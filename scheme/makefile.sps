@@ -1910,6 +1910,7 @@
     (integer->pointer				$for i v $language)
     (pointer->scheme-object			$for i v $language)
     (scheme-object->pointer			$for i v $language)
+    (pointer-clone				$for i v $language)
     (pointer-null?				$for i v $language)
     (pointer-diff				$for i v $language)
     (pointer-add				$for i v $language)
@@ -1920,6 +1921,15 @@
     (pointer<=?					$for i v $language)
     (pointer>=?					$for i v $language)
     (set-pointer-null!				$for i v $language)
+;;;
+    (make-memory-block				$for i v $language)
+    (make-memory-block/guarded			$for i v $language)
+    (memory-block?				$for i v $language)
+    (memory-block?/non-null			$for i v $language)
+    (memory-block?/not-null			$for i v $language)
+    (memory-block-pointer			$for i v $language)
+    (memory-block-size				$for i v $language)
+    (memory-block-reset				$for i v $language)
 ;;;
     (&out-of-memory-error			$for i v $language)
     (make-out-of-memory-error			$for i v $language)

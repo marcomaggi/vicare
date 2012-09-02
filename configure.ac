@@ -251,6 +251,7 @@ VICARE_SIZEOF([long long],[vicare_cv_sizeof_long_long],[SIZEOF_LONG_LONG])
 VICARE_SIZEOF([size_t],[vicare_cv_sizeof_size_t],[SIZEOF_SIZE_T])
 VICARE_SIZEOF([ssize_t],[vicare_cv_sizeof_ssize_t],[SIZEOF_SSIZE_T])
 VICARE_SIZEOF([off_t],[vicare_cv_sizeof_off_t],[SIZEOF_OFF_T])
+VICARE_SIZEOF([ptrdiff_t],[vicare_cv_sizeof_ptrdiff_t],[SIZEOF_PTRDIFF_T])
 
 AC_CACHE_SAVE
 

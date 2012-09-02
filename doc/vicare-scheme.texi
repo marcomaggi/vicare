@@ -5636,16 +5636,24 @@ we must use the garbage collection avoiding @api{}.  @ref{iklib
 collection, Avoiding garbage collection of objects}
 @end defun
 
+
+@defun pointer-clone @var{pointer}
+Return a new pointer object being a copy of @var{pointer}.  This is
+useful when we need a pointer that might be reset to another value in
+the future.
+@end defun
+
 @c page
 @node iklib pointers poke
 @subsection Poking values
 
 
-With all the following functions: the @var{pointer} argument must be a
-valid pointer object; the @var{offset} argument must be a fixnum.  When
-adding an offset to a pointer: all the following functions @strong{do
-not} scale the offset to the size of the poked value; pointer
-arithmetics is performed with byte offsets.
+With all the following functions: the @var{memory} argument must be a
+valid pointer object or @code{memory-block} instance; the @var{offset}
+argument must be an exact integer in the range of the C language type
+@code{ptrdiff_t}.  When adding an offset to a pointer: all the following
+functions @strong{do not} scale the offset to the size of the poked
+value; pointer arithmetics is performed with byte offsets.
 
 The following bindings are exported by the libraries @library{vicare},
 @library{ikarus} and @library{ikarus system $foreign} and reexported by
@@ -5653,14 +5661,14 @@ the library @library{vicare ffi}.
 
 @macro bitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
-@var{pointer}.  @var{VALUE} must be an exact integer in the range
+@var{memory}.  @var{VALUE} must be an exact integer in the range
 representable by \BITNUM\ bits.
 @end macro
 
 @macro cpoker{TYPE}
 Set to @var{value} a number of bytes corresponding to the @code{signed
 \TYPE\} or @code{unsigned \TYPE\} type located at @var{offset} from
-@var{pointer}.
+@var{memory}.
 @end macro
 
 @c ------------------------------------------------------------
@@ -5672,26 +5680,26 @@ memory location selecting the size with the number of bits required to
 represent the value.
 
 
-@defun pointer-set-c-sint8! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-uint8! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint8! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint8! @var{memory} @var{offset} @var{value}
 @bitpoker{single byte,8}
 @end defun
 
 
-@defun pointer-set-c-sint16! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-uint16! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint16! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint16! @var{memory} @var{offset} @var{value}
 @bitpoker{two bytes,16}
 @end defun
 
 
-@defun pointer-set-c-sint32! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-uint32! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint32! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint32! @var{memory} @var{offset} @var{value}
 @bitpoker{two bytes,32}
 @end defun
 
 
-@defun pointer-set-c-sint64! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-uint64! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-sint64! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint64! @var{memory} @var{offset} @var{value}
 @bitpoker{two bytes,64}
 @end defun
 
@@ -5704,33 +5712,33 @@ memory locations selecting the size according to the one used by the C
 language implementation.
 
 
-@defun pointer-set-c-signed-char! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-unsigned-char! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-char! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-char! @var{memory} @var{offset} @var{value}
 @cpoker{char}
 @end defun
 
 
-@defun pointer-set-c-signed-short! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-unsigned-short! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-short! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-short! @var{memory} @var{offset} @var{value}
 @cpoker{short int}
 @end defun
 
 
-@defun pointer-set-c-signed-int! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-unsigned-int! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-int! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-int! @var{memory} @var{offset} @var{value}
 @cpoker{int}
 @end defun
 
 
 
-@defun pointer-set-c-signed-long! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-unsigned-long! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-long! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-long! @var{memory} @var{offset} @var{value}
 @cpoker{long}
 @end defun
 
 
-@defun pointer-set-c-signed-long-long! @var{pointer} @var{offset} @var{value}
-@defunx pointer-set-c-unsigned-long-long! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-signed-long-long! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-long-long! @var{memory} @var{offset} @var{value}
 @cpoker{long long}
 @end defun
 
@@ -5740,18 +5748,18 @@ language implementation.
 @subsubheading Poking floating point numbers
 
 
-@defun pointer-set-c-float! @var{pointer} @var{offset} @var{flonum}
+@defun pointer-set-c-float! @var{memory} @var{offset} @var{flonum}
 Convert the Scheme floating point number @var{flonum} (represented in
 @value{PRJNAME} as an @ieee{} 754 double precision floating point number) to a
 float (an @ieee{} 754 single precision floating point number) and store
-the result in the four bytes at @var{offset} from @var{pointer}.
+the result in the four bytes at @var{offset} from @var{memory}.
 @end defun
 
 
-@defun pointer-set-c-double! @var{pointer} @var{offset} @var{flonum}
+@defun pointer-set-c-double! @var{memory} @var{offset} @var{flonum}
 Store the double precision @ieee{} 754 floating point value of the
 Scheme @var{flonum} in the eight bytes at @var{offset} from
-@var{pointer}.
+@var{memory}.
 @end defun
 
 
@@ -5760,9 +5768,9 @@ Scheme @var{flonum} in the eight bytes at @var{offset} from
 @subsubheading Poking pointers
 
 
-@defun pointer-set-c-pointer! @var{pointer} @var{offset} @var{value}
+@defun pointer-set-c-pointer! @var{memory} @var{offset} @var{value}
 Store address of the raw memory location referenced by the pointer
-@var{value} at @var{offset} from @var{pointer}.
+@var{value} at @var{offset} from @var{memory}.
 @end defun
 
 @c page
@@ -5770,24 +5778,25 @@ Store address of the raw memory location referenced by the pointer
 @subsection Peeking values
 
 
-With all the following functions: the @var{pointer} argument must be a
-valid pointer object; the @var{offset} argument must be a fixnum.  When
-adding an offset to a pointer: all the following functions @strong{do
-not} scale the offset to the size of the poked value; pointer
-arithmetics is performed with byte offsets.
+With all the following functions: the @var{memory} argument must be a
+valid pointer object; the @var{offset} argument must be an exact integer
+in the range of the C language type @code{ptrdiff_t}.  When adding an
+offset to a pointer: all the following functions @strong{do not} scale
+the offset to the size of the poked value; pointer arithmetics is
+performed with byte offsets.
 
 The following bindings are exported by the libraries @library{vicare},
 @library{ikarus} and @library{ikarus system $foreign} and reexported by
 the library @library{vicare ffi}.
 
 @macro bitpeeker{BITNUM}
-Peek the \BITNUM\ bits located at @var{offset} from @var{pointer} and
+Peek the \BITNUM\ bits located at @var{offset} from @var{memory} and
 return them as signed or unsigned exact integer.
 @end macro
 
 @macro cpeeker{TYPE}
 Peek the @code{signed \TYPE\} or @code{unsigned \TYPE\} integer located
-at @var{offset} from @var{pointer} and return it as signed or unsigned
+at @var{offset} from @var{memory} and return it as signed or unsigned
 exact integer.
 @end macro
 
@@ -5800,26 +5809,26 @@ raw memory location selecting the size with the number of bits required
 to represent the value.
 
 
-@defun pointer-ref-c-sint8 @var{pointer} @var{offset}
-@defunx pointer-ref-c-uint8 @var{pointer} @var{offset}
+@defun pointer-ref-c-sint8 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint8 @var{memory} @var{offset}
 @bitpeeker{8}
 @end defun
 
 
-@defun pointer-ref-c-sint16 @var{pointer} @var{offset}
-@defunx pointer-ref-c-uint16 @var{pointer} @var{offset}
+@defun pointer-ref-c-sint16 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint16 @var{memory} @var{offset}
 @bitpeeker{16}
 @end defun
 
 
-@defun pointer-ref-c-sint32 @var{pointer} @var{offset}
-@defunx pointer-ref-c-uint32 @var{pointer} @var{offset}
+@defun pointer-ref-c-sint32 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint32 @var{memory} @var{offset}
 @bitpeeker{32}
 @end defun
 
 
-@defun pointer-ref-c-sint64 @var{pointer} @var{offset}
-@defunx pointer-ref-c-uint64 @var{pointer} @var{offset}
+@defun pointer-ref-c-sint64 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint64 @var{memory} @var{offset}
 @bitpeeker{64}
 @end defun
 
@@ -5832,32 +5841,32 @@ raw memory locations selecting the size according to the one used by the
 C language implementation.
 
 
-@defun pointer-ref-c-signed-char @var{pointer} @var{offset}
-@defunx pointer-ref-c-signed-char @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-char @var{memory} @var{offset}
+@defunx pointer-ref-c-signed-char @var{memory} @var{offset}
 @cpeeker{char}
 @end defun
 
 
-@defun pointer-ref-c-signed-short @var{pointer} @var{offset}
-@defunx pointer-ref-c-unsigned-short @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-short @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-short @var{memory} @var{offset}
 @cpeeker{short int}
 @end defun
 
 
-@defun pointer-ref-c-signed-int @var{pointer} @var{offset}
-@defunx pointer-ref-c-unsigned-int @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-int @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-int @var{memory} @var{offset}
 @cpeeker{int}
 @end defun
 
 
-@defun pointer-ref-c-signed-long @var{pointer} @var{offset}
-@defunx pointer-ref-c-unsigned-long @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-long @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-long @var{memory} @var{offset}
 @cpeeker{long}
 @end defun
 
 
-@defun pointer-ref-c-signed-long-long @var{pointer} @var{offset}
-@defunx pointer-ref-c-unsigned-long-long @var{pointer} @var{offset}
+@defun pointer-ref-c-signed-long-long @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-long-long @var{memory} @var{offset}
 @cpeeker{long long}
 @end defun
 
@@ -5866,18 +5875,18 @@ C language implementation.
 @subsubheading Peeking floating point numbers
 
 
-@defun pointer-ref-c-float @var{pointer} @var{offset}
+@defun pointer-ref-c-float @var{memory} @var{offset}
 Return the four--byte float (represented as @ieee{} 754 single precision
-floating point number) stored at @var{offset} from @var{pointer}.  The
+floating point number) stored at @var{offset} from @var{memory}.  The
 value is extended to an @ieee{} 754 double precision floating point
 number that @value{PRJNAME} uses to represent inexact numbers.
 @end defun
 
 
-@defun pointer-ref-c-double @var{pointer} @var{offset}
+@defun pointer-ref-c-double @var{memory} @var{offset}
 Return the eight--byte float (represented as @ieee{} 754 double
 precision floating point number) stored at @var{offset} from
-@var{pointer}.
+@var{memory}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -5885,8 +5894,8 @@ precision floating point number) stored at @var{offset} from
 @subsubheading Peeking pointers
 
 
-@defun pointer-ref-c-pointer @var{pointer} @var{offset}
-Return the pointer stored at @var{offset} from @var{pointer}.  The size
+@defun pointer-ref-c-pointer @var{memory} @var{offset}
+Return the pointer stored at @var{offset} from @var{memory}.  The size
 of the pointer (also the number of bytes loaded) depends on the
 architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
 systems.
@@ -5901,6 +5910,7 @@ systems.
 * iklib memory intro::          Introduction to managing memory.
 * iklib memory alloc::          Allocating and freeing memory.
 * iklib memory ops::            Memory operations.
+* iklib memory blocks::         Memory blocks.
 * iklib memory condition::      Memory allocation condition objects.
 @end menu
 
@@ -5946,8 +5956,9 @@ the library @library{vicare ffi}.
 @defunx guarded-malloc @var{number-of-bytes}
 Interface to the C function @cfunc{malloc}, @glibcref{Basic Allocation,
 malloc}.  Allocate a block of memory @var{number-of-bytes} wide;
-@var{number-of-bytes} must be a non--negative fixnum.  If successful
-return a pointer object, else return @false{}.
+@var{number-of-bytes} must be an exact integer in the range of the C
+language type @code{size_t}.  If successful return a pointer object,
+else return @false{}.
 
 Memory allocated by @func{malloc} must be released by @func{free};
 memory allocated by @func{guarded-malloc} is automatically released
@@ -5963,20 +5974,40 @@ raise a non--continuable exception with components: @condition{who},
 @end defun
 
 
-@defun realloc @var{pointer} @var{number-of-bytes}
-@defunx guarded-realloc @var{pointer} @var{number-of-bytes}
+@defun realloc @var{memory} @var{number-of-bytes}
+@defunx guarded-realloc @var{memory} @var{number-of-bytes}
 Interface to the C function @cfunc{realloc}, @glibcref{Changing Block
 Size, realloc}.  Reallocate the block of memory referenced by
-@var{pointer} to the new size @var{number-of-bytes}, which must be a
-non--negative fixnum.
+@var{memory} to the new size @var{number-of-bytes}.
 
-If successful: mutate @var{pointer} to reference a the new memory block
-and return @var{pointer} itself.  If an error occurs: return @false{}
-and leave untouched both @var{pointer} and its referenced memory.
+@var{memory} must be a pointer object or @code{memory-block} instance.
 
-Memory allocated by @func{realloc} must be released by @func{free};
-memory allocated by @func{guarded-realloc} is automatically released
-whenever the returned pointer object is garbage collected.
+@var{number-of-bytes} must be an exact integer in the range of the C
+language type @code{size_t}.
+
+If successful: mutate the pointer in @var{memory} to reference the new
+memory block and return @var{memory} itself; when @var{memory} is a
+@code{memory-block}: mutate the size field to @var{number-of-bytes}.  If
+an error occurs: return @false{} and leave untouched both @var{memory}
+and its referenced memory.
+
+Memory allocated by @func{realloc} must be released by @func{free},
+unless @var{memory} was already scheduled to be removed by the garbage
+collector; when @func{guarded-realloc} is used:
+
+@itemize
+@item
+When @var{memory} is a pointer object: the allocated memory is
+automatically released whenever the returned pointer object is garbage
+collected.  If @var{memory} was already scheduled to be removed by the
+garbage collector: we should use @func{realloc} not
+@func{guarded-realloc}.
+
+@item
+When @var{memory} is an instance of @code{memory-block}: the allocated
+memory is automatically released by the garbage collector only if
+@code{memory-block} was built by @func{make-memory-block/guarded}.
+@end itemize
 @end defun
 
 
@@ -5993,8 +6024,9 @@ raise a non--continuable exception with components: @condition{who},
 Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
 Space, calloc}.  Allocate and clear to zero a block of memory capable of
 holding @var{number-of-elements} each @var{element-size} wide; both the
-arguments must be non--negative fixnums.  If successful return a pointer
-object, else return @false{}.
+arguments must be exact integers in the range of the C language type
+@code{size_t}.  If successful return a pointer object, else return
+@false{}.
 
 Memory allocated by @func{calloc} must be released by @func{free};
 memory allocated by @func{guarded-calloc} is automatically released
@@ -6010,17 +6042,19 @@ raise a non--continuable exception with components: @condition{who},
 @end defun
 
 
-@defun free @var{pointer}
-Release the memory referenced by @var{pointer}, which must be the return
-value of @cfunc{malloc}, @cfunc{realloc}, @cfunc{calloc} or a similar
-system procedure.  @var{pointer} is mutated to reference the @cnull{}
-pointer.
+@defun free @var{memory}
+Release the memory referenced by @var{memory}, which must be either a
+pointer object returned by @cfunc{malloc}, @cfunc{realloc},
+@cfunc{calloc} or a similar system procedure or an instance of
+@code{memory-block}.  The pointer object in @var{memory} is mutated to
+reference the @cnull{} pointer; when @var{memory} is a
+@code{memory-block}: the @code{size} field is also reset to zero.
 
 If memory allocated by a guarding function is released by @func{free}:
 @value{PRJNAME} will @strong{not} try to automatically release the old
 memory again.
 
-If @var{pointer} is @cnull{} nothing happens.
+If the pointer in @var{memory} is @cnull{} nothing happens.
 @end defun
 
 
@@ -6092,8 +6126,9 @@ the library @library{vicare ffi}.
 Interface to the C function @cfunc{memcpy}, @glibcref{Copying and
 Concatenation, memcpy}.  Copy @var{count} bytes from the memory
 referenced by the pointer @var{src} to the memory referenced by the
-pointer @var{dst}; @var{count} must be a non--negative fixnum.  The two
-memory regions must not overlap.  Return unspecified values.
+pointer @var{dst}; @var{count} must be an exact integer in the range of
+the C language type @code{size_t}.  The two memory regions must not
+overlap.  Return unspecified values.
 @end defun
 
 
@@ -6101,17 +6136,19 @@ memory regions must not overlap.  Return unspecified values.
 Interface to the C function @cfunc{memmove}, @glibcref{Copying and
 Concatenation, memmove}.  Copy @var{count} bytes from the memory
 referenced by the pointer @var{src} to the memory referenced by the
-pointer @var{dst}; @var{count} must be a non--negative fixnum.  The two
-memory regions can be overlapping.  Return unspecified values.
+pointer @var{dst}; @var{count} must be an exact integer in the range of
+the C language type @code{size_t}.  The two memory regions can be
+overlapping.  Return unspecified values.
 @end defun
 
 
 @defun memset @var{ptr} @var{value} @var{count}
 Interface to the C function @cfunc{memset}, @glibcref{Copying and
 Concatenation, memset}.Set to @var{value} @var{count} bytes of the
-memory referenced by the pointer @var{ptr}.  @var{count} must be a
-non--negative fixnum, @var{value} must be an exact fixnum in the range
-@math{[-128, 255]}.  Return unspecified values.
+memory referenced by the pointer @var{ptr}.  @var{count} must be an
+exact integer in the range of the C language type @code{size_t},
+@var{value} must be an exact fixnum in the range @math{[-128, 255]}.
+Return unspecified values.
 @end defun
 
 
@@ -6120,7 +6157,7 @@ Interface to the C function @cfunc{memcmp}, @glibcref{String/Array
 Comparison, memcmp}.  Compare @var{count} bytes in the memory blocks
 referenced by @vari{pointer} and @varii{pointer}, return a fixnum
 representing the classic comparison ternary result.  @var{count} must be
-a non--negative fixnum.
+an exact integer in the range of the C language type @code{size_t}.
 @end defun
 
 
@@ -6160,6 +6197,71 @@ Like @func{bytevector->memory*} and @func{bytevector->guarded-memory*},
 but if allocation fails raise a non--continuable exception with
 components: @condition{who}, @condition{message},
 @condition{out-of-memory-error}.
+@end defun
+
+@c page
+@node iklib memory blocks
+@subsection Memory blocks
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@deftp {Struct Type} memory-block
+Data structure used to reference a raw memory block through a pointer
+and number of bytes.  It has the following public fields:
+
+@table @code
+@item pointer
+A pointer object referencing the first byte of memory.
+
+@item size
+The number of bytes in the memory block; it is an exact integer in the
+range of the C language type @code{size_t}.
+@end table
+@end deftp
+
+
+@defun make-memory-block @var{pointer} @var{size}
+@defunx make-memory-block/guarded @var{pointer} @var{size}
+Build and return a new instance of @code{memory-block} referencing a
+memory block pointed to by @var{pointer} and of @var{size} number of
+bytes.
+
+When a @code{memory-block} built by @func{make-memory-block} is garbage
+collected: nothing happens.
+
+When a @code{memory-block} built by @func{make-memory-block/guarded} is
+garbage collected: the referenced memory block is released with
+@func{free} from @library{vicare}.
+@end defun
+
+
+@defun memory-block? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{memory-block}.
+@end defun
+
+
+@defun memory-block?/non-null @var{obj}
+@defunx memory-block?/not-null @var{obj}
+Return @true{} if @var{obj} is an instance of @code{memory-block} and
+the pointer is not @cnull{}.
+@end defun
+
+
+@defun memory-block-pointer @var{mblock}
+@defunx memory-block-size @var{mblock}
+Accessors for the fields of @code{memory-block} instances.  The pointer
+object returned by @func{memory-block-pointer} is a copy of the pointer
+object in @var{mblock}.
+@end defun
+
+
+@defun memory-block-reset @var{mblock}
+Reset an instance of @code{memory-block} to a @cnull{} pointer and zero
+size.  Return unspecified values.
 @end defun
 
 @c page
@@ -6294,7 +6396,8 @@ Interface to the C function @cfunc{strncmp}, @glibcref{String/Array
 Comparison, strncmp}.  Return a fixnum representing the classic
 comparison ternary result of comparing the first @var{count} bytes in
 the @asciiz{} strings referenced by @vari{pointer} and @varii{pointer}.
-@var{count} must be a fixnum.
+@var{count} must be an exact integer in the range of the C language type
+@code{size_t}.
 @end defun
 
 
@@ -6325,7 +6428,8 @@ raise a non--continuable exception with components: @condition{who},
 Interface to the C function @cfunc{strndup}, @glibcref{Copying and
 Concatenation, strndup}.  Duplicate the first @var{count} bytes in the
 @asciiz{} string referenced by @var{pointer}; if successful return a new
-pointer object, else return @false{}.  @var{count} must be a fixnum.
+pointer object, else return @false{}.  @var{count} must be an exact
+integer in the range of the C language type @code{size_t}.
 
 Memory allocated by @func{strdup} must be explicitly released by
 @func{free}; memory allocated by @func{guarded-strdup} is automatically
@@ -6334,8 +6438,8 @@ garbage collected.
 @end defun
 
 
-@defun strndup* @var{pointer}
-@defunx guarded-strndup* @var{pointer}
+@defun strndup* @var{pointer} @var{count}
+@defunx guarded-strndup* @var{pointer} @var{count}
 Like @func{strndup} and @func{guarded-strndup}, but if allocation fails
 raise a non--continuable exception with components: @condition{who},
 @condition{message}, @condition{out-of-memory-error}.
@@ -17361,6 +17465,11 @@ Number of bytes in the C language type @code{off_t}.
 @end deffn
 
 
+@deffn {Identifier Syntax} SIZEOF_PTRDIFF_T
+Number of bytes in the C language type @code{ptrdiff_t}.
+@end deffn
+
+
 @deffn {Identifier Syntax} SIZEOF_FLOAT
 Number of bytes in the C language type @code{float}.
 @end deffn
@@ -17505,6 +17614,13 @@ representable with a platform C language type @code{size_t} or
 Return @true{} if @var{obj} is a fixnum or bignum in the range
 representable with a platform C language type @code{off_t} as defined by
 @file{stdio.h}.
+@end deffn
+
+
+@deffn Syntax ptrdiff_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{ptrdiff_t} as
+defined by @file{stddef.h}.
 @end deffn
 
 
@@ -22696,6 +22812,7 @@ value.
 @deftypefun ikptr ika_integer_from_off_t (ikpcb * @var{pcb}, off_t @var{N})
 @deftypefunx ikptr ika_integer_from_ssize_t (ikpcb * @var{pcb}, ssize_t @var{N})
 @deftypefunx ikptr ika_integer_from_size_t (ikpcb * @var{pcb}, size_t @var{N})
+@deftypefunx ikptr ika_integer_from_ptrdiff_t (ikpcb * @var{pcb}, ptrdiff_t @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
@@ -22726,6 +22843,7 @@ conversion.
 @deftypefun off_t ik_integer_to_off_t (ikptr @var{x})
 @deftypefunx size_t ik_integer_to_size_t (ikptr @var{x})
 @deftypefunx ssize_t ik_integer_to_ssize_t (ikptr @var{x})
+@deftypefunx ptrdiff_t ik_integer_to_ptrdiff_t (ikptr @var{x})
 Return a C language number from a Scheme exact integer object.  The
 object @var{X} must be in the correct range for the requested
 conversion.
@@ -23531,6 +23649,11 @@ the pointer to the first byte of the word holding the pointer value.
 @subsubheading Convenience preprocessor macros
 
 
+@deftypefn {Preprocessor Macro} int IK_IS_POINTER (ikptr @var{X})
+Evaluate to true if @var{X} is a pointer object.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr IK_POINTER_DATA (ikptr @var{X})
 Return the value of the pointer as @code{ikptr}.
 @end deftypefn
@@ -23660,6 +23783,33 @@ pointer object return a pointer to first byte of the referenced memory.
 @deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{OBJ})
 If @var{OBJ} is the false object: return @cnull{}; else @var{OBJ} must
 be a pointer object and its pointer is returned.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@deftypefn {Preprocessor Macro} ikptr IK_MBLOCK_POINTER (ikptr @var{obj})
+Given an instance of @code{memory-block}, return a pointer object being
+the value of its @code{pointer} field.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_MBLOCK_SIZE (ikptr @var{obj})
+Given an instance of @code{memory-block}, return an exact integer being
+the value of its @code{size} field.  Notice that the returned value can
+be either a fixnum or a bignum.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} size_t IK_MBLOCK_SIZE_T (ikptr @var{obj})
+Given an instance of @code{memory-block}, return the value of the
+@code{size} field as @code{size_t}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a pointer object or an instance of
+@code{memory-block}, return a pointer being the referenced memory.  If
+@var{obj} is @false{}: the returned value is @cnull{}.
 @end deftypefn
 
 @c page

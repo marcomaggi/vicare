@@ -84,6 +84,17 @@
 ;;; --------------------------------------------------------------------
 
   (check
+      (let ((P (integer->pointer 123)))
+	(pointer=? P (pointer-clone P)))
+    => #t)
+
+  (check
+      (pointer-null? (pointer-clone (null-pointer)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
       (pointer? (null-pointer))
     => #t)
 
@@ -240,6 +251,77 @@
 	    (two (integer->pointer 123)))
 	(equal? one two))
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'memory-blocks))
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 123) 4096)))
+	(memory-block? B))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 123) 4096)))
+	(list (pointer->integer (memory-block-pointer B))
+	      (memory-block-size    B)))
+    => '(123 4096))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 123) 4096)))
+	(memory-block?/non-null B))
+    => #t)
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 123) 4096)))
+	(memory-block?/not-null B))
+    => #t)
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 0) 0)))
+	(memory-block?/non-null B))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (begin
+	(make-memory-block/guarded (malloc 16) 16)
+	(collect))
+    => (void))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 123) 4096)))
+	(memory-block-reset B)
+	(list (pointer->integer (memory-block-pointer B))
+	      (memory-block-size B)))
+    => '(0 0))
+
+;;; --------------------------------------------------------------------
+
+  (check	;free
+      (let ((B (make-memory-block (malloc 16) 16)))
+	(free B)
+	(list (pointer->integer (memory-block-pointer B))
+	      (memory-block-size B)))
+    => '(0 0))
+
+  (check	;realloc
+      (let ((B (make-memory-block (malloc 16) 16)))
+;;;(check-pretty-print B)
+	(realloc B 32)
+;;;(check-pretty-print B)
+	(begin0
+	    (memory-block-size B)
+	  (free B)))
+    => 32)
 
   #t)
 
@@ -531,7 +613,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'access))
+(parametrise ((check-test-name	'pointer-access))
 
   (check
       (let ((P (guarded-malloc 32)))
@@ -703,7 +785,187 @@
 	(pointer-ref-c-unsigned-long-long  P 2))
     => 123)
 
-  #t)
+  (collect))
+
+
+(parametrise ((check-test-name	'mblock-access))
+
+  (define (block-malloc number-of-bytes)
+    (make-memory-block/guarded (malloc* number-of-bytes) number-of-bytes))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-uint8! P 2 123)
+	(pointer-ref-c-uint8  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-uint8! P 2 (words.greatest-u8))
+	(pointer-ref-c-uint8  P 2))
+    => (words.greatest-u8))
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-uint8! P 2 (words.least-u8))
+	(pointer-ref-c-uint8  P 2))
+    => (words.least-u8))
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-sint8! P 2 -123)
+	(pointer-ref-c-sint8  P 2))
+    => -123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-sint8! P 2 (words.greatest-s8))
+	(pointer-ref-c-sint8  P 2))
+    => (words.greatest-s8))
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-sint8! P 2 (words.least-s8))
+	(pointer-ref-c-sint8  P 2))
+    => (words.least-s8))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-uint16! P 2 123)
+	(pointer-ref-c-uint16  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-sint16! P 2 -123)
+	(pointer-ref-c-sint16  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-uint32! P 2 123)
+	(pointer-ref-c-uint32  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-sint32! P 2 -123)
+	(pointer-ref-c-sint32  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-uint64! P 2 123)
+	(pointer-ref-c-uint64  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-sint64! P 2 -123)
+	(pointer-ref-c-sint64  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-float! P 2 1.23)
+	(fl>? 0.0001 (fl- 1.23 (pointer-ref-c-float  P 2))))
+    => #t)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-double! P 2 -1.23)
+	(pointer-ref-c-double  P 2))
+    => -1.23)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-pointer! P 2 (integer->pointer 123))
+	(pointer-ref-c-pointer  P 2))
+    => (integer->pointer 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-signed-char! P 2 123)
+	(pointer-ref-c-signed-char  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-unsigned-char! P 2 123)
+	(pointer-ref-c-unsigned-char  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-signed-short! P 2 123)
+	(pointer-ref-c-signed-short  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-unsigned-short! P 2 123)
+	(pointer-ref-c-unsigned-short  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-signed-int! P 2 123)
+	(pointer-ref-c-signed-int  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-unsigned-int! P 2 123)
+	(pointer-ref-c-unsigned-int  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-signed-long! P 2 123)
+	(pointer-ref-c-signed-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-unsigned-long! P 2 123)
+	(pointer-ref-c-unsigned-long  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-signed-long-long! P 2 123)
+	(pointer-ref-c-signed-long-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (block-malloc 32)))
+	(pointer-set-c-unsigned-long-long! P 2 123)
+	(pointer-ref-c-unsigned-long-long  P 2))
+    => 123)
+
+  (collect))
 
 
 (parametrise ((check-test-name	'case-errno))

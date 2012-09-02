@@ -37,7 +37,7 @@
     SIZEOF_SHORT	SIZEOF_INT
     SIZEOF_LONG		SIZEOF_LONG_LONG
     SIZEOF_SIZE_T	SIZEOF_SSIZE_T
-    SIZEOF_OFF_T
+    SIZEOF_OFF_T	SIZEOF_PTRDIFF_T
     SIZEOF_FLOAT	SIZEOF_DOUBLE
     SIZEOF_POINTER
 
@@ -58,7 +58,7 @@
     unsigned-long-long?	signed-long-long?
 
     size_t?		ssize_t?
-    off_t?
+    off_t?		ptrdiff_t?
 
     ;; inclusive limits
     greatest-u8		least-u8
@@ -210,6 +210,7 @@
 (define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
 (define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
 (define-inline-constant SIZEOF_OFF_T		@SIZEOF_OFF_T@)
+(define-inline-constant SIZEOF_PTRDIFF_T	@SIZEOF_PTRDIFF_T@)
 (define-inline-constant SIZEOF_FLOAT		4)
 (define-inline-constant SIZEOF_DOUBLE		8)
 (define-inline-constant SIZEOF_POINTER		(case-word-size
@@ -240,6 +241,16 @@
 
 (define-syntax OFF_T_MIN
   (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
+
+(define-syntax PTRDIFF_T_MAX
+  (if (= 4 @SIZEOF_PTRDIFF_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax PTRDIFF_T_MIN
+  (if (= 4 @SIZEOF_PTRDIFF_T@)
       (identifier-syntax S32MIN)
     (identifier-syntax S64MIN)))
 
@@ -496,6 +507,7 @@
   (define-predicate size_t?			@SIZEOF_SIZE_T@		unsigned)
   (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	signed)
   (define-predicate off_t?			@SIZEOF_OFF_T@		signed)
+  (define-predicate ptrdiff_t?			@SIZEOF_PTRDIFF_T@	signed)
   )
 
 

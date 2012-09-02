@@ -17,16 +17,26 @@
 
 (library (ikarus.pointers)
   (export
+
     ;; pointer objects
     pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
+    pointer-clone
     pointer->scheme-object		scheme-object->pointer
     pointer-diff			pointer-add
     pointer=?				pointer<>?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     set-pointer-null!
+
+    ;; memory blocks
+    memory-block?			memory-block?/non-null
+    make-memory-block/guarded		memory-block-size
+    memory-block-reset
+    (rename (%make-memory-block		make-memory-block)
+	    (%memory-block-pointer	memory-block-pointer)
+	    (memory-block?/non-null	memory-block?/not-null))
 
     ;; shared libraries inteface
     dlopen				dlclose
@@ -115,11 +125,20 @@
 		  pointer?
 		  null-pointer				pointer-null?
 		  pointer->integer			integer->pointer
+		  pointer->scheme-object		scheme-object->pointer
+		  pointer-clone
 		  pointer-diff				pointer-add
 		  pointer=?				pointer<>?
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
 		  set-pointer-null!
+
+		  ;; memory blocks
+		  make-memory-block			make-memory-block/guarded
+		  memory-block?
+		  memory-block?/non-null		memory-block?/not-null
+		  memory-block-pointer			memory-block-size
+		  memory-block-reset
 
 		  ;; shared libraries inteface
 		  dlopen				dlclose
@@ -274,6 +293,22 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (memory-block who obj)
+  (memory-block? obj)
+  (assertion-violation who "expected instance of memory-block as argument" obj))
+
+(define-argument-validation (memory-block/non-null who obj)
+  (memory-block?/non-null obj)
+  (assertion-violation who
+    "expected instance of memory-block referencing non-null as argument" obj))
+
+(define-argument-validation (pointer/memory-block who obj)
+  (or (pointer? obj) (memory-block? obj))
+  (assertion-violation who
+    "expected pointer or instance of memory-block as argument" obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
@@ -292,13 +327,25 @@
   (assertion-violation who
     "expected exact integer representing pointer difference as argument" obj))
 
-(define-argument-validation (number-of-bytes who obj)
+(define-argument-validation (memory/ptrdiff who memory offset data-size)
+  (or (pointer? memory)
+      (<= (+ offset data-size) (memory-block-size memory)))
+  (assertion-violation who
+    "offset from pointer out of range for data size"
+    memory offset data-size))
+
+(define-argument-validation (size_t-number-of-bytes who obj)
+  (words.size_t? obj)
+  (assertion-violation who "expected size_t as number of bytes argument" obj))
+
+(define-argument-validation (fixnum-number-of-bytes who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as number of bytes argument" obj))
+  (assertion-violation who
+    "expected non-negative fixnum as number of bytes argument" obj))
 
 (define-argument-validation (number-of-elements who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as number of elements argument" obj))
+  (words.size_t? obj)
+  (assertion-violation who "expected size_t as number of elements argument" obj))
 
 (define-argument-validation (byte who obj)
   (or (words.word-u8? obj)
@@ -443,6 +490,11 @@
   (assertion-violation who
     "expected exact integer representing a C language \"unsigned long long\" as argument" obj))
 
+(define-argument-validation (size_t who obj)
+  (words.size_t? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"size_t\" as argument" obj))
+
 
 ;;;; errno interface
 
@@ -455,6 +507,62 @@
     (with-arguments-validation (who)
 	((errno  errno))
       (foreign-call "ikrt_set_errno" errno)))))
+
+
+;;;; memory blocks
+
+(define-struct memory-block
+  (pointer size))
+
+(define (%struct-memory-block-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[memory-block")
+  (%display " pointer=")	(%display (memory-block-pointer S))
+  (%display " size=")		(%display (memory-block-size    S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define %memory-block-guardian
+  (make-guardian))
+
+(define (%memory-block-guardian-destructor)
+  (do ((B (%memory-block-guardian) (%memory-block-guardian)))
+      ((not B))
+;;;(pretty-print B (current-error-port))
+    ;;Remember that FREE will mutate to NULL the pointer.
+    (free (memory-block-pointer B))
+    (set-memory-block-pointer! B (void))
+    (set-memory-block-size!    B (void))
+;;;(pretty-print B (current-error-port))
+    #;(struct-reset B)))
+
+;;; --------------------------------------------------------------------
+
+(define (%make-memory-block pointer size)
+  (define who 'make-memory-block)
+  (with-arguments-validation (who)
+      ((pointer	pointer)
+       (size_t	size))
+    (make-memory-block pointer size)))
+
+(define (make-memory-block/guarded pointer size)
+  (%memory-block-guardian (%make-memory-block pointer size)))
+
+(define (memory-block?/non-null obj)
+  (and (memory-block? obj)
+       (not (pointer-null? (memory-block-pointer obj)))))
+
+(define (%memory-block-pointer obj)
+  (pointer-clone (memory-block-pointer obj)))
+
+(define (memory-block-reset B)
+  (define who 'make-memory-block)
+  (with-arguments-validation (who)
+      ((memory-block	B))
+    (set-memory-block-pointer! B (null-pointer))
+    (set-memory-block-size!    B 0)))
 
 
 ;;; shared libraries interface
@@ -540,6 +648,14 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (pointer-clone obj)
+  (define who 'pointer-clone)
+  (with-arguments-validation (who)
+      ((pointer	obj))
+    (capi.ffi-pointer-clone obj)))
+
+;;; --------------------------------------------------------------------
+
 (define (pointer-add ptr delta)
   (define who 'pointer-add)
   (with-arguments-validation (who)
@@ -587,75 +703,167 @@
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax ((define-accessor (syntax-rules ()
-					((_ ?who ?accessor)
-					 (define (?who pointer offset)
-					   (define who '?who)
-					   (with-arguments-validation (who)
-					       ((pointer  pointer)
-						(ptrdiff  offset))
-					     (?accessor pointer offset)))))))
-  (define-accessor pointer-ref-c-uint8		capi.ffi-pointer-ref-c-uint8)
-  (define-accessor pointer-ref-c-sint8		capi.ffi-pointer-ref-c-sint8)
-  (define-accessor pointer-ref-c-uint16		capi.ffi-pointer-ref-c-uint16)
-  (define-accessor pointer-ref-c-sint16		capi.ffi-pointer-ref-c-sint16)
-  (define-accessor pointer-ref-c-uint32		capi.ffi-pointer-ref-c-uint32)
-  (define-accessor pointer-ref-c-sint32		capi.ffi-pointer-ref-c-sint32)
-  (define-accessor pointer-ref-c-uint64		capi.ffi-pointer-ref-c-uint64)
-  (define-accessor pointer-ref-c-sint64		capi.ffi-pointer-ref-c-sint64)
+(let-syntax
+    ((define-accessor (syntax-rules ()
+			((_ ?who ?accessor ?data-size)
+			 (define (?who memory offset)
+			   (define who '?who)
+			   (with-arguments-validation (who)
+			       ((pointer/memory-block	memory)
+				(ptrdiff		offset)
+				(memory/ptrdiff		memory offset ?data-size))
+			     (?accessor memory offset)))))))
+  (define-accessor pointer-ref-c-uint8
+    capi.ffi-pointer-ref-c-uint8 1)
+  (define-accessor pointer-ref-c-sint8
+    capi.ffi-pointer-ref-c-sint8 1)
+  (define-accessor pointer-ref-c-uint16
+    capi.ffi-pointer-ref-c-uint16 2)
+  (define-accessor pointer-ref-c-sint16
+    capi.ffi-pointer-ref-c-sint16 2)
+  (define-accessor pointer-ref-c-uint32
+    capi.ffi-pointer-ref-c-uint32 4)
+  (define-accessor pointer-ref-c-sint32
+    capi.ffi-pointer-ref-c-sint32 4)
+  (define-accessor pointer-ref-c-uint64
+    capi.ffi-pointer-ref-c-uint64 8)
+  (define-accessor pointer-ref-c-sint64
+    capi.ffi-pointer-ref-c-sint64 8)
 
-  (define-accessor pointer-ref-c-float		capi.ffi-pointer-ref-c-float)
-  (define-accessor pointer-ref-c-double		capi.ffi-pointer-ref-c-double)
-  (define-accessor pointer-ref-c-pointer	capi.ffi-pointer-ref-c-pointer)
+  (define-accessor pointer-ref-c-float
+    capi.ffi-pointer-ref-c-float
+    words.SIZEOF_FLOAT)
+  (define-accessor pointer-ref-c-double
+    capi.ffi-pointer-ref-c-double
+    words.SIZEOF_DOUBLE)
+  (define-accessor pointer-ref-c-pointer
+    capi.ffi-pointer-ref-c-pointer
+    words.SIZEOF_POINTER)
 
-  (define-accessor pointer-ref-c-signed-char	capi.ffi-pointer-ref-c-signed-char)
-  (define-accessor pointer-ref-c-signed-short	capi.ffi-pointer-ref-c-signed-short)
-  (define-accessor pointer-ref-c-signed-int	capi.ffi-pointer-ref-c-signed-int)
-  (define-accessor pointer-ref-c-signed-long	capi.ffi-pointer-ref-c-signed-long)
-  (define-accessor pointer-ref-c-signed-long-long capi.ffi-pointer-ref-c-signed-long-long)
-  (define-accessor pointer-ref-c-unsigned-char	capi.ffi-pointer-ref-c-unsigned-char)
-  (define-accessor pointer-ref-c-unsigned-short	capi.ffi-pointer-ref-c-unsigned-short)
-  (define-accessor pointer-ref-c-unsigned-int	capi.ffi-pointer-ref-c-unsigned-int)
-  (define-accessor pointer-ref-c-unsigned-long	capi.ffi-pointer-ref-c-unsigned-long)
-  (define-accessor pointer-ref-c-unsigned-long-long capi.ffi-pointer-ref-c-unsigned-long-long))
+  (define-accessor pointer-ref-c-signed-char
+    capi.ffi-pointer-ref-c-signed-char
+    words.SIZEOF_CHAR)
+  (define-accessor pointer-ref-c-signed-short
+    capi.ffi-pointer-ref-c-signed-short
+    words.SIZEOF_SHORT)
+  (define-accessor pointer-ref-c-signed-int
+    capi.ffi-pointer-ref-c-signed-int
+    words.SIZEOF_INT)
+  (define-accessor pointer-ref-c-signed-long
+    capi.ffi-pointer-ref-c-signed-long
+    words.SIZEOF_LONG)
+  (define-accessor pointer-ref-c-signed-long-long
+    capi.ffi-pointer-ref-c-signed-long-long
+    words.SIZEOF_LONG_LONG)
+
+  (define-accessor pointer-ref-c-unsigned-char
+    capi.ffi-pointer-ref-c-unsigned-char
+    words.SIZEOF_CHAR)
+  (define-accessor pointer-ref-c-unsigned-short
+    capi.ffi-pointer-ref-c-unsigned-short
+    words.SIZEOF_SHORT)
+  (define-accessor pointer-ref-c-unsigned-int
+    capi.ffi-pointer-ref-c-unsigned-int
+    words.SIZEOF_INT)
+  (define-accessor pointer-ref-c-unsigned-long
+    capi.ffi-pointer-ref-c-unsigned-long
+    words.SIZEOF_LONG)
+  (define-accessor pointer-ref-c-unsigned-long-long
+    capi.ffi-pointer-ref-c-unsigned-long-long
+    words.SIZEOF_LONG_LONG))
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax ((define-mutator (syntax-rules ()
-				       ((_ ?who ?mutator ?word-type)
-					(define (?who pointer offset value)
-					  (define who '?who)
-					  (with-arguments-validation (who)
-					      ((pointer     pointer)
-					       (ptrdiff     offset)
-					       (?word-type  value))
-					    (?mutator pointer offset value)))))))
-  (define-mutator pointer-set-c-uint8!		capi.ffi-pointer-set-c-uint8!	uint8)
-  (define-mutator pointer-set-c-sint8!		capi.ffi-pointer-set-c-sint8!	sint8)
-  (define-mutator pointer-set-c-uint16!		capi.ffi-pointer-set-c-uint16!	uint16)
-  (define-mutator pointer-set-c-sint16!		capi.ffi-pointer-set-c-sint16!	sint16)
-  (define-mutator pointer-set-c-uint32!		capi.ffi-pointer-set-c-uint32!	uint32)
-  (define-mutator pointer-set-c-sint32!		capi.ffi-pointer-set-c-sint32!	sint32)
-  (define-mutator pointer-set-c-uint64!		capi.ffi-pointer-set-c-uint64!	uint64)
-  (define-mutator pointer-set-c-sint64!		capi.ffi-pointer-set-c-sint64!	sint64)
+(let-syntax
+    ((define-mutator (syntax-rules ()
+		       ((_ ?who ?mutator ?word-type ?data-size)
+			(define (?who memory offset value)
+			  (define who '?who)
+			  (with-arguments-validation (who)
+			      ((pointer/memory-block	memory)
+			       (ptrdiff			offset)
+			       (memory/ptrdiff		memory offset ?data-size)
+			       (?word-type		value))
+			    (?mutator memory offset value)))))))
+  (define-mutator pointer-set-c-uint8!
+    capi.ffi-pointer-set-c-uint8!
+    uint8 1)
+  (define-mutator pointer-set-c-sint8!
+    capi.ffi-pointer-set-c-sint8!
+    sint8 1)
+  (define-mutator pointer-set-c-uint16!
+    capi.ffi-pointer-set-c-uint16!
+    uint16 2)
+  (define-mutator pointer-set-c-sint16!
+    capi.ffi-pointer-set-c-sint16!
+    sint16 2)
+  (define-mutator pointer-set-c-uint32!
+    capi.ffi-pointer-set-c-uint32!
+    uint32 4)
+  (define-mutator pointer-set-c-sint32!
+    capi.ffi-pointer-set-c-sint32!
+    sint32 4)
+  (define-mutator pointer-set-c-uint64!
+    capi.ffi-pointer-set-c-uint64!
+    uint64 8)
+  (define-mutator pointer-set-c-sint64!
+    capi.ffi-pointer-set-c-sint64!
+    sint64 8)
 
-  (define-mutator pointer-set-c-float!		capi.ffi-pointer-set-c-float!	flonum)
-  (define-mutator pointer-set-c-double!		capi.ffi-pointer-set-c-double!	flonum)
-  (define-mutator pointer-set-c-pointer!	capi.ffi-pointer-set-c-pointer!	pointer)
+  (define-mutator pointer-set-c-float!
+    capi.ffi-pointer-set-c-float!
+    flonum
+    words.SIZEOF_FLOAT)
+  (define-mutator pointer-set-c-double!
+    capi.ffi-pointer-set-c-double!
+    flonum
+    words.SIZEOF_DOUBLE)
+  (define-mutator pointer-set-c-pointer!
+    capi.ffi-pointer-set-c-pointer!
+    pointer
+    words.SIZEOF_POINTER)
 
-  (define-mutator pointer-set-c-signed-char!	capi.ffi-pointer-set-c-signed-char!	signed-char)
-  (define-mutator pointer-set-c-signed-short!	capi.ffi-pointer-set-c-signed-short!	signed-short)
-  (define-mutator pointer-set-c-signed-int!	capi.ffi-pointer-set-c-signed-int!	signed-int)
-  (define-mutator pointer-set-c-signed-long!	capi.ffi-pointer-set-c-signed-long!	signed-long)
+  (define-mutator pointer-set-c-signed-char!
+    capi.ffi-pointer-set-c-signed-char!
+    signed-char
+    words.SIZEOF_CHAR)
+  (define-mutator pointer-set-c-signed-short!
+    capi.ffi-pointer-set-c-signed-short!
+    signed-short
+    words.SIZEOF_SHORT)
+  (define-mutator pointer-set-c-signed-int!
+    capi.ffi-pointer-set-c-signed-int!
+    signed-int
+    words.SIZEOF_INT)
+  (define-mutator pointer-set-c-signed-long!
+    capi.ffi-pointer-set-c-signed-long!
+    signed-long
+    words.SIZEOF_LONG)
   (define-mutator pointer-set-c-signed-long-long!
-    capi.ffi-pointer-set-c-signed-long-long! signed-long-long)
+    capi.ffi-pointer-set-c-signed-long-long!
+    signed-long-long
+    words.SIZEOF_LONG)
 
-  (define-mutator pointer-set-c-unsigned-char!	capi.ffi-pointer-set-c-unsigned-char!	unsigned-char)
-  (define-mutator pointer-set-c-unsigned-short!	capi.ffi-pointer-set-c-unsigned-short!	unsigned-short)
-  (define-mutator pointer-set-c-unsigned-int!	capi.ffi-pointer-set-c-unsigned-int!	unsigned-int)
-  (define-mutator pointer-set-c-unsigned-long!	capi.ffi-pointer-set-c-unsigned-long!	unsigned-long)
+  (define-mutator pointer-set-c-unsigned-char!
+    capi.ffi-pointer-set-c-unsigned-char!
+    unsigned-char
+    words.SIZEOF_CHAR)
+  (define-mutator pointer-set-c-unsigned-short!
+    capi.ffi-pointer-set-c-unsigned-short!
+    unsigned-short
+    words.SIZEOF_SHORT)
+  (define-mutator pointer-set-c-unsigned-int!
+    capi.ffi-pointer-set-c-unsigned-int!
+    unsigned-int
+    words.SIZEOF_INT)
+  (define-mutator pointer-set-c-unsigned-long!
+    capi.ffi-pointer-set-c-unsigned-long!
+    unsigned-long
+    words.SIZEOF_LONG)
   (define-mutator pointer-set-c-unsigned-long-long!
-    capi.ffi-pointer-set-c-unsigned-long-long! unsigned-long-long))
+    capi.ffi-pointer-set-c-unsigned-long-long!
+    unsigned-long-long
+    words.SIZEOF_LONG_LONG))
 
 
 ;;; raw memory management
@@ -680,20 +888,22 @@
 (define (malloc number-of-bytes)
   (define who 'malloc)
   (with-arguments-validation (who)
-      ((number-of-bytes	 number-of-bytes))
+      ((size_t-number-of-bytes	 number-of-bytes))
     (capi.ffi-malloc number-of-bytes)))
 
 (define (malloc* number-of-bytes)
   (or (malloc number-of-bytes)
       (%raise-out-of-memory 'malloc*)))
 
-(define (realloc pointer number-of-bytes)
+(define (realloc memory number-of-bytes)
   (define who 'realloc)
   (with-arguments-validation (who)
-      ((number-of-bytes	 number-of-bytes))
-    ;;Take  care at  the C  level not  to realloc  null pointers  and of
-    ;;mutating POINTER to NULL.
-    (capi.ffi-realloc pointer number-of-bytes)))
+      ((pointer/memory-block	memory)
+       (size_t-number-of-bytes	number-of-bytes))
+    ;;Take  care at  the C  level not  to realloc  NULL pointers  and of
+    ;;mutating POINTER  to NULL.   If MEMORY  is a  MEMORY-BLOCK: update
+    ;;both the pointer and size fields.
+    (capi.ffi-realloc memory number-of-bytes)))
 
 (define (realloc* pointer number-of-bytes)
   (or (realloc pointer number-of-bytes)
@@ -703,20 +913,21 @@
   (define who 'calloc)
   (with-arguments-validation (who)
       ((number-of-elements	number-of-elements)
-       (number-of-bytes		element-size))
+       (size_t-number-of-bytes	element-size))
     (capi.ffi-calloc number-of-elements element-size)))
 
 (define (calloc* number-of-elements element-size)
   (or (calloc number-of-elements element-size)
       (%raise-out-of-memory 'calloc*)))
 
-(define (free ptr)
+(define (free obj)
   (define who 'free)
   (with-arguments-validation (who)
-      ((pointer	ptr))
+      ((pointer/memory-block	obj))
     ;;Take care  at the  C level  not to "free()"  null pointers  and of
-    ;;mutating PTR to NULL.
-    (capi.ffi-free ptr)))
+    ;;mutating PTR to NULL.  Also if OBJ is a MEMORY-BLOCK: set the size
+    ;;to zero.
+    (capi.ffi-free obj)))
 
 ;;; --------------------------------------------------------------------
 
@@ -758,33 +969,33 @@
 (define (memcpy dst src count)
   (define who 'memcpy)
   (with-arguments-validation (who)
-      ((pointer		dst)
-       (pointer		src)
-       (number-of-bytes	count))
+      ((pointer			dst)
+       (pointer			src)
+       (size_t-number-of-bytes	count))
     (capi.ffi-memcpy dst src count)))
 
 (define (memmove dst src count)
   (define who 'memmove)
   (with-arguments-validation (who)
-      ((pointer		dst)
-       (pointer		src)
-       (number-of-bytes	count))
+      ((pointer			dst)
+       (pointer			src)
+       (size_t-number-of-bytes	count))
     (capi.ffi-memmove dst src count)))
 
 (define (memset ptr byte count)
   (define who 'memset)
   (with-arguments-validation (who)
-      ((pointer		ptr)
-       (byte		byte)
-       (number-of-bytes	count))
+      ((pointer			ptr)
+       (byte			byte)
+       (size_t-number-of-bytes	count))
     (capi.ffi-memset ptr byte count)))
 
 (define (memcmp ptr1 ptr2 count)
   (define who 'memcp)
   (with-arguments-validation (who)
-      ((pointer		ptr1)
-       (pointer		ptr2)
-       (number-of-bytes	count))
+      ((pointer			ptr1)
+       (pointer			ptr2)
+       (size_t-number-of-bytes	count))
     (capi.ffi-memcmp ptr1 ptr2 count)))
 
 ;;; --------------------------------------------------------------------
@@ -792,8 +1003,8 @@
 (define (memory->bytevector pointer length)
   (define who 'memory->bytevector)
   (with-arguments-validation (who)
-      ((pointer		pointer)
-       (number-of-bytes	length))
+      ((pointer			pointer)
+       (fixnum-number-of-bytes	length))
     (capi.ffi-memory->bytevector pointer length)))
 
 (define (bytevector->memory bv)
@@ -836,9 +1047,9 @@
 
 (define (guarded-realloc pointer number-of-bytes)
   (let ((rv (realloc pointer number-of-bytes)))
-    (and rv (begin
-	      (set-pointer-null! pointer)
-	      (%memory-guardian rv)))))
+    (and rv (if (pointer? rv)
+		(%memory-guardian rv)
+	      rv))))
 
 (define (guarded-realloc* pointer number-of-bytes)
   (or (guarded-realloc pointer number-of-bytes)
@@ -884,9 +1095,9 @@
 (define (strncmp pointer1 pointer2 count)
   (define who 'strncmp)
   (with-arguments-validation (who)
-      ((pointer		pointer1)
-       (pointer		pointer2)
-       (number-of-bytes	count))
+      ((pointer			pointer1)
+       (pointer			pointer2)
+       (size_t-number-of-bytes	count))
     (capi.ffi-strncmp pointer1 pointer2 count)))
 
 (define (strdup pointer)
@@ -902,8 +1113,8 @@
 (define (strndup pointer count)
   (define who 'strndup)
   (with-arguments-validation (who)
-      ((pointer		pointer)
-       (number-of-bytes	count))
+      ((pointer			pointer)
+       (size_t-number-of-bytes	count))
     (capi.ffi-strndup pointer count)))
 
 (define (strndup* pointer count)
@@ -932,8 +1143,8 @@
    ((pointer count)
     (define who 'cstring->bytevector)
     (with-arguments-validation (who)
-	((pointer		pointer)
-	 (number-of-bytes	count))
+	((pointer			pointer)
+	 (fixnum-number-of-bytes	count))
       (capi.ffi-cstring->bytevector pointer count)))))
 
 (define (cstring16->bytevector pointer)
@@ -954,8 +1165,8 @@
    ((pointer count)
     (define who 'cstring->string)
     (with-arguments-validation (who)
-	((pointer		pointer)
-	 (number-of-bytes	count))
+	((pointer			pointer)
+	 (fixnum-number-of-bytes	count))
       (ascii->string (capi.ffi-cstring->bytevector pointer count))))))
 
 (define (cstring16n->string pointer)
@@ -1474,7 +1685,11 @@
 
 ;;;; done
 
-(post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
+(set-rtd-printer! (type-descriptor memory-block)	%struct-memory-block-printer)
+
+(post-gc-hooks (cons* %memory-block-guardian-destructor
+		      %free-allocated-memory
+		      (post-gc-hooks)))
 
 )
 

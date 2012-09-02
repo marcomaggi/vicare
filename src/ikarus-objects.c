@@ -605,6 +605,19 @@ ika_integer_from_size_t (ikpcb * pcb, size_t N)
     return IK_VOID_OBJECT;
   }
 }
+ikptr
+ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N)
+{
+  switch (sizeof(ptrdiff_t)) {
+  case sizeof(uint64_t):
+    return ika_integer_from_uint64(pcb, (uint64_t)N);
+  case sizeof(int32_t):
+    return ika_integer_from_uint32(pcb, (uint32_t)N);
+  default:
+    ik_abort("unexpected ptrdiff_t size %d", sizeof(ptrdiff_t));
+    return IK_VOID_OBJECT;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 
@@ -790,6 +803,14 @@ ik_integer_to_ssize_t (ikptr x)
     return (ssize_t)ik_integer_to_sint32(x);
   else
     return (ssize_t)ik_integer_to_sint64(x);
+}
+ptrdiff_t
+ik_integer_to_ptrdiff_t (ikptr x)
+{
+  if (sizeof(ptrdiff_t) == sizeof(int32_t))
+    return (ptrdiff_t)ik_integer_to_sint32(x);
+  else
+    return (ptrdiff_t)ik_integer_to_sint64(x);
 }
 
 /* ------------------------------------------------------------------ */

@@ -53,7 +53,7 @@
 
     ffi-pointer?			ffi-pointer-null?
     ffi-fixnum->pointer			ffi-bignum->pointer
-    ffi-pointer->integer
+    ffi-pointer->integer		ffi-pointer-clone
     ffi-pointer->scheme-object		ffi-scheme-object->pointer
     ffi-pointer-add
     ffi-pointer-eq			ffi-pointer-neq
@@ -393,6 +393,9 @@
 
 (define-inline (ffi-pointer->scheme-object obj)
   (foreign-call "ikrt_pointer_to_scheme_object" obj))
+
+(define-inline (ffi-pointer-clone obj)
+  (foreign-call "ikrt_pointer_clone" obj))
 
 (define-inline (ffi-scheme-object->pointer obj)
   (foreign-call "ikrt_pointer_from_scheme_object" obj))

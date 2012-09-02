@@ -60,10 +60,19 @@
     pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
+    pointer->scheme-object		scheme-object->pointer
+    pointer-clone
     pointer-diff			pointer-add
     pointer=?				pointer<>?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
+
+    ;; memory blocks
+    make-memory-block			make-memory-block/guarded
+    memory-block?
+    memory-block?/non-null		memory-block?/not-null
+    memory-block-pointer		memory-block-size
+    memory-block-reset
 
     ;; raw memory allocation
     malloc				guarded-malloc

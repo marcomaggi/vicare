@@ -74,6 +74,17 @@ Notes for revision 0.2d16
 
 * Added (vicare infix) providing an infix to prefix transformer.
 
+* Added data structure MEMORY-BLOCK to reference a raw memory block with
+  both  a pointer  and its  size.   Many functions  accepting a  pointer
+  object as argument now accept a memory block too.
+
+* MALLOC, REALLOC, CALLOC, MEMCPY,  MEMMOVE, MEMSET, MEMCMP, STRNCMP and
+  STRNDUP now accept a "size_t"  exact integer as count argument, rather
+  than a fixnum.
+
+* Fixed bug  in GUARDED-REALLOC  causing the return  value to  be always
+  NULL.
+
 
 Notes for revision 0.2d15
 -------------------------
