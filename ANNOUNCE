@@ -85,6 +85,10 @@ Notes for revision 0.2d16
 * Fixed bug  in GUARDED-REALLOC  causing the return  value to  be always
   NULL.
 
+* Added functions to poke and peek  values to and from raw memory arrays
+  (like POINTER-SET  and POINTER-REF,  but ARRAY-SET and  ARRAY-REF with
+  scaled offsets).
+
 
 Notes for revision 0.2d15
 -------------------------

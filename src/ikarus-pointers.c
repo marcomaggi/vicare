@@ -38,6 +38,9 @@
 #  define RTLD_LOCAL	0 /* for cygwin, possibly incorrect */
 #endif
 
+#define IK_P_OFFSET(OBJ)	(IK_IS_FIXNUM(OBJ)? IK_UNFIX(OBJ) : ik_integer_to_ssize_t(OBJ))
+#define IK_P_INDEX(OBJ)		(IK_IS_FIXNUM(OBJ)? IK_UNFIX(OBJ) : ik_integer_to_ssize_t(OBJ))
+
 
 /** --------------------------------------------------------------------
  ** Interface to "errno".
@@ -579,62 +582,60 @@ ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb * pcb)
  ** Raw memory getters through pointers.
  ** ----------------------------------------------------------------- */
 
-#define IK_OFFSET(OBJ)	(IK_IS_FIXNUM(OBJ)? IK_UNFIX(OBJ) : ik_integer_to_ssize_t(OBJ))
-
 ikptr
 ikrt_ref_uint8 (ikptr s_pointer, ikptr s_offset)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint8_t *	data   = (uint8_t *)(memory + IK_OFFSET(s_offset));
+  uint8_t *	data   = (uint8_t *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_sint8 (ikptr s_pointer, ikptr s_offset)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int8_t *	data   = (int8_t *)(memory + IK_OFFSET(s_offset));
+  int8_t *	data   = (int8_t *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_uint16 (ikptr s_pointer, ikptr s_offset)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint16_t *	data   = (uint16_t *)(memory + IK_OFFSET(s_offset));
+  uint16_t *	data   = (uint16_t *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_sint16 (ikptr s_pointer, ikptr s_offset)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int16_t *	data   = (int16_t *)(memory + IK_OFFSET(s_offset));
+  int16_t *	data   = (int16_t *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_uint32 (ikptr s_pointer, ikptr s_offset, ikpcb * pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint32_t *	data   = (uint32_t *)(memory + IK_OFFSET(s_offset));
-  return ika_integer_from_ulong(pcb, (ik_ulong)(*data));
+  uint32_t *	data   = (uint32_t *)(memory + IK_P_OFFSET(s_offset));
+  return ika_integer_from_uint32(pcb, *data);
 }
 ikptr
 ikrt_ref_sint32 (ikptr s_pointer, ikptr s_offset, ikpcb * pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int32_t *	data   = (int32_t *)(memory + IK_OFFSET(s_offset));
-  return ika_integer_from_long(pcb, (long)(*data));
+  int32_t *	data   = (int32_t *)(memory + IK_P_OFFSET(s_offset));
+  return ika_integer_from_sint32(pcb, *data);
 }
 ikptr
 ikrt_ref_uint64 (ikptr s_pointer, ikptr s_offset, ikpcb * pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint64_t *	data   = (uint64_t *)(memory + IK_OFFSET(s_offset));
+  uint64_t *	data   = (uint64_t *)(memory + IK_P_OFFSET(s_offset));
   return ika_integer_from_uint64(pcb, *data);
 }
 ikptr
 ikrt_ref_sint64 (ikptr s_pointer, ikptr s_offset, ikpcb * pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int64_t *	data   = (int64_t *)(memory + IK_OFFSET(s_offset));
+  int64_t *	data   = (int64_t *)(memory + IK_P_OFFSET(s_offset));
   return ika_integer_from_sint64(pcb, *data);
 }
 
@@ -644,21 +645,21 @@ ikptr
 ikrt_ref_float (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  float *	data   = (float *)(memory + IK_OFFSET(s_offset));
+  float *	data   = (float *)(memory + IK_P_OFFSET(s_offset));
   return ika_flonum_from_double(pcb, (double)(*data));
 }
 ikptr
 ikrt_ref_double (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  double *	data   = (double *)(memory + IK_OFFSET(s_offset));
+  double *	data   = (double *)(memory + IK_P_OFFSET(s_offset));
   return ika_flonum_from_double(pcb, *data);
 }
 ikptr
 ikrt_ref_pointer (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  void **	data   = (void **)(memory + IK_OFFSET(s_offset));
+  void **	data   = (void **)(memory + IK_P_OFFSET(s_offset));
   return ika_pointer_alloc(pcb, (ik_ulong)(*data));
 }
 
@@ -668,70 +669,70 @@ ikptr
 ikrt_ref_char(ikptr s_pointer, ikptr s_offset /*, ikpcb* pcb*/)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  signed char *	data   = (signed char *)(memory + IK_OFFSET(s_offset));
+  signed char *	data   = (signed char *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_uchar(ikptr s_pointer, ikptr s_offset /*, ikpcb* pcb*/)
 {
   uint8_t *		memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  unsigned char *	data   = (unsigned char *)(memory + IK_OFFSET(s_offset));
+  unsigned char *	data   = (unsigned char *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_short(ikptr s_pointer, ikptr s_offset /*, ikpcb* pcb*/)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  short int *	data   = (short int *)(memory + IK_OFFSET(s_offset));
+  short int *	data   = (short int *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_ushort(ikptr s_pointer, ikptr s_offset /*, ikpcb* pcb*/)
 {
   uint8_t *		memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  unsigned short int *	data   = (unsigned short int *)(memory + IK_OFFSET(s_offset));
+  unsigned short int *	data   = (unsigned short int *)(memory + IK_P_OFFSET(s_offset));
   return IK_FIX(*data);
 }
 ikptr
 ikrt_ref_int (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int *		data   = (int *)(memory + IK_OFFSET(s_offset));
+  int *		data   = (int *)(memory + IK_P_OFFSET(s_offset));
   return (wordsize == 8)? IK_FIX(*data) : ika_integer_from_int(pcb, *data);
 }
 ikptr
 ikrt_ref_uint(ikptr s_pointer, ikptr s_offset , ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  unsigned int *data   = (unsigned int *)(memory + IK_OFFSET(s_offset));
+  unsigned int *data   = (unsigned int *)(memory + IK_P_OFFSET(s_offset));
   return (wordsize == 8)? IK_FIX(*data) : ika_integer_from_uint(pcb, *data);
 }
 ikptr
 ikrt_ref_long(ikptr s_pointer, ikptr s_offset , ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  long *	data   = (long *)(memory + IK_OFFSET(s_offset));
+  long *	data   = (long *)(memory + IK_P_OFFSET(s_offset));
   return ika_integer_from_long(pcb, *data);
 }
 ikptr
 ikrt_ref_ulong(ikptr s_pointer, ikptr s_offset , ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  ik_ulong *	data   = (ik_ulong *)(memory + IK_OFFSET(s_offset));
+  ik_ulong *	data   = (ik_ulong *)(memory + IK_P_OFFSET(s_offset));
   return ika_integer_from_ulong(pcb, *data);
 }
 ikptr
 ikrt_ref_longlong(ikptr s_pointer, ikptr s_offset , ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  ik_llong *	data   = (ik_llong *)(memory + IK_OFFSET(s_offset));
+  ik_llong *	data   = (ik_llong *)(memory + IK_P_OFFSET(s_offset));
   return ika_integer_from_llong(pcb, *data);
 }
 ikptr
 ikrt_ref_ulonglong(ikptr s_pointer, ikptr s_offset , ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  ik_ullong *	data   = (ik_ullong *)(memory + IK_OFFSET(s_offset));
+  ik_ullong *	data   = (ik_ullong *)(memory + IK_P_OFFSET(s_offset));
   return ika_integer_from_llong(pcb, *data);
 }
 
@@ -744,7 +745,7 @@ ikptr
 ikrt_set_uint8 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint8_t *	data	= (uint8_t *)(memory + IK_OFFSET(s_offset));
+  uint8_t *	data	= (uint8_t *)(memory + IK_P_OFFSET(s_offset));
   *data = IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -752,7 +753,7 @@ ikptr
 ikrt_set_sint8 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int8_t *	data   = (int8_t *)(memory + IK_OFFSET(s_offset));
+  int8_t *	data   = (int8_t *)(memory + IK_P_OFFSET(s_offset));
   *data = IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -760,7 +761,7 @@ ikptr
 ikrt_set_uint16 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint16_t *	data   = (uint16_t *)(memory + IK_OFFSET(s_offset));
+  uint16_t *	data   = (uint16_t *)(memory + IK_P_OFFSET(s_offset));
   *data = (uint16_t)IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -768,7 +769,7 @@ ikptr
 ikrt_set_sint16 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int16_t *	data   = (int16_t *)(memory + IK_OFFSET(s_offset));
+  int16_t *	data   = (int16_t *)(memory + IK_P_OFFSET(s_offset));
   *data = (int16_t)IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -776,7 +777,7 @@ ikptr
 ikrt_set_uint32 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint32_t *	data   = (uint32_t *)(memory + IK_OFFSET(s_offset));
+  uint32_t *	data   = (uint32_t *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_uint32(s_value);
   return IK_VOID_OBJECT;
 }
@@ -784,7 +785,7 @@ ikptr
 ikrt_set_sint32 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int32_t *	data   = (int32_t *)(memory + IK_OFFSET(s_offset));
+  int32_t *	data   = (int32_t *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_sint32(s_value);
   return IK_VOID_OBJECT;
 }
@@ -792,7 +793,7 @@ ikptr
 ikrt_set_uint64 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  uint64_t *	data   = (uint64_t *)(memory + IK_OFFSET(s_offset));
+  uint64_t *	data   = (uint64_t *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_uint64(s_value);
   return IK_VOID_OBJECT;
 }
@@ -800,7 +801,7 @@ ikptr
 ikrt_set_sint64 (ikptr s_pointer, ikptr s_offset, ikptr s_value)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int64_t *	data   = (int64_t *)(memory + IK_OFFSET(s_offset));
+  int64_t *	data   = (int64_t *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_sint64(s_value);
   return IK_VOID_OBJECT;
 }
@@ -811,7 +812,7 @@ ikptr
 ikrt_set_float (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  float *	data	= (float *)(memory + IK_OFFSET(s_offset));
+  float *	data	= (float *)(memory + IK_P_OFFSET(s_offset));
   *data = (float)IK_FLONUM_DATA(s_value);
   return IK_VOID_OBJECT;
 }
@@ -819,7 +820,7 @@ ikptr
 ikrt_set_double (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  double *	data	= (double *)(memory + IK_OFFSET(s_offset));
+  double *	data	= (double *)(memory + IK_P_OFFSET(s_offset));
   *data = IK_FLONUM_DATA(s_value);
   return IK_VOID_OBJECT;
 }
@@ -827,8 +828,8 @@ ikptr
 ikrt_set_pointer (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  void **	data	= (void **)(memory + IK_OFFSET(s_offset));
-  *data = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_value);
+  void **	data	= (void **)(memory + IK_P_OFFSET(s_offset));
+  *data = IK_POINTER_DATA_VOIDP(s_value);
   return IK_VOID_OBJECT;
 }
 
@@ -838,15 +839,15 @@ ikptr
 ikrt_set_char (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  char *	data	= (char *)(memory + IK_OFFSET(s_offset));
-  *data = (unsigned char)IK_UNFIX(s_value);
+  char *	data	= (char *)(memory + IK_P_OFFSET(s_offset));
+  *data = (char)IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
 ikptr
 ikrt_set_uchar (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *		memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  unsigned char *	data	= (unsigned char *)(memory + IK_OFFSET(s_offset));
+  unsigned char *	data	= (unsigned char *)(memory + IK_P_OFFSET(s_offset));
   *data = (unsigned char)IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -855,7 +856,7 @@ ikptr
 ikrt_set_short (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  short int *	data	= (short int *)(memory + IK_OFFSET(s_offset));
+  short int *	data	= (short int *)(memory + IK_P_OFFSET(s_offset));
   *data = (short int)IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -863,7 +864,7 @@ ikptr
 ikrt_set_ushort (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *		memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  unsigned short int *	data	= (unsigned short int *)(memory + IK_OFFSET(s_offset));
+  unsigned short int *	data	= (unsigned short int *)(memory + IK_P_OFFSET(s_offset));
   *data = (unsigned short int)IK_UNFIX(s_value);
   return IK_VOID_OBJECT;
 }
@@ -872,7 +873,7 @@ ikptr
 ikrt_set_int (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  int *		data	= (int *)(memory + IK_OFFSET(s_offset));
+  int *		data	= (int *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_int(s_value);
   return IK_VOID_OBJECT;
 }
@@ -880,7 +881,7 @@ ikptr
 ikrt_set_uint (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  unsigned int *data	= (unsigned int *)(memory + IK_OFFSET(s_offset));
+  unsigned int *data	= (unsigned int *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_uint(s_value);
   return IK_VOID_OBJECT;
 }
@@ -889,7 +890,7 @@ ikptr
 ikrt_set_long (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  long *	data	= (long *)(memory + IK_OFFSET(s_offset));
+  long *	data	= (long *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_long(s_value);
   return IK_VOID_OBJECT;
 }
@@ -897,7 +898,7 @@ ikptr
 ikrt_set_ulong (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  ik_ulong *	data	= (ik_ulong *)(memory + IK_OFFSET(s_offset));
+  ik_ulong *	data	= (ik_ulong *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_ulong(s_value);
   return IK_VOID_OBJECT;
 }
@@ -906,7 +907,7 @@ ikptr
 ikrt_set_longlong (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  ik_llong *	data	= (ik_llong *)(memory + IK_OFFSET(s_offset));
+  ik_llong *	data	= (ik_llong *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_llong(s_value);
   return IK_VOID_OBJECT;
 }
@@ -914,8 +915,330 @@ ikptr
 ikrt_set_ulonglong (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
 {
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
-  ik_ullong *	data	= (ik_ullong *)(memory + IK_OFFSET(s_offset));
+  ik_ullong *	data	= (ik_ullong *)(memory + IK_P_OFFSET(s_offset));
   *data = ik_integer_to_ullong(s_value);
+  return IK_VOID_OBJECT;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Raw memory array getters through pointers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_array_ref_uint8 (ikptr s_pointer, ikptr s_index)
+{
+  uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  uint8_t	data	= memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_sint8 (ikptr s_pointer, ikptr s_index)
+{
+  int8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  int8_t	data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_uint16 (ikptr s_pointer, ikptr s_index)
+{
+  uint16_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  uint16_t	data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_sint16 (ikptr s_pointer, ikptr s_index)
+{
+  int16_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  int16_t	data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_uint32 (ikptr s_pointer, ikptr s_index, ikpcb * pcb)
+{
+  uint32_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  uint32_t	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_uint32(pcb, data);
+}
+ikptr
+ikrt_array_ref_sint32 (ikptr s_pointer, ikptr s_index, ikpcb * pcb)
+{
+  int32_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  int32_t	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_sint32(pcb, data);
+}
+ikptr
+ikrt_array_ref_uint64 (ikptr s_pointer, ikptr s_index, ikpcb * pcb)
+{
+  uint64_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  uint64_t	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_uint64(pcb, data);
+}
+ikptr
+ikrt_array_ref_sint64 (ikptr s_pointer, ikptr s_index, ikpcb * pcb)
+{
+  int64_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  int64_t	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_sint64(pcb, data);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_array_ref_float (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
+{
+  float *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  float		data   = memory[IK_P_OFFSET(s_index)];
+  return ika_flonum_from_double(pcb, (double)data);
+}
+ikptr
+ikrt_array_ref_double (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
+{
+  double *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  double	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_flonum_from_double(pcb, data);
+}
+ikptr
+ikrt_array_ref_pointer (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
+{
+  void **	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  void *	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_pointer_alloc(pcb, (ik_ulong)data);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_array_ref_char(ikptr s_pointer, ikptr s_index /*, ikpcb* pcb*/)
+{
+  signed char *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  signed char	data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_uchar(ikptr s_pointer, ikptr s_index /*, ikpcb* pcb*/)
+{
+  unsigned char *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  unsigned char		data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_short(ikptr s_pointer, ikptr s_index /*, ikpcb* pcb*/)
+{
+  short int *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  short int	data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_ushort(ikptr s_pointer, ikptr s_index /*, ikpcb* pcb*/)
+{
+  unsigned short int *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  unsigned short int	data   = memory[IK_P_OFFSET(s_index)];
+  return IK_FIX(data);
+}
+ikptr
+ikrt_array_ref_int (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
+{
+  int *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  int 	data   = memory[IK_P_OFFSET(s_index)];
+  return (wordsize == 8)? IK_FIX(data) : ika_integer_from_int(pcb, data);
+}
+ikptr
+ikrt_array_ref_uint(ikptr s_pointer, ikptr s_index , ikpcb* pcb)
+{
+  unsigned int *memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  unsigned int	data   = memory[IK_P_OFFSET(s_index)];
+  return (wordsize == 8)? IK_FIX(data) : ika_integer_from_uint(pcb, data);
+}
+ikptr
+ikrt_array_ref_long(ikptr s_pointer, ikptr s_index , ikpcb* pcb)
+{
+  long *memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  long	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_long(pcb, data);
+}
+ikptr
+ikrt_array_ref_ulong(ikptr s_pointer, ikptr s_index , ikpcb* pcb)
+{
+  ik_ulong *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  ik_ulong	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_ulong(pcb, data);
+}
+ikptr
+ikrt_array_ref_longlong(ikptr s_pointer, ikptr s_index , ikpcb* pcb)
+{
+  ik_llong *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  ik_llong	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_llong(pcb, data);
+}
+ikptr
+ikrt_array_ref_ulonglong(ikptr s_pointer, ikptr s_index , ikpcb* pcb)
+{
+  ik_ullong *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  ik_ullong	data   = memory[IK_P_OFFSET(s_index)];
+  return ika_integer_from_llong(pcb, data);
+}
+
+
+/** --------------------------------------------------------------------
+ ** Raw memory array setters through pointers.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_array_set_uint8 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_sint8 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  int8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_uint16 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  uint16_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (uint16_t)IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_sint16 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  int16_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (int16_t)IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_uint32 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  uint32_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_uint32(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_sint32 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  int32_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_sint32(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_uint64 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  uint64_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_uint64(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_sint64 (ikptr s_pointer, ikptr s_index, ikptr s_value)
+{
+  uint64_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_sint64(s_value);
+  return IK_VOID_OBJECT;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_array_set_float (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  float *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (float)IK_FLONUM_DATA(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_double (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  double *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = IK_FLONUM_DATA(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_pointer (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  void **	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = IK_POINTER_DATA_VOIDP(s_value);
+  return IK_VOID_OBJECT;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_array_set_char (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  char *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (char)IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_uchar (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  unsigned char *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (unsigned char)IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+
+ikptr
+ikrt_array_set_short (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  short int *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (short int)IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_ushort (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  unsigned short int *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = (unsigned short int)IK_UNFIX(s_value);
+  return IK_VOID_OBJECT;
+}
+
+ikptr
+ikrt_array_set_int (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  int *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_int(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_uint (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  unsigned int *memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_uint(s_value);
+  return IK_VOID_OBJECT;
+}
+
+ikptr
+ikrt_array_set_long (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  long *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_long(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_ulong (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  ik_ulong *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_ulong(s_value);
+  return IK_VOID_OBJECT;
+}
+
+ikptr
+ikrt_array_set_longlong (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  ik_llong *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_llong(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_ulonglong (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  ik_ullong *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  memory[IK_P_OFFSET(s_index)] = ik_integer_to_ullong(s_value);
   return IK_VOID_OBJECT;
 }
 

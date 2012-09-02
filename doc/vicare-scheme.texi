@@ -5523,8 +5523,9 @@ informations on the internals of @var{port}.
 * iklib pointers objects::      Handling pointer values.
 * iklib pointers poke::         Poking values.
 * iklib pointers peek::         Peeking values.
+* iklib arrays poke::           Poking values into arrays.
+* iklib arrays peek::           Peeking values from arrays.
 @end menu
-
 
 @c page
 @node iklib pointers objects
@@ -5782,7 +5783,7 @@ With all the following functions: the @var{memory} argument must be a
 valid pointer object; the @var{offset} argument must be an exact integer
 in the range of the C language type @code{ptrdiff_t}.  When adding an
 offset to a pointer: all the following functions @strong{do not} scale
-the offset to the size of the poked value; pointer arithmetics is
+the offset to the size of the peeked value; pointer arithmetics is
 performed with byte offsets.
 
 The following bindings are exported by the libraries @library{vicare},
@@ -5896,6 +5897,262 @@ precision floating point number) stored at @var{offset} from
 
 @defun pointer-ref-c-pointer @var{memory} @var{offset}
 Return the pointer stored at @var{offset} from @var{memory}.  The size
+of the pointer (also the number of bytes loaded) depends on the
+architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
+systems.
+@end defun
+
+@c page
+@node iklib arrays poke
+@subsection Poking values into arrays
+
+
+With all the following functions: the @var{memory} argument must be a
+valid pointer object or @code{memory-block} instance; the @var{index}
+argument must be an exact integer in the range of the C language type
+@code{ptrdiff_t}.  When adding an offset to a pointer: all the following
+functions @strong{do} scale the index to the size of the poked value.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+@macro abitpoker{BYTENUM,BITNUM}
+Set to @var{value} the \BYTENUM\ of memory located at @var{index} from
+@var{memory}.  @var{VALUE} must be an exact integer in the range
+representable by \BITNUM\ bits.
+@end macro
+
+@macro acpoker{TYPE}
+Set to @var{value} a number of bytes corresponding to the @code{signed
+\TYPE\} or @code{unsigned \TYPE\} type located at @var{index} from
+@var{memory}.
+@end macro
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking bitwise sized exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory location selecting the size with the number of bits required to
+represent the value.
+
+
+@defun array-set-c-sint8! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint8! @var{memory} @var{index} @var{value}
+@abitpoker{single byte,8}
+@end defun
+
+
+@defun array-set-c-sint16! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint16! @var{memory} @var{index} @var{value}
+@abitpoker{two bytes,16}
+@end defun
+
+
+@defun array-set-c-sint32! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint32! @var{memory} @var{index} @var{value}
+@abitpoker{two bytes,32}
+@end defun
+
+
+@defun array-set-c-sint64! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint64! @var{memory} @var{index} @var{value}
+@abitpoker{two bytes,64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking C language exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory locations selecting the size according to the one used by the C
+language implementation.
+
+
+@defun array-set-c-signed-char! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-char! @var{memory} @var{index} @var{value}
+@acpoker{char}
+@end defun
+
+
+@defun array-set-c-signed-short! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-short! @var{memory} @var{index} @var{value}
+@acpoker{short int}
+@end defun
+
+
+@defun array-set-c-signed-int! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-int! @var{memory} @var{index} @var{value}
+@acpoker{int}
+@end defun
+
+
+
+@defun array-set-c-signed-long! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-long! @var{memory} @var{index} @var{value}
+@acpoker{long}
+@end defun
+
+
+@defun array-set-c-signed-long-long! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-long-long! @var{memory} @var{index} @var{value}
+@acpoker{long long}
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking floating point numbers
+
+
+@defun array-set-c-float! @var{memory} @var{index} @var{flonum}
+Convert the Scheme floating point number @var{flonum} (represented in
+@value{PRJNAME} as an @ieee{} 754 double precision floating point number) to a
+float (an @ieee{} 754 single precision floating point number) and store
+the result in the four bytes at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-double! @var{memory} @var{index} @var{flonum}
+Store the double precision @ieee{} 754 floating point value of the
+Scheme @var{flonum} in the eight bytes at @var{index} from
+@var{memory}.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking pointers
+
+
+@defun array-set-c-pointer! @var{memory} @var{index} @var{value}
+Store address of the raw memory location referenced by the pointer
+@var{value} at @var{index} from @var{memory}.
+@end defun
+
+@c page
+@node iklib arrays peek
+@subsection Peeking values from arrays
+
+
+With all the following functions: the @var{memory} argument must be a
+valid pointer object; the @var{index} argument must be an exact integer
+in the range of the C language type @code{ptrdiff_t}.  When adding an
+offset to a pointer: all the following functions @strong{do} scale the
+index to the size of the peeked value.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+@macro abitpeeker{BITNUM}
+Peek the \BITNUM\ bits located at @var{index} from @var{memory} and
+return them as signed or unsigned exact integer.
+@end macro
+
+@macro acpeeker{TYPE}
+Peek the @code{signed \TYPE\} or @code{unsigned \TYPE\} integer located
+at @var{index} from @var{memory} and return it as signed or unsigned
+exact integer.
+@end macro
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking bitwise sized exact integers
+
+The following functions retrieve signed and unsigned exact integers from
+raw memory location selecting the size with the number of bits required
+to represent the value.
+
+
+@defun array-ref-c-sint8 @var{memory} @var{index}
+@defunx array-ref-c-uint8 @var{memory} @var{index}
+@abitpeeker{8}
+@end defun
+
+
+@defun array-ref-c-sint16 @var{memory} @var{index}
+@defunx array-ref-c-uint16 @var{memory} @var{index}
+@abitpeeker{16}
+@end defun
+
+
+@defun array-ref-c-sint32 @var{memory} @var{index}
+@defunx array-ref-c-uint32 @var{memory} @var{index}
+@abitpeeker{32}
+@end defun
+
+
+@defun array-ref-c-sint64 @var{memory} @var{index}
+@defunx array-ref-c-uint64 @var{memory} @var{index}
+@abitpeeker{64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking C language exact integers
+
+The following functions store signed and unsigned exact integers from
+raw memory locations selecting the size according to the one used by the
+C language implementation.
+
+
+@defun array-ref-c-signed-char @var{memory} @var{index}
+@defunx array-ref-c-signed-char @var{memory} @var{index}
+@acpeeker{char}
+@end defun
+
+
+@defun array-ref-c-signed-short @var{memory} @var{index}
+@defunx array-ref-c-unsigned-short @var{memory} @var{index}
+@acpeeker{short int}
+@end defun
+
+
+@defun array-ref-c-signed-int @var{memory} @var{index}
+@defunx array-ref-c-unsigned-int @var{memory} @var{index}
+@acpeeker{int}
+@end defun
+
+
+@defun array-ref-c-signed-long @var{memory} @var{index}
+@defunx array-ref-c-unsigned-long @var{memory} @var{index}
+@acpeeker{long}
+@end defun
+
+
+@defun array-ref-c-signed-long-long @var{memory} @var{index}
+@defunx array-ref-c-unsigned-long-long @var{memory} @var{index}
+@acpeeker{long long}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking floating point numbers
+
+
+@defun array-ref-c-float @var{memory} @var{index}
+Return the four--byte float (represented as @ieee{} 754 single precision
+floating point number) stored at @var{index} from @var{memory}.  The
+value is extended to an @ieee{} 754 double precision floating point
+number that @value{PRJNAME} uses to represent inexact numbers.
+@end defun
+
+
+@defun array-ref-c-double @var{memory} @var{index}
+Return the eight--byte float (represented as @ieee{} 754 double
+precision floating point number) stored at @var{index} from
+@var{memory}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking pointers
+
+
+@defun array-ref-c-pointer @var{memory} @var{index}
+Return the pointer stored at @var{index} from @var{memory}.  The size
 of the pointer (also the number of bytes loaded) depends on the
 architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
 systems.

@@ -119,7 +119,36 @@
     pointer-set-c-signed-long-long!	pointer-set-c-unsigned-long-long!
 
     pointer-set-c-float!		pointer-set-c-double!
-    pointer-set-c-pointer!)
+    pointer-set-c-pointer!
+
+    ;; memory array accessors and mutators
+    array-ref-c-uint8			array-ref-c-sint8
+    array-ref-c-uint16			array-ref-c-sint16
+    array-ref-c-uint32			array-ref-c-sint32
+    array-ref-c-uint64			array-ref-c-sint64
+
+    array-ref-c-signed-char		array-ref-c-unsigned-char
+    array-ref-c-signed-short		array-ref-c-unsigned-short
+    array-ref-c-signed-int		array-ref-c-unsigned-int
+    array-ref-c-signed-long		array-ref-c-unsigned-long
+    array-ref-c-signed-long-long	array-ref-c-unsigned-long-long
+
+    array-ref-c-float			array-ref-c-double
+    array-ref-c-pointer
+
+    array-set-c-uint8!			array-set-c-sint8!
+    array-set-c-uint16!			array-set-c-sint16!
+    array-set-c-uint32!			array-set-c-sint32!
+    array-set-c-uint64!			array-set-c-sint64!
+
+    array-set-c-signed-char!		array-set-c-unsigned-char!
+    array-set-c-signed-short!		array-set-c-unsigned-short!
+    array-set-c-signed-int!		array-set-c-unsigned-int!
+    array-set-c-signed-long!		array-set-c-unsigned-long!
+    array-set-c-signed-long-long!	array-set-c-unsigned-long-long!
+
+    array-set-c-float!			array-set-c-double!
+    array-set-c-pointer!)
   (import (except (ikarus)
 		  ;; pointer objects
 		  pointer?
@@ -221,7 +250,36 @@
 		  pointer-set-c-signed-long-long!	pointer-set-c-unsigned-long-long!
 
 		  pointer-set-c-float!			pointer-set-c-double!
-		  pointer-set-c-pointer!)
+		  pointer-set-c-pointer!
+
+		  ;; memory array accessors and mutators
+		  array-ref-c-uint8			array-ref-c-sint8
+		  array-ref-c-uint16			array-ref-c-sint16
+		  array-ref-c-uint32			array-ref-c-sint32
+		  array-ref-c-uint64			array-ref-c-sint64
+
+		  array-ref-c-signed-char		array-ref-c-unsigned-char
+		  array-ref-c-signed-short		array-ref-c-unsigned-short
+		  array-ref-c-signed-int		array-ref-c-unsigned-int
+		  array-ref-c-signed-long		array-ref-c-unsigned-long
+		  array-ref-c-signed-long-long		array-ref-c-unsigned-long-long
+
+		  array-ref-c-float			array-ref-c-double
+		  array-ref-c-pointer
+
+		  array-set-c-uint8!			array-set-c-sint8!
+		  array-set-c-uint16!			array-set-c-sint16!
+		  array-set-c-uint32!			array-set-c-sint32!
+		  array-set-c-uint64!			array-set-c-sint64!
+
+		  array-set-c-signed-char!		array-set-c-unsigned-char!
+		  array-set-c-signed-short!		array-set-c-unsigned-short!
+		  array-set-c-signed-int!		array-set-c-unsigned-int!
+		  array-set-c-signed-long!		array-set-c-unsigned-long!
+		  array-set-c-signed-long-long!		array-set-c-unsigned-long-long!
+
+		  array-set-c-float!			array-set-c-double!
+		  array-set-c-pointer!)
     (only (ikarus system $pointers)
 	  $pointer=)
     (vicare syntactic-extensions)
@@ -333,6 +391,13 @@
   (assertion-violation who
     "offset from pointer out of range for data size"
     memory offset data-size))
+
+(define-argument-validation (memory/index who memory index data-size)
+  (or (pointer? memory)
+      (<= (* index data-size) (memory-block-size memory)))
+  (assertion-violation who
+    "offset from pointer out of range for data size"
+    memory index data-size))
 
 (define-argument-validation (size_t-number-of-bytes who obj)
   (words.size_t? obj)
@@ -701,7 +766,8 @@
   (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)
   (define-pointer-comparison pointer>=?		capi.ffi-pointer-ge))
 
-;;; --------------------------------------------------------------------
+
+;;;; pointer accessors
 
 (let-syntax
     ((define-accessor (syntax-rules ()
@@ -772,7 +838,8 @@
     capi.ffi-pointer-ref-c-unsigned-long-long
     words.SIZEOF_LONG_LONG))
 
-;;; --------------------------------------------------------------------
+
+;;;; pointer mutators
 
 (let-syntax
     ((define-mutator (syntax-rules ()
@@ -862,6 +929,172 @@
     words.SIZEOF_LONG)
   (define-mutator pointer-set-c-unsigned-long-long!
     capi.ffi-pointer-set-c-unsigned-long-long!
+    unsigned-long-long
+    words.SIZEOF_LONG_LONG))
+
+
+;;;; array accessors
+
+(let-syntax
+    ((define-accessor (syntax-rules ()
+			((_ ?who ?accessor ?data-size)
+			 (define (?who memory offset)
+			   (define who '?who)
+			   (with-arguments-validation (who)
+			       ((pointer/memory-block	memory)
+				(ptrdiff		offset)
+				(memory/index		memory offset ?data-size))
+			     (?accessor memory offset)))))))
+  (define-accessor array-ref-c-uint8
+    capi.ffi-array-ref-c-uint8 1)
+  (define-accessor array-ref-c-sint8
+    capi.ffi-array-ref-c-sint8 1)
+  (define-accessor array-ref-c-uint16
+    capi.ffi-array-ref-c-uint16 2)
+  (define-accessor array-ref-c-sint16
+    capi.ffi-array-ref-c-sint16 2)
+  (define-accessor array-ref-c-uint32
+    capi.ffi-array-ref-c-uint32 4)
+  (define-accessor array-ref-c-sint32
+    capi.ffi-array-ref-c-sint32 4)
+  (define-accessor array-ref-c-uint64
+    capi.ffi-array-ref-c-uint64 8)
+  (define-accessor array-ref-c-sint64
+    capi.ffi-array-ref-c-sint64 8)
+
+  (define-accessor array-ref-c-float
+    capi.ffi-array-ref-c-float
+    words.SIZEOF_FLOAT)
+  (define-accessor array-ref-c-double
+    capi.ffi-array-ref-c-double
+    words.SIZEOF_DOUBLE)
+  (define-accessor array-ref-c-pointer
+    capi.ffi-array-ref-c-pointer
+    words.SIZEOF_POINTER)
+
+  (define-accessor array-ref-c-signed-char
+    capi.ffi-array-ref-c-signed-char
+    words.SIZEOF_CHAR)
+  (define-accessor array-ref-c-signed-short
+    capi.ffi-array-ref-c-signed-short
+    words.SIZEOF_SHORT)
+  (define-accessor array-ref-c-signed-int
+    capi.ffi-array-ref-c-signed-int
+    words.SIZEOF_INT)
+  (define-accessor array-ref-c-signed-long
+    capi.ffi-array-ref-c-signed-long
+    words.SIZEOF_LONG)
+  (define-accessor array-ref-c-signed-long-long
+    capi.ffi-array-ref-c-signed-long-long
+    words.SIZEOF_LONG_LONG)
+
+  (define-accessor array-ref-c-unsigned-char
+    capi.ffi-array-ref-c-unsigned-char
+    words.SIZEOF_CHAR)
+  (define-accessor array-ref-c-unsigned-short
+    capi.ffi-array-ref-c-unsigned-short
+    words.SIZEOF_SHORT)
+  (define-accessor array-ref-c-unsigned-int
+    capi.ffi-array-ref-c-unsigned-int
+    words.SIZEOF_INT)
+  (define-accessor array-ref-c-unsigned-long
+    capi.ffi-array-ref-c-unsigned-long
+    words.SIZEOF_LONG)
+  (define-accessor array-ref-c-unsigned-long-long
+    capi.ffi-array-ref-c-unsigned-long-long
+    words.SIZEOF_LONG_LONG))
+
+
+;;;; array mutators
+
+(let-syntax
+    ((define-mutator (syntax-rules ()
+		       ((_ ?who ?mutator ?word-type ?data-size)
+			(define (?who memory offset value)
+			  (define who '?who)
+			  (with-arguments-validation (who)
+			      ((pointer/memory-block	memory)
+			       (ptrdiff			offset)
+			       (memory/index		memory offset ?data-size)
+			       (?word-type		value))
+			    (?mutator memory offset value)))))))
+  (define-mutator array-set-c-uint8!
+    capi.ffi-array-set-c-uint8!
+    uint8 1)
+  (define-mutator array-set-c-sint8!
+    capi.ffi-array-set-c-sint8!
+    sint8 1)
+  (define-mutator array-set-c-uint16!
+    capi.ffi-array-set-c-uint16!
+    uint16 2)
+  (define-mutator array-set-c-sint16!
+    capi.ffi-array-set-c-sint16!
+    sint16 2)
+  (define-mutator array-set-c-uint32!
+    capi.ffi-array-set-c-uint32!
+    uint32 4)
+  (define-mutator array-set-c-sint32!
+    capi.ffi-array-set-c-sint32!
+    sint32 4)
+  (define-mutator array-set-c-uint64!
+    capi.ffi-array-set-c-uint64!
+    uint64 8)
+  (define-mutator array-set-c-sint64!
+    capi.ffi-array-set-c-sint64!
+    sint64 8)
+
+  (define-mutator array-set-c-float!
+    capi.ffi-array-set-c-float!
+    flonum
+    words.SIZEOF_FLOAT)
+  (define-mutator array-set-c-double!
+    capi.ffi-array-set-c-double!
+    flonum
+    words.SIZEOF_DOUBLE)
+  (define-mutator array-set-c-pointer!
+    capi.ffi-array-set-c-pointer!
+    pointer
+    words.SIZEOF_POINTER)
+
+  (define-mutator array-set-c-signed-char!
+    capi.ffi-array-set-c-signed-char!
+    signed-char
+    words.SIZEOF_CHAR)
+  (define-mutator array-set-c-signed-short!
+    capi.ffi-array-set-c-signed-short!
+    signed-short
+    words.SIZEOF_SHORT)
+  (define-mutator array-set-c-signed-int!
+    capi.ffi-array-set-c-signed-int!
+    signed-int
+    words.SIZEOF_INT)
+  (define-mutator array-set-c-signed-long!
+    capi.ffi-array-set-c-signed-long!
+    signed-long
+    words.SIZEOF_LONG)
+  (define-mutator array-set-c-signed-long-long!
+    capi.ffi-array-set-c-signed-long-long!
+    signed-long-long
+    words.SIZEOF_LONG)
+
+  (define-mutator array-set-c-unsigned-char!
+    capi.ffi-array-set-c-unsigned-char!
+    unsigned-char
+    words.SIZEOF_CHAR)
+  (define-mutator array-set-c-unsigned-short!
+    capi.ffi-array-set-c-unsigned-short!
+    unsigned-short
+    words.SIZEOF_SHORT)
+  (define-mutator array-set-c-unsigned-int!
+    capi.ffi-array-set-c-unsigned-int!
+    unsigned-int
+    words.SIZEOF_INT)
+  (define-mutator array-set-c-unsigned-long!
+    capi.ffi-array-set-c-unsigned-long!
+    unsigned-long
+    words.SIZEOF_LONG)
+  (define-mutator array-set-c-unsigned-long-long!
+    capi.ffi-array-set-c-unsigned-long-long!
     unsigned-long-long
     words.SIZEOF_LONG_LONG))
 

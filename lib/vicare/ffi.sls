@@ -145,7 +145,36 @@
     pointer-set-c-signed-long-long!	pointer-set-c-unsigned-long-long!
 
     pointer-set-c-float!		pointer-set-c-double!
-    pointer-set-c-pointer!)
+    pointer-set-c-pointer!
+
+    ;; memory array accessors and mutators
+    array-ref-c-uint8			array-ref-c-sint8
+    array-ref-c-uint16			array-ref-c-sint16
+    array-ref-c-uint32			array-ref-c-sint32
+    array-ref-c-uint64			array-ref-c-sint64
+
+    array-ref-c-signed-char		array-ref-c-unsigned-char
+    array-ref-c-signed-short		array-ref-c-unsigned-short
+    array-ref-c-signed-int		array-ref-c-unsigned-int
+    array-ref-c-signed-long		array-ref-c-unsigned-long
+    array-ref-c-signed-long-long	array-ref-c-unsigned-long-long
+
+    array-ref-c-float			array-ref-c-double
+    array-ref-c-pointer
+
+    array-set-c-uint8!			array-set-c-sint8!
+    array-set-c-uint16!			array-set-c-sint16!
+    array-set-c-uint32!			array-set-c-sint32!
+    array-set-c-uint64!			array-set-c-sint64!
+
+    array-set-c-signed-char!		array-set-c-unsigned-char!
+    array-set-c-signed-short!		array-set-c-unsigned-short!
+    array-set-c-signed-int!		array-set-c-unsigned-int!
+    array-set-c-signed-long!		array-set-c-unsigned-long!
+    array-set-c-signed-long-long!	array-set-c-unsigned-long-long!
+
+    array-set-c-float!			array-set-c-double!
+    array-set-c-pointer!)
   (import (vicare)
     (ikarus system $foreign)
     (vicare errno))

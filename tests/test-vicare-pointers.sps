@@ -788,6 +788,181 @@
   (collect))
 
 
+(parametrise ((check-test-name	'array-access))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint8! P 2 123)
+	(array-ref-c-uint8  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint8! P 2 (words.greatest-u8))
+	(array-ref-c-uint8  P 2))
+    => (words.greatest-u8))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint8! P 2 (words.least-u8))
+	(array-ref-c-uint8  P 2))
+    => (words.least-u8))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint8! P 2 -123)
+	(array-ref-c-sint8  P 2))
+    => -123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint8! P 2 (words.greatest-s8))
+	(array-ref-c-sint8  P 2))
+    => (words.greatest-s8))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint8! P 2 (words.least-s8))
+	(array-ref-c-sint8  P 2))
+    => (words.least-s8))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint16! P 2 123)
+	(array-ref-c-uint16  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint16! P 2 -123)
+	(array-ref-c-sint16  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint32! P 2 123)
+	(array-ref-c-uint32  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint32! P 2 -123)
+	(array-ref-c-sint32  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-uint64! P 2 123)
+	(array-ref-c-uint64  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-sint64! P 2 -123)
+	(array-ref-c-sint64  P 2))
+    => -123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-float! P 2 1.23)
+	(fl>? 0.0001 (fl- 1.23 (array-ref-c-float  P 2))))
+    => #t)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-double! P 2 -1.23)
+	(array-ref-c-double  P 2))
+    => -1.23)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-pointer! P 2 (integer->pointer 123))
+	(array-ref-c-pointer  P 2))
+    => (integer->pointer 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-char! P 2 123)
+	(array-ref-c-signed-char  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-char! P 2 123)
+	(array-ref-c-unsigned-char  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-short! P 2 123)
+	(array-ref-c-signed-short  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-short! P 2 123)
+	(array-ref-c-unsigned-short  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-int! P 2 123)
+	(array-ref-c-signed-int  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-int! P 2 123)
+	(array-ref-c-unsigned-int  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-long! P 2 123)
+	(array-ref-c-signed-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-long! P 2 123)
+	(array-ref-c-unsigned-long  P 2))
+    => 123)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-signed-long-long! P 2 123)
+	(array-ref-c-signed-long-long  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-unsigned-long-long! P 2 123)
+	(array-ref-c-unsigned-long-long  P 2))
+    => 123)
+
+  (collect))
+
+
 (parametrise ((check-test-name	'mblock-access))
 
   (define (block-malloc number-of-bytes)
