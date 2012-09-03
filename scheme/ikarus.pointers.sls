@@ -22,7 +22,7 @@
     pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
-    pointer-clone
+    pointer-clone			pointer-and-offset?
     pointer->scheme-object		scheme-object->pointer
     pointer-diff			pointer-add
     pointer=?				pointer<>?
@@ -155,7 +155,7 @@
 		  null-pointer				pointer-null?
 		  pointer->integer			integer->pointer
 		  pointer->scheme-object		scheme-object->pointer
-		  pointer-clone
+		  pointer-clone				pointer-and-offset?
 		  pointer-diff				pointer-add
 		  pointer=?				pointer<>?
 		  pointer<?				pointer>?
@@ -325,6 +325,10 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (exact-integer who obj)
+  (or (fixnum? obj) (bignum? obj))
+  (assertion-violation who "expected exact integer as argument" obj))
+
 (define-argument-validation (non-negative-exact-integer who obj)
   (or (and (fixnum? obj) (unsafe.fx<= 0 obj))
       (and (bignum? obj) (<= 0 obj)))
@@ -398,6 +402,12 @@
   (assertion-violation who
     "offset from pointer out of range for data size"
     memory index data-size))
+
+(define-argument-validation (pointer-and-offset who pointer offset)
+  (%pointer-and-offset? pointer offset)
+  (assertion-violation who
+    "offset would cause pointer overflow or underflow"
+    pointer offset))
 
 (define-argument-validation (size_t-number-of-bytes who obj)
   (words.size_t? obj)
@@ -721,11 +731,42 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (pointer-and-offset? pointer offset)
+  (define who 'pointer-and-offset?)
+  (with-arguments-validation (who)
+      ((pointer		pointer)
+       (exact-integer	offset))
+    (%pointer-and-offset? pointer offset)))
+
+(define (%pointer-and-offset? pointer offset)
+  (cond ((zero? offset)
+	 #t)
+	((negative? offset)
+	 ;;            pointer
+	 ;;               v
+	 ;; |-------------+----------| range of pointers
+	 ;; 0                       max
+	 ;;
+	 ;; |-------------| range of (- offset)
+	 ;;
+	 (<= (- offset) (capi.ffi-pointer->integer pointer)))
+	(else
+	 ;;            pointer
+	 ;;               v
+	 ;; |-------------+----------| range of pointers
+	 ;; 0                       max
+	 ;;
+	 ;;               |----------| range of (- offset)
+	 ;;
+	 (<= offset (- (words.greatest-c-pointer)
+		       (capi.ffi-pointer->integer pointer))))))
+
 (define (pointer-add ptr delta)
   (define who 'pointer-add)
   (with-arguments-validation (who)
-      ((pointer  ptr)
-       (ptrdiff  delta))
+      ((pointer			ptr)
+       (exact-integer		delta)
+       (pointer-and-offset	ptr delta))
     (let ((rv (capi.ffi-pointer-add ptr delta)))
       (or rv
 	  (assertion-violation who

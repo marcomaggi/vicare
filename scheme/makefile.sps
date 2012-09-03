@@ -1914,6 +1914,7 @@
     (pointer-null?				$for i v $language)
     (pointer-diff				$for i v $language)
     (pointer-add				$for i v $language)
+    (pointer-and-offset?			$for i v $language)
     (pointer=?					$for i v $language)
     (pointer<>?					$for i v $language)
     (pointer<?					$for i v $language)

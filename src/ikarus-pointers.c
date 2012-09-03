@@ -733,7 +733,7 @@ ikrt_ref_ulonglong(ikptr s_pointer, ikptr s_offset , ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
   ik_ullong *	data   = (ik_ullong *)(memory + IK_P_OFFSET(s_offset));
-  return ika_integer_from_llong(pcb, *data);
+  return ika_integer_from_ullong(pcb, *data);
 }
 
 
@@ -1076,7 +1076,7 @@ ikrt_array_ref_ulonglong(ikptr s_pointer, ikptr s_index , ikpcb* pcb)
 {
   ik_ullong *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
   ik_ullong	data   = memory[IK_P_OFFSET(s_index)];
-  return ika_integer_from_llong(pcb, data);
+  return ika_integer_from_ullong(pcb, data);
 }
 
 

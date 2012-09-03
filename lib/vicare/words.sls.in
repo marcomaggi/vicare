@@ -397,10 +397,10 @@
 (define-inline (least-c-unsigned-char)		0)
 (define-inline (least-c-signed-char)		CHAR_MIN)
 
-(define-inline (greatest-c-unsigned-short)	USHORT_MAX)
-(define-inline (greatest-c-signed-short)	SHORT_MAX)
+(define-inline (greatest-c-unsigned-short)	USHRT_MAX)
+(define-inline (greatest-c-signed-short)	SHRT_MAX)
 (define-inline (least-c-unsigned-short)		0)
-(define-inline (least-c-signed-short)		SHORT_MIN)
+(define-inline (least-c-signed-short)		SHRT_MIN)
 
 (define-inline (greatest-c-unsigned-int)	UINT_MAX)
 (define-inline (greatest-c-signed-int)		INT_MAX)

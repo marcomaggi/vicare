@@ -5610,6 +5610,12 @@ assertion violation.
 @end defun
 
 
+@defun pointer-and-offset? @var{ptr} @var{diff}
+Return true if the exact integer @var{diff} can be added to @var{ptr}
+without causing a pointer overflow or underflow.
+@end defun
+
+
 @defun pointer=? @vari{ptr} @varii{ptr}
 @defunx pointer<>? @vari{ptr} @varii{ptr}
 @defunx pointer<? @vari{ptr} @varii{ptr}
