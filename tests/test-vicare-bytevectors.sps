@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (vicare words)
+  (prefix (vicare words) words.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -979,13 +979,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 1 (least-u8*)))
-    => (list (least-u8*)))
+	(bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)))
+    => (list (words.least-u8*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u8-set! #vu8(1 2 3) 1 (greatest-u8*)))
-    => (list (greatest-u8*)))
+	(bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)))
+    => (list (words.greatest-u8*)))
 
   #t)
 
@@ -1084,13 +1084,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 1 (least-s8*)))
-    => (list (least-s8*)))
+	(bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)))
+    => (list (words.least-s8*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s8-set! #vs8(1 2 3) 1 (greatest-s8*)))
-    => (list (greatest-s8*)))
+	(bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)))
+    => (list (words.greatest-s8*)))
 
   #t)
 
@@ -1223,13 +1223,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (least-u16*) (endianness little)))
-    => (list (least-u16*)))
+	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)))
+    => (list (words.least-u16*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (greatest-u16*) (endianness little)))
-    => `(,(greatest-u16*)))
+	(bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)))
+    => `(,(words.greatest-u16*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1382,13 +1382,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 0 (least-u16*)))
-    => (list (least-u16*)))
+	(bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 0 (words.least-u16*)))
+    => (list (words.least-u16*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 0 (greatest-u16*)))
-    => `(,(greatest-u16*)))
+	(bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 0 (words.greatest-u16*)))
+    => `(,(words.greatest-u16*)))
 
   #t)
 
@@ -1531,13 +1531,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (least-s16*) (endianness little)))
-    => (list (least-s16*)))
+	(bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*) (endianness little)))
+    => (list (words.least-s16*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (greatest-s16*) (endianness little)))
-    => `(,(greatest-s16*)))
+	(bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*) (endianness little)))
+    => `(,(words.greatest-s16*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1588,25 +1588,25 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s16-set! bv 0 (greatest-s16) (endianness little))
+	(bytevector-s16-set! bv 0 (words.greatest-s16) (endianness little))
 	bv)
     => #vu8(#xFF 127))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s16-set! bv 0 (greatest-s16) (endianness big))
+	(bytevector-s16-set! bv 0 (words.greatest-s16) (endianness big))
 	bv)
     => #vu8(127 #xFF))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s16-set! bv 0 (least-s16) (endianness little))
+	(bytevector-s16-set! bv 0 (words.least-s16) (endianness little))
 	bv)
     => #vu8(0 #x80))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s16-set! bv 0 (least-s16) (endianness big))
+	(bytevector-s16-set! bv 0 (words.least-s16) (endianness big))
 	bv)
     => #vu8(#x80 0))
 
@@ -1713,13 +1713,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 (least-s16*)))
-    => (list (least-s16*)))
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 (words.least-s16*)))
+    => (list (words.least-s16*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 (greatest-s16*)))
-    => `(,(greatest-s16*)))
+	(bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 0 (words.greatest-s16*)))
+    => `(,(words.greatest-s16*)))
 
   #t)
 
@@ -1740,7 +1740,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s16-native-set! bv 0 (greatest-s16))
+	(bytevector-s16-native-set! bv 0 (words.greatest-s16))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#xFF 127))
@@ -1748,7 +1748,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s16-native-set! bv 0 (least-s16))
+	(bytevector-s16-native-set! bv 0 (words.least-s16))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(0 #x80))
@@ -1883,13 +1883,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (least-u32*) (endianness little)))
-    => `(,(least-u32*)))
+	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.least-u32*) (endianness little)))
+    => `(,(words.least-u32*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (greatest-u32*) (endianness little)))
-    => `(,(greatest-u32*)))
+	(bytevector-u32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.greatest-u32*) (endianness little)))
+    => `(,(words.greatest-u32*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2054,13 +2054,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (least-u32*)))
-    => `(,(least-u32*)))
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.least-u32*)))
+    => `(,(words.least-u32*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (greatest-u32*)))
-    => `(,(greatest-u32*)))
+	(bytevector-u32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.greatest-u32*)))
+    => `(,(words.greatest-u32*)))
 
   #t)
 
@@ -2213,13 +2213,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (least-s32*) (endianness little)))
-    => `(,(least-s32*)))
+	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.least-s32*) (endianness little)))
+    => `(,(words.least-s32*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (greatest-s32*) (endianness little)))
-    => `(,(greatest-s32*)))
+	(bytevector-s32-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 1 (words.greatest-s32*) (endianness little)))
+    => `(,(words.greatest-s32*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2276,25 +2276,25 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-set! bv 0 (greatest-s32) (endianness little))
+	(bytevector-s32-set! bv 0 (words.greatest-s32) (endianness little))
 	bv)
     => #vu8(#xFF #xFF #xFF 127))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-set! bv 0 (greatest-s32) (endianness big))
+	(bytevector-s32-set! bv 0 (words.greatest-s32) (endianness big))
 	bv)
     => #vu8(127 #xFF #xFF #xFF))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-set! bv 0 (least-s32) (endianness little))
+	(bytevector-s32-set! bv 0 (words.least-s32) (endianness little))
 	bv)
     => #vu8(0 0 0 #x80))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-set! bv 0 (least-s32) (endianness big))
+	(bytevector-s32-set! bv 0 (words.least-s32) (endianness big))
 	bv)
     => #vu8(#x80 0 0 0))
 
@@ -2402,13 +2402,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (least-s32*)))
-    => `(,(least-s32*)))
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.least-s32*)))
+    => `(,(words.least-s32*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (greatest-s32*)))
-    => `(,(greatest-s32*)))
+	(bytevector-s32-native-set! #vu8(1 0 0 0 2 0 0 0 3 0 0 0) 0 (words.greatest-s32*)))
+    => `(,(words.greatest-s32*)))
 
   #t)
 
@@ -2431,7 +2431,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-native-set! bv 0 (greatest-s32))
+	(bytevector-s32-native-set! bv 0 (words.greatest-s32))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#xFF #xFF #xFF 127))
@@ -2439,7 +2439,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s32-native-set! bv 0 (least-s32))
+	(bytevector-s32-native-set! bv 0 (words.least-s32))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(0 0 0 #x80))
@@ -2586,13 +2586,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u64-set! the-bv 1 (least-u64*) (endianness little)))
-    => `(,(least-u64*)))
+	(bytevector-u64-set! the-bv 1 (words.least-u64*) (endianness little)))
+    => `(,(words.least-u64*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u64-set! the-bv 1 (greatest-u64*) (endianness little)))
-    => `(,(greatest-u64*)))
+	(bytevector-u64-set! the-bv 1 (words.greatest-u64*) (endianness little)))
+    => `(,(words.greatest-u64*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2769,13 +2769,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-u64-native-set! the-bv 0 (least-u64*)))
-    => `(,(least-u64*)))
+	(bytevector-u64-native-set! the-bv 0 (words.least-u64*)))
+    => `(,(words.least-u64*)))
 
   (check	;too high
       (catch #f
-	(bytevector-u64-native-set! the-bv 0 (greatest-u64*)))
-    => `(,(greatest-u64*)))
+	(bytevector-u64-native-set! the-bv 0 (words.greatest-u64*)))
+    => `(,(words.greatest-u64*)))
 
   #t)
 
@@ -2914,25 +2914,25 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s64-set! bv 0 (greatest-s64) (endianness little))
+	(bytevector-s64-set! bv 0 (words.greatest-s64) (endianness little))
 	bv)
     => #vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF 127))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s64-set! bv 0 (greatest-s64) (endianness big))
+	(bytevector-s64-set! bv 0 (words.greatest-s64) (endianness big))
 	bv)
     => #vu8(127 #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s64-set! bv 0 (least-s64) (endianness little))
+	(bytevector-s64-set! bv 0 (words.least-s64) (endianness little))
 	bv)
     => #vu8(0 0 0 0 0 0 0 #x80))
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s64-set! bv 0 (least-s64) (endianness big))
+	(bytevector-s64-set! bv 0 (words.least-s64) (endianness big))
 	bv)
     => #vu8(#x80 0 0 0 0 0 0 0))
 
@@ -2977,13 +2977,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s64-set! the-bv-le 1 (least-s64*) (endianness little)))
-    => `(,(least-s64*)))
+	(bytevector-s64-set! the-bv-le 1 (words.least-s64*) (endianness little)))
+    => `(,(words.least-s64*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s64-set! the-bv-le 1 (greatest-s64*) (endianness little)))
-    => `(,(greatest-s64*)))
+	(bytevector-s64-set! the-bv-le 1 (words.greatest-s64*) (endianness little)))
+    => `(,(words.greatest-s64*)))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -3125,7 +3125,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s64-native-set! bv 0 (greatest-s64))
+	(bytevector-s64-native-set! bv 0 (words.greatest-s64))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(#xFF #xFF #xFF #xFF #xFF #xFF #xFF 127))
@@ -3133,7 +3133,7 @@
 
   (check
       (let ((bv (make-bytevector bytes-per-word)))
-	(bytevector-s64-native-set! bv 0 (least-s64))
+	(bytevector-s64-native-set! bv 0 (words.least-s64))
 	bv)
     => (case (native-endianness)
 	 ((little)	#vu8(0 0 0 0 0 0 0 #x80))
@@ -3185,13 +3185,13 @@
 
   (check	;too low
       (catch #f
-	(bytevector-s64-native-set! the-bv-le 0 (least-s64*)))
-    => `(,(least-s64*)))
+	(bytevector-s64-native-set! the-bv-le 0 (words.least-s64*)))
+    => `(,(words.least-s64*)))
 
   (check	;too high
       (catch #f
-	(bytevector-s64-native-set! the-bv-le 0 (greatest-s64*)))
-    => `(,(greatest-s64*)))
+	(bytevector-s64-native-set! the-bv-le 0 (words.greatest-s64*)))
+    => `(,(words.greatest-s64*)))
 
   #t)
 
