@@ -17805,21 +17805,6 @@ the 256-bit range; else return @false{}.
 @end deffn
 
 
-@deffn Syntax ptrdiff? @var{obj}
-Return @true{} if @var{obj} is a fixnum or bignum which can be
-interpreted as difference between memory pointer values; else return
-@false{}.
-
-On 32-bit platforms this means @var{obj} is between the minimum for
-signed 32-bit integers and the maximum for unsigned 32-bit integers.
-
-On 64-bit platforms this means @var{obj} is between the minimum for
-signed 64-bit integers and the maximum for unsigned 64-bit integers.
-@example
-@end example
-@end deffn
-
-
 @deffn Syntax unsigned-char? @var{obj}
 @deffnx Syntax signed-char? @var{obj}
 Return @true{} if @var{obj} is a fixnum in the range representable with

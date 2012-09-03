@@ -49,7 +49,7 @@
     word-u64?		word-s64?
     word-u128?		word-s128?
     word-u256?		word-s256?
-    machine-word?	ptrdiff?
+    machine-word?
 
     unsigned-char?	signed-char?
     unsigned-short?	signed-short?
@@ -368,17 +368,6 @@
   (case-word-size
    ((32) (word-u32? N))
    ((64) (word-u64? N))))
-
-(define-inline (ptrdiff? N)
-  (case-word-size
-   ((32) (or (fixnum? N)
-	     (and (bignum? N)
-		  ($bnbn>= N S32MIN)
-		  ($bnbn<= N U32MAX))))
-   ((64) (or (fixnum? N)
-	     (and (bignum? N)
-		  ($bnbn>= N S64MIN)
-		  ($bnbn<= N U64MAX))))))
 
 ;;; --------------------------------------------------------------------
 
