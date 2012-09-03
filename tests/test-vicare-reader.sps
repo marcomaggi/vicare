@@ -124,8 +124,8 @@
   (read-symbol-and-eof "->-ciao"	"->-ciao")
 
   (read-and-lexical-violation "-ciao"		"-c")
-  (read-and-lexical-violation "--ciao"		"--")
-  (read-and-lexical-violation "-->ciao"		"--")
+  (read-and-lexical-violation "#!r6rs --ciao"	no-irritants)
+  (read-and-lexical-violation "#!r6rs -->ciao"	no-irritants)
   (read-and-lexical-violation "-i123"		"-i1")
   (read-and-lexical-violation "-iCIAO"		"-iC")
   (read-and-lexical-violation "-i-ciao"		"-i-")
