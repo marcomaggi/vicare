@@ -77,19 +77,18 @@
     greatest-machine-word
     least-machine-word
 
-    greatest-c-uchar		greatest-c-schar
-    least-c-uchar		least-c-schar
-    greatest-c-ushort		greatest-c-sshort
-    least-c-ushort		least-c-sshort
-    greatest-c-uint		greatest-c-sint
-    least-c-uint		least-c-sint
-    greatest-c-ulong		greatest-c-slong
-    least-c-ulong		least-c-slong
-    greatest-c-ullong		greatest-c-sllong
-    least-c-ullong		least-c-sllong
+    greatest-c-unsigned-char		greatest-c-signed-char
+    least-c-unsigned-char		least-c-signed-char
+    greatest-c-unsigned-short		greatest-c-signed-short
+    least-c-unsigned-short		least-c-signed-short
+    greatest-c-unsigned-int		greatest-c-signed-int
+    least-c-unsigned-int		least-c-signed-int
+    greatest-c-unsigned-long		greatest-c-signed-long
+    least-c-unsigned-long		least-c-signed-long
+    greatest-c-unsigned-long-long	greatest-c-signed-long-long
+    least-c-unsigned-long-long		least-c-signed-long-long
 
-    greatest-c-pointer
-    least-c-pointer
+    greatest-c-pointer			least-c-pointer
 
     ;; exclusive limits
     greatest-u8*	least-u8*
@@ -107,19 +106,18 @@
     greatest-machine-word*
     least-machine-word*
 
-    greatest-c-uchar*		greatest-c-schar*
-    least-c-uchar*		least-c-schar*
-    greatest-c-ushort*		greatest-c-sshort*
-    least-c-ushort*		least-c-sshort*
-    greatest-c-uint*		greatest-c-sint*
-    least-c-uint*		least-c-sint*
-    greatest-c-ulong*		greatest-c-slong*
-    least-c-ulong*		least-c-slong*
-    greatest-c-ullong*		greatest-c-sllong*
-    least-c-ullong*		least-c-sllong*
+    greatest-c-unsigned-char*		greatest-c-signed-char*
+    least-c-unsigned-char*		least-c-signed-char*
+    greatest-c-unsigned-short*		greatest-c-signed-short*
+    least-c-unsigned-short*		least-c-signed-short*
+    greatest-c-unsigned-int*		greatest-c-signed-int*
+    least-c-unsigned-int*		least-c-signed-int*
+    greatest-c-unsigned-long*		greatest-c-signed-long*
+    least-c-unsigned-long*		least-c-signed-long*
+    greatest-c-unsigned-long-long*	greatest-c-signed-long-long*
+    least-c-unsigned-long-long*		least-c-signed-long-long*
 
-    greatest-c-pointer*
-    least-c-pointer*
+    greatest-c-pointer*			least-c-pointer*
 
     ;; fixnum alignment
     fixnum-aligned-to-2?
@@ -394,30 +392,30 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (greatest-c-uchar)	UCHAR_MAX)
-(define-inline (greatest-c-schar)	CHAR_MAX)
-(define-inline (least-c-uchar)		0)
-(define-inline (least-c-schar)		CHAR_MIN)
+(define-inline (greatest-c-unsigned-char)	UCHAR_MAX)
+(define-inline (greatest-c-signed-char)		CHAR_MAX)
+(define-inline (least-c-unsigned-char)		0)
+(define-inline (least-c-signed-char)		CHAR_MIN)
 
-(define-inline (greatest-c-ushort)	USHORT_MAX)
-(define-inline (greatest-c-sshort)	SHORT_MAX)
-(define-inline (least-c-ushort)		0)
-(define-inline (least-c-sshort)		SHORT_MIN)
+(define-inline (greatest-c-unsigned-short)	USHORT_MAX)
+(define-inline (greatest-c-signed-short)	SHORT_MAX)
+(define-inline (least-c-unsigned-short)		0)
+(define-inline (least-c-signed-short)		SHORT_MIN)
 
-(define-inline (greatest-c-uint)	UINT_MAX)
-(define-inline (greatest-c-sint)	INT_MAX)
-(define-inline (least-c-uint)		0)
-(define-inline (least-c-sint)		INT_MIN)
+(define-inline (greatest-c-unsigned-int)	UINT_MAX)
+(define-inline (greatest-c-signed-int)		INT_MAX)
+(define-inline (least-c-unsigned-int)		0)
+(define-inline (least-c-signed-int)		INT_MIN)
 
-(define-inline (greatest-c-ulong)	ULONG_MAX)
-(define-inline (greatest-c-slong)	LONG_MAX)
-(define-inline (least-c-ulong)		0)
-(define-inline (least-c-slong)		LONG_MIN)
+(define-inline (greatest-c-unsigned-long)	ULONG_MAX)
+(define-inline (greatest-c-signed-long)		LONG_MAX)
+(define-inline (least-c-unsigned-long)		0)
+(define-inline (least-c-signed-long)		LONG_MIN)
 
-(define-inline (greatest-c-ullong)	ULONG_LONG_MAX)
-(define-inline (greatest-c-sllong)	LONG_LONG_MAX)
-(define-inline (least-c-ullong)		0)
-(define-inline (least-c-sllong)		LONG_LONG_MIN)
+(define-inline (greatest-c-unsigned-long-long)	ULONG_LONG_MAX)
+(define-inline (greatest-c-signed-long-long)	LONG_LONG_MAX)
+(define-inline (least-c-unsigned-long-long)	0)
+(define-inline (least-c-signed-long-long)	LONG_LONG_MIN)
 
 (define-inline (greatest-c-pointer)
   (case-word-size
@@ -473,30 +471,30 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (greatest-c-uchar*)	(+ (greatest-c-uchar) 1))
-(define-inline (greatest-c-schar*)	(+ (greatest-c-schar) 1))
-(define-inline (least-c-uchar*)		(- (least-c-uchar) 1))
-(define-inline (least-c-schar*)		(- (least-c-schar) 1))
+(define-inline (greatest-c-unsigned-char*)	(+ (greatest-c-unsigned-char) 1))
+(define-inline (greatest-c-signed-char*)	(+ (greatest-c-signed-char) 1))
+(define-inline (least-c-unsigned-char*)		(- (least-c-unsigned-char) 1))
+(define-inline (least-c-signed-char*)		(- (least-c-signed-char) 1))
 
-(define-inline (greatest-c-ushort*)	(+ (greatest-c-ushort) 1))
-(define-inline (greatest-c-sshort*)	(+ (greatest-c-sshort) 1))
-(define-inline (least-c-ushort*)	(- (least-c-ushort) 1))
-(define-inline (least-c-sshort*)	(- (least-c-sshort) 1))
+(define-inline (greatest-c-unsigned-short*)	(+ (greatest-c-unsigned-short) 1))
+(define-inline (greatest-c-signed-short*)	(+ (greatest-c-signed-short) 1))
+(define-inline (least-c-unsigned-short*)	(- (least-c-unsigned-short) 1))
+(define-inline (least-c-signed-short*)		(- (least-c-signed-short) 1))
 
-(define-inline (greatest-c-uint*)	(+ (greatest-c-uint) 1))
-(define-inline (greatest-c-sint*)	(+ (greatest-c-sint) 1))
-(define-inline (least-c-uint*)		(- (least-c-uint) 1))
-(define-inline (least-c-sint*)		(- (least-c-sint) 1))
+(define-inline (greatest-c-unsigned-int*)	(+ (greatest-c-unsigned-int) 1))
+(define-inline (greatest-c-signed-int*)		(+ (greatest-c-signed-int) 1))
+(define-inline (least-c-unsigned-int*)		(- (least-c-unsigned-int) 1))
+(define-inline (least-c-signed-int*)		(- (least-c-signed-int) 1))
 
-(define-inline (greatest-c-ulong*)	(+ (greatest-c-ulong) 1))
-(define-inline (greatest-c-slong*)	(+ (greatest-c-slong) 1))
-(define-inline (least-c-ulong*)		(- (least-c-ulong) 1))
-(define-inline (least-c-slong*)		(- (least-c-slong) 1))
+(define-inline (greatest-c-unsigned-long*)	(+ (greatest-c-unsigned-long) 1))
+(define-inline (greatest-c-signed-long*)	(+ (greatest-c-signed-long) 1))
+(define-inline (least-c-unsigned-long*)		(- (least-c-unsigned-long) 1))
+(define-inline (least-c-signed-long*)		(- (least-c-signed-long) 1))
 
-(define-inline (greatest-c-ullong*)	(+ (greatest-c-ullong) 1))
-(define-inline (greatest-c-sllong*)	(+ (greatest-c-sllong) 1))
-(define-inline (least-c-ullong*)	(- (least-c-ullong) 1))
-(define-inline (least-c-sllong*)	(- (least-c-sllong) 1))
+(define-inline (greatest-c-unsigned-long-long*)	(+ (greatest-c-unsigned-long-long) 1))
+(define-inline (greatest-c-signed-long-long*)	(+ (greatest-c-signed-long-long) 1))
+(define-inline (least-c-unsigned-long-long*)	(- (least-c-unsigned-long-long) 1))
+(define-inline (least-c-signed-long-long*)	(- (least-c-signed-long-long) 1))
 
 (define-inline (greatest-c-pointer*)
   (case-word-size
