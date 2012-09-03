@@ -56,6 +56,7 @@
     unsigned-int?	signed-int?
     unsigned-long?	signed-long?
     unsigned-long-long?	signed-long-long?
+    pointer?
 
     size_t?		ssize_t?
     off_t?		ptrdiff_t?
@@ -87,6 +88,9 @@
     greatest-c-ullong		greatest-c-sllong
     least-c-ullong		least-c-sllong
 
+    greatest-c-pointer
+    least-c-pointer
+
     ;; exclusive limits
     greatest-u8*	least-u8*
     greatest-s8*	least-s8*
@@ -114,12 +118,16 @@
     greatest-c-ullong*		greatest-c-sllong*
     least-c-ullong*		least-c-sllong*
 
+    greatest-c-pointer*
+    least-c-pointer*
+
     ;; fixnum alignment
     fixnum-aligned-to-2?
     fixnum-aligned-to-4?
     fixnum-aligned-to-8?
     fixnum-aligned-to?)
-  (import (ikarus)
+  (import (except (vicare)
+		  pointer?)
     (ikarus system $fx)
     (ikarus system $bignums)
     (only (vicare syntactic-extensions)
@@ -250,9 +258,7 @@
 (define-inline-constant SIZEOF_PTRDIFF_T	@SIZEOF_PTRDIFF_T@)
 (define-inline-constant SIZEOF_FLOAT		4)
 (define-inline-constant SIZEOF_DOUBLE		8)
-(define-inline-constant SIZEOF_POINTER		(case-word-size
-						 ((32)	4)
-						 ((64)	8)))
+(define-inline-constant SIZEOF_POINTER		@VICARE_SIZE_OF_VOIDP@)
 
 ;;; --------------------------------------------------------------------
 
@@ -413,6 +419,14 @@
 (define-inline (least-c-ullong)		0)
 (define-inline (least-c-sllong)		LONG_LONG_MIN)
 
+(define-inline (greatest-c-pointer)
+  (case-word-size
+   ((32)	U32MAX)
+   ((64)	U64MAX)))
+
+(define-inline (least-c-pointer)
+  0)
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (greatest-u8*)		U8MAX*)
@@ -483,6 +497,16 @@
 (define-inline (greatest-c-sllong*)	(+ (greatest-c-sllong) 1))
 (define-inline (least-c-ullong*)	(- (least-c-ullong) 1))
 (define-inline (least-c-sllong*)	(- (least-c-sllong) 1))
+
+(define-inline (greatest-c-pointer*)
+  (case-word-size
+   ((32)	U32MAX*)
+   ((64)	U64MAX*)))
+
+(define-inline (least-c-pointer*)
+  (case-word-size
+   ((32)	U32MIN*)
+   ((64)	U64MIN*)))
 
 
 ;;;; bit-sized word predicates
@@ -618,6 +642,8 @@
   (define-predicate signed-int?			@SIZEOF_INT@		signed)
   (define-predicate signed-long?		@SIZEOF_LONG@		signed)
   (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	signed)
+
+  (define-predicate pointer?			@VICARE_SIZE_OF_VOIDP@	unsigned)
 
   (define-predicate size_t?			@SIZEOF_SIZE_T@		unsigned)
   (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	signed)

@@ -100,6 +100,13 @@
   (check (words.signed-long-long? LONG_LONG_MIN)	=> #t)
   (check (words.signed-long-long? (+ -1 LONG_LONG_MIN))	=> #f)
 
+;;; --------------------------------------------------------------------
+
+  (check (words.pointer? (words.greatest-c-pointer*))	=> #f)
+  (check (words.pointer? (words.greatest-c-pointer))	=> #t)
+  (check (words.pointer? (words.least-c-pointer))	=> #t)
+  (check (words.pointer? (words.least-c-pointer*))	=> #f)
+
   #t)
 
 
