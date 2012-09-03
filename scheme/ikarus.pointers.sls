@@ -381,7 +381,7 @@
     "expected non-negative exact integer in the range of a machine word as argument" obj))
 
 (define-argument-validation (ptrdiff who obj)
-  (words.ptrdiff? obj)
+  (words.ptrdiff_t? obj)
   (assertion-violation who
     "expected exact integer representing pointer difference as argument" obj))
 
