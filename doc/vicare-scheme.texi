@@ -17850,7 +17850,7 @@ int} or @code{unsigned long long int}.
 @end deffn
 
 
-@deffn Syntax pointer? @var{obj}
+@deffn Syntax pointer-integer? @var{obj}
 Return @true{} if @var{obj} is a fixnum or bignum in the range
 representable with a platform C language type @code{void *}.
 @end deffn

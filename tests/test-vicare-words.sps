@@ -102,10 +102,10 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check (words.pointer? (words.greatest-c-pointer*))	=> #f)
-  (check (words.pointer? (words.greatest-c-pointer))	=> #t)
-  (check (words.pointer? (words.least-c-pointer))	=> #t)
-  (check (words.pointer? (words.least-c-pointer*))	=> #f)
+  (check (words.pointer-integer? (words.greatest-c-pointer*))	=> #f)
+  (check (words.pointer-integer? (words.greatest-c-pointer))	=> #t)
+  (check (words.pointer-integer? (words.least-c-pointer))	=> #t)
+  (check (words.pointer-integer? (words.least-c-pointer*))	=> #f)
 
   #t)
 

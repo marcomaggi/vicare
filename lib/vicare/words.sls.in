@@ -56,7 +56,7 @@
     unsigned-int?	signed-int?
     unsigned-long?	signed-long?
     unsigned-long-long?	signed-long-long?
-    pointer?
+    pointer-integer?
 
     size_t?		ssize_t?
     off_t?		ptrdiff_t?
@@ -124,8 +124,7 @@
     fixnum-aligned-to-4?
     fixnum-aligned-to-8?
     fixnum-aligned-to?)
-  (import (except (ikarus)
-		  pointer?)
+  (import (ikarus)
     (ikarus system $fx)
     (ikarus system $bignums)
     (only (vicare syntactic-extensions)
@@ -641,7 +640,7 @@
   (define-predicate signed-long?		@SIZEOF_LONG@		signed)
   (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	signed)
 
-  (define-predicate pointer?			@VICARE_SIZE_OF_VOIDP@	unsigned)
+  (define-predicate pointer-integer?		@VICARE_SIZE_OF_VOIDP@	unsigned)
 
   (define-predicate size_t?			@SIZEOF_SIZE_T@		unsigned)
   (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	signed)
