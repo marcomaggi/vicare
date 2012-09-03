@@ -466,42 +466,42 @@
 (define-argument-validation (uint8 who obj)
   (words.word-u8? obj)
   (assertion-violation who
-    "expected exact integer representing an 8-bit signed integer as argument" obj))
+    "expected exact integer representing an 8-bit unsigned integer as argument" obj))
 
 (define-argument-validation (sint8 who obj)
   (words.word-s8? obj)
   (assertion-violation who
-    "expected exact integer representing an 8-bit unsigned integer as argument" obj))
+    "expected exact integer representing an 8-bit signed integer as argument" obj))
 
 (define-argument-validation (uint16 who obj)
   (words.word-u16? obj)
   (assertion-violation who
-    "expected exact integer representing an 16-bit signed integer as argument" obj))
+    "expected exact integer representing an 16-bit unsigned integer as argument" obj))
 
 (define-argument-validation (sint16 who obj)
   (words.word-s16? obj)
   (assertion-violation who
-    "expected exact integer representing an 16-bit unsigned integer as argument" obj))
+    "expected exact integer representing an 16-bit signed integer as argument" obj))
 
 (define-argument-validation (uint32 who obj)
   (words.word-u32? obj)
   (assertion-violation who
-    "expected exact integer representing an 32-bit signed integer as argument" obj))
+    "expected exact integer representing an 32-bit unsigned integer as argument" obj))
 
 (define-argument-validation (sint32 who obj)
   (words.word-s32? obj)
   (assertion-violation who
-    "expected exact integer representing an 32-bit unsigned integer as argument" obj))
+    "expected exact integer representing an 32-bit signed integer as argument" obj))
 
 (define-argument-validation (uint64 who obj)
   (words.word-u64? obj)
   (assertion-violation who
-    "expected exact integer representing an 64-bit signed integer as argument" obj))
+    "expected exact integer representing an 64-bit unsigned integer as argument" obj))
 
 (define-argument-validation (sint64 who obj)
   (words.word-s64? obj)
   (assertion-violation who
-    "expected exact integer representing an 64-bit unsigned integer as argument" obj))
+    "expected exact integer representing an 64-bit signed integer as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
