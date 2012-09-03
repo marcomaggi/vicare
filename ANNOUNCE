@@ -89,6 +89,9 @@ Notes for revision 0.2d16
   (like POINTER-SET  and POINTER-REF,  but ARRAY-SET and  ARRAY-REF with
   scaled offsets).
 
+* Added inclusive and  exclusive limits for C language  types in (vicare
+  words).
+
 
 Notes for revision 0.2d15
 -------------------------

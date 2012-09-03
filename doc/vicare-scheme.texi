@@ -17970,6 +17970,51 @@ On 64-bit platforms: evaluate to the greatest or least unsigned exact
 integer in the 64-bit range.
 @end deffn
 
+
+@deffn Syntax greatest-c-uchar
+@deffnx Syntax greatest-c-schar
+@deffnx Syntax least-c-uchar
+@deffnx Syntax least-c-schar
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{char} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ushort
+@deffnx Syntax greatest-c-sshort
+@deffnx Syntax least-c-ushort
+@deffnx Syntax least-c-sshort
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{short int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-uint
+@deffnx Syntax greatest-c-sint
+@deffnx Syntax least-c-uint
+@deffnx Syntax least-c-sint
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ulong
+@deffnx Syntax greatest-c-slong
+@deffnx Syntax least-c-ulong
+@deffnx Syntax least-c-slong
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ullong
+@deffnx Syntax greatest-c-sllong
+@deffnx Syntax least-c-ullong
+@deffnx Syntax least-c-sllong
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long long} range.
+@end deffn
+
 @c ------------------------------------------------------------
 
 @subsubheading Exclusive limits
@@ -18036,6 +18081,51 @@ least--minus--1 unsigned exact integer in the 32-bit range.
 
 On 64-bit platforms: evaluate to the greatest--plus--1 or
 least--minus--1 unsigned exact integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-c-uchar*
+@deffnx Syntax greatest-c-schar*
+@deffnx Syntax least-c-uchar*
+@deffnx Syntax least-c-schar*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{char} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ushort*
+@deffnx Syntax greatest-c-sshort*
+@deffnx Syntax least-c-ushort*
+@deffnx Syntax least-c-sshort*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{short int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-uint*
+@deffnx Syntax greatest-c-sint*
+@deffnx Syntax least-c-uint*
+@deffnx Syntax least-c-sint*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ulong*
+@deffnx Syntax greatest-c-slong*
+@deffnx Syntax least-c-ulong*
+@deffnx Syntax least-c-slong*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ullong*
+@deffnx Syntax greatest-c-sllong*
+@deffnx Syntax least-c-ullong*
+@deffnx Syntax least-c-sllong*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long long} range.
 @end deffn
 
 @c page
