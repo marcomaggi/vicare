@@ -124,7 +124,7 @@
     fixnum-aligned-to-4?
     fixnum-aligned-to-8?
     fixnum-aligned-to?)
-  (import (except (vicare)
+  (import (except (ikarus)
 		  pointer?)
     (ikarus system $fx)
     (ikarus system $bignums)
