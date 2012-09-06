@@ -90,6 +90,11 @@
 
     greatest-c-pointer			least-c-pointer
 
+    greatest-c-size_t			least-c-size_t
+    greatest-c-ssize_t			least-c-ssize_t
+    greatest-c-off_t			least-c-off_t
+    greatest-c-ptrdiff_t		least-c-ptrdiff_t
+
     ;; exclusive limits
     greatest-u8*	least-u8*
     greatest-s8*	least-s8*
@@ -118,6 +123,11 @@
     least-c-unsigned-long-long*		least-c-signed-long-long*
 
     greatest-c-pointer*			least-c-pointer*
+
+    greatest-c-size_t*			least-c-size_t*
+    greatest-c-ssize_t*			least-c-ssize_t*
+    greatest-c-off_t*			least-c-off_t*
+    greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
 
     ;; fixnum alignment
     fixnum-aligned-to-2?
@@ -424,6 +434,15 @@
 (define-inline (least-c-pointer)
   0)
 
+(define-inline (greatest-c-size_t)		SIZE_T_MAX)
+(define-inline (greatest-c-ssize_t)		SSIZE_T_MAX)
+(define-inline (least-c-size_t)			0)
+(define-inline (least-c-ssize_t)		SSIZE_T_MIN)
+(define-inline (greatest-c-off_t)		OFF_T_MAX)
+(define-inline (least-c-off_t)			OFF_T_MIN)
+(define-inline (greatest-c-ptrdiff_t)		PTRDIFF_T_MAX)
+(define-inline (least-c-ptrdiff_t)		PTRDIFF_T_MIN)
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (greatest-u8*)		U8MAX*)
@@ -504,6 +523,18 @@
   (case-word-size
    ((32)	U32MIN*)
    ((64)	U64MIN*)))
+
+(define-inline (greatest-c-size_t*)		(+ SIZE_T_MAX 1))
+(define-inline (least-c-size_t*)		-1)
+
+(define-inline (greatest-c-ssize_t*)		(+ SSIZE_T_MAX 1))
+(define-inline (least-c-ssize_t*)		(- SSIZE_T_MIN 1))
+
+(define-inline (greatest-c-off_t*)		(+ OFF_T_MAX 1))
+(define-inline (least-c-off_t*)			(- OFF_T_MIN 1))
+
+(define-inline (greatest-c-ptrdiff_t*)		(+ PTRDIFF_T_MAX 1))
+(define-inline (least-c-ptrdiff_t*)		(- PTRDIFF_T_MIN 1))
 
 
 ;;;; bit-sized word predicates

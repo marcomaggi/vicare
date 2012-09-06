@@ -922,6 +922,70 @@
 	(list rv args))
     => `(,(words.greatest-s8) (,(words.greatest-s16) ,(words.greatest-s32) ,(words.greatest-s64))))
 
+  (check	;size_t
+      (let* ((rv-t		'size_t)
+	     (args-t		'(size_t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (args		#f)
+	     (function		(callout-maker
+				 (callback-maker
+				  (lambda (a)
+				    (set! args (list a))
+				    a))))
+	     (rv		(function (words.greatest-c-size_t))))
+	(list rv args))
+    => `(,(words.greatest-c-size_t)
+	 (,(words.greatest-c-size_t))))
+
+  (check	;ssize_t
+      (let* ((rv-t		'ssize_t)
+	     (args-t		'(ssize_t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (args		#f)
+	     (function		(callout-maker
+				 (callback-maker
+				  (lambda (a)
+				    (set! args (list a))
+				    a))))
+	     (rv		(function (words.greatest-c-ssize_t))))
+	(list rv args))
+    => `(,(words.greatest-c-ssize_t)
+	 (,(words.greatest-c-ssize_t))))
+
+  (check	;off_t
+      (let* ((rv-t		'off_t)
+	     (args-t		'(off_t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (args		#f)
+	     (function		(callout-maker
+				 (callback-maker
+				  (lambda (a)
+				    (set! args (list a))
+				    a))))
+	     (rv		(function (words.greatest-c-off_t))))
+	(list rv args))
+    => `(,(words.greatest-c-off_t)
+	 (,(words.greatest-c-off_t))))
+
+  (check	;ptrdiff_t
+      (let* ((rv-t		'ptrdiff_t)
+	     (args-t		'(ptrdiff_t))
+	     (callout-maker	(ffi.make-c-callout-maker  rv-t args-t))
+	     (callback-maker	(ffi.make-c-callback-maker rv-t args-t))
+	     (args		#f)
+	     (function		(callout-maker
+				 (callback-maker
+				  (lambda (a)
+				    (set! args (list a))
+				    a))))
+	     (rv		(function (words.greatest-c-ptrdiff_t))))
+	(list rv args))
+    => `(,(words.greatest-c-ptrdiff_t)
+	 (,(words.greatest-c-ptrdiff_t))))
+
 ;;; --------------------------------------------------------------------
 ;;; releasing callbacks
 

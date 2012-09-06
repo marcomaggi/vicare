@@ -7674,6 +7674,16 @@ Exact integers in the range for @code{int32_t} and @code{uint32_t}.
 @item int64_t
 @itemx uint64_t
 Exact integers in the range for @code{int64_t} and @code{uint64_t}.
+
+@item size_t
+@itemx ssize_t
+Exact integers in the range for @code{size_t} and @code{ssize_t}.
+
+@item off_t
+Exact integers in the range for @code{off_t}.
+
+@item ptrdiff_t
+Exact integers in the range for @code{ptrdiff_t}.
 @end table
 
 @c page
@@ -18034,6 +18044,34 @@ Evaluate to the greatest or least, signed or unsigned, exact integer in
 the C language @code{void *} range.
 @end deffn
 
+
+@deffn Syntax greatest-c-size_t
+@deffnx Syntax least-c-size_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{size_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ssize_t
+@deffnx Syntax least-c-ssize_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ssize_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-off_t
+@deffnx Syntax least-c-off_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{off_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ptrdiff_t
+@deffnx Syntax least-c-ptrdiff_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ptrdiff_t} range.
+@end deffn
+
 @c ------------------------------------------------------------
 
 @subsubheading Exclusive limits
@@ -18152,6 +18190,34 @@ unsigned, exact integer in the C language @code{long long} range.
 @deffnx Syntax least-c-pointer*
 Evaluate to the greatest--plus--1 or least--minus--1, signed or
 unsigned, exact integer in the C language @code{void *} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-size_t*
+@deffnx Syntax least-c-size_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{size_t*} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ssize_t*
+@deffnx Syntax least-c-ssize_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ssize_t*} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-off_t*
+@deffnx Syntax least-c-off_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{off_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ptrdiff_t*
+@deffnx Syntax least-c-ptrdiff_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ptrdiff_t} range.
 @end deffn
 
 @c page

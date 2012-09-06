@@ -42,7 +42,19 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d17
 -------------------------
 
-*
+* Added  size_t, ssize_t,  off_t,  ptrdiff_t as  type  specifiers for  C
+  language callouts and callbacks.
+
+* Added limits to (vicare words):
+
+    greatest-c-size_t			least-c-size_t
+    greatest-c-ssize			least-c-ssize_t
+    greatest-c-off_t			least-c-off_t
+    greatest-c-ptrdiff_t		least-c-ptrdiff_t
+    greatest-c-size_t*			least-c-size_t*
+    greatest-c-ssize_t			least-c-ssize_t*
+    greatest-c-off_t*			least-c-off_t*
+    greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
 
 
 Notes for revision 0.2d16

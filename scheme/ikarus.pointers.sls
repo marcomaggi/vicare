@@ -1645,6 +1645,34 @@
     ((unsigned-long-long)	TYPE_ID_UINT64)
     ((signed-long-long)		TYPE_ID_SINT64)
 
+    ((size_t)			(cond ((= words.SIZEOF_SIZE_T words.SIZEOF_INT)
+				       TYPE_ID_UINT)
+				      ((= words.SIZEOF_SIZE_T words.SIZEOF_LONG)
+				       TYPE_ID_ULONG)
+				      (else
+				       TYPE_ID_UINT64)))
+
+    ((ssize_t)			(cond ((= words.SIZEOF_SSIZE_T words.SIZEOF_INT)
+				       TYPE_ID_SINT)
+				      ((= words.SIZEOF_SSIZE_T words.SIZEOF_LONG)
+				       TYPE_ID_SLONG)
+				      (else
+				       TYPE_ID_SINT64)))
+
+    ((off_t)			(cond ((= words.SIZEOF_OFF_T words.SIZEOF_INT)
+				       TYPE_ID_SINT)
+				      ((= words.SIZEOF_OFF_T words.SIZEOF_LONG)
+				       TYPE_ID_SLONG)
+				      (else
+				       TYPE_ID_SINT64)))
+
+    ((ptrdiff_t)		(cond ((= words.SIZEOF_PTRDIFF_T words.SIZEOF_INT)
+				       TYPE_ID_SINT)
+				      ((= words.SIZEOF_PTRDIFF_T words.SIZEOF_LONG)
+				       TYPE_ID_SLONG)
+				      (else
+				       TYPE_ID_SINT64)))
+
     (else
      (assertion-violation #f "invalid FFI type specifier" type))))
 
@@ -1670,7 +1698,12 @@
   (define-predicate %sint32?			words.word-s32?)
   (define-predicate %uint32?			words.word-u32?)
   (define-predicate %sint64?			words.word-s64?)
-  (define-predicate %uint64?			words.word-u64?))
+  (define-predicate %uint64?			words.word-u64?)
+
+  (define-predicate %size_t?			words.size_t?)
+  (define-predicate %ssize_t?			words.ssize_t?)
+  (define-predicate %off_t?			words.off_t?)
+  (define-predicate %ptrdiff_t?			words.ptrdiff_t?))
 
 (define (pointer/bytevector? obj)
   (or (pointer? obj) (bytevector? obj)))
@@ -1702,6 +1735,11 @@
     ((uint32_t)			%uint32?)
     ((int64_t)			%sint64?)
     ((uint64_t)			%uint64?)
+
+    ((size_t)			%size_t?)
+    ((ssize_t)			%ssize_t?)
+    ((off_t)			%off_t?)
+    ((ptrdiff_t)		%ptrdiff_t?)
 
     (else
      (assertion-violation #f "unknown FFI type specifier" type))))
