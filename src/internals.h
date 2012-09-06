@@ -1101,58 +1101,143 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 
 
 /** --------------------------------------------------------------------
- ** Miscellanous convenience macros.
+ ** Special boolean object macros.
  ** ----------------------------------------------------------------- */
-
-/* If OBJ is  a bytevector object return a "char*"  pointer to the first
-   byte, if  OBJ is a pointer  object return a "char*"  pointer to first
-   byte of the referenced memory. */
-#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER(OBJ)	\
-  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ))
-
-/* If OBJ  is the  false object:  return NULL.  If  OBJ is  a bytevector
-   object  return a  "char*" pointer  to the  first byte.   If OBJ  is a
-   pointer  object  return  a  "char*"  pointer to  first  byte  of  the
-   referenced memory. */
-#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)	\
-  ((IK_FALSE_OBJECT == (OBJ))? NULL : \
-    ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ)))
-
-/* If OBJ is  a bytevector object return a "void*"  pointer to the first
-   byte, if  OBJ is a pointer  object return a "void*"  pointer to first
-   byte of the referenced memory. */
-#define IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ)	\
-  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_POINTER_DATA_VOIDP(OBJ))
-
-/* If OBJ  is the  false object:  return NULL.  If  OBJ is  a bytevector
-   object  return a  "void*" pointer  to the  first byte.   If OBJ  is a
-   pointer  object  return  a  "void*"  pointer to  first  byte  of  the
-   referenced memory. */
-#define IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)	\
-  ((IK_FALSE_OBJECT == (OBJ))? NULL : \
-    ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_POINTER_DATA_VOIDP(OBJ)))
-
-/* If OBJ is the  false object: return NULL; else OBJ  must be a pointer
-   object and its "void*" pointer is returned. */
-#define IK_POINTER_FROM_POINTER_OR_FALSE(OBJ)		\
-  ((IK_FALSE_OBJECT == (OBJ))? NULL : IK_POINTER_DATA_VOIDP(OBJ))
 
 #define IK_IS_BOOLEAN(OBJ)		((IK_FALSE == (OBJ)) || (IK_TRUE == (OBJ)))
 #define IK_BOOLEAN_TO_INT(OBJ)		(!(IK_FALSE == (OBJ)))
 #define IK_BOOLEAN_FROM_INT(INT)	((INT)? IK_TRUE : IK_FALSE)
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Special memory-block object macros.
+ ** ----------------------------------------------------------------- */
 
 #define IK_MBLOCK_POINTER(OBJ)		IK_FIELD(OBJ, 0)
 #define IK_MBLOCK_SIZE(OBJ)		IK_FIELD(OBJ, 1)
 #define IK_MBLOCK_DATA_VOIDP(OBJ)	IK_POINTER_DATA_VOIDP(IK_MBLOCK_POINTER(OBJ))
+#define IK_MBLOCK_DATA_CHARP(OBJ)	IK_POINTER_DATA_CHARP(IK_MBLOCK_POINTER(OBJ))
 #define IK_MBLOCK_SIZE_T(OBJ)		ik_integer_to_size_t(IK_BLOCK_SIZE(obj))
 
-#define IK_POINTER_FROM_POINTER_OR_MBLOCK(OBJ)	\
-   (IK_IS_POINTER(OBJ)? IK_POINTER_DATA_VOIDP(OBJ) : IK_MBLOCK_DATA_VOIDP(OBJ))
+
+/** --------------------------------------------------------------------
+ ** Special macros extracting "void *" pointers from objects.
+ ** ----------------------------------------------------------------- */
 
+/* pointer, false */
+#define IK_POINTER_FROM_POINTER_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_POINTER_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_POINTER_DATA_VOIDP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, false */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_BYTEVECTOR_DATA_VOIDP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* mblock, false */
+#define IK_POINTER_FROM_MBLOCK_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_MBLOCK_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_MBLOCK_DATA_VOIDP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ) \
+  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_POINTER_DATA_VOIDP(OBJ))
+
+/* bytevector, pointer, false */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* pointer, mblock */
+#define IK_POINTER_FROM_POINTER_OR_MBLOCK(OBJ) \
+          IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
+#define   IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_POINTER(OBJ)? IK_POINTER_DATA_VOIDP(OBJ) : IK_MBLOCK_DATA_VOIDP(OBJ))
+
+/* pointer, mblock, false */
 #define IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)	\
-  ((IK_FALSE_OBJECT == (OBJ))? NULL : IK_POINTER_FROM_POINTER_OR_MBLOCK(OBJ))
+          IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)	\
+  ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer, mblock */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_BYTEVECTOR(OBJ)? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* bytevector, pointer, mblock, false */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
+
+
+/** --------------------------------------------------------------------
+ ** Special macros extracting "char *" pointers from objects.
+ ** ----------------------------------------------------------------- */
+
+/* pointer, false */
+#define IK_CHARP_FROM_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_POINTER_DATA_CHARP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, false */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_BYTEVECTOR_DATA_CHARP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* mblock, false */
+#define IK_CHARP_FROM_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_MBLOCK_DATA_CHARP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER(OBJ) \
+  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ))
+
+/* bytevector, pointer, false */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* pointer, mblock */
+#define IK_CHARP_FROM_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_POINTER(OBJ)? IK_POINTER_DATA_CHARP(OBJ) : IK_MBLOCK_DATA_CHARP(OBJ))
+
+/* pointer, mblock, false */
+#define IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)	\
+  ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer, mblock */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_BYTEVECTOR(OBJ)? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_CHARP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* bytevector, pointer, mblock, false */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
 
 
 /** --------------------------------------------------------------------

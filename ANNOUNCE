@@ -56,6 +56,8 @@ Notes for revision 0.2d17
     greatest-c-off_t*			least-c-off_t*
     greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
 
+* Reorganised IK_VOIDP_FROM and similar C preprocessor macros.
+
 
 Notes for revision 0.2d16
 -------------------------
