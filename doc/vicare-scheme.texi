@@ -20555,6 +20555,7 @@ values is duplicated in the Scheme language compiler
 * objects strings::             String objects.
 * objects symbols::             Symbol objects.
 * objects bignums::             Bignum objects.
+* objects integers::            Exact integer objects.
 * objects ratnums::             Ratnum objects.
 * objects flonums::             Flonum objects.
 * objects compnums::            Compnum objects.
@@ -23274,6 +23275,18 @@ conversion.
 @end deftypefun
 
 @c page
+@node objects integers
+@section Exact integer objects
+
+
+An exact integer is either a fixnum or a bignum.
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_INTEGER (ikptr @var{obj})
+Evaluate to true if @var{obj} is either a fixnum or a bignum.
+@end deftypefn
+
+@c page
 @node objects ratnums
 @section Ratnum objects
 
@@ -24094,9 +24107,15 @@ Return the value of the pointer cast to a specific type.
 @end deftypefn
 
 
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET (ikptr @var{X}, void * @var{ptr})
+Reset to @var{ptr} the value of the pointer @var{X}.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET_NULL (ikptr @var{X})
 Reset to @cnull{} the value of the pointer.
 @end deftypefn
+
 
 @deftypefn {Preprocessor Macro} int IK_POINTER_IS_NULL (ikptr @var{X})
 Evaluate to true if the pointer value is @cnull{}.

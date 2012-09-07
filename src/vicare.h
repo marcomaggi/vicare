@@ -588,8 +588,9 @@ ik_decl int   ik_is_pointer	(ikptr X);
 #define IK_POINTER_DATA_ULONG(X)	((ik_ulong) IK_REF((X), off_pointer_data))
 #define IK_POINTER_DATA_ULLONG(X)	((ik_ullong)IK_REF((X), off_pointer_data))
 
-#define IK_POINTER_SET_NULL(X)		(IK_REF((X), off_pointer_data) = 0)
-#define IK_POINTER_IS_NULL(X)		(0 == IK_POINTER_DATA(X))
+#define IK_POINTER_SET(X,P)	(IK_REF((X), off_pointer_data) = (ikptr)((void*)(P)))
+#define IK_POINTER_SET_NULL(X)	(IK_REF((X), off_pointer_data) = 0)
+#define IK_POINTER_IS_NULL(X)	(0 == IK_POINTER_DATA(X))
 
 
 /** --------------------------------------------------------------------
@@ -789,6 +790,13 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 
 ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
 ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+
+
+/** --------------------------------------------------------------------
+ ** Special exact integer object macros.
+ ** ----------------------------------------------------------------- */
+
+#define IK_IS_INTEGER(OBJ)	(IK_IS_FIXNUM(OBJ)||ik_is_bignum(OBJ))
 
 
 /** --------------------------------------------------------------------
