@@ -816,7 +816,7 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 #define IK_MBLOCK_SIZE(OBJ)		IK_FIELD(OBJ, 1)
 #define IK_MBLOCK_DATA_VOIDP(OBJ)	IK_POINTER_DATA_VOIDP(IK_MBLOCK_POINTER(OBJ))
 #define IK_MBLOCK_DATA_CHARP(OBJ)	IK_POINTER_DATA_CHARP(IK_MBLOCK_POINTER(OBJ))
-#define IK_MBLOCK_SIZE_T(OBJ)		ik_integer_to_size_t(IK_BLOCK_SIZE(obj))
+#define IK_MBLOCK_SIZE_T(OBJ)		ik_integer_to_size_t(IK_MBLOCK_SIZE(OBJ))
 
 
 /** --------------------------------------------------------------------
