@@ -1805,16 +1805,25 @@ program handing its command line to the executable @command{vicare}.
 @cindex @library{vicare}, library
 @cindex Library @library{ikarus}
 @cindex @library{ikarus}, library
+@cindex Library @library{vicare language-extensions}
+@cindex @library{vicare language-extensions}, library
 
 
 In addition to the libraries listed in the @rnrs{6} standard,
-@value{PRJNAME} offers the @library{ikarus} and @library{vicare}
-libraries which provide additional features; @library{ikarus} is a
-composite library, it exports a superset of all the supported bindings
-of @rnrs{6}; @library{vicare} exports the same bindings of
-@library{ikarus}.  The library @library{vicare language-extensions}
-exports all the bindings exported by @library{vicare} that are
-@strong{not} exported by @library{rnrs (6)}
+@value{PRJNAME} offers more libraries which provide additional features:
+
+@table @library
+@item ikarus
+It is a composite library, it exports a superset of all the supported
+bindings of @rnrs{6}.
+
+@item vicare
+It exports the same bindings of @library{ikarus}.
+
+@item vicare language-extensions
+It exports all the bindings exported by @library{vicare} that are
+@strong{not} exported by @library{rnrs (6)}.
+@end table
 
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
