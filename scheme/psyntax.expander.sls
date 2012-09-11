@@ -2327,11 +2327,8 @@
       (define (gen-name x)
 	(datum->syntax foo
 		       (string->symbol
-			(string-append
-			 (symbol->string (syntax->datum foo))
-			 "-"
-			 (symbol->string (syntax->datum x))
-			 "-set!"))))
+			(string-append (symbol->string (syntax->datum foo)) "-"
+				       (symbol->string (syntax->datum x)) "-set!"))))
       (let f ((fields fields))
 	(syntax-match fields (mutable)
 	  (() '())
@@ -2340,19 +2337,47 @@
 	  (((mutable name) . rest)
 	   (cons (gen-name name) (f rest)))
 	  ((_ . rest) (f rest)))))
+    (define (get-unsafe-mutators foo fields)
+      (define (gen-name x)
+	(datum->syntax foo
+		       (string->symbol
+			(string-append "$" (symbol->string (syntax->datum foo))
+				       "-" (symbol->string (syntax->datum x)) "-set!"))))
+      (let f ((fields fields))
+	(syntax-match fields (mutable)
+	  (() '())
+	  (((mutable name accessor mutator) . rest)
+	   (cons (gen-name name) (f rest)))
+	  (((mutable name) . rest)
+	   (cons (gen-name name) (f rest)))
+	  ((_ . rest) (f rest)))))
     (define (get-accessors foo fields)
       (define (gen-name x)
 	(datum->syntax foo
 		       (string->symbol
-			(string-append
-			 (symbol->string (syntax->datum foo))
-			 "-"
-			 (symbol->string (syntax->datum x))))))
+			(string-append (symbol->string (syntax->datum foo)) "-"
+				       (symbol->string (syntax->datum x))))))
       (map
           (lambda (field)
             (syntax-match field (mutable immutable)
               ((mutable name accessor mutator) (id? accessor) accessor)
               ((immutable name accessor)       (id? accessor) accessor)
+              ((mutable name)                  (id? name) (gen-name name))
+              ((immutable name)                (id? name) (gen-name name))
+              (name                            (id? name) (gen-name name))
+              (others (stx-error field "invalid field spec"))))
+	fields))
+    (define (get-unsafe-accessors foo fields)
+      (define (gen-name x)
+	(datum->syntax foo
+		       (string->symbol
+			(string-append "$" (symbol->string (syntax->datum foo))
+				       "-" (symbol->string (syntax->datum x))))))
+      (map
+          (lambda (field)
+            (syntax-match field (mutable immutable)
+              ((mutable name accessor mutator) (id? accessor) (gen-name name))
+              ((immutable name accessor)       (id? accessor) (gen-name name))
               ((mutable name)                  (id? name) (gen-name name))
               ((immutable name)                (id? name) (gen-name name))
               (name                            (id? name) (gen-name name))
@@ -2364,20 +2389,23 @@
 	 ((null? ls) '())
 	 (else (cons i (f (cdr ls) (+ i 1)))))))
     (define (do-define-record namespec clause*)
-      (let* ((foo (get-record-name namespec))
-	     (foo-rtd (gensym))
-	     (foo-rcd (gensym))
-	     (protocol (gensym))
-	     (make-foo (get-record-constructor-name namespec))
-	     (fields (get-fields clause*))
-	     (idx* (enumerate fields))
-	     (foo-x* (get-accessors foo fields))
-	     (set-foo-x!* (get-mutators foo fields))
-	     (set-foo-idx* (get-mutator-indices fields))
-	     (foo? (get-record-predicate-name namespec))
-	     (foo-rtd-code (foo-rtd-code foo clause* (parent-rtd-code clause*)))
-	     (foo-rcd-code (foo-rcd-code clause* foo-rtd protocol (parent-rcd-code clause*)))
-	     (protocol-code (get-protocol-code clause*)))
+      (let* ((foo		(get-record-name namespec))
+	     (foo-rtd		(gensym))
+	     (foo-rcd		(gensym))
+	     (protocol		(gensym))
+	     (make-foo		(get-record-constructor-name namespec))
+	     (fields		(get-fields clause*))
+	     (idx*		(enumerate fields))
+	     (foo-x*		(get-accessors foo fields))
+	     (unsafe-foo-x*	(get-unsafe-accessors foo fields))
+	     (set-foo-x!*	(get-mutators foo fields))
+	     (unsafe-set-foo-x!* (get-unsafe-mutators foo fields))
+	     (set-foo-idx*	(get-mutator-indices fields))
+	     (foo?		(get-record-predicate-name namespec))
+	     (foo-rtd-code	(foo-rtd-code foo clause* (parent-rtd-code clause*)))
+	     (foo-rcd-code	(foo-rcd-code clause* foo-rtd protocol
+					      (parent-rcd-code clause*)))
+	     (protocol-code	(get-protocol-code clause*)))
 	(bless
 	 `(begin
 	    (define ,foo-rtd ,foo-rtd-code)
@@ -2394,7 +2422,22 @@
 	    ,@(map
 		  (lambda (set-foo-x! idx)
 		    `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
-		set-foo-x!* set-foo-idx*)))))
+		set-foo-x!* set-foo-idx*)
+	    ,@(map
+		  (lambda (unsafe-foo-x idx)
+		    `(define-syntax ,unsafe-foo-x
+		       (syntax-rules ()
+			 ((_ x)
+			  ($struct-ref x ,idx)))))
+		unsafe-foo-x* idx*)
+	    ,@(map
+		  (lambda (unsafe-set-foo-x! idx)
+		    `(define-syntax ,unsafe-set-foo-x!
+		       (syntax-rules ()
+			 ((_ x v)
+			  ($struct-set! x ,idx v)))))
+		unsafe-set-foo-x!* set-foo-idx*)
+	    ))))
     (define (verify-clauses x cls*)
       (define valid-kwds
 	(map bless

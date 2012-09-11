@@ -47,6 +47,103 @@
        (begin . ?body)))))
 
 
+(parametrise ((check-test-name	'definition))
+
+  (check	;safe accessors
+      (let ()
+	(define-record-type color
+	  (fields (mutable red)
+		  (mutable green)
+		  (mutable blue)))
+	(define X
+	  (make-color 1 2 3))
+	(list (color-red   X)
+	      (color-green X)
+	      (color-blue  X)))
+    => '(1 2 3))
+
+  (check	;safe accessors and mutators
+      (let ()
+	(define-record-type color
+	  (fields (mutable red)
+		  (mutable green)
+		  (mutable blue)))
+	(define X
+	  (make-color 1 2 3))
+	(color-red-set!   X 10)
+	(color-green-set! X 20)
+	(color-blue-set!  X 30)
+	(list (color-red   X)
+	      (color-green X)
+	      (color-blue  X)))
+    => '(10 20 30))
+
+  (check	;safe accessors and mutators
+      (let ()
+	(define-record-type color
+	  (fields (mutable red   the-red   set-the-red!)
+		  (mutable green the-green set-the-green!)
+		  (mutable blue  the-blue  set-the-blue!)))
+	(define X
+	  (make-color 1 2 3))
+	(set-the-red!   X 10)
+	(set-the-green! X 20)
+	(set-the-blue!  X 30)
+	(list (the-red   X)
+	      (the-green X)
+	      (the-blue  X)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check	;unsafe accessors
+      (let ()
+	(define-record-type color
+	  (fields (mutable red)
+		  (mutable green)
+		  (mutable blue)))
+	(define X
+	  (make-color 1 2 3))
+	(list ($color-red   X)
+	      ($color-green X)
+	      ($color-blue  X)))
+    => '(1 2 3))
+
+  (check	;unsafe accessors and mutators
+      (let ()
+	(define-record-type color
+	  (fields (mutable red)
+		  (mutable green)
+		  (mutable blue)))
+	(define X
+	  (make-color 1 2 3))
+	($color-red-set!   X 10)
+	($color-green-set! X 20)
+	($color-blue-set!  X 30)
+	(list ($color-red   X)
+	      ($color-green X)
+	      ($color-blue  X)))
+    => '(10 20 30))
+
+  (check	;unsafe accessors and mutators
+      (let ()
+	(define-record-type color
+	  (fields (mutable red   the-red   set-the-red!)
+		  (mutable green the-green set-the-green!)
+		  (mutable blue  the-blue  set-the-blue!)))
+	(define X
+	  (make-color 1 2 3))
+	($color-red-set!   X 10)
+	($color-green-set! X 20)
+	($color-blue-set!  X 30)
+	(list ($color-red   X)
+	      ($color-green X)
+	      ($color-blue  X)))
+    => '(10 20 30))
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
 
   (let ()

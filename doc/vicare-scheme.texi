@@ -290,6 +290,7 @@ machines.  @emph{Vicare} is pronounced the etruscan way.
 * overview system::             System requirements.
 * overview install::            Installation and uninstallation.
 * overview restrictions::       Implementation restrictions.
+* overview extensions::         Implementation extensions.
 * overview repl::               The read-eval-print loop.
 * overview foreign::            Built in interface to external
                                 libraries.
@@ -817,8 +818,8 @@ $ make uninstall
 @section Implementation restrictions
 
 
-Here is a list of implementations constraints which may be
-non--compliant with @rnrs{6}.
+Here is a list of implementation constraints which may be non--compliant
+with @rnrs{6}.
 
 @enumerate
 @item
@@ -838,6 +839,139 @@ values (it could be greater than this).  As comparison: LispWorks for
 Unix sets this value to 300, LispWorks for Windows and LispWorks for
 Linux set this value to 255 (last verified from its online documenattion
 in November, 2011).
+@end enumerate
+
+@c page
+@node overview extensions
+@section Implementation extensions
+
+
+Here is a list of implementation extensions which may be non--compliant
+with @rnrs{6}.
+
+@enumerate
+@item
+According to @rnrs{6}: if the parent of a record type has a custom
+protocol function, the record type itself must have a custom protocol
+function; that is:
+
+@example
+(import (rnrs))
+
+(define-record-type alpha
+  (fields a)
+  (protocol (lambda (A) ---)))
+
+;; this is good
+(define-record-type beta
+  (parent alpha)
+  (fields b)
+  (protocol (lambda (A B) ---)))
+
+;; this is bad according to R6RS!!!
+(define-record-type gamma
+  (parent alpha)
+  (fields b))
+@end example
+
+This restriction is violated by @value{PRJNAME}, which allows the
+following:
+
+@example
+(import (rnrs))
+
+(define-record-type alpha
+  (fields a)
+  (protocol (lambda (A) ---)))
+
+;; this is good in Vicare!!!
+(define-record-type beta
+  (parent alpha)
+  (fields b))
+@end example
+
+@noindent
+@value{PRJNAME} just expects the parent protocol function to have the
+same interface of a default protocol function.
+
+@item
+The syntax @func{define-record-type} automatically generates unsafe
+field accessor and mutator syntaxes; in the following example:
+
+@example
+(define-record-type color
+  (fields (mutable red)
+          (mutable green)
+          (mutable blue)))
+@end example
+
+@noindent
+in addition to the safe accessor and mutator definitions for:
+
+@example
+color-red           color-red-set!
+color-green         color-green-set!
+color-blue          color-blue-set!
+@end example
+
+@noindent
+unsafe accessors and mutator definitions for:
+
+@example
+$color-red          $color-red-set!
+$color-green        $color-green-set!
+$color-blue         $color-blue-set!
+@end example
+
+@noindent
+are generated with code like:
+
+@example
+(define-syntax $color-red
+  (syntax-rules ()
+    ((_ x)
+     ($struct-ref x 0))))
+
+(define-syntax $color-red-set!
+  (syntax-rules ()
+    ((_ x v)
+     ($struct-set! x 0 v))))
+@end example
+
+Notice that the name of the unsafe accessors and mutators is always
+built from the field name, @strong{not} from the custom names given in
+the definition; for example:
+
+@example
+(import (rnrs))
+
+(define-record-type color
+  (fields (mutable red   the-red   set-the-red!)
+          (mutable green the-green set-the-green!)
+          (mutable blue  the-blue  set-the-blue!)))
+
+(define X
+  (make-color 1 2 3))
+
+(define Y
+  (make-color 1 2 3))
+
+(set-the-red!   X 10)
+(set-the-green! X 20)
+(set-the-blue!  X 30)
+(list (the-red   X)
+      (the-green X)
+      (the-blue  X)))
+@result{} (10 20 30)
+
+($color-red-set!   Y 10)
+($color-green-set! Y 20)
+($color-blue-set!  Y 30)
+(list ($color-red   Y)
+      ($color-green Y)
+      ($color-blue  Y)))
+@result{} (10 20 30)
+@end example
 @end enumerate
 
 @c page

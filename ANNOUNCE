@@ -88,6 +88,42 @@ Notes for revision 0.2d17
         ((_ x v)
 	 ($struct-set! x 0 v))))
 
+* Added automatic generation of unsafe  accessor and mutator syntaxes to
+  DEFINE-RECORD-TYPE  as  extension (and  violation?)  of  R6RS; in  the
+  following example:
+
+    (define-record-type color
+      (fields (mutable red)
+              (mutable green)
+	      (mutable blue)))
+
+  in addition to the safe accessor and mutator definitions for:
+
+    color-red		color-red-set!
+    color-green		color-green-set!
+    color-blue		color-blue-set!
+
+  unsafe accessors and mutator definitions for:
+
+    $color-red		$color-red-set!
+    $color-green	$color-green-set!
+    $color-blue		$color-blue-set!
+
+  are generated with code like:
+
+    (define-syntax $color-red
+      (syntax-rules ()
+        ((_ x)
+	 ($struct-ref x 0))))
+
+    (define-syntax $color-red-set!
+      (syntax-rules ()
+        ((_ x v)
+	 ($struct-set! x 0 v))))
+
+* Added new  documentation node "overview extensions"  for extensions to
+  R6RS.
+
 
 Notes for revision 0.2d16
 -------------------------
