@@ -2608,18 +2608,36 @@ low level operation.
 @item color-red @var{stru}
 @itemx color-green @var{stru}
 @itemx color-blue @var{stru}
-Accessors for the fields of the structure.  These accessors make use of
-the @func{$struct/rtd?} low level operation to validate the argument and
-if successful they use @func{$struct-ref} to extract the value; if the
-argument is of invalid type: an assertion violation is raised.
+Accessor functions for the fields of the structure.  These accessors
+make use of the @func{$struct/rtd?} low level operation to validate the
+argument and if successful they use @func{$struct-ref} to extract the
+value; if the argument is of invalid type: an assertion violation is
+raised.
 
 @item set-color-red! @var{stru} @var{red}
 @itemx set-color-green! @var{stru} @var{green}
 @itemx set-color-blue! @var{stru} @var{blue}
-Mutators for the fields of the structure.  These mutators make use of
-the @func{$struct/rtd?} low level operation to validate the argument and
-if successful they use @func{$struct-set!} to extract the value; if the
-argument is of invalid type: an assertion violation is raised.
+Mutator functions for the fields of the structure.  These mutators make
+use of the @func{$struct/rtd?} low level operation to validate the
+argument @var{stru} and if successful they use @func{$struct-set!} to
+set the value; if the argument @var{stru} is of invalid type: an
+assertion violation is raised.
+
+@item $color-red @var{stru}
+@itemx $color-green @var{stru}
+@itemx $color-blue @var{stru}
+Unsafe accessor syntaxes for the fields of the structure.  These
+accessors do not validate the arguments and expand directly to a use of
+@func{$struct-ref} to extract the value; if the argument is invalid: the
+behaviour is undefined.
+
+@item $set-color-red! @var{stru} @var{red}
+@itemx $set-color-green! @var{stru} @var{green}
+@itemx $set-color-blue! @var{stru} @var{blue}
+Unsafe mutator syntaxes for the fields of the structure.  These mutators
+do not validate the arguments and expand directly to a use of
+@func{$struct-set!} to set the value; if the argument @var{stru} is
+invalid: the behaviour is undefined.
 @end table
 @end deffn
 

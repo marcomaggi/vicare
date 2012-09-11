@@ -2161,21 +2161,25 @@
 	 (datum->stx id (string->symbol str))))
      (syntax-match e ()
        ((_ name (field* ...))
-	(let* ((namestr (symbol->string (identifier->symbol name)))
-	       (fields (map identifier->symbol field*))
-	       (fieldstr* (map symbol->string fields))
-	       (rtd (datum->stx name (make-struct-type namestr fields)))
-	       (constr (mkid name (string-append "make-" namestr)))
-	       (pred (mkid name (string-append namestr "?")))
-	       (i* (enumerate field*))
-	       (getters
-		(map (lambda (x)
-		       (mkid name (string-append namestr "-" x)))
-		  fieldstr*))
-	       (setters
-		(map (lambda (x)
-		       (mkid name (string-append "set-" namestr "-" x "!")))
-		  fieldstr*)))
+	(let* ((namestr		(symbol->string (identifier->symbol name)))
+	       (fields		(map identifier->symbol field*))
+	       (fieldstr*	(map symbol->string fields))
+	       (rtd		(datum->stx name (make-struct-type namestr fields)))
+	       (constr		(mkid name (string-append "make-" namestr)))
+	       (pred		(mkid name (string-append namestr "?")))
+	       (i*		(enumerate field*))
+	       (getters		(map (lambda (x)
+				       (mkid name (string-append namestr "-" x)))
+				  fieldstr*))
+	       (setters		(map (lambda (x)
+				       (mkid name (string-append "set-" namestr "-" x "!")))
+				  fieldstr*))
+	       (unsafe-getters	(map (lambda (x)
+				       (mkid name (string-append "$" namestr "-" x)))
+				  fieldstr*))
+	       (unsafe-setters	(map (lambda (x)
+				       (mkid name (string-append "$set-" namestr "-" x "!")))
+				  fieldstr*)))
 	  (bless
 	   `(begin
 	      (define-syntax ,name (cons '$rtd ',rtd))
@@ -2201,7 +2205,26 @@
 			      (assertion-violation ',setter
 				"not a struct of required type as struct setter argument"
 				x ',rtd)))))
-		  setters i*)))))))
+		  setters i*)
+	      ,@(map (lambda (unsafe-getter i)
+		       `(define-syntax ,unsafe-getter
+			  (syntax-rules ()
+			    ((_ x)
+			     ($struct-ref x ,i))))
+		       #;(unquote (define ,unsafe-getter
+				  (lambda (x)
+		        	    ($struct-ref x ,i)))))
+		  unsafe-getters i*)
+	      ,@(map (lambda (unsafe-setter i)
+		       `(define-syntax ,unsafe-setter
+			  (syntax-rules ()
+			    ((_ x v)
+			     ($struct-set! x ,i v))))
+		       #;(unquote (define ,unsafe-setter
+				  (lambda (x v)
+				    ($struct-set! x ,i v)))))
+		  unsafe-setters i*))
+	   )))))
    (lambda (stx)
      (stx-error stx "define-struct not supported"))))
 

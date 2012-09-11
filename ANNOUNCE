@@ -58,6 +58,36 @@ Notes for revision 0.2d17
 
 * Reorganised IK_VOIDP_FROM and similar C preprocessor macros.
 
+* Added automatic generation of unsafe  accessor and mutator syntaxes to
+  DEFINE-STRUCT; in the following example:
+
+    (define-struct color
+      (red green blue))
+
+  in addition to the safe accessor and mutator definitions for:
+
+    color-red		set-color-red!
+    color-green		set-color-green!
+    color-blue		set-color-blue!
+
+  unsafe accessors and mutator definitions for:
+
+    $color-red		$set-color-red!
+    $color-green	$set-color-green!
+    $color-blue		$set-color-blue!
+
+  are generated with code like:
+
+    (define-syntax $color-red
+      (syntax-rules ()
+        ((_ x)
+	 ($struct-ref x 0))))
+
+    (define-syntax $set-color-red!
+      (syntax-rules ()
+        ((_ x v)
+	 ($struct-set! x 0 v))))
+
 
 Notes for revision 0.2d16
 -------------------------

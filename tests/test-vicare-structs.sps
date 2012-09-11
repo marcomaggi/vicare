@@ -57,12 +57,43 @@
 	(color? S))
     => #t)
 
+;;; --------------------------------------------------------------------
+
   (check
       (let ((S (make-color 1 2 3)))
 	(list (color-red   S)
 	      (color-green S)
 	      (color-blue  S)))
     => '(1 2 3))
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	(set-color-red!   S 10)
+	(set-color-green! S 20)
+	(set-color-blue!  S 30)
+	(list (color-red   S)
+	      (color-green S)
+	      (color-blue  S)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	(list ($color-red   S)
+	      ($color-green S)
+	      ($color-blue  S)))
+    => '(1 2 3))
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	($set-color-red!   S 10)
+	($set-color-green! S 20)
+	($set-color-blue!  S 30)
+	(list ($color-red   S)
+	      ($color-green S)
+	      ($color-blue  S)))
+    => '(10 20 30))
 
   #t)
 
