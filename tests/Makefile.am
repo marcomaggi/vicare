@@ -156,6 +156,7 @@ TESTS			=	\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\
+	test-vicare-syntactic-extensions.sps		\
 	test-vicare-system.sps				\
 	test-vicare-vectors.sps				\
 	test-vicare-weak-tables.sps			\
@@ -370,6 +371,7 @@ EXTRA_DIST = \
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
 	test-vicare-symbols.sps				\
+	test-vicare-syntactic-extensions.sps		\
 	test-vicare-system.sps				\
 	test-vicare-vectors.sps				\
 	test-vicare-weak-tables.sps			\

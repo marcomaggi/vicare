@@ -20236,8 +20236,8 @@ expand to @meta{big-body}.
 @end deffn
 
 
-@deffn Macro case-fixnums @meta{expr} ((@meta{fixnum}) @metao{fx-body} @meta{fx-body} ...) ...
-@deffnx Macro case-fixnums @meta{expr} ((@meta{fixnum}) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
+@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
 @deffnx {Auxiliary Syntax} else
 Special implementation of @func{case} expeting only fixnums as datums;
 for maximum speed, it makes use of unsafe operations on fixnums.
@@ -20249,8 +20249,8 @@ behaviour is undefined (and you do not want it).
 @end deffn
 
 
-@deffn Macro case-integers @meta{expr} ((@meta{int}) @metao{int-body} @meta{int-body} ...) ...
-@deffnx Macro case-integers @meta{expr} ((@meta{int}) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
+@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
 @deffnx {Auxiliary Syntax} else
 Special implementation of @func{case} expecting only exact integers as
 datums.  @func{else} must be the binding exported by @library{rnrs} and

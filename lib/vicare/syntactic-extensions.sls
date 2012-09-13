@@ -492,23 +492,27 @@
 (define-syntax case-fixnums
   (syntax-rules (else)
     ((_ ?expr
-	((?fixnum)
+	((?fixnum0 ?fixnum ...)
 	 ?fx-body0 ?fx-body ...)
 	...
 	(else
 	 ?else-body0 ?else-body ...))
      (let ((fx ?expr))
-       (cond (($fx= ?fixnum fx)
+       (cond ((or ($fx= ?fixnum0 fx)
+		  ($fx= ?fixnum  fx)
+		  ...)
 	      ?fx-body0 ?fx-body ...)
 	     ...
 	     (else
 	      ?else-body0 ?else-body ...))))
     ((_ ?expr
-	((?fixnum)
+	((?fixnum0 ?fixnum ...)
 	 ?fx-body0 ?fx-body ...)
 	...)
      (let ((fx ?expr))
-       (cond (($fx= ?fixnum fx)
+       (cond ((or ($fx= ?fixnum0 fx)
+		  ($fx= ?fixnum  fx)
+		  ...)
 	      ?fx-body0 ?fx-body ...)
 	     ...)))
     ))
@@ -516,23 +520,27 @@
 (define-syntax case-integers
   (syntax-rules (else)
     ((_ ?expr
-	((?integer)
+	((?integer0 ?integer ...)
 	 ?body0 ?body ...)
 	...
 	(else
 	 ?else-body0 ?else-body ...))
      (let ((int ?expr))
-       (cond ((= ?integer int)
+       (cond ((or (= ?integer0 int)
+		  (= ?integer  int)
+		  ...)
 	      ?body0 ?body ...)
 	     ...
 	     (else
 	      ?else-body0 ?else-body ...))))
     ((_ ?expr
-	((?integer)
+	((?integer0 ?integer ...)
 	 ?body0 ?body ...)
 	...)
      (let ((int ?expr))
-       (cond ((= ?integer int)
+       (cond ((or (= ?integer0 int)
+		  (= ?integer  int)
+		  ...)
 	      ?body0 ?body ...)
 	     ...)))
     ))

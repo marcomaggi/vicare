@@ -124,6 +124,9 @@ Notes for revision 0.2d17
 * Added new  documentation node "overview extensions"  for extensions to
   R6RS.
 
+* CASE-FIXNUMS and CASE-INTEGERS  from (vicare syntactic-extensions) now
+  accept multiple datums in the same clause.
+
 
 Notes for revision 0.2d16
 -------------------------
