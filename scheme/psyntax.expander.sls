@@ -3538,16 +3538,17 @@
 	     (e* (map (lambda (x) (add-subst rib x)) (syntax->list e*))))
 	(let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
 		      (chi-body* e* r mr lex* rhs* mod** kwd* '() rib #f #t)))
-	  (let ((exp-lab*
-		 (vector-map
-		     (lambda (x)
-		       (or (id->label
-			    (make-<stx> (identifier->symbol x) (<stx>-mark* x)
+	  (let* ((exp-id* (vector-append exp-id* (list->vector _exp*)))
+                 (exp-lab*
+                  (vector-map
+                   (lambda (x)
+                     (or (id->label
+                          (make-<stx> (identifier->symbol x) (<stx>-mark* x)
 				      (list rib)
 				      '()))
-			   (stx-error x "cannot find module export")))
+                         (stx-error x "cannot find module export")))
 		   exp-id*))
-		(mod** (cons e* mod**)))
+                 (mod** (cons e* mod**)))
 	    (if (not name) ;;; explicit export
 		(values lex* rhs* exp-id* exp-lab* r mr mod** kwd*)
 	      (let ((lab (gen-label 'module))
