@@ -105,6 +105,9 @@
 (define-syntax no-source
   (lambda (x) #f))
 
+(define (vector-append v1 v2)
+  (list->vector (append (vector->list v1) (vector->list v2))))
+
 
 ;;;; <RIB> type definition
 
@@ -3705,10 +3708,23 @@
 			   subst-names)
 			 subst-labels)))
 		     (_ (stx-error e "invalid import form"))))
+                 (define (any-import ctxt e r)
+                   (if (id? e)
+                       (module-import (list ctxt e) r)
+                       (library-import (list ctxt e))))
+                 (define (any-import* ctxt e* r)
+                   (if (null? e*)
+                       (values '#() '#())
+                       (let-values (((t1 t2) (any-import ctxt (car e*) r))
+                                    ((t3 t4) (any-import* ctxt (cdr e*) r)))
+                         (values (vector-append t1 t3)
+                                 (vector-append t2 t4)))))
+                 (define (any-import*-checked e r)
+                   (syntax-match e ()
+                     ((ctxt e* ...) (any-import* ctxt e* r))
+                     (_ (stx-error e "invalid import form"))))
 		 (let-values (((id* lab*)
-			       (if (module-import? e)
-				   (module-import e r)
-				 (library-import e))))
+                               (any-import*-checked e r)))
 		   (vector-for-each
 		       (lambda (id lab) (extend-rib! rib id lab sd?))
 		     id* lab*))
