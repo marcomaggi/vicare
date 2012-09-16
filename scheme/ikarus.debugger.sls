@@ -37,13 +37,8 @@
 		  print-condition)
     (prefix (only (ikarus)
 		  display write newline printf
-		  pretty-print #;pretty-print* write-char
+		  pretty-print pretty-print* write-char
 		  print-condition)
-	    ikarus.)
-    ;;To be  removed at the next  boot image rotation  (Marco Maggi; Mon
-    ;;Jun 4, 2012).
-    (prefix (only (ikarus pretty-print)
-		  pretty-print*)
 	    ikarus.)
     (vicare syntactic-extensions)
     (prefix (vicare words)

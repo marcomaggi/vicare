@@ -23,7 +23,7 @@
     eval-core
     symbol-value			set-symbol-value!
     keyword?				pretty-print
-    #;pretty-print*
+    pretty-print*
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -44,20 +44,12 @@
     library-version-mismatch-warning
     library-stale-warning
     file-locator-resolution-error)
-  (import (except (ikarus)
-		  ;;This binding is in  the makefile and this EXCEPT and
-		  ;;the  IMPORT below can  be removed  at the  next boot
-		  ;;image rotation (Marco Maggi; Wed Mar 28, 2012).
-		  annotation-textual-position)
+  (import (ikarus)
     (only (ikarus.reader)
-	  read-library-source-file ;this is not in makefile.sps
-	  annotation-textual-position)
+	  ;;this is not in makefile.sps
+	  read-library-source-file)
     (only (ikarus.compiler)
 	  eval-core)
-    ;;To be  removed at the next  boot image rotation  (Marco Maggi; Mon
-    ;;Jun 4, 2012).
-    #;(only (ikarus pretty-print)
-	  pretty-print*)
     (only (ikarus system $symbols)
 	  $unintern-gensym))
 
