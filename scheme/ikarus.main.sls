@@ -32,7 +32,7 @@
 
 
 (library (ikarus main)
-  (export)
+  (export $struct-guardian)
   (import (except (ikarus)
 		  load-r6rs-script
 		  load
@@ -65,6 +65,9 @@
 		  getenv
 		  real-pathname)
 	    posix.)
+    (only (ikarus system $structs)
+	  $struct-ref
+	  $struct-rtd)
     (only (ikarus cafe)
 	  cafe-input-port)
     (prefix (only (ikarus.readline)
@@ -995,8 +998,26 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 ;;;; main expressions
 
-;;See "ikarus.symbol-table.ss" for an explanation of this.
-($initialize-symbol-table!)
+(module ()
+  ;;See "ikarus.symbol-table.ss"  for an  explanation of  this.  Nothing
+  ;;must be executed before the initialisation of the symbol table.
+  ($initialize-symbol-table!)
+
+  #| end of module |#)
+
+(module ($struct-guardian)
+  (define $struct-guardian
+    (make-guardian))
+
+  (define ($struct-guardian-destructor)
+    (do ((P ($struct-guardian) ($struct-guardian)))
+	((not P))
+      (($struct-ref ($struct-rtd P) 5) P)))
+
+  (post-gc-hooks (cons $struct-guardian-destructor
+		       (post-gc-hooks)))
+
+  #| end of module |# )
 
 (let-values (((cfg execution-state-initialisation-according-to-command-line-options)
 	      (parse-command-line-arguments)))

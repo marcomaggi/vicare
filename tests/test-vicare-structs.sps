@@ -251,7 +251,7 @@
 
   (check
       (struct-length color-rtd)
-    => 5)
+    => 6)
 
   (check
       (struct-length S)
@@ -338,6 +338,27 @@
     => `(,(void) ,(void) ,(void)))
 
   #t)
+
+
+(parametrise ((check-test-name	'destructor))
+
+  (check
+      (with-result
+       (let ()
+	 (define-struct alpha
+	   (a b c))
+	 (module ()
+	   (set-rtd-destructor! (type-descriptor alpha)
+				(lambda (S)
+				  (check-pretty-print (list 'destroying S))
+				  (add-result (alpha-a S)))))
+	 (let ((S (make-alpha 1 2 3)))
+	   (set-alpha-b! S 10)
+	   (check-pretty-print S))
+	 (collect)))
+    => `(,(void) (1)))
+
+  (collect))
 
 
 ;;;; done

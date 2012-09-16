@@ -21,7 +21,8 @@
     fasl-search-path)
   (import (except (ikarus)
 		  load			load-r6rs-script
-		  fasl-directory	fasl-path)
+		  fasl-directory	fasl-path
+		  fasl-search-path)
     (prefix (only (ikarus.posix)
 		  getenv
 		  mkdir/parents

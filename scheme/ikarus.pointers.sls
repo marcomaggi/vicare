@@ -205,7 +205,7 @@
 		  guarded-strdup			guarded-strdup*
 		  guarded-strndup			guarded-strndup*
 		  cstring->bytevector			cstring->string
-		  cstring16->bytevector			cstring16->string
+		  cstring16->bytevector			cstring16n->string
 		  cstring16le->string			cstring16be->string
 		  bytevector->cstring			bytevector->cstring*
 		  bytevector->guarded-cstring		bytevector->guarded-cstring*

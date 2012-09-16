@@ -18,10 +18,12 @@
   (export
     string->symbol
     $initialize-symbol-table!
-    $symbol-table-size
+    (rename (%symbol-table-size		$symbol-table-size))
     $log-symbol-table-status)
   (import (except (ikarus)
-		  string->symbol)
+		  string->symbol
+		  $symbol-table-size
+		  $log-symbol-table-status)
     (except (ikarus system $symbols)
 	    $symbol-table-size
 	    $log-symbol-table-status)
@@ -124,7 +126,7 @@
       (intern-car (unsafe.cdr x))))
   (vector-for-each intern-car (foreign-call "ikrt_get_symbol_table")))
 
-(define ($symbol-table-size)
+(define (%symbol-table-size)
   (symbol-table-size THE-SYMBOL-TABLE))
 
 (define ($log-symbol-table-status)
@@ -139,7 +141,7 @@
     (newline port))
   (%display "Vicare internal symbol table status:\n")
   (%display "\tnumber of interned symbols: ")
-  (%display ($symbol-table-size))
+  (%display (%symbol-table-size))
   (%newline)
   (%display "\tnumber of hash table buckets: ")
   (%display (vector-length (symbol-table-buckets THE-SYMBOL-TABLE)))

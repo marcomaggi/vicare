@@ -393,12 +393,13 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (gensym_val == IK_UNBOUND_OBJECT) {
       rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | vector_tag;
       ikptr base_rtd = pcb->base_rtd;
-      IK_REF(rtd, off_rtd_rtd) = base_rtd;
-      IK_REF(rtd, off_rtd_name) = name;
-      IK_REF(rtd, off_rtd_length) = IK_FIX(n);
-      IK_REF(rtd, off_rtd_fields) = fields;
-      IK_REF(rtd, off_rtd_printer) = IK_FALSE_OBJECT;
-      IK_REF(rtd, off_rtd_symbol) = symb;
+      IK_REF(rtd, off_rtd_rtd)		= base_rtd;
+      IK_REF(rtd, off_rtd_name)		= name;
+      IK_REF(rtd, off_rtd_length)	= IK_FIX(n);
+      IK_REF(rtd, off_rtd_fields)	= fields;
+      IK_REF(rtd, off_rtd_printer)	= IK_FALSE_OBJECT;
+      IK_REF(rtd, off_rtd_symbol)	= symb;
+      IK_REF(rtd, off_rtd_destructor)	= IK_FALSE;
       IK_REF(symb, off_symbol_record_value) = rtd;
       ((unsigned int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(symb+off_symbol_record_value)] = -1;
     } else {

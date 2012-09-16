@@ -296,6 +296,7 @@ ik_make_pcb (void)
     IK_REF(s_base_rtd, off_rtd_fields)  = 0;
     IK_REF(s_base_rtd, off_rtd_printer) = 0;
     IK_REF(s_base_rtd, off_rtd_symbol)  = 0;
+    IK_REF(s_base_rtd, off_rtd_destructor) = IK_FALSE;
     pcb->base_rtd = s_base_rtd;
   }
   return pcb;

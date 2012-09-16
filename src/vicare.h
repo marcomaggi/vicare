@@ -667,7 +667,8 @@ ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 #define disp_rtd_fields		(3 * wordsize)
 #define disp_rtd_printer	(4 * wordsize)
 #define disp_rtd_symbol		(5 * wordsize)
-#define rtd_size		(6 * wordsize)
+#define disp_rtd_destructor	(6 * wordsize)
+#define rtd_size		(7 * wordsize)
 
 #define off_rtd_rtd		(disp_rtd_rtd	  - rtd_tag)
 #define off_rtd_name		(disp_rtd_name	  - rtd_tag)
@@ -675,6 +676,7 @@ ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 #define off_rtd_fields		(disp_rtd_fields  - rtd_tag)
 #define off_rtd_printer		(disp_rtd_printer - rtd_tag)
 #define off_rtd_symbol		(disp_rtd_symbol  - rtd_tag)
+#define off_rtd_destructor	(disp_rtd_destructor - rtd_tag)
 
 ik_decl ikptr ika_struct_alloc_and_init	(ikpcb * pcb, ikptr rtd);
 ik_decl ikptr ika_struct_alloc_no_init	(ikpcb * pcb, ikptr rtd);
