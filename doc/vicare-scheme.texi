@@ -2811,7 +2811,7 @@ Return a string represnting the name of structures of type @var{rtd}.
 
 
 @defun struct-type-symbol @var{rtd}
-Return a symbol uniquely identifying the data structure type @var{RTD}.
+Return a symbol uniquely identifying the data structure type @var{rtd}.
 @end defun
 
 
@@ -2821,12 +2821,37 @@ of type @var{rtd}.
 @end defun
 
 
+@defun struct-type-destructor @var{rtd}
+Return @false{} or a procedure being the destructor for instances of
+@var{rtd}.  The destructor is registered in a structure type descritpor
+with @func{set-rtd-destructor!}.
+@end defun
+
+@c ------------------------------------------------------------
+
 @defun set-rtd-printer! @var{rtd} @var{printer}
 Select the procedure @var{printer} as printer for data structures of
-type @var{rtd}.  The printer accepts as @math{3} arguments: the
-structure to be printed, the port to which write a string represention
-of the structure with @func{display}, a function to be optionally
-applied to the field values to print them.
+type @var{rtd}; return unspecified values.  The printer accepts as
+@math{3} arguments: the structure to be printed, the port to which write
+a string represention of the structure with @func{display}, a function
+to be optionally applied to the field values to print them.
+@end defun
+
+
+@defun set-rtd-destructor! @var{rtd} @var{destructor}
+Select the procedure @var{destructor} as destructor for data structures
+of type @var{rtd}; return unspecified values.  The destructor accepts a
+single argument being the structure instance to finalise; the destructor
+can return unspecified values.
+
+After a destructor is registered in @var{rtd}: new instances of this
+structure type are registered, upon creation, into an internal guardian,
+@ref{iklib guardians} for details; whenever such structures are garbage
+collected: the guardian applies @var{destructor} to them.
+
+Exceptions raised by @var{destructor} are catched with @func{guard} and
+discarded: destructor functions must take care of exceptions by
+themselves.
 @end defun
 
 @c page

@@ -1012,7 +1012,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (define ($struct-guardian-destructor)
     (do ((P ($struct-guardian) ($struct-guardian)))
 	((not P))
-      (($struct-ref ($struct-rtd P) 5) P)))
+      (guard (else (void))
+	(($struct-ref ($struct-rtd P) 5) P))))
 
   (post-gc-hooks (cons $struct-guardian-destructor
 		       (post-gc-hooks)))

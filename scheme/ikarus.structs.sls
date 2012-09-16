@@ -21,7 +21,7 @@
 
     ;; struct type descriptor inspection
     struct-type-name		struct-type-symbol
-    struct-type-field-names
+    struct-type-field-names	struct-type-destructor
 
     ;; struct type descriptor customisation
     set-rtd-printer!		set-rtd-destructor!
@@ -45,26 +45,25 @@
 		  make-struct-type
 
 		  ;; struct type descriptor inspection
-		  struct-type-name	struct-type-symbol
-		  struct-type-field-names
+		  struct-type-name		struct-type-symbol
+		  struct-type-field-names	struct-type-destructor
 
 		  ;; struct type descriptor customisation
-		  set-rtd-printer!	set-rtd-destructor!
+		  set-rtd-printer!		set-rtd-destructor!
 
 		  ;; struct accessors and mutators
-		  struct?
-		  struct-constructor	struct-predicate
-		  struct=?
+		  struct?			struct=?
+		  struct-constructor		struct-predicate
 
 		  ;; struct accessors and mutators
-		  struct-ref		struct-set!
-		  struct-field-accessor	struct-field-mutator
+		  struct-ref			struct-set!
+		  struct-field-accessor		struct-field-mutator
 		  struct-reset
 
 		  ;; structure inspection
-		  struct-rtd		struct-type-descriptor
-		  struct-name		struct-printer
-		  struct-destructor	struct-length)
+		  struct-rtd			struct-type-descriptor
+		  struct-name			struct-printer
+		  struct-destructor		struct-length)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -234,6 +233,16 @@
   (with-arguments-validation (who)
       ((rtd rtd))
     (rtd-fields rtd)))
+
+(define (struct-type-destructor rtd)
+  ;;Return false or a procedure being the destructor of RTD.
+  ;;
+  (define who 'struct-type-destructor)
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (rtd-destructor rtd)))
+
+;;; --------------------------------------------------------------------
 
 (define (set-rtd-printer! rtd printer)
   ;;Select the procedure PRINTER as  printer for data structures of type

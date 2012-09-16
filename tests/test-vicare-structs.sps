@@ -353,6 +353,7 @@
 				  (check-pretty-print (list 'destroying S))
 				  (add-result (alpha-a S)))))
 	 (let ((S (make-alpha 1 2 3)))
+(check-pretty-print (struct-destructor S))
 	   (set-alpha-b! S 10)
 	   (check-pretty-print S))
 	 (collect)))
