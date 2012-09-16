@@ -27,7 +27,8 @@
 
 #!vicare
 (import (vicare)
-  (vicare checks))
+  (vicare checks)
+  (ikarus system $structs))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -338,28 +339,6 @@
     => `(,(void) ,(void) ,(void)))
 
   #t)
-
-
-(parametrise ((check-test-name	'destructor))
-
-  (check
-      (with-result
-       (let ()
-	 (define-struct alpha
-	   (a b c))
-	 (module ()
-	   (set-rtd-destructor! (type-descriptor alpha)
-				(lambda (S)
-				  (check-pretty-print (list 'destroying S))
-				  (add-result (alpha-a S)))))
-	 (let ((S (make-alpha 1 2 3)))
-(check-pretty-print (struct-destructor S))
-	   (set-alpha-b! S 10)
-	   (check-pretty-print S))
-	 (collect)))
-    => `(,(void) (1)))
-
-  (collect))
 
 
 ;;;; done

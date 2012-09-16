@@ -64,6 +64,7 @@
 		  struct-rtd			struct-type-descriptor
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
+    (ikarus.emergency)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
