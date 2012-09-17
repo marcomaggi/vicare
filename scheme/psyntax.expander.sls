@@ -2185,7 +2185,10 @@
 	      (define-syntax ,name (cons '$rtd ',rtd))
 	      (define ,constr
 		(lambda ,field*
-		  ($struct ',rtd ,@field*)))
+		  (let ((S ($struct ',rtd ,@field*)))
+		    (if ($struct-ref ',rtd 5) ;destructor
+			($struct-guardian S)
+		      S))))
 	      (define ,pred
 		(lambda (x) ($struct/rtd? x ',rtd)))
 	      ,@(map (lambda (getter i)
