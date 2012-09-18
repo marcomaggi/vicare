@@ -14,7 +14,7 @@ VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
 # line of "make".
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_FLAGS	= -b $(VICARE_BOOT) --debug $(user_flags) --r6rs-script
+VICARE_FLAGS	= -b $(VICARE_BOOT) $(user_flags) --r6rs-script
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 		  CHECK_TEST_NAME=$(name)				\
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
