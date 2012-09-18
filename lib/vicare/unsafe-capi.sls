@@ -75,6 +75,9 @@
     ffi-pointer-ref-c-signed-long	ffi-pointer-ref-c-unsigned-long
     ffi-pointer-ref-c-signed-long-long	ffi-pointer-ref-c-unsigned-long-long
 
+    ffi-pointer-ref-c-size_t		ffi-pointer-ref-c-ssize_t
+    ffi-pointer-ref-c-off_t		ffi-pointer-ref-c-ptrdiff_t
+
     ffi-pointer-set-c-uint8!		ffi-pointer-set-c-sint8!
     ffi-pointer-set-c-uint16!		ffi-pointer-set-c-sint16!
     ffi-pointer-set-c-uint32!		ffi-pointer-set-c-sint32!
@@ -88,6 +91,9 @@
     ffi-pointer-set-c-signed-int!	ffi-pointer-set-c-unsigned-int!
     ffi-pointer-set-c-signed-long!	ffi-pointer-set-c-unsigned-long!
     ffi-pointer-set-c-signed-long-long!	ffi-pointer-set-c-unsigned-long-long!
+
+    ffi-pointer-set-c-size_t!		ffi-pointer-set-c-ssize_t!
+    ffi-pointer-set-c-off_t!		ffi-pointer-set-c-ptrdiff_t!
 
     ffi-array-ref-c-uint8		ffi-array-ref-c-sint8
     ffi-array-ref-c-uint16		ffi-array-ref-c-sint16
@@ -103,6 +109,9 @@
     ffi-array-ref-c-signed-long		ffi-array-ref-c-unsigned-long
     ffi-array-ref-c-signed-long-long	ffi-array-ref-c-unsigned-long-long
 
+    ffi-array-ref-c-size_t		ffi-array-ref-c-ssize_t
+    ffi-array-ref-c-off_t		ffi-array-ref-c-ptrdiff_t
+
     ffi-array-set-c-uint8!		ffi-array-set-c-sint8!
     ffi-array-set-c-uint16!		ffi-array-set-c-sint16!
     ffi-array-set-c-uint32!		ffi-array-set-c-sint32!
@@ -116,6 +125,9 @@
     ffi-array-set-c-signed-int!		ffi-array-set-c-unsigned-int!
     ffi-array-set-c-signed-long!	ffi-array-set-c-unsigned-long!
     ffi-array-set-c-signed-long-long!	ffi-array-set-c-unsigned-long-long!
+
+    ffi-array-set-c-size_t!		ffi-array-set-c-ssize_t!
+    ffi-array-set-c-off_t!		ffi-array-set-c-ptrdiff_t!
 
     ;; error handling
     posix-strerror
@@ -580,6 +592,20 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (ffi-pointer-ref-c-size_t pointer offset)
+  (foreign-call "ikrt_ref_size_t" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-ssize_t pointer offset)
+  (foreign-call "ikrt_ref_ssize_t" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-off_t pointer offset)
+  (foreign-call "ikrt_ref_off_t" pointer offset))
+
+(define-inline (ffi-pointer-ref-c-ptrdiff_t pointer offset)
+  (foreign-call "ikrt_ref_ptrdiff_t" pointer offset))
+
+;;; --------------------------------------------------------------------
+
 (define-inline (ffi-pointer-set-c-uint8! pointer offset value)
   (foreign-call "ikrt_set_uint8" pointer offset value))
 
@@ -648,6 +674,20 @@
 
 (define-inline (ffi-pointer-set-c-unsigned-long-long! pointer offset value)
   (foreign-call "ikrt_set_ulonglong" pointer offset value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-pointer-set-c-size_t! pointer offset value)
+  (foreign-call "ikrt_set_size_t" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-ssize_t! pointer offset value)
+  (foreign-call "ikrt_set_ssize_t" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-off_t! pointer offset value)
+  (foreign-call "ikrt_set_off_t" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-ptrdiff_t! pointer offset value)
+  (foreign-call "ikrt_set_ptrdiff_t" pointer offset value))
 
 ;;; --------------------------------------------------------------------
 
@@ -722,6 +762,20 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-inline (ffi-array-ref-c-size_t array offset)
+  (foreign-call "ikrt_array_ref_size_t" array offset))
+
+(define-inline (ffi-array-ref-c-ssize_t array offset)
+  (foreign-call "ikrt_array_ref_ssize_t" array offset))
+
+(define-inline (ffi-array-ref-c-off_t array offset)
+  (foreign-call "ikrt_array_ref_off_t" array offset))
+
+(define-inline (ffi-array-ref-c-ptrdiff_t array offset)
+  (foreign-call "ikrt_array_ref_ptrdiff_t" array offset))
+
+;;; --------------------------------------------------------------------
+
 (define-inline (ffi-array-set-c-uint8! array offset value)
   (foreign-call "ikrt_array_set_uint8" array offset value))
 
@@ -790,6 +844,20 @@
 
 (define-inline (ffi-array-set-c-unsigned-long-long! array offset value)
   (foreign-call "ikrt_array_set_ulonglong" array offset value))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ffi-array-set-c-size_t! array offset value)
+  (foreign-call "ikrt_array_set_size_t" array offset value))
+
+(define-inline (ffi-array-set-c-ssize_t! array offset value)
+  (foreign-call "ikrt_array_set_ssize_t" array offset value))
+
+(define-inline (ffi-array-set-c-off_t! array offset value)
+  (foreign-call "ikrt_array_set_off_t" array offset value))
+
+(define-inline (ffi-array-set-c-ptrdiff_t! array offset value)
+  (foreign-call "ikrt_array_set_ptrdiff_t" array offset value))
 
 
 ;;;; error handling

@@ -635,7 +635,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check 'this	;cstring16->bytevector
+  (check 	;cstring16->bytevector
       (let* ((cstr (bytevector->guarded-cstring (bytevector-append (string->utf16n "ciao")
 								   '#vu8(0 0))))
 	     (bv   (cstring16->bytevector cstr)))
@@ -1288,6 +1288,138 @@
 	  (pointer-set-c-unsigned-long-long! P 2 (words.least-c-unsigned-long-long*))))
     => `(,(words.least-c-unsigned-long-long*)))
 
+;;; --------------------------------------------------------------------
+;;; c-size_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-size_t! P 2 123)
+	(pointer-ref-c-size_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-size_t! P 2 (words.greatest-c-size_t))
+	(pointer-ref-c-size_t  P 2))
+    => (words.greatest-c-size_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-size_t! P 2 (words.least-c-size_t))
+	(pointer-ref-c-size_t  P 2))
+    => (words.least-c-size_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-size_t! P 2 (words.greatest-c-size_t*))))
+    => `(,(words.greatest-c-size_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-size_t! P 2 (words.least-c-size_t*))))
+    => `(,(words.least-c-size_t*)))
+
+;;; --------------------------------------------------------------------
+;;; c-ssize_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ssize_t! P 2 123)
+	(pointer-ref-c-ssize_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ssize_t! P 2 (words.greatest-c-ssize_t))
+	(pointer-ref-c-ssize_t  P 2))
+    => (words.greatest-c-ssize_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ssize_t! P 2 (words.least-c-ssize_t))
+	(pointer-ref-c-ssize_t  P 2))
+    => (words.least-c-ssize_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-ssize_t! P 2 (words.greatest-c-ssize_t*))))
+    => `(,(words.greatest-c-ssize_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-ssize_t! P 2 (words.least-c-ssize_t*))))
+    => `(,(words.least-c-ssize_t*)))
+
+;;; --------------------------------------------------------------------
+;;; c-off_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-off_t! P 2 123)
+	(pointer-ref-c-off_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-off_t! P 2 (words.greatest-c-off_t))
+	(pointer-ref-c-off_t  P 2))
+    => (words.greatest-c-off_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-off_t! P 2 (words.least-c-off_t))
+	(pointer-ref-c-off_t  P 2))
+    => (words.least-c-off_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-off_t! P 2 (words.greatest-c-off_t*))))
+    => `(,(words.greatest-c-off_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-off_t! P 2 (words.least-c-off_t*))))
+    => `(,(words.least-c-off_t*)))
+
+;;; --------------------------------------------------------------------
+;;; c-ptrdiff_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ptrdiff_t! P 2 123)
+	(pointer-ref-c-ptrdiff_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t))
+	(pointer-ref-c-ptrdiff_t  P 2))
+    => (words.greatest-c-ptrdiff_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t))
+	(pointer-ref-c-ptrdiff_t  P 2))
+    => (words.least-c-ptrdiff_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t*))))
+    => `(,(words.greatest-c-ptrdiff_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (pointer-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t*))))
+    => `(,(words.least-c-ptrdiff_t*)))
+
   (collect))
 
 
@@ -1912,6 +2044,138 @@
 	(let ((P (guarded-malloc 32)))
 	  (array-set-c-unsigned-long-long! P 2 (words.least-c-unsigned-long-long*))))
     => `(,(words.least-c-unsigned-long-long*)))
+
+;;; --------------------------------------------------------------------
+;;; c-size_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-size_t! P 2 123)
+	(array-ref-c-size_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-size_t! P 2 (words.greatest-c-size_t))
+	(array-ref-c-size_t  P 2))
+    => (words.greatest-c-size_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-size_t! P 2 (words.least-c-size_t))
+	(array-ref-c-size_t  P 2))
+    => (words.least-c-size_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-size_t! P 2 (words.greatest-c-size_t*))))
+    => `(,(words.greatest-c-size_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-size_t! P 2 (words.least-c-size_t*))))
+    => `(,(words.least-c-size_t*)))
+
+;;; --------------------------------------------------------------------
+;;; c-ssize_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ssize_t! P 2 123)
+	(array-ref-c-ssize_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ssize_t! P 2 (words.greatest-c-ssize_t))
+	(array-ref-c-ssize_t  P 2))
+    => (words.greatest-c-ssize_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ssize_t! P 2 (words.least-c-ssize_t))
+	(array-ref-c-ssize_t  P 2))
+    => (words.least-c-ssize_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-ssize_t! P 2 (words.greatest-c-ssize_t*))))
+    => `(,(words.greatest-c-ssize_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-ssize_t! P 2 (words.least-c-ssize_t*))))
+    => `(,(words.least-c-ssize_t*)))
+
+;;; --------------------------------------------------------------------
+;;; c-off_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-off_t! P 2 123)
+	(array-ref-c-off_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-off_t! P 2 (words.greatest-c-off_t))
+	(array-ref-c-off_t  P 2))
+    => (words.greatest-c-off_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-off_t! P 2 (words.least-c-off_t))
+	(array-ref-c-off_t  P 2))
+    => (words.least-c-off_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-off_t! P 2 (words.greatest-c-off_t*))))
+    => `(,(words.greatest-c-off_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-off_t! P 2 (words.least-c-off_t*))))
+    => `(,(words.least-c-off_t*)))
+
+;;; --------------------------------------------------------------------
+;;; c-ptrdiff_t
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ptrdiff_t! P 2 123)
+	(array-ref-c-ptrdiff_t  P 2))
+    => 123)
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t))
+	(array-ref-c-ptrdiff_t  P 2))
+    => (words.greatest-c-ptrdiff_t))
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(array-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t))
+	(array-ref-c-ptrdiff_t  P 2))
+    => (words.least-c-ptrdiff_t))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-ptrdiff_t! P 2 (words.greatest-c-ptrdiff_t*))))
+    => `(,(words.greatest-c-ptrdiff_t*)))
+
+  (check
+      (catch-assertion #f
+	(let ((P (guarded-malloc 32)))
+	  (array-set-c-ptrdiff_t! P 2 (words.least-c-ptrdiff_t*))))
+    => `(,(words.least-c-ptrdiff_t*)))
 
   (collect))
 

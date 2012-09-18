@@ -30,7 +30,6 @@
 
 #include "internals.h"
 #include <gmp.h>
-#include <unistd.h> /* for off_t */
 
 
 /** --------------------------------------------------------------------
@@ -610,9 +609,9 @@ ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N)
 {
   switch (sizeof(ptrdiff_t)) {
   case sizeof(uint64_t):
-    return ika_integer_from_uint64(pcb, (uint64_t)N);
+    return ika_integer_from_sint64(pcb, (uint64_t)N);
   case sizeof(int32_t):
-    return ika_integer_from_uint32(pcb, (uint32_t)N);
+    return ika_integer_from_sint32(pcb, (uint32_t)N);
   default:
     ik_abort("unexpected ptrdiff_t size %d", sizeof(ptrdiff_t));
     return IK_VOID_OBJECT;
@@ -783,10 +782,15 @@ ik_integer_to_sint64 (ikptr x)
 off_t
 ik_integer_to_off_t (ikptr x)
 {
-  if (sizeof(off_t) == sizeof(int64_t))
+  switch (sizeof(off_t)) {
+  case sizeof(int64_t):
     return (off_t)ik_integer_to_sint64(x);
-  else
+  case sizeof(int32_t):
     return (off_t)ik_integer_to_sint32(x);
+  default:
+    ik_abort("unexpected off_t size %d", sizeof(off_t));
+    return IK_VOID_OBJECT;
+  }
 }
 size_t
 ik_integer_to_size_t (ikptr x)
@@ -807,10 +811,15 @@ ik_integer_to_ssize_t (ikptr x)
 ptrdiff_t
 ik_integer_to_ptrdiff_t (ikptr x)
 {
-  if (sizeof(ptrdiff_t) == sizeof(int32_t))
+  switch (sizeof(ptrdiff_t)) {
+  case sizeof(int32_t):
     return (ptrdiff_t)ik_integer_to_sint32(x);
-  else
+  case sizeof(int64_t):
     return (ptrdiff_t)ik_integer_to_sint64(x);
+  default:
+    ik_abort("unexpected ptrdiff_t size %d", sizeof(ptrdiff_t));
+    return IK_VOID_OBJECT;
+  }
 }
 
 /* ------------------------------------------------------------------ */

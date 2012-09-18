@@ -6017,6 +6017,29 @@ language implementation.
 @end defun
 
 
+@defun pointer-set-c-size_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{size_t}
+type located at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-ssize_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{ssize_t}
+type located at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-off_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{off_t}
+type located at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-ptrdiff_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the
+@code{ptrdiff_t} type located at @var{offset} from @var{memory}.
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Poking floating point numbers
@@ -6144,6 +6167,30 @@ C language implementation.
 @cpeeker{long long}
 @end defun
 
+
+@defun pointer-ref-c-size_t @var{memory} @var{offset}
+Peek the @code{size_t} integer located at @var{offset} from @var{memory}
+and return it as exact integer.
+@end defun
+
+
+@defun pointer-ref-c-ssize_t @var{memory} @var{offset}
+Peek the @code{ssize_t} integer located at @var{offset} from @var{memory}
+and return it as exact integer.
+@end defun
+
+
+@defun pointer-ref-c-off_t @var{memory} @var{offset}
+Peek the @code{off_t} integer located at @var{offset} from @var{memory}
+and return it as exact integer.
+@end defun
+
+
+@defun pointer-ref-c-ptrdiff_t @var{memory} @var{offset}
+Peek the @code{ptrdiff_t} integer located at @var{offset} from
+@var{memory} and return it as exact integer.
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Peeking floating point numbers
@@ -6261,7 +6308,6 @@ language implementation.
 @end defun
 
 
-
 @defun array-set-c-signed-long! @var{memory} @var{index} @var{value}
 @defunx array-set-c-unsigned-long! @var{memory} @var{index} @var{value}
 @acpoker{long}
@@ -6273,6 +6319,29 @@ language implementation.
 @acpoker{long long}
 @end defun
 
+
+@defun array-set-c-size_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{size_t}
+type located at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-ssize_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{ssize_t}
+type located at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-off_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{off_t}
+type located at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-ptrdiff_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the
+@code{ptrdiff_t} type located at @var{index} from @var{memory}.
+@end defun
 
 @c ------------------------------------------------------------
 
@@ -6398,6 +6467,30 @@ C language implementation.
 @defun array-ref-c-signed-long-long @var{memory} @var{index}
 @defunx array-ref-c-unsigned-long-long @var{memory} @var{index}
 @acpeeker{long long}
+@end defun
+
+
+@defun array-ref-c-size_t @var{memory} @var{index}
+Peek the @code{size_t} integer located at @var{index} from @var{memory}
+and return it as signed or unsigned exact integer.
+@end defun
+
+
+@defun array-ref-c-ssize_t @var{memory} @var{index}
+Peek the @code{ssize_t} integer located at @var{index} from @var{memory}
+and return it as signed or unsigned exact integer.
+@end defun
+
+
+@defun array-ref-c-off_t @var{memory} @var{index}
+Peek the @code{off_t} integer located at @var{index} from @var{memory}
+and return it as signed or unsigned exact integer.
+@end defun
+
+
+@defun array-ref-c-ptrdiff_t @var{memory} @var{index}
+Peek the @code{ptrdiff_t} integer located at @var{index} from
+@var{memory} and return it as signed or unsigned exact integer.
 @end defun
 
 @c ------------------------------------------------------------

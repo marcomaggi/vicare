@@ -2034,6 +2034,11 @@
     (pointer-ref-c-double			$for i v $language)
     (pointer-ref-c-pointer			$for i v $language)
 ;;;
+    (pointer-ref-c-size_t			$for i v $language)
+    (pointer-ref-c-ssize_t			$for i v $language)
+    (pointer-ref-c-off_t			$for i v $language)
+    (pointer-ref-c-ptrdiff_t			$for i v $language)
+;;;
     (pointer-set-c-uint8!			$for i v $language)
     (pointer-set-c-sint8!			$for i v $language)
     (pointer-set-c-uint16!			$for i v $language)
@@ -2057,6 +2062,11 @@
     (pointer-set-c-float!			$for i v $language)
     (pointer-set-c-double!			$for i v $language)
     (pointer-set-c-pointer!			$for i v $language)
+;;;
+    (pointer-set-c-size_t!			$for i v $language)
+    (pointer-set-c-ssize_t!			$for i v $language)
+    (pointer-set-c-off_t!			$for i v $language)
+    (pointer-set-c-ptrdiff_t!			$for i v $language)
 ;;;
     (array-ref-c-uint8				$for i v $language)
     (array-ref-c-sint8				$for i v $language)
@@ -2082,6 +2092,11 @@
     (array-ref-c-double				$for i v $language)
     (array-ref-c-pointer			$for i v $language)
 ;;;
+    (array-ref-c-size_t				$for i v $language)
+    (array-ref-c-ssize_t			$for i v $language)
+    (array-ref-c-off_t				$for i v $language)
+    (array-ref-c-ptrdiff_t			$for i v $language)
+;;;
     (array-set-c-uint8!				$for i v $language)
     (array-set-c-sint8!				$for i v $language)
     (array-set-c-uint16!			$for i v $language)
@@ -2105,6 +2120,11 @@
     (array-set-c-float!				$for i v $language)
     (array-set-c-double!			$for i v $language)
     (array-set-c-pointer!			$for i v $language)
+;;;
+    (array-set-c-size_t!			$for i v $language)
+    (array-set-c-ssize_t!			$for i v $language)
+    (array-set-c-off_t!				$for i v $language)
+    (array-set-c-ptrdiff_t!			$for i v $language)
 ;;;
     (dlopen					$for)
     (dlerror					$for)

@@ -56,6 +56,9 @@ Notes for revision 0.2d17
     greatest-c-off_t*			least-c-off_t*
     greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
 
+* Added setters and getters for C language types size_t, ssize_t, off_t,
+  ptrdiff_t.
+
 * Reorganised IK_VOIDP_FROM and similar C preprocessor macros.
 
 * Added automatic generation of unsafe  accessor and mutator syntaxes to

@@ -133,6 +133,9 @@
     pointer-ref-c-float			pointer-ref-c-double
     pointer-ref-c-pointer
 
+    pointer-ref-c-size_t		pointer-ref-c-ssize_t
+    pointer-ref-c-off_t			pointer-ref-c-ptrdiff_t
+
     pointer-set-c-uint8!		pointer-set-c-sint8!
     pointer-set-c-uint16!		pointer-set-c-sint16!
     pointer-set-c-uint32!		pointer-set-c-sint32!
@@ -146,6 +149,9 @@
 
     pointer-set-c-float!		pointer-set-c-double!
     pointer-set-c-pointer!
+
+    pointer-set-c-size_t!		pointer-set-c-ssize_t!
+    pointer-set-c-off_t!		pointer-set-c-ptrdiff_t!
 
     ;; memory array accessors and mutators
     array-ref-c-uint8			array-ref-c-sint8
@@ -162,6 +168,9 @@
     array-ref-c-float			array-ref-c-double
     array-ref-c-pointer
 
+    array-ref-c-size_t			array-ref-c-ssize_t
+    array-ref-c-off_t			array-ref-c-ptrdiff_t
+
     array-set-c-uint8!			array-set-c-sint8!
     array-set-c-uint16!			array-set-c-sint16!
     array-set-c-uint32!			array-set-c-sint32!
@@ -174,7 +183,10 @@
     array-set-c-signed-long-long!	array-set-c-unsigned-long-long!
 
     array-set-c-float!			array-set-c-double!
-    array-set-c-pointer!)
+    array-set-c-pointer!
+
+    array-set-c-size_t!			array-set-c-ssize_t!
+    array-set-c-off_t!			array-set-c-ptrdiff_t!)
   (import (vicare)
     (ikarus system $foreign)
     (vicare errno))

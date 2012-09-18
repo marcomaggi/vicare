@@ -83,14 +83,15 @@
  ** Headers.
  ** ----------------------------------------------------------------- */
 
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h> /* for off_t */
 
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif
 #ifdef HAVE_ASSERT_H
 #  include <assert.h>
 #endif
