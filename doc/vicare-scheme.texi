@@ -8144,14 +8144,22 @@ and returns its return value; if an error occurs: an exception is
 raised.
 
 @example
-(fork
-  (lambda (child-pid)
-    (printf "in parent, child pid = ~s\n" child-pid))
-  (lambda ()
-    (printf "in child\n")
-    (exit)))
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.fork
+ (lambda (child-pid)
+   (printf "in parent pid = ~a, child pid = ~s\n"
+	   (px.getpid) child-pid)
+   (flush-output-port (current-output-port)))
+ (lambda ()
+   (printf "in child, pid = ~a\n" (px.getpid))
+   (flush-output-port (current-output-port))
+   (exit)))
 
 (printf "here we are in the parent\n")
+(flush-output-port (current-output-port))
 @end example
 @end defun
 
