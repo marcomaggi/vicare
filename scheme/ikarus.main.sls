@@ -32,7 +32,10 @@
 
 
 (library (ikarus main)
-  (export $struct-guardian)
+  (export
+    $struct-guardian
+    struct-guardian-logger
+    struct-guardian-log)
   (import (except (ikarus)
 		  load-r6rs-script
 		  load
@@ -1005,18 +1008,73 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   #| end of module |#)
 
-(module ($struct-guardian)
+(module ($struct-guardian struct-guardian-logger struct-guardian-log)
   (define $struct-guardian
     (make-guardian))
 
-  (define ($struct-guardian-destructor)
-    (do ((S ($struct-guardian) ($struct-guardian)))
-	((not S))
-      (guard (else (void))
-	(($struct-ref ($struct-rtd S) 5) S)
-	(struct-reset S))))
+  (define struct-guardian-logger
+    (make-parameter #f
+      (lambda (obj)
+	(cond ((or (boolean? obj)
+		   (procedure? obj))
+	       obj)
+	      (obj	#t)
+	      (else	#f)))))
 
-  (post-gc-hooks (cons $struct-guardian-destructor
+  (define (struct-guardian-log S E action)
+    (case action
+      ((before-destruction)
+       (fprintf (current-error-port)
+		"*** Vicare debug: struct guardian: before destruction:\n\
+                 ***\t~s\n" S))
+      ((after-destruction)
+       (fprintf (current-error-port)
+		"*** Vicare debug: struct guardian: after destruction:\n\
+                 ***\t~s\n" S))
+      ((exception)
+       (fprintf (current-error-port)
+		"*** Vicare debug: struct guardian: exception:\n\
+                 ***\t~s\n\
+                 ***\t~s\n" S E))
+      (else
+       (assertion-violation 'struct-guardian-log
+	 "invalid action in struct destruction process" S action))))
+
+  (define (%struct-guardian-destructor)
+    (guard (E (else (void)))
+      (define-inline (%execute ?S ?body0 . ?body)
+	(do ((?S ($struct-guardian) ($struct-guardian)))
+	    ((not ?S))
+	  ?body0 . ?body))
+      (define-inline (%extract-destructor S)
+	($struct-ref ($struct-rtd S) 5))
+      (define-inline (%call-logger ?logger ?struct ?exception ?action)
+	(guard (E (else (void)))
+	  (?logger ?struct ?exception ?action)))
+      (let ((logger (struct-guardian-logger)))
+	(cond ((procedure? logger)
+	       (%execute S
+		 (guard (E (else
+			    (%call-logger logger S E 'exception)))
+		   (%call-logger logger S #f 'before-destruction)
+		   ((%extract-destructor S) S)
+		   (%call-logger logger S #f 'after-destruction)
+		   (struct-reset S))))
+	      (logger
+	       (%execute S
+		 (guard (E (else
+			    (%call-logger struct-guardian-log S E 'exception)))
+		   (%call-logger struct-guardian-log S #f 'before-destruction)
+		   ((%extract-destructor S) S)
+		   (%call-logger struct-guardian-log S #f 'after-destruction)
+		   (struct-reset S))))
+	      (else
+	       (%execute S
+		 (guard (E (else (void)))
+		   ((%extract-destructor S) S)
+		   (struct-reset S))))))))
+
+  (post-gc-hooks (cons %struct-guardian-destructor
 		       (post-gc-hooks)))
 
   #| end of module |# )
@@ -1092,4 +1150,5 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 ;;; end of file
 ;;Local Variables:
 ;;eval: (put 'with-run-time-config 'scheme-indent-function 1)
+;;eval: (put '%execute 'scheme-indent-function 1)
 ;;End:

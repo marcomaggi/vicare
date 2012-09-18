@@ -697,6 +697,8 @@
     (struct-rtd					i v $language)
     (struct=?					i v $language)
     (struct-reset				i v $language)
+    (struct-guardian-logger			i v $language)
+    (struct-guardian-log			i v $language)
     ($struct-guardian				$structs)
     (code?					i v $language)
     (immediate?					i v $language)

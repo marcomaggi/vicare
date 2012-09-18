@@ -2837,6 +2837,10 @@ a string represention of the structure with @func{display}, a function
 to be optionally applied to the field values to print them.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Automatic finalisation of structures
+
 
 @defun set-rtd-destructor! @var{rtd} @var{destructor}
 Select the procedure @var{destructor} as destructor for data structures
@@ -2850,8 +2854,85 @@ structure type are registered, upon creation, into an internal guardian,
 collected: the guardian applies @var{destructor} to them.
 
 Exceptions raised by @var{destructor} are catched with @func{guard} and
-discarded: destructor functions must take care of exceptions by
+discarded: destructor functions should take care of exceptions by
 themselves.
+@end defun
+
+
+@deffn Parameter struct-guardian-logger
+Select data structure destruction logging mode for debugging purposes.
+When a structure is finalised by the garbage collector, using the
+destructor registered in the @rtd{}:
+
+@itemize
+@item
+If this parameter is set to @false{}: no additional actions are
+performed.
+
+@item
+If this parameter is set to @true{}: the function
+@func{struct-guardian-log} is used to log the operations to the textual
+output port returned by @code{current-error-port}.
+
+@item
+If this parameter is set to a procedure: such procedure is used to log
+the operations in a user selected way.
+@end itemize
+
+See the documentation of @func{struct-guardian-log} for the calling
+protocol of the logger functions.
+@end deffn
+
+
+@defun struct-guardian-log @var{struct} @var{exception} @var{action}
+Built in logger function to be used to log data structure finalisation
+operations by the garbage collector.  @var{struct} is the structure to
+be finalised; @var{exception} is @false{} or an object raised by the
+structure destructor; @var{action} is one of the symbols:
+@code{before-destruction}, @code{after-destruction}, @code{exception}.
+
+When this function is used as value for the parameter
+@func{struct-guardian-logger}:
+
+@itemize
+@item
+The function is called just before the structucture is finalised with
+@var{action} set to the symbol @code{before-destruction} and
+@var{exception} set to @false{}.
+
+@item
+The function is called right after the structucture has been finalised
+with @var{action} set to the symbol @code{after-destruction} and
+@var{exception} set to @false{}.
+
+@item
+If an exception is raised by the destructor: such exception is catched
+and this function is called with @var{action} set to @code{exception}
+and @var{exception} set to the raised object.
+@end itemize
+
+The current implementation is the following:
+
+@smallexample
+(define (struct-guardian-log S E action)
+  (case action
+    ((before-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: before destruction:\n\
+        ***\t~s\n" S))
+    ((after-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: after destruction:\n\
+        ***\t~s\n" S))
+    ((exception)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: exception:\n\
+        ***\t~s\n\
+        ***\t~s\n" S E))
+    (else
+     (assertion-violation 'struct-guardian-log
+       "invalid action in struct destruction process" S action))))
+@end smallexample
 @end defun
 
 @c page

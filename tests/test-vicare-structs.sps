@@ -341,6 +341,39 @@
   #t)
 
 
+(parametrise ((check-test-name		'destructor)
+	      (struct-guardian-logger	(lambda (S E action)
+					  (check-pretty-print (list S E action)))))
+
+  (define-struct alpha
+    (a b c))
+
+  (set-rtd-destructor! (type-descriptor alpha)
+		       (lambda (S)
+			 (void)))
+
+  (check
+      (parametrise ((struct-guardian-logger #t))
+	(let ((S (make-alpha 1 2 3)))
+	  (check-pretty-print S)
+	  (collect)))
+    => (void))
+
+  (check
+      (let ((S (make-alpha 1 2 3)))
+	(check-pretty-print S)
+	(collect))
+    => (void))
+
+  (check
+      (let ((S (make-alpha 1 2 3)))
+	(check-pretty-print S)
+	(collect))
+    => (void))
+
+  (collect))
+
+
 ;;;; done
 
 (check-report)
