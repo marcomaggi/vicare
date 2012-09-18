@@ -1010,10 +1010,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (make-guardian))
 
   (define ($struct-guardian-destructor)
-    (do ((P ($struct-guardian) ($struct-guardian)))
-	((not P))
+    (do ((S ($struct-guardian) ($struct-guardian)))
+	((not S))
       (guard (else (void))
-	(($struct-ref ($struct-rtd P) 5) P))))
+	(($struct-ref ($struct-rtd S) 5) S)
+	(struct-reset S))))
 
   (post-gc-hooks (cons $struct-guardian-destructor
 		       (post-gc-hooks)))
