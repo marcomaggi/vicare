@@ -314,7 +314,7 @@
 	       (ls (cons name ls))
 	       (len (fold-left (lambda (ac s) (+ 1 ac (box-length s)))
 		      -1 ls)))
-	  (conc "#(" (make-fbox len ls #f) ")")))))
+	  (conc "#[" (make-fbox len ls #f) "]")))))
 
     (define (boxify-custom-struct out)
       (import traversal-helpers)
