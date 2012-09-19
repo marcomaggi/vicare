@@ -42,10 +42,35 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d17
 -------------------------
 
+* The distributed boot images have been rotated.
+
+* A data structure  automatic destruction protocol has  been added; this
+  is about Vicare's structs, not R6RS records (although R6RS records are
+  structs).
+
+    A field has been added to the RTD of structs:
+
+  - Whenever the  field holds a  procedure, instances of the  struct are
+    registered (upon  creation) into an internal  guardian; whenever the
+    guardian  collects   the  instance,  a  post-GC   hook  applies  the
+    destructor to the instance.
+
+  - If the field holds #f: nothing happens.
+
+    For  details   see  the   "Automatic  finalisation   of  structures"
+  subheading of the "iklib structs rtd" documentation node.
+
+* The addition  of the struct  destructors causes  Issue #35 to  show up
+  much more often than  before[1].  This is very bad and  I hate it, but
+  that is the way it is.  This bug  is from code I have not yet studied,
+  so it is very unlikely that I will be able to fix it anytime soon.
+
+  [1] <https://github.com/marcomaggi/vicare/issues/35>
+
 * Added  size_t, ssize_t,  off_t,  ptrdiff_t as  type  specifiers for  C
   language callouts and callbacks.
 
-* Added limits to (vicare words):
+* Added limits to the library (vicare words):
 
     greatest-c-size_t			least-c-size_t
     greatest-c-ssize			least-c-ssize_t
@@ -56,8 +81,8 @@ Notes for revision 0.2d17
     greatest-c-off_t*			least-c-off_t*
     greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
 
-* Added setters and getters for C language types size_t, ssize_t, off_t,
-  ptrdiff_t.
+* Added  raw memory  setters and  getters for  C language  types size_t,
+  ssize_t, off_t, ptrdiff_t.
 
 * Reorganised IK_VOIDP_FROM and similar C preprocessor macros.
 
@@ -90,6 +115,8 @@ Notes for revision 0.2d17
       (syntax-rules ()
         ((_ x v)
 	 ($struct-set! x 0 v))))
+
+  at the Scheme level it cannot be faster than this.
 
 * Added automatic generation of unsafe  accessor and mutator syntaxes to
   DEFINE-RECORD-TYPE  as  extension (and  violation?)  of  R6RS; in  the
