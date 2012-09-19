@@ -94,7 +94,10 @@
 	      (the-blue  X)))
     => '(10 20 30))
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe-accessors))
 
   (check	;unsafe accessors
       (let ()
@@ -140,6 +143,121 @@
 	      ($color-green X)
 	      ($color-blue  X)))
     => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check	;unsafe accessors, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(list ($alpha-a O)
+	      ($alpha-b O)
+	      ($alpha-c O)
+	      ($beta-a O)
+	      ($beta-b O)
+	      ($beta-c O)))
+    => '(1 2 3 4 5 6))
+
+  (check	;unsafe accessors and mutators, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	($alpha-a-set! O 10)
+	($alpha-b-set! O 20)
+	($alpha-c-set! O 30)
+	($beta-a-set! O 40)
+	($beta-b-set! O 50)
+	($beta-c-set! O 60)
+	(list ($alpha-a O)
+	      ($alpha-b O)
+	      ($alpha-c O)
+	      ($beta-a O)
+	      ($beta-b O)
+	      ($beta-c O)))
+    => '(10 20 30 40 50 60))
+
+  (check	;unsafe accessors and mutators, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	($alpha-a-set! O 10)
+	#;($alpha-b-set! O 20)
+	($alpha-c-set! O 30)
+	($beta-a-set! O 40)
+	#;($beta-b-set! O 50)
+	($beta-c-set! O 60)
+	(list ($alpha-a O)
+	      ($alpha-b O)
+	      ($alpha-c O)
+	      ($beta-a O)
+	      ($beta-b O)
+	      ($beta-c O)))
+    => '(10 2 30 40 5 60))
+
+  (check	;unsafe accessors and mutators, with inheritance
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define-record-type gamma
+	  (parent beta)
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define O
+	  (make-gamma 1 2 3 4 5 6 7 8 9))
+	($alpha-a-set! O 10)
+	#;($alpha-b-set! O 20)
+	($alpha-c-set! O 30)
+	($beta-a-set! O 40)
+	#;($beta-b-set! O 50)
+	($beta-c-set! O 60)
+	($gamma-a-set! O 70)
+	#;($gamma-b-set! O 80)
+	($gamma-c-set! O 90)
+	(list ($alpha-a O)
+	      ($alpha-b O)
+	      ($alpha-c O)
+	      ($beta-a O)
+	      ($beta-b O)
+	      ($beta-c O)
+	      ($gamma-a O)
+	      ($gamma-b O)
+	      ($gamma-c O)))
+    => '(10 2 30 40 5 60 70 8 90))
 
   #t)
 

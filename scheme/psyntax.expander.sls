@@ -2354,6 +2354,15 @@
 	  (((mutable name) . rest)
 	   (cons (gen-name name) (f rest)))
 	  ((_ . rest) (f rest)))))
+    (define (get-unsafe-mutators-idx-names foo fields)
+      (let f ((fields fields))
+	(syntax-match fields (mutable)
+	  (() '())
+	  (((mutable name accessor mutator) . rest)
+	   (cons (gensym) (f rest)))
+	  (((mutable name) . rest)
+	   (cons (gensym) (f rest)))
+	  ((_ . rest) (f rest)))))
     (define (get-accessors foo fields)
       (define (gen-name x)
 	(datum->syntax foo
@@ -2386,6 +2395,10 @@
               (name                            (id? name) (gen-name name))
               (others (stx-error field "invalid field spec"))))
 	fields))
+    (define (get-unsafe-accessors-idx-names foo fields)
+      (map (lambda (x)
+	     (gensym))
+	fields))
     (define (enumerate ls)
       (let f ((ls ls) (i 0))
 	(cond
@@ -2398,16 +2411,26 @@
 	     (protocol		(gensym))
 	     (make-foo		(get-record-constructor-name namespec))
 	     (fields		(get-fields clause*))
+	     ;;Indexes for safe accessors and mutators.
 	     (idx*		(enumerate fields))
-	     (foo-x*		(get-accessors foo fields))
-	     (unsafe-foo-x*	(get-unsafe-accessors foo fields))
-	     (set-foo-x!*	(get-mutators foo fields))
-	     (unsafe-set-foo-x!* (get-unsafe-mutators foo fields))
 	     (set-foo-idx*	(get-mutator-indices fields))
+	     ;;Names of safe accessors and mutators.
+	     (foo-x*		(get-accessors foo fields))
+	     (set-foo-x!*	(get-mutators foo fields))
+	     ;;Names of unsafe accessors and mutators.
+	     (unsafe-foo-x*	(get-unsafe-accessors foo fields))
+	     (unsafe-set-foo-x!* (get-unsafe-mutators foo fields))
+	     ;;Names for unsafe index bindings.
+	     (unsafe-foo-x-idx*	     (get-unsafe-accessors-idx-names foo fields))
+	     (unsafe-set-foo-x!-idx* (get-unsafe-mutators-idx-names foo fields))
+	     ;;Predicate name.
 	     (foo?		(get-record-predicate-name namespec))
+	     ;;Code   for   record-type   descriptor   and   record-type
+	     ;;constructor descriptor.
 	     (foo-rtd-code	(foo-rtd-code foo clause* (parent-rtd-code clause*)))
 	     (foo-rcd-code	(foo-rcd-code clause* foo-rtd protocol
 					      (parent-rcd-code clause*)))
+	     ;;Code for protocol.
 	     (protocol-code	(get-protocol-code clause*)))
 	(bless
 	 `(begin
@@ -2427,19 +2450,27 @@
 		    `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
 		set-foo-x!* set-foo-idx*)
 	    ,@(map
-		  (lambda (unsafe-foo-x idx)
-		    `(define-syntax ,unsafe-foo-x
-		       (syntax-rules ()
-			 ((_ x)
-			  ($struct-ref x ,idx)))))
-		unsafe-foo-x* idx*)
+		  (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
+		    `(begin
+		       (define ,unsafe-foo-x-idx
+			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+		       (define-syntax ,unsafe-foo-x
+			 (syntax-rules ()
+			   ((_ x)
+			    ($struct-ref x ,unsafe-foo-x-idx))))
+		       ))
+		unsafe-foo-x* idx* unsafe-foo-x-idx*)
 	    ,@(map
-		  (lambda (unsafe-set-foo-x! idx)
-		    `(define-syntax ,unsafe-set-foo-x!
-		       (syntax-rules ()
-			 ((_ x v)
-			  ($struct-set! x ,idx v)))))
-		unsafe-set-foo-x!* set-foo-idx*)
+		  (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
+		    `(begin
+		       (define ,unsafe-set-foo-x!-idx
+			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+		       (define-syntax ,unsafe-set-foo-x!
+			 (syntax-rules ()
+			   ((_ x v)
+			    ($struct-set! x ,unsafe-set-foo-x!-idx v))))
+		       ))
+		unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
 	    ))))
     (define (verify-clauses x cls*)
       (define valid-kwds

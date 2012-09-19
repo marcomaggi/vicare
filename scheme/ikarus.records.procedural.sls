@@ -118,7 +118,7 @@
 
 (define-struct <rtd>
   ;;R6RS record type descriptor.  Notice  that the first two fields have
-  ;;the same meaning  of the firts two fields  of a Vicare's struct-type
+  ;;the same meaning  of the first two fields  of a Vicare's struct-type
   ;;descriptor.
   ;;
   ;;Vicare's struct-type descriptor:
@@ -139,6 +139,10 @@
    fields-number
 		;This subtype's  number of fields,  excluding the fields
 		;of the parents.
+   first-field-index
+		;The index  of the  first field of  this subtype  in the
+		;layout of instances;  it is the total  number of fields
+		;of the parent type.
    parent
 		;False or  instance of RTD  structure, it is  the parent
 		;RTD.
@@ -647,12 +651,15 @@
     ;;
     (let ((fields-number (unsafe.vector-length normalised-fields)))
       (if (not parent)
-	  (make-<rtd> name fields-number fields-number
+	  (make-<rtd> name fields-number fields-number 0
 		      parent sealed? opaque? uid normalised-fields
 		      (void) #;initialiser
 		      #f #;default-protocol
 		      #f #;default-rcd)
-	(make-<rtd> name (fx+ fields-number (<rtd>-total-fields-number parent)) fields-number
+	(make-<rtd> name
+		    (fx+ fields-number (<rtd>-total-fields-number parent))
+		    fields-number
+		    (<rtd>-total-fields-number parent)
 		    parent sealed? (or opaque? (<rtd>-opaque? parent)) uid normalised-fields
 		    (void) #;initialiser
 		    #f #;default-protocol
