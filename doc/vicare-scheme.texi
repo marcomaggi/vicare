@@ -9296,6 +9296,26 @@ previous call to @func{telldir}.  Return unspecified values.
 @section File descriptors
 
 
+@menu
+* posix fd open::               Opening and closing.
+* posix fd read::               Reading from file descriptors.
+* posix fd write::              Writing to file descriptors.
+* posix fd seek::               Moving the current position.
+* posix fd scatter::            Scatter--gather operations.
+* posix fd select::             Waiting for events with @func{select}.
+* posix fd poll::               Polling for events.
+* posix fd device::             Special device operations.
+* posix fd dup::                Duplicating file descriptors.
+* posix fd pipe::               File descriptor pipes.
+* posix fd fifo::               File descriptor fifos.
+* posix fd trunc::              Truncating files.
+@end menu
+
+@c page
+@node posix fd open
+@subsection Opening and closing
+
+
 @defun open @var{pathname} @var{flags} @var{mode}
 Interface to the C function @cfunc{open}, @glibcref{Opening and Closing
 Files, open}.  Open a file descriptor for the file system entry
@@ -9326,6 +9346,10 @@ must be a fixnum.  If successful return unspecified values, else raise
 an exception.
 @end defun
 
+@c page
+@node posix fd read
+@subsection Reading from file descriptors
+
 
 @defun read @var{fd} @var{buffer}
 @defunx read @var{fd} @var{buffer} @var{size}
@@ -9343,6 +9367,10 @@ Interface to the C function @cfunc{pread}, @glibcref{I/O Primitives,
 pread}.  Like @func{read}, but start reading at offset @var{off} from
 the start of the file; @var{off} must be a non--negative exact integer.
 @end defun
+
+@c page
+@node posix fd write
+@subsection Writing to file descriptors
 
 
 @defun write @var{fd} @var{buffer}
@@ -9362,6 +9390,10 @@ pwrite}.  Like @func{write}, but start writing at offset @var{off} from
 the start of the file; @var{off} must be a non--negative exact integer.
 @end defun
 
+@c page
+@node posix fd seek
+@subsection Moving the current position
+
 
 @defun lseek @var{fd} @var{off} @var{whence}
 Interface to the C function @cfunc{lseek}, @glibcref{File Position
@@ -9372,7 +9404,10 @@ non--negative exact integer representing the number of bytes from the
 beginning of the file, else raise an exception.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd scatter
+@subsection Scatter--gather operations
+
 
 @defun readv @var{fd} @var{buffers}
 Interface to the C function @cfunc{readv}, @glibcref{Scatter-Gather,
@@ -9391,7 +9426,10 @@ non--negative exact integer representing the number of bytes actually
 written, else raise an exception.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd select
+@subsection Waiting for events with @func{select}
+
 
 @defun select @var{nfds} @var{read-fds} @var{write-fds} @var{except-fds} @var{sec} @var{usec}
 Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
@@ -9461,7 +9499,10 @@ error occurs: raise an exception.  Else return @true{} if the file
 descriptor receives an exceptional notification.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd poll
+@subsection Polling for events
+
 
 @defun poll @var{fds} @var{timeout}
 Interface to the C function @cfunc{poll}, see the manual page
@@ -9478,7 +9519,10 @@ the third element of the subvectors is mutated to represent the events
 for which the file descriptor is ready.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd device
+@subsection Special device operations
+
 
 @defun fcntl @var{fd} @var{command}
 @defunx fcntl @var{fd} @var{command} @var{arg}
@@ -9503,7 +9547,10 @@ successful return a fixnum representing the return value of
 @cfunc{ioctl}, else raise an exception.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd dup
+@subsection Duplicating file descriptors
+
 
 @defun dup @var{fd}
 Interface to the C function @cfunc{dup}, @glibcref{Duplicating
@@ -9519,6 +9566,10 @@ Descriptors, dup}.  Duplicate the file descriptor @var{old} to
 @var{new}.  If successful return unspecified values, else raise an
 exception.
 @end defun
+
+@c page
+@node posix fd pipe
+@subsection File descriptor pipes
 
 
 @defun pipe
@@ -9626,6 +9677,10 @@ communicate with the parent:
 @end example
 @end defun
 
+@c page
+@node posix fd fifo
+@subsection File descriptor fifos
+
 
 @defun mkfifo @var{pathname} @var{mode}
 Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
@@ -9634,7 +9689,10 @@ mode @var{mode}, which must be a fixnum.  If successful return
 unspecified values, else raise an exception.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd trunc
+@subsection Truncating files
+
 
 @defun truncate @var{pathname} @var{length}
 Interface to the C function @cfunc{truncate}, @glibcref{File Size,
