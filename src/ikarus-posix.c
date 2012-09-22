@@ -1960,6 +1960,167 @@ ikrt_posix_ftruncate (ikptr s_fd, ikptr s_length)
 
 
 /** --------------------------------------------------------------------
+ ** File descriptor sets.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_posix_sizeof_fd_set (ikptr s_count, ikpcb * pcb)
+{
+  /* Yes, we do not check for overflow. */
+  size_t	len = sizeof(fd_set) * IK_UNFIX(s_count);
+  return ika_integer_from_size_t(pcb, len);
+}
+ikptr
+ikrt_posix_make_fd_set_bytevector (ikptr s_count, ikpcb * pcb)
+{
+  long		count	= IK_UNFIX(s_count);
+  /* Yes, we do not check for overflow. */
+  long		len	= sizeof(fd_set) * count;
+  ikptr		bv	= ika_bytevector_alloc(pcb, len);
+  fd_set *	set	= (fd_set *)IK_BYTEVECTOR_DATA_VOIDP(bv);
+  long		i;
+  for (i=0; i<count; ++i)
+    FD_ZERO(&(set[i]));
+  return bv;
+}
+ikptr
+ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb * pcb)
+{
+  long		count	= IK_UNFIX(s_count);
+  /* Yes, we do not check for overflow. */
+  size_t	len = sizeof(fd_set) * count;
+  fd_set *	set = malloc(len);
+  if (set) {
+    long	i;
+    for (i=0; i<count; ++i)
+      FD_ZERO(&(set[i]));
+    return ika_pointer_alloc(pcb, (ik_ulong)set);
+  } else
+    return IK_FALSE;
+}
+ikptr
+ikrt_posix_make_fd_set_memory_block (ikptr s_mblock, ikptr s_count, ikpcb * pcb)
+{
+  long		count	= IK_UNFIX(s_count);
+  /* Yes, we do not check for overflow. */
+  size_t	len = sizeof(fd_set) * count;
+  fd_set *	set = malloc(len);
+  if (set) {
+    long	i;
+    for (i=0; i<count; ++i)
+      FD_ZERO(&(set[i]));
+    pcb->root0 = &s_mblock;
+    {
+      IK_POINTER_SET(IK_MBLOCK_POINTER(s_mblock), (ikptr)set);
+      IK_ASS(IK_MBLOCK_SIZE(s_mblock), ika_integer_from_size_t(pcb, len));
+    }
+    pcb->root0 = NULL;
+    return IK_TRUE;
+  } else
+    return IK_FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_fd_zero (ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+{
+  fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(s_fdset);
+  if (set) {
+    int		idx = IK_UNFIX(s_idx);
+    FD_ZERO(&(set[idx]));
+  }
+  return IK_VOID;
+}
+ikptr
+ikrt_posix_fd_set (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+{
+  fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fdset);
+  int		idx = IK_UNFIX(s_idx);
+  int		fd  = IK_NUM_TO_FD(s_fd);
+  FD_SET(fd, &(set[idx]));
+  return IK_VOID;
+}
+ikptr
+ikrt_posix_fd_clr (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+{
+  fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fdset);
+  int		idx = IK_UNFIX(s_idx);
+  int		fd  = IK_NUM_TO_FD(s_fd);
+  FD_CLR(fd, &(set[idx]));
+  return IK_VOID;
+}
+ikptr
+ikrt_posix_fd_isset (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+{
+  fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fdset);
+  int		idx = IK_UNFIX(s_idx);
+  int		fd  = IK_NUM_TO_FD(s_fd);
+  int		rv;
+  rv = FD_ISSET(fd, &(set[idx]));
+  return IK_BOOLEAN_FROM_INT(rv);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_select_from_sets (ikptr s_nfds,
+			     ikptr s_read_fds, ikptr s_write_fds, ikptr s_except_fds,
+			     ikptr s_sec, ikptr s_usec,
+			     ikpcb * pcb)
+{
+#ifdef HAVE_SELECT
+  fd_set *	read_fds   = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_read_fds);
+  fd_set *	write_fds  = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_write_fds);
+  fd_set *	except_fds = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_except_fds);
+  struct timeval timeout;
+  int		nfds=0;
+  int		rv;
+  nfds = (IK_FALSE == s_nfds)? FD_SETSIZE : IK_UNFIX(s_nfds);
+  timeout.tv_sec  = IK_UNFIX(s_sec);
+  timeout.tv_usec = IK_UNFIX(s_usec);
+  errno = 0;
+  rv	= select(nfds, read_fds, write_fds, except_fds, &timeout);
+  if (0 == rv) { /* timeout has expired */
+    return IK_FIX(0);
+  } else if (-1 == rv) { /* an error occurred */
+    return ik_errno_to_code();
+  } else /* success */
+    return IK_FALSE;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_select_from_sets_array (ikptr s_nfds, ikptr s_fd_sets,
+				   ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+{
+#ifdef HAVE_SELECT
+  fd_set *	fd_sets    = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fd_sets);
+  fd_set *	read_fds   = &(fd_sets[0]);
+  fd_set *	write_fds  = &(fd_sets[1]);
+  fd_set *	except_fds = &(fd_sets[2]);
+  struct timeval timeout;
+  int		nfds=0;
+  int		rv;
+  nfds = (IK_FALSE == s_nfds)? FD_SETSIZE : IK_UNFIX(s_nfds);
+  timeout.tv_sec  = IK_UNFIX(s_sec);
+  timeout.tv_usec = IK_UNFIX(s_usec);
+  errno = 0;
+  rv	= select(nfds, read_fds, write_fds, except_fds, &timeout);
+  if (0 == rv) { /* timeout has expired */
+    return IK_FIX(0);
+  } else if (-1 == rv) { /* an error occurred */
+    return ik_errno_to_code();
+  } else /* success */
+    return IK_FALSE;
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
  ** Memory-mapped input/output.
  ** ----------------------------------------------------------------- */
 

@@ -9431,6 +9431,143 @@ written, else raise an exception.
 @subsection Waiting for events with @func{select}
 
 
+@menu
+* posix fd select fdset::       Allocating and accessing
+                                file descriptor sets.
+* posix fd select select::      Selecting events to wait for.
+* posix fd select special::     Selecting special events to wait for.
+@end menu
+
+@c page
+@node posix fd select fdset
+@subsubsection Allocating and accessing file descriptor sets
+
+
+At low level, the @posix{} function @cfunc{select} keeps track of file
+descriptors organised in sets, represented by instances of the C
+language type @code{fd_set}; we can think of such data structures as
+arrays of integers, holding @code{FD_SETSIZE} bits, in which each bit
+represents a file descriptor: @code{1} for inclusion, @code{0} for
+exclusion.
+
+
+@defun sizeof-fd-set
+@defunx sizeof-fd-set @var{count}
+Return an exact integer representing the number of bytes needed to hold
+@var{count} instances of the C language type @code{fd_set}.  The
+optional @var{count} must be a positive fixnum; when not given: it
+defaults to @code{1}.
+@end defun
+
+
+@defun make-fd-set-bytevector
+@defunx make-fd-set-bytevector @var{count}
+Build and return a new bytevector capable of holding @var{count}
+instances of the C language type @code{fd_set} defined in
+@file{sys/types.h}; every allocated @code{fd_set} is initialised with
+@cfunc{FD_ZERO}.  The optional @var{count} must be a positive fixnum;
+when not given: allocate enough room for a single instance of
+@code{fd_set}.
+@end defun
+
+
+@defun make-fd-set-pointer
+@defunx make-fd-set-pointer @var{count}
+Use @cfunc{malloc} to allocate a memory block capable of holding
+@var{count} instances of the C language type @code{fd_set} defined in
+@file{sys/types.h}; every allocated @code{fd_set} is initialised with
+@cfunc{FD_ZERO}.
+
+The optional @var{count} must be a positive fixnum; when not given:
+allocate enough room for a single instance of @code{fd_set}.
+
+If successful: return a pointer object referencing the memory block;
+else return @false{}.
+@end defun
+
+
+@defun make-fd-set-memory-block
+@defunx make-fd-set-memory-block @var{count}
+Use @cfunc{malloc} to allocate a memory block capable of holding
+@var{count} instances of the C language type @code{fd_set} defined in
+@file{sys/types.h}; every allocated @code{fd_set} is initialised with
+@cfunc{FD_ZERO}.
+
+The optional @var{count} must be a positive fixnum; when not given:
+allocate enough room for a single instance of @code{fd_set}.
+
+If successful: return an instance of @code{memory-block} referencing the
+memory block; else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun FD_ZERO @var{fdsets}
+@defunx FD_ZERO @var{fdsets} @var{idx}
+Reset to empty the given file descriptor set; return unspecified values;
+@glibcref{Waiting for I/O, FD_ZERO}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+@var{idx} must be a non--negative fixnum representing the index of the
+selected @code{fd_set} in @var{fdsets}; when not given: it defaults to
+zero.
+@end defun
+
+
+@defun FD_SET @var{fd} @var{fdsets}
+@defunx FD_SET @var{fd} @var{fdsets} @var{idx}
+Add the file descriptor @var{fd} to the given set; return unspecified
+values; @glibcref{Waiting for I/O, FD_SET}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+
+@defun FD_CLR @var{fd} @var{fdsets}
+@defunx FD_CLR @var{fd} @var{fdsets} @var{idx}
+Remove the file descriptor @var{fd} from the given set; return
+unspecified values; @glibcref{Waiting for I/O, FD_CLR}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+
+@defun FD_ISSET @var{fd} @var{fdsets}
+@defunx FD_ISSET @var{fd} @var{fdsets} @var{idx}
+Return a boolean specifying if the file descriptor @var{fd} is contained
+in the given set; return unspecified values; @glibcref{Waiting for I/O,
+FD_ISSET}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+
+@c page
+@node posix fd select select
+@subsubsection Selecting events to wait for
+
+
 @defun select @var{nfds} @var{read-fds} @var{write-fds} @var{except-fds} @var{sec} @var{usec}
 Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
 select}.  Wait for read, write or exceptional events on selected lists
@@ -9444,10 +9581,10 @@ nil or lists of file descriptors to be checked for events.  @var{sec}
 and @var{usec} must be fixnums representing timeout seconds and
 microseconds.
 
-If the timeout expires before any event arrives: return 3 values all
-being nil.  If an error occurs: raise an exception.  Else return 3
-values being lists of file descriptors, respectively, ready for reading,
-writing or an exceptional condition.
+If the timeout expires before any event arrives: return @math{3} values
+all being nil.  If an error occurs: raise an exception.  Else return
+@math{3} values being lists of file descriptors, respectively, ready for
+reading, writing or an exceptional condition.
 @end defun
 
 
@@ -9457,11 +9594,52 @@ select}.  Wait for read, write or exceptional events on the single file
 descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
 representing timeout seconds and microseconds.
 
-If the timeout expires before any event arrives: return 3 values all
-being false.  If an error occurs: raise an exception.  Else return 3
-values being false or @var{fd}, respectively, if @var{fd} is ready for
-reading, writing or an exceptional condition.
+If the timeout expires before any event arrives: return @math{3} values
+all being false.  If an error occurs: raise an exception.  Else return
+@math{3} values being false or @var{fd}, respectively, if @var{fd} is
+ready for reading, writing or an exceptional condition.
 @end defun
+
+
+@defun select-from-sets @var{nfds} @var{read-fds} @var{write-fds} @var{except-fds} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to @code{FD_SETSIZE}; it must be the maximum file descriptor
+number in the sets to be checked for events, plus one.  @var{read-fds},
+@var{write-fds} and @var{except-fds} must be bytevectors, pointer
+objects or instances of @code{memory-block} holding an instance of the C
+language type @code{fd_set}.  @var{sec} and @var{usec} must be fixnums
+representing timeout seconds and microseconds.
+
+If the timeout expires before any event arrives: return @math{3} values
+all being @false{}; if an error occurs: raise an exception; else return
+@math{3} values being @var{read-fds}, @var{write-fds}, @var{except-fds}.
+@end defun
+
+
+@defun select-from-sets-array @var{nfds} @var{fdsets} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to @code{FD_SETSIZE}; it must be the maximum file descriptor
+number in the sets to be checked for events, plus one.  @var{fdsets}
+must be a bytevector, pointer object or instance of @code{memory-block}
+holding @math{3} contiguous instances of the C language type
+@code{fd_set}.  @var{sec} and @var{usec} must be fixnums representing
+timeout seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}; if an
+error occurs: raise an exception; else return @var{fdsets} itself.
+@end defun
+
+@c page
+@node posix fd select special
+@subsubsection Selecting special events to wait for
 
 
 @defun select-fd-readable? @var{fd} @var{sec} @var{usec}

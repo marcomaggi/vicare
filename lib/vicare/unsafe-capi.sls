@@ -221,6 +221,12 @@
     posix-pipe				posix-mkfifo
     posix-truncate			posix-ftruncate
 
+    posix-sizeof-fd-set			posix-make-fd-set-bytevector
+    posix-make-fd-set-pointer		posix-make-fd-set-memory-block!
+    posix-fd-zero			posix-fd-set
+    posix-fd-clr			posix-fd-isset
+    posix-select-from-sets		posix-select-from-sets-array
+
     linux-epoll-event-alloc		linux-epoll-event-size
     linux-epoll-create			linux-epoll-create1
     linux-epoll-ctl			linux-epoll-wait
@@ -1334,6 +1340,43 @@
   (foreign-call "ikrt_linux_epoll_event_set_data_u64" events-array index field-u64))
 (define-inline (linux-epoll-event-ref-data-u64  events-array index)
   (foreign-call "ikrt_linux_epoll_event_ref_data_u64" events-array index))
+
+
+;;;; file descriptor sets
+
+(define-inline (posix-sizeof-fd-set count)
+  (foreign-call "ikrt_posix_sizeof_fd_set" count))
+
+(define-inline (posix-make-fd-set-bytevector count)
+  (foreign-call "ikrt_posix_make_fd_set_bytevector" count))
+
+(define-inline (posix-make-fd-set-pointer count)
+  (foreign-call "ikrt_posix_make_fd_set_pointer" count))
+
+(define-inline (posix-make-fd-set-memory-block! mblock count)
+  (foreign-call "ikrt_posix_make_fd_set_memory_block" mblock count))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-fd-zero fdset idx)
+  (foreign-call "ikrt_posix_fd_zero" fdset idx))
+
+(define-inline (posix-fd-set fd fdset idx)
+  (foreign-call "ikrt_posix_fd_set" fd fdset idx))
+
+(define-inline (posix-fd-clr fd fdset idx)
+  (foreign-call "ikrt_posix_fd_clr" fd fdset idx))
+
+(define-inline (posix-fd-isset fd fdset idx)
+  (foreign-call "ikrt_posix_fd_isset" fd fdset idx))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-select-from-sets nfds read-fds write-fds except-fds sec usec)
+  (foreign-call "ikrt_posix_select_from_sets" nfds read-fds write-fds except-fds sec usec))
+
+(define-inline (posix-select-from-sets-array nfds fd-sets sec usec)
+  (foreign-call "ikrt_posix_select_from_sets_array" nfds fd-sets sec usec))
 
 
 ;;;; memory-mapped input/output

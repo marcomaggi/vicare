@@ -157,6 +157,12 @@
     pipe				mkfifo
     truncate				ftruncate
 
+    sizeof-fd-set			make-fd-set-bytevector
+    make-fd-set-pointer			make-fd-set-memory-block
+    FD_ZERO				FD_SET
+    FD_CLR				FD_ISSET
+    select-from-sets			select-from-sets-array
+
     ;; memory-mapped input/output
     mmap				munmap
     msync				mremap
@@ -502,19 +508,29 @@
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
 
+(define-argument-validation (pointer who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (fixnum/false who obj)
   (or (not obj) (fixnum? obj))
   (assertion-violation who "expected false or fixnum as argument" obj))
 
+(define-argument-validation (positive-fixnum who obj)
+  (and (fixnum? obj)
+       (unsafe.fx< 0 obj))
+  (assertion-violation who "expected positive fixnum as argument" obj))
+
+(define-argument-validation (non-negative-fixnum who obj)
+  (and (fixnum? obj)
+       (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as argument" obj))
+
 (define-argument-validation (boolean/fixnum who obj)
   (or (fixnum? obj) (boolean? obj))
   (assertion-violation who "expected boolean or fixnum as argument" obj))
-
-(define-argument-validation (pointer who obj)
-  (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
 
 (define-argument-validation (pointer/false who obj)
   (or (not obj) (pointer? obj))
@@ -546,6 +562,24 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (general-buffer who obj)
+  (or (bytevector? obj)
+      (pointer? obj)
+      (memory-block? obj))
+  (assertion-violation who
+    "expected bytevector or pointer or memory-block as general buffer argument" obj))
+
+(define-argument-validation (general-buffer/false who obj)
+  (or (not obj)
+      (bytevector? obj)
+      (pointer? obj)
+      (memory-block? obj))
+  (assertion-violation who
+    "expected false or bytevector or pointer or memory-block as general buffer argument"
+    obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (pid who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
@@ -556,7 +590,7 @@
 
 (define-argument-validation (file-descriptor who obj)
   (%file-descriptor? obj)
-  (assertion-violation who "expected fixnum file descriptor as argument" obj))
+  (assertion-violation who "expected fixnum as file descriptor argument" obj))
 
 (define-argument-validation (message-queue-descriptor who obj)
   (%message-queue-descriptor? obj)
@@ -615,8 +649,14 @@
   (assertion-violation who
     "expected platform off_t exact integer as offset argument" obj))
 
-(define-argument-validation (false/fd who obj)
+(define-argument-validation (false/file-descriptor who obj)
   (or (not obj) (%file-descriptor? obj))
+  (assertion-violation who "expected false or file descriptor as argument" obj))
+
+(define-argument-validation (select-nfds who obj)
+  (or (not obj)
+      (%file-descriptor? obj)
+      (unsafe.fx= obj FD_SETSIZE))
   (assertion-violation who "expected false or file descriptor as argument" obj))
 
 (define-argument-validation (list-of-fds who obj)
@@ -1936,7 +1976,7 @@
 (define (select nfds read-fds write-fds except-fds sec usec)
   (define who 'select)
   (with-arguments-validation (who)
-      ((false/fd	nfds)
+      ((select-nfds	nfds)
        (list-of-fds	read-fds)
        (list-of-fds	write-fds)
        (list-of-fds	except-fds)
@@ -2102,6 +2142,135 @@
     (let ((rv (capi.posix-ftruncate fd length)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv fd length)))))
+
+
+;;;; file descriptor sets
+
+(define sizeof-fd-set
+  (case-lambda
+   (()
+    (capi.posix-sizeof-fd-set 1))
+   ((count)
+    (define who 'sizeof-fd-set)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (capi.posix-sizeof-fd-set count)))))
+
+(define make-fd-set-bytevector
+  (case-lambda
+   (()
+    (capi.posix-make-fd-set-bytevector 1))
+   ((count)
+    (define who 'make-fd-set-bytevector)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (capi.posix-make-fd-set-bytevector count)))))
+
+(define make-fd-set-pointer
+  (case-lambda
+   (()
+    (capi.posix-make-fd-set-pointer 1))
+   ((count)
+    (define who 'make-fd-set-pointer)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (capi.posix-make-fd-set-pointer count)))))
+
+(define make-fd-set-memory-block
+  (case-lambda
+   (()
+    (make-fd-set-memory-block 1))
+   ((count)
+    (define who 'make-fd-set-memory-block)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (let ((mb (make-memory-block (null-pointer) 0)))
+	(if (capi.posix-make-fd-set-memory-block! mb count)
+	    mb
+	  #f))))))
+
+;;; --------------------------------------------------------------------
+
+(define FD_ZERO
+  (case-lambda
+   ((fd-set)
+    (FD_ZERO fd-set 0))
+   ((fd-set idx)
+    (define who 'FD_ZERO)
+    (with-arguments-validation (who)
+	((general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-zero fd-set idx)))))
+
+(define FD_SET
+  (case-lambda
+   ((fd fd-set)
+    (FD_SET fd fd-set 0))
+   ((fd fd-set idx)
+    (define who 'FD_SET)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-set fd fd-set idx)))))
+
+(define FD_CLR
+  (case-lambda
+   ((fd fd-set)
+    (FD_CLR fd fd-set 0))
+   ((fd fd-set idx)
+    (define who 'FD_SET)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-clr fd fd-set idx)))))
+
+(define FD_ISSET
+  (case-lambda
+   ((fd fd-set)
+    (FD_ISSET fd fd-set 0))
+   ((fd fd-set idx)
+    (define who 'FD_ISSET)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-isset fd fd-set idx)))))
+
+;;; --------------------------------------------------------------------
+
+(define (select-from-sets nfds read-fds write-fds except-fds sec usec)
+  (define who 'select-from-sets)
+  (with-arguments-validation (who)
+      ((select-nfds	nfds)
+       (general-buffer	read-fds)
+       (general-buffer	write-fds)
+       (general-buffer	except-fds)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-from-sets nfds read-fds write-fds except-fds sec usec)))
+      (if (fixnum? rv)
+	  (if (unsafe.fxzero? rv)
+	      (values #f #f #f) ;timeout expired
+	    (%raise-errno-error who rv nfds read-fds write-fds except-fds sec usec))
+	;; success
+	(values read-fds write-fds except-fds)))))
+
+(define (select-from-sets-array nfds fd-sets sec usec)
+  (define who 'select-from-sets-array)
+  (with-arguments-validation (who)
+      ((select-nfds	nfds)
+       (general-buffer	fd-sets)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-from-sets-array nfds fd-sets sec usec)))
+      (if (fixnum? rv)
+	  (if (unsafe.fxzero? rv)
+	      #f ;timeout expired
+	    (%raise-errno-error who rv nfds fd-sets sec usec))
+	;; success
+	fd-sets))))
 
 
 ;;;; memory-mapped input/output

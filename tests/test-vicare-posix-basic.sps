@@ -989,6 +989,508 @@
   #t)
 
 
+(parametrise ((check-test-name	'fdsets))
+
+;;; sizeof
+
+  (check
+      (fixnum? (px.sizeof-fd-set))
+    => #t)
+
+  (check
+      (fixnum? (px.sizeof-fd-set 2))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bytevector array
+
+  (check
+      (let ((bv (px.make-fd-set-bytevector)))
+	(bytevector-length bv))
+    => (px.sizeof-fd-set))
+
+  (check
+      (let ((bv (px.make-fd-set-bytevector 3)))
+	(bytevector-length bv))
+    => (px.sizeof-fd-set 3))
+
+;;; --------------------------------------------------------------------
+;;; pointer array
+
+  (check
+      (let ((P (px.make-fd-set-pointer)))
+	(pointer-null? P))
+    => #f)
+
+  (check
+      (let ((P (px.make-fd-set-pointer 3)))
+	(pointer-null? P))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; memory-block array
+
+  (check
+      (let ((mb (px.make-fd-set-memory-block)))
+	(memory-block-size mb))
+    => (px.sizeof-fd-set))
+
+  (check
+      (let ((mb (px.make-fd-set-memory-block 3)))
+	(memory-block-size mb))
+    => (px.sizeof-fd-set 3))
+
+;;; --------------------------------------------------------------------
+;;; operations with bytevectors, single set
+
+  (check
+      (let ((S (px.make-fd-set-bytevector)))
+	(px.FD_ISSET 123 S))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-bytevector)))
+	(px.FD_SET 123 S)
+	(px.FD_ISSET 123 S))
+    => #t)
+
+  (check
+      (let ((S (px.make-fd-set-bytevector)))
+	(px.FD_SET 123 S)
+	(px.FD_CLR 123 S)
+	(px.FD_ISSET 123 S))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-bytevector)))
+	(px.FD_SET 123 S)
+	(px.FD_ZERO S)
+	(px.FD_ISSET 123 S))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; operations with bytevectors, multiple sets
+
+  (check
+      (let ((S (px.make-fd-set-bytevector 3)))
+	(px.FD_ISSET 123 S 1))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-bytevector 3)))
+	(px.FD_SET 123 S 1)
+	(px.FD_ISSET 123 S 1))
+    => #t)
+
+  (check
+      (let ((S (px.make-fd-set-bytevector 3)))
+	(px.FD_SET 123 S 1)
+	(px.FD_CLR 123 S 1)
+	(px.FD_ISSET 123 S 1))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-bytevector 3)))
+	(px.FD_SET 123 S 1)
+	(px.FD_ZERO S 1)
+	(px.FD_ISSET 123 S 1))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; operations with pointers, single set
+
+  (check
+      (let ((S (px.make-fd-set-pointer)))
+	(px.FD_ISSET 123 S))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-pointer)))
+  	(px.FD_SET 123 S)
+  	(px.FD_ISSET 123 S))
+    => #t)
+
+  (check
+      (let ((S (px.make-fd-set-pointer)))
+  	(px.FD_SET 123 S)
+  	(px.FD_CLR 123 S)
+  	(px.FD_ISSET 123 S))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-pointer)))
+  	(px.FD_SET 123 S)
+  	(px.FD_ZERO S)
+  	(px.FD_ISSET 123 S))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; operations with pointers, multiple sets
+
+  (check
+      (let ((S (px.make-fd-set-pointer 3)))
+  	(px.FD_ISSET 123 S 1))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-pointer 3)))
+  	(px.FD_SET 123 S 1)
+  	(px.FD_ISSET 123 S 1))
+    => #t)
+
+  (check
+      (let ((S (px.make-fd-set-pointer 3)))
+  	(px.FD_SET 123 S 1)
+  	(px.FD_CLR 123 S 1)
+  	(px.FD_ISSET 123 S 1))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-pointer 3)))
+  	(px.FD_SET 123 S 1)
+  	(px.FD_ZERO S 1)
+  	(px.FD_ISSET 123 S 1))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; operations with memory-blocks, single set
+
+  (check
+      (let ((S (px.make-fd-set-memory-block)))
+	(px.FD_ISSET 123 S))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-memory-block)))
+  	(px.FD_SET 123 S)
+  	(px.FD_ISSET 123 S))
+    => #t)
+
+  (check
+      (let ((S (px.make-fd-set-memory-block)))
+  	(px.FD_SET 123 S)
+  	(px.FD_CLR 123 S)
+  	(px.FD_ISSET 123 S))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-memory-block)))
+  	(px.FD_SET 123 S)
+  	(px.FD_ZERO S)
+  	(px.FD_ISSET 123 S))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; operations with memory-blocks, multiple sets
+
+  (check
+      (let ((S (px.make-fd-set-memory-block 3)))
+  	(px.FD_ISSET 123 S 1))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-memory-block 3)))
+  	(px.FD_SET 123 S 1)
+  	(px.FD_ISSET 123 S 1))
+    => #t)
+
+  (check
+      (let ((S (px.make-fd-set-memory-block 3)))
+  	(px.FD_SET 123 S 1)
+  	(px.FD_CLR 123 S 1)
+  	(px.FD_ISSET 123 S 1))
+    => #f)
+
+  (check
+      (let ((S (px.make-fd-set-memory-block 3)))
+  	(px.FD_SET 123 S 1)
+  	(px.FD_ZERO S 1)
+  	(px.FD_ISSET 123 S 1))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; select-from-sets, bytevectors
+
+  (check	;timeout
+      (let-values (((in ou) (px.pipe))
+		   ((rfds)  (px.make-fd-set-bytevector))
+		   ((wfds)  (px.make-fd-set-bytevector))
+		   ((efds)  (px.make-fd-set-bytevector)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in rfds)
+	      (px.FD_SET in wfds)
+	      (px.FD_SET in efds)
+	      ;;OU is always writable
+	      (px.FD_SET ou rfds)
+	      (px.FD_SET ou efds)
+	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+;;;		(check-pretty-print (list r w e))
+		(list (eq? r #f)
+		      (eq? w #f)
+		      (eq? e #f))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #t #t))
+
+  (check	;read/write ready
+      (let-values (((in ou) (px.pipe))
+		   ((rfds)  (px.make-fd-set-bytevector))
+		   ((wfds)  (px.make-fd-set-bytevector))
+		   ((efds)  (px.make-fd-set-bytevector)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in rfds)
+	      (px.FD_SET in wfds)
+	      (px.FD_SET in efds)
+	      (px.FD_SET ou rfds)
+	      (px.FD_SET ou wfds)
+	      (px.FD_SET ou efds)
+	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+;;;		(check-pretty-print (list r w e))
+		(list (eq? r rfds)
+		      (eq? w wfds)
+		      (eq? e efds)
+		      (px.FD_ISSET in rfds)
+		      (px.FD_ISSET ou wfds))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #t #t #t #t))
+
+;;; --------------------------------------------------------------------
+;;; select-from-sets, pointers
+
+  (check	;timeout
+      (let-values (((in ou) (px.pipe))
+		   ((rfds)  (px.make-fd-set-pointer))
+		   ((wfds)  (px.make-fd-set-pointer))
+		   ((efds)  (px.make-fd-set-pointer)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in rfds)
+	      (px.FD_SET in wfds)
+	      (px.FD_SET in efds)
+	      ;;OU is always writable
+	      (px.FD_SET ou rfds)
+	      (px.FD_SET ou efds)
+	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+;;;		(check-pretty-print (list r w e))
+		(list (eq? r #f)
+		      (eq? w #f)
+		      (eq? e #f))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #t #t))
+
+  (check	;read/write ready
+      (let-values (((in ou) (px.pipe))
+		   ((rfds)  (px.make-fd-set-pointer))
+		   ((wfds)  (px.make-fd-set-pointer))
+		   ((efds)  (px.make-fd-set-pointer)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in rfds)
+	      (px.FD_SET in wfds)
+	      (px.FD_SET in efds)
+	      (px.FD_SET ou rfds)
+	      (px.FD_SET ou wfds)
+	      (px.FD_SET ou efds)
+	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+;;;		(check-pretty-print (list r w e))
+		(list (eq? r rfds)
+		      (eq? w wfds)
+		      (eq? e efds)
+		      (px.FD_ISSET in rfds)
+		      (px.FD_ISSET ou wfds))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #t #t #t #t))
+
+;;; --------------------------------------------------------------------
+;;; select-from-sets, memory-blocks
+
+  (check	;timeout
+      (let-values (((in ou) (px.pipe))
+		   ((rfds)  (px.make-fd-set-memory-block))
+		   ((wfds)  (px.make-fd-set-memory-block))
+		   ((efds)  (px.make-fd-set-memory-block)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in rfds)
+	      (px.FD_SET in wfds)
+	      (px.FD_SET in efds)
+	      ;;OU is always writable
+	      (px.FD_SET ou rfds)
+	      (px.FD_SET ou efds)
+	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+;;;		(check-pretty-print (list r w e))
+		(list (eq? r #f)
+		      (eq? w #f)
+		      (eq? e #f))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #t #t))
+
+  (check	;read/write ready
+      (let-values (((in ou) (px.pipe))
+		   ((rfds)  (px.make-fd-set-memory-block))
+		   ((wfds)  (px.make-fd-set-memory-block))
+		   ((efds)  (px.make-fd-set-memory-block)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in rfds)
+	      (px.FD_SET in wfds)
+	      (px.FD_SET in efds)
+	      (px.FD_SET ou rfds)
+	      (px.FD_SET ou wfds)
+	      (px.FD_SET ou efds)
+	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (let-values (((r w e) (px.select-from-sets #f rfds wfds efds 0 0)))
+;;;		(check-pretty-print (list r w e))
+		(list (eq? r rfds)
+		      (eq? w wfds)
+		      (eq? e efds)
+		      (px.FD_ISSET in rfds)
+		      (px.FD_ISSET in wfds)
+		      (px.FD_ISSET in efds)
+		      (px.FD_ISSET ou rfds)
+		      (px.FD_ISSET ou wfds)
+		      (px.FD_ISSET ou efds))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #t #t   #t #f #f  #f #t #f))
+
+;;; --------------------------------------------------------------------
+;;; select-from-sets-array, bytevectors
+
+  (check	;timeout
+      (let-values (((in ou)  (px.pipe))
+		   ((fdsets) (px.make-fd-set-bytevector 3)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in fdsets 0)
+	      (px.FD_SET in fdsets 1)
+	      (px.FD_SET in fdsets 2)
+	      ;;OU is always writable
+	      (px.FD_SET ou fdsets 0)
+	      (px.FD_SET ou fdsets 2)
+	      (px.select-from-sets-array #f fdsets 0 0))
+	  (px.close in)
+	  (px.close ou)))
+    => #f)
+
+  (check	;read/write ready
+      (let-values (((in ou)  (px.pipe))
+		   ((fdsets) (px.make-fd-set-bytevector 3)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in fdsets 0)
+	      (px.FD_SET in fdsets 1)
+	      (px.FD_SET in fdsets 2)
+	      (px.FD_SET ou fdsets 0)
+	      (px.FD_SET ou fdsets 1)
+	      (px.FD_SET ou fdsets 2)
+	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
+		(list (px.FD_ISSET in fdsets 0)
+		      (px.FD_ISSET in fdsets 1)
+		      (px.FD_ISSET in fdsets 2)
+		      (px.FD_ISSET ou fdsets 0)
+		      (px.FD_ISSET ou fdsets 1)
+		      (px.FD_ISSET ou fdsets 2))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #f #f  #f #t #f))
+
+;;; --------------------------------------------------------------------
+;;; select-from-sets-array, pointers
+
+  (check	;timeout
+      (let-values (((in ou)  (px.pipe))
+		   ((fdsets) (px.make-fd-set-pointer 3)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in fdsets 0)
+	      (px.FD_SET in fdsets 1)
+	      (px.FD_SET in fdsets 2)
+	      ;;OU is always writable
+	      (px.FD_SET ou fdsets 0)
+	      (px.FD_SET ou fdsets 2)
+	      (px.select-from-sets-array #f fdsets 0 0))
+	  (px.close in)
+	  (px.close ou)))
+    => #f)
+
+  (check	;read/write ready
+      (let-values (((in ou)  (px.pipe))
+		   ((fdsets) (px.make-fd-set-pointer 3)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in fdsets 0)
+	      (px.FD_SET in fdsets 1)
+	      (px.FD_SET in fdsets 2)
+	      (px.FD_SET ou fdsets 0)
+	      (px.FD_SET ou fdsets 1)
+	      (px.FD_SET ou fdsets 2)
+	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
+		(list (px.FD_ISSET in fdsets 0)
+		      (px.FD_ISSET in fdsets 1)
+		      (px.FD_ISSET in fdsets 2)
+		      (px.FD_ISSET ou fdsets 0)
+		      (px.FD_ISSET ou fdsets 1)
+		      (px.FD_ISSET ou fdsets 2))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #f #f  #f #t #f))
+
+;;; --------------------------------------------------------------------
+;;; select-from-sets-array, memory-blocks
+
+  (check	;timeout
+      (let-values (((in ou)  (px.pipe))
+		   ((fdsets) (px.make-fd-set-memory-block 3)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in fdsets 0)
+	      (px.FD_SET in fdsets 1)
+	      (px.FD_SET in fdsets 2)
+	      ;;OU is always writable
+	      (px.FD_SET ou fdsets 0)
+	      (px.FD_SET ou fdsets 2)
+	      (px.select-from-sets-array #f fdsets 0 0))
+	  (px.close in)
+	  (px.close ou)))
+    => #f)
+
+  (check	;read/write ready
+      (let-values (((in ou)  (px.pipe))
+		   ((fdsets) (px.make-fd-set-memory-block 3)))
+	(unwind-protect
+	    (begin
+	      (px.FD_SET in fdsets 0)
+	      (px.FD_SET in fdsets 1)
+	      (px.FD_SET in fdsets 2)
+	      (px.FD_SET ou fdsets 0)
+	      (px.FD_SET ou fdsets 1)
+	      (px.FD_SET ou fdsets 2)
+	      (assert (= 1 (px.write ou '#vu8(1) 1)))
+	      (let ((rv (px.select-from-sets-array #f fdsets 0 0)))
+		(list (px.FD_ISSET in fdsets 0)
+		      (px.FD_ISSET in fdsets 1)
+		      (px.FD_ISSET in fdsets 2)
+		      (px.FD_ISSET ou fdsets 0)
+		      (px.FD_ISSET ou fdsets 1)
+		      (px.FD_ISSET ou fdsets 2))))
+	  (px.close in)
+	  (px.close ou)))
+    => '(#t #f #f  #f #t #f))
+
+  #t)
+
+
 (parametrise ((check-test-name	'config))
 
   (check
