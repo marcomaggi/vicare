@@ -20065,6 +20065,14 @@ holding @acronym{BWP} in key position.  Notice that fixnums, characters
 and the other values that fit in a single machine word are never
 collected from the point of view of a weak hashtable.
 
+@quotation
+@strong{NOTE} Immediate values (@true{}, @false{}, nil, fixnums, etc.)
+used as weak hashtable keys are @strong{never} garbage collected; so the
+associated entries will never be removed from the table unless we
+explicitly do it with @func{weak-hashtable-delete!} or
+@func{weak-hashtable-clear!}.
+@end quotation
+
 When the number of collected objects equals the number of buckets
 (whatever the distribution of elements), the table is enlarged doubling
 the number of buckets; the table is @strong{never} restricted by
