@@ -9608,11 +9608,16 @@ of file descriptors.
 
 @var{nfds} must be false or a non--negative fixnum, when false it
 defaults to @code{FD_SETSIZE}; it must be the maximum file descriptor
-number in the sets to be checked for events, plus one.  @var{read-fds},
-@var{write-fds} and @var{except-fds} must be bytevectors, pointer
-objects or instances of @code{memory-block} holding an instance of the C
-language type @code{fd_set}.  @var{sec} and @var{usec} must be fixnums
-representing timeout seconds and microseconds.
+number in the sets to be checked for events, plus one.
+
+@var{read-fds}, @var{write-fds} and @var{except-fds} must be @false{} or
+bytevectors, pointer objects or instances of @code{memory-block} holding
+an instance of the C language type @code{fd_set}; when @false{} or a
+@cnull{} pointer: an empty @code{fd_set} is internally allocated and
+used.
+
+@var{sec} and @var{usec} must be fixnums representing timeout seconds
+and microseconds.
 
 If the timeout expires before any event arrives: return @math{3} values
 all being @false{}; if an error occurs: raise an exception; else return

@@ -2070,13 +2070,31 @@ ikrt_posix_select_from_sets (ikptr s_nfds,
 			     ikpcb * pcb)
 {
 #ifdef HAVE_SELECT
-  fd_set *	read_fds   = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_read_fds);
-  fd_set *	write_fds  = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_write_fds);
-  fd_set *	except_fds = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_except_fds);
+  fd_set *	read_fds   = \
+    IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(s_read_fds);
+  fd_set *	write_fds  = \
+    IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(s_write_fds);
+  fd_set *	except_fds = \
+    IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(s_except_fds);
+  fd_set	empty_read;
+  fd_set	empty_write;
+  fd_set	empty_except;
   struct timeval timeout;
   int		nfds=0;
   int		rv;
   nfds = (IK_FALSE == s_nfds)? FD_SETSIZE : IK_UNFIX(s_nfds);
+  if (NULL == read_fds) {
+    read_fds = &empty_read;
+    FD_ZERO(read_fds);
+  }
+  if (NULL == write_fds) {
+    write_fds = &empty_write;
+    FD_ZERO(write_fds);
+  }
+  if (NULL == except_fds) {
+    except_fds = &empty_except;
+    FD_ZERO(except_fds);
+  }
   timeout.tv_sec  = IK_UNFIX(s_sec);
   timeout.tv_usec = IK_UNFIX(s_usec);
   errno = 0;
