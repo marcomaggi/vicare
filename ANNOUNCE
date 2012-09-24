@@ -48,6 +48,8 @@ Notes for revision 0.2d18
     scheme-object->pointer
     pointer->scheme-object
 
+* Fixed unsafe accessors and mutators for R6RS records.
+
 
 Notes for revision 0.2d17
 -------------------------
