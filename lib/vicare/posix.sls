@@ -162,6 +162,7 @@
     FD_ZERO				FD_SET
     FD_CLR				FD_ISSET
     select-from-sets			select-from-sets-array
+    fd-set-inspection
 
     ;; memory-mapped input/output
     mmap				munmap
@@ -2271,6 +2272,22 @@
 	    (%raise-errno-error who rv nfds fd-sets sec usec))
 	;; success
 	fd-sets))))
+
+;;; --------------------------------------------------------------------
+
+(define fd-set-inspection
+  (case-lambda
+   ((fdsets)
+    (fd-set-inspection fdsets 0))
+   ((fdsets idx)
+    (let loop ((i   0)
+	       (set '()))
+      (if (= i FD_SETSIZE)
+	  (reverse set)
+	(loop (+ 1 i)
+	      (if (FD_ISSET i fdsets idx)
+		  (cons i set)
+		set)))))))
 
 
 ;;;; memory-mapped input/output

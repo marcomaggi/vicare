@@ -9573,6 +9573,21 @@ defaults to zero.
 @end defun
 
 
+@defun fd-set-inspection @var{fdsets}
+@defunx fd-set-inspection @var{fdsets} @var{idx}
+Return a list of fixnums representing the file descriptors set in the
+selected @code{fd_set} structure.  This function is for debugging
+purposes.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
 @c page
 @node posix fd select select
 @subsubsection Selecting events to wait for
