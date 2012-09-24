@@ -925,8 +925,148 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
   return IK_VOID_OBJECT;
 }
 
-/* ------------------------------------------------------------------ */
+
+/** --------------------------------------------------------------------
+ ** Garbage collection avoidance.
+ ** ----------------------------------------------------------------- */
 
+static ik_gc_avoidance_collection_t *
+ik_allocate_avoidance_collection (void)
+{
+  ik_gc_avoidance_collection_t *	collection;
+  int	i;
+  collection = calloc(1, sizeof(ik_gc_avoidance_collection_t));
+  if (NULL == collection) {
+    ik_abort("not enough memory to allocate a garbage collection avoidance list");
+  }
+  for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i)
+    collection->slots[i] = IK_VOID;
+  return collection;
+}
+ikptr
+ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
+{
+  if (IK_VOID == s_obj) {
+    return ika_pointer_alloc(pcb, (ik_ulong)NULL);
+  } else {
+    ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
+    ikptr *				slot = NULL;
+    { /* If no collections are present: allocate a new one and store it in
+	 the PCB. */
+      if (NULL == collection)
+	pcb->not_to_be_collected = collection = ik_allocate_avoidance_collection();
+    }
+    { /* At  least  one  collection  is   present.   Search  the  list  of
+	 collections for the first with a free slot in its array. */
+      while (collection) {
+	int	i;
+	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	  if (IK_VOID == collection->slots[i]) {
+	    slot = &collection->slots[i];
+	    goto out;
+	  }
+	}
+	collection = collection->next;
+      }
+    }
+  out:
+    /* If no collection has a free slot: allocate a new one and push it on
+       the PCB. */
+    {
+      if (NULL == slot) {
+	collection		= ik_allocate_avoidance_collection();
+	collection->next	= pcb->not_to_be_collected;
+	pcb->not_to_be_collected= collection;
+	slot = &(collection->slots[0]);
+      }
+    }
+    /* Now SLOT references a free slot. */
+    *slot = s_obj;
+    return ika_pointer_alloc(pcb, (ik_ulong)slot);
+  }
+}
+ikptr
+ik_forget_to_avoid_collecting (ikptr s_ptr, ikpcb * pcb)
+{
+  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  if (P) {
+    ikptr	s_obj = *P;
+    *P = IK_VOID;
+    return s_obj;
+  } else
+    return IK_VOID;
+}
+ikptr
+ik_retrieve_to_avoid_collecting (ikptr s_ptr, ikpcb * pcb)
+{
+  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  return (P)? *P : IK_VOID;
+}
+ikptr
+ik_replace_to_avoid_collecting (ikptr s_ptr, ikptr s_new_obj, ikpcb * pcb)
+{
+  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  if (P) {
+    ikptr	s_old_obj = *P;
+    *P = s_new_obj;
+    return s_old_obj;
+  } else
+    return IK_VOID;
+}
+ikptr
+ik_collection_avoidance_list (ikpcb * pcb)
+{
+  ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
+  ikptr		s_list		= IK_NULL;
+  ikptr		s_spine		= IK_NULL;
+  if (NULL == collection)
+    return IK_NULL;
+  else {
+    pcb->root0 = &s_list;
+    pcb->root1 = &s_spine;
+    {
+      while (collection) {
+	int	i;
+	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	  /* fprintf(stderr, "%d=%ld ", i, collection->slots[i]); */
+	  if (IK_VOID != collection->slots[i]) {
+	    if (IK_NULL == s_spine) {
+	      s_spine = ika_pair_alloc(pcb);
+	    } else {
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    }
+	    IK_CAR(s_spine) = collection->slots[i];
+	    if (IK_NULL == s_list)
+	      s_list = s_spine;
+	  }
+	}
+	collection = collection->next;
+      }
+      if (IK_NULL != s_spine)
+	IK_CDR(s_spine) = IK_NULL;
+    }
+    pcb->root1 = NULL;
+    pcb->root0 = NULL;
+    return s_list;
+  }
+}
+ikptr
+ik_purge_collection_avoidance_list (ikpcb * pcb)
+{
+  ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
+  while (collection) {
+    int		i;
+    for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i)
+      collection->slots[i] = IK_VOID;
+    collection = collection->next;
+  }
+  return IK_VOID;
+}
+
+#if 0
+/* The following  are the old versions,  when the "not to  be collected"
+   list was an actual Scheme list. */
 ikptr
 ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
 {
@@ -1038,5 +1178,6 @@ ik_purge_collection_avoidance_list (ikpcb * pcb)
   pcb->not_to_be_collected = IK_NULL;
   return IK_VOID;
 }
+#endif
 
 /* end of file */

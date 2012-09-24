@@ -383,7 +383,7 @@ typedef struct ikpcb {
   struct timeval	collect_rtime;
 
   /* Scheme list of object not to be collected. */
-  ikptr			not_to_be_collected;
+  void *		not_to_be_collected;
 
 } ikpcb;
 
@@ -394,6 +394,37 @@ typedef struct ikcont {
   long		size;
   ikptr		next;	/* pointer to next ikcont structure */
 } ikcont;
+
+/* ------------------------------------------------------------------ */
+
+/* The garbage collection avoidance list  is a linked list of structures
+   managed as a stack.  Allocated  structures are never released, so the
+   stack continues to grow and never shrinks.
+
+     Every structure contains an array of machine words that is meant to
+   hold references to  "ikptr" values not to be garbage  collected; if a
+   slot in the array is not IK_VOID: it contains a "ikptr" value.
+
+     Adding values  requires a linear  search for  a NULL slot  and this
+   sucks plenty; but this way: the  sweep of the garbage collector is as
+   fast   as  possible,   removing  values   requires  only   a  pointer
+   indirection, memory consumption is as small as possible.
+
+     The arrays  implicitly associate  the memory  pointer in  which the
+   "ikptr" is  stored to  the "ikptr"  value itself;  this is  useful to
+   store references to  to "ikptr" values in data  structures managed by
+   foreign C language libraries. */
+
+#define IK_GC_AVOIDANCE_ARRAY_LEN	((4096/sizeof(void *)) - 1)
+
+typedef struct ik_gc_avoidance_collection_t	ik_gc_avoidance_collection_t;
+struct ik_gc_avoidance_collection_t {
+  /* NULL or  a pointer to  the next struct of  this type in  the linked
+     list. */
+  ik_gc_avoidance_collection_t *	next;
+  /* Pointer to the first word in the free list. */
+  ikptr		slots[IK_GC_AVOIDANCE_ARRAY_LEN];
+};
 
 
 /** --------------------------------------------------------------------

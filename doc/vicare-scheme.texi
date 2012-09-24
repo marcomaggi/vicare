@@ -1850,7 +1850,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib printing::              Printing.
 * iklib tracing::               Tracing for debugging.
 * iklib timing::                Timing.
-* iklib collection::            Interfacing with garbage collection.
+* iklib gc::                    Interfacing with garbage collection.
 * iklib guardians::             Guardians and garbage collection.
 * iklib io::                    Input/output library.
 * iklib pointers::              Handling pointer objects.
@@ -4952,7 +4952,7 @@ Return the garbage collection bytes major field of @var{stats}.
 @end defun
 
 @c page
-@node iklib collection
+@node iklib gc
 @section Interfacing with garbage collection
 
 
@@ -4983,23 +4983,50 @@ we retrieve the object reference and use it.
 @defun register-to-avoid-collecting @var{obj}
 Register @var{obj} in the internal state of Vicare so that it is not
 garbage collected even when we loose all the Scheme references to it;
-constant values (@false{}, @true{}, @dots{}) and fixnums cannot be
-registered in this way.  Return @var{obj} itself.
+return a pointer object which can be used to uniquely identify the
+collected @var{obj}.
+
+If @var{obj} is the return value of @code{(void)}: the returned value is
+a @cnull{} pointer.
 @end defun
 
 
-@defun forget-to-avoid-collecting @var{obj}
-Remove @var{obj} from the internal state of Vicare so that it is garbage
-collected when we loose all the Scheme references to it.  If @var{obj}
-was previously registered: return @var{obj} itself, else return
-@false{}.
+@defun forget-to-avoid-collecting @var{pointer}
+Remove the Scheme object associated to @var{pointer} from the internal
+state of Vicare, so that it is garbage collected when we loose all the
+Scheme references to it; return the referenced object.  @var{pointer}
+must be the return value of a previous call to
+@func{register-to-avoid-collecting}.
+
+If @var{pointer} is @cnull{}: nothing happens and the returned value is
+@code{(void)}.
+@end defun
+
+
+@defun retrieve-to-avoid-collecting @var{pointer}
+Return the Scheme object associated to @var{pointer} in the internal
+state of Vicare.  @var{pointer} must be the return value of a previous
+call to @func{register-to-avoid-collecting}.
+
+If @var{pointer} is @cnull{}: nothing happens and the returned value is
+@code{(void)}.
+@end defun
+
+
+@defun replace-to-avoid-collecting @var{pointer} @var{new-obj}
+Replace the Scheme object associated to @var{pointer} in the internal
+state of Vicare with @var{new-obj}; return the previously registered
+object.  @var{pointer} must be the return value of a previous call to
+@func{register-to-avoid-collecting}.
+
+If @var{pointer} is @cnull{}: nothing happens and the returned value is
+@code{(void)}.
 @end defun
 
 
 @defun collection-avoidance-list
-Return the very list of object that where registered to avoid collection
-by @func{register-to-avoid-collecting}; it can be the empty list.  We
-must be very careful in handling and modifying this list.
+Return the list of objects that where registered to avoid collection by
+@func{register-to-avoid-collecting}; it can be the empty list.
 @end defun
 
 
@@ -5891,23 +5918,6 @@ without causing a pointer overflow or underflow.
 @defunx pointer>=? @vari{ptr} @varii{ptr}
 Comparison functions for pointers.  Return @true{} if the arguments
 satisfy the predicate, else return @false{}.
-@end defun
-
-
-@defun pointer->scheme-object @var{pointer}
-@defunx scheme-object->pointer @var{obj}
-One of the assumptions of @value{PRJNAME}, regarding the hosting
-platform, is that a machine word has the same dimension of a pointer;
-immediate Scheme objects and references to Scheme objects are
-represented as machine words.
-
-These functions convert between Scheme objects and pointer objects, so
-that a Scheme object can be handed, as opaque value, to a function
-written and compiled in a foreign language (typically the C language).
-
-To prevent garbage collection of objects converted to pointer objects,
-we must use the garbage collection avoiding @api{}.  @ref{iklib
-collection, Avoiding garbage collection of objects}
 @end defun
 
 

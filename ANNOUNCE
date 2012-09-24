@@ -42,7 +42,11 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d18
 -------------------------
 
-*
+* Reimplemented and extended the  garbage collection avoidance API.  The
+  following functions were broken and have been removed:
+
+    scheme-object->pointer
+    pointer->scheme-object
 
 
 Notes for revision 0.2d17

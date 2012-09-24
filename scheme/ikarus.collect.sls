@@ -18,8 +18,11 @@
 (library (ikarus collect)
   (export do-overflow do-overflow-words do-vararg-overflow collect
           do-stack-overflow collect-key post-gc-hooks
+
 	  register-to-avoid-collecting
 	  forget-to-avoid-collecting
+	  replace-to-avoid-collecting
+	  retrieve-to-avoid-collecting
 	  collection-avoidance-list
 	  purge-collection-avoidance-list)
   (import (except (ikarus)
@@ -29,10 +32,25 @@
 
 		  register-to-avoid-collecting
 		  forget-to-avoid-collecting
+		  replace-to-avoid-collecting
+		  retrieve-to-avoid-collecting
 		  collection-avoidance-list
 		  purge-collection-avoidance-list)
     (ikarus system $fx)
-    (ikarus system $arg-list))
+    (ikarus system $arg-list)
+    (vicare syntactic-extensions))
+
+
+;;;; arguments validation
+
+(define-argument-validation (pointer who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
+
+(define-argument-validation (non-null-pointer who obj)
+  (and (pointer? obj)
+       (not (pointer-null? obj)))
+  (assertion-violation who "expected non NULL pointer as argument" obj))
 
 
 (define post-gc-hooks
@@ -98,8 +116,23 @@
 (define (register-to-avoid-collecting obj)
   (foreign-call "ik_register_to_avoid_collecting" obj))
 
-(define (forget-to-avoid-collecting obj)
-  (foreign-call "ik_forget_to_avoid_collecting" obj))
+(define (forget-to-avoid-collecting ptr)
+  (define who 'forget-to-avoid-collecting)
+  (with-arguments-validation (who)
+      ((pointer	ptr))
+    (foreign-call "ik_forget_to_avoid_collecting" ptr)))
+
+(define (replace-to-avoid-collecting ptr obj)
+  (define who 'replace-to-avoid-collecting)
+  (with-arguments-validation (who)
+      ((non-null-pointer	ptr))
+    (foreign-call "ik_replace_to_avoid_collecting" ptr obj)))
+
+(define (retrieve-to-avoid-collecting ptr)
+  (define who 'retrieve-to-avoid-collecting)
+  (with-arguments-validation (who)
+      ((pointer	ptr))
+    (foreign-call "ik_retrieve_to_avoid_collecting" ptr)))
 
 (define (collection-avoidance-list)
   (foreign-call "ik_collection_avoidance_list"))

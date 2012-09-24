@@ -169,16 +169,19 @@ ikrt_pointer_set_null (ikptr pointer)
 
 /* ------------------------------------------------------------------ */
 
+/* Stale function to  be removed at the next boot  image rotation (Marco
+   Maggi; Mon Sep 24, 2012). */
 ikptr
 ikrt_pointer_from_scheme_object (ikptr s_obj, ikpcb * pcb)
 {
-  return ika_pointer_alloc(pcb, (ik_ulong)s_obj);
+  return IK_VOID;
 }
+/* Stale function to  be removed at the next boot  image rotation (Marco
+   Maggi; Mon Sep 24, 2012). */
 ikptr
 ikrt_pointer_to_scheme_object (ikptr s_pointer, ikpcb * pcb)
 {
-  void *	pointer = IK_POINTER_DATA_VOIDP(s_pointer);
-  return (ikptr)pointer;
+  return IK_VOID;
 }
 
 /* ------------------------------------------------------------------ */

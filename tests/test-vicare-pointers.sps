@@ -2472,23 +2472,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'objects))
-
-  (check
-      (pointer? (scheme-object->pointer '(1 . 2)))
-    => #t)
-
-  (check
-      (let ((O '(1 . 2)))
-	(register-to-avoid-collecting O)
-	(eq? O (unwind-protect
-		   (pointer->scheme-object (scheme-object->pointer O))
-		 (forget-to-avoid-collecting O))))
-    => #t)
-
-  #t)
-
-
 ;;;; done
 
 (check-report)

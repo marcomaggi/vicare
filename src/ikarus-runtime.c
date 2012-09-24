@@ -244,7 +244,7 @@ ik_make_pcb (void)
   pcb->frame_base = pcb->frame_pointer;
   pcb->frame_redline = pcb->stack_base + 2 * 4096;
 
-  pcb->not_to_be_collected = IK_NULL_OBJECT;
+  pcb->not_to_be_collected = NULL;
 
   { /* make cache ikpage */
     ikpage* p = (ikpage*)(long)ik_mmap(CACHE_SIZE * sizeof(ikpage));

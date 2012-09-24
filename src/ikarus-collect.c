@@ -491,7 +491,23 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   scan_dirty_pages(&gc);
   collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
   collect_locatives(&gc, pcb->callbacks);
-  pcb->not_to_be_collected = add_object(&gc, pcb->not_to_be_collected, "not_to_be_collected");
+  { /* Scan the collection of words not to be collected because they are
+       referenced somewhere outside the Scheme heap and stack. */
+    ik_gc_avoidance_collection_t *	C = pcb->not_to_be_collected;
+    while (C) {
+      int	i;
+      for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	if (C->slots[i])
+	  C->slots[i] = add_object(&gc, C->slots[i], "not_to_be_collected");
+      }
+      C = C->next;
+    }
+#if 0 /* This is the  old implementation, when the "not  to be collected
+	 list" was an actual Scheme list. */
+    pcb->not_to_be_collected =
+      add_object(&gc, pcb->not_to_be_collected, "not_to_be_collected");
+#endif
+  }
   pcb->next_k		= add_object(&gc, pcb->next_k,		"next_k");
   pcb->symbol_table	= add_object(&gc, pcb->symbol_table,	"symbol_table");
   pcb->gensym_table	= add_object(&gc, pcb->gensym_table,	"gensym_table");
