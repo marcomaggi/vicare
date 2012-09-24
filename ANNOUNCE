@@ -50,6 +50,8 @@ Notes for revision 0.2d18
 
 * Fixed unsafe accessors and mutators for R6RS records.
 
+* Added variants of SELECT function acting on fd_set instances.
+
 
 Notes for revision 0.2d17
 -------------------------
