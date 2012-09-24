@@ -60,7 +60,6 @@
     pointer?
     null-pointer			pointer-null?
     pointer->integer			integer->pointer
-    pointer->scheme-object		scheme-object->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
     pointer=?				pointer<>?
