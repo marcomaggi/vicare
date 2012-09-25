@@ -2717,7 +2717,7 @@ structures.
 @subsection Structure type descriptors
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Syntax define-struct @meta{name} (@meta{field} ...)
@@ -2742,9 +2742,9 @@ expands to the definition of the following bindings:
 
 @table @code
 @item color
-An identifier syntax bound to a pair whose car is the symbol @samp{$rtd}
-and whose cdr is the return value of @func{make-struct-type} applied to
-the name of the structure and the list of fields.
+A keyword bound to a pair whose car is the symbol @samp{$rtd} and whose
+cdr is the return value of @func{make-struct-type} applied to the name
+of the structure and the list of fields.
 
 @item make-color @var{red} @var{green} @var{blue}
 A structure constructor accepting as much arguments as there are fields.
@@ -2830,7 +2830,7 @@ of type @var{rtd}.
 
 @defun struct-type-destructor @var{rtd}
 Return @false{} or a procedure being the destructor for instances of
-@var{rtd}.  The destructor is registered in a structure type descritpor
+@var{rtd}.  The destructor is registered in a structure type descriptor
 with @func{set-rtd-destructor!}.
 @end defun
 
@@ -2838,10 +2838,10 @@ with @func{set-rtd-destructor!}.
 
 @defun set-rtd-printer! @var{rtd} @var{printer}
 Select the procedure @var{printer} as printer for data structures of
-type @var{rtd}; return unspecified values.  The printer accepts as
-@math{3} arguments: the structure to be printed, the port to which write
-a string represention of the structure with @func{display}, a function
-to be optionally applied to the field values to print them.
+type @var{rtd}; return unspecified values.  The printer accepts @math{3}
+arguments: the structure to be printed, the port to which write a string
+represention of the structure with @func{display}, a function to be
+optionally applied to the field values to print them.
 @end defun
 
 @c ------------------------------------------------------------
@@ -2947,7 +2947,7 @@ The current implementation is the following:
 @subsection Using data structures
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun struct-constructor @var{rtd}
@@ -2978,14 +2978,15 @@ structures of type @var{rtd}.
 @subsection Inspecting data structures
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun struct? @var{stru}
 @defunx struct? @var{stru} @var{rtd}
-When no @var{rtd} argument is given return true if @var{stru} is a data
+When no @var{rtd} argument is given: return true if @var{stru} is a data
 structure.  When @var{rtd} is given: return true if @var{stru} is a data
-structure and it is of type @var{rtd}.
+structure and it is of type @var{rtd}, which must be a struct type
+descriptor.
 @end defun
 
 
@@ -3055,7 +3056,7 @@ for symbols.
 The reader supports a special syntax to read keyword objects, @ref{iklib
 reader stx, Miscellaneous additional syntaxes}.
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun symbol->keyword @var{symbol}
@@ -3097,7 +3098,7 @@ Return an exact integer suitable to be used as hash value for
 
 Weak references do not cause the referenced value to be considered used
 by the garbage collector.  The following bindings are exported by the
-@library{ikarus} library.
+library @library{vicare}.
 
 
 @defun weak-cons @var{A} @var{D}
@@ -3137,10 +3138,10 @@ vicare> (bwp-object? (car x))
 
 
 The description of bytevectors uses the term @emph{byte} for an exact
-integer object in the interval @math{(-128, @dots{}, 127)} and the term
-@emph{octet} for an exact integer object in the interval @math{(0,
-@dots{}, 255)}.  A byte corresponds to its two's complement
-representation as an octet.
+integer object in the inclusive interval @math{(-128, @dots{}, 127)} and
+the term @emph{octet} for an exact integer object in the inclusive
+interval @math{(0, @dots{}, 255)}.  A byte corresponds to its two's
+complement representation as an octet.
 
 @menu
 * iklib bytevectors sub::       Building subbytevectors.
@@ -3153,7 +3154,7 @@ representation as an octet.
 @subsection Building subbytevectors
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun subbytevector-u8 @var{bv} @var{start}
@@ -3208,7 +3209,7 @@ must be such that:
 
 These conversion functions work like @func{bytevector->u8-list} and
 @func{u8-list->bytevector}.  The following bindings are exported by the
-@library{ikarus} library.
+library @library{vicare}.
 
 
 @defun {bytevector->s8-list} @var{bytevector}
@@ -3321,7 +3322,7 @@ part first.
 @subsection Generic bytevectors operations
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun bytevector-append @var{bytevector} ...
@@ -3334,7 +3335,7 @@ arguments are given: return the empty bytevector.
 @section Additional string functions
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
@@ -3380,7 +3381,7 @@ occurs because of impossible generation: raise an error.
 @section Additional vector functions
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun subvector @var{vec} @var{start} @var{end}
@@ -3404,7 +3405,9 @@ the given vectors.
 
 
 @defun vector-copy @var{vec}
-Return a newly allocated copy of the given vector.
+Return a newly allocated copy of the given vector.  This is ``shallow''
+copy, @strong{not} a ``deep'' copy: the returned vector holds the same
+items of @var{vec}.
 @end defun
 
 
