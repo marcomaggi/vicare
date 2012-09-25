@@ -435,10 +435,10 @@ ik_collect_check (unsigned long req, ikpcb* pcb)
 {
   long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
   if (bytes >= req) {
-    return true_object;
+    return IK_TRUE_OBJECT;
   } else {
     ik_collect(req, pcb);
-    return false_object;
+    return IK_FALSE_OBJECT;
   }
 }
 
@@ -472,7 +472,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
     gettimeofday(&rt0, 0);
     getrusage(RUSAGE_SELF, &t0);
   }
-  pcb->collect_key	= false_object;
+  pcb->collect_key	= IK_FALSE_OBJECT;
   bzero(&gc, sizeof(gc_t));
   gc.pcb		= pcb;
   gc.segment_vector	= pcb->segment_vector;
@@ -491,6 +491,23 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   scan_dirty_pages(&gc);
   collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
   collect_locatives(&gc, pcb->callbacks);
+  { /* Scan the collection of words not to be collected because they are
+       referenced somewhere outside the Scheme heap and stack. */
+    ik_gc_avoidance_collection_t *	C = pcb->not_to_be_collected;
+    while (C) {
+      int	i;
+      for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	if (C->slots[i])
+	  C->slots[i] = add_object(&gc, C->slots[i], "not_to_be_collected");
+      }
+      C = C->next;
+    }
+#if 0 /* This is the  old implementation, when the "not  to be collected
+	 list" was an actual Scheme list. */
+    pcb->not_to_be_collected =
+      add_object(&gc, pcb->not_to_be_collected, "not_to_be_collected");
+#endif
+  }
   pcb->next_k		= add_object(&gc, pcb->next_k,		"next_k");
   pcb->symbol_table	= add_object(&gc, pcb->symbol_table,	"symbol_table");
   pcb->gensym_table	= add_object(&gc, pcb->gensym_table,	"gensym_table");
@@ -805,8 +822,8 @@ gc_finalize_guardians (gc_t* gc)
       ikptr last_pair = ref(tc, off_cdr);
       ref(last_pair, off_car) = obj;
       ref(last_pair, off_cdr) = p;
-      ref(p, off_car) = false_object;
-      ref(p, off_cdr) = false_object;
+      ref(p, off_car) = IK_FALSE_OBJECT;
+      ref(p, off_cdr) = IK_FALSE_OBJECT;
       ref(tc, off_cdr) = p;
       dirty_vec[IK_PAGE_INDEX(tc)] = -1;
       dirty_vec[IK_PAGE_INDEX(last_pair)] = -1;
@@ -1757,7 +1774,7 @@ fix_weak_pointers(gc_t* gc) {
               } else {
                 int x_gen = segment_vec[IK_PAGE_INDEX(x)] & gen_mask;
                 if (x_gen <= collect_gen) {
-                  ref(p, 0) = bwp_object;
+                  ref(p, 0) = IK_BWP_OBJECT;
                 }
               }
             }
@@ -1981,8 +1998,8 @@ add_one_tconc(ikpcb* pcb, ikptr p) {
   ikptr new_pair = p | pair_tag;
   ref(d, off_car) = tcbucket;
   ref(d, off_cdr) = new_pair;
-  ref(new_pair, off_car) = false_object;
-  ref(new_pair, off_cdr) = false_object;
+  ref(new_pair, off_car) = IK_FALSE_OBJECT;
+  ref(new_pair, off_cdr) = IK_FALSE_OBJECT;
   ref(tc, off_cdr) = new_pair;
   ref(tcbucket, -vector_tag) = (ikptr)(tcbucket_size - wordsize);
   ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(tc)] = -1;

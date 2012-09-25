@@ -28,8 +28,10 @@
 (import
   (only (vicare installation-configuration))
   (only (vicare platform-constants))
+  (only (vicare platform features))
   (only (vicare errno))
   (only (vicare include))
+  (only (vicare infix))
   (only (vicare syntactic-extensions))
   (only (vicare unsafe-operations))
   (only (vicare unsafe-unicode))
@@ -39,6 +41,7 @@
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))
   (only (vicare keywords))
+  (only (vicare checks))
   )
 
 ;;; end of file

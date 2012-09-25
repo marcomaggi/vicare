@@ -81,13 +81,13 @@ ikptr
 ikrt_positive_bn (ikptr x)
 {
   ikptr first_word = ref(x, -vector_tag);
-  return (IK_BNFST_NEGATIVE(first_word))? false_object : true_object;
+  return (IK_BNFST_NEGATIVE(first_word))? IK_FALSE_OBJECT : IK_TRUE_OBJECT;
 }
 ikptr
 ikrt_even_bn (ikptr x)
 {
   mp_limb_t first_limb = IK_BIGNUM_FIRST_LIMB(x);
-  return (first_limb & 1)? false_object : true_object;
+  return (first_limb & 1)? IK_FALSE_OBJECT : IK_TRUE_OBJECT;
 }
 
 

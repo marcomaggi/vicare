@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d11
+Subject: [announce] Vicare Scheme revision 0.2d19
 
                              Vicare Scheme
                              =============
@@ -39,18 +39,347 @@ collection of R6 Scheme libraries:
 	      <http://marcomaggi.github.com/nausicaa.html>
 
 
+Notes for revision 0.2d19
+-------------------------
+
+*
+
+
+Notes for revision 0.2d18
+-------------------------
+
+* Reimplemented and extended the  garbage collection avoidance API.  The
+  following functions were broken and have been removed:
+
+    scheme-object->pointer
+    pointer->scheme-object
+
+* Fixed unsafe accessors and mutators for R6RS records.
+
+* Added variants of SELECT function acting on fd_set instances.
+
+
+Notes for revision 0.2d17
+-------------------------
+
+* The distributed boot images have been rotated.
+
+* A data structure  automatic destruction protocol has  been added; this
+  is about Vicare's structs, not R6RS records (although R6RS records are
+  structs).
+
+    A field has been added to the RTD of structs:
+
+  - Whenever the  field holds a  procedure, instances of the  struct are
+    registered (upon  creation) into an internal  guardian; whenever the
+    guardian  collects   the  instance,  a  post-GC   hook  applies  the
+    destructor to the instance.
+
+  - If the field holds #f: nothing happens.
+
+    For  details   see  the   "Automatic  finalisation   of  structures"
+  subheading of the "iklib structs rtd" documentation node.
+
+* The addition  of the struct  destructors causes  Issue #35 to  show up
+  much more often than  before[1].  This is very bad and  I hate it, but
+  that is the way it is.  This bug  is from code I have not yet studied,
+  so it is very unlikely that I will be able to fix it anytime soon.
+
+  [1] <https://github.com/marcomaggi/vicare/issues/35>
+
+* Added  size_t, ssize_t,  off_t,  ptrdiff_t as  type  specifiers for  C
+  language callouts and callbacks.
+
+* Added limits to the library (vicare words):
+
+    greatest-c-size_t			least-c-size_t
+    greatest-c-ssize			least-c-ssize_t
+    greatest-c-off_t			least-c-off_t
+    greatest-c-ptrdiff_t		least-c-ptrdiff_t
+    greatest-c-size_t*			least-c-size_t*
+    greatest-c-ssize_t			least-c-ssize_t*
+    greatest-c-off_t*			least-c-off_t*
+    greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
+
+* Added  raw memory  setters and  getters for  C language  types size_t,
+  ssize_t, off_t, ptrdiff_t.
+
+* Reorganised IK_VOIDP_FROM and similar C preprocessor macros.
+
+* Added automatic generation of unsafe  accessor and mutator syntaxes to
+  DEFINE-STRUCT; in the following example:
+
+    (define-struct color
+      (red green blue))
+
+  in addition to the safe accessor and mutator definitions for:
+
+    color-red		set-color-red!
+    color-green		set-color-green!
+    color-blue		set-color-blue!
+
+  unsafe accessors and mutator definitions for:
+
+    $color-red		$set-color-red!
+    $color-green	$set-color-green!
+    $color-blue		$set-color-blue!
+
+  are generated with code like:
+
+    (define-syntax $color-red
+      (syntax-rules ()
+        ((_ x)
+	 ($struct-ref x 0))))
+
+    (define-syntax $set-color-red!
+      (syntax-rules ()
+        ((_ x v)
+	 ($struct-set! x 0 v))))
+
+  at the Scheme level it cannot be faster than this.
+
+* Added automatic generation of unsafe  accessor and mutator syntaxes to
+  DEFINE-RECORD-TYPE  as  extension (and  violation?)  of  R6RS; in  the
+  following example:
+
+    (define-record-type color
+      (fields (mutable red)
+              (mutable green)
+	      (mutable blue)))
+
+  in addition to the safe accessor and mutator definitions for:
+
+    color-red		color-red-set!
+    color-green		color-green-set!
+    color-blue		color-blue-set!
+
+  unsafe accessors and mutator definitions for:
+
+    $color-red		$color-red-set!
+    $color-green	$color-green-set!
+    $color-blue		$color-blue-set!
+
+  are generated with code like:
+
+    (define-syntax $color-red
+      (syntax-rules ()
+        ((_ x)
+	 ($struct-ref x 0))))
+
+    (define-syntax $color-red-set!
+      (syntax-rules ()
+        ((_ x v)
+	 ($struct-set! x 0 v))))
+
+* Added new  documentation node "overview extensions"  for extensions to
+  R6RS.
+
+* CASE-FIXNUMS and CASE-INTEGERS  from (vicare syntactic-extensions) now
+  accept multiple datums in the same clause.
+
+
+Notes for revision 0.2d16
+-------------------------
+
+* Added C language preprocessor macros:
+
+    IK_IS_BOOLEAN
+    IK_BOOLEAN_TO_INT
+    IK_BOOLEAN_FROM_INT
+
+  along with others documented in the "objects misc" node.
+
+* Added functions to convert immediate  Scheme objects and references to
+  Scheme objects to pointer objects:
+
+    pointer->scheme-object
+    scheme-object->pointer
+
+  such functions allow to hand a  Scheme object to a foreign function as
+  opaque value.   Such functions  are meant  to be  used along  with the
+  garbage collection avoidance API.
+
+* Changed STRUCT-RESET to set all the fields of a struct to void, rather
+  than to false.
+
+* Added functions to convert from  raw memory strings in UTF-16 encoding
+  to bytevectors and Scheme strings:
+
+    cstring16->bytevector
+    cstring16n->string
+    cstring16le->string
+    cstring16be->string
+
+* Fixed bug in BYTEVECTOR->CSTRING  erroneously using "strncpy()" rather
+  than a verbatim copy of the bytes.
+
+* When the  reader is in "#!vicare" mode: "++" and "--" are now accepted
+  identifiers.
+
+* Added (vicare infix) providing an infix to prefix transformer.
+
+* Added data structure MEMORY-BLOCK to reference a raw memory block with
+  both  a pointer  and its  size.   Many functions  accepting a  pointer
+  object as argument now accept a memory block too.
+
+* MALLOC, REALLOC, CALLOC, MEMCPY,  MEMMOVE, MEMSET, MEMCMP, STRNCMP and
+  STRNDUP now accept a "size_t"  exact integer as count argument, rather
+  than a fixnum.
+
+* Fixed bug  in GUARDED-REALLOC  causing the return  value to  be always
+  NULL.
+
+* Added functions to poke and peek  values to and from raw memory arrays
+  (like POINTER-SET  and POINTER-REF,  but ARRAY-SET and  ARRAY-REF with
+  scaled offsets).
+
+* Added inclusive and  exclusive limits for C language  types in (vicare
+  words).
+
+
+Notes for revision 0.2d15
+-------------------------
+
+* NULL-POINTER now returns a newly allocated pointer object, rather than
+  returning always the same one.
+
+* Fixed missing normalisation of some FASL pathnames.
+
+* "make installcheck" should now work (I hope definitely).
+
+* When running "make vfasl" to precompile libraries from the build tree:
+  the FASL files are now created under $(builddir)/lib/fasl, rather than
+  polluting a system FASL cache directory.
+
+* More constants as identifiers syntaxes in (vicare words):
+
+    SIZEOF_CHAR
+    SIZEOF_SHORT        SIZEOF_INT
+    SIZEOF_LONG         SIZEOF_LONG_LONG
+    SIZEOF_SIZE_T       SIZEOF_SSIZE_T
+    SIZEOF_OFF_T
+    SIZEOF_FLOAT        SIZEOF_DOUBLE
+    SIZEOF_POINTER
+
+* The following symbols substitutions have been imposed on the C code:
+
+    false_object	-> IK_FALSE_OBJECT
+    true_object		-> IK_TRUE_OBJECT
+    null_object		-> IK_NULL_OBJECT
+    eof_object		-> IK_EOF_OBJECT
+    void_object		-> IK_VOID_OBJECT
+    unbound_object	-> IK_UNBOUND_OBJECT
+    bwp_object		-> IK_BWP_OBJECT
+
+  and the following aliases defined: IK_FALSE, IK_TRUE, IK_NULL, IK_EOF,
+  IK_VOID, IK_UNBOUND, IK_BWP.
+
+* Added STRUCT-RESET  to (vicare), to  reset to #f  all the fields  of a
+  structure.
+
+* Added REGCOMP/DISOWN to (vicare glibc).
+
+* Added syntaxes to (vicare syntactic-extensions):
+
+    case-integers
+    define-exact-integer->symbol-function
+
+* Added experimental API to avoid garbage collection of objects:
+
+	register-to-avoid-collecting
+	forget-to-avoid-collecting
+	collection-avoidance-list
+	purge-collection-avoidance-list
+
+* Added documentation  for some, but  not all, the syntaxes  exported by
+  (vicare syntactic-extensions).
+
+
+Notes for revision 0.2d14
+-------------------------
+
+* Added  library (vicare  platform  features)  exporting one  identifier
+  syntax for each HAVE_ constant  defined by "configure".  At present it
+  is maintained by hand.
+
+* Fixed distributions of Scheme libraries and test files.
+
+* Fixed GNU  Automake stuff to  have the "make distcheck"  rule complete
+  successfully despite some test failures.
+
+
+Notes for revision 0.2d13
+-------------------------
+
+* More platform  constants in  (vicare platform-constants),  which means
+  that running "configure" takes longer (sorry).  But, when POSIX, Glibc
+  and  Linux are  disabled: the  associated platform  constants are  not
+  checked anymore, making running "configure" much faster.
+
+* Added POSIX timers API to (vicare posix).
+
+* Added resource usage and limits API to (vicare posix).
+
+* Added PRLIMIT to (vicare linux).
+
+* Added functions  to (vicare posix):  CLOCK-GETCPUCLOCKID, SIGWAITINFO,
+  SIGTIMEDWAIT.
+
+* Added inotify API to (vicare linux).
+
+
+Notes for revision 0.2d12
+-------------------------
+
+* The runtime program "vicare" is now linked with -lrt.
+
+* Added miscellaneous functions to (vicare posix): TRUNCATE, FTRUNCATE.
+
+* Added  realtime  clock  functions  to  (vicare  posix):  CLOCK-GETRES,
+  CLOCK-GETTIME, CLOCK-SETTIME.
+
+* Added POSIX message queue API to (vicare posix).
+
+* Added POSIX shared memory API to (vicare posix).
+
+* Added POSIX semaphores API to (vicare posix).
+
+* Added timerfd API to (vicare linux).
+
+* Added the function STRUCT=? to (vicare).
+
+* Miscellaneous bug fixes (a killer one in MMAP).
+
+
 Notes for revision 0.2d11
 -------------------------
 
 * The function GET-CHAR-AND-TRACK-TEXTUAL-POSITION increments the column
   number by 8 when a tab character is read, rather than by 1.
 
-* When exiting a runnin Vicare  process from debugger by typing "q": the
-  exit status is now 99 rather than 0.
+* When exiting a running Vicare process from the debugger by typing "q":
+  the exit status is now 99 rather than 0.
 
 * The function  SYNTAX-VIOLATION no more  flattens the form  and subform
   arguments from syntax objects  to symbolic expressions, syntax objects
   are kept.
+
+* Added PRETTY-PRINT*, like  PRETTY-PRINT but accepts some configuration
+  arguments.
+
+* Multiple FASL  directories are now supported.  Files  are now searched
+  in a path to allow  both system precompiled files and user precompiled
+  files.   The  environment   variable  VICARE_FASL_PATH  allows  adding
+  directories to the search path.
+
+* Added command line options:  --fasl-directory, to override the default
+  value of the parameter FASL-DIRECTORY; --fasl-path, to add directories
+  to the default value of the parameter FASL-SEARCH-PATH.
+
+* Added command line option --print-loaded-libraries, to print pathnames
+  of loaded libraries.
+
+* The documentation file has been renamed to "vicare-scheme.texi".
 
 
 Notes for revision 0.2d10

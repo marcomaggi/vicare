@@ -18,6 +18,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_GLOB_H
 #  include <glob.h>
 #endif
+#ifdef HAVE_SYS_INOTIFY_H
+#  include <sys/inotify.h>
+#endif
 #ifdef HAVE_INTTYPES_H
 #  include <inttypes.h>
 #endif
@@ -30,6 +33,9 @@ AC_INCLUDES_DEFAULT
 #ifdef HAVE_REGEX_H
 #  include <regex.h>
 #endif
+#ifdef HAVE_SEMAPHORE_H
+#  include <semaphore.h>
+#endif
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
 #endif
@@ -41,6 +47,9 @@ AC_INCLUDES_DEFAULT
 #endif
 #ifdef HAVE_SYS_SIGNALFD_H
 #  include <sys/signalfd.h>
+#endif
+#ifdef HAVE_SYS_TIMERFD_H
+#  include <sys/timerfd.h>
 #endif
 #ifdef HAVE_SYS_WAIT_H
 #  include <sys/wait.h>
@@ -71,6 +80,9 @@ AC_INCLUDES_DEFAULT
 #endif
 #ifdef HAVE_MNTENT_H
 #  include <mntent.h>
+#endif
+#ifdef HAVE_MQUEUE_H
+#  include <mqueue.h>
 #endif
 #ifdef HAVE_NETDB_H
 #  include <netdb.h>
@@ -164,6 +176,11 @@ AC_DEFUN([VICARE_VALUEOF_TEST],[
 AC_DEFUN([VICARE_CONSTANT_TEST],[VICARE_VALUEOF_TEST([$1],[$1])])
 AC_DEFUN([VICARE_CONSTANT_TESTS],[m4_map_args_w($1,[VICARE_CONSTANT_TEST(],[)])])
 
+AC_DEFUN([VICARE_CONSTANT_FALSE],
+  [VALUEOF_$1="#f"
+   AC_SUBST([VALUEOF_$1])])
+AC_DEFUN([VICARE_CONSTANT_FALSES],[m4_map_args_w($1,[VICARE_CONSTANT_FALSE(],[)])])
+
 dnl page
 AC_DEFUN([VICARE_STRINGOF_TEST],
   [VALUEOF_$1=""
@@ -177,7 +194,8 @@ AC_DEFUN([VICARE_STRINGOF_TEST],
            return ferror (f) || fclose (f) != 0;
         }])],
         [vicare_cv_stringof_$1=`cat conftest.val`],
-        [vicare_cv_stringof_$1=""])
+        [vicare_cv_stringof_$1=""],
+	[vicare_cv_stringof_$1=""])
       rm -f conftest.val])
    VALUEOF_$1="$vicare_cv_stringof_$1"
    AC_SUBST([VALUEOF_$1])])
@@ -198,7 +216,8 @@ AC_DEFUN([VICARE_DOUBLEOF_TEST],
            return ferror (f) || fclose (f) != 0;
         }])],
         [vicare_cv_doubleof_$1=`cat conftest.val`],
-        [vicare_cv_doubleof_$1=""])
+        [vicare_cv_doubleof_$1=""],
+	[vicare_cv_doubleof_$1="0.0"])
       rm -f conftest.val])
    VALUEOF_$1="$vicare_cv_doubleof_$1"
    AC_SUBST([VALUEOF_$1])])
@@ -260,7 +279,8 @@ AC_DEFUN([VICARE_CHECK_PAGESHIFT],
            return ferror (f) || fclose (f) != 0;
         }])],
         [vicare_cv_pageshift=`cat conftest.val`],
-        [vicare_cv_pageshift=12])
+        [vicare_cv_pageshift=12],
+	[vicare_cv_pageshift=12])
       rm -f conftest.val])])])
 
 ### end of file

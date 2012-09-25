@@ -28,7 +28,7 @@
 #!r6rs
 (import (rnrs)
   (vicare language-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare language extensions library\n")

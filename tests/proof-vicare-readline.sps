@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (checks)
+  (vicare checks)
   (prefix (vicare readline) rl.))
 
 (check-set-mode! 'report-failed)

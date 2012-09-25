@@ -21,46 +21,50 @@
 
     ;; struct type descriptor inspection
     struct-type-name		struct-type-symbol
-    struct-type-field-names
+    struct-type-field-names	struct-type-destructor
 
     ;; struct type descriptor customisation
-    set-rtd-printer!
+    set-rtd-printer!		set-rtd-destructor!
 
     ;; struct constructor and predicate
     struct?
     struct-constructor		struct-predicate
+    struct=?
 
     ;; struct accessors and mutators
     struct-ref			struct-set!
     struct-field-accessor	struct-field-mutator
+    struct-reset
 
     ;; structure inspection
     struct-rtd			(rename (struct-rtd struct-type-descriptor))
     struct-name			struct-printer
-    struct-length)
+    struct-destructor		struct-length)
   (import (except (ikarus)
 		  ;; struct type descriptor constructor
 		  make-struct-type
 
 		  ;; struct type descriptor inspection
-		  struct-type-name	struct-type-symbol
-		  struct-type-field-names
+		  struct-type-name		struct-type-symbol
+		  struct-type-field-names	struct-type-destructor
 
 		  ;; struct type descriptor customisation
-		  set-rtd-printer!
+		  set-rtd-printer!		set-rtd-destructor!
 
 		  ;; struct accessors and mutators
-		  struct?
-		  struct-constructor	struct-predicate
+		  struct?			struct=?
+		  struct-constructor		struct-predicate
 
 		  ;; struct accessors and mutators
-		  struct-ref		struct-set!
-		  struct-field-accessor	struct-field-mutator
+		  struct-ref			struct-set!
+		  struct-field-accessor		struct-field-mutator
+		  struct-reset
 
 		  ;; structure inspection
-		  struct-rtd		struct-type-descriptor
-		  struct-name		struct-printer
-		  struct-length)
+		  struct-rtd			struct-type-descriptor
+		  struct-name			struct-printer
+		  struct-destructor		struct-length)
+    (ikarus.emergency)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -105,11 +109,15 @@
   (procedure? printer)
   (assertion-violation who "expected procedure as printer argument" printer))
 
+(define-argument-validation (destructor who destructor)
+  (procedure? destructor)
+  (assertion-violation who "expected procedure as destructor argument" destructor))
+
 
 ;;;; low level RTD operations
 
-(define-inline (make-rtd name fields printer symbol)
-  ($struct (base-rtd) name (length fields) fields printer symbol))
+(define-inline (make-rtd name fields symbol)
+  ($struct (base-rtd) name (length fields) fields #f #;printer symbol #f #;destructor))
 
 (define-inline (rtd? x)
   (and ($struct? x)
@@ -133,6 +141,9 @@
 (define-inline (rtd-symbol rtd)
   ($struct-ref rtd 4))
 
+(define-inline (rtd-destructor rtd)
+  ($struct-ref rtd 5))
+
 
 ;;;; unsafe RTD fields mutators
 
@@ -150,6 +161,9 @@
 
 (define-inline (set-rtd-symbol! rtd symbol)
   ($struct-set! rtd 4 symbol))
+
+(define-inline ($set-rtd-destructor! rtd destructor-func)
+  ($struct-set! rtd 5 destructor-func))
 
 
 ;;;; structure type descriptor
@@ -173,7 +187,7 @@
 	 (list-of-fields fields))
       (for-each %field-is-a-symbol? fields)
       (let* ((uid (gensym name))
-	     (rtd (make-rtd name fields #f uid)))
+	     (rtd (make-rtd name fields uid)))
 	(set-symbol-value! uid rtd)
 	rtd)))
    ((name fields uid)
@@ -192,7 +206,7 @@
                  value or to type descriptor not matching this \
                  definition"))
 	    rtd)
-	(let ((rtd (make-rtd name fields #f uid)))
+	(let ((rtd (make-rtd name fields uid)))
 	  (set-symbol-value! uid rtd)
 	  rtd))))))
 
@@ -221,6 +235,16 @@
       ((rtd rtd))
     (rtd-fields rtd)))
 
+(define (struct-type-destructor rtd)
+  ;;Return false or a procedure being the destructor of RTD.
+  ;;
+  (define who 'struct-type-destructor)
+  (with-arguments-validation (who)
+      ((rtd rtd))
+    (rtd-destructor rtd)))
+
+;;; --------------------------------------------------------------------
+
 (define (set-rtd-printer! rtd printer)
   ;;Select the procedure PRINTER as  printer for data structures of type
   ;;RTD.   The printer  accepts  as  3 arguments:  the  structure to  be
@@ -233,6 +257,17 @@
       ((rtd	rtd)
        (printer	printer))
     ($set-rtd-printer! rtd printer)))
+
+(define (set-rtd-destructor! rtd destructor)
+  ;;Select the procedure DESTRUCTOR ad destructor for data structures of
+  ;;type  RTD.   The destructor  accepts  a  single argument  being  the
+  ;;structure instance.
+  ;;
+  (define who set-rtd-destructor!)
+  (with-arguments-validation (who)
+      ((rtd		rtd)
+       (destructor	destructor))
+    ($set-rtd-destructor! rtd destructor)))
 
 
 ;;;; data structure functions
@@ -260,9 +295,12 @@
     (lambda args
       (let* ((n (rtd-length rtd))
 	     (r ($make-struct rtd n)))
-	(or (%set-fields r args 0 n)
-	    (assertion-violation who
-	      "incorrect number of arguments to the constructor" rtd))))))
+	(if (%set-fields r args 0 n)
+	    (if (rtd-destructor rtd)
+		($struct-guardian r)
+	      r)
+	  (assertion-violation who
+	    "incorrect number of arguments to the constructor" rtd))))))
 
 (define (struct-predicate rtd)
   ;;Return a predicate function for structures of type RTD.
@@ -316,6 +354,17 @@
 	(with-arguments-validation (who)
 	    ((struct-of-type x rtd))
 	  ($struct-set! x i v))))))
+
+(define (struct-reset x)
+  ;;Reset to #f all the fields of a structure.
+  ;;
+  (define who 'struct-reset)
+  (with-arguments-validation (who)
+      ((struct x))
+    (let ((len ($struct-ref ($struct-rtd x) 1)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i len))
+	($struct-set! x i (void))))))
 
 
 ;;;; data structure inspection
@@ -376,6 +425,15 @@
       ((struct x))
     (rtd-printer ($struct-rtd x))))
 
+(define (struct-destructor x)
+  ;;Return  the procedure  being the  destructor function  for the  data
+  ;;structure X.
+  ;;
+  (define who 'struct-destructor)
+  (with-arguments-validation (who)
+      ((struct x))
+    (rtd-destructor ($struct-rtd x))))
+
 (define (struct-ref x i)
   ;;Return the value of field at index I in the data structure X.
   ;;
@@ -394,12 +452,28 @@
        (index	i x))
     ($struct-set! x i v)))
 
+(define (struct=? obj1 obj2)
+  ;;Return true if OBJ1 and OBJ2  are two structures having the same RTD
+  ;;and equal field values according to EQV?.
+  ;;
+  (and (struct? obj1)
+       (struct? obj2)
+       (eq? (struct-rtd obj1)
+	    (struct-rtd obj2))
+       (let ((len (struct-length obj1)))
+	 (let loop ((i 0))
+	   (or (= i len)
+	       (and (eqv? (struct-ref obj1 i)
+			  (struct-ref obj2 i))
+		    (loop (+ 1 i))))))))
+
 
 ;;;; done
 
 ;;Initialise the fields of the base RTD.
-(set-rtd-fields! (base-rtd) '(name fields length printer symbol))
-(set-rtd-name! (base-rtd) "base-rtd")
+(set-rtd-name!   (base-rtd) "base-rtd")
+(set-rtd-fields! (base-rtd) '(name fields length printer symbol destructor))
+($set-rtd-destructor! (base-rtd) #f)
 ($set-rtd-printer! (base-rtd)
 		   (lambda (rtd port wr)
 		     (define who 'struct-type-printer)

@@ -61,7 +61,7 @@ feature_failure_ (const char * funcname)
   ik_abort("called GNU Readline library specific function, %s\n", funcname);
 }
 
-#define feature_failure(FN)     { feature_failure_(FN); return void_object; }
+#define feature_failure(FN)     { feature_failure_(FN); return IK_VOID_OBJECT; }
 
 
 /** --------------------------------------------------------------------
@@ -72,16 +72,16 @@ ikptr
 ik_readline_enabled (void)
 {
 #ifdef HAVE_LIBREADLINE
-  return true_object;
+  return IK_TRUE_OBJECT;
 #else
-  return false_object;
+  return IK_FALSE_OBJECT;
 #endif
 }
 ikptr
 ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
 {
 #ifdef HAVE_LIBREADLINE
-  char *	prompt = (false_object == s_prompt)? NULL : IK_BYTEVECTOR_DATA_CHARP(s_prompt);
+  char *	prompt = (IK_FALSE_OBJECT == s_prompt)? NULL : IK_BYTEVECTOR_DATA_CHARP(s_prompt);
   char *	line;
   ikptr		rv;
   line = readline(prompt);
@@ -95,7 +95,7 @@ ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
     free(line);
     return rv;
   } else
-    return false_object;
+    return IK_FALSE_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -112,7 +112,7 @@ ik_readline_rl_version (ikpcb * pcb)
 #if ((defined HAVE_LIBREADLINE) && (defined RL_READLINE_VERSION))
   return ika_integer_from_int(pcb, (int)RL_READLINE_VERSION);
 #else
-  return false_object;
+  return IK_FALSE_OBJECT;
 #endif
 }
 

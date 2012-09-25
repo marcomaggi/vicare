@@ -31,7 +31,7 @@
   (prefix (vicare simple-event-loop) sel.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare simple event loop\n")

@@ -18,7 +18,7 @@
 ;;;		(= -8/3 (/ 1 -3/8)) => #t
 ;;;		(= (/ -3/8) (/ 1 -3/8)) => #f
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -37,7 +37,7 @@
 
 #!r6rs
 (import (rnrs)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing issue 25, wrong handling of sign in exact rationals\n")

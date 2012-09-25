@@ -32,10 +32,12 @@
 		  integer->machine-word
 		  machine-word->integer
 
-		  display write newline printf pretty-print write-char
+		  display write newline printf
+		  pretty-print pretty-print* write-char
 		  print-condition)
     (prefix (only (ikarus)
-		  display write newline printf pretty-print write-char
+		  display write newline printf
+		  pretty-print pretty-print* write-char
 		  print-condition)
 	    ikarus.)
     (vicare syntactic-extensions)
@@ -102,9 +104,9 @@
     (apply fprintf port args)
     (flush-output-port port)))
 
-(define (%pretty-print thing)
+(define (%pretty-print thing start-column)
   (let ((port (console-output-port)))
-    (ikarus.pretty-print thing)
+    (ikarus.pretty-print* thing port start-column #t)
     (flush-output-port port)))
 
 (define (print-condition con)
@@ -315,8 +317,9 @@
       x))
   (let ((n (car x))
 	(x (cdr x)))
-    (%printf " [~a] " n)
-    (%pretty-print (trace-expr x))
+    (let ((str (format " [~a] " n)))
+      (%printf str)
+      (%pretty-print (trace-expr x) (string-length str)))
     (let ((src (trace-src x)))
       (when (pair? src)
 	(%printf "     source: char ~a of ~a\n" (cdr src) (car src))))

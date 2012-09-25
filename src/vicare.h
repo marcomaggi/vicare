@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h> /* for off_t */
 
 
@@ -168,19 +169,27 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_ALIGN(N) \
   ((((N) + IK_ALIGN_SIZE - 1) >>  IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
 
-#define false_object		((ikptr)0x2F)
-#define true_object		((ikptr)0x3F)
-#define null_object		((ikptr)0x4F)
-#define eof_object		((ikptr)0x5F)
-#define void_object		((ikptr)0x7F)
+#define IK_FALSE_OBJECT		((ikptr)0x2F)
+#define IK_TRUE_OBJECT		((ikptr)0x3F)
+#define IK_NULL_OBJECT		((ikptr)0x4F)
+#define IK_EOF_OBJECT		((ikptr)0x5F)
+#define IK_VOID_OBJECT		((ikptr)0x7F)
 
 /* Special machine word value stored in locations that used to hold weak
    references to values which have been already garbage collected. */
-#define bwp_object		((ikptr)0x8F)
+#define IK_BWP_OBJECT		((ikptr)0x8F)
 
 /* Special machine word value stored  in the "value" and "proc" field of
    Scheme symbol memory blocks to signal that these fields are unset. */
-#define unbound_object		((ikptr)0x6F)
+#define IK_UNBOUND_OBJECT	((ikptr)0x6F)
+
+#define IK_FALSE		IK_FALSE_OBJECT
+#define IK_TRUE			IK_TRUE_OBJECT
+#define IK_NULL			IK_NULL_OBJECT
+#define IK_EOF			IK_EOF_OBJECT
+#define IK_VOID			IK_VOID_OBJECT
+#define IK_BWP			IK_BWP_OBJECT
+#define IK_UNBOUND		IK_UNBOUND_OBJECT
 
 
 /** --------------------------------------------------------------------
@@ -389,6 +398,7 @@ ik_decl ikptr	ika_integer_from_uint64	(ikpcb* pcb, uint64_t N);
 ik_decl ikptr	ika_integer_from_off_t	(ikpcb * pcb, off_t N);
 ik_decl ikptr	ika_integer_from_ssize_t(ikpcb * pcb, ssize_t N);
 ik_decl ikptr	ika_integer_from_size_t	(ikpcb * pcb, size_t N);
+ik_decl ikptr	ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N);
 
 ik_decl int32_t	 ik_integer_to_sint32	(ikptr x);
 ik_decl int64_t	 ik_integer_to_sint64	(ikptr x);
@@ -405,6 +415,7 @@ ik_decl ik_ullong ik_integer_to_ullong	(ikptr x);
 ik_decl off_t	ik_integer_to_off_t	(ikptr x);
 ik_decl size_t	ik_integer_to_size_t	(ikptr x);
 ik_decl ssize_t	ik_integer_to_ssize_t	(ikptr x);
+ik_decl ptrdiff_t ik_integer_to_ptrdiff_t (ikptr x);
 
 /* inspection */
 ik_decl ikptr	ikrt_positive_bn	(ikptr x);
@@ -565,6 +576,9 @@ ik_decl ikptr iku_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
 ik_decl ikptr ikrt_is_pointer	(ikptr X);
 ik_decl int   ik_is_pointer	(ikptr X);
 
+#define IK_IS_POINTER(X)	\
+  (((vector_tag == IK_TAGOF(X)) && (pointer_tag == IK_REF(X, -vector_tag))))
+
 #define IK_POINTER_DATA(X)		IK_REF((X), off_pointer_data)
 #define IK_POINTER_DATA_VOIDP(X)	((void *)   IK_REF((X), off_pointer_data))
 #define IK_POINTER_DATA_CHARP(X)	((char *)   IK_REF((X), off_pointer_data))
@@ -574,8 +588,9 @@ ik_decl int   ik_is_pointer	(ikptr X);
 #define IK_POINTER_DATA_ULONG(X)	((ik_ulong) IK_REF((X), off_pointer_data))
 #define IK_POINTER_DATA_ULLONG(X)	((ik_ullong)IK_REF((X), off_pointer_data))
 
-#define IK_POINTER_SET_NULL(X)		(IK_REF((X), off_pointer_data) = 0)
-#define IK_POINTER_IS_NULL(X)		(0 == IK_POINTER_DATA(X))
+#define IK_POINTER_SET(X,P)	(IK_REF((X), off_pointer_data) = (ikptr)((void*)(P)))
+#define IK_POINTER_SET_NULL(X)	(IK_REF((X), off_pointer_data) = 0)
+#define IK_POINTER_IS_NULL(X)	(0 == IK_POINTER_DATA(X))
 
 
 /** --------------------------------------------------------------------
@@ -618,7 +633,9 @@ ik_decl ikptr ikrt_vector_copy		(ikptr s_dst, ikptr s_dst_start,
 ik_decl ikptr ika_bytevector_alloc		(ikpcb * pcb, long requested_number_of_bytes);
 ik_decl ikptr ika_bytevector_from_cstring	(ikpcb * pcb, const char * cstr);
 ik_decl ikptr ika_bytevector_from_cstring_len	(ikpcb * pcb, const char * cstr, size_t len);
-ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, void * memory, size_t length);
+ik_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, const void * memory,
+						 size_t length);
+ik_decl ikptr ik_bytevector_from_utf16z		(ikpcb * pcb, const void * data);
 ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 				    ikptr s_src, ikptr s_src_start,
 				    ikptr s_count);
@@ -650,7 +667,8 @@ ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 #define disp_rtd_fields		(3 * wordsize)
 #define disp_rtd_printer	(4 * wordsize)
 #define disp_rtd_symbol		(5 * wordsize)
-#define rtd_size		(6 * wordsize)
+#define disp_rtd_destructor	(6 * wordsize)
+#define rtd_size		(7 * wordsize)
 
 #define off_rtd_rtd		(disp_rtd_rtd	  - rtd_tag)
 #define off_rtd_name		(disp_rtd_name	  - rtd_tag)
@@ -658,6 +676,7 @@ ik_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 #define off_rtd_fields		(disp_rtd_fields  - rtd_tag)
 #define off_rtd_printer		(disp_rtd_printer - rtd_tag)
 #define off_rtd_symbol		(disp_rtd_symbol  - rtd_tag)
+#define off_rtd_destructor	(disp_rtd_destructor - rtd_tag)
 
 ik_decl ikptr ika_struct_alloc_and_init	(ikpcb * pcb, ikptr rtd);
 ik_decl ikptr ika_struct_alloc_no_init	(ikpcb * pcb, ikptr rtd);
@@ -773,6 +792,153 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 
 ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
 ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+
+
+/** --------------------------------------------------------------------
+ ** Special exact integer object macros.
+ ** ----------------------------------------------------------------- */
+
+#define IK_IS_INTEGER(OBJ)	(IK_IS_FIXNUM(OBJ)||ik_is_bignum(OBJ))
+
+
+/** --------------------------------------------------------------------
+ ** Special boolean object macros.
+ ** ----------------------------------------------------------------- */
+
+#define IK_IS_BOOLEAN(OBJ)		((IK_FALSE == (OBJ)) || (IK_TRUE == (OBJ)))
+#define IK_BOOLEAN_TO_INT(OBJ)		(!(IK_FALSE == (OBJ)))
+#define IK_BOOLEAN_FROM_INT(INT)	((INT)? IK_TRUE : IK_FALSE)
+
+
+/** --------------------------------------------------------------------
+ ** Special memory-block object macros.
+ ** ----------------------------------------------------------------- */
+
+#define IK_MBLOCK_POINTER(OBJ)		IK_FIELD(OBJ, 0)
+#define IK_MBLOCK_SIZE(OBJ)		IK_FIELD(OBJ, 1)
+#define IK_MBLOCK_DATA_VOIDP(OBJ)	IK_POINTER_DATA_VOIDP(IK_MBLOCK_POINTER(OBJ))
+#define IK_MBLOCK_DATA_CHARP(OBJ)	IK_POINTER_DATA_CHARP(IK_MBLOCK_POINTER(OBJ))
+#define IK_MBLOCK_SIZE_T(OBJ)		ik_integer_to_size_t(IK_MBLOCK_SIZE(OBJ))
+
+
+/** --------------------------------------------------------------------
+ ** Special macros extracting "void *" pointers from objects.
+ ** ----------------------------------------------------------------- */
+
+/* pointer, false */
+#define IK_POINTER_FROM_POINTER_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_POINTER_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_POINTER_DATA_VOIDP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, false */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_BYTEVECTOR_DATA_VOIDP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* mblock, false */
+#define IK_POINTER_FROM_MBLOCK_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_MBLOCK_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_MBLOCK_DATA_VOIDP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ) \
+  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_POINTER_DATA_VOIDP(OBJ))
+
+/* bytevector, pointer, false */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* pointer, mblock */
+#define IK_POINTER_FROM_POINTER_OR_MBLOCK(OBJ) \
+          IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
+#define   IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_POINTER(OBJ)? IK_POINTER_DATA_VOIDP(OBJ) : IK_MBLOCK_DATA_VOIDP(OBJ))
+
+/* pointer, mblock, false */
+#define IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)	\
+          IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)	\
+  ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer, mblock */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_BYTEVECTOR(OBJ)? IK_BYTEVECTOR_DATA_VOIDP(OBJ) : IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* bytevector, pointer, mblock, false */
+#define IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
+          IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+#define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
+
+
+/** --------------------------------------------------------------------
+ ** Special macros extracting "char *" pointers from objects.
+ ** ----------------------------------------------------------------- */
+
+/* pointer, false */
+#define IK_CHARP_FROM_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_POINTER_DATA_CHARP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, false */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_BYTEVECTOR_DATA_CHARP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* mblock, false */
+#define IK_CHARP_FROM_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_MBLOCK_DATA_CHARP(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER(OBJ) \
+  ((IK_IS_BYTEVECTOR(OBJ))? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_POINTER_DATA_CHARP(OBJ))
+
+/* bytevector, pointer, false */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* pointer, mblock */
+#define IK_CHARP_FROM_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_POINTER(OBJ)? IK_POINTER_DATA_CHARP(OBJ) : IK_MBLOCK_DATA_CHARP(OBJ))
+
+/* pointer, mblock, false */
+#define IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)	\
+  ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* bytevector, pointer, mblock */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)	\
+  (IK_IS_BYTEVECTOR(OBJ)? IK_BYTEVECTOR_DATA_CHARP(OBJ) : IK_CHARP_FROM_POINTER_OR_MBLOCK(OBJ))
+
+/* bytevector, pointer, mblock, false */
+#define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
+  ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
 
 
 /** --------------------------------------------------------------------

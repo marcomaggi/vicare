@@ -25,6 +25,7 @@
 ;;;
 
 
+#!r6rs
 (import (vicare)
   (prefix (vicare linux)
 	  lx.)
@@ -32,10 +33,25 @@
 	  px.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare GNU+Linux functions\n")
+
+
+;;;; helpers
+
+(define-syntax with-temporary-file
+  (syntax-rules ()
+    ((_ (?pathname ?fd) . ?body)
+     (let ((ptn ?pathname))
+       (when (file-exists? ptn)
+	 (delete-file ptn))
+       (let ((?fd (px.open ptn (fxior O_CREAT O_EXCL O_RDWR) (fxior S_IRUSR S_IWUSR))))
+	 (unwind-protect
+	     (begin . ?body)
+	   (px.close ?fd)
+	   (delete-file ptn)))))))
 
 
 (parametrise ((check-test-name	'termination-status))
@@ -60,6 +76,26 @@
       (let ((status (px.system "exit 0")))
 	(lx.WIFCONTINUED status))
     => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'resources))
+
+  (check
+      (let ((rlim (lx.prlimit (px.getpid) RLIMIT_SIGPENDING)))
+;;;	(check-pretty-print rlim)
+	(lx.struct-rlimit? rlim))
+    => #t)
+
+  (check
+      (let* ((pid  (px.getpid))
+	     (rlim (lx.prlimit pid RLIMIT_SIGPENDING)))
+;;;	(check-pretty-print rlim)
+	(let ((old (lx.prlimit pid RLIMIT_SIGPENDING rlim)))
+;;;	  (check-pretty-print old)
+	  (lx.struct-rlimit? old)))
+    => #t)
 
   #t)
 
@@ -144,6 +180,161 @@
 		(px.close fd))))
 	(px.signal-bub-final))
     => `(,SIGUSR1 ,SIGUSR2 #f))
+
+  #t)
+
+
+(parametrise ((check-test-name	'timerfd))
+
+  (define (log T)
+    (let ((interval	(lx.struct-itimerspec-it_interval T))
+	  (value	(lx.struct-itimerspec-it_value    T)))
+      (list (lx.struct-timespec-tv_sec  interval)
+	    (lx.struct-timespec-tv_nsec interval)
+	    (lx.struct-timespec-tv_sec  value)
+	    (lx.struct-timespec-tv_nsec value))))
+
+;;; --------------------------------------------------------------------
+;;; SETTIME tests
+
+  (check	;settime with OLD argument
+      (let* ((fd	(lx.timerfd-create CLOCK_REALTIME
+					   (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
+	     (new	(lx.make-struct-itimerspec
+			 (lx.make-struct-timespec 1 2)
+			 (lx.make-struct-timespec 0 0)))
+	     (old	(lx.make-struct-itimerspec
+			 (lx.make-struct-timespec 0 0)
+			 (lx.make-struct-timespec 0 0)))
+	     (result	(unwind-protect
+			    (lx.timerfd-settime fd 0 new old)
+			  (px.close fd))))
+	(and (eq? old result)
+	     (list (log new) (log old))))
+    ;;Notice that the old configuration is empty!!!
+    => '((1 2 0 0) (0 0 0 0)))
+
+  (check	;settime twice with OLD argument
+      (let* ((fd	(lx.timerfd-create CLOCK_REALTIME
+					   (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
+	     (new	(lx.make-struct-itimerspec
+	     		 (lx.make-struct-timespec 1 2)
+	     		 (lx.make-struct-timespec 0 0)))
+	     (older	(lx.make-struct-itimerspec
+	     		 (lx.make-struct-timespec 0 0)
+	     		 (lx.make-struct-timespec 0 0)))
+	     (newer	(lx.make-struct-itimerspec
+	     		 (lx.make-struct-timespec 5 6)
+	     		 (lx.make-struct-timespec 0 0)))
+	     (old	(lx.make-struct-itimerspec
+	     		 (lx.make-struct-timespec 0 0)
+	     		 (lx.make-struct-timespec 0 0)))
+	     (result1	(lx.timerfd-settime fd TFD_TIMER_ABSTIME new older))
+	     (result2	(unwind-protect
+	     		    (lx.timerfd-settime fd TFD_TIMER_ABSTIME newer old)
+			  (px.close fd))))
+	(and (eq? older result1)
+	     (eq? old   result2)
+	     (list (log new) (log older)
+		   (log newer) (log old))))
+    => '((1 2 0 0) (0 0 0 0)
+	 (5 6 0 0) (1 2 0 0)))
+
+  (check	;settime without OLD argument
+      (let ((fd  (lx.timerfd-create CLOCK_REALTIME (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
+	    (new (lx.make-struct-itimerspec
+		  (lx.make-struct-timespec 1 0)
+		  (lx.make-struct-timespec 1 0))))
+	(unwind-protect
+	    (lx.timerfd-settime fd 0 new)
+	  (px.close fd)))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; GETTIME tests
+
+  (check	;settime then gettime with CURR argument
+      (let ((fd   (lx.timerfd-create CLOCK_REALTIME (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
+	    (new  (lx.make-struct-itimerspec
+		   (lx.make-struct-timespec 1 2)
+		   (lx.make-struct-timespec 0 0)))
+	    (curr (lx.make-struct-itimerspec
+		   (lx.make-struct-timespec 0 0)
+ 		   (lx.make-struct-timespec 0 0))))
+	(unwind-protect
+	    (begin
+	      (lx.timerfd-settime fd 0 new)
+	      (lx.timerfd-gettime fd curr))
+	  (px.close fd))
+	(log curr))
+    => '(1 2 0 0))
+
+  (check	;settime then gettime without CURR argument
+      (let* ((fd   (lx.timerfd-create CLOCK_REALTIME (bitwise-ior TFD_CLOEXEC TFD_NONBLOCK)))
+	     (new  (lx.make-struct-itimerspec
+		    (lx.make-struct-timespec 1 2)
+		    (lx.make-struct-timespec 0 0)))
+	     (curr (unwind-protect
+		       (begin
+			 (lx.timerfd-settime fd 0 new)
+			 (lx.timerfd-gettime fd))
+		     (px.close fd))))
+	(log curr))
+    => '(1 2 0 0))
+
+  #t)
+
+
+(parametrise ((check-test-name	'inotify))
+
+;;; initialise and close
+
+  (check
+      (let ((fd (lx.inotify-init)))
+	(unwind-protect
+	    (fixnum? fd)
+	  (px.close fd)))
+    => #t)
+
+  (check
+      (let ((fd (lx.inotify-init1 IN_NONBLOCK)))
+	(unwind-protect
+	    (fixnum? fd)
+	  (px.close fd)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; watcher creation and removal
+
+  (check
+      (let ((fd		(lx.inotify-init))
+	    (ptn	"inotify.test"))
+	(with-temporary-file (ptn fd1)
+	  (let ((wd (lx.inotify-add-watch fd ptn IN_MODIFY)))
+	    (unwind-protect
+		(integer? wd)
+	      (lx.inotify-rm-watch fd wd)))))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; watcher event reading
+
+  (check
+      (let ((infd	(lx.inotify-init))
+	    (ptn	"inotify.test"))
+	(with-temporary-file (ptn fd)
+	  (let ((wd (lx.inotify-add-watch infd ptn IN_MODIFY)))
+	    (unwind-protect
+		(begin
+		  (px.write fd #vu8(1 2 3))
+		  (let-values (((r w x) (px.select-fd infd 1 0)))
+		    (let ((ev (lx.inotify-read infd)))
+		      (and (lx.struct-inotify-event? ev)
+			   (= wd (lx.struct-inotify-event-wd ev))
+			   (zero? (lx.struct-inotify-event-len ev))
+			   (not (lx.struct-inotify-event-name ev))))))
+	      (lx.inotify-rm-watch infd wd)))))
+    => #t)
 
   #t)
 

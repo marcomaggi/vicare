@@ -43,8 +43,7 @@
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare unsafe-operations)
-	    unsafe.)
-    (vicare words))
+	    unsafe.))
 
 
 ;;;; arguments validation

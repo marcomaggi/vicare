@@ -40,10 +40,10 @@ ikptr
 ikrt_is_weak_pair (ikptr x, ikpcb* pcb)
 {
   if (IK_TAGOF(x) != pair_tag)
-    return false_object;
+    return IK_FALSE_OBJECT;
   else {
     unsigned t = pcb->segment_vector[IK_PAGE_INDEX(x)];
-    return ((t & type_mask) == weak_pairs_type)? true_object : false_object;
+    return ((t & type_mask) == weak_pairs_type)? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
   }
 }
 

@@ -51,10 +51,33 @@
     ;; interprocess signals
     (rename (raise-signal	raise))
     kill				pause
+    sigwaitinfo				sigtimedwait
 
     signal-bub-init			signal-bub-final
     signal-bub-acquire
     signal-bub-delivered?		signal-bub-all-delivered
+
+    (rename (%make-struct-siginfo_t make-struct-siginfo_t))
+    struct-siginfo_t?
+    struct-siginfo_t-si_signo		set-struct-siginfo_t-si_signo!
+    struct-siginfo_t-si_errno		set-struct-siginfo_t-si_errno!
+    struct-siginfo_t-si_code		set-struct-siginfo_t-si_code!
+    struct-siginfo_t-si_trapno		set-struct-siginfo_t-si_trapno!
+    struct-siginfo_t-si_pid		set-struct-siginfo_t-si_pid!
+    struct-siginfo_t-si_uid		set-struct-siginfo_t-si_uid!
+    struct-siginfo_t-si_status		set-struct-siginfo_t-si_status!
+    struct-siginfo_t-si_utime		set-struct-siginfo_t-si_utime!
+    struct-siginfo_t-si_stime		set-struct-siginfo_t-si_stime!
+    struct-siginfo_t-si_value.sival_int	set-struct-siginfo_t-si_value.sival_int!
+    struct-siginfo_t-si_value.sival_ptr	set-struct-siginfo_t-si_value.sival_ptr!
+    struct-siginfo_t-si_int		set-struct-siginfo_t-si_int!
+    struct-siginfo_t-si_ptr		set-struct-siginfo_t-si_ptr!
+    struct-siginfo_t-si_overrun		set-struct-siginfo_t-si_overrun!
+    struct-siginfo_t-si_timerid		set-struct-siginfo_t-si_timerid!
+    struct-siginfo_t-si_addr		set-struct-siginfo_t-si_addr!
+    struct-siginfo_t-si_band		set-struct-siginfo_t-si_band!
+    struct-siginfo_t-si_fd		set-struct-siginfo_t-si_fd!
+    struct-siginfo_t-si_addr_lsb	set-struct-siginfo_t-si_addr_lsb!
 
     ;; file system inspection
     stat				lstat
@@ -132,6 +155,14 @@
     fcntl				ioctl
     dup					dup2
     pipe				mkfifo
+    truncate				ftruncate
+
+    sizeof-fd-set			make-fd-set-bytevector
+    make-fd-set-pointer			make-fd-set-memory-block
+    FD_ZERO				FD_SET
+    FD_CLR				FD_ISSET
+    select-from-sets			select-from-sets-array
+    fd-set-inspection
 
     ;; memory-mapped input/output
     mmap				munmap
@@ -139,6 +170,46 @@
     madvise				mprotect
     mlock				munlock
     mlockall				munlockall
+
+    ;; POSIX shared memory
+    shm-open				shm-unlink
+
+    ;; POSIX semaphores
+    sem-open				sem-close
+    sem-unlink				sem-init
+    sem-destroy				sem-post
+    sem-wait				sem-trywait
+    sem-timedwait			sem-getvalue
+    sizeof-sem_t
+
+    ;; POSIX message queues
+    mq-open				mq-close
+    mq-unlink
+    mq-send				mq-receive
+    mq-timedsend			mq-timedreceive
+    mq-setattr				mq-getattr
+    #;mq-notify
+
+    make-struct-mq-attr
+    (rename (%valid-struct-mq-attr?	struct-mq-attr?))
+    struct-mq-attr-mq_flags		set-struct-mq-attr-mq_flags!
+    struct-mq-attr-mq_maxmsg		set-struct-mq-attr-mq_maxmsg!
+    struct-mq-attr-mq_msgsize		set-struct-mq-attr-mq_msgsize!
+    struct-mq-attr-mq_curmsgs		set-struct-mq-attr-mq_curmsgs!
+
+    ;; POSIX per-process timers
+    timer-create			timer-delete
+    timer-settime			timer-gettime
+    timer-getoverrun
+
+    (rename (%make-struct-itimerspec make-struct-itimerspec))
+    struct-itimerspec?
+    struct-itimerspec-it_interval	struct-itimerspec-it_value
+    set-struct-itimerspec-it_interval!	set-struct-itimerspec-it_value!
+
+    ;; POSIX realtime clock functions
+    clock-getres			clock-getcpuclockid
+    clock-gettime			clock-settime
 
     ;; sockets
     make-sockaddr_un
@@ -234,13 +305,17 @@
 
     make-struct-timeval			struct-timeval?
     struct-timeval-tv_sec		struct-timeval-tv_usec
+    set-struct-timeval-tv_sec!		set-struct-timeval-tv_usec!
 
     make-struct-timespec		struct-timespec?
     struct-timespec-tv_sec		struct-timespec-tv_nsec
+    set-struct-timespec-tv_sec!		set-struct-timespec-tv_nsec!
 
     make-struct-tms			struct-tms?
     struct-tms-tms_utime		struct-tms-tms_stime
     struct-tms-tms_cutime		struct-tms-tms_cstime
+    set-struct-tms-tms_utime!		set-struct-tms-tms_stime!
+    set-struct-tms-tms_cutime!		set-struct-tms-tms_cstime!
 
     make-struct-tm			struct-tm?
     struct-tm-tm_sec			struct-tm-tm_min
@@ -249,9 +324,45 @@
     struct-tm-tm_wday			struct-tm-tm_yday
     struct-tm-tm_isdst			struct-tm-tm_gmtoff
     struct-tm-tm_zone
+    set-struct-tm-tm_sec!		set-struct-tm-tm_min!
+    set-struct-tm-tm_hour!		set-struct-tm-tm_mday!
+    set-struct-tm-tm_mon!		set-struct-tm-tm_year!
+    set-struct-tm-tm_wday!		set-struct-tm-tm_yday!
+    set-struct-tm-tm_isdst!		set-struct-tm-tm_gmtoff!
+    set-struct-tm-tm_zone!
 
-    make-struct-itimerval		struct-itimerval?
+    (rename (%make-struct-itimerval make-struct-itimerval))
+    struct-itimerval?
     struct-itimerval-it_interval	struct-itimerval-it_value
+    set-struct-itimerval-it_interval!	set-struct-itimerval-it_value!
+
+    ;; resources limits
+    getrlimit				setrlimit
+    getrusage				RLIM_INFINITY
+
+    (rename (%make-struct-rlimit make-struct-rlimit))
+    struct-rlimit?
+    struct-rlimit-rlim_cur		set-struct-rlimit-rlim_cur!
+    struct-rlimit-rlim_max		set-struct-rlimit-rlim_max!
+
+    (rename (%make-struct-rusage make-struct-rusage))
+    struct-rusage?
+    struct-rusage-ru_utime		set-struct-rusage-ru_utime!
+    struct-rusage-ru_stime		set-struct-rusage-ru_stime!
+    struct-rusage-ru_maxrss		set-struct-rusage-ru_maxrss!
+    struct-rusage-ru_ixrss		set-struct-rusage-ru_ixrss!
+    struct-rusage-ru_idrss		set-struct-rusage-ru_idrss!
+    struct-rusage-ru_isrss		set-struct-rusage-ru_isrss!
+    struct-rusage-ru_minflt		set-struct-rusage-ru_minflt!
+    struct-rusage-ru_majflt		set-struct-rusage-ru_majflt!
+    struct-rusage-ru_nswap		set-struct-rusage-ru_nswap!
+    struct-rusage-ru_inblock		set-struct-rusage-ru_inblock!
+    struct-rusage-ru_oublock		set-struct-rusage-ru_oublock!
+    struct-rusage-ru_msgsnd		set-struct-rusage-ru_msgsnd!
+    struct-rusage-ru_msgrcv		set-struct-rusage-ru_msgrcv!
+    struct-rusage-ru_nsignals		set-struct-rusage-ru_nsignals!
+    struct-rusage-ru_nvcsw		set-struct-rusage-ru_nvcsw!
+    struct-rusage-ru_nivcsw		set-struct-rusage-ru_nivcsw!
 
     ;; system configuration
     sysconf
@@ -267,7 +378,8 @@
   (import (except (vicare)
 		  strerror		getenv
 		  remove		time
-		  read			write)
+		  read			write
+		  truncate)
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
@@ -290,6 +402,85 @@
   (and (fixnum? obj)
        (unsafe.fx>= obj 0)
        (unsafe.fx<  obj FD_SETSIZE)))
+
+(define-inline (%message-queue-descriptor? obj)
+  (%file-descriptor? obj))
+
+(define-inline (%signal-fixnum? ?obj)
+  (let ((obj ?obj))
+    (and (fixnum? obj)
+	 (unsafe.fx>= obj 0)
+	 (unsafe.fx<= obj NSIG))))
+
+(define (%struct-timespec? obj)
+  (and (struct-timespec? obj)
+       (let ((sec (struct-timespec-tv_sec obj)))
+	 (and (words.signed-long? sec)
+	      (<= 0 sec)))
+       (let ((nsec (struct-timespec-tv_nsec obj)))
+	 (and (words.signed-long? nsec)
+	      (<= 0 nsec 999999999)))))
+;;;                      876543210
+
+(define (%struct-timeval? obj)
+  (and (struct-timeval? obj)
+       (let ((sec (struct-timeval-tv_sec obj)))
+	 (and (words.signed-long? sec)
+	      (<= 0 sec)))
+       (let ((usec (struct-timeval-tv_usec obj)))
+	 (and (words.signed-long? usec)
+	      (<= 0 usec 999999)))))
+;;;                   876543210
+
+(define (%struct-itimerval? obj)
+  (and (struct-itimerval? obj)
+       (%struct-timeval? (struct-itimerval-it_interval obj))
+       (%struct-timeval? (struct-itimerval-it_value    obj))))
+
+(define (%valid-itimerspec? obj)
+  (and (struct-itimerspec? obj)
+       (let ((T (struct-itimerspec-it_interval obj)))
+	 (and (struct-timespec? T)
+	      (words.signed-long? (struct-timespec-tv_sec  T))
+	      (words.signed-long? (struct-timespec-tv_nsec T))))
+       (let ((T (struct-itimerspec-it_value obj)))
+	 (and (struct-timespec? T)
+	      (words.signed-long? (struct-timespec-tv_sec  T))
+	      (words.signed-long? (struct-timespec-tv_nsec T))))))
+
+(define (%valid-struct-mq-attr? obj)
+  (and (struct-mq-attr? obj)
+       (words.signed-long? (struct-mq-attr-mq_flags   obj))
+       (words.signed-long? (struct-mq-attr-mq_maxmsg  obj))
+       (words.signed-long? (struct-mq-attr-mq_msgsize obj))
+       (words.signed-long? (struct-mq-attr-mq_curmsgs obj))))
+
+(define (%valid-struct-rlimit? obj)
+  (and (struct-rlimit? obj)
+       (words.word-s64? (struct-rlimit-rlim_cur obj))
+       (words.word-s64? (struct-rlimit-rlim_max obj))))
+
+(define (%valid-struct-rusage? obj)
+  (define-inline (field? ?val)
+    (let ((val ?val))
+      (or (not val) (words.signed-long? val))))
+  (and (struct-rusage? obj)
+       (%struct-timeval? (struct-rusage-ru_utime obj))
+       (%struct-timeval? (struct-rusage-ru_stime obj))
+       (field? (struct-rusage-ru_maxrss obj))
+       (field? (struct-rusage-ru_ixrss obj))
+       (field? (struct-rusage-ru_idrss obj))
+       (field? (struct-rusage-ru_isrss obj))
+       (field? (struct-rusage-ru_minflt obj))
+       (field? (struct-rusage-ru_majflt obj))
+       (field? (struct-rusage-ru_nswap obj))
+       (field? (struct-rusage-ru_inblock obj))
+       (field? (struct-rusage-ru_oublock obj))
+       (field? (struct-rusage-ru_msgsnd obj))
+       (field? (struct-rusage-ru_msgrcv obj))
+       (field? (struct-rusage-ru_nsignals obj))
+       (field? (struct-rusage-ru_nvcsw obj))
+       (field? (struct-rusage-ru_nivcsw obj))))
 
 
 ;;;; arguments validation
@@ -318,19 +509,29 @@
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
 
+(define-argument-validation (pointer who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (fixnum/false who obj)
   (or (not obj) (fixnum? obj))
   (assertion-violation who "expected false or fixnum as argument" obj))
 
+(define-argument-validation (positive-fixnum who obj)
+  (and (fixnum? obj)
+       (unsafe.fx< 0 obj))
+  (assertion-violation who "expected positive fixnum as argument" obj))
+
+(define-argument-validation (non-negative-fixnum who obj)
+  (and (fixnum? obj)
+       (unsafe.fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as argument" obj))
+
 (define-argument-validation (boolean/fixnum who obj)
   (or (fixnum? obj) (boolean? obj))
   (assertion-violation who "expected boolean or fixnum as argument" obj))
-
-(define-argument-validation (pointer who obj)
-  (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
 
 (define-argument-validation (pointer/false who obj)
   (or (not obj) (pointer? obj))
@@ -362,6 +563,24 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-argument-validation (general-buffer who obj)
+  (or (bytevector? obj)
+      (pointer? obj)
+      (memory-block? obj))
+  (assertion-violation who
+    "expected bytevector or pointer or memory-block as general buffer argument" obj))
+
+(define-argument-validation (general-buffer/false who obj)
+  (or (not obj)
+      (bytevector? obj)
+      (pointer? obj)
+      (memory-block? obj))
+  (assertion-violation who
+    "expected false or bytevector or pointer or memory-block as general buffer argument"
+    obj))
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (pid who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum pid as argument" obj))
@@ -372,12 +591,14 @@
 
 (define-argument-validation (file-descriptor who obj)
   (%file-descriptor? obj)
-  (assertion-violation who "expected fixnum file descriptor as argument" obj))
+  (assertion-violation who "expected fixnum as file descriptor argument" obj))
+
+(define-argument-validation (message-queue-descriptor who obj)
+  (%message-queue-descriptor? obj)
+  (assertion-violation who "expected message queue descriptor as argument" obj))
 
 (define-argument-validation (signal who obj)
-  (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<= obj NSIG))
+  (%signal-fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
 (define-argument-validation (pathname who obj)
@@ -424,13 +645,19 @@
   (assertion-violation who
     "expected non-negative exact integer as directory stream position argument" obj))
 
-(define-argument-validation (offset who obj)
+(define-argument-validation (off_t who obj)
   (words.off_t? obj)
   (assertion-violation who
     "expected platform off_t exact integer as offset argument" obj))
 
-(define-argument-validation (false/fd who obj)
+(define-argument-validation (false/file-descriptor who obj)
   (or (not obj) (%file-descriptor? obj))
+  (assertion-violation who "expected false or file descriptor as argument" obj))
+
+(define-argument-validation (select-nfds who obj)
+  (or (not obj)
+      (%file-descriptor? obj)
+      (unsafe.fx= obj FD_SETSIZE))
   (assertion-violation who "expected false or file descriptor as argument" obj))
 
 (define-argument-validation (list-of-fds who obj)
@@ -486,16 +713,58 @@
   (assertion-violation who "expected vector of data for poll as argument" obj))
 
 (define-argument-validation (itimerval who obj)
-  (and (struct-itimerval? obj)
-       (let ((T (struct-itimerval-it_interval obj)))
-	 (and (struct-timeval? T)
-	      (words.signed-long? (struct-timeval-tv_sec  T))
-	      (words.signed-long? (struct-timeval-tv_usec T))))
-       (let ((T (struct-itimerval-it_value obj)))
-	 (and (struct-timeval? T)
-	      (words.signed-long? (struct-timeval-tv_sec  T))
-	      (words.signed-long? (struct-timeval-tv_usec T)))))
+  (%struct-itimerval? obj)
   (assertion-violation who "expected struct-itimerval as argument" obj))
+
+(define-argument-validation (timespec who obj)
+  (%struct-timespec? obj)
+  (assertion-violation who "expected struct-timespec as argument" obj))
+
+(define-argument-validation (itimerspec who obj)
+  (%valid-itimerspec? obj)
+  (assertion-violation who "expected struct-itimerspec as argument" obj))
+
+(define-argument-validation (itimerspec/false who obj)
+  (or (not obj) (%valid-itimerspec? obj))
+  (assertion-violation who "expected false or struct-itimerspec as argument" obj))
+
+(define-argument-validation (mq-attr who obj)
+  (%valid-struct-mq-attr? obj)
+  (assertion-violation who "expected instance of struct-mq-attr as argument" obj))
+
+(define-argument-validation (mq-attr/false who obj)
+  (or (not obj) (%valid-struct-mq-attr? obj))
+  (assertion-violation who "expected false or instance of struct-mq-attr as argument" obj))
+
+(define-argument-validation (semaphore who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as semaphore argument" obj))
+
+(define-argument-validation (clockid_t who obj)
+  (words.signed-long? obj)
+  (assertion-violation who
+    "expected exact integer representing clockid_t as argument" obj))
+
+(define-argument-validation (timer_t who obj)
+  (words.signed-long? obj)
+  (assertion-violation who
+    "expected exact integer representing timer_t as argument" obj))
+
+(define-argument-validation (sigevent who obj)
+  (struct-sigevent? obj)
+  (assertion-violation who "expected struct-sigevent as argument" obj))
+
+(define-argument-validation (siginfo_t who obj)
+  (struct-siginfo_t? obj)
+  (assertion-violation who "expected struct-siginfo_t as argument" obj))
+
+(define-argument-validation (rlimit who obj)
+  (%valid-struct-rlimit? obj)
+  (assertion-violation who "expected struct-rlimit as argument" obj))
+
+(define-argument-validation (rusage who obj)
+  (%valid-struct-rusage? obj)
+  (assertion-violation who "expected struct-rusage as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -912,6 +1181,96 @@
 
 (define (pause)
   (capi.posix-pause))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-siginfo_t
+  (si_signo	      ;0
+   si_errno	      ;1
+   si_code	      ;2
+   si_trapno	      ;3
+   si_pid	      ;4
+   si_uid	      ;5
+   si_status	      ;6
+   si_utime	      ;7
+   si_stime	      ;8
+   si_value.sival_int ;9
+   si_value.sival_ptr ;10
+   si_int	      ;11
+   si_ptr	      ;12
+   si_overrun	      ;13
+   si_timerid	      ;14
+   si_addr	      ;15
+   si_band	      ;16
+   si_fd	      ;17
+   si_addr_lsb))      ;18
+
+(define (%struct-siginfo_t-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-siginfo_t")
+  (%display " st_signo=")		(%display (struct-siginfo_t-si_signo S))
+  (%display " si_errno=")		(%display (struct-siginfo_t-si_errno S))
+  (%display " si_code=")		(%display (struct-siginfo_t-si_code S))
+  (%display " si_trapno=")		(%display (struct-siginfo_t-si_trapno S))
+  (%display " si_pid=")			(%display (struct-siginfo_t-si_pid S))
+  (%display " si_uid=")			(%display (struct-siginfo_t-si_uid S))
+  (%display " si_status=")		(%display (struct-siginfo_t-si_status S))
+  (%display " si_utime=")		(%display (struct-siginfo_t-si_utime S))
+  (%display " si_stime=")		(%display (struct-siginfo_t-si_stime S))
+  (%display " si_value.sival_int=")	(%display (struct-siginfo_t-si_value.sival_int S))
+  (%display " si_value.sival_ptr=")	(%display (struct-siginfo_t-si_value.sival_ptr S))
+  (%display " si_int=")			(%display (struct-siginfo_t-si_int S))
+  (%display " si_ptr=")			(%display (struct-siginfo_t-si_ptr S))
+  (%display " si_overrun=")		(%display (struct-siginfo_t-si_overrun S))
+  (%display " si_timerid=")		(%display (struct-siginfo_t-si_timerid S))
+  (%display " si_addr=")		(%display (struct-siginfo_t-si_addr S))
+  (%display " si_band=")		(%display (struct-siginfo_t-si_band S))
+  (%display " si_fd=")			(%display (struct-siginfo_t-si_fd S))
+  (%display " si_addr_lsb=")		(%display (struct-siginfo_t-si_addr_lsb S))
+  (%display "]"))
+
+(define %make-struct-siginfo_t
+  (case-lambda
+   (()
+    (make-struct-siginfo_t #f #f #f #f #f #f #f #f
+			   #f #f #f #f #f #f #f #f #f #f #f))
+   ((signo errno code trapno pid uid status
+	   utime stime value.int value.ptr int ptr overrun timerid addr band fd addr_lsb)
+    (make-struct-siginfo_t signo errno code trapno pid uid status
+			   utime stime value.int value.ptr int ptr overrun timerid
+			   addr band fd addr_lsb))))
+
+;;; --------------------------------------------------------------------
+
+(define sigwaitinfo
+  (case-lambda
+   ((signo)
+    (sigwaitinfo signo (%make-struct-siginfo_t)))
+   ((signo siginfo)
+    (define who 'sigwaitinfo)
+    (with-arguments-validation (who)
+	((signal	signo)
+	 (siginfo_t	siginfo))
+      (let ((rv (capi.posix-sigwaitinfo signo siginfo)))
+	(if (unsafe.fx<= 0 rv)
+	    (values rv siginfo)
+	  (%raise-errno-error who rv signo siginfo)))))))
+
+(define sigtimedwait
+  (case-lambda
+   ((signo timeout)
+    (sigtimedwait signo (%make-struct-siginfo_t) timeout))
+   ((signo siginfo timeout)
+    (define who 'sigtimedwait)
+    (with-arguments-validation (who)
+	((signal	signo)
+	 (siginfo_t	siginfo)
+	 (timespec	timeout))
+      (let ((rv (capi.posix-sigtimedwait signo siginfo timeout)))
+	(if (unsafe.fx<= 0 rv)
+	    (values rv siginfo)
+	  (%raise-errno-error who rv signo siginfo timeout)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1547,7 +1906,7 @@
       ((file-descriptor  fd)
        (bytevector	 buffer)
        (fixnum/false	 size)
-       (offset		 off))
+       (off_t		 off))
     (let ((rv (capi.posix-pread fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
 	  rv
@@ -1574,7 +1933,7 @@
       ((file-descriptor  fd)
        (bytevector	 buffer)
        (fixnum/false	 size)
-       (offset		 off))
+       (off_t		 off))
     (let ((rv (capi.posix-pwrite fd buffer size off)))
       (if (unsafe.fx<= 0 rv)
 	  rv
@@ -1584,7 +1943,7 @@
   (define who 'lseek)
   (with-arguments-validation (who)
       ((file-descriptor  fd)
-       (offset		 off)
+       (off_t		 off)
        (fixnum		 whence))
     (let ((rv (capi.posix-lseek fd off whence)))
       (if (negative? rv)
@@ -1618,7 +1977,7 @@
 (define (select nfds read-fds write-fds except-fds sec usec)
   (define who 'select)
   (with-arguments-validation (who)
-      ((false/fd	nfds)
+      ((select-nfds	nfds)
        (list-of-fds	read-fds)
        (list-of-fds	write-fds)
        (list-of-fds	except-fds)
@@ -1755,7 +2114,7 @@
       (%raise-errno-error who rv))))
 
 (define (mkfifo pathname mode)
-  (define who 'pipe)
+  (define who 'mkfifo)
   (with-arguments-validation (who)
       ((pathname  pathname)
        (fixnum    mode))
@@ -1763,6 +2122,172 @@
       (let ((rv (capi.posix-mkfifo pathname.bv mode)))
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error/filename who rv pathname mode))))))
+
+;;; --------------------------------------------------------------------
+
+(define (truncate pathname length)
+  (define who 'truncate)
+  (with-arguments-validation (who)
+      ((pathname	pathname)
+       (off_t		length))
+    (with-pathnames ((pathname.bv pathname))
+      (let ((rv (capi.posix-truncate pathname.bv length)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv pathname length))))))
+
+(define (ftruncate fd length)
+  (define who 'ftruncate)
+  (with-arguments-validation (who)
+      ((file-descriptor	fd)
+       (off_t		length))
+    (let ((rv (capi.posix-ftruncate fd length)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv fd length)))))
+
+
+;;;; file descriptor sets
+
+(define sizeof-fd-set
+  (case-lambda
+   (()
+    (capi.posix-sizeof-fd-set 1))
+   ((count)
+    (define who 'sizeof-fd-set)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (capi.posix-sizeof-fd-set count)))))
+
+(define make-fd-set-bytevector
+  (case-lambda
+   (()
+    (capi.posix-make-fd-set-bytevector 1))
+   ((count)
+    (define who 'make-fd-set-bytevector)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (capi.posix-make-fd-set-bytevector count)))))
+
+(define make-fd-set-pointer
+  (case-lambda
+   (()
+    (capi.posix-make-fd-set-pointer 1))
+   ((count)
+    (define who 'make-fd-set-pointer)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (capi.posix-make-fd-set-pointer count)))))
+
+(define make-fd-set-memory-block
+  (case-lambda
+   (()
+    (make-fd-set-memory-block 1))
+   ((count)
+    (define who 'make-fd-set-memory-block)
+    (with-arguments-validation (who)
+	((positive-fixnum	count))
+      (let ((mb (make-memory-block (null-pointer) 0)))
+	(if (capi.posix-make-fd-set-memory-block! mb count)
+	    mb
+	  #f))))))
+
+;;; --------------------------------------------------------------------
+
+(define FD_ZERO
+  (case-lambda
+   ((fd-set)
+    (FD_ZERO fd-set 0))
+   ((fd-set idx)
+    (define who 'FD_ZERO)
+    (with-arguments-validation (who)
+	((general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-zero fd-set idx)))))
+
+(define FD_SET
+  (case-lambda
+   ((fd fd-set)
+    (FD_SET fd fd-set 0))
+   ((fd fd-set idx)
+    (define who 'FD_SET)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-set fd fd-set idx)))))
+
+(define FD_CLR
+  (case-lambda
+   ((fd fd-set)
+    (FD_CLR fd fd-set 0))
+   ((fd fd-set idx)
+    (define who 'FD_SET)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-clr fd fd-set idx)))))
+
+(define FD_ISSET
+  (case-lambda
+   ((fd fd-set)
+    (FD_ISSET fd fd-set 0))
+   ((fd fd-set idx)
+    (define who 'FD_ISSET)
+    (with-arguments-validation (who)
+	((file-descriptor	fd)
+	 (general-buffer	fd-set)
+	 (non-negative-fixnum	idx))
+      (capi.posix-fd-isset fd fd-set idx)))))
+
+;;; --------------------------------------------------------------------
+
+(define (select-from-sets nfds read-fds write-fds except-fds sec usec)
+  (define who 'select-from-sets)
+  (with-arguments-validation (who)
+      ((select-nfds		nfds)
+       (general-buffer/false	read-fds)
+       (general-buffer/false	write-fds)
+       (general-buffer/false	except-fds)
+       (secfx			sec)
+       (usecfx			usec))
+    (let ((rv (capi.posix-select-from-sets nfds read-fds write-fds except-fds sec usec)))
+      (if (fixnum? rv)
+	  (if (unsafe.fxzero? rv)
+	      (values #f #f #f) ;timeout expired
+	    (%raise-errno-error who rv nfds read-fds write-fds except-fds sec usec))
+	;; success
+	(values read-fds write-fds except-fds)))))
+
+(define (select-from-sets-array nfds fd-sets sec usec)
+  (define who 'select-from-sets-array)
+  (with-arguments-validation (who)
+      ((select-nfds	nfds)
+       (general-buffer	fd-sets)
+       (secfx		sec)
+       (usecfx		usec))
+    (let ((rv (capi.posix-select-from-sets-array nfds fd-sets sec usec)))
+      (if (fixnum? rv)
+	  (if (unsafe.fxzero? rv)
+	      #f ;timeout expired
+	    (%raise-errno-error who rv nfds fd-sets sec usec))
+	;; success
+	fd-sets))))
+
+;;; --------------------------------------------------------------------
+
+(define fd-set-inspection
+  (case-lambda
+   ((fdsets)
+    (fd-set-inspection fdsets 0))
+   ((fdsets idx)
+    (let loop ((i   0)
+	       (set '()))
+      (if (= i FD_SETSIZE)
+	  (reverse set)
+	(loop (+ 1 i)
+	      (if (FD_ISSET i fdsets idx)
+		  (cons i set)
+		set)))))))
 
 
 ;;;; memory-mapped input/output
@@ -1775,7 +2300,7 @@
        (fixnum		protect)
        (fixnum		flags)
        (file-descriptor	fd)
-       (offset		offset))
+       (off_t		offset))
     (let ((rv (capi.posix-mmap address length protect flags fd offset)))
       (if (pointer? rv)
 	  rv
@@ -1863,6 +2388,411 @@
   (let ((rv (capi.posix-munlockall)))
     (unless (unsafe.fxzero? rv)
       (%raise-errno-error who rv))))
+
+
+;;;; POSIX shared memory
+
+(define (shm-open name oflag mode)
+  (define who 'shm-open)
+  (with-arguments-validation (who)
+      ((pathname	name)
+       (fixnum		oflag)
+       (fixnum		mode))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-shm-open name.bv oflag mode)))
+	(if (unsafe.fx<= 0 rv)
+	    rv
+	  (%raise-errno-error who rv name oflag mode))))))
+
+(define (shm-unlink name)
+  (define who 'shm-unlink)
+  (with-arguments-validation (who)
+      ((pathname	name))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-shm-unlink name.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv name))))))
+
+
+;;;; POSIX semaphores
+
+(define (sizeof-sem_t)
+  (capi.posix-sizeof-sem_t))
+
+;;; --------------------------------------------------------------------
+
+(define sem-open
+  (case-lambda
+   ((name oflag mode)
+    (sem-open name oflag mode 0))
+   ((name oflag mode value)
+    (define who 'sem-open)
+    (with-arguments-validation (who)
+	((pathname	name)
+	 (fixnum		oflag)
+	 (fixnum		mode)
+	 (unsigned-int	value))
+      (with-pathnames ((name.bv name))
+	(let ((rv (capi.posix-sem-open name.bv oflag mode value)))
+	  (if (pointer? rv)
+	      rv
+	    (%raise-errno-error who rv name oflag mode value))))))))
+
+(define (sem-close sem)
+  (define who 'sem-close)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-close sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
+
+(define (sem-unlink name)
+  (define who 'sem-unlink)
+  (with-arguments-validation (who)
+      ((pathname	name))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-sem-unlink name.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv name.bv))))))
+
+;;; --------------------------------------------------------------------
+
+(define sem-init
+  (case-lambda
+   ((sem pshared)
+    (sem-init sem pshared 0))
+   ((sem pshared value)
+    (define who 'sem-init)
+    (with-arguments-validation (who)
+	((semaphore	sem)
+	 (unsigned-int	value))
+      (let ((rv (capi.posix-sem-init sem pshared value)))
+	(if (pointer? rv)
+	    rv
+	  (%raise-errno-error who rv sem pshared value)))))))
+
+(define (sem-destroy sem)
+  (define who 'sem-destroy)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-destroy sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
+
+;;; --------------------------------------------------------------------
+
+(define (sem-post sem)
+  (define who 'sem-post)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-post sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
+
+(define (sem-wait sem)
+  (define who 'sem-wait)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-wait sem)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv sem)))))
+
+(define (sem-trywait sem)
+  (define who 'sem-trywait)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-close sem)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv sem)))))
+
+(define (sem-timedwait sem abs-timeout)
+  (define who 'sem-timedwait)
+  (with-arguments-validation (who)
+      ((semaphore	sem)
+       (timespec	abs-timeout))
+    (let ((rv (capi.posix-sem-timedwait sem abs-timeout)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error who rv sem abs-timeout)))))
+
+(define (sem-getvalue sem)
+  (define who 'sem-getvalue)
+  (with-arguments-validation (who)
+      ((semaphore	sem))
+    (let ((rv (capi.posix-sem-getvalue sem)))
+      (if (pair? rv)
+	  (car rv)
+	(%raise-errno-error who rv sem)))))
+
+
+;;;; message queues
+
+(define-struct struct-mq-attr
+  (mq_flags mq_maxmsg mq_msgsize mq_curmsgs))
+
+(define (%struct-mq-attr-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-mq-attr")
+  (%display " mq_flags=")	(%display (struct-mq-attr-mq_flags   S))
+  (%display " mq_maxmsg=")	(%display (struct-mq-attr-mq_maxmsg  S))
+  (%display " mq_msgsize=")	(%display (struct-mq-attr-mq_msgsize S))
+  (%display " mq_curmsgs=")	(%display (struct-mq-attr-mq_curmsgs S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define mq-open
+  (case-lambda
+   ((name oflag mode)
+    (mq-open name oflag mode #f))
+   ((name oflag mode attr)
+    (define who 'mq-open)
+    (with-arguments-validation (who)
+	((pathname	name)
+	 (fixnum	oflag)
+	 (fixnum	mode)
+	 (mq-attr/false	attr))
+      (with-pathnames ((name.bv name))
+	(let ((rv (capi.posix-mq-open name.bv oflag mode attr)))
+	  (if (unsafe.fx<= 0 rv)
+	      rv
+	    (%raise-errno-error who rv name oflag mode attr))))))))
+
+(define (mq-close mq)
+  (define who 'mq-close)
+  (with-arguments-validation (who)
+      ((message-queue-descriptor	mq))
+    (let ((rv (capi.posix-mq-close mq)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv mq)))))
+
+(define (mq-unlink name)
+  (define who 'mq-unlink)
+  (with-arguments-validation (who)
+      ((pathname name))
+    (with-pathnames ((name.bv name))
+      (let ((rv (capi.posix-mq-unlink name.bv)))
+	(unless (unsafe.fxzero? rv)
+	  (%raise-errno-error who rv name))))))
+
+(define (mq-send mqd message priority)
+  (define who 'mq-send)
+  (with-arguments-validation (who)
+      ((message-queue-descriptor	mqd)
+       (bytevector			message)
+       (unsigned-int			priority))
+    (let ((rv (capi.posix-mq-send mqd message priority)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv mqd message priority)))))
+
+(define (mq-timedsend mqd message priority epoch-timeout)
+  (define who 'mq-timedsend)
+  (with-arguments-validation (who)
+      ((message-queue-descriptor	mqd)
+       (bytevector			message)
+       (unsigned-int			priority)
+       (timespec			epoch-timeout))
+    (let ((rv (capi.posix-mq-timedsend mqd message priority epoch-timeout)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv mqd message priority epoch-timeout)))))
+
+(define (mq-receive mqd message)
+  (define who 'mq-receive)
+  (with-arguments-validation (who)
+      ((message-queue-descriptor	mqd)
+       (bytevector			message))
+    (let ((rv (capi.posix-mq-receive mqd message)))
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
+	(%raise-errno-error who rv mqd message)))))
+
+(define (mq-timedreceive mqd message epoch-timeout)
+  (define who 'mq-timedreceive)
+  (with-arguments-validation (who)
+      ((message-queue-descriptor	mqd)
+       (bytevector			message)
+       (timespec			epoch-timeout))
+    (let ((rv (capi.posix-mq-timedreceive mqd message epoch-timeout)))
+      (if (pair? rv)
+	  (values (car rv) (cdr rv))
+	(%raise-errno-error who rv mqd message epoch-timeout)))))
+
+(define mq-setattr
+  (case-lambda
+   ((mqd new-attr)
+    (mq-setattr mqd new-attr (make-struct-mq-attr 0 0 0 0)))
+   ((mqd new-attr old-attr)
+    (define who 'mq-setattr)
+    (with-arguments-validation (who)
+	((message-queue-descriptor	mqd)
+	 (mq-attr			new-attr)
+	 (mq-attr			old-attr))
+      (let ((rv (capi.posix-mq-setattr mqd new-attr old-attr)))
+	(if (unsafe.fxzero? rv)
+	    old-attr
+	  (%raise-errno-error who rv new-attr old-attr)))))))
+
+(define mq-getattr
+  (case-lambda
+   ((mqd)
+    (mq-getattr mqd (make-struct-mq-attr 0 0 0 0)))
+   ((mqd attr)
+    (define who 'mq-getattr)
+    (with-arguments-validation (who)
+	((message-queue-descriptor	mqd)
+	 (mq-attr			attr))
+      (let ((rv (capi.posix-mq-getattr mqd attr)))
+	(if (unsafe.fxzero? rv)
+	    attr
+	  (%raise-errno-error who rv attr)))))))
+
+;;At present this is not interfaced.
+;;
+;; (define (mq-notify)
+;;   (define who 'mq-notify)
+;;   #f)
+
+
+;;;; POSIX timers
+
+(define-struct struct-sigevent
+  (sigev_notify sigev_signo))
+
+(define (%struct-sigevent-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[struct-sigevent")
+  (%display " sigev_notify=")	(%display (struct-sigevent-sigev_notify S))
+  (%display " sigev_signo=")	(%display (struct-sigevent-sigev_signo  S))
+  (%display "]"))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-itimerspec
+  (it_interval it_value))
+
+(define (%struct-itimerspec-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-itimerspec\"")
+  (%display " it_interval=")		(%display (struct-itimerspec-it_interval S))
+  (%display " it_value=")		(%display (struct-itimerspec-it_value    S))
+  (%display "]"))
+
+(define %make-struct-itimerspec
+  (case-lambda
+   (()
+    (make-struct-itimerspec (make-struct-timespec 0 0)
+			    (make-struct-timespec 0 0)))
+   ((it-interval it-value)
+    (make-struct-itimerspec it-interval it-value))))
+
+;;; --------------------------------------------------------------------
+
+(define (timer-create clock-id #;sev)
+  ;;At present  we only support setting  the SEV argument to  false.  In
+  ;;future we may support the full "struct-sigevent" structure.
+  ;;
+  (define who 'timer-create)
+  (with-arguments-validation (who)
+      ((clockid_t		clock-id)
+       #;(sigevent/false	sev))
+    (let* ((sev #f)
+	   (rv  (capi.posix-timer-create clock-id sev)))
+      (if (pair? rv)
+	  (unsafe.car rv)
+	(%raise-errno-error who rv clock-id sev)))))
+
+(define (timer-delete timer-id)
+  (define who 'timer-delete)
+  (with-arguments-validation (who)
+      ((timer_t	timer-id))
+    (let ((rv (capi.posix-timer-delete timer-id)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv timer-id)))))
+
+(define timer-settime
+  (case-lambda
+   ((timer-id flags new-timer-spec)
+    (timer-settime timer-id flags new-timer-spec #f))
+   ((timer-id flags new-timer-spec old-timer-spec)
+    (define who 'timer-settime)
+    (with-arguments-validation (who)
+	((timer_t		timer-id)
+	 (fixnum		flags)
+	 (itimerspec		new-timer-spec)
+	 (itimerspec/false	old-timer-spec))
+      (let ((rv (capi.posix-timer-settime timer-id flags new-timer-spec old-timer-spec)))
+	(if (unsafe.fxzero? rv)
+	    old-timer-spec
+	  (%raise-errno-error who rv timer-id flags new-timer-spec old-timer-spec)))))))
+
+(define timer-gettime
+  (case-lambda
+   ((timer-id)
+    (timer-gettime timer-id (%make-struct-itimerspec)))
+   ((timer-id curr-timer-spec)
+    (define who 'timer-gettime)
+    (with-arguments-validation (who)
+	((timer_t	timer-id)
+	 (itimerspec	curr-timer-spec))
+      (let ((rv (capi.posix-timer-gettime timer-id curr-timer-spec)))
+	(if (unsafe.fxzero? rv)
+	    curr-timer-spec
+	  (%raise-errno-error who rv timer-id curr-timer-spec)))))))
+
+(define (timer-getoverrun timer-id)
+  (define who 'timer-getoverrun)
+  (with-arguments-validation (who)
+      ((timer_t		timer-id))
+    (let ((rv (capi.posix-timer-getoverrun timer-id)))
+      (if (<= 0 rv)
+	  rv
+	(%raise-errno-error who rv timer-id)))))
+
+
+;;;; clock functions
+
+(define (clock-getres clock-id T)
+  (define who 'clock-getres)
+  (with-arguments-validation (who)
+      ((clockid_t	clock-id)
+       (timespec	T))
+    (let ((rv (capi.posix-clock-getres clock-id T)))
+      (if (unsafe.fxzero? rv)
+	  T
+	(%raise-errno-error who rv clock-id T)))))
+
+(define (clock-gettime clock-id T)
+  (define who 'clock-gettime)
+  (with-arguments-validation (who)
+      ((clockid_t	clock-id)
+       (timespec	T))
+    (let ((rv (capi.posix-clock-gettime clock-id T)))
+      (if (unsafe.fxzero? rv)
+	  T
+	(%raise-errno-error who rv clock-id T)))))
+
+(define (clock-settime clock-id T)
+  (define who 'clock-settime)
+  (with-arguments-validation (who)
+      ((clockid_t	clock-id)
+       (timespec	T))
+    (let ((rv (capi.posix-clock-settime clock-id T)))
+      (if (unsafe.fxzero? rv)
+	  T
+	(%raise-errno-error who rv clock-id T)))))
+
+(define (clock-getcpuclockid pid)
+  (define who 'clock-getcpuclockid)
+  (with-arguments-validation (who)
+      ((pid	pid))
+    (let ((rv (capi.posix-clock-getcpuclockid pid)))
+      (if (pair? rv)
+	  (car rv)
+	(%raise-errno-error who rv pid)))))
 
 
 ;;;; sockets
@@ -2871,6 +3801,14 @@
   (%display " it_value=")		(%display (struct-itimerval-it_value    S))
   (%display "]"))
 
+(define %make-struct-itimerval
+  (case-lambda
+   (()
+    (make-struct-itimerval (make-struct-timeval 0 0)
+			   (make-struct-timeval 0 0)))
+   ((interval value)
+    (make-struct-itimerval interval value))))
+
 ;;; --------------------------------------------------------------------
 
 (define (clock)
@@ -3041,6 +3979,171 @@
 
 (define (confstr/string parameter)
   (latin1->string (confstr parameter)))
+
+
+;;;; resources limits
+
+(define-struct struct-rlimit
+  (rlim_cur rlim_max))
+
+(define (%struct-rlimit-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-rlimit\"")
+  (%display " rlim_cur=")	(%display (struct-rlimit-rlim_cur  S))
+  (let ((max (struct-rlimit-rlim_max S)))
+    (%display " rlim_max=")	(%display max)
+    (when (and RLIM_INFINITY (= max RLIM_INFINITY))
+      (%display " (RLIM_INFINITY)")))
+  (%display "]"))
+
+(define %make-struct-rlimit
+  (case-lambda
+   (()
+    (make-struct-rlimit 0 0))
+   ((cur max)
+    (make-struct-rlimit cur max))))
+
+;;; --------------------------------------------------------------------
+
+(define-struct struct-rusage
+  (ru_utime	;0
+   ru_stime	;1
+   ru_maxrss	;2
+   ru_ixrss	;3
+   ru_idrss	;4
+   ru_isrss	;5
+   ru_minflt	;6
+   ru_majflt	;7
+   ru_nswap	;8
+   ru_inblock	;9
+   ru_oublock	;10
+   ru_msgsnd	;11
+   ru_msgrcv	;12
+   ru_nsignals	;13
+   ru_nvcsw	;14
+   ru_nivcsw	;15
+   ))
+
+(define (%struct-rusage-printer S port sub-printer)
+  (define-inline (%display thing)
+    (display thing port))
+  (%display "#[\"struct-rusage\"")
+  (%display " ru_utime=")	(%display (struct-rusage-ru_utime	S)) ;0
+  (%display " ru_stime=")	(%display (struct-rusage-ru_stime	S)) ;1
+  (%display " ru_maxrss=")	(%display (struct-rusage-ru_maxrss	S)) ;2
+  (%display " ru_ixrss=")	(%display (struct-rusage-ru_ixrss	S)) ;3
+  (%display " ru_idrss=")	(%display (struct-rusage-ru_idrss	S)) ;4
+  (%display " ru_isrss=")	(%display (struct-rusage-ru_isrss	S)) ;5
+  (%display " ru_minflt=")	(%display (struct-rusage-ru_minflt	S)) ;6
+  (%display " ru_majflt=")	(%display (struct-rusage-ru_majflt	S)) ;7
+  (%display " ru_nswap=")	(%display (struct-rusage-ru_nswap	S)) ;8
+  (%display " ru_inblock=")	(%display (struct-rusage-ru_inblock	S)) ;9
+  (%display " ru_oublock=")	(%display (struct-rusage-ru_oublock	S)) ;10
+  (%display " ru_msgsnd=")	(%display (struct-rusage-ru_msgsnd	S)) ;11
+  (%display " ru_msgrcv=")	(%display (struct-rusage-ru_msgrcv	S)) ;12
+  (%display " ru_nsignals=")	(%display (struct-rusage-ru_nsignals	S)) ;13
+  (%display " ru_nvcsw=")	(%display (struct-rusage-ru_nvcsw	S)) ;14
+  (%display " ru_nivcsw=")	(%display (struct-rusage-ru_nivcsw	S)) ;15
+  (%display "]"))
+
+(define %make-struct-rusage
+  (case-lambda
+   (()
+    (make-struct-rusage (make-struct-timeval 0 0) ;; ru_utime, 0
+			(make-struct-timeval 0 0) ;; ru_stime, 1
+			#f			  ;; ru_maxrss, 2
+			#f			  ;; ru_ixrss, 3
+			#f			  ;; ru_idrss, 4
+			#f			  ;; ru_isrss, 5
+			#f			  ;; ru_minflt, 6
+			#f			  ;; ru_majflt, 7
+			#f			  ;; ru_nswap, 8
+			#f			  ;; ru_inblock, 9
+			#f			  ;; ru_oublock, 10
+			#f			  ;; ru_msgsnd, 11
+			#f			  ;; ru_msgrcv, 12
+			#f			  ;; ru_nsignals, 13
+			#f			  ;; ru_nvcsw, 14
+			#f			  ;; ru_nivcsw, 15
+			))
+   ((ru_utime			      ;0
+     ru_stime			      ;1
+     ru_maxrss			      ;2
+     ru_ixrss			      ;3
+     ru_idrss			      ;4
+     ru_isrss			      ;5
+     ru_minflt			      ;6
+     ru_majflt			      ;7
+     ru_nswap			      ;8
+     ru_inblock			      ;9
+     ru_oublock			      ;10
+     ru_msgsnd			      ;11
+     ru_msgrcv			      ;12
+     ru_nsignals		      ;13
+     ru_nvcsw			      ;14
+     ru_nivcsw)			      ;15
+    (make-struct-rusage ru_utime      ;0
+			ru_stime      ;1
+			ru_maxrss     ;2
+			ru_ixrss      ;3
+			ru_idrss      ;4
+			ru_isrss      ;5
+			ru_minflt     ;6
+			ru_majflt     ;7
+			ru_nswap      ;8
+			ru_inblock    ;9
+			ru_oublock    ;10
+			ru_msgsnd     ;11
+			ru_msgrcv     ;12
+			ru_nsignals   ;13
+			ru_nvcsw      ;14
+			ru_nivcsw     ;15
+			))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline-constant RLIM_INFINITY
+  (capi.posix-RLIM_INFINITY))
+
+(define getrlimit
+  (case-lambda
+   ((resource)
+    (getrlimit resource (%make-struct-rlimit)))
+   ((resource rlimit)
+    (define who 'getrlimit)
+    (with-arguments-validation (who)
+	((signed-int	resource)
+	 (rlimit	rlimit))
+      (let ((rv (capi.posix-getrlimit resource rlimit)))
+	(if (unsafe.fxzero? rv)
+	    rlimit
+	  (%raise-errno-error who rv resource rlimit)))))))
+
+(define (setrlimit resource rlimit)
+  (define who 'setrlimit)
+  (with-arguments-validation (who)
+      ((signed-int	resource)
+       (rlimit		rlimit))
+    (let ((rv (capi.posix-setrlimit resource rlimit)))
+      (unless (unsafe.fxzero? rv)
+	(%raise-errno-error who rv resource rlimit)))))
+
+;;; --------------------------------------------------------------------
+
+(define getrusage
+  (case-lambda
+   ((processes)
+    (getrusage processes (%make-struct-rusage)))
+   ((processes rusage)
+    (define who 'getrusage)
+    (with-arguments-validation (who)
+	((signed-int	processes)
+	 (rusage	rusage))
+      (let ((rv (capi.posix-getrusage processes rusage)))
+	(if (unsafe.fxzero? rv)
+	    rusage
+	  (%raise-errno-error who rv processes rusage)))))))
 
 
 ;;;; splitting pathnames and search paths
@@ -3289,6 +4392,12 @@
 (set-rtd-printer! (type-descriptor struct-tms)		%struct-tms-printer)
 (set-rtd-printer! (type-descriptor struct-tm)		%struct-tm-printer)
 (set-rtd-printer! (type-descriptor struct-itimerval)	%struct-itimerval-printer)
+(set-rtd-printer! (type-descriptor struct-mq-attr)	%struct-mq-attr-printer)
+(set-rtd-printer! (type-descriptor struct-sigevent)	%struct-sigevent-printer)
+(set-rtd-printer! (type-descriptor struct-itimerspec)	%struct-itimerspec-printer)
+(set-rtd-printer! (type-descriptor struct-siginfo_t)	%struct-siginfo_t-printer)
+(set-rtd-printer! (type-descriptor struct-rlimit)	%struct-rlimit-printer)
+(set-rtd-printer! (type-descriptor struct-rusage)	%struct-rusage-printer)
 
 (vicare-executable-as-string)
 

@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare weak-hashtables)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare weak hashtables\n")

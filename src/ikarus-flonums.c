@@ -324,16 +324,16 @@ ikrt_fixnum_to_flonum (ikptr x, ikptr r)
 ikptr
 ikrt_fl_equal (ikptr x, ikptr y)
 {
-  return (IK_FLONUM_DATA(x) == IK_FLONUM_DATA(y))? true_object : false_object;
+  return (IK_FLONUM_DATA(x) == IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
 }
 ikptr
 ikrt_fl_less_or_equal (ikptr x, ikptr y)
 {
-  return (IK_FLONUM_DATA(x) <= IK_FLONUM_DATA(y))? true_object : false_object;
+  return (IK_FLONUM_DATA(x) <= IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
 }
 ikptr
 ikrt_fl_less (ikptr x, ikptr y) {
-  return (IK_FLONUM_DATA(x) < IK_FLONUM_DATA(y))? true_object : false_object;
+  return (IK_FLONUM_DATA(x) < IK_FLONUM_DATA(y))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
 }
 
 /* end of file */

@@ -42,7 +42,7 @@ ikrt_close_fd (ikptr fd /*, ikpcb* pcb */)
   int   rv;
   errno = 0;
   rv    = close(IK_UNFIX(fd));
-  return (-1 != rv)? false_object : ik_errno_to_code();
+  return (-1 != rv)? IK_FALSE_OBJECT : ik_errno_to_code();
 }
 ikptr
 ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
@@ -52,7 +52,7 @@ ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
   offset = ik_integer_to_llong(pos);
   errno  = 0;
   rv     = lseek(IK_UNFIX(fd), offset, SEEK_SET);
-  return (-1 != rv)? false_object : ik_errno_to_code();
+  return (-1 != rv)? IK_FALSE_OBJECT : ik_errno_to_code();
 }
 ikptr
 ikrt_open_input_fd (ikptr pathname_bv, ikptr ikopts /*, ikpcb* pcb */)

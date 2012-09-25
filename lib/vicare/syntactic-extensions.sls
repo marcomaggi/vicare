@@ -40,6 +40,7 @@
     begin0			begin0-let
     with-pathnames
     with-bytevectors		with-bytevectors/or-false
+    callet			callet*
 
     ;; arguments validation
     define-argument-validation
@@ -50,7 +51,8 @@
     ;; miscellaneous dispatching
     case-word-size		case-endianness
     case-one-operand		case-two-operands
-    case-fixnums
+    case-fixnums		case-integers
+    define-exact-integer->symbol-function
 
     ;; auxiliary syntaxes
     big			little
@@ -123,6 +125,75 @@
        (let*-inline ((?var ?expr) ...)
 	 ?body0 . ?body)))))
 
+(define-syntax callet
+  ;;Transforms:
+  ;;
+  ;;   (callet printf (string "ciao ~a") (arg 123))
+  ;;
+  ;;into:
+  ;;
+  ;;   (printf "ciao ~a" 123)
+  ;;
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?func ?arg ...)
+       (let loop ((args		#'(?arg ...))
+		  (keys		'())
+		  (exprs	'()))
+	 (syntax-case args ()
+	   (()
+	    #`(?func . #,(reverse exprs)))
+	   (((?key ?expr) . ?args)
+	    (identifier? #'?key)
+	    (loop #'?args
+		  (cons #'?key  keys)
+		  (cons #'?expr exprs)))
+	   (((?key ?expr) . ?args)
+	    (syntax-violation 'callet
+	      "expected identifier as argument key" stx #'(?key ?expr)))
+	   ((?arg . ?args)
+	    (loop #'?args
+		  (cons (car (generate-temporaries '(#f))) keys)
+		  (cons #'?arg exprs)))
+	   ))))))
+
+(define-syntax callet*
+  ;;Transforms:
+  ;;
+  ;;   (callet printf (string "ciao ~a") (arg 123))
+  ;;
+  ;;into:
+  ;;
+  ;;   (let* ((string "ciao ~a")
+  ;;          (arg    123))
+  ;;     (printf string arg))
+  ;;
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?func ?arg ...)
+       (let loop ((args		#'(?arg ...))
+		  (keys		'())
+		  (exprs	'()))
+	 (syntax-case args ()
+	   (()
+	    (with-syntax (((KEY  ...) (reverse keys))
+			  ((EXPR ...) (reverse exprs)))
+	      #`(let* ((KEY EXPR) ...)
+		  (?func KEY ...))))
+	   (((?key ?expr) . ?args)
+	    (identifier? #'?key)
+	    (loop #'?args
+		  (cons #'?key  keys)
+		  (cons #'?expr exprs)))
+	   (((?key ?expr) . ?args)
+	    (syntax-violation 'callet
+	      "expected identifier as argument key" stx #'(?key ?expr)))
+	   ((?arg . ?args)
+	    (loop #'?args
+		  (cons (car (generate-temporaries '(#f))) keys)
+		  (cons #'?arg exprs)))
+	   ))))))
+
 
 ;;;; other syntaxes
 
@@ -158,11 +229,15 @@
 	     (cleanup)
 	     (raise E))
 	 (lambda ()
-	   (call-with-values
+	   (begin0
+	       ?body
+	     (cleanup))
+	   #;(call-with-values
 	       (lambda () ?body)
 	     (lambda return-values
 	       (cleanup)
-	       (apply values return-values)))))))))
+	       (apply values return-values)))
+	   ))))))
 
 (define-syntax debug-assert
   ;;This is meant to expand to nothing when debugging is turned off.
@@ -177,10 +252,11 @@
 
 (define-syntax with-pathnames
   (syntax-rules ()
-    ((_ ((?pathname-bv ?pathname) ...) . ?body)
-     (let ((?pathname-bv (if (bytevector? ?pathname)
-			     ?pathname
-			   ((string->filename-func) ?pathname)))
+    ((_ ((?pathname.bv ?pathname) ...) . ?body)
+     (let ((?pathname.bv (let ((pathname ?pathname))
+			   (if (bytevector? pathname)
+			       pathname
+			     ((string->filename-func) pathname))))
 	   ...)
        . ?body))))
 
@@ -193,9 +269,10 @@
   ;;
   (syntax-rules ()
     ((_ ((?value.bv ?value) ...) . ?body)
-     (let ((?value.bv (if (bytevector? ?value)
-			  ?value
-			(string->latin1 ?value)))
+     (let ((?value.bv (let ((V ?value))
+			(if (bytevector? V)
+			    V
+			  (string->latin1 V))))
 	   ...)
        . ?body))))
 
@@ -208,11 +285,12 @@
   ;;
   (syntax-rules ()
     ((_ ((?value.bv ?value) ...) . ?body)
-     (let ((?value.bv (cond ((bytevector? ?value)
-			     ?value)
-			    ((string? ?value)
-			     (string->latin1 ?value))
-			    (else ?value)))
+     (let ((?value.bv (let ((V ?value))
+			(cond ((bytevector? V)
+			       V)
+			      ((string? V)
+			       (string->latin1 V))
+			      (else V))))
 	   ...)
        . ?body))))
 
@@ -238,8 +316,9 @@
   ;;  (define-inline (vicare.argument-validation-error-for-bytevector who bv))
   ;;    (assertion-violation who "expected a bytevector as argument" bv))
   ;;
-  ;;If we need to export a  validator from a library: we can export just
-  ;;the VICARE.ARGUMENT-VALIDATION-FOR-?NAME, without prefixing it.
+  ;;If we need to export a validator  from a library: we can export just
+  ;;the    identifier   VICARE.ARGUMENT-VALIDATION-FOR-?NAME,    without
+  ;;prefixing it.
   ;;
   (lambda (stx)
     (define who 'define-argument-validation)
@@ -413,26 +492,74 @@
 (define-syntax case-fixnums
   (syntax-rules (else)
     ((_ ?expr
-	((?fixnum)
+	((?fixnum0 ?fixnum ...)
 	 ?fx-body0 ?fx-body ...)
 	...
 	(else
 	 ?else-body0 ?else-body ...))
      (let ((fx ?expr))
-       (cond (($fx= ?fixnum fx)
+       (cond ((or ($fx= ?fixnum0 fx)
+		  ($fx= ?fixnum  fx)
+		  ...)
 	      ?fx-body0 ?fx-body ...)
 	     ...
 	     (else
 	      ?else-body0 ?else-body ...))))
     ((_ ?expr
-	((?fixnum)
+	((?fixnum0 ?fixnum ...)
 	 ?fx-body0 ?fx-body ...)
 	...)
      (let ((fx ?expr))
-       (cond (($fx= ?fixnum fx)
+       (cond ((or ($fx= ?fixnum0 fx)
+		  ($fx= ?fixnum  fx)
+		  ...)
 	      ?fx-body0 ?fx-body ...)
 	     ...)))
     ))
+
+(define-syntax case-integers
+  (syntax-rules (else)
+    ((_ ?expr
+	((?integer0 ?integer ...)
+	 ?body0 ?body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((int ?expr))
+       (cond ((or (= ?integer0 int)
+		  (= ?integer  int)
+		  ...)
+	      ?body0 ?body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?integer0 ?integer ...)
+	 ?body0 ?body ...)
+	...)
+     (let ((int ?expr))
+       (cond ((or (= ?integer0 int)
+		  (= ?integer  int)
+		  ...)
+	      ?body0 ?body ...)
+	     ...)))
+    ))
+
+(define-argument-validation (exact-integer who obj)
+  (and (integer? obj) (exact? obj))
+  (assertion-violation who "expected exact integer as argument" obj))
+
+(define-syntax define-exact-integer->symbol-function
+  (syntax-rules ()
+    ((_ ?who (?code ...))
+     (define (?who code)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((exact-integer	code))
+	 (case-integers code
+	   ((?code)	'?code)
+	   ...
+	   (else #f)))))))
 
 
 ;;;; math functions dispatching
@@ -539,4 +666,5 @@
 ;;Local Variables:
 ;;eval: (put 'case-one-operand 'scheme-indent-function 1)
 ;;eval: (put 'case-two-operands 'scheme-indent-function 1)
+;;eval: (put 'case-integers 'scheme-indent-function 1)
 ;;End:

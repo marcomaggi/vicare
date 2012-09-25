@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare flonum-parser)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing library (vicare flonum-parser)\n")

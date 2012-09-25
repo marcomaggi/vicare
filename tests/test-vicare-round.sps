@@ -26,7 +26,7 @@
 
 
 (import (ikarus)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing round function\n")

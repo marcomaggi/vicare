@@ -47,7 +47,7 @@
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
     (vicare syntactic-extensions)
-    (vicare words)
+    (prefix (vicare words) words.)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
 
@@ -882,6 +882,18 @@
 	 (let ((ch1 (peek-char port)))
 	   (cond ((eof-object? ch1)	'(datum . +))
 		 ((delimiter?  ch1)	'(datum . +))
+
+		 ((unsafe.char= #\+ ch1)
+		  (if (port-in-r6rs-mode? port)
+		      (%error "++ syntax is invalid in #!r6rs mode")
+		    (begin
+		      (get-char-and-track-textual-position port)
+		      (let ((ch2 (peek-char port)))
+			(if (or (eof-object? ch2)
+				(delimiter?  ch2))
+			    '(datum . |++|)
+			  (%error "invalid syntax ++"))))))
+
 		 (else
 		  (cons 'datum (u:sign port '(#\+) 10 #f #f +1))))))
 
@@ -902,6 +914,17 @@
 		 ((unsafe.char= ch1 #\>)
 		  (get-char-and-track-textual-position port)
 		  (finish-tokenisation-of-identifier '(#\> #\-) port #t))
+
+		 ((unsafe.char= #\- ch1)
+		  (if (port-in-r6rs-mode? port)
+		      (%error "-- syntax is invalid in #!r6rs mode")
+		    (begin
+		      (get-char-and-track-textual-position port)
+		      (let ((ch2 (peek-char port)))
+			(if (or (eof-object? ch2)
+				(delimiter?  ch2))
+			    '(datum . |--|)
+			  (%error "invalid syntax --"))))))
 
 		 ;;number
 		 (else
@@ -2862,13 +2885,13 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u8
   'vu8			     ;tag
-  word-u8?		     ;to validate numbers
+  words.word-u8?	     ;to validate numbers
   1			     ;number of bytes in word
   unsafe.bytevector-u8-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s8
   'vs8			     ;tag
-  word-s8?		     ;to validate numbers
+  words.word-s8?	     ;to validate numbers
   1			     ;number of bytes in word
   unsafe.bytevector-s8-set!) ;setter
 
@@ -2876,19 +2899,19 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u16l
   'vu16l		       ;tag
-  word-u16?		       ;to validate numbers
+  words.word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
   unsafe.bytevector-u16l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u16b
   'vu16b		       ;tag
-  word-u16?		       ;to validate numbers
+  words.word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
   unsafe.bytevector-u16b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u16n
   'vu16n		       ;tag
-  word-u16?		       ;to validate numbers
+  words.word-u16?	       ;to validate numbers
   2			       ;number of bytes in word
   unsafe.bytevector-u16n-set!) ;setter
 
@@ -2896,19 +2919,19 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s16l
   'vs16l		       ;tag
-  word-s16?		       ;to validate numbers
+  words.word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
   unsafe.bytevector-s16l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s16b
   'vs16b		       ;tag
-  word-s16?		       ;to validate numbers
+  words.word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
   unsafe.bytevector-s16b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s16n
   'vs16n		       ;tag
-  word-s16?		       ;to validate numbers
+  words.word-s16?	       ;to validate numbers
   2			       ;number of bytes in word
   unsafe.bytevector-s16n-set!) ;setter
 
@@ -2916,19 +2939,19 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u32l
   'vu32l		       ;tag
-  word-u32?		       ;to validate numbers
+  words.word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
   unsafe.bytevector-u32l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u32b
   'vu32b		       ;tag
-  word-u32?		       ;to validate numbers
+  words.word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
   unsafe.bytevector-u32b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u32n
   'vu32n		       ;tag
-  word-u32?		       ;to validate numbers
+  words.word-u32?	       ;to validate numbers
   4			       ;number of bytes in word
   unsafe.bytevector-u32n-set!) ;setter
 
@@ -2936,19 +2959,19 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s32l
   'vs32l		       ;tag
-  word-s32?		       ;to validate numbers
+  words.word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
   unsafe.bytevector-s32l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s32b
   'vs32b		       ;tag
-  word-s32?		       ;to validate numbers
+  words.word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
   unsafe.bytevector-s32b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s32n
   'vs32n		       ;tag
-  word-s32?		       ;to validate numbers
+  words.word-s32?	       ;to validate numbers
   4			       ;number of bytes in word
   unsafe.bytevector-s32n-set!) ;setter
 
@@ -2956,19 +2979,19 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u64l
   'vu64l		       ;tag
-  word-u64?		       ;to validate numbers
+  words.word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-u64l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u64b
   'vu64b		       ;tag
-  word-u64?		       ;to validate numbers
+  words.word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-u64b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-u64n
   'vu64n		       ;tag
-  word-u64?		       ;to validate numbers
+  words.word-u64?	       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-u64n-set!) ;setter
 
@@ -2976,19 +2999,19 @@
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s64l
   'vs64l		       ;tag
-  word-s64?		       ;to validate numbers
+  words.word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-s64l-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s64b
   'vs64b		       ;tag
-  word-s64?		       ;to validate numbers
+  words.word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-s64b-set!) ;setter
 
 (define-finish-bytevector finish-tokenisation-of-bytevector-s64n
   'vs64n		       ;tag
-  word-s64?		       ;to validate numbers
+  words.word-s64?	       ;to validate numbers
   8			       ;number of bytes in word
   unsafe.bytevector-s64n-set!) ;setter
 

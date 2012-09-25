@@ -2,7 +2,7 @@
 
 #MAKEINFOFLAGS	= --no-split
 
-info_TEXINFOS	= vicare.texi
-EXTRA_DIST	= macros.texi
+info_TEXINFOS		= vicare-scheme.texi
+vicare_scheme_TEXINFOS	= gpl-3.0.texi macros.texi
 
 ### end of file

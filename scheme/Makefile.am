@@ -20,7 +20,7 @@ VICARE_ARGUMENTS_VALIDATION	= @VICARE_ARGUMENTS_VALIDATION@
 IKARUS_PREBUILT_BOOT	= $(srcdir)/ikarus.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 VICARE_PREBUILT_BOOT	= $(srcdir)/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 
-CLEANFILES		= $(nodist_pkglib_DATA) ikarus.config.ss
+CLEANFILES		= $(nodist_pkglib_DATA) ikarus.config.ss vicare.boot
 MAINTAINERCLEANFILES	= last-revision
 
 all: $(nodist_pkglib_DATA)
@@ -156,6 +156,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.main.sls					\
 	ikarus.multiple-values.sls			\
 	ikarus.numerics.sls				\
+	ikarus.options.sls				\
 	ikarus.pairs.sls				\
 	ikarus.pointers.sls				\
 	ikarus.posix.sls				\

@@ -29,7 +29,7 @@
 (import (vicare)
   (prefix (vicare words) words.)
   (vicare platform-constants)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing (vicare words) library\n")
@@ -100,10 +100,29 @@
   (check (words.signed-long-long? LONG_LONG_MIN)	=> #t)
   (check (words.signed-long-long? (+ -1 LONG_LONG_MIN))	=> #f)
 
+;;; --------------------------------------------------------------------
+
+  (check (words.pointer-integer? (words.greatest-c-pointer*))	=> #f)
+  (check (words.pointer-integer? (words.greatest-c-pointer))	=> #t)
+  (check (words.pointer-integer? (words.least-c-pointer))	=> #t)
+  (check (words.pointer-integer? (words.least-c-pointer*))	=> #f)
+
   #t)
 
 
 (parametrise ((check-test-name	'size_t))
+
+  (check (fixnum? words.SIZEOF_CHAR)		=> #t)
+  (check (fixnum? words.SIZEOF_SHORT)		=> #t)
+  (check (fixnum? words.SIZEOF_INT)		=> #t)
+  (check (fixnum? words.SIZEOF_LONG)		=> #t)
+  (check (fixnum? words.SIZEOF_LONG_LONG)	=> #t)
+  (check (fixnum? words.SIZEOF_SIZE_T)		=> #t)
+  (check (fixnum? words.SIZEOF_SSIZE_T)		=> #t)
+  (check (fixnum? words.SIZEOF_OFF_T)		=> #t)
+  (check (fixnum? words.SIZEOF_FLOAT)		=> #t)
+  (check (fixnum? words.SIZEOF_DOUBLE)		=> #t)
+  (check (fixnum? words.SIZEOF_POINTER)		=> #t)
 
   (check (words.size_t? (+ 1 SIZE_T_MAX))	=> #f)
   (check (words.size_t? SIZE_T_MAX)		=> #t)

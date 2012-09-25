@@ -34,7 +34,7 @@
 	  ffi.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare GNU C Library functions\n")
@@ -326,8 +326,22 @@
 	rv)
     => '#((0 . 3)))
 
+  (check
+      (let* ((rex (glibc.regcomp "[a-z]+" REG_EXTENDED))
+	     (rv  (glibc.regexec rex "abc" 0)))
+	(glibc.regfree rex)
+	rv)
+    => '#((0 . 3)))
 
-  #f)
+  (check
+      (let* ((rex (glibc.regcomp/disown "[a-z]+" REG_EXTENDED))
+	     (rv  (glibc.regexec rex "abc" 0)))
+	(glibc.regfree rex)
+	rv)
+    => '#((0 . 3)))
+
+;;;  (check-pretty-print 'gc)
+  (collect))
 
 
 (parametrise ((check-test-name	'word-expansion))

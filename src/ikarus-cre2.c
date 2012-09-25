@@ -42,7 +42,7 @@ feature_failure_ (const char * funcname)
 {
   ik_abort("called CRE2 specific function, %s", funcname);
 }
-#define feature_failure(FN)     { feature_failure_(FN); return void_object; }
+#define feature_failure(FN)     { feature_failure_(FN); return IK_VOID_OBJECT; }
 #endif
 
 
@@ -54,9 +54,9 @@ ikptr
 ikrt_cre2_enabled (void)
 {
 #if (1 == ENABLE_CRE2)
-  return true_object;
+  return IK_TRUE_OBJECT;
 #else
-  return false_object;
+  return IK_FALSE_OBJECT;
 #endif
 }
 ikptr
@@ -113,10 +113,10 @@ ikrt_cre2_new (ikptr s_pattern, ikptr s_options, ikpcb * pcb)
   cre2_options_t *	options;
   pattern     = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
   pattern_len = IK_BYTEVECTOR_LENGTH(s_pattern);
-  options     = (false_object == s_options)? NULL : IK_POINTER_DATA_VOIDP(s_options);
+  options     = (IK_FALSE_OBJECT == s_options)? NULL : IK_POINTER_DATA_VOIDP(s_options);
   rex         = cre2_new(pattern, pattern_len, options);
   if (NULL == rex)
-    return false_object; /* error allocating memory */
+    return IK_FALSE_OBJECT; /* error allocating memory */
   else {
     int  errcode = cre2_error_code(rex);
     if (errcode) {
@@ -150,7 +150,7 @@ ikrt_cre2_delete (ikptr s_rex)
     cre2_delete(rex);
     IK_POINTER_SET_NULL(s_rex);
   }
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   return feature_failure(__func__);
 #endif
@@ -177,7 +177,7 @@ ikrt_cre2_opt_new (ikpcb * pcb)
     cre2_opt_set_encoding(opt, CRE2_UTF8);
     return ika_pointer_alloc(pcb, (ik_ulong)opt);
   } else
-    return false_object; /* error allocating memory */
+    return IK_FALSE_OBJECT; /* error allocating memory */
 #else
   return feature_failure(__func__);
 #endif
@@ -196,7 +196,7 @@ ikrt_cre2_opt_delete (ikptr s_opt)
     cre2_opt_delete(opt);
     IK_POINTER_SET_NULL(s_opt);
   }
-  return void_object;
+  return IK_VOID_OBJECT;
 #else
   return feature_failure(__func__);
 #endif
@@ -208,15 +208,15 @@ ikrt_cre2_opt_delete (ikptr s_opt)
   {									\
     cre2_options_t *	opt;						\
     opt = IK_POINTER_DATA_VOIDP(s_opt);					\
-    cre2_opt_set_##NAME(opt, (false_object == s_bool)? 0 : 1);		\
-    return void_object;							\
+    cre2_opt_set_##NAME(opt, (IK_FALSE_OBJECT == s_bool)? 0 : 1);	\
+    return IK_VOID_OBJECT;							\
   }									\
   ikptr									\
   ikrt_cre2_opt_##NAME (ikptr s_opt)					\
   {									\
     cre2_options_t *	opt;						\
     opt = IK_POINTER_DATA_VOIDP(s_opt);					\
-    return (cre2_opt_##NAME(opt))? true_object : false_object;		\
+    return (cre2_opt_##NAME(opt))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;	\
   }
 
 DEFINE_OPTION_SETTER_AND_GETTER(posix_syntax)
@@ -237,7 +237,7 @@ ikrt_cre2_opt_set_max_mem (ikptr s_opt, ikptr s_dim)
   opt = IK_POINTER_DATA_VOIDP(s_opt);
   dim = ik_integer_to_long(s_dim);
   cre2_opt_set_max_mem(opt, (int)dim);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 ikptr
 ikrt_cre2_opt_max_mem (ikptr s_opt, ikpcb * pcb)
@@ -323,7 +323,7 @@ ikrt_cre2_match (ikptr s_rex, ikptr s_text, ikptr s_start, ikptr s_end, ikptr s_
     pcb->root0 = NULL;
     return s_match;
   } else
-    return false_object; /* no match */
+    return IK_FALSE_OBJECT; /* no match */
 #else
   return feature_failure(__func__);
 #endif

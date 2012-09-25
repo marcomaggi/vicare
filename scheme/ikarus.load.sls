@@ -17,10 +17,12 @@
 (library (ikarus load)
   (export
     load		load-r6rs-script
-    fasl-directory	fasl-path)
+    fasl-directory	fasl-path
+    fasl-search-path)
   (import (except (ikarus)
 		  load			load-r6rs-script
-		  fasl-directory	fasl-path)
+		  fasl-directory	fasl-path
+		  fasl-search-path)
     (prefix (only (ikarus.posix)
 		  getenv
 		  mkdir/parents
@@ -39,9 +41,22 @@
 	  compile-r6rs-top-level)
     (only (ikarus.reader)
 	  read-script-source-file)
+    (prefix (only (vicare options)
+		  print-loaded-libraries)
+	    config.)
     (only (vicare syntactic-extensions)
 	  unwind-protect
-	  define-inline))
+	  define-inline
+	  define-argument-validation
+	  with-arguments-validation))
+
+
+;;;; arguments validation
+
+(define-argument-validation (search-path who obj)
+  (for-all string? obj)
+  (assertion-violation who
+    "expected list of strings representing directory pathnames as search path" obj))
 
 
 ;;;; handling of FASL repository file names
@@ -51,30 +66,42 @@
   (cond ((<= (fixnum-width) 32)	".vicare-32bit-fasl")
 	(else			".vicare-64bit-fasl")))
 
+(define DEFAULT-FASL-DIRECTORY
+  (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
+    (if (and P (file-exists? P))
+	(posix.real-pathname P)
+      (let ((P (posix.getenv "HOME")))
+	(if (and P (file-exists? P))
+	    (string-append (posix.real-pathname P) "/.vicare/precompiled")
+	  ""))))
+  ;;The following  code was the  original in Ikarus.  (Marco  Maggi; Sat
+  ;;Mar 10, 2012)
+  #;(cond ((posix.getenv "VICARE_FASL_DIRECTORY"))
+	((posix.getenv "HOME")
+	 => (lambda (s)
+	      (string-append s "/.vicare/precompiled")))
+	(else "")))
+
+;;The search  path to look for FASL  files.  Notice that we  do not test
+;;the existence of the directories.
+;;
+(define fasl-search-path
+  (make-parameter (list DEFAULT-FASL-DIRECTORY)
+    (lambda (P)
+      (define who 'fasl-path)
+      (with-arguments-validation (who)
+	  ((search-path	P))
+	P))))
+
 ;;The directory under which serialised FASL files must be saved.
 ;;
 (define fasl-directory
-  (make-parameter
-      (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
-	(if (and P (file-exists? P))
-	    (posix.real-pathname P)
-	  (let ((P (posix.getenv "HOME")))
-	    (if (and P (file-exists? P))
-		(string-append (posix.real-pathname P) "/.vicare/precompiled")
-	      ""))))
-;;;The following code was the original in Ikarus.  (Marco Maggi; Sat Mar
-;;;10, 2012)
-;;;
-;;;      (cond ((posix.getenv "VICARE_FASL_DIRECTORY"))
-;;;	    ((posix.getenv "HOME")
-;;;	     => (lambda (s)
-;;;		  (string-append s "/.vicare/precompiled")))
-;;;	    (else ""))
+  (make-parameter DEFAULT-FASL-DIRECTORY
     (lambda (P)
       (define who 'fasl-directory)
       (if (string? P)
 	  (if (file-exists? P)
-	      P
+	      (posix.real-pathname P)
 	    (error who "attempt to set non-existent directory pathname" P))
 	(error who "expected string as directory pathname" P)))))
 
@@ -85,7 +112,16 @@
   ;;
   (let ((d (fasl-directory)))
     (and (not (string=? d ""))
-	 (string-append d (posix.real-pathname filename) FASL-EXTENSION))))
+	 (make-fasl-pathname d filename))))
+
+(define (make-fasl-pathname prefix-pathname source-file-pathname)
+  ;;We  assume that  PREFIX-PATHNAME,  if it  exists,  has already  been
+  ;;normalised; if  PREFIX-PATHNAME does not  exist: it will  be created
+  ;;when the FASL file is created.
+  ;;
+  (string-append prefix-pathname
+		 (posix.real-pathname source-file-pathname)
+		 FASL-EXTENSION))
 
 
 ;;;; loading and serialising libraries
@@ -102,17 +138,31 @@
   ;;Print  to  the current  error  port  appropriate  warning about  the
   ;;availability of the FASL file.
   ;;
-  (let ((ikfasl (fasl-path filename)))
+  (define (%print-loaded-library name)
+    (when (config.print-loaded-libraries)
+      (display (string-append "vicare loading: " name "\n")
+	       (console-error-port))))
+  (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
+		  (if (null? search-path)
+		      #f
+		    (let ((ikfasl (make-fasl-pathname (car search-path) filename)))
+		      (if (file-exists? ikfasl)
+			  ikfasl
+			(next-prefix (cdr search-path))))))
+		#;(fasl-path filename)))
     (cond ((or (not ikfasl)
 	       (not (file-exists? ikfasl)))
+	   (%print-loaded-library filename)
 	   #f)
 	  ((< (posix.file-modification-time ikfasl)
 	      (posix.file-modification-time filename))
-	   (fprintf (current-error-port)
+	   (%print-loaded-library filename)
+	   (fprintf (console-error-port)
 		    "WARNING: not using fasl file ~s because it is older \
                      than the source file ~s\n" ikfasl filename)
 	   #f)
 	  (else
+	   (%print-loaded-library ikfasl)
 	   (let ((x (let* ((port (open-file-input-port ikfasl))
 			   (x    (fasl-read port)))
 		      (close-input-port port)
@@ -120,7 +170,7 @@
 	     (if (serialized-library? x)
 		 (apply success-kont filename (serialized-library-contents x))
 	       (begin
-		 (fprintf (current-error-port)
+		 (fprintf (console-error-port)
 			  "WARNING: not using fasl file ~s because it was \
                            compiled with a different instance of Vicare.\n" ikfasl)
 		 #f)))))))
@@ -207,6 +257,8 @@
     (when run?
       (thunk))))
 
+;;Someday I will write this function.  (Marco Maggi; Mon Jun 4, 2012)
+;;
 ;; (define (compile-r6rs-library filename)
 ;;   ((current-library-expander)
 ;;    (read-library-source-file filename)

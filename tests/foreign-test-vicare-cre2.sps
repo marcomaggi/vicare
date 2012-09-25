@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (prefix (vicare cre2) cre2.)
-  (checks))
+  (vicare checks))
 
 (unless (cre2.enabled?)
   (exit 0))

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +27,8 @@
 
 #!vicare
 (import (vicare)
-  (checks))
+  (vicare checks)
+  (ikarus system $structs))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -57,12 +58,43 @@
 	(color? S))
     => #t)
 
+;;; --------------------------------------------------------------------
+
   (check
       (let ((S (make-color 1 2 3)))
 	(list (color-red   S)
 	      (color-green S)
 	      (color-blue  S)))
     => '(1 2 3))
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	(set-color-red!   S 10)
+	(set-color-green! S 20)
+	(set-color-blue!  S 30)
+	(list (color-red   S)
+	      (color-green S)
+	      (color-blue  S)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	(list ($color-red   S)
+	      ($color-green S)
+	      ($color-blue  S)))
+    => '(1 2 3))
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	($set-color-red!   S 10)
+	($set-color-green! S 20)
+	($set-color-blue!  S 30)
+	(list ($color-red   S)
+	      ($color-green S)
+	      ($color-blue  S)))
+    => '(10 20 30))
 
   #t)
 
@@ -220,7 +252,7 @@
 
   (check
       (struct-length color-rtd)
-    => 5)
+    => 6)
 
   (check
       (struct-length S)
@@ -296,7 +328,50 @@
 	(struct-ref S 4))
     => (list 4 S))
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S ((struct-constructor color-rtd) 1 2 3)))
+	(struct-reset S)
+	(list (struct-ref S 0)
+	      (struct-ref S 1)
+	      (struct-ref S 2)))
+    => `(,(void) ,(void) ,(void)))
+
   #t)
+
+
+(parametrise ((check-test-name		'destructor)
+	      (struct-guardian-logger	(lambda (S E action)
+					  (check-pretty-print (list S E action)))))
+
+  (define-struct alpha
+    (a b c))
+
+  (set-rtd-destructor! (type-descriptor alpha)
+		       (lambda (S)
+			 (void)))
+
+  (check
+      (parametrise ((struct-guardian-logger #t))
+	(let ((S (make-alpha 1 2 3)))
+	  (check-pretty-print S)
+	  (collect)))
+    => (void))
+
+  (check
+      (let ((S (make-alpha 1 2 3)))
+	(check-pretty-print S)
+	(collect))
+    => (void))
+
+  (check
+      (let ((S (make-alpha 1 2 3)))
+	(check-pretty-print S)
+	(collect))
+    => (void))
+
+  (collect))
 
 
 ;;;; done

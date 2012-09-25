@@ -31,6 +31,16 @@
 #!r6rs
 (library (vicare words)
   (export
+
+    ;; sizes
+    SIZEOF_CHAR
+    SIZEOF_SHORT	SIZEOF_INT
+    SIZEOF_LONG		SIZEOF_LONG_LONG
+    SIZEOF_SIZE_T	SIZEOF_SSIZE_T
+    SIZEOF_OFF_T	SIZEOF_PTRDIFF_T
+    SIZEOF_FLOAT	SIZEOF_DOUBLE
+    SIZEOF_POINTER
+
     ;; predicates
     word?
     word-u8?		word-s8?
@@ -39,16 +49,17 @@
     word-u64?		word-s64?
     word-u128?		word-s128?
     word-u256?		word-s256?
-    machine-word?	ptrdiff?
+    machine-word?
 
     unsigned-char?	signed-char?
     unsigned-short?	signed-short?
     unsigned-int?	signed-int?
     unsigned-long?	signed-long?
     unsigned-long-long?	signed-long-long?
+    pointer-integer?
 
     size_t?		ssize_t?
-    off_t?
+    off_t?		ptrdiff_t?
 
     ;; inclusive limits
     greatest-u8		least-u8
@@ -66,6 +77,24 @@
     greatest-machine-word
     least-machine-word
 
+    greatest-c-unsigned-char		greatest-c-signed-char
+    least-c-unsigned-char		least-c-signed-char
+    greatest-c-unsigned-short		greatest-c-signed-short
+    least-c-unsigned-short		least-c-signed-short
+    greatest-c-unsigned-int		greatest-c-signed-int
+    least-c-unsigned-int		least-c-signed-int
+    greatest-c-unsigned-long		greatest-c-signed-long
+    least-c-unsigned-long		least-c-signed-long
+    greatest-c-unsigned-long-long	greatest-c-signed-long-long
+    least-c-unsigned-long-long		least-c-signed-long-long
+
+    greatest-c-pointer			least-c-pointer
+
+    greatest-c-size_t			least-c-size_t
+    greatest-c-ssize_t			least-c-ssize_t
+    greatest-c-off_t			least-c-off_t
+    greatest-c-ptrdiff_t		least-c-ptrdiff_t
+
     ;; exclusive limits
     greatest-u8*	least-u8*
     greatest-s8*	least-s8*
@@ -81,6 +110,24 @@
     greatest-s256*	least-s256*
     greatest-machine-word*
     least-machine-word*
+
+    greatest-c-unsigned-char*		greatest-c-signed-char*
+    least-c-unsigned-char*		least-c-signed-char*
+    greatest-c-unsigned-short*		greatest-c-signed-short*
+    least-c-unsigned-short*		least-c-signed-short*
+    greatest-c-unsigned-int*		greatest-c-signed-int*
+    least-c-unsigned-int*		least-c-signed-int*
+    greatest-c-unsigned-long*		greatest-c-signed-long*
+    least-c-unsigned-long*		least-c-signed-long*
+    greatest-c-unsigned-long-long*	greatest-c-signed-long-long*
+    least-c-unsigned-long-long*		least-c-signed-long-long*
+
+    greatest-c-pointer*			least-c-pointer*
+
+    greatest-c-size_t*			least-c-size_t*
+    greatest-c-ssize_t*			least-c-ssize_t*
+    greatest-c-off_t*			least-c-off_t*
+    greatest-c-ptrdiff_t*		least-c-ptrdiff_t*
 
     ;; fixnum alignment
     fixnum-aligned-to-2?
@@ -148,15 +195,26 @@
 (define-inline-constant S64MAX		+9223372036854775807)	#;(- (expt 2 63) 1)
 (define-inline-constant S64MIN		-9223372036854775808)	#;(- (expt 2 63))
 
-(define-inline-constant U128MAX		340282366920938463463374607431768211455) #;(- (expt 2 128) 1)
-(define-inline-constant U128MIN		0)
-(define-inline-constant S128MAX		170141183460469231731687303715884105727) #;(- (expt 2 127) 1)
-(define-inline-constant S128MIN		-170141183460469231731687303715884105728) #;(- (expt 2 127))
+(define-inline-constant U128MAX
+  340282366920938463463374607431768211455) #;(- (expt 2 128) 1)
+(define-inline-constant U128MIN
+  0)
+(define-inline-constant S128MAX
+  170141183460469231731687303715884105727) #;(- (expt 2 127) 1)
+(define-inline-constant S128MIN
+  -170141183460469231731687303715884105728) #;(- (expt 2 127))
 
-(define-inline-constant U256MAX		115792089237316195423570985008687907853269984665640564039457584007913129639935) #;(- (expt 2 256) 1)
-(define-inline-constant U256MIN		0)
-(define-inline-constant S256MAX		57896044618658097711785492504343953926634992332820282019728792003956564819967) #;(- (expt 2 255) 1)
-(define-inline-constant S256MIN		-57896044618658097711785492504343953926634992332820282019728792003956564819968) #;(- (expt 2 255))
+(define-inline-constant U256MAX
+  #;(- (expt 2 256) 1)
+  115792089237316195423570985008687907853269984665640564039457584007913129639935)
+(define-inline-constant U256MIN
+  0)
+(define-inline-constant S256MAX
+  #;(- (expt 2 255) 1)
+  57896044618658097711785492504343953926634992332820282019728792003956564819967)
+(define-inline-constant S256MIN
+  #;(- (expt 2 255))
+  -57896044618658097711785492504343953926634992332820282019728792003956564819968)
 
 ;;; --------------------------------------------------------------------
 
@@ -185,10 +243,14 @@
 (define-inline-constant S128MAX*	170141183460469231731687303715884105728)
 (define-inline-constant S128MIN*	-170141183460469231731687303715884105729)
 
-(define-inline-constant U256MAX*	115792089237316195423570985008687907853269984665640564039457584007913129639936)
-(define-inline-constant U256MIN*	-1)
-(define-inline-constant S256MAX*	57896044618658097711785492504343953926634992332820282019728792003956564819968)
-(define-inline-constant S256MIN*	-57896044618658097711785492504343953926634992332820282019728792003956564819969)
+(define-inline-constant U256MAX*
+  115792089237316195423570985008687907853269984665640564039457584007913129639936)
+(define-inline-constant U256MIN*
+  -1)
+(define-inline-constant S256MAX*
+  57896044618658097711785492504343953926634992332820282019728792003956564819968)
+(define-inline-constant S256MIN*
+  -57896044618658097711785492504343953926634992332820282019728792003956564819969)
 
 ;;; --------------------------------------------------------------------
 
@@ -200,6 +262,41 @@
 (define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
 (define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
 (define-inline-constant SIZEOF_OFF_T		@SIZEOF_OFF_T@)
+(define-inline-constant SIZEOF_PTRDIFF_T	@SIZEOF_PTRDIFF_T@)
+(define-inline-constant SIZEOF_FLOAT		4)
+(define-inline-constant SIZEOF_DOUBLE		8)
+(define-inline-constant SIZEOF_POINTER		@VICARE_SIZE_OF_VOIDP@)
+
+;;; --------------------------------------------------------------------
+
+(define-inline-constant SCHAR_MIN		@VALUEOF_SCHAR_MIN@)
+(define-inline-constant SCHAR_MAX		@VALUEOF_SCHAR_MAX@)
+(define-inline-constant UCHAR_MAX		@VALUEOF_UCHAR_MAX@)
+(define-inline-constant CHAR_MIN		@VALUEOF_CHAR_MIN@)
+(define-inline-constant CHAR_MAX		@VALUEOF_CHAR_MAX@)
+(define-inline-constant SHRT_MIN		@VALUEOF_SHRT_MIN@)
+(define-inline-constant SHRT_MAX		@VALUEOF_SHRT_MAX@)
+(define-inline-constant USHRT_MAX		@VALUEOF_USHRT_MAX@)
+(define-inline-constant INT_MIN			@VALUEOF_INT_MIN@)
+(define-inline-constant INT_MAX			@VALUEOF_INT_MAX@)
+(define-inline-constant UINT_MAX		@VALUEOF_UINT_MAX@)
+(define-inline-constant LONG_MIN		@VALUEOF_LONG_MIN@)
+(define-inline-constant LONG_MAX		@VALUEOF_LONG_MAX@)
+(define-inline-constant ULONG_MAX		@VALUEOF_ULONG_MAX@)
+;; If the "long  long" constants are undefined, assume  that "long long"
+;; is a 64-bit integer.
+(define-inline-constant LONG_LONG_MIN		(or @VALUEOF_LONG_LONG_MIN@
+						    ;; (- (expt 2 63))
+						    -9223372036854775808))
+(define-inline-constant LONG_LONG_MAX		(or @VALUEOF_LONG_LONG_MAX@
+						    ;; (- (expt 2 63) 1)
+						    +9223372036854775807))
+(define-inline-constant ULONG_LONG_MAX		(or @VALUEOF_ULONG_LONG_MAX@
+						    ;; (- (expt 2 64) 1)
+						    18446744073709551615))
+(define-inline-constant WCHAR_MAX		@VALUEOF_WCHAR_MAX@)
+
+;;; --------------------------------------------------------------------
 
 (define-syntax SIZE_T_MAX
   (if (= 4 @SIZEOF_SIZE_T@)
@@ -225,6 +322,16 @@
 
 (define-syntax OFF_T_MIN
   (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
+
+(define-syntax PTRDIFF_T_MAX
+  (if (= 4 @SIZEOF_PTRDIFF_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax PTRDIFF_T_MIN
+  (if (= 4 @SIZEOF_PTRDIFF_T@)
       (identifier-syntax S32MIN)
     (identifier-syntax S64MIN)))
 
@@ -280,6 +387,8 @@
 (define-inline (least-u256)		U256MIN)
 (define-inline (least-s256)		S256MIN)
 
+;;; --------------------------------------------------------------------
+
 (define-inline (greatest-machine-word)
   (case-word-size
    ((32)	(greatest-u32))
@@ -289,6 +398,50 @@
   (case-word-size
    ((32)	(least-u32))
    ((64)	(least-u64))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (greatest-c-unsigned-char)	UCHAR_MAX)
+(define-inline (greatest-c-signed-char)		CHAR_MAX)
+(define-inline (least-c-unsigned-char)		0)
+(define-inline (least-c-signed-char)		CHAR_MIN)
+
+(define-inline (greatest-c-unsigned-short)	USHRT_MAX)
+(define-inline (greatest-c-signed-short)	SHRT_MAX)
+(define-inline (least-c-unsigned-short)		0)
+(define-inline (least-c-signed-short)		SHRT_MIN)
+
+(define-inline (greatest-c-unsigned-int)	UINT_MAX)
+(define-inline (greatest-c-signed-int)		INT_MAX)
+(define-inline (least-c-unsigned-int)		0)
+(define-inline (least-c-signed-int)		INT_MIN)
+
+(define-inline (greatest-c-unsigned-long)	ULONG_MAX)
+(define-inline (greatest-c-signed-long)		LONG_MAX)
+(define-inline (least-c-unsigned-long)		0)
+(define-inline (least-c-signed-long)		LONG_MIN)
+
+(define-inline (greatest-c-unsigned-long-long)	ULONG_LONG_MAX)
+(define-inline (greatest-c-signed-long-long)	LONG_LONG_MAX)
+(define-inline (least-c-unsigned-long-long)	0)
+(define-inline (least-c-signed-long-long)	LONG_LONG_MIN)
+
+(define-inline (greatest-c-pointer)
+  (case-word-size
+   ((32)	U32MAX)
+   ((64)	U64MAX)))
+
+(define-inline (least-c-pointer)
+  0)
+
+(define-inline (greatest-c-size_t)		SIZE_T_MAX)
+(define-inline (greatest-c-ssize_t)		SSIZE_T_MAX)
+(define-inline (least-c-size_t)			0)
+(define-inline (least-c-ssize_t)		SSIZE_T_MIN)
+(define-inline (greatest-c-off_t)		OFF_T_MAX)
+(define-inline (least-c-off_t)			OFF_T_MIN)
+(define-inline (greatest-c-ptrdiff_t)		PTRDIFF_T_MAX)
+(define-inline (least-c-ptrdiff_t)		PTRDIFF_T_MIN)
 
 ;;; --------------------------------------------------------------------
 
@@ -322,6 +475,8 @@
 (define-inline (least-u256*)		U256MIN*)
 (define-inline (least-s256*)		S256MIN*)
 
+;;; --------------------------------------------------------------------
+
 (define-inline (greatest-machine-word*)
   (case-word-size
    ((32)	(greatest-u32*))
@@ -331,6 +486,55 @@
   (case-word-size
    ((32)	(least-u32*))
    ((64)	(least-u64*))))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (greatest-c-unsigned-char*)	(+ (greatest-c-unsigned-char) 1))
+(define-inline (greatest-c-signed-char*)	(+ (greatest-c-signed-char) 1))
+(define-inline (least-c-unsigned-char*)		(- (least-c-unsigned-char) 1))
+(define-inline (least-c-signed-char*)		(- (least-c-signed-char) 1))
+
+(define-inline (greatest-c-unsigned-short*)	(+ (greatest-c-unsigned-short) 1))
+(define-inline (greatest-c-signed-short*)	(+ (greatest-c-signed-short) 1))
+(define-inline (least-c-unsigned-short*)	(- (least-c-unsigned-short) 1))
+(define-inline (least-c-signed-short*)		(- (least-c-signed-short) 1))
+
+(define-inline (greatest-c-unsigned-int*)	(+ (greatest-c-unsigned-int) 1))
+(define-inline (greatest-c-signed-int*)		(+ (greatest-c-signed-int) 1))
+(define-inline (least-c-unsigned-int*)		(- (least-c-unsigned-int) 1))
+(define-inline (least-c-signed-int*)		(- (least-c-signed-int) 1))
+
+(define-inline (greatest-c-unsigned-long*)	(+ (greatest-c-unsigned-long) 1))
+(define-inline (greatest-c-signed-long*)	(+ (greatest-c-signed-long) 1))
+(define-inline (least-c-unsigned-long*)		(- (least-c-unsigned-long) 1))
+(define-inline (least-c-signed-long*)		(- (least-c-signed-long) 1))
+
+(define-inline (greatest-c-unsigned-long-long*)	(+ (greatest-c-unsigned-long-long) 1))
+(define-inline (greatest-c-signed-long-long*)	(+ (greatest-c-signed-long-long) 1))
+(define-inline (least-c-unsigned-long-long*)	(- (least-c-unsigned-long-long) 1))
+(define-inline (least-c-signed-long-long*)	(- (least-c-signed-long-long) 1))
+
+(define-inline (greatest-c-pointer*)
+  (case-word-size
+   ((32)	U32MAX*)
+   ((64)	U64MAX*)))
+
+(define-inline (least-c-pointer*)
+  (case-word-size
+   ((32)	U32MIN*)
+   ((64)	U64MIN*)))
+
+(define-inline (greatest-c-size_t*)		(+ SIZE_T_MAX 1))
+(define-inline (least-c-size_t*)		-1)
+
+(define-inline (greatest-c-ssize_t*)		(+ SSIZE_T_MAX 1))
+(define-inline (least-c-ssize_t*)		(- SSIZE_T_MIN 1))
+
+(define-inline (greatest-c-off_t*)		(+ OFF_T_MAX 1))
+(define-inline (least-c-off_t*)			(- OFF_T_MIN 1))
+
+(define-inline (greatest-c-ptrdiff_t*)		(+ PTRDIFF_T_MAX 1))
+(define-inline (least-c-ptrdiff_t*)		(- PTRDIFF_T_MIN 1))
 
 
 ;;;; bit-sized word predicates
@@ -342,17 +546,6 @@
   (case-word-size
    ((32) (word-u32? N))
    ((64) (word-u64? N))))
-
-(define-inline (ptrdiff? N)
-  (case-word-size
-   ((32) (or (fixnum? N)
-	     (and (bignum? N)
-		  ($bnbn>= N S32MIN)
-		  ($bnbn<= N U32MAX))))
-   ((64) (or (fixnum? N)
-	     (and (bignum? N)
-		  ($bnbn>= N S64MIN)
-		  ($bnbn<= N U64MAX))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -478,9 +671,12 @@
   (define-predicate signed-long?		@SIZEOF_LONG@		signed)
   (define-predicate signed-long-long?		@SIZEOF_LONG_LONG@	signed)
 
+  (define-predicate pointer-integer?		@VICARE_SIZE_OF_VOIDP@	unsigned)
+
   (define-predicate size_t?			@SIZEOF_SIZE_T@		unsigned)
   (define-predicate ssize_t?			@SIZEOF_SSIZE_T@	signed)
   (define-predicate off_t?			@SIZEOF_OFF_T@		signed)
+  (define-predicate ptrdiff_t?			@SIZEOF_PTRDIFF_T@	signed)
   )
 
 

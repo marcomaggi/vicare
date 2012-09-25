@@ -184,7 +184,7 @@ alloc (size_t n, long m)
 ikptr
 ikrt_has_ffi (void)
 {
-  return true_object;
+  return IK_TRUE_OBJECT;
 }
 
 #ifdef DEBUG_FFI
@@ -240,7 +240,7 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
   }
   cif->arg_types[arity] = NULL;
   rv = ffi_prep_cif(&(cif->cif), FFI_DEFAULT_ABI, arity, cif->retval_type, cif->arg_types);
-  return (FFI_OK == rv)? ika_pointer_alloc(pcb, (ik_ulong)cif) : false_object;
+  return (FFI_OK == rv)? ika_pointer_alloc(pcb, (ik_ulong)cif) : IK_FALSE_OBJECT;
 }
 
 
@@ -300,7 +300,7 @@ ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
    selected by TYPE_ID. */
 {
   switch (type_id) {
-  case TYPE_ID_VOID:    return void_object;
+  case TYPE_ID_VOID:    return IK_VOID_OBJECT;
 
   case TYPE_ID_UINT8:   return IK_FIX(*((uint8_t*) buffer));
   case TYPE_ID_SINT8:   return IK_FIX(*(( int8_t*) buffer));
@@ -326,7 +326,7 @@ ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
 
   default:
     ik_abort("%s: invalid arg %d", __func__, (int)type_id);
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 
@@ -363,7 +363,12 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
     uint8_t *   arg_next = &(args_buffer[0]);
     uint8_t *   arg_end  = arg_next + cif->args_bufsize;
     void *      arg_value_ptrs[1+cif->arity];
-    uint8_t     retval_buffer[cif->retval_type->size];
+    /* It seems  that Libffi expects  at least a return-value  buffer of
+       size  "sizeof(uint64_t)"  even for  smaller  types,  at least  on
+       64-bit platforms.  Let's play it safe and try to forget about it.
+       (Marco Maggi; Aug 1, 2012) */
+    uint8_t     retval_buffer[(cif->retval_type->size < sizeof(uint64_t))? \
+			      sizeof(uint64_t) : cif->retval_type->size];
     /* Fill ARG_VALUE_PTRS  with pointers  to memory blocks  holding the
        native argument values. */
     int  i;
@@ -395,7 +400,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
 
  too_many_args_error:
   ik_abort("exceeded maximum memory size (%d) reserved for callout arguments, too many arguments to callout", args_bufsize);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 
@@ -434,11 +439,11 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
 #endif
   callback_user_data = malloc(sizeof(ik_callback_locative));
   if (NULL == callback_user_data)
-    return false_object;
+    return IK_FALSE_OBJECT;
   st = ffi_prep_closure_loc(closure, cif, generic_callback, callback_user_data, callable_pointer);
   if (FFI_OK != st) {
     free(callback_user_data);
-    return false_object;
+    return IK_FALSE_OBJECT;
   }
   /* Prepend this callback to the linked list of callbacks registered in
      this process' PCB.  The garbage collector uses this information not
@@ -451,7 +456,7 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
   /* Return a pointer to callable code. */
   return ika_pointer_alloc(pcb, (ik_ulong)callable_pointer);
 #else /* if FFI_CLOSURES */
-  return false_object;
+  return IK_FALSE_OBJECT;
 #endif /* if FFI_CLOSURES */
 }
 ikptr
@@ -466,7 +471,7 @@ ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
       pcb->callbacks = root->next;
       ffi_closure_free(root->closure);
       free(root);
-      return true_object;
+      return IK_TRUE_OBJECT;
     } else {
       for (; root->next; root = root->next) {
         if (root->next->callable_pointer != callable_pointer)
@@ -476,13 +481,13 @@ ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
           root->next = root->next->next;
           ffi_closure_free(this->closure);
           free(this);
-          return true_object;
+          return IK_TRUE_OBJECT;
         }
       }
-      return false_object;
+      return IK_FALSE_OBJECT;
     }
   } else
-    return true_object;
+    return IK_TRUE_OBJECT;
 }
 static void
 generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * user_data)
@@ -541,11 +546,11 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
 
 #else
 
-ikptr ikrt_ffi_prep_cif ()		{ return false_object; }
-ikptr ikrt_ffi_call()			{ return false_object; }
-ikptr ikrt_ffi_prepare_callback()	{ return false_object; }
-ikptr ikrt_ffi_release_callback ()	{ return false_object; }
-ikptr ikrt_has_ffi()			{ return false_object; }
+ikptr ikrt_ffi_prep_cif ()		{ return IK_FALSE_OBJECT; }
+ikptr ikrt_ffi_call()			{ return IK_FALSE_OBJECT; }
+ikptr ikrt_ffi_prepare_callback()	{ return IK_FALSE_OBJECT; }
+ikptr ikrt_ffi_release_callback ()	{ return IK_FALSE_OBJECT; }
+ikptr ikrt_has_ffi()			{ return IK_FALSE_OBJECT; }
 
 #endif
 
@@ -619,7 +624,7 @@ seal_scheme_stack(ikpcb* pcb)
     pcb->frame_pointer = pcb->frame_base - wordsize;
     IK_REF(pcb->frame_pointer, 0) = underflow_handler;
   }
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 #else
 {
@@ -647,7 +652,7 @@ seal_scheme_stack(ikpcb* pcb)
     fprintf(stderr, "already sealed\n");
   }
   dump_stack(pcb, "AFTER SEALING");
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 #endif
 

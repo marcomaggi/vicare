@@ -1,6 +1,6 @@
 #!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -240,6 +240,7 @@
   ;;Error: Error: Error: Error: Error: Error: Error: Error: Error: ...).
   ;;
   '("ikarus.emergency.sls"
+    "ikarus.options.sls"
     "ikarus.singular-objects.sls"
     "ikarus.handlers.sls"
     "ikarus.multiple-values.sls"
@@ -675,11 +676,13 @@
     (time-nanosecond				i v $language)
     (command-line-arguments			i v $language)
     (set-rtd-printer!				i v $language)
+    (set-rtd-destructor!			i v $language)
     (struct?					i v $language)
     (make-struct-type				i v $language)
     (struct-type-name				i v $language)
     (struct-type-symbol				i v $language)
     (struct-type-field-names			i v $language)
+    (struct-type-destructor			i v $language)
     (struct-constructor				i v $language)
     (struct-predicate				i v $language)
     (struct-field-accessor			i v $language)
@@ -688,8 +691,15 @@
     (struct-ref					i v $language)
     (struct-set!				i v $language)
     (struct-printer				i v $language)
+    (struct-destructor				i v $language)
     (struct-name				i v $language)
     (struct-type-descriptor			i v $language)
+    (struct-rtd					i v $language)
+    (struct=?					i v $language)
+    (struct-reset				i v $language)
+    (struct-guardian-logger			i v $language)
+    (struct-guardian-log			i v $language)
+    ($struct-guardian				$structs)
     (code?					i v $language)
     (immediate?					i v $language)
     (pointer-value				i v $language)
@@ -805,9 +815,9 @@
     ($set-symbol-unique-string!			$symbols)
     ($set-symbol-plist!				$symbols)
     ($unintern-gensym				$symbols)
-    ($symbol-table-size				$symbols)
     ($init-symbol-value!)
     ($unbound-object?				$symbols)
+    ($symbol-table-size				$symbols)
     ($log-symbol-table-status			$symbols)
 ;;;
     (base-rtd					$structs)
@@ -889,6 +899,12 @@
     (collect					i v $language)
     (collect-key				i v $language)
     (post-gc-hooks				i v $language)
+    (register-to-avoid-collecting		i v $language)
+    (forget-to-avoid-collecting			i v $language)
+    (replace-to-avoid-collecting		i v $language)
+    (retrieve-to-avoid-collecting		i v $language)
+    (collection-avoidance-list			i v $language)
+    (purge-collection-avoidance-list		i v $language)
     (do-stack-overflow)
     (make-promise)
     (make-traced-procedure			i v $language)
@@ -906,6 +922,7 @@
     (fasl-read					i v $language)
     (fasl-directory				i v $language)
     (fasl-path					i v $language)
+    (fasl-search-path				i v $language)
     (lambda						i v r ba se ne)
     (and					i v r ba se ne)
     (begin					i v r ba se ne)
@@ -1774,6 +1791,7 @@
     (eval-core					$boot)
     (current-core-eval				i v $language) ;;; temp
     (pretty-print				i v $language $boot)
+    (pretty-print*				i v $language)
     (pretty-format				i v $language)
     (pretty-width				i v $language)
     (module					i v $language cm)
@@ -1898,9 +1916,11 @@
     (null-pointer				$for i v $language)
     (pointer->integer				$for i v $language)
     (integer->pointer				$for i v $language)
+    (pointer-clone				$for i v $language)
     (pointer-null?				$for i v $language)
     (pointer-diff				$for i v $language)
     (pointer-add				$for i v $language)
+    (pointer-and-offset?			$for i v $language)
     (pointer=?					$for i v $language)
     (pointer<>?					$for i v $language)
     (pointer<?					$for i v $language)
@@ -1908,6 +1928,15 @@
     (pointer<=?					$for i v $language)
     (pointer>=?					$for i v $language)
     (set-pointer-null!				$for i v $language)
+;;;
+    (make-memory-block				$for i v $language)
+    (make-memory-block/guarded			$for i v $language)
+    (memory-block?				$for i v $language)
+    (memory-block?/non-null			$for i v $language)
+    (memory-block?/not-null			$for i v $language)
+    (memory-block-pointer			$for i v $language)
+    (memory-block-size				$for i v $language)
+    (memory-block-reset				$for i v $language)
 ;;;
     (&out-of-memory-error			$for i v $language)
     (make-out-of-memory-error			$for i v $language)
@@ -1944,6 +1973,10 @@
     (bytevector->cstring			$for i v $language)
     (bytevector->guarded-cstring		$for i v $language)
     (cstring->bytevector			$for i v $language)
+    (cstring16->bytevector			$for i v $language)
+    (cstring16n->string				$for i v $language)
+    (cstring16le->string			$for i v $language)
+    (cstring16be->string			$for i v $language)
     (string->cstring				$for i v $language)
     (string->guarded-cstring			$for i v $language)
     (bytevector->cstring*			$for i v $language)
@@ -2001,6 +2034,11 @@
     (pointer-ref-c-double			$for i v $language)
     (pointer-ref-c-pointer			$for i v $language)
 ;;;
+    (pointer-ref-c-size_t			$for i v $language)
+    (pointer-ref-c-ssize_t			$for i v $language)
+    (pointer-ref-c-off_t			$for i v $language)
+    (pointer-ref-c-ptrdiff_t			$for i v $language)
+;;;
     (pointer-set-c-uint8!			$for i v $language)
     (pointer-set-c-sint8!			$for i v $language)
     (pointer-set-c-uint16!			$for i v $language)
@@ -2024,6 +2062,69 @@
     (pointer-set-c-float!			$for i v $language)
     (pointer-set-c-double!			$for i v $language)
     (pointer-set-c-pointer!			$for i v $language)
+;;;
+    (pointer-set-c-size_t!			$for i v $language)
+    (pointer-set-c-ssize_t!			$for i v $language)
+    (pointer-set-c-off_t!			$for i v $language)
+    (pointer-set-c-ptrdiff_t!			$for i v $language)
+;;;
+    (array-ref-c-uint8				$for i v $language)
+    (array-ref-c-sint8				$for i v $language)
+    (array-ref-c-uint16				$for i v $language)
+    (array-ref-c-sint16				$for i v $language)
+    (array-ref-c-uint32				$for i v $language)
+    (array-ref-c-sint32				$for i v $language)
+    (array-ref-c-uint64				$for i v $language)
+    (array-ref-c-sint64				$for i v $language)
+;;;
+    (array-ref-c-signed-char			$for i v $language)
+    (array-ref-c-unsigned-char			$for i v $language)
+    (array-ref-c-signed-short			$for i v $language)
+    (array-ref-c-unsigned-short			$for i v $language)
+    (array-ref-c-signed-int			$for i v $language)
+    (array-ref-c-unsigned-int			$for i v $language)
+    (array-ref-c-signed-long			$for i v $language)
+    (array-ref-c-unsigned-long			$for i v $language)
+    (array-ref-c-signed-long-long		$for i v $language)
+    (array-ref-c-unsigned-long-long		$for i v $language)
+;;;
+    (array-ref-c-float				$for i v $language)
+    (array-ref-c-double				$for i v $language)
+    (array-ref-c-pointer			$for i v $language)
+;;;
+    (array-ref-c-size_t				$for i v $language)
+    (array-ref-c-ssize_t			$for i v $language)
+    (array-ref-c-off_t				$for i v $language)
+    (array-ref-c-ptrdiff_t			$for i v $language)
+;;;
+    (array-set-c-uint8!				$for i v $language)
+    (array-set-c-sint8!				$for i v $language)
+    (array-set-c-uint16!			$for i v $language)
+    (array-set-c-sint16!			$for i v $language)
+    (array-set-c-uint32!			$for i v $language)
+    (array-set-c-sint32!			$for i v $language)
+    (array-set-c-uint64!			$for i v $language)
+    (array-set-c-sint64!			$for i v $language)
+;;;
+    (array-set-c-signed-char!			$for i v $language)
+    (array-set-c-unsigned-char!			$for i v $language)
+    (array-set-c-signed-short!			$for i v $language)
+    (array-set-c-unsigned-short!		$for i v $language)
+    (array-set-c-signed-int!			$for i v $language)
+    (array-set-c-unsigned-int!			$for i v $language)
+    (array-set-c-signed-long!			$for i v $language)
+    (array-set-c-unsigned-long!			$for i v $language)
+    (array-set-c-signed-long-long!		$for i v $language)
+    (array-set-c-unsigned-long-long!		$for i v $language)
+;;;
+    (array-set-c-float!				$for i v $language)
+    (array-set-c-double!			$for i v $language)
+    (array-set-c-pointer!			$for i v $language)
+;;;
+    (array-set-c-size_t!			$for i v $language)
+    (array-set-c-ssize_t!			$for i v $language)
+    (array-set-c-off_t!				$for i v $language)
+    (array-set-c-ptrdiff_t!			$for i v $language)
 ;;;
     (dlopen					$for)
     (dlerror					$for)
@@ -2298,9 +2399,9 @@
   ;;For each library: accumulate all the code in the CODE* variable, all
   ;;the substitutions in SUBST, the whole environment in ENV.
   (let-values (((name* code* subst env) (make-init-code)))
-    (debug-printf "Expanding ")
+    (debug-printf "Expanding:\n")
     (for-each (lambda (file)
-		(debug-printf " ~s" file)
+		(debug-printf " ~s\n" file)
 		;;For each  library in the  file apply the  function for
 		;;its side effects.
 		(load (string-append src-dir "/" file)
@@ -2312,7 +2413,7 @@
 			  (set! subst (append export-subst subst))
 			  (set! env   (append export-env   env))))))
       files)
-    (debug-printf "\n")
+    ;;;(debug-printf "\n")
     (let-values (((export-subst export-env export-locs)
                   (make-system-data (prune-subst subst env) env)))
       (let-values (((name code) (build-system-library export-subst export-env export-locs)))

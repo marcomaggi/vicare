@@ -4,11 +4,6 @@
 
 set -xe
 
-autoreconf --install --verbose
-
-# aclocal
-# autoheader
-# automake --foreign --add-missing
-# autoconf
+autoreconf --warnings=all --install --verbose
 
 ### end of file

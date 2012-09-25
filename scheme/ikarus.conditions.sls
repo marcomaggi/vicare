@@ -528,8 +528,9 @@
        (newline port))
       ((1)	;... or only one field.
        (display ": " port)
-       (write ((record-accessor (caar rf) 0) x) port)
-       (newline port))
+       (pretty-print ((record-accessor (caar rf) 0) x) port)
+       #;(write ((record-accessor (caar rf) 0) x) port)
+       #;(newline port))
       (else
        (display ":\n" port)
        (for-each

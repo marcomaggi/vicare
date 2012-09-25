@@ -388,6 +388,81 @@
 ;;;; signalfd
     SFD_CLOEXEC		SFD_NONBLOCK
 
+;;;; timerfd
+    CLOCK_REALTIME	CLOCK_MONOTONIC
+    TFD_CLOEXEC		TFD_NONBLOCK
+    TFD_TIMER_ABSTIME
+
+;;;; inotify
+    IN_NONBLOCK		IN_CLOEXEC
+
+    IN_ACCESS		IN_ATTRIB	IN_CLOSE_WRITE
+    IN_CLOSE_NOWRITE	IN_CREATE	IN_DELETE
+    IN_DELETE_SELF	IN_MODIFY	IN_MOVE_SELF
+    IN_MOVED_FROM	IN_MOVED_TO	IN_OPEN
+    IN_ALL_EVENTS	IN_MOVE		IN_CLOSE
+
+    IN_DONT_FOLLOW	IN_EXCL_UNLINK	IN_MASK_ADD
+    IN_ONESHOT		IN_ONLYDIR	IN_IGNORED
+    IN_ISDIR		IN_Q_OVERFLOW	IN_UNMOUNT
+
+;;;; clock
+    CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID
+    CLOCK_THREAD_CPUTIME_ID
+    TIMER_ABSTIME
+
+;;;; struct "siginfo_t", values for field `si_code'
+    SI_ASYNCNL		SI_TKILL		SI_SIGIO
+    SI_ASYNCIO		SI_MESGQ		SI_TIMER
+    SI_QUEUE		SI_USER			SI_KERNEL
+
+;;;; struct "siginfo_t", `si_code' values for SIGILL signal
+    ILL_ILLOPC		ILL_ILLOPN		ILL_ILLADR
+    ILL_ILLTRP		ILL_PRVOPC		ILL_PRVREG
+    ILL_COPROC		ILL_BADSTK
+
+;;;; struct "siginfo_t", `si_code' values for SIGFPE signal
+    FPE_INTDIV		FPE_INTOVF		FPE_FLTDIV
+    FPE_FLTOVF		FPE_FLTUND		FPE_FLTRES
+    FPE_FLTINV		FPE_FLTSUB
+
+;;;; struct "siginfo_t", `si_code' values for SIGSEGV signal
+    SEGV_MAPERR		SEGV_ACCERR
+
+;;;; struct "siginfo_t", `si_code' values for SIGBUS signal
+    BUS_ADRALN		BUS_ADRERR		BUS_OBJERR
+
+;;;; struct "siginfo_t", `si_code' values for SIGTRAP signal
+    TRAP_BRKPT		TRAP_TRACE
+
+;;;; struct "siginfo_t", `si_code' values for SIGCHLD signal.
+;;;
+;;;Already exported above.
+;;;
+;;; CLD_EXITED		CLD_KILLED		CLD_DUMPED
+;;; CLD_TRAPPED		CLD_STOPPED		CLD_CONTINUED
+
+;;;; struct "siginfo_t", `si_code' values for SIGPOLL signal
+    POLL_IN		POLL_OUT		POLL_MSG
+    POLL_ERR		POLL_PRI		POLL_HUP
+
+;;;; struct "sigevent_t", `sigev_notify' values.
+    SIGEV_SIGNAL	SIGEV_NONE		SIGEV_THREAD
+    SIGEV_THREAD_ID
+
+;;; For "setrlimit()" and similar.
+    RLIMIT_AS		RLIMIT_CORE
+    RLIMIT_CPU		RLIMIT_DATA		RLIMIT_FSIZE
+    RLIMIT_LOCKS	RLIMIT_MEMLOCK		RLIMIT_MSGQUEUE
+    RLIMIT_NICE		RLIMIT_NOFILE		RLIMIT_NPROC
+    RLIMIT_RSS		RLIMIT_RTPRIO		RLIMIT_RTTIME
+    RLIMIT_SIGPENDING	RLIMIT_STACK
+
+;;;; For "getrusage()".
+    RUSAGE_SELF		RUSAGE_CHILDREN		RUSAGE_THREAD
+
+;;; --------------------------------------------------------------------
+
 ;;; errno codes, reexported from (vicare errno)
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -1276,6 +1351,145 @@
 
 (define-inline-constant SFD_CLOEXEC		@VALUEOF_SFD_CLOEXEC@)
 (define-inline-constant SFD_NONBLOCK		@VALUEOF_SFD_NONBLOCK@)
+
+;;; timerfd
+
+(define-inline-constant CLOCK_REALTIME		@VALUEOF_CLOCK_REALTIME@)
+(define-inline-constant CLOCK_MONOTONIC		@VALUEOF_CLOCK_MONOTONIC@)
+(define-inline-constant TFD_CLOEXEC		@VALUEOF_TFD_CLOEXEC@)
+(define-inline-constant TFD_NONBLOCK		@VALUEOF_TFD_NONBLOCK@)
+(define-inline-constant TFD_TIMER_ABSTIME	@VALUEOF_TFD_TIMER_ABSTIME@)
+
+;;; inotify
+(define-inline-constant IN_NONBLOCK		@VALUEOF_IN_NONBLOCK@)
+(define-inline-constant IN_CLOEXEC		@VALUEOF_IN_CLOEXEC@)
+
+(define-inline-constant IN_ACCESS		@VALUEOF_IN_ACCESS@)
+(define-inline-constant IN_ATTRIB		@VALUEOF_IN_ATTRIB@)
+(define-inline-constant IN_CLOSE_WRITE		@VALUEOF_IN_CLOSE_WRITE@)
+(define-inline-constant IN_CLOSE_NOWRITE	@VALUEOF_IN_CLOSE_NOWRITE@)
+(define-inline-constant IN_CREATE		@VALUEOF_IN_CREATE@)
+(define-inline-constant IN_DELETE		@VALUEOF_IN_DELETE@)
+(define-inline-constant IN_DELETE_SELF		@VALUEOF_IN_DELETE_SELF@)
+(define-inline-constant IN_MODIFY		@VALUEOF_IN_MODIFY@)
+(define-inline-constant IN_MOVE_SELF		@VALUEOF_IN_MOVE_SELF@)
+(define-inline-constant IN_MOVED_FROM		@VALUEOF_IN_MOVED_FROM@)
+(define-inline-constant IN_MOVED_TO		@VALUEOF_IN_MOVED_TO@)
+(define-inline-constant IN_OPEN			@VALUEOF_IN_OPEN@)
+(define-inline-constant IN_ALL_EVENTS		@VALUEOF_IN_ALL_EVENTS@)
+(define-inline-constant IN_MOVE			@VALUEOF_IN_MOVE@)
+(define-inline-constant IN_CLOSE		@VALUEOF_IN_CLOSE@)
+
+(define-inline-constant IN_DONT_FOLLOW		@VALUEOF_IN_DONT_FOLLOW@)
+(define-inline-constant IN_EXCL_UNLINK		@VALUEOF_IN_EXCL_UNLINK@)
+(define-inline-constant IN_MASK_ADD		@VALUEOF_IN_MASK_ADD@)
+(define-inline-constant IN_ONESHOT		@VALUEOF_IN_ONESHOT@)
+(define-inline-constant IN_ONLYDIR		@VALUEOF_IN_ONLYDIR@)
+(define-inline-constant IN_IGNORED		@VALUEOF_IN_IGNORED@)
+(define-inline-constant IN_ISDIR		@VALUEOF_IN_ISDIR@)
+(define-inline-constant IN_Q_OVERFLOW		@VALUEOF_IN_Q_OVERFLOW@)
+(define-inline-constant IN_UNMOUNT		@VALUEOF_IN_UNMOUNT@)
+
+;;; clock
+(define-inline-constant CLOCK_MONOTONIC_RAW	@VALUEOF_CLOCK_MONOTONIC_RAW@)
+(define-inline-constant CLOCK_PROCESS_CPUTIME_ID @VALUEOF_CLOCK_PROCESS_CPUTIME_ID@)
+(define-inline-constant CLOCK_THREAD_CPUTIME_ID	@VALUEOF_CLOCK_THREAD_CPUTIME_ID@)
+
+(define-inline-constant TIMER_ABSTIME		@VALUEOF_TIMER_ABSTIME@)
+
+;;; --------------------------------------------------------------------
+
+;;; struct "siginfo_t", values for field `si_code'
+(define-inline-constant SI_ASYNCNL		@VALUEOF_SI_ASYNCNL@)
+(define-inline-constant SI_TKILL		@VALUEOF_SI_TKILL@)
+(define-inline-constant SI_SIGIO		@VALUEOF_SI_SIGIO@)
+(define-inline-constant SI_ASYNCIO		@VALUEOF_SI_ASYNCIO@)
+(define-inline-constant SI_MESGQ		@VALUEOF_SI_MESGQ@)
+(define-inline-constant SI_TIMER		@VALUEOF_SI_TIMER@)
+(define-inline-constant SI_QUEUE		@VALUEOF_SI_QUEUE@)
+(define-inline-constant SI_USER			@VALUEOF_SI_USER@)
+(define-inline-constant SI_KERNEL		@VALUEOF_SI_KERNEL@)
+
+;;; struct "siginfo_t", `si_code' values for SIGILL signal
+(define-inline-constant ILL_ILLOPC		@VALUEOF_ILL_ILLOPC@)
+(define-inline-constant ILL_ILLOPN		@VALUEOF_ILL_ILLOPN@)
+(define-inline-constant ILL_ILLADR		@VALUEOF_ILL_ILLADR@)
+(define-inline-constant ILL_ILLTRP		@VALUEOF_ILL_ILLTRP@)
+(define-inline-constant ILL_PRVOPC		@VALUEOF_ILL_PRVOPC@)
+(define-inline-constant ILL_PRVREG		@VALUEOF_ILL_PRVREG@)
+(define-inline-constant ILL_COPROC		@VALUEOF_ILL_COPROC@)
+(define-inline-constant ILL_BADSTK		@VALUEOF_ILL_BADSTK@)
+
+;;; struct "siginfo_t", `si_code' values for SIGFPE signal
+(define-inline-constant FPE_INTDIV		@VALUEOF_FPE_INTDIV@)
+(define-inline-constant FPE_INTOVF		@VALUEOF_FPE_INTOVF@)
+(define-inline-constant FPE_FLTDIV		@VALUEOF_FPE_FLTDIV@)
+(define-inline-constant FPE_FLTOVF		@VALUEOF_FPE_FLTOVF@)
+(define-inline-constant FPE_FLTUND		@VALUEOF_FPE_FLTUND@)
+(define-inline-constant FPE_FLTRES		@VALUEOF_FPE_FLTRES@)
+(define-inline-constant FPE_FLTINV		@VALUEOF_FPE_FLTINV@)
+(define-inline-constant FPE_FLTSUB		@VALUEOF_FPE_FLTSUB@)
+
+;;; struct "siginfo_t", `si_code' values for SIGSEGV signal
+(define-inline-constant SEGV_MAPERR		@VALUEOF_SEGV_MAPERR@)
+(define-inline-constant SEGV_ACCERR		@VALUEOF_SEGV_ACCERR@)
+
+;;; struct "siginfo_t", `si_code' values for SIGBUS signal
+(define-inline-constant BUS_ADRALN		@VALUEOF_BUS_ADRALN@)
+(define-inline-constant BUS_ADRERR		@VALUEOF_BUS_ADRERR@)
+(define-inline-constant BUS_OBJERR		@VALUEOF_BUS_OBJERR@)
+
+;;; struct "siginfo_t", `si_code' values for SIGTRAP signal
+(define-inline-constant TRAP_BRKPT		@VALUEOF_TRAP_BRKPT@)
+(define-inline-constant TRAP_TRACE		@VALUEOF_TRAP_TRACE@)
+
+;;; struct "siginfo_t", `si_code' values for SIGCHLD signal.
+;;
+;;Already defined above.
+;;
+;; (define-inline-constant CLD_EXITED		@VALUEOF_CLD_EXITED@)
+;; (define-inline-constant CLD_KILLED		@VALUEOF_CLD_KILLED@)
+;; (define-inline-constant CLD_DUMPED		@VALUEOF_CLD_DUMPED@)
+;; (define-inline-constant CLD_TRAPPED		@VALUEOF_CLD_TRAPPED@)
+;; (define-inline-constant CLD_STOPPED		@VALUEOF_CLD_STOPPED@)
+;; (define-inline-constant CLD_CONTINUED	@VALUEOF_CLD_CONTINUED@)
+
+;;; struct "siginfo_t", `si_code' values for SIGPOLL signal
+(define-inline-constant POLL_IN			@VALUEOF_POLL_IN@)
+(define-inline-constant POLL_OUT		@VALUEOF_POLL_OUT@)
+(define-inline-constant POLL_MSG		@VALUEOF_POLL_MSG@)
+(define-inline-constant POLL_ERR		@VALUEOF_POLL_ERR@)
+(define-inline-constant POLL_PRI		@VALUEOF_POLL_PRI@)
+(define-inline-constant POLL_HUP		@VALUEOF_POLL_HUP@)
+
+;;; struct "sigevent_t", `sigev_notify' values.
+(define-inline-constant SIGEV_SIGNAL		@VALUEOF_SIGEV_SIGNAL@)
+(define-inline-constant SIGEV_NONE		@VALUEOF_SIGEV_NONE@)
+(define-inline-constant SIGEV_THREAD		@VALUEOF_SIGEV_THREAD@)
+(define-inline-constant SIGEV_THREAD_ID		@VALUEOF_SIGEV_THREAD_ID@)
+
+;;; For "setrlimit()" and similar.
+(define-inline-constant RLIMIT_AS		@VALUEOF_RLIMIT_AS@)
+(define-inline-constant RLIMIT_CORE		@VALUEOF_RLIMIT_CORE@)
+(define-inline-constant RLIMIT_CPU		@VALUEOF_RLIMIT_CPU@)
+(define-inline-constant RLIMIT_DATA		@VALUEOF_RLIMIT_DATA@)
+(define-inline-constant RLIMIT_FSIZE		@VALUEOF_RLIMIT_FSIZE@)
+(define-inline-constant RLIMIT_LOCKS		@VALUEOF_RLIMIT_LOCKS@)
+(define-inline-constant RLIMIT_MEMLOCK		@VALUEOF_RLIMIT_MEMLOCK@)
+(define-inline-constant RLIMIT_MSGQUEUE		@VALUEOF_RLIMIT_MSGQUEUE@)
+(define-inline-constant RLIMIT_NICE		@VALUEOF_RLIMIT_NICE@)
+(define-inline-constant RLIMIT_NOFILE		@VALUEOF_RLIMIT_NOFILE@)
+(define-inline-constant RLIMIT_NPROC		@VALUEOF_RLIMIT_NPROC@)
+(define-inline-constant RLIMIT_RSS		@VALUEOF_RLIMIT_RSS@)
+(define-inline-constant RLIMIT_RTPRIO		@VALUEOF_RLIMIT_RTPRIO@)
+(define-inline-constant RLIMIT_RTTIME		@VALUEOF_RLIMIT_RTTIME@)
+(define-inline-constant RLIMIT_SIGPENDING	@VALUEOF_RLIMIT_SIGPENDING@)
+(define-inline-constant RLIMIT_STACK		@VALUEOF_RLIMIT_STACK@)
+
+;;; For "getrusage()".
+(define-inline-constant RUSAGE_SELF		@VALUEOF_RUSAGE_SELF@)
+(define-inline-constant RUSAGE_CHILDREN		@VALUEOF_RUSAGE_CHILDREN@)
+(define-inline-constant RUSAGE_THREAD		@VALUEOF_RUSAGE_THREAD@)
 
 
 ;;;; h_errno friendly interface

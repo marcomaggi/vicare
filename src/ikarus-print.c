@@ -63,13 +63,13 @@ print (FILE* fh, ikptr x)
   if (IK_IS_FIXNUM(x)) {
     fprintf(fh, "%ld", IK_UNFIX(x));
   }
-  else if (x == false_object) {
+  else if (x == IK_FALSE_OBJECT) {
     fprintf(fh, "#f");
   }
-  else if (x == true_object) {
+  else if (x == IK_TRUE_OBJECT) {
     fprintf(fh, "#t");
   }
-  else if (x == null_object) {
+  else if (x == IK_NULL_OBJECT) {
     fprintf(fh, "()");
   }
   else if (IK_IS_CHAR(x)) {
@@ -140,7 +140,7 @@ print (FILE* fh, ikptr x)
         print(fh, IK_CAR(d));
         d = IK_CDR(d);
       }
-      else if (d == null_object) {
+      else if (d == IK_NULL_OBJECT) {
         fprintf(fh, ")");
         return;
       }

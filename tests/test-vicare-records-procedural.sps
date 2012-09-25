@@ -30,7 +30,7 @@
 		(make-record-type-descriptor make-record-type-descriptor*)
 		(make-record-constructor-descriptor make-record-constructor-descriptor*))
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare R6RS records, procedural layer\n")

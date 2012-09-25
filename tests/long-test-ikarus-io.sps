@@ -29,7 +29,8 @@
 
 #!r6rs
 (import (ikarus)
-  (checks))
+  (prefix (vicare posix) px.) ;for FILE-SIZE
+  (vicare checks))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -130,7 +131,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (file-size-char-by-char filename)
+(define (px.file-size-char-by-char filename)
   ;;Open textual file FILENAME and  compute its size in character units,
   ;;reading characters one by one.
   ;;
@@ -1542,8 +1543,8 @@
 (parametrise ((check-test-name	'ikarus/file))
 
   ;;Preliminary assertions on input data.
-  (assert (= (file-size-char-by-char (src-file "TEST-SOURCE-FILE.txt")) 56573))
-  (assert (= (file-size (src-file "TEST-SOURCE-FILE.txt")) 56573))
+  (assert (= (px.file-size-char-by-char (src-file "TEST-SOURCE-FILE.txt")) 56573))
+  (assert (= (px.file-size (src-file "TEST-SOURCE-FILE.txt")) 56573))
   (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
     (let-values (((port extract) (open-bytevector-output-port #f)))
       (bytevector->binary-port bv port)

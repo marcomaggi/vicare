@@ -18,7 +18,7 @@
 ;;;	even  though it  wasn't necessary  in this  case.  This  can get
 ;;;	pretty confusing in larger examples.
 ;;;
-;;;Copyright (c) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,7 +36,7 @@
 
 
 (import (ikarus)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing issue 20, shared structures displayed peculiarly\n")

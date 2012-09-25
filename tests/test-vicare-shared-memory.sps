@@ -30,7 +30,7 @@
   (prefix (vicare posix) px.)
   (vicare platform-constants)
   (vicare syntactic-extensions)
-  (checks))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare mmapped shared memory\n")

@@ -30,7 +30,6 @@
 
 #include "internals.h"
 #include <gmp.h>
-#include <unistd.h> /* for off_t */
 
 
 /** --------------------------------------------------------------------
@@ -41,16 +40,16 @@ ikptr
 ika_pair_alloc (ikpcb * pcb)
 {
   ikptr	s_pair = IKA_PAIR_ALLOC(pcb);
-  IK_CAR(s_pair) = void_object;
-  IK_CDR(s_pair) = void_object;
+  IK_CAR(s_pair) = IK_VOID_OBJECT;
+  IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
 ikptr
 iku_pair_alloc (ikpcb * pcb)
 {
   ikptr	s_pair = IKU_PAIR_ALLOC(pcb);
-  IK_CAR(s_pair) = void_object;
-  IK_CDR(s_pair) = void_object;
+  IK_CAR(s_pair) = IK_VOID_OBJECT;
+  IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
 long
@@ -113,7 +112,7 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
    strings.  Make use of "pcb->root8,9".  */
 {
   if (! argv[0])
-    return null_object;
+    return IK_NULL_OBJECT;
   else {
     ikptr	s_list, s_pair;
     s_list = s_pair = ika_pair_alloc(pcb);
@@ -127,7 +126,7 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
 	  s_pair = IK_CDR(s_pair);
 	} else {
-	  IK_CDR(s_pair) = null_object;
+	  IK_CDR(s_pair) = IK_NULL_OBJECT;
 	  break;
 	}
       }
@@ -144,7 +143,7 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
    the ASCIIZ strings.	Make use of "pcb->root8,9".  */
 {
   if (! argc)
-    return null_object;
+    return IK_NULL_OBJECT;
   else {
     ikptr	s_list, s_pair;
     s_list = s_pair = ika_pair_alloc(pcb);
@@ -158,7 +157,7 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
 	  s_pair = IK_CDR(s_pair);
 	} else {
-	  IK_CDR(s_pair) = null_object;
+	  IK_CDR(s_pair) = IK_NULL_OBJECT;
 	  break;
 	}
       }
@@ -208,7 +207,7 @@ ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
   return s_bv;
 }
 ikptr
-ika_bytevector_from_memory_block (ikpcb * pcb, void * memory, size_t len)
+ika_bytevector_from_memory_block (ikpcb * pcb, const void * memory, size_t len)
 {
   if (len > most_positive_fixnum)
     len = most_positive_fixnum;
@@ -228,7 +227,24 @@ ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + src_start;
   memcpy(dst, src, count);
-  return void_object;
+  return IK_VOID_OBJECT;
+}
+ikptr
+ik_bytevector_from_utf16z (ikpcb * pcb, const void * _data)
+/* Build and return  a new bytevector from a memory  block referencing a
+   UTF-16 string terminated with two  consecutive zeros starting at even
+   offset.  If the  the end of the  string is not found  before the byte
+   index reaches the maximum fixnum: return the false object. */
+{
+  const uint8_t *	data = _data;
+  int			i;
+  /* Search the end of  the UTF-16 string: it is a sequence  of two 0 at
+     even offset. */
+  for (i=0; data[i] || data[1+i]; i+=2)
+    if (most_positive_fixnum <= i)
+      return IK_FALSE_OBJECT;
+  return (most_positive_fixnum <= i)? IK_FALSE_OBJECT : \
+    ika_bytevector_from_memory_block(pcb, data, i);
 }
 
 
@@ -279,7 +295,7 @@ ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
   uint8_t *	dst = IK_BYTEVECTOR_DATA_UINT8P(s_dst) + (long)s_dst_start;
   uint8_t *	src = IK_BYTEVECTOR_DATA_UINT8P(s_src) + (long)s_src_start;
   memcpy(dst, src, (size_t)s_count);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
 
 
@@ -476,7 +492,7 @@ ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
       return ika_integer_from_llong (pcb, (ik_llong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -498,7 +514,7 @@ ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
       return ika_integer_from_llong (pcb, (ik_llong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -520,7 +536,7 @@ ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
       return ika_integer_from_ullong (pcb, (ik_ullong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -542,7 +558,7 @@ ika_integer_from_uint64	(ikpcb* pcb, uint64_t N)
       return ika_integer_from_ullong (pcb, (ik_ullong)N);
     default:
       ik_abort("unexpected integers size");
-      return void_object;
+      return IK_VOID_OBJECT;
     }
   }
 }
@@ -559,7 +575,7 @@ ika_integer_from_off_t (ikpcb * pcb, off_t N)
     return ika_integer_from_sint32(pcb, (int32_t)N);
   default:
     ik_abort("unexpected off_t size %d", sizeof(off_t));
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 ikptr
@@ -572,7 +588,7 @@ ika_integer_from_ssize_t (ikpcb * pcb, ssize_t N)
     return ika_integer_from_sint32(pcb, (int32_t)N);
   default:
     ik_abort("unexpected ssize_t size %d", sizeof(ssize_t));
-    return void_object;
+    return IK_VOID_OBJECT;
   }
 }
 ikptr
@@ -585,7 +601,20 @@ ika_integer_from_size_t (ikpcb * pcb, size_t N)
     return ika_integer_from_uint32(pcb, (uint32_t)N);
   default:
     ik_abort("unexpected size_t size %d", sizeof(size_t));
-    return void_object;
+    return IK_VOID_OBJECT;
+  }
+}
+ikptr
+ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N)
+{
+  switch (sizeof(ptrdiff_t)) {
+  case sizeof(uint64_t):
+    return ika_integer_from_sint64(pcb, (uint64_t)N);
+  case sizeof(int32_t):
+    return ika_integer_from_sint32(pcb, (uint32_t)N);
+  default:
+    ik_abort("unexpected ptrdiff_t size %d", sizeof(ptrdiff_t));
+    return IK_VOID_OBJECT;
   }
 }
 
@@ -618,7 +647,7 @@ ik_integer_to_int (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return (int)IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
@@ -632,7 +661,7 @@ ik_integer_to_long (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     if (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))
@@ -646,7 +675,7 @@ ik_integer_to_uint (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
@@ -658,7 +687,7 @@ ik_integer_to_ulong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     assert(! IK_BNFST_NEGATIVE(ref(x, -vector_tag)));
@@ -670,7 +699,7 @@ ik_integer_to_llong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     ikptr fst		   = ref(x, -vector_tag);
@@ -692,7 +721,7 @@ ik_integer_to_ullong (ikptr x)
 {
   if (IK_IS_FIXNUM(x))
     return (ik_ullong)IK_UNFIX(x);
-  else if (x == void_object)
+  else if (x == IK_VOID_OBJECT)
     return 0;
   else {
     ik_ullong *	 memory = (ik_ullong *)(x + off_bignum_data);
@@ -708,7 +737,7 @@ ik_integer_to_uint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : false_object;
+    return ((0 <= X) && (X <= UINT32_MAX))? ((uint32_t)X) : IK_FALSE_OBJECT;
   } else {
     uint32_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -719,7 +748,7 @@ ik_integer_to_sint32 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : false_object;
+    return ((INT32_MIN <= X) && (X <= INT32_MAX))? ((int32_t)X) : IK_FALSE_OBJECT;
   } else {
     int32_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -730,7 +759,7 @@ ik_integer_to_uint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : false_object;
+    return ((0 <= X) && (X <= UINT64_MAX))? ((uint64_t)X) : IK_FALSE_OBJECT;
   } else {
     uint64_t *	memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -741,7 +770,7 @@ ik_integer_to_sint64 (ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
     long	X = IK_UNFIX(x);
-    return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : false_object;
+    return ((INT64_MIN <= X) && (X <= INT64_MAX))? ((int64_t)X) : IK_FALSE_OBJECT;
   } else {
     int64_t *  memory = (void *)(((uint8_t *)x) + off_bignum_data);
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
@@ -753,10 +782,15 @@ ik_integer_to_sint64 (ikptr x)
 off_t
 ik_integer_to_off_t (ikptr x)
 {
-  if (sizeof(off_t) == sizeof(int64_t))
+  switch (sizeof(off_t)) {
+  case sizeof(int64_t):
     return (off_t)ik_integer_to_sint64(x);
-  else
+  case sizeof(int32_t):
     return (off_t)ik_integer_to_sint32(x);
+  default:
+    ik_abort("unexpected off_t size %d", sizeof(off_t));
+    return IK_VOID_OBJECT;
+  }
 }
 size_t
 ik_integer_to_size_t (ikptr x)
@@ -773,6 +807,19 @@ ik_integer_to_ssize_t (ikptr x)
     return (ssize_t)ik_integer_to_sint32(x);
   else
     return (ssize_t)ik_integer_to_sint64(x);
+}
+ptrdiff_t
+ik_integer_to_ptrdiff_t (ikptr x)
+{
+  switch (sizeof(ptrdiff_t)) {
+  case sizeof(int32_t):
+    return (ptrdiff_t)ik_integer_to_sint32(x);
+  case sizeof(int64_t):
+    return (ptrdiff_t)ik_integer_to_sint64(x);
+  default:
+    ik_abort("unexpected ptrdiff_t size %d", sizeof(ptrdiff_t));
+    return IK_VOID_OBJECT;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -875,7 +922,262 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
     ik_abort("%s: invalid dst value, %lu", __func__, (ik_ulong)s_dst);
 
   memcpy(dst, src, count);
-  return void_object;
+  return IK_VOID_OBJECT;
 }
+
+
+/** --------------------------------------------------------------------
+ ** Garbage collection avoidance.
+ ** ----------------------------------------------------------------- */
+
+static ik_gc_avoidance_collection_t *
+ik_allocate_avoidance_collection (void)
+{
+  ik_gc_avoidance_collection_t *	collection;
+  int	i;
+  collection = calloc(1, sizeof(ik_gc_avoidance_collection_t));
+  if (NULL == collection) {
+    ik_abort("not enough memory to allocate a garbage collection avoidance list");
+  }
+  for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i)
+    collection->slots[i] = IK_VOID;
+  return collection;
+}
+ikptr
+ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
+{
+  if (IK_VOID == s_obj) {
+    return ika_pointer_alloc(pcb, (ik_ulong)NULL);
+  } else {
+    ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
+    ikptr *				slot = NULL;
+    { /* If no collections are present: allocate a new one and store it in
+	 the PCB. */
+      if (NULL == collection)
+	pcb->not_to_be_collected = collection = ik_allocate_avoidance_collection();
+    }
+    { /* At  least  one  collection  is   present.   Search  the  list  of
+	 collections for the first with a free slot in its array. */
+      while (collection) {
+	int	i;
+	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	  if (IK_VOID == collection->slots[i]) {
+	    slot = &collection->slots[i];
+	    goto out;
+	  }
+	}
+	collection = collection->next;
+      }
+    }
+  out:
+    /* If no collection has a free slot: allocate a new one and push it on
+       the PCB. */
+    {
+      if (NULL == slot) {
+	collection		= ik_allocate_avoidance_collection();
+	collection->next	= pcb->not_to_be_collected;
+	pcb->not_to_be_collected= collection;
+	slot = &(collection->slots[0]);
+      }
+    }
+    /* Now SLOT references a free slot. */
+    *slot = s_obj;
+    return ika_pointer_alloc(pcb, (ik_ulong)slot);
+  }
+}
+ikptr
+ik_forget_to_avoid_collecting (ikptr s_ptr, ikpcb * pcb)
+{
+  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  if (P) {
+    ikptr	s_obj = *P;
+    *P = IK_VOID;
+    return s_obj;
+  } else
+    return IK_VOID;
+}
+ikptr
+ik_retrieve_to_avoid_collecting (ikptr s_ptr, ikpcb * pcb)
+{
+  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  return (P)? *P : IK_VOID;
+}
+ikptr
+ik_replace_to_avoid_collecting (ikptr s_ptr, ikptr s_new_obj, ikpcb * pcb)
+{
+  ikptr *	P = IK_POINTER_DATA_VOIDP(s_ptr);
+  if (P) {
+    ikptr	s_old_obj = *P;
+    *P = s_new_obj;
+    return s_old_obj;
+  } else
+    return IK_VOID;
+}
+ikptr
+ik_collection_avoidance_list (ikpcb * pcb)
+{
+  ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
+  ikptr		s_list		= IK_NULL;
+  ikptr		s_spine		= IK_NULL;
+  if (NULL == collection)
+    return IK_NULL;
+  else {
+    pcb->root0 = &s_list;
+    pcb->root1 = &s_spine;
+    {
+      while (collection) {
+	int	i;
+	for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i) {
+	  /* fprintf(stderr, "%d=%ld ", i, collection->slots[i]); */
+	  if (IK_VOID != collection->slots[i]) {
+	    if (IK_NULL == s_spine) {
+	      s_spine = ika_pair_alloc(pcb);
+	    } else {
+	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
+	      s_spine = IK_CDR(s_spine);
+	    }
+	    IK_CAR(s_spine) = collection->slots[i];
+	    if (IK_NULL == s_list)
+	      s_list = s_spine;
+	  }
+	}
+	collection = collection->next;
+      }
+      if (IK_NULL != s_spine)
+	IK_CDR(s_spine) = IK_NULL;
+    }
+    pcb->root1 = NULL;
+    pcb->root0 = NULL;
+    return s_list;
+  }
+}
+ikptr
+ik_purge_collection_avoidance_list (ikpcb * pcb)
+{
+  ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
+  while (collection) {
+    int		i;
+    for (i=0; i<IK_GC_AVOIDANCE_ARRAY_LEN; ++i)
+      collection->slots[i] = IK_VOID;
+    collection = collection->next;
+  }
+  return IK_VOID;
+}
+
+#if 0
+/* The following  are the old versions,  when the "not to  be collected"
+   list was an actual Scheme list. */
+ikptr
+ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
+{
+  switch (s_obj) {
+  case IK_FALSE:     /* Avoid registering constants. */
+  case IK_TRUE:
+  case IK_NULL:
+  case IK_EOF:
+  case IK_VOID:
+  case IK_BWP:
+  case IK_UNBOUND:
+    return s_obj;
+  default:
+    if (IK_IS_FIXNUM(s_obj)) {    /* Avoid registering fixnums. */
+      return s_obj;
+    } else {
+      pcb->root0 = &s_obj;
+      {
+	ikptr	s_pair = ika_pair_alloc(pcb);
+	IK_CAR(s_pair) = s_obj;
+	IK_CDR(s_pair) = pcb->not_to_be_collected;
+	pcb->not_to_be_collected = s_pair;
+      }
+      pcb->root0 = NULL;
+      return s_obj;
+    }
+  }
+}
+ikptr
+ik_forget_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
+{
+  switch (s_obj) {
+  case IK_FALSE:     /* Avoid searching for constants. */
+  case IK_TRUE:
+  case IK_NULL:
+  case IK_EOF:
+  case IK_VOID:
+  case IK_BWP:
+  case IK_UNBOUND:
+    return IK_FALSE;
+  default:
+    if (IK_IS_FIXNUM(s_obj)) {    /* Avoid searching for fixnums. */
+      return IK_FALSE;
+    } else {
+      ikptr s_pair = pcb->not_to_be_collected;
+      /*
+       *  |------------| pcb
+       *       |
+       *        ---> NULL = s_pair
+       */
+      if (IK_NULL == s_pair) {
+	return IK_FALSE_OBJECT;
+      } else
+	/* Before:
+	 *
+	 *  |------------| pcb
+	 *       |
+	 *        --->|---|---| s_pair
+	 *              |   |
+	 *             OBJ   --->|---|---| CDR
+	 *
+	 * after:
+	 *
+	 *  |------------| pcb                |---|---| s_pair
+	 *       |                              |
+	 *        --->|---|---| CDR            OBJ
+	 */
+	if (IK_CAR(s_pair) == s_obj) {
+	  pcb->not_to_be_collected = IK_CDR(s_pair);
+	  return s_obj;
+	} else {
+	  ikptr	s_prev = s_pair;
+	  while (IK_NULL != s_pair) {
+	    /* Before:
+	     *
+	     *  |---|---| s_prev
+	     *        |
+	     *         --->|---|---| s_pair
+	     *               |   |
+	     *              OBJ   --->|---|---| CDR
+	     *
+	     * after:
+	     *
+	     *  |---|---| s_prev               |---|---| s_pair
+	     *        |                          |
+	     *         --->|---|---| CDR        OBJ
+	     */
+	    if (IK_CAR(s_pair) == s_obj) {
+	      IK_CDR(s_prev) = IK_CDR(s_pair);
+	      return s_obj;
+	    } else {
+	      s_prev = s_pair;
+	      s_pair = IK_CDR(s_prev);
+	    }
+	  }
+	  return IK_FALSE_OBJECT;
+	}
+    }
+  }
+}
+ikptr
+ik_collection_avoidance_list (ikpcb * pcb)
+{
+  return pcb->not_to_be_collected;
+}
+ikptr
+ik_purge_collection_avoidance_list (ikpcb * pcb)
+{
+  pcb->not_to_be_collected = IK_NULL;
+  return IK_VOID;
+}
+#endif
 
 /* end of file */
