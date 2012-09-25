@@ -1,0 +1,54 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
+;;;Part of: Vicare
+;;;Contents: installation-time configuration
+;;;Date: Fri Oct 21, 2011
+;;;
+;;;Abstract
+;;;
+;;;	This library is  both installed and used to  built Vicare's boot
+;;;	image.  When building the image we cannot reference variables in
+;;;	external libraries  like this one, for this  reason the constans
+;;;	defined here are directly expanded in the including code.
+;;;
+;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under the terms of the  GNU General Public License as published by
+;;;the Free Software Foundation, either version 3 of the License, or (at
+;;;your option) any later version.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+
+
+#!r6rs
+(library (vicare installation-configuration)
+  (export
+    vicare-version
+    target			wordsize
+    platform-endianness		arguments-validation)
+  (import (rnrs))
+
+  (define-syntax vicare-version
+    (identifier-syntax "@PACKAGE_VERSION@"))
+
+  (define-syntax target
+    (identifier-syntax '@target@))
+
+  (define-syntax wordsize
+    (identifier-syntax @VICARE_SIZE_OF_VOIDP@))
+
+  (define-syntax platform-endianness
+    (identifier-syntax '@VICARE_PLATFORM_ENDIANNESS@))
+
+  (define-syntax arguments-validation
+    (identifier-syntax (positive? @VICARE_ARGUMENTS_VALIDATION@))))
+
+;;; end of file

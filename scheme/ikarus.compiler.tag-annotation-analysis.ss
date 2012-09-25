@@ -1,29 +1,28 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
-;;; 
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
-;;; 
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should have received a copy of the GNU General Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; THIS IS WIP
-(include "ikarus.ontology.ss")
+(include "ikarus.compiler.ontology.ss")
 
 (define tag-analysis-output (make-parameter #f))
 
 (define (introduce-tags x)
   (define who 'introduce-tags)
   #;
-  (define primitive-return-types 
+  (define primitive-return-types
     '(
      [=                     boolean]
       [<                     boolean]
@@ -78,13 +77,10 @@
       [port?                 boolean]
       [port-eof?             boolean]
       [port-closed?          boolean]
-      [char-ready?           boolean]
       [eof-object?           boolean]
       [hashtable?            boolean]
       [hashtable-mutable?    boolean]
       [file-exists?          boolean]
-      [file-regular?         boolean]
-      [file-directory?       boolean]
       [file-readable?        boolean]
       [file-writable?        boolean]
       [file-executable?      boolean]
@@ -119,7 +115,7 @@
          (values (cons x x*)
                  (and-envs env1 env2)
                  (cons t t*)))]))
-  (define (constant-type x) 
+  (define (constant-type x)
     (define (numeric x)
       (define (size x t)
         (T:and t
@@ -131,7 +127,7 @@
       (cond
         [(fixnum? x) (size x T:fixnum)]
         [(flonum? x) (size x T:flonum)]
-        [(or (bignum? x) (ratnum? x)) 
+        [(or (bignum? x) (ratnum? x))
          (size x (T:and T:exact T:other-number))]
         [else        T:number]))
     (cond
@@ -179,7 +175,7 @@
          (for-each number! lhs*)
          (let ([env (extend-env* lhs* t* env)])
            (let-values ([(body env t) (V body env)])
-             (values 
+             (values
                (make-bind lhs* rhs* body)
                env t))))]
       [(fix lhs* rhs* body)
@@ -187,15 +183,15 @@
        (let-values ([(rhs* env t*) (V* rhs* env)])
          (let ([env (extend-env* lhs* t* env)])
            (let-values ([(body env t) (V body env)])
-             (values 
+             (values
                (make-fix lhs* rhs* body)
                env t))))]
       [(clambda g cls* cp free name)
        (values
          (make-clambda g
-           (map 
+           (map
              (lambda (x)
-               (struct-case x 
+               (struct-case x
                  [(clambda-case info body)
                   (for-each number! (case-info-args info))
                   (let-values ([(body env t) (V body env)])
@@ -225,7 +221,7 @@
     (let ([env (and-envs rator-env rand*-env)]
           [rand* (map annotate rand* rand*-val)])
       (struct-case rator
-        [(primref op) 
+        [(primref op)
          (apply-primcall op rand* env)]
         [else
          (values (make-funcall (annotate rator rator-val) rand*)
@@ -247,7 +243,7 @@
           [(null? x*) env]
           [else (extend (car x*) (car t*)
                   (extend* (cdr x*) (cdr t*) env))]))
-      (values 
+      (values
         (make-funcall (make-primref op) rand*)
         (if (= (length rand-t*) (length rand*))
             (extend* rand* rand-t* env)
@@ -270,7 +266,7 @@
               (extend* rand* env)
               ret-t))
     (case op
-      [(cons)        
+      [(cons)
        (return T:pair)]
       [(car cdr
         caar cadr cdar cddr
@@ -304,12 +300,12 @@
        (inject T:char T:fixnum)]
       [(char->integer)
        (inject T:fixnum T:char)]
-      [(bytevector-u8-ref bytevector-s8-ref 
+      [(bytevector-u8-ref bytevector-s8-ref
         bytevector-u16-native-ref bytevector-s16-native-ref)
        (inject T:fixnum T:bytevector T:fixnum)]
       [(bytevector-u16-ref bytevector-s16-ref)
        (inject T:fixnum T:bytevector T:fixnum T:symbol)]
-      [(bytevector-u8-set! bytevector-s8-set! 
+      [(bytevector-u8-set! bytevector-s8-set!
         bytevector-u16-native-set! bytevector-s16-native-set!)
        (inject T:void T:bytevector T:fixnum T:fixnum)]
       [(bytevector-u16-set! bytevector-s16-set!)
@@ -329,35 +325,35 @@
         fleven? flodd? flzero? flpositive? flnegative?
         flfinite? flinfinite? flinteger? flnan?)
        (inject* T:boolean T:flonum)]
-      [(char=? char<? char<=? char>? char>=? 
+      [(char=? char<? char<=? char>? char>=?
         char-ci=? char-ci<? char-ci<=? char-ci>? char-ci>=?)
        (inject* T:boolean T:char)]
       [(string=? string<? string<=? string>? string>=?
         string-ci=? string-ci<? string-ci<=? string-ci>?
         string-ci>=?)
        (inject* T:boolean T:string)]
-      [(make-parameter 
-        record-constructor  
-        record-accessor     
-        record-constructor  
-        record-predicate    
-        condition-accessor  
-        condition-predicate 
+      [(make-parameter
+        record-constructor
+        record-accessor
+        record-constructor
+        record-predicate
+        condition-accessor
+        condition-predicate
         enum-set-constructor
-        enum-set-indexer    
+        enum-set-indexer
         make-guardian)
        (return T:procedure)]
       [(fixnum-width greatest-fixnum least-fixnum)
        (return T:fixnum)]
       [else
        (return T:object)]))
- 
+
 
   ;;;
   (define (extend-env* x* v* env)
     (cond
       [(null? x*) env]
-      [else 
+      [else
        (extend-env* (cdr x*) (cdr v*)
          (extend-env (car x*) (car v*) env))]))
   (define (extend-env x t env)
@@ -392,7 +388,7 @@
       (if (eq? env1 env2)
           env1
           (if (pair? env1)
-              (if (pair? env2) 
+              (if (pair? env2)
                   (merge-envs2 (car env1) (cdr env1) (car env2) (cdr env2))
                   empty-env)
               empty-env)))
@@ -418,7 +414,7 @@
       (if (eq? env1 env2)
           env1
           (if (pair? env1)
-              (if (pair? env2) 
+              (if (pair? env2)
                   (merge-envs2 (car env1) (cdr env1) (car env2) (cdr env2))
                   env1)
               env2)))
@@ -437,3 +433,4 @@
       (pretty-print (unparse-pretty x)))
     x))
 
+;;; end of file

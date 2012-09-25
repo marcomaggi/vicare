@@ -470,7 +470,7 @@
   ;;;          (make-primcall 'mref
   ;;;            (list
   ;;;              (make-constant (make-object (primref->symbol 'do-overflow)))
-  ;;;              (make-constant (- disp-symbol-record-proc symbol-ptag))))
+  ;;;              (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
   ;;;          (list size)))))
   (define (alloc-check size)
     (define (test size)
@@ -498,7 +498,7 @@
            (make-primcall 'mref
              (list
                (make-constant (make-object (primref->symbol 'do-overflow)))
-               (make-constant (- disp-symbol-record-proc symbol-ptag))))
+               (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
            (list size)))))
   ;;; impose value
   (define (V d x)

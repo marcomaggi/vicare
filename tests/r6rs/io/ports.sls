@@ -602,7 +602,7 @@
       (test/unspec (close-port p)))
 
     ;; textual port positions are hopelessly broken in R6RS
-    #;(test-positions make-custom-textual-input-port)
+    (test-positions make-custom-textual-input-port)
 
     (let* ([accum '()]
            [p (make-custom-binary-output-port
@@ -662,7 +662,7 @@
       (test/unspec (close-port p)))
 
     ;; textual port positions are hopelessly broken in R6RS
-    #;(test-positions make-custom-textual-output-port)
+    (test-positions make-custom-textual-output-port)
 
     (let* ([save #f]
            [p (make-custom-binary-input/output-port
@@ -701,7 +701,7 @@
       (close-port p))
 
     ;; textual port positions are hopelessly broken in R6RS
-    #;(test-positions (lambda (id r/w get set close)
+    (test-positions (lambda (id r/w get set close)
                         (make-custom-textual-input/output-port
                          id r/w r/w get set close)))
 

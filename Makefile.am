@@ -1,43 +1,56 @@
 ## Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS	= foreign
-SUBDIRS			= src scheme doc lib benchmarks tests
-EXTRA_DIST		= README COPYING GPL-3 configure.sh
+ACLOCAL_AMFLAGS		= -I m4
+SUBDIRS			= src scheme doc lib tests
+EXTRA_DIST		= configure.sh			\
+			  scripts/make-last-revision	\
+			  scripts/vie
 dist_doc_DATA		= README COPYING GPL-3
 
-vicare_test_RULES	= test tests test-r6rs \
-	test-r6rs-control		\
-	test-r6rs-base			\
-	test-r6rs-io-ports		\
-	test-r6rs-io-simple		\
-	test-r6rs-eval			\
-	test-r6rs-syntax-case		\
-	test-r6rs-mutable-strings	\
-	test-r6rs-records-procedural	\
-	test-r6rs-records-syntactic	\
-	test-r6rs-conditions		\
-	test-r6rs-hashtables		\
-	test-r6rs-programs		\
-	test-r6rs-contrib		\
-	test-r6rs-unicode		\
-	test-r6rs-r5rs			\
-	test-r6rs-reader		\
-	test-r6rs-mutable-pairs		\
-	test-r6rs-lists			\
-	test-r6rs-arithmetic-fixnums	\
-	test-r6rs-arithmetic-bitwise	\
-	test-r6rs-arithmetic-flonums	\
-	test-r6rs-bytevectors		\
-	test-r6rs-exceptions		\
-	test-r6rs-enums			\
-	test-r6rs-sorting
+vicare_test_RULES	= test tests long-test long-tests \
+			  test-run test-vie test-exec-modes \
+			  proof proofs foreign-test foreign-tests
 
-.PHONY: $(vicare_test_RULES)
+vicare_lib_RULES	= vfasl vfasl-installed
+
+if WANT_BINFMT
+rcddir			= $(sysconfdir)/rc.d
+rcd_SCRIPTS		= rc.vicare-scheme
+
+rc.vicare-scheme: Makefile
+	@echo '#!/bin/sh' >$(@)
+	@echo '#' >>$(@)
+	@echo '# Setup the  Linux module  "binfmt_misc" to automatically  recognise and' >>$(@)
+	@echo '# run Vicare Scheme programs using the installed "vicare" executable.' >>$(@)
+	@echo '' >>$(@)
+	@echo 'if test -f /proc/sys/fs/binfmt_misc/register' >>$(@)
+	@echo 'then' >>$(@)
+	@echo '  if test -f /proc/sys/fs/binfmt_misc/VICARE' >>$(@)
+	@echo '  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE' >>$(@)
+	@echo '  fi' >>$(@)
+	@echo '  echo -n enabling binfmt Vicare Scheme scripts execution...' >>$(@)
+	@echo '  echo ":VICARE:M:0:;;;!vicare::$(bindir)/vicare:" >/proc/sys/fs/binfmt_misc/register' >>$(@)
+	@echo '  echo done' >>$(@)
+	@echo 'fi' >>$(@)
+	@echo '' >>$(@)
+	@echo '### end of file' >>$(@)
+
+endif
+
+.PHONY: $(vicare_test_RULES) $(vicare_lib_RULES) \
+	try-vicare-boot boot-image-64-bit
+
 
 $(vicare_test_RULES):
 	cd tests ; $(MAKE) $(@)
 
-ikarus-tests:
+try-vicare-boot:
 	cd scheme; $(MAKE) $(@)
+
+boot-image-64-bit:
+	cd scheme; $(MAKE) $(@)
+
+$(vicare_lib_RULES):
+	cd lib; $(MAKE) $(@)
 
 ### end of file

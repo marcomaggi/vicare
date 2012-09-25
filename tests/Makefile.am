@@ -1,185 +1,234 @@
 ## Process this file with automake to produce Makefile.in
 
-testdir			= $(srcdir)
-VICARE_SELECTED_TESTS	= $(wildcard $(testdir)/test-*$(name)*.sps)
+testdir				= $(srcdir)
+VICARE_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
+VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
+VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
+VICARE_SELECTED_PROOFS		= $(testdir)/proof-*$(file)*.sps
 
+VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
+VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
+VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
+
+# The variable "user_flags"  is for the user to be  set on the command
+# line of "make".
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_FLAGS	= -b $(VICARE_BOOT) --debug --r6rs-script
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(srcdir):$(srcdir)/../lib
-VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
+VICARE_FLAGS	= -b $(VICARE_BOOT) --debug $(user_flags) --r6rs-script
+VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
+		  CHECK_TEST_NAME=$(name)				\
+		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
+		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
+VICARE_RUN	= $(VICARE_ENV) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
-.PHONY: test tests test-r6rs
+.PHONY: test tests test-r6rs long-test long-tests
+.PHONY: proof proofs foreign-test foreign-tests
 
 test tests:
 	@echo
-	@$(foreach f,$(VICARE_SELECTED_TESTS),$(VICARE_RUN) $(f);)
+	@for f in $(VICARE_SELECTED_TESTS); do $(VICARE_RUN) $$f; done
 	@echo
 
-## --------------------------------------------------------------------
-## Raw interface for Flatt's R6RS test suite.
+long-test long-tests:
+	@echo
+	@for f in $(VICARE_SELECTED_LONG_TESTS); do $(VICARE_RUN) $$f; done
+	@echo
 
-vicare_r6rs_subtest_RULES	=	\
-	test-r6rs-control		\
-	test-r6rs-base			\
-	test-r6rs-io-ports		\
-	test-r6rs-io-simple		\
-	test-r6rs-eval			\
-	test-r6rs-syntax-case		\
-	test-r6rs-mutable-strings	\
-	test-r6rs-records-procedural	\
-	test-r6rs-records-syntactic	\
-	test-r6rs-conditions		\
-	test-r6rs-hashtables		\
-	test-r6rs-programs		\
-	test-r6rs-contrib		\
-	test-r6rs-unicode		\
-	test-r6rs-test			\
-	test-r6rs-run			\
-	test-r6rs-r5rs			\
-	test-r6rs-reader		\
-	test-r6rs-mutable-pairs		\
-	test-r6rs-lists			\
-	test-r6rs-arithmetic-fixnums	\
-	test-r6rs-arithmetic-bitwise	\
-	test-r6rs-arithmetic-flonums	\
-	test-r6rs-bytevectors		\
-	test-r6rs-exceptions		\
-	test-r6rs-enums			\
-	test-r6rs-sorting
+foreign-test foreign-tests:
+	@echo
+	@for f in $(VICARE_SELECTED_FOREIGN_TESTS); do $(VICARE_RUN) $$f; done
+	@echo
 
-.PHONY: test-r6rs $(vicare_r6rs_subtest_RULES)
+proof proofs:
+	@echo
+	@for f in $(VICARE_SELECTED_PROOFS); do $(VICARE_RUN) $$f; done
+	@echo
 
-test-r6rs: $(vicare_r6rs_subtest_RULES)
+#page
+#### running vicare from the build directory
 
-test-r6rs-control:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/control.sps
+VIE			= $(srcdir)/../scripts/vie
 
-test-r6rs-base:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/base.sps
+# The variable "user_flags"  is for the user to be  set on the command
+# line of "make".
+VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_TEST_RUN_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
+			  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
+VICARE_TEST_RUN		= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
+VICARE_TEST_VIE		= $(VICARE_TEST_RUN_ENV) $(VIE) $(VICARE) --raw-repl $(VICARE_TEST_RUN_FLAGS)
 
-test-r6rs-io-ports:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/io/ports.sps
 
-test-r6rs-io-simple:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/io/simple.sps
+.PHONY: test-run test-vie test-exec-modes
 
-test-r6rs-eval:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/eval.sps
+test-run:
+	$(VICARE_TEST_RUN)
 
-test-r6rs-syntax-case:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/syntax-case.sps
+test-vie:
+	$(VICARE_TEST_VIE)
 
-test-r6rs-mutable-strings:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/mutable-strings.sps
+test-exec-modes:
+	$(VICARE_TEST_RUN_ENV) $(srcdir)/test-exec-modes.sh $(VICARE) $(VICARE_BOOT) $(srcdir)
 
-test-r6rs-records-procedural:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/records/procedural.sps
+#page
+#### interface to "make check"
 
-test-r6rs-records-syntactic:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/records/syntactic.sps
+VICARE_CHECK_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_CHECK_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_CHECK_FLAGS)
 
-test-r6rs-conditions:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/conditions.sps
+VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(user_flags)
+VICARE_LIBDIR		= $(libdir)/scheme
+VICARE_INSTCHECK_ENV	= VICARE_LIBRARY_PATH=$(DESTDIR)$(VICARE_LIBDIR):$(VICARE_LIBRARY_PATH):$(srcdir):$(srcdir)/../scheme LD_LIBRARY_PATH=$(DESTDIR)$(libdir) VICARE_CHECK_QUIET=yes
+VICARE_INSTCHECK_RUN	= $(VICARE_INSTCHECK_ENV) $(DESTDIR)$(bindir)/vicare $(VICARE_INSTCHECK_FLAGS)
 
-test-r6rs-hashtables:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/hashtables.sps
-
-test-r6rs-programs:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/programs.sps
-
-test-r6rs-contrib:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/contrib.sps
-
-test-r6rs-unicode:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/unicode.sps
-
-test-r6rs-r5rs:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/r5rs.sps
-
-test-r6rs-reader:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/reader.sps
-
-test-r6rs-mutable-pairs:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/mutable-pairs.sps
-
-test-r6rs-lists:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/lists.sps
-
-test-r6rs-arithmetic-fixnums:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/arithmetic/fixnums.sps
-
-test-r6rs-arithmetic-bitwise:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/arithmetic/bitwise.sps
-
-test-r6rs-arithmetic-flonums:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/arithmetic/flonums.sps
-
-test-r6rs-bytevectors:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/bytevectors.sps
-
-test-r6rs-exceptions:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/exceptions.sps
-
-test-r6rs-enums:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/enums.sps
-
-test-r6rs-sorting:
-	@$(VICARE_RUN) $(srcdir)/r6rs/run/sorting.sps
-
-## --------------------------------------------------------------------
-## Interface to "make check".
-
-TESTS_ENVIRONMENT	= $(VICARE_RUN)
+# TESTS and TESTS_ENVIRONMENT are Automake variables.
+TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes $(VICARE_CHECK_RUN)
 TESTS			=	\
-	test-equal-hash.sps				\
-	test-fxreverse-bit-field.sps			\
-	test-getpid.sps					\
-	test-log.sps					\
+	test-r6rs-arithmetic-bitwise.sps		\
+	test-r6rs-arithmetic-fixnums.sps		\
+	test-r6rs-arithmetic-flonums.sps		\
+	test-r6rs-base.sps				\
+	test-r6rs-bytevectors.sps			\
+	test-r6rs-conditions.sps			\
+	test-r6rs-contrib.sps				\
+	test-r6rs-control.sps				\
+	test-r6rs-enums.sps				\
+	test-r6rs-eval.sps				\
+	test-r6rs-exceptions.sps			\
+	test-r6rs-hashtables.sps			\
+	test-r6rs-io-ports.sps				\
+	test-r6rs-io-simple.sps				\
+	test-r6rs-lists.sps				\
+	test-r6rs-mutable-pairs.sps			\
+	test-r6rs-mutable-strings.sps			\
+	test-r6rs-programs.sps				\
+	test-r6rs-r5rs.sps				\
+	test-r6rs-reader.sps				\
+	test-r6rs-records-procedural.sps		\
+	test-r6rs-records-syntactic.sps			\
+	test-r6rs-sorting.sps				\
+	test-r6rs-syntax-case.sps			\
+	test-r6rs-unicode.sps				\
 	\
-	test-issue-7.sps				\
-	test-issue-8.sps				\
-	test-issue-9.sps				\
-	test-issue-10.sps				\
-	test-issue-12.sps				\
-	test-issue-13.sps				\
-	test-issue-15.sps				\
-	test-issue-17.sps				\
-	test-issue-18.sps				\
-	test-issue-20.sps				\
-	test-issue-21.sps				\
-	test-issue-22.sps				\
+	test-ikarus-bignum-to-flonum.sps		\
+	test-ikarus-bytevectors.sps			\
+	test-ikarus-case-folding.sps			\
+	test-ikarus-div-and-mod.sps			\
+	test-ikarus-enums.sps				\
+	test-ikarus-fasl.sps				\
+	test-ikarus-fldiv-and-mod.sps			\
+	test-ikarus-guardians.sps			\
+	test-ikarus-hashtables.sps			\
+	test-ikarus-lists.sps				\
+	test-ikarus-normalization.sps			\
+	test-ikarus-numerics.sps			\
+	test-ikarus-r6rs-records-procedural.sps		\
+	test-ikarus-reader.sps				\
+	test-ikarus-set-position.sps			\
+	test-ikarus-sorting.sps				\
+	test-ikarus-strings.sps				\
+	test-ikarus-symbol-table.sps			\
+	test-ikarus-unicode.sps				\
 	\
-	$(srcdir)/r6rs/run/control.sps			\
-	$(srcdir)/r6rs/run/base.sps			\
-	$(srcdir)/r6rs/run/io/ports.sps			\
-	$(srcdir)/r6rs/run/io/simple.sps		\
-	$(srcdir)/r6rs/run/eval.sps			\
-	$(srcdir)/r6rs/run/syntax-case.sps		\
-	$(srcdir)/r6rs/run/mutable-strings.sps		\
-	$(srcdir)/r6rs/run/records/procedural.sps	\
-	$(srcdir)/r6rs/run/records/syntactic.sps	\
-	$(srcdir)/r6rs/run/conditions.sps		\
-	$(srcdir)/r6rs/run/hashtables.sps		\
-	$(srcdir)/r6rs/run/programs.sps			\
-	$(srcdir)/r6rs/run/contrib.sps			\
-	$(srcdir)/r6rs/run/unicode.sps			\
-	$(srcdir)/r6rs/run/r5rs.sps			\
-	$(srcdir)/r6rs/run/reader.sps			\
-	$(srcdir)/r6rs/run/mutable-pairs.sps		\
-	$(srcdir)/r6rs/run/lists.sps			\
-	$(srcdir)/r6rs/run/arithmetic/fixnums.sps	\
-	$(srcdir)/r6rs/run/arithmetic/bitwise.sps	\
-	$(srcdir)/r6rs/run/arithmetic/flonums.sps	\
-	$(srcdir)/r6rs/run/bytevectors.sps		\
-	$(srcdir)/r6rs/run/exceptions.sps		\
-	$(srcdir)/r6rs/run/enums.sps			\
-	$(srcdir)/r6rs/run/sorting.sps
+	test-vicare-bignums.sps				\
+	test-vicare-bytevectors.sps			\
+	test-vicare-chars.sps				\
+	test-vicare-collect.sps				\
+	test-vicare-enumerations.sps			\
+	test-vicare-equality.sps			\
+	test-vicare-debugging.sps			\
+	test-vicare-flonum-formatter.sps		\
+	test-vicare-flonum-parser.sps			\
+	test-vicare-keywords.sps			\
+	test-vicare-infix.sps				\
+	test-vicare-io.sps				\
+	test-vicare-language-extensions.sps		\
+	test-vicare-lists.sps				\
+	test-vicare-log.sps				\
+	test-vicare-parameters.sps			\
+	test-vicare-parser-logic.sps			\
+	test-vicare-pointers.sps			\
+	test-vicare-promises.sps			\
+	test-vicare-reader.sps				\
+	test-vicare-records-procedural.sps		\
+	test-vicare-records-syntactic.sps		\
+	test-vicare-round.sps				\
+	test-vicare-string-to-number.sps		\
+	test-vicare-strings.sps				\
+	test-vicare-structs.sps				\
+	test-vicare-symbols.sps				\
+	test-vicare-system.sps				\
+	test-vicare-vectors.sps				\
+	test-vicare-weak-tables.sps			\
+	test-vicare-words.sps				\
+	\
+	test-issue-001-equal-hash.sps			\
+	test-issue-006-fxreverse-bit-field.sps		\
+	test-issue-007.sps				\
+	test-issue-008.sps				\
+	test-issue-009.sps				\
+	test-issue-010.sps				\
+	test-issue-012.sps				\
+	test-issue-013.sps				\
+	test-issue-015.sps				\
+	test-issue-017.sps				\
+	test-issue-020.sps				\
+	test-issue-021.sps				\
+	test-issue-022.sps				\
+	test-issue-023.sps				\
+	test-issue-024.sps				\
+	test-issue-025-sign-in-exact-rationals.sps
 
-## --------------------------------------------------------------------
+if WANT_LIBFFI
+TESTS	+= test-vicare-ffi.sps
+endif
 
-EXTRA_DIST =	\
-	checks.sls					\
+if WANT_POSIX
+TESTS	+= \
+	test-vicare-posix-basic.sps		\
+	test-vicare-posix-net.sps		\
+	test-vicare-posix-mmap.sps		\
+	test-vicare-posix-bub.sps		\
+	test-vicare-posix-time.sps		\
+	test-vicare-posix-timers.sps		\
+	test-vicare-posix-message-queue.sps	\
+	test-vicare-posix-shared-memory.sps	\
+	test-vicare-posix-semaphores.sps	\
+	test-vicare-posix-sigwait.sps		\
+	\
+	test-vicare-shared-memory.sps		\
+	test-vicare-sel.sps
+endif
+
+if WANT_GLIBC
+TESTS	+= test-vicare-glibc.sps
+endif
+
+if WANT_LINUX
+TESTS	+= test-vicare-linux.sps
+endif
+
+if WANT_CRE2
+TESTS	+= foreign-test-vicare-cre2.sps
+endif
+
+installcheck-local:
+	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
+
+XFAIL_TESTS = \
+	test-vicare-log.sps			\
+	test-issue-008.sps
+
+#page
+#### extra files to be distributed
+
+EXTRA_DIST = \
+	ikarus-test-framework.sls			\
+	lists.sls					\
+	lists/low.sls					\
+	lists/stx.sls					\
+	TEST-SOURCE-FILE.txt				\
+	rn100						\
+	\
 	r6rs						\
 	r6rs/README.txt					\
 	r6rs/arithmetic					\
@@ -209,56 +258,140 @@ EXTRA_DIST =	\
 	r6rs/records					\
 	r6rs/records/procedural.sls			\
 	r6rs/records/syntactic.sls			\
-	r6rs/run					\
-	r6rs/run-via-eval.sps				\
-	r6rs/run.sps					\
-	r6rs/run/arithmetic				\
-	r6rs/run/arithmetic/bitwise.sps			\
-	r6rs/run/arithmetic/fixnums.sps			\
-	r6rs/run/arithmetic/flonums.sps			\
-	r6rs/run/base.sps				\
-	r6rs/run/bytevectors.sps			\
-	r6rs/run/conditions.sps				\
-	r6rs/run/contrib.sps				\
-	r6rs/run/control.sps				\
-	r6rs/run/enums.sps				\
-	r6rs/run/eval.sps				\
-	r6rs/run/exceptions.sps				\
-	r6rs/run/hashtables.sps				\
-	r6rs/run/io					\
-	r6rs/run/io/ports.sps				\
-	r6rs/run/io/simple.sps				\
-	r6rs/run/lists.sps				\
-	r6rs/run/mutable-pairs.sps			\
-	r6rs/run/mutable-strings.sps			\
-	r6rs/run/programs.sps				\
-	r6rs/run/r5rs.sps				\
-	r6rs/run/reader.sps				\
-	r6rs/run/records				\
-	r6rs/run/records/procedural.sps			\
-	r6rs/run/records/syntactic.sps			\
-	r6rs/run/sorting.sps				\
-	r6rs/run/syntax-case.sps			\
-	r6rs/run/unicode.sps				\
 	r6rs/sorting.sls				\
 	r6rs/syntax-case.sls				\
 	r6rs/test.sls					\
 	r6rs/unicode.sls				\
-	test-equal-hash.sps				\
-	test-fxreverse-bit-field.sps			\
-	test-getpid.sps					\
-	test-log.sps					\
-	test-issue-7.sps				\
-	test-issue-8.sps				\
-	test-issue-9.sps				\
-	test-issue-10.sps				\
-	test-issue-12.sps				\
-	test-issue-13.sps				\
-	test-issue-15.sps				\
-	test-issue-17.sps				\
-	test-issue-18.sps				\
-	test-issue-20.sps				\
-	test-issue-21.sps				\
-	test-issue-22.sps
+	\
+	exec-modes-helpers/r6rs-forms			\
+	exec-modes-helpers/r6rs-program.sps		\
+	test-exec-modes.sh				\
+	\
+	proof-vicare-gcc.sps				\
+	proof-vicare-readline.sps			\
+	proof-vicare-timerfd.sps			\
+	\
+	long-test-r6rs-run.sps				\
+	long-test-r6rs-run-via-eval.sps			\
+	long-test-ikarus-bignums.sps			\
+	long-test-ikarus-bitwise.sps			\
+	long-test-ikarus-fixnums.sps			\
+	long-test-ikarus-io.sps				\
+	long-test-ikarus-parse-flonums.sps		\
+	long-test-ikarus-string-to-number.sps		\
+	\
+	test-r6rs-arithmetic-bitwise.sps		\
+	test-r6rs-arithmetic-fixnums.sps		\
+	test-r6rs-arithmetic-flonums.sps		\
+	test-r6rs-base.sps				\
+	test-r6rs-bytevectors.sps			\
+	test-r6rs-conditions.sps			\
+	test-r6rs-contrib.sps				\
+	test-r6rs-control.sps				\
+	test-r6rs-enums.sps				\
+	test-r6rs-eval.sps				\
+	test-r6rs-exceptions.sps			\
+	test-r6rs-hashtables.sps			\
+	test-r6rs-io-ports.sps				\
+	test-r6rs-io-simple.sps				\
+	test-r6rs-lists.sps				\
+	test-r6rs-mutable-pairs.sps			\
+	test-r6rs-mutable-strings.sps			\
+	test-r6rs-programs.sps				\
+	test-r6rs-r5rs.sps				\
+	test-r6rs-reader.sps				\
+	test-r6rs-records-procedural.sps		\
+	test-r6rs-records-syntactic.sps			\
+	test-r6rs-sorting.sps				\
+	test-r6rs-syntax-case.sps			\
+	test-r6rs-unicode.sps				\
+	\
+	test-ikarus-bignum-to-flonum.sps		\
+	test-ikarus-bytevectors.sps			\
+	test-ikarus-case-folding.sps			\
+	test-ikarus-div-and-mod.sps			\
+	test-ikarus-enums.sps				\
+	test-ikarus-fasl.sps				\
+	test-ikarus-fldiv-and-mod.sps			\
+	test-ikarus-guardians.sps			\
+	test-ikarus-hashtables.sps			\
+	test-ikarus-lists.sps				\
+	test-ikarus-normalization.sps			\
+	test-ikarus-numerics.sps			\
+	test-ikarus-r6rs-records-procedural.sps		\
+	test-ikarus-reader.sps				\
+	test-ikarus-set-position.sps			\
+	test-ikarus-sorting.sps				\
+	test-ikarus-strings.sps				\
+	test-ikarus-symbol-table.sps			\
+	test-ikarus-unicode.sps				\
+	\
+	test-vicare-bignums.sps				\
+	test-vicare-bytevectors.sps			\
+	test-vicare-chars.sps				\
+	test-vicare-collect.sps				\
+	test-vicare-enumerations.sps			\
+	test-vicare-equality.sps			\
+	test-vicare-debugging.sps			\
+	test-vicare-ffi.sps				\
+	test-vicare-flonum-formatter.sps		\
+	test-vicare-flonum-parser.sps			\
+	test-vicare-glibc.sps				\
+	test-vicare-keywords.sps			\
+	test-vicare-infix.sps				\
+	test-vicare-io.sps				\
+	test-vicare-language-extensions.sps		\
+	test-vicare-linux.sps				\
+	test-vicare-lists.sps				\
+	test-vicare-log.sps				\
+	test-vicare-parameters.sps			\
+	test-vicare-parser-logic.sps			\
+	test-vicare-pointers.sps			\
+	\
+	test-vicare-posix-basic.sps			\
+	test-vicare-posix-net.sps			\
+	test-vicare-posix-mmap.sps			\
+	test-vicare-posix-bub.sps			\
+	test-vicare-posix-time.sps			\
+	test-vicare-posix-timers.sps			\
+	test-vicare-posix-message-queue.sps		\
+	test-vicare-posix-shared-memory.sps		\
+	test-vicare-posix-semaphores.sps		\
+	test-vicare-posix-sigwait.sps			\
+	\
+	test-vicare-promises.sps			\
+	test-vicare-reader.sps				\
+	test-vicare-records-procedural.sps		\
+	test-vicare-records-syntactic.sps		\
+	test-vicare-round.sps				\
+	test-vicare-sel.sps				\
+	test-vicare-shared-memory.sps			\
+	test-vicare-string-to-number.sps		\
+	test-vicare-strings.sps				\
+	test-vicare-structs.sps				\
+	test-vicare-symbols.sps				\
+	test-vicare-system.sps				\
+	test-vicare-vectors.sps				\
+	test-vicare-weak-tables.sps			\
+	test-vicare-words.sps				\
+	\
+	test-issue-001-equal-hash.sps			\
+	test-issue-006-fxreverse-bit-field.sps		\
+	test-issue-007.sps				\
+	test-issue-008.sps				\
+	test-issue-009.sps				\
+	test-issue-010.sps				\
+	test-issue-012.sps				\
+	test-issue-013.sps				\
+	test-issue-015.sps				\
+	test-issue-017.sps				\
+	test-issue-020.sps				\
+	test-issue-021.sps				\
+	test-issue-022.sps				\
+	test-issue-023.sps				\
+	test-issue-024.sps				\
+	test-issue-025-sign-in-exact-rationals.sps	\
+	\
+	foreign-test-vicare-cre2.sps
 
 ### end of file

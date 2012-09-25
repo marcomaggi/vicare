@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# Rebuild  the  "./scheme/last-revision"  file  holding the  branch  and
+# commit hash.  To be run from the top source directory.
+
+PATH=~/bin:${PATH}
+
+LAST_REVISION_FILE=./scheme/last-revision
+BRANCH_NAME=$(git branch 2>/dev/null | sed -e '/^[^*]/d' -e 's/^* //')
+COMMIT_HASH=$(git show | head -1 | cut -d' ' -f2)
+echo "$BRANCH_NAME/$COMMIT_HASH" >$LAST_REVISION_FILE
+
+### end of file
+

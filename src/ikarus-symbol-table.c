@@ -1,48 +1,73 @@
 /*
- *  Ikarus Scheme -- A compiler for R6RS Scheme.
- *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 3 as
- *  published by the Free Software Foundation.
- *  
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *  
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Ikarus Scheme -- A compiler for R6RS Scheme.
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+ * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ *
+ * This program is free software:  you can redistribute it and/or modify
+ * it under  the terms of  the GNU General  Public License version  3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is  distributed in the hope that it  will be useful, but
+ * WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+ * MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+ * General Public License for more details.
+ *
+ * You should  have received  a copy of  the GNU General  Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
+#include "internals.h"
 
-#include "ikarus-data.h"
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
+#undef NUM_OF_BUCKETS
+#define NUM_OF_BUCKETS		4096 /* power of 2 */
 
+
 static ikptr
-make_symbol_table(ikpcb* pcb){
-  #define NUM_OF_BUCKETS 4096 /* power of 2 */
-  int size = align_to_next_page(disp_vector_data + NUM_OF_BUCKETS * wordsize);
-  ikptr st = ik_mmap_ptr(size, 0, pcb) + vector_tag;
-  bzero((char*)(long)st-vector_tag, size);
-  ref(st, off_vector_length) = fix(NUM_OF_BUCKETS);
+make_symbol_table (ikpcb* pcb)
+/* Build and return a new hash table to be used as symbol table for both
+   common  symbols and  gensyms.   "Symbol table"  here  means a  Scheme
+   vector of  buckets, in which  a bucket is  a proper list  of symbols;
+   empty bucket slots are initialised to the fixnum zero.
+
+   The vector is allocated outside  of the memory scanned by the garbage
+   collector.  Later  some pages in the  vector may be  registered to be
+   scanned. */
+{
+  int   size = IK_ALIGN_TO_NEXT_PAGE(disp_vector_data + NUM_OF_BUCKETS * wordsize);
+  ikptr st   = ik_mmap_ptr(size, 0, pcb) | vector_tag;
+  memset((char*)(long)st-vector_tag, '\0', size);
+  IK_REF(st, off_vector_length) = IK_FIX(NUM_OF_BUCKETS);
+  return st;
+}
+ikptr
+ikrt_get_symbol_table (ikpcb* pcb)
+/* The symbol  table is created by  C language code,  but, after loading
+   the  boot  image,  it is  retrieved  by  Scheme  code to  be  handled
+   there. */
+{
+  ikptr st = pcb->symbol_table;
+  pcb->symbol_table = IK_FALSE_OBJECT;
+  if (st == IK_FALSE_OBJECT)
+    ik_abort("attempt to access dead symbol table");
   return st;
 }
 
-
+
+static long
+compute_hash (ikptr str)
 /* one-at-a-time from http://burtleburtle.net/bob/hash/doobs.html */
-static long int 
-compute_hash(ikptr str){
-  long int len = unfix(ref(str, off_string_length));
-  int* data = (int*)(str + off_string_data);
-  int h = len;
-  int* last = data + len;
-
+{
+  long  len  = IK_UNFIX(IK_REF(str, off_string_length));
+  int*  data = (int*)(str + off_string_data);
+  int   h    = len;
+  int*  last = data + len;
   /* one-at-a-time */
-  while(data < last){
+  while (data < last) {
     int c = (*data >> 8);
     h = h + c;
     h = h + (h << 10);
@@ -54,179 +79,226 @@ compute_hash(ikptr str){
   h = h + (h << 15);
   return (h >= 0) ? h : (1 - h);
 }
-
-ikptr 
-ikrt_string_hash(ikptr str){
+ikptr
+ikrt_string_hash (ikptr str)
+{
   return (ikptr)(compute_hash(str) & (~ fx_mask));
 }
-
-static int strings_eqp(ikptr str1, ikptr str2){
-  ikptr len = ref(str1, off_string_length);
-  if(len == ref(str2, off_string_length)){
-    return
-      (memcmp((char*)(long)str1+off_string_data, 
-              (char*)(long)str2+off_string_data, 
-              unfix(len) * string_char_size)
-       == 0);
-  }
-  return 0;
+static int
+strings_eqp (ikptr str1, ikptr str2)
+{
+  ikptr len = IK_REF(str1, off_string_length);
+  if (len == IK_REF(str2, off_string_length)) {
+    return (0 == memcmp((char*)(long)str1+off_string_data,
+			(char*)(long)str2+off_string_data,
+			IK_UNFIX(len) * IK_STRING_CHAR_SIZE));
+  } else
+    return 0;
 }
 
-static ikptr 
-ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
-  ikptr sym = ik_unsafe_alloc(pcb, symbol_record_size) + record_tag;
-  ref(sym, -record_tag) = symbol_record_tag;
-  ref(sym, off_symbol_record_string)  = str;
-  ref(sym, off_symbol_record_ustring) = ustr;
-  ref(sym, off_symbol_record_value)   = unbound_object;
-  ref(sym, off_symbol_record_proc)    = str;
-  ref(sym, off_symbol_record_plist)   = null_object;
-  return sym;
-}
-
+
 static ikptr
-intern_string(ikptr str, ikptr st, ikpcb* pcb){
-  int h = compute_hash(str);
-  int idx = h & (unfix(ref(st, off_vector_length)) - 1);
-  ikptr bckt = ref(st, off_vector_data + idx*wordsize);
-  ikptr b = bckt;
-  while(b){
-    ikptr sym = ref(b, off_car);
-    ikptr sym_str = ref(sym, off_symbol_record_string);
-    if(strings_eqp(sym_str, str)){
-      return sym;
-    }
-    b = ref(b, off_cdr);
-  }
-  ikptr sym = ik_make_symbol(str, false_object,  pcb);
-  b = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
-  ref(b, off_car) = sym;
-  ref(b, off_cdr) = bckt;
-  ref(st, off_vector_data + idx*wordsize) = b;
-  ((int*)(long)pcb->dirty_vector)[page_index(st+off_vector_data+idx*wordsize)] = -1;
-  return sym;
+iku_make_symbol (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
+{
+  ikptr s_sym = ik_unsafe_alloc(pcb, symbol_record_size) | record_tag;
+  IK_REF(s_sym, -record_tag)               = symbol_tag;
+  IK_REF(s_sym, off_symbol_record_string)  = s_pretty_string;
+  IK_REF(s_sym, off_symbol_record_ustring) = s_unique_string;
+  IK_REF(s_sym, off_symbol_record_value)   = IK_UNBOUND_OBJECT;
+  IK_REF(s_sym, off_symbol_record_proc)    = s_pretty_string;
+  IK_REF(s_sym, off_symbol_record_plist)   = IK_NULL_OBJECT;
+  return s_sym;
 }
-
 static ikptr
-intern_unique_string(ikptr str, ikptr ustr, ikptr st, ikpcb* pcb){
-  int h = compute_hash(ustr);
-  int idx = h & (unfix(ref(st, off_vector_length)) - 1);
-  ikptr bckt = ref(st, off_vector_data + idx*wordsize);
-  ikptr b = bckt;
-  while(b){
-    ikptr sym = ref(b, off_car);
-    ikptr sym_ustr = ref(sym, off_symbol_record_ustring);
-    if(strings_eqp(sym_ustr, ustr)){
-      return sym;
+intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
+{
+  int   hash_value    = compute_hash(s_unique_string);
+  int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
+  ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
+  { /* If a symbol having S_UNIQUE_STRING is already interned: return it
+       to the caller. */
+    ikptr s_list_iterator = s_bucket_list;
+    while (s_list_iterator && IK_NULL_OBJECT != s_list_iterator) {
+      ikptr s_sym     = IK_CAR(s_list_iterator);
+      ikptr s_sym_str = IK_REF(s_sym, off_symbol_record_string);
+      if (strings_eqp(s_sym_str, s_unique_string)) {
+	return s_sym;
+      }
+      s_list_iterator = IK_CDR(s_list_iterator);
     }
-    b = ref(b, off_cdr);
   }
-  ikptr sym = ik_make_symbol(str, ustr, pcb);
-  b = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
-  ref(b, off_car) = sym;
-  ref(b, off_cdr) = bckt;
-  ref(st, off_vector_data + idx*wordsize) = b;
-  ((int*)(long)pcb->dirty_vector)[page_index(st+off_vector_data+idx*wordsize)] = -1;
-  return sym;
+  /* Allocate a new  pointer object and register it  in the symbol table
+     by prepending it to the bucket list. */
+  ikptr s_sym  = iku_make_symbol(s_unique_string, IK_FALSE_OBJECT, pcb);
+  ikptr s_pair = IKU_PAIR_ALLOC(pcb);
+  IK_CAR(s_pair) = s_sym;
+  IK_CDR(s_pair) = s_bucket_list;
+  IK_ITEM(s_symbol_table, bucket_index) = s_pair;
+  { /* Mark the  page containing  the bucket slot  to be scanned  by the
+       garbage collector. */
+    ik_ulong bucket_slot_pointer = s_symbol_table + off_vector_data + bucket_index * wordsize;
+    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+  }
+  return s_sym;
 }
+static ikptr
+intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
+/* Intern a  symbol object, having  S_PRETTY_STRING and S_UNIQUE_STRING,
+   in S_SYMBOL_TABLE which can be  either the common symbol table or the
+   gensyms table.
 
-ikptr
-ikrt_intern_gensym(ikptr sym, ikpcb* pcb){
-  ikptr st = pcb->gensym_table;
-  if(st == 0){
-    st = make_symbol_table(pcb);
-    pcb->gensym_table = st;
-  }
-  ikptr ustr = ref(sym, off_symbol_record_ustring);
-  int h = compute_hash(ustr);
-  int idx = h & (unfix(ref(st, off_vector_length)) - 1);
-  ikptr bckt = ref(st, off_vector_data + idx*wordsize);
-  ikptr b = bckt;
-  while(b){
-    ikptr sym = ref(b, off_car);
-    ikptr sym_ustr = ref(sym, off_symbol_record_ustring);
-    if(strings_eqp(sym_ustr, ustr)){
-      return false_object;
+   If a symbol object having S_UNIQUE_STRING is already interned: return
+   it.  Else: allocate a new symbol object, intern it, return it. */
+{
+  int   hash_value    = compute_hash(s_unique_string);
+  int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
+  ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
+  { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
+       it. */
+    ikptr s_list_iterator = s_bucket_list;
+    while (s_list_iterator && IK_NULL_OBJECT != s_list_iterator) {
+      ikptr s_sym      = IK_CAR(s_list_iterator);
+      ikptr s_sym_ustr = IK_REF(s_sym, off_symbol_record_ustring);
+      if (strings_eqp(s_sym_ustr, s_unique_string)) {
+	return s_sym;
+      }
+      s_list_iterator = IK_CDR(s_list_iterator);
     }
-    b = ref(b, off_cdr);
   }
-  b = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
-  ref(b, off_car) = sym;
-  ref(b, off_cdr) = bckt;
-  ref(st, off_vector_data + idx*wordsize) = b;
-  ((int*)(long)pcb->dirty_vector)[page_index(st+off_vector_data+idx*wordsize)] = -1;
-  return true_object;
+  /* Allocate a  new symbol  object and  add it to  the symbol  table by
+     prepending it to the bucket list. */
+  ikptr s_sym  = iku_make_symbol(s_pretty_string, s_unique_string, pcb);
+  ikptr s_pair = IKU_PAIR_ALLOC(pcb);
+  IK_CAR(s_pair) = s_sym;
+  IK_CDR(s_pair) = s_bucket_list;
+  IK_ITEM(s_symbol_table, bucket_index) = s_pair;
+  { /* Mark the  page containing  the bucket slot  to be scanned  by the
+       garbage collector. */
+    ik_ulong bucket_slot_pointer = s_symbol_table + off_vector_data + bucket_index * wordsize;
+    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+  }
+  return s_sym;
 }
-
-
 ikptr
-ikrt_unintern_gensym(ikptr sym, ikpcb* pcb){
-  ikptr st = pcb->gensym_table;
-  if(st == 0){
+ikrt_intern_gensym (ikptr s_sym, ikpcb* pcb)
+/* Given a  symbol object try to intern  it in the table  of gensyms; if
+   successful  return the  true object,  else return  the  false object.
+   Successful interning  means that  the unique string  in S_SYM  is not
+   already in the table.
+
+   Interning a gensym  cannot fail; this function is  meant to be called
+   in a  loop with a  newly generated unique  string stored in  S_SYM at
+   each iteration until the interning succeeds. */
+{
+  ikptr s_gensym_table = pcb->gensym_table;
+  if (0 == s_gensym_table) {
+    pcb->gensym_table = s_gensym_table = make_symbol_table(pcb);
+  }
+  ikptr s_unique_string = IK_REF(s_sym, off_symbol_record_ustring);
+  int   hash_value      = compute_hash(s_unique_string);
+  int   bucket_index    = hash_value & (IK_VECTOR_LENGTH(s_gensym_table) - 1);
+  ikptr s_bucket_list   = IK_ITEM(s_gensym_table, bucket_index);
+  { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
+       false. */
+    ikptr s_list_iterator = s_bucket_list;
+    while (s_list_iterator && IK_NULL_OBJECT != s_list_iterator) {
+      ikptr s_sym      = IK_CAR(s_list_iterator);
+      ikptr s_sym_ustr = IK_REF(s_sym, off_symbol_record_ustring);
+      if (strings_eqp(s_sym_ustr, s_unique_string)) {
+	return IK_FALSE_OBJECT;
+      }
+      s_list_iterator = IK_CDR(s_list_iterator);
+    }
+  }
+  /* Allocate a  new symbol  object and  add it to  the symbol  table by
+     prepending it to the bucket list. */
+  ikptr s_pair = IKU_PAIR_ALLOC(pcb);
+  IK_CAR(s_pair) = s_sym;
+  IK_CDR(s_pair) = s_bucket_list;
+  IK_ITEM(s_gensym_table, bucket_index) = s_pair;
+  { /* Mark the  page containing  the bucket slot  to be scanned  by the
+       garbage collector. */
+    ik_ulong bucket_slot_pointer = s_gensym_table + off_vector_data + bucket_index * wordsize;
+    ((int*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(bucket_slot_pointer)] = -1;
+  }
+  return IK_TRUE_OBJECT;
+}
+ikptr
+ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
+/* Remove S_SYM  from the  hash table of  interned gensyms;  return true
+   object if  the table exists and  S_SYM is present,  else return false
+   object. */
+{
+  fprintf(stderr, "removing gensym\n");
+  ikptr gensym_table = pcb->gensym_table;
+  if (0 == gensym_table) {
     /* no symbol table */
-    return false_object;
+    return IK_FALSE_OBJECT;
   }
-  ikptr ustr = ref(sym, off_symbol_record_ustring);
-  if (tagof(ustr) != string_tag) {
-    return false_object;
+  ikptr s_unique_string = IK_REF(s_sym, off_symbol_record_ustring);
+  if (IK_TAGOF(s_unique_string) != string_tag) {
+    return IK_FALSE_OBJECT;
   }
-  int h = compute_hash(ustr);
-  int idx = h & (unfix(ref(st, off_vector_length)) - 1);
-  ikptr loc = (ikptr)(st+off_vector_data+idx*wordsize);
-  ikptr bckt = ref(loc, 0);
-  while(bckt){
-    if (ref(bckt, off_car) == sym) {
-      /* found it */
-      ref(sym, off_symbol_record_ustring) = true_object;
-      ref(loc, 0) = ref(bckt, off_cdr);
-      return true_object;
+  int   hash_value    = compute_hash(s_unique_string);
+  int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(gensym_table) - 1);
+#if 0
+  /* This  is the  original  Ikarus  code.  (Marco  Maggi;  Sun Mar  11,
+     2012) */
+  ikptr bucket_list_pointer = (ikptr)(gensym_table + off_vector_data + bucket_index * wordsize);
+  ikptr s_bucket_list       = IK_REF(bucket_list_pointer, 0);
+  while (s_bucket_list) {
+    if (IK_CAR(s_bucket_list) == s_sym) {
+      /* Found it.   Remove the unique  string from the  gensym.  Remove
+	 the containing pair from the bucket list. */
+      IK_REF(s_sym, off_symbol_record_ustring) = IK_TRUE_OBJECT;
+      IK_REF(bucket_list_pointer, 0) = IK_CDR(s_bucket_list);
+      return IK_TRUE_OBJECT;
     } else {
-      loc = (ikptr)(bckt + off_cdr);
-      bckt = ref(loc, 0);
+      bucket_list_pointer = (ikptr)(s_bucket_list + off_cdr);
+      s_bucket_list       = IK_REF(bucket_list_pointer, 0);
     }
   }
-  return false_object;
+#else
+  /* This is  the modified  code to make  things more  readable.  (Marco
+     Maggi; Sun Mar 11, 2012) */
+  ikptr * bucket_list_pointer = (ikptr *)(gensym_table + off_vector_data + bucket_index * wordsize);
+  ikptr   s_bucket_list       = *bucket_list_pointer;
+  while (s_bucket_list) {
+    if (IK_CAR(s_bucket_list) == s_sym) {
+      /* Found it.   Remove the unique  string from the  gensym.  Remove
+	 the containing pair from the bucket list. */
+      IK_REF(s_sym, off_symbol_record_ustring) = IK_TRUE_OBJECT;
+      *bucket_list_pointer = IK_CDR(s_bucket_list);
+      return IK_TRUE_OBJECT;
+    } else {
+      bucket_list_pointer = (ikptr *)(s_bucket_list + off_cdr);
+      s_bucket_list       = *bucket_list_pointer;
+    }
+  }
+#endif
+  return IK_FALSE_OBJECT;
 }
 
+
 ikptr
-ikrt_get_symbol_table(ikpcb* pcb){
-  ikptr st = pcb->symbol_table;
-  pcb->symbol_table = false_object;
-  if(st == false_object) {
-    fprintf(stderr, "bug in ikarus, attempt to access dead symbol table\n");
-    exit(-1);
+ikrt_string_to_symbol (ikptr str, ikpcb* pcb)
+{
+  ikptr s_symbol_table = pcb->symbol_table;
+  if (IK_FALSE_OBJECT == s_symbol_table)
+    ik_abort("attempt to access dead symbol table");
+  if (0 == s_symbol_table) {
+    pcb->symbol_table = s_symbol_table = make_symbol_table(pcb);
   }
-  return st;
+  return intern_string(str, s_symbol_table, pcb);
+}
+ikptr
+ikrt_strings_to_gensym (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
+{
+  ikptr s_gensym_table = pcb->gensym_table;
+  if (0 == s_gensym_table) {
+    pcb->gensym_table = s_gensym_table = make_symbol_table(pcb);
+  }
+  return intern_unique_string(s_pretty_string, s_unique_string, s_gensym_table, pcb);
 }
 
-
-ikptr 
-ikrt_string_to_symbol(ikptr str, ikpcb* pcb){
-  ikptr st = pcb->symbol_table;
-  if(st == false_object) {
-    fprintf(stderr, "bug in ikarus, attempt to access dead symbol table\n");
-    exit(-1);
-  }
-  if(st == 0){
-    st = make_symbol_table(pcb);
-    pcb->symbol_table = st;
-  }
-  return intern_string(str, st, pcb);
-}
-
-ikptr 
-ik_intern_string(ikptr str, ikpcb* pcb){
-  return ikrt_string_to_symbol(str, pcb);
-}
-
-ikptr 
-ikrt_strings_to_gensym(ikptr str, ikptr ustr, ikpcb* pcb){
-  ikptr st = pcb->gensym_table;
-  if(st == 0){
-    st = make_symbol_table(pcb);
-    pcb->gensym_table = st;
-  }
-  return intern_unique_string(str, ustr, st, pcb);
-}
-
-
+/* end of file */

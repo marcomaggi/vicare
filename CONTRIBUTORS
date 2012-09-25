@@ -1,18 +1,93 @@
-Marco  Maggi   <marco.maggi-ipsu@poste.it>  is  the  initial
-maintainer of Vicare Scheme fork.
+Marco  Maggi <marco.maggi-ipsu@poste.it>  is the  initial  maintainer of
+Vicare Scheme fork.
 
 Andreas Rottmann: provided patch to implement getpid.
 
-Göran     Weinholt:    provided    patch     to    implement
-FXREVERSE-BIT-FIELD.
+Göran Weinholt: provided patch to implement FXREVERSE-BIT-FIELD.
 
-Matthew Flatt  distributed the  R6RS test suite  embedded in
-the Vicare distribution.
+Matthew Flatt  distributed the  R6RS test suite  embedded in  the Vicare
+distribution.
 
+The  implementation of  the function  BITWISE-REVERSE-BIT-FIELD  is from
+original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
+Y. FUJITA / LittleWing  Company Limited.
+
+## ------------------------------------------------------------
+## Below are the contributors of Ikarus
+
+People  listed  in this  file  have  contributed comments,  suggestions,
+criticisms, and bug reports which  have helped me fix and improve Ikarus
+Scheme.  Without their contributions,  my job would've been much harder.
+I'm very thankful.
+
+   Aziz,,,
+
+====================================================================
+VERSION 0.0.2:
+
+* Everybody  who took the  time to  email me  when Ikarus  was released.
+  Thanks for the encouragements.
+
+* Eric  Hanchrow  (offby1)  reported  the  first public  bug  on  bignum
+  division error
+
+* Wolfram Fenske helped  test porting the system to  NetBSD and FreeBSD,
+  increasing the number of supported platforms from 3 to 5.  The Solaris
+  port is still unfinished though.
+
+* Tom  Gordon reported  installation  problems on  64-bit systems  which
+  resulted in improving the error report of the configure script.
+
+* Jens Axel  SÃ¸gaard(and his brother) provided  solutions for compiling
+  Ikarus on 64-bit machines.
+
+* Andre van  Tonder reported expansion problems  for top-level programs.
+  He also made suggestions for improving the user's guide.
+
+* Michael  Adams helped  in  a zillion  things  including fixing  typos,
+  making   the  command-line  procedure   consistent  for   scripts  and
+  interactive sessions,  installing the boot  file in a  proper location
+  (along  with some  help in  using  automake and  autoconf), filed  bug
+  reports (on  expt, modulo, error,  get-line, number->string, truncate,
+  fltruncate,   flabs,   substring,   define-record-type,  put-u8,   the
+  expander, and  the compiler), and helped  cut startup time  in half by
+  instrumenting the ikarus loader.
+
+* Phil Bewig wrote SRFI-41 (streams)  in R6RS, which loads flawlessly in
+  Ikarus.
+
+* Felix Klock reported (indirectly) that the +nan.0 and +inf.0 should be
+  case insensitive.
+
+* Derick Eddington  reported garbage collection problems  with code that
+  only  uses bignum  arithmetic.   Also reported  problems with  reading
+  identifiers containing unicode escape  sequences and corrected a minor
+  bug with export classifications.
+
+* Kent Dybvig approved of an  idea for optimizing closures that resulted
+  in cutting the bootstrap time in half.
+
+* Will Clinger indirectly reported that Ikarus does not support the
+  #!r6rs comment.
+
+
+====================================================================
+VERSION 0.0.1:
+
+* Kent Dybvig  and Michael Adams  both advised that the  initial release
+  should build  and install using  the standard ./configure,  make, make
+  install sequence.   This made the  lauch of Ikarus very  successful as
+  people had little or no problems building and installing it.
+
+* Will Byrd gave suggestions about the minimum stuff that should go into
+  the user's guide and suggested having a small R6RS tutorial.
+
+* Roshan James  bugged me to port  Ikarus to Windows.  Only  half of his
+  wish came true (cygwin is not windows in his dictionary).
 
 ### end of file
 # Local Variables:
 # mode: text
-# fill-column: 60
+# fill-column: 72
 # paragraph-start: "*"
 # End:

@@ -1,592 +1,659 @@
+/*
+  Part of: Vicare
+  Contents: interface to POSIX functions
+  Date: Sun Nov  6, 2011
 
-#include "ikarus-data.h"
-#include "config.h"
-#include <sys/errno.h>
+  Abstract
 
-#if ENABLE_LIBFFI
+        This module defines the interface between Vicare and Libffi.
+
+        This  file is  without  license notice  in  the original  Ikarus
+        distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
+        2011).
+
+  Copyright (C) 2011-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+
+  This program is  free software: you can redistribute  it and/or modify
+  it under the  terms of the GNU General Public  License as published by
+  the Free Software Foundation, either  version 3 of the License, or (at
+  your option) any later version.
+
+  This program  is distributed in the  hope that it will  be useful, but
+  WITHOUT   ANY  WARRANTY;   without  even   the  implied   warranty  of
+  MERCHANTABILITY  or FITNESS  FOR A  PARTICULAR PURPOSE.   See  the GNU
+  General Public License for more details.
+
+  You  should have received  a copy  of the  GNU General  Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
+
+#include "internals.h"
+static ikptr    seal_scheme_stack            (ikpcb* pcb);
+
+#ifdef HAVE_LIBFFI
 #include <ffi.h>
-#include <stdlib.h>
-#include <strings.h>
 
 #undef DEBUG_FFI
 
-#ifdef HACK_FFI
-#include <sys/mman.h>
+#ifdef LIBFFI_ON_DARWIN
+#  include <sys/mman.h>         /* for "mprotect()" */
 #endif
 
+
+/** --------------------------------------------------------------------
+ ** Constants and variables.
+ ** ----------------------------------------------------------------- */
+
+/* These  constants must  be kept  in  sync with  the ones  in the  file
+   "ikarus.pointers.sls". */
+typedef enum type_id_t {
+  TYPE_ID_VOID          =  0,   /* &ffi_type_void    */
+  TYPE_ID_UINT8         =  1,   /* &ffi_type_uint8   */
+  TYPE_ID_SINT8         =  2,   /* &ffi_type_sint8   */
+  TYPE_ID_UINT16        =  3,   /* &ffi_type_uint16  */
+  TYPE_ID_SINT16        =  4,   /* &ffi_type_sint16  */
+  TYPE_ID_UINT32        =  5,   /* &ffi_type_uint32  */
+  TYPE_ID_SINT32        =  6,   /* &ffi_type_sint32  */
+  TYPE_ID_UINT64        =  7,   /* &ffi_type_uint64  */
+  TYPE_ID_SINT64        =  8,   /* &ffi_type_sint64  */
+  TYPE_ID_FLOAT         =  9,   /* &ffi_type_float   */
+  TYPE_ID_DOUBLE        = 10,   /* &ffi_type_double  */
+  TYPE_ID_POINTER       = 11,   /* &ffi_type_pointer */
+  TYPE_ID_UCHAR         = 12,   /* &ffi_type_uchar   */
+  TYPE_ID_SCHAR         = 13,   /* &ffi_type_schar   */
+  TYPE_ID_USHORT        = 14,   /* &ffi_type_ushort  */
+  TYPE_ID_SSHORT        = 15,   /* &ffi_type_sshort  */
+  TYPE_ID_UINT          = 16,   /* &ffi_type_uint    */
+  TYPE_ID_SINT          = 17,   /* &ffi_type_sint    */
+  TYPE_ID_ULONG         = 18,   /* &ffi_type_ulong   */
+  TYPE_ID_SLONG         = 19,   /* &ffi_type_slong   */
+  TYPE_ID_NUMBER        = 20
+} type_id_t;
+
+static ffi_type * the_ffi_types_array[TYPE_ID_NUMBER] = {
+  &ffi_type_void,       /*  0 */
+  &ffi_type_uint8,      /*  1 */
+  &ffi_type_sint8,      /*  2 */
+  &ffi_type_uint16,     /*  3 */
+  &ffi_type_sint16,     /*  4 */
+  &ffi_type_uint32,     /*  5 */
+  &ffi_type_sint32,     /*  6 */
+  &ffi_type_uint64,     /*  7 */
+  &ffi_type_sint64,     /*  8 */
+  &ffi_type_float,      /*  9 */
+  &ffi_type_double,     /* 10 */
+  &ffi_type_pointer,    /* 11 */
+  &ffi_type_uchar,      /* 12 */
+  &ffi_type_schar,      /* 13 */
+  &ffi_type_ushort,     /* 14 */
+  &ffi_type_sshort,     /* 15 */
+  &ffi_type_uint,       /* 16 */
+  &ffi_type_sint,       /* 17 */
+  &ffi_type_ulong,      /* 18 */
+  &ffi_type_slong       /* 19 */
+};
+
+static size_t the_ffi_type_sizes[TYPE_ID_NUMBER] = {
+  0,                            /*  0 */
+  sizeof(uint8_t),              /*  1 */
+  sizeof(int8_t),               /*  2 */
+  sizeof(uint16_t),             /*  3 */
+  sizeof(int16_t),              /*  4 */
+  sizeof(uint32_t),             /*  5 */
+  sizeof(int32_t),              /*  6 */
+  sizeof(uint64_t),             /*  7 */
+  sizeof(int64_t),              /*  8 */
+  sizeof(float),                /*  9 */
+  sizeof(double),               /* 10 */
+  sizeof(void *),               /* 11 */
+  sizeof(unsigned char),        /* 12 */
+  sizeof(char),                 /* 13 */
+  sizeof(unsigned short),       /* 14 */
+  sizeof(short),                /* 15 */
+  sizeof(unsigned int),         /* 16 */
+  sizeof(int),                  /* 17 */
+  sizeof(ik_ulong),        /* 18 */
+  sizeof(long)                  /* 19 */
+};
+
+
+/** --------------------------------------------------------------------
+ ** Type definitions.
+ ** ----------------------------------------------------------------- */
+
+typedef void address_t ();
+
+/* This structure exists to make  it easier to allocate data required by
+   Libffi's Call InterFace; it wraps a Libffi's "ffi_cif" type providing
+   a full description of the interface for callouts and callbacks. */
+typedef struct ik_ffi_cif_stru_t {
+  ffi_cif       cif;            /* Libffi's CIF structure */
+  unsigned      arity;          /* number of arguments */
+  size_t        args_bufsize;   /* number of  bytes to allocate  to hold
+                                   the arguments as native values */
+  ffi_type *    retval_type;    /* Libffi's type structure for return value */
+  type_id_t     retval_type_id; /* type identifier for return value */
+  ffi_type **   arg_types;      /* Libffi's type structures for arguments */
+  type_id_t *   arg_type_ids;   /* type identifiers for arguments */
+  uint8_t       data[0];        /* appended data */
+} ik_ffi_cif_stru_t;
+
+typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
+
+/* Compute the size  of memory block to hold  a full "ik_ffi_cif_stru_t"
+   with array data  appended.  ARITY is the number  of arguments for the
+   described call interface. */
+#define IK_FFI_CIF_SIZEOF(ARITY)                \
+  (sizeof(ik_ffi_cif_stru_t)+(1+(ARITY))*sizeof(ffi_type*)+(ARITY)*sizeof(type_id_t*))
+
+/* Given a pointer  CIF of type "ik_ffi_cif_t", return  a pointer to the
+   array  of  "ffy_type" structures  describing  the  type  of the  call
+   arguments; such pointer must be stored the "arg_types" field. */
+#define IK_FFI_CIF_ARG_TYPES_PTR(CIF,ARITY)     \
+  ((ffi_type**)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t)))
+
+/* Given a pointer  CIF of type "ik_ffi_cif_t", return  a pointer to the
+   array  of  "type_id_t"  integers  describing  the type  of  the  call
+   arguments; such pointer must be stored the "arg_type_ids" field. */
+#define IK_FFI_CIF_ARG_TYPE_IDS_PTR(CIF,ARITY)  \
+  ((type_id_t*)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t) + (1+(ARITY))*sizeof(ffi_type*)))
+
+static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr s_scheme_value, void * buffer);
+static ikptr    ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
+static void     generic_callback             (ffi_cif *cif, void *ret, void **args, void *user_data);
+
+
+/** --------------------------------------------------------------------
+ ** Helpers and miscellaneous small functions.
+ ** ----------------------------------------------------------------- */
+
 static void*
-alloc(size_t n, int m) {
-  void* x = calloc(n, m);
-  if (x == NULL) {
-    fprintf(stderr, "ERROR (ikarus): calloc failed!\n");
-    exit(-1);
-  }
-  return x;
+alloc (size_t n, long m)
+{
+  void  * ptr = calloc(n, m);
+  if (!ptr)
+    ik_abort("failed memory allocation with calloc(%u, %ld)", n, m);
+  return ptr;
 }
-
-static ffi_type* scheme_to_ffi_type_cast(ikptr nptr);
-
-static ffi_type* 
-scheme_to_ffi_record_type_cast(ikptr vec){
-  ikptr lenptr = ref(vec, -vector_tag);
-  if (! is_fixnum(lenptr)) {
-    fprintf(stderr, "NOT A VECTOR 0x%016lx\n", vec);
-    exit(-1);
-  }
-  long n = unfix(lenptr);
-  ffi_type* t = alloc(sizeof(ffi_type), 1);
-  ffi_type** ts = alloc(sizeof(ffi_type*), n+1);
-  t->size = 0;
-  t->alignment = 0;
-  t->type = FFI_TYPE_STRUCT;
-  t->elements = ts;
-  long i;
-  for(i=0; i<n; i++){
-    ts[i] = scheme_to_ffi_type_cast(ref(vec, off_vector_data + i*wordsize)); 
-  }
-  ts[n] = 0;
-  return t;
-}
-
-static ffi_type* 
-scheme_to_ffi_type_cast(ikptr nptr){
-  if (tagof(nptr) == vector_tag) {
-    return scheme_to_ffi_record_type_cast(nptr);
-  } else if (is_fixnum(nptr)) {
-    long n = unfix(nptr);
-    switch (n & 0xF) {
-      case  1: return &ffi_type_void;
-      case  2: return &ffi_type_uint8;
-      case  3: return &ffi_type_sint8;
-      case  4: return &ffi_type_uint16;
-      case  5: return &ffi_type_sint16;
-      case  6: return &ffi_type_uint32;
-      case  7: return &ffi_type_sint32;
-      case  8: return (sizeof(long)==4)?&ffi_type_uint32:&ffi_type_uint64;
-      case  9: return (sizeof(long)==4)?&ffi_type_sint32:&ffi_type_sint64;
-      case 10: return &ffi_type_uint64;
-      case 11: return &ffi_type_sint64;
-      case 12: return &ffi_type_float;
-      case 13: return &ffi_type_double;
-      case 14: return &ffi_type_pointer;
-      default: 
-        fprintf(stderr, "INVALID ARG %ld", n);
-        exit(-1);
-    }
-  } else {
-    fprintf(stderr, "INVALID ARG %ld", nptr);
-    exit(-1);
-  }
-}
-
-static void* 
-alloc_room_for_type(ffi_type* t){
-  return alloc(t->size, 1);
-}
-
-extern long extract_num(ikptr x);
-extern long long extract_num_longlong(ikptr x);
-extern ikptr sll_to_number(signed long long n, ikpcb* pcb);
-extern ikptr ull_to_number(unsigned long long n, ikpcb* pcb);
-
-static void scheme_to_ffi_value_cast(ffi_type*, ikptr, ikptr, void*);
-
-static void
-scheme_to_ffi_record_value_cast(ffi_type* t, ikptr nptr, ikptr p, void* r) {
-  if (t->type != FFI_TYPE_STRUCT) {
-    fprintf(stderr, "not a struct type\n");
-    exit(-1);
-  }
-  ffi_type** ts = t->elements;
-  char* buf = r;
-  ikptr lenptr = ref(nptr, off_vector_length);
-  int n = unfix(lenptr);
-  int i;
-  for(i=0; i<n; i++) {
-    ffi_type* at = ts[i];
-    ikptr argt = ref(nptr, off_vector_data + i*wordsize);
-    ikptr arg = ref(p, off_vector_data + i*wordsize);
-    scheme_to_ffi_value_cast(at, argt, arg, buf);
-    buf += at->size;
-  }
-}
-
-static void
-scheme_to_ffi_value_cast(ffi_type* t, ikptr nptr, ikptr p, void* r) {
-  if (tagof(nptr) == vector_tag) {
-    scheme_to_ffi_record_value_cast(t, nptr, p, r);
-  } else if (is_fixnum(nptr)) {
-    long n = unfix(nptr);
-    switch (n & 0xF) {
-      case  1: {  return; }
-      case  2: // ffi_type_uint8;
-      case  3:
-       { *((char*)r) = extract_num(p); return; }
-      case  4: // ffi_type_uint16;
-      case  5: 
-       { *((short*)r) = extract_num(p); return; }
-      case  6: //  ffi_type_uint32;
-      case  7: 
-       { *((int*)r) = extract_num(p); return; }
-      case  8: // ffi_type_uint64;
-      case  9: 
-       { *((long*)r) = extract_num(p); return; }
-      case 10:
-      case 11:
-       { *((long long*)r) = extract_num_longlong(p); return; }
-      case 12: //return &ffi_type_float;
-       { *((float*)r) = flonum_data(p); return; }
-      case 13: //return &ffi_type_double;
-       { *((double*)r) = flonum_data(p); return; }
-      case 14: //return &ffi_type_pointer;
-       { *((void**)r) = (void*)ref(p, off_pointer_data); return; }
-      default: 
-        fprintf(stderr, "INVALID ARG %ld", n);
-        exit(-1);
-    }
-  } else {
-    fprintf(stderr, "INVALID TYPE  0x%016lx\n", nptr);
-    exit(-1);
-  }
-}
-
-
-static ikptr
-ffi_to_scheme_value_cast(int n, void* p, ikpcb* pcb) {
-  switch (n & 0xF) {
-    case  1: return void_object; 
-    case  2: return u_to_number(*((unsigned char*)p), pcb);
-    case  3: return s_to_number(*((signed char*)p), pcb);
-    case  4: return u_to_number(*((unsigned short*)p), pcb);
-    case  5: return s_to_number(*((signed short*)p), pcb);
-    case  6: return u_to_number(*((unsigned int*)p), pcb);
-    case  7: return s_to_number(*((signed int*)p), pcb);
-    case  8: return u_to_number(*((unsigned long*)p), pcb);
-    case  9: return s_to_number(*((signed long*)p), pcb);
-    case 10: return ull_to_number(*((unsigned long long*)p), pcb);
-    case 11: return sll_to_number(*((signed long long*)p), pcb);
-    case 12: return d_to_number(*((float*)p), pcb);
-    case 13: return d_to_number(*((double*)p), pcb);
-    case 14: return make_pointer((long)*((void**)p), pcb);
-    default: 
-      fprintf(stderr, "INVALID ARG %d", n);
-      exit(-1);
-  }
-}
-
 ikptr
-ikrt_ffi_prep_cif(ikptr rtptr, ikptr argstptr, ikpcb* pcb) {
-  ffi_cif* cif = alloc(sizeof(ffi_cif), 1);
-  ffi_abi abi = FFI_DEFAULT_ABI;
-  int nargs = unfix(ref(argstptr, off_vector_length));
-  ffi_type** argtypes = alloc(sizeof(ffi_type*), nargs+1);
-  int i;
-  for(i=0; i<nargs; i++){
-    ikptr argt = ref(argstptr, off_vector_data + i*wordsize);
-    argtypes[i] = scheme_to_ffi_type_cast(argt);
-  }
-  argtypes[nargs] = NULL;
-  ffi_type* rtype = scheme_to_ffi_type_cast(rtptr);
-  ffi_status s = ffi_prep_cif(cif, abi, nargs, rtype, argtypes);
-  if (s == FFI_OK) {
-    ikptr r = ik_safe_alloc(pcb, pointer_size);
-    ref(r, 0) = pointer_tag;
-    ref(r, wordsize) = (ikptr)cif;
-    return r + vector_tag;
-  } else {
-    return false_object;  
-  }
+ikrt_has_ffi (void)
+{
+  return IK_TRUE_OBJECT;
 }
 
-
-#ifdef DEBUG_FFI        
+#ifdef DEBUG_FFI
 static void
-dump_stack(ikpcb* pcb, char* msg) {
+dump_stack (ikpcb* pcb, char* msg)
+{
   fprintf(stderr, "====================  %s\n", msg);
   ikptr frame_base = pcb->frame_base;
   ikptr frame_pointer = pcb->frame_pointer;
   ikptr p = frame_pointer;
   fprintf(stderr, "fp=0x%016lx   base=0x%016lx\n", frame_pointer, frame_base);
-  while(p < frame_base) {
-    fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, ref(p, 0));
+  while (p < frame_base) {
+    fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, IK_REF(p, 0));
     p += wordsize;
   }
 }
 #endif
 
+
+/** --------------------------------------------------------------------
+ ** Call InterFace (CIF) preparation.
+ ** ----------------------------------------------------------------- */
 
-/* FIXME: handle stack overflow */
 ikptr
-ikrt_seal_scheme_stack(ikpcb* pcb) {
-  #if 0
-           |              |
-           |              |
-           |              |
-           |              |
-           +--------------+
-           |   underflow  |  <--------- new frame pointer
-           +--------------+
-           | return point |  <--------- old frame pointer, new frame base
-           +--------------+
-           |      .       |
-           |      .       |
-           |      .       |
-           |              |
-           +--------------+
-           |   underflow  |  <--------- old frame base 
-           +--------------+
-  #endif
-  ikptr frame_base = pcb->frame_base;
-  ikptr frame_pointer = pcb->frame_pointer;
-#ifdef DEBUG_FFI
-  dump_stack(pcb, "BEFORE SEALING");
-  fprintf(stderr, "old base=0x%016lx  fp=0x%016lx\n", pcb->frame_base,
-      pcb->frame_pointer);
+ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
+/* Wrapper  for   Libffi's  "ffi_prep_cif()";  prepare   a  Libffi  call
+   interface (CIF) building an  appropriate data structure, whose memory
+   is obtained  by "calloc()".  Return a pointer  object referencing the
+   CIF structure.
+
+   The generated CIR can be used for both callouts and callbacks.
+
+   S_TYPE_IDS  must  be a  vector  of  fixnums  in the  set  "type_id_t"
+   selecting the type  of the arguments and return  value; the fixnum at
+   index 0  represents the type of  the return value,  the other fixnums
+   the type of the arguments. */
+{
+  unsigned      arity = ((unsigned)IK_VECTOR_LENGTH(s_type_ids))-1;
+  ik_ffi_cif_t  cif   = alloc(IK_FFI_CIF_SIZEOF(arity), 1);
+  ffi_status    rv;
+  int           i;
+  cif->arg_types      = IK_FFI_CIF_ARG_TYPES_PTR(cif, arity);
+  cif->arg_type_ids   = IK_FFI_CIF_ARG_TYPE_IDS_PTR(cif, arity);
+  cif->arity          = arity;
+  cif->retval_type_id = IK_UNFIX(IK_ITEM(s_type_ids, 0));
+  cif->retval_type    = the_ffi_types_array[cif->retval_type_id];
+  cif->args_bufsize   = 0;
+  for (i=0; i<arity; ++i) {
+    type_id_t   id       =  IK_UNFIX(IK_ITEM(s_type_ids, 1+i));
+    cif->args_bufsize    += the_ffi_type_sizes[id];
+    cif->arg_type_ids[i] =  id;
+    cif->arg_types[i]    =  the_ffi_types_array[id];
+  }
+  cif->arg_types[arity] = NULL;
+  rv = ffi_prep_cif(&(cif->cif), FFI_DEFAULT_ABI, arity, cif->retval_type, cif->arg_types);
+  return (FFI_OK == rv)? ika_pointer_alloc(pcb, (ik_ulong)cif) : IK_FALSE_OBJECT;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Converting Scheme values to and from native values.
+ ** ----------------------------------------------------------------- */
+
+static void
+scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buffer)
+/* Convert  the S_SCHEME_VALUE to  a native  value and  store it  in the
+   block of memory  referenced by BUFFER; the type  is selected TYPE_ID.
+   S_SCHEME_VALUE must have been already validated.  BUFFER must be wide
+   enough. */
+{
+  switch (type_id) {
+  case TYPE_ID_VOID: return;
+
+  case TYPE_ID_UINT8:   *((uint8_t*)         buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_SINT8:   *((int8_t*)          buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_UINT16:  *((uint16_t*)        buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_SINT16:  *((int16_t*)         buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_UINT32:  *((uint32_t*)        buffer) = ik_integer_to_uint32(s_scheme_value); return;
+  case TYPE_ID_SINT32:  *((int32_t*)         buffer) = ik_integer_to_sint32(s_scheme_value); return;
+  case TYPE_ID_UINT64:  *((uint64_t*)        buffer) = ik_integer_to_uint64(s_scheme_value); return;
+  case TYPE_ID_SINT64:  *((int64_t*)         buffer) = ik_integer_to_sint64(s_scheme_value); return;
+
+  case TYPE_ID_FLOAT:   *((float*)          buffer) = IK_FLONUM_DATA(s_scheme_value); return;
+  case TYPE_ID_DOUBLE:  *((double*)         buffer) = IK_FLONUM_DATA(s_scheme_value); return;
+
+  case TYPE_ID_POINTER:
+    /* This  supports  bytevector  arguments  to  foreign  functions  as
+       pointers.  Currently  undocumented because it  is unsafe.  (Marco
+       Maggi; Jan 13, 2012) */
+    if (IK_IS_BYTEVECTOR(s_scheme_value))
+      *((void**)buffer) = IK_BYTEVECTOR_DATA_VOIDP(s_scheme_value);
+    else
+      *((void**)buffer) = IK_POINTER_DATA_VOIDP(s_scheme_value);
+    return;
+
+  case TYPE_ID_UCHAR:   *((unsigned char*)  buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_SCHAR:   *((char*)           buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_USHORT:  *((unsigned short*) buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_SSHORT:  *((signed short*)   buffer) = IK_UNFIX(s_scheme_value); return;
+  case TYPE_ID_UINT:    *((unsigned int*)   buffer) = ik_integer_to_long(s_scheme_value); return;
+  case TYPE_ID_SINT:    *((signed int*)     buffer) = ik_integer_to_long(s_scheme_value); return;
+  case TYPE_ID_ULONG:   *((ik_ulong*)       buffer) = ik_integer_to_long(s_scheme_value); return;
+  case TYPE_ID_SLONG:   *((long*)           buffer) = ik_integer_to_long(s_scheme_value); return;
+
+  default:
+    ik_abort("%s: invalid argument type selector %d", __func__, (int)type_id);
+  }
+}
+static ikptr
+ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
+/* Convert the native value stored  in the block of memory referenced by
+   BUFFER to  a Scheme value  and return the  Scheme value; the  type is
+   selected by TYPE_ID. */
+{
+  switch (type_id) {
+  case TYPE_ID_VOID:    return IK_VOID_OBJECT;
+
+  case TYPE_ID_UINT8:   return IK_FIX(*((uint8_t*) buffer));
+  case TYPE_ID_SINT8:   return IK_FIX(*(( int8_t*) buffer));
+  case TYPE_ID_UINT16:  return IK_FIX(*((uint16_t*)buffer));
+  case TYPE_ID_SINT16:  return IK_FIX(*(( int16_t*)buffer));
+  case TYPE_ID_UINT32:  return ika_integer_from_ulong (pcb, *((uint32_t*) buffer));
+  case TYPE_ID_SINT32:  return ika_integer_from_long  (pcb, *((long*)     buffer));
+  case TYPE_ID_UINT64:  return ika_integer_from_ullong(pcb, *((ik_ullong*)buffer));
+  case TYPE_ID_SINT64:  return ika_integer_from_llong (pcb, *((ik_llong*) buffer));
+
+  case TYPE_ID_FLOAT:   return ika_flonum_from_double	(pcb, *((float*)      buffer));
+  case TYPE_ID_DOUBLE:  return ika_flonum_from_double	(pcb, *((double*)     buffer));
+  case TYPE_ID_POINTER: return ika_pointer_alloc	(pcb, (long)*((void**)buffer));
+
+  case TYPE_ID_UCHAR:   return ika_integer_from_ulong(pcb, *((unsigned char*) buffer));
+  case TYPE_ID_SCHAR:   return ika_integer_from_long (pcb, *((signed char*)   buffer));
+  case TYPE_ID_USHORT:  return ika_integer_from_ulong(pcb, *((unsigned short*)buffer));
+  case TYPE_ID_SSHORT:  return ika_integer_from_long (pcb, *((signed short*)  buffer));
+  case TYPE_ID_UINT:    return ika_integer_from_ulong(pcb, *((unsigned int*)  buffer));
+  case TYPE_ID_SINT:    return ika_integer_from_long (pcb, *((signed int*)    buffer));
+  case TYPE_ID_ULONG:   return ika_integer_from_ulong(pcb, *((ik_ulong*)      buffer));
+  case TYPE_ID_SLONG:   return ika_integer_from_long (pcb, *((long*)          buffer));
+
+  default:
+    ik_abort("%s: invalid arg %d", __func__, (int)type_id);
+    return IK_VOID_OBJECT;
+  }
+}
+
+
+/** --------------------------------------------------------------------
+ ** Callout: call a C function from Scheme code.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
+/* Perform a callout and return the return value of the callout.
+
+   S_DATA  must  be  a pair  whose  car  is  a  pointer object  of  type
+   "ik_ffi_cif_t"  and whose cdr  is a  pointer object  representing the
+   address of the foreign function to call.
+
+   S_ARGS must be a vector holding the call arguments.  */
+{
+  ikptr         return_value;
+  ikptr         sk;
+  size_t        args_bufsize;
+  seal_scheme_stack(pcb);
+  sk = ik_unsafe_alloc(pcb, system_continuation_size) | vector_tag;
+  IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
+  IK_REF(sk, off_system_continuation_top)  = pcb->system_stack;
+  IK_REF(sk, off_system_continuation_next) = pcb->next_k;
+  pcb->next_k = sk;
+  {
+    ik_ffi_cif_t  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
+    address_t *   address = IK_POINTER_DATA_VOIDP(IK_CDR(s_data));
+    /* Prepare  memory   to  hold  native   values  representing  Scheme
+       arguments and the return value */
+    uint8_t     args_buffer[cif->args_bufsize];
+    uint8_t *   arg_next = &(args_buffer[0]);
+    uint8_t *   arg_end  = arg_next + cif->args_bufsize;
+    void *      arg_value_ptrs[1+cif->arity];
+    /* It seems  that Libffi expects  at least a return-value  buffer of
+       size  "sizeof(uint64_t)"  even for  smaller  types,  at least  on
+       64-bit platforms.  Let's play it safe and try to forget about it.
+       (Marco Maggi; Aug 1, 2012) */
+    uint8_t     retval_buffer[(cif->retval_type->size < sizeof(uint64_t))? \
+			      sizeof(uint64_t) : cif->retval_type->size];
+    /* Fill ARG_VALUE_PTRS  with pointers  to memory blocks  holding the
+       native argument values. */
+    int  i;
+    for (i=0; i<cif->arity; i++) {
+      ikptr  value = IK_ITEM(s_args, i);
+      arg_value_ptrs[i] = arg_next;
+      scheme_to_native_value_cast(cif->arg_type_ids[i], value, arg_next);
+      arg_next += cif->arg_types[i]->size;
+      if (arg_end < arg_next) {
+        args_bufsize = cif->args_bufsize;
+        goto too_many_args_error;
+      }
+    }
+    arg_value_ptrs[cif->arity] = NULL;
+    /* Perform the call. */
+    errno = 0;
+    ffi_call(&(cif->cif), address, (void *)retval_buffer, arg_value_ptrs);
+    pcb->last_errno = errno;
+    return_value    = ika_native_to_scheme_value_cast(cif->retval_type_id, retval_buffer, pcb);
+  }
+  pcb->frame_pointer = pcb->frame_base - wordsize;
+  sk = pcb->next_k - vector_tag;
+  if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
+    ik_abort("%s: invalid system cont", __func__);
+  }
+  pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
+  pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
+  return return_value;
+
+ too_many_args_error:
+  ik_abort("exceeded maximum memory size (%d) reserved for callout arguments, too many arguments to callout", args_bufsize);
+  return IK_VOID_OBJECT;
+}
+
+
+/** --------------------------------------------------------------------
+ ** Callback: call a Scheme closure from C code.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
+/* Prepare  a Libffi's  callback interface  associated  to a  CIF and  a
+   Scheme function.   If successful return a  pointer object referencing
+   the  callback, else  return false.   A failure  is probably  an error
+   allocating memory with the system functions.
+
+   S_DATA  must  be  a pair  whose  car  is  a  pointer object  of  type
+   "ik_ffi_cif_t" and whose cdr is the Scheme function to be used by the
+   callback. */
+{
+#if FFI_CLOSURES
+  ffi_cif *                     cif;
+  void *                        callable_pointer;
+  ffi_closure *                 closure;
+  ik_callback_locative *        callback_user_data;
+  ffi_status                    st;
+  cif     = IK_POINTER_DATA_VOIDP(IK_CAR(s_data));
+  closure = ffi_closure_alloc(sizeof(ffi_closure), &callable_pointer);
+#ifdef LIBFFI_ON_DARWIN
+  { /* This is  needed on some flavors  of Darwin to  make the generated
+       callback code executable. */
+    long code_start = IK_ALIGN_TO_PREV_PAGE(callable_pointer);
+    long code_end   = IK_ALIGN_TO_NEXT_PAGE(FFI_TRAMPOLINE_SIZE+(-1)+(long)callable_pointer);
+    int rv = mprotect((void*)code_start, code_end - code_start, PROT_READ|PROT_WRITE|PROT_EXEC);
+    if (rv)
+      fprintf(stderr, "*** Vicare warning: error mprotecting callback code page\n");
+  }
 #endif
+  callback_user_data = malloc(sizeof(ik_callback_locative));
+  if (NULL == callback_user_data)
+    return IK_FALSE_OBJECT;
+  st = ffi_prep_closure_loc(closure, cif, generic_callback, callback_user_data, callable_pointer);
+  if (FFI_OK != st) {
+    free(callback_user_data);
+    return IK_FALSE_OBJECT;
+  }
+  /* Prepend this callback to the linked list of callbacks registered in
+     this process' PCB.  The garbage collector uses this information not
+     to collect data still needed by the callbacks.  */
+  callback_user_data->callable_pointer  = callable_pointer;
+  callback_user_data->closure           = closure;
+  callback_user_data->data              = s_data;
+  callback_user_data->next              = pcb->callbacks;
+  pcb->callbacks                        = callback_user_data;
+  /* Return a pointer to callable code. */
+  return ika_pointer_alloc(pcb, (ik_ulong)callable_pointer);
+#else /* if FFI_CLOSURES */
+  return IK_FALSE_OBJECT;
+#endif /* if FFI_CLOSURES */
+}
+ikptr
+ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
+{
+  ik_callback_locative *  root;
+  void *                  callable_pointer;
+  root             = pcb->callbacks;
+  callable_pointer = IK_POINTER_DATA_VOIDP(s_callable_pointer);
+  if (root) {
+    if (root->callable_pointer == callable_pointer) {
+      pcb->callbacks = root->next;
+      ffi_closure_free(root->closure);
+      free(root);
+      return IK_TRUE_OBJECT;
+    } else {
+      for (; root->next; root = root->next) {
+        if (root->next->callable_pointer != callable_pointer)
+          continue;
+        else {
+          ik_callback_locative *  this = root->next;
+          root->next = root->next->next;
+          ffi_closure_free(this->closure);
+          free(this);
+          return IK_TRUE_OBJECT;
+        }
+      }
+      return IK_FALSE_OBJECT;
+    }
+  } else
+    return IK_TRUE_OBJECT;
+}
+static void
+generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * user_data)
+/* Implement the  callback function used by all  the callbacks, whatever
+   the CIF  and the Scheme function;  this function is  called by Libffi
+   whenever   a    call   to   the   callable    pointer   returned   by
+   "ikrt_prepare_callback()" is performed.
+
+   CIF_ is a pointer to  a Libffi's call interface, which, under Vicare,
+   is  also a pointer  of type  "ik_ffi_cif_t" referencing  the extended
+   CIF.
+
+   RETVAL_BUFFER is a pointer to  a memory block in which the callback's
+   native return value must be stored.
+
+   ARGS is a  pointer to an array of  pointers referencing memory blocks
+   holding the native input arguments.  The arity of the callback can be
+   retrieved from the CIF.
+
+   USER_DATA is a pointer  to a structure of type "ik_callback_locative"
+   whose  data  field   is  a  reference  to  the   S_DATA  argument  to
+   "ikrt_prepare_callback()".
+
+   Access the PCB through "ik_the_pcb()". */
+{
+  ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
+  ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
+  ikptr         s_proc        = IK_CDR(s_data);
+  ikpcb *       pcb           = ik_the_pcb();
+  int           i;
+  ikptr         rv;
+  pcb->frame_pointer = pcb->frame_base;
+  pcb->root0 = &s_proc;
+  { /* Push arguments on the Scheme stack. */
+    for (i=0; i<cif->arity; ++i) {
+      ikptr	s_value;
+      s_value = ika_native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
+      IK_REF(pcb->frame_pointer, -2*wordsize - i*wordsize) = s_value;
+    }
+  }
+  pcb->root0 = NULL;
+  /* Perform the call. */
+  {
+    ikptr         code_entry    = IK_REF(s_proc, off_closure_code);
+    ikptr         code_ptr      = code_entry - off_code_data;
+    rv = ik_exec_code(pcb, code_ptr, IK_FIX(-cif->arity), s_proc);
+    /* Convert the Scheme return value to a native value. */
+    scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
+  }
+}
+
+
+/** --------------------------------------------------------------------
+ ** If libffi is not used.
+ ** ----------------------------------------------------------------- */
+
+#else
+
+ikptr ikrt_ffi_prep_cif ()		{ return IK_FALSE_OBJECT; }
+ikptr ikrt_ffi_call()			{ return IK_FALSE_OBJECT; }
+ikptr ikrt_ffi_prepare_callback()	{ return IK_FALSE_OBJECT; }
+ikptr ikrt_ffi_release_callback ()	{ return IK_FALSE_OBJECT; }
+ikptr ikrt_has_ffi()			{ return IK_FALSE_OBJECT; }
+
+#endif
+
+
+/** --------------------------------------------------------------------
+ ** Stack handling.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_enter_c_function (ikpcb* pcb)
+/* Call this function  whenever we enter a C function  that may invoke a
+   Scheme callback. */
+{
+  ikptr		sk;
+  seal_scheme_stack(pcb);
+  sk = ik_unsafe_alloc(pcb, system_continuation_size) | vector_tag;
+  IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
+  IK_REF(sk, off_system_continuation_top)  = pcb->system_stack;
+  IK_REF(sk, off_system_continuation_next) = pcb->next_k;
+  pcb->next_k = sk;
+  return sk;
+}
+void
+ik_leave_c_function (ikpcb * pcb, ikptr sk)
+/* Call this  function whenever we exit  a C function that  may invoke a
+   Scheme callback. */
+{
+  pcb->frame_pointer = pcb->frame_base - wordsize;
+  sk = pcb->next_k - vector_tag;
+  if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
+    ik_abort("%s: invalid system cont", __func__);
+  }
+  pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
+  pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
+}
+static ikptr
+seal_scheme_stack(ikpcb* pcb)
+/* FIXME: handle stack overflow */
+#ifndef DEBUG_FFI
+{
+  /*
+    |              |
+    |              |
+    |              |
+    |              |
+    +--------------+
+    |   underflow  |  <--------- new frame pointer
+    +--------------+
+    | return point |  <--------- old frame pointer, new frame base
+    +--------------+
+    |      .       |
+    |      .       |
+    |      .       |
+    |              |
+    +--------------+
+    |   underflow  |  <--------- old frame base
+    +--------------+
+  */
+  ikptr frame_base    = pcb->frame_base;
+  ikptr frame_pointer = pcb->frame_pointer;
   if ((frame_base - wordsize) != frame_pointer) {
-    ikptr underflow_handler = ref(frame_base, -wordsize);
-    cont* k = (cont*) pcb->next_k;
-    cont* nk = (cont*) ik_unsafe_alloc(pcb, sizeof(cont));
+    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
+    ikcont *	k  = (ikcont*) pcb->next_k;
+    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
+    nk->tag  = continuation_tag;
+    nk->next = (ikptr) k;
+    nk->top  = frame_pointer;
+    nk->size = frame_base - frame_pointer - wordsize;
+    pcb->next_k        = vector_tag + (ikptr)nk;
+    pcb->frame_base    = frame_pointer;
+    pcb->frame_pointer = pcb->frame_base - wordsize;
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
+  }
+  return IK_VOID_OBJECT;
+}
+#else
+{
+  ikptr frame_base    = pcb->frame_base;
+  ikptr frame_pointer = pcb->frame_pointer;
+  dump_stack(pcb, "BEFORE SEALING");
+  fprintf(stderr, "old base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
+  if ((frame_base - wordsize) != frame_pointer) {
+    ikptr	underflow_handler = IK_REF(frame_base, -wordsize);
+    ikcont *	k  = (ikcont*) pcb->next_k;
+    ikcont *	nk = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
     nk->tag = continuation_tag;
     nk->next = (ikptr) k;
     nk->top = frame_pointer;
-#ifdef DEBUG_FFI
-    fprintf(stderr, "rp=0x%016lx\n",
-        ref(frame_pointer, 0));
-#endif
+    fprintf(stderr, "rp=0x%016lx\n", IK_REF(frame_pointer, 0));
     nk->size = frame_base - frame_pointer - wordsize;
-#ifdef DEBUG_FFI
     fprintf(stderr, "frame size=%ld\n", nk->size);
-#endif
-    pcb->next_k = vector_tag + (ikptr)nk;
-    pcb->frame_base = frame_pointer;
+    pcb->next_k        = vector_tag + (ikptr)nk;
+    pcb->frame_base    = frame_pointer;
     pcb->frame_pointer = pcb->frame_base - wordsize;
-#ifdef DEBUG_FFI
-    fprintf(stderr, "new base=0x%016lx  fp=0x%016lx\n", pcb->frame_base,
-        pcb->frame_pointer);
+    fprintf(stderr, "new base=0x%016lx  fp=0x%016lx\n", pcb->frame_base, pcb->frame_pointer);
     fprintf(stderr, "uf=0x%016lx\n", underflow_handler);
-#endif
-    ref(pcb->frame_pointer, 0) = underflow_handler;
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
   } else {
-#ifdef DEBUG_FFI
     fprintf(stderr, "already sealed\n");
-#endif
   }
-#ifdef DEBUG_FFI
   dump_stack(pcb, "AFTER SEALING");
-#endif
-  return void_object;
+  return IK_VOID_OBJECT;
 }
-
-ikptr
-ikrt_call_back(ikptr proc, ikpcb* pcb) {
-  ikrt_seal_scheme_stack(pcb);
-
-  ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  ref(sk, 0) = system_continuation_tag;
-  ref(sk, disp_system_continuation_top) = pcb->system_stack;
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk + vector_tag;
-  ikptr entry_point = ref(proc, off_closure_code);
-#ifdef DEBUG_FFI
-  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
-#endif
-  ikptr code_ptr = entry_point - off_code_data;
-  pcb->frame_pointer = pcb->frame_base;
-  ikptr rv = ik_exec_code(pcb, code_ptr, 0, proc); 
-#ifdef DEBUG_FFI
-  fprintf(stderr, "system_stack = 0x%016lx\n", pcb->system_stack);
-#endif
-#ifdef DEBUG_FFI
-  fprintf(stderr, "rv=0x%016lx\n", rv);
-#endif
-  sk = pcb->next_k - vector_tag;
-  if (ref(sk, 0) != system_continuation_tag) {
-    fprintf(stderr, "ikarus internal error: invalid system cont\n");
-    exit(-1);
-  }
-  pcb->next_k = ref(sk, disp_system_continuation_next);
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->system_stack = ref(sk, disp_system_continuation_top);
-  pcb->frame_pointer = pcb->frame_base - wordsize;
-#ifdef DEBUG_FFI
-  fprintf(stderr, "rp=0x%016lx\n", ref(pcb->frame_pointer, 0));
-#endif
-  return rv;
-}
-
-
-
-ikptr
-ikrt_ffi_call(ikptr data, ikptr argsvec, ikpcb* pcb)  {
-
-  ikrt_seal_scheme_stack(pcb);
-  ikptr sk = ik_unsafe_alloc(pcb, system_continuation_size);
-  ref(sk, 0) = system_continuation_tag;
-  ref(sk, disp_system_continuation_top) = pcb->system_stack;
-  ref(sk, disp_system_continuation_next) = pcb->next_k;
-  pcb->next_k = sk + vector_tag;
-
-
-  ikptr cifptr  = ref(data, off_vector_data + 0 * wordsize);
-  ikptr funptr  = ref(data, off_vector_data + 1 * wordsize);
-  ikptr typevec = ref(data, off_vector_data + 2 * wordsize);
-  ikptr rtype   = ref(data, off_vector_data + 3 * wordsize);
-  ffi_cif* cif = (ffi_cif*) ref(cifptr, off_pointer_data);
-  void(*fn)() = (void (*)()) ref(funptr, off_pointer_data);
-  int n = unfix(ref(argsvec, off_vector_length));
-  void** avalues = alloc(sizeof(void*), n+1);
-  int i;
-  for(i=0; i<n; i++){
-    ffi_type* t = cif->arg_types[i];
-    ikptr at = ref(typevec, off_vector_data + i * wordsize);
-    ikptr v = ref(argsvec, off_vector_data + i * wordsize);
-    void* p = alloc_room_for_type(t);
-    avalues[i] = p;
-    scheme_to_ffi_value_cast(t, at, v, p);
-  }
-  avalues[n] = NULL;
-  void* rvalue = alloc_room_for_type(cif->rtype);
-  ffi_call(cif, fn, rvalue, avalues);
-  pcb->last_errno = errno;
-  ikptr val = ffi_to_scheme_value_cast(unfix(rtype), rvalue, pcb);
-  for(i=0; i<n; i++){
-    free(avalues[i]);
-  }
-#ifdef DEBUG_FFI
-  fprintf(stderr, "DONE WITH CALL, RV=0x%016lx\n", (long)val);
-#endif
-  free(avalues);
-  free(rvalue);
-
-  pcb->frame_pointer = pcb->frame_base - wordsize;
-
-  sk = pcb->next_k - vector_tag;
-  if (ref(sk, 0) != system_continuation_tag) {
-    fprintf(stderr, "ikarus internal error: invalid system cont\n");
-    exit(-1);
-  }
-  pcb->next_k = ref(sk, disp_system_continuation_next);
-  pcb->system_stack = ref(sk, disp_system_continuation_top);
-
-  return val;
-}
-
-
-ikptr ikrt_has_ffi(/*ikpcb* pcb*/){
-  return true_object;
-}
-
-/*
-
-ffi_status ffi_prep_cif (
-  ffi_cif *cif, 
-  ffi_abi abi,
-  unsigned int nargs,
-  ffi_type *rtype, 
-  ffi_type **argtypes)
-
-void *ffi_closure_alloc (size_t size, void **code)
-
-void ffi_closure_free (void *writable)
-
-ffi_status ffi_prep_closure_loc (
-  ffi_closure *closure,
-  ffi_cif *cif,
-  void (*fun) (ffi_cif *cif, void *ret, void **args, void *user_data),
-  void *user_data,
-  void *codeloc)
-
-*/
-
-extern ikpcb* the_pcb;
-static void 
-generic_callback(ffi_cif *cif, void *ret, void **args, void *user_data){
-  /* convert args according to cif to scheme values */
-  /* call into scheme, get the return value */
-  /* convert the return value to C */
-  /* put the C return value in *ret */
-  /* done */
-  ikptr data = ((callback_locative*)user_data)->data;
-  ikptr proc   = ref(data, off_vector_data + 1 * wordsize);
-  ikptr argtypes_conv = ref(data, off_vector_data + 2 * wordsize);
-  ikptr rtype_conv = ref(data, off_vector_data + 3 * wordsize);
-  int n = unfix(ref(argtypes_conv, off_vector_length));
-
-  ikpcb* pcb = the_pcb;
-  ikptr code_entry = ref(proc, off_closure_code);
-  ikptr code_ptr = code_entry - off_code_data;
-
-  pcb->frame_pointer = pcb->frame_base;
-  int i;
-  for(i = 0; i < n; i++){
-    ikptr argt = ref(argtypes_conv, off_vector_data + i*wordsize);
-    void* argp = args[i];
-    ref(pcb->frame_pointer, -2*wordsize - i*wordsize) = 
-      ffi_to_scheme_value_cast(unfix(argt), argp, pcb);
-  }
-  ikptr rv = ik_exec_code(pcb, code_ptr, fix(-n), proc); 
-#ifdef DEBUG_FFI
-  fprintf(stderr, "and back with rv=0x%016lx!\n", rv);
-#endif
-  scheme_to_ffi_value_cast(cif->rtype, rtype_conv, rv, ret);
-  return;
-}
-
-ikptr
-ikrt_prepare_callback(ikptr data, ikpcb* pcb){
-#if FFI_CLOSURES
-  ikptr cifptr = ref(data, off_vector_data + 0 * wordsize);
-  void* codeloc;
-  ffi_closure* closure = ffi_closure_alloc(sizeof(ffi_closure), &codeloc);
-
-#ifdef HACK_FFI
-  {
-    long code_start = align_to_prev_page(codeloc);
-    long code_end =
-      align_to_next_page(FFI_TRAMPOLINE_SIZE+(-1)+(long)codeloc);
-    int rv = mprotect((void*)code_start, code_end - code_start,
-        PROT_READ|PROT_WRITE|PROT_EXEC);
-    if(rv) {
-      fprintf(stderr, "Error mprotecting code page!\n");
-    }
-  }
 #endif
 
-  ffi_cif* cif = (ffi_cif*) ref(cifptr, off_pointer_data);
-  
-  callback_locative* loc = malloc(sizeof(callback_locative));
-  if(!loc) {
-    fprintf(stderr, "ERROR: ikarus malloc error\n");
-    exit(-1);
-  }
-  
-  ffi_status st = 
-    ffi_prep_closure_loc(closure, cif, generic_callback, loc, codeloc);
-
-  if (st != FFI_OK) {
-    free(loc);
-    return false_object;
-  }
-
-  loc->data = data;
-  loc->next = pcb->callbacks;
-  pcb->callbacks = loc;
-
-  ikptr p = ik_safe_alloc(pcb, pointer_size);
-  ref(p, 0) = pointer_tag;
-  ref(p, wordsize) = (ikptr) codeloc;
-  return p+vector_tag;
-#else
-  return false_object
-#endif
-}
-
-int ho (int(*f)(int), int n) {
- // fprintf(stderr, "HO HO 0x%016lx!\n", (long)f);
-  int n0 = f(n);
- // fprintf(stderr, "GOT N0\n");
-  return n0 + f(n);
-}
-
-
-int ho2 (ikptr fptr, ikptr nptr) {
-  int (*f)(int) =  (int(*)(int)) ref(fptr, off_pointer_data);
-  int n = unfix(nptr);
- // fprintf(stderr, "HO2 HO2 0x%016lx!\n", (long)f);
-  int n0 = f(n);
- // fprintf(stderr, "GOT N0\n");
-  return n0 + f(n);
-}
-
-
-int test_I_I (int(*f)(int), int n0) {
-  return f(n0);
-}
-
-int test_I_II (int(*f)(int,int), int n0, int n1) {
-  return f(n0,n1);
-}
-
-int test_I_III (int(*f)(int,int,int), int n0, int n1, int n2) {
-  return f(n0,n1,n2);
-}
-
-int add_I_I(int n0) {
-  return n0;
-}
-int add_I_II(int n0, int n1) {
-  return n0+n1;
-}
-int add_I_III(int n0, int n1, int n2) {
-  return n0+n1+n2;
-}
-
-
-
-struct Point{
-  float x;
-  float y;
-};
-
-struct Rect{
-  struct Point tl;
-  struct Point br;
-};
-
-float test_area_F_R(struct Rect r) {
-  float dx = r.br.x - r.tl.x;
-  float dy = r.br.y - r.tl.y;
-  return dx * dy;
-}
-
-double test_D_D (double(*f)(double), double n0) {
-  return f(n0);
-}
-
-double test_D_DD (double(*f)(double,double), double n0, double n1) {
-  return f(n0,n1);
-}
-
-double test_D_DDD (double(*f)(double,double,double), double n0, double n1, double n2) {
-  return f(n0,n1,n2);
-}
-
-double add_D_D(double n0) {
-  return n0;
-}
-double add_D_DD(double n0, double n1) {
-  return n0+n1;
-}
-double add_D_DDD(double n0, double n1, double n2) {
-  return n0+n1+n2;
-}
-
-
-
-
-
-int cadd1 (int n) {
-  return n+1;
-}
-
-void hello_world(int n) {
-  while(n > 0) {
-    fprintf(stderr, "Hello World\n");
-    n--;
-  }
-}
-
-#else
-ikptr ikrt_ffi_prep_cif()     { return false_object; }
-ikptr ikrt_ffi_call()         { return false_object; }
-ikptr ikrt_prepare_callback() { return false_object; }
-ikptr ikrt_has_ffi()         { return false_object; }
-
-
-#endif
-
-
-
-
-
+/* end of file */

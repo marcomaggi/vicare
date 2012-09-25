@@ -10,8 +10,6 @@ Topics
   2. License
   4. Install
   5. Testing
-  6. Policy
-  7. Contributing
   A. Credits
   B. Bug reports
   C. Resources
@@ -32,14 +30,27 @@ edited by Michael  Sperber, R. Kent Dybvig, Matthew  Flatt and Anton Van
 Straaten.
 
   Ikarus Scheme is an almost R6RS compliant implementation of the Scheme
-programming language;  it is the creation of  Abdulaziz Ghuloum.  Vicare
-Scheme is an experimental fork  of Ikarus Scheme; "Vicare" is pronounced
-the etruscan way.
+programming  language; it is  the creation  of Abdulaziz  Ghuloum, which
+retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
+fork of Ikarus Scheme, aiming to  become a native compiler for R6 Scheme
+producing  single   threaded  programs  running  on   Intel  x86  32-bit
+processors, with experimental support  for 64-bit machines; it is tested
+only on GNU+Linux,  no official support for other  platforms is present.
+"Vicare" is pronounced the etruscan way.
+
+  Vicare implements  an optionally included  foreign-functions interface
+based on Libffi.   The last time the maintainer  updated this paragraph,
+it had tested Libffi version 3.0.10.
+
+  Current official maintainers are:
+
+Marco Maggi <marco.maggi-ipsu@poste.it>
 
 
 2. License
 ----------
 
+Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by the Vicare contributors.
 
@@ -60,19 +71,28 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 4. Install
 ----------
 
-If we have checked out a  revision from the repository, you will have to
-build the infrastructure running a script from the top source directory:
+4.1 Install Vicare
+------------------
+
+After checking out a revision from the repository, we will have to build
+the infrastructure running a script from the top source directory:
 
    $ cd /path/to/vicare
-   $ sh BUILD-THE-INFRASTRUCTURE.sh
+   $ sh autogen.sh
 
-after that, basically we should do:
+after  that, or  if we  have downloaded  a proper  distribution tarball,
+basically we should do:
 
    $ mkdir "=build"
    $ cd "=build"
    $ ../configure
    $ make
    $ make install
+
+notice  that  the  "configure"  script  is  prepared  to  enable  shared
+libraries  and  disable static  libraries:  this  must  not be  changed,
+because  the package  is  meant to  install  a C  shared  library to  be
+dynamically loaded.
 
   To test what a rule will do use the "-n" option; example:
 
@@ -83,127 +103,83 @@ the files under a temporary location; example:
 
     $ make install DESTDIR=/tmp/marco/vicare
 
+  After   installation,  the   makefile   rule  "vfasl-installed"   will
+precompile the libraries installed in the hierarchy (vicare ---).
+
+
+4.2 Install CRE2
+----------------
+
+CRE2 is a  C language wrapper for the RE2  library, which is implemented
+in  C++.    RE2  is  a   fast,  safe,  thread-friendly   alternative  to
+backtracking regular  expression engines from Google like  those used in
+PCRE, Perl, and Python.
+
+  Vicare  implements an  optional  built  in interface  to  CRE2; it  is
+disabled by default, to enable  it we must give the "--with-cre2" option
+to the "configure" script.  When using  this option we must use also the
+--enable-shared  and  --disable-static  options  to avoid  installing  a
+useless static library.
+
+  At present (Jan 6, 2012), to  install RE2 we must check out a revision
+from  the  repository  (see   Resources);  then  we  should  follow  the
+installation instructions in the README file.  To install CRE2: download
+the  latest  tarball, build  and  install it;  CRE2  relies  on the  GNU
+Autotools.
+
 
 5. Testing
 ----------
 
-The  original  tests  (from  the  Ikarus  distribution)  are  under  the
-"scheme/tests" subdirectory and they are executed running:
+Test  files  are  located  in  the "tests"  directory;  the  files  with
+extension  ".sps" are  Scheme  programs.  They  are  partitioned in  two
+families: the files whose name  start with "long-test" need some time to
+be executed  by a  powerless computer; the  files whose name  start with
+"test" can  be run in  reasonable time on  any system.  The  files whose
+name contains "r6rs" are R6RS compliance tests by Matthew Flatt.
 
-   $ make ikarus-tests
+  The  "make  vfasl"  command  will  precompile  the  libraries  in  the
+hierarchy (vicare ---) to be used by the test suite.
 
-  The new tests added in Vicare are in the "tests" subdirectory and they
-are executed running:
+  The "make check",  "make test" and "make tests"  commands run the same
+set of  "quick" tests; the "check"  makefile rule uses  the GNU Automake
+infrastructure.  After  the installation: we  can run these  tests using
+the "make installcheck" rule.
 
-   $ make tests
+  The "make long-test"  and "make long-tests" commands run  the same set
+of time-consuming tests.
 
-all the  test files under "tests"  are programs whose file  name has the
-format  "test-<name>.sps"  where  <name>  is  indicates  of  the  tested
-feature; it is possible to select a single test file by using the "name"
+  It  is possible  to select  a  single test  file by  using the  "file"
 variable on the command line of "make"; for example:
 
-   $ make tests name=equal-hash
+   $ make test file=equal-hash
 
-will run the "test-equal-hash.sps" file.  The "name" variable is used to
-expand a file name with wildcards as in "test-*$(name)*.sps".
+will run the  "test-issue-001-equal-hash.sps" file.  The "file" variable
+is used to expand a file name with wildcards as in "test-*$(file)*.sps".
 
-  The  following command  will  run  all the  R6RS  compliance tests  by
-Matthew Flatt:
+  It  is possible to  run "vicare"  from the  build directory  with user
+selected command line arguments doing:
 
-   $ make test-r6rs
+   $ make test-run user_flags='...'
 
-whose files are in the "tests/r6rs" subdirectory; in detail: each of the
-following makefile rules will run a single set of R6RS compliance tests:
+where the contents  of the "user_flags" variable are  placed directly on
+the command line.
 
-    test-r6rs-arithmetic-bitwise        test-r6rs-arithmetic-fixnums
-    test-r6rs-arithmetic-flonums        test-r6rs-base
-    test-r6rs-bytevectors               test-r6rs-conditions
-    test-r6rs-contrib                   test-r6rs-control
-    test-r6rs-enums                     test-r6rs-eval
-    test-r6rs-exceptions                test-r6rs-hashtables
-    test-r6rs-io-ports                  test-r6rs-io-simple
-    test-r6rs-lists                     test-r6rs-mutable-pairs
-    test-r6rs-mutable-strings           test-r6rs-programs
-    test-r6rs-r5rs                      test-r6rs-reader
-    test-r6rs-records-procedural        test-r6rs-records-syntactic
-    test-r6rs-sorting                   test-r6rs-syntax-case
-    test-r6rs-unicode
+  Some  test  files need  a  usable  directory  pathname in  the  TMPDIR
+environment variable.
 
-  The command:
+  The  file "test-vicare-posix.sps" contains  tests for  network sockets
+which are  normally disabled because  the firewall rules on  the hosting
+machine must  allo connections on 127.0.0.1:8080  and 127.0.0.1:8081; to
+enable these tests run make with the environment variable RUN_INET_TESTS
+set to something:
 
-   $ make check
+   $ make test file=vicare-posix RUN_INET_TESTS=1
 
-will  run both  the R6RS  compliance tests  and the  Vicare  tests under
-"tests".
+  When included, it is possible to run tests for the bindings to foreign
+libraries (like CRE2) with:
 
-
-6. Policy
----------
-
-While the long term aim of the project is still not clearly established,
-Vicare has the following short and midterm goals:
-
-* Allow the installation  of both Ikarus and Vicare  without conflict in
-  installed files and directories.
-
-* Drop documentation in TeX format, replacing it with a Texinfo file.
-
-* Document  the  internals  of   the  distribution,  both  the  building
-  infrastructure and the source code.
-
-* Fix bugs.
-
-* Push compliance with R6RS, keeping a pragmatic eye at issues.
-
-* Enhance the POSIX interface.
-
-* Avoid the distribution of companion libraries: only code directly used
-  in Vicare's internals is distribted.   It is always possible to fork a
-  branch  and build a  "batteries included"  distribution as  a separate
-  project.
-
-
-7. Contributing
----------------
-
-If you  feel the need to  contribute bug reports, bug  fixes, patches or
-documentation to  Vicare Scheme, you  are welcome.  For bug  reports and
-patches, you should adhere to the following rules:
-
-* Vicare  is hosted  at  GitHub, so  first  of all  an  issue should  be
-  registered at the development site:
-
-                 <http://github.com/marcomaggi/vicare/>
-
-  so  that a  new branch  can be  created in  the repository,  with name
-  referring to the issue.
-
-* The branch which aims at enhancing the original Ikarus distribution is
-  named "ikarus", so a patch should be built by deriving the code from a
-  checkout of such branch.
-
-* Patches are accepted  only if they come with  documentation and tests;
-  for  patches  enhancing compliance  with  R6RS,  documentation is  not
-  needed.
-
-* Patches  exposing the  POSIX interface  at  the Scheme  level will  be
-  accepted, but, at some point in  the future, that code will be subject
-  to modifications to enforce a policy of internal coherence.
-
-* Big and revolutionary patches will be rejected.  It is always possible
-  to  fork a  branch and  develop whatever  experimental reorganisation,
-  rewriting or  enhancement (for example  support for other  CPUs).  Big
-  changes can be merged later if they are successful.
-
-  For  documentation  contributions,  you  can email  directly  Vicare's
-maintainer  at <marco.maggi-ipsu@poste.it>  with or  without  opening an
-issue about  undocumented features.  Documentation in  patches should be
-added   to  the   Texinfo   file  "doc/vicare.texi",   but  pure   ASCII
-documentation may be accepted (and formatted by the maintainer) if it is
-not too long.
-
-  Tests  for  patches must  be  added  under  the "tests"  subdirectory,
-ideally by creating a new test file.
+   $ make foreign-test
 
 
 A. Credits
@@ -213,23 +189,53 @@ The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
 Vicare Scheme  is a  fork driven by  Marco Maggi.  See  the CONTRIBUTORS
 file for the list of contributors to Vicare Scheme.
 
-  The R6RS  compatibility tests in  "./tests/r6rs" are by  Matthew Flatt
-and are distributed under the GNU GPL version 2, or any later version.
+  The R6RS compatibility tests are  by Matthew Flatt and are distributed
+under the GNU GPL version 2, or any later version.
+
+  Barak A.  Pearlmutter provided a number  of changes for  better use of
+the GNU Autotools.
+
+  The implementation  of the function  BITWISE-REVERSE-BIT-FIELD is from
+original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
+Y. FUJITA / LittleWing  Company Limited.  See the file "COPYING.ypsilon"
+for terms and conditions of use of this function.
+
+  The implementation of EQUAL? comes from:
+
+    Michael D.   Adams and  R.  Kent Dybvig.   "Efficient nondestructive
+    equality checking for trees and graphs."  In ICFP '08: Proceeding of
+    the  13th   ACM  SIGPLAN  international   conference  on  Functional
+    programming,  pages 179-188.  ACM,  New York,  NY, USA,  2008.  ISBN
+    978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+
+and the online distribution which is Copyright (c) 2008 Michael D. Adams
+and R. Kent Dybvig, see  the file "ikarus.equal.ss" for the full license
+notice.
+
+  The implementation of MAKE-GUARDIAN comes from:
+
+    Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
+    Collector".   In  Proceedings  of  the  SIGPLAN  '93  Conference  on
+    Programming Language Design and Implementation, 207-216, June 1993.
 
 
 B. Bug reports
 --------------
 
 Bug reports  are appreciated, register  them using the issue  tracker at
-Vicare GitHub site.
+Vicare's GitHub site:
+
+	      <http://github.com/marcomaggi/vicare/issues>
 
 
 C. Resources
 ------------
 
-The latest version of this package can be downloaded from:
+The  latest version of  this package  can be  downloaded from  Github or
+Google Code:
 
             <http://github.com/marcomaggi/vicare/downloads>
+	<http://code.google.com/p/vicare-scheme/downloads/list>
 
 the home page of the Vicare project is at:
 
@@ -238,6 +244,43 @@ the home page of the Vicare project is at:
 development takes place at:
 
                  <http://github.com/marcomaggi/vicare/>
+
+and as backup at:
+
+		     <http://gitorious.org/vicare>
+
+this project has a mailing list:
+
+	     <http://groups.google.com/group/vicare-users>
+
+  It  is suggested to  use Vicare  Scheme along  with Nausicaa,  a large
+collection of R6 Scheme libraries:
+
+	      <http://marcomaggi.github.com/nausicaa.html>
+
+  The library Libffi can be found at:
+
+		    <http://sourceware.org/libffi/>
+
+  The library RE2 is available at:
+
+		    <http://code.google.com/p/re2/>
+
+the library CRE2 is available from:
+
+		  <http://github.com/marcomaggi/cre2/>
+
+  The home page of the R6RS standard is at:
+
+			 <http://www.r6rs.org>
+
+  Other known implementations of R6 Scheme:
+
+Chez Scheme	<http://www.scheme.com/>
+Larceny		<http://www.larcenists.org/>
+Mosh		<http://code.google.com/p/mosh-scheme/>
+Racket		<http://racket-lang.org/>
+Ypsilon		<http://code.google.com/p/ypsilon/>
 
 
 ### end of file

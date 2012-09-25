@@ -1,42 +1,42 @@
 /*
  *  Ikarus Scheme -- A compiler for R6RS Scheme.
  *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
- *  
+ *
  *  This program is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
-
-
-#include "config.h"
+#include "internals.h"
 #if (!HAVE_GETADDRINFO)
-#include "ikarus-getaddrinfo.h"
-
 #include <netdb.h>
 #include <sys/socket.h>
 #include <cygwin/in.h>
-#include <string.h>
-#include <stdio.h>
 
-int 
-getaddrinfo(const char *hostname, const char* servname,
-  const struct addrinfo* hints, struct addrinfo** res){ 
+
+int
+getaddrinfo (const char *hostname, const char* servname,
+	     const struct addrinfo* hints, struct addrinfo** res)
+{
   /* hints not used */
   struct servent* sent = getservbyname(servname, "tcp");
   if (sent == 0) return -1;
   struct hostent* hent = gethostbyname(hostname);
   if (!hent){
-   return -1;
+    return -1;
   }
   struct addrinfo* r =  malloc(sizeof(struct addrinfo));
   if(r == 0) return -1;
@@ -59,11 +59,18 @@ getaddrinfo(const char *hostname, const char* servname,
   *res = r;
   return 0;
 }
-
 void
-freeaddrinfo(struct addrinfo *ai){
+freeaddrinfo (struct addrinfo *ai)
+{
   free(ai->ai_addr);
   free(ai);
 }
 
-#endif
+
+/** --------------------------------------------------------------------
+ ** Done.
+ ** ----------------------------------------------------------------- */
+
+#endif /* if (!HAVE_GETADDRINFO) */
+
+/* end of file */

@@ -1,104 +1,115 @@
 /*
- *  Ikarus Scheme -- A compiler for R6RS Scheme.
- *  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
- *  
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 3 as
- *  published by the Free Software Foundation.
- *  
- *  This program is distributed in the hope that it will be useful, but
- *  WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *  
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Ikarus Scheme -- A compiler for R6RS Scheme.
+ * Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+ * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+ *
+ * This program is free software:  you can redistribute it and/or modify
+ * it under  the terms of  the GNU General  Public License version  3 as
+ * published by the Free Software Foundation.
+ *
+ * This program is  distributed in the hope that it  will be useful, but
+ * WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+ * MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+ * General Public License for more details.
+ *
+ * You should  have received  a copy of  the GNU General  Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
+
+/** --------------------------------------------------------------------
+ ** Headers.
+ ** ----------------------------------------------------------------- */
 
 #include "bootfileloc.h"
-#include "ikarus-data.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include "internals.h"
 #include <fcntl.h>
-#include <string.h>
-#include <errno.h>
 #include <gmp.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-
-void register_handlers();
-void register_alt_stack();
-
+extern int cpu_has_sse2();
+static void register_handlers();
+static void register_alt_stack();
 
 ikpcb* the_pcb;
 
-int
-file_exists(char* filename){
-  struct stat sb;
-  int s = stat(filename, &sb);
-  return (s == 0);
+ikpcb *
+ik_the_pcb (void)
+{
+  return the_pcb;
 }
 
-extern int cpu_has_sse2();
+
+int
+ikarus_main (int argc, char** argv, char* boot_file)
+/* Setup  global variables  and handlers,  then load  the boot  file and
+   evaluate it.  This  function is meant to be  called from "main()" and
+   its return value becomes the return value of "main()".
 
-int ikarus_main(int argc, char** argv, char* boot_file){
-  if(! cpu_has_sse2()){
-    fprintf(stderr, "Ikarus Scheme cannot run on your computer because\n");
+   "argc" and "argv" must reference arguments on the command line of the
+   "vicare" executable,  with the command  name and the  option "--boot"
+   removed.
+
+   "boot_file" must  be a string  representing the filename of  the boot
+   file to use. */
+{
+  ikpcb *	pcb;
+  int		repl_on_sigint	= 0;
+  if (! cpu_has_sse2()) {
+    fprintf(stderr, "Vicare Scheme cannot run on your computer because\n");
     fprintf(stderr, "your CPU does not support the SSE2 instruction set.\n");
-    fprintf(stderr, "Refer to the Ikarus Scheme User's Guide for the\n");
+    fprintf(stderr, "Refer to the Vicare Scheme User's Guide for the\n");
     fprintf(stderr, "minimum hardware requirements.\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
-  if(sizeof(mp_limb_t) != sizeof(long int)){
-    fprintf(stderr, "ERROR: limb size does not match\n");
-    exit(-1);
-  }
-  if(mp_bits_per_limb != (8*sizeof(long int))){
-    fprintf(stderr, "ERROR: invalid bits_per_limb=%d\n", mp_bits_per_limb);
-    exit(-1);
-  }
-  ikpcb* pcb = ik_make_pcb();
-  the_pcb = pcb;
-  { /* set up arg_list */
-    ikptr arg_list = null_object;
-    int i = argc-1;
-    while(i > 0){
-      char* s = argv[i];
-      int n = strlen(s);
-      ikptr bv = ik_unsafe_alloc(pcb, align(disp_bytevector_data+n+1)) 
-                 + bytevector_tag;
-      ref(bv, off_bytevector_length) = fix(n);
-      memcpy((char*)(bv+off_bytevector_data), s, n+1);
-      ikptr p = ik_unsafe_alloc(pcb, pair_size);
-      ref(p, disp_car) = bv;
-      ref(p, disp_cdr) = arg_list;
-      arg_list = p+pair_tag;
-      i--;
+  if (sizeof(mp_limb_t) != sizeof(long int))
+    ik_abort("limb size does not match");
+  if (mp_bits_per_limb != (8*sizeof(long int)))
+    ik_abort("invalid bits_per_limb=%d\n", mp_bits_per_limb);
+  the_pcb = pcb = ik_make_pcb();
+  { /* Set up arg_list from the  last "argv" to the first; the resulting
+       list will end in COMMAND-LINE. */
+
+    ikptr	arg_list	= IK_NULL_OBJECT;
+    int		i		= argc-1;
+    for (; i > 0; --i) {
+      if (0 == strcmp(argv[i], "--repl-on-sigint")) {
+	repl_on_sigint = 1;
+      } else {
+	char *	s = argv[i];
+	int	n = strlen(s);
+	ikptr	bv = ik_unsafe_alloc(pcb, IK_ALIGN(disp_bytevector_data+n+1)) | bytevector_tag;
+	ref(bv, off_bytevector_length) = IK_FIX(n);
+	/* copy the bytes and the terminating zero */
+	memcpy((char*)(bv+off_bytevector_data), s, n+1);
+	ikptr p = ik_unsafe_alloc(pcb, pair_size);
+	ref(p, disp_car) = bv;
+	ref(p, disp_cdr) = arg_list;
+	arg_list = p+pair_tag;
+      }
     }
+    pcb->argv0    = argv[0];
     pcb->arg_list = arg_list;
   }
-  register_handlers();
+  register_handlers(repl_on_sigint);
   register_alt_stack();
   ik_fasl_load(pcb, boot_file);
-  /*
-  fprintf(stderr, "collect time: %d.%03d utime, %d.%03d stime (%d collections)\n", 
-                  pcb->collect_utime.tv_sec, 
-                  pcb->collect_utime.tv_usec/1000, 
-                  pcb->collect_stime.tv_sec, 
-                  pcb->collect_stime.tv_usec/1000,
-                  pcb->collection_id );
-                  */
   ik_delete_pcb(pcb);
   return 0;
 }
 
-#if 0
-Notice how the bsd manpages have incorrect type for the handler.
+
+ikptr
+ikrt_get_argv0_string (ikpcb * pcb)
+{
+  return ika_bytevector_from_cstring(pcb, pcb->argv0);
+}
+
+
+/* Notice how the BSD manpages have incorrect type for the handler.
 
      #include <signal.h>
 
@@ -106,56 +117,67 @@ Notice how the bsd manpages have incorrect type for the handler.
              union {
                      void    (*__sa_handler)(int);
                      void    (*__sa_sigaction)(int, struct __siginfo *, void *);
-             } __sigaction_u;                /* signal handler */
-             int     sa_flags;               /* see signal options below */
-             sigset_t sa_mask;               /* signal mask to apply */
+             } __sigaction_u;
+             int     sa_flags;
+             sigset_t sa_mask;
      };
-
      #define sa_handler      __sigaction_u.__sa_handler
      #define sa_sigaction    __sigaction_u.__sa_sigaction
-
      int
-     sigaction(int sig, const struct sigaction * restrict act,
-         struct sigaction * restrict oact);
-#endif
+     sigaction(int sig, const struct sigaction * restrict act, struct sigaction * restrict oact);
+*/
 
-void handler(int signo, siginfo_t* info, void* uap){
-  signo=signo; info=info; uap=uap; /* no warning */
-  the_pcb->engine_counter = fix(-1);
-  the_pcb->interrupted = 1;
+static void
+handler (int signo, siginfo_t* info, void* uap)
+{
+  ikpcb *	pcb = ik_the_pcb();
+  /* avoid compiler warnings on unused arguments */
+  signo=signo; info=info; uap=uap;
+  pcb->engine_counter = IK_FIX(-1);
+  pcb->interrupted    = 1;
 }
-
-void
-register_handlers(){
-  struct sigaction sa;
-  sa.sa_sigaction = handler;
+static void
+register_handlers (int repl_on_sigint)
+{
+  if (repl_on_sigint) {
+    /* Enter REPL on SIGINT. */
+    struct sigaction	sa;
+    int			rv;
+    sa.sa_sigaction = handler;
 #ifdef __CYGWIN__
-  sa.sa_flags = SA_SIGINFO;
+    sa.sa_flags = SA_SIGINFO;
 #else
-  sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 #endif
-  sigemptyset(&sa.sa_mask);
-  int err = sigaction(SIGINT, &sa, 0);
-  if(err){
-    fprintf(stderr, "Sigaction Failed: %s\n", strerror(errno));
-    exit(-1);
+    sigemptyset(&sa.sa_mask);
+    rv = sigaction(SIGINT, &sa, 0);
+    if (rv)
+      ik_abort("sigaction failed: %s", strerror(errno));
   }
-
   /* ignore sigpipes */
   {
-    sigset_t set;
+#if 1
+    struct sigaction	sa;
+    int			rv;
+    sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    rv = sigaction(SIGPIPE, &sa, NULL);
+    if (rv)
+      ik_abort("sigaction failed while trying to ignore SIGPIPE: %s", strerror(errno));
+#else
+    sigset_t	set;
+    int		rv;
     sigprocmask(0, 0, &set); /* get the set */
     sigaddset(&set, SIGPIPE);
-    int err = sigprocmask(SIG_SETMASK, &set, &set);
-    if(err){
-      fprintf(stderr, "Sigprocmask Failed: %s\n", strerror(errno));
-      exit(-1);
-    }
+    rv = sigprocmask(SIG_SETMASK, &set, NULL);
+    if (rv)
+      ik_abort("sigprocmask failed: %s", strerror(errno));
+#endif
   }
 }
 
-
-#if 0
+/*
 SYNOPSIS
      #include <sys/types.h>
      #include <signal.h>
@@ -168,27 +190,24 @@ SYNOPSIS
 
      int
      sigaltstack(const struct sigaltstack *ss, struct sigaltstack *oss);
-#endif
+*/
 
-void
-register_alt_stack(){
+static void
+register_alt_stack (void)
+{
 #if HAVE_SIGALTSTACK
-  char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC, 
-                   MAP_PRIVATE|MAP_ANON, -1, 0);
-//  char* stk = ik_mmap(SIGSTKSZ);
-  if(stk == (char*)-1){
-    fprintf(stderr, "Cannot maloc an alt stack\n");
-    exit(-1);
-  }
-
+  char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);
+  //  char* stk = ik_mmap(SIGSTKSZ);
+  if (stk == (char*)-1)
+    ik_abort("cannot allocate an alternate stack for interprocess signals");
   stack_t sa;
   sa.ss_sp = stk;
   sa.ss_size = SIGSTKSZ;
   sa.ss_flags = 0;
   int err = sigaltstack(&sa, 0);
-  if(err){
-    fprintf(stderr, "Cannot set alt stack: %s\n", strerror(errno));
-    exit(-1);
-  }
+  if (err)
+    ik_abort("cannot set alternate stack for interprocess signals: %s\n", strerror(errno));
 #endif
 }
+
+/* end of file */
