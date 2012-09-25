@@ -3679,32 +3679,115 @@ The format of the annotated source is the one which is comprehensible by
 @section Local library imports
 
 
-@deffn Syntax import import-spec* ...
-The @func{import} keyword which is exported from the @library{ikarus}
-library can be used anywhere definitions can occur: at a script body,
-library's top--level, or in internal definitions context.  The syntax of
-the local @func{import} form is similar to the @func{import} that
-appears at the top of a library or a script form, and carries with it
-the same restrictions: no identifier name may be imported twice unless
-it denotes the same identifier; no identifier may be both imported and
-defined; and imported identifiers are immutable.
+Local @func{import} forms are useful for the following reasons:
 
-Local @func{import} forms are useful for two reasons: (1) they minimize
-the namespace clutter that usually occurs when many libraries are
-imported at the top level, and (2) they limit the scope of the import
-and thus help modularize a library's dependencies.
+@enumerate
+@item
+They minimize the namespace clutter that usually occurs when many
+libraries are imported at the top level.
 
-Suppose you are constructing a large library and at some point you
-realize that one of your procedures needs to make use of some other
-library for performing a specific task.  Importing that library at top
-level makes it available for the entire library.  Consequently, even if
-that library is no longer used anywhere in the code (say when the code
-that uses it is deleted), it becomes very hard to delete the import
-without first examiniming the entire library body for potential usage
-leaks.  By locally importing a library into the appropriate scope, we
-gain the ability to delete the @func{import} form when the procedure
-that was using it is deleted.
+@item
+They limit the scope of the import and thus help modularize a library's
+dependencies.
+@end enumerate
+
+Let's suppose we are constructing a large library and at some point we
+realize that a procedure needs to make use of some other library to
+performing a specific task; importing that library at top level makes it
+available for the entire library.  Consequently, even if that library is
+no longer used anywhere in the code (say when the code that uses it is
+deleted), it becomes very hard to delete the import without first
+examiniming the entire library body for potential usage leaks.  By
+locally importing a library into the appropriate scope, we gain the
+ability to delete the @func{import} form when the procedure that was
+using it is deleted.
+
+
+@deffn Syntax import @meta{import-spec} ...
+This syntax can be used anywhere definitions can occur:
+
+@enumerate
+@item
+In a script body.
+
+@item
+At library's top--level.
+
+@item
+In internal definitions context.
+@end enumerate
+
+The syntax of the local @func{import} form is similar to the
+@func{import} that appears at the top of a library or a script form, and
+carries with it the same restrictions:
+
+@itemize
+@item
+No identifier name may be imported twice unless it denotes the same
+identifier.
+
+@item
+No identifier may be both imported and defined.
+
+@item
+Imported identifiers are immutable.
+@end itemize
 @end deffn
+
+
+In the following example we import a library in the body of a function:
+
+@example
+;;; file "alpha.sls"
+(library (alpha)
+  (export doit)
+  (import (vicare))
+  (define (doit)
+    (fprintf (current-error-port) "From alpha!\n")))
+
+;;; file "beta.sls"
+(library (beta)
+  (export doit)
+  (import (vicare))
+  (define (doit)
+    (fprintf (current-error-port) "From beta!\n")))
+
+;;; file "program.sps"
+(import (vicare)
+  (alpha))
+(define (do-that)
+  (import (beta))
+  (doit))
+(doit)
+(do-that)
+@print{} From alpha!
+@print{} From beta!
+@end example
+
+In the following example we import bindings from a module in the body of
+a function:
+
+@example
+(import (vicare))
+
+(define (doit)
+  (fprintf (current-error-port) "From body!\n"))
+
+(module do-stuff
+  (doit)
+  (define (doit)
+    (fprintf (current-error-port) "From module!\n")))
+
+(define (do-that)
+  (import do-stuff)
+  (doit))
+
+(doit)
+(do-that)
+@print{} From body!
+@print{} From module!
+@end example
+
 
 @c page
 @node iklib modules
