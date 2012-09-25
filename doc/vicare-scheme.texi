@@ -1867,6 +1867,9 @@ It exports all the bindings exported by @library{vicare} that are
 @section Finding the @command{vicare} executable
 
 
+The following bindings are exported by the library @library{vicare}.
+
+
 @defun vicare-argv0
 Return a bytevector holding the C string in the @code{argv[0]} argument
 to the @cfunc{main} function of the current @value{PRJNAME} process.
@@ -1894,7 +1897,7 @@ process.
 @subsection Scheme source code position
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @deftp {Condition Type} &source-position
@@ -1949,7 +1952,7 @@ Accessors for the fields of condition objects of type
 @subsection Reporting @code{EAGAIN} exceptions
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @deftp {Condition Type} &i/o-eagain
@@ -2002,21 +2005,21 @@ Gensym syntax, @code{#@{gensym@}}.
 Shared structures graph notation: @code{#nn=}, @code{#nn#}.
 
 @item
-Special symbols are allowed: @code{++}, @code{--}.
+Special symbols: @code{++}, @code{--}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
-until the @code{#!r6rs} token is read.  Thus, reading the @code{#!r6rs}
-token disables all extensions to the lexical syntax on the specific
-port, and the @code{#!vicare} enables them again.
+until the token @code{#!r6rs} is read; thus, reading the token
+@code{#!r6rs} disables all extensions to the lexical syntax on the
+specific port, and the token @code{#!vicare} enables them again.
 
 When writing code that is intended to be portable across different
-Scheme implementations, we should add the @code{#!r6rs} token to the top
+Scheme implementations, we should add the token @code{#!r6rs} to the top
 of every script and library that we write; this allows @value{PRJNAME}
 to alert us when using non--portable features.  When writing code that's
-intended to be @value{PRJNAME}--specific, we should add the
-@code{#!vicare} token in order to get an immediate error when the code
-is run under other implementations.
+intended to be @value{PRJNAME}--specific, we should add the token
+@code{#!vicare} in order to get an immediate error when the code is run
+under other implementations.
 
 The comment @code{#!ikarus} is accepted for backwards compatibility with
 Ikarus Scheme.
@@ -2026,9 +2029,8 @@ Ikarus Scheme.
 @deffn Procedure port-mode @var{input-port}
 Accept an input port as argument and return a symbol among: @code{r6rs},
 @code{vicare}.  All input ports start under @code{vicare} mode and thus
-accept @value{PRJNAME}--specific reader extensions.  When the
-@code{#!r6rs} token is read from a port, its mode changes to
-@code{r6rs}.
+accept @value{PRJNAME}--specific reader extensions.  When the token
+@code{#!r6rs} is read from a port: its mode changes to @code{r6rs}.
 
 @example
 > (port-mode (current-input-port))
@@ -2044,9 +2046,8 @@ vicare
 @deffn Procedure set-port-mode! @var{input-port} @var{mode}
 Modifiy the lexical syntax accepted by subsequent calls to @func{read}
 on the input port.  The mode is a symbol among @code{r6rs} and
-@code{vicare}.  The effect of setting the port mode is similar to
-that of reading the @code{#!r6rs} or @code{#!vicare} token from that
-port.
+@code{vicare}.  The effect of setting the port mode is similar to that
+of reading the token @code{#!r6rs} or @code{#!vicare} from that port.
 
 @example
 > (set-port-mode! (current-input-port) 'r6rs)
@@ -2405,7 +2406,7 @@ read: the next form read has case insensitive identifiers.  When
 @subsection Additional reader functions
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun get-annotated-datum @var{port}
@@ -2458,8 +2459,8 @@ representing the position of the expression in the source code.
 
 
 Under @value{PRJNAME}, a syntax object is the instance of a data
-structure.  The following bindings are exported by the @library{ikarus}
-library.
+structure.  The following bindings are exported by the library
+@library{vicare}.
 
 
 @defun syntax-object? @var{stx}
@@ -2480,7 +2481,7 @@ debugging purposes.
 @subsection Syntax transformers facilities
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun variable-transformer?
@@ -2507,7 +2508,7 @@ Undocumented.
 @subsection Expander facilities
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun expand
@@ -2633,27 +2634,33 @@ data structures is marked using the @code{#n=} and @code{#n#} notation.
 @cindex Environment, interaction
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
-@defun environment?
-Undocumented.
+@defun environment? @var{env}
+Return @true{} if @var{env} is an environment object.
 @end defun
 
 
 @defun interaction-environment
-Return an environment object representing the environment active at the
-@repl{}.  To be used as argument for @func{eval}.
+@defunx interaction-environment @var{env}
+When called with no arguments: return an environment object representing
+the environment active at the @repl{}; to be used as argument for
+@func{eval}.
+
+When called with the argument @var{env}, which must be an environment
+object: set @var{env} as interaction environment.
 @end defun
 
 
 @defun new-interaction-environment
-Undocumented.
+Build and return a new interaction environment object.
 @end defun
 
 
-@defun environment-symbols
-Undocumented.
+@defun environment-symbols @var{env}
+Return a list of symbols representing the names of the bindings from
+@var{env}, which must be en environment.
 @end defun
 
 @c page
@@ -2661,7 +2668,7 @@ Undocumented.
 @section Cafe
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun new-cafe
@@ -2670,8 +2677,8 @@ Start a new read--eval--print loop (@repl{}) inside the current cafe (if
 one exists).  It prompts the user for an expression, evaluates it,
 prints the result back, and repeats the process.  If @func{new-cafe} is
 called with an argument, @var{eval}, then that argument must be a
-procedure that takes a single argument.  The @var{eval} procedure will
-be used to evaluate the expressions.
+procedure that takes a single argument; the @var{eval} procedure will be
+used to evaluate the expressions.
 
 Every time a new cafe is started, the prompt is changed to reflect the
 depth of the current cafe (i.e. how many eof objects is takes to exit
