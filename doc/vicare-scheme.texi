@@ -3742,6 +3742,11 @@ No identifier may be both imported and defined.
 @item
 Imported identifiers are immutable.
 @end itemize
+
+Each @meta{import-spec} can be as defined by @rnrs{6} or a symbol
+representing the name of a module; notice that module import
+specifications can be only symbols, @strong{without} prefixes, renaming
+and the features allowed for libraries.
 @end deffn
 
 

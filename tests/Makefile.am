@@ -135,6 +135,7 @@ TESTS			=	\
 	test-vicare-collect.sps				\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
+	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
@@ -333,6 +334,7 @@ EXTRA_DIST = \
 	test-vicare-collect.sps				\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
+	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
 	test-vicare-ffi.sps				\
 	test-vicare-flonum-formatter.sps		\

@@ -28,8 +28,11 @@
     if-wants-case-lambda
     if-wants-letrec*		if-wants-global-defines
     if-wants-library-letrec*
-    base-of-interaction-library)
-  (import (rnrs))
+    base-of-interaction-library
+    vector-append)
+  (import (rnrs)
+    (only (ikarus)
+	  vector-append))
 
 
 (define (base-of-interaction-library) '(ikarus))
