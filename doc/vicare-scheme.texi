@@ -1844,6 +1844,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib enumerations::          Additional functions on enumerations.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
+* iklib export::                Extended library exports.
 * iklib modules::               Local modules.
 * iklib parameters::            Parameters.
 * iklib gensym::                Gensyms.
@@ -3801,6 +3802,59 @@ a function:
 (do-that)
 @print{} From body!
 @print{} From module!
+@end example
+
+@c page
+@node iklib export
+@section Extended library exports
+
+
+@value{PRJNAME} allows the @func{export} syntax to appear at the top
+level of a library among the definitions, not only as third form of a
+@func{library} form.
+
+
+@deffn Syntax export @meta{export-spec} ...
+Export the specified bidings from the current library or module.  When
+@func{export} appears at the top level of a library: it exports the
+specified bindings from the library.  When @func{export} appears in the
+body of a module: it exports the specified bindings from the module
+(@strong{not} from the enclosing library).
+@end deffn
+
+
+Here is an example of library exporting a binding with a @func{export}
+at the end:
+
+@example
+;;; file "alpha.sls"
+(library (alpha)
+  (export red)
+  (import (vicare))
+  (define (blue)
+    'blue)
+  (define (red)
+    'red)
+  (export blue))
+
+;;; file "program.sps"
+(import (vicare)
+  (alpha))
+(pretty-print (red)  (current-error-port))
+(pretty-print (blue) (current-error-port))
+@end example
+
+Here is an example of module exporting a binding with @func{export}:
+
+@example
+(import (vicare))
+
+(module (green)
+  (define (green) 'green)
+  (define (yellow) 'yellow)
+  (export yellow))
+
+(list (green) (yellow)) @result{} (green yellow)
 @end example
 
 @c page

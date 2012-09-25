@@ -15,6 +15,9 @@ Y. FUJITA / LittleWing  Company Limited.
 https://github.com/sunderroy: contributed  a fix  for IMPORT  allowing a
 mixture of module names and library specs.
 
+https://github.com/sunderroy: contributed  a fix  for EXPORT  allowing a
+module to export its bindings to the enclosing region.
+
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
 

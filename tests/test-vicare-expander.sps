@@ -27,6 +27,7 @@
 
 #!vicare
 (import (vicare)
+  (rnrs eval)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -90,6 +91,20 @@
 	(import (prefix ciao ciao.))
 	(list (ciao.hello) (ciao.salut)))
     => '(hello salut))
+
+  #t)
+
+
+(parametrise ((check-test-name	'export))
+
+  (check
+      (let ()
+	(module (green)
+	  (define (green) 'green)
+	  (define (yellow) 'yellow)
+	  (export yellow))
+	(list (green) (yellow)))
+    => '(green yellow))
 
   #t)
 

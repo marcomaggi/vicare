@@ -3599,40 +3599,41 @@
 	object
       (mkstx object m* s* ae*))))
 
-(define chi-internal-module
-  (lambda (e r mr lex* rhs* mod** kwd*)
-    (let-values (((name exp-id* e*) (parse-module e)))
-      (let* ((rib (make-empty-rib))
-	     (e* (map (lambda (x) (add-subst rib x)) (syntax->list e*))))
-	(let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
-		      (chi-body* e* r mr lex* rhs* mod** kwd* '() rib #f #t)))
-	  (let ((exp-lab*
-		 (vector-map
-		     (lambda (x)
-		       (or (id->label
-			    (make-<stx> (identifier->symbol x) (<stx>-mark* x)
-				      (list rib)
-				      '()))
-			   (stx-error x "cannot find module export")))
-		   exp-id*))
-		(mod** (cons e* mod**)))
-	    (if (not name) ;;; explicit export
-		(values lex* rhs* exp-id* exp-lab* r mr mod** kwd*)
-	      (let ((lab (gen-label 'module))
-		    (iface
-		     (make-module-interface
-		      (car (<stx>-mark* name))
-		      (vector-map
-			  (lambda (x)
-			    (make-<stx> (<stx>-expr x) (<stx>-mark* x) '() '()))
-			exp-id*)
-		      exp-lab*)))
-		(values lex* rhs*
-			(vector name) ;;; FIXME: module cannot
-			(vector lab)  ;;;  export itself yet
-			(cons (cons lab (cons '$module iface)) r)
-			(cons (cons lab (cons '$module iface)) mr)
-			mod** kwd*)))))))))
+(define (chi-internal-module e r mr lex* rhs* mod** kwd*)
+  (let-values (((name exp-id* e*) (parse-module e)))
+    (let* ((rib (make-empty-rib))
+	   (e*  (map (lambda (x)
+		       (add-subst rib x))
+		  (syntax->list e*))))
+      (let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
+		    (chi-body* e* r mr lex* rhs* mod** kwd* '() rib #f #t)))
+	(let* ((exp-id*  (vector-append exp-id* (list->vector _exp*)))
+	       (exp-lab* (vector-map
+			     (lambda (x)
+			       (or (id->label (make-<stx> (identifier->symbol x)
+							  (<stx>-mark* x)
+							  (list rib)
+							  '()))
+				   (stx-error x "cannot find module export")))
+			   exp-id*))
+	       (mod** (cons e* mod**)))
+	  (if (not name) ;;; explicit export
+	      (values lex* rhs* exp-id* exp-lab* r mr mod** kwd*)
+	    (let ((lab (gen-label 'module))
+		  (iface
+		   (make-module-interface
+		    (car (<stx>-mark* name))
+		    (vector-map
+			(lambda (x)
+			  (make-<stx> (<stx>-expr x) (<stx>-mark* x) '() '()))
+		      exp-id*)
+		    exp-lab*)))
+	      (values lex* rhs*
+		      (vector name) ;;; FIXME: module cannot
+		      (vector lab)  ;;;  export itself yet
+		      (cons (cons lab (cons '$module iface)) r)
+		      (cons (cons lab (cons '$module iface)) mr)
+		      mod** kwd*))))))))
 
 (define chi-body*
   (lambda (e* r mr lex* rhs* mod** kwd* exp* rib mix? sd?)
