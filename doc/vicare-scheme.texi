@@ -3788,7 +3788,6 @@ a function:
 @print{} From module!
 @end example
 
-
 @c page
 @node iklib modules
 @section Local modules
@@ -3801,6 +3800,7 @@ difference between modules and @rnrs{6} libraries is that modules are
 defined in a single form nested into a library; so, in a way, they are
 sub--libraries.
 
+@ignore
 @quotation
 @strong{NOTE} In the official documentation of @value{PRJNAME} 0.0.3+
 (revision 1648) modules are yet not documented.  Please refer to Section
@@ -3809,34 +3809,50 @@ Thesis, and its POPL99 paper for details on using the @func{module} and
 @func{import} keywords.  @value{PRJNAME}'s internal module system is
 similar in spirit to that of Chez Scheme.
 @end quotation
+@end ignore
 
-@menu
-* iklib modules examples::      Usage example for modules.
-* iklib modules api::           Modules programming interface.
-@end menu
+@deffn Syntax module @meta{interface} @meta{definition} ... @meta{expression} ...
+@deffnx Syntax module @meta{name} @meta{interface} @meta{definition} ... @meta{expression} ...
+Define a new local module.  The first form defines an @emph{anonymous}
+module, while the second form defines a @emph{named} module called
+@meta{name}, which must be a symbol.
 
-@c page
-@node iklib modules examples
-@subsection Usage example for modules
+@meta{interface} is a list of symbols selecting bindings from this
+module to be exported; every listed symbol must be bound in this
+module's @meta{definition}, otherwise an error is raised.
 
+@meta{definition} is a set of bindings like the one that may appear at
+the beginning of a @func{let} body, with the addition of @func{import}
+forms that may import bindings from libraries and other modules.
 
-@menu
-* iklib modules examples anonymous:: Anonymous modules.
-* iklib modules examples named::     Named modules.
-* iklib modules examples utils::     Utilities examples.
-@end menu
+@meta{expression} is a set of expressions that is evaluated at module's
+definition time.
 
-@c page
-@node iklib modules examples anonymous
-@subsubsection Anonymous modules
+Modules ``exist'' only in the enclosing region, bindings exported from a
+module are not accessible outside of the enclosing region.  Modules can
+be nested and import/export relations are possible according to the
+regions nesting hierarchy.
 
+Bindings in the @meta{interface} declared by anonymous modules are
+imported by default in the enclosing region: there is no need to use
+@func{import}.  Bindings in the @meta{interface} declared by named
+modules are visible only in regions that @func{import} the module.
+
+@meta{definition} and @meta{expression} have no default access to the
+bindings in the enclosing region; only imported bindings are visible
+from the module.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples of anonymous modules
 
 The following example defines an anonymous module, without expressions,
-and invokes its functions from the enclosing environment (which is the
-top level):
+and invokes its functions from the enclosing region (which is the top
+level):
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (module (one two three)
     (define (one)       'one)
@@ -3844,18 +3860,19 @@ top level):
     (define (three)     (cons 'three (hidden)))
     (define (hidden)    'hidden))
 
-(printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three))
+(fprintf (current-error-port)
+         "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
 @end example
 
 @noindent
 notice that the @func{hidden} function is visible inside the module but
-not in the enclosing environment.
+not in the enclosing region.
 
 The following example defines a module, with expressions, and invokes
-its functions from the enclosing environment (which is the top level):
+its functions from the enclosing region (which is the top level):
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (module (one two three)
     (define (one)       'one)
@@ -3863,15 +3880,17 @@ its functions from the enclosing environment (which is the top level):
     (define (three)     (cons 'three (hidden)))
     (define (hidden)    'hidden)
 
-    (printf "defining an anonymous module~%"))
+    (fprintf (current-error-port)
+             "defining an anonymous module\n"))
 
-(printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three))
+(fprintf (current-error-port)
+         "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
 @end example
 
 @noindent
-notice that when the enclosing environment is the top level: the
-expressions at the end of a module are evaluated @strong{after} the
-expressions at the top level; so the output from the example is:
+notice that when the enclosing region is the top level: the expressions
+at the end of a module are evaluated @strong{after} the expressions at
+the top level; so the output from the example is:
 
 @example
 calling anonymous: one two (three . hidden)
@@ -3883,16 +3902,15 @@ this can lead to undesired results if the module's expressions are meant
 to initialise the state of the module, and the expressions at the top
 level invoke the module's functions (before initialisation).  On the
 other hand: this behaviour allows the module to access definitions from
-the enclosing environment and the top level environment despite their
-placement in the file; see below for an example.  The same behaviour is
-shown by named modules.
+the enclosing region and the top level region despite their placement in
+the file; see below for an example.  The same behaviour is shown by
+named modules.
 
 The following example defines a module, with expressions, and invokes
-its functions from the enclosing environment (which is a @func{let}
-form):
+its functions from the enclosing region (which is a @func{let} form):
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
   (module (one two three)
@@ -3901,16 +3919,18 @@ form):
       (define (three)     (cons 'three (hidden)))
       (define (hidden)    'hidden)
 
-      (printf "defining an anonymous module~%"))
+      (printf (current-error-port)
+              "defining an anonymous module\n"))
 
-  (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three)))
+  (fprintf (current-error-port)
+           "calling anonymous: ~s ~s ~s\n" (one) (two) (three)))
 @end example
 
 @noindent
-notice that when the enclosing environment is @strong{not} the top
-level: the expressions at the end of a module are evaluated
-@strong{before} the expressions in the body of the enclosing
-environment; so the output from the example is:
+notice that when the enclosing region is @strong{not} the top level: the
+expressions at the end of a module are evaluated @strong{before} the
+expressions in the body of the enclosing region; so the output from the
+example is:
 
 @example
 defining an anonymous module
@@ -3921,11 +3941,11 @@ calling anonymous: one two (three . hidden)
 so the state of the module can be correctly initialised before its
 functions are invoked.  The same behaviour is shown by named modules.
 
-The following example shows that bindings from the enclosing environment
-and the top level environment are accessible from the modules:
+The following example shows that bindings from the enclosing region and
+the top level environment are accessible from the modules:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (define (top-level-before) 'top-level-before)
 
@@ -3944,112 +3964,118 @@ and the top level environment are accessible from the modules:
 
   (define (outer-after) 'outer-after)
 
-  (printf "calling anonymous: ~s ~s ~s~%" (one) (two) (three)))
+  (fprintf (current-error-port)
+           "calling anonymous: ~s ~s ~s\n" (one) (two) (three)))
 
 (define (top-level-after) 'top-level-after)
 @end example
 
 @noindent
-this happens both when the enclosing environment is the top level and
-when the enclosing environment is not the top level.  The same behaviour
-is shown by named modules.
+this happens both when the enclosing region is the top level and when
+the enclosing region is not the top level.  The same behaviour is shown
+by named modules.
 
-@c page
-@node iklib modules examples named
-@subsubsection Named modules
+@c ------------------------------------------------------------
+
+@subsubheading Named modules
 
 
 The following example defines a module named @code{blue} and invokes
-functions from it in the top level environment:
+functions from it in the top level region:
 
 @example
-(import (ikarus))
+(import (vicare))
 
-[module blue (blue-one blue-two blue-three)
+(module blue (blue-one blue-two blue-three)
     (define (blue-one)          'blue-one)
     (define (blue-two)          'blue-two)
     (define (blue-three)        (cons 'blue-three (hidden)))
-    (define (hidden)            'blue-hidden)]
+    (define (hidden)            'blue-hidden))
 
 (import blue)
-(printf "calling blue: ~s ~s ~s~%"
-        (blue-one) (blue-two) (blue-three))
+(fprintf (current-error-port)
+         "calling blue: ~s ~s ~s\n"
+         (blue-one) (blue-two) (blue-three))
 @end example
 
 @noindent
 notice that bindings from a named module are accessible only if imported
-in the enclosing environment.
+in the enclosing region.
 
 The following example defines two modules named @code{green} and
-@code{red}, then it imports their bindings in different environments:
+@code{red}, then it imports their bindings in different regions:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
 
-  [module green (one two three)
+  (module green (one two three)
     (define (one)       'green-one)
     (define (two)       'green-two)
     (define (three)     (cons 'green-three (hidden)))
-    (define (hidden)    'green-hidden)]
+    (define (hidden)    'green-hidden))
 
-  [module red (one two three)
+  (module red (one two three)
     (define (one)       'red-one)
     (define (two)       'red-two)
     (define (three)     (cons 'red-three (hidden)))
-    (define (hidden)    'red-hidden)]
+    (define (hidden)    'red-hidden))
 
   (import green)
 
-  [let ()
+  (let ()
     (import red)
-    (printf "calling red: ~s ~s ~s~%" (one) (two) (three))]
+    (fprintf (current-error-port)
+             "calling red: ~s ~s ~s\n" (one) (two) (three)))
 
-  (printf "calling green: ~s ~s ~s~%" (one) (two) (three)))
+  (fprintf (current-error-port)
+           "calling green: ~s ~s ~s\n" (one) (two) (three)))
 @end example
 
-The following example shows that modules in the same enclosing
-environment can import their bindings:
+The following example shows that modules in the same enclosing region
+can import their bindings:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
 
-  [module green (one two)
+  (module green (one two)
     (define (one)       'one)
-    (define (two)       'two)]
+    (define (two)       'two))
 
-  [module red (f g)
+  (module red (f g)
     (import green)
     (define (f)         (cons 'f (one)))
-    (define (g)         (cons 'g (two)))]
+    (define (g)         (cons 'g (two))))
 
   (import red)
-  (printf "calling red: ~s ~s~%" (f) (g)))
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @noindent
 while the following example shows that bindings from an anonymous module
 are automatically available in modules defined in the same enclosing
-environment:
+region:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
 
-  [module (one two)
+  (module (one two)
     (define (one)       'one)
-    (define (two)       'two)]
+    (define (two)       'two))
 
-  [module red (f g)
+  (module red (f g)
     (define (f)         (cons 'f (one)))
-    (define (g)         (cons 'g (two)))]
+    (define (g)         (cons 'g (two))))
 
   (import red)
-  (printf "calling red: ~s ~s~%" (f) (g)))
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @noindent
@@ -4058,20 +4084,21 @@ does not matter in determining visibility of bindings from
 @strong{anonymous} modules:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
 
-  [module red (f g)
+  (module red (f g)
     (define (f)         (cons 'f (one)))
-    (define (g)         (cons 'g (two)))]
+    (define (g)         (cons 'g (two))))
 
-  [module (one two)
+  (module (one two)
     (define (one)       'one)
-    (define (two)       'two)]
+    (define (two)       'two))
 
   (import red)
-  (printf "calling red: ~s ~s~%" (f) (g)))
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
 @end example
 
 @noindent
@@ -4079,90 +4106,56 @@ the following is an @strong{error} because it tries to import bindings
 from a @strong{named} module before its definition:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
 
-  [module red (f g)
-    (import green)
+  (module red (f g)
+    (import green) ;; error here!!!
     (define (f)         (cons 'f (one)))
-    (define (g)         (cons 'g (two)))]
+    (define (g)         (cons 'g (two))))
 
-  [module green (one two)
+  (module green (one two)
     (define (one)       'one)
-    (define (two)       'two)]
+    (define (two)       'two))
 
   (import red)
-  (printf "calling red: ~s ~s~%" (f) (g)))
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
 @end example
 
-@c page
-@node iklib modules examples utils
-@subsubsection Utilities examples
+@c ------------------------------------------------------------
+
+@subsubheading Utilities examples
 
 
 The following example shows how syntactic abstractions can be used to
-access definitions in a module without using the @func{import} form:
+access definitions in a module without explicitly using the
+@func{import} form:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (let ()
 
   (define-syntax in-module
     (syntax-rules ()
-      [(_ ?module ?expr ...)
-       (let () (import ?module) ?expr ...)]))
+      ((_ ?module ?expr ...)
+       (let () (import ?module) ?expr ...))))
 
-  [module red (one two)
+  (module red (one two)
     (define (one arg)   (cons 'red-one arg))
-    (define (two arg)   (cons 'red-two arg))]
+    (define (two arg)   (cons 'red-two arg)))
 
-  [module green (one two)
+  (module green (one two)
     (define (one arg)   (cons 'green-one arg))
-    (define (two arg)   (cons 'green-two arg))]
+    (define (two arg)   (cons 'green-two arg)))
 
-  (printf "calling ones: ~s ~s~%"
-          [(in-module red one)   123]
-          [(in-module green one) 456]))
+  (fprintf (current-error-port)
+           "calling ones: ~s ~s\n"
+           ((in-module red one)   123)
+           ((in-module green one) 456)))
 @end example
-
-@c page
-@node iklib modules api
-@subsection Modules programming interface
-
-
-@deffn Syntax module @var{interface} @var{definitions} ... @var{expressions} ...
-@deffnx Syntax module @var{name} @var{interface} @var{definitions} ... @var{expressions} ...
-Define a new local module.  The first form defines an @emph{anonymous}
-module, while the second form defines a @emph{named} module called
-@var{name}, which must be a symbol.
-
-@var{interface} is a list of symbols that select bindings from this
-module to be exported.  Every listed symbol must be bound in this
-module's @var{definitions}, otherwise an error is raised.
-
-@var{definitions} is a set of bindings like the one that may appear at
-the beginning of a @func{let} body, with the addition of @func{import}
-forms that may import bindings from libraries and other modules.
-
-@var{expressions} is a set of expressions that is evaluated at module's
-definition time.
-
-Modules ``exist'' only in the enclosing region, bindings exported from a
-module are not accessible outside of the enclosing region.  Modules can
-be nested and import/export relations are possible according to the
-regions nesting hierarchy.
-
-Bindings in the @var{interface} declared by anonymous modules are
-imported by default in the enclosing region: there is no need to use
-@func{import}.  Bindings in the @var{interface} declared by named
-modules are visible only in regions that @func{import} the module.
-
-@var{definitions} and @var{expressions} have no default access to the
-bindings in the enclosing region; only imported bindings are visible
-from the module.
-@end deffn
 
 @c page
 @node iklib parameters
