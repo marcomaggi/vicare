@@ -42,7 +42,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d19
 -------------------------
 
-*
+* Fixed   IMPORT    and   EXPORT   syntaxes   in    body.    Thanks   to
+  https://github.com/sunderroy.
 
 
 Notes for revision 0.2d18
