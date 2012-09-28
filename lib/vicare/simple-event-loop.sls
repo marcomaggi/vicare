@@ -32,10 +32,9 @@
 
     ;; event loop control
     initialise			finalise
-    busy?
-    do-one-event
-    enter
-    leave-asap
+    busy?			do-one-event
+    enter			leave-asap
+    logging
 
     ;; interprocess signals
     receive-signal		serve-interprocess-signals
@@ -48,8 +47,7 @@
     do-one-fd-event
 
     ;; fragmented tasks
-    task-fragment		do-one-task-event
-    )
+    task-fragment		do-one-task-event)
   (import (vicare)
     (prefix (vicare posix) px.)
     (prefix (vicare unsafe-operations) unsafe.)
@@ -92,6 +90,19 @@
 
 (define-inline (%fxincr! ?fxvar)
   (set! ?fxvar (unsafe.fxadd1 ?fxvar)))
+
+(define logging
+  (make-parameter #f
+    (lambda (obj)
+      (if obj #t #f))))
+
+(define (%log template . args)
+  (when (logging)
+    (let ((port (current-error-port)))
+      (fprintf port "vicare SEL: ")
+      (apply fprintf port template args)
+      (fprintf port "\n")
+      (flush-output-port port))))
 
 
 ;;;; data structures
@@ -209,6 +220,7 @@
 ;;;; event loop control
 
 (define (initialise)
+  (%log "initialising")
   (set! SOURCES
 	(make-event-sources
 	 #f			   ;break?
@@ -223,6 +235,7 @@
   (px.signal-bub-init))
 
 (define (finalise)
+  (%log "finalising")
   (px.signal-bub-init)
   (set! SOURCES #f))
 
@@ -243,16 +256,19 @@
 (define (enter)
   ;;Enter the event loop and consume all the events.
   ;;
-  (with-event-sources (SOURCES)
-    (if SOURCES.break?
-	(set! SOURCES.break? #f)
-      (begin
-	(do-one-event)
-	(enter)))))
+  (%log "enter loop")
+  (let loop ()
+    (with-event-sources (SOURCES)
+      (if SOURCES.break?
+	  (set! SOURCES.break? #f)
+	(begin
+	  (do-one-event)
+	  (loop))))))
 
 (define (leave-asap)
   ;;Leave the event loop as soon as possible.
   ;;
+  (%log "scheduled loop exit ASAP")
   (with-event-sources (SOURCES)
     (set! SOURCES.break? #t)))
 
@@ -262,11 +278,14 @@
 (define (serve-interprocess-signals)
   (px.signal-bub-acquire)
   (for-each (lambda (signum)
+	      (%log "start evaluation of signal handler for ~a" signum)
 	      (with-event-sources (SOURCES)
-		(for-each (lambda (thunk)
-			    (%catch (thunk)))
-		  (unsafe.vector-ref SOURCES.signal-handlers signum))
-		(unsafe.vector-set! SOURCES.signal-handlers signum '())))
+		(let ((handlers (unsafe.vector-ref SOURCES.signal-handlers signum)))
+		  (unsafe.vector-set! SOURCES.signal-handlers signum '())
+		  (for-each (lambda (thunk)
+			      (%catch (thunk)))
+		    handlers)))
+	      (%log "finished evaluation of signal handler for ~a" signum))
     (px.signal-bub-all-delivered)))
 
 (define (receive-signal signum handler-thunk)
@@ -276,7 +295,8 @@
        (procedure	handler-thunk))
     (with-event-sources (SOURCES)
       (unsafe.vector-set! SOURCES.signal-handlers signum
-			  (cons handler-thunk (unsafe.vector-ref SOURCES.signal-handlers signum))))))
+			  (cons handler-thunk
+				(unsafe.vector-ref SOURCES.signal-handlers signum))))))
 
 
 ;;;; file descriptor events
