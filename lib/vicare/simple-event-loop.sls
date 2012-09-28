@@ -236,7 +236,7 @@
 
 (define (finalise)
   (%log "finalising")
-  (px.signal-bub-init)
+  (px.signal-bub-final)
   (set! SOURCES #f))
 
 (define (do-one-event)
