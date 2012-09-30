@@ -168,11 +168,11 @@ the command line.
   Some  test  files need  a  usable  directory  pathname in  the  TMPDIR
 environment variable.
 
-  The  file "test-vicare-posix.sps" contains  tests for  network sockets
+  The file  "test-vicare-posix.sps" contains  tests for  network sockets
 which are  normally disabled because  the firewall rules on  the hosting
-machine must  allo connections on 127.0.0.1:8080  and 127.0.0.1:8081; to
-enable these tests run make with the environment variable RUN_INET_TESTS
-set to something:
+machine  must  allow  TCP  and UDP  connections  on  127.0.0.1:8080  and
+127.0.0.1:8081;  to enable  these tests  run make  with the  environment
+variable RUN_INET_TESTS set to something:
 
    $ make test file=vicare-posix RUN_INET_TESTS=1
 

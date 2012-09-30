@@ -2358,10 +2358,13 @@ ikrt_posix_make_sockaddr_in (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
   {
     struct in_addr *		host_address;
     struct sockaddr_in *	socket_address;
+    uint16_t			port = htons((uint16_t)IK_UNFIX(s_port));
+    /* fprintf(stderr, "%s: port %ld %u\n", __func__, IK_UNFIX(s_port), port); */
     s_socket_address	       = ika_bytevector_alloc(pcb, BV_LEN);
     socket_address	       = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
     socket_address->sin_family = AF_INET;
-    socket_address->sin_port   = (unsigned short int)IK_UNFIX(s_port);
+    socket_address->sin_port   = (unsigned short int)port;
+    /* fprintf(stderr, "%s: field %u\n", __func__, (uint16_t)(ntohs(socket_address->sin_port))); */
     host_address	       = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
     memcpy(&(socket_address->sin_addr), host_address, sizeof(struct in_addr));
   }
@@ -2402,8 +2405,12 @@ ikrt_posix_sockaddr_in_in_port (ikptr s_socket_address)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_IN
   struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
-  return (AF_INET == socket_address->sin_family)?
-    IK_FIX((long)socket_address->sin_port) : IK_FALSE_OBJECT;
+  if (AF_INET == socket_address->sin_family) {
+    uint16_t		port = ntohs((uint16_t)(socket_address->sin_port));
+    /* fprintf(stderr, "%s: port %u\n", __func__, port); */
+    return IK_FIX((long)port);
+  } else
+    return IK_FALSE;
 #else
   feature_failure(__func__);
 #endif
@@ -2420,16 +2427,19 @@ ikrt_posix_make_sockaddr_in6 (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
 #ifdef HAVE_STRUCT_SOCKADDR_IN6
 #undef BV_LEN
 #define BV_LEN	sizeof(struct sockaddr_in6)
-  struct in6_addr *	host_address;
-  struct sockaddr_in6 * socket_address;
   ikptr			s_socket_address;
   pcb->root0 = &s_host_address;
   pcb->root1 = &s_port;
   {
+    struct in6_addr *		host_address;
+    struct sockaddr_in6 *	socket_address;
+    uint16_t			port = htons((uint16_t)IK_UNFIX(s_port));
+    /* fprintf(stderr, "%s: port %ld %u\n", __func__, IK_UNFIX(s_port), port); */
     s_socket_address	        = ika_bytevector_alloc(pcb, BV_LEN);
     socket_address	        = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
     socket_address->sin6_family = AF_INET6;
-    socket_address->sin6_port   = (unsigned short int)IK_UNFIX(s_port);
+    socket_address->sin6_port   = (unsigned short int)port;
+    /* fprintf(stderr, "%s: field %u\n", __func__, (uint16_t)(ntohs(socket_address->sin_port))); */
     host_address                = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
     memcpy(&(socket_address->sin6_addr), host_address, sizeof(struct in6_addr));
   }
@@ -2470,8 +2480,15 @@ ikrt_posix_sockaddr_in6_in6_port (ikptr s_socket_address)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_IN6
   struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
-  return (AF_INET6 == socket_address->sin6_family)?
-    IK_FIX((long)socket_address->sin6_port) : IK_FALSE_OBJECT;
+  /* return (AF_INET6 == socket_address->sin6_family)? */
+  /*   IK_FIX((long)socket_address->sin6_port) : IK_FALSE_OBJECT; */
+  if (AF_INET6 == socket_address->sin6_family) {
+    uint16_t		port = ntohs((uint16_t)(socket_address->sin6_port));
+    /* fprintf(stderr, "%s: port %u\n", __func__, port); */
+    return IK_FIX((long)port);
+  } else
+    return IK_FALSE;
+
 #else
   feature_failure(__func__);
 #endif

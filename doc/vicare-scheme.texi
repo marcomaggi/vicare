@@ -10272,6 +10272,9 @@ Given a bytevector @var{host-address} holding a @code{struct in_addr}
 and a fixnum @var{port} representing a network port number, build and
 return a bytevector holding a @code{struct sockaddr_in} initialised with
 this data.
+
+Internally convert @var{port} to network byte order using @cfunc{htons}
+before storing the value in the data structure.
 @end defun
 
 
@@ -10282,6 +10285,9 @@ sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
 return them as bytevector holding the corresponding @code{struct
 in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
 an exception is raised.
+
+Internally convert the port to host byte order using @cfunc{ntohs}
+before after extracting the value from the data structure.
 @end defun
 
 @c page
