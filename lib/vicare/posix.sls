@@ -221,6 +221,8 @@
     inet-aton				inet-ntoa
     inet-pton				inet-ntop
     inet-ntoa/string			inet-ntop/string
+    htonl				htons
+    ntohl				ntohs
     gethostbyname			gethostbyname2
     gethostbyaddr			host-entries
     getaddrinfo				gai-strerror
@@ -767,6 +769,16 @@
   (assertion-violation who "expected struct-rusage as argument" obj))
 
 ;;; --------------------------------------------------------------------
+
+(define-argument-validation (uint32_t who obj)
+  (words.word-u32? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"uint32_t\" as argument" obj))
+
+(define-argument-validation (uint16_t who obj)
+  (words.word-u16? obj)
+  (assertion-violation who
+    "expected exact integer representing a C language \"uint16_t\" as argument" obj))
 
 (define-argument-validation (unsigned-int who obj)
   (words.unsigned-int? obj)
@@ -2928,6 +2940,32 @@
 
 (define (inet-ntop/string af addr)
   (utf8->string (inet-ntop af addr)))
+
+;;; --------------------------------------------------------------------
+
+(define (htonl host-long)
+  (define who 'htonl)
+  (with-arguments-validation (who)
+      ((uint32_t	host-long))
+    (capi.posix-htonl host-long)))
+
+(define (htons host-short)
+  (define who 'htons)
+  (with-arguments-validation (who)
+      ((uint16_t	host-short))
+    (capi.posix-htons host-short)))
+
+(define (ntohl host-long)
+  (define who 'ntohl)
+  (with-arguments-validation (who)
+      ((uint32_t	host-long))
+    (capi.posix-ntohl host-long)))
+
+(define (ntohs host-short)
+  (define who 'ntohs)
+  (with-arguments-validation (who)
+      ((uint16_t	host-short))
+    (capi.posix-ntohs host-short)))
 
 ;;; --------------------------------------------------------------------
 

@@ -198,6 +198,10 @@ main (int argc, const char *const argv[])
     HAVE_INET_NTOA\n\
     HAVE_INET_NTOP\n\
     HAVE_INET_PTON\n\
+    HAVE_HTONL\n\
+    HAVE_HTONS\n\
+    HAVE_NTOHL\n\
+    HAVE_NTOHS\n\
     HAVE_INOTIFY_ADD_WATCH\n\
     HAVE_INOTIFY_INIT\n\
     HAVE_INOTIFY_INIT1\n\
@@ -1409,6 +1413,34 @@ printf("(define-inline-constant HAVE_INET_NTOP %s)\n",
   );
 printf("(define-inline-constant HAVE_INET_PTON %s)\n",
 #ifdef HAVE_INET_PTON
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_HTONL %s)\n",
+#ifdef HAVE_HTONL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_HTONS %s)\n",
+#ifdef HAVE_HTONS
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_NTOHL %s)\n",
+#ifdef HAVE_NTOHL
+  "#t"
+#else
+  "#f"
+#endif
+  );
+printf("(define-inline-constant HAVE_NTOHS %s)\n",
+#ifdef HAVE_NTOHS
   "#t"
 #else
   "#f"

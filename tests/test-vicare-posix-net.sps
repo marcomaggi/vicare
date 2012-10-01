@@ -160,6 +160,32 @@
 ;;; --------------------------------------------------------------------
 
   (check
+      (px.htonl #xA5B6C7D8)
+    => #xD8C7B6A5)
+
+  (check
+      (px.ntohl #xA5B6C7D8)
+    => #xD8C7B6A5)
+
+  (check
+      (px.htons #xA5B6)
+    => #xB6A5)
+
+  (check
+      (px.ntohs #xA5B6)
+    => #xB6A5)
+
+  (check
+      (px.ntohl (px.htonl #xA5B6C7D8))
+    => #xA5B6C7D8)
+
+  (check
+      (px.ntohs (px.htons #xA5B6))
+    => #xA5B6)
+
+;;; --------------------------------------------------------------------
+
+  (check
     (let ((S (px.gethostbyname "localhost")))
 ;;;      (check-pretty-print S)
       (list (px.struct-hostent? S)

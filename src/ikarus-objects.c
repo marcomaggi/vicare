@@ -475,6 +475,38 @@ ika_integer_from_ullong (ikpcb * pcb, ik_ullong N)
 /* ------------------------------------------------------------------ */
 
 ikptr
+ika_integer_from_sint8	(ikpcb* pcb, int8_t N)
+/* According to R6RS  fixnums have at least 24 bits,  so we just convert
+   it to fixnum. */
+{
+  return IK_FIX(N);
+}
+ikptr
+ika_integer_from_uint8	(ikpcb* pcb, uint8_t N)
+/* According to R6RS  fixnums have at least 24 bits,  so we just convert
+   it to fixnum. */
+{
+  return IK_FIX(N);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ika_integer_from_sint16	(ikpcb* pcb, int16_t N)
+/* According to R6RS  fixnums have at least 24 bits,  so we just convert
+   it to fixnum. */
+{
+  return IK_FIX(N);
+}
+ikptr
+ika_integer_from_uint16	(ikpcb* pcb, uint16_t N)
+{
+  return IK_FIX(N);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
 ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
 {
   ikptr	s_fx = IK_FIX(N);
@@ -482,28 +514,6 @@ ika_integer_from_sint32	(ikpcb* pcb, int32_t N)
     return s_fx;
   else {
     switch (sizeof(int32_t)) {
-    case sizeof(int):
-      return ika_integer_from_int   (pcb, (int)N);
-#if 0 /* duplicate case value */
-    case sizeof(long):
-      return ika_integer_from_long  (pcb, (long)N);
-#endif
-    case sizeof(ik_llong):
-      return ika_integer_from_llong (pcb, (ik_llong)N);
-    default:
-      ik_abort("unexpected integers size");
-      return IK_VOID_OBJECT;
-    }
-  }
-}
-ikptr
-ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
-{
-  ikptr	s_fx = IK_FIX(N);
-  if (IK_UNFIX(s_fx) == N)
-    return s_fx;
-  else {
-    switch (sizeof(int64_t)) {
     case sizeof(int):
       return ika_integer_from_int   (pcb, (int)N);
 #if 0 /* duplicate case value */
@@ -534,6 +544,31 @@ ika_integer_from_uint32	(ikpcb* pcb, uint32_t N)
 #endif
     case sizeof(ik_ullong):
       return ika_integer_from_ullong (pcb, (ik_ullong)N);
+    default:
+      ik_abort("unexpected integers size");
+      return IK_VOID_OBJECT;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ika_integer_from_sint64	(ikpcb* pcb, int64_t N)
+{
+  ikptr	s_fx = IK_FIX(N);
+  if (IK_UNFIX(s_fx) == N)
+    return s_fx;
+  else {
+    switch (sizeof(int64_t)) {
+    case sizeof(int):
+      return ika_integer_from_int   (pcb, (int)N);
+#if 0 /* duplicate case value */
+    case sizeof(long):
+      return ika_integer_from_long  (pcb, (long)N);
+#endif
+    case sizeof(ik_llong):
+      return ika_integer_from_llong (pcb, (ik_llong)N);
     default:
       ik_abort("unexpected integers size");
       return IK_VOID_OBJECT;
@@ -732,6 +767,48 @@ ik_integer_to_ullong (ikptr x)
 
 /* ------------------------------------------------------------------ */
 
+uint8_t
+ik_integer_to_uint8 (ikptr x)
+/* According to R6RS fixnums must have at  least 24 bits, so X must be a
+   fixnum for this function to work. */
+{
+  assert(IK_IS_FIXNUM(x));
+  long	X = IK_UNFIX(x);
+  return ((0 <= X) && (X <= UINT8_MAX))? ((uint8_t)X) : IK_FALSE;
+}
+int8_t
+ik_integer_to_sint8 (ikptr x)
+/* According to R6RS fixnums must have at  least 24 bits, so X must be a
+   fixnum for this function to work. */
+{
+  assert(IK_IS_FIXNUM(x));
+  long	X = IK_UNFIX(x);
+  return ((INT8_MIN <= X) && (X <= INT8_MAX))? ((int8_t)X) : IK_FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+
+uint16_t
+ik_integer_to_uint16 (ikptr x)
+/* According to R6RS fixnums must have at  least 24 bits, so X must be a
+   fixnum for this function to work. */
+{
+  assert(IK_IS_FIXNUM(x));
+  long	X = IK_UNFIX(x);
+  return ((0 <= X) && (X <= UINT16_MAX))? ((uint16_t)X) : IK_FALSE;
+}
+int16_t
+ik_integer_to_sint16 (ikptr x)
+/* According to R6RS fixnums must have at  least 24 bits, so X must be a
+   fixnum for this function to work. */
+{
+  assert(IK_IS_FIXNUM(x));
+  long	X = IK_UNFIX(x);
+  return ((INT16_MIN <= X) && (X <= INT16_MAX))? ((int16_t)X) : IK_FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+
 uint32_t
 ik_integer_to_uint32 (ikptr x)
 {
@@ -754,6 +831,9 @@ ik_integer_to_sint32 (ikptr x)
     return (IK_BNFST_NEGATIVE(ref(x, -vector_tag)))? -(*memory) : (*memory);
   }
 }
+
+/* ------------------------------------------------------------------ */
+
 uint64_t
 ik_integer_to_uint64 (ikptr x)
 {

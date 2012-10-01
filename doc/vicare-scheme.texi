@@ -10286,8 +10286,8 @@ return them as bytevector holding the corresponding @code{struct
 in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
 an exception is raised.
 
-Internally convert the port to host byte order using @cfunc{ntohs}
-before after extracting the value from the data structure.
+Internally convert the port number to host byte order using
+@cfunc{ntohs} after the extraction of the value from the data structure.
 @end defun
 
 @c page
@@ -10329,6 +10329,9 @@ sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
 and return them as bytevector holding the corresponding @code{struct
 in6_addr} and as fixnum.  If the data in @var{socket_address} is
 invalid: an exception is raised.
+
+Internally convert the port number to host byte order using
+@cfunc{ntohs} after the extraction of the value from the data structure.
 @end defun
 
 @c ------------------------------------------------------------
@@ -11090,6 +11093,48 @@ error message string.
 Interface to the C function @cfunc{gai_strerror}, see the manual page
 @code{gai_strerror(3)}.  Convert an @code{EAI_} error code into the
 corresponding error message, return a string holding such message.
+@end defun
+
+
+@defun htonl @var{host-long}
+@defunx ntohl @var{net-long}
+Convert an exact integer, in the range of the C language type
+@code{uint32_t}, between host byte order and network byte order;
+@glibcref{Byte Order, ntohl}.
+
+On the i386 platform: host byte order is least significant byte first.
+The network byte order is: most significant byte first.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.htonl #xA5B6C7D8)                   @result{} #xD8C7B6A5
+(px.ntohl #xA5B6C7D8)                   @result{} #xD8C7B6A5
+(px.ntohl (px.htonl #xA5B6C7D8))        @result{} #xA5B6C7D8
+@end example
+@end defun
+
+
+@defun htons @var{host-short}
+@defunx ntohs @var{net-short}
+Convert an exact integer, in the range of the C language type
+@code{uint16_t}, between host byte order and network byte order;
+@glibcref{Byte Order, htons}.
+
+On the i386 platform: host byte order is least significant byte first.
+The network byte order is: most significant byte first.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.htons #xA5B6)               @result{} #xB6A5
+(px.ntohs #xA5B6)               @result{} #xB6A5
+(px.ntohs (px.htons #xA5B6))    @result{} #xA5B6
+@end example
 @end defun
 
 @c page
@@ -24024,8 +24069,12 @@ value.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_sint32 (ikpcb * @var{pcb}, int32_t @var{N})
+@deftypefun ikptr ika_integer_from_sint8 (ikpcb * @var{pcb}, int8_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint16 (ikpcb * @var{pcb}, int16_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint32 (ikpcb * @var{pcb}, int32_t @var{N})
 @deftypefunx ikptr ika_integer_from_sint64 (ikpcb * @var{pcb}, int64_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint8 (ikpcb * @var{pcb}, uint8_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint16 (ikpcb * @var{pcb}, uint16_t @var{N})
 @deftypefunx ikptr ika_integer_from_uint32 (ikpcb * @var{pcb}, uint32_t @var{N})
 @deftypefunx ikptr ika_integer_from_uint64 (ikpcb * @var{pcb}, uint64_t @var{N})
 Build and return a new exact integer object from the given C language
@@ -24054,8 +24103,12 @@ conversion.
 @end deftypefun
 
 
-@deftypefun int32_t ik_integer_to_sint32 (ikptr @var{X})
+@deftypefun int8_t ik_integer_to_sint8 (ikptr @var{X})
+@deftypefunx int16_t ik_integer_to_sint16 (ikptr @var{X})
+@deftypefunx int32_t ik_integer_to_sint32 (ikptr @var{X})
 @deftypefunx int64_t ik_integer_to_sint64 (ikptr @var{X})
+@deftypefunx uint8_t ik_integer_to_uint8 (ikptr @var{X})
+@deftypefunx uint16_t ik_integer_to_uint16 (ikptr @var{X})
 @deftypefunx uint32_t ik_integer_to_uint32 (ikptr @var{X})
 @deftypefunx uint64_t ik_integer_to_uint64 (ikptr @var{X})
 Return a C language number from a Scheme exact integer object.  The

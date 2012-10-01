@@ -45,10 +45,31 @@ Notes for revision 0.2d19
 * Fixed   IMPORT    and   EXPORT   syntaxes   in    body.    Thanks   to
   https://github.com/sunderroy.
 
-* Library  (vicare posix):  network port  numbers are  now appropriately
-  converted to  network byte order  when stored in  "struct sockaddr_in"
-  and "struct sockaddr_in6" values and converted back to host byte order
-  when extracted.
+* Library (vicare posix): network port numbers are now automatically and
+  appropriately converted to  network byte order when  stored in "struct
+  sockaddr_in" and  "struct sockaddr_in6" values, and  converted back to
+  host byte order when extracted, by the functions:
+
+    make-sockaddr_in		make-sockaddr_in6
+    sockaddr_in.in_port		sockaddr_in6.in6_port
+
+* Added functions to (vicare posix):
+
+    htonl	htons
+    ntohl	ntohs
+
+* For completeness, added the C functions:
+
+    int8_t   ik_integer_to_sint8  (ikptr X)
+    int16_t  ik_integer_to_sint16 (ikptr X)
+    uint8_t  ik_integer_to_uint8  (ikptr X)
+    uint16_t ik_integer_to_uint16 (ikptr X)
+    ikptr    ika_integer_from_sint8  (ikpcb * pcb, int8_t   N)
+    ikptr    ika_integer_from_sint16 (ikpcb * pcb, int16_t  N)
+    ikptr    ika_integer_from_uint8  (ikpcb * pcb, uint8_t  N)
+    ikptr    ika_integer_from_uint16 (ikpcb * pcb, uint16_t N)
+
+  they are equivalent to IK_FIX() and IK_UNFIX().
 
 
 Notes for revision 0.2d18

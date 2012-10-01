@@ -337,7 +337,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_TYPES([struct sockaddr_in6],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct in_addr],,,[VICARE_INCLUDES])
   AC_CHECK_TYPES([struct in6_addr],,,[VICARE_INCLUDES])
-  AC_CHECK_FUNCS([inet_aton inet_ntoa inet_pton inet_ntop])
+  AC_CHECK_FUNCS([inet_aton inet_ntoa inet_pton inet_ntop htonl htons ntohl ntohs])
   AC_CHECK_TYPES([struct hostent],,,[VICARE_INCLUDES])
   AC_CHECK_FUNCS([gethostbyname gethostbyname2 gethostbyaddr sethostent gethostent endhostent])
   AC_CHECK_TYPES([struct addrinfo],,,[VICARE_INCLUDES])

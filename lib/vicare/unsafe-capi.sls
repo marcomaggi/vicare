@@ -284,6 +284,8 @@
     posix-in6addr_loopback		posix-in6addr_any
     posix-inet_aton			posix-inet_ntoa
     posix-inet_pton			posix-inet_ntop
+    posix-htonl				posix-htons
+    posix-ntohl				posix-ntohs
     posix-gethostbyname			posix-gethostbyname2
     posix-gethostbyaddr			posix-host-entries
     posix-getaddrinfo			posix-gai_strerror
@@ -1600,6 +1602,20 @@
 
 (define-inline (posix-inet_ntop af addr)
   (foreign-call "ikrt_posix_inet_ntop" af addr))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (posix-htonl host-long)
+  (foreign-call "ikrt_posix_htonl" host-long))
+
+(define-inline (posix-htons host-short)
+  (foreign-call "ikrt_posix_htons" host-short))
+
+(define-inline (posix-ntohl host-long)
+  (foreign-call "ikrt_posix_ntohl" host-long))
+
+(define-inline (posix-ntohs host-short)
+  (foreign-call "ikrt_posix_ntohs" host-short))
 
 ;;; --------------------------------------------------------------------
 

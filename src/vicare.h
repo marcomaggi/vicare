@@ -390,8 +390,12 @@ ik_decl ikptr	ika_integer_from_uint	(ikpcb* pcb, ik_uint N);
 ik_decl ikptr	ika_integer_from_ulong	(ikpcb* pcb, ik_ulong N);
 ik_decl ikptr	ika_integer_from_ullong	(ikpcb* pcb, ik_ullong N);
 
+ik_decl ikptr	ika_integer_from_sint8	(ikpcb* pcb, int8_t N);
+ik_decl ikptr	ika_integer_from_sint16	(ikpcb* pcb, int16_t N);
 ik_decl ikptr	ika_integer_from_sint32	(ikpcb* pcb, int32_t N);
 ik_decl ikptr	ika_integer_from_sint64	(ikpcb* pcb, int64_t N);
+ik_decl ikptr	ika_integer_from_uint8	(ikpcb* pcb, uint8_t N);
+ik_decl ikptr	ika_integer_from_uint16	(ikpcb* pcb, uint16_t N);
 ik_decl ikptr	ika_integer_from_uint32	(ikpcb* pcb, uint32_t N);
 ik_decl ikptr	ika_integer_from_uint64	(ikpcb* pcb, uint64_t N);
 
@@ -400,8 +404,12 @@ ik_decl ikptr	ika_integer_from_ssize_t(ikpcb * pcb, ssize_t N);
 ik_decl ikptr	ika_integer_from_size_t	(ikpcb * pcb, size_t N);
 ik_decl ikptr	ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N);
 
+ik_decl int8_t	 ik_integer_to_sint8	(ikptr x);
+ik_decl int16_t	 ik_integer_to_sint16	(ikptr x);
 ik_decl int32_t	 ik_integer_to_sint32	(ikptr x);
 ik_decl int64_t	 ik_integer_to_sint64	(ikptr x);
+ik_decl uint8_t  ik_integer_to_uint8	(ikptr x);
+ik_decl uint16_t ik_integer_to_uint16	(ikptr x);
 ik_decl uint32_t ik_integer_to_uint32	(ikptr x);
 ik_decl uint64_t ik_integer_to_uint64	(ikptr x);
 

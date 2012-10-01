@@ -6018,9 +6018,64 @@ ikrt_posix_getrusage (ikptr s_processes, ikptr s_rusage, ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
- ** Miscellaneous functions.
+ ** Host to/from network byte order.
  ** ----------------------------------------------------------------- */
 
+ikptr
+ikrt_posix_htonl (ikptr s_host_long, ikpcb * pcb)
+{
+#ifdef HAVE_HTONL
+  uint32_t	in = ik_integer_to_uint32(s_host_long);
+  uint32_t	rv;
+  rv = htonl(in);
+  return ika_integer_from_uint32(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_htons (ikptr s_host_long, ikpcb * pcb)
+{
+#ifdef HAVE_HTONS
+  uint16_t	in = ik_integer_to_uint16(s_host_long);
+  uint16_t	rv;
+  rv = htons(in);
+  return ika_integer_from_uint16(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_posix_ntohl (ikptr s_host_long, ikpcb * pcb)
+{
+#ifdef HAVE_NTOHL
+  uint32_t	in = ik_integer_to_uint32(s_host_long);
+  uint32_t	rv;
+  rv = ntohl(in);
+  return ika_integer_from_uint32(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_posix_ntohs (ikptr s_host_long, ikpcb * pcb)
+{
+#ifdef HAVE_NTOHS
+  uint16_t	in = ik_integer_to_uint16(s_host_long);
+  uint16_t	rv;
+  rv = ntohs(in);
+  return ika_integer_from_uint16(pcb, rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+
+
+/** --------------------------------------------------------------------
+ ** Miscellaneous functions.
+ ** ----------------------------------------------------------------- */
 
 /* end of file */
