@@ -329,12 +329,12 @@
 	 (%synner "invalid input form" #f))))
 
     (define (%build-output-form who validators list-of-args body)
-      (syntax-case validators ()
+      (syntax-case validators (void)
 	(()
 	 #`(let () #,body))
-	;;Accept #t as special validator meaning "always valid"; this is
-	;;sometimes useful when composing syntax output forms.
-	((#t . ?other-validators)
+	;;Accept VOID as special  validator meaning "always valid"; this
+	;;is sometimes useful when composing syntax output forms.
+	((void . ?other-validators)
 	 (%build-output-form who #'?other-validators list-of-args body))
 	((?validator . ?other-validators)
 	 (identifier? #'?validator)

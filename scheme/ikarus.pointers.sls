@@ -32,7 +32,7 @@
     ;; memory blocks
     memory-block?			memory-block?/non-null
     make-memory-block/guarded		memory-block-size
-    memory-block-reset
+    memory-block-reset			null-memory-block
     (rename (%make-memory-block		make-memory-block)
 	    (%memory-block-pointer	memory-block-pointer)
 	    (memory-block?/non-null	memory-block?/not-null))
@@ -177,7 +177,7 @@
 		  memory-block?
 		  memory-block?/non-null		memory-block?/not-null
 		  memory-block-pointer			memory-block-size
-		  memory-block-reset
+		  memory-block-reset			null-memory-block
 
 		  ;; shared libraries inteface
 		  dlopen				dlclose
@@ -658,6 +658,9 @@
       ((pointer	pointer)
        (size_t	size))
     (make-memory-block pointer size)))
+
+(define (null-memory-block)
+  (make-memory-block (null-pointer) 0))
 
 (define (make-memory-block/guarded pointer size)
   (%memory-block-guardian (%make-memory-block pointer size)))

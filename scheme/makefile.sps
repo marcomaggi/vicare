@@ -1931,6 +1931,7 @@
 ;;;
     (make-memory-block				$for i v $language)
     (make-memory-block/guarded			$for i v $language)
+    (null-memory-block				$for i v $language)
     (memory-block?				$for i v $language)
     (memory-block?/non-null			$for i v $language)
     (memory-block?/not-null			$for i v $language)

@@ -1708,9 +1708,6 @@
 
 (parametrise ((check-test-name	'validate-memory-block))
 
-  (define (null-memory-block)
-    (make-memory-block (null-pointer) 0))
-
 ;;; memory-block
 
   (check

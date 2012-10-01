@@ -7047,6 +7047,12 @@ Reset an instance of @code{memory-block} to a @cnull{} pointer and zero
 size.  Return unspecified values.
 @end defun
 
+
+@defun null-memory-block
+Build and return a new instance of @code{memory-block} holding a new
+@cnull{} pointer object and zero as size.
+@end defun
+
 @c page
 @node iklib memory condition
 @subsection Memory allocation condition objects
