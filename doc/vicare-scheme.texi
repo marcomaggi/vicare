@@ -18554,7 +18554,11 @@ just evaluate the @meta{body} forms.
 @condition{who} condition object.
 
 @meta{validator} must be an identifier previously used as name of
-validation clause by the @func{define-argument-validation} macro.
+validation clause by the @func{define-argument-validation} macro.  As a
+special case when @meta{validator} is the identifier @func{void},
+exported by @library{vicare}, no validation is generated: the @var{arg}
+values are considered always valid; this is sometimes useful when using
+this macro in the expansion of another macro.
 
 Simple example:
 
