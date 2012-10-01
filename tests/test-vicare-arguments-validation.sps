@@ -29,6 +29,8 @@
 (import (vicare)
   (vicare syntactic-extensions)
   (vicare arguments validation)
+  (prefix (vicare arguments validation)
+	  args.)
   (prefix (vicare posix) px.)
   (vicare checks))
 
@@ -1670,6 +1672,27 @@
   (check
       (doit #f enum-set/false "ciao")
     => '("ciao"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-prefixed))
+
+  (check
+      (doit #f args.fixnum 123)
+    => #t)
+
+  (check
+      (doit #f args.fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f args.fixnum/false #f)
+    => #t)
+
+  (check
+      (doit #f args.string "123")
+    => #t)
 
   #t)
 

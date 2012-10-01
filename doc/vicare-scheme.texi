@@ -18435,9 +18435,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 
 The library @library{vicare arguments validation} provides bindings to
 macros that extend the Scheme language implemented by @library{vicare}
-and @library{rnrs}; to improve ease of use, the library implements its
-features with some non-hygienic techniques; the library is meant to be
-imported @strong{without} prefixing the bindings.
+and @library{rnrs}.
 
 @menu
 * args config::                 Enabling or disabling arguments

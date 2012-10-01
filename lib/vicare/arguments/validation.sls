@@ -34,137 +34,137 @@
     arguments-validation-forms
 
     ;; fixnums
-    vicare.argument-validation-for-fixnum
-    vicare.argument-validation-for-fixnum/false
-    vicare.argument-validation-for-positive-fixnum
-    vicare.argument-validation-for-negative-fixnum
-    vicare.argument-validation-for-non-positive-fixnum
-    vicare.argument-validation-for-non-negative-fixnum
-    vicare.argument-validation-for-fixnum-in-inclusive-range
-    vicare.argument-validation-for-fixnum-in-exclusive-range
-    vicare.argument-validation-for-even-fixnum
-    vicare.argument-validation-for-odd-fixnum
+    fixnum.vicare-arguments-validation
+    fixnum/false.vicare-arguments-validation
+    positive-fixnum.vicare-arguments-validation
+    negative-fixnum.vicare-arguments-validation
+    non-positive-fixnum.vicare-arguments-validation
+    non-negative-fixnum.vicare-arguments-validation
+    fixnum-in-inclusive-range.vicare-arguments-validation
+    fixnum-in-exclusive-range.vicare-arguments-validation
+    even-fixnum.vicare-arguments-validation
+    odd-fixnum.vicare-arguments-validation
 
     ;; exact integers
-    vicare.argument-validation-for-exact-integer
-    vicare.argument-validation-for-exact-integer/false
-    vicare.argument-validation-for-positive-exact-integer
-    vicare.argument-validation-for-negative-exact-integer
-    vicare.argument-validation-for-non-positive-exact-integer
-    vicare.argument-validation-for-non-negative-exact-integer
-    vicare.argument-validation-for-exact-integer-in-inclusive-range
-    vicare.argument-validation-for-exact-integer-in-exclusive-range
-    vicare.argument-validation-for-even-exact-integer
-    vicare.argument-validation-for-odd-exact-integer
+    exact-integer.vicare-arguments-validation
+    exact-integer/false.vicare-arguments-validation
+    positive-exact-integer.vicare-arguments-validation
+    negative-exact-integer.vicare-arguments-validation
+    non-positive-exact-integer.vicare-arguments-validation
+    non-negative-exact-integer.vicare-arguments-validation
+    exact-integer-in-inclusive-range.vicare-arguments-validation
+    exact-integer-in-exclusive-range.vicare-arguments-validation
+    even-exact-integer.vicare-arguments-validation
+    odd-exact-integer.vicare-arguments-validation
 
     ;; bit sized integers
-    vicare.argument-validation-for-word-u8
-    vicare.argument-validation-for-word-u8/false
-    vicare.argument-validation-for-word-s8
-    vicare.argument-validation-for-word-s8/false
-    vicare.argument-validation-for-word-u16
-    vicare.argument-validation-for-word-u16/false
-    vicare.argument-validation-for-word-s16
-    vicare.argument-validation-for-word-s16/false
-    vicare.argument-validation-for-word-u32
-    vicare.argument-validation-for-word-u32/false
-    vicare.argument-validation-for-word-s32
-    vicare.argument-validation-for-word-s32/false
-    vicare.argument-validation-for-word-u64
-    vicare.argument-validation-for-word-u64/false
-    vicare.argument-validation-for-word-s64
-    vicare.argument-validation-for-word-s64/false
-    vicare.argument-validation-for-word-u128
-    vicare.argument-validation-for-word-u128/false
-    vicare.argument-validation-for-word-s128
-    vicare.argument-validation-for-word-s128/false
-    vicare.argument-validation-for-word-u256
-    vicare.argument-validation-for-word-u256/false
-    vicare.argument-validation-for-word-s256
-    vicare.argument-validation-for-word-s256/false
-    vicare.argument-validation-for-machine-word
-    vicare.argument-validation-for-machine-word/false
+    word-u8.vicare-arguments-validation
+    word-u8/false.vicare-arguments-validation
+    word-s8.vicare-arguments-validation
+    word-s8/false.vicare-arguments-validation
+    word-u16.vicare-arguments-validation
+    word-u16/false.vicare-arguments-validation
+    word-s16.vicare-arguments-validation
+    word-s16/false.vicare-arguments-validation
+    word-u32.vicare-arguments-validation
+    word-u32/false.vicare-arguments-validation
+    word-s32.vicare-arguments-validation
+    word-s32/false.vicare-arguments-validation
+    word-u64.vicare-arguments-validation
+    word-u64/false.vicare-arguments-validation
+    word-s64.vicare-arguments-validation
+    word-s64/false.vicare-arguments-validation
+    word-u128.vicare-arguments-validation
+    word-u128/false.vicare-arguments-validation
+    word-s128.vicare-arguments-validation
+    word-s128/false.vicare-arguments-validation
+    word-u256.vicare-arguments-validation
+    word-u256/false.vicare-arguments-validation
+    word-s256.vicare-arguments-validation
+    word-s256/false.vicare-arguments-validation
+    machine-word.vicare-arguments-validation
+    machine-word/false.vicare-arguments-validation
 
     ;; C language "int" type
-    vicare.argument-validation-for-signed-int
-    vicare.argument-validation-for-signed-int/false
-    vicare.argument-validation-for-positive-signed-int
-    vicare.argument-validation-for-negative-signed-int
-    vicare.argument-validation-for-non-positive-signed-int
-    vicare.argument-validation-for-non-negative-signed-int
-    vicare.argument-validation-for-signed-int-in-inclusive-range
-    vicare.argument-validation-for-signed-int-in-exclusive-range
-    vicare.argument-validation-for-even-signed-int
-    vicare.argument-validation-for-odd-signed-int
+    signed-int.vicare-arguments-validation
+    signed-int/false.vicare-arguments-validation
+    positive-signed-int.vicare-arguments-validation
+    negative-signed-int.vicare-arguments-validation
+    non-positive-signed-int.vicare-arguments-validation
+    non-negative-signed-int.vicare-arguments-validation
+    signed-int-in-inclusive-range.vicare-arguments-validation
+    signed-int-in-exclusive-range.vicare-arguments-validation
+    even-signed-int.vicare-arguments-validation
+    odd-signed-int.vicare-arguments-validation
 
     ;; other C language types
-    vicare.argument-validation-for-unsigned-char
-    vicare.argument-validation-for-signed-char
-    vicare.argument-validation-for-unsigned-short
-    vicare.argument-validation-for-signed-short
-    vicare.argument-validation-for-unsigned-int
-    vicare.argument-validation-for-unsigned-long
-    vicare.argument-validation-for-signed-long
-    vicare.argument-validation-for-unsigned-long-long
-    vicare.argument-validation-for-signed-long-long
-    vicare.argument-validation-for-pointer-integer
-    vicare.argument-validation-for-size_t
-    vicare.argument-validation-for-ssize_t
-    vicare.argument-validation-for-off_t
-    vicare.argument-validation-for-ptrdiff_t
+    unsigned-char.vicare-arguments-validation
+    signed-char.vicare-arguments-validation
+    unsigned-short.vicare-arguments-validation
+    signed-short.vicare-arguments-validation
+    unsigned-int.vicare-arguments-validation
+    unsigned-long.vicare-arguments-validation
+    signed-long.vicare-arguments-validation
+    unsigned-long-long.vicare-arguments-validation
+    signed-long-long.vicare-arguments-validation
+    pointer-integer.vicare-arguments-validation
+    size_t.vicare-arguments-validation
+    ssize_t.vicare-arguments-validation
+    off_t.vicare-arguments-validation
+    ptrdiff_t.vicare-arguments-validation
 
-    vicare.argument-validation-for-unsigned-char/false
-    vicare.argument-validation-for-signed-char/false
-    vicare.argument-validation-for-unsigned-short/false
-    vicare.argument-validation-for-signed-short/false
-    vicare.argument-validation-for-unsigned-int/false
-    vicare.argument-validation-for-unsigned-long/false
-    vicare.argument-validation-for-signed-long/false
-    vicare.argument-validation-for-unsigned-long-long/false
-    vicare.argument-validation-for-signed-long-long/false
-    vicare.argument-validation-for-pointer-integer/false
-    vicare.argument-validation-for-size_t/false
-    vicare.argument-validation-for-ssize_t/false
-    vicare.argument-validation-for-off_t/false
-    vicare.argument-validation-for-ptrdiff_t/false
+    unsigned-char/false.vicare-arguments-validation
+    signed-char/false.vicare-arguments-validation
+    unsigned-short/false.vicare-arguments-validation
+    signed-short/false.vicare-arguments-validation
+    unsigned-int/false.vicare-arguments-validation
+    unsigned-long/false.vicare-arguments-validation
+    signed-long/false.vicare-arguments-validation
+    unsigned-long-long/false.vicare-arguments-validation
+    signed-long-long/false.vicare-arguments-validation
+    pointer-integer/false.vicare-arguments-validation
+    size_t/false.vicare-arguments-validation
+    ssize_t/false.vicare-arguments-validation
+    off_t/false.vicare-arguments-validation
+    ptrdiff_t/false.vicare-arguments-validation
 
     ;; strings
-    vicare.argument-validation-for-string
-    vicare.argument-validation-for-string/false
-    vicare.argument-validation-for-non-empty-string
-    vicare.argument-validation-for-non-empty-string/false
-    vicare.argument-validation-for-index-for-string
-    vicare.argument-validation-for-index-and-count-for-string
-    vicare.argument-validation-for-start-and-end-for-string
-    vicare.argument-validation-for-start-and-past-for-string
+    string.vicare-arguments-validation
+    string/false.vicare-arguments-validation
+    non-empty-string.vicare-arguments-validation
+    non-empty-string/false.vicare-arguments-validation
+    index-for-string.vicare-arguments-validation
+    index-and-count-for-string.vicare-arguments-validation
+    start-and-end-for-string.vicare-arguments-validation
+    start-and-past-for-string.vicare-arguments-validation
 
     ;; vectors
-    vicare.argument-validation-for-vector
-    vicare.argument-validation-for-vector/false
-    vicare.argument-validation-for-non-empty-vector
-    vicare.argument-validation-for-non-empty-vector/false
-    vicare.argument-validation-for-index-for-vector
-    vicare.argument-validation-for-index-and-count-for-vector
-    vicare.argument-validation-for-start-and-end-for-vector
-    vicare.argument-validation-for-start-and-past-for-vector
+    vector.vicare-arguments-validation
+    vector/false.vicare-arguments-validation
+    non-empty-vector.vicare-arguments-validation
+    non-empty-vector/false.vicare-arguments-validation
+    index-for-vector.vicare-arguments-validation
+    index-and-count-for-vector.vicare-arguments-validation
+    start-and-end-for-vector.vicare-arguments-validation
+    start-and-past-for-vector.vicare-arguments-validation
 
     ;; bytevectors
-    vicare.argument-validation-for-bytevector
-    vicare.argument-validation-for-bytevector/false
-    vicare.argument-validation-for-non-empty-bytevector
-    vicare.argument-validation-for-non-empty-bytevector/false
-    vicare.argument-validation-for-index-for-bytevector
-    vicare.argument-validation-for-index-and-count-for-bytevector
-    vicare.argument-validation-for-start-and-end-for-bytevector
-    vicare.argument-validation-for-start-and-past-for-bytevector
+    bytevector.vicare-arguments-validation
+    bytevector/false.vicare-arguments-validation
+    non-empty-bytevector.vicare-arguments-validation
+    non-empty-bytevector/false.vicare-arguments-validation
+    index-for-bytevector.vicare-arguments-validation
+    index-and-count-for-bytevector.vicare-arguments-validation
+    start-and-end-for-bytevector.vicare-arguments-validation
+    start-and-past-for-bytevector.vicare-arguments-validation
 
     ;; symbols
-    vicare.argument-validation-for-symbol
-    vicare.argument-validation-for-symbol/false
+    symbol.vicare-arguments-validation
+    symbol/false.vicare-arguments-validation
 
     ;; enum-sets
-    vicare.argument-validation-for-enum-set
-    vicare.argument-validation-for-enum-set/false
+    enum-set.vicare-arguments-validation
+    enum-set/false.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -197,15 +197,15 @@
   ;;
   ;;into:
   ;;
-  ;;  (define-inline (vicare.argument-validation-for-bytevector who bv . body)
-  ;;    (if (vicare.argument-validation-predicate-for-bytevector bv)
+  ;;  (define-inline (bytevector.vicare-arguments-validation who bv . body)
+  ;;    (if (the-predicate bv)
   ;;        (begin . body)
-  ;;      (vicare.argument-validation-error-for-bytevector who bv)))
+  ;;      (the-error who bv)))
   ;;
-  ;;  (define-inline (vicare.argument-validation-predicate-for-bytevector bv)
+  ;;  (define-inline (the-predicate bv)
   ;;    (bytevector? bv))
   ;;
-  ;;  (define-inline (vicare.argument-validation-error-for-bytevector who bv))
+  ;;  (define-inline (the-error who bv))
   ;;    (assertion-violation who "expected a bytevector as argument" bv))
   ;;
   ;;If we need to export a validator  from a library: we can export just
@@ -222,21 +222,19 @@
 	 (let ((ctx  #'?name)
 	       (name (symbol->string (syntax->datum #'?name))))
 	   (with-syntax
-	       ((VALIDATE	(%name ctx name "argument-validation-for-"))
-		(PREDICATE	(%name ctx name "argument-validation-predicate-for-"))
-		(ERROR	(%name ctx name "argument-validation-error-for-")))
+	       ((VALIDATE (%name ctx name ".vicare-arguments-validation")))
 	     #'(begin
-		 (define-inline (PREDICATE ?arg ...) ?predicate)
-		 (define-inline (ERROR ?who ?arg ...) ?error-handler)
+		 (define-inline (the-predicate ?arg ...) ?predicate)
+		 (define-inline (the-error ?who ?arg ...) ?error-handler)
 		 (define-inline (VALIDATE ?who ?arg ... . body)
-		   (if (PREDICATE ?arg ...)
+		   (if (the-predicate ?arg ...)
 		       (begin . body)
-		     (ERROR ?who ?arg ...)))))))
+		     (the-error ?who ?arg ...)))))))
 	(_
 	 (%synner "invalid input form" #f))))
 
-    (define (%name ctx name prefix-string)
-      (let ((str (string-append "vicare." prefix-string name)))
+    (define (%name ctx name suffix-string)
+      (let ((str (string-append name suffix-string)))
 	(datum->syntax ctx (string->symbol str))))
 
     (define (%synner msg subform)
@@ -333,15 +331,15 @@
 	 (identifier? #'?validator)
 	 (let ((str (symbol->string (syntax->datum #'?validator))))
 	   (with-syntax
-	       ((VALIDATE (%name #'?validator str "argument-validation-for-"))
+	       ((VALIDATE (%name #'?validator str ".vicare-arguments-validation"))
 		(((ARG ...) . OTHER-ARGS) list-of-args))
 	     #`(VALIDATE #,who ARG ...
 			 #,(%build-output-form who #'?other-validators #'OTHER-ARGS body)))))
 	((?validator . ?others)
 	 (%synner "invalid argument-validator selector" #'?validator))))
 
-    (define (%name ctx name prefix-string)
-      (let ((str (string-append "vicare." prefix-string name)))
+    (define (%name ctx name suffix-string)
+      (let ((str (string-append name suffix-string)))
 	(datum->syntax ctx (string->symbol str))))
 
     (define syntax->list
