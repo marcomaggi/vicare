@@ -137,13 +137,34 @@
   (import (ikarus)
     (ikarus system $fx)
     (ikarus system $bignums)
-    (only (vicare syntactic-extensions)
-	  define-inline
-	  define-inline-constant
-	  case-word-size))
+    (for (prefix (vicare installation-configuration)
+		 config.)
+	 expand))
 
 
 ;;;; helpers
+
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
+
+(define-syntax define-inline-constant
+  (syntax-rules ()
+    ((_ ?name ?value)
+     (define-syntax ?name (identifier-syntax ?value)))))
+
+(define-syntax case-word-size
+  (if (= 4 config.wordsize)
+      (syntax-rules ()
+	((_ ((32) . ?body-32) ((64) . ?body-64))
+	 (begin . ?body-32)))
+    (syntax-rules ()
+      ((_ ((32) . ?body-32) ((64) . ?body-64))
+       (begin . ?body-64)))))
 
 (define-syntax case-data-size
   (syntax-rules ()

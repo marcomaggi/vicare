@@ -692,6 +692,11 @@ Disable arguments validation for the functions in Vicare's boot image;
 use with care: an invalid argument will cause undefined behaviour (most
 likely a process crash).
 
+@cindex @env{VICARE_ARGUMENTS_VALIDATION} environment variable
+@cindex Environment variable @env{VICARE_ARGUMENTS_VALIDATION}
+This setting can be overridden by setting the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}; @ref{args config} for details.
+
 @item @env{CFLAGS}
 Specify options to be used while compiling @value{PRJNAME}'s C code.
 
@@ -18403,6 +18408,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 @value{PRJNAME} comes with a set of additional libraries.
 
 @menu
+* args::                        Optional function arguments validation.
 * include::                     Including source files at expand time.
 * errno::                       More features for @code{errno}.
 * words::                       Exact integer predicates and constants.
@@ -18417,6 +18423,161 @@ be @code{AF_INET} or @code{AF_INET6}.
 * syntaxes::                    Language syntactic extensions.
 * infix::                       Infix to prefix transformer.
 @end menu
+
+@c page
+@node args
+@section Optional function arguments validation
+
+
+@cindex Library @library{vicare arguments-validation}
+@cindex @library{vicare arguments-validation}, library
+
+
+The library @library{vicare arguments-validation} provides bindings to
+macros that extend the Scheme language implemented by @library{vicare}
+and @library{rnrs}; to improve ease of use, the library implements its
+features with some non-hygienic techniques; the library is meant to be
+imported @strong{without} prefixing the bindings.
+
+@menu
+* args config::                 Enabling or disabling arguments
+                                validation.
+* args definitions::            Defining arguments validation clauses.
+@end menu
+
+@c page
+@node args config
+@subsection Enabling or disabling arguments validation
+
+
+@cindex @env{VICARE_ARGUMENTS_VALIDATION} environment variable
+@cindex Environment variable @env{VICARE_ARGUMENTS_VALIDATION}
+
+
+Global arguments validation is enabled or disabled by setting to @true{}
+or @false{} the @code{arguments-validation} identifier syntax exported
+by @library{vicare installation-configuration}, the default is @true{};
+such value can be configured as follows:
+
+@enumerate
+@item
+Argument validation is @strong{enabled} by setting to the string
+@code{yes}, or the string @code{1}, the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}.
+
+@item
+Argument validation is @strong{disabled} by setting to the string
+@code{no}, or the string @code{0}, the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}.
+
+@item
+If the environment variable @env{VICARE_ARGUMENTS_VALIDATION} is unset
+or set to some string different from @code{yes}, @code{no}, @code{1},
+@code{0}:
+
+@itemize
+@item
+Arguments validation is @strong{enabled} if the
+@option{--enable-arguments-validation} option of the @command{configure}
+script was used.
+
+@item
+Arguments validation is @strong{disabled} if the
+@option{--disable-arguments-validation} option of the
+@command{configure} script was used.
+@end itemize
+@end enumerate
+
+@c page
+@node args definitions
+@subsection Defining argument validation clauses
+
+
+The following bindings are exported by the library @library{vicare
+arguments-validation} and reexported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac define-argument-validation (@meta{name} @meta{who} @meta{arg} ...) @meta{predicate} @meta{error-handler}
+Define a set of macros to validate arguments, to be used along with the
+syntax @func{WITH-ARGUMENTS-VALIDATION}.  Transform:
+
+@example
+(define-argument-validation (bytevector who bv)
+  (bytevector? bv)
+  (assertion-violation who "expected a bytevector as argument" bv))
+@end example
+
+@noindent
+into:
+
+@smallexample
+(define-inline (vicare.argument-validation-for-bytevector who bv . body)
+  (if (vicare.argument-validation-predicate-for-bytevector bv)
+      (begin . body)
+    (vicare.argument-validation-error-for-bytevector who bv)))
+
+(define-inline (vicare.argument-validation-predicate-for-bytevector bv)
+  (bytevector? bv))
+
+(define-inline (vicare.argument-validation-error-for-bytevector who bv))
+  (assertion-violation who "expected a bytevector as argument" bv))
+@end smallexample
+
+If we need to export a validator from a library: we can export just the
+identifier @code{vicare.argument-validation-for-@meta{name}}, without
+prefixing it.
+@end defmac
+
+
+@defmac arguments-validation-forms . @meta{body}
+If arguments validation is enabled, expand to:
+
+@example
+(begin . @meta{body})
+@end example
+
+@noindent
+else expand to @code{(values)}.
+@end defmac
+
+
+@defmac with-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) . @meta{body}
+If arguments validation is enabled: expand to code that validates the
+@meta{arg} expressions according to the @meta{validator}, then evaluate
+@meta{body}; else just evaluate @meta{body}.
+
+@meta{who} must be an identifier and it is used as first argument to the
+validator macro.
+
+For example:
+
+@example
+(with-arguments-validation (who)
+     ((fixnum  X)
+      (integer Y))
+  (do-this)
+  (do-that))
+@end example
+
+@noindent
+expands into:
+
+@example
+(vicare.argument-validation-for-fixnum who X
+ (vicare.argument-validation-for-integer who Y
+  (do-this)
+  (do-that)))
+@end example
+@end defmac
+
+
+@defmac with-dangerous-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) . @meta{body}
+Like @func{with-arguments-validation}, but the validation is always
+performed even when global arguments validation is disabled.
+@end defmac
+
+
 
 @c page
 @node include
@@ -20948,95 +21109,16 @@ the behaviour is undefined (and you do not want it).
 @subsection Arguments validation
 
 
-Global arguments validation is enabled or disabled by setting to @true{}
-or @false{} the @code{arguments-validation} identifier syntax exported
-by @library{vicare installation-configuration}, the default is @true{};
-such value can be configured at installation time with the
-@option{--enable-arguments-validation} option of the @command{configure}
-script.
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac define-argument-validation (@meta{name} @meta{who} @meta{arg} ...) @meta{predicate} @meta{error-handler}
-Define a set of macros to validate arguments, to be used along with
-@func{WITH-ARGUMENTS-VALIDATION}.  Transform:
+The following bindings are imported and reexported by @library{vicare
+syntactic-extension} from the library @library{vicare
+arguments-validation}:
 
 @example
-(define-argument-validation (bytevector who bv)
-  (bytevector? bv)
-  (assertion-violation who "expected a bytevector as argument" bv))
+define-argument-validation
+with-arguments-validation
+with-dangerous-arguments-validation
+arguments-validation-forms
 @end example
-
-@noindent
-into:
-
-@smallexample
-(define-inline (vicare.argument-validation-for-bytevector who bv . body)
-  (if (vicare.argument-validation-predicate-for-bytevector bv)
-      (begin . body)
-    (vicare.argument-validation-error-for-bytevector who bv)))
-
-(define-inline (vicare.argument-validation-predicate-for-bytevector bv)
-  (bytevector? bv))
-
-(define-inline (vicare.argument-validation-error-for-bytevector who bv))
-  (assertion-violation who "expected a bytevector as argument" bv))
-@end smallexample
-
-If we need to export a validator from a library: we can export just the
-identifier @code{vicare.argument-validation-for-@meta{name}}, without
-prefixing it.
-@end defmac
-
-
-@defmac arguments-validation-forms . @meta{body}
-If arguments validation is enabled, expand to:
-
-@example
-(begin . @meta{body})
-@end example
-
-@noindent
-else expand to @code{(values)}.
-@end defmac
-
-
-@defmac with-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) . @meta{body}
-If arguments validation is enabled: expand to code that validates the
-@meta{arg} expressions according to the @meta{validator}, then evaluate
-@meta{body}; else just evaluate @meta{body}.
-
-@meta{who} must be an identifier and it is used as first argument to the
-validator macro.
-
-For example:
-
-@example
-(with-arguments-validation (who)
-     ((fixnum  X)
-      (integer Y))
-  (do-this)
-  (do-that))
-@end example
-
-@noindent
-expands into:
-
-@example
-(vicare.argument-validation-for-fixnum who X
- (vicare.argument-validation-for-integer who Y
-  (do-this)
-  (do-that)))
-@end example
-@end defmac
-
-
-@defmac with-dangerous-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) . @meta{body}
-Like @func{with-arguments-validation}, but the validation is always
-performed even when global arguments validation is disabled.
-@end defmac
 
 @c page
 @node syntaxes misc

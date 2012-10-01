@@ -29,6 +29,7 @@
   (only (vicare installation-configuration))
   (only (vicare platform-constants))
   (only (vicare platform features))
+  (only (vicare arguments-validation))
   (only (vicare errno))
   (only (vicare include))
   (only (vicare infix))

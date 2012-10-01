@@ -11,7 +11,7 @@
 ;;;	external libraries  like this one, for this  reason the constans
 ;;;	defined here are directly expanded in the including code.
 ;;;
-;;;Copyright (C) 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -34,7 +34,7 @@
     vicare-version
     target			wordsize
     platform-endianness		arguments-validation)
-  (import (rnrs))
+  (import (ikarus))
 
   (define-syntax vicare-version
     (identifier-syntax "@PACKAGE_VERSION@"))
@@ -49,6 +49,18 @@
     (identifier-syntax '@VICARE_PLATFORM_ENDIANNESS@))
 
   (define-syntax arguments-validation
-    (identifier-syntax (positive? @VICARE_ARGUMENTS_VALIDATION@))))
+    (identifier-syntax (let ((rv (getenv "VICARE_ARGUMENTS_VALIDATION")))
+			 (if rv
+			     (cond ((or (string=? rv "yes")
+					(string=? rv "1"))
+				    #t)
+				   ((or (string=? rv "no")
+					(string=? rv "0"))
+				    #f)
+				   (else
+				    (positive? @VICARE_ARGUMENTS_VALIDATION@)))
+			   (positive? @VICARE_ARGUMENTS_VALIDATION@)))))
+
+  )
 
 ;;; end of file

@@ -129,6 +129,7 @@ TESTS			=	\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
@@ -328,6 +329,7 @@ EXTRA_DIST = \
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\

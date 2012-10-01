@@ -256,11 +256,20 @@
 	    ($bytevector-set!	$bytevector-s8-set!))
     (ikarus system $chars)
     (ikarus system $strings)
-    (only (vicare syntactic-extensions)
-	  define-inline)
     (for (prefix (vicare installation-configuration)
 		 config.)
 	 expand))
+
+
+;;;; helpers
+
+(define-syntax define-inline
+  (syntax-rules ()
+    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+     (define-syntax ?name
+       (syntax-rules ()
+	 ((_ ?arg ... . ?rest)
+	  (begin ?form0 ?form ...)))))))
 
 
 ;;;; structures
