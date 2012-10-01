@@ -44,6 +44,17 @@
     vicare.argument-validation-for-even-fixnum
     vicare.argument-validation-for-odd-fixnum
 
+    ;; exact integers
+    vicare.argument-validation-for-exact-integer
+    vicare.argument-validation-for-positive-exact-integer
+    vicare.argument-validation-for-negative-exact-integer
+    vicare.argument-validation-for-non-positive-exact-integer
+    vicare.argument-validation-for-non-negative-exact-integer
+    vicare.argument-validation-for-exact-integer-in-inclusive-range
+    vicare.argument-validation-for-exact-integer-in-exclusive-range
+    vicare.argument-validation-for-even-exact-integer
+    vicare.argument-validation-for-odd-exact-integer
+
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -339,6 +350,110 @@
 
 (define (%invalid-odd-fixnum who obj)
   (assertion-violation who "expected odd fixnum as argument" obj))
+
+
+;;;; exact integers validation
+
+(define-inline (exact-integer? obj)
+  (and (integer? obj)
+       (exact?   obj)))
+
+(define-argument-validation (exact-integer who obj)
+  (exact-integer? obj)
+  (%invalid-exact-integer who obj))
+
+(define (%invalid-exact-integer who obj)
+  (assertion-violation who "expected exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (positive-exact-integer who obj)
+  (and (exact-integer? obj)
+       (< 0 obj))
+  (%invalid-positive-exact-integer who obj))
+
+(define (%invalid-positive-exact-integer who obj)
+  (assertion-violation who "expected positive exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (negative-exact-integer who obj)
+  (and (exact-integer? obj)
+       (> 0 obj))
+  (%invalid-negative-exact-integer who obj))
+
+(define (%invalid-negative-exact-integer who obj)
+  (assertion-violation who "expected negative exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-positive-exact-integer who obj)
+  (and (exact-integer? obj)
+       (>= 0 obj))
+  (%invalid-non-positive-exact-integer who obj))
+
+(define (%invalid-non-positive-exact-integer who obj)
+  (assertion-violation who "expected non-positive exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-negative-exact-integer who obj)
+  (and (exact-integer? obj)
+       (<= 0 obj))
+  (%invalid-non-negative-exact-integer who obj))
+
+(define (%invalid-non-negative-exact-integer who obj)
+  (assertion-violation who "expected non-negative exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (exact-integer-in-inclusive-range ?who ?obj ?min ?max)
+  (and (exact-integer? ?obj)
+       (>= ?obj ?min)
+       (<= ?obj ?max))
+  (%invalid-exact-integer-in-inclusive-range ?who ?obj ?min ?max))
+
+(define (%invalid-exact-integer-in-inclusive-range who obj min max)
+  (assertion-violation who
+    (string-append "expected exact integer in inclusive range ["
+		   (number->string min) ", " (number->string max)
+		   "] as argument")
+    obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (exact-integer-in-exclusive-range ?who ?obj ?min ?max)
+  (and (exact-integer? ?obj)
+       (> ?obj ?min)
+       (< ?obj ?max))
+  (%invalid-exact-integer-in-exclusive-range ?who ?obj ?min ?max))
+
+(define (%invalid-exact-integer-in-exclusive-range who obj min max)
+  (assertion-violation who
+    (string-append "expected exact integer in exclusive range ("
+		   (number->string min) ", " (number->string max)
+		   ") as argument")
+    obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (even-exact-integer who obj)
+  (and (exact-integer? obj)
+       (even? obj))
+  (%invalid-even-exact-integer who obj))
+
+(define (%invalid-even-exact-integer who obj)
+  (assertion-violation who "expected even exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (odd-exact-integer who obj)
+  (and (exact-integer? obj)
+       (odd? obj))
+  (%invalid-odd-exact-integer who obj))
+
+(define (%invalid-odd-exact-integer who obj)
+  (assertion-violation who "expected odd exact integer as argument" obj))
 
 
 ;;;; done

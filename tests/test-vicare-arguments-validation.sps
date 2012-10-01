@@ -292,6 +292,197 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-exact-integer))
+
+;;; exact-integer
+
+  (check
+      (doit #f exact-integer 123)
+    => #t)
+
+  (check
+      (doit #f exact-integer 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; positive-exact-integer
+
+  (check
+      (doit #f positive-exact-integer 123)
+    => #t)
+
+  (check
+      (doit #f positive-exact-integer 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f positive-exact-integer 0)
+    => '(0))
+
+  (check
+      (doit #f positive-exact-integer -1)
+    => '(-1))
+
+;;; --------------------------------------------------------------------
+;;; negative-exact-integer
+
+  (check
+      (doit #f negative-exact-integer -123)
+    => #t)
+
+  (check
+      (doit #f negative-exact-integer 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f negative-exact-integer 0)
+    => '(0))
+
+  (check
+      (doit #f negative-exact-integer +1)
+    => '(+1))
+
+;;; --------------------------------------------------------------------
+;;; non-positive-exact-integer
+
+  (check
+      (doit #f non-positive-exact-integer -123)
+    => #t)
+
+  (check
+      (doit #f non-positive-exact-integer 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f non-positive-exact-integer 0)
+    => #t)
+
+  (check
+      (doit #f non-positive-exact-integer +1)
+    => '(+1))
+
+;;; --------------------------------------------------------------------
+;;; non-negative-exact-integer
+
+  (check
+      (doit #f non-negative-exact-integer +123)
+    => #t)
+
+  (check
+      (doit #f non-negative-exact-integer 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f non-negative-exact-integer 0)
+    => #t)
+
+  (check
+      (doit #f non-negative-exact-integer -1)
+    => '(-1))
+
+;;; --------------------------------------------------------------------
+;;; exact-integer-in-inclusive-range
+
+  (check
+      (doit #f exact-integer-in-inclusive-range +123 100 200)
+    => #t)
+
+  (check
+      (doit #f exact-integer-in-inclusive-range +100 100 200)
+    => #t)
+
+  (check
+      (doit #f exact-integer-in-inclusive-range +200 100 200)
+    => #t)
+
+  (check
+      (doit #f exact-integer-in-inclusive-range 'ciao 100 200)
+    => '(ciao))
+
+  (check
+      (doit #f exact-integer-in-inclusive-range 0 100 200)
+    => '(0))
+
+;;; --------------------------------------------------------------------
+;;; exact-integer-in-exclusive-range
+
+  (check
+      (doit #f exact-integer-in-exclusive-range +123 100 200)
+    => #t)
+
+  (check
+      (doit #f exact-integer-in-exclusive-range +100 100 200)
+    => '(100))
+
+  (check
+      (doit #f exact-integer-in-exclusive-range +200 100 200)
+    => '(200))
+
+  (check
+      (doit #f exact-integer-in-exclusive-range 'ciao 100 200)
+    => '(ciao))
+
+  (check
+      (doit #f exact-integer-in-exclusive-range 0 100 200)
+    => '(0))
+
+;;; --------------------------------------------------------------------
+;;; even-exact-integer
+
+  (check
+      (doit #f even-exact-integer 2)
+    => #t)
+
+  (check
+      (doit #f even-exact-integer 3)
+    => '(3))
+
+  (check
+      (doit #f even-exact-integer -2)
+    => #t)
+
+  (check
+      (doit #f even-exact-integer -3)
+    => '(-3))
+
+  (check
+      (doit #f even-exact-integer 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f even-exact-integer 0)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; odd-exact-integer
+
+  (check
+      (doit #f odd-exact-integer 2)
+    => '(2))
+
+  (check
+      (doit #f odd-exact-integer 3)
+    => #t)
+
+  (check
+      (doit #f odd-exact-integer -2)
+    => '(-2))
+
+  (check
+      (doit #f odd-exact-integer -3)
+    => #t)
+
+  (check
+      (doit #f odd-exact-integer 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f odd-exact-integer 0)
+    => '(0))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

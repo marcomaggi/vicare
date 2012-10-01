@@ -18449,6 +18449,7 @@ imported @strong{without} prefixing the bindings.
 Predefined validation clauses
 
 * args fixnums::                Validating fixnums.
+* args exact integers::         Validating exact integers.
 @end menu
 
 @c page
@@ -18657,6 +18658,49 @@ the specified range.  @var{min} and @var{max} must be fixnums.
 @deffnx {Validation Clause} odd-fixnum @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{fixnum?} and the
 predicate @func{fxeven?} or @func{fxodd?}.
+@end deffn
+
+@c page
+@node args exact integers
+@subsection Validating exact integers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{integer?} and
+@func{exact?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-exact-integer @var{obj}
+@deffnx {Validation Clause} negative-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-exact-integer @var{obj}
+@deffnx {Validation Clause} non-negative-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} exact-integer-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} exact-integer-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is in the specified range.  @var{min} and @var{max}
+must be exact-integers.
+@end deffn
+
+
+@deffn {Validation Clause} even-exact-integer @var{obj}
+@deffnx {Validation Clause} odd-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and the predicate @func{fxeven?} or @func{fxodd?}.
 @end deffn
 
 @c page
