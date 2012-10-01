@@ -18429,11 +18429,11 @@ be @code{AF_INET} or @code{AF_INET6}.
 @section Optional function arguments validation
 
 
-@cindex Library @library{vicare arguments-validation}
-@cindex @library{vicare arguments-validation}, library
+@cindex Library @library{vicare arguments validation}
+@cindex @library{vicare arguments validation}, library
 
 
-The library @library{vicare arguments-validation} provides bindings to
+The library @library{vicare arguments validation} provides bindings to
 macros that extend the Scheme language implemented by @library{vicare}
 and @library{rnrs}; to improve ease of use, the library implements its
 features with some non-hygienic techniques; the library is meant to be
@@ -18494,7 +18494,7 @@ Arguments validation is @strong{disabled} if the
 
 
 The following bindings are exported by the library @library{vicare
-arguments-validation} and reexported by the library @library{vicare
+arguments validation} and reexported by the library @library{vicare
 syntactic-extensions}.
 
 
@@ -21110,8 +21110,8 @@ the behaviour is undefined (and you do not want it).
 
 
 The following bindings are imported and reexported by @library{vicare
-syntactic-extension} from the library @library{vicare
-arguments-validation}:
+syntactic-extension} from the library @library{vicare arguments
+validation}:
 
 @example
 define-argument-validation

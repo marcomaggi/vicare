@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare arguments-validation)
+(library (vicare arguments validation)
   (export
     define-argument-validation
     with-arguments-validation

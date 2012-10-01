@@ -65,7 +65,7 @@
 	 expand)
     (only (ikarus system $fx)
 	  $fx=)
-    (only (vicare arguments-validation)
+    (only (vicare arguments validation)
 	  define-argument-validation
 	  with-arguments-validation
 	  with-dangerous-arguments-validation

@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare syntactic-extensions)
+  (vicare arguments validation)
   (prefix (vicare posix) px.)
   (vicare checks))
 
