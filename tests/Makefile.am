@@ -16,6 +16,7 @@ VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) $(user_flags) --r6rs-script
 VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
+		  VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY)	\
 		  CHECK_TEST_NAME=$(name)				\
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
 		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
