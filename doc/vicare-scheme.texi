@@ -18465,6 +18465,7 @@ Predefined validation clauses
 * args enum-sets::              Validating enum-sets.
 * args pointers::               Validating pointers.
 * args memory-blocks::          Validating @code{meory-block} values.
+* args ports::                  Validating input/output ports.
 @end menu
 
 @c page
@@ -19281,6 +19282,51 @@ Succeed if @var{obj} is a memory-block.
 
 @deffn {Validation Clause} memory-block/false @var{obj}
 Succeed if @var{obj} is @false{} or a memory-block.
+@end deffn
+
+@c page
+@node args ports
+@subsection Validating input/output ports
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} port @var{obj}
+Succeed if @var{obj} is a port.
+@end deffn
+
+
+@deffn {Validation Clause} port/false @var{obj}
+Succeed if @var{obj} is @false{} or a port.
+@end deffn
+
+
+@deffn {Validation Clause} input-port @var{obj}
+@deffnx {Validation Clause} output-port @var{obj}
+@deffnx {Validation Clause} input/output-port @var{obj}
+Succeed if @var{obj} is an input, output or input/output port.
+@end deffn
+
+
+@deffn {Validation Clause} input-port/false @var{obj}
+@deffnx {Validation Clause} output-port/false @var{obj}
+@deffnx {Validation Clause} input/output-port/false @var{obj}
+Succeed if @var{obj} is @false{} or an input, output or input/output
+port.
+@end deffn
+
+
+@deffn {Validation Clause} textual-port @var{obj}
+@deffnx {Validation Clause} binary-port @var{obj}
+Succeed if @var{obj} is an textual or binary port.
+@end deffn
+
+
+@deffn {Validation Clause} textual-port/false @var{obj}
+@deffnx {Validation Clause} binary-port/false @var{obj}
+Succeed if @var{obj} is @false{} or an textual or binary port.
 @end deffn
 
 @c page

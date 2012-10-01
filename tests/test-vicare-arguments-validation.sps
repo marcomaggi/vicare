@@ -1736,6 +1736,36 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-port))
+
+;;; port
+
+  (check
+      (doit #f port (current-output-port))
+    => #t)
+
+  (check
+      (doit #f port "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; port/false
+
+  (check
+      (doit #f port/false (current-output-port))
+    => #t)
+
+  (check
+      (doit #f port/false #f)
+    => #t)
+
+  (check
+      (doit #f port/false "ciao")
+    => '("ciao"))
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-prefixed))
 
   (check

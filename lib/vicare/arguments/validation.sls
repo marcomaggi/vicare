@@ -174,6 +174,19 @@
     memory-block.vicare-arguments-validation
     memory-block/false.vicare-arguments-validation
 
+    ;; input/output ports
+    port.vicare-arguments-validation
+    port/false.vicare-arguments-validation
+    input-port.vicare-arguments-validation
+    input-port/false.vicare-arguments-validation
+    output-port.vicare-arguments-validation
+    output-port/false.vicare-arguments-validation
+    input/output-port.vicare-arguments-validation
+    input/output-port/false.vicare-arguments-validation
+    textual-port.vicare-arguments-validation
+    textual-port/false.vicare-arguments-validation
+    binary-port.vicare-arguments-validation
+    binary-port/false.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1162,6 +1175,26 @@
 (define-argument-validation (input/output-port/false who obj)
   (or (not obj) (input/output-port? obj))
   (assertion-violation who "expected false or input/output port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (textual-port who obj)
+  (textual-port? obj)
+  (assertion-violation who "expected textual port as argument" obj))
+
+(define-argument-validation (textual-port/false who obj)
+  (or (not obj) (textual-port? obj))
+  (assertion-violation who "expected false or textual port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (binary-port who obj)
+  (binary-port? obj)
+  (assertion-violation who "expected binary port as argument" obj))
+
+(define-argument-validation (binary-port/false who obj)
+  (or (not obj) (binary-port? obj))
+  (assertion-violation who "expected false or binary port as argument" obj))
 
 
 ;;;; done
