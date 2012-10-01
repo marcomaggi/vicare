@@ -114,6 +114,21 @@
     => '(ciao))
 
 ;;; --------------------------------------------------------------------
+;;; fixnum/false
+
+  (check
+      (doit #f fixnum/false 123)
+    => #t)
+
+  (check
+      (doit #f fixnum/false #f)
+    => #t)
+
+  (check
+      (doit #f fixnum/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
 ;;; positive-fixnum
 
   (check
@@ -305,6 +320,21 @@
     => '(ciao))
 
 ;;; --------------------------------------------------------------------
+;;; exact-integer/false
+
+  (check
+      (doit #f exact-integer/false 123)
+    => #t)
+
+  (check
+      (doit #f exact-integer/false #f)
+    => #t)
+
+  (check
+      (doit #f exact-integer/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
 ;;; positive-exact-integer
 
   (check
@@ -478,6 +508,212 @@
 
   (check
       (doit #f odd-exact-integer 0)
+    => '(0))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-signed-int))
+
+;;; signed-int
+
+  (check
+      (doit #f signed-int 123)
+    => #t)
+
+  (check
+      (doit #f signed-int 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-int/false
+
+  (check
+      (doit #f signed-int/false 123)
+    => #t)
+
+  (check
+      (doit #f signed-int/false #f)
+    => #t)
+
+  (check
+      (doit #f signed-int/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; positive-signed-int
+
+  (check
+      (doit #f positive-signed-int 123)
+    => #t)
+
+  (check
+      (doit #f positive-signed-int 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f positive-signed-int 0)
+    => '(0))
+
+  (check
+      (doit #f positive-signed-int -1)
+    => '(-1))
+
+;;; --------------------------------------------------------------------
+;;; negative-signed-int
+
+  (check
+      (doit #f negative-signed-int -123)
+    => #t)
+
+  (check
+      (doit #f negative-signed-int 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f negative-signed-int 0)
+    => '(0))
+
+  (check
+      (doit #f negative-signed-int +1)
+    => '(+1))
+
+;;; --------------------------------------------------------------------
+;;; non-positive-signed-int
+
+  (check
+      (doit #f non-positive-signed-int -123)
+    => #t)
+
+  (check
+      (doit #f non-positive-signed-int 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f non-positive-signed-int 0)
+    => #t)
+
+  (check
+      (doit #f non-positive-signed-int +1)
+    => '(+1))
+
+;;; --------------------------------------------------------------------
+;;; non-negative-signed-int
+
+  (check
+      (doit #f non-negative-signed-int +123)
+    => #t)
+
+  (check
+      (doit #f non-negative-signed-int 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f non-negative-signed-int 0)
+    => #t)
+
+  (check
+      (doit #f non-negative-signed-int -1)
+    => '(-1))
+
+;;; --------------------------------------------------------------------
+;;; signed-int-in-inclusive-range
+
+  (check
+      (doit #f signed-int-in-inclusive-range +123 100 200)
+    => #t)
+
+  (check
+      (doit #f signed-int-in-inclusive-range +100 100 200)
+    => #t)
+
+  (check
+      (doit #f signed-int-in-inclusive-range +200 100 200)
+    => #t)
+
+  (check
+      (doit #f signed-int-in-inclusive-range 'ciao 100 200)
+    => '(ciao))
+
+  (check
+      (doit #f signed-int-in-inclusive-range 0 100 200)
+    => '(0))
+
+;;; --------------------------------------------------------------------
+;;; signed-int-in-exclusive-range
+
+  (check
+      (doit #f signed-int-in-exclusive-range +123 100 200)
+    => #t)
+
+  (check
+      (doit #f signed-int-in-exclusive-range +100 100 200)
+    => '(100))
+
+  (check
+      (doit #f signed-int-in-exclusive-range +200 100 200)
+    => '(200))
+
+  (check
+      (doit #f signed-int-in-exclusive-range 'ciao 100 200)
+    => '(ciao))
+
+  (check
+      (doit #f signed-int-in-exclusive-range 0 100 200)
+    => '(0))
+
+;;; --------------------------------------------------------------------
+;;; even-signed-int
+
+  (check
+      (doit #f even-signed-int 2)
+    => #t)
+
+  (check
+      (doit #f even-signed-int 3)
+    => '(3))
+
+  (check
+      (doit #f even-signed-int -2)
+    => #t)
+
+  (check
+      (doit #f even-signed-int -3)
+    => '(-3))
+
+  (check
+      (doit #f even-signed-int 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f even-signed-int 0)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; odd-signed-int
+
+  (check
+      (doit #f odd-signed-int 2)
+    => '(2))
+
+  (check
+      (doit #f odd-signed-int 3)
+    => #t)
+
+  (check
+      (doit #f odd-signed-int -2)
+    => '(-2))
+
+  (check
+      (doit #f odd-signed-int -3)
+    => #t)
+
+  (check
+      (doit #f odd-signed-int 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f odd-signed-int 0)
     => '(0))
 
   #t)

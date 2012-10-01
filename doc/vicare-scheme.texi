@@ -18450,6 +18450,9 @@ Predefined validation clauses
 
 * args fixnums::                Validating fixnums.
 * args exact integers::         Validating exact integers.
+* args bits::                   Validating bit--sized integers.
+* args signed int::             Validating C language @code{int} values.
+* args clang::                  Validating C language values.
 @end menu
 
 @c page
@@ -18633,6 +18636,12 @@ Succeed if @var{obj} satisfies the predicate @func{fixnum?}.
 @end deffn
 
 
+@deffn {Validation Clause} fixnum/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicate
+@func{fixnum?}.
+@end deffn
+
+
 @deffn {Validation Clause} positive-fixnum @var{obj}
 @deffnx {Validation Clause} negative-fixnum @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
@@ -18670,8 +18679,14 @@ arguments validation}.
 
 
 @deffn {Validation Clause} exact-integer @var{obj}
-Succeed if @var{obj} satisfies the predicate @func{integer?} and
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
 @func{exact?}.
+@end deffn
+
+
+@deffn {Validation Clause} exact-integer/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicates
+@func{integer?} and @func{exact?}.
 @end deffn
 
 
@@ -18693,14 +18708,277 @@ Succeed if @var{obj} satisfies the predicates @func{integer?} and
 @deffnx {Validation Clause} exact-integer-in-exclusive-range @var{obj} @var{min} @var{max}
 Succeed if @var{obj} satisfies the predicates @func{integer?} and
 @func{exact?} and it is in the specified range.  @var{min} and @var{max}
-must be exact-integers.
+must be exact integers.
 @end deffn
 
 
 @deffn {Validation Clause} even-exact-integer @var{obj}
 @deffnx {Validation Clause} odd-exact-integer @var{obj}
 Succeed if @var{obj} satisfies the predicates @func{integer?} and
-@func{exact?} and the predicate @func{fxeven?} or @func{fxodd?}.
+@func{exact?} and the predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args bits
+@subsection Validating bit--sized integers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} word-u8 @var{obj}
+@deffnx {Validation Clause} word-u8/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an octet.
+@end deffn
+
+
+@deffn {Validation Clause} word-s8 @var{obj}
+@deffnx {Validation Clause} word-s8/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a byte.
+@end deffn
+
+
+@deffn {Validation Clause} word-u16 @var{obj}
+@deffnx {Validation Clause} word-u16/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{16}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s16 @var{obj}
+@deffnx {Validation Clause} word-s16/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{16}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u32 @var{obj}
+@deffnx {Validation Clause} word-u32/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{32}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s32 @var{obj}
+@deffnx {Validation Clause} word-s32/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{32}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u64 @var{obj}
+@deffnx {Validation Clause} word-u64/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{64}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s64 @var{obj}
+@deffnx {Validation Clause} word-s64/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{64}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u128 @var{obj}
+@deffnx {Validation Clause} word-u128/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{128}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s128 @var{obj}
+@deffnx {Validation Clause} word-s128/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{128}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u256 @var{obj}
+@deffnx {Validation Clause} word-u256/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{256}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s256 @var{obj}
+@deffnx {Validation Clause} word-s256/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{256}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} machine-word @var{obj}
+@deffnx {Validation Clause} machine-word/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned machine word integer; a
+machine word is @math{32}-bit or @math{64}-bit integer.
+@end deffn
+
+@c page
+@node args signed int
+@subsection Validating C language @code{int} values
+
+
+Exact integers in the range of the C language type @code{int} are used
+often when interfacing with a foreign C language library; the library
+@library{vicare words} provides the predicate @func{signed-int?} to
+validated such values; @ref{words predicates} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-int/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicate
+@func{signed-int?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-signed-int @var{obj}
+@deffnx {Validation Clause} negative-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-signed-int @var{obj}
+@deffnx {Validation Clause} non-negative-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} signed-int-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} signed-int-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is in the specified range.  @var{min} and @var{max} must be exact
+integers.
+@end deffn
+
+
+@deffn {Validation Clause} even-signed-int @var{obj}
+@deffnx {Validation Clause} odd-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and the
+predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args clang
+@subsection Validating C language values
+
+
+The library @library{vicare words} provides the predicates to validate
+typical values used when interfacing with foreign C language libraries;
+@ref{words predicates} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} unsigned-char @var{obj}
+@deffnx {Validation Clause} unsigned-char/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned char}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-char @var{obj}
+@deffnx {Validation Clause} signed-char/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed char}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-short @var{obj}
+@deffnx {Validation Clause} unsigned-short/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned short int}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-short @var{obj}
+@deffnx {Validation Clause} signed-short/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed short int}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-int @var{obj}
+@deffnx {Validation Clause} unsigned-int/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned int}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-long @var{obj}
+@deffnx {Validation Clause} unsigned-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned long}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-long @var{obj}
+@deffnx {Validation Clause} signed-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed long}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-long-long @var{obj}
+@deffnx {Validation Clause} unsigned-long-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned long long}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-long-long @var{obj}
+@deffnx {Validation Clause} signed-long-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed long long}.
+@end deffn
+
+
+@deffn {Validation Clause} pointer-integer @var{obj}
+@deffnx {Validation Clause} pointer-integer/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{void *}.
+@end deffn
+
+
+@deffn {Validation Clause} size_t @var{obj}
+@deffnx {Validation Clause} size_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{size_t}.
+@end deffn
+
+
+@deffn {Validation Clause} ssize_t @var{obj}
+@deffnx {Validation Clause} ssize_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{ssize_t}.
+@end deffn
+
+
+@deffn {Validation Clause} off_t @var{obj}
+@deffnx {Validation Clause} off_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{off_t}.
+@end deffn
+
+
+@deffn {Validation Clause} ptrdiff_t @var{obj}
+@deffnx {Validation Clause} ptrdiff_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{ptrdiff_t}.
 @end deffn
 
 @c page
