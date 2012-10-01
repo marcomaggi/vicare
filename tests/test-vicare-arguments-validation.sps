@@ -1488,6 +1488,132 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-bytevector))
+
+;;; bytevector
+
+  (check
+      (doit #f bytevector '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f bytevector 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; bytevector/false
+
+  (check
+      (doit #f bytevector/false '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f bytevector/false #f)
+    => #t)
+
+  (check
+      (doit #f bytevector/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; non-empty-bytevector
+
+  (check
+      (doit #f non-empty-bytevector '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f non-empty-bytevector '#vu8())
+    => '(#vu8()))
+
+  (check
+      (doit #f non-empty-bytevector 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; non-empty-bytevector/false
+
+  (check
+      (doit #f non-empty-bytevector/false '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f non-empty-bytevector/false #f)
+    => #t)
+
+  (check
+      (doit #f non-empty-bytevector/false '#vu8())
+    => '(#vu8()))
+
+  (check
+      (doit #f non-empty-bytevector/false 'ciao)
+    => '(ciao))
+
+
+;;; --------------------------------------------------------------------
+;;; index-for-bytevector
+
+  (check
+      (doit #f index-for-bytevector '#vu8(1 2 3) 0)
+    => #t)
+
+  (check
+      (doit #f index-for-bytevector '#vu8(1 2 3) 2)
+    => #t)
+
+  (check
+      (doit #f index-for-bytevector '#vu8(1 2 3) 3)
+    => '(3 #vu8(1 2 3)))
+
+  (check
+      (doit #f index-for-bytevector '#vu8(1 2 3) 'ciao)
+    => '(ciao #vu8(1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; index-and-count-for-bytevector
+
+  (check (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 0 0)	=> #t)
+  (check (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 0 1)	=> #t)
+  (check (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 0 2) => #t)
+  (check (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 0 3) => #t)
+  (check (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 0 4) => '(0 4 #vu8(1 2 3)))
+
+  (check
+      (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 'ciao 2)
+    => '(ciao 2 #vu8(1 2 3)))
+
+  (check
+      (doit #f index-and-count-for-bytevector '#vu8(1 2 3) 2 'ciao)
+    => '(2 ciao #vu8(1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; start-and-past-for-bytevector
+
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 0 0)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 0 1)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 0 2)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 0 3)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 0 4)	=> '(0 4 #vu8(1 2 3)))
+
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 0 0)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 1 1)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 2)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 3)	=> #t)
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 3 3)	=> '(3 3 #vu8(1 2 3)))
+
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 1)	=> '(2 1 #vu8(1 2 3)))
+
+  (check
+      (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 'ciao 2)
+    => '(ciao 2 #vu8(1 2 3)))
+
+  (check
+      (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 'ciao)
+    => '(2 ciao #vu8(1 2 3)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -147,6 +147,16 @@
     vicare.argument-validation-for-index-and-count-for-vector
     vicare.argument-validation-for-start-and-end-for-vector
     vicare.argument-validation-for-start-and-past-for-vector
+
+    ;; bytevectors
+    vicare.argument-validation-for-bytevector
+    vicare.argument-validation-for-bytevector/false
+    vicare.argument-validation-for-non-empty-bytevector
+    vicare.argument-validation-for-non-empty-bytevector/false
+    vicare.argument-validation-for-index-for-bytevector
+    vicare.argument-validation-for-index-and-count-for-bytevector
+    vicare.argument-validation-for-start-and-end-for-bytevector
+    vicare.argument-validation-for-start-and-past-for-bytevector
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1440,6 +1450,113 @@
 (define (%invalid-start-and-past-for-vector who vec start past)
   (assertion-violation who
     "expected valid fixnums as arguments for start and past vector indexes"
+    start past vec))
+
+
+;;;; bytevectors
+
+(define-inline (index-for-bytevector? vec idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<  idx ($bytevector-length vec))))
+
+(define-inline (one-off-index-for-bytevector? vec idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<= idx ($bytevector-length vec))))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (bytevector who obj)
+  (bytevector? obj)
+  (%invalid-bytevector who obj))
+
+(define (%invalid-bytevector who obj)
+  (assertion-violation who "expected bytevector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (bytevector/false who obj)
+  (or (not obj) (bytevector? obj))
+  (%invalid-bytevector/false who obj))
+
+(define (%invalid-bytevector/false who obj)
+  (assertion-violation who "expected false or bytevector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-empty-bytevector who obj)
+  (and (bytevector? obj)
+       ($fx< 0 ($bytevector-length obj)))
+  (%invalid-non-empty-bytevector who obj))
+
+(define (%invalid-non-empty-bytevector who obj)
+  (assertion-violation who "expected non-empty bytevector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-empty-bytevector/false who obj)
+  (or (not obj)
+      (and (bytevector? obj)
+	   ($fx< 0 ($bytevector-length obj))))
+  (%invalid-non-empty-bytevector/false who obj))
+
+(define (%invalid-non-empty-bytevector/false who obj)
+  (assertion-violation who "expected false or non-empty bytevector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-for-bytevector who vec idx)
+  ;;We assume that VEC has already been validated as bytevector.
+  (index-for-bytevector? vec idx)
+  (%invalid-index-for-bytevector who vec idx))
+
+(define (%invalid-index-for-bytevector who vec idx)
+  (assertion-violation who
+    "expected valid fixnum as index for bytevector argument"
+    idx vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-and-count-for-bytevector who vec idx count)
+  ;;We assume that VEC has already been validated as bytevector.
+  (and (index-for-bytevector? vec idx)
+       (fixnum? count)
+       (let ((end (+ idx count)))
+	 (one-off-index-for-bytevector? vec end)))
+  (%invalid-index-and-count-for-bytevector who vec idx count))
+
+(define (%invalid-index-and-count-for-bytevector who vec idx count)
+  (assertion-violation who
+    "expected valid fixnums as arguments for bytevector index and character count"
+    idx count vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-and-end-for-bytevector who vec start end)
+  ;;We assume that VEC has already been validated as bytevector.
+  (and (index-for-bytevector? vec start)
+       (index-for-bytevector? vec end)
+       ($fx<= start end))
+  (%invalid-start-and-end-for-bytevector who vec start end))
+
+(define (%invalid-start-and-end-for-bytevector who vec start end)
+  (assertion-violation who
+    "expected valid fixnums as arguments for start and end bytevector indexes"
+    start end vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-and-past-for-bytevector who vec start past)
+  ;;We assume that VEC has already been validated as bytevector.
+  (and (index-for-bytevector? vec start)
+       (one-off-index-for-bytevector? vec past)
+       ($fx<= start past))
+  (%invalid-start-and-past-for-bytevector who vec start past))
+
+(define (%invalid-start-and-past-for-bytevector who vec start past)
+  (assertion-violation who
+    "expected valid fixnums as arguments for start and past bytevector indexes"
     start past vec))
 
 

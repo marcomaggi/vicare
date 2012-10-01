@@ -18453,8 +18453,10 @@ Predefined validation clauses
 * args bits::                   Validating bit--sized integers.
 * args signed int::             Validating C language @code{int} values.
 * args clang::                  Validating C language values.
-* args string::                 Validating string and related arguments.
-* args vector::                 Validating vector and related arguments.
+* args strings::                Validating string and related arguments.
+* args vectors::                Validating vector and related arguments.
+* args bytevectors::            Validating bytevector and related
+                                arguments.
 @end menu
 
 @c page
@@ -18984,7 +18986,7 @@ variant, in the range of a C language type @code{ptrdiff_t}.
 @end deffn
 
 @c page
-@node args string
+@node args strings
 @subsection Validating string and related arguments
 
 
@@ -19055,7 +19057,7 @@ In other words: @var{start} and @var{past} select a substring of
 @end deffn
 
 @c page
-@node args vector
+@node args vectors
 @subsection Validating vector and related arguments
 
 
@@ -19123,6 +19125,78 @@ Assuming that @var{vec} is an already validated vector: succeed if both
 
 In other words: @var{start} and @var{past} select a subvector of
 @var{vec} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args bytevectors
+@subsection Validating bytevector and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bytevector @var{obj}
+Succeed if @var{obj} is a bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector/false @var{obj}
+Succeed if @var{obj} is @false{} or a bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-bytevector @var{obj}
+Succeed if @var{obj} is a bytevector and its length is greater than
+zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-bytevector/false @var{obj}
+Succeed if @var{obj} is @false{} or a bytevector and its length is
+greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-bytevector @var{bv} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{bv}, which is expected to be an already validated bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-bytevector @var{bv} @var{idx} @var{count}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{bv},
+and @var{count} is a fixnum which can be used as characters count in
+@var{bv} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a subbytevector of
+@var{bv}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-bytevector @var{bv} @var{start} @var{end}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+both @var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{bv}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a subbytevector of
+@var{bv} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-bytevector @var{bv} @var{start} @var{past}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+both @var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} < (bytevector-length @var{bv})
+@var{start} <= @var{past} <= (bytevector-length @var{bv})
+@end example
+
+In other words: @var{start} and @var{past} select a subbytevector of
+@var{bv} by specifying left--inclusive and right--exclusive limits.
 @end deffn
 
 @c page
