@@ -513,6 +513,278 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-bits))
+
+;;; u8
+
+  (check
+      (doit #f word-u8 123)
+    => #t)
+
+  (check
+      (doit #f word-u8 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s8
+
+  (check
+      (doit #f word-s8 123)
+    => #t)
+
+  (check
+      (doit #f word-s8 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u16
+
+  (check
+      (doit #f word-u16 123)
+    => #t)
+
+  (check
+      (doit #f word-u16 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s16
+
+  (check
+      (doit #f word-s16 123)
+    => #t)
+
+  (check
+      (doit #f word-s16 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u32
+
+  (check
+      (doit #f word-u32 123)
+    => #t)
+
+  (check
+      (doit #f word-u32 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s32
+
+  (check
+      (doit #f word-s32 123)
+    => #t)
+
+  (check
+      (doit #f word-s32 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u64
+
+  (check
+      (doit #f word-u64 123)
+    => #t)
+
+  (check
+      (doit #f word-u64 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s64
+
+  (check
+      (doit #f word-s64 123)
+    => #t)
+
+  (check
+      (doit #f word-s64 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u128
+
+  (check
+      (doit #f word-u128 123)
+    => #t)
+
+  (check
+      (doit #f word-u128 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s128
+
+  (check
+      (doit #f word-s128 123)
+    => #t)
+
+  (check
+      (doit #f word-s128 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u256
+
+  (check
+      (doit #f word-u256 123)
+    => #t)
+
+  (check
+      (doit #f word-u256 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s256
+
+  (check
+      (doit #f word-s256 123)
+    => #t)
+
+  (check
+      (doit #f word-s256 'ciao)
+    => '(ciao))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-bits-false))
+
+;;; u8/false
+
+  (check
+      (doit #f word-u8/false 123)
+    => #t)
+
+  (check
+      (doit #f word-u8/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s8/false
+
+  (check
+      (doit #f word-s8/false 123)
+    => #t)
+
+  (check
+      (doit #f word-s8/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u16/false
+
+  (check
+      (doit #f word-u16/false 123)
+    => #t)
+
+  (check
+      (doit #f word-u16/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s16/false
+
+  (check
+      (doit #f word-s16/false 123)
+    => #t)
+
+  (check
+      (doit #f word-s16/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u32/false
+
+  (check
+      (doit #f word-u32/false 123)
+    => #t)
+
+  (check
+      (doit #f word-u32/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s32/false
+
+  (check
+      (doit #f word-s32/false 123)
+    => #t)
+
+  (check
+      (doit #f word-s32/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u64/false
+
+  (check
+      (doit #f word-u64/false 123)
+    => #t)
+
+  (check
+      (doit #f word-u64/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s64/false
+
+  (check
+      (doit #f word-s64/false 123)
+    => #t)
+
+  (check
+      (doit #f word-s64/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u128/false
+
+  (check
+      (doit #f word-u128/false 123)
+    => #t)
+
+  (check
+      (doit #f word-u128/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s128/false
+
+  (check
+      (doit #f word-s128/false 123)
+    => #t)
+
+  (check
+      (doit #f word-s128/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; u256/false
+
+  (check
+      (doit #f word-u256/false 123)
+    => #t)
+
+  (check
+      (doit #f word-u256/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; s256/false
+
+  (check
+      (doit #f word-s256/false 123)
+    => #t)
+
+  (check
+      (doit #f word-s256/false 'ciao)
+    => '(ciao))
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-signed-int))
 
 ;;; signed-int
@@ -715,6 +987,228 @@
   (check
       (doit #f odd-signed-int 0)
     => '(0))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-clang))
+
+;;; unsigned-char
+
+  (check
+      (doit #f unsigned-char 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-char 500)
+    => '(500))
+
+  (check
+      (doit #f unsigned-char -123)
+    => '(-123))
+
+  (check
+      (doit #f unsigned-char 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-char
+
+  (check
+      (doit #f signed-char 123)
+    => #t)
+
+  (check
+      (doit #f signed-char 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-short
+
+  (check
+      (doit #f unsigned-short 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-short 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-short
+
+  (check
+      (doit #f signed-short 123)
+    => #t)
+
+  (check
+      (doit #f signed-short 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-int
+
+  (check
+      (doit #f unsigned-int 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-int 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-long
+
+  (check
+      (doit #f unsigned-long 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-long 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-long
+
+  (check
+      (doit #f signed-long 123)
+    => #t)
+
+  (check
+      (doit #f signed-long 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-long-long
+
+  (check
+      (doit #f unsigned-long-long 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-long-long 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-long-long
+
+  (check
+      (doit #f signed-long-long 123)
+    => #t)
+
+  (check
+      (doit #f signed-long-long 'ciao)
+    => '(ciao))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-clang-false))
+
+;;; unsigned-char/false
+
+  (check
+      (doit #f unsigned-char/false 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-char/false 500)
+    => '(500))
+
+  (check
+      (doit #f unsigned-char/false -123)
+    => '(-123))
+
+  (check
+      (doit #f unsigned-char/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-char/false
+
+  (check
+      (doit #f signed-char/false 123)
+    => #t)
+
+  (check
+      (doit #f signed-char/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-short/false
+
+  (check
+      (doit #f unsigned-short/false 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-short/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-short/false
+
+  (check
+      (doit #f signed-short/false 123)
+    => #t)
+
+  (check
+      (doit #f signed-short/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-int/false
+
+  (check
+      (doit #f unsigned-int/false 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-int/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-long/false
+
+  (check
+      (doit #f unsigned-long/false 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-long/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-long/false
+
+  (check
+      (doit #f signed-long/false 123)
+    => #t)
+
+  (check
+      (doit #f signed-long/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; unsigned-long-long/false
+
+  (check
+      (doit #f unsigned-long-long/false 123)
+    => #t)
+
+  (check
+      (doit #f unsigned-long-long/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; signed-long-long/false
+
+  (check
+      (doit #f signed-long-long/false 123)
+    => #t)
+
+  (check
+      (doit #f signed-long-long/false 'ciao)
+    => '(ciao))
 
   #t)
 
