@@ -165,6 +165,15 @@
     ;; enum-sets
     enum-set.vicare-arguments-validation
     enum-set/false.vicare-arguments-validation
+
+    ;; pointers
+    pointer.vicare-arguments-validation
+    pointer/false.vicare-arguments-validation
+
+    ;; memory-blocks
+    memory-block.vicare-arguments-validation
+    memory-block/false.vicare-arguments-validation
+
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1090,6 +1099,28 @@
 (define-argument-validation (enum-set/false who obj)
   (or (not obj) (enum-set? obj))
   (assertion-violation who "expected false or enum-set as argument" obj))
+
+
+;;;; pointers
+
+(define-argument-validation (pointer who obj)
+  (pointer? obj)
+  (assertion-violation who "expected pointer as argument" obj))
+
+(define-argument-validation (pointer/false who obj)
+  (or (not obj) (pointer? obj))
+  (assertion-violation who "expected false or pointer as argument" obj))
+
+
+;;;; memory-blocks
+
+(define-argument-validation (memory-block who obj)
+  (memory-block? obj)
+  (assertion-violation who "expected memory-block as argument" obj))
+
+(define-argument-validation (memory-block/false who obj)
+  (or (not obj) (memory-block? obj))
+  (assertion-violation who "expected false or memory-block as argument" obj))
 
 
 ;;;; ports

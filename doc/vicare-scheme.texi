@@ -18457,6 +18457,8 @@ Predefined validation clauses
                                 arguments.
 * args symbols::                Validating symbols.
 * args enum-sets::              Validating enum-sets.
+* args pointers::               Validating pointers.
+* args memory-blocks::          Validating @code{meory-block} values.
 @end menu
 
 @c page
@@ -19233,6 +19235,42 @@ Succeed if @var{obj} is a enum-set.
 
 @deffn {Validation Clause} enum-set/false @var{obj}
 Succeed if @var{obj} is @false{} or a enum-set.
+@end deffn
+
+@c page
+@node args pointers
+@subsection Validating pointers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} pointer @var{obj}
+Succeed if @var{obj} is a pointer.
+@end deffn
+
+
+@deffn {Validation Clause} pointer/false @var{obj}
+Succeed if @var{obj} is @false{} or a pointer.
+@end deffn
+
+@c page
+@node args memory-blocks
+@subsection Validating @code{meory-block} values
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} memory-block @var{obj}
+Succeed if @var{obj} is a memory-block.
+@end deffn
+
+
+@deffn {Validation Clause} memory-block/false @var{obj}
+Succeed if @var{obj} is @false{} or a memory-block.
 @end deffn
 
 @c page

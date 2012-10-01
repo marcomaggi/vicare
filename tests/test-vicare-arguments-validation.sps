@@ -1676,6 +1676,69 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-pointer))
+
+;;; pointer
+
+  (check
+      (doit #f pointer (null-pointer))
+    => #t)
+
+  (check
+      (doit #f pointer "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; pointer/false
+
+  (check
+      (doit #f pointer/false (null-pointer))
+    => #t)
+
+  (check
+      (doit #f pointer/false #f)
+    => #t)
+
+  (check
+      (doit #f pointer/false "ciao")
+    => '("ciao"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-memory-block))
+
+  (define (null-memory-block)
+    (make-memory-block (null-pointer) 0))
+
+;;; memory-block
+
+  (check
+      (doit #f memory-block (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f memory-block "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; memory-block/false
+
+  (check
+      (doit #f memory-block/false (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f memory-block/false #f)
+    => #t)
+
+  (check
+      (doit #f memory-block/false "ciao")
+    => '("ciao"))
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-prefixed))
 
   (check
