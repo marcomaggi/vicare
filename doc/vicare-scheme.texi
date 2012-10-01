@@ -18443,6 +18443,12 @@ imported @strong{without} prefixing the bindings.
 * args config::                 Enabling or disabling arguments
                                 validation.
 * args definitions::            Defining arguments validation clauses.
+* args using::                  Performing arguments validation.
+* args forms::                  Optional validation forms.
+
+Predefined validation clauses
+
+* args fixnums::                Validating fixnums.
 @end menu
 
 @c page
@@ -18494,65 +18500,61 @@ Arguments validation is @strong{disabled} if the
 
 
 The following bindings are exported by the library @library{vicare
-arguments validation} and reexported by the library @library{vicare
-syntactic-extensions}.
+arguments validation}.
 
 
 @defmac define-argument-validation (@meta{name} @meta{who} @meta{arg} ...) @meta{predicate} @meta{error-handler}
-Define a set of macros to validate arguments, to be used along with the
-syntax @func{WITH-ARGUMENTS-VALIDATION}.  Transform:
+Define a validation clause to be used along with the syntax
+@func{WITH-ARGUMENTS-VALIDATION}.  Example:
 
 @example
 (define-argument-validation (bytevector who bv)
   (bytevector? bv)
-  (assertion-violation who "expected a bytevector as argument" bv))
+  (assertion-violation who
+    "expected a bytevector as argument"
+    bv))
 @end example
 
-@noindent
-into:
-
-@smallexample
-(define-inline (vicare.argument-validation-for-bytevector who bv . body)
-  (if (vicare.argument-validation-predicate-for-bytevector bv)
-      (begin . body)
-    (vicare.argument-validation-error-for-bytevector who bv)))
-
-(define-inline (vicare.argument-validation-predicate-for-bytevector bv)
-  (bytevector? bv))
-
-(define-inline (vicare.argument-validation-error-for-bytevector who bv))
-  (assertion-violation who "expected a bytevector as argument" bv))
-@end smallexample
-
-If we need to export a validator from a library: we can export just the
-identifier @code{vicare.argument-validation-for-@meta{name}}, without
-prefixing it.
+We have to assume that the values @meta{arg} are evaluated multiple
+times.
 @end defmac
 
-
-@defmac arguments-validation-forms . @meta{body}
-If arguments validation is enabled, expand to:
-
-@example
-(begin . @meta{body})
-@end example
-
-@noindent
-else expand to @code{(values)}.
-@end defmac
+@c page
+@node args using
+@subsection Performing arguments validation
 
 
-@defmac with-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) . @meta{body}
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac with-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) @metao{body} . @meta{body}
 If arguments validation is enabled: expand to code that validates the
-@meta{arg} expressions according to the @meta{validator}, then evaluate
-@meta{body}; else just evaluate @meta{body}.
+@meta{arg} expressions using to the @meta{validator} clause, then
+evaluate the @meta{body} forms; if arguments validation is disabled:
+just evaluate the @meta{body} forms.
 
 @meta{who} must be an identifier and it is used as first argument to the
 validator macro.
 
-For example:
+@meta{validator} must be an identifier previously used as name of
+validation clause by the @func{define-argument-validation} macro.
+
+Simple example:
 
 @example
+(define-argument-validation (fixnum who obj)
+  (fixnum? obj)
+  (assertion-violation who
+    "expected fixnum as argument"
+    obj))
+
+(define-argument-validation (integer who obj)
+  (integer? obj)
+  (assertion-violation who
+    "expected integer as argument"
+    obj))
+
 (with-arguments-validation (who)
      ((fixnum  X)
       (integer Y))
@@ -18561,22 +18563,87 @@ For example:
 @end example
 
 @noindent
-expands into:
+multiple clauses are evaluated from first to last, so the above example
+is equivalent to:
 
 @example
-(vicare.argument-validation-for-fixnum who X
- (vicare.argument-validation-for-integer who Y
-  (do-this)
-  (do-that)))
+(with-arguments-validation (who)
+     ((fixnum  X))
+  (with-arguments-validation (who)
+       ((integer Y))
+    (do-this)
+    (do-that)))
+@end example
+
+@noindent
+which is equivalent to something like:
+
+@example
+(if (fixnum? X)
+    (if (integer? X)
+        (begin
+          (do-this)
+          (do-that))
+      (assertion-violation who
+        "expected integer as argument"
+        obj))
+  (assertion-violation who
+    "expected fixnum as argument"
+    obj))
 @end example
 @end defmac
 
 
-@defmac with-dangerous-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) . @meta{body}
+@defmac with-dangerous-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) @metao{body} . @meta{body}
 Like @func{with-arguments-validation}, but the validation is always
 performed even when global arguments validation is disabled.
 @end defmac
 
+@c page
+@node args forms
+@subsection Optional validation forms
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac arguments-validation-forms
+@defmacx arguments-validation-forms @metao{body} . @meta{body}
+When used without arguments or arguments validation disabled: expand to
+@code{(values)}; else expand to:
+
+@example
+(begin @metao{body} . @meta{body})
+@end example
+@end defmac
+
+@c page
+@node args fixnums
+@subsection Validating fixnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-fixnum @var{obj}
+@deffnx {Validation Clause} negative-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-fixnum @var{obj}
+@deffnx {Validation Clause} non-negative-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+strictly positive or strictly negative.
+@end deffn
 
 
 @c page

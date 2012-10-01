@@ -32,6 +32,15 @@
     with-arguments-validation
     with-dangerous-arguments-validation
     arguments-validation-forms
+
+    ;; fixnums
+    vicare.argument-validation-for-fixnum
+    vicare.argument-validation-for-positive-fixnum
+    vicare.argument-validation-for-negative-fixnum
+    vicare.argument-validation-for-non-positive-fixnum
+    vicare.argument-validation-for-non-negative-fixnum
+    vicare.argument-validation-for-fixnum-in-inclusive-range
+
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -40,7 +49,7 @@
     (prefix (vicare words)
 	    words.)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    $))
 
 
 ;;; helpers
@@ -115,12 +124,17 @@
 (define-syntax arguments-validation-forms
   (if config.arguments-validation
       (syntax-rules ()
-	((_ . ?body)
-	 (begin . ?body)))
+	((_)
+	 (values))
+	((_ ?body0 . ?body)
+	 (begin ?body0 . ?body)))
     (syntax-rules ()
-      ((_ . ?body)
+      ((_)
+       (values))
+      ((_ ?body0 . ?body)
        (values)))))
 
+
 (define-syntax with-arguments-validation
   ;;Perform the validation only if enabled at configure time.
   ;;
@@ -168,6 +182,8 @@
     (define (main stx)
       (syntax-case stx ()
 	((_ ?always-include (?who) ((?validator ?arg ...) ...) . ?body)
+	 (and (identifier? #'?who)
+	      (for-all identifier? (syntax->list #'(?validator ...))))
 	 ;;Whether we  include the arguments  checking or not,  we build
 	 ;;the output form validating the input form.
 	 (let* ((include?	(syntax->datum #'?always-include))
@@ -176,9 +192,7 @@
 						    #'(?validator ...)
 						    #'((?arg ...) ...)
 						    body)))
-	   (if (or include? config.arguments-validation
-		   (let ((S (getenv "VICARE_ARGUMENTS_VALIDATION")))
-		     (and (string? S) (string=? S "yes"))))
+	   (if (or include? config.arguments-validation)
 	       output-form body)))
 	(_
 	 (%synner "invalid input form" #f))))
@@ -206,14 +220,87 @@
       (let ((str (string-append "vicare." prefix-string name)))
 	(datum->syntax ctx (string->symbol str))))
 
+    (define syntax->list
+      (case-lambda
+       ((stx)
+	(syntax->list stx '()))
+       ((stx tail)
+	(syntax-case stx ()
+	  ((?car . ?cdr)
+	   (cons #'?car (syntax->list #'?cdr tail)))
+	  (()
+	   tail)))))
+
     (define (%synner msg subform)
       (syntax-violation 'with-arguments-validation
 	msg (syntax->datum stx) (syntax->datum subform)))
 
     (main stx)))
 
+
+;;;; fixnums validation
 
+(define-argument-validation (fixnum who obj)
+  (fixnum? obj)
+  (%invalid-fixnum who obj))
 
+(define (%invalid-fixnum who obj)
+  (assertion-violation who "expected fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (positive-fixnum who obj)
+  (and (fixnum? obj)
+       ($fx< 0 obj))
+  (%invalid-positive-fixnum who obj))
+
+(define (%invalid-positive-fixnum who obj)
+  (assertion-violation who "expected positive fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (negative-fixnum who obj)
+  (and (fixnum? obj)
+       ($fx> 0 obj))
+  (%invalid-negative-fixnum who obj))
+
+(define (%invalid-negative-fixnum who obj)
+  (assertion-violation who "expected negative fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-positive-fixnum who obj)
+  (and (fixnum? obj)
+       ($fx>= 0 obj))
+  (%invalid-non-positive-fixnum who obj))
+
+(define (%invalid-non-positive-fixnum who obj)
+  (assertion-violation who "expected non-positive fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-negative-fixnum who obj)
+  (and (fixnum? obj)
+       ($fx<= 0 obj))
+  (%invalid-non-negative-fixnum who obj))
+
+(define (%invalid-non-negative-fixnum who obj)
+  (assertion-violation who "expected non-negative fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (fixnum-in-inclusive-range ?who ?obj ?min ?max)
+  (and (fixnum? ?obj)
+       ($fx>= ?obj ?min)
+       ($fx<= ?obj ?max))
+  (%invalid-fixnum-in-inclusive-range ?who ?obj ?min ?max))
+
+(define (%invalid-fixnum-in-inclusive-range who obj min max)
+  (assertion-violation who
+    (string-append "expected fixnum in inclusive range ["
+		   (number->string min) ", " (number->string max)
+		   "] as argument")
+    obj))
 
 
 ;;;; done

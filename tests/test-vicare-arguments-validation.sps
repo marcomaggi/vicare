@@ -36,6 +36,28 @@
 (check-display "*** testing Vicare arguments validation library\n")
 
 
+;;;; helpers
+
+(define-syntax catch
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((assertion-violation? E)
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       (begin . ?body)))))
+
+(define-syntax doit
+  (syntax-rules ()
+    ((_ ?print ?validator . ?objs)
+     (catch ?print
+       (let ((who 'test))
+	 (with-arguments-validation (who)
+	     ((?validator . ?objs))
+	   #t))))))
+
+
 (parametrise ((check-test-name	'config))
 
   (check
@@ -81,6 +103,114 @@
 
 (parametrise ((check-test-name	'validate-fixnums))
 
+;;; fixnum
+
+  (check
+      (doit #f fixnum 123)
+    => #t)
+
+  (check
+      (doit #f fixnum 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; positive-fixnum
+
+  (check
+      (doit #f positive-fixnum 123)
+    => #t)
+
+  (check
+      (doit #f positive-fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f positive-fixnum 0)
+    => '(0))
+
+  (check
+      (doit #f positive-fixnum -1)
+    => '(-1))
+
+;;; --------------------------------------------------------------------
+;;; negative-fixnum
+
+  (check
+      (doit #f negative-fixnum -123)
+    => #t)
+
+  (check
+      (doit #f negative-fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f negative-fixnum 0)
+    => '(0))
+
+  (check
+      (doit #f negative-fixnum +1)
+    => '(+1))
+
+;;; --------------------------------------------------------------------
+;;; non-positive-fixnum
+
+  (check
+      (doit #f non-positive-fixnum -123)
+    => #t)
+
+  (check
+      (doit #f non-positive-fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f non-positive-fixnum 0)
+    => #t)
+
+  (check
+      (doit #f non-positive-fixnum +1)
+    => '(+1))
+
+;;; --------------------------------------------------------------------
+;;; non-negative-fixnum
+
+  (check
+      (doit #f non-negative-fixnum +123)
+    => #t)
+
+  (check
+      (doit #f non-negative-fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f non-negative-fixnum 0)
+    => #t)
+
+  (check
+      (doit #f non-negative-fixnum -1)
+    => '(-1))
+
+;;; --------------------------------------------------------------------
+;;; fixnum-in-inclusive-range
+
+  (check
+      (doit #f fixnum-in-inclusive-range +123 100 200)
+    => #t)
+
+  (check
+      (doit #f fixnum-in-inclusive-range +100 100 200)
+    => #t)
+
+  (check
+      (doit #f fixnum-in-inclusive-range +200 100 200)
+    => #t)
+
+  (check
+      (doit #f fixnum-in-inclusive-range 'ciao 100 200)
+    => '(ciao))
+
+  (check
+      (doit #f fixnum-in-inclusive-range 0 100 200)
+    => '(0))
 
   #t)
 
