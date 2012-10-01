@@ -18457,6 +18457,8 @@ Predefined validation clauses
 * args vectors::                Validating vector and related arguments.
 * args bytevectors::            Validating bytevector and related
                                 arguments.
+* args symbols::                Validating symbols.
+* args enum-sets::              Validating enum-sets.
 @end menu
 
 @c page
@@ -19197,6 +19199,42 @@ both @var{start} and @var{past} are fixnums satisfying the constraints:
 
 In other words: @var{start} and @var{past} select a subbytevector of
 @var{bv} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args symbols
+@subsection Validating symbols
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} symbol @var{obj}
+Succeed if @var{obj} is a symbol.
+@end deffn
+
+
+@deffn {Validation Clause} symbol/false @var{obj}
+Succeed if @var{obj} is @false{} or a symbol.
+@end deffn
+
+@c page
+@node args enum-sets
+@subsection Validating enum-sets
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} enum-set @var{obj}
+Succeed if @var{obj} is a enum-set.
+@end deffn
+
+
+@deffn {Validation Clause} enum-set/false @var{obj}
+Succeed if @var{obj} is @false{} or a enum-set.
 @end deffn
 
 @c page

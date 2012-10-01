@@ -157,6 +157,14 @@
     vicare.argument-validation-for-index-and-count-for-bytevector
     vicare.argument-validation-for-start-and-end-for-bytevector
     vicare.argument-validation-for-start-and-past-for-bytevector
+
+    ;; symbols
+    vicare.argument-validation-for-symbol
+    vicare.argument-validation-for-symbol/false
+
+    ;; enum-sets
+    vicare.argument-validation-for-enum-set
+    vicare.argument-validation-for-enum-set/false
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1558,6 +1566,44 @@
   (assertion-violation who
     "expected valid fixnums as arguments for start and past bytevector indexes"
     start past vec))
+
+
+;;;; symbols
+
+(define-argument-validation (symbol who obj)
+  (symbol? obj)
+  (%invalid-symbol who obj))
+
+(define (%invalid-symbol who obj)
+  (assertion-violation who "expected symbol as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (symbol/false who obj)
+  (or (not obj) (symbol? obj))
+  (%invalid-symbol/false who obj))
+
+(define (%invalid-symbol/false who obj)
+  (assertion-violation who "expected false or symbol as argument" obj))
+
+
+;;;; enum-sets
+
+(define-argument-validation (enum-set who obj)
+  (enum-set? obj)
+  (%invalid-enum-set who obj))
+
+(define (%invalid-enum-set who obj)
+  (assertion-violation who "expected enum-set as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (enum-set/false who obj)
+  (or (not obj) (enum-set? obj))
+  (%invalid-enum-set/false who obj))
+
+(define (%invalid-enum-set/false who obj)
+  (assertion-violation who "expected false or enum-set as argument" obj))
 
 
 ;;;; done

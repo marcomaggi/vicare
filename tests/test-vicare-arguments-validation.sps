@@ -1614,6 +1614,66 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-symbol))
+
+;;; symbol
+
+  (check
+      (doit #f symbol 'ciao)
+    => #t)
+
+  (check
+      (doit #f symbol "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; symbol/false
+
+  (check
+      (doit #f symbol/false 'ciao)
+    => #t)
+
+  (check
+      (doit #f symbol/false #f)
+    => #t)
+
+  (check
+      (doit #f symbol/false "ciao")
+    => '("ciao"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-enum-set))
+
+;;; enum-set
+
+  (check
+      (doit #f enum-set (make-enumeration '(ciao)))
+    => #t)
+
+  (check
+      (doit #f enum-set "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; enum-set/false
+
+  (check
+      (doit #f enum-set/false (make-enumeration '(ciao)))
+    => #t)
+
+  (check
+      (doit #f enum-set/false #f)
+    => #t)
+
+  (check
+      (doit #f enum-set/false "ciao")
+    => '("ciao"))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
