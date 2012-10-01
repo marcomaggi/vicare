@@ -366,108 +366,60 @@
 
 (define-argument-validation (fixnum who obj)
   (fixnum? obj)
-  (%invalid-fixnum who obj))
-
-(define-inline (%invalid-fixnum who obj)
   (assertion-violation who "expected fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (fixnum/false who obj)
   (or (not obj) (fixnum? obj))
-  (%invalid-fixnum/false who obj))
-
-(define-inline (%invalid-fixnum/false who obj)
   (assertion-violation who "expected false or fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (positive-fixnum who obj)
   (and (fixnum? obj)
        ($fx< 0 obj))
-  (%invalid-positive-fixnum who obj))
-
-(define-inline (%invalid-positive-fixnum who obj)
   (assertion-violation who "expected positive fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (negative-fixnum who obj)
   (and (fixnum? obj)
        ($fx> 0 obj))
-  (%invalid-negative-fixnum who obj))
-
-(define-inline (%invalid-negative-fixnum who obj)
   (assertion-violation who "expected negative fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-positive-fixnum who obj)
   (and (fixnum? obj)
        ($fx>= 0 obj))
-  (%invalid-non-positive-fixnum who obj))
-
-(define-inline (%invalid-non-positive-fixnum who obj)
   (assertion-violation who "expected non-positive fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-negative-fixnum who obj)
   (and (fixnum? obj)
        ($fx<= 0 obj))
-  (%invalid-non-negative-fixnum who obj))
-
-(define-inline (%invalid-non-negative-fixnum who obj)
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (fixnum-in-inclusive-range ?who ?obj ?min ?max)
-  (and (fixnum? ?obj)
-       ($fx>= ?obj ?min)
-       ($fx<= ?obj ?max))
-  (%invalid-fixnum-in-inclusive-range ?who ?obj ?min ?max))
-
-(define-inline (%invalid-fixnum-in-inclusive-range who obj min max)
+(define-argument-validation (fixnum-in-inclusive-range who obj min max)
+  (and (fixnum? obj)
+       ($fx>= obj min)
+       ($fx<= obj max))
   (assertion-violation who
     (string-append "expected fixnum in inclusive range ["
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
     obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (fixnum-in-exclusive-range ?who ?obj ?min ?max)
-  (and (fixnum? ?obj)
-       ($fx> ?obj ?min)
-       ($fx< ?obj ?max))
-  (%invalid-fixnum-in-exclusive-range ?who ?obj ?min ?max))
-
-(define-inline (%invalid-fixnum-in-exclusive-range who obj min max)
+(define-argument-validation (fixnum-in-exclusive-range who obj min max)
+  (and (fixnum? obj)
+       ($fx> obj min)
+       ($fx< obj max))
   (assertion-violation who
     (string-append "expected fixnum in exclusive range ("
 		   (number->string min) ", " (number->string max)
 		   ") as argument")
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (even-fixnum who obj)
   (and (fixnum? obj)
        (fxeven? obj))
-  (%invalid-even-fixnum who obj))
-
-(define-inline (%invalid-even-fixnum who obj)
   (assertion-violation who "expected even fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (odd-fixnum who obj)
   (and (fixnum? obj)
        (fxodd? obj))
-  (%invalid-odd-fixnum who obj))
-
-(define-inline (%invalid-odd-fixnum who obj)
   (assertion-violation who "expected odd fixnum as argument" obj))
 
 
@@ -477,110 +429,64 @@
   (and (integer? obj)
        (exact?   obj)))
 
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (exact-integer who obj)
   (exact-integer? obj)
-  (%invalid-exact-integer who obj))
-
-(define-inline (%invalid-exact-integer who obj)
   (assertion-violation who "expected exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (exact-integer/false who obj)
   (or (not obj) (exact-integer? obj))
-  (%invalid-exact-integer/false who obj))
-
-(define-inline (%invalid-exact-integer/false who obj)
   (assertion-violation who "expected false or exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (positive-exact-integer who obj)
   (and (exact-integer? obj)
        (< 0 obj))
-  (%invalid-positive-exact-integer who obj))
-
-(define-inline (%invalid-positive-exact-integer who obj)
   (assertion-violation who "expected positive exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (negative-exact-integer who obj)
   (and (exact-integer? obj)
        (> 0 obj))
-  (%invalid-negative-exact-integer who obj))
-
-(define-inline (%invalid-negative-exact-integer who obj)
   (assertion-violation who "expected negative exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-positive-exact-integer who obj)
   (and (exact-integer? obj)
        (>= 0 obj))
-  (%invalid-non-positive-exact-integer who obj))
-
-(define-inline (%invalid-non-positive-exact-integer who obj)
   (assertion-violation who "expected non-positive exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-negative-exact-integer who obj)
   (and (exact-integer? obj)
        (<= 0 obj))
-  (%invalid-non-negative-exact-integer who obj))
-
-(define-inline (%invalid-non-negative-exact-integer who obj)
   (assertion-violation who "expected non-negative exact integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (exact-integer-in-inclusive-range ?who ?obj ?min ?max)
-  (and (exact-integer? ?obj)
-       (>= ?obj ?min)
-       (<= ?obj ?max))
-  (%invalid-exact-integer-in-inclusive-range ?who ?obj ?min ?max))
-
-(define-inline (%invalid-exact-integer-in-inclusive-range who obj min max)
+(define-argument-validation (exact-integer-in-inclusive-range who obj min max)
+  (and (exact-integer? obj)
+       (>= obj min)
+       (<= obj max))
   (assertion-violation who
     (string-append "expected exact integer in inclusive range ["
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
     obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (exact-integer-in-exclusive-range ?who ?obj ?min ?max)
-  (and (exact-integer? ?obj)
-       (> ?obj ?min)
-       (< ?obj ?max))
-  (%invalid-exact-integer-in-exclusive-range ?who ?obj ?min ?max))
-
-(define-inline (%invalid-exact-integer-in-exclusive-range who obj min max)
+(define-argument-validation (exact-integer-in-exclusive-range who obj min max)
+  (and (exact-integer? obj)
+       (> obj min)
+       (< obj max))
   (assertion-violation who
     (string-append "expected exact integer in exclusive range ("
 		   (number->string min) ", " (number->string max)
 		   ") as argument")
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (even-exact-integer who obj)
   (and (exact-integer? obj)
        (even? obj))
-  (%invalid-even-exact-integer who obj))
-
-(define-inline (%invalid-even-exact-integer who obj)
   (assertion-violation who "expected even exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (odd-exact-integer who obj)
   (and (exact-integer? obj)
        (odd? obj))
-  (%invalid-odd-exact-integer who obj))
-
-(define-inline (%invalid-odd-exact-integer who obj)
   (assertion-violation who "expected odd exact integer as argument" obj))
 
 
@@ -588,108 +494,60 @@
 
 (define-argument-validation (signed-int who obj)
   (words.signed-int? obj)
-  (%invalid-signed-int who obj))
-
-(define-inline (%invalid-signed-int who obj)
   (assertion-violation who "expected exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (signed-int/false who obj)
   (or (not obj) (words.signed-int? obj))
-  (%invalid-signed-int/false who obj))
-
-(define-inline (%invalid-signed-int/false who obj)
   (assertion-violation who "expected false or exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (positive-signed-int who obj)
   (and (words.signed-int? obj)
        (< 0 obj))
-  (%invalid-positive-signed-int who obj))
-
-(define-inline (%invalid-positive-signed-int who obj)
   (assertion-violation who "expected positive exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (negative-signed-int who obj)
   (and (words.signed-int? obj)
        (> 0 obj))
-  (%invalid-negative-signed-int who obj))
-
-(define-inline (%invalid-negative-signed-int who obj)
   (assertion-violation who "expected negative exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-positive-signed-int who obj)
   (and (words.signed-int? obj)
        (>= 0 obj))
-  (%invalid-non-positive-signed-int who obj))
-
-(define-inline (%invalid-non-positive-signed-int who obj)
   (assertion-violation who "expected non-positive exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-negative-signed-int who obj)
   (and (words.signed-int? obj)
        (<= 0 obj))
-  (%invalid-non-negative-signed-int who obj))
-
-(define-inline (%invalid-non-negative-signed-int who obj)
   (assertion-violation who "expected non-negative exact integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (signed-int-in-inclusive-range ?who ?obj ?min ?max)
-  (and (words.signed-int? ?obj)
-       (>= ?obj ?min)
-       (<= ?obj ?max))
-  (%invalid-signed-int-in-inclusive-range ?who ?obj ?min ?max))
-
-(define-inline (%invalid-signed-int-in-inclusive-range who obj min max)
+(define-argument-validation (signed-int-in-inclusive-range who obj min max)
+  (and (words.signed-int? obj)
+       (>= obj min)
+       (<= obj max))
   (assertion-violation who
     (string-append "expected exact integer in inclusive range ["
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
     obj))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (signed-int-in-exclusive-range ?who ?obj ?min ?max)
-  (and (words.signed-int? ?obj)
-       (> ?obj ?min)
-       (< ?obj ?max))
-  (%invalid-signed-int-in-exclusive-range ?who ?obj ?min ?max))
-
-(define-inline (%invalid-signed-int-in-exclusive-range who obj min max)
+(define-argument-validation (signed-int-in-exclusive-range who obj min max)
+  (and (words.signed-int? obj)
+       (> obj min)
+       (< obj max))
   (assertion-violation who
     (string-append "expected exact integer in exclusive range ("
 		   (number->string min) ", " (number->string max)
 		   ") as argument")
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (even-signed-int who obj)
   (and (words.signed-int? obj)
        (even? obj))
-  (%invalid-even-signed-int who obj))
-
-(define-inline (%invalid-even-signed-int who obj)
   (assertion-violation who "expected even exact integer as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (odd-signed-int who obj)
   (and (words.signed-int? obj)
        (odd? obj))
-  (%invalid-odd-signed-int who obj))
-
-(define-inline (%invalid-odd-signed-int who obj)
   (assertion-violation who "expected odd exact integer as argument" obj))
 
 
@@ -697,129 +555,66 @@
 
 (define-argument-validation (word-u8 who obj)
   (words.word-u8? obj)
-  (%invalid-word-u8 who obj))
-
-(define-inline (%invalid-word-u8 who obj)
   (assertion-violation who
     "expected exact integer representing an octet as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s8 who obj)
   (words.word-s8? obj)
-  (%invalid-word-s8 who obj))
-
-(define-inline (%invalid-word-s8 who obj)
   (assertion-violation who
     "expected exact integer representing a byte as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-u16 who obj)
   (words.word-u16? obj)
-  (%invalid-word-u16 who obj))
-
-(define-inline (%invalid-word-u16 who obj)
   (assertion-violation who
     "expected exact integer representing a 16-bit unsigned integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s16 who obj)
   (words.word-s16? obj)
-  (%invalid-word-s16 who obj))
-
-(define-inline (%invalid-word-s16 who obj)
   (assertion-violation who
     "expected exact integer representing a 16-bit signed integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-u32 who obj)
   (words.word-u32? obj)
-  (%invalid-word-u32 who obj))
-
-(define-inline (%invalid-word-u32 who obj)
   (assertion-violation who
     "expected exact integer representing a 32-bit unsigned integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s32 who obj)
   (words.word-s32? obj)
-  (%invalid-word-s32 who obj))
-
-(define-inline (%invalid-word-s32 who obj)
   (assertion-violation who
     "expected exact integer representing a 32-bit signed integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-u64 who obj)
   (words.word-u64? obj)
-  (%invalid-word-u64 who obj))
-
-(define-inline (%invalid-word-u64 who obj)
   (assertion-violation who
     "expected exact integer representing a 64-bit unsigned integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s64 who obj)
   (words.word-s64? obj)
-  (%invalid-word-s64 who obj))
-
-(define-inline (%invalid-word-s64 who obj)
   (assertion-violation who
     "expected exact integer representing a 64-bit signed integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-u128 who obj)
   (words.word-u128? obj)
-  (%invalid-word-u128 who obj))
-
-(define-inline (%invalid-word-u128 who obj)
   (assertion-violation who
     "expected exact integer representing a 128-bit unsigned integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s128 who obj)
   (words.word-s128? obj)
-  (%invalid-word-s128 who obj))
-
-(define-inline (%invalid-word-s128 who obj)
   (assertion-violation who
     "expected exact integer representing a 128-bit signed integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-u256 who obj)
   (words.word-u256? obj)
-  (%invalid-word-u256 who obj))
-
-(define-inline (%invalid-word-u256 who obj)
   (assertion-violation who
     "expected exact integer representing a 256-bit unsigned integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s256 who obj)
   (words.word-s256? obj)
-  (%invalid-word-s256 who obj))
-
-(define-inline (%invalid-word-s256 who obj)
   (assertion-violation who
     "expected exact integer representing a 256-bit signed integer as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (machine-word who obj)
   (words.machine-word? obj)
-  (%invalid-machine-word who obj))
-
-(define-inline (%invalid-machine-word who obj)
   (assertion-violation who
     "expected exact integer representing a machine word as argument" obj))
 
@@ -828,423 +623,252 @@
 
 (define-argument-validation (word-u8/false who obj)
   (or (not obj) (words.word-u8? obj))
-  (%invalid-word-u8/false who obj))
-
-(define-inline (%invalid-word-u8/false who obj)
   (assertion-violation who
     "expected false or exact integer representing an octet as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-s8/false who obj)
   (or (not obj) (words.word-s8? obj))
-  (%invalid-word-s8/false who obj))
-
-(define-inline (%invalid-word-s8/false who obj)
   (assertion-violation who
     "expected false or exact integer representing a byte as argument" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (word-u16/false who obj)
   (or (not obj) (words.word-u16? obj))
-  (%invalid-word-u16/false who obj))
-
-(define-inline (%invalid-word-u16/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 16-bit unsigned integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 16-bit unsigned integer as argument"
+    obj))
 
 (define-argument-validation (word-s16/false who obj)
   (or (not obj) (words.word-s16? obj))
-  (%invalid-word-s16/false who obj))
-
-(define-inline (%invalid-word-s16/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 16-bit signed integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 16-bit signed integer as argument"
+    obj))
 
 (define-argument-validation (word-u32/false who obj)
   (or (not obj) (words.word-u32? obj))
-  (%invalid-word-u32/false who obj))
-
-(define-inline (%invalid-word-u32/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 32-bit unsigned integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 32-bit unsigned integer as argument"
+    obj))
 
 (define-argument-validation (word-s32/false who obj)
   (or (not obj) (words.word-s32? obj))
-  (%invalid-word-s32/false who obj))
-
-(define-inline (%invalid-word-s32/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 32-bit signed integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 32-bit signed integer as argument"
+    obj))
 
 (define-argument-validation (word-u64/false who obj)
   (or (not obj) (words.word-u64? obj))
-  (%invalid-word-u64/false who obj))
-
-(define-inline (%invalid-word-u64/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 64-bit unsigned integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 64-bit unsigned integer as argument"
+    obj))
 
 (define-argument-validation (word-s64/false who obj)
   (or (not obj) (words.word-s64? obj))
-  (%invalid-word-s64/false who obj))
-
-(define-inline (%invalid-word-s64/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 64-bit signed integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 64-bit signed integer as argument"
+    obj))
 
 (define-argument-validation (word-u128/false who obj)
   (or (not obj) (words.word-u128? obj))
-  (%invalid-word-u128/false who obj))
-
-(define-inline (%invalid-word-u128/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 128-bit unsigned integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 128-bit unsigned integer as argument"
+    obj))
 
 (define-argument-validation (word-s128/false who obj)
   (or (not obj) (words.word-s128? obj))
-  (%invalid-word-s128/false who obj))
-
-(define-inline (%invalid-word-s128/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 128-bit signed integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 128-bit signed integer as argument"
+    obj))
 
 (define-argument-validation (word-u256/false who obj)
   (or (not obj) (words.word-u256? obj))
-  (%invalid-word-u256/false who obj))
-
-(define-inline (%invalid-word-u256/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 256-bit unsigned integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 256-bit unsigned integer as argument"
+    obj))
 
 (define-argument-validation (word-s256/false who obj)
   (or (not obj) (words.word-s256? obj))
-  (%invalid-word-s256/false who obj))
-
-(define-inline (%invalid-word-s256/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a 256-bit signed integer as argument" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer representing a 256-bit signed integer as argument"
+    obj))
 
 (define-argument-validation (machine-word/false who obj)
   (or (not obj) (words.machine-word? obj))
-  (%invalid-machine-word/false who obj))
-
-(define-inline (%invalid-machine-word/false who obj)
   (assertion-violation who
-    "expected false or exact integer representing a machine word as argument" obj))
+    "expected false or exact integer representing a machine word as argument"
+    obj))
 
 
 ;;;; C language values
 
 (define-argument-validation (unsigned-char who obj)
   (words.unsigned-char? obj)
-  (%invalid-unsigned-char who obj))
-
-(define-inline (%invalid-unsigned-char who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"unsigned char\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"unsigned char\""
+    obj))
 
 (define-argument-validation (signed-char who obj)
   (words.signed-char? obj)
-  (%invalid-signed-char who obj))
-
-(define-inline (%invalid-signed-char who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"signed char\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"signed char\""
+    obj))
 
 (define-argument-validation (unsigned-short who obj)
   (words.unsigned-short? obj)
-  (%invalid-unsigned-short who obj))
-
-(define-inline (%invalid-unsigned-short who obj)
   (assertion-violation who
     "expected exact integer in the range of the C language type \"unsigned short int\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (signed-short who obj)
   (words.signed-short? obj)
-  (%invalid-signed-short who obj))
-
-(define-inline (%invalid-signed-short who obj)
   (assertion-violation who
     "expected exact integer in the range of the C language type \"signed short int\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (unsigned-int who obj)
   (words.unsigned-int? obj)
-  (%invalid-unsigned-int who obj))
-
-(define-inline (%invalid-unsigned-int who obj)
   (assertion-violation who
     "expected exact integer in the range of the C language type \"unsigned int\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (unsigned-long who obj)
   (words.unsigned-long? obj)
-  (%invalid-unsigned-long who obj))
-
-(define-inline (%invalid-unsigned-long who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"unsigned long\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"unsigned long\""
+    obj))
 
 (define-argument-validation (signed-long who obj)
   (words.signed-long? obj)
-  (%invalid-signed-long who obj))
-
-(define-inline (%invalid-signed-long who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"signed long\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"signed long\""
+    obj))
 
 (define-argument-validation (unsigned-long-long who obj)
   (words.unsigned-long-long? obj)
-  (%invalid-unsigned-long-long who obj))
-
-(define-inline (%invalid-unsigned-long-long who obj)
   (assertion-violation who
     "expected exact integer in the range of the C language type \"unsigned long long\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (signed-long-long who obj)
   (words.signed-long-long? obj)
-  (%invalid-signed-long-long who obj))
-
-(define-inline (%invalid-signed-long-long who obj)
   (assertion-violation who
     "expected exact integer in the range of the C language type \"signed long long\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (pointer-integer who obj)
   (words.pointer-integer? obj)
-  (%invalid-pointer-integer who obj))
-
-(define-inline (%invalid-pointer-integer who obj)
   (assertion-violation who
     "expected exact integer in the range of the C language type \"void *\"" obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (size_t who obj)
   (words.size_t? obj)
-  (%invalid-size_t who obj))
-
-(define-inline (%invalid-size_t who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"size_t\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"size_t\""
+    obj))
 
 (define-argument-validation (ssize_t who obj)
   (words.ssize_t? obj)
-  (%invalid-ssize_t who obj))
-
-(define-inline (%invalid-ssize_t who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"ssize_t\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"ssize_t\""
+    obj))
 
 (define-argument-validation (off_t who obj)
   (words.off_t? obj)
-  (%invalid-off_t who obj))
-
-(define-inline (%invalid-off_t who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"off_t\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected exact integer in the range of the C language type \"off_t\""
+    obj))
 
 (define-argument-validation (ptrdiff_t who obj)
   (words.ptrdiff_t? obj)
-  (%invalid-ptrdiff_t who obj))
-
-(define-inline (%invalid-ptrdiff_t who obj)
   (assertion-violation who
-    "expected exact integer in the range of the C language type \"ptrdiff_t\"" obj))
+    "expected exact integer in the range of the C language type \"ptrdiff_t\""
+    obj))
 
 
 ;;;; false or C language values
 
 (define-argument-validation (unsigned-char/false who obj)
   (or (not obj) (words.unsigned-char? obj))
-  (%invalid-unsigned-char/false who obj))
-
-(define-inline (%invalid-unsigned-char/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"unsigned char\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"unsigned char\""
+    obj))
 
 (define-argument-validation (signed-char/false who obj)
   (or (not obj) (words.signed-char? obj))
-  (%invalid-signed-char/false who obj))
-
-(define-inline (%invalid-signed-char/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"signed char\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"signed char\""
+    obj))
 
 (define-argument-validation (unsigned-short/false who obj)
   (or (not obj) (words.unsigned-short? obj))
-  (%invalid-unsigned-short/false who obj))
-
-(define-inline (%invalid-unsigned-short/false who obj)
   (assertion-violation who
     "expected false or exact integer in the range of the C language type \"unsigned short int\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (signed-short/false who obj)
   (or (not obj) (words.signed-short? obj))
-  (%invalid-signed-short/false who obj))
-
-(define-inline (%invalid-signed-short/false who obj)
   (assertion-violation who
     "expected false or exact integer in the range of the C language type \"signed short int\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (unsigned-int/false who obj)
   (or (not obj) (words.unsigned-int? obj))
-  (%invalid-unsigned-int/false who obj))
-
-(define-inline (%invalid-unsigned-int/false who obj)
   (assertion-violation who
     "expected false or exact integer in the range of the C language type \"unsigned int\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (unsigned-long/false who obj)
   (or (not obj) (words.unsigned-long? obj))
-  (%invalid-unsigned-long/false who obj))
-
-(define-inline (%invalid-unsigned-long/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"unsigned long\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"unsigned long\""
+    obj))
 
 (define-argument-validation (signed-long/false who obj)
   (or (not obj) (words.signed-long? obj))
-  (%invalid-signed-long/false who obj))
-
-(define-inline (%invalid-signed-long/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"signed long\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"signed long\""
+    obj))
 
 (define-argument-validation (unsigned-long-long/false who obj)
   (or (not obj) (words.unsigned-long-long? obj))
-  (%invalid-unsigned-long-long/false who obj))
-
-(define-inline (%invalid-unsigned-long-long/false who obj)
   (assertion-violation who
     "expected false or exact integer in the range of the C language type \"unsigned long long\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (signed-long-long/false who obj)
   (or (not obj) (words.signed-long-long? obj))
-  (%invalid-signed-long-long/false who obj))
-
-(define-inline (%invalid-signed-long-long/false who obj)
   (assertion-violation who
     "expected false or exact integer in the range of the C language type \"signed long long\""
     obj))
 
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (pointer-integer/false who obj)
   (or (not obj) (words.pointer-integer? obj))
-  (%invalid-pointer-integer/false who obj))
-
-(define-inline (%invalid-pointer-integer/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"void *\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"void *\""
+    obj))
 
 (define-argument-validation (size_t/false who obj)
   (or (not obj) (words.size_t? obj))
-  (%invalid-size_t/false who obj))
-
-(define-inline (%invalid-size_t/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"size_t\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"size_t\""
+    obj))
 
 (define-argument-validation (ssize_t/false who obj)
   (or (not obj) (words.ssize_t? obj))
-  (%invalid-ssize_t/false who obj))
-
-(define-inline (%invalid-ssize_t/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"ssize_t\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"ssize_t\""
+    obj))
 
 (define-argument-validation (off_t/false who obj)
   (or (not obj) (words.off_t? obj))
-  (%invalid-off_t/false who obj))
-
-(define-inline (%invalid-off_t/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"off_t\"" obj))
-
-;;; --------------------------------------------------------------------
+    "expected false or exact integer in the range of the C language type \"off_t\""
+    obj))
 
 (define-argument-validation (ptrdiff_t/false who obj)
   (or (not obj) (words.ptrdiff_t? obj))
-  (%invalid-ptrdiff_t/false who obj))
-
-(define-inline (%invalid-ptrdiff_t/false who obj)
   (assertion-violation who
-    "expected false or exact integer in the range of the C language type \"ptrdiff_t\"" obj))
+    "expected false or exact integer in the range of the C language type \"ptrdiff_t\""
+    obj))
 
 
 ;;;; strings
@@ -1263,54 +887,27 @@
 
 (define-argument-validation (string who obj)
   (string? obj)
-  (%invalid-string who obj))
-
-(define-inline (%invalid-string who obj)
   (assertion-violation who "expected string as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (string/false who obj)
   (or (not obj) (string? obj))
-  (%invalid-string/false who obj))
-
-(define-inline (%invalid-string/false who obj)
   (assertion-violation who "expected false or string as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-empty-string who obj)
   (and (string? obj)
        ($fx< 0 ($string-length obj)))
-  (%invalid-non-empty-string who obj))
-
-(define-inline (%invalid-non-empty-string who obj)
   (assertion-violation who "expected non-empty string as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-empty-string/false who obj)
   (or (not obj)
       (and (string? obj)
 	   ($fx< 0 ($string-length obj))))
-  (%invalid-non-empty-string/false who obj))
-
-(define-inline (%invalid-non-empty-string/false who obj)
   (assertion-violation who "expected false or non-empty string as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-string who str idx)
   ;;We assume that STR has already been validated as string.
   (index-for-string? str idx)
-  (%invalid-index-for-string who str idx))
-
-(define-inline (%invalid-index-for-string who str idx)
-  (assertion-violation who
-    "expected valid fixnum as index for string argument"
-    idx str))
-
-;;; --------------------------------------------------------------------
+  (assertion-violation who "expected valid fixnum as index for string argument" idx str))
 
 (define-argument-validation (index-and-count-for-string who str idx count)
   ;;We assume that STR has already been validated as string.
@@ -1318,37 +915,24 @@
        (fixnum? count)
        (let ((end (+ idx count)))
 	 (one-off-index-for-string? str end)))
-  (%invalid-index-and-count-for-string who str idx count))
-
-(define-inline (%invalid-index-and-count-for-string who str idx count)
   (assertion-violation who
     "expected valid fixnums as arguments for string index and character count"
     idx count str))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-and-end-for-string who str start end)
   ;;We assume that STR has already been validated as string.
   (and (index-for-string? str start)
        (index-for-string? str end)
        ($fx<= start end))
-  (%invalid-start-and-end-for-string who str start end))
-
-(define-inline (%invalid-start-and-end-for-string who str start end)
   (assertion-violation who
     "expected valid fixnums as arguments for start and end string indexes"
     start end str))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-and-past-for-string who str start past)
   ;;We assume that STR has already been validated as string.
   (and (index-for-string? str start)
        (one-off-index-for-string? str past)
        ($fx<= start past))
-  (%invalid-start-and-past-for-string who str start past))
-
-(define-inline (%invalid-start-and-past-for-string who str start past)
   (assertion-violation who
     "expected valid fixnums as arguments for start and past string indexes"
     start past str))
@@ -1370,54 +954,27 @@
 
 (define-argument-validation (vector who obj)
   (vector? obj)
-  (%invalid-vector who obj))
-
-(define-inline (%invalid-vector who obj)
   (assertion-violation who "expected vector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (vector/false who obj)
   (or (not obj) (vector? obj))
-  (%invalid-vector/false who obj))
-
-(define-inline (%invalid-vector/false who obj)
   (assertion-violation who "expected false or vector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-empty-vector who obj)
   (and (vector? obj)
        ($fx< 0 ($vector-length obj)))
-  (%invalid-non-empty-vector who obj))
-
-(define-inline (%invalid-non-empty-vector who obj)
   (assertion-violation who "expected non-empty vector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-empty-vector/false who obj)
   (or (not obj)
       (and (vector? obj)
 	   ($fx< 0 ($vector-length obj))))
-  (%invalid-non-empty-vector/false who obj))
-
-(define-inline (%invalid-non-empty-vector/false who obj)
   (assertion-violation who "expected false or non-empty vector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-vector who vec idx)
   ;;We assume that VEC has already been validated as vector.
   (index-for-vector? vec idx)
-  (%invalid-index-for-vector who vec idx))
-
-(define-inline (%invalid-index-for-vector who vec idx)
-  (assertion-violation who
-    "expected valid fixnum as index for vector argument"
-    idx vec))
-
-;;; --------------------------------------------------------------------
+  (assertion-violation who "expected valid fixnum as index for vector argument" idx vec))
 
 (define-argument-validation (index-and-count-for-vector who vec idx count)
   ;;We assume that VEC has already been validated as vector.
@@ -1425,37 +982,24 @@
        (fixnum? count)
        (let ((end (+ idx count)))
 	 (one-off-index-for-vector? vec end)))
-  (%invalid-index-and-count-for-vector who vec idx count))
-
-(define-inline (%invalid-index-and-count-for-vector who vec idx count)
   (assertion-violation who
     "expected valid fixnums as arguments for vector index and character count"
     idx count vec))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-and-end-for-vector who vec start end)
   ;;We assume that VEC has already been validated as vector.
   (and (index-for-vector? vec start)
        (index-for-vector? vec end)
        ($fx<= start end))
-  (%invalid-start-and-end-for-vector who vec start end))
-
-(define-inline (%invalid-start-and-end-for-vector who vec start end)
   (assertion-violation who
     "expected valid fixnums as arguments for start and end vector indexes"
     start end vec))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-and-past-for-vector who vec start past)
   ;;We assume that VEC has already been validated as vector.
   (and (index-for-vector? vec start)
        (one-off-index-for-vector? vec past)
        ($fx<= start past))
-  (%invalid-start-and-past-for-vector who vec start past))
-
-(define-inline (%invalid-start-and-past-for-vector who vec start past)
   (assertion-violation who
     "expected valid fixnums as arguments for start and past vector indexes"
     start past vec))
@@ -1477,54 +1021,27 @@
 
 (define-argument-validation (bytevector who obj)
   (bytevector? obj)
-  (%invalid-bytevector who obj))
-
-(define-inline (%invalid-bytevector who obj)
   (assertion-violation who "expected bytevector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (bytevector/false who obj)
   (or (not obj) (bytevector? obj))
-  (%invalid-bytevector/false who obj))
-
-(define-inline (%invalid-bytevector/false who obj)
   (assertion-violation who "expected false or bytevector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-empty-bytevector who obj)
   (and (bytevector? obj)
        ($fx< 0 ($bytevector-length obj)))
-  (%invalid-non-empty-bytevector who obj))
-
-(define-inline (%invalid-non-empty-bytevector who obj)
   (assertion-violation who "expected non-empty bytevector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (non-empty-bytevector/false who obj)
   (or (not obj)
       (and (bytevector? obj)
 	   ($fx< 0 ($bytevector-length obj))))
-  (%invalid-non-empty-bytevector/false who obj))
-
-(define-inline (%invalid-non-empty-bytevector/false who obj)
   (assertion-violation who "expected false or non-empty bytevector as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (index-for-bytevector who vec idx)
   ;;We assume that VEC has already been validated as bytevector.
   (index-for-bytevector? vec idx)
-  (%invalid-index-for-bytevector who vec idx))
-
-(define-inline (%invalid-index-for-bytevector who vec idx)
-  (assertion-violation who
-    "expected valid fixnum as index for bytevector argument"
-    idx vec))
-
-;;; --------------------------------------------------------------------
+  (assertion-violation who "expected valid fixnum as index for bytevector argument" idx vec))
 
 (define-argument-validation (index-and-count-for-bytevector who vec idx count)
   ;;We assume that VEC has already been validated as bytevector.
@@ -1532,37 +1049,24 @@
        (fixnum? count)
        (let ((end (+ idx count)))
 	 (one-off-index-for-bytevector? vec end)))
-  (%invalid-index-and-count-for-bytevector who vec idx count))
-
-(define-inline (%invalid-index-and-count-for-bytevector who vec idx count)
   (assertion-violation who
     "expected valid fixnums as arguments for bytevector index and character count"
     idx count vec))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-and-end-for-bytevector who vec start end)
   ;;We assume that VEC has already been validated as bytevector.
   (and (index-for-bytevector? vec start)
        (index-for-bytevector? vec end)
        ($fx<= start end))
-  (%invalid-start-and-end-for-bytevector who vec start end))
-
-(define-inline (%invalid-start-and-end-for-bytevector who vec start end)
   (assertion-violation who
     "expected valid fixnums as arguments for start and end bytevector indexes"
     start end vec))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (start-and-past-for-bytevector who vec start past)
   ;;We assume that VEC has already been validated as bytevector.
   (and (index-for-bytevector? vec start)
        (one-off-index-for-bytevector? vec past)
        ($fx<= start past))
-  (%invalid-start-and-past-for-bytevector who vec start past))
-
-(define-inline (%invalid-start-and-past-for-bytevector who vec start past)
   (assertion-violation who
     "expected valid fixnums as arguments for start and past bytevector indexes"
     start past vec))
@@ -1572,18 +1076,10 @@
 
 (define-argument-validation (symbol who obj)
   (symbol? obj)
-  (%invalid-symbol who obj))
-
-(define-inline (%invalid-symbol who obj)
   (assertion-violation who "expected symbol as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (symbol/false who obj)
   (or (not obj) (symbol? obj))
-  (%invalid-symbol/false who obj))
-
-(define-inline (%invalid-symbol/false who obj)
   (assertion-violation who "expected false or symbol as argument" obj))
 
 
@@ -1591,19 +1087,52 @@
 
 (define-argument-validation (enum-set who obj)
   (enum-set? obj)
-  (%invalid-enum-set who obj))
-
-(define-inline (%invalid-enum-set who obj)
   (assertion-violation who "expected enum-set as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (enum-set/false who obj)
   (or (not obj) (enum-set? obj))
-  (%invalid-enum-set/false who obj))
-
-(define-inline (%invalid-enum-set/false who obj)
   (assertion-violation who "expected false or enum-set as argument" obj))
+
+
+;;;; ports
+
+(define-argument-validation (port who obj)
+  (port? obj)
+  (assertion-violation who "expected port as argument" obj))
+
+(define-argument-validation (port/false who obj)
+  (or (not obj) (port? obj))
+  (assertion-violation who "expected false or port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (input-port who obj)
+  (input-port? obj)
+  (assertion-violation who "expected input port as argument" obj))
+
+(define-argument-validation (input-port/false who obj)
+  (or (not obj) (input-port? obj))
+  (assertion-violation who "expected false or input port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (output-port who obj)
+  (output-port? obj)
+  (assertion-violation who "expected output port as argument" obj))
+
+(define-argument-validation (output-port/false who obj)
+  (or (not obj) (output-port? obj))
+  (assertion-violation who "expected false or output port as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (input/output-port who obj)
+  (input/output-port? obj)
+  (assertion-violation who "expected input/output port as argument" obj))
+
+(define-argument-validation (input/output-port/false who obj)
+  (or (not obj) (input/output-port? obj))
+  (assertion-violation who "expected false or input/output port as argument" obj))
 
 
 ;;;; done
