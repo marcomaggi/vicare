@@ -40,6 +40,9 @@
     vicare.argument-validation-for-non-positive-fixnum
     vicare.argument-validation-for-non-negative-fixnum
     vicare.argument-validation-for-fixnum-in-inclusive-range
+    vicare.argument-validation-for-fixnum-in-exclusive-range
+    vicare.argument-validation-for-even-fixnum
+    vicare.argument-validation-for-odd-fixnum
 
     )
   (import (ikarus)
@@ -301,6 +304,41 @@
 		   (number->string min) ", " (number->string max)
 		   "] as argument")
     obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (fixnum-in-exclusive-range ?who ?obj ?min ?max)
+  (and (fixnum? ?obj)
+       ($fx> ?obj ?min)
+       ($fx< ?obj ?max))
+  (%invalid-fixnum-in-exclusive-range ?who ?obj ?min ?max))
+
+(define (%invalid-fixnum-in-exclusive-range who obj min max)
+  (assertion-violation who
+    (string-append "expected fixnum in exclusive range ("
+		   (number->string min) ", " (number->string max)
+		   ") as argument")
+    obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (even-fixnum who obj)
+  (and (fixnum? obj)
+       (fxeven? obj))
+  (%invalid-even-fixnum who obj))
+
+(define (%invalid-even-fixnum who obj)
+  (assertion-violation who "expected even fixnum as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (odd-fixnum who obj)
+  (and (fixnum? obj)
+       (fxodd? obj))
+  (%invalid-odd-fixnum who obj))
+
+(define (%invalid-odd-fixnum who obj)
+  (assertion-violation who "expected odd fixnum as argument" obj))
 
 
 ;;;; done

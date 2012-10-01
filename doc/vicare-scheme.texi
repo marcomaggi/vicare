@@ -18534,8 +18534,8 @@ If arguments validation is enabled: expand to code that validates the
 evaluate the @meta{body} forms; if arguments validation is disabled:
 just evaluate the @meta{body} forms.
 
-@meta{who} must be an identifier and it is used as first argument to the
-validator macro.
+@meta{who} must be an identifier used as argument when building a
+@condition{who} condition object.
 
 @meta{validator} must be an identifier previously used as name of
 validation clause by the @func{define-argument-validation} macro.
@@ -18645,6 +18645,19 @@ Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
 strictly positive or strictly negative.
 @end deffn
 
+
+@deffn {Validation Clause} fixnum-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} fixnum-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is in
+the specified range.  @var{min} and @var{max} must be fixnums.
+@end deffn
+
+
+@deffn {Validation Clause} even-fixnum @var{obj}
+@deffnx {Validation Clause} odd-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and the
+predicate @func{fxeven?} or @func{fxodd?}.
+@end deffn
 
 @c page
 @node include

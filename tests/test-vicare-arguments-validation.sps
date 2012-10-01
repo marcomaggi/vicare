@@ -212,6 +212,83 @@
       (doit #f fixnum-in-inclusive-range 0 100 200)
     => '(0))
 
+;;; --------------------------------------------------------------------
+;;; fixnum-in-exclusive-range
+
+  (check
+      (doit #f fixnum-in-exclusive-range +123 100 200)
+    => #t)
+
+  (check
+      (doit #f fixnum-in-exclusive-range +100 100 200)
+    => '(100))
+
+  (check
+      (doit #f fixnum-in-exclusive-range +200 100 200)
+    => '(200))
+
+  (check
+      (doit #f fixnum-in-exclusive-range 'ciao 100 200)
+    => '(ciao))
+
+  (check
+      (doit #f fixnum-in-exclusive-range 0 100 200)
+    => '(0))
+
+;;; --------------------------------------------------------------------
+;;; even-fixnum
+
+  (check
+      (doit #f even-fixnum 2)
+    => #t)
+
+  (check
+      (doit #f even-fixnum 3)
+    => '(3))
+
+  (check
+      (doit #f even-fixnum -2)
+    => #t)
+
+  (check
+      (doit #f even-fixnum -3)
+    => '(-3))
+
+  (check
+      (doit #f even-fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f even-fixnum 0)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; odd-fixnum
+
+  (check
+      (doit #f odd-fixnum 2)
+    => '(2))
+
+  (check
+      (doit #f odd-fixnum 3)
+    => #t)
+
+  (check
+      (doit #f odd-fixnum -2)
+    => '(-2))
+
+  (check
+      (doit #f odd-fixnum -3)
+    => #t)
+
+  (check
+      (doit #f odd-fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f odd-fixnum 0)
+    => '(0))
+
   #t)
 
 
