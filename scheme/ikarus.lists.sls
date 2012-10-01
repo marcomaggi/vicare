@@ -552,11 +552,11 @@
 	     ((?check x))
 	   (%race ls ls ls x))))))
 
-(define-remover remq eq? #t)
+(define-remover remq eq? void)
 
-(define-remover remv eqv? #t)
+(define-remover remv eqv? void)
 
-(define-remover remove equal? #t)
+(define-remover remove equal? void)
 
 (define-remover remp (lambda (elt p) (p elt)) procedure)
 
