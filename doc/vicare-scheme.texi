@@ -18453,6 +18453,8 @@ Predefined validation clauses
 * args bits::                   Validating bit--sized integers.
 * args signed int::             Validating C language @code{int} values.
 * args clang::                  Validating C language values.
+* args string::                 Validating string and related arguments.
+* args vector::                 Validating vector and related arguments.
 @end menu
 
 @c page
@@ -18979,6 +18981,148 @@ variant, in the range of a C language type @code{off_t}.
 @deffnx {Validation Clause} ptrdiff_t/false @var{obj}
 Succeed if @var{obj} is an exact integer, or @false{} for the second
 variant, in the range of a C language type @code{ptrdiff_t}.
+@end deffn
+
+@c page
+@node args string
+@subsection Validating string and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} string @var{obj}
+Succeed if @var{obj} is a string.
+@end deffn
+
+
+@deffn {Validation Clause} string/false @var{obj}
+Succeed if @var{obj} is @false{} or a string.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-string @var{obj}
+Succeed if @var{obj} is a string and its length is greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-string/false @var{obj}
+Succeed if @var{obj} is @false{} or a string and its length is greater
+than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-string @var{str} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{str}, which is expected to be an already validated string.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-string @var{str} @var{idx} @var{count}
+Assuming that @var{str} is an already validated string: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{str},
+and @var{count} is a fixnum which can be used as characters count in
+@var{str} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a substring of
+@var{str}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-string @var{str} @var{start} @var{end}
+Assuming that @var{str} is an already validated string: succeed if both
+@var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{str}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a substring of
+@var{str} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-string @var{str} @var{start} @var{past}
+Assuming that @var{str} is an already validated string: succeed if both
+@var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} < (string-length @var{str})
+@var{start} <= @var{past} <= (string-length @var{str})
+@end example
+
+In other words: @var{start} and @var{past} select a substring of
+@var{str} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args vector
+@subsection Validating vector and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} vector @var{obj}
+Succeed if @var{obj} is a vector.
+@end deffn
+
+
+@deffn {Validation Clause} vector/false @var{obj}
+Succeed if @var{obj} is @false{} or a vector.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-vector @var{obj}
+Succeed if @var{obj} is a vector and its length is greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-vector/false @var{obj}
+Succeed if @var{obj} is @false{} or a vector and its length is greater
+than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-vector @var{vec} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{vec}, which is expected to be an already validated vector.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-vector @var{vec} @var{idx} @var{count}
+Assuming that @var{vec} is an already validated vector: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{vec},
+and @var{count} is a fixnum which can be used as characters count in
+@var{vec} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a subvector of
+@var{vec}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-vector @var{vec} @var{start} @var{end}
+Assuming that @var{vec} is an already validated vector: succeed if both
+@var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{vec}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a subvector of
+@var{vec} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-vector @var{vec} @var{start} @var{past}
+Assuming that @var{vec} is an already validated vector: succeed if both
+@var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} < (vector-length @var{vec})
+@var{start} <= @var{past} <= (vector-length @var{vec})
+@end example
+
+In other words: @var{start} and @var{past} select a subvector of
+@var{vec} by specifying left--inclusive and right--exclusive limits.
 @end deffn
 
 @c page

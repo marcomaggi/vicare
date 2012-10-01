@@ -1213,6 +1213,281 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-string))
+
+;;; string
+
+  (check
+      (doit #f string "123")
+    => #t)
+
+  (check
+      (doit #f string 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; string/false
+
+  (check
+      (doit #f string/false "123")
+    => #t)
+
+  (check
+      (doit #f string/false #f)
+    => #t)
+
+  (check
+      (doit #f string/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; non-empty-string
+
+  (check
+      (doit #f non-empty-string "123")
+    => #t)
+
+  (check
+      (doit #f non-empty-string "")
+    => '(""))
+
+  (check
+      (doit #f non-empty-string 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; non-empty-string/false
+
+  (check
+      (doit #f non-empty-string/false "123")
+    => #t)
+
+  (check
+      (doit #f non-empty-string/false #f)
+    => #t)
+
+  (check
+      (doit #f non-empty-string/false "")
+    => '(""))
+
+  (check
+      (doit #f non-empty-string/false 'ciao)
+    => '(ciao))
+
+
+;;; --------------------------------------------------------------------
+;;; index-for-string
+
+  (check
+      (doit #f index-for-string "123" 0)
+    => #t)
+
+  (check
+      (doit #f index-for-string "123" 2)
+    => #t)
+
+  (check
+      (doit #f index-for-string "123" 3)
+    => '(3 "123"))
+
+  (check
+      (doit #f index-for-string "123" 'ciao)
+    => '(ciao "123"))
+
+;;; --------------------------------------------------------------------
+;;; index-and-count-for-string
+
+  (check (doit #f index-and-count-for-string "123" 0 0)	=> #t)
+  (check (doit #f index-and-count-for-string "123" 0 1)	=> #t)
+  (check (doit #f index-and-count-for-string "123" 0 2) => #t)
+  (check (doit #f index-and-count-for-string "123" 0 3) => #t)
+  (check (doit #f index-and-count-for-string "123" 0 4) => '(0 4 "123"))
+
+  (check
+      (doit #f index-and-count-for-string "123" 'ciao 2)
+    => '(ciao 2 "123"))
+
+  (check
+      (doit #f index-and-count-for-string "123" 2 'ciao)
+    => '(2 ciao "123"))
+
+;;; --------------------------------------------------------------------
+;;; start-and-end-for-string
+
+  (check (doit #f start-and-end-for-string "123" 0 0)	=> #t)
+  (check (doit #f start-and-end-for-string "123" 0 1)	=> #t)
+  (check (doit #f start-and-end-for-string "123" 0 2)	=> #t)
+  (check (doit #f start-and-end-for-string "123" 0 3)	=> '(0 3 "123"))
+
+  (check (doit #f start-and-end-for-string "123" 0 0)	=> #t)
+  (check (doit #f start-and-end-for-string "123" 1 1)	=> #t)
+  (check (doit #f start-and-end-for-string "123" 2 2)	=> #t)
+  (check (doit #f start-and-end-for-string "123" 3 3)	=> '(3 3 "123"))
+
+  (check (doit #f start-and-end-for-string "123" 2 1)	=> '(2 1 "123"))
+
+  (check
+      (doit #f start-and-end-for-string "123" 'ciao 2)
+    => '(ciao 2 "123"))
+
+  (check
+      (doit #f start-and-end-for-string "123" 2 'ciao)
+    => '(2 ciao "123"))
+
+;;; --------------------------------------------------------------------
+;;; start-and-past-for-string
+
+  (check (doit #f start-and-past-for-string "123" 0 0)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 0 1)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 0 2)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 0 3)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 0 4)	=> '(0 4 "123"))
+
+  (check (doit #f start-and-past-for-string "123" 0 0)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 1 1)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 2 2)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 2 3)	=> #t)
+  (check (doit #f start-and-past-for-string "123" 3 3)	=> '(3 3 "123"))
+
+  (check (doit #f start-and-past-for-string "123" 2 1)	=> '(2 1 "123"))
+
+  (check
+      (doit #f start-and-past-for-string "123" 'ciao 2)
+    => '(ciao 2 "123"))
+
+  (check
+      (doit #f start-and-past-for-string "123" 2 'ciao)
+    => '(2 ciao "123"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-vector))
+
+;;; vector
+
+  (check
+      (doit #f vector '#(1 2 3))
+    => #t)
+
+  (check
+      (doit #f vector 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; vector/false
+
+  (check
+      (doit #f vector/false '#(1 2 3))
+    => #t)
+
+  (check
+      (doit #f vector/false #f)
+    => #t)
+
+  (check
+      (doit #f vector/false 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; non-empty-vector
+
+  (check
+      (doit #f non-empty-vector '#(1 2 3))
+    => #t)
+
+  (check
+      (doit #f non-empty-vector '#())
+    => '(#()))
+
+  (check
+      (doit #f non-empty-vector 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; non-empty-vector/false
+
+  (check
+      (doit #f non-empty-vector/false '#(1 2 3))
+    => #t)
+
+  (check
+      (doit #f non-empty-vector/false #f)
+    => #t)
+
+  (check
+      (doit #f non-empty-vector/false '#())
+    => '(#()))
+
+  (check
+      (doit #f non-empty-vector/false 'ciao)
+    => '(ciao))
+
+
+;;; --------------------------------------------------------------------
+;;; index-for-vector
+
+  (check
+      (doit #f index-for-vector '#(1 2 3) 0)
+    => #t)
+
+  (check
+      (doit #f index-for-vector '#(1 2 3) 2)
+    => #t)
+
+  (check
+      (doit #f index-for-vector '#(1 2 3) 3)
+    => '(3 #(1 2 3)))
+
+  (check
+      (doit #f index-for-vector '#(1 2 3) 'ciao)
+    => '(ciao #(1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; index-and-count-for-vector
+
+  (check (doit #f index-and-count-for-vector '#(1 2 3) 0 0)	=> #t)
+  (check (doit #f index-and-count-for-vector '#(1 2 3) 0 1)	=> #t)
+  (check (doit #f index-and-count-for-vector '#(1 2 3) 0 2) => #t)
+  (check (doit #f index-and-count-for-vector '#(1 2 3) 0 3) => #t)
+  (check (doit #f index-and-count-for-vector '#(1 2 3) 0 4) => '(0 4 #(1 2 3)))
+
+  (check
+      (doit #f index-and-count-for-vector '#(1 2 3) 'ciao 2)
+    => '(ciao 2 #(1 2 3)))
+
+  (check
+      (doit #f index-and-count-for-vector '#(1 2 3) 2 'ciao)
+    => '(2 ciao #(1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; start-and-past-for-vector
+
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 0 0)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 0 1)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 0 2)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 0 3)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 0 4)	=> '(0 4 #(1 2 3)))
+
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 0 0)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 1 1)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 2 2)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 2 3)	=> #t)
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 3 3)	=> '(3 3 #(1 2 3)))
+
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 2 1)	=> '(2 1 #(1 2 3)))
+
+  (check
+      (doit #f start-and-past-for-vector '#(1 2 3) 'ciao 2)
+    => '(ciao 2 #(1 2 3)))
+
+  (check
+      (doit #f start-and-past-for-vector '#(1 2 3) 2 'ciao)
+    => '(2 ciao #(1 2 3)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

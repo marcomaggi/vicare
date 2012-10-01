@@ -127,6 +127,26 @@
     vicare.argument-validation-for-ssize_t/false
     vicare.argument-validation-for-off_t/false
     vicare.argument-validation-for-ptrdiff_t/false
+
+    ;; strings
+    vicare.argument-validation-for-string
+    vicare.argument-validation-for-string/false
+    vicare.argument-validation-for-non-empty-string
+    vicare.argument-validation-for-non-empty-string/false
+    vicare.argument-validation-for-index-for-string
+    vicare.argument-validation-for-index-and-count-for-string
+    vicare.argument-validation-for-start-and-end-for-string
+    vicare.argument-validation-for-start-and-past-for-string
+
+    ;; vectors
+    vicare.argument-validation-for-vector
+    vicare.argument-validation-for-vector/false
+    vicare.argument-validation-for-non-empty-vector
+    vicare.argument-validation-for-non-empty-vector/false
+    vicare.argument-validation-for-index-for-vector
+    vicare.argument-validation-for-index-and-count-for-vector
+    vicare.argument-validation-for-start-and-end-for-vector
+    vicare.argument-validation-for-start-and-past-for-vector
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1207,6 +1227,220 @@
 (define (%invalid-ptrdiff_t/false who obj)
   (assertion-violation who
     "expected false or exact integer in the range of the C language type \"ptrdiff_t\"" obj))
+
+
+;;;; strings
+
+(define-inline (index-for-string? str idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<  idx ($string-length str))))
+
+(define-inline (one-off-index-for-string? str idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<= idx ($string-length str))))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (string who obj)
+  (string? obj)
+  (%invalid-string who obj))
+
+(define (%invalid-string who obj)
+  (assertion-violation who "expected string as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (string/false who obj)
+  (or (not obj) (string? obj))
+  (%invalid-string/false who obj))
+
+(define (%invalid-string/false who obj)
+  (assertion-violation who "expected false or string as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-empty-string who obj)
+  (and (string? obj)
+       ($fx< 0 ($string-length obj)))
+  (%invalid-non-empty-string who obj))
+
+(define (%invalid-non-empty-string who obj)
+  (assertion-violation who "expected non-empty string as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-empty-string/false who obj)
+  (or (not obj)
+      (and (string? obj)
+	   ($fx< 0 ($string-length obj))))
+  (%invalid-non-empty-string/false who obj))
+
+(define (%invalid-non-empty-string/false who obj)
+  (assertion-violation who "expected false or non-empty string as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-for-string who str idx)
+  ;;We assume that STR has already been validated as string.
+  (index-for-string? str idx)
+  (%invalid-index-for-string who str idx))
+
+(define (%invalid-index-for-string who str idx)
+  (assertion-violation who
+    "expected valid fixnum as index for string argument"
+    idx str))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-and-count-for-string who str idx count)
+  ;;We assume that STR has already been validated as string.
+  (and (index-for-string? str idx)
+       (fixnum? count)
+       (let ((end (+ idx count)))
+	 (one-off-index-for-string? str end)))
+  (%invalid-index-and-count-for-string who str idx count))
+
+(define (%invalid-index-and-count-for-string who str idx count)
+  (assertion-violation who
+    "expected valid fixnums as arguments for string index and character count"
+    idx count str))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-and-end-for-string who str start end)
+  ;;We assume that STR has already been validated as string.
+  (and (index-for-string? str start)
+       (index-for-string? str end)
+       ($fx<= start end))
+  (%invalid-start-and-end-for-string who str start end))
+
+(define (%invalid-start-and-end-for-string who str start end)
+  (assertion-violation who
+    "expected valid fixnums as arguments for start and end string indexes"
+    start end str))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-and-past-for-string who str start past)
+  ;;We assume that STR has already been validated as string.
+  (and (index-for-string? str start)
+       (one-off-index-for-string? str past)
+       ($fx<= start past))
+  (%invalid-start-and-past-for-string who str start past))
+
+(define (%invalid-start-and-past-for-string who str start past)
+  (assertion-violation who
+    "expected valid fixnums as arguments for start and past string indexes"
+    start past str))
+
+
+;;;; vectors
+
+(define-inline (index-for-vector? vec idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<  idx ($vector-length vec))))
+
+(define-inline (one-off-index-for-vector? vec idx)
+  (and (fixnum? idx)
+       ($fx>= idx 0)
+       ($fx<= idx ($vector-length vec))))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (vector who obj)
+  (vector? obj)
+  (%invalid-vector who obj))
+
+(define (%invalid-vector who obj)
+  (assertion-violation who "expected vector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (vector/false who obj)
+  (or (not obj) (vector? obj))
+  (%invalid-vector/false who obj))
+
+(define (%invalid-vector/false who obj)
+  (assertion-violation who "expected false or vector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-empty-vector who obj)
+  (and (vector? obj)
+       ($fx< 0 ($vector-length obj)))
+  (%invalid-non-empty-vector who obj))
+
+(define (%invalid-non-empty-vector who obj)
+  (assertion-violation who "expected non-empty vector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (non-empty-vector/false who obj)
+  (or (not obj)
+      (and (vector? obj)
+	   ($fx< 0 ($vector-length obj))))
+  (%invalid-non-empty-vector/false who obj))
+
+(define (%invalid-non-empty-vector/false who obj)
+  (assertion-violation who "expected false or non-empty vector as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-for-vector who vec idx)
+  ;;We assume that VEC has already been validated as vector.
+  (index-for-vector? vec idx)
+  (%invalid-index-for-vector who vec idx))
+
+(define (%invalid-index-for-vector who vec idx)
+  (assertion-violation who
+    "expected valid fixnum as index for vector argument"
+    idx vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (index-and-count-for-vector who vec idx count)
+  ;;We assume that VEC has already been validated as vector.
+  (and (index-for-vector? vec idx)
+       (fixnum? count)
+       (let ((end (+ idx count)))
+	 (one-off-index-for-vector? vec end)))
+  (%invalid-index-and-count-for-vector who vec idx count))
+
+(define (%invalid-index-and-count-for-vector who vec idx count)
+  (assertion-violation who
+    "expected valid fixnums as arguments for vector index and character count"
+    idx count vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-and-end-for-vector who vec start end)
+  ;;We assume that VEC has already been validated as vector.
+  (and (index-for-vector? vec start)
+       (index-for-vector? vec end)
+       ($fx<= start end))
+  (%invalid-start-and-end-for-vector who vec start end))
+
+(define (%invalid-start-and-end-for-vector who vec start end)
+  (assertion-violation who
+    "expected valid fixnums as arguments for start and end vector indexes"
+    start end vec))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (start-and-past-for-vector who vec start past)
+  ;;We assume that VEC has already been validated as vector.
+  (and (index-for-vector? vec start)
+       (one-off-index-for-vector? vec past)
+       ($fx<= start past))
+  (%invalid-start-and-past-for-vector who vec start past))
+
+(define (%invalid-start-and-past-for-vector who vec start past)
+  (assertion-violation who
+    "expected valid fixnums as arguments for start and past vector indexes"
+    start past vec))
 
 
 ;;;; done
