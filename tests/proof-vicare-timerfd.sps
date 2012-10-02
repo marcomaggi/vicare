@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare platform-constants)
+  (vicare platform constants)
   (only (vicare syntactic-extensions)
 	unwind-protect)
   (prefix (vicare posix) px.)

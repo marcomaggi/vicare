@@ -7319,7 +7319,7 @@ level, @value{PRJNAME} defines it as the fixnum @code{-1}; at present
 all the known error codes fit into fixnums range.  One syntax identifier
 binding for each known @code{errno} value is exported by the library
 @library{vicare errno} and reexported by the library @library{vicare
-platform-constants}.
+platform constants}.
 
 If some error codes are not defined on a platform: the corresponding
 binding evaluates to @true{}.  Notice that if no error occurred
@@ -8234,7 +8234,7 @@ to assign it a prefix as follows:
 @end example
 
 All the constants needed to use the interface are available as
-identifier syntaxes exported by the @library{vicare platform-constants}
+identifier syntaxes exported by the @library{vicare platform constants}
 library; if a constant value is not exported file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
@@ -8735,7 +8735,7 @@ a meaningless usage example:
 @example
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.signal-bub-init)
 
@@ -8937,7 +8937,7 @@ to the signal; when not given a new instance is allocated internally.
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (px.signal-bub-init)
@@ -8971,7 +8971,7 @@ represents the maximum interval of time to wait for the signal;
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (px.signal-bub-init)
@@ -9495,7 +9495,7 @@ Example:
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (define fd
   (px.open "name.ext"
@@ -10263,7 +10263,7 @@ and we can use constant values to initialise the fields:
 @example
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (define addr (make-bytevector 4))
 (bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
@@ -10401,7 +10401,7 @@ Addresses in presentation format can be handled as follows:
 #!vicare
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.inet-pton AF_INET "127.0.0.1") @result{} #vu8(127 0 0 1)
 (px.inet-pton AF_INET "ciao")      @error{} invalid arguments
@@ -10914,7 +10914,7 @@ be @code{AF_LOCAL}.
 @example
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
   (px.write a '#vu8(1 2 3 4) 4)
@@ -11159,7 +11159,7 @@ Basically a @tcp{}/@ip{} server should do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((sockaddr    (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (server-sock (px.socket PF_INET SOCK_STREAM 0)))
@@ -11179,7 +11179,7 @@ while a @tcp{}/@ip{} client should to:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (sock     (px.socket PF_INET SOCK_STREAM 0)))
@@ -11194,7 +11194,7 @@ A @udp{}/@ip{} ``server'' should do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((sockaddr   (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (sock       (px.socket PF_INET SOCK_DGRAM 0))
@@ -11216,7 +11216,7 @@ while a @udp{}/@ip{} ``client'' should do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((sockaddr   (px.make-sockaddr_in '#vu8(127 0 0 1) 8081))
       (sock       (px.socket PF_INET SOCK_DGRAM 0))
@@ -11238,7 +11238,7 @@ A Unix--domain socket server should do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let* ((tmpdir       (px.getenv "TMPDIR"))
        (pathname     (string-append tmpdir "/use-me"))
@@ -11260,7 +11260,7 @@ while a Unix--domain socket client should do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let* ((tmpdir    (px.getenv "TMPDIR"))
        (pathname  (string-append tmpdir "/use-me"))
@@ -11278,7 +11278,7 @@ should do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((sockaddr    (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (server-sock (px.socket PF_INET SOCK_STREAM 0)))
@@ -11314,7 +11314,7 @@ do:
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((sockaddr  (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
       (sock      (px.socket PF_INET SOCK_STREAM 0)))
@@ -12352,7 +12352,7 @@ delivered by the expiration of the timer, we have to check the
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (px.signal-bub-init)
@@ -12462,7 +12462,7 @@ representing the value; else an exception is raised.
 #!r6rs
 (import (rnrs)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.confstr/string _CS_PATH)
 @result{} "/bin:/usr/bin"
@@ -12669,7 +12669,7 @@ new instance is allocated, filled and returned.
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.getrlimit RLIMIT_STACK)
 @result{} #["struct-rlimit" rlim_cur=8388608 rlim_max=4294967295]
@@ -12978,7 +12978,7 @@ how to send and receive a message:
 #!vicare
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (define name "/vicare-test")
@@ -13024,7 +13024,7 @@ how to send and receive a message with timeout:
 #!vicare
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (define name "/vicare-test")
@@ -13132,7 +13132,7 @@ for details.
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (only (vicare syntactic-extensions)
         unwind-protect
         callet)
@@ -13381,7 +13381,7 @@ semaphore structure in the shared memory.
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (only (vicare syntactic-extensions)
         unwind-protect
         callet))
@@ -13484,7 +13484,7 @@ the shared memory.
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (only (vicare syntactic-extensions)
         unwind-protect
         callet))
@@ -13613,7 +13613,7 @@ they can be excluded at compile time by giving the option
 @end quotation
 
 All the constants needed to use the interface are available as
-identifier syntaxes exported by the @library{vicare platform-constants}
+identifier syntaxes exported by the @library{vicare platform constants}
 library; if a constant value is not exported file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
@@ -13801,7 +13801,7 @@ the address type with the parameter @var{addrtype} which must be
 
 
 A binding for each of the following constants is exported by
-@library{vicare platform-constants}:
+@library{vicare platform constants}:
 
 @example
 M_E         M_LOG2E     M_LOG10E
@@ -13955,7 +13955,7 @@ Interface to the C function @cfunc{rand}, @glibcref{ISO Random, rand}.
 Return a non--negative exact integer representing the next
 pseudo--random number in the series.  The maximum returned value is
 @code{RAND_MAX}, which is a binding exported by @library{vicare
-platform-constants}.
+platform constants}.
 @end defun
 
 
@@ -13983,13 +13983,13 @@ according to @var{flags}; if it matches return @true{}, else return
 @var{pattern} and @var{string} must be Scheme strings or bytevectors;
 @var{flags} must be a fixnum resulting from the bitwise combination
 (@func{fxior}) of the @code{FNM_} constants exported by @library{vicare
-platform-constants}.
+platform constants}.
 
 @example
 #!r6rs
 (import (vicare)
   (prefix (vicare glibc) glibc.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (glibc.fnmatch "ciao" "ciao"  0)        @result{} #t
 (glibc.fnmatch "ciao" "salut" 0)        @result{} #f
@@ -14038,7 +14038,7 @@ documentation for @cfunc{glob} and the flag @code{GLOB_ERR} for details.
 #!r6rs
 (import (vicare)
   (prefix (vicare glibc) glibc.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (glibc.glob/string "*" 0 #f)
 @result{} ("bin" "boot" "dev" "etc" "home" "lib"
@@ -14062,7 +14062,7 @@ matching:
 #!r6rs
 (import (vicare)
   (prefix (vicare glibc) glibc.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (let ((rex (glibc.regcomp "abc" 0)))
   (glibc.regexec rex "abc" 0))
@@ -14199,7 +14199,7 @@ performed by Unix shell programs.  It works as follows:
 (import (rnrs)
   (prefix (vicare posix) px.)
   (prefix (vicare glibc) glibc.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.setenv "CIAO" "BLU")
 (glibc.wordexp/string "$CIAO" 0)        @result{} #("BLU")
@@ -14427,7 +14427,7 @@ they can be excluded at compile time by giving the option
 @end quotation
 
 All the constants needed to use the interface are available as
-identifier syntaxes exported by the @library{vicare platform-constants}
+identifier syntaxes exported by the @library{vicare platform constants}
 library; if a constant value is not exported, file a feature request for
 the project.  If a constant is not defined on a platform: its value is
 set to @false{}.
@@ -14673,7 +14673,7 @@ Here is a meaningless example showing the mechanics of the epoll @api{}:
           linux.)
   (prefix (vicare posix)
           px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (let-values (((in ou) (px.pipe)))
@@ -14793,7 +14793,7 @@ is pending:
 (import (vicare)
   (prefix (vicare linux) lx.)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.signal-bub-init)
 (let* ((mask  (vector SIGUSR1 SIGUSR2)
@@ -14811,7 +14811,7 @@ now we raise a single signal:
 (import (vicare)
   (prefix (vicare linux) lx.)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.signal-bub-init)
 (let* ((mask  (vector SIGUSR1 SIGUSR2)
@@ -14836,7 +14836,7 @@ now we raise two signals:
 (import (vicare)
   (prefix (vicare linux) lx.)
   (prefix (vicare posix) px.)
-  (vicare platform-constants))
+  (vicare platform constants))
 
 (px.signal-bub-init)
 (let* ((mask  (vector SIGUSR1 SIGUSR2)
@@ -14997,7 +14997,7 @@ The following program watches a timer as time goes by:
 @example
 #!r6rs
 (import (vicare)
-  (vicare platform-constants)
+  (vicare platform constants)
   (only (vicare syntactic-extensions)
         unwind-protect)
   (prefix (vicare posix) px.)
@@ -15046,7 +15046,7 @@ The following example prints the number of timer expirations:
 @example
 #!r6rs
 (import (vicare)
-  (vicare platform-constants)
+  (vicare platform constants)
   (only (vicare syntactic-extensions)
         unwind-protect)
   (prefix (vicare posix) px.)
@@ -15214,7 +15214,7 @@ event on a file:
 (import (vicare)
   (prefix (vicare linux) lx.)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (let* ((infd     (lx.inotify-init))
@@ -19488,7 +19488,7 @@ to the sourced code.
 
 One syntax identifier binding for each known @code{errno} value is
 exported by the library @library{vicare errno} and reexported by the
-library @library{vicare platform-constants}; @ref{iklib errno} for
+library @library{vicare platform constants}; @ref{iklib errno} for
 details on @value{PRJNAME} internal encoding of @code{errno} codes.  The
 following bindings are exported by the library @library{vicare errno}.
 
@@ -19537,13 +19537,13 @@ are @strong{not} meant to be binding identifiers.
 @section Hosting platform utilities
 
 
-@cindex Library @library{vicare platform-constants}
-@cindex @library{vicare platform-constants}, library
+@cindex Library @library{vicare platform constants}
+@cindex @library{vicare platform constants}, library
 @cindex Library @library{vicare platform utilities}
 @cindex @library{vicare platform utilities}, library
 
 
-The library @library{vicare platform-constants} exports one syntax
+The library @library{vicare platform constants} exports one syntax
 identifier binding for each platform constant that makes sense to access
 from Scheme.  The library @library{vicare platform utilities} defines
 helper functions to deal with platform specific issues.
@@ -19559,7 +19559,7 @@ return the corresponding symbol; if @var{code} is not recognised as
 
 @example
 (import (rnrs)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare platform utilities))
 
 (posix-signal->symbol SIGTERM)            @result{} SIGTERM
@@ -19575,7 +19575,7 @@ corresponding symbol; if @var{code} is not recognised as encoded
 
 @example
 (import (rnrs)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare platform utilities))
 
 (errno-code->symbol EINVAL)             @result{} EINVAL
@@ -21280,7 +21280,7 @@ the given initialisation directory, then load it and access the symbol
 (vicare ffi)
 (vicare posix)
 (vicare glibc)
-(vicare platform-constants)
+(vicare platform constants)
 (vicare syntactic-extensions)
 @end example
 
@@ -27015,7 +27015,7 @@ The first example just exchanges a signed integer:
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (let* ((shmem.len (px.sysconf _SC_PAGESIZE))
@@ -27052,7 +27052,7 @@ The second example exchanges a bytevector of known length:
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (let* ((shmem.len (px.sysconf _SC_PAGESIZE))
@@ -27100,7 +27100,7 @@ of memory are enough:
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions))
 
 (define data

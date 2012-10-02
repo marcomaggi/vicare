@@ -604,7 +604,7 @@
     (prefix (vicare unsafe-capi)
 	    capi.)
     (vicare unsafe-unicode)
-    (vicare platform-constants))
+    (vicare platform constants))
 
 
 ;;;; port attributes

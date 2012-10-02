@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (prefix (vicare words) words.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

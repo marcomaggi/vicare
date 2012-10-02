@@ -73,6 +73,9 @@ Notes for revision 0.2d19
 
 * Added library (vicare platform utilities).
 
+* While the  library (vicare  platform-constants) is  still distributed,
+  its use is now deprecated; use (vicare platform constants) instead.
+
 
 Notes for revision 0.2d18
 -------------------------

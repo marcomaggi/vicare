@@ -1,0 +1,1600 @@
+;;;
+;;;Part of: Vicare
+;;;Contents: platform constants
+;;;Date: Mon Nov  7, 2011
+;;;
+;;;Abstract
+;;;
+;;;	Export an  identifier syntax  for each platform  constant.  This
+;;;	library can be used also by Vicare's source code.
+;;;
+;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under the terms of the  GNU General Public License as published by
+;;;the Free Software Foundation, either version 3 of the License, or (at
+;;;your option) any later version.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received  a copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+
+
+(library (vicare platform constants)
+  (export
+
+;;; data type sizes and limits
+
+    SIZEOF_CHAR		SIZEOF_SHORT
+    SIZEOF_INT		SIZEOF_LONG
+    SIZEOF_LONG_LONG
+    SIZEOF_SIZE_T	SIZEOF_SSIZE_T
+    SIZE_T_MAX
+    SSIZE_T_MAX		SSIZE_T_MIN
+    SIZEOF_OFF_T
+    OFF_T_MAX		OFF_T_MIN
+
+    CHAR_BIT		SCHAR_MIN	SCHAR_MAX
+    UCHAR_MAX		CHAR_MIN	CHAR_MAX
+    SHRT_MIN		SHRT_MAX	USHRT_MAX
+    INT_MIN		INT_MAX		UINT_MAX
+    LONG_MIN		LONG_MAX	ULONG_MAX
+    LONG_LONG_MIN	LONG_LONG_MAX	ULONG_LONG_MAX
+    WCHAR_MAX
+
+;;; miscellaneous platform constants
+
+    ;; constants for waitpid and similar
+    WAIT_ANY		WAIT_MYPGRP	WCONTINUED
+    WEXITED		WNOHANG		WNOWAIT
+    WSTOPPED		WUNTRACED
+    P_PID		P_PGID		P_ALL
+    CLD_CONTINUED	CLD_DUMPED	CLD_EXITED
+    CLD_KILLED		CLD_STOPPED	CLD_TRAPPED
+
+;;;These are not fixnums.
+;;;
+;;;__WCLONE		__WALL		__WNOTHREAD
+
+;;; constants for file system inspection
+    S_IFDIR		S_IFCHR		S_IFBLK
+    S_IFREG		S_IFLNK		S_IFSOCK
+    S_IFIFO
+
+;;; seek whence arguments
+    SEEK_SET SEEK_CUR SEEK_END
+
+;;; file descriptor related flags
+    O_ACCMODE		O_APPEND	O_ASYNC
+    O_CREAT		O_EXCL		O_EXEC
+    O_EXLOCK		O_FSYNC		O_IGNORE_CTTY
+    O_NDELAY		O_NOCTTY	O_NOLINK
+    O_NONBLOCK		O_NOTRANS	O_RDONLY
+    O_RDWR		O_READ		O_SHLOCK
+    O_SYNC		O_TRUNC		O_WRITE
+    O_WRONLY
+
+;;; This is GNU specific.
+    O_NOATIME
+
+;;; These are Linux specific.
+    O_CLOEXEC		O_DIRECT	O_DIRECTORY
+    O_LARGEFILE		O_NOFOLLOW	FD_CLOEXEC
+
+    EPOLL_CLOEXEC	EPOLL_CTL_ADD	EPOLL_CTL_MOD
+    EPOLL_CTL_DEL
+    EPOLLIN		EPOLLOUT	EPOLLRDHUP
+    EPOLLPRI		EPOLLERR	EPOLLHUP
+    EPOLLET		EPOLLONESHOT
+
+;;; ioctl action selection
+    F_DUPFD		F_GETFD		F_GETFL
+    F_GETLK		F_GETOWN	F_SETFD
+    F_SETFL		F_SETLKW	F_SETLK
+    F_SETOWN		F_RDLCK		F_UNLCK
+    F_WRLCK
+
+;;; miscellaneous file-related constants
+    R_OK		W_OK		X_OK
+    F_OK
+
+;;; miscellaneous constants
+    L_ctermid		L_tmpnam	L_cuserid
+    EOF			MAXSYMLINKS	MAXPATHLEN
+    CLOCKS_PER_SEC	RAND_MAX
+
+;;; mode bits
+    S_IRUSR		S_IWUSR		S_IXUSR
+    S_IRGRP		S_IWGRP		S_IXGRP
+    S_IROTH		S_IWOTH		S_IXOTH
+    S_IRWXU		S_IRWXG		S_IRWXO
+    S_ISUID		S_ISGID		S_ISVTX
+
+;;; dirent stuff
+    DT_BLK		DT_CHR		DT_DIR
+    DT_FIFO		DT_LNK		DT_REG
+    DT_SOCK		DT_UNKNOWN
+
+;;; constants related to ftw() and nftw()
+    FTW_F		FTW_D		FTW_NS
+    FTW_DNR		FTW_SL		FTW_DP
+    FTW_SLN		FTW_PHYS	FTW_MOUNT
+    FTW_CHDIR		FTW_DEPTH	FTW_ACTIONRETVAL
+    FTW_CONTINUE	FTW_STOP	FTW_SKIP_SUBTREE
+    FTW_SKIP_SIBLINGS
+
+;;; setitimer() stuff
+    ITIMER_REAL		ITIMER_VIRTUAL	ITIMER_PROF
+
+;;; mmap constants
+    MAP_PRIVATE		MAP_SHARED	MAP_FIXED
+    MAP_ANON		MAP_ANONYMOUS	MAP_32BITS
+    MAP_DENYWRITE	MAP_EXECUTABLE	MAP_FILE
+    MAP_GROWSDOWN	MAP_LOCKED	MAP_NONBLOCK
+    MAP_NORESERVE	MAP_POPULATE	MAP_STACK
+    MAP_AUTOGROW	MAP_AUTORESRV	MAP_COPY
+    PROT_READ		PROT_WRITE	PROT_EXEC
+    PROT_NONE		MS_SYNC		MS_ASYNC
+    MREMAP_MAYMOVE
+
+    MADV_NORMAL		MADV_RANDOM	MADV_SEQUENTIAL
+    MADV_WILLNEED	MADV_DONTNEED
+    POSIX_MADV_NORMAL		POSIX_MADV_RANDOM
+    POSIX_MADV_SEQUENTIAL	POSIX_MADV_WILLNEED
+    POSIX_MADV_DONTNEED
+    MCL_CURRENT		MCL_FUTURE
+
+;;; select related symbols
+    FD_SETSIZE
+
+;;; poll related symbols
+    POLLIN		POLLPRI		POLLOUT
+    POLLRDHUP		POLLERR		POLLHUP
+    POLLNVAL
+
+;;; system capacity limitations
+    ARG_MAX		_POSIX_ARG_MAX
+    CHILD_MAX		_POSIX_CHILD_MAX
+    OPEN_MAX		_POSIX_OPEN_MAX
+    STREAM_MAX		_POSIX_STREAM_MAX
+    TZNAME_MAX		_POSIX_TZNAME_MAX
+    NGROUPS_MAX		SSIZE_MAX	RE_DUP_MAX
+
+;;; overall system options
+    _POSIX_JOB_CONTROL	_POSIX_SAVED_IDS
+    _POSIX2_C_DEV	_POSIX2_FORT_DEV
+    _POSIX2_FORT_RUN	_POSIX2_LOCALEDEF
+    _POSIX2_SW_DEV
+
+;;; supported POSIX version
+    _POSIX_VERSION	_POSIX2_C_VERSION
+
+;;; sysconf constants (lexicographic order, lines then rows)
+    _SC_2_CHAR_TERM		_SC_2_C_BIND		_SC_2_C_DEV
+    _SC_2_C_VERSION		_SC_2_FORT_DEV		_SC_2_FORT_RUN
+    _SC_2_LOCALEDEF		_SC_2_PBS		_SC_2_PBS_ACCOUNTING
+    _SC_2_PBS_CHECKPOINT	_SC_2_PBS_LOCATE	_SC_2_PBS_MESSAGE
+    _SC_2_PBS_TRACK		_SC_2_SW_DEV		_SC_2_UPE
+    _SC_2_VERSION		_SC_ADVISORY_INFO	_SC_AIO_LISTIO_MAX
+    _SC_AIO_MAX			_SC_AIO_PRIO_DELTA_MAX	_SC_ARG_MAX
+    _SC_ASYNCHRONOUS_IO		_SC_ATEXIT_MAX		_SC_AVPHYS_PAGES
+    _SC_BARRIERS		_SC_BASE		_SC_BC_BASE_MAX
+    _SC_BC_DIM_MAX		_SC_BC_SCALE_MAX	_SC_BC_STRING_MAX
+    _SC_CHARCLASS_NAME_MAX	_SC_CHAR_BIT		_SC_CHAR_MAX
+    _SC_CHAR_MIN		_SC_CHILD_MAX		_SC_CLK_TCK
+    _SC_CLOCK_SELECTION		_SC_COLL_WEIGHTS_MAX	_SC_CPUTIME
+    _SC_C_LANG_SUPPORT		_SC_C_LANG_SUPPORT_R	_SC_DELAYTIMER_MAX
+    _SC_DEVICE_IO		_SC_DEVICE_SPECIFIC	_SC_DEVICE_SPECIFIC_R
+    _SC_EQUIV_CLASS_MAX		_SC_EXPR_NEST_MAX	_SC_FD_MGMT
+    _SC_FIFO			_SC_FILE_ATTRIBUTES	_SC_FILE_LOCKING
+    _SC_FILE_SYSTEM		_SC_FSYNC		_SC_GETGR_R_SIZE_MAX
+    _SC_GETPW_R_SIZE_MAX	_SC_HOST_NAME_MAX	_SC_INT_MAX
+    _SC_INT_MIN			_SC_IOV_MAX		_SC_IPV6 _SC_RAW_SOCKETS
+    _SC_JOB_CONTROL		_SC_LEVEL1_DCACHE_ASSOC	_SC_LEVEL1_DCACHE_LINESIZE
+    _SC_LEVEL1_DCACHE_SIZE	_SC_LEVEL1_ICACHE_ASSOC	_SC_LEVEL1_ICACHE_LINESIZE
+    _SC_LEVEL1_ICACHE_SIZE	_SC_LEVEL2_CACHE_ASSOC	_SC_LEVEL2_CACHE_LINESIZE
+    _SC_LEVEL2_CACHE_SIZE	_SC_LEVEL3_CACHE_ASSOC	_SC_LEVEL3_CACHE_LINESIZE
+    _SC_LEVEL3_CACHE_SIZE	_SC_LEVEL4_CACHE_ASSOC	_SC_LEVEL4_CACHE_LINESIZE
+    _SC_LEVEL4_CACHE_SIZE	_SC_LINE_MAX		_SC_LOGIN_NAME_MAX
+    _SC_LONG_BIT		_SC_MAPPED_FILES	_SC_MB_LEN_MAX
+    _SC_MEMLOCK			_SC_MEMLOCK_RANGE	_SC_MEMORY_PROTECTION
+    _SC_MESSAGE_PASSING		_SC_MONOTONIC_CLOCK	_SC_MQ_OPEN_MAX
+    _SC_MQ_PRIO_MAX		_SC_MULTI_PROCESS	_SC_NETWORKING
+    _SC_NGROUPS_MAX		_SC_NL_ARGMAX		_SC_NL_LANGMAX
+    _SC_NL_MSGMAX		_SC_NL_NMAX		_SC_NL_SETMAX
+    _SC_NL_TEXTMAX		_SC_NPROCESSORS_CONF	_SC_NPROCESSORS_ONLN
+    _SC_NZERO			_SC_OPEN_MAX		_SC_PAGESIZE
+    _SC_PAGE_SIZE		_SC_PASS_MAX		_SC_PHYS_PAGES
+    _SC_PII			_SC_PII_INTERNET	_SC_PII_INTERNET_DGRAM
+    _SC_PII_INTERNET_STREAM	_SC_PII_OSI		_SC_PII_OSI_CLTS
+    _SC_PII_OSI_COTS		_SC_PII_OSI_M		_SC_PII_SOCKET
+    _SC_PII_XTI			_SC_PIPE		_SC_POLL
+    _SC_PRIORITIZED_IO		_SC_PRIORITY_SCHEDULING	_SC_READER_WRITER_LOCKS
+    _SC_REALTIME_SIGNALS	_SC_REGEXP		_SC_REGEX_VERSION
+    _SC_RE_DUP_MAX		_SC_RTSIG_MAX		_SC_SAVED_IDS
+    _SC_SCHAR_MAX		_SC_SCHAR_MIN		_SC_SELECT
+    _SC_SEMAPHORES		_SC_SEM_NSEMS_MAX	_SC_SEM_VALUE_MAX
+    _SC_SHARED_MEMORY_OBJECTS	_SC_SHELL		_SC_SHRT_MAX
+    _SC_SHRT_MIN		_SC_SIGNALS		_SC_SIGQUEUE_MAX
+    _SC_SINGLE_PROCESS		_SC_SPAWN		_SC_SPIN_LOCKS
+    _SC_SPORADIC_SERVER		_SC_SSIZE_MAX		_SC_STREAMS
+    _SC_STREAM_MAX		_SC_SYMLOOP_MAX		_SC_SYNCHRONIZED_IO
+    _SC_SYSTEM_DATABASE		_SC_SYSTEM_DATABASE_R	_SC_THREADS
+    _SC_THREAD_ATTR_STACKADDR	_SC_THREAD_ATTR_STACKSIZE _SC_THREAD_CPUTIME
+    _SC_THREAD_DESTRUCTOR_ITERATIONS _SC_THREAD_KEYS_MAX _SC_THREAD_PRIORITY_SCHEDULING
+    _SC_THREAD_PRIO_INHERIT	_SC_THREAD_PRIO_PROTECT	_SC_THREAD_PROCESS_SHARED
+    _SC_THREAD_SAFE_FUNCTIONS	_SC_THREAD_SPORADIC_SERVER _SC_THREAD_STACK_MIN
+    _SC_THREAD_THREADS_MAX	_SC_TIMEOUTS		_SC_TIMERS
+    _SC_TIMER_MAX		_SC_TRACE		_SC_TRACE_EVENT_FILTER
+    _SC_TRACE_INHERIT		_SC_TRACE_LOG		_SC_TTY_NAME_MAX
+    _SC_TYPED_MEMORY_OBJECTS	_SC_TZNAME_MAX		_SC_T_IOV_MAX
+    _SC_UCHAR_MAX		_SC_UINT_MAX		_SC_UIO_MAXIOV
+    _SC_ULONG_MAX		_SC_USER_GROUPS		_SC_USER_GROUPS_R
+    _SC_USHRT_MAX		_SC_V6_ILP32_OFF32	_SC_V6_ILP32_OFFBIG
+    _SC_V6_LP64_OFF64		_SC_V6_LPBIG_OFFBIG	_SC_VERSION
+    _SC_WORD_BIT		_SC_XBS5_ILP32_OFF32	_SC_XBS5_ILP32_OFFBIG
+    _SC_XBS5_LP64_OFF64		_SC_XBS5_LPBIG_OFFBIG	_SC_XOPEN_CRYPT
+    _SC_XOPEN_ENH_I18N		_SC_XOPEN_LEGACY	_SC_XOPEN_REALTIME
+    _SC_XOPEN_REALTIME_THREADS	_SC_XOPEN_SHM		_SC_XOPEN_UNIX
+    _SC_XOPEN_VERSION		_SC_XOPEN_XCU_VERSION	_SC_XOPEN_XPG2
+    _SC_XOPEN_XPG3		_SC_XOPEN_XPG4
+
+;;; limits on file system capacity
+    LINK_MAX	MAX_CANON	MAX_INPUT
+    NAME_MAX	PATH_MAX	PIPE_BUF
+    MAXNAMLEN	FILENAME_MAX
+
+;;; optional features in file support
+    _POSIX_CHOWN_RESTRICTED
+    _POSIX_NO_TRUNC
+    _POSIX_VDISABLE
+
+;;; minimum values for file system limits
+    _POSIX_LINK_MAX		_POSIX_MAX_CANON
+    _POSIX_MAX_INPUT		_POSIX_NAME_MAX
+    _POSIX_PATH_MAX		_POSIX_PIPE_BUF
+    SYMLINK_MAX			POSIX_REC_INCR_XFER_SIZE
+    POSIX_REC_MAX_XFER_SIZE	POSIX_REC_MIN_XFER_SIZE
+    POSIX_REC_XFER_ALIGN
+
+;;; constants for pathconf and fpathconf
+    _PC_LINK_MAX		_PC_MAX_CANON		_PC_MAX_INPUT
+    _PC_NAME_MAX		_PC_PATH_MAX		_PC_PIPE_BUF
+    _PC_CHOWN_RESTRICTED	_PC_NO_TRUNC		_PC_VDISABLE
+    _PC_SYNC_IO			_PC_ASYNC_IO		_PC_PRIO_IO
+    _PC_FILESIZEBITS		_PC_REC_INCR_XFER_SIZE	_PC_REC_MAX_XFER_SIZE
+    _PC_REC_MIN_XFER_SIZE	_PC_REC_XFER_ALIGN
+
+;;; glibc system inspection constants
+    BC_BASE_MAX			_POSIX_BC_BASE_MAX
+    BC_DIM_MAX			_POSIX_BC_DIM_MAX
+    BC_SCALE_MAX		_POSIX_BC_SCALE_MAX
+    BC_STRING_MAX		_POSIX_BC_STRING_MAX
+    COLL_WEIGHTS_MAX		_POSIX_COLL_WEIGHTS_MAX
+    EXPR_NEXT_MAX		_POSIX_EXPR_NEXT_MAX
+    LINE_MAX			_POSIX_LINE_MAX
+    EQUIV_CLASS_MAX		_POSIX_EQUIV_CLASS_MAX
+
+;;; string-valued system configuration parameters
+    _CS_PATH			_CS_LFS_CFLAGS
+    _CS_LFS_LDFLAGS		_CS_LFS_LIBS
+    _CS_LFS_LINTFLAGS		_CS_LFS64_CFLAGS
+    _CS_LFS64_LDFLAGS		_CS_LFS64_LIBS
+    _CS_LFS64_LINTFLAGS
+
+;;; file system files pathnames
+    _PATH_MNTTAB		_PATH_FSTAB
+    _PATH_MOUNTED
+
+;;; mount options
+    FSTAB_RW			FSTAB_RQ
+    FSTAB_RO			FSTAB_SW
+    FSTAB_XX
+
+;;; values for the mnt_type field of struct mtab
+    MNTTYPE_IGNORE		MNTTYPE_NFS
+    MNTTYPE_SWAP
+
+;;; values for the mnt_opts field of struct mtab
+    MNTOPT_DEFAULTS		MNTOPT_RO
+    MNTOPT_RW			MNTOPT_SUID
+    MNTOPT_NOSUID		MNTOPT_NOAUTO
+
+;;; options for mount
+    MS_MGC_MASK		MS_REMOUNT	MS_RDONLY
+    S_IMMUTABLE		S_APPEND	MS_NOSUID
+    MS_NOEXEC		MS_NODEV	MS_SYNCHRONOUS
+    MS_MANDLOCK		MS_NOATIME	MS_NODIRATIME
+
+;;; flags for umount2
+    MNT_FORCE
+
+;;; sockets constants
+    SOCK_STREAM		SOCK_DGRAM	SOCK_RAW
+    SOCK_RDM		SOCK_SEQPACKET	SOCK_DCCP
+    SOCK_PACKET		SOCK_CLOEXEC	SOCK_NONBLOCK
+
+    AF_LOCAL		PF_LOCAL
+    AF_UNIX		PF_UNIX
+    AF_FILE		PF_FILE
+    AF_INET		PF_INET
+    AF_INET6		PF_INET6
+    AF_UNSPEC		PF_UNSPEC
+    SHUT_RD		SHUT_WR		SHUT_RDWR
+    IPPORT_RESERVED	IPPORT_USERRESERVED
+    IFNAMSIZ
+
+    MSG_OOB		MSG_PEEK	MSG_DONTROUTE
+
+    SOL_SOCKET		SO_DEBUG	SO_REUSEADDR
+    SO_KEEPALIVE	SO_DONTROUTE	SO_LINGER
+    SO_BROADCAST	SO_OOBINLINE	SO_SNDBUF
+    SO_RCVBUF		SO_TYPE		SO_STYLE
+    SO_ERROR
+
+    INADDR_LOOPBACK	INADDR_ANY	INADDR_BROADCAST
+    INADDR_NONE		INET_ADDRSTRLEN	INET6_ADDRSTRLEN
+
+    AI_ADDRCONFIG	AI_ALL		AI_CANONNAME
+    AI_NUMERIC_HOST	AI_NUMERIC_SERV	AI_PASSIVE
+    AI_V4MAPPED		AI_IDN		AI_CANONIDN
+    AI_IDN_ALLOW_UNASSIGNED	AI_IDN_USE_STD3_ASCII_RULES
+
+    EAI_ADDRFAMILY	EAI_AGAIN	EAI_BADFLAGS
+    EAI_FAIL		EAI_FAMILY	EAI_MEMORY
+    EAI_NODATA		EAI_NONAME	EAI_SERVICE
+    EAI_SOCKTYPE	EAI_SYSTEM
+
+;;; mathematics
+    M_E			M_LOG2E		M_LOG10E
+    M_LN2		M_LN10		M_PI
+    M_PI_2		M_PI_4		M_1_PI
+    M_2_PI		M_2_SQRTPI	M_SQRT2
+    M_SQRT1_2
+
+;;; fnmatch()
+    FNM_NOMATCH		FNM_FILE_NAME	FNM_PATHNAME
+    FNM_PERIOD		FNM_NOESCAPE	FNM_LEADING_DIR
+    FNM_CASEFOLD	FNM_EXTMATCH
+
+;;;; glob() flags
+    GLOB_ERR		GLOB_MARK	GLOB_NOCHECK
+    GLOB_NOSORT		GLOB_NOESCAPE	GLOB_PERIOD
+    GLOB_MAGCHAR	GLOB_BRACE	GLOB_NOMAGIC
+    GLOB_TILDE		GLOB_TILDE_CHECK GLOB_ONLYDIR
+    GLOB_ABORTED	GLOB_NOMATCH	GLOB_NOSPACE
+
+;;;; POSIX regexps
+    REG_BADBR		REG_BADPAT	REG_BADRPT
+    REG_ECOLLATE	REG_ECTYPE	REG_EESCAPE
+    REG_ESUBREG		REG_EBRACK	REG_EPAREN
+    REG_EBRACE		REG_ERANGE
+
+    REG_EXTENDED	REG_ICASE	REG_NOSUB
+    REG_NEWLINE		REG_NOTBOL	REG_NOTEOL
+    REG_NOMATCH		REG_ESPACE
+
+;;;; word expansion
+    WRDE_NOCMD		WRDE_SHOWERR	WRDE_UNDEF
+
+    WRDE_BADCHAR	WRDE_BADVAL	WRDE_CMDSUB
+    WRDE_NOSPACE	WRDE_SYNTAX
+
+;;;; signalfd
+    SFD_CLOEXEC		SFD_NONBLOCK
+
+;;;; timerfd
+    CLOCK_REALTIME	CLOCK_MONOTONIC
+    TFD_CLOEXEC		TFD_NONBLOCK
+    TFD_TIMER_ABSTIME
+
+;;;; inotify
+    IN_NONBLOCK		IN_CLOEXEC
+
+    IN_ACCESS		IN_ATTRIB	IN_CLOSE_WRITE
+    IN_CLOSE_NOWRITE	IN_CREATE	IN_DELETE
+    IN_DELETE_SELF	IN_MODIFY	IN_MOVE_SELF
+    IN_MOVED_FROM	IN_MOVED_TO	IN_OPEN
+    IN_ALL_EVENTS	IN_MOVE		IN_CLOSE
+
+    IN_DONT_FOLLOW	IN_EXCL_UNLINK	IN_MASK_ADD
+    IN_ONESHOT		IN_ONLYDIR	IN_IGNORED
+    IN_ISDIR		IN_Q_OVERFLOW	IN_UNMOUNT
+
+;;;; clock
+    CLOCK_MONOTONIC_RAW CLOCK_PROCESS_CPUTIME_ID
+    CLOCK_THREAD_CPUTIME_ID
+    TIMER_ABSTIME
+
+;;;; struct "siginfo_t", values for field `si_code'
+    SI_ASYNCNL		SI_TKILL		SI_SIGIO
+    SI_ASYNCIO		SI_MESGQ		SI_TIMER
+    SI_QUEUE		SI_USER			SI_KERNEL
+
+;;;; struct "siginfo_t", `si_code' values for SIGILL signal
+    ILL_ILLOPC		ILL_ILLOPN		ILL_ILLADR
+    ILL_ILLTRP		ILL_PRVOPC		ILL_PRVREG
+    ILL_COPROC		ILL_BADSTK
+
+;;;; struct "siginfo_t", `si_code' values for SIGFPE signal
+    FPE_INTDIV		FPE_INTOVF		FPE_FLTDIV
+    FPE_FLTOVF		FPE_FLTUND		FPE_FLTRES
+    FPE_FLTINV		FPE_FLTSUB
+
+;;;; struct "siginfo_t", `si_code' values for SIGSEGV signal
+    SEGV_MAPERR		SEGV_ACCERR
+
+;;;; struct "siginfo_t", `si_code' values for SIGBUS signal
+    BUS_ADRALN		BUS_ADRERR		BUS_OBJERR
+
+;;;; struct "siginfo_t", `si_code' values for SIGTRAP signal
+    TRAP_BRKPT		TRAP_TRACE
+
+;;;; struct "siginfo_t", `si_code' values for SIGCHLD signal.
+;;;
+;;;Already exported above.
+;;;
+;;; CLD_EXITED		CLD_KILLED		CLD_DUMPED
+;;; CLD_TRAPPED		CLD_STOPPED		CLD_CONTINUED
+
+;;;; struct "siginfo_t", `si_code' values for SIGPOLL signal
+    POLL_IN		POLL_OUT		POLL_MSG
+    POLL_ERR		POLL_PRI		POLL_HUP
+
+;;;; struct "sigevent_t", `sigev_notify' values.
+    SIGEV_SIGNAL	SIGEV_NONE		SIGEV_THREAD
+    SIGEV_THREAD_ID
+
+;;; For "setrlimit()" and similar.
+    RLIMIT_AS		RLIMIT_CORE
+    RLIMIT_CPU		RLIMIT_DATA		RLIMIT_FSIZE
+    RLIMIT_LOCKS	RLIMIT_MEMLOCK		RLIMIT_MSGQUEUE
+    RLIMIT_NICE		RLIMIT_NOFILE		RLIMIT_NPROC
+    RLIMIT_RSS		RLIMIT_RTPRIO		RLIMIT_RTTIME
+    RLIMIT_SIGPENDING	RLIMIT_STACK
+
+;;;; For "getrusage()".
+    RUSAGE_SELF		RUSAGE_CHILDREN		RUSAGE_THREAD
+
+;;; --------------------------------------------------------------------
+
+;;; errno codes, reexported from (vicare errno)
+    E2BIG		EACCES		EADDRINUSE
+    EADDRNOTAVAIL	EADV		EAFNOSUPPORT
+    EAGAIN		EALREADY	EBADE
+    EBADF		EBADFD		EBADMSG
+    EBADR		EBADRQC		EBADSLT
+    EBFONT		EBUSY		ECANCELED
+    ECHILD		ECHRNG		ECOMM
+    ECONNABORTED	ECONNREFUSED	ECONNRESET
+    EDEADLK		EDEADLOCK	EDESTADDRREQ
+    EDOM		EDOTDOT		EDQUOT
+    EEXIST		EFAULT		EFBIG
+    EHOSTDOWN		EHOSTUNREACH	EIDRM
+    EILSEQ		EINPROGRESS	EINTR
+    EINVAL		EIO		EISCONN
+    EISDIR		EISNAM		EKEYEXPIRED
+    EKEYREJECTED	EKEYREVOKED	EL2HLT
+    EL2NSYNC		EL3HLT		EL3RST
+    ELIBACC		ELIBBAD		ELIBEXEC
+    ELIBMAX		ELIBSCN		ELNRNG
+    ELOOP		EMEDIUMTYPE	EMFILE
+    EMLINK		EMSGSIZE	EMULTIHOP
+    ENAMETOOLONG	ENAVAIL		ENETDOWN
+    ENETRESET		ENETUNREACH	ENFILE
+    ENOANO		ENOBUFS		ENOCSI
+    ENODATA		ENODEV		ENOENT
+    ENOEXEC		ENOKEY		ENOLCK
+    ENOLINK		ENOMEDIUM	ENOMEM
+    ENOMSG		ENONET		ENOPKG
+    ENOPROTOOPT		ENOSPC		ENOSR
+    ENOSTR		ENOSYS		ENOTBLK
+    ENOTCONN		ENOTDIR		ENOTEMPTY
+    ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
+    ENOTTY		ENOTUNIQ	ENXIO
+    EOPNOTSUPP		EOVERFLOW	EOWNERDEAD
+    EPERM		EPFNOSUPPORT	EPIPE
+    EPROTO		EPROTONOSUPPORT	EPROTOTYPE
+    ERANGE		EREMCHG		EREMOTE
+    EREMOTEIO		ERESTART	EROFS
+    ESHUTDOWN		ESOCKTNOSUPPORT	ESPIPE
+    ESRCH		ESRMNT		ESTALE
+    ESTRPIPE		ETIME		ETIMEDOUT
+    ETOOMANYREFS	ETXTBSY		EUCLEAN
+    EUNATCH		EUSERS		EWOULDBLOCK
+    EXDEV		EXFULL
+
+;;; h_errno codes
+    h_errno-code	case-h_errno
+
+    ;; codes
+    HOST_NOT_FOUND	TRY_AGAIN	NO_RECOVERY
+    NO_ADDRESS
+
+;;; interprocess signals
+    NSIG
+
+    ;; program error
+    SIGFPE		SIGILL		SIGSEGV
+    SIGBUS		SIGABRT		SIGIOT
+    SIGTRAP		SIGEMT		SIGSYS
+
+    ;; termination
+    SIGTERM		SIGINT		SIGQUIT
+    SIGKILL		SIGHUP
+
+    ;; alarm
+    SIGALRM		SIGVRALRM	SIGPROF
+
+    ;; asynchronous I/O
+    SIGIO		SIGURG		SIGPOLL
+
+    ;; job control
+    SIGCHLD		SIGCLD		SIGCONT
+    SIGSTOP		SIGTSTP		SIGTTIN
+    SIGTTOU
+
+    ;; operation error
+    SIGPIPE		SIGLOST		SIGXCPU
+    SIGXSFZ
+
+    ;; misc
+    SIGUSR1		SIGUSR2		SIGWINCH
+    SIGINFO)
+  (import (ikarus)
+    (vicare errno)
+    (only (ikarus system $fx)
+	  $fx=))
+
+
+;;;; helpers
+
+(define-syntax neg
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?code)
+       (let ((N (syntax->datum #'?code)))
+	 (if (number? N)
+	     (- N)
+	   #t))))))
+
+(define-syntax define-inline-constant
+  (syntax-rules ()
+    ((_ ?name ?value)
+     (define-syntax ?name (identifier-syntax ?value)))))
+
+
+;;;; miscellaneous platform constants
+
+(define-inline-constant SIZEOF_CHAR		@SIZEOF_CHAR@)
+(define-inline-constant SIZEOF_SHORT		@SIZEOF_SHORT@)
+(define-inline-constant SIZEOF_INT		@SIZEOF_INT@)
+(define-inline-constant SIZEOF_LONG		@SIZEOF_LONG@)
+(define-inline-constant SIZEOF_LONG_LONG	@SIZEOF_LONG_LONG@)
+(define-inline-constant SIZEOF_SIZE_T		@SIZEOF_SIZE_T@)
+(define-inline-constant SIZEOF_SSIZE_T		@SIZEOF_SSIZE_T@)
+(define-inline-constant SIZEOF_OFF_T		@SIZEOF_OFF_T@)
+
+(define-inline-constant U32MAX		4294967295)	#;(- (expt 2 32) 1)
+(define-inline-constant U32MIN		0)
+(define-inline-constant S32MAX		+2147483647)	#;(- (expt 2 31) 1)
+(define-inline-constant S32MIN		-2147483648)	#;(- (expt 2 31))
+
+(define-inline-constant U64MAX		18446744073709551615)	#;(- (expt 2 64) 1)
+(define-inline-constant U64MIN		0)
+(define-inline-constant S64MAX		+9223372036854775807)	#;(- (expt 2 63) 1)
+(define-inline-constant S64MIN		-9223372036854775808)	#;(- (expt 2 63))
+
+(define-syntax SIZE_T_MAX
+  (if (= 4 @SIZEOF_SIZE_T@)
+      (identifier-syntax U32MAX)
+    (identifier-syntax U64MAX)))
+
+(define-inline-constant SIZE_T_MIN	0)
+
+(define-syntax SSIZE_T_MAX
+  (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax SSIZE_T_MIN
+  (if (= 4 @SIZEOF_SSIZE_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
+
+(define-syntax OFF_T_MAX
+  (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MAX)
+    (identifier-syntax S64MAX)))
+
+(define-syntax OFF_T_MIN
+  (if (= 4 @SIZEOF_OFF_T@)
+      (identifier-syntax S32MIN)
+    (identifier-syntax S64MIN)))
+
+(define-inline-constant CHAR_BIT		@VALUEOF_CHAR_BIT@)
+(define-inline-constant SCHAR_MIN		@VALUEOF_SCHAR_MIN@)
+(define-inline-constant SCHAR_MAX		@VALUEOF_SCHAR_MAX@)
+(define-inline-constant UCHAR_MAX		@VALUEOF_UCHAR_MAX@)
+(define-inline-constant CHAR_MIN		@VALUEOF_CHAR_MIN@)
+(define-inline-constant CHAR_MAX		@VALUEOF_CHAR_MAX@)
+(define-inline-constant SHRT_MIN		@VALUEOF_SHRT_MIN@)
+(define-inline-constant SHRT_MAX		@VALUEOF_SHRT_MAX@)
+(define-inline-constant USHRT_MAX		@VALUEOF_USHRT_MAX@)
+(define-inline-constant INT_MIN			@VALUEOF_INT_MIN@)
+(define-inline-constant INT_MAX			@VALUEOF_INT_MAX@)
+(define-inline-constant UINT_MAX		@VALUEOF_UINT_MAX@)
+(define-inline-constant LONG_MIN		@VALUEOF_LONG_MIN@)
+(define-inline-constant LONG_MAX		@VALUEOF_LONG_MAX@)
+(define-inline-constant ULONG_MAX		@VALUEOF_ULONG_MAX@)
+;; If the "long  long" constants are undefined, assume  that "long long"
+;; is a 64-bit integer.
+(define-inline-constant LONG_LONG_MIN		(or @VALUEOF_LONG_LONG_MIN@
+						    ;; (- (expt 2 63))
+						    -9223372036854775808))
+(define-inline-constant LONG_LONG_MAX		(or @VALUEOF_LONG_LONG_MAX@
+						    ;; (- (expt 2 63) 1)
+						    +9223372036854775807))
+(define-inline-constant ULONG_LONG_MAX		(or @VALUEOF_ULONG_LONG_MAX@
+						    ;; (- (expt 2 64) 1)
+						    18446744073709551615))
+(define-inline-constant WCHAR_MAX		@VALUEOF_WCHAR_MAX@)
+
+;; constants for waitpid
+(define-inline-constant WAIT_ANY		@VALUEOF_WAIT_ANY@)
+(define-inline-constant WAIT_MYPGRP		@VALUEOF_WAIT_MYPGRP@)
+(define-inline-constant WCONTINUED		@VALUEOF_WCONTINUED@)
+(define-inline-constant WEXITED			@VALUEOF_WEXITED@)
+(define-inline-constant WNOHANG			@VALUEOF_WNOHANG@)
+(define-inline-constant WNOWAIT			@VALUEOF_WNOWAIT@)
+(define-inline-constant WSTOPPED		@VALUEOF_WSTOPPED@)
+(define-inline-constant WUNTRACED		@VALUEOF_WUNTRACED@)
+(define-inline-constant P_PID			@VALUEOF_P_PID@)
+(define-inline-constant P_PGID			@VALUEOF_P_PGID@)
+(define-inline-constant P_ALL			@VALUEOF_P_ALL@)
+(define-inline-constant CLD_CONTINUED		@VALUEOF_CLD_CONTINUED@)
+(define-inline-constant CLD_DUMPED		@VALUEOF_CLD_DUMPED@)
+(define-inline-constant CLD_EXITED		@VALUEOF_CLD_EXITED@)
+(define-inline-constant CLD_KILLED		@VALUEOF_CLD_KILLED@)
+(define-inline-constant CLD_STOPPED		@VALUEOF_CLD_STOPPED@)
+(define-inline-constant CLD_TRAPPED		@VALUEOF_CLD_TRAPPED@)
+
+;;; These are not fixnums.
+;;
+;; (define-inline-constant __WCLONE		@VALUEOF___WCLONE@)
+;; (define-inline-constant __WALL		@VALUEOF___WALL@)
+;; (define-inline-constant __WNOTHREAD		@VALUEOF___WNOTHREAD@)
+
+(define-inline-constant S_IFDIR		@VALUEOF_S_IFDIR@)
+(define-inline-constant S_IFCHR		@VALUEOF_S_IFCHR@)
+(define-inline-constant S_IFBLK		@VALUEOF_S_IFBLK@)
+(define-inline-constant S_IFREG		@VALUEOF_S_IFREG@)
+(define-inline-constant S_IFLNK		@VALUEOF_S_IFLNK@)
+(define-inline-constant S_IFSOCK	@VALUEOF_S_IFSOCK@)
+(define-inline-constant S_IFIFO		@VALUEOF_S_IFIFO@)
+
+(define-inline-constant SEEK_SET	@VALUEOF_SEEK_SET@)
+(define-inline-constant SEEK_CUR	@VALUEOF_SEEK_CUR@)
+(define-inline-constant SEEK_END	@VALUEOF_SEEK_END@)
+
+(define-inline-constant O_ACCMODE	@VALUEOF_O_ACCMODE@)
+(define-inline-constant O_APPEND	@VALUEOF_O_APPEND@)
+(define-inline-constant O_ASYNC		@VALUEOF_O_ASYNC@)
+(define-inline-constant O_CREAT		@VALUEOF_O_CREAT@)
+(define-inline-constant O_EXCL		@VALUEOF_O_EXCL@)
+(define-inline-constant O_EXEC		@VALUEOF_O_EXEC@)
+(define-inline-constant O_EXLOCK	@VALUEOF_O_EXLOCK@)
+(define-inline-constant O_FSYNC		@VALUEOF_O_FSYNC@)
+(define-inline-constant O_IGNORE_CTTY	@VALUEOF_O_IGNORE_CTTY@)
+(define-inline-constant O_NDELAY	@VALUEOF_O_NDELAY@)
+(define-inline-constant O_NOCTTY	@VALUEOF_O_NOCTTY@)
+(define-inline-constant O_NOLINK	@VALUEOF_O_NOLINK@)
+(define-inline-constant O_NONBLOCK	@VALUEOF_O_NONBLOCK@)
+(define-inline-constant O_NOTRANS	@VALUEOF_O_NOTRANS@)
+(define-inline-constant O_RDONLY	@VALUEOF_O_RDONLY@)
+(define-inline-constant O_RDWR		@VALUEOF_O_RDWR@)
+(define-inline-constant O_READ		@VALUEOF_O_READ@)
+(define-inline-constant O_SHLOCK	@VALUEOF_O_SHLOCK@)
+(define-inline-constant O_SYNC		@VALUEOF_O_SYNC@)
+(define-inline-constant O_TRUNC		@VALUEOF_O_TRUNC@)
+(define-inline-constant O_WRITE		@VALUEOF_O_WRITE@)
+(define-inline-constant O_WRONLY	@VALUEOF_O_WRONLY@)
+
+(define-inline-constant O_NOATIME	@VALUEOF_O_NOATIME@)
+
+(define-inline-constant O_CLOEXEC	@VALUEOF_O_CLOEXEC@)
+(define-inline-constant O_DIRECT	@VALUEOF_O_DIRECT@)
+(define-inline-constant O_DIRECTORY	@VALUEOF_O_DIRECTORY@)
+(define-inline-constant O_LARGEFILE	@VALUEOF_O_LARGEFILE@)
+(define-inline-constant O_NOFOLLOW	@VALUEOF_O_NOFOLLOW@)
+(define-inline-constant FD_CLOEXEC	@VALUEOF_FD_CLOEXEC@)
+
+(define-inline-constant EPOLL_CLOEXEC	@VALUEOF_EPOLL_CLOEXEC@)
+(define-inline-constant EPOLL_CTL_ADD	@VALUEOF_EPOLL_CTL_ADD@)
+(define-inline-constant EPOLL_CTL_MOD	@VALUEOF_EPOLL_CTL_MOD@)
+(define-inline-constant EPOLL_CTL_DEL	@VALUEOF_EPOLL_CTL_DEL@)
+(define-inline-constant EPOLLIN		@VALUEOF_EPOLLIN@)
+(define-inline-constant EPOLLOUT	@VALUEOF_EPOLLOUT@)
+(define-inline-constant EPOLLRDHUP	@VALUEOF_EPOLLRDHUP@)
+(define-inline-constant EPOLLPRI	@VALUEOF_EPOLLPRI@)
+(define-inline-constant EPOLLERR	@VALUEOF_EPOLLERR@)
+(define-inline-constant EPOLLHUP	@VALUEOF_EPOLLHUP@)
+(define-inline-constant EPOLLET		@VALUEOF_EPOLLET@)
+(define-inline-constant EPOLLONESHOT	@VALUEOF_EPOLLONESHOT@)
+
+(define-inline-constant F_DUPFD		@VALUEOF_F_DUPFD@)
+(define-inline-constant F_GETFD		@VALUEOF_F_GETFD@)
+(define-inline-constant F_GETFL		@VALUEOF_F_GETFL@)
+(define-inline-constant F_GETLK		@VALUEOF_F_GETLK@)
+(define-inline-constant F_GETOWN	@VALUEOF_F_GETOWN@)
+(define-inline-constant F_SETFD		@VALUEOF_F_SETFD@)
+(define-inline-constant F_SETFL		@VALUEOF_F_SETFL@)
+(define-inline-constant F_SETLKW	@VALUEOF_F_SETLKW@)
+(define-inline-constant F_SETLK		@VALUEOF_F_SETLK@)
+(define-inline-constant F_SETOWN	@VALUEOF_F_SETOWN@)
+(define-inline-constant F_RDLCK		@VALUEOF_F_RDLCK@)
+(define-inline-constant F_UNLCK		@VALUEOF_F_UNLCK@)
+(define-inline-constant F_WRLCK		@VALUEOF_F_WRLCK@)
+
+(define-inline-constant R_OK		@VALUEOF_R_OK@)
+(define-inline-constant W_OK		@VALUEOF_W_OK@)
+(define-inline-constant X_OK		@VALUEOF_X_OK@)
+(define-inline-constant F_OK		@VALUEOF_F_OK@)
+
+(define-inline-constant L_ctermid		@VALUEOF_L_ctermid@)
+(define-inline-constant L_tmpnam		@VALUEOF_L_tmpnam@)
+(define-inline-constant CLOCKS_PER_SEC		@VALUEOF_CLOCKS_PER_SEC@)
+
+(define-inline-constant S_IRUSR		@VALUEOF_S_IRUSR@)
+(define-inline-constant S_IWUSR		@VALUEOF_S_IWUSR@)
+(define-inline-constant S_IXUSR		@VALUEOF_S_IXUSR@)
+
+(define-inline-constant S_IRGRP		@VALUEOF_S_IRGRP@)
+(define-inline-constant S_IWGRP		@VALUEOF_S_IWGRP@)
+(define-inline-constant S_IXGRP		@VALUEOF_S_IXGRP@)
+
+(define-inline-constant S_IROTH		@VALUEOF_S_IROTH@)
+(define-inline-constant S_IWOTH		@VALUEOF_S_IWOTH@)
+(define-inline-constant S_IXOTH		@VALUEOF_S_IXOTH@)
+
+(define-inline-constant S_IRWXU		@VALUEOF_S_IRWXU@)
+(define-inline-constant S_IRWXG		@VALUEOF_S_IRWXG@)
+(define-inline-constant S_IRWXO		@VALUEOF_S_IRWXO@)
+
+(define-inline-constant S_ISUID		@VALUEOF_S_ISUID@)
+(define-inline-constant S_ISGID		@VALUEOF_S_ISGID@)
+(define-inline-constant S_ISVTX		@VALUEOF_S_ISVTX@)
+
+(define-inline-constant DT_BLK			@VALUEOF_DT_BLK@)
+(define-inline-constant DT_CHR			@VALUEOF_DT_CHR@)
+(define-inline-constant DT_DIR			@VALUEOF_DT_DIR@)
+(define-inline-constant DT_FIFO			@VALUEOF_DT_FIFO@)
+(define-inline-constant DT_LNK			@VALUEOF_DT_LNK@)
+(define-inline-constant DT_REG			@VALUEOF_DT_REG@)
+(define-inline-constant DT_SOCK			@VALUEOF_DT_SOCK@)
+(define-inline-constant DT_UNKNOWN		@VALUEOF_DT_UNKNOWN@)
+
+(define-inline-constant FTW_F			@VALUEOF_FTW_F@)
+(define-inline-constant FTW_D			@VALUEOF_FTW_D@)
+(define-inline-constant FTW_NS			@VALUEOF_FTW_NS@)
+(define-inline-constant FTW_DNR			@VALUEOF_FTW_DNR@)
+(define-inline-constant FTW_SL			@VALUEOF_FTW_SL@)
+(define-inline-constant FTW_DP			@VALUEOF_FTW_DP@)
+(define-inline-constant FTW_SLN			@VALUEOF_FTW_SLN@)
+(define-inline-constant FTW_PHYS		@VALUEOF_FTW_PHYS@)
+(define-inline-constant FTW_MOUNT		@VALUEOF_FTW_MOUNT@)
+(define-inline-constant FTW_CHDIR		@VALUEOF_FTW_CHDIR@)
+(define-inline-constant FTW_DEPTH		@VALUEOF_FTW_DEPTH@)
+(define-inline-constant FTW_ACTIONRETVAL	@VALUEOF_FTW_ACTIONRETVAL@)
+(define-inline-constant FTW_CONTINUE		@VALUEOF_FTW_CONTINUE@)
+(define-inline-constant FTW_STOP		@VALUEOF_FTW_STOP@)
+(define-inline-constant FTW_SKIP_SUBTREE	@VALUEOF_FTW_SKIP_SUBTREE@)
+(define-inline-constant FTW_SKIP_SIBLINGS	@VALUEOF_FTW_SKIP_SIBLINGS@)
+
+(define-inline-constant ITIMER_REAL		@VALUEOF_ITIMER_REAL@)
+(define-inline-constant ITIMER_VIRTUAL		@VALUEOF_ITIMER_VIRTUAL@)
+(define-inline-constant ITIMER_PROF		@VALUEOF_ITIMER_PROF@)
+
+(define-inline-constant EOF			@VALUEOF_EOF@)
+(define-inline-constant MAXSYMLINKS		@VALUEOF_MAXSYMLINKS@)
+(define-inline-constant MAXPATHLEN		@VALUEOF_MAXPATHLEN@)
+
+(define-inline-constant MAP_PRIVATE		@VALUEOF_MAP_PRIVATE@)
+(define-inline-constant MAP_SHARED		@VALUEOF_MAP_SHARED@)
+(define-inline-constant MAP_FIXED		@VALUEOF_MAP_FIXED@)
+(define-inline-constant MAP_ANON		@VALUEOF_MAP_ANON@)
+(define-inline-constant MAP_ANONYMOUS		@VALUEOF_MAP_ANONYMOUS@)
+(define-inline-constant MAP_32BITS		@VALUEOF_MAP_32BITS@)
+(define-inline-constant MAP_DENYWRITE		@VALUEOF_MAP_DENYWRITE@)
+(define-inline-constant MAP_EXECUTABLE		@VALUEOF_MAP_EXECUTABLE@)
+(define-inline-constant MAP_FILE		@VALUEOF_MAP_FILE@)
+(define-inline-constant MAP_GROWSDOWN		@VALUEOF_MAP_GROWSDOWN@)
+(define-inline-constant MAP_LOCKED		@VALUEOF_MAP_LOCKED@)
+(define-inline-constant MAP_NONBLOCK		@VALUEOF_MAP_NONBLOCK@)
+(define-inline-constant MAP_NORESERVE		@VALUEOF_MAP_NORESERVE@)
+(define-inline-constant MAP_POPULATE		@VALUEOF_MAP_POPULATE@)
+(define-inline-constant MAP_STACK		@VALUEOF_MAP_STACK@)
+(define-inline-constant MAP_AUTOGROW		@VALUEOF_MAP_AUTOGROW@)
+(define-inline-constant MAP_AUTORESRV		@VALUEOF_MAP_AUTORESRV@)
+(define-inline-constant MAP_COPY		@VALUEOF_MAP_COPY@)
+(define-inline-constant PROT_READ		@VALUEOF_PROT_READ@)
+(define-inline-constant PROT_WRITE		@VALUEOF_PROT_WRITE@)
+(define-inline-constant PROT_EXEC		@VALUEOF_PROT_EXEC@)
+(define-inline-constant PROT_NONE		@VALUEOF_PROT_NONE@)
+(define-inline-constant MS_SYNC			@VALUEOF_MS_SYNC@)
+(define-inline-constant MS_ASYNC		@VALUEOF_MS_ASYNC@)
+(define-inline-constant MREMAP_MAYMOVE		@VALUEOF_MREMAP_MAYMOVE@)
+
+(define-inline-constant MADV_NORMAL		@VALUEOF_MADV_NORMAL@)
+(define-inline-constant MADV_RANDOM		@VALUEOF_MADV_RANDOM@)
+(define-inline-constant MADV_SEQUENTIAL		@VALUEOF_MADV_SEQUENTIAL@)
+(define-inline-constant MADV_WILLNEED		@VALUEOF_MADV_WILLNEED@)
+(define-inline-constant MADV_DONTNEED		@VALUEOF_MADV_DONTNEED@)
+(define-inline-constant POSIX_MADV_NORMAL	@VALUEOF_POSIX_MADV_NORMAL@)
+(define-inline-constant POSIX_MADV_RANDOM	@VALUEOF_POSIX_MADV_RANDOM@)
+(define-inline-constant POSIX_MADV_SEQUENTIAL	@VALUEOF_POSIX_MADV_SEQUENTIAL@)
+(define-inline-constant POSIX_MADV_WILLNEED	@VALUEOF_POSIX_MADV_WILLNEED@)
+(define-inline-constant POSIX_MADV_DONTNEED	@VALUEOF_POSIX_MADV_DONTNEED@)
+(define-inline-constant MCL_CURRENT		@VALUEOF_MCL_CURRENT@)
+(define-inline-constant MCL_FUTURE		@VALUEOF_MCL_FUTURE@)
+
+(define-inline-constant FD_SETSIZE		@VALUEOF_FD_SETSIZE@)
+
+(define-inline-constant POLLIN			@VALUEOF_POLLIN@)
+(define-inline-constant POLLPRI			@VALUEOF_POLLPRI@)
+(define-inline-constant POLLOUT			@VALUEOF_POLLOUT@)
+(define-inline-constant POLLRDHUP		@VALUEOF_POLLRDHUP@)
+(define-inline-constant POLLERR			@VALUEOF_POLLERR@)
+(define-inline-constant POLLHUP			@VALUEOF_POLLHUP@)
+(define-inline-constant POLLNVAL		@VALUEOF_POLLNVAL@)
+
+(define-inline-constant L_cuserid		@VALUEOF_L_cuserid@)
+
+(define-inline-constant ARG_MAX			@VALUEOF_ARG_MAX@)
+(define-inline-constant _POSIX_ARG_MAX		@VALUEOF__POSIX_ARG_MAX@)
+(define-inline-constant CHILD_MAX		@VALUEOF_CHILD_MAX@)
+(define-inline-constant _POSIX_CHILD_MAX	@VALUEOF__POSIX_CHILD_MAX@)
+(define-inline-constant OPEN_MAX		@VALUEOF_OPEN_MAX@)
+(define-inline-constant _POSIX_OPEN_MAX		@VALUEOF__POSIX_OPEN_MAX@)
+(define-inline-constant STREAM_MAX		@VALUEOF_STREAM_MAX@)
+(define-inline-constant _POSIX_STREAM_MAX	@VALUEOF__POSIX_STREAM_MAX@)
+(define-inline-constant TZNAME_MAX		@VALUEOF_TZNAME_MAX@)
+(define-inline-constant _POSIX_TZNAME_MAX	@VALUEOF__POSIX_TZNAME_MAX@)
+(define-inline-constant NGROUPS_MAX		@VALUEOF_NGROUPS_MAX@)
+(define-inline-constant SSIZE_MAX		@VALUEOF_SSIZE_MAX@)
+(define-inline-constant RE_DUP_MAX		@VALUEOF_RE_DUP_MAX@)
+
+(define-inline-constant _POSIX_JOB_CONTROL	@VALUEOF__POSIX_JOB_CONTROL@)
+(define-inline-constant _POSIX_SAVED_IDS	@VALUEOF__POSIX_SAVED_IDS@)
+(define-inline-constant _POSIX2_C_DEV		@VALUEOF__POSIX2_C_DEV@)
+(define-inline-constant _POSIX2_FORT_DEV	@VALUEOF__POSIX2_FORT_DEV@)
+(define-inline-constant _POSIX2_FORT_RUN	@VALUEOF__POSIX2_FORT_RUN@)
+(define-inline-constant _POSIX2_LOCALEDEF	@VALUEOF__POSIX2_LOCALEDEF@)
+(define-inline-constant _POSIX2_SW_DEV		@VALUEOF__POSIX2_SW_DEV@)
+
+(define-inline-constant _POSIX_VERSION		@VALUEOF__POSIX_VERSION@)
+(define-inline-constant _POSIX2_C_VERSION	@VALUEOF__POSIX2_C_VERSION@)
+
+(define-inline-constant _SC_2_CHAR_TERM		@VALUEOF__SC_2_CHAR_TERM@)
+(define-inline-constant _SC_2_C_BIND		@VALUEOF__SC_2_C_BIND@)
+(define-inline-constant _SC_2_C_DEV		@VALUEOF__SC_2_C_DEV@)
+(define-inline-constant _SC_2_C_VERSION		@VALUEOF__SC_2_C_VERSION@)
+(define-inline-constant _SC_2_FORT_DEV		@VALUEOF__SC_2_FORT_DEV@)
+(define-inline-constant _SC_2_FORT_RUN		@VALUEOF__SC_2_FORT_RUN@)
+(define-inline-constant _SC_2_LOCALEDEF		@VALUEOF__SC_2_LOCALEDEF@)
+(define-inline-constant _SC_2_PBS		@VALUEOF__SC_2_PBS@)
+(define-inline-constant _SC_2_PBS_ACCOUNTING	@VALUEOF__SC_2_PBS_ACCOUNTING@)
+(define-inline-constant _SC_2_PBS_CHECKPOINT	@VALUEOF__SC_2_PBS_CHECKPOINT@)
+(define-inline-constant _SC_2_PBS_LOCATE	@VALUEOF__SC_2_PBS_LOCATE@)
+(define-inline-constant _SC_2_PBS_MESSAGE	@VALUEOF__SC_2_PBS_MESSAGE@)
+(define-inline-constant _SC_2_PBS_TRACK		@VALUEOF__SC_2_PBS_TRACK@)
+(define-inline-constant _SC_2_SW_DEV		@VALUEOF__SC_2_SW_DEV@)
+(define-inline-constant _SC_2_UPE		@VALUEOF__SC_2_UPE@)
+(define-inline-constant _SC_2_VERSION		@VALUEOF__SC_2_VERSION@)
+(define-inline-constant _SC_ADVISORY_INFO	@VALUEOF__SC_ADVISORY_INFO@)
+(define-inline-constant _SC_AIO_LISTIO_MAX	@VALUEOF__SC_AIO_LISTIO_MAX@)
+(define-inline-constant _SC_AIO_MAX		@VALUEOF__SC_AIO_MAX@)
+(define-inline-constant _SC_AIO_PRIO_DELTA_MAX	@VALUEOF__SC_AIO_PRIO_DELTA_MAX@)
+(define-inline-constant _SC_ARG_MAX		@VALUEOF__SC_ARG_MAX@)
+(define-inline-constant _SC_ASYNCHRONOUS_IO	@VALUEOF__SC_ASYNCHRONOUS_IO@)
+(define-inline-constant _SC_ATEXIT_MAX		@VALUEOF__SC_ATEXIT_MAX@)
+(define-inline-constant _SC_AVPHYS_PAGES	@VALUEOF__SC_AVPHYS_PAGES@)
+(define-inline-constant _SC_BARRIERS		@VALUEOF__SC_BARRIERS@)
+(define-inline-constant _SC_BASE		@VALUEOF__SC_BASE@)
+(define-inline-constant _SC_BC_BASE_MAX		@VALUEOF__SC_BC_BASE_MAX@)
+(define-inline-constant _SC_BC_DIM_MAX		@VALUEOF__SC_BC_DIM_MAX@)
+(define-inline-constant _SC_BC_SCALE_MAX	@VALUEOF__SC_BC_SCALE_MAX@)
+(define-inline-constant _SC_BC_STRING_MAX	@VALUEOF__SC_BC_STRING_MAX@)
+(define-inline-constant _SC_CHARCLASS_NAME_MAX	@VALUEOF__SC_CHARCLASS_NAME_MAX@)
+(define-inline-constant _SC_CHAR_BIT		@VALUEOF__SC_CHAR_BIT@)
+(define-inline-constant _SC_CHAR_MAX		@VALUEOF__SC_CHAR_MAX@)
+(define-inline-constant _SC_CHAR_MIN		@VALUEOF__SC_CHAR_MIN@)
+(define-inline-constant _SC_CHILD_MAX		@VALUEOF__SC_CHILD_MAX@)
+(define-inline-constant _SC_CLK_TCK		@VALUEOF__SC_CLK_TCK@)
+(define-inline-constant _SC_CLOCK_SELECTION	@VALUEOF__SC_CLOCK_SELECTION@)
+(define-inline-constant _SC_COLL_WEIGHTS_MAX	@VALUEOF__SC_COLL_WEIGHTS_MAX@)
+(define-inline-constant _SC_CPUTIME		@VALUEOF__SC_CPUTIME@)
+(define-inline-constant _SC_C_LANG_SUPPORT	@VALUEOF__SC_C_LANG_SUPPORT@)
+(define-inline-constant _SC_C_LANG_SUPPORT_R	@VALUEOF__SC_C_LANG_SUPPORT_R@)
+(define-inline-constant _SC_DELAYTIMER_MAX	@VALUEOF__SC_DELAYTIMER_MAX@)
+(define-inline-constant _SC_DEVICE_IO		@VALUEOF__SC_DEVICE_IO@)
+(define-inline-constant _SC_DEVICE_SPECIFIC	@VALUEOF__SC_DEVICE_SPECIFIC@)
+(define-inline-constant _SC_DEVICE_SPECIFIC_R	@VALUEOF__SC_DEVICE_SPECIFIC_R@)
+(define-inline-constant _SC_EQUIV_CLASS_MAX	@VALUEOF__SC_EQUIV_CLASS_MAX@)
+(define-inline-constant _SC_EXPR_NEST_MAX	@VALUEOF__SC_EXPR_NEST_MAX@)
+(define-inline-constant _SC_FD_MGMT		@VALUEOF__SC_FD_MGMT@)
+(define-inline-constant _SC_FIFO		@VALUEOF__SC_FIFO@)
+(define-inline-constant _SC_FILE_ATTRIBUTES	@VALUEOF__SC_FILE_ATTRIBUTES@)
+(define-inline-constant _SC_FILE_LOCKING	@VALUEOF__SC_FILE_LOCKING@)
+(define-inline-constant _SC_FILE_SYSTEM		@VALUEOF__SC_FILE_SYSTEM@)
+(define-inline-constant _SC_FSYNC		@VALUEOF__SC_FSYNC@)
+(define-inline-constant _SC_GETGR_R_SIZE_MAX	@VALUEOF__SC_GETGR_R_SIZE_MAX@)
+(define-inline-constant _SC_GETPW_R_SIZE_MAX	@VALUEOF__SC_GETPW_R_SIZE_MAX@)
+(define-inline-constant _SC_HOST_NAME_MAX	@VALUEOF__SC_HOST_NAME_MAX@)
+(define-inline-constant _SC_INT_MAX		@VALUEOF__SC_INT_MAX@)
+(define-inline-constant _SC_INT_MIN		@VALUEOF__SC_INT_MIN@)
+(define-inline-constant _SC_IOV_MAX		@VALUEOF__SC_IOV_MAX@)
+(define-inline-constant _SC_IPV6		@VALUEOF__SC_IPV6@)
+(define-inline-constant _SC_JOB_CONTROL		@VALUEOF__SC_JOB_CONTROL@)
+(define-inline-constant _SC_LEVEL1_DCACHE_ASSOC	@VALUEOF__SC_LEVEL1_DCACHE_ASSOC@)
+(define-inline-constant _SC_LEVEL1_DCACHE_LINESIZE @VALUEOF__SC_LEVEL1_DCACHE_LINESIZE@)
+(define-inline-constant _SC_LEVEL1_DCACHE_SIZE	@VALUEOF__SC_LEVEL1_DCACHE_SIZE@)
+(define-inline-constant _SC_LEVEL1_ICACHE_ASSOC	@VALUEOF__SC_LEVEL1_ICACHE_ASSOC@)
+(define-inline-constant _SC_LEVEL1_ICACHE_LINESIZE @VALUEOF__SC_LEVEL1_ICACHE_LINESIZE@)
+(define-inline-constant _SC_LEVEL1_ICACHE_SIZE	@VALUEOF__SC_LEVEL1_ICACHE_SIZE@)
+(define-inline-constant _SC_LEVEL2_CACHE_ASSOC	@VALUEOF__SC_LEVEL2_CACHE_ASSOC@)
+(define-inline-constant _SC_LEVEL2_CACHE_LINESIZE @VALUEOF__SC_LEVEL2_CACHE_LINESIZE@)
+(define-inline-constant _SC_LEVEL2_CACHE_SIZE	@VALUEOF__SC_LEVEL2_CACHE_SIZE@)
+(define-inline-constant _SC_LEVEL3_CACHE_ASSOC	@VALUEOF__SC_LEVEL3_CACHE_ASSOC@)
+(define-inline-constant _SC_LEVEL3_CACHE_LINESIZE @VALUEOF__SC_LEVEL3_CACHE_LINESIZE@)
+(define-inline-constant _SC_LEVEL3_CACHE_SIZE	@VALUEOF__SC_LEVEL3_CACHE_SIZE@)
+(define-inline-constant _SC_LEVEL4_CACHE_ASSOC	@VALUEOF__SC_LEVEL4_CACHE_ASSOC@)
+(define-inline-constant _SC_LEVEL4_CACHE_LINESIZE @VALUEOF__SC_LEVEL4_CACHE_LINESIZE@)
+(define-inline-constant _SC_LEVEL4_CACHE_SIZE	@VALUEOF__SC_LEVEL4_CACHE_SIZE@)
+(define-inline-constant _SC_LINE_MAX		@VALUEOF__SC_LINE_MAX@)
+(define-inline-constant _SC_LOGIN_NAME_MAX	@VALUEOF__SC_LOGIN_NAME_MAX@)
+(define-inline-constant _SC_LONG_BIT		@VALUEOF__SC_LONG_BIT@)
+(define-inline-constant _SC_MAPPED_FILES	@VALUEOF__SC_MAPPED_FILES@)
+(define-inline-constant _SC_MB_LEN_MAX		@VALUEOF__SC_MB_LEN_MAX@)
+(define-inline-constant _SC_MEMLOCK		@VALUEOF__SC_MEMLOCK@)
+(define-inline-constant _SC_MEMLOCK_RANGE	@VALUEOF__SC_MEMLOCK_RANGE@)
+(define-inline-constant _SC_MEMORY_PROTECTION	@VALUEOF__SC_MEMORY_PROTECTION@)
+(define-inline-constant _SC_MESSAGE_PASSING	@VALUEOF__SC_MESSAGE_PASSING@)
+(define-inline-constant _SC_MONOTONIC_CLOCK	@VALUEOF__SC_MONOTONIC_CLOCK@)
+(define-inline-constant _SC_MQ_OPEN_MAX		@VALUEOF__SC_MQ_OPEN_MAX@)
+(define-inline-constant _SC_MQ_PRIO_MAX		@VALUEOF__SC_MQ_PRIO_MAX@)
+(define-inline-constant _SC_MULTI_PROCESS	@VALUEOF__SC_MULTI_PROCESS@)
+(define-inline-constant _SC_NETWORKING		@VALUEOF__SC_NETWORKING@)
+(define-inline-constant _SC_NGROUPS_MAX		@VALUEOF__SC_NGROUPS_MAX@)
+(define-inline-constant _SC_NL_ARGMAX		@VALUEOF__SC_NL_ARGMAX@)
+(define-inline-constant _SC_NL_LANGMAX		@VALUEOF__SC_NL_LANGMAX@)
+(define-inline-constant _SC_NL_MSGMAX		@VALUEOF__SC_NL_MSGMAX@)
+(define-inline-constant _SC_NL_NMAX		@VALUEOF__SC_NL_NMAX@)
+(define-inline-constant _SC_NL_SETMAX		@VALUEOF__SC_NL_SETMAX@)
+(define-inline-constant _SC_NL_TEXTMAX		@VALUEOF__SC_NL_TEXTMAX@)
+(define-inline-constant _SC_NPROCESSORS_CONF	@VALUEOF__SC_NPROCESSORS_CONF@)
+(define-inline-constant _SC_NPROCESSORS_ONLN	@VALUEOF__SC_NPROCESSORS_ONLN@)
+(define-inline-constant _SC_NZERO		@VALUEOF__SC_NZERO@)
+(define-inline-constant _SC_OPEN_MAX		@VALUEOF__SC_OPEN_MAX@)
+(define-inline-constant _SC_PAGESIZE		@VALUEOF__SC_PAGESIZE@)
+(define-inline-constant _SC_PAGE_SIZE		@VALUEOF__SC_PAGE_SIZE@)
+(define-inline-constant _SC_PASS_MAX		@VALUEOF__SC_PASS_MAX@)
+(define-inline-constant _SC_PHYS_PAGES		@VALUEOF__SC_PHYS_PAGES@)
+(define-inline-constant _SC_PII			@VALUEOF__SC_PII@)
+(define-inline-constant _SC_PII_INTERNET	@VALUEOF__SC_PII_INTERNET@)
+(define-inline-constant _SC_PII_INTERNET_DGRAM	@VALUEOF__SC_PII_INTERNET_DGRAM@)
+(define-inline-constant _SC_PII_INTERNET_STREAM	@VALUEOF__SC_PII_INTERNET_STREAM@)
+(define-inline-constant _SC_PII_OSI		@VALUEOF__SC_PII_OSI@)
+(define-inline-constant _SC_PII_OSI_CLTS	@VALUEOF__SC_PII_OSI_CLTS@)
+(define-inline-constant _SC_PII_OSI_COTS	@VALUEOF__SC_PII_OSI_COTS@)
+(define-inline-constant _SC_PII_OSI_M		@VALUEOF__SC_PII_OSI_M@)
+(define-inline-constant _SC_PII_SOCKET		@VALUEOF__SC_PII_SOCKET@)
+(define-inline-constant _SC_PII_XTI		@VALUEOF__SC_PII_XTI@)
+(define-inline-constant _SC_PIPE		@VALUEOF__SC_PIPE@)
+(define-inline-constant _SC_POLL		@VALUEOF__SC_POLL@)
+(define-inline-constant _SC_PRIORITIZED_IO	@VALUEOF__SC_PRIORITIZED_IO@)
+(define-inline-constant _SC_PRIORITY_SCHEDULING	@VALUEOF__SC_PRIORITY_SCHEDULING@)
+(define-inline-constant _SC_RAW_SOCKETS		@VALUEOF__SC_RAW_SOCKETS@)
+(define-inline-constant _SC_READER_WRITER_LOCKS	@VALUEOF__SC_READER_WRITER_LOCKS@)
+(define-inline-constant _SC_REALTIME_SIGNALS	@VALUEOF__SC_REALTIME_SIGNALS@)
+(define-inline-constant _SC_REGEXP		@VALUEOF__SC_REGEXP@)
+(define-inline-constant _SC_REGEX_VERSION	@VALUEOF__SC_REGEX_VERSION@)
+(define-inline-constant _SC_RE_DUP_MAX		@VALUEOF__SC_RE_DUP_MAX@)
+(define-inline-constant _SC_RTSIG_MAX		@VALUEOF__SC_RTSIG_MAX@)
+(define-inline-constant _SC_SAVED_IDS		@VALUEOF__SC_SAVED_IDS@)
+(define-inline-constant _SC_SCHAR_MAX		@VALUEOF__SC_SCHAR_MAX@)
+(define-inline-constant _SC_SCHAR_MIN		@VALUEOF__SC_SCHAR_MIN@)
+(define-inline-constant _SC_SELECT		@VALUEOF__SC_SELECT@)
+(define-inline-constant _SC_SEMAPHORES		@VALUEOF__SC_SEMAPHORES@)
+(define-inline-constant _SC_SEM_NSEMS_MAX	@VALUEOF__SC_SEM_NSEMS_MAX@)
+(define-inline-constant _SC_SEM_VALUE_MAX	@VALUEOF__SC_SEM_VALUE_MAX@)
+(define-inline-constant _SC_SHARED_MEMORY_OBJECTS @VALUEOF__SC_SHARED_MEMORY_OBJECTS@)
+(define-inline-constant _SC_SHELL		@VALUEOF__SC_SHELL@)
+(define-inline-constant _SC_SHRT_MAX		@VALUEOF__SC_SHRT_MAX@)
+(define-inline-constant _SC_SHRT_MIN		@VALUEOF__SC_SHRT_MIN@)
+(define-inline-constant _SC_SIGNALS		@VALUEOF__SC_SIGNALS@)
+(define-inline-constant _SC_SIGQUEUE_MAX	@VALUEOF__SC_SIGQUEUE_MAX@)
+(define-inline-constant _SC_SINGLE_PROCESS	@VALUEOF__SC_SINGLE_PROCESS@)
+(define-inline-constant _SC_SPAWN		@VALUEOF__SC_SPAWN@)
+(define-inline-constant _SC_SPIN_LOCKS		@VALUEOF__SC_SPIN_LOCKS@)
+(define-inline-constant _SC_SPORADIC_SERVER	@VALUEOF__SC_SPORADIC_SERVER@)
+(define-inline-constant _SC_SSIZE_MAX		@VALUEOF__SC_SSIZE_MAX@)
+(define-inline-constant _SC_STREAMS		@VALUEOF__SC_STREAMS@)
+(define-inline-constant _SC_STREAM_MAX		@VALUEOF__SC_STREAM_MAX@)
+(define-inline-constant _SC_SYMLOOP_MAX		@VALUEOF__SC_SYMLOOP_MAX@)
+(define-inline-constant _SC_SYNCHRONIZED_IO	@VALUEOF__SC_SYNCHRONIZED_IO@)
+(define-inline-constant _SC_SYSTEM_DATABASE	@VALUEOF__SC_SYSTEM_DATABASE@)
+(define-inline-constant _SC_SYSTEM_DATABASE_R	@VALUEOF__SC_SYSTEM_DATABASE_R@)
+(define-inline-constant _SC_THREADS		@VALUEOF__SC_THREADS@)
+(define-inline-constant _SC_THREAD_ATTR_STACKADDR @VALUEOF__SC_THREAD_ATTR_STACKADDR@)
+(define-inline-constant _SC_THREAD_ATTR_STACKSIZE @VALUEOF__SC_THREAD_ATTR_STACKSIZE@)
+(define-inline-constant _SC_THREAD_CPUTIME	@VALUEOF__SC_THREAD_CPUTIME@)
+(define-inline-constant _SC_THREAD_DESTRUCTOR_ITERATIONS @VALUEOF__SC_THREAD_DESTRUCTOR_ITERATIONS@)
+(define-inline-constant _SC_THREAD_KEYS_MAX	@VALUEOF__SC_THREAD_KEYS_MAX@)
+(define-inline-constant _SC_THREAD_PRIORITY_SCHEDULING @VALUEOF__SC_THREAD_PRIORITY_SCHEDULING@)
+(define-inline-constant _SC_THREAD_PRIO_INHERIT	@VALUEOF__SC_THREAD_PRIO_INHERIT@)
+(define-inline-constant _SC_THREAD_PRIO_PROTECT	@VALUEOF__SC_THREAD_PRIO_PROTECT@)
+(define-inline-constant _SC_THREAD_PROCESS_SHARED @VALUEOF__SC_THREAD_PROCESS_SHARED@)
+(define-inline-constant _SC_THREAD_SAFE_FUNCTIONS @VALUEOF__SC_THREAD_SAFE_FUNCTIONS@)
+(define-inline-constant _SC_THREAD_SPORADIC_SERVER @VALUEOF__SC_THREAD_SPORADIC_SERVER@)
+(define-inline-constant _SC_THREAD_STACK_MIN	@VALUEOF__SC_THREAD_STACK_MIN@)
+(define-inline-constant _SC_THREAD_THREADS_MAX	@VALUEOF__SC_THREAD_THREADS_MAX@)
+(define-inline-constant _SC_TIMEOUTS		@VALUEOF__SC_TIMEOUTS@)
+(define-inline-constant _SC_TIMERS		@VALUEOF__SC_TIMERS@)
+(define-inline-constant _SC_TIMER_MAX		@VALUEOF__SC_TIMER_MAX@)
+(define-inline-constant _SC_TRACE		@VALUEOF__SC_TRACE@)
+(define-inline-constant _SC_TRACE_EVENT_FILTER	@VALUEOF__SC_TRACE_EVENT_FILTER@)
+(define-inline-constant _SC_TRACE_INHERIT	@VALUEOF__SC_TRACE_INHERIT@)
+(define-inline-constant _SC_TRACE_LOG		@VALUEOF__SC_TRACE_LOG@)
+(define-inline-constant _SC_TTY_NAME_MAX	@VALUEOF__SC_TTY_NAME_MAX@)
+(define-inline-constant _SC_TYPED_MEMORY_OBJECTS @VALUEOF__SC_TYPED_MEMORY_OBJECTS@)
+(define-inline-constant _SC_TZNAME_MAX		@VALUEOF__SC_TZNAME_MAX@)
+(define-inline-constant _SC_T_IOV_MAX		@VALUEOF__SC_T_IOV_MAX@)
+(define-inline-constant _SC_UCHAR_MAX		@VALUEOF__SC_UCHAR_MAX@)
+(define-inline-constant _SC_UINT_MAX		@VALUEOF__SC_UINT_MAX@)
+(define-inline-constant _SC_UIO_MAXIOV		@VALUEOF__SC_UIO_MAXIOV@)
+(define-inline-constant _SC_ULONG_MAX		@VALUEOF__SC_ULONG_MAX@)
+(define-inline-constant _SC_USER_GROUPS		@VALUEOF__SC_USER_GROUPS@)
+(define-inline-constant _SC_USER_GROUPS_R	@VALUEOF__SC_USER_GROUPS_R@)
+(define-inline-constant _SC_USHRT_MAX		@VALUEOF__SC_USHRT_MAX@)
+(define-inline-constant _SC_V6_ILP32_OFF32	@VALUEOF__SC_V6_ILP32_OFF32@)
+(define-inline-constant _SC_V6_ILP32_OFFBIG	@VALUEOF__SC_V6_ILP32_OFFBIG@)
+(define-inline-constant _SC_V6_LP64_OFF64	@VALUEOF__SC_V6_LP64_OFF64@)
+(define-inline-constant _SC_V6_LPBIG_OFFBIG	@VALUEOF__SC_V6_LPBIG_OFFBIG@)
+(define-inline-constant _SC_VERSION		@VALUEOF__SC_VERSION@)
+(define-inline-constant _SC_WORD_BIT		@VALUEOF__SC_WORD_BIT@)
+(define-inline-constant _SC_XBS5_ILP32_OFF32	@VALUEOF__SC_XBS5_ILP32_OFF32@)
+(define-inline-constant _SC_XBS5_ILP32_OFFBIG	@VALUEOF__SC_XBS5_ILP32_OFFBIG@)
+(define-inline-constant _SC_XBS5_LP64_OFF64	@VALUEOF__SC_XBS5_LP64_OFF64@)
+(define-inline-constant _SC_XBS5_LPBIG_OFFBIG	@VALUEOF__SC_XBS5_LPBIG_OFFBIG@)
+(define-inline-constant _SC_XOPEN_CRYPT		@VALUEOF__SC_XOPEN_CRYPT@)
+(define-inline-constant _SC_XOPEN_ENH_I18N	@VALUEOF__SC_XOPEN_ENH_I18N@)
+(define-inline-constant _SC_XOPEN_LEGACY	@VALUEOF__SC_XOPEN_LEGACY@)
+(define-inline-constant _SC_XOPEN_REALTIME	@VALUEOF__SC_XOPEN_REALTIME@)
+(define-inline-constant _SC_XOPEN_REALTIME_THREADS @VALUEOF__SC_XOPEN_REALTIME_THREADS@)
+(define-inline-constant _SC_XOPEN_SHM		@VALUEOF__SC_XOPEN_SHM@)
+(define-inline-constant _SC_XOPEN_UNIX		@VALUEOF__SC_XOPEN_UNIX@)
+(define-inline-constant _SC_XOPEN_VERSION	@VALUEOF__SC_XOPEN_VERSION@)
+(define-inline-constant _SC_XOPEN_XCU_VERSION	@VALUEOF__SC_XOPEN_XCU_VERSION@)
+(define-inline-constant _SC_XOPEN_XPG2		@VALUEOF__SC_XOPEN_XPG2@)
+(define-inline-constant _SC_XOPEN_XPG3		@VALUEOF__SC_XOPEN_XPG3@)
+(define-inline-constant _SC_XOPEN_XPG4		@VALUEOF__SC_XOPEN_XPG4@)
+
+(define-inline-constant LINK_MAX		@VALUEOF_LINK_MAX@)
+(define-inline-constant MAX_CANON		@VALUEOF_MAX_CANON@)
+(define-inline-constant MAX_INPUT		@VALUEOF_MAX_INPUT@)
+(define-inline-constant NAME_MAX		@VALUEOF_NAME_MAX@)
+(define-inline-constant PATH_MAX		@VALUEOF_PATH_MAX@)
+(define-inline-constant PIPE_BUF		@VALUEOF_PIPE_BUF@)
+(define-inline-constant MAXNAMLEN		@VALUEOF_MAXNAMLEN@)
+(define-inline-constant FILENAME_MAX		@VALUEOF_FILENAME_MAX@)
+
+(define-inline-constant _POSIX_CHOWN_RESTRICTED	@VALUEOF__POSIX_CHOWN_RESTRICTED@)
+(define-inline-constant _POSIX_NO_TRUNC		@VALUEOF__POSIX_NO_TRUNC@)
+(define-inline-constant _POSIX_VDISABLE		@VALUEOF__POSIX_VDISABLE@)
+
+(define-inline-constant _POSIX_LINK_MAX		@VALUEOF__POSIX_LINK_MAX@)
+(define-inline-constant _POSIX_MAX_CANON	@VALUEOF__POSIX_MAX_CANON@)
+(define-inline-constant _POSIX_MAX_INPUT	@VALUEOF__POSIX_MAX_INPUT@)
+(define-inline-constant _POSIX_NAME_MAX		@VALUEOF__POSIX_NAME_MAX@)
+(define-inline-constant _POSIX_PATH_MAX		@VALUEOF__POSIX_PATH_MAX@)
+(define-inline-constant _POSIX_PIPE_BUF		@VALUEOF__POSIX_PIPE_BUF@)
+(define-inline-constant SYMLINK_MAX		@VALUEOF_SYMLINK_MAX@)
+(define-inline-constant POSIX_REC_INCR_XFER_SIZE @VALUEOF_POSIX_REC_INCR_XFER_SIZE@)
+(define-inline-constant POSIX_REC_MAX_XFER_SIZE	@VALUEOF_POSIX_REC_MAX_XFER_SIZE@)
+(define-inline-constant POSIX_REC_MIN_XFER_SIZE	@VALUEOF_POSIX_REC_MIN_XFER_SIZE@)
+(define-inline-constant POSIX_REC_XFER_ALIGN	@VALUEOF_POSIX_REC_XFER_ALIGN@)
+
+(define-inline-constant _PC_LINK_MAX		@VALUEOF__PC_LINK_MAX@)
+(define-inline-constant _PC_MAX_CANON		@VALUEOF__PC_MAX_CANON@)
+(define-inline-constant _PC_MAX_INPUT		@VALUEOF__PC_MAX_INPUT@)
+(define-inline-constant _PC_NAME_MAX		@VALUEOF__PC_NAME_MAX@)
+(define-inline-constant _PC_PATH_MAX		@VALUEOF__PC_PATH_MAX@)
+(define-inline-constant _PC_PIPE_BUF		@VALUEOF__PC_PIPE_BUF@)
+(define-inline-constant _PC_CHOWN_RESTRICTED	@VALUEOF__PC_CHOWN_RESTRICTED@)
+(define-inline-constant _PC_NO_TRUNC		@VALUEOF__PC_NO_TRUNC@)
+(define-inline-constant _PC_VDISABLE		@VALUEOF__PC_VDISABLE@)
+(define-inline-constant _PC_SYNC_IO		@VALUEOF__PC_SYNC_IO@)
+(define-inline-constant _PC_ASYNC_IO		@VALUEOF__PC_ASYNC_IO@)
+(define-inline-constant _PC_PRIO_IO		@VALUEOF__PC_PRIO_IO@)
+(define-inline-constant _PC_FILESIZEBITS	@VALUEOF__PC_FILESIZEBITS@)
+(define-inline-constant _PC_REC_INCR_XFER_SIZE	@VALUEOF__PC_REC_INCR_XFER_SIZE@)
+(define-inline-constant _PC_REC_MAX_XFER_SIZE	@VALUEOF__PC_REC_MAX_XFER_SIZE@)
+(define-inline-constant _PC_REC_MIN_XFER_SIZE	@VALUEOF__PC_REC_MIN_XFER_SIZE@)
+(define-inline-constant _PC_REC_XFER_ALIGN	@VALUEOF__PC_REC_XFER_ALIGN@)
+
+(define-inline-constant BC_BASE_MAX		@VALUEOF_BC_BASE_MAX@)
+(define-inline-constant _POSIX_BC_BASE_MAX	@VALUEOF__POSIX_BC_BASE_MAX@)
+(define-inline-constant BC_DIM_MAX		@VALUEOF_BC_DIM_MAX@)
+(define-inline-constant _POSIX_BC_DIM_MAX	@VALUEOF__POSIX_BC_DIM_MAX@)
+(define-inline-constant BC_SCALE_MAX		@VALUEOF_BC_SCALE_MAX@)
+(define-inline-constant _POSIX_BC_SCALE_MAX	@VALUEOF__POSIX_BC_SCALE_MAX@)
+(define-inline-constant BC_STRING_MAX		@VALUEOF_BC_STRING_MAX@)
+(define-inline-constant _POSIX_BC_STRING_MAX	@VALUEOF__POSIX_BC_STRING_MAX@)
+(define-inline-constant COLL_WEIGHTS_MAX	@VALUEOF_COLL_WEIGHTS_MAX@)
+(define-inline-constant _POSIX_COLL_WEIGHTS_MAX	@VALUEOF__POSIX_COLL_WEIGHTS_MAX@)
+(define-inline-constant EXPR_NEXT_MAX		@VALUEOF_EXPR_NEXT_MAX@)
+(define-inline-constant _POSIX_EXPR_NEXT_MAX	@VALUEOF__POSIX_EXPR_NEXT_MAX@)
+(define-inline-constant LINE_MAX		@VALUEOF_LINE_MAX@)
+(define-inline-constant _POSIX_LINE_MAX		@VALUEOF__POSIX_LINE_MAX@)
+(define-inline-constant EQUIV_CLASS_MAX		@VALUEOF_EQUIV_CLASS_MAX@)
+(define-inline-constant _POSIX_EQUIV_CLASS_MAX	@VALUEOF__POSIX_EQUIV_CLASS_MAX@)
+
+(define-inline-constant _CS_PATH		@VALUEOF__CS_PATH@)
+(define-inline-constant _CS_LFS_CFLAGS		@VALUEOF__CS_LFS_CFLAGS@)
+(define-inline-constant _CS_LFS_LDFLAGS		@VALUEOF__CS_LFS_LDFLAGS@)
+(define-inline-constant _CS_LFS_LIBS		@VALUEOF__CS_LFS_LIBS@)
+(define-inline-constant _CS_LFS_LINTFLAGS	@VALUEOF__CS_LFS_LINTFLAGS@)
+(define-inline-constant _CS_LFS64_CFLAGS	@VALUEOF__CS_LFS64_CFLAGS@)
+(define-inline-constant _CS_LFS64_LDFLAGS	@VALUEOF__CS_LFS64_LDFLAGS@)
+(define-inline-constant _CS_LFS64_LIBS		@VALUEOF__CS_LFS64_LIBS@)
+(define-inline-constant _CS_LFS64_LINTFLAGS	@VALUEOF__CS_LFS64_LINTFLAGS@)
+
+(define-inline-constant _PATH_MNTTAB		"@VALUEOF__PATH_MNTTAB@")
+(define-inline-constant _PATH_FSTAB		"@VALUEOF__PATH_FSTAB@")
+(define-inline-constant _PATH_MOUNTED		"@VALUEOF__PATH_MOUNTED@")
+
+(define-inline-constant FSTAB_RW		"@VALUEOF_FSTAB_RW@")
+(define-inline-constant FSTAB_RQ		"@VALUEOF_FSTAB_RQ@")
+(define-inline-constant FSTAB_RO		"@VALUEOF_FSTAB_RO@")
+(define-inline-constant FSTAB_SW		"@VALUEOF_FSTAB_SW@")
+(define-inline-constant FSTAB_XX		"@VALUEOF_FSTAB_XX@")
+
+(define-inline-constant MNTTYPE_IGNORE		"@VALUEOF_MNTTYPE_IGNORE@")
+(define-inline-constant MNTTYPE_NFS		"@VALUEOF_MNTTYPE_NFS@")
+(define-inline-constant MNTTYPE_SWAP		"@VALUEOF_MNTTYPE_SWAP@")
+
+(define-inline-constant MNTOPT_DEFAULTS		"@VALUEOF_MNTOPT_DEFAULTS@")
+(define-inline-constant MNTOPT_RO		"@VALUEOF_MNTOPT_RO@")
+(define-inline-constant MNTOPT_RW		"@VALUEOF_MNTOPT_RW@")
+(define-inline-constant MNTOPT_SUID		"@VALUEOF_MNTOPT_SUID@")
+(define-inline-constant MNTOPT_NOSUID		"@VALUEOF_MNTOPT_NOSUID@")
+(define-inline-constant MNTOPT_NOAUTO		"@VALUEOF_MNTOPT_NOAUTO@")
+
+(define-inline-constant MS_MGC_MASK		@VALUEOF_MS_MGC_MASK@)
+(define-inline-constant MS_REMOUNT		@VALUEOF_MS_REMOUNT@)
+(define-inline-constant MS_RDONLY		@VALUEOF_MS_RDONLY@)
+(define-inline-constant S_IMMUTABLE		@VALUEOF_S_IMMUTABLE@)
+(define-inline-constant S_APPEND		@VALUEOF_S_APPEND@)
+(define-inline-constant MS_NOSUID		@VALUEOF_MS_NOSUID@)
+(define-inline-constant MS_NOEXEC		@VALUEOF_MS_NOEXEC@)
+(define-inline-constant MS_NODEV		@VALUEOF_MS_NODEV@)
+(define-inline-constant MS_SYNCHRONOUS		@VALUEOF_MS_SYNCHRONOUS@)
+(define-inline-constant MS_MANDLOCK		@VALUEOF_MS_MANDLOCK@)
+(define-inline-constant MS_NOATIME		@VALUEOF_MS_NOATIME@)
+(define-inline-constant MS_NODIRATIME		@VALUEOF_MS_NODIRATIME@)
+
+(define-inline-constant MNT_FORCE		@VALUEOF_MNT_FORCE@)
+
+;; on the GNU C Library see /usr/include/bits/socket.h
+(define-inline-constant SOCK_STREAM		@VALUEOF_SOCK_STREAM@)
+(define-inline-constant SOCK_DGRAM		@VALUEOF_SOCK_DGRAM@)
+(define-inline-constant SOCK_RAW		@VALUEOF_SOCK_RAW@)
+(define-inline-constant SOCK_RDM		@VALUEOF_SOCK_RDM@)
+(define-inline-constant SOCK_SEQPACKET		@VALUEOF_SOCK_SEQPACKET@)
+(define-inline-constant SOCK_DCCP		@VALUEOF_SOCK_DCCP@)
+(define-inline-constant SOCK_PACKET		@VALUEOF_SOCK_PACKET@)
+(define-inline-constant SOCK_CLOEXEC		@VALUEOF_SOCK_CLOEXEC@)
+(define-inline-constant SOCK_NONBLOCK		@VALUEOF_SOCK_NONBLOCK@)
+
+;; on the GNU C Library see /usr/include/bits/socket.h
+(define-inline-constant AF_LOCAL		@VALUEOF_AF_LOCAL@)
+(define-inline-constant PF_LOCAL		@VALUEOF_PF_LOCAL@)
+(define-inline-constant AF_UNIX			@VALUEOF_AF_UNIX@)
+(define-inline-constant PF_UNIX			@VALUEOF_PF_UNIX@)
+(define-inline-constant AF_FILE			@VALUEOF_AF_FILE@)
+(define-inline-constant PF_FILE			@VALUEOF_PF_FILE@)
+(define-inline-constant AF_INET			@VALUEOF_AF_INET@)
+(define-inline-constant PF_INET			@VALUEOF_PF_INET@)
+(define-inline-constant AF_INET6		@VALUEOF_AF_INET6@)
+(define-inline-constant PF_INET6		@VALUEOF_PF_INET6@)
+(define-inline-constant AF_UNSPEC		@VALUEOF_AF_UNSPEC@)
+(define-inline-constant PF_UNSPEC		@VALUEOF_PF_UNSPEC@)
+(define-inline-constant SHUT_RD			@VALUEOF_SHUT_RD@)
+(define-inline-constant SHUT_WR			@VALUEOF_SHUT_WR@)
+(define-inline-constant SHUT_RDWR		@VALUEOF_SHUT_RDWR@)
+(define-inline-constant IPPORT_RESERVED		@VALUEOF_IPPORT_RESERVED@)
+(define-inline-constant IPPORT_USERRESERVED	@VALUEOF_IPPORT_USERRESERVED@)
+(define-inline-constant IFNAMSIZ		@VALUEOF_IFNAMSIZ@)
+
+;; on the GNU C Library see /usr/include/bits/socket.h
+(define-inline-constant MSG_OOB			@VALUEOF_MSG_OOB@)
+(define-inline-constant MSG_PEEK		@VALUEOF_MSG_PEEK@)
+(define-inline-constant MSG_DONTROUTE		@VALUEOF_MSG_DONTROUTE@)
+
+;; on the GNU C Library see /usr/include/bits/socket.h
+(define-inline-constant SOL_SOCKET		@VALUEOF_SOL_SOCKET@)
+(define-inline-constant SO_DEBUG		@VALUEOF_SO_DEBUG@)
+(define-inline-constant SO_REUSEADDR		@VALUEOF_SO_REUSEADDR@)
+(define-inline-constant SO_KEEPALIVE		@VALUEOF_SO_KEEPALIVE@)
+(define-inline-constant SO_DONTROUTE		@VALUEOF_SO_DONTROUTE@)
+(define-inline-constant SO_LINGER		@VALUEOF_SO_LINGER@)
+(define-inline-constant SO_BROADCAST		@VALUEOF_SO_BROADCAST@)
+(define-inline-constant SO_OOBINLINE		@VALUEOF_SO_OOBINLINE@)
+(define-inline-constant SO_SNDBUF		@VALUEOF_SO_SNDBUF@)
+(define-inline-constant SO_RCVBUF		@VALUEOF_SO_RCVBUF@)
+(define-inline-constant SO_TYPE			@VALUEOF_SO_TYPE@)
+(define-inline-constant SO_STYLE		@VALUEOF_SO_STYLE@)
+(define-inline-constant SO_ERROR		@VALUEOF_SO_ERROR@)
+
+(define-inline-constant INADDR_LOOPBACK		@VALUEOF_INADDR_LOOPBACK@)
+(define-inline-constant INADDR_ANY		@VALUEOF_INADDR_ANY@)
+(define-inline-constant INADDR_BROADCAST	@VALUEOF_INADDR_BROADCAST@)
+(define-inline-constant INADDR_NONE		@VALUEOF_INADDR_NONE@)
+(define-inline-constant INET_ADDRSTRLEN		@VALUEOF_INET_ADDRSTRLEN@)
+(define-inline-constant INET6_ADDRSTRLEN	@VALUEOF_INET6_ADDRSTRLEN@)
+
+(define-inline-constant AI_ADDRCONFIG		@VALUEOF_AI_ADDRCONFIG@)
+(define-inline-constant AI_ALL			@VALUEOF_AI_ALL@)
+(define-inline-constant AI_CANONNAME		@VALUEOF_AI_CANONNAME@)
+(define-inline-constant AI_NUMERIC_HOST		@VALUEOF_AI_NUMERIC_HOST@)
+(define-inline-constant AI_NUMERIC_SERV		@VALUEOF_AI_NUMERIC_SERV@)
+(define-inline-constant AI_PASSIVE		@VALUEOF_AI_PASSIVE@)
+(define-inline-constant AI_V4MAPPED		@VALUEOF_AI_V4MAPPED@)
+(define-inline-constant AI_IDN			@VALUEOF_AI_IDN@)
+(define-inline-constant AI_CANONIDN		@VALUEOF_AI_CANONIDN@)
+(define-inline-constant AI_IDN_ALLOW_UNASSIGNED	@VALUEOF_AI_IDN_ALLOW_UNASSIGNED@)
+(define-inline-constant AI_IDN_USE_STD3_ASCII_RULES @VALUEOF_AI_IDN_USE_STD3_ASCII_RULES@)
+
+(define-inline-constant EAI_ADDRFAMILY		@VALUEOF_EAI_ADDRFAMILY@)
+(define-inline-constant EAI_AGAIN		@VALUEOF_EAI_AGAIN@)
+(define-inline-constant EAI_BADFLAGS		@VALUEOF_EAI_BADFLAGS@)
+(define-inline-constant EAI_FAIL		@VALUEOF_EAI_FAIL@)
+(define-inline-constant EAI_FAMILY		@VALUEOF_EAI_FAMILY@)
+(define-inline-constant EAI_MEMORY		@VALUEOF_EAI_MEMORY@)
+(define-inline-constant EAI_NODATA		@VALUEOF_EAI_NODATA@)
+(define-inline-constant EAI_NONAME		@VALUEOF_EAI_NONAME@)
+(define-inline-constant EAI_SERVICE		@VALUEOF_EAI_SERVICE@)
+(define-inline-constant EAI_SOCKTYPE		@VALUEOF_EAI_SOCKTYPE@)
+(define-inline-constant EAI_SYSTEM		@VALUEOF_EAI_SYSTEM@)
+
+(define-inline-constant RAND_MAX		@VALUEOF_RAND_MAX@)
+
+;;; mathematics
+(define-inline-constant M_E			@VALUEOF_M_E@)
+(define-inline-constant M_LOG2E			@VALUEOF_M_LOG2E@)
+(define-inline-constant M_LOG10E		@VALUEOF_M_LOG10E@)
+(define-inline-constant M_LN2			@VALUEOF_M_LN2@)
+(define-inline-constant M_LN10			@VALUEOF_M_LN10@)
+(define-inline-constant M_PI			@VALUEOF_M_PI@)
+(define-inline-constant M_PI_2			@VALUEOF_M_PI_2@)
+(define-inline-constant M_PI_4			@VALUEOF_M_PI_4@)
+(define-inline-constant M_1_PI			@VALUEOF_M_1_PI@)
+(define-inline-constant M_2_PI			@VALUEOF_M_2_PI@)
+(define-inline-constant M_2_SQRTPI		@VALUEOF_M_2_SQRTPI@)
+(define-inline-constant M_SQRT2			@VALUEOF_M_SQRT2@)
+(define-inline-constant M_SQRT1_2		@VALUEOF_M_SQRT1_2@)
+
+;;fnmatch
+(define-inline-constant FNM_NOMATCH		@VALUEOF_FNM_NOMATCH@)
+(define-inline-constant FNM_FILE_NAME		@VALUEOF_FNM_FILE_NAME@)
+(define-inline-constant FNM_PATHNAME		@VALUEOF_FNM_PATHNAME@)
+(define-inline-constant FNM_PERIOD		@VALUEOF_FNM_PERIOD@)
+(define-inline-constant FNM_NOESCAPE		@VALUEOF_FNM_NOESCAPE@)
+(define-inline-constant FNM_LEADING_DIR		@VALUEOF_FNM_LEADING_DIR@)
+(define-inline-constant FNM_CASEFOLD		@VALUEOF_FNM_CASEFOLD@)
+(define-inline-constant FNM_EXTMATCH		@VALUEOF_FNM_EXTMATCH@)
+
+;; glob
+(define-inline-constant GLOB_ERR		@VALUEOF_GLOB_ERR@)
+(define-inline-constant GLOB_MARK		@VALUEOF_GLOB_MARK@)
+(define-inline-constant GLOB_NOCHECK		@VALUEOF_GLOB_NOCHECK@)
+(define-inline-constant GLOB_NOSORT		@VALUEOF_GLOB_NOSORT@)
+(define-inline-constant GLOB_NOESCAPE		@VALUEOF_GLOB_NOESCAPE@)
+(define-inline-constant GLOB_PERIOD		@VALUEOF_GLOB_PERIOD@)
+(define-inline-constant GLOB_MAGCHAR		@VALUEOF_GLOB_MAGCHAR@)
+(define-inline-constant GLOB_BRACE		@VALUEOF_GLOB_BRACE@)
+(define-inline-constant GLOB_NOMAGIC		@VALUEOF_GLOB_NOMAGIC@)
+(define-inline-constant GLOB_TILDE		@VALUEOF_GLOB_TILDE@)
+(define-inline-constant GLOB_TILDE_CHECK	@VALUEOF_GLOB_TILDE_CHECK@)
+(define-inline-constant GLOB_ONLYDIR		@VALUEOF_GLOB_ONLYDIR@)
+(define-inline-constant GLOB_ABORTED		@VALUEOF_GLOB_ABORTED@)
+(define-inline-constant GLOB_NOMATCH		@VALUEOF_GLOB_NOMATCH@)
+(define-inline-constant GLOB_NOSPACE		@VALUEOF_GLOB_NOSPACE@)
+
+;;;; POSIX regexps
+(define-inline-constant REG_BADBR		@VALUEOF_REG_BADBR@)
+(define-inline-constant REG_BADPAT		@VALUEOF_REG_BADPAT@)
+(define-inline-constant REG_BADRPT		@VALUEOF_REG_BADRPT@)
+(define-inline-constant REG_ECOLLATE		@VALUEOF_REG_ECOLLATE@)
+(define-inline-constant REG_ECTYPE		@VALUEOF_REG_ECTYPE@)
+(define-inline-constant REG_EESCAPE		@VALUEOF_REG_EESCAPE@)
+(define-inline-constant REG_ESUBREG		@VALUEOF_REG_ESUBREG@)
+(define-inline-constant REG_EBRACK		@VALUEOF_REG_EBRACK@)
+(define-inline-constant REG_EPAREN		@VALUEOF_REG_EPAREN@)
+(define-inline-constant REG_EBRACE		@VALUEOF_REG_EBRACE@)
+(define-inline-constant REG_ERANGE		@VALUEOF_REG_ERANGE@)
+
+(define-inline-constant REG_EXTENDED		@VALUEOF_REG_EXTENDED@)
+(define-inline-constant REG_ICASE		@VALUEOF_REG_ICASE@)
+(define-inline-constant REG_NOSUB		@VALUEOF_REG_NOSUB@)
+(define-inline-constant REG_NEWLINE		@VALUEOF_REG_NEWLINE@)
+(define-inline-constant REG_NOTBOL		@VALUEOF_REG_NOTBOL@)
+(define-inline-constant REG_NOTEOL		@VALUEOF_REG_NOTEOL@)
+(define-inline-constant REG_NOMATCH		@VALUEOF_REG_NOMATCH@)
+(define-inline-constant REG_ESPACE		@VALUEOF_REG_ESPACE@)
+
+;;;; word expansion
+(define-inline-constant WRDE_NOCMD		@VALUEOF_WRDE_NOCMD@)
+(define-inline-constant WRDE_SHOWERR		@VALUEOF_WRDE_SHOWERR@)
+(define-inline-constant WRDE_UNDEF		@VALUEOF_WRDE_UNDEF@)
+
+(define-inline-constant WRDE_BADCHAR		@VALUEOF_WRDE_BADCHAR@)
+(define-inline-constant WRDE_BADVAL		@VALUEOF_WRDE_BADVAL@)
+(define-inline-constant WRDE_CMDSUB		@VALUEOF_WRDE_CMDSUB@)
+(define-inline-constant WRDE_NOSPACE		@VALUEOF_WRDE_NOSPACE@)
+(define-inline-constant WRDE_SYNTAX		@VALUEOF_WRDE_SYNTAX@)
+
+;;; signalfd
+
+(define-inline-constant SFD_CLOEXEC		@VALUEOF_SFD_CLOEXEC@)
+(define-inline-constant SFD_NONBLOCK		@VALUEOF_SFD_NONBLOCK@)
+
+;;; timerfd
+
+(define-inline-constant CLOCK_REALTIME		@VALUEOF_CLOCK_REALTIME@)
+(define-inline-constant CLOCK_MONOTONIC		@VALUEOF_CLOCK_MONOTONIC@)
+(define-inline-constant TFD_CLOEXEC		@VALUEOF_TFD_CLOEXEC@)
+(define-inline-constant TFD_NONBLOCK		@VALUEOF_TFD_NONBLOCK@)
+(define-inline-constant TFD_TIMER_ABSTIME	@VALUEOF_TFD_TIMER_ABSTIME@)
+
+;;; inotify
+(define-inline-constant IN_NONBLOCK		@VALUEOF_IN_NONBLOCK@)
+(define-inline-constant IN_CLOEXEC		@VALUEOF_IN_CLOEXEC@)
+
+(define-inline-constant IN_ACCESS		@VALUEOF_IN_ACCESS@)
+(define-inline-constant IN_ATTRIB		@VALUEOF_IN_ATTRIB@)
+(define-inline-constant IN_CLOSE_WRITE		@VALUEOF_IN_CLOSE_WRITE@)
+(define-inline-constant IN_CLOSE_NOWRITE	@VALUEOF_IN_CLOSE_NOWRITE@)
+(define-inline-constant IN_CREATE		@VALUEOF_IN_CREATE@)
+(define-inline-constant IN_DELETE		@VALUEOF_IN_DELETE@)
+(define-inline-constant IN_DELETE_SELF		@VALUEOF_IN_DELETE_SELF@)
+(define-inline-constant IN_MODIFY		@VALUEOF_IN_MODIFY@)
+(define-inline-constant IN_MOVE_SELF		@VALUEOF_IN_MOVE_SELF@)
+(define-inline-constant IN_MOVED_FROM		@VALUEOF_IN_MOVED_FROM@)
+(define-inline-constant IN_MOVED_TO		@VALUEOF_IN_MOVED_TO@)
+(define-inline-constant IN_OPEN			@VALUEOF_IN_OPEN@)
+(define-inline-constant IN_ALL_EVENTS		@VALUEOF_IN_ALL_EVENTS@)
+(define-inline-constant IN_MOVE			@VALUEOF_IN_MOVE@)
+(define-inline-constant IN_CLOSE		@VALUEOF_IN_CLOSE@)
+
+(define-inline-constant IN_DONT_FOLLOW		@VALUEOF_IN_DONT_FOLLOW@)
+(define-inline-constant IN_EXCL_UNLINK		@VALUEOF_IN_EXCL_UNLINK@)
+(define-inline-constant IN_MASK_ADD		@VALUEOF_IN_MASK_ADD@)
+(define-inline-constant IN_ONESHOT		@VALUEOF_IN_ONESHOT@)
+(define-inline-constant IN_ONLYDIR		@VALUEOF_IN_ONLYDIR@)
+(define-inline-constant IN_IGNORED		@VALUEOF_IN_IGNORED@)
+(define-inline-constant IN_ISDIR		@VALUEOF_IN_ISDIR@)
+(define-inline-constant IN_Q_OVERFLOW		@VALUEOF_IN_Q_OVERFLOW@)
+(define-inline-constant IN_UNMOUNT		@VALUEOF_IN_UNMOUNT@)
+
+;;; clock
+(define-inline-constant CLOCK_MONOTONIC_RAW	@VALUEOF_CLOCK_MONOTONIC_RAW@)
+(define-inline-constant CLOCK_PROCESS_CPUTIME_ID @VALUEOF_CLOCK_PROCESS_CPUTIME_ID@)
+(define-inline-constant CLOCK_THREAD_CPUTIME_ID	@VALUEOF_CLOCK_THREAD_CPUTIME_ID@)
+
+(define-inline-constant TIMER_ABSTIME		@VALUEOF_TIMER_ABSTIME@)
+
+;;; --------------------------------------------------------------------
+
+;;; struct "siginfo_t", values for field `si_code'
+(define-inline-constant SI_ASYNCNL		@VALUEOF_SI_ASYNCNL@)
+(define-inline-constant SI_TKILL		@VALUEOF_SI_TKILL@)
+(define-inline-constant SI_SIGIO		@VALUEOF_SI_SIGIO@)
+(define-inline-constant SI_ASYNCIO		@VALUEOF_SI_ASYNCIO@)
+(define-inline-constant SI_MESGQ		@VALUEOF_SI_MESGQ@)
+(define-inline-constant SI_TIMER		@VALUEOF_SI_TIMER@)
+(define-inline-constant SI_QUEUE		@VALUEOF_SI_QUEUE@)
+(define-inline-constant SI_USER			@VALUEOF_SI_USER@)
+(define-inline-constant SI_KERNEL		@VALUEOF_SI_KERNEL@)
+
+;;; struct "siginfo_t", `si_code' values for SIGILL signal
+(define-inline-constant ILL_ILLOPC		@VALUEOF_ILL_ILLOPC@)
+(define-inline-constant ILL_ILLOPN		@VALUEOF_ILL_ILLOPN@)
+(define-inline-constant ILL_ILLADR		@VALUEOF_ILL_ILLADR@)
+(define-inline-constant ILL_ILLTRP		@VALUEOF_ILL_ILLTRP@)
+(define-inline-constant ILL_PRVOPC		@VALUEOF_ILL_PRVOPC@)
+(define-inline-constant ILL_PRVREG		@VALUEOF_ILL_PRVREG@)
+(define-inline-constant ILL_COPROC		@VALUEOF_ILL_COPROC@)
+(define-inline-constant ILL_BADSTK		@VALUEOF_ILL_BADSTK@)
+
+;;; struct "siginfo_t", `si_code' values for SIGFPE signal
+(define-inline-constant FPE_INTDIV		@VALUEOF_FPE_INTDIV@)
+(define-inline-constant FPE_INTOVF		@VALUEOF_FPE_INTOVF@)
+(define-inline-constant FPE_FLTDIV		@VALUEOF_FPE_FLTDIV@)
+(define-inline-constant FPE_FLTOVF		@VALUEOF_FPE_FLTOVF@)
+(define-inline-constant FPE_FLTUND		@VALUEOF_FPE_FLTUND@)
+(define-inline-constant FPE_FLTRES		@VALUEOF_FPE_FLTRES@)
+(define-inline-constant FPE_FLTINV		@VALUEOF_FPE_FLTINV@)
+(define-inline-constant FPE_FLTSUB		@VALUEOF_FPE_FLTSUB@)
+
+;;; struct "siginfo_t", `si_code' values for SIGSEGV signal
+(define-inline-constant SEGV_MAPERR		@VALUEOF_SEGV_MAPERR@)
+(define-inline-constant SEGV_ACCERR		@VALUEOF_SEGV_ACCERR@)
+
+;;; struct "siginfo_t", `si_code' values for SIGBUS signal
+(define-inline-constant BUS_ADRALN		@VALUEOF_BUS_ADRALN@)
+(define-inline-constant BUS_ADRERR		@VALUEOF_BUS_ADRERR@)
+(define-inline-constant BUS_OBJERR		@VALUEOF_BUS_OBJERR@)
+
+;;; struct "siginfo_t", `si_code' values for SIGTRAP signal
+(define-inline-constant TRAP_BRKPT		@VALUEOF_TRAP_BRKPT@)
+(define-inline-constant TRAP_TRACE		@VALUEOF_TRAP_TRACE@)
+
+;;; struct "siginfo_t", `si_code' values for SIGCHLD signal.
+;;
+;;Already defined above.
+;;
+;; (define-inline-constant CLD_EXITED		@VALUEOF_CLD_EXITED@)
+;; (define-inline-constant CLD_KILLED		@VALUEOF_CLD_KILLED@)
+;; (define-inline-constant CLD_DUMPED		@VALUEOF_CLD_DUMPED@)
+;; (define-inline-constant CLD_TRAPPED		@VALUEOF_CLD_TRAPPED@)
+;; (define-inline-constant CLD_STOPPED		@VALUEOF_CLD_STOPPED@)
+;; (define-inline-constant CLD_CONTINUED	@VALUEOF_CLD_CONTINUED@)
+
+;;; struct "siginfo_t", `si_code' values for SIGPOLL signal
+(define-inline-constant POLL_IN			@VALUEOF_POLL_IN@)
+(define-inline-constant POLL_OUT		@VALUEOF_POLL_OUT@)
+(define-inline-constant POLL_MSG		@VALUEOF_POLL_MSG@)
+(define-inline-constant POLL_ERR		@VALUEOF_POLL_ERR@)
+(define-inline-constant POLL_PRI		@VALUEOF_POLL_PRI@)
+(define-inline-constant POLL_HUP		@VALUEOF_POLL_HUP@)
+
+;;; struct "sigevent_t", `sigev_notify' values.
+(define-inline-constant SIGEV_SIGNAL		@VALUEOF_SIGEV_SIGNAL@)
+(define-inline-constant SIGEV_NONE		@VALUEOF_SIGEV_NONE@)
+(define-inline-constant SIGEV_THREAD		@VALUEOF_SIGEV_THREAD@)
+(define-inline-constant SIGEV_THREAD_ID		@VALUEOF_SIGEV_THREAD_ID@)
+
+;;; For "setrlimit()" and similar.
+(define-inline-constant RLIMIT_AS		@VALUEOF_RLIMIT_AS@)
+(define-inline-constant RLIMIT_CORE		@VALUEOF_RLIMIT_CORE@)
+(define-inline-constant RLIMIT_CPU		@VALUEOF_RLIMIT_CPU@)
+(define-inline-constant RLIMIT_DATA		@VALUEOF_RLIMIT_DATA@)
+(define-inline-constant RLIMIT_FSIZE		@VALUEOF_RLIMIT_FSIZE@)
+(define-inline-constant RLIMIT_LOCKS		@VALUEOF_RLIMIT_LOCKS@)
+(define-inline-constant RLIMIT_MEMLOCK		@VALUEOF_RLIMIT_MEMLOCK@)
+(define-inline-constant RLIMIT_MSGQUEUE		@VALUEOF_RLIMIT_MSGQUEUE@)
+(define-inline-constant RLIMIT_NICE		@VALUEOF_RLIMIT_NICE@)
+(define-inline-constant RLIMIT_NOFILE		@VALUEOF_RLIMIT_NOFILE@)
+(define-inline-constant RLIMIT_NPROC		@VALUEOF_RLIMIT_NPROC@)
+(define-inline-constant RLIMIT_RSS		@VALUEOF_RLIMIT_RSS@)
+(define-inline-constant RLIMIT_RTPRIO		@VALUEOF_RLIMIT_RTPRIO@)
+(define-inline-constant RLIMIT_RTTIME		@VALUEOF_RLIMIT_RTTIME@)
+(define-inline-constant RLIMIT_SIGPENDING	@VALUEOF_RLIMIT_SIGPENDING@)
+(define-inline-constant RLIMIT_STACK		@VALUEOF_RLIMIT_STACK@)
+
+;;; For "getrusage()".
+(define-inline-constant RUSAGE_SELF		@VALUEOF_RUSAGE_SELF@)
+(define-inline-constant RUSAGE_CHILDREN		@VALUEOF_RUSAGE_CHILDREN@)
+(define-inline-constant RUSAGE_THREAD		@VALUEOF_RUSAGE_THREAD@)
+
+
+;;;; h_errno friendly interface
+
+(define-syntax h_errno-code
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?code)
+       (identifier? #'?code)
+       (let ((sym (syntax->datum #'?code)))
+	 (define them '(HOST_NOT_FOUND TRY_AGAIN NO_RECOVERY NO_ADDRESS))
+	 (if (memq sym them)
+	     #'?code
+	   (syntax-violation 'h_errno-code "invalid symbol as h_errno code" (syntax->datum stx) sym)))))))
+
+(define-syntax case-h_errno
+  (syntax-rules (else)
+    ((_ ?h_errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
+     (let ((h_errno ?h_errno))
+       (cond ((or (and (fixnum? ?code0) ($fx= h_errno ?code0))
+		  (and (fixnum? ?code)  ($fx= h_errno ?code))
+		  ...)
+	      . ?body)
+	     ...
+	     (else . ?else-body))))
+    ((_ ?h_errno ((?code0 ?code ...) . ?body) ...)
+     (let ((h_errno ?h_errno))
+       (cond ((or (and (fixnum? ?code0) ($fx= h_errno ?code0))
+		  (and (fixnum? ?code)  ($fx= h_errno ?code))
+		  ...)
+	      . ?body)
+	     ...)))
+    ))
+
+
+;;;; h_errno codes
+
+(define-inline-constant HOST_NOT_FOUND	(neg @VALUEOF_HOST_NOT_FOUND@))
+(define-inline-constant TRY_AGAIN	(neg @VALUEOF_TRY_AGAIN@))
+(define-inline-constant NO_RECOVERY	(neg @VALUEOF_NO_RECOVERY@))
+(define-inline-constant NO_ADDRESS	(neg @VALUEOF_NO_ADDRESS@))
+
+
+;;;; interprocess signals
+
+(define-inline-constant NSIG		@VALUEOF_NSIG@)
+
+;;; program error
+(define-inline-constant SIGFPE		@VALUEOF_SIGFPE@)
+(define-inline-constant SIGILL		@VALUEOF_SIGILL@)
+(define-inline-constant SIGSEGV		@VALUEOF_SIGSEGV@)
+(define-inline-constant SIGBUS		@VALUEOF_SIGBUS@)
+(define-inline-constant SIGABRT		@VALUEOF_SIGABRT@)
+(define-inline-constant SIGIOT		@VALUEOF_SIGIOT@)
+(define-inline-constant SIGTRAP		@VALUEOF_SIGTRAP@)
+(define-inline-constant SIGEMT		@VALUEOF_SIGEMT@)
+(define-inline-constant SIGSYS		@VALUEOF_SIGSYS@)
+
+;;; termination
+(define-inline-constant SIGTERM		@VALUEOF_SIGTERM@)
+(define-inline-constant SIGINT		@VALUEOF_SIGINT@)
+(define-inline-constant SIGQUIT		@VALUEOF_SIGQUIT@)
+(define-inline-constant SIGKILL		@VALUEOF_SIGKILL@)
+(define-inline-constant SIGHUP		@VALUEOF_SIGHUP@)
+
+;;; alarm
+(define-inline-constant SIGALRM		@VALUEOF_SIGALRM@)
+(define-inline-constant SIGVRALRM	@VALUEOF_SIGVRALRM@)
+(define-inline-constant SIGPROF		@VALUEOF_SIGPROF@)
+
+;;; asynchronous I/O
+(define-inline-constant SIGIO		@VALUEOF_SIGIO@)
+(define-inline-constant SIGURG		@VALUEOF_SIGURG@)
+(define-inline-constant SIGPOLL		@VALUEOF_SIGPOLL@)
+
+;;; job control
+(define-inline-constant SIGCHLD		@VALUEOF_SIGCHLD@)
+(define-inline-constant SIGCLD		@VALUEOF_SIGCLD@)
+(define-inline-constant SIGCONT		@VALUEOF_SIGCONT@)
+(define-inline-constant SIGSTOP		@VALUEOF_SIGSTOP@)
+(define-inline-constant SIGTSTP		@VALUEOF_SIGTSTP@)
+(define-inline-constant SIGTTIN		@VALUEOF_SIGTTIN@)
+(define-inline-constant SIGTTOU		@VALUEOF_SIGTTOU@)
+
+;;; operation error
+(define-inline-constant SIGPIPE		@VALUEOF_SIGPIPE@)
+(define-inline-constant SIGLOST		@VALUEOF_SIGLOST@)
+(define-inline-constant SIGXCPU		@VALUEOF_SIGXCPU@)
+(define-inline-constant SIGXSFZ		@VALUEOF_SIGXSFZ@)
+
+;;; misc
+(define-inline-constant SIGUSR1		@VALUEOF_SIGUSR1@)
+(define-inline-constant SIGUSR2		@VALUEOF_SIGUSR2@)
+(define-inline-constant SIGWINCH	@VALUEOF_SIGWINCH@)
+(define-inline-constant SIGINFO		@VALUEOF_SIGINFO@)
+
+
+;;;; done
+
+)
+
+;;; end of file
+;; Local Variables:
+;; mode: scheme
+;; End:

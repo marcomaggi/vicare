@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare platform utilities)
   (vicare checks))
 

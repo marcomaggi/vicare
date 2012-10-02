@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions)
   (vicare checks))
 

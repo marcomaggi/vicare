@@ -30,7 +30,7 @@
   (vicare errno)
   (prefix (vicare words)
 	  words.)
-  (prefix (vicare platform-constants)
+  (prefix (vicare platform constants)
 	  plat.)
   (vicare syntactic-extensions)
   (vicare checks))

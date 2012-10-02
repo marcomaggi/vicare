@@ -33,7 +33,7 @@
 	  words.)
   (prefix (vicare ffi)
 	  ffi.)
-  (prefix (vicare platform-constants)
+  (prefix (vicare platform constants)
 	  plat.))
 
 (check-set-mode! 'report-failed)

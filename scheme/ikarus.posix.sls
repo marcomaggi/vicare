@@ -39,7 +39,7 @@
 		  vicare-argv0
 		  vicare-argv0-string)
     (vicare syntactic-extensions)
-    (vicare platform-constants)
+    (vicare platform constants)
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare unsafe-operations)
@@ -102,7 +102,7 @@
 
 (define (errno->string negated-errno-code)
   ;;Convert   an   errno   code    as   represented   by   the   (vicare
-  ;;platform-constants)  library into  a string  representing  the errno
+  ;;platform constants)  library into  a string  representing  the errno
   ;;code symbol.
   ;;
   (define who 'errno->string)

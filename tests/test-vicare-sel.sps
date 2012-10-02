@@ -29,7 +29,7 @@
 (import (vicare)
   (prefix (vicare posix) px.)
   (prefix (vicare simple-event-loop) sel.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions)
   (vicare checks))
 

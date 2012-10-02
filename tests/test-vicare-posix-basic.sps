@@ -31,7 +31,7 @@
 	  px.)
   (prefix (vicare ffi)
 	  ffi.)
-  (vicare platform-constants)
+  (vicare platform constants)
   (vicare syntactic-extensions)
   (vicare checks))
 

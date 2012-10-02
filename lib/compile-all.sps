@@ -29,6 +29,7 @@
   (only (vicare installation-configuration))
   (only (vicare errno))
   (only (vicare platform-constants))
+  (only (vicare platform constants))
   (only (vicare platform features))
   (only (vicare platform utilities))
   (only (vicare unsafe-operations))
