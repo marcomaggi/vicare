@@ -18450,22 +18450,7 @@ and @library{rnrs}.
 * args using::                  Performing arguments validation.
 * args forms::                  Optional validation forms.
 
-Predefined validation clauses
-
-* args fixnums::                Validating fixnums.
-* args exact integers::         Validating exact integers.
-* args bits::                   Validating bit--sized integers.
-* args signed int::             Validating C language @code{int} values.
-* args clang::                  Validating C language values.
-* args strings::                Validating string and related arguments.
-* args vectors::                Validating vector and related arguments.
-* args bytevectors::            Validating bytevector and related
-                                arguments.
-* args symbols::                Validating symbols.
-* args enum-sets::              Validating enum-sets.
-* args pointers::               Validating pointers.
-* args memory-blocks::          Validating @code{meory-block} values.
-* args ports::                  Validating input/output ports.
+* args predefined::             Predefined validation clauses.
 @end menu
 
 @c page
@@ -18640,8 +18625,36 @@ When used without arguments or arguments validation disabled: expand to
 @end defmac
 
 @c page
-@node args fixnums
-@subsection Validating fixnums
+@node args predefined
+@subsection Predefined validation clauses
+
+
+@menu
+* args predefined fixnums::        Validating fixnums.
+* args predefined exact integers:: Validating exact integers.
+* args predefined bits::           Validating bit--sized integers.
+* args predefined signed int::     Validating C language @code{int} values.
+* args predefined clang::          Validating C language values.
+* args predefined strings::        Validating string and
+                                   related arguments.
+* args predefined vectors::        Validating vector and
+                                   related arguments.
+* args predefined bytevectors::    Validating bytevector and related
+                                   arguments.
+* args predefined symbols::        Validating symbols.
+* args predefined enum-sets::      Validating enum-sets.
+* args predefined pointers::       Validating pointers.
+* args predefined memory-blocks::  Validating @code{meory-block} values.
+* args predefined ports::          Validating input/output ports.
+* args predefined genstrings::     Validating generalised C string
+                                   arguments.
+* args predefined genbuffers::     Validating generalised C buffer
+                                   arguments.
+@end menu
+
+@c page
+@node args predefined fixnums
+@subsubsection Validating fixnums
 
 
 The following bindings are exported by the library @library{vicare
@@ -18687,8 +18700,8 @@ predicate @func{fxeven?} or @func{fxodd?}.
 @end deffn
 
 @c page
-@node args exact integers
-@subsection Validating exact integers
+@node args predefined exact integers
+@subsubsection Validating exact integers
 
 
 The following bindings are exported by the library @library{vicare
@@ -18736,8 +18749,8 @@ Succeed if @var{obj} satisfies the predicates @func{integer?} and
 @end deffn
 
 @c page
-@node args bits
-@subsection Validating bit--sized integers
+@node args predefined bits
+@subsubsection Validating bit--sized integers
 
 
 The following bindings are exported by the library @library{vicare
@@ -18836,8 +18849,8 @@ machine word is @math{32}-bit or @math{64}-bit integer.
 @end deffn
 
 @c page
-@node args signed int
-@subsection Validating C language @code{int} values
+@node args predefined signed int
+@subsubsection Validating C language @code{int} values
 
 
 Exact integers in the range of the C language type @code{int} are used
@@ -18889,8 +18902,8 @@ predicate @func{even?} or @func{odd?}.
 @end deffn
 
 @c page
-@node args clang
-@subsection Validating C language values
+@node args predefined clang
+@subsubsection Validating C language values
 
 
 The library @library{vicare words} provides the predicates to validate
@@ -18999,8 +19012,8 @@ variant, in the range of a C language type @code{ptrdiff_t}.
 @end deffn
 
 @c page
-@node args strings
-@subsection Validating string and related arguments
+@node args predefined strings
+@subsubsection Validating string and related arguments
 
 
 The following bindings are exported by the library @library{vicare
@@ -19070,8 +19083,8 @@ In other words: @var{start} and @var{past} select a substring of
 @end deffn
 
 @c page
-@node args vectors
-@subsection Validating vector and related arguments
+@node args predefined vectors
+@subsubsection Validating vector and related arguments
 
 
 The following bindings are exported by the library @library{vicare
@@ -19141,8 +19154,8 @@ In other words: @var{start} and @var{past} select a subvector of
 @end deffn
 
 @c page
-@node args bytevectors
-@subsection Validating bytevector and related arguments
+@node args predefined bytevectors
+@subsubsection Validating bytevector and related arguments
 
 
 The following bindings are exported by the library @library{vicare
@@ -19213,8 +19226,8 @@ In other words: @var{start} and @var{past} select a subbytevector of
 @end deffn
 
 @c page
-@node args symbols
-@subsection Validating symbols
+@node args predefined symbols
+@subsubsection Validating symbols
 
 
 The following bindings are exported by the library @library{vicare
@@ -19231,8 +19244,8 @@ Succeed if @var{obj} is @false{} or a symbol.
 @end deffn
 
 @c page
-@node args enum-sets
-@subsection Validating enum-sets
+@node args predefined enum-sets
+@subsubsection Validating enum-sets
 
 
 The following bindings are exported by the library @library{vicare
@@ -19249,8 +19262,8 @@ Succeed if @var{obj} is @false{} or a enum-set.
 @end deffn
 
 @c page
-@node args pointers
-@subsection Validating pointers
+@node args predefined pointers
+@subsubsection Validating pointers
 
 
 The following bindings are exported by the library @library{vicare
@@ -19267,8 +19280,8 @@ Succeed if @var{obj} is @false{} or a pointer.
 @end deffn
 
 @c page
-@node args memory-blocks
-@subsection Validating @code{meory-block} values
+@node args predefined memory-blocks
+@subsubsection Validating @code{meory-block} values
 
 
 The following bindings are exported by the library @library{vicare
@@ -19285,8 +19298,8 @@ Succeed if @var{obj} is @false{} or a memory-block.
 @end deffn
 
 @c page
-@node args ports
-@subsection Validating input/output ports
+@node args predefined ports
+@subsubsection Validating input/output ports
 
 
 The following bindings are exported by the library @library{vicare
@@ -19327,6 +19340,113 @@ Succeed if @var{obj} is an textual or binary port.
 @deffn {Validation Clause} textual-port/false @var{obj}
 @deffnx {Validation Clause} binary-port/false @var{obj}
 Succeed if @var{obj} is @false{} or an textual or binary port.
+@end deffn
+
+@c page
+@node args predefined genstrings
+@subsubsection Validating generalised C string arguments
+
+
+Generalised C strings are meant to be used in interfaces to foreign C
+language libraries, when a pointer to C string or input buffer is
+required as argument.
+
+A @dfn{generalised C string} is an object capable of holding the
+representation of a C language string; such Scheme objects are: strings,
+bytevectors, pointer objects, instances of @code{memory-block}.
+
+When a Scheme string is used as generalised C string: the application
+must take care of converting the Scheme string into a C string
+representation, for example using @func{string->ascii}.
+
+When using generalised C strings we have to remember that:
+
+@itemize
+@item
+A run of the garbage collector may move the data area of Scheme
+bytevectors; for this reason Scheme bytevectors and Scheme strings
+converted to bytevectors are not suitable as arguments to Scheme
+functions interfacing to C functions that call back to Scheme.
+
+@item
+If a Scheme string is used as argument: the C function cannot modify it
+by using it as output buffer.
+@end itemize
+
+@noindent
+in these cases we should use generalised C buffers, @ref{args predefined
+genbuffers} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn Syntax general-c-string? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string @var{obj}
+Succeed if @var{obj} is a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C string.
+@end deffn
+
+@c page
+@node args predefined genbuffers
+@subsubsection Validating generalised C buffer arguments
+
+
+Generalised C buffers are meant to be used in interfaces to foreign C
+language libraries, when a pointer to raw data is required as argument.
+
+A @dfn{generalised C buffer} is an object capable of holding an array of
+mutable bytes referenced by a pointer; such Scheme objects are:
+bytevectors, pointer objects, instances of @code{memory-block}.
+
+A @dfn{generalised C sticky buffer} is an object capable of holding an
+array of mutable bytes referenced by a pointer, whose data area is never
+moved around by the garbage collector; such Scheme objects are: pointer
+objects, instances of @code{memory-block}.  Sticky buffers are meant to
+be used when calling out to C functions that call back to Scheme.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn Syntax general-c-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer @var{obj}
+Succeed if @var{obj} is a generalised C buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C buffer.
+@end deffn
+
+
+@deffn Syntax general-c-sticky-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer @var{obj}
+Succeed if @var{obj} is a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C sticky buffer.
 @end deffn
 
 @c page

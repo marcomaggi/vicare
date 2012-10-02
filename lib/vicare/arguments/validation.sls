@@ -187,6 +187,23 @@
     textual-port/false.vicare-arguments-validation
     binary-port.vicare-arguments-validation
     binary-port/false.vicare-arguments-validation
+
+    ;; procedures
+    procedure.vicare-arguments-validation
+    procedure/false.vicare-arguments-validation
+
+    ;; generalised C strings and buffers
+    general-c-string?
+    general-c-string.vicare-arguments-validation
+    general-c-string/false.vicare-arguments-validation
+
+    general-c-buffer?
+    general-c-buffer.vicare-arguments-validation
+    general-c-buffer/false.vicare-arguments-validation
+
+    general-c-sticky-buffer?
+    general-c-sticky-buffer.vicare-arguments-validation
+    general-c-sticky-buffer/false.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1195,6 +1212,70 @@
 (define-argument-validation (binary-port/false who obj)
   (or (not obj) (binary-port? obj))
   (assertion-violation who "expected false or binary port as argument" obj))
+
+
+;;;; procedures
+
+(define-argument-validation (procedure who obj)
+  (procedure? obj)
+  (assertion-violation who "expected procedure as argument" obj))
+
+(define-argument-validation (procedure/false who obj)
+  (or (not obj) (procedure? obj))
+  (assertion-violation who "expected false or procedure as argument" obj))
+
+
+;;;; generalised C strings
+
+(define-inline (general-c-string? ?obj)
+  (let ((obj ?obj))
+    (or (string?	obj)
+	(bytevector?	obj)
+	(pointer?	obj)
+	(memory-block?	obj))))
+
+(define-argument-validation (general-c-string who obj)
+  (general-c-string? obj)
+  (assertion-violation who "expected general C string as argument" obj))
+
+(define-argument-validation (general-c-string/false who obj)
+  (or (not obj)
+      (string? obj)
+      (bytevector? obj)
+      (pointer? obj)
+      (memory-block? obj))
+  (assertion-violation who "expected false or general C string as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (general-c-buffer? ?obj)
+  (let ((obj ?obj))
+    (or (bytevector?	obj)
+	(pointer?	obj)
+	(memory-block?	obj))))
+
+(define-argument-validation (general-c-buffer who obj)
+  (general-c-buffer? obj)
+  (assertion-violation who "expected general C buffer as argument" obj))
+
+(define-argument-validation (general-c-buffer/false who obj)
+  (or (not obj) (general-c-buffer? obj))
+  (assertion-violation who "expected false or general C buffer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-inline (general-c-sticky-buffer? ?obj)
+  (let ((obj ?obj))
+    (or (pointer?	obj)
+	(memory-block?	obj))))
+
+(define-argument-validation (general-c-sticky-buffer who obj)
+  (general-c-sticky-buffer? obj)
+  (assertion-violation who "expected general C sticky buffer as argument" obj))
+
+(define-argument-validation (general-c-sticky-buffer/false who obj)
+  (or (not obj) (general-c-sticky-buffer? obj))
+  (assertion-violation who "expected general C sticky buffer as argument" obj))
 
 
 ;;;; done

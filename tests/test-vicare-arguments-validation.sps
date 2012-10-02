@@ -1899,6 +1899,198 @@
   #t)
 
 
+(parametrise ((check-test-name	'validate-procedure))
+
+;;; procedure
+
+  (check
+      (doit #f procedure values)
+    => #t)
+
+  (check
+      (doit #f procedure "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; procedure/false
+
+  (check
+      (doit #f procedure/false values)
+    => #t)
+
+  (check
+      (doit #f procedure/false #f)
+    => #t)
+
+  (check
+      (doit #f procedure/false "ciao")
+    => '("ciao"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-genstrings))
+
+;;; general-c-string
+
+  (check
+      (doit #f general-c-string "ciao")
+    => #t)
+
+  (check
+      (doit #f general-c-string '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f general-c-string (null-pointer))
+    => #t)
+
+  (check
+      (doit #f general-c-string (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f general-c-string 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; general-c-string/false
+
+  (check
+      (doit #f general-c-string/false "ciao")
+    => #t)
+
+  (check
+      (doit #f general-c-string/false '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f general-c-string/false (null-pointer))
+    => #t)
+
+  (check
+      (doit #f general-c-string/false (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f general-c-string/false #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string/false 'ciao)
+    => '(ciao))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-genbuffers))
+
+;;; general-c-buffer
+
+  (check
+      (doit #f general-c-buffer "ciao")
+    => '("ciao"))
+
+  (check
+      (doit #f general-c-buffer '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f general-c-buffer (null-pointer))
+    => #t)
+
+  (check
+      (doit #f general-c-buffer (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f general-c-buffer 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; general-c-buffer/false
+
+  (check
+      (doit #f general-c-buffer/false "ciao")
+    => '("ciao"))
+
+  (check
+      (doit #f general-c-buffer/false '#vu8(1 2 3))
+    => #t)
+
+  (check
+      (doit #f general-c-buffer/false (null-pointer))
+    => #t)
+
+  (check
+      (doit #f general-c-buffer/false (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f general-c-buffer/false #f)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer/false 'ciao)
+    => '(ciao))
+
+  #t)
+
+
+(parametrise ((check-test-name	'validate-genbuffers-sticky))
+
+;;; general-c-sticky-buffer
+
+  (check
+      (doit #f general-c-sticky-buffer "ciao")
+    => '("ciao"))
+
+  (check
+      (doit #f general-c-sticky-buffer '#vu8(1 2 3))
+    => '(#vu8(1 2 3)))
+
+  (check
+      (doit #f general-c-sticky-buffer (null-pointer))
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; general-c-sticky-buffer/false
+
+  (check
+      (doit #f general-c-sticky-buffer/false "ciao")
+    => '("ciao"))
+
+  (check
+      (doit #f general-c-sticky-buffer/false '#vu8(1 2 3))
+    => '(#vu8(1 2 3)))
+
+  (check
+      (doit #f general-c-sticky-buffer/false (null-pointer))
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer/false (null-memory-block))
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer/false #f)
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer/false 'ciao)
+    => '(ciao))
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-prefixed))
 
   (check
