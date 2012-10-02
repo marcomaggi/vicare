@@ -52,7 +52,7 @@
     (prefix (vicare posix) px.)
     (prefix (vicare unsafe-operations) unsafe.)
     (vicare syntactic-extensions)
-    (vicare platform-constants))
+    (vicare platform constants))
 
 
 ;;;; arguments validation

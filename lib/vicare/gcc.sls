@@ -38,7 +38,7 @@
     (prefix (vicare ffi) ffi.)
     (prefix (vicare posix) px.)
     (prefix (vicare glibc) glibc.)
-    (prefix (vicare platform-constants) plat.)
+    (prefix (vicare platform constants) plat.)
     (vicare syntactic-extensions))
 
 

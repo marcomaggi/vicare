@@ -209,6 +209,8 @@
     (for (prefix (vicare installation-configuration)
 		 config.)
 	 expand)
+    (only (vicare platform constants)
+	  FD_SETSIZE)
     (prefix (vicare words)
 	    words.)
     (prefix (vicare unsafe-operations)
@@ -463,8 +465,8 @@
 ;;;; exact integers validation
 
 (define-inline (exact-integer? obj)
-  (and (integer? obj)
-       (exact?   obj)))
+  (or (fixnum? obj)
+      (bignum? obj)))
 
 ;;; --------------------------------------------------------------------
 

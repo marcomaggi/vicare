@@ -83,7 +83,7 @@
 		  directory-stream-pointer)
 	    posix.)
     (vicare syntactic-extensions)
-    (vicare platform-constants)
+    (vicare platform constants)
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare words)

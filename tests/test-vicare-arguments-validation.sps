@@ -103,6 +103,27 @@
   (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
 
 
+(parametrise ((check-test-name	'validate-prefixed))
+
+  (check
+      (doit #f args.fixnum 123)
+    => #t)
+
+  (check
+      (doit #f args.fixnum 'ciao)
+    => '(ciao))
+
+  (check
+      (doit #f args.fixnum/false #f)
+    => #t)
+
+  (check
+      (doit #f args.string "123")
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-fixnums))
 
 ;;; fixnum
@@ -2091,23 +2112,48 @@
   #t)
 
 
-(parametrise ((check-test-name	'validate-prefixed))
+(parametrise ((check-test-name	'validation-clauses))
+
+;;; file-descriptor
 
   (check
-      (doit #f args.fixnum 123)
+      (doit #f file-descriptor 123)
     => #t)
 
   (check
-      (doit #f args.fixnum 'ciao)
+      (doit #f file-descriptor -1)
+    => '(-1))
+
+  (check
+      (doit #f file-descriptor (greatest-fixnum))
+    => `(,(greatest-fixnum)))
+
+  (check
+      (doit #f file-descriptor 'ciao)
     => '(ciao))
 
+;;; --------------------------------------------------------------------
+;;; file-descriptor/false
+
   (check
-      (doit #f args.fixnum/false #f)
+      (doit #f file-descriptor/false 123)
     => #t)
 
   (check
-      (doit #f args.string "123")
+      (doit #f file-descriptor/false -1)
+    => '(-1))
+
+  (check
+      (doit #f file-descriptor/false (greatest-fixnum))
+    => `(,(greatest-fixnum)))
+
+  (check
+      (doit #f file-descriptor/false #f)
     => #t)
+
+  (check
+      (doit #f file-descriptor/false 'ciao)
+    => '(ciao))
 
   #t)
 

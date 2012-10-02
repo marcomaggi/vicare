@@ -376,7 +376,12 @@
     vicare-executable-as-bytevector	vicare-executable-as-string
 
     ;; miscellaneous functions
-    file-descriptor?)
+    file-descriptor?
+
+    ;; validation clauses
+    file-descriptor.vicare-arguments-validation
+    file-descriptor/false.vicare-arguments-validation
+    )
   (import (except (vicare)
 		  strerror		getenv
 		  remove		time
@@ -386,7 +391,8 @@
 		  errno->string)
 	    posix.)
     (vicare syntactic-extensions)
-    (vicare platform-constants)
+    (vicare platform constants)
+    (vicare arguments validation)
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare unsafe-operations)
@@ -487,7 +493,7 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (procedure who obj)
+#;(define-argument-validation (procedure who obj)
   (procedure? obj)
   (assertion-violation who "expected procedure as argument" obj))
 
@@ -495,15 +501,15 @@
   (boolean? obj)
   (assertion-violation who "expected boolean as argument" obj))
 
-(define-argument-validation (fixnum who obj)
+#;(define-argument-validation (fixnum who obj)
   (fixnum? obj)
   (assertion-violation who "expected fixnum as argument" obj))
 
-(define-argument-validation (string who obj)
+#;(define-argument-validation (string who obj)
   (string? obj)
   (assertion-violation who "expected string as argument" obj))
 
-(define-argument-validation (bytevector who obj)
+#;(define-argument-validation (bytevector who obj)
   (bytevector? obj)
   (assertion-violation who "expected bytevector as argument" obj))
 
@@ -511,22 +517,22 @@
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
 
-(define-argument-validation (pointer who obj)
+#;(define-argument-validation (pointer who obj)
   (pointer? obj)
   (assertion-violation who "expected pointer as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (fixnum/false who obj)
+#;(define-argument-validation (fixnum/false who obj)
   (or (not obj) (fixnum? obj))
   (assertion-violation who "expected false or fixnum as argument" obj))
 
-(define-argument-validation (positive-fixnum who obj)
+#;(define-argument-validation (positive-fixnum who obj)
   (and (fixnum? obj)
        (unsafe.fx< 0 obj))
   (assertion-violation who "expected positive fixnum as argument" obj))
 
-(define-argument-validation (non-negative-fixnum who obj)
+#;(define-argument-validation (non-negative-fixnum who obj)
   (and (fixnum? obj)
        (unsafe.fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
@@ -535,7 +541,7 @@
   (or (fixnum? obj) (boolean? obj))
   (assertion-violation who "expected boolean or fixnum as argument" obj))
 
-(define-argument-validation (pointer/false who obj)
+#;(define-argument-validation (pointer/false who obj)
   (or (not obj) (pointer? obj))
   (assertion-violation who "expected false or pointer as argument" obj))
 
@@ -543,7 +549,7 @@
   (or (not obj) (fixnum? obj) (pointer? obj))
   (assertion-violation who "expected false, fixnum or pointer as argument" obj))
 
-(define-argument-validation (exact-integer who obj)
+#;(define-argument-validation (exact-integer who obj)
   (or (fixnum? obj) (bignum? obj))
   (assertion-violation who "expected exact integer as argument" obj))
 
@@ -565,14 +571,14 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (general-buffer who obj)
+#;(define-argument-validation (general-buffer who obj)
   (or (bytevector? obj)
       (pointer? obj)
       (memory-block? obj))
   (assertion-violation who
     "expected bytevector or pointer or memory-block as general buffer argument" obj))
 
-(define-argument-validation (general-buffer/false who obj)
+#;(define-argument-validation (general-buffer/false who obj)
   (or (not obj)
       (bytevector? obj)
       (pointer? obj)
@@ -591,7 +597,7 @@
   (fixnum? obj)
   (assertion-violation who "expected fixnum gid as argument" obj))
 
-(define-argument-validation (file-descriptor who obj)
+#;(define-argument-validation (file-descriptor who obj)
   (%file-descriptor? obj)
   (assertion-violation who "expected fixnum as file descriptor argument" obj))
 
@@ -647,7 +653,7 @@
   (assertion-violation who
     "expected non-negative exact integer as directory stream position argument" obj))
 
-(define-argument-validation (off_t who obj)
+#;(define-argument-validation (off_t who obj)
   (words.off_t? obj)
   (assertion-violation who
     "expected platform off_t exact integer as offset argument" obj))
@@ -686,17 +692,17 @@
   (assertion-violation who
     "expected exact integer or 32-bit bytevector as network address argument" obj))
 
-(define-argument-validation (platform-int who obj)
+#;(define-argument-validation (signed-int who obj)
   (words.signed-int? obj)
   (assertion-violation who
     "expected exact integer in platform's \"int\" range as argument" obj))
 
-(define-argument-validation (platform-int/boolean who obj)
+(define-argument-validation (signed-int/boolean who obj)
   (or (boolean? obj) (words.signed-int? obj))
   (assertion-violation who
     "expected boolean or exact integer in platform's \"int\" range as argument" obj))
 
-(define-argument-validation (platform-size_t who obj)
+#;(define-argument-validation (size_t who obj)
   (words.size_t? obj)
   (assertion-violation who
     "expected exact integer in platform's \"size_t\" range as argument" obj))
@@ -770,22 +776,22 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (uint32_t who obj)
+#;(define-argument-validation (word-u32 who obj)
   (words.word-u32? obj)
   (assertion-violation who
-    "expected exact integer representing a C language \"uint32_t\" as argument" obj))
+    "expected exact integer representing a C language \"word-u32\" as argument" obj))
 
-(define-argument-validation (uint16_t who obj)
+#;(define-argument-validation (word-u16 who obj)
   (words.word-u16? obj)
   (assertion-violation who
-    "expected exact integer representing a C language \"uint16_t\" as argument" obj))
+    "expected exact integer representing a C language \"word-u16\" as argument" obj))
 
-(define-argument-validation (unsigned-int who obj)
+#;(define-argument-validation (unsigned-int who obj)
   (words.unsigned-int? obj)
   (assertion-violation who
     "expected exact integer representing a C language \"unsigned int\" as argument" obj))
 
-(define-argument-validation (signed-int who obj)
+#;(define-argument-validation (signed-int who obj)
   (words.signed-int? obj)
   (assertion-violation who
     "expected exact integer representing a C language \"signed int\" as argument" obj))
@@ -843,7 +849,7 @@
 
 (define (h_errno->string negated-h_errno-code)
   ;;Convert   an   h_errno   code   as  represented   by   the   (vicare
-  ;;platform-constants) library  into a string  representing the h_errno
+  ;;platform constants) library  into a string  representing the h_errno
   ;;code symbol.
   ;;
   (define who 'h_errno->string)
@@ -2058,7 +2064,7 @@
   (define who 'poll)
   (with-arguments-validation (who)
       ((poll-fds	fds)
-       (platform-int	timeout))
+       (signed-int	timeout))
     (let ((rv (capi.posix-poll fds timeout)))
       (if (unsafe.fx<= 0 rv)
 	  rv
@@ -2211,7 +2217,7 @@
    ((fd-set idx)
     (define who 'FD_ZERO)
     (with-arguments-validation (who)
-	((general-buffer	fd-set)
+	((general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
       (capi.posix-fd-zero fd-set idx)))))
 
@@ -2223,7 +2229,7 @@
     (define who 'FD_SET)
     (with-arguments-validation (who)
 	((file-descriptor	fd)
-	 (general-buffer	fd-set)
+	 (general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
       (capi.posix-fd-set fd fd-set idx)))))
 
@@ -2235,7 +2241,7 @@
     (define who 'FD_SET)
     (with-arguments-validation (who)
 	((file-descriptor	fd)
-	 (general-buffer	fd-set)
+	 (general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
       (capi.posix-fd-clr fd fd-set idx)))))
 
@@ -2247,7 +2253,7 @@
     (define who 'FD_ISSET)
     (with-arguments-validation (who)
 	((file-descriptor	fd)
-	 (general-buffer	fd-set)
+	 (general-c-buffer	fd-set)
 	 (non-negative-fixnum	idx))
       (capi.posix-fd-isset fd fd-set idx)))))
 
@@ -2257,9 +2263,9 @@
   (define who 'select-from-sets)
   (with-arguments-validation (who)
       ((select-nfds		nfds)
-       (general-buffer/false	read-fds)
-       (general-buffer/false	write-fds)
-       (general-buffer/false	except-fds)
+       (general-c-buffer/false	read-fds)
+       (general-c-buffer/false	write-fds)
+       (general-c-buffer/false	except-fds)
        (secfx			sec)
        (usecfx			usec))
     (let ((rv (capi.posix-select-from-sets nfds read-fds write-fds except-fds sec usec)))
@@ -2273,10 +2279,10 @@
 (define (select-from-sets-array nfds fd-sets sec usec)
   (define who 'select-from-sets-array)
   (with-arguments-validation (who)
-      ((select-nfds	nfds)
-       (general-buffer	fd-sets)
-       (secfx		sec)
-       (usecfx		usec))
+      ((select-nfds		nfds)
+       (general-c-buffer	fd-sets)
+       (secfx			sec)
+       (usecfx			usec))
     (let ((rv (capi.posix-select-from-sets-array nfds fd-sets sec usec)))
       (if (fixnum? rv)
 	  (if (unsafe.fxzero? rv)
@@ -2308,7 +2314,7 @@
   (define who 'mmap)
   (with-arguments-validation (who)
       ((pointer/false	address)
-       (platform-size_t	length)
+       (size_t		length)
        (fixnum		protect)
        (fixnum		flags)
        (file-descriptor	fd)
@@ -2321,8 +2327,8 @@
 (define (munmap address length)
   (define who 'munmap)
   (with-arguments-validation (who)
-      ((pointer		address)
-       (platform-size_t	length))
+      ((pointer	address)
+       (size_t	length))
     (let ((rv (capi.posix-munmap address length)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length)))))
@@ -2330,9 +2336,9 @@
 (define (msync address length flags)
   (define who 'msync)
   (with-arguments-validation (who)
-      ((pointer		address)
-       (platform-size_t	length)
-       (fixnum		flags))
+      ((pointer	address)
+       (size_t	length)
+       (fixnum	flags))
     (let ((rv (capi.posix-msync address length flags)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length flags)))))
@@ -2340,10 +2346,10 @@
 (define (mremap address length new-length flags)
   (define who 'mremap)
   (with-arguments-validation (who)
-      ((pointer		address)
-       (platform-size_t	length)
-       (platform-size_t	new-length)
-       (fixnum		flags))
+      ((pointer	address)
+       (size_t	length)
+       (size_t	new-length)
+       (fixnum	flags))
     (let ((rv (capi.posix-mremap address length new-length flags)))
       (if (pointer? rv)
 	  rv
@@ -2352,9 +2358,9 @@
 (define (madvise address length advice)
   (define who 'madvise)
   (with-arguments-validation (who)
-      ((pointer		address)
-       (platform-size_t	length)
-       (fixnum		advice))
+      ((pointer	address)
+       (size_t	length)
+       (fixnum	advice))
     (let ((rv (capi.posix-madvise address length advice)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length advice)))))
@@ -2362,9 +2368,9 @@
 (define (mprotect address length prot)
   (define who 'mprotect)
   (with-arguments-validation (who)
-      ((pointer		address)
-       (platform-size_t	length)
-       (fixnum		prot))
+      ((pointer	address)
+       (size_t	length)
+       (fixnum	prot))
     (let ((rv (capi.posix-mprotect address length prot)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length)))))
@@ -2373,7 +2379,7 @@
   (define who 'mlock)
   (with-arguments-validation (who)
       ((pointer		address)
-       (platform-size_t	length))
+       (size_t		length))
     (let ((rv (capi.posix-mlock address length)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length)))))
@@ -2382,7 +2388,7 @@
   (define who 'munlock)
   (with-arguments-validation (who)
       ((pointer		address)
-       (platform-size_t	length))
+       (size_t		length))
     (let ((rv (capi.posix-munlock address length)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv address length)))))
@@ -2946,25 +2952,25 @@
 (define (htonl host-long)
   (define who 'htonl)
   (with-arguments-validation (who)
-      ((uint32_t	host-long))
+      ((word-u32	host-long))
     (capi.posix-htonl host-long)))
 
 (define (htons host-short)
   (define who 'htons)
   (with-arguments-validation (who)
-      ((uint16_t	host-short))
+      ((word-u16	host-short))
     (capi.posix-htons host-short)))
 
 (define (ntohl host-long)
   (define who 'ntohl)
   (with-arguments-validation (who)
-      ((uint32_t	host-long))
+      ((word-u32	host-long))
     (capi.posix-ntohl host-long)))
 
 (define (ntohs host-short)
   (define who 'ntohs)
   (with-arguments-validation (who)
-      ((uint16_t	host-short))
+      ((word-u16	host-short))
     (capi.posix-ntohs host-short)))
 
 ;;; --------------------------------------------------------------------
@@ -3467,7 +3473,7 @@
       ((file-descriptor		sock)
        (fixnum			level)
        (fixnum			option)
-       (platform-int/boolean	optval))
+       (signed-int/boolean	optval))
     (let ((rv (capi.posix-setsockopt/int sock level option optval)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
@@ -3476,9 +3482,9 @@
   (define who 'setsockopt/size_t)
   (with-arguments-validation (who)
       ((file-descriptor	sock)
-       (fixnum		level)
-       (fixnum		option)
-       (platform-size_t	optval))
+       (fixnum	level)
+       (fixnum	option)
+       (size_t	optval))
     (let ((rv (capi.posix-setsockopt/size_t sock level option optval)))
       (unless (unsafe.fxzero? rv)
 	(%raise-errno-error who rv sock level option optval)))))
@@ -4412,6 +4418,17 @@
 
 (define (file-descriptor? obj)
   (%file-descriptor? obj))
+
+
+;;;; arguments validation clauses
+
+(define-argument-validation (file-descriptor who obj)
+  (%file-descriptor? obj)
+  (assertion-violation who "expected fixnum file descriptor as argument" obj))
+
+(define-argument-validation (file-descriptor/false who obj)
+  (or (not obj) (%file-descriptor? obj))
+  (assertion-violation who "expected false or fixnum file descriptor as argument" obj))
 
 
 ;;;; done

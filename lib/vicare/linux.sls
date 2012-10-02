@@ -109,7 +109,8 @@
     )
   (import (vicare)
     (vicare syntactic-extensions)
-    (vicare platform-constants)
+    (vicare platform constants)
+    (vicare arguments validation)
     (prefix (vicare words)
 	    words.)
     (prefix (vicare posix)
@@ -122,55 +123,17 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
 (define-argument-validation (boolean who obj)
   (boolean? obj)
   (assertion-violation who "expected boolean as argument" obj))
-
-(define-argument-validation (fixnum who obj)
-  (fixnum? obj)
-  (assertion-violation who "expected fixnum as argument" obj))
-
-(define-argument-validation (positive-fixnum who obj)
-  (and (fixnum? obj) (unsafe.fx< 0 obj))
-  (assertion-violation who "expected positive fixnum as argument" obj))
 
 (define-argument-validation (index who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected fixnum index as argument" obj))
 
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
-
-(define-argument-validation (pointer who obj)
-  (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
-
-(define-argument-validation (false/pointer who obj)
-  (or (not obj) (pointer? obj))
-  (assertion-violation who "expected false or pointer as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (signed-int who obj)
-  (words.signed-int? obj)
-  (assertion-violation who "expected C language signed int as argument" obj))
-
-(define-argument-validation (uint32 who obj)
-  (words.word-u32? obj)
-  (assertion-violation who "expected C language uint32 as argument" obj))
-
-(define-argument-validation (uint64 who obj)
-  (words.word-u64? obj)
-  (assertion-violation who "expected C language uint64 as argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -182,16 +145,10 @@
   (fixnum? obj)
   (assertion-violation who "expected fixnum signal code as argument" obj))
 
-(define-argument-validation (file-descriptor who obj)
-  (%file-descriptor? obj)
-  (assertion-violation who "expected fixnum file descriptor as argument" obj))
-
 (define-argument-validation (file-descriptor/-1 who obj)
-  (and (fixnum? obj)
-       (or (unsafe.fx=  obj -1)
-	   (and (unsafe.fx>= obj 0)
-		(unsafe.fx<  obj FD_SETSIZE))))
-  (assertion-violation who "expected -1 or fixnum file descriptor as argument" obj))
+  (or (px.file-descriptor? obj)
+      (eqv? -1 obj))
+  (assertion-violation who "expected -1 or file descriptor as argument" obj))
 
 (define-argument-validation (vector-of-signums who obj)
   (and (vector? obj) (vector-for-all fixnum? obj))
@@ -265,14 +222,6 @@
 	  (make-who-condition who)
 	  (make-message-condition (strerror errno))
 	  (make-irritants-condition irritants))))
-
-(define-inline (%file-descriptor? obj)
-  ;;Do  what   is  possible  to  recognise   fixnums  representing  file
-  ;;descriptors.
-  ;;
-  (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<  obj FD_SETSIZE)))
 
 (define (%valid-struct-rlimit? obj)
   (and (px.struct-rlimit? obj)
@@ -361,10 +310,10 @@
    ((epfd op fd event)
     (define who 'epoll-ctl)
     (with-arguments-validation (who)
-	((file-descriptor	epfd)
+	((px.file-descriptor	epfd)
 	 (fixnum		op)
-	 (file-descriptor	fd)
-	 (false/pointer		event))
+	 (px.file-descriptor	fd)
+	 (pointer/false		event))
       (let ((rv (capi.linux-epoll-ctl epfd op fd event)))
 	(unless (unsafe.fxzero? rv)
 	  (%raise-errno-error who rv epfd op fd event)))))))
@@ -372,7 +321,7 @@
 (define (epoll-wait epfd event maxevents timeout-ms)
   (define who 'epoll-wait)
   (with-arguments-validation (who)
-      ((file-descriptor		epfd)
+      ((px.file-descriptor	epfd)
        (pointer			event)
        (signed-int		maxevents)
        (signed-int		timeout-ms))
@@ -417,7 +366,7 @@
   (define-epoll-event-field
     epoll-event-set-events!
     epoll-event-ref-events
-    uint32
+    word-u32
     capi.linux-epoll-event-set-events!
     capi.linux-epoll-event-ref-events)
 
@@ -431,21 +380,21 @@
   (define-epoll-event-field
     epoll-event-set-data-fd!
     epoll-event-ref-data-fd
-    file-descriptor
+    px.file-descriptor
     capi.linux-epoll-event-set-data-fd!
     capi.linux-epoll-event-ref-data-fd)
 
   (define-epoll-event-field
     epoll-event-set-data-u32!
     epoll-event-ref-data-u32
-    uint32
+    word-u32
     capi.linux-epoll-event-set-data-u32!
     capi.linux-epoll-event-ref-data-u32)
 
   (define-epoll-event-field
     epoll-event-set-data-u64!
     epoll-event-ref-data-u64
-    uint64
+    word-u64
     capi.linux-epoll-event-set-data-u64!
     capi.linux-epoll-event-ref-data-u64)
   )
@@ -507,7 +456,7 @@
 (define (read-signalfd-siginfo fd)
   (define who 'read-signalfd-siginfo)
   (with-arguments-validation (who)
-      ((file-descriptor	fd))
+      ((px.file-descriptor	fd))
     (let* ((info (make-struct-signalfd-siginfo #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f #f))
 	   (rv   (capi.linux-read-signalfd-siginfo fd info)))
       (cond ((unsafe.fxzero? rv)
@@ -541,7 +490,7 @@
    ((fd flags new old)
     (define who 'timerfd-settime)
     (with-arguments-validation (who)
-	((file-descriptor	fd)
+	((px.file-descriptor	fd)
 	 (timerfd-settime-flags	flags)
 	 (itimerspec		new)
 	 (itimerspec/false	old))
@@ -559,7 +508,7 @@
    ((fd curr)
     (define who 'timerfd-gettime)
     (with-arguments-validation (who)
-	((file-descriptor	fd)
+	((px.file-descriptor	fd)
 	 (itimerspec		curr))
       (let ((rv (capi.linux-timerfd-gettime fd curr)))
 	(if (unsafe.fxzero? rv)
@@ -569,7 +518,7 @@
 (define (timerfd-read fd)
   (define who 'timerfd-read)
   (with-arguments-validation (who)
-      ((file-descriptor	fd))
+      ((px.file-descriptor	fd))
     (let ((rv (capi.linux-timerfd-read fd)))
       (if (<= 0 rv)
 	  rv
@@ -620,9 +569,9 @@
 (define (inotify-add-watch fd pathname mask)
   (define who 'inotify-add-watch)
   (with-arguments-validation (who)
-      ((file-descriptor	fd)
+      ((px.file-descriptor	fd)
        (pathname	pathname)
-       (uint32		mask))
+       (word-u32	mask))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.linux-inotify-add-watch fd pathname.bv mask)))
 	(if (not (negative? rv))
@@ -632,7 +581,7 @@
 (define (inotify-rm-watch fd wd)
   (define who 'inotify-rm-watch)
   (with-arguments-validation (who)
-      ((file-descriptor			fd)
+      ((px.file-descriptor			fd)
        (inotify-watch-descriptor	wd))
     (let ((rv (capi.linux-inotify-rm-watch fd wd)))
       (unless (unsafe.fxzero? rv)
@@ -645,7 +594,7 @@
    ((fd event)
     (define who 'inotify-read)
     (with-arguments-validation (who)
-	((file-descriptor	fd)
+	((px.file-descriptor	fd)
 	 (inotify-event		event))
       (let ((rv (capi.linux-inotify-read fd event)))
 	(cond ((struct-inotify-event? rv)
