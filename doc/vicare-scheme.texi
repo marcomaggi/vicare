@@ -8268,6 +8268,7 @@ syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
 * posix shm::                   Shared memory.
 * posix sem::                   Semaphores.
 * posix misc::                  Miscellaneous functions.
+* posix args::                  Arguments validation clauses.
 * posix not::                   @posix{} functions not interfaced.
 @end menu
 
@@ -13576,6 +13577,22 @@ of @code{FD_SETSIZE}.
 @end defun
 
 @c page
+@node posix args
+@section Arguments validation clauses
+
+
+The clauses are meant to be used with the features of the library
+@library{vicare arguments validation}; notice that the name of the
+clause is @strong{not} the name of the exported binding.
+
+
+@deffn {Validation Clause} file-descriptor @var{obj}
+@deffnx {Validation Clause} file-descriptor/false @var{obj}
+Succeed if @var{obj} satisfies the @func{file-descriptor?} predicate or,
+for the second clause, it is @false{}.
+@end deffn
+
+@c page
 @node posix not
 @section @posix{} functions not interfaced
 
@@ -18696,8 +18713,12 @@ strictly positive or strictly negative.
 
 @deffn {Validation Clause} non-positive-fixnum @var{obj}
 @deffnx {Validation Clause} non-negative-fixnum @var{obj}
+@deffnx {Validation Clause} fixnum-index @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
 strictly positive or strictly negative.
+
+The clause @code{fixnum-index} is an alias for
+@code{non-negative-fixnum}.
 @end deffn
 
 

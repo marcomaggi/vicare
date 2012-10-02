@@ -48,6 +48,9 @@
     even-fixnum.vicare-arguments-validation
     odd-fixnum.vicare-arguments-validation
 
+    (rename (non-negative-fixnum.vicare-arguments-validation
+	     fixnum-index.vicare-arguments-validation))
+
     ;; exact integers
     exact-integer.vicare-arguments-validation
     exact-integer/false.vicare-arguments-validation

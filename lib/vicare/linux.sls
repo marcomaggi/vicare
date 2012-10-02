@@ -123,10 +123,6 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected fixnum index as argument" obj))
-
 (define-argument-validation (pathname who obj)
   (or (bytevector? obj) (string? obj))
   (assertion-violation who "expected string or bytevector as pathname argument" obj))
@@ -155,9 +151,11 @@
        (or (unsafe.fx= obj CLOCK_REALTIME)
 	   (unsafe.fx= obj CLOCK_MONOTONIC)))
   (assertion-violation who
-    (string-append "expected fixnum " (number->string CLOCK_REALTIME)
-		   " or " (number->string CLOCK_MONOTONIC)
-		   " as clockid argument")
+    (string-append "expected fixnum CLOCK_REALTIME ("
+		   (number->string CLOCK_REALTIME)
+		   ") or CLOCK_MONOTONIC ("
+		   (number->string CLOCK_MONOTONIC)
+		   ") as clockid argument")
     obj))
 
 (define-argument-validation (timerfd-settime-flags who obj)
@@ -349,14 +347,14 @@
 	      (define who '?mutator)
 	      (with-arguments-validation (who)
 		  ((pointer		events-array)
-		   (index		index)
+		   (fixnum-index	index)
 		   (?value-type	new-value))
 		(?mutator-func events-array index new-value)))
 	    (define (?accessor events-array index)
 	      (define who '?accessor)
 	      (with-arguments-validation (who)
 		  ((pointer		events-array)
-		   (index		index))
+		   (fixnum-index	index))
 		(?accessor-func events-array index))))))))
 
   (define-epoll-event-field
@@ -566,8 +564,8 @@
   (define who 'inotify-add-watch)
   (with-arguments-validation (who)
       ((px.file-descriptor	fd)
-       (pathname	pathname)
-       (word-u32	mask))
+       (pathname		pathname)
+       (word-u32		mask))
     (with-pathnames ((pathname.bv pathname))
       (let ((rv (capi.linux-inotify-add-watch fd pathname.bv mask)))
 	(if (not (negative? rv))
@@ -577,7 +575,7 @@
 (define (inotify-rm-watch fd wd)
   (define who 'inotify-rm-watch)
   (with-arguments-validation (who)
-      ((px.file-descriptor			fd)
+      ((px.file-descriptor		fd)
        (inotify-watch-descriptor	wd))
     (let ((rv (capi.linux-inotify-rm-watch fd wd)))
       (unless (unsafe.fxzero? rv)
