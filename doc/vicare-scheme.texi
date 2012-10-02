@@ -19486,7 +19486,8 @@ to the sourced code.
 
 
 One syntax identifier binding for each known @code{errno} value is
-exported by the library @library{vicare errno}; @ref{iklib errno} for
+exported by the library @library{vicare errno} and reexported by the
+library @library{vicare platform-constants}; @ref{iklib errno} for
 details on @value{PRJNAME} internal encoding of @code{errno} codes.  The
 following bindings are exported by the library @library{vicare errno}.
 
