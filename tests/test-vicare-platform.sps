@@ -1,14 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare
-;;;Contents: tests for errno related features
+;;;Contents: tests for platform constants related features
 ;;;Date: Tue Oct  2, 2012
 ;;;
 ;;;Abstract
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,13 +27,12 @@
 
 #!r6rs
 (import (vicare)
-  (vicare errno)
-  (prefix (vicare platform-constants)
-	  plat.)
+  (vicare platform-constants)
+  (vicare platform utilities)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare errno features\n")
+(check-display "*** testing Vicare platform utilities\n")
 
 
 ;;;; helpers
@@ -60,76 +59,25 @@
        (let () . ?body)))))
 
 
-(parametrise ((check-test-name	'case-errno))
+(parametrise ((check-test-name	'symbols))
 
   (check
-      (case-errno plat.EPERM
-	((EPERM)	1)
-	((ENOMEM)	2)
-	((EAGAIN)	3))
-    => 1)
+      (errno-code->symbol EINVAL)
+    => 'EINVAL)
 
   (check
-      (case-errno plat.EPERM
-	((EPERM)	1)
-	((ENOMEM)	2)
-	((EAGAIN)	3)
-	(else		#f))
-    => 1)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (case-errno plat.EPERM
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3))
-    => 1)
-
-  (check
-      (case-errno plat.EPERM
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3)
-	(else		#f))
-    => 1)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (case-errno plat.EAGAIN
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3))
-    => 3)
-
-  (check
-      (case-errno plat.EAGAIN
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3)
-	(else		#f))
-    => 3)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (catch #f
-	(case-errno plat.EFAULT
-	  ((ENOMEM EPERM)	1)
-	  ((EAGAIN)		3)))
-    => (list plat.EFAULT))
-
-  (check
-      (case-errno plat.EFAULT
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3)
-	(else		#f))
+      (errno-code->symbol (greatest-fixnum))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
-;;;Syntax error "unknown symbolic error code"
-;;;
-  #;(case-errno plat.EFAULT
-  ((ENOMEM EPERM)	1)
-  ((ciao)		2))
+  (check
+      (posix-signal->symbol SIGTERM)
+    => 'SIGTERM)
+
+  (check
+      (posix-signal->symbol (greatest-fixnum))
+    => #f)
 
   #t)
 

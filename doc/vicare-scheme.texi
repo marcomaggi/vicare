@@ -18417,6 +18417,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 * args::                        Optional function arguments validation.
 * include::                     Including source files at expand time.
 * errno::                       More features for @code{errno}.
+* platform::                    Hosting platform utilities.
 * words::                       Exact integer predicates and constants.
 * keywords::                    More facilities for keyword objects.
 * readline::                    Extended interface to @gnu{} Readline.
@@ -19531,6 +19532,41 @@ The @meta{code} must be symbols representing @code{errno} codes, they
 are @strong{not} meant to be binding identifiers.
 @end deffn
 
+@c page
+@node platform
+@section Hosting platform utilities
+
+
+@cindex Library @library{vicare platform-constants}
+@cindex @library{vicare platform-constants}, library
+@cindex Library @library{vicare platform utilities}
+@cindex @library{vicare platform utilities}, library
+
+
+The library @library{vicare platform-constants} exports one syntax
+identifier binding for each platform constant that makes sense to access
+from Scheme.  The library @library{vicare platform utilities} defines
+helper functions to deal with platform specific issues.
+
+The following bindings are exported by the library @library{vicare
+platform utilities}.
+
+
+@deffn Syntax posix-signal->symbol @var{code}
+Given an integer representing an interprocess @posix{} signal code,
+return the corresponding symbol; if @var{code} is not recognised as
+@posix{} signal code: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform-constants)
+  (vicare platform utilities))
+
+(posix-signal->symbol SIGTERM)            @result{} SIGTERM
+(posix-signal->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end deffn
+
 
 @defun errno-code->symbol @var{code}
 Given a fixnum representing an encoded @code{errno} value, return the
@@ -19539,7 +19575,8 @@ corresponding symbol; if @var{code} is not recognised as encoded
 
 @example
 (import (rnrs)
-  (vicare errno))
+  (vicare platform-constants)
+  (vicare platform utilities))
 
 (errno-code->symbol EINVAL)             @result{} EINVAL
 (errno-code->symbol (greatest-fixnum))  @result{} #f

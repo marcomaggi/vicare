@@ -71,7 +71,7 @@ Notes for revision 0.2d19
 
   they are equivalent to IK_FIX() and IK_UNFIX().
 
-* Added function ERRNO-CODE->SYMBOL to (vicare errno).
+* Added library (vicare platform utilities).
 
 
 Notes for revision 0.2d18

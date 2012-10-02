@@ -28,7 +28,6 @@
 (library (vicare errno)
   (export
     errno-code		case-errno
-    errno-code->symbol
 
     E2BIG		EACCES		EADDRINUSE
     EADDRNOTAVAIL	EADV		EAFNOSUPPORT
@@ -94,45 +93,6 @@
   (syntax-rules ()
     ((_ ?name ?value)
      (define-syntax ?name (identifier-syntax ?value)))))
-
-(define-syntax case-fixnums
-  (syntax-rules (else)
-    ((_ ?expr
-	((?fixnum0 ?fixnum ...)
-	 ?fx-body0 ?fx-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((fx ?expr))
-       (cond ((or ($fx= ?fixnum0 fx)
-		  ($fx= ?fixnum  fx)
-		  ...)
-	      ?fx-body0 ?fx-body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?fixnum0 ?fixnum ...)
-	 ?fx-body0 ?fx-body ...)
-	...)
-     (let ((fx ?expr))
-       (cond ((or ($fx= ?fixnum0 fx)
-		  ($fx= ?fixnum  fx)
-		  ...)
-	      ?fx-body0 ?fx-body ...)
-	     ...)))
-    ))
-
-(define-syntax define-fixnum->symbol-function
-  (syntax-rules ()
-    ((_ ?who (?code ...))
-     (define (?who code)
-       (define who '?who)
-       (assert (fixnum? code))
-       (case-fixnums code
-	 ((?code)	'?code)
-	 ...
-	 (else #f))))))
 
 
 ;;;; errno codes
@@ -412,52 +372,6 @@
 		   (else
 		    (assertion-violation #f "unknown errno code" errno))))))
       )))
-
-(define-fixnum->symbol-function errno-code->symbol
-  (E2BIG		EACCES		EADDRINUSE
-   EADDRNOTAVAIL	EADV		EAFNOSUPPORT
-   EAGAIN		EALREADY	EBADE
-   EBADF		EBADFD		EBADMSG
-   EBADR		EBADRQC		EBADSLT
-   EBFONT		EBUSY		ECANCELED
-   ECHILD		ECHRNG		ECOMM
-   ECONNABORTED		ECONNREFUSED	ECONNRESET
-   EDEADLK		EDEADLOCK	EDESTADDRREQ
-   EDOM			EDOTDOT		EDQUOT
-   EEXIST		EFAULT		EFBIG
-   EHOSTDOWN		EHOSTUNREACH	EIDRM
-   EILSEQ		EINPROGRESS	EINTR
-   EINVAL		EIO		EISCONN
-   EISDIR		EISNAM		EKEYEXPIRED
-   EKEYREJECTED		EKEYREVOKED	EL2HLT
-   EL2NSYNC		EL3HLT		EL3RST
-   ELIBACC		ELIBBAD		ELIBEXEC
-   ELIBMAX		ELIBSCN		ELNRNG
-   ELOOP		EMEDIUMTYPE	EMFILE
-   EMLINK		EMSGSIZE	EMULTIHOP
-   ENAMETOOLONG		ENAVAIL		ENETDOWN
-   ENETRESET		ENETUNREACH	ENFILE
-   ENOANO		ENOBUFS		ENOCSI
-   ENODATA		ENODEV		ENOENT
-   ENOEXEC		ENOKEY		ENOLCK
-   ENOLINK		ENOMEDIUM	ENOMEM
-   ENOMSG		ENONET		ENOPKG
-   ENOPROTOOPT		ENOSPC		ENOSR
-   ENOSTR		ENOSYS		ENOTBLK
-   ENOTCONN		ENOTDIR		ENOTEMPTY
-   ENOTNAM		ENOTRECOVERABLE	ENOTSOCK
-   ENOTTY		ENOTUNIQ	ENXIO
-   EOPNOTSUPP		EOVERFLOW	EOWNERDEAD
-   EPERM		EPFNOSUPPORT	EPIPE
-   EPROTO		EPROTONOSUPPORT	EPROTOTYPE
-   ERANGE		EREMCHG		EREMOTE
-   EREMOTEIO		ERESTART	EROFS
-   ESHUTDOWN		ESOCKTNOSUPPORT	ESPIPE
-   ESRCH		ESRMNT		ESTALE
-   ESTRPIPE		ETIME		ETIMEDOUT
-   ETOOMANYREFS		ETXTBSY		EUCLEAN
-   EUNATCH		EUSERS		EWOULDBLOCK
-   EXDEV		EXFULL))
 
 
 ;;;; done

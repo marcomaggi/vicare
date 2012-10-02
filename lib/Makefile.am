@@ -22,6 +22,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/unsafe-capi.sls			\
 	vicare/unsafe-operations.sls		\
 	vicare/unsafe-unicode.sls		\
+	vicare/platform/utilities.sls		\
 	vicare/weak-hashtables.sls		\
 	vicare/checks.sls
 

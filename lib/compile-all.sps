@@ -27,16 +27,18 @@
 #!r6rs
 (import
   (only (vicare installation-configuration))
+  (only (vicare errno))
   (only (vicare platform-constants))
   (only (vicare platform features))
+  (only (vicare platform utilities))
+  (only (vicare unsafe-operations))
   (only (vicare arguments validation))
-  (only (vicare errno))
+  (only (vicare syntactic-extensions))
+
+  (only (vicare unsafe-capi))
   (only (vicare include))
   (only (vicare infix))
-  (only (vicare syntactic-extensions))
-  (only (vicare unsafe-operations))
   (only (vicare unsafe-unicode))
-  (only (vicare unsafe-capi))
   (only (vicare words))
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))
