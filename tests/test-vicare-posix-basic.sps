@@ -1767,6 +1767,72 @@
   #t)
 
 
+(parametrise ((check-test-name	'validation-clauses))
+
+  (define-syntax catch
+    (syntax-rules ()
+      ((_ print? . ?body)
+       (guard (E ((assertion-violation? E)
+		  (when print?
+		    (check-pretty-print (condition-message E)))
+		  (condition-irritants E))
+		 (else E))
+	 (begin . ?body)))))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?print ?validator . ?objs)
+       (catch ?print
+	 (let ((who 'test))
+	   (with-arguments-validation (who)
+	       ((?validator . ?objs))
+	     #t))))))
+
+;;; --------------------------------------------------------------------
+;;; file-descriptor
+
+  (check
+      (doit #f px.file-descriptor 123)
+    => #t)
+
+  (check
+      (doit #f px.file-descriptor -1)
+    => '(-1))
+
+  (check
+      (doit #f px.file-descriptor (greatest-fixnum))
+    => `(,(greatest-fixnum)))
+
+  (check
+      (doit #f px.file-descriptor 'ciao)
+    => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; file-descriptor/false
+
+  (check
+      (doit #f px.file-descriptor/false 123)
+    => #t)
+
+  (check
+      (doit #f px.file-descriptor/false -1)
+    => '(-1))
+
+  (check
+      (doit #f px.file-descriptor/false (greatest-fixnum))
+    => `(,(greatest-fixnum)))
+
+  (check
+      (doit #f px.file-descriptor/false #f)
+    => #t)
+
+  (check
+      (doit #f px.file-descriptor/false 'ciao)
+    => '(ciao))
+
+  #t)
+
+
 ;;;; done
 
 (flush-output-port (current-output-port))

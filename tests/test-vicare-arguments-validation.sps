@@ -103,6 +103,25 @@
   (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
 
 
+(parametrise ((check-test-name	'validate-booleans))
+
+;;; boolean
+
+  (check
+      (doit #f boolean #t)
+    => #t)
+
+  (check
+      (doit #f boolean #f)
+    => #t)
+
+  (check
+      (doit #f boolean 'ciao)
+    => '(ciao))
+
+  #t)
+
+
 (parametrise ((check-test-name	'validate-prefixed))
 
   (check
@@ -2107,52 +2126,6 @@
 
   (check
       (doit #f general-c-sticky-buffer/false 'ciao)
-    => '(ciao))
-
-  #t)
-
-
-(parametrise ((check-test-name	'validation-clauses))
-
-;;; file-descriptor
-
-  (check
-      (doit #f file-descriptor 123)
-    => #t)
-
-  (check
-      (doit #f file-descriptor -1)
-    => '(-1))
-
-  (check
-      (doit #f file-descriptor (greatest-fixnum))
-    => `(,(greatest-fixnum)))
-
-  (check
-      (doit #f file-descriptor 'ciao)
-    => '(ciao))
-
-;;; --------------------------------------------------------------------
-;;; file-descriptor/false
-
-  (check
-      (doit #f file-descriptor/false 123)
-    => #t)
-
-  (check
-      (doit #f file-descriptor/false -1)
-    => '(-1))
-
-  (check
-      (doit #f file-descriptor/false (greatest-fixnum))
-    => `(,(greatest-fixnum)))
-
-  (check
-      (doit #f file-descriptor/false #f)
-    => #t)
-
-  (check
-      (doit #f file-descriptor/false 'ciao)
     => '(ciao))
 
   #t)

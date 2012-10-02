@@ -18631,6 +18631,7 @@ When used without arguments or arguments validation disabled: expand to
 
 
 @menu
+* args predefined booleans::       Validating booleans.
 * args predefined fixnums::        Validating fixnums.
 * args predefined exact integers:: Validating exact integers.
 * args predefined bits::           Validating bit--sized integers.
@@ -18652,6 +18653,19 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined genbuffers::     Validating generalised C buffer
                                    arguments.
 @end menu
+
+@c page
+@node args predefined booleans
+@subsubsection Validating booleans
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} boolean @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{boolean?}.
+@end deffn
 
 @c page
 @node args predefined fixnums

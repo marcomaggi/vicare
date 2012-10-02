@@ -33,6 +33,9 @@
     with-dangerous-arguments-validation
     arguments-validation-forms
 
+    ;; booleans
+    boolean.vicare-arguments-validation
+
     ;; fixnums
     fixnum.vicare-arguments-validation
     fixnum/false.vicare-arguments-validation
@@ -399,6 +402,13 @@
 	msg (syntax->datum stx) (syntax->datum subform)))
 
     (main stx)))
+
+
+;;;; booleans
+
+(define-argument-validation (boolean who obj)
+  (boolean? obj)
+  (assertion-violation who "expected boolean as argument" obj))
 
 
 ;;;; fixnums validation

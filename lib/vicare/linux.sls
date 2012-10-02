@@ -123,10 +123,6 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (boolean who obj)
-  (boolean? obj)
-  (assertion-violation who "expected boolean as argument" obj))
-
 (define-argument-validation (index who obj)
   (and (fixnum? obj) (unsafe.fx<= 0 obj))
   (assertion-violation who "expected fixnum index as argument" obj))
