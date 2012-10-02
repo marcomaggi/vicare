@@ -476,6 +476,8 @@
     reset-input-port!		reset-output-port!
     port-id			port-fd
     string->filename-func	filename->string-func
+    (rename (string->filename-func	string->pathname-func)
+	    (filename->string-func	pathname->string-func))
     port-dump-status
 
     ;; networking
@@ -587,6 +589,7 @@
 		  reset-input-port!		reset-output-port!
 		  port-id			port-fd
 		  string->filename-func		filename->string-func
+		  string->pathname-func		pathname->string-func
 		  port-dump-status
 
 		  ;; networking

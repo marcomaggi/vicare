@@ -261,7 +261,7 @@
      (let ((?pathname.bv (let ((pathname ?pathname))
 			   (if (bytevector? pathname)
 			       pathname
-			     ((string->filename-func) pathname))))
+			     ((string->pathname-func) pathname))))
 	   ...)
        . ?body))))
 

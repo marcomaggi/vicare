@@ -5501,6 +5501,7 @@ library.
 
 
 @deffn Parameter string->filename-func
+@deffnx Parameter string->pathname-func
 In @value{PRJNAME} the string--to--filename conversion is performed by
 the function returned by @func{string->filename-func}, which defaults to
 @func{string->utf8}.
@@ -5508,6 +5509,7 @@ the function returned by @func{string->filename-func}, which defaults to
 
 
 @deffn Parameter filename->string-func
+@deffnx Parameter pathname->string-func
 In @value{PRJNAME} the filename--to--string conversion is performed by
 the function returned by @func{filename->string-func}, which defaults to
 @func{utf8->string}.

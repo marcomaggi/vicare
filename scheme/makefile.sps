@@ -1806,6 +1806,8 @@
     (port-fd					i v $language)
     (string->filename-func			i v $language)
     (filename->string-func			i v $language)
+    (string->pathname-func			i v $language)
+    (pathname->string-func			i v $language)
     (port-dump-status				i v $language)
     (port-closed?				i v $language)
 ;;; (ikarus system $io)
