@@ -35,6 +35,7 @@
   (only (vicare unsafe-operations))
   (only (vicare arguments validation))
   (only (vicare syntactic-extensions))
+  (only (vicare arguments general-c-buffers))
 
   (only (vicare unsafe-capi))
   (only (vicare include))

@@ -142,6 +142,7 @@ TESTS			=	\
 	test-vicare-debugging.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
+	test-vicare-general-c-buffers.sps		\
 	test-vicare-keywords.sps			\
 	test-vicare-infix.sps				\
 	test-vicare-io.sps				\
@@ -345,6 +346,7 @@ EXTRA_DIST = \
 	test-vicare-ffi.sps				\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
+	test-vicare-general-c-buffers.sps		\
 	test-vicare-glibc.sps				\
 	test-vicare-keywords.sps			\
 	test-vicare-infix.sps				\

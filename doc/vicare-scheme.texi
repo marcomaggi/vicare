@@ -18438,6 +18438,8 @@ be @code{AF_INET} or @code{AF_INET6}.
 * errno::                       More features for @code{errno}.
 * platform::                    Hosting platform utilities.
 * words::                       Exact integer predicates and constants.
+* syntaxes::                    Language syntactic extensions.
+* cbuffers::                    Generalised C buffers.
 * keywords::                    More facilities for keyword objects.
 * readline::                    Extended interface to @gnu{} Readline.
 * parser logic::                Defining parsers logic.
@@ -18446,7 +18448,6 @@ be @code{AF_INET} or @code{AF_INET6}.
 * flonum format::               Formatting flonums.
 * flonum parse::                Parsing flonums.
 * sel::                         Simple event loop.
-* syntaxes::                    Language syntactic extensions.
 * infix::                       Infix to prefix transformer.
 @end menu
 
@@ -20172,6 +20173,499 @@ the C language @code{ptrdiff_t} range.
 @end deffn
 
 @c page
+@node syntaxes
+@section Language syntactic extensions
+
+
+@cindex Library @library{vicare syntactic-extensions}
+@cindex @library{vicare syntactic-extensions}, library
+
+
+The library @library{vicare syntactic-extensions} provides bindings to
+macros that extend the Scheme language implemented by @library{vicare}
+and @library{rnrs}.
+
+@menu
+* syntaxes defines::            Special definitions.
+* syntaxes bindings::           Special local bindings.
+* syntaxes sequencing::         Sequencing execution.
+* syntaxes conversion::         Converting common arguments.
+* syntaxes cases::              Special cases.
+* syntaxes args::               Arguments validation.
+* syntaxes misc::               Miscellaneous syntaxes.
+@end menu
+
+@c page
+@node syntaxes defines
+@subsection Special definitions
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{form} @meta{form} ...
+Wrapper for @func{syntax-rules}, expand to:
+
+@example
+(define-syntax @meta{name}
+  (syntax-rules ()
+    ((_ @meta{arg} ... . @meta{rest})
+     (begin @metao{form} @meta{form} ...))))
+@end example
+@end defmac
+
+
+@defmac define-constant @meta{name} @meta{expr}
+Wrapper for @func{identifier-syntax}, expand to:
+
+@example
+(begin
+  (define ghost @meta{expr})
+  (define-syntax @meta{name}
+    (identifier-syntax ghost)))
+@end example
+
+@noindent
+@meta{expr} is evaluated once and the identifier syntax @meta{name} can
+be used to access the result; it is impossible to modify the value by
+acting upon @meta{name}.
+@end defmac
+
+
+@defmac define-inline-constant @meta{name} @meta{value}
+Wrapper for @func{identifier-syntax}, expand to:
+
+@example
+(define-syntax @meta{name}
+  (identifier-syntax @meta{value}))
+@end example
+
+@noindent
+@meta{value} is evaluated every time @meta{name} is referenced; it is
+impossible to modify the @meta{value} by acting upon @meta{name}.  This
+syntax is useful to defined constants resulting from @gnu{} Autoconf
+expansion:
+
+@example
+(define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
+@end example
+@end defmac
+
+
+@defmac define-syntax* (@meta{who} @meta{stx}) . @meta{body}
+Wrapper for @func{define-syntax}, expand to:
+
+@example
+(define-syntax @meta{who}
+  (lambda (@meta{stx}) . @meta{body}))
+@end example
+@end defmac
+
+
+@defmac define-auxiliary-syntaxes @metao{name} @meta{name} ...
+Define auxiliary syntaxes to be used as literal identifiers by
+@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
+
+@example
+(define-syntax @metao{name} (syntax-rules ()))
+(define-syntax @meta{name}  (syntax-rules ()))
+...
+@end example
+@end defmac
+
+
+@defmac define-exact-integer->symbol-function @meta{who} (@meta{code} ...)
+Define a function used to convert exact intgers to the corresponding
+symbolic name.  Expand to:
+
+@example
+(define (@meta{who} code)
+  (define who '@meta{who})
+  (with-arguments-validation (who)
+      ((exact-integer      code))
+    (case-integers code
+      ((@meta{code})     '@meta{code})
+      ...
+      (else #f))))
+@end example
+@end defmac
+
+@c page
+@node syntaxes bindings
+@subsection Special local bindings
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac let-inline ((@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
+Wrapper for @func{let-syntax}, expand to:
+
+@example
+(let-syntax ((@meta{var} (identifier-syntax @meta{expr}))
+             ...)
+  @metao{body} . @meta{body})
+@end example
+@end defmac
+
+
+@defmac {let*-inline} () @metao{body} . @meta{body}
+@defmacx {let*-inline} ((@metao{var} @metao{expr}) (@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
+Wrapper for @func{let-syntax}, expand to:
+
+@example
+(let-syntax ((@metao{var} (identifier-syntax @meta{expr})))
+  (let*-inline ((@meta{var} @meta{expr})
+                ...)
+    @metao{body} . @meta{body}))
+@end example
+@end defmac
+
+@c page
+@node syntaxes sequencing
+@subsection Sequencing execution
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac begin0 @metao{expr} @meta{expr} ...
+Expand to:
+
+@example
+(call-with-values
+     (lambda () @metao{expr})
+  (lambda args
+    @meta{expr} ...
+    (apply values args)))
+@end example
+
+This syntax comes from the @rnrs{6} original document, Appendix A
+``Formal semantics''.
+@end defmac
+
+
+@defmac begin0-let ((@metao{var} @metao{init}) (@meta{var} @meta{init}) ...) @metao{form} @meta{form} ...
+Expand to:
+
+@example
+(let ((@metao{var} @metao{init})
+      (@meta{var}  @meta{init})
+      ...)
+  @metao{form} @meta{form} ...
+  @metao{var})
+@end example
+@end defmac
+
+@c page
+@node syntaxes conversion
+@subsection Converting common arguments
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac with-pathnames ((@meta{pathname.bv} @meta{pathname}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors or
+strings representing pathnames; the strings are converted to
+bytevectors.  This macro assumes that the arguments have already been
+validated.  Expand to:
+
+@example
+(let ((@meta{pathname.bv} (let ((pathname @meta{pathname}))
+                      (if (bytevector? pathname)
+                          pathname
+                        ((string->filename-func) pathname))))
+      ...)
+  . @meta{body})
+@end example
+@end defmac
+
+
+@defmac with-bytevectors ((@meta{value.bv} @meta{value}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors or
+strings; the strings are converted to bytevectors.  This macro assumes
+that the arguments have already been validated.  Expand to:
+
+@example
+(let ((@meta{value.bv} (let ((V @meta{value}))
+                   (if (bytevector? V)
+                       V
+                     (string->latin1 V))))
+      ...)
+  . @meta{body})
+@end example
+@end defmac
+
+
+@defmac with-bytevectors/or-false ((@meta{value.bv} @meta{value}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors, strings
+or false; the strings are converted to bytevectors.  This macro assumes
+that the arguments have already been validated.  Expand to:
+
+@example
+(let ((?value.bv (let ((V ?value))
+                   (cond ((bytevector? V)
+                          V)
+                         ((string? V)
+                          (string->latin1 V))
+                         (else V))))
+      ...)
+  . ?body)
+@end example
+@end defmac
+
+@c page
+@node syntaxes cases
+@subsection Special cases
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
+If the platform word size is 32-bit expand to @meta{body-32}, else
+expand to @meta{body-64}.
+@end defmac
+
+
+@deffn Macro case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
+@deffnx Macro case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
+@deffnx {Auxiliary Syntax} big
+@deffnx {Auxiliary Syntax} little
+If the platform endianness is little expand to @meta{lit-body}, else
+expand to @meta{big-body}.
+@end deffn
+
+
+@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
+@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expeting only fixnums as datums;
+for maximum speed, it makes use of unsafe operations on fixnums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a fixnum, else the
+behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
+@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only exact integers as
+datums.  @func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to an exact integer, else
+the behaviour is undefined (and you do not want it).
+@end deffn
+
+@c page
+@node syntaxes args
+@subsection Arguments validation
+
+
+The following bindings are imported and reexported by @library{vicare
+syntactic-extension} from the library @library{vicare arguments
+validation}:
+
+@example
+define-argument-validation
+with-arguments-validation
+with-dangerous-arguments-validation
+arguments-validation-forms
+@end example
+
+@c page
+@node syntaxes misc
+@subsection Miscellaneous syntaxes
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac callet @meta{func} @meta{arg} ...
+Expand to a call to @meta{func}, which must evaluate to a function,
+applied to the arguments resulting from processing the @var{arg}
+syntaxes; @var{arg} can be one among:
+
+@example
+@meta{expr}
+(@meta{name} @meta{expr})
+@end example
+
+@noindent
+where @meta{expr} is an expression that will become the actual argument
+and @meta{name} must be an identifier used to comment the meaning of the
+arguments.  Examples:
+
+@example
+(callet printf
+        (string "ciao ~a")
+        (arg    123))
+@expansion{} (printf "ciao ~a" 123)
+@end example
+@end defmac
+
+
+@defmac callet* @meta{func} @meta{arg} ...
+Like @func{callet}, but define local @func{let*} bindings for the
+@var{arg} with name.  Example:
+
+@example
+(callet printf
+        (string "ciao ~a")
+        (arg    123))
+@expansion{} (let* ((string "ciao ~a")
+           (arg    123))
+      (printf string arg))
+@end example
+@end defmac
+
+
+@defmac unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
+Not a general @func{unwind-protect} for Scheme, but fine where we do not
+use continuations to escape from the body.  Expand to:
+
+@example
+(let ((cleanup (lambda ()
+                 @metao{cleanup}
+                 @meta{cleanup}
+                 ...)))
+  (with-exception-handler
+      (lambda (E)
+        (cleanup)
+        (raise E))
+    (lambda ()
+      (begin0
+          @meta{body}
+        (cleanup)))))
+@end example
+@end defmac
+
+@c page
+@node cbuffers
+@section Generalised C buffers
+
+
+@cindex Library @library{vicare arguments general-c-buffers}
+@cindex @library{vicare arguments general-c-buffers}, library
+
+
+Generalised C strings and buffers are meant to be used in interfaces to
+foreign C language libraries, when a pointer to C string or input and
+output buffer is required as argument.  @ref{args predefined genstrings}
+for details on generalised C strings.  @ref{args predefined genbuffers}
+for details on generalised C buffers.
+
+The following bindings are exported by the library @library{vicare
+arguments general-c-buffers}.
+
+
+@deffn Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) ((string-to-bytevector @meta{string->bytevector})) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Prepare some generalised C strings to be used by a chunk of code
+expecting access to raw memory holding a C language string or input
+buffer.
+
+The values @meta{str} must be identifiers, unique according to
+@func{bound-identifier=?}.
+
+The values @meta{expr} must be expressions which will always be
+evaluated only once.
+
+The value @meta{string->bytevector} must be an expression evaluating to
+a procedure which converts a string to a bytevector, for example
+@func{string->ascii}.
+
+For each couple @meta{str} and @meta{expr} do the following:
+
+@itemize
+@item
+If the result of evaluating @meta{expr} is a bytevector, pointer object
+or @code{memory-block} instance bind it to @meta{str}.
+
+@item
+If the result of evaluating @meta{expr} is a string: convert it to a
+bytevector using the procedure result of evaluating
+@meta{string->bytevector}, then bind it to @meta{str}.
+@end itemize
+
+Evaluate the @meta{body} forms in the region in which such bindings are
+effective.  Return the return value of the last @meta{body} form.
+@end deffn
+
+
+@deffn Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) ((string-to-bytevector @meta{string->bytevector})) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Like @func{with-general-c-strings} but if a @meta{expr} evaluates
+to @false{} accept the value.
+@end deffn
+
+
+@deffn Syntax with-general-c-pathnames ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Prepare some generalised C strings to be used by a chunk of code
+expecting access to raw memory holding a C language string representing
+a file system pathname.
+
+The values @meta{ptn} must be identifiers, unique according to
+@func{bound-identifier=?}.
+
+The values @meta{expr} must be expressions which will always be
+evaluated only once.
+
+For each couple @meta{ptn} and @meta{expr} do the following:
+
+@itemize
+@item
+If the result of evaluating @meta{expr} is a bytevector, pointer object
+or @code{memory-block} instance bind it to @meta{ptn}.
+
+@item
+If the result of evaluating @meta{expr} is a string: convert it to a
+bytevector using the function referenced by the parameter
+@func{string->pathname-func}, then bind it to @meta{ptn}.
+@end itemize
+
+Evaluate the @meta{body} forms in the region in which such bindings are
+effective.  Return the return value of the last @meta{body} form.
+@end deffn
+
+
+@deffn Syntax with-general-c-pathnames/false ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Like @func{with-general-c-pathnames} but if a @meta{expr} evaluates to
+@false{} accept the value.
+@end deffn
+
+
+As example, let's say we have loaded C language code exposing a function
+@cfunc{ikptr_posix_file_size}, which given a file pathname returns its
+size; we can interface it as follows:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare arguments validation))
+
+(define (file-size pathname)
+  (define who 'file-size)
+  (with-arguments-validation (who)
+      ((general-c-string pathname))
+    (with-general-c-pathnames ((pathname^ pathname))
+      (foreign-call "ikptr_posix_file_size" pathname^))))
+@end example
+
+@c page
 @node keywords
 @section More facilities for keyword objects
 
@@ -21768,385 +22262,6 @@ automatically registered as task fragment.
 Evaluate one task event, if any.  Return a boolean, @true{} if a task
 was run.
 @end defun
-
-@c page
-@node syntaxes
-@section Language syntactic extensions
-
-
-@cindex Library @library{vicare syntactic-extensions}
-@cindex @library{vicare syntactic-extensions}, library
-
-
-The library @library{vicare syntactic-extensions} provides bindings to
-macros that extend the Scheme language implemented by @library{vicare}
-and @library{rnrs}.
-
-@menu
-* syntaxes defines::            Special definitions.
-* syntaxes bindings::           Special local bindings.
-* syntaxes sequencing::         Sequencing execution.
-* syntaxes conversion::         Converting common arguments.
-* syntaxes cases::              Special cases.
-* syntaxes args::               Arguments validation.
-* syntaxes misc::               Miscellaneous syntaxes.
-@end menu
-
-@c page
-@node syntaxes defines
-@subsection Special definitions
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{form} @meta{form} ...
-Wrapper for @func{syntax-rules}, expand to:
-
-@example
-(define-syntax @meta{name}
-  (syntax-rules ()
-    ((_ @meta{arg} ... . @meta{rest})
-     (begin @metao{form} @meta{form} ...))))
-@end example
-@end defmac
-
-
-@defmac define-constant @meta{name} @meta{expr}
-Wrapper for @func{identifier-syntax}, expand to:
-
-@example
-(begin
-  (define ghost @meta{expr})
-  (define-syntax @meta{name}
-    (identifier-syntax ghost)))
-@end example
-
-@noindent
-@meta{expr} is evaluated once and the identifier syntax @meta{name} can
-be used to access the result; it is impossible to modify the value by
-acting upon @meta{name}.
-@end defmac
-
-
-@defmac define-inline-constant @meta{name} @meta{value}
-Wrapper for @func{identifier-syntax}, expand to:
-
-@example
-(define-syntax @meta{name}
-  (identifier-syntax @meta{value}))
-@end example
-
-@noindent
-@meta{value} is evaluated every time @meta{name} is referenced; it is
-impossible to modify the @meta{value} by acting upon @meta{name}.  This
-syntax is useful to defined constants resulting from @gnu{} Autoconf
-expansion:
-
-@example
-(define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
-@end example
-@end defmac
-
-
-@defmac define-syntax* (@meta{who} @meta{stx}) . @meta{body}
-Wrapper for @func{define-syntax}, expand to:
-
-@example
-(define-syntax @meta{who}
-  (lambda (@meta{stx}) . @meta{body}))
-@end example
-@end defmac
-
-
-@defmac define-auxiliary-syntaxes @metao{name} @meta{name} ...
-Define auxiliary syntaxes to be used as literal identifiers by
-@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
-
-@example
-(define-syntax @metao{name} (syntax-rules ()))
-(define-syntax @meta{name}  (syntax-rules ()))
-...
-@end example
-@end defmac
-
-
-@defmac define-exact-integer->symbol-function @meta{who} (@meta{code} ...)
-Define a function used to convert exact intgers to the corresponding
-symbolic name.  Expand to:
-
-@example
-(define (@meta{who} code)
-  (define who '@meta{who})
-  (with-arguments-validation (who)
-      ((exact-integer      code))
-    (case-integers code
-      ((@meta{code})     '@meta{code})
-      ...
-      (else #f))))
-@end example
-@end defmac
-
-@c page
-@node syntaxes bindings
-@subsection Special local bindings
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac let-inline ((@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
-Wrapper for @func{let-syntax}, expand to:
-
-@example
-(let-syntax ((@meta{var} (identifier-syntax @meta{expr}))
-             ...)
-  @metao{body} . @meta{body})
-@end example
-@end defmac
-
-
-@defmac {let*-inline} () @metao{body} . @meta{body}
-@defmacx {let*-inline} ((@metao{var} @metao{expr}) (@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
-Wrapper for @func{let-syntax}, expand to:
-
-@example
-(let-syntax ((@metao{var} (identifier-syntax @meta{expr})))
-  (let*-inline ((@meta{var} @meta{expr})
-                ...)
-    @metao{body} . @meta{body}))
-@end example
-@end defmac
-
-@c page
-@node syntaxes sequencing
-@subsection Sequencing execution
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac begin0 @metao{expr} @meta{expr} ...
-Expand to:
-
-@example
-(call-with-values
-     (lambda () @metao{expr})
-  (lambda args
-    @meta{expr} ...
-    (apply values args)))
-@end example
-
-This syntax comes from the @rnrs{6} original document, Appendix A
-``Formal semantics''.
-@end defmac
-
-
-@defmac begin0-let ((@metao{var} @metao{init}) (@meta{var} @meta{init}) ...) @metao{form} @meta{form} ...
-Expand to:
-
-@example
-(let ((@metao{var} @metao{init})
-      (@meta{var}  @meta{init})
-      ...)
-  @metao{form} @meta{form} ...
-  @metao{var})
-@end example
-@end defmac
-
-@c page
-@node syntaxes conversion
-@subsection Converting common arguments
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac with-pathnames ((@meta{pathname.bv} @meta{pathname}) ...) . @meta{body}
-Used to preprocess function arguments which must be bytevectors or
-strings representing pathnames; the strings are converted to
-bytevectors.  This macro assumes that the arguments have already been
-validated.  Expand to:
-
-@example
-(let ((@meta{pathname.bv} (let ((pathname @meta{pathname}))
-                      (if (bytevector? pathname)
-                          pathname
-                        ((string->filename-func) pathname))))
-      ...)
-  . @meta{body})
-@end example
-@end defmac
-
-
-@defmac with-bytevectors ((@meta{value.bv} @meta{value}) ...) . @meta{body}
-Used to preprocess function arguments which must be bytevectors or
-strings; the strings are converted to bytevectors.  This macro assumes
-that the arguments have already been validated.  Expand to:
-
-@example
-(let ((@meta{value.bv} (let ((V @meta{value}))
-                   (if (bytevector? V)
-                       V
-                     (string->latin1 V))))
-      ...)
-  . @meta{body})
-@end example
-@end defmac
-
-
-@defmac with-bytevectors/or-false ((@meta{value.bv} @meta{value}) ...) . @meta{body}
-Used to preprocess function arguments which must be bytevectors, strings
-or false; the strings are converted to bytevectors.  This macro assumes
-that the arguments have already been validated.  Expand to:
-
-@example
-(let ((?value.bv (let ((V ?value))
-                   (cond ((bytevector? V)
-                          V)
-                         ((string? V)
-                          (string->latin1 V))
-                         (else V))))
-      ...)
-  . ?body)
-@end example
-@end defmac
-
-@c page
-@node syntaxes cases
-@subsection Special cases
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
-If the platform word size is 32-bit expand to @meta{body-32}, else
-expand to @meta{body-64}.
-@end defmac
-
-
-@deffn Macro case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
-@deffnx Macro case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
-@deffnx {Auxiliary Syntax} big
-@deffnx {Auxiliary Syntax} little
-If the platform endianness is little expand to @meta{lit-body}, else
-expand to @meta{big-body}.
-@end deffn
-
-
-@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
-@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expeting only fixnums as datums;
-for maximum speed, it makes use of unsafe operations on fixnums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a fixnum, else the
-behaviour is undefined (and you do not want it).
-@end deffn
-
-
-@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
-@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only exact integers as
-datums.  @func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to an exact integer, else
-the behaviour is undefined (and you do not want it).
-@end deffn
-
-@c page
-@node syntaxes args
-@subsection Arguments validation
-
-
-The following bindings are imported and reexported by @library{vicare
-syntactic-extension} from the library @library{vicare arguments
-validation}:
-
-@example
-define-argument-validation
-with-arguments-validation
-with-dangerous-arguments-validation
-arguments-validation-forms
-@end example
-
-@c page
-@node syntaxes misc
-@subsection Miscellaneous syntaxes
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac callet @meta{func} @meta{arg} ...
-Expand to a call to @meta{func}, which must evaluate to a function,
-applied to the arguments resulting from processing the @var{arg}
-syntaxes; @var{arg} can be one among:
-
-@example
-@meta{expr}
-(@meta{name} @meta{expr})
-@end example
-
-@noindent
-where @meta{expr} is an expression that will become the actual argument
-and @meta{name} must be an identifier used to comment the meaning of the
-arguments.  Examples:
-
-@example
-(callet printf
-        (string "ciao ~a")
-        (arg    123))
-@expansion{} (printf "ciao ~a" 123)
-@end example
-@end defmac
-
-
-@defmac callet* @meta{func} @meta{arg} ...
-Like @func{callet}, but define local @func{let*} bindings for the
-@var{arg} with name.  Example:
-
-@example
-(callet printf
-        (string "ciao ~a")
-        (arg    123))
-@expansion{} (let* ((string "ciao ~a")
-           (arg    123))
-      (printf string arg))
-@end example
-@end defmac
-
-
-@defmac unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
-Not a general @func{unwind-protect} for Scheme, but fine where we do not
-use continuations to escape from the body.  Expand to:
-
-@example
-(let ((cleanup (lambda ()
-                 @metao{cleanup}
-                 @meta{cleanup}
-                 ...)))
-  (with-exception-handler
-      (lambda (E)
-        (cleanup)
-        (raise E))
-    (lambda ()
-      (begin0
-          @meta{body}
-        (cleanup)))))
-@end example
-@end defmac
 
 @c page
 @node infix

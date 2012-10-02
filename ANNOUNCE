@@ -78,6 +78,8 @@ Notes for revision 0.2d19
 
 * Added library (vicare arguments validation).
 
+* Added library (vicare arguments general-c-buffers).
+
 * Added the following function aliases:
 
     string->pathname-func = string->filename-func
