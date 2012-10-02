@@ -19530,6 +19530,21 @@ The @meta{code} must be symbols representing @code{errno} codes, they
 are @strong{not} meant to be binding identifiers.
 @end deffn
 
+
+@defun errno-code->symbol @var{code}
+Given a fixnum representing an encoded @code{errno} value, return the
+corresponding symbol; if @var{code} is not recognised as encoded
+@code{errno} value: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare errno))
+
+(errno-code->symbol EINVAL)             @result{} EINVAL
+(errno-code->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end defun
+
 @c page
 @node words
 @section Exact integer predicates and constants

@@ -2360,80 +2360,6 @@
   (collect))
 
 
-(parametrise ((check-test-name	'case-errno))
-
-  (check
-      (case-errno plat.EPERM
-	((EPERM)	1)
-	((ENOMEM)	2)
-	((EAGAIN)	3))
-    => 1)
-
-  (check
-      (case-errno plat.EPERM
-	((EPERM)	1)
-	((ENOMEM)	2)
-	((EAGAIN)	3)
-	(else		#f))
-    => 1)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (case-errno plat.EPERM
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3))
-    => 1)
-
-  (check
-      (case-errno plat.EPERM
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3)
-	(else		#f))
-    => 1)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (case-errno plat.EAGAIN
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3))
-    => 3)
-
-  (check
-      (case-errno plat.EAGAIN
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3)
-	(else		#f))
-    => 3)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (catch #f
-	(case-errno plat.EFAULT
-	  ((ENOMEM EPERM)	1)
-	  ((EAGAIN)		3)))
-    => (list plat.EFAULT))
-
-  (check
-      (case-errno plat.EFAULT
-	((ENOMEM EPERM)	1)
-	((EAGAIN)	3)
-	(else		#f))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-;;;Syntax error "unknown symbolic error code"
-;;;
-  #;(case-errno plat.EFAULT
-  ((ENOMEM EPERM)	1)
-  ((ciao)		2))
-
-  #t)
-
-
 (parametrise ((check-test-name	'local-storage))
 
   (check
