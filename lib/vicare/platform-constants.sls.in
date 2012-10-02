@@ -548,10 +548,8 @@
     SIGINFO)
   (import (ikarus)
     (vicare errno)
-    (only (vicare syntactic-extensions)
-	  define-inline-constant)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (only (ikarus system $fx)
+	  $fx=))
 
 
 ;;;; helpers
@@ -564,6 +562,11 @@
 	 (if (number? N)
 	     (- N)
 	   #t))))))
+
+(define-syntax define-inline-constant
+  (syntax-rules ()
+    ((_ ?name ?value)
+     (define-syntax ?name (identifier-syntax ?value)))))
 
 
 ;;;; miscellaneous platform constants
@@ -1509,16 +1512,16 @@
   (syntax-rules (else)
     ((_ ?h_errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
      (let ((h_errno ?h_errno))
-       (cond ((or (and (fixnum? ?code0) (unsafe.fx= h_errno ?code0))
-		  (and (fixnum? ?code)  (unsafe.fx= h_errno ?code))
+       (cond ((or (and (fixnum? ?code0) ($fx= h_errno ?code0))
+		  (and (fixnum? ?code)  ($fx= h_errno ?code))
 		  ...)
 	      . ?body)
 	     ...
 	     (else . ?else-body))))
     ((_ ?h_errno ((?code0 ?code ...) . ?body) ...)
      (let ((h_errno ?h_errno))
-       (cond ((or (and (fixnum? ?code0) (unsafe.fx= h_errno ?code0))
-		  (and (fixnum? ?code)  (unsafe.fx= h_errno ?code))
+       (cond ((or (and (fixnum? ?code0) ($fx= h_errno ?code0))
+		  (and (fixnum? ?code)  ($fx= h_errno ?code))
 		  ...)
 	      . ?body)
 	     ...)))
