@@ -1763,6 +1763,139 @@
       (doit #f port/false "ciao")
     => '("ciao"))
 
+;;; --------------------------------------------------------------------
+;;; input-port
+
+  (check
+      (doit #f input-port (current-input-port))
+    => #t)
+
+  (check
+      (doit #f input-port "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; input-port/false
+
+  (check
+      (doit #f input-port/false (current-input-port))
+    => #t)
+
+  (check
+      (doit #f input-port/false #f)
+    => #t)
+
+  (check
+      (doit #f input-port/false "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; output-port
+
+  (check
+      (doit #f output-port (current-output-port))
+    => #t)
+
+  (check
+      (doit #f output-port "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; output-port/false
+
+  (check
+      (doit #f output-port/false (current-output-port))
+    => #t)
+
+  (check
+      (doit #f output-port/false #f)
+    => #t)
+
+  (check
+      (doit #f output-port/false "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; input/output-port
+
+  (check
+      (doit #f input/output-port (make-custom-textual-input/output-port
+				  "id" values values values values values))
+    => #t)
+
+  (check
+      (doit #f input/output-port "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; input/output-port/false
+
+  (check
+      (doit #f input/output-port/false (make-custom-textual-input/output-port
+					"id" values values values values values))
+    => #t)
+
+  (check
+      (doit #f input/output-port/false #f)
+    => #t)
+
+  (check
+      (doit #f input/output-port/false "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; textual-port
+
+  (check
+      (doit #f textual-port (current-input-port))
+    => #t)
+
+  (check
+      (doit #f textual-port "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; textual-port/false
+
+  (check
+      (doit #f textual-port/false (current-input-port))
+    => #t)
+
+  (check
+      (doit #f textual-port/false #f)
+    => #t)
+
+  (check
+      (doit #f textual-port/false "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; binary-port
+
+  (check
+      (doit #f binary-port (standard-input-port))
+    => #t)
+
+  (check
+      (doit #f binary-port "ciao")
+    => '("ciao"))
+
+;;; --------------------------------------------------------------------
+;;; binary-port/false
+
+  (check
+      (doit #f binary-port/false (standard-input-port))
+    => #t)
+
+  (check
+      (doit #f binary-port/false #f)
+    => #t)
+
+  (check
+      (doit #f binary-port/false "ciao")
+    => '("ciao"))
+
+
   #t)
 
 
