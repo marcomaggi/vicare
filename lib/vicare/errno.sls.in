@@ -74,9 +74,8 @@
     EUNATCH		EUSERS		EWOULDBLOCK
     EXDEV		EXFULL)
   (import (ikarus)
-    (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (only (ikarus system $fx)
+	  $fx=))
 
 
 ;;;; helpers
@@ -89,6 +88,11 @@
 	 (if (number? N)
 	     (- N)
 	   #t))))))
+
+(define-syntax define-inline-constant
+  (syntax-rules ()
+    ((_ ?name ?value)
+     (define-syntax ?name (identifier-syntax ?value)))))
 
 
 ;;;; errno codes
@@ -351,8 +355,8 @@
       ((_ ?errno ((?code0 ?code ...) . ?body) ... (else . ?else-body))
        (with-syntax ((((CODE0 CODE ...) ...) (%codes->bindings #'((?code0 ?code ...) ...))))
 	 #'(let ((errno ?errno))
-	     (cond ((or (and (fixnum? CODE0) (unsafe.fx= errno CODE0))
-			(and (fixnum? CODE)  (unsafe.fx= errno CODE))
+	     (cond ((or (and (fixnum? CODE0) ($fx= errno CODE0))
+			(and (fixnum? CODE)  ($fx= errno CODE))
 			...)
 		    . ?body)
 		   ...
@@ -360,8 +364,8 @@
       ((_ ?errno ((?code0 ?code ...) . ?body) ...)
        (with-syntax ((((CODE0 CODE ...) ...) (%codes->bindings #'((?code0 ?code ...) ...))))
 	 #'(let ((errno ?errno))
-	     (cond ((or (and (fixnum? CODE0) (unsafe.fx= errno CODE0))
-			(and (fixnum? CODE)  (unsafe.fx= errno CODE))
+	     (cond ((or (and (fixnum? CODE0) ($fx= errno CODE0))
+			(and (fixnum? CODE)  ($fx= errno CODE))
 			...)
 		    . ?body)
 		   ...
