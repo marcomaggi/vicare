@@ -76,6 +76,8 @@ Notes for revision 0.2d19
 * While the  library (vicare  platform-constants) is  still distributed,
   its use is now deprecated; use (vicare platform constants) instead.
 
+* Added library (vicare arguments validation).
+
 * Added the following function aliases:
 
     string->pathname-func = string->filename-func
