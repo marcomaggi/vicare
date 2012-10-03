@@ -32,6 +32,7 @@
 	  words.)
   (prefix (vicare platform constants)
 	  plat.)
+  (prefix (vicare unsafe-operations) $)
   (vicare syntactic-extensions)
   (vicare checks))
 
@@ -376,6 +377,15 @@
 	    (memory-block-size B)
 	  (free B)))
     => 32)
+
+;;; --------------------------------------------------------------------
+;;; unsafe accessors
+
+  (check
+      (let ((B (make-memory-block (integer->pointer 123) 4096)))
+	(list (pointer->integer ($memory-block-pointer B))
+	      ($memory-block-size B)))
+    => '(123 4096))
 
   (collect))
 

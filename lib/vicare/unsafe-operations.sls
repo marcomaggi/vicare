@@ -240,6 +240,11 @@
 	    ($string-fill!			string-fill!)
 	    ($substring				substring))
 
+;;; --------------------------------------------------------------------
+
+    (rename ($memory-block-pointer		memory-block-pointer)
+	    ($memory-block-size			memory-block-size))
+
     #| end of export |# )
   (import (ikarus)
     (ikarus system $structs)
@@ -278,6 +283,18 @@
   (syntax-rules ()
     ((_ ?stru)
      ($struct-ref ($struct-rtd ?stru) 1))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $memory-block-pointer
+  (syntax-rules ()
+    ((_ ?stru)
+     ($struct-ref ?stru 0))))
+
+(define-syntax $memory-block-size
+  (syntax-rules ()
+    ((_ ?stru)
+     ($struct-ref ?stru 1))))
 
 
 ;;;; fixnums
