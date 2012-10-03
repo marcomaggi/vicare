@@ -2909,6 +2909,11 @@ When this function is used as value for the parameter
 
 @itemize
 @item
+The function is called whenever a data structure is registered in for
+destruction with @var{action} set to the symbol @code{registration} and
+@var{exception} set to @false{}.
+
+@item
 The function is called just before the structucture is finalised with
 @var{action} set to the symbol @code{before-destruction} and
 @var{exception} set to @false{}.
@@ -2929,6 +2934,10 @@ The current implementation is the following:
 @smallexample
 (define (struct-guardian-log S E action)
   (case action
+    ((registration)
+     (fprintf (current-error-port)
+              "*** Vicare debug: struct guardian: registered struct:\n\
+               ***\t~s\n" S))
     ((before-destruction)
      (fprintf (current-error-port)
        "*** Vicare debug: struct guardian: before destruction:\n\

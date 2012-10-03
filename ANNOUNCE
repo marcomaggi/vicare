@@ -85,6 +85,13 @@ Notes for revision 0.2d19
     string->pathname-func = string->filename-func
     pathname->string-func = filename->string-func
 
+* Instances of MEMORY-BLOCK are now garbage collected using the built in
+  struct  destruction  mechanism,  rather   than  using  an  independent
+  guardian.
+
+* Log  functions registered  in STRUCT-GUARDIAN-LOGGER  must support  an
+  additional operation: registration; see the documentation for details.
+
 
 Notes for revision 0.2d18
 -------------------------
