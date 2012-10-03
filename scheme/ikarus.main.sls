@@ -1074,8 +1074,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		   ((%extract-destructor S) S)
 		   (struct-reset S))))))))
 
-  (post-gc-hooks (cons %struct-guardian-destructor
-		       (post-gc-hooks)))
+  (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
 
   #| end of module |# )
 

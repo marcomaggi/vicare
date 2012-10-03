@@ -624,60 +624,72 @@
 ;;;; memory blocks
 
 (define-struct memory-block
-  (pointer size))
+  (pointer
+		;Pointer object referencing a block of raw memory.
+   size
+		;Exact integer  representing the number of  bytes in the
+		;memory block.  It must be in  the range of a C language
+		;type "size_t".
+   owner?
+		;Boolean, if true  the block of memory  must be released
+		;whenever this structure instance is garbage collected.
+   ))
 
 (define (%struct-memory-block-printer S port sub-printer)
   (define-inline (%display thing)
     (display thing port))
   (%display "#[memory-block")
-  (%display " pointer=")	(%display (memory-block-pointer S))
-  (%display " size=")		(%display (memory-block-size    S))
+  (%display " pointer=")	(%display ($memory-block-pointer S))
+  (%display " size=")		(%display ($memory-block-size    S))
+  (%display " owner?=")		(%display ($memory-block-owner?  S))
   (%display "]"))
 
 ;;; --------------------------------------------------------------------
 
-(define %memory-block-guardian
-  (make-guardian))
-
-(define (%memory-block-guardian-destructor)
-  (do ((B (%memory-block-guardian) (%memory-block-guardian)))
-      ((not B))
-;;;(pretty-print B (current-error-port))
+(define (%unsafe.memory-block-destructor S)
+  (when ($memory-block-owner? S)
     ;;Remember that FREE will mutate to NULL the pointer.
-    (free (memory-block-pointer B))
-    (set-memory-block-pointer! B (void))
-    (set-memory-block-size!    B (void))
-;;;(pretty-print B (current-error-port))
-    #;(struct-reset B)))
+    (capi.ffi-free ($memory-block-pointer S))
+    ($set-memory-block-pointer! S (void))
+    ($set-memory-block-size!    S (void))))
 
 ;;; --------------------------------------------------------------------
 
 (define (%make-memory-block pointer size)
+  ;;Wrapper for  the constructor  MAKE-MEMORY-BLOCK which  validates the
+  ;;arguments.
+  ;;
   (define who 'make-memory-block)
   (with-arguments-validation (who)
       ((pointer	pointer)
        (size_t	size))
-    (make-memory-block pointer size)))
+    (make-memory-block pointer size #f)))
 
 (define (null-memory-block)
-  (make-memory-block (null-pointer) 0))
+  (make-memory-block (null-pointer) 0 #f))
 
 (define (make-memory-block/guarded pointer size)
-  (%memory-block-guardian (%make-memory-block pointer size)))
+  (define who 'make-memory-block/guarded)
+  (with-arguments-validation (who)
+      ((pointer	pointer)
+       (size_t	size))
+    (make-memory-block pointer size #t)))
 
 (define (memory-block?/non-null obj)
   (and (memory-block? obj)
-       (not (pointer-null? (memory-block-pointer obj)))))
+       (not (pointer-null? ($memory-block-pointer obj)))))
 
 (define (%memory-block-pointer obj)
   (pointer-clone (memory-block-pointer obj)))
 
 (define (memory-block-reset B)
-  (define who 'make-memory-block)
+  (define who 'memory-block-reset)
   (with-arguments-validation (who)
       ((memory-block	B))
-    (set-memory-block-pointer! B (null-pointer))
-    (set-memory-block-size!    B 0)))
+    (%unsafe.memory-block-destructor B)
+    ($set-memory-block-pointer! B (null-pointer))
+    ($set-memory-block-size!    B 0)
+    ($set-memory-block-owner?!  B #f)))
 
 
 ;;; shared libraries interface
@@ -1403,9 +1415,10 @@
 (define (%free-allocated-memory)
   (do ((pointer (%memory-guardian) (%memory-guardian)))
       ((not pointer))
-    (unless (pointer-null? pointer)
-      (free pointer)
-      (set-pointer-null! pointer))))
+    ;;We know that POINTER is a pointer object.
+    (unless (capi.ffi-pointer-null? pointer)
+      (capi.ffi-free pointer)
+      (capi.ffi-set-pointer-null! pointer))))
 
 (define (guarded-malloc number-of-bytes)
   (let ((rv (malloc number-of-bytes)))
@@ -2093,11 +2106,10 @@
 
 ;;;; done
 
-(set-rtd-printer! (type-descriptor memory-block)	%struct-memory-block-printer)
+(set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
+(set-rtd-destructor!	(type-descriptor memory-block)	%unsafe.memory-block-destructor)
 
-(post-gc-hooks (cons* %memory-block-guardian-destructor
-		      %free-allocated-memory
-		      (post-gc-hooks)))
+(post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
 
 )
 

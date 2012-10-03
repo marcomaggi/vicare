@@ -7046,7 +7046,8 @@ object in @var{mblock}.
 
 @defun memory-block-reset @var{mblock}
 Reset an instance of @code{memory-block} to a @cnull{} pointer and zero
-size.  Return unspecified values.
+size; return unspecified values.  If @var{mblock} has been created to
+release the referenced memory block: the memory block is freed.
 @end defun
 
 

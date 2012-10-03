@@ -37,6 +37,7 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare pointer functions\n")
+(struct-guardian-logger	#t)
 
 
 ;;;; helpers
@@ -308,7 +309,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'memory-blocks))
+(parametrise ((check-test-name		'memory-blocks))
 
   (check
       (let ((B (make-memory-block (integer->pointer 123) 4096)))
@@ -376,7 +377,7 @@
 	  (free B)))
     => 32)
 
-  #t)
+  (collect))
 
 
 (parametrise ((check-test-name	'allocation))
@@ -2400,6 +2401,7 @@
 
 ;;;; done
 
+(collect)
 (check-report)
 
 ;;; end of file
