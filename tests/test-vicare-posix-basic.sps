@@ -269,7 +269,9 @@
 (parametrise ((check-test-name	'system))
 
   (check
-      (px.system "echo innocuous output from 'system()' call ; exit 0")
+      (px.system (if check-quiet-tests?
+		     "exit 0"
+		   "echo innocuous output from 'system()' call ; exit 0"))
     => 0)
 
   #t)
@@ -279,14 +281,12 @@
 
   (check
       (px.fork (lambda (child-pid)
-		 (display (format "after fork in parent, parent pid=~s, child pid=~s\n"
-			    (px.getpid) child-pid)
-			  (current-error-port))
+		 (check-display (format "after fork in parent, parent pid=~s, child pid=~s\n"
+				  (px.getpid) child-pid))
 		 #t)
 	       (lambda ()
-		 (display (format "after fork in child,  parent pid=~s, child pid=~s\n"
-			    (px.getppid) (px.getpid))
-			  (current-error-port))
+		 (check-display (format "after fork in child,  parent pid=~s, child pid=~s\n"
+				  (px.getppid) (px.getpid)))
 		 (exit)))
     => #t)
 
