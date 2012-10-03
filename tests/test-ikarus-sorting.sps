@@ -26,7 +26,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus))
+(import (ikarus)
+  (vicare checks))
 
 (define (permutations ls)
   (define (rem* ls)
@@ -130,8 +131,8 @@
   (test-list-sort))
 
 (set-port-buffer-mode! (current-output-port) (buffer-mode line))
-(display "*** testing Ikarus sorting\n\n" (current-error-port))
+(check-display "*** testing Ikarus sorting\n\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

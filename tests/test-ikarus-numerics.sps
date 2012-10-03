@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +27,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus))
+(import (ikarus)
+  (vicare checks))
 
 (define (test-rounding)
   (define (test-round x)
@@ -87,11 +89,7 @@
   (test-round +2.50)
   (test-round -2.50)
   (test-round +3.50)
-  (test-round -3.50)
-
-
-
-  )
+  (test-round -3.50))
 
 (define (test-eqv)
   (define (test-eqv x y result)
@@ -127,8 +125,8 @@
   (test-exact-integer-sqrt)
   (test-eqv))
 
-(display "*** testing Ikarus numerics\n\n" (current-error-port))
+(check-display "*** testing Ikarus numerics\n\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

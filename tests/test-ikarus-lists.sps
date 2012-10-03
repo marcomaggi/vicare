@@ -10,6 +10,7 @@
 ;;;	Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +28,8 @@
 
 #!ikarus
 (import (ikarus)
-  (ikarus-test-framework))
+  (ikarus-test-framework)
+  (vicare checks))
 
 (define (run-tests) (test-lists))
 
@@ -69,8 +71,8 @@
   [values (equal? (fold-right + 0 '(1 2 3) '(4 5 6)) 21)]
   )
 
-(display "*** testing lists\n" (current-error-port))
+(check-display "*** testing lists\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +27,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus))
+(import (ikarus)
+  (vicare checks))
 
 (define-syntax test
   (lambda (q)
@@ -174,8 +176,8 @@
   (run-unicode-tests))
 
 
-(display "*** testing unicode\n" (current-error-port))
+(check-display "*** testing unicode\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n")
 
 ;;; end of file

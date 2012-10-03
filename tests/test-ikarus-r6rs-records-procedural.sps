@@ -10,6 +10,7 @@
 ;;;	file in the original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +29,8 @@
 #!ikarus
 (import (ikarus)
   (rnrs records inspection)
-  (rnrs records procedural))
+  (rnrs records procedural)
+  (vicare checks))
 
 (define (%printf . args)
   (when #f
@@ -234,7 +236,7 @@
     )
   )
 
-(display "*** testing Ikarus R6RS records procedural\n\n" (current-error-port))
+(check-display "*** testing Ikarus R6RS records procedural\n\n")
 (test0)
 (%printf "test0 ok\n")
 (test1)
@@ -250,6 +252,6 @@
 (%printf "rtd0=~s\n" rtd0)
 (%printf "rcd0=~s\n" rcd0-default)
 (%printf "fields of ~s are ~s\n" rtd1 (record-type-field-names rtd1))
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

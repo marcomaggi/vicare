@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +29,8 @@
 #!ikarus
 (import (ikarus)
   (only (ikarus system $symbols)
-	$symbol-table-size))
+	$symbol-table-size)
+  (vicare checks))
 
 (define (test-gcable-symbols n)
   ;;Create N new  interned symbols without keeping a  reference to them,
@@ -48,21 +50,24 @@
 			 (integer->char (+ (char->integer #\a)
 					   (random 26))))
 		    (make-list n))))
-  (newline)
+  (check-newline)
   (let ([str1 (random-string 70)]
 	[str2 (random-string 70)])
     ;;Intern a symbol wihout keeping a reference to it.
-    (printf "sym1=~s\n" (string->symbol str1))
+    (unless check-quiet-tests?
+      (printf "sym1=~s\n" (string->symbol str1)))
     ;;Force garbage collection to collect it.
     (do ((i 0 (+ i 1)))
 	((= i 1024))
       (collect))
     (let ([sym1 (string->symbol str1)])
-      (printf "sym1=~s\n" (string->symbol str1))
-      (printf "sym2=~s\n" (string->symbol str2))
+      (unless check-quiet-tests?
+	(printf "sym1=~s\n" (string->symbol str1))
+	(printf "sym2=~s\n" (string->symbol str2)))
       (let ([sym3 (string->symbol str1)])
-	(printf "sym3=~s\n" (string->symbol str1))
-	(newline)
+	(unless check-quiet-tests?
+	  (printf "sym3=~s\n" (string->symbol str1)))
+	(check-newline)
 	(assert (eq? sym1 sym3))))))
 
 
@@ -71,8 +76,8 @@
   (test-reference-after-gc))
 
 (set-port-buffer-mode! (current-output-port) (buffer-mode line))
-(display "*** testing symbol table\n" (current-error-port))
+(check-display "*** testing symbol table\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

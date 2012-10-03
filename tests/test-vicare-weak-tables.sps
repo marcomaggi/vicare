@@ -237,7 +237,7 @@
         (weak-hashtable-set! T (vector-ref K 3) 4)
         (weak-hashtable-set! T (vector-ref K 4) 5)
         (weak-hashtable-set! T (vector-ref K 5) 6)
-	(pretty-print (weak-hashtable-keys T) (current-error-port))))
+	(check-pretty-print (weak-hashtable-keys T))))
 
   (check
       (let ((T (make-weak-hashtable string-hash string=?)))
@@ -257,7 +257,7 @@
         (weak-hashtable-set! T (vector-ref K 4) 5)
         (weak-hashtable-set! T (vector-ref K 5) 6)
       (let-values (((keys vals) (weak-hashtable-entries T)))
-	(pretty-print (list keys vals) (current-error-port)))))
+	(check-pretty-print (list keys vals)))))
 
   #t)
 

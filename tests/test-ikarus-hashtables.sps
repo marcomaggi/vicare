@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +29,8 @@
 #!ikarus
 (import (ikarus)
   (rnrs hashtables)
-  (ikarus-test-framework))
+  (ikarus-test-framework)
+  (vicare checks))
 
 (define (run-tests) (test-hashtables))
 
@@ -47,8 +49,8 @@
      (equal? (hashtable-keys h) '#()))]
   )
 
-(display "*** testing hashtables\n" (current-error-port))
+(check-display "*** testing hashtables\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

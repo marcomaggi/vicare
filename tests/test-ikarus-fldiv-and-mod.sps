@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +27,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus))
+(import (ikarus)
+  (vicare checks))
 
 (define (run-tests)
   (test-fldiv-and-mod)
@@ -36,7 +38,8 @@
 (define (test-fldiv-and-mod)
   (define (test x1 x2 verify?)
     (let-values ([(d m) (fldiv-and-mod x1 x2)])
-      (printf "(fldiv-and-mod ~s ~s) = ~s ~s\n" x1 x2 d m)
+      (unless check-quiet-tests?
+	(printf "(fldiv-and-mod ~s ~s) = ~s ~s\n" x1 x2 d m))
       (when verify?
 	(assert (= d (fldiv x1 x2)))
 	(assert (= m (flmod x1 x2)))
@@ -77,7 +80,8 @@
 (define (test-fldiv0-and-mod0)
   (define (test x1 x2 verify?)
     (let-values ([(d m) (fldiv0-and-mod0 x1 x2)])
-      (printf "(fldiv0-and-mod0 ~s ~s) = ~s ~s\n" x1 x2 d m)
+      (unless check-quiet-tests?
+	(printf "(fldiv0-and-mod0 ~s ~s) = ~s ~s\n" x1 x2 d m))
       (when verify?
 	(assert (= d (fldiv0 x1 x2)))
 	(assert (= m (flmod0 x1 x2)))
@@ -119,8 +123,8 @@
   (test -17.0 +inf.0 #f)
   (test -17.0 -inf.0 #f))
 
-(display "*** testing fldiv and mod\n" (current-error-port))
+(check-display "*** testing fldiv and mod\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

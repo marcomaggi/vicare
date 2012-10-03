@@ -10,6 +10,7 @@
 ;;;	Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,22 +28,25 @@
 
 (library (ikarus-test-framework)
   (export define-tests src-file)
-  (import (ikarus))
+  (import (ikarus)
+    (only (vicare checks)
+	  check-quiet-tests?))
 
   (define (src-file x)
     (string-append (or (getenv "VICARE_SRC_DIR") ".") "/" x))
 
   (define-syntax define-tests
     (syntax-rules ()
-      [(_ test-all [p0 e0] ...)
+      ((_ test-all (p0 e0) ...)
        (define test-all
          (lambda ()
-           (let ([p p0] [e e0])
+           (let ((p p0) (e e0))
              (unless (p e)
                (error 'test-all "failed"
                       '(p0 e0) e)))
            ...
-           (printf "[~s: ~s] Happy Happy Joy Joy\n"
-                   (length '(p0 ...))'test-all  )))])))
+           (unless check-quiet-tests?
+	     (printf "[~s: ~s] Happy Happy Joy Joy\n" (length '(p0 ...)) 'test-all))
+	   ))))))
 
 ;;; end of file
