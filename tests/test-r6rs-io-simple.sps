@@ -1,4 +1,5 @@
 ;;;Copyright (c) 2008 Matthew Flatt
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This library is free software;  you can redistribute it and/or modify
 ;;;it  under the  terms of  the GNU  Library General  Public  License as
@@ -17,9 +18,11 @@
 
 #!r6rs
 (import (r6rs io simple)
-        (r6rs test)
-        (rnrs io simple))
-(display "*** Flatt's R6RS tests for (rnrs io simple)\n\n"
-	 (current-error-port))
+  (r6rs test)
+  (rnrs io simple)
+  (vicare checks))
+(check-display "*** Flatt's R6RS tests for (rnrs io simple)\n\n")
 (run-io-simple-tests)
 (report-test-results)
+
+;;; end of file
