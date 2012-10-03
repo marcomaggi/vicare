@@ -304,6 +304,9 @@
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (ikarus system $pointers)
 	  $pointer=)
+    (only (ikarus system $structs)
+	  $struct
+	  $struct-guardian)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
@@ -646,6 +649,20 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-syntax $make-memory-block
+  ;;The  currently   distributed  boot   image  does  not   include  the
+  ;;$struct-guardian call  in the definition  of struct makers  built by
+  ;;the expander;  for this  reason MAKE-MEMORY-BLOCK does  not register
+  ;;the structure with the guardian and we must do it explicitly.  To be
+  ;;removed after  the next boot  image rotation.  (Marco Maggi;  Oct 3,
+  ;;2012)
+  ;;
+  (syntax-rules ()
+    ((_ ?pointer ?size ?owner?)
+     ($struct-guardian ($struct (type-descriptor memory-block) ?pointer ?size ?owner?))
+     #;(make-memory-block ?pointer ?size ?owner?)
+     )))
+
 (define (%unsafe.memory-block-destructor S)
   (when ($memory-block-owner? S)
     ;;Remember that FREE will mutate to NULL the pointer.
@@ -663,17 +680,17 @@
   (with-arguments-validation (who)
       ((pointer	pointer)
        (size_t	size))
-    (make-memory-block pointer size #f)))
+    ($make-memory-block pointer size #f)))
 
 (define (null-memory-block)
-  (make-memory-block (null-pointer) 0 #f))
+  ($make-memory-block (null-pointer) 0 #f))
 
 (define (make-memory-block/guarded pointer size)
   (define who 'make-memory-block/guarded)
   (with-arguments-validation (who)
       ((pointer	pointer)
        (size_t	size))
-    (make-memory-block pointer size #t)))
+    ($make-memory-block pointer size #t)))
 
 (define (memory-block?/non-null obj)
   (and (memory-block? obj)
