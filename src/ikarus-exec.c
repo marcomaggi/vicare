@@ -34,12 +34,13 @@ ik_exec_code (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp)
     ikptr rp = IK_REF(top, 0);
     long int framesize = (long int) IK_REF(rp, disp_frame_size);
 #ifdef DEBUG_EXEC
-    fprintf(stderr, "exec framesize=0x%016lx ksize=%ld rp=0x%016lx\n", framesize, k->size, rp);
+    fprintf(stderr, "%s: exec framesize=0x%016lx ksize=%ld rp=0x%016lx\n",
+	    __func__, framesize, k->size, rp);
 #endif
     if (0 == framesize)
       framesize = IK_REF(top, wordsize);
     if (framesize <= 0)
-      ik_abort("invalid framesize %ld\n", framesize);
+      ik_abort("%s: invalid framesize %ld\n", __func__, framesize);
     if (framesize < k->size) {
       ikcont *	nk = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
       nk->tag	= k->tag;
@@ -52,8 +53,8 @@ ik_exec_code (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp)
       ik_ulong idx = ((ik_ulong)(&k->next)) >> IK_PAGESHIFT;
       ((int*)(long)(pcb->dirty_vector))[idx] = -1;
     } else if (framesize > k->size) {
-      ik_abort("invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
-	       framesize, k->size, rp, IK_REF(rp, disp_frame_offset));
+      ik_abort("%s: invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
+	       __func__, framesize, k->size, rp, IK_REF(rp, disp_frame_offset));
     }
     pcb->next_k = k->next;
     ikptr fbase = pcb->frame_base - wordsize;

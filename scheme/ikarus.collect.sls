@@ -38,7 +38,8 @@
 		  purge-collection-avoidance-list)
     (ikarus system $fx)
     (ikarus system $arg-list)
-    (vicare syntactic-extensions))
+    (vicare syntactic-extensions)
+    (ikarus.emergency))
 
 
 ;;;; arguments validation
@@ -63,28 +64,46 @@
           (die 'post-gc-hooks "not a list of procedures" ls)))))
 
 (define (do-post-gc ls n)
+  (emergency-write "entering post gc")
   (let ([k0 (collect-key)])
     (parameterize ([post-gc-hooks '()])
-      (for-each (lambda (x) (x)) ls))
+      (for-each (lambda (x)
+		  (emergency-write "running post-gc hook")
+		  (x))
+	ls))
     (if (eq? k0 (collect-key))
+	;;Check if there are N  bytes already allocated and available on
+	;;the heap; run a GC otherwise.
         (let ([was-enough? (foreign-call "ik_collect_check" n)])
-          ;;; handlers ran without GC but there is was not enough
-          ;;; space in the nursery for the pending allocation,
-          (unless was-enough? (do-post-gc ls n)))
-        (let ()
-          ;;; handlers did cause a GC, so, do the handlers again.
-          (do-post-gc ls n)))))
+	  ;;Handlers ran without GC but there is was not enough space in
+	  ;;the nursery for the pending allocation.
+          (if was-enough?
+	      (emergency-write "exiting post gc")
+	    (do-post-gc ls n))
+          ;; (unless was-enough?
+	  ;;   (do-post-gc ls n))
+	  )
+      (let ()
+	;;Handlers did cause a GC, so, do the handlers again.
+	(emergency-write "handlers caused GC, looping")
+	(do-post-gc ls n)))))
 
 (define do-overflow
   (lambda (n)
+    ;;There is not  enough memory to perform an operation,  so we can do
+    ;;nothing before performing a GC run.
     (foreign-call "ik_collect" n)
+    (emergency-write "do-overflow: performed collect")
     (let ([ls (post-gc-hooks)])
       (unless (null? ls) (do-post-gc ls n)))))
 
 (define do-overflow-words
   (lambda (n)
+    ;;There is not  enough memory to perform an operation,  so we can do
+    ;;nothing before performing a GC run.
     (let ([n ($fxsll n 2)])
       (foreign-call "ik_collect" n)
+      (emergency-write "do-overflow-words: performed collect")
       (let ([ls (post-gc-hooks)])
         (unless (null? ls) (do-post-gc ls n))))))
 

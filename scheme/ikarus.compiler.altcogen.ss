@@ -473,6 +473,9 @@
   ;;;              (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
   ;;;          (list size)))))
   (define (alloc-check size)
+    ;;Generate code to make sure that there is enough memory on the heap
+    ;;to allocate SIZE  bytes.  This function should  be called whenever
+    ;;the ALLOC primitive is invoked.
     (define (test size)
       (if (struct-case size
              [(constant i) (<= i 4096)]

@@ -432,6 +432,8 @@ static void fix_new_pages(gc_t* gc);
 
 ikptr
 ik_collect_check (unsigned long req, ikpcb* pcb)
+/* Check if there  are REQ bytes already allocated and  available on the
+   heap; return #t if there are, run a GC and return #f otherwise. */
 {
   long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
   if (bytes >= req) {
