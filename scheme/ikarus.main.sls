@@ -39,7 +39,10 @@
   (import (except (ikarus)
 		  load-r6rs-script
 		  load
-		  host-info)
+		  host-info
+		  $struct-guardian
+		  struct-guardian-logger
+		  struct-guardian-log)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
