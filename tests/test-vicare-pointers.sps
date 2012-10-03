@@ -38,7 +38,7 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare pointer functions\n")
-(struct-guardian-logger	#t)
+#;(struct-guardian-logger	#t)
 
 
 ;;;; helpers
