@@ -10,6 +10,7 @@
 ;;;	original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +27,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus))
+(import (ikarus)
+  (vicare checks))
 
 (define (test1)
   (define (for-each-pair f x)
@@ -50,7 +52,8 @@
       (cond
        [(g) =>
 	(lambda (p)
-	  (printf " [~s/~s]" i n)
+	  (unless check-quiet-tests?
+	    (printf " [~s/~s]" i n))
 	  (assert (eq? (cdr p) ls))
 	  (set! ls (cdr ls))
 	  (f (+ i 1)))]
@@ -58,8 +61,8 @@
   (assert (null? ls)))
 
 (set-port-buffer-mode! (current-output-port) (buffer-mode none))
-(display "*** testing Ikarus guardians\n\n" (current-error-port))
+(check-display "*** testing Ikarus guardians\n\n")
 (test1)
-(display "\n\n; *** done\n" (current-error-port))
+(check-display "\n\n; *** done\n\n")
 
 ;;; end of file

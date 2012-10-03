@@ -10,6 +10,7 @@
 ;;;	the original Ikarus distribution.
 ;;;
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +29,8 @@
 
 #!vicare
 (import (ikarus)
-  (ikarus-test-framework))
+  (ikarus-test-framework)
+  (vicare checks))
 
 (define-tests test-strings
   [values
@@ -47,8 +49,8 @@
   [values (string-ci=? "\xDF;\xDF;" "SSSS")]
   )
 
-(display "*** testing strings\n" (current-error-port))
+(check-display "*** testing strings\n")
 (test-strings)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n\n")
 
 ;;; end of file

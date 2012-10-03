@@ -4,7 +4,7 @@ testdir				= $(srcdir)
 VICARE_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
 VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
 VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
-VICARE_SELECTED_PROOFS		= $(testdir)/proof-*$(file)*.sps
+VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
 VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
@@ -23,7 +23,7 @@ VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 VICARE_RUN	= $(VICARE_ENV) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs long-test long-tests
-.PHONY: proof proofs foreign-test foreign-tests
+.PHONY: demo demos foreign-test foreign-tests
 
 test tests:
 	@echo
@@ -40,9 +40,9 @@ foreign-test foreign-tests:
 	@for f in $(VICARE_SELECTED_FOREIGN_TESTS); do $(VICARE_RUN) $$f; done
 	@echo
 
-proof proofs:
+demo demos:
 	@echo
-	@for f in $(VICARE_SELECTED_PROOFS); do $(VICARE_RUN) $$f; done
+	@for f in $(VICARE_SELECTED_DEMOS); do $(VICARE_RUN) $$f; done
 	@echo
 
 #page
@@ -274,9 +274,10 @@ EXTRA_DIST = \
 	exec-modes-helpers/r6rs-program.sps		\
 	test-exec-modes.sh				\
 	\
-	proof-vicare-gcc.sps				\
-	proof-vicare-readline.sps			\
-	proof-vicare-timerfd.sps			\
+	demo-vicare-gcc.sps				\
+	demo-vicare-readline.sps			\
+	demo-vicare-timerfd.sps				\
+	demo-issue-35.sps				\
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\

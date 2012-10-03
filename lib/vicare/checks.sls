@@ -45,6 +45,7 @@
     check-test-name
 
     ;; output
+    check-quiet-tests?
     check-display
     check-write
     check-newline
@@ -58,7 +59,7 @@
 
 ;;; utilities
 
-(define quiet-tests?
+(define check-quiet-tests?
   (let ((S (getenv "VICARE_CHECK_QUIET")))
     (and S
 	 (or (and (fixnum? S)
@@ -66,29 +67,29 @@
 	     (string=? S "yes")))))
 
 (define (check-display thing)
-  (unless quiet-tests?
+  (unless check-quiet-tests?
     (ikarus:display thing (current-error-port))))
 
 (define (check-write thing)
-  (unless quiet-tests?
+  (unless check-quiet-tests?
     (ikarus:write thing (current-error-port))))
 
 (define (check-newline)
-  (unless quiet-tests?
+  (unless check-quiet-tests?
     (ikarus:newline (current-error-port))))
 
 (define (check-pretty-print thing)
-  (unless quiet-tests?
+  (unless check-quiet-tests?
     (ikarus:pretty-print thing (current-error-port))))
 
 (define (flush-checks-port)
-  (unless quiet-tests?
+  (unless check-quiet-tests?
     (flush-output-port (current-error-port))))
 
 (define check-pretty-print/no-trailing-newline
   (case-lambda
    ((datum output-port)
-    (unless quiet-tests?
+    (unless check-quiet-tests?
       (let* ((os	(call-with-string-output-port
 			    (lambda (sop) (check-pretty-print datum sop))))
 	     (len	(string-length os))

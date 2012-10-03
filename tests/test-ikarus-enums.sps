@@ -1,5 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -14,7 +15,8 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #!ikarus
-(import (ikarus))
+(import (ikarus)
+  (vicare checks))
 
 (define (run-tests)
   (define (trace-equal? x y) (equal? x y))
@@ -65,8 +67,8 @@
       (enum-set->list (enum-set-projection e1 e2)))
     '(red black))))
 
-(display "*** testing enums\n" (current-error-port))
+(check-display "*** testing enums\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-display "; *** done\n")
 
 ;;; end of file

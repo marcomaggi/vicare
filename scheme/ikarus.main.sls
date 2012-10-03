@@ -39,7 +39,10 @@
   (import (except (ikarus)
 		  load-r6rs-script
 		  load
-		  host-info)
+		  host-info
+		  $struct-guardian
+		  struct-guardian-logger
+		  struct-guardian-log)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
@@ -1009,8 +1012,21 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   #| end of module |#)
 
 (module ($struct-guardian struct-guardian-logger struct-guardian-log)
-  (define $struct-guardian
+  (define %struct-guardian
     (make-guardian))
+
+  (define ($struct-guardian S)
+    (let ((logger (struct-guardian-logger)))
+      (cond ((procedure? logger)
+	     (guard (E (else (void)))
+	       (logger S #f 'registration))
+	     (%struct-guardian S))
+	    (logger
+	     (guard (E (else (void)))
+	       (struct-guardian-log S #f 'registration))
+	     (%struct-guardian S))
+	    (else
+	     (%struct-guardian S)))))
 
   (define struct-guardian-logger
     (make-parameter #f
@@ -1023,6 +1039,10 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   (define (struct-guardian-log S E action)
     (case action
+      ((registration)
+       (fprintf (current-error-port)
+		"*** Vicare debug: struct guardian: registered struct:\n\
+                 ***\t~s\n" S))
       ((before-destruction)
        (fprintf (current-error-port)
 		"*** Vicare debug: struct guardian: before destruction:\n\
@@ -1043,7 +1063,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (define (%struct-guardian-destructor)
     (guard (E (else (void)))
       (define-inline (%execute ?S ?body0 . ?body)
-	(do ((?S ($struct-guardian) ($struct-guardian)))
+	(do ((?S (%struct-guardian) (%struct-guardian)))
 	    ((not ?S))
 	  ?body0 . ?body))
       (define-inline (%extract-destructor S)
@@ -1074,8 +1094,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		   ((%extract-destructor S) S)
 		   (struct-reset S))))))))
 
-  (post-gc-hooks (cons %struct-guardian-destructor
-		       (post-gc-hooks)))
+  (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
 
   #| end of module |# )
 
