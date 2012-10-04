@@ -22574,6 +22574,7 @@ values is duplicated in the Scheme language compiler
 * objects ports::               Port objects.
 * objects transcoders::         Transcoder objects.
 * objects pointers::            Pointer objects.
+* objects code::                Code objects.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
 * objects callbacks::           Notes on calling Scheme code from C.
@@ -26194,6 +26195,110 @@ the payload of this word is an 8-bit vector whose format is as follows:
 
 See the source code in the file @file{ikarus.codecs.sls} for more
 details.
+
+@c page
+@node objects code
+@section Code objects
+
+
+Code objects contain compiled binary code ready to be executed by the
+host's processor.
+
+@menu
+* objects code layout::         Memory layout of code objects.
+* objects code reloc::          The relocation vector.
+@end menu
+
+@c page
+@node objects code layout
+@subsection Memory layout of code objects
+
+
+A code object fixed length memory block, of variable size equal to a
+multiple of the host's page size, referenced by machine words tagged as
+vectors.  The first machine word of a code memory block is tagged has
+code in its least significant bits and it has the most significant bits
+set to zero.
+
+@example
+|------------------------|-------------| reference to code
+      heap pointer         vector tag
+
+|------------------------|-------------| code first word
+   all set to zero          code tag
+@end example
+
+The first words of a code memory block hold meta data:
+
+@enumerate 2
+@item
+The second word contains a non--negative fixnum representing the number
+of used bytes in the allocated block; this is @strong{not} the number of
+allocated bytes (multiple of the page size), just the number of bytes
+actually used by meta data and binary code.
+
+@item
+The third word contains the reference to a Scheme vector used as
+relocation vector.
+
+@item
+The fourth word contains a non--negative fixnum representing the number
+of free variables in the contained code.  If such values is zero: the
+code is a thunk.
+
+@item
+The fifth word contains a code annotation; it is initialised to
+@false{}.
+
+@item
+The sixth word is currently unused; it is initialised to the fixnum
+zero.
+@end enumerate
+
+@c page
+@node objects code reloc
+@subsection The relocation vector
+
+
+The @dfn{relocation vector} is a Scheme vector referenced by the meta
+data of a code object; the relocation vector can be empty.
+
+The relocation vector is divided into records, each some words long:
+
+@example
+   0     1     2     3     4     5     6     7
+|-----|-----|-----|-----|-----|-----|-----|-----| relocation vector
+|...........|.................|.................|
+ 1st record      2nd record        3rd record
+@end example
+
+@noindent
+the first word in each record contains a fixnum which must be
+interpreted as bit field; such fixnum must never be zero.  On 32-bit
+platforms the layout of such fixnum is:
+
+@example
+     bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+... |----|----|----|----|----|----|----|----|
+...................|..............|.........| 1st record word
+ number of bytes     record tag    fixnum tag
+@end example
+
+@noindent
+on 64-bit platforms the layout of such fixnum is:
+
+@example
+        bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+   ... |----|----|----|----|----|----|----|----|
+.................|..............|..............| 1st record word
+ number of bytes    record tag    fixnum tag
+@end example
+
+@noindent
+the @math{3} least significant bits of the fixnum's data represent a
+type tag for the record; the remaining most significant bits of the
+fixnum's data area represent a number of bytes.  The record type tag
+also decides the length of the record.
 
 @c page
 @node objects misc

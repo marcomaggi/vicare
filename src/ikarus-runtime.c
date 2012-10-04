@@ -608,18 +608,50 @@ ik_dump_dirty_vector (ikpcb* pcb)
 
 
 ikptr
-ikrt_make_code (ikptr codesizeptr, ikptr freevars, ikptr rvec, ikpcb* pcb)
+ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, ikpcb* pcb)
+/* Build a new code object and return a reference to it.
+
+   S_CODE_SIZE is a non-negative  fixnum representing the requested code
+   size.  S_FREEVARS is a non-negative fixnum representing the number of
+   free variables in the code.  S_RELOCATION_VECTOR is a vector used for
+   relocation; empty when handed to this function. */
 {
-  assert((fx_mask & (int)codesizeptr) == 0);
-  long   code_size = IK_UNFIX(codesizeptr);
+  assert(IK_IS_FIXNUM(s_code_size));
+  assert(IK_IS_FIXNUM(s_freevars));
+  assert(ik_is_vector(s_relocation_vector));
+  long   code_size = IK_UNFIX(s_code_size);
+  /* We allocate  a number of bytes  equal to the least  number of pages
+   * required to  hold CODE_SIZE.   Example: if  CODE_SIZE is  less than
+   * IK_PAGESIZE:
+   *
+   *      IK_PAGESIZE
+   *   |---------------| memreq
+   *   |---------| code_size
+   *
+   * Example: if CODE_SIZE is greater than IK_PAGESIZE:
+   *
+   *      IK_PAGESIZE     IK_PAGESIZE
+   *   |---------------|---------------| memreq
+   *   |-------------------| code_size
+   *
+   */
   long   memreq    = IK_ALIGN_TO_NEXT_PAGE(disp_code_data + code_size);
+  /* Here MEM is  still an untagged pointer, not really  an "ikptr" yet;
+     we  tag it  later.   MEM references  the first  byte  in the  pages
+     allocated with "mmap()" with execution protection. */
   ikptr  mem       = ik_mmap_code(memreq, 0, pcb);
   bzero((char*)(long)mem, memreq);
-  IK_REF(mem, disp_code_code_tag)     = code_tag;
-  IK_REF(mem, disp_code_code_size)    = codesizeptr;
-  IK_REF(mem, disp_code_freevars)     = freevars;
-  IK_REF(mem, disp_code_reloc_vector) = rvec;
-  IK_REF(mem, disp_code_annotation)   = IK_FALSE_OBJECT;
+  IK_REF(mem, disp_code_code_tag)	= code_tag;
+  IK_REF(mem, disp_code_code_size)	= s_code_size;
+  IK_REF(mem, disp_code_freevars)	= s_freevars;
+  IK_REF(mem, disp_code_reloc_vector)	= s_relocation_vector;
+  IK_REF(mem, disp_code_annotation)	= IK_FALSE;
+  /* We put  nothing in the "unused"  field of the block;  this field is
+     already allocated to zeros, which means the fixnum zero. */
+  /* FIXME Do we actually need to call the relocation function here?  It
+     appears  that the  functions does  nothing when  the relocation  is
+     empty, and it IS empty when this function is called.  (Marco Maggi;
+     Oct 4, 2012) */
   ik_relocate_code(mem);
   return mem | vector_tag;
 }
@@ -636,7 +668,7 @@ ikrt_set_code_annotation (ikptr s_code, ikptr s_annot, ikpcb* pcb)
 {
   IK_REF(s_code, off_code_annotation) = s_annot;
   ((unsigned*)(long)pcb->dirty_vector)[IK_PAGE_INDEX(s_code)] = -1;
-  return IK_VOID_OBJECT;
+  return IK_VOID;
 }
 
 

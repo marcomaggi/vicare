@@ -133,63 +133,78 @@ alloc_code (long int size, ikpcb* pcb, fasl_port* p)
 
 void
 ik_relocate_code (ikptr code)
+/* Accept as argument an *untagged* pointer to a code object. */
 {
   ikptr	vec  = IK_REF(code, disp_code_reloc_vector);
-  ikptr size = IK_REF(vec, off_vector_length);
+  /* Remember  that the  fixnum representing  the number  of items  in a
+     vector, taken as "long", also represents the number of bytes in the
+     data area of the vector. */
+  ikptr size = IK_VECTOR_LENGTH_FX(vec);
+  /* The variable  DATA is an  *untagged* pointer referencing  the first
+     byte of binary code in the code object. */
   ikptr data = code + disp_code_data;
-  ikptr p    = vec + off_vector_data;
-  ikptr q    = p + size;
-  while(p < q) {
-    long	r = IK_UNFIX(IK_REF(p, 0));
-    if (0 == r)
-      ik_abort("unset reloc!");
-    long tag = r & 3;
-    long code_off = r >> 2;
-    if (tag == 0) {
-      /* vanilla object */
-      IK_REF(data, code_off) = IK_REF(p, wordsize);
-      p += (2*wordsize);
-    }
-    else if (tag == 2) {
-      /* displaced object */
-      long obj_off = IK_UNFIX(IK_REF(p, wordsize));
-      ikptr obj = IK_REF(p, 2*wordsize);
+  /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
+     word in the data area of the relocation vector VEC. */
+  ikptr reloc_vec_cur  = vec  + off_vector_data;
+  /* The variable  RELOC_VEC_PAST is an  *untagged* pointer to  the word
+     right after the data area of the relocation vector VEC. */
+  ikptr reloc_vec_past = reloc_vec_cur + size;
+  /* If the relocation vector is empty: do nothing. */
+  while (reloc_vec_cur < reloc_vec_past) {
+    long	first_record_word = IK_UNFIX(IK_REF(reloc_vec_cur, 0));
+    if (0 == first_record_word)
+      ik_abort("invalid empty record in code object's relocation vector");
+    const long	reloc_record_tag = first_record_word & 3;
+    const long	code_off	 = first_record_word >> 2;
+    if (reloc_record_tag == 0) {
+      /* This record represents a vanilla object; this record is 2 words
+	 wide. */
+      IK_REF(data, code_off) = IK_REF(reloc_vec_cur, wordsize);
+      reloc_vec_cur += (2*wordsize);
+    } else if (reloc_record_tag == 2) {
+      /* This record  represents a  displaced object;  this record  is 3
+	 words wide. */
+      long	obj_off	= IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
+      ikptr	obj	= IK_REF(reloc_vec_cur, 2*wordsize);
       IK_REF(data, code_off) = obj + obj_off;
-      p += (3*wordsize);
-    }
-    else if (tag == 3) {
-      /* jump label */
-      long obj_off = IK_UNFIX(IK_REF(p, wordsize));
-      long obj = IK_REF(p, 2*wordsize);
-      long displaced_object = obj + obj_off;
-      long next_word = data + code_off + 4;
-      long relative_distance = displaced_object - next_word;
+      reloc_vec_cur += (3*wordsize);
+    } else if (reloc_record_tag == 3) {
+      /* This record  represents a  jump label; this  record is  3 words
+	 wide. */
+      long	obj_off			= IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
+      long	obj			= IK_REF(reloc_vec_cur, 2*wordsize);
+      long	displaced_object	= obj + obj_off;
+      long	next_word		= data + code_off + 4;
+      long	relative_distance	= displaced_object - next_word;
 #if 0
       if (wordsize == 8) {
         relative_distance += 4;
       }
 #endif
       *((int*)(data+code_off)) = relative_distance;
-      //      IK_REF(next_word, -wordsize) = relative_distance;
-      p += (3*wordsize);
-    }
-    else if (tag == 1) {
-      /* foreign object */
-      ikptr str = IK_REF(p, wordsize);
-      char* name = NULL;
+      /* IK_REF(next_word, -wordsize) = relative_distance; */
+      reloc_vec_cur += (3*wordsize);
+    } else if (reloc_record_tag == 1) {
+      /* This record represents a foreign object; this record is 2 words
+	 wide. */
+      ikptr	str	= IK_REF(reloc_vec_cur, wordsize);
+      char *	name	= NULL;
       if (IK_TAGOF(str) == bytevector_tag) {
         name = (char*)(long) str + off_bytevector_data;
       } else
         ik_abort("foreign name is not a bytevector");
+      /* FIXME Do we call "dlerror()" here to clean up possible previous
+	 errors?  (Marco Maggi; Oct 4, 2012) */
       dlerror();
-      void* sym = dlsym(RTLD_DEFAULT, name);
-      char* err = dlerror();
+      void *	sym	= dlsym(RTLD_DEFAULT, name);
+      char *	err	= dlerror();
       if (err)
         ik_abort("failed to find foreign name %s: %s", name, err);
       IK_REF(data,code_off) = (ikptr)sym;
-      p += (2*wordsize);
+      reloc_vec_cur += (2*wordsize);
     } else
-      ik_abort("invalid reloc 0x%016lx (tag=%ld)", r, tag);
+      ik_abort("invalid first word in relocation vector's record: 0x%016lx (tag=%ld)",
+	       first_record_word, reloc_record_tag);
   }
 }
 
