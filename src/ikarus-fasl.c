@@ -131,9 +131,29 @@ alloc_code (long int size, ikpcb* pcb, fasl_port* p)
 }
 
 
+/* Accessors for the words of relocation vector's records. */
+#undef  IK_RELOC_RECORD_REF
+#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
+#undef  IK_RELOC_RECORD_1ST
+#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
+#undef  IK_RELOC_RECORD_2ND
+#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
+#undef  IK_RELOC_RECORD_3RD
+#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
+
 void
 ik_relocate_code (ikptr code)
-/* Accept as argument an *untagged* pointer to a code object. */
+/* Accept as  argument an *untagged*  pointer to a code  object; process
+   the code object's relocation vector.
+
+   This function called:
+
+   - whenever a code  object is allocated, in this  case CODE references
+     an allocated but still empty code object;
+
+   - whenever a  code object is read  from a FASL file;
+
+   - whenever a code object is created by the assembler. */
 {
   ikptr	vec  = IK_REF(code, disp_code_reloc_vector);
   /* Remember  that the  fixnum representing  the number  of items  in a
@@ -151,7 +171,7 @@ ik_relocate_code (ikptr code)
   ikptr reloc_vec_past = reloc_vec_cur + size;
   /* If the relocation vector is empty: do nothing. */
   while (reloc_vec_cur < reloc_vec_past) {
-    long	first_record_word = IK_UNFIX(IK_REF(reloc_vec_cur, 0));
+    long	first_record_word = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
     if (0 == first_record_word)
       ik_abort("invalid empty record in code object's relocation vector");
     const long	reloc_record_tag = first_record_word & 3;
@@ -161,23 +181,23 @@ ik_relocate_code (ikptr code)
     switch (reloc_record_tag) {
     case 0: { /* This record represents a vanilla object; this record is
 		 2 words wide. */
-      IK_REF(data, data_code_off) = IK_REF(reloc_vec_cur, wordsize);
+      IK_REF(data, data_code_off) = IK_RELOC_RECORD_2ND(reloc_vec_cur);
       reloc_vec_cur += (2*wordsize);
       break;
     }
     case 2: { /* This record represents a  displaced object; this record
 		 is 3 words wide. */
-      long	obj_off	= IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
-      ikptr	obj	= IK_REF(reloc_vec_cur, 2*wordsize);
+      long	obj_off	= IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
+      ikptr	obj	=          IK_RELOC_RECORD_3RD(reloc_vec_cur);
       IK_REF(data, data_code_off) = obj + obj_off;
       reloc_vec_cur += (3*wordsize);
       break;
     }
     case 3: { /* This record represents  a jump label; this  record is 3
 		 words wide. */
-      long	obj_off			= IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
-      long	obj			= IK_REF(reloc_vec_cur, 2*wordsize);
-      long	displaced_object	= obj + obj_off;
+      long	obj_off			= IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
+      long	obj			=          IK_RELOC_RECORD_3RD(reloc_vec_cur);
+      long	displaced_object	= obj  + obj_off;
       long	next_word		= data + data_code_off + 4;
       long	relative_distance	= displaced_object - next_word;
 #if 0
@@ -192,7 +212,7 @@ ik_relocate_code (ikptr code)
     }
     case 1: { /* This record represents a foreign object; this record is
 		 2 words wide. */
-      ikptr	str	= IK_REF(reloc_vec_cur, wordsize);
+      ikptr	str	= IK_RELOC_RECORD_2ND(reloc_vec_cur);
       char *	name	= NULL;
       if (IK_TAGOF(str) == bytevector_tag) {
         name = (char*)(long) str + off_bytevector_data;

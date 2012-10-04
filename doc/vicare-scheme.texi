@@ -26214,23 +26214,45 @@ host's processor.
 @subsection Memory layout of code objects
 
 
-A code object fixed length memory block, of variable size equal to a
-multiple of the host's page size, referenced by machine words tagged as
-vectors.  The first machine word of a code memory block is tagged has
-code in its least significant bits and it has the most significant bits
-set to zero.
+A code object is a fixed length memory block, of variable size equal to
+a multiple of the host's page size, referenced by machine words tagged
+as vectors; the memory is allocated with @cfunc{mmap} and is given read,
+write and execution protection.  The memory layout of a code object is
+as follows:
+
+@example
+     page size          page size          page size
+|..................|..................|..................|
+|-----------|-----------------------------------|++++++++|
+  meta data                 data area             unused
+@end example
+
+@noindent
+if the requested memory is less than the exact multiple of a page size,
+the last allocated bytes are unused and set to zero at allocation time.
+
+The first machine word of a code memory block is tagged has code in its
+least significant bits and it has the most significant bits set to zero.
 
 @example
 |------------------------|-------------| reference to code
-      heap pointer         vector tag
+    memory pointer         vector tag
 
 |------------------------|-------------| code first word
    all set to zero          code tag
 @end example
 
+@c ------------------------------------------------------------
+
+@subsubheading Meta data in a code memory block
+
 The first words of a code memory block hold meta data:
 
-@enumerate 2
+@enumerate
+@item
+The first word contains the secondary tag needed to recognise a Scheme
+object as code object.
+
 @item
 The second word contains a non--negative fixnum representing the number
 of used bytes in the allocated block; this is @strong{not} the number of
@@ -26254,6 +26276,10 @@ The fifth word contains a code annotation; it is initialised to
 The sixth word is currently unused; it is initialised to the fixnum
 zero.
 @end enumerate
+
+@noindent
+the subsequent words in the memory block are the code object's data
+area.
 
 @c page
 @node objects code reloc
@@ -26297,8 +26323,9 @@ on 64-bit platforms the layout of such fixnum is:
 @noindent
 the @math{3} least significant bits of the fixnum's data represent a
 type tag for the record; the remaining most significant bits of the
-fixnum's data area represent a number of bytes.  The record type tag
-also decides the length of the record.
+fixnum's data area represent a number of bytes: an offset in the data
+area of the code object.  The record type tag also decides the length of
+the record.
 
 @c page
 @node objects misc
