@@ -48,6 +48,16 @@
        ($fx<  obj 256))
   (assertion-violation who "expected fixnum in range [0, 255] as octet argument" obj))
 
+(define-argument-validation (code-size who obj)
+  ($fx-non-negative? obj)
+  (assertion-violation who "expected non-negative fixnum as code object size argument" obj))
+
+(define-argument-validation (number-of-freevars who obj)
+  ($fx-non-negative? obj)
+  (assertion-violation who
+    "expected non-negative fixnum as number of free variables argument"
+    obj))
+
 (define-argument-validation (code who obj)
   (code? obj)
   (assertion-violation who "expected code object as argument" obj))
@@ -68,11 +78,11 @@
 
 
 (define (make-code code-size freevars)
-  (unless ($fx-non-negative? code-size)
-    (die 'make-code "not a valid code size" code-size))
-  (unless ($fx-non-negative? freevars)
-    (die 'make-code "not a valid number of free vars" freevars))
-  (foreign-call "ikrt_make_code" code-size freevars '#()))
+  (define who 'make-code)
+  (with-arguments-validation (who)
+      ((code-size		code-size)
+       (number-of-freevars	freevars))
+    (foreign-call "ikrt_make_code" code-size freevars '#())))
 
 (define (code-reloc-vector x)
   (define who 'code-reloc-vector)
