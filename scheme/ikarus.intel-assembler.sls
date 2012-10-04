@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi.
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -85,6 +85,13 @@
            (bitwise-and t 255)
 	 (error 'byte "invalid" t '(byte ?x)))))))
 
+(define-syntax define-entry-predicate
+  (syntax-rules ()
+    ((_ ?who ?symbol)
+     (define (?who x)
+       (and (pair? x)
+	    (eq? ($car x) '?symbol))))))
+
 
 ;;;; constants
 
@@ -154,22 +161,17 @@
 	(else
 	 (die 'register-index "not a register" x))))
 
-(define (reg32? x)
-  (cond ((assq x register-mapping) =>
-	 (lambda (x) (eqv? (cadr x) 32)))
-	(else #f)))
-
-(define (reg8? x)
-  (cond ((assq x register-mapping)
-	 => (lambda (x)
-	      (eqv? (cadr x) 8)))
-	(else #f)))
-
-(define (xmmreg? x)
-  (cond ((assq x register-mapping)
-	 => (lambda (x)
-	      (eqv? (cadr x) 'xmm)))
-	(else #f)))
+(let-syntax ((define-register-mapping-predicate
+	       (syntax-rules ()
+		 ((_ ?who ?val)
+		  (define (?who x)
+		    (cond ((assq x register-mapping)
+			   => (lambda (x)
+				(eqv? ($cadr x) ?val)))
+			  (else #f)))))))
+  (define-register-mapping-predicate reg8?   8)
+  (define-register-mapping-predicate reg32?  32)
+  (define-register-mapping-predicate xmmreg? 'xmm))
 
 (define (reg? x)
   (assq x register-mapping))
@@ -194,9 +196,7 @@
        ($fx>= x -128)
        ($fx<= x +127)))
 
-(define (mem? x)
-  (and (pair? x)
-       (eq? ($car x) 'disp)))
+(define-entry-predicate mem? disp)
 
 (define (small-disp? x)
   (and (mem? x)
@@ -206,7 +206,8 @@
   (cons (byte n) ac))
 
 (define (CODE+r n r ac)
-  (cons (byte ($fxlogor n (register-index r))) ac))
+  (cons (byte ($fxlogor n (register-index r)))
+	ac))
 
 (define (ModRM mod reg r/m ac)
   (cons (byte ($fxlogor (register-index r/m)
@@ -285,34 +286,23 @@
       (foreign? x)
       (label? x)))
 
-(define (foreign? x)
-  (and (pair? x)
-       (eq? ($car x) 'foreign-label)))
+(define-entry-predicate foreign? foreign-label)
 
 (define (imm8? x)
   (and (int? x)
        (byte? x)))
 
-(define (label? x)
-  (and (pair? x)
-       (eq? ($car x) 'label)))
+(define-entry-predicate label? label)
+(define-entry-predicate label-address? label-address)
 
-(define (label-address? x)
-  (and (pair? x)
-       (eq? ($car x) 'label-address)))
-
-(define (label-name x)
+(define-inline (label-name x)
   ($cadr x))
 
-(define int? integer?)
+(define-inline (int? x)
+  (integer? x))
 
-(define (obj? x)
-  (and (pair? x)
-       (eq? ($car x) 'obj)))
-
-(define (obj+? x)
-  (and (pair? x)
-       (eq? ($car x) 'obj+)))
+(define-entry-predicate obj?	obj)
+(define-entry-predicate obj+?	obj+)
 
 (define (CODErri c d s i ac)
   ;;Generate code for register+register+immediate operations?
@@ -1365,16 +1355,14 @@
 (define (assemble-sources thunk?-label ls*)
   ;;This is the entry point in the assembler.
   ;;
+  (define-entry-predicate name? name)
   (define (code-list ls)
-    (if (let ((a ($cadr ls)))
-	  (and (pair? a)
-	       (eq? ($car a) 'name)))
+    (if (name? ($cadr ls))
 	($cddr ls)
       ($cdr ls)))
   (define (code-name ls)
     (let ((a ($cadr ls)))
-      (if (and (pair? a)
-	       (eq? ($car a) 'name))
+      (if (name? a)
 	  ($cadr a)
 	#f)))
   (let ((closure-size* (map car       ls*))
