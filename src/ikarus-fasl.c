@@ -155,38 +155,43 @@ ik_relocate_code (ikptr code)
     if (0 == first_record_word)
       ik_abort("invalid empty record in code object's relocation vector");
     const long	reloc_record_tag = first_record_word & 3;
-    const long	code_off	 = first_record_word >> 2;
-    if (reloc_record_tag == 0) {
-      /* This record represents a vanilla object; this record is 2 words
-	 wide. */
-      IK_REF(data, code_off) = IK_REF(reloc_vec_cur, wordsize);
+    /* Offset  relative to  DATA of  a word  representing a  relocatable
+       object. */
+    const long	data_code_off	 = first_record_word >> 2;
+    switch (reloc_record_tag) {
+    case 0: { /* This record represents a vanilla object; this record is
+		 2 words wide. */
+      IK_REF(data, data_code_off) = IK_REF(reloc_vec_cur, wordsize);
       reloc_vec_cur += (2*wordsize);
-    } else if (reloc_record_tag == 2) {
-      /* This record  represents a  displaced object;  this record  is 3
-	 words wide. */
+      break;
+    }
+    case 2: { /* This record represents a  displaced object; this record
+		 is 3 words wide. */
       long	obj_off	= IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
       ikptr	obj	= IK_REF(reloc_vec_cur, 2*wordsize);
-      IK_REF(data, code_off) = obj + obj_off;
+      IK_REF(data, data_code_off) = obj + obj_off;
       reloc_vec_cur += (3*wordsize);
-    } else if (reloc_record_tag == 3) {
-      /* This record  represents a  jump label; this  record is  3 words
-	 wide. */
+      break;
+    }
+    case 3: { /* This record represents  a jump label; this  record is 3
+		 words wide. */
       long	obj_off			= IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
       long	obj			= IK_REF(reloc_vec_cur, 2*wordsize);
       long	displaced_object	= obj + obj_off;
-      long	next_word		= data + code_off + 4;
+      long	next_word		= data + data_code_off + 4;
       long	relative_distance	= displaced_object - next_word;
 #if 0
       if (wordsize == 8) {
         relative_distance += 4;
       }
 #endif
-      *((int*)(data+code_off)) = relative_distance;
+      *((int*)(data+data_code_off)) = relative_distance;
       /* IK_REF(next_word, -wordsize) = relative_distance; */
       reloc_vec_cur += (3*wordsize);
-    } else if (reloc_record_tag == 1) {
-      /* This record represents a foreign object; this record is 2 words
-	 wide. */
+      break;
+    }
+    case 1: { /* This record represents a foreign object; this record is
+		 2 words wide. */
       ikptr	str	= IK_REF(reloc_vec_cur, wordsize);
       char *	name	= NULL;
       if (IK_TAGOF(str) == bytevector_tag) {
@@ -200,12 +205,16 @@ ik_relocate_code (ikptr code)
       char *	err	= dlerror();
       if (err)
         ik_abort("failed to find foreign name %s: %s", name, err);
-      IK_REF(data,code_off) = (ikptr)sym;
+      IK_REF(data,data_code_off) = (ikptr)sym;
       reloc_vec_cur += (2*wordsize);
-    } else
+      break;
+    }
+    default:
       ik_abort("invalid first word in relocation vector's record: 0x%016lx (tag=%ld)",
 	       first_record_word, reloc_record_tag);
-  }
+      break;
+    } /* end of switch() */
+  } /* end of while() */
 }
 
 
