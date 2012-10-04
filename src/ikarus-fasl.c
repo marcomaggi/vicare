@@ -298,10 +298,10 @@ do_read (ikpcb* pcb, fasl_port* p)
     fasl_read_buf(p, &freevars, sizeof(ikptr));
     ikptr annotation = do_read(pcb, p);
     ikptr code = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
-    IK_REF(code, 0) = code_tag;
-    IK_REF(code, disp_code_code_size) = IK_FIX(code_size);
-    IK_REF(code, disp_code_freevars) = freevars;
-    IK_REF(code, disp_code_annotation) = annotation;
+    IK_REF(code, 0)			= code_tag;
+    IK_REF(code, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(code, disp_code_freevars)	= freevars;
+    IK_REF(code, disp_code_annotation)	= annotation;
     fasl_read_buf(p, (void*)(disp_code_data+(long)code), code_size);
     if (put_mark_index) {
       p->marks[put_mark_index] = code+vector_tag;

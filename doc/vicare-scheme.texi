@@ -26327,6 +26327,9 @@ fixnum's data area represent a number of bytes: an offset in the data
 area of the code object.  The record type tag also decides the length of
 the record.
 
+Whenever a code object is serialised into a @fasl{} file: the relocation
+vector is appended to it in the @fasl{} file.
+
 @c page
 @node objects misc
 @section Miscellaneous functions and preprocessor macros
