@@ -1392,44 +1392,51 @@
     ))
 
 
-(define (assemble-sources thunk?-label ls*)
-  ;;This is the entry point in the assembler.
-  ;;
+(module (assemble-sources)
+
+  (define (assemble-sources thunk?-label ls*)
+    ;;This is the entry point in the assembler.
+    ;;
+    (let ((closure-size* (map car       ls*))
+	  (code-name*    (map code-name ls*))
+	  (ls*           (map code-list ls*)))
+      (let* ((ls* (map convert-instructions ls*))
+	     (ls* (map optimize-local-jumps ls*)))
+	(let ((n* (map compute-code-size  ls*))
+	      (m* (map compute-reloc-size ls*)))
+	  (let ((code* (map make-code   n* closure-size*))
+		(relv* (map make-vector m*)))
+	    (let ((reloc** (map whack-instructions code* ls*)))
+	      (for-each
+		  (lambda (foo reloc*)
+		    (for-each
+			(whack-reloc thunk?-label ($car foo) ($cdr foo))
+		      reloc*))
+		(map cons code* relv*)
+		reloc**)
+	      ;;This causes the relocation vector to be processed for each
+	      ;;code object.
+	      (for-each set-code-reloc-vector! code* relv*)
+	      (for-each (lambda (code name)
+			  (when name
+			    (set-code-annotation! code name)))
+		code* code-name*)
+	      code*))))))
+
   (define-entry-predicate name? name)
+
   (define (code-list ls)
     (if (name? ($cadr ls))
 	($cddr ls)
       ($cdr ls)))
+
   (define (code-name ls)
     (let ((a ($cadr ls)))
       (if (name? a)
 	  ($cadr a)
 	#f)))
-  (let ((closure-size* (map car       ls*))
-	(code-name*    (map code-name ls*))
-	(ls*           (map code-list ls*)))
-    (let* ((ls* (map convert-instructions ls*))
-	   (ls* (map optimize-local-jumps ls*)))
-      (let ((n* (map compute-code-size  ls*))
-	    (m* (map compute-reloc-size ls*)))
-	(let ((code* (map make-code   n* closure-size*))
-	      (relv* (map make-vector m*)))
-	  (let ((reloc** (map whack-instructions code* ls*)))
-	    (for-each
-		(lambda (foo reloc*)
-		  (for-each
-		      (whack-reloc thunk?-label ($car foo) ($cdr foo))
-		    reloc*))
-	      (map cons code* relv*)
-	      reloc**)
-	    ;;This causes the relocation vector to be processed for each
-	    ;;code object.
-	    (for-each set-code-reloc-vector! code* relv*)
-	    (for-each (lambda (code name)
-			(when name
-			  (set-code-annotation! code name)))
-	      code* code-name*)
-	    code*))))))
+
+  #| end of module |# )
 
 
 ;;;; done
