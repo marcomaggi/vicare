@@ -22691,24 +22691,84 @@ Return an integer representing the @math{3} least significant bits of an
 
 @deftypefn {Preprocessor Macro} ikptr IK_REF (ikptr @var{value_ref}, long @var{byte_offset})
 @deftypefnx {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
-Getter and setter for machine words allocated on the heap.  Interpret
-@var{value_ref} as a pointer to an array of @ikptr{} and locate the
-value at the zero--based @var{byte_offset}.  A use of this macro can
-appear both as operand and as left--side of an assignment.
+Getter and setter for machine words.  Interpret @var{value_ref} as a
+pointer to an array of @ikptr{} values and locate the value at the
+zero--based @var{byte_offset}.  A use of this macro can appear both as
+operand and as left--side of an assignment.
 
 @example
 ikptr   P, Q;
 
-Q = IK_REF(P, 2);     /* retrieve the 3rd word */
-IK_REF(P, 0) = 123L;  /* store a value in the 1st word */
+Q = IK_REF(P, 2*wordsize); /* retrieve the 3rd word */
+IK_REF(P, 0) = 123L;       /* store a value in the 1st word */
 @end example
 
 Both @var{value_ref} and @var{byte_offset} are first cast to @code{long}
 values, then added and the sum is cast to @code{ikptr *}.
 
-Values for @var{byte_offset} are usually precomputed and take into
-account a component used to remove the tag from the pointer in
-@var{value_ref}.
+There are two categories of values for @var{byte_offset}: offsets and
+displacements; both are usually precomputed at compile time and are
+predefined for the built in Scheme values.
+
+@table @dfn
+@item Displacements
+They are plain numbers of bytes to be added to an @strong{untagged}
+pointer to obtain the memory address of a machine word.
+
+@item Offsets
+They are number of bytes from which a Scheme value's tag is subtracted:
+adding an offset to a @strong{tagged} pointer removes the tag and
+computes the memory address of a machine word, in a single step.
+@end table
+
+Given an @strong{untagged} pointer to a vector, the fixnum representing
+the length of the vector can be obtained with:
+
+@example
+ikptr   p_vector = ...;
+ikptr   s_length = IK_REF(p_vector, disp_vector_length);
+@end example
+
+@noindent
+predefined displacements have names prefixed with @code{disp_}; given a
+@strong{tagged} pointer to a vector, the fixnum representing the length
+of the vector can be obtained with:
+
+@example
+ikptr   s_vector = ...;
+ikptr   s_length = IK_REF(s_vector, off_vector_length);
+@end example
+
+@noindent
+predefined offsets have names prefixed with @code{off_}.  An offset can
+be computed from a displacement simply by subtracting the tag:
+
+@example
+off_vector_length = disp_vector_length - vector_tag
+@end example
+
+@noindent
+this because we can build a tagged pointer from an untagged and aligned
+one with:
+
+@example
+s_vector = p_vector | vector_tag = p_vector + vector_tag
+@end example
+
+@noindent
+and vice versa we can compute an untagged pointer from a tagged one
+with:
+
+@example
+p_vector = s_vector - vector_tag
+@end example
+
+@noindent
+and so:
+
+@example
+s_vector + off_vector_length = p_vector + disp_vector_length
+@end example
 
 @quotation
 @strong{NOTE} @cfunc{ref} is defined only in the internal header file
