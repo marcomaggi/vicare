@@ -26,7 +26,10 @@
     (ikarus system $vectors)
     (ikarus system $fx)
     (ikarus system $codes)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (only (vicare syntactic-extensions)
+	  define-inline
+	  define-inline-constant))
 
   (module (wordsize)
     (import (vicare include))
@@ -34,14 +37,6 @@
 
 
 ;;;; helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
 
 (define-inline ($cadr x)	($car ($cdr x)))
 (define-inline ($cdar x)	($cdr ($car x)))
@@ -1282,16 +1277,117 @@
 	0
 	ls))
 
-(define foreign-string->bytevector
-  ;;Convert the string X to a UTF-8 bytevector.  To speed up operations:
-  ;;keep a cache of conversions in MEMOIZED as association list.
-  ;;
-  (let ((memoized (make-hashtable string-hash string=?)))
-    (lambda (str)
-      (or (hashtable-ref memoized str #f)
-	  (let ((bv (string->utf8 str)))
-	    (hashtable-set! memoized str bv)
-	    bv))))
+(define code-entry-adjustment
+  (let ((v #f))
+    (case-lambda
+     (()
+      (or v (die 'code-entry-adjustment "uninitialized")))
+     ((x)
+      (set! v x)))))
+
+
+(module (whack-reloc)
+
+  (define who 'whack-reloc)
+
+  (define (whack-reloc thunk?-label code vec)
+    ;;Return  a closure  to be  used to  add records  to the  relocation
+    ;;vector VEC associated to the code object CODE.
+    ;;
+    (define reloc-idx 0)
+    (lambda (r)
+      (let ((idx  ($car  r))
+	    (type ($cadr r))
+	    (v    (let ((v (cddr r)))
+		    (cond ((thunk?-label v)
+			   => (lambda (label)
+				(let ((p (label-loc label)))
+				  (cond (($fx= (length p) 2)
+					 (let ((code ($car  p))
+					       (idx  ($cadr p)))
+					   (unless ($fxzero? idx)
+					     (%error "cannot create a thunk pointing" idx))
+					   (let ((thunk (code->thunk code)))
+					     (set-cdr! ($cdr p) (list thunk))
+					     thunk)))
+					(else
+					 (caddr p))))))
+			  (else v)))))
+	(case type
+	  ((reloc-word)
+	   ;;Add a  record of type  "vanilla object".  The type  tag for
+	   ;;this record type is zero.
+	   ($vector-set! vec          reloc-idx  ($fxsll idx 2))
+	   ($vector-set! vec ($fxadd1 reloc-idx) v)
+	   (set! reloc-idx ($fx+ reloc-idx 2)))
+	  ((foreign-label)
+	   ;;Add a record of type "foreign address".
+	   (let ((name (foreign-string->bytevector v)))
+	     ($vector-set! vec reloc-idx
+			   ($fxlogor IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG ($fxsll idx 2)))
+	     ($vector-set! vec ($fxadd1 reloc-idx) name)
+	     (set! reloc-idx ($fx+ reloc-idx 2))))
+	  ((reloc-word+)
+	   ;;Add a record of type "displaced object".
+	   (let ((obj  ($car v))
+		 (disp ($cdr v)))
+	     ($vector-set! vec reloc-idx
+			   ($fxlogor IK_RELOC_RECORD_DISPLACED_OBJECT_TAG ($fxsll idx 2)))
+	     ($vector-set! vec ($fxadd1 reloc-idx) disp)
+	     ($vector-set! vec ($fx+ reloc-idx 2) obj)
+	     (set! reloc-idx ($fx+ reloc-idx 3))))
+	  ((label-addr)
+	   ;;Add a record of type "displaced object".
+	   (let* ((loc (label-loc v))
+		  (obj  ($car  loc))
+		  (disp ($cadr loc)))
+	     ($vector-set! vec reloc-idx
+			   ($fxlogor IK_RELOC_RECORD_DISPLACED_OBJECT_TAG ($fxsll idx 2)))
+	     ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
+	     ($vector-set! vec ($fx+ reloc-idx 2) obj))
+	   (set! reloc-idx ($fx+ reloc-idx 3)))
+	  ((local-relative)
+	   ;;Now that  we have  processed everything,  we can  store the
+	   ;;label offset in the code object.
+	   (let* ((loc (label-loc v))
+		  (obj  ($car  loc))
+		  (disp ($cadr loc)))
+	     (unless (eq? obj code)
+	       (%error "local-relative differ"))
+	     (let ((rel ($fx- disp ($fx+ idx 4))))
+	       ($code-set! code       idx    ($fxlogand rel #xFF))
+	       ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra rel 8) #xFF))
+	       ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra rel 16) #xFF))
+	       ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra rel 24) #xFF)))))
+	  ((relative)
+	   ;;Add a record of type "jump label".
+	   (let* ((loc (label-loc v))
+		  (obj  ($car  loc))
+		  (disp ($cadr loc)))
+	     (unless (and (code? obj) (fixnum? disp))
+	       (%error "invalid relative jump obj/disp" obj disp))
+	     ($vector-set! vec reloc-idx
+			   ($fxlogor IK_RELOC_RECORD_JUMP_LABEL_TAG ($fxsll idx 2)))
+	     ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
+	     ($vector-set! vec ($fx+ reloc-idx 2) obj))
+	   (set! reloc-idx ($fx+ reloc-idx 3)))
+	  (else
+	   (%error "invalid reloc type" type))))
+      ))
+
+  (define foreign-string->bytevector
+    ;;Convert  the  string  X  to  a  UTF-8  bytevector.   To  speed  up
+    ;;operations: keep a cache of conversions in MEMOIZED as association
+    ;;list.
+    ;;
+    (let ((memoized (make-hashtable string-hash string=?)))
+      (lambda (str)
+	(with-arguments-validation (who)
+	    ((string	str))
+	  (or (hashtable-ref memoized str #f)
+	      (let ((bv (string->utf8 str)))
+		(hashtable-set! memoized str bv)
+		bv))))))
   ;;The following is the original Ikarus code, using a list as cache.
   ;; (let ((mem '()))
   ;;   (lambda (x)
@@ -1305,91 +1401,16 @@
   ;; 	       #;(cdar ls))
   ;; 	      (else
   ;; 	       (loop ($cdr ls)))))))
-  )
 
-
-(define code-entry-adjustment
-  (let ((v #f))
-    (case-lambda
-     (()
-      (or v (die 'code-entry-adjustment "uninitialized")))
-     ((x)
-      (set! v x)))))
-
-(define (whack-reloc thunk?-label code vec)
-  (define who 'whack-reloc)
-  (define reloc-idx 0)
   (define-inline (%error message . irritants)
     (error who message . irritants))
-  (lambda (r)
-    (let ((idx  ($car  r))
-	  (type ($cadr r))
-	  (v    (let ((v (cddr r)))
-		  (cond ((thunk?-label v)
-			 => (lambda (label)
-			      (let ((p (label-loc label)))
-				(cond (($fx= (length p) 2)
-				       (let ((code ($car  p))
-					     (idx  ($cadr p)))
-					 (unless ($fx= idx 0)
-					   (%error "cannot create a thunk pointing" idx))
-					 (let ((thunk (code->thunk code)))
-					   (set-cdr! ($cdr p) (list thunk))
-					   thunk)))
-				      (else
-				       (caddr p))))))
-			(else v)))))
-      (case type
-	((reloc-word)
-	 ($vector-set! vec reloc-idx ($fxsll idx 2))
-	 ($vector-set! vec ($fx+ reloc-idx 1) v)
-	 (set! reloc-idx ($fx+ reloc-idx 2)))
-	((foreign-label)
-	 (let ((name (if (string? v)
-			 (foreign-string->bytevector v)
-		       (%error "not a string" v))))
-	   ($vector-set! vec reloc-idx ($fxlogor 1 ($fxsll idx 2)))
-	   ($vector-set! vec ($fx+ reloc-idx 1) name)
-	   (set! reloc-idx ($fx+ reloc-idx 2))))
-	((reloc-word+)
-	 (let ((obj  ($car v))
-	       (disp ($cdr v)))
-	   ($vector-set! vec reloc-idx ($fxlogor 2 ($fxsll idx 2)))
-	   ($vector-set! vec ($fx+ reloc-idx 1) disp)
-	   ($vector-set! vec ($fx+ reloc-idx 2) obj)
-	   (set! reloc-idx ($fx+ reloc-idx 3))))
-	((label-addr)
-	 (let ((loc (label-loc v)))
-	   (let ((obj  ($car  loc))
-		 (disp ($cadr loc)))
-	     ($vector-set! vec reloc-idx ($fxlogor 2 ($fxsll idx 2)))
-	     ($vector-set! vec ($fx+ reloc-idx 1) ($fx+ disp (code-entry-adjustment)))
-	     ($vector-set! vec ($fx+ reloc-idx 2) obj)))
-	 (set! reloc-idx ($fx+ reloc-idx 3)))
-	((local-relative)
-	 (let ((loc (label-loc v)))
-	   (let ((obj  ($car  loc))
-		 (disp ($cadr loc)))
-	     (unless (eq? obj code)
-	       (%error "local-relative differ"))
-	     (let ((rel ($fx- disp ($fx+ idx 4))))
-	       (code-set! code ($fx+ idx 0) ($fxlogand rel #xFF))
-	       (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra rel 8) #xFF))
-	       (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra rel 16) #xFF))
-	       (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra rel 24) #xFF))))))
-	((relative)
-	 (let ((loc (label-loc v)))
-	   (let ((obj  ($car  loc))
-		 (disp ($cadr loc)))
-	     (unless (and (code? obj) (fixnum? disp))
-	       (%error "invalid relative jump obj/disp" obj disp))
-	     ($vector-set! vec reloc-idx ($fxlogor 3 ($fxsll idx 2)))
-	     ($vector-set! vec ($fx+ reloc-idx 1) ($fx+ disp (code-entry-adjustment)))
-	     ($vector-set! vec ($fx+ reloc-idx 2) obj)))
-	 (set! reloc-idx ($fx+ reloc-idx 3)))
-	(else
-	 (%error "invalid reloc type" type))))
-    ))
+
+  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0)
+  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1)
+  (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2)
+  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	3)
+
+  #| end of module |# )
 
 
 (module (assemble-sources)
