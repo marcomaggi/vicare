@@ -2920,9 +2920,13 @@
  /section)
 
 
-(section ;;; codes
+(section ;;; code objects
+
+ ;;An object is a code object if the reference to it is tagged as vector
+ ;;and if the first word is tagged as code.
  (define-primop code? unsafe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
 
  (define-primop $closure-code unsafe
    ((V x)
@@ -2931,16 +2935,20 @@
 	 (K (- vector-tag disp-code-data)))))
 
  (define-primop $code-freevars unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-code-freevars vector-tag)))))
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-freevars vector-tag)))))
 
  (define-primop $code-reloc-vector unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-code-relocsize vector-tag)))))
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-relocsize vector-tag)))))
 
  (define-primop $code-size unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-code-instrsize vector-tag)))))
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-instrsize vector-tag)))))
 
  (define-primop $code-annotation unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-code-annotation vector-tag)))))
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-annotation vector-tag)))))
 
  (define-primop $code->closure unsafe
    ((V x)
@@ -2973,7 +2981,8 @@
 	 (prm 'sra (T v) (K fx-shift)))))
 
  (define-primop $set-code-annotation! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-code-annotation vector-tag))))
+   ((E x v)
+    (mem-assign v (T x) (- disp-code-annotation vector-tag))))
 
  /section)
 

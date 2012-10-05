@@ -1500,16 +1500,6 @@ add_object_proc (gc_t* gc, ikptr X)
 }
 
 
-/* Accessors for the words of relocation vector's records. */
-#undef  IK_RELOC_RECORD_REF
-#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
-#undef  IK_RELOC_RECORD_1ST
-#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
-#undef  IK_RELOC_RECORD_2ND
-#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
-#undef  IK_RELOC_RECORD_3RD
-#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
-
 static void
 relocate_new_code (ikptr X, gc_t* gc)
 /* Process  the relocation  vector  of  a code  object.   X  must be  an
@@ -1537,11 +1527,12 @@ relocate_new_code (ikptr X, gc_t* gc)
   /* Scan the records in the relocation vector. */
   while (reloc_vec_cur < reloc_vec_end) {
     const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
-    const long	reloc_record_tag  = first_record_bits & 3;
-    const long	data_code_offset  = first_record_bits >> 2;
+    const long	reloc_record_tag  = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const long	data_code_offset  = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
     switch (reloc_record_tag) {
-    case 0: { /* This record represents a vanilla object; this record is
-		 2 words wide. */
+    case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
+      /* This record represents a vanilla object; this record is 2 words
+	 wide. */
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       fprintf(stderr, "r=0x%08x data_code_offset=%d reloc_size=0x%08x\n",
 	      first_record_bits, data_code_offset, IK_VECTOR_LENGTH_FX(s_reloc_vec));
@@ -1552,8 +1543,9 @@ relocate_new_code (ikptr X, gc_t* gc)
       reloc_vec_cur += (2*wordsize);
       break;
     }
-    case 2: { /* This record represents a  displaced object; this record
-		 is 3 words wide. */
+    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
+      /* This record  represents a  displaced object;  this record  is 3
+	 words wide. */
       long	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
       ikptr	s_old_object =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
       ikptr	s_new_object = add_object(gc, s_old_object, "reloc2");
@@ -1561,8 +1553,9 @@ relocate_new_code (ikptr X, gc_t* gc)
       reloc_vec_cur += (3 * wordsize);
       break;
     }
-    case 3: { /* This record represents  a jump label; this  record is 3
-		 words wide. */
+    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
+      /* This record  represents a  jump label; this  record is  3 words
+	 wide. */
       long	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
       ikptr	s_obj   =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -1578,8 +1571,9 @@ relocate_new_code (ikptr X, gc_t* gc)
       reloc_vec_cur += (3*wordsize);
       break;
     }
-    case 1: { /* This record represents a foreign object; this record is
-		 2 words wide.  Do nothing. */
+    case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
+      /* This record represents a foreign object; this record is 2 words
+	 wide.  Do nothing. */
       reloc_vec_cur += (2 * wordsize);
       break;
     }

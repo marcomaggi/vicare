@@ -305,6 +305,7 @@
 	  ;;relocation vector.
 	  (let ((closure ($code->closure code)))
 	    (put-mark closure-mark closure)
+	    ;;Setting the code reloc vector also process it.
 	    (set-code-reloc-vector! code (read))
 	    code)
        (begin

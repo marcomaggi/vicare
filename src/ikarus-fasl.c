@@ -131,16 +131,6 @@ alloc_code (long int size, ikpcb* pcb, fasl_port* p)
 }
 
 
-/* Accessors for the words of relocation vector's records. */
-#undef  IK_RELOC_RECORD_REF
-#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
-#undef  IK_RELOC_RECORD_1ST
-#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
-#undef  IK_RELOC_RECORD_2ND
-#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
-#undef  IK_RELOC_RECORD_3RD
-#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
-
 void
 ik_relocate_code (ikptr code)
 /* Accept as  argument an *untagged*  pointer to a code  object; process
@@ -176,25 +166,28 @@ ik_relocate_code (ikptr code)
     const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
     if (0 == first_record_bits)
       ik_abort("invalid empty record in code object's relocation vector");
-    const long	reloc_record_tag  = first_record_bits & 3;
-    const long	data_code_offset  = first_record_bits >> 2;
+    const long	reloc_record_tag  = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const long	data_code_offset  = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
     switch (reloc_record_tag) {
-    case 0: { /* This record represents a vanilla object; this record is
-		 2 words wide. */
+    case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
+      /* This record represents a vanilla object; this record is 2 words
+	 wide. */
       IK_REF(data, data_code_offset) = IK_RELOC_RECORD_2ND(reloc_vec_cur);
       reloc_vec_cur += (2*wordsize);
       break;
     }
-    case 2: { /* This record represents a  displaced object; this record
-		 is 3 words wide. */
+    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
+      /* This record  represents a  displaced object;  this record  is 3
+	 words wide. */
       const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
       const ikptr s_obj   =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
       IK_REF(data, data_code_offset) = s_obj + obj_off;
       reloc_vec_cur += (3*wordsize);
       break;
     }
-    case 3: { /* This record represents  a jump label; this  record is 3
-		 words wide. */
+    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
+      /* This record  represents a  jump label; this  record is  3 words
+	 wide. */
       const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
       const long obj               =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
       const long displaced_object  = obj  + obj_off;
@@ -210,21 +203,23 @@ ik_relocate_code (ikptr code)
       reloc_vec_cur += (3*wordsize);
       break;
     }
-    case 1: { /* This record represents a foreign object; this record is
-		 2 words wide. */
+    case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
+      /* This record represents a foreign object; this record is 2 words
+	 wide.   We store  directly the  address of  the foreign  object
+	 (usually a C function) in the data area. */
       ikptr	str	= IK_RELOC_RECORD_2ND(reloc_vec_cur);
       char *	name	= NULL;
       if (IK_TAGOF(str) == bytevector_tag) {
         name = (char*)(long) str + off_bytevector_data;
       } else
         ik_abort("foreign name is not a bytevector");
-      /* FIXME Do we call "dlerror()" here to clean up possible previous
-	 errors?  (Marco Maggi; Oct 4, 2012) */
+      /* We call "dlerror()" here to  clean up possible previous errors.
+	 (Marco Maggi; Oct 4, 2012) */
       dlerror();
       void *	sym	= dlsym(RTLD_DEFAULT, name);
       char *	err	= dlerror();
       if (err)
-        ik_abort("failed to find foreign name %s: %s", name, err);
+        ik_abort("dlsym() failed to find foreign name %s: %s", name, err);
       IK_REF(data,data_code_offset) = (ikptr)sym;
       reloc_vec_cur += (2*wordsize);
       break;

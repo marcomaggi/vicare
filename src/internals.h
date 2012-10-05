@@ -554,6 +554,32 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define off_code_data		(disp_code_data		- code_pri_tag)
 #define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
 
+/* Accessors for the words of relocation vector's records. */
+#undef  IK_RELOC_RECORD_REF
+#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
+#undef  IK_RELOC_RECORD_1ST
+#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
+#undef  IK_RELOC_RECORD_2ND
+#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
+#undef  IK_RELOC_RECORD_3RD
+#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
+
+/* Least significant  bits tags  for the  first word  in records  of the
+   relocation vector for code objects. */
+#define IK_RELOC_RECORD_MASK_TAG		0b11
+#define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
+#define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
+#define IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2
+#define IK_RELOC_RECORD_JUMP_LABEL_TAG		3
+
+/* Given a  machine word representing  the bits in  the first word  of a
+   record in a relocation vector: evaluate to the record type tag. */
+#define IK_RELOC_RECORD_1ST_BITS_TAG(WORD)	((WORD) & IK_RELOC_RECORD_MASK_TAG)
+
+/* Given a  machine word representing  the bits in  the first word  of a
+   record in a relocation vector: evaluate to the offset. */
+#define IK_RELOC_RECORD_1ST_BITS_OFFSET(WORD)	((WORD) >> 2)
+
 
 /** --------------------------------------------------------------------
  ** Fixnum objects.
