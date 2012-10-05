@@ -25,6 +25,7 @@
     (ikarus system $pairs)
     (ikarus system $vectors)
     (ikarus system $fx)
+    (ikarus system $codes)
     (vicare arguments validation))
 
   (module (wordsize)
@@ -1195,12 +1196,12 @@
 	       (if (fixnum? a)
 		   (begin
 		     ;;Store a byte of binary code in the data area.
-		     (code-set! x idx a)
+		     ($code-set! x idx a)
 		     (loop ($cdr ls) ($fxadd1 idx) reloc bot*))
 		 (case ($car a)
 		   ((byte)
 		    ;;Store a byte of binary code in the data area.
-		    (code-set! x idx ($cdr a))
+		    ($code-set! x idx ($cdr a))
 		    (loop ($cdr ls) ($fxadd1 idx) reloc bot*))
 		   ((relative local-relative)
 		    ;;Add an entry to the relocation list; leave 4 bytes
@@ -1241,19 +1242,19 @@
 	((fixnum	x))
       (if ($fx= wordsize 4)
 	  (begin
-	    (code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
-	    (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
-	    (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
-	    (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
+	    ($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
+	    ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
+	    ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
+	    ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
 	(begin
-	  (code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
-	  (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
-	  (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
-	  (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
-	  (code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
-	  (code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
-	  (code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
-	  (code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF))))))
+	  ($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
+	  ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
+	  ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
+	  ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
+	  ($code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
+	  ($code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
+	  ($code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
+	  ($code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF))))))
 
   (define (%set-label-loc! x loc)
     (if (getprop x '*label-loc*)
