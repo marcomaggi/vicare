@@ -1408,6 +1408,12 @@
 		(relv* (map make-vector m*)))
 	    (let ((reloc** (map whack-instructions code* ls*)))
 	      (for-each
+		  (lambda (code-object relocation-vector reloc*)
+		    (for-each
+			(whack-reloc thunk?-label code-object relocation-vector)
+		      reloc*))
+		code* relv* reloc**)
+	      #;(for-each
 		  (lambda (foo reloc*)
 		    (for-each
 			(whack-reloc thunk?-label ($car foo) ($cdr foo))
