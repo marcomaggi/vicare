@@ -26207,6 +26207,7 @@ host's processor.
 @menu
 * objects code layout::         Memory layout of code objects.
 * objects code reloc::          The relocation vector.
+* objects code gc::             Memory and garbage collection.
 @end menu
 
 @c page
@@ -26323,12 +26324,58 @@ on 64-bit platforms the layout of such fixnum is:
 @noindent
 the @math{2} least significant bits of the fixnum's data represent a
 type tag for the record; the remaining most significant bits of the
-fixnum's data area represent a number of bytes: an offset in the data
-area of the code object.  The record type tag also decides the length of
-the record.
+fixnum's data area represent a number of bytes: a displacement in the
+data area of the code object selecting the target word.
 
 Whenever a code object is serialised into a @fasl{} file: the relocation
-vector is appended to it in the @fasl{} file.
+vector is appended to it in the @fasl{} file.  Whenever the garbage
+collector moves a code object into a new location: the relocation vector
+must be processed again to update the addresses.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: vanilla object
+
+Such records are composed by @math{2} words; the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains the reference to the Scheme object (or the
+Scheme object itself, if immediate).
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+              displacement   ^
+                             |
+           ------------------
+          |
+  |----|----| vanilla object record
+   1st  2nd
+@end example
+
+When these records are processed: the object reference is copied into
+the target word.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: displaced object
+
+@c page
+@node objects code gc
+@subsection Memory and garbage collection
+
+
+Code objects are @strong{not} allocated on the heap like other common
+objects (pairs, vectors, @dots{}); rather they are allocated in
+specially memory mapped regions which receive execution protection.
+
+Whenever the garbage collector encounters a reference to a code object:
+it moves the code object itself into a new location to reduce
+fragmentation.
 
 @c page
 @node objects misc

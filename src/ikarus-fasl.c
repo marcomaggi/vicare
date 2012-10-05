@@ -132,7 +132,7 @@ alloc_code (long int size, ikpcb* pcb, fasl_port* p)
 
 
 void
-ik_relocate_code (ikptr code)
+ik_relocate_code (ikptr p_code)
 /* Accept as  argument an *untagged*  pointer to a code  object; process
    the code object's relocation vector.
 
@@ -146,71 +146,73 @@ ik_relocate_code (ikptr code)
    - whenever a code object is created by the assembler. */
 {
   /* The relocation vector. */
-  const ikptr s_reloc_vec = IK_REF(code, disp_code_reloc_vector);
+  const ikptr s_reloc_vec = IK_REF(p_code, disp_code_reloc_vector);
   /* The  number of  items in  the relocation  vector; it  can be  zero.
      Remember  that the  fixnum representing  the number  of items  in a
      vector, taken as "long", also represents the number of bytes in the
      data area of the vector. */
-  const ikptr reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
-  /* The variable  DATA is an  *untagged* pointer referencing  the first
+  const ikptr s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
+  /* The variable P_DATA is an  *untagged* pointer referencing the first
      byte in the data area of the code object. */
-  const ikptr data = code + disp_code_data;
-  /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
+  const ikptr p_data = p_code + disp_code_data;
+  /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
      word in the data area of the relocation vector RELOC_VEC. */
-  ikptr reloc_vec_cur  = s_reloc_vec + off_vector_data;
-  /* The variable  RELOC_VEC_END is  an *untagged*  pointer to  the word
+  ikptr p_reloc_vec_cur  = s_reloc_vec + off_vector_data;
+  /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
      right after the data area of the relocation vector VEC. */
-  const ikptr reloc_vec_end = reloc_vec_cur + reloc_vec_len;
+  const ikptr p_reloc_vec_end = p_reloc_vec_cur + s_reloc_vec_len;
   /* If the relocation vector is empty: do nothing. */
-  while (reloc_vec_cur < reloc_vec_end) {
-    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
+  while (p_reloc_vec_cur < p_reloc_vec_end) {
+    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
     if (0 == first_record_bits)
       ik_abort("invalid empty record in code object's relocation vector");
-    const long	reloc_record_tag  = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
-    const long	data_code_offset  = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+    const long	reloc_record_tag = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const long	disp_code_word   = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
     switch (reloc_record_tag) {
     case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
       /* This record represents a vanilla object; this record is 2 words
-	 wide. */
-      IK_REF(data, data_code_offset) = IK_RELOC_RECORD_2ND(reloc_vec_cur);
-      reloc_vec_cur += (2*wordsize);
+	 wide.  The second word contains the reference to the object (or
+	 the object itself if immediate). */
+      IK_REF(p_data, disp_code_word) = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      p_reloc_vec_cur += (2*wordsize);
       break;
     }
     case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
       /* This record  represents a  displaced object;  this record  is 3
-	 words wide. */
-      const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
-      const ikptr s_obj   =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
-      IK_REF(data, data_code_offset) = s_obj + obj_off;
-      reloc_vec_cur += (3*wordsize);
+	 words  wide.  The  second word  contains the  displacement, the
+	 third word contains the reference to the object. */
+      const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const ikptr s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      IK_REF(p_data, disp_code_word) = s_obj + obj_off;
+      p_reloc_vec_cur += (3*wordsize);
       break;
     }
     case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
       /* This record  represents a  jump label; this  record is  3 words
 	 wide. */
-      const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
-      const long obj               =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
+      const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const long obj               =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
       const long displaced_object  = obj  + obj_off;
-      const long next_word         = data + data_code_offset + 4;
+      const long next_word         = p_data + disp_code_word + 4;
       const long relative_distance = displaced_object - next_word;
 #if 0
       if (wordsize == 8) {
         relative_distance += 4;
       }
 #endif
-      *((int*)(data+data_code_offset)) = relative_distance;
+      *((int*)(p_data + disp_code_word)) = relative_distance;
       /* IK_REF(next_word, -wordsize) = relative_distance; */
-      reloc_vec_cur += (3*wordsize);
+      p_reloc_vec_cur += (3*wordsize);
       break;
     }
     case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
       /* This record represents a foreign object; this record is 2 words
 	 wide.   We store  directly the  address of  the foreign  object
 	 (usually a C function) in the data area. */
-      ikptr	str	= IK_RELOC_RECORD_2ND(reloc_vec_cur);
+      ikptr	s_str	= IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
       char *	name	= NULL;
-      if (IK_TAGOF(str) == bytevector_tag) {
-        name = (char*)(long) str + off_bytevector_data;
+      if (IK_TAGOF(s_str) == bytevector_tag) {
+        name = IK_BYTEVECTOR_DATA_CHARP(s_str);
       } else
         ik_abort("foreign name is not a bytevector");
       /* We call "dlerror()" here to  clean up possible previous errors.
@@ -220,8 +222,8 @@ ik_relocate_code (ikptr code)
       char *	err	= dlerror();
       if (err)
         ik_abort("dlsym() failed to find foreign name %s: %s", name, err);
-      IK_REF(data,data_code_offset) = (ikptr)sym;
-      reloc_vec_cur += (2*wordsize);
+      IK_REF(p_data, disp_code_word) = (ikptr)sym;
+      p_reloc_vec_cur += (2*wordsize);
       break;
     }
     default:
