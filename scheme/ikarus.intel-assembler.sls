@@ -43,6 +43,26 @@
 (define-inline ($caar x)	($car ($car x)))
 (define-inline ($cddr x)	($cdr ($cdr x)))
 
+(define-inline ($fxadd2 X)	($fx+ X 2))
+(define-inline ($fxadd3 X)	($fx+ X 3))
+(define-inline ($fxadd4 X)	($fx+ X 4))
+
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?X 0)
+     ?X)
+    ((_ ?X 1)
+     (set! ?X ($fxadd1 ?X)))
+    ((_ ?X 2)
+     (set! ?X ($fxadd2 ?X)))
+    ((_ ?X 3)
+     (set! ?X ($fxadd3 ?X)))
+    ((_ ?X ?N)
+     (set! ?X ($fx+ ?X ?N)))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define (fold func init ls)
   (if (null? ls)
       init
@@ -1315,62 +1335,57 @@
 			  (else v)))))
 	(case type
 	  ((reloc-word)
-	   ;;Add a  record of type  "vanilla object".  The type  tag for
-	   ;;this record type is zero.
-	   ($vector-set! vec          reloc-idx  ($fxsll idx 2))
+	   ;;Add a record of type "vanilla object".
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG idx)
 	   ($vector-set! vec ($fxadd1 reloc-idx) v)
-	   (set! reloc-idx ($fx+ reloc-idx 2)))
+	   ($fxincr! reloc-idx 2))
 	  ((foreign-label)
 	   ;;Add a record of type "foreign address".
 	   (let ((name (foreign-string->bytevector v)))
-	     ($vector-set! vec reloc-idx
-			   ($fxlogor IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG ($fxsll idx 2)))
+	     (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG idx)
 	     ($vector-set! vec ($fxadd1 reloc-idx) name)
-	     (set! reloc-idx ($fx+ reloc-idx 2))))
+	     ($fxincr! reloc-idx 2)))
 	  ((reloc-word+)
 	   ;;Add a record of type "displaced object".
 	   (let ((obj  ($car v))
 		 (disp ($cdr v)))
-	     ($vector-set! vec reloc-idx
-			   ($fxlogor IK_RELOC_RECORD_DISPLACED_OBJECT_TAG ($fxsll idx 2)))
+	     (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG idx)
 	     ($vector-set! vec ($fxadd1 reloc-idx) disp)
-	     ($vector-set! vec ($fx+ reloc-idx 2) obj)
-	     (set! reloc-idx ($fx+ reloc-idx 3))))
+	     ($vector-set! vec ($fxadd2 reloc-idx) obj)
+	     ($fxincr! reloc-idx 3)))
 	  ((label-addr)
 	   ;;Add a record of type "displaced object".
 	   (let* ((loc (label-loc v))
 		  (obj  ($car  loc))
 		  (disp ($cadr loc)))
-	     ($vector-set! vec reloc-idx
-			   ($fxlogor IK_RELOC_RECORD_DISPLACED_OBJECT_TAG ($fxsll idx 2)))
+	     (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG idx)
 	     ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
-	     ($vector-set! vec ($fx+ reloc-idx 2) obj))
-	   (set! reloc-idx ($fx+ reloc-idx 3)))
+	     ($vector-set! vec ($fxadd2 reloc-idx) obj))
+	   ($fxincr! reloc-idx 3))
 	  ((local-relative)
 	   ;;Now that  we have  processed everything,  we can  store the
 	   ;;label offset in the code object.
-	   (let* ((loc (label-loc v))
+	   (let* ((loc  (label-loc v))
 		  (obj  ($car  loc))
 		  (disp ($cadr loc)))
 	     (unless (eq? obj code)
 	       (%error "local-relative differ"))
-	     (let ((rel ($fx- disp ($fx+ idx 4))))
-	       ($code-set! code       idx    ($fxlogand rel #xFF))
-	       ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra rel 8) #xFF))
-	       ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra rel 16) #xFF))
-	       ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra rel 24) #xFF)))))
+	     (let ((rel ($fx- disp ($fxadd4 idx))))
+	       ($code-set! code          idx  ($fxlogand rel #xFF))
+	       ($code-set! code ($fxadd1 idx) ($fxlogand ($fxsra rel 8) #xFF))
+	       ($code-set! code ($fxadd2 idx) ($fxlogand ($fxsra rel 16) #xFF))
+	       ($code-set! code ($fxadd3 idx) ($fxlogand ($fxsra rel 24) #xFF)))))
 	  ((relative)
 	   ;;Add a record of type "jump label".
-	   (let* ((loc (label-loc v))
+	   (let* ((loc  (label-loc v))
 		  (obj  ($car  loc))
 		  (disp ($cadr loc)))
 	     (unless (and (code? obj) (fixnum? disp))
 	       (%error "invalid relative jump obj/disp" obj disp))
-	     ($vector-set! vec reloc-idx
-			   ($fxlogor IK_RELOC_RECORD_JUMP_LABEL_TAG ($fxsll idx 2)))
+	     (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG idx)
 	     ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
-	     ($vector-set! vec ($fx+ reloc-idx 2) obj))
-	   (set! reloc-idx ($fx+ reloc-idx 3)))
+	     ($vector-set! vec ($fxadd2 reloc-idx) obj))
+	   ($fxincr! reloc-idx 3))
 	  (else
 	   (%error "invalid reloc type" type))))
       ))
@@ -1404,6 +1419,14 @@
 
   (define-inline (%error message . irritants)
     (error who message . irritants))
+
+  (define-syntax %store-first-word!
+    (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
+      ((_ ?vec ?reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG ?idx)
+       ($vector-set! ?vec ?reloc-idx                ($fxsll ?idx 2)))
+      ((_ ?vec ?reloc-idx ?tag ?idx)
+       ($vector-set! ?vec ?reloc-idx ($fxlogor ?tag ($fxsll ?idx 2))))
+      ))
 
   (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0)
   (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1)
