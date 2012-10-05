@@ -155,57 +155,57 @@ ik_relocate_code (ikptr code)
 
    - whenever a code object is created by the assembler. */
 {
-  ikptr	vec  = IK_REF(code, disp_code_reloc_vector);
-  /* Remember  that the  fixnum representing  the number  of items  in a
+  /* The relocation vector. */
+  const ikptr s_reloc_vec = IK_REF(code, disp_code_reloc_vector);
+  /* The  number of  items in  the relocation  vector; it  can be  zero.
+     Remember  that the  fixnum representing  the number  of items  in a
      vector, taken as "long", also represents the number of bytes in the
      data area of the vector. */
-  ikptr size = IK_VECTOR_LENGTH_FX(vec);
+  const ikptr reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
   /* The variable  DATA is an  *untagged* pointer referencing  the first
      byte in the data area of the code object. */
-  ikptr data = code + disp_code_data;
+  const ikptr data = code + disp_code_data;
   /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
-     word in the data area of the relocation vector VEC. */
-  ikptr reloc_vec_cur  = vec  + off_vector_data;
+     word in the data area of the relocation vector RELOC_VEC. */
+  ikptr reloc_vec_cur  = s_reloc_vec + off_vector_data;
   /* The variable  RELOC_VEC_END is  an *untagged*  pointer to  the word
      right after the data area of the relocation vector VEC. */
-  ikptr reloc_vec_end = reloc_vec_cur + size;
+  const ikptr reloc_vec_end = reloc_vec_cur + reloc_vec_len;
   /* If the relocation vector is empty: do nothing. */
   while (reloc_vec_cur < reloc_vec_end) {
     const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
     if (0 == first_record_bits)
       ik_abort("invalid empty record in code object's relocation vector");
-    const long	reloc_record_tag = first_record_bits & 3;
-    /* Offset  relative to  DATA  of a  word  referencing a  relocatable
-       object. */
-    const long	data_code_off	 = first_record_bits >> 2;
+    const long	reloc_record_tag  = first_record_bits & 3;
+    const long	data_code_offset  = first_record_bits >> 2;
     switch (reloc_record_tag) {
     case 0: { /* This record represents a vanilla object; this record is
 		 2 words wide. */
-      IK_REF(data, data_code_off) = IK_RELOC_RECORD_2ND(reloc_vec_cur);
+      IK_REF(data, data_code_offset) = IK_RELOC_RECORD_2ND(reloc_vec_cur);
       reloc_vec_cur += (2*wordsize);
       break;
     }
     case 2: { /* This record represents a  displaced object; this record
 		 is 3 words wide. */
-      long	obj_off	= IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
-      ikptr	obj	=          IK_RELOC_RECORD_3RD(reloc_vec_cur);
-      IK_REF(data, data_code_off) = obj + obj_off;
+      const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
+      const ikptr s_obj   =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
+      IK_REF(data, data_code_offset) = s_obj + obj_off;
       reloc_vec_cur += (3*wordsize);
       break;
     }
     case 3: { /* This record represents  a jump label; this  record is 3
 		 words wide. */
-      long	obj_off			= IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
-      long	obj			=          IK_RELOC_RECORD_3RD(reloc_vec_cur);
-      long	displaced_object	= obj  + obj_off;
-      long	next_word		= data + data_code_off + 4;
-      long	relative_distance	= displaced_object - next_word;
+      const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
+      const long obj               =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
+      const long displaced_object  = obj  + obj_off;
+      const long next_word         = data + data_code_offset + 4;
+      const long relative_distance = displaced_object - next_word;
 #if 0
       if (wordsize == 8) {
         relative_distance += 4;
       }
 #endif
-      *((int*)(data+data_code_off)) = relative_distance;
+      *((int*)(data+data_code_offset)) = relative_distance;
       /* IK_REF(next_word, -wordsize) = relative_distance; */
       reloc_vec_cur += (3*wordsize);
       break;
@@ -225,7 +225,7 @@ ik_relocate_code (ikptr code)
       char *	err	= dlerror();
       if (err)
         ik_abort("failed to find foreign name %s: %s", name, err);
-      IK_REF(data,data_code_off) = (ikptr)sym;
+      IK_REF(data,data_code_offset) = (ikptr)sym;
       reloc_vec_cur += (2*wordsize);
       break;
     }

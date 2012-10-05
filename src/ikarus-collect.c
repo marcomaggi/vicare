@@ -1500,6 +1500,16 @@ add_object_proc (gc_t* gc, ikptr X)
 }
 
 
+/* Accessors for the words of relocation vector's records. */
+#undef  IK_RELOC_RECORD_REF
+#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
+#undef  IK_RELOC_RECORD_1ST
+#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
+#undef  IK_RELOC_RECORD_2ND
+#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
+#undef  IK_RELOC_RECORD_3RD
+#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
+
 static void
 relocate_new_code (ikptr X, gc_t* gc)
 /* Process  the relocation  vector  of  a code  object.   X  must be  an
@@ -1507,80 +1517,81 @@ relocate_new_code (ikptr X, gc_t* gc)
 
   This function has similarities with "ik_relocate_code()". */
 {
-  ikptr		s_reloc_vec;
-  ikptr		s_reloc_vec_len;
-  /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
-     word in the data area of the relocation vector VEC. */
-  ikptr		reloc_vec_cur;
-  /* The variable  RELOC_VEC_END is  an *untagged*  pointer to  the word
-     right after the data area of the relocation vector VEC. */
-  ikptr		reloc_vec_end;
-  /* The variable  DATA is an  *untagged* pointer referencing  the first
-     byte in the data area of the code object. */
-  ikptr		data;
-  s_reloc_vec = IK_REF(X, disp_code_reloc_vector);
-  s_reloc_vec = add_object(gc, s_reloc_vec, "relocvec");
+  const ikptr	s_reloc_vec = add_object(gc, IK_REF(X, disp_code_reloc_vector), "relocvec");
   IK_REF(X, disp_code_reloc_vector) = s_reloc_vec;
   IK_REF(X, disp_code_annotation)   = add_object(gc, IK_REF(X, disp_code_annotation),
 						 "annotation");
-  /* Remember  that the  fixnum representing  the number  of items  in a
+  /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
+     word in the data area of the relocation vector VEC. */
+  ikptr		reloc_vec_cur = s_reloc_vec + off_vector_data;
+  /* The variable  RELOC_VEC_END is  an *untagged*  pointer to  the word
+     right after the data area of the relocation vector VEC.
+
+     Remember  that the  fixnum representing  the number  of items  in a
      vector, taken as "long", also represents the number of bytes in the
      data area. */
-  s_reloc_vec_len = IK_REF(s_reloc_vec, off_vector_length);
-  reloc_vec_cur   = s_reloc_vec + off_vector_data;
-  reloc_vec_end   = reloc_vec_cur + s_reloc_vec_len;
-  data            = X + disp_code_data;
+  ikptr		reloc_vec_end = reloc_vec_cur + IK_VECTOR_LENGTH_FX(s_reloc_vec);
+  /* The variable  DATA is an  *untagged* pointer referencing  the first
+     byte in the data area of the code object. */
+  const ikptr	data = X + disp_code_data;
   /* Scan the records in the relocation vector. */
   while (reloc_vec_cur < reloc_vec_end) {
-    const long	first_record_bits = IK_UNFIX(IK_REF(reloc_vec_cur, 0));
+    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
     const long	reloc_record_tag  = first_record_bits & 3;
-    /* Offset  relative to  DATA  of a  word  referencing a  relocatable
-       object. */
-    const long	data_code_off = first_record_bits >> 2;
-    if (reloc_record_tag == 0) {
-      /* undisplaced pointer */
+    const long	data_code_offset  = first_record_bits >> 2;
+    switch (reloc_record_tag) {
+    case 0: { /* This record represents a vanilla object; this record is
+		 2 words wide. */
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      // fprintf(stderr, "r=0x%08x data_code_off=%d reloc_size=0x%08x\n",
-      //     first_record_bits, data_code_off, s_reloc_vec_len);
+      fprintf(stderr, "r=0x%08x data_code_offset=%d reloc_size=0x%08x\n",
+	      first_record_bits, data_code_offset, IK_VECTOR_LENGTH_FX(s_reloc_vec));
 #endif
-      ikptr old_object = IK_REF(reloc_vec_cur, wordsize);
-      ikptr new_object = add_object(gc, old_object, "reloc1");
-      IK_REF(data, data_code_off) = new_object;
+      ikptr	s_old_object = IK_RELOC_RECORD_2ND(reloc_vec_cur);
+      ikptr	s_new_object = add_object(gc, s_old_object, "reloc1");
+      IK_REF(data, data_code_offset) = s_new_object;
       reloc_vec_cur += (2*wordsize);
-    } else if (reloc_record_tag == 2) {
-      /* displaced pointer */
-      long obj_off = IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
-      ikptr old_object = IK_REF(reloc_vec_cur, 2*wordsize);
-      ikptr new_object = add_object(gc, old_object, "reloc2");
-      IK_REF(data, data_code_off) = new_object + obj_off;
+      break;
+    }
+    case 2: { /* This record represents a  displaced object; this record
+		 is 3 words wide. */
+      long	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
+      ikptr	s_old_object =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
+      ikptr	s_new_object = add_object(gc, s_old_object, "reloc2");
+      IK_REF(data, data_code_offset) = s_new_object + obj_off;
       reloc_vec_cur += (3 * wordsize);
-    } else if (reloc_record_tag == 3) {
-      /* displaced relative pointer */
-      long obj_off = IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
-      ikptr obj = IK_REF(reloc_vec_cur, 2*wordsize);
+      break;
+    }
+    case 3: { /* This record represents  a jump label; this  record is 3
+		 words wide. */
+      long	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(reloc_vec_cur));
+      ikptr	s_obj   =          IK_RELOC_RECORD_3RD(reloc_vec_cur);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      //fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)obj,
-      //    obj_off);
+      fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)s_obj, obj_off);
 #endif
-      obj = add_object(gc, obj, "reloc3");
-      ikptr displaced_object = obj + obj_off;
-      long next_word = data + data_code_off + 4;
-      ikptr relative_distance = displaced_object - (long)next_word;
+      s_obj = add_object(gc, s_obj, "reloc3");
+      ikptr	displaced_object  = s_obj + obj_off;
+      long	next_word         = data + data_code_offset + 4;
+      ikptr	relative_distance = displaced_object - (long)next_word;
       if (((long)relative_distance) != ((long)((int)relative_distance)))
         ik_abort("relocation error with relative=0x%016lx", relative_distance);
-      *((int*)(data+data_code_off)) = (int)relative_distance;
+      *((int*)(data+data_code_offset)) = (int)relative_distance;
       reloc_vec_cur += (3*wordsize);
-    } else if (reloc_record_tag == 1) {
-      /* do nothing */
+      break;
+    }
+    case 1: { /* This record represents a foreign object; this record is
+		 2 words wide.  Do nothing. */
       reloc_vec_cur += (2 * wordsize);
-    } else
+      break;
+    }
+    default:
       ik_abort("invalid relocation record tag %ld in 0x%016lx",
 	       reloc_record_tag, first_record_bits);
-  }
+      break;
+    } /* end of switch() */
+  } /* end of while() */
 }
 
-
-
+
 static void
 collect_loop(gc_t* gc) {
   int done;

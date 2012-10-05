@@ -26306,8 +26306,8 @@ platforms the layout of such fixnum is:
 @example
      bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
 ... |----|----|----|----|----|----|----|----|
-...................|..............|.........| 1st record word
- number of bytes     record tag    fixnum tag
+........................|.........|.........| 1st record word
+ number of bytes        record tag fixnum tag
 @end example
 
 @noindent
@@ -26316,12 +26316,12 @@ on 64-bit platforms the layout of such fixnum is:
 @example
         bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
    ... |----|----|----|----|----|----|----|----|
-.................|..............|..............| 1st record word
- number of bytes    record tag    fixnum tag
+......................|.........|..............| 1st record word
+ number of bytes      record tag   fixnum tag
 @end example
 
 @noindent
-the @math{3} least significant bits of the fixnum's data represent a
+the @math{2} least significant bits of the fixnum's data represent a
 type tag for the record; the remaining most significant bits of the
 fixnum's data area represent a number of bytes: an offset in the data
 area of the code object.  The record type tag also decides the length of
