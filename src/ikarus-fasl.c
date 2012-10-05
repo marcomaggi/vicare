@@ -192,7 +192,7 @@ ik_relocate_code (ikptr p_code)
 	 wide. */
       const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
       const long obj               =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      const long displaced_object  = obj  + obj_off;
+      const long displaced_object  = obj + obj_off;
       const long next_word         = p_data + disp_code_word + 4;
       const long relative_distance = displaced_object - next_word;
 #if 0
@@ -200,6 +200,8 @@ ik_relocate_code (ikptr p_code)
         relative_distance += 4;
       }
 #endif
+      /* FIXME Why  is the target  word an  "int" rather than  a "long"?
+	 (Marco Maggi; Oct 5, 2012) */
       *((int*)(p_data + disp_code_word)) = relative_distance;
       /* IK_REF(next_word, -wordsize) = relative_distance; */
       p_reloc_vec_cur += (3*wordsize);

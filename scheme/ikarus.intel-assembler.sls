@@ -24,7 +24,8 @@
 	    procedure-annotation)
     (ikarus system $pairs)
     (ikarus system $vectors)
-    (ikarus system $fx))
+    (ikarus system $fx)
+    (vicare arguments validation))
 
   (module (wordsize)
     (import (vicare include))
@@ -1113,36 +1114,12 @@
 	0
 	ls))
 
-(define (set-label-loc! x loc)
-  (when (getprop x '*label-loc*)
-    (die 'compile "label is already defined" x))
-  (putprop x '*label-loc* loc))
-
 (define (label-loc x)
   (or (getprop x '*label-loc*)
       (die 'compile "undefined label" x)))
 
 (define (unset-label-loc! x)
   (remprop x '*label-loc*))
-
-(define (set-code-word! code idx x)
-  (if (fixnum? x)
-      (if ($fx= wordsize 4)
-	  (begin
-	    (code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
-	    (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
-	    (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
-	    (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
-	(begin
-	  (code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
-	  (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
-	  (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
-	  (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
-	  (code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
-	  (code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
-	  (code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
-	  (code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF))))
-    (die 'set-code-word! "unhandled" x)))
 
 (define local-labels
   (make-parameter '()))
@@ -1188,42 +1165,104 @@
     locals)
   ls)
 
-(define (whack-instructions x ls)
-  (define (loop ls idx reloc bot*)
-    (cond ((null? ls)
-	   (if (null? bot*)
-	       reloc
-	     (loop (car bot*) idx reloc (cdr bot*))))
-	  (else
-	   (let ((a (car ls)))
-	     (if (fixnum? a)
-		 (begin
-		   (code-set! x idx a)
-		   (loop (cdr ls) (fxadd1 idx) reloc bot*))
-	       (case (car a)
-		 ((byte)
-		  (code-set! x idx (cdr a))
-		  (loop (cdr ls) (fx+ idx 1) reloc bot*))
-		 ((relative local-relative)
-		  (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
-		 ((reloc-word reloc-word+ label-addr foreign-label)
-		  (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
-		 ((word)
-		  (let ((v (cdr a)))
-		    (set-code-word! x idx v)
-		    (loop (cdr ls) (fx+ idx wordsize) reloc bot*)))
-		 ((current-frame-offset)
-		  (set-code-word! x idx idx) ;;; FIXME 64bit
-		  (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
-		 ((label)
-		  (set-label-loc! (cdr a) (list x idx))
-		  (loop (cdr ls) idx reloc bot*))
-		 ((bottom-code)
-		  (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
-		 (else
-		  (die 'whack-instructions "unknown instr" a))))))))
-  (loop ls 0 '() '()))
+
+(module (whack-instructions)
 
+  (define (whack-instructions x ls)
+    ;;Loop  over the  list of  entries LS,  filling the  data area  of X
+    ;;accordingly.  X is a code object.
+    ;;
+    ;;LS is a  list of fixnums and lists; the  fixnums being binary code
+    ;;octects to  be stored in  the code  object's data area,  the lists
+    ;;representing entries for the relocation vector.
+    ;;
+    ;;Return a list representing data to build a relocation vector.
+    ;;
+    (define (loop ls idx reloc bot*)
+      ;;IDX is  the index  of the  next byte  to be  filled in  the code
+      ;;object's data area.  It is
+      ;;
+      ;;BOT* is initially  empty and is filled with  subentries from the
+      ;;entries in LS having key BOTTOM-CODE; such entries are processed
+      ;;ater LS has been consumed.
+      ;;
+      (cond ((null? ls)
+	     (if (null? bot*)
+		 reloc
+	       (loop ($car bot*) idx reloc ($cdr bot*))))
+	    (else
+	     (let ((a ($car ls)))
+	       (if (fixnum? a)
+		   (begin
+		     ;;Store a byte of binary code in the data area.
+		     (code-set! x idx a)
+		     (loop ($cdr ls) ($fxadd1 idx) reloc bot*))
+		 (case ($car a)
+		   ((byte)
+		    ;;Store a byte of binary code in the data area.
+		    (code-set! x idx ($cdr a))
+		    (loop ($cdr ls) ($fxadd1 idx) reloc bot*))
+		   ((relative local-relative)
+		    ;;Add an entry to the relocation list; leave 4 bytes
+		    ;;of room in the data area.
+		    (loop ($cdr ls) ($fx+ idx 4) (cons (cons idx a) reloc) bot*))
+		   ((reloc-word reloc-word+ label-addr foreign-label)
+		    ;;Add an entry to the  relocation list; leave a word
+		    ;;of room in the data area.
+		    (loop ($cdr ls) ($fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
+		   ((word)
+		    ;;Store a machine word in the data area.
+		    (%set-code-word! x idx ($cdr a))
+		    (loop ($cdr ls) ($fx+ idx wordsize) reloc bot*))
+		   ((current-frame-offset)
+		    ;;Store a machine word in  the data area holding the
+		    ;;current offset in the data area.
+		    (%set-code-word! x idx idx) ;;; FIXME 64bit
+		    (loop ($cdr ls) ($fx+ idx wordsize) reloc bot*))
+		   ((label)
+		    ;;Store informations  about the current  location in
+		    ;;the code object in the symbol ($cdr a).
+		    (%set-label-loc! ($cdr a) (list x idx))
+		    (loop ($cdr ls) idx reloc bot*))
+		   ((bottom-code)
+		    ;;Push this  entry in  BOT* to  be processed  at the
+		    ;;end.
+		    (loop ($cdr ls) idx reloc (cons ($cdr a) bot*)))
+		   (else
+		    (die 'whack-instructions "unknown instr" a))))))))
+    (loop ls 0 '() '()))
+
+  (define (%set-code-word! code idx x)
+    ;;Store a machine  word, whose value is  X, in the data  area of the
+    ;;code object CODE at index IDX.
+    ;;
+    (define who '%set-code-word!)
+    (with-arguments-validation (who)
+	((fixnum	x))
+      (if ($fx= wordsize 4)
+	  (begin
+	    (code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
+	    (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
+	    (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
+	    (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
+	(begin
+	  (code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
+	  (code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
+	  (code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
+	  (code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
+	  (code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
+	  (code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
+	  (code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
+	  (code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF))))))
+
+  (define (%set-label-loc! x loc)
+    (if (getprop x '*label-loc*)
+	(die '%set-label-loc! "label is already defined" x)
+      (putprop x '*label-loc* loc)))
+
+  #| end of module |# )
+
+
 (define (compute-reloc-size ls)
   (fold (lambda (x ac)
 	  (if (fixnum? x)
@@ -1382,6 +1421,8 @@
 		    reloc*))
 	      (map cons code* relv*)
 	      reloc**)
+	    ;;This causes the relocation vector to be processed for each
+	    ;;code object.
 	    (for-each set-code-reloc-vector! code* relv*)
 	    (for-each (lambda (code name)
 			(when name

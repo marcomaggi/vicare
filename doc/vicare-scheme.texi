@@ -26336,10 +26336,13 @@ must be processed again to update the addresses.
 
 @subsubheading Records of type: vanilla object
 
-Such records are composed by @math{2} words; the first word contains the
+Such records are composed by @math{2} words: the first word contains the
 tag and the displacement in bytes of the target word in the data area;
 the second word contains the reference to the Scheme object (or the
 Scheme object itself, if immediate).
+
+When these records are processed: the object reference is stored into
+the target word.
 
 @example
    meta data         data area
@@ -26349,20 +26352,91 @@ s_code   p_data
   v         v
   |---------|--------------|----|------| code object
             |..............|....|target word
-              displacement   ^
-                             |
-           ------------------
-          |
+      ------->displacement   ^
+     |                       |
+     |     ------------------
+     |    |
   |----|----| vanilla object record
    1st  2nd
 @end example
 
-When these records are processed: the object reference is copied into
-the target word.
-
 @c ------------------------------------------------------------
 
 @subsubheading Records of type: displaced object
+
+Such records are composed by @math{3} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains a fixnum representing a byte offset; the third
+word contains the reference to the Scheme object (or the Scheme object
+itself, if immediate).
+
+When these records are processed: the object reference is added to the
+offset in bytes and the result is stored into the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |       ----------------
+     |      |
+     |  off + obj
+  |----|----|----| vanilla object record
+   1st  2nd  3rd
+@end example
+
+Examples of displaced objects are: Scheme symbols referenced in the
+code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: jump label
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+@dots{}
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: foreign address
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains the reference to a bytevector object holding
+the C string representation of a foreign object name, in the format
+suitable to be handed to @cfunc{dlsym}.
+
+When these records are processed: @cfunc{dlsym} is used to retrieve the
+address of the foreign object (which must be present in the global
+namespace), then the address is stored directly in the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |     --- dlsym() ------
+     |    |
+     |    |
+  |----|----| vanilla object record
+   1st  2nd
+@end example
+
+Examples of foreign objects are: the C functions exported by the runtime
+program @command{vicare} to be called from Scheme; the C functions
+exported by the shared library when using an extension to Vicare with
+the model proposed by the Vicare/Template project (for example
+Vicare/SQLite).
 
 @c page
 @node objects code gc
