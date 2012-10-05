@@ -226,15 +226,15 @@ meta_alloc_extending (long size, gc_t* gc, int meta_id)
   return mem;
 }
 static inline ikptr
-meta_alloc (long size, gc_t* gc, int meta_id)
+meta_alloc (long aligned_size, gc_t* gc, int meta_id)
 {
-  assert(size == IK_ALIGN(size));
+  assert(aligned_size == IK_ALIGN(aligned_size));
   meta_t *	meta = &gc->meta[meta_id];
   ikptr		ap   = meta->ap;
   ikptr		ep   = meta->ep;
-  ikptr		nap  = ap + size;
+  ikptr		nap  = ap + aligned_size;
   if (nap > ep) {
-    return meta_alloc_extending(size, gc, meta_id);
+    return meta_alloc_extending(aligned_size, gc, meta_id);
   } else {
     meta->ap = nap;
     return ap;
@@ -324,18 +324,29 @@ gc_alloc_new_data(int size, gc_t* gc) {
 }
 
 static inline ikptr
-gc_alloc_new_code(long size, gc_t* gc) {
-  assert(size == IK_ALIGN(size));
-  if (size < IK_PAGESIZE) {
-    return meta_alloc(size, gc, meta_code);
-  } else {
-    long memreq = IK_ALIGN_TO_NEXT_PAGE(size);
-    ikptr mem = ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
+gc_alloc_new_code (long aligned_size, gc_t* gc)
+/* Allocate a new memory block to be as code object; the allocated block
+   size is an  exact multiple of the page size;  allocation is performed
+   with "mmap()" to  have read, write and  execution protection.
+
+   Return an *untagged* pointer referencing  the first byte of allocated
+   memory. */
+{
+  assert(aligned_size == IK_ALIGN(aligned_size));
+  if (aligned_size < IK_PAGESIZE) {
+    return meta_alloc(aligned_size, gc, meta_code);
+  } else { /* More than one page needed. */
+    long	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
+    ikptr	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
+    qupages_t *	p;
+    /* FIXME In this function we never access the "segment_vector" field
+       of  "gc", do  we  need  this assignment?   (Marco  Maggi; Oct  5,
+       2012) */
     gc->segment_vector = gc->pcb->segment_vector;
-    qupages_t* p = ik_malloc(sizeof(qupages_t));
+    p    = ik_malloc(sizeof(qupages_t));
     p->p = mem;
-    p->q = mem+size;
-    bzero((char*)(long)(mem+size), memreq-size);
+    p->q = mem+aligned_size;
+    bzero((char*)(long)(mem+aligned_size), memreq-aligned_size);
     p->next = gc->queues[meta_code];
     gc->queues[meta_code] = p;
     return mem;
@@ -838,52 +849,59 @@ gc_finalize_guardians (gc_t* gc)
 static int alloc_code_count = 0;
 
 static ikptr
-add_code_entry(gc_t* gc, ikptr entry) {
-  ikptr x = entry - disp_code_data;
-  if (ref(x,0) == IK_FORWARD_PTR) {
-    return ref(x,wordsize) + off_code_data;
+add_code_entry (gc_t* gc, ikptr entry)
+/* Add a code object. */
+{
+  ikptr		x = entry - disp_code_data;
+  if (IK_FORWARD_PTR == IK_REF(x,0)) {
+    return IK_REF(x,wordsize) + off_code_data;
   }
-  long idx = IK_PAGE_INDEX(x);
-  unsigned int t = gc->segment_vector[idx];
-  int gen = t & gen_mask;
-  if (gen > gc->collect_gen) {
+  long		idx	= IK_PAGE_INDEX(x);
+  unsigned	t	= gc->segment_vector[idx];
+  int		gen	= t & gen_mask;
+  if (gen > gc->collect_gen)
     return entry;
-  }
-  long code_size = IK_UNFIX(ref(x, disp_code_code_size));
-  ikptr reloc_vec = ref(x, disp_code_reloc_vector);
-  ikptr freevars = ref(x, disp_code_freevars);
-  ikptr annotation = ref(x, disp_code_annotation);
-  long required_mem = IK_ALIGN(disp_code_data + code_size);
+  /* The number of bytes actually used in the allocated memory block. */
+  long		code_size	= IK_UNFIX(IK_REF(x, disp_code_code_size));
+  /* The total number of allocated bytes. */
+  long		required_mem	= IK_ALIGN(disp_code_data + code_size);
+  /* The relocation vector. */
+  ikptr		s_reloc_vec	= IK_REF(x, disp_code_reloc_vector);
+  /* A fixnum representing th enumber of free variables. */
+  ikptr		s_freevars	= IK_REF(x, disp_code_freevars);
+  /* An object that annotates the code object. */
+  ikptr		s_annotation	= IK_REF(x, disp_code_annotation);
   if (required_mem >= IK_PAGESIZE) {
-    int new_tag = gc->collect_gen_tag;
-    long idx = IK_PAGE_INDEX(x);
+    int		new_tag	= gc->collect_gen_tag;
+    long	idx	= IK_PAGE_INDEX(x);
+    long	i;
     gc->segment_vector[idx] = new_tag | code_mt;
-    long i;
-    for(i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
+    for (i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
       gc->segment_vector[idx] = new_tag | data_mt;
     }
-    qupages_t* p = ik_malloc(sizeof(qupages_t));
+    qupages_t *	p = ik_malloc(sizeof(qupages_t));
     p->p = x;
     p->q = x+required_mem;
     p->next = gc->queues[meta_code];
     gc->queues[meta_code] = p;
     return entry;
-  } else {
-    ikptr y = gc_alloc_new_code(required_mem, gc);
-    ref(y, 0) = code_tag;
-    ref(y, disp_code_code_size) = IK_FIX(code_size);
-    ref(y, disp_code_reloc_vector) = reloc_vec;
-    ref(y, disp_code_freevars) = freevars;
-    ref(y, disp_code_annotation) = annotation;
+  } else { /* Only one memory page allocated. */
+    ikptr	y = gc_alloc_new_code(required_mem, gc);
+    IK_REF(y, 0) = code_tag;
+    IK_REF(y, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(y, disp_code_reloc_vector)	= s_reloc_vec;
+    IK_REF(y, disp_code_freevars)	= s_freevars;
+    IK_REF(y, disp_code_annotation)	= s_annotation;
     memcpy((char*)(long)(y+disp_code_data),
            (char*)(long)(x+disp_code_data),
            code_size);
-    ref(x, 0) = IK_FORWARD_PTR;
-    ref(x, wordsize) = y | vector_tag;
+    IK_REF(x, 0)	= IK_FORWARD_PTR;
+    IK_REF(x, wordsize)	= y | vector_tag;
     return y+disp_code_data;
   }
 }
 
+
 static void
 collect_locatives(gc_t* gc, ik_callback_locative* loc) {
   while(loc) {
@@ -1296,6 +1314,8 @@ add_object_proc (gc_t* gc, ikptr X)
       return Y;
     }
     else if (code_tag == first_word) {
+      /* The memory block of a code object references a number of Scheme
+	 values. */
       ikptr	entry     = X + off_code_data;
       ikptr	new_entry = add_code_entry(gc, entry);
       return new_entry - off_code_data;
@@ -1481,62 +1501,81 @@ add_object_proc (gc_t* gc, ikptr X)
 
 
 static void
-relocate_new_code(ikptr x, gc_t* gc) {
-  ikptr relocvector = ref(x, disp_code_reloc_vector);
-  relocvector = add_object(gc, relocvector, "relocvec");
-  ref(x, disp_code_reloc_vector) = relocvector;
-  ref(x, disp_code_annotation) =
-    add_object(gc, ref(x, disp_code_annotation), "annotation");
-  ikptr relocsize = ref(relocvector, off_vector_length);
-  ikptr p = relocvector + off_vector_data;
-  ikptr q = p + relocsize;
-  ikptr code = x + disp_code_data;
-  while(p < q) {
-    long r = IK_UNFIX(ref(p, 0));
-    long tag = r & 3;
-    long code_off = r >> 2;
-    if (tag == 0) {
+relocate_new_code (ikptr X, gc_t* gc)
+/* Process  the relocation  vector  of  a code  object.   X  must be  an
+  *untagged* pointer referencing the code object.
+
+  This function has similarities with "ik_relocate_code()". */
+{
+  ikptr		s_reloc_vec;
+  ikptr		s_reloc_vec_len;
+  /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
+     word in the data area of the relocation vector VEC. */
+  ikptr		reloc_vec_cur;
+  /* The variable  RELOC_VEC_END is  an *untagged*  pointer to  the word
+     right after the data area of the relocation vector VEC. */
+  ikptr		reloc_vec_end;
+  /* The variable  DATA is an  *untagged* pointer referencing  the first
+     byte in the data area of the code object. */
+  ikptr		data;
+  s_reloc_vec = IK_REF(X, disp_code_reloc_vector);
+  s_reloc_vec = add_object(gc, s_reloc_vec, "relocvec");
+  IK_REF(X, disp_code_reloc_vector) = s_reloc_vec;
+  IK_REF(X, disp_code_annotation)   = add_object(gc, IK_REF(X, disp_code_annotation),
+						 "annotation");
+  /* Remember  that the  fixnum representing  the number  of items  in a
+     vector, taken as "long", also represents the number of bytes in the
+     data area. */
+  s_reloc_vec_len = IK_REF(s_reloc_vec, off_vector_length);
+  reloc_vec_cur   = s_reloc_vec + off_vector_data;
+  reloc_vec_end   = reloc_vec_cur + s_reloc_vec_len;
+  data            = X + disp_code_data;
+  /* Scan the records in the relocation vector. */
+  while (reloc_vec_cur < reloc_vec_end) {
+    const long	first_record_bits = IK_UNFIX(IK_REF(reloc_vec_cur, 0));
+    const long	reloc_record_tag  = first_record_bits & 3;
+    /* Offset  relative to  DATA  of a  word  referencing a  relocatable
+       object. */
+    const long	data_code_off = first_record_bits >> 2;
+    if (reloc_record_tag == 0) {
       /* undisplaced pointer */
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-     // fprintf(stderr, "r=0x%08x code_off=%d reloc_size=0x%08x\n",
-     //     r, code_off, relocsize);
+      // fprintf(stderr, "r=0x%08x data_code_off=%d reloc_size=0x%08x\n",
+      //     first_record_bits, data_code_off, s_reloc_vec_len);
 #endif
-      ikptr old_object = ref(p, wordsize);
+      ikptr old_object = IK_REF(reloc_vec_cur, wordsize);
       ikptr new_object = add_object(gc, old_object, "reloc1");
-      ref(code, code_off) = new_object;
-      p += (2*wordsize);
-    }
-    else if (tag == 2) {
+      IK_REF(data, data_code_off) = new_object;
+      reloc_vec_cur += (2*wordsize);
+    } else if (reloc_record_tag == 2) {
       /* displaced pointer */
-      long obj_off = IK_UNFIX(ref(p, wordsize));
-      ikptr old_object = ref(p, 2*wordsize);
+      long obj_off = IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
+      ikptr old_object = IK_REF(reloc_vec_cur, 2*wordsize);
       ikptr new_object = add_object(gc, old_object, "reloc2");
-      ref(code, code_off) = new_object + obj_off;
-      p += (3 * wordsize);
-    }
-    else if (tag == 3) {
+      IK_REF(data, data_code_off) = new_object + obj_off;
+      reloc_vec_cur += (3 * wordsize);
+    } else if (reloc_record_tag == 3) {
       /* displaced relative pointer */
-      long obj_off = IK_UNFIX(ref(p, wordsize));
-      ikptr obj = ref(p, 2*wordsize);
+      long obj_off = IK_UNFIX(IK_REF(reloc_vec_cur, wordsize));
+      ikptr obj = IK_REF(reloc_vec_cur, 2*wordsize);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       //fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)obj,
       //    obj_off);
 #endif
       obj = add_object(gc, obj, "reloc3");
       ikptr displaced_object = obj + obj_off;
-      long next_word = code + code_off + 4;
+      long next_word = data + data_code_off + 4;
       ikptr relative_distance = displaced_object - (long)next_word;
       if (((long)relative_distance) != ((long)((int)relative_distance)))
         ik_abort("relocation error with relative=0x%016lx", relative_distance);
-      *((int*)(code+code_off)) = (int)relative_distance;
-      p += (3*wordsize);
-    }
-    else if (tag == 1) {
+      *((int*)(data+data_code_off)) = (int)relative_distance;
+      reloc_vec_cur += (3*wordsize);
+    } else if (reloc_record_tag == 1) {
       /* do nothing */
-      p += (2 * wordsize);
-    }
-    else
-      ik_abort("invalid rtag %ld in 0x%016lx", tag, r);
+      reloc_vec_cur += (2 * wordsize);
+    } else
+      ik_abort("invalid relocation record tag %ld in 0x%016lx",
+	       reloc_record_tag, first_record_bits);
   }
 }
 
@@ -1846,46 +1885,46 @@ scan_dirty_pointers_page(gc_t* gc, long page_idx, int mask) {
 }
 
 static void
-scan_dirty_code_page(gc_t* gc, long page_idx) {
-  ikptr p = (ikptr)(page_idx << IK_PAGESHIFT);
-  ikptr start = p;
-  ikptr q = p + IK_PAGESIZE;
-  unsigned int* segment_vec = (unsigned int*)(long)gc->segment_vector;
-  unsigned int* dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
+scan_dirty_code_page (gc_t* gc, long page_idx)
+{
+  ikptr		p		= (ikptr)(page_idx << IK_PAGESHIFT);
+  ikptr		start		= p;
+  ikptr		q		= p + IK_PAGESIZE;
+  unsigned *	segment_vec	= (unsigned *)(long)gc->segment_vector;
+  unsigned *	dirty_vec	= (unsigned *)(long)gc->pcb->dirty_vector;
   //unsigned int d = dirty_vec[page_idx];
-  unsigned int t = segment_vec[page_idx];
+  unsigned	t		= segment_vec[page_idx];
   //unsigned int masked_d = d & mask;
-  unsigned int new_d = 0;
-  while(p < q) {
-    if (ref(p, 0) != code_tag) {
+  unsigned	new_d		= 0;
+  while (p < q) {
+    if (IK_REF(p, 0) != code_tag) {
       p = q;
-    }
-    else {
-      long j = ((long)p - (long)start) / cardsize;
-      long code_size = IK_UNFIX(ref(p, disp_code_code_size));
+    } else {
+      long	j		= ((long)p - (long)start) / cardsize;
+      long	code_size	= IK_UNFIX(IK_REF(p, disp_code_code_size));
       relocate_new_code(p, gc);
       segment_vec = gc->segment_vector;
-      ikptr rvec = ref(p, disp_code_reloc_vector);
-      ikptr len = ref(rvec, off_vector_length);
+      ikptr	rvec		= IK_REF(p, disp_code_reloc_vector);
+      ikptr	len		= IK_REF(rvec, off_vector_length);
       assert(((long)len) >= 0);
-      unsigned long i;
-      unsigned long code_d = segment_vec[IK_PAGE_INDEX(rvec)];
-      for(i=0; i<len; i+=wordsize) {
-        ikptr r = ref(rvec, i+off_vector_data);
+      unsigned long	i;
+      unsigned long	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
+      for (i=0; i<len; i+=wordsize) {
+        ikptr		r = IK_REF(rvec, i+off_vector_data);
         if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
           /* do nothing */
         } else {
-          r = add_object(gc, r, "nothing2");
-          segment_vec = gc->segment_vector;
-          code_d = code_d | segment_vec[IK_PAGE_INDEX(r)];
+          r		= add_object(gc, r, "nothing2");
+          segment_vec	= gc->segment_vector;
+          code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
         }
       }
-      new_d = new_d | (code_d<<(j*meta_dirty_shift));
-      p += IK_ALIGN(code_size + disp_code_data);
+      new_d	= new_d | (code_d << (j * meta_dirty_shift));
+      p		+= IK_ALIGN(code_size + disp_code_data);
     }
   }
-  dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
-  new_d = new_d & cleanup_mask[t & gen_mask];
+  dirty_vec	= (unsigned int*)(long)gc->pcb->dirty_vector;
+  new_d		= new_d & cleanup_mask[t & gen_mask];
   dirty_vec[page_idx] = new_d;
 }
 

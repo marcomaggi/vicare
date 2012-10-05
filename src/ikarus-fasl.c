@@ -161,23 +161,23 @@ ik_relocate_code (ikptr code)
      data area of the vector. */
   ikptr size = IK_VECTOR_LENGTH_FX(vec);
   /* The variable  DATA is an  *untagged* pointer referencing  the first
-     byte of binary code in the code object. */
+     byte in the data area of the code object. */
   ikptr data = code + disp_code_data;
   /* The variable  RELOC_VEC_CUR is an  *untagged* pointer to  the first
      word in the data area of the relocation vector VEC. */
   ikptr reloc_vec_cur  = vec  + off_vector_data;
-  /* The variable  RELOC_VEC_PAST is an  *untagged* pointer to  the word
+  /* The variable  RELOC_VEC_END is  an *untagged*  pointer to  the word
      right after the data area of the relocation vector VEC. */
-  ikptr reloc_vec_past = reloc_vec_cur + size;
+  ikptr reloc_vec_end = reloc_vec_cur + size;
   /* If the relocation vector is empty: do nothing. */
-  while (reloc_vec_cur < reloc_vec_past) {
-    long	first_record_word = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
-    if (0 == first_record_word)
+  while (reloc_vec_cur < reloc_vec_end) {
+    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(reloc_vec_cur));
+    if (0 == first_record_bits)
       ik_abort("invalid empty record in code object's relocation vector");
-    const long	reloc_record_tag = first_record_word & 3;
-    /* Offset  relative to  DATA of  a word  representing a  relocatable
+    const long	reloc_record_tag = first_record_bits & 3;
+    /* Offset  relative to  DATA  of a  word  referencing a  relocatable
        object. */
-    const long	data_code_off	 = first_record_word >> 2;
+    const long	data_code_off	 = first_record_bits >> 2;
     switch (reloc_record_tag) {
     case 0: { /* This record represents a vanilla object; this record is
 		 2 words wide. */
@@ -231,7 +231,7 @@ ik_relocate_code (ikptr code)
     }
     default:
       ik_abort("invalid first word in relocation vector's record: 0x%016lx (tag=%ld)",
-	       first_record_word, reloc_record_tag);
+	       first_record_bits, reloc_record_tag);
       break;
     } /* end of switch() */
   } /* end of while() */
