@@ -290,24 +290,26 @@ do_read (ikpcb* pcb, fasl_port* p)
       p->marks_size = 2*IK_PAGESIZE;
     }
   }
-  if (c == 'x') {
-    long code_size;
-    ikptr freevars;
+  if (c == 'x') {	/* code object */
+    long	code_size;
+    ikptr	freevars;
+    ikptr	annotation;
+    ikptr	p_code;
     fasl_read_buf(p, &code_size, sizeof(long));
-    fasl_read_buf(p, &freevars, sizeof(ikptr));
-    ikptr annotation = do_read(pcb, p);
-    ikptr code = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
-    IK_REF(code, 0)			= code_tag;
-    IK_REF(code, disp_code_code_size)	= IK_FIX(code_size);
-    IK_REF(code, disp_code_freevars)	= freevars;
-    IK_REF(code, disp_code_annotation)	= annotation;
-    fasl_read_buf(p, (void*)(disp_code_data+(long)code), code_size);
+    fasl_read_buf(p, &freevars,  sizeof(ikptr));
+    annotation = do_read(pcb, p);
+    p_code     = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
+    IK_REF(p_code, 0)			= code_tag;
+    IK_REF(p_code, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(p_code, disp_code_freevars)	= freevars;
+    IK_REF(p_code, disp_code_annotation)= annotation;
+    fasl_read_buf(p, (void*)(disp_code_data+(long)p_code), code_size);
     if (put_mark_index) {
-      p->marks[put_mark_index] = code+vector_tag;
+      p->marks[put_mark_index] = p_code | vector_tag;
     }
-    IK_REF(code, disp_code_reloc_vector) = do_read(pcb, p);
-    ik_relocate_code(code);
-    return code+vector_tag;
+    IK_REF(p_code, disp_code_reloc_vector) = do_read(pcb, p);
+    ik_relocate_code(p_code);
+    return p_code | vector_tag;
   }
   else if (c == 'P') {
     ikptr pair = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
@@ -454,13 +456,15 @@ do_read (ikpcb* pcb, fasl_port* p)
     return rtd;
   }
   else if (c == 'Q') { /* thunk */
-    ikptr proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
+    ikptr s_proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
     if (put_mark_index) {
-      p->marks[put_mark_index] = proc;
+      p->marks[put_mark_index] = s_proc;
     }
-    ikptr code = do_read(pcb, p);
-    IK_REF(proc, -closure_tag) = code + off_code_data;
-    return proc;
+    ikptr s_code = do_read(pcb, p);
+    /* Store in  the closure's memory block  a raw pointer to  the first
+       byte of the code object's data area. */
+    IK_REF(s_proc, off_closure_code) = s_code + off_code_data;
+    return s_proc;
   }
   else if (c == '<') {
     int idx;

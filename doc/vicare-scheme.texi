@@ -15304,6 +15304,8 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib ports::                Low level port structures.
 * syslib transcoders::          Low level transcoder operations.
 * syslib pointers::             Low level pointer operations.
+* syslib codes::                Low level code objects operations.
+* syslib closures::             Low level closures operations.
 @end menu
 
 @c page
@@ -16043,7 +16045,8 @@ Extract the payload bits from a transcoder and return them as fixnum.
 
 
 In the following definitions the @var{ptr} arguments must be pointer
-objects.
+objects.  The following bindings are exported by the @library{ikarus
+system $pointers} library.
 
 
 @deffn {Primitive Operation} $pointer? @var{obj}
@@ -16055,6 +16058,80 @@ else return @false{}.
 @deffn {Unsafe Operation} $pointer= @vari{ptr} @varii{ptr}
 Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @false{}.
+@end deffn
+
+@c page
+@node syslib codes
+@section Low level code objects operations
+
+
+In the following definitions the @var{code} arguments must be code
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
+
+
+@defun code? @var{obj}
+Return @true{} if @var{obj} is a code object.
+@end defun
+
+
+@deffn {Primitive Operation} $code-freevars @var{code}
+Return a fixnum representing the number of free variables referenced by
+@var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-reloc-vector @var{code}
+Return the relocation vector of @var{code}.  The relocation vector is a
+Scheme vector, @ref{objects codes reloc}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-size @var{code}
+Return a fixnum representing the number of bytes used in the data area
+of @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-annotation @var{code}
+Return an object used as annotation for @var{code}.  The default value
+for the annotation is @false{}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code->closure @var{code}
+Return a closure object wrapping @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-ref @var{code} @var{index}
+Return the byte at @var{index} in the data area of @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-set! @var{code} @var{index} @var{octet}
+Store @var{octet} at @var{index} in the data area of @var{code}.  Both
+@var{index} and @var{octet} must be fixnums; @var{octet} must be in the
+range @math{[0, 255]}.
+@end deffn
+
+
+@deffn {Primitive Operation} $set-code-annotation @var{code} @var{obj}
+Store @var{obj} in the annotation field of @var{code}.
+@end deffn
+
+@c page
+@node syslib closures
+@section Low level closures operations
+
+
+In the following definitions the @var{closure} arguments must be closure
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
+
+
+@deffn {Primitive Operation} $closure-code @var{closure}
+Return the code object wrapped by the @var{closure}.
 @end deffn
 
 @c page
@@ -22574,7 +22651,8 @@ values is duplicated in the Scheme language compiler
 * objects ports::               Port objects.
 * objects transcoders::         Transcoder objects.
 * objects pointers::            Pointer objects.
-* objects code::                Code objects.
+* objects codes::               Code objects.
+* objects closures::            Closure objects.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
 * objects callbacks::           Notes on calling Scheme code from C.
@@ -26257,7 +26335,7 @@ See the source code in the file @file{ikarus.codecs.sls} for more
 details.
 
 @c page
-@node objects code
+@node objects codes
 @section Code objects
 
 
@@ -26265,13 +26343,13 @@ Code objects contain compiled binary code ready to be executed by the
 host's processor.
 
 @menu
-* objects code layout::         Memory layout of code objects.
-* objects code reloc::          The relocation vector.
-* objects code gc::             Memory and garbage collection.
+* objects codes layout::        Memory layout of code objects.
+* objects codes reloc::         The relocation vector.
+* objects codes gc::            Memory and garbage collection.
 @end menu
 
 @c page
-@node objects code layout
+@node objects codes layout
 @subsection Memory layout of code objects
 
 
@@ -26343,7 +26421,7 @@ the subsequent words in the memory block are the code object's data
 area.
 
 @c page
-@node objects code reloc
+@node objects codes reloc
 @subsection The relocation vector
 
 
@@ -26499,7 +26577,7 @@ the model proposed by the Vicare/Template project (for example
 Vicare/SQLite).
 
 @c page
-@node objects code gc
+@node objects codes gc
 @subsection Memory and garbage collection
 
 
@@ -26510,6 +26588,98 @@ specially memory mapped regions which receive execution protection.
 Whenever the garbage collector encounters a reference to a code object:
 it moves the code object itself into a new location to reduce
 fragmentation.
+
+@c page
+@node objects closures
+@section Closure objects
+
+
+A closure object is a fixed length memory block referenced by machine
+words tagged as closures; each closure object is associated to a code
+object that implements the procedure.  The memory layout of a closure
+object is as follows:
+
+@example
+|------------------------|-------------| reference to closure
+      heap pointer         closure tag
+
+|--------------------------------------| closure data
+              code pointer
+@end example
+
+@noindent
+the memory block of a closure object is a single word wide; the word
+holds a raw memory pointer referencing the first byte in the code object
+implementing the closure.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Closure objects are allocated on the heap; to perform the allocation and
+initialisation we do:
+
+@example
+ikptr   p_closure;
+ikptr   s_closure;
+ikptr   s_code = ...;
+
+p_closure = ik_safe_alloc(pcb, IK_ALIGN(disp_closure_data));
+s_closure = p_closure | closure_tag;
+IK_REF(s_closure, off_closure_code) = s_code + off_code_data;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the closure tag (an integer value fitting in @math{3} bits) which
+allows to recognise closures among all the other built in objects.
+
+
+@defvr {Preprocessor Symbol} closure_tag
+An integer used to tag @ikptr{} references to closure memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} closure_mask
+An integer representing the bitmask used to extract (with a bitwise
+logic AND) the tag from @ikptr{} references to closure objects.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_closure_code
+Displacement of code pointer.  The number of bytes to add to an
+@strong{untagged} pointer to closure to get the pointer to the first
+byte in the word of the closure's data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_closure_data
+Number of bytes needed to hold a closure's memory block.  An integer to
+add to an @strong{untagged} pointer to closure to obtain a pointer to
+the first byte after the closure's memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_closure_code
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the closure's data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_closure_data
+An integer to add to a tagged @ikptr{} vector reference to obtain a
+pointer to the first byte after the closure's memory block.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr @var{X})
+Evaluate to true if @var{X} is a reference to closure object.
+@end deftypefn
 
 @c page
 @node objects misc

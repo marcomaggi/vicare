@@ -2929,6 +2929,27 @@
     (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
 
  (define-primop $closure-code unsafe
+   ;;First  extract  from the  closure  object  the raw  memory  pointer
+   ;;referencing the first  byte of binary code in a  code object's data
+   ;;area:
+   ;;
+   ;;  memory pointer = (prm 'mref (T closure) (K off-closure-code))
+   ;;
+   ;;we know that such memory  pointer is DISP-CODE-DATA bytes after the
+   ;;pointer  to the  first  byte of  the code  object,  so we  subtract
+   ;;DISP-CODE-DATA  and add  the vector  tag:  the result  is a  tagged
+   ;;reference to the code object.
+   ;;
+   ;;    |----------| closure object
+   ;;      p_memory
+   ;;
+   ;;      meta data        binary code
+   ;;    |-----------|-----------------------| code object
+   ;;    ^           ^
+   ;; s_code      p_memory
+   ;;
+   ;;    |...........| disp-code-data
+   ;;
    ((V x)
     (prm 'int+
 	 (prm 'mref (T x) (K (- disp-closure-code closure-tag)))
@@ -2952,9 +2973,14 @@
 
  (define-primop $code->closure unsafe
    ((V x)
-    (with-tmp ((v (prm 'alloc
+    (with-tmp
+	;;Allocate a closure's memory block  and tag the reference to it
+	;;as closure.
+	((v (prm 'alloc
 		       (K (align (+ 0 disp-closure-data)))
 		       (K closure-tag))))
+      ;;Store in the  closure's memory block a raw pointer  to the first
+      ;;byte of the code object's data area.
       (prm 'mset v
 	   (K (- disp-closure-code closure-tag))
 	   (prm 'int+ (T x)

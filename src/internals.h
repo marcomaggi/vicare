@@ -534,54 +534,6 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 
 
 /** --------------------------------------------------------------------
- ** Code objects.
- ** ----------------------------------------------------------------- */
-
-/* This	 is the	 primary tag,  in the  machine word  referencing  a code
-   object. */
-#define code_pri_tag		vector_tag
-/* This is the	secondary tag, in the first word  of the referenced heap
-   vector. */
-#define code_tag		((ikptr)0x2F)
-#define disp_code_code_tag	0
-#define disp_code_code_size	(1 * wordsize)
-#define disp_code_reloc_vector	(2 * wordsize)
-#define disp_code_freevars	(3 * wordsize)
-#define disp_code_annotation	(4 * wordsize)
-#define disp_code_unused	(5 * wordsize)
-#define disp_code_data		(6 * wordsize)
-#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
-#define off_code_data		(disp_code_data		- code_pri_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
-
-/* Accessors for the words of relocation vector's records. */
-#undef  IK_RELOC_RECORD_REF
-#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
-#undef  IK_RELOC_RECORD_1ST
-#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
-#undef  IK_RELOC_RECORD_2ND
-#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
-#undef  IK_RELOC_RECORD_3RD
-#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
-
-/* Least significant  bits tags  for the  first word  in records  of the
-   relocation vector for code objects. */
-#define IK_RELOC_RECORD_MASK_TAG		0b11
-#define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
-#define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
-#define IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2
-#define IK_RELOC_RECORD_JUMP_LABEL_TAG		3
-
-/* Given a  machine word representing  the bits in  the first word  of a
-   record in a relocation vector: evaluate to the record type tag. */
-#define IK_RELOC_RECORD_1ST_BITS_TAG(WORD)	((WORD) & IK_RELOC_RECORD_MASK_TAG)
-
-/* Given a  machine word representing  the bits in  the first word  of a
-   record in a relocation vector: evaluate to the offset. */
-#define IK_RELOC_RECORD_1ST_BITS_OFFSET(WORD)	((WORD) >> 2)
-
-
-/** --------------------------------------------------------------------
  ** Fixnum objects.
  ** ----------------------------------------------------------------- */
 
@@ -1097,6 +1049,54 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_port_cookie		(disp_port_cookie	- vector_tag)
 #define off_port_unused1	(disp_port_unused1	- vector_tag)
 #define off_port_unused2	(disp_port_unused2	- vector_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Code objects.
+ ** ----------------------------------------------------------------- */
+
+/* This	 is the	 primary tag,  in the  machine word  referencing  a code
+   object. */
+#define code_pri_tag		vector_tag
+/* This is the	secondary tag, in the first word  of the referenced heap
+   vector. */
+#define code_tag		((ikptr)0x2F)
+#define disp_code_code_tag	0
+#define disp_code_code_size	(1 * wordsize)
+#define disp_code_reloc_vector	(2 * wordsize)
+#define disp_code_freevars	(3 * wordsize)
+#define disp_code_annotation	(4 * wordsize)
+#define disp_code_unused	(5 * wordsize)
+#define disp_code_data		(6 * wordsize)
+#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
+#define off_code_data		(disp_code_data		- code_pri_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
+
+/* Accessors for the words of relocation vector's records. */
+#undef  IK_RELOC_RECORD_REF
+#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
+#undef  IK_RELOC_RECORD_1ST
+#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
+#undef  IK_RELOC_RECORD_2ND
+#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
+#undef  IK_RELOC_RECORD_3RD
+#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
+
+/* Least significant  bits tags  for the  first word  in records  of the
+   relocation vector for code objects. */
+#define IK_RELOC_RECORD_MASK_TAG		0b11
+#define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
+#define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
+#define IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2
+#define IK_RELOC_RECORD_JUMP_LABEL_TAG		3
+
+/* Given a  machine word representing  the bits in  the first word  of a
+   record in a relocation vector: evaluate to the record type tag. */
+#define IK_RELOC_RECORD_1ST_BITS_TAG(WORD)	((WORD) & IK_RELOC_RECORD_MASK_TAG)
+
+/* Given a  machine word representing  the bits in  the first word  of a
+   record in a relocation vector: evaluate to the offset. */
+#define IK_RELOC_RECORD_1ST_BITS_OFFSET(WORD)	((WORD) >> 2)
 
 
 /** --------------------------------------------------------------------
