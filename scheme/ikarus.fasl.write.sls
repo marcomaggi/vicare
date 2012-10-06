@@ -497,8 +497,9 @@
 	 ;;- the character "x";
 	 ;;- a  machine word representing  the number of  bytes actually
 	 ;;  used in the data area of the code object;
-	 ;;- a fixnum  representing the number of free  variables in the
-	 ;;  code;
+	 ;;- a machine word representing the number of free variables in
+	 ;;  the code;
+	 ;;- a Scheme object representing the code annotation;
 	 ;;- an array of bytes being the binary code;
 	 ;;- the relocation vector as Scheme vector.
 	 ;;

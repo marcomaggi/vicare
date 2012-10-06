@@ -296,8 +296,8 @@
     ;;
     ;;The format is:
     ;;
-    ;; int	: exact integer representing code size in bytes
-    ;; fixnum	: fixnum representing number of free variables
+    ;; int	: machine word representing code size in bytes
+    ;; int	: machine word representing number of free variables
     ;; object	: code annotation
     ;; byte ...	: the actual code
     ;; vector	: code relocation vector
