@@ -302,8 +302,8 @@
     ;; byte ...	: the actual code
     ;; vector	: code relocation vector
     ;;
-    (let* ((code-size (read-integer-word    port))
-	   (freevars  (read-fixnum port))
+    (let* ((code-size (read-integer-word port))
+	   (freevars  (read-fixnum       port))
 	   (code      (make-code code-size freevars)))
       (when code-mark (%put-mark code-mark code))
       (let ((annotation (%read-without-mark)))
