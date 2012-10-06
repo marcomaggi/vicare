@@ -71,30 +71,39 @@
 
   (define MARKS
     (make-vector 1 #f))
+
   (define-syntax MARKS.len
-    (identifier-syntax (vector-length MARKS)))
-  (define (put-mark m obj)
+    (identifier-syntax (unsafe.vector-length MARKS)))
+
+  (define (%put-mark m obj)
     ;;Mark object OBJ  with the fixnum M; that is: store  OBJ at index M
     ;;in the vector MARKS.  If  MARKS is not wide enough: reallocate it.
     ;;It is an error if the same mark is defined twice.
     ;;
     (if (unsafe.fx< m MARKS.len)
-	(if (vector-ref MARKS m)
+	(if (unsafe.vector-ref MARKS m)
 	    (assertion-violation who "mark set twice" m port)
-	  (vector-set! MARKS m obj))
+	  (unsafe.vector-set! MARKS m obj))
       (let* ((n MARKS.len)
 	     (v (make-vector (fxmax (unsafe.fx* n 2) (unsafe.fxadd1 m)) #f)))
 	(let loop ((i 0))
 	  (if (unsafe.fx= i n)
 	      (begin
 		(set! MARKS v)
-		(vector-set! MARKS m obj))
+		(unsafe.vector-set! MARKS m obj))
 	    (begin
-	      (vector-set! v i (vector-ref MARKS i))
+	      (unsafe.vector-set! v i (unsafe.vector-ref MARKS i))
 	      (loop (unsafe.fxadd1 i))))))))
 
-  (define (read)
-    ;;Read and return the next object; it will have not mark.
+  (define (%read-without-mark)
+    ;;Read and return the next object; it will have no mark.
+    ;;
+    ;;This procedure is used both to start reading an object and to read
+    ;;subobjects:  objects that  are  components of  other objects;  for
+    ;;example the car and cdr or a pair are subobjects.
+    ;;
+    ;;Such subobjects can  be marked, but not with the  same mark of the
+    ;;superobject.
     ;;
     (read/mark #f))
 
@@ -109,12 +118,12 @@
 	((#\P)	;pair
 	 (if m
 	     (let ((x (cons #f #f)))
-	       (put-mark m x)
-	       (set-car! x (read))
-	       (set-cdr! x (read))
+	       (%put-mark m x)
+	       (unsafe.set-car! x (%read-without-mark))
+	       (unsafe.set-cdr! x (%read-without-mark))
 	       x)
-	   (let ((a (read)))
-	     (cons a (read)))))
+	   (let ((a (%read-without-mark)))
+	     (cons a (%read-without-mark)))))
 	((#\N) '())
 	((#\T) #t)
 	((#\F) #f)
@@ -127,69 +136,69 @@
 	     (unless (unsafe.fx= i len)
 	       (string-set! str i (read-u8-as-char port))
 	       (next-char (unsafe.fxadd1 i))))
-	   (when m (put-mark m str))
+	   (when m (%put-mark m str))
 	   str))
 	((#\S)	;Unicode string
 	 (let* ((len (read-integer-word port))
 		(str (make-string len)))
 	   (let next-char ((i 0))
 	     (unless (unsafe.fx= i len)
-	       (string-set! str i (integer->char (read-u32 port)))
+	       (unsafe.string-set! str i (integer->char (read-u32 port)))
 	       (next-char (unsafe.fxadd1 i))))
-	   (when m (put-mark m str))
+	   (when m (%put-mark m str))
 	   str))
 	((#\M)	;symbol
-	 (let ((sym (string->symbol (read))))
-	   (when m (put-mark m sym))
+	 (let ((sym (string->symbol (%read-without-mark))))
+	   (when m (%put-mark m sym))
 	   sym))
 	((#\G)	;generated symbol
-	 (let* ((pretty (read))
-		(unique (read))
+	 (let* ((pretty (%read-without-mark))
+		(unique (%read-without-mark))
 		(g      (foreign-call "ikrt_strings_to_gensym" pretty unique)))
-	   (when m (put-mark m g))
+	   (when m (%put-mark m g))
 	   g))
 	((#\V)	;vector
 	 (let* ((len (read-integer-word port))
 		(vec (make-vector len)))
-	   (when m (put-mark m vec))
+	   (when m (%put-mark m vec))
 	   (let next-object ((i 0))
 	     (unless (unsafe.fx= i len)
-	       (vector-set! vec i (read))
+	       (unsafe.vector-set! vec i (%read-without-mark))
 	       (next-object (unsafe.fxadd1 i))))
 	   vec))
 	((#\v)	;bytevector
 	 (let* ((len (read-integer-word port))
 		(bv  (make-bytevector len)))
-	   (when m (put-mark m bv))
+	   (when m (%put-mark m bv))
 	   (let next-octet ((i 0))
 	     (unless (unsafe.fx= i len)
 	       (bytevector-u8-set! bv i (read-u8 port))
 	       (next-octet (unsafe.fxadd1 i))))
 	   bv))
 	((#\x)	;code
-	 (read-code m #f))
+	 (%read-code m #f))
 	((#\Q)	;procedure
-	 (read-procedure m))
+	 (%read-procedure m))
 	((#\R)	;struct type descriptor
-	 (let* ((rtd-name	(read))
-		(rtd-symbol	(read))
+	 (let* ((rtd-name	(%read-without-mark))
+		(rtd-symbol	(%read-without-mark))
 		(field-count	(read-integer-word port))
-		(fields		(let f ((i 0))
+		(fields		(let recur ((i 0))
 				  (if (unsafe.fx= i field-count)
 				      '()
-				    (let ((a (read)))
-				      (cons a (f (unsafe.fxadd1 i)))))))
+				    (let ((a (%read-without-mark)))
+				      (cons a (recur (unsafe.fxadd1 i)))))))
 		(rtd		(make-struct-type rtd-name fields rtd-symbol)))
-	   (when m (put-mark m rtd))
+	   (when m (%put-mark m rtd))
 	   rtd))
-	((#\{)
+	((#\{)	;Structure instance.
 	 (let* ((field-count	(read-integer-word port))
-		(rtd		(read))
+		(rtd		(%read-without-mark))
 		(struct		(make-struct rtd field-count)))
-	   (when m (put-mark m struct))
+	   (when m (%put-mark m struct))
 	   (let next-field ((i 0))
 	     (unless (unsafe.fx= i field-count)
-	       ($struct-set! struct i (read))
+	       ($struct-set! struct i (%read-without-mark))
 	       (next-field (unsafe.fxadd1 i))))
 	   struct))
 	((#\C)	;Unicode char
@@ -202,29 +211,31 @@
 	((#\<)	;reference to a previously read mark
 	 (let ((m (read-u32 port)))
 	   (if (unsafe.fx< m MARKS.len)
-	       (or (vector-ref MARKS m)
+	       (or (unsafe.vector-ref MARKS m)
 		   (error who "uninitialized mark" m))
 	     (assertion-violation who "invalid mark" m))))
 	((#\l)	;list of length <= 255
-	 (read-list (read-u8 port) m))
+	 (%read-list (read-u8 port) m))
 	((#\L)	;list of length > 255
-	 (read-list (read-integer-word port) m))
+	 (%read-list (read-integer-word port) m))
 	((#\W)	;R6RS record type descriptor
-	 (let* ((name		(read))
-		(parent		(read))
-		(uid		(read))
-		(sealed?	(read))
-		(opaque?	(read))
-		(field-count	(read))
+	 (let* ((name		(%read-without-mark))
+		(parent		(%read-without-mark))
+		(uid		(%read-without-mark))
+		(sealed?	(%read-without-mark))
+		(opaque?	(%read-without-mark))
+		(field-count	(%read-without-mark))
 		(fields		(make-vector field-count)))
 	   (let next-field ((i 0))
 	     (if (unsafe.fx= i field-count)
-		 (let ((rtd (make-record-type-descriptor name parent uid sealed? opaque? fields)))
-		   (when m (put-mark m rtd))
+		 (let ((rtd (make-record-type-descriptor name parent uid
+							 sealed? opaque? fields)))
+		   (when m (%put-mark m rtd))
 		   rtd)
-	       (let* ((field-mutable? (read))
-		      (field-name     (read)))
-		 (vector-set! fields i (list (if field-mutable? 'mutable 'immutable) field-name))
+	       (let* ((field-mutable? (%read-without-mark))
+		      (field-name     (%read-without-mark)))
+		 (unsafe.vector-set! fields i
+				     (list (if field-mutable? 'mutable 'immutable) field-name))
 		 (next-field (unsafe.fxadd1 i)))))))
 	((#\b)	;bignum
 	 (let* ((i	(read-integer-word port))
@@ -232,7 +243,7 @@
 		(bv	(get-bytevector-n port len))
 		(bignum	(bytevector-uint-ref bv 0 'little len))
 		(bignum	(if (unsafe.fx< i 0) (- bignum) bignum)))
-	   (when m (put-mark m bignum))
+	   (when m (%put-mark m bignum))
 	   bignum))
 	((#\f)	;flonum
 	 (let ((fl (unsafe.make-flonum)))
@@ -244,38 +255,40 @@
 	   (unsafe.flonum-set! fl 2 (get-u8 port))
 	   (unsafe.flonum-set! fl 1 (get-u8 port))
 	   (unsafe.flonum-set! fl 0 (get-u8 port))
-	   (when m (put-mark m fl))
+	   (when m (%put-mark m fl))
 	   fl))
 	((#\r)	;ratnum
-	 (let* ((den (read))
-		(num (read))
+	 (let* ((den (%read-without-mark))
+		(num (%read-without-mark))
 		(x   (/ num den)))
-	   (when m (put-mark m x))
+	   (when m (%put-mark m x))
 	   x))
 	((#\i) ;;; compnum
-	 (let* ((real (read))
-		(imag (read)))
+	 (let* ((real (%read-without-mark))
+		(imag (%read-without-mark)))
 	   (let ((x (make-rectangular real imag)))
-	     (when m (put-mark m x))
+	     (when m (%put-mark m x))
 	     x)))
 	((#\h #\H)	;;; EQ? or EQV? hashtable
 	 (let ((x (if (unsafe.char= ch #\h)
 		      (make-eq-hashtable)
 		    (make-eqv-hashtable))))
-	   (when m (put-mark m x))
-	   (let* ((keys (read)) (vals (read)))
+	   (when m (%put-mark m x))
+	   (let* ((keys (%read-without-mark))
+		  (vals (%read-without-mark)))
 	     (vector-for-each
-                 (lambda (k v) (hashtable-set! x k v))
+                 (lambda (k v)
+		   (hashtable-set! x k v))
 	       keys vals))
 	   x))
 	((#\O)	;autoload foreign library
-	 (autoload-filename-foreign-library (read))
+	 (autoload-filename-foreign-library (%read-without-mark))
 	 ;;recurse to satisfy the request to return an object
 	 (read/mark m))
 	(else
 	 (assertion-violation who "unexpected char as fasl object header" ch port)))))
 
-  (define (read-code code-mark closure-mark)
+  (define (%read-code code-mark closure-mark)
     ;;Read and  return a  code object.  Unless  CODE-MARK is  false: the
     ;;code  object is  marked  with CODE-MARK.   Unless CLOSURE-MARK  is
     ;;false:  a  closure  is  built  with the  object  and  marked  with
@@ -292,8 +305,8 @@
     (let* ((code-size (read-integer-word    port))
 	   (freevars  (read-fixnum port))
 	   (code      (make-code code-size freevars)))
-      (when code-mark (put-mark code-mark code))
-      (let ((annotation (read)))
+      (when code-mark (%put-mark code-mark code))
+      (let ((annotation (%read-without-mark)))
 	(set-code-annotation! code annotation))
       ;;Read the actual code one byte at a time.
       (let loop ((i 0))
@@ -304,15 +317,15 @@
 	  ;;First  build the  closure and  mark it,  then read  the code
 	  ;;relocation vector.
 	  (let ((closure ($code->closure code)))
-	    (put-mark closure-mark closure)
+	    (%put-mark closure-mark closure)
 	    ;;Setting the code reloc vector also process it.
-	    (set-code-reloc-vector! code (read))
+	    (set-code-reloc-vector! code (%read-without-mark))
 	    code)
        (begin
-	 (set-code-reloc-vector! code (read))
+	 (set-code-reloc-vector! code (%read-without-mark))
 	 code))))
 
-  (define (read-procedure mark)
+  (define (%read-procedure mark)
     ;;Read a procedure.
     ;;
     ;;FIXME Understand and document the expected format.
@@ -320,45 +333,45 @@
     (let ((ch (read-u8-as-char port)))
       (case ch
 	((#\x)
-	 (let ((code (read-code #f mark)))
+	 (let ((code (%read-code #f mark)))
 	   (if mark
-	       (vector-ref MARKS mark)
+	       (unsafe.vector-ref MARKS mark)
 	     ($code->closure code))))
 	((#\<)
 	 (let ((closure-mark (read-u32 port)))
 	   (unless (unsafe.fx< closure-mark MARKS.len)
 	     (assertion-violation who "invalid mark" mark))
-	   (let* ((code (vector-ref MARKS closure-mark))
+	   (let* ((code (unsafe.vector-ref MARKS closure-mark))
 		  (proc ($code->closure code)))
-	     (when mark (put-mark mark proc))
+	     (when mark (%put-mark mark proc))
 	     proc)))
 	((#\>)
 	 (let ((closure-mark (read-u32 port))
 	       (ch           (read-u8-as-char port)))
 	   (unless (unsafe.char= ch #\x)
 	     (assertion-violation who "expected char \"x\"" ch))
-	   (let ((code (read-code closure-mark mark)))
+	   (let ((code (%read-code closure-mark mark)))
 	     (if mark
-		 (vector-ref MARKS mark)
+		 (unsafe.vector-ref MARKS mark)
 	       ($code->closure code)))))
 	(else
 	 (assertion-violation who "invalid code header" ch)))))
 
-  (define (read-list len mark)
+  (define (%read-list len mark)
     ;;Read and  return a  list of LEN  elements.  Unless MARK  is false:
     ;;mark the list with MARK.
     ;;
     (let ((ls (make-list (+ 1 len))))
-      (when mark (put-mark mark ls))
+      (when mark (%put-mark mark ls))
       (let loop ((ls ls))
-	(set-car! ls (read))
+	(set-car! ls (%read-without-mark))
 	(let ((d (cdr ls)))
 	  (if (null? d)
-	      (set-cdr! ls (read))
+	      (set-cdr! ls (%read-without-mark))
 	    (loop d))))
       ls))
 
-  (read))
+  (%read-without-mark))
 
 
 ;;;; utilities

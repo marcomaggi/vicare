@@ -23225,11 +23225,12 @@ zero, so that such bits can be used to hold an object's type tag.
 
 @noindent
 for these reasons we must always filter the requested size (in bytes)
-through the @cfunc{IK_ALIGN} macro.  The @pcb{} always references a
-``pointer to the next free block'' with alignment constraints satisfied;
-if we filter the requested number of bytes through @cfunc{IK_ALIGN}, we
-obtain a number of bytes which, added to the pointer, gives a correctly
-aligned pointer:
+through the @cfunc{IK_ALIGN} macro.
+
+The @pcb{} always references a ``pointer to the next free block'' with
+alignment constraints satisfied; if we filter the requested number of
+bytes through @cfunc{IK_ALIGN}, we obtain a number of bytes which, added
+to the pointer, gives a correctly aligned pointer:
 
 @example
 uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
@@ -23265,7 +23266,11 @@ Convert @var{number_of_bytes} to the number of bytes requested to
 satisfy pointer alignment constraints.  The aligned size is always an
 exact multiple of the underlying platform's word size (32-bit or
 64-bit); precisely: it is the smallest multiple of the wordsize which is
-greater than @var{number_of_bytes}.
+greater than @var{number_of_bytes} and makes the pointer have the
+@math{3} least significant bits set to zero.
+
+This means that it is impossible to allocate less than @math{2} machine
+words.
 @ignore
 We can simulate the computation with:
 
@@ -23286,22 +23291,41 @@ We can simulate the computation with:
             align_shift)
         align_shift)))
 
-(define (print-align n)
-  (let ((m (align n))
-        (base-pointer (expt 2 (- (* 8 (sizeof-ikptr)) 1))))
-    (display n)
-    (display " -> ")
-    (display m)
-    (display "\t")
-    (display (number->string base-pointer 2))
-    (display " -> ")
-    (display (number->string (+ base-pointer m) 2))
-    (newline)))
+(define (print-align number-of-bytes)
+  (let ((m              (align number-of-bytes))
+        (base-pointer   (expt 2 (- (* 8 (sizeof-ikptr)) 1))))
+    (printf "Number of bytes: ~a\n" number-of-bytes)
+    (printf "\tAligned number of bytes: ~a\n" m)
+    (printf "\tAllocated number of words: ~a\n" (div m (sizeof-ikptr)))
+    (if (= 4 (sizeof-ikptr))
+        (begin
+          (printf "\t                    3         2         1         0\n")
+          (printf "\t                   10987654321098765432109876543210\n"))
+      (begin
+        (printf "\t                      6         5         4         3         2         1         0\n")
+        (printf "\t                   3210987654321098765432109876543210987654321098765432109876543210\n")))
+    (printf "\tWith base pointer: ~a\n"
+            (number->string base-pointer       2))
+    (printf "\tnext pointer is:   ~a\n"
+            (number->string (+ base-pointer m) 2))))
 
+(display "32-bit platforms:\n")
 (parameterize ((sizeof-ikptr 4)) ; 32 bits platform
+  (print-align 2)
+  (print-align 4)
   (print-align 12)
   (print-align 17)
   (print-align 1234))
+
+(display "64-bit platforms:\n")
+(parameterize ((sizeof-ikptr 8)) ;64 bits platform
+  (print-align 2)
+  (print-align 4)
+  (print-align 12)
+  (print-align 17)
+  (print-align 1234))
+
+(flush-output-port (current-output-port))
 @end example
 @end ignore
 @end deftypefn
@@ -26682,7 +26706,8 @@ object is as follows:
 @noindent
 the memory block of a closure object is a single word wide; the word
 holds a raw memory pointer referencing the first byte in the code object
-implementing the closure.
+implementing the closure.  We have to remember that we allocate memory
+in aligned blocks, which are at least @math{2} machine words wide.
 
 @c ------------------------------------------------------------
 
