@@ -491,26 +491,23 @@
 
 ;;; --------------------------------------------------------------------
 
-	((code? x)
-	 ;;Code object.  Write:
-	 ;;
-	 ;;- the character "x";
-	 ;;- a  machine word representing  the number of  bytes actually
-	 ;;  used in the data area of the code object;
-	 ;;- a machine word representing the number of free variables in
-	 ;;  the code;
-	 ;;- a Scheme object representing the code annotation;
-	 ;;- an array of bytes being the binary code;
-	 ;;- the relocation vector as Scheme vector.
-	 ;;
+	((code? x)	;code object
+	 ;;Write the character "x" as header.
 	 (put-tag #\x port)
+	 ;;Write  an  exact integer  representing  the  number of  bytes
+	 ;;actually used in the data area of the code object;
 	 (write-int ($code-size x) port)
+	 ;;Write  an  exact  integer  representing the  number  of  free
+	 ;;variables in the code.
 	 (write-int (bitwise-arithmetic-shift-left ($code-freevars x) fxshift) port)
+	 ;;Write a Scheme object representing the code annotation.
 	 (let ((next-mark (%write-object ($code-annotation x) next-mark)))
+	   ;;Write an array of bytes being the binary code.
 	   (let next-byte ((i 0) (x.len (code-size x)))
 	     (unless (unsafe.fx= i x.len)
 	       (write-byte (code-ref x i) port)
 	       (next-byte (unsafe.fxadd1 i) x.len)))
+	   ;;Write the relocation vector as Scheme vector.
 	   (%write-object ($code-reloc-vector x) next-mark)))
 
 ;;; --------------------------------------------------------------------

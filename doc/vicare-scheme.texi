@@ -27547,21 +27547,61 @@ A list of @math{N > 255} elements followed by the elements.
 @func{eqv?} hashtable, first vector keys, second vector values.
 
 @item "W" + name + parent + uid + sealed? + opaque? + count + (bool + field) ...
-An @rnrs{6} record type descriptor.  @code{name} must be the return
-value of @func{record-type-name}.  @code{parent} must be the return
-value of @func{record-type-parent}.  @code{uid} must be the return value
-of @func{record-type-uid}.  @code{sealed?} must be the return value of
-@func{record-type-sealed?}.  @code{opaque?} must be the return value of
-@func{record-type-opaque?}.  @code{count} must be a fixnum representing
-the number of fields.  Each @code{bool + field} sequence must be a
-boolean representing the mutability of the record field, followed by
-symbol representing the name of the record field.
+An @rnrs{6} record type descriptor.
 
-@item "x"
-Denotes code.
+@table @code
+@item name
+Must be the return value of @func{record-type-name}.
 
-@item "Q"
-Procedure; followed by code.
+@item parent
+Must be the return value of @func{record-type-parent}.
+
+@item uid
+Must be the return value of @func{record-type-uid}.
+
+@item sealed?
+Must be the return value of @func{record-type-sealed?}.
+
+@item opaque?
+Must be the return value of @func{record-type-opaque?}.
+
+@item count
+Must be a fixnum representing the number of fields.
+@end table
+
+Each @code{bool + field} sequence must be a boolean representing the
+mutability of the record field, followed by symbol representing the name
+of the record field.
+
+@item "x" + int + int + annotation + bytes + relocation vector
+Denotes code.  A serialised code object is represented as follows, after
+the @samp{x} header:
+
+@enumerate
+@item
+An exact integer representing the number of bytes actually used in the
+data area of the code object.  On 32-bit platforms: a big endian 32-bit
+integer.  On 64-bit platforms: a sequence of two big endian 32-bit
+integers.
+
+@item
+An exact integer representing the number of free variables in the code.
+On 32-bit platforms: a big endian 32-bit integer.  On 64-bit platforms:
+a sequence of two big endian 32-bit integers.
+
+@item
+A Scheme object representing the code annotation.
+
+@item
+An array of bytes being the binary code.
+
+@item
+The code relocation vector as an ordinary Scheme vector.
+@end enumerate
+
+@item "Q" + "x" + code object
+Procedure.  A procedure is represented by the header @code{Q} followed
+by the serialisation of a code object, header @code{x} included.
 
 @item ">" + int32(I)
 Mark the next object with index @math{I}.
