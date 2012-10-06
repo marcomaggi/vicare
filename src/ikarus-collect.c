@@ -1168,9 +1168,9 @@ add_object_proc (gc_t* gc, ikptr X)
 #endif
     return Y;
   }
-  else if (tag == vector_tag) {
-    /* Move  a  vector.   Notice  that   we  do  *not*  move  its  items
-       recursively.  */
+  else if (vector_tag == tag) {
+    /* Move an object whose reference  is tagged as vector; such objects
+       are "vector like" in that they are arrays of words. */
     if (IK_IS_FIXNUM(first_word)) { /* real vector */
       /* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
 	 number of  bytes to allocate for  the data area  of the vector;

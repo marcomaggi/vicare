@@ -15313,6 +15313,10 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 @section Low level symbol operations
 
 
+@cindex @library{ikarus system $symbols}, library
+@cindex Library @library{ikarus system $symbols}
+
+
 The arguments @var{sym} must be references to symbol blocks, the
 arguments @var{str} must be references to strings.  The following
 bindings are exported by the @library{ikarus system $symbols} library.
@@ -15394,6 +15398,10 @@ vicare>
 @c page
 @node syslib fixnums
 @section Low level fixnum operations
+
+
+@cindex @library{ikarus system $fx}, library
+@cindex Library @library{ikarus system $fx}
 
 
 The following bindings are exported by the @library{ikarus system $fx}
@@ -15506,6 +15514,10 @@ Evaluate to a fixnum which can be used as hash value.
 @section Low level bignum operations
 
 
+@cindex @library{ikarus system $bignums}, library
+@cindex Library @library{ikarus system $bignums}
+
+
 The arguments @var{bn} to these operations must be bignums.  The
 following bindings are exported by the @library{ikarus system $bignums}
 library.  @ref{iklib numerics} for more functions acting on bignums.
@@ -15530,6 +15542,10 @@ portion of a bignum memory block.
 @c page
 @node syslib flonums
 @section Low level flonum operations
+
+
+@cindex @library{ikarus system $flonums}, library
+@cindex Library @library{ikarus system $flonums}
 
 
 The arguments @var{fl} to these operations must be flonums, the
@@ -15588,6 +15604,10 @@ format of @ieee{} double precision flonums.
 @section Low level ratnum operations
 
 
+@cindex @library{ikarus system $ratnums}, library
+@cindex Library @library{ikarus system $ratnums}
+
+
 The arguments @var{rat} to these operations must be ratnums, the
 arguments @var{num} must be references to either fixnums or bignums.
 The following bindings are exported by the @library{ikarus system
@@ -15614,6 +15634,10 @@ Return the reference to the denominator.
 @c page
 @node syslib compnums
 @section Low level compnum operations
+
+
+@cindex @library{ikarus system $compnums}, library
+@cindex Library @library{ikarus system $compnums}
 
 
 The arguments @var{cmp} to these operations must be compnums, the
@@ -15644,6 +15668,10 @@ Return the reference to the imaginary part.
 @section Low level cflonum operations
 
 
+@cindex @library{ikarus system $compnums}, library
+@cindex Library @library{ikarus system $compnums}
+
+
 The arguments @var{cmp} to these operations must be cflonums, the
 arguments @var{fl} must be references to flonums.  The following
 bindings are exported by the @library{ikarus system $compnums} library.
@@ -15669,6 +15697,10 @@ Return the reference to the imaginary part.
 @c page
 @node syslib chars
 @section Low level character operations
+
+
+@cindex @library{ikarus system $chars}, library
+@cindex Library @library{ikarus system $chars}
 
 
 The arguments @var{ch} to these operations must be characters, the
@@ -15717,6 +15749,10 @@ Return a fixnum representing the code point of the operand.
 @section Low level pair operations
 
 
+@cindex @library{ikarus system $pairs}, library
+@cindex Library @library{ikarus system $pairs}
+
+
 The arguments @var{P} to these operations must be pairs.  The following
 bindings are exported by the @library{ikarus system $pairs} library.
 @ref{objects pairs} for details of pair representation.
@@ -15744,6 +15780,10 @@ Store @var{value} in the cdr location of @var{P}.
 @c page
 @node syslib structs
 @section Low level structure operations
+
+
+@cindex @library{ikarus system $structs}, library
+@cindex Library @library{ikarus system $structs}
 
 
 The arguments @var{stru} to these operations must be references to data
@@ -15808,6 +15848,10 @@ such values.  Return a reference to the structure.
 @section Low level vector operations
 
 
+@cindex @library{ikarus system $vectors}, library
+@cindex Library @library{ikarus system $vectors}
+
+
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the @library{ikarus system $vectors} library.
@@ -15844,6 +15888,10 @@ Store @var{value} at index @var{fx} in @var{vec}.
 @c page
 @node syslib bytevectors
 @section Low level bytevector operations
+
+
+@cindex @library{ikarus system $bytevectors}, library
+@cindex Library @library{ikarus system $bytevectors}
 
 
 The arguments @var{bv} to these operations must be references to
@@ -15931,6 +15979,10 @@ Store @var{fl} at index @var{fx} of @var{bv}.
 @section Low level string operations
 
 
+@cindex @library{ikarus system $strings}, library
+@cindex Library @library{ikarus system $strings}
+
+
 The arguments @var{str} to these operations must be references to
 strings, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{ch} must be characters.  The following
@@ -15960,6 +16012,10 @@ Store @var{ch} at index @var{fx} of @var{str}.
 @c page
 @node syslib ports
 @section Low level port structures
+
+
+@cindex @library{ikarus system $io}, library
+@cindex Library @library{ikarus system $io}
 
 
 The following bindings are exported by the @library{ikarus system $io}
@@ -16023,6 +16079,10 @@ Mutator for the port attributes.
 @section Low level transcoder operations
 
 
+@cindex @library{ikarus system $transcoders}, library
+@cindex Library @library{ikarus system $transcoders}
+
+
 The arguments @var{tran} to these operations must be transcoders, the
 arguments @var{fx} must be fixnums in the appropriate range.  The
 following bindings are exported by the @library{ikarus system
@@ -16044,6 +16104,10 @@ Extract the payload bits from a transcoder and return them as fixnum.
 @section Low level pointer operations
 
 
+@cindex @library{ikarus system $pointers}, library
+@cindex Library @library{ikarus system $pointers}
+
+
 In the following definitions the @var{ptr} arguments must be pointer
 objects.  The following bindings are exported by the @library{ikarus
 system $pointers} library.
@@ -16063,6 +16127,10 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @c page
 @node syslib codes
 @section Low level code objects operations
+
+
+@cindex @library{ikarus system $codes}, library
+@cindex Library @library{ikarus system $codes}
 
 
 In the following definitions the @var{code} arguments must be code
@@ -16123,6 +16191,10 @@ Store @var{obj} in the annotation field of @var{code}.
 @c page
 @node syslib closures
 @section Low level closures operations
+
+
+@cindex @library{ikarus system $codes}, library
+@cindex Library @library{ikarus system $codes}
 
 
 In the following definitions the @var{closure} arguments must be closure
@@ -26604,7 +26676,7 @@ object is as follows:
       heap pointer         closure tag
 
 |--------------------------------------| closure data
-              code pointer
+   raw memory pointer to binary code
 @end example
 
 @noindent
