@@ -91,8 +91,8 @@
 	      (begin
 		(set! MARKS v)
 		(unsafe.vector-set! MARKS m obj))
-	    (begin
-	      (unsafe.vector-set! v i (vector-ref MARKS i))
+	    (let ((m (unsafe.vector-ref MARKS i)))
+	      (unsafe.vector-set! v i m)
 	      (loop (unsafe.fxadd1 i))))))))
 
   (define (%read-without-mark)
