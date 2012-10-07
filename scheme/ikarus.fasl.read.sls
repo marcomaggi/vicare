@@ -335,13 +335,13 @@
 	((#\x)
 	 (let ((code (%read-code #f mark)))
 	   (if mark
-	       (vector-ref MARKS mark)
+	       (unsafe.vector-ref MARKS mark)
 	     ($code->closure code))))
 	((#\<)
 	 (let ((closure-mark (read-u32 port)))
 	   (unless (unsafe.fx< closure-mark MARKS.len)
 	     (assertion-violation who "invalid mark" mark))
-	   (let* ((code (vector-ref MARKS closure-mark))
+	   (let* ((code (unsafe.vector-ref MARKS closure-mark))
 		  (proc ($code->closure code)))
 	     (when mark (%put-mark mark proc))
 	     proc)))
@@ -352,7 +352,7 @@
 	     (assertion-violation who "expected char \"x\"" ch))
 	   (let ((code (%read-code closure-mark mark)))
 	     (if mark
-		 (vector-ref MARKS mark)
+		 (unsafe.vector-ref MARKS mark)
 	       ($code->closure code)))))
 	(else
 	 (assertion-violation who "invalid code header" ch)))))
