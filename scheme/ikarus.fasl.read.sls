@@ -96,7 +96,14 @@
 	      (loop (unsafe.fxadd1 i))))))))
 
   (define (%read-without-mark)
-    ;;Read and return the next object; it will have not mark.
+    ;;Read and return the next object; it will have no mark.
+    ;;
+    ;;This procedure is used both to start reading an object and to read
+    ;;subobjects:  objects that  are  components of  other objects;  for
+    ;;example the car and cdr or a pair are subobjects.
+    ;;
+    ;;Such subobjects can  be marked, but not with the  same mark of the
+    ;;superobject.
     ;;
     (%read/mark #f))
 
@@ -176,15 +183,15 @@
 	 (let* ((rtd-name	(%read-without-mark))
 		(rtd-symbol	(%read-without-mark))
 		(field-count	(read-integer-word port))
-		(fields		(let f ((i 0))
+		(fields		(let recur ((i 0))
 				  (if (unsafe.fx= i field-count)
 				      '()
 				    (let ((a (%read-without-mark)))
-				      (cons a (f (unsafe.fxadd1 i)))))))
+				      (cons a (recur (unsafe.fxadd1 i)))))))
 		(rtd		(make-struct-type rtd-name fields rtd-symbol)))
 	   (when m (%put-mark m rtd))
 	   rtd))
-	((#\{)
+	((#\{)	;struct instance
 	 (let* ((field-count	(read-integer-word port))
 		(rtd		(%read-without-mark))
 		(struct		(make-struct rtd field-count)))
@@ -221,12 +228,14 @@
 		(fields		(make-vector field-count)))
 	   (let next-field ((i 0))
 	     (if (unsafe.fx= i field-count)
-		 (let ((rtd (make-record-type-descriptor name parent uid sealed? opaque? fields)))
+		 (let ((rtd (make-record-type-descriptor name parent uid
+							 sealed? opaque? fields)))
 		   (when m (%put-mark m rtd))
 		   rtd)
 	       (let* ((field-mutable? (%read-without-mark))
 		      (field-name     (%read-without-mark)))
-		 (vector-set! fields i (list (if field-mutable? 'mutable 'immutable) field-name))
+		 (vector-set! fields i (list (if field-mutable? 'mutable 'immutable)
+					     field-name))
 		 (next-field (unsafe.fxadd1 i)))))))
 	((#\b)	;bignum
 	 (let* ((i	(read-integer-word port))
@@ -265,9 +274,11 @@
 		      (make-eq-hashtable)
 		    (make-eqv-hashtable))))
 	   (when m (%put-mark m x))
-	   (let* ((keys (%read-without-mark)) (vals (%read-without-mark)))
+	   (let* ((keys (%read-without-mark))
+		  (vals (%read-without-mark)))
 	     (vector-for-each
-                 (lambda (k v) (hashtable-set! x k v))
+                 (lambda (k v)
+		   (hashtable-set! x k v))
 	       keys vals))
 	   x))
 	((#\O)	;autoload foreign library
@@ -291,8 +302,8 @@
     ;; byte ...	: the actual code
     ;; vector	: code relocation vector
     ;;
-    (let* ((code-size (read-integer-word    port))
-	   (freevars  (read-fixnum port))
+    (let* ((code-size (read-integer-word port))
+	   (freevars  (read-fixnum       port))
 	   (code      (make-code code-size freevars)))
       (when code-mark (%put-mark code-mark code))
       (let ((annotation (%read-without-mark)))
@@ -347,8 +358,8 @@
 	 (assertion-violation who "invalid code header" ch)))))
 
   (define (%read-list len mark)
-    ;;Read and  return a  list of LEN  elements.  Unless MARK  is false:
-    ;;mark the list with MARK.
+    ;;Read and  return a list  of LEN  elements.  Unless MARK  is false:
+    ;;mark the first pair of the list with MARK.
     ;;
     (let ((ls (make-list (+ 1 len))))
       (when mark (%put-mark mark ls))
