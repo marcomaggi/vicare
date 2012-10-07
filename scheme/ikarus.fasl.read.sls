@@ -73,7 +73,7 @@
     (make-vector 1 #f))
 
   (define-syntax MARKS.len
-    (identifier-syntax (vector-length MARKS)))
+    (identifier-syntax (unsafe.vector-length MARKS)))
 
   (define (%put-mark m obj)
     ;;Mark object OBJ  with the fixnum M; that is: store  OBJ at index M
