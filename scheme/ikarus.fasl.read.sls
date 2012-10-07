@@ -211,7 +211,7 @@
 	((#\<)	;reference to a previously read mark
 	 (let ((m (read-u32 port)))
 	   (if (unsafe.fx< m MARKS.len)
-	       (or (vector-ref MARKS m)
+	       (or (unsafe.vector-ref MARKS m)
 		   (error who "uninitialized mark" m))
 	     (assertion-violation who "invalid mark" m))))
 	((#\l)	;list of length <= 255
