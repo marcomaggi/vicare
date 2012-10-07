@@ -81,9 +81,17 @@
     ;;It is an error if the same mark is defined twice.
     ;;
     (if (unsafe.fx< m MARKS.len)
-	(if (vector-ref MARKS m)
-	    (assertion-violation who "mark set twice" m port)
-	  (unsafe.vector-set! MARKS m obj))
+	;;FIXME For  reasons still  to be understood,  if we  remove the
+	;;variable GOOD and  just put the expression in as  IF test: the
+	;;result is  wrong.  This  happens only when  we use  the unsafe
+	;;$VECTOR-REF   operation,  when   using  the   safe  VECTOR-REF
+	;;everything  works.   It  may  be that  the  implementation  of
+	;;$VECTOR-REF is partly wrong, or the compilers makes some error
+	;;in generating the code.  (Marco Maggi; Oct 7, 2012)
+	(let ((good (unsafe.vector-ref MARKS m)))
+	  (if good
+	      (assertion-violation who "mark set twice" m port)
+	    (unsafe.vector-set! MARKS m obj)))
       (let* ((n MARKS.len)
 	     (v (make-vector ($fxmax (unsafe.fx* n 2) (unsafe.fxadd1 m)) #f)))
 	(let loop ((i 0))
