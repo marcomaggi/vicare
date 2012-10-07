@@ -628,6 +628,8 @@
 	   (cogen-value-$vector-ref x i))
 	  (else #f))
 	(prm 'mref (T x)
+	     ;;FIXME Is  this correct?  Why  I is not multiplied  by the
+	     ;;WORDSIZE?  (Marco Maggi; Oct 7, 2012)
 	     (prm 'int+ (T i) (K (- disp-vector-data vector-tag))))))
    ((E x i)	;if it appears in "for side-effect" position
     (nop)))
@@ -691,6 +693,8 @@
        (cogen-effect-$vector-set! x i v))
       (else
        (mem-assign v
+		   ;;FIXME Is this correct?  Why  I is not multiplied by
+		   ;;the WORDSIZE?  (Marco Maggi; Oct 7, 2012)
 		   (prm 'int+ (T x) (T i))
 		   (- disp-vector-data vector-tag))))))
 
