@@ -83,16 +83,16 @@
     (if (unsafe.fx< m MARKS.len)
 	(if (vector-ref MARKS m)
 	    (assertion-violation who "mark set twice" m port)
-	  (vector-set! MARKS m obj))
+	  (unsafe.vector-set! MARKS m obj))
       (let* ((n MARKS.len)
 	     (v (make-vector ($fxmax (unsafe.fx* n 2) (unsafe.fxadd1 m)) #f)))
 	(let loop ((i 0))
 	  (if (unsafe.fx= i n)
 	      (begin
 		(set! MARKS v)
-		(vector-set! MARKS m obj))
+		(unsafe.vector-set! MARKS m obj))
 	    (begin
-	      (vector-set! v i (vector-ref MARKS i))
+	      (unsafe.vector-set! v i (vector-ref MARKS i))
 	      (loop (unsafe.fxadd1 i))))))))
 
   (define (%read-without-mark)
@@ -163,7 +163,7 @@
 	   (when m (%put-mark m vec))
 	   (let next-object ((i 0))
 	     (unless (unsafe.fx= i len)
-	       (vector-set! vec i (%read-without-mark))
+	       (unsafe.vector-set! vec i (%read-without-mark))
 	       (next-object (unsafe.fxadd1 i))))
 	   vec))
 	((#\v)	;bytevector
@@ -234,8 +234,8 @@
 		   rtd)
 	       (let* ((field-mutable? (%read-without-mark))
 		      (field-name     (%read-without-mark)))
-		 (vector-set! fields i (list (if field-mutable? 'mutable 'immutable)
-					     field-name))
+		 (unsafe.vector-set! fields i (list (if field-mutable? 'mutable 'immutable)
+						    field-name))
 		 (next-field (unsafe.fxadd1 i)))))))
 	((#\b)	;bignum
 	 (let* ((i	(read-integer-word port))
@@ -269,7 +269,7 @@
 	   (let ((x (make-rectangular real imag)))
 	     (when m (%put-mark m x))
 	     x)))
-	((#\h #\H)	;;; EQ? or EQV? hashtable
+	((#\h #\H) ;;; EQ? or EQV? hashtable
 	 (let ((x (if (unsafe.char= ch #\h)
 		      (make-eq-hashtable)
 		    (make-eqv-hashtable))))
@@ -321,9 +321,9 @@
 	    ;;Setting the code reloc vector also process it.
 	    (set-code-reloc-vector! code (%read-without-mark))
 	    code)
-       (begin
-	 (set-code-reloc-vector! code (%read-without-mark))
-	 code))))
+	(begin
+	  (set-code-reloc-vector! code (%read-without-mark))
+	  code))))
 
   (define (%read-procedure mark)
     ;;Read a procedure.
