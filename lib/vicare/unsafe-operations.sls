@@ -60,6 +60,20 @@
 	    ($struct-ref	struct-ref)
 	    ($struct-set!	struct-set!))
 
+    (rename ($caar		caar)
+	    ($cadr		cadr)
+	    ($cdar		cdar)
+	    ($cddr		cddr)
+
+	    ($caaar		caaar)
+	    ($caadr		caadr)
+	    ($cadar		cadar)
+	    ($cdaar		cdaar)
+	    ($cdadr		cdadr)
+	    ($cddar		cddar)
+	    ($cdddr		cdddr)
+	    ($caddr		caddr))
+
     (rename ($fxzero?	fxzero?)
 	    ($fxadd1	fxadd1)		;increment
 	    ($fxsub1	fxsub1)		;decrement
@@ -82,7 +96,12 @@
 
     (rename ($fxand	fxand)		;multiple arguments AND
 	    ($fxior	fxior)		;multiple arguments inclusive OR
-	    ($fxxor	fxxor))		;multiple arguments exclusive OR
+	    ($fxxor	fxxor)		;multiple arguments exclusive OR
+	    ($fxmax	fxmax)		;multiple arguments max
+	    ($fxadd2	fxadd2)
+	    ($fxadd3	fxadd3)
+	    ($fxadd4	fxadd4)
+	    ($fxincr!	fxincr!))
 
 ;;; --------------------------------------------------------------------
 
@@ -314,12 +333,74 @@
      ($struct-ref ?stru 1))))
 
 
+;;;; pairs
+
+(define-inline ($caar x)	($car ($car x)))
+(define-inline ($cadr x)	($car ($cdr x)))
+(define-inline ($cdar x)	($cdr ($car x)))
+(define-inline ($cddr x)	($cdr ($cdr x)))
+
+(define-inline ($caaar x)	($car ($car ($car x))))
+(define-inline ($caadr x)	($car ($car ($cdr x))))
+(define-inline ($cadar x)	($car ($cdr ($car x))))
+(define-inline ($cdaar x)	($cdr ($car ($car x))))
+(define-inline ($cdadr x)	($cdr ($car ($cdr x))))
+(define-inline ($cddar x)	($cdr ($cdr ($car x))))
+(define-inline ($cdddr x)	($cdr ($cdr ($cdr x))))
+(define-inline ($caddr x)	($car ($cdr ($cdr x))))
+
+
 ;;;; fixnums
+
+;;; arithmetic operations
 
 (define-syntax $fxneg
   (syntax-rules ()
     ((_ ?op)
      ($fx- 0 ?op))))
+
+(define-syntax $fxadd2
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx+ ?op 2))))
+
+(define-syntax $fxadd3
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx+ ?op 3))))
+
+(define-syntax $fxadd4
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx+ ?op 4))))
+
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxadd3 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
+
+(define-syntax $fxmax
+  (syntax-rules ()
+    ((_ ?op)
+     ?op)
+    ((_ ?op1 ?op2)
+     (if ($fx> ?op1 ?op2) ?op1 ?op2))
+    ((_ ?op1 ?op2 . ?ops)
+     (let ((X ($fxmax ?op1 ?op2)))
+       ($fxmax X . ?ops)))
+    ))
+
+;;; --------------------------------------------------------------------
+;;; logic operations
 
 (define-syntax $fxand
   (syntax-rules ()

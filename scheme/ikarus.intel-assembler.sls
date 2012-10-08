@@ -22,11 +22,13 @@
   (import (ikarus)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (ikarus system $pairs)
-    (ikarus system $vectors)
-    (ikarus system $fx)
-    (ikarus system $codes)
+    ;; (ikarus system $pairs)
+    ;; (ikarus system $vectors)
+    ;; (ikarus system $fx)
+    ;; (ikarus system $codes)
     (vicare arguments validation)
+    (prefix (vicare unsafe-operations)
+	    $)
     (only (vicare syntactic-extensions)
 	  define-inline
 	  define-inline-constant))
@@ -37,31 +39,6 @@
 
 
 ;;;; helpers
-
-(define-inline ($cadr x)	($car ($cdr x)))
-(define-inline ($cdar x)	($cdr ($car x)))
-(define-inline ($caar x)	($car ($car x)))
-(define-inline ($cddr x)	($cdr ($cdr x)))
-
-(define-inline ($fxadd2 X)	($fx+ X 2))
-(define-inline ($fxadd3 X)	($fx+ X 3))
-(define-inline ($fxadd4 X)	($fx+ X 4))
-
-(define-syntax $fxincr!
-  (syntax-rules ()
-    ((_ ?X 0)
-     ?X)
-    ((_ ?X 1)
-     (set! ?X ($fxadd1 ?X)))
-    ((_ ?X 2)
-     (set! ?X ($fxadd2 ?X)))
-    ((_ ?X 3)
-     (set! ?X ($fxadd3 ?X)))
-    ((_ ?X ?N)
-     (set! ?X ($fx+ ?X ?N)))
-    ))
-
-;;; --------------------------------------------------------------------
 
 (define (fold func init ls)
   (if (null? ls)

@@ -64,9 +64,6 @@
 (define (%do-read port)
   ;;Actually read a fasl file from the input PORT.
   ;;
-  (define-inline ($fxmax x y)
-    (if ($fx> x y) x y))
-
   (define MARKS
     (make-vector 1 #f))
 
