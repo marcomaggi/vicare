@@ -4722,6 +4722,14 @@ output port.  The default is false.
 @end deffn
 
 
+@deffn Parameter printer-integer-radix
+The radix used to print exact integers (fixnums and bignums) with
+@func{write}, @func{display} and similar functions.  Initialised to
+@code{10}, it must hold a value usable as second argument to
+@func{string->number}.
+@end deffn
+
+
 @deffn Parameter print-gensym
 @deffnx Parameter print-gensym #t
 @deffnx Parameter print-gensym #f
@@ -4751,7 +4759,6 @@ printed using the @code{#:pretty} notation.
 @end example
 
 The initial value of @code{print-gensym} is @true{}.
-
 @end deffn
 
 

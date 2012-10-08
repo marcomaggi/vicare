@@ -42,7 +42,7 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d20
 -------------------------
 
-*
+* Added PRINTER-INTEGER-RADIX to (vicare).
 
 
 Notes for revision 0.2d19

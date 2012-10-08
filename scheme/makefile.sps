@@ -629,6 +629,7 @@
     (print-gensym				i v $language symbols)
     (print-graph				i v $language)
     (print-unicode				i v $language)
+    (printer-integer-radix			i v $language)
     (unicode-printable-char?			i v $language)
     (gensym-count				i v $language symbols)
     (gensym-prefix				i v $language symbols)

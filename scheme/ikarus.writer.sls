@@ -18,21 +18,21 @@
 (library (ikarus writer)
   (export
     write		display
-    format
+    put-datum		format
     printf		fprintf
     print-error
     print-unicode	print-graph
-    put-datum
+    printer-integer-radix
 
     ;;The following are not in "makefile.sps".
     traverse		traversal-helpers)
   (import (except (ikarus)
-		  write		display
-		  format
-		  printf	fprintf
+		  write			display
+		  put-datum		format
+		  printf		fprintf
 		  print-error
-		  print-unicode	print-graph
-		  put-datum)
+		  print-unicode		print-graph
+		  printer-integer-radix)
     (only (ikarus system $symbols)
 	  $unbound-object?)
     (only (ikarus.pretty-formats)
@@ -43,6 +43,16 @@
 
 (define print-unicode
   (make-parameter #f))
+
+(define printer-integer-radix
+  (make-parameter 10
+    (lambda (obj)
+      (case obj
+	((2 8 10 16)
+	 obj)
+	(else
+	 (assertion-violation 'printer-integer-radix
+	   "invalid radix to print integers, expected 2, 8, 10 or 16" obj))))))
 
 (module traversal-helpers
   (cyclic-set? shared-set? mark-set? set-mark! set-shared! shared?
@@ -174,20 +184,27 @@
 
 (define (wr x p m h i)
   (define (write-fixnum x p)
-    (define loop
-      (lambda (x p)
-        (unless (fxzero? x)
-          (loop (fxquotient x 10) p)
-          (write-char
-	   (integer->char
-	    (fx+ (fxremainder x 10)
-		 (char->integer #\0)))
-	   p))))
-    (cond
-     ((fxzero? x) (write-char #\0 p))
-     ((fx< x 0)
-      (write-char* (fixnum->string x) p))
-     (else (loop x p))))
+    (define (loop x p)
+      (unless (fxzero? x)
+	(loop (fxquotient x 10) p)
+	(write-char (integer->char (fx+ (fxremainder x 10)
+					(char->integer #\0)))
+		    p)))
+    (let ((radix (printer-integer-radix)))
+      (if (fx=? 10 radix)
+	  (cond ((fxzero? x)
+		 (write-char #\0 p))
+		((fx< x 0)
+		 (write-char* (fixnum->string x) p))
+		(else
+		 (loop x p)))
+	(begin
+	  (write-char #\# p)
+	  (case radix
+	    ((2)	(write-char #\b p))
+	    ((8)	(write-char #\o p))
+	    ((16)	(write-char #\x p)))
+	  (write-char* (number->string x radix) p)))))
   (define (write-pair x p m h i)
     (define (macro x h)
       (and
@@ -318,7 +335,7 @@
       (write-char x p)))
   (define (write-string x p m)
     (define (write-string-escape x p)
-      ;;; commonize with write-symbol-bar-escape
+;;; commonize with write-symbol-bar-escape
       (define (loop x i n p)
         (unless (fx= i n)
           (let* ((ch   (string-ref x i))
@@ -338,7 +355,7 @@
 	      (write-char ch p))
 	     ((fx< byte 127)
 	      (write-char ch p))
-	     ((or (fx= byte 127)	;this is the #\delete char
+	     ((or (fx= byte 127) ;this is the #\delete char
 		  (fx= byte #x85)
 		  (fx= byte #x2028))
 	      (write-inline-hex byte p))
@@ -539,44 +556,44 @@
 	     i)
 	    ;;We do not handle opaque records specially.
 	    #;((let ((rtd (struct-type-descriptor x)))
-	       (and (record-type-descriptor? rtd)
-		    (record-type-opaque? rtd)))
-	     (write-char* "#<unknown>" p)
-	     i)
-	    ((keyword? x)
-	     (write-char #\# p)
-	     (write-char #\: p)
-	     (wr (struct-ref x 0) p m h i))
-	    (else ;it is a Vicare's struct
-	     (write-char #\# p)
-	     (write-char #\[ p)
-	     (let ((i (wr (struct-name x) p m h i)))
-	       (let ((n (struct-length x)))
-		 (let f ((idx 0) (i i))
-		   (cond
-		    ((fx= idx n)
-		     (write-char #\] p)
-		     i)
-		    (else
-		     (write-char #\space p)
-		     (f (fxadd1 idx)
-			(wr (struct-ref x idx) p m h i))))))))))
-    (define (write-custom-struct out p m h i)
-      (let ((i
-             (let f ((cache (cdr out)))
-               (cond
-		((not cache) i)
-		(else
-		 (let ((i (f (cache-next cache))))
-		   (write-char* (cache-string cache) p)
-		   (wr (cache-object cache) p m h i)))))))
-        (write-char* (car out) p)
-        i))
-    (let ((b (hashtable-ref h x #f)))
-      (cond
-       ((pair? b)
-	(write-custom-struct (cdr b) p m h i))
-       (else (write-vanilla-struct x p m h i)))))
+	    (and (record-type-descriptor? rtd)
+	    (record-type-opaque? rtd)))
+      (write-char* "#<unknown>" p)
+      i)
+      ((keyword? x)
+       (write-char #\# p)
+       (write-char #\: p)
+       (wr (struct-ref x 0) p m h i))
+      (else	;it is a Vicare's struct
+       (write-char #\# p)
+       (write-char #\[ p)
+       (let ((i (wr (struct-name x) p m h i)))
+	 (let ((n (struct-length x)))
+	   (let f ((idx 0) (i i))
+	     (cond
+	      ((fx= idx n)
+	       (write-char #\] p)
+	       i)
+	      (else
+	       (write-char #\space p)
+	       (f (fxadd1 idx)
+		  (wr (struct-ref x idx) p m h i))))))))))
+  (define (write-custom-struct out p m h i)
+    (let ((i
+	   (let f ((cache (cdr out)))
+	     (cond
+	      ((not cache) i)
+	      (else
+	       (let ((i (f (cache-next cache))))
+		 (write-char* (cache-string cache) p)
+		 (wr (cache-object cache) p m h i)))))))
+      (write-char* (car out) p)
+      i))
+  (let ((b (hashtable-ref h x #f)))
+    (cond
+     ((pair? b)
+      (write-custom-struct (cdr b) p m h i))
+     (else (write-vanilla-struct x p m h i)))))
   (define (write-char* x p)
     (let f ((x x) (p p) (i 0) (n (string-length x)))
       (unless (fx=? i n)
@@ -650,7 +667,13 @@
       i)
      ((char? x) (write-character x p m) i)
      ((null? x) (write-char #\( p) (write-char #\) p) i)
-     ((number? x) (write-char* (number->string x) p) i)
+     ((number? x)
+      (write-char* (if (or (fixnum? x)
+			   (bignum? x))
+		       (number->string x (printer-integer-radix))
+		     (number->string x))
+		   p)
+      i)
      ((vector? x) (write-shared x p m h i write-vector))
      ((bytevector? x) (write-shared x p m h i write-bytevector))
      ((procedure? x) (write-procedure x p) i)
