@@ -28,11 +28,7 @@
 	    $)
     (prefix (vicare words)
 	    words.)
-    (only (vicare syntactic-extensions)
-	  define-inline
-	  define-inline-constant
-	  define-constant
-	  case-word-size))
+    (vicare syntactic-extensions))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
@@ -433,11 +429,28 @@
   (define (%error-incorrect-args a)
     (die who "incorrect args" a))
   (cond ((getprop ($car a) *cogen*)
-	 => (lambda (p)
-	      (let ((n    ($car p))
-		    (proc ($cdr p))
+	 => (lambda (prop)
+	      (let ((n    ($car prop))
+		    (proc ($cdr prop))
 		    (args ($cdr a)))
-		(cond (($fx= n 2)
+		(case-fixnums n
+		  ((2)
+		   (if ($fx= (length args) 2)
+		       (proc a ac ($car args) ($cadr args))
+		     (%error-incorrect-args a)))
+		  ((1)
+		   (if ($fx= (length args) 1)
+		       (proc a ac ($car args))
+		     (%error-incorrect-args a)))
+		  ((0)
+		   (if ($fx= (length args) 0)
+		       (proc a ac)
+		     (%error-incorrect-args a)))
+		  (else
+		   (if ($fx= (length args) n)
+		       (apply proc a ac args)
+		     (%error-incorrect-args a))))
+		#;(cond (($fx= n 2)
 		       (if ($fx= (length args) 2)
 			   (proc a ac ($car args) ($cadr args))
 			 (%error-incorrect-args a)))
@@ -452,7 +465,8 @@
 		      (else
 		       (if ($fx= (length args) n)
 			   (apply proc a ac args)
-			 (%error-incorrect-args a)))))))
+			 (%error-incorrect-args a))))
+		)))
 	((eq? ($car a) 'seq)
 	 (fold convert-instruction ac ($cdr a)))
 	((eq? ($car a) 'pad)
