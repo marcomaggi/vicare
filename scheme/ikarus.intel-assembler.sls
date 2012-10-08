@@ -1394,20 +1394,6 @@
 	      (let ((bv (string->utf8 str)))
 		(hashtable-set! memoized str bv)
 		bv))))))
-  ;;The following is the original Ikarus code, using a list as cache.
-  ;;
-  ;; (let ((mem '()))
-  ;;   (lambda (x)
-  ;;     (let loop ((ls mem))
-  ;;       (cond ((null? ls)
-  ;; 	       (let ((bv (string->utf8 x)))
-  ;; 		 (set! mem (cons (cons x bv) mem))
-  ;; 		 bv))
-  ;; 	      ((string=? x ($car ($car ls)))
-  ;; 	       ($cdr ($car ls))
-  ;; 	       #;(cdar ls))
-  ;; 	      (else
-  ;; 	       (loop ($cdr ls)))))))
 
   (define-inline (%error message . irritants)
     (error who message . irritants))
@@ -1449,13 +1435,6 @@
 			(whack-reloc thunk?-label code-object relocation-vector)
 		      reloc*))
 		code* relv* reloc**)
-	      #;(for-each
-		  (lambda (foo reloc*)
-		    (for-each
-			(whack-reloc thunk?-label ($car foo) ($cdr foo))
-		      reloc*))
-		(map cons code* relv*)
-		reloc**)
 	      ;;This causes the relocation vector to be processed for each
 	      ;;code object.
 	      (for-each set-code-reloc-vector! code* relv*)
