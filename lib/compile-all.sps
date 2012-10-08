@@ -47,6 +47,7 @@
   (only (vicare weak-hashtables))
   (only (vicare keywords))
   (only (vicare checks))
+  (only (vicare assembler inspection))
   )
 
 ;;; end of file

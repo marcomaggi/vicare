@@ -640,6 +640,7 @@
     (engine-handler				i v $language)
     (assembler-output				i v $language)
     (optimizer-output				i v $language)
+    (assembler-property-key			$codes)
     (new-cafe					i v $language)
     (waiter-prompt-string			i v $language)
     (readline-enabled?				i v $language)

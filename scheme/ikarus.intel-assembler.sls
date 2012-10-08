@@ -18,7 +18,8 @@
 (library (ikarus.intel-assembler)
   (export
     assemble-sources
-    code-entry-adjustment)
+    code-entry-adjustment
+    assembler-property-key)
   (import (ikarus)
     (except (ikarus.code-objects)
 	    procedure-annotation)
@@ -101,6 +102,9 @@
 
 (define *cogen*
   (gensym "*cogen*"))
+
+(define (assembler-property-key)
+  *cogen*)
 
 (define register-mapping
 ;;;   reg  cls  idx  REX.R
@@ -471,36 +475,6 @@
 	(else
 	 (die who "unknown instruction" a))))
 
-(define (RM /d dst ac)
-  (define who 'RM)
-  (cond ((mem? dst)
-	 (with-args dst
-	   (lambda (a0 a1)
-	     (cond ((and (imm8?  a0)
-			 (reg32? a1))
-		    (ModRM 1 /d a1 (IMM8 a0 ac)))
-		   ((and (imm?   a0)
-			 (reg32? a1))
-		    (ModRM 2 /d a1 (IMM32 a0 ac)))
-		   ((and (imm8?  a1)
-			 (reg32? a0))
-		    (ModRM 1 /d a0 (IMM8 a1 ac)))
-		   ((and (imm?   a1)
-			 (reg32? a0))
-		    (ModRM 2 /d a0 (IMM32 a1 ac)))
-		   ((and (reg32? a0)
-			 (reg32? a1))
-		    (RegReg /d a0 a1 ac))
-		   ((and (imm? a0)
-			 (imm? a1))
-		    (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
-		   (else
-		    (die who "unhandled" a0 a1))))))
-	((reg? dst)
-	 (ModRM 3 /d dst ac))
-	(else
-	 (die who "unhandled" dst))))
-
 
 ;;Notice that this  module exports nothing; this is  because its purpose
 ;;is to put properties in the  property lists of the symbols (ret, cltd,
@@ -688,7 +662,7 @@
 	(CODE c ac)
       (REX.R 0 (CODE c ac))))
 
-;;;Commented out because it is not used (Marco Maggi; Oct 25, 2011).
+  ;;Commented out because it is not used (Marco Maggi; Oct 25, 2011).
   ;;
   ;; (define trace-ac
   ;;   (let ((cache '()))
@@ -727,6 +701,36 @@
 
   (define (CCI32 c0 c1 i32 ac)
     (CODE c0 (CODE c1 (IMM32 i32 ac))))
+
+  (define (RM /d dst ac)
+    (define who 'RM)
+    (cond ((mem? dst)
+	   (with-args dst
+	     (lambda (a0 a1)
+	       (cond ((and (imm8?  a0)
+			   (reg32? a1))
+		      (ModRM 1 /d a1 (IMM8 a0 ac)))
+		     ((and (imm?   a0)
+			   (reg32? a1))
+		      (ModRM 2 /d a1 (IMM32 a0 ac)))
+		     ((and (imm8?  a1)
+			   (reg32? a0))
+		      (ModRM 1 /d a0 (IMM8 a1 ac)))
+		     ((and (imm?   a1)
+			   (reg32? a0))
+		      (ModRM 2 /d a0 (IMM32 a1 ac)))
+		     ((and (reg32? a0)
+			   (reg32? a1))
+		      (RegReg /d a0 a1 ac))
+		     ((and (imm? a0)
+			   (imm? a1))
+		      (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
+		     (else
+		      (die who "unhandled" a0 a1))))))
+	  ((reg? dst)
+	   (ModRM 3 /d dst ac))
+	  (else
+	   (die who "unhandled" dst))))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 4, 2012)
   ;;
