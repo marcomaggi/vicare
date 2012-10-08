@@ -404,13 +404,24 @@
 				  ($fxsll s 6))))
         ac))
 
-(define (imm32? x)
-  (case-word-size
-    ((32)
-     (imm? x))
-    ((64)
-     (and (immediate-int? x)
-	  (<= (words.least-s32) x (words.greatest-s32))))))
+(case-word-size
+ ((32)
+  (define-inline (imm32? x)
+    (imm? x)))
+ ((64)
+  (define (imm32? x)
+    (and (immediate-int? x)
+	 (<= (words.least-s32) x (words.greatest-s32))))))
+;;The following is  a previous version of the  IMM32?  function.  (Marco
+;;Maggi; Oct 8, 2012)
+;;
+;; (define (imm32? x)
+;;   (case-word-size
+;;     ((32)
+;;      (imm? x))
+;;     ((64)
+;;      (and (immediate-int? x)
+;; 	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
 (define-syntax add-instruction
@@ -425,7 +436,8 @@
   (syntax-rules ()
     ((_ instr ac ((name* arg** ...) b* b** ...) ...)
      (begin
-       (add-instruction (name* instr ac arg** ...) b* b** ...) ...))))
+       (add-instruction (name* instr ac arg** ...) b* b** ...)
+       ...))))
 
 (define (convert-instruction a ac)
   (define who 'convert-instruction)
