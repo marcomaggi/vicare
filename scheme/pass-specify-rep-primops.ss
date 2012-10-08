@@ -627,10 +627,13 @@
 	  ((known i t)
 	   (cogen-value-$vector-ref x i))
 	  (else #f))
+	;;Notice  that I  is not  multiplied  by the  WORDSIZE; this  is
+	;;because I is  a fixnum and a fixnum representing  the index of
+	;;the I-th slot in a vector,  taken as a "long", also represents
+	;;the offset in bytes of the word in the I-th slot.
 	(prm 'mref (T x)
-	     ;;FIXME Is  this correct?  Why  I is not multiplied  by the
-	     ;;WORDSIZE?  (Marco Maggi; Oct 7, 2012)
-	     (prm 'int+ (T i) (K (- disp-vector-data vector-tag))))))
+	     (prm 'int+ (T i) (K (- disp-vector-data vector-tag))))
+	))
    ((E x i)	;if it appears in "for side-effect" position
     (nop)))
 
@@ -692,11 +695,14 @@
       ((known i t)
        (cogen-effect-$vector-set! x i v))
       (else
+       ;;Notice  that I  is  not  multiplied by  the  WORDSIZE; this  is
+       ;;because I  is a fixnum and  a fixnum representing the  index of
+       ;;the I-th slot  in a vector, taken as a  "long", also represents
+       ;;the offset in bytes of the word in the I-th slot.
        (mem-assign v
-		   ;;FIXME Is this correct?  Why  I is not multiplied by
-		   ;;the WORDSIZE?  (Marco Maggi; Oct 7, 2012)
 		   (prm 'int+ (T x) (T i))
-		   (- disp-vector-data vector-tag))))))
+		   (- disp-vector-data vector-tag))
+       ))))
 
  (define-primop vector-set! safe
    ((E x i v)

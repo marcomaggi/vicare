@@ -24341,6 +24341,11 @@ ikptr  s_len  = IK_REF(s_vec, off_vector_length);
 long   length = IK_UNFIX(s_len);
 @end example
 
+Notice that a fixnum @var{I} representing the index of the @var{I}-th
+slot in a vector, taken as a @code{long}, also represents the offset in
+bytes of the word in the @var{I}-th slot with respect to the beginning
+of the vector's data area.
+
 
 @defvr {Preprocessor Symbol} vector_tag
 An integer used to tag @ikptr{} references  to vector memory blocks.
