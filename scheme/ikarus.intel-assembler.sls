@@ -25,12 +25,16 @@
     (vicare arguments validation)
     (prefix (vicare unsafe-operations)
 	    $)
+    (prefix (vicare words)
+	    words.)
     (only (vicare syntactic-extensions)
 	  define-inline
 	  define-inline-constant
 	  define-constant
 	  case-word-size))
 
+  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
+  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
     (import (vicare include))
     (include "ikarus.config.ss"))
@@ -86,12 +90,6 @@
 
 
 ;;;; constants
-
-(define-constant const.-2^31
-  (- (expt 2 31)))
-
-(define-constant const.2^31-1
-  (- (expt 2 31) 1))
 
 (define-constant const.wordsize-bitmask
   ;;On 32-bit platforms: this  is an exact integer of 32  bits set to 1.
@@ -407,14 +405,12 @@
         ac))
 
 (define (imm32? x)
-  (case wordsize
-    ((4)
+  (case-word-size
+    ((32)
      (imm? x))
-    ((8)
-     (and (integer? x)
-          (<= const.-2^31 x const.2^31-1)))
-    (else
-     (error 'imm32? "invalid wordsize" wordsize))))
+    ((64)
+     (and (immediate-int? x)
+	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
 (define-syntax add-instruction
