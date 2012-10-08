@@ -28,7 +28,8 @@
     (only (vicare syntactic-extensions)
 	  define-inline
 	  define-inline-constant
-	  define-constant))
+	  define-constant
+	  case-word-size))
 
   (module (wordsize)
     (import (vicare include))
@@ -92,7 +93,10 @@
 (define-constant const.2^31-1
   (- (expt 2 31) 1))
 
-(define-constant const.-1+2^wordsize*8
+(define-constant const.wordsize-bitmask
+  ;;On 32-bit platforms: this  is an exact integer of 32  bits set to 1.
+  ;;On 64-bit platforms: this is an exact integer of 64 bits set to 1.
+  ;;
   (- (expt 2 (* wordsize 8)) 1))
 
 ;;; --------------------------------------------------------------------
@@ -151,6 +155,13 @@
     (%r14l   8    6  #t)
     (%r15l   8    7  #t)
     ))
+
+
+;;;; arguments validation
+
+(define-argument-validation (immediate-int who obj)
+  (immediate-int? obj)
+  (assertion-violation who "expected immediate integer as argument" obj))
 
 
 (define (convert-instructions ls)
@@ -239,8 +250,30 @@
 	 (die 'IMM32 "invalid" n))))
 
 (define (IMM n ac)
-  (cond ((int? n)
-	 (case wordsize
+  (cond ((immediate-int? n)
+	 ;;Prepend  to the  accumulator  AC an  immediate integer  value
+	 ;;least significant bytes first.
+	 ;;
+	 ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
+	 ;;
+	 (case-word-size
+	   ((32)
+	    (cons* (byte n)
+		   (byte (sra n 8))
+		   (byte (sra n 16))
+		   (byte (sra n 24))
+		   ac))
+	   ((64)
+	    (cons* (byte n)
+		   (byte (sra n 8))
+		   (byte (sra n 16))
+		   (byte (sra n 24))
+		   (byte (sra n 32))
+		   (byte (sra n 40))
+		   (byte (sra n 48))
+		   (byte (sra n 56))
+		   ac)))
+	 #;(case wordsize
 	   ((4)
 	    (cons* (byte n)
 		   (byte (sra n 8))
@@ -256,12 +289,18 @@
 		   (byte (sra n 40))
 		   (byte (sra n 48))
 		   (byte (sra n 56))
-		   ac))))
+		   ac)))
+	 )
 	((obj? n)
 	 (let ((v ($cadr n)))
-	   (if (immediate? v)
+	   (cons (if (immediate? v)
+		     (word v)
+		   (reloc-word v))
+		 ac)
+	   #;(if (immediate? v)
 	       (cons (word v) ac)
-	     (cons (reloc-word v) ac))))
+	     (cons (reloc-word v) ac))
+	   ))
 	((obj+? n)
 	 (let ((v ($cadr  n))
 	       (d ($caddr n)))
@@ -283,12 +322,16 @@
 	 (die 'IMM "invalid" n))))
 
 (define (IMM8 n ac)
-  (if (int? n)
-      (cons* (byte n) ac)
-    (die 'IMM8 "invalid" n)))
+  ;;Prepend  to the  accumulator AC  a fixnum  representing the  byte N,
+  ;;which is an immediate 8-bit value.
+  ;;
+  (define who 'IMM8)
+  (with-arguments-validation (who)
+      ((immediate-int	n))
+    (cons (byte n) ac)))
 
 (define (imm? x)
-  (or (int?		x)
+  (or (immediate-int?	x)
       (obj?		x)
       (obj+?		x)
       (label-address?	x)
@@ -298,8 +341,8 @@
 (define-entry-predicate foreign? foreign-label)
 
 (define (imm8? x)
-  (and (int?  x)
-       (byte? x)))
+  (and (immediate-int?	x)
+       (byte?		x)))
 
 (define-entry-predicate label? label)
 (define-entry-predicate label-address? label-address)
@@ -307,8 +350,10 @@
 (define-inline (label-name x)
   ($cadr x))
 
-(define-inline (int? x)
-  (integer? x))
+(define-inline (immediate-int? ?x)
+  (let ((X ?x))
+    (or (fixnum? X)
+	(bignum? X))))
 
 (define-entry-predicate obj?	obj)
 (define-entry-predicate obj+?	obj+)
@@ -340,17 +385,17 @@
 		ac))))
 
 (define (IMM*2 i1 i2 ac)
-  (cond ((and (int? i1)
+  (cond ((and (immediate-int? i1)
 	      (obj? i2))
 	 (let ((d i1)
-	       (v (cadr i2)))
+	       (v ($cadr i2)))
 	   (cons (reloc-word+ v d) ac)))
-	((and (int? i2)
+	((and (immediate-int? i2)
 	      (obj? i1))
 	 (IMM*2 i2 i1 ac))
-	((and (int? i1)
-	      (int? i2))
-	 (IMM (bitwise-and (+ i1 i2) const.-1+2^wordsize*8)
+	((and (immediate-int? i1)
+	      (immediate-int? i2))
+	 (IMM (bitwise-and (+ i1 i2) const.wordsize-bitmask)
 	      ac))
 	(else
 	 (die 'assemble "invalid IMM*2" i1 i2))))
