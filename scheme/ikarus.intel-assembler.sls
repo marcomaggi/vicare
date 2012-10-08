@@ -22,16 +22,13 @@
   (import (ikarus)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    ;; (ikarus system $pairs)
-    ;; (ikarus system $vectors)
-    ;; (ikarus system $fx)
-    ;; (ikarus system $codes)
     (vicare arguments validation)
     (prefix (vicare unsafe-operations)
 	    $)
     (only (vicare syntactic-extensions)
 	  define-inline
-	  define-inline-constant))
+	  define-inline-constant
+	  define-constant))
 
   (module (wordsize)
     (import (vicare include))
@@ -88,6 +85,17 @@
 
 
 ;;;; constants
+
+(define-constant const.-2^31
+  (- (expt 2 31)))
+
+(define-constant const.2^31-1
+  (- (expt 2 31) 1))
+
+(define-constant const.-1+2^wordsize*8
+  (- (expt 2 (* wordsize 8)) 1))
+
+;;; --------------------------------------------------------------------
 
 (define *cogen*
   (gensym "*cogen*"))
@@ -167,7 +175,7 @@
   (define-register-mapping-predicate reg32?  32)
   (define-register-mapping-predicate xmmreg? 'xmm))
 
-(define (reg? x)
+(define-inline (reg? x)
   (assq x register-mapping))
 
 (define (reg-requires-REX? x)
@@ -176,13 +184,13 @@
 	(else
 	 (error 'reg-required-REX? "not a reg" x))))
 
-(define (word x)
+(define-inline (word x)
   (cons 'word x))
 
-(define (reloc-word x)
+(define-inline (reloc-word x)
   (cons 'reloc-word x))
 
-(define (reloc-word+ x d)
+(define-inline (reloc-word+ x d)
   (cons* 'reloc-word+ x d))
 
 (define (byte? x)
@@ -194,7 +202,7 @@
 
 (define (small-disp? x)
   (and (mem? x)
-       (byte? (cadr x))))
+       (byte? ($cadr x))))
 
 (define (CODE n ac)
   (cons (byte n) ac))
@@ -222,9 +230,11 @@
 		ac))
 	((label? n)
 	 (cond ((local-label? (label-name n))
-		(cons (cons 'local-relative (label-name n)) ac))
+		(cons `(local-relative . ,(label-name n))
+		      ac))
 	       (else
-		(cons (cons 'relative (label-name n)) ac))))
+		(cons `(relative       . ,(label-name n))
+		      ac))))
 	(else
 	 (die 'IMM32 "invalid" n))))
 
@@ -248,22 +258,27 @@
 		   (byte (sra n 56))
 		   ac))))
 	((obj? n)
-	 (let ((v (cadr n)))
+	 (let ((v ($cadr n)))
 	   (if (immediate? v)
 	       (cons (word v) ac)
 	     (cons (reloc-word v) ac))))
 	((obj+? n)
-	 (let ((v (cadr n)) (d (caddr n)))
+	 (let ((v ($cadr  n))
+	       (d ($caddr n)))
 	   (cons (reloc-word+ v d) ac)))
 	((label-address? n)
-	 (cons (cons 'label-addr (label-name n)) ac))
+	 (cons `(label-addr	. ,(label-name n))
+	       ac))
 	((foreign? n)
-	 (cons (cons 'foreign-label (label-name n)) ac))
+	 (cons `(foreign-label	. ,(label-name n))
+	       ac))
 	((label? n)
 	 (cond ((local-label? (label-name n))
-		(cons (cons 'local-relative (label-name n)) ac))
+		(cons `(local-relative . ,(label-name n))
+		      ac))
 	       (else
-		(cons (cons 'relative (label-name n)) ac))))
+		(cons `(relative . ,(label-name n))
+		      ac))))
 	(else
 	 (die 'IMM "invalid" n))))
 
@@ -273,17 +288,17 @@
     (die 'IMM8 "invalid" n)))
 
 (define (imm? x)
-  (or (int? x)
-      (obj? x)
-      (obj+? x)
-      (label-address? x)
-      (foreign? x)
-      (label? x)))
+  (or (int?		x)
+      (obj?		x)
+      (obj+?		x)
+      (label-address?	x)
+      (foreign?		x)
+      (label?		x)))
 
 (define-entry-predicate foreign? foreign-label)
 
 (define (imm8? x)
-  (and (int? x)
+  (and (int?  x)
        (byte? x)))
 
 (define-entry-predicate label? label)
@@ -335,8 +350,7 @@
 	 (IMM*2 i2 i1 ac))
 	((and (int? i1)
 	      (int? i2))
-	 (IMM (bitwise-and (+ i1 i2)
-			   (- (expt 2 (* wordsize 8)) 1))
+	 (IMM (bitwise-and (+ i1 i2) const.-1+2^wordsize*8)
 	      ac))
 	(else
 	 (die 'assemble "invalid IMM*2" i1 i2))))
@@ -353,7 +367,7 @@
      (imm? x))
     ((8)
      (and (integer? x)
-          (<= (- (expt 2 31)) x (- (expt 2 31) 1))))
+          (<= const.-2^31 x const.2^31-1)))
     (else
      (error 'imm32? "invalid wordsize" wordsize))))
 
@@ -1111,7 +1125,7 @@
   (or (getprop x '*label-loc*)
       (die 'compile "undefined label" x)))
 
-(define (unset-label-loc! x)
+(define-inline (unset-label-loc! x)
   (remprop x '*label-loc*))
 
 (define local-labels
@@ -1381,6 +1395,7 @@
 		(hashtable-set! memoized str bv)
 		bv))))))
   ;;The following is the original Ikarus code, using a list as cache.
+  ;;
   ;; (let ((mem '()))
   ;;   (lambda (x)
   ;;     (let loop ((ls mem))
