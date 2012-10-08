@@ -426,17 +426,22 @@
 
 (define-syntax add-instruction
   (syntax-rules ()
-    ((_ (name instr ac args ...) b b* ...)
-     (putprop 'name *cogen*
-	      (cons (length '(args ...))
-		    (lambda (instr ac args ...)
-		      b b* ...))))))
+    ((add-instruction (?name ?instr ?ac ?args ...)
+       ?body0 ?body ...)
+     (putprop '?name *cogen*
+	      (cons (length '(?args ...))
+		    (lambda (?instr ?ac ?args ...)
+		      ?body0 ?body ...))))))
 
 (define-syntax add-instructions
   (syntax-rules ()
-    ((_ instr ac ((name* arg** ...) b* b** ...) ...)
+    ((add-instructions ?instr ?accumulator
+       ((?name* ?arg** ...)
+	?body* ?body** ...)
+       ...)
      (begin
-       (add-instruction (name* instr ac arg** ...) b* b** ...)
+       (add-instruction (?name* ?instr ?accumulator ?arg** ...)
+	 ?body* ?body** ...)
        ...))))
 
 (define (convert-instruction a ac)
@@ -490,27 +495,27 @@
   (define who 'RM)
   (cond ((mem? dst)
 	 (with-args dst
-		    (lambda (a0 a1)
-		      (cond ((and (imm8?  a0)
-				  (reg32? a1))
-			     (ModRM 1 /d a1 (IMM8 a0 ac)))
-			    ((and (imm?   a0)
-				  (reg32? a1))
-			     (ModRM 2 /d a1 (IMM32 a0 ac)))
-			    ((and (imm8?  a1)
-				  (reg32? a0))
-			     (ModRM 1 /d a0 (IMM8 a1 ac)))
-			    ((and (imm?   a1)
-				  (reg32? a0))
-			     (ModRM 2 /d a0 (IMM32 a1 ac)))
-			    ((and (reg32? a0)
-				  (reg32? a1))
-			     (RegReg /d a0 a1 ac))
-			    ((and (imm? a0)
-				  (imm? a1))
-			     (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
-			    (else
-			     (die who "unhandled" a0 a1))))))
+	   (lambda (a0 a1)
+	     (cond ((and (imm8?  a0)
+			 (reg32? a1))
+		    (ModRM 1 /d a1 (IMM8 a0 ac)))
+		   ((and (imm?   a0)
+			 (reg32? a1))
+		    (ModRM 2 /d a1 (IMM32 a0 ac)))
+		   ((and (imm8?  a1)
+			 (reg32? a0))
+		    (ModRM 1 /d a0 (IMM8 a1 ac)))
+		   ((and (imm?   a1)
+			 (reg32? a0))
+		    (ModRM 2 /d a0 (IMM32 a1 ac)))
+		   ((and (reg32? a0)
+			 (reg32? a1))
+		    (RegReg /d a0 a1 ac))
+		   ((and (imm? a0)
+			 (imm? a1))
+		    (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
+		   (else
+		    (die who "unhandled" a0 a1))))))
 	((reg? dst)
 	 (ModRM 3 /d dst ac))
 	(else
@@ -1520,5 +1525,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'add-instructions 'scheme-indent-function 2)
+;; eval: (put 'add-instruction 'scheme-indent-function 1)
 ;; eval: (put 'with-args 'scheme-indent-function 1)
 ;; End:
