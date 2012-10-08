@@ -769,6 +769,9 @@
 ;;; --------------------------------------------------------------------
 ;;; end of module definitions
 
+  ;;Store a function  in the properties list of symbols  being the names
+  ;;of assembly instructions.
+  ;;
   (add-instructions instr ac
     ((ret)
      (CODE #xC3 ac))
@@ -1224,9 +1227,8 @@
        (die who "label-address is not a symbol" L)))
     ((current-frame-offset)
      (cons '(current-frame-offset) ac))
-    ((nop) ac)
-
-    )
+    ((nop)
+     ac))
 
   #| end of module |# )
 
