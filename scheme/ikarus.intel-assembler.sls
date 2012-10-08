@@ -424,26 +424,6 @@
 ;; 	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
-(define-syntax add-instruction
-  (syntax-rules ()
-    ((add-instruction (?name ?instr ?ac ?args ...)
-       ?body0 ?body ...)
-     (putprop '?name *cogen*
-	      (cons (length '(?args ...))
-		    (lambda (?instr ?ac ?args ...)
-		      ?body0 ?body ...))))))
-
-(define-syntax add-instructions
-  (syntax-rules ()
-    ((add-instructions ?instr ?accumulator
-       ((?name* ?arg** ...)
-	?body* ?body** ...)
-       ...)
-     (begin
-       (add-instruction (?name* ?instr ?accumulator ?arg** ...)
-	 ?body* ?body** ...)
-       ...))))
-
 (define (convert-instruction a ac)
   (define who 'convert-instruction)
   (define (%error-incorrect-args a)
@@ -522,7 +502,79 @@
 	 (die who "unhandled" dst))))
 
 
+;;Notice that this  module exports nothing; this is  because its purpose
+;;is to put properties in the  property lists of the symbols (ret, cltd,
+;;movl, ...) of the assembly operations:
+;;
+;;   ret
+;;   cltd
+;;   movl src dst
+;;   mov32 src dst
+;;   movb src dst
+;;   addl src dst
+;;   subl src dst
+;;   sall src dst
+;;   shrl src dst
+;;   sarl src dst
+;;   andl src dst
+;;   orl src dst
+;;   xorl src dst
+;;   leal src dst
+;;   cmpl src dst
+;;   imull src dst
+;;   idivl dst
+;;   pushl dst
+;;   popl dst
+;;   notl dst
+;;   bswap dst
+;;   negl dst
+;;   jmp dst
+;;   call dst
+;;   movsd src dst
+;;   cvtsi2sd src dst
+;;   cvtsd2ss src dst
+;;   cvtss2sd src dst
+;;   movss src dst
+;;   addsd src dst
+;;   subsd src dst
+;;   mulsd src dst
+;;   divsd src dst
+;;   ucomisd src dst
+;;   ja dst
+;;   jae dst
+;;   jb dst
+;;   jbe dst
+;;   jg dst
+;;   jge dst
+;;   jl dst
+;;   jle dst
+;;   je dst
+;;   jna dst
+;;   jnae dst
+;;   jnb dst
+;;   jnbe dst
+;;   jng dst
+;;   jnge dst
+;;   jnl dst
+;;   jnle dst
+;;   jne dst
+;;   jo dst
+;;   jp dst
+;;   jnp dst
+;;
+;;and  additionally  to  the   symbols  (byte,  byte-vector,  int,  ...)
+;;representing the following datums:
+;;
+;;   byte x
+;;   byte-vector x
+;;   int a
+;;   label L
+;;   label-address L
+;;   current-frame-offset
+;;   nop ac
+;;
 (module ()
+
   (define who 'assembler)
 
   (define (REX.R bits ac)
@@ -695,6 +747,27 @@
 				 `(bottom-code (label . ,g)
 					       (label-addr . ,(label-name dst)))
 				 ac))))))
+
+  (let-syntax ((add-instruction
+		   (syntax-rules ()
+		     ((add-instruction (?name ?instr ?ac ?args ...)
+			?body0 ?body ...)
+		      (putprop '?name *cogen*
+			       (cons (length '(?args ...))
+				     (lambda (?instr ?ac ?args ...)
+				       ?body0 ?body ...)))))))
+    (define-syntax add-instructions
+      (syntax-rules ()
+	((add-instructions ?instr ?accumulator
+	   ((?name* ?arg** ...) ?body* ?body** ...)
+	   ...)
+	 (begin
+	   (add-instruction (?name* ?instr ?accumulator ?arg** ...)
+	     ?body* ?body** ...)
+	   ...)))))
+
+;;; --------------------------------------------------------------------
+;;; end of module definitions
 
   (add-instructions instr ac
     ((ret)
