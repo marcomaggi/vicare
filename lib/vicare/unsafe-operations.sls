@@ -52,7 +52,10 @@
 #!r6rs
 (library (vicare unsafe-operations)
   (export
-    (rename ($struct-rtd	struct-rtd)
+    (rename ($make-struct	make-struct)
+	    ($struct		struct)
+	    ($struct-rtd	struct-rtd)
+	    ($struct/rtd?	struct/rtd?)
 	    ($struct-length	struct-length)
 	    ($struct-ref	struct-ref)
 	    ($struct-set!	struct-set!))
@@ -245,6 +248,18 @@
     (rename ($memory-block-pointer		memory-block-pointer)
 	    ($memory-block-size			memory-block-size))
 
+;;; --------------------------------------------------------------------
+
+    (rename ($closure-code			closure-code)
+	    ($code->closure			code->closure)
+	    ($code-reloc-vector			code-reloc-vector)
+	    ($code-freevars			code-freevars)
+	    ($code-size				code-size)
+	    ($code-annotation			code-annotation)
+	    ($code-ref				code-ref)
+	    ($code-set!				code-set!)
+	    ($set-code-annotation!		set-code-annotation!))
+
     #| end of export |# )
   (import (ikarus)
     (ikarus system $structs)
@@ -261,7 +276,9 @@
 	    ($bytevector-set!	$bytevector-s8-set!))
     (ikarus system $chars)
     (ikarus system $strings)
-    (for (prefix (vicare installation-configuration)
+    (ikarus system $codes)
+    (for (prefix (only (vicare installation-configuration)
+		       platform-endianness)
 		 config.)
 	 expand))
 
