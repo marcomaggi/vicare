@@ -315,12 +315,9 @@
 	 (cons `(foreign-label	. ,(label-name n))
 	       ac))
 	((label? n)
-	 (cond ((local-label? (label-name n))
-		(cons `(local-relative . ,(label-name n))
-		      ac))
-	       (else
-		(cons `(relative . ,(label-name n))
-		      ac))))
+	 (let ((LN (label-name n)))
+	   `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
+	     . ,ac)))
 	(else
 	 (die 'IMM "invalid" n))))
 
@@ -343,9 +340,8 @@
 
 (define-entry-predicate foreign? foreign-label)
 
-(define (imm8? x)
-  (and (immediate-int?	x)
-       (byte?		x)))
+(define-inline (imm8? x)
+  (byte? x))
 
 (define-entry-predicate label? label)
 (define-entry-predicate label-address? label-address)
@@ -382,9 +378,8 @@
 	((eq? r1 '%ebp)
 	 (die 'assembler "BUG: invalid src %ebp"))
 	(else
-	 (cons* (byte ($fxlogor 4 ($fxsll (register-index r1) 3)))
-		(byte ($fxlogor (register-index r2)
-				($fxsll (register-index r3) 3)))
+	 (cons* (byte ($fxlogor 4                   ($fxsll (register-index r1) 3)))
+		(byte ($fxlogor (register-index r2) ($fxsll (register-index r3) 3)))
 		ac))))
 
 (define (IMM*2 i1 i2 ac)
