@@ -1601,8 +1601,8 @@
     ;;
     (let ((num-of-freevars* (map car       ls*))
 	  (code-name*       (map code-name ls*))
-	  (ls*              (map code-list ls*)))
-      (let* ((octets-and-labels* (map convert-instructions ls*))
+	  (assembly-sexps*  (map code-list ls*)))
+      (let* ((octets-and-labels* (map convert-instructions  assembly-sexps*))
 	     (octets-and-labels* (map %optimize-local-jumps octets-and-labels*)))
 	(let ((code-size*  (map compute-code-size   octets-and-labels*))
 	      (reloc-size* (map %compute-reloc-size octets-and-labels*)))
@@ -1639,13 +1639,13 @@
 	#f)))
 
   (define (%optimize-local-jumps octets-and-labels)
-    ;;Scan OCTETS-AND-LABELS  and collect  the LABEL entries;  then scan
-    ;;again   OCTETS-AND-LABELS   and   mutate  the   RELATIVE   entries
-    ;;referencing local labels to be LOCAL-RELATIVE entries.
+    ;;Scan OCTETS-AND-LABELS  and collect  the LABEL entries,  which are
+    ;;"local"; then scan again OCTETS-AND-LABELS and mutate the RELATIVE
+    ;;entries referencing local labels to be LOCAL-RELATIVE entries.
     ;;
     ;;Notice  that   this  function  does   NOT  modify  the   spine  of
-    ;;OCTETS-AND-LABELS in  any way; it  just mutates some of  the entry
-    ;;CAR's.
+    ;;OCTETS-AND-LABELS in any way; it  just mutates some of the entry's
+    ;;CARs.
     ;;
     (let ((locals '())
 	  (G      (gensym)))
