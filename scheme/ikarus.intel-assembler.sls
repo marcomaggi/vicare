@@ -54,8 +54,11 @@
 ;;Assembly code is  represented by a symbolic expression; we  can take a
 ;;look  at  the assembly  by  using  "--print-assembly" option  for  the
 ;;executable "vicare".
-;;
-;;For example, let's consider the library:
+
+
+;;;; Assembly examples
+
+;;Let's consider the library:
 #|
    (library (proof)
      (export alpha)
@@ -84,17 +87,22 @@
 |#
 ;;where we see:
 ;;
-;;* The label "L2" is the entry  point.
+;;**The label "L2" is the entry  point.
 ;;
-;;*  The number  of  required arguments  is zero,  the  number of  given
-;;arguments is stored in %EAX; if  more than zero arguments are present,
-;;jump to L3.
+;;**The  number of  required  arguments  is zero,  the  number of  given
+;;  arguments is already stored in %EAX: if more than zero arguments are
+;;  present, jump to "L3".
 ;;
-;;* The fixnum 123 is encoded as  raw exact integer 492; load it in %EAX
-;;and return to the caller.
+;;**The fixnum 123 is encoded as raw exact integer:
 ;;
-;;* If the  wrong number of arguments  was given: jump to  the far label
-;;"SL_invalid_args".
+;;    492 = 123 * 4 = 123 << 2
+;;
+;;  such raw integer is loaded in %EAX.
+;;
+;;**The return value is computed and ready: return to the caller.
+;;
+;;**If the  wrong number of arguments  was given: jump to  the far label
+;;  "SL_invalid_args".
 ;;
 
 
