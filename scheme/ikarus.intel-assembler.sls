@@ -424,60 +424,71 @@
 ;; 	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
-(define (convert-instruction assembly-sexp accum)
-  ;;Convert  ASSEMBLY-SEXP  into  a sequence  of  fixnums  (representing
-  ;;octets) and  sexps prepended to  the accumulator list  ACCUM; return
-  ;;the new accumulator list.
-  ;;
+(module (convert-instruction)
+
   (define who 'convert-instruction)
-  (define (%error-incorrect-args assembly-sexp expected-nargs)
-    (assertion-violation who
-      (string-append "wrong number of arguments in assembly symbolic expression, expected "
-		     (number->string  expected-nargs))
-      assembly-sexp))
-  (cond ((getprop ($car assembly-sexp) *cogen*)
-	 => (lambda (prop)
-	      (let ((n    ($car prop))
-		    (proc ($cdr prop))
-		    (args ($cdr assembly-sexp)))
-		(define-inline (%with-checked-args ?nargs ?body-form)
-		  (if ($fx= (length args) ?nargs)
-		      ?body-form
-		    (%error-incorrect-args assembly-sexp n)))
-		(case-fixnums n
-		  ((2)
-		   (%with-checked-args 2
-		     (proc assembly-sexp accum ($car args) ($cadr args))))
-		  ((1)
-		   (%with-checked-args 1
-		     (proc assembly-sexp accum ($car args))))
-		  ((0)
-		   (%with-checked-args 0
-		     (proc assembly-sexp accum)))
-		  (else
-		   (%with-checked-args n
-		     (apply proc assembly-sexp accum args)))))))
-	((eq? ($car assembly-sexp) 'seq)
-	 (fold convert-instruction accum ($cdr assembly-sexp)))
-	((eq? ($car assembly-sexp) 'pad)
-	 (let ()
-	   (define (%find-prefix x ls)
-	     (let loop ((ls ls))
-	       (if (eq? ls x)
-		   '()
-		 (let ((assembly-sexp ($car ls)))
-		   (if (and (pair? assembly-sexp)
-			    (eq? ($car assembly-sexp) 'bottom-code))
-		       (loop ($cdr ls))
-		     (cons assembly-sexp (loop ($cdr ls))))))))
+
+  (define (convert-instruction assembly-sexp accum)
+    ;;Convert  ASSEMBLY-SEXP into  a sequence  of fixnums  (representing
+    ;;octets) and sexps prepended to  the accumulator list ACCUM; return
+    ;;the new accumulator list.
+    ;;
+    (define asm-mnemonic
+      ($car assembly-sexp))
+    (cond ((getprop asm-mnemonic *cogen*)
+	   => (lambda (prop)
+		(let ((n    ($car prop))
+		      (proc ($cdr prop))
+		      (args ($cdr assembly-sexp)))
+		  (define-inline (%with-checked-args ?nargs ?body-form)
+		    (if ($fx= (length args) ?nargs)
+			?body-form
+		      (%error-incorrect-args assembly-sexp n)))
+		  (case-fixnums n
+		    ((2)
+		     (%with-checked-args 2
+		       (proc assembly-sexp accum ($car args) ($cadr args))))
+		    ((1)
+		     (%with-checked-args 1
+		       (proc assembly-sexp accum ($car args))))
+		    ((0)
+		     (%with-checked-args 0
+		       (proc assembly-sexp accum)))
+		    (else
+		     (%with-checked-args n
+		       (apply proc assembly-sexp accum args)))))))
+	  ((eq? asm-mnemonic 'seq)
+	   (fold convert-instruction accum ($cdr assembly-sexp)))
+	  ((eq? asm-mnemonic 'pad)
 	   (let* ((n    ($cadr assembly-sexp))
 		  (code ($cddr assembly-sexp))
 		  (ls   (fold convert-instruction accum code))
 		  (m    (compute-code-size (%find-prefix accum ls))))
-	     (append (make-list (- n m) 0) ls))
-	   ))
-	(else
-	 (assertion-violation who "unknown instruction" assembly-sexp))))
+	     (append (make-list (- n m) 0) ls)))
+	  (else
+	   (assertion-violation who "unknown instruction" assembly-sexp))))
+
+  (define (%find-prefix accum ls)
+    (let loop ((ls ls))
+      (if (eq? ls accum)
+	  '()
+	(let ((asm-sexp ($car ls)))
+	  (if (bottom-code? asm-sexp)
+	      (loop ($cdr ls))
+	    (cons asm-sexp (loop ($cdr ls))))))))
+
+  (define-entry-predicate bottom-code? bottom-code)
+  #;(and (pair? asm-sexp)
+       (eq? ($car asm-sexp) 'bottom-code))
+
+  (define (%error-incorrect-args assembly-sexp expected-nargs)
+    (assertion-violation who
+      (string-append
+       "wrong number of arguments in assembly symbolic expression, expected "
+       (number->string  expected-nargs))
+      assembly-sexp))
+
+  #| end of module |# )
 
 
 ;;Notice that this  module exports nothing; this is  because its purpose
