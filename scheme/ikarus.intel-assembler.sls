@@ -423,7 +423,7 @@
 (module (convert-instructions)
 
   (define (convert-instructions ls)
-    (parametrise ((local-labels (uncover-local-labels ls)))
+    (parametrise ((local-labels (%uncover-local-labels ls)))
       (fold %convert-single-sexp '() ls)))
 
   (define who 'convert-instruction)
@@ -432,6 +432,13 @@
     ;;Convert  ASSEMBLY-SEXP into  a sequence  of fixnums  (representing
     ;;octets) and sexps prepended to  the accumulator list ACCUM; return
     ;;the new accumulator list.
+    ;;
+    ;;The items  prepended to ACCUM can  be fixnums or entries  like the
+    ;;following:
+    ;;
+    ;;	(label . ?symbol)
+    ;;  (label-addr . ?symbol)
+    ;;  (current-frame-offset)
     ;;
     (define key
       ($car assembly-sexp))
@@ -507,39 +514,43 @@
        (number->string expected-nargs))
       assembly-sexp))
 
-  (define (uncover-local-labels accum)
+  (define-inline (%uncover-local-labels accum)
     ;;Expect ACCUM to be a list of assembly sexps; visit ACCUM, entering
-    ;;PAD and SEQ  sexps recursively, and build a list  of symbols being
+    ;;PAD and SEQ entries recursively, and build a list of symbols being
     ;;the names of the LABEL entries.  Return the list of LABEL names.
     ;;
-    (define locals '())
-    (define (find x)
-      (when (pair? x)
-	(case ($car x)
-	  ((label)
-	   (set! locals (cons (label-name x) locals)))
-	  ((seq pad)
-	   (for-each find ($cdr x))))))
-    (for-each find accum)
-    locals)
+    (%%uncover-local-labels '() accum))
 
-  (define (uncover-local-labels accum)
-    (let loop ((names	'())
-	       (accum	accum))
-      (define-inline (%next ?names)
-	(loop ?names ($cdr accum)))
-      (if (null? accum)
-	  names
-	(let ((entry ($car accum)))
-	  (if (pair? entry)
-	      (case-symbols ($car entry)
-		((label)
-		 (%next (cons (label-name entry) names)))
-		((seq pad)
-		 (%next (loop names ($cdr entry))))
-		(else
-		 (%next names)))
-	    (%next names))))))
+  (define (%%uncover-local-labels names accum)
+    (define-inline (%next ?names)
+      (%%uncover-local-labels ?names ($cdr accum)))
+    (if (null? accum)
+	names
+      (let ((entry ($car accum)))
+	(if (pair? entry)
+	    (case-symbols ($car entry)
+	      ((label)
+	       (%next (cons (label-name entry) names)))
+	      ((seq pad)
+	       (%next (%%uncover-local-labels names ($cdr entry))))
+	      (else
+	       (%next names)))
+	  (%next names)))))
+
+  ;;The following is the original Ikarus' version.  (Marco Maggi; Oct 9,
+  ;;2012)
+  ;;
+  ;; (define (uncover-local-labels accum)
+  ;;   (define locals '())
+  ;;   (define (find x)
+  ;;     (when (pair? x)
+  ;; 	(case ($car x)
+  ;; 	  ((label)
+  ;; 	   (set! locals (cons (label-name x) locals)))
+  ;; 	  ((seq pad)
+  ;; 	   (for-each find ($cdr x))))))
+  ;;   (for-each find accum)
+  ;;   locals)
 
   #| end of module |# )
 
