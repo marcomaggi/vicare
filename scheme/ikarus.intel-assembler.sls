@@ -832,15 +832,18 @@
   ;; 		(cons (car ls) (f (cdr ls))))))
   ;;   ls)
 
-  (define (jmp-pc-relative code0 code1 dst ac)
-    (if ($fx= wordsize 4)
-	(error 'intel-assembler "no pc-relative jumps in 32-bit mode")
-      (let ((g (gensym)))
+  (case-word-size
+   ((32)
+    (define (jmp-pc-relative code0 code1 dst ac)
+      (error 'intel-assembler "no pc-relative jumps in 32-bit mode")))
+   ((64)
+    (define (jmp-pc-relative code0 code1 dst ac)
+      (let ((G (gensym)))
 	(CODE code0
-	      (CODE code1 (cons* `(local-relative . ,g)
-				 `(bottom-code (label . ,g)
+	      (CODE code1 (cons* `(local-relative . ,G)
+				 `(bottom-code (label . ,G)
 					       (label-addr . ,(label-name dst)))
-				 ac))))))
+				 ac)))))))
 
   (let-syntax ((add-instruction
 		   (syntax-rules ()
@@ -1188,9 +1191,11 @@
 	    (CODE #xE9 (cons `(local-relative . ,(label-name dst))
 			     ac)))
 	   ((imm? dst)
-	    (if ($fx= wordsize 4)
-		(CODE #xE9 (IMM32 dst ac))
-	      (jmp-pc-relative #xFF #x25 dst ac)))
+	    (case-word-size
+	     ((32)
+	      (CODE #xE9 (IMM32 dst ac)))
+	     ((64)
+	      (jmp-pc-relative #xFF #x25 dst ac))))
 	   ((mem? dst)
 	    (CR*  #xFF '/4 dst ac))
 	   (else
@@ -1201,9 +1206,11 @@
 	    (CODE #xE8 (cons `(local-relative . ,(label-name dst))
 			     ac)))
 	   ((imm? dst)
-	    (if ($fx= wordsize 4)
-		(CODE #xE8 (IMM32 dst ac))
-	      (jmp-pc-relative #xFF #x15 dst ac)))
+	    (case-word-size
+	     ((32)
+	      (CODE #xE8 (IMM32 dst ac)))
+	     ((64)
+	      (jmp-pc-relative #xFF #x15 dst ac))))
 	   ((mem? dst)
 	    (CR* #xFF '/2 dst ac))
 	   ((reg? dst)
