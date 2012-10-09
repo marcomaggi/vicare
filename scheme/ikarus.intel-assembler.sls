@@ -1361,39 +1361,6 @@
 	0
 	ls))
 
-(define (label-loc x)
-  (or (getprop x '*label-loc*)
-      (die 'compile "undefined label" x)))
-
-(define-inline (unset-label-loc! x)
-  (remprop x '*label-loc*))
-
-(define (optimize-local-jumps ls)
-  (define locals '())
-  (define g (gensym))
-  (define (mark x)
-    (when (pair? x)
-      (case ($car x)
-        ((label)
-         (putprop ($cdr x) g 'local)
-         (set! locals (cons ($cdr x) locals)))
-        ((bottom-code)
-	 (for-each mark ($cdr x))))))
-  (define (opt x)
-    (when (pair? x)
-      (case ($car x)
-        ((relative)
-         (when (eq? (getprop ($cdr x) g) 'local)
-           (set-car! x 'local-relative)))
-        ((bottom-code)
-	 (for-each opt ($cdr x))))))
-  (for-each mark ls)
-  (for-each opt ls)
-  (for-each (lambda (x)
-	      (remprop x g))
-    locals)
-  ls)
-
 
 (module (store-binary-code-in-code-objects)
 
@@ -1486,7 +1453,7 @@
 
   (define (%set-label-loc! x loc)
     (if (getprop x '*label-loc*)
-	(die '%set-label-loc! "label is already defined" x)
+	(error '%set-label-loc! "label is already defined" x)
       (putprop x '*label-loc* loc)))
 
   #| end of module |# )
@@ -1526,7 +1493,7 @@
 					     (set-cdr! ($cdr p) (list thunk))
 					     thunk)))
 					(else
-					 (caddr p))))))
+					 ($caddr p))))))
 			  (else v)))))
 	(case type
 	  ((reloc-word)
@@ -1610,6 +1577,15 @@
        ($vector-set! ?vec ?reloc-idx ($fxlogor ?tag ($fxsll ?idx 2))))
       ))
 
+  (define (label-loc x)
+    (or (getprop x '*label-loc*)
+	(error 'compile "undefined label" x)))
+
+  ;;Commented out because unused.  (Marco Maggi; Oct 9, 2012)
+  ;;
+  ;; (define-inline (unset-label-loc! x)
+  ;;   (remprop x '*label-loc*))
+
   (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0)
   (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1)
   (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2)
@@ -1626,8 +1602,8 @@
     (let ((num-of-freevars* (map car       ls*))
 	  (code-name*       (map code-name ls*))
 	  (ls*              (map code-list ls*)))
-      (let* ((ls*                (map convert-instructions ls*))
-	     (octets-and-labels* (map optimize-local-jumps ls*)))
+      (let* ((octets-and-labels* (map convert-instructions ls*))
+	     (octets-and-labels* (map %optimize-local-jumps octets-and-labels*)))
 	(let ((code-size*  (map compute-code-size   octets-and-labels*))
 	      (reloc-size* (map %compute-reloc-size octets-and-labels*)))
 	  (let ((code-objects* (map make-code   code-size* num-of-freevars*))
@@ -1661,6 +1637,41 @@
       (if (name? a)
 	  ($cadr a)
 	#f)))
+
+  (define (%optimize-local-jumps octets-and-labels)
+    ;;Scan OCTETS-AND-LABELS  and collect  the LABEL entries;  then scan
+    ;;again   OCTETS-AND-LABELS   and   mutate  the   RELATIVE   entries
+    ;;referencing local labels to be LOCAL-RELATIVE entries.
+    ;;
+    ;;Notice  that   this  function  does   NOT  modify  the   spine  of
+    ;;OCTETS-AND-LABELS in  any way; it  just mutates some of  the entry
+    ;;CAR's.
+    ;;
+    (let ((locals '())
+	  (G      (gensym)))
+      (define (%mark-labels-with-property x)
+	(when (pair? x)
+	  (case-symbols ($car x)
+	    ((label)
+	     (putprop ($cdr x) G 'local)
+	     (set! locals (cons ($cdr x) locals)))
+	    ((bottom-code)
+	     (for-each %mark-labels-with-property ($cdr x))))))
+      (define (%relative->local-relative x)
+	(when (pair? x)
+	  (case-symbols ($car x)
+	    ((relative)
+	     (when (eq? (getprop ($cdr x) G) 'local)
+	       ($set-car! x 'local-relative)))
+	    ((bottom-code)
+	     (for-each %relative->local-relative ($cdr x))))))
+      (for-each %mark-labels-with-property octets-and-labels)
+      (for-each %relative->local-relative  octets-and-labels)
+      ;;Clean up the property lists of label symbols.
+      (for-each (lambda (x)
+		  (remprop x G))
+	locals)
+      octets-and-labels))
 
   (define (%compute-reloc-size octets-and-labels)
     ;;Compute the length  of the relocation vector needed  to relocate a
