@@ -162,10 +162,6 @@
   (assertion-violation who "expected immediate integer as argument" obj))
 
 
-(define (convert-instructions ls)
-  (parameterize ((local-labels (uncover-local-labels ls)))
-    (fold convert-instruction '() ls)))
-
 (define (register-index x)
   (cond ((assq x register-mapping)
 	 => caddr)
@@ -424,11 +420,15 @@
 ;; 	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
-(module (convert-instruction)
+(module (convert-instructions)
+
+  (define (convert-instructions ls)
+    (parametrise ((local-labels (uncover-local-labels ls)))
+      (fold %convert-single-sexp '() ls)))
 
   (define who 'convert-instruction)
 
-  (define (convert-instruction assembly-sexp accum)
+  (define (%convert-single-sexp assembly-sexp accum)
     ;;Convert  ASSEMBLY-SEXP into  a sequence  of fixnums  (representing
     ;;octets) and sexps prepended to  the accumulator list ACCUM; return
     ;;the new accumulator list.
@@ -467,14 +467,14 @@
 	   ;;where   ?ASM-SEXPS  is   a   list   of  assembly   symbolic
 	   ;;expressions.
 	   ;;
-	   (fold convert-instruction accum ($cdr assembly-sexp)))
+	   (fold %convert-single-sexp accum ($cdr assembly-sexp)))
 	  ((eq? key 'pad)
 	   ;;Process a PAD sexp.  Convert the assembly code and return a
 	   ;;new accumulator list padded with a prefix of zeros.
 	   ;;
 	   (let* ((n              ($cadr assembly-sexp))
 		  (asm-sexps      ($cddr assembly-sexp))
-		  (new-accum.tail (fold convert-instruction accum asm-sexps))
+		  (new-accum.tail (fold %convert-single-sexp accum asm-sexps))
 		  (prefix.len     (compute-code-size (%find-prefix accum new-accum.tail))))
 	     (append (make-list (- n prefix.len) 0)
 		     new-accum.tail)))
@@ -506,6 +506,22 @@
        "wrong number of arguments in assembly symbolic expression, expected "
        (number->string expected-nargs))
       assembly-sexp))
+
+  (define (uncover-local-labels accum)
+    ;;Expect ACCUM to be a list of assembly sexps; visit ACCUM, entering
+    ;;PAD and SEQ  sexps recursively, and build a list  of symbols being
+    ;;the names of the LABEL entries.  Return the list of LABEL names.
+    ;;
+    (define locals '())
+    (define (find x)
+      (when (pair? x)
+	(case ($car x)
+	  ((label)
+	   (set! locals (cons (label-name x) locals)))
+	  ((seq pad)
+	   (for-each find ($cdr x))))))
+    (for-each find accum)
+    locals)
 
   #| end of module |# )
 
@@ -1304,18 +1320,6 @@
 
 (define (local-label? x)
   (and (memq x (local-labels)) #t))
-
-(define (uncover-local-labels ls)
-  (define locals '())
-  (define (find x)
-    (when (pair? x)
-      (case ($car x)
-	((label)
-	 (set! locals (cons (label-name x) locals)))
-	((seq pad)
-	 (for-each find ($cdr x))))))
-  (for-each find ls)
-  locals)
 
 (define (optimize-local-jumps ls)
   (define locals '())
