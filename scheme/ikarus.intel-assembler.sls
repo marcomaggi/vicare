@@ -433,40 +433,23 @@
 	      (let ((n    ($car prop))
 		    (proc ($cdr prop))
 		    (args ($cdr a)))
+		(define-inline (%with-checked-args ?nargs ?body-form)
+		  (if ($fx= (length args) ?nargs)
+		      ?body-form
+		    (%error-incorrect-args a)))
 		(case-fixnums n
 		  ((2)
-		   (if ($fx= (length args) 2)
-		       (proc a ac ($car args) ($cadr args))
-		     (%error-incorrect-args a)))
+		   (%with-checked-args 2
+		     (proc a ac ($car args) ($cadr args))))
 		  ((1)
-		   (if ($fx= (length args) 1)
-		       (proc a ac ($car args))
-		     (%error-incorrect-args a)))
+		   (%with-checked-args 1
+		     (proc a ac ($car args))))
 		  ((0)
-		   (if ($fx= (length args) 0)
-		       (proc a ac)
-		     (%error-incorrect-args a)))
+		   (%with-checked-args 0
+		     (proc a ac)))
 		  (else
-		   (if ($fx= (length args) n)
-		       (apply proc a ac args)
-		     (%error-incorrect-args a))))
-		#;(cond (($fx= n 2)
-		       (if ($fx= (length args) 2)
-			   (proc a ac ($car args) ($cadr args))
-			 (%error-incorrect-args a)))
-		      (($fx= n 1)
-		       (if ($fx= (length args) 1)
-			   (proc a ac ($car args))
-			 (%error-incorrect-args a)))
-		      (($fx= n 0)
-		       (if ($fx= (length args) 0)
-			   (proc a ac)
-			 (%error-incorrect-args a)))
-		      (else
-		       (if ($fx= (length args) n)
-			   (apply proc a ac args)
-			 (%error-incorrect-args a))))
-		)))
+		   (%with-checked-args n
+		     (apply proc a ac args)))))))
 	((eq? ($car a) 'seq)
 	 (fold convert-instruction ac ($cdr a)))
 	((eq? ($car a) 'pad)
@@ -1620,4 +1603,5 @@
 ;; eval: (put 'add-instructions 'scheme-indent-function 2)
 ;; eval: (put 'add-instruction 'scheme-indent-function 1)
 ;; eval: (put 'with-args 'scheme-indent-function 1)
+;; eval: (put '%with-checked-args 'scheme-indent-function 1)
 ;; End:
