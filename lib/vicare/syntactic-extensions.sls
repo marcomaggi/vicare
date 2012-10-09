@@ -52,6 +52,7 @@
     case-word-size		case-endianness
     case-one-operand		case-two-operands
     case-fixnums		case-integers
+    case-symbols
     define-exact-integer->symbol-function
 
     ;; auxiliary syntaxes
@@ -388,6 +389,34 @@
 		  (= ?integer  int)
 		  ...)
 	      ?body0 ?body ...)
+	     ...)))
+    ))
+
+(define-syntax case-symbols
+  (syntax-rules (else)
+    ((_ ?expr
+	((?symbol0 ?symbol ...)
+	 ?sym-body0 ?sym-body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((sym ?expr))
+       (cond ((or (eq? (quote ?symbol0) sym)
+		  (eq? (quote ?symbol)  sym)
+		  ...)
+	      ?sym-body0 ?sym-body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?symbol0 ?symbol ...)
+	 ?sym-body0 ?sym-body ...)
+	...)
+     (let ((sym ?expr))
+       (cond ((or (eq? (quote ?symbol0) sym)
+		  (eq? (quote ?symbol)  sym)
+		  ...)
+	      ?sym-body0 ?sym-body ...)
 	     ...)))
     ))
 

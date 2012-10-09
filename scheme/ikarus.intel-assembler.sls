@@ -523,6 +523,24 @@
     (for-each find accum)
     locals)
 
+  (define (uncover-local-labels accum)
+    (let loop ((names	'())
+	       (accum	accum))
+      (define-inline (%next ?names)
+	(loop ?names ($cdr accum)))
+      (if (null? accum)
+	  names
+	(let ((entry ($car accum)))
+	  (if (pair? entry)
+	      (case-symbols ($car entry)
+		((label)
+		 (%next (cons (label-name entry) names)))
+		((seq pad)
+		 (%next (loop names ($cdr entry))))
+		(else
+		 (%next names)))
+	    (%next names))))))
+
   #| end of module |# )
 
 

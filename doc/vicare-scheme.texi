@@ -20612,7 +20612,7 @@ expand to @meta{big-body}.
 @deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
 @deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
 @deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expeting only fixnums as datums;
+Special implementation of @func{case} expecting only fixnums as datums;
 for maximum speed, it makes use of unsafe operations on fixnums.
 @func{else} must be the binding exported by @library{rnrs} and
 @library{vicare}.
@@ -20631,6 +20631,18 @@ datums.  @func{else} must be the binding exported by @library{rnrs} and
 
 @meta{expr} must be an expression evaluating to an exact integer, else
 the behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only symbols as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a symbol, else the
+behaviour is undefined.
 @end deffn
 
 @c page

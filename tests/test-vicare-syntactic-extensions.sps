@@ -262,6 +262,121 @@
   #f)
 
 
+(parametrise ((check-test-name	'case-symbols))
+
+  (check
+      (case-symbols 'alpha
+	((alpha)	#t)
+	((beta)		#f))
+    => #t)
+
+  (check
+      (case-symbols 'beta
+	((alpha)	#t)
+	((beta)		#f))
+    => #f)
+
+  (check
+      (case-symbols 'delta
+	((alpha)	#t)
+	((beta)		#f))
+    => (void))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-symbols 'alpha
+	((alpha)	1)
+	((beta)		2)
+	(else		3))
+    => 1)
+
+  (check
+      (case-symbols 'beta
+	((alpha)	1)
+	((beta)		2)
+	(else		3))
+    => 2)
+
+  (check
+      (case-symbols 'delta
+	((alpha)	1)
+	((beta)		2)
+	(else		3))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-symbols 'a
+	((a b c)	#t)
+	((d)		#f))
+    => #t)
+
+  (check
+      (case-symbols 'b
+	((a b c)	#t)
+	((d)		#f))
+    => #t)
+
+  (check
+      (case-symbols 'c
+	((a b c)	#t)
+	((d)		#f))
+    => #t)
+
+  (check
+      (case-symbols 'd
+	((a b c)	#t)
+	((d)		#f))
+    => #f)
+
+  (check
+      (case-symbols 'e
+	((a b c)	#t)
+	((d)		#f))
+    => (void))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-symbols 'a
+	((a b c)	#t)
+	((d)		#f)
+	(else		0))
+    => #t)
+
+  (check
+      (case-symbols 'b
+	((a b c)	#t)
+	((d)		#f)
+	(else		0))
+    => #t)
+
+  (check
+      (case-symbols 'c
+	((a b c)	#t)
+	((d)		#f)
+	(else		0))
+    => #t)
+
+  (check
+      (case-symbols 'd
+	((a b c)	#t)
+	((d)		#f)
+	(else		0))
+    => #f)
+
+  (check
+      (case-symbols 'e
+	((a b c)	#t)
+	((d)		#f)
+	(else		0))
+    => 0)
+
+  #f)
+
+
 ;;;; done
 
 (check-report)
