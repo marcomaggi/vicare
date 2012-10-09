@@ -227,260 +227,284 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (immediate-int who obj)
-  (immediate-int? obj)
-  (assertion-violation who "expected immediate integer as argument" obj))
-
 
-(define (register-index x)
-  (cond ((assq x register-mapping)
-	 => caddr)
-	(else
-	 (die 'register-index "not a register" x))))
+(module stuff
+  (register-index
+   reg8?		reg32?
+   xmmreg?		reg?
+   reg-requires-REX?
+   word			reloc-word
+   reloc-word+		byte?
+   mem?			small-disp?
+   CODE			CODE+r
+   ModRM		IMM32
+   IMM			IMM8
+   imm?			foreign?
+   imm8?		label?
+   label-address?	label-name
+   immediate-int?
+   obj?			obj+?
+   CODErri		CODErr
+   RegReg		IMM*2
+   SIB			imm32?)
 
-(let-syntax ((define-register-mapping-predicate
-	       (syntax-rules ()
-		 ((_ ?who ?val)
-		  (define (?who x)
-		    (cond ((assq x register-mapping)
-			   => (lambda (x)
-				(eqv? ($cadr x) ?val)))
-			  (else #f)))))))
-  (define-register-mapping-predicate reg8?   8)
-  (define-register-mapping-predicate reg32?  32)
-  (define-register-mapping-predicate xmmreg? 'xmm))
+  (define-argument-validation (immediate-int who obj)
+    (immediate-int? obj)
+    (assertion-violation who "expected immediate integer as argument" obj))
 
-(define-inline (reg? x)
-  (assq x register-mapping))
 
-(define (reg-requires-REX? x)
-  (cond ((assq x register-mapping)
-	 => cadddr)
-	(else
-	 (error 'reg-required-REX? "not a reg" x))))
+  (define (register-index x)
+    (cond ((assq x register-mapping)
+	   => caddr)
+	  (else
+	   (die 'register-index "not a register" x))))
 
-(define-inline (word x)
-  (cons 'word x))
+  (let-syntax ((define-register-mapping-predicate
+		 (syntax-rules ()
+		   ((_ ?who ?val)
+		    (define (?who x)
+		      (cond ((assq x register-mapping)
+			     => (lambda (x)
+				  (eqv? ($cadr x) ?val)))
+			    (else #f)))))))
+    (define-register-mapping-predicate reg8?   8)
+    (define-register-mapping-predicate reg32?  32)
+    (define-register-mapping-predicate xmmreg? 'xmm))
 
-(define-inline (reloc-word x)
-  (cons 'reloc-word x))
+  (define-inline (reg? x)
+    (assq x register-mapping))
 
-(define-inline (reloc-word+ x d)
-  (cons* 'reloc-word+ x d))
+  (define (reg-requires-REX? x)
+    (cond ((assq x register-mapping)
+	   => cadddr)
+	  (else
+	   (error 'reg-required-REX? "not a reg" x))))
 
-(define (byte? x)
-  (and (fixnum? x)
-       ($fx>= x -128)
-       ($fx<= x +127)))
+  (define-inline (word x)
+    (cons 'word x))
 
-(define-entry-predicate mem? disp)
+  (define-inline (reloc-word x)
+    (cons 'reloc-word x))
 
-(define (small-disp? x)
-  (and (mem? x)
-       (byte? ($cadr x))))
+  (define-inline (reloc-word+ x d)
+    (cons* 'reloc-word+ x d))
 
-(define (CODE n ac)
-  (cons (byte n) ac))
+  (define (byte? x)
+    (and (fixnum? x)
+	 ($fx>= x -128)
+	 ($fx<= x +127)))
 
-(define (CODE+r n r ac)
-  (cons (byte ($fxlogor n (register-index r)))
-	ac))
+  (define-entry-predicate mem? disp)
 
-(define (ModRM mod reg r/m ac)
-  (cons (byte ($fxlogor (register-index r/m)
-			($fxlogor ($fxsll (register-index reg) 3)
-				  ($fxsll mod 6))))
-	(if (and (not ($fx= mod 3)) (eq? r/m '%esp))
-	    (cons (byte #x24) ac)
-	  ac)))
+  (define (small-disp? x)
+    (and (mem? x)
+	 (byte? ($cadr x))))
 
-(case-word-size
- ((32)
-  (define-inline (IMM32 n ac)
-    (IMM n ac)))
- ((64)
-  (define (IMM32 n ac)
-    (cond ((imm32? n)
-	   ;;Prepend  to the  accumulator AC  a 32-bit  immediate value,
-	   ;;least significant byte first.
+  (define (CODE n ac)
+    (cons (byte n) ac))
+
+  (define (CODE+r n r ac)
+    (cons (byte ($fxlogor n (register-index r)))
+	  ac))
+
+  (define (ModRM mod reg r/m ac)
+    (cons (byte ($fxlogor (register-index r/m)
+			  ($fxlogor ($fxsll (register-index reg) 3)
+				    ($fxsll mod 6))))
+	  (if (and (not ($fx= mod 3)) (eq? r/m '%esp))
+	      (cons (byte #x24) ac)
+	    ac)))
+
+  (case-word-size
+   ((32)
+    (define-inline (IMM32 n ac)
+      (IMM n ac)))
+   ((64)
+    (define (IMM32 n ac)
+      (cond ((imm32? n)
+	     ;;Prepend  to the  accumulator AC  a 32-bit  immediate value,
+	     ;;least significant byte first.
+	     ;;
+	     ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
+	     ;;
+	     ;;SRA = shift right arithmetic.
+	     (cons* (byte n)
+		    (byte (sra n 8))
+		    (byte (sra n 16))
+		    (byte (sra n 24))
+		    ac))
+	    ((label? n)
+	     (let ((LN (label-name n)))
+	       `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
+		 . ,ac)))
+	    (else
+	     (die 'IMM32 "invalid" n))))))
+  ;;The following  is the original Ikarus's  IMM32 implementation.  (Marco
+  ;;Maggi; Oct 8, 2012)
+  ;;
+  ;; (define (IMM32 n ac)
+  ;;   (cond (($fx= wordsize 4)
+  ;; 	 (IMM n ac))
+  ;; 	((imm32? n)
+  ;; 	 (cons* (byte n)
+  ;; 		(byte (sra n 8))
+  ;; 		(byte (sra n 16))
+  ;; 		(byte (sra n 24))
+  ;; 		ac))
+  ;; 	((label? n)
+  ;; 	 (cond ((local-label? (label-name n))
+  ;; 		(cons `(local-relative . ,(label-name n))
+  ;; 		      ac))
+  ;; 	       (else
+  ;; 		(cons `(relative       . ,(label-name n))
+  ;; 		      ac))))
+  ;; 	(else
+  ;; 	 (die 'IMM32 "invalid" n))))
+
+  (define (IMM n ac)
+    (cond ((immediate-int? n)
+	   ;;Prepend  to the  accumulator  AC an  immediate integer  value
+	   ;;least significant bytes first.
 	   ;;
 	   ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
 	   ;;
-	   ;;SRA = shift right arithmetic.
-	   (cons* (byte n)
-		  (byte (sra n 8))
-		  (byte (sra n 16))
-		  (byte (sra n 24))
-		  ac))
+	   (case-word-size
+	    ((32)
+	     (cons* (byte n)
+		    (byte (sra n 8))
+		    (byte (sra n 16))
+		    (byte (sra n 24))
+		    ac))
+	    ((64)
+	     (cons* (byte n)
+		    (byte (sra n 8))
+		    (byte (sra n 16))
+		    (byte (sra n 24))
+		    (byte (sra n 32))
+		    (byte (sra n 40))
+		    (byte (sra n 48))
+		    (byte (sra n 56))
+		    ac))))
+	  ((obj? n)
+	   (let ((v ($cadr n)))
+	     (cons (if (immediate? v)
+		       (word v)
+		     (reloc-word v))
+		   ac)))
+	  ((obj+? n)
+	   (let ((v ($cadr  n))
+		 (d ($caddr n)))
+	     (cons (reloc-word+ v d) ac)))
+	  ((label-address? n)
+	   (cons `(label-addr	. ,(label-name n))
+		 ac))
+	  ((foreign? n)
+	   (cons `(foreign-label	. ,(label-name n))
+		 ac))
 	  ((label? n)
 	   (let ((LN (label-name n)))
 	     `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
 	       . ,ac)))
 	  (else
-	   (die 'IMM32 "invalid" n))))))
-;;The following  is the original Ikarus's  IMM32 implementation.  (Marco
-;;Maggi; Oct 8, 2012)
-;;
-;; (define (IMM32 n ac)
-;;   (cond (($fx= wordsize 4)
-;; 	 (IMM n ac))
-;; 	((imm32? n)
-;; 	 (cons* (byte n)
-;; 		(byte (sra n 8))
-;; 		(byte (sra n 16))
-;; 		(byte (sra n 24))
-;; 		ac))
-;; 	((label? n)
-;; 	 (cond ((local-label? (label-name n))
-;; 		(cons `(local-relative . ,(label-name n))
-;; 		      ac))
-;; 	       (else
-;; 		(cons `(relative       . ,(label-name n))
-;; 		      ac))))
-;; 	(else
-;; 	 (die 'IMM32 "invalid" n))))
+	   (die 'IMM "invalid" n))))
 
-(define (IMM n ac)
-  (cond ((immediate-int? n)
-	 ;;Prepend  to the  accumulator  AC an  immediate integer  value
-	 ;;least significant bytes first.
-	 ;;
-	 ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
-	 ;;
-	 (case-word-size
-	   ((32)
-	    (cons* (byte n)
-		   (byte (sra n 8))
-		   (byte (sra n 16))
-		   (byte (sra n 24))
-		   ac))
-	   ((64)
-	    (cons* (byte n)
-		   (byte (sra n 8))
-		   (byte (sra n 16))
-		   (byte (sra n 24))
-		   (byte (sra n 32))
-		   (byte (sra n 40))
-		   (byte (sra n 48))
-		   (byte (sra n 56))
-		   ac))))
-	((obj? n)
-	 (let ((v ($cadr n)))
-	   (cons (if (immediate? v)
-		     (word v)
-		   (reloc-word v))
-		 ac)))
-	((obj+? n)
-	 (let ((v ($cadr  n))
-	       (d ($caddr n)))
-	   (cons (reloc-word+ v d) ac)))
-	((label-address? n)
-	 (cons `(label-addr	. ,(label-name n))
-	       ac))
-	((foreign? n)
-	 (cons `(foreign-label	. ,(label-name n))
-	       ac))
-	((label? n)
-	 (let ((LN (label-name n)))
-	   `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
-	     . ,ac)))
-	(else
-	 (die 'IMM "invalid" n))))
+  (define (IMM8 n ac)
+    ;;Prepend  to the  accumulator AC  a fixnum  representing the  byte N,
+    ;;which is an immediate 8-bit value.
+    ;;
+    (define who 'IMM8)
+    (with-arguments-validation (who)
+	((immediate-int	n))
+      (cons (byte n) ac)))
 
-(define (IMM8 n ac)
-  ;;Prepend  to the  accumulator AC  a fixnum  representing the  byte N,
-  ;;which is an immediate 8-bit value.
-  ;;
-  (define who 'IMM8)
-  (with-arguments-validation (who)
-      ((immediate-int	n))
-    (cons (byte n) ac)))
+  (define (imm? x)
+    (or (immediate-int?	x)
+	(obj?		x)
+	(obj+?		x)
+	(label-address?	x)
+	(foreign?		x)
+	(label?		x)))
 
-(define (imm? x)
-  (or (immediate-int?	x)
-      (obj?		x)
-      (obj+?		x)
-      (label-address?	x)
-      (foreign?		x)
-      (label?		x)))
+  (define-entry-predicate foreign? foreign-label)
 
-(define-entry-predicate foreign? foreign-label)
+  (define-inline (imm8? x)
+    (byte? x))
 
-(define-inline (imm8? x)
-  (byte? x))
+  (define-entry-predicate label? label)
+  (define-entry-predicate label-address? label-address)
 
-(define-entry-predicate label? label)
-(define-entry-predicate label-address? label-address)
+  (define-inline (label-name x)
+    ($cadr x))
 
-(define-inline (label-name x)
-  ($cadr x))
+  (define-inline (immediate-int? ?x)
+    (let ((X ?x))
+      (or (fixnum? X)
+	  (bignum? X))))
 
-(define-inline (immediate-int? ?x)
-  (let ((X ?x))
-    (or (fixnum? X)
-	(bignum? X))))
+  (define-entry-predicate obj?	obj)
+  (define-entry-predicate obj+?	obj+)
 
-(define-entry-predicate obj?	obj)
-(define-entry-predicate obj+?	obj+)
+  (define (CODErri c d s i ac)
+    ;;Generate code for register+register+immediate operations?
+    ;;
+    (cond ((imm8? i)
+	   (CODE c (ModRM 1 d s (IMM8 i ac))))
+	  ((imm? i)
+	   (CODE c (ModRM 2 d s (IMM i ac))))
+	  (else
+	   (die 'CODErri "invalid i" i))))
 
-(define (CODErri c d s i ac)
-  ;;Generate code for register+register+immediate operations?
-  ;;
-  (cond ((imm8? i)
-	 (CODE c (ModRM 1 d s (IMM8 i ac))))
-	((imm? i)
-	 (CODE c (ModRM 2 d s (IMM i ac))))
-	(else
-	 (die 'CODErri "invalid i" i))))
+  (define (CODErr c r1 r2 ac)
+    ;;Generate code for register+register operations?
+    ;;
+    (CODE c (ModRM 3 r1 r2 ac)))
 
-(define (CODErr c r1 r2 ac)
-  ;;Generate code for register+register operations?
-  ;;
-  (CODE c (ModRM 3 r1 r2 ac)))
+  (define (RegReg r1 r2 r3 ac)
+    (cond ((eq? r3 '%esp)
+	   (die 'assembler "BUG: invalid src %esp"))
+	  ((eq? r1 '%ebp)
+	   (die 'assembler "BUG: invalid src %ebp"))
+	  (else
+	   (cons* (byte ($fxlogor 4                   ($fxsll (register-index r1) 3)))
+		  (byte ($fxlogor (register-index r2) ($fxsll (register-index r3) 3)))
+		  ac))))
 
-(define (RegReg r1 r2 r3 ac)
-  (cond ((eq? r3 '%esp)
-	 (die 'assembler "BUG: invalid src %esp"))
-	((eq? r1 '%ebp)
-	 (die 'assembler "BUG: invalid src %ebp"))
-	(else
-	 (cons* (byte ($fxlogor 4                   ($fxsll (register-index r1) 3)))
-		(byte ($fxlogor (register-index r2) ($fxsll (register-index r3) 3)))
-		ac))))
+  (define (IMM*2 i1 i2 ac)
+    (cond ((and (immediate-int? i1)
+		(obj? i2))
+	   (let ((d i1)
+		 (v ($cadr i2)))
+	     (cons (reloc-word+ v d) ac)))
+	  ((and (immediate-int? i2)
+		(obj? i1))
+	   (IMM*2 i2 i1 ac))
+	  ((and (immediate-int? i1)
+		(immediate-int? i2))
+	   (IMM (bitwise-and (+ i1 i2) const.wordsize-bitmask)
+		ac))
+	  (else
+	   (die 'assemble "invalid IMM*2" i1 i2))))
 
-(define (IMM*2 i1 i2 ac)
-  (cond ((and (immediate-int? i1)
-	      (obj? i2))
-	 (let ((d i1)
-	       (v ($cadr i2)))
-	   (cons (reloc-word+ v d) ac)))
-	((and (immediate-int? i2)
-	      (obj? i1))
-	 (IMM*2 i2 i1 ac))
-	((and (immediate-int? i1)
-	      (immediate-int? i2))
-	 (IMM (bitwise-and (+ i1 i2) const.wordsize-bitmask)
-	      ac))
-	(else
-	 (die 'assemble "invalid IMM*2" i1 i2))))
+  (define (SIB s i b ac)
+    (cons (byte ($fxlogor (register-index b)
+			  ($fxlogor ($fxsll (register-index i) 3)
+				    ($fxsll s 6))))
+	  ac))
 
-(define (SIB s i b ac)
-  (cons (byte ($fxlogor (register-index b)
-			($fxlogor ($fxsll (register-index i) 3)
-				  ($fxsll s 6))))
-        ac))
+  (case-word-size
+   ((32)
+    (define-inline (imm32? x)
+      (imm? x)))
+   ((64)
+    (define (imm32? x)
+      (and (immediate-int? x)
+	   (<= (words.least-s32) x (words.greatest-s32))))))
 
-(case-word-size
- ((32)
-  (define-inline (imm32? x)
-    (imm? x)))
- ((64)
-  (define (imm32? x)
-    (and (immediate-int? x)
-	 (<= (words.least-s32) x (words.greatest-s32))))))
+  #| end of module |# )
 
 
 (module (convert-instructions local-label?)
+  (import stuff)
 
   ;;List  of symbols  representing  local labels.
   (define local-labels
@@ -698,8 +722,11 @@
 ;;   nop ac
 ;;
 (module ()
+  (import stuff)
 
   (define who 'assembler)
+
+;;; --------------------------------------------------------------------
 
   (define (REX.R bits ac)
     (if ($fx= wordsize 4)
@@ -904,6 +931,8 @@
 				 `(bottom-code (label . ,G)
 					       (label-addr . ,(label-name dst)))
 				 ac)))))))
+
+;;; --------------------------------------------------------------------
 
   (let-syntax ((add-instruction
 		   (syntax-rules ()
