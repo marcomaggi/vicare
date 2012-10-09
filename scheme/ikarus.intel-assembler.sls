@@ -47,8 +47,54 @@
 ;;
 ;;   <http://www.intel.com/design/intarch/manuals/243191.htm>
 ;;
-;;The    entry    point   in    the    assembler    is   the    function
-;;ASSEMBLE-SOURCES.
+;;The entry point in the  assembler is the function ASSEMBLE-SOURCES: it
+;;compiles  assembly code  into binary  code stored  in a  code objects;
+;;every call to ASSEMBLE-SOURCES can generate a list of code objects.
+;;
+;;Assembly code is  represented by a symbolic expression; we  can take a
+;;look  at  the assembly  by  using  "--print-assembly" option  for  the
+;;executable "vicare".
+;;
+;;For example, let's consider the library:
+#|
+   (library (proof)
+     (export alpha)
+     (import (vicare))
+     (define (alpha)
+       123))
+|#
+;;internally it is converted to something like:
+#|
+   (letrec ((alpha_0 (lambda () '123)))
+     (void))
+|#
+;;and the associated assembly symbolic  expression for a 32-bit platform
+;;is:
+#|
+   (name (alpha "var/tmp//proof.sls" . 74))
+   (label L2)
+   (cmpl 0 %eax)
+   (jne (label L3))
+   (label L4)
+   (movl 492 %eax)
+   (ret)
+   (label L3)
+   (jmp (label SL_invalid_args))
+   (nop)
+|#
+;;where we see:
+;;
+;;* The label "L2" is the entry  point.
+;;
+;;*  The number  of  required arguments  is zero,  the  number of  given
+;;arguments is stored in %EAX; if  more than zero arguments are present,
+;;jump to L3.
+;;
+;;* The fixnum 123 is encoded as  raw exact integer 492; load it in %EAX
+;;and return to the caller.
+;;
+;;* If the  wrong number of arguments  was given: jump to  the far label
+;;"SL_invalid_args".
 ;;
 
 
