@@ -1543,7 +1543,7 @@
 	    (v    (let ((v (cddr r)))
 		    (cond ((thunk?-label v)
 			   => (lambda (label)
-				(let ((p (label-loc label)))
+				(let ((p (%label-loc label)))
 				  (cond (($fx= (length p) 2)
 					 (let ((code ($car  p))
 					       (idx  ($cadr p)))
@@ -1555,7 +1555,7 @@
 					(else
 					 ($caddr p))))))
 			  (else v)))))
-	(case type
+	(case-symbols type
 	  ((reloc-word)
 	   ;;Add a record of type "vanilla object".
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG idx)
@@ -1563,7 +1563,7 @@
 	   ($fxincr! reloc-idx 2))
 	  ((foreign-label)
 	   ;;Add a record of type "foreign address".
-	   (let ((name (foreign-string->bytevector v)))
+	   (let ((name (%foreign-string->bytevector v)))
 	     (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG idx)
 	     ($vector-set! vec ($fxadd1 reloc-idx) name)
 	     ($fxincr! reloc-idx 2)))
@@ -1577,7 +1577,7 @@
 	     ($fxincr! reloc-idx 3)))
 	  ((label-addr)
 	   ;;Add a record of type "displaced object".
-	   (let* ((loc (label-loc v))
+	   (let* ((loc (%label-loc v))
 		  (obj  ($car  loc))
 		  (disp ($cadr loc)))
 	     (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG idx)
@@ -1587,7 +1587,7 @@
 	  ((local-relative)
 	   ;;Now that  we have  processed everything,  we can  store the
 	   ;;label offset in the code object.
-	   (let* ((loc  (label-loc v))
+	   (let* ((loc  (%label-loc v))
 		  (obj  ($car  loc))
 		  (disp ($cadr loc)))
 	     (unless (eq? obj code)
@@ -1599,7 +1599,7 @@
 	       ($code-set! code ($fxadd3 idx) ($fxlogand ($fxsra rel 24) #xFF)))))
 	  ((relative)
 	   ;;Add a record of type "jump label".
-	   (let* ((loc  (label-loc v))
+	   (let* ((loc  (%label-loc v))
 		  (obj  ($car  loc))
 		  (disp ($cadr loc)))
 	     (unless (and (code? obj) (fixnum? disp))
@@ -1612,7 +1612,7 @@
 	   (%error "invalid reloc type" type))))
       ))
 
-  (define foreign-string->bytevector
+  (define %foreign-string->bytevector
     ;;Convert  the  string  X  to  a  UTF-8  bytevector.   To  speed  up
     ;;operations: keep a cache of conversions in MEMOIZED as association
     ;;list.
@@ -1637,7 +1637,7 @@
        ($vector-set! ?vec ?reloc-idx ($fxlogor ?tag ($fxsll ?idx 2))))
       ))
 
-  (define (label-loc x)
+  (define (%label-loc x)
     (or (getprop x '*label-loc*)
 	(error 'compile "undefined label" x)))
 
@@ -1658,6 +1658,8 @@
 
   (define (assemble-sources thunk?-label ls*)
     ;;This is the entry point in the assembler.
+    ;;
+    ;;Return a list of code objects.
     ;;
     (let ((num-of-freevars* (map car       ls*))
 	  (code-name*       (map code-name ls*))
