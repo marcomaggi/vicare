@@ -1519,20 +1519,11 @@
   #| end of module |# )
 
 
-(define code-entry-adjustment
-  (let ((v #f))
-    (case-lambda
-     (()
-      (or v (die 'code-entry-adjustment "uninitialized")))
-     ((x)
-      (set! v x)))))
+(module (make-reloc-vector-record-filler code-entry-adjustment)
 
-
-(module (whack-reloc)
+  (define who 'make-reloc-vector-record-filler)
 
-  (define who 'whack-reloc)
-
-  (define (whack-reloc thunk?-label code vec)
+  (define (make-reloc-vector-record-filler thunk?-label code vec)
     ;;Return  a closure  to be  used to  add records  to the  relocation
     ;;vector VEC associated to the code object CODE.
     ;;
@@ -1612,6 +1603,14 @@
 	   (%error "invalid reloc type" type))))
       ))
 
+  (define code-entry-adjustment
+    (let ((v #f))
+      (case-lambda
+       (()
+	(or v (die 'code-entry-adjustment "uninitialized")))
+       ((x)
+	(set! v x)))))
+
   (define %foreign-string->bytevector
     ;;Convert  the  string  X  to  a  UTF-8  bytevector.   To  speed  up
     ;;operations: keep a cache of conversions in MEMOIZED as association
@@ -1675,7 +1674,7 @@
 	      (for-each
 		  (lambda (code-object reloc-vector reloc*)
 		    (for-each
-			(whack-reloc thunk?-label code-object reloc-vector)
+			(make-reloc-vector-record-filler thunk?-label code-object reloc-vector)
 		      reloc*))
 		code-objects* reloc-vector* reloc**)
 	      ;;This causes the relocation vector to be processed for each
