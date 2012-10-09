@@ -433,9 +433,11 @@
     ;;octets) and sexps prepended to  the accumulator list ACCUM; return
     ;;the new accumulator list.
     ;;
-    (define asm-mnemonic
+    (define key
       ($car assembly-sexp))
-    (cond ((getprop asm-mnemonic *cogen*)
+    (cond ((getprop key *cogen*)
+	   ;;Convert an assembly instruction specification.
+	   ;;
 	   => (lambda (prop)
 		(let ((n    ($car prop))
 		      (proc ($cdr prop))
@@ -457,35 +459,52 @@
 		    (else
 		     (%with-checked-args n
 		       (apply proc assembly-sexp accum args)))))))
-	  ((eq? asm-mnemonic 'seq)
+	  ((eq? key 'seq)
+	   ;;Process a SEQ sexp.  A SEQ sexp has the format:
+	   ;;
+	   ;;   (seq . ?asm-sexps)
+	   ;;
+	   ;;where   ?ASM-SEXPS  is   a   list   of  assembly   symbolic
+	   ;;expressions.
+	   ;;
 	   (fold convert-instruction accum ($cdr assembly-sexp)))
-	  ((eq? asm-mnemonic 'pad)
-	   (let* ((n    ($cadr assembly-sexp))
-		  (code ($cddr assembly-sexp))
-		  (ls   (fold convert-instruction accum code))
-		  (m    (compute-code-size (%find-prefix accum ls))))
-	     (append (make-list (- n m) 0) ls)))
+	  ((eq? key 'pad)
+	   ;;Process a PAD sexp.  Convert the assembly code and return a
+	   ;;new accumulator list padded with a prefix of zeros.
+	   ;;
+	   (let* ((n              ($cadr assembly-sexp))
+		  (asm-sexps      ($cddr assembly-sexp))
+		  (new-accum.tail (fold convert-instruction accum asm-sexps))
+		  (prefix.len     (compute-code-size (%find-prefix accum new-accum.tail))))
+	     (append (make-list (- n prefix.len) 0)
+		     new-accum.tail)))
 	  (else
 	   (assertion-violation who "unknown instruction" assembly-sexp))))
 
-  (define (%find-prefix accum ls)
-    (let loop ((ls ls))
-      (if (eq? ls accum)
+  (define (%find-prefix old-accum new-accum)
+    ;;Expect NEW-ACCUM to be a list having OLD-ACCUM as tail:
+    ;;
+    ;;   new-accum = (item0 item ... . old-accum)
+    ;;
+    ;;visit the prefix of NEW-ACCUM holding the new ITEMs and filter out
+    ;;the ITEMs being BOTTOM-CODE entries; return the resulting list.
+    ;;
+    (let loop ((ls new-accum))
+      (if (eq? ls old-accum)
 	  '()
 	(let ((asm-sexp ($car ls)))
 	  (if (bottom-code? asm-sexp)
+	      ;;Skip BOTTOM-CODE sexp.
 	      (loop ($cdr ls))
 	    (cons asm-sexp (loop ($cdr ls))))))))
 
   (define-entry-predicate bottom-code? bottom-code)
-  #;(and (pair? asm-sexp)
-       (eq? ($car asm-sexp) 'bottom-code))
 
   (define (%error-incorrect-args assembly-sexp expected-nargs)
     (assertion-violation who
       (string-append
        "wrong number of arguments in assembly symbolic expression, expected "
-       (number->string  expected-nargs))
+       (number->string expected-nargs))
       assembly-sexp))
 
   #| end of module |# )
