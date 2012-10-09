@@ -420,7 +420,18 @@
 ;; 	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
-(module (convert-instructions)
+(module (convert-instructions local-label?)
+
+  ;;List  of symbols  representing  local labels.
+  (define local-labels
+    (make-parameter '()))
+
+  (define (local-label? x)
+    ;;FIXME Would  this be significantly  faster with an  EQ? hashtable?
+    ;;Or is the number of local labels usually small?  (Marco Maggi; Oct
+    ;;9, 2012)
+    ;;
+    (and (memq x (local-labels)) #t))
 
   (define (convert-instructions ls)
     (parametrise ((local-labels (%uncover-local-labels ls)))
@@ -1343,12 +1354,6 @@
 
 (define-inline (unset-label-loc! x)
   (remprop x '*label-loc*))
-
-(define local-labels
-  (make-parameter '()))
-
-(define (local-label? x)
-  (and (memq x (local-labels)) #t))
 
 (define (optimize-local-jumps ls)
   (define locals '())
