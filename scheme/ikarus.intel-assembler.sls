@@ -1394,26 +1394,32 @@
   #| end of module |# )
 
 
-(define (compute-code-size ls)
-  (fold (lambda (x ac)
+(define (compute-code-size octets-and-labels)
+  ;;Given a list holding octets-as-fixnums  and label sexps: compute and
+  ;;return the number  of bytes needed to hold  the corresponding binary
+  ;;code.  Such  number of bytes  will be the  minimum size of  the data
+  ;;area in a code object.
+  ;;
+  (define who 'compute-code-size)
+  (fold (lambda (x size)
 	  (if (fixnum? x)
-	      ($fx+ ac 1)
-	    (case (car x)
+	      ($fxadd1 size)
+	    (case-symbols ($car x)
 	      ((byte)
-	       ($fx+ ac 1))
+	       ($fxadd1 size))
 	      ((relative local-relative)
-	       ($fx+ ac 4))
+	       ($fxadd4 size))
 	      ((label)
-	       ac)
+	       size)
 	      ((word reloc-word reloc-word+ label-addr
 		     current-frame-offset foreign-label)
-	       ($fx+ ac wordsize))
+	       ($fx+ size wordsize))
 	      ((bottom-code)
-	       ($fx+ ac (compute-code-size ($cdr x))))
+	       ($fx+ size (compute-code-size ($cdr x))))
 	      (else
-	       (die 'compute-code-size "unknown instr" x)))))
+	       (error who "unknown instr" x)))))
 	0
-	ls))
+	octets-and-labels))
 
 
 (module (store-binary-code-in-code-objects)
