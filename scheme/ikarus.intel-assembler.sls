@@ -1545,41 +1545,38 @@
 			      (else
 			       ($caddr p))))))
 		(else v))))
-      ;;Offset into the data area of the code object.
-      (define binary-code.offset
-	($car r))
       (define-syntax key
 	(identifier-syntax ($cadr r)))
       (case-symbols key
 	((reloc-word)
 	 ;;Add a record of type "vanilla object".
-	 (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG
-			     binary-code.offset)
-	 ($vector-set! vec ($fxadd1 reloc-idx) val)
-	 ($fxincr! reloc-idx 2))
+	 (let ((off ($car r))) ;Offset into the data area of the code object.
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
+	   ($vector-set! vec ($fxadd1 reloc-idx) val)
+	   ($fxincr! reloc-idx 2)))
 	((foreign-label)
 	 ;;Add a record of type "foreign address".
-	 (let ((name (%foreign-string->bytevector val)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG
-			       binary-code.offset)
+	 (let ((off  ($car r)) ;Offset into the data area of the code object.
+	       (name (%foreign-string->bytevector val)))
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
 	   ($vector-set! vec ($fxadd1 reloc-idx) name)
 	   ($fxincr! reloc-idx 2)))
 	((reloc-word+)
 	 ;;Add a record of type "displaced object".
-	 (let ((obj  ($car val))
+	 (let ((off  ($car r)) ;Offset into the data area of the code object.
+	       (obj  ($car val))
 	       (disp ($cdr val)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG
-			       binary-code.offset)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
 	   ($vector-set! vec ($fxadd1 reloc-idx) disp)
 	   ($vector-set! vec ($fxadd2 reloc-idx) obj)
 	   ($fxincr! reloc-idx 3)))
 	((label-addr)
 	 ;;Add a record of type "displaced object".
-	 (let* ((loc  (%label-loc val))
+	 (let* ((off  ($car r))	;Offset into the data area of the code object.
+		(loc  (%label-loc val))
 		(obj  ($car  loc))
 		(disp ($cadr loc)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG
-			       binary-code.offset)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
 	   ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
 	   ($vector-set! vec ($fxadd2 reloc-idx) obj))
 	 ($fxincr! reloc-idx 3))
@@ -1588,37 +1585,43 @@
 	 ;;of this very  code object.  There is no need  to add a record
 	 ;;to the relocation vector, we  just store in the code object's
 	 ;;data area  the relative offset  of the label with  respect to
-	 ;;the beginning of the data area itself.
+	 ;;the current position in data area itself.
 	 ;;
-	 ;;  meta data        data area
-	 ;; |---------|----+------------------|-|--------| code object
-	 ;;                ^                   ^
-	 ;;                L                   |
-	 ;;           |....| ---relative offset of L
+	 ;;  meta data     L  data area
+	 ;; |---------|----+-------------|---|---|--------| code object
+	 ;;                ^               ^ |
+	 ;;                |               | |
+	 ;;                |         ------  |
+	 ;;                |        |        |
+	 ;;                |.................| relative offset of L
+	 ;;
+	 ;;           |....| disp        |...| 4
+	 ;;           |..................| off
 	 ;;
 	 ;;Notice that local  labels are specified with  a 32-bit offset
 	 ;;on all the platforms.
 	 ;;
-	 (let* ((loc  (%label-loc val))
+	 (let* ((off  ($car r))	;Offset into the data area of the code object.
+		(loc  (%label-loc val))
 		(obj  ($car  loc))
 		(disp ($cadr loc)))
 	   (unless (eq? obj code)
 	     (%error "source code object and target code object of \
                       a local relative jump are not the same"))
-	   (let ((rel ($fx- disp ($fxadd4 binary-code.offset))))
-	     ($code-set! code          binary-code.offset  ($fxlogand         rel     #xFF))
-	     ($code-set! code ($fxadd1 binary-code.offset) ($fxlogand ($fxsra rel 8)  #xFF))
-	     ($code-set! code ($fxadd2 binary-code.offset) ($fxlogand ($fxsra rel 16) #xFF))
-	     ($code-set! code ($fxadd3 binary-code.offset) ($fxlogand ($fxsra rel 24) #xFF)))))
+	   (let ((rel ($fx- disp ($fxadd4 off))))
+	     ($code-set! code          off  ($fxlogand         rel     #xFF))
+	     ($code-set! code ($fxadd1 off) ($fxlogand ($fxsra rel 8)  #xFF))
+	     ($code-set! code ($fxadd2 off) ($fxlogand ($fxsra rel 16) #xFF))
+	     ($code-set! code ($fxadd3 off) ($fxlogand ($fxsra rel 24) #xFF)))))
 	((relative)
 	 ;;Add a record of type "jump label".
-	 (let* ((loc  (%label-loc val))
+	 (let* ((off  ($car r))	;Offset into the data area of the code object.
+		(loc  (%label-loc val))
 		(obj  ($car  loc))
 		(disp ($cadr loc)))
 	   (unless (and (code? obj) (fixnum? disp))
 	     (%error "invalid relative jump obj/disp" obj disp))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG
-			       binary-code.offset)
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG off)
 	   ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
 	   ($vector-set! vec ($fxadd2 reloc-idx) obj))
 	 ($fxincr! reloc-idx 3))
