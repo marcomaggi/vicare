@@ -37,6 +37,18 @@
     (include "ikarus.config.ss"))
 
 
+;;;; Introduction
+;;
+;;As reference for  i686 instructions we can look at  (URL last verified
+;;on Oct 9, 2012):
+;;
+;;   Intel(R)  Architecture  Software   Developer's  Manual,  Volume  2:
+;;   Instruction Set Reference Manual
+;;
+;;   <http://www.intel.com/design/intarch/manuals/243191.htm>
+;;
+
+
 ;;;; helpers
 
 (define (fold func init ls)
@@ -408,16 +420,6 @@
   (define (imm32? x)
     (and (immediate-int? x)
 	 (<= (words.least-s32) x (words.greatest-s32))))))
-;;The following is  a previous version of the  IMM32?  function.  (Marco
-;;Maggi; Oct 8, 2012)
-;;
-;; (define (imm32? x)
-;;   (case-word-size
-;;     ((32)
-;;      (imm? x))
-;;     ((64)
-;;      (and (immediate-int? x)
-;; 	  (<= (words.least-s32) x (words.greatest-s32))))))
 
 
 (module (convert-instructions local-label?)
@@ -1486,24 +1488,6 @@
   #| end of module |# )
 
 
-(define (compute-reloc-size ls)
-  (fold (lambda (x ac)
-	  (if (fixnum? x)
-	      ac
-	    (case ($car x)
-	      ((word byte label current-frame-offset local-relative)
-	       ac)
-	      ((reloc-word foreign-label)
-	       ($fx+ ac 2))
-	      ((relative reloc-word+ label-addr)
-	       ($fx+ ac 3))
-	      ((bottom-code)
-	       ($fx+ ac (compute-reloc-size ($cdr x))))
-	      (else
-	       (die 'compute-reloc-size "unknown instr" x)))))
-	0
-	ls))
-
 (define code-entry-adjustment
   (let ((v #f))
     (case-lambda
@@ -1635,14 +1619,14 @@
   (define (assemble-sources thunk?-label ls*)
     ;;This is the entry point in the assembler.
     ;;
-    (let ((closure-size* (map car       ls*))
-	  (code-name*    (map code-name ls*))
-	  (ls*           (map code-list ls*)))
+    (let ((num-of-freevars* (map car       ls*))
+	  (code-name*       (map code-name ls*))
+	  (ls*              (map code-list ls*)))
       (let* ((ls* (map convert-instructions ls*))
 	     (ls* (map optimize-local-jumps ls*)))
-	(let ((n* (map compute-code-size  ls*))
-	      (m* (map compute-reloc-size ls*)))
-	  (let ((code* (map make-code   n* closure-size*))
+	(let ((code-size* (map compute-code-size  ls*))
+	      (m*         (map %compute-reloc-size ls*)))
+	  (let ((code* (map make-code   code-size* num-of-freevars*))
 		(relv* (map make-vector m*)))
 	    (let ((reloc** (map whack-instructions code* ls*)))
 	      (for-each
@@ -1672,6 +1656,24 @@
       (if (name? a)
 	  ($cadr a)
 	#f)))
+
+  (define (%compute-reloc-size ls)
+    (fold (lambda (x ac)
+	    (if (fixnum? x)
+		ac
+	      (case ($car x)
+		((word byte label current-frame-offset local-relative)
+		 ac)
+		((reloc-word foreign-label)
+		 ($fx+ ac 2))
+		((relative reloc-word+ label-addr)
+		 ($fx+ ac 3))
+		((bottom-code)
+		 ($fx+ ac (%compute-reloc-size ($cdr x))))
+		(else
+		 (assertion-violation '%compute-reloc-size "unknown instr" x)))))
+	  0
+	  ls))
 
   #| end of module |# )
 
