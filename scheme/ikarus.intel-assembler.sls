@@ -47,6 +47,9 @@
 ;;
 ;;   <http://www.intel.com/design/intarch/manuals/243191.htm>
 ;;
+;;The    entry    point   in    the    assembler    is   the    function
+;;ASSEMBLE-SOURCES.
+;;
 
 
 ;;;; helpers
@@ -86,7 +89,8 @@
   (syntax-rules ()
     ((_ ?x)
      (let ((t ?x))
-       (if (integer? t)
+       (if (or (fixnum? t)
+	       (bignum? t))
            (bitwise-and t 255)
 	 (error 'byte "invalid" t '(byte ?x)))))))
 
@@ -1391,9 +1395,9 @@
   ls)
 
 
-(module (whack-instructions)
+(module (store-binary-code-in-code-objects)
 
-  (define (whack-instructions x ls)
+  (define (store-binary-code-in-code-objects x ls)
     ;;Loop  over the  list of  entries LS,  filling the  data area  of X
     ;;accordingly.  X is a code object.
     ;;
@@ -1454,7 +1458,7 @@
 		    ;;end.
 		    (loop ($cdr ls) idx reloc (cons ($cdr a) bot*)))
 		   (else
-		    (die 'whack-instructions "unknown instr" a))))))))
+		    (die 'store-binary-code-in-code-objects "unknown instr" a))))))))
     (loop ls 0 '() '()))
 
   (define (%set-code-word! code idx x)
@@ -1622,27 +1626,28 @@
     (let ((num-of-freevars* (map car       ls*))
 	  (code-name*       (map code-name ls*))
 	  (ls*              (map code-list ls*)))
-      (let* ((ls* (map convert-instructions ls*))
-	     (ls* (map optimize-local-jumps ls*)))
-	(let ((code-size* (map compute-code-size  ls*))
-	      (m*         (map %compute-reloc-size ls*)))
-	  (let ((code* (map make-code   code-size* num-of-freevars*))
-		(relv* (map make-vector m*)))
-	    (let ((reloc** (map whack-instructions code* ls*)))
+      (let* ((ls*                (map convert-instructions ls*))
+	     (octets-and-labels* (map optimize-local-jumps ls*)))
+	(let ((code-size*  (map compute-code-size   octets-and-labels*))
+	      (reloc-size* (map %compute-reloc-size octets-and-labels*)))
+	  (let ((code-objects* (map make-code   code-size* num-of-freevars*))
+		(reloc-vector* (map make-vector reloc-size*)))
+	    (let ((reloc** (map store-binary-code-in-code-objects
+			     code-objects* octets-and-labels*)))
 	      (for-each
-		  (lambda (code-object relocation-vector reloc*)
+		  (lambda (code-object reloc-vector reloc*)
 		    (for-each
-			(whack-reloc thunk?-label code-object relocation-vector)
+			(whack-reloc thunk?-label code-object reloc-vector)
 		      reloc*))
-		code* relv* reloc**)
+		code-objects* reloc-vector* reloc**)
 	      ;;This causes the relocation vector to be processed for each
 	      ;;code object.
-	      (for-each set-code-reloc-vector! code* relv*)
+	      (for-each set-code-reloc-vector! code-objects* reloc-vector*)
 	      (for-each (lambda (code name)
 			  (when name
 			    (set-code-annotation! code name)))
-		code* code-name*)
-	      code*))))))
+		code-objects* code-name*)
+	      code-objects*))))))
 
   (define-entry-predicate name? name)
 
@@ -1657,11 +1662,15 @@
 	  ($cadr a)
 	#f)))
 
-  (define (%compute-reloc-size ls)
+  (define (%compute-reloc-size octets-and-labels)
+    ;;Compute the length  of the relocation vector needed  to relocate a
+    ;;code object holding the binary code in OCTETS-AND-LABELS.
+    ;;
+    (define who '%compute-reloc-size)
     (fold (lambda (x ac)
 	    (if (fixnum? x)
 		ac
-	      (case ($car x)
+	      (case-symbols ($car x)
 		((word byte label current-frame-offset local-relative)
 		 ac)
 		((reloc-word foreign-label)
@@ -1671,9 +1680,9 @@
 		((bottom-code)
 		 ($fx+ ac (%compute-reloc-size ($cdr x))))
 		(else
-		 (assertion-violation '%compute-reloc-size "unknown instr" x)))))
+		 (assertion-violation who "unknown instr" x)))))
 	  0
-	  ls))
+	  octets-and-labels))
 
   #| end of module |# )
 
