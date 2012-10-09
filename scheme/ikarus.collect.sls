@@ -65,7 +65,11 @@
 (define (do-post-gc ls n)
   (let ([k0 (collect-key)])
     (parameterize ([post-gc-hooks '()])
-      (for-each (lambda (x) (x)) ls))
+      ;;FIXME Temporary work  around for issue #35:  disable running the
+      ;;post GC hooks.  To be restored after the bug is fixed.
+      (void)
+      ;;This runs the hook functions.
+      #;(for-each (lambda (x) (x)) ls))
     (if (eq? k0 (collect-key))
         (let ([was-enough? (foreign-call "ik_collect_check" n)])
           ;;; handlers ran without GC but there is was not enough
