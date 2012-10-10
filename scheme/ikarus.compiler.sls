@@ -61,7 +61,8 @@
     (ikarus.fasl.write)
     (ikarus.intel-assembler)
     (only (vicare syntactic-extensions)
-	  define-inline)
+	  define-inline
+	  case-symbols)
     (vicare arguments validation))
 
 
@@ -509,63 +510,97 @@
       ($cadr x)))
 
   (define (get-fmls x args)
+    ;;Expect X to be a sexp representing  a CASE-LAMBDA and ARGS to be a
+    ;;list  of arguments  for  such  function.  Scan  the  clauses in  X
+    ;;looking for a set of formals that matches ARGS: when found, return
+    ;;the list of formals; when not found, return null.
+    ;;
     (define (matching? fmls args)
+      ;;Return true if  FMLS and ARGS are lists with  the same number of
+      ;;items.
       (cond ((null? fmls)
 	     (null? args))
 	    ((pair? fmls)
 	     (and (pair? args)
-		  (matching? (cdr fmls) (cdr args))))
+		  (matching? ($cdr fmls) ($cdr args))))
 	    (else #t)))
-    (define (get-cls* x)
+    (define (get-clause* x)
+      ;;Given  a sexp  representing a  CASE-LAMBDA, return  its list  of
+      ;;clauses.  Return null if X is not a CASE-LAMBDA sexp.
       (if (pair? x)
-          (case (car x)
+          (case-symbols ($car x)
             ((case-lambda)
-	     (cdr x))
+	     ($cdr x))
             ((annotated-case-lambda)
-	     (cddr x))
+	     ($cddr x))
             (else '()))
 	'()))
-    (let f ((cls* (get-cls* x)))
-      (cond ((null? cls*)
+    (let loop ((clause* (get-clause* x)))
+      (cond ((null? clause*)
 	     '())
-	    ((matching? (caar cls*) args)
-	     (caar cls*))
+	    ((matching? ($caar clause*) args)
+	     ($caar clause*))
 	    (else
-	     (f (cdr cls*))))))
+	     (loop ($cdr clause*))))))
 
   (define (make-global-set! lhs rhs)
+    ;;Return a new  struct instance of type FUNCALL  representing a SET!
+    ;;for a variable at the top level. (?)
+    ;;
     (make-funcall (make-primref '$init-symbol-value!)
 		  (list (make-constant lhs) rhs)))
+
   (define-syntax equal-case
-    (lambda (x)
-      (syntax-case x ()
-	((_ val clause* ...)
-	 (with-syntax ((body
-			(let f ((clause* #'(clause* ...)))
-			  (syntax-case clause* (else)
-			    (((else e e* ...))
-			     #'(begin e e* ...))
-			    ((((datum* ...) e e* ...) . rest)
-			     (with-syntax ((rest (f #'rest)))
-			       #'(if (member t '(datum* ...))
-				     (begin e e* ...)
-				   rest)))))))
-	   #'(let ((t val)) body))))))
+    ;;CASE  syntax specialised  to  use EQUAL?   rather  than EQV?.   We
+    ;;expand:
+    ;;
+    ;;   (equal-case ?expr
+    ;;     ((?A ...)
+    ;;      ?a0 ?a ...)
+    ;;     ((?B ...)
+    ;;      ?b0 ?b ...)
+    ;;     (else
+    ;;      ?else0 ?else ...))
+    ;;
+    ;;into:
+    ;;
+    ;;   (let ((t ?expr))
+    ;;     (if (member t '(?A ...))
+    ;;         (begin ?a0 ?a ...)
+    ;;       (if (member t '(?B ...))
+    ;;           (begin ?b0 ?b ...)
+    ;;         (begin ?else0 ?else))))
+    ;;
+    (lambda (stx)
+      (syntax-case stx ()
+	((_ ?expr ?clause ...)
+	 (with-syntax
+	     ((BODY (let f ((clause* #'(?clause ...)))
+		      (syntax-case clause* (else)
+			(((else ?else0 ?else ...))
+			 #'(begin ?else0 ?else ...))
+			((((?datum ...) ?body0 ?body ...) . ?other-clauses)
+			 (with-syntax ((REST (f #'?other-clauses)))
+			   #'(if (member t '(?datum ...))
+				 (begin ?body0 ?body ...)
+			       REST)))))))
+	   #'(let ((t ?expr)) BODY)))
+	)))
 
   (define (E-clambda-clause* cls* ctxt)
-    (map
-	(let ((ctxt (if (pair? ctxt) (car ctxt) #f)))
-	  (lambda (cls)
-	    (let ((fml* (car cls)) (body (cadr cls)))
-	      (let ((nfml* (gen-fml* fml*)))
-		(let ((body (E body ctxt)))
-		  (ungen-fml* fml*)
-		  (make-clambda-case
-		   (make-case-info
-                    (gensym)
-                    (properize nfml*)
-                    (list? fml*))
-		   body))))))
+    ;;Return a list holding new instances of struct CLAMBDA-CASE.
+    ;;
+    (map (let ((ctxt (if (pair? ctxt)
+			 (car ctxt)
+		       #f)))
+	   (lambda (cls)
+	     (let ((fml* (car cls))
+		   (body (cadr cls)))
+	       (let ((nfml* (gen-fml* fml*))
+		     (body  (E body ctxt)))
+		 (ungen-fml* fml*)
+		 (make-clambda-case (make-case-info (gensym) (properize nfml*) (list? fml*))
+				    body)))))
       cls*))
 
   (define (E-make-parameter mk-call args ctxt)
