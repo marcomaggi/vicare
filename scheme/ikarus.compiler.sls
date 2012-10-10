@@ -102,8 +102,8 @@
 		     (ell2 ?ell2))
 	   (if (null? ell1)
 	       '()
-	     (cons (?func ($car input1) ($car input2))
-		   (recur ($cdr input1) ($cdr input2))))))
+	     (cons (?func ($car ell1) ($car ell2))
+		   (recur ($cdr ell1) ($cdr ell2))))))
       )))
 
 (define-syntax begin0
@@ -558,6 +558,9 @@
   ;;The bulk of the work is performed by the recursive function E.
   ;;
 
+  (define-inline (E* x)
+    (E x #f))
+
   (define (E x ctxt)
     ;;Convert the  symbolic expression X  representing code in  the core
     ;;language into a nested hierarchy of struct instances.  CTXT
@@ -625,7 +628,7 @@
 		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 		  ;;Make sure that LHS* is processed first!!!
 		  (let* ((nlhs* (gen-fml* lhs*))
-			 (nrhs* (map E rhs* lhs*)))
+			 (nrhs* (map/stx E rhs* lhs*)))
 		    (begin0
 			(make-recbind nlhs* nrhs* (E body ctxt))
 		      (ungen-fml* lhs*))))))
@@ -639,7 +642,7 @@
 		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 		  ;;Make sure that LHS* is processed first!!!
 		  (let* ((nlhs* (gen-fml* lhs*))
-			 (nrhs* (map E rhs* lhs*)))
+			 (nrhs* (map/stx E rhs* lhs*)))
 		    (begin0
 			(make-rec*bind nlhs* nrhs* (E body ctxt))
 		      (ungen-fml* lhs*))))))
@@ -658,7 +661,7 @@
 			  (set-prelex-global-location! lhs loc))
 		      nlhs* loc*)
 		    (let ((expr (make-rec*bind nlhs*
-					       (map E rhs* lhs*)
+					       (map/stx E rhs* lhs*)
 					       (let f ((lhs* nlhs*)
 						       (loc* loc*))
 						 (cond ((null? lhs*)
@@ -707,9 +710,12 @@
 	     ((foreign-call)
 	      (let ((name (quoted-string ($cadr x)))
 		    (arg* ($cddr x)))
-		(make-forcall name (map (lambda (x)
-					  (E x #f))
-				     arg*))))
+		(make-forcall name
+			      (map/stx E* arg*)
+			      #;(map (lambda (x)
+				     (E x #f))
+				arg*)
+			      )))
 
 	     ;;Synopsis: (primitive ?prim)
 	     ;;
@@ -982,7 +988,9 @@
             ctxt)))
       (else	;Error, incorrect number of arguments.
        (mk-call (make-primref 'make-parameter)
-		(map (lambda (x) (E x #f)) args)))))
+		(map/stx E* args)
+		#;(map (lambda (x) (E x #f)) args)
+		))))
 
   (define (E-app mk-call rator args ctxt)
     (equal-case rator
@@ -997,9 +1005,9 @@
 			   (cons (E ($car args) ($car names))
 				 (f ($cdr args) ($cdr names))))
 			  (else
-			   (map (lambda (x)
-				  (E x #f))
-			     args)))))))))
+			   (map/stx E* args)
+			   #;(map (lambda (x) (E x #f)) args)
+			   ))))))))
 
   (module (lexical gen-fml* ungen-fml*)
 
