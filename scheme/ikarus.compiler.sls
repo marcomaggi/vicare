@@ -416,6 +416,11 @@
   ;;language, convert  it into a  nested hierarchy of  struct instances;
   ;;return the outer struct instance.
   ;;
+  ;;An expression in  the core language is code fully  expanded in which
+  ;;all  the bindings  have a  unique variable  name; the  core language
+  ;;would be evaluated  in an environment composed by  all the functions
+  ;;exported by the boot image and the loaded libraries.
+  ;;
   ;;Recognise the following core language:
   ;;
   ;;   (quote ?datum)
@@ -433,68 +438,198 @@
   ;;   (annotated-call ?arg ...)
   ;;   ?symbol
   ;;
-  ;;where; ?SYMBOL is interpreted as  reference to variable; ?LHS stands
+  ;;where: ?SYMBOL is interpreted as  reference to variable; ?LHS stands
   ;;for "left-hand side"; ?RHS stands for "right-hand side".
   ;;
+  ;;The bulk of the work is performed by the recursive function E.
+  ;;
 
-  (module (lexical gen-fml* ungen-fml*)
+  (define (E x ctxt)
+    ;;Convert the  symbolic expression X  representing code in  the core
+    ;;language into a nested hierarchy of struct instances.
+    ;;
+    (cond ((pair? x)
+	   (equal-case ($car x)
 
-    ;;FIXME  Do we  need a  new  cookie at  each call  to the  RECORDIZE
-    ;;function?  Maybe  not, because  we always  call GEN-FML*  and then
-    ;;clean up with UNGEN-FML*.  (Marco Maggi; Oct 10, 2012)
-    (define *cookie*
-      (gensym))
+	     ;;Synopsis: (quote ?datum)
+	     ;;
+	     ((quote)
+	      (make-constant ($cadr x)))
 
-    (define-inline (lexical x)
-      (getprop x *cookie*))
+	     ;;Synopsis: (if ?test ?consequent ?alternate)
+	     ;;
+	     ((if)
+	      (make-conditional
+		  (E ($cadr x) #f)
+		(E ($caddr x)        ctxt)
+		(E ($car ($cdddr x)) ctxt)))
 
-    (define (gen-fml* fml*)
-      ;;Expect FML* to be a symbol  or a list of symbols.  This function
-      ;;is used to  process the formals of  LAMBDA, CASE-LAMBDA, LETREC,
-      ;;LETREC*, LIBRARY-LETREC.
-      ;;
-      ;;When FML*  is a symbol: build  a struct instance of  type PRELEX
-      ;;and  store it  in the  property list  of FML*,  then return  the
-      ;;PRELEX instance.
-      ;;
-      ;;When FML* is  a list of symbols: for each  symbol build a struct
-      ;;instance of type PRELEX and store it in the property list of the
-      ;;symbol; return the list of PRELEX instances.
-      ;;
-      ;;The property list keyword is the gensym bound to *COOKIE*.
-      ;;
-      (cond ((pair? fml*)
-	     (let ((v (make-prelex ($car fml*) #f)))
-	       (putprop ($car fml*) *cookie* v)
-	       (cons v (gen-fml* ($cdr fml*)))))
-	    ((symbol? fml*)
-	     (let ((v (make-prelex fml* #f)))
-	       (putprop fml* *cookie* v)
-	       v))
-	    (else '())))
+	     ;;Synopsis: (set! ?lhs ?rhs)
+	     ;;
+	     ((set!)
+	      (let ((lhs ($cadr  x))	;left-hand side
+		    (rhs ($caddr x)))	;right-hand side
+		(cond ((lexical lhs)
+		       => (lambda (var)
+			    (set-prelex-source-assigned?! var #t)
+			    (make-assign var (E rhs lhs))))
+		      (else
+		       (make-global-set! lhs (E rhs lhs))))))
 
-    (define (ungen-fml* fml*)
-      ;;Clean up  function associated to the  function GEN-FML*.  Expect
-      ;;FML* to be a symbol or a list of symbols.
-      ;;
-      ;;When FML* is  a symbol: remove the instance of  type PRELEX from
-      ;;the property list of the symbol; return unspecified values.
-      ;;
-      ;;When  FML* is  a list  of symbols:  for each  symbol remove  the
-      ;;struct instance  of type  PRELEX from the  property list  of the
-      ;;symbol; return unspecified values.
-      ;;
-      ;;The property list keyword is the gensym bound to *COOKIE*.
-      ;;
-      (cond ((pair? fml*)
-	     (remprop ($car fml*) *cookie*)
-	     (ungen-fml* ($cdr fml*)))
-	    ((symbol? fml*)
-	     (remprop fml* *cookie*))
-	    ;;When FML* is null: do nothing.
-	    ))
+	     ;;Synopsis: (begin ?body0 ?body ...)
+	     ;;
+	     ((begin)
+	      (let f ((a ($cadr x))
+		      (d ($cddr x)))
+		(cond ((null? d)
+		       (E a ctxt))
+		      (else
+		       (make-seq (E a #f)
+				 (f ($car d) ($cdr d)))))))
 
-    #| end of module |# )
+	     ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
+	     ;;
+	     ((letrec)
+	      (let ((bind* ($cadr  x))	  ;list of bindings
+		    (body  ($caddr x)))	  ;list of body forms
+		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
+		      (rhs* (map %cadr bind*))) ;list of bindings right-hand sides
+		  (let ((nlhs* (gen-fml* lhs*)))
+		    (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
+		      (ungen-fml* lhs*)
+		      expr)))))
+
+	     ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+	     ;;
+	     ((letrec*)
+	      (let ((bind* ($cadr x))	  ;list of bindings
+		    (body  ($caddr x)))	  ;list of body forms
+		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
+		      (rhs* (map %cadr bind*))) ;list of bindings right-hand sides
+		  (let ((nlhs* (gen-fml* lhs*)))
+		    (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
+		      (ungen-fml* lhs*)
+		      expr)))))
+
+	     ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+	     ;;
+	     ((library-letrec*)
+	      (let ((bind* ($cadr  x))	  ;list of bindings
+		    (body  ($caddr x)))	  ;list of body forms
+		(let ((lhs* (map %car   bind*)) ;list of bindings left-hand sides
+		      (loc* (map %cadr  bind*)) ;list of ?
+		      (rhs* (map %caddr bind*))) ;list of bindings right-hand sides
+		  (let ((nlhs* (gen-fml* lhs*)))
+		    (for-each
+			(lambda (lhs loc)
+			  (set-prelex-global-location! lhs loc))
+		      nlhs* loc*)
+		    (let ((expr (make-rec*bind nlhs*
+					       (map E rhs* lhs*)
+					       (let f ((lhs* nlhs*)
+						       (loc* loc*))
+						 (cond ((null? lhs*)
+							(E body ctxt))
+						       ((not ($car loc*))
+							(f ($cdr lhs*) ($cdr loc*)))
+						       (else
+							(f ($cdr lhs*) ($cdr loc*))))))))
+		      (ungen-fml* lhs*)
+		      expr)))))
+
+	     ;;Synopsis: (case-lambda (?formals ?body0 ?body ...))
+	     ;;
+	     ((case-lambda)
+	      (let ((cls* (E-clambda-clause* ($cdr x) ctxt)))
+		(make-clambda (gensym) cls* #f #f
+			      (and (symbol? ctxt) ctxt))))
+
+	     ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+	     ;;
+	     ((annotated-case-lambda)
+	      (let ((annotated-expr ($cadr x))
+		    (clause*        (E-clambda-clause* ($cddr x) ctxt)))
+		(make-clambda (gensym) clause* #f #f
+			      (cons (and (symbol? ctxt)
+					 ctxt)
+				    (and (not (strip-source-info))
+					 (annotation? annotated-expr)
+					 (annotation-source annotated-expr))))))
+
+	     ;;Synopsis: (lambda ?formals ?body0 ?body ...)
+	     ;;
+	     ;;LAMBDA  functions   are  handled  as  special   cases  of
+	     ;;CASE-LAMBDA functions.
+	     ;;
+	     ;;   (lambda ?formals ?body0 ?body ...)
+	     ;;   ===> (case-lambda (?formals ?body0 ?body ...))
+	     ;;
+	     ((lambda)
+	      (E `(case-lambda ,($cdr x)) ctxt))
+
+	     ;;Synopsis: (foreign-call "?function-name" ?arg ...)
+	     ;;
+	     ;;Return a struct instance of type FORCALL.
+	     ;;
+	     ((foreign-call)
+	      (let ((name (quoted-string ($cadr x)))
+		    (arg* ($cddr x)))
+		(make-forcall name (map (lambda (x)
+					  (E x #f))
+				     arg*))))
+
+	     ;;Synopsis: (primitive ?prim)
+	     ;;
+	     ((primitive)
+	      (let ((var ($cadr x)))
+		(make-primref var)))
+
+	     ;;Synopsis: (annotated-call ?arg ...)
+	     ;;
+	     ((annotated-call)
+	      (E-app (if (generate-debug-calls)
+			 (lambda (op rands)
+			   (define (operator? x)
+			     (struct-case x
+			       ((primref x)
+				(guard (con ((assertion-violation? con) #t))
+				  (system-value x)
+				  #f))
+			       (else #f)))
+			   (define (get-src/expr ae)
+			     (if (annotation? ae)
+				 (cons (annotation-source   ae)
+				       (annotation-stripped ae))
+			       (cons #f (syntax->datum ae))))
+			   (define src/expr
+			     (make-constant (get-src/expr ($cadr x))))
+			   (if (operator? op)
+			       (make-funcall op rands)
+			     (make-funcall (make-primref 'debug-call)
+					   (cons* src/expr op rands))))
+		       make-funcall)
+		     ($caddr x) ($cdddr x) ctxt))
+
+	     (else ;if X is a pair here, it is a function call
+	      ;;Synopsis: (?func ?arg ...)
+	      ;;
+	      ;;Return a struct instance of type FUNCALL.
+	      ;;
+	      (E-app make-funcall ($car x) ($cdr x) ctxt))))
+
+	  ((symbol? x)
+	   (cond ((lexical x)
+		  ;;It is a reference to local variable.
+		  => (lambda (var)
+		       (set-prelex-source-referenced?! var #t)
+		       var))
+		 (else
+		  ;;It is a reference to top level variable.
+		  (make-funcall (make-primref 'top-level-value)
+				(list (make-constant x))))))
+
+	  (else
+	   (error 'recordize "invalid expression" x))))
 
   (define (properize fml*)
     ;;If  FML* is  a proper  list: return  a new  list holding  the same
@@ -517,47 +652,55 @@
 	  (else
 	   (list fml*))))
 
-  (define-argument-validation (quoted-sym who obj)
-    (and (list? obj)
-	 ($fx= (length obj) 2)
-	 (eq? 'quote ($car obj))
-	 (symbol? ($cadr obj)))
-    (assertion-violation who "expected quoted symbol sexp as argument" obj))
+  (module (quoted-sym)
 
-  (define (quoted-sym x)
-    ;;Check that X has the format:
-    ;;
-    ;;  (quote ?symbol)
-    ;;
-    ;;and return ?SYMBOL.
-    ;;
-    (define who 'quoted-sym)
-    (with-arguments-validation (who)
-	((quoted-sym	x))
-      ($cadr x)))
+    (define-argument-validation (quoted-sym who obj)
+      (and (list? obj)
+	   ($fx= (length obj) 2)
+	   (eq? 'quote ($car obj))
+	   (symbol? ($cadr obj)))
+      (assertion-violation who "expected quoted symbol sexp as argument" obj))
 
-  (define-argument-validation (quoted-string who obj)
-    ;;Check that X has the format:
-    ;;
-    ;;  (quote ?string)
-    ;;
-    (and (list? obj)
-	 ($fx= (length obj) 2)
-	 (eq? 'quote ($car obj))
-	 (string? ($cadr obj)))
-    (error who "expected quoted string sexp as argument" obj))
+    (define (quoted-sym x)
+      ;;Check that X has the format:
+      ;;
+      ;;  (quote ?symbol)
+      ;;
+      ;;and return ?SYMBOL.
+      ;;
+      (define who 'quoted-sym)
+      (with-arguments-validation (who)
+	  ((quoted-sym	x))
+	($cadr x)))
 
-  (define (quoted-string x)
-    ;;Check that X has the format:
-    ;;
-    ;;  (quote ?string)
-    ;;
-    ;;and return ?string.
-    ;;
-    (define who 'quoted-string)
-    (with-arguments-validation (who)
-	((quoted-string	x))
-      ($cadr x)))
+    #| end of module: quoted-sym |# )
+
+  (module (quoted-string)
+
+    (define-argument-validation (quoted-string who obj)
+      ;;Check that X has the format:
+      ;;
+      ;;  (quote ?string)
+      ;;
+      (and (list? obj)
+	   ($fx= (length obj) 2)
+	   (eq? 'quote ($car obj))
+	   (string? ($cadr obj)))
+      (error who "expected quoted string sexp as argument" obj))
+
+    (define (quoted-string x)
+      ;;Check that X has the format:
+      ;;
+      ;;  (quote ?string)
+      ;;
+      ;;and return ?string.
+      ;;
+      (define who 'quoted-string)
+      (with-arguments-validation (who)
+	  ((quoted-string	x))
+	($cadr x)))
+
+    #| end of module: quoted-string |# )
 
   (define (get-fmls x args)
     ;;Expect X to be a sexp representing  a CASE-LAMBDA and ARGS to be a
@@ -725,191 +868,66 @@
 				  (E x #f))
 			     args)))))))))
 
-  (define (E x ctxt)
-    (cond ((pair? x)
-	   (equal-case ($car x)
+  (module (lexical gen-fml* ungen-fml*)
 
-	     ;;Synopsis: (quote ?datum)
-	     ;;
-	     ((quote)
-	      (make-constant ($cadr x)))
+    ;;FIXME  Do we  need a  new  cookie at  each call  to the  RECORDIZE
+    ;;function?  Maybe  not, because  we always  call GEN-FML*  and then
+    ;;clean up with UNGEN-FML*.  (Marco Maggi; Oct 10, 2012)
+    (define *cookie*
+      (gensym))
 
-	     ;;Synopsis: (if ?test ?consequent ?alternate)
-	     ;;
-	     ((if)
-	      (make-conditional
-		  (E ($cadr x) #f)
-		(E ($caddr x)        ctxt)
-		(E ($car ($cdddr x)) ctxt)))
+    (define-inline (lexical x)
+      (getprop x *cookie*))
 
-	     ;;Synopsis: (set! ?lhs ?rhs)
-	     ;;
-	     ((set!)
-	      (let ((lhs ($cadr  x))  ;left-hand side
-		    (rhs ($caddr x))) ;right-hand side
-		(cond ((lexical lhs)
-		       => (lambda (var)
-			    (set-prelex-source-assigned?! var #t)
-			    (make-assign var (E rhs lhs))))
-		      (else
-		       (make-global-set! lhs (E rhs lhs))))))
+    (define (gen-fml* fml*)
+      ;;Expect FML* to be a symbol  or a list of symbols.  This function
+      ;;is used to  process the formals of  LAMBDA, CASE-LAMBDA, LETREC,
+      ;;LETREC*, LIBRARY-LETREC.
+      ;;
+      ;;When FML*  is a symbol: build  a struct instance of  type PRELEX
+      ;;and  store it  in the  property list  of FML*,  then return  the
+      ;;PRELEX instance.
+      ;;
+      ;;When FML* is  a list of symbols: for each  symbol build a struct
+      ;;instance of type PRELEX and store it in the property list of the
+      ;;symbol; return the list of PRELEX instances.
+      ;;
+      ;;The property list keyword is the gensym bound to *COOKIE*.
+      ;;
+      (cond ((pair? fml*)
+	     (let ((v (make-prelex ($car fml*) #f)))
+	       (putprop ($car fml*) *cookie* v)
+	       (cons v (gen-fml* ($cdr fml*)))))
+	    ((symbol? fml*)
+	     (let ((v (make-prelex fml* #f)))
+	       (putprop fml* *cookie* v)
+	       v))
+	    (else '())))
 
-	     ;;Synopsis: (begin ?body0 ?body ...)
-	     ;;
-	     ((begin)
-	      (let f ((a ($cadr x))
-		      (d ($cddr x)))
-		(cond ((null? d)
-		       (E a ctxt))
-		      (else
-		       (make-seq (E a #f)
-				 (f ($car d) ($cdr d)))))))
+    (define (ungen-fml* fml*)
+      ;;Clean up  function associated to the  function GEN-FML*.  Expect
+      ;;FML* to be a symbol or a list of symbols.
+      ;;
+      ;;When FML* is  a symbol: remove the instance of  type PRELEX from
+      ;;the property list of the symbol; return unspecified values.
+      ;;
+      ;;When  FML* is  a list  of symbols:  for each  symbol remove  the
+      ;;struct instance  of type  PRELEX from the  property list  of the
+      ;;symbol; return unspecified values.
+      ;;
+      ;;The property list keyword is the gensym bound to *COOKIE*.
+      ;;
+      (cond ((pair? fml*)
+	     (remprop ($car fml*) *cookie*)
+	     (ungen-fml* ($cdr fml*)))
+	    ((symbol? fml*)
+	     (remprop fml* *cookie*))
+	    ;;When FML* is null: do nothing.
+	    ))
 
-	     ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
-	     ;;
-	     ((letrec)
-	      (let ((bind* ($cadr  x))	;list of bindings
-		    (body  ($caddr x)))	;list of body forms
-		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
-		      (rhs* (map %cadr bind*)))	;list of bindings right-hand sides
-		  (let ((nlhs* (gen-fml* lhs*)))
-		    (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
-		      (ungen-fml* lhs*)
-		      expr)))))
+    #| end of module |# )
 
-	     ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
-	     ;;
-	     ((letrec*)
-	      (let ((bind* ($cadr x))	;list of bindings
-		    (body  ($caddr x)))	;list of body forms
-		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
-		      (rhs* (map %cadr bind*)))	;list of bindings right-hand sides
-		  (let ((nlhs* (gen-fml* lhs*)))
-		    (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
-		      (ungen-fml* lhs*)
-		      expr)))))
-
-	     ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
-	     ;;
-	     ((library-letrec*)
-	      (let ((bind* ($cadr  x))	;list of bindings
-		    (body  ($caddr x)))	;list of body forms
-		(let ((lhs* (map %car   bind*))	;list of bindings left-hand sides
-		      (loc* (map %cadr  bind*))	;list of ?
-		      (rhs* (map %caddr bind*))) ;list of bindings right-hand sides
-		  (let ((nlhs* (gen-fml* lhs*)))
-		    (for-each
-			(lambda (lhs loc)
-			  (set-prelex-global-location! lhs loc))
-		      nlhs* loc*)
-		    (let ((expr (make-rec*bind nlhs*
-					       (map E rhs* lhs*)
-					       (let f ((lhs* nlhs*)
-						       (loc* loc*))
-						 (cond ((null? lhs*)
-							(E body ctxt))
-						       ((not ($car loc*))
-							(f ($cdr lhs*) ($cdr loc*)))
-						       (else
-							(f ($cdr lhs*) ($cdr loc*))))))))
-		      (ungen-fml* lhs*)
-		      expr)))))
-
-	     ;;Synopsis: (case-lambda (?formals ?body0 ?body ...))
-	     ;;
-	     ((case-lambda)
-	      (let ((cls* (E-clambda-clause* ($cdr x) ctxt)))
-		(make-clambda (gensym) cls* #f #f
-			      (and (symbol? ctxt) ctxt))))
-
-	     ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
-	     ;;
-	     ((annotated-case-lambda)
-	      (let ((annotated-expr ($cadr x))
-		    (clause*        (E-clambda-clause* ($cddr x) ctxt)))
-		(make-clambda (gensym) clause* #f #f
-			      (cons (and (symbol? ctxt)
-					 ctxt)
-				    (and (not (strip-source-info))
-					 (annotation? annotated-expr)
-					 (annotation-source annotated-expr))))))
-
-	     ;;Synopsis: (lambda ?formals ?body0 ?body ...)
-	     ;;
-	     ;;LAMBDA  functions   are  handled  as  special   cases  of
-	     ;;CASE-LAMBDA functions.
-	     ;;
-	     ;;   (lambda ?formals ?body0 ?body ...)
-	     ;;   ===> (case-lambda (?formals ?body0 ?body ...))
-	     ;;
-	     ((lambda)
-	      (E `(case-lambda ,($cdr x)) ctxt))
-
-	     ;;Synopsis: (foreign-call "?function-name" ?arg ...)
-	     ;;
-	     ;;Return a struct instance of type FORCALL.
-	     ;;
-	     ((foreign-call)
-	      (let ((name (quoted-string ($cadr x)))
-		    (arg* ($cddr x)))
-		(make-forcall name (map (lambda (x)
-					  (E x #f))
-				     arg*))))
-
-	     ;;Synopsis: (primitive ?prim)
-	     ;;
-	     ((primitive)
-	      (let ((var ($cadr x)))
-		(make-primref var)))
-
-	     ;;Synopsis: (annotated-call ?arg ...)
-	     ;;
-	     ((annotated-call)
-	      (E-app (if (generate-debug-calls)
-			 (lambda (op rands)
-			   (define (operator? x)
-			     (struct-case x
-			       ((primref x)
-				(guard (con ((assertion-violation? con) #t))
-				  (system-value x)
-				  #f))
-			       (else #f)))
-			   (define (get-src/expr ae)
-			     (if (annotation? ae)
-				 (cons (annotation-source   ae)
-				       (annotation-stripped ae))
-			       (cons #f (syntax->datum ae))))
-			   (define src/expr
-			     (make-constant (get-src/expr ($cadr x))))
-			   (if (operator? op)
-			       (make-funcall op rands)
-			     (make-funcall (make-primref 'debug-call)
-					   (cons* src/expr op rands))))
-		       make-funcall)
-		     ($caddr x) ($cdddr x) ctxt))
-
-	     (else ;if X is a pair here, it is a function call
-	      ;;Synopsis: (?func ?arg ...)
-	      ;;
-	      ;;Return a struct instance of type FUNCALL.
-	      ;;
-	      (E-app make-funcall ($car x) ($cdr x) ctxt))))
-
-	  ((symbol? x)
-	   (cond ((lexical x)
-		  ;;It is a reference to local variable.
-		  => (lambda (var)
-		       (set-prelex-source-referenced?! var #t)
-		       var))
-		 (else
-		  ;;It is a reference to top level variable.
-		  (make-funcall (make-primref 'top-level-value)
-				(list (make-constant x))))))
-
-	  (else
-	   (error 'recordize "invalid expression" x))))
-
-  (E x #f))
+    (E x #f))
 
 
 (define (unparse x)
