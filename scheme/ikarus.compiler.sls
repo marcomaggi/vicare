@@ -60,6 +60,44 @@
 (define generate-debug-calls (make-parameter #f))
 
 (define-syntax struct-case
+  ;;Specialised CASE syntax  for data structures.  Notice  that we could
+  ;;use this  syntax for any  set of struct  types, not only  the struct
+  ;;types defined in this library.
+  ;;
+  ;;Given:
+  ;;
+  ;;  (define-struct alpha (a b c))
+  ;;  (define-struct beta  (d e f))
+  ;;
+  ;;we want to expand:
+  ;;
+  ;;  (struct-case ?expr
+  ;;    ((alpha a b)
+  ;;     (do-this))
+  ;;    ((beta d e f)
+  ;;     (do-that))
+  ;;    (else
+  ;;     (do-other)))
+  ;;
+  ;;into:
+  ;;
+  ;;  (let ((v ?expr))
+  ;;    (if ($struct/rtd? v (type-descriptor alpha))
+  ;;        (let ((a ($struct-ref v 0))
+  ;;              (b ($struct-ref v 1)))
+  ;;          (do-this))
+  ;;      (if ($struct/rtd? v (type-descriptor beta))
+  ;;          (let ((d ($struct-ref v 0))
+  ;;                (e ($struct-ref v 1))
+  ;;                (f ($struct-ref v 2)))
+  ;;            (do-that))
+  ;;        (begin
+  ;;          (do-other)))))
+  ;;
+  ;;notice that: in the clauses the  pattern "(alpha a b)" must list the
+  ;;fields A and B in the same  order in which they appear in the struct
+  ;;type definition.
+  ;;
   (lambda (stx)
     (define (main stx)
       (syntax-case stx ()
@@ -67,6 +105,26 @@
 	 (with-syntax ((BODY (%generate-body #'_ #'(?clause ...))))
 	   #'(let ((v ?expr))
 	       BODY)))))
+
+    (define (%generate-body ctxt clauses-stx)
+      (syntax-case clauses-stx (else)
+        (()
+	 (with-syntax ((INPUT-FORM stx))
+	   #'(error 'compiler "unknown struct type" v 'INPUT-FORM)))
+
+        (((else ?body0 ?body ...))
+	 #'(begin ?body0 ?body ...))
+
+        ((((?struct-name ?field-name ...) ?body0 ?body ...) . ?other-clauses)
+	 (identifier? #'?struct-name)
+         (with-syntax ((RTD		#'(type-descriptor ?struct-name))
+                       ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
+		       (ALTERN		(%generate-body ctxt #'?other-clauses)))
+	   #'(if ($struct/rtd? v RTD)
+		 (let ((?field-name ($struct-ref v FIELD-IDX))
+		       ...)
+		   ?body0 ?body ...)
+	       ALTERN)))))
 
     (define (%enumerate fields-stx next-field-idx)
       ;;FIELDS-STX must be a syntax object holding a list of identifiers
@@ -82,26 +140,6 @@
          (with-syntax ((FIELD-IDX        next-field-idx)
 		       (OTHER-FIELD-IDXS (%enumerate #'x* (fxadd1 next-field-idx))))
            #'(FIELD-IDX . OTHER-FIELD-IDXS)))))
-
-    (define (%generate-body ctxt clauses-stx)
-      (syntax-case clauses-stx (else)
-        (()
-	 (with-syntax ((x stx))
-	   #'(error #f "unmatched " v 'x)))
-
-        (((else ?body0 ?body ...))
-	 #'(begin ?body0 ?body ...))
-
-        ((((?struct-name ?field-name ...) ?body0 ?body ...) . ?other-clauses)
-	 (identifier? #'?struct-name)
-         (with-syntax ((ALTERN		(%generate-body ctxt #'?other-clauses))
-                       ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
-                       (RTD		#'(type-descriptor ?struct-name)))
-	   #'(if ($struct/rtd? v RTD)
-		 (let ((?field-name ($struct-ref v FIELD-IDX))
-		       ...)
-		   ?body0 ?body ...)
-	       ALTERN)))))
 
     (main stx)))
 
