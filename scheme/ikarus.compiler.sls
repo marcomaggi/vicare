@@ -84,22 +84,43 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax %car	(identifier-syntax (lambda (x) ($car x))))
-(define-syntax %cdr	(identifier-syntax (lambda (x) ($cdr x))))
+;; (define-syntax %car	(identifier-syntax (lambda (x) ($car x))))
+;; (define-syntax %cdr	(identifier-syntax (lambda (x) ($cdr x))))
 
-(define-syntax %caar	(identifier-syntax (lambda (x) ($caar x))))
-(define-syntax %cadr	(identifier-syntax (lambda (x) ($cadr x))))
-(define-syntax %cdar	(identifier-syntax (lambda (x) ($cdar x))))
-(define-syntax %cddr	(identifier-syntax (lambda (x) ($cddr x))))
+;; (define-syntax %caar	(identifier-syntax (lambda (x) ($caar x))))
+;; (define-syntax %cadr	(identifier-syntax (lambda (x) ($cadr x))))
+;; (define-syntax %cdar	(identifier-syntax (lambda (x) ($cdar x))))
+;; (define-syntax %cddr	(identifier-syntax (lambda (x) ($cddr x))))
 
-(define-syntax %caaar	(identifier-syntax (lambda (x) ($caaar x))))
-(define-syntax %caadr	(identifier-syntax (lambda (x) ($caadr x))))
-(define-syntax %cadar	(identifier-syntax (lambda (x) ($cadar x))))
-(define-syntax %cdaar	(identifier-syntax (lambda (x) ($cdaar x))))
-(define-syntax %cdadr	(identifier-syntax (lambda (x) ($cdadr x))))
-(define-syntax %cddar	(identifier-syntax (lambda (x) ($cddar x))))
-(define-syntax %cdddr	(identifier-syntax (lambda (x) ($cdddr x))))
-(define-syntax %caddr	(identifier-syntax (lambda (x) ($caddr x))))
+;; (define-syntax %caaar	(identifier-syntax (lambda (x) ($caaar x))))
+;; (define-syntax %caadr	(identifier-syntax (lambda (x) ($caadr x))))
+;; (define-syntax %cadar	(identifier-syntax (lambda (x) ($cadar x))))
+;; (define-syntax %cdaar	(identifier-syntax (lambda (x) ($cdaar x))))
+;; (define-syntax %cdadr	(identifier-syntax (lambda (x) ($cdadr x))))
+;; (define-syntax %cddar	(identifier-syntax (lambda (x) ($cddar x))))
+;; (define-syntax %cdddr	(identifier-syntax (lambda (x) ($cdddr x))))
+;; (define-syntax %caddr	(identifier-syntax (lambda (x) ($caddr x))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax map/stx
+  (syntax-rules ()
+    ((_ ?func ?ell)
+     (let loop ((input  ?ell)
+		(output '()))
+       (if (null? input)
+	   output
+	 (loop ($cdr input) (cons (?func ($car input)) output)))))
+    ((_ ?func ?ell1 ?ell2)
+     (let loop ((input1 ?ell1)
+		(input2 ?ell2)
+		(output '()))
+       (if (null? input1)
+	   output
+	 (loop ($cdr input1)
+	       ($cdr input2)
+	       (cons (?func ($car input1) ($car input2)) output)))))
+    ))
 
 ;;; --------------------------------------------------------------------
 
@@ -325,40 +346,127 @@
 
 ;;;; struct types
 
-(define-struct constant (value))
+;;Instances of this type represent datums in the core language.
+;;
+(define-struct constant
+  (value
+		;The datum from the source.
+   ))
+
+;;An instance  of this  type represents  a form in  a sequence  of forms
+;;inside a core language BEGIN.  We can think of the form:
+;;
+;;   (begin ?b0 ?b1 ?last)
+;;
+;;as:
+;;
+;;   (begin ?b0 (begin ?b1 (begin ?last)))
+;;
+;;and it becomes the nested hierarchy:
+;;
+;;   #[seq (recordize ?b0) #[seq (recordize ?b1) (recordize ?last)]]
+;;
+(define-struct seq
+  (e0
+		;A struct  instance representing  the first form  in the
+		;sequence.
+   e1
+		;A  struct instance  representing the  last form  in the
+		;sequence or a struct  instance of type SEQ representing
+		;a subsequence.
+   ))
+
+;;An instance of this type represents an IF form.
+;;
+(define-struct conditional
+  (test
+		;A struct instance representing the test form.
+   conseq
+		;A struct instance representing the consequent form.
+   altern
+		;A struct instance representing the alternate form.
+   ))
+
+;;An instance of this type represents a SET! form in which the left-hand
+;;side references a local binding.
+;;
+(define-struct assign
+  (lhs
+		;A  struct  instance  of type  PRELEX  representing  the
+		;binding.
+   rhs
+		;A struct instance representing the new binding value.
+   ))
+
+;;An instance of this type represents a function call; there are special
+;;cases of this.
+;;
+(define-struct funcall
+  (op
+		;When  the FUNCALL  represents a  SET!  on  a top  level
+		;binding, this field is the result of calling:
+		;
+		;   (make-primref '$init-symbol-value!)
+		;
+   rand*
+		;When  the FUNCALL  represents a  SET!  on  a top  level
+		;bindings, this field is a  list of 2 elements: a struct
+		;instance of  type CONSTANT  holding the symbol  name of
+		;the  binding; a  struct instance  representing the  new
+		;value.
+   ))
+
+;;; --------------------------------------------------------------------
+
 (define-struct code-loc (label))
+
 (define-struct foreign-label (label))
+
 (define-struct var
    (name reg-conf frm-conf var-conf reg-move frm-move var-move
          loc index referenced global-loc))
+
 (define-struct cp-var (idx))
+
 (define-struct frame-var (idx))
+
 (define-struct new-frame (base-idx size body))
+
 (define-struct save-cp (loc))
+
 (define-struct eval-cp (check body))
+
 (define-struct return (value))
+
 (define-struct call-cp
   (call-convention label save-cp? rp-convention base-idx arg-count live-mask))
+
 (define-struct tailcall-cp (convention label arg-count))
+
 (define-struct primcall (op arg*))
+
 (define-struct primref (name))
-(define-struct conditional (test conseq altern))
+
 (define-struct interrupt-call (test handler))
+
 (define-struct bind (lhs* rhs* body))
+
 (define-struct recbind (lhs* rhs* body))
+
 (define-struct rec*bind (lhs* rhs* body))
+
 (define-struct fix (lhs* rhs* body))
 
-(define-struct seq (e0 e1))
 (define-struct case-info (label args proper))
+
 (define-struct clambda-case (info body))
+
 (define-struct clambda (label cases cp free name))
 (define-struct closure (code free* well-known?))
-(define-struct funcall (op rand*))
+
 (define-struct jmpcall (label op rand*))
 (define-struct forcall (op rand*))
 (define-struct codes (list body))
-(define-struct assign (lhs rhs))
 (define-struct mvcall (producer consumer))
 
 (define-struct known (expr type))
@@ -379,6 +487,8 @@
 (define-structure (prelex name operand)
   ((source-referenced?   #f)
    (source-assigned?     #f)
+		;Boolean,  true  when  the  binding  has  been  used  as
+		;left-hand side in a SET! form.
    (residual-referenced? #f)
    (residual-assigned?   #f)
    (global-location      #f)))
@@ -421,6 +531,9 @@
   ;;would be evaluated  in an environment composed by  all the functions
   ;;exported by the boot image and the loaded libraries.
   ;;
+  ;;This function expects a symbolic  expression with perfect syntax: no
+  ;;syntax errors are checked.
+  ;;
   ;;Recognise the following core language:
   ;;
   ;;   (quote ?datum)
@@ -446,17 +559,21 @@
 
   (define (E x ctxt)
     ;;Convert the  symbolic expression X  representing code in  the core
-    ;;language into a nested hierarchy of struct instances.
+    ;;language into a nested hierarchy of struct instances.  CTXT
     ;;
     (cond ((pair? x)
-	   (equal-case ($car x)
+	   (case-symbols ($car x)
 
 	     ;;Synopsis: (quote ?datum)
+	     ;;
+	     ;;Return a struct instance of type CONSTANT.
 	     ;;
 	     ((quote)
 	      (make-constant ($cadr x)))
 
 	     ;;Synopsis: (if ?test ?consequent ?alternate)
+	     ;;
+	     ;;Return a struct instance of type CONDITIONAL.
 	     ;;
 	     ((if)
 	      (make-conditional
@@ -466,6 +583,11 @@
 
 	     ;;Synopsis: (set! ?lhs ?rhs)
 	     ;;
+	     ;;If the  left-hand side is  a references a  local binding:
+	     ;;return  a  struct  instance   of  type  ASSIGN.   If  the
+	     ;;left-hand side  represents a top level  binding: return a
+	     ;;struct instance of type FUNCALL.
+	     ;;
 	     ((set!)
 	      (let ((lhs ($cadr  x))	;left-hand side
 		    (rhs ($caddr x)))	;right-hand side
@@ -474,26 +596,32 @@
 			    (set-prelex-source-assigned?! var #t)
 			    (make-assign var (E rhs lhs))))
 		      (else
+		       ;;We recordize the right-hand size in the context
+		       ;;of LHS.
 		       (make-global-set! lhs (E rhs lhs))))))
 
 	     ;;Synopsis: (begin ?body0 ?body ...)
 	     ;;
+	     ;;Build and return nested hierarchy of SEQ structures:
+	     ;;
+	     ;;   #[seq ?body0 #[seq ?body ...]]
+	     ;;
 	     ((begin)
-	      (let f ((a ($cadr x))
-		      (d ($cddr x)))
-		(cond ((null? d)
-		       (E a ctxt))
+	      (let recur ((A ($cadr x))
+			  (D ($cddr x)))
+		(cond ((null? D)
+		       (E A ctxt))
 		      (else
-		       (make-seq (E a #f)
-				 (f ($car d) ($cdr d)))))))
+		       (make-seq (E A #f)
+				 (recur ($car D) ($cdr D)))))))
 
 	     ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
 	     ;;
 	     ((letrec)
 	      (let ((bind* ($cadr  x))	  ;list of bindings
 		    (body  ($caddr x)))	  ;list of body forms
-		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
-		      (rhs* (map %cadr bind*))) ;list of bindings right-hand sides
+		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
+		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
 		    (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
 		      (ungen-fml* lhs*)
@@ -504,8 +632,8 @@
 	     ((letrec*)
 	      (let ((bind* ($cadr x))	  ;list of bindings
 		    (body  ($caddr x)))	  ;list of body forms
-		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
-		      (rhs* (map %cadr bind*))) ;list of bindings right-hand sides
+		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
+		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
 		    (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
 		      (ungen-fml* lhs*)
@@ -516,9 +644,9 @@
 	     ((library-letrec*)
 	      (let ((bind* ($cadr  x))	  ;list of bindings
 		    (body  ($caddr x)))	  ;list of body forms
-		(let ((lhs* (map %car   bind*)) ;list of bindings left-hand sides
-		      (loc* (map %cadr  bind*)) ;list of ?
-		      (rhs* (map %caddr bind*))) ;list of bindings right-hand sides
+		(let ((lhs* (map/stx $car   bind*)) ;list of bindings left-hand sides
+		      (loc* (map/stx $cadr  bind*)) ;list of ?
+		      (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
 		    (for-each
 			(lambda (lhs loc)
@@ -736,12 +864,12 @@
 	    (else
 	     (loop ($cdr clause*))))))
 
-  (define (make-global-set! lhs rhs)
+  (define (make-global-set! lhs recordised-rhs)
     ;;Return a new  struct instance of type FUNCALL  representing a SET!
     ;;for a variable at the top level. (?)
     ;;
     (make-funcall (make-primref '$init-symbol-value!)
-		  (list (make-constant lhs) rhs)))
+		  (list (make-constant lhs) recordised-rhs)))
 
   (define-syntax equal-case
     ;;CASE  syntax specialised  to  use EQUAL?   rather  than EQV?.   We
