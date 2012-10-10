@@ -1,50 +1,61 @@
-;;; Ikarus Scheme -- A compiler for R6RS Scheme.
-;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; Modified by Marco Maggi.
+;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 ;;;
-;;; This program is free software: you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License version 3 as
-;;; published by the Free Software Foundation.
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under  the terms of  the GNU General  Public License version  3 as
+;;;published by the Free Software Foundation.
 ;;;
-;;; This program is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; General Public License for more details.
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
 ;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should  have received a  copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+
+#!r6rs
 (library (ikarus.compiler)
-  (export compile-core-expr-to-port
-          assembler-output optimize-cp
-          current-primitive-locations eval-core
-          current-core-eval compile-core-expr
-          expand expand/optimize expand/scc-letrec optimizer-output
-          cp0-effort-limit cp0-size-limit optimize-level
-          perform-tag-analysis tag-analysis-output
-          strip-source-info generate-debug-calls current-letrec-pass)
-  (import
-    (rnrs hashtables)
+  (export
+    compile-core-expr-to-port		assembler-output
+    optimize-cp				optimizer-output
+    current-primitive-locations
+    eval-core				current-core-eval
+    compile-core-expr
+    expand				expand/optimize
+    expand/scc-letrec
+    cp0-effort-limit			cp0-size-limit
+    optimize-level
+    perform-tag-analysis		tag-analysis-output
+    strip-source-info			generate-debug-calls
+    current-letrec-pass)
+  (import (except (ikarus)
+		  compile-core-expr-to-port		assembler-output
+		  optimize-cp				optimizer-output
+		  current-primitive-locations
+		  eval-core
+		  optimize-level
+		  debug-optimizer
+		  fasl-write
+		  cp0-size-limit			cp0-effort-limit
+		  expand				expand/optimize
+		  expand/scc-letrec
+		  tag-analysis-output			perform-tag-analysis
+		  current-core-eval			current-letrec-pass
+		  bind)
+    ;;Remember that this file defines the primitive operations.
     (ikarus system $fx)
     (ikarus system $pairs)
-    (only (ikarus system $codes) $code->closure)
-    (only (ikarus system $structs) $struct-ref $struct/rtd?)
-    (except (ikarus)
-        optimize-level debug-optimizer
-        fasl-write optimize-cp
-        compile-core-expr-to-port assembler-output
-        current-primitive-locations eval-core
-        cp0-size-limit cp0-effort-limit
-        expand/optimize expand/scc-letrec expand optimizer-output
-        tag-analysis-output perform-tag-analysis
-        current-core-eval current-letrec-pass
-	bind)
+    (only (ikarus system $codes)
+	  $code->closure)
+    (only (ikarus system $structs)
+	  $struct-ref $struct/rtd?)
     (vicare include)
     (ikarus.fasl.write)
     (ikarus.intel-assembler))
 
-
+
 (define strip-source-info (make-parameter #f))
 (define generate-debug-calls (make-parameter #f))
 
@@ -2333,6 +2344,9 @@
     [(x) (expand x (interaction-environment))]
     [(x env) (expand/pretty x env 'expand)]))
 
+
+;;;; done
+
 )
 
-
+;;; end of file
