@@ -104,23 +104,24 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax map/stx
-  (syntax-rules ()
-    ((_ ?func ?ell)
-     (let loop ((input  ?ell)
-		(output '()))
-       (if (null? input)
-	   output
-	 (loop ($cdr input) (cons (?func ($car input)) output)))))
-    ((_ ?func ?ell1 ?ell2)
-     (let loop ((input1 ?ell1)
-		(input2 ?ell2)
-		(output '()))
-       (if (null? input1)
-	   output
-	 (loop ($cdr input1)
-	       ($cdr input2)
-	       (cons (?func ($car input1) ($car input2)) output)))))
-    ))
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?func ?ell)
+       (identifier? #'?func)
+       #'(let recur ((ell ?ell))
+	   (if (null? ell)
+	       '()
+	     (cons (?func ($car ell))
+		   (recur ($cdr ell))))))
+      ((_ ?func ?ell1 ?ell2)
+       (identifier? #'?func)
+       #'(let recur ((ell1 ?ell1)
+		     (ell2 ?ell2))
+	   (if (null? ell1)
+	       '()
+	     (cons (?func ($car input1) ($car input2))
+		   (recur ($cdr input1) ($cdr input2))))))
+      )))
 
 ;;; --------------------------------------------------------------------
 
@@ -623,7 +624,9 @@
 		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
 		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
-		    (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
+		    (let ((expr (make-recbind nlhs*
+					      (map E rhs* lhs*)
+					      (E body ctxt))))
 		      (ungen-fml* lhs*)
 		      expr)))))
 
