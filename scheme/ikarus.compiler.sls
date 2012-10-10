@@ -84,6 +84,25 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-syntax %car	(identifier-syntax (lambda (x) ($car x))))
+(define-syntax %cdr	(identifier-syntax (lambda (x) ($cdr x))))
+
+(define-syntax %caar	(identifier-syntax (lambda (x) ($caar x))))
+(define-syntax %cadr	(identifier-syntax (lambda (x) ($cadr x))))
+(define-syntax %cdar	(identifier-syntax (lambda (x) ($cdar x))))
+(define-syntax %cddr	(identifier-syntax (lambda (x) ($cddr x))))
+
+(define-syntax %caaar	(identifier-syntax (lambda (x) ($caaar x))))
+(define-syntax %caadr	(identifier-syntax (lambda (x) ($caadr x))))
+(define-syntax %cadar	(identifier-syntax (lambda (x) ($cadar x))))
+(define-syntax %cdaar	(identifier-syntax (lambda (x) ($cdaar x))))
+(define-syntax %cdadr	(identifier-syntax (lambda (x) ($cdadr x))))
+(define-syntax %cddar	(identifier-syntax (lambda (x) ($cddar x))))
+(define-syntax %cdddr	(identifier-syntax (lambda (x) ($cdddr x))))
+(define-syntax %caddr	(identifier-syntax (lambda (x) ($caddr x))))
+
+;;; --------------------------------------------------------------------
+
 (define-syntax struct-case
   ;;Specialised CASE syntax  for data structures.  Notice  that we could
   ;;use this  syntax for any  set of struct  types, not only  the struct
@@ -393,7 +412,36 @@
 
 
 (define (recordize x)
+  ;;Given  a symbolic  expression  X  representing a  form  in the  core
+  ;;language, convert  it into a  nested hierarchy of  struct instances;
+  ;;return the outer struct instance.
+  ;;
+  ;;Recognise the following core language:
+  ;;
+  ;;   (quote ?datum)
+  ;;   (if ?test ?consequent ?alternate)
+  ;;   (set! ?lhs ?rhs)
+  ;;   (begin ?body0 ?body ...)
+  ;;   (letrec  ((?lhs ?rhs) ...) ?body0 ?body ..)
+  ;;   (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+  ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+  ;;   (case-lambda (?formals ?body0 ?body ...))
+  ;;   (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+  ;;   (lambda ?formals ?body0 ?body ...)
+  ;;   (foreign-call "?function-name" ?arg ...)
+  ;;   (primitive ?prim)
+  ;;   (annotated-call ?arg ...)
+  ;;   ?symbol
+  ;;
+  ;;where; ?SYMBOL is interpreted as  reference to variable; ?LHS stands
+  ;;for "left-hand side"; ?RHS stands for "right-hand side".
+  ;;
+
   (module (lexical gen-fml* ungen-fml*)
+
+    ;;FIXME  Do we  need a  new  cookie at  each call  to the  RECORDIZE
+    ;;function?  Maybe  not, because  we always  call GEN-FML*  and then
+    ;;clean up with UNGEN-FML*.  (Marco Maggi; Oct 10, 2012)
     (define *cookie*
       (gensym))
 
@@ -401,7 +449,9 @@
       (getprop x *cookie*))
 
     (define (gen-fml* fml*)
-      ;;Expect FML* to be a symbol or a list of symbols.
+      ;;Expect FML* to be a symbol  or a list of symbols.  This function
+      ;;is used to  process the formals of  LAMBDA, CASE-LAMBDA, LETREC,
+      ;;LETREC*, LIBRARY-LETREC.
       ;;
       ;;When FML*  is a symbol: build  a struct instance of  type PRELEX
       ;;and  store it  in the  property list  of FML*,  then return  the
@@ -677,19 +727,26 @@
 
   (define (E x ctxt)
     (cond ((pair? x)
-	   (equal-case (car x)
-	     ((quote)
-	      (make-constant (cadr x)))
+	   (equal-case ($car x)
 
+	     ;;Synopsis: (quote ?datum)
+	     ;;
+	     ((quote)
+	      (make-constant ($cadr x)))
+
+	     ;;Synopsis: (if ?test ?consequent ?alternate)
+	     ;;
 	     ((if)
 	      (make-conditional
-		  (E (cadr x) #f)
-		(E (caddr x) ctxt)
-		(E (cadddr x) ctxt)))
+		  (E ($cadr x) #f)
+		(E ($caddr x)        ctxt)
+		(E ($car ($cdddr x)) ctxt)))
 
+	     ;;Synopsis: (set! ?lhs ?rhs)
+	     ;;
 	     ((set!)
-	      (let ((lhs (cadr  x))	;left-hand side
-		    (rhs (caddr x)))	;right-hand side
+	      (let ((lhs ($cadr  x))  ;left-hand side
+		    (rhs ($caddr x))) ;right-hand side
 		(cond ((lexical lhs)
 		       => (lambda (var)
 			    (set-prelex-source-assigned?! var #t)
@@ -697,41 +754,49 @@
 		      (else
 		       (make-global-set! lhs (E rhs lhs))))))
 
+	     ;;Synopsis: (begin ?body0 ?body ...)
+	     ;;
 	     ((begin)
-	      (let f ((a (cadr x))
-		      (d (cddr x)))
+	      (let f ((a ($cadr x))
+		      (d ($cddr x)))
 		(cond ((null? d)
 		       (E a ctxt))
 		      (else
 		       (make-seq (E a #f)
-				 (f (car d) (cdr d)))))))
+				 (f ($car d) ($cdr d)))))))
 
+	     ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
+	     ;;
 	     ((letrec)
-	      (let ((bind* (cadr  x))	;list of bindings
-		    (body  (caddr x)))	;list of body forms
-		(let ((lhs* (map car  bind*))	;list of bindings left-hand sides
-		      (rhs* (map cadr bind*)))	;list of bindings right-hand sides
+	      (let ((bind* ($cadr  x))	;list of bindings
+		    (body  ($caddr x)))	;list of body forms
+		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
+		      (rhs* (map %cadr bind*)))	;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
 		    (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
 		      (ungen-fml* lhs*)
 		      expr)))))
 
+	     ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+	     ;;
 	     ((letrec*)
-	      (let ((bind* (cadr x))	;list of bindings
-		    (body  (caddr x)))	;list of body forms
-		(let ((lhs* (map car  bind*))	;list of bindings left-hand sides
-		      (rhs* (map cadr bind*)))	;list of bindings right-hand sides
+	      (let ((bind* ($cadr x))	;list of bindings
+		    (body  ($caddr x)))	;list of body forms
+		(let ((lhs* (map %car  bind*)) ;list of bindings left-hand sides
+		      (rhs* (map %cadr bind*)))	;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
 		    (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
 		      (ungen-fml* lhs*)
 		      expr)))))
 
+	     ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+	     ;;
 	     ((library-letrec*)
-	      (let ((bind* (cadr  x))	;list of bindings
-		    (body  (caddr x)))	;list of body forms
-		(let ((lhs* (map car   bind*))	;list of bindings left-hand sides
-		      (loc* (map cadr  bind*))	;list of ?
-		      (rhs* (map caddr bind*)))	;list of bindings right-hand sides
+	      (let ((bind* ($cadr  x))	;list of bindings
+		    (body  ($caddr x)))	;list of body forms
+		(let ((lhs* (map %car   bind*))	;list of bindings left-hand sides
+		      (loc* (map %cadr  bind*))	;list of ?
+		      (rhs* (map %caddr bind*))) ;list of bindings right-hand sides
 		  (let ((nlhs* (gen-fml* lhs*)))
 		    (for-each
 			(lambda (lhs loc)
@@ -739,73 +804,110 @@
 		      nlhs* loc*)
 		    (let ((expr (make-rec*bind nlhs*
 					       (map E rhs* lhs*)
-					       (let f ((lhs* nlhs*) (loc* loc*))
+					       (let f ((lhs* nlhs*)
+						       (loc* loc*))
 						 (cond ((null? lhs*)
 							(E body ctxt))
-						       ((not (car loc*))
-							(f (cdr lhs*) (cdr loc*)))
+						       ((not ($car loc*))
+							(f ($cdr lhs*) ($cdr loc*)))
 						       (else
-							(f (cdr lhs*) (cdr loc*))))))))
+							(f ($cdr lhs*) ($cdr loc*))))))))
 		      (ungen-fml* lhs*)
 		      expr)))))
 
+	     ;;Synopsis: (case-lambda (?formals ?body0 ?body ...))
+	     ;;
 	     ((case-lambda)
-	      (let ((cls* (E-clambda-clause* (cdr x) ctxt)))
+	      (let ((cls* (E-clambda-clause* ($cdr x) ctxt)))
 		(make-clambda (gensym) cls* #f #f
 			      (and (symbol? ctxt) ctxt))))
+
+	     ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+	     ;;
 	     ((annotated-case-lambda)
-	      (let ((ae (cadr x)))
-		(let ((cls* (E-clambda-clause* (cddr x) ctxt)))
-		  (make-clambda (gensym) cls* #f #f
-				(cons
-				 (and (symbol? ctxt) ctxt)
-				 (and (not (strip-source-info))
-				      (annotation? ae)
-				      (annotation-source ae)))))))
+	      (let ((annotated-expr ($cadr x))
+		    (clause*        (E-clambda-clause* ($cddr x) ctxt)))
+		(make-clambda (gensym) clause* #f #f
+			      (cons (and (symbol? ctxt)
+					 ctxt)
+				    (and (not (strip-source-info))
+					 (annotation? annotated-expr)
+					 (annotation-source annotated-expr))))))
+
+	     ;;Synopsis: (lambda ?formals ?body0 ?body ...)
+	     ;;
+	     ;;LAMBDA  functions   are  handled  as  special   cases  of
+	     ;;CASE-LAMBDA functions.
+	     ;;
+	     ;;   (lambda ?formals ?body0 ?body ...)
+	     ;;   ===> (case-lambda (?formals ?body0 ?body ...))
+	     ;;
 	     ((lambda)
-	      (E `(case-lambda ,(cdr x)) ctxt))
+	      (E `(case-lambda ,($cdr x)) ctxt))
+
+	     ;;Synopsis: (foreign-call "?function-name" ?arg ...)
+	     ;;
+	     ;;Return a struct instance of type FORCALL.
+	     ;;
 	     ((foreign-call)
-	      (let ((name (quoted-string (cadr x))) (arg* (cddr x)))
-		(make-forcall name (map (lambda (x) (E x #f)) arg*))))
+	      (let ((name (quoted-string ($cadr x)))
+		    (arg* ($cddr x)))
+		(make-forcall name (map (lambda (x)
+					  (E x #f))
+				     arg*))))
+
+	     ;;Synopsis: (primitive ?prim)
+	     ;;
 	     ((primitive)
-	      (let ((var (cadr x)))
+	      (let ((var ($cadr x)))
 		(make-primref var)))
+
+	     ;;Synopsis: (annotated-call ?arg ...)
+	     ;;
 	     ((annotated-call)
-	      (E-app
-	       (if (generate-debug-calls)
-		   (lambda (op rands)
-		     (define (operator? x)
-		       (struct-case x
-			 ((primref x)
-			  (guard (con ((assertion-violation? con) #t))
-			    (system-value x)
-			    #f))
-			 (else #f)))
-		     (define (get-src/expr ae)
-		       (if (annotation? ae)
-			   (cons (annotation-source ae)
-				 (annotation-stripped ae))
-			 (cons #f (syntax->datum ae))))
-		     (define src/expr
-		       (make-constant (get-src/expr (cadr x))))
-		     (if (operator? op)
-			 (make-funcall op rands)
-		       (make-funcall (make-primref 'debug-call)
-				     (cons* src/expr op rands))))
-		 make-funcall)
-	       (caddr x) (cdddr x) ctxt))
-	     (else (E-app make-funcall (car x) (cdr x) ctxt))))
+	      (E-app (if (generate-debug-calls)
+			 (lambda (op rands)
+			   (define (operator? x)
+			     (struct-case x
+			       ((primref x)
+				(guard (con ((assertion-violation? con) #t))
+				  (system-value x)
+				  #f))
+			       (else #f)))
+			   (define (get-src/expr ae)
+			     (if (annotation? ae)
+				 (cons (annotation-source   ae)
+				       (annotation-stripped ae))
+			       (cons #f (syntax->datum ae))))
+			   (define src/expr
+			     (make-constant (get-src/expr ($cadr x))))
+			   (if (operator? op)
+			       (make-funcall op rands)
+			     (make-funcall (make-primref 'debug-call)
+					   (cons* src/expr op rands))))
+		       make-funcall)
+		     ($caddr x) ($cdddr x) ctxt))
+
+	     (else ;if X is a pair here, it is a function call
+	      ;;Synopsis: (?func ?arg ...)
+	      ;;
+	      ;;Return a struct instance of type FUNCALL.
+	      ;;
+	      (E-app make-funcall ($car x) ($cdr x) ctxt))))
+
 	  ((symbol? x)
-	   (cond
-	    ((lexical x) =>
-	     (lambda (var)
-	       (set-prelex-source-referenced?! var #t)
-	       var))
-	    (else
-	     (make-funcall
-	      (make-primref 'top-level-value)
-	      (list (make-constant x))))))
-	  (else (error 'recordize "invalid expression" x))))
+	   (cond ((lexical x)
+		  ;;It is a reference to local variable.
+		  => (lambda (var)
+		       (set-prelex-source-referenced?! var #t)
+		       var))
+		 (else
+		  ;;It is a reference to top level variable.
+		  (make-funcall (make-primref 'top-level-value)
+				(list (make-constant x))))))
+
+	  (else
+	   (error 'recordize "invalid expression" x))))
 
   (E x #f))
 
@@ -919,7 +1021,7 @@
            "#<unknown>"))))
   (E x))
 
-
+
 (define (unparse-pretty x)
   (define n 0)
   (define h (make-eq-hashtable))
@@ -1017,6 +1119,7 @@
       (else x)))
   (E x))
 
+
 (define open-mvcalls (make-parameter #t))
 
 (define (optimize-direct-calls x)
@@ -1183,10 +1286,11 @@
   body)
 |#
 
-
+
 (include "ikarus.compiler.optimize-letrec.ss")
 (include "ikarus.compiler.source-optimizer.ss")
 
+
 (define (rewrite-assignments x)
   (define who 'rewrite-assignments)
   (define (fix-lhs* lhs*)
@@ -1273,8 +1377,11 @@
       (else (error who "invalid expression" (unparse x)))))
   (Expr x))
 
+
+
 (include "ikarus.compiler.tag-annotation-analysis.ss")
 
+
 (define (introduce-vars x)
   (define who 'introduce-vars)
   (define (lookup x)
@@ -1330,6 +1437,7 @@
       (else (error who "invalid expression" (unparse x)))))
   (E x))
 
+
 (define (sanitize-bindings x)
   (define who 'sanitize-bindings)
   (define (CLambda x)
@@ -1384,7 +1492,7 @@
       (else (error who "invalid expression" (unparse x)))))
   (Expr x))
 
-
+
 (define (untag x)
   (struct-case x
     ((known x t) (values x t))
@@ -1394,7 +1502,7 @@
   (if t
       (make-known x t)
       x))
-
+
 (define (optimize-for-direct-jumps x)
   (define who 'optimize-for-direct-jumps)
   (define (init-var x)
@@ -1495,7 +1603,7 @@
       (else (error who "invalid expression" (unparse x)))))
   (Expr x))
 
-
+
 (define (insert-global-assignments x)
   (define who 'insert-global-assignments)
   (define (global-assign lhs* body)
@@ -1595,8 +1703,7 @@
     ;(pretty-print x)
     x))
 
-
-
+
 (define optimize-cp (make-parameter #t))
 
 (define (convert-closures prog)
@@ -1713,8 +1820,7 @@
           (map unparse free)))
    prog))
 
-
-
+
 (define (optimize-closures/lift-codes x)
   (define who 'optimize-closures/lift-codes)
   (define all-codes '())
