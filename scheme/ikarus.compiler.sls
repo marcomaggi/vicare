@@ -60,18 +60,33 @@
 (define generate-debug-calls (make-parameter #f))
 
 (define-syntax struct-case
-  (lambda (x)
-    (define (%enumerate fields i)
-      (syntax-case fields ()
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((_ ?expr ?clause ...)
+	 (with-syntax ((BODY (%generate-body #'_ #'(?clause ...))))
+	   #'(let ((v ?expr))
+	       BODY)))))
+
+    (define (%enumerate fields-stx next-field-idx)
+      ;;FIELDS-STX must be a syntax object holding a list of identifiers
+      ;;being  struct field  names.   NEXT-FIELD-IDX must  be a  fixnums
+      ;;representing the index of the first field in FIELDS-STX.
+      ;;
+      ;;Return  a syntax  object holding  a  list of  fixnums being  the
+      ;;indexes of the fields in FIELDS-STX.
+      ;;
+      (syntax-case fields-stx ()
         (() #'())
         ((x . x*)
-         (with-syntax ((I i)
-		       (I* (%enumerate #'x* (fx+ i 1))))
-           #'(I . I*)))))
+         (with-syntax ((FIELD-IDX        next-field-idx)
+		       (OTHER-FIELD-IDXS (%enumerate #'x* (fxadd1 next-field-idx))))
+           #'(FIELD-IDX . OTHER-FIELD-IDXS)))))
+
     (define (%generate-body ctxt clauses-stx)
       (syntax-case clauses-stx (else)
         (()
-	 (with-syntax ((x x))
+	 (with-syntax ((x stx))
 	   #'(error #f "unmatched " v 'x)))
 
         (((else ?body0 ?body ...))
@@ -87,11 +102,8 @@
 		       ...)
 		   ?body0 ?body ...)
 	       ALTERN)))))
-    (syntax-case x ()
-      ((_ ?expr ?clause ...)
-       (with-syntax ((BODY (%generate-body #'_ #'(?clause ...))))
-         #'(let ((v ?expr))
-	     BODY))))))
+
+    (main stx)))
 
 
 
