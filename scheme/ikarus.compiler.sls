@@ -67,6 +67,22 @@
 
 ;;;; helper syntaxes
 
+(define-inline ($caar x)	($car ($car x)))
+(define-inline ($cadr x)	($car ($cdr x)))
+(define-inline ($cdar x)	($cdr ($car x)))
+(define-inline ($cddr x)	($cdr ($cdr x)))
+
+(define-inline ($caaar x)	($car ($car ($car x))))
+(define-inline ($caadr x)	($car ($car ($cdr x))))
+(define-inline ($cadar x)	($car ($cdr ($car x))))
+(define-inline ($cdaar x)	($cdr ($car ($car x))))
+(define-inline ($cdadr x)	($cdr ($car ($cdr x))))
+(define-inline ($cddar x)	($cdr ($cdr ($car x))))
+(define-inline ($cdddr x)	($cdr ($cdr ($cdr x))))
+(define-inline ($caddr x)	($car ($cdr ($cdr x))))
+
+;;; --------------------------------------------------------------------
+
 (define-syntax struct-case
   ;;Specialised CASE syntax  for data structures.  Notice  that we could
   ;;use this  syntax for any  set of struct  types, not only  the struct
@@ -419,14 +435,29 @@
         (cadr x)
       (error 'quoted-sym "not a quoted symbol" x)))
 
+  (define-argument-validation (quoted-string who obj)
+    ;;Check that X has the format:
+    ;;
+    ;;  (quote ?string)
+    ;;
+    (and (list? obj)
+	 ($fx= (length obj) 2)
+	 (eq? 'quote ($car obj))
+	 (string? ($cadr obj)))
+    (error who "expected quoted string sexp as argument" obj))
+
   (define (quoted-string x)
     ;;Check that X has the format:
     ;;
-    ;;  (quote ?symbol)
+    ;;  (quote ?string)
     ;;
-    ;;and return ?SYMBOL.
+    ;;and return ?string.
     ;;
-    (if (and (list? x)
+    (define who 'quoted-string)
+    (with-arguments-validation (who)
+	((quoted-string	x))
+      ($cadr x))
+    #;(if (and (list? x)
              (fx= (length x) 2)
              (eq? 'quote (car x))
              (string? (cadr x)))
