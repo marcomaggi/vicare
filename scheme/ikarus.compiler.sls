@@ -15,6 +15,12 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;; Introduction
+;;
+;;NOTE This library is loaded by "makefile.sps" to build the boot image.
+;;
+
+
 #!r6rs
 (library (ikarus.compiler)
   (export
@@ -55,7 +61,8 @@
     (ikarus.fasl.write)
     (ikarus.intel-assembler)
     (only (vicare syntactic-extensions)
-	  define-inline))
+	  define-inline)
+    (vicare arguments validation))
 
 
 ;;;; helper syntaxes
@@ -147,7 +154,26 @@
 
 (define-syntax define-structure
   ;;A syntax to define struct  types for compatibility with the notation
-  ;;used in Oscar Waddell's thesis.
+  ;;used in Oscar  Waddell's thesis; it allows the  definition of struct
+  ;;types in which some of the  fields are initialised by the maker with
+  ;;default values,  while other  fields are initialised  with arguments
+  ;;handed to the maker.
+  ;;
+  ;;Synopsis:
+  ;;
+  ;;  (define-structure (?name ?field-without ...)
+  ;;    ((?field-with ?default)
+  ;;	 ...))
+  ;;
+  ;;where: ?NAME is the struct  type name, ?FIELD-WITHOUT are identifier
+  ;;names  for the  fields without  default, ?FIELD-WITH  are identifier
+  ;;names for the fields with default, ?DEFAULT are the default values.
+  ;;
+  ;;The  maker accepts  a number  of arguments  equal to  the number  of
+  ;;?FIELD-WITHOUT, in the same order in which they appear in the struct
+  ;;definition.
+  ;;
+  ;;(It is a bit ugly...  Marco Maggi; Oct 10, 2012)
   ;;
   (lambda (stx)
     #;(define (%make-fmt ctxt)
@@ -303,7 +329,9 @@
 
 (define-struct shortcut (body handler))
 
-(define-struct fvar (idx))
+(define-struct fvar
+  (idx))
+
 (define-struct object (val))
 (define-struct locals (vars body))
 (define-struct nframe (vars live body))
@@ -321,116 +349,145 @@
 
 
 (define mkfvar
+  ;;Maker function for structs of type FVAR.  It caches structures based
+  ;;on the values  of the argument, so that calling:
+  ;;
+  ;;   (mkfvar 123)
+  ;;
+  ;;always returns the same FVAR instance holding 123.
+  ;;
+  ;;FIXME Should  a hashtable be used  as cache?  (Marco Maggi;  Oct 10,
+  ;;2012)
+  ;;
   (let ((cache '()))
     (lambda (i)
-      (cond
-        ((fixnum? i)
-         (cond
-           ((assv i cache) => cdr)
-           (else
-            (let ((fv (make-fvar i)))
-              (set! cache (cons (cons i fv) cache))
-              fv))))
-        (else (error 'mkfvar "not a fixnum" i))))))
+      (define who 'mkfvar)
+      (with-arguments-validation (who)
+	  ((fixnum	i))
+	(cond ((assv i cache)
+	       => cdr)
+	      (else
+	       (let ((fv (make-fvar i)))
+		 (set! cache (cons (cons i fv) cache))
+		 fv)))))))
 
 (define (unique-var name)
   (make-var name #f #f #f #f #f #f #f #f #f #f))
 
+
 (define (recordize x)
   (define *cookie* (gensym))
+
   (define (gen-fml* fml*)
-    (cond
-      ((pair? fml*)
-       (let ((v (make-prelex (car fml*) #f)))
-         (putprop (car fml*) *cookie* v)
-         (cons v (gen-fml* (cdr fml*)))))
-      ((symbol? fml*)
-       (let ((v (make-prelex fml* #f)))
-         (putprop fml* *cookie* v)
-         v))
-      (else '())))
+    (cond ((pair? fml*)
+	   (let ((v (make-prelex (car fml*) #f)))
+	     (putprop (car fml*) *cookie* v)
+	     (cons v (gen-fml* (cdr fml*)))))
+	  ((symbol? fml*)
+	   (let ((v (make-prelex fml* #f)))
+	     (putprop fml* *cookie* v)
+	     v))
+	  (else '())))
+
   (define (ungen-fml* fml*)
-    (cond
-      ((pair? fml*)
-       (remprop (car fml*) *cookie*)
-       (ungen-fml* (cdr fml*)))
-      ((symbol? fml*)
-       (remprop fml* *cookie*))))
+    (cond ((pair? fml*)
+	   (remprop (car fml*) *cookie*)
+	   (ungen-fml* (cdr fml*)))
+	  ((symbol? fml*)
+	   (remprop fml* *cookie*))))
+
   (define (properize fml*)
-    (cond
-      ((pair? fml*)
-       (cons (car fml*) (properize (cdr fml*))))
-      ((null? fml*) '())
-      (else (list fml*))))
+    (cond ((pair? fml*)
+	   (cons (car fml*)
+		 (properize (cdr fml*))))
+	  ((null? fml*)
+	   '())
+	  (else
+	   (list fml*))))
+
   (define (quoted-sym x)
+    ;;Check that X has the format:
+    ;;
+    ;;  (quote ?symbol)
+    ;;
+    ;;and return ?SYMBOL.
+    ;;
     (if (and (list? x)
              (fx= (length x) 2)
              (eq? 'quote (car x))
              (symbol? (cadr x)))
         (cadr x)
-        (error 'quoted-sym "not a quoted symbol" x)))
+      (error 'quoted-sym "not a quoted symbol" x)))
+
   (define (quoted-string x)
+    ;;Check that X has the format:
+    ;;
+    ;;  (quote ?symbol)
+    ;;
+    ;;and return ?SYMBOL.
+    ;;
     (if (and (list? x)
              (fx= (length x) 2)
              (eq? 'quote (car x))
              (string? (cadr x)))
         (cadr x)
-        (error 'quoted-string "not a quoted string" x)))
+      (error 'quoted-string "not a quoted string" x)))
+
   (define (lexical x)
     (getprop x *cookie*))
   (define (get-fmls x args)
     (define (matching? fmls args)
       (cond
-        ((null? fmls) (null? args))
-        ((pair? fmls) (and (pair? args) (matching? (cdr fmls) (cdr args))))
-        (else #t)))
+       ((null? fmls) (null? args))
+       ((pair? fmls) (and (pair? args) (matching? (cdr fmls) (cdr args))))
+       (else #t)))
     (define (get-cls* x)
       (if (pair? x)
           (case (car x)
             ((case-lambda) (cdr x))
             ((annotated-case-lambda) (cddr x))
             (else '()))
-          '()))
+	'()))
     (let f ((cls* (get-cls* x)))
       (cond
-        ((null? cls*) '())
-        ((matching? (caar cls*) args)
-         (caar cls*))
-        (else (f (cdr cls*))))))
+       ((null? cls*) '())
+       ((matching? (caar cls*) args)
+	(caar cls*))
+       (else (f (cdr cls*))))))
   (define (make-global-set! lhs rhs)
     (make-funcall (make-primref '$init-symbol-value!)
-      (list (make-constant lhs) rhs)))
+		  (list (make-constant lhs) rhs)))
   (define-syntax equal-case
     (lambda (x)
       (syntax-case x ()
-         ((_ val clause* ...)
-          (with-syntax ((body
-                         (let f ((clause* #'(clause* ...)))
-                           (syntax-case clause* (else)
-                             (((else e e* ...))
-                              #'(begin e e* ...))
-                             ((((datum* ...) e e* ...) . rest)
-                              (with-syntax ((rest (f #'rest)))
-                                #'(if (member t '(datum* ...))
-                                      (begin e e* ...)
-                                      rest)))))))
-            #'(let ((t val)) body))))))
+	((_ val clause* ...)
+	 (with-syntax ((body
+			(let f ((clause* #'(clause* ...)))
+			  (syntax-case clause* (else)
+			    (((else e e* ...))
+			     #'(begin e e* ...))
+			    ((((datum* ...) e e* ...) . rest)
+			     (with-syntax ((rest (f #'rest)))
+			       #'(if (member t '(datum* ...))
+				     (begin e e* ...)
+				   rest)))))))
+	   #'(let ((t val)) body))))))
 
   (define (E-clambda-clause* cls* ctxt)
     (map
-      (let ((ctxt (if (pair? ctxt) (car ctxt) #f)))
-        (lambda (cls)
-          (let ((fml* (car cls)) (body (cadr cls)))
-            (let ((nfml* (gen-fml* fml*)))
-              (let ((body (E body ctxt)))
-                (ungen-fml* fml*)
-                (make-clambda-case
-                  (make-case-info
+	(let ((ctxt (if (pair? ctxt) (car ctxt) #f)))
+	  (lambda (cls)
+	    (let ((fml* (car cls)) (body (cadr cls)))
+	      (let ((nfml* (gen-fml* fml*)))
+		(let ((body (E body ctxt)))
+		  (ungen-fml* fml*)
+		  (make-clambda-case
+		   (make-case-info
                     (gensym)
                     (properize nfml*)
                     (list? fml*))
-                  body))))))
-           cls*))
+		   body))))))
+      cls*))
 
   (define (E-make-parameter mk-call args ctxt)
     (case (length args)
@@ -491,136 +548,137 @@
 
   (define (E-app mk-call rator args ctxt)
     (equal-case rator
-      (((primitive make-parameter)) (E-make-parameter mk-call args ctxt))
-      (else
-       (let ((names (get-fmls rator args)))
-         (mk-call
-           (E rator (list ctxt))
-           (let f ((args args) (names names))
-             (cond
-               ((pair? names)
-                (cons
-                  (E (car args) (car names))
-                  (f (cdr args) (cdr names))))
-               (else
-                (map (lambda (x) (E x #f)) args)))))))))
+		(((primitive make-parameter)) (E-make-parameter mk-call args ctxt))
+		(else
+		 (let ((names (get-fmls rator args)))
+		   (mk-call
+		    (E rator (list ctxt))
+		    (let f ((args args) (names names))
+		      (cond
+		       ((pair? names)
+			(cons
+			 (E (car args) (car names))
+			 (f (cdr args) (cdr names))))
+		       (else
+			(map (lambda (x) (E x #f)) args)))))))))
   (define (E x ctxt)
     (cond
-      ((pair? x)
-       (equal-case (car x)
-         ((quote) (make-constant (cadr x)))
-         ((if)
-          (make-conditional
-            (E (cadr x) #f)
-            (E (caddr x) ctxt)
-            (E (cadddr x) ctxt)))
-         ((set!)
-          (let ((lhs (cadr x)) (rhs (caddr x)))
-            (cond
-              ((lexical lhs) =>
-               (lambda (var)
-                 (set-prelex-source-assigned?! var #t)
-                 (make-assign var (E rhs lhs))))
-              (else (make-global-set! lhs (E rhs lhs))))))
-         ((begin)
-          (let f ((a (cadr x)) (d (cddr x)))
-            (cond
-              ((null? d) (E a ctxt))
-              (else
-               (make-seq (E a #f) (f (car d) (cdr d)))))))
-         ((letrec)
-          (let ((bind* (cadr x)) (body (caddr x)))
-            (let ((lhs* (map car bind*))
-                  (rhs* (map cadr bind*)))
-              (let ((nlhs* (gen-fml* lhs*)))
-                (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
-                  (ungen-fml* lhs*)
-                  expr)))))
-         ((letrec*)
-          (let ((bind* (cadr x)) (body (caddr x)))
-            (let ((lhs* (map car bind*))
-                  (rhs* (map cadr bind*)))
-              (let ((nlhs* (gen-fml* lhs*)))
-                (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
-                  (ungen-fml* lhs*)
-                  expr)))))
-         ((library-letrec*)
-          (let ((bind* (cadr x)) (body (caddr x)))
-            (let ((lhs* (map car bind*))
-                  (loc* (map cadr bind*))
-                  (rhs* (map caddr bind*)))
-              (let ((nlhs* (gen-fml* lhs*)))
-                (for-each
-                  (lambda (lhs loc)
-                    (set-prelex-global-location! lhs loc))
-                  nlhs* loc*)
-                (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*)
-                               (let f ((lhs* nlhs*) (loc* loc*))
-                                 (cond
-                                   ((null? lhs*) (E body ctxt))
-                                   ((not (car loc*)) (f (cdr lhs*) (cdr loc*)))
-                                   (else (f (cdr lhs*) (cdr loc*))))))))
-                  (ungen-fml* lhs*)
-                  expr)))))
-         ((case-lambda)
-          (let ((cls* (E-clambda-clause* (cdr x) ctxt)))
-            (make-clambda (gensym) cls* #f #f
-              (and (symbol? ctxt) ctxt))))
-         ((annotated-case-lambda)
-          (let ((ae (cadr x)))
-            (let ((cls* (E-clambda-clause* (cddr x) ctxt)))
-              (make-clambda (gensym) cls* #f #f
-                (cons
-                  (and (symbol? ctxt) ctxt)
-                  (and (not (strip-source-info))
-                       (annotation? ae)
-                       (annotation-source ae)))))))
-         ((lambda)
-          (E `(case-lambda ,(cdr x)) ctxt))
-         ((foreign-call)
-          (let ((name (quoted-string (cadr x))) (arg* (cddr x)))
-            (make-forcall name (map (lambda (x) (E x #f)) arg*))))
-         ((primitive)
-          (let ((var (cadr x)))
-            (make-primref var)))
-         ((annotated-call)
-          (E-app
-	   (if (generate-debug-calls)
-	       (lambda (op rands)
-		 (define (operator? x)
-		   (struct-case x
-				((primref x)
-				 (guard (con ((assertion-violation? con) #t))
-				   (system-value x)
-				   #f))
-				(else #f)))
-		 (define (get-src/expr ae)
-		   (if (annotation? ae)
-		       (cons (annotation-source ae)
-			     (annotation-stripped ae))
-		     (cons #f (syntax->datum ae))))
-		 (define src/expr
-		   (make-constant (get-src/expr (cadr x))))
-		 (if (operator? op)
-		     (make-funcall op rands)
-		   (make-funcall (make-primref 'debug-call)
-				 (cons* src/expr op rands))))
-	     make-funcall)
-	   (caddr x) (cdddr x) ctxt))
-         (else (E-app make-funcall (car x) (cdr x) ctxt))))
-      ((symbol? x)
-       (cond
-         ((lexical x) =>
-          (lambda (var)
-            (set-prelex-source-referenced?! var #t)
-            var))
-         (else
-          (make-funcall
-            (make-primref 'top-level-value)
-            (list (make-constant x))))))
-      (else (error 'recordize "invalid expression" x))))
+     ((pair? x)
+      (equal-case (car x)
+		  ((quote) (make-constant (cadr x)))
+		  ((if)
+		   (make-conditional
+		       (E (cadr x) #f)
+		     (E (caddr x) ctxt)
+		     (E (cadddr x) ctxt)))
+		  ((set!)
+		   (let ((lhs (cadr x)) (rhs (caddr x)))
+		     (cond
+		      ((lexical lhs) =>
+		       (lambda (var)
+			 (set-prelex-source-assigned?! var #t)
+			 (make-assign var (E rhs lhs))))
+		      (else (make-global-set! lhs (E rhs lhs))))))
+		  ((begin)
+		   (let f ((a (cadr x)) (d (cddr x)))
+		     (cond
+		      ((null? d) (E a ctxt))
+		      (else
+		       (make-seq (E a #f) (f (car d) (cdr d)))))))
+		  ((letrec)
+		   (let ((bind* (cadr x)) (body (caddr x)))
+		     (let ((lhs* (map car bind*))
+			   (rhs* (map cadr bind*)))
+		       (let ((nlhs* (gen-fml* lhs*)))
+			 (let ((expr (make-recbind nlhs* (map E rhs* lhs*) (E body ctxt))))
+			   (ungen-fml* lhs*)
+			   expr)))))
+		  ((letrec*)
+		   (let ((bind* (cadr x)) (body (caddr x)))
+		     (let ((lhs* (map car bind*))
+			   (rhs* (map cadr bind*)))
+		       (let ((nlhs* (gen-fml* lhs*)))
+			 (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
+			   (ungen-fml* lhs*)
+			   expr)))))
+		  ((library-letrec*)
+		   (let ((bind* (cadr x)) (body (caddr x)))
+		     (let ((lhs* (map car bind*))
+			   (loc* (map cadr bind*))
+			   (rhs* (map caddr bind*)))
+		       (let ((nlhs* (gen-fml* lhs*)))
+			 (for-each
+			     (lambda (lhs loc)
+			       (set-prelex-global-location! lhs loc))
+			   nlhs* loc*)
+			 (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*)
+						    (let f ((lhs* nlhs*) (loc* loc*))
+						      (cond
+						       ((null? lhs*) (E body ctxt))
+						       ((not (car loc*)) (f (cdr lhs*) (cdr loc*)))
+						       (else (f (cdr lhs*) (cdr loc*))))))))
+			   (ungen-fml* lhs*)
+			   expr)))))
+		  ((case-lambda)
+		   (let ((cls* (E-clambda-clause* (cdr x) ctxt)))
+		     (make-clambda (gensym) cls* #f #f
+				   (and (symbol? ctxt) ctxt))))
+		  ((annotated-case-lambda)
+		   (let ((ae (cadr x)))
+		     (let ((cls* (E-clambda-clause* (cddr x) ctxt)))
+		       (make-clambda (gensym) cls* #f #f
+				     (cons
+				      (and (symbol? ctxt) ctxt)
+				      (and (not (strip-source-info))
+					   (annotation? ae)
+					   (annotation-source ae)))))))
+		  ((lambda)
+		   (E `(case-lambda ,(cdr x)) ctxt))
+		  ((foreign-call)
+		   (let ((name (quoted-string (cadr x))) (arg* (cddr x)))
+		     (make-forcall name (map (lambda (x) (E x #f)) arg*))))
+		  ((primitive)
+		   (let ((var (cadr x)))
+		     (make-primref var)))
+		  ((annotated-call)
+		   (E-app
+		    (if (generate-debug-calls)
+			(lambda (op rands)
+			  (define (operator? x)
+			    (struct-case x
+			      ((primref x)
+			       (guard (con ((assertion-violation? con) #t))
+				 (system-value x)
+				 #f))
+			      (else #f)))
+			  (define (get-src/expr ae)
+			    (if (annotation? ae)
+				(cons (annotation-source ae)
+				      (annotation-stripped ae))
+			      (cons #f (syntax->datum ae))))
+			  (define src/expr
+			    (make-constant (get-src/expr (cadr x))))
+			  (if (operator? op)
+			      (make-funcall op rands)
+			    (make-funcall (make-primref 'debug-call)
+					  (cons* src/expr op rands))))
+		      make-funcall)
+		    (caddr x) (cdddr x) ctxt))
+		  (else (E-app make-funcall (car x) (cdr x) ctxt))))
+     ((symbol? x)
+      (cond
+       ((lexical x) =>
+	(lambda (var)
+	  (set-prelex-source-referenced?! var #t)
+	  var))
+       (else
+	(make-funcall
+	 (make-primref 'top-level-value)
+	 (list (make-constant x))))))
+     (else (error 'recordize "invalid expression" x))))
   (E x #f))
 
+
 (define (unparse x)
   (define (E-args proper x)
     (if proper
