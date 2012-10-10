@@ -392,34 +392,86 @@
 
 
 (define (recordize x)
-  (define *cookie* (gensym))
+  (module (lexical gen-fml* ungen-fml*)
+    (define *cookie*
+      (gensym))
 
-  (define (gen-fml* fml*)
-    (cond ((pair? fml*)
-	   (let ((v (make-prelex (car fml*) #f)))
-	     (putprop (car fml*) *cookie* v)
-	     (cons v (gen-fml* (cdr fml*)))))
-	  ((symbol? fml*)
-	   (let ((v (make-prelex fml* #f)))
-	     (putprop fml* *cookie* v)
-	     v))
-	  (else '())))
+    (define-inline (lexical x)
+      (getprop x *cookie*))
 
-  (define (ungen-fml* fml*)
-    (cond ((pair? fml*)
-	   (remprop (car fml*) *cookie*)
-	   (ungen-fml* (cdr fml*)))
-	  ((symbol? fml*)
-	   (remprop fml* *cookie*))))
+    (define (gen-fml* fml*)
+      ;;Expect FML* to be a symbol or a list of symbols.
+      ;;
+      ;;When FML*  is a symbol: build  a struct instance of  type PRELEX
+      ;;and  store it  in the  property list  of FML*,  then return  the
+      ;;PRELEX instance.
+      ;;
+      ;;When FML* is  a list of symbols: for each  symbol build a struct
+      ;;instance of type PRELEX and store it in the property list of the
+      ;;symbol; return the list of PRELEX instances.
+      ;;
+      ;;The property list keyword is the gensym bound to *COOKIE*.
+      ;;
+      (cond ((pair? fml*)
+	     (let ((v (make-prelex ($car fml*) #f)))
+	       (putprop ($car fml*) *cookie* v)
+	       (cons v (gen-fml* ($cdr fml*)))))
+	    ((symbol? fml*)
+	     (let ((v (make-prelex fml* #f)))
+	       (putprop fml* *cookie* v)
+	       v))
+	    (else '())))
+
+    (define (ungen-fml* fml*)
+      ;;Clean up  function associated to the  function GEN-FML*.  Expect
+      ;;FML* to be a symbol or a list of symbols.
+      ;;
+      ;;When FML* is  a symbol: remove the instance of  type PRELEX from
+      ;;the property list of the symbol; return unspecified values.
+      ;;
+      ;;When  FML* is  a list  of symbols:  for each  symbol remove  the
+      ;;struct instance  of type  PRELEX from the  property list  of the
+      ;;symbol; return unspecified values.
+      ;;
+      ;;The property list keyword is the gensym bound to *COOKIE*.
+      ;;
+      (cond ((pair? fml*)
+	     (remprop ($car fml*) *cookie*)
+	     (ungen-fml* ($cdr fml*)))
+	    ((symbol? fml*)
+	     (remprop fml* *cookie*))
+	    ;;When FML* is null: do nothing.
+	    ))
+
+    #| end of module |# )
 
   (define (properize fml*)
+    ;;If  FML* is  a proper  list: return  a new  list holding  the same
+    ;;values.
+    ;;
+    ;;If FML* is an improper list:  return a new proper list holding the
+    ;;same values:
+    ;;
+    ;;   (properize '(1 2 . 3)) => (1 2 3)
+    ;;
+    ;;If FML* is not a list: return a list wrapping it:
+    ;;
+    ;;   (properize 123) => (123)
+    ;;
     (cond ((pair? fml*)
-	   (cons (car fml*)
-		 (properize (cdr fml*))))
+	   (cons ($car fml*)
+		 (properize ($cdr fml*))))
 	  ((null? fml*)
 	   '())
 	  (else
 	   (list fml*))))
+
+  (define-argument-validation (quoted-sym who obj)
+    (and (list? obj)
+	 ($fx= (length obj) 2)
+	 (eq? 'quote ($car obj))
+	 (symbol? ($cadr obj)))
+    (assertion-violation who "expected quoted symbol sexp as argument" obj))
 
   (define (quoted-sym x)
     ;;Check that X has the format:
@@ -428,12 +480,10 @@
     ;;
     ;;and return ?SYMBOL.
     ;;
-    (if (and (list? x)
-             (fx= (length x) 2)
-             (eq? 'quote (car x))
-             (symbol? (cadr x)))
-        (cadr x)
-      (error 'quoted-sym "not a quoted symbol" x)))
+    (define who 'quoted-sym)
+    (with-arguments-validation (who)
+	((quoted-sym	x))
+      ($cadr x)))
 
   (define-argument-validation (quoted-string who obj)
     ;;Check that X has the format:
@@ -456,35 +506,33 @@
     (define who 'quoted-string)
     (with-arguments-validation (who)
 	((quoted-string	x))
-      ($cadr x))
-    #;(if (and (list? x)
-             (fx= (length x) 2)
-             (eq? 'quote (car x))
-             (string? (cadr x)))
-        (cadr x)
-      (error 'quoted-string "not a quoted string" x)))
+      ($cadr x)))
 
-  (define (lexical x)
-    (getprop x *cookie*))
   (define (get-fmls x args)
     (define (matching? fmls args)
-      (cond
-       ((null? fmls) (null? args))
-       ((pair? fmls) (and (pair? args) (matching? (cdr fmls) (cdr args))))
-       (else #t)))
+      (cond ((null? fmls)
+	     (null? args))
+	    ((pair? fmls)
+	     (and (pair? args)
+		  (matching? (cdr fmls) (cdr args))))
+	    (else #t)))
     (define (get-cls* x)
       (if (pair? x)
           (case (car x)
-            ((case-lambda) (cdr x))
-            ((annotated-case-lambda) (cddr x))
+            ((case-lambda)
+	     (cdr x))
+            ((annotated-case-lambda)
+	     (cddr x))
             (else '()))
 	'()))
     (let f ((cls* (get-cls* x)))
-      (cond
-       ((null? cls*) '())
-       ((matching? (caar cls*) args)
-	(caar cls*))
-       (else (f (cdr cls*))))))
+      (cond ((null? cls*)
+	     '())
+	    ((matching? (caar cls*) args)
+	     (caar cls*))
+	    (else
+	     (f (cdr cls*))))))
+
   (define (make-global-set! lhs rhs)
     (make-funcall (make-primref '$init-symbol-value!)
 		  (list (make-constant lhs) rhs)))
@@ -707,6 +755,7 @@
 	 (make-primref 'top-level-value)
 	 (list (make-constant x))))))
      (else (error 'recordize "invalid expression" x))))
+
   (E x #f))
 
 
