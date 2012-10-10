@@ -504,7 +504,8 @@
 
 
 (module (convert-instructions local-label?)
-  (import stuff)
+  (module (label-name)
+    (import stuff))
 
   ;;List  of symbols  representing  local labels.
   (define local-labels
