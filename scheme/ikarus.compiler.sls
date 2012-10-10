@@ -84,26 +84,9 @@
 
 ;;; --------------------------------------------------------------------
 
-;; (define-syntax %car	(identifier-syntax (lambda (x) ($car x))))
-;; (define-syntax %cdr	(identifier-syntax (lambda (x) ($cdr x))))
-
-;; (define-syntax %caar	(identifier-syntax (lambda (x) ($caar x))))
-;; (define-syntax %cadr	(identifier-syntax (lambda (x) ($cadr x))))
-;; (define-syntax %cdar	(identifier-syntax (lambda (x) ($cdar x))))
-;; (define-syntax %cddr	(identifier-syntax (lambda (x) ($cddr x))))
-
-;; (define-syntax %caaar	(identifier-syntax (lambda (x) ($caaar x))))
-;; (define-syntax %caadr	(identifier-syntax (lambda (x) ($caadr x))))
-;; (define-syntax %cadar	(identifier-syntax (lambda (x) ($cadar x))))
-;; (define-syntax %cdaar	(identifier-syntax (lambda (x) ($cdaar x))))
-;; (define-syntax %cdadr	(identifier-syntax (lambda (x) ($cdadr x))))
-;; (define-syntax %cddar	(identifier-syntax (lambda (x) ($cddar x))))
-;; (define-syntax %cdddr	(identifier-syntax (lambda (x) ($cdddr x))))
-;; (define-syntax %caddr	(identifier-syntax (lambda (x) ($caddr x))))
-
-;;; --------------------------------------------------------------------
-
 (define-syntax map/stx
+  ;;Like MAP, but expand the loop inline.
+  ;;
   (lambda (stx)
     (syntax-case stx ()
       ((_ ?func ?ell)
@@ -122,6 +105,15 @@
 	     (cons (?func ($car input1) ($car input2))
 		   (recur ($cdr input1) ($cdr input2))))))
       )))
+
+(define-syntax begin0
+  ;;A version of BEGIN0 usable only with single values.
+  ;;
+  (syntax-rules ()
+    ((_ ?form ?body0 ?body ...)
+     (let ((t ?form))
+       ?body0 ?body ...
+       t))))
 
 ;;; --------------------------------------------------------------------
 
@@ -347,11 +339,28 @@
 
 ;;;; struct types
 
+;;Instances of  this type are  stored in  the property lists  of symbols
+;;representing  binding names;  this way  we  can just  send around  the
+;;symbol to represent some lexical context informations.
+;;
+(define-structure (prelex name operand)
+  ((source-referenced?   #f)
+   (source-assigned?     #f)
+		;Boolean,  true  when  the  binding  has  been  used  as
+		;left-hand side in a SET! form.
+   (residual-referenced? #f)
+   (residual-assigned?   #f)
+   (global-location      #f)))
+
+
+;;; --------------------------------------------------------------------
+
 ;;Instances of this type represent datums in the core language.
 ;;
 (define-struct constant
   (value
-		;The datum from the source.
+		;The  datum  from  the  source,  for  example:  numbers,
+		;vectors, strings, quoted lists...
    ))
 
 ;;An instance  of this  type represents  a form in  a sequence  of forms
@@ -485,15 +494,6 @@
 (define-struct asm-instr (op dst src))
 (define-struct disp (s0 s1))
 
-(define-structure (prelex name operand)
-  ((source-referenced?   #f)
-   (source-assigned?     #f)
-		;Boolean,  true  when  the  binding  has  been  used  as
-		;left-hand side in a SET! form.
-   (residual-referenced? #f)
-   (residual-assigned?   #f)
-   (global-location      #f)))
-
 
 (define mkfvar
   ;;Maker function for structs of type FVAR.  It caches structures based
@@ -623,12 +623,12 @@
 		    (body  ($caddr x)))	  ;list of body forms
 		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
 		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
-		  (let ((nlhs* (gen-fml* lhs*)))
-		    (let ((expr (make-recbind nlhs*
-					      (map E rhs* lhs*)
-					      (E body ctxt))))
-		      (ungen-fml* lhs*)
-		      expr)))))
+		  ;;Make sure that LHS* is processed first!!!
+		  (let* ((nlhs* (gen-fml* lhs*))
+			 (nrhs* (map E rhs* lhs*)))
+		    (begin0
+			(make-recbind nlhs* nrhs* (E body ctxt))
+		      (ungen-fml* lhs*))))))
 
 	     ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
 	     ;;
@@ -637,10 +637,12 @@
 		    (body  ($caddr x)))	  ;list of body forms
 		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
 		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
-		  (let ((nlhs* (gen-fml* lhs*)))
-		    (let ((expr (make-rec*bind nlhs* (map E rhs* lhs*) (E body ctxt))))
-		      (ungen-fml* lhs*)
-		      expr)))))
+		  ;;Make sure that LHS* is processed first!!!
+		  (let* ((nlhs* (gen-fml* lhs*))
+			 (nrhs* (map E rhs* lhs*)))
+		    (begin0
+			(make-rec*bind nlhs* nrhs* (E body ctxt))
+		      (ungen-fml* lhs*))))))
 
 	     ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
 	     ;;
