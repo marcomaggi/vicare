@@ -53,11 +53,12 @@
 	  $struct-ref $struct/rtd?)
     (vicare include)
     (ikarus.fasl.write)
-    (ikarus.intel-assembler))
+    (ikarus.intel-assembler)
+    (only (vicare syntactic-extensions)
+	  define-inline))
 
 
-(define strip-source-info (make-parameter #f))
-(define generate-debug-calls (make-parameter #f))
+;;;; helper syntaxes
 
 (define-syntax struct-case
   ;;Specialised CASE syntax  for data structures.  Notice  that we could
@@ -136,53 +137,78 @@
       ;;
       (syntax-case fields-stx ()
         (() #'())
-        ((x . x*)
-         (with-syntax ((FIELD-IDX        next-field-idx)
-		       (OTHER-FIELD-IDXS (%enumerate #'x* (fxadd1 next-field-idx))))
+        ((?field-name . ?other-names)
+         (with-syntax
+	     ((FIELD-IDX        next-field-idx)
+	      (OTHER-FIELD-IDXS (%enumerate #'?other-names (fxadd1 next-field-idx))))
            #'(FIELD-IDX . OTHER-FIELD-IDXS)))))
 
     (main stx)))
 
+
+;;;; helper functions
 
+(define strip-source-info
+  (make-parameter #f))
 
+(define generate-debug-calls
+  (make-parameter #f))
+
+(define-inline (singleton x)
+  ;;Wrap  the object  X  into a  unique  container, so  that  it can  be
+  ;;compared with EQ?.
+  ;;
+  (list x))
 
 (define (remq1 x ls)
-  (cond
-    ((null? ls) '())
-    ((eq? x (car ls)) (cdr ls))
-    (else
-     (let ((t (remq1 x (cdr ls))))
-       (cond
-         ((eq? t (cdr ls)) ls)
-         (else (cons (car ls) t)))))))
-
-(define (singleton x) (list x))
+  ;;Scan the  list LS and  remove only the  first instance of  object X,
+  ;;using EQ?  as  comparison function; return the  resulting list which
+  ;;may share its tail with LS.
+  ;;
+  (cond ((null? ls)
+	 '())
+	((eq? x ($car ls))
+	 ($cdr ls))
+	(else
+	 (let ((t (remq1 x ($cdr ls))))
+	   (cond ((eq? t ($cdr ls))
+		  ls)
+		 (else
+		  (cons ($car ls) t)))))))
 
 (define (union s1 s2)
+  ;;Return a list which  is the union between the lists  S1 and S2, with
+  ;;all the duplicates removed.
+  ;;
   (define (add* s1 s2)
-    (cond
-     ((null? s1) s2)
-     (else (add (car s1) (add* (cdr s1) s2)))))
+    (if (null? s1)
+	s2
+      (add ($car s1)
+	   (add* ($cdr s1) s2))))
   (define (add x s)
-    (cond
-     ((memq x s) s)
-     (else (cons x s))))
-  (cond
-   ((null? s1) s2)
-   ((null? s2) s1)
-   (else (add* s1 s2))))
+    (if (memq x s)
+	s
+      (cons x s)))
+  (cond ((null? s1) s2)
+	((null? s2) s1)
+	(else
+	 (add* s1 s2))))
 
 (define (difference s1 s2)
-  (define (rem* s1 s2)
-    (cond
-     ((null? s1) s2)
-     (else (remq1 (car s1) (rem* (cdr s1) s2)))))
-  (cond
-   ((null? s1) '())
-   ((null? s2) s1)
-   (else (rem* s2 s1))))
+  ;;Return a list holding all the  elements from the list S1 not present
+  ;;in the list S2.
+  ;;
+  (define (rem* s2 s1)
+    (if (null? s2)
+	s1
+      (remq1 ($car s2)
+	     (rem* ($cdr s2) s1))))
+  (cond ((null? s1) '())
+	((null? s2) s1)
+	(else
+	 (rem* s2 s1))))
 
-
+
 
 (define-struct constant (value))
 (define-struct code-loc (label))
