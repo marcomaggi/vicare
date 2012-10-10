@@ -145,6 +145,58 @@
 
     (main stx)))
 
+(define-syntax define-structure
+  ;;A syntax to define struct  types for compatibility with the notation
+  ;;used in Oscar Waddell's thesis.
+  ;;
+  (lambda (stx)
+    #;(define (%make-fmt ctxt)
+      (lambda (template-str . args)
+        (datum->syntax ctxt
+		       (string->symbol
+			(apply format template-str (map syntax->datum args))))))
+    (define (%format-id ctxt template-str . args)
+      (datum->syntax ctxt (string->symbol
+			   (apply format template-str (map syntax->datum args)))))
+    (syntax-case stx ()
+      ((_ (?name ?field ...))
+       #'(define-struct ?name (?field ...)))
+
+      ((_ (?name ?field-without-default ...)
+	  ((?field-with-default ?default)
+	   ...))
+       (with-syntax
+	   #;(((PRED MAKER (GETTER ...) (SETTER ...))
+	     (let ((fmt (%make-fmt #'?name)))
+	       (list (fmt "~s?" #'?name)
+		     (fmt "make-~s" #'?name)
+		     (map (lambda (x)
+			    (fmt "~s-~s" #'?name x))
+		       #'(?field-without-default ... ?field-with-default ...))
+		     (map (lambda (x)
+			    (fmt "set-~s-~s!" #'?name x))
+		       #'(?field-without-default ... ?field-with-default ...))))))
+	   ((PRED		(%format-id #'?name "~s?" #'?name))
+	    (MAKER		(%format-id #'?name "make-~s" #'?name))
+	    ((GETTER ...)	(map (lambda (x)
+				       (%format-id #'?name "~s-~s" #'?name x))
+				  #'(?field-without-default ... ?field-with-default ...)))
+	    ((SETTER ...)	(map (lambda (x)
+				       (%format-id #'?name "set-~s-~s!" #'?name x))
+				  #'(?field-without-default ... ?field-with-default ...))))
+         #'(module (?name PRED GETTER ... SETTER ... MAKER)
+             (module private
+	       (?name PRED GETTER ... SETTER ... MAKER)
+	       (define-struct ?name
+		 (?field-without-default ... ?field-with-default ...)))
+             (module (MAKER)
+               (define (MAKER ?field-without-default ...)
+                 (import private)
+                 (MAKER ?field-without-default ... ?default ...)))
+             (module (?name PRED GETTER ... SETTER ...)
+               (import private)))))
+      )))
+
 
 ;;;; helper functions
 
@@ -209,6 +261,7 @@
 	 (rem* s2 s1))))
 
 
+;;;; struct types
 
 (define-struct constant (value))
 (define-struct code-loc (label))
@@ -259,37 +312,6 @@
 (define-struct asm-instr (op dst src))
 (define-struct disp (s0 s1))
 
-;;; this define-structure definition for compatibility with the
-;;; notation used in Oscar's thesis.
-(define-syntax define-structure
-  (lambda (stx)
-    (define (fmt ctxt)
-      (lambda (str . args)
-        (datum->syntax ctxt
-          (string->symbol
-            (apply format str (map syntax->datum args))))))
-    (syntax-case stx ()
-      ((_ (name fields ...))
-       #'(define-struct name (fields ...)))
-      ((_ (name fields ...) ((others defaults) ...))
-       (with-syntax (((pred maker (getters ...) (setters ...))
-                      (let ((fmt (fmt #'name)))
-                        (list (fmt "~s?" #'name)
-                              (fmt "make-~s" #'name)
-                              (map (lambda (x) (fmt "~s-~s" #'name x))
-                                   #'(fields ... others ...))
-                              (map (lambda (x) (fmt "set-~s-~s!" #'name x))
-                                   #'(fields ... others ...))))))
-         #'(module (name pred getters ... setters ... maker)
-             (module P (name pred getters ... setters ... maker)
-               (define-struct name (fields ... others ...)))
-             (module (maker)
-               (define (maker fields ...)
-                 (import P)
-                 (maker fields ... defaults ...)))
-             (module (name pred getters ... setters ...)
-               (import P))))))))
-;;;
 (define-structure (prelex name operand)
   ((source-referenced?   #f)
    (source-assigned?     #f)
@@ -297,6 +319,7 @@
    (residual-assigned?   #f)
    (global-location      #f)))
 
+
 (define mkfvar
   (let ((cache '()))
     (lambda (i)
