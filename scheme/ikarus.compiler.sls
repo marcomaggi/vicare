@@ -100,6 +100,8 @@
 	 #'(let recur ((t ?ell0) (T ?ell) ...)
 	     (if (null? t)
 		 '()
+	       ;;MAP does  not specify the  order in which the  ?FUNC is
+	       ;;applied to the items.
 	       (cons (?func ($car t) ($car T) ...)
 		     (recur ($cdr t) ($cdr T) ...))))))
       )))
@@ -1466,210 +1468,336 @@
 
 
 (define (unparse x)
-  (define (E-args proper x)
-    (if proper
-        (map E x)
-        (let f ((a (car x)) (d (cdr x)))
-          (cond
-            ((null? d) (E a))
-            (else (cons (E a) (f (car d) (cdr d))))))))
-  (define (E x)
-    (struct-case x
-      ((constant c) `(quote ,c))
-      ((known x t) `(known ,(E x) ,(T:description t)))
-      ((code-loc x) `(code-loc ,x))
-      ((var x) (string->symbol (format ":~a" x)))
-      ((prelex name) (string->symbol (format ":~a" name)))
-      ((primref x) x)
-      ((conditional test conseq altern)
-       `(if ,(E test) ,(E conseq) ,(E altern)))
-      ((interrupt-call e0 e1)
-       `(interrupt-call ,(E e0) ,(E e1)))
-      ((primcall op arg*) `(,op . ,(map E arg*)))
-      ((bind lhs* rhs* body)
-       `(let ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
-          ,(E body)))
-      ((recbind lhs* rhs* body)
-       `(letrec ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
-          ,(E body)))
-      ((rec*bind lhs* rhs* body)
-       `(letrec* ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
-          ,(E body)))
-      ;((library-recbind lhs* loc* rhs* body)
-      ; `(letrec ,(map (lambda (lhs loc rhs) (list (E lhs) loc (E rhs)))
-      ;                lhs* loc* rhs*)
-      ;    ,(E body)))
-      ((fix lhs* rhs* body)
-       `(fix ,(map (lambda (lhs rhs) (list (E lhs) (E rhs))) lhs* rhs*)
-          ,(E body)))
-      ((seq e0 e1)
-       (let ()
-         (define (f x ac)
-           (struct-case x
-             ((seq e0 e1) (f e0 (f e1 ac)))
-             (else (cons (E x) ac))))
-         (cons 'begin (f e0 (f e1 '())))))
-      ((clambda-case info body)
-       `( ;   label: ,(case-info-label info)
-         ,(E-args (case-info-proper info) (case-info-args info))
-         ,(E body)))
-      ((clambda g cls* cp free)
-       `(clambda (label: ,g) ; cp: ,(E cp) ) ;free: ,(map E free))
-           ,@(map E cls*)))
-      ((clambda label clauses free)
-       `(code ,label . ,(map E clauses)))
-      ((closure code free* wk?)
-       `(closure ,@(if wk? '(wk) '()) ,(E code) ,(map E free*)))
-      ((codes list body)
-       `(codes ,(map E list)
-          ,(E body)))
-      ((funcall rator rand*) `(funcall ,(E rator) . ,(map E rand*)))
-      ((jmpcall label rator rand*)
-       `(jmpcall ,label ,(E rator) . ,(map E rand*)))
-      ((forcall rator rand*) `(foreign-call ,rator . ,(map E rand*)))
-      ((assign lhs rhs) `(set! ,(E lhs) ,(E rhs)))
-      ((return x) `(return ,(E x)))
-      ((new-frame base-idx size body)
-       `(new-frame (base: ,base-idx)
-                   (size: ,size)
-          ,(E body)))
-      ((frame-var idx)
-       (string->symbol (format "fv.~a" idx)))
-      ((cp-var idx)
-       (string->symbol (format "cp.~a" idx)))
-      ((save-cp expr)
-       `(save-cp ,(E expr)))
-      ((eval-cp check body)
-       `(eval-cp ,check ,(E body)))
-      ((call-cp call-convention label save-cp? rp-convention base-idx arg-count live-mask)
-       `(call-cp (conv: ,call-convention)
-                 (label: ,label)
-                 (rpconv: ,(if (symbol? rp-convention)
-                               rp-convention
-                               (E rp-convention)))
-                 (base-idx: ,base-idx)
-                 (arg-count: ,arg-count)
-                 (live-mask: ,live-mask)))
-      ((tailcall-cp convention label arg-count)
-       `(tailcall-cp ,convention ,label ,arg-count))
-      ((foreign-label x) `(foreign-label ,x))
-      ((mvcall prod cons) `(mvcall ,(E prod) ,(E cons)))
-      ((fvar idx) (string->symbol (format "fv.~a" idx)))
-      ((nfv idx) 'nfv)
-      ((locals vars body) `(locals ,(map E vars) ,(E body)))
-      ((asm-instr op d s)
-       `(asm ,op ,(E d) ,(E s)))
-      ((disp s0 s1)
-       `(disp ,(E s0) ,(E s1)))
-      ((nframe vars live body) `(nframe ;(vars: ,(map E vars))
-                                        ;(live: ,(map E live))
-                                  ,(E body)))
-      ((shortcut body handler)
-       `(shortcut ,(E body) ,(E handler)))
-      ((ntcall target valuw args mask size)
-       `(ntcall ,target ,size))
-      (else
-       (if (symbol? x)
-           x
-           "#<unknown>"))))
-  (E x))
+  ;;Unparse  the  struct  instance  X (representing  code  in  the  core
+  ;;language already  processed by the  compiler) into a  human readable
+  ;;symbolic expression to be used when raising errors.
+  ;;
+  ;;Being  that this  function is  used only  when signaling  errors: it
+  ;;makes no sense to use unsafe operations: let's keep it safe!!!
+  ;;
+  (struct-case x
+    ((constant c)
+     `(quote ,c))
+
+    ((known x t)
+     `(known ,(unparse x) ,(T:description t)))
+
+    ((code-loc x)
+     `(code-loc ,x))
+
+    ((var x)
+     (string->symbol (format ":~a" x)))
+
+    ((prelex name)
+     (string->symbol (format ":~a" name)))
+
+    ((primref x)
+     x)
+
+    ((conditional test conseq altern)
+     `(if ,(unparse test) ,(unparse conseq) ,(unparse altern)))
+
+    ((interrupt-call e0 e1)
+     `(interrupt-call ,(unparse e0) ,(unparse e1)))
+
+    ((primcall op arg*)
+     `(,op . ,(map unparse arg*)))
+
+    ((bind lhs* rhs* body)
+     `(let ,(map (lambda (lhs rhs)
+		   (list (unparse lhs) (unparse rhs)))
+	      lhs* rhs*)
+	,(unparse body)))
+
+    ((recbind lhs* rhs* body)
+     `(letrec ,(map (lambda (lhs rhs)
+		      (list (unparse lhs) (unparse rhs)))
+		 lhs* rhs*)
+	,(unparse body)))
+
+    ((rec*bind lhs* rhs* body)
+     `(letrec* ,(map (lambda (lhs rhs)
+		       (list (unparse lhs) (unparse rhs)))
+		  lhs* rhs*)
+	,(unparse body)))
+
+    ;;Commented out because unused;  notice that LIBRARY-LETREC* forms
+    ;;are  represented by  structures of  type REC*BIND;  there is  no
+    ;;structure of type LIBRARY-RECBIND.  (Marco Maggi; Oct 11, 2012)
+    ;;
+    ;; ((library-recbind lhs* loc* rhs* body)
+    ;;  `(letrec ,(map (lambda (lhs loc rhs)
+    ;; 			(list (unparse lhs) loc (unparse rhs)))
+    ;; 		   lhs* loc* rhs*)
+    ;; 	  ,(unparse body)))
+
+    ((fix lhs* rhs* body)
+     `(fix ,(map (lambda (lhs rhs)
+		   (list (unparse lhs) (unparse rhs)))
+	      lhs* rhs*)
+	   ,(unparse body)))
+
+    ((seq e0 e1)
+     (letrec ((recur (lambda (x ac)
+		       (struct-case x
+			 ((seq e0 e1)
+			  (recur e0 (recur e1 ac)))
+			 (else
+			  (cons (unparse x) ac))))))
+       (cons 'begin (recur e0 (recur e1 '())))))
+
+    ((clambda-case info body)
+     `(,(if (case-info-proper info)
+	    (map unparse (case-info-args info))
+	  ;;The loop below  is like MAP but for improper  lists: it maps
+	  ;;UNPARSE over the improper list X.
+	  (let ((X (case-info-args info)))
+	    (let recur ((A (car X))
+			(D (cdr X)))
+	      (if (null? D)
+		  (unparse A)
+		(cons (unparse A) (recur (car D) (cdr D)))))))
+       ,(unparse body)))
+
+    ((clambda g cls* #;cp #;free)
+     ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
+     `(clambda (label: ,g)
+	       ;;cp:   ,(unparse cp))
+	       ;;free: ,(map unparse free))
+	       ,@(map unparse cls*)))
+
+    ((clambda label clauses free)
+     `(code ,label . ,(map unparse clauses)))
+
+    ((closure code free* wk?)
+     `(closure ,@(if wk? '(wk) '())
+	       ,(unparse code)
+	       ,(map unparse free*)))
+
+    ((codes list body)
+     `(codes ,(map unparse list)
+	     ,(unparse body)))
+
+    ((funcall rator rand*)
+     `(funcall ,(unparse rator) . ,(map unparse rand*)))
+
+    ((jmpcall label rator rand*)
+     `(jmpcall ,label ,(unparse rator) . ,(map unparse rand*)))
+
+    ((forcall rator rand*)
+     `(foreign-call ,rator . ,(map unparse rand*)))
+
+    ((assign lhs rhs)
+     `(set! ,(unparse lhs) ,(unparse rhs)))
+
+    ((return x)
+     `(return ,(unparse x)))
+
+    ((new-frame base-idx size body)
+     `(new-frame (base: ,base-idx)
+		 (size: ,size)
+		 ,(unparse body)))
+
+    ((frame-var idx)
+     (string->symbol (format "fv.~a" idx)))
+
+    ((cp-var idx)
+     (string->symbol (format "cp.~a" idx)))
+
+    ((save-cp expr)
+     `(save-cp ,(unparse expr)))
+
+    ((eval-cp check body)
+     `(eval-cp ,check ,(unparse body)))
+
+    ((call-cp call-convention label save-cp? rp-convention base-idx arg-count live-mask)
+     `(call-cp (conv:		,call-convention)
+	       (label:	,label)
+	       (rpconv:	,(if (symbol? rp-convention)
+			     rp-convention
+			   (unparse rp-convention)))
+	       (base-idx:	,base-idx)
+	       (arg-count:	,arg-count)
+	       (live-mask:	,live-mask)))
+
+    ((tailcall-cp convention label arg-count)
+     `(tailcall-cp ,convention ,label ,arg-count))
+
+    ((foreign-label x)
+     `(foreign-label ,x))
+
+    ((mvcall prod cons)
+     `(mvcall ,(unparse prod) ,(unparse cons)))
+
+    ((fvar idx)
+     (string->symbol (format "fv.~a" idx)))
+
+    ((nfv idx)
+     'nfv)
+
+    ((locals vars body)
+     `(locals ,(map unparse vars) ,(unparse body)))
+
+    ((asm-instr op d s)
+     `(asm ,op ,(unparse d) ,(unparse s)))
+
+    ((disp s0 s1)
+     `(disp ,(unparse s0) ,(unparse s1)))
+
+    ((nframe vars live body)
+     `(nframe #;(vars: ,(map unparse vars))
+       #;(live: ,(map unparse live))
+       ,(unparse body)))
+
+    ((shortcut body handler)
+     `(shortcut ,(unparse body) ,(unparse handler)))
+
+    ((ntcall target valuw args mask size)
+     `(ntcall ,target ,size))
+
+    (else
+     (if (symbol? x)
+	 x
+       "#<unknown>"))))
 
 
 (define (unparse-pretty x)
+  ;;Unparse  the  struct  instance  X (representing  code  in  the  core
+  ;;language already  processed by the  compiler) into a  human readable
+  ;;symbolic  expression to  be  used  when printing  to  some port  for
+  ;;miscellaneous debugging purposes.
+  ;;
+  ;;Being that  this function is used  only when debugging: it  makes no
+  ;;sense to use unsafe operations: let's keep it safe!!!
+  ;;
   (define n 0)
   (define h (make-eq-hashtable))
+
   (define (Var x)
     (or (hashtable-ref h x #f)
         (let ((v (string->symbol (format "~a_~a" (prelex-name x) n))))
           (hashtable-set! h x v)
           (set! n (+ n 1))
           v)))
+
   (define (map f ls)
-    (cond
-      ((null? ls) '())
-      (else
-       (let ((a (f (car ls))))
-         (cons a (map f (cdr ls)))))))
+    ;;This version  of MAP imposes an  order to the application  of F to
+    ;;the items in LS.
+    ;;
+    (if (null? ls)
+	'()
+      (let ((a (f (car ls))))
+	(cons a (map f (cdr ls))))))
+
   (define (E-args proper x)
     (if proper
         (map Var x)
-        (let f ((a (car x)) (d (cdr x)))
-          (cond
-            ((null? d) (Var a))
-            (else
-             (let ((a (Var a)))
-               (cons a (f (car d) (cdr d)))))))))
+      ;;The loop  below is like  MAP but for  improper lists: it  maps E
+      ;;over the improper list X.
+      (let recur ((A (car x))
+		  (D (cdr x)))
+	(if (null? D)
+	    (Var A)
+	  (let ((A (Var A)))
+	    (cons A (recur (car D) (cdr D))))))))
+
   (define (clambda-clause x)
     (struct-case x
       ((clambda-case info body)
-       (let ((args (E-args (case-info-proper info) (case-info-args info)) ))
+       (let ((args (E-args (case-info-proper info) (case-info-args info))))
          (list args (E body))))))
+
   (define (build-let b* body)
-    (cond
-      ((and (= (length b*) 1)
-            (pair? body)
-            (or (eq? (car body) 'let*)
-                (and (eq? (car body) 'let)
-                     (= (length (cadr body)) 1))))
-       (list 'let* (append b* (cadr body)) (caddr body)))
-      (else
-       (list 'let b* body))))
+    (cond ((and (= (length b*) 1)
+		(pair? body)
+		(or (eq? (car body) 'let*)
+		    (and (eq? (car body) 'let)
+			 (= (length (cadr body)) 1))))
+	   (list 'let* (append b* (cadr body)) (caddr body)))
+	  (else
+	   (list 'let b* body))))
+
   (define (E x)
     (struct-case x
-      ((constant c) `(quote ,c))
-      ((prelex) (Var x))
-      ((primref x) x)
-      ((known x t) `(known ,(E x) ,(T:description t)))
+      ((constant c)
+       `(quote ,c))
+
+      ((prelex)
+       (Var x))
+
+      ((primref x)
+       x)
+
+      ((known x t)
+       `(known ,(E x) ,(T:description t)))
+
       ((conditional test conseq altern)
        (cons 'if (map E (list test conseq altern))))
-      ((primcall op arg*) (cons op (map E arg*)))
+
+      ((primcall op arg*)
+       (cons op (map E arg*)))
+
       ((bind lhs* rhs* body)
        (let* ((lhs* (map Var lhs*))
               (rhs* (map E rhs*))
               (body (E body)))
          (import (only (ikarus) map))
          (build-let (map list lhs* rhs*) body)))
+
       ((fix lhs* rhs* body)
        (let* ((lhs* (map Var lhs*))
               (rhs* (map E rhs*))
               (body (E body)))
          (import (only (ikarus) map))
          (list 'letrec (map list lhs* rhs*) body)))
+
       ((recbind lhs* rhs* body)
        (let* ((lhs* (map Var lhs*))
               (rhs* (map E rhs*))
               (body (E body)))
          (import (only (ikarus) map))
          (list 'letrec (map list lhs* rhs*) body)))
+
       ((rec*bind lhs* rhs* body)
        (let* ((lhs* (map Var lhs*))
               (rhs* (map E rhs*))
               (body (E body)))
          (import (only (ikarus) map))
          (list 'letrec* (map list lhs* rhs*) body)))
+
       ((seq e0 e1)
        (cons 'begin
-          (let f ((e0 e0) (e* (list e1)))
-            (struct-case e0
-              ((seq e00 e01)
-               (f e00 (cons e01 e*)))
-              (else
-               (let ((x (E e0)))
-                 (if (null? e*)
-                     (list x)
-                     (cons x (f (car e*) (cdr e*))))))))))
+	     (let f ((e0 e0) (e* (list e1)))
+	       (struct-case e0
+		 ((seq e00 e01)
+		  (f e00 (cons e01 e*)))
+		 (else
+		  (let ((x (E e0)))
+		    (if (null? e*)
+			(list x)
+		      (cons x (f (car e*) (cdr e*))))))))))
+
       ((clambda g cls* cp free)
        (let ((cls* (map clambda-clause cls*)))
          (cond
-           ((= (length cls*) 1) (cons 'lambda (car cls*)))
-           (else (cons 'case-lambda cls*)))))
+	  ((= (length cls*) 1) (cons 'lambda (car cls*)))
+	  (else (cons 'case-lambda cls*)))))
+
       ((funcall rator rand*)
        (let ((rator (E rator)))
          (cons rator (map E rand*))))
-      ((forcall rator rand*) `(foreign-call ,rator . ,(map E rand*)))
-      ((assign lhs rhs) `(set! ,(E lhs) ,(E rhs)))
-      ((foreign-label x) `(foreign-label ,x))
+
+      ((forcall rator rand*)
+       `(foreign-call ,rator . ,(map E rand*)))
+
+      ((assign lhs rhs)
+       `(set! ,(E lhs) ,(E rhs)))
+
+      ((foreign-label x)
+       `(foreign-label ,x))
+
       (else x)))
+
   (E x))
 
 
