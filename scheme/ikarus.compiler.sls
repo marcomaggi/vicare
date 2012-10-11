@@ -82,6 +82,8 @@
 (define-inline ($cdddr x)	($cdr ($cdr ($cdr x))))
 (define-inline ($caddr x)	($car ($cdr ($cdr x))))
 
+(define-inline ($cadddr x)	($car ($cdddr x)))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax map/stx
@@ -374,7 +376,8 @@
 ;;
 ;;and it becomes the nested hierarchy:
 ;;
-;;   #[seq (recordize ?b0) #[seq (recordize ?b1) (recordize ?last)]]
+;;   (make-seq (recordize ?b0)
+;;             (make-seq (recordize ?b1) (recordize ?last)))
 ;;
 (define-struct seq
   (e0
@@ -428,73 +431,196 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-struct code-loc (label))
+(define-struct code-loc
+  (label))
 
-(define-struct foreign-label (label))
+(define-struct foreign-label
+  (label))
 
 (define-struct var
-   (name reg-conf frm-conf var-conf reg-move frm-move var-move
-         loc index referenced global-loc))
+   (name
+    reg-conf
+    frm-conf
+    var-conf
+    reg-move
+    frm-move
+    var-move
+    loc
+    index
+    referenced
+    global-loc
+    ))
 
-(define-struct cp-var (idx))
+(define-struct cp-var
+  (idx))
 
-(define-struct frame-var (idx))
+(define-struct frame-var
+  (idx))
 
-(define-struct new-frame (base-idx size body))
+(define-struct new-frame
+  (base-idx size body))
 
-(define-struct save-cp (loc))
+(define-struct save-cp
+  (loc))
 
-(define-struct eval-cp (check body))
+(define-struct eval-cp
+  (check body))
 
-(define-struct return (value))
+(define-struct return
+  (value))
 
 (define-struct call-cp
-  (call-convention label save-cp? rp-convention base-idx arg-count live-mask))
+  (call-convention
+   label
+   save-cp?
+   rp-convention
+   base-idx
+   arg-count
+   live-mask))
 
-(define-struct tailcall-cp (convention label arg-count))
+(define-struct tailcall-cp
+  (convention
+   label
+   arg-count
+   ))
 
-(define-struct primcall (op arg*))
+(define-struct primcall
+  (op arg*))
 
-(define-struct primref (name))
+(define-struct primref
+  (name))
 
-(define-struct interrupt-call (test handler))
+(define-struct interrupt-call
+  (test handler))
 
-(define-struct bind (lhs* rhs* body))
+(define-struct bind
+  (lhs*
+   rhs*
+   body
+   ))
 
-(define-struct recbind (lhs* rhs* body))
+(define-struct recbind
+  (lhs*
+   rhs*
+   body
+   ))
 
-(define-struct rec*bind (lhs* rhs* body))
+(define-struct rec*bind
+  (lhs*
+   rhs*
+   body
+   ))
 
-(define-struct fix (lhs* rhs* body))
+(define-struct fix
+  (lhs*
+   rhs*
+   body
+   ))
 
-(define-struct case-info (label args proper))
+(define-struct case-info
+  (label
+   args
+   proper
+   ))
 
-(define-struct clambda-case (info body))
+(define-struct clambda-case
+  (info
+   body
+   ))
 
-(define-struct clambda (label cases cp free name))
-(define-struct closure (code free* well-known?))
+(define-struct clambda
+  (label
+   cases
+   cp
+   free
+   name
+   ))
 
-(define-struct jmpcall (label op rand*))
-(define-struct forcall (op rand*))
-(define-struct codes (list body))
-(define-struct mvcall (producer consumer))
+(define-struct closure
+  (code
+   free*
+   well-known?
+   ))
 
-(define-struct known (expr type))
+(define-struct jmpcall
+  (label
+   op
+   rand*
+   ))
 
-(define-struct shortcut (body handler))
+(define-struct forcall
+  (op
+   rand*
+   ))
+
+(define-struct codes
+  (list
+   body
+   ))
+
+(define-struct mvcall
+
+  (producer
+   consumer
+   ))
+
+(define-struct known
+  (expr
+   type
+   ))
+
+(define-struct shortcut
+  (body
+   handler
+   ))
 
 (define-struct fvar
   (idx))
 
-(define-struct object (val))
-(define-struct locals (vars body))
-(define-struct nframe (vars live body))
-(define-struct nfv (conf loc var-conf frm-conf nfv-conf))
-(define-struct ntcall (target value args mask size))
-(define-struct asm-instr (op dst src))
-(define-struct disp (s0 s1))
+(define-struct object
+  (val))
+
+(define-struct locals
+  (vars
+   body
+   ))
+
+(define-struct nframe
+  (vars
+   live
+   body
+   ))
+
+(define-struct nfv
+  (conf
+   loc
+   var-conf
+   frm-conf
+   nfv-conf
+   ))
+
+(define-struct ntcall
+  (target
+   value
+   args
+   mask
+   size
+   ))
+
+(define-struct asm-instr
+  (op
+   dst
+   src
+   ))
+
+(define-struct disp
+  (s0
+   s1
+   ))
 
 
+;;;; special struct makers
+
 (define mkfvar
   ;;Maker function for structs of type FVAR.  It caches structures based
   ;;on the values  of the argument, so that calling:
@@ -544,8 +670,8 @@
   ;;   (letrec  ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
-  ;;   (case-lambda (?formals ?body0 ?body ...))
-  ;;   (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+  ;;   (case-lambda (?formals ?body0 ?body ...) ...)
+  ;;   (annotated-case-lambda ?annotation (?formals ?body0 ?body ...) ...)
   ;;   (lambda ?formals ?body0 ?body ...)
   ;;   (foreign-call "?function-name" ?arg ...)
   ;;   (primitive ?prim)
@@ -558,206 +684,23 @@
   ;;The bulk of the work is performed by the recursive function E.
   ;;
 
-  (define-inline (E* x)
-    (E x #f))
+  (define-syntax E
+    (syntax-rules ()
+      ((_ ?x)
+       (%E ?x #f))
+      ((_ ?x ?ctxt)
+       (%E ?x ?ctxt))
+      ))
 
-  (define (E x ctxt)
+  (define (%E X ctxt)
     ;;Convert the  symbolic expression X  representing code in  the core
     ;;language into a nested hierarchy of struct instances.  CTXT
     ;;
-    (cond ((pair? x)
-	   (case-symbols ($car x)
+    (cond ((pair? X)
+	   (%recordize-pair-sexp X ctxt))
 
-	     ;;Synopsis: (quote ?datum)
-	     ;;
-	     ;;Return a struct instance of type CONSTANT.
-	     ;;
-	     ((quote)
-	      (make-constant ($cadr x)))
-
-	     ;;Synopsis: (if ?test ?consequent ?alternate)
-	     ;;
-	     ;;Return a struct instance of type CONDITIONAL.
-	     ;;
-	     ((if)
-	      (make-conditional
-		  (E ($cadr x) #f)
-		(E ($caddr x)        ctxt)
-		(E ($car ($cdddr x)) ctxt)))
-
-	     ;;Synopsis: (set! ?lhs ?rhs)
-	     ;;
-	     ;;If the  left-hand side is  a references a  local binding:
-	     ;;return  a  struct  instance   of  type  ASSIGN.   If  the
-	     ;;left-hand side  represents a top level  binding: return a
-	     ;;struct instance of type FUNCALL.
-	     ;;
-	     ((set!)
-	      (let ((lhs ($cadr  x))	;left-hand side
-		    (rhs ($caddr x)))	;right-hand side
-		(cond ((lexical lhs)
-		       => (lambda (var)
-			    (set-prelex-source-assigned?! var #t)
-			    (make-assign var (E rhs lhs))))
-		      (else
-		       ;;We recordize the right-hand size in the context
-		       ;;of LHS.
-		       (make-global-set! lhs (E rhs lhs))))))
-
-	     ;;Synopsis: (begin ?body0 ?body ...)
-	     ;;
-	     ;;Build and return nested hierarchy of SEQ structures:
-	     ;;
-	     ;;   #[seq ?body0 #[seq ?body ...]]
-	     ;;
-	     ((begin)
-	      (let recur ((A ($cadr x))
-			  (D ($cddr x)))
-		(cond ((null? D)
-		       (E A ctxt))
-		      (else
-		       (make-seq (E A #f)
-				 (recur ($car D) ($cdr D)))))))
-
-	     ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
-	     ;;
-	     ((letrec)
-	      (let ((bind* ($cadr  x))	  ;list of bindings
-		    (body  ($caddr x)))	  ;list of body forms
-		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
-		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
-		  ;;Make sure that LHS* is processed first!!!
-		  (let* ((nlhs* (gen-fml* lhs*))
-			 (nrhs* (map/stx E rhs* lhs*)))
-		    (begin0
-			(make-recbind nlhs* nrhs* (E body ctxt))
-		      (ungen-fml* lhs*))))))
-
-	     ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
-	     ;;
-	     ((letrec*)
-	      (let ((bind* ($cadr x))	  ;list of bindings
-		    (body  ($caddr x)))	  ;list of body forms
-		(let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
-		      (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
-		  ;;Make sure that LHS* is processed first!!!
-		  (let* ((nlhs* (gen-fml* lhs*))
-			 (nrhs* (map/stx E rhs* lhs*)))
-		    (begin0
-			(make-rec*bind nlhs* nrhs* (E body ctxt))
-		      (ungen-fml* lhs*))))))
-
-	     ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
-	     ;;
-	     ((library-letrec*)
-	      (let ((bind* ($cadr  x))	  ;list of bindings
-		    (body  ($caddr x)))	  ;list of body forms
-		(let ((lhs* (map/stx $car   bind*)) ;list of bindings left-hand sides
-		      (loc* (map/stx $cadr  bind*)) ;list of ?
-		      (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
-		  (let ((nlhs* (gen-fml* lhs*)))
-		    (for-each
-			(lambda (lhs loc)
-			  (set-prelex-global-location! lhs loc))
-		      nlhs* loc*)
-		    (let ((expr (make-rec*bind nlhs*
-					       (map/stx E rhs* lhs*)
-					       (let f ((lhs* nlhs*)
-						       (loc* loc*))
-						 (cond ((null? lhs*)
-							(E body ctxt))
-						       ((not ($car loc*))
-							(f ($cdr lhs*) ($cdr loc*)))
-						       (else
-							(f ($cdr lhs*) ($cdr loc*))))))))
-		      (ungen-fml* lhs*)
-		      expr)))))
-
-	     ;;Synopsis: (case-lambda (?formals ?body0 ?body ...))
-	     ;;
-	     ((case-lambda)
-	      (let ((cls* (E-clambda-clause* ($cdr x) ctxt)))
-		(make-clambda (gensym) cls* #f #f
-			      (and (symbol? ctxt) ctxt))))
-
-	     ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
-	     ;;
-	     ((annotated-case-lambda)
-	      (let ((annotated-expr ($cadr x))
-		    (clause*        (E-clambda-clause* ($cddr x) ctxt)))
-		(make-clambda (gensym) clause* #f #f
-			      (cons (and (symbol? ctxt)
-					 ctxt)
-				    (and (not (strip-source-info))
-					 (annotation? annotated-expr)
-					 (annotation-source annotated-expr))))))
-
-	     ;;Synopsis: (lambda ?formals ?body0 ?body ...)
-	     ;;
-	     ;;LAMBDA  functions   are  handled  as  special   cases  of
-	     ;;CASE-LAMBDA functions.
-	     ;;
-	     ;;   (lambda ?formals ?body0 ?body ...)
-	     ;;   ===> (case-lambda (?formals ?body0 ?body ...))
-	     ;;
-	     ((lambda)
-	      (E `(case-lambda ,($cdr x)) ctxt))
-
-	     ;;Synopsis: (foreign-call "?function-name" ?arg ...)
-	     ;;
-	     ;;Return a struct instance of type FORCALL.
-	     ;;
-	     ((foreign-call)
-	      (let ((name (quoted-string ($cadr x)))
-		    (arg* ($cddr x)))
-		(make-forcall name
-			      (map/stx E* arg*)
-			      #;(map (lambda (x)
-				     (E x #f))
-				arg*)
-			      )))
-
-	     ;;Synopsis: (primitive ?prim)
-	     ;;
-	     ((primitive)
-	      (let ((var ($cadr x)))
-		(make-primref var)))
-
-	     ;;Synopsis: (annotated-call ?arg ...)
-	     ;;
-	     ((annotated-call)
-	      (E-app (if (generate-debug-calls)
-			 (lambda (op rands)
-			   (define (operator? x)
-			     (struct-case x
-			       ((primref x)
-				(guard (con ((assertion-violation? con) #t))
-				  (system-value x)
-				  #f))
-			       (else #f)))
-			   (define (get-src/expr ae)
-			     (if (annotation? ae)
-				 (cons (annotation-source   ae)
-				       (annotation-stripped ae))
-			       (cons #f (syntax->datum ae))))
-			   (define src/expr
-			     (make-constant (get-src/expr ($cadr x))))
-			   (if (operator? op)
-			       (make-funcall op rands)
-			     (make-funcall (make-primref 'debug-call)
-					   (cons* src/expr op rands))))
-		       make-funcall)
-		     ($caddr x) ($cdddr x) ctxt))
-
-	     (else ;if X is a pair here, it is a function call
-	      ;;Synopsis: (?func ?arg ...)
-	      ;;
-	      ;;Return a struct instance of type FUNCALL.
-	      ;;
-	      (E-app make-funcall ($car x) ($cdr x) ctxt))))
-
-	  ((symbol? x)
-	   (cond ((lexical x)
+	  ((symbol? X)
+	   (cond ((lexical X)
 		  ;;It is a reference to local variable.
 		  => (lambda (var)
 		       (set-prelex-source-referenced?! var #t)
@@ -765,10 +708,196 @@
 		 (else
 		  ;;It is a reference to top level variable.
 		  (make-funcall (make-primref 'top-level-value)
-				(list (make-constant x))))))
+				(list (make-constant X))))))
 
 	  (else
-	   (error 'recordize "invalid expression" x))))
+	   (error 'recordize "invalid core language expression" X))))
+
+  (define-inline (%recordize-pair-sexp X ctxt)
+    (case-symbols ($car X)
+
+      ;;Synopsis: (quote ?datum)
+      ;;
+      ;;Return a struct instance of type CONSTANT.
+      ;;
+      ((quote)
+       (make-constant ($cadr X)))
+
+      ;;Synopsis: (if ?test ?consequent ?alternate)
+      ;;
+      ;;Return a struct instance of type CONDITIONAL.
+      ;;
+      ((if)
+       (make-conditional
+	   (E ($cadr X))
+	 (E ($caddr  X) ctxt)
+	 (E ($cadddr X) ctxt)))
+
+      ;;Synopsis: (set! ?lhs ?rhs)
+      ;;
+      ;;If  the left-hand  side  references a  local  binding: return  a
+      ;;struct  instance   of  type  ASSIGN.   If   the  left-hand  side
+      ;;references a top level binding: return a struct instance of type
+      ;;FUNCALL.
+      ;;
+      ((set!)
+       (let ((lhs ($cadr  X))  ;left-hand side
+	     (rhs ($caddr X))) ;right-hand side
+	 (cond ((lexical lhs)
+		=> (lambda (var)
+		     (set-prelex-source-assigned?! var #t)
+		     (make-assign var (E rhs lhs))))
+	       (else
+		;;We recordize the right-hand size in the context
+		;;of LHS.
+		(make-global-set! lhs (E rhs lhs))))))
+
+      ;;Synopsis: (begin ?body0 ?body ...)
+      ;;
+      ;;Build and return nested hierarchy of SEQ structures:
+      ;;
+      ;;   #[seq ?body0 #[seq ?body ...]]
+      ;;
+      ((begin)
+       (let recur ((A ($cadr X))
+		   (D ($cddr X)))
+	 (cond ((null? D)
+		(E A ctxt))
+	       (else
+		(make-seq (E A)
+			  (recur ($car D) ($cdr D)))))))
+
+      ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ((letrec)
+       (let ((bind* ($cadr  X))	    ;list of bindings
+	     (body  ($caddr X)))	    ;list of body forms
+	 (let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
+	       (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
+	   ;;Make sure that LHS* is processed first!!!
+	   (let* ((nlhs* (gen-fml* lhs*))
+		  (nrhs* (map/stx E rhs* lhs*)))
+	     (begin0
+		 (make-recbind nlhs* nrhs* (E body ctxt))
+	       (ungen-fml* lhs*))))))
+
+      ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ((letrec*)
+       (let ((bind* ($cadr X))	    ;list of bindings
+	     (body  ($caddr X)))	    ;list of body forms
+	 (let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
+	       (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
+	   ;;Make sure that LHS* is processed first!!!
+	   (let* ((nlhs* (gen-fml* lhs*))
+		  (nrhs* (map/stx E rhs* lhs*)))
+	     (begin0
+		 (make-rec*bind nlhs* nrhs* (E body ctxt))
+	       (ungen-fml* lhs*))))))
+
+      ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ((library-letrec*)
+       (let ((bind* ($cadr  X))	     ;list of bindings
+	     (body  ($caddr X)))	     ;list of body forms
+	 (let ((lhs* (map/stx $car   bind*)) ;list of bindings left-hand sides
+	       (loc* (map/stx $cadr  bind*)) ;list of ?
+	       (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
+	   (let ((nlhs* (gen-fml* lhs*)))
+	     (for-each
+		 (lambda (lhs loc)
+		   (set-prelex-global-location! lhs loc))
+	       nlhs* loc*)
+	     (let ((expr (make-rec*bind nlhs*
+					(map/stx E rhs* lhs*)
+					(let f ((lhs* nlhs*)
+						(loc* loc*))
+					  (cond ((null? lhs*)
+						 (E body ctxt))
+						((not ($car loc*))
+						 (f ($cdr lhs*) ($cdr loc*)))
+						(else
+						 (f ($cdr lhs*) ($cdr loc*))))))))
+	       (ungen-fml* lhs*)
+	       expr)))))
+
+      ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
+      ;;
+      ((case-lambda)
+       (let ((clause* (E-clambda-clause* ($cdr X) ctxt)))
+	 (make-clambda (gensym) clause* #f #f
+		       (and (symbol? ctxt) ctxt))))
+
+      ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+      ;;
+      ((annotated-case-lambda)
+       (let ((annotated-expr ($cadr X))
+	     (clause*        (E-clambda-clause* ($cddr X) ctxt)))
+	 (make-clambda (gensym) clause* #f #f
+		       (cons (and (symbol? ctxt)
+				  ctxt)
+			     (and (not (strip-source-info))
+				  (annotation? annotated-expr)
+				  (annotation-source annotated-expr))))))
+
+      ;;Synopsis: (lambda ?formals ?body0 ?body ...)
+      ;;
+      ;;LAMBDA  functions   are  handled  as  special   cases  of
+      ;;CASE-LAMBDA functions.
+      ;;
+      ;;   (lambda ?formals ?body0 ?body ...)
+      ;;   ===> (case-lambda (?formals ?body0 ?body ...))
+      ;;
+      ((lambda)
+       (E `(case-lambda ,($cdr X)) ctxt))
+
+      ;;Synopsis: (foreign-call "?function-name" ?arg ...)
+      ;;
+      ;;Return a struct instance of type FORCALL.
+      ;;
+      ((foreign-call)
+       (let ((name (quoted-string ($cadr X)))
+	     (arg* ($cddr X)))
+	 (make-forcall name (map/stx E arg*))))
+
+      ;;Synopsis: (primitive ?prim)
+      ;;
+    ((primitive)
+     (let ((var ($cadr X)))
+       (make-primref var)))
+
+    ;;Synopsis: (annotated-call ?arg ...)
+    ;;
+    ((annotated-call)
+     (E-app (if (generate-debug-calls)
+		(lambda (op rands)
+		  (define (operator? X)
+		    (struct-case x
+				 ((primref X)
+				  (guard (con ((assertion-violation? con) #t))
+				    (system-value X)
+				    #f))
+				 (else #f)))
+		  (define (get-src/expr ae)
+		    (if (annotation? ae)
+			(cons (annotation-source   ae)
+			      (annotation-stripped ae))
+		      (cons #f (syntax->datum ae))))
+		  (define src/expr
+		    (make-constant (get-src/expr ($cadr X))))
+		  (if (operator? op)
+		      (make-funcall op rands)
+		    (make-funcall (make-primref 'debug-call)
+				  (cons* src/expr op rands))))
+	      make-funcall)
+	    ($caddr X) ($cdddr X) ctxt))
+
+    (else	;if X is a pair here, it is a function call
+     ;;Synopsis: (?func ?arg ...)
+     ;;
+     ;;Return a struct instance of type FUNCALL.
+     ;;
+     (E-app make-funcall ($car X) ($cdr X) ctxt))))
 
   (define (properize fml*)
     ;;If  FML* is  a proper  list: return  a new  list holding  the same
@@ -919,7 +1048,18 @@
 	   #'(let ((t ?expr)) BODY)))
 	)))
 
-  (define (E-clambda-clause* cls* ctxt)
+  (define (E-clambda-clause* clause* ctxt)
+    ;;Given a symbolic expression representing a CASE-LAMBDA:
+    ;;
+    ;;   (case-lambda (?formals ?body0 ?body ...) ...)
+    ;;
+    ;;and knowing that  a LAMBDA sexp is converted  to CASE-LAMBDA, this
+    ;;function is called with CLAUSE* set to:
+    ;;
+    ;;   ((?formals ?body0 ?body ...) ...)
+    ;;
+    ;;
+    ;;
     ;;Return a list holding new instances of struct CLAMBDA-CASE.
     ;;
     (map (let ((ctxt (and (pair? ctxt)
@@ -927,87 +1067,87 @@
 	   (lambda (cls)
 	     (let ((fml* ($car cls))
 		   (body ($cadr cls)))
-	       (let ((nfml* (gen-fml* fml*))
-		     (body  (E body ctxt)))
+	       ;;Make sure that FML* is processed first!!!
+	       (let* ((nfml* (gen-fml* fml*))
+		      (body  (E body ctxt)))
 		 (ungen-fml* fml*)
 		 (make-clambda-case (make-case-info (gensym) (properize nfml*) (list? fml*))
 				    body)))))
-      cls*))
+      clause*))
 
-  (define (E-make-parameter mk-call args ctxt)
-    (case (length args)
-      ((1)	;MAKE-PARAMETER called with one argument.
-       (let ((val-expr	(car args))
-             (t		(gensym 't))
-             (x		(gensym 'x))
-	     (bool	(gensym 'bool)))
-         (E `((lambda (,t)
-                (case-lambda
-		 (() ,t)
-		 ((,x) (set! ,t ,x))
-		 ((,x ,bool)
-		  (set! ,t ,x))))
-              ,val-expr)
-            ctxt)))
-      ((2)	;MAKE-PARAMETER called with two arguments.
-       (let ((val-expr		(car args))
-             (guard-expr	(cadr args))
-             (f			(gensym 'f))
-             (t			(gensym 't))
-             (t0		(gensym 't))
-             (x			(gensym 'x))
-	     (bool		(gensym 'bool)))
-         (E `((case-lambda
-	       ((,t ,f)
-		(if ((primitive procedure?) ,f)
-		    ((case-lambda
-		      ((,t0)
-		       (case-lambda
-			(() ,t0)
-			((,x) (set! ,t0 (,f ,x)))
-			((,x ,bool)
-			 (if ,bool
-			     (set! ,t0 (,f ,x))
-			   (set! ,t0 ,x))))))
-		     ,t)
-		  ;;The one below is the original Ikarus implementation;
-		  ;;it was  applying the  guard function every  time and
-		  ;;also applying  the guard function to  the init value
-		  ;;(Marco Maggi; Feb 3, 2012).
-		  ;;
-		  ;; ((case-lambda
-		  ;;   ((,t0)
-		  ;;    (case-lambda
-		  ;;     (() ,t0)
-		  ;;     ((,x) (set! ,t0 (,f ,x))))
-		  ;;    (,f ,t))))
-		  ;;
-		  ((primitive die) 'make-parameter '"not a procedure" ,f))))
-              ,val-expr
-              ,guard-expr)
-            ctxt)))
-      (else	;Error, incorrect number of arguments.
-       (mk-call (make-primref 'make-parameter)
-		(map/stx E* args)
-		#;(map (lambda (x) (E x #f)) args)
-		))))
+  (module (E-app)
 
-  (define (E-app mk-call rator args ctxt)
-    (equal-case rator
-      (((primitive make-parameter))
-       (E-make-parameter mk-call args ctxt))
-      (else
-       (let ((names (get-fmls rator args)))
-	 (mk-call (E rator (list ctxt))
-		  (let f ((args  args)
-			  (names names))
-		    (cond ((pair? names)
-			   (cons (E ($car args) ($car names))
-				 (f ($cdr args) ($cdr names))))
-			  (else
-			   (map/stx E* args)
-			   #;(map (lambda (x) (E x #f)) args)
-			   ))))))))
+    (define (E-app mk-call rator args ctxt)
+      (equal-case rator
+	(((primitive make-parameter))
+	 (E-make-parameter mk-call args ctxt))
+	(else
+	 (let ((names (get-fmls rator args)))
+	   (mk-call (E rator (list ctxt))
+		    (let recur ((args  args)
+				(names names))
+		      (cond ((pair? names)
+			     (cons (E     ($car args) ($car names))
+				   (recur ($cdr args) ($cdr names))))
+			    (else
+			     (map/stx E args)))))))))
+
+    (define (E-make-parameter mk-call args ctxt)
+      (case (length args)
+	((1)	;MAKE-PARAMETER called with one argument.
+	 (let ((val-expr	(car args))
+	       (t		(gensym 't))
+	       (x		(gensym 'x))
+	       (bool	(gensym 'bool)))
+	   (E `((lambda (,t)
+		  (case-lambda
+		   (() ,t)
+		   ((,x) (set! ,t ,x))
+		   ((,x ,bool)
+		    (set! ,t ,x))))
+		,val-expr)
+	      ctxt)))
+	((2)	;MAKE-PARAMETER called with two arguments.
+	 (let ((val-expr		(car args))
+	       (guard-expr	(cadr args))
+	       (f			(gensym 'f))
+	       (t			(gensym 't))
+	       (t0		(gensym 't))
+	       (x			(gensym 'x))
+	       (bool		(gensym 'bool)))
+	   (E `((case-lambda
+		 ((,t ,f)
+		  (if ((primitive procedure?) ,f)
+		      ((case-lambda
+			((,t0)
+			 (case-lambda
+			  (() ,t0)
+			  ((,x) (set! ,t0 (,f ,x)))
+			  ((,x ,bool)
+			   (if ,bool
+			       (set! ,t0 (,f ,x))
+			     (set! ,t0 ,x))))))
+		       ,t)
+		    ;;The one below is the original Ikarus implementation;
+		    ;;it was  applying the  guard function every  time and
+		    ;;also applying  the guard function to  the init value
+		    ;;(Marco Maggi; Feb 3, 2012).
+		    ;;
+		    ;; ((case-lambda
+		    ;;   ((,t0)
+		    ;;    (case-lambda
+		    ;;     (() ,t0)
+		    ;;     ((,x) (set! ,t0 (,f ,x))))
+		    ;;    (,f ,t))))
+		    ;;
+		    ((primitive die) 'make-parameter '"not a procedure" ,f))))
+		,val-expr
+		,guard-expr)
+	      ctxt)))
+	(else	;Error, incorrect number of arguments.
+	 (mk-call (make-primref 'make-parameter) (map/stx E args)))))
+
+    #| end of module: E-app |# )
 
   (module (lexical gen-fml* ungen-fml*)
 
@@ -1068,7 +1208,7 @@
 
     #| end of module |# )
 
-    (E x #f))
+    (E x))
 
 
 (define (unparse x)
@@ -2915,4 +3055,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'equal-case 'scheme-indent-function 1)
+;; eval: (put 'make-conditional 'scheme-indent-function 1)
 ;; End:
