@@ -870,18 +870,20 @@
 	       lhs*^ loc*)
 	     ;;Make sure that LHS* is processed first!!!
 	     (let* ((rhs*^ (map/stx E rhs* lhs*))
-		    ;;FIXME What  the hell  is this loop  doing?  (Marco
-		    ;;Maggi; Oct 11, 2012)
-		    (body  (let f ((lhs* lhs*^)
-				   (loc* loc*))
+		    (body^ (E body ctxt))
+		    ;;FIXME  What  the  hell  was this  loop  (from  the
+		    ;;original  Ikarus code)  doing?  (Marco  Maggi; Oct
+		    ;;11, 2012)
+		    #;(body^ (let loop ((lhs* lhs*^)
+				      (loc* loc*))
 			     (cond ((null? lhs*)
 				    (E body ctxt))
 				   ((not ($car loc*))
-				    (f ($cdr lhs*) ($cdr loc*)))
+				    (loop ($cdr lhs*) ($cdr loc*)))
 				   (else
-				    (f ($cdr lhs*) ($cdr loc*)))))))
+				    (loop ($cdr lhs*) ($cdr loc*)))))))
 	       (begin0
-		   (make-rec*bind lhs*^ rhs*^ body)
+		   (make-rec*bind lhs*^ rhs*^ body^)
 		 (ungen-fml* lhs*)))))))
 
       ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
