@@ -456,6 +456,10 @@
 ;;    + the tail is  a list of  of struct  instances  representing forms
 ;;      that evaluate to the arguments.
 ;;
+;;  Notice that a call to DEBUG-CALL looks like this:
+;;
+;;     (debug-call ?src/expr ?rator ?arg ...)
+;;
 ;;**When the FUNCALL represents a SET!  on a top level binding:
 ;;
 ;;  - the field OP is the result of calling:
@@ -905,6 +909,8 @@
 	   (make-seq (E A) (recur ($car D) ($cdr D))))))
 
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ;;Return a struct instance of type RECBIND.
       ;;
       ((letrec)
        (let ((bind* ($cadr  X))		     ;list of bindings
