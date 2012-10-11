@@ -188,6 +188,11 @@
 ;;Field accessor: annotation-stripped ANN
 ;;  The same S-expression of the EXPRESSION field with no annotations.
 ;;
+;;Field name: source
+;;Field accessor: annotation-source ANN
+;;  A pair whose car is the port  identifier and whose cdr is the offset
+;;  of the character.
+;;
 ;;Field name: textual-position
 ;;Field accessor: annotation-textual-position ANN
 ;;  A  condition  object  of  type "&source-position"  representing  the

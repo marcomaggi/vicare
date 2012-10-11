@@ -62,7 +62,8 @@
     (ikarus.intel-assembler)
     (only (vicare syntactic-extensions)
 	  define-inline
-	  case-symbols)
+	  case-symbols
+	  case-fixnums)
     (vicare arguments validation))
 
 
@@ -291,6 +292,9 @@
   (make-parameter #f))
 
 (define generate-debug-calls
+  ;;Set to true when the option "--debug" is used on the command line of
+  ;;the executable "vicare"; else set to #f.
+  ;;
   (make-parameter #f))
 
 (define-inline (singleton x)
@@ -348,7 +352,7 @@
 	 (rem* s2 s1))))
 
 
-;;;; struct types
+;;; struct types
 
 ;;Instances of  this type are  stored in  the property lists  of symbols
 ;;representing  binding names;  this way  we  can just  send around  the
@@ -424,22 +428,46 @@
    ))
 
 ;;An instance of this type represents a function call; there are special
-;;cases of this.
+;;cases of this:
+;;
+;;**When this FUNCALL represents a plain function application:
+;;
+;;  - the field OP is set to  a struct instance representing a form that
+;;    supposedly evaluates to a closure;
+;;
+;;  - the field RAND* is set  to a list of struct instances representing
+;;    forms that evaluate to the arguments.
+;;
+;;**When this  FUNCALL represents an annotated  function application and
+;;  debugging mode is active:
+;;
+;;  - the field OP is a  struct instance of type PRIMREF referencing the
+;;    primitive DEBUG-CALL;
+;;
+;;  - the field RAND* is a list in which:
+;;
+;;    + the 1st  item is a struct instance of  type CONSTANT whose field
+;;      holds a pair: its car is #f or the source input port identifier;
+;;      its cdr is the source epxression;
+;;
+;;    + the  2nd  item  a  struct  instance  representing  a  form  that
+;;      supposedly evaluates to a closure;
+;;
+;;    + the tail is  a list of  of struct  instances  representing forms
+;;      that evaluate to the arguments.
+;;
+;;**When the FUNCALL represents a SET!  on a top level binding:
+;;
+;;  - the field OP is the result of calling:
+;;
+;;      (make-primref '$init-symbol-value!)
+;;
+;;  - the field RAND* is a list of 2 elements: a struct instance of type
+;;    CONSTANT holding the symbol name of the binding; a struct instance
+;;    representing the new value.
 ;;
 (define-struct funcall
-  (op
-		;When  the FUNCALL  represents a  SET!  on  a top  level
-		;binding, this field is the result of calling:
-		;
-		;   (make-primref '$init-symbol-value!)
-		;
-   rand*
-		;When  the FUNCALL  represents a  SET!  on  a top  level
-		;bindings, this field is a  list of 2 elements: a struct
-		;instance of  type CONSTANT  holding the symbol  name of
-		;the  binding; a  struct instance  representing the  new
-		;value.
-   ))
+  (op rand*))
 
 ;;An  instance of  this type  represents  a CASE-LAMBDA  form.  Given  a
 ;;symbolic expression representing a CASE-LAMBDA:
@@ -1115,6 +1143,13 @@
       ;;We expect X to be the symbolic expression:
       ;;
       ;;   (annotated-call ?annotation ?fun ?arg ...)
+      ;;
+      ;;where  ?ANNOTATION  is a  struct  instance  of type  ANNOTATION,
+      ;;defined by the reader.
+      ;;
+      ;;At present  (Oct 11, 2012), this  function is the only  place in
+      ;;the    compiler    that    makes   use    of    the    parameter
+      ;;GENERATE-DEBUG-CALLS.
       ;;
       (let ((anno ($cadr  X))  ;annotation
 	    (func ($caddr X))  ;expression evaluating to the function
