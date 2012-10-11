@@ -352,7 +352,7 @@
 	 (rem* s2 s1))))
 
 
-;;; struct types
+;;;; struct types used to represent code in the core language
 
 ;;Instances of  this type are  stored in  the property lists  of symbols
 ;;representing  binding names;  this way  we  can just  send around  the
@@ -473,7 +473,91 @@
 (define-struct funcall
   (op rand*))
 
-;;An  instance of  this type  represents  a CASE-LAMBDA  form.  Given  a
+;;An instance of this type represents a LETREC form.
+;;
+(define-struct recbind
+  (lhs*
+		;A list  of struct  instances of type  PRELEX describing
+		;the bindings.
+   rhs*
+		;A list of struct  instances representing the right-hand
+		;sides of the bindings.
+   body
+		;A  struct instance  representing the  sequence of  body
+		;forms.
+   ))
+
+;;An instance of this type represents a LETREC* or LIBRARY-LETREC* form.
+;;
+;;The difference  between a struct  representing a LETREC* and  a struct
+;;representing a LIBRARY-LETREC* form is only in the PRELEX structures.
+;;
+(define-struct rec*bind
+  (lhs*
+		;A list  of struct  instances of type  PRELEX describing
+		;the bindings.
+   rhs*
+		;A list of struct  instances representing the right-hand
+		;sides of the bindings.
+   body
+		;A  struct instance  representing the  sequence of  body
+		;forms.
+   ))
+
+;;An  instance  of this  type  represents  a  reference to  a  primitive
+;;function.
+;;
+(define-struct primref
+  (name
+		;A symbol being the name of the primitive.
+   ))
+
+;;An instance  of this  type represents  a call  to a  foreign function,
+;;usually a C language function.
+;;
+(define-struct forcall
+  (op
+		;A string representing the name of the foreign function.
+   rand*
+		;A list of struct instances representing the arguments.
+   ))
+
+;;An  instance of  this type  represents a  LAMBDA or  CASE-LAMBDA form.
+;;Such forms have the syntax:
+;;
+;;   (lambda ?formals ?body0 ?body ...)
+;;   (case-lambda (?formals ?body0 ?body ...) ...)
+;;   (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+;;
+;;but LAMBDA forms are converted to CASE-LAMBDA forms:
+;;
+;;   (lambda ?formals ?body0 ?body ...)
+;;   ===> (case-lambda (?formals ?body0 ?body ...))
+;;
+(define-struct clambda
+  (label
+		;A unique gensym associated to this closure.
+   cases
+		;A  list  of  struct   instances  of  type  CLAMBDA-CASE
+		;representing the clauses.
+   cp
+		;Initialised to #f.
+   free
+		;Initialised to #f.
+   name
+		;An annotation  representing the name of  the closure if
+		;available.  It  can be:
+		;
+		;* #f when no information is available.
+		;
+		;* A symbol representing the closure name itself.
+		;
+		;* A  pair whose car  is #f  or a name  representing the
+		;closure name itself, and whose cdr is #f or the content
+		;of the SOURCE field in an ANNOTATION struct.
+   ))
+
+;;An instance  of this  type represents a  CASE-LAMBDA clause.   Given a
 ;;symbolic expression representing a CASE-LAMBDA:
 ;;
 ;;   (case-lambda (?formals ?body0 ?body ...) ...)
@@ -545,7 +629,8 @@
 		;?FORMALS is a symbol or improper list.
    ))
 
-;;; --------------------------------------------------------------------
+
+;;;; struct types
 
 (define-struct code-loc
   (label))
@@ -603,25 +688,10 @@
 (define-struct primcall
   (op arg*))
 
-(define-struct primref
-  (name))
-
 (define-struct interrupt-call
   (test handler))
 
 (define-struct bind
-  (lhs*
-   rhs*
-   body
-   ))
-
-(define-struct recbind
-  (lhs*
-   rhs*
-   body
-   ))
-
-(define-struct rec*bind
   (lhs*
    rhs*
    body
@@ -633,14 +703,6 @@
    body
    ))
 
-(define-struct clambda
-  (label
-   cases
-   cp
-   free
-   name
-   ))
-
 (define-struct closure
   (code
    free*
@@ -650,11 +712,6 @@
 (define-struct jmpcall
   (label
    op
-   rand*
-   ))
-
-(define-struct forcall
-  (op
    rand*
    ))
 
@@ -927,6 +984,8 @@
 
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
+      ;;Return a struct instance of type REC*BIND.
+      ;;
       ((letrec*)
        (let ((bind* ($cadr X))		     ;list of bindings
 	     (body  ($caddr X)))	     ;list of body forms
@@ -955,6 +1014,8 @@
       ;;
       ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?expr ...)
       ;;
+      ;;Return a struct instance of type REC*BIND.
+      ;;
       ((library-letrec*)
        (let ((bind* ($cadr  X))		      ;list of bindings
 	     (body  ($caddr X)))	      ;list of body forms
@@ -973,12 +1034,16 @@
 
       ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
       ;;
+      ;;Return a struct instance of type CLAMBDA.
+      ;;
       ((case-lambda)
        (let ((clause* (E-clambda-clause* ($cdr X) ctxt)))
 	 (make-clambda (gensym) clause* #f #f
 		       (and (symbol? ctxt) ctxt))))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+      ;;
+      ;;Return a struct instance of type CLAMBDA.
       ;;
       ((annotated-case-lambda)
        (let ((annotated-expr ($cadr X))
@@ -1012,6 +1077,8 @@
 	 (make-forcall name ($map/stx E arg*))))
 
       ;;Synopsis: (primitive ?prim)
+      ;;
+      ;;Return a struct instance of type PRIMREF.
       ;;
       ((primitive)
        (let ((var ($cadr X)))
