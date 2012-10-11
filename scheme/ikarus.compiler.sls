@@ -750,8 +750,9 @@
   ;;   (lambda ?formals ?body0 ?body ...)
   ;;   (foreign-call "?function-name" ?arg ...)
   ;;   (primitive ?prim)
-  ;;   (annotated-call ?arg ...)
+  ;;   (annotated-call ?annotation ?fun ?arg ...)
   ;;   ?symbol
+  ;;   (?func ?arg ...)
   ;;
   ;;where: ?SYMBOL is interpreted as  reference to variable; ?LHS stands
   ;;for "left-hand side"; ?RHS stands for "right-hand side".
@@ -770,6 +771,25 @@
   ;;       (do-something)
   ;;       (lambda () ;annotated: a
   ;;         ---))
+  ;;
+  ;;   (define a
+  ;;     (let ((a 1) (b 2))
+  ;;       (do-something)
+  ;;       (lambda () ;annotated: a
+  ;;         ---))
+  ;;
+  ;;   (set! a (lambda () ;annotated: a
+  ;;             ---))
+  ;;
+  ;;   (set! a (begin
+  ;;             (do-something)
+  ;;             (lambda () ;annotated: a
+  ;;               ---))
+  ;;
+  ;;this is what  the CLOSURE-NAME argument in the  subfunctions is for;
+  ;;it is carefully handed to the  functions that process forms that may
+  ;;evaluate to a closure and  finally used to annotate struct instances
+  ;;of type CLAMBDA.
   ;;
 
   (define-syntax E
@@ -851,14 +871,13 @@
 		   (D ($cddr X)))
 	 (if (null? D)
 	     (E A ctxt)
-	   (make-seq (E A)
-		     (recur ($car D) ($cdr D))))))
+	   (make-seq (E A) (recur ($car D) ($cdr D))))))
 
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
       ((letrec)
-       (let ((bind* ($cadr  X))		    ;list of bindings
-	     (body  ($caddr X)))	    ;list of body forms
+       (let ((bind* ($cadr  X))		     ;list of bindings
+	     (body  ($caddr X)))	     ;list of body forms
 	 (let ((lhs* ($map/stx $car  bind*)) ;list of bindings left-hand sides
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
@@ -872,8 +891,8 @@
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
       ((letrec*)
-       (let ((bind* ($cadr X))		    ;list of bindings
-	     (body  ($caddr X)))	    ;list of body forms
+       (let ((bind* ($cadr X))		     ;list of bindings
+	     (body  ($caddr X)))	     ;list of body forms
 	 (let ((lhs* ($map/stx $car  bind*)) ;list of bindings left-hand sides
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
@@ -900,8 +919,8 @@
       ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?expr ...)
       ;;
       ((library-letrec*)
-       (let ((bind* ($cadr  X))		     ;list of bindings
-	     (body  ($caddr X)))	     ;list of body forms
+       (let ((bind* ($cadr  X))		      ;list of bindings
+	     (body  ($caddr X)))	      ;list of body forms
 	 (let ((lhs* ($map/stx $car   bind*)) ;list of bindings left-hand sides
 	       (loc* ($map/stx $cadr  bind*)) ;list of unique gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
@@ -928,8 +947,9 @@
        (let ((annotated-expr ($cadr X))
 	     (clause*        (E-clambda-clause* ($cddr X) ctxt)))
 	 (make-clambda (gensym) clause* #f #f
-		       (cons (and (symbol? ctxt)
-				  ctxt)
+		       (cons (and (symbol? ctxt) ctxt)
+			     ;;This  annotation  is excluded  only  when
+			     ;;building the boot image.
 			     (and (not (strip-source-info))
 				  (annotation? annotated-expr)
 				  (annotation-source annotated-expr))))))
@@ -956,42 +976,52 @@
 
       ;;Synopsis: (primitive ?prim)
       ;;
-    ((primitive)
-     (let ((var ($cadr X)))
-       (make-primref var)))
+      ((primitive)
+       (let ((var ($cadr X)))
+	 (make-primref var)))
 
-    ;;Synopsis: (annotated-call ?arg ...)
-    ;;
-    ((annotated-call)
-     (E-app (if (generate-debug-calls)
-		(lambda (op rands)
-		  (define (operator? X)
-		    (struct-case x
-				 ((primref X)
-				  (guard (con ((assertion-violation? con) #t))
-				    (system-value X)
-				    #f))
-				 (else #f)))
-		  (define (get-src/expr ae)
-		    (if (annotation? ae)
-			(cons (annotation-source   ae)
-			      (annotation-stripped ae))
-		      (cons #f (syntax->datum ae))))
-		  (define src/expr
-		    (make-constant (get-src/expr ($cadr X))))
-		  (if (operator? op)
-		      (make-funcall op rands)
-		    (make-funcall (make-primref 'debug-call)
-				  (cons* src/expr op rands))))
-	      make-funcall)
-	    ($caddr X) ($cdddr X) ctxt))
+      ;;Synopsis: (annotated-call ?annotation ?fun ?arg ...)
+      ;;
+      ((annotated-call)
+       (let ((func ($caddr X))
+	     (args ($cdddr X)))
+	 (define (mk-call op rands)
+	   (define (operator? X)
+	     ;;Evaluate to  true if X the  a symbol bound to  a function
+	     ;;exported by the boot image?
+	     ;;
+	     (struct-case X
+	       ((primref X)
+		(guard (con ((assertion-violation? con)
+			     #t))
+		  ;;Not sure: this will fail with an assertion violation
+		  ;;if X  is not a symbol  being the name of  a function
+		  ;;exported by  the boot image.  (Marco  Maggi; Oct 11,
+		  ;;2012)
+		  (system-value X)
+		  #f))
+	       (else #f)))
+	   (define (get-src/expr ae)
+	     (if (annotation? ae)
+		 (cons (annotation-source   ae)
+		       (annotation-stripped ae))
+	       (cons #f (syntax->datum ae))))
+	   (define src/expr
+	     (make-constant (get-src/expr ($cadr X))))
+	   (if (operator? op)
+	       (make-funcall op rands)
+	     (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))
+	 (E-app (if (generate-debug-calls) mk-call make-funcall)
+		func args ctxt)))
 
-    (else	;if X is a pair here, it is a function call
-     ;;Synopsis: (?func ?arg ...)
-     ;;
-     ;;Return a struct instance of type FUNCALL.
-     ;;
-     (E-app make-funcall ($car X) ($cdr X) ctxt))))
+      (else	;if X is a pair here, it is a function call
+       ;;Synopsis: (?func ?arg ...)
+       ;;
+       ;;Return a struct instance of type FUNCALL.
+       ;;
+       (let ((func ($car X))
+	     (args ($cdr X)))
+	 (E-app make-funcall func args ctxt)))))
 
   (module (quoted-sym)
 
@@ -1042,40 +1072,6 @@
 	($cadr x)))
 
     #| end of module: quoted-string |# )
-
-  (define (get-fmls x args)
-    ;;Expect X to be a sexp representing  a CASE-LAMBDA and ARGS to be a
-    ;;list  of arguments  for  such  function.  Scan  the  clauses in  X
-    ;;looking for a set of formals that matches ARGS: when found, return
-    ;;the list of formals; when not found, return null.
-    ;;
-    (define (matching? fmls args)
-      ;;Return true if  FMLS and ARGS are lists with  the same number of
-      ;;items.
-      (cond ((null? fmls)
-	     (null? args))
-	    ((pair? fmls)
-	     (and (pair? args)
-		  (matching? ($cdr fmls) ($cdr args))))
-	    (else #t)))
-    (define (get-clause* x)
-      ;;Given  a sexp  representing a  CASE-LAMBDA, return  its list  of
-      ;;clauses.  Return null if X is not a CASE-LAMBDA sexp.
-      (if (pair? x)
-          (case-symbols ($car x)
-            ((case-lambda)
-	     ($cdr x))
-            ((annotated-case-lambda)
-	     ($cddr x))
-            (else '()))
-	'()))
-    (let loop ((clause* (get-clause* x)))
-      (cond ((null? clause*)
-	     '())
-	    ((matching? ($caar clause*) args)
-	     ($caar clause*))
-	    (else
-	     (loop ($cdr clause*))))))
 
   (define (make-global-set! lhs recordised-rhs)
     ;;Return a new  struct instance of type FUNCALL  representing a SET!
@@ -1136,20 +1132,19 @@
       ;;Return a list holding new struct instances of type CLAMBDA-CASE,
       ;;one for each clause.
       ;;
-      (map (let ((ctxt (and (pair? ctxt)
-			    ($car ctxt))))
-	     (lambda (cls)
-	       (let ((fml* ($car  cls))	;the formals
-		     (body ($cadr cls))) ;the body sequence
+      (map (let ((ctxt (and (pair? ctxt) ($car ctxt))))
+	     (lambda (clause)
+	       (let ((fml* ($car  clause))  ;the formals
+		     (body ($cadr clause))) ;the body sequence
 		 ;;Make sure that FML* is processed first!!!
-		 (let* ((nfml*   (gen-fml* fml*))
-			(body    (E body ctxt))
+		 (let* ((fml*^ (gen-fml* fml*))
+			(body^ (E body ctxt))
 			;;True if FML* is a  proper list; false if it is
 			;;a symbol or improper list.
 			(proper? (list? fml*)))
 		   (ungen-fml* fml*)
-		   (make-clambda-case (make-case-info (gensym) (properize nfml*) proper?)
-				      body)))))
+		   (make-clambda-case (make-case-info (gensym) (properize fml*^) proper?)
+				      body^)))))
 	clause*))
 
     (define (properize fml*)
@@ -1178,6 +1173,19 @@
   (module (E-app)
 
     (define (E-app mk-call rator args ctxt)
+      ;;Process a  form representing a  function call.  Return  a struct
+      ;;instance of type FUNCALL.
+      ;;
+      ;;MK-CALL is either MAKE-FUNCALL or a wrapper for it.
+      ;;
+      ;;When the function call form is:
+      ;;
+      ;;   (?func ?arg ...)
+      ;;
+      ;;the argument RATOR is ?FUNC and the argument ARGS is (?ARG ...).
+      ;;
+      ;;
+      ;;
       (equal-case rator
 	(((primitive make-parameter))
 	 (E-make-parameter mk-call args ctxt))
@@ -1198,7 +1206,7 @@
 	 (let ((val-expr	(car args))
 	       (t		(gensym 't))
 	       (x		(gensym 'x))
-	       (bool	(gensym 'bool)))
+	       (bool		(gensym 'bool)))
 	   (E `((lambda (,t)
 		  (case-lambda
 		   (() ,t)
@@ -1208,12 +1216,12 @@
 		,val-expr)
 	      ctxt)))
 	((2)	;MAKE-PARAMETER called with two arguments.
-	 (let ((val-expr		(car args))
+	 (let ((val-expr	(car args))
 	       (guard-expr	(cadr args))
-	       (f			(gensym 'f))
-	       (t			(gensym 't))
+	       (f		(gensym 'f))
+	       (t		(gensym 't))
 	       (t0		(gensym 't))
-	       (x			(gensym 'x))
+	       (x		(gensym 'x))
 	       (bool		(gensym 'bool)))
 	   (E `((case-lambda
 		 ((,t ,f)
@@ -1246,6 +1254,46 @@
 	      ctxt)))
 	(else	;Error, incorrect number of arguments.
 	 (mk-call (make-primref 'make-parameter) ($map/stx E args)))))
+
+    (module (get-fmls)
+
+      (define (get-fmls x args)
+	;;Expect X to  be a sexp representing a CASE-LAMBDA  and ARGS to
+	;;be a list of arguments for such function.  Scan the clauses in
+	;;X looking for a set of  formals that matches ARGS: when found,
+	;;return the list of formals; when not found, return null.
+	;;
+	(let loop ((clause* (get-clause* x)))
+	  (cond ((null? clause*)
+		 '())
+		((matching? ($caar clause*) args)
+		 ($caar clause*))
+		(else
+		 (loop ($cdr clause*))))))
+
+      (define (matching? fmls args)
+	;;Return true if FMLS and ARGS are lists with the same number of
+	;;items.
+	(cond ((null? fmls)
+	       (null? args))
+	      ((pair? fmls)
+	       (and (pair? args)
+		    (matching? ($cdr fmls) ($cdr args))))
+	      (else #t)))
+
+      (define (get-clause* x)
+	;;Given a  sexp representing a  CASE-LAMBDA, return its  list of
+	;;clauses.  Return null if X is not a CASE-LAMBDA sexp.
+	(if (pair? x)
+	    (case-symbols ($car x)
+	      ((case-lambda)
+	       ($cdr x))
+	      ((annotated-case-lambda)
+	       ($cddr x))
+	      (else '()))
+	  '()))
+
+      #| end of module: get-fmls |# )
 
     #| end of module: E-app |# )
 
@@ -3154,6 +3202,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; eval: (put 'struct-case 'scheme-indent-function 1)
 ;; eval: (put 'equal-case 'scheme-indent-function 1)
 ;; eval: (put 'make-conditional 'scheme-indent-function 1)
 ;; End:
