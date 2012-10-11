@@ -786,6 +786,9 @@
   ;;             (lambda () ;annotated: a
   ;;               ---))
   ;;
+  ;;   ((lambda (x) x) (lambda (y) ;annotated: x
+  ;;                y))
+  ;;
   ;;this is what  the CLOSURE-NAME argument in the  subfunctions is for;
   ;;it is carefully handed to the  functions that process forms that may
   ;;evaluate to a closure and  finally used to annotate struct instances
@@ -1113,9 +1116,9 @@
       ;;
       ;;   (annotated-call ?annotation ?fun ?arg ...)
       ;;
-      (let ((anno ($cadr  X))	;annotation
-	    (func ($caddr X))	;expression evaluating to the function
-	    (args ($cdddr X)))	;arguments
+      (let ((anno ($cadr  X))  ;annotation
+	    (func ($caddr X))  ;expression evaluating to the function
+	    (args ($cdddr X))) ;arguments
 	(E-app (if (generate-debug-calls)
 		   (%make-funcall-maker anno)
 		 make-funcall)
@@ -1167,20 +1170,35 @@
       ;;
       ;;the argument RATOR is ?FUNC and the argument ARGS is (?ARG ...).
       ;;
+      ;;In case RATOR is itself a LAMBDA or CASE-LAMBDA form as in:
+      ;;
+      ;;   ((lambda (x) x) 123)
+      ;;
+      ;;and one of the ARGS evaluates to a closure as in:
+      ;;
+      ;;   ((lambda (x) x) (lambda (y) ;annotated: x
+      ;;                y))
+      ;;
+      ;;we  want   the  argument  LAMBDA   to  be  annotated   with  the
+      ;;corresponding  formal name;  most of  the times  the list  NAMES
+      ;;below will be null.
+      ;;
       (if (equal? rator '(primitive make-parameter))
 	  (E-make-parameter mk-call args ctxt)
-	(let ((names (get-fmls rator args)))
-	  (mk-call (E rator (list ctxt))
-		   (let recur ((args  args)
-			       (names names))
-		     (cond ((pair? names)
-			    (cons (E     ($car args) ($car names))
-				  (recur ($cdr args) ($cdr names))))
-			   (else
-			    ($map/stx E args))))))))
+	(let ((op    (E rator (list ctxt)))
+	      (rand* (let ((names (get-fmls rator args)))
+		       (if (null? names)
+			   ($map/stx E args)
+			 (let recur ((args  args)
+				     (names names))
+			   (if (pair? names)
+			       (cons (E     ($car args) ($car names))
+				     (recur ($cdr args) ($cdr names)))
+			     ($map/stx E args)))))))
+	  (mk-call op rand*))))
 
     (define (E-make-parameter mk-call args ctxt)
-      (case (length args)
+      (case-fixnums (length args)
 	((1)	;MAKE-PARAMETER called with one argument.
 	 (let ((val-expr	(car args))
 	       (t		(gensym 't))
@@ -1335,7 +1353,7 @@
 
     #| end of module |# )
 
-    (E x))
+  (E x))
 
 
 (define (unparse x)
