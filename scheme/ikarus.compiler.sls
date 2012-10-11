@@ -429,6 +429,78 @@
 		;value.
    ))
 
+;;An  instance of  this type  represents  a CASE-LAMBDA  form.  Given  a
+;;symbolic expression representing a CASE-LAMBDA:
+;;
+;;   (case-lambda (?formals ?body0 ?body ...) ...)
+;;
+;;and knowing that a LAMBDA sexp is converted to CASE-LAMBDA:
+;;
+;;   (lambda ?formals ?body0 ?body ...)
+;;   ===> (case-lambda (?formals ?body0 ?body ...))
+;;
+;;an instance of this type is used to represent a single clause:
+;;
+;;   (?formals ?body0 ?body ...)
+;;
+;;holding informations needed to select it among the multiple choices of
+;;the original form.
+;;
+(define-struct clambda-case
+  (info
+		;A struct instance of type CASE-INFO.
+   body
+		;A struct  instance representing  the sequence  of ?BODY
+		;forms.
+   ))
+
+;;An instance of this type  represents easily accessible informations on
+;;the formals of a single clause of CASE-LAMBDA form:
+;;
+;;   (?formals ?body0 ?body ...)
+;;
+;;We know that the following cases for ?FORMALS are possible:
+;;
+;;   (()           ?body0 ?body ...)
+;;   ((a b c)      ?body0 ?body ...)
+;;   ((a b c . d)  ?body0 ?body ...)
+;;   (args         ?body0 ?body ...)
+;;
+;;information is encoded in the fields as follows:
+;;
+;;**If ?FORMALS is null or a proper list: ARGS is null or a proper list,
+;;  PROPER is #t.
+;;
+;;**If ?FORMALS  is a  symbol: ARGS  is a proper  list holding  a single
+;;  item, PROPER is #f.
+;;
+;;**If  ?FORMALS is  an improper  list: ARGS  is a  proper list  holding
+;;  multiple elements, PROPER is #f.
+;;
+(define-struct case-info
+  (label
+		;A unique gensym for this CASE-LAMBDA clause.
+   args
+		;A list of struct  instances of type PRELEX representing
+		;the ?FORMALS as follows:
+		;
+		;   (() ?body0 ?body ...)
+		;   => ()
+		;
+		;   ((a b c) ?body0 ?body ...)
+		;   => (prelex-a prelex-b prelex-c)
+		;
+		;   ((a b c . d) ?body0 ?body ...)
+		;   => (prelex-a prelex-b prelex-c prelex-d)
+		;
+		;   (args ?body0 ?body ...)
+		;   => (prelex-args)
+		;
+   proper
+		;A boolean: true if ?FORMALS  is a proper list, false if
+		;?FORMALS is a symbol or improper list.
+   ))
+
 ;;; --------------------------------------------------------------------
 
 (define-struct code-loc
@@ -514,17 +586,6 @@
 (define-struct fix
   (lhs*
    rhs*
-   body
-   ))
-
-(define-struct case-info
-  (label
-   args
-   proper
-   ))
-
-(define-struct clambda-case
-  (info
    body
    ))
 
@@ -770,47 +831,47 @@
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
       ((letrec)
-       (let ((bind* ($cadr  X))	    ;list of bindings
+       (let ((bind* ($cadr  X))		    ;list of bindings
 	     (body  ($caddr X)))	    ;list of body forms
 	 (let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
 	       (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
-	   (let* ((nlhs* (gen-fml* lhs*))
-		  (nrhs* (map/stx E rhs* lhs*)))
+	   (let* ((lhs*^ (gen-fml* lhs*))
+		  (rhs*^ (map/stx E rhs* lhs*)))
 	     (begin0
-		 (make-recbind nlhs* nrhs* (E body ctxt))
+		 (make-recbind lhs*^ rhs*^ (E body ctxt))
 	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
       ((letrec*)
-       (let ((bind* ($cadr X))	    ;list of bindings
+       (let ((bind* ($cadr X))		    ;list of bindings
 	     (body  ($caddr X)))	    ;list of body forms
 	 (let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
 	       (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
-	   (let* ((nlhs* (gen-fml* lhs*))
-		  (nrhs* (map/stx E rhs* lhs*)))
+	   (let* ((lhs*^ (gen-fml* lhs*))
+		  (rhs*^ (map/stx E rhs* lhs*)))
 	     (begin0
-		 (make-rec*bind nlhs* nrhs* (E body ctxt))
+		 (make-rec*bind lhs*^ rhs*^ (E body ctxt))
 	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
       ;;
       ((library-letrec*)
-       (let ((bind* ($cadr  X))	     ;list of bindings
+       (let ((bind* ($cadr  X))		     ;list of bindings
 	     (body  ($caddr X)))	     ;list of body forms
 	 (let ((lhs* (map/stx $car   bind*)) ;list of bindings left-hand sides
 	       (loc* (map/stx $cadr  bind*)) ;list of ?
 	       (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
-	   (let ((nlhs* (gen-fml* lhs*)))
+	   (let ((lhs*^ (gen-fml* lhs*)))
 	     (for-each
 		 (lambda (lhs loc)
 		   (set-prelex-global-location! lhs loc))
-	       nlhs* loc*)
-	     (let ((expr (make-rec*bind nlhs*
+	       lhs*^ loc*)
+	     (let ((expr (make-rec*bind lhs*^
 					(map/stx E rhs* lhs*)
-					(let f ((lhs* nlhs*)
+					(let f ((lhs* lhs*^)
 						(loc* loc*))
 					  (cond ((null? lhs*)
 						 (E body ctxt))
@@ -898,27 +959,6 @@
      ;;Return a struct instance of type FUNCALL.
      ;;
      (E-app make-funcall ($car X) ($cdr X) ctxt))))
-
-  (define (properize fml*)
-    ;;If  FML* is  a proper  list: return  a new  list holding  the same
-    ;;values.
-    ;;
-    ;;If FML* is an improper list:  return a new proper list holding the
-    ;;same values:
-    ;;
-    ;;   (properize '(1 2 . 3)) => (1 2 3)
-    ;;
-    ;;If FML* is not a list: return a list wrapping it:
-    ;;
-    ;;   (properize 123) => (123)
-    ;;
-    (cond ((pair? fml*)
-	   (cons ($car fml*)
-		 (properize ($cdr fml*))))
-	  ((null? fml*)
-	   '())
-	  (else
-	   (list fml*))))
 
   (module (quoted-sym)
 
@@ -1048,32 +1088,59 @@
 	   #'(let ((t ?expr)) BODY)))
 	)))
 
-  (define (E-clambda-clause* clause* ctxt)
-    ;;Given a symbolic expression representing a CASE-LAMBDA:
-    ;;
-    ;;   (case-lambda (?formals ?body0 ?body ...) ...)
-    ;;
-    ;;and knowing that  a LAMBDA sexp is converted  to CASE-LAMBDA, this
-    ;;function is called with CLAUSE* set to:
-    ;;
-    ;;   ((?formals ?body0 ?body ...) ...)
-    ;;
-    ;;
-    ;;
-    ;;Return a list holding new instances of struct CLAMBDA-CASE.
-    ;;
-    (map (let ((ctxt (and (pair? ctxt)
-			  ($car ctxt))))
-	   (lambda (cls)
-	     (let ((fml* ($car cls))
-		   (body ($cadr cls)))
-	       ;;Make sure that FML* is processed first!!!
-	       (let* ((nfml* (gen-fml* fml*))
-		      (body  (E body ctxt)))
-		 (ungen-fml* fml*)
-		 (make-clambda-case (make-case-info (gensym) (properize nfml*) (list? fml*))
-				    body)))))
-      clause*))
+  (module (E-clambda-clause*)
+
+    (define (E-clambda-clause* clause* ctxt)
+      ;;Given a symbolic expression representing a CASE-LAMBDA:
+      ;;
+      ;;   (case-lambda (?formals ?body0 ?body ...) ...)
+      ;;
+      ;;and knowing that a LAMBDA sexp is converted to CASE-LAMBDA, this
+      ;;function is called with CLAUSE* set to the list of clauses:
+      ;;
+      ;;   ((?formals ?body0 ?body ...) ...)
+      ;;
+      ;;Return a list holding new struct instances of type CLAMBDA-CASE,
+      ;;one for each clause.
+      ;;
+      (map (let ((ctxt (and (pair? ctxt)
+			    ($car ctxt))))
+	     (lambda (cls)
+	       (let ((fml* ($car  cls))	;the formals
+		     (body ($cadr cls))) ;the body sequence
+		 ;;Make sure that FML* is processed first!!!
+		 (let* ((nfml*   (gen-fml* fml*))
+			(body    (E body ctxt))
+			;;True if FML* is a  proper list; false if it is
+			;;a symbol or improper list.
+			(proper? (list? fml*)))
+		   (ungen-fml* fml*)
+		   (make-clambda-case (make-case-info (gensym) (properize nfml*) proper?)
+				      body)))))
+	clause*))
+
+    (define (properize fml*)
+      ;;If FML*  is a proper  list: return a  new list holding  the same
+      ;;values.
+      ;;
+      ;;If FML*  is an improper list:  return a new proper  list holding
+      ;;the same values:
+      ;;
+      ;;   (properize '(1 2 . 3)) => (1 2 3)
+      ;;
+      ;;If FML* is not a list: return a list wrapping it:
+      ;;
+      ;;   (properize 123) => (123)
+      ;;
+      (cond ((pair? fml*)
+	     (cons ($car fml*)
+		   (properize ($cdr fml*))))
+	    ((null? fml*)
+	     '())
+	    (else
+	     (list fml*))))
+
+    #| end of module: E-clambda-clause* |# )
 
   (module (E-app)
 
