@@ -836,11 +836,10 @@
       ((begin)
        (let recur ((A ($cadr X))
 		   (D ($cddr X)))
-	 (cond ((null? D)
-		(E A ctxt))
-	       (else
-		(make-seq (E A)
-			  (recur ($car D) ($cdr D)))))))
+	 (if (null? D)
+	     (E A ctxt)
+	   (make-seq (E A)
+		     (recur ($car D) ($cdr D))))))
 
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
@@ -851,9 +850,10 @@
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
 	   (let* ((lhs*^ (gen-fml* lhs*))
-		  (rhs*^ ($map/stx E rhs* lhs*)))
+		  (rhs*^ ($map/stx E rhs* lhs*))
+		  (body^ (E body ctxt)))
 	     (begin0
-		 (make-recbind lhs*^ rhs*^ (E body ctxt))
+		 (make-recbind lhs*^ rhs*^ body^)
 	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
@@ -865,9 +865,10 @@
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
 	   (let* ((lhs*^ (gen-fml* lhs*))
-		  (rhs*^ ($map/stx E rhs* lhs*)))
+		  (rhs*^ ($map/stx E rhs* lhs*))
+		  (body^ (E body ctxt)))
 	     (begin0
-		 (make-rec*bind lhs*^ rhs*^ (E body ctxt))
+		 (make-rec*bind lhs*^ rhs*^ body^)
 	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
