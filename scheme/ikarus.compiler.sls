@@ -1927,7 +1927,7 @@
 (define (tag x t)
   (if t
       (make-known x t)
-      x))
+    x))
 
 (define (optimize-for-direct-jumps x)
   (define who 'optimize-for-direct-jumps)
@@ -2768,32 +2768,15 @@
 
 
 (define (primref->symbol op)
-  (unless (symbol? op) (error 'primref->symbol "not a symbol" op))
-  (cond
-    (((current-primitive-locations) op) =>
-     (lambda (x)
-       (unless (symbol? x)
-         (error 'primitive-location
-            "not a valid location for ~s" x op))
-       x))
-    (else
-;;;All the  primitives should  be supported now,  so this code  does not
-;;;signal an unimplemented primitive.  But it can happen when adding new
-;;;functio  to forget  to  add  them to  "makefile.sps",  and this  code
-;;;signals this.  (Marco Maggi; Thu Nov 10, 2011)
-     (let ()
-       (define-condition-type &url &condition
-         make-url-condition
-         url-condition?
-        (url condition-url))
-       (raise
-         (condition
-           (make-error)
-           (make-who-condition 'vicare)
-           (make-message-condition "primitive not supported yet or forgot to export it")
-           (make-message-condition "please file a bug report to help us prioritize our goals")
-           (make-url-condition "http://github.com/marcomaggi/vicare")
-           (make-irritants-condition (list op))))))))
+  (unless (symbol? op)
+    (error 'primref->symbol "not a symbol" op))
+  (cond (((current-primitive-locations) op)
+	 => (lambda (x)
+	      (unless (symbol? x)
+		(error 'primitive-location "not a valid location" x op))
+	      x))
+	(else
+	 (error 'vicare "primitive missing from makefile.sps" op))))
 
 ;(define (primref-loc op)
 ;  (mem (fx- disp-symbol-record-proc record-tag)
