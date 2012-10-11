@@ -343,7 +343,7 @@
 
 ;;Instances of  this type are  stored in  the property lists  of symbols
 ;;representing  binding names;  this way  we  can just  send around  the
-;;symbol to represent some lexical context informations.
+;;binding name symbol to represent some lexical context informations.
 ;;
 (define-structure (prelex name operand)
   ((source-referenced?   #f)
@@ -352,8 +352,11 @@
 		;left-hand side in a SET! form.
    (residual-referenced? #f)
    (residual-assigned?   #f)
-   (global-location      #f)))
-
+   (global-location      #f)
+		;When this  binding describes a top  level binding, this
+		;field is  set to  a struct instance  of type  LOC; else
+		;this field is #f.
+   ))
 
 ;;; --------------------------------------------------------------------
 
@@ -857,6 +860,19 @@
 	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ;;Notice that a LIBRARY form like:
+      ;;
+      ;;   (library (the-lib)
+      ;;     (export ---)
+      ;;     (import ---)
+      ;;     (define ?lhs ?rhs)
+      ;;     ...
+      ;;     ?expr ...)
+      ;;
+      ;;is converted by the expander into:
+      ;;
+      ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?expr ...)
       ;;
       ((library-letrec*)
        (let ((bind* ($cadr  X))		     ;list of bindings
