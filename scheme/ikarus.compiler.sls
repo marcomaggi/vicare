@@ -354,8 +354,8 @@
    (residual-assigned?   #f)
    (global-location      #f)
 		;When this  binding describes a top  level binding, this
-		;field is  set to  a struct instance  of type  LOC; else
-		;this field is #f.
+		;field  is set  to  a unique  gensym  associated to  the
+		;binding; else this field is #f.
    ))
 
 ;;; --------------------------------------------------------------------
@@ -723,7 +723,9 @@
   ;;exported by the boot image and the loaded libraries.
   ;;
   ;;This function expects a symbolic  expression with perfect syntax: no
-  ;;syntax errors are checked.
+  ;;syntax errors are  checked.  We expect this function  to be executed
+  ;;without errors,  no exceptions should  be raised unless  an internal
+  ;;bug makes it happen.
   ;;
   ;;Recognise the following core language:
   ;;
@@ -878,7 +880,7 @@
        (let ((bind* ($cadr  X))		     ;list of bindings
 	     (body  ($caddr X)))	     ;list of body forms
 	 (let ((lhs* (map/stx $car   bind*)) ;list of bindings left-hand sides
-	       (loc* (map/stx $cadr  bind*)) ;list of ?
+	       (loc* (map/stx $cadr  bind*)) ;list of unique gensyms
 	       (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
 	   (let ((lhs*^ (gen-fml* lhs*)))
 	     (for-each (lambda (lhs loc)
