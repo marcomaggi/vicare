@@ -1204,21 +1204,17 @@
       ;;
       ;;the argument RATOR is ?FUNC and the argument ARGS is (?ARG ...).
       ;;
-      ;;
-      ;;
-      (equal-case rator
-	(((primitive make-parameter))
-	 (E-make-parameter mk-call args ctxt))
-	(else
-	 (let ((names (get-fmls rator args)))
-	   (mk-call (E rator (list ctxt))
-		    (let recur ((args  args)
-				(names names))
-		      (cond ((pair? names)
-			     (cons (E     ($car args) ($car names))
-				   (recur ($cdr args) ($cdr names))))
-			    (else
-			     ($map/stx E args)))))))))
+      (if (equal? rator '(primitive make-parameter))
+	  (E-make-parameter mk-call args ctxt)
+	(let ((names (get-fmls rator args)))
+	  (mk-call (E rator (list ctxt))
+		   (let recur ((args  args)
+			       (names names))
+		     (cond ((pair? names)
+			    (cons (E     ($car args) ($car names))
+				  (recur ($cdr args) ($cdr names))))
+			   (else
+			    ($map/stx E args))))))))
 
     (define (E-make-parameter mk-call args ctxt)
       (case (length args)
