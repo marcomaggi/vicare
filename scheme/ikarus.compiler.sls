@@ -758,6 +758,19 @@
   ;;
   ;;The bulk of the work is performed by the recursive function E.
   ;;
+  ;;Whenever possible we  want closures to be annotated  with their name
+  ;;in the original source code; example:
+  ;;
+  ;;   (define a
+  ;;     (lambda () ;annotated: a
+  ;;       ---))
+  ;;
+  ;;   (define a
+  ;;     (begin
+  ;;       (do-something)
+  ;;       (lambda () ;annotated: a
+  ;;         ---))
+  ;;
 
   (define-syntax E
     (syntax-rules ()
@@ -769,7 +782,7 @@
 
   (define (%E X ctxt)
     ;;Convert the  symbolic expression X  representing code in  the core
-    ;;language into a nested hierarchy of struct instances.  CTXT
+    ;;language into a nested hierarchy of struct instances.
     ;;
     (cond ((pair? X)
 	   (%recordize-pair-sexp X ctxt))
@@ -892,25 +905,15 @@
 	 (let ((lhs* ($map/stx $car   bind*)) ;list of bindings left-hand sides
 	       (loc* ($map/stx $cadr  bind*)) ;list of unique gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
-	   (let ((lhs*^ (gen-fml* lhs*)))
-	     ($for-each/stx set-prelex-global-location! lhs*^ loc*)
-	     ;;Make sure that LHS* is processed first!!!
-	     (let* ((rhs*^ ($map/stx E rhs* lhs*))
-		    (body^ (E body ctxt))
-		    ;;FIXME  What  the  hell  was this  loop  (from  the
-		    ;;original  Ikarus code)  doing?  (Marco  Maggi; Oct
-		    ;;11, 2012)
-		    #;(body^ (let loop ((lhs* lhs*^)
-				      (loc* loc*))
-			     (cond ((null? lhs*)
-				    (E body ctxt))
-				   ((not ($car loc*))
-				    (loop ($cdr lhs*) ($cdr loc*)))
-				   (else
-				    (loop ($cdr lhs*) ($cdr loc*)))))))
-	       (begin0
-		   (make-rec*bind lhs*^ rhs*^ body^)
-		 (ungen-fml* lhs*)))))))
+	   ;;Make sure that LHS* is processed first!!!
+	   (let* ((lhs*^ (let ((lhs*^ (gen-fml* lhs*)))
+			   ($for-each/stx set-prelex-global-location! lhs*^ loc*)
+			   lhs*^))
+		  (rhs*^ ($map/stx E rhs* lhs*))
+		  (body^ (E body ctxt)))
+	     (begin0
+		 (make-rec*bind lhs*^ rhs*^ body^)
+	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
       ;;
