@@ -982,37 +982,10 @@
 
       ;;Synopsis: (annotated-call ?annotation ?fun ?arg ...)
       ;;
+      ;;Return a struct instance of type FUNCALL.
+      ;;
       ((annotated-call)
-       (let ((func ($caddr X))
-	     (args ($cdddr X)))
-	 (define (mk-call op rands)
-	   (define (operator? X)
-	     ;;Evaluate to  true if X the  a symbol bound to  a function
-	     ;;exported by the boot image?
-	     ;;
-	     (struct-case X
-	       ((primref X)
-		(guard (con ((assertion-violation? con)
-			     #t))
-		  ;;Not sure: this will fail with an assertion violation
-		  ;;if X  is not a symbol  being the name of  a function
-		  ;;exported by  the boot image.  (Marco  Maggi; Oct 11,
-		  ;;2012)
-		  (system-value X)
-		  #f))
-	       (else #f)))
-	   (define (get-src/expr ae)
-	     (if (annotation? ae)
-		 (cons (annotation-source   ae)
-		       (annotation-stripped ae))
-	       (cons #f (syntax->datum ae))))
-	   (define src/expr
-	     (make-constant (get-src/expr ($cadr X))))
-	   (if (operator? op)
-	       (make-funcall op rands)
-	     (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))
-	 (E-app (if (generate-debug-calls) mk-call make-funcall)
-		func args ctxt)))
+       (E-annotated-call X ctxt))
 
       (else	;if X is a pair here, it is a function call
        ;;Synopsis: (?func ?arg ...)
@@ -1169,6 +1142,53 @@
 	     (list fml*))))
 
     #| end of module: E-clambda-clause* |# )
+
+  (module (E-annotated-call)
+
+    (define (E-annotated-call X ctxt)
+      ;;We expect X to be the symbolic expression:
+      ;;
+      ;;   (annotated-call ?annotation ?fun ?arg ...)
+      ;;
+      (let ((anno ($cadr  X))	;annotation
+	    (func ($caddr X))	;expression evaluating to the function
+	    (args ($cdddr X)))	;arguments
+	(E-app (if (generate-debug-calls)
+		   (%make-funcall-maker anno)
+		 make-funcall)
+	       func args ctxt)))
+
+    (define (%make-funcall-maker anno)
+      (let ((src/expr (make-constant (if (annotation? anno)
+					 (cons (annotation-source   anno)
+					       (annotation-stripped anno))
+				       (cons #f (syntax->datum anno))))))
+	(lambda (op rands)
+	  ;;Only non-operators get special  handling when debugging mode
+	  ;;is active.
+	  ;;
+	  (if (%operator? op)
+	      (make-funcall op rands)
+	    (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))))
+
+    (define (%operator? op)
+      ;;Evaluate to true if OP references a primitive operation exported
+      ;;by the boot image?
+      ;;
+      ;;Not sure: the SYSTEM-NAME call below will fail with an assertion
+      ;;violation  if  NAME is  not  a  unique  symbol associated  to  a
+      ;;function  exported by  the boot  image.  (Marco  Maggi; Oct  11,
+      ;;2012)
+      ;;
+      (struct-case op
+	((primref name)
+	 (guard (C ((assertion-violation? C)
+		    #t))
+	   (system-value name)
+	   #f))
+	(else #f)))
+
+    #| end of module: E-annotated-call |# )
 
   (module (E-app)
 
