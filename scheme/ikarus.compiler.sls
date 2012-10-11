@@ -86,26 +86,35 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax map/stx
-  ;;Like MAP, but expand the loop inline.
+(define-syntax $map/stx
+  ;;Like MAP, but  expand the loop inline.  The "function"  to be mapped
+  ;;must be specified by an identifier.
   ;;
   (lambda (stx)
     (syntax-case stx ()
-      ((_ ?func ?ell)
+      ((_ ?func ?ell0 ?ell ...)
        (identifier? #'?func)
-       #'(let recur ((ell ?ell))
-	   (if (null? ell)
-	       '()
-	     (cons (?func ($car ell))
-		   (recur ($cdr ell))))))
-      ((_ ?func ?ell1 ?ell2)
+       (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
+	 #'(let recur ((t ?ell0) (T ?ell) ...)
+	     (if (null? t)
+		 '()
+	       (cons (?func ($car t) ($car T) ...)
+		     (recur ($cdr t) ($cdr T) ...))))))
+      )))
+
+(define-syntax $for-each/stx
+  ;;Like FOR-HEACH,  but expand the  loop inline.  The "function"  to be
+  ;;mapped must be specified by an identifier.
+  ;;
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ?func ?ell0 ?ell ...)
        (identifier? #'?func)
-       #'(let recur ((ell1 ?ell1)
-		     (ell2 ?ell2))
-	   (if (null? ell1)
-	       '()
-	     (cons (?func ($car ell1) ($car ell2))
-		   (recur ($cdr ell1) ($cdr ell2))))))
+       (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
+	 #'(let loop ((t ?ell0) (T ?ell) ...)
+	     (unless (null? t)
+	       (?func ($car t) ($car T) ...)
+	       (loop  ($cdr t) ($cdr T) ...)))))
       )))
 
 (define-syntax begin0
@@ -838,11 +847,11 @@
       ((letrec)
        (let ((bind* ($cadr  X))		    ;list of bindings
 	     (body  ($caddr X)))	    ;list of body forms
-	 (let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
-	       (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
+	 (let ((lhs* ($map/stx $car  bind*)) ;list of bindings left-hand sides
+	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
 	   (let* ((lhs*^ (gen-fml* lhs*))
-		  (rhs*^ (map/stx E rhs* lhs*)))
+		  (rhs*^ ($map/stx E rhs* lhs*)))
 	     (begin0
 		 (make-recbind lhs*^ rhs*^ (E body ctxt))
 	       (ungen-fml* lhs*))))))
@@ -852,11 +861,11 @@
       ((letrec*)
        (let ((bind* ($cadr X))		    ;list of bindings
 	     (body  ($caddr X)))	    ;list of body forms
-	 (let ((lhs* (map/stx $car  bind*)) ;list of bindings left-hand sides
-	       (rhs* (map/stx $cadr bind*))) ;list of bindings right-hand sides
+	 (let ((lhs* ($map/stx $car  bind*)) ;list of bindings left-hand sides
+	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
 	   (let* ((lhs*^ (gen-fml* lhs*))
-		  (rhs*^ (map/stx E rhs* lhs*)))
+		  (rhs*^ ($map/stx E rhs* lhs*)))
 	     (begin0
 		 (make-rec*bind lhs*^ rhs*^ (E body ctxt))
 	       (ungen-fml* lhs*))))))
@@ -879,15 +888,13 @@
       ((library-letrec*)
        (let ((bind* ($cadr  X))		     ;list of bindings
 	     (body  ($caddr X)))	     ;list of body forms
-	 (let ((lhs* (map/stx $car   bind*)) ;list of bindings left-hand sides
-	       (loc* (map/stx $cadr  bind*)) ;list of unique gensyms
-	       (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
+	 (let ((lhs* ($map/stx $car   bind*)) ;list of bindings left-hand sides
+	       (loc* ($map/stx $cadr  bind*)) ;list of unique gensyms
+	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
 	   (let ((lhs*^ (gen-fml* lhs*)))
-	     (for-each (lambda (lhs loc)
-			 (set-prelex-global-location! lhs loc))
-	       lhs*^ loc*)
+	     ($for-each/stx set-prelex-global-location! lhs*^ loc*)
 	     ;;Make sure that LHS* is processed first!!!
-	     (let* ((rhs*^ (map/stx E rhs* lhs*))
+	     (let* ((rhs*^ ($map/stx E rhs* lhs*))
 		    (body^ (E body ctxt))
 		    ;;FIXME  What  the  hell  was this  loop  (from  the
 		    ;;original  Ikarus code)  doing?  (Marco  Maggi; Oct
@@ -941,7 +948,7 @@
       ((foreign-call)
        (let ((name (quoted-string ($cadr X)))
 	     (arg* ($cddr X)))
-	 (make-forcall name (map/stx E arg*))))
+	 (make-forcall name ($map/stx E arg*))))
 
       ;;Synopsis: (primitive ?prim)
       ;;
@@ -1179,7 +1186,7 @@
 			     (cons (E     ($car args) ($car names))
 				   (recur ($cdr args) ($cdr names))))
 			    (else
-			     (map/stx E args)))))))))
+			     ($map/stx E args)))))))))
 
     (define (E-make-parameter mk-call args ctxt)
       (case (length args)
@@ -1234,7 +1241,7 @@
 		,guard-expr)
 	      ctxt)))
 	(else	;Error, incorrect number of arguments.
-	 (mk-call (make-primref 'make-parameter) (map/stx E args)))))
+	 (mk-call (make-primref 'make-parameter) ($map/stx E args)))))
 
     #| end of module: E-app |# )
 
@@ -1945,7 +1952,7 @@
          (map (lambda (cls)
                 (struct-case cls
                   ((clambda-case info body)
-                   (for-each init-var (case-info-args info))
+                   ($for-each/stx init-var (case-info-args info))
                    (make-clambda-case info (Expr body)))))
               cls*)
          cp free name))))
@@ -1963,12 +1970,12 @@
       ((var)      x)
       ((primref)  x)
       ((bind lhs* rhs* body)
-       (for-each init-var lhs*)
+       ($for-each/stx init-var lhs*)
        (let ((rhs* (map Expr rhs*)))
-         (for-each set-var lhs* rhs*)
+         ($for-each/stx set-var lhs* rhs*)
          (make-bind lhs* rhs* (Expr body))))
       ((fix lhs* rhs* body)
-       (for-each set-var lhs* rhs*)
+       ($for-each/stx set-var lhs* rhs*)
        (make-fix lhs* (map CLambda rhs*) (Expr body)))
       ((conditional test conseq altern)
        (make-conditional (Expr test) (Expr conseq) (Expr altern)))
@@ -2246,7 +2253,7 @@
                      (lambda (x)
                        (struct-case x
                          ((clambda-case info body)
-                          (for-each unset! (case-info-args info))
+                          ($for-each/stx unset! (case-info-args info))
                           (make-clambda-case info (E body)))))
                      cls*)))
          (let ((g (make-code-loc label)))
@@ -2261,11 +2268,11 @@
       (else
        (cons (car ls) (trim p? (cdr ls))))))
   (define (do-bind lhs* rhs* body)
-    (for-each unset! lhs*)
+    ($for-each/stx unset! lhs*)
     (let ((rhs* (map E rhs*)))
-      (for-each copy-subst! lhs* rhs*)
+      ($for-each/stx copy-subst! lhs* rhs*)
       (let ((body (E body)))
-        (for-each unset! lhs*)
+        ($for-each/stx unset! lhs*)
         (make-bind lhs* rhs* body))))
   (define (trim-free ls)
     (cond
@@ -2279,7 +2286,7 @@
              (else (error who "invalid value in trim-free" what))))))
       (else (cons (car ls) (trim-free (cdr ls))))))
   (define (do-fix lhs* rhs* body)
-    (for-each unset! lhs*)
+    ($for-each/stx unset! lhs*)
     (let ((free** ;;; trim the free lists first; after init.
            (map (lambda (lhs rhs)
                   ;;; remove self also
@@ -2326,7 +2333,7 @@
                       (cons (node-name x) (node-free y)))
                     (process-node y))
                   (node-deps x)))))
-          (for-each process-node node*))
+          ($for-each/stx process-node node*))
         ;;; Now those that have free variables are actual closures.
         ;;; Those with no free variables are actual combinators.
         (let ((rhs*
@@ -3014,7 +3021,7 @@
   ;;
   (if (and (pair? x)
 	   (eq? ($car x) 'seq))
-      (for-each print-instr ($cdr x))
+      ($for-each/stx print-instr ($cdr x))
     (let ((port (current-error-port)))
       (display "   " port)
       (write x port)
@@ -3050,7 +3057,7 @@
                        (print-gensym  #f))
           (for-each (lambda (ls)
 		      (newline)
-		      (for-each print-instr ls))
+		      ($for-each/stx print-instr ls))
 	    ls*)))
       (let ((code* (assemble-sources
 		    (lambda (x)
