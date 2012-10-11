@@ -1053,43 +1053,6 @@
     (make-funcall (make-primref '$init-symbol-value!)
 		  (list (make-constant lhs) recordised-rhs)))
 
-  (define-syntax equal-case
-    ;;CASE  syntax specialised  to  use EQUAL?   rather  than EQV?.   We
-    ;;expand:
-    ;;
-    ;;   (equal-case ?expr
-    ;;     ((?A ...)
-    ;;      ?a0 ?a ...)
-    ;;     ((?B ...)
-    ;;      ?b0 ?b ...)
-    ;;     (else
-    ;;      ?else0 ?else ...))
-    ;;
-    ;;into:
-    ;;
-    ;;   (let ((t ?expr))
-    ;;     (if (member t '(?A ...))
-    ;;         (begin ?a0 ?a ...)
-    ;;       (if (member t '(?B ...))
-    ;;           (begin ?b0 ?b ...)
-    ;;         (begin ?else0 ?else))))
-    ;;
-    (lambda (stx)
-      (syntax-case stx ()
-	((_ ?expr ?clause ...)
-	 (with-syntax
-	     ((BODY (let f ((clause* #'(?clause ...)))
-		      (syntax-case clause* (else)
-			(((else ?else0 ?else ...))
-			 #'(begin ?else0 ?else ...))
-			((((?datum ...) ?body0 ?body ...) . ?other-clauses)
-			 (with-syntax ((REST (f #'?other-clauses)))
-			   #'(if (member t '(?datum ...))
-				 (begin ?body0 ?body ...)
-			       REST)))))))
-	   #'(let ((t ?expr)) BODY)))
-	)))
-
   (module (E-clambda-clause*)
 
     (define (E-clambda-clause* clause* ctxt)
@@ -3219,6 +3182,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'struct-case 'scheme-indent-function 1)
-;; eval: (put 'equal-case 'scheme-indent-function 1)
 ;; eval: (put 'make-conditional 'scheme-indent-function 1)
 ;; End:
