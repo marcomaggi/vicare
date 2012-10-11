@@ -865,22 +865,24 @@
 	       (loc* (map/stx $cadr  bind*)) ;list of ?
 	       (rhs* (map/stx $caddr bind*))) ;list of bindings right-hand sides
 	   (let ((lhs*^ (gen-fml* lhs*)))
-	     (for-each
-		 (lambda (lhs loc)
-		   (set-prelex-global-location! lhs loc))
+	     (for-each (lambda (lhs loc)
+			 (set-prelex-global-location! lhs loc))
 	       lhs*^ loc*)
-	     (let ((expr (make-rec*bind lhs*^
-					(map/stx E rhs* lhs*)
-					(let f ((lhs* lhs*^)
-						(loc* loc*))
-					  (cond ((null? lhs*)
-						 (E body ctxt))
-						((not ($car loc*))
-						 (f ($cdr lhs*) ($cdr loc*)))
-						(else
-						 (f ($cdr lhs*) ($cdr loc*))))))))
-	       (ungen-fml* lhs*)
-	       expr)))))
+	     ;;Make sure that LHS* is processed first!!!
+	     (let* ((rhs*^ (map/stx E rhs* lhs*))
+		    ;;FIXME What  the hell  is this loop  doing?  (Marco
+		    ;;Maggi; Oct 11, 2012)
+		    (body  (let f ((lhs* lhs*^)
+				   (loc* loc*))
+			     (cond ((null? lhs*)
+				    (E body ctxt))
+				   ((not ($car loc*))
+				    (f ($cdr lhs*) ($cdr loc*)))
+				   (else
+				    (f ($cdr lhs*) ($cdr loc*)))))))
+	       (begin0
+		   (make-rec*bind lhs*^ rhs*^ body)
+		 (ungen-fml* lhs*)))))))
 
       ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
       ;;
