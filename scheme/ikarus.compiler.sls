@@ -366,7 +366,14 @@
 ;;representing  binding names;  this way  we  can just  send around  the
 ;;binding name symbol to represent some lexical context informations.
 ;;
-(define-structure (prelex name operand)
+(define-structure
+    (prelex
+     name
+		;A  symbol representing  the binding  name; in  practice
+		;useful only for humans when debugging.
+     operand
+		;FIXME Document it!!!  (Marco Maggi; Oct 12, 2012)
+     )
   ((source-referenced?   #f)
 		;Boolean, true when the region  in which this binding is
 		;defined has at least one reference to it.
@@ -2238,6 +2245,34 @@
   ;;   to such  bindingns must  be substituted  with appropriate  vector
   ;;  operations.
   ;;
+  ;;Code representing usage of a read-write binding like:
+  ;;
+  ;;   (let ((x 123))
+  ;;     (set! x 456)
+  ;;     x)
+  ;;
+  ;;is transformed into:
+  ;;
+  ;;   (let ((t 123))
+  ;;     (let ((x (vector t)))
+  ;;       ($vector-set! x 0 456)
+  ;;       ($vector-ref x 0)))
+  ;;
+  ;;Code representing usage of multiple a bindings like:
+  ;;
+  ;;   (let ((x 1)
+  ;;         (y 2))
+  ;;     (set! x 3)
+  ;;     (list x y))
+  ;;
+  ;;is transformed into:
+  ;;
+  ;;   (let ((t 1)
+  ;;         (y 2))
+  ;;     (let ((x (vector t)))
+  ;;       ($vector-set! x 0 3)
+  ;;       (list ($vector-ref x 0) y)))
+  ;;
   (define who 'rewrite-references-and-assignments)
 
   (define (rewrite-references-and-assignments x)
@@ -2340,10 +2375,12 @@
     ;;
     (if (null? lhs*)
 	(values '() '() '())
-      (let ((x (car lhs*)))
-	(let-values (((lhs* a-lhs* a-rhs*) (%fix-lhs* (cdr lhs*))))
+      (let ((x ($car lhs*)))
+	(let-values (((lhs* a-lhs* a-rhs*) (%fix-lhs* ($cdr lhs*))))
 	  (if (and (prelex-source-assigned? x)
 		   (not (prelex-global-location x)))
+	      ;;We always  use the same  PRELEX name because it  is used
+	      ;;only for debugging purposes.
 	      (let ((t (make-prelex 'assignment-tmp #f)))
 		(set-prelex-source-referenced?! t #t)
 		(values (cons t lhs*)
@@ -2352,6 +2389,36 @@
 	    (values (cons x lhs*) a-lhs* a-rhs*))))))
 
   (define (%bind-assigned lhs* rhs* body)
+    ;;LHS* must be a list of struct instances of type PRELEX represening
+    ;;read-write bindings.
+    ;;
+    ;;RHS* must be a list  of struct instance representing references to
+    ;;temporary bindings holding the binding's values.
+    ;;
+    ;;BODY must be  a struct instance representing code  to be evaluated
+    ;;in the region of the bindings.
+    ;;
+    ;;In a trasformation from:
+    ;;
+    ;;   (let ((X 123))
+    ;;     (set! X 456)
+    ;;     x)
+    ;;
+    ;;to:
+    ;;
+    ;;   (let ((T 123))
+    ;;     (let ((X (vector T)))
+    ;;       ($vector-set! X 0 456)
+    ;;       ($vector-ref X 0)))
+    ;;
+    ;;this function generates the recordised code representing:
+    ;;
+    ;;   (let ((X (vector T)))
+    ;;     ?body)
+    ;;
+    ;;in this case LHS* is a list holding the PRELEX for X and RHS* is a
+    ;;list holding the prelex for T.
+    ;;
     (if (null? lhs*)
 	body
       (make-bind lhs*
@@ -3727,6 +3794,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; eval: (put 'define-structure 'scheme-indent-function 1)
 ;; eval: (put 'struct-case 'scheme-indent-function 1)
 ;; eval: (put 'make-conditional 'scheme-indent-function 1)
 ;; End:
