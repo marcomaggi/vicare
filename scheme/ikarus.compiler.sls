@@ -2809,6 +2809,11 @@
   ;;there is a way to jump directly from the function application to the
   ;;clause that matches the number of arguments.
   ;;
+  ;;This optimisation is possible only  when: a preliminary iteration of
+  ;;the recordized  code let's  us find  bindings whose  right-hand size
+  ;;evaluates to  a CASE-LAMBDA,  that is to  a closure  definition with
+  ;;known clauses.
+  ;;
   ;;This module  must be used with  recordized code in which  the PRELEX
   ;;instances have been already substituted  by VAR instances.  It is to
   ;;be used after using SANITIZE-BINDINGS.
@@ -2838,11 +2843,11 @@
       ((bind lhs* rhs* body)
        ($for-each/stx %mark-var-as-non-referenced lhs*)
        (let ((rhs* ($map/stx E rhs*)))
-	 ($for-each/stx %set-var lhs* rhs*)
+	 ($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
 	 (make-bind lhs* rhs* (E body))))
 
       ((fix lhs* rhs* body)
-       ($for-each/stx %set-var lhs* rhs*)
+       ($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
        (make-fix lhs* ($map/stx CLambda rhs*) (E body)))
 
       ((conditional test conseq altern)
@@ -2863,7 +2868,7 @@
   (define-inline (%mark-var-as-non-referenced x)
     ($set-var-referenced! x #f))
 
-  (define (%set-var lhs rhs)
+  (define (%maybe-mark-var-as-referencing-clambda lhs rhs)
     (struct-case rhs
       ((clambda)
        ($set-var-referenced! lhs rhs))
