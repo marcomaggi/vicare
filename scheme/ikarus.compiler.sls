@@ -691,6 +691,11 @@
 		;evaluated in the region of the bindings.
    ))
 
+;;Like BIND, but the RHS* field holds struct instances of type CLAMBDA.
+;;
+(define-struct fix
+  (lhs* rhs* body))
+
 ;;Instances of this struct type represent variables in recordized code.
 ;;
 (define-struct var
@@ -753,12 +758,6 @@
 
 (define-struct interrupt-call
   (test handler))
-
-(define-struct fix
-  (lhs*
-   rhs*
-   body
-   ))
 
 (define-struct closure
   (code
@@ -2603,9 +2602,32 @@
 
 
 (module (sanitize-bindings)
+  ;;Separates bindings having  a CLAMBDA struct as  right-hand side into
+  ;;struct instances of type FIX.
   ;;
   ;;This module  must be used with  recordized code in which  the PRELEX
   ;;instances have been already substituted by VAR instances.
+  ;;
+  ;;Code like:
+  ;;
+  ;;   (let ((a 123)
+  ;;         (b (lambda (x) (this))))
+  ;;     (that))
+  ;;
+  ;;is transformed into:
+  ;;
+  ;;   (let ((a 123))
+  ;;     (let ((b (lambda (x) (this))))
+  ;;       (that)))
+  ;;
+  ;;Code like:
+  ;;
+  ;;   (case-lambda (?formal ?body0 ?body ...))
+  ;;
+  ;;is transformed into:
+  ;;
+  ;;   (let ((t (case-lambda (?formal ?body0 ?body ...))))
+  ;;     t)
   ;;
   (define who 'sanitize-bindings)
 
@@ -2630,13 +2652,33 @@
        x)
 
       ((bind lhs* rhs* body)
+       ;;Here we want to transform:
+       ;;
+       ;;   (let ((a 123)
+       ;;         (b (lambda (x) (this))))
+       ;;     (that))
+       ;;
+       ;;into:
+       ;;
+       ;;   (let ((a 123))
+       ;;     (let ((b (lambda (x) (this))))
+       ;;       (that)))
+       ;;
+       ;;in which the  inner LET is represented by a  struct instance of
+       ;;type FIX.
        (let-values (((lambda* other*) (partition (lambda (x)
-						   (clambda? (cdr x)))
-					(map cons lhs* rhs*))))
-         (make-bind (map car other*)
-                    (map E (map cdr other*))
-		    (do-fix (map car lambda*)
-			    (map cdr lambda*)
+						   (clambda? ($cdr x)))
+					($map/stx cons lhs* rhs*))))
+	 ;;LAMBDA*  is a  list of  pairs  (LHS RHS)  in which  RHS is  a
+	 ;;CLAMBDA struct.
+	 ;;
+	 ;;OTHER* is a list  of pairs (LHS RHS) in which  RHS is *not* a
+	 ;;CLAMBDA struct.
+	 ;;
+         (make-bind ($map/stx $car other*)
+                    ($map/stx E ($map/stx $cdr other*))
+		    (do-fix ($map/stx $car lambda*)
+			    ($map/stx $cdr lambda*)
 			    body))))
 
       ((fix lhs* rhs* body)
@@ -2648,15 +2690,26 @@
       ((seq e0 e1)
        (make-seq (E e0) (E e1)))
 
-      ((clambda g cls* cp free name)
+      ((clambda)
+       ;;Here we want to transform:
+       ;;
+       ;;   (case-lambda (?formal ?body0 ?body ...))
+       ;;
+       ;;into:
+       ;;
+       ;;   (let ((t (case-lambda (?formal ?body0 ?body ...))))
+       ;;     t)
+       ;;
+       ;;in which  the LET is represented  by a struct instance  of type
+       ;;FIX.
        (let ((t (unique-var 'anon)))
          (make-fix (list t) (list (CLambda x)) t)))
 
       ((forcall op rand*)
-       (make-forcall op (map E rand*)))
+       (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (make-funcall (A rator) (map A rand*)))
+       (make-funcall (A rator) ($map/stx A rand*)))
 
       ((mvcall p c)
        (make-mvcall (E p) (E c)))
@@ -2665,7 +2718,8 @@
        (error who "invalid expression" (unparse x)))))
 
   (define (CLambda x)
-    ;;The purpose of this function is to  apply E to every body of every
+    ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
+    ;;purpose of  this function  is to  apply E to  every body  of every
     ;;CASE-LAMBDA clause.
     ;;
     (struct-case x
@@ -2684,7 +2738,7 @@
   (define (do-fix lhs* rhs* body)
     (if (null? lhs*)
         (E body)
-      (make-fix lhs* (map CLambda rhs*) (E body))))
+      (make-fix lhs* ($map/stx CLambda rhs*) (E body))))
 
   (define (A x)
     (struct-case x
@@ -2698,14 +2752,16 @@
 
 (define (untag x)
   (struct-case x
-    ((known x t) (values x t))
-    (else        (values x #f))))
+    ((known x t)
+     (values x t))
+    (else
+     (values x #f))))
 
 (define (tag x t)
   (if t
       (make-known x t)
     x))
-
+
 (define (optimize-for-direct-jumps x)
   (define who 'optimize-for-direct-jumps)
   (define (init-var x)
