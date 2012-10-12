@@ -2832,31 +2832,26 @@
   (define (optimize c rator rand*)
     (let ((n (length rand*)))
       (struct-case c
-	((clambda main-label cls*)
-	 (let f ((cls* cls*))
-	   (cond ((null? cls*)
-		  ;; none matching?
-		  (make-funcall rator rand*))
-		 (else
-		  (struct-case (clambda-case-info (car cls*))
-		    ((case-info label fml* proper)
-		     (cond (proper
-			    (if (fx= n (length fml*))
-				(make-jmpcall label (strip rator) ($map/stx strip rand*))
-			      (f (cdr cls*))))
-			   (else
-			    (if (fx<= (length (cdr fml*)) n)
-				(make-jmpcall label (strip rator)
-					      (let f ((fml* (cdr fml*)) (rand* rand*))
-						(cond ((null? fml*)
-						       ;;FIXME: construct list afterwards
-						       (list (make-funcall
-							      (make-primref 'list) rand*)))
-						      (else
-						       (cons (strip (car rand*))
-							     (f (cdr fml*)
-								(cdr rand*)))))))
-			      (f (cdr cls*))))))))))))))
+	((clambda main-label clause*)
+	 (define (inner-recur fml* rand*)
+	   (if (null? fml*)
+	       ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
+	       (list (make-funcall (make-primref 'list) rand*))
+	     (cons (strip (car rand*))
+		   (inner-recur (cdr fml*) (cdr rand*)))))
+	 (let outer-recur ((clause* clause*))
+	   (if (null? clause*)
+	       (make-funcall rator rand*)
+	     (struct-case (clambda-case-info (car clause*))
+	       ((case-info label fml* proper?)
+		(if proper?
+		    (if (fx= n (length fml*))
+			(make-jmpcall label (strip rator) ($map/stx strip rand*))
+		      (outer-recur (cdr clause*)))
+		  (if (fx<= (length (cdr fml*)) n)
+		      (make-jmpcall label (strip rator)
+				    (inner-recur (cdr fml*) rand*))
+		    (outer-recur (cdr clause*))))))))))))
 
   (define (strip x)
     (struct-case x
