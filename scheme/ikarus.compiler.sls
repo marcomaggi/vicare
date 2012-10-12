@@ -2559,7 +2559,7 @@
     ;;It  is  a very  bad  error  if this  function  finds  a PRELEX  in
     ;;reference position not yet processed by %CONVERT-PRELEX.
     ;;
-    (let ((v ($prelex-operand prel)))
+    (let ((v (prelex-operand prel)))
       (assert (var? v))
       v))
 
@@ -2571,11 +2571,11 @@
     ;;PRELEX, so that, later, references to the PRELEX in the recordized
     ;;code can be substituted with the VAR.
     ;;
-    (assert (not (var? ($prelex-operand prel))))
-    (let ((v (unique-var ($prelex-name prel))))
-      ($set-var-referenced! v ($prelex-source-referenced? prel))
-      ($set-var-global-loc! v ($prelex-global-location prel))
-      ($set-prelex-operand! prel v)
+    (assert (not (var? (prelex-operand prel))))
+    (let ((v (unique-var (prelex-name prel))))
+      ($set-var-referenced! v (prelex-source-referenced? prel))
+      ($set-var-global-loc! v (prelex-global-location prel))
+      (set-prelex-operand! prel v)
       v))
 
   (define (A x)
@@ -2594,20 +2594,20 @@
     (struct-case x
       ((clambda g cls* cp free name)
        (make-clambda g
-         (map (lambda (cls)
-                (struct-case cls
-                  ((clambda-case info body)
-                   (struct-case info
-                     ((case-info label fml* proper)
-                      (make-clambda-case
-                        (make-case-info label fml* proper)
-                        (Expr body)))))))
-              cls*)
-         cp free name))))
+		     (map (lambda (cls)
+			    (struct-case cls
+			      ((clambda-case info body)
+			       (struct-case info
+				 ((case-info label fml* proper)
+				  (make-clambda-case
+				   (make-case-info label fml* proper)
+				   (Expr body)))))))
+		       cls*)
+		     cp free name))))
   (define (do-fix lhs* rhs* body)
     (if (null? lhs*)
         (Expr body)
-        (make-fix lhs* (map CLambda rhs*) (Expr body))))
+      (make-fix lhs* (map CLambda rhs*) (Expr body))))
   (define (A x)
     (struct-case x
       ((known x t) (make-known (Expr x) t))
@@ -2620,12 +2620,12 @@
       ((bind lhs* rhs* body)
        (let-values (((lambda* other*)
                      (partition
-                       (lambda (x) (clambda? (cdr x)))
+			 (lambda (x) (clambda? (cdr x)))
                        (map cons lhs* rhs*))))
          (make-bind (map car other*)
                     (map Expr (map cdr other*))
-           (do-fix (map car lambda*) (map cdr lambda*)
-             body))))
+		    (do-fix (map car lambda*) (map cdr lambda*)
+			    body))))
       ((fix lhs* rhs* body)
        (do-fix lhs* rhs* body))
       ((conditional test conseq altern)
