@@ -372,7 +372,8 @@
 		;A  symbol representing  the binding  name; in  practice
 		;useful only for humans when debugging.
      operand
-		;FIXME Document it!!!  (Marco Maggi; Oct 12, 2012)
+		;False  or  a struct  of  type  VAR associated  to  this
+		;instance.
      )
   ((source-referenced?   #f)
 		;Boolean, true when the region  in which this binding is
@@ -489,9 +490,8 @@
 ;;
 ;;**When the FUNCALL represents a SET!  on a top level binding:
 ;;
-;;  - the field OP is the result of calling:
-;;
-;;      (make-primref '$init-symbol-value!)
+;;  -  the field  OP is a  struct instance of  type PRIMREF  holding the
+;;    symbol "$init-symbol-value!".
 ;;
 ;;  - the field RAND* is a list of 2 elements: a struct instance of type
 ;;    CONSTANT holding the symbol name of the binding; a struct instance
@@ -659,12 +659,26 @@
 
 ;;;; struct types
 
-(define-struct code-loc
-  (label))
+;;Instances of this  struct type represent bindings at  the lowest level
+;;in recordized code.
+;;
+(define-struct bind
+  (lhs*
+		;When code is first recordized  and optimized: a list of
+		;struct  instances  of   type  PRELEX  representing  the
+		;binding names.   Later: a  list of struct  instances of
+		;type VAR representing variables.
+   rhs*
+		;A list of struct instances representing recordized code
+		;which,  when  evaluated,   will  return  the  binding's
+		;values.
+   body
+		;A struct  instance representing  recordized code  to be
+		;evaluated in the region of the bindings.
+   ))
 
-(define-struct foreign-label
-  (label))
-
+;;Instances of this struct type represent variables in recordized code.
+;;
 (define-struct var
    (name
     reg-conf
@@ -678,6 +692,14 @@
     referenced
     global-loc
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-struct code-loc
+  (label))
+
+(define-struct foreign-label
+  (label))
 
 (define-struct cp-var
   (idx))
@@ -717,12 +739,6 @@
 
 (define-struct interrupt-call
   (test handler))
-
-(define-struct bind
-  (lhs*
-   rhs*
-   body
-   ))
 
 (define-struct fix
   (lhs*
@@ -2231,7 +2247,7 @@
   ;;  (let ((x 123)) (set! x 456) (display x))
   ;;
   ;;A binding in  reference position or in the left-hand  side of a SET!
-  ;;syntax  is represented  by a  struct instance  of type  PRELEX; this
+  ;;syntax, is  represented by  a struct instance  of type  PRELEX; this
   ;;module must be used only on  recordized code in which referenced and
   ;;mutated  bindings  have already  been  marked  appropriately in  the
   ;;PRELEX structures.
@@ -2241,9 +2257,9 @@
   ;;  must be substituted with appropriate function calls.
   ;;
   ;;*  Read-write local  bindings  are implemented  with Scheme  vectors
-  ;;  providing  mutable memory localtions.  References  and assignments
-  ;;   to such  bindingns must  be substituted  with appropriate  vector
-  ;;  operations.
+  ;;  providing mutable  memory locations: one vector  for each binding.
+  ;;  References  and assignments to  such bindings must  be substituted
+  ;;  with appropriate vector operations.
   ;;
   ;;Code representing usage of a read-write binding like:
   ;;
@@ -2278,7 +2294,7 @@
   (define (rewrite-references-and-assignments x)
     ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
     ;;which must  be a struct  instance representing recordized  code in
-    ;;the  core language,  and building  a new  hierarchy of  optimised,
+    ;;the core  language, and building  a new hierarchy  of transformed,
     ;;recordized code; return the new hierarchy.
     ;;
     (define-syntax E ;make the code more readable
@@ -2465,60 +2481,111 @@
 (include "ikarus.compiler.tag-annotation-analysis.ss")
 
 
-(define (introduce-vars x)
+(module (introduce-vars)
+  ;;This module  operates on  recordized code  representing code  in the
+  ;;core  language; it  substitutes  all the  struct  instances of  type
+  ;;PRELEX with struct instances of type VAR.
+  ;;
   (define who 'introduce-vars)
-  (define (lookup x)
-    (let ((v (prelex-operand x)))
-      (assert (var? v))
-      v))
-  (define (convert-prelex x)
-    (assert (not (var? (prelex-operand x))))
-    (let ((v (unique-var (prelex-name x))))
-      (set-var-referenced! v (prelex-source-referenced? x))
-      (set-var-global-loc! v (prelex-global-location x))
-      (set-prelex-operand! x v)
-      v))
-  (define (A x)
+
+  ;;Make the code more readable.
+  (define-syntax E
+    (identifier-syntax introduce-vars))
+
+  (define (introduce-vars x)
+    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the core  language, and building  a new hierarchy  of transformed,
+    ;;recordized code; return the new hierarchy.
+    ;;
     (struct-case x
-      ((known x t) (make-known (E x) t))
-      (else (E x))))
-  (define (E x)
-    (struct-case x
-      ((constant) x)
-      ((prelex) (lookup x))
-      ((primref) x)
+      ((constant)
+       x)
+
+      ((prelex)
+       (lookup x))
+
+      ((primref)
+       x)
+
       ((bind lhs* rhs* body)
-       (let ((lhs* (map convert-prelex lhs*)))
+       (let ((lhs* (map %convert-prelex lhs*)))
          (make-bind lhs* (map E rhs*) (E body))))
+
       ((fix lhs* rhs* body)
-       (let ((lhs* (map convert-prelex lhs*)))
+       (let ((lhs* (map %convert-prelex lhs*)))
          (make-fix lhs* (map E rhs*) (E body))))
+
       ((conditional e0 e1 e2)
        (make-conditional (E e0) (E e1) (E e2)))
-      ((seq e0 e1) (make-seq (E e0) (E e1)))
-      ((clambda g cls* cp free name)
-       (make-clambda g
-         (map
-           (lambda (cls)
-             (struct-case cls
-               ((clambda-case info body)
-                (struct-case info
-                  ((case-info label args proper)
-                   (let ((args (map convert-prelex args)))
-                     (make-clambda-case
-                       (make-case-info label args proper)
-                       (E body))))))))
-           cls*)
-         cp free name))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((clambda label clause* cp free name)
+       ;;The purpose of this form is to apply %CONVERT-PRELEX to all the
+       ;;items in the ARGS field of all the CASE-INFO structs.
+       (make-clambda label
+		     (map (lambda (cls)
+			    (struct-case cls
+			      ((clambda-case info body)
+			       (struct-case info
+				 ((case-info label args proper)
+				  (let ((args (map %convert-prelex args)))
+				    (make-clambda-case (make-case-info label args proper)
+						       (E body))))))))
+		       clause*)
+		     cp free name))
+
       ((primcall rator rand*)
        (make-primcall rator (map A rand*)))
+
       ((funcall rator rand*)
        (make-funcall (A rator) (map A rand*)))
-      ((forcall rator rand*) (make-forcall rator (map E rand*)))
+
+      ((forcall rator rand*)
+       (make-forcall rator (map E rand*)))
+
       ((assign lhs rhs)
        (make-assign (lookup lhs) (E rhs)))
-      (else (error who "invalid expression" (unparse x)))))
-  (E x))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
+
+  (define (lookup prel)
+    ;;Given  a struct  instance of  type PRELEX  in reference  position,
+    ;;return the associated struct instance of type VAR.
+    ;;
+    ;;It  is  a very  bad  error  if this  function  finds  a PRELEX  in
+    ;;reference position not yet processed by %CONVERT-PRELEX.
+    ;;
+    (let ((v ($prelex-operand prel)))
+      (assert (var? v))
+      v))
+
+  (define (%convert-prelex prel)
+    ;;Convert the PRELEX  struct PREL into a VAR struct;  return the VAR
+    ;;struct.
+    ;;
+    ;;The generated  VAR struct is  stored in  the field OPERAND  of the
+    ;;PRELEX, so that, later, references to the PRELEX in the recordized
+    ;;code can be substituted with the VAR.
+    ;;
+    (assert (not (var? ($prelex-operand prel))))
+    (let ((v (unique-var ($prelex-name prel))))
+      ($set-var-referenced! v ($prelex-source-referenced? prel))
+      ($set-var-global-loc! v ($prelex-global-location prel))
+      ($set-prelex-operand! prel v)
+      v))
+
+  (define (A x)
+    (struct-case x
+      ((known x t)
+       (make-known (E x) t))
+      (else
+       (E x))))
+
+  #| end of module: introduce-vars |# )
 
 
 (define (sanitize-bindings x)
