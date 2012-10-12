@@ -2371,7 +2371,38 @@
 
   (define (%fix-lhs* lhs*)
     ;;LHS* is  a list  of struct instances  of type  PRELEX representing
-    ;;bindings.
+    ;;bindings.  Return 3 values:
+    ;;
+    ;;**A  list of  struct  instances of  type  PRELEX representing  the
+    ;;  bindings to be created to hold the right-hand side values.
+    ;;
+    ;;**A  list of  struct  instances of  type  PRELEX representing  the
+    ;;  read-write bindings referencing the mutable vectors.
+    ;;
+    ;;**A  list of  struct  instances of  type  PRELEX representing  the
+    ;;  temporary bindings used to hold the right-hand side values.
+    ;;
+    ;;In a trasformation from:
+    ;;
+    ;;   (let ((X 123))
+    ;;     (set! X 456)
+    ;;     x)
+    ;;
+    ;;to:
+    ;;
+    ;;   (let ((T 123))
+    ;;     (let ((X (vector T)))
+    ;;       ($vector-set! X 0 456)
+    ;;       ($vector-ref X 0)))
+    ;;
+    ;;the argument LHS*  is a list holding the PRELEX  for X; the return
+    ;;values are:
+    ;;
+    ;;1. A list holding the PRELEX for T.
+    ;;
+    ;;2. A list holding the PRELEX for X.
+    ;;
+    ;;3. A list holding the PRELEX for T.
     ;;
     (if (null? lhs*)
 	(values '() '() '())
@@ -2417,7 +2448,7 @@
     ;;     ?body)
     ;;
     ;;in this case LHS* is a list holding the PRELEX for X and RHS* is a
-    ;;list holding the prelex for T.
+    ;;list holding the PRELEX for T.
     ;;
     (if (null? lhs*)
 	body
