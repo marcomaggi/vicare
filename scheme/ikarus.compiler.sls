@@ -1801,10 +1801,69 @@
   (E x))
 
 
-(define open-mvcalls (make-parameter #t))
+(define open-mvcalls
+  ;;When  set to  true: an  attempt is  made to  expand inline  calls to
+  ;;CALL-WITH-VALUES by inserting local bindings.
+  ;;
+  (make-parameter #t))
 
 (define (optimize-direct-calls x)
   (define who 'optimize-direct-calls)
+
+  (define (E x)
+    ;;Traverse  the hierarchy  of X,  which  must be  a struct  instance
+    ;;representing recordized code in the core language.
+    ;;
+    (struct-case x
+      ((constant)
+       x)
+
+      ((prelex)
+       (assert (prelex-source-referenced? x))
+       x)
+
+      ((primref)
+       x)
+
+      ((bind lhs* rhs* body)
+       (make-bind lhs* (map E rhs*) (E body)))
+
+      ((recbind lhs* rhs* body)
+       (make-recbind lhs* (map E rhs*) (E body)))
+
+      ((rec*bind lhs* rhs* body)
+       (make-rec*bind lhs* (map E rhs*) (E body)))
+
+      ((conditional test conseq altern)
+       (make-conditional
+	   (E test)
+         (E conseq)
+         (E altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((clambda label clause* cp free name)
+       (make-clambda label
+		     (map (lambda (x)
+			    (struct-case x
+			      ((clambda-case info body)
+			       (make-clambda-case info (E body)))))
+		       clause*)
+		     cp free name))
+
+      ((funcall rator rand*)
+       (inline make-funcall (E rator) (map E rand*)))
+
+      ((forcall rator rand*)
+       (make-forcall rator (map E rand*)))
+
+      ((assign lhs rhs)
+       (assert (prelex-source-assigned? lhs))
+       (make-assign lhs (E rhs)))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
 
   (module (try-inline)
 
@@ -1932,7 +1991,66 @@
 
     #| end of module: try-inline |# )
 
-  (define (inline mk rator rand*)
+  (module (inline)
+
+    (define (inline mk rator rand*)
+      (struct-case rator
+	((clambda label.unused clause*)
+	 (try-inline clause* rand* (mk rator rand*)))
+
+	((primref op)
+	 (case op
+	   ;;FIXME Here.  (Abdulaziz Ghuloum)
+	   ((call-with-values)
+	    (cond ((and (open-mvcalls)
+			($fx= (length rand*) 2))
+		   ;;Here we know that the source code is:
+		   ;;
+		   ;;   (call-with-values ?producer ?consumer)
+		   ;;
+		   (let ((producer (inline ($car rand*) '()))
+			 (consumer ($cadr rand*)))
+		     (cond ((single-value-consumer? consumer)
+			    (inline consumer (list producer)))
+			   ((and (valid-mv-consumer? consumer)
+				 (valid-mv-producer? producer))
+			    (make-mvcall producer consumer))
+			   (else
+			    (make-funcall rator rand*)))))
+		  (else
+		   ;;Here we do not know what the source code is, it could
+		   ;;be something like:
+		   ;;
+		   ;;   (apply call-with-values ?form)
+		   ;;
+		   (mk rator rand*))))
+	   ((debug-call)
+	    (inline (lambda (op^ rand*^)
+		      (mk rator (cons* ($car rand*) op^ rand*^)))
+		    ($cadr rand*)
+		    ($cddr rand*)))
+	   (else
+	    ;;Other primitive operations need no special handling.
+	    (mk rator rand*))))
+
+	((bind lhs* rhs* body)
+	 (if (null? lhs*)
+	     (inline mk body rand*)
+	   (make-bind lhs* rhs* (call-expr mk body rand*))))
+
+	((recbind lhs* rhs* body)
+	 (if (null? lhs*)
+	     (inline mk body rand*)
+	   (make-recbind lhs* rhs* (call-expr mk body rand*))))
+
+	((rec*bind lhs* rhs* body)
+	 (if (null? lhs*)
+	     (inline mk body rand*)
+	   (make-rec*bind lhs* rhs* (call-expr mk body rand*))))
+
+	(else
+	 (mk rator rand*))))
+
     (define (valid-mv-consumer? x)
       ;;Return true if X is a  struct instance of type CLAMBDA, having a
       ;;single clause which accepts a  fixed number of arguments, one or
@@ -1947,14 +2065,14 @@
       ;;   (case-lambda ((a b c) ?body0 ?body ...))
       ;;
       (struct-case x
-        ((clambda label.unused clause*)
-         (and ($fx= (length clause*) 1)	;single clause?
-              (struct-case ($car clause*)
-                ((clambda-case info)
-                 (struct-case info
-                   ((case-info label.unused args.unused proper?)
+	((clambda label.unused clause*)
+	 (and ($fx= (length clause*) 1) ;single clause?
+	      (struct-case ($car clause*)
+		((clambda-case info)
+		 (struct-case info
+		   ((case-info label.unused args.unused proper?)
 		    proper?))))))
-        (else #f)))
+	(else #f)))
 
     (define (single-value-consumer? x)
       ;;Return true if X is a  struct instance of type CLAMBDA, having a
@@ -1968,132 +2086,44 @@
       ;;   (case-lambda ((a) ?body0 ?body ...))
       ;;
       (struct-case x
-        ((clambda label.unused clause*)
-         (and ($fx= (length clause*) 1)	;single clause?
-              (struct-case ($car clause*)
-                ((clambda-case info)
-                 (struct-case info
-                   ((case-info label.unused args proper?)
-                    (and proper?
+	((clambda label.unused clause*)
+	 (and ($fx= (length clause*) 1) ;single clause?
+	      (struct-case ($car clause*)
+		((clambda-case info)
+		 (struct-case info
+		   ((case-info label.unused args proper?)
+		    (and proper?
 			 ($fx= (length args) 1))))))))
-        (else #f)))
+	(else #f)))
 
     (define (valid-mv-producer? x)
       (struct-case x
-        ((funcall)
+	((funcall)
 	 #t)
-        ((conditional)
+	((conditional)
 	 #f)
-        ((bind lhs* rhs* body)
+	((bind lhs* rhs* body)
 	 (valid-mv-producer? body))
 	;;FIXME Bug.  (Abdulaziz Ghuloum)
 	;;
 	;;FIXME Why is it a bug?  (Marco Maggi; Oct 12, 2012)
-        (else #f)))
+	(else #f)))
 
-    (struct-case rator
-      ((clambda label.unused clause*)
-       (try-inline clause* rand* (mk rator rand*)))
+    (define (call-expr mk x rand*)
+      (cond ((clambda? x)
+	     (inline mk x rand*))
+	    ((and (prelex? x)
+		  (not (prelex-source-assigned? x)))
+	     ;;FIXME Did we do the analysis yet?  (Abdulaziz Ghuloum)
+	     (mk x rand*))
+	    (else
+	     (let ((t (make-prelex 'tmp #f)))
+	       (set-prelex-source-referenced?! t #t)
+	       (make-bind (list t) (list x) (mk t rand*))))))
 
-      ((primref op)
-       (case op
-	 ;;FIXME Here.  (Abdulaziz Ghuloum)
-         ((call-with-values)
-          (cond ((and (open-mvcalls)
-		      ($fx= (length rand*) 2))
-		 ;;Here we know that the source code is:
-		 ;;
-		 ;;   (call-with-values ?producer ?consumer)
-		 ;;
-		 (let ((producer (inline ($car rand*) '()))
-		       (consumer ($cadr rand*)))
-		   (cond ((single-value-consumer? consumer)
-			  (inline consumer (list producer)))
-			 ((and (valid-mv-consumer? consumer)
-			       (valid-mv-producer? producer))
-			  (make-mvcall producer consumer))
-			 (else
-			  (make-funcall rator rand*)))))
-		(else
-		 ;;Here we do not know what the source code is, it could
-		 ;;be something like:
-		 ;;
-		 ;;   (apply call-with-values ?form)
-		 ;;
-		 (mk rator rand*))))
-         ((debug-call)
-          (inline (lambda (op^ rand*^)
-		    (mk rator (cons* ($car rand*) op^ rand*^)))
-		  ($cadr rand*)
-		  ($cddr rand*)))
-         (else
-          (mk rator rand*))))
+    #| end of module: inline |# )
 
-      ((bind lhs* rhs* body)
-       (if (null? lhs*)
-           (inline mk body rand*)
-	 (make-bind lhs* rhs*
-		    (call-expr mk body rand*))))
-      ((recbind lhs* rhs* body)
-       (if (null? lhs*)
-           (inline mk body rand*)
-	 (make-recbind lhs* rhs*
-		       (call-expr mk body rand*))))
-      ((rec*bind lhs* rhs* body)
-       (if (null? lhs*)
-           (inline mk body rand*)
-	 (make-rec*bind lhs* rhs*
-			(call-expr mk body rand*))))
-      (else (mk rator rand*))))
-
-  (define (call-expr mk x rand*)
-    (cond
-     ((clambda? x) (inline mk x rand*))
-     ((and (prelex? x) (not (prelex-source-assigned? x)))
-;;; FIXME: did we do the analysis yet?
-      (mk x rand*))
-     (else
-      (let ((t (make-prelex 'tmp #f)))
-	(set-prelex-source-referenced?! t #t)
-	(make-bind (list t) (list x)
-		   (mk t rand*))))))
-
-  (define (Expr x)
-    (struct-case x
-      ((constant) x)
-      ((prelex) (assert (prelex-source-referenced? x)) x)
-      ((primref) x)
-      ((bind lhs* rhs* body)
-       (make-bind lhs* (map Expr rhs*) (Expr body)))
-      ((recbind lhs* rhs* body)
-       (make-recbind lhs* (map Expr rhs*) (Expr body)))
-      ((rec*bind lhs* rhs* body)
-       (make-rec*bind lhs* (map Expr rhs*) (Expr body)))
-      ((conditional test conseq altern)
-       (make-conditional
-	   (Expr test)
-         (Expr conseq)
-         (Expr altern)))
-      ((seq e0 e1)
-       (make-seq (Expr e0) (Expr e1)))
-      ((clambda label clause* cp free name)
-       (make-clambda label
-		     (map (lambda (x)
-			    (struct-case x
-			      ((clambda-case info body)
-			       (make-clambda-case info (Expr body)))))
-		       clause*)
-		     cp free name))
-      ((funcall rator rand*)
-       (inline make-funcall (Expr rator) (map Expr rand*)))
-      ((forcall rator rand*)
-       (make-forcall rator (map Expr rand*)))
-      ((assign lhs rhs)
-       (assert (prelex-source-assigned? lhs))
-       (make-assign lhs (Expr rhs)))
-      (else (error who "invalid expression" (unparse x)))))
-
-  (Expr x))
+  (E x))
 
 
 
