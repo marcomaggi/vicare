@@ -1811,7 +1811,7 @@
   ;;   (let ((x 123)) x)
   ;;
   ;;and  so it  can  be  converted to  low  level  operations that  more
-  ;;efficiently implement the binding; this function attempts to perform
+  ;;efficiently implement  the binding; this module  attempts to perform
   ;;such inlining.
   ;;
   (define who 'optimize-direct-calls)
@@ -1822,6 +1822,11 @@
     ;;the  core language,  and building  a new  hierarchy of  optimised,
     ;;recordized code; return the new hierarchy.
     ;;
+    ;;The  only   recordized  code  that  may   actually  need  inlining
+    ;;transformation are FUNCALL instances.
+    ;;
+    (define-syntax E ;make the code more readable
+      (identifier-syntax optimize-direct-calls))
     (struct-case x
       ((constant)
        x)
@@ -1834,41 +1839,38 @@
        x)
 
       ((bind lhs* rhs* body)
-       (make-bind lhs* ($map/stx optimize-direct-calls rhs*) (optimize-direct-calls body)))
+       (make-bind lhs* ($map/stx E rhs*) (E body)))
 
       ((recbind lhs* rhs* body)
-       (make-recbind lhs* ($map/stx optimize-direct-calls rhs*) (optimize-direct-calls body)))
+       (make-recbind lhs* ($map/stx E rhs*) (E body)))
 
       ((rec*bind lhs* rhs* body)
-       (make-rec*bind lhs* ($map/stx optimize-direct-calls rhs*) (optimize-direct-calls body)))
+       (make-rec*bind lhs* ($map/stx E rhs*) (E body)))
 
       ((conditional test conseq altern)
-       (make-conditional
-	   (optimize-direct-calls test)
-	 (optimize-direct-calls conseq)
-	 (optimize-direct-calls altern)))
+       (make-conditional (E test) (E conseq) (E altern)))
 
       ((seq e0 e1)
-       (make-seq (optimize-direct-calls e0) (optimize-direct-calls e1)))
+       (make-seq (E e0) (E e1)))
 
       ((clambda label clause* cp free name)
        (make-clambda label
-		     (map (lambda (x)
-			    (struct-case x
+		     (map (lambda (clause)
+			    (struct-case clause
 			      ((clambda-case info body)
-			       (make-clambda-case info (optimize-direct-calls body)))))
+			       (make-clambda-case info (E body)))))
 		       clause*)
 		     cp free name))
 
       ((funcall rator rand*)
-       (inline make-funcall (optimize-direct-calls rator) ($map/stx optimize-direct-calls rand*)))
+       (inline make-funcall (E rator) ($map/stx E rand*)))
 
       ((forcall rator rand*)
-       (make-forcall rator ($map/stx optimize-direct-calls rand*)))
+       (make-forcall rator ($map/stx E rand*)))
 
       ((assign lhs rhs)
        (assert (prelex-source-assigned? lhs))
-       (make-assign lhs (optimize-direct-calls rhs)))
+       (make-assign lhs (E rhs)))
 
       (else
        (error who "invalid expression" (unparse x)))))
