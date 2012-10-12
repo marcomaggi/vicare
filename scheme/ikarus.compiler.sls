@@ -2751,7 +2751,10 @@
 
 
 (module (optimize-for-direct-jumps)
-
+  ;;
+  ;;This module  must be used with  recordized code in which  the PRELEX
+  ;;instances have been already substituted by VAR instances.
+  ;;
   (define who 'optimize-for-direct-jumps)
 
   ;;Make the code more readable.
@@ -2794,18 +2797,18 @@
        (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (let-values (((rator t) (untag (A rator))))
+       (let-values (((rator type) (untag (E-known rator))))
 	 (cond ((and (var? rator)
 		     (%bound-var rator))
 		=> (lambda (c)
-		     (optimize c rator ($map/stx A rand*))))
+		     (optimize c rator ($map/stx E-known rand*))))
 	       ((and (primref? rator)
 		     (eq? (primref-name rator) '$$apply))
 		(make-jmpcall (sl-apply-label)
-			      (A- (car rand*))
-			      ($map/stx A- (cdr rand*))))
+			      (E-unpack-known (car rand*))
+			      ($map/stx E-unpack-known (cdr rand*))))
 	       (else
-		(make-funcall (tag rator t) ($map/stx A rand*))))))
+		(make-funcall (tag rator type) ($map/stx E-known rand*))))))
 
       (else
        (error who "invalid expression" (unparse x)))))
@@ -2832,6 +2835,19 @@
   (module (optimize)
 
     (define (optimize c rator rand*)
+      ;;Attempt to optimize the function application:
+      ;;
+      ;;   (RATOR . RAND*)
+      ;;
+      ;;C is a struct instance of type CLAMBDA.
+      ;;
+      ;;RATOR  is a  struct  instance  of type  VAR  which  is known  to
+      ;;reference the CLAMBDA in C.
+      ;;
+      ;;RAND* is a list of struct instances representing recordized code
+      ;;which,  when  evaluated,  will  return  the  arguments  for  the
+      ;;function application.
+      ;;
       (struct-case c
 	((clambda label.unused clause*)
 	 (define num-of-rand* (length rand*))
@@ -2882,19 +2898,24 @@
 		       clause*)
 		     cp free name))))
 
-  (define (A x)
+  (define (E-known x)
     (struct-case x
       ((known expr type)
        (make-known (E expr) type))
       (else
        (E x))))
 
-  (define (A- x)
+  (define (E-unpack-known x)
     (struct-case x
       ((known expr type)
        (E expr))
       (else
        (E x))))
+
+  (define (tag expr type)
+    (if type
+	(make-known expr type)
+      expr))
 
   (define (untag x)
     (struct-case x
@@ -2902,11 +2923,6 @@
        (values expr type))
       (else
        (values x #f))))
-
-  (define (tag expr type)
-    (if type
-	(make-known expr type)
-      expr))
 
   #| end of module: optimize-for-direct-jumps |# )
 
