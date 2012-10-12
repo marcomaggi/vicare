@@ -1468,9 +1468,9 @@
 
 
 (define (unparse x)
-  ;;Unparse  the  struct  instance  X (representing  code  in  the  core
-  ;;language already  processed by the  compiler) into a  human readable
-  ;;symbolic expression to be used when raising errors.
+  ;;Unparse the struct  instance X (representing recordized  code in the
+  ;;core  language  already processed  by  the  compiler) into  a  human
+  ;;readable symbolic expression to be used when raising errors.
   ;;
   ;;Being  that this  function is  used only  when signaling  errors: it
   ;;makes no sense to use unsafe operations: let's keep it safe!!!
@@ -1662,10 +1662,10 @@
 
 
 (define (unparse-pretty x)
-  ;;Unparse  the  struct  instance  X (representing  code  in  the  core
-  ;;language already  processed by the  compiler) into a  human readable
-  ;;symbolic  expression to  be  used  when printing  to  some port  for
-  ;;miscellaneous debugging purposes.
+  ;;Unparse the struct  instance X (representing recordized  code in the
+  ;;core  language  already processed  by  the  compiler) into  a  human
+  ;;readable symbolic expression  to be used when printing  to some port
+  ;;for miscellaneous debugging purposes.
   ;;
   ;;Being that  this function is used  only when debugging: it  makes no
   ;;sense to use unsafe operations: let's keep it safe!!!
@@ -1808,6 +1808,23 @@
   (make-parameter #t))
 
 (define (optimize-direct-calls x)
+  ;;Perform code optimisation traversing the whole hierarchy in X, which
+  ;;must be a  struct instance representing recordized code  in the core
+  ;;language,  and building  a  new hierarchy  of optimised,  recordized
+  ;;code; return the new hierarchy.
+  ;;
+  ;;By definition, a "direct closure application" like:
+  ;;
+  ;;   ((lambda (x) x) 123)
+  ;;
+  ;;can be expanded to:
+  ;;
+  ;;   (let ((x 123)) x)
+  ;;
+  ;;and  so it  can  be  converted to  low  level  operations that  more
+  ;;efficiently implement the binding; this function attempts to perform
+  ;;such inlining.
+  ;;
   (define who 'optimize-direct-calls)
 
   (define (E x)
@@ -1826,13 +1843,13 @@
        x)
 
       ((bind lhs* rhs* body)
-       (make-bind lhs* (map E rhs*) (E body)))
+       (make-bind lhs* ($map/stx E rhs*) (E body)))
 
       ((recbind lhs* rhs* body)
-       (make-recbind lhs* (map E rhs*) (E body)))
+       (make-recbind lhs* ($map/stx E rhs*) (E body)))
 
       ((rec*bind lhs* rhs* body)
-       (make-rec*bind lhs* (map E rhs*) (E body)))
+       (make-rec*bind lhs* ($map/stx E rhs*) (E body)))
 
       ((conditional test conseq altern)
        (make-conditional
@@ -1853,10 +1870,10 @@
 		     cp free name))
 
       ((funcall rator rand*)
-       (inline make-funcall (E rator) (map E rand*)))
+       (inline make-funcall (E rator) ($map/stx E rand*)))
 
       ((forcall rator rand*)
-       (make-forcall rator (map E rand*)))
+       (make-forcall rator ($map/stx E rand*)))
 
       ((assign lhs rhs)
        (assert (prelex-source-assigned? lhs))
@@ -1864,132 +1881,6 @@
 
       (else
        (error who "invalid expression" (unparse x)))))
-
-  (module (try-inline)
-
-    (define (try-inline clause* rand* default)
-      ;;Iterate  the CASE-LAMBDA  clauses in  CLAUSE* searching  for one
-      ;;whose  formals  match the  RAND*  arguments;  if found  generate
-      ;;appropriate local bindings that  inline the closure application.
-      ;;If successful return a struct instance of type BIND, else return
-      ;;DEFAULT.
-      ;;
-      (cond ((null? clause*)
-	     default)
-	    ((inline-case ($car clause*) rand*))
-	    (else
-	     (try-inline ($cdr clause*) rand* default))))
-
-    (define (inline-case clause rand*)
-      ;;Try to  convert the CASE-LAMBDA clause  in CLAUSE into a  set of
-      ;;local bindings for the arguments  in RAND*; if successful return
-      ;;a struct instance of type BIND, else return #f.
-      ;;
-      (struct-case clause
-	((clambda-case info body)
-	 (struct-case info
-	   ((case-info label fml* proper?)
-	    (if proper?
-		;;If the formals  of the CASE-LAMBDA clause  is a proper
-		;;list, make an appropriate local binding; convert:
-		;;
-		;;   ((case-lambda ((a b c) ?body)) 1 2 3)
-		;;
-		;;into:
-		;;
-		;;   (let ((a 1) (b 2) (c 3)) ?body)
-		;;
-		(and ($fx= (length fml*)
-			   (length rand*))
-		     (make-bind fml* rand* body))
-	      ;;If the formals of the  CASE-LAMBDA clause is a symbol or
-	      ;;a  proper  list,  make  an  appropriate  local  binding;
-	      ;;convert:
-	      ;;
-	      ;;   ((case-lambda (args ?body)) 1 2 3)
-	      ;;
-	      ;;into:
-	      ;;
-	      ;;   (let ((args (list 1 2 3))) ?body)
-	      ;;
-	      ;;and convert:
-	      ;;
-	      ;;   ((case-lambda ((a b . args) ?body)) 1 2 3 4)
-	      ;;
-	      ;;into:
-	      ;;
-	      ;;   (let ((a 1) (b 2) (args (list 3 4))) ?body)
-	      ;;
-	      ;;
-	      (and ($fx<= (length fml*)
-			  (length rand*))
-		   (make-bind fml* (%properize fml* rand*) body))))))))
-
-    (define (%properize lhs* rhs*)
-      ;;LHS*  must  be a  list  of  PRELEX structures  representing  the
-      ;;binding names of a CASE-LAMBDA  clause, for the cases of formals
-      ;;being  a symbol  or an  improper list;  RHS* must  be a  list of
-      ;;struct instances representing the values to be bound.
-      ;;
-      ;;Build and return a new list out of RHS* that matches the list in
-      ;;LHS*.
-      ;;
-      ;;If  LHS* holds  a single  item:  it means  that the  CASE-LAMBDA
-      ;;application is like:
-      ;;
-      ;;   ((case-lambda (args ?body0 ?body ...)) 1 2 3)
-      ;;
-      ;;so this function is called with:
-      ;;
-      ;;   LHS* = (#[prelex args])
-      ;;   RHS* = (#[constant 1] #[constant 2] #[constant 3])
-      ;;
-      ;;and we need to return the list:
-      ;;
-      ;;   (#[funcall cons
-      ;;              (#[constant 1]
-      ;;               #[funcall cons
-      ;;                         (#[constant 2]
-      ;;                          #[funcall cons
-      ;;                                    (#[constant 3]
-      ;;                                     #[constant ()])])])])
-      ;;
-      ;;If LHS*  holds a multiple  items: it means that  the CASE-LAMBDA
-      ;;application is like:
-      ;;
-      ;;   ((case-lambda ((a b . args) ?body0 ?body ...)) 1 2 3 4)
-      ;;
-      ;;so this function is called with:
-      ;;
-      ;;   LHS* = (#[prelex a] #[prelex b] #[prelex args])
-      ;;   RHS* = (#[constant 1] #[constant 2]
-      ;;           #[constant 3] #[constant 4])
-      ;;
-      ;;and we need to return the list:
-      ;;
-      ;;   (#[constant 1] #[constant 2]
-      ;;    #[funcall cons
-      ;;              (#[constant 3]
-      ;;               #[funcall cons
-      ;;                         (#[constant 4]
-      ;;                          #[constant ()])])])
-      ;;
-      (cond ((null? lhs*)
-	     (error who "improper improper"))
-	    ((null? ($cdr lhs*))
-	     (list (%make-conses rhs*)))
-	    (else
-	     (cons ($car rhs*)
-		   (%properize ($cdr lhs*)
-			       ($cdr rhs*))))))
-
-    (define (%make-conses ls)
-      (if (null? ls)
-	  (make-constant '())
-	(make-funcall (make-primref 'cons)
-		      (list ($car ls) (%make-conses ($cdr ls))))))
-
-    #| end of module: try-inline |# )
 
   (module (inline)
 
@@ -2122,6 +2013,132 @@
 	       (make-bind (list t) (list x) (mk t rand*))))))
 
     #| end of module: inline |# )
+
+  (module (try-inline)
+
+    (define (try-inline clause* rand* default)
+      ;;Iterate  the CASE-LAMBDA  clauses in  CLAUSE* searching  for one
+      ;;whose  formals  match the  RAND*  arguments;  if found  generate
+      ;;appropriate local bindings that  inline the closure application.
+      ;;If successful return a struct instance of type BIND, else return
+      ;;DEFAULT.
+      ;;
+      (cond ((null? clause*)
+	     default)
+	    ((inline-case ($car clause*) rand*))
+	    (else
+	     (try-inline ($cdr clause*) rand* default))))
+
+    (define (inline-case clause rand*)
+      ;;Try to  convert the CASE-LAMBDA clause  in CLAUSE into a  set of
+      ;;local bindings for the arguments  in RAND*; if successful return
+      ;;a struct instance of type BIND, else return #f.
+      ;;
+      (struct-case clause
+	((clambda-case info body)
+	 (struct-case info
+	   ((case-info label fml* proper?)
+	    (if proper?
+		;;If the formals  of the CASE-LAMBDA clause  is a proper
+		;;list, make an appropriate local binding; convert:
+		;;
+		;;   ((case-lambda ((a b c) ?body)) 1 2 3)
+		;;
+		;;into:
+		;;
+		;;   (let ((a 1) (b 2) (c 3)) ?body)
+		;;
+		(and ($fx= (length fml*)
+			   (length rand*))
+		     (make-bind fml* rand* body))
+	      ;;If the formals of the  CASE-LAMBDA clause is a symbol or
+	      ;;a  proper  list,  make  an  appropriate  local  binding;
+	      ;;convert:
+	      ;;
+	      ;;   ((case-lambda (args ?body)) 1 2 3)
+	      ;;
+	      ;;into:
+	      ;;
+	      ;;   (let ((args (list 1 2 3))) ?body)
+	      ;;
+	      ;;and convert:
+	      ;;
+	      ;;   ((case-lambda ((a b . args) ?body)) 1 2 3 4)
+	      ;;
+	      ;;into:
+	      ;;
+	      ;;   (let ((a 1) (b 2) (args (list 3 4))) ?body)
+	      ;;
+	      ;;
+	      (and ($fx<= (length fml*)
+			  (length rand*))
+		   (make-bind fml* (%properize fml* rand*) body))))))))
+
+    (define (%properize lhs* rhs*)
+      ;;LHS*  must  be a  list  of  PRELEX structures  representing  the
+      ;;binding names of a CASE-LAMBDA  clause, for the cases of formals
+      ;;being  a symbol  or an  improper list;  RHS* must  be a  list of
+      ;;struct instances representing the values to be bound.
+      ;;
+      ;;Build and return a new list out of RHS* that matches the list in
+      ;;LHS*.
+      ;;
+      ;;If  LHS* holds  a single  item:  it means  that the  CASE-LAMBDA
+      ;;application is like:
+      ;;
+      ;;   ((case-lambda (args ?body0 ?body ...)) 1 2 3)
+      ;;
+      ;;so this function is called with:
+      ;;
+      ;;   LHS* = (#[prelex args])
+      ;;   RHS* = (#[constant 1] #[constant 2] #[constant 3])
+      ;;
+      ;;and we need to return the list:
+      ;;
+      ;;   (#[funcall cons
+      ;;              (#[constant 1]
+      ;;               #[funcall cons
+      ;;                         (#[constant 2]
+      ;;                          #[funcall cons
+      ;;                                    (#[constant 3]
+      ;;                                     #[constant ()])])])])
+      ;;
+      ;;If LHS*  holds a multiple  items: it means that  the CASE-LAMBDA
+      ;;application is like:
+      ;;
+      ;;   ((case-lambda ((a b . args) ?body0 ?body ...)) 1 2 3 4)
+      ;;
+      ;;so this function is called with:
+      ;;
+      ;;   LHS* = (#[prelex a] #[prelex b] #[prelex args])
+      ;;   RHS* = (#[constant 1] #[constant 2]
+      ;;           #[constant 3] #[constant 4])
+      ;;
+      ;;and we need to return the list:
+      ;;
+      ;;   (#[constant 1] #[constant 2]
+      ;;    #[funcall cons
+      ;;              (#[constant 3]
+      ;;               #[funcall cons
+      ;;                         (#[constant 4]
+      ;;                          #[constant ()])])])
+      ;;
+      (cond ((null? lhs*)
+	     (error who "improper improper"))
+	    ((null? ($cdr lhs*))
+	     (list (%make-conses rhs*)))
+	    (else
+	     (cons ($car rhs*)
+		   (%properize ($cdr lhs*)
+			       ($cdr rhs*))))))
+
+    (define (%make-conses ls)
+      (if (null? ls)
+	  (make-constant '())
+	(make-funcall (make-primref 'cons)
+		      (list ($car ls) (%make-conses ($cdr ls))))))
+
+    #| end of module: try-inline |# )
 
   (E x))
 
