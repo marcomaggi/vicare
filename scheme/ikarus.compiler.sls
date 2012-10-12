@@ -3698,7 +3698,7 @@
 
 (define (fx? x)
   (let* ((intbits (* wordsize 8))
-         (fxbits (- intbits fx-shift)))
+         (fxbits  (- intbits fx-shift)))
     (and (or (fixnum? x) (bignum? x))
          (<= (- (expt 2 (- fxbits 1)))
              x
@@ -4043,134 +4043,147 @@
     SL_call_with_values)
    ))
 
-(define (print-instr x)
-  ;;Print to the current error port the symbolic expression representing
-  ;;the assembly  instruction X.  To  be used to log  generated assembly
-  ;;for human inspection.
-  ;;
-  (if (and (pair? x)
-	   (eq? ($car x) 'seq))
-      ($for-each/stx print-instr ($cdr x))
-    (let ((port (current-error-port)))
-      (display "   " port)
-      (write x port)
-      (newline port))))
+
+(define optimizer-output
+  (make-parameter #f))
 
-(define optimizer-output (make-parameter #f))
-(define perform-tag-analysis (make-parameter #t))
+(define perform-tag-analysis
+  (make-parameter #t))
 
-(define (compile-core-expr->code p)
-  (let* ((p (recordize p))
-         (p (parameterize ((open-mvcalls #f))
-              (optimize-direct-calls p)))
-         (p (optimize-letrec p))
-         (p (source-optimize p))
-         (dummy
-          (begin
-            (when (optimizer-output)
-               (pretty-print (unparse-pretty p) (current-error-port)))
-            #f))
-         (p (rewrite-references-and-assignments p))
-         (p (if (perform-tag-analysis)
-                (introduce-tags p)
-                p))
-         (p (introduce-vars p))
-         (p (sanitize-bindings p))
-         (p (optimize-for-direct-jumps p))
-         (p (insert-global-assignments p))
-         (p (convert-closures p))
-         (p (optimize-closures/lift-codes p)))
-    (let ((ls* (alt-cogen p)))
-      (when (assembler-output)
-        (parameterize ((gensym-prefix "L")
-                       (print-gensym  #f))
-          (for-each (lambda (ls)
-		      (newline)
-		      ($for-each/stx print-instr ls))
-	    ls*)))
-      (let ((code* (assemble-sources
-		    (lambda (x)
-		      (if (closure? x)
-			  (if (null? (closure-free* x))
-			      (code-loc-label (closure-code x))
-			    (error 'compile "BUG: non-thunk escaped" x))
-			#f))
-		    ls*)))
-        (car code*)))))
+(define assembler-output
+  (make-parameter #f))
 
-(define compile-core-expr-to-port
-  (lambda (expr port)
-    (fasl-write (compile-core-expr->code expr) port)))
+(module (compile-core-expr->code)
 
+  (define who 'compile-core-expr->code)
+
+  (define (compile-core-expr->code p)
+    (let* ((p (recordize p))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (when (optimizer-output)
+	(pretty-print (unparse-pretty p) (current-error-port)))
+      (let* ((p (rewrite-references-and-assignments p))
+	     (p (if (perform-tag-analysis)
+		    (introduce-tags p)
+		  p))
+	     (p (introduce-vars p))
+	     (p (sanitize-bindings p))
+	     (p (optimize-for-direct-jumps p))
+	     (p (insert-global-assignments p))
+	     (p (convert-closures p))
+	     (p (optimize-closures/lift-codes p))
+	     (ls* (alt-cogen p)))
+	(when (assembler-output)
+	  ;;Print nicely the assembly labels.
+	  (parameterize ((gensym-prefix "L")
+			 (print-gensym  #f))
+	    (for-each (lambda (ls)
+			(newline (current-error-port))
+			($for-each/stx print-instr ls))
+	      ls*)))
+	(let ((code* (assemble-sources thunk?-label ls*)))
+	  (car code*)))))
+
+  (define (thunk?-label x)
+    (if (closure? x)
+	(if (null? (closure-free* x))
+	    (code-loc-label (closure-code x))
+	  (error who "BUG: non-thunk escaped" x))
+      #f))
+
+  (define (print-instr x)
+    ;;Print  to   the  current   error  port  the   symbolic  expression
+    ;;representing  the  assembly instruction  X.   To  be used  to  log
+    ;;generated assembly for human inspection.
+    ;;
+    (if (and (pair? x)
+	     (eq? ($car x) 'seq))
+	($for-each/stx print-instr ($cdr x))
+      (let ((port (current-error-port)))
+	(display "   " port)
+	(write x port)
+	(newline port))))
+
+  #| end of module: compile-core-expr->code |# )
+
+(define (compile-core-expr-to-port expr port)
+  (fasl-write (compile-core-expr->code expr) port))
 
 (define (compile-core-expr x)
   (let ((code (compile-core-expr->code x)))
     ($code->closure code)))
 
-(define assembler-output (make-parameter #f))
-
 (define current-core-eval
-  (make-parameter
-    (lambda (x) ((compile-core-expr x)))
+  (make-parameter (lambda (x)
+		    ((compile-core-expr x)))
     (lambda (x)
-      (if (procedure? x)
-          x
-          (die 'current-core-eval "not a procedure" x)))))
+      (define who 'current-core-eval)
+      (with-arguments-validation (who)
+	  ((procedure	x))
+	x))))
 
-(define eval-core
-  (lambda (x)
-    ((current-core-eval) x)))
+(define (eval-core x)
+  ((current-core-eval) x))
 
 (include "ikarus.compiler.altcogen.ss")
 
 (define current-primitive-locations
   (let ((plocs (lambda (x) #f)))
     (case-lambda
-      (() plocs)
-      ((p)
-       (if (procedure? p)
-           (begin
-             (set! plocs p)
-             (refresh-cached-labels!))
-           (error 'current-primitive-locations "not a procedure" p))))))
+     (()
+      plocs)
+     ((p)
+      (if (procedure? p)
+	  (begin
+	    (set! plocs p)
+	    (refresh-cached-labels!))
+	(error 'current-primitive-locations "not a procedure" p))))))
 
+
 (define (expand/pretty x env who . passes)
   (unless (environment? env)
     (die who "not an environment" env))
   (let-values (((x libs) (core-expand x env)))
-    (let f ((x (recordize x)) (passes passes))
+    (let loop ((x      (recordize x))
+	       (passes passes))
       (if (null? passes)
           (unparse-pretty x)
-          (f ((car passes) x) (cdr passes))))))
-
+	(loop ((car passes) x) (cdr passes))))))
 
 (define expand/scc-letrec
   (case-lambda
-    ((x) (expand/scc-letrec x (interaction-environment)))
-    ((x env)
-     (expand/pretty x env 'expand/scc-letrec
-       (lambda (x)
-         (parameterize ((open-mvcalls #f))
-            (optimize-direct-calls x)))
-       (lambda (x)
-         (parameterize ((debug-scc #t))
-            (optimize-letrec x)))))))
+   ((x)
+    (expand/scc-letrec x (interaction-environment)))
+   ((x env)
+    (expand/pretty x env 'expand/scc-letrec
+		   (lambda (x)
+		     (parameterize ((open-mvcalls #f))
+		       (optimize-direct-calls x)))
+		   (lambda (x)
+		     (parameterize ((debug-scc #t))
+		       (optimize-letrec x)))))))
 
 (define expand/optimize
   (case-lambda
-    ((x) (expand/optimize x (interaction-environment)))
-    ((x env)
-     (expand/pretty x env 'expand/optimize
-       (lambda (x)
-         (parameterize ((open-mvcalls #f))
-            (optimize-direct-calls x)))
-       optimize-letrec
-       source-optimize))))
+   ((x)
+    (expand/optimize x (interaction-environment)))
+   ((x env)
+    (expand/pretty x env 'expand/optimize
+		   (lambda (x)
+		     (parameterize ((open-mvcalls #f))
+		       (optimize-direct-calls x)))
+		   optimize-letrec
+		   source-optimize))))
 
 (define expand
   (case-lambda
-    ((x) (expand x (interaction-environment)))
-    ((x env) (expand/pretty x env 'expand))))
+   ((x)
+    (expand x (interaction-environment)))
+   ((x env)
+    (expand/pretty x env 'expand))))
 
 
 ;;;; done
