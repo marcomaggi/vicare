@@ -1805,33 +1805,86 @@
 
 (define (optimize-direct-calls x)
   (define who 'optimize-direct-calls)
-  (define (make-conses ls)
-    (cond
-      ((null? ls) (make-constant '()))
-      (else
-       (make-funcall (make-primref 'cons)
-         (list (car ls) (make-conses (cdr ls)))))))
-  (define (properize lhs* rhs*)
-    (cond
-      ((null? lhs*) (error who "improper improper"))
-      ((null? (cdr lhs*))
-       (list (make-conses rhs*)))
-      (else (cons (car rhs*) (properize (cdr lhs*) (cdr rhs*))))))
-  (define (inline-case cls rand*)
-    (struct-case cls
-      ((clambda-case info body)
-       (struct-case info
-         ((case-info label fml* proper)
-          (if proper
-              (and (fx= (length fml*) (length rand*))
-                   (make-bind fml* rand* body))
-              (and (fx<= (length fml*) (length rand*))
-                   (make-bind fml* (properize fml* rand*) body))))))))
-  (define (try-inline cls* rand* default)
-    (cond
-      ((null? cls*) default)
-      ((inline-case (car cls*) rand*))
-      (else (try-inline (cdr cls*) rand* default))))
+
+  (module (try-inline)
+
+    (define (try-inline clause* rand* default)
+      ;;Iterate  the CASE-LAMBDA  clauses in  CLAUSE* searching  for one
+      ;;whose  formals  match the  RAND*  arguments;  if found  generate
+      ;;appropriate local bindings that  inline the closure application.
+      ;;If successful return a struct instance of type BIND, else return
+      ;;DEFAULT.
+      ;;
+      (cond ((null? clause*)
+	     default)
+	    ((inline-case ($car clause*) rand*))
+	    (else
+	     (try-inline ($cdr clause*) rand* default))))
+
+    (define (inline-case clause rand*)
+      ;;Try to  convert the CASE-LAMBDA clause  in CLAUSE into a  set of
+      ;;local bindings for the arguments  in RAND*; if successful return
+      ;;a struct instance of type BIND, else return #f.
+      ;;
+      (struct-case clause
+	((clambda-case info body)
+	 (struct-case info
+	   ((case-info label fml* proper?)
+	    (if proper?
+		;;If the formals  of the CASE-LAMBDA clause  is a proper
+		;;list, make an appropriate local binding; convert:
+		;;
+		;;   ((case-lambda ((a b c) ?body)) 1 2 3)
+		;;
+		;;into:
+		;;
+		;;   (let ((a 1) (b 2) (c 3)) ?body)
+		;;
+		(and ($fx= (length fml*)
+			   (length rand*))
+		     (make-bind fml* rand* body))
+	      ;;If the formals of the  CASE-LAMBDA clause is a symbol or
+	      ;;a  proper  list,  make  an  appropriate  local  binding;
+	      ;;convert:
+	      ;;
+	      ;;   ((case-lambda (args ?body)) 1 2 3)
+	      ;;
+	      ;;into:
+	      ;;
+	      ;;   (let ((args (list 1 2 3))) ?body)
+	      ;;
+	      ;;and convert:
+	      ;;
+	      ;;   ((case-lambda ((a b . args) ?body)) 1 2 3 4)
+	      ;;
+	      ;;into:
+	      ;;
+	      ;;   (let ((a 1) (b 2) (args (list 3 4))) ?body)
+	      ;;
+	      ;;
+	      (and ($fx<= (length fml*)
+			  (length rand*))
+		   (make-bind fml* (%properize fml* rand*) body))))))))
+
+    (define (%properize lhs* rhs*)
+      (cond ((null? lhs*)
+	     (error who "improper improper"))
+	    ((null? ($cdr lhs*))
+	     (list (%make-conses rhs*)))
+	    (else
+	     (cons ($car rhs*)
+		   (%properize ($cdr lhs*)
+			       ($cdr rhs*))))))
+
+    (define (%make-conses ls)
+      (if (null? ls)
+	  (make-constant '())
+	(make-funcall (make-primref 'cons)
+		      (list ($car ls) (%make-conses ($cdr ls))))))
+
+    #| end of module: try-inline |# )
+
+
   (define (inline mk rator rand*)
     (define (valid-mv-consumer? x)
       (struct-case x
@@ -1842,6 +1895,7 @@
                  (struct-case info
                    ((case-info L args proper) proper))))))
         (else #f)))
+
     (define (single-value-consumer? x)
       (struct-case x
         ((clambda L cases F)
@@ -1852,6 +1906,7 @@
                    ((case-info L args proper)
                     (and proper (fx= (length args) 1))))))))
         (else #f)))
+
     (define (valid-mv-producer? x)
       (struct-case x
         ((funcall) #t)
@@ -1859,63 +1914,66 @@
         ((bind lhs* rhs* body) (valid-mv-producer? body))
         (else #f) ;; FIXME BUG
         ))
+
     (struct-case rator
       ((clambda g cls*)
        (try-inline cls* rand*
-          (mk rator rand*)))
+		   (mk rator rand*)))
       ((primref op)
        (case op
-         ;;; FIXME HERE
+;;; FIXME HERE
          ((call-with-values)
           (cond
-            ((and (open-mvcalls) (fx= (length rand*) 2))
-             (let ((producer (inline (car rand*) '()))
-                   (consumer (cadr rand*)))
-               (cond
-                 ((single-value-consumer? consumer)
-                  (inline consumer (list producer)))
-                 ((and (valid-mv-consumer? consumer)
-                       (valid-mv-producer? producer))
-                  (make-mvcall producer consumer))
-                 (else
-                  (make-funcall rator rand*)))))
-            (else
-             (mk rator rand*))))
+	   ((and (open-mvcalls) (fx= (length rand*) 2))
+	    (let ((producer (inline (car rand*) '()))
+		  (consumer (cadr rand*)))
+	      (cond
+	       ((single-value-consumer? consumer)
+		(inline consumer (list producer)))
+	       ((and (valid-mv-consumer? consumer)
+		     (valid-mv-producer? producer))
+		(make-mvcall producer consumer))
+	       (else
+		(make-funcall rator rand*)))))
+	   (else
+	    (mk rator rand*))))
          ((debug-call)
           (inline
-            (lambda (op^ rand*^)
-              (mk rator (cons* (car rand*) op^ rand*^)))
-            (cadr rand*)
-            (cddr rand*)))
+	   (lambda (op^ rand*^)
+	     (mk rator (cons* (car rand*) op^ rand*^)))
+	   (cadr rand*)
+	   (cddr rand*)))
          (else
           (mk rator rand*))))
       ((bind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
-           (make-bind lhs* rhs*
-             (call-expr mk body rand*))))
+	 (make-bind lhs* rhs*
+		    (call-expr mk body rand*))))
       ((recbind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
-           (make-recbind lhs* rhs*
-             (call-expr mk body rand*))))
+	 (make-recbind lhs* rhs*
+		       (call-expr mk body rand*))))
       ((rec*bind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
-           (make-rec*bind lhs* rhs*
-             (call-expr mk body rand*))))
+	 (make-rec*bind lhs* rhs*
+			(call-expr mk body rand*))))
       (else (mk rator rand*))))
+
   (define (call-expr mk x rand*)
     (cond
-      ((clambda? x) (inline mk x rand*))
-      ((and (prelex? x) (not (prelex-source-assigned? x)))
-       ;;; FIXME: did we do the analysis yet?
-       (mk x rand*))
-      (else
-       (let ((t (make-prelex 'tmp #f)))
-         (set-prelex-source-referenced?! t #t)
-         (make-bind (list t) (list x)
-           (mk t rand*))))))
+     ((clambda? x) (inline mk x rand*))
+     ((and (prelex? x) (not (prelex-source-assigned? x)))
+;;; FIXME: did we do the analysis yet?
+      (mk x rand*))
+     (else
+      (let ((t (make-prelex 'tmp #f)))
+	(set-prelex-source-referenced?! t #t)
+	(make-bind (list t) (list x)
+		   (mk t rand*))))))
+
   (define (Expr x)
     (struct-case x
       ((constant) x)
@@ -1929,19 +1987,19 @@
        (make-rec*bind lhs* (map Expr rhs*) (Expr body)))
       ((conditional test conseq altern)
        (make-conditional
-         (Expr test)
+	   (Expr test)
          (Expr conseq)
          (Expr altern)))
       ((seq e0 e1)
        (make-seq (Expr e0) (Expr e1)))
       ((clambda g cls* cp free name)
        (make-clambda g
-         (map (lambda (x)
-                (struct-case x
-                  ((clambda-case info body)
-                   (make-clambda-case info (Expr body)))))
-              cls*)
-         cp free name))
+		     (map (lambda (x)
+			    (struct-case x
+			      ((clambda-case info body)
+			       (make-clambda-case info (Expr body)))))
+		       cls*)
+		     cp free name))
       ((funcall rator rand*)
        (inline make-funcall (Expr rator) (map Expr rand*)))
       ((forcall rator rand*)
@@ -1950,8 +2008,10 @@
        (assert (prelex-source-assigned? lhs))
        (make-assign lhs (Expr rhs)))
       (else (error who "invalid expression" (unparse x)))))
+
   (Expr x))
 
+
 
 #|
 (letrec* (bi ...
@@ -1967,7 +2027,6 @@
   body)
 |#
 
-
 (include "ikarus.compiler.optimize-letrec.ss")
 (include "ikarus.compiler.source-optimizer.ss")
 
