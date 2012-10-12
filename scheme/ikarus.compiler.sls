@@ -2829,35 +2829,40 @@
   (define-inline (%bound-var x)
     ($var-referenced x))
 
-  (define (optimize c rator rand*)
-    (let ((n (length rand*)))
+  (module (optimize)
+
+    (define (optimize c rator rand*)
       (struct-case c
-	((clambda main-label clause*)
-	 (define (inner-recur fml* rand*)
-	   (if (null? fml*)
-	       ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
-	       (list (make-funcall (make-primref 'list) rand*))
-	     (cons (strip (car rand*))
-		   (inner-recur (cdr fml*) (cdr rand*)))))
+	((clambda label.unused clause*)
+	 (define num-of-rand* (length rand*))
 	 (let outer-recur ((clause* clause*))
 	   (if (null? clause*)
 	       (make-funcall rator rand*)
 	     (struct-case (clambda-case-info (car clause*))
 	       ((case-info label fml* proper?)
 		(if proper?
-		    (if (fx= n (length fml*))
+		    (if (fx= num-of-rand* (length fml*))
 			(make-jmpcall label (strip rator) ($map/stx strip rand*))
 		      (outer-recur (cdr clause*)))
-		  (if (fx<= (length (cdr fml*)) n)
+		  (if (fx<= (length (cdr fml*)) num-of-rand*)
 		      (make-jmpcall label (strip rator)
 				    (inner-recur (cdr fml*) rand*))
-		    (outer-recur (cdr clause*))))))))))))
+		    (outer-recur (cdr clause*)))))))))))
 
-  (define (strip x)
-    (struct-case x
-      ((known expr type)
-       expr)
-      (else x)))
+    (define (inner-recur fml* rand*)
+      (if (null? fml*)
+	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
+	  (list (make-funcall (make-primref 'list) rand*))
+	(cons (strip (car rand*))
+	      (inner-recur (cdr fml*) (cdr rand*)))))
+
+    (define (strip x)
+      (struct-case x
+	((known expr type)
+	 expr)
+	(else x)))
+
+    #| end of module: optimize |# )
 
   (define (CLambda x)
     ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
