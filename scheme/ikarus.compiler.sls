@@ -2750,117 +2750,165 @@
   #| end of module: sanitize-bindings |# )
 
 
-(define (untag x)
-  (struct-case x
-    ((known x t)
-     (values x t))
-    (else
-     (values x #f))))
+(module (optimize-for-direct-jumps)
 
-(define (tag x t)
-  (if t
-      (make-known x t)
-    x))
-
-(define (optimize-for-direct-jumps x)
   (define who 'optimize-for-direct-jumps)
-  (define (init-var x)
-    (set-var-referenced! x #f))
-  (define (set-var x v)
-    (struct-case v
-      ((clambda) (set-var-referenced! x v))
+
+  ;;Make the code more readable.
+  (define-syntax E
+    (identifier-syntax optimize-for-direct-jumps))
+
+  (define (optimize-for-direct-jumps x)
+    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the  core language,  and building  a new  hierarchy of  optimised,
+    ;;recordized code; return the new hierarchy.
+    ;;
+    (struct-case x
+      ((constant)
+       x)
+
       ((var)
-       (cond
-         ((bound-var v) => (lambda (v) (set-var-referenced! x v)))
-         (else (void))))
-      (else (void))))
-  (define (bound-var x)
-    (var-referenced x))
+       x)
+
+      ((primref)
+       x)
+
+      ((bind lhs* rhs* body)
+       ($for-each/stx %mark-var-as-non-referenced lhs*)
+       (let ((rhs* ($map/stx E rhs*)))
+	 ($for-each/stx %set-var lhs* rhs*)
+	 (make-bind lhs* rhs* (E body))))
+
+      ((fix lhs* rhs* body)
+       ($for-each/stx %set-var lhs* rhs*)
+       (make-fix lhs* ($map/stx CLambda rhs*) (E body)))
+
+      ((conditional test conseq altern)
+       (make-conditional (E test) (E conseq) (E altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((forcall op rand*)
+       (make-forcall op ($map/stx E rand*)))
+
+      ((funcall rator rand*)
+       (let-values (((rator t) (untag (A rator))))
+	 (cond ((and (var? rator)
+		     (%bound-var rator))
+		=> (lambda (c)
+		     (optimize c rator ($map/stx A rand*))))
+	       ((and (primref? rator)
+		     (eq? (primref-name rator) '$$apply))
+		(make-jmpcall (sl-apply-label)
+			      (A- (car rand*))
+			      ($map/stx A- (cdr rand*))))
+	       (else
+		(make-funcall (tag rator t) ($map/stx A rand*))))))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
+
+  (define-inline (%mark-var-as-non-referenced x)
+    ($set-var-referenced! x #f))
+
+  (define (%set-var lhs rhs)
+    (struct-case rhs
+      ((clambda)
+       ($set-var-referenced! lhs rhs))
+      ((var)
+       (cond ((%bound-var rhs)
+	      => (lambda (v)
+		   ($set-var-referenced! lhs v)))
+	     (else
+	      (void))))
+      (else
+       (void))))
+
+  (define-inline (%bound-var x)
+    ($var-referenced x))
+
   (define (optimize c rator rand*)
     (let ((n (length rand*)))
       (struct-case c
-        ((clambda main-label cls*)
-         (let f ((cls* cls*))
-           (cond
-             ((null? cls*)
-              ;;; none matching?
-              (make-funcall rator rand*))
-             (else
-              (struct-case (clambda-case-info (car cls*))
-                ((case-info label fml* proper)
-                 (cond
-                   (proper
-                    (if (fx= n (length fml*))
-                        (make-jmpcall label (strip rator) (map strip rand*))
-                        (f (cdr cls*))))
-                   (else
-                    (if (fx<= (length (cdr fml*)) n)
-                        (make-jmpcall label (strip rator)
-                           (let f ((fml* (cdr fml*)) (rand* rand*))
-                             (cond
-                               ((null? fml*)
-                                ;;; FIXME: construct list afterwards
-                                (list (make-funcall (make-primref 'list) rand*)))
-                               (else
-                                (cons (strip (car rand*))
-                                      (f (cdr fml*) (cdr rand*)))))))
-                        (f (cdr cls*))))))))))))))
+	((clambda main-label cls*)
+	 (let f ((cls* cls*))
+	   (cond ((null? cls*)
+		  ;; none matching?
+		  (make-funcall rator rand*))
+		 (else
+		  (struct-case (clambda-case-info (car cls*))
+		    ((case-info label fml* proper)
+		     (cond (proper
+			    (if (fx= n (length fml*))
+				(make-jmpcall label (strip rator) ($map/stx strip rand*))
+			      (f (cdr cls*))))
+			   (else
+			    (if (fx<= (length (cdr fml*)) n)
+				(make-jmpcall label (strip rator)
+					      (let f ((fml* (cdr fml*)) (rand* rand*))
+						(cond ((null? fml*)
+						       ;;FIXME: construct list afterwards
+						       (list (make-funcall
+							      (make-primref 'list) rand*)))
+						      (else
+						       (cons (strip (car rand*))
+							     (f (cdr fml*)
+								(cdr rand*)))))))
+			      (f (cdr cls*))))))))))))))
+
   (define (strip x)
     (struct-case x
-      ((known x t) x)
+      ((known expr type)
+       expr)
       (else x)))
+
   (define (CLambda x)
+    ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
+    ;;purpose  of this  function  is to  apply  E to  the  body of  each
+    ;;CASE-LAMBDA  clause, after  having  marked  as non-referenced  the
+    ;;corresponding formals.
+    ;;
     (struct-case x
-      ((clambda g cls* cp free name)
-       (make-clambda g
-         (map (lambda (cls)
-                (struct-case cls
-                  ((clambda-case info body)
-                   ($for-each/stx init-var (case-info-args info))
-                   (make-clambda-case info (Expr body)))))
-              cls*)
-         cp free name))))
+      ((clambda label clause* cp free name)
+       (make-clambda label
+		     (map (lambda (cls)
+			    (struct-case cls
+			      ((clambda-case info body)
+			       ($for-each/stx %mark-var-as-non-referenced
+					      (case-info-args info))
+			       (make-clambda-case info (E body)))))
+		       clause*)
+		     cp free name))))
+
   (define (A x)
     (struct-case x
-      ((known x t) (make-known (Expr x) t))
-      (else (Expr x))))
+      ((known expr type)
+       (make-known (E expr) type))
+      (else
+       (E x))))
+
   (define (A- x)
     (struct-case x
-      ((known x t) (Expr x))
-      (else (Expr x))))
-  (define (Expr x)
+      ((known expr type)
+       (E expr))
+      (else
+       (E x))))
+
+  (define (untag x)
     (struct-case x
-      ((constant) x)
-      ((var)      x)
-      ((primref)  x)
-      ((bind lhs* rhs* body)
-       ($for-each/stx init-var lhs*)
-       (let ((rhs* (map Expr rhs*)))
-         ($for-each/stx set-var lhs* rhs*)
-         (make-bind lhs* rhs* (Expr body))))
-      ((fix lhs* rhs* body)
-       ($for-each/stx set-var lhs* rhs*)
-       (make-fix lhs* (map CLambda rhs*) (Expr body)))
-      ((conditional test conseq altern)
-       (make-conditional (Expr test) (Expr conseq) (Expr altern)))
-      ((seq e0 e1) (make-seq (Expr e0) (Expr e1)))
-      ((forcall op rand*)
-       (make-forcall op (map Expr rand*)))
-      ((funcall rator rand*)
-       (let-values (((rator t) (untag (A rator))))
-         (cond
-           ((and (var? rator) (bound-var rator)) =>
-            (lambda (c)
-              (optimize c rator (map A rand*))))
-           ((and (primref? rator)
-                 (eq? (primref-name rator) '$$apply))
-            (make-jmpcall (sl-apply-label)
-                          (A- (car rand*))
-                          (map A- (cdr rand*))))
-           (else
-            (make-funcall (tag rator t) (map A rand*))))))
-      (else (error who "invalid expression" (unparse x)))))
-  (Expr x))
+      ((known expr type)
+       (values expr type))
+      (else
+       (values x #f))))
+
+  (define (tag expr type)
+    (if type
+	(make-known expr type)
+      expr))
+
+  #| end of module: optimize-for-direct-jumps |# )
 
 
 (define (insert-global-assignments x)
