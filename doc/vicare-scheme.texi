@@ -2812,9 +2812,9 @@ symbols representing the field names.
 
 The optional @var{uid} argument must be a symbol uniquely identifying
 this type; when not supplied, a symbol is automatically generated.  The
-@func{$symbol-value} field of @var{uid} is set to the newly created RTD;
-if @var{uid} already has a symbol value: such value must be a struct
-descriptor equal to the newly created RTD.
+@func{$symbol-value} field of @var{uid} is set to the newly created
+@rtd{}; if @var{uid} already has a symbol value: such value must be a
+struct descriptor equal to the newly created @rtd{}.
 @end defun
 
 
@@ -3514,7 +3514,8 @@ Return the value in the @func{$symbol-value} field of the symbol
 
 @defun symbol-bound? @var{sym}
 Return true if @var{sym} is a symbol and its @func{$symbol-value} field
-is set to the special ``unbound'' machine word value.
+is set to the special ``unbound'' machine word value.  @ref{objects
+symbols} for details.
 @end defun
 
 @c page
@@ -15348,7 +15349,6 @@ meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @deffn {Unsafe Operation} $symbol-string @var{sym}
 @deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
 @deffnx {Unsafe Operation} $symbol-plist @var{sym}
-@deffnx {Unsafe Operation} $symbol-value @var{sym}
 Accessors for the fields of @var{sym}.
 @end deffn
 
@@ -15356,9 +15356,25 @@ Accessors for the fields of @var{sym}.
 @deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
 @deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
 @deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
-@deffnx {Unsafe Operation} $set-symbol-value! @var{sym} @var{val}
 @deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
 Mutators for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-value @var{sym}
+@deffnx {Unsafe Operation} $set-symbol-value! @var{sym} @var{val}
+The @code{value} field has multiple purposes:
+
+@itemize
+@item
+When @var{sym} is the unique identifier of a data structure type: the
+@code{value} field holds the @rtd{} of the data structure.
+
+@item
+Top level bindings in compiled Scheme code are represented by gensyms;
+the value of a top level binding is stored in the @code{value} field of
+a gensym memory block.
+@end itemize
 @end deffn
 
 
@@ -25144,6 +25160,19 @@ bits set to zero.
 A symbol memory block is @math{6} words wide and contains references to
 the following fields: @code{string}, @code{ustring}, @code{value},
 @code{proc}, @code{plist}.
+
+The @code{value} field has multiple purposes:
+
+@itemize
+@item
+When the symbol is the unique identifier of a data structure type: the
+@code{value} field holds the @rtd{} of the data structure.
+
+@item
+Top level bindings in compiled Scheme code are represented by gensyms;
+the value of a top level binding is stored in the @code{value} field of
+a gensym memory block.
+@end itemize
 
 @c ------------------------------------------------------------
 

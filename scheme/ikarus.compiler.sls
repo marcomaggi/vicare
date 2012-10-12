@@ -356,6 +356,11 @@
 
 
 ;;;; struct types used to represent code in the core language
+;;
+;;The struct  types defined in this  code page are used  by the function
+;;RECORDIZE to  represent code in  the core language  in a way  which is
+;;better inspectable and optimizable.
+;;
 
 ;;Instances of  this type are  stored in  the property lists  of symbols
 ;;representing  binding names;  this way  we  can just  send around  the
@@ -363,6 +368,8 @@
 ;;
 (define-structure (prelex name operand)
   ((source-referenced?   #f)
+		;Boolean, true when the region  in which this binding is
+		;defined has at least one reference to it.
    (source-assigned?     #f)
 		;Boolean,  true  when  the  binding  has  been  used  as
 		;left-hand side in a SET! form.
@@ -372,6 +379,11 @@
 		;When this  binding describes a top  level binding, this
 		;field  is set  to  a unique  gensym  associated to  the
 		;binding; else this field is #f.
+		;
+		;The value of a top level binding is stored in the VALUE
+		;field of a gensym memory block.  Such field is accessed
+		;with the  operation $SYMBOL-VALUE and mutated  with the
+		;operation $SET-SYMBOL-VALUE!.
    ))
 
 ;;; --------------------------------------------------------------------
@@ -420,7 +432,8 @@
    ))
 
 ;;An instance of this type represents a SET! form in which the left-hand
-;;side references a local binding.
+;;side references a lexical binding  represented by a struct instance of
+;;type PRELEX.
 ;;
 (define-struct assign
   (lhs
@@ -938,7 +951,7 @@
 
       ;;Synopsis: (set! ?lhs ?rhs)
       ;;
-      ;;If  the left-hand  side  references a  local  binding: return  a
+      ;;If the  left-hand side  references a  lexical binding:  return a
       ;;struct  instance   of  type  ASSIGN.   If   the  left-hand  side
       ;;references a top level binding: return a struct instance of type
       ;;FUNCALL.
@@ -1016,6 +1029,16 @@
       ;;is converted by the expander into:
       ;;
       ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?expr ...)
+      ;;
+      ;;where:
+      ;;
+      ;;* ?LHS is a gensym representing the name of the binding;
+      ;;
+      ;;* ?LOC is a gensym used to hold the value of the binding (in the
+      ;;  VALUE field of the sybmol memory block);
+      ;;
+      ;;* ?RHS is a symbolic expression which evaluates to the binding's
+      ;;  value.
       ;;
       ;;Return a struct instance of type REC*BIND.
       ;;
@@ -1814,6 +1837,30 @@
   ;;efficiently implement  the binding; this module  attempts to perform
   ;;such inlining.
   ;;
+  ;;Examples:
+  ;;
+  ;;* Notice that COND syntaxes are expanded as follows:
+  ;;
+  ;;    (cond ((this X)
+  ;;           => (lambda (Y)
+  ;;                (that Y)))
+  ;;          (else
+  ;;           (that)))
+  ;;
+  ;;  becomes:
+  ;;
+  ;;    (let ((t (this X)))
+  ;;      (if t
+  ;;          ((lambda (Y) (that Y)) t)
+  ;;        (that)))
+  ;;
+  ;;  which contains a direct call, which will be optimised to:
+  ;;
+  ;;    (let ((t (this X)))
+  ;;      (if t
+  ;;          (let ((Y t)) (that Y))
+  ;;        (that)))
+  ;;
   (define who 'optimize-direct-calls)
 
   (define (optimize-direct-calls x)
@@ -2161,91 +2208,150 @@
 (include "ikarus.compiler.source-optimizer.ss")
 
 
-(define (rewrite-assignments x)
-  (define who 'rewrite-assignments)
-  (define (fix-lhs* lhs*)
-    (cond
-      ((null? lhs*) (values '() '() '()))
-      (else
-       (let ((x (car lhs*)))
-         (let-values (((lhs* a-lhs* a-rhs*) (fix-lhs* (cdr lhs*))))
-           (cond
-             ((and (prelex-source-assigned? x) (not (prelex-global-location x)))
-              (let ((t (make-prelex 'assignment-tmp #f)))
-                (set-prelex-source-referenced?! t #t)
-                (values (cons t lhs*) (cons x a-lhs*) (cons t a-rhs*))))
-             (else
-              (values (cons x lhs*) a-lhs* a-rhs*))))))))
-  (define (bind-assigned lhs* rhs* body)
-    (cond
-      ((null? lhs*) body)
-      (else
-       (make-bind lhs*
-         (map (lambda (rhs) (make-funcall (make-primref 'vector) (list rhs))) rhs*)
-         body))))
-  (define (Expr x)
+(module (rewrite-references-and-assignments)
+  ;;We distinguish between bindings that are only referenced (read-only)
+  ;;and bindings that are also mutated (read-write).  Example of code in
+  ;;which the binding X is only referenced:
+  ;;
+  ;;  (let ((x 123)) (display x))
+  ;;
+  ;;example of code in which the binding X is mutated and referenced:
+  ;;
+  ;;  (let ((x 123)) (set! x 456) (display x))
+  ;;
+  ;;A binding in  reference position or in the left-hand  side of a SET!
+  ;;syntax  is represented  by a  struct instance  of type  PRELEX; this
+  ;;module must be used only on  recordized code in which referenced and
+  ;;mutated  bindings  have already  been  marked  appropriately in  the
+  ;;PRELEX structures.
+  ;;
+  ;;* Top level bindings are  implemented with gensyms holding the value
+  ;;  in an internal field.  References and assignments to such bindings
+  ;;  must be substituted with appropriate function calls.
+  ;;
+  ;;*  Read-write local  bindings  are implemented  with Scheme  vectors
+  ;;  providing  mutable memory localtions.  References  and assignments
+  ;;   to such  bindingns must  be substituted  with appropriate  vector
+  ;;  operations.
+  ;;
+  (define who 'rewrite-references-and-assignments)
+
+  (define (rewrite-references-and-assignments x)
+    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the  core language,  and building  a new  hierarchy of  optimised,
+    ;;recordized code; return the new hierarchy.
+    ;;
+    (define-syntax E ;make the code more readable
+      (identifier-syntax rewrite-references-and-assignments))
     (struct-case x
-      ((constant) x)
+      ((constant)
+       x)
+
       ((prelex)
-       (cond
-         ((prelex-source-assigned? x)
-          (cond
-            ((prelex-global-location x) =>
-             (lambda (loc)
-               (make-funcall
-                 (make-primref '$symbol-value)
-                 (list (make-constant loc)))))
-            (else
-             (make-funcall (make-primref '$vector-ref)
-               (list x (make-constant 0))))))
-         (else x)))
-      ((primref) x)
+       (if (prelex-source-assigned? x)
+	   ;;Reference to a read-write binding.
+	   (cond ((prelex-global-location x)
+		  ;;Reference to a top level binding.  LOC is the symbol
+		  ;;used to hold the value.
+		  => (lambda (loc)
+		       (make-funcall (make-primref '$symbol-value)
+				     (list (make-constant loc)))))
+		 (else
+		  ;;Reference to local  mutable binding: substitute with
+		  ;;appropriate reference to the vector location.
+		  (make-funcall (make-primref '$vector-ref)
+				(list x (make-constant 0)))))
+	 ;;Reference to a read-only binding.
+	 x))
+
+      ((primref)
+       x)
+
       ((bind lhs* rhs* body)
-       (let-values (((lhs* a-lhs* a-rhs*) (fix-lhs* lhs*)))
-         (make-bind lhs* (map Expr rhs*)
-           (bind-assigned a-lhs* a-rhs* (Expr body)))))
+       (let-values (((lhs* a-lhs* a-rhs*) (%fix-lhs* lhs*)))
+         (make-bind lhs* ($map/stx E rhs*)
+		    (%bind-assigned a-lhs* a-rhs* (E body)))))
+
       ((fix lhs* rhs* body)
-       (make-fix lhs* (map Expr rhs*) (Expr body)))
+       (make-fix lhs* ($map/stx E rhs*) (E body)))
+
       ((conditional test conseq altern)
-       (make-conditional (Expr test) (Expr conseq) (Expr altern)))
-      ((seq e0 e1) (make-seq (Expr e0) (Expr e1)))
-      ((clambda g cls* cp free name)
-       (make-clambda g
-         (map (lambda (cls)
-                (struct-case cls
-                  ((clambda-case info body)
-                   (struct-case info
-                     ((case-info label fml* proper)
-                      (let-values (((fml* a-lhs* a-rhs*) (fix-lhs* fml*)))
-                        (make-clambda-case
-                          (make-case-info label fml* proper)
-                          (bind-assigned a-lhs* a-rhs* (Expr body)))))))))
-              cls*)
-         cp free name))
+       (make-conditional (E test) (E conseq) (E altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((clambda label clause* cp free name)
+       (make-clambda label
+		     (map (lambda (cls)
+			    (struct-case cls
+			      ((clambda-case info body)
+			       (struct-case info
+				 ((case-info label fml* proper)
+				  (let-values (((fml* a-lhs* a-rhs*) (%fix-lhs* fml*)))
+				    (make-clambda-case
+				     (make-case-info label fml* proper)
+				     (%bind-assigned a-lhs* a-rhs* (E body)))))))))
+		       clause*)
+		     cp free name))
+
       ((forcall op rand*)
-       (make-forcall op (map Expr rand*)))
+       (make-forcall op ($map/stx E rand*)))
+
       ((funcall rator rand*)
-       (make-funcall (Expr rator) (map Expr rand*)))
+       (make-funcall (E rator) ($map/stx E rand*)))
+
       ((assign lhs rhs)
-       (cond
-         ((prelex-source-assigned? lhs) =>
-          (lambda (where)
-            (cond
-              ((symbol? where)
-               (make-funcall (make-primref '$init-symbol-value!)
-                 (list (make-constant where) (Expr rhs))))
-              ((prelex-global-location lhs) =>
-               (lambda (loc)
-                 (make-funcall (make-primref '$set-symbol-value!)
-                   (list (make-constant loc) (Expr rhs)))))
-              (else
-               (make-funcall (make-primref '$vector-set!)
-                 (list lhs (make-constant 0) (Expr rhs)))))))
-         (else
-          (error 'rewrite-assignments "not assigned" lhs x))))
-      ((mvcall p c) (make-mvcall (Expr p) (Expr c)))
-      (else (error who "invalid expression" (unparse x)))))
-  (Expr x))
+       (cond ((prelex-source-assigned? lhs)
+	      => (lambda (where)
+		   (cond ((symbol? where)
+			  (make-funcall (make-primref '$init-symbol-value!)
+					(list (make-constant where) (E rhs))))
+			 ((prelex-global-location lhs)
+			  ;;Mutation of  top level binding.  LOC  is the
+			  ;;symbol used to hold the value.
+			  => (lambda (loc)
+			       (make-funcall (make-primref '$set-symbol-value!)
+					     (list (make-constant loc) (E rhs)))))
+			 (else
+			  ;;Mutation of local  binding.  Substitute with
+			  ;;the appropriate vector operation.
+			  (make-funcall (make-primref '$vector-set!)
+					(list lhs (make-constant 0) (E rhs)))))))
+	     (else
+	      (error who "not assigned" lhs x))))
+
+      ((mvcall p c)
+       (make-mvcall (E p) (E c)))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
+
+  (define (%fix-lhs* lhs*)
+    (if (null? lhs*)
+	(values '() '() '())
+      (let ((x (car lhs*)))
+	(let-values (((lhs* a-lhs* a-rhs*) (%fix-lhs* (cdr lhs*))))
+	  (if (and (prelex-source-assigned? x)
+		   (not (prelex-global-location x)))
+	      (let ((t (make-prelex 'assignment-tmp #f)))
+		(set-prelex-source-referenced?! t #t)
+		(values (cons t lhs*)
+			(cons x a-lhs*)
+			(cons t a-rhs*)))
+	    (values (cons x lhs*) a-lhs* a-rhs*))))))
+
+  (define (%bind-assigned lhs* rhs* body)
+    (if (null? lhs*)
+	body
+      (make-bind lhs*
+		 (map (lambda (rhs)
+			(make-funcall (make-primref 'vector) (list rhs)))
+		   rhs*)
+		 body)))
+
+  #| end of module: rewrite-references-and-assignments |# )
 
 
 
@@ -3503,7 +3609,7 @@
             (when (optimizer-output)
                (pretty-print (unparse-pretty p) (current-error-port)))
             #f))
-         (p (rewrite-assignments p))
+         (p (rewrite-references-and-assignments p))
          (p (if (perform-tag-analysis)
                 (introduce-tags p)
                 p))
