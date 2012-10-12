@@ -2766,6 +2766,48 @@
 
 
 (module (optimize-for-direct-jumps)
+  ;;We known that direct function applications like:
+  ;;
+  ;;   ((lambda (x) x) 123)
+  ;;
+  ;;can be optimized to:
+  ;;
+  ;;   (let ((x 123)) x)
+  ;;
+  ;;and also:
+  ;;
+  ;;   ((case-lambda ((x) x)
+  ;;                 ((x y) (list x y)))
+  ;;    1 2)
+  ;;
+  ;;can be optimized to:
+  ;;
+  ;;   ((case-lambda ((x y) (list x y))) 1 2)
+  ;;
+  ;;and so to:
+  ;;
+  ;;   (let ((x 1) (y 2)) (list x y))
+  ;;
+  ;;this is what the module OPTIMIZE-DIRECT-CALLS does.  Fine.
+  ;;
+  ;;This  module   is,  in  a   way,  a  generalisation  of   the  above
+  ;;optimisation; let's consider the following code:
+  ;;
+  ;;   (let ((f (lambda (x) x)))
+  ;;     (f 123))
+  ;;
+  ;;while we  cannot, in general,  replace the LAMBDA definition  with a
+  ;;low level binding, there is a way to jump directly from the function
+  ;;application to the function  implementation without executing a full
+  ;;closure call.  When the closure definition has multiple clauses:
+  ;;
+  ;;   (let ((f (case-lambda
+  ;;              ((x)		x)
+  ;;              ((x y)	(list x y)))))
+  ;;     (f 1 2))
+  ;;
+  ;;there is a way to jump directly from the function application to the
+  ;;clause that matches the number of arguments.
   ;;
   ;;This module  must be used with  recordized code in which  the PRELEX
   ;;instances have been already substituted  by VAR instances.  It is to
