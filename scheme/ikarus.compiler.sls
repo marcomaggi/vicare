@@ -1867,6 +1867,54 @@
 		   (make-bind fml* (%properize fml* rand*) body))))))))
 
     (define (%properize lhs* rhs*)
+      ;;LHS*  must  be a  list  of  PRELEX structures  representing  the
+      ;;binding names of a CASE-LAMBDA  clause, for the cases of formals
+      ;;being  a symbol  or an  improper list;  RHS* must  be a  list of
+      ;;struct instances representing the values to be bound.
+      ;;
+      ;;Build and return a new list out of RHS* that matches the list in
+      ;;LHS*.
+      ;;
+      ;;If  LHS* holds  a single  item:  it means  that the  CASE-LAMBDA
+      ;;application is like:
+      ;;
+      ;;   ((case-lambda (args ?body0 ?body ...)) 1 2 3)
+      ;;
+      ;;so this function is called with:
+      ;;
+      ;;   LHS* = (#[prelex args])
+      ;;   RHS* = (#[constant 1] #[constant 2] #[constant 3])
+      ;;
+      ;;and we need to return the list:
+      ;;
+      ;;   (#[funcall cons
+      ;;              (#[constant 1]
+      ;;               #[funcall cons
+      ;;                         (#[constant 2]
+      ;;                          #[funcall cons
+      ;;                                    (#[constant 3]
+      ;;                                     #[constant ()])])])])
+      ;;
+      ;;If LHS*  holds a multiple  items: it means that  the CASE-LAMBDA
+      ;;application is like:
+      ;;
+      ;;   ((case-lambda ((a b . args) ?body0 ?body ...)) 1 2 3 4)
+      ;;
+      ;;so this function is called with:
+      ;;
+      ;;   LHS* = (#[prelex a] #[prelex b] #[prelex args])
+      ;;   RHS* = (#[constant 1] #[constant 2]
+      ;;           #[constant 3] #[constant 4])
+      ;;
+      ;;and we need to return the list:
+      ;;
+      ;;   (#[constant 1] #[constant 2]
+      ;;    #[funcall cons
+      ;;              (#[constant 3]
+      ;;               #[funcall cons
+      ;;                         (#[constant 4]
+      ;;                          #[constant ()])])])
+      ;;
       (cond ((null? lhs*)
 	     (error who "improper improper"))
 	    ((null? ($cdr lhs*))
@@ -1884,67 +1932,103 @@
 
     #| end of module: try-inline |# )
 
-
   (define (inline mk rator rand*)
     (define (valid-mv-consumer? x)
+      ;;Return true if X is a  struct instance of type CLAMBDA, having a
+      ;;single clause which accepts a  fixed number of arguments, one or
+      ;;more it does not matter; else return false.
+      ;;
+      ;;In  other  words,  return  true  if X  represents  a  LAMBDA  or
+      ;;CASE-LAMBDA like:
+      ;;
+      ;;   (lambda (a) ?body0 ?body ...)
+      ;;   (lambda (a b c) ?body0 ?body ...)
+      ;;   (case-lambda ((a) ?body0 ?body ...))
+      ;;   (case-lambda ((a b c) ?body0 ?body ...))
+      ;;
       (struct-case x
-        ((clambda L cases F)
-         (and (fx= (length cases) 1)
-              (struct-case (car cases)
-                ((clambda-case info body)
+        ((clambda label.unused clause*)
+         (and ($fx= (length clause*) 1)	;single clause?
+              (struct-case ($car clause*)
+                ((clambda-case info)
                  (struct-case info
-                   ((case-info L args proper) proper))))))
+                   ((case-info label.unused args.unused proper?)
+		    proper?))))))
         (else #f)))
 
     (define (single-value-consumer? x)
+      ;;Return true if X is a  struct instance of type CLAMBDA, having a
+      ;;single  clause  which accepts  a  single  argument; else  return
+      ;;false.
+      ;;
+      ;;In  other  words,  return  true  if X  represents  a  LAMBDA  or
+      ;;CASE-LAMBDA like:
+      ;;
+      ;;   (lambda (a) ?body0 ?body ...)
+      ;;   (case-lambda ((a) ?body0 ?body ...))
+      ;;
       (struct-case x
-        ((clambda L cases F)
-         (and (fx= (length cases) 1)
-              (struct-case (car cases)
-                ((clambda-case info body)
+        ((clambda label.unused clause*)
+         (and ($fx= (length clause*) 1)	;single clause?
+              (struct-case ($car clause*)
+                ((clambda-case info)
                  (struct-case info
-                   ((case-info L args proper)
-                    (and proper (fx= (length args) 1))))))))
+                   ((case-info label.unused args proper?)
+                    (and proper?
+			 ($fx= (length args) 1))))))))
         (else #f)))
 
     (define (valid-mv-producer? x)
       (struct-case x
-        ((funcall) #t)
-        ((conditional) #f)
-        ((bind lhs* rhs* body) (valid-mv-producer? body))
-        (else #f) ;; FIXME BUG
-        ))
+        ((funcall)
+	 #t)
+        ((conditional)
+	 #f)
+        ((bind lhs* rhs* body)
+	 (valid-mv-producer? body))
+	;;FIXME Bug.  (Abdulaziz Ghuloum)
+	;;
+	;;FIXME Why is it a bug?  (Marco Maggi; Oct 12, 2012)
+        (else #f)))
 
     (struct-case rator
-      ((clambda g cls*)
-       (try-inline cls* rand*
-		   (mk rator rand*)))
+      ((clambda label.unused clause*)
+       (try-inline clause* rand* (mk rator rand*)))
+
       ((primref op)
        (case op
-;;; FIXME HERE
+	 ;;FIXME Here.  (Abdulaziz Ghuloum)
          ((call-with-values)
-          (cond
-	   ((and (open-mvcalls) (fx= (length rand*) 2))
-	    (let ((producer (inline (car rand*) '()))
-		  (consumer (cadr rand*)))
-	      (cond
-	       ((single-value-consumer? consumer)
-		(inline consumer (list producer)))
-	       ((and (valid-mv-consumer? consumer)
-		     (valid-mv-producer? producer))
-		(make-mvcall producer consumer))
-	       (else
-		(make-funcall rator rand*)))))
-	   (else
-	    (mk rator rand*))))
+          (cond ((and (open-mvcalls)
+		      ($fx= (length rand*) 2))
+		 ;;Here we know that the source code is:
+		 ;;
+		 ;;   (call-with-values ?producer ?consumer)
+		 ;;
+		 (let ((producer (inline ($car rand*) '()))
+		       (consumer ($cadr rand*)))
+		   (cond ((single-value-consumer? consumer)
+			  (inline consumer (list producer)))
+			 ((and (valid-mv-consumer? consumer)
+			       (valid-mv-producer? producer))
+			  (make-mvcall producer consumer))
+			 (else
+			  (make-funcall rator rand*)))))
+		(else
+		 ;;Here we do not know what the source code is, it could
+		 ;;be something like:
+		 ;;
+		 ;;   (apply call-with-values ?form)
+		 ;;
+		 (mk rator rand*))))
          ((debug-call)
-          (inline
-	   (lambda (op^ rand*^)
-	     (mk rator (cons* (car rand*) op^ rand*^)))
-	   (cadr rand*)
-	   (cddr rand*)))
+          (inline (lambda (op^ rand*^)
+		    (mk rator (cons* ($car rand*) op^ rand*^)))
+		  ($cadr rand*)
+		  ($cddr rand*)))
          (else
           (mk rator rand*))))
+
       ((bind lhs* rhs* body)
        (if (null? lhs*)
            (inline mk body rand*)
@@ -1992,13 +2076,13 @@
          (Expr altern)))
       ((seq e0 e1)
        (make-seq (Expr e0) (Expr e1)))
-      ((clambda g cls* cp free name)
-       (make-clambda g
+      ((clambda label clause* cp free name)
+       (make-clambda label
 		     (map (lambda (x)
 			    (struct-case x
 			      ((clambda-case info body)
 			       (make-clambda-case info (Expr body)))))
-		       cls*)
+		       clause*)
 		     cp free name))
       ((funcall rator rand*)
        (inline make-funcall (Expr rator) (map Expr rand*)))
