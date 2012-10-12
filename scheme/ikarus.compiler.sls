@@ -272,19 +272,33 @@
 	    ((GETTER ...)	(map (lambda (x)
 				       (%format-id #'?name "~s-~s" #'?name x))
 				  #'(?field-without-default ... ?field-with-default ...)))
+	    ((UNSAFE-GETTER ...)(map (lambda (x)
+				       (%format-id #'?name "$~s-~s" #'?name x))
+				  #'(?field-without-default ... ?field-with-default ...)))
 	    ((SETTER ...)	(map (lambda (x)
 				       (%format-id #'?name "set-~s-~s!" #'?name x))
+				  #'(?field-without-default ... ?field-with-default ...)))
+	    ((UNSAFE-SETTER ...)(map (lambda (x)
+				       (%format-id #'?name "$set-~s-~s!" #'?name x))
 				  #'(?field-without-default ... ?field-with-default ...))))
-         #'(module (?name PRED GETTER ... SETTER ... MAKER)
+         #'(module (?name PRED
+			  GETTER ... UNSAFE-GETTER ...
+			  SETTER ... UNSAFE-SETTER ...
+			  MAKER)
              (module private
-	       (?name PRED GETTER ... SETTER ... MAKER)
+	       (?name PRED
+		      GETTER ... UNSAFE-GETTER ...
+		      SETTER ... UNSAFE-SETTER ...
+		      MAKER)
 	       (define-struct ?name
 		 (?field-without-default ... ?field-with-default ...)))
              (module (MAKER)
                (define (MAKER ?field-without-default ...)
                  (import private)
                  (MAKER ?field-without-default ... ?default ...)))
-             (module (?name PRED GETTER ... SETTER ...)
+             (module (?name PRED
+			    GETTER ... UNSAFE-GETTER ...
+			    SETTER ... UNSAFE-SETTER ...)
                (import private)))))
       )))
 
@@ -2559,7 +2573,7 @@
     ;;It  is  a very  bad  error  if this  function  finds  a PRELEX  in
     ;;reference position not yet processed by %CONVERT-PRELEX.
     ;;
-    (let ((v (prelex-operand prel)))
+    (let ((v ($prelex-operand prel)))
       (assert (var? v))
       v))
 
@@ -2571,11 +2585,11 @@
     ;;PRELEX, so that, later, references to the PRELEX in the recordized
     ;;code can be substituted with the VAR.
     ;;
-    (assert (not (var? (prelex-operand prel))))
-    (let ((v (unique-var (prelex-name prel))))
-      ($set-var-referenced! v (prelex-source-referenced? prel))
-      ($set-var-global-loc! v (prelex-global-location prel))
-      (set-prelex-operand! prel v)
+    (assert (not (var? ($prelex-operand prel))))
+    (let ((v (unique-var ($prelex-name prel))))
+      ($set-var-referenced! v ($prelex-source-referenced? prel))
+      ($set-var-global-loc! v ($prelex-global-location prel))
+      ($set-prelex-operand! prel v)
       v))
 
   (define (A x)
