@@ -648,7 +648,9 @@
 ;;
 (define-struct case-info
   (label
-		;A unique gensym for this CASE-LAMBDA clause.
+		;A  unique gensym  for this  CASE-LAMBDA clause.   It is
+		;used to  generate, when possible, direct  jumps to this
+		;clause rather than calling the whole closure.
    args
 		;A list of struct  instances of type PRELEX representing
 		;the ?FORMALS as follows:
@@ -712,6 +714,23 @@
     global-loc
     ))
 
+;;Instances of this  struct type are substitute instances  of FUNCALL in
+;;recordized code  when it  is possible  to perform a  direct jump  to a
+;;CASE-LAMBDA clause, rather than call the whole closure.
+;;
+(define-struct jmpcall
+  (label
+		;A gensym, it is the gensym stored in the LABEL field of
+		;the target CASE-INFO struct.
+   op
+		;A  struct instance  representing  the  operator of  the
+		;closure application.
+   rand*
+		;A list  of struct instances representing  the arguments
+		;of the closure application.
+   ))
+
+
 ;;; --------------------------------------------------------------------
 
 (define-struct code-loc
@@ -763,12 +782,6 @@
   (code
    free*
    well-known?
-   ))
-
-(define-struct jmpcall
-  (label
-   op
-   rand*
    ))
 
 (define-struct codes
@@ -2629,6 +2642,8 @@
   ;;   (let ((t (case-lambda (?formal ?body0 ?body ...))))
   ;;     t)
   ;;
+  ;;this is useful for later transformations.
+  ;;
   (define who 'sanitize-bindings)
 
   ;;Make the code more readable.
@@ -2753,7 +2768,8 @@
 (module (optimize-for-direct-jumps)
   ;;
   ;;This module  must be used with  recordized code in which  the PRELEX
-  ;;instances have been already substituted by VAR instances.
+  ;;instances have been already substituted  by VAR instances.  It is to
+  ;;be used after using SANITIZE-BINDINGS.
   ;;
   (define who 'optimize-for-direct-jumps)
 
@@ -2797,18 +2813,7 @@
        (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (let-values (((rator type) (untag (E-known rator))))
-	 (cond ((and (var? rator)
-		     (%bound-var rator))
-		=> (lambda (c)
-		     (optimize c rator ($map/stx E-known rand*))))
-	       ((and (primref? rator)
-		     (eq? (primref-name rator) '$$apply))
-		(make-jmpcall (sl-apply-label)
-			      (E-unpack-known (car rand*))
-			      ($map/stx E-unpack-known (cdr rand*))))
-	       (else
-		(make-funcall (tag rator type) ($map/stx E-known rand*))))))
+       (%optimize-funcall rator rand*))
 
       (else
        (error who "invalid expression" (unparse x)))))
@@ -2832,45 +2837,107 @@
   (define-inline (%bound-var x)
     ($var-referenced x))
 
-  (module (optimize)
+  (module (%optimize-funcall)
 
-    (define (optimize c rator rand*)
+    (define (%optimize-funcall rator rand*)
+      (let-values (((rator type) (untag (E-known rator))))
+	(cond
+	 ;;Is RATOR a  variable known to reference a  closure?  In this
+	 ;;case we can attempt an optimization.
+	 ((and (var? rator)
+	       (%bound-var rator))
+	  => (lambda (c)
+	       (%optimize c rator ($map/stx E-known rand*))))
+
+	 ;;Is RATOR the  low level APPLY operation?  In  this case: the
+	 ;;first  RAND*  should  be   a  struct  instance  representing
+	 ;;recordized code which will evaluate to a closure.
+	 ((and (primref? rator)
+	       (eq? (primref-name rator) '$$apply))
+	  (make-jmpcall (sl-apply-label)
+			(E-unpack-known ($car rand*))
+			($map/stx E-unpack-known ($cdr rand*))))
+
+	 ;;If we are  here: RATOR is just some  unknown struct instance
+	 ;;representing  recordized code  which,  when evaluated,  will
+	 ;;return a closure.
+	 (else
+	  (make-funcall (tag rator type) ($map/stx E-known rand*))))))
+
+    (define (%optimize clam rator rand*)
       ;;Attempt to optimize the function application:
       ;;
       ;;   (RATOR . RAND*)
       ;;
-      ;;C is a struct instance of type CLAMBDA.
+      ;;CLAM is a struct instance of type CLAMBDA.
       ;;
       ;;RATOR  is a  struct  instance  of type  VAR  which  is known  to
-      ;;reference the CLAMBDA in C.
+      ;;reference the CLAMBDA in CLAM.
       ;;
       ;;RAND* is a list of struct instances representing recordized code
       ;;which,  when  evaluated,  will  return  the  arguments  for  the
       ;;function application.
       ;;
-      (struct-case c
+      ;;This function  searches for a  clause in CLAM which  matches the
+      ;;arguments given in RAND*:
+      ;;
+      ;;*  If   found:  return  a   struct  instance  of   type  JMPCALL
+      ;;  representing a jump call to the matching clause.
+      ;;
+      ;;* If  not found: just return  a struct instance of  type FUNCALL
+      ;;  representing a normal function call.
+      ;;
+      (struct-case clam
 	((clambda label.unused clause*)
+	 ;;Number of arguments in this function application.
 	 (define num-of-rand* (length rand*))
-	 (let outer-recur ((clause* clause*))
+	 (let recur ((clause* clause*))
+	   (define-inline (%recur-to-next-clause)
+	     (recur ($cdr clause*)))
 	   (if (null? clause*)
+	       ;;No  matching clause  found.  Just  call the  closure as
+	       ;;always.
 	       (make-funcall rator rand*)
-	     (struct-case (clambda-case-info (car clause*))
+	     (struct-case ($clambda-case-info ($car clause*))
 	       ((case-info label fml* proper?)
 		(if proper?
-		    (if (fx= num-of-rand* (length fml*))
+		    ;;This clause has a fixed number of arguments.
+		    (if ($fx= num-of-rand* (length fml*))
 			(make-jmpcall label (strip rator) ($map/stx strip rand*))
-		      (outer-recur (cdr clause*)))
-		  (if (fx<= (length (cdr fml*)) num-of-rand*)
-		      (make-jmpcall label (strip rator)
-				    (inner-recur (cdr fml*) rand*))
-		    (outer-recur (cdr clause*)))))))))))
+		      (%recur-to-next-clause))
+		  ;;This clause has a variable number of arguments.
+		  (if ($fx<= (length ($cdr fml*)) num-of-rand*)
+		      (make-jmpcall label (strip rator) (%prepare-rand* ($cdr fml*) rand*))
+		    (%recur-to-next-clause))))))))))
 
-    (define (inner-recur fml* rand*)
+    (define (%prepare-rand* fml* rand*)
+      ;;FML* is a  list of struct instances of  type PRELEX representing
+      ;;the formal arguments of the CASE-LAMBDA clause.
+      ;;
+      ;;RAND* is a  list os struct instances  representing the arguments
+      ;;to the closure application.
+      ;;
+      ;;This function processes RAND* and builds a new list representing
+      ;;arguments that can be assigned to the formals of the clause.  If
+      ;;the clause is:
+      ;;
+      ;;   ((a b . args) ?body0 ?body ...)
+      ;;
+      ;;and RAND* is:
+      ;;
+      ;;   (#[constant 1] #[constant 2]
+      ;;    #[constant 3] #[constant 4])
+      ;;
+      ;;this function must prepare a recordized list like:
+      ;;
+      ;;   (#[constant 1] #[constant 2]
+      ;;    #[funcall #[primref list] (#[constant 3] #[constant 4])])
+      ;;
       (if (null? fml*)
 	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
 	  (list (make-funcall (make-primref 'list) rand*))
-	(cons (strip (car rand*))
-	      (inner-recur (cdr fml*) (cdr rand*)))))
+	(cons (strip ($car rand*))
+	      (%prepare-rand* ($cdr fml*) ($cdr rand*)))))
 
     (define (strip x)
       (struct-case x
@@ -2878,7 +2945,7 @@
 	 expr)
 	(else x)))
 
-    #| end of module: optimize |# )
+    #| end of module: %optimize-funcall |# )
 
   (define (CLambda x)
     ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
