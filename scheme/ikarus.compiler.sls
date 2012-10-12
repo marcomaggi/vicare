@@ -1801,18 +1801,7 @@
   (E x))
 
 
-(define open-mvcalls
-  ;;When  set to  true: an  attempt is  made to  expand inline  calls to
-  ;;CALL-WITH-VALUES by inserting local bindings.
-  ;;
-  (make-parameter #t))
-
-(define (optimize-direct-calls x)
-  ;;Perform code optimisation traversing the whole hierarchy in X, which
-  ;;must be a  struct instance representing recordized code  in the core
-  ;;language,  and building  a  new hierarchy  of optimised,  recordized
-  ;;code; return the new hierarchy.
-  ;;
+(module (optimize-direct-calls open-mvcalls)
   ;;By definition, a "direct closure application" like:
   ;;
   ;;   ((lambda (x) x) 123)
@@ -1827,9 +1816,11 @@
   ;;
   (define who 'optimize-direct-calls)
 
-  (define (E x)
-    ;;Traverse  the hierarchy  of X,  which  must be  a struct  instance
-    ;;representing recordized code in the core language.
+  (define (optimize-direct-calls x)
+    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the  core language,  and building  a new  hierarchy of  optimised,
+    ;;recordized code; return the new hierarchy.
     ;;
     (struct-case x
       ((constant)
@@ -1843,44 +1834,50 @@
        x)
 
       ((bind lhs* rhs* body)
-       (make-bind lhs* ($map/stx E rhs*) (E body)))
+       (make-bind lhs* ($map/stx optimize-direct-calls rhs*) (optimize-direct-calls body)))
 
       ((recbind lhs* rhs* body)
-       (make-recbind lhs* ($map/stx E rhs*) (E body)))
+       (make-recbind lhs* ($map/stx optimize-direct-calls rhs*) (optimize-direct-calls body)))
 
       ((rec*bind lhs* rhs* body)
-       (make-rec*bind lhs* ($map/stx E rhs*) (E body)))
+       (make-rec*bind lhs* ($map/stx optimize-direct-calls rhs*) (optimize-direct-calls body)))
 
       ((conditional test conseq altern)
        (make-conditional
-	   (E test)
-         (E conseq)
-         (E altern)))
+	   (optimize-direct-calls test)
+	 (optimize-direct-calls conseq)
+	 (optimize-direct-calls altern)))
 
       ((seq e0 e1)
-       (make-seq (E e0) (E e1)))
+       (make-seq (optimize-direct-calls e0) (optimize-direct-calls e1)))
 
       ((clambda label clause* cp free name)
        (make-clambda label
 		     (map (lambda (x)
 			    (struct-case x
 			      ((clambda-case info body)
-			       (make-clambda-case info (E body)))))
+			       (make-clambda-case info (optimize-direct-calls body)))))
 		       clause*)
 		     cp free name))
 
       ((funcall rator rand*)
-       (inline make-funcall (E rator) ($map/stx E rand*)))
+       (inline make-funcall (optimize-direct-calls rator) ($map/stx optimize-direct-calls rand*)))
 
       ((forcall rator rand*)
-       (make-forcall rator ($map/stx E rand*)))
+       (make-forcall rator ($map/stx optimize-direct-calls rand*)))
 
       ((assign lhs rhs)
        (assert (prelex-source-assigned? lhs))
-       (make-assign lhs (E rhs)))
+       (make-assign lhs (optimize-direct-calls rhs)))
 
       (else
        (error who "invalid expression" (unparse x)))))
+
+  (define open-mvcalls
+    ;;When set  to true: an  attempt is made  to expand inline  calls to
+    ;;CALL-WITH-VALUES by inserting local bindings.
+    ;;
+    (make-parameter #t))
 
   (module (inline)
 
@@ -2140,7 +2137,7 @@
 
     #| end of module: try-inline |# )
 
-  (E x))
+  #| end of module: optimize-direct-calls |# )
 
 
 
