@@ -2306,7 +2306,7 @@
   (define who 'rewrite-references-and-assignments)
 
   (define (rewrite-references-and-assignments x)
-    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
+    ;;Perform code  transformation traversing the whole  hierarchy in X,
     ;;which must  be a struct  instance representing recordized  code in
     ;;the core  language, and building  a new hierarchy  of transformed,
     ;;recordized code; return the new hierarchy.
@@ -2507,7 +2507,7 @@
     (identifier-syntax introduce-vars))
 
   (define (introduce-vars x)
-    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
+    ;;Perform code  transformation traversing the whole  hierarchy in X,
     ;;which must  be a struct  instance representing recordized  code in
     ;;the core  language, and building  a new hierarchy  of transformed,
     ;;recordized code; return the new hierarchy.
@@ -2602,59 +2602,98 @@
   #| end of module: introduce-vars |# )
 
 
-(define (sanitize-bindings x)
+(module (sanitize-bindings)
+  ;;
+  ;;This module  must be used with  recordized code in which  the PRELEX
+  ;;instances have been already substituted by VAR instances.
+  ;;
   (define who 'sanitize-bindings)
-  (define (CLambda x)
+
+  ;;Make the code more readable.
+  (define-syntax E
+    (identifier-syntax sanitize-bindings))
+
+  (define (sanitize-bindings x)
+    ;;Perform code  transformation traversing the whole  hierarchy in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the core  language, and building  a new hierarchy  of transformed,
+    ;;recordized code; return the new hierarchy.
+    ;;
     (struct-case x
+      ((constant)
+       x)
+
+      ((var)
+       x)
+
+      ((primref)
+       x)
+
+      ((bind lhs* rhs* body)
+       (let-values (((lambda* other*) (partition (lambda (x)
+						   (clambda? (cdr x)))
+					(map cons lhs* rhs*))))
+         (make-bind (map car other*)
+                    (map E (map cdr other*))
+		    (do-fix (map car lambda*)
+			    (map cdr lambda*)
+			    body))))
+
+      ((fix lhs* rhs* body)
+       (do-fix lhs* rhs* body))
+
+      ((conditional test conseq altern)
+       (make-conditional (E test) (E conseq) (E altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
       ((clambda g cls* cp free name)
-       (make-clambda g
+       (let ((t (unique-var 'anon)))
+         (make-fix (list t) (list (CLambda x)) t)))
+
+      ((forcall op rand*)
+       (make-forcall op (map E rand*)))
+
+      ((funcall rator rand*)
+       (make-funcall (A rator) (map A rand*)))
+
+      ((mvcall p c)
+       (make-mvcall (E p) (E c)))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
+
+  (define (CLambda x)
+    ;;The purpose of this function is to  apply E to every body of every
+    ;;CASE-LAMBDA clause.
+    ;;
+    (struct-case x
+      ((clambda label clause* cp free name)
+       (make-clambda label
 		     (map (lambda (cls)
 			    (struct-case cls
 			      ((clambda-case info body)
 			       (struct-case info
 				 ((case-info label fml* proper)
-				  (make-clambda-case
-				   (make-case-info label fml* proper)
-				   (Expr body)))))))
-		       cls*)
+				  (make-clambda-case (make-case-info label fml* proper)
+						     (E body)))))))
+		       clause*)
 		     cp free name))))
+
   (define (do-fix lhs* rhs* body)
     (if (null? lhs*)
-        (Expr body)
-      (make-fix lhs* (map CLambda rhs*) (Expr body))))
+        (E body)
+      (make-fix lhs* (map CLambda rhs*) (E body))))
+
   (define (A x)
     (struct-case x
-      ((known x t) (make-known (Expr x) t))
-      (else (Expr x))))
-  (define (Expr x)
-    (struct-case x
-      ((constant) x)
-      ((var)      x)
-      ((primref) x)
-      ((bind lhs* rhs* body)
-       (let-values (((lambda* other*)
-                     (partition
-			 (lambda (x) (clambda? (cdr x)))
-                       (map cons lhs* rhs*))))
-         (make-bind (map car other*)
-                    (map Expr (map cdr other*))
-		    (do-fix (map car lambda*) (map cdr lambda*)
-			    body))))
-      ((fix lhs* rhs* body)
-       (do-fix lhs* rhs* body))
-      ((conditional test conseq altern)
-       (make-conditional (Expr test) (Expr conseq) (Expr altern)))
-      ((seq e0 e1) (make-seq (Expr e0) (Expr e1)))
-      ((clambda g cls* cp free name)
-       (let ((t (unique-var 'anon)))
-         (make-fix (list t) (list (CLambda x)) t)))
-      ((forcall op rand*)
-       (make-forcall op (map Expr rand*)))
-      ((funcall rator rand*)
-       (make-funcall (A rator) (map A rand*)))
-      ((mvcall p c) (make-mvcall (Expr p) (Expr c)))
-      (else (error who "invalid expression" (unparse x)))))
-  (Expr x))
+      ((known x t)
+       (make-known (E x) t))
+      (else
+       (E x))))
+
+  #| end of module: sanitize-bindings |# )
 
 
 (define (untag x)
