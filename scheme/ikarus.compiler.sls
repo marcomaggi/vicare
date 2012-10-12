@@ -371,8 +371,12 @@
 		;Boolean, true when the region  in which this binding is
 		;defined has at least one reference to it.
    (source-assigned?     #f)
-		;Boolean,  true  when  the  binding  has  been  used  as
+		;Boolean or symbol.
+		;
+		;When a boolean: true when  the binding has been used as
 		;left-hand side in a SET! form.
+		;
+		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
    (residual-referenced? #f)
    (residual-assigned?   #f)
    (global-location      #f)
@@ -2306,6 +2310,8 @@
        (cond ((prelex-source-assigned? lhs)
 	      => (lambda (where)
 		   (cond ((symbol? where)
+			  ;;FIXME What is this  case?  (Marco Maggi; Oct
+			  ;;12, 2012)
 			  (make-funcall (make-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
 			 ((prelex-global-location lhs)
@@ -2329,6 +2335,9 @@
        (error who "invalid expression" (unparse x)))))
 
   (define (%fix-lhs* lhs*)
+    ;;LHS* is  a list  of struct instances  of type  PRELEX representing
+    ;;bindings.
+    ;;
     (if (null? lhs*)
 	(values '() '() '())
       (let ((x (car lhs*)))
