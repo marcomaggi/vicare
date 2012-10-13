@@ -3469,7 +3469,12 @@
 	 x)
 
 	((bind lhs* rhs* body)
-	 (%do-bind lhs* rhs* body))
+	 ($for-each/stx unset! lhs*)
+	 (let ((rhs*^ ($map/stx E rhs*)))
+	   ($for-each/stx copy-subst! lhs* rhs*^)
+	   (let ((body^ (E body)))
+	     ($for-each/stx unset! lhs*)
+	     (make-bind lhs* rhs*^ body^))))
 
 	((fix lhs* rhs* body)
 	 (%do-fix lhs* rhs* body))
@@ -3481,13 +3486,13 @@
 	 (make-seq (E e0) (E e1)))
 
 	((forcall op rand*)
-	 (make-forcall op (map E rand*)))
+	 (make-forcall op ($map/stx E rand*)))
 
 	((funcall rator rand*)
-	 (make-funcall (E-known rator) (map E-known rand*)))
+	 (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
 	((jmpcall label rator rand*)
-	 (make-jmpcall label (E rator) (map E rand*)))
+	 (make-jmpcall label (E rator) ($map/stx E rand*)))
 
 	(else
 	 (error who "invalid expression" (unparse x)))))
@@ -3501,108 +3506,118 @@
 
     #| end of module: E |# )
 
-  (define (%do-bind lhs* rhs* body)
-    ($for-each/stx unset! lhs*)
-    (let ((rhs* (map E rhs*)))
-      ($for-each/stx copy-subst! lhs* rhs*)
-      (let ((body (E body)))
-	($for-each/stx unset! lhs*)
-	(make-bind lhs* rhs* body))))
+  (module (%do-fix)
 
-  (define (%do-fix lhs* rhs* body)
-    ($for-each/stx unset! lhs*)
-    ;;Trim the free lists first; after init.
-    (let ((free** (map (lambda (lhs rhs)
-			 ;;Remove self also.
-			 (remq lhs (%trim-free (closure-free* rhs))))
-		    lhs* rhs*)))
-      (define-struct node
-	(name code deps whacked free wk?))
-      (let ((node* (map (lambda (lhs rhs)
-			  (let ((n (make-node lhs (closure-code rhs)
-					      '() #f '()
-					      (closure-well-known? rhs))))
-			    (set-subst! lhs n)
-			    n))
-		     lhs* rhs*)))
-	;;If X is free in Y, then whenever X becomes a non-combinator, Y
-	;;also   becomes  a   non-combinator.   Here,   we  mark   these
-	;;dependencies.
-	(for-each
-	    (lambda (my-node free*)
-	      (for-each (lambda (fvar)
-			  (cond ((get-subst fvar)
-				 ;;One of ours.
-				 => (lambda (her-node)
-				      (set-node-deps! her-node
-						      (cons my-node (node-deps her-node)))))
-				(else ;;; not one of ours
-				 (set-node-free! my-node
-						 (cons fvar (node-free my-node))))))
-		free*))
-	  node* free**)
-	;;Next, we go  over the list of  nodes, and if we  find one that
-	;;has any free  variables, we know it's a  non-combinator, so we
-	;;whack it and add it to all of its dependents.
-	(let ()
-	  (define (process-node x)
-	    (when (cond ((null? (node-free x))
-			 #f)
-			;; ((and (node-wk? x)
-			;;       (null? (cdr (node-free x))))
-			;;  #f)
-			(else
-			 #t))
-	      (unless (node-whacked x)
-		(set-node-whacked! x #t)
-		(for-each (lambda (y)
-			    (set-node-free! y (cons (node-name x) (node-free y)))
-			    (process-node y))
-		  (node-deps x)))))
-	  ($for-each/stx process-node node*))
-	;;Now those that have free variables are actual closures.  Those
-	;;with no free variables are actual combinators.
-	(let ((rhs* (map (lambda (node)
-			   (let ((wk?  (node-wk?  node))
-				 (name (node-name node))
-				 (free (node-free node)))
-			     (let ((closure (make-closure (node-code node) free wk?)))
-			       (cond ((null? free)
-				      (set-subst! name closure))
-				     ((and (null? (cdr free)) wk?)
-				      (set-subst! name closure))
-				     (else
-				      (unset! name)))
-			       closure)))
-		      node*)))
-	  (for-each (lambda (lhs^ closure)
-		      (let* ((lhs  (get-forward! lhs^))
-			     (free (filter var?
-				     (remq lhs (%trim-free (closure-free* closure))))))
-			(set-closure-free*! closure free)
-			(set-closure-code!  closure
-					    (lift-code lhs
-						       (closure-code  closure)
-						       (closure-free* closure)))))
-	    lhs* rhs*)
-	  (let ((body (E body)))
-	    (let f ((lhs* lhs*)
-		    (rhs* rhs*)
-		    (l*   '())
-		    (r*   '()))
-	      (cond ((null? lhs*)
-		     (if (null? l*)
-			 body
-		       (make-fix l* r* body)))
-		    (else
-		     (let ((lhs (car lhs*))
-			   (rhs (car rhs*)))
-		       (cond ((get-subst lhs)
-			      (unset! lhs)
-			      (f (cdr lhs*) (cdr rhs*) l* r*))
-			     (else
-			      (f (cdr lhs*) (cdr rhs*)
-				 (cons lhs l*) (cons rhs r*)))))))))))))
+    (define (%do-fix lhs* rhs* body)
+      ($for-each/stx unset! lhs*)
+      ;;Trim the free lists first; after init.
+      (let ((free** (map (lambda (lhs rhs)
+			   ;;Remove self also.
+			   (remq lhs (%trim-free (closure-free* rhs))))
+		      lhs* rhs*)))
+	(define-struct node
+	  (name code deps whacked free wk?))
+	(let ((node* (map (lambda (lhs rhs)
+			    (let ((n (make-node lhs (closure-code rhs)
+						'() #f '()
+						(closure-well-known? rhs))))
+			      (set-subst! lhs n)
+			      n))
+		       lhs* rhs*)))
+	  ;;If X is free in Y, then whenever X becomes a non-combinator, Y
+	  ;;also   becomes  a   non-combinator.   Here,   we  mark   these
+	  ;;dependencies.
+	  (for-each
+	      (lambda (my-node free*)
+		(for-each (lambda (fvar)
+			    (cond ((get-subst fvar)
+				   ;;One of ours.
+				   => (lambda (her-node)
+					(set-node-deps! her-node
+							(cons my-node (node-deps her-node)))))
+				  (else ;;; not one of ours
+				   (set-node-free! my-node
+						   (cons fvar (node-free my-node))))))
+		  free*))
+	    node* free**)
+	  ;;Next, we go  over the list of  nodes, and if we  find one that
+	  ;;has any free  variables, we know it's a  non-combinator, so we
+	  ;;whack it and add it to all of its dependents.
+	  (let ()
+	    (define (%process-node x)
+	      (when (cond ((null? (node-free x))
+			   #f)
+			  ;; ((and (node-wk? x)
+			  ;;       (null? (cdr (node-free x))))
+			  ;;  #f)
+			  (else
+			   #t))
+		(unless (node-whacked x)
+		  (set-node-whacked! x #t)
+		  (for-each (lambda (y)
+			      (set-node-free! y (cons (node-name x) (node-free y)))
+			      (%process-node y))
+		    (node-deps x)))))
+	    ($for-each/stx %process-node node*))
+	  ;;Now those that have free variables are actual closures.  Those
+	  ;;with no free variables are actual combinators.
+	  (let ((rhs* (map (lambda (node)
+			     (let ((wk?  (node-wk?  node))
+				   (name (node-name node))
+				   (free (node-free node)))
+			       (let ((closure (make-closure (node-code node) free wk?)))
+				 (cond ((null? free)
+					(set-subst! name closure))
+				       ((and (null? (cdr free)) wk?)
+					(set-subst! name closure))
+				       (else
+					(unset! name)))
+				 closure)))
+			node*)))
+	    (for-each (lambda (lhs^ closure)
+			(let* ((lhs  (get-forward! lhs^))
+			       (free (filter var?
+				       (remq lhs (%trim-free (closure-free* closure))))))
+			  (set-closure-free*! closure free)
+			  (set-closure-code!  closure (lift-code lhs (closure-code  closure)
+								 (closure-free* closure)))))
+	      lhs* rhs*)
+	    (let ((body^ (E body)))
+	      (let loop ((lhs* lhs*)
+			 (rhs* rhs*)
+			 (l*   '())
+			 (r*   '()))
+		(if (null? lhs*)
+		    (if (null? l*)
+			body^
+		      (make-fix l* r* body^))
+		  (let ((lhs (car lhs*))
+			(rhs (car rhs*)))
+		    (if (get-subst lhs)
+			(begin
+			  (unset! lhs)
+			  (loop (cdr lhs*) (cdr rhs*) l* r*))
+		      (loop (cdr lhs*) (cdr rhs*) (cons lhs l*) (cons rhs r*)))))))))))
+
+    (define (%trim-free ls)
+      (cond ((null? ls)
+	     '())
+	    ((get-forward! (car ls))
+	     => (lambda (what)
+		  (let ((rest (%trim-free (cdr ls))))
+		    (struct-case what
+		      ((closure)
+		       rest)
+		      ((var)
+		       (if (memq what rest)
+			   rest
+			 (cons what rest)))
+		      (else
+		       (error who "invalid value in %trim-free" what))))))
+	    (else
+	     (cons (car ls) (%trim-free (cdr ls))))))
+
+    #| end of module: %do-fix |# )
 
   (define (get-forward! x)
     (when (eq? x 'q)
@@ -3677,31 +3692,12 @@
 	     (set-var-index! lhs #f))))
 
     (define (get-subst x)
-      (unless (var? x)
-	(error 'get-subst "not a var" x))
+      #;(assert (var? x))
       (struct-case (var-index x)
 	((prop v)	v)
 	(else		#f)))
 
     #| end of module |# )
-
-  (define (%trim-free ls)
-    (cond ((null? ls)
-	   '())
-	  ((get-forward! (car ls))
-	   => (lambda (what)
-		(let ((rest (%trim-free (cdr ls))))
-		  (struct-case what
-		    ((closure)
-		     rest)
-		    ((var)
-		     (if (memq what rest)
-			 rest
-		       (cons what rest)))
-		    (else
-		     (error who "invalid value in %trim-free" what))))))
-	  (else
-	   (cons (car ls) (%trim-free (cdr ls))))))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 13, 2012)
   ;;
