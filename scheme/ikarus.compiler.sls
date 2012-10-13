@@ -3441,9 +3441,6 @@
   (define all-codes
     (make-parameter #f))
 
-  (define-inline (prepend-to-all-codes obj)
-    (all-codes (cons obj (all-codes))))
-
   (define (optimize-closures/lift-codes X)
     (parametrise ((all-codes '()))
       ;;(when (optimize-cp)
@@ -3644,6 +3641,8 @@
     ;;Return a struct instance of type CODE-LOC holding the label of the
     ;;argument CODE.
     ;;
+    (define-inline (prepend-to-all-codes obj)
+      (all-codes (cons obj (all-codes))))
     (struct-case code
       ((clambda label clause* cp.dropped free*.dropped name)
        (let ((clause* (map (lambda (clause)
