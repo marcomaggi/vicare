@@ -3041,104 +3041,156 @@
   #| end of module: optimize-for-direct-jumps |# )
 
 
-(define (insert-global-assignments x)
+(module (insert-global-assignments)
+
   (define who 'insert-global-assignments)
-  (define (global-assign lhs* body)
-    (cond
-      ((null? lhs*) body)
-      ((var-global-loc (car lhs*)) =>
-       (lambda (loc)
-         (make-seq
-           (make-funcall (make-primref '$init-symbol-value!)
-             (list (make-constant loc) (car lhs*)))
-           (global-assign (cdr lhs*) body))))
-      (else (global-assign (cdr lhs*) body))))
-  (define (global-fix lhs* body)
-    (cond
-      ((null? lhs*) body)
-      ((var-global-loc (car lhs*)) =>
-       (lambda (loc)
-         (make-seq
-           (make-funcall (make-primref '$set-symbol-value/proc!)
-             (list (make-constant loc) (car lhs*)))
-           (global-assign (cdr lhs*) body))))
-      (else (global-assign (cdr lhs*) body))))
-  (define (A x)
+
+  ;;Make the code more readable.
+  (define-syntax M
+    (identifier-syntax insert-global-assignments))
+
+  (define (insert-global-assignments x)
+    ;;Perform code  transformation traversing the whole  hierarchy in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the core  language, and building  a new hierarchy  of transformed,
+    ;;recordized code; return the new hierarchy.
+    ;;
     (struct-case x
-      ((known x t) (make-known (Expr x) t))
-      (else (Expr x))))
-  (define (Expr x)
-    (struct-case x
-      ((constant) x)
+      ((constant)
+       x)
+
       ((var)
-       (cond
-         ((var-global-loc x) =>
-          (lambda (loc)
-            (make-funcall
-              (make-primref '$symbol-value)
-              (list (make-constant loc)))))
-         (else x)))
-      ((primref)  x)
+       x)
+
+      ((primref)
+       x)
+
       ((bind lhs* rhs* body)
-       (make-bind lhs* (map Expr rhs*)
-         (global-assign lhs* (Expr body))))
+       (make-bind lhs* (map M rhs*)
+		  (%global-assign lhs* (M body))))
+
       ((fix lhs* rhs* body)
-       (make-fix lhs* (map Expr rhs*)
-         (global-fix lhs* (Expr body))))
+       (make-fix lhs* (map M rhs*)
+		 (%global-fix lhs* (M body))))
+
       ((conditional test conseq altern)
-       (make-conditional (Expr test) (Expr conseq) (Expr altern)))
-      ((seq e0 e1) (make-seq (Expr e0) (Expr e1)))
-      ((clambda g cls* cp free name)
-       (make-clambda g
-         (map (lambda (cls)
-                (struct-case cls
-                  ((clambda-case info body)
-                   (make-clambda-case info (Expr body)))))
-              cls*)
-         cp free name))
+       (make-conditional (M test) (M conseq) (M altern)))
+
+      ((seq e0 e1)
+       (make-seq (M e0) (M e1)))
+
+      ((clambda label clause* cp free name)
+       ;;Apply E to every body of every CASE-LAMBDA clause.
+       (make-clambda label
+		     (map (lambda (clause)
+			    (struct-case clause
+			      ((clambda-case info body)
+			       (make-clambda-case info (E body)))))
+		       clause*)
+		     cp free name))
+
       ((forcall op rand*)
-       (make-forcall op (map Expr rand*)))
+       (make-forcall op (map M rand*)))
+
       ((funcall rator rand*)
-       (make-funcall (A rator) (map A rand*)))
+       (make-funcall (M-known rator) (map M-known rand*)))
+
       ((jmpcall label rator rand*)
-       (make-jmpcall label (Expr rator) (map Expr rand*)))
-      (else (error who "invalid expression" (unparse x)))))
-  (define (AM x)
+       (make-jmpcall label (M rator) (map M rand*)))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
+
+  (define (E x)
     (struct-case x
-      ((known x t) (make-known (Main x) t))
-      (else (Main x))))
-  (define (Main x)
-    (struct-case x
-      ((constant) x)
-      ((var)      x)
-      ((primref)  x)
+      ((constant)
+       x)
+
+      ((var)
+       (cond ((var-global-loc x)
+	      => (lambda (loc)
+		   (make-funcall (make-primref '$symbol-value)
+				 (list (make-constant loc)))))
+	     (else x)))
+
+      ((primref)
+       x)
+
       ((bind lhs* rhs* body)
-       (make-bind lhs* (map Main rhs*)
-         (global-assign lhs* (Main body))))
+       (make-bind lhs* (map E rhs*)
+		  (%global-assign lhs* (E body))))
+
       ((fix lhs* rhs* body)
-       (make-fix lhs* (map Main rhs*)
-         (global-fix lhs* (Main body))))
+       (make-fix lhs* (map E rhs*)
+		 (%global-fix lhs* (E body))))
+
       ((conditional test conseq altern)
-       (make-conditional (Main test) (Main conseq) (Main altern)))
-      ((seq e0 e1) (make-seq (Main e0) (Main e1)))
-      ((clambda g cls* cp free name)
-       (make-clambda g
-         (map (lambda (cls)
-                (struct-case cls
-                  ((clambda-case info body)
-                   (make-clambda-case info (Expr body)))))
-              cls*)
-         cp free name))
+       (make-conditional (E test) (E conseq) (E altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((clambda label clause* cp free name)
+       (make-clambda label
+		     (map (lambda (clause)
+			    (struct-case clause
+			      ((clambda-case info body)
+			       (make-clambda-case info (E body)))))
+		       clause*)
+		     cp free name))
+
       ((forcall op rand*)
-       (make-forcall op (map Main rand*)))
+       (make-forcall op (map E rand*)))
+
       ((funcall rator rand*)
-       (make-funcall (AM rator) (map AM rand*)))
+       (make-funcall (E-known rator) (map E-known rand*)))
+
       ((jmpcall label rator rand*)
-       (make-jmpcall label (Main rator) (map Main rand*)))
-      (else (error who "invalid expression" (unparse x)))))
-  (let ((x (Main x)))
-    ;(pretty-print x)
-    x))
+       (make-jmpcall label (E rator) (map E rand*)))
+
+      (else
+       (error who "invalid expression" (unparse x)))))
+
+  (define (%global-assign lhs* body)
+    (cond ((null? lhs*)
+	   body)
+	  ((var-global-loc (car lhs*))
+	   => (lambda (loc)
+		(make-seq (make-funcall (make-primref '$init-symbol-value!)
+					(list (make-constant loc) (car lhs*)))
+			  (%global-assign (cdr lhs*) body))))
+	  (else
+	   (%global-assign (cdr lhs*) body))))
+
+  (define (%global-fix lhs* body)
+    ;;Prepend   to   the   body   of    a   FIX   struct   a   call   to
+    ;;$SET-SYMBOL-VALUE/PROC!.
+    ;;
+    (cond ((null? lhs*)
+	   body)
+	  ((var-global-loc (car lhs*))
+	   => (lambda (loc)
+		(make-seq (make-funcall (make-primref '$set-symbol-value/proc!)
+					(list (make-constant loc) (car lhs*)))
+			  (%global-assign (cdr lhs*) body))))
+	  (else
+	   (%global-assign (cdr lhs*) body))))
+
+  (define (E-known x)
+    (struct-case x
+      ((known x t)
+       (make-known (E x) t))
+      (else
+       (E x))))
+
+  (define (M-known x)
+    (struct-case x
+      ((known x t)
+       (make-known (M x) t))
+      (else
+       (M x))))
+
+  #| end of module: insert-global-assignments |# )
 
 
 (define optimize-cp (make-parameter #t))
