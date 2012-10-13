@@ -3055,6 +3055,9 @@
     ;;the core  language, and building  a new hierarchy  of transformed,
     ;;recordized code; return the new hierarchy.
     ;;
+    ;;This  function  traverses  top  level  forms  only;  forms  inside
+    ;;CASE-LAMBDA are traversed by the function E.
+    ;;
     (struct-case x
       ((constant)
        x)
@@ -3066,11 +3069,11 @@
        x)
 
       ((bind lhs* rhs* body)
-       (make-bind lhs* (map M rhs*)
+       (make-bind lhs* ($map/stx M rhs*)
 		  (%global-assign lhs* (M body))))
 
       ((fix lhs* rhs* body)
-       (make-fix lhs* (map M rhs*)
+       (make-fix lhs* ($map/stx M rhs*)
 		 (%global-fix lhs* (M body))))
 
       ((conditional test conseq altern)
@@ -3090,13 +3093,13 @@
 		     cp free name))
 
       ((forcall op rand*)
-       (make-forcall op (map M rand*)))
+       (make-forcall op ($map/stx M rand*)))
 
       ((funcall rator rand*)
-       (make-funcall (M-known rator) (map M-known rand*)))
+       (make-funcall (M-known rator) ($map/stx M-known rand*)))
 
       ((jmpcall label rator rand*)
-       (make-jmpcall label (M rator) (map M rand*)))
+       (make-jmpcall label (M rator) ($map/stx M rand*)))
 
       (else
        (error who "invalid expression" (unparse x)))))
@@ -3117,11 +3120,11 @@
        x)
 
       ((bind lhs* rhs* body)
-       (make-bind lhs* (map E rhs*)
+       (make-bind lhs* ($map/stx E rhs*)
 		  (%global-assign lhs* (E body))))
 
       ((fix lhs* rhs* body)
-       (make-fix lhs* (map E rhs*)
+       (make-fix lhs* ($map/stx E rhs*)
 		 (%global-fix lhs* (E body))))
 
       ((conditional test conseq altern)
@@ -3131,6 +3134,7 @@
        (make-seq (E e0) (E e1)))
 
       ((clambda label clause* cp free name)
+       ;;Apply E to every body of every CASE-LAMBDA clause.
        (make-clambda label
 		     (map (lambda (clause)
 			    (struct-case clause
@@ -3140,41 +3144,41 @@
 		     cp free name))
 
       ((forcall op rand*)
-       (make-forcall op (map E rand*)))
+       (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (make-funcall (E-known rator) (map E-known rand*)))
+       (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       ((jmpcall label rator rand*)
-       (make-jmpcall label (E rator) (map E rand*)))
+       (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
        (error who "invalid expression" (unparse x)))))
 
-  (define (%global-assign lhs* body)
+  (define (%global-assign lhs* body.already-processed)
     (cond ((null? lhs*)
-	   body)
+	   body.already-processed)
 	  ((var-global-loc (car lhs*))
 	   => (lambda (loc)
 		(make-seq (make-funcall (make-primref '$init-symbol-value!)
 					(list (make-constant loc) (car lhs*)))
-			  (%global-assign (cdr lhs*) body))))
+			  (%global-assign (cdr lhs*) body.already-processed))))
 	  (else
-	   (%global-assign (cdr lhs*) body))))
+	   (%global-assign (cdr lhs*) body.already-processed))))
 
-  (define (%global-fix lhs* body)
+  (define (%global-fix lhs* body.already-processed)
     ;;Prepend   to   the   body   of    a   FIX   struct   a   call   to
     ;;$SET-SYMBOL-VALUE/PROC!.
     ;;
     (cond ((null? lhs*)
-	   body)
+	   body.already-processed)
 	  ((var-global-loc (car lhs*))
 	   => (lambda (loc)
 		(make-seq (make-funcall (make-primref '$set-symbol-value/proc!)
 					(list (make-constant loc) (car lhs*)))
-			  (%global-assign (cdr lhs*) body))))
+			  (%global-assign (cdr lhs*) body.already-processed))))
 	  (else
-	   (%global-assign (cdr lhs*) body))))
+	   (%global-assign (cdr lhs*) body.already-processed))))
 
   (define (E-known x)
     (struct-case x
