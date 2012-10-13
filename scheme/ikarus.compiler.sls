@@ -3514,7 +3514,7 @@
     ;;Trim the free lists first; after init.
     (let ((free** (map (lambda (lhs rhs)
 			 ;;Remove self also.
-			 (remq lhs (trim-free (closure-free* rhs))))
+			 (remq lhs (%trim-free (closure-free* rhs))))
 		    lhs* rhs*)))
       (define-struct node
 	(name code deps whacked free wk?))
@@ -3578,7 +3578,7 @@
 	  (for-each (lambda (lhs^ closure)
 		      (let* ((lhs  (get-forward! lhs^))
 			     (free (filter var?
-				     (remq lhs (trim-free (closure-free* closure))))))
+				     (remq lhs (%trim-free (closure-free* closure))))))
 			(set-closure-free*! closure free)
 			(set-closure-code!  closure
 					    (lift-code lhs
@@ -3660,24 +3660,19 @@
       (val))
 
     (define (unset! x)
-      (unless (var? x)
-	(error 'unset! "not a var" x))
+      #;(assert (var? x))
       (set-var-index! x #f))
 
     (define (set-subst! x v)
-      (unless (var? x)
-	(error 'set-subst! "not a var" x))
+      #;(assert (var? x))
       (set-var-index! x (make-prop v)))
 
     (define (copy-subst! lhs rhs)
-      (unless (var? lhs)
-	(error 'copy-subst! "not a var" lhs))
+      #;(assert (var? lhs))
       (cond ((and (var? rhs)
 		  (var-index rhs))
 	     => (lambda (v)
-		  (if (prop? v)
-		      (set-var-index! lhs v)
-		    (set-var-index! lhs #f))))
+		  (set-var-index! lhs (if (prop? v) v #f))))
 	    (else
 	     (set-var-index! lhs #f))))
 
@@ -3690,12 +3685,12 @@
 
     #| end of module |# )
 
-  (define (trim-free ls)
+  (define (%trim-free ls)
     (cond ((null? ls)
 	   '())
 	  ((get-forward! (car ls))
 	   => (lambda (what)
-		(let ((rest (trim-free (cdr ls))))
+		(let ((rest (%trim-free (cdr ls))))
 		  (struct-case what
 		    ((closure)
 		     rest)
@@ -3704,9 +3699,9 @@
 			 rest
 		       (cons what rest)))
 		    (else
-		     (error who "invalid value in trim-free" what))))))
+		     (error who "invalid value in %trim-free" what))))))
 	  (else
-	   (cons (car ls) (trim-free (cdr ls))))))
+	   (cons (car ls) (%trim-free (cdr ls))))))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 13, 2012)
   ;;
