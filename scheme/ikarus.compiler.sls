@@ -3929,6 +3929,7 @@
 
 
 (define fx?
+  ;;Return if X is an exact signed integer that fits in a machine word.
   (let* ((intbits	($fx* wordsize 8))
          (fxbits	($fx- intbits fx-shift))
 	 (t		(expt 2 ($fx- fxbits 1)))
