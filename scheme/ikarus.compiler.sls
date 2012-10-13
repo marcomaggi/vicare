@@ -3105,6 +3105,9 @@
        (error who "invalid expression" (unparse x)))))
 
   (define (E x)
+    ;;Traverses  the  recordized code  inside  the  body of  CASE-LAMBDA
+    ;;forms.
+    ;;
     (struct-case x
       ((constant)
        x)
@@ -3156,29 +3159,35 @@
        (error who "invalid expression" (unparse x)))))
 
   (define (%global-assign lhs* body.already-processed)
-    (cond ((null? lhs*)
-	   body.already-processed)
-	  ((var-global-loc (car lhs*))
-	   => (lambda (loc)
-		(make-seq (make-funcall (make-primref '$init-symbol-value!)
-					(list (make-constant loc) (car lhs*)))
-			  (%global-assign (cdr lhs*) body.already-processed))))
-	  (else
-	   (%global-assign (cdr lhs*) body.already-processed))))
-
-  (define (%global-fix lhs* body.already-processed)
-    ;;Prepend   to   the   body   of    a   FIX   struct   a   call   to
-    ;;$SET-SYMBOL-VALUE/PROC!.
+    ;;Prepend to the body of a BIND struct a call to $INIT-SYMBOL-VALUE!
+    ;;for each of the VAR structs in LHS*.
     ;;
     (cond ((null? lhs*)
 	   body.already-processed)
-	  ((var-global-loc (car lhs*))
+	  ((var-global-loc ($car lhs*))
+	   => (lambda (loc)
+		(make-seq (make-funcall (make-primref '$init-symbol-value!)
+					(list (make-constant loc) ($car lhs*)))
+			  (%global-assign ($cdr lhs*) body.already-processed))))
+	  (else
+	   (%global-assign ($cdr lhs*) body.already-processed))))
+
+  (define (%global-fix lhs* body.already-processed)
+    ;;Prepend   to   the   body   of    a   FIX   struct   a   call   to
+    ;;$SET-SYMBOL-VALUE/PROC! for the first VAR struct in LHS*; the rest
+    ;;of the VAR structs are handed to %GLOBAL-ASSIGN.
+    ;;
+    ;;FIXME Why is this?  (Marco Maggi; Oct 13, 2012)
+    ;;
+    (cond ((null? lhs*)
+	   body.already-processed)
+	  ((var-global-loc ($car lhs*))
 	   => (lambda (loc)
 		(make-seq (make-funcall (make-primref '$set-symbol-value/proc!)
-					(list (make-constant loc) (car lhs*)))
-			  (%global-assign (cdr lhs*) body.already-processed))))
+					(list (make-constant loc) ($car lhs*)))
+			  (%global-assign ($cdr lhs*) body.already-processed))))
 	  (else
-	   (%global-assign (cdr lhs*) body.already-processed))))
+	   (%global-assign ($cdr lhs*) body.already-processed))))
 
   (define (E-known x)
     (struct-case x
