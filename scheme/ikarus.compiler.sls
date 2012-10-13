@@ -314,7 +314,7 @@
   ;;
   (make-parameter #f))
 
-(define-inline (singleton x)
+#;(define-inline (singleton x)
   ;;Wrap  the object  X  into a  unique  container, so  that  it can  be
   ;;compared with EQ?.
   ;;
@@ -3230,66 +3230,71 @@
 	(error who "free vars encountered in program" (map unparse free)))))
 
   (define (E X)
+    ;;Traverse  the  recordized  code  X  and return  2  values:  a  new
+    ;;recordized code hierarchy, a list  of struct instances of type VAR
+    ;;representing the free variables in X.
+    ;;
     (struct-case X
       ((constant)
        (values X '()))
 
       ((var)
        (set-var-index! X #f)
-       (values X (singleton X)))
+       (values X (list X)))
 
       ((primref)
        (values X '()))
 
       ((bind lhs* rhs* body)
-       (let-values (((rhs* rhs-free)  (E* rhs*))
-                    ((body body-free) (E  body)))
-	 (values (make-bind lhs* rhs* body)
+       (let-values (((rhs*^ rhs-free)  (E* rhs*))
+                    ((body^ body-free) (E  body)))
+	 (values (make-bind lhs* rhs*^ body^)
 		 (union rhs-free (difference body-free lhs*)))))
 
       ((fix lhs* rhs* body)
        (for-each (lambda (x)
 		   (set-var-index! x #t))
 	 lhs*)
-       (let-values (((rhs* rfree) (do-clambda* lhs* rhs*))
-                    ((body bfree) (E body)))
+       (let-values (((rhs*^ rhd-free)  (%do-clambda* lhs* rhs*))
+                    ((body^ body-free) (E body)))
 	 (for-each (lambda (lhs rhs)
 		     (when (var-index lhs)
 		       (set-closure-well-known?! rhs #t)
 		       (set-var-index! lhs #f)))
-	   lhs* rhs*)
-	 (values (make-fix lhs* rhs* body)
-		 (difference (union bfree rfree) lhs*))))
+	   lhs* rhs*^)
+	 (values (make-fix lhs* rhs*^ body^)
+		 (difference (union body-free rhd-free) lhs*))))
 
       ((conditional test conseq altern)
-       (let-values (((test   test-free)   (E test))
-                    ((conseq conseq-free) (E conseq))
-                    ((altern altern-free) (E altern)))
-         (values (make-conditional test conseq altern)
+       (let-values (((test^     test-free) (E test))
+                    ((conseq^ conseq-free) (E conseq))
+                    ((altern^ altern-free) (E altern)))
+         (values (make-conditional test^ conseq^ altern^)
                  (union test-free (union conseq-free altern-free)))))
 
       ((seq e0 e1)
-       (let-values (((e0 e0-free) (E e0))
-                    ((e1 e1-free) (E e1)))
-         (values (make-seq e0 e1)
+       (let-values (((e0^ e0-free) (E e0))
+                    ((e1^ e1-free) (E e1)))
+         (values (make-seq e0^ e1^)
 		 (union e0-free e1-free))))
 
       ((forcall op rand*)
-       (let-values (((rand* rand*-free) (E* rand*)))
-         (values (make-forcall op rand*) rand*-free)))
+       (let-values (((rand*^ rand*-free) (E* rand*)))
+         (values (make-forcall op rand*^)
+		 rand*-free)))
 
       ((funcall rator rand*)
-       (let-values (((rator rat-free)   (E-known  rator))
-                    ((rand* rand*-free) (E-known* rand*)))
-         (values (make-funcall rator rand*)
+       (let-values (((rator^ rat-free)   (E-known  rator))
+                    ((rand*^ rand*-free) (E-known* rand*)))
+         (values (make-funcall rator^ rand*^)
                  (union rat-free rand*-free))))
 
       ((jmpcall label rator rand*)
-       (let-values (((rator rat-free)   (if (optimize-cp)
+       (let-values (((rator^ rat-free)   (if (optimize-cp)
 					    (Rator rator)
 					  (E rator)))
-                    ((rand* rand*-free) (E-known* rand*)))
-         (values (make-jmpcall label rator rand*)
+                    ((rand*^ rand*-free) (E-known* rand*)))
+         (values (make-jmpcall label rator^ rand*^)
                  (union rat-free rand*-free))))
 
       (else
@@ -3302,34 +3307,41 @@
 		   ((d d-free) (E* (cdr x*))))
 	(values (cons a d) (union a-free d-free)))))
 
-  (define (do-clambda* lhs* x*)
-    (if (null? x*)
-	(values '() '())
-      (let-values (((a a-free) (do-clambda  (car lhs*) (car x*)))
-		   ((d d-free) (do-clambda* (cdr lhs*) (cdr x*))))
-	(values (cons a d) (union a-free d-free)))))
+  (module (%do-clambda*)
 
-  (define (do-clambda lhs x)
-    ;;X must be a struct instance of type CLAMBDA.
-    ;;
-    (struct-case x
-      ((clambda label clause* _cp _free name)
-       (let-values
-	   (((clause* free)
-	     (let recur ((clause* clause*))
-	       (if (null? clause*)
-		   (values '() '())
-		 (struct-case (car clause*)
-		   ((clambda-case info body)
-		    (let-values
-			(((body    body-free)    (E body))
-			 ((clause* clause*-free) (recur (cdr clause*))))
-		      (values (cons (make-clambda-case info body) clause*)
-			      (union (difference body-free (case-info-args info))
-				     clause*-free)))))))))
-	 (values (make-closure (make-clambda label clause* lhs free name)
-			       free #f)
-		 free)))))
+    (define (%do-clambda* lhs* x*)
+      ;;Apply %DO-CLAMBDA to every item in LHS*
+      ;;
+      (if (null? x*)
+	  (values '() '())
+	(let-values (((a a-free) (%do-clambda  (car lhs*) (car x*)))
+		     ((d d-free) (%do-clambda* (cdr lhs*) (cdr x*))))
+	  (values (cons a d)
+		  (union a-free d-free)))))
+
+    (define (%do-clambda lhs x)
+      ;;X must be a struct instance of type CLAMBDA.
+      ;;
+      (struct-case x
+	((clambda label clause* _cp _free name)
+	 (let-values
+	     (((clause* free)
+	       (let recur ((clause* clause*))
+		 (if (null? clause*)
+		     (values '() '())
+		   (struct-case (car clause*)
+		     ((clambda-case info body)
+		      (let-values
+			  (((body    body-free)    (E body))
+			   ((clause* clause*-free) (recur (cdr clause*))))
+			(values (cons (make-clambda-case info body) clause*)
+				(union (difference body-free (case-info-args info))
+				       clause*-free)))))))))
+	   (values (make-closure (make-clambda label clause* lhs free name)
+				 free #f)
+		   free)))))
+
+    #| end of module: do-clambda* |# )
 
   (define (E-known x)
     (struct-case x
@@ -3353,7 +3365,7 @@
     ;;
     (struct-case x
       ((var)
-       (values x (singleton x)))
+       (values x (list x)))
       ;;((known x t)
       ;; (let-values (((x free) (Rator x)))
       ;;   (values (make-known x t) free)))
