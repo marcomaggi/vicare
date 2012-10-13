@@ -91,10 +91,24 @@
        (define-syntax ?name
 	 (identifier-syntax ghost))))))
 
-(define-syntax define-inline-constant
+#;(define-syntax define-inline-constant
   (syntax-rules ()
     ((_ ?name ?value)
      (define-syntax ?name (identifier-syntax ?value)))))
+(define-syntax define-inline-constant
+  ;;We want to allow a generic expression to generate the constant value
+  ;;at expand time.
+  ;;
+  (syntax-rules ()
+    ((_ ?name ?expr)
+     (define-syntax ?name
+       (let ((const ?expr))
+	 (lambda (stx)
+	   (syntax-case stx ()
+	     (?id
+	      (identifier? #'?id)
+	      (with-syntax ((VALUE const))
+		#'(quote VALUE))))))))))
 
 (define-syntax define-syntax*
   (syntax-rules ()

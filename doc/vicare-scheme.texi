@@ -20421,19 +20421,27 @@ acting upon @meta{name}.
 @end defmac
 
 
-@defmac define-inline-constant @meta{name} @meta{value}
-Wrapper for @func{identifier-syntax}, expand to:
+@defmac define-inline-constant @meta{name} @meta{expr}
+Expand to:
 
 @example
 (define-syntax @meta{name}
-  (identifier-syntax @meta{value}))
+  (let ((const @meta{expr}))
+    (lambda (stx)
+      (syntax-case stx ()
+        (?id
+         (identifier? #'?id)
+         (with-syntax ((VALUE const))
+           #'(quote VALUE)))))))
 @end example
 
 @noindent
-@meta{value} is evaluated every time @meta{name} is referenced; it is
-impossible to modify the @meta{value} by acting upon @meta{name}.  This
-syntax is useful to defined constants resulting from @gnu{} Autoconf
-expansion:
+@meta{expr} is evaluated only once at expand time; it is impossible to
+modify the result of the expansion of @meta{name} by acting upon
+@meta{name}.
+
+This syntax is also useful to defined constants resulting from @gnu{}
+Autoconf expansion:
 
 @example
 (define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
