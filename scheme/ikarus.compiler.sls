@@ -3928,14 +3928,15 @@
 (define pcb-collect-key			(* 12 wordsize))
 
 
-(define (fx? x)
-  (let* ((intbits (* wordsize 8))
-         (fxbits  (- intbits fx-shift)))
-    (and (or (fixnum? x) (bignum? x))
-         (<= (- (expt 2 (- fxbits 1)))
-             x
-             (- (expt 2 (- fxbits 1)) 1)))))
-
+(define fx?
+  (let* ((intbits	($fx* wordsize 8))
+         (fxbits	($fx- intbits fx-shift))
+	 (t		(expt 2 ($fx- fxbits 1)))
+	 (min		(- t))
+	 (max		(- t 1)))
+    (lambda (x)
+      (and (or (fixnum? x) (bignum? x))
+	   (<= min x max)))))
 
 (module ()
   ;;; initialize the cogen
