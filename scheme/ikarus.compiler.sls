@@ -582,9 +582,13 @@
 		;A  list  of  struct   instances  of  type  CLAMBDA-CASE
 		;representing the clauses.
    cp
-		;Initialised to #f.
+		;Initialised to #f, it is  set to the struct instance of
+		;type VAR to which the  CLOSURE wrapping this CLAMBDA is
+		;bound.
    free
-		;Initialised to #f.
+		;Initialised  to #f,  it  is  set to  a  list of  struct
+		;instances of  type VAR representing the  free variables
+		;referenced by this CLAMBDA.
    name
 		;An annotation  representing the name of  the closure if
 		;available.  It  can be:
@@ -652,8 +656,8 @@
 		;used to  generate, when possible, direct  jumps to this
 		;clause rather than calling the whole closure.
    args
-		;A list of struct  instances of type PRELEX representing
-		;the ?FORMALS as follows:
+		;A list  of struct instances  of type PRELEX or  of type
+		;VAR representing the ?FORMALS as follows:
 		;
 		;   (() ?body0 ?body ...)
 		;   => ()
@@ -737,6 +741,8 @@
 		;A  struct instance  of  type  CLAMBDA representing  the
 		;closure's implementation.
    free*
+		;A list of struct instances of type VAR representing the
+		;free variables referenced by this CLOSURE.
    well-known?
    ))
 
@@ -3209,11 +3215,11 @@
   #| end of module: insert-global-assignments |# )
 
 
-(define optimize-cp
-  (make-parameter #t))
-
 (module (convert-closures)
-
+  ;;This  module  converts  all  the  CLAMBDA  structures  into  CLOSURE
+  ;;structures, compiling  a list of  free variables referenced  by each
+  ;;CLOSURE.
+  ;;
   (define who 'convert-closures)
 
   (define (convert-closures X)
@@ -3249,13 +3255,15 @@
        (let-values (((rhs*^ rhs-free)  (E* rhs*))
                     ((body^ body-free) (E  body)))
 	 (values (make-bind lhs* rhs*^ body^)
+		 ;;If a VAR struct is a  binding in this BIND: it is not
+		 ;;a free variable; so remove it.
 		 (union rhs-free (difference body-free lhs*)))))
 
       ((fix lhs* rhs* body)
        (for-each (lambda (x)
 		   (set-var-index! x #t))
 	 lhs*)
-       (let-values (((rhs*^ rhd-free)  (%do-clambda* lhs* rhs*))
+       (let-values (((rhs*^ rhs-free)  (%do-clambda* lhs* rhs*))
                     ((body^ body-free) (E body)))
 	 ;;RHS*^ is a list of struct instances of type CLOSURE.
 	 (for-each (lambda (lhs rhs)
@@ -3264,7 +3272,9 @@
 		       (set-var-index! lhs #f)))
 	   lhs* rhs*^)
 	 (values (make-fix lhs* rhs*^ body^)
-		 (difference (union body-free rhd-free) lhs*))))
+		 ;;If a VAR struct is a binding in this FIX: it is not a
+		 ;;free variable; so remove it.
+		 (difference (union body-free rhs-free) lhs*))))
 
       ((conditional test conseq altern)
        (let-values (((test^     test-free) (E test))
@@ -3355,6 +3365,16 @@
 		   free)))))
 
     (define (%process-clauses clause*)
+      ;;CLAUSE* is a list of struct instances of type CLAMBDA-CASE.
+      ;;
+      ;;Process all the clauses in CLAUSE*; return 2 values:
+      ;;
+      ;;1. A  list of struct  instances of type CLAMBDA-CASE  which must
+      ;;   replace the original CLAUSE*.
+      ;;
+      ;;2. A list of struct instances  of type VAR representing the free
+      ;;   variables referenced by the bodies of the clauses.
+      ;;
       (if (null? clause*)
 	  (values '() '())
 	(struct-case (car clause*)
@@ -3362,6 +3382,8 @@
 	   (let-values (((body^    body-free)    (E body))
 			((clause*^ clause*-free) (%process-clauses (cdr clause*))))
 	     (values (cons (make-clambda-case info body^) clause*^)
+		     ;;If a VAR  struct is a clause  formal argument: it
+		     ;;is not a free variable; so remove it.
 		     (union (difference body-free (case-info-args info))
 			    clause*-free)))))))
 
@@ -4198,6 +4220,9 @@
    ))
 
 
+(define optimize-cp
+  (make-parameter #t))
+
 (define optimizer-output
   (make-parameter #f))
 
