@@ -3209,16 +3209,97 @@
   #| end of module: insert-global-assignments |# )
 
 
-(define optimize-cp (make-parameter #t))
+(define optimize-cp
+  (make-parameter #t))
 
-(define (convert-closures prog)
+(module (convert-closures)
+
   (define who 'convert-closures)
 
-  (define (Expr* x*)
+  (define (convert-closures X)
+    ;;Perform code  transformation traversing the whole  hierarchy in X,
+    ;;which must  be a struct  instance representing recordized  code in
+    ;;the core  language, and building  a new hierarchy  of transformed,
+    ;;recordized code; return the new hierarchy.
+    ;;
+    ;;The bulk of the work is performed by the recursive function E.
+    ;;
+    (let-values (((X^ free) (E X)))
+      (if (null? free)
+	  X^
+	(error who "free vars encountered in program" (map unparse free)))))
+
+  (define (E X)
+    (struct-case X
+      ((constant)
+       (values X '()))
+
+      ((var)
+       (set-var-index! X #f)
+       (values X (singleton X)))
+
+      ((primref)
+       (values X '()))
+
+      ((bind lhs* rhs* body)
+       (let-values (((rhs* rhs-free)  (E* rhs*))
+                    ((body body-free) (E  body)))
+	 (values (make-bind lhs* rhs* body)
+		 (union rhs-free (difference body-free lhs*)))))
+
+      ((fix lhs* rhs* body)
+       (for-each (lambda (x)
+		   (set-var-index! x #t))
+	 lhs*)
+       (let-values (((rhs* rfree) (do-clambda* lhs* rhs*))
+                    ((body bfree) (E body)))
+	 (for-each (lambda (lhs rhs)
+		     (when (var-index lhs)
+		       (set-closure-well-known?! rhs #t)
+		       (set-var-index! lhs #f)))
+	   lhs* rhs*)
+	 (values (make-fix lhs* rhs* body)
+		 (difference (union bfree rfree) lhs*))))
+
+      ((conditional test conseq altern)
+       (let-values (((test   test-free)   (E test))
+                    ((conseq conseq-free) (E conseq))
+                    ((altern altern-free) (E altern)))
+         (values (make-conditional test conseq altern)
+                 (union test-free (union conseq-free altern-free)))))
+
+      ((seq e0 e1)
+       (let-values (((e0 e0-free) (E e0))
+                    ((e1 e1-free) (E e1)))
+         (values (make-seq e0 e1)
+		 (union e0-free e1-free))))
+
+      ((forcall op rand*)
+       (let-values (((rand* rand*-free) (E* rand*)))
+         (values (make-forcall op rand*) rand*-free)))
+
+      ((funcall rator rand*)
+       (let-values (((rator rat-free)   (E-known  rator))
+                    ((rand* rand*-free) (E-known* rand*)))
+         (values (make-funcall rator rand*)
+                 (union rat-free rand*-free))))
+
+      ((jmpcall label rator rand*)
+       (let-values (((rator rat-free)   (if (optimize-cp)
+					    (Rator rator)
+					  (E rator)))
+                    ((rand* rand*-free) (E-known* rand*)))
+         (values (make-jmpcall label rator rand*)
+                 (union rat-free rand*-free))))
+
+      (else
+       (error who "invalid expression" X))))
+
+  (define (E* x*)
     (if (null? x*)
 	(values '() '())
-      (let-values (((a a-free) (Expr  (car x*)))
-		   ((d d-free) (Expr* (cdr x*))))
+      (let-values (((a a-free) (E  (car x*)))
+		   ((d d-free) (E* (cdr x*))))
 	(values (cons a d) (union a-free d-free)))))
 
   (define (do-clambda* lhs* x*)
@@ -3241,7 +3322,7 @@
 		 (struct-case (car clause*)
 		   ((clambda-case info body)
 		    (let-values
-			(((body    body-free)    (Expr body))
+			(((body    body-free)    (E body))
 			 ((clause* clause*-free) (recur (cdr clause*))))
 		      (values (cons (make-clambda-case info body) clause*)
 			      (union (difference body-free (case-info-args info))
@@ -3250,104 +3331,36 @@
 			       free #f)
 		 free)))))
 
-  (define (A x)
+  (define (E-known x)
     (struct-case x
       ((known expr type)
-       (let-values (((expr^ free) (Expr expr)))
+       (let-values (((expr^ free) (E expr)))
          (values (make-known expr^ type)
 		 free)))
       (else
-       (Expr x))))
+       (E x))))
 
-  (define (A* x*)
+  (define (E-known* x*)
     (if (null? x*)
 	(values '() '())
-      (let-values (((a a-free) (A  (car x*)))
-		   ((d d-free) (A* (cdr x*))))
+      (let-values (((a a-free) (E-known  (car x*)))
+		   ((d d-free) (E-known* (cdr x*))))
 	(values (cons a d)
 		(union a-free d-free)))))
 
-  (define (Expr ex)
-    (struct-case ex
-      ((constant)
-       (values ex '()))
-
-      ((var)
-       (set-var-index! ex #f)
-       (values ex (singleton ex)))
-
-      ((primref)
-       (values ex '()))
-
-      ((bind lhs* rhs* body)
-       (let-values (((rhs* rhs-free)  (Expr* rhs*))
-                    ((body body-free) (Expr  body)))
-	 (values (make-bind lhs* rhs* body)
-		 (union rhs-free (difference body-free lhs*)))))
-
-      ((fix lhs* rhs* body)
-       (for-each (lambda (x)
-		   (set-var-index! x #t))
-	 lhs*)
-       (let-values (((rhs* rfree) (do-clambda* lhs* rhs*))
-                    ((body bfree) (Expr body)))
-	 (for-each (lambda (lhs rhs)
-		     (when (var-index lhs)
-		       (set-closure-well-known?! rhs #t)
-		       (set-var-index! lhs #f)))
-	   lhs* rhs*)
-	 (values (make-fix lhs* rhs* body)
-		 (difference (union bfree rfree) lhs*))))
-
-      ((conditional test conseq altern)
-       (let-values (((test   test-free)   (Expr test))
-                    ((conseq conseq-free) (Expr conseq))
-                    ((altern altern-free) (Expr altern)))
-         (values (make-conditional test conseq altern)
-                 (union test-free (union conseq-free altern-free)))))
-
-      ((seq e0 e1)
-       (let-values (((e0 e0-free) (Expr e0))
-                    ((e1 e1-free) (Expr e1)))
-         (values (make-seq e0 e1)
-		 (union e0-free e1-free))))
-
-      ((forcall op rand*)
-       (let-values (((rand* rand*-free) (Expr* rand*)))
-         (values (make-forcall op rand*) rand*-free)))
-
-      ((funcall rator rand*)
-       (let-values (((rator rat-free)   (A  rator))
-                    ((rand* rand*-free) (A* rand*)))
-         (values (make-funcall rator rand*)
-                 (union rat-free rand*-free))))
-
-      ((jmpcall label rator rand*)
-       (let-values (((rator rat-free)
-                     (if (optimize-cp)
-			 (Rator rator)
-		       (Expr rator)))
-                    ((rand* rand*-free)
-                     (A* rand*)))
-         (values (make-jmpcall label rator rand*)
-                 (union rat-free rand*-free))))
-
-      (else
-       (error who "invalid expression" ex))))
-
   (define (Rator x)
+    ;;Invoked only when the parameter OPTIMIZE-CP is set to true.
+    ;;
     (struct-case x
-      ((var) (values x (singleton x)))
-      ;((known x t)
-      ; (let-values (((x free) (Rator x)))
-      ;   (values (make-known x t) free)))
-      (else (Expr x))))
+      ((var)
+       (values x (singleton x)))
+      ;;((known x t)
+      ;; (let-values (((x free) (Rator x)))
+      ;;   (values (make-known x t) free)))
+      (else
+       (E x))))
 
-  (let-values (((prog free) (Expr prog)))
-    (unless (null? free)
-      (error who "free vars encountered in program"
-	     (map unparse free)))
-    prog))
+  #| end of module: convert closures |# )
 
 
 (define (optimize-closures/lift-codes x)
