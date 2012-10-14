@@ -4017,10 +4017,19 @@
 (define (pop targ)	(list 'pop targ))
 (define (sete targ)	(list 'sete targ))
 (define (call targ)	(list 'call targ))
+
 (define (tail-indirect-cpr-call)
-  (jmp (mem (fx- disp-closure-code closure-tag) cpr)))
+  ;;Fetch a  binary code address  from the closure object  referenced by
+  ;;the CPR (Closure Pointer Register) and jump directly there.
+  ;;
+  (jmp  (mem ($fx- disp-closure-code closure-tag) cpr)))
+
 (define (indirect-cpr-call)
-  (call (mem (fx- disp-closure-code closure-tag) cpr)))
+  ;;Fetch a  binary code address  from the closure object  referenced by
+  ;;the CPR (Closure Pointer Register) and perform a call to there.
+  ;;
+  (call (mem ($fx- disp-closure-code closure-tag) cpr)))
+
 (define (negl targ)	(list 'negl targ))
 (define (label x)	(list 'label x))
 (define (label-address x) (list 'label-address x))
@@ -4097,7 +4106,8 @@
   (define-cached refresh-cached-labels!
 
     ((sl-annotated-procedure-label)
-     (import (ikarus.code-objects))
+     (import (only (ikarus.code-objects)
+		   make-annotation-indirect))
      (define SL_annotated
        (gensym "SL_annotated"))
      (assemble-sources (lambda (x) #f)
@@ -4114,7 +4124,11 @@
 		(movl (mem ($fx- ($fx+ disp-closure-data wordsize) closure-tag)
 			   cpr)
 		      cpr)
-		(tail-indirect-cpr-call))))
+		;;Fetch a  binary code  address from the  closure object
+		;;referenced by  the CPR (Closure Pointer  Register) and
+		;;jump directly there.
+		(tail-indirect-cpr-call)
+		)))
      SL_annotated)
 
     ((sl-apply-label)
@@ -4147,49 +4161,52 @@
      ;;   [FPR + EAX] --> | ?arg4
      ;;                  ---
      ;;
-     (let ((SL_apply (gensym "SL_apply"))
-	   (L_apply_done (gensym))
+     (define SL_apply (gensym "SL_apply"))
+     (let ((L_apply_done (gensym))
 	   (L_apply_loop (gensym)))
        (assemble-sources (lambda (x) #f)
-	 (list
-	  (list 0			;number of free vars
-		(label SL_apply)	;code name
+	 `(,(list 0		 ;number of free vars
+		  (label SL_apply) ;code name
 ;;;
-		;;We suppose  that: at (descending) offset  EAX from the
-		;;address  in FPR  (Frame Pointer  Register) there  is a
-		;;reference to a Scheme list.
+		  ;;We suppose  that: at (descending) offset  EAX from the
+		  ;;address  in FPR  (Frame Pointer  Register) there  is a
+		  ;;reference to a Scheme list.
 
-		;;Load  in EBX  the word  at offset  EAX from  the frame
-		;;pointer.
-		(movl (mem fpr eax) ebx)
-		;;If EBX holds the Scheme null object ...
-		(cmpl (int nil) ebx)
-		;;... there  are no function  call arguments to  push on
-		;;the stack.
-		(je (label L_apply_done))
+		  ;;Load  in EBX  the word  at offset  EAX from  the frame
+		  ;;pointer.
+		  (movl (mem fpr eax) ebx)
+		  ;;If EBX holds the Scheme null object ...
+		  (cmpl (int nil) ebx)
+		  ;;... there  are no function  call arguments to  push on
+		  ;;the stack.
+		  (je (label L_apply_done))
 
-		(label L_apply_loop)
-		;;Load in ECX the car.
-		(movl (mem ($fx- disp-car pair-tag) ebx) ecx)
-		;;Load in EBX the cdr.
-		(movl (mem ($fx- disp-cdr pair-tag) ebx) ebx)
-		;;Move the car at offset EAX from the frame pointer.
-		(movl ecx (mem fpr eax))
-		;;Decrement EAX  by the  word size:  offset of  the next
-		;;argument, if any.
-		(subl (int wordsize) eax)
-		;;If EBX does not hold the Scheme null object ...
-		(cmpl (int nil) ebx)
-		;;... there are more function  call arguments to push on
-		;;the stack.
-		(jne (label L_apply_loop))
+		  (label L_apply_loop)
+		  ;;Load in ECX the car.
+		  (movl (mem ($fx- disp-car pair-tag) ebx) ecx)
+		  ;;Load in EBX the cdr.
+		  (movl (mem ($fx- disp-cdr pair-tag) ebx) ebx)
+		  ;;Move the car at offset EAX from the frame pointer.
+		  (movl ecx (mem fpr eax))
+		  ;;Decrement EAX  by the  word size:  offset of  the next
+		  ;;argument, if any.
+		  (subl (int wordsize) eax)
+		  ;;If EBX does not hold the Scheme null object ...
+		  (cmpl (int nil) ebx)
+		  ;;... there are more function  call arguments to push on
+		  ;;the stack.
+		  (jne (label L_apply_loop))
 
-		(label L_apply_done)
-		;;Undo the previous increment of EAX, so that EAX is the
-		;;offset from  the address in  FPR of the  last function
-		;;call argument.
-		(addl (int wordsize) eax)
-		(tail-indirect-cpr-call))))
+		  (label L_apply_done)
+		  ;;Undo the previous increment of EAX, so that EAX is the
+		  ;;offset from  the address in  FPR of the  last function
+		  ;;call argument.
+		  (addl (int wordsize) eax)
+		  ;;Fetch a binary code  address from the closure object
+		  ;;referenced by the CPR (Closure Pointer Register) and
+		  ;;jump directly there.
+		  (tail-indirect-cpr-call)
+		  )))
        SL_apply))
 
     ((sl-continuation-code-label)
@@ -4242,7 +4259,8 @@
 		(jne (label L_cont_mult_copy_loop))
 		(movl ebx fpr)
 		(movl (mem 0 ebx) ebx)
-		(jmp (mem disp-multivalue-rp ebx))))))
+		(jmp (mem disp-multivalue-rp ebx))
+		))))
      SL_continuation_code)
 
     ((sl-invalid-args-label)
@@ -4257,126 +4275,156 @@
 		(movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
 		(movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
 		(movl (int (argc-convention 2)) eax)
-		(tail-indirect-cpr-call))))
+		;;Fetch a  binary code  address from the  closure object
+		;;referenced by  the CPR (Closure Pointer  Register) and
+		;;jump directly there.
+		(tail-indirect-cpr-call)
+		)))
      SL_invalid_args)
 
     ((sl-mv-ignore-rp-label)
      (define SL_multiple_values_ignore_rp (gensym "SL_multiple_ignore_error_rp"))
      (assemble-sources (lambda (x) #f)
-       (list
-	(list 0
-	      (label SL_multiple_values_ignore_rp)
-	      (ret))))
+       `(,(list 0
+		(label SL_multiple_values_ignore_rp)
+;;;
+		(ret)
+		)))
      SL_multiple_values_ignore_rp)
 
     ((sl-mv-error-rp-label)
      (define SL_multiple_values_error_rp (gensym "SL_multiple_values_error_rp"))
      (assemble-sources (lambda (x) #f)
-       (list
-	(list 0
-	      (label SL_multiple_values_error_rp)
-	      (movl (obj (primref->symbol '$multiple-values-error)) cpr)
-	      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-	      (tail-indirect-cpr-call))))
+       `(,(list 0
+		(label SL_multiple_values_error_rp)
+;;;
+		(movl (obj (primref->symbol '$multiple-values-error)) cpr)
+		(movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+		;;Fetch a  binary code  address from the  closure object
+		;;referenced by  the CPR (Closure Pointer  Register) and
+		;;jump directly there.
+		(tail-indirect-cpr-call)
+		)))
      SL_multiple_values_error_rp)
 
     ((sl-values-label)
      (define SL_values (gensym "SL_values"))
-     (assemble-sources (lambda (x) #f)
-       (list
-	(let ((L_values_one_value (gensym))
-	      (L_values_many_values (gensym)))
-	  (list 0 ; no freevars
-		'(name values)
-		(label SL_values)
-		(cmpl (int (argc-convention 1)) eax)
-		(je (label L_values_one_value))
-		(label L_values_many_values)
-		(movl (mem 0 fpr) ebx) ; return point
-		(jmp (mem disp-multivalue-rp ebx)) ; go
-		(label L_values_one_value)
-		(movl (mem (fx- 0 wordsize) fpr) eax)
-		(ret)))))
+     (let ((L_values_one_value (gensym))
+	   (L_values_many_values (gensym)))
+       (assemble-sources (lambda (x) #f)
+	 `(,(list 0 ; no freevars
+		  '(name values)
+;;;
+		  (label SL_values)
+		  (cmpl (int (argc-convention 1)) eax)
+		  (je (label L_values_one_value))
+
+		  (label L_values_many_values)
+		  (movl (mem 0 fpr) ebx)	   ; return point
+		  (jmp (mem disp-multivalue-rp ebx)) ; go
+
+		  (label L_values_one_value)
+		  (movl (mem (fx- 0 wordsize) fpr) eax)
+		  (ret)
+		  ))))
      SL_values)
 
     ((sl-cwv-label)
      (define SL_call_with_values (gensym "SL_call_with_values"))
-     (assemble-sources (lambda (x) #f)
-       (list
-	(let ((L_cwv_done (gensym))
-	      (L_cwv_loop (gensym))
-	      (L_cwv_multi_rp (gensym))
-	      (L_cwv_call (gensym))
-	      (SL_nonprocedure (gensym "SL_nonprocedure"))
-	      (SL_invalid_args (gensym "SL_invalid_args")))
-	  (list
-	   0	; no free vars
-	   '(name call-with-values)
-	   (label SL_call_with_values)
-	   (cmpl (int (argc-convention 2)) eax)
-	   (jne (label SL_invalid_args))
-	   (movl (mem (fx- 0 wordsize) fpr) ebx) ; producer
-	   (movl ebx cpr)
-	   (andl (int closure-mask) ebx)
-	   (cmpl (int closure-tag) ebx)
-	   (jne (label SL_nonprocedure))
-	   (movl (int (argc-convention 0)) eax)
-	   (compile-call-frame
-	    3
-	    '#(#b110)
-	    (label-address L_cwv_multi_rp)
-	    (indirect-cpr-call))
-;;; one value returned
-	   (movl (mem (fx* -2 wordsize) fpr) ebx) ; consumer
-	   (movl ebx cpr)
-	   (movl eax (mem (fx- 0 wordsize) fpr))
-	   (movl (int (argc-convention 1)) eax)
-	   (andl (int closure-mask) ebx)
-	   (cmpl (int closure-tag) ebx)
-	   (jne (label SL_nonprocedure))
-	   (tail-indirect-cpr-call)
-;;; multiple values returned
-	   (label L_cwv_multi_rp)
-		; because values does not pop the return point
-		; we have to adjust fp one more word here
-	   (addl (int (fx* wordsize 3)) fpr)
-	   (movl (mem (fx* -2 wordsize) fpr) cpr) ; consumer
-	   (cmpl (int (argc-convention 0)) eax)
-	   (je (label L_cwv_done))
-	   (movl (int (fx* -4 wordsize)) ebx)
-	   (addl fpr ebx) ; ebx points to first value
-	   (movl ebx ecx)
-	   (addl eax ecx) ; ecx points to the last value
-	   (label L_cwv_loop)
-	   (movl (mem 0 ebx) edx)
-	   (movl edx (mem (fx* 3 wordsize) ebx))
-	   (subl (int wordsize) ebx)
-	   (cmpl ecx ebx)
-	   (jge (label L_cwv_loop))
-	   (label L_cwv_done)
-	   (movl cpr ebx)
-	   (andl (int closure-mask) ebx)
-	   (cmpl (int closure-tag) ebx)
-	   (jne (label SL_nonprocedure))
-	   (tail-indirect-cpr-call)
-
-	   (label SL_nonprocedure)
-	   (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
-	   (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
-	   (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-	   (movl (int (argc-convention 1)) eax)
-	   (tail-indirect-cpr-call)
-
-	   (label SL_invalid_args)
+     (let ((L_cwv_done		(gensym))
+	   (L_cwv_loop		(gensym))
+	   (L_cwv_multi_rp	(gensym))
+	   (L_cwv_call		(gensym))
+	   (SL_nonprocedure	(gensym "SL_nonprocedure"))
+	   (SL_invalid_args	(gensym "SL_invalid_args")))
+       (assemble-sources (lambda (x) #f)
+	 `(,(list 0 ; no free vars
+		  '(name call-with-values)
 ;;;
-	   (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
-	   (negl eax)
-	   (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
-	   (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
-	   (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-	   (movl (int (argc-convention 2)) eax)
-	   (tail-indirect-cpr-call)
-	   ))))
+		  (label SL_call_with_values)
+		  (cmpl (int (argc-convention 2)) eax)
+		  (jne (label SL_invalid_args))
+		  (movl (mem (fx- 0 wordsize) fpr) ebx) ; producer
+		  (movl ebx cpr)
+		  (andl (int closure-mask) ebx)
+		  (cmpl (int closure-tag) ebx)
+		  (jne (label SL_nonprocedure))
+		  (movl (int (argc-convention 0)) eax)
+		  ;;This  evaluates to  a  nested  sequence of  assembly
+		  ;;instructions.
+		  (compile-call-frame
+		   3				  ;framesize
+		   '#(#b110)			  ;livemask-vec
+		   (label-address L_cwv_multi_rp) ;multiarg-rp
+		   ;;Fetch a binary code address from the closure object
+		   ;;referenced  by the  CPR (Closure  Pointer Register)
+		   ;;and perform a call to there.
+		   (indirect-cpr-call))	;call-sequence
+		  ;; one value returned
+		  (movl (mem (fx* -2 wordsize) fpr) ebx) ; consumer
+		  (movl ebx cpr)
+		  (movl eax (mem (fx- 0 wordsize) fpr))
+		  (movl (int (argc-convention 1)) eax)
+		  (andl (int closure-mask) ebx)
+		  (cmpl (int closure-tag) ebx)
+		  (jne (label SL_nonprocedure))
+		  ;;Fetch a binary code  address from the closure object
+		  ;;referenced by the CPR (Closure Pointer Register) and
+		  ;;jump directly there.
+		  (tail-indirect-cpr-call)
+
+		  ;; multiple values returned
+		  (label L_cwv_multi_rp)
+		  ;;Because values does not pop the return point we have
+		  ;;to adjust fp one more word here.
+		  (addl (int (fx* wordsize 3)) fpr)
+		  (movl (mem (fx* -2 wordsize) fpr) cpr) ; consumer
+		  (cmpl (int (argc-convention 0)) eax)
+		  (je (label L_cwv_done))
+		  (movl (int (fx* -4 wordsize)) ebx)
+		  (addl fpr ebx) ; ebx points to first value
+		  (movl ebx ecx)
+		  (addl eax ecx) ; ecx points to the last value
+
+		  (label L_cwv_loop)
+		  (movl (mem 0 ebx) edx)
+		  (movl edx (mem (fx* 3 wordsize) ebx))
+		  (subl (int wordsize) ebx)
+		  (cmpl ecx ebx)
+		  (jge (label L_cwv_loop))
+
+		  (label L_cwv_done)
+		  (movl cpr ebx)
+		  (andl (int closure-mask) ebx)
+		  (cmpl (int closure-tag) ebx)
+		  (jne (label SL_nonprocedure))
+		  ;;Fetch a binary code  address from the closure object
+		  ;;referenced by the CPR (Closure Pointer Register) and
+		  ;;jump directly there.
+		  (tail-indirect-cpr-call)
+
+		  (label SL_nonprocedure)
+		  (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
+		  (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
+		  (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+		  (movl (int (argc-convention 1)) eax)
+		  ;;Fetch a binary code  address from the closure object
+		  ;;referenced by the CPR (Closure Pointer Register) and
+		  ;;jump directly there.
+		  (tail-indirect-cpr-call)
+
+		  (label SL_invalid_args)
+		  (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
+		  (negl eax)
+		  (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
+		  (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
+		  (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+		  (movl (int (argc-convention 2)) eax)
+		  ;;Fetch a binary code  address from the closure object
+		  ;;referenced by the CPR (Closure Pointer Register) and
+		  ;;jump directly there.
+		  (tail-indirect-cpr-call)
+		  ))))
      SL_call_with_values)
     ))
 

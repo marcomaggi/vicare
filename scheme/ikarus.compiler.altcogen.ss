@@ -2514,20 +2514,20 @@
 (define (compile-call-frame framesize livemask-vec multiarg-rp call-sequence)
   (let ([L_CALL (label (gensym))])
     (list 'seq
-      (if (or (= framesize 0) (= framesize 1))
-          '(seq)
-          `(subl ,(* (fxsub1 framesize) wordsize) ,fpr))
-      (jmp L_CALL)
-      `(byte-vector ,livemask-vec)
-      `(int ,(* framesize wordsize))
-      '(current-frame-offset)
-      multiarg-rp
-      `(pad ,call-instruction-size
-            ,L_CALL
-            ,call-sequence)
-      (if (or (= framesize 0) (= framesize 1))
-          '(seq)
-          `(addl ,(* (fxsub1 framesize) wordsize) ,fpr)))))
+	  (if (or (= framesize 0) (= framesize 1))
+	      '(seq) ;this generates no code
+	    `(subl ,(* (fxsub1 framesize) wordsize) ,fpr))
+	  (jmp L_CALL)
+	  `(byte-vector ,livemask-vec)
+	  `(int ,(* framesize wordsize))
+	  '(current-frame-offset)
+	  multiarg-rp
+	  `(pad ,call-instruction-size
+		,L_CALL
+		,call-sequence)
+	  (if (or (= framesize 0) (= framesize 1))
+	      '(seq) ;this generates no code
+	    `(addl ,(* (fxsub1 framesize) wordsize) ,fpr)))))
 
 
 
