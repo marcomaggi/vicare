@@ -4062,6 +4062,7 @@
 (define cpr		'%edi) ; closure pointer
 (define pcr		'%esi) ; pcb pointer
 (define register?	symbol?)
+
 (define (argc-convention n)
   ($fx- 0 ($fxsll n fx-shift)))
 
@@ -4327,6 +4328,7 @@
        (define L_values_many_values	(gensym)))
      (assembly
       (label SL_values)
+      ;;If the encoded number of arguments in EAX is 1 ...
       (cmpl (int (argc-convention 1)) eax)
       (je (label L_values_one_value))
 
