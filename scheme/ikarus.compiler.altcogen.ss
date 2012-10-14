@@ -62,71 +62,106 @@
 
   (define (introduce-primcalls x)
 
+    (define (Program x)
+      (struct-case x
+	((codes code* body)
+	 (make-codes (map Clambda code*) (E body)))
+	(else
+	 (error who "invalid program" x))))
+
+    (Program x))
+
+  (define (E x)
+    (struct-case x
+      ((constant)
+       x)
+
+      ((var)
+       x)
+
+      ((primref)
+       x)
+
+      ((bind lhs* rhs* body)
+       (make-bind lhs* (map E rhs*) (E body)))
+
+      ((fix lhs* rhs* body)
+       (make-fix lhs* rhs* (E body)))
+
+      ((conditional e0 e1 e2)
+       (make-conditional (E e0) (E e1) (E e2)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((closure)
+       x)
+
+      ((forcall op arg*)
+       (make-forcall op (map E arg*)))
+
+      ((funcall rator arg*)
+       (mkfuncall (E-known rator) (map E-known arg*)))
+
+      ((jmpcall label rator arg*)
+       (make-jmpcall label (E rator) (map E arg*)))
+
+      (else
+       (error who "invalid expr" x))))
+
+  (define (ClambdaCase x)
+    (struct-case x
+      ((clambda-case info body)
+       (make-clambda-case info (E body)))
+      (else
+       (error who "invalid clambda-case" x))))
+
+  (define (Clambda x)
+    (struct-case x
+      ((clambda label case* cp free* name)
+       (make-clambda label (map ClambdaCase case*) cp free* name))
+      (else
+       (error who "invalid clambda" x))))
+
+  (define (E-known x)
+    (struct-case x
+      ((known expr type)
+       (make-known (E expr) type))
+      (else
+       (E x))))
+
+;;; --------------------------------------------------------------------
+
+  (module (mkfuncall)
+
     (define (mkfuncall op arg*)
-      (define (primop? x)
-	(import primops)
-	(or (eq? x 'debug-call) (primop? x)))
       (struct-case op
 	((known x t)
 	 (struct-case x
 	   ((primref name)
 	    (if (primop? name)
 		(make-primcall name arg*)
-              (make-funcall op arg*)))
-	   (else (make-funcall op arg*))))
+	      (make-funcall op arg*)))
+	   (else
+	    (make-funcall op arg*))))
+
 	((primref name)
-	 (cond
-	  ((primop? name)
-	   (make-primcall name arg*))
-	  (else (make-funcall op arg*))))
-	(else (make-funcall op arg*))))
+	 (cond ((primop? name)
+		(make-primcall name arg*))
+	       (else
+		(make-funcall op arg*))))
 
-    (define (A x)
-      (struct-case x
-	((known x t) (make-known (Expr x) t))
-	(else (Expr x))))
+	(else
+	 (make-funcall op arg*))))
 
-    (define (Expr x)
-      (struct-case x
-	((constant) x)
-	((var)      x)
-	((primref)  x)
-	((bind lhs* rhs* body)
-	 (make-bind lhs* (map Expr rhs*) (Expr body)))
-	((fix lhs* rhs* body)
-	 (make-fix lhs* rhs* (Expr body)))
-	((conditional e0 e1 e2)
-	 (make-conditional (Expr e0) (Expr e1) (Expr e2)))
-	((seq e0 e1)
-	 (make-seq (Expr e0) (Expr e1)))
-	((closure) x)
-	((forcall op arg*)
-	 (make-forcall op (map Expr arg*)))
-	((funcall rator arg*)
-	 (mkfuncall (A rator) (map A arg*)))
-	((jmpcall label rator arg*)
-	 (make-jmpcall label (Expr rator) (map Expr arg*)))
-	(else (error who "invalid expr" x))))
+    (define (primop? x)
+      (import primops)
+      (or (eq? x 'debug-call)
+	  (primop? x)))
 
-    (define (ClambdaCase x)
-      (struct-case x
-	((clambda-case info body)
-	 (make-clambda-case info (Expr body)))
-	(else (error who "invalid clambda-case" x))))
+    #| end of module: mkfuncall |# )
 
-    (define (Clambda x)
-      (struct-case x
-	((clambda label case* cp free* name)
-	 (make-clambda label (map ClambdaCase case*) cp free* name))
-	(else (error who "invalid clambda" x))))
-
-    (define (Program x)
-      (struct-case x
-	((codes code* body)
-	 (make-codes (map Clambda code*) (Expr body)))
-	(else (error who "invalid program" x))))
-
-    (Program x))
+;;; --------------------------------------------------------------------
 
   (define (check-gensym x)
     (unless (gensym? x)
@@ -153,7 +188,6 @@
        (for-each check-var free*))
       (else
        (error who "invalid closure" x))))
-
 
   #| end of module: introduce-primcalls |# )
 
