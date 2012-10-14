@@ -4087,19 +4087,22 @@
   (define-auxiliary-syntaxes number-of-free-variables)
   (define-auxiliary-syntaxes code-annotation)
   (define-auxiliary-syntaxes definitions)
+  (define-auxiliary-syntaxes local-labels)
   (define-auxiliary-syntaxes assembly)
 
   (define-syntax define-cached
     (lambda (x)
       (syntax-case x (public-function
 		      entry-point-label number-of-free-variables
-		      code-annotation definitions assembly)
+		      code-annotation definitions local-labels
+		      assembly)
         ((_ ?refresh
 	    ((public-function		?func-name)
 	     (entry-point-label		?label-name)
 	     (number-of-free-variables	?freevars)
 	     (code-annotation		?annotation)
 	     (definitions		?def ...)
+	     (local-labels		?lab ...)
 	     (assembly			?body0 ?body ...))
 	    ...)
          (with-syntax (((V ...) (generate-temporaries #'(?func-name ...))))
@@ -4119,6 +4122,8 @@
 			 (let ((label
 				(let ((?label-name (gensym (symbol->string '?label-name))))
 				  ?def ...
+				  (define ?lab (gensym (symbol->string (quote ?lab))))
+				  ...
 				  (assemble-sources thunk?-label
 				    (list (cons* ?freevars ?annotation
 						 (list ?body0 ?body ...))))
@@ -4142,6 +4147,7 @@
      (definitions
        (import (only (ikarus.code-objects)
 		     make-annotation-indirect)))
+     (local-labels)
      (assembly
       (label SL_annotated)
       ;;Load  into CPR  (Closure Pointer  Register) the  address of  the
@@ -4188,9 +4194,9 @@
      (entry-point-label		SL_apply)
      (number-of-free-variables	0)
      (code-annotation		(label SL_apply))
-     (definitions
-       (define L_apply_done (gensym))
-       (define L_apply_loop (gensym)))
+     (definitions)
+     (local-labels L_apply_done
+		   L_apply_loop)
      ;;We suppose that:  at (descending) offset EAX from  the address in
      ;;FPR (Frame  Pointer Register)  there is a  reference to  a Scheme
      ;;list.
@@ -4230,12 +4236,12 @@
      (entry-point-label		SL_continuation_code)
      (number-of-free-variables	1)
      (code-annotation		(label SL_continuation_code))
-     (definitions
-       (define L_cont_zero_args      (gensym))
-       (define L_cont_mult_args      (gensym))
-       (define L_cont_one_arg        (gensym))
-       (define L_cont_mult_move_args (gensym))
-       (define L_cont_mult_copy_loop (gensym)))
+     (definitions)
+     (local-labels L_cont_zero_args
+		   L_cont_mult_args
+		   L_cont_one_arg
+		   L_cont_mult_move_args
+		   L_cont_mult_copy_loop)
      (assembly
       (movl (mem (fx- disp-closure-data closure-tag) cpr) ebx) ; captured-k
       (movl ebx (mem pcb-next-continuation pcr))	       ; set
@@ -4283,6 +4289,7 @@
      (number-of-free-variables	0)
      (code-annotation		(label SL_invalid_args))
      (definitions)
+     (local-labels)
      (assembly
       (movl cpr (mem ($fx- 0 wordsize) fpr)) ; first arg
       (negl eax)
@@ -4300,6 +4307,7 @@
      (number-of-free-variables	0)
      (code-annotation		(label SL_multiple_values_ignore_rp))
      (definitions)
+     (local-labels)
      (assembly
       (ret)
       ))
@@ -4309,6 +4317,7 @@
      (number-of-free-variables	0)
      (code-annotation		(label SL_multiple_values_error_rp))
      (definitions)
+     (local-labels)
      (assembly
       (movl (obj (primref->symbol '$multiple-values-error)) cpr)
       (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
@@ -4323,9 +4332,9 @@
      (entry-point-label		SL_values)
      (number-of-free-variables	0)
      (code-annotation		'(name values))
-     (definitions
-       (define L_values_one_value	(gensym))
-       (define L_values_many_values	(gensym)))
+     (definitions)
+     (local-labels L_values_one_value
+		   L_values_many_values)
      (assembly
       (label SL_values)
       ;;If the encoded number of arguments in EAX is 1 ...
@@ -4345,13 +4354,13 @@
      (entry-point-label		SL_call_with_values)
      (number-of-free-variables	0)
      (code-annotation		'(name call-with-values))
-     (definitions
-       (define L_cwv_done	(gensym))
-       (define L_cwv_loop	(gensym))
-       (define L_cwv_multi_rp	(gensym))
-       (define L_cwv_call	(gensym))
-       (define SL_nonprocedure	(gensym "SL_nonprocedure"))
-       (define SL_invalid_args	(gensym "SL_invalid_args")))
+     (definitions)
+     (local-labels L_cwv_done
+		   L_cwv_loop
+		   L_cwv_multi_rp
+		   L_cwv_call
+		   SL_nonprocedure
+		   SL_invalid_args)
      (assembly
       (label SL_call_with_values)
       (cmpl (int (argc-convention 2)) eax)
