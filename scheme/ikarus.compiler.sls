@@ -70,6 +70,36 @@
     (vicare arguments validation))
 
 
+;;;; configuration parameters
+
+(define generate-debug-calls
+  ;;Set to true when the option "--debug" is used on the command line of
+  ;;the executable "vicare"; else set to #f.
+  ;;
+  (make-parameter #f))
+
+(define strip-source-info
+  (make-parameter #f))
+
+(define open-mvcalls
+  ;;When  set to  true: an  attempt is  made to  expand inline  calls to
+  ;;CALL-WITH-VALUES by inserting local bindings.
+  ;;
+  (make-parameter #t))
+
+(define optimize-cp
+  (make-parameter #t))
+
+(define optimizer-output
+  (make-parameter #f))
+
+(define perform-tag-analysis
+  (make-parameter #t))
+
+(define assembler-output
+  (make-parameter #f))
+
+
 ;;;; helper syntaxes
 
 (define-inline ($caar x)	($car ($car x)))
@@ -243,11 +273,6 @@
   ;;(It is a bit ugly...  Marco Maggi; Oct 10, 2012)
   ;;
   (lambda (stx)
-    #;(define (%make-fmt ctxt)
-      (lambda (template-str . args)
-        (datum->syntax ctxt
-		       (string->symbol
-			(apply format template-str (map syntax->datum args))))))
     (define (%format-id ctxt template-str . args)
       (datum->syntax ctxt (string->symbol
 			   (apply format template-str (map syntax->datum args)))))
@@ -259,16 +284,6 @@
 	  ((?field-with-default ?default)
 	   ...))
        (with-syntax
-	   #;(((PRED MAKER (GETTER ...) (SETTER ...))
-	     (let ((fmt (%make-fmt #'?name)))
-	       (list (fmt "~s?" #'?name)
-		     (fmt "make-~s" #'?name)
-		     (map (lambda (x)
-			    (fmt "~s-~s" #'?name x))
-		       #'(?field-without-default ... ?field-with-default ...))
-		     (map (lambda (x)
-			    (fmt "set-~s-~s!" #'?name x))
-		       #'(?field-without-default ... ?field-with-default ...))))))
 	   ((PRED		(%format-id #'?name "~s?" #'?name))
 	    (MAKER		(%format-id #'?name "make-~s" #'?name))
 	    ((GETTER ...)	(map (lambda (x)
@@ -306,21 +321,6 @@
 
 
 ;;;; helper functions
-
-(define strip-source-info
-  (make-parameter #f))
-
-(define generate-debug-calls
-  ;;Set to true when the option "--debug" is used on the command line of
-  ;;the executable "vicare"; else set to #f.
-  ;;
-  (make-parameter #f))
-
-#;(define-inline (singleton x)
-  ;;Wrap  the object  X  into a  unique  container, so  that  it can  be
-  ;;compared with EQ?.
-  ;;
-  (list x))
 
 (define (remq1 x ls)
   ;;Scan the  list LS and  remove only the  first instance of  object X,
@@ -369,6 +369,162 @@
 	((null? s2) s1)
 	(else
 	 (rem* s2 s1))))
+
+
+(define current-core-eval
+  (make-parameter (lambda (x)
+		    ((compile-core-expr x)))
+    (lambda (x)
+      (define who 'current-core-eval)
+      (with-arguments-validation (who)
+	  ((procedure	x))
+	x))))
+
+(define (eval-core x)
+  ;;This  function is  used  to compile  fully  expanded R6RS  programs,
+  ;;invoke libraries, implement R6RS's eval function, compile right-hand
+  ;;sides of syntax definitions.
+  ;;
+  ((current-core-eval) x))
+
+(define current-primitive-locations
+  (let ((plocs (lambda (x) #f)))
+    (case-lambda
+     (()
+      plocs)
+     ((p)
+      (define who 'current-primitive-locations)
+      (with-arguments-validation (who)
+	  ((procedure	p))
+	(set! plocs p)
+	(refresh-cached-labels!))))))
+
+
+(define (expand/pretty x env who . passes)
+  (unless (environment? env)
+    (die who "not an environment" env))
+  (let-values (((x libs) (core-expand x env)))
+    (let loop ((x      (recordize x))
+	       (passes passes))
+      (if (null? passes)
+          (unparse-pretty x)
+	(loop ((car passes) x) (cdr passes))))))
+
+(define expand/scc-letrec
+  (case-lambda
+   ((x)
+    (expand/scc-letrec x (interaction-environment)))
+   ((x env)
+    (expand/pretty x env 'expand/scc-letrec
+		   (lambda (x)
+		     (parameterize ((open-mvcalls #f))
+		       (optimize-direct-calls x)))
+		   (lambda (x)
+		     (parameterize ((debug-scc #t))
+		       (optimize-letrec x)))))))
+
+(define expand/optimize
+  (case-lambda
+   ((x)
+    (expand/optimize x (interaction-environment)))
+   ((x env)
+    (expand/pretty x env 'expand/optimize
+		   (lambda (x)
+		     (parameterize ((open-mvcalls #f))
+		       (optimize-direct-calls x)))
+		   optimize-letrec
+		   source-optimize))))
+
+(define expand
+  (case-lambda
+   ((x)
+    (expand x (interaction-environment)))
+   ((x env)
+    (expand/pretty x env 'expand))))
+
+
+(module (compile-core-expr-to-port compile-core-expr)
+  ;;The list of compiler passes is:
+  ;;
+  ;;   recordize
+  ;;   optimize-direct-calls
+  ;;   optimize-letrec
+  ;;   source-optimize
+  ;;   rewrite-references-and-assignments
+  ;;   introduce-tags (optional)
+  ;;   introduce-vars
+  ;;   sanitize-bindings
+  ;;   optimize-for-direct-jumps
+  ;;   insert-global-assignments
+  ;;   convert-closures
+  ;;   optimize-closures/lift-codes
+  ;;
+
+  (define (compile-core-expr-to-port expr port)
+    ;;This function is used to write binary code into the boot image.
+    ;;
+    (fasl-write (compile-core-expr->code expr) port))
+
+  (define (compile-core-expr x)
+    ;;This  function  is used  to  compile  libraries' source  code  for
+    ;;serialisation into FASL files.
+    ;;
+    (let ((code (compile-core-expr->code x)))
+      ($code->closure code)))
+
+  (define who 'compile-core-expr->code)
+
+  (define (compile-core-expr->code p)
+    (let* ((p (recordize p))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (when (optimizer-output)
+	(pretty-print (unparse-pretty p) (current-error-port)))
+      (let* ((p (rewrite-references-and-assignments p))
+	     (p (if (perform-tag-analysis)
+		    (introduce-tags p)
+		  p))
+	     (p (introduce-vars p))
+	     (p (sanitize-bindings p))
+	     (p (optimize-for-direct-jumps p))
+	     (p (insert-global-assignments p))
+	     (p (convert-closures p))
+	     (p (optimize-closures/lift-codes p))
+	     (ls* (alt-cogen p)))
+	(when (assembler-output)
+	  ;;Print nicely the assembly labels.
+	  (parameterize ((gensym-prefix "L")
+			 (print-gensym  #f))
+	    (for-each (lambda (ls)
+			(newline (current-error-port))
+			($for-each/stx print-instr ls))
+	      ls*)))
+	(let ((code* (assemble-sources thunk?-label ls*)))
+	  (car code*)))))
+
+  (define (thunk?-label x)
+    (if (closure? x)
+	(if (null? (closure-free* x))
+	    (code-loc-label (closure-code x))
+	  (error who "BUG: non-thunk escaped" x))
+      #f))
+
+  (define (print-instr x)
+    ;;Print  to   the  current   error  port  the   symbolic  expression
+    ;;representing  the  assembly instruction  X.   To  be used  to  log
+    ;;generated assembly for human inspection.
+    ;;
+    (if (and (pair? x)
+	     (eq? ($car x) 'seq))
+	($for-each/stx print-instr ($cdr x))
+      (let ((port (current-error-port)))
+	(display "   " port)
+	(write x port)
+	(newline port))))
+
+  #| end of module: compile-core-expr |# )
 
 
 ;;;; struct types used to represent code in the core language
@@ -1554,341 +1710,7 @@
   (E x))
 
 
-(define (unparse x)
-  ;;Unparse the struct  instance X (representing recordized  code in the
-  ;;core  language  already processed  by  the  compiler) into  a  human
-  ;;readable symbolic expression to be used when raising errors.
-  ;;
-  ;;Being  that this  function is  used only  when signaling  errors: it
-  ;;makes no sense to use unsafe operations: let's keep it safe!!!
-  ;;
-  (struct-case x
-    ((constant c)
-     `(quote ,c))
-
-    ((known x t)
-     `(known ,(unparse x) ,(T:description t)))
-
-    ((code-loc x)
-     `(code-loc ,x))
-
-    ((var x)
-     (string->symbol (format ":~a" x)))
-
-    ((prelex name)
-     (string->symbol (format ":~a" name)))
-
-    ((primref x)
-     x)
-
-    ((conditional test conseq altern)
-     `(if ,(unparse test) ,(unparse conseq) ,(unparse altern)))
-
-    ((interrupt-call e0 e1)
-     `(interrupt-call ,(unparse e0) ,(unparse e1)))
-
-    ((primcall op arg*)
-     `(,op . ,(map unparse arg*)))
-
-    ((bind lhs* rhs* body)
-     `(let ,(map (lambda (lhs rhs)
-		   (list (unparse lhs) (unparse rhs)))
-	      lhs* rhs*)
-	,(unparse body)))
-
-    ((recbind lhs* rhs* body)
-     `(letrec ,(map (lambda (lhs rhs)
-		      (list (unparse lhs) (unparse rhs)))
-		 lhs* rhs*)
-	,(unparse body)))
-
-    ((rec*bind lhs* rhs* body)
-     `(letrec* ,(map (lambda (lhs rhs)
-		       (list (unparse lhs) (unparse rhs)))
-		  lhs* rhs*)
-	,(unparse body)))
-
-    ;;Commented out because unused;  notice that LIBRARY-LETREC* forms
-    ;;are  represented by  structures of  type REC*BIND;  there is  no
-    ;;structure of type LIBRARY-RECBIND.  (Marco Maggi; Oct 11, 2012)
-    ;;
-    ;; ((library-recbind lhs* loc* rhs* body)
-    ;;  `(letrec ,(map (lambda (lhs loc rhs)
-    ;; 			(list (unparse lhs) loc (unparse rhs)))
-    ;; 		   lhs* loc* rhs*)
-    ;; 	  ,(unparse body)))
-
-    ((fix lhs* rhs* body)
-     `(fix ,(map (lambda (lhs rhs)
-		   (list (unparse lhs) (unparse rhs)))
-	      lhs* rhs*)
-	   ,(unparse body)))
-
-    ((seq e0 e1)
-     (letrec ((recur (lambda (x ac)
-		       (struct-case x
-			 ((seq e0 e1)
-			  (recur e0 (recur e1 ac)))
-			 (else
-			  (cons (unparse x) ac))))))
-       (cons 'begin (recur e0 (recur e1 '())))))
-
-    ((clambda-case info body)
-     `(,(if (case-info-proper info)
-	    (map unparse (case-info-args info))
-	  ;;The loop below  is like MAP but for improper  lists: it maps
-	  ;;UNPARSE over the improper list X.
-	  (let ((X (case-info-args info)))
-	    (let recur ((A (car X))
-			(D (cdr X)))
-	      (if (null? D)
-		  (unparse A)
-		(cons (unparse A) (recur (car D) (cdr D)))))))
-       ,(unparse body)))
-
-    ((clambda g cls* #;cp #;free)
-     ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
-     `(clambda (label: ,g)
-	       ;;cp:   ,(unparse cp))
-	       ;;free: ,(map unparse free))
-	       ,@(map unparse cls*)))
-
-    ((clambda label clauses free)
-     `(code ,label . ,(map unparse clauses)))
-
-    ((closure code free* wk?)
-     `(closure ,@(if wk? '(wk) '())
-	       ,(unparse code)
-	       ,(map unparse free*)))
-
-    ((codes list body)
-     `(codes ,(map unparse list)
-	     ,(unparse body)))
-
-    ((funcall rator rand*)
-     `(funcall ,(unparse rator) . ,(map unparse rand*)))
-
-    ((jmpcall label rator rand*)
-     `(jmpcall ,label ,(unparse rator) . ,(map unparse rand*)))
-
-    ((forcall rator rand*)
-     `(foreign-call ,rator . ,(map unparse rand*)))
-
-    ((assign lhs rhs)
-     `(set! ,(unparse lhs) ,(unparse rhs)))
-
-    ((return x)
-     `(return ,(unparse x)))
-
-    ((new-frame base-idx size body)
-     `(new-frame (base: ,base-idx)
-		 (size: ,size)
-		 ,(unparse body)))
-
-    ((frame-var idx)
-     (string->symbol (format "fv.~a" idx)))
-
-    ((cp-var idx)
-     (string->symbol (format "cp.~a" idx)))
-
-    ((save-cp expr)
-     `(save-cp ,(unparse expr)))
-
-    ((eval-cp check body)
-     `(eval-cp ,check ,(unparse body)))
-
-    ((call-cp call-convention label save-cp? rp-convention base-idx arg-count live-mask)
-     `(call-cp (conv:		,call-convention)
-	       (label:	,label)
-	       (rpconv:	,(if (symbol? rp-convention)
-			     rp-convention
-			   (unparse rp-convention)))
-	       (base-idx:	,base-idx)
-	       (arg-count:	,arg-count)
-	       (live-mask:	,live-mask)))
-
-    ((tailcall-cp convention label arg-count)
-     `(tailcall-cp ,convention ,label ,arg-count))
-
-    ((foreign-label x)
-     `(foreign-label ,x))
-
-    ((mvcall prod cons)
-     `(mvcall ,(unparse prod) ,(unparse cons)))
-
-    ((fvar idx)
-     (string->symbol (format "fv.~a" idx)))
-
-    ((nfv idx)
-     'nfv)
-
-    ((locals vars body)
-     `(locals ,(map unparse vars) ,(unparse body)))
-
-    ((asm-instr op d s)
-     `(asm ,op ,(unparse d) ,(unparse s)))
-
-    ((disp s0 s1)
-     `(disp ,(unparse s0) ,(unparse s1)))
-
-    ((nframe vars live body)
-     `(nframe #;(vars: ,(map unparse vars))
-       #;(live: ,(map unparse live))
-       ,(unparse body)))
-
-    ((shortcut body handler)
-     `(shortcut ,(unparse body) ,(unparse handler)))
-
-    ((ntcall target valuw args mask size)
-     `(ntcall ,target ,size))
-
-    (else
-     (if (symbol? x)
-	 x
-       "#<unknown>"))))
-
-
-(define (unparse-pretty x)
-  ;;Unparse the struct  instance X (representing recordized  code in the
-  ;;core  language  already processed  by  the  compiler) into  a  human
-  ;;readable symbolic expression  to be used when printing  to some port
-  ;;for miscellaneous debugging purposes.
-  ;;
-  ;;Being that  this function is used  only when debugging: it  makes no
-  ;;sense to use unsafe operations: let's keep it safe!!!
-  ;;
-  (define n 0)
-  (define h (make-eq-hashtable))
-
-  (define (Var x)
-    (or (hashtable-ref h x #f)
-        (let ((v (string->symbol (format "~a_~a" (prelex-name x) n))))
-          (hashtable-set! h x v)
-          (set! n (+ n 1))
-          v)))
-
-  (define (map f ls)
-    ;;This version  of MAP imposes an  order to the application  of F to
-    ;;the items in LS.
-    ;;
-    (if (null? ls)
-	'()
-      (let ((a (f (car ls))))
-	(cons a (map f (cdr ls))))))
-
-  (define (E-args proper x)
-    (if proper
-        (map Var x)
-      ;;The loop  below is like  MAP but for  improper lists: it  maps E
-      ;;over the improper list X.
-      (let recur ((A (car x))
-		  (D (cdr x)))
-	(if (null? D)
-	    (Var A)
-	  (let ((A (Var A)))
-	    (cons A (recur (car D) (cdr D))))))))
-
-  (define (clambda-clause x)
-    (struct-case x
-      ((clambda-case info body)
-       (let ((args (E-args (case-info-proper info) (case-info-args info))))
-         (list args (E body))))))
-
-  (define (build-let b* body)
-    (cond ((and (= (length b*) 1)
-		(pair? body)
-		(or (eq? (car body) 'let*)
-		    (and (eq? (car body) 'let)
-			 (= (length (cadr body)) 1))))
-	   (list 'let* (append b* (cadr body)) (caddr body)))
-	  (else
-	   (list 'let b* body))))
-
-  (define (E x)
-    (struct-case x
-      ((constant c)
-       `(quote ,c))
-
-      ((prelex)
-       (Var x))
-
-      ((primref x)
-       x)
-
-      ((known x t)
-       `(known ,(E x) ,(T:description t)))
-
-      ((conditional test conseq altern)
-       (cons 'if (map E (list test conseq altern))))
-
-      ((primcall op arg*)
-       (cons op (map E arg*)))
-
-      ((bind lhs* rhs* body)
-       (let* ((lhs* (map Var lhs*))
-              (rhs* (map E rhs*))
-              (body (E body)))
-         (import (only (ikarus) map))
-         (build-let (map list lhs* rhs*) body)))
-
-      ((fix lhs* rhs* body)
-       (let* ((lhs* (map Var lhs*))
-              (rhs* (map E rhs*))
-              (body (E body)))
-         (import (only (ikarus) map))
-         (list 'letrec (map list lhs* rhs*) body)))
-
-      ((recbind lhs* rhs* body)
-       (let* ((lhs* (map Var lhs*))
-              (rhs* (map E rhs*))
-              (body (E body)))
-         (import (only (ikarus) map))
-         (list 'letrec (map list lhs* rhs*) body)))
-
-      ((rec*bind lhs* rhs* body)
-       (let* ((lhs* (map Var lhs*))
-              (rhs* (map E rhs*))
-              (body (E body)))
-         (import (only (ikarus) map))
-         (list 'letrec* (map list lhs* rhs*) body)))
-
-      ((seq e0 e1)
-       (cons 'begin
-	     (let f ((e0 e0) (e* (list e1)))
-	       (struct-case e0
-		 ((seq e00 e01)
-		  (f e00 (cons e01 e*)))
-		 (else
-		  (let ((x (E e0)))
-		    (if (null? e*)
-			(list x)
-		      (cons x (f (car e*) (cdr e*))))))))))
-
-      ((clambda g cls* cp free)
-       (let ((cls* (map clambda-clause cls*)))
-         (cond
-	  ((= (length cls*) 1) (cons 'lambda (car cls*)))
-	  (else (cons 'case-lambda cls*)))))
-
-      ((funcall rator rand*)
-       (let ((rator (E rator)))
-         (cons rator (map E rand*))))
-
-      ((forcall rator rand*)
-       `(foreign-call ,rator . ,(map E rand*)))
-
-      ((assign lhs rhs)
-       `(set! ,(E lhs) ,(E rhs)))
-
-      ((foreign-label x)
-       `(foreign-label ,x))
-
-      (else x)))
-
-  (E x))
-
-
-(module (optimize-direct-calls open-mvcalls)
+(module (optimize-direct-calls)
   ;;By definition, a "direct closure application" like:
   ;;
   ;;   ((lambda (x) x) 123)
@@ -1985,12 +1807,6 @@
 
       (else
        (error who "invalid expression" (unparse x)))))
-
-  (define open-mvcalls
-    ;;When set  to true: an  attempt is made  to expand inline  calls to
-    ;;CALL-WITH-VALUES by inserting local bindings.
-    ;;
-    (make-parameter #t))
 
   (module (inline)
 
@@ -2253,6 +2069,7 @@
   #| end of module: optimize-direct-calls |# )
 
 
+;;;; some external code
 
 #|
 (letrec* (bi ...
@@ -2514,6 +2331,7 @@
   #| end of module: rewrite-references-and-assignments |# )
 
 
+;;;; some other external code
 
 (include "ikarus.compiler.tag-annotation-analysis.ss")
 
@@ -3713,7 +3531,7 @@
   #| end of module: optimize-closures/lift-codes |# )
 
 
-;;;; definitions
+;;;; definitions for assembly code generation
 ;;
 ;;The  folowing constants  definitions must  be  kept in  sync with  the
 ;;definitions  in   the  C  language  header   files  "internals.h"  and
@@ -3930,7 +3748,7 @@
 (define pcb-collect-key			(* 12 wordsize))
 
 
-;;;; utility functions
+;;;; utility functions for assembly code generation
 
 (module (fx?)
 
@@ -3970,12 +3788,13 @@
 ;;       (obj (primref->symbol op))))
 
 
+;;;; more assembly code helpers
+
 (module ()
   ;;Initialize the cogen.  This parameter is used by the assembler.
   (code-entry-adjustment (- disp-code-data vector-tag)))
 
 ;;; --------------------------------------------------------------------
-;;; COGEN HELERS
 
 (define (align n)
   ($fxsll ($fxsra ($fx+ n ($fxsub1 object-alignment))
@@ -4445,159 +4264,344 @@
   #| end of module |# )
 
 
-(define optimize-cp
-  (make-parameter #t))
-
-(define optimizer-output
-  (make-parameter #f))
-
-(define perform-tag-analysis
-  (make-parameter #t))
-
-(define assembler-output
-  (make-parameter #f))
-
-(module (compile-core-expr-to-port
-	 compile-core-expr)
-
-  (define (compile-core-expr-to-port expr port)
-    ;;This function is used to write binary code into the boot image.
-    ;;
-    (fasl-write (compile-core-expr->code expr) port))
-
-  (define (compile-core-expr x)
-    ;;This  function  is used  to  compile  libraries' source  code  for
-    ;;serialisation into FASL files.
-    ;;
-    (let ((code (compile-core-expr->code x)))
-      ($code->closure code)))
-
-  (define who 'compile-core-expr->code)
-
-  (define (compile-core-expr->code p)
-    (let* ((p (recordize p))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (when (optimizer-output)
-	(pretty-print (unparse-pretty p) (current-error-port)))
-      (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-tag-analysis)
-		    (introduce-tags p)
-		  p))
-	     (p (introduce-vars p))
-	     (p (sanitize-bindings p))
-	     (p (optimize-for-direct-jumps p))
-	     (p (insert-global-assignments p))
-	     (p (convert-closures p))
-	     (p (optimize-closures/lift-codes p))
-	     (ls* (alt-cogen p)))
-	(when (assembler-output)
-	  ;;Print nicely the assembly labels.
-	  (parameterize ((gensym-prefix "L")
-			 (print-gensym  #f))
-	    (for-each (lambda (ls)
-			(newline (current-error-port))
-			($for-each/stx print-instr ls))
-	      ls*)))
-	(let ((code* (assemble-sources thunk?-label ls*)))
-	  (car code*)))))
-
-  (define (thunk?-label x)
-    (if (closure? x)
-	(if (null? (closure-free* x))
-	    (code-loc-label (closure-code x))
-	  (error who "BUG: non-thunk escaped" x))
-      #f))
-
-  (define (print-instr x)
-    ;;Print  to   the  current   error  port  the   symbolic  expression
-    ;;representing  the  assembly instruction  X.   To  be used  to  log
-    ;;generated assembly for human inspection.
-    ;;
-    (if (and (pair? x)
-	     (eq? ($car x) 'seq))
-	($for-each/stx print-instr ($cdr x))
-      (let ((port (current-error-port)))
-	(display "   " port)
-	(write x port)
-	(newline port))))
-
-  #| end of module: compile-core-expr |# )
-
-(define current-core-eval
-  (make-parameter (lambda (x)
-		    ((compile-core-expr x)))
-    (lambda (x)
-      (define who 'current-core-eval)
-      (with-arguments-validation (who)
-	  ((procedure	x))
-	x))))
-
-(define (eval-core x)
-  ;;This  function is  used  to compile  fully  expanded R6RS  programs,
-  ;;invoke libraries, implement R6RS's eval function, compile right-hand
-  ;;sides of syntax definitions.
-  ;;
-  ((current-core-eval) x))
+;;;; external code for actual code generation
 
 (include "ikarus.compiler.altcogen.ss")
 
-(define current-primitive-locations
-  (let ((plocs (lambda (x) #f)))
-    (case-lambda
-     (()
-      plocs)
-     ((p)
-      (define who 'current-primitive-locations)
-      (with-arguments-validation (who)
-	  ((procedure	p))
-	(set! plocs p)
-	(refresh-cached-labels!))))))
+
+(define (unparse x)
+  ;;Unparse the struct  instance X (representing recordized  code in the
+  ;;core  language  already processed  by  the  compiler) into  a  human
+  ;;readable symbolic expression to be used when raising errors.
+  ;;
+  ;;Being  that this  function is  used only  when signaling  errors: it
+  ;;makes no sense to use unsafe operations: let's keep it safe!!!
+  ;;
+  (struct-case x
+    ((constant c)
+     `(quote ,c))
+
+    ((known x t)
+     `(known ,(unparse x) ,(T:description t)))
+
+    ((code-loc x)
+     `(code-loc ,x))
+
+    ((var x)
+     (string->symbol (format ":~a" x)))
+
+    ((prelex name)
+     (string->symbol (format ":~a" name)))
+
+    ((primref x)
+     x)
+
+    ((conditional test conseq altern)
+     `(if ,(unparse test) ,(unparse conseq) ,(unparse altern)))
+
+    ((interrupt-call e0 e1)
+     `(interrupt-call ,(unparse e0) ,(unparse e1)))
+
+    ((primcall op arg*)
+     `(,op . ,(map unparse arg*)))
+
+    ((bind lhs* rhs* body)
+     `(let ,(map (lambda (lhs rhs)
+		   (list (unparse lhs) (unparse rhs)))
+	      lhs* rhs*)
+	,(unparse body)))
+
+    ((recbind lhs* rhs* body)
+     `(letrec ,(map (lambda (lhs rhs)
+		      (list (unparse lhs) (unparse rhs)))
+		 lhs* rhs*)
+	,(unparse body)))
+
+    ((rec*bind lhs* rhs* body)
+     `(letrec* ,(map (lambda (lhs rhs)
+		       (list (unparse lhs) (unparse rhs)))
+		  lhs* rhs*)
+	,(unparse body)))
+
+    ;;Commented out because unused;  notice that LIBRARY-LETREC* forms
+    ;;are  represented by  structures of  type REC*BIND;  there is  no
+    ;;structure of type LIBRARY-RECBIND.  (Marco Maggi; Oct 11, 2012)
+    ;;
+    ;; ((library-recbind lhs* loc* rhs* body)
+    ;;  `(letrec ,(map (lambda (lhs loc rhs)
+    ;; 			(list (unparse lhs) loc (unparse rhs)))
+    ;; 		   lhs* loc* rhs*)
+    ;; 	  ,(unparse body)))
+
+    ((fix lhs* rhs* body)
+     `(fix ,(map (lambda (lhs rhs)
+		   (list (unparse lhs) (unparse rhs)))
+	      lhs* rhs*)
+	   ,(unparse body)))
+
+    ((seq e0 e1)
+     (letrec ((recur (lambda (x ac)
+		       (struct-case x
+			 ((seq e0 e1)
+			  (recur e0 (recur e1 ac)))
+			 (else
+			  (cons (unparse x) ac))))))
+       (cons 'begin (recur e0 (recur e1 '())))))
+
+    ((clambda-case info body)
+     `(,(if (case-info-proper info)
+	    (map unparse (case-info-args info))
+	  ;;The loop below  is like MAP but for improper  lists: it maps
+	  ;;UNPARSE over the improper list X.
+	  (let ((X (case-info-args info)))
+	    (let recur ((A (car X))
+			(D (cdr X)))
+	      (if (null? D)
+		  (unparse A)
+		(cons (unparse A) (recur (car D) (cdr D)))))))
+       ,(unparse body)))
+
+    ((clambda g cls* #;cp #;free)
+     ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
+     `(clambda (label: ,g)
+	       ;;cp:   ,(unparse cp))
+	       ;;free: ,(map unparse free))
+	       ,@(map unparse cls*)))
+
+    ((clambda label clauses free)
+     `(code ,label . ,(map unparse clauses)))
+
+    ((closure code free* wk?)
+     `(closure ,@(if wk? '(wk) '())
+	       ,(unparse code)
+	       ,(map unparse free*)))
+
+    ((codes list body)
+     `(codes ,(map unparse list)
+	     ,(unparse body)))
+
+    ((funcall rator rand*)
+     `(funcall ,(unparse rator) . ,(map unparse rand*)))
+
+    ((jmpcall label rator rand*)
+     `(jmpcall ,label ,(unparse rator) . ,(map unparse rand*)))
+
+    ((forcall rator rand*)
+     `(foreign-call ,rator . ,(map unparse rand*)))
+
+    ((assign lhs rhs)
+     `(set! ,(unparse lhs) ,(unparse rhs)))
+
+    ((return x)
+     `(return ,(unparse x)))
+
+    ((new-frame base-idx size body)
+     `(new-frame (base: ,base-idx)
+		 (size: ,size)
+		 ,(unparse body)))
+
+    ((frame-var idx)
+     (string->symbol (format "fv.~a" idx)))
+
+    ((cp-var idx)
+     (string->symbol (format "cp.~a" idx)))
+
+    ((save-cp expr)
+     `(save-cp ,(unparse expr)))
+
+    ((eval-cp check body)
+     `(eval-cp ,check ,(unparse body)))
+
+    ((call-cp call-convention label save-cp? rp-convention base-idx arg-count live-mask)
+     `(call-cp (conv:		,call-convention)
+	       (label:	,label)
+	       (rpconv:	,(if (symbol? rp-convention)
+			     rp-convention
+			   (unparse rp-convention)))
+	       (base-idx:	,base-idx)
+	       (arg-count:	,arg-count)
+	       (live-mask:	,live-mask)))
+
+    ((tailcall-cp convention label arg-count)
+     `(tailcall-cp ,convention ,label ,arg-count))
+
+    ((foreign-label x)
+     `(foreign-label ,x))
+
+    ((mvcall prod cons)
+     `(mvcall ,(unparse prod) ,(unparse cons)))
+
+    ((fvar idx)
+     (string->symbol (format "fv.~a" idx)))
+
+    ((nfv idx)
+     'nfv)
+
+    ((locals vars body)
+     `(locals ,(map unparse vars) ,(unparse body)))
+
+    ((asm-instr op d s)
+     `(asm ,op ,(unparse d) ,(unparse s)))
+
+    ((disp s0 s1)
+     `(disp ,(unparse s0) ,(unparse s1)))
+
+    ((nframe vars live body)
+     `(nframe #;(vars: ,(map unparse vars))
+       #;(live: ,(map unparse live))
+       ,(unparse body)))
+
+    ((shortcut body handler)
+     `(shortcut ,(unparse body) ,(unparse handler)))
+
+    ((ntcall target valuw args mask size)
+     `(ntcall ,target ,size))
+
+    (else
+     (if (symbol? x)
+	 x
+       "#<unknown>"))))
 
 
-(define (expand/pretty x env who . passes)
-  (unless (environment? env)
-    (die who "not an environment" env))
-  (let-values (((x libs) (core-expand x env)))
-    (let loop ((x      (recordize x))
-	       (passes passes))
-      (if (null? passes)
-          (unparse-pretty x)
-	(loop ((car passes) x) (cdr passes))))))
+(define (unparse-pretty x)
+  ;;Unparse the struct  instance X (representing recordized  code in the
+  ;;core  language  already processed  by  the  compiler) into  a  human
+  ;;readable symbolic expression  to be used when printing  to some port
+  ;;for miscellaneous debugging purposes.
+  ;;
+  ;;Being that  this function is used  only when debugging: it  makes no
+  ;;sense to use unsafe operations: let's keep it safe!!!
+  ;;
+  (define n 0)
+  (define h (make-eq-hashtable))
 
-(define expand/scc-letrec
-  (case-lambda
-   ((x)
-    (expand/scc-letrec x (interaction-environment)))
-   ((x env)
-    (expand/pretty x env 'expand/scc-letrec
-		   (lambda (x)
-		     (parameterize ((open-mvcalls #f))
-		       (optimize-direct-calls x)))
-		   (lambda (x)
-		     (parameterize ((debug-scc #t))
-		       (optimize-letrec x)))))))
+  (define (Var x)
+    (or (hashtable-ref h x #f)
+        (let ((v (string->symbol (format "~a_~a" (prelex-name x) n))))
+          (hashtable-set! h x v)
+          (set! n (+ n 1))
+          v)))
 
-(define expand/optimize
-  (case-lambda
-   ((x)
-    (expand/optimize x (interaction-environment)))
-   ((x env)
-    (expand/pretty x env 'expand/optimize
-		   (lambda (x)
-		     (parameterize ((open-mvcalls #f))
-		       (optimize-direct-calls x)))
-		   optimize-letrec
-		   source-optimize))))
+  (define (map f ls)
+    ;;This version  of MAP imposes an  order to the application  of F to
+    ;;the items in LS.
+    ;;
+    (if (null? ls)
+	'()
+      (let ((a (f (car ls))))
+	(cons a (map f (cdr ls))))))
 
-(define expand
-  (case-lambda
-   ((x)
-    (expand x (interaction-environment)))
-   ((x env)
-    (expand/pretty x env 'expand))))
+  (define (E-args proper x)
+    (if proper
+        (map Var x)
+      ;;The loop  below is like  MAP but for  improper lists: it  maps E
+      ;;over the improper list X.
+      (let recur ((A (car x))
+		  (D (cdr x)))
+	(if (null? D)
+	    (Var A)
+	  (let ((A (Var A)))
+	    (cons A (recur (car D) (cdr D))))))))
+
+  (define (clambda-clause x)
+    (struct-case x
+      ((clambda-case info body)
+       (let ((args (E-args (case-info-proper info) (case-info-args info))))
+         (list args (E body))))))
+
+  (define (build-let b* body)
+    (cond ((and (= (length b*) 1)
+		(pair? body)
+		(or (eq? (car body) 'let*)
+		    (and (eq? (car body) 'let)
+			 (= (length (cadr body)) 1))))
+	   (list 'let* (append b* (cadr body)) (caddr body)))
+	  (else
+	   (list 'let b* body))))
+
+  (define (E x)
+    (struct-case x
+      ((constant c)
+       `(quote ,c))
+
+      ((prelex)
+       (Var x))
+
+      ((primref x)
+       x)
+
+      ((known x t)
+       `(known ,(E x) ,(T:description t)))
+
+      ((conditional test conseq altern)
+       (cons 'if (map E (list test conseq altern))))
+
+      ((primcall op arg*)
+       (cons op (map E arg*)))
+
+      ((bind lhs* rhs* body)
+       (let* ((lhs* (map Var lhs*))
+              (rhs* (map E rhs*))
+              (body (E body)))
+         (import (only (ikarus) map))
+         (build-let (map list lhs* rhs*) body)))
+
+      ((fix lhs* rhs* body)
+       (let* ((lhs* (map Var lhs*))
+              (rhs* (map E rhs*))
+              (body (E body)))
+         (import (only (ikarus) map))
+         (list 'letrec (map list lhs* rhs*) body)))
+
+      ((recbind lhs* rhs* body)
+       (let* ((lhs* (map Var lhs*))
+              (rhs* (map E rhs*))
+              (body (E body)))
+         (import (only (ikarus) map))
+         (list 'letrec (map list lhs* rhs*) body)))
+
+      ((rec*bind lhs* rhs* body)
+       (let* ((lhs* (map Var lhs*))
+              (rhs* (map E rhs*))
+              (body (E body)))
+         (import (only (ikarus) map))
+         (list 'letrec* (map list lhs* rhs*) body)))
+
+      ((seq e0 e1)
+       (cons 'begin
+	     (let f ((e0 e0) (e* (list e1)))
+	       (struct-case e0
+		 ((seq e00 e01)
+		  (f e00 (cons e01 e*)))
+		 (else
+		  (let ((x (E e0)))
+		    (if (null? e*)
+			(list x)
+		      (cons x (f (car e*) (cdr e*))))))))))
+
+      ((clambda g cls* cp free)
+       (let ((cls* (map clambda-clause cls*)))
+         (cond
+	  ((= (length cls*) 1) (cons 'lambda (car cls*)))
+	  (else (cons 'case-lambda cls*)))))
+
+      ((funcall rator rand*)
+       (let ((rator (E rator)))
+         (cons rator (map E rand*))))
+
+      ((forcall rator rand*)
+       `(foreign-call ,rator . ,(map E rand*)))
+
+      ((assign lhs rhs)
+       `(set! ,(E lhs) ,(E rhs)))
+
+      ((foreign-label x)
+       `(foreign-label ,x))
+
+      (else x)))
+
+  (E x))
+
 
 
 ;;;; done
