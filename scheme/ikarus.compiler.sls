@@ -3932,13 +3932,12 @@
 	     (local-labels		?lab ...)
 	     (assembly			?body0 ?body ...))
 	    ...)
-         (with-syntax (((V ...) (generate-temporaries #'(?func-name ...))))
+         (with-syntax (((LABEL-GENSYM ...) (generate-temporaries #'(?func-name ...))))
            #'(begin
-	       ;;This V is set to a gensym.
-               (define V #f)
+               (define LABEL-GENSYM #f)
 	       ...
                (define (?func-name)
-                 (or V (error '?func-name "uninitialized label")))
+                 (or LABEL-GENSYM (error '?func-name "uninitialized label")))
 	       ...
 	       (define (?refresh)
 		 (define-syntax ?func-name
@@ -3955,7 +3954,7 @@
 				    (list (cons* ?freevars ?annotation
 						 (list ?body0 ?body ...))))
 				  ?label-name)))
-			   (set! V label)
+			   (set! LABEL-GENSYM label)
 			   (lambda () label)))
 			...)
 		   (void))))
