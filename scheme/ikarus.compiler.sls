@@ -4457,7 +4457,20 @@
 (define assembler-output
   (make-parameter #f))
 
-(module (compile-core-expr->code)
+(module (compile-core-expr-to-port
+	 compile-core-expr)
+
+  (define (compile-core-expr-to-port expr port)
+    ;;This function is used to write binary code into the boot image.
+    ;;
+    (fasl-write (compile-core-expr->code expr) port))
+
+  (define (compile-core-expr x)
+    ;;This  function  is used  to  compile  libraries' source  code  for
+    ;;serialisation into FASL files.
+    ;;
+    (let ((code (compile-core-expr->code x)))
+      ($code->closure code)))
 
   (define who 'compile-core-expr->code)
 
@@ -4511,14 +4524,7 @@
 	(write x port)
 	(newline port))))
 
-  #| end of module: compile-core-expr->code |# )
-
-(define (compile-core-expr-to-port expr port)
-  (fasl-write (compile-core-expr->code expr) port))
-
-(define (compile-core-expr x)
-  (let ((code (compile-core-expr->code x)))
-    ($code->closure code)))
+  #| end of module: compile-core-expr |# )
 
 (define current-core-eval
   (make-parameter (lambda (x)
@@ -4530,6 +4536,10 @@
 	x))))
 
 (define (eval-core x)
+  ;;This  function is  used  to compile  fully  expanded R6RS  programs,
+  ;;invoke libraries, implement R6RS's eval function, compile right-hand
+  ;;sides of syntax definitions.
+  ;;
   ((current-core-eval) x))
 
 (include "ikarus.compiler.altcogen.ss")
