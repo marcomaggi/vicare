@@ -4068,22 +4068,23 @@
   (define-syntax define-cached
     (lambda (x)
       (syntax-case x ()
-        ((_ refresh ((name*) ?body0 ?body ...) ...)
-         (with-syntax (((v* ...) (generate-temporaries #'(name* ...))))
+        ((_ ?refresh ((?name) ?body0 ?body ...) ...)
+         (with-syntax (((V ...) (generate-temporaries #'(?name ...))))
            #'(begin
-               (define v* #f)
+	       ;;This V is set to a gensym.
+               (define V #f)
 	       ...
-               (define (name*)
-                 (or v* (error 'name* "uninitialized label")))
+               (define (?name)
+                 (or V (error '?name "uninitialized label")))
 	       ...
-	       (define (refresh)
-		 (define-syntax name*
+	       (define (?refresh)
+		 (define-syntax ?name
 		   (lambda (stx)
 		     (syntax-error stx "cannot use label before it is defined")))
 		 ...
-		 (let* ((name* (let ((label (let ()
+		 (let* ((?name (let ((label (let ()
 					      ?body0 ?body ...)))
-				 (set! v* label)
+				 (set! V label)
 				 (lambda () label)))
 			...)
 		   (void))))
@@ -4101,7 +4102,11 @@
 	(list 2
 	      `(name ,(make-annotation-indirect))
 	      (label SL_annotated)
-	      (movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag) cpr) cpr)
+	      ;;Load into CPR (Closure  Pointer Register) the address of
+	      ;;the first byte of binary code.
+	      (movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag)
+			 cpr)
+		    cpr)
 	      (tail-indirect-cpr-call))))
      SL_annotated)
 
@@ -4409,11 +4414,11 @@
      (()
       plocs)
      ((p)
-      (if (procedure? p)
-	  (begin
-	    (set! plocs p)
-	    (refresh-cached-labels!))
-	(error 'current-primitive-locations "not a procedure" p))))))
+      (define who 'current-primitive-locations)
+      (with-arguments-validation (who)
+	  ((procedure	p))
+	(set! plocs p)
+	(refresh-cached-labels!))))))
 
 
 (define (expand/pretty x env who . passes)
