@@ -4098,16 +4098,20 @@
      (define SL_annotated
        (gensym "SL_annotated"))
      (assemble-sources (lambda (x) #f)
-       (list
-	(list 2
-	      `(name ,(make-annotation-indirect))
-	      (label SL_annotated)
-	      ;;Load into CPR (Closure  Pointer Register) the address of
-	      ;;the first byte of binary code.
-	      (movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag)
-			 cpr)
-		    cpr)
-	      (tail-indirect-cpr-call))))
+       `(,(list 2	;number of free variables
+		;;ANNOTATION-INDIRECT is  a struct type  without fields;
+		;;it is used  to generate unique values.   This will end
+		;;in the code object's annotation field.
+		`(name ,(make-annotation-indirect))
+		;; -----------------------------------------------------
+		(label SL_annotated)
+		;;Load into  CPR (Closure Pointer Register)  the address
+		;;of  the  first byte  of  binary  code in  the  closure
+		;;actually referenced by the CPR itself.
+		(movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag)
+			   cpr)
+		      cpr)
+		(tail-indirect-cpr-call))))
      SL_annotated)
 
     ((sl-apply-label)
@@ -4116,8 +4120,9 @@
 	   (L_apply_loop (gensym)))
        (assemble-sources (lambda (x) #f)
 	 (list
-	  (list 0
-		(label SL_apply)
+	  (list 0			;number of free vars
+		(label SL_apply)	;code name
+		;; -----------------------------------------------------
 		(movl (mem fpr eax) ebx)
 		(cmpl (int nil) ebx)
 		(je (label L_apply_done))
