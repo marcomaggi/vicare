@@ -904,6 +904,17 @@
    well-known?
    ))
 
+;;Instances of this type represent function calls to primitives.
+;;
+(define-struct primcall
+  (op
+		;A symbol being the name of the primitive.
+   arg*
+		;A  list  of  struct instances  representing  recordized
+		;expressions  which,  when  evaluated, will  return  the
+		;arguments of this primitive call.
+   ))
+
 ;;; --------------------------------------------------------------------
 
 (define-struct code-loc
@@ -944,9 +955,6 @@
    label
    arg-count
    ))
-
-(define-struct primcall
-  (op arg*))
 
 (define-struct interrupt-call
   (test handler))

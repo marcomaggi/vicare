@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-;;;;
+;;;; Introduction
 ;;
 ;;Input to cogen is <Program>:
 ;;
@@ -37,9 +37,11 @@
 ;;  <info>    ::= (clambda-info label <arg var>* proper)
 ;;  <Program> ::= (codes <clambda>* <Expr>)
 
+
 (module (alt-cogen compile-call-frame)
 
   (define (alt-cogen x)
+    ;;Commenting out this definition causes some passes to be timed.
     (define-inline (time-it name proc)
       (proc))
     (let* ((x (introduce-primcalls x))
@@ -57,104 +59,136 @@
 
 
 (module (introduce-primcalls)
-
+  ;;The purpose of this module is to examine all the function calls:
+  ;;
+  ;;   (?operator ?arg ...)
+  ;;
+  ;;if the ?OPERATOR is a struct instance of type PRIMREF representing a
+  ;;primitive  operation:  such struct  is  replaced  by an  appropriate
+  ;;struct instance of type PRIMCALL.
+  ;;
   (define who 'introduce-primcalls)
 
-  (define (introduce-primcalls x)
+  (define (introduce-primcalls Program)
+    (struct-case Program
+      ((codes code* body)
+       (make-codes (map Clambda code*) (E body)))
+      (else
+       (error who "invalid program" Program))))
 
-    (define (Program x)
+;;; --------------------------------------------------------------------
+
+  (module (E)
+
+    (define (E x)
+      ;;The  purpose of  this recordized  code traversal  is to  process
+      ;;struct  instances of  type  FUNCALL with  the module  MKFUNCALL;
+      ;;everything else is left untouched.
+      ;;
       (struct-case x
-	((codes code* body)
-	 (make-codes (map Clambda code*) (E body)))
+	((constant)
+	 x)
+
+	((var)
+	 x)
+
+	((primref)
+	 x)
+
+	((bind lhs* rhs* body)
+	 (make-bind lhs* (map E rhs*) (E body)))
+
+	((fix lhs* rhs* body)
+	 (make-fix lhs* rhs* (E body)))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (E e0) (E e1) (E e2)))
+
+	((seq e0 e1)
+	 (make-seq (E e0) (E e1)))
+
+	((closure)
+	 x)
+
+	((forcall op arg*)
+	 (make-forcall op (map E arg*)))
+
+	((funcall rator arg*)
+	 (mkfuncall (E-known rator) (map E-known arg*)))
+
+	((jmpcall label rator arg*)
+	 (make-jmpcall label (E rator) (map E arg*)))
+
 	(else
-	 (error who "invalid program" x))))
+	 (error who "invalid expr" x))))
 
-    (Program x))
+    (define (E-known x)
+      (struct-case x
+	((known expr type)
+	 (make-known (E expr) type))
+	(else
+	 (E x))))
 
-  (define (E x)
-    (struct-case x
-      ((constant)
-       x)
+    #| end of module: E |# )
 
-      ((var)
-       x)
+;;; --------------------------------------------------------------------
 
-      ((primref)
-       x)
+  (module (Clambda)
+    ;;The purpose  of this  module is to  apply E to  the body  of every
+    ;;CASE-LAMBDA clause.
+    ;;
+    (define (Clambda x)
+      (struct-case x
+	((clambda label case* cp free* name)
+	 (make-clambda label (map ClambdaCase case*) cp free* name))
+	(else
+	 (error who "invalid clambda" x))))
 
-      ((bind lhs* rhs* body)
-       (make-bind lhs* (map E rhs*) (E body)))
+    (define (ClambdaCase x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (E body)))
+	(else
+	 (error who "invalid clambda-case" x))))
 
-      ((fix lhs* rhs* body)
-       (make-fix lhs* rhs* (E body)))
-
-      ((conditional e0 e1 e2)
-       (make-conditional (E e0) (E e1) (E e2)))
-
-      ((seq e0 e1)
-       (make-seq (E e0) (E e1)))
-
-      ((closure)
-       x)
-
-      ((forcall op arg*)
-       (make-forcall op (map E arg*)))
-
-      ((funcall rator arg*)
-       (mkfuncall (E-known rator) (map E-known arg*)))
-
-      ((jmpcall label rator arg*)
-       (make-jmpcall label (E rator) (map E arg*)))
-
-      (else
-       (error who "invalid expr" x))))
-
-  (define (ClambdaCase x)
-    (struct-case x
-      ((clambda-case info body)
-       (make-clambda-case info (E body)))
-      (else
-       (error who "invalid clambda-case" x))))
-
-  (define (Clambda x)
-    (struct-case x
-      ((clambda label case* cp free* name)
-       (make-clambda label (map ClambdaCase case*) cp free* name))
-      (else
-       (error who "invalid clambda" x))))
-
-  (define (E-known x)
-    (struct-case x
-      ((known expr type)
-       (make-known (E expr) type))
-      (else
-       (E x))))
+    #| end of module: Clambda |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (mkfuncall)
 
     (define (mkfuncall op arg*)
+      ;;OP is a struct instance  representing the operator in a function
+      ;;application.
+      ;;
+      ;;ARG* is a list of struct instances representing the arguments of
+      ;;a function application.
+      ;;
+      ;;If  the   operator  is  a   struct  instance  of   type  PRIMREF
+      ;;representing a  primitive operation: such struct  is replaced by
+      ;;an appropriate struct instance of type PRIMCALL.
+      ;;
       (struct-case op
-	((known x t)
-	 (struct-case x
+	((known expr type)
+	 (struct-case expr
 	   ((primref name)
-	    (if (primop? name)
+	    (if (%primitive-operation? name)
 		(make-primcall name arg*)
 	      (make-funcall op arg*)))
 	   (else
 	    (make-funcall op arg*))))
 
 	((primref name)
-	 (cond ((primop? name)
-		(make-primcall name arg*))
-	       (else
-		(make-funcall op arg*))))
+	 (if (%primitive-operation? name)
+	     (make-primcall name arg*)
+	   (make-funcall op arg*)))
 
 	(else
 	 (make-funcall op arg*))))
 
-    (define (primop? x)
+    (define (%primitive-operation? x)
+      ;;Import PRIMOP?  from a module defined  in "pass-specify-rep.ss".
+      ;;(Marco Maggi; Oct 14, 2012)
       (import primops)
       (or (eq? x 'debug-call)
 	  (primop? x)))
@@ -163,31 +197,33 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (check-gensym x)
-    (unless (gensym? x)
-      (error who "invalid gensym" x)))
-
-  (define (check-label x)
-    (struct-case x
-      ((code-loc label)
-       (check-gensym label))
-      (else
-       (error who "invalid label" x))))
-
-  (define (check-var x)
-    (struct-case x
-      ((var)
-       (void))
-      (else
-       (error who "invalid var" x))))
-
-  (define (check-closure x)
-    (struct-case x
-      ((closure label free*)
-       (check-label label)
-       (for-each check-var free*))
-      (else
-       (error who "invalid closure" x))))
+  ;;Commented out because unused.  (Marco Maggi; Oct 14, 2012)
+  ;;
+  ;; (define (check-gensym x)
+  ;;   (unless (gensym? x)
+  ;;     (error who "invalid gensym" x)))
+  ;;
+  ;; (define (check-label x)
+  ;;   (struct-case x
+  ;;     ((code-loc label)
+  ;;      (check-gensym label))
+  ;;     (else
+  ;;      (error who "invalid label" x))))
+  ;;
+  ;; (define (check-var x)
+  ;;   (struct-case x
+  ;;     ((var)
+  ;;      (void))
+  ;;     (else
+  ;;      (error who "invalid var" x))))
+  ;;
+  ;; (define (check-closure x)
+  ;;   (struct-case x
+  ;;     ((closure label free*)
+  ;;      (check-label label)
+  ;;      (for-each check-var free*))
+  ;;     (else
+  ;;      (error who "invalid closure" x))))
 
   #| end of module: introduce-primcalls |# )
 
