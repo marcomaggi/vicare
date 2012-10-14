@@ -2868,11 +2868,13 @@
    ((E) (interrupt)))
 
  (define-primop $make-values-procedure unsafe
-   ((V) (K (make-closure
-            (make-code-loc (sl-values-label))
-            '() #f)))
-   ((P) (interrupt))
-   ((E) (interrupt)))
+   ((V)
+    (K (make-closure (make-code-loc (sl-values-label))
+		     '() #f)))
+   ((P)
+    (interrupt))
+   ((E)
+    (interrupt)))
 
  (define-primop $make-annotated-procedure unsafe
    ((V annotation proc)

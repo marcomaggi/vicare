@@ -4135,8 +4135,8 @@
      (entry-point-label		SL_annotated)
      (number-of-free-variables	2)
      ;;ANNOTATION-INDIRECT is a  struct type without fields;  it is used
-     ;;to generate  unique values.  This  will end in the  code object's
-     ;;annotation field.
+     ;;to generate unique values or disjoint type.  This will end in the
+     ;;code object's annotation field.
      (code-annotation		`(name ,(make-annotation-indirect)))
      (definitions
        (import (only (ikarus.code-objects)
@@ -4316,6 +4316,8 @@
       (tail-indirect-cpr-call)
       ))
 
+    ;;This is the implementation of the VALUES function.
+    ;;
     ((public-function		sl-values-label)
      (entry-point-label		SL_values)
      (number-of-free-variables	0)
