@@ -63,6 +63,7 @@
     (only (vicare syntactic-extensions)
 	  define-inline
 	  define-inline-constant
+	  define-auxiliary-syntaxes
 	  case-symbols
 	  case-fixnums
 	  case-word-size)
@@ -4077,27 +4078,37 @@
 	 sl-values-label
 	 sl-cwv-label)
 
+  (define-auxiliary-syntaxes public-function)
+  (define-auxiliary-syntaxes label-name)
+
   (define-syntax define-cached
     (lambda (x)
-      (syntax-case x ()
-        ((_ ?refresh ((?name) ?body0 ?body ...) ...)
-         (with-syntax (((V ...) (generate-temporaries #'(?name ...))))
+      (syntax-case x (public-function label-name)
+        ((_ ?refresh
+	    ((public-function ?func-name)
+	     (label-name ?label-name)
+	     ?body0 ?body ...)
+	    ...)
+         (with-syntax (((V ...) (generate-temporaries #'(?func-name ...))))
            #'(begin
 	       ;;This V is set to a gensym.
                (define V #f)
 	       ...
-               (define (?name)
-                 (or V (error '?name "uninitialized label")))
+               (define (?func-name)
+                 (or V (error '?func-name "uninitialized label")))
 	       ...
 	       (define (?refresh)
-		 (define-syntax ?name
+		 (define-syntax ?func-name
 		   (lambda (stx)
 		     (syntax-error stx "cannot use label before it is defined")))
 		 ...
-		 (let* ((?name (let ((label (let ()
-					      ?body0 ?body ...)))
-				 (set! V label)
-				 (lambda () label)))
+		 (let* ((?func-name
+			 (let ((label
+				(let ((?label-name (gensym (symbol->string '?label-name))))
+				  ?body0 ?body ...
+				  ?label-name)))
+			   (set! V label)
+			   (lambda () label)))
 			...)
 		   (void))))
 	   ))
@@ -4105,11 +4116,10 @@
 
   (define-cached refresh-cached-labels!
 
-    ((sl-annotated-procedure-label)
+    ((public-function	sl-annotated-procedure-label)
+     (label-name	SL_annotated)
      (import (only (ikarus.code-objects)
 		   make-annotation-indirect))
-     (define SL_annotated
-       (gensym "SL_annotated"))
      (assemble-sources (lambda (x) #f)
        `(,(list 2	;number of free variables
 		;;ANNOTATION-INDIRECT is  a struct type  without fields;
@@ -4128,10 +4138,10 @@
 		;;referenced by  the CPR (Closure Pointer  Register) and
 		;;jump directly there.
 		(tail-indirect-cpr-call)
-		)))
-     SL_annotated)
+		))))
 
-    ((sl-apply-label)
+    ((public-function	sl-apply-label)
+     (label-name	SL_apply)
      ;;In the context of a function application like:
      ;;
      ;;   (apply ?function ?arg0 ?arg1 '(?arg2 ?arg3 ?arg4))
@@ -4161,7 +4171,6 @@
      ;;   [FPR + EAX] --> | ?arg4
      ;;                  ---
      ;;
-     (define SL_apply (gensym "SL_apply"))
      (let ((L_apply_done (gensym))
 	   (L_apply_loop (gensym)))
        (assemble-sources (lambda (x) #f)
@@ -4206,11 +4215,10 @@
 		  ;;referenced by the CPR (Closure Pointer Register) and
 		  ;;jump directly there.
 		  (tail-indirect-cpr-call)
-		  )))
-       SL_apply))
+		  )))))
 
-    ((sl-continuation-code-label)
-     (define SL_continuation_code (gensym "SL_continuation_code"))
+    ((public-function	sl-continuation-code-label)
+     (label-name	SL_continuation_code)
      (assemble-sources (lambda (x) #f)
        (list
 	(let ((L_cont_zero_args      (gensym))
@@ -4260,11 +4268,10 @@
 		(movl ebx fpr)
 		(movl (mem 0 ebx) ebx)
 		(jmp (mem disp-multivalue-rp ebx))
-		))))
-     SL_continuation_code)
+		)))))
 
-    ((sl-invalid-args-label)
-     (define SL_invalid_args (gensym "SL_invalid_args"))
+    ((public-function	sl-invalid-args-label)
+     (label-name	SL_invalid_args)
      (assemble-sources (lambda (x) #f)
        `(,(list 0			;number of free variables
 		(label SL_invalid_args)	;code name
@@ -4279,21 +4286,19 @@
 		;;referenced by  the CPR (Closure Pointer  Register) and
 		;;jump directly there.
 		(tail-indirect-cpr-call)
-		)))
-     SL_invalid_args)
+		))))
 
-    ((sl-mv-ignore-rp-label)
-     (define SL_multiple_values_ignore_rp (gensym "SL_multiple_ignore_error_rp"))
+    ((public-function	sl-mv-ignore-rp-label)
+     (label-name	SL_multiple_values_ignore_rp)
      (assemble-sources (lambda (x) #f)
        `(,(list 0
 		(label SL_multiple_values_ignore_rp)
 ;;;
 		(ret)
-		)))
-     SL_multiple_values_ignore_rp)
+		))))
 
-    ((sl-mv-error-rp-label)
-     (define SL_multiple_values_error_rp (gensym "SL_multiple_values_error_rp"))
+    ((public-function	sl-mv-error-rp-label)
+     (label-name	SL_multiple_values_error_rp)
      (assemble-sources (lambda (x) #f)
        `(,(list 0
 		(label SL_multiple_values_error_rp)
@@ -4304,11 +4309,10 @@
 		;;referenced by  the CPR (Closure Pointer  Register) and
 		;;jump directly there.
 		(tail-indirect-cpr-call)
-		)))
-     SL_multiple_values_error_rp)
+		))))
 
-    ((sl-values-label)
-     (define SL_values (gensym "SL_values"))
+    ((public-function	sl-values-label)
+     (label-name	SL_values)
      (let ((L_values_one_value (gensym))
 	   (L_values_many_values (gensym)))
        (assemble-sources (lambda (x) #f)
@@ -4326,11 +4330,10 @@
 		  (label L_values_one_value)
 		  (movl (mem (fx- 0 wordsize) fpr) eax)
 		  (ret)
-		  ))))
-     SL_values)
+		  )))))
 
-    ((sl-cwv-label)
-     (define SL_call_with_values (gensym "SL_call_with_values"))
+    ((public-function	sl-cwv-label)
+     (label-name	SL_call_with_values)
      (let ((L_cwv_done		(gensym))
 	   (L_cwv_loop		(gensym))
 	   (L_cwv_multi_rp	(gensym))
@@ -4424,9 +4427,10 @@
 		  ;;referenced by the CPR (Closure Pointer Register) and
 		  ;;jump directly there.
 		  (tail-indirect-cpr-call)
-		  ))))
-     SL_call_with_values)
-    ))
+		  )))))
+    )
+
+  #| end of module |# )
 
 
 (define optimize-cp
