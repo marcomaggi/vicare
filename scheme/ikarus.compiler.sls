@@ -4082,7 +4082,7 @@
     #f)
 
   (define-auxiliary-syntaxes public-function)
-  (define-auxiliary-syntaxes label-name)
+  (define-auxiliary-syntaxes entry-point-label)
   (define-auxiliary-syntaxes number-of-free-variables)
   (define-auxiliary-syntaxes code-annotation)
   (define-auxiliary-syntaxes definitions)
@@ -4091,11 +4091,11 @@
   (define-syntax define-cached
     (lambda (x)
       (syntax-case x (public-function
-		      label-name number-of-free-variables
+		      entry-point-label number-of-free-variables
 		      code-annotation definitions assembly)
         ((_ ?refresh
 	    ((public-function		?func-name)
-	     (label-name		?label-name)
+	     (entry-point-label		?label-name)
 	     (number-of-free-variables	?freevars)
 	     (code-annotation		?annotation)
 	     (definitions		?def ...)
@@ -4132,7 +4132,7 @@
   (define-cached refresh-cached-labels!
 
     ((public-function		sl-annotated-procedure-label)
-     (label-name		SL_annotated)
+     (entry-point-label		SL_annotated)
      (number-of-free-variables	2)
      ;;ANNOTATION-INDIRECT is a  struct type without fields;  it is used
      ;;to generate  unique values.  This  will end in the  code object's
@@ -4184,7 +4184,7 @@
      ;;   [FPR + EAX] --> | ?arg4
      ;;                  ---
      ;;
-     (label-name		SL_apply)
+     (entry-point-label		SL_apply)
      (number-of-free-variables	0)
      (code-annotation		(label SL_apply))
      (definitions
@@ -4226,7 +4226,7 @@
       ))
 
     ((public-function		sl-continuation-code-label)
-     (label-name		SL_continuation_code)
+     (entry-point-label		SL_continuation_code)
      (number-of-free-variables	1)
      (code-annotation		(label SL_continuation_code))
      (definitions
@@ -4278,7 +4278,7 @@
       ))
 
     ((public-function		sl-invalid-args-label)
-     (label-name		SL_invalid_args)
+     (entry-point-label		SL_invalid_args)
      (number-of-free-variables	0)
      (code-annotation		(label SL_invalid_args))
      (definitions)
@@ -4295,7 +4295,7 @@
       ))
 
     ((public-function		sl-mv-ignore-rp-label)
-     (label-name		SL_multiple_values_ignore_rp)
+     (entry-point-label		SL_multiple_values_ignore_rp)
      (number-of-free-variables	0)
      (code-annotation		(label SL_multiple_values_ignore_rp))
      (definitions)
@@ -4304,7 +4304,7 @@
       ))
 
     ((public-function		sl-mv-error-rp-label)
-     (label-name		SL_multiple_values_error_rp)
+     (entry-point-label		SL_multiple_values_error_rp)
      (number-of-free-variables	0)
      (code-annotation		(label SL_multiple_values_error_rp))
      (definitions)
@@ -4317,12 +4317,12 @@
       ))
 
     ((public-function		sl-values-label)
-     (label-name		SL_values)
+     (entry-point-label		SL_values)
      (number-of-free-variables	0)
      (code-annotation		'(name values))
      (definitions
-       (define L_values_one_value (gensym))
-       (define L_values_many_values (gensym)))
+       (define L_values_one_value	(gensym))
+       (define L_values_many_values	(gensym)))
      (assembly
       (label SL_values)
       (cmpl (int (argc-convention 1)) eax)
@@ -4338,7 +4338,7 @@
       ))
 
     ((public-function		sl-cwv-label)
-     (label-name		SL_call_with_values)
+     (entry-point-label		SL_call_with_values)
      (number-of-free-variables	0)
      (code-annotation		'(name call-with-values))
      (definitions
