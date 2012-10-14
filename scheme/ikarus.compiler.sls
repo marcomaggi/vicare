@@ -3929,6 +3929,8 @@
 (define pcb-collect-key			(* 12 wordsize))
 
 
+;;;; utility functions
+
 (module (fx?)
 
   (define intbits
@@ -3950,6 +3952,23 @@
 
   #| end od module |# )
 
+(define (primref->symbol op)
+  (define who 'primref->symbol)
+  (with-arguments-validation (who)
+      ((symbol	op))
+    (cond (((current-primitive-locations) op)
+	   => (lambda (x)
+		(with-arguments-validation (who)
+		    ((symbol	x))
+		  x)))
+	  (else
+	   (error who "BUG: primitive missing from makefile.sps" op)))))
+
+;;(define (primref-loc op)
+;;  (mem (fx- disp-symbol-record-proc record-tag)
+;;       (obj (primref->symbol op))))
+
+
 (module ()
   ;;Initialize the cogen.  This parameter is used by the assembler.
   (code-entry-adjustment (- disp-code-data vector-tag)))
@@ -4037,24 +4056,8 @@
   ($fx- 0 ($fxsll n fx-shift)))
 
 
+;;;; assembly labels for common subroutines
 
-(define (primref->symbol op)
-  (define who 'primref->symbol)
-  (with-arguments-validation (who)
-      ((symbol	op))
-    (cond (((current-primitive-locations) op)
-	   => (lambda (x)
-		(with-arguments-validation (who)
-		    ((symbol	x))
-		  x)))
-	  (else
-	   (error who "BUG: primitive missing from makefile.sps" op)))))
-
-;;(define (primref-loc op)
-;;  (mem (fx- disp-symbol-record-proc record-tag)
-;;       (obj (primref->symbol op))))
-
-;;Assembly labels.
 (module (refresh-cached-labels!
 	 sl-annotated-procedure-label
 	 sl-apply-label
@@ -4103,18 +4106,47 @@
 		;;it is used  to generate unique values.   This will end
 		;;in the code object's annotation field.
 		`(name ,(make-annotation-indirect))
-		;; -----------------------------------------------------
+;;;
 		(label SL_annotated)
 		;;Load into  CPR (Closure Pointer Register)  the address
 		;;of  the  first byte  of  binary  code in  the  closure
 		;;actually referenced by the CPR itself.
-		(movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag)
+		(movl (mem ($fx- ($fx+ disp-closure-data wordsize) closure-tag)
 			   cpr)
 		      cpr)
 		(tail-indirect-cpr-call))))
      SL_annotated)
 
     ((sl-apply-label)
+     ;;In the context of a function application like:
+     ;;
+     ;;   (apply ?function ?arg0 ?arg1 '(?arg2 ?arg3 ?arg4))
+     ;;
+     ;;this routine iterates  the list of arguments pushes  on the stack
+     ;;the Scheme objects: ?ARG2, ?ARG3, ?ARG4.
+     ;;
+     ;;Before:
+     ;;                  ---
+     ;;                   | ?arg0
+     ;;                  ---
+     ;;                   | ?arg1
+     ;;                  ---
+     ;;   [FPR + EAX] --> | --> (?arg2 ?arg3 ?arg4)
+     ;;                  ---
+     ;;
+     ;;after:
+     ;;                  ---
+     ;;                   | ?arg0
+     ;;                  ---
+     ;;                   | ?arg1
+     ;;                  ---
+     ;;                   | ?arg2
+     ;;                  ---
+     ;;                   | ?arg3
+     ;;                  ---
+     ;;   [FPR + EAX] --> | ?arg4
+     ;;                  ---
+     ;;
      (let ((SL_apply (gensym "SL_apply"))
 	   (L_apply_done (gensym))
 	   (L_apply_loop (gensym)))
@@ -4122,18 +4154,40 @@
 	 (list
 	  (list 0			;number of free vars
 		(label SL_apply)	;code name
-		;; -----------------------------------------------------
+;;;
+		;;We suppose  that: at (descending) offset  EAX from the
+		;;address  in FPR  (Frame Pointer  Register) there  is a
+		;;reference to a Scheme list.
+
+		;;Load  in EBX  the word  at offset  EAX from  the frame
+		;;pointer.
 		(movl (mem fpr eax) ebx)
+		;;If EBX holds the Scheme null object ...
 		(cmpl (int nil) ebx)
+		;;... there  are no function  call arguments to  push on
+		;;the stack.
 		(je (label L_apply_done))
+
 		(label L_apply_loop)
-		(movl (mem (fx- disp-car pair-tag) ebx) ecx)
-		(movl (mem (fx- disp-cdr pair-tag) ebx) ebx)
+		;;Load in ECX the car.
+		(movl (mem ($fx- disp-car pair-tag) ebx) ecx)
+		;;Load in EBX the cdr.
+		(movl (mem ($fx- disp-cdr pair-tag) ebx) ebx)
+		;;Move the car at offset EAX from the frame pointer.
 		(movl ecx (mem fpr eax))
+		;;Decrement EAX  by the  word size:  offset of  the next
+		;;argument, if any.
 		(subl (int wordsize) eax)
+		;;If EBX does not hold the Scheme null object ...
 		(cmpl (int nil) ebx)
+		;;... there are more function  call arguments to push on
+		;;the stack.
 		(jne (label L_apply_loop))
+
 		(label L_apply_done)
+		;;Undo the previous increment of EAX, so that EAX is the
+		;;offset from  the address in  FPR of the  last function
+		;;call argument.
 		(addl (int wordsize) eax)
 		(tail-indirect-cpr-call))))
        SL_apply))
@@ -4147,59 +4201,63 @@
 	      (L_cont_one_arg        (gensym))
 	      (L_cont_mult_move_args (gensym))
 	      (L_cont_mult_copy_loop (gensym)))
-	  (list  1 ; freevars
-		 (label SL_continuation_code)
-		 (movl (mem (fx- disp-closure-data closure-tag) cpr) ebx) ; captured-k
-		 (movl ebx (mem pcb-next-continuation pcr)) ; set
-		 (movl (mem pcb-frame-base pcr) ebx)
-		 (cmpl (int (argc-convention 1)) eax)
-		 (jg (label L_cont_zero_args))
-		 (jl (label L_cont_mult_args))
-		 (label L_cont_one_arg)
-		 (movl (mem (fx- 0 wordsize) fpr) eax)
-		 (movl ebx fpr)
-		 (subl (int wordsize) fpr)
-		 (ret)
-		 (label L_cont_zero_args)
-		 (subl (int wordsize) ebx)
-		 (movl ebx fpr)
-		 (movl (mem 0 ebx) ebx) ; return point
-		 (jmp (mem disp-multivalue-rp ebx)) ; go
-		 (label L_cont_mult_args)
-		 (subl (int wordsize) ebx)
-		 (cmpl ebx fpr)
-		 (jne (label L_cont_mult_move_args))
-		 (movl (mem 0 ebx) ebx)
-		 (jmp (mem disp-multivalue-rp ebx))
-		 (label L_cont_mult_move_args)
-		; move args from fpr to ebx
-		 (movl (int 0) ecx)
-		 (label L_cont_mult_copy_loop)
-		 (subl (int wordsize) ecx)
-		 (movl (mem fpr ecx) edx)
-		 (movl edx (mem ebx ecx))
-		 (cmpl ecx eax)
-		 (jne (label L_cont_mult_copy_loop))
-		 (movl ebx fpr)
-		 (movl (mem 0 ebx) ebx)
-		 (jmp (mem disp-multivalue-rp ebx))))))
+	  (list 1				;number of free variables
+		(label SL_continuation_code)	;code name
+;;;
+		(movl (mem (fx- disp-closure-data closure-tag) cpr) ebx) ; captured-k
+		(movl ebx (mem pcb-next-continuation pcr)) ; set
+		(movl (mem pcb-frame-base pcr) ebx)
+		(cmpl (int (argc-convention 1)) eax)
+		(jg (label L_cont_zero_args))
+		(jl (label L_cont_mult_args))
+
+		(label L_cont_one_arg)
+		(movl (mem (fx- 0 wordsize) fpr) eax)
+		(movl ebx fpr)
+		(subl (int wordsize) fpr)
+		(ret)
+
+		(label L_cont_zero_args)
+		(subl (int wordsize) ebx)
+		(movl ebx fpr)
+		(movl (mem 0 ebx) ebx)		    ; return point
+		(jmp (mem disp-multivalue-rp ebx))  ; go
+
+		(label L_cont_mult_args)
+		(subl (int wordsize) ebx)
+		(cmpl ebx fpr)
+		(jne (label L_cont_mult_move_args))
+		(movl (mem 0 ebx) ebx)
+		(jmp (mem disp-multivalue-rp ebx))
+
+		(label L_cont_mult_move_args)
+		;;Move args from FPR to EBX.
+		(movl (int 0) ecx)
+
+		(label L_cont_mult_copy_loop)
+		(subl (int wordsize) ecx)
+		(movl (mem fpr ecx) edx)
+		(movl edx (mem ebx ecx))
+		(cmpl ecx eax)
+		(jne (label L_cont_mult_copy_loop))
+		(movl ebx fpr)
+		(movl (mem 0 ebx) ebx)
+		(jmp (mem disp-multivalue-rp ebx))))))
      SL_continuation_code)
 
     ((sl-invalid-args-label)
      (define SL_invalid_args (gensym "SL_invalid_args"))
      (assemble-sources (lambda (x) #f)
-       (list
-	(list 0
-	      (label SL_invalid_args)
+       `(,(list 0			;number of free variables
+		(label SL_invalid_args)	;code name
 ;;;
-	      (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
-	      (negl eax)
-	      (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
-	      (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
-	      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-		;(movl (primref-loc '$incorrect-args-error-handler) cpr)
-	      (movl (int (argc-convention 2)) eax)
-	      (tail-indirect-cpr-call))))
+		(movl cpr (mem ($fx- 0 wordsize) fpr)) ; first arg
+		(negl eax)
+		(movl eax (mem ($fx- 0 ($fx* 2 wordsize)) fpr))
+		(movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
+		(movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+		(movl (int (argc-convention 2)) eax)
+		(tail-indirect-cpr-call))))
      SL_invalid_args)
 
     ((sl-mv-ignore-rp-label)
@@ -4219,7 +4277,6 @@
 	      (label SL_multiple_values_error_rp)
 	      (movl (obj (primref->symbol '$multiple-values-error)) cpr)
 	      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-		;(movl (primref-loc '$multiple-values-error) cpr)
 	      (tail-indirect-cpr-call))))
      SL_multiple_values_error_rp)
 
