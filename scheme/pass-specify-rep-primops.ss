@@ -2792,12 +2792,21 @@
 (section ;;; interrupts-and-engines
 
  (define-primop $interrupted? unsafe
-   ((P) (prm '!= (prm 'mref pcr (K pcb-interrupted)) (K 0))))
+   ;;Evaluate  to true  if the  field  "interrupted" of  the C  language
+   ;;struct PCB is not zero.
+   ;;
+   ((P)
+    (prm '!= (prm 'mref pcr (K pcb-interrupted)) (K 0))))
 
  (define-primop $unset-interrupted! unsafe
-   ((E) (prm 'mset pcr (K pcb-interrupted) (K 0))))
+   ;;Set to zero the field "interrupted" of the C language struct PCB.
+   ;;
+   ((E)
+    (prm 'mset pcr (K pcb-interrupted) (K 0))))
 
  (define-primop $do-event safe
+   ;;Set to 1 the field "engine_counter" of the C language struct PCB.
+   ;;
    ((E)
     (begin
       (interrupt)
@@ -2805,8 +2814,13 @@
 	   (K (fxsll 1 fx-shift))))))
 
  (define-primop $swap-engine-counter! unsafe
+   ;;Set to X  the field "engine_counter" of the C  language struct PCB;
+   ;;return the previous field value.
+   ;;
    ((V x)
-;;; FIXME: should be atomic swap instead of load and set!
+    ;;FIXME: should be atomic swap  instead of load and set!  (Abdulaziz
+    ;;Ghuloum)
+    ;;
     (with-tmp ((x0 (T x)))
       (with-tmp ((t (prm 'mref pcr (K pcb-engine-counter))))
 	(prm 'mset pcr (K pcb-engine-counter) x0)

@@ -474,39 +474,58 @@
 
 
 (module (insert-engine-checks)
+  ;;This  module traverses  all the  function  bodies and,  if the  body
+  ;;contains at least one JMPCALL struct or one FUNCALL struct (in which
+  ;;the operator is *not* a PRIMREF), it transforms the ?BODY into:
+  ;;
+  ;;   (begin
+  ;;     (primcall '$do-event '())
+  ;;     ?body)
   ;;
   (define who 'insert-engine-checks)
 
-  (define (insert-engine-checks x)
+  (module (insert-engine-checks)
 
-    (define (CodesExpr x)
+    (define (insert-engine-checks x)
       (struct-case x
 	((codes list body)
-	 (make-codes (map CodeExpr list) (%process-body body)))))
+	 (make-codes ($map/stx CodeExpr list)
+		     (%process-body body)))))
 
-    (CodesExpr x))
+    (define (CodeExpr x)
+      (struct-case x
+	((clambda label cases cp free name)
+	 (make-clambda label ($map/stx CaseExpr cases) cp free name))))
 
-  (define (CodeExpr x)
-    (struct-case x
-      ((clambda L cases cp free name)
-       (make-clambda L (map CaseExpr cases) cp free name))))
+    (define (CaseExpr x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (%process-body body)))))
 
-  (define (CaseExpr x)
-    (struct-case x
-      ((clambda-case info body)
-       (make-clambda-case info (%process-body body)))))
+    (define (%process-body body)
+      (if (E body)
+	  (make-seq (make-primcall '$do-event '())
+		    body)
+	body))
 
-  (define (%process-body body)
-    (if (E body)
-	(make-seq (make-primcall '$do-event '())
-		  body)
-      body))
+    #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (E)
 
     (define (E x)
+      ;;The purpose of this recordized  code traversal is to return true
+      ;;if:
+      ;;
+      ;;* At least one of the nested structs is an instance of JMPCALL.
+      ;;
+      ;;* At least  one of the nested structs is  an instance of FUNCALL
+      ;;   in which  the operator  is *not*  a struct  instance of  type
+      ;;  PRIMREF.
+      ;;
+      ;;else the return value is false.
+      ;;
       (struct-case x
 	((constant)
 	 #f)
