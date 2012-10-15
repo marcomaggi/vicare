@@ -590,11 +590,12 @@
 
 
 (module (insert-stack-overflow-check)
-  ;;This  module traverses  all the  function  bodies and,  if the  body
-  ;;contains ??? it transforms the ?BODY into:
+  ;;This  module traverses  all  the  function bodies  and,  if a  ?BODY
+  ;;contains only function  calls in tail position, it  transforms it as
+  ;;follows:
   ;;
   ;;   (begin
-  ;;     (primcall '$$stack-overflow-check '())
+  ;;     (primcall '$stack-overflow-check '())
   ;;     ?body)
   ;;
   (define who 'insert-stack-overflow-check)
@@ -608,7 +609,9 @@
 		     (%process-body body)))))
 
     (module (Clambda)
-
+      ;;The purpose of this module is  to apply %PROCESS-BODY to all the
+      ;;bodies of closure's clauses.
+      ;;
       (define (Clambda x)
 	(struct-case x
 	  ((clambda label case* cp free* name)
@@ -622,7 +625,7 @@
       #| end of module: Clambda |# )
 
     (define (%process-body body)
-      (if (Tail body)
+      (if (%tail? body)
 	  (make-seq (make-primcall '$stack-overflow-check '()) body)
 	body))
 
@@ -630,97 +633,108 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (Tail NonTail)
+  (module (%tail?)
 
-    (define (NonTail x)
-      (struct-case x
-	((constant)			#f)
-	((var)				#f)
-	((primref)			#f)
-	((funcall rator arg*)		#t)
-	((jmpcall label rator arg*)	#t)
-	((mvcall rator k)		#t)
-
-	;;FIXME!  (Abdulaziz Ghuloum)
-	((primcall op arg*)
-	 (ormap NonTail-known arg*))
-
-	((bind lhs* rhs* body)
-	 (or (ormap NonTail rhs*)
-	     (NonTail body)))
-
-	((fix lhs* rhs* body)
-	 (NonTail body))
-
-	((conditional e0 e1 e2)
-	 (or (NonTail e0)
-	     (NonTail e1)
-	     (NonTail e2)))
-
-	((seq e0 e1)
-	 (or (NonTail e0)
-	     (NonTail e1)))
-
-	((forcall op arg*)
-	 (ormap NonTail arg*))
-
-	((known expr type)
-	 (NonTail expr))
-
-	(else
-	 (error who "invalid expr" x))))
-
-    (define (Tail x)
-      (struct-case x
+    (define (%tail? body)
+      ;;Return true if  the recordized code BODY  contains only function
+      ;;calls in tail position.
+      ;;
+      (struct-case body
 	((constant)		#f)
 	((var)			#f)
 	((primref)		#f)
 
 	((bind lhs* rhs* body)
-	 (or (ormap NonTail rhs*)
-	     (Tail body)))
+	 (or (ormap %non-tail? rhs*)
+	     (%tail? body)))
 
 	((fix lhs* rhs* body)
-	 (Tail body))
+	 (%tail? body))
 
 	((conditional e0 e1 e2)
-	 (or (NonTail e0)
-	     (Tail e1)
-	     (Tail e2)))
+	 (or (%non-tail? e0)
+	     (%tail? e1)
+	     (%tail? e2)))
 
 	((seq e0 e1)
-	 (or (NonTail e0)
-	     (Tail e1)))
+	 (or (%non-tail? e0)
+	     (%tail? e1)))
 
 	((primcall op arg*)
-	 (ormap NonTail arg*))
+	 (ormap %non-tail? arg*))
 
 	((forcall op arg*)
-	 (ormap NonTail arg*))
+	 (ormap %non-tail? arg*))
 
 	((funcall rator arg*)
-	 (or (NonTail rator)
-	     (ormap NonTail arg*)))
+	 (or (%non-tail? rator)
+	     (ormap %non-tail? arg*)))
 
 	((jmpcall label rator arg*)
-	 (or (NonTail rator)
-	     (ormap NonTail arg*)))
+	 (or (%non-tail? rator)
+	     (ormap %non-tail? arg*)))
 
 	;;Punt.  (Abdulaziz Ghuloum)
 	((mvcall rator k)
 	 #t)
 
 	(else
-	 (error who "invalid expr" x))))
+	 (error who "invalid expr" body))))
 
-    (define (NonTail-known x)
-      (struct-case x
-	((known x t)
-	 (NonTail x))
-	(else
-	 (NonTail x))))
+    (module (%non-tail?)
 
-    #| end of module: Tail NonTail |# )
+      (define (%non-tail? x)
+	;;Notice that this function never  calls %TAIL?.  Return true if
+	;;the recordized code X contains any type of function call.
+	;;
+	(struct-case x
+	  ((constant)			#f)
+	  ((var)			#f)
+	  ((primref)			#f)
+
+	  ((funcall rator arg*)		#t)
+	  ((jmpcall label rator arg*)	#t)
+	  ((mvcall rator k)		#t)
+
+	  ;;FIXME!  (Abdulaziz Ghuloum)
+	  ((primcall op arg*)
+	   (ormap %non-tail?-known arg*))
+
+	  ((bind lhs* rhs* body)
+	   (or (ormap %non-tail? rhs*)
+	       (%non-tail? body)))
+
+	  ((fix lhs* rhs* body)
+	   (%non-tail? body))
+
+	  ((conditional e0 e1 e2)
+	   (or (%non-tail? e0)
+	       (%non-tail? e1)
+	       (%non-tail? e2)))
+
+	  ((seq e0 e1)
+	   (or (%non-tail? e0)
+	       (%non-tail? e1)))
+
+	  ((forcall op arg*)
+	   (ormap %non-tail? arg*))
+
+	  ((known expr type)
+	   (%non-tail? expr))
+
+	  (else
+	   (error who "invalid expr" x))))
+
+      (define (%non-tail?-known x)
+	(struct-case x
+	  ((known x t)
+	   (%non-tail? x))
+	  (else
+	   (%non-tail? x))))
+
+      #| end of module: %non-tail? |# )
+
+    #| end of module: %tail? |# )
 
   #| end of module: insert-stack-overflow-check |# )
 

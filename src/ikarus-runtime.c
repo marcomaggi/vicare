@@ -48,6 +48,9 @@ static int total_malloced = 0;
 
 #define CACHE_SIZE		(IK_PAGESIZE * 1) /* must be multiple of IK_PAGESIZE */
 
+#define IK_STAKSIZE (1024 * 4096)
+/* #define IK_STAKSIZE (256 * 4096) */
+
 
 static void
 extend_table_maybe (ikptr p, ik_ulong size, ikpcb* pcb)
@@ -231,15 +234,13 @@ ik_make_pcb (void)
   ikpcb* pcb = ik_malloc(sizeof(ikpcb));
   bzero(pcb, sizeof(ikpcb));
   pcb->collect_key = IK_FALSE_OBJECT;
-#define STAKSIZE (1024 * 4096)
-  //#define STAKSIZE (256 * 4096)
   pcb->heap_base = ik_mmap(IK_HEAPSIZE);
   pcb->heap_size = IK_HEAPSIZE;
   pcb->allocation_pointer = pcb->heap_base;
   pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - 2 * 4096;
 
-  pcb->stack_base = ik_mmap(STAKSIZE);
-  pcb->stack_size = STAKSIZE;
+  pcb->stack_base = ik_mmap(IK_STAKSIZE);
+  pcb->stack_size = IK_STAKSIZE;
   pcb->frame_pointer = pcb->stack_base + pcb->stack_size;
   pcb->frame_base = pcb->frame_pointer;
   pcb->frame_redline = pcb->stack_base + 2 * 4096;
@@ -260,8 +261,7 @@ ik_make_pcb (void)
     pcb->uncached_pages = q;
   }
 
-  {
-    /* compute extent of heap and stack */
+  { /* compute extent of heap and stack */
     ikptr lo_mem;
     ikptr hi_mem;
     if (pcb->heap_base < pcb->stack_base) {
@@ -482,25 +482,29 @@ ik_error (ikptr args)
 void
 ik_stack_overflow (ikpcb* pcb)
 {
+  ikptr		underflow_handler;
 #ifdef VICARE_DEBUGGING
   ik_debug_message("entered ik_stack_overflow pcb=0x%016lx", (long)pcb);
 #endif
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
-  ikptr frame_base        = pcb->frame_base;
-  ikptr underflow_handler = IK_REF(frame_base, -wordsize);
+  {
+    ikptr	frame_base = pcb->frame_base;;
+    underflow_handler = IK_REF(frame_base, -wordsize);
+  }
 #ifdef VICARE_DEBUGGING
   ik_debug_message("underflow_handler = 0x%08x", (int)underflow_handler);
 #endif
-  /* capture continuation and set it as next_k */
-  ikptr k = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
-  IK_REF(k, -vector_tag)           = continuation_tag;
-  IK_REF(k, off_continuation_top)  = pcb->frame_pointer;
-  IK_REF(k, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
-  IK_REF(k, off_continuation_next) = pcb->next_k;
-  pcb->next_k                      = k;
-
-  pcb->stack_base    = (ikptr)(long)ik_mmap_typed(STAKSIZE, mainstack_mt, pcb);
-  pcb->stack_size    = STAKSIZE;
+  { /* capture continuation and set it as next_k */
+    ikptr	s_kont;
+    s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
+    IK_REF(s_kont, -vector_tag)           = continuation_tag;
+    IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
+    IK_REF(s_kont, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
+    IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+    pcb->next_k = s_kont;
+  }
+  pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STAKSIZE, mainstack_mt, pcb);
+  pcb->stack_size    = IK_STAKSIZE;
   pcb->frame_base    = pcb->stack_base + pcb->stack_size;
   pcb->frame_pointer = pcb->frame_base - wordsize;
   pcb->frame_redline = pcb->stack_base + 2 * 4096;
