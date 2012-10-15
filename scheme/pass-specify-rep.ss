@@ -62,6 +62,10 @@
     (prm 'interrupt))
 
   (define (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
+    ;;P must be a struct instance of type PH.
+    ;;
+    ;;CTXT must be one of the symbols: V, E, P.
+    ;;
     (define who 'with-interrupt-handler)
     (if (not (PH-interruptable? p))
 	;;Raise an  error if INTERRUPT  is called by  an uninterruptible
@@ -73,39 +77,31 @@
 	(let ((body (parameterize ((interrupt-handler (lambda ()
 							(set! interrupted? #t))))
 		      (k))))
-	  (cond ((not interrupted?)
-		 body)
+	  (if (not interrupted?)
+	      body
+	    (case-symbols ctxt
+	      ((V)
+	       (let ((h (make-interrupt-call x args)))
+		 (if (%interrupt-primcall? body)
+		     (make-no-interrupt-call x args)
+		   (make-shortcut body h))))
 
-		((eq? ctxt 'V)
-		 (let ((h (make-interrupt-call x args)))
-		   (if (%interrupt-primcall? body)
-		       #;(struct-case body
-			 ((primcall op)
-			  (eq? op 'interrupt))
-			 (else #f))
-		       (make-no-interrupt-call x args)
-		     (make-shortcut body h))))
+	      ((E)
+	       (let ((h (make-interrupt-call x args)))
+		 (if (%interrupt-primcall? body)
+		     (make-no-interrupt-call x args)
+		   (make-shortcut body h))))
 
-		((eq? ctxt 'E)
-		 (let ((h (make-interrupt-call x args)))
-		   (if (%interrupt-primcall? body)
-		       #;(struct-case body
-			 ((primcall op)
-			  (eq? op 'interrupt))
-			 (else #f))
-		       (make-no-interrupt-call x args)
-		     (make-shortcut body h))))
+	      ((P)
+	       (let ((h (prm '!= (make-interrupt-call x args)
+			     (K bool-f))))
+		 (if (%interrupt-primcall? body)
+		     (prm '!= (make-no-interrupt-call x args)
+			  (K bool-f))
+		   (make-shortcut body h))))
 
-		((eq? ctxt 'P)
-		 (let ((h (prm '!= (make-interrupt-call x args)
-			       (K bool-f))))
-		   (if (%interrupt-primcall? body)
-		       (prm '!= (make-no-interrupt-call x args)
-			    (K bool-f))
-		     (make-shortcut body h))))
-
-		(else
-		 (error who "invalid context" ctxt)))))))
+	      (else
+	       (error who "invalid context" ctxt))))))))
 
   (define (%interrupt-primcall? body)
     (struct-case body
