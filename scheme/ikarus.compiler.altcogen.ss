@@ -58,6 +58,16 @@
       ls))
 
 
+;;;; helpers
+
+(define-syntax seq*
+  (syntax-rules ()
+    ((_ ?e)
+     ?e)
+    ((_ ?e* ... ?e)
+     (make-seq (seq* ?e* ...) ?e))))
+
+
 (module (introduce-primcalls)
   ;;The purpose of this module is to examine all the function calls:
   ;;
@@ -270,7 +280,7 @@
   ;;      (let ((T ?closure))
   ;;        T)
   ;;
-  (define who 'eliminate-fix)
+    (define who 'eliminate-fix)
 
   (define (eliminate-fix Program)
     (struct-case Program
@@ -463,58 +473,103 @@
   #| end of module: eliminate-fix |# )
 
 
-
-(define-syntax seq*
-  (syntax-rules ()
-    ((_ e) e)
-    ((_ e* ... e)
-     (make-seq (seq* e* ...) e))))
-
-(define (insert-engine-checks x)
+(module (insert-engine-checks)
+  ;;
   (define who 'insert-engine-checks)
-  (define (known-primref? x)
-    (struct-case x
-      ((known x t) (known-primref? x))
-      ((primref)   #t)
-      (else #f)))
-  (define (A x)
-    (struct-case x
-      ((known x t) (Expr x))
-      (else (Expr x))))
-  (define (Expr x)
-    (struct-case x
-      ((constant)                 #f)
-      ((var)                      #f)
-      ((primref)                  #f)
-      ((jmpcall label rator arg*) #t)
-      ((funcall rator arg*)
-       (if (known-primref? rator) (ormap A arg*) #t))
-      ((bind lhs* rhs* body)      (or (ormap Expr rhs*) (Expr body)))
-      ((fix lhs* rhs* body)       (Expr body))
-      ((conditional e0 e1 e2)     (or (Expr e0) (Expr e1) (Expr e2)))
-      ((seq e0 e1)                (or (Expr e0) (Expr e1)))
-      ((primcall op arg*)         (ormap A arg*))
-      ((forcall op arg*)          (ormap Expr arg*))
-      (else (error who "invalid expr" x))))
-  (define (Main x)
-    (if (Expr x)
-        (make-seq (make-primcall '$do-event '()) x)
-        x))
-  (define (CaseExpr x)
-    (struct-case x
-      ((clambda-case info body)
-       (make-clambda-case info (Main body)))))
+
+  (define (insert-engine-checks x)
+
+    (define (CodesExpr x)
+      (struct-case x
+	((codes list body)
+	 (make-codes (map CodeExpr list) (%process-body body)))))
+
+    (CodesExpr x))
+
   (define (CodeExpr x)
     (struct-case x
       ((clambda L cases cp free name)
        (make-clambda L (map CaseExpr cases) cp free name))))
-  (define (CodesExpr x)
+
+  (define (CaseExpr x)
     (struct-case x
-      ((codes list body)
-       (make-codes (map CodeExpr list) (Main body)))))
-  (CodesExpr x))
+      ((clambda-case info body)
+       (make-clambda-case info (%process-body body)))))
 
+  (define (%process-body body)
+    (if (E body)
+	(make-seq (make-primcall '$do-event '())
+		  body)
+      body))
 
+;;; --------------------------------------------------------------------
+
+  (module (E)
+
+    (define (E x)
+      (struct-case x
+	((constant)
+	 #f)
+
+	((var)
+	 #f)
+
+	((primref)
+	 #f)
+
+	((jmpcall label rator arg*)
+	 #t)
+
+	((funcall rator arg*)
+	 (if (%known-primref? rator)
+	     (ormap E-known arg*)
+	   #t))
+
+	((bind lhs* rhs* body)
+	 (or (ormap E rhs*) (E body)))
+
+	((fix lhs* rhs* body)
+	 (E body))
+
+	((conditional e0 e1 e2)
+	 (or (E e0) (E e1) (E e2)))
+
+	((seq e0 e1)
+	 (or (E e0) (E e1)))
+
+	((primcall op arg*)
+	 (ormap E-known arg*))
+
+	((forcall op arg*)
+	 (ormap E arg*))
+
+	(else
+	 (error who "invalid expr" x))))
+
+    (define (E-known x)
+      (struct-case x
+	((known expr type)
+	 (E expr))
+	(else
+	 (E x))))
+
+    (define (%known-primref? x)
+      ;;Return true if X is a  struct instance of type PRIMREF, possibly
+      ;;wrapped into a struct instance of type KNOWN.
+      ;;
+      (struct-case x
+	((known expr type)
+	 (%known-primref? expr))
+	((primref)
+	 #t)
+	(else
+	 #f)))
+
+    #| end of module: E |# )
+
+  #| end of file: insert-engine-checks |# )
+
+
 (define (insert-stack-overflow-check x)
   (define who 'insert-stack-overflow-check)
   (define (A x)
