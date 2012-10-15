@@ -831,7 +831,8 @@
 		;   => (prelex-args)
 		;
 		;In  the  latest  compiler  passes:  a  list  of  struct
-		;instances of type VAR representing the formals.
+		;instances of type VAR representing the formals.  In the
+		;very latest passes.
    proper
 		;A boolean: true if ?FORMALS  is a proper list, false if
 		;?FORMALS is a symbol or improper list.
@@ -918,6 +919,13 @@
 		;arguments of this primitive call.
    ))
 
+(define-struct codes
+  (list
+		;A list of struct instances of type CLAMBDA.
+   body
+		;A struct instance representing recordized code.
+   ))
+
 ;;; --------------------------------------------------------------------
 
 (define-struct code-loc
@@ -962,13 +970,7 @@
 (define-struct interrupt-call
   (test handler))
 
-(define-struct codes
-  (list
-   body
-   ))
-
 (define-struct mvcall
-
   (producer
    consumer
    ))
@@ -3457,17 +3459,24 @@
       (cond ((not y)
 	     x)
 	    ((var? y)
+	     ;;By  temporarily setting  the subst  to 'Q  we can  detect
+	     ;;circular references while recursing into GET-FORWARD!.
 	     (set-subst! x 'q)
 	     (let ((y (get-forward! y)))
+	       ;;Restore the subst to its proper value.
 	       (set-subst! x y)
 	       y))
 	    ((closure? y)
-	     (let ((free (closure-free* y)))
-	       (cond ((null? free)
+	     (let ((free* (closure-free* y)))
+	       (cond ((null? free*)
 		      y)
-		     ((null? (cdr free))
+		     ((null? (cdr free*))
+		      ;;By temporarily  setting the  subst to 'Q  we can
+		      ;;detect circular references  while recursing into
+		      ;;GET-FORWARD!.
 		      (set-subst! x 'q)
-		      (let ((y (get-forward! (car free))))
+		      (let ((y (get-forward! ($car free*))))
+			;;Restore the subst to its proper value.
 			(set-subst! x y)
 			y))
 		     (else

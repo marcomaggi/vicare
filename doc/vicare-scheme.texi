@@ -26766,15 +26766,17 @@ object is as follows:
 |------------------------|-------------| reference to closure
       heap pointer         closure tag
 
-|--------------------------------------| closure data
-   raw memory pointer to binary code
+                       0   1   2   3   4   5
+|--------------------|---|---|---|---|---|---| memory block
+  raw memory pointer    one slot for every
+  to binary code        free variable
 @end example
 
 @noindent
-the memory block of a closure object is a single word wide; the word
-holds a raw memory pointer referencing the first byte in the code object
-implementing the closure.  We have to remember that we allocate memory
-in aligned blocks, which are at least @math{2} machine words wide.
+the first word in the memory block holds a raw memory pointer
+referencing the first byte in the code object implementing the closure;
+the subsequent words (if any) are slot associated to the free variables
+referenced by the closure's code.
 
 @c ------------------------------------------------------------
 
