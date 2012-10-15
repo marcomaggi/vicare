@@ -744,18 +744,27 @@
 (include "pass-specify-rep.ss")
 
 
+;;;; some CPU registers stuff
+
 (define parameter-registers '(%edi))
+
 (define return-value-register '%eax)
+
+;;Continuation pointer register?
+;;
 (define cp-register '%edi)
+
 (define all-registers
-  (case wordsize
-    ((4) '(%eax %edi %ebx %edx %ecx))
-    (else '(%eax %edi %ebx %edx %ecx %r8 %r9 %r10 %r11 %r14 %r15))))
+  (case-word-size
+   ((32)
+    '(%eax %edi %ebx %edx %ecx))
+   ((64)
+    '(%eax %edi %ebx %edx %ecx %r8 %r9 %r10 %r11 %r14 %r15))))
 
 (define non-8bit-registers
-  (case wordsize
-    ((4) '(%edi))
-    (else '(%edi))))
+  (case-word-size
+   ((32)	'(%edi))
+   ((64)	'(%edi))))
 
 (define argc-register '%eax)
 
@@ -765,12 +774,13 @@
 ;;; cpr = %edi
 
 (define (register-index x)
-  (cond
-    ((assq x '((%eax 0) (%edi 1) (%ebx 2) (%edx 3)
-               (%ecx 4) (%esi 5) (%esp 6) (%ebp 7)))
-     => cadr)
-    (else (error 'register-index "not a register" x))))
+  (cond ((assq x '((%eax 0) (%edi 1) (%ebx 2) (%edx 3)
+		   (%ecx 4) (%esi 5) (%esp 6) (%ebp 7)))
+	 => cadr)
+	(else
+	 (error 'register-index "not a register" x))))
 
+
 (define (impose-calling-convention/evaluation-order x)
   ;;The following subfunctions are key to understand this function:
   ;;

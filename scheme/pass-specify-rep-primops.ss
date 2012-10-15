@@ -2827,9 +2827,14 @@
 	t))))
 
  (define-primop $stack-overflow-check unsafe
+   ;;If the  field "frame_redline"  of the C  language structure  PCB is
+   ;;less than stack base pointer: ???
+   ;;
    ((E)
     (make-shortcut
      (make-conditional
+	 ;; ESP = stack base pointer
+	 ;; PCR = pointer to the PCB structure
      	 (prm 'u< esp (prm 'mref pcr (K pcb-frame-redline)))
        (prm 'interrupt)
        (prm 'nop))
