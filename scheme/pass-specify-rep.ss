@@ -49,66 +49,68 @@
    v-handler v-handled?
    e-handler e-handled?))
 
-(define interrupt-handler
-  (make-parameter (lambda ()
-		    (error 'interrupt-handler "uninitialized"))))
+
+(module (with-interrupt-handler interrupt)
 
-(define (interrupt)
-  ((interrupt-handler))
-  ;;Remember that PRM returns a struct instance of type PRIMCALL.
-  (prm 'interrupt))
+  (define interrupt-handler
+    (make-parameter (lambda ()
+		      (error 'interrupt-handler "uninitialized"))))
 
-(define (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
-  (define who 'with-interrupt-handler)
-  (if (not (PH-interruptable? p))
-      (parameterize ((interrupt-handler (lambda ()
-					  (error 'cogen "uninterruptable" x args ctxt))))
-	(k))
-    (let ((interrupted? #f))
-      (let ((body (parameterize ((interrupt-handler (lambda ()
-						      (set! interrupted? #t))))
-		    (k))))
-	(cond ((not interrupted?)
-	       body)
+  (define (interrupt)
+    ((interrupt-handler))
+    ;;Remember that PRM is a maker of struct instances of type PRIMCALL.
+    (prm 'interrupt))
 
-	      ((eq? ctxt 'V)
-	       (let ((h (make-interrupt-call x args)))
-		 (if (struct-case body
-		       ((primcall op)
-			(eq? op 'interrupt))
-		       (else #f))
-		     (make-no-interrupt-call x args)
-		   (make-shortcut body h))))
+  (define (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
+    (define who 'with-interrupt-handler)
+    (if (not (PH-interruptable? p))
+	;;Raise an  error if INTERRUPT  is called by  an uninterruptible
+	;;primitive.
+	(parameterize ((interrupt-handler (lambda ()
+					    (error 'cogen "uninterruptable" x args ctxt))))
+	  (k))
+      (let ((interrupted? #f))
+	(let ((body (parameterize ((interrupt-handler (lambda ()
+							(set! interrupted? #t))))
+		      (k))))
+	  (cond ((not interrupted?)
+		 body)
 
-	      ((eq? ctxt 'E)
-	       (let ((h (make-interrupt-call x args)))
-		 (if (struct-case body
-		       ((primcall op)
-			(eq? op 'interrupt))
-		       (else #f))
-		     (make-no-interrupt-call x args)
-		   (make-shortcut body h))))
+		((eq? ctxt 'V)
+		 (let ((h (make-interrupt-call x args)))
+		   (if (struct-case body
+			 ((primcall op)
+			  (eq? op 'interrupt))
+			 (else #f))
+		       (make-no-interrupt-call x args)
+		     (make-shortcut body h))))
 
-	      ((eq? ctxt 'P)
-	       (let ((h (prm '!= (make-interrupt-call x args)
-			     (K bool-f))))
-		 (if (struct-case body
-		       ((primcall op)
-			(eq? op 'interrupt))
-		       (else #f))
-		     (prm '!= (make-no-interrupt-call x args)
-			  (K bool-f))
-		   (make-shortcut body h))))
+		((eq? ctxt 'E)
+		 (let ((h (make-interrupt-call x args)))
+		   (if (struct-case body
+			 ((primcall op)
+			  (eq? op 'interrupt))
+			 (else #f))
+		       (make-no-interrupt-call x args)
+		     (make-shortcut body h))))
 
-	      (else
-	       (error who "invalid context" ctxt)))))))
+		((eq? ctxt 'P)
+		 (let ((h (prm '!= (make-interrupt-call x args)
+			       (K bool-f))))
+		   (if (struct-case body
+			 ((primcall op)
+			  (eq? op 'interrupt))
+			 (else #f))
+		       (prm '!= (make-no-interrupt-call x args)
+			    (K bool-f))
+		     (make-shortcut body h))))
 
-(define (remove-tag x)
-  (struct-case x
-    ((known expr type)
-     expr)
-    (else x)))
+		(else
+		 (error who "invalid context" ctxt)))))))
 
+  #| end of module: with-interrupt-handler |# )
+
+
 (module (with-tmp)
 
   (define-syntax with-tmp
@@ -145,6 +147,7 @@
 
   #| end of module: with-tmp |# )
 
+
 ;; if ctxt is V:
 ;;   if cogen-value, then V
 ;;   if cogen-pred, then (if P #f #t)
@@ -198,51 +201,52 @@
     (let ((p (get-primop x)))
       (simplify* args
 		 (lambda (args)
-		   (with-interrupt-handler p x ctxt (map T args)
-					   make-interrupt-call make-no-interrupt-call
-					   (lambda ()
-					     (case ctxt
-					       ((P)
-						(cond
-						 ((PH-p-handled? p)
-						  (apply (PH-p-handler p) args))
-						 ((PH-v-handled? p)
-						  (let ((e (apply (PH-v-handler p) args)))
-						    (if (interrupt? e) e (prm '!= e (K bool-f)))))
-						 ((PH-e-handled? p)
-						  (let ((e (apply (PH-e-handler p) args)))
-						    (if (interrupt? e) e (make-seq e (K #t)))))
-						 (else (error 'cogen-primop "not handled" x))))
-					       ((V)
-						(cond
-						 ((PH-v-handled? p)
-						  (apply (PH-v-handler p) args))
-						 ((PH-p-handled? p)
-						  (let ((e (apply (PH-p-handler p) args)))
-						    (if (interrupt? e)
-							e
-						      (make-conditional e (K bool-t) (K bool-f)))))
-						 ((PH-e-handled? p)
-						  (let ((e (apply (PH-e-handler p) args)))
-						    (if (interrupt? e) e (make-seq e (K void-object)))))
-						 (else (error 'cogen-primop "not handled" x))))
-					       ((E)
-						(cond
-						 ((PH-e-handled? p)
-						  (apply (PH-e-handler p) args))
-						 ((PH-p-handled? p)
-						  (let ((e (apply (PH-p-handler p) args)))
-						    (if (interrupt? e)
-							e
-						      (make-conditional e (prm 'nop) (prm 'nop)))))
-						 ((PH-v-handled? p)
-						  (let ((e (apply (PH-v-handler p) args)))
-						    (if (interrupt? e)
-							e
-						      (with-tmp ((t e)) (prm 'nop)))))
-						 (else (error 'cogen-primop "not handled" x))))
-					       (else
-						(error 'cogen-primop "invalid context" ctxt)))))))))
+		   (with-interrupt-handler
+		    p x ctxt (map T args)
+		    make-interrupt-call make-no-interrupt-call
+		    (lambda ()
+		      (case ctxt
+			((P)
+			 (cond
+			  ((PH-p-handled? p)
+			   (apply (PH-p-handler p) args))
+			  ((PH-v-handled? p)
+			   (let ((e (apply (PH-v-handler p) args)))
+			     (if (interrupt? e) e (prm '!= e (K bool-f)))))
+			  ((PH-e-handled? p)
+			   (let ((e (apply (PH-e-handler p) args)))
+			     (if (interrupt? e) e (make-seq e (K #t)))))
+			  (else (error 'cogen-primop "not handled" x))))
+			((V)
+			 (cond
+			  ((PH-v-handled? p)
+			   (apply (PH-v-handler p) args))
+			  ((PH-p-handled? p)
+			   (let ((e (apply (PH-p-handler p) args)))
+			     (if (interrupt? e)
+				 e
+			       (make-conditional e (K bool-t) (K bool-f)))))
+			  ((PH-e-handled? p)
+			   (let ((e (apply (PH-e-handler p) args)))
+			     (if (interrupt? e) e (make-seq e (K void-object)))))
+			  (else (error 'cogen-primop "not handled" x))))
+			((E)
+			 (cond
+			  ((PH-e-handled? p)
+			   (apply (PH-e-handler p) args))
+			  ((PH-p-handled? p)
+			   (let ((e (apply (PH-p-handler p) args)))
+			     (if (interrupt? e)
+				 e
+			       (make-conditional e (prm 'nop) (prm 'nop)))))
+			  ((PH-v-handled? p)
+			   (let ((e (apply (PH-v-handler p) args)))
+			     (if (interrupt? e)
+				 e
+			       (with-tmp ((t e)) (prm 'nop)))))
+			  (else (error 'cogen-primop "not handled" x))))
+			(else
+			 (error 'cogen-primop "invalid context" ctxt)))))))))
   cogen-primop)
 
 (module (cogen-primop cogen-debug-primop)
@@ -489,19 +493,30 @@
      (make-jmpcall label (V rator) (map V arg*)))
     (else (error 'cogen-V "invalid value expr" x))))
 
-(define (cogen-debug-call op ctxt arg* k)
-  (define (fail)
-    (k (make-funcall (make-primref 'debug-call) arg*)))
-  (assert (>= (length arg*) 2))
-  (let ((src/expr (car arg*))
-	(op (cadr arg*))
-	(args (cddr arg*)))
-    (struct-case (remove-tag op)
-      ((primref name)
-       (if (primop? name)
-	   (cogen-debug-primop name src/expr ctxt args)
-	 (fail)))
-      (else (fail)))))
+(module (cogen-debug-call)
+
+  (define (cogen-debug-call op ctxt arg* k)
+    (define (fail)
+      (k (make-funcall (make-primref 'debug-call) arg*)))
+    (assert (>= (length arg*) 2))
+    (let ((src/expr (car arg*))
+	  (op (cadr arg*))
+	  (args (cddr arg*)))
+      (struct-case (remove-tag op)
+	((primref name)
+	 (if (primop? name)
+	     (cogen-debug-primop name src/expr ctxt args)
+	   (fail)))
+	(else
+	 (fail)))))
+
+  (define (remove-tag x)
+    (struct-case x
+      ((known expr type)
+       expr)
+      (else x)))
+
+  #| end of module: cogen-debug-call |# )
 
 (define (P x)
   (struct-case x
