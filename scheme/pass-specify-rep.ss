@@ -78,7 +78,8 @@
 
 		((eq? ctxt 'V)
 		 (let ((h (make-interrupt-call x args)))
-		   (if (struct-case body
+		   (if (%interrupt-primcall? body)
+		       #;(struct-case body
 			 ((primcall op)
 			  (eq? op 'interrupt))
 			 (else #f))
@@ -87,7 +88,8 @@
 
 		((eq? ctxt 'E)
 		 (let ((h (make-interrupt-call x args)))
-		   (if (struct-case body
+		   (if (%interrupt-primcall? body)
+		       #;(struct-case body
 			 ((primcall op)
 			  (eq? op 'interrupt))
 			 (else #f))
@@ -97,16 +99,20 @@
 		((eq? ctxt 'P)
 		 (let ((h (prm '!= (make-interrupt-call x args)
 			       (K bool-f))))
-		   (if (struct-case body
-			 ((primcall op)
-			  (eq? op 'interrupt))
-			 (else #f))
+		   (if (%interrupt-primcall? body)
 		       (prm '!= (make-no-interrupt-call x args)
 			    (K bool-f))
 		     (make-shortcut body h))))
 
 		(else
 		 (error who "invalid context" ctxt)))))))
+
+  (define (%interrupt-primcall? body)
+    (struct-case body
+      ((primcall op)
+       (eq? op 'interrupt))
+      (else
+       #f)))
 
   #| end of module: with-interrupt-handler |# )
 
