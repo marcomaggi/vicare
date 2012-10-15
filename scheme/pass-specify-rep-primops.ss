@@ -736,19 +736,27 @@
 (section ;;; closures
 
  (define-primop procedure? safe
-   ((P x) (tag-test (T x) closure-mask closure-tag)))
+   ;;Evaluate to true if X is a closure object.
+   ;;
+   ((P x)
+    (tag-test (T x) closure-mask closure-tag)))
 
  (define-primop $cpref unsafe
+   ;;Whenever  the body  of a  closure  references a  free variable  the
+   ;;closure is closed upon...
+   ;;
    ((V x i)
     (struct-case i
       ((constant i)
-       (unless (fx? i) (interrupt))
+       (unless (fx? i)
+	 (interrupt))
        (prm 'mref (T x)
 	    (K (+ (- disp-closure-data closure-tag)
 		  (* i wordsize)))))
       ((known expr t)
        (cogen-value-$cpref x expr))
-      (else (interrupt)))))
+      (else
+       (interrupt)))))
 
  /section)
 

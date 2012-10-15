@@ -814,8 +814,9 @@
 		;used to  generate, when possible, direct  jumps to this
 		;clause rather than calling the whole closure.
    args
-		;A list  of struct instances  of type PRELEX or  of type
-		;VAR representing the ?FORMALS as follows:
+		;In  the  earlier  compiler  passes: a  list  of  struct
+		;instances of  type PRELEX representing the  ?FORMALS as
+		;follows:
 		;
 		;   (() ?body0 ?body ...)
 		;   => ()
@@ -829,6 +830,8 @@
 		;   (args ?body0 ?body ...)
 		;   => (prelex-args)
 		;
+		;In  the  latest  compiler  passes:  a  list  of  struct
+		;instances of type VAR representing the formals.
    proper
 		;A boolean: true if ?FORMALS  is a proper list, false if
 		;?FORMALS is a symbol or improper list.

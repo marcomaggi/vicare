@@ -72,7 +72,7 @@
   (define (introduce-primcalls Program)
     (struct-case Program
       ((codes code* body)
-       (make-codes (map Clambda code*) (E body)))
+       (make-codes ($map/stx Clambda code*) (E body)))
       (else
        (error who "invalid program" Program))))
 
@@ -101,7 +101,7 @@
 	 x)
 
 	((bind lhs* rhs* body)
-	 (make-bind lhs* (map E rhs*) (E body)))
+	 (make-bind lhs* ($map/stx E rhs*) (E body)))
 
 	((fix lhs* rhs* body)
 	 (make-fix lhs* rhs* (E body)))
@@ -116,13 +116,13 @@
 	 x)
 
 	((forcall op arg*)
-	 (make-forcall op (map E arg*)))
+	 (make-forcall op ($map/stx E arg*)))
 
 	((funcall rator arg*)
-	 (mkfuncall (E-known rator) (map E-known arg*)))
+	 (mkfuncall (E-known rator) ($map/stx E-known arg*)))
 
 	((jmpcall label rator arg*)
-	 (make-jmpcall label (E rator) (map E arg*)))
+	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
 	 (error who "invalid expr" x))))
@@ -145,7 +145,7 @@
     (define (Clambda x)
       (struct-case x
 	((clambda label case* cp free* name)
-	 (make-clambda label (map ClambdaCase case*) cp free* name))
+	 (make-clambda label ($map/stx ClambdaCase case*) cp free* name))
 	(else
 	 (error who "invalid clambda" x))))
 
@@ -344,7 +344,7 @@
       ;;This function is a closure  upon the arguments MAIN-CPVAR, CPVAR
       ;;and FREE* of MAKE-E.
       ;;
-      ;;X must be a struct instance of type VAR representing.
+      ;;X must be a struct instance of type VAR.
       ;;
       ;;The  purpose of  this function  is to  replace X  with a  struct
       ;;instance of type PRIMCALL representing a call to $CPREF.
@@ -389,10 +389,6 @@
       ;;
       (lambda (x)
 	;;X must be a struct instance of type CLAMBDA-CASE.
-	;;
-	;;FREE*  must  be  a  list  of  struct  instances  of  type  VAR
-	;;representing  the  free  variables   in  the  clauses  of  the
-	;;CASE-LAMBDA form being processed.
 	;;
 	(struct-case x
 	  ((clambda-case info body)
