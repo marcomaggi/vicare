@@ -589,65 +589,147 @@
   #| end of file: insert-engine-checks |# )
 
 
-(define (insert-stack-overflow-check x)
+(module (insert-stack-overflow-check)
+  ;;This  module traverses  all the  function  bodies and,  if the  body
+  ;;contains ??? it transforms the ?BODY into:
+  ;;
+  ;;   (begin
+  ;;     (primcall '$$stack-overflow-check '())
+  ;;     ?body)
+  ;;
   (define who 'insert-stack-overflow-check)
-  (define (A x)
-    (struct-case x
-      ((known x t) (NonTail x))
-      (else (NonTail x))))
-  (define (NonTail x)
-    (struct-case x
-      ((constant)                 #f)
-      ((var)                      #f)
-      ((primref)                  #f)
-      ((funcall rator arg*)       #t)
-      ((jmpcall label rator arg*) #t)
-      ((mvcall rator k)           #t)
-      ((primcall op arg*)     (ormap A arg*)) ;PUNT!!! FIXME!
-      ((bind lhs* rhs* body)  (or (ormap NonTail rhs*) (NonTail body)))
-      ((fix lhs* rhs* body)   (NonTail body))
-      ((conditional e0 e1 e2) (or (NonTail e0) (NonTail e1) (NonTail e2)))
-      ((seq e0 e1)            (or (NonTail e0) (NonTail e1)))
-      ((forcall op arg*)      (ormap NonTail arg*))
-      ((known x t) (NonTail x))
-      (else (error who "invalid expr" x))))
-  (define (Tail x)
-    (struct-case x
-      ((constant) #f)
-      ((var)      #f)
-      ((primref)  #f)
-      ((bind lhs* rhs* body)      (or (ormap NonTail rhs*) (Tail body)))
-      ((fix lhs* rhs* body)       (Tail body))
-      ((conditional e0 e1 e2)     (or (NonTail e0) (Tail e1) (Tail e2)))
-      ((seq e0 e1)                (or (NonTail e0) (Tail e1)))
-      ((primcall op arg*)         (ormap NonTail arg*))
-      ((forcall op arg*)          (ormap NonTail arg*))
-      ((funcall rator arg*)       (or (NonTail rator) (ormap NonTail arg*)))
-      ((jmpcall label rator arg*) (or (NonTail rator) (ormap NonTail arg*)))
-      ((mvcall rator k) #t) ; punt
-      (else (error who "invalid expr" x))))
-  (define (insert-check x)
-    (make-seq (make-primcall '$stack-overflow-check '()) x))
-  (define (ClambdaCase x)
-    (struct-case x
-      ((clambda-case info body)
-       (make-clambda-case info (Main body)))))
-  (define (Clambda x)
-    (struct-case x
-      ((clambda label case* cp free* name)
-       (make-clambda label (map ClambdaCase case*) cp free* name))))
-  (define (Main x)
-    (if (Tail x)
-        (insert-check x)
-        x))
-  (define (Program x)
-    (struct-case x
-      ((codes code* body)
-       (make-codes (map Clambda code*) (Main body)))))
-  (Program x))
+
+  (module (insert-stack-overflow-check)
+
+    (define (insert-stack-overflow-check Program)
+      (struct-case Program
+	((codes code* body)
+	 (make-codes (map Clambda code*)
+		     (%process-body body)))))
+
+    (module (Clambda)
+
+      (define (Clambda x)
+	(struct-case x
+	  ((clambda label case* cp free* name)
+	   (make-clambda label (map ClambdaCase case*) cp free* name))))
+
+      (define (ClambdaCase x)
+	(struct-case x
+	  ((clambda-case info body)
+	   (make-clambda-case info (%process-body body)))))
+
+      #| end of module: Clambda |# )
+
+    (define (%process-body body)
+      (if (Tail body)
+	  (make-seq (make-primcall '$stack-overflow-check '()) body)
+	body))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (Tail NonTail)
+
+    (define (NonTail x)
+      (struct-case x
+	((constant)			#f)
+	((var)				#f)
+	((primref)			#f)
+	((funcall rator arg*)		#t)
+	((jmpcall label rator arg*)	#t)
+	((mvcall rator k)		#t)
+
+	;;FIXME!  (Abdulaziz Ghuloum)
+	((primcall op arg*)
+	 (ormap NonTail-known arg*))
+
+	((bind lhs* rhs* body)
+	 (or (ormap NonTail rhs*)
+	     (NonTail body)))
+
+	((fix lhs* rhs* body)
+	 (NonTail body))
+
+	((conditional e0 e1 e2)
+	 (or (NonTail e0)
+	     (NonTail e1)
+	     (NonTail e2)))
+
+	((seq e0 e1)
+	 (or (NonTail e0)
+	     (NonTail e1)))
+
+	((forcall op arg*)
+	 (ormap NonTail arg*))
+
+	((known expr type)
+	 (NonTail expr))
+
+	(else
+	 (error who "invalid expr" x))))
+
+    (define (Tail x)
+      (struct-case x
+	((constant)		#f)
+	((var)			#f)
+	((primref)		#f)
+
+	((bind lhs* rhs* body)
+	 (or (ormap NonTail rhs*)
+	     (Tail body)))
+
+	((fix lhs* rhs* body)
+	 (Tail body))
+
+	((conditional e0 e1 e2)
+	 (or (NonTail e0)
+	     (Tail e1)
+	     (Tail e2)))
+
+	((seq e0 e1)
+	 (or (NonTail e0)
+	     (Tail e1)))
+
+	((primcall op arg*)
+	 (ormap NonTail arg*))
+
+	((forcall op arg*)
+	 (ormap NonTail arg*))
+
+	((funcall rator arg*)
+	 (or (NonTail rator)
+	     (ormap NonTail arg*)))
+
+	((jmpcall label rator arg*)
+	 (or (NonTail rator)
+	     (ormap NonTail arg*)))
+
+	;;Punt.  (Abdulaziz Ghuloum)
+	((mvcall rator k)
+	 #t)
+
+	(else
+	 (error who "invalid expr" x))))
+
+    (define (NonTail-known x)
+      (struct-case x
+	((known x t)
+	 (NonTail x))
+	(else
+	 (NonTail x))))
+
+    #| end of module: Tail NonTail |# )
+
+  #| end of module: insert-stack-overflow-check |# )
+
+
+;;;; some external code
 
 (include "pass-specify-rep.ss")
 
+
 (define parameter-registers '(%edi))
 (define return-value-register '%eax)
 (define cp-register '%edi)
