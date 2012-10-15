@@ -228,88 +228,148 @@
   #| end of module: introduce-primcalls |# )
 
 
+(module (eliminate-fix)
 
-(define (eliminate-fix x)
-  ;;;
   (define who 'eliminate-fix)
-  ;;;
-  (define (Expr main-cpvar cpvar free*)
-    ;;;
-    (define (Var x)
-      (cond
-        ((eq? x main-cpvar) cpvar)
-        (else
-         (let f ((free* free*) (i 0))
-           (cond
-             ((null? free*) x)
-             ((eq? x (car free*))
-              (make-primcall '$cpref (list cpvar (make-constant i))))
-             (else (f (cdr free*) (fxadd1 i))))))))
-    (define (do-fix lhs* rhs* body)
-      (define (handle-closure x)
-        (struct-case x
-          ((closure code free* well-known?)
-           (make-closure code (map Var free*) well-known?))))
-      (make-fix lhs* (map handle-closure rhs*) body))
-    (define (A x)
-      (struct-case x
-        ((known x t) (make-known (Expr x) t))
-        (else (Expr x))))
-    (define (Expr x)
-      (struct-case x
-        ((constant) x)
-        ((var)      (Var x))
-        ((primref)  x)
-        ((bind lhs* rhs* body)
-         (make-bind lhs* (map Expr rhs*) (Expr body)))
-        ((fix lhs* rhs* body)
-         (do-fix lhs* rhs* (Expr body)))
-        ((conditional e0 e1 e2)
-         (make-conditional (Expr e0) (Expr e1) (Expr e2)))
-        ((seq e0 e1)
-         (make-seq (Expr e0) (Expr e1)))
-        ((closure)
-         (let ((t (unique-var 'tmp)))
-           (Expr (make-fix (list t) (list x) t))))
-        ((primcall op arg*)
-         (make-primcall op (map A arg*)))
-        ((forcall op arg*)
-         (make-forcall op (map Expr arg*)))
-        ((funcall rator arg*)
-         (make-funcall (A rator) (map A arg*)))
-        ((jmpcall label rator arg*)
-         (make-jmpcall label (Expr rator) (map Expr arg*)))
-        (else (error who "invalid expr" x))))
-    Expr)
-  ;;;
-  (define (ClambdaCase main-cp free*)
-    (lambda (x)
-      (struct-case x
-        ((clambda-case info body)
-         (struct-case info
-           ((case-info label args proper)
-            (let ((cp (unique-var 'cp)))
-              (make-clambda-case
-                (make-case-info label (cons cp args) proper)
-                ((Expr main-cp cp free*) body))))))
-        (else (error who "invalid clambda-case" x)))))
-  ;;;
-  (define (Clambda x)
-    (struct-case x
-      ((clambda label case* cp free* name)
-       (make-clambda label (map (ClambdaCase cp free*) case*)
-                     #f free* name))
-      (else (error who "invalid clambda" x))))
-  ;;;
-  (define (Program x)
-    (struct-case x
+
+  (define (eliminate-fix Program)
+    (struct-case Program
       ((codes code* body)
-       (make-codes (map Clambda code*) ((Expr #f #f '()) body)))
-      (else (error who "invalid program" x))))
-  ;;;
-  (Program x))
+       (let* ((code*^ (map Clambda code*))
+	      (E      (make-E #f #f '()))
+	      (body^  (E body)))
+	 (make-codes code*^ body^)))
+      (else
+       (error who "invalid program" Program))))
 
+;;; --------------------------------------------------------------------
 
+  (define (make-E main-cpvar cpvar free*)
+
+    (define (E x)
+      (struct-case x
+	((constant)
+	 x)
+
+	((var)
+	 (%do-var x))
+
+	((primref)
+	 x)
+
+	((bind lhs* rhs* body)
+	 (make-bind lhs* (map E rhs*) (E body)))
+
+	((fix lhs* rhs* body)
+	 (%do-fix lhs* rhs* (E body)))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (E e0) (E e1) (E e2)))
+
+	((seq e0 e1)
+	 (make-seq (E e0) (E e1)))
+
+	((closure)
+	 (let ((t (unique-var 'tmp)))
+	   (E (make-fix (list t) (list x) t))))
+
+	((primcall op arg*)
+	 (make-primcall op (map E-known arg*)))
+
+	((forcall op arg*)
+	 (make-forcall op (map E arg*)))
+
+	((funcall rator arg*)
+	 (make-funcall (E-known rator) (map E-known arg*)))
+
+	((jmpcall label rator arg*)
+	 (make-jmpcall label (E rator) (map E arg*)))
+
+	(else
+	 (error who "invalid expr" x))))
+
+    (define (E-known x)
+      (struct-case x
+	((known expr type)
+	 (make-known (E expr) type))
+	(else
+	 (E x))))
+
+    (module (%do-fix)
+      ;;The purpose of this module is to apply %DO-VAR to all the struct
+      ;;instances of  type VAR  being free  variables referenced  by the
+      ;;closures.   We cannot  move this  module out  of MAKE-E  because
+      ;;%DO-VAR is a closure on the arguments of MAKE-E itself.
+      ;;
+      (define (%do-fix lhs* rhs* body)
+	(make-fix lhs* (map %handle-closure rhs*) body))
+
+      (define (%handle-closure rhs)
+	;;RHS must be a struct instance of type CLOSURE.
+	;;
+	(struct-case rhs
+	  ((closure code free* well-known?)
+	   (make-closure code (map %do-var free*) well-known?))))
+
+      #| end of module: %do-fix |# )
+
+    (define (%do-var x)
+      ;;X must be a struct instance of type VAR.
+      ;;
+      ;;This function is a closure  upon the arguments MAIN-CPVAR, CPVAR
+      ;;and FREE* of MAKE-E.
+      ;;
+      (if (eq? x main-cpvar)
+	  cpvar
+	(let loop ((free* free*)
+		   (i 0))
+	  (cond ((null? free*)
+		 x)
+		((eq? x (car free*))
+		 (make-primcall '$cpref (list cpvar (make-constant i))))
+		(else
+		 (loop (cdr free*) (fxadd1 i)))))))
+
+    E)
+
+;;; --------------------------------------------------------------------
+
+  (module (Clambda)
+
+    (define (Clambda x)
+      ;;X must be a struct instance of type CLAMBDA.
+      ;;
+      (struct-case x
+	((clambda label case* cp free* name)
+	 (make-clambda label
+		       (map (ClambdaCase cp free*) case*)
+		       #f free* name))
+	(else
+	 (error who "invalid clambda" x))))
+
+    (define (ClambdaCase main-cp free*)
+      (lambda (x)
+	;;X must be a struct instance of type CLAMBDA-CASE.
+	;;
+	;;FREE*  must  be  a  list  of  struct  instances  of  type  VAR
+	;;representing  the  free  variables   in  the  clauses  of  the
+	;;CASE-LAMBDA form being processed.
+	;;
+	(struct-case x
+	  ((clambda-case info body)
+	   (struct-case info
+	     ((case-info label args proper)
+	      (let ((cp (unique-var 'cp)))
+		(make-clambda-case (make-case-info label (cons cp args) proper)
+				   ((make-E main-cp cp free*) body))))))
+	  (else
+	   (error who "invalid clambda-case" x)))))
+
+    #| end of module: Clambda |# )
+
+  #| end of module: eliminate-fix |# )
+
+
 
 (define-syntax seq*
   (syntax-rules ()
