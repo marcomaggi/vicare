@@ -81,6 +81,11 @@
   (module (E)
 
     (define (E x)
+      ;;Perform code transformation traversing the whole hierarchy in X,
+      ;;which must be  a struct instance representing  recordized code ,
+      ;;and building  a new  hierarchy of transformed,  recordized code;
+      ;;return the new hierarchy.
+      ;;
       ;;The  purpose of  this recordized  code traversal  is to  process
       ;;struct  instances of  type  FUNCALL with  the module  MKFUNCALL;
       ;;everything else is left untouched.
@@ -229,13 +234,15 @@
 
 
 (module (eliminate-fix)
-
+  ;;Despite its name, the purpose of  this module is *not* to remove the
+  ;;FIX structures from recordized code.
+  ;;
   (define who 'eliminate-fix)
 
   (define (eliminate-fix Program)
     (struct-case Program
       ((codes code* body)
-       (let* ((code*^ (map Clambda code*))
+       (let* ((code*^ ($map/stx Clambda code*))
 	      (E      (make-E #f #f '()))
 	      (body^  (E body)))
 	 (make-codes code*^ body^)))
@@ -247,6 +254,26 @@
   (define (make-E main-cpvar cpvar free*)
 
     (define (E x)
+      ;;Perform code transformation traversing the whole hierarchy in X,
+      ;;which must  be a  struct instance representing  recordized code,
+      ;;and building  a new  hierarchy of transformed,  recordized code;
+      ;;return the new hierarchy.
+      ;;
+      ;;The purposes of this code traversal are:
+      ;;
+      ;;1.  Map  %DO-VAR over  every  struct  instance  of type  VAR  in
+      ;;   reference position.
+      ;;
+      ;;2. Map %DO-FIX to every struct instance of type FIX.
+      ;;
+      ;;3. Convert every  struct instance of type CLOSURE  into a struct
+      ;;   instance of type FIX representing this form:
+      ;;
+      ;;      (let ((T ?closure))
+      ;;        T)
+      ;;
+      ;;   where T is a unique variable.
+      ;;
       (struct-case x
 	((constant)
 	 x)
@@ -258,7 +285,7 @@
 	 x)
 
 	((bind lhs* rhs* body)
-	 (make-bind lhs* (map E rhs*) (E body)))
+	 (make-bind lhs* ($map/stx E rhs*) (E body)))
 
 	((fix lhs* rhs* body)
 	 (%do-fix lhs* rhs* (E body)))
@@ -274,16 +301,16 @@
 	   (E (make-fix (list t) (list x) t))))
 
 	((primcall op arg*)
-	 (make-primcall op (map E-known arg*)))
+	 (make-primcall op ($map/stx E-known arg*)))
 
 	((forcall op arg*)
-	 (make-forcall op (map E arg*)))
+	 (make-forcall op ($map/stx E arg*)))
 
 	((funcall rator arg*)
-	 (make-funcall (E-known rator) (map E-known arg*)))
+	 (make-funcall (E-known rator) ($map/stx E-known arg*)))
 
 	((jmpcall label rator arg*)
-	 (make-jmpcall label (E rator) (map E arg*)))
+	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
 	 (error who "invalid expr" x))))
@@ -296,39 +323,42 @@
 	 (E x))))
 
     (module (%do-fix)
-      ;;The purpose of this module is to apply %DO-VAR to all the struct
+      ;;The purpose of  this module is to map %DO-VAR  to all the struct
       ;;instances of  type VAR  being free  variables referenced  by the
       ;;closures.   We cannot  move this  module out  of MAKE-E  because
       ;;%DO-VAR is a closure on the arguments of MAKE-E itself.
       ;;
       (define (%do-fix lhs* rhs* body)
-	(make-fix lhs* (map %handle-closure rhs*) body))
+	(make-fix lhs* ($map/stx %handle-closure rhs*) body))
 
       (define (%handle-closure rhs)
 	;;RHS must be a struct instance of type CLOSURE.
 	;;
 	(struct-case rhs
 	  ((closure code free* well-known?)
-	   (make-closure code (map %do-var free*) well-known?))))
+	   (make-closure code ($map/stx %do-var free*) well-known?))))
 
       #| end of module: %do-fix |# )
 
     (define (%do-var x)
-      ;;X must be a struct instance of type VAR.
-      ;;
       ;;This function is a closure  upon the arguments MAIN-CPVAR, CPVAR
       ;;and FREE* of MAKE-E.
+      ;;
+      ;;X must be a struct instance of type VAR representing.
+      ;;
+      ;;The  purpose of  this function  is to  replace X  with a  struct
+      ;;instance of type PRIMCALL representing a call to $CPREF.
       ;;
       (if (eq? x main-cpvar)
 	  cpvar
 	(let loop ((free* free*)
-		   (i 0))
+		   (i     0))
 	  (cond ((null? free*)
 		 x)
-		((eq? x (car free*))
+		((eq? x ($car free*))
 		 (make-primcall '$cpref (list cpvar (make-constant i))))
 		(else
-		 (loop (cdr free*) (fxadd1 i)))))))
+		 (loop ($cdr free*) ($fxadd1 i)))))))
 
     E)
 
@@ -341,13 +371,22 @@
       ;;
       (struct-case x
 	((clambda label case* cp free* name)
-	 (make-clambda label
-		       (map (ClambdaCase cp free*) case*)
-		       #f free* name))
+	 (let ((case-mapper (ClambdaCase cp free*)))
+	   (make-clambda label ($map/stx case-mapper case*) #f free* name)))
 	(else
 	 (error who "invalid clambda" x))))
 
     (define (ClambdaCase main-cp free*)
+      ;;MAIN-CP  must be  a struct  instance of  type VAR  to which  the
+      ;;CLOSURE wrapping this CLAMBDA is bound.
+      ;;
+      ;;FREE*  must  be   a  list  of  struct  instances   of  type  VAR
+      ;;representing  the free  variables referenced  by the  clauses of
+      ;;this CASE-LAMBDA.
+      ;;
+      ;;Return  a  function  to  be mapped  over  all  the  CLAMBDA-CASE
+      ;;structures representing the clauses of this CLAMBDA.
+      ;;
       (lambda (x)
 	;;X must be a struct instance of type CLAMBDA-CASE.
 	;;
@@ -358,10 +397,12 @@
 	(struct-case x
 	  ((clambda-case info body)
 	   (struct-case info
-	     ((case-info label args proper)
-	      (let ((cp (unique-var 'cp)))
-		(make-clambda-case (make-case-info label (cons cp args) proper)
-				   ((make-E main-cp cp free*) body))))))
+	     ((case-info label args proper?)
+	      (let* ((cp    (unique-var 'cp))
+		     (info^ (make-case-info label (cons cp args) proper?))
+		     (E     (make-E main-cp cp free*))
+		     (body^ (E body)))
+		(make-clambda-case info^ body^)))))
 	  (else
 	   (error who "invalid clambda-case" x)))))
 
