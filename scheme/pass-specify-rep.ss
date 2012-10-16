@@ -577,24 +577,22 @@
   (module (build-setters)
 
     (define (build-setters lhs* rhs* body)
-      (cond ((null? lhs*)
-	     body)
-	    (else
-	     (%single-closure-setters (car lhs*) (car rhs*)
-				      (build-setters (cdr lhs*) (cdr rhs*) body)))))
+      (if (null? lhs*)
+	  body
+	(%single-closure-setters (car lhs*) (car rhs*)
+				 (build-setters (cdr lhs*) (cdr rhs*) body))))
 
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
 	((closure code free*)
 	 (make-seq (prm 'mset lhs (K (- disp-closure-code closure-tag)) (V code))
-		   (let f ((ls free*)
-			   (i (- disp-closure-data closure-tag)))
-		     (cond
-		      ((null? ls) body)
-		      (else
-		       (make-seq
-			(prm 'mset lhs (K i) (V (car ls)))
-			(f (cdr ls) (+ i wordsize))))))))))
+		   (f lhs body free* (- disp-closure-data closure-tag))))))
+
+    (define (f lhs body ls i)
+      (if (null? ls)
+	  body
+	(make-seq (prm 'mset lhs (K i) (V (car ls)))
+		  (f lhs body (cdr ls) (+ i wordsize)))))
 
     #| end of module: build-setters |# )
 
