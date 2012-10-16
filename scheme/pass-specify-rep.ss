@@ -15,6 +15,56 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;; Introduction
+;;
+;;The internal representation of a primitive operation is a symbol whose
+;;property list  contains an instance of  struct PRIMITIVE-HANDLER.  For
+;;example $VECTOR-LENGTH is represented by:
+;;
+;;   (set-primop! '$vector-length
+;;                (make-primitive-handler #f
+;;                  cogen-pred-$vector-length    #t
+;;                  cogen-value-$vector-length   #t
+;;                  cogen-effect-$vector-length  #t))
+;;
+;;where  the bindings  COGEN-*-$VECTOR-LENGTH are  CASE-LAMBDA functions
+;;that generate assembly code for the specified execution context:
+;;
+;;* Primitive  used in predicate context,  in which the only  thing that
+;;  matters is if the return value is true or #f, as in:
+;;
+;;     (if ($vector-length vec)
+;;         (this)
+;;       (that))
+;;
+;;  in which case, if  we know that the return value  is always true, we
+;;  can optimise to:
+;;
+;;     (begin
+;;       ($vector-length vec)
+;;       (this))
+;;
+;;* Primitive  used for its side  effects, in which the  return value is
+;;  discarded, as in:
+;;
+;;     (begin
+;;       ($vector-length vec)
+;;       (this))
+;;
+;;  in which case, if we know that the primitive has no side effects, we
+;;  can optimize to:
+;;
+;;     (begin
+;;       (this))
+;;
+;;* Primitive used for its return value, as in:
+;;
+;;     (display ($vector-length vec))
+;;
+;;  in which case we really have to perform the operation.
+;;
+
+
 (module primops
   (primop? get-primop set-primop!)
   ;;This  module has  the  only  purpose of  making  the binding  COOKIE
@@ -39,7 +89,7 @@
   (import primops)
 
 
-(define-struct PH
+(define-struct primitive-handler
   ;;Primitive handler.   Collects the  definitions associated  to unsafe
   ;;primitive operations.  An instance of  this structure is created for
   ;;every use of the DEFINE-PRIMOP syntax.
@@ -62,12 +112,12 @@
     (prm 'interrupt))
 
   (define (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
-    ;;P must be a struct instance of type PH.
+    ;;P must be a struct instance of type primitive-handler.
     ;;
     ;;CTXT must be one of the symbols: V, E, P.
     ;;
     (define who 'with-interrupt-handler)
-    (if (not (PH-interruptable? p))
+    (if (not (primitive-handler-interruptable? p))
 	;;Raise an  error if INTERRUPT  is called by  an uninterruptible
 	;;primitive.
 	(parameterize ((interrupt-handler (lambda ()
@@ -166,41 +216,41 @@
 		      (lambda ()
 			(case ctxt
 			  ((P)
-			   (cond ((PH-p-handled? p)
-				  (apply (PH-p-handler p) args))
-				 ((PH-v-handled? p)
-				  (let ((e (apply (PH-v-handler p) args)))
+			   (cond ((primitive-handler-p-handled? p)
+				  (apply (primitive-handler-p-handler p) args))
+				 ((primitive-handler-v-handled? p)
+				  (let ((e (apply (primitive-handler-v-handler p) args)))
 				    (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
-				 ((PH-e-handled? p)
-				  (let ((e (apply (PH-e-handler p) args)))
+				 ((primitive-handler-e-handled? p)
+				  (let ((e (apply (primitive-handler-e-handler p) args)))
 				    (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
 				 (else
 				  (error 'cogen-primop "not handled" x))))
 			  ((V)
-			   (cond ((PH-v-handled? p)
-				  (apply (PH-v-handler p) args))
-				 ((PH-p-handled? p)
-				  (let ((e (apply (PH-p-handler p) args)))
+			   (cond ((primitive-handler-v-handled? p)
+				  (apply (primitive-handler-v-handler p) args))
+				 ((primitive-handler-p-handled? p)
+				  (let ((e (apply (primitive-handler-p-handler p) args)))
 				    (if (%interrupt-primcall? e)
 					e
 				      (make-conditional e (K bool-t) (K bool-f)))))
-				 ((PH-e-handled? p)
-				  (let ((e (apply (PH-e-handler p) args)))
+				 ((primitive-handler-e-handled? p)
+				  (let ((e (apply (primitive-handler-e-handler p) args)))
 				    (if (%interrupt-primcall? e)
 					e
 				      (make-seq e (K void-object)))))
 				 (else
 				  (error 'cogen-primop "not handled" x))))
 			  ((E)
-			   (cond ((PH-e-handled? p)
-				  (apply (PH-e-handler p) args))
-				 ((PH-p-handled? p)
-				  (let ((e (apply (PH-p-handler p) args)))
+			   (cond ((primitive-handler-e-handled? p)
+				  (apply (primitive-handler-e-handler p) args))
+				 ((primitive-handler-p-handled? p)
+				  (let ((e (apply (primitive-handler-p-handler p) args)))
 				    (if (%interrupt-primcall? e)
 					e
 				      (make-conditional e (prm 'nop) (prm 'nop)))))
-				 ((PH-v-handled? p)
-				  (let ((e (apply (PH-v-handler p) args)))
+				 ((primitive-handler-v-handled? p)
+				  (let ((e (apply (primitive-handler-v-handler p) args)))
 				    (if (%interrupt-primcall? e)
 					e
 				      (with-tmp ((t e)) (prm 'nop)))))
@@ -322,76 +372,92 @@
   ;;into:
   ;;
   ;;  (begin
-  ;;    (define cogen-$vector-length-pred
+  ;;    (define cogen-pred-$vector-length
   ;;      (case-lambda
   ;;       ((x)		body-P)
   ;;       (args	(interrupt))))
   ;;
-  ;;    (define cogen-$vector-length-effect
+  ;;    (define cogen-effect-$vector-length
   ;;      (case-lambda
   ;;       ((x)		body-E))
   ;;       (args	(interrupt))))
   ;;
-  ;;    (define cogen-$vector-length-value
+  ;;    (define cogen-value-$vector-length
   ;;      (case-lambda
   ;;       ((x)		body-V)
   ;;       (args	(interrupt))))
   ;;
   ;;    (module ()
   ;;      (set-primop! '$vector-length
-  ;;                   (make-PH #f
-  ;;                     cogen-$vector-length-pred    #t
-  ;;                     cogen-$vector-length-value   #t
-  ;;                     cogen-$vector-length-effect  #t))))
+  ;;                   (make-primitive-handler #f
+  ;;                     cogen-pred-$vector-length    #t
+  ;;                     cogen-value-$vector-length   #t
+  ;;                     cogen-effect-$vector-length  #t))))
   ;;
   ;;The P,  V and  E clauses  are optional and  there can  be multiple
   ;;clauses for each type: they are like SYNTAX-CASE clauses.
   ;;
-  (lambda (x)
-    (define (%cogen-name stx name suffix)
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((?stx ?name ?interruptable ?clause* ...)
+	 (let ((cases #'(?clause* ...)))
+	   (with-syntax
+	       ((COGEN-P	(%cogen-name #'?stx "pred"   #'?name))
+		(COGEN-V	(%cogen-name #'?stx "value"  #'?name))
+		(COGEN-E	(%cogen-name #'?stx "effect" #'?name))
+		(INTERRUPTABLE?	(syntax-case #'?interruptable (safe unsafe)
+				  (safe   #t)
+				  (unsafe #f))))
+	     (let-values
+		 (((P-handler P-handled?) (%generate-handler #'P cases))
+		  ((V-handler V-handled?) (%generate-handler #'V cases))
+		  ((E-handler E-handled?) (%generate-handler #'E cases)))
+	       #`(begin
+		   (define COGEN-P #,P-handler)
+		   (define COGEN-V #,V-handler)
+		   (define COGEN-E #,E-handler)
+		   (module ()
+		     (set-primop! '?name
+				  (make-primitive-handler INTERRUPTABLE?
+							  COGEN-P #,P-handled?
+							  COGEN-V #,V-handled?
+							  COGEN-E #,E-handled?))))
+	       ))))
+	))
+
+    (define (%generate-handler execution-context clause*)
+      ;;Return 2  values: a  CASE-LAMBDA syntax object  representing the
+      ;;primitive  operation handler  for  EXECUTION-CONTEXT; a  boolean
+      ;;value,  true  if  the  primitive operation  is  implemented  for
+      ;;EXECUTION-CONTEXT.
+      ;;
+      (let ((clause* (%filter-cases execution-context clause*)))
+	(with-syntax (((CLAUSE* ...) clause*))
+	  (values #'(case-lambda CLAUSE* ... (args (interrupt)))
+		  (not (null? clause*))))))
+
+    (define (%filter-cases execution-context clause*)
+      ;;Extract from CLAUSE* the  cases matching EXECUTION-CONTEXT among
+      ;;the possible P, V, E.  Return a list of CASE-LAMBDA clauses.
+      ;;
+      (syntax-case clause* ()
+	(() '())
+	((((?PVE . ?arg*) ?body0 ?body ...) . ?rest)
+	 (free-identifier=? #'?PVE execution-context)
+	 (cons #'(?arg* ?body0 ?body ...)
+	       (%filter-cases execution-context #'?rest)))
+	((?case . ?rest)
+	 (%filter-cases execution-context #'?rest))))
+
+    (define (%cogen-name stx infix name)
       (let* ((name.str  (symbol->string (syntax->datum name)))
-	     (cogen.str (string-append "cogen-" suffix "-"  name.str)))
+	     (cogen.str (string-append "cogen-" infix "-"  name.str)))
 	(datum->syntax stx (string->symbol cogen.str))))
-    (define (%generate-handler name ctxt case*)
-      (define (%filter-cases case*)
-	;;Extract  from  CASE*  the  cases  matching  CTXT  among  the
-	;;possible P, V, E.
-	;;
-	(syntax-case case* ()
-	  (() '())
-	  ((((?PVE . ?arg*) ?b ?b* ...) . ?rest)
-	   (free-identifier=? #'?PVE ctxt)
-	   (cons #'(?arg* ?b ?b* ...) (%filter-cases #'?rest)))
-	  ((?case . ?rest)
-	   (%filter-cases #'?rest))))
 
-      (let ((case* (%filter-cases case*)))
-	(with-syntax (((CASE* ...) case*))
-	  (values #'(case-lambda CASE* ... (args (interrupt)))
-		  (not (null? case*))))))
-    (syntax-case x ()
-      ((?stx ?name ?interruptable ?case* ...)
-       (let ((cases #'(?case* ...)))
-	 (with-syntax
-	     ((COGEN-P		(%cogen-name #'?stx #'?name "pred"))
-	      (COGEN-E		(%cogen-name #'?stx #'?name "effect"))
-	      (COGEN-V		(%cogen-name #'?stx #'?name "value"))
-	      (INTERRUPTABLE?		(syntax-case #'?interruptable (safe unsafe)
-					  (safe   #t)
-					  (unsafe #f))))
-	   (let-values (((p-handler phandled?) (%generate-handler #'?name #'P cases))
-			((v-handler vhandled?) (%generate-handler #'?name #'V cases))
-			((e-handler ehandled?) (%generate-handler #'?name #'E cases)))
-	     #`(begin
-		 (define COGEN-P #,p-handler)
-		 (define COGEN-V #,v-handler)
-		 (define COGEN-E #,e-handler)
-		 (module ()
-		   (set-primop! '?name (make-PH INTERRUPTABLE?
-						COGEN-P #,phandled?
-						COGEN-V #,vhandled?
-						COGEN-E #,ehandled?)))))))))))
+    (main stx)))
 
+
 (define (handle-fix lhs* rhs* body)
   (define (closure-size x)
     (struct-case x
@@ -671,8 +737,8 @@
   (syntax-rules ()
     ((_ what expr) (void))))
 
-  ;;;========================================================================
-  ;;;
+;;; --------------------------------------------------------------------
+
 (define (interrupt-unless x)
   (make-conditional x (prm 'nop) (interrupt)))
 (define (interrupt-when x)

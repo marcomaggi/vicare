@@ -14,8 +14,19 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+;;;; Introduction
+;;
+;;For  an explanation  of  primitive operation  definition and  internal
+;;representation: see the file "pass-specify-rep.ss".
+;;
+
+
+;;;; syntax helpers
+
 (define-syntax /section
   (syntax-rules ()))
+
 (define-syntax section
   (syntax-rules (/section)
     ((section e* ... /section) (begin e* ...))))
