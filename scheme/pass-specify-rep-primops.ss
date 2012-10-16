@@ -45,13 +45,6 @@
  (define (nop)
    (make-primcall 'nop '()))
 
- (define-syntax K
-   ;;Build an integer constant out of X.
-   ;;
-   (syntax-rules ()
-     ((_ x)
-      (make-constant x))))
-
  (define (tag-test x mask tag)
    ;;Primary tag test.  X must be a word referencing a Scheme value.
    ;;

@@ -15,6 +15,16 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;; introduction
+;;
+;;This  file  is part  of  the  compiler; it  is  included  by the  file
+;;"ikarus.compiler.sls"; it includes "pass-specify-rep-primops.ss".
+;;
+;;NOTE   Some   functions   used   in   this   file   are   defined   in
+;;"pass-specify-rep-primops.ss".
+;;
+
+
 ;;;; internal representation of primitive operations
 ;;
 ;;The internal representation of a primitive operation is a symbol whose
@@ -817,7 +827,7 @@
        (make-jmpcall label (V rator) (map V arg*)))
 
       (else
-       (error 'cogen-V "invalid value expr" x))))
+       (error 'cogen-V "invalid value expr" (unparse x)))))
 
   #| end of module: V |# )
 
@@ -888,49 +898,99 @@
      (P expr))
 
     (else
-     (error 'cogen-P "invalid pred expr" x))))
+     (error 'cogen-P "invalid pred expr" (unparse x)))))
 
 
 (define (E x)
+  ;;X  must be  a struct  instance  representing recordized  code to  be
+  ;;executed in  "for side  effect" context.   Return a  struct instance
+  ;;representing recordized  code (to be  executed in "for  side effect"
+  ;;context) which is meant to replace X.
+  ;;
+  ;;Accept as input recordized code holding the following struct types:
+  ;;
+  ;;bind		closure		code-loc
+  ;;conditional		constant	fix
+  ;;forcall		funcall		jmpcall
+  ;;known		primcall	primref
+  ;;seq			var
+  ;;
   (struct-case x
-    ((constant) (nop))
-    ((var)      (nop))
-    ((primref)  (nop))
-    ((code-loc) (nop))
-    ((closure)  (nop))
+
+    ;;Useless for side effects: remove!
+    ((constant)		(nop))
+    ((var)		(nop))
+    ((primref)		(nop))
+    ((code-loc)		(nop))
+    ((closure)		(nop))
+
     ((bind lhs* rhs* body)
      (make-bind lhs* (map V rhs*) (E body)))
-    ((conditional e0 e1 e2)
-     (make-conditional (P e0) (E e1) (E e2)))
+
+    ((conditional test conseq altern)
+     (make-conditional (P test) (E conseq) (E altern)))
+
     ((seq e0 e1)
      (make-seq (E e0) (E e1)))
+
     ((fix lhs* rhs* body)
      (handle-fix lhs* rhs* (E body)))
+
     ((primcall op arg*)
      (case op
        ((debug-call)
 	(cogen-debug-call op 'E arg* E))
-       (else (cogen-primop op 'E arg*))))
+       (else
+	(cogen-primop     op 'E arg*))))
+
     ((forcall op arg*)
      (make-forcall op (map V arg*)))
+
     ((funcall rator arg*)
      (make-funcall (Function rator) (map V arg*)))
+
     ((jmpcall label rator arg*)
      (make-jmpcall label (V rator) (map V arg*)))
+
     ((known expr type)
-       ;;; FIXME: suboptimal
+     ;;FIXME Suboptimal.  (Abdulaziz Ghuloum)
      (E expr))
+
     (else
-     (error 'cogen-E "invalid effect expr" x))))
+     (error 'cogen-E "invalid effect expr" (unparse x)))))
 
 
 (define (T x)
+  ;;X  must be  a struct  instance  representing recordized  code to  be
+  ;;executed in  "for returned  value" context,  evaluating to  a single
+  ;;value to  be used as  argument to  a primitive operation.   Return a
+  ;;struct instance representing recordized code (to be executed in "for
+  ;;returned value" context) which is meant to replace X.
+  ;;
+  ;;Accept as input recordized code holding the following struct types:
+  ;;
+  ;;constant		known		var
+  ;;
   (struct-case x
-    ((var) x)
-    ((constant i) (constant-rep x))
+    ((var)
+     x)
+
+    ((constant)
+     (constant-rep x))
+
     ((known expr type)
      (make-known (T expr) type))
-    (else (error 'cogen-T "invalid" (unparse x)))))
+
+    (else
+     (error 'cogen-T "invalid" (unparse x)))))
+
+
+(define-syntax K
+  ;;Wrap X with a struct instance of type CONSTANT.
+  ;;
+  (syntax-rules ()
+    ((_ ?x)
+     (make-constant ?x))))
 
 
 (module (cogen-debug-call)
