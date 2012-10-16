@@ -3571,12 +3571,12 @@
    ((32) 2)
    ((64) 3)))
 
-(define fx-scale				wordsize)
 (define object-alignment			(* 2 wordsize))
 (define align-shift				(+ wordshift 1))
 (define pagesize				4096)
 (define pageshift				12)
 
+(define fx-scale				wordsize)
 (define fx-shift				wordshift)
 (define fx-mask					(- wordsize 1))
 (define fx-tag					0)

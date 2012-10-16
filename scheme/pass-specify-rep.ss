@@ -687,20 +687,46 @@
 
 
 (define (constant-rep x)
+  ;;X must be  a struct instance of type CONSTANT.   Return a new struct
+  ;;instance of type  CONSTANT holding the binary  representation of the
+  ;;value.
+  ;;
   (let ((c (constant-value x)))
-    (cond
-     ((fx? c) (make-constant (* c fx-scale)))
-     ((boolean? c) (make-constant (if c bool-t bool-f)))
-     ((eq? c (void)) (make-constant void-object))
-     ((bwp-object? c) (make-constant bwp-object))
-     ((char? c) (make-constant
-		 (fxlogor char-tag
-			  (fxsll (char->integer c) char-shift))))
-     ((null? c) (make-constant nil))
-     ((eof-object? c) (make-constant eof))
-     ((object? c) (error 'constant-rep "double-wrap"))
-     (else (make-constant (make-object c))))))
+    (cond ((fx? c)
+	   (make-constant (bitwise-arithmetic-shift-left c fx-shift)
+			  #;(* c fx-scale)))
 
+	  ((boolean? c)
+	   (make-constant (if c bool-t bool-f)))
+
+	  ((eq? c (void))
+	   (make-constant void-object))
+
+	  ((bwp-object? c)
+	   (make-constant bwp-object))
+
+	  ((char? c)
+	   ;;Here we  are interested in Scheme  characters as standalone
+	   ;;objects: machine words whose least significant bits are set
+	   ;;to the  character tag and  whose most significant  bits are
+	   ;;set to the character's Unicode code point.
+	   (make-constant ($fxlogor char-tag
+				    ($fxsll (char->integer c)
+					    char-shift))))
+
+	  ((null? c)
+	   (make-constant nil))
+
+	  ((eof-object? c)
+	   (make-constant eof))
+
+	  ((object? c)
+	   (error 'constant-rep "double-wrap"))
+
+	  (else
+	   (make-constant (make-object c))))))
+
+
 (define (V x) ;;; erase known values
   (struct-case x
     ((known x t)
