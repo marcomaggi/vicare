@@ -494,11 +494,20 @@
   ;;the values from a FIX struct are processed as follows:
   ;;
   ;;* If the FIX struct contains only bindings for combinators: a single
-  ;;  BIND structure is returned.
+  ;;  BIND structure is returned, representing the following operations:
+  ;;
+  ;;     (let ((?combinator-name ?combinator-code))
+  ;;           ...))
+  ;;       ?body)
   ;;
   ;;* If  the FIX struct  contains only bindings for  non-combinators: a
   ;;  single BIND  structure is returned, containing  recordized code to
-  ;;  allocate and initialise the closures.
+  ;;  allocate and initialise the closures:
+  ;;
+  ;;     (let ((?non-combin-name
+  ;;                  (alloc-and-init-closure ?non-combin-code))
+  ;;           ...)
+  ;;       ?body)
   ;;
   ;;* If the  FIX struct contains both  combinators and non-combinators,
   ;;  the  return value  is recordized  code representing  the following
@@ -534,9 +543,9 @@
       (if (null? lhs*)
 	  (values '() '() '() '())
 	(let-values (((lhs-combin* rhs-combin lhs-non-combin rhs-non-combin)
-		      (%partition (cdr lhs*) (cdr rhs*))))
-	  (let ((lhs (car lhs*))
-		(rhs (car rhs*)))
+		      (%partition ($cdr lhs*) ($cdr rhs*))))
+	  (let ((lhs ($car lhs*))
+		(rhs ($car rhs*)))
 	    (if (%combinator? lhs rhs)
 		(values (cons lhs lhs-combin*)
 			(cons rhs rhs-combin)
@@ -560,10 +569,10 @@
   (module (build-closures)
 
     (define (build-closures lhs* rhs* body)
-      (let ((lhs  (car lhs*))
-	    (rhs  (car rhs*))
-	    (lhs* (cdr lhs*))
-	    (rhs* (cdr rhs*)))
+      (let ((lhs  ($car lhs*))
+	    (rhs  ($car rhs*))
+	    (lhs* ($cdr lhs*))
+	    (rhs* ($cdr rhs*)))
 	(let ((n  (%closure-size rhs))
 	      (n* (map %closure-size rhs*)))
 	  (make-bind (list lhs)
@@ -581,8 +590,8 @@
 	  '()
 	(cons (prm 'int+ lhs (K n))
 	      (%adders lhs
-		       (+ n (car n*))
-		       (cdr n*)))))
+		       (+ n ($car n*))
+		       ($cdr n*)))))
 
     (define (%sum n n*)
       ;;Return the sum between the numbers in the list N* and the number
@@ -590,8 +599,8 @@
       ;;
       (if (null? n*)
 	  n
-	(%sum (+ n (car n*))
-	      (cdr n*))))
+	(%sum (+ n ($car n*))
+	      ($cdr n*))))
 
     (define (%closure-size x)
       ;;X  must  be a  struct  instance  of  type CLOSURE.   Return  the
@@ -644,8 +653,8 @@
       ;;
       (if (null? lhs*)
 	  body
-	(%single-closure-setters (car lhs*) (car rhs*)
-				 (closure-object-setters (cdr lhs*) (cdr rhs*) body))))
+	(%single-closure-setters ($car lhs*) ($car rhs*)
+				 (closure-object-setters ($cdr lhs*) ($cdr rhs*) body))))
 
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
@@ -669,8 +678,8 @@
       ;;
       (if (null? free*)
 	  body
-	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
-		  (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))))
+	(make-seq (prm 'mset lhs (K slot-offset) (V ($car free*)))
+		  (%slot-setters lhs ($cdr free*) (+ slot-offset wordsize) body))))
 
     #| end of module: closure-object-setters |# )
 
