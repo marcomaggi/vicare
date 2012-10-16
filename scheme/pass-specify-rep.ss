@@ -111,10 +111,11 @@
 		;implemented for predicate execution context.
    v-handler
 		;CASE-LAMBDA function  generating assembly code  for the
-		;"for value" execution context.
+		;"for returned value" execution context.
    v-handled?
 		;Boolean,   true   if   this  primitive   operation   is
-		;implemented for the "for value" execution context.
+		;implemented  for  the  "for returned  value"  execution
+		;context.
    e-handler
 		;CASE-LAMBDA function  generating assembly code  for the
 		;"for side effects" execution context.
@@ -732,7 +733,11 @@
 
 
 (module (V)
-  ;;Erase known values.
+  ;;The function V erases known values;  its argument X must be a struct
+  ;;instance  representing  recordized  code  to  be  executed  in  "for
+  ;;returned  value" context;  its  return value  is  a struct  instance
+  ;;representing recordized code (to be executed in "for returned value"
+  ;;context) which is meant to replace X.
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
@@ -741,6 +746,7 @@
   ;;forcall		funcall		jmpcall
   ;;known		primcall	primref
   ;;seq			var
+  ;;
   ;;
   ;;Return recordized code in which:
   ;;
@@ -817,36 +823,72 @@
 
 
 (define (P x)
+  ;;X  must be  a struct  instance  representing recordized  code to  be
+  ;;executed   in  predicate   context.    Return   a  struct   instance
+  ;;representing recordized  code (to be executed  in predicate context)
+  ;;which is meant to replace X.
+  ;;
+  ;;Accept as input recordized code holding the following struct types:
+  ;;
+  ;;bind		closure		code-loc
+  ;;conditional		constant	fix
+  ;;forcall		funcall		jmpcall
+  ;;known		primcall	primref
+  ;;seq			var
+  ;;
   (struct-case x
-    ((constant c) (if c (K #t) (K #f)))
-    ((primref)  (K #t))
-    ((code-loc) (K #t))
-    ((closure)  (K #t))
+    ((constant c)
+     (if c (K #t) (K #f)))
+
+    ((primref)
+     (K #t))
+
+    ((code-loc)
+     (K #t))
+
+    ((closure)
+     (K #t))
+
     ((bind lhs* rhs* body)
      (make-bind lhs* (map V rhs*) (P body)))
-    ((conditional e0 e1 e2)
-     (make-conditional (P e0) (P e1) (P e2)))
+
+    ((conditional test conseq altern)
+     ;;FIXME Should  this be processed  further to  test the case  of (P
+     ;;test)  always true  or always  false?   Or is  this already  done
+     ;;later?  (Marco Maggi; Oct 16, 2012)
+     (make-conditional (P test) (P conseq) (P altern)))
+
     ((seq e0 e1)
      (make-seq (E e0) (P e1)))
+
     ((fix lhs* rhs* body)
      (handle-fix lhs* rhs* (P body)))
+
     ((primcall op arg*)
      (case op
        ((debug-call)
 	(cogen-debug-call op 'P arg* P))
-       (else (cogen-primop op 'P arg*))))
+       (else
+	(cogen-primop     op 'P arg*))))
+
     ((var)
      (prm '!= (V x) (V (K #f))))
+
     ((funcall)
      (prm '!= (V x) (V (K #f))))
+
     ((jmpcall)
      (prm '!= (V x) (V (K #f))))
+
     ((forcall)
      (prm '!= (V x) (V (K #f))))
+
     ((known expr type)
-       ;;; FIXME: suboptimal
+     ;;FIXME.  Suboptimal.  (Abdulaziz Ghuloum)
      (P expr))
-    (else (error 'cogen-P "invalid pred expr" x))))
+
+    (else
+     (error 'cogen-P "invalid pred expr" x))))
 
 
 (define (E x)
