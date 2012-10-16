@@ -620,81 +620,99 @@
   )
 
 (define (handle-fix lhs* rhs* body)
-  (define (closure-size x)
+
+  (define (%closure-size x)
+    ;;X must be a struct instance of type CLOSURE.  Return the *aligned*
+    ;;number of  bytes needed to  hold the  free variables slots  in the
+    ;;closure built in object.
+    ;;
+    ;;                  0   1   2   3   4   5
+    ;;   |------------|---|---|---|---|---|---| closure object
+    ;;         ^
+    ;;         |      |.......................|
+    ;;    pointer to         slots size
+    ;;    binary code
+    ;;
     (struct-case x
-      [(closure code free*)
+      ((closure code free*)
        (if (null? free*)
 	   0
-	 (align (+ disp-closure-data
-		   (* (length free*) wordsize))))]))
+	 (align (+ disp-closure-data (* (length free*) wordsize)))))))
+
   (define (partition p? lhs* rhs*)
     (cond
-     [(null? lhs*) (values '() '() '() '())]
-     [else
-      (let-values ([(a* b* c* d*)
-		    (partition p? (cdr lhs*) (cdr rhs*))]
-		   [(x y) (values (car lhs*) (car rhs*))])
+     ((null? lhs*) (values '() '() '() '()))
+     (else
+      (let-values (((a* b* c* d*)
+		    (partition p? (cdr lhs*) (cdr rhs*)))
+		   ((x y) (values (car lhs*) (car rhs*))))
 	(cond
-	 [(p? x y)
-	  (values (cons x a*) (cons y b*) c* d*)]
-	 [else
-	  (values a* b* (cons x c*) (cons y d*))]))]))
+	 ((p? x y)
+	  (values (cons x a*) (cons y b*) c* d*))
+	 (else
+	  (values a* b* (cons x c*) (cons y d*))))))))
+
   (define (combinator? lhs rhs)
     (struct-case rhs
-      [(closure code free*) (null? free*)]))
+      ((closure code free*) (null? free*))))
+
   (define (sum n* n)
     (cond
-     [(null? n*) n]
-     [else (sum (cdr n*) (+ n (car n*)))]))
+     ((null? n*) n)
+     (else (sum (cdr n*) (+ n (car n*))))))
+
   (define (adders lhs n n*)
     (cond
-     [(null? n*) '()]
-     [else
+     ((null? n*) '())
+     (else
       (cons (prm 'int+ lhs (K n))
-	    (adders lhs (+ n (car n*)) (cdr n*)))]))
+	    (adders lhs (+ n (car n*)) (cdr n*))))))
+
   (define (build-closures lhs* rhs* body)
-    (let ([lhs (car lhs*)] [rhs (car rhs*)]
-	  [lhs* (cdr lhs*)] [rhs* (cdr rhs*)])
-      (let ([n (closure-size rhs)]
-	    [n* (map closure-size rhs*)])
+    (let ((lhs (car lhs*)) (rhs (car rhs*))
+	  (lhs* (cdr lhs*)) (rhs* (cdr rhs*)))
+      (let ((n (%closure-size rhs))
+	    (n* (map %closure-size rhs*)))
 	(make-bind (list lhs)
 		   (list (prm 'alloc
 			      (K (sum n* n))
 			      (K closure-tag)))
 		   (make-bind lhs* (adders lhs n n*)
 			      body)))))
+
   (define (build-setters lhs* rhs* body)
     (define (build-setter lhs rhs body)
       (struct-case rhs
-	[(closure code free*)
+	((closure code free*)
 	 (make-seq
 	  (prm 'mset lhs
 	       (K (- disp-closure-code closure-tag))
 	       (V code))
-	  (let f ([ls free*]
-		  [i (- disp-closure-data closure-tag)])
+	  (let f ((ls free*)
+		  (i (- disp-closure-data closure-tag)))
 	    (cond
-	     [(null? ls) body]
-	     [else
+	     ((null? ls) body)
+	     (else
 	      (make-seq
 	       (prm 'mset lhs (K i) (V (car ls)))
-	       (f (cdr ls) (+ i wordsize)))])))]))
+	       (f (cdr ls) (+ i wordsize))))))))))
     (cond
-     [(null? lhs*) body]
-     [else
+     ((null? lhs*) body)
+     (else
       (build-setter (car lhs*) (car rhs*)
-		    (build-setters (cdr lhs*) (cdr rhs*) body))]))
-  (let-values ([(flhs* frhs* clhs* crhs*)
-		(partition combinator? lhs* rhs*)])
+		    (build-setters (cdr lhs*) (cdr rhs*) body)))))
+
+  (let-values (((flhs* frhs* clhs* crhs*)
+		(partition combinator? lhs* rhs*)))
     (cond
-     [(null? clhs*) (make-bind flhs* (map V frhs*) body)]
-     [(null? flhs*)
+     ((null? clhs*) (make-bind flhs* (map V frhs*) body))
+     ((null? flhs*)
       (build-closures clhs* crhs*
-		      (build-setters clhs* crhs* body))]
-     [else
+		      (build-setters clhs* crhs* body)))
+     (else
       (make-bind flhs* (map V frhs*)
 		 (build-closures clhs* crhs*
-				 (build-setters clhs* crhs* body)))])))
+				 (build-setters clhs* crhs* body)))))))
 
 
 (define (constant-rep x)
