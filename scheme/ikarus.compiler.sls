@@ -898,6 +898,10 @@
 
 ;;Instances of this type represent closures.
 ;;
+;;NOTE We  must not confuse  struct instances  of type CLOSURE,  used to
+;;represent recordized code,  with instances of Scheme  built in objects
+;;of type closure, which represent closures at run time.
+;;
 (define-struct closure
   (code
 		;A  struct instance  of  type  CLAMBDA representing  the
@@ -3661,6 +3665,8 @@
 (define closure-tag				3)
 (define disp-closure-code			0)
 (define disp-closure-data			wordsize)
+(define off-closure-code			(fx- disp-closure-code closure-tag))
+(define off-closure-data			(fx- disp-closure-data closure-tag))
 
 (define continuation-tag			#x1F)
 (define disp-continuation-top			(* 1 wordsize))
