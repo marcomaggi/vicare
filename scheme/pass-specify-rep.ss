@@ -484,33 +484,72 @@
 
 
 (module (handle-fix)
-
+  ;;This module transforms and expands the values in struct instances of
+  ;;type FIX.  Knowing that a closure is a:
+  ;;
+  ;;* "combinator" if it has *no* free variables;
+  ;;
+  ;;* "non-combinator" if it has free variables;
+  ;;
+  ;;the values from a FIX struct are processed as follows:
+  ;;
+  ;;* If the FIX struct contains only bindings for combinators: a single
+  ;;  BIND structure is returned.
+  ;;
+  ;;* If  the FIX struct  contains only bindings for  non-combinators: a
+  ;;  single BIND  structure is returned, containing  recordized code to
+  ;;  allocate and initialise the closures.
+  ;;
+  ;;* If the  FIX struct contains both  combinators and non-combinators,
+  ;;  the  return value  is recordized  code representing  the following
+  ;;  operations:
+  ;;
+  ;;     (let ((?combinator-name ?combinator-code))
+  ;;           ...))
+  ;;       (let ((?non-combin-name
+  ;;                   (alloc-and-init-closure ?non-combin-code))
+  ;;             ...)
+  ;;         ?body))
+  ;;
   (module (handle-fix)
 
     (define (handle-fix lhs* rhs* body)
-      (let-values (((flhs* frhs* clhs* crhs*)
-		    (%partition %combinator? lhs* rhs*)))
-	(cond ((null? clhs*)
-	       (make-bind flhs* (map V frhs*) body))
-	      ((null? flhs*)
-	       (build-closures clhs* crhs* (closure-object-setters clhs* crhs* body)))
+      (let-values (((lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
+		    (%partition lhs* rhs*)))
+	(cond ((null? lhs-non-combin*)
+	       (make-bind lhs-combin* (map V rhs-combin*) body))
+	      ((null? lhs-combin*)
+	       (build-closures lhs-non-combin* rhs-non-combin*
+			       (closure-object-setters lhs-non-combin*
+						       rhs-non-combin*
+						       body)))
 	      (else
-	       (make-bind flhs* (map V frhs*)
-			  (build-closures clhs* crhs*
-					  (closure-object-setters clhs* crhs* body)))))))
+	       (make-bind lhs-combin* (map V rhs-combin*)
+			  (build-closures lhs-non-combin* rhs-non-combin*
+					  (closure-object-setters lhs-non-combin*
+								  rhs-non-combin*
+								  body)))))))
 
-    (define (%partition p? lhs* rhs*)
+    (define (%partition lhs* rhs*)
       (if (null? lhs*)
 	  (values '() '() '() '())
-	(let-values (((a* b* c* d*) (%partition p? (cdr lhs*) (cdr rhs*)))
-		     ((x y)         (values (car lhs*) (car rhs*))))
-	  (if (p? x y)
-	      (values (cons x a*) (cons y b*) c* d*)
-	    (values a* b* (cons x c*) (cons y d*))))))
+	(let-values (((lhs-combin* rhs-combin lhs-non-combin rhs-non-combin)
+		      (%partition (cdr lhs*) (cdr rhs*))))
+	  (let ((lhs (car lhs*))
+		(rhs (car rhs*)))
+	    (if (%combinator? lhs rhs)
+		(values (cons lhs lhs-combin*)
+			(cons rhs rhs-combin)
+			lhs-non-combin
+			rhs-non-combin)
+	      (values lhs-combin*
+		      rhs-combin
+		      (cons lhs lhs-non-combin)
+		      (cons rhs rhs-non-combin)))))))
 
     (define (%combinator? lhs.unused rhs)
-      ;;Return true if  the struct instance of type CLOSURE  in RHS has no
-      ;;free variables.
+      ;;Return true  if the struct instance  of type CLOSURE in  RHS has
+      ;;*no* free variables.
       ;;
       (struct-case rhs
 	((closure code free*)
@@ -609,8 +648,6 @@
 				 (closure-object-setters (cdr lhs*) (cdr rhs*) body))))
 
     (define (%single-closure-setters lhs rhs body)
-      (define off-closure-code (- disp-closure-code closure-tag))
-      (define off-closure-data (- disp-closure-data closure-tag))
       (struct-case rhs
 	((closure code free*)
 	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
