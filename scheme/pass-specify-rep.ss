@@ -595,16 +595,26 @@
     ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
     ;;
     (define (closure-object-setters lhs* rhs* body)
+      ;;LHS* must be a list of struct instances of type VAR representing
+      ;;memory locations containing references to the closure objects.
+      ;;
+      ;;RHS* must be a list of struct instances of type CLOSURE.
+      ;;
+      ;;BODY must be  a struct instance representing  recordized code in
+      ;;which the closure bindings are visible.
+      ;;
       (if (null? lhs*)
 	  body
 	(%single-closure-setters (car lhs*) (car rhs*)
 				 (closure-object-setters (cdr lhs*) (cdr rhs*) body))))
 
     (define (%single-closure-setters lhs rhs body)
+      (define off-closure-code (- disp-closure-code closure-tag))
+      (define off-closure-data (- disp-closure-data closure-tag))
       (struct-case rhs
 	((closure code free*)
-	 (make-seq (prm 'mset lhs (K (- disp-closure-code closure-tag)) (V code))
-		   (%slot-setters lhs free* (- disp-closure-data closure-tag) body)))))
+	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
+		   (%slot-setters lhs free* off-closure-data body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
       ;;LHS  must be  a struct  instance  of type  VAR representing  the
