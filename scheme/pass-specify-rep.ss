@@ -150,138 +150,162 @@
   #| end of module: with-tmp |# )
 
 
-;; if ctxt is V:
-;;   if cogen-value, then V
-;;   if cogen-pred, then (if P #f #t)
-;;   if cogen-effect, then (seq E (void))
-;;
-;; if ctxt is P:
-;;   if cogen-pred, then P
-;;   if cogen-value, then (!= V #f)
-;;   if cogen-effect, then (seq E #t)
-;;
-;; if ctxt is E:
-;;   if cogen-effect, then E
-;;   if cogen-value, then (let ((tmp V)) (nop))
-;;   if cogen-pred, then (if P (nop) (nop))
-(define (simplify* args k)
-  (define (S* ls)
-    (if (null? ls)
-	(values '() '() '())
-      (let-values (((lhs* rhs* arg*) (S* (cdr ls))))
-	(let ((a (car ls)))
-	  (struct-case a
-	    ((known expr type)
-	     (struct-case expr
-	       ((constant i)
-		;; erase known tag
-		(values lhs* rhs* (cons expr arg*)))
-	       (else
-		;(printf "known ~s ~s\n" type expr)
-		(let ((tmp (unique-var 'tmp)))
-		  (values (cons tmp lhs*)
-			  (cons (V expr) rhs*)
-			  (cons (make-known tmp type) arg*))))))
-	    ((constant i)
-	     (values lhs* rhs* (cons a arg*)))
-	    (else
-	     (let ((t (unique-var 'tmp)))
-	       (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
-  (let-values (((lhs* rhs* args) (S* args)))
-    (if (null? lhs*)
-	(k args)
-      (make-bind lhs* rhs* (k args)))))
+(module (make-cogen-handler)
 
-(define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
-  ;;Build and return the COGEN-PRIMOP closure.
+  (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
+    ;;Build and return the COGEN-PRIMOP closure.
+    ;;
+    (define (cogen-primop x ctxt args)
+      (let ((p (get-primop x)))
+	(simplify* args
+		   (lambda (args)
+		     (with-interrupt-handler
+		      p x ctxt (map T args)
+		      make-interrupt-call make-no-interrupt-call
+		      (lambda ()
+			(case ctxt
+			  ((P)
+			   (cond ((PH-p-handled? p)
+				  (apply (PH-p-handler p) args))
+				 ((PH-v-handled? p)
+				  (let ((e (apply (PH-v-handler p) args)))
+				    (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
+				 ((PH-e-handled? p)
+				  (let ((e (apply (PH-e-handler p) args)))
+				    (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
+				 (else
+				  (error 'cogen-primop "not handled" x))))
+			  ((V)
+			   (cond ((PH-v-handled? p)
+				  (apply (PH-v-handler p) args))
+				 ((PH-p-handled? p)
+				  (let ((e (apply (PH-p-handler p) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (make-conditional e (K bool-t) (K bool-f)))))
+				 ((PH-e-handled? p)
+				  (let ((e (apply (PH-e-handler p) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (make-seq e (K void-object)))))
+				 (else
+				  (error 'cogen-primop "not handled" x))))
+			  ((E)
+			   (cond ((PH-e-handled? p)
+				  (apply (PH-e-handler p) args))
+				 ((PH-p-handled? p)
+				  (let ((e (apply (PH-p-handler p) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (make-conditional e (prm 'nop) (prm 'nop)))))
+				 ((PH-v-handled? p)
+				  (let ((e (apply (PH-v-handler p) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (with-tmp ((t e)) (prm 'nop)))))
+				 (else
+				  (error 'cogen-primop "not handled" x))))
+			  (else
+			   (error 'cogen-primop "invalid context" ctxt)))))))))
+    cogen-primop)
+
+  (define (%interrupt-primcall? body)
+    (struct-case body
+      ((primcall op)
+       (eq? op 'interrupt))
+      (else
+       #f)))
+
+
+  ;; if ctxt is V:
+  ;;   if cogen-value, then V
+  ;;   if cogen-pred, then (if P #f #t)
+  ;;   if cogen-effect, then (seq E (void))
   ;;
-  (define (cogen-primop x ctxt args)
-    (define (interrupt? x)
-      (struct-case x
-	((primcall x) (eq? x 'interrupt))
-	(else #f)))
-    (let ((p (get-primop x)))
-      (simplify* args
-		 (lambda (args)
-		   (with-interrupt-handler
-		    p x ctxt (map T args)
-		    make-interrupt-call make-no-interrupt-call
-		    (lambda ()
-		      (case ctxt
-			((P)
-			 (cond
-			  ((PH-p-handled? p)
-			   (apply (PH-p-handler p) args))
-			  ((PH-v-handled? p)
-			   (let ((e (apply (PH-v-handler p) args)))
-			     (if (interrupt? e) e (prm '!= e (K bool-f)))))
-			  ((PH-e-handled? p)
-			   (let ((e (apply (PH-e-handler p) args)))
-			     (if (interrupt? e) e (make-seq e (K #t)))))
-			  (else (error 'cogen-primop "not handled" x))))
-			((V)
-			 (cond
-			  ((PH-v-handled? p)
-			   (apply (PH-v-handler p) args))
-			  ((PH-p-handled? p)
-			   (let ((e (apply (PH-p-handler p) args)))
-			     (if (interrupt? e)
-				 e
-			       (make-conditional e (K bool-t) (K bool-f)))))
-			  ((PH-e-handled? p)
-			   (let ((e (apply (PH-e-handler p) args)))
-			     (if (interrupt? e) e (make-seq e (K void-object)))))
-			  (else (error 'cogen-primop "not handled" x))))
-			((E)
-			 (cond
-			  ((PH-e-handled? p)
-			   (apply (PH-e-handler p) args))
-			  ((PH-p-handled? p)
-			   (let ((e (apply (PH-p-handler p) args)))
-			     (if (interrupt? e)
-				 e
-			       (make-conditional e (prm 'nop) (prm 'nop)))))
-			  ((PH-v-handled? p)
-			   (let ((e (apply (PH-v-handler p) args)))
-			     (if (interrupt? e)
-				 e
-			       (with-tmp ((t e)) (prm 'nop)))))
-			  (else (error 'cogen-primop "not handled" x))))
-			(else
-			 (error 'cogen-primop "invalid context" ctxt)))))))))
-  cogen-primop)
+  ;; if ctxt is P:
+  ;;   if cogen-pred, then P
+  ;;   if cogen-value, then (!= V #f)
+  ;;   if cogen-effect, then (seq E #t)
+  ;;
+  ;; if ctxt is E:
+  ;;   if cogen-effect, then E
+  ;;   if cogen-value, then (let ((tmp V)) (nop))
+  ;;   if cogen-pred, then (if P (nop) (nop))
+  (define (simplify* args k)
+    (define (S* ls)
+      (if (null? ls)
+	  (values '() '() '())
+	(let-values (((lhs* rhs* arg*) (S* (cdr ls))))
+	  (let ((a (car ls)))
+	    (struct-case a
+	      ((known expr type)
+	       (struct-case expr
+		 ((constant i)
+		  ;; erase known tag
+		  (values lhs* rhs* (cons expr arg*)))
+		 (else
+		;(printf "known ~s ~s\n" type expr)
+		  (let ((tmp (unique-var 'tmp)))
+		    (values (cons tmp lhs*)
+			    (cons (V expr) rhs*)
+			    (cons (make-known tmp type) arg*))))))
+	      ((constant i)
+	       (values lhs* rhs* (cons a arg*)))
+	      (else
+	       (let ((t (unique-var 'tmp)))
+		 (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
+    (let-values (((lhs* rhs* args) (S* args)))
+      (if (null? lhs*)
+	  (k args)
+	(make-bind lhs* rhs* (k args)))))
 
+  #| end of module |# )
+
+
 (module (cogen-primop cogen-debug-primop)
+
   (define (primop-interrupt-handler x)
     (case x
-      ((fx+)                      'error@fx+)
-      ((fx-)                      'error@fx-)
-      ((fx*)                      'error@fx*)
-      ((add1)                     'error@add1)
-      ((sub1)                     'error@sub1)
-      ((fxadd1)                   'error@fxadd1)
-      ((fxsub1)                   'error@fxsub1)
-      ((fxarithmetic-shift-left)  'error@fxarithmetic-shift-left)
-      ((fxarithmetic-shift-right) 'error@fxarithmetic-shift-right)
-      (else                      x)))
+      ((fx+)				'error@fx+)
+      ((fx-)				'error@fx-)
+      ((fx*)				'error@fx*)
+      ((add1)				'error@add1)
+      ((sub1)				'error@sub1)
+      ((fxadd1)				'error@fxadd1)
+      ((fxsub1)				'error@fxsub1)
+      ((fxarithmetic-shift-left)	'error@fxarithmetic-shift-left)
+      ((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
+      (else				x)))
+
   (define (make-interrupt-call op args)
-    (make-funcall
-     (V (make-primref (primop-interrupt-handler op)))
-     args))
+    (let ((pref (make-primref (primop-interrupt-handler op))))
+      (make-funcall (V pref) args)))
+
   (define (make-no-interrupt-call op args)
-    (make-funcall (V (make-primref op)) args))
+    (let ((pref (make-primref op)))
+      (make-funcall (V pref) args)))
+
   (define cogen-primop
     (make-cogen-handler make-interrupt-call make-no-interrupt-call))
+
   (define (cogen-debug-primop op src/loc ctxt args)
-    (define (make-call op args)
-      (make-funcall
-       (V (make-primref 'debug-call))
-       (cons* (V src/loc) (V (make-primref op)) args)))
-    ((make-cogen-handler make-call make-call) op ctxt args))
+    (define-inline (main)
+      ((make-cogen-handler %make-call %make-call) op ctxt args))
 
-  #| end of module (COGEN-PRIMOP COGEN-DEBUG-PRIMOP) |# )
+    (define (%make-call op args)
+      ;;This function clauses upon the argument SRC/LOC.
+      ;;
+      (let ((pref (make-primref 'debug-call)))
+	(make-funcall (V pref)
+		      (cons* (V src/loc)
+			     (V (make-primref op))
+			     args))))
 
+    (main))
 
+  #| end of module: cogen-primop cogen-debug-primop |# )
+
+
 (define-syntax define-primop
   ;;Transform a declaration like:
   ;;
