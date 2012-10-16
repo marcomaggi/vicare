@@ -668,7 +668,45 @@
       (cons (prm 'int+ lhs (K n))
 	    (adders lhs (+ n (car n*)) (cdr n*))))))
 
-  (define (build-closures lhs* rhs* body)
+  (module (build-closures)
+
+    (define (build-closures lhs* rhs* body)
+      (let ((lhs  (car lhs*))
+	    (rhs  (car rhs*))
+	    (lhs* (cdr lhs*))
+	    (rhs* (cdr rhs*)))
+	(let ((n  (%closure-size rhs))
+	      (n* (map %closure-size rhs*)))
+	  (make-bind (list lhs)
+		     (list (prm 'alloc
+				(K (%sum n n*))
+				(K closure-tag)))
+		     (make-bind lhs* (%adders lhs n n*)
+				body)))))
+
+    (define (%adders lhs n n*)
+      ;;Return   a  list   of   strutct  instances   of  type   PRIMCALL
+      ;;representing...
+      ;;
+      (if (null? n*)
+	  '()
+	(cons (prm 'int+ lhs (K n))
+	      (%adders lhs
+		       (+ n (car n*))
+		       (cdr n*)))))
+
+    (define (%sum n n*)
+      ;;Return the sum between the numbers in the list N* and the number
+      ;;N.
+      ;;
+      (if (null? n*)
+	  n
+	(%sum (+ n (car n*))
+	      (cdr n*))))
+
+    #| end of module |# )
+
+  #;(define (build-closures lhs* rhs* body)
     (let ((lhs (car lhs*)) (rhs (car rhs*))
 	  (lhs* (cdr lhs*)) (rhs* (cdr rhs*)))
       (let ((n (%closure-size rhs))
