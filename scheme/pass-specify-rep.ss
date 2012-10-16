@@ -586,13 +586,13 @@
       (struct-case rhs
 	((closure code free*)
 	 (make-seq (prm 'mset lhs (K (- disp-closure-code closure-tag)) (V code))
-		   (f lhs body free* (- disp-closure-data closure-tag))))))
+		   (%slot-setters lhs free* (- disp-closure-data closure-tag) body)))))
 
-    (define (f lhs body ls i)
-      (if (null? ls)
+    (define (%slot-setters lhs free* slot-offset body)
+      (if (null? free*)
 	  body
-	(make-seq (prm 'mset lhs (K i) (V (car ls)))
-		  (f lhs body (cdr ls) (+ i wordsize)))))
+	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
+		  (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))))
 
     #| end of module: build-setters |# )
 
