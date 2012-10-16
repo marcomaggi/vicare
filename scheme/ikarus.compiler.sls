@@ -4087,7 +4087,7 @@
 		   L_cont_mult_move_args
 		   L_cont_mult_copy_loop)
      (assembly
-      (movl (mem (fx- disp-closure-data closure-tag) cpr) ebx) ; captured-k
+      (movl (mem off-closure-data cpr) ebx) ; captured-k
       (movl ebx (mem pcb-next-continuation pcr))	       ; set
       (movl (mem pcb-frame-base pcr) ebx)
       (cmpl (int (argc-convention 1)) eax)

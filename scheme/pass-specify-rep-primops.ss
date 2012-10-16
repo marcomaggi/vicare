@@ -762,7 +762,7 @@
        (unless (fx? i)
 	 (interrupt))
        (prm 'mref (T x)
-	    (K (+ (- disp-closure-data closure-tag)
+	    (K (+ off-closure-data
 		  (* i wordsize)))))
       ((known expr t)
        (cogen-value-$cpref x expr))
@@ -2892,7 +2892,7 @@
 		       (K closure-tag))))
       (prm 'mset t (K (- disp-closure-code closure-tag))
 	   (K (make-code-loc (sl-continuation-code-label))))
-      (prm 'mset t (K (- disp-closure-data closure-tag))
+      (prm 'mset t (K off-closure-data)
 	   (T x))
       t))
    ((P x) (K #t))
@@ -2922,7 +2922,7 @@
 			 (K closure-tag))))
 	(prm 'mset t (K (- disp-closure-code closure-tag))
 	     (K (make-code-loc (sl-annotated-procedure-label))))
-	(prm 'mset t (K (- disp-closure-data closure-tag))
+	(prm 'mset t (K off-closure-data)
 	     (T annotation))
 	(prm 'mset t (K (- (+ disp-closure-data wordsize) closure-tag))
 	     (T proc))
@@ -2933,7 +2933,7 @@
  (define-primop $annotated-procedure-annotation unsafe
    ((V proc)
     (prm 'mref (T proc)
-	 (K (- disp-closure-data closure-tag)))))
+	 (K off-closure-data))))
 
 
  /section)
