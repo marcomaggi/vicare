@@ -483,142 +483,6 @@
     (main stx)))
 
 
-#;(define (handle-fix lhs* rhs* body)
-
-  (define (%closure-size x)
-    ;;X must be a struct instance of type CLOSURE.  Return the *aligned*
-    ;;number of  bytes needed to  hold the  free variables slots  in the
-    ;;closure built in object.
-    ;;
-    ;;                  0   1   2   3   4   5
-    ;;   |------------|---|---|---|---|---|---| closure object
-    ;;         ^
-    ;;         |      |.......................|
-    ;;    pointer to         slots size
-    ;;    binary code
-    ;;
-    (struct-case x
-      ((closure code free*)
-       (if (null? free*)
-	   0
-	 (align (+ disp-closure-data (* (length free*) wordsize)))))))
-
-  (define (partition p? lhs* rhs*)
-    (if (null? lhs*)
-	(values '() '() '() '())
-      (let-values (((a* b* c* d*) (partition p? (cdr lhs*) (cdr rhs*)))
-		   ((x y)         (values (car lhs*) (car rhs*))))
-	(if (p? x y)
-	    (values (cons x a*) (cons y b*) c* d*)
-	  (values a* b* (cons x c*) (cons y d*))))))
-
-  (define (combinator? lhs.unused rhs)
-    ;;Return true if  the struct instance of type CLOSURE  in RHS has no
-    ;;free variables.
-    ;;
-    (struct-case rhs
-      ((closure code free*)
-       (null? free*))))
-
-  (module (build-closures)
-
-    (define (build-closures lhs* rhs* body)
-      (let ((lhs  (car lhs*))
-	    (rhs  (car rhs*))
-	    (lhs* (cdr lhs*))
-	    (rhs* (cdr rhs*)))
-	(let ((n  (%closure-size rhs))
-	      (n* (map %closure-size rhs*)))
-	  (make-bind (list lhs)
-		     (list (prm 'alloc
-				(K (%sum n n*))
-				(K closure-tag)))
-		     (make-bind lhs* (%adders lhs n n*)
-				body)))))
-
-    (define (%adders lhs n n*)
-      ;;Return   a  list   of   strutct  instances   of  type   PRIMCALL
-      ;;representing...
-      ;;
-      (if (null? n*)
-	  '()
-	(cons (prm 'int+ lhs (K n))
-	      (%adders lhs
-		       (+ n (car n*))
-		       (cdr n*)))))
-
-    (define (%sum n n*)
-      ;;Return the sum between the numbers in the list N* and the number
-      ;;N.
-      ;;
-      (if (null? n*)
-	  n
-	(%sum (+ n (car n*))
-	      (cdr n*))))
-
-    #| end of module |# )
-
-  (module (build-setters)
-    ;;To build  a closure built  in object we  must allocate a  block of
-    ;;memory and then intialise it.  Given  a built in code object and a
-    ;;list of free variables, initialisation means:
-    ;;
-    ;;1. Store the a  reference to the code object in  the first word of
-    ;;   the closure object.
-    ;;
-    ;;2. For each free variable: store the reference to free variable in
-    ;;   the associated slot of the closure object.
-    ;;
-    ;;If ?VAR is the address of a  closure built in object, ?CODE is the
-    ;;code  built  in object,  ?FREE-VAR  is  the  reference to  a  free
-    ;;variable, the initialisation for a single closure object is:
-    ;;
-    ;;   (mset ?var off-closure-code ?code)
-    ;;   (mset ?var (+ 0 off-closure-data) ?free-var-0)
-    ;;   (mset ?var (+ 1 off-closure-data) ?free-var-1)
-    ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
-    ;;
-    (define (build-setters lhs* rhs* body)
-      (if (null? lhs*)
-	  body
-	(%single-closure-setters (car lhs*) (car rhs*)
-				 (build-setters (cdr lhs*) (cdr rhs*) body))))
-
-    (define (%single-closure-setters lhs rhs body)
-      (struct-case rhs
-	((closure code free*)
-	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
-		   (%slot-setters lhs free* off-closure-data)))))
-
-    (define (%slot-setters lhs free* slot-offset)
-      ;;LHS  must be  a struct  instance  of type  VAR representing  the
-      ;;address of the closure memory block.
-      ;;
-      ;;FREE* must be a list of struct instances of type VAR.
-      ;;
-      ;;SLOT-OFFSET must be  a fixnum representing the  offset, from the
-      ;;beginning of the closure memory block, of the next free variable
-      ;;slot, measured in bytes.
-      ;;
-      (if (null? free*)
-	  body
-	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
-		  (%slot-setters lhs (cdr free*) (fx+ slot-offset wordsize)))))
-
-    #| end of module: build-setters |# )
-
-  (let-values (((flhs* frhs* clhs* crhs*)
-		(partition combinator? lhs* rhs*)))
-    (cond ((null? clhs*)
-	   (make-bind flhs* (map V frhs*) body))
-	  ((null? flhs*)
-	   (build-closures clhs* crhs* (build-setters clhs* crhs* body)))
-	  (else
-	   (make-bind flhs* (map V frhs*)
-		      (build-closures clhs* crhs*
-				      (build-setters clhs* crhs* body))))))
-  )
-
 (module (handle-fix)
 
   (module (handle-fix)
@@ -710,27 +574,79 @@
 
     #| end of module |# )
 
-  (define (build-setters lhs* rhs* body)
-    (define (build-setter lhs rhs body)
+  (module (build-setters)
+
+    (define (build-setters lhs* rhs* body)
+      (cond ((null? lhs*)
+	     body)
+	    (else
+	     (%single-closure-setters (car lhs*) (car rhs*)
+				      (build-setters (cdr lhs*) (cdr rhs*) body)))))
+
+    (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
 	((closure code free*)
-	 (make-seq
-	  (prm 'mset lhs
-	       (K (- disp-closure-code closure-tag))
-	       (V code))
-	  (let f ((ls free*)
-		  (i (- disp-closure-data closure-tag)))
-	    (cond
-	     ((null? ls) body)
-	     (else
-	      (make-seq
-	       (prm 'mset lhs (K i) (V (car ls)))
-	       (f (cdr ls) (+ i wordsize))))))))))
-    (cond
-     ((null? lhs*) body)
-     (else
-      (build-setter (car lhs*) (car rhs*)
-		    (build-setters (cdr lhs*) (cdr rhs*) body)))))
+	 (make-seq (prm 'mset lhs (K (- disp-closure-code closure-tag)) (V code))
+		   (let f ((ls free*)
+			   (i (- disp-closure-data closure-tag)))
+		     (cond
+		      ((null? ls) body)
+		      (else
+		       (make-seq
+			(prm 'mset lhs (K i) (V (car ls)))
+			(f (cdr ls) (+ i wordsize))))))))))
+
+    #| end of module: build-setters |# )
+
+  #;(module (build-setters)
+    ;;To build  a closure built  in object we  must allocate a  block of
+    ;;memory and then intialise it.  Given  a built in code object and a
+    ;;list of free variables, initialisation means:
+    ;;
+    ;;1. Store the a  reference to the code object in  the first word of
+    ;;   the closure object.
+    ;;
+    ;;2. For each free variable: store the reference to free variable in
+    ;;   the associated slot of the closure object.
+    ;;
+    ;;If ?VAR is the address of a  closure built in object, ?CODE is the
+    ;;code  built  in object,  ?FREE-VAR  is  the  reference to  a  free
+    ;;variable, the initialisation for a single closure object is:
+    ;;
+    ;;   (mset ?var off-closure-code ?code)
+    ;;   (mset ?var (+ 0 off-closure-data) ?free-var-0)
+    ;;   (mset ?var (+ 1 off-closure-data) ?free-var-1)
+    ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
+    ;;
+    (define (build-setters lhs* rhs* body)
+      (if (null? lhs*)
+	  body
+	(%single-closure-setters (car lhs*) (car rhs*)
+				 (build-setters (cdr lhs*) (cdr rhs*) body))))
+
+    (define (%single-closure-setters lhs rhs body)
+      (struct-case rhs
+	((closure code free*)
+	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
+		   (%slot-setters lhs free* off-closure-data)))))
+
+    (define (%slot-setters lhs free* slot-offset)
+      ;;LHS  must be  a struct  instance  of type  VAR representing  the
+      ;;address of the closure memory block.
+      ;;
+      ;;FREE* must be a list of struct instances of type VAR.
+      ;;
+      ;;SLOT-OFFSET must be  a fixnum representing the  offset, from the
+      ;;beginning of the closure memory block, of the next free variable
+      ;;slot, measured in bytes.
+      ;;
+      (if (null? free*)
+	  body
+	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
+		  (%slot-setters lhs (cdr free*) (fx+ slot-offset wordsize)))))
+
+    #| end of module: build-setters |# )
+
 
   #| end of module: handle-fix |# )
 
