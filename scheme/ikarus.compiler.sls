@@ -3641,6 +3641,8 @@
 (define vector-mask				7)
 (define disp-vector-length			0)
 (define disp-vector-data			wordsize)
+(define off-vector-length			(fx- disp-vector-length vector-tag))
+(define off-vector-data				(fx- disp-vector-data   vector-tag))
 
 (define symbol-primary-tag			vector-tag)
 (define symbol-tag				#x5F)
@@ -3868,13 +3870,13 @@
   ;;Fetch a  binary code address  from the closure object  referenced by
   ;;the CPR (Closure Pointer Register) and jump directly there.
   ;;
-  (jmp  (mem ($fx- disp-closure-code closure-tag) cpr)))
+  (jmp  (mem off-closure-code cpr)))
 
 (define (indirect-cpr-call)
   ;;Fetch a  binary code address  from the closure object  referenced by
   ;;the CPR (Closure Pointer Register) and perform a call to there.
   ;;
-  (call (mem ($fx- disp-closure-code closure-tag) cpr)))
+  (call (mem off-closure-code cpr)))
 
 (define (negl targ)	(list 'negl targ))
 (define (label x)	(list 'label x))

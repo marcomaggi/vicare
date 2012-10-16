@@ -608,7 +608,7 @@
 			   (K (align (+ (* i wordsize) disp-vector-data)))
 			   (K vector-tag))))
 	  (prm 'mset v
-	       (K (- disp-vector-length vector-tag))
+	       (K off-vector-length)
 	       (K (* i fx-scale)))
 	  v)))
      ((known expr t)
@@ -616,7 +616,7 @@
      (else
       (with-tmp ((alen (align-code (T len) disp-vector-data)))
 	(with-tmp ((v (prm 'alloc alen (K vector-tag))))
-	  (prm 'mset v (K (- disp-vector-length vector-tag)) (T len))
+	  (prm 'mset v (K off-vector-length) (T len))
 	  v)))))
   ((P len) (K #t))
   ((E len) (nop)))
@@ -634,7 +634,7 @@
 	   (and (fx? i)
 		(fx>= i 0)
 		(prm 'mref (T x)
-		     (K (+ (* i wordsize) (- disp-vector-data vector-tag))))))
+		     (K (+ (* i wordsize) off-vector-data)))))
 	  ((known i t)
 	   (cogen-value-$vector-ref x i))
 	  (else #f))
@@ -643,13 +643,13 @@
 	;;the I-th slot in a vector,  taken as a "long", also represents
 	;;the offset in bytes of the word in the I-th slot.
 	(prm 'mref (T x)
-	     (prm 'int+ (T i) (K (- disp-vector-data vector-tag))))
+	     (prm 'int+ (T i) (K off-vector-data)))
 	))
    ((E x i)	;if it appears in "for side-effect" position
     (nop)))
 
  (define-primop $vector-length unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-vector-length vector-tag))))
+   ((V x) (prm 'mref (T x) (K off-vector-length)))
    ((E x) (prm 'nop))
    ((P x) (K #t)))
 
@@ -702,7 +702,7 @@
 	   (interrupt)
 	 (mem-assign v (T x)
 		     (+ (* i wordsize)
-			(- disp-vector-data vector-tag)))))
+			off-vector-data))))
       ((known i t)
        (cogen-effect-$vector-set! x i v))
       (else
@@ -712,7 +712,7 @@
        ;;the offset in bytes of the word in the I-th slot.
        (mem-assign v
 		   (prm 'int+ (T x) (T i))
-		   (- disp-vector-data vector-tag))
+		   off-vector-data)
        ))))
 
  (define-primop vector-set! safe
@@ -728,10 +728,10 @@
 				    (* (length arg*) wordsize))))
 		       (K vector-tag))))
       (seq*
-       (prm 'mset v (K (- disp-vector-length vector-tag))
+       (prm 'mset v (K off-vector-length)
 	    (K (* (length arg*) wordsize)))
        (let f ((t* (map T arg*))
-	       (i (- disp-vector-data vector-tag)))
+	       (i off-vector-data))
 	 (cond
 	  ((null? t*) v)
 	  (else
@@ -2890,7 +2890,7 @@
     (with-tmp ((t (prm 'alloc
 		       (K (align (+ disp-closure-data wordsize)))
 		       (K closure-tag))))
-      (prm 'mset t (K (- disp-closure-code closure-tag))
+      (prm 'mset t (K off-closure-code)
 	   (K (make-code-loc (sl-continuation-code-label))))
       (prm 'mset t (K off-closure-data)
 	   (T x))
@@ -2916,17 +2916,16 @@
 
  (define-primop $make-annotated-procedure unsafe
    ((V annotation proc)
-    (let ((off (- disp-closure-code closure-tag)))
-      (with-tmp ((t (prm 'alloc
-			 (K (align (+ disp-closure-data (* 2 wordsize))))
-			 (K closure-tag))))
-	(prm 'mset t (K (- disp-closure-code closure-tag))
-	     (K (make-code-loc (sl-annotated-procedure-label))))
-	(prm 'mset t (K off-closure-data)
-	     (T annotation))
-	(prm 'mset t (K (- (+ disp-closure-data wordsize) closure-tag))
-	     (T proc))
-	t)))
+    (with-tmp ((t (prm 'alloc
+		       (K (align (+ disp-closure-data (* 2 wordsize))))
+		       (K closure-tag))))
+      (prm 'mset t (K off-closure-code)
+	   (K (make-code-loc (sl-annotated-procedure-label))))
+      (prm 'mset t (K off-closure-data)
+	   (T annotation))
+      (prm 'mset t (K (+ off-closure-data wordsize))
+	   (T proc))
+      t))
    ((P) (interrupt))
    ((E) (interrupt)))
 
@@ -3002,7 +3001,7 @@
    ;;
    ((V x)
     (prm 'int+
-	 (prm 'mref (T x) (K (- disp-closure-code closure-tag)))
+	 (prm 'mref (T x) (K off-closure-code))
 	 (K (- vector-tag disp-code-data)))))
 
  (define-primop $code-freevars unsafe
@@ -3032,7 +3031,7 @@
       ;;Store in the  closure's memory block a raw pointer  to the first
       ;;byte of the code object's data area.
       (prm 'mset v
-	   (K (- disp-closure-code closure-tag))
+	   (K off-closure-code)
 	   (prm 'int+ (T x)
 		(K (- disp-code-data vector-tag))))
       v)))
