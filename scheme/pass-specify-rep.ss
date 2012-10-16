@@ -621,24 +621,6 @@
 
 (define (handle-fix lhs* rhs* body)
 
-  (define (%closure-size x)
-    ;;X must be a struct instance of type CLOSURE.  Return the *aligned*
-    ;;number of  bytes needed to  hold the  free variables slots  in the
-    ;;closure built in object.
-    ;;
-    ;;                  0   1   2   3   4   5
-    ;;   |------------|---|---|---|---|---|---| closure object
-    ;;         ^
-    ;;         |      |.......................|
-    ;;    pointer to         slots size
-    ;;    binary code
-    ;;
-    (struct-case x
-      ((closure code free*)
-       (if (null? free*)
-	   0
-	 (align (+ disp-closure-data (* (length free*) wordsize)))))))
-
   (define (partition p? lhs* rhs*)
     (if (null? lhs*)
 	(values '() '() '() '())
@@ -692,6 +674,24 @@
 	(%sum (+ n (car n*))
 	      (cdr n*))))
 
+    (define (%closure-size x)
+      ;;X  must  be a  struct  instance  of  type CLOSURE.   Return  the
+      ;;*aligned*  number of  bytes needed  to hold  the free  variables
+      ;;slots in the closure built in object.
+      ;;
+      ;;                  0   1   2   3   4   5
+      ;;   |------------|---|---|---|---|---|---| closure object
+      ;;         ^
+      ;;         |      |.......................|
+      ;;    pointer to         slots size
+      ;;    binary code
+      ;;
+      (struct-case x
+	((closure code free*)
+	 (if (null? free*)
+	     0
+	   (align (+ disp-closure-data (* (length free*) wordsize)))))))
+
     #| end of module |# )
 
   (define (build-setters lhs* rhs* body)
@@ -716,7 +716,7 @@
       (build-setter (car lhs*) (car rhs*)
 		    (build-setters (cdr lhs*) (cdr rhs*) body)))))
 
-  (let-values (((flhs* frhs* clhs* crhs*)
+  #;(let-values (((flhs* frhs* clhs* crhs*)
 		(partition combinator? lhs* rhs*)))
     (cond
      ((null? clhs*) (make-bind flhs* (map V frhs*) body))
@@ -726,7 +726,19 @@
      (else
       (make-bind flhs* (map V frhs*)
 		 (build-closures clhs* crhs*
-				 (build-setters clhs* crhs* body)))))))
+				 (build-setters clhs* crhs* body))))))
+  (let-values (((flhs* frhs* clhs* crhs*)
+		(partition combinator? lhs* rhs*)))
+    (cond ((null? clhs*)
+	   (make-bind flhs* (map V frhs*) body))
+	  ((null? flhs*)
+	   (build-closures clhs* crhs* (build-setters clhs* crhs* body)))
+	  (else
+	   (make-bind flhs* (map V frhs*)
+		      (build-closures clhs* crhs*
+				      (build-setters clhs* crhs* body))))))
+
+  )
 
 
 (define (constant-rep x)
