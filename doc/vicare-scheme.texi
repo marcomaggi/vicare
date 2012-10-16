@@ -23638,6 +23638,8 @@ are available to store the number:
 (- (expt 2 29))         @result{} -536870912
 @end example
 
+@itemize
+@item
 With machine words 32-bit wide, which means the word size is @math{4}
 bytes, the representation of a fixnum is:
 
@@ -23651,9 +23653,11 @@ bytes, the representation of a fixnum is:
 
 @noindent
 the two least significant bits are set to zero: this ``tags'' the
-machine words which embed fixnums.  With machine words 64-bit wide,
-which means the word size is @math{8} bytes, the representation of a
-fixnum is:
+machine words which embed fixnums.
+
+@item
+With machine words 64-bit wide, which means the word size is @math{8}
+bytes, the representation of a fixnum is:
 
 @example
          61 bits fixnum representation
@@ -23666,13 +23670,24 @@ fixnum is:
 @noindent
 the three least significant bits are set to zero: this ``tags'' the
 machine words which embed fixnums.
+@end itemize
 
 The fixnums tag is @code{00} on 32-bit platforms and @code{000} on
-64-bit platforms; given the symbol @code{fx_shift}, which is set to the
-number of bits in the tag, the value is selected in such a way that:
+64-bit platforms; given the symbols:
+
+@table @code
+@item fx_shift
+Set to the number of bits in the tag.
+
+@item fx_scale
+Set to the number of bytes in a machine word.
+@end table
+
+@noindent
+the value is selected in such a way that:
 
 @example
-length_in_bytes = number_of_words *  fx_shift
+length_in_bytes = number_of_words *  fx_scale
                 = number_of_words *  wordsize
                 = number_of_words << fx_shift
 @end example
