@@ -2535,12 +2535,12 @@
       ((constant n)
        (unless (fx? n) (interrupt))
        (with-tmp ((s (prm 'alloc
-;;; Characters are 32-bit unsigned integers, NOT machine words.
+			  ;;Characters  are  32-bit  unsigned  integers,
+			  ;;*not* machine words.
 			  (K (align (+ (* n 4) disp-string-data)))
-;;;			  (K (align (+ (* n wordsize) disp-string-data)))
 			  (K string-tag))))
 	 (prm 'mset s
-	      (K (- disp-string-length string-tag))
+	      (K off-string-length)
 	      (K (* n fx-scale)))
 	 s))
       ((known expr)
@@ -2550,14 +2550,14 @@
 			  (align-code (T n) disp-string-data)
 			  (K string-tag))))
 	 (prm 'mset s
-	      (K (- disp-string-length string-tag))
+	      (K off-string-length)
 	      (T n))
 	 s))))
    ((P n) (K #t))
    ((E n) (nop)))
 
  (define-primop $string-length unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-string-length string-tag))))
+   ((V x) (prm 'mref (T x) (K off-string-length)))
    ((P x) (K #t))
    ((E x) (nop)))
 
@@ -2569,7 +2569,7 @@
        (unless (fx? i) (interrupt))
        (prm 'mref32 (T s)
 	    (K (+ (* i char-size)
-		  (- disp-string-data string-tag)))))
+		  off-string-data))))
       (else
        (prm 'mref32 (T s)
 	    (prm 'int+
@@ -2577,12 +2577,12 @@
 		  ((= wordsize char-size) (T i))
 		  ((= wordsize 8) (prm 'sra (T i) (K 1)))
 		  (else (error '$string-ref "invalid operand")))
-		 (K (- disp-string-data string-tag)))))))
+		 (K off-string-data))))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
-;;;(Marco Maggi; Oct  31, 2011) Commented out because  it appears not to
-;;;cause  incorrect code  generation when  the index  argument is  not a
+;;;(Marco Maggi; Oct  31, 2011) Commented out because it  appears not to
+;;;cause  correct code  generation  when  the index  argument  is not  a
 ;;;fixnum; specifically:
 ;;;
 ;;;   (guard (E ((assertion-violation? E)
@@ -2626,17 +2626,28 @@
       ((constant i)
        (unless (fx? i) (interrupt))
        (prm 'mset32 (T x)
-	    (K (+ (* i char-size)
-		  (- disp-string-data string-tag)))
+	    (K (+ (* i char-size) off-string-data))
 	    (T c)))
       (else
        (prm 'mset32 (T x)
 	    (prm 'int+
-		 (cond
-		  ((= wordsize char-size) (T i))
-		  ((= wordsize 8) (prm 'sra (T i) (K 1)))
-		  (else (error '$string-set! "invalid operand")))
-		 (K (- disp-string-data string-tag)))
+		 (case-word-size
+		  ((32)
+		   ;;It is  a fixnum representing a  character index and
+		   ;;its raw value is also the offset in bytes.
+		   (T i))
+		  ((64)
+		   ;;It is a fixnum  representing a character index and,
+		   ;;after shifting one  bit, its raw value  is also the
+		   ;;offset in bytes.
+		   (prm 'sra (T i) (K 1))))
+		 ;; (cond ((= wordsize char-size)
+		 ;; 	(T i))
+		 ;;       ((= wordsize 8)
+		 ;; 	(prm 'sra (T i) (K 1)))
+		 ;;       (else
+		 ;; 	(error '$string-set! "invalid operand")))
+		 (K off-string-data))
 	    (T c))))))
 
  /section)

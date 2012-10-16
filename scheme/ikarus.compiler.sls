@@ -3593,6 +3593,7 @@
 (define void-object				#x7F)
 (define bwp-object				#x8F)
 
+;;Characters are 32-bit integers, on any platform.
 (define char-size				4)
 (define char-shift				8)
 (define char-tag				#x0F)
@@ -3662,6 +3663,8 @@
 (define string-tag				6)
 (define disp-string-length			0)
 (define disp-string-data			wordsize)
+(define off-string-length			(fx- disp-string-length string-tag))
+(define off-string-data				(fx- disp-string-data   string-tag))
 
 (define closure-mask				7)
 (define closure-tag				3)
