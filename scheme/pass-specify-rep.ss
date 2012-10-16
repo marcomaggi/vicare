@@ -640,33 +640,21 @@
 	 (align (+ disp-closure-data (* (length free*) wordsize)))))))
 
   (define (partition p? lhs* rhs*)
-    (cond
-     ((null? lhs*) (values '() '() '() '()))
-     (else
-      (let-values (((a* b* c* d*)
-		    (partition p? (cdr lhs*) (cdr rhs*)))
-		   ((x y) (values (car lhs*) (car rhs*))))
-	(cond
-	 ((p? x y)
-	  (values (cons x a*) (cons y b*) c* d*))
-	 (else
-	  (values a* b* (cons x c*) (cons y d*))))))))
+    (if (null? lhs*)
+	(values '() '() '() '())
+      (let-values (((a* b* c* d*) (partition p? (cdr lhs*) (cdr rhs*)))
+		   ((x y)         (values (car lhs*) (car rhs*))))
+	(if (p? x y)
+	    (values (cons x a*) (cons y b*) c* d*)
+	  (values a* b* (cons x c*) (cons y d*))))))
 
-  (define (combinator? lhs rhs)
+  (define (combinator? lhs.unused rhs)
+    ;;Return true if  the struct instance of type CLOSURE  in RHS has no
+    ;;free variables.
+    ;;
     (struct-case rhs
-      ((closure code free*) (null? free*))))
-
-  (define (sum n* n)
-    (cond
-     ((null? n*) n)
-     (else (sum (cdr n*) (+ n (car n*))))))
-
-  (define (adders lhs n n*)
-    (cond
-     ((null? n*) '())
-     (else
-      (cons (prm 'int+ lhs (K n))
-	    (adders lhs (+ n (car n*)) (cdr n*))))))
+      ((closure code free*)
+       (null? free*))))
 
   (module (build-closures)
 
@@ -685,7 +673,7 @@
 				body)))))
 
     (define (%adders lhs n n*)
-      ;;Return   a  list   of   strutct  instances   of  type   PRIMCALL
+      ;;Return   a   list  of   struct   instances   of  type   PRIMCALL
       ;;representing...
       ;;
       (if (null? n*)
@@ -705,18 +693,6 @@
 	      (cdr n*))))
 
     #| end of module |# )
-
-  #;(define (build-closures lhs* rhs* body)
-    (let ((lhs (car lhs*)) (rhs (car rhs*))
-	  (lhs* (cdr lhs*)) (rhs* (cdr rhs*)))
-      (let ((n (%closure-size rhs))
-	    (n* (map %closure-size rhs*)))
-	(make-bind (list lhs)
-		   (list (prm 'alloc
-			      (K (sum n* n))
-			      (K closure-tag)))
-		   (make-bind lhs* (adders lhs n n*)
-			      body)))))
 
   (define (build-setters lhs* rhs* body)
     (define (build-setter lhs rhs body)
