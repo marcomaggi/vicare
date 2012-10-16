@@ -691,6 +691,10 @@
   ;;instance of type  CONSTANT holding the binary  representation of the
   ;;value.
   ;;
+  ;;Such binary  representation is either  an exact integer or  a struct
+  ;;instance of  type OBJECT containing  the object itself (to  be later
+  ;;serialised).
+  ;;
   (let ((c (constant-value x)))
     (cond ((fx? c)
 	   (make-constant (bitwise-arithmetic-shift-left c fx-shift)
@@ -727,73 +731,91 @@
 	   (make-constant (make-object c))))))
 
 
-(define (V x) ;;; erase known values
-  (struct-case x
-    ((known x t)
-     (unknown-V x))
-    (else
-     (unknown-V x))))
-
-(define (unknown-V x)
-  (struct-case x
-    ((constant)
-     (constant-rep x))
-    ((var)
-     x)
-    ((primref name)
-     (prm 'mref
-	  (K (make-object (primref->symbol name)))
-	  (K (- disp-symbol-record-value symbol-primary-tag))))
-    ((code-loc)
-     (make-constant x))
-    ((closure)
-     (make-constant x))
-    ((bind lhs* rhs* body)
-     (make-bind lhs* (map V rhs*) (V body)))
-    ((fix lhs* rhs* body)
-     (handle-fix lhs* rhs* (V body)))
-    ((conditional e0 e1 e2)
-     (make-conditional (P e0) (V e1) (V e2)))
-    ((seq e0 e1)
-     (make-seq (E e0) (V e1)))
-    ((primcall op arg*)
-     (case op
-       ((debug-call)
-	(cogen-debug-call op 'V arg* V))
-       (else (cogen-primop op 'V arg*))))
-    ((forcall op arg*)
-     (make-forcall op (map V arg*)))
-    ((funcall rator arg*)
-     (make-funcall (Function rator) (map V arg*)))
-    ((jmpcall label rator arg*)
-     (make-jmpcall label (V rator) (map V arg*)))
-    (else (error 'cogen-V "invalid value expr" x))))
-
-(module (cogen-debug-call)
-
-  (define (cogen-debug-call op ctxt arg* k)
-    (define (fail)
-      (k (make-funcall (make-primref 'debug-call) arg*)))
-    (assert (>= (length arg*) 2))
-    (let ((src/expr (car arg*))
-	  (op (cadr arg*))
-	  (args (cddr arg*)))
-      (struct-case (remove-tag op)
-	((primref name)
-	 (if (primop? name)
-	     (cogen-debug-primop name src/expr ctxt args)
-	   (fail)))
-	(else
-	 (fail)))))
-
-  (define (remove-tag x)
+(module (V)
+  ;;Erase known values.
+  ;;
+  ;;Accept as input recordized code holding the following struct types:
+  ;;
+  ;;bind		closure		code-loc
+  ;;conditional		constant	fix
+  ;;forcall		funcall		jmpcall
+  ;;known		primcall	primref
+  ;;seq			var
+  ;;
+  ;;Return recordized code in which:
+  ;;
+  ;;* Instances  of CONSTANT  contain the  binary representation  of the
+  ;;  object.
+  ;;
+  ;;* Instances of PRIMREF are replaced by instances of PRIMCALL.
+  ;;
+  ;;* Instances  of CODE-LOC and  CLOSURE are wrapped into  instances of
+  ;;  CONSTANT.
+  ;;
+  ;;* Instances of PRIMCALL ...
+  ;;
+  ;;* Instances of FIX are handled.
+  ;;
+  (define (V x)
     (struct-case x
       ((known expr type)
-       expr)
-      (else x)))
+       (unknown-V expr))
+      (else
+       (unknown-V x))))
 
-  #| end of module: cogen-debug-call |# )
+  (define (unknown-V x)
+    (struct-case x
+      ((constant)
+       (constant-rep x))
 
+      ((var)
+       x)
+
+      ((primref name)
+       (prm 'mref
+	    (K (make-object (primref->symbol name)))
+	    (K off-symbol-record-value)))
+
+      ((code-loc)
+       (make-constant x))
+
+      ((closure)
+       (make-constant x))
+
+      ((bind lhs* rhs* body)
+       (make-bind lhs* (map V rhs*) (V body)))
+
+      ((fix lhs* rhs* body)
+       (handle-fix lhs* rhs* (V body)))
+
+      ((conditional test conseq altern)
+       (make-conditional (P test) (V conseq) (V altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (V e1)))
+
+      ((primcall op arg*)
+       (case op
+	 ((debug-call)
+	  (cogen-debug-call op 'V arg* V))
+	 (else
+	  (cogen-primop     op 'V arg*))))
+
+      ((forcall op arg*)
+       (make-forcall op (map V arg*)))
+
+      ((funcall rator arg*)
+       (make-funcall (Function rator) (map V arg*)))
+
+      ((jmpcall label rator arg*)
+       (make-jmpcall label (V rator) (map V arg*)))
+
+      (else
+       (error 'cogen-V "invalid value expr" x))))
+
+  #| end of module: V |# )
+
+
 (define (P x)
   (struct-case x
     ((constant c) (if c (K #t) (K #f)))
@@ -826,6 +848,7 @@
      (P expr))
     (else (error 'cogen-P "invalid pred expr" x))))
 
+
 (define (E x)
   (struct-case x
     ((constant) (nop))
@@ -858,6 +881,44 @@
     (else
      (error 'cogen-E "invalid effect expr" x))))
 
+
+(define (T x)
+  (struct-case x
+    ((var) x)
+    ((constant i) (constant-rep x))
+    ((known expr type)
+     (make-known (T expr) type))
+    (else (error 'cogen-T "invalid" (unparse x)))))
+
+
+(module (cogen-debug-call)
+
+  (define (cogen-debug-call op ctxt arg* kont)
+    (assert (>= (length arg*) 2))
+    (let ((src/expr	(car  arg*))
+	  (op		(cadr arg*))
+	  (args		(cddr arg*)))
+      (struct-case (%remove-tag op)
+	((primref name)
+	 (if (primop? name)
+	     (cogen-debug-primop name src/expr ctxt args)
+	   (%fail kont arg*)))
+	(else
+	 (%fail kont arg*)))))
+
+  (define (%fail kont arg*)
+    (kont (make-funcall (make-primref 'debug-call) arg*)))
+
+  (define (%remove-tag x)
+    (struct-case x
+      ((known expr type)
+       expr)
+      (else
+       x)))
+
+  #| end of module: cogen-debug-call |# )
+
+
 (define (Function x)
   (define (Function x check?)
     (define (nonproc x check?)
@@ -901,14 +962,14 @@
       (else (nonproc x check?))))
   (Function x #t))
 
-
-
+
 (define record-optimization^
   (let ((h (make-eq-hashtable)))
     (lambda (what expr)
       (let ((n (hashtable-ref h what 0)))
 	(hashtable-set! h what (+ n 1))
 	(printf "optimize ~a(~s): ~s\n" what n (unparse expr))))))
+
 (define-syntax record-optimization
   (syntax-rules ()
     ((_ what expr) (void))))
@@ -922,14 +983,6 @@
 (define (interrupt-unless-fixnum x)
   (interrupt-unless (tag-test x fx-mask fx-tag)))
 
-
-(define (T x)
-  (struct-case x
-    ((var) x)
-    ((constant i) (constant-rep x))
-    ((known expr type)
-     (make-known (T expr) type))
-    (else (error 'cogen-T "invalid" (unparse x)))))
 
 (define (ClambdaCase x)
   (struct-case x

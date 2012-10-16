@@ -930,6 +930,14 @@
 		;A struct instance representing recordized code.
    ))
 
+;;Instances of this type represent constant  objects to be hard coded in
+;;compiled code, whose binary representation  is *not* an exact integer.
+;;For  example: the  binary  representation  of the  boolean  #t is  the
+;;integer #x3F, while a Scheme vector has a more complex representation.
+;;
+(define-struct object
+  (val))
+
 ;;; --------------------------------------------------------------------
 
 (define-struct code-loc
@@ -991,9 +999,6 @@
 
 (define-struct fvar
   (idx))
-
-(define-struct object
-  (val))
 
 (define-struct locals
   (vars
@@ -3654,6 +3659,11 @@
 (define disp-symbol-record-proc			(* 4 wordsize))
 (define disp-symbol-record-plist		(* 5 wordsize))
 (define symbol-record-size			(* 6 wordsize))
+(define off-symbol-record-string	(fx- disp-symbol-record-string  symbol-primary-tag))
+(define off-symbol-record-ustring	(fx- disp-symbol-record-ustring symbol-primary-tag))
+(define off-symbol-record-value		(fx- disp-symbol-record-value   symbol-primary-tag))
+(define off-symbol-record-proc		(fx- disp-symbol-record-proc    symbol-primary-tag))
+(define off-symbol-record-plist		(fx- disp-symbol-record-plist   symbol-primary-tag))
 
 (define record-tag				vector-tag)
 (define disp-struct-rtd				0)
