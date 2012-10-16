@@ -493,11 +493,11 @@
 	(cond ((null? clhs*)
 	       (make-bind flhs* (map V frhs*) body))
 	      ((null? flhs*)
-	       (build-closures clhs* crhs* (build-setters clhs* crhs* body)))
+	       (build-closures clhs* crhs* (closure-object-setters clhs* crhs* body)))
 	      (else
 	       (make-bind flhs* (map V frhs*)
 			  (build-closures clhs* crhs*
-					  (build-setters clhs* crhs* body)))))))
+					  (closure-object-setters clhs* crhs* body)))))))
 
     (define (%partition p? lhs* rhs*)
       (if (null? lhs*)
@@ -574,13 +574,31 @@
 
     #| end of module |# )
 
-  (module (build-setters)
-
-    (define (build-setters lhs* rhs* body)
+  (module (closure-object-setters)
+    ;;To build  a closure built  in object we  must allocate a  block of
+    ;;memory and then intialise it.  Given  a built in code object and a
+    ;;list of free variables, initialisation means:
+    ;;
+    ;;1. Store a  pointer to the binary  code in the code  object in the
+    ;;   first word of the closure object.
+    ;;
+    ;;2.   For each  free variable:  store the  reference to  it in  the
+    ;;   associated slot of the closure object.
+    ;;
+    ;;If ?VAR is the address of  a closure built in object, ?BINARY-CODE
+    ;;is a pointer  to the binary code, ?FREE-VAR is  the reference to a
+    ;;free variable, the initialisation for a single closure object is:
+    ;;
+    ;;   (mset ?var off-closure-code ?binary-code)
+    ;;   (mset ?var (+ 0 off-closure-data) ?free-var-0)
+    ;;   (mset ?var (+ 1 off-closure-data) ?free-var-1)
+    ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
+    ;;
+    (define (closure-object-setters lhs* rhs* body)
       (if (null? lhs*)
 	  body
 	(%single-closure-setters (car lhs*) (car rhs*)
-				 (build-setters (cdr lhs*) (cdr rhs*) body))))
+				 (closure-object-setters (cdr lhs*) (cdr rhs*) body))))
 
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
@@ -589,62 +607,25 @@
 		   (%slot-setters lhs free* (- disp-closure-data closure-tag) body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
+      ;;LHS  must be  a struct  instance  of type  VAR representing  the
+      ;;address of the closure memory block.
+      ;;
+      ;;FREE*  must  be   a  list  of  struct  instances   of  type  VAR
+      ;;representing references to free variables.
+      ;;
+      ;;SLOT-OFFSET must be  a fixnum representing the  offset (from the
+      ;;beginning of the closure memory block) of the next free variable
+      ;;slot, measured in bytes.
+      ;;
+      ;;BODY must be  a struct instance representing  recordized code in
+      ;;which the closure bindings are visible.
+      ;;
       (if (null? free*)
 	  body
 	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
 		  (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))))
 
-    #| end of module: build-setters |# )
-
-  #;(module (build-setters)
-    ;;To build  a closure built  in object we  must allocate a  block of
-    ;;memory and then intialise it.  Given  a built in code object and a
-    ;;list of free variables, initialisation means:
-    ;;
-    ;;1. Store the a  reference to the code object in  the first word of
-    ;;   the closure object.
-    ;;
-    ;;2. For each free variable: store the reference to free variable in
-    ;;   the associated slot of the closure object.
-    ;;
-    ;;If ?VAR is the address of a  closure built in object, ?CODE is the
-    ;;code  built  in object,  ?FREE-VAR  is  the  reference to  a  free
-    ;;variable, the initialisation for a single closure object is:
-    ;;
-    ;;   (mset ?var off-closure-code ?code)
-    ;;   (mset ?var (+ 0 off-closure-data) ?free-var-0)
-    ;;   (mset ?var (+ 1 off-closure-data) ?free-var-1)
-    ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
-    ;;
-    (define (build-setters lhs* rhs* body)
-      (if (null? lhs*)
-	  body
-	(%single-closure-setters (car lhs*) (car rhs*)
-				 (build-setters (cdr lhs*) (cdr rhs*) body))))
-
-    (define (%single-closure-setters lhs rhs body)
-      (struct-case rhs
-	((closure code free*)
-	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
-		   (%slot-setters lhs free* off-closure-data)))))
-
-    (define (%slot-setters lhs free* slot-offset)
-      ;;LHS  must be  a struct  instance  of type  VAR representing  the
-      ;;address of the closure memory block.
-      ;;
-      ;;FREE* must be a list of struct instances of type VAR.
-      ;;
-      ;;SLOT-OFFSET must be  a fixnum representing the  offset, from the
-      ;;beginning of the closure memory block, of the next free variable
-      ;;slot, measured in bytes.
-      ;;
-      (if (null? free*)
-	  body
-	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
-		  (%slot-setters lhs (cdr free*) (fx+ slot-offset wordsize)))))
-
-    #| end of module: build-setters |# )
-
+    #| end of module: closure-object-setters |# )
 
   #| end of module: handle-fix |# )
 
