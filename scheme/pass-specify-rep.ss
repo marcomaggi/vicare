@@ -150,7 +150,8 @@
   #| end of module: with-tmp |# )
 
 
-(module (make-cogen-handler)
+(module cogen-handler-maker
+  (make-cogen-handler)
 
   (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
     ;;Build and return the COGEN-PRIMOP closure.
@@ -263,30 +264,10 @@
 
 
 (module (cogen-primop cogen-debug-primop)
-
-  (define (primop-interrupt-handler x)
-    (case x
-      ((fx+)				'error@fx+)
-      ((fx-)				'error@fx-)
-      ((fx*)				'error@fx*)
-      ((add1)				'error@add1)
-      ((sub1)				'error@sub1)
-      ((fxadd1)				'error@fxadd1)
-      ((fxsub1)				'error@fxsub1)
-      ((fxarithmetic-shift-left)	'error@fxarithmetic-shift-left)
-      ((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
-      (else				x)))
-
-  (define (make-interrupt-call op args)
-    (let ((pref (make-primref (primop-interrupt-handler op))))
-      (make-funcall (V pref) args)))
-
-  (define (make-no-interrupt-call op args)
-    (let ((pref (make-primref op)))
-      (make-funcall (V pref) args)))
+  (import cogen-handler-maker)
 
   (define cogen-primop
-    (make-cogen-handler make-interrupt-call make-no-interrupt-call))
+    (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
 
   (define (cogen-debug-primop op src/loc ctxt args)
     (define-inline (main)
@@ -295,13 +276,37 @@
     (define (%make-call op args)
       ;;This function clauses upon the argument SRC/LOC.
       ;;
-      (let ((pref (make-primref 'debug-call)))
-	(make-funcall (V pref)
-		      (cons* (V src/loc)
-			     (V (make-primref op))
-			     args))))
+      (make-funcall (make-primref 'debug-call)
+		    (cons* (V src/loc)
+			   (V (make-primref op))
+			   args)))
 
     (main))
+
+  (module (%make-interrupt-call)
+
+    (define (%make-interrupt-call op args)
+      (let ((pref (make-primref (%primop-interrupt-handler op))))
+	(make-funcall (V pref) args)))
+
+    (define (%primop-interrupt-handler x)
+      (case-symbols x
+	((fx+)				'error@fx+)
+	((fx-)				'error@fx-)
+	((fx*)				'error@fx*)
+	((add1)				'error@add1)
+	((sub1)				'error@sub1)
+	((fxadd1)			'error@fxadd1)
+	((fxsub1)			'error@fxsub1)
+	((fxarithmetic-shift-left)	'error@fxarithmetic-shift-left)
+	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
+	(else				x)))
+
+    #| end of module |# )
+
+  (define (%make-no-interrupt-call op args)
+    (let ((pref (make-primref op)))
+      (make-funcall (V pref) args)))
 
   #| end of module: cogen-primop cogen-debug-primop |# )
 
@@ -319,17 +324,17 @@
   ;;  (begin
   ;;    (define cogen-$vector-length-pred
   ;;      (case-lambda
-  ;;       ((x)	body-P)
+  ;;       ((x)		body-P)
   ;;       (args	(interrupt))))
   ;;
   ;;    (define cogen-$vector-length-effect
   ;;      (case-lambda
-  ;;       ((x)	body-E))
+  ;;       ((x)		body-E))
   ;;       (args	(interrupt))))
   ;;
   ;;    (define cogen-$vector-length-value
   ;;      (case-lambda
-  ;;       ((x)	body-V)
+  ;;       ((x)		body-V)
   ;;       (args	(interrupt))))
   ;;
   ;;    (module ()
@@ -340,11 +345,13 @@
   ;;                     cogen-$vector-length-effect  #t))))
   ;;
   ;;The P,  V and  E clauses  are optional and  there can  be multiple
-  ;;clauses for each type: they are like SYNTAX-CASE branches.
+  ;;clauses for each type: they are like SYNTAX-CASE clauses.
   ;;
   (lambda (x)
     (define (%cogen-name stx name suffix)
-      (datum->syntax stx (string->symbol (format "cogen-~a-~a" suffix (syntax->datum name)))))
+      (let* ((name.str  (symbol->string (syntax->datum name)))
+	     (cogen.str (string-append "cogen-" suffix "-"  name.str)))
+	(datum->syntax stx (string->symbol cogen.str))))
     (define (%generate-handler name ctxt case*)
       (define (%filter-cases case*)
 	;;Extract  from  CASE*  the  cases  matching  CTXT  among  the
@@ -357,6 +364,7 @@
 	   (cons #'(?arg* ?b ?b* ...) (%filter-cases #'?rest)))
 	  ((?case . ?rest)
 	   (%filter-cases #'?rest))))
+
       (let ((case* (%filter-cases case*)))
 	(with-syntax (((CASE* ...) case*))
 	  (values #'(case-lambda CASE* ... (args (interrupt)))
