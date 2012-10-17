@@ -96,29 +96,42 @@
      (else
       (dirty-vector-set addr))))
 
- (define (mem-assign v x i)
-   ;;Generate the  machine code  needed to store  the machine word  V at
-   ;;heap offset delta I, expressed  in bytes, from the base heap offset
-   ;;X, expressed in bytes.
-   ;;
-   (define (slow-mem-assign v x i)
-     (with-tmp ((t (prm 'int+ x (K i))))
-       (make-seq
-	(prm 'mset t (K 0) (T v))
-	(dirty-vector-set t))))
-   (struct-case v
-     ((constant t)
-      (if (or (fx? t) (immediate? t))
-	  (prm 'mset x (K i) (T v))
-	(slow-mem-assign v x i)))
-     ((known expr t)
-      (cond ((eq? (T:immediate? t) 'yes)
-	     (record-optimization 'mem-assign v)
-	     (prm 'mset x (K i) (T expr)))
-	    (else
-	     (slow-mem-assign expr x i))))
-     (else
-      (slow-mem-assign v x i))))
+ (module (mem-assign)
+
+   (define (mem-assign v base offset)
+     ;;Store V at OFFSET from BASE.
+     ;;
+     ;;V must be a struct instance representing recordized code.
+     ;;
+     ;;X must be a struct instance representing a (possibly tagged) base
+     ;;address.
+     ;;
+     ;;OFFSET must be an exact integer representing an offset in bytes.
+     ;;
+     ;;Generate low level recordized code  needed to store the result of
+     ;;evaluating V at OFFSET from the base heap address BASE.
+     ;;
+     (struct-case v
+       ((constant value)
+	(if (or (fx? value)
+		(immediate? value))
+	    (prm 'mset base (K offset) (T v))
+	  (%slow-mem-assign v base offset)))
+       ((known expr type)
+	(cond ((eq? (T:immediate? type) 'yes)
+	       (record-optimization 'mem-assign v)
+	       (prm 'mset base (K offset) (T expr)))
+	      (else
+	       (%slow-mem-assign expr base offset))))
+       (else
+	(%slow-mem-assign v base offset))))
+
+   (define (%slow-mem-assign v base offset)
+     (with-tmp ((t (prm 'int+ base (K offset))))
+       (make-seq (prm 'mset t (K 0) (T v))
+		 (dirty-vector-set t))))
+
+   #| end of module: mem-assign |# )
 
  (define (align-code unknown-amount known-amount)
    ;;Given  a compile-time  known  amount of  bytes  and a  compile-time
@@ -677,12 +690,10 @@
 
  (define-primop vector-ref safe
    ((V x i)
-    (seq*
-     (vector-range-check x i)
-     (cogen-value-$vector-ref x i)))
+    (seq* (vector-range-check x i)
+	  (cogen-value-$vector-ref x i)))
    ((E x i)
     (vector-range-check x i)))
-
 
  (define-primop $vector-set! unsafe
    ((E x i v)
@@ -693,10 +704,8 @@
       ((constant i)
        (if (not (fx? i))
 	   (interrupt)
-	 (mem-assign v (T x)
-		     (+ (* i wordsize)
-			off-vector-data))))
-      ((known i t)
+	 (mem-assign v (T x) (fx+ (fx* i wordsize) off-vector-data))))
+      ((known i)
        (cogen-effect-$vector-set! x i v))
       (else
        ;;Notice  that I  is  not  multiplied by  the  WORDSIZE; this  is
@@ -754,9 +763,7 @@
       ((constant i)
        (unless (fx? i)
 	 (interrupt))
-       (prm 'mref (T x)
-	    (K (+ off-closure-data
-		  (* i wordsize)))))
+       (prm 'mref (T x) (K (+ off-closure-data (* i wordsize)))))
       ((known expr t)
        (cogen-value-$cpref x expr))
       (else
