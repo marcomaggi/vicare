@@ -133,28 +133,28 @@
 
    #| end of module: mem-assign |# )
 
- (define (align-code unknown-amount known-amount)
+ (define (align-code UNknown-amount known-amount)
    ;;Given  a compile-time  known  amount of  bytes  and a  compile-time
-   ;;unknown amount  of bytes, compute  and return the actual  amount of
-   ;;bytes to be allocated on the heap to keep subsequence memory blocks
-   ;;allocated.
+   ;;UNknown amount of bytes, which must be summed to obtain the size of
+   ;;a memory block to be allocated: compute and return the actual total
+   ;;amount of  bytes to be  allocated on  the heap to  keep subsequence
+   ;;memory blocks allocated.
    ;;
    ;;See details about memory allocation in the documentation.  See also
    ;;the ALIGN function defined in the library (ikarus.compiler).
    ;;
-   (prm 'sll
-	(prm 'sra
-	     (prm 'int+ unknown-amount
-		  (K (+ known-amount (sub1 object-alignment))))
-	     (K align-shift))
-	(K align-shift)))
+   (define-inline (%shift-left ?expr)	(prm 'sll ?expr (K align-shift)))
+   (define-inline (%shift-right ?expr)	(prm 'sra ?expr (K align-shift)))
+   (%shift-left
+    (%shift-right
+     (prm 'int+ UNknown-amount (K (+ known-amount (sub1 object-alignment)))))))
 
  (define (assert-fixnum x)
    (struct-case x
      ((constant i)
       (if (fx? i) (nop) (interrupt)))
-     ((known expr t)
-      (case (T:fixnum? t)
+     ((known expr type)
+      (case-symbols (T:fixnum? type)
 	((yes) (nop))
 	((no)  (interrupt))
 	(else  (assert-fixnum expr))))

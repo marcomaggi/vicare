@@ -2535,20 +2535,20 @@
        (let-values (((lambda* other*) (partition (lambda (x)
 						   (clambda? ($cdr x)))
 					($map/stx cons lhs* rhs*))))
-	 ;;LAMBDA*  is a  list of  pairs  (LHS RHS)  in which  RHS is  a
+	 ;;LAMBDA* is  a list  of pairs (LHS  . RHS) in  which RHS  is a
 	 ;;CLAMBDA struct.
 	 ;;
-	 ;;OTHER* is a list  of pairs (LHS RHS) in which  RHS is *not* a
+	 ;;OTHER* is a list of pairs (LHS . RHS) in which RHS is *not* a
 	 ;;CLAMBDA struct.
 	 ;;
          (make-bind ($map/stx $car other*)
                     ($map/stx E ($map/stx $cdr other*))
-		    (do-fix ($map/stx $car lambda*)
-			    ($map/stx $cdr lambda*)
-			    body))))
+		    (%do-fix ($map/stx $car lambda*)
+			     ($map/stx $cdr lambda*)
+			     body))))
 
       ((fix lhs* rhs* body)
-       (do-fix lhs* rhs* body))
+       (%do-fix lhs* rhs* body))
 
       ((conditional test conseq altern)
        (make-conditional (E test) (E conseq) (E altern)))
@@ -2601,7 +2601,7 @@
 		       clause*)
 		     cp free name))))
 
-  (define (do-fix lhs* rhs* body)
+  (define (%do-fix lhs* rhs* body)
     (if (null? lhs*)
         (E body)
       (make-fix lhs* ($map/stx CLambda rhs*) (E body))))
