@@ -3576,146 +3576,206 @@
    ((32) 2)
    ((64) 3)))
 
-(define object-alignment			(* 2 wordsize))
-(define align-shift				(+ wordshift 1))
-(define pagesize				4096)
-(define pageshift				12)
+(define object-alignment		(* 2 wordsize))
+(define align-shift			(+ wordshift 1))
+(define pagesize			4096)
+(define pageshift			12)
 
-(define fx-scale				wordsize)
-(define fx-shift				wordshift)
-(define fx-mask					(- wordsize 1))
-(define fx-tag					0)
+(define fx-scale			wordsize)
+(define fx-shift			wordshift)
+(define fx-mask				(- wordsize 1))
+(define fx-tag				0)
 
-(define bool-f					#x2F)	;the constant #f
-(define bool-t					#x3F)	;the constant #t
-(define bool-mask				#xEF)
-(define bool-tag				#x2F)
-(define bool-shift				4)
+;;; --------------------------------------------------------------------
+;;; built in Scheme values
 
-(define nil					#x4F)
-(define eof					#x5F)
-(define unbound					#x6F)
-(define void-object				#x7F)
-(define bwp-object				#x8F)
+(define bool-f				#x2F)	;the constant #f
+(define bool-t				#x3F)	;the constant #t
+(define bool-mask			#xEF)
+(define bool-tag			#x2F)
+(define bool-shift			4)
+
+(define nil				#x4F)
+(define eof				#x5F)
+(define unbound				#x6F)
+(define void-object			#x7F)
+(define bwp-object			#x8F)
+
+;;; --------------------------------------------------------------------
+;;; characters
 
 ;;Characters are 32-bit integers, on any platform.
-(define char-size				4)
-(define char-shift				8)
-(define char-tag				#x0F)
-(define char-mask				#xFF)
+(define char-size			4)
+(define char-shift			8)
+(define char-tag			#x0F)
+(define char-mask			#xFF)
 
-(define pair-mask				7)
-(define pair-tag				1)
-(define disp-car				0)
-(define disp-cdr				wordsize)
-(define pair-size				(* 2 wordsize))
+;;; --------------------------------------------------------------------
+;;; pairs
 
-(define flonum-tag				#x17)
-(define flonum-size				16)
-(define disp-flonum-data			8)
+(define pair-mask			7)
+(define pair-tag			1)
+(define disp-car			0)
+(define disp-cdr			wordsize)
+(define pair-size			(* 2 wordsize))
 
-(define ratnum-tag				#x27)
-(define disp-ratnum-num				(* 1 wordsize))
-(define disp-ratnum-den				(* 2 wordsize))
-(define ratnum-size				(* 4 wordsize))
+;;; --------------------------------------------------------------------
+;;; flonums
 
-(define compnum-tag				#x37)
-(define disp-compnum-real			(* 1 wordsize))
-(define disp-compnum-imag			(* 2 wordsize))
-(define compnum-size				(* 4 wordsize))
+(define flonum-tag			#x17)
+(define flonum-size			16)
+(define disp-flonum-data		8)
 
-(define cflonum-tag				#x47)
-(define disp-cflonum-real			(* 1 wordsize))
-(define disp-cflonum-imag			(* 2 wordsize))
-(define cflonum-size				(* 4 wordsize))
+;;; --------------------------------------------------------------------
+;;; ratnums
 
-(define bignum-mask				#b111)
-(define bignum-tag				#b011)
-(define bignum-sign-mask			#b1000)
-(define bignum-sign-shift			3)
-(define bignum-length-shift			4)
-(define disp-bignum-data			wordsize)
+(define ratnum-tag			#x27)
+(define disp-ratnum-num			(* 1 wordsize))
+(define disp-ratnum-den			(* 2 wordsize))
+(define ratnum-size			(* 4 wordsize))
 
-(define bytevector-mask				7)
-(define bytevector-tag				2)
-(define disp-bytevector-length			0)
-(define disp-bytevector-data			8)
+;;; --------------------------------------------------------------------
+;;; compnums
+
+(define compnum-tag			#x37)
+(define disp-compnum-real		(* 1 wordsize))
+(define disp-compnum-imag		(* 2 wordsize))
+(define compnum-size			(* 4 wordsize))
+
+;;; --------------------------------------------------------------------
+;;; cflonums
+
+(define cflonum-tag			#x47)
+(define disp-cflonum-real		(* 1 wordsize))
+(define disp-cflonum-imag		(* 2 wordsize))
+(define cflonum-size			(* 4 wordsize))
+
+;;; --------------------------------------------------------------------
+;;; bignums
+
+(define bignum-mask			#b111)
+(define bignum-tag			#b011)
+(define bignum-sign-mask		#b1000)
+(define bignum-sign-shift		3)
+(define bignum-length-shift		4)
+(define disp-bignum-data		wordsize)
+
+;;; --------------------------------------------------------------------
+;;; bytevectors
+
+(define bytevector-mask			7)
+(define bytevector-tag			2)
+(define disp-bytevector-length		0)
+(define disp-bytevector-data		8)
 		;To  allow  the same  displacement  on  both 32-bit  and
 		;64-bit platforms.
 
-(define vector-tag				5)
-(define vector-mask				7)
-(define disp-vector-length			0)
-(define disp-vector-data			wordsize)
-(define off-vector-length			(fx- disp-vector-length vector-tag))
-(define off-vector-data				(fx- disp-vector-data   vector-tag))
+;;; --------------------------------------------------------------------
+;;; vectors
 
-(define symbol-primary-tag			vector-tag)
-(define symbol-tag				#x5F)
-(define symbol-record-tag			#x5F)
-(define disp-symbol-record-string		(* 1 wordsize))
-(define disp-symbol-record-ustring		(* 2 wordsize))
-(define disp-symbol-record-value		(* 3 wordsize))
-(define disp-symbol-record-proc			(* 4 wordsize))
-(define disp-symbol-record-plist		(* 5 wordsize))
-(define symbol-record-size			(* 6 wordsize))
+(define vector-tag			5)
+(define vector-mask			7)
+
+(define disp-vector-length		0)
+(define disp-vector-data		wordsize)
+
+(define off-vector-length		(fx- disp-vector-length vector-tag))
+(define off-vector-data			(fx- disp-vector-data   vector-tag))
+
+;;; --------------------------------------------------------------------
+;;; symbols
+
+(define symbol-primary-tag		vector-tag)
+(define symbol-tag			#x5F)
+(define symbol-record-tag		#x5F)
+
+(define disp-symbol-record-string	(fx* 1 wordsize))
+(define disp-symbol-record-ustring	(fx* 2 wordsize))
+(define disp-symbol-record-value	(fx* 3 wordsize))
+(define disp-symbol-record-proc		(fx* 4 wordsize))
+(define disp-symbol-record-plist	(fx* 5 wordsize))
+(define symbol-record-size		(fx* 6 wordsize))
+
 (define off-symbol-record-string	(fx- disp-symbol-record-string  symbol-primary-tag))
 (define off-symbol-record-ustring	(fx- disp-symbol-record-ustring symbol-primary-tag))
 (define off-symbol-record-value		(fx- disp-symbol-record-value   symbol-primary-tag))
 (define off-symbol-record-proc		(fx- disp-symbol-record-proc    symbol-primary-tag))
 (define off-symbol-record-plist		(fx- disp-symbol-record-plist   symbol-primary-tag))
 
-(define record-tag				vector-tag)
-(define disp-struct-rtd				0)
-(define disp-struct-data			wordsize)
+;;; --------------------------------------------------------------------
+;;; structs
 
-(define string-mask				#b111)
-(define string-tag				6)
-(define disp-string-length			0)
-(define disp-string-data			wordsize)
-(define off-string-length			(fx- disp-string-length string-tag))
-(define off-string-data				(fx- disp-string-data   string-tag))
+(define record-tag			vector-tag)
+(define disp-struct-rtd			0)
+(define disp-struct-data		wordsize)
 
-(define closure-mask				7)
-(define closure-tag				3)
-(define disp-closure-code			0)
-(define disp-closure-data			wordsize)
-(define off-closure-code			(fx- disp-closure-code closure-tag))
-(define off-closure-data			(fx- disp-closure-data closure-tag))
+;;; --------------------------------------------------------------------
+;;; strings
 
-(define continuation-tag			#x1F)
-(define disp-continuation-top			(* 1 wordsize))
-(define disp-continuation-size			(* 2 wordsize))
-(define disp-continuation-next			(* 3 wordsize))
-(define continuation-size			(* 4 wordsize))
+(define string-mask			#b111)
+(define string-tag			6)
 
-(define code-tag				#x2F)
-(define disp-code-instrsize			(* 1 wordsize))
-(define disp-code-relocsize			(* 2 wordsize))
-(define disp-code-freevars			(* 3 wordsize))
-(define disp-code-annotation			(* 4 wordsize))
-(define disp-code-unused			(* 5 wordsize))
-(define disp-code-data				(* 6 wordsize))
+(define disp-string-length		0)
+(define disp-string-data		wordsize)
 
-(define transcoder-mask				#xFF) ;;; 0011
-(define transcoder-tag				#x7F) ;;; 0011
-(define transcoder-payload-shift		10)
+(define off-string-length		(fx- disp-string-length string-tag))
+(define off-string-data			(fx- disp-string-data   string-tag))
 
-(define transcoder-write-utf8-mask		#x1000)
-(define transcoder-write-byte-mask		#x2000)
-(define transcoder-read-utf8-mask		#x4000)
-(define transcoder-read-byte-mask		#x8000)
-(define transcoder-handling-mode-shift		16)
-(define transcoder-handling-mode-bits		2)
-(define transcoder-eol-style-shift		18)
-(define transcoder-eol-style-bits		3)
-(define transcoder-codec-shift			21)
-(define transcoder-codec-bits			3)
+;;; --------------------------------------------------------------------
+;;; closures
 
-(define transcoder-handling-mode:none		#b00)
-(define transcoder-handling-mode:ignore		#b01)
-(define transcoder-handling-mode:raise		#b10)
-(define transcoder-handling-mode:replace	#b11)
+(define closure-mask			7)
+(define closure-tag			3)
+
+(define disp-closure-code		0)
+(define disp-closure-data		wordsize)
+
+(define off-closure-code		(fx- disp-closure-code closure-tag))
+(define off-closure-data		(fx- disp-closure-data closure-tag))
+
+;;; --------------------------------------------------------------------
+;;; continuations
+
+(define continuation-tag		#x1F)
+
+(define disp-continuation-top		(* 1 wordsize))
+(define disp-continuation-size		(* 2 wordsize))
+(define disp-continuation-next		(* 3 wordsize))
+(define continuation-size		(* 4 wordsize))
+
+;;; --------------------------------------------------------------------
+;;; code objects
+
+(define code-tag			#x2F)
+(define disp-code-instrsize		(* 1 wordsize))
+(define disp-code-relocsize		(* 2 wordsize))
+(define disp-code-freevars		(* 3 wordsize))
+(define disp-code-annotation		(* 4 wordsize))
+(define disp-code-unused		(* 5 wordsize))
+(define disp-code-data			(* 6 wordsize))
+
+;;; --------------------------------------------------------------------
+;;; transcoders
+
+(define transcoder-mask			#xFF) ;;; 0011
+(define transcoder-tag			#x7F) ;;; 0011
+(define transcoder-payload-shift	10)
+
+(define transcoder-write-utf8-mask	#x1000)
+(define transcoder-write-byte-mask	#x2000)
+(define transcoder-read-utf8-mask	#x4000)
+(define transcoder-read-byte-mask	#x8000)
+(define transcoder-handling-mode-shift	16)
+(define transcoder-handling-mode-bits	2)
+(define transcoder-eol-style-shift	18)
+(define transcoder-eol-style-bits	3)
+(define transcoder-codec-shift		21)
+(define transcoder-codec-bits		3)
+
+(define transcoder-handling-mode:none	#b00)
+(define transcoder-handling-mode:ignore	#b01)
+(define transcoder-handling-mode:raise	#b10)
+(define transcoder-handling-mode:replace #b11)
 
 (define transcoder-eol-style:none	#b000)
 (define transcoder-eol-style:lf		#b001)
@@ -3730,8 +3790,12 @@
 (define transcoder-codec:utf-8		#b010)
 (define transcoder-codec:utf-16		#b011)
 
+;;; --------------------------------------------------------------------
+;;; input/output ports
+
 (define port-tag			#x3F)
 (define port-mask			#x3F)
+
 (define disp-port-attrs			0)
 (define disp-port-index			(*  1 wordsize))
 (define disp-port-size			(*  2 wordsize))
@@ -3748,16 +3812,25 @@
 (define disp-port-unused2		(* 13 wordsize))
 (define port-size			(* 14 wordsize))
 
+;;; --------------------------------------------------------------------
+;;; pointer objects
+
 (define pointer-tag			#x107)
 (define disp-pointer-data		wordsize)
 (define pointer-size			(* 2 wordsize))
+
 (define off-pointer-data		(- disp-pointer-data vector-tag))
+
+;;; --------------------------------------------------------------------
+;;; tcbuckets
 
 (define disp-tcbucket-tconc		0)
 (define disp-tcbucket-key		(* 1 wordsize))
 (define disp-tcbucket-val		(* 2 wordsize))
 (define disp-tcbucket-next		(* 3 wordsize))
 (define tcbucket-size			(* 4 wordsize))
+
+;;; --------------------------------------------------------------------
 
 ;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
 ;;call-frames are laid out (search for livemask).

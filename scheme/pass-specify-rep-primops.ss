@@ -785,65 +785,83 @@
 
  (define-primop symbol? safe
    ((P x)
-    (sec-tag-test (T x) vector-mask vector-tag #f symbol-tag))
-   ((E x) (nop)))
+    (sec-tag-test (T x) vector-mask symbol-primary-tag #f symbol-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-symbol unsafe
    ((V str)
-    (with-tmp ((x (prm 'alloc (K (align symbol-record-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K symbol-tag))
-      (prm 'mset x (K (- disp-symbol-record-string  vector-tag)) (T str))
-      (prm 'mset x (K (- disp-symbol-record-ustring vector-tag)) (K 0))
-      (prm 'mset x (K (- disp-symbol-record-value   vector-tag)) (K unbound))
-      (prm 'mset x (K (- disp-symbol-record-proc    vector-tag)) (K unbound))
-      (prm 'mset x (K (- disp-symbol-record-plist   vector-tag)) (K nil))
+    ;;X is a machine word referencing a symbol's memory block.
+    (with-tmp ((x (prm 'alloc
+		       (K (align symbol-record-size))
+		       (K symbol-primary-tag))))
+      (prm 'mset x (K (fx- symbol-primary-tag))  (K symbol-tag))
+      (prm 'mset x (K off-symbol-record-string)  (T str))
+      (prm 'mset x (K off-symbol-record-ustring) (K 0))
+      (prm 'mset x (K off-symbol-record-value)   (K unbound))
+      (prm 'mset x (K off-symbol-record-proc)    (K unbound))
+      (prm 'mset x (K off-symbol-record-plist)   (K nil))
       x))
-   ((P str) (K #t))
-   ((E str) (nop)))
+   ((P str)
+    (K #t))
+   ((E str)
+    (nop)))
 
  (define-primop $symbol-string unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-string vector-tag))))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref (T x) (K off-symbol-record-string)))
+   ((E x)
+    (nop)))
 
  (define-primop $set-symbol-string! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-symbol-record-string vector-tag))))
+   ((E x v)
+    (mem-assign v (T x) off-symbol-record-string)))
 
  (define-primop $symbol-unique-string unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-ustring vector-tag))))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref (T x) (K off-symbol-record-ustring)))
+   ((E x)
+    (nop)))
 
  (define-primop $set-symbol-unique-string! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-symbol-record-ustring vector-tag))))
+   ((E x v)
+    (mem-assign v (T x) off-symbol-record-ustring)))
 
  (define-primop $symbol-plist unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-plist vector-tag))))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref (T x) (K off-symbol-record-plist)))
+   ((E x)
+    (nop)))
 
  (define-primop $set-symbol-plist! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-symbol-record-plist vector-tag))))
+   ((E x v)
+    (mem-assign v (T x) off-symbol-record-plist)))
 
  (define-primop $symbol-value unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-symbol-record-value vector-tag))))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref (T x) (K off-symbol-record-value)))
+   ((E x)
+    (nop)))
 
  (define-primop $set-symbol-value! unsafe
    ((E x v)
-    (with-tmp ((x (T x)))
-      (prm 'mset x (K (- disp-symbol-record-value vector-tag)) (T v))
-      (dirty-vector-set x))))
+    (with-tmp ((x^ (T x)))
+      (prm 'mset x^ (K off-symbol-record-value) (T v))
+      (dirty-vector-set x^))))
 
  (define-primop $set-symbol-proc! unsafe
    ((E x v)
-    (with-tmp ((x (T x)))
-      (prm 'mset x (K (- disp-symbol-record-proc vector-tag)) (T v))
-      (dirty-vector-set x))))
+    (with-tmp ((x^ (T x)))
+      (prm 'mset x^ (K off-symbol-record-proc) (T v))
+      (dirty-vector-set x^))))
 
  (define-primop $set-symbol-value/proc! unsafe
    ((E x v)
-    (with-tmp ((x (T x)) (v (T v)))
-      (prm 'mset x (K (- disp-symbol-record-value vector-tag)) v)
-      (prm 'mset x (K (- disp-symbol-record-proc  vector-tag)) v)
-      (dirty-vector-set x))))
+    (with-tmp ((x^ (T x))
+	       (v^ (T v)))
+      (prm 'mset x^ (K off-symbol-record-value) v^)
+      (prm 'mset x^ (K off-symbol-record-proc)  v^)
+      (dirty-vector-set x^))))
 
  (define-primop top-level-value safe
    ((V x)
@@ -854,36 +872,40 @@
 	     (interrupt-when (cogen-pred-$unbound-object? v))
 	     v)
 	 (interrupt)))
-      ((known expr t)
+      ((known expr)
        (cogen-value-top-level-value expr))
       (else
-       (with-tmp ((x (T x)))
-	 (interrupt-unless (cogen-pred-symbol? x))
-	 (with-tmp ((v (cogen-value-$symbol-value x)))
+       (with-tmp ((x^ (T x)))
+	 (interrupt-unless (cogen-pred-symbol? x^))
+	 (with-tmp ((v (cogen-value-$symbol-value x^)))
 	   (interrupt-when (cogen-pred-$unbound-object? v))
 	   v)))))
    ((E x)
+    ;;The difference between the V execution context and the E execution
+    ;;context  is that:  here  we  do *not*  return  the  object in  the
+    ;;symbol's field "value".
+    ;;
     (struct-case x
       ((constant s)
        (if (symbol? s)
 	   (with-tmp ((v (cogen-value-$symbol-value x)))
 	     (interrupt-when (cogen-pred-$unbound-object? v)))
 	 (interrupt)))
-      ((known expr t)
+      ((known expr)
        (cogen-effect-top-level-value expr))
       (else
-       (with-tmp ((x (T x)))
-	 (interrupt-unless (cogen-pred-symbol? x))
-	 (with-tmp ((v (cogen-value-$symbol-value x)))
+       (with-tmp ((x^ (T x)))
+	 (interrupt-unless (cogen-pred-symbol? x^))
+	 (with-tmp ((v (cogen-value-$symbol-value x^)))
 	   (interrupt-when (cogen-pred-$unbound-object? v))))))))
 
 
  (define-primop $init-symbol-function! unsafe
    ((E x v)
-    (with-tmp ((x (T x)) (v (T v)))
-      (prm 'mset x (K (- disp-symbol-record-proc vector-tag)) v)
-      (dirty-vector-set x))))
-
+    (with-tmp ((x^ (T x))
+	       (v^ (T v)))
+      (prm 'mset x^ (K off-symbol-record-proc) v^)
+      (dirty-vector-set x^))))
 
  /section)
 
