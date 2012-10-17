@@ -535,21 +535,35 @@
       (smart-dirty-vector-set x^ v))))
 
  (define (expand-cxr val ls)
+   ;;LS must  be a  list of  symbols "a" and  "d" representing  a nested
+   ;;sequence of car and cdr operations.
+   ;;
+   ;;Return a struct instance representing  recordized code for a nested
+   ;;sequence of car and cdr calls.  For example:
+   ;;
+   ;;   (expand-cxr x '(a d))
+   ;;
+   ;;returns recordized code for:
+   ;;
+   ;;   (prm 'mref x (prm 'mref x off-cdr)
+   ;;                off-car)
+   ;;
+   ;;and so it implements cadr.
+   ;;
    (if (null? ls)
        (T val)
      (with-tmp ((x^ (expand-cxr val ($cdr ls))))
        (assert-pair x^)
        (prm 'mref x^
-	    (case ($car ls)
-	      ((a)
-	       (K off-car))
-	      (else
-	       (K off-cdr)))))))
+	    (if (eq? 'a ($car ls))
+		(K off-car)
+	      (K off-cdr))))))
 
  (define-primop caar   safe ((V x) (expand-cxr x '(a a))))
  (define-primop cadr   safe ((V x) (expand-cxr x '(a d))))
  (define-primop cdar   safe ((V x) (expand-cxr x '(d a))))
  (define-primop cddr   safe ((V x) (expand-cxr x '(d d))))
+
  (define-primop caaar  safe ((V x) (expand-cxr x '(a a a))))
  (define-primop caadr  safe ((V x) (expand-cxr x '(a a d))))
  (define-primop cadar  safe ((V x) (expand-cxr x '(a d a))))
@@ -558,22 +572,23 @@
  (define-primop cdadr  safe ((V x) (expand-cxr x '(d a d))))
  (define-primop cddar  safe ((V x) (expand-cxr x '(d d a))))
  (define-primop cdddr  safe ((V x) (expand-cxr x '(d d d))))
-;;;(define-primop caaaar safe ((V x) (expand-cxr x '(a a a a))))
-;;;(define-primop caaadr safe ((V x) (expand-cxr x '(a a a d))))
-;;;(define-primop caadar safe ((V x) (expand-cxr x '(a a d a))))
-;;;(define-primop caaddr safe ((V x) (expand-cxr x '(a a d d))))
-;;;(define-primop cadaar safe ((V x) (expand-cxr x '(a d a a))))
-;;;(define-primop cadadr safe ((V x) (expand-cxr x '(a d a d))))
-;;;(define-primop caddar safe ((V x) (expand-cxr x '(a d d a))))
+
+ (define-primop caaaar safe ((V x) (expand-cxr x '(a a a a))))
+ (define-primop caaadr safe ((V x) (expand-cxr x '(a a a d))))
+ (define-primop caadar safe ((V x) (expand-cxr x '(a a d a))))
+ (define-primop caaddr safe ((V x) (expand-cxr x '(a a d d))))
+ (define-primop cadaar safe ((V x) (expand-cxr x '(a d a a))))
+ (define-primop cadadr safe ((V x) (expand-cxr x '(a d a d))))
+ (define-primop caddar safe ((V x) (expand-cxr x '(a d d a))))
  (define-primop cadddr safe ((V x) (expand-cxr x '(a d d d))))
-;;;(define-primop cdaaar safe ((V x) (expand-cxr x '(d a a a))))
-;;;(define-primop cdaadr safe ((V x) (expand-cxr x '(d a a d))))
-;;;(define-primop cdadar safe ((V x) (expand-cxr x '(d a d a))))
-;;;(define-primop cdaddr safe ((V x) (expand-cxr x '(d a d d))))
-;;;(define-primop cddaar safe ((V x) (expand-cxr x '(d d a a))))
-;;;(define-primop cddadr safe ((V x) (expand-cxr x '(d d a d))))
-;;;(define-primop cdddar safe ((V x) (expand-cxr x '(d d d a))))
-;;;(define-primop cddddr safe ((V x) (expand-cxr x '(d d d d))))
+ (define-primop cdaaar safe ((V x) (expand-cxr x '(d a a a))))
+ (define-primop cdaadr safe ((V x) (expand-cxr x '(d a a d))))
+ (define-primop cdadar safe ((V x) (expand-cxr x '(d a d a))))
+ (define-primop cdaddr safe ((V x) (expand-cxr x '(d a d d))))
+ (define-primop cddaar safe ((V x) (expand-cxr x '(d d a a))))
+ (define-primop cddadr safe ((V x) (expand-cxr x '(d d a d))))
+ (define-primop cdddar safe ((V x) (expand-cxr x '(d d d a))))
+ (define-primop cddddr safe ((V x) (expand-cxr x '(d d d d))))
 
 
  (define-primop list safe
