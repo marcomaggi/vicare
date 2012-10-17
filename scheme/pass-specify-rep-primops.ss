@@ -184,7 +184,7 @@
  /section)
 
 
-(section ;;; simple objects
+(section
 
  (define-primop base-rtd safe
    ;;The base RTD  of all the struct  types is stored in  the C language
@@ -347,87 +347,99 @@
    ((P x ls)
     (struct-case ls
       ((constant ls)
-       (cond ((not (list? ls))
-	      (interrupt))
-	     (else
-	      (with-tmp ((x (T x)))
-		(let f ((ls ls))
-		  (cond ((null? ls)
-			 (K #f))
-			((null? (cdr ls))
-			 (prm '= x (T (K (car ls)))))
-			(else
-			 (make-conditional
-			     (prm '= x (T (K (car ls))))
-			   (K #t)
-			   (f (cdr ls))))))))))
-      ((known expr t)
+       (if (list? ls)
+	   ;;We assume that a list hard-coded in the source is not "very
+	   ;;long",   so  we   unroll  the   search  into   sequence  of
+	   ;;conditionals.
+	   (with-tmp ((x (T x)))
+	     (let loop ((ls ls))
+	       (cond ((null? ls)
+		      (K #f))
+		     ((null? ($cdr ls))
+		      (prm '= x (T (K ($car ls)))))
+		     (else
+		      (make-conditional
+			  (prm '= x (T (K ($car ls))))
+			(K #t) ;return a boolean
+			(loop ($cdr ls)))))))
+	 (interrupt)))
+      ((known expr)
        (cogen-pred-$memq x expr))
       (else
        (interrupt))))
    ((V x ls)
     (struct-case ls
       ((constant ls)
-       (cond
-	((not (list? ls)) (interrupt))
-	(else
-	 (with-tmp ((x (T x)))
-	   (let f ((ls ls))
-	     (cond
-	      ((null? ls) (K bool-f))
-	      (else
-	       (make-conditional
-		   (prm '= x (T (K (car ls))))
-		 (T (K ls))
-		 (f (cdr ls))))))))))
-      ((known expr t)
+       (if (list? ls)
+	   ;;We assume that a list hard-coded in the source is not "very
+	   ;;long",   so  we   unroll  the   search  into   sequence  of
+	   ;;conditionals.
+	   (with-tmp ((x (T x)))
+	     (let loop ((ls ls))
+	       (cond ((null? ls)
+		      (K bool-f))
+		     (else
+		      (make-conditional
+			  (prm '= x (T (K ($car ls))))
+			(T (K ls)) ;return the value
+			(loop ($cdr ls)))))))
+	 (interrupt)))
+      ((known expr)
        (cogen-value-$memq x expr))
-      (else (interrupt))))
-   ((E x ls) (nop)))
+      (else
+       (interrupt))))
+   ((E x ls)
+    (nop)))
 
  (define-primop memq safe
-   ((P x ls) (cogen-pred-$memq x ls))
-   ((V x ls) (cogen-value-$memq x ls))
+   ((P x ls)
+    (cogen-pred-$memq x ls))
+   ((V x ls)
+    (cogen-value-$memq x ls))
    ((E x ls)
     (struct-case ls
       ((constant ls)
-       (cond
-	((list? ls) (nop))
-	(else (interrupt))))
-      ((known expr t)
+       (if (list? ls)
+	   (nop)
+	 (interrupt)))
+      ((known expr)
        (cogen-effect-memq x expr))
-      (else (interrupt)))))
+      (else
+       (interrupt)))))
 
  (define-primop memv safe
    ((V x ls)
     (struct-case ls
       ((constant lsv)
-       (cond
-	((and (list? lsv) (andmap equable? lsv))
-	 (cogen-value-$memq x ls))
-	(else (interrupt))))
+       (if (and (list? lsv)
+		(andmap equable? lsv))
+	   (cogen-value-$memq x ls)
+	 (interrupt)))
       ((known expr t)
        (cogen-value-memv x expr))
-      (else (interrupt))))
+      (else
+       (interrupt))))
    ((P x ls)
     (struct-case ls
       ((constant lsv)
-       (cond
-	((and (list? lsv) (andmap equable? lsv))
-	 (cogen-pred-$memq x ls))
-	(else (interrupt))))
+       (if (and (list? lsv)
+		(andmap equable? lsv))
+	   (cogen-pred-$memq x ls)
+	 (interrupt)))
       ((known expr t)
        (cogen-pred-memv x expr))
-      (else (interrupt))))
+      (else
+       (interrupt))))
    ((E x ls)
     (struct-case ls
-      ((constant lsv)
-       (cond
-	((list? lsv) (nop))
-	(else (interrupt))))
+      ((constant val)
+       (if (list? val)
+	   (nop)
+	 (interrupt)))
       ((known expr t)
        (cogen-effect-memv x expr))
-      (else (interrupt)))))
+      (else
+       (interrupt)))))
 
  /section)
 
