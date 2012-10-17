@@ -73,16 +73,44 @@
   ;;
   ;;   (?operator ?arg ...)
   ;;
-  ;;if the ?OPERATOR is a struct instance of type PRIMREF representing a
+  ;;which, in  recordized code, are  represented by struct  instances of
+  ;;type FUNCALL; everything else is left untouched.
+  ;;
+  ;;If the ?OPERATOR is a struct instance of type PRIMREF representing a
   ;;primitive  operation:  such struct  is  replaced  by an  appropriate
-  ;;struct instance of type PRIMCALL.
+  ;;struct instance of type PRIMCALL; recordized code like:
+  ;;
+  ;;   #[funcall  #[primref ?name] (?arg ...)]
+  ;;
+  ;;is converted to:
+  ;;
+  ;;   #[primcall #[primref ?name] (?arg ...)]
+  ;;
+  ;;Notice that not all the struct instances of type PRIMREF reference a
+  ;;primitive operation: the struct type  PRIMREF is used to represent a
+  ;;reference to all  the function bindings exported by  the boot image.
+  ;;Only  those for  which ?NAME  is a  symbol satisfying  the predicate
+  ;;PRIMOP?   are  primitive  operations;   in  other  words,  only  the
+  ;;operations  defined  by  the   syntax  DEFINE-PRIMOP  are  primitive
+  ;;operations.  Examples: $CAR, $CDR, FIXNUM? are primitive operations;
+  ;;LIST, NUMBER?, STRING-LENGTH are *not* primitive operations.
+  ;;
+  ;;This module accepts as input a  struct instance of type CODES, whose
+  ;;internal recordized code must be composed by struct instances of the
+  ;;following types:
+  ;;
+  ;;   bind		closure		conditional
+  ;;   constant		fix		forcall
+  ;;   funcall		jmpcall		known
+  ;;   primref		seq		var
   ;;
   (define who 'introduce-primcalls)
 
   (define (introduce-primcalls Program)
     (struct-case Program
       ((codes code* body)
-       (make-codes ($map/stx Clambda code*) (E body)))
+       (make-codes ($map/stx Clambda code*)
+		   (E body)))
       (else
        (error who "invalid program" Program))))
 
@@ -185,14 +213,7 @@
       ;;
       (struct-case op
 	((known expr)
-	 (mkfuncall expr arg*)
-	 #;(struct-case expr
-	   ((primref name)
-	    (if (%primitive-operation? name)
-		(make-primcall name arg*)
-	      (make-funcall op arg*)))
-	   (else
-	    (make-funcall op arg*))))
+	 (mkfuncall expr arg*))
 
 	((primref name)
 	 (if (%primitive-operation? name)
@@ -201,8 +222,6 @@
 
 	(else
 	 (make-funcall op arg*))))
-
-;;#[funcall #[primref ?name] (?arg ...)]
 
     (define (%primitive-operation? x)
       ;;Import PRIMOP?  from a module defined  in "pass-specify-rep.ss".

@@ -1039,6 +1039,21 @@
        (cond ((and (eq? op 'top-level-value)
 		   (null? ($cdr args))
 		   (%recordized-symbol ($car args)))
+	      ;;The recordized code:
+	      ;;
+	      ;;   #[funcall #[primref top-level-value] (?name)]
+	      ;;
+	      ;;represents a reference  to a top level  value; given the
+	      ;;?NAME of a  top level binding: values are  stored in the
+	      ;;field "proc"  of symbols  being names  of the  top level
+	      ;;bindings.
+	      ;;
+	      ;;,  either  a
+	      ;;function as in:
+	      ;;
+	      ;;   (map fixnum? '(1 2 3))
+	      ;;
+	      ;;
 	      => (lambda (sym)
 		   (reset-symbol-proc! sym)
 		   (prm 'mref (T (K sym)) (K off-symbol-record-proc))))
