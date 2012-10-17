@@ -1024,6 +1024,11 @@
 (module (Function)
 
   (define-inline (Function x)
+    ;;X must  be a  struct instance representing  recordized code  to be
+    ;;executed  in  "for  returned  value"  context.   Return  a  struct
+    ;;instance  representing recordized  code  (to be  executed in  "for
+    ;;returned value" context) which is meant to replace X.
+    ;;
     (F x #t))
 
   (define (F x check?)
@@ -1031,31 +1036,39 @@
       ((primcall op args)
        (cond ((and (eq? op 'top-level-value)
 		   (= (length args) 1)
-		   (let f ((x (car args)))
-		     (struct-case x
-		       ((constant x)
-			(and (symbol? x) x))
-		       ((known x t)
-			(f x))
-		       (else #f))))
+		   (%recordized-symbol (car args)))
 	      => (lambda (sym)
 		   (reset-symbol-proc! sym)
-		   (prm 'mref (T (K sym))
-			(K (- disp-symbol-record-proc symbol-primary-tag)))))
+		   (prm 'mref (T (K sym)) (K off-symbol-record-proc))))
 	     (else
 	      (nonproc x check?))))
 
       ((primref op)
        (V x))
 
-      ((known x t)
-       (cond ((eq? (T:procedure? t) 'yes)
-	      ;;(record-optimization 'procedure x)
-	      (F x #f))
+      ((known expr type)
+       (cond ((eq? (T:procedure? type) 'yes)
+	      ;;(record-optimization 'procedure expr)
+	      (F expr #f))
 	     (else
-	      (F x check?))))
+	      (F expr check?))))
+
       (else
        (nonproc x check?))))
+
+  (define (%recordized-symbol arg)
+    ;;ARG must be a struct instance representing recordized code.
+    ;;
+    ;;If ARG is  an intance of CONSTANT (possibly wrapped  into a KNOWN)
+    ;;whose value is a symbol: return that symbol; else return #f.
+    ;;
+    (struct-case arg
+      ((constant val)
+       (and (symbol? val) val))
+      ((known expr type)
+       (%recordized-symbol expr))
+      (else
+       #f)))
 
   (define (nonproc x check?)
     (if check?
