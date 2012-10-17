@@ -1021,48 +1021,55 @@
   #| end of module: cogen-debug-call |# )
 
 
-(define (Function x)
-  (define (Function x check?)
-    (define (nonproc x check?)
-      (cond
-       (check?
-	(with-tmp ((x (V x)))
-	  (make-shortcut
-	   (make-seq
-	    (make-conditional
-		(tag-test x closure-mask closure-tag)
-	      (prm 'nop)
-	      (prm 'interrupt))
-	    x)
-	   (V (make-funcall (make-primref 'error)
-			    (list (K 'apply) (K "not a procedure") x))))))
-       (else
-	(V x))))
+(module (Function)
+
+  (define-inline (Function x)
+    (F x #t))
+
+  (define (F x check?)
     (struct-case x
       ((primcall op args)
-       (cond
-	((and (eq? op 'top-level-value)
-	      (= (length args) 1)
-	      (let f ((x (car args)))
-		(struct-case x
-		  ((constant x)
-		   (and (symbol? x) x))
-		  ((known x t) (f x))
-		  (else #f)))) =>
-		  (lambda (sym)
-		    (reset-symbol-proc! sym)
-		    (prm 'mref (T (K sym))
-			 (K (- disp-symbol-record-proc symbol-primary-tag)))))
-	(else (nonproc x check?))))
-      ((primref op) (V x))
+       (cond ((and (eq? op 'top-level-value)
+		   (= (length args) 1)
+		   (let f ((x (car args)))
+		     (struct-case x
+		       ((constant x)
+			(and (symbol? x) x))
+		       ((known x t)
+			(f x))
+		       (else #f))))
+	      => (lambda (sym)
+		   (reset-symbol-proc! sym)
+		   (prm 'mref (T (K sym))
+			(K (- disp-symbol-record-proc symbol-primary-tag)))))
+	     (else
+	      (nonproc x check?))))
+
+      ((primref op)
+       (V x))
+
       ((known x t)
-       (cond
-	((eq? (T:procedure? t) 'yes)
-		;(record-optimization 'procedure x)
-	 (Function x #f))
-	(else (Function x check?))))
-      (else (nonproc x check?))))
-  (Function x #t))
+       (cond ((eq? (T:procedure? t) 'yes)
+	      ;;(record-optimization 'procedure x)
+	      (F x #f))
+	     (else
+	      (F x check?))))
+      (else
+       (nonproc x check?))))
+
+  (define (nonproc x check?)
+    (if check?
+	(with-tmp ((x (V x)))
+	  (make-shortcut (make-seq (make-conditional
+				       (tag-test x closure-mask closure-tag)
+				     (prm 'nop)
+				     (prm 'interrupt))
+				   x)
+			 (V (make-funcall (make-primref 'error)
+					  (list (K 'apply) (K "not a procedure") x)))))
+      (V x)))
+
+  #| end of module: Function |# )
 
 
 (define record-optimization^
