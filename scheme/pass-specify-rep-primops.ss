@@ -590,26 +590,38 @@
  (define-primop cdddar safe ((V x) (expand-cxr x '(d d d a))))
  (define-primop cddddr safe ((V x) (expand-cxr x '(d d d d))))
 
-
  (define-primop list safe
-   ((V) (K nil))
-   ((V . arg*)
-    (let ((n (length arg*)) (t* (map T arg*)))
-      (with-tmp ((v (prm 'alloc (K (align (* n pair-size))) (K pair-tag))))
-	(prm 'mset v (K off-car) (car t*))
-	(prm 'mset v
-	     (K (- (+ disp-cdr (* (sub1 n) pair-size)) pair-tag))
+   ((V)		;this is the case of: (list)
+    (K nil))
+   ((V . arg*)	;this is the case of: (list 1 2 3)
+    (let ((n  (length arg*))
+	  (arg*^ (map T arg*)))
+      ;;Allocate on the heap enough room for all the pairs.
+      (with-tmp ((first-pair (prm 'alloc
+				  (K (align (* n pair-size)))
+				  (K pair-tag))))
+	;;Store the first value in the car of the first pair.
+	(prm 'mset first-pair (K off-car) (car arg*^))
+	;;Store nil in the cdr of the first pair.
+	(prm 'mset first-pair
+	     (K (+ off-cdr (* (sub1 n) pair-size)))
 	     (K nil))
-	(let f ((t* (cdr t*)) (i pair-size))
-	  (cond
-	   ((null? t*) v)
-	   (else
-	    (with-tmp ((tmp (prm 'int+ v (K i))))
-	      (prm 'mset tmp (K off-car) (car t*))
-	      (prm 'mset tmp (K (+ disp-cdr (- pair-size) (- pair-tag))) tmp)
-	      (f (cdr t*) (+ i pair-size)))))))))
-   ((P . arg*) (K #t))
-   ((E . arg*) (nop)))
+	(let loop ((arg*^ (cdr arg*^))
+		   (idx   pair-size))	;offset of the next pair
+	  (if (null? arg*^)
+	      first-pair
+	    (with-tmp ((tmp (prm 'int+ first-pair (K idx))))
+	      ;;Store a value in the car of this pair.
+	      (prm 'mset tmp (K off-car) (car arg*^))
+	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
+	      ;;previous pair.
+	      (prm 'mset tmp (K (- off-cdr pair-size)) tmp)
+	      (loop (cdr arg*^) (+ idx pair-size)))))
+	)))
+   ((P . arg*)
+    (K #t))
+   ((E . arg*)
+    (nop)))
 
  (define-primop cons* safe
    ((V) (interrupt))
