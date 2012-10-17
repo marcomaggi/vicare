@@ -152,7 +152,9 @@
  (define (assert-fixnum x)
    (struct-case x
      ((constant i)
-      (if (fx? i) (nop) (interrupt)))
+      (if (fx? i)
+	  (nop)
+	(interrupt)))
      ((known expr type)
       (case-symbols (T:fixnum? type)
 	((yes) (nop))
@@ -163,12 +165,19 @@
 
  (define (assert-string x)
    (struct-case x
-     ((constant s) (if (string? s) (nop) (interrupt)))
-     ((known expr t)
-      (case (T:string? t)
-	((yes) (record-optimization 'assert-string x) (nop))
-	((no)  (interrupt))
-	(else  (assert-string expr))))
+     ((constant s)
+      (if (string? s)
+	  (nop)
+	(interrupt)))
+     ((known expr type)
+      (case-symbols (T:string? type)
+	((yes)
+	 (record-optimization 'assert-string x)
+	 (nop))
+	((no)
+	 (interrupt))
+	(else
+	 (assert-string expr))))
      (else
       (interrupt-unless (cogen-pred-string? x)))))
 
@@ -177,16 +186,24 @@
 
 (section ;;; simple objects
 
+ ;;The base  RTD of  all the struct  types is stored  in the  C language
+ ;;structure PCB.
+ ;;
  (define-primop base-rtd safe
    ((V) (prm 'mref pcr (K pcb-base-rtd)))
    ((P) (K #t))
    ((E) (prm 'nop)))
 
+ ;;This is the definition of the  Scheme function VOID.  It just returns
+ ;;the void object, which is true.
+ ;;
  (define-primop void safe
    ((V) (K void-object))
    ((P) (K #t))
    ((E) (prm 'nop)))
 
+ ;;This is the definition of the primitive operation NOP.
+ ;;
  (define-primop nop unsafe
    ((E) (prm 'nop)))
 
@@ -194,15 +211,20 @@
    ((P x y) (prm '!= (T x) (T y)))
    ((E x y) (nop)))
 
+ ;;This is the implementation of the Scheme function EQ?.
+ ;;
  (define-primop eq? safe
    ((P x y) (prm '= (T x) (T y)))
    ((E x y) (nop)))
 
  (define (equable-constant? x)
    (struct-case x
-     ((constant xv) (equable? xv))
-     ((known x t) (equable-constant? x))
-     (else #f)))
+     ((constant xv)
+      (equable? xv))
+     ((known expr)
+      (equable-constant? expr))
+     (else
+      #f)))
 
  (define-primop eqv? safe
    ;;Notice  that at  the Scheme  level the  EQV? predicate  is  the one

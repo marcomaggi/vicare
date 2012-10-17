@@ -1032,6 +1032,7 @@
     (div0-and-mod0				i v r ba)
     (dynamic-wind				i v r ba se)
     (eq?					i v r ba se)
+    (neq?					i v $language)
     (equal?					i v r ba se)
     (eqv?					i v r ba se)
     (error					i v r ba)

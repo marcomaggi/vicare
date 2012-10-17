@@ -7460,6 +7460,16 @@ cause undefined behaviour.
 @section Miscellaneous functions
 
 
+@defun neq? @vari{obj} @varii{obj}
+Compare the arguments as @func{eq?} would do, but return a negated
+result.  Equivalent (but more efficient) to:
+
+@example
+(not (eq? @vari{obj} @varii{obj}))
+@end example
+@end defun
+
+
 @defun void
 Return the void value.  It is the value returned by forms that do not
 return a meaningful value.
