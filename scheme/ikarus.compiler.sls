@@ -3615,9 +3615,13 @@
 
 (define pair-mask			7)
 (define pair-tag			1)
+
 (define disp-car			0)
 (define disp-cdr			wordsize)
-(define pair-size			(* 2 wordsize))
+(define pair-size			(fx* 2 wordsize))
+
+(define off-car				(fx- disp-car pair-tag))
+(define off-cdr				(fx- disp-cdr pair-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; flonums

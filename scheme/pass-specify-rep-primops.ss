@@ -463,81 +463,88 @@
  (define-primop cons safe
    ((V a d)
     (with-tmp ((t (prm 'alloc (K pair-size) (K pair-tag))))
-      (prm 'mset t (K (- disp-car pair-tag)) (T a))
-      (prm 'mset t (K (- disp-cdr pair-tag)) (T d))
+      (prm 'mset t (K off-car) (T a))
+      (prm 'mset t (K off-cdr) (T d))
       t))
    ((P a d) (K #t))
    ((E a d) (prm 'nop)))
 
  (define-primop $car unsafe
-   ((V x) (prm 'mref  (T x) (K (- disp-car pair-tag))))
+   ((V x) (prm 'mref  (T x) (K off-car)))
    ((E x) (nop)))
 
  (define-primop $cdr unsafe
-   ((V x) (prm 'mref  (T x) (K (- disp-cdr pair-tag))))
+   ((V x) (prm 'mref  (T x) (K off-cdr)))
    ((E x) (nop)))
 
  (define-primop $set-car! unsafe
    ((E x v)
-    (with-tmp ((x (T x)))
-      (prm 'mset x (K (- disp-car pair-tag)) (T v))
-      (smart-dirty-vector-set x v))))
+    (with-tmp ((x^ (T x)))
+      (prm 'mset x^ (K off-car) (T v))
+      (smart-dirty-vector-set x^ v))))
 
  (define-primop $set-cdr! unsafe
    ((E x v)
-    (with-tmp ((x (T x)))
-      (prm 'mset x (K (- disp-cdr pair-tag)) (T v))
-      (smart-dirty-vector-set x v))))
+    (with-tmp ((x^ (T x)))
+      (prm 'mset x^ (K off-cdr) (T v))
+      (smart-dirty-vector-set x^ v))))
 
  (define (assert-pair x)
+   ;;X must be a struct instance representing recordized code.
+   ;;
    (struct-case x
-     ((known x t)
-      (case (T:pair? t)
-	((yes) (record-optimization 'assert-pair x) (nop))
-	((no)  (interrupt))
-	(else  (assert-pair x))))
+     ((known expr type)
+      (case-symbols (T:pair? type)
+	((yes)
+	 (record-optimization 'assert-pair expr) (nop))
+	((no)
+	 (interrupt))
+	(else
+	 (assert-pair expr))))
      (else
       (interrupt-unless (tag-test x pair-mask pair-tag)))))
 
  (define-primop car safe
    ((V x)
-    (with-tmp ((x (T x)))
-      (assert-pair x)
-      (prm 'mref x (K (- disp-car pair-tag)))))
-   ((E x) (assert-pair (T x))))
+    (with-tmp ((x^ (T x)))
+      (assert-pair x^)
+      (prm 'mref x^ (K off-car))))
+   ((E x)
+    (assert-pair (T x))))
 
  (define-primop cdr safe
    ((V x)
-    (with-tmp ((x (T x)))
-      (assert-pair x)
-      (prm 'mref x (K (- disp-cdr pair-tag)))))
-   ((E x) (assert-pair (T x))))
+    (with-tmp ((x^ (T x)))
+      (assert-pair x^)
+      (prm 'mref x^ (K off-cdr))))
+   ((E x)
+    (assert-pair (T x))))
 
  (define-primop set-car! safe
    ((E x v)
-    (with-tmp ((x (T x)))
-      (assert-pair x)
-      (prm 'mset x (K (- disp-car pair-tag)) (T v))
-      (smart-dirty-vector-set x v))))
+    (with-tmp ((x^ (T x)))
+      (assert-pair x^)
+      (prm 'mset x^ (K off-car) (T v))
+      (smart-dirty-vector-set x^ v))))
 
  (define-primop set-cdr! safe
    ((E x v)
-    (with-tmp ((x (T x)))
-      (assert-pair x)
-      (prm 'mset x (K (- disp-cdr pair-tag)) (T v))
-      (smart-dirty-vector-set x v))))
-
+    (with-tmp ((x^ (T x)))
+      (assert-pair x^)
+      (prm 'mset x^ (K off-cdr) (T v))
+      (smart-dirty-vector-set x^ v))))
 
  (define (expand-cxr val ls)
-   (cond
-    ((null? ls) (T val))
-    (else
-     (with-tmp ((x (expand-cxr val (cdr ls))))
-       (assert-pair x)
-       (prm 'mref x
-	    (case (car ls)
-	      ((a)  (K (- disp-car pair-tag)))
-	      (else (K (- disp-cdr pair-tag)))))))))
+   (if (null? ls)
+       (T val)
+     (with-tmp ((x^ (expand-cxr val ($cdr ls))))
+       (assert-pair x^)
+       (prm 'mref x^
+	    (case ($car ls)
+	      ((a)
+	       (K off-car))
+	      (else
+	       (K off-cdr)))))))
 
  (define-primop caar   safe ((V x) (expand-cxr x '(a a))))
  (define-primop cadr   safe ((V x) (expand-cxr x '(a d))))
@@ -574,7 +581,7 @@
    ((V . arg*)
     (let ((n (length arg*)) (t* (map T arg*)))
       (with-tmp ((v (prm 'alloc (K (align (* n pair-size))) (K pair-tag))))
-	(prm 'mset v (K (- disp-car pair-tag)) (car t*))
+	(prm 'mset v (K off-car) (car t*))
 	(prm 'mset v
 	     (K (- (+ disp-cdr (* (sub1 n) pair-size)) pair-tag))
 	     (K nil))
@@ -583,7 +590,7 @@
 	   ((null? t*) v)
 	   (else
 	    (with-tmp ((tmp (prm 'int+ v (K i))))
-	      (prm 'mset tmp (K (- disp-car pair-tag)) (car t*))
+	      (prm 'mset tmp (K off-car) (car t*))
 	      (prm 'mset tmp (K (+ disp-cdr (- pair-size) (- pair-tag))) tmp)
 	      (f (cdr t*) (+ i pair-size)))))))))
    ((P . arg*) (K #t))
@@ -595,15 +602,15 @@
    ((V a . a*)
     (let ((t* (map T a*)) (n (length a*)))
       (with-tmp ((v (prm 'alloc (K (* n pair-size)) (K pair-tag))))
-	(prm 'mset v (K (- disp-car pair-tag)) (T a))
+	(prm 'mset v (K off-car) (T a))
 	(let f ((t* t*) (i pair-size))
 	  (cond
 	   ((null? (cdr t*))
 	    (seq* (prm 'mset v (K (- i disp-cdr pair-tag)) (car t*)) v))
 	   (else
 	    (with-tmp ((tmp (prm 'int+ v (K i))))
-	      (prm 'mset tmp (K (- disp-car pair-tag)) (car t*))
-	      (prm 'mset tmp (K (- (- disp-cdr pair-tag) pair-size)) tmp)
+	      (prm 'mset tmp (K off-car) (car t*))
+	      (prm 'mset tmp (K (- off-cdr pair-size)) tmp)
 	      (f (cdr t*) (+ i pair-size)))))))))
    ((P) (interrupt))
    ((P x) (P x))
