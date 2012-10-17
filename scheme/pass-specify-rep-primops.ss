@@ -843,6 +843,12 @@
    ((E x)
     (nop)))
 
+ (define-primop $symbol-proc unsafe
+   ((V x)
+    (prm 'mref (T x) (K off-symbol-record-proc)))
+   ((E x)
+    (nop)))
+
  (define-primop $set-symbol-value! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))

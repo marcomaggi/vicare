@@ -809,6 +809,7 @@
     ($make-symbol				$symbols)
     ($symbol-unique-string			$symbols)
     ($symbol-value				$symbols)
+    ($symbol-proc				$symbols)
     ($symbol-string				$symbols)
     ($symbol-plist				$symbols)
     ($set-symbol-value!				$symbols)

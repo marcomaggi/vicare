@@ -15356,7 +15356,6 @@ Accessors for the fields of @var{sym}.
 @deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
 @deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
 @deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
-@deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
 Mutators for the fields of @var{sym}.
 @end deffn
 
@@ -15375,6 +15374,12 @@ Top level bindings in compiled Scheme code are represented by gensyms;
 the value of a top level binding is stored in the @code{value} field of
 a gensym memory block.
 @end itemize
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-proc @var{sym}
+@deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
+Accessor and mutator for the field @code{proc}.
 @end deffn
 
 
