@@ -7470,6 +7470,13 @@ result.  Equivalent (but more efficient) to:
 @end defun
 
 
+@defun immediate? @var{obj}
+Return true if @var{obj} is an immediate object: an object contained in
+a single machine word.  Compound objects (like lists and vectors) are
+@strong{not} immediate.
+@end defun
+
+
 @defun void
 Return the void value.  It is the value returned by forms that do not
 return a meaningful value.

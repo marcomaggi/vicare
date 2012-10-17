@@ -186,36 +186,42 @@
 
 (section ;;; simple objects
 
- ;;The base  RTD of  all the struct  types is stored  in the  C language
- ;;structure PCB.
- ;;
  (define-primop base-rtd safe
+   ;;The base RTD  of all the struct  types is stored in  the C language
+   ;;structure PCB.
+   ;;
    ((V) (prm 'mref pcr (K pcb-base-rtd)))
    ((P) (K #t))
    ((E) (prm 'nop)))
 
- ;;This is the definition of the  Scheme function VOID.  It just returns
- ;;the void object, which is true.
- ;;
  (define-primop void safe
+   ;;This  is the  definition  of  the Scheme  function  VOID.  It  just
+   ;;returns the void object, which is true.
+   ;;
    ((V) (K void-object))
    ((P) (K #t))
    ((E) (prm 'nop)))
 
- ;;This is the definition of the primitive operation NOP.
- ;;
  (define-primop nop unsafe
+   ;;This is the definition of the primitive operation NOP.
+   ;;
    ((E) (prm 'nop)))
 
  (define-primop neq? unsafe
+   ;;This is the implementation of the Scheme function NEQ?.
+   ;;
    ((P x y) (prm '!= (T x) (T y)))
    ((E x y) (nop)))
 
- ;;This is the implementation of the Scheme function EQ?.
- ;;
  (define-primop eq? safe
+   ;;This is the implementation of the Scheme function EQ?.
+   ;;
    ((P x y) (prm '= (T x) (T y)))
    ((E x y) (nop)))
+
+ (define (equable? x)
+   (or (fx? x)
+       (not (number? x))))
 
  (define (equable-constant? x)
    (struct-case x
@@ -227,8 +233,11 @@
       #f)))
 
  (define-primop eqv? safe
-   ;;Notice  that at  the Scheme  level the  EQV? predicate  is  the one
+   ;;This is the implementation of the primitive operation EQV?.
+   ;;
+   ;;Notice  that at  the Scheme  level the  EQV? predicate  is the  one
    ;;exported by (ikarus predicates).
+   ;;
    ((P x y)
     (if (or (equable-constant? x)
 	    (equable-constant? y))
@@ -237,27 +246,40 @@
    ((E x y) (nop)))
 
  (define-primop null? safe
+   ;;This is the implementation of the Scheme function NULL?.
+   ;;
    ((P x) (prm '= (T x) (K nil)))
    ((E x) (nop)))
 
  (define-primop not safe
+   ;;This is the implementation of the Scheme function NOT.
+   ;;
    ((P x) (prm '= (T x) (K bool-f)))
    ((E x) (nop)))
 
  (define-primop eof-object safe
+   ;;This is the implementation of the Scheme function EOF-OBJECT.
+   ;;
    ((V) (K eof))
    ((P) (K #t))
    ((E) (nop)))
 
  (define-primop eof-object? safe
+   ;;This is the implementation of the Scheme function EOF-OBJECT?.
+   ;;
    ((P x) (prm '= (T x) (K eof)))
    ((E x) (nop)))
 
  (define-primop $unbound-object? unsafe
+   ;;This   is   the   implementation   of   the   primitive   operation
+   ;;$UNBOUND-OBJECT?.
+   ;;
    ((P x) (prm '= (T x) (K unbound)))
    ((E x) (nop)))
 
  (define-primop immediate? safe
+   ;;This is the implementation of the Scheme function IMMEDIATE?.
+   ;;
    ((P x)
     (make-conditional
 	(tag-test (T x) fx-mask fx-tag)
@@ -266,19 +288,40 @@
    ((E x) (nop)))
 
  (define-primop boolean? safe
+   ;;This is the implementation of the Scheme function BOOLEAN?.
+   ;;
    ((P x)
     (tag-test (T x) bool-mask bool-tag))
    ((E x) (nop)))
 
  (define-primop bwp-object? safe
+   ;;This is the implementation of the Scheme function BWP-OBJECT?.
+   ;;
    ((P x) (prm '= (T x) (K bwp-object)))
    ((E x) (nop)))
 
  (define-primop $forward-ptr? unsafe
-   ((P x) (prm '= (T x) (K -1)))
-   ((E x) (nop)))
+   ;;Primitive operation.  When a Scheme  object's memory block is moved
+   ;;by the garbage collector: the first word of the old memory block is
+   ;;overwritten with a  special value, the "forward  pointer".  See the
+   ;;garbage collector for details.
+   ;;
+   ;;This predicate evaluates to true if X is such a machine word.
+   ;;
+   ;;This  definition  must  be  kept   in  sync  with  the  C  language
+   ;;preprocessor constant IK_FORWARD_PTR.
+   ;;
+   ;;FIXME  At present  this operation  is  not exported  by any  Scheme
+   ;;library, should it be?  (Marco Maggi; Oct 17, 2012)
+   ;;
+   ((P x)
+    (prm '= (T x) (K -1)))
+   ((E x)
+    (nop)))
 
  (define-primop pointer-value unsafe
+   ;;FIXME What is this for?  (Marco Maggi; Oct 17, 2012)
+   ;;
    ((V x) (prm 'logand
 	       (prm 'srl (T x) (K 1))
 	       (K (* -1 fx-scale))))
@@ -286,34 +329,42 @@
    ((E x) (nop)))
 
  (define-primop $arg-list unsafe
+   ;;Return  the  value  of  the  field "arg_list"  in  the  C  language
+   ;;structure PCB.
+   ;;
    ((V) (prm 'mref pcr (K pcb-arg-list)))
    ((P) (K #t))
    ((E) (nop)))
 
  (define-primop $collect-key unsafe
-   ((V) (prm 'mref pcr (K pcb-collect-key)))
+   ;;Return  the value  of the  field  "collect_key" in  the C  language
+   ;;structure PCB.
+   ;;
+   ((V)   (prm 'mref pcr (K pcb-collect-key)))
    ((E x) (prm 'mset pcr (K pcb-collect-key) (T x))))
 
  (define-primop $memq safe
    ((P x ls)
     (struct-case ls
       ((constant ls)
-       (cond
-	((not (list? ls)) (interrupt))
-	(else
-	 (with-tmp ((x (T x)))
-	   (let f ((ls ls))
-	     (cond
-	      ((null? ls) (K #f))
-	      ((null? (cdr ls)) (prm '= x (T (K (car ls)))))
-	      (else
-	       (make-conditional
-		   (prm '= x (T (K (car ls))))
-		 (K #t)
-		 (f (cdr ls))))))))))
+       (cond ((not (list? ls))
+	      (interrupt))
+	     (else
+	      (with-tmp ((x (T x)))
+		(let f ((ls ls))
+		  (cond ((null? ls)
+			 (K #f))
+			((null? (cdr ls))
+			 (prm '= x (T (K (car ls)))))
+			(else
+			 (make-conditional
+			     (prm '= x (T (K (car ls))))
+			   (K #t)
+			   (f (cdr ls))))))))))
       ((known expr t)
        (cogen-pred-$memq x expr))
-      (else (interrupt))))
+      (else
+       (interrupt))))
    ((V x ls)
     (struct-case ls
       ((constant ls)
@@ -346,9 +397,6 @@
       ((known expr t)
        (cogen-effect-memq x expr))
       (else (interrupt)))))
-
- (define (equable? x)
-   (or (fx? x) (not (number? x))))
 
  (define-primop memv safe
    ((V x ls)

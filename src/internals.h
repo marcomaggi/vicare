@@ -145,7 +145,10 @@
 
 #define IK_GUARDIANS_GENERATION_NUMBER	0
 
+/* This  definition must  be  kept  in sync  with  the primitive  Scheme
+   operation $FORWARD-PTR? */
 #define IK_FORWARD_PTR		((ikptr)-1)
+
 #define IK_MOST_BYTES_IN_MINOR	0x10000000
 
 #define old_gen_mask		0x00000007
