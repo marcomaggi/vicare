@@ -589,7 +589,7 @@
 
     (define (E-known x)
       (struct-case x
-	((known expr type)
+	((known expr)
 	 (E expr))
 	(else
 	 (E x))))
@@ -599,7 +599,7 @@
       ;;wrapped into a struct instance of type KNOWN.
       ;;
       (struct-case x
-	((known expr type)
+	((known expr)
 	 (%known-primref? expr))
 	((primref)
 	 #t)
@@ -741,7 +741,7 @@
 	  ((forcall op arg*)
 	   (ormap %non-tail? arg*))
 
-	  ((known expr type)
+	  ((known expr)
 	   (%non-tail? expr))
 
 	  (else
@@ -749,8 +749,8 @@
 
       (define (%non-tail?-known x)
 	(struct-case x
-	  ((known x t)
-	   (%non-tail? x))
+	  ((known expr)
+	   (%non-tail? expr))
 	  (else
 	   (%non-tail? x))))
 
@@ -832,7 +832,8 @@
        (do-bind lhs* rhs* (S body k)))
       ((seq e0 e1)
        (make-seq (E e0) (S e1 k)))
-      ((known x) (S x k))
+      ((known expr)
+       (S expr k))
       (else
        (cond
          ((or (constant? x) (symbol? x)) (k x))
@@ -1048,7 +1049,8 @@
        (make-shortcut
           (V d body)
           (V d handler)))
-      ((known x) (V d x))
+      ((known expr)
+       (V d expr))
       (else
        (if (symbol? x)
            (make-set d x)
@@ -1226,7 +1228,8 @@
       ((forcall) (VT x))
       ((shortcut body handler)
        (make-shortcut (Tail body) (Tail handler)))
-      ((known x) (Tail x))
+      ((known expr)
+       (Tail expr))
       (else (error who "invalid tail" x))))
   ;;;
   (define (formals-locations args)

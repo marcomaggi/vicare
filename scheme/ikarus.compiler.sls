@@ -2415,10 +2415,10 @@
 		     cp free name))
 
       ((primcall rator rand*)
-       (make-primcall rator (map A rand*)))
+       (make-primcall rator (map E-known rand*)))
 
       ((funcall rator rand*)
-       (make-funcall (A rator) (map A rand*)))
+       (make-funcall (E-known rator) (map E-known rand*)))
 
       ((forcall rator rand*)
        (make-forcall rator (map E rand*)))
@@ -2455,10 +2455,10 @@
       ($set-prelex-operand! prel v)
       v))
 
-  (define (A x)
+  (define (E-known x)
     (struct-case x
-      ((known x t)
-       (make-known (E x) t))
+      ((known expr type)
+       (make-known (E expr) type))
       (else
        (E x))))
 
@@ -2575,7 +2575,7 @@
        (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (make-funcall (A rator) ($map/stx A rand*)))
+       (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       ((mvcall p c)
        (make-mvcall (E p) (E c)))
@@ -2606,10 +2606,10 @@
         (E body)
       (make-fix lhs* ($map/stx CLambda rhs*) (E body))))
 
-  (define (A x)
+  (define (E-known x)
     (struct-case x
-      ((known x t)
-       (make-known (E x) t))
+      ((known expr type)
+       (make-known (E expr) type))
       (else
        (E x))))
 
@@ -2839,7 +2839,7 @@
 
     (define (strip x)
       (struct-case x
-	((known expr type)
+	((known expr)
 	 expr)
 	(else x)))
 
@@ -2872,7 +2872,7 @@
 
   (define (E-unpack-known x)
     (struct-case x
-      ((known expr type)
+      ((known expr)
        (E expr))
       (else
        (E x))))
@@ -3042,15 +3042,15 @@
 
   (define (E-known x)
     (struct-case x
-      ((known x t)
-       (make-known (E x) t))
+      ((known expr type)
+       (make-known (E expr) type))
       (else
        (E x))))
 
   (define (M-known x)
     (struct-case x
-      ((known x t)
-       (make-known (M x) t))
+      ((known expr type)
+       (make-known (M expr) type))
       (else
        (M x))))
 
@@ -4394,8 +4394,8 @@
     ((constant c)
      `(quote ,c))
 
-    ((known x t)
-     `(known ,(unparse x) ,(T:description t)))
+    ((known expr type)
+     `(known ,(unparse expr) ,(T:description type)))
 
     ((code-loc x)
      `(code-loc ,x))
@@ -4643,8 +4643,8 @@
       ((primref x)
        x)
 
-      ((known x t)
-       `(known ,(E x) ,(T:description t)))
+      ((known expr type)
+       `(known ,(E expr) ,(T:description type)))
 
       ((conditional test conseq altern)
        (cons 'if (map E (list test conseq altern))))

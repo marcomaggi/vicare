@@ -87,12 +87,12 @@
       (if (or (fx? t) (immediate? t))
 	  (prm 'nop)
 	(dirty-vector-set addr)))
-     ((known x t)
-      (cond ((eq? (T:immediate? t) 'yes)
-	     (record-optimization 'smart-dirty-vec t)
+     ((known expr type)
+      (cond ((eq? (T:immediate? type) 'yes)
+	     (record-optimization 'smart-dirty-vec type)
 	     (nop))
 	    (else
-	     (smart-dirty-vector-set addr x))))
+	     (smart-dirty-vector-set addr expr))))
      (else
       (dirty-vector-set addr))))
 
@@ -415,7 +415,7 @@
 		(andmap equable? lsv))
 	   (cogen-value-$memq x ls)
 	 (interrupt)))
-      ((known expr t)
+      ((known expr)
        (cogen-value-memv x expr))
       (else
        (interrupt))))
@@ -426,7 +426,7 @@
 		(andmap equable? lsv))
 	   (cogen-pred-$memq x ls)
 	 (interrupt)))
-      ((known expr t)
+      ((known expr)
        (cogen-pred-memv x expr))
       (else
        (interrupt))))
@@ -436,7 +436,7 @@
        (if (list? val)
 	   (nop)
 	 (interrupt)))
-      ((known expr t)
+      ((known expr)
        (cogen-effect-memv x expr))
       (else
        (interrupt)))))
@@ -699,7 +699,7 @@
 	       (K off-vector-length)
 	       (K (* i fx-scale)))
 	  v)))
-     ((known expr t)
+     ((known expr)
       (cogen-value-$make-vector expr))
      (else
       (with-tmp ((alen (align-code (T len) disp-vector-data)))
@@ -723,7 +723,7 @@
 		(fx>= i 0)
 		(prm 'mref (T x)
 		     (K (+ (* i wordsize) off-vector-data)))))
-	  ((known i t)
+	  ((known i)
 	   (cogen-value-$vector-ref x i))
 	  (else #f))
 	;;Notice  that I  is not  multiplied  by the  WORDSIZE; this  is
@@ -846,7 +846,7 @@
        (unless (fx? i)
 	 (interrupt))
        (prm 'mref (T x) (K (+ off-closure-data (* i wordsize)))))
-      ((known expr t)
+      ((known expr)
        (cogen-value-$cpref x expr))
       (else
        (interrupt)))))
@@ -1091,13 +1091,15 @@
       ((constant a)
        (unless (fx? a) (interrupt))
        (prm 'int* (T b) (K a)))
-      ((known a t) (cogen-value-$fx* a b))
+      ((known a)
+       (cogen-value-$fx* a b))
       (else
        (struct-case b
 	 ((constant b)
 	  (unless (fx? b) (interrupt))
 	  (prm 'int* (T a) (K b)))
-	 ((known b t) (cogen-value-$fx* a b))
+	 ((known b)
+	  (cogen-value-$fx* a b))
 	 (else
 	  (prm 'int* (T a) (prm 'sra (T b) (K fx-shift))))))))
    ((P x y) (K #t))
@@ -1134,7 +1136,8 @@
       ((constant i)
        (unless (fx? i) (interrupt))
        (prm 'sll (T x) (K i)))
-      ((known i t) (cogen-value-$fxsll x i))
+      ((known i)
+       (cogen-value-$fxsll x i))
       (else
        (prm 'sll (T x) (prm 'sra (T i) (K fx-shift))))))
    ((P x i) (K #t))
@@ -1151,7 +1154,8 @@
 			i
 		      (- (* wordsize 8) 1))))
 	    (K (* -1 fx-scale))))
-      ((known i t) (cogen-value-$fxsra x i))
+      ((known i)
+       (cogen-value-$fxsra x i))
       (else
        (with-tmp ((i (prm 'sra (T i) (K fx-shift))))
 	 (with-tmp ((i (make-conditional
@@ -1268,7 +1272,8 @@
 		      (K (+ i (- disp-bignum-data vector-tag))))
 		 (K 255))
 	    (K fx-shift)))
-      ((known i t) (cogen-value-$bignum-byte-ref s i))
+      ((known i)
+       (cogen-value-$bignum-byte-ref s i))
       (else
        (prm 'sll
 	    (prm 'srl ;;; FIXME: bref
@@ -1386,7 +1391,7 @@
 		      (K (+ (- 7 i) (- disp-flonum-data vector-tag))))
 		 (K 255))
 	    (K fx-shift)))
-      ((known expr t)
+      ((known expr)
        (cogen-value-$flonum-u8-ref s expr))
       (else (interrupt))))
    ((P s i) (K #t))
@@ -1412,7 +1417,7 @@
 	    (T x)
 	    (K (+ (- 7 i) (- disp-flonum-data vector-tag)))
 	    (prm 'sra (T v) (K fx-shift))))
-      ((known expr t)
+      ((known expr)
        (cogen-effect-$flonum-set! x expr v))
       (else (interrupt)))))
 
@@ -1746,7 +1751,8 @@
    (define (known-non-fixnum? x)
      (struct-case x
        ((constant i) (not (fx? i)))
-       ((known x t) (eq? (T:fixnum? t) 'no))
+       ((known x t)
+	(eq? (T:fixnum? t) 'no))
        (else #f)))
    (let-values (((fx* others) (partition known-fixnum? (cons a a*))))
      (let-values (((nfx* others) (partition known-non-fixnum?  others)))
@@ -1923,7 +1929,8 @@
 		(assert-fixnum b)
 		(prm 'int*/overflow a b)))
 	  (interrupt)))
-       ((known x t) (cogen-*-constant x b))
+       ((known x)
+	(cogen-*-constant x b))
        (else #f)))
    (or (cogen-*-constant a b)
        (cogen-*-constant b a)
@@ -2060,7 +2067,7 @@
 		 (K fx-shift)))))
 	(else
 	 (interrupt))))
-      ((known expr t)
+      ((known expr)
        (cogen-value-div x expr))
       (else (interrupt)))))
 
@@ -2082,7 +2089,8 @@
 		   (prm 'sra (T x) (K 1))
 		   (K (fxsll -1 fx-shift)))))
 	 (interrupt)))
-      ((known expr t) (cogen-value-quotient x expr))
+      ((known expr)
+       (cogen-value-quotient x expr))
       (else (interrupt)))))
 
  /section)
@@ -2131,7 +2139,7 @@
 			  (K vector-tag))))
 	 (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
 	 t))
-      ((known expr t)
+      ((known expr)
        (cogen-value-$make-struct rtd expr))
       (else
        (with-tmp ((ln (align-code len disp-struct-data)))
@@ -2240,12 +2248,14 @@
    (define (known-char? x)
      (struct-case x
        ((constant i) (char? i))
-       ((known x t) (eq? (T:char? t) 'yes))
+       ((known x t)
+	(eq? (T:char? t) 'yes))
        (else #f)))
    (define (known-non-char? x)
      (struct-case x
        ((constant i) (not (char? i)))
-       ((known x t) (eq? (T:char? t) 'no))
+       ((known x t)
+	(eq? (T:char? t) 'no))
        (else #f)))
    (let-values (((fx* others) (partition known-char? (cons a a*))))
      (let-values (((nfx* others) (partition known-non-char?  others)))
@@ -2351,7 +2361,7 @@
 	      (K (+ n (- disp-bytevector-data bytevector-tag)))
 	      (K 0))
 	 s))
-      ((known expr t)
+      ((known expr)
        (cogen-value-$make-bytevector expr))
       (else
        (with-tmp ((s (prm 'alloc

@@ -774,7 +774,7 @@
   ;;
   (define (V x)
     (struct-case x
-      ((known expr type)
+      ((known expr)
        (unknown-V expr))
       (else
        (unknown-V x))))
@@ -893,7 +893,7 @@
     ((forcall)
      (prm '!= (V x) (V (K #f))))
 
-    ((known expr type)
+    ((known expr)
      ;;FIXME.  Suboptimal.  (Abdulaziz Ghuloum)
      (P expr))
 
@@ -952,7 +952,7 @@
     ((jmpcall label rator arg*)
      (make-jmpcall label (V rator) (map V arg*)))
 
-    ((known expr type)
+    ((known expr)
      ;;FIXME Suboptimal.  (Abdulaziz Ghuloum)
      (E expr))
 
@@ -1013,7 +1013,7 @@
 
   (define (%remove-tag x)
     (struct-case x
-      ((known expr type)
+      ((known expr)
        expr)
       (else
        x)))
@@ -1082,7 +1082,7 @@
     (struct-case arg
       ((constant val)
        (and (symbol? val) val))
-      ((known expr type)
+      ((known expr)
        (%recordized-symbol expr))
       (else
        #f)))
