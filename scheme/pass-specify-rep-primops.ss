@@ -594,29 +594,29 @@
    ((V)		;this is the case of: (list)
     (K nil))
    ((V . arg*)	;this is the case of: (list 1 2 3)
-    (let ((n  (length arg*))
+    (let ((len   (length arg*))	;number of pairs
 	  (arg*^ (map T arg*)))
       ;;Allocate on the heap enough room for all the pairs.
       (with-tmp ((first-pair (prm 'alloc
-				  (K (align (* n pair-size)))
+				  (K (align (* len pair-size)))
 				  (K pair-tag))))
 	;;Store the first value in the car of the first pair.
 	(prm 'mset first-pair (K off-car) (car arg*^))
-	;;Store nil in the cdr of the first pair.
+	;;Store nil in the cdr of the last pair.
 	(prm 'mset first-pair
-	     (K (+ off-cdr (* (sub1 n) pair-size)))
+	     (K (+ off-cdr (* (sub1 len) pair-size)))
 	     (K nil))
-	(let loop ((arg*^ (cdr arg*^))
-		   (idx   pair-size))	;offset of the next pair
+	(let loop ((arg*^  (cdr arg*^))
+		   (offset pair-size)) ;offset in bytes of the next pair
 	  (if (null? arg*^)
 	      first-pair
-	    (with-tmp ((tmp (prm 'int+ first-pair (K idx))))
+	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
 	      ;;Store a value in the car of this pair.
 	      (prm 'mset tmp (K off-car) (car arg*^))
 	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
 	      ;;previous pair.
-	      (prm 'mset tmp (K (- off-cdr pair-size)) tmp)
-	      (loop (cdr arg*^) (+ idx pair-size)))))
+	      (prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
+	      (loop (cdr arg*^) (+ offset pair-size)))))
 	)))
    ((P . arg*)
     (K #t))
@@ -624,26 +624,43 @@
     (nop)))
 
  (define-primop cons* safe
-   ((V) (interrupt))
-   ((V x) (T x))
+   ((V)		;this is the invalid case: (cons*)
+    (interrupt))
+   ((V x)	;this is the case: (cons* '(1 2 3)) = (1 2 3)
+    (T x))
    ((V a . a*)
-    (let ((t* (map T a*)) (n (length a*)))
-      (with-tmp ((v (prm 'alloc (K (* n pair-size)) (K pair-tag))))
-	(prm 'mset v (K off-car) (T a))
-	(let f ((t* t*) (i pair-size))
-	  (cond
-	   ((null? (cdr t*))
-	    (seq* (prm 'mset v (K (- i disp-cdr pair-tag)) (car t*)) v))
-	   (else
-	    (with-tmp ((tmp (prm 'int+ v (K i))))
-	      (prm 'mset tmp (K off-car) (car t*))
-	      (prm 'mset tmp (K (- off-cdr pair-size)) tmp)
-	      (f (cdr t*) (+ i pair-size)))))))))
-   ((P) (interrupt))
-   ((P x) (P x))
-   ((P a . a*) (K #t))
-   ((E) (interrupt))
-   ((E . a*) (nop)))
+    (let ((arg*^ (map T a*))
+	  (len   (length a*)))	;number of pairs
+      ;;Allocate on the heap enough room for all the pairs.
+      (with-tmp ((first-pair (prm 'alloc
+				  (K (* len pair-size))
+				  (K pair-tag))))
+	(prm 'mset first-pair (K off-car) (T a))
+	(let loop ((arg*^  arg*^)
+		   (offset pair-size)) ;offset in bytes of the next pair
+	  (if (null? (cdr arg*^))
+	      ;;Store the  last argument  in the cdr  of the  last pair;
+	      ;;return the first pair.
+	      (seq* (prm 'mset first-pair (K (- offset disp-cdr pair-tag)) (car arg*^))
+		    first-pair)
+	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
+	      ;;Store a value in the car of this pair.
+	      (prm 'mset tmp (K off-car) (car arg*^))
+	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
+	      ;;previous pair.
+	      (prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
+	      (loop (cdr arg*^) (+ offset pair-size)))))
+	)))
+   ((P)
+    (interrupt))
+   ((P x)
+    (P x))
+   ((P a . a*)
+    (K #t))
+   ((E)
+    (interrupt))
+   ((E . a*)
+    (nop)))
 
  /section)
 
