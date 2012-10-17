@@ -646,7 +646,7 @@
 	      ;;Notice  that, here,  OFFSET  references  the first  byte
 	      ;;*after* the last pair.
 	      (seq* (prm 'mset first-pair
-			 (K (- (- offset disp-cdr) pair-tag))
+			 (K (+ (- offset pair-size) off-cdr))
 			 (car arg*^))
 		    first-pair)
 	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
