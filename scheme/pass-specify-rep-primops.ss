@@ -631,7 +631,8 @@
    ((V a . a*)
     (let ((arg*^ (map T a*))
 	  (len   (length a*)))	;number of pairs
-      ;;Allocate on the heap enough room for all the pairs.
+      ;;Allocate on the heap enough room for all the pairs.  Notice that
+      ;;a multiple of the PAIR-SIZE is automatically aligned.
       (with-tmp ((first-pair (prm 'alloc
 				  (K (* len pair-size))
 				  (K pair-tag))))
@@ -639,9 +640,14 @@
 	(let loop ((arg*^  arg*^)
 		   (offset pair-size)) ;offset in bytes of the next pair
 	  (if (null? (cdr arg*^))
-	      ;;Store the  last argument  in the cdr  of the  last pair;
-	      ;;return the first pair.
-	      (seq* (prm 'mset first-pair (K (- offset disp-cdr pair-tag)) (car arg*^))
+	      ;;Store the last argument (which  should be a list) in the
+	      ;;cdr of the last pair; return the first pair.
+	      ;;
+	      ;;Notice  that, here,  OFFSET  references  the first  byte
+	      ;;*after* the last pair.
+	      (seq* (prm 'mset first-pair
+			 (K (- (- offset disp-cdr) pair-tag))
+			 (car arg*^))
 		    first-pair)
 	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
 	      ;;Store a value in the car of this pair.
