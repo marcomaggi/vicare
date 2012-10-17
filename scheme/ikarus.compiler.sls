@@ -2107,8 +2107,8 @@
   body)
 |#
 
-(include "ikarus.compiler.optimize-letrec.ss")
-(include "ikarus.compiler.source-optimizer.ss")
+(include/verbose "ikarus.compiler.optimize-letrec.ss")
+(include/verbose "ikarus.compiler.source-optimizer.ss")
 
 
 (module (rewrite-references-and-assignments)
@@ -2355,7 +2355,7 @@
 
 ;;;; some other external code
 
-(include "ikarus.compiler.tag-annotation-analysis.ss")
+(include/verbose "ikarus.compiler.tag-annotation-analysis.ss")
 
 
 (module (introduce-vars)
@@ -4383,7 +4383,7 @@
 
 ;;;; external code for actual code generation
 
-(include "ikarus.compiler.altcogen.ss")
+(include/verbose "ikarus.compiler.altcogen.ss")
 
 
 (define (unparse x)

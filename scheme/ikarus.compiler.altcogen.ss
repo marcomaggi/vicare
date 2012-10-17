@@ -763,7 +763,7 @@
 
 ;;;; some external code
 
-(include "pass-specify-rep.ss")
+(include/verbose "pass-specify-rep.ss")
 
 
 ;;;; some CPU registers stuff
