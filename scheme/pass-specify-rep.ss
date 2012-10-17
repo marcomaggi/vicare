@@ -1038,7 +1038,6 @@
 	      (current-error-port))
        (cond ((and (eq? op 'top-level-value)
 		   (null? ($cdr args))
-		   #;(= (length args) 1)
 		   (%recordized-symbol ($car args)))
 	      => (lambda (sym)
 		   (reset-symbol-proc! sym)

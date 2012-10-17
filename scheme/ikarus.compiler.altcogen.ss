@@ -184,8 +184,9 @@
       ;;an appropriate struct instance of type PRIMCALL.
       ;;
       (struct-case op
-	((known expr type)
-	 (struct-case expr
+	((known expr)
+	 (mkfuncall expr arg*)
+	 #;(struct-case expr
 	   ((primref name)
 	    (if (%primitive-operation? name)
 		(make-primcall name arg*)
@@ -200,6 +201,8 @@
 
 	(else
 	 (make-funcall op arg*))))
+
+;;#[funcall #[primref ?name] (?arg ...)]
 
     (define (%primitive-operation? x)
       ;;Import PRIMOP?  from a module defined  in "pass-specify-rep.ss".
