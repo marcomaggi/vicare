@@ -917,23 +917,27 @@
    ;;
    ((V len)
     (struct-case len
-      ((constant i)
-       (if (and (fx? i) #f)
+      ((constant len.val)
+       ;;LEN.VAL   is  an   exact  integer   (possibly  not   a  fixnum)
+       ;;representing the binary representation of the number of slots.
+       (if (and (fx? len.val) #f)
 	   (interrupt)
-	 (with-tmp ((v (prm 'alloc
-			    (K (align (fx+ (fx* i wordsize) disp-vector-data)))
-			    (K vector-tag))))
-	   (prm 'mset v
+	 (with-tmp ((vec (prm 'alloc
+			      (K (align (+ (* len.val wordsize) disp-vector-data)))
+			      (K vector-tag))))
+	   (prm 'mset vec
 		(K off-vector-length)
-		(K (fx* i fx-scale)))
-	   v)))
-      ((known expr)
-       (cogen-value-$make-vector expr))
+		(K (* len.val fx-scale)))
+	   vec)))
+      ((known len.expr)
+       (cogen-value-$make-vector len.expr))
       (else
-       (with-tmp ((alen (align-code (T len) disp-vector-data)))
-	 (with-tmp ((vec (prm 'alloc alen (K vector-tag))))
-	   (prm 'mset vec (K off-vector-length) (T len))
-	   vec)))))
+       ;;Here LEN is recordized code  which, when evaluated, must return
+       ;;a finxum representing the number of slots.
+       (with-tmp* ((alen (align-code (T len) disp-vector-data))
+		   (vec  (prm 'alloc alen (K vector-tag))))
+	 (prm 'mset vec (K off-vector-length) (T len))
+	 vec))))
    ((P len)
     (K #t))
    ((E len)
@@ -947,69 +951,75 @@
       vec)))
 
  (define-primop $vector-ref unsafe
-   ((V x i)
-    (or (struct-case i
-	  ((constant i)
-	   (and (fx? i)
-		(fx>= i 0)
-		(prm 'mref (T x) (K (fx+ (fx* i wordsize) off-vector-data)))))
-	  ((known i)
-	   (cogen-value-$vector-ref x i))
+   ((V vec idx)
+    (or (struct-case idx
+	  ((constant idx.val)
+	   ;;LEN.VAL  is  an  exact  integer  (possibly  not  a  fixnum)
+	   ;;representing  the binary  representation of  the number  of
+	   ;;slots.
+	   (and (fx? idx.val)
+		(fx>= idx.val 0)
+		(prm 'mref (T vec) (K (+ (* idx.val wordsize) off-vector-data)))))
+	  ((known idx.expr)
+	   (cogen-value-$vector-ref vec idx.expr))
 	  (else
 	   #f))
-	;;Notice  that I  is not  multiplied  by the  WORDSIZE; this  is
-	;;because I is a fixnum representing  the index of the I-th slot
-	;;in a vector; also, taken as a "long", it represents the offset
-	;;in bytes of the word in the I-th slot.
-	(prm 'mref (T x) (prm 'int+ (T i) (K off-vector-data)))))
-   ((E x i)
+	;;Notice that  IDX is  not multiplied by  the WORDSIZE;  this is
+	;;because  IDX is  recordized  code that,  once evaluated,  must
+	;;return a fixnum representing the index of the IDX-th slot in a
+	;;vector; also,  taken as  a "long",  such value  represents the
+	;;offset in bytes of the word in the IDX-th slot.
+	(prm 'mref (T vec) (prm 'int+ (T idx) (K off-vector-data)))))
+   ((E vec idx)
     (nop)))
 
  (define-primop $vector-length unsafe
-   ((V x)
-    (prm 'mref (T x) (K off-vector-length)))
-   ((E x)
-    (prm 'nop))
-   ((P x)
+   ((V vec)
+    (prm 'mref (T vec) (K off-vector-length)))
+   ((E vec)
+    (nop))
+   ((P vec)
     (K #t)))
 
  (define-primop vector-length safe
-   ((V x)
-    (struct-case x
-      ((known expr type)
-       (case-symbols (T:vector? type)
+   ((V vec)
+    (struct-case vec
+      ((known vec.expr vec.type)
+       (case-symbols (T:vector? vec.type)
 	 ((yes)
-	  (record-optimization 'vector-length expr)
-	  (cogen-value-$vector-length expr))
+	  (record-optimization 'vector-length vec.expr)
+	  (cogen-value-$vector-length vec.expr))
 	 ((no)
 	  (interrupt))
 	 (else
-	  (cogen-value-vector-length expr))))
+	  (cogen-value-vector-length vec.expr))))
       (else
        (multiple-forms-sequence
 	(interrupt-unless
-	 (tag-test (T x) vector-mask vector-tag))
-	(with-tmp ((t (cogen-value-$vector-length x)))
-	  (interrupt-unless-fixnum t)
-	  t)))))
-   ((E x)
-    (struct-case x
-      ((known expr type)
-       (case-symbols (T:vector? type)
+	 (tag-test (T vec) vector-mask vector-tag))
+	(with-tmp ((vec.len (cogen-value-$vector-length vec)))
+	  (interrupt-unless-fixnum vec.len)
+	  vec.len)))))
+   ((E vec)
+    (struct-case vec
+      ((known vec.expr vec.type)
+       (case-symbols (T:vector? vec.type)
 	 ((yes)
-	  (record-optimization 'vector-length expr) (nop))
+	  (record-optimization 'vector-length vec.expr)
+	  (nop))
 	 ((no)
 	  (interrupt))
 	 (else
-	  (cogen-effect-vector-length expr))))
+	  (cogen-effect-vector-length vec.expr))))
       (else
        (multiple-forms-sequence
-	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
-	(with-tmp ((vec.len (cogen-value-$vector-length x)))
+	(interrupt-unless
+	 (tag-test (T vec) vector-mask vector-tag))
+	(with-tmp ((vec.len (cogen-value-$vector-length vec)))
 	  (interrupt-unless-fixnum vec.len))))))
-   ((P x)
+   ((P vec)
     (multiple-forms-sequence
-     (cogen-effect-vector-length x)
+     (cogen-effect-vector-length vec)
      (K #t))))
 
  (define-primop vector-ref safe
@@ -1026,7 +1036,7 @@
       ((constant idx.val)
        (if (not (fx? idx.val))
 	   (interrupt)
-	 (mem-assign item (T vec) (fx+ (fx* idx.val wordsize) off-vector-data))))
+	 (mem-assign item (T vec) (+ (* idx.val wordsize) off-vector-data))))
       ((known idx.expr)
        (cogen-effect-$vector-set! vec idx.expr item))
       (else
@@ -1054,11 +1064,11 @@
     ;;initialise the items.
     ;;
     (with-tmp ((vec (prm 'alloc
-			 (K (align (fx+ disp-vector-data (fx* (length arg*) wordsize))))
+			 (K (align (fx+ disp-vector-data (* (length arg*) wordsize))))
 			 (K vector-tag))))
       (multiple-forms-sequence
        ;;Store the vector length in the first word.
-       (prm 'mset vec (K off-vector-length) (K (fx* (length arg*) wordsize)))
+       (prm 'mset vec (K off-vector-length) (K (* (length arg*) wordsize)))
        (let recur ((arg*^  (map T arg*))
 		   (offset off-vector-data))
 	 (if (null? arg*^)
@@ -3491,5 +3501,6 @@
 ;;;Local Variables:
 ;;;eval: (put 'make-conditional	'scheme-indent-function 2)
 ;;;eval: (put 'with-tmp		'scheme-indent-function 1)
+;;;eval: (put 'with-tmp*	'scheme-indent-function 1)
 ;;;eval: (put 'struct-case	'scheme-indent-function 1)
 ;;;End:

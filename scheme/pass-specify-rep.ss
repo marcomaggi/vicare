@@ -199,11 +199,12 @@
   #| end of module: with-interrupt-handler |# )
 
 
-(module (with-tmp)
+(module (with-tmp with-tmp*)
 
   (define-syntax with-tmp
     ;;Do what is  needed to generate recordized code in  the region of a
-    ;;local binding definition.
+    ;;local binding definition.   It works like LET  for recordized code
+    ;;generation
     ;;
     (lambda (x)
       (syntax-case x ()
@@ -223,6 +224,33 @@
 			    ;;structures.
 			    (let ((?lhs (copy-tag ?lhs VAR))
 				  ...)
+			      ;;Evaluate the  body forms, each  of which
+			      ;;must return recordized code.
+			      (multiple-forms-sequence ?body0 ?body ...))))))))))
+
+  (define-syntax with-tmp*
+    ;;Do what is  needed to generate recordized code in  the region of a
+    ;;local binding definition.  It works  like LET* for recordized code
+    ;;generation
+    ;;
+    (lambda (x)
+      (syntax-case x ()
+	((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
+	 (with-syntax (((VAR ...) (generate-temporaries #'(?lhs ...))))
+	   ;;Evaluate the right-hand sides, which must return recordized
+	   ;;code.
+	   #'(let* ((?lhs ?rhs)
+		    ...)
+	       ;;Generate new struct instances of type VAR.
+	       (let ((VAR (unique-var '?lhs))
+		     ...)
+		 ;;Make the binding struct.
+		 (make-bind (list VAR ...) (list ?lhs ...)
+			    ;;The ?BODY forms  expect Scheme bindings to
+			    ;;exists with name ?LHS, referencing the VAR
+			    ;;structures.
+			    (let* ((?lhs (copy-tag ?lhs VAR))
+				   ...)
 			      ;;Evaluate the  body forms, each  of which
 			      ;;must return recordized code.
 			      (multiple-forms-sequence ?body0 ?body ...))))))))))
