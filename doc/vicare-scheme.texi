@@ -25217,8 +25217,8 @@ bits set to zero.
 @end example
 
 A symbol memory block is @math{6} words wide and contains references to
-the following fields: @code{string}, @code{ustring}, @code{value},
-@code{proc}, @code{plist}.
+objects begin the following fields: @code{string}, @code{ustring},
+@code{value}, @code{proc}, @code{plist}.
 
 The @code{value} field has multiple purposes:
 
@@ -26826,7 +26826,7 @@ object is as follows:
 @noindent
 the first word in the memory block holds a raw memory pointer
 referencing the first byte in the code object implementing the closure;
-the subsequent words (if any) are slot associated to the free variables
+the subsequent words (if any) are slots associated to the free variables
 referenced by the closure's code.
 
 @c ------------------------------------------------------------

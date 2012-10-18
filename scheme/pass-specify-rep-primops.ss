@@ -1088,7 +1088,27 @@
  /section)
 
 
-(section ;;; closures
+;;;; closures
+;;
+;;A closure object is a fixed  length memory block referenced by machine
+;;words tagged as closures; each closure  object is associated to a code
+;;object that implements the procedure.   The memory layout of a closure
+;;object is as follows:
+;;
+;; |------------------------|-------------| reference to closure
+;;       heap pointer         closure tag
+;;
+;;                        0   1   2   3   4   5
+;; |--------------------|---|---|---|---|---|---| memory block
+;;   raw memory pointer    one slot for every
+;;   to binary code        free variable
+;;
+;;the  first  word in  the  memory  block  holds  a raw  memory  pointer
+;;referencing  the  first  byte  in the  code  object  implementing  the
+;;closure; the  subsequent words  (if any) are  slots associated  to the
+;;free variables referenced by the closure's code.
+;;
+(section
 
  (define-primop procedure? safe
    ;;Evaluate to true if X is a closure object.
@@ -1100,14 +1120,17 @@
    ;;Whenever  the body  of a  closure  references a  free variable  the
    ;;closure is closed upon...
    ;;
-   ((V x i)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i)
+   ((V clo freevar-idx)
+    (struct-case freevar-idx
+      ((constant freevar-idx.val)
+       ;;FREEVAR-IDX.VAL  is  an  exact   integer  (possibly  a  bignum)
+       ;;representing the index of a free variable in the closure's data
+       ;;area; such index is zero-based.
+       (unless (fx? freevar-idx.val)
 	 (interrupt))
-       (prm 'mref (T x) (K (+ off-closure-data (* i wordsize)))))
-      ((known expr)
-       (cogen-value-$cpref x expr))
+       (prm 'mref (T clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
+      ((known freevar-idx.expr)
+       (cogen-value-$cpref clo freevar-idx.expr))
       (else
        (interrupt)))))
 
@@ -1127,8 +1150,8 @@
 ;;  |------------------------|-------------| symbol first word
 ;;     all set to zero         symbol tag
 ;;
-;;A symbol memory  block is 6 words wide and  contains references to the
-;;following fields: string, ustring, value, proc, plist.
+;;A symbol  memory block  is 6  words wide  being the  following fields:
+;;string, ustring, value, proc, plist.
 ;;
 (section
 
