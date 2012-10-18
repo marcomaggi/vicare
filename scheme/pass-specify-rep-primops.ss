@@ -918,8 +918,8 @@
    ((V len)
     (struct-case len
       ((constant len.val)
-       ;;LEN.VAL   is  an   exact  integer   (possibly  not   a  fixnum)
-       ;;representing the binary representation of the number of slots.
+       ;;LEN.VAL is  an exact  integer (possibly a  bignum) representing
+       ;;the binary representation of the number of slots.
        (if (and (fx? len.val) #f)
 	   (interrupt)
 	 (with-tmp ((vec (prm 'alloc
@@ -954,7 +954,7 @@
    ((V vec idx)
     (or (struct-case idx
 	  ((constant idx.val)
-	   ;;LEN.VAL  is  an  exact  integer  (possibly  not  a  fixnum)
+	   ;;LEN.VAL   is  an   exact   integer   (possibly  a   bignum)
 	   ;;representing  the binary  representation of  the number  of
 	   ;;slots.
 	   (and (fx? idx.val)
@@ -1034,12 +1034,17 @@
    ((E vec idx item)
     (struct-case idx
       ((constant idx.val)
+       ;;IDX.VAL  is an  exact  integer (possibly  a  bignum) being  the
+       ;;binary representation of a fixnum slot index.
        (if (not (fx? idx.val))
 	   (interrupt)
 	 (mem-assign item (T vec) (+ (* idx.val wordsize) off-vector-data))))
       ((known idx.expr)
        (cogen-effect-$vector-set! vec idx.expr item))
       (else
+       ;;Here IDX is recordized code  which, when evaluated, must return
+       ;;a fixnum representing a slot index.
+       ;;
        ;;Notice  that I  is  not  multiplied by  the  WORDSIZE; this  is
        ;;because I is  a fixnum representing the index of  the I-th slot
        ;;in a vector; also, taken as  a "long", it represents the offset
