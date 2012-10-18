@@ -1311,8 +1311,8 @@
 ;;;; fixnums
 ;;
 ;;A fixnum  is a machine  word whose least  significant bits are  set to
-;;zero.  R6RS states  that a fixnum must have at least  24 bits in which
-;;to store  the number; on a  32-bit platform, 29 bits  are available to
+;;zero.  R6RS states that  a fixnum must have at least  24 bits in which
+;;to store  the number; on a  32-bit platform, 30 bits  are available to
 ;;store the number:
 ;;
 ;; (greatest-fixnum)       => +536870911
@@ -1325,88 +1325,133 @@
 (section
 
  (define-primop fixnum? safe
-   ((P x) (tag-test (T x) fx-mask fx-tag))
-   ((E x) (nop)))
-
+   ((P x)
+    (tag-test (T x) fx-mask fx-tag))
+   ((E x)
+    (nop)))
 
  (define-primop fixnum-width safe
-   ((V) (K (fxsll (- (* wordsize 8) fx-shift) fx-shift)))
-   ((E) (nop))
-   ((P) (K #t)))
+   ((V)
+    (K (fxsll (- (* wordsize 8) fx-shift) fx-shift)))
+   ((E)
+    (nop))
+   ((P)
+    (K #t)))
 
  (define-primop least-fixnum safe
-   ((V) (K (sll (- (expt 2 (- (- (* wordsize 8) fx-shift) 1)))
-		fx-shift)))
-   ((E) (nop))
-   ((P) (K #t)))
+   ((V)
+    (K (sll (- (expt 2 (- (- (* wordsize 8) fx-shift) 1)))
+	    fx-shift)))
+   ((E)
+    (nop))
+   ((P)
+    (K #t)))
 
  (define-primop greatest-fixnum safe
-   ((V) (K (sll (- (expt 2 (- (- (* wordsize 8) fx-shift) 1)) 1)
-		fx-shift)))
-   ((E) (nop))
-   ((P) (K #t)))
+   ((V)
+    (K (sll (- (expt 2 (- (- (* wordsize 8) fx-shift) 1)) 1)
+	    fx-shift)))
+   ((E)
+    (nop))
+   ((P)
+    (K #t)))
 
-
-
+;;; --------------------------------------------------------------------
 
  (define-primop $fxzero? unsafe
-   ((P x) (prm '= (T x) (K 0)))
-   ((E x) (nop)))
+   ((P x)
+    (prm '= (T x) (K 0)))
+   ((E x)
+    (nop)))
 
  (define-primop $fx= unsafe
-   ((P x y) (prm '= (T x) (T y)))
-   ((E x y) (nop)))
+   ((P x y)
+    (prm '= (T x) (T y)))
+   ((E x y)
+    (nop)))
 
  (define-primop $fx< unsafe
-   ((P x y) (prm '< (T x) (T y)))
-   ((E x y) (nop)))
+   ((P x y)
+    (prm '< (T x) (T y)))
+   ((E x y)
+    (nop)))
 
  (define-primop $fx<= unsafe
-   ((P x y) (prm '<= (T x) (T y)))
-   ((E x y) (nop)))
+   ((P x y)
+    (prm '<= (T x) (T y)))
+   ((E x y)
+    (nop)))
 
  (define-primop $fx> unsafe
-   ((P x y) (prm '> (T x) (T y)))
-   ((E x y) (nop)))
+   ((P x y)
+    (prm '> (T x) (T y)))
+   ((E x y)
+    (nop)))
 
  (define-primop $fx>= unsafe
-   ((P x y) (prm '>= (T x) (T y)))
-   ((E x y) (nop)))
+   ((P x y)
+    (prm '>= (T x) (T y)))
+   ((E x y)
+    (nop)))
 
  (define-primop $fxadd1 unsafe
-   ((V x) (cogen-value-$fx+ x (K 1)))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((V x)
+    (cogen-value-$fx+ x (K 1)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  (define-primop $fxsub1 unsafe
-   ((V x) (cogen-value-$fx+ x (K -1)))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((V x)
+    (cogen-value-$fx+ x (K -1)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  (define-primop $fx+ unsafe
-   ((V x y) (prm 'int+ (T x) (T y)))
-   ((P x y) (K #t))
-   ((E x y) (nop)))
+   ((V x y)
+    (prm 'int+ (T x) (T y)))
+   ((P x y)
+    (K #t))
+   ((E x y)
+    (nop)))
 
  (define-primop $fx* unsafe
    ((V a b)
     (struct-case a
-      ((constant a)
-       (unless (fx? a) (interrupt))
-       (prm 'int* (T b) (K a)))
+      ((constant a.val)
+       ;;A.VAL is an exact integer  (possibly a bignum) representing the
+       ;;binary representation of the fixnum A.
+       (unless (fx? a.val)
+	 (interrupt))
+       (prm 'int* (T b) (K a.val)))
       ((known a)
        (cogen-value-$fx* a b))
       (else
+       ;;Here A is recordized code  which, when evaluated, must return a
+       ;;fixnum.
        (struct-case b
-	 ((constant b)
-	  (unless (fx? b) (interrupt))
-	  (prm 'int* (T a) (K b)))
-	 ((known b)
-	  (cogen-value-$fx* a b))
+	 ((constant b.val)
+	  ;;B.VAL is  an exact integer (possibly  a bignum) representing
+	  ;;the binary representation of the fixnum B.
+	  (unless (fx? b.val)
+	    (interrupt))
+	  (prm 'int* (T a) (K b.val)))
+	 ((known b.expr)
+	  (cogen-value-$fx* a b.expr))
 	 (else
+	  ;;Here B is recordized code which, when evaluated, must return
+	  ;;a fixnum.
+	  ;;
+	  ;;FIXME Why are we right-shifting  B and not A?  (Marco Maggi;
+	  ;;Oct 18, 2012)
 	  (prm 'int* (T a) (prm 'sra (T b) (K fx-shift))))))))
-   ((P x y) (K #t))
-   ((E x y) (nop)))
+   ((P x y)
+    (K #t))
+   ((E x y)
+    (nop)))
 
  (define-primop $fxlognot unsafe
    ((V x) (cogen-value-$fxlogxor x (K -1)))
