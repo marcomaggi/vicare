@@ -1037,30 +1037,38 @@
        (mem-assign item (prm 'int+ (T vec) (T idx)) off-vector-data)))))
 
  (define-primop vector-set! safe
-   ((E x i v)
+   ((E vec idx item)
     (multiple-forms-sequence
-     (vector-range-check x i)
-     (cogen-effect-$vector-set! x i v))))
+     (vector-range-check vec idx)
+     (cogen-effect-$vector-set! vec idx item))))
 
  (define-primop vector safe
    ((V . arg*)
-    (with-tmp ((v (prm 'alloc
-		       (K (align (+ disp-vector-data
-				    (* (length arg*) wordsize))))
-		       (K vector-tag))))
+    ;;This is the case:
+    ;;
+    ;;   (vector 1 2 3)
+    ;;
+    ;;here we  know the number  of arguments  and we assume  that vector
+    ;;constructor calls hard-coded  in the source have  a "small" number
+    ;;of  arguments;   so  we  generate  unrolled   recordized  code  to
+    ;;initialise the items.
+    ;;
+    (with-tmp ((vec (prm 'alloc
+			 (K (align (fx+ disp-vector-data (fx* (length arg*) wordsize))))
+			 (K vector-tag))))
       (multiple-forms-sequence
-       (prm 'mset v (K off-vector-length)
-	    (K (* (length arg*) wordsize)))
-       (let f ((t* (map T arg*))
-	       (i off-vector-data))
-	 (cond
-	  ((null? t*) v)
-	  (else
-	   (make-seq
-	    (prm 'mset v (K i) (car t*))
-	    (f (cdr t*) (+ i wordsize)))))))))
-   ((E . arg*) (prm 'nop))
-   ((P . arg*) (K #t)))
+       ;;Store the vector length in the first word.
+       (prm 'mset vec (K off-vector-length) (K (fx* (length arg*) wordsize)))
+       (let recur ((arg*^  (map T arg*))
+		   (offset off-vector-data))
+	 (if (null? arg*^)
+	     vec
+	   (make-seq (prm 'mset vec (K offset) (car arg*^))
+		     (recur (cdr arg*^) (+ offset wordsize))))))))
+   ((E . arg*)
+    (prm 'nop))
+   ((P . arg*)
+    (K #t)))
 
  /section)
 
