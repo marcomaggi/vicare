@@ -1423,9 +1423,11 @@
     (struct-case a
       ((constant a.val)
        ;;A.VAL is an exact integer  (possibly a bignum) representing the
-       ;;binary representation of the fixnum A.
+       ;;binary representation of the untagged fixnum A.
        (unless (fx? a.val)
 	 (interrupt))
+       ;;Since we want the  result to be a fixnum, there  is no need to:
+       ;;untag A, multiply A, retag A; we just multiply the tagged A.
        (prm 'int* (T b) (K a.val)))
       ((known a)
        (cogen-value-$fx* a b))
@@ -1443,10 +1445,11 @@
 	  (cogen-value-$fx* a b.expr))
 	 (else
 	  ;;Here B is recordized code which, when evaluated, must return
-	  ;;a fixnum.
+	  ;;a fixnum.  By right-shifting B we untag it.
 	  ;;
-	  ;;FIXME Why are we right-shifting  B and not A?  (Marco Maggi;
-	  ;;Oct 18, 2012)
+	  ;;Since we  want the result to  be a fixnum, there  is no need
+	  ;;to:  untag A,  multiply A,  retag  A; we  just multiply  the
+	  ;;tagged A.
 	  (prm 'int* (T a) (prm 'sra (T b) (K fx-shift))))))))
    ((P x y)
     (K #t))
@@ -1454,9 +1457,12 @@
     (nop)))
 
  (define-primop $fxlognot unsafe
-   ((V x) (cogen-value-$fxlogxor x (K -1)))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((V x)
+    (cogen-value-$fxlogxor x (K -1)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  (define-primop $fxlogand unsafe
    ((V x y) (prm 'logand (T x) (T y)))
@@ -1479,20 +1485,39 @@
    ((E x y) (nop)))
 
  (define-primop $fxsll unsafe
-   ((V x i)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (prm 'sll (T x) (K i)))
-      ((known i)
-       (cogen-value-$fxsll x i))
+   ;;Shift-left logic.
+   ;;
+   ((V x numbits)
+    ;;Both X and NUMBITS must be fixnums.
+    (struct-case numbits
+      ((constant numbits.val)
+       ;;Here  NUMBITS.VAL must  be an  exact integer  being the  binary
+       ;;representation of the shift amount.
+       ;;
+       ;;FIXME Should not  we check also that NUMBITS.VAL  is not bigger
+       ;;than the  number of bits  in a  fixnum?  (Marco Maggi;  Oct 18,
+       ;;2012)
+       (unless (fx? numbits.val)
+	 (interrupt))
+       (prm 'sll (T x) (K numbits.val)))
+      ((known numbits.expr)
+       (cogen-value-$fxsll x numbits.expr))
       (else
-       (prm 'sll (T x) (prm 'sra (T i) (K fx-shift))))))
-   ((P x i) (K #t))
-   ((E x i) (nop)))
+       ;;By right-shifting NUMBITS we untag it.
+       ;;
+       ;;Since we want a fixnum as result:  there is no need to untag X,
+       ;;left-shift X, retag X; we just left-shift the tagged X.
+       (prm 'sll (T x) (prm 'sra (T numbits) (K fx-shift))))))
+   ((P x i)
+    (K #t))
+   ((E x i)
+    (nop)))
 
  (define-primop $fxsra unsafe
+   ;;Shift-right arithmetic.
+   ;;
    ((V x i)
+    ;;Both X and NUMBITS must be fixnums.
     (struct-case i
       ((constant i)
        (unless (fx? i) (interrupt))
@@ -1513,8 +1538,10 @@
 	   (prm 'logand
 		(prm 'sra (T x) i)
 		(K (* -1 fx-scale))))))))
-   ((P x i) (K #t))
-   ((E x i) (nop)))
+   ((P x i)
+    (K #t))
+   ((E x i)
+    (nop)))
 
  (define-primop $fxquotient unsafe
    ((V a b)
