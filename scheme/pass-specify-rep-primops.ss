@@ -645,10 +645,11 @@
 	      ;;
 	      ;;Notice  that, here,  OFFSET  references  the first  byte
 	      ;;*after* the last pair.
-	      (seq* (prm 'mset first-pair
-			 (K (+ (- offset pair-size) off-cdr))
-			 (car arg*^))
-		    first-pair)
+	      (multiple-forms-sequence
+	       (prm 'mset first-pair
+		    (K (+ (- offset pair-size) off-cdr))
+		    (car arg*^))
+	       first-pair)
 	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
 	      ;;Store a value in the car of this pair.
 	      (prm 'mset tmp (K off-car) (car arg*^))
@@ -707,23 +708,33 @@
 
  (module (vector-range-check)
 
-   (define (vector-range-check x idx)
-     (struct-case x
+   (define (vector-range-check maybe-vector maybe-idx)
+     ;;THE-VECTOR must be a struct instance representing recordized code
+     ;;which, once evaluated, it is known to return a Scheme vector.
+     ;;
+     ;;MAYBE-IDX must be a  struct instance representing recordized code
+     ;;which, once  evaluated, *should*  return a fixnum  representing a
+     ;;valid vector index, but we are not sure about it.
+     ;;
+     ;;Generate recordized code to check  at run time that: MAYBE-IDX is
+     ;;a fixnum and also it is in the correct range for a slot index.
+     ;;
+     (struct-case maybe-vector
        ((known expr type)
 	(case-symbols (T:vector? type)
 	  ((yes)
 	   (record-optimization 'check-vector expr)
-	   (check-vector expr idx))
+	   (%check-vector expr maybe-idx))
 	  ((no)
 	   (interrupt))
 	  (else
-	   (check-non-vector expr idx))))
+	   (%check-non-vector expr maybe-idx))))
        (else
-	(check-non-vector x idx))))
+	(%check-non-vector maybe-vector maybe-idx))))
 
-   (module (check-non-vector)
+   (module (%check-non-vector)
 
-     (define (check-non-vector maybe-vector maybe-idx)
+     (define (%check-non-vector maybe-vector maybe-idx)
        ;;MAYBE-VECTOR must be a  struct instance representing recordized
        ;;code which,  once evaluated,  *should* return a  Scheme vector,
        ;;but we are not sure about it.
@@ -732,16 +743,20 @@
        ;;code   which,  once   evaluated,  *should*   return  a   fixnum
        ;;representing a valid slot index, but we are not sure about it.
        ;;
+       ;;Generate   recordized  code   to  check   at  run   time  that:
+       ;;MAYBE-VECTOR is  actually a vector;  MAYBE-IDX is a  fixnum and
+       ;;also it is in the correct range for a slot index.
+       ;;
        (struct-case maybe-idx
 	 ((constant val)
 	  (if (and (fx? val)
 		   (>= val 0))
-	      (check-fx maybe-vector maybe-idx)
-	    (check-? maybe-vector maybe-idx)))
+	      (%check-fx maybe-vector maybe-idx)
+	    (%check-? maybe-vector maybe-idx)))
 	 ((known expr type)
 	  (case-symbols (T:fixnum? type)
 	    ((yes)
-	     (check-fx maybe-vector expr))
+	     (%check-fx maybe-vector expr))
 	    ((maybe)
 	     (vector-range-check maybe-vector expr))
 	    (else
@@ -750,9 +765,9 @@
 		      type)
 	     (vector-range-check maybe-vector expr))))
 	 (else
-	  (check-? maybe-vector maybe-idx))))
+	  (%check-? maybe-vector maybe-idx))))
 
-     (define (check-fx maybe-vector idx)
+     (define (%check-fx maybe-vector idx)
        ;;MAYBE-VECTOR must be a  struct instance representing recordized
        ;;code which,  once evaluated,  *should* return a  Scheme vector,
        ;;but we are not sure about it.
@@ -764,18 +779,19 @@
        ;;MAYBE-VECTOR is actually a vector;  IDX is in the correct range
        ;;for a slot index.
        ;;
-       (seq* (interrupt-unless
-	      (tag-test (T maybe-vector) vector-mask vector-tag))
-	     (with-tmp ((len (cogen-value-$vector-length maybe-vector)))
-	       ;;FIXME Should  not the  two forms  below be  in reversed
-	       ;;order?  Is  this the order  because the first  check is
-	       ;;faster and it will work  with any machine word?  (Marco
-	       ;;Maggi; Oct 18, 2012)
-	       (interrupt-unless
-		(prm 'u< (T idx) len))
-	       (interrupt-unless-fixnum len))))
+       (multiple-forms-sequence
+	(interrupt-unless
+	 (tag-test (T maybe-vector) vector-mask vector-tag))
+	(with-tmp ((len (cogen-value-$vector-length maybe-vector)))
+	  ;;FIXME Should not  the two forms below be  in reversed order?
+	  ;;Is this the  order because the first check is  faster and it
+	  ;;will  work with  any machine  word?  (Marco  Maggi; Oct  18,
+	  ;;2012)
+	  (interrupt-unless
+	   (prm 'u< (T idx) len))
+	  (interrupt-unless-fixnum len))))
 
-     (define (check-? maybe-vector maybe-idx)
+     (define (%check-? maybe-vector maybe-idx)
        ;;MAYBE-VECTOR must be a  struct instance representing recordized
        ;;code which,  once evaluated,  *should* return a  Scheme vector,
        ;;but we are not sure about it.
@@ -789,24 +805,24 @@
        ;;MAYBE-VECTOR is  actually a vector;  MAYBE-IDX is a  fixnum and
        ;;also it is in the correct range for a slot index.
        ;;
-       (seq* (interrupt-unless
-	      (tag-test (T maybe-vector) vector-mask vector-tag))
-	     (with-tmp ((len (cogen-value-$vector-length maybe-vector)))
-	       ;;FIXME Should  not the  two forms  below be  in reversed
-	       ;;order?  Is  this the order  because the first  check is
-	       ;;faster and  it will work  with any machine  word?  What
-	       ;;kind of check is the second one?  (Marco Maggi; Oct 18,
-	       ;;2012)
-	       (interrupt-unless
-		(prm 'u< (T maybe-idx) len))
-	       (with-tmp ((t (prm 'logor len (T maybe-idx))))
-		 (interrupt-unless-fixnum t)))))
+       (multiple-forms-sequence
+	(interrupt-unless
+	 (tag-test (T maybe-vector) vector-mask vector-tag))
+	(with-tmp ((len (cogen-value-$vector-length maybe-vector)))
+	  ;;FIXME Should not  the two forms below be  in reversed order?
+	  ;;Is this the  order because the first check is  faster and it
+	  ;;will work with any machine word?   What kind of check is the
+	  ;;second one?  (Marco Maggi; Oct 18, 2012)
+	  (interrupt-unless
+	   (prm 'u< (T maybe-idx) len))
+	  (with-tmp ((t (prm 'logor len (T maybe-idx))))
+	    (interrupt-unless-fixnum t)))))
 
-     #| end of module: check-non-vector |#)
+     #| end of module: %check-non-vector |#)
 
-   (module (check-vector)
+   (module (%check-vector)
 
-     (define (check-vector the-vector maybe-idx)
+     (define (%check-vector the-vector maybe-idx)
        ;;THE-VECTOR must  be a  struct instance  representing recordized
        ;;code  which, once  evaluated, it  is known  to return  a Scheme
        ;;vector.
@@ -816,24 +832,28 @@
        ;;representing a  valid vector index,  but we are not  sure about
        ;;it.
        ;;
+       ;;Generate recordized code  to check at run  time that: MAYBE-IDX
+       ;;is a  fixnum and  also it is  in the correct  range for  a slot
+       ;;index.
+       ;;
        (struct-case maybe-idx
 	 ((constant val)
 	  (if (and (fx? val)
 		   (>= val 0))
-	      (check-fx the-vector maybe-idx)
+	      (%check-fx the-vector maybe-idx)
 	    (interrupt)))
 	 ((known expr type)
 	  (case (T:fixnum? type)
 	    ((yes)
-	     (check-fx the-vector expr))
+	     (%check-fx the-vector expr))
 	    ((no)
 	     (interrupt))
 	    (else
-	     (check-vector the-vector expr))))
+	     (%check-vector the-vector expr))))
 	 (else
-	  (check-? the-vector maybe-idx))))
+	  (%check-? the-vector maybe-idx))))
 
-     (define (check-fx the-vector idx)
+     (define (%check-fx the-vector idx)
        ;;THE-VECTOR must  be a  struct instance  representing recordized
        ;;code  which, once  evaluated, it  is known  to return  a Scheme
        ;;vector.
@@ -848,7 +868,7 @@
 	 (interrupt-unless
 	  (prm 'u< (T idx) len))))
 
-     (define (check-? the-vector maybe-idx)
+     (define (%check-? the-vector maybe-idx)
        ;;THE-VECTOR must  be a  struct instance  representing recordized
        ;;code  which, once  evaluated, it  is known  to return  a Scheme
        ;;vector.
@@ -861,19 +881,19 @@
        ;;is a  fixnum and  also it is  in the correct  range for  a slot
        ;;index.
        ;;
-       (seq* (interrupt-unless-fixnum (T maybe-idx))
-	     (with-tmp ((len (cogen-value-$vector-length the-vector)))
-	       ;;FIXME Should  not the  two forms  below be  in reversed
-	       ;;order?  Is  this the order  because the first  check is
-	       ;;faster and  it will work  with any machine  word?  What
-	       ;;kind of check is the second one?  (Marco Maggi; Oct 18,
-	       ;;2012)
-	       (interrupt-unless
-		(prm 'u< (T maybe-idx) len))
-	       (with-tmp ((t (prm 'logor len (T maybe-idx))))
-		 (interrupt-unless-fixnum t)))))
+       (multiple-forms-sequence
+	(interrupt-unless-fixnum (T maybe-idx))
+	(with-tmp ((len (cogen-value-$vector-length the-vector)))
+	  ;;FIXME Should not  the two forms below be  in reversed order?
+	  ;;Is this the  order because the first check is  faster and it
+	  ;;will work with any machine word?   What kind of check is the
+	  ;;second one?  (Marco Maggi; Oct 18, 2012)
+	  (interrupt-unless
+	   (prm 'u< (T maybe-idx) len))
+	  (with-tmp ((t (prm 'logor len (T maybe-idx))))
+	    (interrupt-unless-fixnum t)))))
 
-     #| end of module: check-vector |# )
+     #| end of module: %check-vector |# )
 
    #| end of module: vector-range-check |# )
 
@@ -956,7 +976,7 @@
 	 ((no)  (interrupt))
 	 (else  (cogen-value-vector-length x))))
       (else
-       (seq*
+       (multiple-forms-sequence
 	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
 	(with-tmp ((t (cogen-value-$vector-length x)))
 	  (interrupt-unless-fixnum t)
@@ -969,17 +989,20 @@
 	 ((no)  (interrupt))
 	 (else  (cogen-effect-vector-length x))))
       (else
-       (seq*
+       (multiple-forms-sequence
 	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
 	(with-tmp ((t (cogen-value-$vector-length x)))
 	  (interrupt-unless-fixnum t))))))
    ((P x)
-    (seq* (cogen-effect-vector-length x) (K #t))))
+    (multiple-forms-sequence
+     (cogen-effect-vector-length x)
+     (K #t))))
 
  (define-primop vector-ref safe
    ((V x i)
-    (seq* (vector-range-check x i)
-	  (cogen-value-$vector-ref x i)))
+    (multiple-forms-sequence
+     (vector-range-check x i)
+     (cogen-value-$vector-ref x i)))
    ((E x i)
     (vector-range-check x i)))
 
@@ -1007,7 +1030,7 @@
 
  (define-primop vector-set! safe
    ((E x i v)
-    (seq*
+    (multiple-forms-sequence
      (vector-range-check x i)
      (cogen-effect-$vector-set! x i v))))
 
@@ -1017,7 +1040,7 @@
 		       (K (align (+ disp-vector-data
 				    (* (length arg*) wordsize))))
 		       (K vector-tag))))
-      (seq*
+      (multiple-forms-sequence
        (prm 'mset v (K off-vector-length)
 	    (K (* (length arg*) wordsize)))
        (let f ((t* (map T arg*))
@@ -1677,7 +1700,7 @@
 ;;;    (cond
 ;;;      ((null? ls) (prm 'nop))
 ;;;      (else
-;;;       (seq*
+;;;       (multiple-forms-sequence
 ;;;         (interrupt-unless
 ;;;           (tag-test (car ls) vector-mask vector-tag))
 ;;;         (primary-tag-tests (cdr ls))))))
@@ -1706,7 +1729,7 @@
 ;;;      ((not check) (interrupt))
 ;;;      ((null? check) code)
 ;;;      (else
-;;;       (seq*
+;;;       (multiple-forms-sequence
 ;;;         (primary-tag-tests check)
 ;;;         (secondary-tag-tests check)
 ;;;         code)))))
@@ -1970,7 +1993,7 @@
 	  (tag-test (or* (T (car others)) (cdr others)) fx-mask fx-tag)))))))
 
  (define (fixnum-fold-p op a a*)
-   (seq*
+   (multiple-forms-sequence
     (assert-fixnums a a*)
     (let f ((a a) (a* a*))
       (cond
@@ -2075,26 +2098,30 @@
  (define-primop - safe
    ((V a)
     (interrupt)
-    (seq*
+    (multiple-forms-sequence
      (assert-fixnums a '())
      (prm 'int-/overflow (K 0) (T a))))
    ((V a . a*)
     (interrupt)
-    (seq*
+    (multiple-forms-sequence
      (assert-fixnums a a*)
      (let f ((a (T a)) (a* a*))
        (cond
 	((null? a*) a)
 	(else
 	 (f (prm 'int-/overflow a (T (car a*))) (cdr a*)))))))
-   ((P a . a*) (seq* (assert-fixnums a a*) (K #t)))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop + safe
    ((V) (K 0))
    ((V a . a*)
     (interrupt)
-    (seq*
+    (multiple-forms-sequence
      (assert-fixnums a a*)
      (let f ((a (T a)) (a* a*))
        (cond
@@ -2102,7 +2129,10 @@
 	(else
 	 (f (prm 'int+/overflow a (T (car a*))) (cdr a*)))))))
    ((P) (K #t))
-   ((P a . a*) (seq* (assert-fixnums a a*) (K #t)))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
    ((E) (nop))
    ((E a . a*) (assert-fixnums a a*)))
 
@@ -2147,7 +2177,10 @@
    ((V) (K (fxsll 1 fx-shift)))
    ((V a b) (cogen-binary-* a b))
    ((P) (K #t))
-   ((P a . a*) (seq* (assert-fixnums a a*) (K #t)))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
    ((E) (nop))
    ((E a . a*) (assert-fixnums a a*)))
 
@@ -2155,7 +2188,7 @@
    ((V) (K (fxsll -1 fx-shift)))
    ((V a . a*)
     (interrupt)
-    (seq*
+    (multiple-forms-sequence
      (assert-fixnums a a*)
      (let f ((a (T a)) (a* a*))
        (cond
@@ -2163,7 +2196,10 @@
 	(else
 	 (f (prm 'logand a (T (car a*))) (cdr a*)))))))
    ((P) (K #t))
-   ((P a . a*) (seq* (assert-fixnums a a*) (K #t)))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
    ((E) (nop))
    ((E a . a*) (assert-fixnums a a*)))
 
@@ -2179,7 +2215,7 @@
 
  (define-primop zero? safe
    ((P x)
-    (seq*
+    (multiple-forms-sequence
      (assert-fixnum x)
      (cogen-pred-$fxzero? x)))
    ((E x) (assert-fixnum x)))
@@ -2266,7 +2302,7 @@
        (cond
 	((and (fx? i) (> i 0) (log2 i)) =>
 	 (lambda (bits)
-	   (seq*
+	   (multiple-forms-sequence
 	    (interrupt-unless (cogen-pred-fixnum? x))
 	    (prm 'sll
 		 (prm 'sra (T x) (K (+ bits fx-shift)))
@@ -2282,7 +2318,7 @@
     (struct-case n
       ((constant i)
        (if (eqv? i 2)
-	   (seq*
+	   (multiple-forms-sequence
 	    (interrupt-unless (cogen-pred-fixnum? x))
 	    (make-conditional
 		(prm '< (T x) (K 0))
@@ -2367,12 +2403,14 @@
 
  (define-primop $struct-set! unsafe
    ((V x i v)
-    (seq* (cogen-effect-$vector-set! x i v)
-	  (K void-object)))
+    (multiple-forms-sequence
+     (cogen-effect-$vector-set! x i v)
+     (K void-object)))
    ((E x i v) (cogen-effect-$vector-set! x i v))
    ((P x i v)
-    (seq* (cogen-effect-$vector-set! x i v)
-	  (K #t))))
+    (multiple-forms-sequence
+     (cogen-effect-$vector-set! x i v)
+     (K #t))))
 
  (define-primop $struct unsafe
    ((V rtd . v*)
@@ -2473,7 +2511,7 @@
 	  (tag-test (or* (T (car others)) (cdr others)) char-mask char-tag)))))))
 
  (define (char-fold-p op a a*)
-   (seq*
+   (multiple-forms-sequence
     (assert-chars a a*)
     (let f ((a a) (a* a*))
       (cond
@@ -2736,7 +2774,7 @@
 
  (define-primop $bytevector-ieee-double-native-set! unsafe
    ((E bv i x)
-    (seq*
+    (multiple-forms-sequence
      (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
      (prm 'fl:store
 	  (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
@@ -2756,7 +2794,7 @@
 
  (define-primop $bytevector-ieee-single-native-set! unsafe
    ((E bv i x)
-    (seq*
+    (multiple-forms-sequence
      (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
      (prm 'fl:double->single)
      (prm 'fl:store-single
@@ -2783,7 +2821,7 @@
 ;;;
 ;;;(define-primop $bytevector-ieee-double-nonnative-set! unsafe
 ;;;  ((E bv i x)
-;;;   (seq*
+;;;   (multiple-forms-sequence
 ;;;     (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
 ;;;     (prm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
@@ -2819,7 +2857,7 @@
    ((E bv i x)
     (let ((bvoff (- disp-bytevector-data bytevector-tag))
 	  (floff (- disp-flonum-data vector-tag)))
-      (seq*
+      (multiple-forms-sequence
        (prm 'fl:load (T x) (K floff))
        (prm 'fl:double->single)
        (with-tmp ((t (prm 'int+ (T bv)
@@ -2929,19 +2967,19 @@
 ;;;
 ;;;(define-primop string-ref safe
 ;;;  ((V s i)
-;;;   (seq*
+;;;   (multiple-forms-sequence
 ;;;    (assert-fixnum i)
 ;;;    (assert-string s)
 ;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
 ;;;    (cogen-value-$string-ref s i)))
 ;;;  ((P s i)
-;;;   (seq*
+;;;   (multiple-forms-sequence
 ;;;    (assert-fixnum i)
 ;;;    (assert-string s)
 ;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
 ;;;    (K #t)))
 ;;;  ((E s i)
-;;;   (seq*
+;;;   (multiple-forms-sequence
 ;;;    (assert-fixnum i)
 ;;;    (assert-string s)
 ;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s))))))

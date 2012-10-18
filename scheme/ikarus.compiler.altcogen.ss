@@ -60,12 +60,12 @@
 
 ;;;; helpers
 
-(define-syntax seq*
+(define-syntax multiple-forms-sequence
   (syntax-rules ()
     ((_ ?e)
      ?e)
     ((_ ?e* ... ?e)
-     (make-seq (seq* ?e* ...) ?e))))
+     (make-seq (multiple-forms-sequence ?e* ...) ?e))))
 
 
 (module (introduce-primcalls)
@@ -1009,19 +1009,19 @@
          ((int-quotient)
           (S* rands
               (lambda (rands)
-                (seq*
-                  (make-set eax (car rands))
-                  (make-asm-instr 'cltd edx eax)
-                  (make-asm-instr 'idiv eax (cadr rands))
-                  (make-set d eax)))))
+                (multiple-forms-sequence
+		 (make-set eax (car rands))
+		 (make-asm-instr 'cltd edx eax)
+		 (make-asm-instr 'idiv eax (cadr rands))
+		 (make-set d eax)))))
          ((int-remainder)
           (S* rands
               (lambda (rands)
-                (seq*
-                  (make-set eax (car rands))
-                  (make-asm-instr 'cltd edx eax)
-                  (make-asm-instr 'idiv edx (cadr rands))
-                  (make-set d edx)))))
+                (multiple-forms-sequence
+		 (make-set eax (car rands))
+		 (make-asm-instr 'cltd edx eax)
+		 (make-asm-instr 'idiv edx (cadr rands))
+		 (make-set d edx)))))
          ((sll sra srl sll/overflow)
           (let ((a (car rands)) (b (cadr rands)))
             (cond
@@ -1032,10 +1032,10 @@
               (else
                (S b
                   (lambda (b)
-                    (seq*
-                      (V d a)
-                      (make-set ecx b)
-                      (make-asm-instr op d ecx))))))))
+                    (multiple-forms-sequence
+		     (V d a)
+		     (make-set ecx b)
+		     (make-asm-instr op d ecx))))))))
          (else (error who "invalid value op" op))))
       ((funcall rator rands)
        (handle-nontail-call rator rands d #f))
@@ -1202,18 +1202,18 @@
                 (proc (cadr rands))
                 (k (caddr rands)))
             (set! locals (cons* t0 t1 t2 locals))
-            (seq*
-              (V t0 handler)
-              (V t1 k)
-              (V t2 proc)
-              (make-set (mkfvar 1) t0)
-              (make-set (mkfvar 2) t1)
-              (make-set cpr t2)
-              (make-set argc-register (make-constant (argc-convention 1)))
-              (make-asm-instr 'int- fpr (make-constant wordsize))
-              (make-primcall 'indirect-jump
-                (list argc-register cpr pcr esp apr
-                      (mkfvar 1) (mkfvar 2))))))
+            (multiple-forms-sequence
+	     (V t0 handler)
+	     (V t1 k)
+	     (V t2 proc)
+	     (make-set (mkfvar 1) t0)
+	     (make-set (mkfvar 2) t1)
+	     (make-set cpr t2)
+	     (make-set argc-register (make-constant (argc-convention 1)))
+	     (make-asm-instr 'int- fpr (make-constant wordsize))
+	     (make-primcall 'indirect-jump
+			    (list argc-register cpr pcr esp apr
+				  (mkfvar 1) (mkfvar 2))))))
          (else (VT x))))
       ((bind lhs* rhs* e)
        (do-bind lhs* rhs* (Tail e)))

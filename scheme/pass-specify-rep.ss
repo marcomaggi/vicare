@@ -225,7 +225,7 @@
 				  ...)
 			      ;;Evaluate the  body forms, each  of which
 			      ;;must return recordized code.
-			      (seq* ?body0 ?body ...))))))))))
+			      (multiple-forms-sequence ?body0 ?body ...))))))))))
 
   (define (copy-tag orig new)
     (struct-case orig
