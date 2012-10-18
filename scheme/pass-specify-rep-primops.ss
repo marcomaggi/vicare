@@ -900,8 +900,10 @@
 ;;; --------------------------------------------------------------------
 
  (define-primop vector? safe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag fx-mask fx-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag fx-mask fx-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-vector unsafe
    ;;Notice that  the code  below does not  initialise the  vector's data
@@ -919,114 +921,120 @@
        (if (and (fx? i) #f)
 	   (interrupt)
 	 (with-tmp ((v (prm 'alloc
-			    (K (align (+ (* i wordsize) disp-vector-data)))
+			    (K (align (fx+ (fx* i wordsize) disp-vector-data)))
 			    (K vector-tag))))
 	   (prm 'mset v
 		(K off-vector-length)
-		(K (* i fx-scale)))
+		(K (fx* i fx-scale)))
 	   v)))
       ((known expr)
        (cogen-value-$make-vector expr))
       (else
        (with-tmp ((alen (align-code (T len) disp-vector-data)))
-	 (with-tmp ((v (prm 'alloc alen (K vector-tag))))
-	   (prm 'mset v (K off-vector-length) (T len))
-	   v)))))
-   ((P len) (K #t))
-   ((E len) (nop)))
+	 (with-tmp ((vec (prm 'alloc alen (K vector-tag))))
+	   (prm 'mset vec (K off-vector-length) (T len))
+	   vec)))))
+   ((P len)
+    (K #t))
+   ((E len)
+    (nop)))
 
  (define-primop make-vector safe
    ((V len)
-    (with-tmp ((x (make-forcall "ikrt_make_vector1" (list (T len)))))
-      (interrupt-when (prm '= x (K 0)))
-      x)))
+    (with-tmp ((vec (make-forcall "ikrt_make_vector1" (list (T len)))))
+      (interrupt-when
+       (prm '= vec (K 0)))
+      vec)))
 
  (define-primop $vector-ref unsafe
-   ((V x i)	;if it appears in "for expression value" position
+   ((V x i)
     (or (struct-case i
 	  ((constant i)
 	   (and (fx? i)
 		(fx>= i 0)
-		(prm 'mref (T x)
-		     (K (+ (* i wordsize) off-vector-data)))))
+		(prm 'mref (T x) (K (fx+ (fx* i wordsize) off-vector-data)))))
 	  ((known i)
 	   (cogen-value-$vector-ref x i))
-	  (else #f))
+	  (else
+	   #f))
 	;;Notice  that I  is not  multiplied  by the  WORDSIZE; this  is
-	;;because I is  a fixnum and a fixnum representing  the index of
-	;;the I-th slot in a vector,  taken as a "long", also represents
-	;;the offset in bytes of the word in the I-th slot.
-	(prm 'mref (T x)
-	     (prm 'int+ (T i) (K off-vector-data)))
-	))
-   ((E x i)	;if it appears in "for side-effect" position
+	;;because I is a fixnum representing  the index of the I-th slot
+	;;in a vector; also, taken as a "long", it represents the offset
+	;;in bytes of the word in the I-th slot.
+	(prm 'mref (T x) (prm 'int+ (T i) (K off-vector-data)))))
+   ((E x i)
     (nop)))
 
  (define-primop $vector-length unsafe
-   ((V x) (prm 'mref (T x) (K off-vector-length)))
-   ((E x) (prm 'nop))
-   ((P x) (K #t)))
+   ((V x)
+    (prm 'mref (T x) (K off-vector-length)))
+   ((E x)
+    (prm 'nop))
+   ((P x)
+    (K #t)))
 
  (define-primop vector-length safe
    ((V x)
     (struct-case x
-      ((known x t)
-       (case (T:vector? t)
-	 ((yes) (record-optimization 'vector-length x) (cogen-value-$vector-length x))
-	 ((no)  (interrupt))
-	 (else  (cogen-value-vector-length x))))
+      ((known expr type)
+       (case-symbols (T:vector? type)
+	 ((yes)
+	  (record-optimization 'vector-length expr)
+	  (cogen-value-$vector-length expr))
+	 ((no)
+	  (interrupt))
+	 (else
+	  (cogen-value-vector-length expr))))
       (else
        (multiple-forms-sequence
-	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
+	(interrupt-unless
+	 (tag-test (T x) vector-mask vector-tag))
 	(with-tmp ((t (cogen-value-$vector-length x)))
 	  (interrupt-unless-fixnum t)
 	  t)))))
    ((E x)
     (struct-case x
-      ((known x t)
-       (case (T:vector? t)
-	 ((yes) (record-optimization 'vector-length x) (nop))
-	 ((no)  (interrupt))
-	 (else  (cogen-effect-vector-length x))))
+      ((known expr type)
+       (case-symbols (T:vector? type)
+	 ((yes)
+	  (record-optimization 'vector-length expr) (nop))
+	 ((no)
+	  (interrupt))
+	 (else
+	  (cogen-effect-vector-length expr))))
       (else
        (multiple-forms-sequence
 	(interrupt-unless (tag-test (T x) vector-mask vector-tag))
-	(with-tmp ((t (cogen-value-$vector-length x)))
-	  (interrupt-unless-fixnum t))))))
+	(with-tmp ((vec.len (cogen-value-$vector-length x)))
+	  (interrupt-unless-fixnum vec.len))))))
    ((P x)
     (multiple-forms-sequence
      (cogen-effect-vector-length x)
      (K #t))))
 
  (define-primop vector-ref safe
-   ((V x i)
+   ((V vec idx)
     (multiple-forms-sequence
-     (vector-range-check x i)
-     (cogen-value-$vector-ref x i)))
-   ((E x i)
-    (vector-range-check x i)))
+     (vector-range-check vec idx)
+     (cogen-value-$vector-ref vec idx)))
+   ((E vec idx)
+    (vector-range-check vec idx)))
 
  (define-primop $vector-set! unsafe
-   ((E x i v)
-    ;; X -> reference to vector
-    ;; I -> index as fixnum
-    ;; V -> whatever Scheme value
-    (struct-case i
-      ((constant i)
-       (if (not (fx? i))
+   ((E vec idx item)
+    (struct-case idx
+      ((constant idx.val)
+       (if (not (fx? idx.val))
 	   (interrupt)
-	 (mem-assign v (T x) (fx+ (fx* i wordsize) off-vector-data))))
-      ((known i)
-       (cogen-effect-$vector-set! x i v))
+	 (mem-assign item (T vec) (fx+ (fx* idx.val wordsize) off-vector-data))))
+      ((known idx.expr)
+       (cogen-effect-$vector-set! vec idx.expr item))
       (else
        ;;Notice  that I  is  not  multiplied by  the  WORDSIZE; this  is
-       ;;because I  is a fixnum and  a fixnum representing the  index of
-       ;;the I-th slot  in a vector, taken as a  "long", also represents
-       ;;the offset in bytes of the word in the I-th slot.
-       (mem-assign v
-		   (prm 'int+ (T x) (T i))
-		   off-vector-data)
-       ))))
+       ;;because I is  a fixnum representing the index of  the I-th slot
+       ;;in a vector; also, taken as  a "long", it represents the offset
+       ;;in bytes of the word in the I-th slot.
+       (mem-assign item (prm 'int+ (T vec) (T idx)) off-vector-data)))))
 
  (define-primop vector-set! safe
    ((E x i v)
