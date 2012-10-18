@@ -1102,27 +1102,42 @@
   #| end of module: Function |# )
 
 
-(define record-optimization^
-  (let ((h (make-eq-hashtable)))
-    (lambda (what expr)
-      (let ((n (hashtable-ref h what 0)))
-	(hashtable-set! h what (+ n 1))
-	(printf "optimize ~a(~s): ~s\n" what n (unparse expr))))))
+(module (record-optimization)
+  ;;Currently unused.  (Marco Maggi; Oct 18, 2012)
+  ;;
+  (define-syntax record-optimization
+    (syntax-rules ()
+      ((_ ?what ?expr)
+       (void))))
 
-(define-syntax record-optimization
-  (syntax-rules ()
-    ((_ what expr) (void))))
+  #;(define the-table
+    (make-eq-hashtable))
 
-;;; --------------------------------------------------------------------
+  #;(define (record-optimization^ what expr)
+    (let ((n (hashtable-ref the-table what 0)))
+      (hashtable-set! the-table what (+ n 1))
+      (printf "optimize ~a(~s): ~s\n" what n (unparse expr))))
 
-(define (interrupt-unless x)
-  (make-conditional x (prm 'nop) (interrupt)))
-(define (interrupt-when x)
-  (make-conditional x (interrupt) (prm 'nop)))
-(define (interrupt-unless-fixnum x)
-  (interrupt-unless (tag-test x fx-mask fx-tag)))
+  #| end of module: record-optimization |# )
 
+
+;;;; predefined checks
 
+(define (interrupt-unless recordized-code)
+  (make-conditional recordized-code
+      (prm 'nop)
+    (interrupt)))
+
+(define (interrupt-when recordized-code)
+  (make-conditional recordized-code
+      (interrupt)
+    (prm 'nop)))
+
+(define (interrupt-unless-fixnum recordized-code)
+  (interrupt-unless
+   (tag-test recordized-code fx-mask fx-tag)))
+
+
 (define (ClambdaCase x)
   (struct-case x
     ((clambda-case info body)
@@ -1162,4 +1177,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'module 'scheme-indent-function 2)
+;; eval: (put 'make-conditional 'scheme-indent-function 2)
 ;; End:

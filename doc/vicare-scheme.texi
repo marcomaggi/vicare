@@ -24326,10 +24326,8 @@ be non--negative fixnums.  Return unspecified values.
 
 Vectors are variable length blocks of memory referenced by machine words
 tagged as vectors.  The first machine word of a vector block contains a
-fixnum representing the vector length; a vector is capable of holding at
-most a number of values equal to the return value of
-@func{greatest-fixnum}.  This means that the first word of a vector is
-tagged as a fixnum.
+fixnum representing the vector length; this means that the first word of
+a vector is tagged as a fixnum.
 
 @example
 |------------------------|-------------| reference to vector
@@ -24338,6 +24336,27 @@ tagged as a fixnum.
 |------------------------|-------------| vector first word
      number of words       fixnum tag
 @end example
+
+After the length machine word comes the data area: an array of machine
+words, one for each vector slot; slot indexes are zero--based.
+
+@example
+      0   1   2   3   4   5   6   7
+|---|---|---|---|---|---|---|---|---| vector memory block
+  ^ |...............................|
+  |        slots = data area
+length
+fixnum
+@end example
+
+A vector is capable of holding at most a number of values equal to the
+return value of @func{greatest-fixnum}.  The fixnum representing the
+vector length, interpreted as raw signed integer, also represents the
+number of bytes in the data area.
+
+A fixnum representing the index of slot N, interpreted as raw signed
+integer, also represents the offset in bytes of the firts byte of the
+slot with respect the beginning of the data area.
 
 @c ------------------------------------------------------------
 

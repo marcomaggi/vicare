@@ -671,100 +671,249 @@
  /section)
 
 
-(section  ;;; vectors
- (section ;;; helpers
-  (define (vector-range-check x idx)
-    (define (check-non-vector x idx)
-      (define (check-fx idx)
-	(seq*
-	 (interrupt-unless (tag-test (T x) vector-mask vector-tag))
-	 (with-tmp ((len (cogen-value-$vector-length x)))
-	   (interrupt-unless (prm 'u< (T idx) len))
-	   (interrupt-unless-fixnum len))))
-      (define (check-? idx)
-	(seq*
-	 (interrupt-unless (tag-test (T x) vector-mask vector-tag))
-	 (with-tmp ((len (cogen-value-$vector-length x)))
-	   (interrupt-unless (prm 'u< (T idx) len))
-	   (with-tmp ((t (prm 'logor len (T idx))))
-	     (interrupt-unless-fixnum t)))))
-      (struct-case idx
-	((constant i)
-	 (if (and (fx? i) (>= i 0))
-	     (check-fx idx)
-	   (check-? idx)))
-	((known idx idx-t)
-	 (case (T:fixnum? idx-t)
-	   ((yes) (check-fx idx))
-	   ((maybe) (vector-range-check x idx))
-	   (else
-	    (printf "vector check with mismatch index tag ~s" idx-t)
-	    (vector-range-check x idx))))
-	(else (check-? idx))))
-    (define (check-vector x idx)
-      (define (check-fx idx)
-	(with-tmp ((len (cogen-value-$vector-length x)))
-	  (interrupt-unless (prm 'u< (T idx) len))))
-      (define (check-? idx)
-	(seq*
-	 (interrupt-unless-fixnum (T idx))
-	 (with-tmp ((len (cogen-value-$vector-length x)))
-	   (interrupt-unless (prm 'u< (T idx) len)))))
-      (struct-case idx
-	((constant i)
-	 (if (and (fx? i) (>= i 0))
-	     (check-fx idx)
-	   (interrupt)))
-	((known idx idx-t)
-	 (case (T:fixnum? idx-t)
-	   ((yes) (check-fx idx))
-	   ((no)  (interrupt))
-	   (else  (check-vector x idx))))
-	(else (check-? idx))))
-    (struct-case x
-      ((known x t)
-       (case (T:vector? t)
-	 ((yes) (record-optimization 'check-vector x) (check-vector x idx))
-	 ((no) (interrupt))
-	 (else (check-non-vector x idx))))
-      (else (check-non-vector x idx))))
-  /section)
+;;;; vectors
+;;
+;;Vectors are  variable length  blocks of  memory referenced  by machine
+;;words tagged  as vectors.  The  first machine  word of a  vector block
+;;contains a fixnum representing the  vector length; this means that the
+;;first word of a vector is tagged as a fixnum.
+;;
+;; |------------------------|-------------| reference to vector
+;;       heap pointer         vector tag
+;;
+;; |------------------------|-------------| vector first word
+;;      number of words       fixnum tag
+;;
+;;After the length machine word comes the data area: an array of machine
+;;words, one for each vector slot; slot indexes are zero--based.
+;;
+;;       0   1   2   3   4   5   6   7
+;; |---|---|---|---|---|---|---|---|---| vector memory block
+;;   ^ |...............................|
+;;   |               slots
+;; length
+;; fixnum
+;;
+;;A vector is capable of holding at most a number of values equal to the
+;;return value  of GREATEST-FIXNUM.  The fixnum  representing the vector
+;;length, interpreted as raw signed  integer, also represents the number
+;;of bytes in the data area.
+;;
+;;A fixnum representing  the index of slot N, interpreted  as raw signed
+;;integer, also represents the offset in  bytes of the firts byte of the
+;;slot with respect the beginning of the data area.
+;;
+(section
+
+ (module (vector-range-check)
+
+   (define (vector-range-check x idx)
+     (struct-case x
+       ((known expr type)
+	(case-symbols (T:vector? type)
+	  ((yes)
+	   (record-optimization 'check-vector expr)
+	   (check-vector expr idx))
+	  ((no)
+	   (interrupt))
+	  (else
+	   (check-non-vector expr idx))))
+       (else
+	(check-non-vector x idx))))
+
+   (module (check-non-vector)
+
+     (define (check-non-vector maybe-vector maybe-idx)
+       ;;MAYBE-VECTOR must be a  struct instance representing recordized
+       ;;code which,  once evaluated,  *should* return a  Scheme vector,
+       ;;but we are not sure about it.
+       ;;
+       ;;MAYBE-IDX  must be  a struct  instance representing  recordized
+       ;;code   which,  once   evaluated,  *should*   return  a   fixnum
+       ;;representing a valid slot index, but we are not sure about it.
+       ;;
+       (struct-case maybe-idx
+	 ((constant val)
+	  (if (and (fx? val)
+		   (>= val 0))
+	      (check-fx maybe-vector maybe-idx)
+	    (check-? maybe-vector maybe-idx)))
+	 ((known expr type)
+	  (case-symbols (T:fixnum? type)
+	    ((yes)
+	     (check-fx maybe-vector expr))
+	    ((maybe)
+	     (vector-range-check maybe-vector expr))
+	    (else
+	     (fprintf (current-error-port)
+		      "*** Vicare warning: vector check with mismatch index tag ~s\n"
+		      type)
+	     (vector-range-check maybe-vector expr))))
+	 (else
+	  (check-? maybe-vector maybe-idx))))
+
+     (define (check-fx maybe-vector idx)
+       ;;MAYBE-VECTOR must be a  struct instance representing recordized
+       ;;code which,  once evaluated,  *should* return a  Scheme vector,
+       ;;but we are not sure about it.
+       ;;
+       ;;IDX  must be  a  struct instance  representing recordized  code
+       ;;which, once evaluated, it is known to return a fixnum.
+       ;;
+       ;;Generate   recordized  code   to  check   at  run   time  that:
+       ;;MAYBE-VECTOR is actually a vector;  IDX is in the correct range
+       ;;for a slot index.
+       ;;
+       (seq* (interrupt-unless
+	      (tag-test (T maybe-vector) vector-mask vector-tag))
+	     (with-tmp ((len (cogen-value-$vector-length maybe-vector)))
+	       ;;FIXME Should  not the  two forms  below be  in reversed
+	       ;;order?  Is  this the order  because the first  check is
+	       ;;faster and it will work  with any machine word?  (Marco
+	       ;;Maggi; Oct 18, 2012)
+	       (interrupt-unless
+		(prm 'u< (T idx) len))
+	       (interrupt-unless-fixnum len))))
+
+     (define (check-? maybe-vector maybe-idx)
+       ;;MAYBE-VECTOR must be a  struct instance representing recordized
+       ;;code which,  once evaluated,  *should* return a  Scheme vector,
+       ;;but we are not sure about it.
+       ;;
+       ;;MAYBE-IDX  must be  a struct  instance representing  recordized
+       ;;code   which,  once   evaluated,  *should*   return  a   fixnum
+       ;;representing a  valid vector index,  but we are not  sure about
+       ;;it.
+       ;;
+       ;;Generate   recordized  code   to  check   at  run   time  that:
+       ;;MAYBE-VECTOR is  actually a vector;  MAYBE-IDX is a  fixnum and
+       ;;also it is in the correct range for a slot index.
+       ;;
+       (seq* (interrupt-unless
+	      (tag-test (T maybe-vector) vector-mask vector-tag))
+	     (with-tmp ((len (cogen-value-$vector-length maybe-vector)))
+	       ;;FIXME Should  not the  two forms  below be  in reversed
+	       ;;order?  Is  this the order  because the first  check is
+	       ;;faster and  it will work  with any machine  word?  What
+	       ;;kind of check is the second one?  (Marco Maggi; Oct 18,
+	       ;;2012)
+	       (interrupt-unless
+		(prm 'u< (T maybe-idx) len))
+	       (with-tmp ((t (prm 'logor len (T maybe-idx))))
+		 (interrupt-unless-fixnum t)))))
+
+     #| end of module: check-non-vector |#)
+
+   (module (check-vector)
+
+     (define (check-vector the-vector maybe-idx)
+       ;;THE-VECTOR must  be a  struct instance  representing recordized
+       ;;code  which, once  evaluated, it  is known  to return  a Scheme
+       ;;vector.
+       ;;
+       ;;MAYBE-IDX  must be  a struct  instance representing  recordized
+       ;;code   which,  once   evaluated,  *should*   return  a   fixnum
+       ;;representing a  valid vector index,  but we are not  sure about
+       ;;it.
+       ;;
+       (struct-case maybe-idx
+	 ((constant val)
+	  (if (and (fx? val)
+		   (>= val 0))
+	      (check-fx the-vector maybe-idx)
+	    (interrupt)))
+	 ((known expr type)
+	  (case (T:fixnum? type)
+	    ((yes)
+	     (check-fx the-vector expr))
+	    ((no)
+	     (interrupt))
+	    (else
+	     (check-vector the-vector expr))))
+	 (else
+	  (check-? the-vector maybe-idx))))
+
+     (define (check-fx the-vector idx)
+       ;;THE-VECTOR must  be a  struct instance  representing recordized
+       ;;code  which, once  evaluated, it  is known  to return  a Scheme
+       ;;vector.
+       ;;
+       ;;IDX  must be  a  struct instance  representing recordized  code
+       ;;which, once evaluated, it is known to return a fixnum.
+       ;;
+       ;;Generate recordized code  to check at run time that:  IDX is in
+       ;;the correct range for a slot index.
+       ;;
+       (with-tmp ((len (cogen-value-$vector-length the-vector)))
+	 (interrupt-unless
+	  (prm 'u< (T idx) len))))
+
+     (define (check-? the-vector maybe-idx)
+       ;;THE-VECTOR must  be a  struct instance  representing recordized
+       ;;code  which, once  evaluated, it  is known  to return  a Scheme
+       ;;vector.
+       ;;
+       ;;MAYBE-IDX  must be  a struct  instance representing  recordized
+       ;;code   which,  once   evaluated,  *should*   return  a   fixnum
+       ;;representing a valid slot index, but we are not sure about it.
+       ;;
+       ;;Generate recordized code  to check at run  time that: MAYBE-IDX
+       ;;is a  fixnum and  also it is  in the correct  range for  a slot
+       ;;index.
+       ;;
+       (seq* (interrupt-unless-fixnum (T maybe-idx))
+	     (with-tmp ((len (cogen-value-$vector-length the-vector)))
+	       ;;FIXME Should  not the  two forms  below be  in reversed
+	       ;;order?  Is  this the order  because the first  check is
+	       ;;faster and  it will work  with any machine  word?  What
+	       ;;kind of check is the second one?  (Marco Maggi; Oct 18,
+	       ;;2012)
+	       (interrupt-unless
+		(prm 'u< (T maybe-idx) len))
+	       (with-tmp ((t (prm 'logor len (T maybe-idx))))
+		 (interrupt-unless-fixnum t)))))
+
+     #| end of module: check-vector |# )
+
+   #| end of module: vector-range-check |# )
+
+;;; --------------------------------------------------------------------
 
  (define-primop vector? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag fx-mask fx-tag))
    ((E x) (nop)))
 
-(define-primop $make-vector unsafe
-  ;;Notice that  the code  below does not  initialise the  vector's data
-  ;;area leaving the items set to  whatever is there on the Scheme heap;
-  ;;this can be bad for garbage  collection if the newly built vector is
-  ;;moved before the items are  set to some correct Scheme object.  This
-  ;;is why  the unsafe  operations library defines  a $MAKE-CLEAN-VECTOR
-  ;;macro which builds a new vector  and clears the data area filling it
-  ;;with zero fixnums (which is  fast from C language using "memset()").
-  ;;(Marco Maggi; Jan 18, 2012)
-  ;;
-  ((V len)
-   (struct-case len
-     ((constant i)
-      (if (and (fx? i) #f)
-	  (interrupt)
-	(with-tmp ((v (prm 'alloc
-			   (K (align (+ (* i wordsize) disp-vector-data)))
-			   (K vector-tag))))
-	  (prm 'mset v
-	       (K off-vector-length)
-	       (K (* i fx-scale)))
-	  v)))
-     ((known expr)
-      (cogen-value-$make-vector expr))
-     (else
-      (with-tmp ((alen (align-code (T len) disp-vector-data)))
-	(with-tmp ((v (prm 'alloc alen (K vector-tag))))
-	  (prm 'mset v (K off-vector-length) (T len))
-	  v)))))
-  ((P len) (K #t))
-  ((E len) (nop)))
+ (define-primop $make-vector unsafe
+   ;;Notice that  the code  below does not  initialise the  vector's data
+   ;;area leaving the items set to  whatever is there on the Scheme heap;
+   ;;this can be bad for garbage  collection if the newly built vector is
+   ;;moved before the items are  set to some correct Scheme object.  This
+   ;;is why  the unsafe  operations library defines  a $MAKE-CLEAN-VECTOR
+   ;;macro which builds a new vector  and clears the data area filling it
+   ;;with zero fixnums (which is  fast from C language using "memset()").
+   ;;(Marco Maggi; Jan 18, 2012)
+   ;;
+   ((V len)
+    (struct-case len
+      ((constant i)
+       (if (and (fx? i) #f)
+	   (interrupt)
+	 (with-tmp ((v (prm 'alloc
+			    (K (align (+ (* i wordsize) disp-vector-data)))
+			    (K vector-tag))))
+	   (prm 'mset v
+		(K off-vector-length)
+		(K (* i fx-scale)))
+	   v)))
+      ((known expr)
+       (cogen-value-$make-vector expr))
+      (else
+       (with-tmp ((alen (align-code (T len) disp-vector-data)))
+	 (with-tmp ((v (prm 'alloc alen (K vector-tag))))
+	   (prm 'mset v (K off-vector-length) (T len))
+	   v)))))
+   ((P len) (K #t))
+   ((E len) (nop)))
 
  (define-primop make-vector safe
    ((V len)
@@ -3286,7 +3435,7 @@
 
 ;;; end of file
 ;;;Local Variables:
-;;;eval: (put 'make-conditional	'scheme-indent-function 1)
+;;;eval: (put 'make-conditional	'scheme-indent-function 2)
 ;;;eval: (put 'with-tmp		'scheme-indent-function 1)
 ;;;eval: (put 'struct-case	'scheme-indent-function 1)
 ;;;End:
