@@ -3693,6 +3693,7 @@
 (define symbol-tag			#x5F)
 (define symbol-record-tag		#x5F)
 
+(define disp-symbol-record-tag		#;(fx* 0 wordsize) 0)
 (define disp-symbol-record-string	(fx* 1 wordsize))
 (define disp-symbol-record-ustring	(fx* 2 wordsize))
 (define disp-symbol-record-value	(fx* 3 wordsize))
@@ -3700,6 +3701,7 @@
 (define disp-symbol-record-plist	(fx* 5 wordsize))
 (define symbol-record-size		(fx* 6 wordsize))
 
+(define off-symbol-record-tag		(fx- disp-symbol-record-tag     symbol-primary-tag))
 (define off-symbol-record-string	(fx- disp-symbol-record-string  symbol-primary-tag))
 (define off-symbol-record-ustring	(fx- disp-symbol-record-ustring symbol-primary-tag))
 (define off-symbol-record-value		(fx- disp-symbol-record-value   symbol-primary-tag))

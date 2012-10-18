@@ -1163,21 +1163,22 @@
 
  (define-primop $make-symbol unsafe
    ((V str)
-    ;;X is a machine word referencing a symbol's memory block.
-    (with-tmp ((x (prm 'alloc
-		       (K (align symbol-record-size))
-		       (K symbol-primary-tag))))
-      (prm 'mset x (K (fx- symbol-primary-tag))  (K symbol-tag))
-      (prm 'mset x (K off-symbol-record-string)  (T str))
-      (prm 'mset x (K off-symbol-record-ustring) (K 0))
-      (prm 'mset x (K off-symbol-record-value)   (K unbound))
-      (prm 'mset x (K off-symbol-record-proc)    (K unbound))
-      (prm 'mset x (K off-symbol-record-plist)   (K nil))
-      x))
+    (with-tmp ((sym (prm 'alloc
+			 (K (align symbol-record-size))
+			 (K symbol-primary-tag))))
+      (prm 'mset sym (K off-symbol-record-tag)     (K symbol-tag))
+      (prm 'mset sym (K off-symbol-record-string)  (T str))
+      (prm 'mset sym (K off-symbol-record-ustring) (K 0))
+      (prm 'mset sym (K off-symbol-record-value)   (K unbound))
+      (prm 'mset sym (K off-symbol-record-proc)    (K unbound))
+      (prm 'mset sym (K off-symbol-record-plist)   (K nil))
+      sym))
    ((P str)
     (K #t))
    ((E str)
     (nop)))
+
+;;; --------------------------------------------------------------------
 
  (define-primop $symbol-string unsafe
    ((V x)
@@ -1189,6 +1190,8 @@
    ((E x v)
     (mem-assign v (T x) off-symbol-record-string)))
 
+;;; --------------------------------------------------------------------
+
  (define-primop $symbol-unique-string unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-ustring)))
@@ -1198,6 +1201,8 @@
  (define-primop $set-symbol-unique-string! unsafe
    ((E x v)
     (mem-assign v (T x) off-symbol-record-ustring)))
+
+;;; --------------------------------------------------------------------
 
  (define-primop $symbol-plist unsafe
    ((V x)
@@ -1209,15 +1214,11 @@
    ((E x v)
     (mem-assign v (T x) off-symbol-record-plist)))
 
+;;; --------------------------------------------------------------------
+
  (define-primop $symbol-value unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-value)))
-   ((E x)
-    (nop)))
-
- (define-primop $symbol-proc unsafe
-   ((V x)
-    (prm 'mref (T x) (K off-symbol-record-proc)))
    ((E x)
     (nop)))
 
@@ -1227,11 +1228,21 @@
       (prm 'mset x^ (K off-symbol-record-value) (T v))
       (dirty-vector-set x^))))
 
+;;; --------------------------------------------------------------------
+
+ (define-primop $symbol-proc unsafe
+   ((V x)
+    (prm 'mref (T x) (K off-symbol-record-proc)))
+   ((E x)
+    (nop)))
+
  (define-primop $set-symbol-proc! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (prm 'mset x^ (K off-symbol-record-proc) (T v))
       (dirty-vector-set x^))))
+
+;;; --------------------------------------------------------------------
 
  (define-primop $set-symbol-value/proc! unsafe
    ((E x v)
@@ -1241,49 +1252,58 @@
       (prm 'mset x^ (K off-symbol-record-proc)  v^)
       (dirty-vector-set x^))))
 
+;;; --------------------------------------------------------------------
+
  (define-primop top-level-value safe
-   ((V x)
-    (struct-case x
-      ((constant s)
-       (if (symbol? s)
-	   (with-tmp ((v (cogen-value-$symbol-value x)))
-	     (interrupt-when (cogen-pred-$unbound-object? v))
-	     v)
+   ((V sym)
+    (struct-case sym
+      ((constant sym.val)
+       (if (symbol? sym.val)
+	   (with-tmp ((val (cogen-value-$symbol-value sym)))
+	     (interrupt-when
+	      (cogen-pred-$unbound-object? val))
+	     val)
 	 (interrupt)))
-      ((known expr)
-       (cogen-value-top-level-value expr))
+      ((known sym.expr)
+       (cogen-value-top-level-value sym.expr))
       (else
-       (with-tmp ((x^ (T x)))
-	 (interrupt-unless (cogen-pred-symbol? x^))
-	 (with-tmp ((v (cogen-value-$symbol-value x^)))
-	   (interrupt-when (cogen-pred-$unbound-object? v))
-	   v)))))
-   ((E x)
+       ;;Here  SYM  is recordized  code  which,  when evaluated,  should
+       ;;return a symbol.
+       (with-tmp ((sym^ (T sym)))
+	 (interrupt-unless
+	  (cogen-pred-symbol? sym^))
+	 (with-tmp ((val (cogen-value-$symbol-value sym^)))
+	   (interrupt-when
+	    (cogen-pred-$unbound-object? val))
+	   val)))))
+   ((E sym)
     ;;The difference between the V execution context and the E execution
     ;;context  is that:  here  we  do *not*  return  the  object in  the
     ;;symbol's field "value".
     ;;
-    (struct-case x
-      ((constant s)
-       (if (symbol? s)
-	   (with-tmp ((v (cogen-value-$symbol-value x)))
-	     (interrupt-when (cogen-pred-$unbound-object? v)))
+    (struct-case sym
+      ((constant sym.val)
+       (if (symbol? sym.val)
+	   (with-tmp ((val (cogen-value-$symbol-value sym)))
+	     (interrupt-when
+	      (cogen-pred-$unbound-object? val)))
 	 (interrupt)))
-      ((known expr)
-       (cogen-effect-top-level-value expr))
+      ((known sym.expr)
+       (cogen-effect-top-level-value sym.expr))
       (else
-       (with-tmp ((x^ (T x)))
-	 (interrupt-unless (cogen-pred-symbol? x^))
-	 (with-tmp ((v (cogen-value-$symbol-value x^)))
-	   (interrupt-when (cogen-pred-$unbound-object? v))))))))
-
+       (with-tmp ((sym^ (T sym)))
+	 (interrupt-unless
+	  (cogen-pred-symbol? sym^))
+	 (with-tmp ((val (cogen-value-$symbol-value sym^)))
+	   (interrupt-when
+	    (cogen-pred-$unbound-object? val))))))))
 
  (define-primop $init-symbol-function! unsafe
-   ((E x v)
-    (with-tmp ((x^ (T x))
-	       (v^ (T v)))
-      (prm 'mset x^ (K off-symbol-record-proc) v^)
-      (dirty-vector-set x^))))
+   ((E sym v)
+    (with-tmp ((sym^ (T sym))
+	       (v^   (T v)))
+      (prm 'mset sym^ (K off-symbol-record-proc) v^)
+      (dirty-vector-set sym^))))
 
  /section)
 
