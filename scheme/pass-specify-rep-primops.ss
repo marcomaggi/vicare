@@ -1824,11 +1824,11 @@
       (else
        ;;Here BYTE-IDX  is recordized  code which, when  evaluated, must
        ;;return a fixnum.
-       (prm 'sll
-	    (prm 'srl ;;FIXME bref.  (Abdulaziz Ghuloum)
+       (prm 'sll      ;tag the fixnum
+	    (prm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
 		 (prm 'mref (T bigN)
 		      (prm 'int+
-			   (prm 'sra (T byte-idx) (K fx-shift))
+			   (prm 'sra (T byte-idx) (K fx-shift)) ;untag the fixnum
 			   ;;FIXME Endianness  dependency!!!  Works only
 			   ;;on little endian  platforms.  (Marco Maggi;
 			   ;;Oct 19, 2012)
