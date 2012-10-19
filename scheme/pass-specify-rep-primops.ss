@@ -1633,8 +1633,8 @@
     ;;Both X and  NUMBITS must be fixnums.
     (struct-case numbits
       ((constant numbits.val)
-       ;;Here  NUMBITS.VAL must  be an  exact integer  being the  binary
-       ;;representation of the shift amount.
+       ;;Here  NUMBITS.VAL must  be  an exact  integer representing  the
+       ;;binary representation of the shift amount.
        (interrupt-unless-fx numbits.val)
        (prm 'logand
 	    (prm 'sra (T x) (K (let ((word-numbits (* wordsize 8)))

@@ -1166,7 +1166,10 @@
    (tag-test recordized-code fx-mask fx-tag)))
 
 (define (interrupt-unless-fx binary-representation)
-  (unless (fx? binary-representation)
+  (if (fx? binary-representation)
+      (nop)
+    (interrupt))
+  #;(unless (fx? binary-representation)
     (interrupt)))
 
 
