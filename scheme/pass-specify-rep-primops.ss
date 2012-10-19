@@ -1516,58 +1516,145 @@
     (nop)))
 
  (define-primop $fxsra unsafe
-   ;;Shift-right arithmetic.
+   ;;Shift-right arithmetic: right-shifts the bits  of the operand by an
+   ;;amount of positions; if the most  significant bit of the operand is
+   ;;set to:
+   ;;
+   ;;0 - arithmetic right-shifting introduces bits  set to 0 on the left
+   ;;    of the machine word;
+   ;;
+   ;;1 - arithmetic right-shifting introduces bits  set to 1 on the left
+   ;;    of the machine word.
+   ;;
+   ;;On a 32-bit platform, let's say  we have the following machine word
+   ;;as operand (representing the positive  fixnum 63161283) and we want
+   ;;to right-shift it by 10:
+   ;;
+   ;;      byte4    byte3    byte1    byte0
+   ;;    00001111 00001111 00001111 00001100
+   ;;   |................................|..|
+   ;;           payload bits              fixnum tag
+   ;;                         |.............|
+   ;;                          shift amount
+   ;;
+   ;;after arithmetic right-shifting, we get the machine word:
+   ;;
+   ;;      byte4    byte3    byte1    byte0
+   ;;    00000000 00000011 11000011 11000011
+   ;;
+   ;;and to make  the resulting fixnum, we  have to set to  0 the least
+   ;;significant bits  corresponding to the  fixnum tag; we do  it with
+   ;;the following bitwise logic AND operation:
+   ;;
+   ;;      byte4    byte3    byte1    byte0
+   ;;    00000000 00000011 11000011 11000011 AND
+   ;;    11111111 11111111 11111111 11111100 =
+   ;;    -------------------------------------
+   ;;    00000000 00000011 11000011 11000000
+   ;;    |...............................|..|
+   ;;             payload bits            fixnum tag
+   ;;
+   ;;whose result is the fixnum:
+   ;;
+   ;;   (integer->machine-word #b00000000000000111100001111000000)
+   ;;   => 61680
+   ;;
+   ;;On a 32-bit platform, let's say  we have the following machine word
+   ;;as  operand (representing  the negative  fixnum -473709629)  and we
+   ;;want to right-shift it by 10:
+   ;;
+   ;;      byte4    byte3    byte1    byte0
+   ;;    10001111 00001111 00001111 00001100
+   ;;   |................................|..|
+   ;;           payload bits              fixnum tag
+   ;;                         |.............|
+   ;;                          shift amount
+   ;;
+   ;;after arithmetic right-shifting, we get the machine word:
+   ;;
+   ;;      byte4    byte3    byte1    byte0
+   ;;    11111111 11100011 11000011 11000011
+   ;;               ^
+   ;;        original sign bit
+   ;;
+   ;;and to make  the resulting fixnum, we  have to set to  0 the least
+   ;;significant bits  corresponding to the  fixnum tag; we do  it with
+   ;;the following bitwise logic AND operation:
+   ;;
+   ;;      byte4    byte3    byte1    byte0
+   ;;    11111111 11100011 11000011 11000011 AND
+   ;;    11111111 11111111 11111111 11111100 =
+   ;;    -------------------------------------
+   ;;    11111111 11100011 11000011 11000000
+   ;;    |...............................|..|
+   ;;             payload bits            fixnum tag
+   ;;
+   ;;whose result is the fixnum:
+   ;;
+   ;;   (integer->machine-word #b11111111111000111100001111000000)
+   ;;   => -462608
+   ;;
+   ;;QUESTION: How do we make the  machine word that acts as AND-mask to
+   ;;set to 0 the fixnum tag bits?
+   ;;
+   ;;ANSWER:  It is  a  constant value  known at  compile  time, so  the
+   ;;compiler computes it  as struct instance of type  CONSTANT; at this
+   ;;stage in  the compilation process,  such constant must be  an exact
+   ;;integer representing the binary representation of the mask word.
+   ;;
+   ;;On a 32-bit platform, the payload bits of such exact integer are:
+   ;;
+   ;;   11111111 11111111 11111111 11111100   machine word mask
+   ;;
+   ;;we can represent this integer as the fixnum:
+   ;;
+   ;;   11111111 11111111 11111111 11110000   mask fixnum representation
+   ;;
+   ;;knowing that,  when the final  compilation step will  be performed,
+   ;;such fixnum will be artithmetically right-shifted by 2.
+   ;;
+   ;;Then, how do we compute the  fixnum representation of the mask?  We
+   ;;take the fixnum  with all the payload  bits set to 1,  which is -1,
+   ;;and left-shift  it by the number  of bits in the  fixnum tag; there
+   ;;are two ways to do it, on a 32-bit platform:
+   ;;
+   ;;   (define fx-shift 2)
+   ;;   (define fx-scale 4)
+   ;;
+   ;;   (fxarithmetic-shift-left -1 fx-shift)	=> -4
+   ;;   (* -1 fx-scale)				=> -4
+   ;;
+   ;;and notice that:
+   ;;
+   ;;   (machine-word->integer -4)
+   ;;   => #b11111111111111111111111111110000
    ;;
    ((V x numbits)
-    ;;Both  X and  NUMBITS  must be  fixnums.  Let's  say,  on a  32-bit
-    ;;platform, we have the following fixnum as X:
-    ;;
-    ;;      byte4      byte3      byte1      byte0
-    ;;   #b00001111 #b00001111 #b00001111 #b00001100
-    ;;   |.......................................|..|
-    ;;                payload bits                fixnum tag
-    ;;
-    ;;if we right shift it by 10, we get:
-    ;;
-    ;;      byte4      byte3      byte1      byte0
-    ;;   #b00001111 #b00001111 #b00001111 #b00001100
-    ;;
-    ;;
-    ;;
+    ;;Both X and  NUMBITS must be fixnums.
     (struct-case numbits
       ((constant numbits.val)
        ;;Here  NUMBITS.VAL must  be an  exact integer  being the  binary
        ;;representation of the shift amount.
-       ;;
-       ;;Question:  Should we  not check  also that  NUMBITS.VAL is  not
-       ;;bigger than the number of bits in  a fixnum?  We could as it is
-       ;;done by FXARITHMETIC-SHIFT,  but we decide not  to because this
-       ;;is a low level operation.  (Marco Maggi; Oct 18, 2012)
        (interrupt-unless-fx numbits.val)
        (prm 'logand
 	    (prm 'sra (T x) (K (let ((word-numbits (* wordsize 8)))
 				 (if (< numbits.val word-numbits)
 				     numbits.val
 				   (- word-numbits 1)))))
-	    ;;This constant is a machine word with all the bits set to 1
-	    ;;except  the least  significant ones  corresponding to  the
-	    ;;fixnum tag.
 	    (K (* -1 fx-scale))))
       ((known numbits.expr)
        (cogen-value-$fxsra x numbits.expr))
       (else
        ;;Here NUMBITS is recordized code that must return a fixnum.
        ;;
-       (with-tmp* ((numbits.val (prm 'sra (T numbits) (K fx-shift)))
-		   (numbits.val (let ((word-numbits (* wordsize 8)))
-				  (make-conditional (prm '< numbits.val (K word-numbits))
-				      numbits.val
-				    (K (- word-numbits 1))))))
+       (with-tmp*
+	   ((numbits.val (prm 'sra (T numbits) (K fx-shift)))
+	    (numbits.val (let ((word-numbits (* wordsize 8)))
+			   (make-conditional (prm '< numbits.val (K word-numbits))
+			       numbits.val
+			     (K (- word-numbits 1))))))
 	 (prm 'logand
 	      (prm 'sra (T x) numbits.val)
-	      ;;This constant is a machine word with all the bits set to
-	      ;;1 except the least significant ones corresponding to the
-	      ;;fixnum tag.
 	      (K (* -1 fx-scale)))))))
    ((P x i)
     (K #t))
