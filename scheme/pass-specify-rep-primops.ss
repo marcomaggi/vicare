@@ -1763,45 +1763,68 @@
     (nop)))
 
  (define-primop $bignum-positive? unsafe
+   ;;Extract the  sign bit from the  first word and evaluate  to true if
+   ;;the sign bit is set to zero.
+   ;;
    ((P x)
     (prm '= (prm 'logand
 		 (prm 'mref (T x) (K off-bignum-tag))
 		 (K bignum-sign-mask))
 	 (K 0)))
-   ((E x) (nop)))
-
- (define-primop $bignum-byte-ref unsafe
-   ((V s i)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (prm 'sll
-	    (prm 'logand
-		 (prm 'mref (T s) (K (+ i off-bignum-data)))
-		 (K 255))
-	    (K fx-shift)))
-      ((known i)
-       (cogen-value-$bignum-byte-ref s i))
-      (else
-       (prm 'sll
-	    (prm 'srl ;;; FIXME: bref
-		 (prm 'mref (T s)
-		      (prm 'int+
-			   (prm 'sra (T i) (K fx-shift))
-			   ;; ENDIANNESS DEPENDENCY
-			   (K (- disp-bignum-data (- wordsize 1) vector-tag))))
-		 (K (* (- wordsize 1) 8)))
-	    (K fx-shift)))))
-   ((P s i) (K #t))
-   ((E s i) (nop)))
+   ((E x)
+    (nop)))
 
  (define-primop $bignum-size unsafe
+   ;;Extract the  number of limbs from  the first word and  return it as
+   ;;fixnum.
+   ;;
    ((V x)
     (prm 'sll
 	 (prm 'sra
 	      (prm 'mref (T x) (K off-bignum-tag))
 	      (K bignum-length-shift))
+	 ;;This  constant  must be  an  exact  integer representing  the
+	 ;;binary representation of the left-shift amount.
 	 (K (* 2 fx-shift)))))
+
+ (define-primop $bignum-byte-ref unsafe
+   ;;Return a fixnum representing a byte  from the array of limbs in the
+   ;;data area.  On a 32-bit platform, the byte indexes are as follows:
+   ;;
+   ;;            limb0                      limb1
+   ;;  |--|--|--|--|--|--|--|--|  |--|--|--|--|--|--|--|--|  ...
+   ;;    0  1  2  3  4  5  6  7     8  9 10 11 12 13 14 15
+   ;;
+   ((V bigN byte-idx)
+    (struct-case byte-idx
+      ((constant byte-idx.val)
+       ;;BYTE-IDX.VAL is  an exact  integer whose  payload bits  are the
+       ;;binary representataion of the selected byte index.
+       (interrupt-unless-fx byte-idx.val)
+       (prm 'sll
+	    (prm 'logand
+		 (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data)))
+		 (K 255))
+	    (K fx-shift)))
+      ((known byte-idx.expr)
+       (cogen-value-$bignum-byte-ref bigN byte-idx.expr))
+      (else
+       ;;Here BYTE-IDX  is recordized  code which, when  evaluated, must
+       ;;return a fixnum.
+       (prm 'sll
+	    (prm 'srl ;;FIXME bref.  (Abdulaziz Ghuloum)
+		 (prm 'mref (T bigN)
+		      (prm 'int+
+			   (prm 'sra (T byte-idx) (K fx-shift))
+			   ;;FIXME Endianness  dependency!!!  (Abdulaziz
+			   ;;Ghuloum)
+			   (K (- disp-bignum-data (- wordsize 1) vector-tag))))
+		 (K (* (- wordsize 1) 8)))
+	    (K fx-shift)))))
+   ((P bigN byte-idx)
+    (K #t))
+   ((E bigN byte-idx)
+    (nop)))
 
  /section)
 
