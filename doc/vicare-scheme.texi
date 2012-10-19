@@ -25332,11 +25332,11 @@ is as follows:
 @end example
 
 @noindent
-where the first word @code{fst} is header of meta informations encoded
-as explained above and each limb is a machine word stored in native
-endianness; the big number is the concatenation of limbs with
-@code{limb0} being the least significant one.  There is always at least
-one limb; when a bignum is composed of a single limb, its value is
+where the first word @code{1st} is header of meta informations encoded
+as explained above and each limb is a machine word stored in
+@strong{native} endianness; the big number is the concatenation of limbs
+with @code{limb0} being the least significant one.  There is always at
+least one limb; when a bignum is composed of a single limb, its value is
 always non--zero and outside the range of fixnums.
 
 @c ------------------------------------------------------------

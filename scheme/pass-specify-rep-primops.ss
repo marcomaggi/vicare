@@ -1818,7 +1818,8 @@
 			   (prm 'sra (T byte-idx) (K fx-shift))
 			   ;;FIXME Endianness  dependency!!!  (Abdulaziz
 			   ;;Ghuloum)
-			   (K (- disp-bignum-data (- wordsize 1) vector-tag))))
+			   (K (- off-bignum-data (- wordsize 1))
+			      #;(- disp-bignum-data (- wordsize 1) vector-tag))))
 		 (K (* (- wordsize 1) 8)))
 	    (K fx-shift)))))
    ((P bigN byte-idx)
