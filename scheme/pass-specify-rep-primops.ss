@@ -1757,13 +1757,15 @@
 (section
 
  (define-primop bignum? safe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag bignum-mask bignum-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag bignum-mask bignum-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $bignum-positive? unsafe
    ((P x)
     (prm '= (prm 'logand
-		 (prm 'mref (T x) (K (- vector-tag)))
+		 (prm 'mref (T x) (K off-bignum-tag))
 		 (K bignum-sign-mask))
 	 (K 0)))
    ((E x) (nop)))
@@ -1775,8 +1777,7 @@
        (unless (fx? i) (interrupt))
        (prm 'sll
 	    (prm 'logand
-		 (prm 'mref (T s)
-		      (K (+ i (- disp-bignum-data vector-tag))))
+		 (prm 'mref (T s) (K (+ i off-bignum-data)))
 		 (K 255))
 	    (K fx-shift)))
       ((known i)
@@ -1787,10 +1788,8 @@
 		 (prm 'mref (T s)
 		      (prm 'int+
 			   (prm 'sra (T i) (K fx-shift))
-;;; ENDIANNESS DEPENDENCY
-			   (K (- disp-bignum-data
-				 (- wordsize 1)
-				 vector-tag))))
+			   ;; ENDIANNESS DEPENDENCY
+			   (K (- disp-bignum-data (- wordsize 1) vector-tag))))
 		 (K (* (- wordsize 1) 8)))
 	    (K fx-shift)))))
    ((P s i) (K #t))
@@ -1800,7 +1799,7 @@
    ((V x)
     (prm 'sll
 	 (prm 'sra
-	      (prm 'mref (T x) (K (- vector-tag)))
+	      (prm 'mref (T x) (K off-bignum-tag))
 	      (K bignum-length-shift))
 	 (K (* 2 fx-shift)))))
 

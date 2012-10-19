@@ -3659,10 +3659,27 @@
 
 (define bignum-mask			#b111)
 (define bignum-tag			#b011)
+
+;;Bit mask to be AND-ed to the  first word in a bignum's memory block to
+;;isolate the sign bit.
 (define bignum-sign-mask		#b1000)
+
+;;Given the  first word in  a bignum's memory  block, with the  sign bit
+;;already isolated: we have to right-shift it by this amount to get 0 if
+;;positive and 1 if negative.
 (define bignum-sign-shift		3)
+
+;;Given  the  first  word  in  a  bignum's  memory  block:  we  have  to
+;;right-shift it by  this amount to get a machine  word (*not* a fixnum)
+;;representing the  number of limbs  in the data  area.  Each limb  is a
+;;machine word.
 (define bignum-length-shift		4)
+
+(define disp-bignum-tag			0)
 (define disp-bignum-data		wordsize)
+
+(define off-bignum-tag			(fx- disp-bignum-tag  vector-tag))
+(define off-bignum-data			(fx- disp-bignum-data vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; bytevectors
