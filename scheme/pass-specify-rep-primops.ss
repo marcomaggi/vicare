@@ -1663,19 +1663,29 @@
 
  (define-primop $fxquotient unsafe
    ((V a b)
-    (with-tmp ((b (T b))) ;;; FIXME: why is quotient called remainder?
-      (prm 'sll (prm 'int-quotient (T a) b) (K fx-shift))))
-   ((P a b) (K #t))
-   ((E a b) (nop)))
+    ;;FIXME Why is quotient called remainder?  (Abdulaziz Ghuloum)
+    (with-tmp ((b (T b)))
+      (prm 'sll
+	   (prm 'int-quotient (T a) b)
+	   (K fx-shift))))
+   ((P a b)
+    (K #t))
+   ((E a b)
+    (nop)))
 
-;;;FIXME Is this actually finished used somewhere?
+ ;;FIXME This  is used nowhere, is  it finished?  (Marco Maggi;  Oct 19,
+ ;;2012)
  (define-primop $int-quotient unsafe
    ((V a b)
-    (prm 'sll (prm 'int-quotient (T a) (T b)) (K fx-shift))))
+    (prm 'sll
+	 (prm 'int-quotient (T a) (T b))
+	 (K fx-shift))))
 
-;;;FIXME Is this actually finished and used somewhere?
+ ;;FIXME This is  used nowhere, and it looks  unfinished?  (Marco Maggi;
+ ;;Oct 19, 2012)
  (define-primop $int-remainder unsafe
-   ((V a b) (prm 'int-remainder (T a))))
+   ((V a b)
+    (prm 'int-remainder (T a))))
 
  ;;This  implementation is  wrong  as documented  in  issue 9:  incorrect
  ;;results for negative numbers.  It  is replaced with another version in
@@ -1691,7 +1701,8 @@
  ;;   ((P a b) (K #t))
  ;;   ((E a b) (nop)))
 
-;;;FIXME Is this actually used somewhere?
+ ;;FIXME This looks  to be used nowhere; is it  finished?  (Marco Maggi;
+ ;;Oct 19, 2012)
  (define-primop $fxinthash unsafe
    ((V key)
     (with-tmp ((k (T key)))
@@ -1739,6 +1750,9 @@
 ;;                       sign bit
 ;;  |----------------------|-|-------------| bignum first word
 ;;     number of words         bignum tag
+;;
+;;   |----|-----|-----|-----|-----| bignum memory block
+;;    1st  limb0 limb1 limb2 limb3
 ;;
 (section
 

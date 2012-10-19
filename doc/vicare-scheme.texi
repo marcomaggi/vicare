@@ -25328,7 +25328,7 @@ is as follows:
 
 @example
 |----|-----|-----|-----|-----| ...
- fst  limb0 limb1 limb2 limb3
+ 1st  limb0 limb1 limb2 limb3
 @end example
 
 @noindent
