@@ -1809,14 +1809,13 @@
       ((constant byte-idx.val)
        ;;BYTE-IDX.VAL is  an exact  integer whose  payload bits  are the
        ;;binary representataion of the selected byte index.
+       ;;
+       ;;FIXME  Endianness dependency!!!   Works only  on little  endian
+       ;;platforms.  (Marco Maggi; Oct 19, 2012)
        (interrupt-unless-fx byte-idx.val)
        (prm 'sll
-	    (prm 'logand
-		 (prm 'mref (T bigN)
-		      ;;FIXME  Endianness dependency!!!   Works only  on
-		      ;;little endian platforms.   (Marco Maggi; Oct 19,
-		      ;;2012)
-		      (K (+ byte-idx.val off-bignum-data)))
+	    (prm 'logand ;isolate the requested byte
+		 (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data)))
 		 (K 255))
 	    (K fx-shift)))
       ((known byte-idx.expr)
@@ -1824,17 +1823,32 @@
       (else
        ;;Here BYTE-IDX  is recordized  code which, when  evaluated, must
        ;;return a fixnum.
-       (prm 'sll      ;tag the fixnum
-	    (prm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
+       ;;
+       ;;FIXME  Endianness dependency!!!   Works only  on little  endian
+       ;;platforms.  (Marco Maggi; Oct 19, 2012)
+       (prm 'sll	 ;tag the fixnum
+	    (prm 'logand ;isolate the requested byte
 		 (prm 'mref (T bigN)
 		      (prm 'int+
 			   (prm 'sra (T byte-idx) (K fx-shift)) ;untag the fixnum
-			   ;;FIXME Endianness  dependency!!!  Works only
-			   ;;on little endian  platforms.  (Marco Maggi;
-			   ;;Oct 19, 2012)
-			   (K (- off-bignum-data (- wordsize 1)))))
-		 (K (* (- wordsize 1) 8)))
-	    (K fx-shift)))))
+			   (K off-bignum-data)))
+		 (K 255))
+	    (K fx-shift))
+       ;;
+       ;;The one below  is the original Ikarus version; I  do not really
+       ;;know why it was written this way,  it may well be that I am too
+       ;;stupid and/or  ignorant to  understand.  (Marco Maggi;  Oct 19,
+       ;;2012)
+       ;;
+       ;; (prm 'sll      ;tag the fixnum
+       ;;      (prm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
+       ;;           (prm 'mref (T bigN)
+       ;;                (prm 'int+
+       ;;                     (prm 'sra (T byte-idx) (K fx-shift)) ;untag the fixnum
+       ;;                     (K (- off-bignum-data (- wordsize 1)))))
+       ;;           (K (* (- wordsize 1) 8)))
+       ;;      (K fx-shift))
+       )))
    ((P bigN byte-idx)
     (K #t))
    ((E bigN byte-idx)
