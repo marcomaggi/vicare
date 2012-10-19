@@ -3628,7 +3628,12 @@
 
 (define flonum-tag			#x17)
 (define flonum-size			16)
+
+(define disp-flonum-tag			0)
 (define disp-flonum-data		8)
+
+(define off-flonum-tag			(fx- disp-flonum-tag  vector-tag))
+(define off-flonum-data			(fx- disp-flonum-data vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; ratnums

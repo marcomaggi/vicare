@@ -25861,6 +25861,8 @@ platforms; to allow for the same binary layout on both platforms, on a
    1st word     2nd word     3rd word     4th word
 |------------|------------|------------|------------|
  tagged word     unused           data words
+                          |.........................|
+                                    flonum
 @end example
 
 @noindent
@@ -25870,6 +25872,8 @@ on a 64-bit platform the actual number is stored in the second word:
           1st word                 2nd word
 |-------------------------|-------------------------|
          tagged word               data word
+                          |.........................|
+                                    flonum
 @end example
 
 @c ------------------------------------------------------------

@@ -1877,59 +1877,68 @@
 ;;    1st word     2nd word     3rd word     4th word
 ;;  |------------|------------|------------|------------|
 ;;   tagged word     unused           data words
+;;                            |.........................|
+;;                                      flonum
 ;;
 ;;on a 64-bit platform the actual number is stored in the second word:
 ;;
 ;;            1st word                 2nd word
 ;;  |-------------------------|-------------------------|
 ;;           tagged word               data word
+;;                            |.........................|
+;;                                      flonum
 ;;
 (section
 
  (define ($flop-aux op fl0 fl1)
    ;;Flonum operation between two operands.
    ;;
-   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-     ;;tag the first word of the result as flonum
-     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
-     ;;load the first operand in a register for flonums
-     (prm 'fl:load  (T fl0) (K (- disp-flonum-data vector-tag)))
-     ;;perform the operation between the register and FL1
-     (prm op        (T fl1) (K (- disp-flonum-data vector-tag)))
-     ;;store the result from the register into memory referenced by X
-     (prm 'fl:store x       (K (- disp-flonum-data vector-tag)))
+   (with-tmp ((x (prm 'alloc
+		      (K (align flonum-size))
+		      (K vector-tag))))
+     ;;Tag the first word of the result as flonum.
+     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
+     ;;Load the first operand in a register for flonums.
+     (prm 'fl:load  (T fl0) (K off-flonum-data))
+     ;;Perform the operation between the register and FL1.
+     (prm op        (T fl1) (K off-flonum-data))
+     ;;Store the result from the register into memory referenced by X.
+     (prm 'fl:store x       (K off-flonum-data))
      x))
 
  (define ($flop-aux* op fl fl*)
    ;;Flonum operation  between three or  more operands (but also  upon a
    ;;single operand).
    ;;
-   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-     ;;tag the first word of the result as flonum
-     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
-     ;;load the first operand in a register for flonums
-     (prm 'fl:load (T fl) (K (- disp-flonum-data vector-tag)))
-     (let f ((fl* fl*))
-       (cond ((null? fl*)
-	      (prm 'nop))
-	     (else
-	      (make-seq
-	       ;;perform the operation between the register and the next
-	       ;;operand
-	       (prm op (T (car fl*)) (K (- disp-flonum-data vector-tag)))
-	       (f (cdr fl*))))))
-     ;;store the result from the register into memory referenced by X
-     (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+   (with-tmp ((x (prm 'alloc
+		      (K (align flonum-size))
+		      (K vector-tag))))
+     ;;Tag the first word of the result as flonum.
+     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
+     ;;Load the first operand in a register for flonums.
+     (prm 'fl:load (T fl) (K off-flonum-data))
+     (let recur ((fl* fl*))
+       (if (null? fl*)
+	   (nop)
+	 (make-seq
+	  ;;Perform  the operation  between  the register  and the  next
+	  ;;operand.
+	  (prm op (T (car fl*)) (K off-flonum-data))
+	  (recur (cdr fl*)))))
+     ;;Store the result from the register into memory referenced by X.
+     (prm 'fl:store x (K off-flonum-data))
      x))
 
  (define ($flcmp-aux op fl0 fl1)
    ;;Flonum comparison operation.
    ;;
    (make-seq
-    ;; load the first operand in a register for flonums
-    (prm 'fl:load (T fl0) (K (- disp-flonum-data vector-tag)))
-    ;; perform the operation between the register and FL1
-    (prm op       (T fl1) (K (- disp-flonum-data vector-tag)))))
+    ;;Load the first operand in a register for flonums.
+    (prm 'fl:load (T fl0) (K off-flonum-data))
+    ;;Perform the operation between the register and FL1.
+    (prm op       (T fl1) (K off-flonum-data))))
+
+;;; --------------------------------------------------------------------
 
  (define-primop flonum? safe
    ((P x) (sec-tag-test (T x) vector-mask vector-tag #f flonum-tag))
@@ -1945,7 +1954,7 @@
        (prm 'sll
 	    (prm 'logand
 		 (prm 'bref (T s)
-		      (K (+ (- 7 i) (- disp-flonum-data vector-tag))))
+		      (K (+ (- 7 i) off-flonum-data)))
 		 (K 255))
 	    (K fx-shift)))
       ((known expr)
@@ -1957,7 +1966,7 @@
  (define-primop $make-flonum unsafe
    ((V)
     (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+      (prm 'mset x (K off-flonum-tag) (K flonum-tag))
       x))
    ((P str) (K #t))
    ((E str) (nop)))
@@ -1972,7 +1981,7 @@
        ;;store the byte
        (prm 'bset
 	    (T x)
-	    (K (+ (- 7 i) (- disp-flonum-data vector-tag)))
+	    (K (+ (- 7 i) off-flonum-data))
 	    (prm 'sra (T v) (K fx-shift))))
       ((known expr)
        (cogen-effect-$flonum-set! x expr v))
@@ -1984,13 +1993,13 @@
       ((4)
        (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	 ;;tag the first word of the result as flonum
-	 (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+	 (prm 'mset x (K off-flonum-tag) (K flonum-tag))
 	 ;;perform the operation storing the result in a flonum register
 	 (prm 'fl:from-int
 	      (K 0) ; dummy
 	      (prm 'sra (T fx) (K fx-shift)))
 	 ;;store the result from the register into memory referenced by X
-	 (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+	 (prm 'fl:store x (K off-flonum-data))
 	 x))
       (else
        (with-tmp ((f (cogen-value-$make-flonum)))
@@ -2020,7 +2029,7 @@
 			 (interrupt-unless
 			  (tag-test x vector-mask vector-tag))
 			 (interrupt-unless
-			  (prm '= (prm 'mref x (K (- vector-tag)))
+			  (prm '= (prm 'mref x (K off-flonum-tag))
 			       (K flonum-tag)))
 			 code))))))
 
@@ -2039,7 +2048,7 @@
 ;;;        (else (prm 'logor (car a*) (or* (cdr a*))))))
 ;;;    (interrupt-unless
 ;;;      (prm '= (or* (map (lambda (x)
-;;;                          (prm 'mref x (K (- vector-tag))))
+;;;                          (prm 'mref x (K off-flonum-tag)))
 ;;;                        ls))
 ;;;           (K flonum-tag))))
 ;;;  (let ((check
