@@ -3884,7 +3884,8 @@
     (- t 1))
 
   (define (fx? x)
-    ;;Return if X is an exact signed integer that fits in a machine word.
+    ;;Return true if X is an exact signed integer that fits in a machine
+    ;;word.
     (and (or (fixnum? x)
 	     (bignum? x))
 	 (<= least-signed-machine-word x greatest-signed-machine-word)))

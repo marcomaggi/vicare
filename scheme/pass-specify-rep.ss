@@ -1165,6 +1165,10 @@
   (interrupt-unless
    (tag-test recordized-code fx-mask fx-tag)))
 
+(define (interrupt-unless-fx binary-representation)
+  (unless (fx? binary-representation)
+    (interrupt)))
+
 
 (define (ClambdaCase x)
   (struct-case x

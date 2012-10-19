@@ -1494,19 +1494,21 @@
        ;;Here  NUMBITS.VAL must  be an  exact integer  being the  binary
        ;;representation of the shift amount.
        ;;
-       ;;FIXME Should not  we check also that NUMBITS.VAL  is not bigger
-       ;;than the  number of bits  in a  fixnum?  (Marco Maggi;  Oct 18,
-       ;;2012)
+       ;;Question:  Should we  not check  also that  NUMBITS.VAL is  not
+       ;;bigger than the number of bits in  a fixnum?  We could as it is
+       ;;done by FXARITHMETIC-SHIFT,  but we decide not  to because this
+       ;;is a low level operation.  (Marco Maggi; Oct 18, 2012)
        (unless (fx? numbits.val)
 	 (interrupt))
        (prm 'sll (T x) (K numbits.val)))
       ((known numbits.expr)
        (cogen-value-$fxsll x numbits.expr))
       (else
-       ;;By right-shifting NUMBITS we untag it.
+       ;;Here NUMBITS is recordized code that must return a fixnum.
        ;;
-       ;;Since we want a fixnum as result:  there is no need to untag X,
-       ;;left-shift X, retag X; we just left-shift the tagged X.
+       ;;By right-shifting NUMBITS we untag  it.  Since we want a fixnum
+       ;;as result: there is no need  to untag X, left-shift X, retag X;
+       ;;we just left-shift the tagged X.
        (prm 'sll (T x) (prm 'sra (T numbits) (K fx-shift))))))
    ((P x i)
     (K #t))
@@ -1516,28 +1518,57 @@
  (define-primop $fxsra unsafe
    ;;Shift-right arithmetic.
    ;;
-   ((V x i)
-    ;;Both X and NUMBITS must be fixnums.
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
+   ((V x numbits)
+    ;;Both  X and  NUMBITS  must be  fixnums.  Let's  say,  on a  32-bit
+    ;;platform, we have the following fixnum as X:
+    ;;
+    ;;      byte4      byte3      byte1      byte0
+    ;;   #b00001111 #b00001111 #b00001111 #b00001100
+    ;;   |.......................................|..|
+    ;;                payload bits                fixnum tag
+    ;;
+    ;;if we right shift it by 10, we get:
+    ;;
+    ;;      byte4      byte3      byte1      byte0
+    ;;   #b00001111 #b00001111 #b00001111 #b00001100
+    ;;
+    ;;
+    ;;
+    (struct-case numbits
+      ((constant numbits.val)
+       ;;Here  NUMBITS.VAL must  be an  exact integer  being the  binary
+       ;;representation of the shift amount.
+       ;;
+       ;;Question:  Should we  not check  also that  NUMBITS.VAL is  not
+       ;;bigger than the number of bits in  a fixnum?  We could as it is
+       ;;done by FXARITHMETIC-SHIFT,  but we decide not  to because this
+       ;;is a low level operation.  (Marco Maggi; Oct 18, 2012)
+       (interrupt-unless-fx numbits.val)
        (prm 'logand
-	    (prm 'sra (T x)
-		 (K (if (< i (* wordsize 8))
-			i
-		      (- (* wordsize 8) 1))))
+	    (prm 'sra (T x) (K (let ((word-numbits (* wordsize 8)))
+				 (if (< numbits.val word-numbits)
+				     numbits.val
+				   (- word-numbits 1)))))
+	    ;;This constant is a machine word with all the bits set to 1
+	    ;;except  the least  significant ones  corresponding to  the
+	    ;;fixnum tag.
 	    (K (* -1 fx-scale))))
-      ((known i)
-       (cogen-value-$fxsra x i))
+      ((known numbits.expr)
+       (cogen-value-$fxsra x numbits.expr))
       (else
-       (with-tmp ((i (prm 'sra (T i) (K fx-shift))))
-	 (with-tmp ((i (make-conditional
-			   (prm '< i (K (* 8 wordsize)))
-			 i
-			 (K (- (* 8 wordsize) 1)))))
-	   (prm 'logand
-		(prm 'sra (T x) i)
-		(K (* -1 fx-scale))))))))
+       ;;Here NUMBITS is recordized code that must return a fixnum.
+       ;;
+       (with-tmp* ((numbits.val (prm 'sra (T numbits) (K fx-shift)))
+		   (numbits.val (let ((word-numbits (* wordsize 8)))
+				  (make-conditional (prm '< numbits.val (K word-numbits))
+				      numbits.val
+				    (K (- word-numbits 1))))))
+	 (prm 'logand
+	      (prm 'sra (T x) numbits.val)
+	      ;;This constant is a machine word with all the bits set to
+	      ;;1 except the least significant ones corresponding to the
+	      ;;fixnum tag.
+	      (K (* -1 fx-scale)))))))
    ((P x i)
     (K #t))
    ((E x i)
