@@ -1422,10 +1422,9 @@
    ((V a b)
     (struct-case a
       ((constant a.val)
-       ;;A.VAL is an exact integer  (possibly a bignum) representing the
-       ;;binary representation of the untagged fixnum A.
-       (unless (fx? a.val)
-	 (interrupt))
+       ;;A.VAL is  an exact  integer (possibly  a bignum)  whose payload
+       ;;bits are the binary representation of the fixnum A.
+       (interrupt-unless-fx a.val)
        ;;Since we want the  result to be a fixnum, there  is no need to:
        ;;untag A, multiply A, retag A; we just multiply the tagged A.
        (prm 'int* (T b) (K a.val)))
@@ -1436,10 +1435,9 @@
        ;;fixnum.
        (struct-case b
 	 ((constant b.val)
-	  ;;B.VAL is  an exact integer (possibly  a bignum) representing
-	  ;;the binary representation of the fixnum B.
-	  (unless (fx? b.val)
-	    (interrupt))
+	  ;;B.VAL is an exact integer  (possibly a bignum) whose payload
+	  ;;bits are the binary representation of the fixnum B.
+	  (interrupt-unless-fx b.val)
 	  (prm 'int* (T a) (K b.val)))
 	 ((known b.expr)
 	  (cogen-value-$fx* a b.expr))
@@ -1491,15 +1489,15 @@
     ;;Both X and NUMBITS must be fixnums.
     (struct-case numbits
       ((constant numbits.val)
-       ;;Here  NUMBITS.VAL must  be an  exact integer  being the  binary
-       ;;representation of the shift amount.
+       ;;Here NUMBITS.VAL  must be an  exact integer whose  payload bits
+       ;;are the  binary representation of  the shift amount  as machine
+       ;;word.
        ;;
        ;;Question:  Should we  not check  also that  NUMBITS.VAL is  not
        ;;bigger than the number of bits in  a fixnum?  We could as it is
        ;;done by FXARITHMETIC-SHIFT,  but we decide not  to because this
        ;;is a low level operation.  (Marco Maggi; Oct 18, 2012)
-       (unless (fx? numbits.val)
-	 (interrupt))
+       (interrupt-unless-fx numbits.val)
        (prm 'sll (T x) (K numbits.val)))
       ((known numbits.expr)
        (cogen-value-$fxsll x numbits.expr))
@@ -1600,7 +1598,8 @@
    ;;ANSWER:  It is  a  constant value  known at  compile  time, so  the
    ;;compiler computes it  as struct instance of type  CONSTANT; at this
    ;;stage in  the compilation process,  such constant must be  an exact
-   ;;integer representing the binary representation of the mask word.
+   ;;integer whose  payload bits  are the  binary representation  of the
+   ;;mask word.
    ;;
    ;;On a 32-bit platform, the payload bits of such exact integer are:
    ;;
@@ -1633,8 +1632,9 @@
     ;;Both X and  NUMBITS must be fixnums.
     (struct-case numbits
       ((constant numbits.val)
-       ;;Here  NUMBITS.VAL must  be  an exact  integer representing  the
-       ;;binary representation of the shift amount.
+       ;;Here NUMBITS.VAL  must be an  exact integer whose  payload bits
+       ;;are the  binary representation of  the shift amount  as machine
+       ;;word.
        (interrupt-unless-fx numbits.val)
        (prm 'logand
 	    (prm 'sra (T x) (K (let ((word-numbits (* wordsize 8)))
@@ -1789,11 +1789,20 @@
 
  (define-primop $bignum-byte-ref unsafe
    ;;Return a fixnum representing a byte  from the array of limbs in the
-   ;;data area.  On a 32-bit platform, the byte indexes are as follows:
+   ;;data area.  On a *little*  endian 32-bit platform, the byte indexes
+   ;;are as follows:
    ;;
-   ;;            limb0                      limb1
-   ;;  |--|--|--|--|--|--|--|--|  |--|--|--|--|--|--|--|--|  ...
-   ;;    0  1  2  3  4  5  6  7     8  9 10 11 12 13 14 15
+   ;;            limb0                         limb1
+   ;;  |--|--|--|--|--|--|--|--|...  |--|--|--|--|--|--|--|--|...  ...
+   ;;    0  1  2  3  4  5  6  7       32 33 34 35 36 37 38 39
+   ;;
+   ;;on a *big* endian 32-bit platform, the byte indexes are as follows:
+   ;;
+   ;;            limb0                         limb1
+   ;;  |--|--|--|--|--|--|--|--|...  |--|--|--|--|--|--|--|--|...  ...
+   ;;   31 30 29 28 27 26 25 24       63 62 61 60 59 58 57 56
+   ;;
+   ;;Remember that i686 is little endian.
    ;;
    ((V bigN byte-idx)
     (struct-case byte-idx
@@ -1818,8 +1827,7 @@
 			   (prm 'sra (T byte-idx) (K fx-shift))
 			   ;;FIXME Endianness  dependency!!!  (Abdulaziz
 			   ;;Ghuloum)
-			   (K (- off-bignum-data (- wordsize 1))
-			      #;(- disp-bignum-data (- wordsize 1) vector-tag))))
+			   (K (- off-bignum-data (- wordsize 1)))))
 		 (K (* (- wordsize 1) 8)))
 	    (K fx-shift)))))
    ((P bigN byte-idx)
