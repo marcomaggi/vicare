@@ -1812,7 +1812,11 @@
        (interrupt-unless-fx byte-idx.val)
        (prm 'sll
 	    (prm 'logand
-		 (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data)))
+		 (prm 'mref (T bigN)
+		      ;;FIXME  Endianness dependency!!!   Works only  on
+		      ;;little endian platforms.   (Marco Maggi; Oct 19,
+		      ;;2012)
+		      (K (+ byte-idx.val off-bignum-data)))
 		 (K 255))
 	    (K fx-shift)))
       ((known byte-idx.expr)
@@ -1825,8 +1829,9 @@
 		 (prm 'mref (T bigN)
 		      (prm 'int+
 			   (prm 'sra (T byte-idx) (K fx-shift))
-			   ;;FIXME Endianness  dependency!!!  (Abdulaziz
-			   ;;Ghuloum)
+			   ;;FIXME Endianness  dependency!!!  Works only
+			   ;;on little endian  platforms.  (Marco Maggi;
+			   ;;Oct 19, 2012)
 			   (K (- off-bignum-data (- wordsize 1)))))
 		 (K (* (- wordsize 1) 8)))
 	    (K fx-shift)))))
