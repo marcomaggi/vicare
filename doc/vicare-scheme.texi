@@ -15624,6 +15624,19 @@ not initialise the data area.
 
 @deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
 Return the octet at index @var{fx} in the data area of @var{fl}.
+
+Notice that the @var{fx} offset is positive, but it represents an offset
+from the end of the data area; on a 32-bit platform, the indexes of the
+bytes are:
+
+@example
+   1st word    2nd word    3rd word    4th word
+|-----------|-----------|-----------|-----------|
+                        |--|--|--|--|--|--|--|--| bytes
+                          7  6  5  4  3  2  1  0  offsets
+                        |.......................|
+                             IEEE 754 flonum
+@end example
 @end deffn
 
 
