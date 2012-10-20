@@ -1986,7 +1986,13 @@
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
       (else
-       ;;Here OFFSET is recordized code.
+       ;;Here OFFSET is  recordized code; this case  is not implemented.
+       ;;This means that the  following will fail with "uninterruptible"
+       ;;exception:
+       ;;
+       ;;   ($flonum-u8-ref 123.456 (read))
+       ;;
+       ;;after we have put an offset into the current input port.
        ;;
        ;;FIXME Why is this not implemented?  (Marco Maggi; Oct 20, 2012)
        (interrupt))))
