@@ -1954,6 +1954,18 @@
    ((E x)
     (nop)))
 
+ (define-primop $make-flonum unsafe
+   ((V)
+    (with-tmp ((flo (prm 'alloc
+			 (K (align flonum-size))
+			 (K vector-tag))))
+      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      flo))
+   ((P str)
+    (K #t))
+   ((E str)
+    (nop)))
+
  (define-primop $flonum-u8-ref unsafe
    ;;Return a fixnum representing the octect at OFFSET (a fixnum) in the
    ;;data area of FLO (a flonum).
@@ -2001,29 +2013,47 @@
    ((E s i)
     (nop)))
 
- (define-primop $make-flonum unsafe
-   ((V)
-    (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-      (prm 'mset x (K off-flonum-tag) (K flonum-tag))
-      x))
-   ((P str) (K #t))
-   ((E str) (nop)))
-
  (define-primop $flonum-set! unsafe
-   ((E x i v)
-    (struct-case i
-      ((constant i)
-       ;;the data area is 8 bytes wide
-       (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
+   ;;Store the  octet represented by the  fixnum OCTET at OFFSET  in the
+   ;;data area of the flonum FLO.
+   ;;
+   ;;Notice that  the OFFSET  is positive, but  it represents  an offset
+   ;;from the end of the data area; on a 32-bit platform, the indexes of
+   ;;the bytes are:
+   ;;
+   ;;     1st word    2nd word    3rd word    4th word
+   ;;  |-----------|-----------|-----------|-----------|
+   ;;                          |--|--|--|--|--|--|--|--| bytes
+   ;;                            7  6  5  4  3  2  1  0  OFFSETs
+   ;;
+   ((E flo offset octet)
+    (struct-case offset
+      ((constant offset.val)
+       ;;OFFSET.VAL  is an  exact  integer whose  payload  bits are  the
+       ;;binary representation of the offset as machine word.
+       (unless (and (fx? offset.val)
+		    ;;The data area is 8 bytes wide.
+		    (fx>= offset.val 0)
+		    (fx<= offset.val 7))
 	 (interrupt))
        ;;store the byte
-       (prm 'bset
-	    (T x)
-	    (K (+ (- 7 i) off-flonum-data))
-	    (prm 'sra (T v) (K fx-shift))))
-      ((known expr)
-       (cogen-effect-$flonum-set! x expr v))
-      (else (interrupt)))))
+       (prm 'bset (T flo)
+	    (K (fx+ (fx- 7 offset.val) off-flonum-data))
+	    ;;Untag the fixnum.
+	    (prm 'sra (T octet) (K fx-shift))))
+      ((known offset.expr)
+       (cogen-effect-$flonum-set! flo offset.expr octet))
+      (else
+       ;;Here OFFSET is  recordized code; this case  is not implemented.
+       ;;This means that the  following will fail with "uninterruptible"
+       ;;exception:
+       ;;
+       ;;   ($flonum-set! 123.456 (read) 10)
+       ;;
+       ;;after we have put an offset into the current input port.
+       ;;
+       ;;FIXME Why is this not implemented?  (Marco Maggi; Oct 20, 2012)
+       (interrupt)))))
 
  (define-primop $fixnum->flonum unsafe
    ((V fx)
