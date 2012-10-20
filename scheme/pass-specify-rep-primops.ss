@@ -1871,8 +1871,12 @@
 ;;     all set to zero         flonum tag
 ;;
 ;;A  flonum memory  block is  16 bytes  wide on  both 32-bit  and 64-bit
-;;platforms; to allow for the same binary layout on both platforms, on a
-;;32-bit platform the actual number is stored in the last two words:
+;;platforms; the data area of the memory  block is 8 bytes wide, on both
+;;32-bit and 64-bit  platforms: it contains a  double-precision IEEE 754
+;;floating-point number as specified by the hosting platform.
+;;
+;;To allow  for the same  binary layout on  both platforms, on  a 32-bit
+;;platform the actual number is stored in the last two words:
 ;;
 ;;    1st word     2nd word     3rd word     4th word
 ;;  |------------|------------|------------|------------|
@@ -1887,6 +1891,10 @@
 ;;           tagged word               data word
 ;;                            |.........................|
 ;;                                      flonum
+;;
+;;We assume  that the endianness  in which the floating-point  number is
+;;stored in the data area is the same as the machine words.  On the i686
+;;platform: little endian.
 ;;
 (section
 
@@ -1941,27 +1949,51 @@
 ;;; --------------------------------------------------------------------
 
  (define-primop flonum? safe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag #f flonum-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f flonum-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $flonum-u8-ref unsafe
-   ((V s i)
-    (struct-case i
-      ((constant i)
-       ;;the data area is 8 bytes wide
-       (unless (and (fx? i) (fx<= 0 i) (fx<= i 7))
+   ;;Return a fixnum representing the octect at OFFSET (a fixnum) in the
+   ;;data area of FLO (a flonum).
+   ;;
+   ;;Notice that  the OFFSET  is positive, but  it represents  an offset
+   ;;from the end of the data area; on a 32-bit platform, the indexes of
+   ;;the bytes are:
+   ;;
+   ;;     1st word    2nd word    3rd word    4th word
+   ;;  |-----------|-----------|-----------|-----------|
+   ;;                          |--|--|--|--|--|--|--|--| bytes
+   ;;                            7  6  5  4  3  2  1  0  OFFSETs
+   ;;
+   ((V flo offset)
+    (struct-case offset
+      ((constant offset.val)
+       ;;OFFSET.VAL  is an  exact  integer whose  payload  bits are  the
+       ;;binary representation of the offset as machine word.
+       (unless (and (fx? offset.val)
+		    ;;The data area is 8 bytes wide.
+		    (fx>= offset.val 0)
+		    (fx<= offset.val 7))
 	 (interrupt))
-       (prm 'sll
-	    (prm 'logand
-		 (prm 'bref (T s)
-		      (K (+ (- 7 i) off-flonum-data)))
+       (prm 'sll	 ;tag the result as fixnum
+	    (prm 'logand ;isolate the byte
+		 (prm 'bref (T flo)
+		      (K (fx+ (fx- 7 offset.val) off-flonum-data)))
 		 (K 255))
 	    (K fx-shift)))
-      ((known expr)
-       (cogen-value-$flonum-u8-ref s expr))
-      (else (interrupt))))
-   ((P s i) (K #t))
-   ((E s i) (nop)))
+      ((known offset.expr)
+       (cogen-value-$flonum-u8-ref flo offset.expr))
+      (else
+       ;;Here OFFSET is recordized code.
+       ;;
+       ;;FIXME Why is this not implemented?  (Marco Maggi; Oct 20, 2012)
+       (interrupt))))
+   ((P s i)
+    (K #t))
+   ((E s i)
+    (nop)))
 
  (define-primop $make-flonum unsafe
    ((V)
