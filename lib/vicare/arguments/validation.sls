@@ -183,6 +183,9 @@
     ;; flonums
     flonum.vicare-arguments-validation
 
+    ;; bignums
+    bignum.vicare-arguments-validation
+
     ;; input/output ports
     port.vicare-arguments-validation
     port/false.vicare-arguments-validation
@@ -1176,6 +1179,13 @@
 (define-argument-validation (flonum who obj)
   (flonum? obj)
   (assertion-violation who "expected flonum as argument" obj))
+
+
+;;;; bignums validation
+
+(define-argument-validation (bignum who obj)
+  (bignum? obj)
+  (assertion-violation who "expected bignum as argument" obj))
 
 
 ;;;; ports

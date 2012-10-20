@@ -1008,7 +1008,7 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_flonum_to_bytevector (ikptr s_flonum, ikpcb * pcb)
+ikrt_debug_flonum_to_bytevector (ikptr s_flonum, ikpcb * pcb)
 {
   ikptr		s_bv;
   uint8_t *	src;
@@ -1024,7 +1024,7 @@ ikrt_flonum_to_bytevector (ikptr s_flonum, ikpcb * pcb)
   return s_bv;
 }
 ikptr
-ikrt_flonum_from_bytevector (ikptr s_bv, ikpcb * pcb)
+ikrt_debug_flonum_from_bytevector (ikptr s_bv, ikpcb * pcb)
 {
   if (flonum_size == IK_BYTEVECTOR_LENGTH(s_bv)) {
     ikptr	s_flonum;
@@ -1041,6 +1041,47 @@ ikrt_flonum_from_bytevector (ikptr s_bv, ikpcb * pcb)
     return s_flonum;
   } else
     return IK_FALSE;
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_debug_bignum_to_bytevector (ikptr s_bignum, ikpcb * pcb)
+{
+  ikptr		first_word = IK_REF(s_bignum, -vector_tag);
+  long		limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  long		bv_size    = IK_BIGNUM_ALLOC_SIZE(limb_count);
+  ikptr		s_bv;
+  uint8_t *	src;
+  uint8_t *	dst;
+  /* fprintf(stderr, "limb count: %ld, bv size: %ld\n", limb_count, bv_size); */
+  pcb->root0 = &s_bignum;
+  {
+    s_bv = ika_bytevector_alloc(pcb, bv_size);
+    src  = (uint8_t *)(s_bignum - vector_tag);
+    dst  = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
+    memcpy(dst, src, bv_size);
+  }
+  pcb->root0 = NULL;
+  return s_bv;
+}
+ikptr
+ikrt_debug_bignum_from_bytevector (ikptr s_bv, ikpcb * pcb)
+{
+  ikptr		s_bignum;
+  uint8_t *	src;
+  uint8_t *	dst;
+  pcb->root0 = &s_bv;
+  {
+    long	bv_size    = IK_BYTEVECTOR_LENGTH(s_bv);
+    long	limb_count = (bv_size - disp_bignum_data) / wordsize;
+    s_bignum = IKA_BIGNUM_ALLOC(pcb, limb_count);
+    src      = IK_BYTEVECTOR_DATA_UINT8P(s_bv);
+    dst      = (uint8_t *)(s_bignum - vector_tag);
+    memcpy(dst, src, bv_size);
+  }
+  pcb->root0 = NULL;
+  return s_bignum;
 }
 
 

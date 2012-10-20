@@ -7466,6 +7466,14 @@ For @func{bytevector->flonum}: if the bytevector does not have the
 length of a flonum's memory block, the return value is @false{}.
 @end defun
 
+
+@defun bignum->bytevector @var{flo}
+@defunx bytevector->bignum @var{bv}
+Convert a bignum to a bytevector and vice versa.  The bignum's memory
+block is copied byte by byte in the data area of the bytevector; and
+vice versa.
+@end defun
+
 @c page
 @node iklib misc
 @section Miscellaneous functions
@@ -18902,6 +18910,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined pointers::       Validating pointers.
 * args predefined memory-blocks::  Validating @code{meory-block} values.
 * args predefined flonums::        Validating flonums.
+* args predefined bignums::        Validating bignums.
 * args predefined ports::          Validating input/output ports.
 * args predefined genstrings::     Validating generalised C string
                                    arguments.
@@ -19582,6 +19591,19 @@ arguments validation}.
 
 @deffn {Validation Clause} flonum @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{flonum?}.
+@end deffn
+
+@c page
+@node args predefined bignums
+@subsubsection Validating bignums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bignum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{bignum?}.
 @end deffn
 
 @c page

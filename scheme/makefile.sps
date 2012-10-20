@@ -972,6 +972,8 @@
     (acosh					i v $language)
     (atanh					i v $language)
     (angle					i v r ba se)
+    (bignum->bytevector				i v $language)
+    (bytevector->bignum				i v $language)
     (append					i v r ba se)
     (apply					i v r ba se)
     (assert					i v r ba)

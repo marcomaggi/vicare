@@ -47,6 +47,7 @@ Notes for revision 0.2d20
     printer-integer-radix
     neq?
     flonum->bytevector		bytevector->flonum
+    bignum->bytevector		bytevector->bignum
 
 * Modified DEFINE-INLINE-CONSTANT from  (vicare syntactic-extensions) to
   allow the  constant value to be  computed at expand time  by a generic
