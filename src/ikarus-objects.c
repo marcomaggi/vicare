@@ -1005,6 +1005,44 @@ ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
   return IK_VOID_OBJECT;
 }
 
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_flonum_to_bytevector (ikptr s_flonum, ikpcb * pcb)
+{
+  ikptr		s_bv;
+  uint8_t *	src;
+  uint8_t *	dst;
+  pcb->root0 = &s_flonum;
+  {
+    s_bv = ika_bytevector_alloc(pcb, flonum_size);
+    src  = (uint8_t *)(s_flonum - vector_tag);
+    dst  = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
+    memcpy(dst, src, flonum_size);
+  }
+  pcb->root0 = NULL;
+  return s_bv;
+}
+ikptr
+ikrt_flonum_from_bytevector (ikptr s_bv, ikpcb * pcb)
+{
+  if (flonum_size == IK_BYTEVECTOR_LENGTH(s_bv)) {
+    ikptr	s_flonum;
+    uint8_t *	src;
+    uint8_t *	dst;
+    pcb->root0 = &s_bv;
+    {
+      s_flonum = ika_flonum_from_double(pcb, 0.0);
+      src      = IK_BYTEVECTOR_DATA_UINT8P(s_bv);
+      dst      = (uint8_t *)(s_flonum - vector_tag);
+      memcpy(dst, src, flonum_size);
+    }
+    pcb->root0 = NULL;
+    return s_flonum;
+  } else
+    return IK_FALSE;
+}
+
 
 /** --------------------------------------------------------------------
  ** Garbage collection avoidance.

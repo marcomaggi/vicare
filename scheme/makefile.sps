@@ -1250,6 +1250,8 @@
     (fltruncate					i v r fl)
     (flzero?					i v r fl)
     (real->flonum				i v r fl)
+    (bytevector->flonum				i v $language)
+    (flonum->bytevector				i v $language)
     (make-no-infinities-violation		i v r fl)
     (make-no-nans-violation			i v r fl)
     (&no-infinities				i v r fl)

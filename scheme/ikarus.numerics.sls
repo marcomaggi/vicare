@@ -59,27 +59,59 @@
 
 
 (library (ikarus flonums)
-  (export $flonum->exact flonum-parts
-          inexact->exact exact $flonum-rational? $flonum-integer? $flzero?
-          $flnegative? flpositive? flabs fixnum->flonum
-          flsin flcos fltan flasin flacos flatan fleven? flodd?
-          flfloor flceiling flnumerator fldenominator flexp fllog
-          flinteger? flonum-bytes flnan? flfinite? flinfinite?
-          flexpt $flround flround
-	  fllog1p flexpm1)
-  (import
-    (ikarus system $bytevectors)
+  (export
+    $flround
+    $flonum-integer?	$flonum-rational?
+    $flonum->exact
+    $flzero?		$flnegative?
+
+    inexact->exact	exact
+    flabs		flpositive?
+    fixnum->flonum
+    flsin		flasin
+    flcos		flacos
+    fltan		flatan
+    fleven?		flodd?
+    flfloor		flceiling
+    flnumerator		fldenominator
+    flexp		fllog
+    flexpm1		fllog1p
+    flexpt
+    flinteger?		flnan?
+    flfinite?		flinfinite?
+    flonum-parts	flonum-bytes
+    flround
+
+    bytevector->flonum	flonum->bytevector)
+  (import (except (ikarus)
+		  inexact->exact	exact
+		  flabs			flpositive?
+		  fixnum->flonum
+		  flsin			flasin
+		  flcos			flacos
+		  fltan			flatan
+		  fleven?		flodd?
+		  flfloor		flceiling
+		  flnumerator		fldenominator
+		  flexp			fllog
+		  flexpm1		fllog1p
+		  flexpt
+		  flonum-parts		flonum-bytes
+		  flinteger?		flnan?
+		  flfinite?		flinfinite?
+		  flround
+		  bytevector->flonum	flonum->bytevector)
     (ikarus system $fx)
-    (only (ikarus system $flonums) $fl>= $flonum-sbe)
     (ikarus system $bignums)
-    (except (ikarus system $flonums) $flonum-rational?
-            $flonum-integer? $flround)
-    (except (ikarus) inexact->exact exact flpositive? flabs fixnum->flonum
-            flsin flcos fltan flasin flacos flatan fleven? flodd?
-            flfloor flceiling flnumerator fldenominator flexp fllog
-            flexpt flinteger? flonum-parts flonum-bytes flnan? flfinite?
-            flinfinite? flround
-	    fllog1p flexpm1))
+    (ikarus system $bytevectors)
+    (only (ikarus system $flonums)
+	  $fl>=
+	  $flonum-sbe)
+    (except (ikarus system $flonums)
+	    $flonum-rational?
+            $flonum-integer?
+	    $flround)
+    (vicare arguments validation))
 
 
 ;;;; flonums
@@ -448,6 +480,21 @@
 	      (foreign-call "ikrt_flfl_expt" x y ($make-flonum)))))
 	(die 'flexpt "not a flonum" y))
     (die 'fllog "not a flonum" x)))
+
+
+;;;; debugging functions
+
+(define (flonum->bytevector flo)
+  (define who 'flonum->bytevector)
+  (with-arguments-validation (who)
+      ((flonum	flo))
+    (foreign-call "ikrt_flonum_to_bytevector" flo)))
+
+(define (bytevector->flonum bv)
+  (define who 'bytevector->flonum)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_flonum_from_bytevector" bv)))
 
 
 ;;; end of library (ikarus flonums)

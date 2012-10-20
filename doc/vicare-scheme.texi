@@ -7455,6 +7455,17 @@ cause undefined behaviour.
 @end example
 @end defun
 
+
+@defun flonum->bytevector @var{flo}
+@defunx bytevector->flonum @var{bv}
+Convert a flonum to a bytevector and vice versa.  The flonum's memory
+block is copied byte by byte in the data area of the bytevector; and
+vice versa.
+
+For @func{bytevector->flonum}: if the bytevector does not have the
+length of a flonum's memory block, the return value is @false{}.
+@end defun
+
 @c page
 @node iklib misc
 @section Miscellaneous functions
@@ -18877,6 +18888,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined enum-sets::      Validating enum-sets.
 * args predefined pointers::       Validating pointers.
 * args predefined memory-blocks::  Validating @code{meory-block} values.
+* args predefined flonums::        Validating flonums.
 * args predefined ports::          Validating input/output ports.
 * args predefined genstrings::     Validating generalised C string
                                    arguments.
@@ -19544,6 +19556,19 @@ Succeed if @var{obj} is a memory-block.
 
 @deffn {Validation Clause} memory-block/false @var{obj}
 Succeed if @var{obj} is @false{} or a memory-block.
+@end deffn
+
+@c page
+@node args predefined flonums
+@subsubsection Validating flonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} flonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{flonum?}.
 @end deffn
 
 @c page

@@ -140,6 +140,7 @@ TESTS			=	\
 	test-vicare-errno.sps				\
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
+	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
 	test-vicare-general-c-buffers.sps		\
@@ -345,6 +346,7 @@ EXTRA_DIST = \
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
 	test-vicare-ffi.sps				\
+	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
 	test-vicare-general-c-buffers.sps		\

@@ -180,6 +180,9 @@
     memory-block.vicare-arguments-validation
     memory-block/false.vicare-arguments-validation
 
+    ;; flonums
+    flonum.vicare-arguments-validation
+
     ;; input/output ports
     port.vicare-arguments-validation
     port/false.vicare-arguments-validation
@@ -1166,6 +1169,13 @@
 (define-argument-validation (memory-block/false who obj)
   (or (not obj) (memory-block? obj))
   (assertion-violation who "expected false or memory-block as argument" obj))
+
+
+;;;; flonums validation
+
+(define-argument-validation (flonum who obj)
+  (flonum? obj)
+  (assertion-violation who "expected flonum as argument" obj))
 
 
 ;;;; ports
