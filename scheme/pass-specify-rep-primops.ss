@@ -1946,6 +1946,40 @@
     ;;Perform the operation between the register and FL1.
     (prm op       (T fl1) (K off-flonum-data))))
 
+ (define (check-flonums ls code)
+   ;;CODE must be a struct instance representing recordized code.
+   ;;
+   ;;Do what is possible at compilation time to validate LS as a list of
+   ;;flonum  objects, then  return  recordized code  that performs  with
+   ;;valid arguments CODE.
+   ;;
+   (if (null? ls)
+       code
+     (struct-case ($car ls)
+       ((constant v)
+	(if (flonum? v)
+	    (check-flonums ($cdr ls) code)
+	  (interrupt)))
+       ((known expr type)
+	(case-symbols (T:flonum? type)
+	  ((yes)
+	   (record-optimization 'check-flonum expr)
+	   (check-flonums ($cdr ls) code))
+	  ((no)
+	   (interrupt))
+	  (else
+	   (check-flonums (cons expr ($cdr ls)) code))))
+       (else
+	(check-flonums ($cdr ls)
+	  (with-tmp ((x (T ($car ls))))
+	    (interrupt-unless
+	     (tag-test x vector-mask vector-tag))
+	    (interrupt-unless
+	     (prm '=
+		  (prm 'mref x (K off-flonum-tag))
+		  (K flonum-tag)))
+	    code))))))
+
 ;;; --------------------------------------------------------------------
 
  (define-primop flonum? safe
@@ -2076,93 +2110,56 @@
        (with-tmp ((flo (cogen-value-$make-flonum)))
 	 (make-forcall "ikrt_fixnum_to_flonum" (list (T fx) flo)))))))
 
-
- (define (check-flonums ls code)
-   (if (null? ls)
-       code
-     (struct-case (car ls)
-       ((constant v)
-	(if (flonum? v)
-	    (check-flonums (cdr ls) code)
-	  (interrupt)))
-       ((known x t)
-	(case (T:flonum? t)
-	  ((yes)
-	   (record-optimization 'check-flonum x)
-	   (check-flonums (cdr ls) code))
-	  ((no)
-	   (interrupt))
-	  (else
-	   (check-flonums (cons x (cdr ls)) code))))
-       (else
-	(check-flonums (cdr ls)
-		       (with-tmp ((x (T (car ls))))
-			 (interrupt-unless
-			  (tag-test x vector-mask vector-tag))
-			 (interrupt-unless
-			  (prm '= (prm 'mref x (K off-flonum-tag))
-			       (K flonum-tag)))
-			 code))))))
-
-;;;  (define (primary-tag-tests ls)
-;;;    (cond
-;;;      ((null? ls) (prm 'nop))
-;;;      (else
-;;;       (multiple-forms-sequence
-;;;         (interrupt-unless
-;;;           (tag-test (car ls) vector-mask vector-tag))
-;;;         (primary-tag-tests (cdr ls))))))
-;;;  (define (secondary-tag-tests ls)
-;;;    (define (or* a*)
-;;;      (cond
-;;;        ((null? (cdr a*)) (car a*))
-;;;        (else (prm 'logor (car a*) (or* (cdr a*))))))
-;;;    (interrupt-unless
-;;;      (prm '= (or* (map (lambda (x)
-;;;                          (prm 'mref x (K off-flonum-tag)))
-;;;                        ls))
-;;;           (K flonum-tag))))
-;;;  (let ((check
-;;;         (let f ((ls ls) (ac '()))
-;;;           (cond
-;;;             ((null? ls) ac)
-;;;             (else
-;;;              (struct-case (car ls)
-;;;                ((constant v)
-;;;                 (if (flonum? v)
-;;;                     (f (cdr ls) ac)
-;;;                     #f))
-;;;                (else (f (cdr ls) (cons (T (car ls)) ac)))))))))
-;;;    (cond
-;;;      ((not check) (interrupt))
-;;;      ((null? check) code)
-;;;      (else
-;;;       (multiple-forms-sequence
-;;;         (primary-tag-tests check)
-;;;         (secondary-tag-tests check)
-;;;         code)))))
+;;; --------------------------------------------------------------------
+;;; UNsafe arithmetic primitive operations
 
  (define-primop $fl+ unsafe
-   ((V x y) ($flop-aux 'fl:add! x y)))
+   ((V x y)
+    ($flop-aux 'fl:add! x y)))
+
  (define-primop $fl- unsafe
-   ((V x y) ($flop-aux 'fl:sub! x y)))
+   ((V x y)
+    ($flop-aux 'fl:sub! x y)))
+
  (define-primop $fl* unsafe
-   ((V x y) ($flop-aux 'fl:mul! x y)))
+   ((V x y)
+    ($flop-aux 'fl:mul! x y)))
+
  (define-primop $fl/ unsafe
-   ((V x y) ($flop-aux 'fl:div! x y)))
+   ((V x y)
+    ($flop-aux 'fl:div! x y)))
+
+;;; --------------------------------------------------------------------
+;;; safe arithmetic primitive operations
 
  (define-primop fl+ safe
-   ((V) (K (make-object 0.0)))
-   ((V x) (check-flonums (list x) (T x)))
-   ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:add! x x*)))
-   ((P . x*) (check-flonums x* (K #t)))
-   ((E . x*) (check-flonums x* (nop))))
+   ((V)
+    (K (make-object 0.0)))
+   ((V x)
+    (check-flonums (list x) (T x)))
+   ((V x . x*)
+    (check-flonums (cons x x*)
+      ($flop-aux* 'fl:add! x x*)))
+   ((P . x*)
+    (check-flonums x* (K #t)))
+   ((E . x*)
+    (check-flonums x* (nop))))
+
  (define-primop fl* safe
-   ((V) (K (make-object 1.0)))
-   ((V x) (check-flonums (list x) (T x)))
-   ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:mul! x x*)))
-   ((P . x*) (check-flonums x* (K #t)))
-   ((E . x*) (check-flonums x* (nop))))
+   ((V)
+    (K (make-object 1.0)))
+   ((V x)
+    (check-flonums (list x)
+      (T x)))
+   ((V x . x*)
+    (check-flonums (cons x x*)
+      ($flop-aux* 'fl:mul! x x*)))
+   ((P . x*)
+    (check-flonums x*
+      (K #t)))
+   ((E . x*)
+    (check-flonums x*
+      (nop))))
 
 ;;;FIXME The following implementation of FL- was used by the compiler to
 ;;;override   the  implemtation   in  "ikarus.numerics.ss"   for  speed.
@@ -2184,46 +2181,118 @@
 ;;;   ((E x . x*) (check-flonums (cons x x*) (nop))))
 
  (define-primop fl/ safe
-   ((V x) (check-flonums (list x) ($flop-aux 'fl:div! (K 1.0) x)))
-   ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:div! x x*)))
-   ((P x . x*) (check-flonums (cons x x*) (K #t)))
-   ((E x . x*) (check-flonums (cons x x*) (nop))))
+   ((V x)
+    (check-flonums (list x)
+      ($flop-aux 'fl:div! (K 1.0) x)))
+   ((V x . x*)
+    (check-flonums (cons x x*)
+      ($flop-aux* 'fl:div! x x*)))
+   ((P x . x*)
+    (check-flonums (cons x x*)
+      (K #t)))
+   ((E x . x*)
+    (check-flonums (cons x x*)
+      (nop))))
+
+;;; --------------------------------------------------------------------
+;;; UNsafe comparison primitive operations
 
  (define-primop $fl= unsafe
-   ((P x y) ($flcmp-aux 'fl:= x y)))
+   ((P x y)
+    ($flcmp-aux 'fl:= x y)))
+
  (define-primop $fl< unsafe
-   ((P x y) ($flcmp-aux 'fl:< x y)))
+   ((P x y)
+    ($flcmp-aux 'fl:< x y)))
+
  (define-primop $fl<= unsafe
-   ((P x y) ($flcmp-aux 'fl:<= x y)))
+   ((P x y)
+    ($flcmp-aux 'fl:<= x y)))
+
  (define-primop $fl> unsafe
-   ((P x y) ($flcmp-aux 'fl:> x y)))
+   ((P x y)
+    ($flcmp-aux 'fl:> x y)))
+
  (define-primop $fl>= unsafe
-   ((P x y) ($flcmp-aux 'fl:>= x y)))
+   ((P x y)
+    ($flcmp-aux 'fl:>= x y)))
+
+;;; --------------------------------------------------------------------
+;;; safe comparison primitive operations
 
  (define-primop fl=? safe
-   ((P x y) (check-flonums (list x y) ($flcmp-aux 'fl:= x y)))
-   ((E x y) (check-flonums (list x y) (nop))))
+   ((P x y)
+    (check-flonums (list x y)
+      ($flcmp-aux 'fl:= x y)))
+   ((E x y)
+    (check-flonums (list x y)
+      (nop))))
+
  (define-primop fl<? safe
-   ((P x y) (check-flonums (list x y) ($flcmp-aux 'fl:< x y)))
-   ((E x y) (check-flonums (list x y) (nop))))
+   ((P x y)
+    (check-flonums (list x y)
+      ($flcmp-aux 'fl:< x y)))
+   ((E x y)
+    (check-flonums (list x y)
+      (nop))))
+
  (define-primop fl<=? safe
-   ((P x y) (check-flonums (list x y) ($flcmp-aux 'fl:<= x y)))
-   ((E x y) (check-flonums (list x y) (nop))))
+   ((P x y)
+    (check-flonums (list x y)
+      ($flcmp-aux 'fl:<= x y)))
+   ((E x y)
+    (check-flonums (list x y)
+      (nop))))
+
  (define-primop fl>? safe
-   ((P x y) (check-flonums (list x y) ($flcmp-aux 'fl:> x y)))
-   ((E x y) (check-flonums (list x y) (nop))))
+   ((P x y)
+    (check-flonums (list x y)
+      ($flcmp-aux 'fl:> x y)))
+   ((E x y)
+    (check-flonums (list x y)
+      (nop))))
+
  (define-primop fl>=? safe
-   ((P x y) (check-flonums (list x y) ($flcmp-aux 'fl:>= x y)))
-   ((E x y) (check-flonums (list x y) (nop))))
+   ((P x y)
+    (check-flonums (list x y)
+      ($flcmp-aux 'fl:>= x y)))
+   ((E x y)
+    (check-flonums (list x y)
+      (nop))))
+
+;;; --------------------------------------------------------------------
 
  (define-primop $flonum-sbe unsafe
-   ((V x)
-    (prm 'sll
+   ;;Given a  flonum object  FLO, inspects the  IEEE 754  floating point
+   ;;number; on a 32-bit platform:
+   ;;
+   ;;      1st     2nd     3rd     4th
+   ;;   |-------|-------|-------|-------| flonum memory block
+   ;;                   |...............| floating point number
+   ;;                   |-|-|-|-|-|-|-|-| 8 bytes
+   ;;                           |.| BE
+   ;;
+   ;;on a 64-bit platform:
+   ;;
+   ;;        1st word        2nd word
+   ;;   |---------------|---------------| flonum memory block
+   ;;                   |...............| floating point number
+   ;;                   |-|-|-|-|-|-|-|-| 8 bytes
+   ;;                           |.| BE
+   ;;
+   ;;extract the most  significant 32-bit word, called BE,  and apply to
+   ;;it a  logic right-shift of  20 bit-positions, so extracting  its 12
+   ;;most significant bits.  Return the result encoded as fixnum.
+   ;;
+   ;;FIXME Endianness dependency.  (Marco Maggi; Oct 21, 2012)
+   ;;
+   ((V flo)
+    (prm 'sll	;tag the result as fixnum
 	 ;;extract the 12 most significant bits
 	 (prm 'srl
 	      ;;retrieve the second data word
-	      (prm 'mref32 (T x)
-		   (K (- (+ disp-flonum-data 4) vector-tag)))
+	      (prm 'mref32 (T flo)
+		   (K (+ off-flonum-data 4)))
 	      (K 20))
 	 (K fx-shift))))
 
@@ -3885,4 +3954,5 @@
 ;;;eval: (put 'with-tmp		'scheme-indent-function 1)
 ;;;eval: (put 'with-tmp*	'scheme-indent-function 1)
 ;;;eval: (put 'struct-case	'scheme-indent-function 1)
+;;;eval: (put 'check-flonums	'scheme-indent-function 1)
 ;;;End:
