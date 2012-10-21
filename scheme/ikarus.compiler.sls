@@ -3639,9 +3639,14 @@
 ;;; ratnums
 
 (define ratnum-tag			#x27)
-(define disp-ratnum-num			(* 1 wordsize))
-(define disp-ratnum-den			(* 2 wordsize))
-(define ratnum-size			(* 4 wordsize))
+(define disp-ratnum-tag			0)
+(define disp-ratnum-num			(fx* 1 wordsize))
+(define disp-ratnum-den			(fx* 2 wordsize))
+(define ratnum-size			(fx* 4 wordsize))
+
+(define off-ratnum-tag			(fx- disp-ratnum-tag vector-tag))
+(define off-ratnum-num			(fx- disp-ratnum-num vector-tag))
+(define off-ratnum-den			(fx- disp-ratnum-den vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; compnums

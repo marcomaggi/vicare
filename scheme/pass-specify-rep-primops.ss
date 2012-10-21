@@ -2323,25 +2323,31 @@
 (section
 
  (define-primop ratnum? safe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag #f ratnum-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f ratnum-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-ratnum unsafe
    ((V num den)
-    (with-tmp ((x (prm 'alloc (K (align ratnum-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K ratnum-tag))
-      (prm 'mset x (K (- disp-ratnum-num vector-tag)) (T num))
-      (prm 'mset x (K (- disp-ratnum-den vector-tag)) (T den))
-      x))
-   ((P str) (K #t))
-   ((E str) (nop)))
+    (with-tmp ((rat (prm 'alloc
+			 (K (align ratnum-size))
+			 (K vector-tag))))
+      (prm 'mset rat (K off-ratnum-tag) (K ratnum-tag))
+      (prm 'mset rat (K off-ratnum-num) (T num))
+      (prm 'mset rat (K off-ratnum-den) (T den))
+      rat))
+   ((P str)
+    (K #t))
+   ((E str)
+    (nop)))
 
 
  (define-primop $ratnum-n unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-ratnum-num vector-tag)))))
+   ((V x) (prm 'mref (T x) (K off-ratnum-num))))
 
  (define-primop $ratnum-d unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-ratnum-den vector-tag)))))
+   ((V x) (prm 'mref (T x) (K off-ratnum-den))))
 
  /section)
 
