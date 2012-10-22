@@ -2950,34 +2950,44 @@
      (cogen-pred-$fxzero? x)))
    ((E x) (assert-fixnum x)))
 
+ (module (cogen-pred-div
+	  cogen-effect-div
+	  cogen-value-div)
 
-
- (define (log2 n)
-   (let f ((n n) (i 0))
-     (cond
-      ((zero? (fxand n 1))
-       (f (fxsra n 1) (+ i 1)))
-      ((= n 1) i)
-      (else #f))))
-
-
- (define-primop div safe
-   ((V x n)
-    (struct-case n
-      ((constant i)
-       (cond
-	((and (fx? i) (> i 0) (log2 i)) =>
-	 (lambda (bits)
-	   (multiple-forms-sequence
-	    (interrupt-unless (cogen-pred-fixnum? x))
-	    (prm 'sll
-		 (prm 'sra (T x) (K (+ bits fx-shift)))
-		 (K fx-shift)))))
+   (define-primop div safe
+     ((V x n)
+      (struct-case n
+	((constant i)
+	 (cond ((and (fx? i)
+		     (> i 0)
+		     (log2 i))
+		=> (lambda (bits)
+		     (multiple-forms-sequence
+		      (interrupt-unless
+		       (cogen-pred-fixnum? x))
+		      (prm 'sll ;tag the fixnum
+			   (prm 'sra (T x)
+				(K (+ bits fx-shift)))
+			   (K fx-shift)))))
+	       (else
+		(interrupt))))
+	((known expr)
+	 (cogen-value-div x expr))
 	(else
-	 (interrupt))))
-      ((known expr)
-       (cogen-value-div x expr))
-      (else (interrupt)))))
+	 (interrupt)))))
+
+   (define (log2 n)
+     (let recur ((n n)
+		 (i 0))
+       (cond ((fxzero? (fxand n 1))
+	      (recur (fxsra n 1)
+		     (+ i 1)))
+	     ((= n 1)
+	      i)
+	     (else
+	      #f))))
+
+   #| end of module |# )
 
  (define-primop quotient safe
    ((V x n)
