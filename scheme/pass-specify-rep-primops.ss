@@ -2531,289 +2531,252 @@
 		   (recur b ($cdr a*))
 		 (K #f))))))))
 
-;;; --------------------------------------------------------------------
+ (module (cogen-binary-*)
 
- (define-primop = safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
+   (define (cogen-binary-* a b)
+     (or (cogen-*-constant a b)
+	 (cogen-*-constant b a)
+	 (cogen-*-non-constants a b)))
 
- (define-primop < safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '< a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop <= safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '<= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop > safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '> a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop >= safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '>= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx= safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx< safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '< a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx<= safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '<= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx> safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '> a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx>= safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '>= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx=? safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx<? safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '< a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx<=? safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '<= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx>? safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '> a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop fx>=? safe
-   ((P)
-    (interrupt))
-   ((P a . a*)
-    (fixnum-fold-p '>= a a*))
-   ((E)
-    (interrupt))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop - safe
-   ((V a)
-    (interrupt)
-    (multiple-forms-sequence
-     (assert-fixnums a '())
-     (prm 'int-/overflow (K 0) (T a))))
-   ((V a . a*)
-    (interrupt)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (let recur ((a  (T a))
-		 (a* a*))
-       (if (null? a*)
-	   a
-	 (recur (prm 'int-/overflow a (T (car a*)))
-		(cdr a*))))))
-   ((P a . a*)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (K #t)))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop + safe
-   ((V)
-    (K 0))
-   ((V a . a*)
-    (interrupt)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (let recur ((a  (T a))
-		 (a* a*))
-       (if (null? a*)
-	   a
-	 (recur (prm 'int+/overflow a (T (car a*)))
-		(cdr a*))))))
-   ((P)
-    (K #t))
-   ((P a . a*)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (K #t)))
-   ((E)
-    (nop))
-   ((E a . a*)
-    (assert-fixnums a a*)))
-
- (define-primop add1 safe
-   ((V x) (cogen-value-+ x (K 1))))
- (define-primop sub1 safe
-   ((V x) (cogen-value-+ x (K -1))))
-
- (define-primop fxadd1 safe
-   ((V x) (cogen-value-+ x (K 1))))
- (define-primop fxsub1 safe
-   ((V x) (cogen-value-+ x (K -1))))
-
-
- (define (cogen-binary-* a b)
-   (define (cogen-*-non-constants a b)
-     (interrupt)
-     (with-tmp ((a (T a)) (b (T b)))
-       (assert-fixnum a)
-       (assert-fixnum b)
-       (prm 'int*/overflow a
-	    (prm 'sra b (K fx-shift)))))
    (define (cogen-*-constant a b)
      (struct-case a
-       ((constant ak)
-	(if (fx? ak)
+       ((constant a.val)
+	(if (fx? a.val)
 	    (begin
 	      (interrupt)
 	      (with-tmp ((b (T b)))
 		(assert-fixnum b)
 		(prm 'int*/overflow a b)))
 	  (interrupt)))
-       ((known x)
-	(cogen-*-constant x b))
-       (else #f)))
-   (or (cogen-*-constant a b)
-       (cogen-*-constant b a)
-       (cogen-*-non-constants a b)))
+       ((known a.expr)
+	(cogen-*-constant a.expr b))
+       (else
+	#f)))
 
+   (define (cogen-*-non-constants a b)
+     (interrupt)
+     (with-tmp ((a (T a))
+		(b (T b)))
+       (assert-fixnum a)
+       (assert-fixnum b)
+       (prm 'int*/overflow a
+	    (prm 'sra b (K fx-shift)))))
 
- (define-primop * safe
-   ((V) (K (fxsll 1 fx-shift)))
-   ((V a b) (cogen-binary-* a b))
-   ((P) (K #t))
+   #| end of module: cogen-binary-* |# )
+
+;;; --------------------------------------------------------------------
+;;; generic comparison
+
+ (define-primop = safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
    ((P a . a*)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (K #t)))
-   ((E) (nop))
-   ((E a . a*) (assert-fixnums a a*)))
+    (fixnum-fold-p '= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
- (define-primop bitwise-and safe
-   ((V) (K (fxsll -1 fx-shift)))
-   ((V a . a*)
-    (interrupt)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (let f ((a (T a)) (a* a*))
-       (cond
-	((null? a*) a)
-	(else
-	 (f (prm 'logand a (T (car a*))) (cdr a*)))))))
-   ((P) (K #t))
+ (define-primop < safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
    ((P a . a*)
-    (multiple-forms-sequence
-     (assert-fixnums a a*)
-     (K #t)))
-   ((E) (nop))
-   ((E a . a*) (assert-fixnums a a*)))
+    (fixnum-fold-p '< a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop <= safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '<= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop > safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '> a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop >= safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '>= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+;;; --------------------------------------------------------------------
+;;; safe fixnum comparison
+
+ (define-primop fx= safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx< safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '< a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx<= safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '<= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx> safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '> a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx>= safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '>= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx=? safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx<? safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '< a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx<=? safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '<= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx>? safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '> a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop fx>=? safe
+   ((P)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '>= a a*))
+   ((E)
+    ;;According R6RS: it is an error to call this without arguments.
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+;;; --------------------------------------------------------------------
+;;; safe fixnum arithmetic
 
  (define-primop fx+ safe
-   ((V x y) (cogen-value-+ x y)))
+   ((V x y)
+    (cogen-value-+ x y)))
 
  (define-primop fx- safe
-   ((V x)   (cogen-value-- (K 0) x))
-   ((V x y) (cogen-value-- x y)))
+   ((V x)
+    (cogen-value-- (K 0) x))
+   ((V x y)
+    (cogen-value-- x y)))
 
  (define-primop fx* safe
-   ((V a b) (cogen-binary-* a b)))
+   ((V a b)
+    (cogen-binary-* a b)))
 
- (define-primop zero? safe
-   ((P x)
-    (multiple-forms-sequence
-     (assert-fixnum x)
-     (cogen-pred-$fxzero? x)))
-   ((E x) (assert-fixnum x)))
+ (define-primop fxadd1 safe
+   ((V x)
+    (cogen-value-+ x (K 1))))
 
+ (define-primop fxsub1 safe
+   ((V x)
+    (cogen-value-+ x (K -1))))
+
+;;; --------------------------------------------------------------------
+;;; safe fixnum bitwise
 
  (define-primop fxarithmetic-shift-left safe
    ((V x n)
@@ -2851,8 +2814,6 @@
 	     (interrupt-unless (prm '= (prm 'sra x2 n) x))
 	     x2)))))))
 
-
-
  (define-primop fxarithmetic-shift-right safe
    ((V x n)
     (struct-case n
@@ -2878,6 +2839,113 @@
 	   (prm 'sll
 		(prm 'sra (prm 'sra x n) (K fx-shift))
 		(K fx-shift))))))))
+
+
+;;; --------------------------------------------------------------------
+;;; safe generic arithmetic
+
+ (define-primop - safe
+   ((V a)
+    ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
+    (interrupt)
+    (multiple-forms-sequence
+     (assert-fixnums a '())
+     (prm 'int-/overflow (K 0) (T a))))
+   ((V a . a*)
+    ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
+    (interrupt)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (let recur ((a  (T a))
+		 (a* a*))
+       (if (null? a*)
+	   a
+	 (recur (prm 'int-/overflow a (T (car a*)))
+		(cdr a*))))))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop + safe
+   ((V)
+    (K 0))
+   ((V a . a*)
+    ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
+    (interrupt)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (let recur ((a  (T a))
+		 (a* a*))
+       (if (null? a*)
+	   a
+	 (recur (prm 'int+/overflow a (T (car a*)))
+		(cdr a*))))))
+   ((P)
+    (K #t))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
+   ((E)
+    (nop))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+ (define-primop add1 safe
+   ((V x)
+    (cogen-value-+ x (K 1))))
+
+ (define-primop sub1 safe
+   ((V x)
+    (cogen-value-+ x (K -1))))
+
+ (define-primop * safe
+   ((V)
+    (K (fxsll 1 fx-shift)))
+   ((V a b)
+    (cogen-binary-* a b))
+   ((P)
+    (K #t))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
+   ((E)
+    (nop))
+   ((E a . a*)
+    (assert-fixnums a a*)))
+
+;;; --------------------------------------------------------------------
+
+ (define-primop bitwise-and safe
+   ((V) (K (fxsll -1 fx-shift)))
+   ((V a . a*)
+    (interrupt)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (let f ((a (T a)) (a* a*))
+       (cond
+	((null? a*) a)
+	(else
+	 (f (prm 'logand a (T (car a*))) (cdr a*)))))))
+   ((P) (K #t))
+   ((P a . a*)
+    (multiple-forms-sequence
+     (assert-fixnums a a*)
+     (K #t)))
+   ((E) (nop))
+   ((E a . a*) (assert-fixnums a a*)))
+
+ (define-primop zero? safe
+   ((P x)
+    (multiple-forms-sequence
+     (assert-fixnum x)
+     (cogen-pred-$fxzero? x)))
+   ((E x) (assert-fixnum x)))
+
 
 
  (define (log2 n)
