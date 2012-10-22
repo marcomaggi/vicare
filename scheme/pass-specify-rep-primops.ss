@@ -2779,31 +2779,36 @@
 ;;; safe fixnum bitwise
 
  (define-primop fxarithmetic-shift-left safe
-   ((V x n)
-    (struct-case n
-      ((constant i)
-       (cond
-	((and (fx? i)
-	      (>= i 0)
-	      (< i (- (* wordsize 8) fx-shift)))
-	 (with-tmp ((x (T x)))
-	   (assert-fixnum x)
-	   (cond
-	    ((< i 6)
-	     (let f ((i i))
-	       (cond
-		((zero? i) x)
-		(else
-		 (interrupt)
-		 (prm 'sll/overflow (f (- i 1)) (K 1))))))
-	    (else
-	     (with-tmp ((x2 (prm 'sll x (K i))))
-	       (interrupt-unless (prm '= (prm 'sra x2 (K i)) x))
-	       x2)))))
-	(else
-	 (interrupt))))
+   ((V x bitcount)
+    (struct-case bitcount
+      ((constant bitcount.val)
+       ;;BITCOUNT.VAL is  an exact  integer whose  payload bits  are the
+       ;;binary representation of the shift amount as a fixnum.
+       (cond ((and (fx? bitcount.val)
+		   (>= bitcount.val 0)
+		   (<  bitcount.val (- (* wordsize 8) fx-shift)))
+	      (with-tmp ((x (T x)))
+		(assert-fixnum x)
+		(if (< bitcount.val 6)
+		    (let recur ((i bitcount.val))
+		      (if (zero? i)
+			  x
+			(begin
+			  (interrupt)
+			  (prm 'sll/overflow
+			       (recur (- i 1))
+			       (K 1)))))
+		  (with-tmp ((x2 (prm 'sll x (K bitcount.val))))
+		    (interrupt-unless
+		     (prm '=
+			  (prm 'sra x2 (K bitcount.val))
+			  x))
+		    x2))))
+	     (else
+	      (interrupt))))
       (else
-       (with-tmp ((x (T x)) (n (T n)))
+       (with-tmp ((x (T x))
+		  (n (T bitcount)))
 	 (assert-fixnums x (list n))
 	 (with-tmp ((n (prm 'sra n (K fx-shift))))
 	   (interrupt-when
@@ -2811,7 +2816,8 @@
 	   (interrupt-when
 	    (prm '>= n (K (- (* wordsize 8) fx-shift))))
 	   (with-tmp ((x2 (prm 'sll x n)))
-	     (interrupt-unless (prm '= (prm 'sra x2 n) x))
+	     (interrupt-unless
+	      (prm '= (prm 'sra x2 n) x))
 	     x2)))))))
 
  (define-primop fxarithmetic-shift-right safe
