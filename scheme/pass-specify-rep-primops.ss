@@ -2514,107 +2514,174 @@
    #| end of module: assert-fixnums |# )
 
  (define (fixnum-fold-p op a a*)
+   ;;Generate and return  recordized code that: first  validates all the
+   ;;arguments as  fixnums, then  applies the operation  OP to  pairs of
+   ;;arguments  and evaluates  to true  if the  predicate always  return
+   ;;true.
+   ;;
    (multiple-forms-sequence
     (assert-fixnums a a*)
-    (let f ((a a) (a* a*))
-      (cond
-       ((null? a*) (K #t))
-       (else
-	(let ((b (car a*)))
-	  (make-conditional
-	      (prm op (T a) (T b))
-	      (f b (cdr a*))
-	    (K #f))))))))
+    (let recur ((a  a)
+		(a* a*))
+      (cond ((null? a*)
+	     (K #t))
+	    (else
+	     (let ((b ($car a*)))
+	       (make-conditional (prm op (T a) (T b))
+		   (recur b ($cdr a*))
+		 (K #f))))))))
+
+;;; --------------------------------------------------------------------
 
  (define-primop = safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop < safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '< a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '< a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop <= safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '<= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '<= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop > safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '> a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '> a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop >= safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '>= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '>= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx= safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx< safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '< a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '< a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx<= safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '<= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '<= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx> safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '> a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '> a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx>= safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '>= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '>= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx=? safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx<? safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '< a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '< a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx<=? safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '<= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '<= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx>? safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '> a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '> a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop fx>=? safe
-   ((P) (interrupt))
-   ((P a . a*) (fixnum-fold-p '>= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (fixnum-fold-p '>= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop - safe
    ((V a)
@@ -2626,11 +2693,12 @@
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
-     (let f ((a (T a)) (a* a*))
-       (cond
-	((null? a*) a)
-	(else
-	 (f (prm 'int-/overflow a (T (car a*))) (cdr a*)))))))
+     (let recur ((a  (T a))
+		 (a* a*))
+       (if (null? a*)
+	   a
+	 (recur (prm 'int-/overflow a (T (car a*)))
+		(cdr a*))))))
    ((P a . a*)
     (multiple-forms-sequence
      (assert-fixnums a a*)
@@ -2639,23 +2707,28 @@
     (assert-fixnums a a*)))
 
  (define-primop + safe
-   ((V) (K 0))
+   ((V)
+    (K 0))
    ((V a . a*)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
-     (let f ((a (T a)) (a* a*))
-       (cond
-	((null? a*) a)
-	(else
-	 (f (prm 'int+/overflow a (T (car a*))) (cdr a*)))))))
-   ((P) (K #t))
+     (let recur ((a  (T a))
+		 (a* a*))
+       (if (null? a*)
+	   a
+	 (recur (prm 'int+/overflow a (T (car a*)))
+		(cdr a*))))))
+   ((P)
+    (K #t))
    ((P a . a*)
     (multiple-forms-sequence
      (assert-fixnums a a*)
      (K #t)))
-   ((E) (nop))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((E)
+    (nop))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primop add1 safe
    ((V x) (cogen-value-+ x (K 1))))
