@@ -2460,35 +2460,58 @@
  /section)
 
 
-(section ;;; generic arithmetic
+;;;; generic arithmetic
 
- (define (assert-fixnums a a*)
+(section
+
+ (module (assert-fixnums)
+
+   (define (assert-fixnums a a*)
+     ;;Generate and return recordized code  that validates, at run time,
+     ;;the arguments as fixnums.
+     ;;
+     (let*-values (((fx* others)  (partition known-fixnum?     (cons a a*)))
+		   ((nfx* others) (partition known-non-fixnum? others)))
+       (cond ((not (null? nfx*))
+	      (interrupt))
+	     ((null? others)
+	      (nop))
+	     (else
+	      (interrupt-unless
+	       (tag-test (or* (T (car others))
+			      (cdr others))
+			 fx-mask fx-tag))))))
+
    (define (or* a a*)
-     (cond
-      ((null? a*) a)
-      (else (or* (prm 'logor a (T (car a*))) (cdr a*)))))
+     (if (null? a*)
+	 a
+       (or* (prm 'logor a (T (car a*)))
+	    (cdr a*))))
+
    (define (known-fixnum? x)
      (struct-case x
-       ((constant i) (fx? i))
-       ((known x t)
-	(case (T:fixnum? t)
-	  ((yes) (record-optimization 'assert-fixnum x) #t)
-	  (else  #f)))
-       (else #f)))
+       ((constant x.val)
+	(fx? x.val))
+       ((known x.expr x.type)
+	(case-symbols (T:fixnum? x.type)
+	  ((yes)
+	   (record-optimization 'assert-fixnum x.expr)
+	   #t)
+	  (else
+	   #f)))
+       (else
+	#f)))
+
    (define (known-non-fixnum? x)
      (struct-case x
-       ((constant i) (not (fx? i)))
-       ((known x t)
-	(eq? (T:fixnum? t) 'no))
-       (else #f)))
-   (let-values (((fx* others) (partition known-fixnum? (cons a a*))))
-     (let-values (((nfx* others) (partition known-non-fixnum?  others)))
-       (cond
-        ((not (null? nfx*)) (interrupt))
-        ((null? others)     (nop))
-        (else
-         (interrupt-unless
-	  (tag-test (or* (T (car others)) (cdr others)) fx-mask fx-tag)))))))
+       ((constant x.val)
+	(not (fx? x.val)))
+       ((known x.expr x.type)
+	(eq? (T:fixnum? x.type) 'no))
+       (else
+	#f)))
+
+   #| end of module: assert-fixnums |# )
 
  (define (fixnum-fold-p op a a*)
    (multiple-forms-sequence
@@ -2500,7 +2523,7 @@
 	(let ((b (car a*)))
 	  (make-conditional
 	      (prm op (T a) (T b))
-	    (f b (cdr a*))
+	      (f b (cdr a*))
 	    (K #f))))))))
 
  (define-primop = safe
@@ -2820,11 +2843,11 @@
 	    (interrupt-unless (cogen-pred-fixnum? x))
 	    (make-conditional
 		(prm '< (T x) (K 0))
-	      (prm 'logand
-		   (prm 'int+
-			(prm 'sra (T x) (K 1))
-			(K (fxsll 1 (sub1 fx-shift))))
-		   (K (fxsll -1 fx-shift)))
+		(prm 'logand
+		     (prm 'int+
+			  (prm 'sra (T x) (K 1))
+			  (K (fxsll 1 (sub1 fx-shift))))
+		     (K (fxsll -1 fx-shift)))
 	      (prm 'logand
 		   (prm 'sra (T x) (K 1))
 		   (K (fxsll -1 fx-shift)))))
