@@ -3652,17 +3652,27 @@
 ;;; compnums
 
 (define compnum-tag			#x37)
+(define disp-compnum-tag		0)
 (define disp-compnum-real		(* 1 wordsize))
 (define disp-compnum-imag		(* 2 wordsize))
 (define compnum-size			(* 4 wordsize))
+
+(define off-compnum-tag			(fx- disp-compnum-tag  vector-tag))
+(define off-compnum-real		(fx- disp-compnum-real vector-tag))
+(define off-compnum-imag		(fx- disp-compnum-imag vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; cflonums
 
 (define cflonum-tag			#x47)
+(define disp-cflonum-tag		0)
 (define disp-cflonum-real		(* 1 wordsize))
 (define disp-cflonum-imag		(* 2 wordsize))
 (define cflonum-size			(* 4 wordsize))
+
+(define off-cflonum-tag			(fx- disp-cflonum-tag  vector-tag))
+(define off-cflonum-real		(fx- disp-cflonum-real vector-tag))
+(define off-cflonum-imag		(fx- disp-cflonum-imag vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; bignums

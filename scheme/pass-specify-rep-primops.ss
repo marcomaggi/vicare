@@ -2376,25 +2376,32 @@
 (section
 
  (define-primop compnum? safe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag #f compnum-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f compnum-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-compnum unsafe
    ((V real imag)
-    (with-tmp ((x (prm 'alloc (K (align compnum-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K compnum-tag))
-      (prm 'mset x (K (- disp-compnum-real vector-tag)) (T real))
-      (prm 'mset x (K (- disp-compnum-imag vector-tag)) (T imag))
-      x))
-   ((P str) (K #t))
-   ((E str) (nop)))
-
+    (with-tmp ((comp (prm 'alloc
+			  (K (align compnum-size))
+			  (K vector-tag))))
+      (prm 'mset comp (K off-compnum-tag)  (K compnum-tag))
+      (prm 'mset comp (K off-compnum-real) (T real))
+      (prm 'mset comp (K off-compnum-imag) (T imag))
+      comp))
+   ((P str)
+    (K #t))
+   ((E str)
+    (nop)))
 
  (define-primop $compnum-real unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-compnum-real vector-tag)))))
+   ((V comp)
+    (prm 'mref (T comp) (K off-compnum-real))))
 
  (define-primop $compnum-imag unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-compnum-imag vector-tag)))))
+   ((V comp)
+    (prm 'mref (T comp) (K off-compnum-imag))))
 
  /section)
 
@@ -2423,24 +2430,32 @@
 (section
 
  (define-primop cflonum? safe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag #f cflonum-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f cflonum-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-cflonum unsafe
    ((V real imag)
-    (with-tmp ((x (prm 'alloc (K (align cflonum-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K cflonum-tag))
-      (prm 'mset x (K (- disp-cflonum-real vector-tag)) (T real))
-      (prm 'mset x (K (- disp-cflonum-imag vector-tag)) (T imag))
-      x))
-   ((P str) (K #t))
-   ((E str) (nop)))
+    (with-tmp ((cflo (prm 'alloc
+			  (K (align cflonum-size))
+			  (K vector-tag))))
+      (prm 'mset cflo (K off-cflonum-tag)  (K cflonum-tag))
+      (prm 'mset cflo (K off-cflonum-real) (T real))
+      (prm 'mset cflo (K off-cflonum-imag) (T imag))
+      cflo))
+   ((P str)
+    (K #t))
+   ((E str)
+    (nop)))
 
  (define-primop $cflonum-real unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-cflonum-real vector-tag)))))
+   ((V cflo)
+    (prm 'mref (T cflo) (K off-cflonum-real))))
 
  (define-primop $cflonum-imag unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-cflonum-imag vector-tag)))))
+   ((V cflo)
+    (prm 'mref (T cflo) (K off-cflonum-imag))))
 
  /section)
 
