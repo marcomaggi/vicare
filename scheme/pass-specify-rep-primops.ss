@@ -2990,26 +2990,28 @@
    #| end of module |# )
 
  (define-primop quotient safe
-   ((V x n)
-    (struct-case n
-      ((constant i)
-       (if (eqv? i 2)
+   ((V num den)
+    (struct-case den
+      ((constant den.val)
+       (if (eqv? den.val 2)
 	   (multiple-forms-sequence
-	    (interrupt-unless (cogen-pred-fixnum? x))
+	    (interrupt-unless
+	     (cogen-pred-fixnum? num))
 	    (make-conditional
-		(prm '< (T x) (K 0))
+		(prm '< (T num) (K 0))
 		(prm 'logand
 		     (prm 'int+
-			  (prm 'sra (T x) (K 1))
+			  (prm 'sra (T num) (K 1))
 			  (K (fxsll 1 (sub1 fx-shift))))
 		     (K (fxsll -1 fx-shift)))
 	      (prm 'logand
-		   (prm 'sra (T x) (K 1))
+		   (prm 'sra (T num) (K 1))
 		   (K (fxsll -1 fx-shift)))))
 	 (interrupt)))
       ((known expr)
-       (cogen-value-quotient x expr))
-      (else (interrupt)))))
+       (cogen-value-quotient num expr))
+      (else
+       (interrupt)))))
 
  /section)
 
