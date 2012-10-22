@@ -3907,7 +3907,10 @@
 
 ;;;; utility functions for assembly code generation
 
-(module (fx?)
+(module (fx? max-bitcount-in-fixnum-binary-representation)
+
+  (define max-bitcount-in-fixnum-binary-representation
+    (- (* wordsize 8) fx-shift))
 
   (define intbits
     ($fx* wordsize 8))

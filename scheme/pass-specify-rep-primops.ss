@@ -1332,7 +1332,7 @@
 
  (define-primop fixnum-width safe
    ((V)
-    (K (fxsll (- (* wordsize 8) fx-shift) fx-shift)))
+    (K (fxsll max-bitcount-in-fixnum-binary-representation fx-shift)))
    ((E)
     (nop))
    ((P)
@@ -1340,7 +1340,7 @@
 
  (define-primop least-fixnum safe
    ((V)
-    (K (sll (- (expt 2 (- (- (* wordsize 8) fx-shift) 1)))
+    (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)))
 	    fx-shift)))
    ((E)
     (nop))
@@ -1349,7 +1349,7 @@
 
  (define-primop greatest-fixnum safe
    ((V)
-    (K (sll (- (expt 2 (- (- (* wordsize 8) fx-shift) 1)) 1)
+    (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)) 1)
 	    fx-shift)))
    ((E)
     (nop))
@@ -2786,7 +2786,7 @@
        ;;binary representation of the shift amount as a fixnum.
        (cond ((and (fx? bitcount.val)
 		   (>= bitcount.val 0)
-		   (<  bitcount.val (- (* wordsize 8) fx-shift)))
+		   (<  bitcount.val max-bitcount-in-fixnum-binary-representation))
 	      (with-tmp ((x (T x)))
 		(assert-fixnum x)
 		(if (< bitcount.val 6)
@@ -2814,38 +2814,36 @@
 	   (interrupt-when
 	    (prm '< n (K 0)))
 	   (interrupt-when
-	    (prm '>= n (K (- (* wordsize 8) fx-shift))))
+	    (prm '>= n (K max-bitcount-in-fixnum-binary-representation)))
 	   (with-tmp ((x2 (prm 'sll x n)))
 	     (interrupt-unless
 	      (prm '= (prm 'sra x2 n) x))
 	     x2)))))))
 
  (define-primop fxarithmetic-shift-right safe
-   ((V x n)
-    (struct-case n
-;;; FIXME: check for known types
-      ((constant i)
-       (cond
-	((and (fx? i)
-	      (>= i 0)
-	      (< i (- (* wordsize 8) fx-shift)))
-	 (prm 'sll
-	      (prm 'sra (T x) (K (+ i fx-shift)))
-	      (K fx-shift)))
-	(else
-	 (interrupt))))
+   ((V x bitcount)
+    (struct-case bitcount
+      ;;FIXME Check for known types.  (Abdulaziz Ghuloum)
+      ((constant bitcount.val)
+       (if (and (fx? bitcount.val)
+		(>= bitcount.val 0)
+		(<  bitcount.val max-bitcount-in-fixnum-binary-representation))
+	   (prm 'sll
+		(prm 'sra (T x) (K (+ bitcount.val fx-shift)))
+		(K fx-shift))
+	 (interrupt)))
       (else
-       (with-tmp ((x (T x)) (n (T n)))
+       (with-tmp ((x (T x))
+		  (n (T bitcount)))
 	 (assert-fixnums x (list n))
 	 (with-tmp ((n (prm 'sra n (K fx-shift))))
 	   (interrupt-when
-	    (prm '< n (K 0)))
+	    (prm '<  n (K 0)))
 	   (interrupt-when
-	    (prm '>= n (K (- (* wordsize 8) fx-shift))))
+	    (prm '>= n (K max-bitcount-in-fixnum-binary-representation)))
 	   (prm 'sll
 		(prm 'sra (prm 'sra x n) (K fx-shift))
 		(K fx-shift))))))))
-
 
 ;;; --------------------------------------------------------------------
 ;;; safe generic arithmetic
