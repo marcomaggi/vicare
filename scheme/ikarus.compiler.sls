@@ -222,7 +222,7 @@
 	   #'(error 'compiler "unknown struct type" v 'INPUT-FORM)))
 
         (((else ?body0 ?body ...))
-	 #'(begin ?body0 ?body ...))
+	 #'(let () ?body0 ?body ...))
 
         ((((?struct-name ?field-name ...) ?body0 ?body ...) . ?other-clauses)
 	 (identifier? #'?struct-name)

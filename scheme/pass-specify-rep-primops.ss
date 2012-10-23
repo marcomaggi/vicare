@@ -3585,44 +3585,57 @@
     (nop)))
 
  (define-primop $bytevector-set! unsafe
-   ((E x i c)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (struct-case c
-	 ((constant c)
-	  (unless (fx? c)
+   ((E bv idx byte)
+    (struct-case idx
+      ((constant idx.val)
+       (unless (fx? idx.val)
+	 (interrupt))
+       ;;IDX.VAL is an  exact integer whose payload bits  are the binary
+       ;;representation of a fixnum.
+       (let ((byte-offset (+ idx.val off-bytevector-data)))
+	 (struct-case byte
+	   ((constant byte.val)
+	    (unless (fx? byte.val)
+	      (interrupt))
+	    ;;BYTE.VAL is  an exact integer  whose payload bits  are the
+	    ;;binary representation of a fixnum.
+	    (prm 'bset (T bv) (K byte-offset)
+		 (K (cond ((<= -128 byte.val 127)
+			   byte.val)
+			  ((<= +128 byte.val 255)
+			   (- byte.val 256))
+			  (else
+			   (interrupt))))))
+	   (else
+	    ;;BYTE  is a  struct instance  representing recordized  code
+	    ;;which, when evaluate, must return a fixnum.
+	    (prm 'bset (T bv) (K byte-offset)
+		 (prm-UNtag-as-fixnum (T byte)))))))
+      (else
+       ;;IDX is  a struct  instance representing recordized  code which,
+       ;;when evaluate, must return a fixnum.
+       (define byte-offset
+	 (prm 'int+
+	      (prm-UNtag-as-fixnum (T idx))
+	      (K off-bytevector-data)))
+       (struct-case byte
+	 ((constant byte.val)
+	  (unless (fx? byte.val)
 	    (interrupt))
-	  (prm 'bset (T x)
-	       (K (+ i off-bytevector-data))
-	       (K (cond ((<= -128 c 127)
-			 c)
-			((<= 128 c 255)
-			 (- c 256))
+	  ;;BYTE.VAL is  an exact integer  whose payload bits  are the
+	  ;;binary representation of a fixnum.
+	  (prm 'bset (T bv) byte-offset
+	       (K (cond ((<= -128 byte.val 127)
+			 byte.val)
+			((<= +128 byte.val 255)
+			 (- byte.val 256))
 			(else
 			 (interrupt))))))
 	 (else
-	  (prm 'bset (T x)
-	       (K (+ i off-bytevector-data))
-	       (prm-UNtag-as-fixnum (T c))))))
-      (else
-       (struct-case c
-	 ((constant c)
-	  (unless (fx? c) (interrupt))
-	  (prm 'bset (T x)
-	       (prm 'int+
-		    (prm-UNtag-as-fixnum (T i))
-		    (K off-bytevector-data))
-	       (K (cond
-		   ((<= -128 c 127) c)
-		   ((<= 128 c 255) (- c 256))
-		   (else (interrupt))))))
-	 (else
-	  (prm 'bset (T x)
-	       (prm 'int+
-		    (prm-UNtag-as-fixnum (T i))
-		    (K off-bytevector-data))
-	       (prm-UNtag-as-fixnum (T c)))))))))
+	  ;;BYTE  is a  struct instance  representing recordized  code
+	  ;;which, when evaluate, must return a fixnum.
+	  (prm 'bset (T bv) byte-offset
+	       (prm-UNtag-as-fixnum (T byte)))))))))
 
 ;;; --------------------------------------------------------------------
 
