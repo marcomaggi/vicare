@@ -3268,6 +3268,65 @@
    ((E x)
     (nop)))
 
+;;; --------------------------------------------------------------------
+;;; fixnum to and from character
+
+ (define-primop $fixnum->char unsafe
+   ;;Given  a machine  word representing  a fixnum,  whose payload  bits
+   ;;represent a Unicode code point,  return a machine word representing
+   ;;the corresponding standalone character.
+   ;;
+   ;;We know that the character tag  (#x0F) is wider than the fixnum tag
+   ;;(#b00);  on a  32-bit platform,  the fixnum  representing the  code
+   ;;point of #\A:
+   ;;
+   ;;   00000000 00000000 00000001 00000100
+   ;;                                    ** fixnum tag
+   ;;
+   ;;can become the character #\A by left-shifting by 6 positions
+   ;;
+   ;;   00000000 00000000 01000001 00000000
+   ;;
+   ;;and OR-ing the char tag:
+   ;;
+   ;;   00000000 00000000 01000001 00001111
+   ;;                              ******** char tag
+   ;;
+   ((V x)
+    (prm 'logor
+	 (prm 'sll (T x) (K (fx- char-shift fx-shift)))
+	 (K char-tag)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
+
+ (define-primop $char->fixnum unsafe
+   ;;Given a machine word representing  a standalone character: return a
+   ;;machine word  representing a  fixnum, whose payload  bits represent
+   ;;the corresponding Unicode code point.
+   ;;
+   ;;We know that the character tag  (#x0F) is wider than the fixnum tag
+   ;;(#b00);  on a  32-bit platform,  the fixnum  representing the  code
+   ;;point of #\A:
+   ;;
+   ;;   00000000 00000000 00000001 00000100
+   ;;                                    ** fixnum tag
+   ;;
+   ;;can become the character #\A by left-shifting by 6 positions
+   ;;
+   ;;   00000000 00000000 01000001 00000000
+   ;;
+   ((V x)
+    (prm 'sra (T x) (K (fx- char-shift fx-shift))))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
+
+;;; --------------------------------------------------------------------
+;;; UNsafe character comparisons
+
  (let-syntax
      ((define-$char-comparison (syntax-rules ()
 				 ((_ ?who ?prim)
@@ -3284,57 +3343,57 @@
    (define-$char-comparison $char>=	>=))
 
 ;;; --------------------------------------------------------------------
-
- (define-primop $fixnum->char unsafe
-   ((V x)
-    ;;Untag it as fixnum, then tag it as character.
-    (prm 'logor
-	 (prm 'sll (T x) (K (fx- char-shift fx-shift)))
-	 (K char-tag)))
-   ((P x)
-    (K #t))
-   ((E x)
-    (nop)))
-
- (define-primop $char->fixnum unsafe
-   ((V x)
-    (prm 'sra (T x) (K (fx- char-shift fx-shift))))
-   ((P x)
-    (K #t))
-   ((E x)
-    (nop)))
-
-;;; --------------------------------------------------------------------
+;;; safe character comparisons
 
  (define-primop char=? safe
-   ((P) (interrupt))
-   ((P a . a*) (char-fold-p '= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-chars a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (char-fold-p '= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-chars a a*)))
 
  (define-primop char<? safe
-   ((P) (interrupt))
-   ((P a . a*) (char-fold-p '< a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-chars a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (char-fold-p '< a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-chars a a*)))
 
  (define-primop char<=? safe
-   ((P) (interrupt))
-   ((P a . a*) (char-fold-p '<= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-chars a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (char-fold-p '<= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-chars a a*)))
 
  (define-primop char>? safe
-   ((P) (interrupt))
-   ((P a . a*) (char-fold-p '> a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-chars a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (char-fold-p '> a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-chars a a*)))
 
  (define-primop char>=? safe
-   ((P) (interrupt))
-   ((P a . a*) (char-fold-p '>= a a*))
-   ((E) (interrupt))
-   ((E a . a*) (assert-chars a a*)))
+   ((P)
+    (interrupt))
+   ((P a . a*)
+    (char-fold-p '>= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-chars a a*)))
 
  /section)
 
