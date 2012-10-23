@@ -3018,60 +3018,86 @@
 
 ;;;; structs
 ;;
-;;A data  structure is a variable  length block of  memory referenced by
+;;A data  structure is a variable  length block of memory  referenced by
 ;;machine  words  tagged as  vectors;  the  first  machine word  of  the
-;;structure is  a reference  to the type  descriptor, which is  itself a
-;;data structure.  A block of memory is a data structure if and only if:
-;;a reference to it is tagged as  vector and its first word is tagged as
-;;vector.
+;;structure is a reference to the type descriptor (STD), which is itself
+;;a data structure; the subsequent words,  if any, are the fields of the
+;;structure.
+;;
+;;A block of memory  is a data structure if and only  if: a reference to
+;;it is tagged as vector and its first word is tagged as vector.
 ;;
 ;; |----------------|----------| reference to structure
 ;;   heap offset     vector tag
 ;;
 ;; |----------------|----------| first word of structure
-;;   heap offset     vector tag    = reference to rtd
+;;   heap offset     vector tag    = reference to STD
 ;;                                 = reference to structure
 ;;
-;;The type  descriptor of  the type descriptors  is the return  value of
-;;BASE-RTD.
+;;The whole memory block layout of a struct with 5 fields is as follows:
+;;
+;; |-----|------|------|------|------|------|
+;;   STD  field0 field1 field2 field3 field4
+;;
+;;fields are indexed starting at zero.
+;;
+;;The struct type descriptor (std) of the type descriptors is the return
+;;value of BASE-RTD.
 ;;
 (section
 
  (define-primop $struct? unsafe
-   ((P x) (sec-tag-test (T x) vector-mask vector-tag vector-mask vector-tag))
-   ((E x) (nop)))
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag vector-mask vector-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $struct/rtd? unsafe
-   ((P x rtd)
-    (make-conditional
-	(tag-test (T x) vector-mask vector-tag)
-      (prm '= (prm 'mref (T x) (K (- vector-tag))) (T rtd))
+   ;;Evaluate to true if X is a structure and its type is STD.
+   ;;
+   ((P x std)
+    (make-conditional (tag-test (T x) vector-mask vector-tag)
+	(prm '=
+	     (prm 'mref (T x) (K off-struct-std))
+	     (T std))
       (K #f)))
-   ((E x rtd) (nop)))
+   ((E x std)
+    (nop)))
 
  (define-primop $make-struct unsafe
-   ((V rtd len)
+   ;;Allocate a  new data structure of  type STD capable of  holding LEN
+   ;;words/fields.  The returned struct has the fields uninitialised.
+   ;;
+   ((V std len)
     (struct-case len
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (with-tmp ((t (prm 'alloc
-			  (K (align (+ (* i wordsize) disp-struct-data)))
-			  (K vector-tag))))
-	 (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
-	 t))
-      ((known expr)
-       (cogen-value-$make-struct rtd expr))
+      ((constant len.val)
+       ;;LEN.VAL must  be an  exact integer whose  payload bits  are the
+       ;;binary representation of a fixnum.
+       (unless (fx? len.val)
+	 (interrupt))
+       (with-tmp ((stru (prm 'alloc
+			     (K (align (+ (* len.val wordsize) disp-struct-data)))
+			     (K vector-tag))))
+	 ;;Store the STD in the first word.
+	 (prm 'mset stru (K off-struct-std) (T std))
+	 stru))
+      ((known len.expr)
+       (cogen-value-$make-struct std len.expr))
       (else
-       (with-tmp ((ln (align-code len disp-struct-data)))
-	 (with-tmp ((t (prm 'alloc ln (K vector-tag))))
-	   (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
-	   t)))))
-   ((P rtd len) (K #t))
-   ((E rtd len) (nop)))
+       ;;Here LEN is recordized code  which, when evaluated, must return
+       ;;a fixnum representing the number of fields.
+       (with-tmp* ((size (align-code len disp-struct-data))
+		   (stru (prm 'alloc size (K vector-tag))))
+	 (prm 'mset stru (K off-struct-std) (T std))
+	 stru))))
+   ((P std len)
+    (K #t))
+   ((E std len)
+    (nop)))
 
  (define-primop $struct-rtd unsafe
    ((V x)
-    (prm 'mref (T x) (K (- disp-struct-rtd vector-tag))))
+    (prm 'mref (T x) (K off-struct-std)))
    ((E x) (nop))
    ((P x) #t))
 
@@ -3091,13 +3117,13 @@
      (K #t))))
 
  (define-primop $struct unsafe
-   ((V rtd . v*)
+   ((V std . v*)
     (with-tmp ((t (prm 'alloc
 		       (K (align
 			   (+ disp-struct-data
 			      (* (length v*) wordsize))))
 		       (K vector-tag))))
-      (prm 'mset t (K (- disp-struct-rtd vector-tag)) (T rtd))
+      (prm 'mset t (K off-struct-std) (T std))
       (let f ((v* v*)
 	      (i (- disp-struct-data vector-tag)))
 	(cond
@@ -3106,8 +3132,8 @@
 	  (make-seq
 	   (prm 'mset t (K i) (T (car v*)))
 	   (f (cdr v*) (+ i wordsize))))))))
-   ((P rtd . v*) (K #t))
-   ((E rtd . v*) (nop)))
+   ((P std . v*) (K #t))
+   ((E std . v*) (nop)))
 
  /section)
 

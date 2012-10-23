@@ -3750,7 +3750,12 @@
 
 (define record-tag			vector-tag)
 (define disp-struct-rtd			0)
+(define disp-struct-std			0)
 (define disp-struct-data		wordsize)
+
+(define off-struct-rtd			(fx- disp-struct-rtd  vector-tag))
+(define off-struct-std			(fx- disp-struct-std  vector-tag))
+(define off-struct-data			(fx- disp-struct-data vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; strings

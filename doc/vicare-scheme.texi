@@ -64,6 +64,10 @@
 @acronym{SEL}
 @end macro
 
+@macro std{}
+@acronym{STD}
+@end macro
+
 @macro urldate{DATE}
 (@acronym{URL} last verified \DATE\)
 @end macro
@@ -24612,10 +24616,10 @@ fixnums.  Return unspecified values.
 
 
 A data structure is a variable--length block of memory referenced by
-machine words tagged as vectors; the first machine word of the structure
-is a reference to the type descriptor (@rtd{}), which is itself a data
-structure; the subsequent words, if any, are the fields of the
-structure.  A block of memory is a data structure if and only if: a
+machine words tagged as vectors; the first machine word of a structure
+is a reference to its structure type descriptor (@std{}), which is
+itself a data structure; the subsequent words, if any, are the fields of
+the structure.  A block of memory is a data structure if and only if: a
 reference to it is tagged as vector and its first word is tagged as
 vector.
 
@@ -24624,41 +24628,68 @@ vector.
   heap pointer    vector tag
 
 |----------------|----------| first word of structure
-  heap pointer    vector tag    = reference to rtd
+  heap pointer    vector tag    = reference to STD
                                 = reference to structure
 @end example
 
-The type descriptor of the type descriptors is the return value of
-@func{base-rtd} at the Scheme level and the structure referenced by the
-field @code{base_rtd} in the process control block.  Such base type
-descriptor is built at @value{PRJNAME}'s startup.  The graph of
-references for a structure and its type descriptor is as follows:
+The whole memory block layout of a struct with @math{5} fields is as
+follows:
 
 @example
-      rtd ref
+|-----|------|------|------|------|------|
+  STD  field0 field1 field2 field3 field4
+@end example
+
+@noindent
+fields are indexed starting at zero.
+
+The type descriptor of the type descriptors is the return value of
+@func{base-rtd} at the Scheme level and the structure referenced by the
+field @code{base_rtd} in the process control block (@pcb{}).  Such base
+type descriptor is built at @value{PRJNAME}'s startup.
+
+The graph of references for a structure and its type descriptor is as
+follows:
+
+@example
+      STD ref
      |-------|---------------| structure instance
          |
   ---<---
  |
- |     rtd ref
-  -->|-------|---------------| type descriptor
+ |    RTD ref
+  -->|-------|---------------| struct type descriptor
          |
   ---<---
  |
- |     rtd ref
- +-->|-------|---------------| base type descriptor
+ |    STD ref
+ +-->|-------|---------------| base struct type descriptor
  |       |
   ---<---
 @end example
 
 @noindent
-the type descriptor of the base type descriptor is the base type
-descriptor itself.
+the struct type descriptor of the base struct type descriptor is the
+base type descriptor itself.
 
-An @rnrs{6} record--type descriptor is a struct instance of type @rtd{}.
+About @rnrs{6} records and their types:
+
+@itemize
+@item
 An @rnrs{6} record instance is a struct instance whose first word
-references its type descriptor, that is a struct instance of type
-@rtd{}.
+references its @rnrs{6} record type descriptor (@rtd{}).
+
+@item
+An @rnrs{6} record type descriptor (@rtd{}) is a struct instance of type
+@code{<rtd>}.
+
+@item
+An @rnrs{6} record constructor descriptor is a struct instance of type
+@code{<rcd>}.
+@end itemize
+
+The graph of references for an @rnrs{6} record and its type descriptor
+is as follows:
 
 @example
      RTD ref
@@ -24666,33 +24697,33 @@ references its type descriptor, that is a struct instance of type
         |
  ---<---
 |
-|     std ref
+|    STD ref
  -->|-------|---------------| R6RS record type descriptor
-        |                      = struct instance of type RTD
+        |                      = struct instance of type <rtd>
  ---<---
 |
-|     std ref
-+-->|-------|---------------| RTD type descriptor
+|    STD ref
++-->|-------|---------------| <rtd> struct type descriptor
         |
  ---<---
 |
-|     std ref
+|    STD ref
 +-->|-------|---------------| base struct type descriptor
 |       |
  ---<---
 @end example
 
-A struct type descriptor is a fixed--length block of memory composed of
-@math{6} machine words interpreted as follows:
+A struct type descriptor (@std{}) is a fixed--length block of memory
+composed of @math{6} machine words interpreted as follows:
 
 @enumerate
 @item
-A reference to the base @rtd{}.
+A reference to the base @std{}.
 
 @item
 A fixnum representing the number of machine words in the structure minus
 @math{1}; this is the number of fields in the structure excluding the
-reference to the @rtd{}.  This value is @math{5} in the base @rtd{}.
+reference to the @std{}.  This value is @math{5} in the base @std{}.
 
 @item
 Scheme symbol representing the name of this structure type.
@@ -24703,7 +24734,7 @@ this type.
 
 @item
 False or a reference to closure used to print to a Scheme port the
-structures of this type.  This is the printer function.
+structures of this type.  This is the @dfn{printer} function.
 
 @item
 Scheme symbol used as unique identifier for this type.
