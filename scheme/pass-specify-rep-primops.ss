@@ -3152,15 +3152,99 @@
 
 ;;;; characters
 ;;
-;;A character is a machine word  whose least significant bits are set to
-;;the  character tag.   When stored  in a  string: the  machine  word is
-;;trimmed to its least significant 32 bits.
+;;A standalone character is a  machine word whose least significant bits
+;;are set  to the character tag.   When stored in a  string: the machine
+;;word is trimmed to its least significant 32 bits.
 ;;
-;;The most  significant bits, interpreted  as integer, represent  a code
-;;point  in  the range  [0,  #x10FFFF] but  not  in  the range  [#xD800,
+;;The most significant bits, interpreted as integer, represent a Unicode
+;;code point in the range [0, #x10FFFF] but excluding the range [#xD800,
 ;;#xDFFF].
 ;;
 (section
+
+ (module (assert-chars)
+
+   (define (assert-chars a a*)
+     ;;Return  a  struct  instance  representing  recordized  code  that
+     ;;validates A and A* as code returning characters.
+     ;;
+     ;;A must be a struct intance representing recordized code.  A* must
+     ;;be a list of struct instances representing recordized code.
+     ;;
+     (let*-values (((ch*  others) (partition known-char?     (cons a a*)))
+		   ((nch* others) (partition known-non-char? others)))
+       ;;Here  OTHERS  is  a   list  of  struct  instances  representing
+       ;;recordized code which  are neither known to  evaluate to chars,
+       ;;nor known to evaluate to non-chars.
+       (cond ((not (null? nch*))
+	      ;;If there are some non-chars: it is an error.
+	      (interrupt))
+	     ((null? others)
+	      ;;If everything is known to evaluate to chars: fine.
+	      (nop))
+	     (else
+	      ;;If  there  is some  code  of  unknown return  value:  OR
+	      ;;together  all the  resulting machine  words, then  check
+	      ;;that the result is tagged as char.
+	      (interrupt-unless
+	       (tag-test (or* (T ($car others))
+			      ($cdr others))
+			 char-mask char-tag))))))
+
+   (define (or* a a*)
+     ;;Return  a  struct  instance  representing  recordized  code  that
+     ;;applies bitwise  logic OR  to all the  results of  the arguments.
+     ;;Examples:
+     ;;
+     ;;  (or* arg0 '())
+     ;;  => arg0
+     ;;
+     ;;  (or* arg0 (list arg1 arg2 arg3))
+     ;;  => (prm 'logor
+     ;;          (prm 'logor
+     ;;               (prm 'logor arg0 arg1)
+     ;;               arg2)
+     ;;          arg3)
+     ;;
+     (if (null? a*)
+	 a
+       (or* (prm 'logor a (T ($car a*)))
+	    ($cdr a*))))
+
+   (define (known-char? x)
+     (struct-case x
+       ((constant x.val)
+	(char? x.val))
+       ((known x.expr x.type)
+	(eq? (T:char? x.type) 'yes))
+       (else
+	#f)))
+
+   (define (known-non-char? x)
+     (struct-case x
+       ((constant x.val)
+	(not (char? x.val)))
+       ((known x.expr x.type)
+	(eq? (T:char? x.type) 'no))
+       (else
+	#f)))
+
+   #| end of module: assert-chars |# )
+
+ (define (char-fold-p op a a*)
+   (multiple-forms-sequence
+    (assert-chars a a*)
+    (let f ((a a) (a* a*))
+      (cond
+       ((null? a*) (K #t))
+       (else
+	(let ((b (car a*)))
+	  (make-conditional
+	      (prm op (T a) (T b))
+	    (f b (cdr a*))
+	    (K #f))))))))
+
+;;; --------------------------------------------------------------------
 
  (define-primop char? safe
    ((P x) (tag-test (T x) char-mask char-tag))
@@ -3188,6 +3272,7 @@
 
  (define-primop $fixnum->char unsafe
    ((V x)
+    ;;Untag it as fixnum, then tag it as character.
     (prm 'logor
 	 (prm 'sll (T x) (K (- char-shift fx-shift)))
 	 (K char-tag)))
@@ -3199,46 +3284,7 @@
    ((P x) (K #t))
    ((E x) (nop)))
 
-
- (define (assert-chars a a*)
-   (define (or* a a*)
-     (cond
-      ((null? a*) a)
-      (else (or* (prm 'logor a (T (car a*))) (cdr a*)))))
-   (define (known-char? x)
-     (struct-case x
-       ((constant i) (char? i))
-       ((known x t)
-	(eq? (T:char? t) 'yes))
-       (else #f)))
-   (define (known-non-char? x)
-     (struct-case x
-       ((constant i) (not (char? i)))
-       ((known x t)
-	(eq? (T:char? t) 'no))
-       (else #f)))
-   (let-values (((fx* others) (partition known-char? (cons a a*))))
-     (let-values (((nfx* others) (partition known-non-char?  others)))
-       (cond
-        ((not (null? nfx*)) (interrupt))
-        ((null? others)     (nop))
-        (else
-         (interrupt-unless
-	  (tag-test (or* (T (car others)) (cdr others)) char-mask char-tag)))))))
-
- (define (char-fold-p op a a*)
-   (multiple-forms-sequence
-    (assert-chars a a*)
-    (let f ((a a) (a* a*))
-      (cond
-       ((null? a*) (K #t))
-       (else
-	(let ((b (car a*)))
-	  (make-conditional
-	      (prm op (T a) (T b))
-	    (f b (cdr a*))
-	    (K #f))))))))
-
+;;; --------------------------------------------------------------------
 
  (define-primop char=? safe
    ((P) (interrupt))
