@@ -3415,8 +3415,8 @@
 ;;value of GREATEST-FIXNUM.
 ;;
 ;;When allocating  a bytevector capable  of holding N bytes,  the actual
-;;size of  the allocated data area  is N+1; the additional  last byte is
-;;not part of the data area and is perpetually set to zero.
+;;size of the  allocated data area is at least  N+1; the additional last
+;;byte is not part of the data area and is perpetually set to zero.
 ;;
 ;;To  allow  for  the same  binary  layout  on  both 32-bit  and  64-bit
 ;;platforms,  the data area  starts 8  bytes after  the beginning;  on a
@@ -3435,49 +3435,62 @@
 (section
 
  (define-primop bytevector? safe
-   ((P x) (tag-test (T x) bytevector-mask bytevector-tag))
-   ((E x) (nop)))
+   ((P x)
+    (tag-test (T x) bytevector-mask bytevector-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-bytevector unsafe
-   ((V n)
-    (struct-case n ;number of bytes
-      ((constant n)
-       (unless (fx? n) (interrupt))
-       (with-tmp ((s (prm 'alloc
-			  (K (align (+ n 1 disp-bytevector-data)))
-			  (K bytevector-tag))))
-	 ;; store the length in the first word
-	 (prm 'mset s
-	      (K (- disp-bytevector-length bytevector-tag))
-	      (K (* n fx-scale)))
-	 (prm 'bset s
-	      (K (+ n (- disp-bytevector-data bytevector-tag)))
+   ((V num-of-bytes)
+    (struct-case num-of-bytes
+      ((constant num-of-bytes.val)
+       ;;NUM-OF-BYTES.VAL is an exact integer whose payload bits are the
+       ;;binary representation of a fixnum.
+       (unless (fx? num-of-bytes.val)
+	 (interrupt))
+       (with-tmp ((bv (prm 'alloc
+			   (K (align (+ num-of-bytes.val 1 disp-bytevector-data)))
+			   (K bytevector-tag))))
+	 ;;Store the length in the first word.
+	 (prm 'mset bv
+	      (K off-bytevector-length)
+	      ;;Tag as fixnum.
+	      (K (* num-of-bytes.val fx-scale)))
+	 ;;Set to zero the one-off byte.
+	 (prm 'bset bv
+	      (K (+ num-of-bytes.val off-bytevector-data))
 	      (K 0))
-	 s))
-      ((known expr)
-       (cogen-value-$make-bytevector expr))
+	 bv))
+      ((known num-of-bytes.expr)
+       (cogen-value-$make-bytevector num-of-bytes.expr))
       (else
-       (with-tmp ((s (prm 'alloc
-			  (align-code
-			   (prm 'sra (T n) (K fx-shift))
-			   (+ 1 disp-bytevector-data))
-			  (K bytevector-tag))))
-	 (prm 'mset s
-	      (K (- disp-bytevector-length bytevector-tag))
-	      (T n))
-	 (prm 'bset s
+       ;;Here NUM-OF-BYTES is a  struct instance representing recordized
+       ;;code which, when evaluated, must return a fixnum.
+       (with-tmp ((bv (prm 'alloc
+			   (align-code (prm 'sra (T num-of-bytes) (K fx-shift))
+				       (+ 1 disp-bytevector-data))
+			   (K bytevector-tag))))
+	 ;;Store the length in the first word.
+	 (prm 'mset bv (K off-bytevector-length) (T num-of-bytes))
+	 ;;Set to zero the one-off byte.
+	 (prm 'bset bv
 	      (prm 'int+
-		   (prm 'sra (T n) (K fx-shift))
-		   (K (- disp-bytevector-data bytevector-tag)))
+		   (prm 'sra (T num-of-bytes) (K fx-shift)) ;untag the fixnum
+		   (K off-bytevector-data))
 	      (K 0))
-	 s))))
-   ((P n) (K #t))
-   ((E n) (nop)))
+	 bv))))
+   ((P num-of-bytes)
+    (K #t))
+   ((E num-of-bytes)
+    (nop)))
 
  (define-primop $bytevector-length unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-bytevector-length bytevector-tag))))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref (T x) (K off-bytevector-length)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  (define-primop $bytevector-u8-ref unsafe
    ((V s i)
@@ -3487,7 +3500,7 @@
        (prm 'sll
 	    (prm 'logand
 		 (prm 'bref (T s)
-		      (K (+ i (- disp-bytevector-data bytevector-tag))))
+		      (K (+ i off-bytevector-data)))
 		 (K 255))
 	    (K fx-shift)))
       (else
@@ -3496,7 +3509,7 @@
 		 (prm 'bref (T s)
 		      (prm 'int+
 			   (prm 'sra (T i) (K fx-shift))
-			   (K (- disp-bytevector-data bytevector-tag))))
+			   (K off-bytevector-data)))
 		 (K 255))
 	    (K fx-shift)))))
    ((P s i) (K #t))
@@ -3511,7 +3524,7 @@
 	    (prm 'sll
 		 (prm 'logand
 		      (prm 'bref (T s)
-			   (K (+ i (- disp-bytevector-data bytevector-tag))))
+			   (K (+ i off-bytevector-data)))
 		      (K 255))
 		 (K (- (* wordsize 8) 8)))
 	    (K (- (* wordsize 8) (+ 8 fx-shift)))))
@@ -3521,7 +3534,7 @@
 		 (prm 'bref (T s)
 		      (prm 'int+
 			   (prm 'sra (T i) (K fx-shift))
-			   (K (- disp-bytevector-data bytevector-tag))))
+			   (K off-bytevector-data)))
 		 (K (- (* wordsize 8) 8)))
 	    (K (- (* wordsize 8) (+ 8 fx-shift)))))))
    ((P s i) (K #t))
@@ -3537,14 +3550,14 @@
 	 ((constant c)
 	  (unless (fx? c) (interrupt))
 	  (prm 'bset (T x)
-	       (K (+ i (- disp-bytevector-data bytevector-tag)))
+	       (K (+ i off-bytevector-data))
 	       (K (cond
 		   ((<= -128 c 127) c)
 		   ((<= 128 c 255) (- c 256))
 		   (else (interrupt))))))
 	 (else
 	  (prm 'bset (T x)
-	       (K (+ i (- disp-bytevector-data bytevector-tag)))
+	       (K (+ i off-bytevector-data))
 	       (prm 'sra (T c) (K fx-shift))))))
       (else
        (struct-case c
@@ -3553,7 +3566,7 @@
 	  (prm 'bset (T x)
 	       (prm 'int+
 		    (prm 'sra (T i) (K fx-shift))
-		    (K (- disp-bytevector-data bytevector-tag)))
+		    (K off-bytevector-data))
 	       (K (cond
 		   ((<= -128 c 127) c)
 		   ((<= 128 c 255) (- c 256))
@@ -3562,7 +3575,7 @@
 	  (prm 'bset (T x)
 	       (prm 'int+
 		    (prm 'sra (T i) (K fx-shift))
-		    (K (- disp-bytevector-data bytevector-tag)))
+		    (K off-bytevector-data))
 	       (prm 'sra (T c) (K fx-shift)))))))))
 
  (define-primop $bytevector-ieee-double-native-ref unsafe
@@ -3571,8 +3584,8 @@
       (prm 'mset x (K (- vector-tag)) (K flonum-tag))
       (prm 'fl:load
 	   (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-	   (K (- disp-bytevector-data bytevector-tag)))
-      (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+	   (K off-bytevector-data))
+      (prm 'fl:store x (K off-flonum-data))
       x)))
 
 
@@ -3584,19 +3597,19 @@
 ;;;     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
 ;;;     (prm 'fl:load
 ;;;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-;;;       (K (- disp-bytevector-data bytevector-tag)))
+;;;       (K off-bytevector-data))
 ;;;     (prm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
-;;;       (K (- disp-bytevector-data bytevector-tag)))
-;;;     (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+;;;       (K off-bytevector-data))
+;;;     (prm 'fl:store x (K off-flonum-data))
 ;;;     x)))
 
  (define-primop $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
     (case wordsize
       ((4)
-       (let ((bvoff (- disp-bytevector-data bytevector-tag))
-	     (floff (- disp-flonum-data vector-tag)))
+       (let ((bvoff off-bytevector-data)
+	     (floff off-flonum-data))
 	 (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	   (prm 'mset x (K (- vector-tag)) (K flonum-tag))
 	   (with-tmp ((t (prm 'int+ (T bv)
@@ -3609,8 +3622,8 @@
 	       (prm 'mset x (K floff) x0)))
 	   x)))
       (else
-       (let ((bvoff (- disp-bytevector-data bytevector-tag))
-	     (floff (- disp-flonum-data vector-tag)))
+       (let ((bvoff off-bytevector-data)
+	     (floff off-flonum-data))
 	 (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	   (prm 'mset x (K (- vector-tag)) (K flonum-tag))
 	   (with-tmp ((t (prm 'int+ (T bv)
@@ -3624,10 +3637,10 @@
  (define-primop $bytevector-ieee-double-native-set! unsafe
    ((E bv i x)
     (multiple-forms-sequence
-     (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
+     (prm 'fl:load (T x) (K off-flonum-data))
      (prm 'fl:store
 	  (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-	  (K (- disp-bytevector-data bytevector-tag))))))
+	  (K off-bytevector-data)))))
 
 
  (define-primop $bytevector-ieee-single-native-ref unsafe
@@ -3636,24 +3649,24 @@
       (prm 'mset x (K (- vector-tag)) (K flonum-tag))
       (prm 'fl:load-single
 	   (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-	   (K (- disp-bytevector-data bytevector-tag)))
+	   (K off-bytevector-data))
       (prm 'fl:single->double)
-      (prm 'fl:store x (K (- disp-flonum-data vector-tag)))
+      (prm 'fl:store x (K off-flonum-data))
       x)))
 
  (define-primop $bytevector-ieee-single-native-set! unsafe
    ((E bv i x)
     (multiple-forms-sequence
-     (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
+     (prm 'fl:load (T x) (K off-flonum-data))
      (prm 'fl:double->single)
      (prm 'fl:store-single
 	  (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-	  (K (- disp-bytevector-data bytevector-tag))))))
+	  (K off-bytevector-data)))))
 
  (define-primop $bytevector-ieee-single-nonnative-ref unsafe
    ((V bv i)
-    (let ((bvoff (- disp-bytevector-data bytevector-tag))
-	  (floff (- disp-flonum-data vector-tag)))
+    (let ((bvoff off-bytevector-data)
+	  (floff off-flonum-data))
       (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	(prm 'mset x (K (- vector-tag)) (K flonum-tag))
 	(with-tmp ((t (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))))
@@ -3671,20 +3684,20 @@
 ;;;(define-primop $bytevector-ieee-double-nonnative-set! unsafe
 ;;;  ((E bv i x)
 ;;;   (multiple-forms-sequence
-;;;     (prm 'fl:load (T x) (K (- disp-flonum-data vector-tag)))
+;;;     (prm 'fl:load (T x) (K off-flonum-data))
 ;;;     (prm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
-;;;       (K (- disp-bytevector-data bytevector-tag)))
+;;;       (K off-bytevector-data))
 ;;;     (prm 'fl:store
 ;;;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
-;;;       (K (- disp-bytevector-data bytevector-tag))))))
+;;;       (K off-bytevector-data)))))
 
  (define-primop $bytevector-ieee-double-nonnative-set! unsafe
    ((E bv i x)
     (case wordsize
       ((4)
-       (let ((bvoff (- disp-bytevector-data bytevector-tag))
-	     (floff (- disp-flonum-data vector-tag)))
+       (let ((bvoff off-bytevector-data)
+	     (floff off-flonum-data))
 	 (with-tmp ((t (prm 'int+ (T bv)
 			    (prm 'sra (T i) (K fx-shift)))))
 	   (with-tmp ((x0 (prm 'mref (T x) (K floff))))
@@ -3694,8 +3707,8 @@
 	     (prm 'bswap! x0 x0)
 	     (prm 'mset t (K bvoff) x0)))))
       (else
-       (let ((bvoff (- disp-bytevector-data bytevector-tag))
-	     (floff (- disp-flonum-data vector-tag)))
+       (let ((bvoff off-bytevector-data)
+	     (floff off-flonum-data))
 	 (with-tmp ((t (prm 'int+ (T bv)
 			    (prm 'sra (T i) (K fx-shift)))))
 	   (with-tmp ((x0 (prm 'mref (T x) (K floff))))
@@ -3704,8 +3717,8 @@
 
  (define-primop $bytevector-ieee-single-nonnative-set! unsafe
    ((E bv i x)
-    (let ((bvoff (- disp-bytevector-data bytevector-tag))
-	  (floff (- disp-flonum-data vector-tag)))
+    (let ((bvoff off-bytevector-data)
+	  (floff off-flonum-data))
       (multiple-forms-sequence
        (prm 'fl:load (T x) (K floff))
        (prm 'fl:double->single)

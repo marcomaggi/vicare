@@ -3711,6 +3711,9 @@
 		;To  allow  the same  displacement  on  both 32-bit  and
 		;64-bit platforms.
 
+(define off-bytevector-length		(fx- disp-bytevector-length bytevector-tag))
+(define off-bytevector-data		(fx- disp-bytevector-data   bytevector-tag))
+
 ;;; --------------------------------------------------------------------
 ;;; vectors
 
