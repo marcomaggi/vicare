@@ -1836,9 +1836,8 @@
        ;;platforms.  (Marco Maggi; Oct 19, 2012)
        (interrupt-unless-fx byte-idx.val)
        (prm-tag-as-fixnum
-	(prm 'logand ;isolate the requested byte
-	     (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data)))
-	     (K 255))))
+	(prm-isolate-least-significant-byte
+	 (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data))))))
       ((known byte-idx.expr)
        (cogen-value-$bignum-byte-ref bigN byte-idx.expr))
       (else
@@ -1848,12 +1847,11 @@
        ;;FIXME  Endianness dependency!!!   Works only  on little  endian
        ;;platforms.  (Marco Maggi; Oct 19, 2012)
        (prm-tag-as-fixnum
-	(prm 'logand ;isolate the requested byte
-	     (prm 'mref (T bigN)
-		  (prm 'int+
-		       (prm-UNtag-as-fixnum (T byte-idx))
-		       (K off-bignum-data)))
-	     (K 255)))
+	(prm-isolate-least-significant-byte
+	 (prm 'mref (T bigN)
+	      (prm 'int+
+		   (prm-UNtag-as-fixnum (T byte-idx))
+		   (K off-bignum-data)))))
        ;;
        ;;The one below  is the original Ikarus version; I  do not really
        ;;know why it was written this way,  it may well be that I am too
@@ -2044,10 +2042,9 @@
 		    (fx<= offset.val 7))
 	 (interrupt))
        (prm-tag-as-fixnum
-	(prm 'logand ;isolate the byte
-	     (prm 'bref (T flo)
-		  (K (fx+ (fx- 7 offset.val) off-flonum-data)))
-	     (K 255))))
+	(prm-isolate-least-significant-byte
+	 (prm 'bref (T flo)
+	      (K (fx+ (fx- 7 offset.val) off-flonum-data))))))
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
       (else
@@ -3539,10 +3536,8 @@
        (unless (fx? i) (interrupt))
        (prm 'sra
 	    (prm 'sll
-		 (prm 'logand
-		      (prm 'bref (T s)
-			   (K (+ i off-bytevector-data)))
-		      (K 255))
+		 (prm-isolate-least-significant-byte
+		  (prm 'bref (T s) (K (+ i off-bytevector-data))))
 		 (K (- (* wordsize 8) 8)))
 	    (K (- (* wordsize 8) (+ 8 fx-shift)))))
       (else
@@ -4295,12 +4290,11 @@
  (define-primop $code-ref unsafe
    ((V x i)
     (prm-tag-as-fixnum
-     (prm 'logand
-	  (prm 'bref (T x)
-	       (prm 'int+
-		    (prm-UNtag-as-fixnum (T i))
-		    (K (- disp-code-data vector-tag))))
-	  (K 255)))))
+     (prm-isolate-least-significant-byte
+      (prm 'bref (T x)
+	   (prm 'int+
+		(prm-UNtag-as-fixnum (T i))
+		(K (- disp-code-data vector-tag))))))))
 
  (define-primop $code-set! unsafe
    ((E x i v)
