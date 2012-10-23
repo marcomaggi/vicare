@@ -3096,44 +3096,56 @@
     (nop)))
 
  (define-primop $struct-rtd unsafe
-   ((V x)
-    (prm 'mref (T x) (K off-struct-std)))
-   ((E x) (nop))
-   ((P x) #t))
+   ((V stru)
+    (prm 'mref (T stru) (K off-struct-std)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
 
  (define-primop $struct-ref unsafe
-   ((V x i) (cogen-value-$vector-ref x i))
-   ((E x i) (nop)))
+   ;;Return the  word in the  field at index  I.  Accessing a  struct is
+   ;;like accessing a vector.
+   ;;
+   ((V stru idx)
+    (cogen-value-$vector-ref stru idx))
+   ((E stru idx)
+    (nop)))
 
  (define-primop $struct-set! unsafe
-   ((V x i v)
+   ;;Store a  new word in  the field at index  I.  Mutating a  struct is
+   ;;like mutating a vector.
+   ;;
+   ((V stru idx v)
     (multiple-forms-sequence
-     (cogen-effect-$vector-set! x i v)
+     (cogen-effect-$vector-set! stru idx v)
      (K void-object)))
-   ((E x i v) (cogen-effect-$vector-set! x i v))
-   ((P x i v)
+   ((E stru idx v)
+    (cogen-effect-$vector-set! stru idx v))
+   ((P stru idx v)
     (multiple-forms-sequence
-     (cogen-effect-$vector-set! x i v)
+     (cogen-effect-$vector-set! stru idx v)
      (K #t))))
 
  (define-primop $struct unsafe
-   ((V std . v*)
-    (with-tmp ((t (prm 'alloc
-		       (K (align
-			   (+ disp-struct-data
-			      (* (length v*) wordsize))))
-		       (K vector-tag))))
-      (prm 'mset t (K off-struct-std) (T std))
-      (let f ((v* v*)
-	      (i (- disp-struct-data vector-tag)))
-	(cond
-	 ((null? v*) t)
-	 (else
-	  (make-seq
-	   (prm 'mset t (K i) (T (car v*)))
-	   (f (cdr v*) (+ i wordsize))))))))
-   ((P std . v*) (K #t))
-   ((E std . v*) (nop)))
+   ((V std . field*)
+    (with-tmp ((stru (prm 'alloc
+			  (K (align (+ disp-struct-data (* (length field*) wordsize))))
+			  (K vector-tag))))
+      ;;Store a reference to the STD in the first word.
+      (prm 'mset stru (K off-struct-std) (T std))
+      ;;Store the fields.
+      (let recur ((field* field*)
+		  (offset off-struct-data)) ;offset in bytes
+	(cond ((null? field*)
+	       stru)
+	      (else
+	       (make-seq (prm 'mset stru (K offset) (T ($car field*)))
+			 (recur ($cdr field*) (+ offset wordsize))))))))
+   ((P std . field*)
+    (K #t))
+   ((E std . field*)
+    (nop)))
 
  /section)
 
