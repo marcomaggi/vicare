@@ -3629,24 +3629,59 @@
 	  (prm 'bset (T bv) byte-offset (prm-UNtag-as-fixnum (T byte)))))))))
 
 ;;; --------------------------------------------------------------------
+;;; double native flonum ref
 
  (define-primop $bytevector-ieee-double-native-ref unsafe
-   ((V bv i)
-    (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+   ((V bv idx)
+    (with-tmp ((flo (prm 'alloc
+			 (K (align flonum-size))
+			 (K vector-tag))))
+      ;;Tag the first word as flonum.
+      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      ;;Load the number in a floating point register.
       (prm 'fl:load
-	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
+	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	   (K off-bytevector-data))
-      (prm 'fl:store x (K off-flonum-data))
-      x)))
+      ;;Store the number in the data area of the flonum.
+      (prm 'fl:store flo (K off-flonum-data))
+      flo)))
 
+ (define-primop $bytevector-ieee-double-nonnative-ref unsafe
+   ((V bv i)
+    (case-word-size
+     ((32)
+      (with-tmp ((flo (prm 'alloc
+			   (K (align flonum-size))
+			   (K vector-tag))))
+	;;Tag the first word as flonum.
+	(prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+	(with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
+	  (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
+	    (prm 'bswap! x0 x0)
+	    (prm 'mset flo (K (+ off-flonum-data wordsize)) x0))
+	  (with-tmp ((x0 (prm 'mref t (K (+ off-bytevector-data wordsize)))))
+	    (prm 'bswap! x0 x0)
+	    (prm 'mset flo (K off-flonum-data) x0)))
+	flo))
+     ((64)
+      (with-tmp ((flo (prm 'alloc
+			   (K (align flonum-size))
+			   (K vector-tag))))
+	;;Tag the first word as flonum.
+	(prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+	(with-tmp* ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i))))
+		    (x0 (prm 'mref t (K off-bytevector-data))))
+	  (prm 'bswap! x0 x0)
+	  (prm 'mset flo (K off-flonum-data) x0))
+	flo)))))
 
-;;;The following uses unsupported SSE3 instructions.
+;;;The  following   uses  unsupported  SSE3   instructions.   (Abdulaziz
+;;;Ghuloum)
 ;;;
 ;;;(define-primop $bytevector-ieee-double-nonnative-ref unsafe
 ;;;  ((V bv i)
 ;;;   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-;;;     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+;;;     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
 ;;;     (prm 'fl:load
 ;;;       (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 ;;;       (K off-bytevector-data))
@@ -3656,35 +3691,7 @@
 ;;;     (prm 'fl:store x (K off-flonum-data))
 ;;;     x)))
 
- (define-primop $bytevector-ieee-double-nonnative-ref unsafe
-   ((V bv i)
-    (case wordsize
-      ((4)
-       (let ((bvoff off-bytevector-data)
-	     (floff off-flonum-data))
-	 (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-	   (prm 'mset x (K (- vector-tag)) (K flonum-tag))
-	   (with-tmp ((t (prm 'int+ (T bv)
-			      (prm-UNtag-as-fixnum (T i)))))
-	     (with-tmp ((x0 (prm 'mref t (K bvoff))))
-	       (prm 'bswap! x0 x0)
-	       (prm 'mset x (K (+ floff wordsize)) x0))
-	     (with-tmp ((x0 (prm 'mref t (K (+ bvoff wordsize)))))
-	       (prm 'bswap! x0 x0)
-	       (prm 'mset x (K floff) x0)))
-	   x)))
-      (else
-       (let ((bvoff off-bytevector-data)
-	     (floff off-flonum-data))
-	 (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-	   (prm 'mset x (K (- vector-tag)) (K flonum-tag))
-	   (with-tmp ((t (prm 'int+ (T bv)
-			      (prm-UNtag-as-fixnum (T i)))))
-	     (with-tmp ((x0 (prm 'mref t (K bvoff))))
-	       (prm 'bswap! x0 x0)
-	       (prm 'mset x (K floff) x0)))
-	   x))))))
-
+;;; --------------------------------------------------------------------
 
  (define-primop $bytevector-ieee-double-native-set! unsafe
    ((E bv i x)
@@ -3694,11 +3701,10 @@
 	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 	  (K off-bytevector-data)))))
 
-
  (define-primop $bytevector-ieee-single-native-ref unsafe
    ((V bv i)
     (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-      (prm 'mset x (K (- vector-tag)) (K flonum-tag))
+      (prm 'mset x (K off-flonum-tag) (K flonum-tag))
       (prm 'fl:load-single
 	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 	   (K off-bytevector-data))
@@ -3720,7 +3726,7 @@
     (let ((bvoff off-bytevector-data)
 	  (floff off-flonum-data))
       (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-	(prm 'mset x (K (- vector-tag)) (K flonum-tag))
+	(prm 'mset x (K off-flonum-tag) (K flonum-tag))
 	(with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
 	  (with-tmp ((x0 (prm 'mref t (K bvoff))))
 	    (prm 'bswap! x0 x0)
@@ -3729,7 +3735,6 @@
 	(prm 'fl:single->double)
 	(prm 'fl:store x (K floff))
 	x))))
-
 
 ;;;The following uses unsupported SSE3 instructions.
 ;;;
