@@ -31,6 +31,31 @@
   (syntax-rules (/section)
     ((section e* ... /section) (begin e* ...))))
 
+(define-inline (prm-tag-as-fixnum ?machine-word)
+  ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
+  ;;return a  struct instance  representing recordized code  which, when
+  ;;evaluated, will tag the result of ?MACHINE-WORD as fixnum.
+  ;;
+  (prm 'sll ?machine-word (K fx-shift)))
+
+(define-inline (prm-UNtag-as-fixnum ?machine-word)
+  ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
+  ;;return a  struct instance  representing recordized code  which, when
+  ;;evaluated, will untag the result of ?MACHINE-WORD as fixnum.
+  ;;
+  ;;Notice  that   untagging  *must*  be  performed   with  *arithmetic*
+  ;;right-shift.
+  ;;
+  (prm 'sra ?machine-word (K fx-shift)))
+
+(define-inline (prm-isolate-least-significant-byte ?machine-word)
+  ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
+  ;;return a  struct instance  representing recordized code  which, when
+  ;;evaluated, will isolate the least  significant byte of the result of
+  ;;?MACHINE-WORD.
+  ;;
+  (prm 'logand ?machine-word (K 255)))
+
 
 ;;;; helpers
 
@@ -1448,7 +1473,7 @@
 	  ;;Since we  want the result to  be a fixnum, there  is no need
 	  ;;to:  untag A,  multiply A,  retag  A; we  just multiply  the
 	  ;;tagged A.
-	  (prm 'int* (T a) (prm 'sra (T b) (K fx-shift))))))))
+	  (prm 'int* (T a) (prm-UNtag-as-fixnum (T b))))))))
    ((P x y)
     (K #t))
    ((E x y)
@@ -1507,7 +1532,7 @@
        ;;By right-shifting NUMBITS we untag  it.  Since we want a fixnum
        ;;as result: there is no need  to untag X, left-shift X, retag X;
        ;;we just left-shift the tagged X.
-       (prm 'sll (T x) (prm 'sra (T numbits) (K fx-shift))))))
+       (prm 'sll (T x) (prm-UNtag-as-fixnum (T numbits))))))
    ((P x i)
     (K #t))
    ((E x i)
@@ -1648,7 +1673,7 @@
        ;;Here NUMBITS is recordized code that must return a fixnum.
        ;;
        (with-tmp*
-	   ((numbits.val (prm 'sra (T numbits) (K fx-shift)))
+	   ((numbits.val (prm-UNtag-as-fixnum (T numbits)))
 	    (numbits.val (let ((word-numbits (* wordsize 8)))
 			   (make-conditional (prm '< numbits.val (K word-numbits))
 			       numbits.val
@@ -1830,7 +1855,7 @@
 	    (prm 'logand ;isolate the requested byte
 		 (prm 'mref (T bigN)
 		      (prm 'int+
-			   (prm 'sra (T byte-idx) (K fx-shift)) ;untag the fixnum
+			   (prm-UNtag-as-fixnum (T byte-idx))
 			   (K off-bignum-data)))
 		 (K 255))
 	    (K fx-shift))
@@ -1844,7 +1869,7 @@
        ;;      (prm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
        ;;           (prm 'mref (T bigN)
        ;;                (prm 'int+
-       ;;                     (prm 'sra (T byte-idx) (K fx-shift)) ;untag the fixnum
+       ;;                     (prm-UNtag-as-fixnum (T byte-idx))
        ;;                     (K (- off-bignum-data (- wordsize 1)))))
        ;;           (K (* (- wordsize 1) 8)))
        ;;      (K fx-shift))
@@ -2073,8 +2098,7 @@
        ;;store the byte
        (prm 'bset (T flo)
 	    (K (fx+ (fx- 7 offset.val) off-flonum-data))
-	    ;;Untag the fixnum.
-	    (prm 'sra (T octet) (K fx-shift))))
+	    (prm-UNtag-as-fixnum (T octet))))
       ((known offset.expr)
        (cogen-effect-$flonum-set! flo offset.expr octet))
       (else
@@ -2102,7 +2126,7 @@
 	 ;;register.
 	 (prm 'fl:from-int
 	      (K 0) ; dummy
-	      (prm 'sra (T fx) (K fx-shift)))
+	      (prm-UNtag-as-fixnum (T fx)))
 	 ;;Store the result from the register into memory referenced by X
 	 (prm 'fl:store flo (K off-flonum-data))
 	 flo))
@@ -2559,8 +2583,7 @@
 		(b (T b)))
        (assert-fixnum a)
        (assert-fixnum b)
-       (prm 'int*/overflow a
-	    (prm 'sra b (K fx-shift)))))
+       (prm 'int*/overflow a (prm-UNtag-as-fixnum b))))
 
    #| end of module: cogen-binary-* |# )
 
@@ -2810,7 +2833,7 @@
        (with-tmp ((x (T x))
 		  (n (T bitcount)))
 	 (assert-fixnums x (list n))
-	 (with-tmp ((n (prm 'sra n (K fx-shift))))
+	 (with-tmp ((n (prm-UNtag-as-fixnum n)))
 	   (interrupt-when
 	    (prm '< n (K 0)))
 	   (interrupt-when
@@ -2836,13 +2859,13 @@
        (with-tmp ((x (T x))
 		  (n (T bitcount)))
 	 (assert-fixnums x (list n))
-	 (with-tmp ((n (prm 'sra n (K fx-shift))))
+	 (with-tmp ((n (prm-UNtag-as-fixnum n)))
 	   (interrupt-when
 	    (prm '<  n (K 0)))
 	   (interrupt-when
 	    (prm '>= n (K max-bitcount-in-fixnum-binary-representation)))
 	   (prm 'sll
-		(prm 'sra (prm 'sra x n) (K fx-shift))
+		(prm-UNtag-as-fixnum (prm 'sra x n))
 		(K fx-shift))))))))
 
 ;;; --------------------------------------------------------------------
@@ -2966,8 +2989,7 @@
 		      (interrupt-unless
 		       (cogen-pred-fixnum? x))
 		      (prm 'sll ;tag the fixnum
-			   (prm 'sra (T x)
-				(K (+ bits fx-shift)))
+			   (prm 'sra (T x) (K (+ bits fx-shift)))
 			   (K fx-shift)))))
 	       (else
 		(interrupt))))
@@ -3467,7 +3489,7 @@
        ;;Here NUM-OF-BYTES is a  struct instance representing recordized
        ;;code which, when evaluated, must return a fixnum.
        (with-tmp ((bv (prm 'alloc
-			   (align-code (prm 'sra (T num-of-bytes) (K fx-shift))
+			   (align-code (prm-UNtag-as-fixnum (T num-of-bytes))
 				       (+ 1 disp-bytevector-data))
 			   (K bytevector-tag))))
 	 ;;Store the length in the first word.
@@ -3475,7 +3497,7 @@
 	 ;;Set to zero the one-off byte.
 	 (prm 'bset bv
 	      (prm 'int+
-		   (prm 'sra (T num-of-bytes) (K fx-shift)) ;untag the fixnum
+		   (prm-UNtag-as-fixnum (T num-of-bytes))
 		   (K off-bytevector-data))
 	      (K 0))
 	 bv))))
@@ -3485,35 +3507,37 @@
     (nop)))
 
  (define-primop $bytevector-length unsafe
-   ((V x)
-    (prm 'mref (T x) (K off-bytevector-length)))
-   ((P x)
+   ((V bv)
+    (prm 'mref (T bv) (K off-bytevector-length)))
+   ((P bv)
     (K #t))
-   ((E x)
+   ((E bv)
     (nop)))
 
  (define-primop $bytevector-u8-ref unsafe
-   ((V s i)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (prm 'sll
-	    (prm 'logand
-		 (prm 'bref (T s)
-		      (K (+ i off-bytevector-data)))
-		 (K 255))
-	    (K fx-shift)))
+   ((V bv idx)
+    (struct-case idx
+      ((constant idx.val)
+       ;;IDX.VAL is an  exact integer whose payload bits  are the binary
+       ;;representation of a fixnum.
+       (unless (fx? idx.val)
+	 (interrupt))
+       (prm-tag-as-fixnum
+	(prm-isolate-least-significant-byte
+	 (prm 'bref (T bv) (K (+ idx.val off-bytevector-data))))))
       (else
-       (prm 'sll
-	    (prm 'logand
-		 (prm 'bref (T s)
-		      (prm 'int+
-			   (prm 'sra (T i) (K fx-shift))
-			   (K off-bytevector-data)))
-		 (K 255))
-	    (K fx-shift)))))
-   ((P s i) (K #t))
-   ((E s i) (nop)))
+       ;;Here  IDX is  a  struct instance  representing recordized  code
+       ;;which, when evaluated, must return a fixnum.
+       (prm-tag-as-fixnum
+	(prm-isolate-least-significant-byte
+	 (prm 'bref (T bv)
+	      (prm 'int+
+		   (prm-UNtag-as-fixnum (T idx))
+		   (K off-bytevector-data))))))))
+   ((P bv idx)
+    (K #t))
+   ((E bv idx)
+    (nop)))
 
  (define-primop $bytevector-s8-ref unsafe
    ((V s i)
@@ -3533,7 +3557,7 @@
 	    (prm 'sll
 		 (prm 'bref (T s)
 		      (prm 'int+
-			   (prm 'sra (T i) (K fx-shift))
+			   (prm-UNtag-as-fixnum (T i))
 			   (K off-bytevector-data)))
 		 (K (- (* wordsize 8) 8)))
 	    (K (- (* wordsize 8) (+ 8 fx-shift)))))))
@@ -3558,14 +3582,14 @@
 	 (else
 	  (prm 'bset (T x)
 	       (K (+ i off-bytevector-data))
-	       (prm 'sra (T c) (K fx-shift))))))
+	       (prm-UNtag-as-fixnum (T c))))))
       (else
        (struct-case c
 	 ((constant c)
 	  (unless (fx? c) (interrupt))
 	  (prm 'bset (T x)
 	       (prm 'int+
-		    (prm 'sra (T i) (K fx-shift))
+		    (prm-UNtag-as-fixnum (T i))
 		    (K off-bytevector-data))
 	       (K (cond
 		   ((<= -128 c 127) c)
@@ -3574,16 +3598,16 @@
 	 (else
 	  (prm 'bset (T x)
 	       (prm 'int+
-		    (prm 'sra (T i) (K fx-shift))
+		    (prm-UNtag-as-fixnum (T i))
 		    (K off-bytevector-data))
-	       (prm 'sra (T c) (K fx-shift)))))))))
+	       (prm-UNtag-as-fixnum (T c)))))))))
 
  (define-primop $bytevector-ieee-double-native-ref unsafe
    ((V bv i)
     (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
       (prm 'mset x (K (- vector-tag)) (K flonum-tag))
       (prm 'fl:load
-	   (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 	   (K off-bytevector-data))
       (prm 'fl:store x (K off-flonum-data))
       x)))
@@ -3596,7 +3620,7 @@
 ;;;   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 ;;;     (prm 'mset x (K (- vector-tag)) (K flonum-tag))
 ;;;     (prm 'fl:load
-;;;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+;;;       (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 ;;;       (K off-bytevector-data))
 ;;;     (prm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
@@ -3613,7 +3637,7 @@
 	 (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	   (prm 'mset x (K (- vector-tag)) (K flonum-tag))
 	   (with-tmp ((t (prm 'int+ (T bv)
-			      (prm 'sra (T i) (K fx-shift)))))
+			      (prm-UNtag-as-fixnum (T i)))))
 	     (with-tmp ((x0 (prm 'mref t (K bvoff))))
 	       (prm 'bswap! x0 x0)
 	       (prm 'mset x (K (+ floff wordsize)) x0))
@@ -3627,7 +3651,7 @@
 	 (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	   (prm 'mset x (K (- vector-tag)) (K flonum-tag))
 	   (with-tmp ((t (prm 'int+ (T bv)
-			      (prm 'sra (T i) (K fx-shift)))))
+			      (prm-UNtag-as-fixnum (T i)))))
 	     (with-tmp ((x0 (prm 'mref t (K bvoff))))
 	       (prm 'bswap! x0 x0)
 	       (prm 'mset x (K floff) x0)))
@@ -3639,7 +3663,7 @@
     (multiple-forms-sequence
      (prm 'fl:load (T x) (K off-flonum-data))
      (prm 'fl:store
-	  (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 	  (K off-bytevector-data)))))
 
 
@@ -3648,7 +3672,7 @@
     (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
       (prm 'mset x (K (- vector-tag)) (K flonum-tag))
       (prm 'fl:load-single
-	   (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 	   (K off-bytevector-data))
       (prm 'fl:single->double)
       (prm 'fl:store x (K off-flonum-data))
@@ -3660,7 +3684,7 @@
      (prm 'fl:load (T x) (K off-flonum-data))
      (prm 'fl:double->single)
      (prm 'fl:store-single
-	  (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 	  (K off-bytevector-data)))))
 
  (define-primop $bytevector-ieee-single-nonnative-ref unsafe
@@ -3669,7 +3693,7 @@
 	  (floff off-flonum-data))
       (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 	(prm 'mset x (K (- vector-tag)) (K flonum-tag))
-	(with-tmp ((t (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))))
+	(with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
 	  (with-tmp ((x0 (prm 'mref t (K bvoff))))
 	    (prm 'bswap! x0 x0)
 	    (prm 'mset x (K floff) x0)))
@@ -3689,7 +3713,7 @@
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
 ;;;       (K off-bytevector-data))
 ;;;     (prm 'fl:store
-;;;       (prm 'int+ (T bv) (prm 'sra (T i) (K fx-shift)))
+;;;       (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 ;;;       (K off-bytevector-data)))))
 
  (define-primop $bytevector-ieee-double-nonnative-set! unsafe
@@ -3698,8 +3722,7 @@
       ((4)
        (let ((bvoff off-bytevector-data)
 	     (floff off-flonum-data))
-	 (with-tmp ((t (prm 'int+ (T bv)
-			    (prm 'sra (T i) (K fx-shift)))))
+	 (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
 	   (with-tmp ((x0 (prm 'mref (T x) (K floff))))
 	     (prm 'bswap! x0 x0)
 	     (prm 'mset t (K (+ bvoff wordsize)) x0))
@@ -3709,8 +3732,7 @@
       (else
        (let ((bvoff off-bytevector-data)
 	     (floff off-flonum-data))
-	 (with-tmp ((t (prm 'int+ (T bv)
-			    (prm 'sra (T i) (K fx-shift)))))
+	 (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
 	   (with-tmp ((x0 (prm 'mref (T x) (K floff))))
 	     (prm 'bswap! x0 x0)
 	     (prm 'mset t (K bvoff) x0))))))))
@@ -3722,8 +3744,7 @@
       (multiple-forms-sequence
        (prm 'fl:load (T x) (K floff))
        (prm 'fl:double->single)
-       (with-tmp ((t (prm 'int+ (T bv)
-			  (prm 'sra (T i) (K fx-shift)))))
+       (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
 	 (prm 'fl:store-single t (K bvoff))
 	 (case wordsize
 	   ((4)
@@ -4284,7 +4305,7 @@
 	 (prm 'logand
 	      (prm 'bref (T x)
 		   (prm 'int+
-			(prm 'sra (T i) (K fx-shift))
+			(prm-UNtag-as-fixnum (T i))
 			(K (- disp-code-data vector-tag))))
 	      (K 255))
 	 (K fx-shift))))
@@ -4293,9 +4314,9 @@
    ((E x i v)
     (prm 'bset (T x)
 	 (prm 'int+
-	      (prm 'sra (T i) (K fx-shift))
+	      (prm-UNtag-as-fixnum (T i))
 	      (K (- disp-code-data vector-tag)))
-	 (prm 'sra (T v) (K fx-shift)))))
+	 (prm-UNtag-as-fixnum (T v)))))
 
  (define-primop $set-code-annotation! unsafe
    ((E x v)
