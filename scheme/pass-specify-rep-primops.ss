@@ -1690,9 +1690,7 @@
    ((V a b)
     ;;FIXME Why is quotient called remainder?  (Abdulaziz Ghuloum)
     (with-tmp ((b (T b)))
-      (prm 'sll
-	   (prm 'int-quotient (T a) b)
-	   (K fx-shift))))
+      (prm-tag-as-fixnum (prm 'int-quotient (T a) b))))
    ((P a b)
     (K #t))
    ((E a b)
@@ -1702,9 +1700,7 @@
  ;;2012)
  (define-primop $int-quotient unsafe
    ((V a b)
-    (prm 'sll
-	 (prm 'int-quotient (T a) (T b))
-	 (K fx-shift))))
+    (prm-tag-as-fixnum (prm 'int-quotient (T a) (T b)))))
 
  ;;FIXME This is  used nowhere, and it looks  unfinished?  (Marco Maggi;
  ;;Oct 19, 2012)
@@ -1804,12 +1800,13 @@
    ;;fixnum.
    ;;
    ((V x)
-    (prm 'sll
-	 (prm 'sra
+    (prm 'sll  ;In one step:  multiply the number  of limbs by  the word
+		;size and tag the result as fixnum.
+	 (prm 'sra ;extract the number of limbs
 	      (prm 'mref (T x) (K off-bignum-tag))
 	      (K bignum-length-shift))
-	 ;;This  constant  must be  an  exact  integer representing  the
-	 ;;binary representation of the left-shift amount.
+	 ;;This constant must be an exact integer whose payload bits are
+	 ;;the binary representation of the left-shift amount.
 	 (K (* 2 fx-shift)))))
 
  (define-primop $bignum-byte-ref unsafe
@@ -1838,11 +1835,10 @@
        ;;FIXME  Endianness dependency!!!   Works only  on little  endian
        ;;platforms.  (Marco Maggi; Oct 19, 2012)
        (interrupt-unless-fx byte-idx.val)
-       (prm 'sll
-	    (prm 'logand ;isolate the requested byte
-		 (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data)))
-		 (K 255))
-	    (K fx-shift)))
+       (prm-tag-as-fixnum
+	(prm 'logand ;isolate the requested byte
+	     (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data)))
+	     (K 255))))
       ((known byte-idx.expr)
        (cogen-value-$bignum-byte-ref bigN byte-idx.expr))
       (else
@@ -1851,28 +1847,27 @@
        ;;
        ;;FIXME  Endianness dependency!!!   Works only  on little  endian
        ;;platforms.  (Marco Maggi; Oct 19, 2012)
-       (prm 'sll	 ;tag the fixnum
-	    (prm 'logand ;isolate the requested byte
-		 (prm 'mref (T bigN)
-		      (prm 'int+
-			   (prm-UNtag-as-fixnum (T byte-idx))
-			   (K off-bignum-data)))
-		 (K 255))
-	    (K fx-shift))
+       (prm-tag-as-fixnum
+	(prm 'logand ;isolate the requested byte
+	     (prm 'mref (T bigN)
+		  (prm 'int+
+		       (prm-UNtag-as-fixnum (T byte-idx))
+		       (K off-bignum-data)))
+	     (K 255)))
        ;;
        ;;The one below  is the original Ikarus version; I  do not really
        ;;know why it was written this way,  it may well be that I am too
        ;;stupid and/or  ignorant to  understand.  (Marco Maggi;  Oct 19,
        ;;2012)
        ;;
-       ;; (prm 'sll      ;tag the fixnum
+       ;; (prm-tag-as-fixnum
        ;;      (prm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
        ;;           (prm 'mref (T bigN)
        ;;                (prm 'int+
        ;;                     (prm-UNtag-as-fixnum (T byte-idx))
        ;;                     (K (- off-bignum-data (- wordsize 1)))))
-       ;;           (K (* (- wordsize 1) 8)))
-       ;;      (K fx-shift))
+       ;;           (K (* (- wordsize 1) 8))))
+       ;;
        )))
    ((P bigN byte-idx)
     (K #t))
@@ -2048,12 +2043,11 @@
 		    (fx>= offset.val 0)
 		    (fx<= offset.val 7))
 	 (interrupt))
-       (prm 'sll	 ;tag the result as fixnum
-	    (prm 'logand ;isolate the byte
-		 (prm 'bref (T flo)
-		      (K (fx+ (fx- 7 offset.val) off-flonum-data)))
-		 (K 255))
-	    (K fx-shift)))
+       (prm-tag-as-fixnum
+	(prm 'logand ;isolate the byte
+	     (prm 'bref (T flo)
+		  (K (fx+ (fx- 7 offset.val) off-flonum-data)))
+	     (K 255))))
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
       (else
@@ -2311,14 +2305,13 @@
    ;;FIXME Endianness dependency.  (Marco Maggi; Oct 21, 2012)
    ;;
    ((V flo)
-    (prm 'sll	;tag the result as fixnum
-	 ;;extract the 12 most significant bits
-	 (prm 'srl
-	      ;;retrieve the second data word
-	      (prm 'mref32 (T flo)
-		   (K (+ off-flonum-data 4)))
-	      (K 20))
-	 (K fx-shift))))
+    (prm-tag-as-fixnum
+     ;;extract the 12 most significant bits
+     (prm 'srl
+	  ;;retrieve the second data word
+	  (prm 'mref32 (T flo)
+	       (K (+ off-flonum-data 4)))
+	  (K 20)))))
 
  /section)
 
@@ -2851,9 +2844,8 @@
        (if (and (fx? bitcount.val)
 		(>= bitcount.val 0)
 		(<  bitcount.val max-bitcount-in-fixnum-binary-representation))
-	   (prm 'sll
-		(prm 'sra (T x) (K (+ bitcount.val fx-shift)))
-		(K fx-shift))
+	   (prm-tag-as-fixnum
+	    (prm 'sra (T x) (K (+ bitcount.val fx-shift))))
 	 (interrupt)))
       (else
        (with-tmp ((x (T x))
@@ -2864,9 +2856,11 @@
 	    (prm '<  n (K 0)))
 	   (interrupt-when
 	    (prm '>= n (K max-bitcount-in-fixnum-binary-representation)))
-	   (prm 'sll
-		(prm-UNtag-as-fixnum (prm 'sra x n))
-		(K fx-shift))))))))
+	   ;;Untagging and  then tagging as  fixnum makes sure  that the
+	   ;;bits of the fixnum tag are zero.
+	   (prm-tag-as-fixnum
+	    (prm-UNtag-as-fixnum
+	     (prm 'sra x n)))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; safe generic arithmetic
@@ -2988,9 +2982,8 @@
 		     (multiple-forms-sequence
 		      (interrupt-unless
 		       (cogen-pred-fixnum? x))
-		      (prm 'sll ;tag the fixnum
-			   (prm 'sra (T x) (K (+ bits fx-shift)))
-			   (K fx-shift)))))
+		      (prm-tag-as-fixnum
+		       (prm 'sra (T x) (K (+ bits fx-shift)))))))
 	       (else
 		(interrupt))))
 	((known expr)
@@ -4301,14 +4294,13 @@
 
  (define-primop $code-ref unsafe
    ((V x i)
-    (prm 'sll
-	 (prm 'logand
-	      (prm 'bref (T x)
-		   (prm 'int+
-			(prm-UNtag-as-fixnum (T i))
-			(K (- disp-code-data vector-tag))))
-	      (K 255))
-	 (K fx-shift))))
+    (prm-tag-as-fixnum
+     (prm 'logand
+	  (prm 'bref (T x)
+	       (prm 'int+
+		    (prm-UNtag-as-fixnum (T i))
+		    (K (- disp-code-data vector-tag))))
+	  (K 255)))))
 
  (define-primop $code-set! unsafe
    ((E x i v)
