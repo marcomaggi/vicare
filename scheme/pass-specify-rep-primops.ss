@@ -3307,15 +3307,23 @@
    ;;the corresponding Unicode code point.
    ;;
    ;;We know that the character tag  (#x0F) is wider than the fixnum tag
-   ;;(#b00);  on a  32-bit platform,  the fixnum  representing the  code
-   ;;point of #\A:
+   ;;(#b00), and also the most significant bits of the character tag are
+   ;;zero like  the bits of  the fixnum tag;  on a 32-bit  platform, the
+   ;;machine word representing the character #\A:
+   ;;
+   ;;   00000000 00000000 01000001 00001111
+   ;;                              ******** char tag
+   ;;
+   ;;can become  the fixnum representing the  code point of #\A  by just
+   ;;right-shifting by 6:
    ;;
    ;;   00000000 00000000 00000001 00000100
    ;;                                    ** fixnum tag
    ;;
-   ;;can become the character #\A by left-shifting by 6 positions
-   ;;
-   ;;   00000000 00000000 01000001 00000000
+   ;;FIXME  We  do  an  arithmetic  shift-right,  rather  than  a  logic
+   ;;shift-right, is there  a reason for this?  Anyway,  notice that the
+   ;;biggest code  point #x10FFFF  has the most  significant bit  set to
+   ;;zero both when represented as fixnum and character.
    ;;
    ((V x)
     (prm 'sra (T x) (K (fx- char-shift fx-shift))))
