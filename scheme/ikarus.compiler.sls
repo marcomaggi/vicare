@@ -67,7 +67,11 @@
 	  case-symbols
 	  case-fixnums
 	  case-word-size)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (for (prefix (only (vicare installation-configuration)
+		       wordsize)
+		 config.)
+	 run expand))
 
 
 ;;;; configuration parameters

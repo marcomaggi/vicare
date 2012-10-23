@@ -31,6 +31,8 @@
   (syntax-rules (/section)
     ((section e* ... /section) (begin e* ...))))
 
+;;; --------------------------------------------------------------------
+
 (define-inline (prm-tag-as-fixnum ?machine-word)
   ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
   ;;return a  struct instance  representing recordized code  which, when
@@ -48,6 +50,8 @@
   ;;
   (prm 'sra ?machine-word (K fx-shift)))
 
+;;; --------------------------------------------------------------------
+
 (define-inline (prm-isolate-least-significant-byte ?machine-word)
   ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
   ;;return a  struct instance  representing recordized code  which, when
@@ -60,6 +64,9 @@
 ;;;; helpers
 
 (section
+
+ (define-inline-constant NUM-OF-BITS-IN-WORD
+   (* config.wordsize 8))
 
  (define (prm op . args)
    ;;Perform  the primitive operation  OP applying  it to  the arguments
@@ -1662,7 +1669,7 @@
        ;;word.
        (interrupt-unless-fx numbits.val)
        (prm 'logand
-	    (prm 'sra (T x) (K (let ((word-numbits (* wordsize 8)))
+	    (prm 'sra (T x) (K (let ((word-numbits NUM-OF-BITS-IN-WORD))
 				 (if (< numbits.val word-numbits)
 				     numbits.val
 				   (- word-numbits 1)))))
@@ -1674,7 +1681,7 @@
        ;;
        (with-tmp*
 	   ((numbits.val (prm-UNtag-as-fixnum (T numbits)))
-	    (numbits.val (let ((word-numbits (* wordsize 8)))
+	    (numbits.val (let ((word-numbits NUM-OF-BITS-IN-WORD))
 			   (make-conditional (prm '< numbits.val (K word-numbits))
 			       numbits.val
 			     (K (- word-numbits 1))))))
@@ -3520,10 +3527,9 @@
        ;;which, when evaluated, must return a fixnum.
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (prm 'bref (T bv)
-	      (prm 'int+
-		   (prm-UNtag-as-fixnum (T idx))
-		   (K off-bytevector-data))))))))
+	 (prm 'bref (T bv) (prm 'int+
+				(prm-UNtag-as-fixnum (T idx))
+				(K off-bytevector-data))))))))
    ((P bv idx)
     (K #t))
    ((E bv idx)
@@ -3538,8 +3544,8 @@
 	    (prm 'sll
 		 (prm-isolate-least-significant-byte
 		  (prm 'bref (T s) (K (+ i off-bytevector-data))))
-		 (K (- (* wordsize 8) 8)))
-	    (K (- (* wordsize 8) (+ 8 fx-shift)))))
+		 (K (- NUM-OF-BITS-IN-WORD 8)))
+	    (K (- NUM-OF-BITS-IN-WORD (+ 8 fx-shift)))))
       (else
        (prm 'sra
 	    (prm 'sll
@@ -3547,8 +3553,8 @@
 		      (prm 'int+
 			   (prm-UNtag-as-fixnum (T i))
 			   (K off-bytevector-data)))
-		 (K (- (* wordsize 8) 8)))
-	    (K (- (* wordsize 8) (+ 8 fx-shift)))))))
+		 (K (- NUM-OF-BITS-IN-WORD 8)))
+	    (K (- NUM-OF-BITS-IN-WORD (+ 8 fx-shift)))))))
    ((P s i) (K #t))
    ((E s i) (nop)))
 
