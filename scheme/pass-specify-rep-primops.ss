@@ -3586,6 +3586,13 @@
 
  (define-primop $bytevector-set! unsafe
    ((E bv idx byte)
+    (define (%check-byte byte.val)
+      (cond ((<= -128 byte.val 127)
+	     (K byte.val))
+	    ((<= +128 byte.val 255)
+	     (K (fx- byte.val 256)))
+	    (else
+	     (interrupt))))
     (struct-case idx
       ((constant idx.val)
        (unless (fx? idx.val)
@@ -3599,43 +3606,27 @@
 	      (interrupt))
 	    ;;BYTE.VAL is  an exact integer  whose payload bits  are the
 	    ;;binary representation of a fixnum.
-	    (prm 'bset (T bv) (K byte-offset)
-		 (K (cond ((<= -128 byte.val 127)
-			   byte.val)
-			  ((<= +128 byte.val 255)
-			   (- byte.val 256))
-			  (else
-			   (interrupt))))))
+	    (prm 'bset (T bv) (K byte-offset) (%check-byte byte.val)))
 	   (else
 	    ;;BYTE  is a  struct instance  representing recordized  code
 	    ;;which, when evaluate, must return a fixnum.
-	    (prm 'bset (T bv) (K byte-offset)
-		 (prm-UNtag-as-fixnum (T byte)))))))
+	    (prm 'bset (T bv) (K byte-offset) (prm-UNtag-as-fixnum (T byte)))))))
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluate, must return a fixnum.
        (define byte-offset
-	 (prm 'int+
-	      (prm-UNtag-as-fixnum (T idx))
-	      (K off-bytevector-data)))
+	 (prm 'int+ (prm-UNtag-as-fixnum (T idx)) (K off-bytevector-data)))
        (struct-case byte
 	 ((constant byte.val)
 	  (unless (fx? byte.val)
 	    (interrupt))
 	  ;;BYTE.VAL is  an exact integer  whose payload bits  are the
 	  ;;binary representation of a fixnum.
-	  (prm 'bset (T bv) byte-offset
-	       (K (cond ((<= -128 byte.val 127)
-			 byte.val)
-			((<= +128 byte.val 255)
-			 (- byte.val 256))
-			(else
-			 (interrupt))))))
+	  (prm 'bset (T bv) byte-offset (%check-byte byte.val)))
 	 (else
 	  ;;BYTE  is a  struct instance  representing recordized  code
 	  ;;which, when evaluate, must return a fixnum.
-	  (prm 'bset (T bv) byte-offset
-	       (prm-UNtag-as-fixnum (T byte)))))))))
+	  (prm 'bset (T bv) byte-offset (prm-UNtag-as-fixnum (T byte)))))))))
 
 ;;; --------------------------------------------------------------------
 
