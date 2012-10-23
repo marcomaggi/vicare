@@ -3536,27 +3536,54 @@
     (nop)))
 
  (define-primop $bytevector-s8-ref unsafe
-   ((V s i)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (prm 'sra
-	    (prm 'sll
-		 (prm-isolate-least-significant-byte
-		  (prm 'bref (T s) (K (+ i off-bytevector-data))))
-		 (K (- NUM-OF-BITS-IN-WORD 8)))
-	    (K (- NUM-OF-BITS-IN-WORD (+ 8 fx-shift)))))
-      (else
-       (prm 'sra
-	    (prm 'sll
-		 (prm 'bref (T s)
-		      (prm 'int+
-			   (prm-UNtag-as-fixnum (T i))
-			   (K off-bytevector-data)))
-		 (K (- NUM-OF-BITS-IN-WORD 8)))
-	    (K (- NUM-OF-BITS-IN-WORD (+ 8 fx-shift)))))))
-   ((P s i) (K #t))
-   ((E s i) (nop)))
+   ((V bv idx)
+    (let-syntax
+	((%extend-sign (syntax-rules ()
+			 ((_ ?machine-word)
+			  (prm 'sra
+			       (prm 'sll ?machine-word
+				    (K (fx- NUM-OF-BITS-IN-WORD 8)))
+			       (K (fx- NUM-OF-BITS-IN-WORD (fx+ 8 fx-shift))))))))
+      (struct-case idx
+	((constant idx.val)
+	 ;;IDX.VAL is an exact integer whose payload bits are the binary
+	 ;;representation of a fixnum.
+	 (unless (fx? idx.val)
+	   (interrupt))
+	 ;;Retrieve the  requested byte than left-shift  and right-shift
+	 ;;so that  the most  significant bit  is extended  to correctly
+	 ;;represent the sign in the returned fixnum.
+	 (%extend-sign
+	  (prm 'bref (T bv) (K (+ idx.val off-bytevector-data))))
+	 ;;
+	 ;;The one below  is the original code from  Ikarus; in addition
+	 ;;to the code  above, it contains a byte  isolation that, IMHO,
+	 ;;it is useless here.  (Marco Maggi; Oct 23, 2012)
+	 ;;
+	 ;; (prm 'sra
+	 ;;      (prm 'sll
+	 ;;           (prm-isolate-least-significant-byte
+	 ;;            (prm 'bref (T bv) (K (+ idx.val off-bytevector-data))))
+	 ;;           (K (- NUM-OF-BITS-IN-WORD 8)))
+	 ;;      (K (- NUM-OF-BITS-IN-WORD (+ 8 fx-shift))))
+	 ;;
+	 )
+	(else
+	 ;;Here IDX  is a  struct instance representing  recordized code
+	 ;;which, when evaluated, must return a fixnum.
+	 ;;
+	 ;;Retrieve the  requested byte than left-shift  and right-shift
+	 ;;so that  the most  significant bit  is extended  to correctly
+	 ;;represent the sign in the returned fixnum.
+	 (%extend-sign
+	  (prm 'bref (T bv) (prm 'int+
+				 (prm-UNtag-as-fixnum (T idx))
+				 (K off-bytevector-data))))
+	 ))))
+   ((P bv idx)
+    (K #t))
+   ((E bv idx)
+    (nop)))
 
 
  (define-primop $bytevector-set! unsafe
