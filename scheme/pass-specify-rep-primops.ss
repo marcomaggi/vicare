@@ -3232,57 +3232,77 @@
    #| end of module: assert-chars |# )
 
  (define (char-fold-p op a a*)
+   ;;This  is used  to  apply  predicates to  pairs  of  arguments in  a
+   ;;multi-argument primitive call.
+   ;;
+   ;;A must be  a struct intance representing recordized  code.  A* must
+   ;;be a list of struct instances representing recordized code.
+   ;;
+   ;;The returned recordized code is as follows:
+   ;;
+   ;;   (char-fold-p op arg0 (list arg1 arg2 arg3))
+   ;;   => (make-conditional (prm op arg0 arg1)
+   ;;          (make-conditional (prm op arg1 arg2)
+   ;;              (make-conditional (prm arg2 arg3)
+   ;;                  (K #t)
+   ;;                (K #f))
+   ;;            (K #f))
+   ;;        (K #f))
+   ;;
    (multiple-forms-sequence
     (assert-chars a a*)
-    (let f ((a a) (a* a*))
-      (cond
-       ((null? a*) (K #t))
-       (else
-	(let ((b (car a*)))
-	  (make-conditional
-	      (prm op (T a) (T b))
-	    (f b (cdr a*))
-	    (K #f))))))))
+    (let recur ((a  a)
+		(a* a*))
+      (if (null? a*)
+	  (K #t)
+	(let ((b ($car a*)))
+	  (make-conditional (prm op (T a) (T b))
+	      (recur b ($cdr a*))
+	    (K #f)))))))
 
 ;;; --------------------------------------------------------------------
 
  (define-primop char? safe
-   ((P x) (tag-test (T x) char-mask char-tag))
-   ((E x) (nop)))
+   ((P x)
+    (tag-test (T x) char-mask char-tag))
+   ((E x)
+    (nop)))
 
- (define-primop $char= unsafe
-   ((P x y) (prm '= (T x) (T y)))
-   ((E x y) (nop)))
+ (let-syntax
+     ((define-$char-comparison (syntax-rules ()
+				 ((_ ?who ?prim)
+				  (define-primop ?who unsafe
+				    ((P x y)
+				     (prm (quote ?prim) (T x) (T y)))
+				    ((E x y)
+				     (nop)))
+				  ))))
+   (define-$char-comparison $char=	=)
+   (define-$char-comparison $char<	<)
+   (define-$char-comparison $char<=	<=)
+   (define-$char-comparison $char>	>)
+   (define-$char-comparison $char>=	>=))
 
- (define-primop $char< unsafe
-   ((P x y) (prm '< (T x) (T y)))
-   ((E x y) (nop)))
-
- (define-primop $char<= unsafe
-   ((P x y) (prm '<= (T x) (T y)))
-   ((E x y) (nop)))
-
- (define-primop $char> unsafe
-   ((P x y) (prm '> (T x) (T y)))
-   ((E x y) (nop)))
-
- (define-primop $char>= unsafe
-   ((P x y) (prm '>= (T x) (T y)))
-   ((E x y) (nop)))
+;;; --------------------------------------------------------------------
 
  (define-primop $fixnum->char unsafe
    ((V x)
     ;;Untag it as fixnum, then tag it as character.
     (prm 'logor
-	 (prm 'sll (T x) (K (- char-shift fx-shift)))
+	 (prm 'sll (T x) (K (fx- char-shift fx-shift)))
 	 (K char-tag)))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  (define-primop $char->fixnum unsafe
-   ((V x) (prm 'sra (T x) (K (- char-shift fx-shift))))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'sra (T x) (K (fx- char-shift fx-shift))))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
 ;;; --------------------------------------------------------------------
 
