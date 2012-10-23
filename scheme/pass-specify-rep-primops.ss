@@ -3511,6 +3511,8 @@
    ((E bv)
     (nop)))
 
+;;; --------------------------------------------------------------------
+
  (define-primop $bytevector-u8-ref unsafe
    ((V bv idx)
     (struct-case idx
@@ -3540,7 +3542,7 @@
     (let-syntax
 	((%extend-sign (syntax-rules ()
 			 ((_ ?machine-word)
-			  (prm 'sra
+			  (prm 'sra ;this extends the sign
 			       (prm 'sll ?machine-word
 				    (K (fx- NUM-OF-BITS-IN-WORD 8)))
 			       (K (fx- NUM-OF-BITS-IN-WORD (fx+ 8 fx-shift))))))))
@@ -3560,12 +3562,9 @@
 	 ;;to the code  above, it contains a byte  isolation that, IMHO,
 	 ;;it is useless here.  (Marco Maggi; Oct 23, 2012)
 	 ;;
-	 ;; (prm 'sra
-	 ;;      (prm 'sll
-	 ;;           (prm-isolate-least-significant-byte
-	 ;;            (prm 'bref (T bv) (K (+ idx.val off-bytevector-data))))
-	 ;;           (K (- NUM-OF-BITS-IN-WORD 8)))
-	 ;;      (K (- NUM-OF-BITS-IN-WORD (+ 8 fx-shift))))
+         ;; (%extend-sign
+         ;;  (prm-isolate-least-significant-byte
+         ;;   (prm 'bref (T bv) (K (+ idx.val off-bytevector-data)))))
 	 ;;
 	 )
 	(else
@@ -3585,7 +3584,6 @@
    ((E bv idx)
     (nop)))
 
-
  (define-primop $bytevector-set! unsafe
    ((E x i c)
     (struct-case i
@@ -3593,13 +3591,16 @@
        (unless (fx? i) (interrupt))
        (struct-case c
 	 ((constant c)
-	  (unless (fx? c) (interrupt))
+	  (unless (fx? c)
+	    (interrupt))
 	  (prm 'bset (T x)
 	       (K (+ i off-bytevector-data))
-	       (K (cond
-		   ((<= -128 c 127) c)
-		   ((<= 128 c 255) (- c 256))
-		   (else (interrupt))))))
+	       (K (cond ((<= -128 c 127)
+			 c)
+			((<= 128 c 255)
+			 (- c 256))
+			(else
+			 (interrupt))))))
 	 (else
 	  (prm 'bset (T x)
 	       (K (+ i off-bytevector-data))
@@ -3622,6 +3623,8 @@
 		    (prm-UNtag-as-fixnum (T i))
 		    (K off-bytevector-data))
 	       (prm-UNtag-as-fixnum (T c)))))))))
+
+;;; --------------------------------------------------------------------
 
  (define-primop $bytevector-ieee-double-native-ref unsafe
    ((V bv i)
