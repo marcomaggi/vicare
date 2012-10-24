@@ -3629,7 +3629,7 @@
 	  (prm 'bset (T bv) byte-offset (prm-UNtag-as-fixnum (T byte)))))))))
 
 ;;; --------------------------------------------------------------------
-;;; double native flonum ref
+;;; double flonum ref
 
  (define-primop $bytevector-ieee-double-native-ref unsafe
    ((V bv idx)
@@ -3692,51 +3692,38 @@
 ;;;     x)))
 
 ;;; --------------------------------------------------------------------
+;;; double flonum set
 
  (define-primop $bytevector-ieee-double-native-set! unsafe
-   ((E bv i x)
+   ((E bv idx flo)
     (multiple-forms-sequence
-     (prm 'fl:load (T x) (K off-flonum-data))
+     ;;Load the double from the data  area of the flonum into a floating
+     ;;point register.
+     (prm 'fl:load (T flo) (K off-flonum-data))
+     ;;Store the  double from  the register  into the  data area  of the
+     ;;bytevector.
      (prm 'fl:store
-	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
+	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	  (K off-bytevector-data)))))
 
- (define-primop $bytevector-ieee-single-native-ref unsafe
-   ((V bv i)
-    (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-      (prm 'mset x (K off-flonum-tag) (K flonum-tag))
-      (prm 'fl:load-single
-	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
-	   (K off-bytevector-data))
-      (prm 'fl:single->double)
-      (prm 'fl:store x (K off-flonum-data))
-      x)))
+ (define-primop $bytevector-ieee-double-nonnative-set! unsafe
+   ((E bv idx flo)
+    (case-word-size
+     ((32)
+      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
+	(with-tmp ((x0 (prm 'mref (T flo) (K off-flonum-data))))
+	  (prm 'bswap! x0 x0)
+	  (prm 'mset t (K (+ off-bytevector-data wordsize)) x0))
+	(with-tmp ((x0 (prm 'mref (T flo) (K (+ off-flonum-data wordsize)))))
+	  (prm 'bswap! x0 x0)
+	  (prm 'mset t (K off-bytevector-data) x0))))
+     ((64)
+      (with-tmp* ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx))))
+		  (x0 (prm 'mref (T flo) (K off-flonum-data))))
+	(prm 'bswap! x0 x0)
+	(prm 'mset t (K off-bytevector-data) x0))))))
 
- (define-primop $bytevector-ieee-single-native-set! unsafe
-   ((E bv i x)
-    (multiple-forms-sequence
-     (prm 'fl:load (T x) (K off-flonum-data))
-     (prm 'fl:double->single)
-     (prm 'fl:store-single
-	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
-	  (K off-bytevector-data)))))
-
- (define-primop $bytevector-ieee-single-nonnative-ref unsafe
-   ((V bv i)
-    (let ((bvoff off-bytevector-data)
-	  (floff off-flonum-data))
-      (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-	(prm 'mset x (K off-flonum-tag) (K flonum-tag))
-	(with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
-	  (with-tmp ((x0 (prm 'mref t (K bvoff))))
-	    (prm 'bswap! x0 x0)
-	    (prm 'mset x (K floff) x0)))
-	(prm 'fl:load-single x (K (+ floff (- wordsize 4))))
-	(prm 'fl:single->double)
-	(prm 'fl:store x (K floff))
-	x))))
-
-;;;The following uses unsupported SSE3 instructions.
+;;;The following uses unsupported SSE3 instructions.  (Abdulaziz Ghuloum)
 ;;;
 ;;;(define-primop $bytevector-ieee-double-nonnative-set! unsafe
 ;;;  ((E bv i x)
@@ -3749,45 +3736,89 @@
 ;;;       (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 ;;;       (K off-bytevector-data)))))
 
- (define-primop $bytevector-ieee-double-nonnative-set! unsafe
-   ((E bv i x)
-    (case wordsize
-      ((4)
-       (let ((bvoff off-bytevector-data)
-	     (floff off-flonum-data))
-	 (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
-	   (with-tmp ((x0 (prm 'mref (T x) (K floff))))
-	     (prm 'bswap! x0 x0)
-	     (prm 'mset t (K (+ bvoff wordsize)) x0))
-	   (with-tmp ((x0 (prm 'mref (T x) (K (+ floff wordsize)))))
-	     (prm 'bswap! x0 x0)
-	     (prm 'mset t (K bvoff) x0)))))
-      (else
-       (let ((bvoff off-bytevector-data)
-	     (floff off-flonum-data))
-	 (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
-	   (with-tmp ((x0 (prm 'mref (T x) (K floff))))
-	     (prm 'bswap! x0 x0)
-	     (prm 'mset t (K bvoff) x0))))))))
+;;; --------------------------------------------------------------------
+;;; single flonum ref
+
+ (define-primop $bytevector-ieee-single-native-ref unsafe
+   ((V bv idx)
+    (with-tmp ((flo (prm 'alloc
+			 (K (align flonum-size))
+			 (K vector-tag))))
+      ;;Tag the first word of the flonum memory block.
+      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      ;;Load  the  single from  the  bytevector  into a  floating  point
+      ;;register.
+      (prm 'fl:load-single
+	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
+	   (K off-bytevector-data))
+      ;;Convert the single into a double.
+      (prm 'fl:single->double)
+      ;;Store the double into the data area of the flonum.
+      (prm 'fl:store flo (K off-flonum-data))
+      flo)))
+
+ (define-primop $bytevector-ieee-single-nonnative-ref unsafe
+   ((V bv idx)
+    (with-tmp ((flo (prm 'alloc
+			 (K (align flonum-size))
+			 (K vector-tag))))
+      ;;Tag the first word of the flonum memory block.
+      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      ;;Copy the single  from the bytevector data area  into a register;
+      ;;reverse  its bytes;  copy the  reversed single  into the  flonum
+      ;;data.
+      (with-tmp* ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx))))
+		  (x0 (prm 'mref t (K off-bytevector-data))))
+	(prm 'bswap! x0 x0)
+	(prm 'mset flo (K off-flonum-data) x0))
+      ;;Load the reversed single into a floating point register.
+      (prm 'fl:load-single flo (K (+ off-flonum-data (- wordsize 4))))
+      ;;Convert the single into a double.
+      (prm 'fl:single->double)
+      ;;Store the double into the data area of the flonum.
+      (prm 'fl:store flo (K off-flonum-data))
+      flo)))
+
+;;; --------------------------------------------------------------------
+;;; single flonum set
+
+ (define-primop $bytevector-ieee-single-native-set! unsafe
+   ((E bv idx flo)
+    (multiple-forms-sequence
+     ;;Load the single into a floating point register.
+     (prm 'fl:load (T flo) (K off-flonum-data))
+     ;;Convert the double into a single.
+     (prm 'fl:double->single)
+     ;;Store the double into the bytevector.
+     (prm 'fl:store-single
+	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
+	  (K off-bytevector-data)))))
 
  (define-primop $bytevector-ieee-single-nonnative-set! unsafe
-   ((E bv i x)
-    (let ((bvoff off-bytevector-data)
-	  (floff off-flonum-data))
-      (multiple-forms-sequence
-       (prm 'fl:load (T x) (K floff))
-       (prm 'fl:double->single)
-       (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
-	 (prm 'fl:store-single t (K bvoff))
-	 (case wordsize
-	   ((4)
-	    (with-tmp ((x0 (prm 'mref t (K bvoff))))
-	      (prm 'bswap! x0 x0)
-	      (prm 'mset t (K bvoff) x0)))
-	   (else
-	    (with-tmp ((x0 (prm 'mref32 t (K bvoff))))
-	      (prm 'bswap! x0 x0)
-	      (prm 'mset32 t (K bvoff) (prm 'sra x0 (K 32)))))))))))
+   ((E bv i flo)
+    (multiple-forms-sequence
+     ;;Load the single into a floating point register.
+     (prm 'fl:load (T flo) (K off-flonum-data))
+     ;;Convert the double into a single.
+     (prm 'fl:double->single)
+     (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
+       ;;Store the single into the bytevector data area.
+       (prm 'fl:store-single t (K off-bytevector-data))
+       (case-word-size
+	((32)
+	 ;;Load the single into a register.
+	 (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
+	   ;;Reverse the bytes.
+	   (prm 'bswap! x0 x0)
+	   ;;Store the reversed single in the bytevector.
+	   (prm 'mset   t (K off-bytevector-data) x0)))
+	((64)
+	 ;;Load the single into a register.
+	 (with-tmp ((x0 (prm 'mref32 t (K off-bytevector-data))))
+	   ;;Reverse the bytes.
+	   (prm 'bswap! x0 x0)
+	   ;;Store the reversed single in the bytevector.
+	   (prm 'mset32 t (K off-bytevector-data) (prm 'sra x0 (K 32))))))))))
 
  /section)
 
