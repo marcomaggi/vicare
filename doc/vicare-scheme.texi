@@ -1851,6 +1851,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib symbols::               Additional symbol functions.
 * iklib numerics::              Additional functions on numbers.
 * iklib enumerations::          Additional functions on enumerations.
+* iklib hashtables::            Additional functions on hashtables.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib export::                Extended library exports.
@@ -3681,6 +3682,15 @@ The following bindings are exported by the @library{ikarus} and
 @defun enum-set? @var{obj}
 Return @true{} if @var{obj} is an enumeration set object, else return
 @false{}.
+@end defun
+
+@c page
+@node iklib hashtables
+@section Additional functions on hashtables
+
+
+@defun string-ci-hash @var{str}
+Case--insensitive hash function for strings.
 @end defun
 
 @c page

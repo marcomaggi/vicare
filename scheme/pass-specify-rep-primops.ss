@@ -4359,6 +4359,70 @@
  /section)
 
 
+;;;; hash table tcbuckets
+;;
+;;A tcbucket is a fixed-length  memory block referenced by machine words
+;;tagged as  vectors; a  tcbucket is  not a Scheme  object like  all the
+;;others; it is used only to store values in a hashtable.
+;;
+;;   |------------------------|-------------| reference to tcbucket
+;;         heap pointer         vector tag
+;;
+;;The memory layout of a tcbucket is as follows:
+;;
+;;   |-----|-----|-----|-----| tcbucket memory block
+;;    tconc  key   val  next
+;;
+;;
+;;
+(section
+
+ (define-primop $make-tcbucket unsafe
+   ((V tconc key val next)
+    (with-tmp ((buck (prm 'alloc
+			  (K (align tcbucket-size))
+			  (K vector-tag))))
+      (prm 'mset buck (K off-tcbucket-tconc) (T tconc))
+      (prm 'mset buck (K off-tcbucket-key)   (T key))
+      (prm 'mset buck (K off-tcbucket-val)   (T val))
+      (prm 'mset buck (K off-tcbucket-next)  (T next))
+      buck)))
+
+;;; --------------------------------------------------------------------
+
+ (define-primop $tcbucket-key unsafe
+   ((V buck)
+    (prm 'mref (T buck) (K off-tcbucket-key))))
+
+ (define-primop $tcbucket-val unsafe
+   ((V buck)
+    (prm 'mref (T buck) (K off-tcbucket-val))))
+
+ (define-primop $tcbucket-next unsafe
+   ((V buck)
+    (prm 'mref (T buck) (K off-tcbucket-next))))
+
+;;; --------------------------------------------------------------------
+
+ (define-primop $set-tcbucket-key! unsafe
+   ((E buck val)
+    (mem-assign val (T buck) off-tcbucket-key)))
+
+ (define-primop $set-tcbucket-val! unsafe
+   ((E buck val)
+    (mem-assign val (T buck) off-tcbucket-val)))
+
+ (define-primop $set-tcbucket-next! unsafe
+   ((E buck val)
+    (mem-assign val (T buck) off-tcbucket-next)))
+
+ (define-primop $set-tcbucket-tconc! unsafe
+   ((E buck val)
+    (mem-assign val (T buck) off-tcbucket-tconc)))
+
+ /section)
+
+
 (section ;;; interrupts-and-engines
 
  (define-primop $interrupted? unsafe
@@ -4492,37 +4556,6 @@
    ((V proc)
     (prm 'mref (T proc)
 	 (K off-closure-data))))
-
-
- /section)
-
-
-(section ;;; hash table tcbuckets
-
- (define-primop $make-tcbucket unsafe
-   ((V tconc key val next)
-    (with-tmp ((x (prm 'alloc (K (align tcbucket-size)) (K vector-tag))))
-      (prm 'mset x (K (- disp-tcbucket-tconc vector-tag)) (T tconc))
-      (prm 'mset x (K (- disp-tcbucket-key vector-tag)) (T key))
-      (prm 'mset x (K (- disp-tcbucket-val vector-tag)) (T val))
-      (prm 'mset x (K (- disp-tcbucket-next vector-tag)) (T next))
-      x)))
-
- (define-primop $tcbucket-key unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-tcbucket-key vector-tag)))))
- (define-primop $tcbucket-val unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-tcbucket-val vector-tag)))))
- (define-primop $tcbucket-next unsafe
-   ((V x) (prm 'mref (T x) (K (- disp-tcbucket-next vector-tag)))))
-
- (define-primop $set-tcbucket-key! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-tcbucket-key vector-tag))))
- (define-primop $set-tcbucket-val! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-tcbucket-val vector-tag))))
- (define-primop $set-tcbucket-next! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-tcbucket-next vector-tag))))
- (define-primop $set-tcbucket-tconc! unsafe
-   ((E x v) (mem-assign v (T x) (- disp-tcbucket-tconc vector-tag))))
 
 
  /section)

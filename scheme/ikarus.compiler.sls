@@ -3920,6 +3920,11 @@
 (define disp-tcbucket-next		(* 3 wordsize))
 (define tcbucket-size			(* 4 wordsize))
 
+(define off-tcbucket-tconc		(fx- disp-tcbucket-tconc vector-tag))
+(define off-tcbucket-key		(fx- disp-tcbucket-key   vector-tag))
+(define off-tcbucket-val		(fx- disp-tcbucket-val   vector-tag))
+(define off-tcbucket-next		(fx- disp-tcbucket-next  vector-tag))
+
 ;;; --------------------------------------------------------------------
 
 ;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
