@@ -3873,7 +3873,7 @@
        (cogen-value-$make-string expr))
       (else
        ;;NUM-OF-CHARS is a struct  instance representing recordized code
-       ;;which, when evaluated, will return a fixnum.
+       ;;which, when evaluated, must return a fixnum.
        (case-word-size
 	((32)
 	 (with-tmp ((str (prm 'alloc
@@ -3903,29 +3903,72 @@
     (nop)))
 
  (define-primop $string-length unsafe
-   ((V x) (prm 'mref (T x) (K off-string-length)))
-   ((P x) (K #t))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref (T x) (K off-string-length)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
+;;; --------------------------------------------------------------------
 
  (define-primop $string-ref unsafe
-   ((V s i)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (prm 'mref32 (T s)
-	    (K (+ (* i char-size)
-		  off-string-data))))
+   ((V str idx)
+    (struct-case idx
+      ((constant idx.val)
+       (interrupt-unless-fx idx.val)
+       ;;IDX.VAL is an  exact integer whose payload bits  are the binary
+       ;;representation of a fixnum.
+       (prm 'mref32 (T str) (K (+ (* idx.val char-size) off-string-data))))
       (else
-       (prm 'mref32 (T s)
-	    (prm 'int+
-		 (cond
-		  ((= wordsize char-size) (T i))
-		  ((= wordsize 8) (prm 'sra (T i) (K 1)))
-		  (else (error '$string-ref "invalid operand")))
-		 (K off-string-data))))))
-   ((P s i) (K #t))
-   ((E s i) (nop)))
+       ;;IDX is  a struct  instance representing recordized  code which,
+       ;;when evaluated, must return a fixnum.
+       (prm 'mref32 (T str) (prm 'int+ (case-word-size
+					;;IDX is a fixnum representing a
+					;;character  index  and its  raw
+					;;value  is also  the offset  in
+					;;bytes.
+					((32)	(T idx))
+					;;IDX is a fixnum representing a
+					;;character  index   and,  after
+					;;shifting  one   bit,  its  raw
+					;;value  is also  the offset  in
+					;;bytes.
+					((64)	(prm 'sra (T idx) (K 1))))
+				 (K off-string-data))))))
+   ((P str idx)
+    (K #t))
+   ((E str idx)
+    (nop)))
+
+ (define-primop $string-set! unsafe
+   ((E str idx ch)
+    (struct-case idx
+      ((constant idx.val)
+       (interrupt-unless-fx idx.val)
+       ;;IDX.VAL is an  exact integer whose payload bits  are the binary
+       ;;representation of a fixnum.
+       (prm 'mset32 (T str) (K (+ (* idx.val char-size) off-string-data))
+	    (T ch)))
+      (else
+       ;;IDX is  a struct  instance representing recordized  code which,
+       ;;when evaluated, must return a fixnum.
+       (prm 'mset32 (T str) (prm 'int+ (case-word-size
+					;;IDX is a fixnum representing a
+					;;character  index  and its  raw
+					;;value  is also  the offset  in
+					;;bytes.
+					((32)	(T idx))
+					;;IDX is a fixnum representing a
+					;;character  index   and,  after
+					;;shifting  one   bit,  its  raw
+					;;value  is also  the offset  in
+					;;bytes.
+					((64)	(prm 'sra (T idx) (K 1))))
+				 (K off-string-data))
+	    (T ch))))))
+
+;;; --------------------------------------------------------------------
 
 ;;;(Marco Maggi; Oct  31, 2011) Commented out because it  appears not to
 ;;;cause  correct code  generation  when  the index  argument  is not  a
@@ -3965,36 +4008,6 @@
 ;;;    (assert-fixnum i)
 ;;;    (assert-string s)
 ;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s))))))
-
- (define-primop $string-set! unsafe
-   ((E x i c)
-    (struct-case i
-      ((constant i)
-       (unless (fx? i) (interrupt))
-       (prm 'mset32 (T x)
-	    (K (+ (* i char-size) off-string-data))
-	    (T c)))
-      (else
-       (prm 'mset32 (T x)
-	    (prm 'int+
-		 (case-word-size
-		  ((32)
-		   ;;It is  a fixnum representing a  character index and
-		   ;;its raw value is also the offset in bytes.
-		   (T i))
-		  ((64)
-		   ;;It is a fixnum  representing a character index and,
-		   ;;after shifting one  bit, its raw value  is also the
-		   ;;offset in bytes.
-		   (prm 'sra (T i) (K 1))))
-		 ;; (cond ((= wordsize char-size)
-		 ;; 	(T i))
-		 ;;       ((= wordsize 8)
-		 ;; 	(prm 'sra (T i) (K 1)))
-		 ;;       (else
-		 ;; 	(error '$string-set! "invalid operand")))
-		 (K off-string-data))
-	    (T c))))))
 
  /section)
 
