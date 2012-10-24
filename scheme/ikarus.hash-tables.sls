@@ -50,7 +50,21 @@
     (ikarus system $pairs)
     (ikarus system $vectors)
     (ikarus system $tcbuckets)
-    (ikarus system $fx))
+    (ikarus system $fx)
+    (vicare arguments validation))
+
+
+;;;; arguments validation
+
+(define-argument-validation (initial-capacity who obj)
+  (and (or (fixnum? obj)
+	   (bignum? obj))
+       (>= obj 0))
+  (assertion-violation who "invalid initial hashtable capacity" obj))
+
+(define-argument-validation (hasht who obj)
+  (hasht? obj)
+  (assertion-violation who "expected hash table as argument" obj))
 
 
 ;;;; data structure
@@ -66,8 +80,8 @@
    ))
 
 
+;;;; directly from Dybvig's paper
 
-;;Directly from Dybvig's paper.
 (define tc-pop
   (lambda (tc)
     (let ((x ($car tc)))
@@ -386,69 +400,81 @@
 		 ($fxsub1 j) r v)))))))))
 
 
-;;;; public interface
+;;;; public interface: constructors and predicate
 
-(define (hashtable? x) (hasht? x))
+(define (hashtable? x)
+  (hasht? x))
 
 (define make-eq-hashtable
   (case-lambda
    (()
-    (let ((x (cons #f #f)))
-      (let ((tc (cons x x)))
-	(make-hasht (make-base-vec 32) 0 tc #t #f eq? #f))))
-   ((k)
-    (if (and (or (fixnum? k) (bignum? k)) (>= k 0))
-	(make-eq-hashtable)
-      (die 'make-eq-hashtable "invalid initial capacity" k)))))
+    (let* ((x  (cons #f #f))
+	   (tc (cons x x)))
+      (make-hasht (make-base-vec 32) #;vec 0 #;count tc #;tc
+		  #t #;mutable? #f #;hashf eq? #;equivf #f #;hashf0 )))
+   ((cap)
+    (define who 'make-eq-hashtable)
+    (with-arguments-validation (who)
+	((initial-capacity	cap))
+      (make-eq-hashtable)))))
 
 (define make-eqv-hashtable
   (case-lambda
    (()
-    (let ((x (cons #f #f)))
-      (let ((tc (cons x x)))
-	(make-hasht (make-base-vec 32) 0 tc #t #f eqv? #f))))
-   ((k)
-    (if (and (or (fixnum? k) (bignum? k)) (>= k 0))
-	(make-eqv-hashtable)
-      (die 'make-eqv-hashtable "invalid initial capacity" k)))))
+    (let* ((x  (cons #f #f))
+	   (tc (cons x x)))
+      (make-hasht (make-base-vec 32) #;vec 0 #;count tc #;tc
+		  #t #;mutable? #f #;hashf eqv? #;equivf #f #;hashf0)))
+   ((cap)
+    (define who 'make-eqv-hashtable)
+    (with-arguments-validation (who)
+	((initial-capacity	cap))
+      (make-eqv-hashtable)))))
 
-(define make-hashtable
-  (case-lambda
-   ((hashf equivf) (make-hashtable hashf equivf 0))
-   ((hashf equivf k)
-    (define who 'make-hashtable)
-    (define (wrap f)
-      (cond
-       ((or (eq? f symbol-hash)
+(module (make-hashtable)
+
+  (define make-hashtable
+    (case-lambda
+     ((hashf equivf)
+      (make-hashtable hashf equivf 0))
+     ((hashf equivf cap)
+      (define who 'make-hashtable)
+      (with-arguments-validation (who)
+	  ((procedure		hashf)
+	   (procedure		equivf)
+	   (initial-capacity	cap))
+	(make-hasht (make-base-vec 32) #;vec 0 #;count #f #;tc
+		    #t #;mutable? (%make-hashfun-wrapper hashf) #;hashf
+		    equivf #;equivf hashf #;hashf0)))))
+
+  (define (%make-hashfun-wrapper f)
+    (if (or (eq? f symbol-hash)
 	    (eq? f string-hash)
 	    (eq? f string-ci-hash)
 	    (eq? f equal-hash))
-	f)
-       (else
-	(lambda (k)
-	  (let ((i (f k)))
-	    (if (or (fixnum? i) (bignum? i))
-		i
-	      (die #f "invalid return value from hash function" i)))))))
-    (unless (procedure? hashf)
-      (die who "hash function is not a procedure" hashf))
-    (unless (procedure? equivf)
-      (die who "equivalence function is not a procedure" equivf))
-    (if (and (or (fixnum? k) (bignum? k)) (>= k 0))
-	(make-hasht (make-base-vec 32) 0 #f #t (wrap hashf) equivf hashf)
-      (die who "invalid initial capacity" k)))))
+	f
+      (lambda (k)
+	(define who 'hashfunc-wrapper)
+	(let ((i (f k)))
+	  (with-arguments-validation (who)
+	      ((hash-result	i))
+	    i)))))
 
-(define hashtable-ref
-  (lambda (h x v)
-    (if (hasht? h)
-	(get-hash h x v)
-      (die 'hashtable-ref "not a hash table" h))))
+  (define-argument-validation (hash-result who obj)
+    (or (fixnum? obj)
+	(bignum? obj))
+    (assertion-violation who "invalid return value from client hash function" obj))
 
-(define hashtable-contains?
-  (lambda (h x)
-    (if (hasht? h)
-	(in-hash? h x)
-      (die 'hashtable-contains? "not a hash table" h))))
+  #| end of module: make-hashtable |# )
+
+
+;;;; public interface: accessors and mutators
+
+(define (hashtable-ref table key val)
+  (define who 'hashtable-ref)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (get-hash table key val)))
 
 (define hashtable-set!
   (lambda (h x v)
@@ -457,6 +483,16 @@
 	    (put-hash! h x v)
 	  (die 'hashtable-set! "hashtable is immutable" h))
       (die 'hashtable-set! "not a hash table" h))))
+
+;;; --------------------------------------------------------------------
+
+(define (hashtable-contains? table key)
+  (define who 'hashtable-contains?)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (in-hash? table key)))
+
+;;; --------------------------------------------------------------------
 
 (define hashtable-update!
   (lambda (h x proc default)
@@ -468,12 +504,6 @@
 	  (die 'hashtable-update! "hashtable is immutable" h))
       (die 'hashtable-update! "not a hash table" h))))
 
-(define hashtable-size
-  (lambda (h)
-    (if (hasht? h)
-	(hasht-count h)
-      (die 'hashtable-size "not a hash table" h))))
-
 (define hashtable-delete!
   (lambda (h x)
       ;;; FIXME: should shrink table if number of keys drops below
@@ -483,6 +513,14 @@
 	    (del-hash h x)
 	  (die 'hashtable-delete! "hash table is immutable" h))
       (die 'hashtable-delete! "not a hash table" h))))
+
+
+
+(define hashtable-size
+  (lambda (h)
+    (if (hasht? h)
+	(hasht-count h)
+      (die 'hashtable-size "not a hash table" h))))
 
 (define (hashtable-entries h)
   (if (hasht? h)
