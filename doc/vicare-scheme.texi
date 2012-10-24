@@ -16283,8 +16283,8 @@ Evaluate to the contents of the word at index @var{idx} (a non--negative
 fixnum) in the array of free variables in the @var{closure} memory
 block.
 
-It is impossible to know at run time (by inspection) how many free
-variables are associated to @var{closure}.
+To know at run time how many free variables are associated to
+@var{closure} we have to inspect the associated code object.
 @end deffn
 
 @c page
@@ -26951,6 +26951,45 @@ referenced by the closure's code.
 
 Closure objects are actual procedures: closure objects are the ones for
 which the @func{procedure?} predicate returns @true{}.
+
+To inspect the free variables associated to a closure we can do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+
+(define f
+  (let ((a 123))
+    (lambda () a)))
+
+($code-freevars ($closure-code f))      @result{} 1
+($cpref f 0)                            @result{} 123
+@end example
+
+@noindent
+and also:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+
+(define f #f)
+(define g #f)
+
+(let ((a 123))
+  (set! f (lambda () a))
+  (set! g (lambda (x)
+	    (set! a x)
+	    a)))
+
+($code-freevars ($closure-code f))      @result{} 1
+($cpref f 0)                            @result{} #(123)
+
+($code-freevars ($closure-code g))      @result{} 1
+($cpref g 0)                            @result{} #(123)
+@end example
 
 @c ------------------------------------------------------------
 
