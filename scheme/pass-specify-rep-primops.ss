@@ -101,9 +101,9 @@
    ;;the  memory block referenced  by X,  use SECONDARY-MASK  to extract
    ;;bits from W, then verify if the bits are equal to SECONDARY-TAG.
    ;;
-   (make-conditional
-       (tag-test x primary-mask primary-tag)
-     (tag-test (prm 'mref x (K (- primary-tag))) secondary-mask secondary-tag)
+   (make-conditional (tag-test x primary-mask primary-tag)
+       (tag-test (prm 'mref x (K (- primary-tag)))
+		 secondary-mask secondary-tag)
      (K #f)))
 
  (define (dirty-vector-set address)
@@ -4050,21 +4050,34 @@
    ((E x)
     (nop)))
 
- ;;FIXME  The  following two  are  commented  out  because they  require
- ;;defining  INPUT-PORT-TAG and  OUTPUT-PORT-TAG as  bitwise  OR between
- ;;PORT-TAG and the  bits used in the attributes  bitvector to tag ports
- ;;as input and output (see  the file "ikarus.io.ss"); this is possible,
- ;;but requires both the tags allocation  in all the source code and the
- ;;bits allocation in the attributes bitvector to be "definitive" (guess
- ;;by Marco Maggi; Sep 23, 2011).
- ;;
- ;;(define-primop input-port? safe
- ;;  ((P x) (sec-tag-test (T x) vector-mask vector-tag #f input-port-tag))
- ;;  ((E x) (nop)))
- ;;
- ;;(define-primop output-port? safe
- ;;  ((P x) (sec-tag-test (T x) vector-mask vector-tag #f output-port-tag))
- ;;  ((E x) (nop)))
+ #;(let-syntax
+     ((define-predicate-operation
+	(syntax-rules ()
+	  ((_ ?who ?tag)
+	   (define-primop ?who safe
+	     ((P x)
+	      (define bits
+		(bitwise-arithmetic-shift-left ?tag port-attrs-shift))
+	      (make-conditional (cogen-pred-port? x)
+		  (with-tmp ((first-word (prm 'mref (T x) (K off-port-attrs))))
+		    (prm '=
+			 (prm 'logand first-word (K bits))
+			 (K bits)))
+		(K #f)))
+	     #;((P x)
+	      (define bits
+		(bitwise-ior port-tag
+			     (bitwise-arithmetic-shift-left ?tag port-attrs-shift)))
+	      (sec-tag-test (T x) vector-mask vector-tag bits bits))
+	     ((E x)
+	      (nop)))
+	   ))))
+   (define-predicate-operation input-port?	INPUT-PORT-TAG)
+   (define-predicate-operation output-port?	OUTPUT-PORT-TAG)
+   (define-predicate-operation textual-port?	TEXTUAL-PORT-TAG)
+   (define-predicate-operation binary-port?	BINARY-PORT-TAG))
+
+;;; --------------------------------------------------------------------
 
  (define-primop $make-port unsafe
    ((V attrs idx sz buf tr id read write getp setp cl cookie)

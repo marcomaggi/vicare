@@ -3855,6 +3855,13 @@
 ;;isolate the port attributes.
 (define port-attrs-shift		6)
 
+;;These  values  must  be  kept  in   sync  with  the  ones  defined  in
+;;"ikarus.io.sls".
+(define INPUT-PORT-TAG			#b00000000000001)
+(define OUTPUT-PORT-TAG			#b00000000000010)
+(define TEXTUAL-PORT-TAG		#b00000000000100)
+(define BINARY-PORT-TAG			#b00000000001000)
+
 (define disp-port-attrs			0)
 (define disp-port-index			(fx*  1 wordsize))
 (define disp-port-size			(fx*  2 wordsize))

@@ -628,6 +628,9 @@
 ;;additional codecs.  Notice that the fixnum  0 is not a valid fast tag,
 ;;this fact can be used to speed up a little dispatching of evaluation.
 ;;
+;;These  values  must  be  kept  in   sync  with  the  ones  defined  in
+;;"ikarus.compiler.sls".
+;;
 ;;					  32109876543210
 ;;                type bits                         ||||
 ;;                codec bits                   |||||
@@ -1031,20 +1034,35 @@
 	    (identifier? #'?who))
        ;;FIXME It  would be better here  to use a  specialised CASE form
        ;;capable of efficiently dispatch evaluation based on fixnums.
-       #'(cond ((unsafe.fxzero? ?eol-bits)
-		(begin . ?none-body))
-	       ((unsafe.fx= ?eol-bits EOL-LINEFEED-TAG)
-		(begin . ?linefeed-body))
-	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-TAG)
-		(begin . ?carriage-return-body))
-	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(begin . ?carriage-return-linefeed-body))
-	       ((unsafe.fx= ?eol-bits EOL-NEXT-LINE-TAG)
-		(begin . ?next-line-body))
-	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		(begin . ?carriage-return-next-line-body))
-	       ((unsafe.fx= ?eol-bits EOL-LINE-SEPARATOR-TAG)
-		(begin . ?line-separator-body)))
+       #'(if (unsafe.fxzero? ?eol-bits)
+	     (begin . ?none-body)
+	   (case-fixnums ?eol-bits
+	     ((EOL-LINEFEED-TAG)
+	      (begin . ?linefeed-body))
+	     ((EOL-CARRIAGE-RETURN-TAG)
+	      (begin . ?carriage-return-body))
+	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+	      (begin . ?carriage-return-linefeed-body))
+	     ((EOL-NEXT-LINE-TAG)
+	      (begin . ?next-line-body))
+	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+	      (begin . ?carriage-return-next-line-body))
+	     ((?eol-bits EOL-LINE-SEPARATOR-TAG)
+	      (begin . ?line-separator-body))))
+       ;; #'(cond ((unsafe.fxzero? ?eol-bits)
+       ;; 		(begin . ?none-body))
+       ;; 	       ((unsafe.fx= ?eol-bits EOL-LINEFEED-TAG)
+       ;; 		(begin . ?linefeed-body))
+       ;; 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-TAG)
+       ;; 		(begin . ?carriage-return-body))
+       ;; 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+       ;; 		(begin . ?carriage-return-linefeed-body))
+       ;; 	       ((unsafe.fx= ?eol-bits EOL-NEXT-LINE-TAG)
+       ;; 		(begin . ?next-line-body))
+       ;; 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+       ;; 		(begin . ?carriage-return-next-line-body))
+       ;; 	       ((unsafe.fx= ?eol-bits EOL-LINE-SEPARATOR-TAG)
+       ;; 		(begin . ?line-separator-body)))
        ))))
 
 ;;; --------------------------------------------------------------------
@@ -1145,38 +1163,70 @@
 	   (retry-after-tagging-port fast-attrs))
 	 ;;FIXME It would be better  here to use a specialised CASE form
 	 ;;capable of efficiently dispatch evaluation based on fixnums.
-	 (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
-	       ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
-	       ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
-	       ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
-	       ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
-	       ((unsafe.fx= m INIT-GET-UTF16-TAG)
-		(if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
-		    (eof-object)
-		  (retry-after-tagging-port ($port-fast-attrs ?port))))
-	       ((unsafe.fx= m FAST-GET-BYTE-TAG)
-		(assertion-violation ?who "expected textual port" ?port))
-	       ((and (port? ?port)
+	 (case-fixnums m
+	   ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
+	   ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
+	   ((FAST-GET-LATIN-TAG)	. ?latin-tag-body)
+	   ((FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
+	   ((FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
+	   ((INIT-GET-UTF16-TAG)
+	    (if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
+		(eof-object)
+	      (retry-after-tagging-port ($port-fast-attrs ?port))))
+	   ((FAST-GET-BYTE-TAG)
+	    (assertion-violation ?who "expected textual port" ?port))
+	   (else
+	    (if (and (port? ?port)
 		     (%unsafe.input-and-output-port? ?port))
-		;;FIXME It  would be better here to  use a specialised
-		;;CASE form capable of efficiently dispatch evaluation
-		;;based on fixnums.
-		(cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
-		       (%reconfigure-as-input FAST-GET-UTF8-TAG))
-		      ((unsafe.fx= m FAST-PUT-CHAR-TAG)
-		       (%reconfigure-as-input FAST-GET-CHAR-TAG))
-		      ((unsafe.fx= m FAST-PUT-LATIN-TAG)
-		       (%reconfigure-as-input FAST-GET-LATIN-TAG))
-		      ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
-		       (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
-		      ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
-		       (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
-		      ((unsafe.fx= m FAST-PUT-BYTE-TAG)
-		       (assertion-violation ?who "expected textual port" ?port))
-		      (else
-		       (%validate-and-tag))))
-	       (else
-		(%validate-and-tag)))))))
+		(case-fixnums m
+		  ((FAST-PUT-UTF8-TAG)
+		   (%reconfigure-as-input FAST-GET-UTF8-TAG))
+		  ((FAST-PUT-CHAR-TAG)
+		   (%reconfigure-as-input FAST-GET-CHAR-TAG))
+		  ((FAST-PUT-LATIN-TAG)
+		   (%reconfigure-as-input FAST-GET-LATIN-TAG))
+		  ((FAST-PUT-UTF16LE-TAG)
+		   (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
+		  ((FAST-PUT-UTF16BE-TAG)
+		   (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
+		  ((FAST-PUT-BYTE-TAG)
+		   (assertion-violation ?who "expected textual port" ?port))
+		  (else
+		   (%validate-and-tag)))
+	      (%validate-and-tag))))
+	 ;; (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
+	 ;;       ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
+	 ;;       ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
+	 ;;       ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
+	 ;;       ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
+	 ;;       ((unsafe.fx= m INIT-GET-UTF16-TAG)
+	 ;; 	(if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
+	 ;; 	    (eof-object)
+	 ;; 	  (retry-after-tagging-port ($port-fast-attrs ?port))))
+	 ;;       ((unsafe.fx= m FAST-GET-BYTE-TAG)
+	 ;; 	(assertion-violation ?who "expected textual port" ?port))
+	 ;;       ((and (port? ?port)
+	 ;; 	     (%unsafe.input-and-output-port? ?port))
+	 ;; 	;;FIXME It  would be better here to  use a specialised
+	 ;; 	;;CASE form capable of efficiently dispatch evaluation
+	 ;; 	;;based on fixnums.
+	 ;; 	(cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
+	 ;; 	       (%reconfigure-as-input FAST-GET-UTF8-TAG))
+	 ;; 	      ((unsafe.fx= m FAST-PUT-CHAR-TAG)
+	 ;; 	       (%reconfigure-as-input FAST-GET-CHAR-TAG))
+	 ;; 	      ((unsafe.fx= m FAST-PUT-LATIN-TAG)
+	 ;; 	       (%reconfigure-as-input FAST-GET-LATIN-TAG))
+	 ;; 	      ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
+	 ;; 	       (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
+	 ;; 	      ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
+	 ;; 	       (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
+	 ;; 	      ((unsafe.fx= m FAST-PUT-BYTE-TAG)
+	 ;; 	       (assertion-violation ?who "expected textual port" ?port))
+	 ;; 	      (else
+	 ;; 	       (%validate-and-tag))))
+	 ;;       (else
+	 ;; 	(%validate-and-tag)))
+	 ))))
 
 (define-syntax* (%case-textual-output-port-fast-tag stx)
   ;;For  a port fast  tagged for  output: select  a body  of code  to be
