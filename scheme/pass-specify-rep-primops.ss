@@ -183,15 +183,15 @@
 
  (define (assert-fixnum x)
    (struct-case x
-     ((constant i)
-      (if (fx? i)
+     ((constant x.val)
+      (if (fx? x.val)
 	  (nop)
 	(interrupt)))
-     ((known expr type)
-      (case-symbols (T:fixnum? type)
+     ((known x.expr x.type)
+      (case-symbols (T:fixnum? x.type)
 	((yes) (nop))
 	((no)  (interrupt))
-	(else  (assert-fixnum expr))))
+	(else  (assert-fixnum x.expr))))
      (else
       (interrupt-unless (cogen-pred-fixnum? x)))))
 
@@ -3869,8 +3869,8 @@
 	 ;;Store the string length in the first word.
 	 (prm 'mset str (K off-string-length) (K (* num-of-chars.val fx-scale)))
 	 str))
-      ((known expr)
-       (cogen-value-$make-string expr))
+      ((known num-of-chars.expr)
+       (cogen-value-$make-string num-of-chars.expr))
       (else
        ;;NUM-OF-CHARS is a struct  instance representing recordized code
        ;;which, when evaluated, must return a fixnum.
@@ -3970,44 +3970,55 @@
 
 ;;; --------------------------------------------------------------------
 
-;;;(Marco Maggi; Oct  31, 2011) Commented out because it  appears not to
-;;;cause  correct code  generation  when  the index  argument  is not  a
-;;;fixnum; specifically:
-;;;
-;;;   (guard (E ((assertion-violation? E)
-;;;              #t)
-;;;             (else E))
-;;;     (string-ref "ciao" #\Z))
-;;;
-;;;causes a weird error while compiling:
-;;;
-;;;Exception trapped by debugger.
-;;; Condition components:
-;;;   1. &assertion
-;;;   2. &who: *
-;;;   3. &message: "not a number"
-;;;   4. &irritants: (#\d)
-;;;[t] Trace. [r] Reraise exception. [c] Continue. [q] Quit. [?] Help.
-;;;vicare>
-;;;
-;;;(define-primop string-ref safe
-;;;  ((V s i)
-;;;   (multiple-forms-sequence
-;;;    (assert-fixnum i)
-;;;    (assert-string s)
-;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
-;;;    (cogen-value-$string-ref s i)))
-;;;  ((P s i)
-;;;   (multiple-forms-sequence
-;;;    (assert-fixnum i)
-;;;    (assert-string s)
-;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s)))
-;;;    (K #t)))
-;;;  ((E s i)
-;;;   (multiple-forms-sequence
-;;;    (assert-fixnum i)
-;;;    (assert-string s)
-;;;    (interrupt-unless (prm 'u< (T i) (cogen-value-$string-length s))))))
+ (define-primop string-ref safe
+   ((V str idx)
+    (struct-case idx
+      ((constant idx.val)
+       (unless (and (fx? idx.val)
+		    (<= 0 idx.val))
+	 (assertion-violation 'cogen
+	   "expected non-negative fixnum as constant character index" idx.val))
+       ;;IDX.VAL is an  exact integer whose payload bits  are the binary
+       ;;representation of a fixnum.
+       (multiple-forms-sequence
+	(assert-string str)
+	(interrupt-unless
+	 (prm 'u< (T idx) (cogen-value-$string-length str)))
+	(cogen-value-$string-ref str idx)))
+      ((known idx.expr idx.type)
+       (case-symbols (T:fixnum? idx.type)
+	 ((yes)
+	  (multiple-forms-sequence
+	   (assert-string str)
+	   (interrupt-unless
+	    (prm 'u< (T idx.expr) (cogen-value-$string-length str)))
+	   (cogen-value-$string-ref str idx)))
+	 ((no)
+	  (interrupt))
+	 (else
+	  (cogen-value-string-ref str idx.expr))))
+      (else
+       ;;IDX is  a struct  instance representing recordized  code which,
+       ;;when evaluated, must return a fixnum.
+       (multiple-forms-sequence
+	(assert-fixnum idx)
+	(assert-string str)
+	(interrupt-unless
+	 (prm 'u< (T idx) (cogen-value-$string-length str)))
+	(cogen-value-$string-ref str idx)))))
+   ((P str idx)
+    (multiple-forms-sequence
+     (assert-fixnum idx)
+     (assert-string str)
+     (interrupt-unless
+      (prm 'u< (T idx) (cogen-value-$string-length str)))
+     (K #t)))
+   ((E str idx)
+    (multiple-forms-sequence
+     (assert-fixnum idx)
+     (assert-string str)
+     (interrupt-unless
+      (prm 'u< (T idx) (cogen-value-$string-length str))))))
 
  /section)
 

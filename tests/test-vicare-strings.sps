@@ -91,25 +91,25 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check
-      (catch #f
-  	(string-ref "ciao" #\d))
-    => '(#\d))
+  ;; (check
+  ;;     (catch #f
+  ;; 	(string-ref "ciao" #\d))
+  ;;   => '(#\d))
 
-  (check
-      (catch #f
-  	(string-ref "ciao" 'd))
-    => '(d))
+  ;; (check
+  ;;     (catch #f
+  ;; 	(string-ref "ciao" 'd))
+  ;;   => '(d))
 
-  (check
-      (catch #f
-  	(string-ref "ciao" "d"))
-    => '("d"))
+  ;; (check
+  ;;     (catch #f
+  ;; 	(string-ref "ciao" "d"))
+  ;;   => '("d"))
 
-  (check
-      (catch #f
-	(string-ref "" -1))
-    => '(-1))
+  ;; (check
+  ;;     (catch #f
+  ;; 	(string-ref "" -1))
+  ;;   => '(-1))
 
   (check
       (catch #f
