@@ -4073,97 +4073,97 @@
 
 ;;; --------------------------------------------------------------------
 
-   (define-primop $make-port unsafe
-     ((V attrs idx sz buf tr id read write getp setp cl cookie)
-      (with-tmp ((p (prm 'alloc
-			 (K (align port-size))
-			 (K vector-tag))))
-	;;Store  in  the  first  word  a machine  word  holding  the  port
-	;;attributes and the port tag.
-	(prm 'mset p (K off-port-attrs)
-	     (prm 'logor
-		  (prm 'sll (T attrs) (K port-attrs-shift))
-		  (K port-tag)))
-	(prm 'mset p (K off-port-index)		(T idx))
-	(prm 'mset p (K off-port-size)		(T sz))
-	(prm 'mset p (K off-port-buffer)		(T buf))
-	(prm 'mset p (K off-port-transcoder)	(T tr))
-	(prm 'mset p (K off-port-id)		(T id))
-	(prm 'mset p (K off-port-read!)		(T read))
-	(prm 'mset p (K off-port-write!)		(T write))
-	(prm 'mset p (K off-port-get-position)	(T getp))
-	(prm 'mset p (K off-port-set-position!)	(T setp))
-	(prm 'mset p (K off-port-close)		(T cl))
-	(prm 'mset p (K off-port-cookie)		(T cookie))
-	(prm 'mset p (K off-port-unused1)		(K 0))
-	(prm 'mset p (K off-port-unused2)		(K 0))
-	p)))
-
-   (let-syntax
-       ((define-port-accessor (syntax-rules ()
-				((_ ?who ?offset)
-				 (define-primop ?who unsafe
-				   ((V port)
-				    (prm 'mref (T port) (K ?offset))))
-				 ))))
-     (define-port-accessor $port-index		off-port-index)
-     (define-port-accessor $port-size		off-port-size)
-     (define-port-accessor $port-buffer		off-port-buffer)
-     (define-port-accessor $port-transcoder	off-port-transcoder)
-     (define-port-accessor $port-id		off-port-id)
-     (define-port-accessor $port-read!		off-port-read!)
-     (define-port-accessor $port-write!		off-port-write!)
-     (define-port-accessor $port-get-position	off-port-get-position)
-     (define-port-accessor $port-set-position!	off-port-set-position!)
-     (define-port-accessor $port-close		off-port-close)
-     (define-port-accessor $port-cookie		off-port-cookie))
-
-   (define-primop $port-attrs unsafe
-     ;;Given  a  port value  X:  return  a  fixnum representing  the  port
-     ;;attributes.   To  be  used  when  the  argument  has  already  been
-     ;;validated as port value.
-     ((V port)
-      (prm 'sra
-	   (prm 'mref (T port) (K off-port-attrs))
-	   (K port-attrs-shift))))
-
-   (define-primop $port-tag unsafe
-     ;;Extract  from  a port  reference  a  fixnum  representing the  port
-     ;;attributes.  If  the argument  is not a  port reference  the return
-     ;;value is zero.
-     ((V port)
-      (make-conditional (tag-test (T port) vector-mask vector-tag)
-	  (with-tmp ((first-word (prm 'mref (T port) (K off-port-attrs))))
-	    (make-conditional (tag-test first-word port-mask port-tag)
-		(prm 'sra first-word (K port-attrs-shift))
-	      (K 0)))
-	(K 0))))
-
-   (let-syntax
-       ((define-port-mutator (syntax-rules ()
-			       ((_ ?who ?offset)
-				(define-primop ?who unsafe
-				  ((E port val)
-				   (prm 'mset (T port) (K ?offset) (T val))))
-				))))
-     (define-port-mutator $set-port-index!		off-port-index)
-     (define-port-mutator $set-port-size!		off-port-size))
-
-   (define-primop $set-port-attrs! unsafe
-     ;;Store  in the  first word  of  a port  memory  block a  new set  of
-     ;;attributes.
-     ;;
-     ;;ATTRS must be a struct instance representing recordized code which,
-     ;;when  evaluated, must  return a  fixnum representing  the attribute
-     ;;bits.
-     ;;
-     ((E port attrs)
-      (prm 'mset (T port) (K off-port-attrs)
+ (define-primop $make-port unsafe
+   ((V attrs idx sz buf tr id read write getp setp cl cookie)
+    (with-tmp ((p (prm 'alloc
+		       (K (align port-size))
+		       (K vector-tag))))
+      ;;Store  in  the  first  word  a machine  word  holding  the  port
+      ;;attributes and the port tag.
+      (prm 'mset p (K off-port-attrs)
 	   (prm 'logor
 		(prm 'sll (T attrs) (K port-attrs-shift))
-		(K port-tag)))))
+		(K port-tag)))
+      (prm 'mset p (K off-port-index)		(T idx))
+      (prm 'mset p (K off-port-size)		(T sz))
+      (prm 'mset p (K off-port-buffer)		(T buf))
+      (prm 'mset p (K off-port-transcoder)	(T tr))
+      (prm 'mset p (K off-port-id)		(T id))
+      (prm 'mset p (K off-port-read!)		(T read))
+      (prm 'mset p (K off-port-write!)		(T write))
+      (prm 'mset p (K off-port-get-position)	(T getp))
+      (prm 'mset p (K off-port-set-position!)	(T setp))
+      (prm 'mset p (K off-port-close)		(T cl))
+      (prm 'mset p (K off-port-cookie)		(T cookie))
+      (prm 'mset p (K off-port-unused1)		(K 0))
+      (prm 'mset p (K off-port-unused2)		(K 0))
+      p)))
 
-   /section)
+ (let-syntax
+     ((define-port-accessor (syntax-rules ()
+			      ((_ ?who ?offset)
+			       (define-primop ?who unsafe
+				 ((V port)
+				  (prm 'mref (T port) (K ?offset))))
+			       ))))
+   (define-port-accessor $port-index		off-port-index)
+   (define-port-accessor $port-size		off-port-size)
+   (define-port-accessor $port-buffer		off-port-buffer)
+   (define-port-accessor $port-transcoder	off-port-transcoder)
+   (define-port-accessor $port-id		off-port-id)
+   (define-port-accessor $port-read!		off-port-read!)
+   (define-port-accessor $port-write!		off-port-write!)
+   (define-port-accessor $port-get-position	off-port-get-position)
+   (define-port-accessor $port-set-position!	off-port-set-position!)
+   (define-port-accessor $port-close		off-port-close)
+   (define-port-accessor $port-cookie		off-port-cookie))
+
+ (define-primop $port-attrs unsafe
+   ;;Given  a  port value  X:  return  a  fixnum representing  the  port
+   ;;attributes.   To  be  used  when  the  argument  has  already  been
+   ;;validated as port value.
+   ((V port)
+    (prm 'sra
+	 (prm 'mref (T port) (K off-port-attrs))
+	 (K port-attrs-shift))))
+
+ (define-primop $port-tag unsafe
+   ;;Extract  from  a port  reference  a  fixnum  representing the  port
+   ;;attributes.  If  the argument  is not a  port reference  the return
+   ;;value is zero.
+   ((V port)
+    (make-conditional (tag-test (T port) vector-mask vector-tag)
+	(with-tmp ((first-word (prm 'mref (T port) (K off-port-attrs))))
+	  (make-conditional (tag-test first-word port-mask port-tag)
+	      (prm 'sra first-word (K port-attrs-shift))
+	    (K 0)))
+      (K 0))))
+
+ (let-syntax
+     ((define-port-mutator (syntax-rules ()
+			     ((_ ?who ?offset)
+			      (define-primop ?who unsafe
+				((E port val)
+				 (prm 'mset (T port) (K ?offset) (T val))))
+			      ))))
+   (define-port-mutator $set-port-index!	off-port-index)
+   (define-port-mutator $set-port-size!		off-port-size))
+
+ (define-primop $set-port-attrs! unsafe
+   ;;Store  in the  first word  of  a port  memory  block a  new set  of
+   ;;attributes.
+   ;;
+   ;;ATTRS must be a struct instance representing recordized code which,
+   ;;when  evaluated, must  return a  fixnum representing  the attribute
+   ;;bits.
+   ;;
+   ((E port attrs)
+    (prm 'mset (T port) (K off-port-attrs)
+	 (prm 'logor
+	      (prm 'sll (T attrs) (K port-attrs-shift))
+	      (K port-tag)))))
+
+ /section)
 
 
 ;;;; pointers
