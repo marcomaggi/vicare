@@ -983,7 +983,7 @@
       (define (%unsupported-by-latin-1)
 	(assertion-violation who
 	  "EOL style conversion unsupported by Latin-1 codec" style))
-      (case style
+      (case-symbols style
 	((none)		0)
 	((lf)		EOL-LINEFEED-TAG)
 	((cr)		EOL-CARRIAGE-RETURN-TAG)
@@ -1032,37 +1032,29 @@
 	 (else					. ?none-body))
        (and (identifier? #'?eol-bits)
 	    (identifier? #'?who))
-       ;;FIXME It  would be better here  to use a  specialised CASE form
-       ;;capable of efficiently dispatch evaluation based on fixnums.
-       #'(if (unsafe.fxzero? ?eol-bits)
-	     (begin . ?none-body)
-	   (case-fixnums ?eol-bits
-	     ((EOL-LINEFEED-TAG)
-	      (begin . ?linefeed-body))
-	     ((EOL-CARRIAGE-RETURN-TAG)
-	      (begin . ?carriage-return-body))
-	     ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-	      (begin . ?carriage-return-linefeed-body))
-	     ((EOL-NEXT-LINE-TAG)
-	      (begin . ?next-line-body))
-	     ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-	      (begin . ?carriage-return-next-line-body))
-	     ((?eol-bits EOL-LINE-SEPARATOR-TAG)
-	      (begin . ?line-separator-body))))
-       ;; #'(cond ((unsafe.fxzero? ?eol-bits)
-       ;; 		(begin . ?none-body))
-       ;; 	       ((unsafe.fx= ?eol-bits EOL-LINEFEED-TAG)
-       ;; 		(begin . ?linefeed-body))
-       ;; 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-TAG)
-       ;; 		(begin . ?carriage-return-body))
-       ;; 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-       ;; 		(begin . ?carriage-return-linefeed-body))
-       ;; 	       ((unsafe.fx= ?eol-bits EOL-NEXT-LINE-TAG)
-       ;; 		(begin . ?next-line-body))
-       ;; 	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-       ;; 		(begin . ?carriage-return-next-line-body))
-       ;; 	       ((unsafe.fx= ?eol-bits EOL-LINE-SEPARATOR-TAG)
-       ;; 		(begin . ?line-separator-body)))
+       ;; #'(case-fixnums ?eol-bits
+       ;; 	   ((0)
+       ;; 	    (begin . ?none-body))
+       ;; 	   ((EOL-LINEFEED-TAG)
+       ;; 	    (begin . ?linefeed-body))
+       ;; 	   ((EOL-CARRIAGE-RETURN-TAG)
+       ;; 	    (begin . ?carriage-return-body))
+       ;; 	   ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)
+       ;; 	    (begin . ?carriage-return-linefeed-body))
+       ;; 	   ((EOL-NEXT-LINE-TAG)
+       ;; 	    (begin . ?next-line-body))
+       ;; 	   ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
+       ;; 	    (begin . ?carriage-return-next-line-body))
+       ;; 	   ((?eol-bits EOL-LINE-SEPARATOR-TAG)
+       ;; 	    (begin . ?line-separator-body)))
+       #'(case-fixnums ?eol-bits
+	   ((0)					. ?none-body)
+	   ((EOL-LINEFEED-TAG)			. ?linefeed-body)
+	   ((EOL-CARRIAGE-RETURN-TAG)		. ?carriage-return-body)
+	   ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)	. ?carriage-return-linefeed-body)
+	   ((EOL-NEXT-LINE-TAG)			. ?next-line-body)
+	   ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)	. ?carriage-return-next-line-body)
+	   ((EOL-LINE-SEPARATOR-TAG)		. ?line-separator-body))
        ))))
 
 ;;; --------------------------------------------------------------------
@@ -1161,8 +1153,6 @@
 	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
-	 ;;FIXME It would be better  here to use a specialised CASE form
-	 ;;capable of efficiently dispatch evaluation based on fixnums.
 	 (case-fixnums m
 	   ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
 	   ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
@@ -1194,38 +1184,6 @@
 		  (else
 		   (%validate-and-tag)))
 	      (%validate-and-tag))))
-	 ;; (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
-	 ;;       ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
-	 ;;       ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
-	 ;;       ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
-	 ;;       ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
-	 ;;       ((unsafe.fx= m INIT-GET-UTF16-TAG)
-	 ;; 	(if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
-	 ;; 	    (eof-object)
-	 ;; 	  (retry-after-tagging-port ($port-fast-attrs ?port))))
-	 ;;       ((unsafe.fx= m FAST-GET-BYTE-TAG)
-	 ;; 	(assertion-violation ?who "expected textual port" ?port))
-	 ;;       ((and (port? ?port)
-	 ;; 	     (%unsafe.input-and-output-port? ?port))
-	 ;; 	;;FIXME It  would be better here to  use a specialised
-	 ;; 	;;CASE form capable of efficiently dispatch evaluation
-	 ;; 	;;based on fixnums.
-	 ;; 	(cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
-	 ;; 	       (%reconfigure-as-input FAST-GET-UTF8-TAG))
-	 ;; 	      ((unsafe.fx= m FAST-PUT-CHAR-TAG)
-	 ;; 	       (%reconfigure-as-input FAST-GET-CHAR-TAG))
-	 ;; 	      ((unsafe.fx= m FAST-PUT-LATIN-TAG)
-	 ;; 	       (%reconfigure-as-input FAST-GET-LATIN-TAG))
-	 ;; 	      ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
-	 ;; 	       (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
-	 ;; 	      ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
-	 ;; 	       (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
-	 ;; 	      ((unsafe.fx= m FAST-PUT-BYTE-TAG)
-	 ;; 	       (assertion-violation ?who "expected textual port" ?port))
-	 ;; 	      (else
-	 ;; 	       (%validate-and-tag))))
-	 ;;       (else
-	 ;; 	(%validate-and-tag)))
 	 ))))
 
 (define-syntax* (%case-textual-output-port-fast-tag stx)
