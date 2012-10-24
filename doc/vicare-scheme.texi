@@ -22882,6 +22882,7 @@ values is duplicated in the Scheme language compiler
 * objects pointers::            Pointer objects.
 * objects codes::               Code objects.
 * objects closures::            Closure objects.
+* objects tcbuckets::           Components for hashtables.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
 * objects callbacks::           Notes on calling Scheme code from C.
@@ -27069,6 +27070,58 @@ pointer to the first byte after the closure's memory block.
 @deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr @var{X})
 Evaluate to true if @var{X} is a reference to closure object.
 @end deftypefn
+
+@c page
+@node objects tcbuckets
+@section Components for hashtables
+
+
+A tcbucket is a fixed--length memory block referenced by machine words
+tagged as vectors.
+
+@example
+|------------------------|-------------| reference to tcbucket
+      heap pointer         vector tag
+@end example
+
+A tcbucket is not a Scheme object like all the others; it is used only
+to store values in a hashtable.  The memory layout of a tcbucket is as
+follows:
+
+@example
+|-----|-----|-----|-----| tcbucket memory block
+ tconc  key   val  next
+@end example
+
+For details on such objects, see the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} disp_tcbucket_tconc
+@defvrx {Preprocessor Symbol} disp_tcbucket_key
+@defvrx {Preprocessor Symbol} disp_tcbucket_val
+@defvrx {Preprocessor Symbol} disp_tcbucket_next
+Displacement of fields.  The number of bytes to add to an
+@strong{untagged} pointer to tcbucket to get the pointer to the first
+byte in the word of the tcbucket's field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_tcbucket_tconc
+@defvrx {Preprocessor Symbol} off_tcbucket_key
+@defvrx {Preprocessor Symbol} off_tcbucket_val
+@defvrx {Preprocessor Symbol} off_tcbucket_next
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the tcbucket's field.
+@end defvr
 
 @c page
 @node objects misc

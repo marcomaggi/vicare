@@ -15,12 +15,11 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#| See the paper:
-
-Ghuloum, Dybvig.  "Generation-Friendly Eq  Hash Tables".  Proceedings of
-the 2007 Workshop on Scheme and Functional Programming.
-
-#|
+;;See the paper:
+;;
+;;  Ghuloum, Dybvig.  "Generation-Friendly Eq Hash Tables".  Proceedings
+;;  of the 2007 Workshop on Scheme and Functional Programming.
+;;
 
 
 #!r6rs
