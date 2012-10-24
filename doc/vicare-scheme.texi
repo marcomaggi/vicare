@@ -26438,21 +26438,27 @@ collection is run while this function is evaluating.
 @section Port objects
 
 
-A port value is a block of memory allocated as a vector; a reference to
-a port value is a reference to a vector.  The first word of the vector
-is the bitwise OR between a port tag and a bitvector of port attributes.
+A port object is a fixed--length memory block referenced by machine
+words tagged as vectors; the first word of the vector is the bitwise OR
+between a port tag and a bitvector of port attributes.
 
 @example
-|----------------|----------| port value
+|----------------|----------| reference to port
   heap pointer    vector tag
 
-|----------------|----------| 1st word of port's memory block
+|----------------|----------| 1st word of memory block
  port attributes   port tag
 @end example
 
-At present the port tag is @math{6} bits wide, so we have: on 32-bit
-platforms: @math{32 - 6 = 24} bits available for attributes; on 64-bit
-platforms: @math{64 - 6 = 58} bits available for attributes.
+At present the port tag is @math{6} bits wide, so we have:
+
+@itemize
+@item
+On 32-bit platforms: @math{32 - 6 = 24} bits available for attributes.
+
+@item
+On 64-bit platforms: @math{64 - 6 = 58} bits available for attributes.
+@end itemize
 
 See the source code in @file{ikarus.io.sls} for a more comprehensive
 documentation.
