@@ -1120,55 +1120,6 @@
  /section)
 
 
-;;;; closures
-;;
-;;A closure object is a fixed  length memory block referenced by machine
-;;words tagged as closures; each closure  object is associated to a code
-;;object that implements the procedure.   The memory layout of a closure
-;;object is as follows:
-;;
-;; |------------------------|-------------| reference to closure
-;;       heap pointer         closure tag
-;;
-;;                        0   1   2   3   4   5
-;; |--------------------|---|---|---|---|---|---| memory block
-;;   raw memory pointer    one slot for every
-;;   to binary code        free variable
-;;
-;;the  first  word in  the  memory  block  holds  a raw  memory  pointer
-;;referencing  the  first  byte  in the  code  object  implementing  the
-;;closure; the  subsequent words  (if any) are  slots associated  to the
-;;free variables referenced by the closure's code.
-;;
-(section
-
- (define-primop procedure? safe
-   ;;Evaluate to true if X is a closure object.
-   ;;
-   ((P x)
-    (tag-test (T x) closure-mask closure-tag)))
-
- (define-primop $cpref unsafe
-   ;;Whenever  the body  of a  closure  references a  free variable  the
-   ;;closure is closed upon...
-   ;;
-   ((V clo freevar-idx)
-    (struct-case freevar-idx
-      ((constant freevar-idx.val)
-       ;;FREEVAR-IDX.VAL  is  an  exact   integer  (possibly  a  bignum)
-       ;;representing the index of a free variable in the closure's data
-       ;;area; such index is zero-based.
-       (unless (fx? freevar-idx.val)
-	 (interrupt))
-       (prm 'mref (T clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
-      ((known freevar-idx.expr)
-       (cogen-value-$cpref clo freevar-idx.expr))
-      (else
-       (interrupt)))))
-
- /section)
-
-
 ;;;; symbols
 ;;
 ;;A symbol  is a fixed length  memory block referenced  by machine words
@@ -4166,6 +4117,40 @@
  /section)
 
 
+;;;; port transcoders
+;;
+;;A transcoder is a  machine word tagged to make it  of a disjoint type.
+;;The transcoder data  (codec, EOL style, error handling)  is encoded in
+;;the most significant bits of this word.
+;;
+;;  |---------------------------|------------| transcoder
+;;         payload bits          transcoder-tag
+;;
+(section
+
+ (define-primop transcoder? unsafe
+   ((P x)
+    (tag-test (T x) transcoder-mask transcoder-tag)))
+
+ (define-primop $data->transcoder unsafe
+   ;;Given a fixnum FX: encode it  as payload bits of a transcoder word.
+   ;;In one step untag it as fixnum and tag it as transcoder.
+   ;;
+   ((V fx)
+    (prm 'logor
+	 (prm 'sll (T fx) (K (fx- transcoder-payload-shift fx-shift)))
+	 (K transcoder-tag))))
+
+ (define-primop $transcoder->data unsafe
+   ;;Given a transcoder  word TRAN: extract the payload  bits and return
+   ;;them as fixnum.
+   ;;
+   ((V tran)
+    (prm 'sra (T tran) (K (fx- transcoder-payload-shift fx-shift)))))
+
+ /section)
+
+
 ;;;; pointers
 ;;
 ;;A pointer is  a fixed length memory block,  two words wide, referenced
@@ -4206,6 +4191,146 @@
       (make-forcall "ikrt_pointer_eq" (list arg1 arg2))))
    ((E x y)
     (nop)))
+
+ /section)
+
+
+;;;; closures
+;;
+;;A closure object is a fixed  length memory block referenced by machine
+;;words tagged as closures; each closure  object is associated to a code
+;;object that implements the procedure.   The memory layout of a closure
+;;object is as follows:
+;;
+;; |------------------------|-------------| reference to closure
+;;       heap pointer         closure tag
+;;
+;;                        0   1   2   3   4   5
+;; |--------------------|---|---|---|---|---|---| memory block
+;;   raw memory pointer    one slot for every
+;;   to binary code        free variable
+;;
+;;the  first  word in  the  memory  block  holds  a raw  memory  pointer
+;;referencing  the  first  byte  in the  code  object  implementing  the
+;;closure; the  subsequent words  (if any) are  slots associated  to the
+;;free variables referenced by the closure's code.
+;;
+(section
+
+ (define-primop procedure? safe
+   ;;Evaluate to true if X is a closure object.
+   ;;
+   ((P x)
+    (tag-test (T x) closure-mask closure-tag)))
+
+ (define-primop $cpref unsafe
+   ;;Whenever  the body  of a  closure  references a  free variable  the
+   ;;closure is closed upon...
+   ;;
+   ((V clo freevar-idx)
+    (struct-case freevar-idx
+      ((constant freevar-idx.val)
+       ;;FREEVAR-IDX.VAL  is  an  exact   integer  (possibly  a  bignum)
+       ;;representing the index of a free variable in the closure's data
+       ;;area; such index is zero-based.
+       (unless (fx? freevar-idx.val)
+	 (interrupt))
+       (prm 'mref (T clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
+      ((known freevar-idx.expr)
+       (cogen-value-$cpref clo freevar-idx.expr))
+      (else
+       (interrupt)))))
+
+ /section)
+
+
+(section ;;; code objects
+
+ ;;An object is a code object if the reference to it is tagged as vector
+ ;;and if the first word is tagged as code.
+ (define-primop code? unsafe
+   ((P x)
+    (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
+
+ (define-primop $closure-code unsafe
+   ;;First  extract  from the  closure  object  the raw  memory  pointer
+   ;;referencing the first  byte of binary code in a  code object's data
+   ;;area:
+   ;;
+   ;;  memory pointer = (prm 'mref (T closure) (K off-closure-code))
+   ;;
+   ;;we know that such memory  pointer is DISP-CODE-DATA bytes after the
+   ;;pointer  to the  first  byte of  the code  object,  so we  subtract
+   ;;DISP-CODE-DATA  and add  the vector  tag:  the result  is a  tagged
+   ;;reference to the code object.
+   ;;
+   ;;    |----------| closure object
+   ;;      p_memory
+   ;;
+   ;;      meta data        binary code
+   ;;    |-----------|-----------------------| code object
+   ;;    ^           ^
+   ;; s_code      p_memory
+   ;;
+   ;;    |...........| disp-code-data
+   ;;
+   ((V x)
+    (prm 'int+
+	 (prm 'mref (T x) (K off-closure-code))
+	 (K (- vector-tag disp-code-data)))))
+
+ (define-primop $code-freevars unsafe
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-freevars vector-tag)))))
+
+ (define-primop $code-reloc-vector unsafe
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-relocsize vector-tag)))))
+
+ (define-primop $code-size unsafe
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-instrsize vector-tag)))))
+
+ (define-primop $code-annotation unsafe
+   ((V x)
+    (prm 'mref (T x) (K (- disp-code-annotation vector-tag)))))
+
+ (define-primop $code->closure unsafe
+   ((V x)
+    (with-tmp
+	;;Allocate a closure's memory block  and tag the reference to it
+	;;as closure.
+	((v (prm 'alloc
+		       (K (align (+ 0 disp-closure-data)))
+		       (K closure-tag))))
+      ;;Store in the  closure's memory block a raw pointer  to the first
+      ;;byte of the code object's data area.
+      (prm 'mset v
+	   (K off-closure-code)
+	   (prm 'int+ (T x)
+		(K (- disp-code-data vector-tag))))
+      v)))
+
+ (define-primop $code-ref unsafe
+   ((V x i)
+    (prm-tag-as-fixnum
+     (prm-isolate-least-significant-byte
+      (prm 'bref (T x)
+	   (prm 'int+
+		(prm-UNtag-as-fixnum (T i))
+		(K (- disp-code-data vector-tag))))))))
+
+ (define-primop $code-set! unsafe
+   ((E x i v)
+    (prm 'bset (T x)
+	 (prm 'int+
+	      (prm-UNtag-as-fixnum (T i))
+	      (K (- disp-code-data vector-tag)))
+	 (prm-UNtag-as-fixnum (T v)))))
+
+ (define-primop $set-code-annotation! unsafe
+   ((E x v)
+    (mem-assign v (T x) (- disp-code-annotation vector-tag))))
 
  /section)
 
@@ -4375,127 +4500,6 @@
  (define-primop $set-tcbucket-tconc! unsafe
    ((E x v) (mem-assign v (T x) (- disp-tcbucket-tconc vector-tag))))
 
-
- /section)
-
-
-(section ;;; code objects
-
- ;;An object is a code object if the reference to it is tagged as vector
- ;;and if the first word is tagged as code.
- (define-primop code? unsafe
-   ((P x)
-    (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
-
- (define-primop $closure-code unsafe
-   ;;First  extract  from the  closure  object  the raw  memory  pointer
-   ;;referencing the first  byte of binary code in a  code object's data
-   ;;area:
-   ;;
-   ;;  memory pointer = (prm 'mref (T closure) (K off-closure-code))
-   ;;
-   ;;we know that such memory  pointer is DISP-CODE-DATA bytes after the
-   ;;pointer  to the  first  byte of  the code  object,  so we  subtract
-   ;;DISP-CODE-DATA  and add  the vector  tag:  the result  is a  tagged
-   ;;reference to the code object.
-   ;;
-   ;;    |----------| closure object
-   ;;      p_memory
-   ;;
-   ;;      meta data        binary code
-   ;;    |-----------|-----------------------| code object
-   ;;    ^           ^
-   ;; s_code      p_memory
-   ;;
-   ;;    |...........| disp-code-data
-   ;;
-   ((V x)
-    (prm 'int+
-	 (prm 'mref (T x) (K off-closure-code))
-	 (K (- vector-tag disp-code-data)))))
-
- (define-primop $code-freevars unsafe
-   ((V x)
-    (prm 'mref (T x) (K (- disp-code-freevars vector-tag)))))
-
- (define-primop $code-reloc-vector unsafe
-   ((V x)
-    (prm 'mref (T x) (K (- disp-code-relocsize vector-tag)))))
-
- (define-primop $code-size unsafe
-   ((V x)
-    (prm 'mref (T x) (K (- disp-code-instrsize vector-tag)))))
-
- (define-primop $code-annotation unsafe
-   ((V x)
-    (prm 'mref (T x) (K (- disp-code-annotation vector-tag)))))
-
- (define-primop $code->closure unsafe
-   ((V x)
-    (with-tmp
-	;;Allocate a closure's memory block  and tag the reference to it
-	;;as closure.
-	((v (prm 'alloc
-		       (K (align (+ 0 disp-closure-data)))
-		       (K closure-tag))))
-      ;;Store in the  closure's memory block a raw pointer  to the first
-      ;;byte of the code object's data area.
-      (prm 'mset v
-	   (K off-closure-code)
-	   (prm 'int+ (T x)
-		(K (- disp-code-data vector-tag))))
-      v)))
-
- (define-primop $code-ref unsafe
-   ((V x i)
-    (prm-tag-as-fixnum
-     (prm-isolate-least-significant-byte
-      (prm 'bref (T x)
-	   (prm 'int+
-		(prm-UNtag-as-fixnum (T i))
-		(K (- disp-code-data vector-tag))))))))
-
- (define-primop $code-set! unsafe
-   ((E x i v)
-    (prm 'bset (T x)
-	 (prm 'int+
-	      (prm-UNtag-as-fixnum (T i))
-	      (K (- disp-code-data vector-tag)))
-	 (prm-UNtag-as-fixnum (T v)))))
-
- (define-primop $set-code-annotation! unsafe
-   ((E x v)
-    (mem-assign v (T x) (- disp-code-annotation vector-tag))))
-
- /section)
-
-
-;;;; port transcoders
-;;
-;;A transcoder  is a  word tagged to  make it  of a disjoint  type.  The
-;;transcoder data (codec,  EOL style, error handling) is  encoded in the
-;;most significant bits of this word.
-;;
-;;  |---------------------------|------------| transcoder
-;;         payload bits          transcoder-tag
-;;
-(section
-
- (define-primop transcoder? unsafe
-   ((P x) (tag-test (T x) transcoder-mask transcoder-tag)))
-
- (define-primop $data->transcoder unsafe
-   ;;Given a fixnum X: encode it as payload bits of a transcoder word.
-   ;;
-   ((V x) (prm 'logor
-	       (prm 'sll (T x) (K (- transcoder-payload-shift fx-shift)))
-	       (K transcoder-tag))))
-
- (define-primop $transcoder->data unsafe
-   ;;Given a transcoder word X: extract the payload bits and return them
-   ;;as fixnum.
-   ;;
-   ((V x) (prm 'sra (T x) (K (- transcoder-payload-shift fx-shift)))))
 
  /section)
 
