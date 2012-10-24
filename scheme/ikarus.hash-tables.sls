@@ -66,6 +66,10 @@
   (hasht? obj)
   (assertion-violation who "expected hash table as argument" obj))
 
+(define-argument-validation (mutable-hasht who obj)
+  (hasht-mutable? obj)
+  (assertion-violation who "expected mutable hash table as argument" obj))
+
 
 ;;;; data structure
 
@@ -467,22 +471,45 @@
 
   #| end of module: make-hashtable |# )
 
+;;; --------------------------------------------------------------------
+
+(module (hashtable-copy)
+
+  (define who 'hashtable-copy)
+
+  (define hashtable-copy
+    (case-lambda
+     ((table)
+      (with-arguments-validation (who)
+	  ((hasht	table))
+	(if (hasht-mutable? table)
+	    (hasht-copy table #f)
+	  table)))
+     ((table mutable?)
+      (with-arguments-validation (who)
+	  ((hasht	table))
+	(if (or mutable?
+		(hasht-mutable? table))
+	    (hasht-copy table (and mutable? #t))
+	  table)))))
+
+  #| end of module |# )
+
 
 ;;;; public interface: accessors and mutators
 
-(define (hashtable-ref table key val)
+(define (hashtable-ref table key default)
   (define who 'hashtable-ref)
   (with-arguments-validation (who)
       ((hasht	table))
-    (get-hash table key val)))
+    (get-hash table key default)))
 
-(define hashtable-set!
-  (lambda (h x v)
-    (if (hasht? h)
-	(if (hasht-mutable? h)
-	    (put-hash! h x v)
-	  (die 'hashtable-set! "hashtable is immutable" h))
-      (die 'hashtable-set! "not a hash table" h))))
+(define (hashtable-set! table key val)
+  (define who 'hashtable-set!)
+  (with-arguments-validation (who)
+      ((hasht		table)
+       (mutable-hasht	table))
+    (put-hash! table key val)))
 
 ;;; --------------------------------------------------------------------
 
@@ -494,80 +521,74 @@
 
 ;;; --------------------------------------------------------------------
 
-(define hashtable-update!
-  (lambda (h x proc default)
-    (if (hasht? h)
-	(if (hasht-mutable? h)
-	    (if (procedure? proc)
-		(update-hash! h x proc default)
-	      (die 'hashtable-update! "not a procedure" proc))
-	  (die 'hashtable-update! "hashtable is immutable" h))
-      (die 'hashtable-update! "not a hash table" h))))
+(define (hashtable-update! table key proc default)
+  (define who 'hashtable-update!)
+  (with-arguments-validation (who)
+      ((hasht		table)
+       (mutable-hasht	table)
+       (procedure	proc))
+    (update-hash! table key proc default)))
 
-(define hashtable-delete!
-  (lambda (h x)
-      ;;; FIXME: should shrink table if number of keys drops below
-      ;;; (sqrt (vector-length (hasht-vec h)))
-    (if (hasht? h)
-	(if (hasht-mutable? h)
-	    (del-hash h x)
-	  (die 'hashtable-delete! "hash table is immutable" h))
-      (die 'hashtable-delete! "not a hash table" h))))
+(define (hashtable-delete! table key)
+  ;;FIXME: should shrink table if number of keys drops below:
+  ;;
+  ;;(sqrt (vector-length (hasht-vec h)))
+  ;;
+  ;;(Abdulaziz Ghuloum)
+  ;;
+  (define who 'hashtable-delete!)
+  (with-arguments-validation (who)
+      ((hasht		table)
+       (mutable-hasht	table))
+    (del-hash table key)))
+
+(define (hashtable-clear! table)
+  (define who 'hashtable-clear!)
+  (with-arguments-validation (who)
+      ((hasht		table)
+       (mutable-hasht	table))
+    (clear-hash! table)))
 
 
+;;;; public interface: inspection
 
-(define hashtable-size
-  (lambda (h)
-    (if (hasht? h)
-	(hasht-count h)
-      (die 'hashtable-size "not a hash table" h))))
+(define (hashtable-size table)
+  (define who 'hashtable-size)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (hasht-count table)))
 
-(define (hashtable-entries h)
-  (if (hasht? h)
-      (get-entries h)
-    (die 'hashtable-entries "not a hash table" h)))
+(define (hashtable-entries table)
+  (define who 'hashtable-entries)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (get-entries table)))
 
-(define (hashtable-keys h)
-  (if (hasht? h)
-      (get-keys h)
-    (die 'hashtable-keys "not a hash table" h)))
+(define (hashtable-keys table)
+  (define who 'hashtable-keys)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (get-keys table)))
 
-(define (hashtable-mutable? h)
-  (if (hasht? h)
-      (hasht-mutable? h)
-    (die 'hashtable-mutable? "not a hash table" h)))
+(define (hashtable-mutable? table)
+  (define who 'hashtable-mutable?)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (hasht-mutable? table)))
 
-(define (hashtable-clear! h)
-  (if (hasht? h)
-      (if (hasht-mutable? h)
-	  (clear-hash! h)
-	(die 'hashtable-clear! "hash table is immutable" h))
-    (die 'hashtable-clear! "not a hash table" h)))
+;;; --------------------------------------------------------------------
 
-(define hashtable-copy
-  (case-lambda
-   ((h)
-    (if (hasht? h)
-	(if (hasht-mutable? h)
-	    (hasht-copy h #f)
-	  h)
-      (die 'hashtable-copy "not a hash table" h)))
-   ((h mutable?)
-    (if (hasht? h)
-	(if (or mutable? (hasht-mutable? h))
-	    (hasht-copy h (and mutable? #t))
-	  h)
-      (die 'hashtable-copy "not a hash table" h)))))
+(define (hashtable-equivalence-function table)
+  (define who 'hashtable-equivalence-function)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (hasht-equivf table)))
 
-(define (hashtable-equivalence-function h)
-  (if (hasht? h)
-      (hasht-equivf h)
-    (die 'hashtable-equivalence-function "not a hash table" h)))
-
-(define (hashtable-hash-function h)
-  (if (hasht? h)
-      (hasht-hashf0 h)
-    (die 'hashtable-hash-function "not a hash table" h)))
+(define (hashtable-hash-function table)
+  (define who 'hashtable-equivalence-function)
+  (with-arguments-validation (who)
+      ((hasht	table))
+    (hasht-hashf0 table)))
 
 
 ;;;; hash functions
