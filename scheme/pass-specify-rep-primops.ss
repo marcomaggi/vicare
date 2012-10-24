@@ -4373,7 +4373,11 @@
 ;;   |-----|-----|-----|-----| tcbucket memory block
 ;;    tconc  key   val  next
 ;;
+;;For details on such objects, see the paper:
 ;;
+;;   Ghuloum,   Dybvig.    ``Generation--Friendly  Eq   Hash   Tables''.
+;;   Proceedings  of   the  2007  Workshop  on   Scheme  and  Functional
+;;   Programming.
 ;;
 (section
 
@@ -4389,6 +4393,7 @@
       buck)))
 
 ;;; --------------------------------------------------------------------
+;;; accessors
 
  (define-primop $tcbucket-key unsafe
    ((V buck)
@@ -4403,6 +4408,7 @@
     (prm 'mref (T buck) (K off-tcbucket-next))))
 
 ;;; --------------------------------------------------------------------
+;;; mutators
 
  (define-primop $set-tcbucket-key! unsafe
    ((E buck val)
@@ -4423,7 +4429,9 @@
  /section)
 
 
-(section ;;; interrupts-and-engines
+;;;; interrupts-and-engines
+
+(section
 
  (define-primop $interrupted? unsafe
    ;;Evaluate  to true  if the  field  "interrupted" of  the C  language
