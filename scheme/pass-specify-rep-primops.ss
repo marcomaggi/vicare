@@ -175,7 +175,7 @@
    ;;See details about memory allocation in the documentation.  See also
    ;;the ALIGN function defined in the library (ikarus.compiler).
    ;;
-   (define-inline (%shift-left ?expr)	(prm 'sll ?expr (K align-shift)))
+   (define-inline (%shift-left  ?expr)	(prm 'sll ?expr (K align-shift)))
    (define-inline (%shift-right ?expr)	(prm 'sra ?expr (K align-shift)))
    (%shift-left
     (%shift-right
@@ -3834,38 +3834,73 @@
 ;;  |------------------------|-------------| reference to string
 ;;        heap offset          string tag
 ;;
+;;  |------------------------|-------------| string first word
+;;       number of words       fixnum tag
+;;
+;;All the  remaining space  in the  memory block  is filled  with 32-bit
+;;unsigned  integers  whose  least  significant  bits  are  set  to  the
+;;character  tag  and  whose  most  significant  bits  are  set  to  the
+;;character's Unicode code point:
+;;
+;;   tag ch0 ch1 ch2 ch3 ch4 ch5 ch6 ch7
+;;  |---|---|---|---|---|---|---|---|---| string memory block
+;;
+;;Character indexes are zero-based.
+;;
 (section
 
  (define-primop string? safe
-   ((P x) (tag-test (T x) string-mask string-tag))
-   ((E x) (nop)))
+   ((P x)
+    (tag-test (T x) string-mask string-tag))
+   ((E x)
+    (nop)))
 
  (define-primop $make-string unsafe
-   ((V n)
-    (struct-case n
-      ((constant n)
-       (unless (fx? n) (interrupt))
-       (with-tmp ((s (prm 'alloc
-			  ;;Characters  are  32-bit  unsigned  integers,
-			  ;;*not* machine words.
-			  (K (align (+ (* n 4) disp-string-data)))
-			  (K string-tag))))
-	 (prm 'mset s
-	      (K off-string-length)
-	      (K (* n fx-scale)))
-	 s))
+   ((V num-of-chars)
+    (struct-case num-of-chars
+      ((constant num-of-chars.val)
+       (unless (fx? num-of-chars.val)
+	 (interrupt))
+       ;;NUM-OF-CHARS.VAL is an exact integer whose payload bits are the
+       ;;binary representation of a fixnum.
+       (with-tmp ((str (prm 'alloc
+			    (K (align (+ (* num-of-chars.val char-size) disp-string-data)))
+			    (K string-tag))))
+	 ;;Store the string length in the first word.
+	 (prm 'mset str (K off-string-length) (K (* num-of-chars.val fx-scale)))
+	 str))
       ((known expr)
        (cogen-value-$make-string expr))
       (else
-       (with-tmp ((s (prm 'alloc
-			  (align-code (T n) disp-string-data)
-			  (K string-tag))))
-	 (prm 'mset s
-	      (K off-string-length)
-	      (T n))
-	 s))))
-   ((P n) (K #t))
-   ((E n) (nop)))
+       ;;NUM-OF-CHARS is a struct  instance representing recordized code
+       ;;which, when evaluated, will return a fixnum.
+       (case-word-size
+	((32)
+	 (with-tmp ((str (prm 'alloc
+			      (align-code (T num-of-chars) disp-string-data)
+			      (K string-tag))))
+	   ;;Store the string length in the first word.
+	   (prm 'mset str (K off-string-length) (T num-of-chars))
+	   str))
+	((64)
+	 ;;FIXME  CHECK In  the  original Ikarus  sources  there was  no
+	 ;;difference between  32-bit and 64-bit code:  both cases where
+	 ;;like the  above branch for  32-bit.  But on 64-bit  such code
+	 ;;causes the data  area of the string to be  (* 8 NUM-OF-CHARS)
+	 ;;bytes wide,  not (* 4  NUM-OF-CHARS) bytes wide as  it should
+	 ;;be.  So I have introduced the right-shift.  (Marco Maggi; Oct
+	 ;;24, 2012)
+	 (with-tmp ((str (prm 'alloc
+			      (align-code (prm 'sra (T num-of-chars) (K 1))
+					  disp-string-data)
+			      (K string-tag))))
+	   ;;Store the string length in the first word.
+	   (prm 'mset str (K off-string-length) (T num-of-chars))
+	   str))))))
+   ((P n)
+    (K #t))
+   ((E n)
+    (nop)))
 
  (define-primop $string-length unsafe
    ((V x) (prm 'mref (T x) (K off-string-length)))

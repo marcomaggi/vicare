@@ -25131,7 +25131,14 @@ value of @func{greatest-fixnum}.
 All the remaining space in the memory block is filled with 32-bit
 unsigned integers whose least significant bits are set to the character
 tag and whose most significant bits are set to the character's Unicode
-code point.
+code point:
+
+@example
+ tag ch0 ch1 ch2 ch3 ch4 ch5 ch6 ch7
+|---|---|---|---|---|---|---|---|---| string memory block
+@end example
+
+Character indexes are zero--based.
 
 @c ------------------------------------------------------------
 
