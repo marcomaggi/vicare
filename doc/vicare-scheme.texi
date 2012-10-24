@@ -16220,9 +16220,10 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @cindex Library @library{ikarus system $codes}
 
 
-In the following definitions the @var{code} arguments must be code
-objects.  The following bindings are exported by the @library{ikarus
-system $codes} library.
+In the following definitions: the @var{code} arguments must be code
+objects, the @code{closure} arguments must be closure objects.  The
+following bindings are exported by the @library{ikarus system $codes}
+library.
 
 
 @defun code? @var{obj}
@@ -16273,6 +16274,17 @@ range @math{[0, 255]}.
 
 @deffn {Primitive Operation} $set-code-annotation @var{code} @var{obj}
 Store @var{obj} in the annotation field of @var{code}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Primitive Operation} $cpref @var{closure} @var{idx}
+Evaluate to the contents of the word at index @var{idx} (a non--negative
+fixnum) in the array of free variables in the @var{closure} memory
+block.
+
+It is impossible to know at run time (by inspection) how many free
+variables are associated to @var{closure}.
 @end deffn
 
 @c page
@@ -26936,6 +26948,9 @@ the first word in the memory block holds a raw memory pointer
 referencing the first byte in the code object implementing the closure;
 the subsequent words (if any) are slots associated to the free variables
 referenced by the closure's code.
+
+Closure objects are actual procedures: closure objects are the ones for
+which the @func{procedure?} predicate returns @true{}.
 
 @c ------------------------------------------------------------
 

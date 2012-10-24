@@ -3777,6 +3777,26 @@
 (define off-string-data			(fx- disp-string-data   string-tag))
 
 ;;; --------------------------------------------------------------------
+;;; code objects
+
+(define code-tag			#x2F)
+(define disp-code-tag			0)
+(define disp-code-instrsize		(* 1 wordsize))
+(define disp-code-relocsize		(* 2 wordsize))
+(define disp-code-freevars		(* 3 wordsize))
+(define disp-code-annotation		(* 4 wordsize))
+(define disp-code-unused		(* 5 wordsize))
+(define disp-code-data			(* 6 wordsize))
+
+(define off-code-tag			(fx- disp-code-tag vector-tag))
+(define off-code-instrsize		(fx- disp-code-instrsize vector-tag))
+(define off-code-relocsize		(fx- disp-code-relocsize vector-tag))
+(define off-code-freevars		(fx- disp-code-freevars vector-tag))
+(define off-code-annotation		(fx- disp-code-annotation vector-tag))
+(define off-code-unused			(fx- disp-code-unused vector-tag))
+(define off-code-data			(fx- disp-code-data vector-tag))
+
+;;; --------------------------------------------------------------------
 ;;; closures
 
 (define closure-mask			7)
@@ -3797,53 +3817,6 @@
 (define disp-continuation-size		(* 2 wordsize))
 (define disp-continuation-next		(* 3 wordsize))
 (define continuation-size		(* 4 wordsize))
-
-;;; --------------------------------------------------------------------
-;;; code objects
-
-(define code-tag			#x2F)
-(define disp-code-instrsize		(* 1 wordsize))
-(define disp-code-relocsize		(* 2 wordsize))
-(define disp-code-freevars		(* 3 wordsize))
-(define disp-code-annotation		(* 4 wordsize))
-(define disp-code-unused		(* 5 wordsize))
-(define disp-code-data			(* 6 wordsize))
-
-;;; --------------------------------------------------------------------
-;;; transcoders
-
-(define transcoder-mask			#xFF) ;;; 0011
-(define transcoder-tag			#x7F) ;;; 0011
-(define transcoder-payload-shift	10)
-
-(define transcoder-write-utf8-mask	#x1000)
-(define transcoder-write-byte-mask	#x2000)
-(define transcoder-read-utf8-mask	#x4000)
-(define transcoder-read-byte-mask	#x8000)
-(define transcoder-handling-mode-shift	16)
-(define transcoder-handling-mode-bits	2)
-(define transcoder-eol-style-shift	18)
-(define transcoder-eol-style-bits	3)
-(define transcoder-codec-shift		21)
-(define transcoder-codec-bits		3)
-
-(define transcoder-handling-mode:none	#b00)
-(define transcoder-handling-mode:ignore	#b01)
-(define transcoder-handling-mode:raise	#b10)
-(define transcoder-handling-mode:replace #b11)
-
-(define transcoder-eol-style:none	#b000)
-(define transcoder-eol-style:lf		#b001)
-(define transcoder-eol-style:cr		#b010)
-(define transcoder-eol-style:crlf	#b011)
-(define transcoder-eol-style:nel	#b100)
-(define transcoder-eol-style:crnel	#b101)
-(define transcoder-eol-style:ls		#b110)
-
-(define transcoder-codec:none		#b000)
-(define transcoder-codec:latin-1	#b001)
-(define transcoder-codec:utf-8		#b010)
-(define transcoder-codec:utf-16		#b011)
 
 ;;; --------------------------------------------------------------------
 ;;; input/output ports
@@ -3892,6 +3865,42 @@
 (define off-port-cookie			(fx- disp-port-cookie		vector-tag))
 (define off-port-unused1		(fx- disp-port-unused1		vector-tag))
 (define off-port-unused2		(fx- disp-port-unused2		vector-tag))
+
+;;; --------------------------------------------------------------------
+;;; transcoders
+
+(define transcoder-mask			#xFF) ;;; 0011
+(define transcoder-tag			#x7F) ;;; 0011
+(define transcoder-payload-shift	10)
+
+(define transcoder-write-utf8-mask	#x1000)
+(define transcoder-write-byte-mask	#x2000)
+(define transcoder-read-utf8-mask	#x4000)
+(define transcoder-read-byte-mask	#x8000)
+(define transcoder-handling-mode-shift	16)
+(define transcoder-handling-mode-bits	2)
+(define transcoder-eol-style-shift	18)
+(define transcoder-eol-style-bits	3)
+(define transcoder-codec-shift		21)
+(define transcoder-codec-bits		3)
+
+(define transcoder-handling-mode:none	#b00)
+(define transcoder-handling-mode:ignore	#b01)
+(define transcoder-handling-mode:raise	#b10)
+(define transcoder-handling-mode:replace #b11)
+
+(define transcoder-eol-style:none	#b000)
+(define transcoder-eol-style:lf		#b001)
+(define transcoder-eol-style:cr		#b010)
+(define transcoder-eol-style:crlf	#b011)
+(define transcoder-eol-style:nel	#b100)
+(define transcoder-eol-style:crnel	#b101)
+(define transcoder-eol-style:ls		#b110)
+
+(define transcoder-codec:none		#b000)
+(define transcoder-codec:latin-1	#b001)
+(define transcoder-codec:utf-8		#b010)
+(define transcoder-codec:utf-16		#b011)
 
 ;;; --------------------------------------------------------------------
 ;;; pointer objects
