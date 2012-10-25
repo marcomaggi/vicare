@@ -244,7 +244,10 @@ ik_make_pcb (void)
    *         |.....................................| heap size
    *
    * when a Scheme  object is allocated on the heap  and its end crosses
-   * the "red line": the heap must be enlarged. */
+   * the "red line": the current heap segment is stored away in a linked
+   * list referenced by the PCB, a new memory a segment is allocated and
+   * installed   as  Scheme   heap.   See   for  example   the  function
+   * "ik_unsafe_alloc()". */
   {
     pcb->heap_base          = ik_mmap(IK_HEAPSIZE);
     pcb->heap_size          = IK_HEAPSIZE;
@@ -264,7 +267,8 @@ ik_make_pcb (void)
    * when Scheme code  execution uses the heap crossing  the "red line":
    * at the first subsequent function  call, the current Scheme stack is
    * stored away  in a Scheme continuation  and a new memory  segment is
-   * allocated and installed as Scheme stack.
+   * allocated  and installed  as  Scheme stack.   See  for example  the
+   * "ik_stack_overflow()" function.
    *
    * The first stack frame starts from the end of the stack:
    *
@@ -352,13 +356,7 @@ ik_make_pcb (void)
    * The "dirty vector" is an array of "unsigned" integers, one for each
    * memory page  allocated by  Vicare; given a  memory address  used by
    * Vicare, it  is possible to  compute the index of  the corresponding
-   * slot  in the  dirty vector.   Each integer  represents the  type of
-   * usage Vicare makes  of the page; some of the  types (defined in the
-   * internal header file) are:
-   *
-   *   0            -	Unused memory.
-   *   mainheap_mt  -	Scheme heap memory.
-   *   mainstack_mt -	Scheme stack memory.
+   * slot  in the  dirty vector.
    *
    * Indexes in  the dirty vector  are *not* zero-based.  The  fields in
    * the PCB are:
@@ -390,7 +388,13 @@ ik_make_pcb (void)
    * The "segment  vector" is an  array of "unsigned" integers,  one for
    * each memory page  allocated by Vicare; given a  memory address used
    * by Vicare, it is possible to compute the index of the corresponding
-   * slot in the segment vector.
+   * slot in  the segment vector.   Each integer represents the  type of
+   * usage Vicare makes  of the page; some of the  types (defined in the
+   * internal header file) are:
+   *
+   *   0            -	Unused memory.
+   *   mainheap_mt  -	Scheme heap memory.
+   *   mainstack_mt -	Scheme stack memory.
    *
    * Indexes in the segment vector  are *not* zero-based.  The fields in
    * the PCB are:
@@ -446,7 +450,7 @@ ik_make_pcb (void)
     pcb->memory_end  = (ikptr)(hi_seg * SEGMENT_SIZE);
     set_segment_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
     set_segment_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
-#if 1
+#if 0
     fprintf(stderr, "\n*** Vicare debug:\n");
     fprintf(stderr, "*  pcb->heap_base  = #x%lX\n", pcb->heap_base);
     fprintf(stderr, "*  pcb->heap_size  = %lu\n", pcb->heap_size);
@@ -617,19 +621,29 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       pcb->allocation_count_minor = minor;
     }
     { /* Allocate a  new heap  segment and register  it as  current heap
-	 base.  While  computing the segment size: make  sure that there
-	 is always  some room at the  end of the new  heap segment after
-	 allocating the requested memory for the new object. */
-      ik_ulong new_size = (requested_size > IK_HEAP_EXT_SIZE) ? requested_size : IK_HEAP_EXT_SIZE;
-      new_size       += 2 * 4096;
-      new_size       = IK_ALIGN_TO_NEXT_PAGE(new_size);
-      alloc_ptr      = ik_mmap_mixed(new_size, pcb);
-      pcb->heap_base = alloc_ptr;
-      pcb->heap_size = new_size;
-      pcb->allocation_redline = alloc_ptr + new_size - 2 * 4096;
-      new_alloc_ptr = alloc_ptr + requested_size;
-      pcb->allocation_pointer = new_alloc_ptr;
-      return alloc_ptr;
+       * base.  While computing  the segment size: make  sure that there
+       * is always  some room at the  end of the new  heap segment after
+       * allocating the requested memory for the new object.
+       *
+       * Initialise it as follows:
+       *
+       *     heap_base                allocation_redline
+       *         v                            v
+       *  lo mem |----------------------------+--------| hi mem
+       *                       Scheme heap
+       *         |.....................................|
+       *                       heap_size
+       */
+      ikptr	heap_ptr;
+      ik_ulong	new_size = (requested_size > IK_HEAP_EXT_SIZE)? \
+	requested_size : IK_HEAP_EXT_SIZE;
+      new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + 2 * 4096);
+      heap_ptr			= ik_mmap_mixed(new_size, pcb);
+      pcb->heap_base		= heap_ptr;
+      pcb->heap_size		= new_size;
+      pcb->allocation_redline	= heap_ptr + new_size - 2 * 4096;
+      pcb->allocation_pointer	= heap_ptr + requested_size;
+      return heap_ptr;
     }
   }
 }
