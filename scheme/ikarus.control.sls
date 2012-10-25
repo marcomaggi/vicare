@@ -19,8 +19,8 @@
 (library (ikarus control)
   (export
     call/cf		call/cc
-    call-with-current-continuation
-    dynamic-wind	exit)
+    dynamic-wind	exit
+    (rename (call/cc call-with-current-continuation)))
   (import (except (ikarus)
 		  call/cf		call/cc
 		  call-with-current-continuation
@@ -36,9 +36,22 @@
 
 ;;;; helpers
 
-(module (%common-tail)
+(module common-tail
+  (%common-tail)
 
   (define (%common-tail x y)
+    ;;This function  is used only  by the function %DO-WIND.   Given two
+    ;;lists X and  Y (being lists of winders), which  are known to share
+    ;;the  same  tail, return  the  first  pair  of their  common  tail;
+    ;;example:
+    ;;
+    ;;   T = (p q r)
+    ;;   X = (a b c d . T)
+    ;;   Y = (i l m . T)
+    ;;
+    ;;return the  list T.   Attempt to  make this  operation as  fast as
+    ;;possible.
+    ;;
     (let ((lx (%unsafe-len x))
 	  (ly (%unsafe-len y)))
       (let ((x (if ($fx> lx ly)
@@ -84,7 +97,33 @@
   #| end of module: %common-tail |# )
 
 
-(define (primitive-call/cf func)
+;;;; winders
+
+(module winders-handling
+  (winders
+   %winders-push!
+   %winders-pop!)
+
+  (define winders
+    ;;A list  of pairs  beind the in-guard  and out-guard  functions set
+    ;;with DYNAMIC-WIND:
+    ;;
+    ;;   ((?in-guard . ?out-guard) ...)
+    ;;
+    '())
+
+  (define-inline (%winders-push! ?in ?out)
+    (set! winders (cons (cons ?in ?out) winders)))
+
+  (define-inline (%winders-pop!)
+    (set! winders ($cdr winders)))
+
+  #| end of module: winders-handling |# )
+
+
+;;;; continuations
+
+(define (%primitive-call/cf func)
   (if ($fp-at-base)
       (func ($current-frame))
     ($seal-frame-and-call func)))
@@ -93,80 +132,130 @@
   (define who 'call/cf)
   (with-arguments-validation (who)
       ((procedure	func))
-    (primitive-call/cf func)))
+    (%primitive-call/cf func)))
 
-(define (primitive-call/cc func)
-  (primitive-call/cf (lambda (frm)
-		       (func ($frame->continuation frm)))))
+(module (call/cc)
+  (import winders-handling)
 
-(define winders
-  '())
+  (define (call/cc func)
+    (define who 'call/cc)
+    (with-arguments-validation (who)
+	((procedure	func))
+      (%primitive-call/cc (lambda (kont)
+			    (let ((save winders))
+			      (define-inline (%do-wind-maybe)
+				(unless (eq? save winders)
+				  (%do-wind save)))
+			      (func (case-lambda
+				     ((v)
+				      (%do-wind-maybe)
+				      (kont v))
+				     (()
+				      (%do-wind-maybe)
+				      (kont))
+				     ((v1 v2 . v*)
+				      (%do-wind-maybe)
+				      (apply kont v1 v2 v*)))))))))
 
-(define unwind*
-  (lambda (ls tail)
-    (unless (eq? ls tail)
-      (set! winders (cdr ls))
-      ((cdar ls))
-      (unwind* (cdr ls) tail))))
+  (define-inline (%primitive-call/cc ?func)
+    (%primitive-call/cf (lambda (frm)
+			  (?func ($frame->continuation frm)))))
 
-(define rewind*
-  (lambda (ls tail)
-    (unless (eq? ls tail)
-      (rewind* (cdr ls) tail)
-      ((caar ls))
-      (set! winders ls))))
+  (module (%do-wind)
 
-(define do-wind
-  (lambda (new)
-    (let ((tail (%common-tail new winders)))
-      (unwind* winders tail)
-      (rewind* new tail))))
+    (define (%do-wind new)
+      (import common-tail)
+      (let ((tail (%common-tail new winders)))
+	(%unwind* winders tail)
+	(%rewind* new     tail)))
 
-(define call/cc
-  (lambda (f)
-    (unless (procedure? f)
-      (die 'call/cc "not a procedure" f))
-    (primitive-call/cc
-     (lambda (k)
-       (let ((save winders))
-	 (f (case-lambda
-	     ((v) (unless (eq? save winders) (do-wind save)) (k v))
-	     (()  (unless (eq? save winders) (do-wind save)) (k))
-	     ((v1 v2 . v*)
-	      (unless (eq? save winders) (do-wind save))
-	      (apply k v1 v2 v*)))))))))
+    (define (%unwind* ls tail)
+      ;;The list LS must be the head  of WINDERS, TAIL must be a tail of
+      ;;WINDERS.  Run the out-guards from LS, and pop their entry, until
+      ;;TAIL is left in WINDERS.
+      ;;
+      ;;In other words, given LS and TAIL:
+      ;;
+      ;;   LS   = ((?old-in-guard-N . ?old-out-guard-N)
+      ;;           ...
+      ;;           (?old-in-guard-1 . ?old-out-guard-1)
+      ;;           (?old-in-guard-0 . ?old-out-guard-0)
+      ;;           . TAIL)
+      ;;   TAIL = ((?in-guard . ?out-guard) ...)
+      ;;
+      ;;run  the out-guards  from ?OLD-OUT-GUARD-N  to ?OLD-OUT-GUARD-0;
+      ;;finally set winders to TAIL.
+      ;;
+      (unless (eq? ls tail)
+	(set! winders ($cdr ls))
+	(($cdr ($car ls)))
+	(%unwind* ($cdr ls) tail)))
 
-(define call-with-current-continuation
-  (lambda (f)
-    (unless (procedure? f)
-      (die 'call-with-current-continuation
-	   "not a procedure" f))
-    (call/cc f)))
+    (define (%rewind* ls tail)
+      ;;The list LS must be the new head of WINDERS, TAIL must be a tail
+      ;;of WINDERS.   Run the in-guards  from LS in reverse  order, from
+      ;;TAIL excluded to the top; finally set WINDERS to LS.
+      ;;
+      ;;In other words, given LS and TAIL:
+      ;;
+      ;;   LS   = ((?new-in-guard-N . ?new-out-guard-N)
+      ;;           ...
+      ;;           (?new-in-guard-1 . ?new-out-guard-1)
+      ;;           (?new-in-guard-0 . ?new-out-guard-0)
+      ;;           . TAIL)
+      ;;   TAIL = ((?in-guard . ?out-guard) ...)
+      ;;
+      ;;run  the  in-guards  from  ?NEW-IN-GUARD-0  to  ?NEW-IN-GUARD-N;
+      ;;finally set WINDERS to LS.
+      ;;
+      (unless (eq? ls tail)
+	(%rewind* ($cdr ls) tail)
+	(($car ($car ls)))
+	(set! winders ls)))
 
-(define dynamic-wind
-  (lambda (in body out)
-    (unless (procedure? in)
-      (die 'dynamic-wind "not a procedure" in))
-    (unless (procedure? body)
-      (die 'dynamic-wind "not a procedure" body))
-    (unless (procedure? out)
-      (die 'dynamic-wind "not a procedure" out))
-    (in)
-    (set! winders (cons (cons in out) winders))
+    #| end of module: %do-wind |# )
+
+  #| end of module: call/cc |# )
+
+
+;;;; dynamic wind
+
+(define (dynamic-wind in-guard body out-guard)
+  (define who 'dynamic-wind)
+  (import winders-handling)
+  (with-arguments-validation (who)
+      ((procedure	in-guard)
+       (procedure	body)
+       (procedure	out-guard))
+    (in-guard)
+    ;;We  do *not*  push  the guards  if an  error  occurs when  running
+    ;;IN-GUARD.
+    (%winders-push! in-guard out-guard)
     (call-with-values
 	body
       (case-lambda
-       ((v) (set! winders (cdr winders)) (out) v)
-       (()  (set! winders (cdr winders)) (out) (values))
+       ((v)
+	(%winders-pop!)
+	(out-guard)
+	v)
+       (()
+	(%winders-pop!)
+	(out-guard)
+	(values))
        ((v1 v2 . v*)
-	(set! winders (cdr winders))
-	(out)
+	(%winders-pop!)
+	(out-guard)
 	(apply values v1 v2 v*))))))
+
+
+;;;; other functions
 
 (define exit
   (case-lambda
-   (() (exit 0))
-   ((status) (foreign-call "ikrt_exit" status))))
+   (()
+    (exit 0))
+   ((status)
+    (foreign-call "ikrt_exit" status))))
 
 
 ;;;; done
