@@ -169,23 +169,25 @@ ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
     }
   }
   {
-    ikpage *	r = pcb->uncached_pages;
-    if (r) {
+    ikpage *	UNcache = pcb->uncached_pages;
+    if (UNcache) {
       ikpage *	cache = pcb->cached_pages;
       ikpage *	next;
+      /* Split the BASE and SIZE block into cached pages. */
       do {
-	r->base = base;
-	next    = r->next;
-	r->next = cache;
-	cache   = r;
-	r       = next;
-	base   += IK_PAGESIZE;
-	size   -= IK_PAGESIZE;
-      } while (r && size);
+	UNcache->base	= base;
+	next		= UNcache->next;
+	UNcache->next	= cache;
+	cache		= UNcache;
+	UNcache		= next;
+	base		+= IK_PAGESIZE;
+	size		-= IK_PAGESIZE;
+      } while (UNcache && size);
       pcb->cached_pages   = cache;
-      pcb->uncached_pages = r;
+      pcb->uncached_pages = UNcache;
     }
   }
+  /* Unmap the leftovers. */
   if (size)
     ik_munmap(base, size);
 }

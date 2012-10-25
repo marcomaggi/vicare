@@ -356,7 +356,13 @@ ik_make_pcb (void)
    * The "dirty vector" is an array of "unsigned" integers, one for each
    * memory page  allocated by  Vicare; given a  memory address  used by
    * Vicare, it  is possible to  compute the index of  the corresponding
-   * slot  in the  dirty vector.
+   * slot in the dirty vector.  Each slot can be one of two states:
+   *
+   *    0 -	The page is pure.
+   *   -1 -	The page is dirty: it has been mutated.
+   *
+   * such state is used by the garbage collector to decide which page to
+   * scan, see the function "scan_dirty_pages()".
    *
    * Indexes in  the dirty vector  are *not* zero-based.  The  fields in
    * the PCB are:
