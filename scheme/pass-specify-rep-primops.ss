@@ -4491,7 +4491,7 @@
 
 ;;;; control operations
 ;;
-;;
+;;These primitives are mostly used by "ikarus.control.sls".
 ;;
 (section
 
@@ -4572,16 +4572,16 @@
 
  (define-primop $frame->continuation unsafe
    ((V x)
-    (with-tmp ((t (prm 'alloc
-		       (K (align (+ disp-closure-data wordsize)))
-		       (K closure-tag))))
-      (prm 'mset t (K off-closure-code)
-	   (K (make-code-loc (sl-continuation-code-label))))
-      (prm 'mset t (K off-closure-data)
-	   (T x))
-      t))
-   ((P x) (K #t))
-   ((E x) (nop)))
+    (with-tmp ((clo (prm 'alloc
+			 (K (align (+ disp-closure-data wordsize)))
+			 (K closure-tag))))
+      (prm 'mset clo (K off-closure-code) (K (make-code-loc (sl-continuation-code-label))))
+      (prm 'mset clo (K off-closure-data) (T x))
+      clo))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  (define-primop $make-call-with-values-procedure unsafe
    ((V) (K (make-closure
