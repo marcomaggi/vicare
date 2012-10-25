@@ -100,23 +100,37 @@
 ;;;; winders
 
 (module winders-handling
-  (winders
+  (%current-winders
+   %winders-set!
    %winders-push!
-   %winders-pop!)
+   %winders-pop!
+   %winders-eq?)
 
-  (define winders
+  (define the-winders
     ;;A list  of pairs  beind the in-guard  and out-guard  functions set
     ;;with DYNAMIC-WIND:
     ;;
     ;;   ((?in-guard . ?out-guard) ...)
     ;;
+    ;;In   a   multithreading   context    this   variable   should   be
+    ;;thread-specific.
+    ;;
     '())
 
+  (define-inline (%current-winders)
+    the-winders)
+
+  (define-inline (%winders-set! ?new)
+    (set! the-winders ?new))
+
   (define-inline (%winders-push! ?in ?out)
-    (set! winders (cons (cons ?in ?out) winders)))
+    (set! the-winders (cons (cons ?in ?out) the-winders)))
 
   (define-inline (%winders-pop!)
-    (set! winders ($cdr winders)))
+    (set! the-winders ($cdr the-winders)))
+
+  (define-inline (%winders-eq? ?save)
+    (eq? ?save the-winders))
 
   #| end of module: winders-handling |# )
 
@@ -142,9 +156,9 @@
     (with-arguments-validation (who)
 	((procedure	func))
       (%primitive-call/cc (lambda (kont)
-			    (let ((save winders))
+			    (let ((save (%current-winders)))
 			      (define-inline (%do-wind-maybe)
-				(unless (eq? save winders)
+				(unless (%winders-eq? save)
 				  (%do-wind save)))
 			      (func (case-lambda
 				     ((v)
@@ -165,9 +179,9 @@
 
     (define (%do-wind new)
       (import common-tail)
-      (let ((tail (%common-tail new winders)))
-	(%unwind* winders tail)
-	(%rewind* new     tail)))
+      (let ((tail (%common-tail new (%current-winders))))
+	(%unwind* (%current-winders) tail)
+	(%rewind* new                tail)))
 
     (define (%unwind* ls tail)
       ;;The list LS must be the head  of WINDERS, TAIL must be a tail of
@@ -187,7 +201,7 @@
       ;;finally set winders to TAIL.
       ;;
       (unless (eq? ls tail)
-	(set! winders ($cdr ls))
+	(%winders-set! ($cdr ls))
 	(($cdr ($car ls)))
 	(%unwind* ($cdr ls) tail)))
 
@@ -211,7 +225,7 @@
       (unless (eq? ls tail)
 	(%rewind* ($cdr ls) tail)
 	(($car ($car ls)))
-	(set! winders ls)))
+	(%winders-set! ls)))
 
     #| end of module: %do-wind |# )
 
