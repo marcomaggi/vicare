@@ -22,14 +22,19 @@
 
 ikptr
 ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
-/*
-  CODE_PTR is  a raw memory pointer  referencing the entry point  in the
-  closure's code object.
+/* Execute  Scheme  code  and  all   its  continuations  until  no  more
+   continuations are stored in the PCB or a system continuation is found
+   in the continuations linked list.
 
-  S_ARGCOUNT  is a  fixnum  representing the  negated  number of  Scheme
-  arguments.
+   CODE_PTR is a  raw memory pointer referencing the entry  point in the
+   closure's code object.
 
-  S_CLOSURE is a reference to the closure object to execute. */
+   S_ARGCOUNT  is a  fixnum representing  the negated  number of  Scheme
+   arguments.
+
+   S_CLOSURE is a reference to the closure object to execute.
+
+   Return the return value of the last executed continuation. */
 {
   ikptr		s_argc;
   ikptr		s_next_k;
