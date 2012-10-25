@@ -233,32 +233,100 @@ ik_make_pcb (void)
 {
   ikpcb* pcb = ik_malloc(sizeof(ikpcb));
   bzero(pcb, sizeof(ikpcb));
-  pcb->collect_key = IK_FALSE_OBJECT;
-  pcb->heap_base = ik_mmap(IK_HEAPSIZE);
-  pcb->heap_size = IK_HEAPSIZE;
-  pcb->allocation_pointer = pcb->heap_base;
-  pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - 2 * 4096;
 
-  pcb->stack_base = ik_mmap(IK_STAKSIZE);
-  pcb->stack_size = IK_STAKSIZE;
-  pcb->frame_pointer = pcb->stack_base + pcb->stack_size;
-  pcb->frame_base = pcb->frame_pointer;
-  pcb->frame_redline = pcb->stack_base + 2 * 4096;
+  /* The  Scheme heap  grows from  low memory  addresses to  high memory
+   * addresses:
+   *
+   *     heap_base      growth         redline
+   *         v         ------->           v
+   *  lo mem |----------------------------+--------| hi mem
+   *                       Scheme heap
+   *         |.....................................| heap size
+   *
+   * when a Scheme  object is allocated on the heap  and its end crosses
+   * the "red line": the heap must be enlarged. */
+  {
+    pcb->heap_base          = ik_mmap(IK_HEAPSIZE);
+    pcb->heap_size          = IK_HEAPSIZE;
+    pcb->allocation_pointer = pcb->heap_base;
+    pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - 2 * 4096;
+  }
 
-  pcb->not_to_be_collected = NULL;
+  /* The Scheme  stack grows  from high memory  addresses to  low memory
+   * addresses:
+   *
+   *    stack_base   redline    growth
+   *         v          v      <-------
+   *  lo mem |----------+--------------------------| hi mem
+   *                       Scheme stack
+   *         |.....................................| stack size
+   *
+   * when Scheme code  execution uses the heap crossing  the "red line":
+   * the stack must be enlarged.
+   *
+   * The first stack frame starts from the end of the stack:
+   *
+   *    stack_base               frame_pointer  frame_base
+   *         v                         v           v
+   *  lo mem |-------------------------+-----------| hi mem
+   *                       Scheme stack
+   *
+   * then, while nested  functions are called, new frames  are pushed on
+   * the stack:
+   *
+   *    stack_base    frame_pointer  frame_base
+   *         v             v           v
+   *  lo mem |-------------+-----------+-----------| hi mem
+   *                       Scheme stack
+   *
+   */
+  {
+    pcb->stack_base    = ik_mmap(IK_STAKSIZE);
+    pcb->stack_size    = IK_STAKSIZE;
+    pcb->frame_pointer = pcb->stack_base + pcb->stack_size;
+    pcb->frame_base    = pcb->frame_pointer;
+    pcb->frame_redline = pcb->stack_base + 2 * 4096;
+  }
 
-  { /* make cache ikpage */
-    ikpage* p = (ikpage*)(long)ik_mmap(CACHE_SIZE * sizeof(ikpage));
-    pcb->cached_pages_base = (ikptr)(long)p;
+  /* Allocate  and initialise  the page  cache.  The  PCB references  an
+   * array of structures "ikpage" initialised as a linked list.
+   *
+   *          next            next
+   *      -----------     -----------
+   *     |           |   |           |
+   *     v           |   v           |
+   *   |---+---|---+---|---+---|---+---|---+---|
+   *         |   ^           |   ^           |
+   *         v   |           |   |           |
+   *       NULL   -----------     -----------
+   *                 next            next
+   *   |.......|.......|.......|.......|.......|
+   *    ikpage0 ikpage1 ikpage2 ikpage3 ikpage4
+   *
+   * In the PCB:
+   *
+   * cached_pages_base
+   *    Is a pointer to the first byte in the array.
+   *
+   * cached_pages_size
+   *    Is the number of bytes allocated to the array.
+   *
+   * uncached_pages
+   *    Is a pointer to the first free "ikpage" struct.
+   */
+  {
+    ikpage *	cur;
+    ikpage *	past;
+    ikpage *	prev = NULL;
+    cur = (ikpage*)(long)ik_mmap(CACHE_SIZE * sizeof(ikpage));
+    pcb->cached_pages_base = (ikptr)(long)cur;
     pcb->cached_pages_size = CACHE_SIZE * sizeof(ikpage);
-    ikpage* q = 0;
-    ikpage* e = p + CACHE_SIZE;
-    while (p < e) {
-      p->next = q;
-      q = p;
-      p++;
+    past = cur + CACHE_SIZE;
+    for (; cur < past; ++cur) {
+      cur->next = prev;
+      prev = cur;
     }
-    pcb->uncached_pages = q;
+    pcb->uncached_pages = prev;
   }
 
   { /* compute extent of heap and stack */
@@ -272,10 +340,10 @@ ik_make_pcb (void)
       hi_mem = pcb->heap_base + pcb->heap_size + IK_PAGESIZE;
     }
 
-    ik_ulong lo_seg = SEGMENT_INDEX(lo_mem);
-    ik_ulong hi_seg = SEGMENT_INDEX(hi_mem+SEGMENT_SIZE-1);
+    ik_ulong lo_seg   = SEGMENT_INDEX(lo_mem);
+    ik_ulong hi_seg   = SEGMENT_INDEX(hi_mem+SEGMENT_SIZE-1);
     ik_ulong vec_size = (hi_seg - lo_seg) * IK_PAGESIZE;
-    ikptr dvec = ik_mmap(vec_size);
+    ikptr    dvec     = ik_mmap(vec_size);
     bzero((char*)(long)dvec, vec_size);
     pcb->dirty_vector_base = (unsigned*)(long) dvec;
     pcb->dirty_vector = (dvec - lo_seg * IK_PAGESIZE);
@@ -288,16 +356,27 @@ ik_make_pcb (void)
     set_segment_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
     set_segment_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
   }
-  { /* initialize base rtd */
+
+  /* Initialize  base  structure  type  descriptor.  This  is  the  type
+     descriptor of all the struct type descriptors; it describes itself.
+     See   the  Texinfo   documentation  node   "objects  structs"   for
+     details. */
+  {
     ikptr s_base_rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | rtd_tag;
-    IK_REF(s_base_rtd, off_rtd_rtd)     = s_base_rtd;
-    IK_REF(s_base_rtd, off_rtd_length)  = (ikptr) (rtd_size-wordsize);
-    IK_REF(s_base_rtd, off_rtd_name)    = 0;
-    IK_REF(s_base_rtd, off_rtd_fields)  = 0;
-    IK_REF(s_base_rtd, off_rtd_printer) = 0;
-    IK_REF(s_base_rtd, off_rtd_symbol)  = 0;
+    IK_REF(s_base_rtd, off_rtd_rtd)        = s_base_rtd;
+    IK_REF(s_base_rtd, off_rtd_length)     = (ikptr) (rtd_size-wordsize);
+    IK_REF(s_base_rtd, off_rtd_name)       = 0; /* = the fixnum 0 */
+    IK_REF(s_base_rtd, off_rtd_fields)     = 0; /* = the fixnum 0 */
+    IK_REF(s_base_rtd, off_rtd_printer)    = 0; /* = the fixnum 0 */
+    IK_REF(s_base_rtd, off_rtd_symbol)     = 0; /* = the fixnum 0 */
     IK_REF(s_base_rtd, off_rtd_destructor) = IK_FALSE;
     pcb->base_rtd = s_base_rtd;
+  }
+
+  /* Initialise miscellaneous fields. */
+  {
+    pcb->collect_key         = IK_FALSE_OBJECT;
+    pcb->not_to_be_collected = NULL;
   }
   return pcb;
 }

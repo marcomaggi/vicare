@@ -4503,12 +4503,16 @@
    ;;2012)
    ;;
    ;;     high memory address
-   ;;    ----------------
+   ;;   |                |
+   ;;   |----------------|
    ;;   | return address | <-- PCB.frame_base
    ;;   |----------------|
-   ;;   |    1st word    | <-- Frame Pointer Register
+   ;;   |    1st word    | <-- Frame Pointer Register = PCB.frame_pointer
    ;;   |----------------|
    ;;   |    2nd word    |
+   ;;   |----------------|
+   ;;   |      ...       |
+   ;;   |      ...       | <-- PCB.stack_base
    ;;    ----------------
    ;;     low memory address
    ;;
@@ -4525,8 +4529,9 @@
     (prm 'mref pcr (K pcb-next-continuation))))
 
  (define-primop $seal-frame-and-call unsafe
-   ;;Save the current Scheme stack into a new continuation object; store
-   ;;such new continuation as the next continuation; call the object X.
+   ;;Save the current Scheme stack  into a new continuation object (yes,
+   ;;the whole  Scheme stack); store  such new continuation as  the next
+   ;;continuation; call the object X.
    ;;
    ;;FIXME  Is the  following picture  correct?  (Marco  Maggi; Oct  25,
    ;;2012)
@@ -4559,7 +4564,7 @@
       ;;Save  the number  of bytes  representing  the size  of the  used
       ;;Scheme stack.
       (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
-      ;;Set the new continuation object as current continuation.
+      ;;Set the new continuation object as the next continuation.
       (prm 'mset pcr (K pcb-next-continuation) kont)
       ;;The  first free  word on  the stack  is the  new stack  base for
       ;;subsequent code execution.
