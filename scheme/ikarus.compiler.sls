@@ -3813,10 +3813,16 @@
 
 (define continuation-tag		#x1F)
 
+(define disp-continuation-tag		0)
 (define disp-continuation-top		(* 1 wordsize))
 (define disp-continuation-size		(* 2 wordsize))
 (define disp-continuation-next		(* 3 wordsize))
 (define continuation-size		(* 4 wordsize))
+
+(define off-continuation-tag		(fx- disp-continuation-tag  vector-tag))
+(define off-continuation-top		(fx- disp-continuation-top  vector-tag))
+(define off-continuation-size		(fx- disp-continuation-size vector-tag))
+(define off-continuation-next		(fx- disp-continuation-next vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; input/output ports
@@ -3942,19 +3948,19 @@
 
 ;;; --------------------------------------------------------------------
 
-;;;(define pcb-allocation-pointer	(*  0 wordsize)) NOT USED
-(define pcb-allocation-redline		(*  1 wordsize))
-;;;(define pcb-frame-pointer		(*  2 wordsize)) NOT USED
-(define pcb-frame-base			(*  3 wordsize))
-(define pcb-frame-redline		(*  4 wordsize))
-(define pcb-next-continuation		(*  5 wordsize))
-;;;(define pcb-system-stack		(*  6 wordsize)) NOT USED
-(define pcb-dirty-vector		(*  7 wordsize))
-(define pcb-arg-list			(*  8 wordsize))
-(define pcb-engine-counter		(*  9 wordsize))
-(define pcb-interrupted			(* 10 wordsize))
-(define pcb-base-rtd			(* 11 wordsize))
-(define pcb-collect-key			(* 12 wordsize))
+;;(define pcb-allocation-pointer(*  0 wordsize)) NOT USED
+(define pcb-allocation-redline	(*  1 wordsize))
+;;;(define pcb-frame-pointer	(*  2 wordsize)) NOT USED
+(define pcb-frame-base		(*  3 wordsize))
+(define pcb-frame-redline	(*  4 wordsize))
+(define pcb-next-continuation	(*  5 wordsize)) ;this is the C field "next_k"
+;;(define pcb-system-stack	(*  6 wordsize)) NOT USED
+(define pcb-dirty-vector	(*  7 wordsize))
+(define pcb-arg-list		(*  8 wordsize))
+(define pcb-engine-counter	(*  9 wordsize))
+(define pcb-interrupted		(* 10 wordsize))
+(define pcb-base-rtd		(* 11 wordsize))
+(define pcb-collect-key		(* 12 wordsize))
 
 
 ;;;; utility functions for assembly code generation

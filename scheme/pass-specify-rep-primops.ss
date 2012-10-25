@@ -4430,7 +4430,11 @@
 
 
 ;;;; interrupts-and-engines
-
+;;
+;;These  primitive operations  make  use of  some fields  of  the PCB  C
+;;language data  structure; a pointer to  the PCB is meant  to be always
+;;stored in the process control register (PCR).
+;;
 (section
 
  (define-primop $interrupted? unsafe
@@ -4463,10 +4467,10 @@
     ;;FIXME: should be atomic swap  instead of load and set!  (Abdulaziz
     ;;Ghuloum)
     ;;
-    (with-tmp ((x0 (T x)))
-      (with-tmp ((t (prm 'mref pcr (K pcb-engine-counter))))
-	(prm 'mset pcr (K pcb-engine-counter) x0)
-	t))))
+    (with-tmp* ((x0 (T x))
+		(t  (prm 'mref pcr (K pcb-engine-counter))))
+      (prm 'mset pcr (K pcb-engine-counter) x0)
+      t)))
 
  (define-primop $stack-overflow-check unsafe
    ;;If the  field "frame_redline"  of the C  language structure  PCB is
@@ -4485,36 +4489,86 @@
  /section)
 
 
-(section ;;; control operations
+;;;; control operations
+;;
+;;
+;;
+(section
 
  (define-primop $fp-at-base unsafe
+   ;;Evaluate to true if the frame pointer register (FPR) references the
+   ;;base of the stack as described by the PCB structure.
+   ;;
+   ;;FIXME  Is the  following picture  correct?  (Marco  Maggi; Oct  25,
+   ;;2012)
+   ;;
+   ;;     high memory address
+   ;;    ----------------
+   ;;   | return address | <-- PCB.frame_base
+   ;;   |----------------|
+   ;;   |    1st word    | <-- Frame Pointer Register
+   ;;   |----------------|
+   ;;   |    2nd word    |
+   ;;    ----------------
+   ;;     low memory address
+   ;;
    ((P)
-    (prm '= (prm 'int+
-		 (prm 'mref pcr (K pcb-frame-base))
+    (prm '= (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
 		 (K (- wordsize)))
 	 fpr)))
 
  (define-primop $current-frame unsafe
-   ((V) (prm 'mref pcr (K pcb-next-continuation))))
-
+   ;;Extract from the  PCB structure a pointer to  the next continuation
+   ;;and return it.
+   ;;
+   ((V)
+    (prm 'mref pcr (K pcb-next-continuation))))
 
  (define-primop $seal-frame-and-call unsafe
-   ((V x) ;;; PCB NEXT CONT;;; PCB BASE
-    (with-tmp ((k (prm 'alloc (K continuation-size) (K vector-tag))))
-      (with-tmp ((base (prm 'int+
-			    (prm 'mref pcr (K pcb-frame-base))
-			    (K (- wordsize)))))
-	(with-tmp ((underflow-handler (prm 'mref base (K 0))))
-	  (prm 'mset k (K (- vector-tag)) (K continuation-tag))
-	  (prm 'mset k (K (- disp-continuation-top vector-tag)) fpr)
-	  (prm 'mset k (K (- disp-continuation-next vector-tag))
-	       (prm 'mref pcr (K pcb-next-continuation)))
-	  (prm 'mset k (K (- disp-continuation-size vector-tag)) (prm 'int- base fpr))
-	  (prm 'mset pcr (K pcb-next-continuation) k)
-	  (prm 'mset pcr (K pcb-frame-base) fpr)
-	  (prm '$call-with-underflow-handler underflow-handler (T x) k)))))
-   ((E . args) (interrupt))
-   ((P . args) (interrupt)))
+   ;;Save the current Scheme stack into a new continuation object; store
+   ;;such new continuation as the next continuation; call the object X.
+   ;;
+   ;;FIXME  Is the  following picture  correct?  (Marco  Maggi; Oct  25,
+   ;;2012)
+   ;;
+   ;;     high memory address
+   ;;    ----------------
+   ;;   | return address | <-- PCB.frame_base
+   ;;   |----------------|
+   ;;   |    1st word    | = BASE
+   ;;   |----------------|
+   ;;           ...
+   ;;   |----------------|
+   ;;   |    Nth word    | <-- frame pointer register (FPR)
+   ;;    ----------------
+   ;;     low memory address
+   ;;
+   ((V x)
+    (with-tmp* ((kont (prm 'alloc
+			   (K continuation-size)
+			   (K vector-tag)))
+		(base (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
+			   (K (- wordsize))))
+		(underflow-handler (prm 'mref base (K 0))))
+      ;;Store the continuation tag in the first word.
+      (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
+      ;;Save the current Frame Pointer Register.
+      (prm 'mset kont (K off-continuation-top)  fpr)
+      ;;Save the current continuation.
+      (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
+      ;;Save  the number  of bytes  representing  the size  of the  used
+      ;;Scheme stack.
+      (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
+      ;;Set the new continuation object as current continuation.
+      (prm 'mset pcr (K pcb-next-continuation) kont)
+      ;;The  first free  word on  the stack  is the  new stack  base for
+      ;;subsequent code execution.
+      (prm 'mset pcr (K pcb-frame-base) fpr)
+      (prm '$call-with-underflow-handler underflow-handler (T x) kont)))
+   ((E . args)
+    (interrupt))
+   ((P . args)
+    (interrupt)))
 
  (define-primop $frame->continuation unsafe
    ((V x)

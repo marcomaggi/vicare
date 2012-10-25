@@ -294,19 +294,19 @@ typedef struct ik_ptr_page {
 typedef struct ikpcb {
   /* The  first locations  may	be  accessed by	 some  compiled code  to
      perform overflow/underflow ops. */
-  ikptr	  allocation_pointer;		/* 32-bit offset =  0 */
-  ikptr	  allocation_redline;		/* 32-bit offset =  4 */
-  ikptr	  frame_pointer;		/* 32-bit offset =  8 */
-  ikptr	  frame_base;			/* 32-bit offset = 12 */
-  ikptr	  frame_redline;		/* 32-bit offset = 16 */
-  ikptr	  next_k;			/* 32-bit offset = 20 */
-  ikptr	  system_stack;			/* 32-bit offset = 24 */
-  ikptr	  dirty_vector;			/* 32-bit offset = 28 */
-  ikptr	  arg_list;			/* 32-bit offset = 32 */
-  ikptr	  engine_counter;		/* 32-bit offset = 36 */
-  ikptr	  interrupted;			/* 32-bit offset = 40 */
-  ikptr	  base_rtd;			/* 32-bit offset = 44 */
-  ikptr	  collect_key;			/* 32-bit offset = 48 */
+  ikptr	  allocation_pointer;	/* offset =  0 * wordsize, 32-bit offset =  0 */
+  ikptr	  allocation_redline;	/* offset =  1 * wordsize, 32-bit offset =  4 */
+  ikptr	  frame_pointer;	/* offset =  2 * wordsize, 32-bit offset =  8 */
+  ikptr	  frame_base;		/* offset =  3 * wordsize, 32-bit offset = 12 */
+  ikptr	  frame_redline;	/* offset =  4 * wordsize, 32-bit offset = 16 */
+  ikptr	  next_k;		/* offset =  5 * wordsize, 32-bit offset = 20 */
+  ikptr	  system_stack;		/* offset =  6 * wordsize, 32-bit offset = 24 */
+  ikptr	  dirty_vector;		/* offset =  7 * wordsize, 32-bit offset = 28 */
+  ikptr	  arg_list;		/* offset =  8 * wordsize, 32-bit offset = 32 */
+  ikptr	  engine_counter;	/* offset =  9 * wordsize, 32-bit offset = 36 */
+  ikptr	  interrupted;		/* offset = 10 * wordsize, 32-bit offset = 40 */
+  ikptr	  base_rtd;		/* offset = 11 * wordsize, 32-bit offset = 44 */
+  ikptr	  collect_key;		/* offset = 12 * wordsize, 32-bit offset = 48 */
 
   /* ------------------------------------------------------------------ */
   /* The  following fields are	not used  by any  scheme code  they only
