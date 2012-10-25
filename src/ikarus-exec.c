@@ -61,27 +61,31 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
       ik_abort("invalid framesize %ld\n", framesize);
     if (framesize < kont->size) {
       ikcont *	nk = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
-      nk->tag	= kont->tag;
-      nk->next	= kont->next;
-      nk->top	= top + framesize;
-      nk->size	= kont->size - framesize;
+      nk->tag		= kont->tag;
+      nk->next		= kont->next;
+      nk->top		= top + framesize;
+      nk->size		= kont->size - framesize;
       kont->size	= framesize;
       kont->next	= vector_tag + (ikptr)(long)nk;
-      /* record side effect */
-      ik_ulong idx = ((ik_ulong)(&kont->next)) >> IK_PAGESHIFT;
-      ((int*)(long)(pcb->dirty_vector))[idx] = -1;
+      { /* Record in  the dirty vector  the side effect of  mutating the
+	   field "kont->next". */
+	ik_ulong idx = ((ik_ulong)(&kont->next)) >> IK_PAGESHIFT;
+	((int*)(long)(pcb->dirty_vector))[idx] = -1;
+      }
     } else if (framesize > kont->size) {
       ik_abort("invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
 	       framesize, kont->size, rp, IK_REF(rp, disp_frame_offset));
     }
     pcb->next_k = kont->next;
-    ikptr fbase = pcb->frame_base - wordsize;
-    ikptr new_fbase = fbase - framesize;
-    memmove((char*)(long)new_fbase + s_argc,
-	    (char*)(long)fbase + s_argc,
-	    -s_argc);
-    memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
-    s_argc   = ik_asm_reenter(pcb, new_fbase, s_argc);
+    {
+      ikptr fbase     = pcb->frame_base - wordsize;
+      ikptr new_fbase = fbase - framesize;
+      memmove((char*)(long)new_fbase + s_argc,
+	      (char*)(long)fbase + s_argc,
+	      -s_argc);
+      memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
+      s_argc   = ik_asm_reenter(pcb, new_fbase, s_argc);
+    }
     s_next_k =  pcb->next_k;
   }
   /* Retrieve  the return  value from  the stack  and return  it to  the

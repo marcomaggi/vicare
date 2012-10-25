@@ -4493,28 +4493,42 @@
 ;;
 ;;These primitives are mostly used by "ikarus.control.sls".
 ;;
+;;Recall that the Scheme stack is:
+;;
+;;     high memory
+;;   |            |
+;;   |------------|
+;;   |            | <-- pcb->frame_base
+;;   |------------|
+;;   | used word  | <-- pcb->frame_base - wordsize
+;;   |------------|
+;;   | used word  |
+;;   |------------|
+;;   |     .      |
+;;   |     .      |
+;;   |     .      |
+;;   |------------|
+;;   | free word  | <-- pcb->frame_pointer
+;;   |------------|
+;;   |     .      |
+;;   |     .      |
+;;   |     .      |
+;;   |------------|
+;;   | free word  | <-- pcb->stack_base
+;;   |------------|
+;;   |            |
+;;    low memory
+;;
+;;and remember that "pcb->frame_base" references  a word that is one-off
+;;the end of the stack segment; so the first word in the stack is:
+;;
+;;   pcb->frame_base - wordsize
+;;
 (section
 
  (define-primop $fp-at-base unsafe
    ;;Evaluate to true if the frame pointer register (FPR) references the
    ;;base of the stack as described by the PCB structure.
-   ;;
-   ;;FIXME  Is the  following picture  correct?  (Marco  Maggi; Oct  25,
-   ;;2012)
-   ;;
-   ;;     high memory address
-   ;;   |                |
-   ;;   |----------------|
-   ;;   | return address | <-- PCB.frame_base
-   ;;   |----------------|
-   ;;   |    1st word    | <-- Frame Pointer Register = PCB.frame_pointer
-   ;;   |----------------|
-   ;;   |    2nd word    |
-   ;;   |----------------|
-   ;;   |      ...       |
-   ;;   |      ...       | <-- PCB.stack_base
-   ;;    ----------------
-   ;;     low memory address
    ;;
    ((P)
     (prm '= (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
@@ -4533,14 +4547,11 @@
    ;;the whole  Scheme stack); store  such new continuation as  the next
    ;;continuation; call the object X.
    ;;
-   ;;FIXME  Is the  following picture  correct?  (Marco  Maggi; Oct  25,
-   ;;2012)
-   ;;
    ;;     high memory address
    ;;    ----------------
-   ;;   | return address | <-- PCB.frame_base
+   ;;   |                | <-- pcb->frame_base
    ;;   |----------------|
-   ;;   |    1st word    | = BASE
+   ;;   |    1st word    | <-- BASE = pcb->frame_base - wordsize
    ;;   |----------------|
    ;;           ...
    ;;   |----------------|
@@ -4559,7 +4570,7 @@
       (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
       ;;Save the current Frame Pointer Register.
       (prm 'mset kont (K off-continuation-top)  fpr)
-      ;;Save the current continuation.
+      ;;Save the next continuation.
       (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
       ;;Save  the number  of bytes  representing  the size  of the  used
       ;;Scheme stack.
@@ -4567,7 +4578,8 @@
       ;;Set the new continuation object as the next continuation.
       (prm 'mset pcr (K pcb-next-continuation) kont)
       ;;The  first free  word on  the stack  is the  new stack  base for
-      ;;subsequent code execution.
+      ;;subsequent code  execution.  Store the current  frame pointer in
+      ;;the PCB as frame base.
       (prm 'mset pcr (K pcb-frame-base) fpr)
       (prm '$call-with-underflow-handler underflow-handler (T x) kont)))
    ((E . args)
@@ -4589,11 +4601,13 @@
     (nop)))
 
  (define-primop $make-call-with-values-procedure unsafe
-   ((V) (K (make-closure
-            (make-code-loc (sl-cwv-label))
-            '() #f)))
-   ((P) (interrupt))
-   ((E) (interrupt)))
+   ((V)
+    (K (make-closure (make-code-loc (sl-cwv-label))
+		     '() #f)))
+   ((P)
+    (interrupt))
+   ((E)
+    (interrupt)))
 
  (define-primop $make-values-procedure unsafe
    ((V)
@@ -4605,24 +4619,28 @@
     (interrupt)))
 
  (define-primop $make-annotated-procedure unsafe
+   ;;FIXME It  appears that this is  never used.  (Marco Maggi;  Oct 25,
+   ;;2012)
+   ;;
    ((V annotation proc)
-    (with-tmp ((t (prm 'alloc
-		       (K (align (+ disp-closure-data (* 2 wordsize))))
-		       (K closure-tag))))
-      (prm 'mset t (K off-closure-code)
+    (with-tmp ((clo (prm 'alloc
+			 (K (align (+ disp-closure-data (* 2 wordsize))))
+			 (K closure-tag))))
+      (prm 'mset clo (K off-closure-code)
 	   (K (make-code-loc (sl-annotated-procedure-label))))
-      (prm 'mset t (K off-closure-data)
+      (prm 'mset clo (K off-closure-data)
 	   (T annotation))
-      (prm 'mset t (K (+ off-closure-data wordsize))
+      (prm 'mset clo (K (+ off-closure-data wordsize))
 	   (T proc))
-      t))
-   ((P) (interrupt))
-   ((E) (interrupt)))
+      clo))
+   ((P)
+    (interrupt))
+   ((E)
+    (interrupt)))
 
  (define-primop $annotated-procedure-annotation unsafe
    ((V proc)
-    (prm 'mref (T proc)
-	 (K off-closure-data))))
+    (prm 'mref (T proc) (K off-closure-data))))
 
 
  /section)
