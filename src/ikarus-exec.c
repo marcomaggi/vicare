@@ -61,12 +61,12 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
       ik_abort("invalid framesize %ld\n", framesize);
     if (framesize < kont->size) {
       ikcont *	nk = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
-      nk->tag		= kont->tag;
-      nk->next		= kont->next;
-      nk->top		= top + framesize;
-      nk->size		= kont->size - framesize;
-      kont->size	= framesize;
-      kont->next	= vector_tag + (ikptr)(long)nk;
+      nk->tag    = kont->tag;
+      nk->next   = kont->next;
+      nk->top    = top + framesize;
+      nk->size   = kont->size - framesize;
+      kont->size = framesize;
+      kont->next = vector_tag + (ikptr)(long)nk;
       { /* Record in  the dirty vector  the side effect of  mutating the
 	   field "kont->next". */
 	ik_ulong idx = ((ik_ulong)(&kont->next)) >> IK_PAGESHIFT;
@@ -80,8 +80,9 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
     {
       ikptr fbase     = pcb->frame_base - wordsize;
       ikptr new_fbase = fbase - framesize;
+      /* The argc is negative for a reason! */
       memmove((char*)(long)new_fbase + s_argc,
-	      (char*)(long)fbase + s_argc,
+	      (char*)(long)fbase     + s_argc,
 	      -s_argc);
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_argc   = ik_asm_reenter(pcb, new_fbase, s_argc);
