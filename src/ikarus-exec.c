@@ -22,47 +22,58 @@
 
 ikptr
 ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
+/*
+  CODE_PTR is  a raw memory pointer  referencing the entry point  in the
+  closure's code object.
+
+  S_ARGCOUNT  is a  fixnum  representing the  negated  number of  Scheme
+  arguments.
+
+  S_CLOSURE is a reference to the closure object to execute. */
 {
-  ikptr		argc   = ik_asm_enter(pcb, code_ptr+off_code_data, s_argcount, s_closure);
+  ikptr		s_argc   = ik_asm_enter(pcb, code_ptr+off_code_data, s_argcount, s_closure);
   ikptr		s_next_k = pcb->next_k;
   while (s_next_k) {
-    ikcont * k = (ikcont*)(long)(s_next_k - vector_tag);
-    if (k->tag == system_continuation_tag) {
+    ikcont * kont = (ikcont*)(long)(s_next_k - vector_tag);
+    if (kont->tag == system_continuation_tag) {
+      /* System continuations are created by the FFI to save the current
+	 C execution contest just before calling a Scheme function. */
       break;
     }
-    ikptr top = k->top;
-    ikptr rp = IK_REF(top, 0);
-    long int framesize = (long int) IK_REF(rp, disp_frame_size);
+    ikptr	top = kont->top;
+    ikptr	rp  = IK_REF(top, 0);
+    long int	framesize = (long int) IK_REF(rp, disp_frame_size);
 #ifdef DEBUG_EXEC
-    fprintf(stderr, "exec framesize=0x%016lx ksize=%ld rp=0x%016lx\n", framesize, k->size, rp);
+    fprintf(stderr, "exec framesize=0x%016lx kontsize=%ld rp=0x%016lx\n",
+	    framesize, kont->size, rp);
 #endif
     if (0 == framesize)
       framesize = IK_REF(top, wordsize);
     if (framesize <= 0)
       ik_abort("invalid framesize %ld\n", framesize);
-    if (framesize < k->size) {
+    if (framesize < kont->size) {
       ikcont *	nk = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
-      nk->tag	= k->tag;
-      nk->next	= k->next;
+      nk->tag	= kont->tag;
+      nk->next	= kont->next;
       nk->top	= top + framesize;
-      nk->size	= k->size - framesize;
-      k->size	= framesize;
-      k->next	= vector_tag + (ikptr)(long)nk;
+      nk->size	= kont->size - framesize;
+      kont->size	= framesize;
+      kont->next	= vector_tag + (ikptr)(long)nk;
       /* record side effect */
-      ik_ulong idx = ((ik_ulong)(&k->next)) >> IK_PAGESHIFT;
+      ik_ulong idx = ((ik_ulong)(&kont->next)) >> IK_PAGESHIFT;
       ((int*)(long)(pcb->dirty_vector))[idx] = -1;
-    } else if (framesize > k->size) {
+    } else if (framesize > kont->size) {
       ik_abort("invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
-	       framesize, k->size, rp, IK_REF(rp, disp_frame_offset));
+	       framesize, kont->size, rp, IK_REF(rp, disp_frame_offset));
     }
-    pcb->next_k = k->next;
+    pcb->next_k = kont->next;
     ikptr fbase = pcb->frame_base - wordsize;
     ikptr new_fbase = fbase - framesize;
-    memmove((char*)(long)new_fbase + argc,
-	    (char*)(long)fbase + argc,
-	    -argc);
+    memmove((char*)(long)new_fbase + s_argc,
+	    (char*)(long)fbase + s_argc,
+	    -s_argc);
     memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
-    argc     = ik_asm_reenter(pcb, new_fbase, argc);
+    s_argc   = ik_asm_reenter(pcb, new_fbase, s_argc);
     s_next_k =  pcb->next_k;
   }
   ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
