@@ -31,13 +31,16 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
 
   S_CLOSURE is a reference to the closure object to execute. */
 {
-  ikptr		s_argc   = ik_asm_enter(pcb, code_ptr+off_code_data, s_argcount, s_closure);
-  ikptr		s_next_k = pcb->next_k;
+  ikptr		s_argc;
+  ikptr		s_next_k;
+  s_argc   = ik_asm_enter(pcb, code_ptr+off_code_data, s_argcount, s_closure);
+  s_next_k = pcb->next_k;
   while (s_next_k) {
     ikcont * kont = (ikcont*)(long)(s_next_k - vector_tag);
     if (kont->tag == system_continuation_tag) {
       /* System continuations are created by the FFI to save the current
-	 C execution contest just before calling a Scheme function. */
+	 C  execution   contest  just  before  calling   back  a  Scheme
+	 function. */
       break;
     }
     ikptr	top = kont->top;
@@ -76,6 +79,28 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
     s_argc   = ik_asm_reenter(pcb, new_fbase, s_argc);
     s_next_k =  pcb->next_k;
   }
+  /* Retrieve  the return  value from  the stack  and return  it to  the
+   * caller.
+   *
+   *     high memory
+   *   |            |
+   *   |            |
+   *   |------------|
+   *   |            | <-- pcb->frame_base
+   *   |------------|
+   *   |            | <-- pcb->frame_base - wordsize
+   *   |------------|
+   *   |            | <-- pcb->frame_base - 2 * wordsize
+   *   |------------|
+   *   |            |
+   *   |            |
+   *     low memory
+   *
+   * Remember that  "pcb->frame_base" references a word  that is one-off
+   * the end of the stack segment; so the first word in the stack is:
+   *
+   *    pcb->frame_base - wordsize
+   */
   ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
   return rv;
 }

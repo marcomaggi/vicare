@@ -22880,9 +22880,10 @@ values is duplicated in the Scheme language compiler
 * objects ports::               Port objects.
 * objects transcoders::         Transcoder objects.
 * objects pointers::            Pointer objects.
+* objects tcbuckets::           Components for hashtables.
 * objects codes::               Code objects.
 * objects closures::            Closure objects.
-* objects tcbuckets::           Components for hashtables.
+* objects continuations::       Continuation objects.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
 * objects callbacks::           Notes on calling Scheme code from C.
@@ -26487,6 +26488,34 @@ See the source code in @file{ikarus.io.sls} for a more comprehensive
 documentation.
 
 @c page
+@node objects transcoders
+@section Transcoder objects
+
+
+A transcoder is a machine word tagged to make it of a disjoint type.
+The transcoder data (codec, @eol{} style, error handling) is encoded in
+the most significant bits of this word:
+
+@example
+|---------------------------|------------| transcoder
+       payload bits          transcoder-tag
+@end example
+
+@noindent
+the payload of this word is an 8-bit vector whose format is as follows:
+
+@example
+765 432 10
+ |   |   |
+ |   |    -- error handling mode
+ |    ------ end of line style
+  ---------- codec
+@end example
+
+See the source code in the file @file{ikarus.codecs.sls} for more
+details.
+
+@c page
 @node objects pointers
 @section Pointer objects
 
@@ -26652,32 +26681,56 @@ Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
 @end deftypefun
 
 @c page
-@node objects transcoders
-@section Transcoder objects
+@node objects tcbuckets
+@section Components for hashtables
 
 
-A transcoder is a machine word tagged to make it of a disjoint type.
-The transcoder data (codec, @eol{} style, error handling) is encoded in
-the most significant bits of this word:
-
-@example
-|---------------------------|------------| transcoder
-       payload bits          transcoder-tag
-@end example
-
-@noindent
-the payload of this word is an 8-bit vector whose format is as follows:
+A tcbucket is a fixed--length memory block referenced by machine words
+tagged as vectors.
 
 @example
-765 432 10
- |   |   |
- |   |    -- error handling mode
- |    ------ end of line style
-  ---------- codec
+|------------------------|-------------| reference to tcbucket
+      heap pointer         vector tag
 @end example
 
-See the source code in the file @file{ikarus.codecs.sls} for more
-details.
+A tcbucket is not a Scheme object like all the others; it is used only
+to store values in a hashtable.  The memory layout of a tcbucket is as
+follows:
+
+@example
+|-----|-----|-----|-----| tcbucket memory block
+ tconc  key   val  next
+@end example
+
+For details on such objects, see the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} disp_tcbucket_tconc
+@defvrx {Preprocessor Symbol} disp_tcbucket_key
+@defvrx {Preprocessor Symbol} disp_tcbucket_val
+@defvrx {Preprocessor Symbol} disp_tcbucket_next
+Displacement of fields.  The number of bytes to add to an
+@strong{untagged} pointer to tcbucket to get the pointer to the first
+byte in the word of the tcbucket's field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_tcbucket_tconc
+@defvrx {Preprocessor Symbol} off_tcbucket_key
+@defvrx {Preprocessor Symbol} off_tcbucket_val
+@defvrx {Preprocessor Symbol} off_tcbucket_next
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the tcbucket's field.
+@end defvr
 
 @c page
 @node objects codes
@@ -27072,56 +27125,206 @@ Evaluate to true if @var{X} is a reference to closure object.
 @end deftypefn
 
 @c page
-@node objects tcbuckets
-@section Components for hashtables
+@node objects continuations
+@section Continuation objects
 
 
-A tcbucket is a fixed--length memory block referenced by machine words
-tagged as vectors.
-
-@example
-|------------------------|-------------| reference to tcbucket
-      heap pointer         vector tag
-@end example
-
-A tcbucket is not a Scheme object like all the others; it is used only
-to store values in a hashtable.  The memory layout of a tcbucket is as
-follows:
+Continuation objects are memory blocks referenced by machine words
+tagged as vectors, whose first word is tagged as continuation:
 
 @example
-|-----|-----|-----|-----| tcbucket memory block
- tconc  key   val  next
+|----------------|----------| reference to continuation
+  heap pointer    vector tag
+
+|----------------|----------| first word of continuation
+ all set to zero  vector tag
 @end example
 
-For details on such objects, see the paper:
+@noindent
+the layout of a continuation memory block is:
 
-@quotation
-Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
-of the 2007 Workshop on Scheme and Functional Programming.
-@end quotation
+@example
+|-----|-----|-----|-----|
+  tag   top  size  next
+@end example
+
+To understand the contents of a continuation object, we have to recall
+how the Scheme stack is used:
+
+@example
+ high memory
+|            |
+|------------|
+|            | <-- pcb->frame_base
+|------------|
+| used word  | <-- pcb->frame_base - wordsize
+|------------|
+|     .      |
+|     .      |
+|     .      |
+|------------|
+| free word  | <-- pcb->frame_pointer
+|------------|
+|     .      |
+|     .      |
+|     .      |
+|------------|
+| free word  | <-- pcb->stack_base
+|------------|
+|            |
+  low memory
+@end example
+
+@noindent
+and remember that @code{pcb->frame_base} references a word that is
+one--off the end of the stack segment; so the first word in the stack
+is:
+
+@example
+pcb->frame_base - wordsize
+@end example
+
+@noindent
+A continuation references the portion of the Scheme stack memory segment
+between @code{frame_base} and @code{frame_pointer}.
+
+There are two kinds of continuation objects:
+
+@table @dfn
+@item Scheme continuations
+Represent a Scheme continuation.  They are expliticly created by
+@func{call/cc}, but also used to represent a previous Scheme code
+execution when the allocated Scheme stack runs out of space.
+
+@item system continuations
+Represent a C continuation.  They are used by the @ffi{} to save the C
+execution context just before calling back to Scheme from C code.
+@end table
+
+The fields of a Scheme continuation are:
+
+@table @code
+@item top
+Untagged pointer referencing the first free word on the Scheme stack.
+
+@item size
+Number of bytes used on the Scheme stack, @strong{not} counting the free
+word referenced by the frame pointer.
+
+@item next
+Tagged pointer referencing a continuation object; it represents the
+continuation to go back to after the execution of tthis continuation is
+finished.  This ``going back'' is performed by the C function
+@cfunc{ik_exec_code}.
+@end table
+
+The fields of a Scheme continuation are:
+
+@table @code
+@item top
+Untagged memory pointer referencing the C language stack last saved by
+Scheme code; it is the content of the field @code{pcb->system_stack} at
+the time this system continuation object was created.
+
+@item size
+Unused.
+
+@item next
+Tagged memory pointer referencing the next continuation; it is the
+content of the field @code{pcb->next_k} at the time this system
+continuation object was created.
+@end table
+
+Whatever the kind, usually a continuation is created and then saved in
+the field @code{pcb->next_k} in such a way that continuation objects
+create a linked list:
+
+@example
+        next_k
+|------|------|-----| PCB
+          |
+          v     next
+       |-------|----| continuation
+                  |
+                  v     next
+               |-------|----| continuation
+                          |
+                           --> NULL
+@end example
 
 @c ------------------------------------------------------------
 
 @subsubheading Basic operations
 
 
-@defvr {Preprocessor Symbol} disp_tcbucket_tconc
-@defvrx {Preprocessor Symbol} disp_tcbucket_key
-@defvrx {Preprocessor Symbol} disp_tcbucket_val
-@defvrx {Preprocessor Symbol} disp_tcbucket_next
-Displacement of fields.  The number of bytes to add to an
-@strong{untagged} pointer to tcbucket to get the pointer to the first
-byte in the word of the tcbucket's field.
+@defvr {Preprocessor Symbol} continuation_tag
+@defvrx {Preprocessor Symbol} system_continuation_tag
+Integer values used to tag and recognise the first word in continuation
+memory blocks.
 @end defvr
 
 
-@defvr {Preprocessor Symbol} off_tcbucket_tconc
-@defvrx {Preprocessor Symbol} off_tcbucket_key
-@defvrx {Preprocessor Symbol} off_tcbucket_val
-@defvrx {Preprocessor Symbol} off_tcbucket_next
-An integer to add to a tagged @ikptr{} reference to retrieve the pointer
-to the first byte of the word in the tcbucket's field.
+@defvr {Preprocessor Symbol} continuation_size
+@defvrx {Preprocessor Symbol} system_continuation_size
+The number of bytes needed to hold a continuation memory block.
 @end defvr
+
+
+@defvr {Preprocessor Symbol} disp_continuation_tag
+@defvrx {Preprocessor Symbol} disp_continuation_top
+@defvrx {Preprocessor Symbol} disp_continuation_size
+@defvrx {Preprocessor Symbol} disp_continuation_next
+Scheme continuation field displacements.  The number of bytes to add to
+an untagged pointer to Scheme continuations to get the pointer to the
+first byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_system_continuation_tag
+@defvrx {Preprocessor Symbol} disp_system_continuation_top
+@defvrx {Preprocessor Symbol} disp_system_continuation_size
+@defvrx {Preprocessor Symbol} disp_system_continuation_next
+System continuation field displacements.  The number of bytes to add to
+an untagged pointer to system continuations to get the pointer to the
+first byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_continuation_tag
+@defvrx {Preprocessor Symbol} off_continuation_top
+@defvrx {Preprocessor Symbol} off_continuation_size
+@defvrx {Preprocessor Symbol} off_continuation_next
+Scheme continuation field offsets.  The number of bytes to add to a
+tagged pointer to Scheme continuation to get the pointer to the first
+byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_system_continuation_tag
+@defvrx {Preprocessor Symbol} off_system_continuation_top
+@defvrx {Preprocessor Symbol} off_system_continuation_size
+@defvrx {Preprocessor Symbol} off_system_continuation_next
+System continuation field offsets.  The number of bytes to add to a
+tagged pointer to system continuation to get the pointer to the first
+byte in the word holding the specified field.
+@end defvr
+
+
+A Scheme continuation object is usually allocated as follows:
+
+@example
+ikpcb *     pcb = ...;
+ikptr       s_kont;
+
+s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) \
+   | vector_tag;
+IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
+IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
+IK_REF(s_kont, off_continuation_size) = \
+   pcb->frame_base - pcb->frame_pointer - wordsize;
+IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+pcb->next_k = s_kont;
+@end example
 
 @c page
 @node objects misc

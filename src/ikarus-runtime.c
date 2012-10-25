@@ -267,13 +267,15 @@ ik_make_pcb (void)
    * when Scheme code  execution uses the heap crossing  the "red line":
    * at the first subsequent function  call, the current Scheme stack is
    * stored away  in a Scheme continuation  and a new memory  segment is
-   * allocated  and installed  as  Scheme stack.   See  for example  the
-   * "ik_stack_overflow()" function.
+   * allocated  and  installed as  Scheme  stack;  see for  example  the
+   * "ik_stack_overflow()"  function.   When  the function  return:  the
+   * stored continuation  is reinstated  and execution continues  on the
+   * old stack.
    *
    * The first stack frame starts from the end of the stack:
    *
-   *    stack_base               frame_pointer  frame_base
-   *         v                         v           v
+   *    stack_base                   frame_pointer = frame_base
+   *         v                                     v
    *  lo mem |-------------------------+-----------| hi mem
    *                       Scheme stack
    *
@@ -285,6 +287,10 @@ ik_make_pcb (void)
    *  lo mem |-------------+-----------+-----------| hi mem
    *                       Scheme stack
    *
+   * Notice how "pcb->frame_base" references a  word that is one-off the
+   * end of the stack segment; so the first word in the stack is:
+   *
+   *    pcb->frame_base - wordsize
    */
   {
     pcb->stack_base    = ik_mmap(IK_STAKSIZE);
