@@ -113,8 +113,8 @@ set_segment_type (ikptr base, ik_ulong size, unsigned type, ikpcb* pcb)
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  unsigned* p = pcb->segment_vector + IK_PAGE_INDEX(base);
-  unsigned* q = p                   + IK_PAGE_INDEX(size);
+  unsigned * p = pcb->segment_vector + IK_PAGE_INDEX(base);
+  unsigned * q = p                   + IK_PAGE_INDEX(size);
   for (; p < q; ++p)
     *p = type;
 }
@@ -231,7 +231,7 @@ ik_free (void* x, int size)
 ikpcb*
 ik_make_pcb (void)
 {
-  ikpcb* pcb = ik_malloc(sizeof(ikpcb));
+  ikpcb * pcb = ik_malloc(sizeof(ikpcb));
   bzero(pcb, sizeof(ikpcb));
 
   /* The  Scheme heap  grows from  low memory  addresses to  high memory
@@ -262,7 +262,9 @@ ik_make_pcb (void)
    *         |.....................................| stack size
    *
    * when Scheme code  execution uses the heap crossing  the "red line":
-   * the stack must be enlarged.
+   * at the first subsequent function  call, the current Scheme stack is
+   * stored away  in a Scheme continuation  and a new memory  segment is
+   * allocated and installed as Scheme stack.
    *
    * The first stack frame starts from the end of the stack:
    *
@@ -305,13 +307,13 @@ ik_make_pcb (void)
    *
    * In the PCB:
    *
-   * cached_pages_base
+   * cached_pages_base -
    *    Is a pointer to the first byte in the array.
    *
-   * cached_pages_size
+   * cached_pages_size -
    *    Is the number of bytes allocated to the array.
    *
-   * uncached_pages
+   * uncached_pages -
    *    Is a pointer to the first free "ikpage" struct.
    */
   {
@@ -329,9 +331,95 @@ ik_make_pcb (void)
     pcb->uncached_pages = prev;
   }
 
-  { /* compute extent of heap and stack */
-    ikptr lo_mem;
-    ikptr hi_mem;
+  /* Allocate and initialise the dirty vector and the segment vector.
+   *
+   * We forsee two possible scenarios:
+   *
+   *       Scheme heap              Scheme stack
+   *    |--------------+----------+-------------| interesting memory
+   *  begin              (unused?)             end
+   *
+   *      Scheme stack              Scheme heap
+   *    |--------------+----------+-------------| interesting memory
+   *  begin              (unused?)             end
+   *
+   * We compute two addresses: "lo_mem"  which is guaranteed to be below
+   * "begin"; "hi_mem" which is guaranteed to be above "end".
+   *
+   * The dirty vector
+   * ----------------
+   *
+   * The "dirty vector" is an array of "unsigned" integers, one for each
+   * memory page  allocated by  Vicare; given a  memory address  used by
+   * Vicare, it  is possible to  compute the index of  the corresponding
+   * slot  in the  dirty vector.   Each integer  represents the  type of
+   * usage Vicare makes  of the page; some of the  types (defined in the
+   * internal header file) are:
+   *
+   *   0            -	Unused memory.
+   *   mainheap_mt  -	Scheme heap memory.
+   *   mainstack_mt -	Scheme stack memory.
+   *
+   * Indexes in  the dirty vector  are *not* zero-based.  The  fields in
+   * the PCB are:
+   *
+   *   dirty_vector_base -
+   *      Pointer to  the first byte  of memory allocated for  the dirty
+   *      vector.
+   *
+   *   dirty_vector -
+   *      Pointer to  a memory  address that  can be  used to  index the
+   *      slots  in the  dirty vector,  with indexes  computed from  the
+   *      actual memory addresses used by Vicare.
+   *
+   * it's like this:
+   *
+   *                                          slots
+   *                                |....................|
+   *   dirty_vector -> |............|--|--|--|--|--|--|--|
+   *                                ^
+   *                        dirty_vector_base
+   *
+   * the first  slot is *not* "dirty_vector[0]",  rather some expression
+   * like "dirty_vector[734]", where  734 is the value  computed here in
+   * "lo_seg".
+   *
+   * The segment vector
+   * ------------------
+   *
+   * The "segment  vector" is an  array of "unsigned" integers,  one for
+   * each memory page  allocated by Vicare; given a  memory address used
+   * by Vicare, it is possible to compute the index of the corresponding
+   * slot in the segment vector.
+   *
+   * Indexes in the segment vector  are *not* zero-based.  The fields in
+   * the PCB are:
+   *
+   *   segment_vector_base -
+   *      Pointer to the first byte  of memory allocated for the segment
+   *      vector.
+   *
+   *   segment_vector -
+   *      Pointer to  a memory  address that  can be  used to  index the
+   *      slots in  the segment vector,  with indexes computed  from the
+   *      actual memory addresses used by Vicare.
+   *
+   * it's like this:
+   *
+   *                                          slots
+   *                                |....................|
+   *   segment_vector -> |..........|--|--|--|--|--|--|--|
+   *                                ^
+   *                        segment_vector_base
+   *
+   * the first slot is *not* "segment_vector[0]", rather some expression
+   * like "segment_vector[734]", where 734 is the value computed here in
+   * "lo_seg".
+   *
+   */
+  {
+    ikptr	lo_mem, hi_mem;
+    ik_ulong	lo_seg,	hi_seg, vec_size;
     if (pcb->heap_base < pcb->stack_base) {
       lo_mem = pcb->heap_base - IK_PAGESIZE;
       hi_mem = pcb->stack_base + pcb->stack_size + IK_PAGESIZE;
@@ -339,25 +427,46 @@ ik_make_pcb (void)
       lo_mem = pcb->stack_base - IK_PAGESIZE;
       hi_mem = pcb->heap_base + pcb->heap_size + IK_PAGESIZE;
     }
-
-    ik_ulong lo_seg   = SEGMENT_INDEX(lo_mem);
-    ik_ulong hi_seg   = SEGMENT_INDEX(hi_mem+SEGMENT_SIZE-1);
-    ik_ulong vec_size = (hi_seg - lo_seg) * IK_PAGESIZE;
-    ikptr    dvec     = ik_mmap(vec_size);
-    bzero((char*)(long)dvec, vec_size);
-    pcb->dirty_vector_base = (unsigned*)(long) dvec;
-    pcb->dirty_vector = (dvec - lo_seg * IK_PAGESIZE);
-    ikptr svec = ik_mmap(vec_size);
-    bzero((char*)(long)svec, vec_size);
-    pcb->segment_vector_base = (unsigned*)(long)svec;
-    pcb->segment_vector = (unsigned*)(long)(svec - lo_seg * IK_PAGESIZE);
+    lo_seg   = SEGMENT_INDEX(lo_mem);
+    hi_seg   = SEGMENT_INDEX(hi_mem+SEGMENT_SIZE-1);
+    vec_size = (hi_seg - lo_seg) * IK_PAGESIZE;
+    {
+      ikptr	dvec = ik_mmap(vec_size);
+      bzero((char*)(long)dvec, vec_size);
+      pcb->dirty_vector_base   = (unsigned*)(long)dvec;
+      pcb->dirty_vector        = (dvec - lo_seg * IK_PAGESIZE);
+    }
+    {
+      ikptr	svec = ik_mmap(vec_size);
+      bzero((char*)(long)svec, vec_size);
+      pcb->segment_vector_base = (unsigned*)(long)svec;
+      pcb->segment_vector      = (unsigned*)(long)(svec - lo_seg * IK_PAGESIZE);
+    }
     pcb->memory_base = (ikptr)(lo_seg * SEGMENT_SIZE);
-    pcb->memory_end = (ikptr)(hi_seg * SEGMENT_SIZE);
+    pcb->memory_end  = (ikptr)(hi_seg * SEGMENT_SIZE);
     set_segment_type(pcb->heap_base,  pcb->heap_size,  mainheap_mt,  pcb);
     set_segment_type(pcb->stack_base, pcb->stack_size, mainstack_mt, pcb);
+#if 1
+    fprintf(stderr, "\n*** Vicare debug:\n");
+    fprintf(stderr, "*  pcb->heap_base  = #x%lX\n", pcb->heap_base);
+    fprintf(stderr, "*  pcb->heap_size  = %lu\n", pcb->heap_size);
+    fprintf(stderr, "*  pcb->stack_base = #x%lX\n", pcb->stack_base);
+    fprintf(stderr, "*  pcb->stack_size = %lu\n", pcb->stack_size);
+    fprintf(stderr, "*  lo_mem = #x%lX, hi_mem = #x%lX\n", lo_mem, hi_mem);
+    fprintf(stderr, "*  lo_seg = %lu, hi_seg = %lu\n", lo_seg, hi_seg);
+    fprintf(stderr, "*  vec_size = %lu bytes, %lu unsigned ints\n",
+	    vec_size, vec_size/sizeof(unsigned));
+    fprintf(stderr, "*  memory_base = #x%lX\n", pcb->memory_base);
+    fprintf(stderr, "*  memory_end  = #x%lX\n", pcb->memory_end);
+    fprintf(stderr, "*  first dirty   slot: dirty_vector[%lu]\n",
+	    ((long)pcb->dirty_vector_base   - (long)pcb->dirty_vector)/IK_PAGESIZE);
+    fprintf(stderr, "*  first segment slot: segment_vector[%lu]\n",
+	    ((long)pcb->segment_vector_base - (long)pcb->segment_vector)/IK_PAGESIZE);
+    fprintf(stderr, "\n");
+#endif
   }
 
-  /* Initialize  base  structure  type  descriptor.  This  is  the  type
+  /* Initialize base structure type descriptor  (STD).  This is the type
      descriptor of all the struct type descriptors; it describes itself.
      See   the  Texinfo   documentation  node   "objects  structs"   for
      details. */
@@ -442,7 +551,7 @@ ik_safe_alloc (ikpcb * pcb, ik_ulong size)
   end_ptr	= pcb->heap_base + pcb->heap_size;
   new_alloc_ptr	= alloc_ptr + size;
   if (new_alloc_ptr < end_ptr) {
-    /* There  is room  in the  current heap  block: update  the  pcb and
+    /* There is  room in the  current heap  segment: update the  PCB and
        return the offset. */
     pcb->allocation_pointer = new_alloc_ptr;
   } else {
@@ -565,29 +674,42 @@ ik_stack_overflow (ikpcb* pcb)
 #ifdef VICARE_DEBUGGING
   ik_debug_message("entered ik_stack_overflow pcb=0x%016lx", (long)pcb);
 #endif
+  /* Mark the old Scheme stack segment as "data". */
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
-  {
-    ikptr	frame_base = pcb->frame_base;;
-    underflow_handler = IK_REF(frame_base, -wordsize);
-  }
+  underflow_handler = IK_REF(pcb->frame_base, -wordsize);
 #ifdef VICARE_DEBUGGING
-  ik_debug_message("underflow_handler = 0x%08x", (int)underflow_handler);
+  ik_debug_message("underflow_handler = 0x%08x", (long)underflow_handler);
 #endif
-  { /* capture continuation and set it as next_k */
+  { /* Save the whole  Scheme stack into a continuation and  store it in
+       the PCB as "next_k". */
     ikptr	s_kont;
     s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
-    IK_REF(s_kont, -vector_tag)           = continuation_tag;
+    IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
     IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
     IK_REF(s_kont, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
   }
-  pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STAKSIZE, mainstack_mt, pcb);
-  pcb->stack_size    = IK_STAKSIZE;
-  pcb->frame_base    = pcb->stack_base + pcb->stack_size;
-  pcb->frame_pointer = pcb->frame_base - wordsize;
-  pcb->frame_redline = pcb->stack_base + 2 * 4096;
-  IK_REF(pcb->frame_pointer, 0) = underflow_handler;
+  { /* Allocate a  new memory  segment to  be used  as Scheme  stack and
+     * initialise the PCB as follows:
+     *
+     *    stack_base                 frame_pointer   frame_base
+     *         v                                 v   v
+     *  lo mem |---------------------------------+---| hi mem
+     *                       Scheme stack        |...| underflow_handler
+     *
+     *         |.....................................|
+     *                        stack_size
+     */
+    pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STAKSIZE, mainstack_mt, pcb);
+    pcb->stack_size    = IK_STAKSIZE;
+    pcb->frame_base    = pcb->stack_base + pcb->stack_size;
+    pcb->frame_pointer = pcb->frame_base - wordsize;
+    pcb->frame_redline = pcb->stack_base + 2 * 4096;
+    /* Store  the  underflow handler  in  the  last  word of  the  Stack
+       segment. */
+    IK_REF(pcb->frame_pointer, 0) = underflow_handler;
+  }
   return;
 }
 

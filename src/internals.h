@@ -291,6 +291,8 @@ typedef struct ik_ptr_page {
   ikptr		ptr[IK_PTR_PAGE_SIZE];
 } ik_ptr_page;
 
+/* For  more  documentation  on  the PCB  structure:  see  the  function
+   "ik_make_pcb()". */
 typedef struct ikpcb {
   /* The  first locations  may	be  accessed by	 some  compiled code  to
      perform overflow/underflow ops. */
@@ -340,8 +342,8 @@ typedef struct ikpcb {
   ik_uint *		segment_vector;
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
-  /* Pointer to and number of  bytes of the current heap memory segment.
-     New objects are allocated here. */
+  /* Pointer to  and number of  bytes of  the current heap  memory.  New
+     objects are allocated here. */
   ikptr			heap_base;
   ik_ulong		heap_size;
   /* Pointer to first node in  linked list of allocated memory segments.
@@ -353,8 +355,10 @@ typedef struct ikpcb {
   ikpage *		cached_pages;
   /* Linked list of cached ikpages so that we don't malloc/free. */
   ikpage *		uncached_pages;
+  /* Pointer to and size of the cached pages array. */
   ikptr			cached_pages_base;
   int			cached_pages_size;
+  /* Pointer to and number of bytes of the current stack memory. */
   ikptr			stack_base;
   ik_ulong		stack_size;
   /* The hash table holding interned symbols. */
