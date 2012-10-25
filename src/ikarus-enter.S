@@ -14,18 +14,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 .text
-.globl ik_asm_enter
+.globl  ik_asm_enter
 .globl _ik_asm_enter
-.globl ik_foreign_call
+.globl  ik_foreign_call
 .globl _ik_foreign_call
-.globl ik_asm_reenter
+.globl  ik_asm_reenter
 .globl _ik_asm_reenter
 
 
-#if __x86_64__
+
+## ------------------------------------------------------------
+## 64-bit code.
+## ------------------------------------------------------------
 
-####################################################################
-# 64-bit
+#if __x86_64__
 
 .align 8
 ik_asm_enter:
@@ -91,6 +93,7 @@ L_multivalue_underflow:
   add $8, %rsp
   jmp L_do_underflow
 
+## ------------------------------------------------------------
 
 .align 8
 ik_asm_reenter:
@@ -123,13 +126,17 @@ _ik_asm_reenter:
   movq %rsp, 48(%rsi)    # save esp in pcb->system_stack
   movq %rbx, %rsp        # load scheme stack from rbx
   cmpq $-8, %rax
-  jne L_multi_reentry
+  jne L_multi_value_reentry
+
+L_single_value_reentry:
   movq -8(%rsp), %rax
   ret
-L_multi_reentry:
+
+L_multi_value_reentry:
   movq 0(%rsp), %rbx
   jmp *-18(%rbx)
 
+## ------------------------------------------------------------
 
 .align 8
 ik_foreign_call:
@@ -198,10 +205,12 @@ L_back:
   movq 0(%rsi), %rbp     # get allocation pointer from 0(pcb)
   ret                    # return to scheme
 
-#else
+
+## ------------------------------------------------------------
+## 32-bit code.
+## ------------------------------------------------------------
 
-####################################################################
-# 32-bit
+#else
 
 .align 8
 ik_asm_enter:
@@ -278,32 +287,67 @@ L_multivalue_underflow:
   addl $4, %esp
   jmp L_do_underflow
 
+## ------------------------------------------------------------
 
 .align 8
 ik_asm_reenter:
 _ik_asm_reenter:
-  # argc is at 12(%esp)
-  # scheme stack is third arg   8(%esp)
-  # pcb is the first arg        4(%esp)
-  # return point is at          0(%esp)
+  # Called by the C function "ik_exec_code()" to reenter Scheme code
+  # execution at a previously saved continuation.  When we enter here:
+  # the Scheme arguments are already on the Scheme stack.  The C
+  # arguments are on the C stack:
+  #
+  #   argument 3: 12(%esp) = "ikptr" fixnum being the negate number
+  #                          of Scheme arguments
+  #   argument 2:  8(%esp) = raw memory pointer referencing the
+  #	                     previously saved Scheme stack
+  #   argument 1:  4(%esp) = raw memory pointer referencing the
+  #                          PCB C language structure
+  #
+  # The return address is at: 0(%esp).
+  #
+
+  # Make %eax hold a fixnum representing the negated number of args.
   movl 12(%esp), %eax
+
+  # Make %ebx reference the Scheme stack.
   movl  8(%esp), %ebx
+
+  # Preserve registers not preserved by the C call.
   movl %esi, -4(%esp)    #  preserve
   movl %ebp, -8(%esp)    #  preserve
   movl %edi, -12(%esp)   #  preserve
+
+  # Make %esi reference the PCB.
   movl 4(%esp), %esi
-  movl 0(%esi), %ebp     # allocation pointer is at 0(pcb)
+
+  # Make %ebp reference the alloc pointer "pcb->allocation_pointer".
+  movl 0(%esi), %ebp
+
   subl $16, %esp         # 24 for alignment
-  movl %esp, 24(%esi)    # save esp in pcb->system_stack
-  movl %ebx, %esp        # load scheme stack from second arg
+
+  # Save the C language stack in "pcb->system_stack".
+  movl %esp, 24(%esi)
+
+  # Make %esp reference the Scheme stack.
+  movl %ebx, %esp
+
+  # The machine word -4 is the fixnum -1, which represents
+  # a single argument.
   cmpl $-4, %eax
-  jne L_multi_reentry
+  jne L_multi_value_reentry
+
+L_single_value_reentry:
+  # Move the return value in %eax.
   movl -4(%esp), %eax
+  # Return to the Scheme continuation.
   ret
-L_multi_reentry:
+
+L_multi_value_reentry:
   movl 0(%esp), %ebx
   jmp *-9(%ebx)
 
+## ------------------------------------------------------------
 
 .align 8
 ik_foreign_call:
