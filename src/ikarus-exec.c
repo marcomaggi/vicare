@@ -21,12 +21,12 @@
 #undef DEBUG_EXEC
 
 ikptr
-ik_exec_code (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp)
+ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
 {
-  ikptr argc   = ik_asm_enter(pcb, code_ptr+off_code_data, argcount, cp);
-  ikptr next_k = pcb->next_k;
-  while (next_k) {
-    ikcont* k = (ikcont*)(long)(next_k - vector_tag);
+  ikptr		argc   = ik_asm_enter(pcb, code_ptr+off_code_data, s_argcount, s_closure);
+  ikptr		s_next_k = pcb->next_k;
+  while (s_next_k) {
+    ikcont * k = (ikcont*)(long)(s_next_k - vector_tag);
     if (k->tag == system_continuation_tag) {
       break;
     }
@@ -62,8 +62,8 @@ ik_exec_code (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp)
 	    (char*)(long)fbase + argc,
 	    -argc);
     memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
-    argc = ik_asm_reenter(pcb, new_fbase, argc);
-    next_k =  pcb->next_k;
+    argc     = ik_asm_reenter(pcb, new_fbase, argc);
+    s_next_k =  pcb->next_k;
   }
   ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
   return rv;

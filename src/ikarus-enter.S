@@ -1,19 +1,17 @@
-#  Ikarus Scheme -- A compiler for R6RS Scheme.
-#  Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-#  
-#  This program is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License version 3 as
-#  published by the Free Software Foundation.
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+# Ikarus Scheme -- A compiler for R6RS Scheme.
+# Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 .text
 .globl ik_asm_enter
@@ -36,7 +34,7 @@ _ik_asm_enter:
 #     %rdi, %rsi, %rdx, %rcx, %r8 and %r9
 # return value registers are %rax and %rdi
 # callee-save registers:
-#     %rbp, %rbx, %r12, r13, r14, %r15 are callee-save 
+#     %rbp, %rbx, %r12, r13, r14, %r15 are callee-save
 
 
   # First, save all callee-save registers
@@ -76,8 +74,8 @@ _ik_underflow_handler:
   mov $-8, %rax         # set rvcount = 1
 L_do_underflow:
   mov %rsp, 16(%rsi)    # store scheme stack in pcb->frame_pointer
-  mov %rbp, 0(%rsi)     # store allocation pointer
-  mov 48(%rsi), %rsp    # restore system stack
+  mov %rbp, 0(%rsi)     # store allocation pointer pcb->allocation_pointer
+  mov 48(%rsi), %rsp    # restore system stack from pcb->system_stack
   add $64, %rsp         # 64 for alignment
 
   # restore callee-save registers
@@ -101,7 +99,7 @@ _ik_asm_reenter:
   #     %rdi, %rsi, %rdx, %rcx, %r8 and %r9
   # return value registers are %rax and %rdi
   # callee-save registers:
-  #     %rbp, %rbx, %r12, r13, r14, %r15 are callee-save 
+  #     %rbp, %rbx, %r12, r13, r14, %r15 are callee-save
 
   # argc is the third arg       12(%esp)   %rdx
   # scheme stack is second arg  8(%esp)    %rsi
@@ -200,7 +198,7 @@ L_back:
   movq 0(%rsi), %rbp     # get allocation pointer from 0(pcb)
   ret                    # return to scheme
 
-#else  
+#else
 
 ####################################################################
 # 32-bit
@@ -208,22 +206,48 @@ L_back:
 .align 8
 ik_asm_enter:
 _ik_asm_enter:
-  # closure pointer is the 4th arg, 16(%esp)
-  # argcount is the third arg, or 12(%esp)
-  # code is the second arg  8(%esp)
-  # pcb is the first arg    4(%esp)
-  # return point is at      0(%esp)
+  # Called by the C function "ik_exec_code()" to enter Scheme code
+  # execution.  When we enter here: the Scheme arguments are already
+  # on the Scheme stack.  The C arguments are on the C stack:
+  #
+  #   argument 4: 16(%esp) = "ikptr" value referencing the closure
+  #   argument 3: 12(%esp) = "ikptr" fixnum being the number of
+  #                          Scheme arguments
+  #   argument 2:  8(%esp) = raw memory pointer referencing the
+  #	                     entry point in the closure's code
+  #                          object
+  #   argument 1:  4(%esp) = raw memory pointer referencing the
+  #                          PCB C language structure
+  #
+  # The return address is at: 0(%esp).
+  #
+  # To call the Scheme closure we:
+  #
+  # 1. Store the fixnum representing the number of arguments in %eax.
+  #
+  # 2. Store a pointer to closure object in %edi, so we can use it
+  #    to access the free variables.
+  #
+  # 3. Store a pointer to the PCB structure in %esi.
+  #
+  # 4. Store the allocation pointer "pcb->allocation_pointer" in %ebp.
+  #
+  # 5. Save the C stack pointer from %esp to "pcb->system_stack".
+  #
+  # 6. Store the pointer to the Scheme stack "pcb->frame_pointer"
+  #    in %esp.
+  #
   movl 12(%esp), %eax    # arg count
   movl 16(%esp), %edi    # closure pointer
-  movl %esi, -4(%esp)    #  preserve
-  movl %ebp, -8(%esp)    #  preserve
-  movl %edi, -12(%esp)   #  preserve
-  movl 4(%esp), %esi   
+  movl %esi, -4(%esp)    # preserve
+  movl %ebp, -8(%esp)    # preserve
+  movl %edi, -12(%esp)   # preserve
+  movl 4(%esp), %esi     # store the pointer to PCB into %esi
   movl 0(%esi), %ebp     # allocation pointer is at 0(pcb)
-  movl %esp, %ecx
+  movl %esp, %ecx        # save the C stack
   subl $16, %esp         # 16 for alignment
-  movl %esp, 24(%esi)    # save esp in pcb->system_stack
-  movl 8(%esi), %esp     # load scheme stack from pcb->frame_pinter
+  movl %esp, 24(%esi)    # save esp in "pcb->system_stack"
+  movl 8(%esi), %esp     # load scheme stack from "pcb->frame_pointer"
   jmp L_call
   .long 4
   .long 0
@@ -231,20 +255,25 @@ _ik_asm_enter:
   .byte 0
   .byte 0
 L_call:
-  call *8(%ecx)         # goooooooo
-  # now we're back
+  call *8(%ecx)         # call the binary code in the code object
+  # Here we are back from the Scheme code, but there may be a
+  # continuation waiting to be entered in "pcb->next_k".
+  #
+  # The register %esi (PCB), %edi (closure), %ebp (alloc pointer),
+  # %esp (stack pointer) still have the meaning we gave them before.
 ik_underflow_handler:
   movl %eax, -8(%esp)   # store the return value
   movl $-4, %eax        # set rvcount = 1
 L_do_underflow:
-  movl %esp, 8(%esi)    # store scheme stack in pcb->frame_pointer
-  movl %ebp, 0(%esi)    # store allocation pointer
-  movl 24(%esi), %esp   # restore system stack
+  movl %esp, 8(%esi)    # store scheme stack in "pcb->frame_pointer"
+  movl %ebp, 0(%esi)    # store allocation pointer in "pcb->allocation_pointer"
+  movl 24(%esi), %esp   # restore system stack from "pcb->system_stack"
   addl $16, %esp        # 24 for alignment (>= 16)
   movl -4(%esp), %esi   # restore callee-save registers
   movl -8(%esp), %ebp   #
-  movl -12(%esp), %edi  # 
-  ret                   # back to C, which handled the underflow
+  movl -12(%esp), %edi  #
+  ret                   # back to the C function "ik_exec_code()", which
+                        # handled the underflow
 L_multivalue_underflow:
   addl $4, %esp
   jmp L_do_underflow
@@ -262,7 +291,7 @@ _ik_asm_reenter:
   movl %esi, -4(%esp)    #  preserve
   movl %ebp, -8(%esp)    #  preserve
   movl %edi, -12(%esp)   #  preserve
-  movl 4(%esp), %esi   
+  movl 4(%esp), %esi
   movl 0(%esi), %ebp     # allocation pointer is at 0(pcb)
   subl $16, %esp         # 24 for alignment
   movl %esp, 24(%esi)    # save esp in pcb->system_stack
@@ -323,5 +352,9 @@ L_set:                   # (label Lset)
   movl 0(%esi), %ebp     # (movl (pcb-ref 'allocation-pointer) apr)
   ret                    # (ret)))
 
-#endif 
+#endif
 
+### end of file
+# Local Variables:
+# comment-start: "#"
+# End:

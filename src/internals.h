@@ -394,7 +394,13 @@ typedef struct ikpcb {
 
 } ikpcb;
 
-/* Node in a linked list of continuations. */
+/* This C language data structure  is used to access Scheme continuation
+   objects: given an "ikptr" reference to continuation, we subtract from
+   it "vector_tag"  and the result  is an untagged pointer  to "ikcont".
+   This  struct is  a useful  helper to  be used  inplace of  the IK_REF
+   getter.
+
+   Every "ikcont" struct is a node in a linked list of continuations. */
 typedef struct ikcont {
   ikptr		tag;
   ikptr		top;
