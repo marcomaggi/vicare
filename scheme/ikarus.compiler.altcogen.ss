@@ -810,42 +810,75 @@
   (define (impose-calling-convention/evaluation-order x)
     (Program x))
 
+  (define locals
+    (make-parameter #f))
+
+  (define-inline (%locals-cons A)
+    (locals (cons A (locals))))
+
+  (define-inline (%locals-cons* A0 A ...)
+    (locals (cons* A0 A ... (locals))))
+
   (module (Program)
 
     (define (Program x)
       (struct-case x
-	((codes code* body)
-	 (make-codes (map Clambda code*) (Main body)))))
+	((codes x.code* x.body)
+	 (make-codes (map Clambda x.code*) (Main x.body)))))
 
     (define (Clambda x)
       (struct-case x
-	((clambda label case* cp free* name)
-	 (make-clambda label (map ClambdaCase case*) cp free* name))))
+	((clambda x.label x.case* x.cp x.free* x.name)
+	 (make-clambda x.label (map ClambdaCase x.case*) x.cp x.free* x.name))))
 
-    (define (ClambdaCase x)
-      (struct-case x
-	((clambda-case info body)
-	 (struct-case info
-	   ((case-info label args proper)
-	    (let-values (((rargs rlocs fargs flocs)
-			  (partition-formals args)))
-	      (set! locals rargs)
-	      (for-each set-var-loc! fargs flocs)
-	      (let ((body (let f ((args rargs) (locs rlocs))
-			    (cond
-			     ((null? args) (Tail body))
-			     (else
-			      (make-seq
-			       (make-set (car args) (car locs))
-			       (f (cdr args) (cdr locs))))))))
-		(make-clambda-case
-		 (make-case-info label (append rlocs flocs) proper)
-		 (make-locals locals body)))))))))
+    (module (ClambdaCase)
+
+      (define (ClambdaCase cas)
+	(struct-case cas
+	  ((clambda-case cas.info cas.body)
+	   (struct-case cas.info
+	     ((case-info cas.info.label cas.info.args cas.info.proper)
+	      (let-values (((rargs rlocs fargs flocs)
+			    (partition-formals cas.info.args)))
+		(parametrise ((locals rargs))
+		  (for-each set-var-loc!
+		    fargs flocs)
+		  (let ((body (let recur ((args rargs)
+					  (locs rlocs))
+				(if (null? args)
+				    (Tail cas.body)
+				  (make-seq (make-set ($car args) ($car locs))
+					    (recur    ($cdr args) ($cdr locs)))))))
+		    (make-clambda-case
+		     (make-case-info cas.info.label (append rlocs flocs) cas.info.proper)
+		     (make-locals (locals) body))))))))))
+
+      (define (partition-formals ls)
+	(let outer-recur ((regs parameter-registers)
+			  (ls   ls))
+	  (cond ((null? regs)
+		 (let ((flocs (let inner-recur ((i  1)
+						(ls ls))
+				(if (null? ls)
+				    '()
+				  (cons (mkfvar i)
+					(inner-recur ($fxadd1 i) ($cdr ls)))))))
+		   (values '() '() ls flocs)))
+		((null? ls)
+		 (values '() '() '() '()))
+		(else
+		 (let-values (((rargs rlocs fargs flocs)
+			       (outer-recur ($cdr regs) ($cdr ls))))
+		   (values (cons ($car ls)   rargs)
+			   (cons ($car regs) rlocs)
+			   fargs flocs))))))
+
+      #| end of module: ClambdaCase |# )
 
     (define (Main x)
-      (set! locals '())
-      (let ((x (Tail x)))
-	(make-locals locals x)))
+      (parametrise ((locals '()))
+	(let ((x (Tail x)))
+	  (make-locals (locals) x))))
 
     #| end of module: Program |# )
 
@@ -897,7 +930,7 @@
     (cond
      ((null? lhs*) body)
      (else
-      (set! locals (cons (car lhs*) locals))
+      (%locals-cons (car lhs*))
       (make-seq
        (V (car lhs*) (car rhs*))
        (do-bind (cdr lhs*) (cdr rhs*) body)))))
@@ -1222,7 +1255,7 @@
 	  (f (cdr args) (cdr locs) targs tlocs))
 	 (else
 	  (let ((t (unique-var 'tmp)))
-	    (set! locals (cons t locals))
+	    (%locals-cons t)
 	    (make-seq
 	     (V t (car args))
 	     (f (cdr args) (cdr locs)
@@ -1240,7 +1273,7 @@
                 (handler (car rands))
                 (proc (cadr rands))
                 (k (caddr rands)))
-            (set! locals (cons* t0 t1 t2 locals))
+            (%locals-cons* t0 t1 t2)
             (multiple-forms-sequence
 	     (V t0 handler)
 	     (V t1 k)
@@ -1284,26 +1317,6 @@
 		  (f (fxadd1 i) (cdr args)))))))
        (else
 	(cons (car regs) (f (cdr regs) (cdr args)))))))
-
-  (define locals '())
-  (define (partition-formals ls)
-    (let f ((regs parameter-registers) (ls ls))
-      (cond
-       ((null? regs)
-	(let ((flocs
-	       (let f ((i 1) (ls ls))
-		 (cond
-		  ((null? ls) '())
-		  (else (cons (mkfvar i) (f (fxadd1 i) (cdr ls))))))))
-	  (values '() '() ls flocs)))
-       ((null? ls)
-	(values '() '() '() '()))
-       (else
-	(let-values (((rargs rlocs fargs flocs)
-		      (f (cdr regs) (cdr ls))))
-	  (values (cons (car ls) rargs)
-		  (cons (car regs) rlocs)
-		  fargs flocs))))))
 
   #| end of module: impose-calling-convention/evaluation-order |# )
 
