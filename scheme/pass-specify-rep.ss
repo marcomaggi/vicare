@@ -105,7 +105,9 @@
     (Program x))
 
   (module (Program)
-
+    ;;The purpose  of this module  is to apply  the function V  to every
+    ;;CASE-LAMBDA body and to the body of the "program".
+    ;;
     (define who 'specify-representation)
 
     (define (Program x)
