@@ -16231,9 +16231,8 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 
 
 In the following definitions: the @var{code} arguments must be code
-objects, the @code{closure} arguments must be closure objects.  The
-following bindings are exported by the @library{ikarus system $codes}
-library.
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
 
 
 @defun code? @var{obj}
@@ -16286,17 +16285,6 @@ range @math{[0, 255]}.
 Store @var{obj} in the annotation field of @var{code}.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@deffn {Primitive Operation} $cpref @var{closure} @var{idx}
-Evaluate to the contents of the word at index @var{idx} (a non--negative
-fixnum) in the array of free variables in the @var{closure} memory
-block.
-
-To know at run time how many free variables are associated to
-@var{closure} we have to inspect the associated code object.
-@end deffn
-
 @c page
 @node syslib closures
 @section Low level closures operations
@@ -16313,6 +16301,16 @@ system $codes} library.
 
 @deffn {Primitive Operation} $closure-code @var{closure}
 Return the code object wrapped by the @var{closure}.
+@end deffn
+
+
+@deffn {Primitive Operation} $cpref @var{closure} @var{idx}
+Evaluate to the contents of the word at index @var{idx} (a non--negative
+fixnum) in the array of free variables in the @var{closure} memory
+block.
+
+To know at run time how many free variables are associated to
+@var{closure} we have to inspect the associated code object.
 @end deffn
 
 @c page
@@ -26992,10 +26990,12 @@ fragmentation.
 @section Closure objects
 
 
-A closure object is a fixed length memory block referenced by machine
-words tagged as closures; each closure object is associated to a code
-object that implements the procedure.  The memory layout of a closure
-object is as follows:
+Closure objects are actual procedures: closure objects are the ones for
+which the @func{procedure?} predicate returns @true{}.  A closure object
+is a fixed length memory block referenced by machine words tagged as
+closures; each closure object is associated to a code object that
+implements the procedure.  The memory layout of a closure object is as
+follows:
 
 @example
 |------------------------|-------------| reference to closure
@@ -27013,44 +27013,80 @@ referencing the first byte in the code object implementing the closure;
 the subsequent words (if any) are slots associated to the free variables
 referenced by the closure's code.
 
-Closure objects are actual procedures: closure objects are the ones for
-which the @func{procedure?} predicate returns @true{}.
+@c ------------------------------------------------------------
 
-To inspect the free variables associated to a closure we can do:
+@subsubheading Inspecting a closure's free variables
+
+
+We can take a look at the free variables referenced by a closure with
+the facilities of the library @library{ikarus system $codes}.  In a
+normal application: we must @strong{not} mess with the internals of
+closure and code objects.
+
+We start by noticing that in the following example: the function
+@func{f} has no ``true'' free variables, because it accesses only global
+variables:
 
 @example
 #!r6rs
 (import (rnrs)
   (ikarus system $codes))
+(define a 123)
+(define (f)
+  a)
+($code-freevars ($closure-code f))      @result{} 0
+@end example
 
+In the following example: the function @func{f} is the only one
+referencing the free variable @code{a}, so such variable is stored
+directly in the closure's slot:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
 (define f
   (let ((a 123))
     (lambda () a)))
-
 ($code-freevars ($closure-code f))      @result{} 1
 ($cpref f 0)                            @result{} 123
 @end example
 
 @noindent
-and also:
+when there are two such variables:
+
+@example
+#!r6rs
+(import (vicare)
+  (ikarus system $codes))
+
+(define f
+  (let ((a 123)
+        (b 456))
+    (lambda ()
+      (list a b))))
+($code-freevars ($closure-code f))      @result{} 2
+($cpref f 0)                            @result{} 456
+($cpref f 1)                            @result{} 123
+@end example
+
+When more than one closure references the same free variable, the
+storage of the variable is inside a Scheme vector and such vector is
+referenced by the slots of the closures:
 
 @example
 #!r6rs
 (import (rnrs)
   (ikarus system $codes))
-
 (define f #f)
 (define g #f)
-
 (let ((a 123))
   (set! f (lambda () a))
   (set! g (lambda (x)
-	    (set! a x)
-	    a)))
-
+            (set! a x)
+            a)))
 ($code-freevars ($closure-code f))      @result{} 1
 ($cpref f 0)                            @result{} #(123)
-
 ($code-freevars ($closure-code g))      @result{} 1
 ($cpref g 0)                            @result{} #(123)
 @end example
