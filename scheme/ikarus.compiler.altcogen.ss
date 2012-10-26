@@ -839,7 +839,7 @@
 	   (struct-case cas.info
 	     ((case-info cas.info.label cas.info.args cas.info.proper)
 	      (let-values (((rargs rlocs fargs flocs)
-			    (partition-formals cas.info.args)))
+			    (%partition-formals parameter-registers cas.info.args)))
 		(parametrise ((locals rargs))
 		  (for-each set-var-loc!
 		    fargs flocs)
@@ -853,7 +853,26 @@
 		     (make-case-info cas.info.label (append rlocs flocs) cas.info.proper)
 		     (make-locals (locals) body))))))))))
 
-      (define (partition-formals ls)
+      (define (%partition-formals regs ls)
+	;;Recursive function.
+	;;
+	(cond ((null? regs)
+	       (let ((flocs (let recur ((i  1)
+					(ls ls))
+			      (if (null? ls)
+				  '()
+				(cons (mkfvar i)
+				      (recur ($fxadd1 i) ($cdr ls)))))))
+		 (values '() '() ls flocs)))
+	      ((null? ls)
+	       (values '() '() '() '()))
+	      (else
+	       (let-values (((rargs rlocs fargs flocs)
+			     (%partition-formals ($cdr regs) ($cdr ls))))
+		 (values (cons ($car ls)   rargs)
+			 (cons ($car regs) rlocs)
+			 fargs flocs)))))
+      #;(define (partition-formals ls)
 	(let outer-recur ((regs parameter-registers)
 			  (ls   ls))
 	  (cond ((null? regs)
