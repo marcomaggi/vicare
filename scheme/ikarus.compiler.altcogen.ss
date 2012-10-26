@@ -1005,105 +1005,117 @@
 ;;; --------------------------------------------------------------------
 
   (define (do-bind lhs* rhs* body)
-    (cond
-     ((null? lhs*) body)
-     (else
-      (%locals-cons (car lhs*))
-      (make-seq
-       (V (car lhs*) (car rhs*))
-       (do-bind (cdr lhs*) (cdr rhs*) body)))))
+    (if (null? lhs*)
+	body
+      (begin
+	(%locals-cons ($car lhs*))
+	(make-seq (V ($car lhs*) ($car rhs*))
+		  (do-bind ($cdr lhs*) ($cdr rhs*) body)))))
 
-  (define (nontail-locations args)
-    (let f ((regs PARAMETER-REGISTERS) (args args))
-      (cond
-       ((null? args) (values '() '() '()))
-       ((null? regs) (values '() '() args))
-       (else
-	(let-values (((r* rl* f*) (f (cdr regs) (cdr args))))
-	  (values (cons (car regs) r*)
-		  (cons (car args) rl*)
-		  f*))))))
-  (define (make-set lhs rhs)
+  (define-inline (make-set lhs rhs)
     (make-asm-instr 'move lhs rhs))
 
   (define (do-bind-frmt* nf* v* ac)
-    (cond
-     ((null? nf*) ac)
-     (else
-      (make-seq
-       (V (car nf*) (car v*))
-       (do-bind-frmt* (cdr nf*) (cdr v*) ac)))))
+    (if (null? nf*)
+	ac
+      (make-seq (V ($car nf*) ($car v*))
+		(do-bind-frmt* ($cdr nf*) ($cdr v*) ac))))
 
-  (define (handle-nontail-call rator rands value-dest call-targ)
-    (let-values (((reg-locs reg-args frm-args)
-                  (nontail-locations (cons rator rands))))
-      (let ((regt* (map (lambda (x) (unique-var 'rt)) reg-args))
-            (frmt* (map (lambda (x) (make-nfv 'unset-conflicts #f #f #f #f))
-		     frm-args)))
-        (let* ((call (make-ntcall call-targ value-dest
-				  (cons* ARGC-REGISTER
-					 pcr esp apr
-					 (append reg-locs frmt*))
-				  #f #f))
-               (body (make-nframe
-		      frmt* #f
-		      (do-bind-frmt*
-		       frmt* frm-args
-		       (do-bind (cdr regt*) (cdr reg-args)
-				;;evaluate cpt last
-				(do-bind (list (car regt*)) (list (car reg-args))
-					 (assign*
-					  reg-locs regt*
-					  (make-seq
-					   (make-set ARGC-REGISTER
-						     (make-constant
-						      (argc-convention (length rands))))
-					   call))))))))
-          (if value-dest
-              (make-seq body (make-set value-dest RETURN-VALUE-REGISTER))
-	    body)))))
+  (module (handle-nontail-call)
 
-  ;;Commented out by Abdulaziz Ghuloum.
-  ;;
-  ;; (define (alloc-check size)
-  ;;   (E (make-conditional ;;; PCB ALLOC-REDLINE
-  ;; 	   (make-primcall '<=
-  ;; 			  (list (make-primcall 'int+ (list apr size))
-  ;; 				(make-primcall 'mref (list pcr (make-constant 4)))))
-  ;; 	   (make-primcall 'nop '())
-  ;; 	 (make-funcall
-  ;;         (make-primcall 'mref
-  ;; 			 (list
-  ;; 			  (make-constant (make-object (primref->symbol 'do-overflow)))
-  ;; 			  (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
-  ;;         (list size)))))
+    (define (handle-nontail-call rator rands value-dest call-targ)
+      (let-values (((reg-locs reg-args frm-args)
+		    (%nontail-locations PARAMETER-REGISTERS (cons rator rands))))
+	(let ((regt* (map (lambda (x)
+			    (unique-var 'rt))
+		       reg-args))
+	      (frmt* (map (lambda (x)
+			    (make-nfv 'unset-conflicts #f #f #f #f))
+		       frm-args)))
+	  (let* ((call (make-ntcall call-targ value-dest
+				    (cons* ARGC-REGISTER pcr esp apr
+					   (append reg-locs frmt*))
+				    #f #f))
+		 (body (make-nframe
+			frmt* #f
+			(do-bind-frmt*
+			 frmt* frm-args
+			 (do-bind (cdr regt*) (cdr reg-args)
+				  ;;evaluate cpt last
+				  (do-bind (list (car regt*)) (list (car reg-args))
+					   (assign*
+					    reg-locs regt*
+					    (make-seq
+					     (make-set ARGC-REGISTER
+						       (make-constant
+							(argc-convention (length rands))))
+					     call))))))))
+	    (if value-dest
+		(make-seq body (make-set value-dest RETURN-VALUE-REGISTER))
+	      body)))))
 
-  (define (alloc-check size)
-    (define (test size)
+    (define (%nontail-locations regs args)
+      (cond ((null? args)
+	     (values '() '() '()))
+	    ((null? regs)
+	     (values '() '() args))
+	    (else
+	     (let-values (((r* rl* f*)
+			   (%nontail-locations ($cdr regs) ($cdr args))))
+	       (values (cons ($car regs) r*)
+		       (cons ($car args) rl*)
+		       f*)))))
+
+    #| end of module: handle-nontail-call |# )
+
+  (module (alloc-check)
+
+    (define (alloc-check size)
+      (E (make-shortcut
+	  (make-conditional ;;; PCB ALLOC-REDLINE
+	      (%test size)
+	      (make-primcall 'nop '())
+	    (make-primcall 'interrupt '()))
+	  (make-funcall
+	   (make-primcall 'mref
+			  (list
+			   (make-constant (make-object (primref->symbol 'do-overflow)))
+			   (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
+	   (list size)))))
+
+    (define (%test size)
       (if (struct-case size
-	    ((constant i) (<= i 4096))
-	    (else #f))
-          (make-primcall '<= (list apr
-			  (make-primcall 'mref
-					 (list pcr (make-constant pcb-allocation-redline)))))
+	    ((constant i)
+	     (<= i 4096))
+	    (else
+	     #f))
+	  (make-primcall '<=
+	    (list apr
+		  (make-primcall 'mref
+		    (list pcr (make-constant pcb-allocation-redline)))))
 	(make-primcall '>=
-		       (list (make-primcall 'int-
-					    (list
-					     (make-primcall 'mref
-							    (list pcr (make-constant pcb-allocation-redline)))
-					     apr))
-			     size))))
-    (E (make-shortcut
-	(make-conditional ;;; PCB ALLOC-REDLINE
-	    (test size)
-	    (make-primcall 'nop '())
-	  (make-primcall 'interrupt '()))
-	(make-funcall
-	 (make-primcall 'mref
-			(list
-			 (make-constant (make-object (primref->symbol 'do-overflow)))
-			 (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
-	 (list size)))))
+	  (list (make-primcall 'int-
+		  (list (make-primcall 'mref
+			  (list pcr (make-constant pcb-allocation-redline)))
+			apr))
+		size))))
+
+    ;;Commented out by Abdulaziz Ghuloum.
+    ;;
+    ;; (define (alloc-check size)
+    ;;   (E (make-conditional ;;; PCB ALLOC-REDLINE
+    ;; 	   (make-primcall '<=
+    ;; 			  (list (make-primcall 'int+ (list apr size))
+    ;; 				(make-primcall 'mref (list pcr (make-constant 4)))))
+    ;; 	   (make-primcall 'nop '())
+    ;; 	 (make-funcall
+    ;;         (make-primcall 'mref
+    ;; 			 (list
+    ;; 			  (make-constant (make-object (primref->symbol 'do-overflow)))
+    ;; 			  (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
+    ;;         (list size)))))
+
+    #| end of module: alloc-check |# )
 
   (define (V d x)
     ;;Generate assembly  instructions to compute  a value from  struct X
@@ -3568,3 +3580,6 @@
 #| end of module: alt-cogen |# )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'make-primcall 'scheme-indent-function 1)
+;; End:
