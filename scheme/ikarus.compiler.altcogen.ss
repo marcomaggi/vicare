@@ -1117,106 +1117,114 @@
 
     #| end of module: alloc-check |# )
 
+;;; --------------------------------------------------------------------
+
   (define (V d x)
     ;;Generate assembly  instructions to compute  a value from  struct X
     ;;and store the result in destination D.
     ;;
     (struct-case x
-      ((constant) (make-set d x))
+      ((constant)
+       (make-set d x))
+
       ((var)
-       (cond
-	((var-loc x) => (lambda (loc) (make-set d loc)))
-	(else (make-set d x))))
+       (cond ((var-loc x)
+	      => (lambda (loc)
+		   (make-set d loc)))
+	     (else
+	      (make-set d x))))
       ((bind lhs* rhs* e)
        (do-bind lhs* rhs* (V d e)))
+
       ((seq e0 e1)
        (make-seq (E e0) (V d e1)))
+
       ((conditional e0 e1 e2)
        (make-conditional (P e0) (V d e1) (V d e2)))
+
       ((primcall op rands)
-       (case op
+       (case-symbols op
          ((alloc)
           (S (car rands)
              (lambda (size)
-               (make-seq
-		(alloc-check size)
-		(S (cadr rands)
-		   (lambda (tag)
-		     (make-seq
-		      (make-seq
-		       (make-set d apr)
-		       (make-asm-instr 'logor d tag))
-		      (make-asm-instr 'int+ apr size))))))))
+               (make-seq (alloc-check size)
+			 (S (cadr rands)
+			    (lambda (tag)
+			      (make-seq (make-seq (make-set d apr)
+						  (make-asm-instr 'logor d tag))
+					(make-asm-instr 'int+ apr size))))))))
+
          ((mref)
-          (S* rands
-              (lambda (rands)
-                (make-set d (make-disp (car rands) (cadr rands))))))
+          (S* rands (lambda (rands)
+		      (make-set d (make-disp (car rands) (cadr rands))))))
+
          ((mref32)
-          (S* rands
-              (lambda (rands)
-                (make-asm-instr 'load32 d
-				(make-disp (car rands) (cadr rands))))))
+          (S* rands (lambda (rands)
+		      (make-asm-instr 'load32 d (make-disp (car rands) (cadr rands))))))
+
          ((bref)
-          (S* rands
-              (lambda (rands)
-                (make-asm-instr 'load8 d
-				(make-disp (car rands) (cadr rands))))))
+          (S* rands (lambda (rands)
+		      (make-asm-instr 'load8 d (make-disp (car rands) (cadr rands))))))
+
          ((logand logxor logor int+ int- int*
                   int-/overflow int+/overflow int*/overflow)
-          (make-seq
-	   (V d (car rands))
-	   (S (cadr rands)
-	      (lambda (s)
-		(make-asm-instr op d s)))))
+          (make-seq (V d (car rands))
+		    (S (cadr rands) (lambda (s)
+				      (make-asm-instr op d s)))))
          ((int-quotient)
-          (S* rands
-              (lambda (rands)
-                (multiple-forms-sequence
-		 (make-set eax (car rands))
-		 (make-asm-instr 'cltd edx eax)
-		 (make-asm-instr 'idiv eax (cadr rands))
-		 (make-set d eax)))))
+          (S* rands (lambda (rands)
+		      (multiple-forms-sequence
+		       (make-set eax (car rands))
+		       (make-asm-instr 'cltd edx eax)
+		       (make-asm-instr 'idiv eax (cadr rands))
+		       (make-set d eax)))))
+
          ((int-remainder)
-          (S* rands
-              (lambda (rands)
-                (multiple-forms-sequence
-		 (make-set eax (car rands))
-		 (make-asm-instr 'cltd edx eax)
-		 (make-asm-instr 'idiv edx (cadr rands))
-		 (make-set d edx)))))
+          (S* rands (lambda (rands)
+		      (multiple-forms-sequence
+		       (make-set eax (car rands))
+		       (make-asm-instr 'cltd edx eax)
+		       (make-asm-instr 'idiv edx (cadr rands))
+		       (make-set d edx)))))
+
          ((sll sra srl sll/overflow)
-          (let ((a (car rands)) (b (cadr rands)))
-            (cond
-	     ((constant? b)
-	      (make-seq
-	       (V d a)
-	       (make-asm-instr op d b)))
-	     (else
-	      (S b
-		 (lambda (b)
-		   (multiple-forms-sequence
-		    (V d a)
-		    (make-set ecx b)
-		    (make-asm-instr op d ecx))))))))
-         (else (error who "invalid value op" op))))
+          (let ((a (car rands))
+		(b (cadr rands)))
+            (if (constant? b)
+		(make-seq (V d a)
+			  (make-asm-instr op d b))
+	      (S b (lambda (b)
+		     (multiple-forms-sequence
+		      (V d a)
+		      (make-set ecx b)
+		      (make-asm-instr op d ecx)))))))
+
+         (else
+	  (error who "invalid value op" op))))
+
       ((funcall rator rands)
        (handle-nontail-call rator rands d #f))
+
       ((jmpcall label rator rands)
        (handle-nontail-call rator rands d label))
+
       ((forcall op rands)
-       (handle-nontail-call
-	(make-constant (make-foreign-label op))
-	rands d op))
+       (handle-nontail-call (make-constant (make-foreign-label op))
+			    rands d op))
+
       ((shortcut body handler)
-       (make-shortcut
-	(V d body)
-	(V d handler)))
+       (make-shortcut (V d body)
+		      (V d handler)))
+
       ((known expr)
        (V d expr))
+
       (else
        (if (symbol? x)
            (make-set d x)
 	 (error who "invalid value" (unparse x))))))
+
+;;; --------------------------------------------------------------------
 
   (define (assign* lhs* rhs* ac)
     (cond
