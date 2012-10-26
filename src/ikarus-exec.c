@@ -18,7 +18,7 @@
 
 #include "internals.h"
 
-#define DEBUG_EXEC	1
+#define DEBUG_EXEC	0
 
 ikptr
 ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
