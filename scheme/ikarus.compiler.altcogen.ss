@@ -810,6 +810,8 @@
   (define (impose-calling-convention/evaluation-order x)
     (Program x))
 
+;;; --------------------------------------------------------------------
+
   (define locals
     (make-parameter #f))
 
@@ -818,6 +820,8 @@
 
   (define-inline (%locals-cons* A0 A ...)
     (locals (cons* A0 A ... (locals))))
+
+;;; --------------------------------------------------------------------
 
   (module (Program)
 
@@ -851,7 +855,7 @@
 					  (locs rlocs))
 				(if (null? args)
 				    (Tail cas.body)
-				  (make-seq (make-set ($car args) ($car locs))
+				  (make-seq (%make-set ($car args) ($car locs))
 					    (recur    ($cdr args) ($cdr locs)))))))
 		    (make-clambda-case
 		     (make-case-info cas.info.label (append rlocs flocs) cas.info.proper)
@@ -930,19 +934,18 @@
 		 (V t0 handler)
 		 (V t1 k)
 		 (V t2 proc)
-		 (make-set (mkfvar 1) t0)
-		 (make-set (mkfvar 2) t1)
-		 (make-set cpr t2)
-		 (make-set ARGC-REGISTER (make-constant (argc-convention 1)))
+		 (%make-set (mkfvar 1) t0)
+		 (%make-set (mkfvar 2) t1)
+		 (%make-set cpr t2)
+		 (%make-set ARGC-REGISTER (make-constant (argc-convention 1)))
 		 (make-asm-instr 'int- fpr (make-constant wordsize))
 		 (make-primcall 'indirect-jump
-		   (list ARGC-REGISTER cpr pcr esp apr
-			 (mkfvar 1) (mkfvar 2))))))
+		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	     (else
 	      (VT x))))
 
 	  ((bind lhs* rhs* e)
-	   (do-bind lhs* rhs* (Tail e)))
+	   (%do-bind lhs* rhs* (Tail e)))
 
 	  ((seq e0 e1)
 	   (make-seq (E e0) (Tail e1)))
@@ -970,7 +973,7 @@
 
       (define (VT x)
 	(S x (lambda (x)
-	       (make-seq (make-set RETURN-VALUE-REGISTER x)
+	       (make-seq (%make-set RETURN-VALUE-REGISTER x)
 			 (make-primcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
 
       #| end of module: Tail |# )
@@ -990,7 +993,7 @@
   (define (S x kont)
     (struct-case x
       ((bind lhs* rhs* body)
-       (do-bind lhs* rhs* (S body kont)))
+       (%do-bind lhs* rhs* (S body kont)))
       ((seq e0 e1)
        (make-seq (E e0) (S e1 kont)))
       ((known expr)
@@ -1007,28 +1010,28 @@
 	     ((or (funcall? x) (primcall? x) (jmpcall? x)
 		  (forcall? x) (shortcut? x) (conditional? x))
 	      (let ((t (unique-var 'tmp)))
-		(do-bind (list t) (list x) (kont t))))
+		(%do-bind (list t) (list x) (kont t))))
 	     (else
 	      (error who "invalid S" x))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (do-bind lhs* rhs* body)
+  (define (%do-bind lhs* rhs* body)
     (if (null? lhs*)
 	body
       (begin
 	(%locals-cons ($car lhs*))
 	(make-seq (V ($car lhs*) ($car rhs*))
-		  (do-bind ($cdr lhs*) ($cdr rhs*) body)))))
+		  (%do-bind ($cdr lhs*) ($cdr rhs*) body)))))
 
-  (define-inline (make-set lhs rhs)
+  (define-inline (%make-set lhs rhs)
     (make-asm-instr 'move lhs rhs))
 
-  (define (do-bind-frmt* nf* v* ac)
+  (define (%do-bind-frmt* nf* v* ac)
     (if (null? nf*)
 	ac
       (make-seq (V ($car nf*) ($car v*))
-		(do-bind-frmt* ($cdr nf*) ($cdr v*) ac))))
+		(%do-bind-frmt* ($cdr nf*) ($cdr v*) ac))))
 
   (module (handle-nontail-call)
 
@@ -1047,20 +1050,20 @@
 				    #f #f))
 		 (body (make-nframe
 			frmt* #f
-			(do-bind-frmt*
+			(%do-bind-frmt*
 			 frmt* frm-args
-			 (do-bind ($cdr regt*) ($cdr reg-args)
-				  ;;evaluate cpt last
-				  (do-bind (list ($car regt*)) (list ($car reg-args))
-					   (assign*
-					    reg-locs regt*
-					    (make-seq
-					     (make-set ARGC-REGISTER
-						       (make-constant
-							(argc-convention (length rands))))
-					     call))))))))
+			 (%do-bind ($cdr regt*) ($cdr reg-args)
+				   ;;evaluate cpt last
+				   (%do-bind (list ($car regt*)) (list ($car reg-args))
+					     (assign*
+					      reg-locs regt*
+					      (make-seq
+					       (%make-set ARGC-REGISTER
+							  (make-constant
+							   (argc-convention (length rands))))
+					       call))))))))
 	    (if value-dest
-		(make-seq body (make-set value-dest RETURN-VALUE-REGISTER))
+		(make-seq body (%make-set value-dest RETURN-VALUE-REGISTER))
 	      body)))))
 
     (define (%nontail-locations regs args)
@@ -1134,16 +1137,16 @@
     ;;
     (struct-case x
       ((constant)
-       (make-set d x))
+       (%make-set d x))
 
       ((var)
        (cond ((var-loc x)
 	      => (lambda (loc)
-		   (make-set d loc)))
+		   (%make-set d loc)))
 	     (else
-	      (make-set d x))))
+	      (%make-set d x))))
       ((bind lhs* rhs* e)
-       (do-bind lhs* rhs* (V d e)))
+       (%do-bind lhs* rhs* (V d e)))
 
       ((seq e0 e1)
        (make-seq (E e0) (V d e1)))
@@ -1159,13 +1162,13 @@
                (make-seq (alloc-check size)
 			 (S ($cadr rands)
 			    (lambda (tag)
-			      (make-seq (make-seq (make-set d apr)
+			      (make-seq (make-seq (%make-set d apr)
 						  (make-asm-instr 'logor d tag))
 					(make-asm-instr 'int+ apr size))))))))
 
          ((mref)
           (S* rands (lambda (rands)
-		      (make-set d (make-disp ($car rands) ($cadr rands))))))
+		      (%make-set d (make-disp ($car rands) ($cadr rands))))))
 
          ((mref32)
           (S* rands (lambda (rands)
@@ -1179,22 +1182,22 @@
                   int-/overflow int+/overflow int*/overflow)
           (make-seq (V d ($car rands))
 		    (S ($cadr rands) (lambda (s)
-				      (make-asm-instr op d s)))))
+				       (make-asm-instr op d s)))))
          ((int-quotient)
           (S* rands (lambda (rands)
 		      (multiple-forms-sequence
-		       (make-set eax ($car rands))
+		       (%make-set eax ($car rands))
 		       (make-asm-instr 'cltd edx eax)
 		       (make-asm-instr 'idiv eax ($cadr rands))
-		       (make-set d eax)))))
+		       (%make-set d eax)))))
 
          ((int-remainder)
           (S* rands (lambda (rands)
 		      (multiple-forms-sequence
-		       (make-set eax ($car rands))
+		       (%make-set eax ($car rands))
 		       (make-asm-instr 'cltd edx eax)
 		       (make-asm-instr 'idiv edx ($cadr rands))
-		       (make-set d edx)))))
+		       (%make-set d edx)))))
 
          ((sll sra srl sll/overflow)
           (let ((a ($car rands))
@@ -1205,7 +1208,7 @@
 	      (S b (lambda (b)
 		     (multiple-forms-sequence
 		      (V d a)
-		      (make-set ecx b)
+		      (%make-set ecx b)
 		      (make-asm-instr op d ecx)))))))
 
          (else
@@ -1230,7 +1233,7 @@
 
       (else
        (if (symbol? x)
-           (make-set d x)
+           (%make-set d x)
 	 (error who "invalid value" (unparse x))))))
 
 ;;; --------------------------------------------------------------------
@@ -1247,7 +1250,7 @@
     ;;
     (if (null? lhs*)
 	tail-body
-      (make-seq (make-set ($car lhs*) ($car rhs*))
+      (make-seq (%make-set ($car lhs*) ($car rhs*))
 		(assign*  ($cdr lhs*) ($cdr rhs*) tail-body))))
 
 ;;; --------------------------------------------------------------------
@@ -1261,7 +1264,7 @@
        (make-conditional (P e0) (E e1) (E e2)))
 
       ((bind lhs* rhs* e)
-       (do-bind lhs* rhs* (E e)))
+       (%do-bind lhs* rhs* (E e)))
 
       ((primcall op rands)
        (case-symbols op
@@ -1310,7 +1313,7 @@
 	 (make-conditional (P e0) (P e1) (P e2)))
 
 	((bind lhs* rhs* e)
-	 (do-bind lhs* rhs* (P e)))
+	 (%do-bind lhs* rhs* (P e)))
 
 	((primcall op rands)
 	 (let ((a ($car rands)) (b ($cadr rands)))
@@ -1362,8 +1365,8 @@
       ;;
       (let* ((args (cons rator rands))
 	     (locs (%formals-locations PARAMETER-REGISTERS args))
-	     (rest (make-seq (make-set ARGC-REGISTER
-				       (make-constant (argc-convention (length rands))))
+	     (rest (make-seq (%make-set ARGC-REGISTER
+					(make-constant (argc-convention (length rands))))
 			     (if target
 				 (make-primcall 'direct-jump
 				   (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
