@@ -101,6 +101,38 @@
 (module (specify-representation)
   (import primops)
 
+  (define (specify-representation x)
+    (Program x))
+
+  (module (Program)
+
+    (define who 'specify-representation)
+
+    (define (Program x)
+      (struct-case x
+	((codes code* body)
+	 (let ((code* (map Clambda code*))
+	       (body  (V body)))
+	   (make-codes code* body)))
+	(else
+	 (error who "invalid program" x))))
+
+    (define (Clambda x)
+      (struct-case x
+	((clambda label case* cp free* name)
+	 (make-clambda label (map ClambdaCase case*) cp free* name))
+	(else
+	 (error who "invalid clambda" x))))
+
+    (define (ClambdaCase x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (V body)))
+	(else
+	 (error who "invalid clambda-case" x))))
+
+    #| end of module: Program |# )
+
 
 (define-struct primitive-handler
   ;;Primitive handler.   Collects the  definitions associated  to unsafe
@@ -1186,33 +1218,6 @@
     (interrupt))
   #;(unless (fx? binary-representation)
     (interrupt)))
-
-
-(define (ClambdaCase x)
-  (struct-case x
-    ((clambda-case info body)
-     (make-clambda-case info (V body)))
-    (else (error 'specify-rep "invalid clambda-case" x))))
-  ;;;
-(define (Clambda x)
-  (struct-case x
-    ((clambda label case* cp free* name)
-     (make-clambda label
-		   (map ClambdaCase case*)
-		   cp free* name))
-    (else (error 'specify-rep "invalid clambda" x))))
-  ;;;
-(define (Program x)
-  (struct-case x
-    ((codes code* body)
-     (let ((code* (map Clambda code*))
-	   (body (V body)))
-       (make-codes code* body)))
-    (else (error 'specify-rep "invalid program" x))))
-
-(define (specify-representation x)
-  (let ((x (Program x)))
-    x))
 
 
 ;;;; some external code
