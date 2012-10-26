@@ -4091,7 +4091,7 @@
 (define (jo label)	(list 'jo label))
 (define (jmp label)	(list 'jmp label))
 
-(define esp		'%esp) ; stack base pointer
+(define esp		'%esp) ; stack frame pointer
 (define al		'%al)
 (define ah		'%ah)
 (define bh		'%bh)
@@ -4107,6 +4107,10 @@
 (define register?	symbol?)
 
 (define (argc-convention n)
+  ;;At  run  time:  the  number  of arguments  in  a  function  call  is
+  ;;represented by  a negative fixnum  which is the number  of arguments
+  ;;negated.  Example: -2 = 2 arguments.
+  ;;
   ($fx- 0 ($fxsll n fx-shift)))
 
 
