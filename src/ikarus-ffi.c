@@ -529,11 +529,11 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
     }
   }
   pcb->root0 = NULL;
-  /* Perform the call. */
-  {
-    ikptr         code_entry    = IK_REF(s_proc, off_closure_code);
-    ikptr         code_ptr      = code_entry - off_code_data;
-    rv = ik_exec_code(pcb, code_ptr, IK_FIX(-cif->arity), s_proc);
+  { /* Perform the call.  S_CODE is a  tagged pointer to the code object
+       implementing the closure S_PROC. */
+    ikptr	code_entry = IK_REF(s_proc, off_closure_code);
+    ikptr	s_code     = code_entry - off_code_data;
+    rv = ik_exec_code(pcb, s_code, IK_FIX(-cif->arity), s_proc);
     /* Convert the Scheme return value to a native value. */
     scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
   }
