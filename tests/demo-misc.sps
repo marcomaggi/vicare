@@ -7,13 +7,12 @@
 (import (vicare))
 
 (let loop ((i 0))
-  (when (zero? (mod i #e1e1))
+  (when (zero? (mod i #e1e6))
     (fprintf (current-error-port) "~a " i)
     (flush-output-port (current-error-port))
     (void))
-  (when (< i 100)
-    (pretty-print (cons i (loop (+ 1 i)))
-		  (current-error-port))))
+  (when (< i #e1e9)
+    (cons i (loop (+ 1 i)))))
 
 
 ;;; end of file

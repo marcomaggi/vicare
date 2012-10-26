@@ -18,7 +18,7 @@
 
 #include "internals.h"
 
-#define DEBUG_EXEC	0
+#define DEBUG_EXEC	1
 
 ikptr
 ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
@@ -50,9 +50,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   s_argc   = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
   s_next_k = pcb->next_k;
   while (s_next_k) {
-    fprintf(stderr, "here\n");
-    /* We  are  here  because  the execution  of  S_CODE  encountered  a
-       function that recursively called itself in non-tail position. */
+    /* FIXME We are here because???  (Marco Maggi; Oct 26, 2012) */
     ikcont * p_next_k = (ikcont *)(long)(s_next_k - vector_tag);
     /* System continuations are created by the FFI to save the current C
        execution contest just before calling back a Scheme function. */
@@ -108,7 +106,9 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     }
     pcb->next_k = p_next_k->next;
 #if DEBUG_EXEC
-    fprintf(stderr, "%s: reenter\n", __func__);
+    fprintf(stderr, "%s: reenter, argc %lu\n", __func__, IK_UNFIX(-s_argc));
+    ik_fprint(stderr, IK_REF(pcb->frame_base - wordsize + s_argc, 0));
+    fprintf(stderr, "\n");
 #endif
     { /* Move the arguments from the old frame to the new frame.  Notice
 	 that S_ARGC is negative for a reason! */
@@ -117,7 +117,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       char *	arg_dst   = ((char*)(long)new_fbase) + s_argc;
       char *	arg_src   = ((char*)(long)fbase)     + s_argc;
       memmove(arg_dst, arg_src, -s_argc);
-      /* Copy the frame for the non-tail call. */
+      /* Copy the frame. */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_argc = ik_asm_reenter(pcb, new_fbase, s_argc);
     }
