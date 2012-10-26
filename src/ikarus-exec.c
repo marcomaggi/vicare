@@ -21,18 +21,20 @@
 #define DEBUG_EXEC	0
 
 ikptr
-ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
+ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 /* Execute  Scheme  code  and  all   its  continuations  until  no  more
    continuations are stored in the PCB or a system continuation is found
    in the continuations linked list.
 
-   CODE_PTR is a  raw memory pointer referencing the entry  point in the
-   closure's code object.
+   S_CODE  is  a  tagged  memory pointer  referencing  the  code  object
+   implementing S_CLOSURE, if any.
 
    S_ARGCOUNT  is a  fixnum representing  the negated  number of  Scheme
    arguments.
 
-   S_CLOSURE is a reference to the closure object to execute.
+   S_CLOSURE is a reference to the  closure object to execute; it can be
+   the fixnum zero if there is no closure to execute, as when we enter a
+   loaded FASL file.
 
    Return the return value of the last executed continuation. */
 {
@@ -43,9 +45,11 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
 #endif
   ikptr		s_argc;
   ikptr		s_next_k;
-  s_argc   = ik_asm_enter(pcb, code_ptr+off_code_data, s_argcount, s_closure);
+  s_argc   = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
   s_next_k = pcb->next_k;
   while (s_next_k) {
+    /* We  are  here  because  the execution  of  S_CODE  encountered  a
+       function that recursively called itself in non-tail position. */
     ikcont * p_next_k = (ikcont *)(long)(s_next_k - vector_tag);
     /* System continuations are created by the FFI to save the current C
        execution contest just before calling back a Scheme function. */
@@ -66,22 +70,22 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
       /* Insert  a new  continuation  between "s_next_k"  and its  next.
        * Before:
        *
-       * pcb
-       *  |          s_next_k
-       *  |------------>|        s_further
-       *      next_k    |--------->|
-       *                   next    |-------> NULL
-       *                             next
+       *    pcb
+       *     |          s_next_k
+       *     |------------>|        s_further
+       *         next_k    |--------->|
+       *                      next    |-------> NULL
+       *                                next
        *
        * after:
        *
-       * pcb
-       *  |          s_next_k
-       *  |------------>|       s_new_kont
-       *      next_k    |--------->|       s_further
-       *                   next    |-------->|
-       *                             next    |--------> NULL
-       *                                        next
+       *    pcb
+       *     |          s_next_k
+       *     |------------>|       s_new_kont
+       *         next_k    |--------->|       s_further
+       *                      next    |-------->|
+       *                                next    |--------> NULL
+       *                                           next
        */
       ikcont *	p_new_kont = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
       p_new_kont->tag  = p_next_k->tag;
@@ -103,15 +107,15 @@ ik_exec_code (ikpcb * pcb, ikptr code_ptr, ikptr s_argcount, ikptr s_closure)
 #if DEBUG_EXEC
     fprintf(stderr, "%s: reenter\n", __func__);
 #endif
-    {
-      ikptr fbase     = pcb->frame_base - wordsize;
-      ikptr new_fbase = fbase - framesize;
-      /* The argc is negative for a reason! */
-      memmove((char*)(long)new_fbase + s_argc,
-	      (char*)(long)fbase     + s_argc,
-	      -s_argc);
+    { /* Move the arguments from the old frame to the new frame.  Notice
+	 that S_ARGC is negative for a reason! */
+      ikptr	fbase     = pcb->frame_base - wordsize;
+      ikptr	new_fbase = fbase - framesize;
+      char *	arg_dst   = ((char*)(long)new_fbase) + s_argc;
+      char *	arg_src   = ((char*)(long)fbase)     + s_argc;
+      memmove(arg_dst, arg_src, -s_argc);
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
-      s_argc   = ik_asm_reenter(pcb, new_fbase, s_argc);
+      s_argc = ik_asm_reenter(pcb, new_fbase, s_argc);
     }
     s_next_k =  pcb->next_k;
   }  /* end of while() */

@@ -1,5 +1,6 @@
 # Ikarus Scheme -- A compiler for R6RS Scheme.
 # Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+# Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -20,7 +21,6 @@
 .globl _ik_foreign_call
 .globl  ik_asm_reenter
 .globl _ik_asm_reenter
-
 
 
 ## ------------------------------------------------------------
@@ -297,7 +297,7 @@ _ik_asm_reenter:
   # the Scheme arguments are already on the Scheme stack.  The C
   # arguments are on the C stack:
   #
-  #   argument 3: 12(%esp) = "ikptr" fixnum being the negate number
+  #   argument 3: 12(%esp) = "ikptr" fixnum being the negated number
   #                          of Scheme arguments
   #   argument 2:  8(%esp) = raw memory pointer referencing the
   #	                     previously saved Scheme stack
