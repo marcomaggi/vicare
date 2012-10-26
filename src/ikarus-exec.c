@@ -41,13 +41,16 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 #if DEBUG_EXEC
   fprintf(stderr, "%s: enter ", __func__);
   ik_fprint(stderr, s_closure);
-  fprintf(stderr, "\n", __func__);
+  fprintf(stderr, ", ");
+  ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
+  fprintf(stderr, "\n");
 #endif
   ikptr		s_argc;
   ikptr		s_next_k;
   s_argc   = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
   s_next_k = pcb->next_k;
   while (s_next_k) {
+    fprintf(stderr, "here\n");
     /* We  are  here  because  the execution  of  S_CODE  encountered  a
        function that recursively called itself in non-tail position. */
     ikcont * p_next_k = (ikcont *)(long)(s_next_k - vector_tag);
@@ -114,6 +117,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       char *	arg_dst   = ((char*)(long)new_fbase) + s_argc;
       char *	arg_src   = ((char*)(long)fbase)     + s_argc;
       memmove(arg_dst, arg_src, -s_argc);
+      /* Copy the frame for the non-tail call. */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_argc = ik_asm_reenter(pcb, new_fbase, s_argc);
     }
