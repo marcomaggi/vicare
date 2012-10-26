@@ -265,12 +265,14 @@
 
 
 (module cogen-handler-maker
+  ;;This module is used only by the module COGEN-PRIMOP-STUFF.
+  ;;
   (make-cogen-handler)
 
   (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
-    ;;Build and return the COGEN-PRIMOP closure.
+    ;;Build and return the COGEN-PRIMOP-FUNC closure.
     ;;
-    (define (cogen-primop x ctxt args)
+    (define (cogen-primop-func x ctxt args)
       (let ((p (get-primop x)))
 	(simplify* args
 		   (lambda (args)
@@ -322,7 +324,7 @@
 				  (error 'cogen-primop "not handled" x))))
 			  (else
 			   (error 'cogen-primop "invalid context" ctxt)))))))))
-    cogen-primop)
+    cogen-primop-func)
 
   (define (%interrupt-primcall? body)
     (struct-case body
@@ -377,7 +379,8 @@
   #| end of module |# )
 
 
-(module (cogen-primop cogen-debug-primop)
+(module cogen-primop-stuff
+  (cogen-primop cogen-debug-primop)
   (import cogen-handler-maker)
 
   (define cogen-primop
@@ -770,6 +773,36 @@
 	   (make-constant (make-object c))))))
 
 
+(module cogen-debug-call-stuff
+  (cogen-debug-call)
+  (import cogen-primop-stuff)
+
+  (define (cogen-debug-call op ctxt arg* kont)
+    (assert (>= (length arg*) 2))
+    (let ((src/expr	(car  arg*))
+	  (op		(cadr arg*))
+	  (args		(cddr arg*)))
+      (struct-case (%remove-tag op)
+	((primref name)
+	 (if (primop? name)
+	     (cogen-debug-primop name src/expr ctxt args)
+	   (%fail kont arg*)))
+	(else
+	 (%fail kont arg*)))))
+
+  (define (%fail kont arg*)
+    (kont (make-funcall (make-primref 'debug-call) arg*)))
+
+  (define (%remove-tag x)
+    (struct-case x
+      ((known expr)
+       expr)
+      (else
+       x)))
+
+  #| end of module: cogen-debug-call |# )
+
+
 (module (V)
   ;;The function V erases known values;  its argument X must be a struct
   ;;instance  representing  recordized  code  to  be  executed  in  "for
@@ -800,6 +833,8 @@
   ;;
   ;;* Instances of FIX are handled.
   ;;
+  (import cogen-debug-call-stuff)
+  (import cogen-primop-stuff)
   (define (V x)
     (struct-case x
       ((known expr)
@@ -874,6 +909,8 @@
   ;;known		primcall	primref
   ;;seq			var
   ;;
+  (import cogen-debug-call-stuff)
+  (import cogen-primop-stuff)
   (struct-case x
     ((constant c)
      (if c (K #t) (K #f)))
@@ -943,6 +980,8 @@
   ;;known		primcall	primref
   ;;seq			var
   ;;
+  (import cogen-debug-call-stuff)
+  (import cogen-primop-stuff)
   (struct-case x
 
     ;;Useless for side effects: remove!
@@ -1021,36 +1060,21 @@
      (make-constant ?x))))
 
 
-(module (cogen-debug-call)
-
-  (define (cogen-debug-call op ctxt arg* kont)
-    (assert (>= (length arg*) 2))
-    (let ((src/expr	(car  arg*))
-	  (op		(cadr arg*))
-	  (args		(cddr arg*)))
-      (struct-case (%remove-tag op)
-	((primref name)
-	 (if (primop? name)
-	     (cogen-debug-primop name src/expr ctxt args)
-	   (%fail kont arg*)))
-	(else
-	 (%fail kont arg*)))))
-
-  (define (%fail kont arg*)
-    (kont (make-funcall (make-primref 'debug-call) arg*)))
-
-  (define (%remove-tag x)
-    (struct-case x
-      ((known expr)
-       expr)
-      (else
-       x)))
-
-  #| end of module: cogen-debug-call |# )
-
-
 (module (Function)
-
+  ;;This module is used to process the operator of every struct instance
+  ;;of type FUNCALL by the V and  E.  The operator can be a reference to
+  ;;a top level binding, but also  an expression which should evaluate a
+  ;;closure at runtime.
+  ;;
+  ;;This module takes care of:
+  ;;
+  ;;* Expanding recordized  references to top level bindings  to what is
+  ;;  needed to retrieve the reference to closure.
+  ;;
+  ;;* Inserting  code to evaluate  an arbitrary expression and  check at
+  ;;   runtime  that  it  is  actually  a  closure  (if  not:  raise  an
+  ;;  exception).
+  ;;
   (define-inline (Function x)
     ;;X must  be a  struct instance representing  recordized code  to be
     ;;executed  in  "for  returned  value"  context.   Return  a  struct
@@ -1062,8 +1086,6 @@
   (define (F x check?)
     (struct-case x
       ((primcall op args)
-#;(pretty-print (list op args)
-	      (current-error-port))
        (cond ((and (eq? op 'top-level-value)
 		   (null? ($cdr args))
 		   (%recordized-symbol ($car args)))
@@ -1072,15 +1094,8 @@
 	      ;;   #[funcall #[primref top-level-value] (?name)]
 	      ;;
 	      ;;represents a reference  to a top level  value; given the
-	      ;;?NAME of a  top level binding: values are  stored in the
-	      ;;field "proc"  of symbols  being names  of the  top level
-	      ;;bindings.
-	      ;;
-	      ;;,  either  a
-	      ;;function as in:
-	      ;;
-	      ;;   (map fixnum? '(1 2 3))
-	      ;;
+	      ;;?NAME (a symbol) of a  top level binding: the closure is
+	      ;;stored in the field "proc"  of ?NAME.
 	      ;;
 	      => (lambda (sym)
 		   (reset-symbol-proc! sym)
@@ -1091,12 +1106,12 @@
       ((primref op)
        (V x))
 
-      ((known expr type)
-       (cond ((eq? (T:procedure? type) 'yes)
+      ((known x.expr x.type)
+       (cond ((eq? (T:procedure? x.type) 'yes)
 	      ;;(record-optimization 'procedure expr)
-	      (F expr #f))
+	      (F x.expr #f))
 	     (else
-	      (F expr check?))))
+	      (F x.expr check?))))
 
       (else
        (nonproc x check?))))
@@ -1108,23 +1123,23 @@
     ;;whose value is a symbol: return that symbol; else return #f.
     ;;
     (struct-case arg
-      ((constant val)
-       (and (symbol? val) val))
-      ((known expr)
-       (%recordized-symbol expr))
+      ((constant arg.val)
+       (and (symbol? arg.val) arg.val))
+      ((known arg.expr)
+       (%recordized-symbol arg.expr))
       (else
        #f)))
 
   (define (nonproc x check?)
     (if check?
 	(with-tmp ((x (V x)))
-	  (make-shortcut (make-seq (make-conditional
-				       (tag-test x closure-mask closure-tag)
-				     (prm 'nop)
-				     (prm 'interrupt))
-				   x)
-			 (V (make-funcall (make-primref 'error)
-					  (list (K 'apply) (K "not a procedure") x)))))
+	  (make-shortcut
+	   (make-seq (make-conditional (tag-test x closure-mask closure-tag)
+			 (prm 'nop)
+		       (prm 'interrupt))
+		     x)
+	   (V (make-funcall (make-primref 'error)
+			    (list (K 'apply) (K "not a procedure") x)))))
       (V x)))
 
   #| end of module: Function |# )

@@ -106,6 +106,16 @@
 
 ;;;; helper syntaxes
 
+(define-inline (%debug-print ?obj)
+  (pretty-print ?obj (current-error-port)))
+
+(define-inline (%debug-write ?obj)
+  (begin
+    (write ?obj (current-error-port))
+    (newline (current-error-port))))
+
+;;; --------------------------------------------------------------------
+
 (define-inline ($caar x)	($car ($car x)))
 (define-inline ($cadr x)	($car ($cdr x)))
 (define-inline ($cdar x)	($cdr ($car x)))
