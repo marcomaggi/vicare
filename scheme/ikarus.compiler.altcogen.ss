@@ -978,41 +978,31 @@
 		    (S* (cdr x*) (lambda (d)
 				   (kont (cons a d))))))))
 
-;;; --------------------------------------------------------------------
-
-  (define (S x k)
+  (define (S x kont)
     (struct-case x
       ((bind lhs* rhs* body)
-       (do-bind lhs* rhs* (S body k)))
+       (do-bind lhs* rhs* (S body kont)))
       ((seq e0 e1)
-       (make-seq (E e0) (S e1 k)))
+       (make-seq (E e0) (S e1 kont)))
       ((known expr)
-       (S expr k))
+       (S expr kont))
       (else
        (cond ((or (constant? x)
-		  (symbol? x))
-	      (k x))
+		  (symbol?   x))
+	      (kont x))
 	     ((var? x)
 	      (cond ((var-loc x)
-		     => k)
+		     => kont)
 		    (else
-		     (k x))))
+		     (kont x))))
 	     ((or (funcall? x) (primcall? x) (jmpcall? x)
 		  (forcall? x) (shortcut? x) (conditional? x))
 	      (let ((t (unique-var 'tmp)))
-		(do-bind (list t) (list x) (k t))))
+		(do-bind (list t) (list x) (kont t))))
 	     (else
 	      (error who "invalid S" x))))))
 
-  (define (Mem x k)
-    (struct-case x
-      ((primcall op arg*)
-       (if (eq? op 'mref)
-           (S* arg*
-	       (lambda (arg*)
-                 (k (make-disp (car arg*) (cadr arg*)))))
-	 (S x k)))
-      (else (S x k))))
+;;; --------------------------------------------------------------------
 
   (define (do-bind lhs* rhs* body)
     (cond
@@ -1268,44 +1258,51 @@
        (make-shortcut (E body) (E handler)))
       (else (error who "invalid effect" x))))
 
-  (define (P x)
-    (struct-case x
-      ((constant) x)
-      ((seq e0 e1) (make-seq (E e0) (P e1)))
-      ((conditional e0 e1 e2)
-       (make-conditional (P e0) (P e1) (P e2)))
-      ((bind lhs* rhs* e)
-       (do-bind lhs* rhs* (P e)))
-      ((primcall op rands)
-       (let ((a (car rands)) (b (cadr rands)))
-         (cond
-	  ((and (constant? a) (constant? b))
-	   (let ((t (unique-var 'tmp)))
-	     (P (make-bind (list t) (list a)
-			   (make-primcall op (list t b))))))
-	  (else
-	   (Mem a
-		(lambda (a)
-		  (Mem b
-		       (lambda (b)
-			 (make-asm-instr op a b)))))))))
-		;(cond
-		;  ((and (constant? a) (constant? b))
-		;   (let ((t (unique-var 'tmp)))
-		;     (P (make-bind (list t) (list a)
-		;           (make-primcall op (list t b))))))
-		;  ((constant? a)
-		;   (Mem b (lambda (b) (make-asm-instr op a b))))
-		;  ((constant? b)
-		;   (Mem a (lambda (a) (make-asm-instr op a b))))
-		;  (else
-		;   (S* rands
-		;       (lambda (rands)
-		;         (let ((a (car rands)) (b (cadr rands)))
-		;           (make-asm-instr op a b))))))))
-      ((shortcut body handler)
-       (make-shortcut (P body) (P handler)))
-      (else (error who "invalid pred" x))))
+  (module (P)
+
+    (define (P x)
+      (struct-case x
+	((constant)
+	 x)
+
+	((seq e0 e1)
+	 (make-seq (E e0) (P e1)))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (P e0) (P e1) (P e2)))
+
+	((bind lhs* rhs* e)
+	 (do-bind lhs* rhs* (P e)))
+
+	((primcall op rands)
+	 (let ((a (car rands)) (b (cadr rands)))
+	   (cond ((and (constant? a)
+		       (constant? b))
+		  (let ((t (unique-var 'tmp)))
+		    (P (make-bind (list t) (list a)
+				  (make-primcall op (list t b))))))
+		 (else
+		  (Mem a (lambda (a)
+			   (Mem b (lambda (b)
+				    (make-asm-instr op a b)))))))))
+
+	((shortcut body handler)
+	 (make-shortcut (P body) (P handler)))
+
+	(else
+	 (error who "invalid pred" x))))
+
+    (define (Mem x kont)
+      (struct-case x
+	((primcall op arg*)
+	 (if (eq? op 'mref)
+	     (S* arg* (lambda (arg*)
+			(kont (make-disp (car arg*) (cadr arg*)))))
+	   (S x kont)))
+	(else
+	 (S x kont))))
+
+    #| end of module: P |# )
 
   (define (handle-tail-call target rator rands)
     (let* ((args (cons rator rands))
