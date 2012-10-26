@@ -60,13 +60,8 @@
     (vicare include)
     (ikarus.fasl.write)
     (ikarus.intel-assembler)
-    (only (vicare syntactic-extensions)
-	  define-inline
-	  define-inline-constant
-	  define-auxiliary-syntaxes
-	  case-symbols
-	  case-fixnums
-	  case-word-size)
+    (except (vicare syntactic-extensions)
+	    begin0)
     (vicare arguments validation)
     (for (prefix (only (vicare installation-configuration)
 		       wordsize)

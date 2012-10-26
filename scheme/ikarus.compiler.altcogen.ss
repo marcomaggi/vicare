@@ -840,6 +840,10 @@
 	     ((case-info cas.info.label cas.info.args cas.info.proper)
 	      (let-values (((rargs rlocs fargs flocs)
 			    (%partition-formals PARAMETER-REGISTERS cas.info.args)))
+		;;RARGS = list of register symbols associated to formals.
+		;;RLOCS = list of formals associated to symbols.
+		;;FARGS = list of formals associated to FVAR structures.
+		;;FLOCS = list of FVAR structures associated to formals.
 		(parametrise ((locals rargs))
 		  (for-each set-var-loc!
 		    fargs flocs)
@@ -901,6 +905,67 @@
 	(let ((x (Tail x)))
 	  (make-locals (locals) x))))
 
+    (define (Tail x)
+      (struct-case x
+
+	((constant)
+	 (VT x))
+
+	((var)
+	 (VT x))
+
+	((primcall op rands)
+	 (case-symbols op
+	   (($call-with-underflow-handler)
+	    (let ((t0		(unique-var 't))
+		  (t1		(unique-var 't))
+		  (t2		(unique-var 't))
+		  (handler	(car rands))
+		  (proc		(cadr rands))
+		  (k		(caddr rands)))
+	      (%locals-cons* t0 t1 t2)
+	      (multiple-forms-sequence
+	       (V t0 handler)
+	       (V t1 k)
+	       (V t2 proc)
+	       (make-set (mkfvar 1) t0)
+	       (make-set (mkfvar 2) t1)
+	       (make-set cpr t2)
+	       (make-set ARGC-REGISTER (make-constant (argc-convention 1)))
+	       (make-asm-instr 'int- fpr (make-constant wordsize))
+	       (make-primcall 'indirect-jump
+			      (list ARGC-REGISTER cpr pcr esp apr
+				    (mkfvar 1) (mkfvar 2))))))
+	   (else
+	    (VT x))))
+
+	((bind lhs* rhs* e)
+	 (do-bind lhs* rhs* (Tail e)))
+
+	((seq e0 e1)
+	 (make-seq (E e0) (Tail e1)))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (P e0) (Tail e1) (Tail e2)))
+
+	((funcall rator rands)
+	 (handle-tail-call #f rator rands))
+
+	((jmpcall label rator rands)
+	 (handle-tail-call (make-code-loc label) rator rands))
+
+	((forcall)
+	 (VT x))
+
+	((shortcut body handler)
+	 (make-shortcut (Tail body) (Tail handler)))
+
+	((known expr)
+	 (Tail expr))
+
+	(else
+	 (error who "invalid tail" x))))
+
     #| end of module: Program |# )
 
 ;;; --------------------------------------------------------------------
@@ -924,18 +989,20 @@
       ((known expr)
        (S expr k))
       (else
-       (cond ((or (constant? x) (symbol? x)) (k x))
+       (cond ((or (constant? x)
+		  (symbol? x))
+	      (k x))
 	     ((var? x)
-	      (cond
-	       ((var-loc x) => k)
-	       (else (k x))))
+	      (cond ((var-loc x)
+		     => k)
+		    (else
+		     (k x))))
 	     ((or (funcall? x) (primcall? x) (jmpcall? x)
-		  (forcall? x) (shortcut? x)
-		  (conditional? x))
+		  (forcall? x) (shortcut? x) (conditional? x))
 	      (let ((t (unique-var 'tmp)))
-		(do-bind (list t) (list x)
-			 (k t))))
-	     (else (error who "invalid S" x))))))
+		(do-bind (list t) (list x) (k t))))
+	     (else
+	      (error who "invalid S" x))))))
 
   (define (Mem x k)
     (struct-case x
@@ -1281,49 +1348,6 @@
 	     (V t (car args))
 	     (f (cdr args) (cdr locs)
 		(cons t targs) (cons (car locs) tlocs)))))))))
-  (define (Tail x)
-    (struct-case x
-      ((constant) (VT x))
-      ((var)      (VT x))
-      ((primcall op rands)
-       (case op
-         (($call-with-underflow-handler)
-          (let ((t0 (unique-var 't))
-                (t1 (unique-var 't))
-                (t2 (unique-var 't))
-                (handler (car rands))
-                (proc (cadr rands))
-                (k (caddr rands)))
-            (%locals-cons* t0 t1 t2)
-            (multiple-forms-sequence
-	     (V t0 handler)
-	     (V t1 k)
-	     (V t2 proc)
-	     (make-set (mkfvar 1) t0)
-	     (make-set (mkfvar 2) t1)
-	     (make-set cpr t2)
-	     (make-set ARGC-REGISTER (make-constant (argc-convention 1)))
-	     (make-asm-instr 'int- fpr (make-constant wordsize))
-	     (make-primcall 'indirect-jump
-			    (list ARGC-REGISTER cpr pcr esp apr
-				  (mkfvar 1) (mkfvar 2))))))
-         (else (VT x))))
-      ((bind lhs* rhs* e)
-       (do-bind lhs* rhs* (Tail e)))
-      ((seq e0 e1)
-       (make-seq (E e0) (Tail e1)))
-      ((conditional e0 e1 e2)
-       (make-conditional (P e0) (Tail e1) (Tail e2)))
-      ((funcall rator rands)
-       (handle-tail-call #f rator rands))
-      ((jmpcall label rator rands)
-       (handle-tail-call (make-code-loc label) rator rands))
-      ((forcall) (VT x))
-      ((shortcut body handler)
-       (make-shortcut (Tail body) (Tail handler)))
-      ((known expr)
-       (Tail expr))
-      (else (error who "invalid tail" x))))
 
   (define (formals-locations args)
     (let f ((regs PARAMETER-REGISTERS) (args args))
