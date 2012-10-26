@@ -7,7 +7,7 @@
 (import (vicare))
 
 (let loop ((i 0))
-  (when (zero? (mod i #e1e3))
+  (when (zero? (mod i #e1e9))
     (fprintf (current-error-port) "~a " i)
     (flush-output-port (current-error-port))
     (void))
