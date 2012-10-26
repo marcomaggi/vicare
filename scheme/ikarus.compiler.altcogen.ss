@@ -1304,6 +1304,7 @@
 ;  (print-code x)
   (Program x))
 
+
 (module ListySet
   (make-empty-set set-member? set-add set-rem set-difference set-union
    empty-set? singleton
@@ -1358,10 +1359,18 @@
       ((memq (car s1) s2) (union (cdr s1) s2))
       (else (cons (car s1) (union (cdr s1) s2))))))
 
+
 (module IntegerSet
-  (make-empty-set set-member? set-add singleton set-rem set-difference
-   set-union empty-set? set->list list->set)
-  ;;;
+  (make-empty-set
+   set-member?
+   set-add
+   singleton
+   set-rem
+   set-difference
+   set-union
+   empty-set?
+   set->list list->set)
+
   (begin
     (define-syntax car      (identifier-syntax $car))
     (define-syntax cdr      (identifier-syntax $cdr))
@@ -1375,11 +1384,11 @@
     (define-syntax fxeven?
       (syntax-rules ()
         ((_ x) ($fxzero? ($fxlogand x 1))))))
-  ;;;
+
   (define bits 28)
   (define (index-of n) (fxquotient n bits))
   (define (mask-of n)  (fxsll 1 (fxremainder n bits)))
-  ;;;
+
   (define (make-empty-set) 0)
   (define (empty-set? s) (eqv? s 0))
 
@@ -1387,132 +1396,138 @@
     (unless (fixnum? n) (error 'set-member? "not a fixnum" n))
     (let f ((s s) (i (index-of n)) (j (mask-of n)))
       (cond
-        ((pair? s)
-         (if (fxeven? i)
-             (f (car s) (fxsra i 1) j)
-             (f (cdr s) (fxsra i 1) j)))
-        ((eq? i 0) (eq? j (fxlogand s j)))
-        (else #f))))
-  ;;;
+       ((pair? s)
+	(if (fxeven? i)
+	    (f (car s) (fxsra i 1) j)
+	  (f (cdr s) (fxsra i 1) j)))
+       ((eq? i 0) (eq? j (fxlogand s j)))
+       (else #f))))
+;;;
   (define (singleton n)
     (set-add n (make-empty-set)))
-  ;;;
+;;;
   (define (set-add n s)
     (unless (fixnum? n) (error 'set-add "not a fixnum" n))
     (let f ((s s) (i (index-of n)) (j (mask-of n)))
       (cond
-        ((pair? s)
-         (if (fxeven? i)
-             (let ((a0 (car s)))
-               (let ((a1 (f a0 (fxsra i 1) j)))
-                 (if (eq? a0 a1) s (cons a1 (cdr s)))))
-             (let ((d0 (cdr s)))
-               (let ((d1 (f d0 (fxsra i 1) j)))
-                 (if (eq? d0 d1) s (cons (car s) d1))))))
-        ((eq? i 0) (fxlogor s j))
-        (else
-         (if (fxeven? i)
-             (cons (f s (fxsra i 1) j) 0)
-             (cons s (f 0 (fxsra i 1) j)))))))
-  ;;;
+       ((pair? s)
+	(if (fxeven? i)
+	    (let ((a0 (car s)))
+	      (let ((a1 (f a0 (fxsra i 1) j)))
+		(if (eq? a0 a1) s (cons a1 (cdr s)))))
+	  (let ((d0 (cdr s)))
+	    (let ((d1 (f d0 (fxsra i 1) j)))
+	      (if (eq? d0 d1) s (cons (car s) d1))))))
+       ((eq? i 0) (fxlogor s j))
+       (else
+	(if (fxeven? i)
+	    (cons (f s (fxsra i 1) j) 0)
+	  (cons s (f 0 (fxsra i 1) j)))))))
+;;;
   (define (cons^ a d)
     (if (and (eq? d 0) (fixnum? a))
         a
-        (cons a d)))
-  ;;;
+      (cons a d)))
+;;;
   (define (set-rem n s)
     (unless (fixnum? n) (error 'set-rem "not a fixnum" n))
     (let f ((s s) (i (index-of n)) (j (mask-of n)))
       (cond
-        ((pair? s)
-         (if (fxeven? i)
-             (let ((a0 (car s)))
-               (let ((a1 (f a0 (fxsra i 1) j)))
-                 (if (eq? a0 a1) s (cons^ a1 (cdr s)))))
-             (let ((d0 (cdr s)))
-               (let ((d1 (f d0 (fxsra i 1) j)))
-                 (if (eq? d0 d1) s (cons^ (car s) d1))))))
-        ((eq? i 0) (fxlogand s (fxlognot j)))
-        (else s))))
+       ((pair? s)
+	(if (fxeven? i)
+	    (let ((a0 (car s)))
+	      (let ((a1 (f a0 (fxsra i 1) j)))
+		(if (eq? a0 a1) s (cons^ a1 (cdr s)))))
+	  (let ((d0 (cdr s)))
+	    (let ((d1 (f d0 (fxsra i 1) j)))
+	      (if (eq? d0 d1) s (cons^ (car s) d1))))))
+       ((eq? i 0) (fxlogand s (fxlognot j)))
+       (else s))))
 
   (define (set-union^ s1 m2)
     (if (pair? s1)
         (let ((a0 (car s1)))
           (let ((a1 (set-union^ a0 m2)))
             (if (eq? a0 a1) s1 (cons a1 (cdr s1)))))
-        (fxlogor s1 m2)))
-  ;;;
+      (fxlogor s1 m2)))
+;;;
   (define (set-union s1 s2)
     (if (pair? s1)
         (if (pair? s2)
             (if (eq? s1 s2)
                 s1
-                (cons (set-union (car s1) (car s2))
-                      (set-union (cdr s1) (cdr s2))))
-            (let ((a0 (car s1)))
-              (let ((a1 (set-union^ a0 s2)))
-                (if (eq? a0 a1) s1 (cons a1 (cdr s1))))))
-        (if (pair? s2)
-            (let ((a0 (car s2)))
-              (let ((a1 (set-union^ a0 s1)))
-                (if (eq? a0 a1) s2 (cons a1 (cdr s2)))))
-            (fxlogor s1 s2))))
-  ;;;
+	      (cons (set-union (car s1) (car s2))
+		    (set-union (cdr s1) (cdr s2))))
+	  (let ((a0 (car s1)))
+	    (let ((a1 (set-union^ a0 s2)))
+	      (if (eq? a0 a1) s1 (cons a1 (cdr s1))))))
+      (if (pair? s2)
+	  (let ((a0 (car s2)))
+	    (let ((a1 (set-union^ a0 s1)))
+	      (if (eq? a0 a1) s2 (cons a1 (cdr s2)))))
+	(fxlogor s1 s2))))
+;;;
   (define (set-difference^ s1 m2)
     (if (pair? s1)
         (let ((a0 (car s1)))
           (let ((a1 (set-difference^ a0 m2)))
             (if (eq? a0 a1) s1 (cons^ a1 (cdr s1)))))
-        (fxlogand s1 (fxlognot m2))))
+      (fxlogand s1 (fxlognot m2))))
 
   (define (set-difference^^ m1 s2)
     (if (pair? s2)
         (set-difference^^ m1 (car s2))
-        (fxlogand m1 (fxlognot s2))))
-  ;;;
+      (fxlogand m1 (fxlognot s2))))
+;;;
   (define (set-difference s1 s2)
     (if (pair? s1)
         (if (pair? s2)
             (if (eq? s1 s2)
                 0
-                (cons^ (set-difference (car s1) (car s2))
-                       (set-difference (cdr s1) (cdr s2))))
-            (let ((a0 (car s1)))
-              (let ((a1 (set-difference^ a0 s2)))
-                (if (eq? a0 a1) s1 (cons^ a1 (cdr s1))))))
-        (if (pair? s2)
-            (set-difference^^ s1 (car s2))
-            (fxlogand s1 (fxlognot s2)))))
-  ;;;
+	      (cons^ (set-difference (car s1) (car s2))
+		     (set-difference (cdr s1) (cdr s2))))
+	  (let ((a0 (car s1)))
+	    (let ((a1 (set-difference^ a0 s2)))
+	      (if (eq? a0 a1) s1 (cons^ a1 (cdr s1))))))
+      (if (pair? s2)
+	  (set-difference^^ s1 (car s2))
+	(fxlogand s1 (fxlognot s2)))))
+;;;
   (define (list->set ls)
     (unless (andmap fixnum? ls) (error 'list->set "not a list of fixnum" ls))
     (let f ((ls ls) (s 0))
       (cond
-        ((null? ls) s)
-        (else (f (cdr ls) (set-add (car ls) s))))))
-  ;;;
+       ((null? ls) s)
+       (else (f (cdr ls) (set-add (car ls) s))))))
+;;;
   (define (set->list s)
     (let f ((i 0) (j 1) (s s) (ac '()))
       (cond
-        ((pair? s)
-         (f i (fxsll j 1) (car s)
-            (f (fxlogor i j) (fxsll j 1) (cdr s) ac)))
-        (else
-         (let f ((i (fx* i bits)) (m s) (ac ac))
-           (cond
-             ((fxeven? m)
-              (if (fxzero? m)
-                  ac
-                  (f (fx+ i 1) (fxsra m 1) ac)))
-             (else
-              (f (fx+ i 1) (fxsra m 1) (cons i ac)))))))))
-#|IntegerSet|#)
+       ((pair? s)
+	(f i (fxsll j 1) (car s)
+	   (f (fxlogor i j) (fxsll j 1) (cdr s) ac)))
+       (else
+	(let f ((i (fx* i bits)) (m s) (ac ac))
+	  (cond
+	   ((fxeven? m)
+	    (if (fxzero? m)
+		ac
+	      (f (fx+ i 1) (fxsra m 1) ac)))
+	   (else
+	    (f (fx+ i 1) (fxsra m 1) (cons i ac)))))))))
 
+  #| end of module: IntegerSet |# )
+
+
 (module ListyGraphs
-  (empty-graph add-edge! empty-graph? print-graph node-neighbors
+  (empty-graph
+   add-edge!
+   empty-graph?
+   print-graph
+   node-neighbors
    delete-node!)
   (import ListySet)
-  ;;;
+
   (define-struct graph (ls))
   ;;;
   (define (empty-graph) (make-graph '()))
@@ -1572,15 +1587,19 @@
                      (set->list (cdr p)))
            (set-cdr! p (make-empty-set))))
         (else (void)))))
-  ;;;
-  #|ListyGraphs|#)
 
+  #| end of module: ListyGraphs |# )
 
+
 (module IntegerGraphs
-  (empty-graph add-edge! empty-graph? print-graph node-neighbors
+  (empty-graph
+   add-edge!
+   empty-graph?
+   print-graph
+   node-neighbors
    delete-node!)
   (import IntegerSet)
-  ;;;
+
   (define-struct graph (ls))
   ;;;
   (define (empty-graph) (make-graph '()))
@@ -1640,9 +1659,10 @@
                      (set->list (cdr p)))
            (set-cdr! p (make-empty-set))))
         (else (void)))))
-  ;;;
-  #|IntegerGraphs|#)
 
+  #| end of module: IntegerGraphs |# )
+
+
 (module conflict-helpers
   (empty-var-set rem-var add-var union-vars mem-var? for-each-var init-vars!
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv init-nfv!
@@ -1703,8 +1723,11 @@
           ((memq (car s1) s2) (f (cdr s1) s2))
           (else (cons (car s1) (f (cdr s1) s2))))))
     (define (for-each-nfv s f)
-      (for-each f s))))
+      (for-each f s)))
 
+  #| end of module: conflict-helpers |# )
+
+
 (define (uncover-frame-conflicts x varvec)
   (import IntegerSet)
   (import conflict-helpers)
@@ -2096,13 +2119,12 @@
   (T x)
   spill-set)
 
-
-
+
 (module (assign-frame-sizes)
-  ;;; assign-frame-sizes module
-  (define indent (make-parameter 0))
   (import IntegerSet)
   (import conflict-helpers)
+
+  (define indent (make-parameter 0))
   (define (rewrite x varvec)
     (define who 'rewrite)
     (define (assign x)
@@ -2361,11 +2383,11 @@
   ;;;
   (define (assign-frame-sizes x)
     (let ((v (Program x)))
-      v)))
+      v))
 
+  #| end of module: assign-frame-sizes |# )
 
-
-
+
 (module (color-by-chaitin)
   (import ListySet)
   (import ListyGraphs)
@@ -2962,15 +2984,15 @@
          (make-codes (map Clambda code*) (color-program body)))))
     ;;;
     (Program x))
-  #|chaitin module|#)
 
+  #| end of module: chaitin module |# )
 
-
-
+
 (define (compile-call-frame framesize livemask-vec multiarg-rp call-sequence)
   (let ((L_CALL (label (gensym))))
     (list 'seq
-	  (if (or (= framesize 0) (= framesize 1))
+	  (if (or (= framesize 0)
+		  (= framesize 1))
 	      '(seq) ;this generates no code
 	    `(subl ,(* (fxsub1 framesize) wordsize) ,fpr))
 	  (jmp L_CALL)
@@ -2985,14 +3007,25 @@
 	      '(seq) ;this generates no code
 	    `(addl ,(* (fxsub1 framesize) wordsize) ,fpr)))))
 
+
+(module (flatten-codes)
 
-
-(define (flatten-codes x)
   (define who 'flatten-codes)
-  ;;;
+
+  (define exceptions-conc (make-parameter #f))
+
+  (define (flatten-codes x)
+    (struct-case x
+      ((codes code* body)
+       (cons (cons* 0 (label (gensym))
+		    (let ((ac (list '(nop))))
+                      (parameterize ((exceptions-conc ac))
+                        (T body ac))))
+             (map Clambda code*)))))
+
   (define (FVar i)
     `(disp ,(* i (- wordsize)) ,fpr))
-  ;;;
+
   (define (C x)
     (struct-case x
       ((code-loc label) (label-address label))
@@ -3005,7 +3038,8 @@
       (else
        (if (integer? x)
            x
-           (error who "invalid constant C" x)))))
+	 (error who "invalid constant C" x)))))
+
   (define (BYTE x)
     (struct-case x
       ((constant x)
@@ -3013,11 +3047,13 @@
          (error who "invalid byte" x))
        x)
       (else (error who "invalid byte" x))))
+
   (define (D x)
     (struct-case x
       ((constant c) (C c))
       (else
        (if (symbol? x) x (error who "invalid D" x)))))
+
   (define (R x)
     (struct-case x
       ((constant c) (C c))
@@ -3027,6 +3063,7 @@
          `(disp ,s0 ,s1)))
       (else
        (if (symbol? x) x (error who "invalid R" x)))))
+
   (define (R/l x)
     (struct-case x
       ((constant c) (C c))
@@ -3036,18 +3073,21 @@
          `(disp ,s0 ,s1)))
       (else
        (if (symbol? x) (reg/l x) (error who "invalid R/l" x)))))
+
   (define (reg/h x)
     (cond
-      ((assq x '((%eax %ah) (%ebx %bh) (%ecx %ch) (%edx %dh)))
-       => cadr)
-      (else (error who "invalid reg/h" x))))
+     ((assq x '((%eax %ah) (%ebx %bh) (%ecx %ch) (%edx %dh)))
+      => cadr)
+     (else (error who "invalid reg/h" x))))
+
   (define (reg/l x)
     (cond
-      ((assq x '((%eax %al) (%ebx %bl) (%ecx %cl) (%edx %dl)
-                 (%r8 %r8l) (%r9 %r9l) (%r10 %r10l) (%r11 %r11l)
-                 (%r12 %r12l) (%r13 %r13l) (%r14 %r14l) (%r15 %r15l)))
-       => cadr)
-      (else (error who "invalid reg/l" x))))
+     ((assq x '((%eax %al) (%ebx %bl) (%ecx %cl) (%edx %dl)
+		(%r8 %r8l) (%r9 %r9l) (%r10 %r10l) (%r11 %r11l)
+		(%r12 %r12l) (%r13 %r13l) (%r14 %r14l) (%r15 %r15l)))
+      => cadr)
+     (else (error who "invalid reg/l" x))))
+
   (define (R/cl x)
     (struct-case x
       ((constant i)
@@ -3057,61 +3097,63 @@
       (else
        (if (eq? x ecx)
            '%cl
-           (error who "invalid R/cl" x)))))
+	 (error who "invalid R/cl" x)))))
+
   (define (interrupt? x)
     (struct-case x
       ((primcall op args) (eq? op 'interrupt))
       (else #f)))
-  ;;; flatten effect
+
+  ;; flatten effect
   (define (E x ac)
     (struct-case x
       ((seq e0 e1) (E e0 (E e1 ac)))
       ((conditional e0 e1 e2)
        (cond
-         ((interrupt? e1)
-          (let ((L (or (exception-label)
-                       (error who "no exception label"))))
-            (P e0 L #f (E e2 ac))))
-         ((interrupt? e2)
-          (let ((L (or (exception-label)
-                       (error who "no exception label"))))
-            (P e0 #f L (E e1 ac))))
-         (else
-          (let ((lf (unique-label)) (le (unique-label)))
-            (P e0 #f lf
-               (E e1
-                  (cons* `(jmp ,le) lf
-                     (E e2 (cons le ac)))))))))
+	((interrupt? e1)
+	 (let ((L (or (exception-label)
+		      (error who "no exception label"))))
+	   (P e0 L #f (E e2 ac))))
+	((interrupt? e2)
+	 (let ((L (or (exception-label)
+		      (error who "no exception label"))))
+	   (P e0 #f L (E e1 ac))))
+	(else
+	 (let ((lf (unique-label)) (le (unique-label)))
+	   (P e0 #f lf
+	      (E e1
+		 (cons* `(jmp ,le) lf
+			(E e2 (cons le ac)))))))))
       ((ntcall target value args mask size)
        (let ((LCALL (unique-label)))
          (define (rp-label value)
            (if value
                (label-address (sl-mv-error-rp-label))
-               (label-address (sl-mv-ignore-rp-label))))
+	     (label-address (sl-mv-ignore-rp-label))))
          (cond
-           ((string? target) ;; foreign call
-            (cons* `(movl (foreign-label "ik_foreign_call") %ebx)
-                   (compile-call-frame
-                      size
-                      mask
-                      (rp-label value)
-                      `(call %ebx))
-                   ac))
-           (target ;;; known call
-            (cons* (compile-call-frame
-                      size
-                      mask
-                      (rp-label value)
-                      `(call (label ,target)))
-                   ac))
-           (else
-            (cons* (compile-call-frame
-                      size
-                      mask
-                      (rp-label value)
-                      `(call (disp ,(fx- disp-closure-code closure-tag)
-                                   ,cp-register)))
-                   ac)))))
+	  ((string? target) ;; foreign call
+	   (cons* `(movl (foreign-label "ik_foreign_call") %ebx)
+		  (compile-call-frame
+		   size
+		   mask
+		   (rp-label value)
+		   `(call %ebx))
+		  ac))
+	  (target ;;; known call
+	   (cons* (compile-call-frame
+		   size
+		   mask
+		   (rp-label value)
+		   `(call (label ,target)))
+		  ac))
+	  (else
+	   (cons* (compile-call-frame
+		   size
+		   mask
+		   (rp-label value)
+		   `(call (disp ,(fx- disp-closure-code closure-tag)
+				,cp-register)))
+		  ac)))))
       ((asm-instr op d s)
        (case op
          ((logand) (cons `(andl ,(R s) ,(R d)) ac))
@@ -3124,11 +3166,11 @@
          ((move)
           (if (eq? d s)
               ac
-              (cons `(movl ,(R s) ,(R d)) ac)))
+	    (cons `(movl ,(R s) ,(R d)) ac)))
          ((load8)
           (if (eq? d s)
               ac
-              (cons `(movb ,(R/l s) ,(R/l d)) ac)))
+	    (cons `(movb ,(R/l s) ,(R/l d)) ac)))
          ((bset) (cons `(movb ,(R/l s) ,(R d)) ac))
          ((sll)  (cons `(sall ,(R/cl s) ,(R d)) ac))
          ((sra)  (cons `(sarl ,(R/cl s) ,(R d)) ac))
@@ -3197,9 +3239,9 @@
           (let ((l (or (exception-label)
                        (error who "no exception label"))))
             (cons*
-              `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
-              `(je ,l)
-              ac)))
+	     `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
+	     `(je ,l)
+	     ac)))
          ((fl:double->single)
           (cons '(cvtsd2ss xmm0 xmm0) ac))
          ((fl:single->double)
@@ -3213,111 +3255,116 @@
          (parameterize ((exception-label L))
            (E body (cons L2 ac)))))
       (else (error who "invalid effect" (unparse x)))))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (unique-interrupt-label)
     (label (gensym "ERROR")))
+
   (define (unique-label)
     (label (gensym)))
-  ;;;
+
   (define (constant=? x k)
     (struct-case x
       ((constant k0) (equal? k0 k))
       (else #f)))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (P x lt lf ac)
     (struct-case x
       ((constant c)
        (if c
            (if lt (cons `(jmp ,lt) ac) ac)
-           (if lf (cons `(jmp ,lf) ac) ac)))
+	 (if lf (cons `(jmp ,lf) ac) ac)))
       ((seq e0 e1)
        (E e0 (P e1 lt lf ac)))
       ((conditional e0 e1 e2)
        (cond
-         ((and (constant=? e1 #t) (constant=? e2 #f))
-          (P e0 lt lf ac))
-         ((and (constant=? e1 #f) (constant=? e2 #t))
-          (P e0 lf lt ac))
-         ((and lt lf)
-          (let ((l (unique-label)))
-            (P e0 #f l
-               (P e1 lt lf
-                  (cons l (P e2 lt lf ac))))))
-         (lt
-          (let ((lf (unique-label)) (l (unique-label)))
-            (P e0 #f l
-               (P e1 lt lf
-                  (cons l (P e2 lt #f (cons lf ac)))))))
-         (lf
-          (let ((lt (unique-label)) (l (unique-label)))
-            (P e0 #f l
-               (P e1 lt lf
-                  (cons l (P e2 #f lf (cons lt ac)))))))
-         (else
-          (let ((lf (unique-label)) (l (unique-label)))
-            (P e0 #f l
-               (P e1 #f #f
-                  (cons `(jmp ,lf)
-                    (cons l (P e2 #f #f (cons lf ac))))))))))
+	((and (constant=? e1 #t) (constant=? e2 #f))
+	 (P e0 lt lf ac))
+	((and (constant=? e1 #f) (constant=? e2 #t))
+	 (P e0 lf lt ac))
+	((and lt lf)
+	 (let ((l (unique-label)))
+	   (P e0 #f l
+	      (P e1 lt lf
+		 (cons l (P e2 lt lf ac))))))
+	(lt
+	 (let ((lf (unique-label)) (l (unique-label)))
+	   (P e0 #f l
+	      (P e1 lt lf
+		 (cons l (P e2 lt #f (cons lf ac)))))))
+	(lf
+	 (let ((lt (unique-label)) (l (unique-label)))
+	   (P e0 #f l
+	      (P e1 lt lf
+		 (cons l (P e2 #f lf (cons lt ac)))))))
+	(else
+	 (let ((lf (unique-label)) (l (unique-label)))
+	   (P e0 #f l
+	      (P e1 #f #f
+		 (cons `(jmp ,lf)
+		       (cons l (P e2 #f #f (cons lf ac))))))))))
       ((asm-instr op a0 a1)
        (let ()
          (define (notop x)
            (cond
-             ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
-                        (u< u>=) (u<= u>) (u> u<=) (u>= u<)
-                        (fl:= fl:o!=) (fl:!= fl:o=)
-                        (fl:< fl:o>=) (fl:<= fl:o>)
-                        (fl:> fl:o<=) (fl:>= fl:o<)
-                        ))
-              => cadr)
-             (else (error who "invalid notop" x))))
+	    ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
+		       (u< u>=) (u<= u>) (u> u<=) (u>= u<)
+		       (fl:= fl:o!=) (fl:!= fl:o=)
+		       (fl:< fl:o>=) (fl:<= fl:o>)
+		       (fl:> fl:o<=) (fl:>= fl:o<)
+		       ))
+	     => cadr)
+	    (else (error who "invalid notop" x))))
          (define (jmpname x)
            (cond
-             ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)
-                        (u< jb) (u<= jbe) (u> ja) (u>= jae)
-                        (fl:= je) (fl:!= jne)
-                        (fl:< jb) (fl:> ja) (fl:<= jbe) (fl:>= jae)
-                        (fl:o= je) (fl:o!= jne)
-                        (fl:o< jb) (fl:o> ja) (fl:o<= jbe) (fl:o>= jae)
-                        ))
-              => cadr)
-             (else (error who "invalid jmpname" x))))
+	    ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)
+		       (u< jb) (u<= jbe) (u> ja) (u>= jae)
+		       (fl:= je) (fl:!= jne)
+		       (fl:< jb) (fl:> ja) (fl:<= jbe) (fl:>= jae)
+		       (fl:o= je) (fl:o!= jne)
+		       (fl:o< jb) (fl:o> ja) (fl:o<= jbe) (fl:o>= jae)
+		       ))
+	     => cadr)
+	    (else (error who "invalid jmpname" x))))
          (define (revjmpname x)
            (cond
-             ((assq x '((= je) (!= jne) (< jg) (<= jge) (> jl) (>= jle)
-                        (u< ja) (u<= jae) (u> jb) (u>= jbe)))
-              => cadr)
-             (else (error who "invalid jmpname" x))))
+	    ((assq x '((= je) (!= jne) (< jg) (<= jge) (> jl) (>= jle)
+		       (u< ja) (u<= jae) (u> jb) (u>= jbe)))
+	     => cadr)
+	    (else (error who "invalid jmpname" x))))
          (define (cmp op a0 a1 lab ac)
            (cond
-             ((memq op '(fl:= fl:!= fl:< fl:<= fl:> fl:>=))
-              (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
-                     `(,(jmpname op) ,lab)
-                     ;;; BOGUS!
-                     ac))
-             ((memq op '(fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=))
-              (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
-                     `(jp ,lab)
-                     `(,(jmpname op) ,lab)
-                     ac))
-             ((or (symbol? a0) (constant? a1))
-              (cons* `(cmpl ,(R a1) ,(R a0))
-                     `(,(jmpname op) ,lab)
-                     ac))
-             ((or (symbol? a1) (constant? a0))
-              (cons* `(cmpl ,(R a0) ,(R a1))
-                     `(,(revjmpname op) ,lab)
-                     ac))
-             (else (error who "invalid cmpops" a0 a1))))
+	    ((memq op '(fl:= fl:!= fl:< fl:<= fl:> fl:>=))
+	     (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
+		    `(,(jmpname op) ,lab)
+		    ;;BOGUS! (Abdulaziz Ghuloum)
+		    ac))
+	    ((memq op '(fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=))
+	     (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
+		    `(jp ,lab)
+		    `(,(jmpname op) ,lab)
+		    ac))
+	    ((or (symbol? a0) (constant? a1))
+	     (cons* `(cmpl ,(R a1) ,(R a0))
+		    `(,(jmpname op) ,lab)
+		    ac))
+	    ((or (symbol? a1) (constant? a0))
+	     (cons* `(cmpl ,(R a0) ,(R a1))
+		    `(,(revjmpname op) ,lab)
+		    ac))
+	    (else (error who "invalid cmpops" a0 a1))))
          (cond
-           ((and lt lf)
-            (cmp op a0 a1 lt
+	  ((and lt lf)
+	   (cmp op a0 a1 lt
                 (cons `(jmp ,lf) ac)))
-           (lt
-            (cmp op a0 a1 lt ac))
-           (lf
-            (cmp (notop op) a0 a1 lf ac))
-           (else ac))))
+	  (lt
+	   (cmp op a0 a1 lt ac))
+	  (lf
+	   (cmp (notop op) a0 a1 lf ac))
+	  (else ac))))
       ((shortcut body handler)
        (let ((L (unique-interrupt-label)) (lj (unique-label)))
          (let ((ac (if (and lt lf) ac (cons lj ac))))
@@ -3327,7 +3374,9 @@
            (parameterize ((exception-label L))
              (P body lt lf ac)))))
       (else (error who "invalid pred" x))))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (T x ac)
     (struct-case x
       ((seq e0 e1) (E e0 (T e1 ac)))
@@ -3336,13 +3385,13 @@
          (P e0 #f L (T e1 (cons L (T e2 ac))))))
       ((primcall op rands)
        (case op
-        ((return) (cons '(ret) ac))
-        ((indirect-jump)
-         (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,cp-register))
-               ac))
-        ((direct-jump)
-         (cons `(jmp (label ,(code-loc-label (car rands)))) ac))
-        (else (error who "invalid tail" x))))
+	 ((return) (cons '(ret) ac))
+	 ((indirect-jump)
+	  (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,cp-register))
+		ac))
+	 ((direct-jump)
+	  (cons `(jmp (label ,(code-loc-label (car rands)))) ac))
+	 (else (error who "invalid tail" x))))
       ((shortcut body handler)
        (let ((L (unique-interrupt-label)))
          (let ((hand (cons L (T handler '()))))
@@ -3351,8 +3400,11 @@
          (parameterize ((exception-label L))
            (T body ac))))
       (else (error who "invalid tail" x))))
+
   (define exception-label (make-parameter #f))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (handle-vararg fml-count ac)
     (define CONTINUE_LABEL (unique-label))
     (define DONE_LABEL (unique-label))
@@ -3369,19 +3421,19 @@
            (addl eax ebx)
            (cmpl ebx apr)
            (jle LOOP_HEAD)
-           ; overflow
-           (addl eax esp) ; advance esp to cover args
-           (pushl cpr)    ; push current cp
-           (pushl eax)    ; push argc
-           (negl eax)     ; make argc positive
+		; overflow
+           (addl eax esp)		     ; advance esp to cover args
+           (pushl cpr)			     ; push current cp
+           (pushl eax)			     ; push argc
+           (negl eax)			     ; make argc positive
            (addl (int (fx* 4 wordsize)) eax) ; add 4 words to adjust frame size
-           (pushl eax)    ; push frame size
-           (addl eax eax) ; double the number of args
+           (pushl eax)			     ; push frame size
+           (addl eax eax)		     ; double the number of args
            (movl eax (mem (fx* -2 wordsize) fpr)) ; pass it as first arg
-           (movl (int (argc-convention 1)) eax) ; setup argc
+           (movl (int (argc-convention 1)) eax)	  ; setup argc
            (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
            (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-           ;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
+		;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
            (compile-call-frame 0 '#() '(int 0) (indirect-cpr-call))
            (popl eax)     ; pop framesize and drop it
            (popl eax)     ; reload argc
@@ -3402,13 +3454,13 @@
            DONE_LABEL
            (movl ebx (mem (fx- 0 (fxsll fml-count fx-shift)) fpr))
            ac))
-  ;;;
+
   (define (properize args proper ac)
     (cond
-      (proper ac)
-      (else
-       (handle-vararg (length (cdr args)) ac))))
-  ;;;
+     (proper ac)
+     (else
+      (handle-vararg (length (cdr args)) ac))))
+
   (define (ClambdaCase x ac)
     (struct-case x
       ((clambda-case info body)
@@ -3416,48 +3468,38 @@
          ((case-info L args proper)
           (let ((lothers (unique-label)))
             (cons* `(cmpl ,(argc-convention
-                             (if proper
-                                 (length (cdr args))
-                                 (length (cddr args))))
+			    (if proper
+				(length (cdr args))
+			      (length (cddr args))))
                           ,argc-register)
                    (cond
-                     (proper `(jne ,lothers))
-                     ((> (argc-convention 0) (argc-convention 1))
-                      `(jg ,lothers))
-                     (else
-                      `(jl ,lothers)))
-               (properize args proper
-                  (cons (label L)
-                        (T body (cons lothers ac)))))))))))
-  ;;;
+		    (proper `(jne ,lothers))
+		    ((> (argc-convention 0) (argc-convention 1))
+		     `(jg ,lothers))
+		    (else
+		     `(jl ,lothers)))
+		   (properize args proper
+			      (cons (label L)
+				    (T body (cons lothers ac)))))))))))
+
   (define (Clambda x)
     (struct-case x
       ((clambda L case* cp free* name)
        (cons* (length free*)
               `(name ,name)
               (label L)
-          (let ((ac (list '(nop))))
-            (parameterize ((exceptions-conc ac))
-              (let f ((case* case*))
-                (cond
-                  ((null? case*)
-                   (cons `(jmp (label ,(sl-invalid-args-label))) ac))
-                  (else
-                   (ClambdaCase (car case*) (f (cdr case*))))))))))))
-  ;;;
-  (define exceptions-conc (make-parameter #f))
-  ;;;
-  (define (Program x)
-    (struct-case x
-      ((codes code* body)
-       (cons (cons* 0
-                    (label (gensym))
-                    (let ((ac (list '(nop))))
-                      (parameterize ((exceptions-conc ac))
-                        (T body ac))))
-             (map Clambda code*)))))
-  (Program x))
+	      (let ((ac (list '(nop))))
+		(parameterize ((exceptions-conc ac))
+		  (let f ((case* case*))
+		    (cond
+		     ((null? case*)
+		      (cons `(jmp (label ,(sl-invalid-args-label))) ac))
+		     (else
+		      (ClambdaCase (car case*) (f (cdr case*))))))))))))
 
+  #| end of module: flatten-codes |# )
+
+
 (define (print-code x)
   (parameterize ((print-gensym '#t))
     (pretty-print (unparse x))))
@@ -3465,6 +3507,6 @@
 
 ;;;; done
 
-#|module alt-cogen|# )
+#| end of module: alt-cogen |# )
 
 ;;; end of file
