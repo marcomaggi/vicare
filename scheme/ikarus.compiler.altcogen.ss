@@ -768,32 +768,32 @@
 
 ;;;; some CPU registers stuff
 
-(define parameter-registers '(%edi))
+(define-constant PARAMETER-REGISTERS '(%edi))
 
-(define return-value-register '%eax)
+(define-constant RETURN-VALUE-REGISTER '%eax)
 
 ;;Continuation pointer register?
 ;;
-(define cp-register '%edi)
+(define-constant CP-REGISTER '%edi)
 
-(define all-registers
+(define-constant ALL-REGISTERS
   (case-word-size
    ((32)
     '(%eax %edi %ebx %edx %ecx))
    ((64)
     '(%eax %edi %ebx %edx %ecx %r8 %r9 %r10 %r11 %r14 %r15))))
 
-(define non-8bit-registers
+(define-constant NON-8BIT-REGISTERS
   (case-word-size
    ((32)	'(%edi))
    ((64)	'(%edi))))
 
-(define argc-register '%eax)
+(define-constant ARGC-REGISTER '%eax)
 
-;;; apr = %ebp
-;;; esp = %esp
-;;; pcr = %esi
-;;; cpr = %edi
+;;; apr = %ebp		allocation pointer
+;;; esp = %esp		stack pointer
+;;; pcr = %esi		pointer to PCB
+;;; cpr = %edi		pointer to closure
 
 (define (register-index x)
   (cond ((assq x '((%eax 0) (%edi 1) (%ebx 2) (%edx 3)
@@ -839,7 +839,7 @@
 	   (struct-case cas.info
 	     ((case-info cas.info.label cas.info.args cas.info.proper)
 	      (let-values (((rargs rlocs fargs flocs)
-			    (%partition-formals parameter-registers cas.info.args)))
+			    (%partition-formals PARAMETER-REGISTERS cas.info.args)))
 		(parametrise ((locals rargs))
 		  (for-each set-var-loc!
 		    fargs flocs)
@@ -854,43 +854,45 @@
 		     (make-locals (locals) body))))))))))
 
       (define (%partition-formals regs ls)
-	;;Recursive function.
+	;;Recursive  function.   Associate  CASE-LAMBDA formals  to  CPU
+	;;available registers.
+	;;
+	;;REGS must be a list of symbols representing CPU registers.
+	;;
+	;;LS must be a list of CASE-LAMBDA formals.
+	;;
+	;;Return 4 values:
+	;;
+	;;1. a list of register symbols associated to formals;
+	;;
+	;;2. a list of formals associated  to symbols;
+	;;
+	;;3. a list of formals associated to FVAR structures;
+	;;
+	;;4. a list of FVAR structures associated to formals.
 	;;
 	(cond ((null? regs)
-	       (let ((flocs (let recur ((i  1)
-					(ls ls))
-			      (if (null? ls)
-				  '()
-				(cons (mkfvar i)
-				      (recur ($fxadd1 i) ($cdr ls)))))))
+	       ;;If  the  number of  formals  is  <=  of the  number  of
+	       ;;registers:  the left-over  registers are  associated to
+	       ;;FVAR structures.
+	       (let ((flocs (%one-fvar-for-each-left-over-formal 1 ls)))
 		 (values '() '() ls flocs)))
 	      ((null? ls)
+	       ;;If there are more registers than formals: fine.
 	       (values '() '() '() '()))
 	      (else
+	       ;;If there is a register for this formal: associate them.
 	       (let-values (((rargs rlocs fargs flocs)
 			     (%partition-formals ($cdr regs) ($cdr ls))))
 		 (values (cons ($car ls)   rargs)
 			 (cons ($car regs) rlocs)
 			 fargs flocs)))))
-      #;(define (partition-formals ls)
-	(let outer-recur ((regs parameter-registers)
-			  (ls   ls))
-	  (cond ((null? regs)
-		 (let ((flocs (let inner-recur ((i  1)
-						(ls ls))
-				(if (null? ls)
-				    '()
-				  (cons (mkfvar i)
-					(inner-recur ($fxadd1 i) ($cdr ls)))))))
-		   (values '() '() ls flocs)))
-		((null? ls)
-		 (values '() '() '() '()))
-		(else
-		 (let-values (((rargs rlocs fargs flocs)
-			       (outer-recur ($cdr regs) ($cdr ls))))
-		   (values (cons ($car ls)   rargs)
-			   (cons ($car regs) rlocs)
-			   fargs flocs))))))
+
+      (define (%one-fvar-for-each-left-over-formal i ls)
+	(if (null? ls)
+	    '()
+	  (cons (mkfvar i)
+		(%one-fvar-for-each-left-over-formal ($fxadd1 i) ($cdr ls)))))
 
       #| end of module: ClambdaCase |# )
 
@@ -955,7 +957,7 @@
        (do-bind (cdr lhs*) (cdr rhs*) body)))))
 
   (define (nontail-locations args)
-    (let f ((regs parameter-registers) (args args))
+    (let f ((regs PARAMETER-REGISTERS) (args args))
       (cond
        ((null? args) (values '() '() '()))
        ((null? regs) (values '() '() args))
@@ -982,7 +984,7 @@
             (frmt* (map (lambda (x) (make-nfv 'unset-conflicts #f #f #f #f))
 		     frm-args)))
         (let* ((call (make-ntcall call-targ value-dest
-				  (cons* argc-register
+				  (cons* ARGC-REGISTER
 					 pcr esp apr
 					 (append reg-locs frmt*))
 				  #f #f))
@@ -996,12 +998,12 @@
 					 (assign*
 					  reg-locs regt*
 					  (make-seq
-					   (make-set argc-register
+					   (make-set ARGC-REGISTER
 						     (make-constant
 						      (argc-convention (length rands))))
 					   call))))))))
           (if value-dest
-              (make-seq body (make-set value-dest return-value-register))
+              (make-seq body (make-set value-dest RETURN-VALUE-REGISTER))
 	    body)))))
 
   ;;Commented out by Abdulaziz Ghuloum.
@@ -1159,9 +1161,9 @@
     (S x
        (lambda (x)
          (make-seq
-	  (make-set return-value-register x)
+	  (make-set RETURN-VALUE-REGISTER x)
 	  (make-primcall 'return
-			 (list pcr esp apr return-value-register))))))
+			 (list pcr esp apr RETURN-VALUE-REGISTER))))))
 
   (define (E x)
     (struct-case x
@@ -1243,19 +1245,19 @@
            (locs (formals-locations args))
            (rest
             (make-seq
-	     (make-set argc-register
+	     (make-set ARGC-REGISTER
 		       (make-constant
 			(argc-convention (length rands))))
 	     (cond
 	      (target
 	       (make-primcall 'direct-jump
 			      (cons target
-				    (cons* argc-register
+				    (cons* ARGC-REGISTER
 					   pcr esp apr
 					   locs))))
 	      (else
 	       (make-primcall 'indirect-jump
-			      (cons* argc-register
+			      (cons* ARGC-REGISTER
 				     pcr esp apr
 				     locs)))))))
       (let f ((args (reverse args))
@@ -1300,10 +1302,10 @@
 	     (make-set (mkfvar 1) t0)
 	     (make-set (mkfvar 2) t1)
 	     (make-set cpr t2)
-	     (make-set argc-register (make-constant (argc-convention 1)))
+	     (make-set ARGC-REGISTER (make-constant (argc-convention 1)))
 	     (make-asm-instr 'int- fpr (make-constant wordsize))
 	     (make-primcall 'indirect-jump
-			    (list argc-register cpr pcr esp apr
+			    (list ARGC-REGISTER cpr pcr esp apr
 				  (mkfvar 1) (mkfvar 2))))))
          (else (VT x))))
       ((bind lhs* rhs* e)
@@ -1324,7 +1326,7 @@
       (else (error who "invalid tail" x))))
 
   (define (formals-locations args)
-    (let f ((regs parameter-registers) (args args))
+    (let f ((regs PARAMETER-REGISTERS) (args args))
       (cond
        ((null? args) '())
        ((null? regs)
@@ -2449,7 +2451,7 @@
         (else
          (cond
            ((symbol? x)
-            (if (memq x all-registers)
+            (if (memq x ALL-REGISTERS)
                 (set-add x (make-empty-set))
                 (make-empty-set)))
            (else (error who "invalid R" x))))))
@@ -2466,9 +2468,9 @@
             (let ((s (set-rem d s)))
               (set-for-each (lambda (y) (add-edge! g d y)) s)
               (when (var? d)
-                (for-each (lambda (r) (add-edge! g d r)) non-8bit-registers))
+                (for-each (lambda (r) (add-edge! g d r)) NON-8BIT-REGISTERS))
               (when (var? v)
-                (for-each (lambda (r) (add-edge! g v r)) non-8bit-registers))
+                (for-each (lambda (r) (add-edge! g v r)) NON-8BIT-REGISTERS))
               (set-union (R v) s)))
            ((int-/overflow int+/overflow int*/overflow)
             (unless (exception-live-set)
@@ -2484,7 +2486,7 @@
            ((bset)
             (when (var? v)
               (for-each (lambda (r) (add-edge! g v r))
-                non-8bit-registers))
+                NON-8BIT-REGISTERS))
             (set-union (set-union (R v) (R d)) s))
            ((cltd)
             (let ((s (set-rem edx s)))
@@ -2560,7 +2562,7 @@
       (cond
         ((null? ls) #f)
         ((fx< (length (set->list (node-neighbors (car ls) g)))
-              (length all-registers))
+              (length ALL-REGISTERS))
          (car ls))
         (else (find-low-degree (cdr ls) g))))
     (define (find-color/maybe x confs env)
@@ -2572,7 +2574,7 @@
                      (set->list confs))))
         (let ((r* (set->list
                     (set-difference
-                      (list->set all-registers)
+                      (list->set ALL-REGISTERS)
                       (list->set cr)))))
           (if (null? r*)
               #f
@@ -3187,7 +3189,7 @@
 		   mask
 		   (rp-label value)
 		   `(call (disp ,(fx- disp-closure-code closure-tag)
-				,cp-register)))
+				,CP-REGISTER)))
 		  ac)))))
       ((asm-instr op d s)
        (case op
@@ -3422,7 +3424,7 @@
        (case op
 	 ((return) (cons '(ret) ac))
 	 ((indirect-jump)
-	  (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,cp-register))
+	  (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,CP-REGISTER))
 		ac))
 	 ((direct-jump)
 	  (cons `(jmp (label ,(code-loc-label (car rands)))) ac))
@@ -3506,7 +3508,7 @@
 			    (if proper
 				(length (cdr args))
 			      (length (cddr args))))
-                          ,argc-register)
+                          ,ARGC-REGISTER)
                    (cond
 		    (proper `(jne ,lothers))
 		    ((> (argc-convention 0) (argc-convention 1))
