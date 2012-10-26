@@ -803,29 +803,64 @@
 	 (error 'register-index "not a register" x))))
 
 
-(define (impose-calling-convention/evaluation-order x)
-  ;;The following subfunctions are key to understand this function:
-  ;;
-  ;;V - Generate  assembly code needed to evaluate a  struct X and store
-  ;;the result in a destination (for example a CPU register).
-  ;;
-  ;;P - Generate assembly code needed to evaluate a predicate expression
-  ;;which must result in true or false.
-  ;;
+(module (impose-calling-convention/evaluation-order)
 
   (define who 'impose-calling-convention/evaluation-order)
-  ;;;
-  ;;;
-  (define (S* x* k)
-    (cond
-      ((null? x*) (k '()))
-      (else
-       (S (car x*)
-          (lambda (a)
-            (S* (cdr x*)
-                (lambda (d)
-                  (k (cons a d)))))))))
-  ;;;
+
+  (define (impose-calling-convention/evaluation-order x)
+    (Program x))
+
+  (module (Program)
+
+    (define (Program x)
+      (struct-case x
+	((codes code* body)
+	 (make-codes (map Clambda code*) (Main body)))))
+
+    (define (Clambda x)
+      (struct-case x
+	((clambda label case* cp free* name)
+	 (make-clambda label (map ClambdaCase case*) cp free* name))))
+
+    (define (ClambdaCase x)
+      (struct-case x
+	((clambda-case info body)
+	 (struct-case info
+	   ((case-info label args proper)
+	    (let-values (((rargs rlocs fargs flocs)
+			  (partition-formals args)))
+	      (set! locals rargs)
+	      (for-each set-var-loc! fargs flocs)
+	      (let ((body (let f ((args rargs) (locs rlocs))
+			    (cond
+			     ((null? args) (Tail body))
+			     (else
+			      (make-seq
+			       (make-set (car args) (car locs))
+			       (f (cdr args) (cdr locs))))))))
+		(make-clambda-case
+		 (make-case-info label (append rlocs flocs) proper)
+		 (make-locals locals body)))))))))
+
+    (define (Main x)
+      (set! locals '())
+      (let ((x (Tail x)))
+	(make-locals locals x)))
+
+    #| end of module: Program |# )
+
+;;; --------------------------------------------------------------------
+;;; helpers
+
+  (define (S* x* kont)
+    (if (null? x*)
+	(kont '())
+      (S (car x*) (lambda (a)
+		    (S* (cdr x*) (lambda (d)
+				   (kont (cons a d))))))))
+
+;;; --------------------------------------------------------------------
+
   (define (S x k)
     (struct-case x
       ((bind lhs* rhs* body)
@@ -835,126 +870,130 @@
       ((known expr)
        (S expr k))
       (else
-       (cond
-         ((or (constant? x) (symbol? x)) (k x))
-         ((var? x)
-          (cond
-            ((var-loc x) => k)
-            (else (k x))))
-         ((or (funcall? x) (primcall? x) (jmpcall? x)
-              (forcall? x) (shortcut? x)
-              (conditional? x))
-          (let ((t (unique-var 'tmp)))
-            (do-bind (list t) (list x)
-              (k t))))
-         (else (error who "invalid S" x))))))
+       (cond ((or (constant? x) (symbol? x)) (k x))
+	     ((var? x)
+	      (cond
+	       ((var-loc x) => k)
+	       (else (k x))))
+	     ((or (funcall? x) (primcall? x) (jmpcall? x)
+		  (forcall? x) (shortcut? x)
+		  (conditional? x))
+	      (let ((t (unique-var 'tmp)))
+		(do-bind (list t) (list x)
+			 (k t))))
+	     (else (error who "invalid S" x))))))
+
   (define (Mem x k)
     (struct-case x
       ((primcall op arg*)
        (if (eq? op 'mref)
            (S* arg*
-              (lambda (arg*)
+	       (lambda (arg*)
                  (k (make-disp (car arg*) (cadr arg*)))))
-           (S x k)))
+	 (S x k)))
       (else (S x k))))
-  ;;;
+
   (define (do-bind lhs* rhs* body)
     (cond
-      ((null? lhs*) body)
-      (else
-       (set! locals (cons (car lhs*) locals))
-       (make-seq
-         (V (car lhs*) (car rhs*))
-         (do-bind (cdr lhs*) (cdr rhs*) body)))))
-  ;;;
+     ((null? lhs*) body)
+     (else
+      (set! locals (cons (car lhs*) locals))
+      (make-seq
+       (V (car lhs*) (car rhs*))
+       (do-bind (cdr lhs*) (cdr rhs*) body)))))
+
   (define (nontail-locations args)
     (let f ((regs parameter-registers) (args args))
       (cond
-        ((null? args) (values '() '() '()))
-        ((null? regs) (values '() '() args))
-        (else
-         (let-values (((r* rl* f*) (f (cdr regs) (cdr args))))
-            (values (cons (car regs) r*)
-                    (cons (car args) rl*)
-                    f*))))))
+       ((null? args) (values '() '() '()))
+       ((null? regs) (values '() '() args))
+       (else
+	(let-values (((r* rl* f*) (f (cdr regs) (cdr args))))
+	  (values (cons (car regs) r*)
+		  (cons (car args) rl*)
+		  f*))))))
   (define (make-set lhs rhs)
     (make-asm-instr 'move lhs rhs))
+
   (define (do-bind-frmt* nf* v* ac)
     (cond
-      ((null? nf*) ac)
-      (else
-       (make-seq
-         (V (car nf*) (car v*))
-         (do-bind-frmt* (cdr nf*) (cdr v*) ac)))))
-  ;;;
+     ((null? nf*) ac)
+     (else
+      (make-seq
+       (V (car nf*) (car v*))
+       (do-bind-frmt* (cdr nf*) (cdr v*) ac)))))
+
   (define (handle-nontail-call rator rands value-dest call-targ)
     (let-values (((reg-locs reg-args frm-args)
                   (nontail-locations (cons rator rands))))
       (let ((regt* (map (lambda (x) (unique-var 'rt)) reg-args))
             (frmt* (map (lambda (x) (make-nfv 'unset-conflicts #f #f #f #f))
-                        frm-args)))
-        (let* ((call
-                (make-ntcall call-targ value-dest
-                  (cons* argc-register
-                         pcr esp apr
-                         (append reg-locs frmt*))
-                  #f #f))
-               (body
-                (make-nframe frmt* #f
-                  (do-bind-frmt* frmt* frm-args
-                    (do-bind (cdr regt*) (cdr reg-args)
-                      ;;; evaluate cpt last
-                      (do-bind (list (car regt*)) (list (car reg-args))
-                        (assign* reg-locs regt*
-                          (make-seq
-                            (make-set argc-register
-                               (make-constant
-                                 (argc-convention (length rands))))
-                            call))))))))
+		     frm-args)))
+        (let* ((call (make-ntcall call-targ value-dest
+				  (cons* argc-register
+					 pcr esp apr
+					 (append reg-locs frmt*))
+				  #f #f))
+               (body (make-nframe
+		      frmt* #f
+		      (do-bind-frmt*
+		       frmt* frm-args
+		       (do-bind (cdr regt*) (cdr reg-args)
+				;;evaluate cpt last
+				(do-bind (list (car regt*)) (list (car reg-args))
+					 (assign*
+					  reg-locs regt*
+					  (make-seq
+					   (make-set argc-register
+						     (make-constant
+						      (argc-convention (length rands))))
+					   call))))))))
           (if value-dest
               (make-seq body (make-set value-dest return-value-register))
-              body)))))
-  ;;; (define (alloc-check size)
-  ;;;   (E (make-conditional ;;; PCB ALLOC-REDLINE
-  ;;;        (make-primcall '<=
-  ;;;          (list (make-primcall 'int+ (list apr size))
-  ;;;                (make-primcall 'mref (list pcr (make-constant 4)))))
-  ;;;        (make-primcall 'nop '())
-  ;;;        (make-funcall
-  ;;;          (make-primcall 'mref
-  ;;;            (list
-  ;;;              (make-constant (make-object (primref->symbol 'do-overflow)))
-  ;;;              (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
-  ;;;          (list size)))))
+	    body)))))
+
+  ;;Commented out by Abdulaziz Ghuloum.
+  ;;
+  ;; (define (alloc-check size)
+  ;;   (E (make-conditional ;;; PCB ALLOC-REDLINE
+  ;; 	   (make-primcall '<=
+  ;; 			  (list (make-primcall 'int+ (list apr size))
+  ;; 				(make-primcall 'mref (list pcr (make-constant 4)))))
+  ;; 	   (make-primcall 'nop '())
+  ;; 	 (make-funcall
+  ;;         (make-primcall 'mref
+  ;; 			 (list
+  ;; 			  (make-constant (make-object (primref->symbol 'do-overflow)))
+  ;; 			  (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
+  ;;         (list size)))))
+
   (define (alloc-check size)
     (define (test size)
       (if (struct-case size
-             ((constant i) (<= i 4096))
-             (else #f))
-          (make-primcall '<=
-             (list
-               apr
-               (make-primcall 'mref
-                 (list pcr (make-constant pcb-allocation-redline)))))
-          (make-primcall '>=
-            (list (make-primcall 'int-
-                     (list
-                       (make-primcall 'mref
-                         (list pcr (make-constant pcb-allocation-redline)))
-                       apr))
-                  size))))
+	    ((constant i) (<= i 4096))
+	    (else #f))
+          (make-primcall '<= (list apr
+			  (make-primcall 'mref
+					 (list pcr (make-constant pcb-allocation-redline)))))
+	(make-primcall '>=
+		       (list (make-primcall 'int-
+					    (list
+					     (make-primcall 'mref
+							    (list pcr (make-constant pcb-allocation-redline)))
+					     apr))
+			     size))))
     (E (make-shortcut
-         (make-conditional ;;; PCB ALLOC-REDLINE
-           (test size)
-           (make-primcall 'nop '())
-           (make-primcall 'interrupt '()))
-         (make-funcall
-           (make-primcall 'mref
-             (list
-               (make-constant (make-object (primref->symbol 'do-overflow)))
-               (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
-           (list size)))))
-  ;;; impose value
+	(make-conditional ;;; PCB ALLOC-REDLINE
+	    (test size)
+	    (make-primcall 'nop '())
+	  (make-primcall 'interrupt '()))
+	(make-funcall
+	 (make-primcall 'mref
+			(list
+			 (make-constant (make-object (primref->symbol 'do-overflow)))
+			 (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
+	 (list size)))))
+
   (define (V d x)
     ;;Generate assembly  instructions to compute  a value from  struct X
     ;;and store the result in destination D.
@@ -963,8 +1002,8 @@
       ((constant) (make-set d x))
       ((var)
        (cond
-         ((var-loc x) => (lambda (loc) (make-set d loc)))
-         (else (make-set d x))))
+	((var-loc x) => (lambda (loc) (make-set d loc)))
+	(else (make-set d x))))
       ((bind lhs* rhs* e)
        (do-bind lhs* rhs* (V d e)))
       ((seq e0 e1)
@@ -977,14 +1016,14 @@
           (S (car rands)
              (lambda (size)
                (make-seq
-                 (alloc-check size)
-                 (S (cadr rands)
-                    (lambda (tag)
-                      (make-seq
-                        (make-seq
-                          (make-set d apr)
-                          (make-asm-instr 'logor d tag))
-                        (make-asm-instr 'int+ apr size))))))))
+		(alloc-check size)
+		(S (cadr rands)
+		   (lambda (tag)
+		     (make-seq
+		      (make-seq
+		       (make-set d apr)
+		       (make-asm-instr 'logor d tag))
+		      (make-asm-instr 'int+ apr size))))))))
          ((mref)
           (S* rands
               (lambda (rands)
@@ -993,19 +1032,19 @@
           (S* rands
               (lambda (rands)
                 (make-asm-instr 'load32 d
-                  (make-disp (car rands) (cadr rands))))))
+				(make-disp (car rands) (cadr rands))))))
          ((bref)
           (S* rands
               (lambda (rands)
                 (make-asm-instr 'load8 d
-                  (make-disp (car rands) (cadr rands))))))
+				(make-disp (car rands) (cadr rands))))))
          ((logand logxor logor int+ int- int*
                   int-/overflow int+/overflow int*/overflow)
           (make-seq
-            (V d (car rands))
-            (S (cadr rands)
-               (lambda (s)
-                 (make-asm-instr op d s)))))
+	   (V d (car rands))
+	   (S (cadr rands)
+	      (lambda (s)
+		(make-asm-instr op d s)))))
          ((int-quotient)
           (S* rands
               (lambda (rands)
@@ -1025,17 +1064,17 @@
          ((sll sra srl sll/overflow)
           (let ((a (car rands)) (b (cadr rands)))
             (cond
-              ((constant? b)
-               (make-seq
-                 (V d a)
-                 (make-asm-instr op d b)))
-              (else
-               (S b
-                  (lambda (b)
-                    (multiple-forms-sequence
-		     (V d a)
-		     (make-set ecx b)
-		     (make-asm-instr op d ecx))))))))
+	     ((constant? b)
+	      (make-seq
+	       (V d a)
+	       (make-asm-instr op d b)))
+	     (else
+	      (S b
+		 (lambda (b)
+		   (multiple-forms-sequence
+		    (V d a)
+		    (make-set ecx b)
+		    (make-asm-instr op d ecx))))))))
          (else (error who "invalid value op" op))))
       ((funcall rator rands)
        (handle-nontail-call rator rands d #f))
@@ -1043,35 +1082,35 @@
        (handle-nontail-call rator rands d label))
       ((forcall op rands)
        (handle-nontail-call
-         (make-constant (make-foreign-label op))
-         rands d op))
+	(make-constant (make-foreign-label op))
+	rands d op))
       ((shortcut body handler)
        (make-shortcut
-          (V d body)
-          (V d handler)))
+	(V d body)
+	(V d handler)))
       ((known expr)
        (V d expr))
       (else
        (if (symbol? x)
            (make-set d x)
-           (error who "invalid value" (unparse x))))))
-  ;;;
+	 (error who "invalid value" (unparse x))))))
+
   (define (assign* lhs* rhs* ac)
     (cond
-      ((null? lhs*) ac)
-      (else
-       (make-seq
-         (make-set (car lhs*) (car rhs*))
-         (assign* (cdr lhs*) (cdr rhs*) ac)))))
-  ;;;
+     ((null? lhs*) ac)
+     (else
+      (make-seq
+       (make-set (car lhs*) (car rhs*))
+       (assign* (cdr lhs*) (cdr rhs*) ac)))))
+
   (define (VT x)
     (S x
        (lambda (x)
          (make-seq
-           (make-set return-value-register x)
-           (make-primcall 'return
-             (list pcr esp apr return-value-register))))))
-  ;;; impose effect
+	  (make-set return-value-register x)
+	  (make-primcall 'return
+			 (list pcr esp apr return-value-register))))))
+
   (define (E x)
     (struct-case x
       ((seq e0 e1) (make-seq (E e0) (E e1)))
@@ -1085,8 +1124,8 @@
           (S* rands
               (lambda (s*)
                 (make-asm-instr op
-                  (make-disp (car s*) (cadr s*))
-                  (caddr s*)))))
+				(make-disp (car s*) (cadr s*))
+				(caddr s*)))))
          ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
                    fl:from-int fl:shuffle bswap!
                    fl:store-single fl:load-single)
@@ -1102,12 +1141,12 @@
        (handle-nontail-call rator rands #f label))
       ((forcall op rands)
        (handle-nontail-call
-         (make-constant (make-foreign-label op))
-         rands #f op))
+	(make-constant (make-foreign-label op))
+	rands #f op))
       ((shortcut body handler)
        (make-shortcut (E body) (E handler)))
       (else (error who "invalid effect" x))))
-  ;;; impose pred
+
   (define (P x)
     (struct-case x
       ((constant) x)
@@ -1119,75 +1158,75 @@
       ((primcall op rands)
        (let ((a (car rands)) (b (cadr rands)))
          (cond
-           ((and (constant? a) (constant? b))
-            (let ((t (unique-var 'tmp)))
-              (P (make-bind (list t) (list a)
-                    (make-primcall op (list t b))))))
-           (else
-            (Mem a
-              (lambda (a)
-                (Mem b
-                  (lambda (b)
-                    (make-asm-instr op a b)))))))))
-         ;(cond
-         ;  ((and (constant? a) (constant? b))
-         ;   (let ((t (unique-var 'tmp)))
-         ;     (P (make-bind (list t) (list a)
-         ;           (make-primcall op (list t b))))))
-         ;  ((constant? a)
-         ;   (Mem b (lambda (b) (make-asm-instr op a b))))
-         ;  ((constant? b)
-         ;   (Mem a (lambda (a) (make-asm-instr op a b))))
-         ;  (else
-         ;   (S* rands
-         ;       (lambda (rands)
-         ;         (let ((a (car rands)) (b (cadr rands)))
-         ;           (make-asm-instr op a b))))))))
-        ((shortcut body handler)
-         (make-shortcut (P body) (P handler)))
+	  ((and (constant? a) (constant? b))
+	   (let ((t (unique-var 'tmp)))
+	     (P (make-bind (list t) (list a)
+			   (make-primcall op (list t b))))))
+	  (else
+	   (Mem a
+		(lambda (a)
+		  (Mem b
+		       (lambda (b)
+			 (make-asm-instr op a b)))))))))
+		;(cond
+		;  ((and (constant? a) (constant? b))
+		;   (let ((t (unique-var 'tmp)))
+		;     (P (make-bind (list t) (list a)
+		;           (make-primcall op (list t b))))))
+		;  ((constant? a)
+		;   (Mem b (lambda (b) (make-asm-instr op a b))))
+		;  ((constant? b)
+		;   (Mem a (lambda (a) (make-asm-instr op a b))))
+		;  (else
+		;   (S* rands
+		;       (lambda (rands)
+		;         (let ((a (car rands)) (b (cadr rands)))
+		;           (make-asm-instr op a b))))))))
+      ((shortcut body handler)
+       (make-shortcut (P body) (P handler)))
       (else (error who "invalid pred" x))))
-  ;;;
+
   (define (handle-tail-call target rator rands)
     (let* ((args (cons rator rands))
            (locs (formals-locations args))
            (rest
             (make-seq
-              (make-set argc-register
-                (make-constant
-                  (argc-convention (length rands))))
-              (cond
-                (target
-                 (make-primcall 'direct-jump
-                   (cons target
-                    (cons* argc-register
-                           pcr esp apr
-                           locs))))
-                (else
-                 (make-primcall 'indirect-jump
-                   (cons* argc-register
-                          pcr esp apr
-                          locs)))))))
-       (let f ((args (reverse args))
-               (locs (reverse locs))
-               (targs '())
-               (tlocs '()))
-         (cond
-           ((null? args) (assign* tlocs targs rest))
-           ((constant? (car args))
-            (f (cdr args) (cdr locs)
-               (cons (car args) targs)
-               (cons (car locs) tlocs)))
-           ((and (fvar? (car locs))
-                 (var? (car args))
-                 (eq? (car locs) (var-loc (car args))))
-            (f (cdr args) (cdr locs) targs tlocs))
-           (else
-            (let ((t (unique-var 'tmp)))
-              (set! locals (cons t locals))
-              (make-seq
-                (V t (car args))
-                (f (cdr args) (cdr locs)
-                   (cons t targs) (cons (car locs) tlocs)))))))))
+	     (make-set argc-register
+		       (make-constant
+			(argc-convention (length rands))))
+	     (cond
+	      (target
+	       (make-primcall 'direct-jump
+			      (cons target
+				    (cons* argc-register
+					   pcr esp apr
+					   locs))))
+	      (else
+	       (make-primcall 'indirect-jump
+			      (cons* argc-register
+				     pcr esp apr
+				     locs)))))))
+      (let f ((args (reverse args))
+	      (locs (reverse locs))
+	      (targs '())
+	      (tlocs '()))
+	(cond
+	 ((null? args) (assign* tlocs targs rest))
+	 ((constant? (car args))
+	  (f (cdr args) (cdr locs)
+	     (cons (car args) targs)
+	     (cons (car locs) tlocs)))
+	 ((and (fvar? (car locs))
+	       (var? (car args))
+	       (eq? (car locs) (var-loc (car args))))
+	  (f (cdr args) (cdr locs) targs tlocs))
+	 (else
+	  (let ((t (unique-var 'tmp)))
+	    (set! locals (cons t locals))
+	    (make-seq
+	     (V t (car args))
+	     (f (cdr args) (cdr locs)
+		(cons t targs) (cons (car locs) tlocs)))))))))
   (define (Tail x)
     (struct-case x
       ((constant) (VT x))
@@ -1231,78 +1270,42 @@
       ((known expr)
        (Tail expr))
       (else (error who "invalid tail" x))))
-  ;;;
+
   (define (formals-locations args)
     (let f ((regs parameter-registers) (args args))
       (cond
-        ((null? args) '())
-        ((null? regs)
-         (let f ((i 1) (args args))
-           (cond
-             ((null? args) '())
-             (else
-              (cons (mkfvar i)
-                (f (fxadd1 i) (cdr args)))))))
-        (else
-         (cons (car regs) (f (cdr regs) (cdr args)))))))
-  ;;;
+       ((null? args) '())
+       ((null? regs)
+	(let f ((i 1) (args args))
+	  (cond
+	   ((null? args) '())
+	   (else
+	    (cons (mkfvar i)
+		  (f (fxadd1 i) (cdr args)))))))
+       (else
+	(cons (car regs) (f (cdr regs) (cdr args)))))))
+
   (define locals '())
   (define (partition-formals ls)
     (let f ((regs parameter-registers) (ls ls))
       (cond
-        ((null? regs)
-         (let ((flocs
-                (let f ((i 1) (ls ls))
-                  (cond
-                    ((null? ls) '())
-                    (else (cons (mkfvar i) (f (fxadd1 i) (cdr ls))))))))
-           (values '() '() ls flocs)))
-        ((null? ls)
-         (values '() '() '() '()))
-        (else
-         (let-values (((rargs rlocs fargs flocs)
-                       (f (cdr regs) (cdr ls))))
-           (values (cons (car ls) rargs)
-                   (cons (car regs) rlocs)
-                   fargs flocs))))))
-  ;;;
-  (define (ClambdaCase x)
-    (struct-case x
-      ((clambda-case info body)
-       (struct-case info
-         ((case-info label args proper)
-          (let-values (((rargs rlocs fargs flocs)
-                        (partition-formals args)))
-            (set! locals rargs)
-            (for-each set-var-loc! fargs flocs)
-            (let ((body (let f ((args rargs) (locs rlocs))
-                           (cond
-                             ((null? args) (Tail body))
-                             (else
-                              (make-seq
-                                (make-set (car args) (car locs))
-                                (f (cdr args) (cdr locs))))))))
-              (make-clambda-case
-                (make-case-info label (append rlocs flocs) proper)
-                (make-locals locals body)))))))))
-  ;;;
-  (define (Clambda x)
-    (struct-case x
-      ((clambda label case* cp free* name)
-       (make-clambda label (map ClambdaCase case*) cp free* name))))
-  ;;;
-  (define (Main x)
-    (set! locals '())
-    (let ((x (Tail x)))
-      (make-locals locals x)))
-  ;;;
-  (define (Program x)
-    (struct-case x
-      ((codes code* body)
-       (make-codes (map Clambda code*) (Main body)))))
-  ;;;
-;  (print-code x)
-  (Program x))
+       ((null? regs)
+	(let ((flocs
+	       (let f ((i 1) (ls ls))
+		 (cond
+		  ((null? ls) '())
+		  (else (cons (mkfvar i) (f (fxadd1 i) (cdr ls))))))))
+	  (values '() '() ls flocs)))
+       ((null? ls)
+	(values '() '() '() '()))
+       (else
+	(let-values (((rargs rlocs fargs flocs)
+		      (f (cdr regs) (cdr ls))))
+	  (values (cons (car ls) rargs)
+		  (cons (car regs) rlocs)
+		  fargs flocs))))))
+
+  #| end of module: impose-calling-convention/evaluation-order |# )
 
 
 (module ListySet
