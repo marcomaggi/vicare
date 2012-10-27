@@ -4635,8 +4635,8 @@
 	       ,@(map unparse-recordized-code cls*)))
 
     ((closure code free* wk?)
-     `(closure ,@(if wk? '(well-known: #t) '(well-known: #f))
-	       (free*: ,(map unparse-recordized-code free*))
+     `(closure ,(if wk? '(well-known: #t) '(well-known: #f))
+	       (freevars: ,(map unparse-recordized-code free*))
 	       ,(unparse-recordized-code code)))
 
     ((codes list body)
