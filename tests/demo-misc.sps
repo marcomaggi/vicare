@@ -39,7 +39,7 @@
      (print code)
      code)))
 
-(print records)
+(print ($unparse-recordized-code records))
 
 
 ;;; end of file

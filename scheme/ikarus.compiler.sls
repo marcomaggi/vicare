@@ -21,7 +21,7 @@
 ;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.compiler)
   (export
     compile-core-expr-to-port		assembler-output
@@ -4559,9 +4559,9 @@
      x)
 
     ((conditional test conseq altern)
-     `(if ,(unparse-recordized-code test)
-	  ,(unparse-recordized-code conseq)
-	,(unparse-recordized-code altern)))
+     `(conditional ,(unparse-recordized-code test)
+		   ,(unparse-recordized-code conseq)
+		   ,(unparse-recordized-code altern)))
 
     ((interrupt-call e0 e1)
      `(interrupt-call ,(unparse-recordized-code e0) ,(unparse-recordized-code e1)))
@@ -4610,7 +4610,7 @@
 			  (recur e0 (recur e1 ac)))
 			 (else
 			  (cons (unparse-recordized-code x) ac))))))
-       (cons 'begin (recur e0 (recur e1 '())))))
+       (cons 'seq (recur e0 (recur e1 '())))))
 
     ((clambda-case info body)
      `(,(if (case-info-proper info)
@@ -4625,14 +4625,16 @@
 		(cons (unparse-recordized-code A) (recur (car D) (cdr D)))))))
        ,(unparse-recordized-code body)))
 
-    ((clambda g cls* #;cp #;free)
+    ((clambda label cls* cp free)
      ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
-     `(clambda (label: ,g)
-	       ;;cp:   ,(unparse-recordized-code cp))
-	       ;;free: ,(map unparse-recordized-code free))
+     `(clambda (label: ,label)
+	       (cp:    ,(unparse-recordized-code cp))
+	       (free:  ,(if free
+			    (map unparse-recordized-code free)
+			  free))
 	       ,@(map unparse-recordized-code cls*)))
 
-    ((clambda label clauses free)
+    #;((clambda label clauses free)
      `(code ,label . ,(map unparse-recordized-code clauses)))
 
     ((closure code free* wk?)
@@ -4799,7 +4801,7 @@
        `(known ,(E expr) ,(T:description type)))
 
       ((conditional test conseq altern)
-       (cons 'if (map E (list test conseq altern))))
+       (cons 'conditional (map E (list test conseq altern))))
 
       ((primcall op arg*)
        (cons op (map E arg*)))
@@ -4833,22 +4835,23 @@
          (list 'letrec* (map list lhs* rhs*) body)))
 
       ((seq e0 e1)
-       (cons 'begin
-	     (let f ((e0 e0) (e* (list e1)))
+       (cons 'seq
+	     (let recur ((e0 e0)
+			 (e* (list e1)))
 	       (struct-case e0
-		 ((seq e00 e01)
-		  (f e00 (cons e01 e*)))
+		 ((seq e0.e0 e0.e1)
+		  (recur e0.e0 (cons e0.e1 e*)))
 		 (else
-		  (let ((x (E e0)))
+		  (let ((e0^ (E e0)))
 		    (if (null? e*)
-			(list x)
-		      (cons x (f (car e*) (cdr e*))))))))))
+			(list e0^)
+		      (cons e0^ (recur (car e*) (cdr e*))))))))))
 
-      ((clambda g cls* cp free)
+      ((clambda label.unused cls* cp free)
        (let ((cls* (map clambda-clause cls*)))
-         (cond
-	  ((= (length cls*) 1) (cons 'lambda (car cls*)))
-	  (else (cons 'case-lambda cls*)))))
+         (if (= (length cls*) 1)
+	     (cons 'lambda (car cls*))
+	   (cons 'case-lambda cls*))))
 
       ((funcall rator rand*)
        (let ((rator (E rator)))
