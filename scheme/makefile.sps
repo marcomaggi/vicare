@@ -535,6 +535,7 @@
 ;;;
     (posix		(vicare $posix)				#t	#t)
     ($language		(vicare language-extensions)		#f	#f)
+    ($compiler		(ikarus system $compiler)		#f	#f)
     ))
 
 
@@ -2168,6 +2169,25 @@
     (keyword?					i v $language)
     (keyword=?					i v $language)
     (keyword-hash				i v $language)
+
+;;; --------------------------------------------------------------------
+
+    ($compile-core-expr->code			$compiler)
+    ($recordize					$compiler)
+    ($optimize-direct-calls			$compiler)
+    ($optimize-letrec				$compiler)
+    ($source-optimize				$compiler)
+    ($rewrite-references-and-assignments	$compiler)
+    ($introduce-tags				$compiler)
+    ($introduce-vars				$compiler)
+    ($sanitize-bindings				$compiler)
+    ($optimize-for-direct-jumps			$compiler)
+    ($insert-global-assignments			$compiler)
+    ($convert-closures				$compiler)
+    ($optimize-closures/lift-codes		$compiler)
+    ($alt-cogen					$compiler)
+    ($assemble-sources				$compiler)
+
     ))
 
 

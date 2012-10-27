@@ -35,7 +35,24 @@
     optimize-level
     perform-tag-analysis		tag-analysis-output
     strip-source-info			generate-debug-calls
-    current-letrec-pass)
+    current-letrec-pass
+
+    ;; these go in (ikarus system $compiler)
+    (rename (compile-core-expr->code		$compile-core-expr->code)
+	    (recordize				$recordize)
+	    (optimize-direct-calls		$optimize-direct-calls)
+	    (optimize-letrec			$optimize-letrec)
+	    (source-optimize			$source-optimize)
+	    (rewrite-references-and-assignments	$rewrite-references-and-assignments)
+	    (introduce-tags			$introduce-tags)
+	    (introduce-vars			$introduce-vars)
+	    (sanitize-bindings			$sanitize-bindings)
+	    (optimize-for-direct-jumps		$optimize-for-direct-jumps)
+	    (insert-global-assignments		$insert-global-assignments)
+	    (convert-closures			$convert-closures)
+	    (optimize-closures/lift-codes	$optimize-closures/lift-codes)
+	    (alt-cogen				$alt-cogen)
+	    (assemble-sources			$assemble-sources)))
   (import (except (ikarus)
 		  compile-core-expr-to-port		assembler-output
 		  optimize-cp				optimizer-output
@@ -452,7 +469,9 @@
     (expand/pretty x env 'expand))))
 
 
-(module (compile-core-expr-to-port compile-core-expr)
+(module (compile-core-expr-to-port
+	 compile-core-expr
+	 compile-core-expr->code)
   ;;The list of compiler passes is:
   ;;
   ;;   recordize
