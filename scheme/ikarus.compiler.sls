@@ -444,7 +444,7 @@
 ;; (define (expand/pretty x env who . passes)
 ;;   (unless (environment? env)
 ;;     (die who "not an environment" env))
-;;   (let-values (((x libs) (core-expand x env)))
+;;   (let-values (((x libs) (expand-form-to-core-language x env)))
 ;;     (let loop ((x      (recordize x))
 ;; 	       (passes passes))
 ;;       (if (null? passes)

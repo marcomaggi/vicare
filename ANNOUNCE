@@ -55,9 +55,9 @@ Notes for revision 0.2d20
 
 * The  functions EXPAND,  EXPAND/OPTIMIZE,  EXPAND/SCC-LETREC have  been
   removed from the  library (vicare); the function  CORE-EXPAND has been
-  renamed to  EXPAND-CORE-LANGUAGE-FORM, and  documented; EXPAND-LIBRARY
-  (formerly LIBRARY-EXPANDER) has  been added to the export  list of the
-  boot image.
+  renamed     to    EXPAND-FORM-TO-CORE-LANGUAGE,     and    documented;
+  EXPAND-LIBRARY  (formerly  LIBRARY-EXPANDER)  has been  added  to  the
+  export list of the boot image.
 
 
 

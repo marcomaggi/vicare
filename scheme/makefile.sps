@@ -647,7 +647,7 @@
     (readline-enabled?				i v $language)
     (readline					i v $language)
     (make-readline-input-port			i v $language)
-    (expand-core-language-form			i v $language)
+    (expand-form-to-core-language		i v $language)
     (expand-library				i v $language)
     (environment?				i v $language)
     (environment-symbols			i v $language)

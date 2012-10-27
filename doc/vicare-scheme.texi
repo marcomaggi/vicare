@@ -2604,7 +2604,7 @@ Example:
 @end defun
 
 
-@defun expand-core-language-form @var{sexp} @var{env}
+@defun expand-form-to-core-language @var{sexp} @var{env}
 Interface to the internal expression expander, it is the expansion
 engine used by @rnrs{6}'s @func{eval} function.
 
@@ -2621,7 +2621,7 @@ Example:
 (import (vicare))
 
 (let-values (((code libs)
-              (expand-core-language-form
+              (expand-form-to-core-language
                '(define (doit x)
                   (if (null? x)
                       #f

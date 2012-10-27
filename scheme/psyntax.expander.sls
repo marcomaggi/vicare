@@ -30,7 +30,7 @@
     interaction-environment		new-interaction-environment
     environment-symbols
 
-    expand-core-language-form		top-level-expander
+    expand-form-to-core-language		top-level-expander
     expand-library
     compile-r6rs-top-level		boot-library-expand
     make-compile-time-value
@@ -4307,12 +4307,12 @@
     (assertion-violation 'scheme-report-environment "not 5" n))
   (environment '(psyntax scheme-report-environment-5)))
 
-(define (expand-core-language-form x env)
+(define (expand-form-to-core-language x env)
   ;;Interface to  the internal expression expander  (chi-expr).  Take an
   ;;expression  and an  environment.  Return  two values:  the resulting
   ;;core-expression, a  list of  libraries that  must be  invoked before
   ;;evaluating the core expr.
-  (define who 'expand-core-language-form)
+  (define who 'expand-form-to-core-language)
   (cond ((env? env)
 	 (let ((rib (make-top-rib (env-names env) (env-labels env))))
 	   (let ((x (make-<stx> x top-mark* (list rib) '()))
@@ -4350,7 +4350,7 @@
   (lambda (x env)
     (unless (environment? env)
       (error 'eval "not an environment" env))
-    (let-values (((x invoke-req*) (expand-core-language-form x env)))
+    (let-values (((x invoke-req*) (expand-form-to-core-language x env)))
       (for-each invoke-library invoke-req*)
       (eval-core (expanded->core x)))))
 
