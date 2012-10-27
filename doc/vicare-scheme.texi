@@ -2528,23 +2528,117 @@ Undocumented.
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun expand
-Undocumented.
+@defun expand-library
+Given a @code{(library . ---)} symbolic expression, expand it and
+register it with the library manager; return @math{12} values:
+
+@enumerate
+@item
+@var{id}, to be documented.
+
+@item
+@var{name}, to be documented.
+
+@item
+@var{ver}, to be documented.
+
+@item
+@var{imp*}, to be documented.
+
+@item
+@var{vis*}, to be documented.
+
+@item
+@var{inv*}, to be documented.
+
+@item
+@var{invoke-code}, the expanded code expressed in the core lanugage.
+
+@item
+@var{visit-code}, to be documented.
+
+@item
+@var{export-subst}, to be documented.
+
+@item
+@var{export-env}, to be documented.
+
+@item
+@var{guard-code}, to be documented.
+
+@item
+@var{guard-req*}, to be documented.
+@end enumerate
+
+Example:
+
+@example
+(import (vicare))
+
+(let-values (((id name ver imp* vis* inv*
+               invoke-code visit-code
+               export-subst export-env
+               guard-code guard-req*)
+              (expand-library
+               '(library (doit)
+                  (export doit)
+                  (import (vicare))
+                  (define (doit x)
+                    (if (null? x)
+                        #f
+                      (doit (cdr x))))))))
+  invoke-code)
+@result{} (library-letrec*
+     ((#@{doit |$B>4=68o!fJIWV2u|@} #@{doit |wz6BfVVqmV65xcyl|@}
+        (annotated-case-lambda doit
+          ((#@{x |ua9qt/Qp%FG%z984|@})
+            (if (annotated-call (null? x) (primitive null?)
+                  #@{x |ua9qt/Qp%FG%z984|@})
+                '#f
+                (annotated-call (doit (cdr x))
+                  #@{doit |$B>4=68o!fJIWV2u|@}
+                  (annotated-call (cdr x) (primitive cdr)
+                    #@{x |ua9qt/Qp%FG%z984|@})))))))
+     ((primitive void)))
+@end example
 @end defun
 
 
-@defun core-expand
-Undocumented.
-@end defun
+@defun expand-core-language-form @var{sexp} @var{env}
+Interface to the internal expression expander, it is the expansion
+engine used by @rnrs{6}'s @func{eval} function.
 
+@var{sexp} must be a symbolic expression representing a Scheme form;
+@var{env} must be an evaluation environment.
 
-@defun expand/optimize
-Undocumented.
-@end defun
+Return two values: the result of the expansion as symbolic expression in
+the core language; a list of libraries that must be invoked before
+evaluating the returned expression.
 
+Example:
 
-@defun expand/scc-letrec
-Undocumented.
+@example
+(import (vicare))
+
+(let-values (((code libs)
+              (expand-core-language-form
+               '(define (doit x)
+                  (if (null? x)
+                      #f
+                    (doit (cdr x))))
+               (interaction-environment))))
+  code)
+@result{} (set! #@{doit |UB$jGCqqJFloHg6X|@}
+     (annotated-case-lambda doit
+       ((#@{x |O3I3z7rSrwZ9/X2O|@})
+         (if (annotated-call (null? x) (primitive null?)
+               #@{x |O3I3z7rSrwZ9/X2O|@})
+             '#f
+             (annotated-call (doit (cdr x))
+               #@{doit |UB$jGCqqJFloHg6X|@}
+               (annotated-call (cdr x) (primitive cdr)
+                 #@{x |O3I3z7rSrwZ9/X2O|@}))))))
+@end example
 @end defun
 
 @c page

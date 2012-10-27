@@ -29,8 +29,6 @@
     current-primitive-locations
     eval-core				current-core-eval
     compile-core-expr
-    expand				expand/optimize
-    expand/scc-letrec
     cp0-effort-limit			cp0-size-limit
     optimize-level
     perform-tag-analysis		tag-analysis-output
@@ -441,47 +439,49 @@
 	(refresh-cached-labels!))))))
 
 
-(define (expand/pretty x env who . passes)
-  (unless (environment? env)
-    (die who "not an environment" env))
-  (let-values (((x libs) (core-expand x env)))
-    (let loop ((x      (recordize x))
-	       (passes passes))
-      (if (null? passes)
-          (unparse-recordized-code/pretty x)
-	(loop ((car passes) x) (cdr passes))))))
+;;;; commented out because not useful (Marco Maggi; Oct 27, 2012)
 
-(define expand/scc-letrec
-  (case-lambda
-   ((x)
-    (expand/scc-letrec x (interaction-environment)))
-   ((x env)
-    (expand/pretty x env 'expand/scc-letrec
-		   (lambda (x)
-		     (parameterize ((open-mvcalls #f))
-		       (optimize-direct-calls x)))
-		   (lambda (x)
-		     (parameterize ((debug-scc #t))
-		       (optimize-letrec x)))))))
+;; (define (expand/pretty x env who . passes)
+;;   (unless (environment? env)
+;;     (die who "not an environment" env))
+;;   (let-values (((x libs) (core-expand x env)))
+;;     (let loop ((x      (recordize x))
+;; 	       (passes passes))
+;;       (if (null? passes)
+;;           (unparse-recordized-code/pretty x)
+;; 	(loop ((car passes) x) (cdr passes))))))
 
-(define expand/optimize
-  (case-lambda
-   ((x)
-    (expand/optimize x (interaction-environment)))
-   ((x env)
-    (expand/pretty x env 'expand/optimize
-		   (lambda (x)
-		     (parameterize ((open-mvcalls #f))
-		       (optimize-direct-calls x)))
-		   optimize-letrec
-		   source-optimize))))
+;; (define expand/scc-letrec
+;;   (case-lambda
+;;    ((x)
+;;     (expand/scc-letrec x (interaction-environment)))
+;;    ((x env)
+;;     (expand/pretty x env 'expand/scc-letrec
+;; 		   (lambda (x)
+;; 		     (parameterize ((open-mvcalls #f))
+;; 		       (optimize-direct-calls x)))
+;; 		   (lambda (x)
+;; 		     (parameterize ((debug-scc #t))
+;; 		       (optimize-letrec x)))))))
 
-(define expand
-  (case-lambda
-   ((x)
-    (expand x (interaction-environment)))
-   ((x env)
-    (expand/pretty x env 'expand))))
+;; (define expand/optimize
+;;   (case-lambda
+;;    ((x)
+;;     (expand/optimize x (interaction-environment)))
+;;    ((x env)
+;;     (expand/pretty x env 'expand/optimize
+;; 		   (lambda (x)
+;; 		     (parameterize ((open-mvcalls #f))
+;; 		       (optimize-direct-calls x)))
+;; 		   optimize-letrec
+;; 		   source-optimize))))
+
+;; (define expand
+;;   (case-lambda
+;;    ((x)
+;;     (expand x (interaction-environment)))
+;;    ((x env)
+;;     (expand/pretty x env 'expand))))
 
 
 (module (compile-core-expr-to-port

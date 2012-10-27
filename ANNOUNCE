@@ -53,6 +53,13 @@ Notes for revision 0.2d20
   allow the  constant value to be  computed at expand time  by a generic
   expression.
 
+* The  functions EXPAND,  EXPAND/OPTIMIZE,  EXPAND/SCC-LETREC have  been
+  removed from the  library (vicare); the function  CORE-EXPAND has been
+  renamed to  EXPAND-CORE-LANGUAGE-FORM, and  documented; EXPAND-LIBRARY
+  (formerly LIBRARY-EXPANDER) has  been added to the export  list of the
+  boot image.
+
+
 
 Notes for revision 0.2d19
 -------------------------

@@ -30,7 +30,8 @@
     interaction-environment		new-interaction-environment
     environment-symbols
 
-    core-expand				top-level-expander
+    expand-core-language-form		top-level-expander
+    expand-library
     compile-r6rs-top-level		boot-library-expand
     make-compile-time-value
 
@@ -3737,7 +3738,7 @@
 		 (chi-body* (cdr e*) r mr lex* rhs* mod** kwd*
 			    exp* rib mix? sd?)))
 	      ((library)
-	       (library-expander (syntax->datum e))
+	       (expand-library (syntax->datum e))
 	       (chi-body* (cdr e*) r mr lex* rhs* mod** kwd* exp*
 			  rib mix? sd?))
 	      ((export)
@@ -4306,41 +4307,40 @@
     (assertion-violation 'scheme-report-environment "not 5" n))
   (environment '(psyntax scheme-report-environment-5)))
 
-  ;;; The expand procedure is the interface to the internal expression
-  ;;; expander (chi-expr).   It takes an expression and an environment.
-  ;;; It returns two values: The resulting core-expression and a list of
-  ;;; libraries that must be invoked before evaluating the core expr.
-(define core-expand
-  (lambda (x env)
-    (cond
-     ((env? env)
-      (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	(let ((x (make-<stx> x top-mark* (list rib) '()))
-	      (itc (env-itc env))
-	      (rtc (make-collector))
-	      (vtc (make-collector)))
-	  (let ((x (parametrise ((top-level-context #f)
-				 (inv-collector rtc)
-				 (vis-collector vtc)
-				 (imp-collector itc))
-		     (chi-expr x '() '()))))
-	    (seal-rib! rib)
-	    (values x (rtc))))))
-     ((interaction-env? env)
-      (let ((rib (interaction-env-rib env))
-	    (r (interaction-env-r env))
-	    (rtc (make-collector)))
-	(let ((x (make-<stx> x top-mark* (list rib) '())))
-	  (let-values (((e r^)
-			(parametrise ((top-level-context env)
-				      (inv-collector rtc)
-				      (vis-collector (make-collector))
-				      (imp-collector (make-collector)))
-			  (chi-interaction-expr x rib r))))
-	    (set-interaction-env-r! env r^)
-	    (values e (rtc))))))
-     (else
-      (assertion-violation 'expand "not an environment" env)))))
+(define (expand-core-language-form x env)
+  ;;Interface to  the internal expression expander  (chi-expr).  Take an
+  ;;expression  and an  environment.  Return  two values:  the resulting
+  ;;core-expression, a  list of  libraries that  must be  invoked before
+  ;;evaluating the core expr.
+  (define who 'expand-core-language-form)
+  (cond ((env? env)
+	 (let ((rib (make-top-rib (env-names env) (env-labels env))))
+	   (let ((x (make-<stx> x top-mark* (list rib) '()))
+		 (itc (env-itc env))
+		 (rtc (make-collector))
+		 (vtc (make-collector)))
+	     (let ((x (parametrise ((top-level-context #f)
+				    (inv-collector rtc)
+				    (vis-collector vtc)
+				    (imp-collector itc))
+			(chi-expr x '() '()))))
+	       (seal-rib! rib)
+	       (values x (rtc))))))
+	((interaction-env? env)
+	 (let ((rib (interaction-env-rib env))
+	       (r (interaction-env-r env))
+	       (rtc (make-collector)))
+	   (let ((x (make-<stx> x top-mark* (list rib) '())))
+	     (let-values (((e r^)
+			   (parametrise ((top-level-context env)
+					 (inv-collector rtc)
+					 (vis-collector (make-collector))
+					 (imp-collector (make-collector)))
+			     (chi-interaction-expr x rib r))))
+	       (set-interaction-env-r! env r^)
+	       (values e (rtc))))))
+	(else
+	 (assertion-violation who "not an environment" env))))
 
 
   ;;; This is R6RS's eval.  It takes an expression and an environment,
@@ -4350,14 +4350,10 @@
   (lambda (x env)
     (unless (environment? env)
       (error 'eval "not an environment" env))
-    (let-values (((x invoke-req*) (core-expand x env)))
+    (let-values (((x invoke-req*) (expand-core-language-form x env)))
       (for-each invoke-library invoke-req*)
       (eval-core (expanded->core x)))))
 
-
-  ;;; Given a (library . _) s-expression, library-expander expands
-  ;;; it to core-form, registers it with the library manager, and
-  ;;; returns its invoke-code, visit-code, subst and env.
 
 (define (initial-visit! macro*)
   (for-each (lambda (x)
@@ -4365,7 +4361,11 @@
 		(set-symbol-value! loc proc)))
     macro*))
 
-(define library-expander
+(define expand-library
+  ;;Given a  (library .   _) S-expression, this  function expands  it to
+  ;;core-form, registers  it with the  library manager, and  returns its
+  ;;invoke-code, visit-code, subst and env.
+  ;;
   (case-lambda
    ((x filename verify-name)
     (define (build-visit-code macro*)
@@ -4403,9 +4403,9 @@
 		export-subst export-env
 		guard-code guard-req*))))
    ((x filename)
-    (library-expander x filename (lambda (x) (values))))
+    (expand-library x filename (lambda (x) (values))))
    ((x)
-    (library-expander x #f (lambda (x) (values))))))
+    (expand-library x #f (lambda (x) (values))))))
 
   ;;; when bootstrapping the system, visit-code is not (and cannot
   ;;; be) be used in the "next" system.  So, we drop it.
@@ -4413,7 +4413,7 @@
   (let-values (((id name ver imp* vis* inv*
 		    invoke-code visit-code export-subst export-env
 		    guard-code guard-dep*)
-		(library-expander x)))
+		(expand-library x)))
     (values name invoke-code export-subst export-env)))
 
 (define (rev-map-append f ls ac)
@@ -4725,7 +4725,7 @@
 ;;;; done
 
 ;;Register the expander with the library manager.
-(current-library-expander library-expander)
+(current-library-expander expand-library)
 
 )
 
