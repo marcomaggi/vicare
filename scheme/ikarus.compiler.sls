@@ -55,7 +55,6 @@
      (alt-cogen					$compiler.alt-cogen)
      (assemble-sources				$compiler.assemble-sources)
 
-     (alt-cogen					$alt-cogen)
      (alt-cogen.introduce-primcalls		$alt-cogen.introduce-primcalls)
      (alt-cogen.eliminate-fix			$alt-cogen.eliminate-fix)
      (alt-cogen.insert-engine-checks		$alt-cogen.insert-engine-checks)
@@ -446,7 +445,7 @@
     (let loop ((x      (recordize x))
 	       (passes passes))
       (if (null? passes)
-          (unparse-pretty x)
+          (unparse-recordized-code/pretty x)
 	(loop ((car passes) x) (cdr passes))))))
 
 (define expand/scc-letrec
@@ -522,7 +521,7 @@
 	   (p (optimize-letrec p))
 	   (p (source-optimize p)))
       (when (optimizer-output)
-	(pretty-print (unparse-pretty p) (current-error-port)))
+	(pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
       (let* ((p (rewrite-references-and-assignments p))
 	     (p (if (perform-tag-analysis)
 		    (introduce-tags p)
@@ -1869,7 +1868,7 @@
        (make-assign lhs (E rhs)))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (module (inline)
 
@@ -2300,7 +2299,7 @@
        (make-mvcall (E p) (E c)))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (define (%fix-lhs* lhs*)
     ;;LHS* is  a list  of struct instances  of type  PRELEX representing
@@ -2468,7 +2467,7 @@
        (make-assign (lookup lhs) (E rhs)))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (define (lookup prel)
     ;;Given  a struct  instance of  type PRELEX  in reference  position,
@@ -2622,7 +2621,7 @@
        (make-mvcall (E p) (E c)))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (define (CLambda x)
     ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
@@ -2755,7 +2754,7 @@
        (%optimize-funcall rator rand*))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (define-inline (%mark-var-as-non-referenced x)
     ($set-var-referenced! x #f))
@@ -2994,7 +2993,7 @@
        (make-jmpcall label (M rator) ($map/stx M rand*)))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (define (E x)
     ;;Traverses  the  recordized code  inside  the  body of  CASE-LAMBDA
@@ -3048,7 +3047,7 @@
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
-       (error who "invalid expression" (unparse x)))))
+       (error who "invalid expression" (unparse-recordized-code x)))))
 
   (define (%global-assign lhs* body.already-processed)
     ;;Prepend to the body of a BIND struct a call to $INIT-SYMBOL-VALUE!
@@ -3116,7 +3115,8 @@
     (let-values (((X^ free) (E X)))
       (if (null? free)
 	  X^
-	(error who "free vars encountered in program" (map unparse free)))))
+	(error who "free vars encountered in program"
+	       (map unparse-recordized-code free)))))
 
   (define (E X)
     ;;Traverse  the  recordized  code  X  and return  2  values:  a  new
@@ -3329,13 +3329,13 @@
       ;;(when (optimize-cp)
       ;;  (printf "BEFORE\n")
       ;;  (parameterize ((pretty-width 200))
-      ;;    (pretty-print (unparse X))))
+      ;;    (pretty-print (unparse-recordized-code X))))
       (let* ((X^ (E X))
 	     (V  (make-codes (all-codes) X^)))
 	;;(when (optimize-cp)
 	;;  (printf "AFTER\n")
 	;;  (parameterize ((pretty-width 200))
-	;;    (pretty-print (unparse V))))
+	;;    (pretty-print (unparse-recordized-code V))))
 	V)))
 
   (module (E)
@@ -3378,7 +3378,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E rand*)))
 
 	(else
-	 (error who "invalid expression" (unparse x)))))
+	 (error who "invalid expression" (unparse-recordized-code x)))))
 
     (define (E-known x)
       (struct-case x
@@ -4528,7 +4528,7 @@
 (include/verbose "ikarus.compiler.altcogen.ss")
 
 
-(define (unparse x)
+(define (unparse-recordized-code x)
   ;;Unparse the struct  instance X (representing recordized  code in the
   ;;core  language  already processed  by  the  compiler) into  a  human
   ;;readable symbolic expression to be used when raising errors.
@@ -4541,7 +4541,7 @@
      `(quote ,c))
 
     ((known expr type)
-     `(known ,(unparse expr) ,(T:description type)))
+     `(known ,(unparse-recordized-code expr) ,(T:description type)))
 
     ((code-loc x)
      `(code-loc ,x))
@@ -4556,31 +4556,33 @@
      x)
 
     ((conditional test conseq altern)
-     `(if ,(unparse test) ,(unparse conseq) ,(unparse altern)))
+     `(if ,(unparse-recordized-code test)
+	  ,(unparse-recordized-code conseq)
+	,(unparse-recordized-code altern)))
 
     ((interrupt-call e0 e1)
-     `(interrupt-call ,(unparse e0) ,(unparse e1)))
+     `(interrupt-call ,(unparse-recordized-code e0) ,(unparse-recordized-code e1)))
 
     ((primcall op arg*)
-     `(,op . ,(map unparse arg*)))
+     `(,op . ,(map unparse-recordized-code arg*)))
 
     ((bind lhs* rhs* body)
      `(let ,(map (lambda (lhs rhs)
-		   (list (unparse lhs) (unparse rhs)))
+		   (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
 	      lhs* rhs*)
-	,(unparse body)))
+	,(unparse-recordized-code body)))
 
     ((recbind lhs* rhs* body)
      `(letrec ,(map (lambda (lhs rhs)
-		      (list (unparse lhs) (unparse rhs)))
+		      (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
 		 lhs* rhs*)
-	,(unparse body)))
+	,(unparse-recordized-code body)))
 
     ((rec*bind lhs* rhs* body)
      `(letrec* ,(map (lambda (lhs rhs)
-		       (list (unparse lhs) (unparse rhs)))
+		       (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
 		  lhs* rhs*)
-	,(unparse body)))
+	,(unparse-recordized-code body)))
 
     ;;Commented out because unused;  notice that LIBRARY-LETREC* forms
     ;;are  represented by  structures of  type REC*BIND;  there is  no
@@ -4588,15 +4590,15 @@
     ;;
     ;; ((library-recbind lhs* loc* rhs* body)
     ;;  `(letrec ,(map (lambda (lhs loc rhs)
-    ;; 			(list (unparse lhs) loc (unparse rhs)))
+    ;; 			(list (unparse-recordized-code lhs) loc (unparse-recordized-code rhs)))
     ;; 		   lhs* loc* rhs*)
-    ;; 	  ,(unparse body)))
+    ;; 	  ,(unparse-recordized-code body)))
 
     ((fix lhs* rhs* body)
      `(fix ,(map (lambda (lhs rhs)
-		   (list (unparse lhs) (unparse rhs)))
+		   (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
 	      lhs* rhs*)
-	   ,(unparse body)))
+	   ,(unparse-recordized-code body)))
 
     ((seq e0 e1)
      (letrec ((recur (lambda (x ac)
@@ -4604,60 +4606,60 @@
 			 ((seq e0 e1)
 			  (recur e0 (recur e1 ac)))
 			 (else
-			  (cons (unparse x) ac))))))
+			  (cons (unparse-recordized-code x) ac))))))
        (cons 'begin (recur e0 (recur e1 '())))))
 
     ((clambda-case info body)
      `(,(if (case-info-proper info)
-	    (map unparse (case-info-args info))
+	    (map unparse-recordized-code (case-info-args info))
 	  ;;The loop below  is like MAP but for improper  lists: it maps
-	  ;;UNPARSE over the improper list X.
+	  ;;UNPARSE-RECORDIZED-CODE over the improper list X.
 	  (let ((X (case-info-args info)))
 	    (let recur ((A (car X))
 			(D (cdr X)))
 	      (if (null? D)
-		  (unparse A)
-		(cons (unparse A) (recur (car D) (cdr D)))))))
-       ,(unparse body)))
+		  (unparse-recordized-code A)
+		(cons (unparse-recordized-code A) (recur (car D) (cdr D)))))))
+       ,(unparse-recordized-code body)))
 
     ((clambda g cls* #;cp #;free)
      ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
      `(clambda (label: ,g)
-	       ;;cp:   ,(unparse cp))
-	       ;;free: ,(map unparse free))
-	       ,@(map unparse cls*)))
+	       ;;cp:   ,(unparse-recordized-code cp))
+	       ;;free: ,(map unparse-recordized-code free))
+	       ,@(map unparse-recordized-code cls*)))
 
     ((clambda label clauses free)
-     `(code ,label . ,(map unparse clauses)))
+     `(code ,label . ,(map unparse-recordized-code clauses)))
 
     ((closure code free* wk?)
      `(closure ,@(if wk? '(wk) '())
-	       ,(unparse code)
-	       ,(map unparse free*)))
+	       ,(unparse-recordized-code code)
+	       ,(map unparse-recordized-code free*)))
 
     ((codes list body)
-     `(codes ,(map unparse list)
-	     ,(unparse body)))
+     `(codes ,(map unparse-recordized-code list)
+	     ,(unparse-recordized-code body)))
 
     ((funcall rator rand*)
-     `(funcall ,(unparse rator) . ,(map unparse rand*)))
+     `(funcall ,(unparse-recordized-code rator) . ,(map unparse-recordized-code rand*)))
 
     ((jmpcall label rator rand*)
-     `(jmpcall ,label ,(unparse rator) . ,(map unparse rand*)))
+     `(jmpcall ,label ,(unparse-recordized-code rator) . ,(map unparse-recordized-code rand*)))
 
     ((forcall rator rand*)
-     `(foreign-call ,rator . ,(map unparse rand*)))
+     `(foreign-call ,rator . ,(map unparse-recordized-code rand*)))
 
     ((assign lhs rhs)
-     `(set! ,(unparse lhs) ,(unparse rhs)))
+     `(set! ,(unparse-recordized-code lhs) ,(unparse-recordized-code rhs)))
 
     ((return x)
-     `(return ,(unparse x)))
+     `(return ,(unparse-recordized-code x)))
 
     ((new-frame base-idx size body)
      `(new-frame (base: ,base-idx)
 		 (size: ,size)
-		 ,(unparse body)))
+		 ,(unparse-recordized-code body)))
 
     ((frame-var idx)
      (string->symbol (format "fv.~a" idx)))
@@ -4666,17 +4668,17 @@
      (string->symbol (format "cp.~a" idx)))
 
     ((save-cp expr)
-     `(save-cp ,(unparse expr)))
+     `(save-cp ,(unparse-recordized-code expr)))
 
     ((eval-cp check body)
-     `(eval-cp ,check ,(unparse body)))
+     `(eval-cp ,check ,(unparse-recordized-code body)))
 
     ((call-cp call-convention label save-cp? rp-convention base-idx arg-count live-mask)
      `(call-cp (conv:		,call-convention)
 	       (label:	,label)
 	       (rpconv:	,(if (symbol? rp-convention)
 			     rp-convention
-			   (unparse rp-convention)))
+			   (unparse-recordized-code rp-convention)))
 	       (base-idx:	,base-idx)
 	       (arg-count:	,arg-count)
 	       (live-mask:	,live-mask)))
@@ -4688,7 +4690,7 @@
      `(foreign-label ,x))
 
     ((mvcall prod cons)
-     `(mvcall ,(unparse prod) ,(unparse cons)))
+     `(mvcall ,(unparse-recordized-code prod) ,(unparse-recordized-code cons)))
 
     ((fvar idx)
      (string->symbol (format "fv.~a" idx)))
@@ -4697,21 +4699,22 @@
      'nfv)
 
     ((locals vars body)
-     `(locals ,(map unparse vars) ,(unparse body)))
+     `(locals ,(map unparse-recordized-code vars) ,(unparse-recordized-code body)))
 
     ((asm-instr op d s)
-     `(asm ,op ,(unparse d) ,(unparse s)))
+     `(asm ,op ,(unparse-recordized-code d) ,(unparse-recordized-code s)))
 
     ((disp s0 s1)
-     `(disp ,(unparse s0) ,(unparse s1)))
+     `(disp ,(unparse-recordized-code s0) ,(unparse-recordized-code s1)))
 
     ((nframe vars live body)
-     `(nframe #;(vars: ,(map unparse vars))
-       #;(live: ,(map unparse live))
-       ,(unparse body)))
+     `(nframe
+       #;(vars: ,(map unparse-recordized-code vars))
+       #;(live: ,(map unparse-recordized-code live))
+       ,(unparse-recordized-code body)))
 
     ((shortcut body handler)
-     `(shortcut ,(unparse body) ,(unparse handler)))
+     `(shortcut ,(unparse-recordized-code body) ,(unparse-recordized-code handler)))
 
     ((ntcall target valuw args mask size)
      `(ntcall ,target ,size))
@@ -4722,7 +4725,7 @@
        "#<unknown>"))))
 
 
-(define (unparse-pretty x)
+(define (unparse-recordized-code/pretty x)
   ;;Unparse the struct  instance X (representing recordized  code in the
   ;;core  language  already processed  by  the  compiler) into  a  human
   ;;readable symbolic expression  to be used when printing  to some port

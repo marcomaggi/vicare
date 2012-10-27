@@ -924,7 +924,7 @@
        (make-jmpcall label (V rator) (map V arg*)))
 
       (else
-       (error 'cogen-V "invalid value expr" (unparse x)))))
+       (error 'cogen-V "invalid value expr" (unparse-recordized-code x)))))
 
   #| end of module: V |# )
 
@@ -997,7 +997,7 @@
      (P expr))
 
     (else
-     (error 'cogen-P "invalid pred expr" (unparse x)))))
+     (error 'cogen-P "invalid pred expr" (unparse-recordized-code x)))))
 
 
 (define (E x)
@@ -1058,7 +1058,7 @@
      (E expr))
 
     (else
-     (error 'cogen-E "invalid effect expr" (unparse x)))))
+     (error 'cogen-E "invalid effect expr" (unparse-recordized-code x)))))
 
 
 (define (T x)
@@ -1083,7 +1083,7 @@
      (make-known (T expr) type))
 
     (else
-     (error 'cogen-T "invalid" (unparse x)))))
+     (error 'cogen-T "invalid" (unparse-recordized-code x)))))
 
 
 (define-syntax K
@@ -1193,7 +1193,7 @@
   #;(define (record-optimization^ what expr)
     (let ((n (hashtable-ref the-table what 0)))
       (hashtable-set! the-table what (+ n 1))
-      (printf "optimize ~a(~s): ~s\n" what n (unparse expr))))
+      (printf "optimize ~a(~s): ~s\n" what n (unparse-recordized-code expr))))
 
   #| end of module: record-optimization |# )
 

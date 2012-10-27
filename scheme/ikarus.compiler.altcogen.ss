@@ -1244,7 +1244,7 @@
       (else
        (if (symbol? x)
            (%make-set d x)
-	 (error who "invalid value" (unparse x))))))
+	 (error who "invalid value" (unparse-recordized-code x))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1691,8 +1691,8 @@
       (for-each (lambda (x)
                   (let ((lhs (car x)) (rhs* (cdr x)))
                     (printf "  ~s => ~s\n"
-                            (unparse lhs)
-                            (map unparse (set->list rhs*)))))
+                            (unparse-recordized-code lhs)
+                            (map unparse-recordized-code (set->list rhs*)))))
         (graph-ls g)))
     (printf "}\n"))
   (define (node-neighbors x g)
@@ -1763,8 +1763,8 @@
       (for-each (lambda (x)
                   (let ((lhs (car x)) (rhs* (cdr x)))
                     (printf "  ~s => ~s\n"
-                            (unparse lhs)
-                            (map unparse (set->list rhs*)))))
+                            (unparse-recordized-code lhs)
+                            (map unparse-recordized-code (set->list rhs*)))))
         (graph-ls g)))
     (printf "}\n"))
   (define (node-neighbors x g)
@@ -1976,7 +1976,7 @@
                 (let ((rs (rem-reg d rs)))
                   (mark-reg/vars-conf! d vs)
                   (values vs rs (add-frm s fs) ns)))
-               (else (error who "invalid rs" (unparse x)))))
+               (else (error who "invalid rs" (unparse-recordized-code x)))))
             ((fvar? d)
              (cond
                ((not (mem-frm? d fs))
@@ -2093,7 +2093,7 @@
                       (mark-nfv/vars-conf! d vs)
                       (mark-nfv/frms-conf! d fs)
                       (R s vs rs fs (add-nfv d ns))))))
-                (else (error who "invalid op d" (unparse x)))))))
+                (else (error who "invalid op d" (unparse-recordized-code x)))))))
          ((nop) (values vs rs fs ns))
          ((logand logor logxor sll sra srl int+ int- int* bswap!
            sll/overflow)
@@ -2127,7 +2127,7 @@
                   (mark-nfv/vars-conf! d vs)
                   (mark-nfv/frms-conf! d fs)
                   (R s vs rs fs (add-nfv d ns))))))
-            (else (error who "invalid op d" (unparse x)))))
+            (else (error who "invalid op d" (unparse-recordized-code x)))))
          ((idiv)
           (mark-reg/vars-conf! eax vs)
           (mark-reg/vars-conf! edx vs)
@@ -2139,7 +2139,7 @@
            fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:from-int
            fl:shuffle fl:load-single fl:store-single)
           (R* (list s d) vs rs fs ns))
-         (else (error who "invalid effect op" (unparse x)))))
+         (else (error who "invalid effect op" (unparse-recordized-code x)))))
       ((ntcall target value args mask size)
        (set! spill-set (union-vars vs spill-set))
        (for-each-var vs varvec (lambda (x) (set-var-loc! x #t)))
@@ -2165,7 +2165,7 @@
           (parameterize ((exception-live-set
                           (vector vsh rsh fsh nsh)))
             (E body vs rs fs ns))))
-      (else (error who "invalid effect" (unparse x)))))
+      (else (error who "invalid effect" (unparse-recordized-code x)))))
   (define (P x vst rst fst nst
                vsf rsf fsf nsf
                vsu rsu fsu nsu)
@@ -2208,7 +2208,7 @@
             (P body vst rst fst nst
                     vsf rsf fsf nsf
                     vsu rsu fsu nsu))))
-      (else (error who "invalid pred" (unparse x)))))
+      (else (error who "invalid pred" (unparse-recordized-code x)))))
   (define (T x)
     (struct-case x
       ((seq e0 e1)
@@ -2320,7 +2320,7 @@
         ((var? x) (Var x))
         ((disp? x)
          (make-disp (R (disp-s0 x)) (R (disp-s1 x))))
-        (else (error who "invalid R" (unparse x)))))
+        (else (error who "invalid R" (unparse-recordized-code x)))))
     (define (E x)
       (struct-case x
         ((seq e0 e1)
@@ -2447,7 +2447,7 @@
            (else (error who "invalid effect prim" op))))
         ((shortcut body handler)
          (make-shortcut (E body) (E handler)))
-        (else (error who "invalid effect" (unparse x)))))
+        (else (error who "invalid effect" (unparse-recordized-code x)))))
     (define (P x)
       (struct-case x
         ((seq e0 e1)
@@ -2459,7 +2459,7 @@
         ((constant) x)
         ((shortcut body handler)
          (make-shortcut (P body) (P handler)))
-        (else (error who "invalid pred" (unparse x)))))
+        (else (error who "invalid pred" (unparse-recordized-code x)))))
     (define (T x)
       (struct-case x
         ((seq e0 e1)
@@ -2470,7 +2470,7 @@
         ((primcall op args) x)
         ((shortcut body handler)
          (make-shortcut (T body) (T handler)))
-        (else (error who "invalid tail" (unparse x)))))
+        (else (error who "invalid tail" (unparse-recordized-code x)))))
     (T x))
   ;;;
   (define (Main x)
@@ -2609,7 +2609,7 @@
          (let ((s2 (E handler s)))
            (parameterize ((exception-live-set s2))
              (E body s))))
-        (else (error who "invalid effect" (unparse x)))))
+        (else (error who "invalid effect" (unparse-recordized-code x)))))
     (define (P x st sf su)
       (struct-case x
         ((constant c) (if c st sf))
@@ -2624,7 +2624,7 @@
          (let ((s2 (P handler st sf su)))
            (parameterize ((exception-live-set s2))
              (P body st sf su))))
-        (else (error who "invalid pred" (unparse x)))))
+        (else (error who "invalid pred" (unparse-recordized-code x)))))
     (define (T x)
       (struct-case x
         ((conditional e0 e1 e2)
@@ -2637,10 +2637,10 @@
          (let ((s2 (T handler)))
            (parameterize ((exception-live-set s2))
               (T body))))
-        (else (error who "invalid tail" (unparse x)))))
+        (else (error who "invalid tail" (unparse-recordized-code x)))))
     (define exception-live-set (make-parameter #f))
     (let ((s (T x)))
-      ;(pretty-print (unparse x))
+      ;(pretty-print (unparse-recordized-code x))
       ;(print-graph g)
       g))
   ;;;
@@ -2755,7 +2755,7 @@
         ((ntcall) x)
         ((shortcut body handler)
          (make-shortcut (E body) (E handler)))
-        (else (error who "invalid effect" (unparse x)))))
+        (else (error who "invalid effect" (unparse-recordized-code x)))))
     (define (P x)
       (struct-case x
         ((constant) x)
@@ -2766,7 +2766,7 @@
         ((seq e0 e1) (make-seq (E e0) (P e1)))
         ((shortcut body handler)
          (make-shortcut (P body) (P handler)))
-        (else (error who "invalid pred" (unparse x)))))
+        (else (error who "invalid pred" (unparse-recordized-code x)))))
     (define (T x)
       (struct-case x
         ((primcall op rands) x)
@@ -2775,7 +2775,7 @@
         ((seq e0 e1) (make-seq (E e0) (T e1)))
         ((shortcut body handler)
          (make-shortcut (T body) (T handler)))
-        (else (error who "invalid tail" (unparse x)))))
+        (else (error who "invalid tail" (unparse-recordized-code x)))))
     ;(print-code x)
     (T x))
   ;;;
@@ -2998,12 +2998,12 @@
          (case op
            ((nop interrupt incr/zero? fl:single->double
                  fl:double->single) x)
-           (else (error who "invalid op in" (unparse x)))))
+           (else (error who "invalid op in" (unparse-recordized-code x)))))
         ((ntcall) x)
         ((shortcut body handler)
          (let ((body (E body)))
            (make-shortcut body (E handler))))
-        (else (error who "invalid effect" (unparse x)))))
+        (else (error who "invalid effect" (unparse-recordized-code x)))))
     (define (check-disp-arg x k)
       (cond
         ((small-operand? x)
@@ -3061,7 +3061,7 @@
         ((shortcut body handler)
          (let ((body (P body)))
            (make-shortcut body (P handler))))
-        (else (error who "invalid pred" (unparse x)))))
+        (else (error who "invalid pred" (unparse-recordized-code x)))))
     (define (T x)
       (struct-case x
         ((primcall op rands) x)
@@ -3070,7 +3070,7 @@
         ((seq e0 e1) (make-seq (E e0) (T e1)))
         ((shortcut body handler)
          (make-shortcut (T body) (T handler)))
-        (else (error who "invalid tail" (unparse x)))))
+        (else (error who "invalid tail" (unparse-recordized-code x)))))
     (let ((x (T x)))
       (values un* x)))
   ;;;
@@ -3370,7 +3370,7 @@
           (cons '(cvtsd2ss xmm0 xmm0) ac))
          ((fl:single->double)
           (cons '(cvtss2sd xmm0 xmm0) ac))
-         (else (error who "invalid effect" (unparse x)))))
+         (else (error who "invalid effect" (unparse-recordized-code x)))))
       ((shortcut body handler)
        (let ((L (unique-interrupt-label)) (L2 (unique-label)))
          (let ((hand (cons L (E handler `((jmp ,L2))))))
@@ -3378,7 +3378,7 @@
              (set-cdr! tc (append hand (cdr tc)))))
          (parameterize ((exception-label L))
            (E body (cons L2 ac)))))
-      (else (error who "invalid effect" (unparse x)))))
+      (else (error who "invalid effect" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3626,7 +3626,7 @@
 
 (define (print-code x)
   (parameterize ((print-gensym '#t))
-    (pretty-print (unparse x))))
+    (pretty-print (unparse-recordized-code x))))
 
 
 ;;;; done

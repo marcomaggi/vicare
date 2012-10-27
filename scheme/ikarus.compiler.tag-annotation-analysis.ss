@@ -212,7 +212,7 @@
          (values (make-forcall rator rand*)
                  rand*-env
                  T:object))]
-      [else (error who "invalid expression" (unparse x))]))
+      [else (error who "invalid expression" (unparse-recordized-code x))]))
   (define (annotate x t)
     (cond
       [(T=? t T:object) x]
@@ -430,7 +430,7 @@
            [else T:object]))]))
   (let-values ([(x env t) (V x empty-env)])
     (when (tag-analysis-output)
-      (pretty-print (unparse-pretty x)))
+      (pretty-print (unparse-recordized-code/pretty x)))
     x))
 
 ;;; end of file
