@@ -98,17 +98,17 @@
   #| end of module PRIMOPS |# )
 
 
-(module (specify-representation)
+(module (alt-cogen.specify-representation)
   (import primops)
 
-  (define (specify-representation x)
+  (define (alt-cogen.specify-representation x)
     (Program x))
 
   (module (Program)
     ;;The purpose  of this module  is to apply  the function V  to every
     ;;CASE-LAMBDA body and to the body of the "program".
     ;;
-    (define who 'specify-representation)
+    (define who 'alt-cogen.specify-representation)
 
     (define (Program x)
       (struct-case x
@@ -1229,7 +1229,7 @@
 
 ;;;; done
 
-#| end of module SPECIFY-REPRESENTATION |# )
+#| end of module ALT-COGEN.SPECIFY-REPRESENTATION |# )
 
 ;;; end of file
 ;; Local Variables:

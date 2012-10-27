@@ -38,23 +38,33 @@
 ;;  <Program> ::= (codes <clambda>* <Expr>)
 
 
-(module (alt-cogen compile-call-frame)
+(module (alt-cogen
+	 compile-call-frame
+	 alt-cogen.introduce-primcalls
+	 alt-cogen.eliminate-fix
+	 alt-cogen.insert-engine-checks
+	 alt-cogen.insert-stack-overflow-check
+	 alt-cogen.specify-representation
+	 alt-cogen.impose-calling-convention/evaluation-order
+	 alt-cogen.assign-frame-sizes
+	 alt-cogen.color-by-chaitin
+	 alt-cogen.flatten-codes)
 
   (define (alt-cogen x)
     ;;Commenting out this definition causes some passes to be timed.
     (define-inline (time-it name proc)
       (proc))
-    (let* ((x (introduce-primcalls x))
-	   (x (eliminate-fix x))
-	   (x (insert-engine-checks x))
-	   (x (insert-stack-overflow-check x))
-	   (x (specify-representation x))
-	   (x (impose-calling-convention/evaluation-order x))
+    (let* ((x (alt-cogen.introduce-primcalls x))
+	   (x (alt-cogen.eliminate-fix x))
+	   (x (alt-cogen.insert-engine-checks x))
+	   (x (alt-cogen.insert-stack-overflow-check x))
+	   (x (alt-cogen.specify-representation x))
+	   (x (alt-cogen.impose-calling-convention/evaluation-order x))
 	   (x (time-it "frame"    (lambda ()
-				    (assign-frame-sizes x))))
+				    (alt-cogen.assign-frame-sizes x))))
 	   (x (time-it "register" (lambda ()
-				    (color-by-chaitin x))))
-	   (ls (flatten-codes x)))
+				    (alt-cogen.color-by-chaitin x))))
+	   (ls (alt-cogen.flatten-codes x)))
       ls))
 
 
@@ -68,7 +78,7 @@
      (make-seq (multiple-forms-sequence ?e* ...) ?e))))
 
 
-(module (introduce-primcalls)
+(module (alt-cogen.introduce-primcalls)
   ;;The purpose of this module is to examine all the function calls:
   ;;
   ;;   (?operator ?arg ...)
@@ -104,9 +114,9 @@
   ;;   funcall		jmpcall		known
   ;;   primref		seq		var
   ;;
-  (define who 'introduce-primcalls)
+  (define who 'alt-cogen.introduce-primcalls)
 
-  (define (introduce-primcalls Program)
+  (define (alt-cogen.introduce-primcalls Program)
     (struct-case Program
       ((codes code* body)
        (make-codes ($map/stx Clambda code*)
@@ -262,10 +272,10 @@
   ;;     (else
   ;;      (error who "invalid closure" x))))
 
-  #| end of module: introduce-primcalls |# )
+  #| end of module: alt-cogen.introduce-primcalls |# )
 
 
-(module (eliminate-fix)
+(module (alt-cogen.eliminate-fix)
   ;;Despite its name, the purpose of  this module is *not* to remove the
   ;;FIX structures from recordized code.
   ;;
@@ -302,9 +312,9 @@
   ;;      (let ((T ?closure))
   ;;        T)
   ;;
-    (define who 'eliminate-fix)
+    (define who 'alt-cogen.eliminate-fix)
 
-  (define (eliminate-fix Program)
+  (define (alt-cogen.eliminate-fix Program)
     (struct-case Program
       ((codes code* body)
        ;;First traverse the CASE-LAMBDA  bodies, then traverse the whole
@@ -492,10 +502,10 @@
 
     E)
 
-  #| end of module: eliminate-fix |# )
+  #| end of module: alt-cogen.eliminate-fix |# )
 
 
-(module (insert-engine-checks)
+(module (alt-cogen.insert-engine-checks)
   ;;This  module traverses  all the  function  bodies and,  if the  body
   ;;contains at least one JMPCALL struct or one FUNCALL struct (in which
   ;;the operator is *not* a PRIMREF), it transforms the ?BODY into:
@@ -504,11 +514,11 @@
   ;;     (primcall '$do-event '())
   ;;     ?body)
   ;;
-  (define who 'insert-engine-checks)
+  (define who 'alt-cogen.insert-engine-checks)
 
-  (module (insert-engine-checks)
+  (module (alt-cogen.insert-engine-checks)
 
-    (define (insert-engine-checks x)
+    (define (alt-cogen.insert-engine-checks x)
       (struct-case x
 	((codes list body)
 	 (make-codes ($map/stx CodeExpr list)
@@ -608,10 +618,10 @@
 
     #| end of module: E |# )
 
-  #| end of file: insert-engine-checks |# )
+  #| end of file: alt-cogen.insert-engine-checks |# )
 
 
-(module (insert-stack-overflow-check)
+(module (alt-cogen.insert-stack-overflow-check)
   ;;This  module traverses  all  the  function bodies  and,  if a  ?BODY
   ;;contains only function  calls in tail position, it  transforms it as
   ;;follows:
@@ -620,11 +630,11 @@
   ;;     (primcall '$stack-overflow-check '())
   ;;     ?body)
   ;;
-  (define who 'insert-stack-overflow-check)
+  (define who 'alt-cogen.insert-stack-overflow-check)
 
-  (module (insert-stack-overflow-check)
+  (module (alt-cogen.insert-stack-overflow-check)
 
-    (define (insert-stack-overflow-check Program)
+    (define (alt-cogen.insert-stack-overflow-check Program)
       (struct-case Program
 	((codes code* body)
 	 (make-codes (map Clambda code*)
@@ -758,7 +768,7 @@
 
     #| end of module: %tail? |# )
 
-  #| end of module: insert-stack-overflow-check |# )
+  #| end of module: alt-cogen.insert-stack-overflow-check |# )
 
 
 ;;;; some external code
@@ -803,11 +813,11 @@
 	 (error 'register-index "not a register" x))))
 
 
-(module (impose-calling-convention/evaluation-order)
+(module (alt-cogen.impose-calling-convention/evaluation-order)
 
-  (define who 'impose-calling-convention/evaluation-order)
+  (define who 'alt-cogen.impose-calling-convention/evaluation-order)
 
-  (define (impose-calling-convention/evaluation-order x)
+  (define (alt-cogen.impose-calling-convention/evaluation-order x)
     (Program x))
 
 ;;; --------------------------------------------------------------------
@@ -1416,7 +1426,7 @@
 
     #| end of module: %handle-tail-call |# )
 
-  #| end of module: impose-calling-convention/evaluation-order |# )
+  #| end of module: alt-cogen.impose-calling-convention/evaluation-order |# )
 
 
 (module ListySet
@@ -2234,7 +2244,7 @@
   spill-set)
 
 
-(module (assign-frame-sizes)
+(module (alt-cogen.assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
 
@@ -2478,7 +2488,7 @@
                      ((var-loc (car vars)) (f (cdr vars)))
                      (else (cons (car vars) (f (cdr vars)))))))
                body)))))
-      (else (error 'assign-frame-sizes "invalid main" x))))
+      (else (error 'alt-cogen.assign-frame-sizes "invalid main" x))))
   ;;;
   (define (ClambdaCase x)
     (struct-case x
@@ -2495,14 +2505,14 @@
       ((codes code* body)
        (make-codes (map Clambda code*) (Main body)))))
   ;;;
-  (define (assign-frame-sizes x)
+  (define (alt-cogen.assign-frame-sizes x)
     (let ((v (Program x)))
       v))
 
-  #| end of module: assign-frame-sizes |# )
+  #| end of module: alt-cogen.assign-frame-sizes |# )
 
 
-(module (color-by-chaitin)
+(module (alt-cogen.color-by-chaitin)
   (import ListySet)
   (import ListyGraphs)
   ;(import IntegerSet)
@@ -3080,7 +3090,7 @@
                            (body (substitute env body)))
                       (loop sp* un* body))))))))))))
   ;;;
-  (define (color-by-chaitin x)
+  (define (alt-cogen.color-by-chaitin x)
     ;;;
     (define (ClambdaCase x)
       (struct-case x
@@ -3122,13 +3132,13 @@
 	    `(addl ,(* (fxsub1 framesize) wordsize) ,fpr)))))
 
 
-(module (flatten-codes)
+(module (alt-cogen.flatten-codes)
 
-  (define who 'flatten-codes)
+  (define who 'alt-cogen.flatten-codes)
 
   (define exceptions-conc (make-parameter #f))
 
-  (define (flatten-codes x)
+  (define (alt-cogen.flatten-codes x)
     (struct-case x
       ((codes code* body)
        (cons (cons* 0 (label (gensym))
@@ -3611,7 +3621,7 @@
 		     (else
 		      (ClambdaCase (car case*) (f (cdr case*))))))))))))
 
-  #| end of module: flatten-codes |# )
+  #| end of module: alt-cogen.flatten-codes |# )
 
 
 (define (print-code x)
