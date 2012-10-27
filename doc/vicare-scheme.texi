@@ -16337,6 +16337,8 @@ behaviour is undefined.
 @menu
 Compiler passes
 
+* syslib compiler unparse::       Unparsing intermediate
+                                   representations.
 * syslib compiler full::          The full transformation.
 * syslib compiler recordize::     Scheme code to nested structs.
 * syslib compiler direct calls::  Optimisation for direct calls.
@@ -16367,6 +16369,25 @@ Code generation passes
 * syslib compiler color::         Colorising by Chaitin.
 * syslib compiler flatten::       Flattening codes.
 @end menu
+
+@c page
+@node syslib compiler unparse
+@subsection Unparsing intermediate representations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $unparse-recordized-code @var{input}
+@defunx $unparse-recordized-code/pretty @var{input}
+Given as argument a struct instance representing recordized code: build
+and return a symbolic expression that can be printed in human readable
+form.
+
+@var{input} can be any structure that is produced by the compiler
+passes.
+@end defun
 
 @c page
 @node syslib compiler full
@@ -16645,6 +16666,10 @@ system $compiler}.
 @node syslib compiler color
 @subsection Colorising by Chaitin
 
+
+For an introduction to register allocation see:
+
+@center @url{http://en.wikipedia.org/wiki/Register_allocation}
 
 The following bindings are exported by the library @library{ikarus
 system $compiler}.

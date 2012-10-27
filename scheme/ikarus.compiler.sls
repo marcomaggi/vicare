@@ -64,7 +64,10 @@
       $alt-cogen.impose-calling-convention/evaluation-order)
      (alt-cogen.assign-frame-sizes		$alt-cogen.assign-frame-sizes)
      (alt-cogen.color-by-chaitin		$alt-cogen.color-by-chaitin)
-     (alt-cogen.flatten-codes			$alt-cogen.flatten-codes)))
+     (alt-cogen.flatten-codes			$alt-cogen.flatten-codes)
+
+     (unparse-recordized-code			$unparse-recordized-code)
+     (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import (except (ikarus)
 		  compile-core-expr-to-port		assembler-output
 		  optimize-cp				optimizer-output

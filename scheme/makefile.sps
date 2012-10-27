@@ -2197,6 +2197,9 @@
     ($alt-cogen.assign-frame-sizes			$compiler)
     ($alt-cogen.color-by-chaitin			$compiler)
     ($alt-cogen.flatten-codes				$compiler)
+
+    ($unparse-recordized-code				$compiler)
+    ($unparse-recordized-code/pretty			$compiler)
     ))
 
 
