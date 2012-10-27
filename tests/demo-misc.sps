@@ -34,12 +34,24 @@
      ))
 
 (define records
-  ($compiler.recordize
-   (let ((code (expand source)))
-     (print code)
-     code)))
+  (let ((code (expand source)))
+    (print code)
+    (let* ((R ($compiler.recordize code))
+	   (R ($compiler.optimize-direct-calls R))
+	   (R ($compiler.optimize-letrec R))
+	   (R ($compiler.source-optimize R))
+	   (R ($compiler.rewrite-references-and-assignments R))
+	   (R ($compiler.introduce-tags R))
+	   (R ($compiler.introduce-vars R))
+	   (R ($compiler.sanitize-bindings R))
+	   (R ($compiler.optimize-for-direct-jumps R))
+	   (R ($compiler.insert-global-assignments R))
+	   (R ($compiler.convert-closures R))
+	   )
+      R)))
 
 (print ($unparse-recordized-code records))
+#;(print ($unparse-recordized-code/pretty records))
 
 
 ;;; end of file

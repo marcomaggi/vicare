@@ -116,7 +116,7 @@
   ;;When  set to  true: an  attempt is  made to  expand inline  calls to
   ;;CALL-WITH-VALUES by inserting local bindings.
   ;;
-  (make-parameter #t))
+  (make-parameter #f))
 
 (define optimize-cp
   (make-parameter #t))
@@ -4634,13 +4634,10 @@
 			  free))
 	       ,@(map unparse-recordized-code cls*)))
 
-    #;((clambda label clauses free)
-     `(code ,label . ,(map unparse-recordized-code clauses)))
-
     ((closure code free* wk?)
-     `(closure ,@(if wk? '(wk) '())
-	       ,(unparse-recordized-code code)
-	       ,(map unparse-recordized-code free*)))
+     `(closure ,@(if wk? '(well-known: #t) '(well-known: #f))
+	       (free*: ,(map unparse-recordized-code free*))
+	       ,(unparse-recordized-code code)))
 
     ((codes list body)
      `(codes ,(map unparse-recordized-code list)
@@ -4869,7 +4866,6 @@
       (else x)))
 
   (E x))
-
 
 
 ;;;; done
