@@ -2188,8 +2188,6 @@
     ($compiler.alt-cogen				$compiler)
     ($compiler.assemble-sources				$compiler)
 
-    ($alt-cogen						$compiler)
-    ($compile-call-frame				$compiler)
     ($alt-cogen.introduce-primcalls			$compiler)
     ($alt-cogen.eliminate-fix				$compiler)
     ($alt-cogen.insert-engine-checks			$compiler)

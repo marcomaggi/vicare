@@ -15370,6 +15370,7 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib pointers::             Low level pointer operations.
 * syslib codes::                Low level code objects operations.
 * syslib closures::             Low level closures operations.
+* syslib compiler::             Interface to compiler passes.
 @end menu
 
 @c page
@@ -16312,6 +16313,357 @@ block.
 To know at run time how many free variables are associated to
 @var{closure} we have to inspect the associated code object.
 @end deffn
+
+@c page
+@node syslib compiler
+@section Interface to compiler passes
+
+
+@cindex @library{ikarus system $compiler}, library
+@cindex Library @library{ikarus system $compiler}
+
+
+@value{PRJNAME} is a compiler for the Scheme language; internally it
+implements a multitude of passes each of which perform a transformation
+from Scheme code to executable binary code.  The library @library{ikarus
+system $compiler} exports one binding for each compiler pass, allwing
+inspection of the performed transformations.
+
+The sequence in which the passes are performed @strong{cannot} be
+changed; they must be performed in the specified order.  The passes
+functions are to be considered unsafe: if the input is invalid, the
+behaviour is undefined.
+
+@menu
+Compiler passes
+
+* syslib compiler full::          The full transformation.
+* syslib compiler recordize::     Scheme code to nested structs.
+* syslib compiler direct calls::  Optimisation for direct calls.
+* syslib compiler letrec::        Optimisation of @code{letrec} forms.
+* syslib compiler optimisation::  Source optimisation.
+* syslib compiler assignments::   Rewriting references and assignments.
+* syslib compiler tags::          Tagging known properties.
+* syslib compiler vars::          Introducing storage locations.
+* syslib compiler bindings::      Sanitizing bindings.
+* syslib compiler direct jumps::  Optimisation for direct jumps.
+* syslib compiler global::        Inserting global assignments.
+* syslib compiler closures::      Closures conversion.
+* syslib compiler lift::          Closures optimization and codes
+                                  lifting.
+* syslib compiler cogen::         Full assembly code generation.
+* syslib compiler assember::      Binary code generation.
+
+Code generation passes
+
+* syslib compiler primcall::      Introducing primitive calls.
+* syslib compiler fix::           Removing fixes.
+* syslib compiler engine::        Inserting engine checks.
+* syslib compiler stack::         Inserting stack overflow checks.
+* syslib compiler primop::        Expanding primitive operations.
+* syslib compiler order::         Imposing calling convention and
+                                  evaluation order.
+* syslib compiler frame::         Assigning frame sizes.
+* syslib compiler color::         Colorising by Chaitin.
+* syslib compiler flatten::       Flattening codes.
+@end menu
+
+@c page
+@node syslib compiler full
+@subsection The full transformation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.compile-core-expr->code @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler recordize
+@subsection Scheme code to nested structs
+
+
+@defun $compiler.recordize @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler direct calls
+@subsection Optimisation for direct calls
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.optimize-direct-calls @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler letrec
+@subsection Optimisation of @code{letrec} forms
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.optimize-letrec @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler optimisation
+@subsection Source optimisation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.source-optimize @var{input}
+@end defun
+
+@c page
+@node syslib compiler assignments
+@subsection Rewriting references and assignments
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.rewrite-references-and-assignments @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler tags
+@subsection Tagging known properties
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.introduce-tags @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler vars
+@subsection Introducing storage locations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.introduce-vars @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler bindings
+@subsection Sanitizing bindings
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.sanitize-bindings @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler direct jumps
+@subsection Optimisation for direct jumps
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.optimize-for-direct-jumps @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler global
+@subsection Inserting global assignments
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.insert-global-assignments @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler closures
+@subsection Closure conversion
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.convert-closures @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler lift
+@subsection Cloaures optimization and codes lifting
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.optimize-closures/lift-codes @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler cogen
+@subsection Full assembly code generation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.alt-cogen @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler assember
+@subsection Binary code generation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compiler.assemble-sources @var{input}
+@end defun
+
+@c page
+@node syslib compiler primcall
+@subsection Introducing primitive calls
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.introduce-primcalls @var{input}
+@end defun
+
+@c page
+@node syslib compiler fix
+@subsection Removing fixes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.eliminate-fix @var{input}
+@end defun
+
+@c page
+@node syslib compiler engine
+@subsection Inserting engine checks
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.insert-engine-checks @var{input}
+@end defun
+
+@c page
+@node syslib compiler stack
+@subsection Inserting stack overflow checks
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.insert-stack-overflow-check @var{input}
+@end defun
+
+@c page
+@node syslib compiler primop
+@subsection Expanding primitive operations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.specify-representation @var{input}
+@end defun
+
+@c page
+@node syslib compiler order
+@subsection Imposing calling convention and evaluation order
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.impose-calling-convention/evaluation-order @var{input}
+@end defun
+
+@c page
+@node syslib compiler frame
+@subsection Assigning frame sizes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.assign-frame-sizes @var{input}
+@end defun
+
+@c page
+@node syslib compiler color
+@subsection Colorising by Chaitin
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.color-by-chaitin @var{input}
+@end defun
+
+@c page
+@node syslib compiler flatten
+@subsection Flattening codes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen.flatten-codes @var{input}
+@end defun
 
 @c page
 @node capi
