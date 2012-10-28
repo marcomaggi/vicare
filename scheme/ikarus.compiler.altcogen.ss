@@ -2090,56 +2090,56 @@
   (define (mark-reg/vars-conf! r vs)
     (for-each-var vs varvec
       (lambda (v)
-        (set-var-reg-conf! v (add-reg r (var-reg-conf v))))))
+        ($set-var-reg-conf! v (add-reg r ($var-reg-conf v))))))
 
   (define (mark-frm/vars-conf! f vs)
     (for-each-var vs varvec
       (lambda (v)
-        (set-var-frm-conf! v (add-frm f (var-frm-conf v))))))
+        ($set-var-frm-conf! v (add-frm f ($var-frm-conf v))))))
 
   (define (mark-frm/nfvs-conf! f ns)
     (for-each-nfv ns
       (lambda (n)
-        (set-nfv-frm-conf! n (add-frm f (nfv-frm-conf n))))))
+        ($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n))))))
 
   (define (mark-var/vars-conf! v vs)
     (for-each-var vs varvec
       (lambda (w)
-        (set-var-var-conf! w (add-var v (var-var-conf w)))))
-    (set-var-var-conf! v (union-vars vs (var-var-conf v))))
+        ($set-var-var-conf! w (add-var v ($var-var-conf w)))))
+    ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
 
   (define (mark-var/frms-conf! v fs)
-    (set-var-frm-conf! v (union-frms fs (var-frm-conf v))))
+    ($set-var-frm-conf! v (union-frms fs ($var-frm-conf v))))
 
   (define (mark-var/regs-conf! v rs)
-    (set-var-reg-conf! v (union-regs rs (var-reg-conf v))))
+    ($set-var-reg-conf! v (union-regs rs ($var-reg-conf v))))
 
   (define (mark-var/nfvs-conf! v ns)
     (for-each-nfv ns
       (lambda (n)
-        (set-nfv-var-conf! n (add-var v (nfv-var-conf n))))))
+        ($set-nfv-var-conf! n (add-var v ($nfv-var-conf n))))))
 
   (define (mark-nfv/vars-conf! n vs)
-    (set-nfv-var-conf! n (union-vars vs (nfv-var-conf n))))
+    ($set-nfv-var-conf! n (union-vars vs ($nfv-var-conf n))))
 
   (define (mark-nfv/frms-conf! n fs)
-    (set-nfv-frm-conf! n (union-frms fs (nfv-frm-conf n))))
+    ($set-nfv-frm-conf! n (union-frms fs ($nfv-frm-conf n))))
 
   (define (mark-nfv/nfvs-conf! n ns)
-    (set-nfv-nfv-conf! n (union-nfvs ns (nfv-nfv-conf n)))
+    ($set-nfv-nfv-conf! n (union-nfvs ns ($nfv-nfv-conf n)))
     (for-each-nfv ns
       (lambda (m)
-        (set-nfv-nfv-conf! m (add-nfv n (nfv-nfv-conf m))))))
+        ($set-nfv-nfv-conf! m (add-nfv n ($nfv-nfv-conf m))))))
 
   (define (mark-var/var-move! x y)
-    (set-var-var-move! x (add-var y (var-var-move x)))
-    (set-var-var-move! y (add-var x (var-var-move y))))
+    ($set-var-var-move! x (add-var y ($var-var-move x)))
+    ($set-var-var-move! y (add-var x ($var-var-move y))))
 
   (define (mark-var/frm-move! x y)
-    (set-var-frm-move! x (add-frm y (var-frm-move x))))
+    ($set-var-frm-move! x (add-frm y ($var-frm-move x))))
 
   (define (mark-var/reg-move! x y)
-    (set-var-reg-move! x (add-reg y (var-reg-move x))))
+    ($set-var-reg-move! x (add-reg y ($var-reg-move x))))
 
   (define (const? x)
     (or (constant? x)
@@ -2379,7 +2379,8 @@
 
       ((ntcall target value args mask size)
        (set! spill-set (union-vars vs spill-set))
-       (for-each-var vs varvec (lambda (x) (set-var-loc! x #t)))
+       (for-each-var vs varvec (lambda (x)
+				 ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
 
       ((nframe nfvs live body)
