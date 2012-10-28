@@ -2085,7 +2085,10 @@
   (import conflict-helpers)
   (import (ikarus system $vectors))
   (define who 'uncover-frame-conflicts)
-  (define spill-set (make-empty-set))
+
+  (define spill-set
+    ;;This will be the return value.
+    (make-empty-set))
 
   (define (mark-reg/vars-conf! r vs)
     (for-each-var vs varvec
@@ -2301,10 +2304,10 @@
           (let ((v (exception-live-set)))
             (unless (vector? v)
               (error who "unbound exception" x v))
-            (let ((vs (union-vars vs (vector-ref v 0)))
-                  (rs (union-regs rs (vector-ref v 1)))
-                  (fs (union-frms fs (vector-ref v 2)))
-                  (ns (union-nfvs ns (vector-ref v 3))))
+            (let ((vs (union-vars vs ($vector-ref v 0)))
+                  (rs (union-regs rs ($vector-ref v 1)))
+                  (fs (union-frms fs ($vector-ref v 2)))
+                  (ns (union-nfvs ns ($vector-ref v 3))))
               (cond ((var? d)
 		     (cond ((not (mem-var? d vs))
 			    (set-asm-instr-op! x 'nop)
@@ -2424,15 +2427,16 @@
                         vsf rsf fsf nsf
                         vsu rsu fsu nsu)))
          (E e0 vs rs fs ns)))
+
       ((conditional e0 e1 e2)
        (let-values (((vs1 rs1 fs1 ns1)
                      (P e1 vst rst fst nst
-                        vsf rsf fsf nsf
-                        vsu rsu fsu nsu))
+                           vsf rsf fsf nsf
+			   vsu rsu fsu nsu))
                     ((vs2 rs2 fs2 ns2)
                      (P e2 vst rst fst nst
-                        vsf rsf fsf nsf
-                        vsu rsu fsu nsu)))
+                           vsf rsf fsf nsf
+			   vsu rsu fsu nsu)))
          (P e0
             vs1 rs1 fs1 ns1
             vs2 rs2 fs2 ns2
@@ -2440,28 +2444,36 @@
             (union-regs rs1 rs2)
             (union-frms fs1 fs2)
             (union-nfvs ns1 ns2))))
+
       ((constant t)
        (if t
            (values vst rst fst nst)
            (values vsf rsf fsf nsf)))
+
       ((asm-instr op d s)
        (R* (list d s) vsu rsu fsu nsu))
+
       ((shortcut body handler)
        (let-values (((vsh rsh fsh nsh)
                      (P handler vst rst fst nst
                                 vsf rsf fsf nsf
                                 vsu rsu fsu nsu)))
-          (parameterize ((exception-live-set
-                          (vector vsh rsh fsh nsh)))
+          (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
             (P body vst rst fst nst
                     vsf rsf fsf nsf
                     vsu rsu fsu nsu))))
-      (else (error who "invalid pred" (unparse-recordized-code x)))))
+
+      (else
+       (error who "invalid pred" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
   (define (T x)
     (struct-case x
       ((seq e0 e1)
        (let-values (((vs rs fs ns) (T e1)))
          (E e0 vs rs fs ns)))
+
       ((conditional e0 e1 e2)
        (let-values (((vs1 rs1 fs1 ns1) (T e1))
                     ((vs2 rs2 fs2 ns2) (T e2)))
@@ -2472,22 +2484,30 @@
             (union-regs rs1 rs2)
             (union-frms fs1 fs2)
             (union-nfvs ns1 ns2))))
+
       ((primcall op arg*)
-       (case op
+       (case-symbols op
          ((return indirect-jump direct-jump)
           (R* arg* (empty-var-set)
               (empty-reg-set)
               (empty-frm-set)
               (empty-nfv-set)))
-         (else (error who "invalid tail op" x))))
+         (else
+	  (error who "invalid tail op" x))))
+
       ((shortcut body handler)
        (let-values (((vsh rsh fsh nsh) (T handler)))
-          (parameterize ((exception-live-set
-                          (vector vsh rsh fsh nsh)))
+          (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
              (T body))))
-      (else (error who "invalid tail" x))))
+
+      (else
+       (error who "invalid tail" x))))
+
+;;; --------------------------------------------------------------------
+
   (define exception-live-set
     (make-parameter #f))
+
   (T x)
   spill-set)
 
