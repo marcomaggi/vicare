@@ -2515,10 +2515,72 @@
 (module (alt-cogen.assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
+  (begin	;uncomment this form to switch from unsafe to safe
+    (define-inline (car x)	($car x))
+    (define-inline (cdr x)	($cdr x))
+    (define-inline (var-loc x)	($var-loc x)))
 
-  (define indent (make-parameter 0))
-  (define (rewrite x varvec)
-    (define who 'rewrite)
+  (define who 'alt-cogen.assign-frame-sizes)
+
+  (define (alt-cogen.assign-frame-sizes x)
+    (let ((v (Program x)))
+      v))
+
+  (module (Program)
+    ;;The purpose of  this module is to apply the  function "Main" below
+    ;;to all the bodies.
+    ;;
+    (define (Program x)
+      (struct-case x
+	((codes code* body)
+	 (make-codes (map Clambda code*) (Main body)))))
+
+    (define (Clambda x)
+      (struct-case x
+	((clambda label case* cp free* name)
+	 (make-clambda label (map ClambdaCase case*) cp free* name))))
+
+    (define (ClambdaCase x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (Main body)))))
+
+    (define (Main x)
+      (struct-case x
+	((locals vars body)
+	 (init-vars! vars)
+	 (let* ((varvec		(list->vector vars))
+		(call-live*	(uncover-frame-conflicts body varvec))
+		(body		(%rewrite body varvec)))
+	   (make-locals (cons varvec (%discard-vars-with-loc vars))
+			body)))
+	(else
+	 (error who "invalid main" x))))
+
+    (define (%discard-vars-with-loc vars)
+      ;;Given a list of struct instances  of type VAR, return a new list
+      ;;containing only those having #f in the LOC field.
+      ;;
+      (cond ((null? vars)
+	     '())
+	    ((var-loc (car vars))
+	     (%discard-vars-with-loc (cdr vars)))
+	    (else
+	     (cons (car vars) (%discard-vars-with-loc (cdr vars))))))
+
+    #| end of module: Program |# )
+
+;;; --------------------------------------------------------------------
+
+  ;;Commented out because unused.  (Marco Maggi; Oct 28, 2012)
+  ;;
+  ;;(define indent (make-parameter 0))
+
+  (define (%rewrite x varvec)
+    ;;
+    ;;A lot of functions are nested here because they need to close upon
+    ;;the argument VARVEC.
+    ;;
     (define (assign x)
       (let ()
         (define (assign-any)
@@ -2740,42 +2802,6 @@
          (make-shortcut (T body) (T handler)))
         (else (error who "invalid tail" (unparse-recordized-code x)))))
     (T x))
-  ;;;
-  (define (Main x)
-    (struct-case x
-      ((locals vars body)
-       (init-vars! vars)
-       (let ((varvec (list->vector vars)))
-         (let ((call-live* (uncover-frame-conflicts body varvec)))
-           (let ((body (rewrite body varvec)))
-             (make-locals
-               (cons varvec
-                 (let f ((vars vars))
-                   (cond
-                     ((null? vars) '())
-                     ((var-loc (car vars)) (f (cdr vars)))
-                     (else (cons (car vars) (f (cdr vars)))))))
-               body)))))
-      (else (error 'alt-cogen.assign-frame-sizes "invalid main" x))))
-  ;;;
-  (define (ClambdaCase x)
-    (struct-case x
-      ((clambda-case info body)
-       (make-clambda-case info (Main body)))))
-  ;;;
-  (define (Clambda x)
-    (struct-case x
-      ((clambda label case* cp free* name)
-       (make-clambda label (map ClambdaCase case*) cp free* name))))
-  ;;;
-  (define (Program x)
-    (struct-case x
-      ((codes code* body)
-       (make-codes (map Clambda code*) (Main body)))))
-  ;;;
-  (define (alt-cogen.assign-frame-sizes x)
-    (let ((v (Program x)))
-      v))
 
   #| end of module: alt-cogen.assign-frame-sizes |# )
 
