@@ -1799,9 +1799,9 @@
 		;struct  instance  of type  VAR  or  FVAR, or  a  symbol
 		;representing a register.
 		;
-		;The  cdr of  each pair  is  a struct  instance of  type
-		;ListySet  (whatever  it  is defined  in  that  module),
-		;representing the edges outgoing from the node.
+		;The  cdr  of  each  pair is  an  instance  of  ListySet
+		;(whatever it  is defined in that  module), representing
+		;the edges outgoing from the node.
 		;
 		;The  ListySet contains  the target  nodes of  the edges
 		;outgoing from  the node represented  by the car  of the
@@ -1877,6 +1877,8 @@
 
 
 (module IntegerGraphs
+  ;;This module is like ListyGraph, but it makes use of IntegerSet.
+  ;;
   (empty-graph
    add-edge!
    empty-graph?
@@ -1885,65 +1887,83 @@
    delete-node!)
   (import IntegerSet)
 
-  (define-struct graph (ls))
-  ;;;
-  (define (empty-graph) (make-graph '()))
-  ;;;
+  (define-struct graph
+    (ls
+		;A list of pairs representing the graph.
+		;
+		;The  car of  each  pair represents  a  graph's node:  a
+		;struct  instance  of type  VAR  or  FVAR, or  a  symbol
+		;representing a register.
+		;
+		;The  cdr of  each  pair is  an  instance of  IntegerSet
+		;(whatever it  is defined in that  module), representing
+		;the edges outgoing from the node.
+		;
+		;The  ListySet contains  the target  nodes of  the edges
+		;outgoing from  the node represented  by the car  of the
+		;pair.
+     ))
+
+  (define-inline (empty-graph)
+    (make-graph '()))
+
   (define (empty-graph? g)
-    (andmap (lambda (x) (empty-set? (cdr x))) (graph-ls g)))
-  ;;;
+    (andmap (lambda (x)
+	      (empty-set? ($cdr x)))
+	    ($graph-ls g)))
+
   (define (single x)
     (set-add x (make-empty-set)))
-  ;;;
+
   (define (add-edge! g x y)
-    (let ((ls (graph-ls g)))
-      (cond
-        ((assq x ls) =>
-         (lambda (p0)
-           (unless (set-member? y (cdr p0))
-             (set-cdr! p0 (set-add y (cdr p0)))
-             (cond
-               ((assq y ls) =>
-                (lambda (p1)
-                  (set-cdr! p1 (set-add x (cdr p1)))))
-               (else
-                (set-graph-ls! g
-                   (cons (cons y (single x)) ls)))))))
-        ((assq y ls) =>
-         (lambda (p1)
-           (set-cdr! p1 (set-add x (cdr p1)))
-           (set-graph-ls! g (cons (cons x (single y)) ls))))
-        (else
-         (set-graph-ls! g
-           (cons* (cons x (single y))
-                  (cons y (single x))
-                  ls))))))
+    (let ((ls ($graph-ls g)))
+      (cond ((assq x ls)
+	     => (lambda (p0)
+		  (unless (set-member? y ($cdr p0))
+		    (set-cdr! p0 (set-add y ($cdr p0)))
+		    (cond ((assq y ls)
+			   => (lambda (p1)
+				(set-cdr! p1 (set-add x ($cdr p1)))))
+			  (else
+			   ($set-graph-ls! g (cons (cons y (single x)) ls)))))))
+	    ((assq y ls)
+	     => (lambda (p1)
+		  (set-cdr! p1 (set-add x ($cdr p1)))
+		  ($set-graph-ls! g (cons (cons x (single y)) ls))))
+	    (else
+	     ($set-graph-ls! g (cons* (cons x (single y))
+				      (cons y (single x))
+				      ls))))))
+
   (define (print-graph g)
     (printf "G={\n")
     (parameterize ((print-gensym 'pretty))
       (for-each (lambda (x)
-                  (let ((lhs (car x)) (rhs* (cdr x)))
+                  (let ((lhs ($car x))
+			(rhs* ($cdr x)))
                     (printf "  ~s => ~s\n"
                             (unparse-recordized-code lhs)
                             (map unparse-recordized-code (set->list rhs*)))))
-        (graph-ls g)))
+        ($graph-ls g)))
     (printf "}\n"))
+
   (define (node-neighbors x g)
-    (cond
-      ((assq x (graph-ls g)) => cdr)
-      (else (make-empty-set))))
-  ;;;
+    (cond ((assq x ($graph-ls g))
+	   => cdr)
+	  (else
+	   (make-empty-set))))
+
   (define (delete-node! x g)
-    (let ((ls (graph-ls g)))
-      (cond
-        ((assq x ls) =>
-         (lambda (p)
-           (for-each (lambda (y)
-                       (let ((p (assq y ls)))
-                         (set-cdr! p (set-rem x (cdr p)))))
-                     (set->list (cdr p)))
-           (set-cdr! p (make-empty-set))))
-        (else (void)))))
+    (let ((ls ($graph-ls g)))
+      (cond ((assq x ls)
+	     => (lambda (p)
+		  (for-each (lambda (y)
+			      (let ((p (assq y ls)))
+				(set-cdr! p (set-rem x ($cdr p)))))
+		    (set->list ($cdr p)))
+		  (set-cdr! p (make-empty-set))))
+	    (else
+	     (void)))))
 
   #| end of module: IntegerGraphs |# )
 
