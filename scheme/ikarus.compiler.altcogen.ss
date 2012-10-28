@@ -1546,15 +1546,15 @@
 
 
 (module IntegerSet
-  ;;This module implements  sets of bits; each set is  a list of fixnums
-  ;;interpreted as bitvector; each fixnum  contributes with 28 bits; the
-  ;;empty set is the  fixnum zero; each set is composed of  a list of at
-  ;;most (GREATEST-FIXNUM) elements.
+  ;;This module implements sets of bits;  each set is a nested hierarchy
+  ;;of  lists, pairs  and fixnums  interpreted  as a  tree; fixnums  are
+  ;;interpreted as bitvectors.  The empty set is the fixnum zero.
+  ;;
+  ;;To search for a  bit: we compute a "bit index",  then start from the
+  ;;root of the tree and: if the index  is even we go left (the car), if
+  ;;the index is odd we go right (the cdr).
   ;;
   ;;This module has the same API of the module ListySet.
-  ;;
-  ;;FIXME  Should this  implementation  be replaced  with bitvectors  on
-  ;;bignums?  (Marco Maggi; Oct 28, 2012)
   ;;
   (make-empty-set
    singleton
@@ -1585,8 +1585,8 @@
 
   (define-inline ($index-of N)
     ;;Given a  set element N  to be added to,  or searched into,  a set:
-    ;;return a fixnum representing the list index of the fixnum in which
-    ;;N should be stored.
+    ;;return a fixnum representing the "index"  of the fixnum in which N
+    ;;should be stored.
     ;;
     (fxquotient N BITS))
 
