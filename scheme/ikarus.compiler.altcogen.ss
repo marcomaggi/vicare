@@ -1546,7 +1546,14 @@
 
 
 (module IntegerSet
+  ;;This module implements  sets of bits; each set is  a list of fixnums
+  ;;interpreted as bitvector; each fixnum  contributes with 28 bits; the
+  ;;empty set is the fixnum zero.
+  ;;
   ;;This module has the same API of the module ListySet.
+  ;;
+  ;;FIXME  Should this  implementation  be replaced  with bitvectors  on
+  ;;bignums?  (Marco Maggi; Oct 28, 2012)
   ;;
   (make-empty-set
    singleton
@@ -1567,19 +1574,30 @@
     (define-inline (fxzero? x)		($fxzero? x))
     (define-inline (fxeven? x)		($fxzero? ($fxlogand x 1))))
 
+;;; --------------------------------------------------------------------
+
   (define-constant BITS 28)
 
-  (define-inline (index-of n)
-    (fxquotient n BITS))
-
-  (define (mask-of n)
-    (fxsll 1 (fxremainder n BITS)))
-
-  (define (make-empty-set)
+  (define-inline (make-empty-set)
     0)
 
-  (define (singleton n)
-    (set-add n (make-empty-set)))
+  (define-inline ($index-of N)
+    ;;Given a  set element N  to be added to,  or searched into,  a set:
+    ;;return the list index of the fixnum in which N should be stored.
+    ;;
+    (fxquotient N BITS))
+
+  (define ($mask-of n)
+    ;;Given a  set element N  to be added to,  or searched into,  a set:
+    ;;return a  fixnum representing the bitmask  of N for the  fixnum in
+    ;;which N should be stored.
+    ;;
+    (fxsll 1 (fxremainder n BITS)))
+
+  (define (singleton N)
+    ;;Return a set containing only N.
+    ;;
+    (set-add N (make-empty-set)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1591,8 +1609,8 @@
     (with-arguments-validation (who)
 	((fixnum	n))
       (let loop ((S S)
-		 (i (index-of n))
-		 (j (mask-of  n)))
+		 (i ($index-of n))
+		 (j ($mask-of  n)))
 	(cond ((pair? S)
 	       (if (fxeven? i)
 		   (loop (car S) (fxsra i 1) j)
@@ -1603,23 +1621,31 @@
 	       #f)))))
 
   (define (set-add n s)
-    (unless (fixnum? n) (error 'set-add "not a fixnum" n))
-    (let f ((s s) (i (index-of n)) (j (mask-of n)))
-      (cond
-       ((pair? s)
-	(if (fxeven? i)
-	    (let ((a0 (car s)))
-	      (let ((a1 (f a0 (fxsra i 1) j)))
-		(if (eq? a0 a1) s (cons a1 (cdr s)))))
-	  (let ((d0 (cdr s)))
-	    (let ((d1 (f d0 (fxsra i 1) j)))
-	      (if (eq? d0 d1) s (cons (car s) d1))))))
-       ((eq? i 0) (fxlogor s j))
-       (else
-	(if (fxeven? i)
-	    (cons (f s (fxsra i 1) j) 0)
-	  (cons s (f 0 (fxsra i 1) j)))))))
-;;;
+    (define who 'set-add)
+    (with-arguments-validation (who)
+	((fixnum	n))
+      (let recur ((s s)
+		  (i ($index-of n))
+		  (j ($mask-of  n)))
+	(cond ((pair? s)
+	       (if (fxeven? i)
+		   (let* ((a0 (car s))
+			  (a1 (recur a0 (fxsra i 1) j)))
+		     (if (eq? a0 a1)
+			 s
+		       (cons a1 (cdr s))))
+		 (let* ((d0 (cdr s))
+			(d1 (recur d0 (fxsra i 1) j)))
+		   (if (eq? d0 d1)
+		       s
+		     (cons (car s) d1)))))
+	      ((eq? i 0)
+	       (fxlogor s j))
+	      (else
+	       (if (fxeven? i)
+		   (cons (recur s (fxsra i 1) j) 0)
+		 (cons s (recur 0 (fxsra i 1) j))))))))
+
   (define (cons^ a d)
     (if (and (eq? d 0) (fixnum? a))
         a
@@ -1627,7 +1653,7 @@
 ;;;
   (define (set-rem n s)
     (unless (fixnum? n) (error 'set-rem "not a fixnum" n))
-    (let f ((s s) (i (index-of n)) (j (mask-of n)))
+    (let f ((s s) (i ($index-of n)) (j ($mask-of n)))
       (cond
        ((pair? s)
 	(if (fxeven? i)
