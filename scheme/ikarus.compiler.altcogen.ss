@@ -1548,7 +1548,8 @@
 (module IntegerSet
   ;;This module implements  sets of bits; each set is  a list of fixnums
   ;;interpreted as bitvector; each fixnum  contributes with 28 bits; the
-  ;;empty set is the fixnum zero.
+  ;;empty set is the  fixnum zero; each set is composed of  a list of at
+  ;;most (GREATEST-FIXNUM) elements.
   ;;
   ;;This module has the same API of the module ListySet.
   ;;
@@ -1565,6 +1566,7 @@
   (begin       ;just comment out this form to switch from unsafe to safe
     (define-inline (car x)		($car x))
     (define-inline (cdr x)		($cdr x))
+    (define-inline (fx= x y)		($fx= x y))
     (define-inline (fxsll x amount)	($fxsll x amount))
     (define-inline (fxsra x amount)	($fxsra x amount))
     (define-inline (fxlogor x y)	($fxlogor x y))
@@ -1583,7 +1585,8 @@
 
   (define-inline ($index-of N)
     ;;Given a  set element N  to be added to,  or searched into,  a set:
-    ;;return the list index of the fixnum in which N should be stored.
+    ;;return a fixnum representing the list index of the fixnum in which
+    ;;N should be stored.
     ;;
     (fxquotient N BITS))
 
@@ -1610,84 +1613,101 @@
 	((fixnum	n))
       (let loop ((S S)
 		 (i ($index-of n))
-		 (j ($mask-of  n)))
+		 (j ($mask-of  n))) ;this never changes in the loop
 	(cond ((pair? S)
 	       (if (fxeven? i)
 		   (loop (car S) (fxsra i 1) j)
 		 (loop (cdr S) (fxsra i 1) j)))
-	      ((eq? i 0)
-	       (eq? j (fxlogand S j)))
+	      ((fx= i 0)
+	       (fx= j (fxlogand S j)))
 	      (else
 	       #f)))))
 
-  (define (set-add n s)
+  (define (set-add N S)
     (define who 'set-add)
     (with-arguments-validation (who)
-	((fixnum	n))
-      (let recur ((s s)
-		  (i ($index-of n))
-		  (j ($mask-of  n)))
-	(cond ((pair? s)
+	((fixnum	N))
+      (let recur ((S S)
+		  (i ($index-of N))
+		  (j ($mask-of  N)))	;this never changes in the loop
+	(cond ((pair? S)
 	       (if (fxeven? i)
-		   (let* ((a0 (car s))
+		   (let* ((a0 (car S))
 			  (a1 (recur a0 (fxsra i 1) j)))
-		     (if (eq? a0 a1)
-			 s
-		       (cons a1 (cdr s))))
-		 (let* ((d0 (cdr s))
+		     (if (fx= a0 a1)
+			 S
+		       (cons a1 (cdr S))))
+		 (let* ((d0 (cdr S))
 			(d1 (recur d0 (fxsra i 1) j)))
-		   (if (eq? d0 d1)
-		       s
-		     (cons (car s) d1)))))
-	      ((eq? i 0)
-	       (fxlogor s j))
+		   (if (fx= d0 d1)
+		       S
+		     (cons (car S) d1)))))
+	      ((fx= i 0)
+	       (fxlogor S j))
 	      (else
 	       (if (fxeven? i)
-		   (cons (recur s (fxsra i 1) j) 0)
-		 (cons s (recur 0 (fxsra i 1) j))))))))
+		   (cons (recur S (fxsra i 1) j) 0)
+		 (cons S (recur 0 (fxsra i 1) j))))))))
 
-  (define (cons^ a d)
-    (if (and (eq? d 0) (fixnum? a))
-        a
-      (cons a d)))
-;;;
-  (define (set-rem n s)
-    (unless (fixnum? n) (error 'set-rem "not a fixnum" n))
-    (let f ((s s) (i ($index-of n)) (j ($mask-of n)))
-      (cond
-       ((pair? s)
-	(if (fxeven? i)
-	    (let ((a0 (car s)))
-	      (let ((a1 (f a0 (fxsra i 1) j)))
-		(if (eq? a0 a1) s (cons^ a1 (cdr s)))))
-	  (let ((d0 (cdr s)))
-	    (let ((d1 (f d0 (fxsra i 1) j)))
-	      (if (eq? d0 d1) s (cons^ (car s) d1))))))
-       ((eq? i 0) (fxlogand s (fxlognot j)))
-       (else s))))
+  (define (cons^ A D)
+    (if (and (fx= D 0)
+	     (fixnum? A))
+        A
+      (cons A D)))
 
-  (define (set-union^ s1 m2)
-    (if (pair? s1)
-        (let ((a0 (car s1)))
-          (let ((a1 (set-union^ a0 m2)))
-            (if (eq? a0 a1) s1 (cons a1 (cdr s1)))))
-      (fxlogor s1 m2)))
-;;;
-  (define (set-union s1 s2)
-    (if (pair? s1)
-        (if (pair? s2)
-            (if (eq? s1 s2)
-                s1
-	      (cons (set-union (car s1) (car s2))
-		    (set-union (cdr s1) (cdr s2))))
-	  (let ((a0 (car s1)))
-	    (let ((a1 (set-union^ a0 s2)))
-	      (if (eq? a0 a1) s1 (cons a1 (cdr s1))))))
-      (if (pair? s2)
-	  (let ((a0 (car s2)))
-	    (let ((a1 (set-union^ a0 s1)))
-	      (if (eq? a0 a1) s2 (cons a1 (cdr s2)))))
-	(fxlogor s1 s2))))
+  (define (set-rem N S)
+    (define who 'set-rem)
+    (with-arguments-validation (who)
+	((fixnum	N))
+      (let recur ((S S)
+		  (i ($index-of N))
+		  (j ($mask-of  N))) ;this never changes in the loop
+	(cond ((pair? S)
+	       (if (fxeven? i)
+		   (let* ((a0 (car S))
+			  (a1 (recur a0 (fxsra i 1) j)))
+		     (if (fx= a0 a1)
+			 S
+		       (cons^ a1 (cdr S))))
+		 (let* ((d0 (cdr S))
+			(d1 (recur d0 (fxsra i 1) j)))
+		   (if (fx= d0 d1)
+		       S
+		     (cons^ (car S) d1)))))
+	      ((fx= i 0)
+	       (fxlogand S (fxlognot j)))
+	      (else
+	       S)))))
+
+  (module (set-union)
+
+    (define (set-union S1 S2)
+      (if (pair? S1)
+	  (if (pair? S2)
+	      (if (eq? S1 S2)
+		  S1
+		(cons (set-union (car S1) (car S2))
+		      (set-union (cdr S1) (cdr S2))))
+	    (let ((a0 (car S1)))
+	      (let ((a1 (set-union^ a0 S2)))
+		(if (eq? a0 a1) S1 (cons a1 (cdr S1))))))
+	(if (pair? S2)
+	    (let ((a0 (car S2)))
+	      (let ((a1 (set-union^ a0 S1)))
+		(if (eq? a0 a1) S2 (cons a1 (cdr S2)))))
+	  (fxlogor S1 S2))))
+
+    (define (set-union^ S1 M2)
+      (if (pair? S1)
+	  (let* ((a0 (car S1))
+		 (a1 (set-union^ a0 M2)))
+	    (if (fx= a0 a1)
+		S1
+	      (cons a1 (cdr S1))))
+	(fxlogor S1 M2)))
+
+    #| end of module: set-union |# )
+
 ;;;
   (define (set-difference^ s1 m2)
     (if (pair? s1)
