@@ -1607,77 +1607,77 @@
   (define (empty-set? S)
     (eqv? S 0))
 
-  (define (set-member? n S)
+  (define (set-member? N SET)
     (define who 'set-member?)
     (with-arguments-validation (who)
-	((fixnum	n))
-      (let loop ((S S)
-		 (i ($index-of n))
-		 (j ($mask-of  n))) ;this never changes in the loop
-	(cond ((pair? S)
-	       (if (fxeven? i)
-		   (loop (car S) (fxsra i 1) j)
-		 (loop (cdr S) (fxsra i 1) j)))
-	      ((fx= i 0)
-	       (fx= j (fxlogand S j)))
+	((fixnum	N))
+      (let loop ((SET SET)
+		 (idx ($index-of N))
+		 (msk ($mask-of  N))) ;this never changes in the loop
+	(cond ((pair? SET)
+	       (if (fxeven? idx)
+		   (loop (car SET) (fxsra idx 1) msk)
+		 (loop (cdr SET) (fxsra idx 1) msk)))
+	      ((fxzero? idx)
+	       (fx= msk (fxlogand SET msk)))
 	      (else
 	       #f)))))
 
-  (define (set-add N S)
+  (define (set-add N SET)
     (define who 'set-add)
     (with-arguments-validation (who)
 	((fixnum	N))
-      (let recur ((S S)
-		  (i ($index-of N))
-		  (j ($mask-of  N)))	;this never changes in the loop
-	(cond ((pair? S)
-	       (if (fxeven? i)
-		   (let* ((a0 (car S))
-			  (a1 (recur a0 (fxsra i 1) j)))
-		     (if (fx= a0 a1)
-			 S
-		       (cons a1 (cdr S))))
-		 (let* ((d0 (cdr S))
-			(d1 (recur d0 (fxsra i 1) j)))
-		   (if (fx= d0 d1)
-		       S
-		     (cons (car S) d1)))))
-	      ((fx= i 0)
-	       (fxlogor S j))
+      (let recur ((SET SET)
+		  (idx ($index-of N))
+		  (msk ($mask-of  N))) ;this never changes in the loop
+	(cond ((pair? SET)
+	       (if (fxeven? idx)
+		   (let* ((a0 (car SET))
+			  (a1 (recur a0 (fxsra idx 1) msk)))
+		     (if (eq? a0 a1)
+			 SET
+		       (cons a1 (cdr SET))))
+		 (let* ((d0 (cdr SET))
+			(d1 (recur d0 (fxsra idx 1) msk)))
+		   (if (eq? d0 d1)
+		       SET
+		     (cons (car SET) d1)))))
+	      ((fxzero? idx)
+	       (fxlogor SET msk))
 	      (else
-	       (if (fxeven? i)
-		   (cons (recur S (fxsra i 1) j) 0)
-		 (cons S (recur 0 (fxsra i 1) j))))))))
+	       (if (fxeven? idx)
+		   (cons (recur SET (fxsra idx 1) msk) 0)
+		 (cons SET (recur 0 (fxsra idx 1) msk))))))))
 
   (define (cons^ A D)
-    (if (and (fx= D 0)
+    (if (and (eq? D 0)
 	     (fixnum? A))
         A
       (cons A D)))
 
-  (define (set-rem N S)
+  (define (set-rem N SET)
     (define who 'set-rem)
     (with-arguments-validation (who)
 	((fixnum	N))
-      (let recur ((S S)
-		  (i ($index-of N))
-		  (j ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? S)
-	       (if (fxeven? i)
-		   (let* ((a0 (car S))
-			  (a1 (recur a0 (fxsra i 1) j)))
-		     (if (fx= a0 a1)
-			 S
-		       (cons^ a1 (cdr S))))
-		 (let* ((d0 (cdr S))
-			(d1 (recur d0 (fxsra i 1) j)))
-		   (if (fx= d0 d1)
-		       S
-		     (cons^ (car S) d1)))))
-	      ((fx= i 0)
-	       (fxlogand S (fxlognot j)))
+      (let recur ((SET SET)
+		  (idx ($index-of N))
+		  (msk ($mask-of  N))) ;this never changes in the loop
+	(cond ((pair? SET)
+	       (if (fxeven? idx)
+		   (let* ((a0 (car SET))
+			  (a1 (recur a0 (fxsra idx 1) msk)))
+		     (if (eq? a0 a1)
+			 SET
+		       (cons^ a1 (cdr SET))))
+		 (let* ((d0 (cdr SET))
+			(d1 (recur d0 (fxsra idx 1) msk)))
+		   (if (eq? d0 d1)
+		       SET
+		     (cons^ (car SET) d1)))))
+	      ((fxzero? idx)
+	       (fxlogand SET (fxlognot msk)))
 	      (else
-	       S)))))
+	       SET)))))
 
   (module (set-union)
 
@@ -1701,7 +1701,7 @@
       (if (pair? S1)
 	  (let* ((a0 (car S1))
 		 (a1 (set-union^ a0 M2)))
-	    (if (fx= a0 a1)
+	    (if (eq? a0 a1)
 		S1
 	      (cons a1 (cdr S1))))
 	(fxlogor S1 M2)))
@@ -1719,7 +1719,7 @@
 			  (set-difference (cdr s1) (cdr s2))))
 	       (let* ((a0 (car s1))
 		      (a1 (set-difference^ a0 s2)))
-		 (if (fx= a0 a1)
+		 (if (eq? a0 a1)
 		     s1
 		   (cons^ a1 (cdr s1))))))
 	    ((pair? s2)
@@ -1731,7 +1731,7 @@
       (if (pair? S1)
 	  (let* ((a0 (car S1))
 		 (a1 (set-difference^ a0 M2)))
-	    (if (fx= a0 a1)
+	    (if (eq? a0 a1)
 		S1
 	      (cons^ a1 (cdr S1))))
 	(fxlogand S1 (fxlognot M2))))
