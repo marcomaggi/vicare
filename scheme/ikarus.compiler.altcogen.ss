@@ -865,7 +865,7 @@
 					  (locs rlocs))
 				(if (null? args)
 				    (Tail cas.body)
-				  (make-seq (%make-set ($car args) ($car locs))
+				  (make-seq (%make-move ($car args) ($car locs))
 					    (recur    ($cdr args) ($cdr locs)))))))
 		    (make-clambda-case
 		     (make-case-info cas.info.label (append rlocs flocs) cas.info.proper)
@@ -944,10 +944,10 @@
 		 (V t0 handler)
 		 (V t1 k)
 		 (V t2 proc)
-		 (%make-set (mkfvar 1) t0)
-		 (%make-set (mkfvar 2) t1)
-		 (%make-set cpr t2)
-		 (%make-set ARGC-REGISTER (make-constant (argc-convention 1)))
+		 (%make-move (mkfvar 1) t0)
+		 (%make-move (mkfvar 2) t1)
+		 (%make-move cpr t2)
+		 (%make-move ARGC-REGISTER (make-constant (argc-convention 1)))
 		 (make-asm-instr 'int- fpr (make-constant wordsize))
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
@@ -983,7 +983,7 @@
 
       (define (VT x)
 	(S x (lambda (x)
-	       (make-seq (%make-set RETURN-VALUE-REGISTER x)
+	       (make-seq (%make-move RETURN-VALUE-REGISTER x)
 			 (make-primcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
 
       #| end of module: Tail |# )
@@ -1034,7 +1034,7 @@
 	(make-seq (V ($car lhs*) ($car rhs*))
 		  (%do-bind ($cdr lhs*) ($cdr rhs*) body)))))
 
-  (define-inline (%make-set lhs rhs)
+  (define-inline (%make-move lhs rhs)
     (make-asm-instr 'move lhs rhs))
 
   (define (%do-bind-frmt* nf* v* ac)
@@ -1068,12 +1068,12 @@
 					     (assign*
 					      reg-locs regt*
 					      (make-seq
-					       (%make-set ARGC-REGISTER
-							  (make-constant
-							   (argc-convention (length rands))))
+					       (%make-move ARGC-REGISTER
+							   (make-constant
+							    (argc-convention (length rands))))
 					       call))))))))
 	    (if value-dest
-		(make-seq body (%make-set value-dest RETURN-VALUE-REGISTER))
+		(make-seq body (%make-move value-dest RETURN-VALUE-REGISTER))
 	      body)))))
 
     (define (%nontail-locations regs args)
@@ -1147,14 +1147,14 @@
     ;;
     (struct-case x
       ((constant)
-       (%make-set d x))
+       (%make-move d x))
 
       ((var)
        (cond ((var-loc x)
 	      => (lambda (loc)
-		   (%make-set d loc)))
+		   (%make-move d loc)))
 	     (else
-	      (%make-set d x))))
+	      (%make-move d x))))
       ((bind lhs* rhs* e)
        (%do-bind lhs* rhs* (V d e)))
 
@@ -1172,13 +1172,13 @@
                (make-seq (alloc-check size)
 			 (S ($cadr rands)
 			    (lambda (tag)
-			      (make-seq (make-seq (%make-set d apr)
+			      (make-seq (make-seq (%make-move d apr)
 						  (make-asm-instr 'logor d tag))
 					(make-asm-instr 'int+ apr size))))))))
 
          ((mref)
           (S* rands (lambda (rands)
-		      (%make-set d (make-disp ($car rands) ($cadr rands))))))
+		      (%make-move d (make-disp ($car rands) ($cadr rands))))))
 
          ((mref32)
           (S* rands (lambda (rands)
@@ -1196,18 +1196,18 @@
          ((int-quotient)
           (S* rands (lambda (rands)
 		      (multiple-forms-sequence
-		       (%make-set eax ($car rands))
+		       (%make-move eax ($car rands))
 		       (make-asm-instr 'cltd edx eax)
 		       (make-asm-instr 'idiv eax ($cadr rands))
-		       (%make-set d eax)))))
+		       (%make-move d eax)))))
 
          ((int-remainder)
           (S* rands (lambda (rands)
 		      (multiple-forms-sequence
-		       (%make-set eax ($car rands))
+		       (%make-move eax ($car rands))
 		       (make-asm-instr 'cltd edx eax)
 		       (make-asm-instr 'idiv edx ($cadr rands))
-		       (%make-set d edx)))))
+		       (%make-move d edx)))))
 
          ((sll sra srl sll/overflow)
           (let ((a ($car rands))
@@ -1218,7 +1218,7 @@
 	      (S b (lambda (b)
 		     (multiple-forms-sequence
 		      (V d a)
-		      (%make-set ecx b)
+		      (%make-move ecx b)
 		      (make-asm-instr op d ecx)))))))
 
          (else
@@ -1243,7 +1243,7 @@
 
       (else
        (if (symbol? x)
-           (%make-set d x)
+           (%make-move d x)
 	 (error who "invalid value" (unparse-recordized-code x))))))
 
 ;;; --------------------------------------------------------------------
@@ -1260,7 +1260,7 @@
     ;;
     (if (null? lhs*)
 	tail-body
-      (make-seq (%make-set ($car lhs*) ($car rhs*))
+      (make-seq (%make-move ($car lhs*) ($car rhs*))
 		(assign*  ($cdr lhs*) ($cdr rhs*) tail-body))))
 
 ;;; --------------------------------------------------------------------
@@ -1375,8 +1375,8 @@
       ;;
       (let* ((args (cons rator rands))
 	     (locs (%formals-locations PARAMETER-REGISTERS args))
-	     (rest (make-seq (%make-set ARGC-REGISTER
-					(make-constant (argc-convention (length rands))))
+	     (rest (make-seq (%make-move ARGC-REGISTER
+					 (make-constant (argc-convention (length rands))))
 			     (if target
 				 (make-primcall 'direct-jump
 				   (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
@@ -1430,106 +1430,178 @@
 
 
 (module ListySet
-  (make-empty-set set-member? set-add set-rem set-difference set-union
-   empty-set? singleton
-   set->list list->set)
-  (define-struct set (v))
-  (define (make-empty-set) (make-set '()))
-  (define (set-member? x s)
-    ;(unless (fixnum? x) (error 'set-member? "not a fixnum" x))
-    (unless (set? s) (error 'set-member? "not a set" s))
-    (memq x (set-v s)))
-  (define (empty-set? s)
-    (unless (set? s) (error 'empty-set? "not a set" s))
-    (null? (set-v s)))
-  (define (set->list s)
-    (unless (set? s) (error 'set->list "not a set" s))
-    (set-v s))
+  ;;This module has the same API of the module IntegerSet.
+  ;;
+  (make-empty-set
+   singleton
+   set-member?		empty-set?
+   set-add		set-rem
+   set-difference	set-union
+   set->list		list->set)
+
+  (define-struct set
+    ;;Wrapper for a list of elements used as a set.
+    ;;
+    (v
+		;The list of elements in the set.
+     ))
+
+  (define-argument-validation (set who obj)
+    (set? obj)
+    (assertion-violation who "expected set as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+  (define-inline (make-empty-set)
+    (make-set '()))
+
   (define (singleton x)
     (make-set (list x)))
-  (define (set-add x s)
-    ;(unless (fixnum? x) (error 'set-add "not a fixnum" x))
-    (unless (set? s) (error 'set-add "not a set" s))
-    (cond
-      ((memq x (set-v s)) s)
-      (else (make-set (cons x (set-v s))))))
-  (define (rem x s)
-    (cond
-      ((null? s) '())
-      ((eq? x (car s)) (cdr s))
-      (else (cons (car s) (rem x (cdr s))))))
-  (define (set-rem x s)
-    ;(unless (fixnum? x) (error 'set-rem "not a fixnum" x))
-    (unless (set? s) (error 'set-rem "not a set" s))
-    (make-set (rem x (set-v s))))
-  (define (difference s1 s2)
-    (cond
-      ((null? s2) s1)
-      (else (difference (rem (car s2) s1) (cdr s2)))))
-  (define (set-difference s1 s2)
-    (unless (set? s1) (error 'set-difference "not a set" s1))
-    (unless (set? s2) (error 'set-difference "not a set" s2))
-    (make-set (difference (set-v s1) (set-v s2))))
-  (define (set-union s1 s2)
-    (unless (set? s1) (error 'set-union "not a set" s1))
-    (unless (set? s2) (error 'set-union "not a set" s2))
-    (make-set (union (set-v s1) (set-v s2))))
+
+  (define (set-member? x S)
+    (define who 'set-member?)
+    (with-arguments-validation (who)
+	((set	S))
+      (memq x ($set-v S))))
+
+  (define (empty-set? S)
+    (define who 'empty-set?)
+    (with-arguments-validation (who)
+	((set	S))
+      (null? ($set-v S))))
+
+  (define (set->list S)
+    (define who 'set->list)
+    (with-arguments-validation (who)
+	((set	S))
+      ($set-v S)))
+
   (define (list->set ls)
-    ;(unless (andmap fixnum? ls) (error 'set-rem "not a list of fixnum" ls))
     (make-set ls))
-  (define (union s1 s2)
-    (cond
-      ((null? s1) s2)
-      ((memq (car s1) s2) (union (cdr s1) s2))
-      (else (cons (car s1) (union (cdr s1) s2))))))
+
+  (define (set-add x S)
+    (define who 'set-add)
+    (with-arguments-validation (who)
+	((set	S))
+      (if (memq x ($set-v S))
+	  S
+	(make-set (cons x ($set-v S))))))
+
+  (define ($remq x ell)
+    ;;Remove X from the list ELL.
+    ;;
+    (cond ((null? ell)
+	   '())
+	  ((eq? x ($car ell))
+	   ($cdr ell))
+	  (else
+	   (cons ($car ell) ($remq x ($cdr ell))))))
+
+  (define (set-rem x S)
+    (define who 'set-rem)
+    (with-arguments-validation (who)
+	((set	S))
+      (make-set ($remq x ($set-v S)))))
+
+  (module (set-difference)
+
+    (define (set-difference S1 S2)
+      (define who 'set-difference)
+      (with-arguments-validation (who)
+	  ((set		S1)
+	   (set		S2))
+	(make-set ($difference ($set-v S1) ($set-v S2)))))
+
+    (define ($difference ell1 ell2)
+      ;;Remove from the list ELL1 all  the elements of the list ELL2.  Use
+      ;;EQ? for comparison.
+      ;;
+      (cond ((null? ell2)
+	     ell1)
+	    (else
+	     ($difference ($remq ($car ell2) ell1) ($cdr ell2)))))
+
+    #| end of module: set-difference |# )
+
+  (module (set-union)
+
+    (define (set-union S1 S2)
+      (define who 'set-union)
+      (with-arguments-validation (who)
+	  ((set		S1)
+	   (set		S2))
+	(make-set ($union ($set-v S1) ($set-v S2)))))
+
+    (define ($union S1 S2)
+      (cond ((null? S1)
+	     S2)
+	    ((memq ($car S1) S2)
+	     ($union ($cdr S1) S2))
+	    (else
+	     (cons ($car S1) (union ($cdr S1) S2)))))
+
+    #| end of module: set-union |# )
+
+  #| end of module: ListySet |# )
 
 
 (module IntegerSet
+  ;;This module has the same API of the module ListySet.
+  ;;
   (make-empty-set
-   set-member?
-   set-add
    singleton
-   set-rem
-   set-difference
-   set-union
-   empty-set?
-   set->list list->set)
+   set-member?		empty-set?
+   set-add		set-rem
+   set-difference	set-union
+   set->list		list->set)
 
-  (begin
-    (define-syntax car      (identifier-syntax $car))
-    (define-syntax cdr      (identifier-syntax $cdr))
-    (define-syntax fxsll    (identifier-syntax $fxsll))
-    (define-syntax fxsra    (identifier-syntax $fxsra))
-    (define-syntax fxlogor  (identifier-syntax $fxlogor))
-    (define-syntax fxlogand (identifier-syntax $fxlogand))
-    (define-syntax fxlognot (identifier-syntax $fxlognot))
-    (define-syntax fx+      (identifier-syntax $fx+))
-    (define-syntax fxzero?  (identifier-syntax $fxzero?))
-    (define-syntax fxeven?
-      (syntax-rules ()
-        ((_ x) ($fxzero? ($fxlogand x 1))))))
+  (begin       ;just comment out this form to switch from unsafe to safe
+    (define-inline (car x)	($car x))
+    (define-inline (cdr x)	($cdr x))
+    (define-inline (fxsll x)	($fxsll x))
+    (define-inline (fxsra x)	($fxsra x))
+    (define-inline (fxlogor x)	($fxlogor x))
+    (define-inline (fxlogand x)	($fxlogand x))
+    (define-inline (fxlognot x)	($fxlognot x))
+    (define-inline (fx+ x)	($fx+ x))
+    (define-inline (fxzero? x)	($fxzero? x))
+    (define-inline (fxeven? x)	($fxzero? ($fxlogand x 1))))
 
-  (define bits 28)
-  (define (index-of n) (fxquotient n bits))
-  (define (mask-of n)  (fxsll 1 (fxremainder n bits)))
+  (define-constant BITS 28)
 
-  (define (make-empty-set) 0)
-  (define (empty-set? s) (eqv? s 0))
+  (define-inline (index-of n)
+    (fxquotient n BITS))
 
-  (define (set-member? n s)
-    (unless (fixnum? n) (error 'set-member? "not a fixnum" n))
-    (let f ((s s) (i (index-of n)) (j (mask-of n)))
-      (cond
-       ((pair? s)
-	(if (fxeven? i)
-	    (f (car s) (fxsra i 1) j)
-	  (f (cdr s) (fxsra i 1) j)))
-       ((eq? i 0) (eq? j (fxlogand s j)))
-       (else #f))))
-;;;
+  (define (mask-of n)
+    (fxsll 1 (fxremainder n BITS)))
+
+  (define (make-empty-set)
+    0)
+
   (define (singleton n)
     (set-add n (make-empty-set)))
-;;;
+
+;;; --------------------------------------------------------------------
+
+  (define (empty-set? S)
+    (eqv? S 0))
+
+  (define (set-member? n S)
+    (define who 'set-member?)
+    (with-arguments-validation (who)
+	((fixnum	n))
+      (let loop ((S S)
+		 (i (index-of n))
+		 (j (mask-of  n)))
+	(cond ((pair? S)
+	       (if (fxeven? i)
+		   (loop (car S) (fxsra i 1) j)
+		 (loop (cdr S) (fxsra i 1) j)))
+	      ((eq? i 0)
+	       (eq? j (fxlogand S j)))
+	      (else
+	       #f)))))
+
   (define (set-add n s)
     (unless (fixnum? n) (error 'set-add "not a fixnum" n))
     (let f ((s s) (i (index-of n)) (j (mask-of n)))
@@ -1631,7 +1703,7 @@
 	(f i (fxsll j 1) (car s)
 	   (f (fxlogor i j) (fxsll j 1) (cdr s) ac)))
        (else
-	(let f ((i (fx* i bits)) (m s) (ac ac))
+	(let f ((i (fx* i BITS)) (m s) (ac ac))
 	  (cond
 	   ((fxeven? m)
 	    (if (fxzero? m)

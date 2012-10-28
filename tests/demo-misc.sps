@@ -22,12 +22,7 @@
 (define records
   (let-values
       (((code libs) (expand-core-language-form source (interaction-environment))))
-      (((id name ver imp* vis* inv*
-	    code #;invoke-code visit-code
-	    export-subst export-env
-	    guard-code guard-req*)
-	(library-expander source)))
-    (print inv*)
+    (print code)
     (let* ((R ($compiler.recordize code))
 	   (R ($compiler.optimize-direct-calls R))
 	   (R ($compiler.optimize-letrec R))
