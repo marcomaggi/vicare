@@ -1708,32 +1708,41 @@
 
     #| end of module: set-union |# )
 
-;;;
-  (define (set-difference^ s1 m2)
-    (if (pair? s1)
-        (let ((a0 (car s1)))
-          (let ((a1 (set-difference^ a0 m2)))
-            (if (eq? a0 a1) s1 (cons^ a1 (cdr s1)))))
-      (fxlogand s1 (fxlognot m2))))
+  (module (set-difference)
 
-  (define (set-difference^^ m1 s2)
-    (if (pair? s2)
-        (set-difference^^ m1 (car s2))
-      (fxlogand m1 (fxlognot s2))))
-;;;
-  (define (set-difference s1 s2)
-    (if (pair? s1)
-        (if (pair? s2)
-            (if (eq? s1 s2)
-                0
-	      (cons^ (set-difference (car s1) (car s2))
-		     (set-difference (cdr s1) (cdr s2))))
-	  (let ((a0 (car s1)))
-	    (let ((a1 (set-difference^ a0 s2)))
-	      (if (eq? a0 a1) s1 (cons^ a1 (cdr s1))))))
-      (if (pair? s2)
-	  (set-difference^^ s1 (car s2))
-	(fxlogand s1 (fxlognot s2)))))
+    (define (set-difference s1 s2)
+      (cond ((pair? s1)
+	     (if (pair? s2)
+		 (if (eq? s1 s2)
+		     0
+		   (cons^ (set-difference (car s1) (car s2))
+			  (set-difference (cdr s1) (cdr s2))))
+	       (let* ((a0 (car s1))
+		      (a1 (set-difference^ a0 s2)))
+		 (if (fx= a0 a1)
+		     s1
+		   (cons^ a1 (cdr s1))))))
+	    ((pair? s2)
+	     (set-difference^^ s1 (car s2)))
+	    (else
+	     (fxlogand s1 (fxlognot s2)))))
+
+    (define (set-difference^ S1 M2)
+      (if (pair? S1)
+	  (let* ((a0 (car S1))
+		 (a1 (set-difference^ a0 M2)))
+	    (if (fx= a0 a1)
+		S1
+	      (cons^ a1 (cdr S1))))
+	(fxlogand S1 (fxlognot M2))))
+
+    (define (set-difference^^ M1 S2)
+      (if (pair? S2)
+	  (set-difference^^ M1 (car S2))
+	(fxlogand M1 (fxlognot S2))))
+
+    #| end of module: set-difference |# )
+
 ;;;
   (define (list->set ls)
     (unless (andmap fixnum? ls) (error 'list->set "not a list of fixnum" ls))
