@@ -1578,7 +1578,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-constant BITS 28)
+  (define-inline-constant BITS 28)
 
   (define-inline (make-empty-set)
     0)
@@ -1743,29 +1743,41 @@
 
     #| end of module: set-difference |# )
 
-;;;
-  (define (list->set ls)
-    (unless (andmap fixnum? ls) (error 'list->set "not a list of fixnum" ls))
-    (let f ((ls ls) (s 0))
-      (cond
-       ((null? ls) s)
-       (else (f (cdr ls) (set-add (car ls) s))))))
-;;;
-  (define (set->list s)
-    (let f ((i 0) (j 1) (s s) (ac '()))
-      (cond
-       ((pair? s)
-	(f i (fxsll j 1) (car s)
-	   (f (fxlogor i j) (fxsll j 1) (cdr s) ac)))
-       (else
-	(let f ((i (fx* i BITS)) (m s) (ac ac))
-	  (cond
-	   ((fxeven? m)
-	    (if (fxzero? m)
-		ac
-	      (f (fx+ i 1) (fxsra m 1) ac)))
-	   (else
-	    (f (fx+ i 1) (fxsra m 1) (cons i ac)))))))))
+  (module (list->set)
+
+    (define (list->set ls)
+      (define who 'list->set)
+      (with-arguments-validation (who)
+	  ((list-of-fixnums	ls))
+	(let recur ((ls ls)
+		    (S  0))
+	  (if (null? ls)
+	      S
+	    (recur (cdr ls) (set-add (car ls) S))))))
+
+    (define-argument-validation (list-of-fixnums who obj)
+      (and (list? obj)
+	   (for-all fixnum? obj))
+      (assertion-violation who "expected list of fixnums as argument" obj))
+
+    #| end of module: list->set |# )
+
+  (define (set->list S)
+    (let outer ((i  0)
+		(j  1)
+		(S  S)
+		(ac '()))
+      (if (pair? S)
+	  (outer i (fxsll j 1) (car S)
+		 (outer (fxlogor i j) (fxsll j 1) (cdr S) ac))
+	(let inner ((i  (fx* i BITS))
+		    (m  S)
+		    (ac ac))
+	  (if (fxeven? m)
+	      (if (fxzero? m)
+		  ac
+		(inner (fx+ i 1) (fxsra m 1) ac))
+	    (inner (fx+ i 1) (fxsra m 1) (cons i ac)))))))
 
   #| end of module: IntegerSet |# )
 
