@@ -1556,16 +1556,16 @@
    set->list		list->set)
 
   (begin       ;just comment out this form to switch from unsafe to safe
-    (define-inline (car x)	($car x))
-    (define-inline (cdr x)	($cdr x))
-    (define-inline (fxsll x)	($fxsll x))
-    (define-inline (fxsra x)	($fxsra x))
-    (define-inline (fxlogor x)	($fxlogor x))
-    (define-inline (fxlogand x)	($fxlogand x))
-    (define-inline (fxlognot x)	($fxlognot x))
-    (define-inline (fx+ x)	($fx+ x))
-    (define-inline (fxzero? x)	($fxzero? x))
-    (define-inline (fxeven? x)	($fxzero? ($fxlogand x 1))))
+    (define-inline (car x)		($car x))
+    (define-inline (cdr x)		($cdr x))
+    (define-inline (fxsll x amount)	($fxsll x amount))
+    (define-inline (fxsra x amount)	($fxsra x amount))
+    (define-inline (fxlogor x y)	($fxlogor x y))
+    (define-inline (fxlogand x y)	($fxlogand x y))
+    (define-inline (fxlognot x)		($fxlognot x))
+    (define-inline (fx+ x y)		($fx+ x y))
+    (define-inline (fxzero? x)		($fxzero? x))
+    (define-inline (fxeven? x)		($fxzero? ($fxlogand x 1))))
 
   (define-constant BITS 28)
 
