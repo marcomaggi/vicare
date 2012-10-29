@@ -4128,116 +4128,144 @@
   (define (unique-label)
     (label (gensym)))
 
-  (define (constant=? x k)
-    (struct-case x
-      ((constant k0) (equal? k0 k))
-      (else #f)))
-
 ;;; --------------------------------------------------------------------
 
-  (define (P x lt lf ac)
-    (struct-case x
-      ((constant c)
-       (if c
-           (if lt (cons `(jmp ,lt) ac) ac)
-	 (if lf (cons `(jmp ,lf) ac) ac)))
-      ((seq e0 e1)
-       (E e0 (P e1 lt lf ac)))
-      ((conditional e0 e1 e2)
-       (cond
-	((and (constant=? e1 #t) (constant=? e2 #f))
-	 (P e0 lt lf ac))
-	((and (constant=? e1 #f) (constant=? e2 #t))
-	 (P e0 lf lt ac))
-	((and lt lf)
-	 (let ((l (unique-label)))
-	   (P e0 #f l
-	      (P e1 lt lf
-		 (cons l (P e2 lt lf ac))))))
-	(lt
-	 (let ((lf (unique-label)) (l (unique-label)))
-	   (P e0 #f l
-	      (P e1 lt lf
-		 (cons l (P e2 lt #f (cons lf ac)))))))
-	(lf
-	 (let ((lt (unique-label)) (l (unique-label)))
-	   (P e0 #f l
-	      (P e1 lt lf
-		 (cons l (P e2 #f lf (cons lt ac)))))))
+  (module (P)
+
+    (define (P x lt lf ac)
+      (struct-case x
+	((constant c)
+	 (if c
+	     (if lt (cons `(jmp ,lt) ac) ac)
+	   (if lf (cons `(jmp ,lf) ac) ac)))
+
+	((seq e0 e1)
+	 (E e0 (P e1 lt lf ac)))
+
+	((conditional e0 e1 e2)
+	 (P-conditional e0 e1 e2 lt lf ac))
+
+	((asm-instr op a0 a1)
+	 (P-asm-instr op a0 a1 x lt lf ac))
+
+	((shortcut body handler)
+	 (let ((L (unique-interrupt-label))
+	       (lj (unique-label)))
+	   (let ((ac (if (and lt lf) ac (cons lj ac))))
+	     (let* ((hand (cons L (P handler (or lt lj) (or lf lj) '())))
+		    (tc   (exceptions-conc)))
+	       (set-cdr! tc (append hand (cdr tc))))
+	     (parameterize ((exception-label L))
+	       (P body lt lf ac)))))
+
 	(else
-	 (let ((lf (unique-label)) (l (unique-label)))
-	   (P e0 #f l
-	      (P e1 #f #f
-		 (cons `(jmp ,lf)
-		       (cons l (P e2 #f #f (cons lf ac))))))))))
-      ((asm-instr op a0 a1)
-       (let ()
-         (define (notop x)
-           (cond
-	    ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
-		       (u< u>=) (u<= u>) (u> u<=) (u>= u<)
-		       (fl:= fl:o!=) (fl:!= fl:o=)
-		       (fl:< fl:o>=) (fl:<= fl:o>)
-		       (fl:> fl:o<=) (fl:>= fl:o<)
-		       ))
-	     => cadr)
-	    (else (error who "invalid notop" x))))
-         (define (jmpname x)
-           (cond
-	    ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)
-		       (u< jb) (u<= jbe) (u> ja) (u>= jae)
-		       (fl:= je) (fl:!= jne)
-		       (fl:< jb) (fl:> ja) (fl:<= jbe) (fl:>= jae)
-		       (fl:o= je) (fl:o!= jne)
-		       (fl:o< jb) (fl:o> ja) (fl:o<= jbe) (fl:o>= jae)
-		       ))
-	     => cadr)
-	    (else (error who "invalid jmpname" x))))
-         (define (revjmpname x)
-           (cond
-	    ((assq x '((= je) (!= jne) (< jg) (<= jge) (> jl) (>= jle)
-		       (u< ja) (u<= jae) (u> jb) (u>= jbe)))
-	     => cadr)
-	    (else (error who "invalid jmpname" x))))
-         (define (cmp op a0 a1 lab ac)
-           (cond
-	    ((memq op '(fl:= fl:!= fl:< fl:<= fl:> fl:>=))
-	     (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
-		    `(,(jmpname op) ,lab)
-		    ;;BOGUS! (Abdulaziz Ghuloum)
-		    ac))
-	    ((memq op '(fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=))
-	     (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
-		    `(jp ,lab)
-		    `(,(jmpname op) ,lab)
-		    ac))
-	    ((or (symbol? a0) (constant? a1))
-	     (cons* `(cmpl ,(R a1) ,(R a0))
-		    `(,(jmpname op) ,lab)
-		    ac))
-	    ((or (symbol? a1) (constant? a0))
-	     (cons* `(cmpl ,(R a0) ,(R a1))
-		    `(,(revjmpname op) ,lab)
-		    ac))
-	    (else (error who "invalid cmpops" a0 a1))))
-         (cond
-	  ((and lt lf)
-	   (cmp op a0 a1 lt
-                (cons `(jmp ,lf) ac)))
-	  (lt
-	   (cmp op a0 a1 lt ac))
-	  (lf
-	   (cmp (notop op) a0 a1 lf ac))
-	  (else ac))))
-      ((shortcut body handler)
-       (let ((L (unique-interrupt-label)) (lj (unique-label)))
-         (let ((ac (if (and lt lf) ac (cons lj ac))))
-           (let ((hand (cons L (P handler (or lt lj) (or lf lj) '()))))
-             (let ((tc (exceptions-conc)))
-               (set-cdr! tc (append hand (cdr tc)))))
-           (parameterize ((exception-label L))
-             (P body lt lf ac)))))
-      (else (error who "invalid pred" x))))
+	 (error who "invalid pred" x))))
+
+    (define (P-conditional e0 e1 e2 lt lf accum)
+      (cond ((and (constant=? e1 #t)
+		  (constant=? e2 #f))
+	     (P e0 lt lf accum))
+
+	    ((and (constant=? e1 #f)
+		  (constant=? e2 #t))
+	     (P e0 lf lt accum))
+
+	    ((and lt lf)
+	     (let ((l (unique-label)))
+	       (P e0 #f l (P e1 lt lf
+			     (cons l (P e2 lt lf accum))))))
+
+	    (lt
+	     (let ((lf (unique-label))
+		   (l (unique-label)))
+	       (P e0 #f l (P e1 lt lf
+			     (cons l (P e2 lt #f (cons lf accum)))))))
+
+	    (lf
+	     (let ((lt (unique-label))
+		   (l  (unique-label)))
+	       (P e0 #f l (P e1 lt lf
+			     (cons l (P e2 #f lf (cons lt accum)))))))
+
+	    (else
+	     (let ((lf (unique-label))
+		   (l  (unique-label)))
+	       (P e0 #f l (P e1 #f #f
+			     (cons `(jmp ,lf)
+				   (cons l (P e2 #f #f (cons lf accum))))))))))
+
+    (module (P-asm-instr)
+
+      (define (P-asm-instr op a0 a1 x lt lf accum)
+	(cond ((and lt lf)
+	       (cmp op a0 a1 lt (cons `(jmp ,lf) accum)))
+	      (lt
+	       (cmp op a0 a1 lt accum))
+	      (lf
+	       (cmp (notop op) a0 a1 lf accum))
+	      (else
+	       accum)))
+
+      (define (cmp op a0 a1 lab accum)
+	(cond ((memq op '(fl:= fl:!= fl:< fl:<= fl:> fl:>=))
+	       (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
+		      `(,(jmpname op) ,lab)
+		      ;;BOGUS! (Abdulaziz Ghuloum)
+		      accum))
+	      ((memq op '(fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=))
+	       (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
+		      `(jp ,lab)
+		      `(,(jmpname op) ,lab)
+		      accum))
+	      ((or (symbol? a0) (constant? a1))
+	       (cons* `(cmpl ,(R a1) ,(R a0))
+		      `(,(jmpname op) ,lab)
+		      accum))
+	      ((or (symbol? a1) (constant? a0))
+	       (cons* `(cmpl ,(R a0) ,(R a1))
+		      `(,(revjmpname op) ,lab)
+		      accum))
+	      (else
+	       (error who "invalid cmpops" a0 a1))))
+
+      (define (notop x)
+	(cond ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
+			 (u< u>=) (u<= u>) (u> u<=) (u>= u<)
+			 (fl:= fl:o!=) (fl:!= fl:o=)
+			 (fl:< fl:o>=) (fl:<= fl:o>)
+			 (fl:> fl:o<=) (fl:>= fl:o<)))
+	       => cadr)
+	      (else
+	       (error who "invalid notop" x))))
+
+      (define (jmpname x)
+	(cond ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)
+			 (u< jb) (u<= jbe) (u> ja) (u>= jae)
+			 (fl:= je) (fl:!= jne)
+			 (fl:< jb) (fl:> ja) (fl:<= jbe) (fl:>= jae)
+			 (fl:o= je) (fl:o!= jne)
+			 (fl:o< jb) (fl:o> ja) (fl:o<= jbe) (fl:o>= jae)))
+	       => cadr)
+	      (else
+	       (error who "invalid jmpname" x))))
+
+      (define (revjmpname x)
+	(cond ((assq x '((= je) (!= jne) (< jg) (<= jge) (> jl) (>= jle)
+			 (u< ja) (u<= jae) (u> jb) (u>= jbe)))
+	       => cadr)
+	      (else
+	       (error who "invalid jmpname" x))))
+
+      #| end of module: P-asm-instr |# )
+
+    (define (constant=? x k)
+      (struct-case x
+	((constant k0)
+	 (equal? k0 k))
+	(else
+	 #f)))
+
+  #| end of module: P |# )
 
 ;;; --------------------------------------------------------------------
 
