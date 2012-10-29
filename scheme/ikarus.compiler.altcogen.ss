@@ -3917,25 +3917,7 @@
 	 (E-asm-instr ac op d s x))
 
 	((primcall op rands)
-	 (case-symbols op
-	   ((nop)
-	    ac)
-	   ((interrupt)
-	    (let ((l (or (exception-label)
-			 (error who "no exception label"))))
-	      (cons `(jmp ,l) ac)))
-	   ((incr/zero?)
-	    (let ((l (or (exception-label)
-			 (error who "no exception label"))))
-	      (cons* `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
-		     `(je ,l)
-		     ac)))
-	   ((fl:double->single)
-	    (cons '(cvtsd2ss xmm0 xmm0) ac))
-	   ((fl:single->double)
-	    (cons '(cvtss2sd xmm0 xmm0) ac))
-	   (else
-	    (error who "invalid effect" (unparse-recordized-code x)))))
+	 (E-primcall ac op rands x))
 
 	((shortcut body handler)
 	 (let ((L (unique-interrupt-label)) (L2 (unique-label)))
@@ -4091,6 +4073,32 @@
 
 	(else
 	 (error who "invalid instr" x))))
+
+    (define (E-primcall ac op rands x)
+      (case-symbols op
+	((nop)
+	 ac)
+
+	((interrupt)
+	 (let ((l (or (exception-label)
+		      (error who "no exception label"))))
+	   (cons `(jmp ,l) ac)))
+
+	((incr/zero?)
+	 (let ((l (or (exception-label)
+		      (error who "no exception label"))))
+	   (cons* `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
+		  `(je ,l)
+		  ac)))
+
+	((fl:double->single)
+	 (cons '(cvtsd2ss xmm0 xmm0) ac))
+
+	((fl:single->double)
+	 (cons '(cvtss2sd xmm0 xmm0) ac))
+
+	(else
+	 (error who "invalid effect" (unparse-recordized-code x)))))
 
     (define (interrupt? x)
       (struct-case x
