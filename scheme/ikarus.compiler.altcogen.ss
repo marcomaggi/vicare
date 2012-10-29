@@ -2517,6 +2517,8 @@
 (module (alt-cogen.assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
+  (import (only (ikarus system $vectors)
+		$vector-ref))
   (define who 'alt-cogen.assign-frame-sizes)
 
   (define (alt-cogen.assign-frame-sizes x)
@@ -2573,10 +2575,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;Commented out because unused.  (Marco Maggi; Oct 28, 2012)
-  ;;
-  ;;(define indent (make-parameter 0))
-
   (define (%rewrite x varvec)
     ;;
     ;;A lot of functions are nested here because they need to close upon
@@ -2593,7 +2591,7 @@
                    (cond ((symbol? x)
 			  x)
 			 ((nfv? x)
-			  (nfv-loc x))
+			  ($nfv-loc x))
 			 (else
 			  (error who "invalid arg"))))
                  args)
@@ -2602,173 +2600,228 @@
 	 (error who "invalid NF effect" x))))
 
     (define (Var x)
-      (cond
-        (($var-loc x) =>
-         (lambda (loc)
-           (if (fvar? loc)
-               loc
-               (%assign x varvec))))
-        (else x)))
+      (cond (($var-loc x)
+	     => (lambda (loc)
+		  (if (fvar? loc)
+		      loc
+		    (%assign x varvec))))
+	    (else x)))
+
     (define (R x)
-      (cond
-        ((or (constant? x) (reg? x) (fvar? x)) x)
-        ((nfv? x)
-         (or (nfv-loc x)
-             (error who "unassigned nfv")))
-        ((var? x) (Var x))
-        ((disp? x)
-         (make-disp (R (disp-s0 x)) (R (disp-s1 x))))
-        (else (error who "invalid R" (unparse-recordized-code x)))))
-    (define (E x)
-      (struct-case x
-        ((seq e0 e1)
-         (let ((e0 (E e0)))
-           (make-seq e0 (E e1))))
-        ((conditional e0 e1 e2)
-         (make-conditional (P e0) (E e1) (E e2)))
-        ((asm-instr op d s)
-         (case op
-           ((move load8 load32)
-            (let ((d (R d)) (s (R s)))
-              (cond
-                ((eq? d s)
-                 (make-primcall 'nop '()))
-                (else
-                 (make-asm-instr op d s)))))
-           ((logand logor logxor int+ int- int* mset bset mset32
-              sll sra srl bswap!
-              cltd idiv int-/overflow int+/overflow int*/overflow
-              fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
-              fl:from-int fl:shuffle fl:load-single fl:store-single
-              sll/overflow)
-            (make-asm-instr op (R d) (R s)))
-           ((nop) (make-primcall 'nop '()))
-           (else (error who "invalid op" op))))
-        ((nframe vars live body)
-         (let ((live-frms1
-                (map (lambda (i) (Var (vector-ref varvec i)))
-                  (set->list (vector-ref live 0))))
-               (live-frms2 (set->list (vector-ref live 1)))
-               (live-nfvs (vector-ref live 2)))
-           (define (max-frm ls i)
-             (cond
-               ((null? ls) i)
-               (else
-                (max-frm ($cdr ls)
-                  (max i (fvar-idx ($car ls)))))))
-           (define (max-ls ls i)
-             (cond
-               ((null? ls) i)
-               (else
-                (max-ls ($cdr ls) (max i ($car ls))))))
-           (define (max-nfv ls i)
-             (cond
-               ((null? ls) i)
-               (else
-                (let ((loc (nfv-loc ($car ls))))
-                  (unless (fvar? loc) (error 'max-nfv "not assigned"))
-                  (max-nfv ($cdr ls) (max i (fvar-idx loc)))))))
-           (define (actual-frame-size vars i)
-             (define (var-conflict? i vs)
-               (ormap (lambda (xi)
-                         (let ((loc ($var-loc (vector-ref varvec xi))))
-                          (and (fvar? loc)
-                               (fx= i (fvar-idx loc)))))
-                      (set->list vs)))
-             (define (frame-size-ok? i vars)
-               (or (null? vars)
-                   (let ((x ($car vars)))
-                     (and (not (set-member? i (nfv-frm-conf x)))
-                          (not (var-conflict? i (nfv-var-conf x)))
-                          (frame-size-ok? ($fxadd1 i) ($cdr vars))))))
-              (cond
-                ((frame-size-ok? i vars) i)
-                (else (actual-frame-size vars ($fxadd1 i)))))
-           (define (assign-frame-vars! vars i)
-             (unless (null? vars)
-               (let ((v ($car vars)) (fv (mkfvar i)))
-                 (set-nfv-loc! v fv)
-                 ;(for-each
-                 ;  (lambda (j)
-                 ;    (when (fx= j i)
-                 ;      (error who "invalid assignment")))
-                 ;  (set->list (nfv-frm-conf v)))
-                 (for-each
-                   (lambda (x)
-                     (let ((loc (nfv-loc x)))
-                       (cond
-                         (loc
-                          (when (fx= (fvar-idx loc) i)
-                            (error who "invalid assignment")))
-                         (else
-                          (set-nfv-nfv-conf! x
-                            (rem-nfv v (nfv-nfv-conf x)))
-                          (set-nfv-frm-conf! x
-                            (add-frm fv (nfv-frm-conf x)))))))
-                   (nfv-nfv-conf v))
-                 (for-each-var (nfv-var-conf v) varvec
-                   (lambda (x)
-                     (let ((loc ($var-loc x)))
-                       (cond
-                         ((fvar? loc)
-                          (when (fx= (fvar-idx loc) i)
-                            (error who "invalid assignment")))
-                         (else
-                          ($set-var-frm-conf! x
-                            (add-frm fv ($var-frm-conf x)))))))))
-               (assign-frame-vars! ($cdr vars) ($fxadd1 i))))
-           (define (make-mask n)
-             (let ((v (make-vector (fxsra (fx+ n 7) 3) 0)))
-               (define (set-bit idx)
-                 (let ((q (fxsra idx 3))
-                       (r (fxlogand idx 7)))
-                   (vector-set! v q
-                     (fxlogor (vector-ref v q) (fxsll 1 r)))))
-               (for-each (lambda (x) (set-bit (fvar-idx x))) live-frms1)
-               (for-each set-bit live-frms2)
-               (for-each (lambda (x)
-                           (let ((loc (nfv-loc x)))
-                             (when loc
-                               (set-bit (fvar-idx loc)))))
-                         live-nfvs) v))
-           (let ((i (actual-frame-size vars
-                      (fx+ 2
-                        (max-frm live-frms1
-                          (max-nfv live-nfvs
-                            (max-ls live-frms2 0)))))))
-             (assign-frame-vars! vars i)
-             (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
-        ((primcall op args)
-         (case op
-           ((nop interrupt incr/zero? fl:double->single
-                 fl:single->double) x)
-           (else (error who "invalid effect prim" op))))
-        ((shortcut body handler)
-         (make-shortcut (E body) (E handler)))
-        (else (error who "invalid effect" (unparse-recordized-code x)))))
+      (cond ((or (constant? x)
+		 (reg?      x)
+		 (fvar?     x))
+	     x)
+	    ((nfv? x)
+	     (or ($nfv-loc x)
+		 (error who "unassigned nfv")))
+	    ((var? x)
+	     (Var x))
+	    ((disp? x)
+	     (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
+	    (else
+	     (error who "invalid R" (unparse-recordized-code x)))))
+
+    (module (E)
+
+      (define (E x)
+	(struct-case x
+	  ((seq e0 e1)
+	   (let ((e0^ (E e0)))
+	     (make-seq e0^ (E e1))))
+
+	  ((conditional e0 e1 e2)
+	   (make-conditional (P e0) (E e1) (E e2)))
+
+	  ((asm-instr op d s)
+	   (E-asm-instr op d s))
+
+	  ((nframe vars live body)
+	   (E-nframe vars live body))
+
+	  ((primcall op args)
+	   (case-symbols op
+	     ((nop interrupt incr/zero? fl:double->single fl:single->double)
+	      x)
+	     (else
+	      (error who "invalid effect prim" op))))
+
+	  ((shortcut body handler)
+	   (make-shortcut (E body) (E handler)))
+
+	  (else
+	   (error who "invalid effect" (unparse-recordized-code x)))))
+
+      (define (E-asm-instr op d s)
+	(case-symbols op
+	  ((move load8 load32)
+	   ;;If  the   destination  equals  the  source:   convert  this
+	   ;;instruction into a NOP.
+	   (let ((d (R d))
+		 (s (R s)))
+	     (if (eq? d s)
+		 (make-primcall 'nop '())
+	       (make-asm-instr op d s))))
+
+	  (( ;;some assembly instructions
+	    logand		logor		logxor
+	    int+		int-		int*
+	    mset		bset		mset32
+	    sll			sra		srl		bswap!
+	    cltd		idiv
+	    int-/overflow	int+/overflow	int*/overflow
+	    fl:load		fl:store
+	    fl:add!		fl:sub!		fl:mul!		fl:div!
+	    fl:from-int		fl:shuffle	fl:load-single	fl:store-single
+	    sll/overflow)
+	   (make-asm-instr op (R d) (R s)))
+
+	  ((nop)
+	   (make-primcall 'nop '()))
+
+	  (else
+	   (error who "invalid op" op))))
+
+      (define (E-nframe vars live body)
+	(let ((live-frms1 (map (lambda (i)
+				 (Var ($vector-ref varvec i)))
+			    (set->list ($vector-ref live 0))))
+	      (live-frms2 (set->list ($vector-ref live 1)))
+	      (live-nfvs  ($vector-ref live 2)))
+	  (define (max-frm ls i)
+	    (cond
+	     ((null? ls) i)
+	     (else
+	      (max-frm ($cdr ls)
+		       (max i (fvar-idx ($car ls)))))))
+	  (define (max-ls ls i)
+	    (cond
+	     ((null? ls) i)
+	     (else
+	      (max-ls ($cdr ls) (max i ($car ls))))))
+	  (define (max-nfv ls i)
+	    (cond
+	     ((null? ls) i)
+	     (else
+	      (let ((loc (nfv-loc ($car ls))))
+		(unless (fvar? loc) (error 'max-nfv "not assigned"))
+		(max-nfv ($cdr ls) (max i (fvar-idx loc)))))))
+	  (define (actual-frame-size vars i)
+	    (define (var-conflict? i vs)
+	      (ormap (lambda (xi)
+		       (let ((loc ($var-loc ($vector-ref varvec xi))))
+			 (and (fvar? loc)
+			      (fx= i (fvar-idx loc)))))
+		     (set->list vs)))
+	    (define (frame-size-ok? i vars)
+	      (or (null? vars)
+		  (let ((x ($car vars)))
+		    (and (not (set-member? i (nfv-frm-conf x)))
+			 (not (var-conflict? i (nfv-var-conf x)))
+			 (frame-size-ok? ($fxadd1 i) ($cdr vars))))))
+	    (cond
+	     ((frame-size-ok? i vars) i)
+	     (else (actual-frame-size vars ($fxadd1 i)))))
+	  (define (assign-frame-vars! vars i)
+	    (unless (null? vars)
+	      (let ((v ($car vars)) (fv (mkfvar i)))
+		(set-nfv-loc! v fv)
+		;(for-each
+		;  (lambda (j)
+		;    (when (fx= j i)
+		;      (error who "invalid assignment")))
+		;  (set->list (nfv-frm-conf v)))
+		(for-each
+		    (lambda (x)
+		      (let ((loc (nfv-loc x)))
+			(cond
+			 (loc
+			  (when (fx= (fvar-idx loc) i)
+			    (error who "invalid assignment")))
+			 (else
+			  (set-nfv-nfv-conf! x
+					     (rem-nfv v (nfv-nfv-conf x)))
+			  (set-nfv-frm-conf! x
+					     (add-frm fv (nfv-frm-conf x)))))))
+		  (nfv-nfv-conf v))
+		(for-each-var (nfv-var-conf v) varvec
+			      (lambda (x)
+				(let ((loc ($var-loc x)))
+				  (cond
+				   ((fvar? loc)
+				    (when (fx= (fvar-idx loc) i)
+				      (error who "invalid assignment")))
+				   (else
+				    ($set-var-frm-conf! x
+							(add-frm fv ($var-frm-conf x)))))))))
+	      (assign-frame-vars! ($cdr vars) ($fxadd1 i))))
+	  (define (make-mask n)
+	    (let ((v (make-vector (fxsra (fx+ n 7) 3) 0)))
+	      (define (set-bit idx)
+		(let ((q (fxsra idx 3))
+		      (r (fxlogand idx 7)))
+		  (vector-set! v q
+			       (fxlogor ($vector-ref v q) (fxsll 1 r)))))
+	      (for-each (lambda (x) (set-bit (fvar-idx x))) live-frms1)
+	      (for-each set-bit live-frms2)
+	      (for-each (lambda (x)
+			  (let ((loc (nfv-loc x)))
+			    (when loc
+			      (set-bit (fvar-idx loc)))))
+		live-nfvs) v))
+	  (let ((i (actual-frame-size vars
+				      (fx+ 2
+					   (max-frm live-frms1
+						    (max-nfv live-nfvs
+							     (max-ls live-frms2 0)))))))
+	    (assign-frame-vars! vars i)
+	    (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
+
+      #| end of module: E |# )
+
+;;; --------------------------------------------------------------------
+
     (define (P x)
       (struct-case x
         ((seq e0 e1)
-         (let ((e0 (E e0)))
-           (make-seq e0 (P e1))))
+         (let ((e0^ (E e0)))
+           (make-seq e0^ (P e1))))
+
         ((conditional e0 e1 e2)
          (make-conditional (P e0) (P e1) (P e2)))
-        ((asm-instr op d s) (make-asm-instr op (R d) (R s)))
-        ((constant) x)
+
+        ((asm-instr op d s)
+	 (make-asm-instr op (R d) (R s)))
+
+        ((constant)
+	 x)
+
         ((shortcut body handler)
          (make-shortcut (P body) (P handler)))
-        (else (error who "invalid pred" (unparse-recordized-code x)))))
+
+        (else
+	 (error who "invalid pred" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
     (define (T x)
       (struct-case x
         ((seq e0 e1)
-         (let ((e0 (E e0)))
-           (make-seq e0 (T e1))))
+         (let ((e0^ (E e0)))
+           (make-seq e0^ (T e1))))
+
         ((conditional e0 e1 e2)
          (make-conditional (P e0) (T e1) (T e2)))
-        ((primcall op args) x)
+
+        ((primcall op args)
+	 x)
+
         ((shortcut body handler)
          (make-shortcut (T body) (T handler)))
-        (else (error who "invalid tail" (unparse-recordized-code x)))))
+
+        (else
+	 (error who "invalid tail" (unparse-recordized-code x)))))
+
     (T x))
 
 ;;; --------------------------------------------------------------------
