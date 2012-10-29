@@ -3155,7 +3155,7 @@
 			(values spills (set-add sp sp*) (cons (cons sp r) env)))))))
 
 	    ((pair? (set->list sp*))
-	     (let* ((sp (car (set->list sp*)))
+	     (let* ((sp ($car (set->list sp*)))
 		    (n* (node-neighbors sp G)))
 	       (delete-node! sp G)
 	       (let-values (((spills sp* env)
@@ -3171,11 +3171,11 @@
     (define (find-low-degree ls G)
       (cond ((null? ls)
 	     #f)
-	    ((fx< (length (set->list (node-neighbors (car ls) G)))
+	    ((fx< (length (set->list (node-neighbors ($car ls) G)))
 		  (length ALL-REGISTERS))
-	     (car ls))
+	     ($car ls))
 	    (else
-	     (find-low-degree (cdr ls) G))))
+	     (find-low-degree ($cdr ls) G))))
 
     (define (find-color/maybe x confs env)
       (let ((cr (map (lambda (x)
@@ -3190,7 +3190,7 @@
 					     (list->set cr)))))
           (if (null? r*)
               #f
-	    (car r*)))))
+	    ($car r*)))))
 
     (define (find-color x confs env)
       (or (find-color/maybe x confs env)
@@ -3201,79 +3201,137 @@
 ;;; --------------------------------------------------------------------
 
   (define (substitute env x)
+    ;;X must represent recordized code; this function builds and returns
+    ;;a new struct instance representing recordized code, which is meant
+    ;;to replace X.
+    ;;
+    ;;The purpose of this function is  to apply the subfunction R to the
+    ;;operands in the structures of type ASM-INSTR and PRIMCALL.
+    ;;
+    ;;A lot  of functions are nested  here because they make  use of the
+    ;;subfunction "Var", and "Var" needs to close upon the argument ENV.
+    ;;
     (define who 'substitute)
-    (define (Var x)
-      (cond
-        ((assq x env) => cdr)
-        (else x)))
-    (define (Rhs x)
-      (struct-case x
-        ((var) (Var x))
-        ((primcall op rand*)
-         (make-primcall op (map Rand rand*)))
-        (else x)))
-    (define (Rand x)
-      (struct-case x
-        ((var) (Var x))
-        (else x)))
-    (define (Lhs x)
-      (struct-case x
-        ((var) (Var x))
-        ((nfv confs loc)
-         (or loc (error who "LHS not set" x)))
-        (else x)))
-    (define (D x)
-      (struct-case x
-        ((constant) x)
-        ((var) (Var x))
-        ((fvar) x)
-        (else
-         (if (symbol? x) x (error who "invalid D" x)))))
-    (define (R x)
-      (struct-case x
-        ((constant) x)
-        ((var) (Var x))
-        ((fvar)     x)
-        ((nfv c loc)
-         (or loc (error who "unset nfv in R" x)))
-        ((disp s0 s1) (make-disp (D s0) (D s1)))
-        (else
-         (if (symbol? x) x (error who "invalid R" x)))))
-    ;;; substitute effect
+
+    (module (R)
+
+      (define (R x)
+	(struct-case x
+	  ((constant)
+	   x)
+	  ((var)
+	   (Var x))
+	  ((fvar)
+	   x)
+	  ((nfv c loc)
+	   (or loc
+	       (error who "unset nfv in R" x)))
+	  ((disp s0 s1)
+	   (make-disp (D s0) (D s1)))
+	  (else
+	   (if (symbol? x)
+	       x
+	     (error who "invalid R" x)))))
+
+      (define (D x)
+	(struct-case x
+	  ((constant)
+	   x)
+	  ((var)
+	   (Var x))
+	  ((fvar)
+	   x)
+	  (else
+	   (if (symbol? x)
+	       x
+	     (error who "invalid D" x)))))
+
+      (define (Var x)
+	(cond ((assq x env)
+	       => cdr)
+	      (else
+	       x)))
+
+      ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
+      ;;
+      ;; (module (Rhs)
+      ;;
+      ;;   (define (Rhs x)
+      ;; 	(struct-case x
+      ;; 	  ((var)
+      ;; 	   (Var x))
+      ;; 	  ((primcall op rand*)
+      ;; 	   (make-primcall op (map Rand rand*)))
+      ;; 	  (else x)))
+      ;;
+      ;;   (define (Rand x)
+      ;; 	(struct-case x
+      ;; 	  ((var)
+      ;; 	   (Var x))
+      ;; 	  (else x)))
+      ;;
+      ;;   #| end of module: Rhs |# )
+
+      ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
+      ;;
+      ;; (define (Lhs x)
+      ;;   (struct-case x
+      ;;     ((var)
+      ;; 	 (Var x))
+      ;;     ((nfv confs loc)
+      ;;      (or loc
+      ;; 	     (error who "LHS not set" x)))
+      ;;     (else x)))
+
+      #| end of module: R |# )
+
     (define (E x)
+      ;;substitute effect
       (struct-case x
-        ((seq e0 e1) (make-seq (E e0) (E e1)))
+        ((seq e0 e1)
+	 (make-seq (E e0) (E e1)))
         ((conditional e0 e1 e2)
          (make-conditional (P e0) (E e1) (E e2)))
         ((asm-instr op x v)
          (make-asm-instr op (R x) (R v)))
         ((primcall op rands)
          (make-primcall op (map R rands)))
-        ((ntcall) x)
+        ((ntcall)
+	 x)
         ((shortcut body handler)
          (make-shortcut (E body) (E handler)))
-        (else (error who "invalid effect" (unparse-recordized-code x)))))
+        (else
+	 (error who "invalid effect" (unparse-recordized-code x)))))
+
     (define (P x)
       (struct-case x
-        ((constant) x)
+        ((constant)
+	 x)
         ((asm-instr op x v)
          (make-asm-instr op (R x) (R v)))
         ((conditional e0 e1 e2)
          (make-conditional (P e0) (P e1) (P e2)))
-        ((seq e0 e1) (make-seq (E e0) (P e1)))
+        ((seq e0 e1)
+	 (make-seq (E e0) (P e1)))
         ((shortcut body handler)
          (make-shortcut (P body) (P handler)))
-        (else (error who "invalid pred" (unparse-recordized-code x)))))
+        (else
+	 (error who "invalid pred" (unparse-recordized-code x)))))
+
     (define (T x)
       (struct-case x
-        ((primcall op rands) x)
+        ((primcall op rands)
+	 x)
         ((conditional e0 e1 e2)
          (make-conditional (P e0) (T e1) (T e2)))
-        ((seq e0 e1) (make-seq (E e0) (T e1)))
+        ((seq e0 e1)
+	 (make-seq (E e0) (T e1)))
         ((shortcut body handler)
          (make-shortcut (T body) (T handler)))
-        (else (error who "invalid tail" (unparse-recordized-code x)))))
-    ;(print-code x)
+        (else
+	 (error who "invalid tail" (unparse-recordized-code x)))))
+
+    ;;(print-code x)
     (T x))
 
 ;;; --------------------------------------------------------------------
@@ -3315,9 +3373,9 @@
       (cond
         ((null? ls) (k '()))
         (else
-         (S (car ls)
+         (S ($car ls)
             (lambda (a)
-              (S* (cdr ls)
+              (S* ($cdr ls)
                   (lambda (d)
                     (k (cons a d)))))))))
     (define (long-imm? x)
