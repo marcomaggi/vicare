@@ -3841,13 +3841,24 @@
 ;;; --------------------------------------------------------------------
 
   (define (T x accum)
+    ;;X must be a struct instance representing recordized code.
+    ;;
+    ;;ACCUM must  be the list  of assembly instructions,  accumulated so
+    ;;far, that must be included in  binary code after the ones to which
+    ;;X will expand.
+    ;;
+    ;;Process X  as if it  is in tail  position in some  enclosing form;
+    ;;return a new accumulated list of assembly instructions.
+    ;;
     (struct-case x
       ((seq e0 e1)
        (E e0 (T e1 accum)))
 
-      ((conditional e0 e1 e2)
+      ((conditional x.test x.conseq x.altern)
        (let ((L (unique-label)))
-         (P e0 #f L (T e1 (cons L (T e2 accum))))))
+         (P x.test #f L
+	    (T x.conseq
+	       (cons L (T x.altern accum))))))
 
       ((primcall op rands)
        (case-symbols op
@@ -3855,16 +3866,27 @@
 	  (cons '(ret) accum))
 
 	 ((indirect-jump)
-	  (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,CP-REGISTER))
+	  ;;The CPU's  CP-REGISTER contains  a reference to  the closure
+	  ;;object we want to jump to.
+	  (cons `(jmp (disp ,off-closure-code ,CP-REGISTER))
 		accum))
 
 	 ((direct-jump)
-	  (cons `(jmp (label ,(code-loc-label (car rands)))) accum))
+	  (cons `(jmp (label ,(code-loc-label (car rands))))
+		accum))
 
 	 (else
 	  (error who "invalid tail" x))))
 
       ((shortcut body handler)
+       ;;What the heck is a shortcut?
+       ;;
+       ;;HANDLER is expanded to a list of assembly instructions like:
+       ;;
+       ;;  (label "ERROR-0")
+       ;;  (?assembly)
+       ;;  ...
+       ;;
        (let ((L (unique-interrupt-label)))
          (let* ((hand (cons L (T handler '())))
 		(tc   (exceptions-conc)))
@@ -3909,10 +3931,11 @@
 	 (E-primcall op rands x accum))
 
 	((shortcut body handler)
-	 (let ((L (unique-interrupt-label)) (L2 (unique-label)))
-	   (let ((hand (cons L (E handler `((jmp ,L2))))))
-	     (let ((tc (exceptions-conc)))
-	       (set-cdr! tc (append hand (cdr tc)))))
+	 (let ((L (unique-interrupt-label))
+	       (L2 (unique-label)))
+	   (let* ((hand (cons L (E handler `((jmp ,L2)))))
+		  (tc   (exceptions-conc)))
+	     (set-cdr! tc (append hand (cdr tc))))
 	   (parameterize ((exception-label L))
 	     (E body (cons L2 accum)))))
 
