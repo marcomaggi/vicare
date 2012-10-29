@@ -2582,63 +2582,32 @@
     ;;A lot of functions are nested here because they need to close upon
     ;;the argument VARVEC.
     ;;
-    (module (assign)
-
-      (define (assign x)
-	(or (assign-move x)
-	    (assign-any  x)))
-
-      (define (assign-any x)
-	(let ((frms (var-frm-conf x))
-	      (vars (var-var-conf x)))
-	  (let f ((i 1))
-	    (if (set-member? i frms)
-		(f (fxadd1 i))
-	      (let ((fv (mkfvar i)))
-		(set-var-loc! x fv)
-		(for-each-var vars varvec
-			      (lambda (var)
-				(set-var-frm-conf! var (add-frm fv (var-frm-conf var)))))
-		fv)))))
-
-      (define (assign-move x)
-	(let ((mr (set->list (set-difference (var-frm-move x) (var-frm-conf x)))))
-	  (if (null? mr)
-	      #f
-	    (let ((fv (mkfvar ($car mr))))
-	      (set-var-loc! x fv)
-	      (for-each-var (var-var-conf x) varvec
-			    (lambda (var)
-			      (set-var-frm-conf! var (add-frm fv (var-frm-conf var)))))
-	      (for-each-var (var-var-move x) varvec
-			    (lambda (var)
-			      (set-var-frm-move! var (add-frm fv (var-frm-move var)))))
-	      fv))))
-
-      #| end of module: assign |# )
-
     (define (NFE idx mask x)
       (struct-case x
         ((seq e0 e1)
-         (let ((e0 (E e0)))
-           (make-seq e0 (NFE idx mask e1))))
+         (let ((e0^ (E e0)))
+           (make-seq e0^ (NFE idx mask e1))))
         ((ntcall target value args mask^ size)
          (make-ntcall target value
             (map (lambda (x)
-                   (cond
-                     ((symbol? x) x)
-                     ((nfv? x) (nfv-loc x))
-                     (else (error who "invalid arg"))))
+                   (cond ((symbol? x)
+			  x)
+			 ((nfv? x)
+			  (nfv-loc x))
+			 (else
+			  (error who "invalid arg"))))
                  args)
             mask idx))
-        (else (error who "invalid NF effect" x))))
+        (else
+	 (error who "invalid NF effect" x))))
+
     (define (Var x)
       (cond
         (($var-loc x) =>
          (lambda (loc)
            (if (fvar? loc)
                loc
-               (assign x))))
+               (%assign x varvec))))
         (else x)))
     (define (R x)
       (cond
@@ -2711,10 +2680,10 @@
                    (let ((x ($car vars)))
                      (and (not (set-member? i (nfv-frm-conf x)))
                           (not (var-conflict? i (nfv-var-conf x)))
-                          (frame-size-ok? (fxadd1 i) ($cdr vars))))))
+                          (frame-size-ok? ($fxadd1 i) ($cdr vars))))))
               (cond
                 ((frame-size-ok? i vars) i)
-                (else (actual-frame-size vars (fxadd1 i)))))
+                (else (actual-frame-size vars ($fxadd1 i)))))
            (define (assign-frame-vars! vars i)
              (unless (null? vars)
                (let ((v ($car vars)) (fv (mkfvar i)))
@@ -2745,9 +2714,9 @@
                           (when (fx= (fvar-idx loc) i)
                             (error who "invalid assignment")))
                          (else
-                          (set-var-frm-conf! x
-                            (add-frm fv (var-frm-conf x)))))))))
-               (assign-frame-vars! ($cdr vars) (fxadd1 i))))
+                          ($set-var-frm-conf! x
+                            (add-frm fv ($var-frm-conf x)))))))))
+               (assign-frame-vars! ($cdr vars) ($fxadd1 i))))
            (define (make-mask n)
              (let ((v (make-vector (fxsra (fx+ n 7) 3) 0)))
                (define (set-bit idx)
@@ -2801,6 +2770,43 @@
          (make-shortcut (T body) (T handler)))
         (else (error who "invalid tail" (unparse-recordized-code x)))))
     (T x))
+
+;;; --------------------------------------------------------------------
+
+  (module (%assign)
+
+    (define (%assign x varvec)
+      (or (%assign-move x varvec)
+	  (%assign-any  x varvec)))
+
+    (define (%assign-any x varvec)
+      (let ((frms ($var-frm-conf x))
+	    (vars ($var-var-conf x)))
+	(let loop ((i 1))
+	  (if (set-member? i frms)
+	      (loop ($fxadd1 i))
+	    (let ((fv (mkfvar i)))
+	      ($set-var-loc! x fv)
+	      (for-each-var vars varvec
+			    (lambda (var)
+			      ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
+	      fv)))))
+
+    (define (%assign-move x varvec)
+      (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
+	(if (null? mr)
+	    #f
+	  (let ((fv (mkfvar ($car mr))))
+	    ($set-var-loc! x fv)
+	    (for-each-var ($var-var-conf x) varvec
+			  (lambda (var)
+			    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
+	    (for-each-var ($var-var-move x) varvec
+			  (lambda (var)
+			    ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))
+	    fv))))
+
+    #| end of module: assign |# )
 
   #| end of module: alt-cogen.assign-frame-sizes |# )
 
