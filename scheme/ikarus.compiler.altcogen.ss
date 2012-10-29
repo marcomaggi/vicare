@@ -3380,149 +3380,164 @@
 	(define (E x)
 	  ;;unspillable effect
 	  (struct-case x
-	    ((seq e0 e1) (make-seq (E e0) (E e1)))
+	    ((seq e0 e1)
+	     (make-seq (E e0) (E e1)))
+
 	    ((conditional e0 e1 e2)
 	     (make-conditional (P e0) (E e1) (E e2)))
+
 	    ((asm-instr op a b)
-	     (case op
-	       ((load8 load32)
-		(%fix-address b
-			      (lambda (b)
-				(cond
-				 ((or (register? a) (var? a))
-				  (make-asm-instr op a b))
-				 (else
-				  (let ((u (mku)))
-				    (make-seq
-				     (make-asm-instr op u b)
-				     (E (make-asm-instr 'move a u)))))))))
-	       ((logor logxor logand int+ int- int* move
-		       int-/overflow int+/overflow int*/overflow)
-		(cond
-		 ((and (eq? op 'move) (eq? a b))
-		  (make-primcall 'nop '()))
-		 ((and (= wordsize 8)
-		       (not (eq? op 'move))
-		       (long-imm? b))
-		  (let ((u (mku)))
-		    (make-seq
-		     (E (make-asm-instr 'move u b))
-		     (E (make-asm-instr op a u)))))
-		 ((and (memq op '(int* int*/overflow)) (mem? a))
-		  (let ((u (mku)))
-		    (make-seq
-		     (make-seq
-		      (E (make-asm-instr 'move u a))
-		      (E (make-asm-instr op u b)))
-		     (E (make-asm-instr 'move a u)))))
-		 ((and (mem? a) (not (small-operand? b)))
-		  (let ((u (mku)))
-		    (make-seq
-		     (E (make-asm-instr 'move u b))
-		     (E (make-asm-instr op a u)))))
-		 ((disp? a)
-		  (let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
-		    (cond
-		     ((not (small-operand? s0))
-		      (let ((u (mku)))
-			(make-seq
-			 (E (make-asm-instr 'move u s0))
-			 (E (make-asm-instr op (make-disp u s1) b)))))
-		     ((not (small-operand? s1))
-		      (let ((u (mku)))
-			(make-seq
-			 (E (make-asm-instr 'move u s1))
-			 (E (make-asm-instr op (make-disp s0 u) b)))))
-		     ((small-operand? b) x)
-		     (else
-		      (let ((u (mku)))
-			(make-seq
-			 (E (make-asm-instr 'move u b))
-			 (E (make-asm-instr op a u))))))))
-		 ((disp? b)
-		  (let ((s0 (disp-s0 b)) (s1 (disp-s1 b)))
-		    (cond
-		     ((not (small-operand? s0))
-		      (let ((u (mku)))
-			(make-seq
-			 (E (make-asm-instr 'move u s0))
-			 (E (make-asm-instr op a (make-disp u s1))))))
-		     ((not (small-operand? s1))
-		      (let ((u (mku)))
-			(make-seq
-			 (E (make-asm-instr 'move u s1))
-			 (E (make-asm-instr op a (make-disp s0 u))))))
-		     (else x))))
-		 (else x)))
-	       ((bswap!)
-		(cond
-		 ((mem? b)
-		  (let ((u (mku)))
-		    (make-seq
-		     (E (make-asm-instr 'move u a))
-		     (E (make-asm-instr 'bswap! u u))
-		     (E (make-asm-instr 'move b u)))))
-		 (else x)))
-	       ((cltd)
-		(unless (and (symbol? a) (symbol? b))
-		  (error who "invalid args to cltd"))
-		x)
-	       ((idiv)
-		(unless (symbol? a)
-		  (error who "invalid arg to idiv"))
-		(cond
-		 ((or (var? b) (symbol? b)) x)
-		 (else
-		  (let ((u (mku)))
-		    (make-seq
-		     (E (make-asm-instr 'move u b))
-		     (E (make-asm-instr 'idiv a u)))))))
-	       ((sll sra srl sll/overflow)
-		(unless (or (constant? b)
-			    (eq? b ecx))
-		  (error who "invalid shift" b))
-		x)
-	       ((mset mset32 bset)
-		(cond
-		 ((not (small-operand? b))
-		  (let ((u (mku)))
-		    (make-seq
-		     (E (make-asm-instr 'move u b))
-		     (E (make-asm-instr op a u)))))
-		 (else
-		  (check-disp a
-			      (lambda (a)
-				(let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
-				  (cond
-				   ((and (constant? s0) (constant? s1))
-				    (let ((u (mku)))
-				      (make-seq
-				       (make-seq
-					(E (make-asm-instr 'move u s0))
-					(E (make-asm-instr 'int+ u s1)))
-				       (make-asm-instr op
-						       (make-disp u (make-constant 0))
-						       b))))
-				   (else (make-asm-instr op a b)))))))))
-	       ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
-			 fl:load-single fl:store-single)
-		(check-disp-arg a
-				(lambda (a)
-				  (check-disp-arg b
-						  (lambda (b)
-						    (make-asm-instr op a b))))))
-	       ((fl:from-int fl:shuffle) x)
-	       (else (error who "invalid effect op" op))))
+	     (E-asm-instr op a b x))
+
 	    ((primcall op rands)
-	     (case op
-	       ((nop interrupt incr/zero? fl:single->double
-		     fl:double->single) x)
-	       (else (error who "invalid op in" (unparse-recordized-code x)))))
-	    ((ntcall) x)
+	     (case-symbols op
+	       ((nop interrupt incr/zero? fl:single->double fl:double->single)
+		x)
+	       (else
+		(error who "invalid op in" (unparse-recordized-code x)))))
+
+	    ((ntcall)
+	     x)
+
 	    ((shortcut body handler)
-	     (let ((body (E body)))
-	       (make-shortcut body (E handler))))
-	    (else (error who "invalid effect" (unparse-recordized-code x)))))
+	     ;;Do BODY first, then HANDLER.
+	     (let ((body^ (E body)))
+	       (make-shortcut body^ (E handler))))
+
+	    (else
+	     (error who "invalid effect" (unparse-recordized-code x)))))
+
+	(define (E-asm-instr op a b x)
+	  (case-symbols op
+	    ((load8 load32)
+	     (%fix-address b
+			   (lambda (b)
+			     (cond
+			      ((or (register? a) (var? a))
+			       (make-asm-instr op a b))
+			      (else
+			       (let ((u (mku)))
+				 (make-seq
+				  (make-asm-instr op u b)
+				  (E (make-asm-instr 'move a u)))))))))
+	    ((logor logxor logand int+ int- int* move
+		    int-/overflow int+/overflow int*/overflow)
+	     (cond
+	      ((and (eq? op 'move) (eq? a b))
+	       (make-primcall 'nop '()))
+	      ((and (= wordsize 8)
+		    (not (eq? op 'move))
+		    (long-imm? b))
+	       (let ((u (mku)))
+		 (make-seq
+		  (E (make-asm-instr 'move u b))
+		  (E (make-asm-instr op a u)))))
+	      ((and (memq op '(int* int*/overflow)) (mem? a))
+	       (let ((u (mku)))
+		 (make-seq
+		  (make-seq
+		   (E (make-asm-instr 'move u a))
+		   (E (make-asm-instr op u b)))
+		  (E (make-asm-instr 'move a u)))))
+	      ((and (mem? a) (not (small-operand? b)))
+	       (let ((u (mku)))
+		 (make-seq
+		  (E (make-asm-instr 'move u b))
+		  (E (make-asm-instr op a u)))))
+	      ((disp? a)
+	       (let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
+		 (cond
+		  ((not (small-operand? s0))
+		   (let ((u (mku)))
+		     (make-seq
+		      (E (make-asm-instr 'move u s0))
+		      (E (make-asm-instr op (make-disp u s1) b)))))
+		  ((not (small-operand? s1))
+		   (let ((u (mku)))
+		     (make-seq
+		      (E (make-asm-instr 'move u s1))
+		      (E (make-asm-instr op (make-disp s0 u) b)))))
+		  ((small-operand? b) x)
+		  (else
+		   (let ((u (mku)))
+		     (make-seq
+		      (E (make-asm-instr 'move u b))
+		      (E (make-asm-instr op a u))))))))
+	      ((disp? b)
+	       (let ((s0 (disp-s0 b)) (s1 (disp-s1 b)))
+		 (cond
+		  ((not (small-operand? s0))
+		   (let ((u (mku)))
+		     (make-seq
+		      (E (make-asm-instr 'move u s0))
+		      (E (make-asm-instr op a (make-disp u s1))))))
+		  ((not (small-operand? s1))
+		   (let ((u (mku)))
+		     (make-seq
+		      (E (make-asm-instr 'move u s1))
+		      (E (make-asm-instr op a (make-disp s0 u))))))
+		  (else x))))
+	      (else x)))
+	    ((bswap!)
+	     (cond
+	      ((mem? b)
+	       (let ((u (mku)))
+		 (make-seq
+		  (E (make-asm-instr 'move u a))
+		  (E (make-asm-instr 'bswap! u u))
+		  (E (make-asm-instr 'move b u)))))
+	      (else x)))
+	    ((cltd)
+	     (unless (and (symbol? a) (symbol? b))
+	       (error who "invalid args to cltd"))
+	     x)
+	    ((idiv)
+	     (unless (symbol? a)
+	       (error who "invalid arg to idiv"))
+	     (cond
+	      ((or (var? b) (symbol? b)) x)
+	      (else
+	       (let ((u (mku)))
+		 (make-seq
+		  (E (make-asm-instr 'move u b))
+		  (E (make-asm-instr 'idiv a u)))))))
+	    ((sll sra srl sll/overflow)
+	     (unless (or (constant? b)
+			 (eq? b ecx))
+	       (error who "invalid shift" b))
+	     x)
+	    ((mset mset32 bset)
+	     (cond
+	      ((not (small-operand? b))
+	       (let ((u (mku)))
+		 (make-seq
+		  (E (make-asm-instr 'move u b))
+		  (E (make-asm-instr op a u)))))
+	      (else
+	       (check-disp a
+			   (lambda (a)
+			     (let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
+			       (cond
+				((and (constant? s0) (constant? s1))
+				 (let ((u (mku)))
+				   (make-seq
+				    (make-seq
+				     (E (make-asm-instr 'move u s0))
+				     (E (make-asm-instr 'int+ u s1)))
+				    (make-asm-instr op
+						    (make-disp u (make-constant 0))
+						    b))))
+				(else (make-asm-instr op a b)))))))))
+	    ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
+		      fl:load-single fl:store-single)
+	     (check-disp-arg a
+			     (lambda (a)
+			       (check-disp-arg b
+					       (lambda (b)
+						 (make-asm-instr op a b))))))
+	    ((fl:from-int fl:shuffle) x)
+	    (else
+	     (error who "invalid effect op" op))))
 
 	(define (%fix-address x k)
 	  (cond
