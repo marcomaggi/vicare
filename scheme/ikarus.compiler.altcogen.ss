@@ -2881,7 +2881,49 @@
   (import ListyGraphs)
   ;(import IntegerSet)
   ;(import IntegerGraphs)
-  ;;;
+
+  (define (alt-cogen.color-by-chaitin x)
+    (Program x))
+
+  (module (Program)
+    ;;The purpose of this module is to apply the function %COLOR-PROGRAM
+    ;;below to all the bodies.
+    ;;
+    (define (Program x)
+      (struct-case x
+        ((codes code* body)
+         (make-codes (map Clambda code*) (%color-program body)))))
+
+    (define (Clambda x)
+      (struct-case x
+        ((clambda label case* cp free* name)
+         (make-clambda label (map ClambdaCase case*) cp free* name))))
+
+    (define (ClambdaCase x)
+      (struct-case x
+        ((clambda-case info body)
+         (make-clambda-case info (%color-program body)))))
+
+    (define (%color-program x)
+      (define who '%color-program)
+      (struct-case x
+	((locals vars body)
+	 (let ((varvec (car vars)) (sp* (cdr vars)))
+	   (let loop ((sp* (list->set sp*)) (un* (make-empty-set)) (body body))
+	     (let-values (((un* body) (add-unspillables un* body)))
+	       (let ((g (build-graph body)))
+		 (let-values (((spills sp* env) (color-graph sp* un* g)))
+		   (cond
+		    ((null? spills) (substitute env body))
+		    (else
+		     (let* ((env (do-spill spills varvec))
+			    (body (substitute env body)))
+		       (loop sp* un* body))))))))))))
+
+    #| end of module: Program |# )
+
+;;; --------------------------------------------------------------------
+
   (define (set-for-each f s)
     (for-each f (set->list s)))
   ;;;
@@ -3437,41 +3479,6 @@
         (else (error who "invalid tail" (unparse-recordized-code x)))))
     (let ((x (T x)))
       (values un* x)))
-  ;;;
-  (define (color-program x)
-    (define who 'color-program)
-    (struct-case x
-      ((locals vars body)
-       (let ((varvec (car vars)) (sp* (cdr vars)))
-         (let loop ((sp* (list->set sp*)) (un* (make-empty-set)) (body body))
-           (let-values (((un* body) (add-unspillables un* body)))
-             (let ((g (build-graph body)))
-               (let-values (((spills sp* env) (color-graph sp* un* g)))
-                 (cond
-                   ((null? spills) (substitute env body))
-                   (else
-                    (let* ((env (do-spill spills varvec))
-                           (body (substitute env body)))
-                      (loop sp* un* body))))))))))))
-  ;;;
-  (define (alt-cogen.color-by-chaitin x)
-    ;;;
-    (define (ClambdaCase x)
-      (struct-case x
-        ((clambda-case info body)
-         (make-clambda-case info (color-program body)))))
-    ;;;
-    (define (Clambda x)
-      (struct-case x
-        ((clambda label case* cp free* name)
-         (make-clambda label (map ClambdaCase case*) cp free* name))))
-    ;;;
-    (define (Program x)
-      (struct-case x
-        ((codes code* body)
-         (make-codes (map Clambda code*) (color-program body)))))
-    ;;;
-    (Program x))
 
   #| end of module: chaitin module |# )
 
