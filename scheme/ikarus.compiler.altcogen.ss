@@ -3129,65 +3129,74 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (color-graph sp* un* g)
-    (define (find-low-degree ls g)
-      (cond
-        ((null? ls) #f)
-        ((fx< (length (set->list (node-neighbors (car ls) g)))
-              (length ALL-REGISTERS))
-         (car ls))
-        (else (find-low-degree (cdr ls) g))))
+  (module (color-graph)
+
+    (define (color-graph sp* un* G)
+      (cond ((and (empty-set? sp*)
+		  (empty-set? un*))
+	     (values '() (make-empty-set) '()))
+
+	    ((find-low-degree (set->list un*) G)
+	     => (lambda (un)
+		  (let ((n* (node-neighbors un G)))
+		    (delete-node! un G)
+		    (let-values (((spills sp* env)
+				  (color-graph sp* (set-rem un un*) G)))
+		      (let ((r (find-color un n* env)))
+			(values spills sp* (cons (cons un r) env)))))))
+
+	    ((find-low-degree (set->list sp*) G)
+	     => (lambda (sp)
+		  (let ((n* (node-neighbors sp G)))
+		    (delete-node! sp G)
+		    (let-values (((spills sp* env)
+				  (color-graph (set-rem sp sp*) un* G)))
+		      (let ((r (find-color sp n* env)))
+			(values spills (set-add sp sp*) (cons (cons sp r) env)))))))
+
+	    ((pair? (set->list sp*))
+	     (let* ((sp (car (set->list sp*)))
+		    (n* (node-neighbors sp G)))
+	       (delete-node! sp G)
+	       (let-values (((spills sp* env)
+			     (color-graph (set-rem sp sp*) un* G)))
+		 (let ((r (find-color/maybe sp n* env)))
+		   (if r
+		       (values spills (set-add sp sp*) (cons (cons sp r) env))
+		     (values (cons sp spills) sp* env))))))
+
+	    (else
+	     (error 'color-graph "whoaaa"))))
+
+    (define (find-low-degree ls G)
+      (cond ((null? ls)
+	     #f)
+	    ((fx< (length (set->list (node-neighbors (car ls) G)))
+		  (length ALL-REGISTERS))
+	     (car ls))
+	    (else
+	     (find-low-degree (cdr ls) G))))
+
     (define (find-color/maybe x confs env)
       (let ((cr (map (lambda (x)
-                       (cond
-                         ((symbol? x) x)
-                         ((assq x env) => cdr)
-                         (else #f)))
-                     (set->list confs))))
-        (let ((r* (set->list
-                    (set-difference
-                      (list->set ALL-REGISTERS)
-                      (list->set cr)))))
+                       (cond ((symbol? x)
+			      x)
+			     ((assq x env)
+			      => cdr)
+			     (else
+			      #f)))
+		  (set->list confs))))
+        (let ((r* (set->list (set-difference (list->set ALL-REGISTERS)
+					     (list->set cr)))))
           (if (null? r*)
               #f
-              (car r*)))))
+	    (car r*)))))
+
     (define (find-color x confs env)
       (or (find-color/maybe x confs env)
           (error 'find-color "cannot find color for" x)))
-    (cond
-      ((and (empty-set? sp*) (empty-set? un*))
-       (values '() (make-empty-set) '()))
-      ((find-low-degree (set->list un*) g) =>
-       (lambda (un)
-         (let ((n* (node-neighbors un g)))
-           (delete-node! un g)
-           (let-values (((spills sp* env)
-                         (color-graph sp* (set-rem un un*) g)))
-             (let ((r (find-color un n* env)))
-               (values spills sp*
-                  (cons (cons un r) env)))))))
-      ((find-low-degree (set->list sp*) g) =>
-       (lambda (sp)
-         (let ((n* (node-neighbors sp g)))
-           (delete-node! sp g)
-           (let-values (((spills sp* env)
-                         (color-graph (set-rem sp sp*) un* g)))
-             (let ((r (find-color sp n* env)))
-               (values spills (set-add sp sp*)
-                  (cons (cons sp r) env)))))))
-      ((pair? (set->list sp*))
-       (let ((sp (car (set->list sp*))))
-         (let ((n* (node-neighbors sp g)))
-           (delete-node! sp g)
-           (let-values (((spills sp* env)
-                         (color-graph (set-rem sp sp*) un* g)))
-             (let ((r (find-color/maybe sp n* env)))
-               (if r
-                   (values spills (set-add sp sp*)
-                       (cons (cons sp r) env))
-                   (values (cons sp spills) sp* env)))))))
-      (else
-       (error 'color-graph "whoaaa"))))
+
+    #| end of module: color-graph |# )
 
 ;;; --------------------------------------------------------------------
 
