@@ -2929,17 +2929,19 @@
   (define (build-graph x)
     ;;
     ;;A lot of functions are nested here because they need to close upon
-    ;;G.
+    ;;GRAPH.
     ;;
     (define who 'build-graph)
-    (define g
+    (define GRAPH
       (empty-graph))
+    (define exception-live-set
+      (make-parameter #f))
 
     (define (R* ls)
       (if (null? ls)
 	  (make-empty-set)
-	(set-union (R  (car ls))
-		   (R* (cdr ls)))))
+	(set-union (R  ($car ls))
+		   (R* ($cdr ls)))))
 
     (define (R x)
       (struct-case x
@@ -3001,22 +3003,22 @@
 	  ((move load32)
 	   (let ((s (set-rem d s)))
 	     (set-for-each (lambda (y)
-			     (add-edge! g d y))
+			     (add-edge! GRAPH d y))
 			   s)
 	     (set-union (R v) s)))
 
 	  ((load8)
 	   (let ((s (set-rem d s)))
 	     (set-for-each (lambda (y)
-			     (add-edge! g d y))
+			     (add-edge! GRAPH d y))
 			   s)
 	     (when (var? d)
 	       (for-each (lambda (r)
-			   (add-edge! g d r))
+			   (add-edge! GRAPH d r))
 		 NON-8BIT-REGISTERS))
 	     (when (var? v)
 	       (for-each (lambda (r)
-			   (add-edge! g v r))
+			   (add-edge! GRAPH v r))
 		 NON-8BIT-REGISTERS))
 	     (set-union (R v) s)))
 
@@ -3025,21 +3027,21 @@
 	     (error who "uninitialized live set"))
 	   (let ((s (set-rem d (set-union s (exception-live-set)))))
 	     (set-for-each (lambda (y)
-			     (add-edge! g d y))
+			     (add-edge! GRAPH d y))
 			   s)
 	     (set-union (set-union (R v) (R d)) s)))
 
 	  ((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
 	   (let ((s (set-rem d s)))
 	     (set-for-each (lambda (y)
-			     (add-edge! g d y))
+			     (add-edge! GRAPH d y))
 			   s)
 	     (set-union (set-union (R v) (R d)) s)))
 
 	  ((bset)
 	   (when (var? v)
 	     (for-each (lambda (r)
-			 (add-edge! g v r))
+			 (add-edge! GRAPH v r))
 	       NON-8BIT-REGISTERS))
 	   (set-union (set-union (R v) (R d)) s))
 
@@ -3047,7 +3049,7 @@
 	   (let ((s (set-rem edx s)))
 	     (when (register? edx)
 	       (set-for-each (lambda (y)
-			       (add-edge! g edx y))
+			       (add-edge! GRAPH edx y))
 			     s))
 	     (set-union (R eax) s)))
 
@@ -3055,8 +3057,8 @@
 	   (let ((s (set-rem eax (set-rem edx s))))
 	     (when (register? eax)
 	       (set-for-each (lambda (y)
-			       (add-edge! g eax y)
-			       (add-edge! g edx y))
+			       (add-edge! GRAPH eax y)
+			       (add-edge! GRAPH edx y))
 			     s))
 	     (set-union (set-union (R eax) (R edx))
 			(set-union (R v) s))))
@@ -3102,21 +3104,28 @@
     (define (T x)
       (struct-case x
         ((conditional e0 e1 e2)
-         (let ((s1 (T e1)) (s2 (T e2)))
+         (let ((s1 (T e1))
+	       (s2 (T e2)))
            (P e0 s1 s2 (set-union s1 s2))))
+
         ((primcall op rands)
          (R* rands))
-        ((seq e0 e1) (E e0 (T e1)))
+
+        ((seq e0 e1)
+	 (E e0 (T e1)))
+
         ((shortcut body handler)
          (let ((s2 (T handler)))
            (parameterize ((exception-live-set s2))
               (T body))))
-        (else (error who "invalid tail" (unparse-recordized-code x)))))
-    (define exception-live-set (make-parameter #f))
+
+        (else
+	 (error who "invalid tail" (unparse-recordized-code x)))))
+
     (let ((s (T x)))
-      ;(pretty-print (unparse-recordized-code x))
-      ;(print-graph g)
-      g))
+      ;;(pretty-print (unparse-recordized-code x))
+      ;;(print-graph GRAPH)
+      GRAPH))
 
 ;;; --------------------------------------------------------------------
 
