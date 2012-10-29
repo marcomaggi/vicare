@@ -2576,6 +2576,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%rewrite x varvec)
+    ;;X must be a struct instance representing a recordized body.
     ;;
     ;;A lot of functions are nested here because they need to close upon
     ;;the argument VARVEC.
@@ -2621,6 +2622,8 @@
 	     (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
 	    (else
 	     (error who "invalid R" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
 
     (module (E)
 
@@ -2688,40 +2691,48 @@
 			    (set->list ($vector-ref live 0))))
 	      (live-frms2 (set->list ($vector-ref live 1)))
 	      (live-nfvs  ($vector-ref live 2)))
+
 	  (define (max-frm ls i)
-	    (cond
-	     ((null? ls) i)
-	     (else
-	      (max-frm ($cdr ls)
-		       (max i (fvar-idx ($car ls)))))))
+	    (if (null? ls)
+		i
+	      (max-frm ($cdr ls) (max i ($fvar-idx ($car ls))))))
+
 	  (define (max-ls ls i)
-	    (cond
-	     ((null? ls) i)
-	     (else
-	      (max-ls ($cdr ls) (max i ($car ls))))))
+	    (if (null? ls)
+		i
+	      (max-ls  ($cdr ls) (max i ($car ls)))))
+
 	  (define (max-nfv ls i)
-	    (cond
-	     ((null? ls) i)
-	     (else
-	      (let ((loc (nfv-loc ($car ls))))
-		(unless (fvar? loc) (error 'max-nfv "not assigned"))
-		(max-nfv ($cdr ls) (max i (fvar-idx loc)))))))
-	  (define (actual-frame-size vars i)
-	    (define (var-conflict? i vs)
+	    (if (null? ls)
+		i
+	      (let ((loc ($nfv-loc ($car ls))))
+		(unless (fvar? loc)
+		  (error who "FVAR not assigned in MAX-NFV" loc))
+		(max-nfv ($cdr ls) (max i ($fvar-idx loc))))))
+
+	  (module (actual-frame-size)
+
+	    (define (actual-frame-size vars i)
+	      (if (%frame-size-ok? i vars)
+		  i
+		(actual-frame-size vars ($fxadd1 i))))
+
+	    (define (%frame-size-ok? i vars)
+	      (or (null? vars)
+		  (let ((x ($car vars)))
+		    (and (not (set-member?    i ($nfv-frm-conf x)))
+			 (not (%var-conflict? i ($nfv-var-conf x)))
+			 (%frame-size-ok? ($fxadd1 i) ($cdr vars))))))
+
+	    (define (%var-conflict? i vs)
 	      (ormap (lambda (xi)
 		       (let ((loc ($var-loc ($vector-ref varvec xi))))
 			 (and (fvar? loc)
-			      (fx= i (fvar-idx loc)))))
+			      ($fx= i ($fvar-idx loc)))))
 		     (set->list vs)))
-	    (define (frame-size-ok? i vars)
-	      (or (null? vars)
-		  (let ((x ($car vars)))
-		    (and (not (set-member? i (nfv-frm-conf x)))
-			 (not (var-conflict? i (nfv-var-conf x)))
-			 (frame-size-ok? ($fxadd1 i) ($cdr vars))))))
-	    (cond
-	     ((frame-size-ok? i vars) i)
-	     (else (actual-frame-size vars ($fxadd1 i)))))
+
+	    #| end of module: actual-frame-size |# )
+
 	  (define (assign-frame-vars! vars i)
 	    (unless (null? vars)
 	      (let ((v ($car vars)) (fv (mkfvar i)))
@@ -2755,6 +2766,7 @@
 				    ($set-var-frm-conf! x
 							(add-frm fv ($var-frm-conf x)))))))))
 	      (assign-frame-vars! ($cdr vars) ($fxadd1 i))))
+
 	  (define (make-mask n)
 	    (let ((v (make-vector (fxsra (fx+ n 7) 3) 0)))
 	      (define (set-bit idx)
@@ -2769,6 +2781,7 @@
 			    (when loc
 			      (set-bit (fvar-idx loc)))))
 		live-nfvs) v))
+
 	  (let ((i (actual-frame-size vars
 				      (fx+ 2
 					   (max-frm live-frms1
