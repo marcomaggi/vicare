@@ -2518,7 +2518,8 @@
   (import IntegerSet)
   (import conflict-helpers)
   (import (only (ikarus system $vectors)
-		$vector-ref))
+		$vector-ref
+		$vector-set!))
   (define who 'alt-cogen.assign-frame-sizes)
 
   (define (alt-cogen.assign-frame-sizes x)
@@ -2733,61 +2734,59 @@
 
 	    #| end of module: actual-frame-size |# )
 
-	  (define (assign-frame-vars! vars i)
+	  (define (%assign-frame-vars! vars i)
 	    (unless (null? vars)
-	      (let ((v ($car vars)) (fv (mkfvar i)))
-		(set-nfv-loc! v fv)
-		;(for-each
-		;  (lambda (j)
-		;    (when (fx= j i)
-		;      (error who "invalid assignment")))
-		;  (set->list (nfv-frm-conf v)))
-		(for-each
-		    (lambda (x)
-		      (let ((loc (nfv-loc x)))
-			(cond
-			 (loc
-			  (when (fx= (fvar-idx loc) i)
-			    (error who "invalid assignment")))
-			 (else
-			  (set-nfv-nfv-conf! x
-					     (rem-nfv v (nfv-nfv-conf x)))
-			  (set-nfv-frm-conf! x
-					     (add-frm fv (nfv-frm-conf x)))))))
-		  (nfv-nfv-conf v))
-		(for-each-var (nfv-var-conf v) varvec
+	      (let ((v  ($car vars))
+		    (fv (mkfvar i)))
+		($set-nfv-loc! v fv)
+		(for-each (lambda (x)
+			    (let ((loc ($nfv-loc x)))
+			      (if loc
+				  (when ($fx= ($fvar-idx loc) i)
+				    (error who "invalid assignment"))
+				(begin
+				 ($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
+				 ($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
+		  ($nfv-nfv-conf v))
+		(for-each-var ($nfv-var-conf v) varvec
 			      (lambda (x)
 				(let ((loc ($var-loc x)))
-				  (cond
-				   ((fvar? loc)
-				    (when (fx= (fvar-idx loc) i)
-				      (error who "invalid assignment")))
-				   (else
-				    ($set-var-frm-conf! x
-							(add-frm fv ($var-frm-conf x)))))))))
-	      (assign-frame-vars! ($cdr vars) ($fxadd1 i))))
+				  (if (fvar? loc)
+				      (when (fx= (fvar-idx loc) i)
+					(error who "invalid assignment"))
+				    ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
+	      (%assign-frame-vars! ($cdr vars) ($fxadd1 i))))
 
-	  (define (make-mask n)
-	    (let ((v (make-vector (fxsra (fx+ n 7) 3) 0)))
-	      (define (set-bit idx)
-		(let ((q (fxsra idx 3))
-		      (r (fxlogand idx 7)))
-		  (vector-set! v q
-			       (fxlogor ($vector-ref v q) (fxsll 1 r)))))
-	      (for-each (lambda (x) (set-bit (fvar-idx x))) live-frms1)
-	      (for-each set-bit live-frms2)
-	      (for-each (lambda (x)
-			  (let ((loc (nfv-loc x)))
-			    (when loc
-			      (set-bit (fvar-idx loc)))))
-		live-nfvs) v))
+	  (module (make-mask)
 
-	  (let ((i (actual-frame-size vars
-				      (fx+ 2
-					   (max-frm live-frms1
-						    (max-nfv live-nfvs
-							     (max-ls live-frms2 0)))))))
-	    (assign-frame-vars! vars i)
+	    (define (make-mask n)
+	      (let ((vec (make-vector ($fxsra ($fx+ n 7) 3) 0)))
+		(for-each (lambda (fvar)
+			    (%set-bit! vec ($fvar-idx fvar)))
+		  live-frms1)
+		(for-each (lambda (idx)
+			    (%set-bit! vec idx))
+		  live-frms2)
+		(for-each (lambda (nfv)
+			    (let ((loc ($nfv-loc nfv)))
+			      (when loc
+				(%set-bit! vec ($fvar-idx loc)))))
+		  live-nfvs)
+		vec))
+
+	    (define (%set-bit! vec idx)
+	      (let ((q ($fxsra    idx 3))
+		    (r ($fxlogand idx 7)))
+		($vector-set! vec q ($fxlogor ($vector-ref vec q) ($fxsll 1 r)))))
+
+	    #| end of module: make-mask |# )
+
+	  (let ((i (actual-frame-size
+		    vars
+		    ($fx+ 2 (max-frm live-frms1
+				     (max-nfv live-nfvs
+					      (max-ls live-frms2 0)))))))
+	    (%assign-frame-vars! vars i)
 	    (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
 
       #| end of module: E |# )
