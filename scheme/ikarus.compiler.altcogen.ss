@@ -77,6 +77,10 @@
     ((_ ?e* ... ?e)
      (make-seq (multiple-forms-sequence ?e* ...) ?e))))
 
+(define (print-code x)
+  (parameterize ((print-gensym '#t))
+    (pretty-print (unparse-recordized-code x))))
+
 
 (module (alt-cogen.introduce-primcalls)
   ;;The purpose of this module is to examine all the function calls:
@@ -3697,7 +3701,6 @@
     ;; 		       (S* ($cdr ls) (lambda (d)
     ;; 				       (kont (cons a d))))))))
 
-
     #| end of module: add-unspillables |# )
 
   #| end of module: chaitin module |# )
@@ -3715,9 +3718,7 @@
 	  `(int ,(* framesize wordsize))
 	  '(current-frame-offset)
 	  multiarg-rp
-	  `(pad ,call-instruction-size
-		,L_CALL
-		,call-sequence)
+	  `(pad ,call-instruction-size ,L_CALL ,call-sequence)
 	  (if (or (= framesize 0) (= framesize 1))
 	      '(seq) ;this generates no code
 	    `(addl ,(* (fxsub1 framesize) wordsize) ,fpr)))))
@@ -3728,15 +3729,66 @@
   (define who 'alt-cogen.flatten-codes)
 
   (define exceptions-conc (make-parameter #f))
+  (define exception-label (make-parameter #f))
 
   (define (alt-cogen.flatten-codes x)
-    (struct-case x
-      ((codes code* body)
-       (cons (cons* 0 (label (gensym))
-		    (let ((ac (list '(nop))))
-                      (parameterize ((exceptions-conc ac))
-                        (T body ac))))
-             (map Clambda code*)))))
+    (Program x))
+
+  (module (Program)
+
+    (define (Program x)
+      (struct-case x
+	((codes code* body)
+	 (cons (cons* 0 (label (gensym))
+		      (let ((ac (list '(nop))))
+			(parameterize ((exceptions-conc ac))
+			  (T body ac))))
+	       (map Clambda code*)))))
+
+    (define (Clambda x)
+      (struct-case x
+	((clambda L case* cp free* name)
+	 (cons* (length free*)
+		`(name ,name)
+		(label L)
+		(let ((ac (list '(nop))))
+		  (parameterize ((exceptions-conc ac))
+		    (let recur ((case* case*))
+		      (if (null? case*)
+			  (cons `(jmp (label ,(sl-invalid-args-label))) ac)
+			(ClambdaCase (car case*)
+				     (recur (cdr case*)))))))))))
+
+    (define (ClambdaCase x ac)
+      (struct-case x
+	((clambda-case info body)
+	 (struct-case info
+	   ((case-info L args proper)
+	    (let ((lothers (unique-label)))
+	      (cons* `(cmpl ,(argc-convention
+			      (if proper
+				  (length (cdr args))
+				(length (cddr args))))
+			    ,ARGC-REGISTER)
+		     (cond (proper
+			    `(jne ,lothers))
+			   ((> (argc-convention 0)
+			       (argc-convention 1))
+			    `(jg ,lothers))
+			   (else
+			    `(jl ,lothers)))
+		     (properize args proper
+				(cons (label L)
+				      (T body (cons lothers ac)))))))))))
+
+    (define (properize args proper ac)
+      (if proper
+	  ac
+	(handle-vararg (length (cdr args)) ac)))
+
+    #| end of module: Program |# )
+
+;;; --------------------------------------------------------------------
 
   (define (FVar i)
     `(disp ,(* i (- wordsize)) ,fpr))
@@ -4116,8 +4168,6 @@
            (T body ac))))
       (else (error who "invalid tail" x))))
 
-  (define exception-label (make-parameter #f))
-
 ;;; --------------------------------------------------------------------
 
   (define (handle-vararg fml-count ac)
@@ -4170,54 +4220,7 @@
            (movl ebx (mem (fx- 0 (fxsll fml-count fx-shift)) fpr))
            ac))
 
-  (define (properize args proper ac)
-    (cond
-     (proper ac)
-     (else
-      (handle-vararg (length (cdr args)) ac))))
-
-  (define (ClambdaCase x ac)
-    (struct-case x
-      ((clambda-case info body)
-       (struct-case info
-         ((case-info L args proper)
-          (let ((lothers (unique-label)))
-            (cons* `(cmpl ,(argc-convention
-			    (if proper
-				(length (cdr args))
-			      (length (cddr args))))
-                          ,ARGC-REGISTER)
-                   (cond
-		    (proper `(jne ,lothers))
-		    ((> (argc-convention 0) (argc-convention 1))
-		     `(jg ,lothers))
-		    (else
-		     `(jl ,lothers)))
-		   (properize args proper
-			      (cons (label L)
-				    (T body (cons lothers ac)))))))))))
-
-  (define (Clambda x)
-    (struct-case x
-      ((clambda L case* cp free* name)
-       (cons* (length free*)
-              `(name ,name)
-              (label L)
-	      (let ((ac (list '(nop))))
-		(parameterize ((exceptions-conc ac))
-		  (let f ((case* case*))
-		    (cond
-		     ((null? case*)
-		      (cons `(jmp (label ,(sl-invalid-args-label))) ac))
-		     (else
-		      (ClambdaCase (car case*) (f (cdr case*))))))))))))
-
   #| end of module: alt-cogen.flatten-codes |# )
-
-
-(define (print-code x)
-  (parameterize ((print-gensym '#t))
-    (pretty-print (unparse-recordized-code x))))
 
 
 ;;;; done
