@@ -2908,17 +2908,17 @@
       (define who '%color-program)
       (struct-case x
 	((locals vars body)
-	 (let ((varvec (car vars)) (sp* (cdr vars)))
+	 (let ((varvec (car vars))
+	       (sp*    (cdr vars)))
 	   (let loop ((sp* (list->set sp*)) (un* (make-empty-set)) (body body))
 	     (let-values (((un* body) (add-unspillables un* body)))
 	       (let ((g (build-graph body)))
 		 (let-values (((spills sp* env) (color-graph sp* un* g)))
-		   (cond
-		    ((null? spills) (substitute env body))
-		    (else
+		   (if (null? spills)
+		       (substitute env body)
 		     (let* ((env (do-spill spills varvec))
 			    (body (substitute env body)))
-		       (loop sp* un* body))))))))))))
+		       (loop sp* un* body)))))))))))
 
     #| end of module: Program |# )
 
