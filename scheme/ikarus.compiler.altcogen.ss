@@ -3361,282 +3361,317 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (add-unspillables un* x)
-    (define who 'add-unspillables)
-    (define (mku)
-      (let ((u (unique-var 'u)))
-        (set! un* (set-add u un*))
-        u))
-    (define (S x k)
-      (cond
-        ((or (constant? x) (var? x) (symbol? x))
-         (k x))
-        (else
-         (let ((u (mku)))
-           (make-seq (E (make-asm-instr 'move u x)) (k u))))))
-    (define (S* ls k)
-      (cond
-        ((null? ls) (k '()))
-        (else
-         (S ($car ls)
-            (lambda (a)
-              (S* ($cdr ls)
-                  (lambda (d)
-                    (k (cons a d)))))))))
-    (define (long-imm? x)
-      (struct-case x
-        ((constant n)
-         (cond
-           ((integer? n)
-            (not (<= (- (expt 2 31)) n (- (expt 2 31) 1))))
-           (else #t)))
-        (else #f)))
-    (define (small-operand? x)
-      (case wordsize
-        ((4) (not (mem? x)))
-        ((8)
-         (struct-case x
-           ((constant n)
-            (cond
-              ((integer? n)
-               (<= (- (expt 2 31)) n (- (expt 2 31) 1)))
-              (else #f)))
-           (else (or (register? x) (var? x)))))
-        (else (error 'small-operand? "huh?"))))
-    (define (mem? x)
-      (or (disp? x) (fvar? x)))
-    (define (fix-address x k)
-      (cond
-        ((disp? x)
-         (let ((s0 (disp-s0 x)) (s1 (disp-s1 x)))
-           (cond
+  (module (add-unspillables)
+
+    (define (add-unspillables un* x)
+      ;;
+      ;;A  lot  of  functions  are  nested  here  because  they  call  the
+      ;;subfunction MKU, and the MKU needs to close upon the argument UN*.
+      ;;
+      (define who 'add-unspillables)
+
+      (define (mku)
+	(let ((u (unique-var 'u)))
+	  (set! un* (set-add u un*))
+	  u))
+
+      (define (fix-address x k)
+	(cond
+	 ((disp? x)
+	  (let ((s0 (disp-s0 x)) (s1 (disp-s1 x)))
+	    (cond
              ((not (small-operand? s0))
               (let ((u (mku)))
                 (make-seq
-                  (E (make-asm-instr 'move u s0))
-                  (fix-address (make-disp u s1) k))))
+		 (E (make-asm-instr 'move u s0))
+		 (fix-address (make-disp u s1) k))))
              ((not (small-operand? s1))
               (let ((u (mku)))
                 (make-seq
-                  (E (make-asm-instr 'move u s1))
-                  (fix-address (make-disp s0 u) k))))
+		 (E (make-asm-instr 'move u s1))
+		 (fix-address (make-disp s0 u) k))))
              (else (k x)))))
-        (else (k x))))
-    ;;; unspillable effect
-    (define (E x)
-      (struct-case x
-        ((seq e0 e1) (make-seq (E e0) (E e1)))
-        ((conditional e0 e1 e2)
-         (make-conditional (P e0) (E e1) (E e2)))
-        ((asm-instr op a b)
-         (case op
-           ((load8 load32)
-            (fix-address b
-              (lambda (b)
-                (cond
-                  ((or (register? a) (var? a))
-                   (make-asm-instr op a b))
-                  (else
-                   (let ((u (mku)))
-                     (make-seq
-                       (make-asm-instr op u b)
-                       (E (make-asm-instr 'move a u)))))))))
-           ((logor logxor logand int+ int- int* move
-             int-/overflow int+/overflow int*/overflow)
-            (cond
-              ((and (eq? op 'move) (eq? a b))
-               (make-primcall 'nop '()))
-              ((and (= wordsize 8)
-                    (not (eq? op 'move))
-                    (long-imm? b))
-               (let ((u (mku)))
-                 (make-seq
+	 (else (k x))))
+
+      (define (E x)
+	;;unspillable effect
+	(struct-case x
+	  ((seq e0 e1) (make-seq (E e0) (E e1)))
+	  ((conditional e0 e1 e2)
+	   (make-conditional (P e0) (E e1) (E e2)))
+	  ((asm-instr op a b)
+	   (case op
+	     ((load8 load32)
+	      (fix-address b
+			   (lambda (b)
+			     (cond
+			      ((or (register? a) (var? a))
+			       (make-asm-instr op a b))
+			      (else
+			       (let ((u (mku)))
+				 (make-seq
+				  (make-asm-instr op u b)
+				  (E (make-asm-instr 'move a u)))))))))
+	     ((logor logxor logand int+ int- int* move
+		     int-/overflow int+/overflow int*/overflow)
+	      (cond
+	       ((and (eq? op 'move) (eq? a b))
+		(make-primcall 'nop '()))
+	       ((and (= wordsize 8)
+		     (not (eq? op 'move))
+		     (long-imm? b))
+		(let ((u (mku)))
+		  (make-seq
                    (E (make-asm-instr 'move u b))
                    (E (make-asm-instr op a u)))))
-              ((and (memq op '(int* int*/overflow)) (mem? a))
-               (let ((u (mku)))
-                 (make-seq
+	       ((and (memq op '(int* int*/overflow)) (mem? a))
+		(let ((u (mku)))
+		  (make-seq
                    (make-seq
-                     (E (make-asm-instr 'move u a))
-                     (E (make-asm-instr op u b)))
+		    (E (make-asm-instr 'move u a))
+		    (E (make-asm-instr op u b)))
                    (E (make-asm-instr 'move a u)))))
-              ((and (mem? a) (not (small-operand? b)))
-               (let ((u (mku)))
-                 (make-seq
+	       ((and (mem? a) (not (small-operand? b)))
+		(let ((u (mku)))
+		  (make-seq
                    (E (make-asm-instr 'move u b))
                    (E (make-asm-instr op a u)))))
-              ((disp? a)
-               (let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
-                 (cond
+	       ((disp? a)
+		(let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
+		  (cond
                    ((not (small-operand? s0))
                     (let ((u (mku)))
                       (make-seq
-                        (E (make-asm-instr 'move u s0))
-                        (E (make-asm-instr op (make-disp u s1) b)))))
+		       (E (make-asm-instr 'move u s0))
+		       (E (make-asm-instr op (make-disp u s1) b)))))
                    ((not (small-operand? s1))
                     (let ((u (mku)))
                       (make-seq
-                        (E (make-asm-instr 'move u s1))
-                        (E (make-asm-instr op (make-disp s0 u) b)))))
+		       (E (make-asm-instr 'move u s1))
+		       (E (make-asm-instr op (make-disp s0 u) b)))))
                    ((small-operand? b) x)
                    (else
                     (let ((u (mku)))
                       (make-seq
-                        (E (make-asm-instr 'move u b))
-                        (E (make-asm-instr op a u))))))))
-              ((disp? b)
-               (let ((s0 (disp-s0 b)) (s1 (disp-s1 b)))
-                 (cond
+		       (E (make-asm-instr 'move u b))
+		       (E (make-asm-instr op a u))))))))
+	       ((disp? b)
+		(let ((s0 (disp-s0 b)) (s1 (disp-s1 b)))
+		  (cond
                    ((not (small-operand? s0))
                     (let ((u (mku)))
                       (make-seq
-                        (E (make-asm-instr 'move u s0))
-                        (E (make-asm-instr op a (make-disp u s1))))))
+		       (E (make-asm-instr 'move u s0))
+		       (E (make-asm-instr op a (make-disp u s1))))))
                    ((not (small-operand? s1))
                     (let ((u (mku)))
                       (make-seq
-                        (E (make-asm-instr 'move u s1))
-                        (E (make-asm-instr op a (make-disp s0 u))))))
+		       (E (make-asm-instr 'move u s1))
+		       (E (make-asm-instr op a (make-disp s0 u))))))
                    (else x))))
-              (else x)))
-           ((bswap!)
-            (cond
-              ((mem? b)
-               (let ((u (mku)))
-                 (make-seq
+	       (else x)))
+	     ((bswap!)
+	      (cond
+	       ((mem? b)
+		(let ((u (mku)))
+		  (make-seq
                    (E (make-asm-instr 'move u a))
                    (E (make-asm-instr 'bswap! u u))
                    (E (make-asm-instr 'move b u)))))
-              (else x)))
-           ((cltd)
-            (unless (and (symbol? a) (symbol? b))
-              (error who "invalid args to cltd"))
-            x)
-           ((idiv)
-            (unless (symbol? a)
-              (error who "invalid arg to idiv"))
-            (cond
-              ((or (var? b) (symbol? b)) x)
-              (else
-               (let ((u (mku)))
-                 (make-seq
+	       (else x)))
+	     ((cltd)
+	      (unless (and (symbol? a) (symbol? b))
+		(error who "invalid args to cltd"))
+	      x)
+	     ((idiv)
+	      (unless (symbol? a)
+		(error who "invalid arg to idiv"))
+	      (cond
+	       ((or (var? b) (symbol? b)) x)
+	       (else
+		(let ((u (mku)))
+		  (make-seq
                    (E (make-asm-instr 'move u b))
                    (E (make-asm-instr 'idiv a u)))))))
-           ((sll sra srl sll/overflow)
-            (unless (or (constant? b)
-                        (eq? b ecx))
-              (error who "invalid shift" b))
-            x)
-           ((mset mset32 bset)
-            (cond
-              ((not (small-operand? b))
-               (let ((u (mku)))
-                 (make-seq
+	     ((sll sra srl sll/overflow)
+	      (unless (or (constant? b)
+			  (eq? b ecx))
+		(error who "invalid shift" b))
+	      x)
+	     ((mset mset32 bset)
+	      (cond
+	       ((not (small-operand? b))
+		(let ((u (mku)))
+		  (make-seq
                    (E (make-asm-instr 'move u b))
                    (E (make-asm-instr op a u)))))
-              (else
-               (check-disp a
-                 (lambda (a)
-                   (let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
-                     (cond
-                       ((and (constant? s0) (constant? s1))
-                        (let ((u (mku)))
-                          (make-seq
-                            (make-seq
-                              (E (make-asm-instr 'move u s0))
-                              (E (make-asm-instr 'int+ u s1)))
-                            (make-asm-instr op
-                               (make-disp u (make-constant 0))
-                               b))))
-                       (else (make-asm-instr op a b)))))))))
-           ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
-             fl:load-single fl:store-single)
-            (check-disp-arg a
-              (lambda (a)
-                (check-disp-arg b
-                  (lambda (b)
-                    (make-asm-instr op a b))))))
-           ((fl:from-int fl:shuffle) x)
-           (else (error who "invalid effect op" op))))
-        ((primcall op rands)
-         (case op
-           ((nop interrupt incr/zero? fl:single->double
-                 fl:double->single) x)
-           (else (error who "invalid op in" (unparse-recordized-code x)))))
-        ((ntcall) x)
-        ((shortcut body handler)
-         (let ((body (E body)))
-           (make-shortcut body (E handler))))
-        (else (error who "invalid effect" (unparse-recordized-code x)))))
-    (define (check-disp-arg x k)
-      (cond
-        ((small-operand? x)
-         (k x))
-        (else
-         (let ((u (mku)))
-           (make-seq
+	       (else
+		(check-disp a
+			    (lambda (a)
+			      (let ((s0 (disp-s0 a)) (s1 (disp-s1 a)))
+				(cond
+				 ((and (constant? s0) (constant? s1))
+				  (let ((u (mku)))
+				    (make-seq
+				     (make-seq
+				      (E (make-asm-instr 'move u s0))
+				      (E (make-asm-instr 'int+ u s1)))
+				     (make-asm-instr op
+						     (make-disp u (make-constant 0))
+						     b))))
+				 (else (make-asm-instr op a b)))))))))
+	     ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
+		       fl:load-single fl:store-single)
+	      (check-disp-arg a
+			      (lambda (a)
+				(check-disp-arg b
+						(lambda (b)
+						  (make-asm-instr op a b))))))
+	     ((fl:from-int fl:shuffle) x)
+	     (else (error who "invalid effect op" op))))
+	  ((primcall op rands)
+	   (case op
+	     ((nop interrupt incr/zero? fl:single->double
+		   fl:double->single) x)
+	     (else (error who "invalid op in" (unparse-recordized-code x)))))
+	  ((ntcall) x)
+	  ((shortcut body handler)
+	   (let ((body (E body)))
+	     (make-shortcut body (E handler))))
+	  (else (error who "invalid effect" (unparse-recordized-code x)))))
+
+      (define (check-disp-arg x k)
+	(cond
+	 ((small-operand? x)
+	  (k x))
+	 (else
+	  (let ((u (mku)))
+	    (make-seq
              (E (make-asm-instr 'move u x))
              (k u))))))
-    (define (check-disp x k)
-      (struct-case x
-        ((disp a b)
-         (check-disp-arg a
-           (lambda (a)
-             (check-disp-arg b
-               (lambda (b)
-                 (k (make-disp a b)))))))
-        (else (k x))))
-    (define (P x)
-      (struct-case x
-        ((constant) x)
-        ((conditional e0 e1 e2)
-         (make-conditional (P e0) (P e1) (P e2)))
-        ((seq e0 e1) (make-seq (E e0) (P e1)))
-        ((asm-instr op a b)
-         (cond
-           ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
-            (if (mem? a)
-                (let ((u (mku)))
-                  (make-seq
+
+      (define (check-disp x k)
+	(struct-case x
+	  ((disp a b)
+	   (check-disp-arg a
+			   (lambda (a)
+			     (check-disp-arg b
+					     (lambda (b)
+					       (k (make-disp a b)))))))
+	  (else (k x))))
+
+      (define (P x)
+	(struct-case x
+	  ((constant) x)
+	  ((conditional e0 e1 e2)
+	   (make-conditional (P e0) (P e1) (P e2)))
+	  ((seq e0 e1) (make-seq (E e0) (P e1)))
+	  ((asm-instr op a b)
+	   (cond
+	    ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
+	     (if (mem? a)
+		 (let ((u (mku)))
+		   (make-seq
                     (E (make-asm-instr 'move u a))
                     (make-asm-instr op u b)))
-                x))
-           ((and (not (mem? a)) (not (small-operand? a)))
-            (let ((u (mku)))
-              (make-seq
+	       x))
+	    ((and (not (mem? a)) (not (small-operand? a)))
+	     (let ((u (mku)))
+	       (make-seq
                 (E (make-asm-instr 'move u a))
                 (P (make-asm-instr op u b)))))
-           ((and (not (mem? b)) (not (small-operand? b)))
-            (let ((u (mku)))
-              (make-seq
+	    ((and (not (mem? b)) (not (small-operand? b)))
+	     (let ((u (mku)))
+	       (make-seq
                 (E (make-asm-instr 'move u b))
                 (P (make-asm-instr op a u)))))
-           ((and (mem? a) (mem? b))
-            (let ((u (mku)))
-              (make-seq
+	    ((and (mem? a) (mem? b))
+	     (let ((u (mku)))
+	       (make-seq
                 (E (make-asm-instr 'move u b))
                 (P (make-asm-instr op a u)))))
-           (else
-            (check-disp a
-              (lambda (a)
-                (check-disp b
-                  (lambda (b)
-                    (make-asm-instr op a b))))))))
-        ((shortcut body handler)
-         (let ((body (P body)))
-           (make-shortcut body (P handler))))
-        (else (error who "invalid pred" (unparse-recordized-code x)))))
-    (define (T x)
+	    (else
+	     (check-disp a
+			 (lambda (a)
+			   (check-disp b
+				       (lambda (b)
+					 (make-asm-instr op a b))))))))
+	  ((shortcut body handler)
+	   (let ((body (P body)))
+	     (make-shortcut body (P handler))))
+	  (else (error who "invalid pred" (unparse-recordized-code x)))))
+
+      (define (T x)
+	(struct-case x
+	  ((primcall op rands) x)
+	  ((conditional e0 e1 e2)
+	   (make-conditional (P e0) (T e1) (T e2)))
+	  ((seq e0 e1) (make-seq (E e0) (T e1)))
+	  ((shortcut body handler)
+	   (make-shortcut (T body) (T handler)))
+	  (else (error who "invalid tail" (unparse-recordized-code x)))))
+
+      (let ((x (T x)))
+	(values un* x)))
+
+    (define (long-imm? x)
+      ;;Return true if X represents a constant signed integer too big to
+      ;;fit in 32-bit.
+      ;;
       (struct-case x
-        ((primcall op rands) x)
-        ((conditional e0 e1 e2)
-         (make-conditional (P e0) (T e1) (T e2)))
-        ((seq e0 e1) (make-seq (E e0) (T e1)))
-        ((shortcut body handler)
-         (make-shortcut (T body) (T handler)))
-        (else (error who "invalid tail" (unparse-recordized-code x)))))
-    (let ((x (T x)))
-      (values un* x)))
+	((constant n)
+	 (cond ((integer? n)
+		(not (<= MIN-SIGNED-32-BIT-INTEGER
+			 n
+			 MAX-SIGNED-32-BIT-INTEGER)))
+	       (else #t)))
+	(else #f)))
+
+    (define (small-operand? x)
+      (case-word-size
+       ((32)
+	(not (mem? x)))
+       ((64)
+	(struct-case x
+	  ((constant n)
+	   (if (integer? n)
+	       (<= MIN-SIGNED-32-BIT-INTEGER
+		   n
+		   MAX-SIGNED-32-BIT-INTEGER)
+	     #f))
+	  (else
+	   (or (register? x)
+	       (var?      x)))))))
+
+    (define (mem? x)
+      (or (disp? x) (fvar? x)))
+
+    (define-inline-constant MIN-SIGNED-32-BIT-INTEGER
+      (- (expt 2 31)))
+
+    (define-inline-constant MAX-SIGNED-32-BIT-INTEGER
+      (- (expt 2 31) 1))
+
+    ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
+    ;;
+    ;; (define (S x kont)
+    ;;   (if (or (constant? x)
+    ;; 	      (var?      x)
+    ;; 	      (symbol?   x))
+    ;; 	  (kont x)
+    ;; 	(let ((u (mku)))
+    ;; 	  (make-seq (E (make-asm-instr 'move u x))
+    ;; 		    (kont u)))))
+    ;;
+    ;; (define (S* ls kont)
+    ;;   (if (null? ls)
+    ;; 	  (kont '())
+    ;; 	(S ($car ls) (lambda (a)
+    ;; 		       (S* ($cdr ls) (lambda (d)
+    ;; 				       (kont (cons a d))))))))
+
+
+    #| end of module: add-unspillables |# )
 
   #| end of module: chaitin module |# )
 
