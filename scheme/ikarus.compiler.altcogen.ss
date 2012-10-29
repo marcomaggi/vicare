@@ -2925,6 +2925,12 @@
     #| end of module: Program |# )
 
 ;;; --------------------------------------------------------------------
+;;; helpers
+
+  (define-inline (set-for-each f s)
+    (for-each f (set->list s)))
+
+;;; --------------------------------------------------------------------
 
   (define (build-graph x)
     ;;
@@ -3339,19 +3345,18 @@
   (define (do-spill sp* varvec)
     (import conflict-helpers)
     (define (find/set-loc x)
-      (let f ((i 1) (conf (var-frm-conf x)))
+      (let loop ((i    1)
+		 (conf ($var-frm-conf x)))
         (let ((fv (mkfvar i)))
-          (cond
-            ((mem-frm? fv conf) (f (fxadd1 i) conf))
-            (else
-             (for-each-var (var-var-conf x) varvec
-               (lambda (y)
-                 (set-var-var-conf! y
-                   (rem-var x (var-var-conf y)))
-                 (set-var-frm-conf! y
-                   (add-frm fv (var-frm-conf y)))))
-             (set-var-loc! x fv)
-             (cons x fv))))))
+          (if (mem-frm? fv conf)
+	      (loop ($fxadd1 i) conf)
+	    (begin
+	      (for-each-var ($var-var-conf x) varvec
+			    (lambda (y)
+			      ($set-var-var-conf! y (rem-var x  ($var-var-conf y)))
+			      ($set-var-frm-conf! y (add-frm fv ($var-frm-conf y)))))
+	      ($set-var-loc! x fv)
+	      (cons x fv))))))
     (map find/set-loc sp*))
 
 ;;; --------------------------------------------------------------------
@@ -3632,12 +3637,6 @@
         (else (error who "invalid tail" (unparse-recordized-code x)))))
     (let ((x (T x)))
       (values un* x)))
-
-;;; --------------------------------------------------------------------
-;;; helpers
-
-  (define-inline (set-for-each f s)
-    (for-each f (set->list s)))
 
   #| end of module: chaitin module |# )
 
