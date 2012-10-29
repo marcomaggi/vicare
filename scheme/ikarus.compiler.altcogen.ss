@@ -4132,31 +4132,37 @@
 
   (module (P)
 
-    (define (P x lt lf ac)
+    (define (P x lt lf accum)
       (struct-case x
 	((constant c)
 	 (if c
-	     (if lt (cons `(jmp ,lt) ac) ac)
-	   (if lf (cons `(jmp ,lf) ac) ac)))
+	     (if lt
+		 (cons `(jmp ,lt) accum)
+	       accum)
+	   (if lf
+	       (cons `(jmp ,lf) accum)
+	     accum)))
 
 	((seq e0 e1)
-	 (E e0 (P e1 lt lf ac)))
+	 (E e0 (P e1 lt lf accum)))
 
 	((conditional e0 e1 e2)
-	 (P-conditional e0 e1 e2 lt lf ac))
+	 (P-conditional e0 e1 e2 lt lf accum))
 
 	((asm-instr op a0 a1)
-	 (P-asm-instr op a0 a1 x lt lf ac))
+	 (P-asm-instr op a0 a1 lt lf accum))
 
 	((shortcut body handler)
-	 (let ((L (unique-interrupt-label))
+	 (let ((L  (unique-interrupt-label))
 	       (lj (unique-label)))
-	   (let ((ac (if (and lt lf) ac (cons lj ac))))
+	   (let ((accum (if (and lt lf)
+			    accum
+			  (cons lj accum))))
 	     (let* ((hand (cons L (P handler (or lt lj) (or lf lj) '())))
 		    (tc   (exceptions-conc)))
 	       (set-cdr! tc (append hand (cdr tc))))
 	     (parameterize ((exception-label L))
-	       (P body lt lf ac)))))
+	       (P body lt lf accum)))))
 
 	(else
 	 (error who "invalid pred" x))))
@@ -4196,7 +4202,7 @@
 
     (module (P-asm-instr)
 
-      (define (P-asm-instr op a0 a1 x lt lf accum)
+      (define (P-asm-instr op a0 a1 lt lf accum)
 	(cond ((and lt lf)
 	       (cmp op a0 a1 lt (cons `(jmp ,lf) accum)))
 	      (lt
@@ -4271,10 +4277,13 @@
 
   (define (T x ac)
     (struct-case x
-      ((seq e0 e1) (E e0 (T e1 ac)))
+      ((seq e0 e1)
+       (E e0 (T e1 ac)))
+
       ((conditional e0 e1 e2)
        (let ((L (unique-label)))
          (P e0 #f L (T e1 (cons L (T e2 ac))))))
+
       ((primcall op rands)
        (case op
 	 ((return) (cons '(ret) ac))
@@ -4284,6 +4293,7 @@
 	 ((direct-jump)
 	  (cons `(jmp (label ,(code-loc-label (car rands)))) ac))
 	 (else (error who "invalid tail" x))))
+
       ((shortcut body handler)
        (let ((L (unique-interrupt-label)))
          (let ((hand (cons L (T handler '()))))
@@ -4291,7 +4301,9 @@
              (set-cdr! tc (append hand (cdr tc)))))
          (parameterize ((exception-label L))
            (T body ac))))
-      (else (error who "invalid tail" x))))
+
+      (else
+       (error who "invalid tail" x))))
 
 ;;; --------------------------------------------------------------------
 
