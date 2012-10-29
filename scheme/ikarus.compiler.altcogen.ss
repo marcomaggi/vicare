@@ -3474,8 +3474,8 @@
 	    ((bswap!)
 	     (if (mem? b)
 		 (let ((u (mku)))
-		   (make-seq (E (make-asm-instr 'move u a))
-			     (E (make-asm-instr 'bswap! u u))
+		   (make-seq (make-seq (E (make-asm-instr 'move u a))
+				       (E (make-asm-instr 'bswap! u u)))
 			     (E (make-asm-instr 'move b u))))
 	       x))
 
@@ -3513,9 +3513,8 @@
 			       (if (and (constant? s0)
 					(constant? s1))
 				   (let ((u (mku)))
-				     (make-seq (make-seq
-						(E (make-asm-instr 'move u s0))
-						(E (make-asm-instr 'int+ u s1)))
+				     (make-seq (make-seq (E (make-asm-instr 'move u s0))
+							 (E (make-asm-instr 'int+ u s1)))
 					       (make-asm-instr op
 							       (make-disp u (make-constant 0))
 							       b)))
@@ -3552,15 +3551,14 @@
 
 	#| end of module: E |# )
 
+;;; --------------------------------------------------------------------
+
       (define (check-disp-arg x k)
-	(cond
-	 ((small-operand? x)
-	  (k x))
-	 (else
+	(if (small-operand? x)
+	    (k x)
 	  (let ((u (mku)))
-	    (make-seq
-             (E (make-asm-instr 'move u x))
-             (k u))))))
+	    (make-seq (E (make-asm-instr 'move u x))
+		      (k u)))))
 
       (define (check-disp x k)
 	(struct-case x
