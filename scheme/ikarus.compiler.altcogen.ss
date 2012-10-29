@@ -2081,6 +2081,8 @@
 
 
 (define (uncover-frame-conflicts x varvec)
+  ;;This function is used only by ALT-COGEN.ASSIGN-FRAME-SIZES.
+  ;;
   (import IntegerSet)
   (import conflict-helpers)
   (import (ikarus system $vectors))
@@ -2515,11 +2517,6 @@
 (module (alt-cogen.assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
-  (begin	;uncomment this form to switch from unsafe to safe
-    (define-inline (car x)	($car x))
-    (define-inline (cdr x)	($cdr x))
-    (define-inline (var-loc x)	($var-loc x)))
-
   (define who 'alt-cogen.assign-frame-sizes)
 
   (define (alt-cogen.assign-frame-sizes x)
@@ -2546,6 +2543,10 @@
 	 (make-clambda-case info (Main body)))))
 
     (define (Main x)
+      ;;X must  be a struct instance  of type LOCALS.  Update  the field
+      ;;VARS of X and return a  new struct instance of type LOCALS which
+      ;;is meant to replace X.
+      ;;
       (struct-case x
 	((locals vars body)
 	 (init-vars! vars)
@@ -2563,10 +2564,10 @@
       ;;
       (cond ((null? vars)
 	     '())
-	    ((var-loc (car vars))
-	     (%discard-vars-with-loc (cdr vars)))
+	    (($var-loc ($car vars))
+	     (%discard-vars-with-loc ($cdr vars)))
 	    (else
-	     (cons (car vars) (%discard-vars-with-loc (cdr vars))))))
+	     (cons ($car vars) (%discard-vars-with-loc ($cdr vars))))))
 
     #| end of module: Program |# )
 
@@ -2581,43 +2582,41 @@
     ;;A lot of functions are nested here because they need to close upon
     ;;the argument VARVEC.
     ;;
-    (define (assign x)
-      (let ()
-        (define (assign-any)
-          (let ((frms (var-frm-conf x))
-                (vars (var-var-conf x)))
-            (let f ((i 1))
-              (cond
-                ((set-member? i frms) (f (fxadd1 i)))
-                (else
-                 (let ((fv (mkfvar i)))
-                   (set-var-loc! x fv)
-                   (for-each-var vars varvec
-                     (lambda (var)
-                       (set-var-frm-conf! var
-                         (add-frm fv (var-frm-conf var)))))
-                   fv))))))
-        (define (assign-move x)
-          (let ((mr (set->list
-                      (set-difference
-                        (var-frm-move x)
-                        (var-frm-conf x)))))
-            (cond
-              ((null? mr) #f)
-              (else
-               (let ((fv (mkfvar (car mr))))
-                 (set-var-loc! x fv)
-                 (for-each-var (var-var-conf x) varvec
-                     (lambda (var)
-                       (set-var-frm-conf! var
-                         (add-frm fv (var-frm-conf var)))))
-                 (for-each-var (var-var-move x) varvec
-                   (lambda (var)
-                     (set-var-frm-move! var
-                       (add-frm fv (var-frm-move var)))))
-                 fv)))))
-        (or (assign-move x)
-            (assign-any))))
+    (module (assign)
+
+      (define (assign x)
+	(or (assign-move x)
+	    (assign-any  x)))
+
+      (define (assign-any x)
+	(let ((frms (var-frm-conf x))
+	      (vars (var-var-conf x)))
+	  (let f ((i 1))
+	    (if (set-member? i frms)
+		(f (fxadd1 i))
+	      (let ((fv (mkfvar i)))
+		(set-var-loc! x fv)
+		(for-each-var vars varvec
+			      (lambda (var)
+				(set-var-frm-conf! var (add-frm fv (var-frm-conf var)))))
+		fv)))))
+
+      (define (assign-move x)
+	(let ((mr (set->list (set-difference (var-frm-move x) (var-frm-conf x)))))
+	  (if (null? mr)
+	      #f
+	    (let ((fv (mkfvar ($car mr))))
+	      (set-var-loc! x fv)
+	      (for-each-var (var-var-conf x) varvec
+			    (lambda (var)
+			      (set-var-frm-conf! var (add-frm fv (var-frm-conf var)))))
+	      (for-each-var (var-var-move x) varvec
+			    (lambda (var)
+			      (set-var-frm-move! var (add-frm fv (var-frm-move var)))))
+	      fv))))
+
+      #| end of module: assign |# )
+
     (define (NFE idx mask x)
       (struct-case x
         ((seq e0 e1)
@@ -2635,7 +2634,7 @@
         (else (error who "invalid NF effect" x))))
     (define (Var x)
       (cond
-        ((var-loc x) =>
+        (($var-loc x) =>
          (lambda (loc)
            (if (fvar? loc)
                loc
@@ -2686,39 +2685,39 @@
              (cond
                ((null? ls) i)
                (else
-                (max-frm (cdr ls)
-                  (max i (fvar-idx (car ls)))))))
+                (max-frm ($cdr ls)
+                  (max i (fvar-idx ($car ls)))))))
            (define (max-ls ls i)
              (cond
                ((null? ls) i)
                (else
-                (max-ls (cdr ls) (max i (car ls))))))
+                (max-ls ($cdr ls) (max i ($car ls))))))
            (define (max-nfv ls i)
              (cond
                ((null? ls) i)
                (else
-                (let ((loc (nfv-loc (car ls))))
+                (let ((loc (nfv-loc ($car ls))))
                   (unless (fvar? loc) (error 'max-nfv "not assigned"))
-                  (max-nfv (cdr ls) (max i (fvar-idx loc)))))))
+                  (max-nfv ($cdr ls) (max i (fvar-idx loc)))))))
            (define (actual-frame-size vars i)
              (define (var-conflict? i vs)
                (ormap (lambda (xi)
-                         (let ((loc (var-loc (vector-ref varvec xi))))
+                         (let ((loc ($var-loc (vector-ref varvec xi))))
                           (and (fvar? loc)
                                (fx= i (fvar-idx loc)))))
                       (set->list vs)))
              (define (frame-size-ok? i vars)
                (or (null? vars)
-                   (let ((x (car vars)))
+                   (let ((x ($car vars)))
                      (and (not (set-member? i (nfv-frm-conf x)))
                           (not (var-conflict? i (nfv-var-conf x)))
-                          (frame-size-ok? (fxadd1 i) (cdr vars))))))
+                          (frame-size-ok? (fxadd1 i) ($cdr vars))))))
               (cond
                 ((frame-size-ok? i vars) i)
                 (else (actual-frame-size vars (fxadd1 i)))))
            (define (assign-frame-vars! vars i)
              (unless (null? vars)
-               (let ((v (car vars)) (fv (mkfvar i)))
+               (let ((v ($car vars)) (fv (mkfvar i)))
                  (set-nfv-loc! v fv)
                  ;(for-each
                  ;  (lambda (j)
@@ -2740,7 +2739,7 @@
                    (nfv-nfv-conf v))
                  (for-each-var (nfv-var-conf v) varvec
                    (lambda (x)
-                     (let ((loc (var-loc x)))
+                     (let ((loc ($var-loc x)))
                        (cond
                          ((fvar? loc)
                           (when (fx= (fvar-idx loc) i)
@@ -2748,7 +2747,7 @@
                          (else
                           (set-var-frm-conf! x
                             (add-frm fv (var-frm-conf x)))))))))
-               (assign-frame-vars! (cdr vars) (fxadd1 i))))
+               (assign-frame-vars! ($cdr vars) (fxadd1 i))))
            (define (make-mask n)
              (let ((v (make-vector (fxsra (fx+ n 7) 3) 0)))
                (define (set-bit idx)
