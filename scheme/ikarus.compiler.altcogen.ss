@@ -2907,130 +2907,198 @@
     (define (%color-program x)
       (define who '%color-program)
       (struct-case x
-	((locals vars body)
-	 (let ((varvec (car vars))
-	       (sp*    (cdr vars)))
-	   (let loop ((sp* (list->set sp*)) (un* (make-empty-set)) (body body))
-	     (let-values (((un* body) (add-unspillables un* body)))
-	       (let ((g (build-graph body)))
-		 (let-values (((spills sp* env) (color-graph sp* un* g)))
+	((locals x.vars x.body)
+	 (let ((varvec ($car x.vars))
+	       (sp*    ($cdr x.vars)))
+	   (let loop ((sp*^ (list->set sp*))
+		      (un*  (make-empty-set))
+		      (body x.body))
+	     (let-values (((un*^ body^) (add-unspillables un* body)))
+	       (let ((G (build-graph body^)))
+		 (let-values (((spills sp*^^ env) (color-graph sp*^ un*^ G)))
 		   (if (null? spills)
-		       (substitute env body)
-		     (let* ((env (do-spill spills varvec))
-			    (body (substitute env body)))
-		       (loop sp* un* body)))))))))))
+		       (substitute env body^)
+		     (let* ((env^   (do-spill spills varvec))
+			    (body^^ (substitute env^ body^)))
+		       (loop sp*^^ un*^ body^^)))))))))))
 
     #| end of module: Program |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (set-for-each f s)
-    (for-each f (set->list s)))
-  ;;;
   (define (build-graph x)
+    ;;
+    ;;A lot of functions are nested here because they need to close upon
+    ;;G.
+    ;;
     (define who 'build-graph)
-    (define g (empty-graph))
+    (define g
+      (empty-graph))
+
     (define (R* ls)
-      (cond
-        ((null? ls) (make-empty-set))
-        (else (set-union (R (car ls)) (R* (cdr ls))))))
+      (if (null? ls)
+	  (make-empty-set)
+	(set-union (R  (car ls))
+		   (R* (cdr ls)))))
+
     (define (R x)
       (struct-case x
-        ((constant) (make-empty-set))
-        ((var) (singleton x))
-        ((disp s0 s1) (set-union (R s0) (R s1)))
-        ((fvar) (make-empty-set))
-        ((code-loc) (make-empty-set))
+        ((constant)
+	 (make-empty-set))
+        ((var)
+	 (singleton x))
+        ((disp s0 s1)
+	 (set-union (R s0) (R s1)))
+        ((fvar)
+	 (make-empty-set))
+        ((code-loc)
+	 (make-empty-set))
         (else
-         (cond
-           ((symbol? x)
-            (if (memq x ALL-REGISTERS)
-                (set-add x (make-empty-set))
-                (make-empty-set)))
-           (else (error who "invalid R" x))))))
-    ;;; build effect
-    (define (E x s)
-      (struct-case x
-        ((asm-instr op d v)
-         (case op
-           ((move load32)
-            (let ((s (set-rem d s)))
-              (set-for-each (lambda (y) (add-edge! g d y)) s)
-              (set-union (R v) s)))
-           ((load8)
-            (let ((s (set-rem d s)))
-              (set-for-each (lambda (y) (add-edge! g d y)) s)
-              (when (var? d)
-                (for-each (lambda (r) (add-edge! g d r)) NON-8BIT-REGISTERS))
-              (when (var? v)
-                (for-each (lambda (r) (add-edge! g v r)) NON-8BIT-REGISTERS))
-              (set-union (R v) s)))
-           ((int-/overflow int+/overflow int*/overflow)
-            (unless (exception-live-set)
-              (error who "uninitialized live set"))
-            (let ((s (set-rem d (set-union s (exception-live-set)))))
-              (set-for-each (lambda (y) (add-edge! g d y)) s)
-              (set-union (set-union (R v) (R d)) s)))
-           ((logand logxor int+ int- int* logor sll sra srl bswap!
-             sll/overflow)
-            (let ((s (set-rem d s)))
-              (set-for-each (lambda (y) (add-edge! g d y)) s)
-              (set-union (set-union (R v) (R d)) s)))
-           ((bset)
-            (when (var? v)
-              (for-each (lambda (r) (add-edge! g v r))
-                NON-8BIT-REGISTERS))
-            (set-union (set-union (R v) (R d)) s))
-           ((cltd)
-            (let ((s (set-rem edx s)))
-              (when (register? edx)
-                (set-for-each (lambda (y) (add-edge! g edx y)) s))
-              (set-union (R eax) s)))
-           ((idiv)
-            (let ((s (set-rem eax (set-rem edx s))))
-              (when (register? eax)
-                (set-for-each
-                  (lambda (y) (add-edge! g eax y) (add-edge! g edx y))
-                  s))
-              (set-union (set-union (R eax) (R edx))
-                     (set-union (R v) s))))
-           ((mset mset32 fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
-                  fl:from-int fl:shuffle fl:store-single
-                  fl:load-single)
-            (set-union (R v) (set-union (R d) s)))
-           (else (error who "invalid effect" x))))
-        ((seq e0 e1) (E e0 (E e1 s)))
-        ((conditional e0 e1 e2)
-         (let ((s1 (E e1 s)) (s2 (E e2 s)))
-           (P e0 s1 s2 (set-union s1 s2))))
-        ((ntcall targ value args mask size)
-         (set-union (R* args) s))
-        ((primcall op arg*)
-         (case op
-           ((nop fl:single->double fl:double->single) s)
-           ((interrupt incr/zero?)
-            (or (exception-live-set) (error who "uninitialized exception")))
-           (else (error who "invalid effect primcall" op))))
-        ((shortcut body handler)
-         (let ((s2 (E handler s)))
-           (parameterize ((exception-live-set s2))
-             (E body s))))
-        (else (error who "invalid effect" (unparse-recordized-code x)))))
+         (if (symbol? x)
+	     (if (memq x ALL-REGISTERS)
+		 (set-add x (make-empty-set))
+	       (make-empty-set))
+	   (error who "invalid R" x)))))
+
+    (module (E)
+
+      (define (E x s)
+	(struct-case x
+	  ((asm-instr op d v)
+	   (E-asm-instr op d v s))
+
+	  ((seq e0 e1)
+	   (E e0 (E e1 s)))
+
+	  ((conditional e0 e1 e2)
+	   (let ((s1 (E e1 s))
+		 (s2 (E e2 s)))
+	     (P e0 s1 s2 (set-union s1 s2))))
+
+	  ((ntcall targ value args mask size)
+	   (set-union (R* args) s))
+
+	  ((primcall op arg*)
+	   (case-symbols op
+	     ((nop fl:single->double fl:double->single)
+	      s)
+	     ((interrupt incr/zero?)
+	      (or (exception-live-set)
+		  (error who "uninitialized exception")))
+	     (else
+	      (error who "invalid effect primcall" op))))
+
+	  ((shortcut body handler)
+	   (let ((s2 (E handler s)))
+	     (parameterize ((exception-live-set s2))
+	       (E body s))))
+
+	  (else
+	   (error who "invalid effect" (unparse-recordized-code x)))))
+
+      (define (E-asm-instr op d v s)
+	(case-symbols op
+	  ((move load32)
+	   (let ((s (set-rem d s)))
+	     (set-for-each (lambda (y)
+			     (add-edge! g d y))
+			   s)
+	     (set-union (R v) s)))
+
+	  ((load8)
+	   (let ((s (set-rem d s)))
+	     (set-for-each (lambda (y)
+			     (add-edge! g d y))
+			   s)
+	     (when (var? d)
+	       (for-each (lambda (r)
+			   (add-edge! g d r))
+		 NON-8BIT-REGISTERS))
+	     (when (var? v)
+	       (for-each (lambda (r)
+			   (add-edge! g v r))
+		 NON-8BIT-REGISTERS))
+	     (set-union (R v) s)))
+
+	  ((int-/overflow int+/overflow int*/overflow)
+	   (unless (exception-live-set)
+	     (error who "uninitialized live set"))
+	   (let ((s (set-rem d (set-union s (exception-live-set)))))
+	     (set-for-each (lambda (y)
+			     (add-edge! g d y))
+			   s)
+	     (set-union (set-union (R v) (R d)) s)))
+
+	  ((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
+	   (let ((s (set-rem d s)))
+	     (set-for-each (lambda (y)
+			     (add-edge! g d y))
+			   s)
+	     (set-union (set-union (R v) (R d)) s)))
+
+	  ((bset)
+	   (when (var? v)
+	     (for-each (lambda (r)
+			 (add-edge! g v r))
+	       NON-8BIT-REGISTERS))
+	   (set-union (set-union (R v) (R d)) s))
+
+	  ((cltd)
+	   (let ((s (set-rem edx s)))
+	     (when (register? edx)
+	       (set-for-each (lambda (y)
+			       (add-edge! g edx y))
+			     s))
+	     (set-union (R eax) s)))
+
+	  ((idiv)
+	   (let ((s (set-rem eax (set-rem edx s))))
+	     (when (register? eax)
+	       (set-for-each (lambda (y)
+			       (add-edge! g eax y)
+			       (add-edge! g edx y))
+			     s))
+	     (set-union (set-union (R eax) (R edx))
+			(set-union (R v) s))))
+
+	  (( ;;some assembly instructions
+	    mset		mset32
+	    fl:load		fl:store
+	    fl:add!		fl:sub!
+	    fl:mul!		fl:div!
+	    fl:from-int		fl:shuffle
+	    fl:store-single	fl:load-single)
+	   (set-union (R v) (set-union (R d) s)))
+
+	  (else
+	   (error who "invalid effect" x))))
+
+      #| end of module: E |# )
+
     (define (P x st sf su)
       (struct-case x
-        ((constant c) (if c st sf))
+        ((constant c)
+	 (if c st sf))
+
         ((seq e0 e1)
          (E e0 (P e1 st sf su)))
+
         ((conditional e0 e1 e2)
-         (let ((s1 (P e1 st sf su)) (s2 (P e2 st sf su)))
+         (let ((s1 (P e1 st sf su))
+	       (s2 (P e2 st sf su)))
            (P e0 s1 s2 (set-union s1 s2))))
+
         ((asm-instr op s0 s1)
          (set-union (set-union (R s0) (R s1)) su))
+
         ((shortcut body handler)
          (let ((s2 (P handler st sf su)))
            (parameterize ((exception-live-set s2))
              (P body st sf su))))
-        (else (error who "invalid pred" (unparse-recordized-code x)))))
+
+        (else
+	 (error who "invalid pred" (unparse-recordized-code x)))))
+
     (define (T x)
       (struct-case x
         ((conditional e0 e1 e2)
@@ -3049,7 +3117,9 @@
       ;(pretty-print (unparse-recordized-code x))
       ;(print-graph g)
       g))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (color-graph sp* un* g)
     (define (find-low-degree ls g)
       (cond
@@ -3107,8 +3177,11 @@
                    (values spills (set-add sp sp*)
                        (cons (cons sp r) env))
                    (values (cons sp spills) sp* env)))))))
-      (else (error 'color-graph "whoaaa"))))
-  ;;;
+      (else
+       (error 'color-graph "whoaaa"))))
+
+;;; --------------------------------------------------------------------
+
   (define (substitute env x)
     (define who 'substitute)
     (define (Var x)
@@ -3184,7 +3257,9 @@
         (else (error who "invalid tail" (unparse-recordized-code x)))))
     ;(print-code x)
     (T x))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (do-spill sp* varvec)
     (import conflict-helpers)
     (define (find/set-loc x)
@@ -3202,7 +3277,9 @@
              (set-var-loc! x fv)
              (cons x fv))))))
     (map find/set-loc sp*))
-  ;;;
+
+;;; --------------------------------------------------------------------
+
   (define (add-unspillables un* x)
     (define who 'add-unspillables)
     (define (mku)
@@ -3479,6 +3556,12 @@
         (else (error who "invalid tail" (unparse-recordized-code x)))))
     (let ((x (T x)))
       (values un* x)))
+
+;;; --------------------------------------------------------------------
+;;; helpers
+
+  (define-inline (set-for-each f s)
+    (for-each f (set->list s)))
 
   #| end of module: chaitin module |# )
 
