@@ -3725,7 +3725,9 @@
 
 
 (module (alt-cogen.flatten-codes)
-
+  ;;This module converts a struct instance  of type CODES into a list of
+  ;;assembly language instructions, all inclusive.
+  ;;
   (define who 'alt-cogen.flatten-codes)
 
   (define exceptions-conc (make-parameter #f))
