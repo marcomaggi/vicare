@@ -3740,9 +3740,9 @@
       (struct-case x
 	((codes code* body)
 	 (cons (cons* 0 (label (gensym))
-		      (let ((ac (list '(nop))))
-			(parameterize ((exceptions-conc ac))
-			  (T body ac))))
+		      (let ((accum (list '(nop))))
+			(parameterize ((exceptions-conc accum))
+			  (T body accum))))
 	       (map Clambda code*)))))
 
     (define (Clambda x)
@@ -3751,15 +3751,15 @@
 	 (cons* (length free*)
 		`(name ,name)
 		(label L)
-		(let ((ac (list '(nop))))
-		  (parameterize ((exceptions-conc ac))
+		(let ((accum (list '(nop))))
+		  (parameterize ((exceptions-conc accum))
 		    (let recur ((case* case*))
 		      (if (null? case*)
-			  (cons `(jmp (label ,(sl-invalid-args-label))) ac)
+			  (cons `(jmp (label ,(sl-invalid-args-label))) accum)
 			(ClambdaCase (car case*)
 				     (recur (cdr case*)))))))))))
 
-    (define (ClambdaCase x ac)
+    (define (ClambdaCase x accum)
       (struct-case x
 	((clambda-case info body)
 	 (struct-case info
@@ -3777,147 +3777,136 @@
 			    `(jg ,lothers))
 			   (else
 			    `(jl ,lothers)))
-		     (properize args proper
-				(cons (label L)
-				      (T body (cons lothers ac)))))))))))
+		     (%properize args proper
+				 (cons (label L)
+				       (T body (cons lothers accum)))))))))))
 
-    (define (properize args proper ac)
+    (define (%properize args proper accum)
       (if proper
-	  ac
-	(handle-vararg (length (cdr args)) ac)))
+	  accum
+	(%handle-vararg (length (cdr args)) accum)))
+
+    (define (%handle-vararg fml-count accum)
+      (define CONTINUE_LABEL	(unique-label))
+      (define DONE_LABEL	(unique-label))
+      (define CONS_LABEL	(unique-label))
+      (define LOOP_HEAD		(unique-label))
+      (define L_CALL		(unique-label))
+      (cons* (cmpl (int (argc-convention (fxsub1 fml-count))) eax)
+	     (jl CONS_LABEL)
+	     (movl (int nil) ebx)
+	     (jmp DONE_LABEL)
+	     CONS_LABEL
+	     (movl (mem pcb-allocation-redline pcr) ebx)
+	     (addl eax ebx)
+	     (addl eax ebx)
+	     (cmpl ebx apr)
+	     (jle LOOP_HEAD)
+		; overflow
+	     (addl eax esp) ; advance esp to cover args
+	     (pushl cpr)    ; push current cp
+	     (pushl eax)    ; push argc
+	     (negl eax)	    ; make argc positive
+	     (addl (int (fx* 4 wordsize)) eax) ; add 4 words to adjust frame size
+	     (pushl eax)		       ; push frame size
+	     (addl eax eax) ; double the number of args
+	     (movl eax (mem (fx* -2 wordsize) fpr)) ; pass it as first arg
+	     (movl (int (argc-convention 1)) eax)   ; setup argc
+	     (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
+	     (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+		;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
+	     (compile-call-frame 0 '#() '(int 0) (indirect-cpr-call))
+	     (popl eax)	    ; pop framesize and drop it
+	     (popl eax)	    ; reload argc
+	     (popl cpr)	    ; reload cp
+	     (subl eax fpr) ; readjust fp
+	     LOOP_HEAD
+	     (movl (int nil) ebx)
+	     CONTINUE_LABEL
+	     (movl ebx (mem disp-cdr apr))
+	     (movl (mem fpr eax) ebx)
+	     (movl ebx (mem disp-car apr))
+	     (movl apr ebx)
+	     (addl (int pair-tag) ebx)
+	     (addl (int pair-size) apr)
+	     (addl (int (fxsll 1 fx-shift)) eax)
+	     (cmpl (int (fx- 0 (fxsll fml-count fx-shift))) eax)
+	     (jle CONTINUE_LABEL)
+	     DONE_LABEL
+	     (movl ebx (mem (fx- 0 (fxsll fml-count fx-shift)) fpr))
+	     accum))
 
     #| end of module: Program |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (FVar i)
-    `(disp ,(* i (- wordsize)) ,fpr))
+  (define (T x accum)
+    (struct-case x
+      ((seq e0 e1)
+       (E e0 (T e1 accum)))
 
-  (module (R R/l D)
+      ((conditional e0 e1 e2)
+       (let ((L (unique-label)))
+         (P e0 #f L (T e1 (cons L (T e2 accum))))))
 
-    (define (R x)
-      (struct-case x
-	((constant c)
-	 (C c))
-	((fvar i)
-	 (FVar i))
-	((disp s0 s1)
-	 (let ((s0 (D s0))
-	       (s1 (D s1)))
-	   `(disp ,s0 ,s1)))
-	(else
-	 (if (symbol? x)
-	     x
-	   (error who "invalid R" x)))))
+      ((primcall op rands)
+       (case-symbols op
+	 ((return)
+	  (cons '(ret) accum))
 
-    (module (R/l)
+	 ((indirect-jump)
+	  (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,CP-REGISTER))
+		accum))
 
-      (define (R/l x)
-	(struct-case x
-	  ((constant c)
-	   (C c))
-	  ((fvar i)
-	   (FVar i))
-	  ((disp s0 s1)
-	   (let ((s0 (D s0))
-		 (s1 (D s1)))
-	     `(disp ,s0 ,s1)))
-	  (else
-	   (if (symbol? x)
-	       (reg/l x)
-	     (error who "invalid R/l" x)))))
+	 ((direct-jump)
+	  (cons `(jmp (label ,(code-loc-label (car rands)))) accum))
 
-      (define (reg/l x)
-	(cond ((assq x '((%eax %al) (%ebx %bl) (%ecx %cl) (%edx %dl)
-			 (%r8 %r8l) (%r9 %r9l) (%r10 %r10l) (%r11 %r11l)
-			 (%r12 %r12l) (%r13 %r13l) (%r14 %r14l) (%r15 %r15l)))
-	       => cadr)
-	      (else
-	       (error who "invalid reg/l" x))))
+	 (else
+	  (error who "invalid tail" x))))
 
-      #| end of module: R/l |# )
+      ((shortcut body handler)
+       (let ((L (unique-interrupt-label)))
+         (let* ((hand (cons L (T handler '())))
+		(tc   (exceptions-conc)))
+	   (set-cdr! tc (append hand (cdr tc))))
+         (parameterize ((exception-label L))
+           (T body accum))))
 
-    (define (D x)
-      (struct-case x
-	((constant c)
-	 (C c))
-	(else
-	 (if (symbol? x)
-	     x
-	   (error who "invalid D" x)))))
-
-    (define (C x)
-      (struct-case x
-	((code-loc label)
-	 (label-address label))
-	((foreign-label L)
-	 `(foreign-label ,L))
-	((closure label free*)
-	 (unless (null? free*)
-	   (error who "nonempty closure"))
-	 `(obj ,x))
-	((object o)
-	 `(obj ,o))
-	(else
-	 (if (integer? x)
-	     x
-	   (error who "invalid constant C" x)))))
-
-    #| end of module |# )
-
-  ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-  ;;
-  ;; (define (BYTE x)
-  ;;   (struct-case x
-  ;;     ((constant x)
-  ;;      (unless (and (integer? x)
-  ;; 		    (fx<= x +255)
-  ;; 		    (fx>= x -128))
-  ;;        (error who "invalid byte" x))
-  ;;      x)
-  ;;     (else
-  ;;      (error who "invalid byte" x))))
-
-  ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-  ;;
-  ;; (define (reg/h x)
-  ;;   (cond ((assq x '((%eax %ah) (%ebx %bh) (%ecx %ch) (%edx %dh)))
-  ;; 	   => cadr)
-  ;; 	  (else
-  ;; 	   (error who "invalid reg/h" x))))
+      (else
+       (error who "invalid tail" x))))
 
 ;;; --------------------------------------------------------------------
 
   (module (E)
 
-    (define (E x ac)
+    (define (E x accum)
       ;;flatten effect
       (struct-case x
 	((seq e0 e1)
-	 (E e0 (E e1 ac)))
+	 (E e0 (E e1 accum)))
 
 	((conditional e0 e1 e2)
 	 (cond ((interrupt? e1)
 		(let ((L (or (exception-label)
 			     (error who "no exception label"))))
-		  (P e0 L #f (E e2 ac))))
+		  (P e0 L #f (E e2 accum))))
 	       ((interrupt? e2)
 		(let ((L (or (exception-label)
 			     (error who "no exception label"))))
-		  (P e0 #f L (E e1 ac))))
+		  (P e0 #f L (E e1 accum))))
 	       (else
 		(let ((lf (unique-label)) (le (unique-label)))
 		  (P e0 #f lf (E e1 (cons* `(jmp ,le) lf
-					   (E e2 (cons le ac)))))))))
+					   (E e2 (cons le accum)))))))))
 
 	((ntcall target value args mask size)
-	 (E-ntcall ac target value args mask size))
+	 (E-ntcall target value args mask size accum))
 
 	((asm-instr op d s)
-	 (E-asm-instr ac op d s x))
+	 (E-asm-instr op d s x accum))
 
 	((primcall op rands)
-	 (E-primcall ac op rands x))
+	 (E-primcall op rands x accum))
 
 	((shortcut body handler)
 	 (let ((L (unique-interrupt-label)) (L2 (unique-label)))
@@ -3925,12 +3914,12 @@
 	     (let ((tc (exceptions-conc)))
 	       (set-cdr! tc (append hand (cdr tc)))))
 	   (parameterize ((exception-label L))
-	     (E body (cons L2 ac)))))
+	     (E body (cons L2 accum)))))
 
 	(else
 	 (error who "invalid effect" (unparse-recordized-code x)))))
 
-    (define (E-ntcall ac target value args mask size)
+    (define (E-ntcall target value args mask size accum)
       (let ((LCALL (unique-label)))
 	(define (rp-label value)
 	  (if value
@@ -3939,163 +3928,163 @@
 	(cond ((string? target) ;; foreign call
 	       (cons* `(movl (foreign-label "ik_foreign_call") %ebx)
 		      (compile-call-frame size mask (rp-label value) `(call %ebx))
-		      ac))
+		      accum))
 	      (target ;; known call
 	       (cons* (compile-call-frame size mask (rp-label value) `(call (label ,target)))
-		      ac))
+		      accum))
 	      (else
 	       (cons* (compile-call-frame size mask (rp-label value)
 					  `(call (disp ,(fx- disp-closure-code closure-tag)
 						       ,CP-REGISTER)))
-		      ac)))))
+		      accum)))))
 
-    (define (E-asm-instr ac op d s x)
+    (define (E-asm-instr op d s x accum)
       (case-symbols op
 	((logand)
-	 (cons `(andl ,(R s) ,(R d)) ac))
+	 (cons `(andl ,(R s) ,(R d)) accum))
 
 	((int+)
-	 (cons `(addl ,(R s) ,(R d)) ac))
+	 (cons `(addl ,(R s) ,(R d)) accum))
 
 	((int*)
-	 (cons `(imull ,(R s) ,(R d)) ac))
+	 (cons `(imull ,(R s) ,(R d)) accum))
 
 	((int-)
-	 (cons `(subl ,(R s) ,(R d)) ac))
+	 (cons `(subl ,(R s) ,(R d)) accum))
 
 	((logor)
-	 (cons `(orl ,(R s) ,(R d)) ac))
+	 (cons `(orl ,(R s) ,(R d)) accum))
 
 	((logxor)
-	 (cons `(xorl ,(R s) ,(R d)) ac))
+	 (cons `(xorl ,(R s) ,(R d)) accum))
 
 	((mset)
-	 (cons `(movl ,(R s) ,(R d)) ac))
+	 (cons `(movl ,(R s) ,(R d)) accum))
 
 	((move)
 	 (if (eq? d s)
-	     ac
-	   (cons `(movl ,(R s) ,(R d)) ac)))
+	     accum
+	   (cons `(movl ,(R s) ,(R d)) accum)))
 
 	((load8)
 	 (if (eq? d s)
-	     ac
-	   (cons `(movb ,(R/l s) ,(R/l d)) ac)))
+	     accum
+	   (cons `(movb ,(R/l s) ,(R/l d)) accum)))
 
 	((bset)
-	 (cons `(movb ,(R/l s) ,(R d)) ac))
+	 (cons `(movb ,(R/l s) ,(R d)) accum))
 
 	((sll)
-	 (cons `(sall ,(R/cl s) ,(R d)) ac))
+	 (cons `(sall ,(R/cl s) ,(R d)) accum))
 
 	((sra)
-	 (cons `(sarl ,(R/cl s) ,(R d)) ac))
+	 (cons `(sarl ,(R/cl s) ,(R d)) accum))
 
 	((srl)
-	 (cons `(shrl ,(R/cl s) ,(R d)) ac))
+	 (cons `(shrl ,(R/cl s) ,(R d)) accum))
 
 	((idiv)
-	 (cons `(idivl ,(R s)) ac))
+	 (cons `(idivl ,(R s)) accum))
 
 	((cltd)
-	 (cons `(cltd) ac))
+	 (cons `(cltd) accum))
 
 	((bswap!)
 	 (let ((s (R s))
 	       (d (R d)))
 	   (unless (eq? s d)
-	     (error who "invalid instr" x))
-	   (cons `(bswap ,s) ac)))
+	     (error who "invalid instr" (unparse-recordized-code x)))
+	   (cons `(bswap ,s) accum)))
 
 	((mset32)
-	 (cons `(mov32 ,(R s) ,(R d)) ac))
+	 (cons `(mov32 ,(R s) ,(R d)) accum))
 
 	((load32)
-	 (cons `(mov32 ,(R s) ,(R d)) ac))
+	 (cons `(mov32 ,(R s) ,(R d)) accum))
 
 	((int-/overflow)
 	 (let ((L (or (exception-label)
-		      (error who "no exception label"))))
+		      (error who "no exception label" (unparse-recordized-code x)))))
 	   (cons* `(subl ,(R s) ,(R d))
 		  `(jo ,L)
-		  ac)))
+		  accum)))
 
 	((sll/overflow)
 	 (let ((L (or (exception-label)
-		      (error who "no exception label"))))
+		      (error who "no exception label" (unparse-recordized-code x)))))
 	   (cons* `(sall ,(R/cl s) ,(R d))
 		  `(jo ,L)
-		  ac)))
+		  accum)))
 
 	((int*/overflow)
 	 (let ((L (or (exception-label)
-		      (error who "no exception label"))))
+		      (error who "no exception label" (unparse-recordized-code x)))))
 	   (cons* `(imull ,(R s) ,(R d))
 		  `(jo ,L)
-		  ac)))
+		  accum)))
 
 	((int+/overflow)
 	 (let ((L (or (exception-label)
-		      (error who "no exception label"))))
+		      (error who "no exception label" (unparse-recordized-code x)))))
 	   (cons* `(addl ,(R s) ,(R d))
 		  `(jo ,L)
-		  ac)))
+		  accum)))
 
 	((fl:store)
-	 (cons `(movsd xmm0 ,(R (make-disp s d))) ac))
+	 (cons `(movsd xmm0 ,(R (make-disp s d))) accum))
 
 	((fl:store-single)
-	 (cons `(movss xmm0 ,(R (make-disp s d))) ac))
+	 (cons `(movss xmm0 ,(R (make-disp s d))) accum))
 
 	((fl:load)
-	 (cons `(movsd ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(movsd ,(R (make-disp s d)) xmm0) accum))
 
 	((fl:load-single)
-	 (cons `(movss ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(movss ,(R (make-disp s d)) xmm0) accum))
 
 	((fl:from-int)
-	 (cons `(cvtsi2sd ,(R s) xmm0) ac))
+	 (cons `(cvtsi2sd ,(R s) xmm0) accum))
 
 	((fl:shuffle)
-	 (cons `(pshufb ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(pshufb ,(R (make-disp s d)) xmm0) accum))
 
 	((fl:add!)
-	 (cons `(addsd ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(addsd ,(R (make-disp s d)) xmm0) accum))
 
 	((fl:sub!)
-	 (cons `(subsd ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(subsd ,(R (make-disp s d)) xmm0) accum))
 
 	((fl:mul!)
-	 (cons `(mulsd ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(mulsd ,(R (make-disp s d)) xmm0) accum))
 
 	((fl:div!)
-	 (cons `(divsd ,(R (make-disp s d)) xmm0) ac))
+	 (cons `(divsd ,(R (make-disp s d)) xmm0) accum))
 
 	(else
-	 (error who "invalid instr" x))))
+	 (error who "invalid instr" (unparse-recordized-code x)))))
 
-    (define (E-primcall ac op rands x)
+    (define (E-primcall op rands x accum)
       (case-symbols op
 	((nop)
-	 ac)
+	 accum)
 
 	((interrupt)
 	 (let ((l (or (exception-label)
-		      (error who "no exception label"))))
-	   (cons `(jmp ,l) ac)))
+		      (error who "no exception label" (unparse-recordized-code x)))))
+	   (cons `(jmp ,l) accum)))
 
 	((incr/zero?)
 	 (let ((l (or (exception-label)
-		      (error who "no exception label"))))
+		      (error who "no exception label" (unparse-recordized-code x)))))
 	   (cons* `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
 		  `(je ,l)
-		  ac)))
+		  accum)))
 
 	((fl:double->single)
-	 (cons '(cvtsd2ss xmm0 xmm0) ac))
+	 (cons '(cvtsd2ss xmm0 xmm0) accum))
 
 	((fl:single->double)
-	 (cons '(cvtss2sd xmm0 xmm0) ac))
+	 (cons '(cvtss2sd xmm0 xmm0) accum))
 
 	(else
 	 (error who "invalid effect" (unparse-recordized-code x)))))
@@ -4111,14 +4100,14 @@
       (struct-case x
 	((constant i)
 	 (unless (fixnum? i)
-	   (error who "invalid R/cl" x))
+	   (error who "invalid R/cl" (unparse-recordized-code x)))
 	 (fxlogand i (- (* wordsize 8) 1)))
 	(else
 	 (if (eq? x ecx)
 	     '%cl
-	   (error who "invalid R/cl" x)))))
+	   (error who "invalid R/cl" (unparse-recordized-code x))))))
 
-  #| end of module: E |# )
+    #| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -4271,91 +4260,105 @@
 	(else
 	 #f)))
 
-  #| end of module: P |# )
+    #| end of module: P |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (T x ac)
-    (struct-case x
-      ((seq e0 e1)
-       (E e0 (T e1 ac)))
+  (define (FVar i)
+    `(disp ,(* i (- wordsize)) ,fpr))
 
-      ((conditional e0 e1 e2)
-       (let ((L (unique-label)))
-         (P e0 #f L (T e1 (cons L (T e2 ac))))))
+  (module (R R/l D)
 
-      ((primcall op rands)
-       (case op
-	 ((return) (cons '(ret) ac))
-	 ((indirect-jump)
-	  (cons `(jmp (disp ,(fx- disp-closure-code closure-tag) ,CP-REGISTER))
-		ac))
-	 ((direct-jump)
-	  (cons `(jmp (label ,(code-loc-label (car rands)))) ac))
-	 (else (error who "invalid tail" x))))
+    (define (R x)
+      (struct-case x
+	((constant c)
+	 (C c))
+	((fvar i)
+	 (FVar i))
+	((disp s0 s1)
+	 (let ((s0 (D s0))
+	       (s1 (D s1)))
+	   `(disp ,s0 ,s1)))
+	(else
+	 (if (symbol? x)
+	     x
+	   (error who "invalid R" x)))))
 
-      ((shortcut body handler)
-       (let ((L (unique-interrupt-label)))
-         (let ((hand (cons L (T handler '()))))
-           (let ((tc (exceptions-conc)))
-             (set-cdr! tc (append hand (cdr tc)))))
-         (parameterize ((exception-label L))
-           (T body ac))))
+    (module (R/l)
 
-      (else
-       (error who "invalid tail" x))))
+      (define (R/l x)
+	(struct-case x
+	  ((constant c)
+	   (C c))
+	  ((fvar i)
+	   (FVar i))
+	  ((disp s0 s1)
+	   (let ((s0 (D s0))
+		 (s1 (D s1)))
+	     `(disp ,s0 ,s1)))
+	  (else
+	   (if (symbol? x)
+	       (reg/l x)
+	     (error who "invalid R/l" x)))))
 
-;;; --------------------------------------------------------------------
+      (define (reg/l x)
+	(cond ((assq x '((%eax %al) (%ebx %bl) (%ecx %cl) (%edx %dl)
+			 (%r8 %r8l) (%r9 %r9l) (%r10 %r10l) (%r11 %r11l)
+			 (%r12 %r12l) (%r13 %r13l) (%r14 %r14l) (%r15 %r15l)))
+	       => cadr)
+	      (else
+	       (error who "invalid reg/l" x))))
 
-  (define (handle-vararg fml-count ac)
-    (define CONTINUE_LABEL (unique-label))
-    (define DONE_LABEL (unique-label))
-    (define CONS_LABEL (unique-label))
-    (define LOOP_HEAD (unique-label))
-    (define L_CALL (unique-label))
-    (cons* (cmpl (int (argc-convention (fxsub1 fml-count))) eax)
-           (jl CONS_LABEL)
-           (movl (int nil) ebx)
-           (jmp DONE_LABEL)
-           CONS_LABEL
-           (movl (mem pcb-allocation-redline pcr) ebx)
-           (addl eax ebx)
-           (addl eax ebx)
-           (cmpl ebx apr)
-           (jle LOOP_HEAD)
-		; overflow
-           (addl eax esp)		     ; advance esp to cover args
-           (pushl cpr)			     ; push current cp
-           (pushl eax)			     ; push argc
-           (negl eax)			     ; make argc positive
-           (addl (int (fx* 4 wordsize)) eax) ; add 4 words to adjust frame size
-           (pushl eax)			     ; push frame size
-           (addl eax eax)		     ; double the number of args
-           (movl eax (mem (fx* -2 wordsize) fpr)) ; pass it as first arg
-           (movl (int (argc-convention 1)) eax)	  ; setup argc
-           (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
-           (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
-		;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
-           (compile-call-frame 0 '#() '(int 0) (indirect-cpr-call))
-           (popl eax)     ; pop framesize and drop it
-           (popl eax)     ; reload argc
-           (popl cpr)     ; reload cp
-           (subl eax fpr) ; readjust fp
-           LOOP_HEAD
-           (movl (int nil) ebx)
-           CONTINUE_LABEL
-           (movl ebx (mem disp-cdr apr))
-           (movl (mem fpr eax) ebx)
-           (movl ebx (mem disp-car apr))
-           (movl apr ebx)
-           (addl (int pair-tag) ebx)
-           (addl (int pair-size) apr)
-           (addl (int (fxsll 1 fx-shift)) eax)
-           (cmpl (int (fx- 0 (fxsll fml-count fx-shift))) eax)
-           (jle CONTINUE_LABEL)
-           DONE_LABEL
-           (movl ebx (mem (fx- 0 (fxsll fml-count fx-shift)) fpr))
-           ac))
+      #| end of module: R/l |# )
+
+    (define (D x)
+      (struct-case x
+	((constant c)
+	 (C c))
+	(else
+	 (if (symbol? x)
+	     x
+	   (error who "invalid D" x)))))
+
+    (define (C x)
+      (struct-case x
+	((code-loc label)
+	 (label-address label))
+	((foreign-label L)
+	 `(foreign-label ,L))
+	((closure label free*)
+	 (unless (null? free*)
+	   (error who "nonempty closure"))
+	 `(obj ,x))
+	((object o)
+	 `(obj ,o))
+	(else
+	 (if (integer? x)
+	     x
+	   (error who "invalid constant C" x)))))
+
+    #| end of module |# )
+
+  ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
+  ;;
+  ;; (define (BYTE x)
+  ;;   (struct-case x
+  ;;     ((constant x)
+  ;;      (unless (and (integer? x)
+  ;; 		    (fx<= x +255)
+  ;; 		    (fx>= x -128))
+  ;;        (error who "invalid byte" x))
+  ;;      x)
+  ;;     (else
+  ;;      (error who "invalid byte" x))))
+
+  ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
+  ;;
+  ;; (define (reg/h x)
+  ;;   (cond ((assq x '((%eax %ah) (%ebx %bh) (%ecx %ch) (%edx %dh)))
+  ;; 	   => cadr)
+  ;; 	  (else
+  ;; 	   (error who "invalid reg/h" x))))
 
   #| end of module: alt-cogen.flatten-codes |# )
 
