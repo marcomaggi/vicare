@@ -3531,98 +3531,115 @@
 	    (else
 	     (error who "invalid effect op" op))))
 
-	(define (%fix-address x k)
-	  (cond
-	   ((disp? x)
-	    (let ((s0 (disp-s0 x)) (s1 (disp-s1 x)))
-	      (cond
-	       ((not (small-operand? s0))
-		(let ((u (mku)))
-		  (make-seq
-		   (E (make-asm-instr 'move u s0))
-		   (%fix-address (make-disp u s1) k))))
-	       ((not (small-operand? s1))
-		(let ((u (mku)))
-		  (make-seq
-		   (E (make-asm-instr 'move u s1))
-		   (%fix-address (make-disp s0 u) k))))
-	       (else (k x)))))
-	   (else (k x))))
+	(define (%fix-address x kont)
+	  ;;Recursive function.
+	  ;;
+	  (if (disp? x)
+	      (let ((s0 (disp-s0 x))
+		    (s1 (disp-s1 x)))
+		(cond ((not (small-operand? s0))
+		       (let ((u (mku)))
+			 (make-seq (E (make-asm-instr 'move u s0))
+				   (%fix-address (make-disp u s1) kont))))
+		      ((not (small-operand? s1))
+		       (let ((u (mku)))
+			 (make-seq (E (make-asm-instr 'move u s1))
+				   (%fix-address (make-disp s0 u) kont))))
+		      (else
+		       (kont x))))
+	    (kont x)))
 
 	#| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
-      (define (check-disp-arg x k)
+      (define (check-disp-arg x kont)
 	(if (small-operand? x)
-	    (k x)
+	    (kont x)
 	  (let ((u (mku)))
 	    (make-seq (E (make-asm-instr 'move u x))
-		      (k u)))))
+		      (kont u)))))
 
-      (define (check-disp x k)
+      (define (check-disp x kont)
 	(struct-case x
 	  ((disp a b)
-	   (check-disp-arg a
-			   (lambda (a)
-			     (check-disp-arg b
-					     (lambda (b)
-					       (k (make-disp a b)))))))
-	  (else (k x))))
+	   (check-disp-arg a (lambda (a)
+			       (check-disp-arg b (lambda (b)
+						   (kont (make-disp a b)))))))
+	  (else
+	   (kont x))))
+
+;;; --------------------------------------------------------------------
 
       (define (P x)
 	(struct-case x
-	  ((constant) x)
+	  ((constant)
+	   x)
+
 	  ((conditional e0 e1 e2)
 	   (make-conditional (P e0) (P e1) (P e2)))
-	  ((seq e0 e1) (make-seq (E e0) (P e1)))
+
+	  ((seq e0 e1)
+	   (make-seq (E e0) (P e1)))
+
 	  ((asm-instr op a b)
-	   (cond
-	    ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
-	     (if (mem? a)
-		 (let ((u (mku)))
-		   (make-seq
-                    (E (make-asm-instr 'move u a))
-                    (make-asm-instr op u b)))
-	       x))
-	    ((and (not (mem? a)) (not (small-operand? a)))
-	     (let ((u (mku)))
-	       (make-seq
-                (E (make-asm-instr 'move u a))
-                (P (make-asm-instr op u b)))))
-	    ((and (not (mem? b)) (not (small-operand? b)))
-	     (let ((u (mku)))
-	       (make-seq
-                (E (make-asm-instr 'move u b))
-                (P (make-asm-instr op a u)))))
-	    ((and (mem? a) (mem? b))
-	     (let ((u (mku)))
-	       (make-seq
-                (E (make-asm-instr 'move u b))
-                (P (make-asm-instr op a u)))))
-	    (else
-	     (check-disp a
-			 (lambda (a)
-			   (check-disp b
-				       (lambda (b)
-					 (make-asm-instr op a b))))))))
+	   (cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
+		  (if (mem? a)
+		      (let ((u (mku)))
+			(make-seq (E (make-asm-instr 'move u a))
+				  (make-asm-instr op u b)))
+		    x))
+		 ((and (not (mem?           a))
+		       (not (small-operand? a)))
+		  (let ((u (mku)))
+		    (make-seq (E (make-asm-instr 'move u a))
+			      (P (make-asm-instr op u b)))))
+		 ((and (not (mem?           b))
+		       (not (small-operand? b)))
+		  (let ((u (mku)))
+		    (make-seq (E (make-asm-instr 'move u b))
+			      (P (make-asm-instr op a u)))))
+		 ((and (mem? a)
+		       (mem? b))
+		  (let ((u (mku)))
+		    (make-seq (E (make-asm-instr 'move u b))
+			      (P (make-asm-instr op a u)))))
+		 (else
+		  (check-disp a (lambda (a)
+				  (check-disp b (lambda (b)
+						  (make-asm-instr op a b))))))))
+
 	  ((shortcut body handler)
+	   ;;Do BODY first, then HANDLER.
 	   (let ((body (P body)))
 	     (make-shortcut body (P handler))))
-	  (else (error who "invalid pred" (unparse-recordized-code x)))))
+
+	  (else
+	   (error who "invalid pred" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
 
       (define (T x)
 	(struct-case x
-	  ((primcall op rands) x)
+	  ((primcall op rands)
+	   x)
+
 	  ((conditional e0 e1 e2)
 	   (make-conditional (P e0) (T e1) (T e2)))
-	  ((seq e0 e1) (make-seq (E e0) (T e1)))
+
+	  ((seq e0 e1)
+	   (make-seq (E e0) (T e1)))
+
 	  ((shortcut body handler)
 	   (make-shortcut (T body) (T handler)))
-	  (else (error who "invalid tail" (unparse-recordized-code x)))))
+
+	  (else
+	   (error who "invalid tail" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
 
       (let ((x (T x)))
-	(values un* x)))
+	(values un* x))) ;;end of function ADD-UNSPILLABLES
 
     (define (long-imm? x)
       ;;Return true if X represents a constant signed integer too big to
