@@ -304,7 +304,8 @@
 	   (make-funcall rator rand*)))
 
 	((mvcall p c)
-	 (let ((p (E p ref comp)) (c (E c ref comp)))
+	 (let ((p (E p ref comp))
+	       (c (E c ref comp)))
 	   (comp)
 	   (make-mvcall p c)))
 
@@ -332,88 +333,103 @@
       (struct-case x
 	((clambda-case info body)
 	 (let ((h (make-eq-hashtable)))
-	   (let ((body (E body (%extend-hash (case-info-args info) h ref) void)))
-	     (make-clambda-case info body))))))
+	   (let ((body^ (E body
+			   (%extend-hash (case-info-args info) h ref)
+			   void)))
+	     (make-clambda-case info body^))))))
 
     #| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%extend-hash lhs* h ref)
+  (define (%extend-hash lhs* table ref)
     (for-each (lambda (lhs)
-		(hashtable-set! h lhs #t))
+		(hashtable-set! table lhs #t))
       lhs*)
     (lambda (x)
-      (unless (hashtable-ref h x #f)
-	(hashtable-set! h x #t)
+      (unless (hashtable-ref table x #f)
+	(hashtable-set! table x #t)
 	(ref x))))
 
-  (define (do-rhs* i lhs* rhs* ref comp vref vcomp)
-    (if (null? rhs*)
-	'()
-      (let ((h    (make-eq-hashtable))
-	    (rest (do-rhs* (fxadd1 i) lhs* (cdr rhs*) ref comp vref vcomp)))
-	(define (ref x)
-	  (unless (hashtable-ref h x #f)
-	    (hashtable-set! h x #t)
-	    (ref x)
-	    (when (memq x lhs*)
-	      (vector-set! vref i #t))))
-	(define (comp^)
-	  (vector-set! vcomp i #t)
-	  (comp))
-	(cons (E (car rhs*) ref comp^)
-	      rest))))
+  (module (%do-recbind)
 
-  (define (partition-rhs* i lhs* rhs* vref vcomp)
-    (if (null? lhs*)
-	(values '() '() '() '() '() '())
-      (let-values
-	  (((slhs* srhs* llhs* lrhs* clhs* crhs*)
-	    (partition-rhs* (fxadd1 i) (cdr lhs*) (cdr rhs*) vref vcomp))
-	   ((lhs rhs)
-	    (values (car lhs*) (car rhs*))))
-	(cond ((prelex-source-assigned? lhs)
-	       (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
-	      ((clambda? rhs)
-	       (values slhs* srhs* (cons lhs llhs*) (cons rhs lrhs*) clhs* crhs*))
-	      ((or (vector-ref vref  i)
-		   (vector-ref vcomp i))
-	       (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
-	      (else
-	       (values (cons lhs slhs*) (cons rhs srhs*) llhs* lrhs* clhs* crhs*))
-	      ))))
+    (define (%do-recbind lhs* rhs* body ref comp letrec?)
+      (let ((h     (make-eq-hashtable))
+	    (vref  (make-vector (length lhs*) #f))
+	    (vcomp (make-vector (length lhs*) #f)))
+	(let* ((ref  (%extend-hash lhs* h ref))
+	       (body (E body ref comp)))
+	  (let ((rhs* (%do-rhs* 0 lhs* rhs* ref comp vref vcomp)))
+	    (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
+			  (%partition-rhs* 0 lhs* rhs* vref vcomp)))
+	      ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
+	      ;;30, 2012)
+	      ;;
+	      ;; (let ((made-complex (filter (lambda (x)
+	      ;; 			      (not (var-assigned x)))
+	      ;; 		      clhs*)))
+	      ;;   (unless (null? made-complex)
+	      ;;     (set! complex-count (+ complex-count (length made-complex)))
+	      ;;     (printf "COMPLEX (~s) = ~s\n" complex-count
+	      ;; 	    (map unparse-recordized-code made-complex))))
+	      (let ((void* (map (lambda (x)
+				  (make-constant (void)))
+			     clhs*)))
+		(make-bind slhs* srhs*
+			   (make-bind clhs* void*
+				      (make-fix llhs* lrhs*
+						(if letrec?
+						    (let ((t* (map unique-prelex clhs*)))
+						      (make-bind t* crhs*
+								 (build-assign* clhs* t* body)))
+						  (build-assign* clhs* crhs* body)))))))))))
 
-  (define (%do-recbind lhs* rhs* body ref comp letrec?)
-    (let ((h     (make-eq-hashtable))
-	  (vref  (make-vector (length lhs*) #f))
-	  (vcomp (make-vector (length lhs*) #f)))
-      (let* ((ref  (%extend-hash lhs* h ref))
-	     (body (E body ref comp)))
-	(let ((rhs* (do-rhs* 0 lhs* rhs* ref comp vref vcomp)))
-	  (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
-			(partition-rhs* 0 lhs* rhs* vref vcomp)))
-	    ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
-	    ;;30, 2012)
-	    ;;
-	    ;; (let ((made-complex (filter (lambda (x)
-	    ;; 			      (not (var-assigned x)))
-	    ;; 		      clhs*)))
-	    ;;   (unless (null? made-complex)
-	    ;;     (set! complex-count (+ complex-count (length made-complex)))
-	    ;;     (printf "COMPLEX (~s) = ~s\n" complex-count
-	    ;; 	    (map unparse-recordized-code made-complex))))
-	    (let ((void* (map (lambda (x)
-				(make-constant (void)))
-			   clhs*)))
-	      (make-bind slhs* srhs*
-			 (make-bind clhs* void*
-				    (make-fix llhs* lrhs*
-					      (if letrec?
-						  (let ((t* (map unique-prelex clhs*)))
-						    (make-bind t* crhs*
-							       (build-assign* clhs* t* body)))
-						(build-assign* clhs* crhs* body)))))))))))
+    (define (%do-rhs* i lhs* rhs* ref comp vref vcomp)
+      (if (null? rhs*)
+	  '()
+	(let ((h    (make-eq-hashtable))
+	      (rest (%do-rhs* (fxadd1 i) lhs* (cdr rhs*) ref comp vref vcomp)))
+	  (define (ref^ x)
+	    (unless (hashtable-ref h x #f)
+	      (hashtable-set! h x #t)
+	      (ref x)
+	      (when (memq x lhs*)
+		(vector-set! vref i #t))))
+	  (define (comp^)
+	    (vector-set! vcomp i #t)
+	    (comp))
+	  (cons (E (car rhs*) ref^ comp^)
+		rest))))
+
+    (define (%partition-rhs* i lhs* rhs* vref vcomp)
+      ;;
+      ;;Return 6 values:
+      ;;
+      ;;SLHS*, SRHS*
+      ;;
+      ;;LLHS*, LRHS*	Lists of LHS and RHS whose RHS is a CLAMBDA.
+      ;;
+      ;;CLHS*, CRHS*	Lists of LHS and RHS whose LHS has been assigned.
+      ;;
+      (if (null? lhs*)
+	  (values '() '() '() '() '() '())
+	(let-values
+	    (((slhs* srhs* llhs* lrhs* clhs* crhs*)
+	      (%partition-rhs* (fxadd1 i) (cdr lhs*) (cdr rhs*) vref vcomp))
+	     ((lhs rhs)
+	      (values (car lhs*) (car rhs*))))
+	  (cond ((prelex-source-assigned? lhs)
+		 (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
+		((clambda? rhs)
+		 (values slhs* srhs* (cons lhs llhs*) (cons rhs lrhs*) clhs* crhs*))
+		((or (vector-ref vref  i)
+		     (vector-ref vcomp i))
+		 (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
+		(else
+		 (values (cons lhs slhs*) (cons rhs srhs*) llhs* lrhs* clhs* crhs*))
+		))))
+
+    #| end of module: %do-recbind |# )
 
   #| end of module: optimize-letrec/waddell |# )
 
