@@ -16528,7 +16528,42 @@ system $compiler}.
 
 
 @defun $compiler.optimize-letrec @var{input}
+Perform transformations to convert the recordized representation of
+@func{libary-letrec*}, @func{LETREC} and @func{letrec*} forms into low
+level binding constructs and assignments.  The result is such that the
+order of bindings in a single binding construct can be changed at will.
 @end defun
+
+
+@deffn Parameter $current-letrec-pass
+Select the transformations performed by
+@func{$compiler.optimize-letrec}; possible values are the symbols:
+
+@table @code
+@item basic
+The transformations are equivalent to:
+
+@example
+(letrec* ((?var ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (set! ?var ?init) ... . ?body)
+
+(library-letrec* ((?var ?loc ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (set! ?var ?init) ... . ?body)
+
+(letrec ((?var ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (let ((?tmp ?init) ...)
+        (set! ?var ?tmp) ... . ?body))
+@end example
+
+@item waddell
+
+@item scc
+This is the default.
+@end table
+@end deffn
 
 
 @c page

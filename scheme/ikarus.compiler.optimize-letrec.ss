@@ -25,7 +25,7 @@
   (module (current-letrec-pass)
 
     (define current-letrec-pass
-      (make-parameter 'scc
+      (make-parameter 'waddell #;'scc
 	(lambda (x)
 	  (define who 'current-letrec-pass)
 	  (with-arguments-validation (who)
@@ -102,14 +102,14 @@
   ;;following:
   ;;
   ;;   (letrec* ((?var ?init) ...) . ?body)
-  ;;   ===> (let ((?var #f) ...) (set! ?var ?init) ... . ?body)
+  ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
   ;;
   ;;   (library-letrec* ((?var ?loc ?init) ...) . ?body)
-  ;;   ===> (let ((?var #f) ...) (set! ?var ?init) ... . ?body)
+  ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
   ;;
   ;;   (letrec ((?var ?init) ...) . ?body)
-  ;;   ===> (let ((?var #f) ...)
-  ;;          (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
+  ;;   ==> (let ((?var (void)) ...)
+  ;;         (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
   ;;
   ;;This  module  accepts  as   input  a  struct  instance  representing
   ;;recordized code with the following struct types:
@@ -202,12 +202,12 @@
     ;;the transformation  we do here  is equivalent to  constructing the
     ;;following form:
     ;;
-    ;;   (let ((?var #f) ...)
+    ;;   (let ((?var (void)) ...)
     ;;     (set! ?var ?init) ...
     ;;     ?body0 ?body ...)
     ;;
     (make-bind lhs* (map (lambda (x)
-			   (make-constant #f))
+			   (make-constant (void)))
 		      lhs*)
 	       (build-assign* lhs* rhs* body)))
 
@@ -219,90 +219,193 @@
     ;;the transformation  we do here  is equivalent to  constructing the
     ;;following form:
     ;;
-    ;;   (let ((?var #f) ...)
+    ;;   (let ((?var (void)) ...)
     ;;     (let ((?tmp ?init) ...)
     ;;       (set! ?var ?tmp) ...
     ;;       ?body0 ?body ...))
     ;;
     (let ((tmp* (map unique-prelex lhs*)))
       (make-bind lhs* (map (lambda (x)
-			     (make-constant #f))
+			     (make-constant (void)))
 			lhs*)
 		 (make-bind tmp* rhs* (build-assign* lhs* tmp* body)))))
 
   #| end of module: optimize-letrec/basic |# )
 
 
-(define (optimize-letrec/waddell x)
-  (define simple-primitives '())
+(module (optimize-letrec/waddell)
+  ;;
+  ;;
+  ;;
   (define who 'optimize-letrec/waddell)
-  (define (extend-hash lhs* h ref)
-    (for-each (lambda (lhs) (hashtable-set! h lhs #t)) lhs*)
+
+  (define (optimize-letrec/waddell x)
+    (E x (lambda (x)
+	   (error who "free var found" x))
+       void))
+
+  (module (E)
+
+    (define-constant SIMPLE-PRIMITIVES '())
+
+    (define (E x ref comp)
+      (struct-case x
+	((constant)
+	 x)
+
+	((prelex)
+	 (ref x)
+	 x)
+
+	((assign lhs rhs)
+	 (ref lhs)
+	 (comp)
+	 (make-assign lhs (E rhs ref comp)))
+
+	((primref)
+	 x)
+
+	((bind lhs* rhs* body)
+	 (let ((rhs* (E* rhs* ref comp)))
+	   (let ((h (make-eq-hashtable)))
+	     (let ((body (E body (%extend-hash lhs* h ref) comp)))
+	       (make-bind lhs* rhs* body)))))
+
+	((recbind lhs* rhs* body)
+	 (if (null? lhs*)
+	     (E body ref comp)
+	   (%do-recbind lhs* rhs* body ref comp #t)))
+
+	((rec*bind lhs* rhs* body)
+	 (if (null? lhs*)
+	     (E body ref comp)
+	   (%do-recbind lhs* rhs* body ref comp #f)))
+
+	((conditional test conseq altern)
+	 (make-conditional (E test ref comp)
+	     (E conseq ref comp)
+	   (E altern ref comp)))
+
+	((seq e0 e1)
+	 (make-seq (E e0 ref comp) (E e1 ref comp)))
+
+	((clambda)
+	 (E-clambda x ref comp))
+
+	((funcall rator rand*)
+	 (let ((rator (E  rator ref comp))
+	       (rand* (E* rand* ref comp)))
+	   (struct-case rator
+	     ((primref op)
+	      (unless (memq op SIMPLE-PRIMITIVES)
+		(comp)))
+	     (else
+	      (comp)))
+	   (make-funcall rator rand*)))
+
+	((mvcall p c)
+	 (let ((p (E p ref comp)) (c (E c ref comp)))
+	   (comp)
+	   (make-mvcall p c)))
+
+	((forcall rator rand*)
+	 (make-forcall rator (E* rand* ref comp)))
+
+	(else
+	 (error who "invalid expression" (unparse-recordized-code x)))))
+
+    (define (E* x* ref comp)
+      (if (null? x*)
+	  '()
+	(cons (E  (car x*) ref comp)
+	      (E* (cdr x*) ref comp))))
+
+    (define (E-clambda x ref comp)
+      (struct-case x
+	((clambda label cls* cp free name)
+	 (make-clambda label (map (lambda (cls)
+				    (E-clambda-case cls ref))
+			       cls*)
+		       cp free name))))
+
+    (define (E-clambda-case x ref)
+      (struct-case x
+	((clambda-case info body)
+	 (let ((h (make-eq-hashtable)))
+	   (let ((body (E body (%extend-hash (case-info-args info) h ref) void)))
+	     (make-clambda-case info body))))))
+
+    #| end of module: E |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%extend-hash lhs* h ref)
+    (for-each (lambda (lhs)
+		(hashtable-set! h lhs #t))
+      lhs*)
     (lambda (x)
       (unless (hashtable-ref h x #f)
 	(hashtable-set! h x #t)
 	(ref x))))
-  (define (E* x* ref comp)
-    (cond
-     ((null? x*) '())
-     (else
-      (cons (E (car x*) ref comp)
-	    (E* (cdr x*) ref comp)))))
+
   (define (do-rhs* i lhs* rhs* ref comp vref vcomp)
-    (cond
-     ((null? rhs*) '())
-     (else
-      (let ((h (make-eq-hashtable))
+    (if (null? rhs*)
+	'()
+      (let ((h    (make-eq-hashtable))
 	    (rest (do-rhs* (fxadd1 i) lhs* (cdr rhs*) ref comp vref vcomp)))
-	(let ((ref
-	       (lambda (x)
-		 (unless (hashtable-ref h x #f)
-		   (hashtable-set! h x #t)
-		   (ref x)
-		   (when (memq x lhs*)
-		     (vector-set! vref i #t)))))
-	      (comp
-	       (lambda ()
-		 (vector-set! vcomp i #t)
-		 (comp))))
-	  (cons (E (car rhs*) ref comp) rest))))))
+	(define (ref x)
+	  (unless (hashtable-ref h x #f)
+	    (hashtable-set! h x #t)
+	    (ref x)
+	    (when (memq x lhs*)
+	      (vector-set! vref i #t))))
+	(define (comp^)
+	  (vector-set! vcomp i #t)
+	  (comp))
+	(cons (E (car rhs*) ref comp^)
+	      rest))))
+
   (define (partition-rhs* i lhs* rhs* vref vcomp)
-    (cond
-     ((null? lhs*) (values '() '() '() '() '() '()))
-     (else
+    (if (null? lhs*)
+	(values '() '() '() '() '() '())
       (let-values
 	  (((slhs* srhs* llhs* lrhs* clhs* crhs*)
 	    (partition-rhs* (fxadd1 i) (cdr lhs*) (cdr rhs*) vref vcomp))
-	   ((lhs rhs) (values (car lhs*) (car rhs*))))
-	(cond
-	 ((prelex-source-assigned? lhs)
-	  (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
-	 ((clambda? rhs)
-	  (values slhs* srhs* (cons lhs llhs*) (cons rhs lrhs*) clhs* crhs*))
-	 ((or (vector-ref vref i) (vector-ref vcomp i))
-	  (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
-	 (else
-	  (values (cons lhs slhs*) (cons rhs srhs*) llhs* lrhs* clhs* crhs*))
-	 )))))
-  (define (do-recbind lhs* rhs* body ref comp letrec?)
-    (let ((h (make-eq-hashtable))
-	  (vref (make-vector (length lhs*) #f))
+	   ((lhs rhs)
+	    (values (car lhs*) (car rhs*))))
+	(cond ((prelex-source-assigned? lhs)
+	       (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
+	      ((clambda? rhs)
+	       (values slhs* srhs* (cons lhs llhs*) (cons rhs lrhs*) clhs* crhs*))
+	      ((or (vector-ref vref  i)
+		   (vector-ref vcomp i))
+	       (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
+	      (else
+	       (values (cons lhs slhs*) (cons rhs srhs*) llhs* lrhs* clhs* crhs*))
+	      ))))
+
+  (define (%do-recbind lhs* rhs* body ref comp letrec?)
+    (let ((h     (make-eq-hashtable))
+	  (vref  (make-vector (length lhs*) #f))
 	  (vcomp (make-vector (length lhs*) #f)))
-      (let* ((ref (extend-hash lhs* h ref))
+      (let* ((ref  (%extend-hash lhs* h ref))
 	     (body (E body ref comp)))
 	(let ((rhs* (do-rhs* 0 lhs* rhs* ref comp vref vcomp)))
 	  (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
 			(partition-rhs* 0 lhs* rhs* vref vcomp)))
-              ;;; (let ((made-complex
-              ;;;        (filter (lambda (x) (not (var-assigned x)))
-              ;;;                clhs*)))
-              ;;;   (unless (null? made-complex)
-              ;;;     (set! complex-count
-              ;;;       (+ complex-count (length made-complex)))
-              ;;;     (printf "COMPLEX (~s) = ~s\n"
-              ;;;             complex-count
-              ;;;             (map unparse-recordized-code made-complex))))
-	    (let ((void* (map (lambda (x) (make-constant (void))) clhs*)))
+	    ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
+	    ;;30, 2012)
+	    ;;
+	    ;; (let ((made-complex (filter (lambda (x)
+	    ;; 			      (not (var-assigned x)))
+	    ;; 		      clhs*)))
+	    ;;   (unless (null? made-complex)
+	    ;;     (set! complex-count (+ complex-count (length made-complex)))
+	    ;;     (printf "COMPLEX (~s) = ~s\n" complex-count
+	    ;; 	    (map unparse-recordized-code made-complex))))
+	    (let ((void* (map (lambda (x)
+				(make-constant (void)))
+			   clhs*)))
 	      (make-bind slhs* srhs*
 			 (make-bind clhs* void*
 				    (make-fix llhs* lrhs*
@@ -311,59 +414,8 @@
 						    (make-bind t* crhs*
 							       (build-assign* clhs* t* body)))
 						(build-assign* clhs* crhs* body)))))))))))
-  (define (E x ref comp)
-    (struct-case x
-      ((constant) x)
-      ((prelex) (ref x) x)
-      ((assign lhs rhs)
-       (ref lhs)
-       (comp)
-       (make-assign lhs (E rhs ref comp)))
-      ((primref) x)
-      ((bind lhs* rhs* body)
-       (let ((rhs* (E* rhs* ref comp)))
-	 (let ((h (make-eq-hashtable)))
-	   (let ((body (E body (extend-hash lhs* h ref) comp)))
-	     (make-bind lhs* rhs* body)))))
-      ((recbind lhs* rhs* body)
-       (if (null? lhs*)
-	   (E body ref comp)
-	 (do-recbind lhs* rhs* body ref comp #t)))
-      ((rec*bind lhs* rhs* body)
-       (if (null? lhs*)
-	   (E body ref comp)
-	 (do-recbind lhs* rhs* body ref comp #f)))
-      ((conditional e0 e1 e2)
-       (make-conditional (E e0 ref comp) (E e1 ref comp) (E e2 ref comp)))
-      ((seq e0 e1) (make-seq (E e0 ref comp) (E e1 ref comp)))
-      ((clambda g cls* cp free name)
-       (make-clambda g
-		     (map (lambda (x)
-			    (struct-case x
-			      ((clambda-case info body)
-			       (let ((h (make-eq-hashtable)))
-				 (let ((body (E body (extend-hash (case-info-args info) h ref) void)))
-				   (make-clambda-case info body))))))
-		       cls*)
-		     cp free name))
-      ((funcall rator rand*)
-       (let ((rator (E rator ref comp)) (rand* (E* rand* ref comp)))
-	 (struct-case rator
-	   ((primref op)
-	    (unless (memq op simple-primitives)
-	      (comp)))
-	   (else
-	    (comp)))
-	 (make-funcall rator rand*)))
-      ((mvcall p c)
-       (let ((p (E p ref comp)) (c (E c ref comp)))
-	 (comp)
-	 (make-mvcall p c)))
-      ((forcall rator rand*)
-       (make-forcall rator (E* rand* ref comp)))
-      (else (error who "invalid expression" (unparse-recordized-code x)))))
-  (E x (lambda (x) (error who "free var found" x))
-     void))
+
+  #| end of module: optimize-letrec/waddell |# )
 
 
 (define (optimize-letrec/scc x)
