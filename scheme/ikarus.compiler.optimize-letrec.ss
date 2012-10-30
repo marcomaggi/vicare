@@ -22,12 +22,23 @@
   (define debug-scc
     (make-parameter #f))
 
-  (define current-letrec-pass
-    (make-parameter 'scc
-      (lambda (x)
-	(if (memq x '(scc waddell basic))
-	    x
-	  (assertion-violation 'current-letrec-pass "invalid" x)))))
+  (module (current-letrec-pass)
+
+    (define current-letrec-pass
+      (make-parameter 'scc
+	(lambda (x)
+	  (define who 'current-letrec-pass)
+	  (with-arguments-validation (who)
+	      ((letrec-pass x))
+	    x))))
+
+    (define-argument-validation (letrec-pass who obj)
+      (memq obj '(scc waddell basic))
+      (assertion-violation who
+	"invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
+	obj))
+
+    #| end of module |# )
 
   (define (optimize-letrec x)
     (define who 'optimize-letrec)
@@ -40,28 +51,78 @@
 	 "invalid letrec optimization mode" (current-letrec-pass)))))
 
 
+;;;; helpers
+
 (define (unique-prelex x)
   (let ((x (make-prelex (prelex-name    x)
 			(prelex-operand x))))
     ($set-prelex-source-referenced?! x #t)
     x))
 
-(define (build-assign* lhs* rhs* body)
+(module (build-assign*)
+
+  (define (build-assign* lhs* rhs* body)
+    ;;Build a sequence of assignments followed by a body.
+    ;;
+    ;;LHS*  must  be   a  list  of  struct  instances   of  type  PRELEX
+    ;;representing left-hand sides in LET-like bindings.
+    ;;
+    ;;RHS* must  be a list  of struct instances  representing right-hand
+    ;;sides in LET-like bindings, as recordized code.
+    ;;
+    ;;BODY must be a struct instance representing the body of a LET-like
+    ;;body, as recordized code.
+    ;;
+    ;;Return a new struct instance representing the sequence:
+    ;;
+    ;;  (begin (set! ?lhs ?rhs) ... . ?body)
+    ;;
+    (for-each mark-assigned! lhs*)
+    (let recur ((lhs* lhs*)
+		(rhs* rhs*))
+      (if (null? lhs*)
+	  body
+	(make-seq (make-assign ($car lhs*) ($car rhs*))
+		  (recur ($cdr lhs*) ($cdr rhs*))))))
+
   (define (mark-assigned! lhs)
     ;;FIXME This is very fragile.  (Abdulaziz Ghuloum)
-    (unless (prelex-source-assigned? lhs)
+    (unless ($prelex-source-assigned? lhs)
       ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t))))
-  (for-each mark-assigned! lhs*)
-  (let recur ((lhs* lhs*)
-	      (rhs* rhs*))
-    (if (null? lhs*)
-	body
-      (make-seq (make-assign (car lhs*) (car rhs*))
-		(recur (cdr lhs*) (cdr rhs*))))))
+
+  #| end of module: build-assign* |# )
 
 
 (module (optimize-letrec/basic)
+  ;;Perform   basic   transformations    to   convert   the   recordized
+  ;;representation  of  LETREC and  LETREC*  forms  into LET  forms  and
+  ;;assignments.
   ;;
+  ;;The transformations performed  by this module are  equivalent to the
+  ;;following:
+  ;;
+  ;;   (letrec* ((?var ?init) ...) . ?body)
+  ;;   ===> (let ((?var #f) ...) (set! ?var ?init) ... . ?body)
+  ;;
+  ;;   (library-letrec* ((?var ?loc ?init) ...) . ?body)
+  ;;   ===> (let ((?var #f) ...) (set! ?var ?init) ... . ?body)
+  ;;
+  ;;   (letrec ((?var ?init) ...) . ?body)
+  ;;   ===> (let ((?var #f) ...)
+  ;;          (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
+  ;;
+  ;;This  module  accepts  as   input  a  struct  instance  representing
+  ;;recordized code with the following struct types:
+  ;;
+  ;;assign		bind		clambda
+  ;;conditional		constant	forcall
+  ;;funcall		mvcall		prelex
+  ;;primref		rec*bind	recbind
+  ;;seq
+  ;;
+  ;;and returns a new struct  instance representing recordized code with
+  ;;the same types  except RECBIND and REC*BIND which are  replaced by a
+  ;;composition of BIND and ASSIGN structures.
   ;;
   (define who 'optimize-letrec/basic)
 
@@ -100,14 +161,14 @@
 	   (E body)
 	 (%do-rec*bind lhs* (map E rhs*) (E body))))
 
-      ((conditional e0 e1 e2)
-       (make-conditional (E e0) (E e1) (E e2)))
+      ((conditional test conseq altern)
+       (make-conditional (E test) (E conseq) (E altern)))
 
       ((seq e0 e1)
        (make-seq (E e0) (E e1)))
 
-      ((clambda g cls* cp free name)
-       (L x))
+      ((clambda)
+       (E-clambda x))
 
       ((funcall rator rand*)
        (make-funcall (E rator) (map E rand*)))
@@ -121,28 +182,53 @@
       (else
        (error who "invalid expression" (unparse-recordized-code x)))))
 
+  (define (E-clambda x)
+    (struct-case x
+      ((clambda label cls* cp free name)
+       (make-clambda label (map E-clambda-case cls*) cp free name))))
+
+  (define (E-clambda-case x)
+    (struct-case x
+      ((clambda-case info body)
+       (make-clambda-case info (E body)))))
+
+;;; --------------------------------------------------------------------
+
   (define (%do-rec*bind lhs* rhs* body)
+    ;;A struct instance of type REC*BIND represents a form like:
+    ;;
+    ;;   (letrec* ((?var ?init) ...) ?body0 ?body ...)
+    ;;
+    ;;the transformation  we do here  is equivalent to  constructing the
+    ;;following form:
+    ;;
+    ;;   (let ((?var #f) ...)
+    ;;     (set! ?var ?init) ...
+    ;;     ?body0 ?body ...)
+    ;;
     (make-bind lhs* (map (lambda (x)
 			   (make-constant #f))
 		      lhs*)
 	       (build-assign* lhs* rhs* body)))
 
   (define (%do-recbind lhs* rhs* body)
-    (let ((t* (map unique-prelex lhs*)))
+    ;;A struct instance of type REC*BIND represents a form like:
+    ;;
+    ;;   (letrec ((?var ?init) ...) ?body0 ?body ...)
+    ;;
+    ;;the transformation  we do here  is equivalent to  constructing the
+    ;;following form:
+    ;;
+    ;;   (let ((?var #f) ...)
+    ;;     (let ((?tmp ?init) ...)
+    ;;       (set! ?var ?tmp) ...
+    ;;       ?body0 ?body ...))
+    ;;
+    (let ((tmp* (map unique-prelex lhs*)))
       (make-bind lhs* (map (lambda (x)
 			     (make-constant #f))
 			lhs*)
-		 (make-bind t* rhs* (build-assign* lhs* t* body)))))
-
-  (define (L x)
-    (struct-case x
-      ((clambda label cls* cp free name)
-       (make-clambda label (map (lambda (x)
-				  (struct-case x
-				    ((clambda-case info body)
-				     (make-clambda-case info (E body)))))
-			     cls*)
-		     cp free name))))
+		 (make-bind tmp* rhs* (build-assign* lhs* tmp* body)))))
 
   #| end of module: optimize-letrec/basic |# )
 

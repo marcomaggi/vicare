@@ -37,6 +37,8 @@
 
     ;; these go in (ikarus system $compiler)
     (rename
+     (current-letrec-pass			$current-letrec-pass)
+
      (compile-core-expr->code			$compiler.compile-core-expr->code)
      (recordize					$compiler.recordize)
      (optimize-direct-calls			$compiler.optimize-direct-calls)

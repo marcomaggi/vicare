@@ -74,6 +74,8 @@
     (only (ikarus system $structs)
 	  $struct-ref
 	  $struct-rtd)
+    #;(only (ikarus system $compiler)
+	  $current-letrec-pass)
     (only (ikarus cafe)
 	  cafe-input-port)
     (prefix (only (ikarus.readline)
@@ -446,7 +448,8 @@
 	   (cond ((null? (cdr args))
 		  (%error-and-exit "option --compile-dependencies requires a script name"))
 		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --compile-dependencies given after other mode option"))
+		  (%error-and-exit
+		   "option --compile-dependencies given after other mode option"))
 		 (else
 		  (set-run-time-config-exec-mode! cfg 'compile)
 		  (set-run-time-config-script!    cfg (cadr args))
@@ -531,7 +534,8 @@
 	   (if (null? (cdr args))
 	       (%error-and-exit "-e or --eval-expr requires an expression argument")
 	     (begin
-	       (run-time-config-eval-codes-register! cfg (cons 'expr (%string->sexp (cadr args))))
+	       (run-time-config-eval-codes-register! cfg (cons 'expr
+							       (%string->sexp (cadr args))))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "-l" "--load-library")
@@ -567,6 +571,18 @@
 	       (%error-and-exit "--prompt requires a string argument")
 	     (let ((prompt (cadr args)))
 	       (next-option (cddr args) (lambda () (k) (waiter-prompt-string prompt))))))
+
+;;; --------------------------------------------------------------------
+;;; compiler options with argument
+
+	  #;((%option= "--compiler-letrec-pass")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--compiler-letrec-pass requires a mode argument")
+	     (begin
+	       (guard (E (else
+			  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
+		 ($current-letrec-pass (string->symbol (cadr args))))
+	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
 ;;; program options

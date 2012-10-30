@@ -2170,6 +2170,8 @@
 
 ;;; --------------------------------------------------------------------
 
+    ($current-letrec-pass				$compiler)
+
     ($compiler.compile-core-expr->code			$compiler)
     ($compiler.recordize				$compiler)
     ($compiler.optimize-direct-calls			$compiler)
