@@ -889,12 +889,15 @@
 ;;Instances of this  struct type represent bindings at  the lowest level
 ;;in recordized code.
 ;;
+;;A BIND is  a set of bindings  in which the order of  evaluation of the
+;;right-hand sides can be freely changed; it is like a LET syntax.
+;;
 (define-struct bind
   (lhs*
 		;When code is first recordized  and optimized: a list of
 		;struct  instances  of   type  PRELEX  representing  the
 		;binding names.   Later: a  list of struct  instances of
-		;type VAR representing variables.
+		;type VAR representing some kind of memory location.
    rhs*
 		;A list of struct instances representing recordized code
 		;which,  when  evaluated,   will  return  the  binding's
