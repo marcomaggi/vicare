@@ -259,6 +259,8 @@
 
 	((assign lhs rhs)
 	 (ref lhs)
+	 ;;FIXME We have already called REF,  is it needed to call COMP?
+	 ;;(Marco Maggi; Oct 30, 2012)
 	 (comp)
 	 (make-assign lhs (E rhs ref comp)))
 
@@ -266,10 +268,10 @@
 	 x)
 
 	((bind lhs* rhs* body)
-	 (let ((rhs* (E* rhs* ref comp)))
-	   (let ((h (make-eq-hashtable)))
-	     (let ((body (E body (%extend-hash lhs* h ref) comp)))
-	       (make-bind lhs* rhs* body)))))
+	 ;;Do RHS* first, then BODY.
+	 (let* ((rhs*^ (E* rhs* ref comp))
+		(body^ (E body (%extend-hash lhs* (make-eq-hashtable) ref) comp)))
+	   (make-bind lhs* rhs*^ body^)))
 
 	((recbind lhs* rhs* body)
 	 (if (null? lhs*)
@@ -295,6 +297,9 @@
 	((funcall rator rand*)
 	 (let ((rator (E  rator ref comp))
 	       (rand* (E* rand* ref comp)))
+	   ;;This form  is a function  call.  We assume it  might mutate
+	   ;;any of  the bindings whose  region includes it: so  we call
+	   ;;COMP.
 	   (struct-case rator
 	     ((primref op)
 	      (unless (memq op SIMPLE-PRIMITIVES)
@@ -306,6 +311,9 @@
 	((mvcall p c)
 	 (let ((p (E p ref comp))
 	       (c (E c ref comp)))
+	   ;;This form  is a function  call.  We assume it  might mutate
+	   ;;any of  the bindings whose  region includes it: so  we call
+	   ;;COMP.
 	   (comp)
 	   (make-mvcall p c)))
 
@@ -354,44 +362,72 @@
   (module (%do-recbind)
 
     (define (%do-recbind lhs* rhs* body ref comp letrec?)
+      ;;
+      ;;LETREC? is true if the form we are processing is a LETREC; it is
+      ;;false if the form is a LETREC*.
+      ;;
       (let ((h     (make-eq-hashtable))
 	    (vref  (make-vector (length lhs*) #f))
 	    (vcomp (make-vector (length lhs*) #f)))
-	(let* ((ref  (%extend-hash lhs* h ref))
-	       (body (E body ref comp)))
-	  (let ((rhs* (%do-rhs* 0 lhs* rhs* ref comp vref vcomp)))
-	    (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
-			  (%partition-rhs* 0 lhs* rhs* vref vcomp)))
-	      ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
-	      ;;30, 2012)
-	      ;;
-	      ;; (let ((made-complex (filter (lambda (x)
-	      ;; 			      (not (var-assigned x)))
-	      ;; 		      clhs*)))
-	      ;;   (unless (null? made-complex)
-	      ;;     (set! complex-count (+ complex-count (length made-complex)))
-	      ;;     (printf "COMPLEX (~s) = ~s\n" complex-count
-	      ;; 	    (map unparse-recordized-code made-complex))))
-	      (let ((void* (map (lambda (x)
-				  (make-constant (void)))
-			     clhs*)))
-		(make-bind slhs* srhs*
-			   (make-bind clhs* void*
-				      (make-fix llhs* lrhs*
-						(if letrec?
-						    (let ((t* (map unique-prelex clhs*)))
-						      (make-bind t* crhs*
-								 (build-assign* clhs* t* body)))
-						  (build-assign* clhs* crhs* body)))))))))))
+	;;VREF  is a  vector of  booleans, one  for each  binding.  Such
+	;;booleans  will be  set to  true  if the  corresponding LHS  is
+	;;referenced or mutated.
+	;;
+	;;VCOMP is  a vector  of booleans, one  for each  binding.  Such
+	;;booleans will be  set to #t if the corresponding  RHS may have
+	;;assigned an LHS (we cannot be sure neither if it actually does
+	;;it, nor of which bindings are mutated).
+	;;
+	(let* ((ref^  (%extend-hash lhs* h ref))
+	       (body^ (E body ref^ comp))
+	       (rhs*  (%do-rhs* 0 lhs* rhs* ref^ comp vref vcomp)))
+	  (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
+			(%partition-rhs* 0 lhs* rhs* vref vcomp)))
+	    ;;Written by Abdulaziz Ghuloum.
+	    ;;
+	    ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
+	    ;;30, 2012)
+	    ;;
+	    ;; (let ((made-complex (filter (lambda (x)
+	    ;; 			      (not (var-assigned x)))
+	    ;; 		      clhs*)))
+	    ;;   (unless (null? made-complex)
+	    ;;     (set! complex-count (+ complex-count (length made-complex)))
+	    ;;     (printf "COMPLEX (~s) = ~s\n" complex-count
+	    ;; 	    (map unparse-recordized-code made-complex))))
+	    (let ((void* (map (lambda (x)
+				(make-constant (void)))
+			   clhs*)))
+	      (make-bind slhs* srhs*
+		(make-bind clhs* void*
+		  (make-fix llhs* lrhs*
+		    (if letrec?
+			;;This form  is a LETREC,  we do not  care about
+			;;the order of evaluation of the RHS*.
+			(let ((tmp* (map unique-prelex clhs*)))
+			  (make-bind tmp* crhs*
+			    (build-assign* clhs* tmp* body^)))
+		      ;;This form  is a  LETREC*, we  do care  about the
+		      ;;order of evaluation of the RHS*.
+		      (build-assign* clhs* crhs* body^))))))))))
 
     (define (%do-rhs* i lhs* rhs* ref comp vref vcomp)
+      ;;Process  RHS* and  return a  list of  struct instances  which is
+      ;;meant to replace the original RHS*.
+      ;;
+      ;;This recursive function has two purposes:
+      ;;
+      ;;1. Apply E to each struct in RHS*.
+      ;;
+      ;;2. Fill appropriately the vectors VREF and VCOMP.
+      ;;
       (if (null? rhs*)
 	  '()
-	(let ((h    (make-eq-hashtable))
+	(let ((H    (make-eq-hashtable))
 	      (rest (%do-rhs* (fxadd1 i) lhs* (cdr rhs*) ref comp vref vcomp)))
 	  (define (ref^ x)
-	    (unless (hashtable-ref h x #f)
-	      (hashtable-set! h x #t)
+	    (unless (hashtable-ref H x #f)
+	      (hashtable-set! H x #t)
 	      (ref x)
 	      (when (memq x lhs*)
 		(vector-set! vref i #t))))
@@ -406,10 +442,15 @@
       ;;Return 6 values:
       ;;
       ;;SLHS*, SRHS*
+      ;;   Lists of LHS and RHS not in the categories below.
       ;;
-      ;;LLHS*, LRHS*	Lists of LHS and RHS whose RHS is a CLAMBDA.
+      ;;LLHS*, LRHS*
+      ;;   Lists of LHS and RHS whose RHS is a CLAMBDA.
       ;;
-      ;;CLHS*, CRHS*	Lists of LHS and RHS whose LHS has been assigned.
+      ;;CLHS*, CRHS*
+      ;;   Lists of  LHS and RHS for  which either we know  that the LHS
+      ;;   has been assigned, or we  know that the RHS may have assigned
+      ;;   an LHS.
       ;;
       (if (null? lhs*)
 	  (values '() '() '() '() '() '())
@@ -419,14 +460,22 @@
 	     ((lhs rhs)
 	      (values (car lhs*) (car rhs*))))
 	  (cond ((prelex-source-assigned? lhs)
-		 (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
+		 (values slhs* srhs*
+			 llhs* lrhs*
+			 (cons lhs clhs*) (cons rhs crhs*)))
 		((clambda? rhs)
-		 (values slhs* srhs* (cons lhs llhs*) (cons rhs lrhs*) clhs* crhs*))
+		 (values slhs* srhs*
+			 (cons lhs llhs*) (cons rhs lrhs*)
+			 clhs* crhs*))
 		((or (vector-ref vref  i)
 		     (vector-ref vcomp i))
-		 (values slhs* srhs* llhs* lrhs* (cons lhs clhs*) (cons rhs crhs*)))
+		 (values slhs* srhs*
+			 llhs* lrhs*
+			 (cons lhs clhs*) (cons rhs crhs*)))
 		(else
-		 (values (cons lhs slhs*) (cons rhs srhs*) llhs* lrhs* clhs* crhs*))
+		 (values (cons lhs slhs*) (cons rhs srhs*)
+			 llhs* lrhs*
+			 clhs* crhs*))
 		))))
 
     #| end of module: %do-recbind |# )
@@ -692,3 +741,7 @@
 #| end of module |# )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'make-bind 'scheme-indent-function 2)
+;; eval: (put 'make-fix 'scheme-indent-function 2)
+;; End:
