@@ -440,12 +440,18 @@
 	(let ((H    (make-eq-hashtable))
 	      (rest (%do-rhs* (fxadd1 i) lhs* (cdr rhs*) ref comp vref vcomp)))
 	  (define (ref^ x)
+	    ;;Called to signal that a form in RHS has accessed a binding
+	    ;;among LHS*.
+	    ;;
 	    (unless (hashtable-ref H x #f)
 	      (hashtable-set! H x #t)
 	      (ref x)
 	      (when (memq x lhs*)
 		(vector-set! vref i #t))))
 	  (define (comp^)
+	    ;;Called to signal that a form in RHS might mutate a binding
+	    ;;among LHS*.
+	    ;;
 	    (vector-set! vcomp i #t)
 	    (comp))
 	  (cons (E (car rhs*) ref^ comp^)
