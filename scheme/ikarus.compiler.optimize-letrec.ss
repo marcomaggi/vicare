@@ -383,10 +383,8 @@
 	       (rhs*  (%do-rhs* 0 lhs* rhs* ref^ comp vref vcomp)))
 	  (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
 			(%partition-rhs* 0 lhs* rhs* vref vcomp)))
+
 	    ;;Written by Abdulaziz Ghuloum.
-	    ;;
-	    ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
-	    ;;30, 2012)
 	    ;;
 	    ;; (let ((made-complex (filter (lambda (x)
 	    ;; 			      (not (var-assigned x)))
@@ -395,6 +393,10 @@
 	    ;;     (set! complex-count (+ complex-count (length made-complex)))
 	    ;;     (printf "COMPLEX (~s) = ~s\n" complex-count
 	    ;; 	    (map unparse-recordized-code made-complex))))
+	    ;;
+	    ;;This is  only for  debugging purposes.  (Marco  Maggi; Oct
+	    ;;30, 2012)
+
 	    (let ((void* (map (lambda (x)
 				(make-constant (void)))
 			   clhs*)))
@@ -428,7 +430,7 @@
       ;;            (?lhs-2 ?rhs-3))
       ;;     . ?body)
       ;;
-      ;;this function is called with:
+      ;;this function is recursively called with:
       ;;
       ;;   (%do-rhs* 0 '(?lhs-0 ?lhs-1 ?lhs-2) '(?rhs-0 ?rhs-1 ?rhs-2) ---)
       ;;   (%do-rhs* 1 '(?lhs-0 ?lhs-1 ?lhs-2)        '(?rhs-1 ?rhs-2) ---)
