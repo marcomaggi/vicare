@@ -412,14 +412,28 @@
 		      (build-assign* clhs* crhs* body^))))))))))
 
     (define (%do-rhs* i lhs* rhs* ref comp vref vcomp)
-      ;;Process  RHS* and  return a  list of  struct instances  which is
-      ;;meant to replace the original RHS*.
+      ;;Recursively process RHS*  and return a list  of struct instances
+      ;;which is meant to replace the original RHS*.
       ;;
-      ;;This recursive function has two purposes:
+      ;;This function has two purposes:
       ;;
       ;;1. Apply E to each struct in RHS*.
       ;;
       ;;2. Fill appropriately the vectors VREF and VCOMP.
+      ;;
+      ;;Given recordized code representing:
+      ;;
+      ;;   (letrec ((?lhs-0 ?rhs-0)
+      ;;            (?lhs-1 ?rhs-1)
+      ;;            (?lhs-2 ?rhs-3))
+      ;;     . ?body)
+      ;;
+      ;;this function is called with:
+      ;;
+      ;;   (%do-rhs* 0 '(?lhs-0 ?lhs-1 ?lhs-2) '(?rhs-0 ?rhs-1 ?rhs-2) ---)
+      ;;   (%do-rhs* 1 '(?lhs-0 ?lhs-1 ?lhs-2)        '(?rhs-1 ?rhs-2) ---)
+      ;;   (%do-rhs* 2 '(?lhs-0 ?lhs-1 ?lhs-2)               '(?rhs-2) ---)
+      ;;   (%do-rhs* 3 '(?lhs-0 ?lhs-1 ?lhs-2)                     '() ---)
       ;;
       (if (null? rhs*)
 	  '()
