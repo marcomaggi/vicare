@@ -50,9 +50,11 @@
        => (quote ?expected-result)))))
 
 
-(parametrise ((check-test-name		'basic)
-	      ($current-letrec-pass	'basic))
+(parametrise ((check-test-name		'illegal))
 
+;;; checking illegal references to bindings
+
+  ;; error
   (check-syntax-violation ciao_0
     (let ()
       (define b (ciao))
@@ -60,6 +62,7 @@
 	123)
       #t))
 
+  ;; no error
   (check-syntax-violation 123
     (let ()
       (define (ciao)
@@ -67,6 +70,7 @@
       (define b (ciao))
       b))
 
+  ;; no error
   (check-syntax-violation 123
     (letrec* ((ciao (lambda (x)
 		      (when x
