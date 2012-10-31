@@ -4732,10 +4732,7 @@
     ((ntcall target valuw args mask size)
      `(ntcall ,target ,size))
 
-    (else
-     (if (symbol? x)
-	 x
-       "#<unknown>"))))
+    (else x)))
 
 
 (define (unparse-recordized-code/pretty x)
