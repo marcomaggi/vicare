@@ -25,7 +25,7 @@
 ;;   Faithful Yet Efficient Implementation of Scheme's Recursive Binding
 ;;   Construct"
 ;;
-;;the  we can  move  to the  following paper,  which  describes the  SCC
+;;then  we can  move to  the following  paper, which  describes the  SCC
 ;;transformation used by Vicare:
 ;;
 ;;   Abdulaziz Ghuloum,  R. Kent Dybvig.  ``Fixing  Letrec (reloaded)''.
@@ -285,7 +285,7 @@
   ;;
   ;;and returns a new struct  instance representing recordized code with
   ;;the same types  except RECBIND and REC*BIND which are  replaced by a
-  ;;composition of BIND and ASSIGN structures.
+  ;;composition of BIND, FIX and ASSIGN structures.
   ;;
   (define who 'optimize-letrec/waddell)
 

@@ -16523,6 +16523,25 @@ system $compiler}.
 @subsection Optimisation of @code{letrec} forms
 
 
+For an introduction to processing @func{letrec} and @func{letrec*}
+syntaxes, and specifically to understand the code, we @strong{must} read
+the following paper:
+
+@quotation
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
+Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+Construct''.
+@end quotation
+
+@noindent
+then we can move to the following paper, which describes the SCC
+transformation used by Vicare:
+
+@quotation
+Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
+Workshop on Scheme and Functional Programming '09.
+@end quotation
+
 The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
@@ -16559,7 +16578,8 @@ The transformations are equivalent to:
 @end example
 
 @item waddell
-Perform the transformation described in the ``Fixing Letrec'' paper.
+Perform the transformation described in the ``Fixing Letrec'' paper by
+Waddell et al.
 
 @item scc
 This is the default.
