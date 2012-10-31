@@ -4021,7 +4021,7 @@
     ;;
     ;;See %UNSAFE.FLUSH-OUTPUT-PORT for further details.
     ;;
-    (define who who)
+    (define who 'flush-output-port)
     (with-arguments-validation (who)
 	((port               port)
 	 (unsafe.output-port port)
