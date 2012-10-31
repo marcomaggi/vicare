@@ -234,8 +234,34 @@
 
 
 (module (optimize-letrec/waddell)
+  ;;Perform transformations to convert  the recordized representation of
+  ;;LETREC and LETREC* forms into LET forms and assignments.
   ;;
+  ;;The transformations performed  by this module are  equivalent to the
+  ;;following:
   ;;
+  ;;   (letrec* ((?var ?init) ...) . ?body)
+  ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
+  ;;
+  ;;   (library-letrec* ((?var ?loc ?init) ...) . ?body)
+  ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
+  ;;
+  ;;   (letrec ((?var ?init) ...) . ?body)
+  ;;   ==> (let ((?var (void)) ...)
+  ;;         (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
+  ;;
+  ;;This  module  accepts  as   input  a  struct  instance  representing
+  ;;recordized code with the following struct types:
+  ;;
+  ;;assign		bind		clambda
+  ;;conditional		constant	forcall
+  ;;funcall		mvcall		prelex
+  ;;primref		rec*bind	recbind
+  ;;seq
+  ;;
+  ;;and returns a new struct  instance representing recordized code with
+  ;;the same types  except RECBIND and REC*BIND which are  replaced by a
+  ;;composition of BIND and ASSIGN structures.
   ;;
   (define who 'optimize-letrec/waddell)
 
