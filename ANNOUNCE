@@ -59,7 +59,25 @@ Notes for revision 0.2d20
   EXPAND-LIBRARY  (formerly  LIBRARY-EXPANDER)  has been  added  to  the
   export list of the boot image.
 
-* Issue 8 should be fixed.
+* Issue 8  is fixed  in an  R6RS incompatible  way.  R6RS  mandates that
+  illegal references to  bindings established by LETREC  and LETREC* are
+  detected at  run time and cause  an assertion violation to  be raised.
+  Vicare detects them at compile time, so some fully R6RS-compliant code
+  will not work under Vicare.
+
+    For example,  the following program  (from Flatt's test  suite) will
+  run under a R6RS-compliant implementation:
+
+     (import (rnrs))
+     (letrec ((x (if (eq? (cons 1 2)
+                          (cons 1 2))
+                     x
+                   1)))
+       x)
+
+  because the  form X  in reference position  is never  evaluated; under
+  Vicare this code  will rather raise an assertion  violation and syntax
+  violation at compile time.
 
 
 Notes for revision 0.2d19
