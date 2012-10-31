@@ -180,8 +180,8 @@
 
     (define current-letrec-pass
       (make-parameter
-	  'basic
-	  #;'waddell
+	  #;'basic
+	  'waddell
 	  #;'scc
 	(lambda (x)
 	  (define who 'current-letrec-pass)

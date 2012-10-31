@@ -19283,6 +19283,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 * flonum parse::                Parsing flonums.
 * sel::                         Simple event loop.
 * infix::                       Infix to prefix transformer.
+* debugging::                   Debugging facilities.
 @end menu
 
 @c page
@@ -23410,6 +23411,27 @@ fxarithmetic-shift-left           -> fx<<
 fxarithmetic-shift-right          -> fx>>
 @end example
 @end itemize
+
+@c page
+@node debugging
+@section Debugging facilities
+
+
+@menu
+* debugging compiler::          Inspecting the compiler internals.
+@end menu
+
+@c page
+@node debugging compiler
+@subsection Inspecting the compiler internals
+
+
+@cindex Library @library{vicare debugging compiler}
+@cindex @library{vicare debugging compiler}, library
+
+
+The following bindings are exported by the library @library{vicare
+debugging compiler}.
 
 @c page
 @node objects
