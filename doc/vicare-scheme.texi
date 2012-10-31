@@ -16535,7 +16535,7 @@ Construct''.
 
 @noindent
 then we can move to the following paper, which describes the SCC
-transformation used by Vicare:
+transformation used by default:
 
 @quotation
 Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
