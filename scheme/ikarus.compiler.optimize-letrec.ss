@@ -192,7 +192,7 @@
 	   (C e1 illegal*)))
 
       ((clambda)
-       #f #;(C-clambda x))
+       (C-clambda x))
 
       ((funcall rator rand*)
        (or (C  rator illegal*)
@@ -253,9 +253,7 @@
     (define (C-clambda-case x)
       (struct-case x
 	((clambda-case info body)
-	 (cond ((C body '())
-		=> (lambda (illegal)
-		     (%error illegal x)))))))
+	 (C/error body '()))))
 
     #| end of module: C-lambda |# )
 
