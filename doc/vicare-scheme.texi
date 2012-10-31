@@ -16418,21 +16418,26 @@ To know at run time how many free variables are associated to
 
 
 @value{PRJNAME} is a compiler for the Scheme language; internally it
-implements a multitude of passes each of which perform a transformation
-from Scheme code to executable binary code.  The library @library{ikarus
-system $compiler} exports one binding for each compiler pass, allwing
-inspection of the performed transformations.
+implements a multitude of passes, each of which performing a
+transformation from Scheme code to executable binary code.  The library
+@library{ikarus system $compiler} exports one binding for each compiler
+pass, allowing inspection of the performed transformations.
 
 The sequence in which the passes are performed @strong{cannot} be
 changed; they must be performed in the specified order.  The passes
 functions are to be considered unsafe: if the input is invalid, the
 behaviour is undefined.
 
+This section contains some documentation for each pass; however, it is
+almost impossible to truly understand what a pass does without reading
+the source code, where additional documentation is present in the form
+of comments.
+
 @menu
 Compiler passes
 
 * syslib compiler unparse::       Unparsing intermediate
-                                   representations.
+                                  representations.
 * syslib compiler full::          The full transformation.
 * syslib compiler recordize::     Scheme code to nested structs.
 * syslib compiler direct calls::  Optimisation for direct calls.
@@ -16492,7 +16497,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.compile-core-expr->code @var{input}
+@defun $compile-core-expr->code @var{input}
 @end defun
 
 
@@ -16501,7 +16506,7 @@ system $compiler}.
 @subsection Scheme code to nested structs
 
 
-@defun $compiler.recordize @var{input}
+@defun $recordize @var{input}
 @end defun
 
 
@@ -16514,7 +16519,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.optimize-direct-calls @var{input}
+@defun $optimize-direct-calls @var{input}
 @end defun
 
 
@@ -16546,7 +16551,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.optimize-letrec @var{input}
+@defun $optimize-letrec @var{input}
 Perform transformations to convert the recordized representation of
 @func{libary-letrec*}, @func{LETREC} and @func{letrec*} forms into low
 level binding constructs and assignments.  The result is such that the
@@ -16555,7 +16560,7 @@ order of bindings in a single binding construct can be changed at will.
 
 
 @deffn Parameter $check-for-illegal-letrec
-If set to true: @func{$compiler.optimize-letrec} will perform an
+If set to true: @func{$optimize-letrec} will perform an
 additional recordized code pass to check for illegal binding references
 in the right--hand sides of @func{letrec}, @func{letrec*} and
 @func{library-letrec*} syntaxes, raising a syntax violation error if one
@@ -16568,7 +16573,7 @@ for not problems in code.
 
 @deffn Parameter $current-letrec-pass
 Select the transformations performed by
-@func{$compiler.optimize-letrec}; possible values are the symbols:
+@func{$optimize-letrec}; possible values are the symbols:
 
 @table @code
 @item basic
@@ -16608,7 +16613,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.source-optimize @var{input}
+@defun $source-optimize @var{input}
 @end defun
 
 @c page
@@ -16620,7 +16625,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.rewrite-references-and-assignments @var{input}
+@defun $rewrite-references-and-assignments @var{input}
 @end defun
 
 
@@ -16633,7 +16638,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.introduce-tags @var{input}
+@defun $introduce-tags @var{input}
 @end defun
 
 
@@ -16646,7 +16651,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.introduce-vars @var{input}
+@defun $introduce-vars @var{input}
 @end defun
 
 
@@ -16659,7 +16664,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.sanitize-bindings @var{input}
+@defun $sanitize-bindings @var{input}
 @end defun
 
 
@@ -16672,7 +16677,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.optimize-for-direct-jumps @var{input}
+@defun $optimize-for-direct-jumps @var{input}
 @end defun
 
 
@@ -16685,7 +16690,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.insert-global-assignments @var{input}
+@defun $insert-global-assignments @var{input}
 @end defun
 
 
@@ -16698,7 +16703,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.convert-closures @var{input}
+@defun $convert-closures @var{input}
 @end defun
 
 
@@ -16711,7 +16716,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.optimize-closures/lift-codes @var{input}
+@defun $optimize-closures/lift-codes @var{input}
 @end defun
 
 
@@ -16724,7 +16729,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.alt-cogen @var{input}
+@defun $alt-cogen @var{input}
 @end defun
 
 
@@ -16737,7 +16742,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $compiler.assemble-sources @var{input}
+@defun $assemble-sources @var{input}
 @end defun
 
 @c page
@@ -16749,7 +16754,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.introduce-primcalls @var{input}
+@defun $introduce-primcalls @var{input}
 @end defun
 
 @c page
@@ -16761,7 +16766,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.eliminate-fix @var{input}
+@defun $eliminate-fix @var{input}
 @end defun
 
 @c page
@@ -16773,7 +16778,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.insert-engine-checks @var{input}
+@defun $insert-engine-checks @var{input}
 @end defun
 
 @c page
@@ -16785,7 +16790,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.insert-stack-overflow-check @var{input}
+@defun $insert-stack-overflow-check @var{input}
 @end defun
 
 @c page
@@ -16797,7 +16802,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.specify-representation @var{input}
+@defun $specify-representation @var{input}
 @end defun
 
 @c page
@@ -16809,7 +16814,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.impose-calling-convention/evaluation-order @var{input}
+@defun $impose-calling-convention/evaluation-order @var{input}
 @end defun
 
 @c page
@@ -16821,7 +16826,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.assign-frame-sizes @var{input}
+@defun $assign-frame-sizes @var{input}
 @end defun
 
 @c page
@@ -16837,7 +16842,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.color-by-chaitin @var{input}
+@defun $color-by-chaitin @var{input}
 @end defun
 
 @c page
@@ -16849,7 +16854,7 @@ The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
 
-@defun $alt-cogen.flatten-codes @var{input}
+@defun $flatten-codes @var{input}
 @end defun
 
 @c page
