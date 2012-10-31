@@ -16554,6 +16554,18 @@ order of bindings in a single binding construct can be changed at will.
 @end defun
 
 
+@deffn Parameter $check-for-illegal-letrec
+If set to true: @func{$compiler.optimize-letrec} will perform an
+additional recordized code pass to check for illegal binding references
+in the right--hand sides of @func{letrec}, @func{letrec*} and
+@func{library-letrec*} syntaxes, raising a syntax violation error if one
+is found.  This is the default.
+
+If set to false: the validating pass is not performed, faithfully hoping
+for not problems in code.
+@end deffn
+
+
 @deffn Parameter $current-letrec-pass
 Select the transformations performed by
 @func{$compiler.optimize-letrec}; possible values are the symbols:

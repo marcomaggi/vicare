@@ -148,6 +148,7 @@ TESTS			=	\
 	test-vicare-infix.sps				\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
+	test-vicare-letrec-syntax.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
@@ -356,6 +357,7 @@ EXTRA_DIST = \
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-linux.sps				\
+	test-vicare-letrec-syntax.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\

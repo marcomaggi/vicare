@@ -38,6 +38,7 @@
     ;; these go in (ikarus system $compiler)
     (rename
      (current-letrec-pass			$current-letrec-pass)
+     (check-for-illegal-letrec			$check-for-illegal-letrec)
 
      (compile-core-expr->code			$compiler.compile-core-expr->code)
      (recordize					$compiler.recordize)

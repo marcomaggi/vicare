@@ -35,10 +35,16 @@
 
 (module (debug-scc
 	 optimize-letrec
-	 current-letrec-pass)
+	 current-letrec-pass
+	 check-for-illegal-letrec)
 
   (define debug-scc
     (make-parameter #f))
+
+  (define check-for-illegal-letrec
+    (make-parameter #t
+      (lambda (obj)
+	(and obj #t))))
 
   (module (current-letrec-pass)
 
@@ -63,6 +69,8 @@
 
   (define (optimize-letrec x)
     (define who 'optimize-letrec)
+    (when (check-for-illegal-letrec)
+      (check-for-illegal-letrec-references x))
     (case-symbols (current-letrec-pass)
       ((scc)     (optimize-letrec/scc     x))
       ((waddell) (optimize-letrec/waddell x))
@@ -112,6 +120,156 @@
       ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t))))
 
   #| end of module: build-assign* |# )
+
+
+(module (check-for-illegal-letrec-references)
+  ;;This module is  used to check for illegal references  to bindings in
+  ;;the right-hand sides of LETREC and LETREC* syntaxes.
+  ;;
+  (define who 'check-for-illegal-letrec-references)
+
+  (define (check-for-illegal-letrec-references x)
+    (cond ((C x '())
+	   => (lambda (illegal)
+		(%error illegal x)))))
+
+  (define (C x illegal*)
+    ;;Recursively  visit the  recordized  code X  looking  for a  struct
+    ;;instance of type PRELEX which is  EQ? to one in the list ILLEGAL*.
+    ;;When found return such struct, else return #f.
+    ;;
+    (struct-case x
+      ((constant)
+       #f)
+
+      ((prelex)
+       (cond ((memq x illegal*)
+	      => car)
+	     (else #f)))
+
+      ((assign lhs rhs)
+       (cond ((memq lhs illegal*)
+	      => car)
+	     (else
+	      (C rhs illegal*))))
+
+      ((primref)
+       #f)
+
+      ((bind lhs* rhs* body)
+       (or (if (null? lhs*)
+	       #f
+	     (C*/error rhs* illegal*))
+	   (C body illegal*)))
+
+      ((recbind lhs* rhs* body)
+       (or (if (null? lhs*)
+	       #f
+	     (C*/error rhs* (append lhs* illegal*)))
+	   (C body illegal*)))
+
+      ((rec*bind lhs* rhs* body)
+       (or (if (null? lhs*)
+	       #f
+	     ;;Notice the difference between  LETREC and LETREC*: in the
+	     ;;latter it  is fine for  a RHS to  reference the LHS  of a
+	     ;;previous local binding.
+	     (let loop ((lhs* lhs*)
+			(rhs* rhs*))
+;;(%debug-print (map unparse-recordized-code/pretty lhs*))
+	       (if (null? rhs*)
+		   #f
+		 (or (C/error ($car rhs*) (append lhs* illegal*))
+		     (loop ($cdr lhs*) ($cdr rhs*))))))
+	   (C body illegal*)))
+
+      ((conditional test conseq altern)
+       (or (C test   illegal*)
+	   (C conseq illegal*)
+	   (C altern illegal*)))
+
+      ((seq e0 e1)
+       (or (C e0 illegal*)
+	   (C e1 illegal*)))
+
+      ((clambda)
+       #f
+       #;(C-clambda x))
+
+      ((funcall rator rand*)
+       (or (C  rator illegal*)
+	   (C* rand* illegal*)))
+
+      ((mvcall p c)
+       (or (C p illegal*)
+	   (C c illegal*)))
+
+      ((forcall rator rand*)
+       ;;Remember that RATOR is a string here.
+       (C* rand* illegal*))
+
+      (else
+       (error who "invalid expression" (unparse-recordized-code x)))))
+
+  (define (C/error x illegal*)
+    ;;Like C, but  in case of error  make use of X as  enclosing form in
+    ;;the raised exception.
+    ;;
+    (cond ((C x illegal*)
+	   => (lambda (illegal)
+		(%error illegal x)))
+	  (else #f)))
+
+  (define (C* x* illegal*)
+    ;;Apply C to every item in the list X*.
+    ;;
+    (find (lambda (x)
+	    (C x illegal*))
+      x*))
+
+  (define (C*/error x* illegal*)
+    ;;Like C*, but in  case of error make use of the  culprit item of X*
+    ;;as enclosing form in the raised exception.
+    ;;
+    (let loop ((x* x*))
+      (cond ((null? x*)
+	     #f)
+	    ((C ($car x*) illegal*)
+	     => (lambda (illegal)
+		  (%error illegal ($car x*))))
+	    (else
+	     (loop ($cdr x*))))))
+
+;;; --------------------------------------------------------------------
+
+  (module (C-clambda)
+    ;;The purpose of this module is to apply C to every CASE-LAMBDA body
+    ;;with an empty set of illegals.
+    ;;
+    (define (C-clambda x)
+      (struct-case x
+	((clambda label.unused cls*)
+	 (for-each C-clambda-case cls*)
+	 #f)))
+
+    (define (C-clambda-case x)
+      (struct-case x
+	((clambda-case info body)
+	 (cond ((C body '())
+		=> (lambda (illegal)
+		     (%error illegal x)))))))
+
+    #| end of module: C-lambda |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%error illegal-prelex enclosing-code)
+    (syntax-violation who
+      "illegal binding reference in right-hand side of LETREC or LETREC* syntax"
+      (unparse-recordized-code/pretty enclosing-code)
+      (unparse-recordized-code/pretty illegal-prelex)))
+
+  #| end of file: check-for-illegal-letrec-references |# )
 
 
 (module (optimize-letrec/basic)

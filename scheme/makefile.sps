@@ -2171,6 +2171,7 @@
 ;;; --------------------------------------------------------------------
 
     ($current-letrec-pass				$compiler)
+    ($check-for-illegal-letrec				$compiler)
 
     ($compiler.compile-core-expr->code			$compiler)
     ($compiler.recordize				$compiler)
