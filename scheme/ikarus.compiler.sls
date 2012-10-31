@@ -3679,6 +3679,18 @@
 (define off-cdr				(fx- disp-cdr pair-tag))
 
 ;;; --------------------------------------------------------------------
+;;; vectors
+
+(define vector-tag			5)
+(define vector-mask			7)
+
+(define disp-vector-length		0)
+(define disp-vector-data		wordsize)
+
+(define off-vector-length		(fx- disp-vector-length vector-tag))
+(define off-vector-data			(fx- disp-vector-data   vector-tag))
+
+;;; --------------------------------------------------------------------
 ;;; flonums
 
 (define flonum-tag			#x17)
@@ -3768,18 +3780,6 @@
 
 (define off-bytevector-length		(fx- disp-bytevector-length bytevector-tag))
 (define off-bytevector-data		(fx- disp-bytevector-data   bytevector-tag))
-
-;;; --------------------------------------------------------------------
-;;; vectors
-
-(define vector-tag			5)
-(define vector-mask			7)
-
-(define disp-vector-length		0)
-(define disp-vector-data		wordsize)
-
-(define off-vector-length		(fx- disp-vector-length vector-tag))
-(define off-vector-data			(fx- disp-vector-data   vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; symbols
