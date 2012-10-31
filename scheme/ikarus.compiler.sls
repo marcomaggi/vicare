@@ -4824,7 +4824,7 @@
               (rhs* (map E rhs*))
               (body (E body)))
          (import (only (ikarus) map))
-         (list 'letrec (map list lhs* rhs*) body)))
+         (list 'fix (map list lhs* rhs*) body)))
 
       ((recbind lhs* rhs* body)
        (let* ((lhs* (map Var lhs*))

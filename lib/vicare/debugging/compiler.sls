@@ -28,7 +28,43 @@
 #!r6rs
 (library (vicare debugging compiler)
   (export
-    compile-up-to)
+    compile-up-to
+
+    ;; configuration
+    $current-letrec-pass
+    $check-for-illegal-letrec
+
+    ;; compiler passes
+    $compile-core-expr->code
+    $recordize
+    $optimize-direct-calls
+    $optimize-letrec
+    $source-optimize
+    $rewrite-references-and-assignments
+    $introduce-tags
+    $introduce-vars
+    $sanitize-bindings
+    $optimize-for-direct-jumps
+    $insert-global-assignments
+    $convert-closures
+    $optimize-closures/lift-codes
+    $alt-cogen
+    $assemble-sources
+
+    ;; code generation passes
+    $introduce-primcalls
+    $eliminate-fix
+    $insert-engine-checks
+    $insert-stack-overflow-check
+    $specify-representation
+    $impose-calling-convention/evaluation-order
+    $assign-frame-sizes
+    $color-by-chaitin
+    $flatten-codes
+
+    ;; auxiliary functions
+    $unparse-recordized-code
+    $unparse-recordized-code/pretty)
   (import (vicare)
     (ikarus system $compiler))
 
@@ -62,56 +98,31 @@
 		 $color-by-chaitin
 		 $flatten-codes)
     ;; compiler passes
-    ((_ (pass $compile-core-expr->code) ?body)
-     (%compile-up-to  0 ?body))
-    ((_ (pass $recordize) ?body)
-     (%compile-up-to  1 ?body))
-    ((_ (pass $optimize-direct-calls) ?body)
-     (%compile-up-to  2 ?body))
-    ((_ (pass $optimize-letrec) ?body)
-     (%compile-up-to  3 ?body))
-    ((_ (pass $source-optimize) ?body)
-     (%compile-up-to  4 ?body))
-    ((_ (pass $rewrite-references-and-assignments) ?body)
-     (%compile-up-to  5 ?body))
-    ((_ (pass $introduce-tags) ?body)
-     (%compile-up-to  6 ?body))
-    ((_ (pass $introduce-vars) ?body)
-     (%compile-up-to  7 ?body))
-    ((_ (pass $sanitize-bindings) ?body)
-     (%compile-up-to  8 ?body))
-    ((_ (pass $optimize-for-direct-jumps) ?body)
-     (%compile-up-to  9 ?body))
-    ((_ (pass $insert-global-assignments) ?body)
-     (%compile-up-to 10 ?body))
-    ((_ (pass $convert-closures) ?body)
-     (%compile-up-to 11 ?body))
-    ((_ (pass $optimize-closures/lift-codes) ?body)
-     (%compile-up-to 12 ?body))
-    ((_ (pass $alt-cogen) ?body)
-     (%compile-up-to 13 ?body))
-    ((_ (pass $assemble-sources) ?body)
-     (%compile-up-to 14 ?body))
-
+    ((_ $compile-core-expr->code	?body)	(%compile-up-to  0 ?body))
+    ((_ $recordize			?body)	(%compile-up-to  1 ?body))
+    ((_ $optimize-direct-calls		?body)	(%compile-up-to  2 ?body))
+    ((_ $optimize-letrec		?body)	(%compile-up-to  3 ?body))
+    ((_ $source-optimize		?body)	(%compile-up-to  4 ?body))
+    ((_ $rewrite-references-and-assignments ?body) (%compile-up-to  5 ?body))
+    ((_ $introduce-tags			?body)	(%compile-up-to  6 ?body))
+    ((_ $introduce-vars			?body)	(%compile-up-to  7 ?body))
+    ((_ $sanitize-bindings		?body)	(%compile-up-to  8 ?body))
+    ((_ $optimize-for-direct-jumps	?body)	(%compile-up-to  9 ?body))
+    ((_ $insert-global-assignments	?body)	(%compile-up-to 10 ?body))
+    ((_ $convert-closures		?body)	(%compile-up-to 11 ?body))
+    ((_ $optimize-closures/lift-codes	?body)	(%compile-up-to 12 ?body))
+    ((_ $alt-cogen			?body)	(%compile-up-to 13 ?body))
+    ((_ $assemble-sources		?body)	(%compile-up-to 14 ?body))
     ;;code generation passes
-    ((_ (pass $introduce-primcalls) ?body)
-     (%compile-up-to 15 ?body))
-    ((_ (pass $eliminate-fix) ?body)
-     (%compile-up-to 16 ?body))
-    ((_ (pass $insert-engine-checks) ?body)
-     (%compile-up-to 17 ?body))
-    ((_ (pass $insert-stack-overflow-check) ?body)
-     (%compile-up-to 18 ?body))
-    ((_ (pass $specify-representation) ?body)
-     (%compile-up-to 19 ?body))
-    ((_ (pass $impose-calling-convention/evaluation-order) ?body)
-     (%compile-up-to 19 ?body))
-    ((_ (pass $assign-frame-sizes) ?body)
-     (%compile-up-to 20 ?body))
-    ((_ (pass $color-by-chaitin) ?body)
-     (%compile-up-to 21 ?body))
-    ((_ (pass $flatten-codes) ?body)
-     (%compile-up-to 22 ?body))
+    ((_ $introduce-primcalls		?body)	(%compile-up-to 15 ?body))
+    ((_ $eliminate-fix			?body)	(%compile-up-to 16 ?body))
+    ((_ $insert-engine-checks		?body)	(%compile-up-to 17 ?body))
+    ((_ $insert-stack-overflow-check	?body)	(%compile-up-to 18 ?body))
+    ((_ $specify-representation		?body)	(%compile-up-to 19 ?body))
+    ((_ $impose-calling-convention/evaluation-order ?body) (%compile-up-to 19 ?body))
+    ((_ $assign-frame-sizes		?body)	(%compile-up-to 20 ?body))
+    ((_ $color-by-chaitin		?body)	(%compile-up-to 21 ?body))
+    ((_ $flatten-codes			?body)	(%compile-up-to 22 ?body))
     ))
 
 ;;; --------------------------------------------------------------------
