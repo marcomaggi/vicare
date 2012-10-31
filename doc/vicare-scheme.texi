@@ -848,6 +848,30 @@ values (it could be greater than this).  As comparison: LispWorks for
 Unix sets this value to 300, LispWorks for Windows and LispWorks for
 Linux set this value to 255 (last verified from its online documenattion
 in November, 2011).
+
+@item
+@rnrs{6} mandates that illegal references to bindings established by
+@func{letrec} and @func{letrec*} are detected at run time and cause an
+assertion violation to be raised.  @value{PRJNAME} detects them at
+compile time, so some fully @rnrs{6}--compliant code will not work under
+@value{PRJNAME}.
+
+For example, the following program will run under a @rnrs{6}--compliant
+implementation:
+
+@example
+(import (rnrs))
+(letrec ((x (if (eq? (cons 1 2)
+                     (cons 1 2))
+                x
+              1)))
+  x)
+@end example
+
+@noindent
+because the form @code{x} in reference position is never evaluated;
+under @value{PRJNAME} this code will rather raise an assertion violation
+and syntax violation at compile time.
 @end enumerate
 
 @c page
