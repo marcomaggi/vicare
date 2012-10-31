@@ -2132,11 +2132,12 @@
        (unsafe.fx<  obj BUFFER-SIZE-UPPER-LIMIT)))
 
 (define %make-buffer-size-parameter
-  (let ((error-message/invalid-buffer-size (string-append "expected fixnum in range "
-							  (number->string BUFFER-SIZE-LOWER-LIMIT)
-							  " <= x < "
-							  (number->string BUFFER-SIZE-UPPER-LIMIT)
-							  " as buffer size")))
+  (let ((error-message/invalid-buffer-size
+	 (string-append "expected fixnum in range "
+			(number->string BUFFER-SIZE-LOWER-LIMIT)
+			" <= x < "
+			(number->string BUFFER-SIZE-UPPER-LIMIT)
+			" as buffer size")))
     (lambda (init who)
       (make-parameter init
 	(lambda (obj)
@@ -2147,7 +2148,7 @@
 (let-syntax ((define-buffer-size-parameter (syntax-rules ()
 					     ((_ ?who ?init)
 					      (define ?who
-						(%make-buffer-size-parameter ?init ?who))))))
+						(%make-buffer-size-parameter ?init '?who))))))
 
   ;;Customisable buffer size for bytevector ports.  To be used by:
   ;;
