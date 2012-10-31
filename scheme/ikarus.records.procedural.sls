@@ -536,7 +536,7 @@
 
 ;;;; record-type descriptor inspection
 
-(define record-type-descriptor? <rtd>?)
+#;(define record-type-descriptor? <rtd>?)
 
 (define-syntax define-rtd-inspector
   (syntax-rules ()
