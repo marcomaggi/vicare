@@ -90,6 +90,71 @@
   (open-string-input-port "1"))
 
 
+;;;; binary data
+
+(define (bindata-empty.len)
+  0)
+
+(define (bindata-empty.bv)
+  '#vu8())
+
+(define (bindata-zero.bv)
+  '#vu8(0))
+
+(define (bindata-zero.len)
+  1)
+
+(define (bindata-ten.len)
+  10)
+
+(define (bindata-ten.bv)
+  ;;Holds  the same  bytes  of the  first  subvector of  length 10  of
+  ;;BINDATA-HUNDREDS.
+  ;;
+  '#vu8(0 1 2 3 4 5 6 7 8 9))
+
+(define (bindata-bytes.len)
+  256)
+
+(define bindata-bytes.bv
+  ;;Holds  the  same bytes  of  the first  subvector  of  length 256  of
+  ;;BINDATA-HUNDREDS.
+  ;;
+  (let ((result #f))
+    (define (%bytevector-u8-fill! bv)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 256)
+	   bv)
+	(bytevector-u8-set! bv i i)))
+    (lambda ()
+      (or result
+	  (begin
+	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-bytes.len) 0)))
+	    result)))))
+
+(define (bindata-hundreds.len)
+  (* 100 256))
+
+(define bindata-hundreds.bv
+  ;;A bytevector holding 100 sequences of bytes from 0 included to 255
+  ;;included.
+  ;;
+  (let ((result #f))
+    (define (%bytevector-u8-fill! bv)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 100)
+	   bv)
+	(let ((base (* 256 i)))
+	  (do ((j 0 (+ 1 j)))
+	      ((= j 256))
+	    (bytevector-u8-set! bv (+ base j) j)))))
+    (lambda ()
+      (or result
+	  (begin
+	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-hundreds.len) 0)))
+	    result)))))
+
+
 ;;;; file helpers
 
 (define (make-test-pathname filename)
@@ -172,71 +237,6 @@
 	     (begin  . ?body)
 	   (close-input-port ?port)
 	   (cleanup-test-pathname)))))))
-
-
-;;;; binary data
-
-(define (bindata-empty.len)
-  0)
-
-(define (bindata-empty.bv)
-  '#vu8())
-
-(define (bindata-zero.bv)
-  '#vu8(0))
-
-(define (bindata-zero.len)
-  1)
-
-(define (bindata-ten.len)
-  10)
-
-(define (bindata-ten.bv)
-  ;;Holds  the same  bytes  of the  first  subvector of  length 10  of
-  ;;BINDATA-HUNDREDS.
-  ;;
-  '#vu8(0 1 2 3 4 5 6 7 8 9))
-
-(define (bindata-bytes.len)
-  256)
-
-(define bindata-bytes.bv
-  ;;Holds  the  same bytes  of  the first  subvector  of  length 256  of
-  ;;BINDATA-HUNDREDS.
-  ;;
-  (let ((result #f))
-    (define (%bytevector-u8-fill! bv)
-      (do ((i 0 (+ 1 i)))
-	  ((= i 256)
-	   bv)
-	(bytevector-u8-set! bv i i)))
-    (lambda ()
-      (or result
-	  (begin
-	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-bytes.len) 0)))
-	    result)))))
-
-(define (bindata-hundreds.len)
-  (* 100 256))
-
-(define bindata-hundreds.bv
-  ;;A bytevector holding 100 sequences of bytes from 0 included to 255
-  ;;included.
-  ;;
-  (let ((result #f))
-    (define (%bytevector-u8-fill! bv)
-      (do ((i 0 (+ 1 i)))
-	  ((= i 100)
-	   bv)
-	(let ((base (* 256 i)))
-	  (do ((j 0 (+ 1 j)))
-	      ((= j 256))
-	    (bytevector-u8-set! bv (+ base j) j)))))
-    (lambda ()
-      (or result
-	  (begin
-	    (set! result (%bytevector-u8-fill! (make-bytevector (bindata-hundreds.len) 0)))
-	    result)))))
 
 
 ;;;; textual data
