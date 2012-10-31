@@ -17,7 +17,8 @@
 
 ;;;; introduction
 ;;
-;;For an  introduction to  processing LETREC  and LETREC*  syntaxes, and
+;;Here  we  give   only  a  short  context  introduction;   for  a  real
+;;introduction   to  processing   LETREC  and   LETREC*  syntaxes,   and
 ;;specifically  to  understand  the  code  below,  we  *must*  read  the
 ;;following paper:
 ;;
@@ -30,6 +31,135 @@
 ;;
 ;;   Abdulaziz Ghuloum,  R. Kent Dybvig.  ``Fixing  Letrec (reloaded)''.
 ;;   Workshop on Scheme and Functional Programming '09
+;;
+;; ---------------------------------------------------------------------
+;;
+;;Let's consider the following program:
+;;
+;;   (import (rnrs))
+;;   (let ((A B))
+;;     #t)
+;;
+;;it will fail with "unbound identifier  B"; we are *not* concerned with
+;;unbound identifiers here.  So let's move on to the following program:
+;;
+;;   (import (rnrs))
+;;   (let ((A 123))
+;;     (let ((A A))
+;;       #t))
+;;
+;;no errors here: the identifier A  in reference position is captured by
+;;the outer LET binding for A.  Now this program:
+;;
+;;   (import (rnrs))
+;;   (let* ((A 123)
+;;          (B A))
+;;     #t)
+;;
+;;everything is all right; now this program:
+;;
+;;
+;;   (import (rnrs))
+;;   (let* ((A 123)
+;;          (A A))
+;;     #t)
+;;
+;;again no error: the identifier A  in reference position is captured by
+;;the first LET*  binding for A; LET* allows us  to create bindings with
+;;the same name.
+;;
+;; ---------------------------------------------------------------------
+;;
+;;Finally, let's move to the LETREC syntax.  This program is legal:
+;;
+;;   (import (rnrs))
+;;   (letrec ((A (lambda () A)))
+;;     #t)
+;;
+;;because  LETREC  defines recursive  bindings,  so  we are  allowed  to
+;;reference A  in the right-hand  side of the  binding for A  itself, as
+;;long as we put such reference in the body of a LAMBDA.
+;;
+;;This program is also legal:
+;;
+;;   (import (rnrs))
+;;   (letrec ((A (lambda () B))
+;;            (B (lambda () A)))
+;;     #t)
+;;
+;;because the  cross references  to A and  B are in  the body  of LAMBDA
+;;syntaxes.
+;;
+;;This program is illegal:
+;;
+;;   (import (rnrs))
+;;   (letrec ((A (list A)))
+;;     #t)
+;;
+;;because the identifier A in reference position is not in the body of a
+;;LAMBDA syntax: to evaluate the right-hand  side of the binding we need
+;;the value of the binding itself.   Notice that A in reference position
+;;is *not*  an unbound identifier:  it is captured  by the A  in binding
+;;position;  it is  just "illegal"  and we  must detect  this situation,
+;;according to R6RS.
+;;
+;;This program is illegal:
+;;
+;;   (import (rnrs))
+;;   (letrec ((A 123)
+;;            (B (list A)))
+;;     #t)
+;;
+;;because the identifier A in reference  position is not in the body off
+;;a LAMBDA syntax: LETREC does not  impose an order to the evaluation of
+;;the  init expressions,  so  to  evaluate the  right-hand  side of  the
+;;binding we need the value of the binding itself.
+;;
+;; ---------------------------------------------------------------------
+;;
+;;Let's  move to  the LETREC*  syntax; it  is similar  but not  equal to
+;;LETREC.  This program is legal:
+;;
+;;   (import (rnrs))
+;;   (letrec* ((A (lambda () A)))
+;;     #t)
+;;
+;;because  LETREC* defines  recursive  bindings, so  we  are allowed  to
+;;reference A  in the right-hand  side of the  binding for A  itself, as
+;;long as we put such reference in the body of a LAMBDA.
+;;
+;;This program is also legal:
+;;
+;;   (import (rnrs))
+;;   (letrec* ((A (lambda () B))
+;;             (B (lambda () A)))
+;;     #t)
+;;
+;;because the  cross references  to A and  B are in  the body  of LAMBDA
+;;syntaxes.
+;;
+;;This program is illegal:
+;;
+;;   (import (rnrs))
+;;   (letrec* ((A (list A)))
+;;     #t)
+;;
+;;because the identifier A in reference position is not in the body of a
+;;LAMBDA syntax: to evaluate the right-hand  side of the binding we need
+;;the value  of the binding itself.   Again, notice that A  in reference
+;;position is  *not* an unbound identifier:  it is captured by  the A in
+;;binding  position;  it is  just  "illegal"  and  we must  detect  this
+;;situation, according to R6RS.
+;;
+;;This program is legal:
+;;
+;;   (import (rnrs))
+;;   (letrec ((A 123)
+;;            (B (list A)))
+;;     #t)
+;;
+;;because LETREC* imposes a left-to-right order to the evaluation of the
+;;init expressions.
 ;;
 
 
