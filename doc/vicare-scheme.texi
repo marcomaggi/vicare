@@ -869,9 +869,10 @@ implementation:
 @end example
 
 @noindent
-because the form @code{x} in reference position is never evaluated;
-under @value{PRJNAME} this code will rather raise an assertion violation
-and syntax violation at compile time.
+because the form @code{x} in reference position in the right-hand side
+of the binding is never evaluated; under @value{PRJNAME} this code will
+rather raise an assertion violation and syntax violation at compile
+time.
 @end enumerate
 
 @c page

@@ -58,7 +58,6 @@
 ;;
 ;;everything is all right; now this program:
 ;;
-;;
 ;;   (import (rnrs))
 ;;   (let* ((A 123)
 ;;          (A A))
@@ -160,6 +159,33 @@
 ;;
 ;;because LETREC* imposes a left-to-right order to the evaluation of the
 ;;init expressions.
+;;
+;; ---------------------------------------------------------------------
+;;
+;;R6RS  mandates  that illegal  references  to  bindings established  by
+;;LETREC and  LETREC* are detected  at run  time and cause  an assertion
+;;violation to be raised.  Vicare detects  them at compile time, so some
+;;fully R6RS-compliant code will not work under Vicare.
+;;
+;;The following code is illegal under both R6RS and Vicare:
+;;
+;;   (import (rnrs))
+;;   (letrec ((x y)
+;;            (y x))
+;;     'should-not-get-here)
+;;
+;;The following program will run under a R6RS-compliant implementation:
+;;
+;;   (import (rnrs))
+;;   (letrec ((x (if (eq? (cons 1 2)
+;;                        (cons 1 2))
+;;                   x
+;;                 1)))
+;;     x)
+;;
+;;because the form X in reference position in the right-hand side of the
+;;binding is never  evaluated; under Vicare this code  will rather raise
+;;an assertion violation and syntax violation at compile time.
 ;;
 
 
@@ -825,6 +851,19 @@
   ;;Perform transformations to convert  the recordized representation of
   ;;LETREC  and LETREC*  forms  into LET  forms  and assignments.   This
   ;;function does what is described in the [GD] paper.
+  ;;
+  ;;This  module  accepts  as   input  a  struct  instance  representing
+  ;;recordized code with the following struct types:
+  ;;
+  ;;assign		bind		clambda
+  ;;conditional		constant	forcall
+  ;;funcall		mvcall		prelex
+  ;;primref		rec*bind	recbind
+  ;;seq
+  ;;
+  ;;and returns a new struct  instance representing recordized code with
+  ;;the same types  except RECBIND and REC*BIND which are  replaced by a
+  ;;composition of BIND, FIX and ASSIGN structures.
   ;;
   (define who 'optimize-letrec/scc)
 
