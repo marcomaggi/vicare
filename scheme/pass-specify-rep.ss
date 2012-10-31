@@ -417,23 +417,6 @@
   (cogen-primop cogen-debug-primop)
   (import cogen-handler-maker)
 
-  (define cogen-primop
-    (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
-
-  (define (cogen-debug-primop op src/loc ctxt args)
-    (define-inline (main)
-      ((make-cogen-handler %make-call %make-call) op ctxt args))
-
-    (define (%make-call op args)
-      ;;This function clauses upon the argument SRC/LOC.
-      ;;
-      (make-funcall (make-primref 'debug-call)
-		    (cons* (V src/loc)
-			   (V (make-primref op))
-			   args)))
-
-    (main))
-
   (module (%make-interrupt-call)
 
     (define (%make-interrupt-call op args)
@@ -453,11 +436,28 @@
 	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
 	(else				x)))
 
-    #| end of module |# )
+    #| end of module: %make-interrupt-call |# )
 
   (define (%make-no-interrupt-call op args)
     (let ((pref (make-primref op)))
       (make-funcall (V pref) args)))
+
+  (define cogen-primop
+    (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
+
+  (define (cogen-debug-primop op src/loc ctxt args)
+    (define-inline (main)
+      ((make-cogen-handler %make-call %make-call) op ctxt args))
+
+    (define (%make-call op args)
+      ;;This function clauses upon the argument SRC/LOC.
+      ;;
+      (make-funcall (make-primref 'debug-call)
+		    (cons* (V src/loc)
+			   (V (make-primref op))
+			   args)))
+
+    (main))
 
   #| end of module: cogen-primop cogen-debug-primop |# )
 
