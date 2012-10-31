@@ -176,7 +176,6 @@
 	     ;;previous local binding.
 	     (let loop ((lhs* lhs*)
 			(rhs* rhs*))
-;;(%debug-print (map unparse-recordized-code/pretty lhs*))
 	       (if (null? rhs*)
 		   #f
 		 (or (C/error ($car rhs*) (append lhs* illegal*))
@@ -193,8 +192,7 @@
 	   (C e1 illegal*)))
 
       ((clambda)
-       #f
-       #;(C-clambda x))
+       #f #;(C-clambda x))
 
       ((funcall rator rand*)
        (or (C  rator illegal*)
@@ -264,10 +262,18 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error illegal-prelex enclosing-code)
-    (syntax-violation who
-      "illegal binding reference in right-hand side of LETREC or LETREC* syntax"
-      (unparse-recordized-code/pretty enclosing-code)
-      (unparse-recordized-code/pretty illegal-prelex)))
+    ;;R6RS  requests  that  this  error is  of  type  "&assertion",  but
+    ;;"&syntax" is not bad either.
+    ;;
+    (raise
+     (condition
+      (make-who-condition who)
+      (make-message-condition
+       "illegal binding reference in right-hand side of LETREC, LETREC* or LIBRARY syntax")
+      (make-assertion-violation)
+      (make-syntax-violation
+       (unparse-recordized-code/pretty enclosing-code)
+       (unparse-recordized-code/pretty illegal-prelex)))))
 
   #| end of file: check-for-illegal-letrec-references |# )
 

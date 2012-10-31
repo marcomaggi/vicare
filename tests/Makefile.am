@@ -224,8 +224,7 @@ installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
 XFAIL_TESTS = \
-	test-vicare-log.sps			\
-	test-issue-008.sps
+	test-vicare-log.sps
 
 #page
 #### extra files to be distributed

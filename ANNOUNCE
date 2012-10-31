@@ -59,6 +59,7 @@ Notes for revision 0.2d20
   EXPAND-LIBRARY  (formerly  LIBRARY-EXPANDER)  has been  added  to  the
   export list of the boot image.
 
+* Issue 8 should be fixed.
 
 
 Notes for revision 0.2d19

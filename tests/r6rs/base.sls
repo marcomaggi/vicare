@@ -211,7 +211,7 @@
     ;;This  test fails  (Jul  21, 2012)  and it  is  already covered  in
     ;;another test file.
     ;;
-    #;(test/exn (letrec ([x y]
+    (test/exn (letrec ([x y]
                        [y x])
                 'should-not-get-here)
               &assertion)
