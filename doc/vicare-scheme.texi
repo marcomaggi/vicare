@@ -16559,6 +16559,7 @@ The transformations are equivalent to:
 @end example
 
 @item waddell
+Perform the transformation described in the ``Fixing Letrec'' paper.
 
 @item scc
 This is the default.
@@ -29690,6 +29691,15 @@ equality checking for trees and graphs.''  In ICFP '08: Proceeding of
 the 13th ACM SIGPLAN international conference on Functional programming,
 pages 179-188.  ACM, New York, NY, USA, 2008.  ISBN
 978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+
+@noindent
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
+Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+Construct''.
+
+@noindent
+Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
+Workshop on Scheme and Functional Programming '09
 
 @c page
 @node concept index

@@ -907,7 +907,13 @@
 		;evaluated in the region of the bindings.
    ))
 
-;;Like BIND, but the RHS* field holds struct instances of type CLAMBDA.
+;;Like BIND, but the RHS* field  holds struct instances of type CLAMBDA.
+;;For details  on the meaning  of FIX, see  the paper (available  on the
+;;Net):
+;;
+;;   Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  "Fixing Letrec: A
+;;   Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+;;   Construct"
 ;;
 (define-struct fix
   (lhs* rhs* body))

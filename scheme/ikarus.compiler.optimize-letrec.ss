@@ -15,6 +15,24 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;; introduction
+;;
+;;For an  introduction to  processing LETREC  and LETREC*  syntaxes, and
+;;specifically  to  understand  the  code  below,  we  *must*  read  the
+;;following paper:
+;;
+;;   Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  "Fixing Letrec: A
+;;   Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+;;   Construct"
+;;
+;;the  we can  move  to the  following paper,  which  describes the  SCC
+;;transformation used by Vicare:
+;;
+;;   Abdulaziz Ghuloum,  R. Kent Dybvig.  ``Fixing  Letrec (reloaded)''.
+;;   Workshop on Scheme and Functional Programming '09
+;;
+
+
 (module (debug-scc
 	 optimize-letrec
 	 current-letrec-pass)
@@ -25,7 +43,10 @@
   (module (current-letrec-pass)
 
     (define current-letrec-pass
-      (make-parameter 'waddell #;'scc
+      (make-parameter
+	  'basic
+	  #;'waddell
+	  #;'scc
 	(lambda (x)
 	  (define who 'current-letrec-pass)
 	  (with-arguments-validation (who)
@@ -110,6 +131,9 @@
   ;;   (letrec ((?var ?init) ...) . ?body)
   ;;   ==> (let ((?var (void)) ...)
   ;;         (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
+  ;;
+  ;;Notice that the  transformation for LETREC is described  also in the
+  ;;R5RS document.
   ;;
   ;;This  module  accepts  as   input  a  struct  instance  representing
   ;;recordized code with the following struct types:
