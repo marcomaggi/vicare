@@ -4780,7 +4780,7 @@
 	 (let ((test^   (E test))
 	       (conseq^ (E conseq))
 	       (altern^ (E altern)))
-	   (list 'conditional test^ conseq^ altern^)))
+	   (list 'if test^ conseq^ altern^)))
 
 	((primcall op arg*)
 	 (cons op (%map-in-order E arg*)))
@@ -4810,7 +4810,7 @@
 	   (list 'letrec* (map list lhs* rhs*) body)))
 
 	((seq e0 e1)
-	 (cons 'seq
+	 (cons 'begin
 	       ;;Here  we flatten  nested  SEQ instances  into a  unique
 	       ;;output SEQ form.
 	       (let recur ((expr  e0)
