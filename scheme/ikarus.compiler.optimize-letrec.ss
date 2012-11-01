@@ -205,10 +205,7 @@
   (module (current-letrec-pass)
 
     (define current-letrec-pass
-      (make-parameter
-	  #;'basic
-	  'waddell
-	  #;'scc
+      (make-parameter 'scc
 	(lambda (x)
 	  (define who 'current-letrec-pass)
 	  (with-arguments-validation (who)
@@ -1104,7 +1101,7 @@
 
 	  ((assign lhs rhs)
 	   (assert (prelex-source-assigned? lhs))
-		;(set-prelex-source-assigned?! lhs #t)
+	   ;;(set-prelex-source-assigned?! lhs #t)
 	   (mark-free lhs bc)
 	   (mark-complex bc)
 	   (make-assign lhs (E rhs bc)))
@@ -1127,14 +1124,14 @@
 	       (E body bc)
 	     (do-recbind lhs* rhs* body bc #t)))
 
-	  ((conditional e0 e1 e2)
-	   (make-conditional (E e0 bc) (E e1 bc) (E e2 bc)))
+	  ((conditional test conseq altern)
+	   (make-conditional (E test bc) (E conseq bc) (E altern bc)))
 
 	  ((seq e0 e1)
 	   (make-seq (E e0 bc) (E e1 bc)))
 
-	  ((clambda g cls* cp free name)
-	   (L x bc))
+	  ((clambda)
+	   (E-clambda x bc))
 
 	  ((funcall rator rand*)
 	   (mark-complex bc)
@@ -1156,16 +1153,15 @@
 	       (E x bc))
 	  x*))
 
-      (define (L x bc)
+      (define (E-clambda x bc)
 	(struct-case x
-	  ((clambda g cls* cp free name)
+	  ((clambda label cls* cp free name)
 	   (let ((bc (make-binding #f #f #f #t bc '())))
-	     (make-clambda g
-			   (map (lambda (x)
-				  (struct-case x
-				    ((clambda-case info body)
-				     (make-clambda-case info (E body bc)))))
-			     cls*)
+	     (make-clambda label (map (lambda (x)
+					(struct-case x
+					  ((clambda-case info body)
+					   (make-clambda-case info (E body bc)))))
+				   cls*)
 			   cp free name)))))
 
       (define (mark-complex bc)
@@ -1176,55 +1172,32 @@
       (define (mark-free var bc)
 	(let ((rb (prelex-operand var)))
 	  (when rb
-	    (let ((lb (let ((pr (binding-prev rb)))
-			(let loop ((bc bc))
-			  (let ((bcp (binding-prev bc)))
-			    (if (eq? bcp pr)
-				bc
-			      (loop bcp)))))))
-	      (let ((free* (binding-free* lb)))
-		(unless (memq rb free*)
-		  (set-binding-free*! lb (cons rb free*))))))))
+	    (let* ((lb    (let ((pr (binding-prev rb)))
+			    (let loop ((bc bc))
+			      (let ((bcp (binding-prev bc)))
+				(if (eq? bcp pr)
+				    bc
+				  (loop bcp))))))
+		   (free* (binding-free* lb)))
+	      (unless (memq rb free*)
+		(set-binding-free*! lb (cons rb free*)))))))
 
       #| end of module: E |# )
 
     (module (do-recbind)
 
       (define (do-recbind lhs* rhs* body bc ordered?)
-
-	(define (complex? x)
-	  (or (binding-complex x)
-	      (prelex-source-assigned? (binding-lhs x))))
-
-	(define (insert-order-edges b*)
-	  (define (mark pb b*)
-	    (unless (null? b*)
-	      (let ((b (car b*)))
-		(if (complex? b)
-		    (let ((free* (binding-free* b)))
-		      (unless (memq pb free*)
-			(set-binding-free*! b (cons pb free*)))
-		      (mark b (cdr b*)))
-		  (mark pb (cdr b*))))))
-	  (unless (null? b*)
-	    (let ((b (car b*)))
-	      (if (complex? b)
-		  (mark b (cdr b*))
-		(insert-order-edges (cdr b*))))))
-
 	(let ((b* (%make-bindings lhs* rhs* bc 0)))
-	  (for-each (lambda (b) (set-binding-rhs! b (E (binding-rhs b) b))) b*)
-	  (for-each (lambda (x) (set-prelex-operand! x #f)) lhs*)
+	  (for-each (lambda (b)
+		      (set-binding-rhs! b (E (binding-rhs b) b)))
+	    b*)
+	  (for-each (lambda (x)
+		      (set-prelex-operand! x #f))
+	    lhs*)
 	  (let ((body (E body bc)))
-	    (when ordered? (insert-order-edges b*))
+	    (when ordered?
+	      (insert-order-edges b*))
 	    (let ((scc* (get-sccs-in-order b* (map binding-free* b*) b*)))
-	      (when (debug-scc)
-		(printf "SCCS:\n")
-		(for-each
-		    (lambda (scc)
-		      (printf "  ~s\n"
-			      (map unparse-recordized-code (map binding-lhs scc))))
-		  scc*))
 	      (gen-letrecs scc* ordered? body)))))
 
       (define (%make-bindings lhs* rhs* bc i)
@@ -1233,6 +1206,31 @@
 	  (let ((b (make-binding i (car lhs*) (car rhs*) #f bc '())))
 	    (set-prelex-operand! (car lhs*) b)
 	    (cons b (%make-bindings (cdr lhs*) (cdr rhs*) bc (+ i 1))))))
+
+      (define (complex? x)
+	(or (binding-complex x)
+	    (prelex-source-assigned? (binding-lhs x))))
+
+      (module (insert-order-edges)
+
+	(define (insert-order-edges b*)
+	  (unless (null? b*)
+	    (let ((b (car b*)))
+	      (if (complex? b)
+		  (mark b (cdr b*))
+		(insert-order-edges (cdr b*))))))
+
+	(define (mark pb b*)
+	  (unless (null? b*)
+	    (let ((b (car b*)))
+	      (if (complex? b)
+		  (let ((free* (binding-free* b)))
+		    (unless (memq pb free*)
+		      (set-binding-free*! b (cons pb free*)))
+		    (mark b (cdr b*)))
+		(mark pb (cdr b*))))))
+
+	#| end of module: insert-order-edges |# )
 
       #| end of module: do-recbind |# )
 
