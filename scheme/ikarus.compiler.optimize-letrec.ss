@@ -310,17 +310,22 @@
   ;;of LETREC, LETREC* and LIBRARY-LETREC* syntaxes.
   ;;
   (begin
-    (define (%make-empty-illegal-set)
-      (lambda (x)
-	#f))
+    (define-inline (%make-empty-illegal-set)
+      (lambda (x) #f))
     (define-inline (%illegal-reference-to? x illegals)
+      ;;Must return #f if X is legal, and X itself if X is illegal.
+      ;;
       (illegals x))
     (define (%illegal-augment more illegals)
+      ;;MORE must be a list of  PRELEX structures to add to the illegals
+      ;;set.
+      ;;
       (if (null? more)
 	  illegals
 	(let ((H (make-eq-hashtable)))
 	  (for-each (lambda (x)
-		      (hashtable-set! H x #t))
+		      ;;Yes, we want X as both key and value.
+		      (hashtable-set! H x x))
 	    more)
 	  (lambda (x)
 	    (or (hashtable-ref H x #f)
@@ -339,7 +344,7 @@
        (%illegal-reference-to? x illegals))
 
       ((assign lhs rhs)
-       (or (%illegal-reference-to? x illegals)
+       (or (%illegal-reference-to? lhs illegals)
 	   (C rhs illegals)))
 
       ((primref)
