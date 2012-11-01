@@ -20168,6 +20168,12 @@ Succeed if @var{obj} is a pointer.
 Succeed if @var{obj} is @false{} or a pointer.
 @end deffn
 
+
+@deffn {Validation Clause} non-null-pointer @var{obj}
+Succeed if @var{obj} is a pointer and it does @strong{not} represent
+@cnull{}.
+@end deffn
+
 @c page
 @node args predefined memory-blocks
 @subsubsection Validating @code{meory-block} values
