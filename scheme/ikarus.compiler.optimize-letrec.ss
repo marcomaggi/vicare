@@ -590,7 +590,8 @@
 (module (optimize-letrec/waddell)
   ;;Perform transformations to convert  the recordized representation of
   ;;LETREC and LETREC* forms into  LET-like forms and assignments.  This
-  ;;function does what is described in the [WSD] paper.
+  ;;function performs  a transformation similar  (but not equal  to) the
+  ;;one described in the [WSD] paper.
   ;;
   ;;This  module  accepts  as   input  a  struct  instance  representing
   ;;recordized code with the following struct types:
@@ -605,6 +606,9 @@
   ;;the same types  except RECBIND and REC*BIND which are  replaced by a
   ;;composition of BIND, FIX and ASSIGN structures.
   ;;
+  (import (only (ikarus system $vectors)
+		$vector-set!
+		$vector-ref))
   (define who 'optimize-letrec/waddell)
 
   (define (optimize-letrec/waddell x)
@@ -617,6 +621,17 @@
     (define-constant SIMPLE-PRIMITIVES '())
 
     (define (E x ref comp)
+      ;;Recursively visit the recordized code X.
+      ;;
+      ;;REF is a  function of single argument to be  applied to a struct
+      ;;instance of type PRELEX, if  such instance represents a variable
+      ;;that is referenced in X.
+      ;;
+      ;;COMP is a thunk to be called if X is a "complex" expression.  An
+      ;;expression  is complex  if we  cannot establish  for sure  which
+      ;;bindings of  an enclosing  LETREC or  LETREC* are  referenced or
+      ;;assigned.
+      ;;
       (struct-case x
 	((constant)
 	 x)
@@ -626,9 +641,9 @@
 	 x)
 
 	((assign lhs rhs)
+	 ;;An assignment is  a reference to the binding LHS  and also it
+	 ;;makes X a "complex" expression.
 	 (ref lhs)
-	 ;;FIXME We have already called REF,  is it needed to call COMP?
-	 ;;(Marco Maggi; Oct 30, 2012)
 	 (comp)
 	 (make-assign lhs (E rhs ref comp)))
 
@@ -694,8 +709,8 @@
     (define (E* x* ref comp)
       (if (null? x*)
 	  '()
-	(cons (E  (car x*) ref comp)
-	      (E* (cdr x*) ref comp))))
+	(cons (E  ($car x*) ref comp)
+	      (E* ($cdr x*) ref comp))))
 
     (define (E-clambda x ref comp)
       (struct-case x
@@ -730,6 +745,26 @@
   (module (%do-recbind)
 
     (define (%do-recbind lhs* rhs* body ref comp letrec?)
+      ;;If this  form is  a LETREC, we  do not care  about the  order of
+      ;;evaluation of the RHS*; we produce recordized code like this:
+      ;;
+      ;;   (let ((?slhs ?shrs) ...)		;simple
+      ;;     (let ((?clhs (void)) ...)		;complex
+      ;;       (fix ((?llhs ?lrhs) ...)		;lambda
+      ;;         (let ((?tmp ?crhs) ...)
+      ;;           (set! ?crhs ?tmp)
+      ;;           ...
+      ;;           ?body))))
+      ;;
+      ;;If  this form  is  a LETREC*,  we  do care  about  the order  of
+      ;;evaluation of the RHS*;
+      ;;
+      ;;   (let ((?slhs ?shrs) ...)		;simple
+      ;;     (let ((?clhs (void)) ...)		;complex
+      ;;       (fix ((?llhs ?lrhs) ...)		;lambda
+      ;;         (set! ?clhs ?crhs)
+      ;;         ...
+      ;;         ?body)))
       ;;
       ;;LETREC? is true if the form we are processing is a LETREC; it is
       ;;false if the form is a LETREC*.
@@ -749,7 +784,9 @@
 	(let* ((ref^  (%extend-hash lhs* h ref))
 	       (body^ (E body ref^ comp))
 	       (rhs*  (%do-rhs* 0 lhs* rhs* ref^ comp vref vcomp)))
-	  (let-values (((slhs* srhs* llhs* lrhs* clhs* crhs*)
+	  (let-values (((slhs* srhs*  ;simple bindings
+			       llhs* lrhs* ;lambda bindings
+			       clhs* crhs*) ;complex bindings
 			(%partition-rhs* 0 lhs* rhs* vref vcomp)))
 	    (let ((void* (map (lambda (x)
 				(make-constant (void)))
@@ -758,13 +795,9 @@
 		(make-bind clhs* void*
 		  (make-fix llhs* lrhs*
 		    (if letrec?
-			;;This form  is a LETREC,  we do not  care about
-			;;the order of evaluation of the RHS*.
 			(let ((tmp* (map unique-prelex clhs*)))
 			  (make-bind tmp* crhs*
 			    (build-assign* clhs* tmp* body^)))
-		      ;;This form  is a  LETREC*, we  do care  about the
-		      ;;order of evaluation of the RHS*.
 		      (build-assign* clhs* crhs* body^))))))))))
 
     (define (%do-rhs* i lhs* rhs* ref comp vref vcomp)
@@ -794,7 +827,7 @@
       (if (null? rhs*)
 	  '()
 	(let ((H    (make-eq-hashtable))
-	      (rest (%do-rhs* (fxadd1 i) lhs* (cdr rhs*) ref comp vref vcomp)))
+	      (rest (%do-rhs* (fxadd1 i) lhs* ($cdr rhs*) ref comp vref vcomp)))
 	  (define (ref^ x)
 	    ;;Called to signal that a form in RHS has accessed a binding
 	    ;;among LHS*.
@@ -803,52 +836,59 @@
 	      (hashtable-set! H x #t)
 	      (ref x)
 	      (when (memq x lhs*)
-		(vector-set! vref i #t))))
+		($vector-set! vref i #t))))
 	  (define (comp^)
 	    ;;Called to signal that a form in RHS might mutate a binding
 	    ;;among LHS*.
 	    ;;
-	    (vector-set! vcomp i #t)
+	    ($vector-set! vcomp i #t)
 	    (comp))
-	  (cons (E (car rhs*) ref^ comp^)
+	  (cons (E ($car rhs*) ref^ comp^)
 		rest))))
 
     (define (%partition-rhs* i lhs* rhs* vref vcomp)
+      ;;Make use of the data in  the vectors VREF and VCOMP to partition
+      ;;the  bindings  into:  simple,  lambda, complex.   (RHS*  is  not
+      ;;visited here.)
       ;;
       ;;Return 6 values:
       ;;
       ;;SLHS*, SRHS*
-      ;;   Lists of LHS and RHS not in the categories below.
+      ;;   Simple bindings.  SLHS is never  assigned in all the RHS* and
+      ;;    the  associated  SRHS  is  a  simple  expression:  it  never
+      ;;   references SLHS and it does not call any function.
       ;;
       ;;LLHS*, LRHS*
-      ;;   Lists of LHS and RHS whose RHS is a CLAMBDA.
+      ;;   Lambda bindings.  Lists of LHS and RHS whose RHS is a CLAMBDA
+      ;;   and  whose LHS  is never  assigned in both  the RHS*  and the
+      ;;   body.
       ;;
       ;;CLHS*, CRHS*
-      ;;   Lists of  LHS and RHS for  which either we know  that the LHS
-      ;;   has been assigned, or we  know that the RHS may have assigned
-      ;;   an LHS.
+      ;;   Complex bindings.   Lists of LHS and RHS for  which either we
+      ;;   know that the LHS has been  assigned, or we know that the RHS
+      ;;   may have assigned an LHS.
       ;;
       (if (null? lhs*)
 	  (values '() '() '() '() '() '())
 	(let-values
 	    (((slhs* srhs* llhs* lrhs* clhs* crhs*)
-	      (%partition-rhs* (fxadd1 i) (cdr lhs*) (cdr rhs*) vref vcomp))
+	      (%partition-rhs* (fxadd1 i) ($cdr lhs*) ($cdr rhs*) vref vcomp))
 	     ((lhs rhs)
-	      (values (car lhs*) (car rhs*))))
-	  (cond ((prelex-source-assigned? lhs)
+	      (values ($car lhs*) ($car rhs*))))
+	  (cond ((prelex-source-assigned? lhs) ;complex
 		 (values slhs* srhs*
 			 llhs* lrhs*
 			 (cons lhs clhs*) (cons rhs crhs*)))
-		((clambda? rhs)
+		((clambda? rhs)	;lambda
 		 (values slhs* srhs*
 			 (cons lhs llhs*) (cons rhs lrhs*)
 			 clhs* crhs*))
-		((or (vector-ref vref  i)
-		     (vector-ref vcomp i))
+		((or ($vector-ref vref  i) ;complex
+		     ($vector-ref vcomp i))
 		 (values slhs* srhs*
 			 llhs* lrhs*
 			 (cons lhs clhs*) (cons rhs crhs*)))
-		(else
+		(else ;simple
 		 (values (cons lhs slhs*) (cons rhs srhs*)
 			 llhs* lrhs*
 			 clhs* crhs*))

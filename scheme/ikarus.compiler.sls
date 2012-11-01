@@ -908,7 +908,10 @@
 		;evaluated in the region of the bindings.
    ))
 
-;;Like BIND, but the RHS* field  holds struct instances of type CLAMBDA.
+;;Like BIND, but  the RHS* field holds struct instances  of type CLAMBDA
+;;and the  LHS* field  holds locations  that are  never assigned  by the
+;;BODY.
+;;
 ;;For details  on the meaning  of FIX, see  the paper (available  on the
 ;;Net):
 ;;
@@ -917,7 +920,14 @@
 ;;   Construct"
 ;;
 (define-struct fix
-  (lhs* rhs* body))
+  (lhs*
+		;A list of locations in which references to CLAMBDA must
+		;be stored.
+   rhs*
+		;A list of CLAMBDA structures.
+   body
+		;A struct instance representing recordized code.
+   ))
 
 ;;Instances of this struct type represent variables in recordized code.
 ;;

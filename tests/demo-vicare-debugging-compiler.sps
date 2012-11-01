@@ -36,28 +36,41 @@
   #| end of module: doit |# )
 
 
-(doit '(let ((a 1))
-	 (let ((a a))
-	   a)))
+;; (doit '(let ((a 1))
+;; 	 (let ((a a))
+;; 	   a)))
 
-(doit '(let ((a 1))
-	 (let ((a 2))
-	   (let ((a 3))
-	     a))))
+;; (doit '(let ((a 1))
+;; 	 (let ((a 2))
+;; 	   (let ((a 3))
+;; 	     a))))
 
-(doit '(letrec ((a 1)
-		(b 2))
-	 (list a b)))
+;; (doit '(letrec ((a 1)
+;; 		(b 2))
+;; 	 (list a b)))
 
-(doit '(letrec* ((a (lambda (x)
-		      (when x
-			(a #f))))
-		 (b 123)
-		 (c 456)
-		 (d (begin
-		      (set! c 789)
-		      9)))
-	 a))
+;; (doit '(letrec* ((a (lambda (x)
+;; 		      (when x
+;; 			(a #f))))
+;; 		 (b 123)
+;; 		 (c 456)
+;; 		 (d (begin
+;; 		      (set! c 789)
+;; 		      9)))
+;; 	 a))
+
+(doit '(letrec* ((a 123)
+		 (b 2)
+		 (c b)
+		 (d (lambda () 123)))
+	 b))
+
+(doit '(letrec* ((a 123)
+		 (b 2)
+		 (c b)
+		 (d (lambda () 123)))
+	 (set! d 123)
+	 b))
 
 ;;; end of file
 ;; Local Variables:

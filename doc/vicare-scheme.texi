@@ -16631,8 +16631,8 @@ The transformations are equivalent to:
 @end example
 
 @item waddell
-Perform the transformation described in the ``Fixing Letrec'' paper by
-Waddell et al.
+Perform a transformation similar (but no equal) to the one described in
+the ``Fixing Letrec'' paper by Waddell et al.
 
 @item scc
 This is the default.
