@@ -1035,6 +1035,76 @@
   ;;the same types  except RECBIND and REC*BIND which are  replaced by a
   ;;composition of BIND, FIX and ASSIGN structures.
   ;;
+  ;;Let's see some examples:
+  ;;
+  ;;   (let ((a 1))
+  ;;     (let ((a a))
+  ;;       a))
+  ;;   ==> (let* ((a_0 '1)
+  ;;              (a_1 a_0))
+  ;;         a_1)
+  ;;
+  ;; (let ((a 1))
+  ;;   (let ((a 2))
+  ;;     (let ((a 3))
+  ;; 	a)))
+  ;; ==> (let* ((a_0 '1)
+  ;; 	     (a_1 '2)
+  ;; 	     (a_2 '3))
+  ;; 	a_2)
+  ;;
+  ;; (letrec ((a 1)
+  ;; 	   (b 2))
+  ;;   (list a b))
+  ;; ==> (let* ((a_0 '1)
+  ;; 	     (b_0 '2))
+  ;; 	(list a_0 b_0))
+  ;;
+  ;; (letrec* ((a (lambda (x)
+  ;; 		 (when x
+  ;; 		   (a #f))))
+  ;;           (b 123)
+  ;;           (c 456)
+  ;;           (d (begin
+  ;; 		 (set! c 789)
+  ;; 		 9)))
+  ;;   a)
+  ;; ==> (fix ((a_0 (lambda (x_0)
+  ;; 		   (if x_0
+  ;; 		       (a_0 '#f)
+  ;; 		     (void)))))
+  ;; 	 (let* ((b_0 '123)
+  ;; 		(c_0 '456)
+  ;; 		(d_0 (begin
+  ;; 		       (set! c_0 '789)
+  ;; 		       '9)))
+  ;; 	   a_0))
+  ;;
+  ;; (letrec* ((a 123)
+  ;; 	    (b 2)
+  ;; 	    (c b)
+  ;; 	    (d (lambda () 123)))
+  ;;   b)
+  ;; ==> (let* ((a_0 '123)
+  ;; 	     (b_0 '2)
+  ;; 	     (c_0 b_0))
+  ;; 	(fix ((d_0 (lambda () '123)))
+  ;; 	  b_0))
+  ;;
+  ;; (letrec* ((a 123)
+  ;; 	    (b 2)
+  ;; 	    (c b)
+  ;; 	    (d (lambda () 123)))
+  ;;   (set! d 123)
+  ;;   b)
+  ;; ==> (let* ((a_0 '123)
+  ;; 	     (b_0 '2)
+  ;; 	     (c_0 b_0)
+  ;; 	     (d_0 (lambda () '123)))
+  ;; 	(begin
+  ;; 	  (set! d_0 '123)
+  ;; 	  b_0))
+  ;;
   (define who 'optimize-letrec/scc)
 
   (define-struct binding
