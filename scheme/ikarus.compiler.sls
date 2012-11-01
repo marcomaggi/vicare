@@ -4737,24 +4737,27 @@
 
 
 (module (unparse-recordized-code/pretty)
-
+  ;;Unparse the struct  instance X (representing recordized  code in the
+  ;;core  language  already processed  by  the  compiler) into  a  human
+  ;;readable symbolic expression  to be used when printing  to some port
+  ;;for miscellaneous debugging purposes.
+  ;;
+  ;;This module  attempts to unparse  recordized code and  reconstruct a
+  ;;Scheme-like  symbolic  expression;  the  returned  sexp  does  *not*
+  ;;exactly represent the input.
+  ;;
+  ;;This function recognises only structures of the following type:
+  ;;
+  ;;   assign		bind		clambda
+  ;;   conditional	constant	fix
+  ;;   forcall		foreign-label	funcall
+  ;;   known		prelex		primcall
+  ;;   primref		rec*bind	recbind
+  ;;   seq
+  ;;
+  ;;other values are not processed and are returned as they are.
+  ;;
   (define (unparse-recordized-code/pretty x)
-    ;;Unparse the struct instance X (representing recordized code in the
-    ;;core  language already  processed by  the compiler)  into a  human
-    ;;readable symbolic expression to be used when printing to some port
-    ;;for miscellaneous debugging purposes.
-    ;;
-    ;;This function recognises only structures of the following type:
-    ;;
-    ;;   assign		bind		clambda
-    ;;   conditional	constant	fix
-    ;;   forcall	foreign-label	funcall
-    ;;   known		prelex		primcall
-    ;;   primref	rec*bind	recbind
-    ;;   seq
-    ;;
-    ;;other values are not processed and are returned as they are.
-    ;;
     ;;*NOTE* Being  that this function  is used only when  debugging: it
     ;;makes no sense to use unsafe operations: LET'S KEEP IT SAFE!!!
     ;;
@@ -4839,7 +4842,7 @@
 
 	(else x)))
 
-    (define Var
+    (module (Var)
       ;;Given a struct instance X of type PRELEX, identifying a binding:
       ;;return a symbol representing a unique name for the binding.  The
       ;;map between structures and symbols is cached in a hash table.
@@ -4856,21 +4859,25 @@
       ;;     (let ((a_1 a_0))
       ;;       a_1))
       ;;
-      (let ((H (make-eq-hashtable))
-	    (T (make-eq-hashtable))
-	    #;(N 0))
-	(lambda (x)
-	  (or (hashtable-ref H x #f)
-	      (let* ((name (prelex-name x))
-		     (N    (hashtable-ref T name #f)))
-		(unless N
-		  (set! N 0))
-		(hashtable-set! T name (+ N 1))
-		(let ((sym (string->symbol (string-append (symbol->string name)
-							  "_"
-							  (number->string N)))))
-		  (hashtable-set! H x sym)
-		  sym))))))
+      (define H
+	;;Map PRELEX structures to already built binding name symbols.
+	(make-eq-hashtable))
+      (define T
+	;;Map binding pretty string names to indexes.
+	(make-hashtable string-hash string=?))
+      (define (Var x)
+	(import (only (ikarus system $symbols)
+		      $symbol-string))
+	(or (hashtable-ref H x #f)
+	    (let* ((name ($symbol-string (prelex-name x)))
+		   (N    (hashtable-ref T name 0)))
+	      (hashtable-set! T name (+ N 1))
+	      (let ((sym (string->symbol (string-append name "_"
+							(number->string N)))))
+		(hashtable-set! H x sym)
+		sym))))
+
+      #| end of module: Var |# )
 
     (module (E-clambda)
 
@@ -4916,6 +4923,36 @@
 	(cons a (%map-in-order f (cdr ls))))))
 
   (define (%build-let b* body)
+    ;;B* must be a list of already unparsed LET-like bindings; BODY must
+    ;;be an already unparsed symbolic expression representing a body.
+    ;;
+    ;;If B*  represents a single  binding: compress nested LET  and LET*
+    ;;forms  into  a  single  LET*  form.   If  B*  represents  multiple
+    ;;bindings: just return a LET-like form.
+    ;;
+    ;;Example:
+    ;;
+    ;;   (let ((a 1))
+    ;;     (let ((b 2))
+    ;;       (let ((a 3))
+    ;;         (list a b))))
+    ;;
+    ;;is compressed into:
+    ;;
+    ;;   (let* ((a 1)
+    ;;          (b 2)
+    ;;          (a 3))
+    ;;     (list a b))
+    ;;
+    ;;while:
+    ;;
+    ;;   (let ((a 1)
+    ;;         (b 2))
+    ;;     (let ((c 3))
+    ;;       (list a b c)))
+    ;;
+    ;;is returned as is.
+    ;;
     (cond ((and (= (length b*) 1)
 		(pair? body)
 		(or (eq? (car body) 'let*)

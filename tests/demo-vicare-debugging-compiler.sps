@@ -26,15 +26,20 @@
 	   3)
   (%display "\n\n"))
 
-(doit '(let ((a 1))
+#;(doit '(let ((a 1))
 	 (let ((a 2))
 	   a)))
 
-(doit '(letrec ((a 1)
+(doit '(let ((a 1))
+	 (let ((a 2))
+	   (let ((a 3))
+	     a))))
+
+#;(doit '(letrec ((a 1)
 		(b 2))
 	 (list a b)))
 
-(doit '(letrec* ((a (lambda (x)
+#;(doit '(letrec* ((a (lambda (x)
 		      (when x
 			(a #f))))
 		 (b 123)

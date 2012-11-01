@@ -16459,10 +16459,11 @@ the source code, where additional documentation is present in the form
 of comments.
 
 @menu
-Compiler passes
-
 * syslib compiler unparse::       Unparsing intermediate
                                   representations.
+
+Compiler passes
+
 * syslib compiler full::          The full transformation.
 * syslib compiler recordize::     Scheme code to nested structs.
 * syslib compiler direct calls::  Optimisation for direct calls.
@@ -16504,13 +16505,24 @@ system $compiler}.
 
 
 @defun $unparse-recordized-code @var{input}
-@defunx $unparse-recordized-code/pretty @var{input}
 Given as argument a struct instance representing recordized code: build
 and return a symbolic expression that can be printed in human readable
 form.
 
 @var{input} can be any structure that is produced by the compiler
 passes.
+@end defun
+
+
+@defun $unparse-recordized-code/pretty @var{input}
+Unparse the struct instance @var{input} (representing recordized code in
+the core language already processed by the compiler) into a human
+readable symbolic expression to be used when printing to some port for
+miscellaneous debugging purposes.
+
+This function attempts to unparse recordized code and reconstruct a
+Scheme-like symbolic expression; the returned sexp does @strong{not}
+exactly represent the input.
 @end defun
 
 @c page
