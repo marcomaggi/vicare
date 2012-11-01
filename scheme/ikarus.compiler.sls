@@ -4857,13 +4857,20 @@
       ;;       a_1))
       ;;
       (let ((H (make-eq-hashtable))
-	    (N 0))
+	    (T (make-eq-hashtable))
+	    #;(N 0))
 	(lambda (x)
 	  (or (hashtable-ref H x #f)
-	      (let ((sym (string->symbol (format "~a_~a" (prelex-name x) N))))
-		(hashtable-set! H x sym)
-		(set! N (+ N 1))
-		sym)))))
+	      (let* ((name (prelex-name x))
+		     (N    (hashtable-ref T name #f)))
+		(unless N
+		  (set! N 0))
+		(hashtable-set! T name (+ N 1))
+		(let ((sym (string->symbol (string-append (symbol->string name)
+							  "_"
+							  (number->string N)))))
+		  (hashtable-set! H x sym)
+		  sym))))))
 
     (module (E-clambda)
 
