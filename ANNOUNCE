@@ -76,8 +76,8 @@ Notes for revision 0.2d20
        x)
 
   because the form X in reference position in the right-hand side of the
-  binding is never  evaluated; under Vicare this code  will rather raise
-  an assertion violation and syntax violation at compile time.
+  binding is never evaluated; under Vicare this code will rather raise a
+  syntax violation at compile time.
 
 * Issue 32 should be fixed.  It was caused by a dumb error of mine while
   rewriting   code  for   readability  in   "ik_collect()"  to   compute

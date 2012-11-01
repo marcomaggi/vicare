@@ -423,15 +423,10 @@
     ;;R6RS  requests  that  this  error is  of  type  "&assertion",  but
     ;;"&syntax" is not bad either.
     ;;
-    (raise
-     (condition
-      (make-who-condition who)
-      (make-message-condition
-       "illegal binding reference in right-hand side of LETREC, LETREC* or LIBRARY syntax")
-      (make-assertion-violation)
-      (make-syntax-violation
-       (unparse-recordized-code/pretty enclosing-code)
-       (unparse-recordized-code/pretty illegal-prelex)))))
+    (syntax-violation who
+      "illegal binding reference in right-hand side of LETREC, LETREC* or LIBRARY syntax"
+      (unparse-recordized-code/pretty enclosing-code)
+      (unparse-recordized-code/pretty illegal-prelex)))
 
   #| end of module: check-for-illegal-letrec-references |# )
 
