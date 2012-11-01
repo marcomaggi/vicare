@@ -16,18 +16,20 @@
 
 
 (library (ikarus collect)
-  (export do-overflow do-overflow-words do-vararg-overflow collect
-          do-stack-overflow collect-key post-gc-hooks
+  (export
+    do-overflow			do-overflow-words
+    do-vararg-overflow		do-stack-overflow
+    collect			collect-key
+    post-gc-hooks
 
-	  register-to-avoid-collecting
-	  forget-to-avoid-collecting
-	  replace-to-avoid-collecting
-	  retrieve-to-avoid-collecting
-	  collection-avoidance-list
-	  purge-collection-avoidance-list)
+    register-to-avoid-collecting
+    forget-to-avoid-collecting
+    replace-to-avoid-collecting
+    retrieve-to-avoid-collecting
+    collection-avoidance-list
+    purge-collection-avoidance-list)
   (import (except (ikarus)
-		  collect
-		  collect-key
+		  collect		collect-key
 		  post-gc-hooks
 
 		  register-to-avoid-collecting
@@ -38,77 +40,65 @@
 		  purge-collection-avoidance-list)
     (ikarus system $fx)
     (ikarus system $arg-list)
-    (vicare syntactic-extensions))
-
-
-;;;; arguments validation
-
-(define-argument-validation (pointer who obj)
-  (pointer? obj)
-  (assertion-violation who "expected pointer as argument" obj))
-
-(define-argument-validation (non-null-pointer who obj)
-  (and (pointer? obj)
-       (not (pointer-null? obj)))
-  (assertion-violation who "expected non NULL pointer as argument" obj))
+    (vicare syntactic-extensions)
+    (vicare arguments validation))
 
 
 (define post-gc-hooks
   (make-parameter '()
     (lambda (ls)
-      ;;; null? check so that we don't reference list? and andmap
-      ;;; at this stage of booting.
-      (if (or (null? ls) (and (list? ls) (andmap procedure? ls)))
+      ;;NULL? check so that we don't  reference LIST? and ANDMAP at this
+      ;;stage of booting.
+      (if (or (null? ls)
+	      (and (list? ls)
+		   (andmap procedure? ls)))
           ls
-          (die 'post-gc-hooks "not a list of procedures" ls)))))
+	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
 (define (do-post-gc ls n)
-  (let ([k0 (collect-key)])
-    (parameterize ([post-gc-hooks '()])
-      ;;FIXME Temporary work  around for issue #35:  disable running the
-      ;;post GC hooks.  To be restored after the bug is fixed.
-      (void)
-      ;;This runs the hook functions.
-      #;(for-each (lambda (x) (x)) ls))
+  (let ((k0 (collect-key)))
+    ;;Run the hook functions.
+    (parameterize ((post-gc-hooks '()))
+      ;;FIXME  As a  temporary work  around for  issue #35:  comment out
+      ;;running the  post GC  hooks.  To  be restored  after the  bug is
+      ;;fixed.  (Marco Maggi; Nov 1, 2012)
+      #;(void)
+      (for-each (lambda (x) (x)) ls))
     (if (eq? k0 (collect-key))
-        (let ([was-enough? (foreign-call "ik_collect_check" n)])
-          ;;; handlers ran without GC but there is was not enough
-          ;;; space in the nursery for the pending allocation,
+        (let ((was-enough? (foreign-call "ik_collect_check" n)))
+          ;;Handlers ran without GC but there is was not enough space in
+          ;;the nursery for the pending allocation.
           (unless was-enough? (do-post-gc ls n)))
         (let ()
-          ;;; handlers did cause a GC, so, do the handlers again.
+          ;;Handlers did cause a GC, so, do the handlers again.
           (do-post-gc ls n)))))
 
-(define do-overflow
-  (lambda (n)
-    (foreign-call "ik_collect" n)
-    (let ([ls (post-gc-hooks)])
-      (unless (null? ls) (do-post-gc ls n)))))
+(define (do-overflow n)
+  (foreign-call "ik_collect" n)
+  (let ((ls (post-gc-hooks)))
+    (unless (null? ls)
+      (do-post-gc ls n))))
 
-(define do-overflow-words
-  (lambda (n)
-    (let ([n ($fxsll n 2)])
-      (foreign-call "ik_collect" n)
-      (let ([ls (post-gc-hooks)])
-        (unless (null? ls) (do-post-gc ls n))))))
+(define (do-overflow-words n)
+  (let ((n ($fxsll n 2)))
+    (foreign-call "ik_collect" n)
+    (let ((ls (post-gc-hooks)))
+      (unless (null? ls)
+	(do-post-gc ls n)))))
 
 (define do-vararg-overflow do-overflow)
 
-(define collect
-  (lambda ()
-    (do-overflow 4096)))
+(define (collect)
+  (do-overflow 4096))
 
-(define do-stack-overflow
-  (lambda ()
-    (foreign-call "ik_stack_overflow")))
+(define (do-stack-overflow)
+  (foreign-call "ik_stack_overflow"))
 
-(define dump-metatable
-  (lambda ()
-    (foreign-call "ik_dump_metatable")))
+(define (dump-metatable)
+  (foreign-call "ik_dump_metatable"))
 
-(define dump-dirty-vector
-  (lambda ()
-    (foreign-call "ik_dump_dirty_vector")))
+(define (dump-dirty-vector)
+  (foreign-call "ik_dump_dirty_vector"))
 
 (define (collect-key)
   (or ($collect-key)

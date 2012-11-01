@@ -2300,28 +2300,30 @@
 ;;
 
 (define port-guardian
-  (let ((G (make-guardian)))
-    (define (close-garbage-collected-ports)
-      (let ((port (G)))
-	(when port
-	  ;;Notice that, as defined  by R6RS, CLOSE-PORT does nothing if
-	  ;;PORT has already been closed.
+  (make-guardian))
 
-;;;FIXME This CLOSE-PORT is the  whole purpose of having a guardian.  If
-;;;it  is commented  out:  it is  to  investigate if  it  is causing  an
-;;;"invalid frame  size" error  with some builds.   Once the  problem is
-;;;fixed, it should be reincluded.  (Marco Maggi; Nov 2, 2011)
-	  #;(close-port port)
-;;;The code below differs from  CLOSE-PORT because it does not flush the
-;;;buffer.
-	  (with-port (port)
-	    (unless port.closed?
-	      (port.mark-as-closed!)
-	      (when (procedure? port.close)
-		(port.close))))
-	  (close-garbage-collected-ports))))
-    (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
-    G))
+(define (%close-garbage-collected-ports)
+  (let ((port (port-guardian)))
+    (when port
+      ;;FIXME  This CLOSE-PORT  call is  the whole  purpose of  having a
+      ;;guardian here.  If it is commented  out: it is to investigate if
+      ;;it is  causing an  "invalid frame size"  error with  some builds
+      ;;(issue 35 at  Github).  Once the problem is fixed,  it should be
+      ;;reincluded.  (Marco Maggi; Nov 2, 2011)
+
+      ;;Notice that, as defined by R6RS, CLOSE-PORT does nothing if PORT
+      ;;has already been closed.
+      (close-port port)
+
+      ;;The code below differs from CLOSE-PORT because it does not flush
+      ;;the buffer.
+      #;(with-port (port)
+	(unless port.closed?
+	  (port.mark-as-closed!)
+	  (when (procedure? port.close)
+	    (port.close))))
+
+      (%close-garbage-collected-ports))))
 
 (define (%port->maybe-guarded-port port)
   ;;Accept a port  as argument and return the port  itself.  If the port
@@ -7604,6 +7606,8 @@
 
 
 ;;;; done
+
+(post-gc-hooks (cons %close-garbage-collected-ports (post-gc-hooks)))
 
 )
 
