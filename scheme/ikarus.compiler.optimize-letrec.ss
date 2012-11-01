@@ -316,13 +316,15 @@
     (define-inline (%illegal-reference-to? x illegals)
       (illegals x))
     (define (%illegal-augment more illegals)
-      (let ((H (make-eq-hashtable)))
-	(for-each (lambda (x)
-		    (hashtable-set! H x #t))
-	  more)
-	(lambda (x)
-	  (or (hashtable-ref H x #f)
-	      (%illegal-reference-to? x illegals))))))
+      (if (null? more)
+	  illegals
+	(let ((H (make-eq-hashtable)))
+	  (for-each (lambda (x)
+		      (hashtable-set! H x #t))
+	    more)
+	  (lambda (x)
+	    (or (hashtable-ref H x #f)
+		(%illegal-reference-to? x illegals)))))))
 
   (define (C x illegals)
     ;;Recursively  visit the  recordized  code X  looking  for a  struct
