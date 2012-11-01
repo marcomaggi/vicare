@@ -289,6 +289,19 @@
 	   => (lambda (illegal)
 		(%error illegal x)))))
 
+  ;;FIXME Here we use  a list to hold the set  of PRELEX structures that
+  ;;is illegal to  reference in right-hand sided of  LETREC, LETREC* and
+  ;;LIBRARY-LETREC* syntaxes.
+  ;;
+  ;;Doing  a  linear search  is  usually  fine  for LETREC  and  LETREC*
+  ;;syntaxes, because  the list of  bindings is most likely  small.  But
+  ;;LIBRARY-LETREC*  syntaxes will  have "many"  bindings, one  for each
+  ;;defined function.
+  ;;
+  ;;It might  be worthwhile  to change  the implementation  to something
+  ;;better than  lists as it  is done by  other functions in  this file.
+  ;;(Marco Maggi; Nov 1, 2012)
+  ;;
   (begin
     (define (%illegal-reference-to? x illegals)
       (cond ((memq x illegals)
@@ -297,9 +310,9 @@
     (define-inline (%illegal-augment more illegals)
       (append more illegals)))
 
-  (define (C x illegal*)
+  (define (C x illegals)
     ;;Recursively  visit the  recordized  code X  looking  for a  struct
-    ;;instance of type PRELEX which is  EQ? to one in the list ILLEGAL*.
+    ;;instance of type  PRELEX which is EQ? to one  in the set ILLEGALS.
     ;;When found return such struct, else return #f.
     ;;
     (struct-case x
@@ -307,11 +320,11 @@
        #f)
 
       ((prelex)
-       (%illegal-reference-to? x illegal*))
+       (%illegal-reference-to? x illegals))
 
       ((assign lhs rhs)
-       (or (%illegal-reference-to? x illegal*)
-	   (C rhs illegal*)))
+       (or (%illegal-reference-to? x illegals)
+	   (C rhs illegals)))
 
       ((primref)
        #f)
@@ -319,14 +332,14 @@
       ((bind lhs* rhs* body)
        (or (if (null? lhs*)
 	       #f
-	     (C*/error rhs* illegal*))
-	   (C body illegal*)))
+	     (C*/error rhs* illegals))
+	   (C body illegals)))
 
       ((recbind lhs* rhs* body)
        (or (if (null? lhs*)
 	       #f
-	     (C*/error rhs* (%illegal-augment lhs* illegal*)))
-	   (C body illegal*)))
+	     (C*/error rhs* (%illegal-augment lhs* illegals)))
+	   (C body illegals)))
 
       ((rec*bind lhs* rhs* body)
        (or (if (null? lhs*)
@@ -338,61 +351,61 @@
 			(rhs* rhs*))
 	       (if (null? rhs*)
 		   #f
-		 (or (C/error ($car rhs*) (%illegal-augment lhs* illegal*))
+		 (or (C/error ($car rhs*) (%illegal-augment lhs* illegals))
 		     (loop ($cdr lhs*) ($cdr rhs*))))))
-	   (C body illegal*)))
+	   (C body illegals)))
 
       ((conditional test conseq altern)
-       (or (C test   illegal*)
-	   (C conseq illegal*)
-	   (C altern illegal*)))
+       (or (C test   illegals)
+	   (C conseq illegals)
+	   (C altern illegals)))
 
       ((seq e0 e1)
-       (or (C e0 illegal*)
-	   (C e1 illegal*)))
+       (or (C e0 illegals)
+	   (C e1 illegals)))
 
       ((clambda)
        (C-clambda x))
 
       ((funcall rator rand*)
-       (or (C  rator illegal*)
-	   (C* rand* illegal*)))
+       (or (C  rator illegals)
+	   (C* rand* illegals)))
 
       ((mvcall p c)
-       (or (C p illegal*)
-	   (C c illegal*)))
+       (or (C p illegals)
+	   (C c illegals)))
 
       ((forcall rator rand*)
        ;;Remember that RATOR is a string here.
-       (C* rand* illegal*))
+       (C* rand* illegals))
 
       (else
        (error who "invalid expression" (unparse-recordized-code x)))))
 
-  (define (C/error x illegal*)
+  (define (C/error x illegals)
     ;;Like C, but  in case of error  make use of X as  enclosing form in
     ;;the raised exception.
     ;;
-    (cond ((C x illegal*)
+    (cond ((C x illegals)
 	   => (lambda (illegal)
 		(%error illegal x)))
 	  (else #f)))
 
-  (define (C* x* illegal*)
+  (define (C* x* illegals)
     ;;Apply C to every item in the list X*.
     ;;
     (find (lambda (x)
-	    (C x illegal*))
+	    (C x illegals))
       x*))
 
-  (define (C*/error x* illegal*)
+  (define (C*/error x* illegals)
     ;;Like C*, but in  case of error make use of the  culprit item of X*
     ;;as enclosing form in the raised exception.
     ;;
     (let loop ((x* x*))
       (cond ((null? x*)
 	     #f)
-	    ((C ($car x*) illegal*)
+	    ((C ($car x*) illegals)
 	     => (lambda (illegal)
 		  (%error illegal ($car x*))))
 	    (else

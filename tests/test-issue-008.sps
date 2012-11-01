@@ -36,7 +36,7 @@
 ;;;; code
 
 (check
-    (guard (E ((assertion-violation? E)
+    (guard (E ((syntax-violation? E)
                #t)
               (else #f))
       (eval '(letrec ((c b)
