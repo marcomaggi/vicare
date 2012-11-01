@@ -1017,7 +1017,17 @@
     (serial lhs rhs complex prev free*))
 
   (define (optimize-letrec/scc x)
-    (define (gen-letrecs scc* ordered? body)
+
+    (module (gen-letrecs)
+
+      (define (gen-letrecs scc* ordered? body)
+	(let-values (((fix* body)
+		      (let f ((scc* scc*))
+			(if (null? scc*)
+			    (values '() body)
+			  (let-values (((fix* body) (f (cdr scc*))))
+			    (gen-letrec (car scc*) fix* body ordered?))))))
+	  (mkfix fix* body)))
 
       (define (mkfix b* body)
 	(if (null? b*)
@@ -1026,7 +1036,7 @@
 	      (map binding-rhs b*)
 	    body)))
 
-      (define (gen-letrec scc fix* body)
+      (define (gen-letrec scc fix* body ordered?)
 
 	(define (mklet lhs* rhs* body)
 	  (if (null? lhs*)
@@ -1078,12 +1088,9 @@
 				    (mkfix (append lambda* fix*)
 					   (mkset!s complex* body))))))))))
 
-      (let-values (((fix* body) (let f ((scc* scc*))
-				  (if (null? scc*)
-				      (values '() body)
-				    (let-values (((fix* body) (f (cdr scc*))))
-				      (gen-letrec (car scc*) fix* body))))))
-	(mkfix fix* body)))
+      #| end of module: gen-letrecs |# )
+
+;;; --------------------------------------------------------------------
 
     (module (E)
 
