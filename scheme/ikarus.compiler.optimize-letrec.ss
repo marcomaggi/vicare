@@ -286,28 +286,43 @@
 	   => (lambda (illegal)
 		(%error illegal x)))))
 
-  ;;FIXME Here we use  a list to hold the set  of PRELEX structures that
-  ;;is illegal to  reference in right-hand sided of  LETREC, LETREC* and
-  ;;LIBRARY-LETREC* syntaxes.
+  ;;In this  commented out  version we  use a  list to  hold the  set of
+  ;;PRELEX structures that  is illegal to reference  in right-hand sides
+  ;;of LETREC, LETREC* and LIBRARY-LETREC* syntaxes.
   ;;
   ;;Doing  a  linear search  is  usually  fine  for LETREC  and  LETREC*
   ;;syntaxes, because  the list of  bindings is most likely  small.  But
   ;;LIBRARY-LETREC*  syntaxes will  have "many"  bindings, one  for each
   ;;defined function.
   ;;
-  ;;It might  be worthwhile  to change  the implementation  to something
-  ;;better than  lists as it  is done by  other functions in  this file.
-  ;;(Marco Maggi; Nov 1, 2012)
+  ;; (begin
+  ;;   (define-inline (%make-empty-illegal-set)
+  ;;     '())
+  ;;   (define (%illegal-reference-to? x illegals)
+  ;;     (cond ((memq x illegals)
+  ;; 	     => car)
+  ;; 	    (else #f)))
+  ;;   (define-inline (%illegal-augment more illegals)
+  ;;     (append more illegals)))
+  ;;
+  ;;In this version we  use a closure on a hashtable to  hold the set of
+  ;;PRELEX structures that  is illegal to reference  in right-hand sides
+  ;;of LETREC, LETREC* and LIBRARY-LETREC* syntaxes.
   ;;
   (begin
-    (define-inline (%make-empty-illegal-set)
-      '())
-    (define (%illegal-reference-to? x illegals)
-      (cond ((memq x illegals)
-	     => car)
-	    (else #f)))
-    (define-inline (%illegal-augment more illegals)
-      (append more illegals)))
+    (define (%make-empty-illegal-set)
+      (lambda (x)
+	#f))
+    (define-inline (%illegal-reference-to? x illegals)
+      (illegals x))
+    (define (%illegal-augment more illegals)
+      (let ((H (make-eq-hashtable)))
+	(for-each (lambda (x)
+		    (hashtable-set! H x #t))
+	  more)
+	(lambda (x)
+	  (or (hashtable-ref H x #f)
+	      (%illegal-reference-to? x illegals))))))
 
   (define (C x illegals)
     ;;Recursively  visit the  recordized  code X  looking  for a  struct
