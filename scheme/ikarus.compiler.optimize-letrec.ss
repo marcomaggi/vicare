@@ -1041,14 +1041,14 @@
 	 (assert (prelex-source-referenced? x))
 	 (mark-free x bc)
 	 (when (prelex-source-assigned? x)
-	   (mark-complex bc))
+	   (mark-complex! bc))
 	 x)
 
 	((assign lhs rhs)
 	 (assert (prelex-source-assigned? lhs))
 	 ;;(set-prelex-source-assigned?! lhs #t)
 	 (mark-free lhs bc)
-	 (mark-complex bc)
+	 (mark-complex! bc)
 	 (make-assign lhs (E rhs bc)))
 
 	((primref)
@@ -1079,15 +1079,15 @@
 	 (E-clambda x bc))
 
 	((funcall rator rand*)
-	 (mark-complex bc)
+	 (mark-complex! bc)
 	 (make-funcall (E rator bc) (E* rand* bc)))
 
 	((mvcall producer consumer)
-	 (mark-complex bc)
+	 (mark-complex! bc)
 	 (make-mvcall (E producer bc) (E consumer bc)))
 
 	((forcall rator rand*)
-	 (mark-complex bc)
+	 (mark-complex! bc)
 	 (make-forcall rator (E* rand* bc)))
 
 	(else
@@ -1111,15 +1111,18 @@
 				 cls*)
 			 cp free name)))))
 
-    (define (mark-complex bc)
+    (define (mark-complex! bc)
       ;;BC must be  a struct instance of type BINDING.   Mark as complex
       ;;BC and, recursively, its previous value in the field PREV.
       ;;
       (unless (binding-complex bc)
 	(set-binding-complex! bc #t)
-	(mark-complex (binding-prev bc))))
+	(mark-complex! (binding-prev bc))))
 
     (define (mark-free var bc)
+      ;;VAR must  be a  struct instance  of type PRELEX.   BC must  be a
+      ;;struct instance of type BINDING.
+      ;;
       (let ((rb (prelex-operand var)))
 	(when rb
 	  (let* ((lb    (let ((pr (binding-prev rb)))
@@ -1202,8 +1205,7 @@
     (define (mkfix b* body)
       (if (null? b*)
 	  body
-	(make-fix (map binding-lhs b*)
-	    (map binding-rhs b*)
+	(make-fix (map binding-lhs b*) (map binding-rhs b*)
 	  body)))
 
     (module (gen-single-letrec)
@@ -1304,7 +1306,7 @@
     (define (compute-sccs v*)
       ;;Tarjan's algorithm.
       (define scc* '())
-      (define (compute-sccs v)
+      (define (%compute-sccs v)
 	(define index 0)
 	(define stack '())
 	(define (tarjan v)
@@ -1320,17 +1322,17 @@
 						   (node-root v^)))))
 	      (node-link* v))
 	    (when (fx= (node-root v) v-index)
-	      (set! scc* (cons (let f ((ls stack))
+	      (set! scc* (cons (let recur ((ls stack))
 				 (let ((v^ (car ls)))
 				   (set-node-done! v^ #t)
 				   (cons v^ (if (eq? v^ v)
 						(begin (set! stack (cdr ls)) '())
-					      (f (cdr ls))))))
+					      (recur (cdr ls))))))
 			       scc*)))))
 	(tarjan v))
       (for-each (lambda (v)
 		  (unless (node-done v)
-		    (compute-sccs v)))
+		    (%compute-sccs v)))
 	v*)
       (reverse scc*))
 

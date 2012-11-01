@@ -590,8 +590,8 @@
 		;A  symbol representing  the binding  name; in  practice
 		;useful only for humans when debugging.
      operand
-		;False  or  a struct  of  type  VAR associated  to  this
-		;instance.
+		;Multipurpose field.  One use: false or a struct of type
+		;VAR associated to this instance.
      )
   ((source-referenced?   #f)
 		;Boolean, true when the region  in which this binding is
