@@ -606,6 +606,103 @@
   ;;the same types  except RECBIND and REC*BIND which are  replaced by a
   ;;composition of BIND, FIX and ASSIGN structures.
   ;;
+  ;;Let's look at some examples:
+  ;;
+  ;; (let ((a 1))
+  ;;   (let ((a a))
+  ;;     a))
+  ;; ==> (let* ((a_0 '1)
+  ;;            (a_1 a_0))
+  ;;       a_1)
+  ;;
+  ;; (let ((a 1))
+  ;;   (let ((a 2))
+  ;;     (let ((a 3))
+  ;;       a)))
+  ;; ==> (let* ((a_0 '1)
+  ;;            (a_1 '2)
+  ;;            (a_2 '3))
+  ;;       a_2)
+  ;;
+  ;; (letrec ((a 1)
+  ;;          (b 2))
+  ;;   (list a b))
+  ;; ==> (let ()
+  ;;       (let ((a_0 '#<void>)
+  ;;             (b_0 '#<void>))
+  ;;         (fix ()
+  ;;              (let ((a_1 '1)
+  ;;                    (b_1 '2))
+  ;;                (begin
+  ;;                  (set! a_0 a_1)
+  ;;                  (set! b_0 b_1)
+  ;;                  (list a_0 b_0))))))
+  ;;
+  ;; (letrec* ((a (lambda (x)
+  ;;                (when x
+  ;;                  (a #f))))
+  ;;           (b 123)
+  ;;           (c 456)
+  ;;           (d (begin
+  ;;                (set! c 789)
+  ;;                9)))
+  ;;   a)
+  ;; ==> (let ()
+  ;;       (let ((b_0 '#<void>)
+  ;;             (c_0 '#<void>)
+  ;;             (d_0 '#<void>))
+  ;;         (fix ((a_0 (lambda (x_0)
+  ;;                      (if x_0
+  ;;                          (a_0 '#f)
+  ;;                        (void)))))
+  ;;              (begin
+  ;;                (set! b_0 '123)
+  ;;                (set! c_0 '456)
+  ;;                (set! d_0 (begin
+  ;;                            (set! c_0 '789)
+  ;;                            '9))
+  ;;                a_0))))
+  ;;
+  ;; (letrec* ((a 123)
+  ;;           (b 2)
+  ;;           (c b)
+  ;;           (d (lambda ()
+  ;;                123)))
+  ;;   b)
+  ;; ==> (let ()
+  ;;       (let ((a_0 '#<void>)
+  ;;             (b_0 '#<void>)
+  ;;             (c_0 '#<void>))
+  ;;         (fix ((d_0 (lambda ()
+  ;;                      '123)))
+  ;;              (begin
+  ;;                (set! a_0 '123)
+  ;;                (set! b_0 '2)
+  ;;                (set! c_0 b_0)
+  ;;                b_0))))
+  ;;
+  ;; (letrec* ((a 123)
+  ;;           (b 2)
+  ;;           (c b)
+  ;;           (d (lambda ()
+  ;;                123)))
+  ;;   (set! d 123)
+  ;;   b)
+  ;; ==> (let ()
+  ;;       (let ((a_0 '#<void>)
+  ;;             (b_0 '#<void>)
+  ;;             (c_0 '#<void>)
+  ;;             (d_0 '#<void>))
+  ;;         (fix ()
+  ;;              (begin
+  ;;                (set! a_0 '123)
+  ;;                (set! b_0 '2)
+  ;;                (set! c_0 b_0)
+  ;;                (set! d_0 (lambda ()
+  ;;                            '123))
+  ;;                (set! d_0 '123)
+  ;;                b_0))))
+  ;;
   (import (only (ikarus system $vectors)
 		$vector-set!
 		$vector-ref))
@@ -784,8 +881,8 @@
 	(let* ((ref^  (%extend-hash lhs* h ref))
 	       (body^ (E body ref^ comp))
 	       (rhs*  (%do-rhs* 0 lhs* rhs* ref^ comp vref vcomp)))
-	  (let-values (((slhs* srhs*  ;simple bindings
-			       llhs* lrhs* ;lambda bindings
+	  (let-values (((slhs* srhs*	    ;simple bindings
+			       llhs* lrhs*  ;lambda bindings
 			       clhs* crhs*) ;complex bindings
 			(%partition-rhs* 0 lhs* rhs* vref vcomp)))
 	    (let ((void* (map (lambda (x)
