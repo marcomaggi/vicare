@@ -1115,9 +1115,9 @@
       ;;BC must be  a struct instance of type BINDING.   Mark as complex
       ;;BC and, recursively, its previous value in the field PREV.
       ;;
-      (unless (binding-complex bc)
-	(set-binding-complex! bc #t)
-	(mark-complex! (binding-prev bc))))
+      (unless ($binding-complex bc)
+	($set-binding-complex! bc #t)
+	(mark-complex! ($binding-prev bc))))
 
     (define (mark-free var bc)
       ;;VAR must  be a  struct instance  of type PRELEX.   BC must  be a
@@ -1125,15 +1125,15 @@
       ;;
       (let ((rb (prelex-operand var)))
 	(when rb
-	  (let* ((lb    (let ((pr (binding-prev rb)))
+	  (let* ((lb    (let ((pr ($binding-prev rb)))
 			  (let loop ((bc bc))
-			    (let ((bcp (binding-prev bc)))
+			    (let ((bcp ($binding-prev bc)))
 			      (if (eq? bcp pr)
 				  bc
 				(loop bcp))))))
-		 (free* (binding-free* lb)))
+		 (free* ($binding-free* lb)))
 	    (unless (memq rb free*)
-	      (set-binding-free*! lb (cons rb free*)))))))
+	      ($set-binding-free*! lb (cons rb free*)))))))
 
     #| end of module: E |# )
 
@@ -1144,7 +1144,7 @@
     (define (%do-recbind lhs* rhs* body bc ordered?)
       (let ((b* (%make-bindings lhs* rhs* bc 0)))
 	(for-each (lambda (b)
-		    (set-binding-rhs! b (E (binding-rhs b) b)))
+		    ($set-binding-rhs! b (E ($binding-rhs b) b)))
 	  b*)
 	(for-each (lambda (x)
 		    (set-prelex-operand! x #f))
@@ -1163,8 +1163,8 @@
 	  (cons b (%make-bindings ($cdr lhs*) ($cdr rhs*) bc (+ i 1))))))
 
     (define (complex? x)
-      (or (binding-complex x)
-	  (prelex-source-assigned? (binding-lhs x))))
+      (or ($binding-complex x)
+	  (prelex-source-assigned? ($binding-lhs x))))
 
     (module (insert-order-edges)
 
@@ -1179,9 +1179,9 @@
 	(unless (null? b*)
 	  (let ((b ($car b*)))
 	    (if (complex? b)
-		(let ((free* (binding-free* b)))
+		(let ((free* ($binding-free* b)))
 		  (unless (memq pb free*)
-		    (set-binding-free*! b (cons pb free*)))
+		    ($set-binding-free*! b (cons pb free*)))
 		  (mark b ($cdr b*)))
 	      (mark pb ($cdr b*))))))
 
@@ -1215,12 +1215,12 @@
 	       (let ((b ($car scc)))
 		 (cond ((lambda-binding? b)
 			(values (cons b fix*) body))
-		       ((not (memq b (binding-free* b)))
-			(values '() (mklet (list (binding-lhs b))
-					   (list (binding-rhs b))
+		       ((not (memq b ($binding-free* b)))
+			(values '() (mklet (list ($binding-lhs b))
+					   (list ($binding-rhs b))
 					   (mkfix fix* body))))
 		       (else
-			(values '() (mklet (list (binding-lhs b))
+			(values '() (mklet (list ($binding-lhs b))
 					   (list (make-funcall (make-primref 'void) '()))
 					   (mkset!s scc (mkfix fix* body))))))))
 	      (else
@@ -1239,8 +1239,8 @@
 					   (mkset!s complex* body))))))))))
 
       (define (lambda-binding? x)
-	(and (not (prelex-source-assigned? (binding-lhs x)))
-	     (clambda? (binding-rhs x))))
+	(and (not (prelex-source-assigned? ($binding-lhs x)))
+	     (clambda? ($binding-rhs x))))
 
       (define (mklet lhs* rhs* body)
 	(if (null? lhs*)
@@ -1253,18 +1253,18 @@
 	(if (null? b*)
 	    body
 	  (let* ((b   ($car b*))
-		 (lhs (binding-lhs b)))
+		 (lhs ($binding-lhs b)))
 	    (unless (prelex-source-assigned? lhs)
 	      (when (debug-scc)
 		(printf "MADE COMPLEX ~s\n" (unparse-recordized-code lhs)))
 	      (set-prelex-source-assigned?! lhs (or (prelex-global-location lhs) #t)))
-	    (make-seq (make-assign lhs (binding-rhs b))
+	    (make-seq (make-assign lhs ($binding-rhs b))
 		      (mkset!s ($cdr b*) body)))))
 
       (define (sort-bindings ls)
 	(list-sort (lambda (x y)
-		     (< (binding-serial x)
-			(binding-serial y)))
+		     (< ($binding-serial x)
+			($binding-serial y)))
 		   ls))
 
       #| end of module: gen-single-letrec |# )
