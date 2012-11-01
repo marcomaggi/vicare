@@ -282,7 +282,7 @@
   (define who 'check-for-illegal-letrec-references)
 
   (define (check-for-illegal-letrec-references x)
-    (cond ((C x '())
+    (cond ((C x (%make-empty-illegal-set))
 	   => (lambda (illegal)
 		(%error illegal x)))))
 
@@ -300,6 +300,8 @@
   ;;(Marco Maggi; Nov 1, 2012)
   ;;
   (begin
+    (define-inline (%make-empty-illegal-set)
+      '())
     (define (%illegal-reference-to? x illegals)
       (cond ((memq x illegals)
 	     => car)
@@ -423,7 +425,7 @@
     (define (C-clambda-case x)
       (struct-case x
 	((clambda-case info body)
-	 (C/error body '()))))
+	 (C/error body (%make-empty-illegal-set)))))
 
     #| end of module: C-lambda |# )
 
