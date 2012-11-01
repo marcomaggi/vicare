@@ -289,6 +289,14 @@
 	   => (lambda (illegal)
 		(%error illegal x)))))
 
+  (begin
+    (define (%illegal-reference-to? x illegals)
+      (cond ((memq x illegals)
+	     => car)
+	    (else #f)))
+    (define-inline (%illegal-augment more illegals)
+      (append more illegals)))
+
   (define (C x illegal*)
     ;;Recursively  visit the  recordized  code X  looking  for a  struct
     ;;instance of type PRELEX which is  EQ? to one in the list ILLEGAL*.
@@ -299,15 +307,11 @@
        #f)
 
       ((prelex)
-       (cond ((memq x illegal*)
-	      => car)
-	     (else #f)))
+       (%illegal-reference-to? x illegal*))
 
       ((assign lhs rhs)
-       (cond ((memq lhs illegal*)
-	      => car)
-	     (else
-	      (C rhs illegal*))))
+       (or (%illegal-reference-to? x illegal*)
+	   (C rhs illegal*)))
 
       ((primref)
        #f)
@@ -321,7 +325,7 @@
       ((recbind lhs* rhs* body)
        (or (if (null? lhs*)
 	       #f
-	     (C*/error rhs* (append lhs* illegal*)))
+	     (C*/error rhs* (%illegal-augment lhs* illegal*)))
 	   (C body illegal*)))
 
       ((rec*bind lhs* rhs* body)
@@ -334,7 +338,7 @@
 			(rhs* rhs*))
 	       (if (null? rhs*)
 		   #f
-		 (or (C/error ($car rhs*) (append lhs* illegal*))
+		 (or (C/error ($car rhs*) (%illegal-augment lhs* illegal*))
 		     (loop ($cdr lhs*) ($cdr rhs*))))))
 	   (C body illegal*)))
 
