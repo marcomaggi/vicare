@@ -304,10 +304,9 @@ gc_alloc_new_weak_pair(gc_t* gc) {
   ikptr ep = meta->ep;
   ikptr nap = ap + pair_size;
   if (nap > ep) {
-      ikptr mem = ik_mmap_typed(
-                   IK_PAGESIZE,
-                   meta_mt[meta_weak] | gc->collect_gen_tag,
-                   gc->pcb);
+      ikptr mem = ik_mmap_typed(IK_PAGESIZE,
+				meta_mt[meta_weak] | gc->collect_gen_tag,
+				gc->pcb);
       gc->segment_vector = gc->pcb->segment_vector;
       meta->ap = mem + pair_size;
       meta->aq = mem;
@@ -375,10 +374,9 @@ gc_tconc_push_extending(gc_t* gc, ikptr tcbucket) {
     p->next = gc->tconc_queue;
     gc->tconc_queue = p;
   }
-  ikptr ap =
-     ik_mmap_typed(IK_PAGESIZE,
-        meta_mt[meta_ptrs] | gc->collect_gen_tag,
-        gc->pcb);
+  ikptr ap = ik_mmap_typed(IK_PAGESIZE,
+			   meta_mt[meta_ptrs] | gc->collect_gen_tag,
+			   gc->pcb);
   add_to_collect_count(gc->pcb, IK_PAGESIZE);
   gc->segment_vector = gc->pcb->segment_vector;
   bzero((char*)(long)ap, IK_PAGESIZE);
@@ -600,11 +598,13 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
-    long memsize   = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
-    long new_heap_size = memsize + 2 * IK_PAGESIZE;
-    memsize = IK_ALIGN_TO_NEXT_PAGE(memsize);
+    long	memsize = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
+    long	new_heap_size;
+    ikptr	ptr;
+    memsize	  = IK_ALIGN_TO_NEXT_PAGE(memsize);
+    new_heap_size = memsize + 2 * IK_PAGESIZE;
     ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
-    ikptr ptr = ik_mmap_mixed(new_heap_size, pcb);
+    ptr = ik_mmap_mixed(new_heap_size, pcb);
     pcb->allocation_pointer = ptr;
     pcb->allocation_redline = ptr+memsize;
     pcb->heap_base = ptr;

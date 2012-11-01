@@ -48,8 +48,8 @@ static int total_malloced = 0;
 
 #define CACHE_SIZE		(IK_PAGESIZE * 1) /* must be multiple of IK_PAGESIZE */
 
-#define IK_STAKSIZE (1024 * 4096)
-/* #define IK_STAKSIZE (256 * 4096) */
+#define IK_STAKSIZE		(1024 * IK_PAGESIZE)
+/* #define IK_STAKSIZE		(256 * 4096) */
 
 
 static void
@@ -137,8 +137,9 @@ ik_mmap_typed (ik_ulong size, unsigned type, ikpcb* pcb)
       pcb->uncached_pages = pages;
     } else
       segment = ik_mmap(size);
-  } else
+  } else {
     segment = ik_mmap(size);
+  }
   extend_table_maybe(segment, size, pcb);
   set_segment_type(segment, size, type, pcb);
   return segment;
@@ -175,6 +176,9 @@ ik_mmap (ik_ulong size)
   ik_ulong pages   = (size + IK_PAGESIZE - 1) / IK_PAGESIZE;
   ik_ulong mapsize = pages * IK_PAGESIZE;
   total_allocated_pages += pages;
+  // fprintf(stderr,
+  //   "size=%lu, pages=%lu, mapsize=%lu, size/PGSIZE=%lu, mapsize/PGSIZE=%lu\n",
+  //   size, pages, mapsize, size/IK_PAGESIZE, mapsize/IK_PAGESIZE);
   assert(size == mapsize);
 #ifndef __CYGWIN__
   char* mem = mmap(0, mapsize, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANON, -1, 0);

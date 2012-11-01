@@ -79,6 +79,10 @@ Notes for revision 0.2d20
   binding is never  evaluated; under Vicare this code  will rather raise
   an assertion violation and syntax violation at compile time.
 
+* Issue 32 should be fixed.  It was caused by a dumb error of mine while
+  rewriting   code  for   readability  in   "ik_collect()"  to   compute
+  "new_heap_size".
+
 
 Notes for revision 0.2d19
 -------------------------
