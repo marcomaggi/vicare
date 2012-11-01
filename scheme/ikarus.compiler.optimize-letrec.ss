@@ -184,18 +184,14 @@
 ;;     x)
 ;;
 ;;because the form X in reference position in the right-hand side of the
-;;binding is never  evaluated; under Vicare this code  will rather raise
-;;an assertion violation and syntax violation at compile time.
+;;binding is never evaluated; under Vicare this code will rather raise a
+;;syntax violation at compile time.
 ;;
 
 
-(module (debug-scc
-	 optimize-letrec
+(module (optimize-letrec
 	 current-letrec-pass
 	 check-for-illegal-letrec)
-
-  (define debug-scc
-    (make-parameter #f))
 
   (define check-for-illegal-letrec
     (make-parameter #t
@@ -1349,8 +1345,6 @@
 	  (let* ((b   ($car b*))
 		 (lhs ($binding-lhs b)))
 	    (unless (prelex-source-assigned? lhs)
-	      (when (debug-scc)
-		(printf "MADE COMPLEX ~s\n" (unparse-recordized-code lhs)))
 	      (set-prelex-source-assigned?! lhs (or (prelex-global-location lhs) #t)))
 	    (make-seq (make-assign lhs ($binding-rhs b))
 		      (mkset!s ($cdr b*) body)))))

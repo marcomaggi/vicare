@@ -464,8 +464,7 @@
 ;; 		     (parameterize ((open-mvcalls #f))
 ;; 		       (optimize-direct-calls x)))
 ;; 		   (lambda (x)
-;; 		     (parameterize ((debug-scc #t))
-;; 		       (optimize-letrec x)))))))
+;; 		     (optimize-letrec x))))))
 
 ;; (define expand/optimize
 ;;   (case-lambda
