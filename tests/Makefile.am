@@ -171,6 +171,7 @@ TESTS			=	\
 	test-vicare-words.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
+	test-issue-003.sps				\
 	test-issue-006-fxreverse-bit-field.sps		\
 	test-issue-007.sps				\
 	test-issue-008.sps				\
@@ -393,6 +394,7 @@ EXTRA_DIST = \
 	test-vicare-words.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
+	test-issue-003.sps				\
 	test-issue-006-fxreverse-bit-field.sps		\
 	test-issue-007.sps				\
 	test-issue-008.sps				\
