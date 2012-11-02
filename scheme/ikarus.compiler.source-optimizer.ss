@@ -773,61 +773,68 @@
   #| end of module: copy |# )
 
 
-(define (inline proc ctxt env ec sc)
+(module (inline)
+
+  (define (inline proc ctxt env ec sc)
+    (struct-case proc
+      ((clambda g cases cp free name)
+       (let ((rand* (app-rand* ctxt)))
+	 (struct-case (get-case cases rand*)
+	   ((clambda-case info body)
+	    (struct-case info
+	      ((case-info label args proper)
+	       (cond (proper
+		      (with-extended-env ((env args)
+					  (env args rand*))
+			(let ((body (E body (app-ctxt ctxt) env ec sc)))
+			  (let ((result (make-let-binding args rand* body sc)))
+			    (set-app-inlined! ctxt #t)
+			    result))))
+		     (else
+		      (let-values (((x* t* r) (%partition args rand*)))
+			(with-extended-env ((env a*)
+					    (env (append x* t*) rand*))
+			  (let* ((clis (make-funcall (make-primref 'list) t*))
+				 (rarg (make-operand clis env ec)))
+			    (with-extended-env ((env b*)
+						(env (list r) (list rarg)))
+			      (let* ((body^  (E body (app-ctxt ctxt) env ec sc))
+				     (body^^ (make-let-binding b* (list rarg) body^ sc))
+				     (result (make-let-binding a* rand* body^^ sc)))
+				(set-app-inlined! ctxt #t)
+				result))))))))))
+	   (else
+	    (E proc 'v env ec sc)))))))
+
   (define (get-case cases rand*)
-    (define (compatible? x)
+    (define-inline (main)
+      (cond ((memp %compatible? cases)
+	     => car)
+	    (else #f)))
+
+    (define (%compatible? x)
       (struct-case (clambda-case-info x)
 	((case-info label args proper)
-	 (cond
-	  (proper (= (length rand*) (length args)))
-	  (else (>= (length rand*) (- (length args) 1)))))))
-    (cond
-     ((memp compatible? cases) => car)
-     (else #f)))
-  (define (partition args rand*)
-    (cond
-     ((null? (cdr args))
-      (let ((r (car args)))
-	(let ((t* (map (lambda (x) (copy-var r)) rand*)))
-	  (values '() t* r))))
-     (else
+	 (let ((rand*.len (length rand*))
+	       (args.len  (length args)))
+	   (if proper
+	       (= rand*.len args.len)
+	     (>= rand*.len (- args.len 1)))))))
+
+    (main))
+
+  (define (%partition args rand*)
+    (if (null? (cdr args))
+	(let* ((r  (car args))
+	       (t* (map (lambda (x)
+			  (copy-var r))
+		     rand*)))
+	  (values '() t* r))
       (let ((x (car args)))
-	(let-values (((x* t* r) (partition (cdr args) (cdr rand*))))
-	  (values (cons x x*) t* r))))))
-  (struct-case proc
-    ((clambda g cases cp free name)
-     (let ((rand* (app-rand* ctxt)))
-       (struct-case (get-case cases rand*)
-	 ((clambda-case info body)
-	  (struct-case info
-	    ((case-info label args proper)
-	     (cond
-	      (proper
-	       (with-extended-env ((env args)
-				   (env args rand*))
-		 (let ((body (E body (app-ctxt ctxt) env ec sc)))
-		   (let ((result (make-let-binding args rand* body sc)))
-		     (set-app-inlined! ctxt #t)
-		     result))))
-	      (else
-	       (let-values (((x* t* r) (partition args rand*)))
-		 (with-extended-env ((env a*)
-				     (env (append x* t*) rand*))
-		   (let ((rarg (make-operand
-				(make-funcall (make-primref 'list) t*)
-				env ec)))
-		     (with-extended-env ((env b*)
-					 (env (list r) (list rarg)))
-		       (let ((result
-			      (make-let-binding a* rand*
-						(make-let-binding b* (list rarg)
-								  (E body (app-ctxt ctxt) env ec sc)
-								  sc)
-						sc)))
-			 (set-app-inlined! ctxt #t)
-			 result))))))))))
-	 (else
-	  (E proc 'v env ec sc)))))))
+	(let-values (((x* t* r) (%partition (cdr args) (cdr rand*))))
+	  (values (cons x x*) t* r)))))
+
+  #| end of module: inline |# )
 
 
 (define (do-bind lhs* rhs* body ctxt env ec sc)
