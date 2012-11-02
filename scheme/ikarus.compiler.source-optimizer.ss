@@ -144,10 +144,21 @@
     (or (getprop p UNIQUE-PROPERTY-KEY) '()))
 
   (module (%initialise-primitive-properties)
-    ;;For each  symbol being the name  of a primitive operation:  add an
+    ;;For each  symbol being the  name of  a primitive function:  add an
     ;;element to the property list of the symbol.
     ;;
     ;;The key of the property is UNIQUE-PROPERTY-KEY.
+    ;;
+    ;;The value of  the property is a list of  sublists representing the
+    ;;attributes  for a  mode of  calling the  primitive function.   For
+    ;;example, for CONS* the value will be:
+    ;;
+    ;;   (((_)		foldable effect-free)
+    ;;    ((_ . _)	effect-free result-true))
+    ;;
+    ;;the first sublist  specifies the attributes of CONS*  applied to a
+    ;;single argument;  the second  sublist specifies the  attributes of
+    ;;CONS* applied to 2 or more arguments.
     ;;
     (define (%initialise-primitive-properties info-list)
       (unless (null? info-list)
@@ -161,6 +172,11 @@
 	    (%initialise-primitive-properties info-list)))))
 
     (define (%get prim info-list)
+      ;;Check  if  the  head  of  the  INFO-LIST  represents  additional
+      ;;attributes for the primitive PRIM;  if it does return: a sublist
+      ;;specifying attributes and the tail  of INFO-LIST; if it does not
+      ;;return: nil and INFO-LIST itself.
+      ;;
       (if (null? info-list)
 	  (values '() '())
 	(let* ((a  (car info-list))
@@ -175,6 +191,10 @@
     #| end of module: %initialise-primitive-properties |# )
 
   (define-constant PRIMITIVE-INFO-LIST
+    ;;Attributes  specifications for  each mode  of calling  a primitive
+    ;;function.  There  can be any  number of specs for  each primitive,
+    ;;but they must be in adjacent items.
+    ;;
     '(((cons _ _)                           effect-free result-true)
       ((cons* _)                   foldable effect-free            )
       ((cons* _ . _)                        effect-free result-true)
