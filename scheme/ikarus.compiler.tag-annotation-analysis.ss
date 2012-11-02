@@ -175,162 +175,192 @@
 
 ;;; --------------------------------------------------------------------
 
-    (define (apply-primcall op rand* env)
-
-      (define (return t)
-	(values (make-funcall (make-primref op) rand*) env t))
-
-      (module (inject)
-
-	(define (inject ret-t . rand-t*)
-	  (values (make-funcall (make-primref op) rand*)
-		  (if (= (length rand-t*) (length rand*))
-		      (%extend* rand* rand-t* env)
-		    ;;Incorrect number of args.
-		    env)
-		  ret-t))
-
-	(define (%extend* x* t* env)
-	  (if (null? x*)
-	      env
-	    (%extend (car x*) (car t*)
-		     (%extend* (cdr x*) (cdr t*) env))))
-
-	(define (%extend x t env)
-	  (struct-case x
-	    ((known expr t0)
-	     (%extend expr (T:and t t0) env))
-	    ((prelex)
-	     (extend-env x t env))
-	    (else
-	     env)))
-
-	#| end of module: inject |# )
-
-;;; --------------------------------------------------------------------
-
-      (module (inject*)
-
-	(define (inject* ret-t arg-t)
-	  (values (make-funcall (make-primref op) rand*)
-		  (%extend* rand* env arg-t)
-		  ret-t))
-
-	(define (%extend* x* env arg-t)
-	  (if (null? x*)
-	      env
-	    (%extend (car x*) arg-t
-		     (%extend* (cdr x*) env arg-t))))
-
-	(define (%extend x t env)
-	  (struct-case x
-	    ((known expr t0)
-	     (%extend expr (T:and t t0) env))
-	    ((prelex)
-	     (extend-env x t env))
-	    (else
-	     env)))
-
-	#| end of module: inject* |# )
-
-      (case op
-	((cons)
-	 (return T:pair))
-	((car cdr
-	      caar cadr cdar cddr
-	      caaar caadr cadar caddr cdaar cdadr cddar cdddr
-	      caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
-	      cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
-	 (inject T:object T:pair))
-	((set-car! set-cdr!)
-	 (inject T:void T:pair T:object))
-	((vector make-vector list->vector)
-	 (return T:vector))
-	((string make-string list->string)
-	 (return T:string))
-	((string-length)
-	 (inject T:fixnum T:string))
-	((vector-length)
-	 (inject T:fixnum T:vector))
-	((string-ref)
-	 (inject T:char T:string T:fixnum))
-	((string-set!)
-	 (inject T:void T:string T:fixnum T:char))
-	((vector-ref)
-	 (inject T:object T:vector T:fixnum))
-	((vector-set!)
-	 (inject T:void T:vector T:fixnum T:object))
-	((length)
-	 (inject T:fixnum (T:or T:null T:pair)))
-	((bytevector-length)
-	 (inject T:fixnum T:bytevector))
-	((integer->char)
-	 (inject T:char T:fixnum))
-	((char->integer)
-	 (inject T:fixnum T:char))
-	((bytevector-u8-ref bytevector-s8-ref
-			    bytevector-u16-native-ref bytevector-s16-native-ref)
-	 (inject T:fixnum T:bytevector T:fixnum))
-	((bytevector-u16-ref bytevector-s16-ref)
-	 (inject T:fixnum T:bytevector T:fixnum T:symbol))
-	((bytevector-u8-set! bytevector-s8-set!
-			     bytevector-u16-native-set! bytevector-s16-native-set!)
-	 (inject T:void T:bytevector T:fixnum T:fixnum))
-	((bytevector-u16-set! bytevector-s16-set!)
-	 (inject T:void T:bytevector T:fixnum T:fixnum T:symbol))
-	((fx+         fx-         fx*         fxadd1      fxsub1
-		      fxquotient  fxremainder fxmodulo    fxsll       fxsra
-		      fxand       fxdiv       fxdiv0      fxif        fxior
-		      fxlength    fxmax       fxmin       fxmod       fxmod0
-		      fxnot       fxxor       fxlogand    fxlogor     fxlognot
-		      fxlogxor)
-	 (inject* T:fixnum T:fixnum))
-	((fx= fx< fx<= fx> fx>= fx=? fx<? fx<=? fx>? fx>=?
-	      fxeven? fxodd? fxnegative? fxpositive? fxzero?
-	      fxbit-set?)
-	 (inject* T:boolean T:fixnum))
-	((fl=? fl<? fl<=? fl>? fl>=?
-	       fleven? flodd? flzero? flpositive? flnegative?
-	       flfinite? flinfinite? flinteger? flnan?)
-	 (inject* T:boolean T:flonum))
-	((char=? char<? char<=? char>? char>=?
-		 char-ci=? char-ci<? char-ci<=? char-ci>? char-ci>=?)
-	 (inject* T:boolean T:char))
-	((string=? string<? string<=? string>? string>=?
-		   string-ci=? string-ci<? string-ci<=? string-ci>?
-		   string-ci>=?)
-	 (inject* T:boolean T:string))
-	((make-parameter
-	     record-constructor
-	   record-accessor
-	   record-constructor
-	   record-predicate
-	   condition-accessor
-	   condition-predicate
-	   enum-set-constructor
-	   enum-set-indexer
-	   make-guardian)
-	 (return T:procedure))
-	((fixnum-width greatest-fixnum least-fixnum)
-	 (return T:fixnum))
-	(else
-	 (return T:object)))) ;;end of APPLY-PRIMCALL
-
 ;;; --------------------------------------------------------------------
 
     (define (lookup x env)
-      (cond
-       ((eq? env 'bottom) #f)
-       (else
-	(let ((x (prelex-operand x)))
-	  (cond
-           ((assq x env) => cdr)
-           (else T:object))))))
+      (if (eq? env 'bottom)
+	  #f
+	(cond ((assq (prelex-operand x) env)
+	       => cdr)
+	      (else
+	       T:object))))
 
     (let-values (((x env t) (V x EMPTY-ENV)))
       (when (tag-analysis-output)
 	(pretty-print (unparse-recordized-code/pretty x)))
       x))
+
+
+(module (apply-primcall)
+
+  (define (apply-primcall op rand* env)
+    (define (return t)
+      (values (make-funcall (make-primref op) rand*) env t))
+    (define-inline (%inject . ?args)
+      (inject op rand* env . ?args))
+    (define-inline (%inject* . ?args)
+      (inject* op rand* env . ?args))
+    (case-symbols op
+      ((cons)
+       (return T:pair))
+
+      ((car cdr
+	    caar cadr cdar cddr
+	    caaar caadr cadar caddr cdaar cdadr cddar cdddr
+	    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
+	    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
+       (%inject T:object T:pair))
+
+      ((set-car! set-cdr!)
+       (%inject T:void T:pair T:object))
+
+      ((vector make-vector list->vector)
+       (return T:vector))
+
+      ((string make-string list->string)
+       (return T:string))
+
+      ((string-length)
+       (%inject T:fixnum T:string))
+
+      ((vector-length)
+       (%inject T:fixnum T:vector))
+
+      ((string-ref)
+       (%inject T:char T:string T:fixnum))
+
+      ((string-set!)
+       (%inject T:void T:string T:fixnum T:char))
+
+      ((vector-ref)
+       (%inject T:object T:vector T:fixnum))
+
+      ((vector-set!)
+       (%inject T:void T:vector T:fixnum T:object))
+
+      ((length)
+       (%inject T:fixnum (T:or T:null T:pair)))
+
+      ((bytevector-length)
+       (%inject T:fixnum T:bytevector))
+
+      ((integer->char)
+       (%inject T:char T:fixnum))
+
+      ((char->integer)
+       (%inject T:fixnum T:char))
+
+      ((bytevector-u8-ref bytevector-s8-ref
+			  bytevector-u16-native-ref bytevector-s16-native-ref)
+       (%inject T:fixnum T:bytevector T:fixnum))
+
+      ((bytevector-u16-ref bytevector-s16-ref)
+       (%inject T:fixnum T:bytevector T:fixnum T:symbol))
+
+      ((bytevector-u8-set! bytevector-s8-set!
+			   bytevector-u16-native-set! bytevector-s16-native-set!)
+       (%inject T:void T:bytevector T:fixnum T:fixnum))
+
+      ((bytevector-u16-set! bytevector-s16-set!)
+       (%inject T:void T:bytevector T:fixnum T:fixnum T:symbol))
+
+      ((fx+         fx-         fx*         fxadd1      fxsub1
+		    fxquotient  fxremainder fxmodulo    fxsll       fxsra
+		    fxand       fxdiv       fxdiv0      fxif        fxior
+		    fxlength    fxmax       fxmin       fxmod       fxmod0
+		    fxnot       fxxor       fxlogand    fxlogor     fxlognot
+		    fxlogxor)
+       (%inject* T:fixnum T:fixnum))
+
+      ((fx= fx< fx<= fx> fx>= fx=? fx<? fx<=? fx>? fx>=?
+	    fxeven? fxodd? fxnegative? fxpositive? fxzero?
+	    fxbit-set?)
+       (%inject* T:boolean T:fixnum))
+
+      ((fl=? fl<? fl<=? fl>? fl>=?
+	     fleven? flodd? flzero? flpositive? flnegative?
+	     flfinite? flinfinite? flinteger? flnan?)
+       (%inject* T:boolean T:flonum))
+
+      ((char=? char<? char<=? char>? char>=?
+	       char-ci=? char-ci<? char-ci<=? char-ci>? char-ci>=?)
+       (%inject* T:boolean T:char))
+
+      ((string=? string<? string<=? string>? string>=?
+		 string-ci=? string-ci<? string-ci<=? string-ci>?
+		 string-ci>=?)
+       (%inject* T:boolean T:string))
+
+      ((make-parameter
+	   record-constructor record-accessor record-constructor record-predicate
+	   condition-accessor condition-predicate
+	   enum-set-constructor enum-set-indexer
+	   make-guardian)
+       (return T:procedure))
+
+      ((fixnum-width greatest-fixnum least-fixnum)
+       (return T:fixnum))
+
+      (else
+       (return T:object)))) ;;end of APPLY-PRIMCALL
+
+;;; --------------------------------------------------------------------
+
+  (module (inject)
+
+    (define (inject op rand* env ret-t . rand-t*)
+      (values (make-funcall (make-primref op) rand*)
+	      (if (= (length rand-t*)
+		     (length rand*))
+		  (%extend* rand* rand-t* env)
+		;;Incorrect number of args.
+		env)
+	      ret-t))
+
+    (define (%extend* x* t* env)
+      (if (null? x*)
+	  env
+	(%extend (car x*) (car t*)
+		 (%extend* (cdr x*) (cdr t*) env))))
+
+    (define (%extend x t env)
+      (struct-case x
+	((known expr t0)
+	 (%extend expr (T:and t t0) env))
+	((prelex)
+	 (extend-env x t env))
+	(else
+	 env)))
+
+    #| end of module: inject |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (inject*)
+
+    (define (inject* op rand* env ret-t arg-t)
+      (values (make-funcall (make-primref op) rand*)
+	      (%extend* rand* env arg-t)
+	      ret-t))
+
+    (define (%extend* x* env arg-t)
+      (if (null? x*)
+	  env
+	(%extend (car x*) arg-t
+		 (%extend* (cdr x*) env arg-t))))
+
+    (define (%extend x t env)
+      (struct-case x
+	((known expr t0)
+	 (%extend expr (T:and t t0) env))
+	((prelex)
+	 (extend-env x t env))
+	(else
+	 env)))
+
+    #| end of module: inject* |# )
+
+  #| end of module: apply-primcall |# )
 
 
 ;;;; env functions
