@@ -41,7 +41,7 @@
 
   (define (source-optimize expr)
     (define (%doit expr)
-      (E expr 'v empty-env (passive-counter) (passive-counter)))
+      (E expr 'v EMPTY-ENV (passive-counter) (passive-counter)))
     (case (optimize-level)
       ;;It is determined that trying to comment out the clause for level
       ;;2  makes the  process crash!!!   Commenting out  the clause  for
@@ -54,6 +54,9 @@
 	 (%doit expr)))
       (else
        expr)))
+
+  (define-inline-constant EMPTY-ENV
+    '())
 
 
 ;;;; type definitions
@@ -512,102 +515,138 @@
   (or (find %matches? (primprop op))
       '()))
 
-(define (info-foldable? info) (memq 'foldable info))
-(define (info-effect-free? info) (memq 'effect-free info))
-(define (info-result-true? info) (memq 'result-true info))
-(define (info-result-false? info) (memq 'result-false info))
+(define-inline (info-foldable? info)
+  (memq 'foldable info))
 
+(define-inline (info-effect-free? info)
+  (memq 'effect-free info))
+
+(define-inline (info-result-true? info)
+  (memq 'result-true info))
+
+(define-inline (info-result-false? info)
+  (memq 'result-false info))
+
+
 (define-syntax ctxt-case
   (lambda (stx)
-    (define (test x)
+    (define (%test x)
       (case (syntax->datum x)
 	((p)   #'(eq? t 'p))
 	((v)   #'(eq? t 'v))
 	((e)   #'(eq? t 'e))
 	((app) #'(app? t))
-	(else (syntax-violation stx "invalid ctxt" x))))
-    (define (extract cls*)
+	(else
+	 (syntax-violation stx "invalid ctxt" x))))
+    (define (%extract cls*)
       (syntax-case cls* (else)
-	(() #'(error 'extract "unmatched ctxt" t))
-	(((else e e* ...)) #'(begin e e* ...))
+	(()
+	 #'(error '%extract "unmatched ctxt" t))
+
+	(((else e e* ...))
+	 #'(begin e e* ...))
+
 	((((t* ...) e e* ...) rest ...)
-	 (with-syntax (((t* ...) (map test #'(t* ...)))
-		       (body (extract #'(rest ...))))
+	 (with-syntax (((t* ...) (map %test #'(t* ...)))
+		       (body     (%extract #'(rest ...))))
 	   #'(if (or t* ...)
 		 (begin e e* ...)
-	       body)))))
+	       body)))
+	))
     (syntax-case stx ()
-      ((_ expr cls* ...)
-       (with-syntax ((body (extract #'(cls* ...))))
-	 #'(let ((t expr))
-	     body))))))
+      ((_ ?expr ?clause ...)
+       (with-syntax ((BODY (%extract #'(?clause ...))))
+	 #'(let ((t ?expr))
+	     BODY)))
+      )))
+
 (define (mkseq e0 e1)
-    ;;; returns a (seq e0 e1) with a seq-less e1 if both
-    ;;; e0 and e1 are constructed properly.
+  ;;Return  a (seq  e0 e1)  with a  seq-less e1  if both  e0 and  e1 are
+  ;;constructed properly.
+  ;;
   (if (simple? e0)
       e1
     (let ((e0 (struct-case e0
-		((seq e0a e0b) (if (simple? e0b) e0a e0))
-		(else e0))))
+		((seq e0a e0b)
+		 (if (simple? e0b)
+		     e0a
+		   e0))
+		(else
+		 e0))))
       (struct-case e1
-	((seq e1a e1b) (make-seq (make-seq e0 e1a) e1b))
-	(else (make-seq e0 e1))))))
-  ;;; simple?: check quickly whether something is effect-free
+	((seq e1a e1b)
+	 (make-seq (make-seq e0 e1a) e1b))
+	(else
+	 (make-seq e0 e1))))))
+
 (define (simple? x)
+  ;;Check quickly whether something is effect-free.
+  ;;
   (struct-case x
     ((constant) #t)
     ((prelex)   #t)
     ((primref)  #t)
     ((clambda)  #t)
     (else       #f)))
-  ;;; result returns the "last" value of an expression
+
 (define (result-expr x)
+  ;;Return the "last" value of an expression.
+  ;;
   (struct-case x
-    ((seq e0 e1) e1)
-    (else        x)))
-  ;;;
+    ((seq e0 e1)
+     e1)
+    (else
+     x)))
+
 (define (records-equal? x y ctxt)
   (struct-case x
     ((constant kx)
      (struct-case y
        ((constant ky)
 	(ctxt-case ctxt
-		   ((e) #t)
-		   ((p) (if kx ky (not ky)))
-		   (else (eq? kx ky))))
-       (else #f)))
-    (else #f)))
-  ;;;
+	  ((e)
+	   #t)
+	  ((p)
+	   (if kx ky (not ky)))
+	  (else
+	   (eq? kx ky))))
+       (else
+	#f)))
+    (else
+     #f)))
+
 (define (residualize-operands e rand* sc)
-  (cond
-   ((null? rand*) e)
-   ((not (operand-residualize-for-effect (car rand*)))
-    (residualize-operands e (cdr rand*) sc))
-   (else
-    (let ((opnd (car rand*)))
-      (let ((e1 (or (operand-value opnd)
-		    (struct-case opnd
-		      ((operand expr env ec)
-		       (E expr 'e env ec sc))))))
-	(if (simple? e1)
-	    (residualize-operands e (cdr rand*) sc)
-	  (begin
-	    (decrement sc (operand-size opnd))
-	    (mkseq e1 (residualize-operands e (cdr rand*) sc)))))))))
+  (cond ((null? rand*)
+	 e)
+	((not (operand-residualize-for-effect (car rand*)))
+	 (residualize-operands e (cdr rand*) sc))
+	(else
+	 (let ((opnd (car rand*)))
+	   (let ((e1 (or (operand-value opnd)
+			 (struct-case opnd
+			   ((operand expr env ec)
+			    (E expr 'e env ec sc))))))
+	     (if (simple? e1)
+		 (residualize-operands e (cdr rand*) sc)
+	       (begin
+		 (decrement sc (operand-size opnd))
+		 (mkseq e1 (residualize-operands e (cdr rand*) sc)))))))))
+
 (define (value-visit-operand! rand)
   (or (operand-value rand)
-      (let ((sc (passive-counter)))
-	(let ((e (struct-case rand
+      (let* ((sc (passive-counter))
+	     (e  (struct-case rand
 		   ((operand expr env ec)
 		    (E expr 'v env sc ec)))))
-	  (set-operand-value! rand e)
-	  (set-operand-size! rand (passive-counter-value sc))
-	  e))))
+	(set-operand-value! rand e)
+	(set-operand-size!  rand (passive-counter-value sc))
+	e)))
+
 (define (score-value-visit-operand! rand sc)
-  (let ((val (value-visit-operand! rand)))
-    (let ((score (operand-size rand)))
-      (decrement sc score))
-    val))
+  (begin0
+      (value-visit-operand! rand)
+    (decrement sc (operand-size rand))))
+
 (define (E-call rator rand* env ctxt ec sc)
   (let ((ctxt (make-app rand* ctxt)))
     (let ((rator (E rator ctxt env ec sc)))
@@ -688,7 +727,7 @@
 				(lambda ()
 				  (call/cc
 				      (lambda (abort)
-					(inline rhs ctxt empty-env
+					(inline rhs ctxt EMPTY-ENV
 						(if (active-counter? ec)
 						    ec
 						  (make-counter
@@ -952,7 +991,7 @@
 				body)))))))
     (else
      (error who "invalid expression" x))))
-(define empty-env '())
+
 (define (lookup x env)
   (cond
    ((vector? env)
@@ -975,3 +1014,7 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'ctxt-case 'scheme-indent-function 1)
+;; End:
+
