@@ -48,11 +48,10 @@
 
       ((seq e0 e1)
        (let-values (((e0 env t) (V e0 env)))
-	 (cond ((eq? (T:object? t) 'no)
-		(values e0 env t))
-	       (else
-		(let-values (((e1 env t) (V e1 env)))
-		  (values (make-seq e0 e1) env t))))))
+	 (if (eq? (T:object? t) 'no)
+	     (values e0 env t)
+	   (let-values (((e1 env t) (V e1 env)))
+	     (values (make-seq e0 e1) env t)))))
 
       ((conditional x.test x.conseq x.altern)
        (let-values (((x.test env t) (V x.test env)))
@@ -87,14 +86,13 @@
 
       ((clambda label cls* cp free name)
        (values (make-clambda label
-			     (map
-				 (lambda (x)
-				   (struct-case x
-				     ((clambda-case info body)
-				      (for-each number! (case-info-args info))
-				      (let-values (((body env t) (V body env)))
-					;;dropped env and t
-					(make-clambda-case info body)))))
+			     (map (lambda (x)
+				    (struct-case x
+				      ((clambda-case info body)
+				       (for-each number! (case-info-args info))
+				       (let-values (((body env t) (V body env)))
+					 ;;dropped env and t
+					 (make-clambda-case info body)))))
 			       cls*)
 			     cp free name)
 	       env
@@ -119,8 +117,8 @@
   (define (V* x* env)
     (if (null? x*)
 	(values '() env '())
-      (let-values (((x  env1 t)  (V  (car x*) env))
-		   ((x* env2 t*) (V* (cdr x*) env)))
+      (let-values (((x  env1 t)  (V  ($car x*) env))
+		   ((x* env2 t*) (V* ($cdr x*) env)))
 	(values (cons x x*)
 		(and-envs env1 env2)
 		(cons t t*)))))
@@ -204,7 +202,7 @@
       ((cons)
        (return T:pair))
 
-      ((car cdr
+      (($car cdr
 	    caar cadr cdar cddr
 	    caaar caadr cadar caddr cdaar cdadr cddar cdddr
 	    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
@@ -320,8 +318,8 @@
     (define (%extend* x* t* env)
       (if (null? x*)
 	  env
-	(%extend (car x*) (car t*)
-		 (%extend* (cdr x*) (cdr t*) env))))
+	(%extend ($car x*) ($car t*)
+		 (%extend* ($cdr x*) ($cdr t*) env))))
 
     (define (%extend x t env)
       (struct-case x
@@ -346,8 +344,8 @@
     (define (%extend* x* env arg-t)
       (if (null? x*)
 	  env
-	(%extend (car x*) arg-t
-		 (%extend* (cdr x*) env arg-t))))
+	(%extend ($car x*) arg-t
+		 (%extend* ($cdr x*) env arg-t))))
 
     (define (%extend x t env)
       (struct-case x
@@ -368,8 +366,8 @@
 (define (extend-env* x* v* env)
   (if (null? x*)
       env
-    (extend-env* (cdr x*) (cdr v*)
-		 (extend-env (car x*) (car v*) env))))
+    (extend-env* ($cdr x*) ($cdr v*)
+		 (extend-env ($car x*) ($car v*) env))))
 
 (define (extend-env x t env)
   (if (T=? t T:object)
@@ -379,7 +377,7 @@
 	(if (or (null? env)
 		(< x (caar env)))
 	    (cons (cons x t) env)
-	  (cons (car env) (recur (cdr env))))))))
+	  (cons ($car env) (recur ($cdr env))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -393,17 +391,17 @@
 	   env1)
 	  ((pair? env1)
 	   (if (pair? env2)
-	       (%merge-envs2 (car env1) (cdr env1)
-			     (car env2) (cdr env2))
+	       (%merge-envs2 ($car env1) ($cdr env1)
+			     ($car env2) ($cdr env2))
 	     EMPTY-ENV))
 	  (else
 	   EMPTY-ENV)))
 
   (define (%merge-envs2 a1 env1 a2 env2)
-    (let ((x1 (car a1))
-	  (x2 (car a2)))
+    (let ((x1 ($car a1))
+	  (x2 ($car a2)))
       (cond ((eq? x1 x2)
-	     (cons-env x1 (T:or (cdr a1) (cdr a2))
+	     (cons-env x1 (T:or ($cdr a1) ($cdr a2))
 		       (%merge-envs env1 env2)))
 	    ((< x2 x1)
 	     (%merge-envs1 a1 env1 env2))
@@ -412,7 +410,7 @@
 
   (define (%merge-envs1 a1 env1 env2)
     (if (pair? env2)
-	(%merge-envs2 a1 env1 (car env2) (cdr env2))
+	(%merge-envs2 a1 env1 ($car env2) ($cdr env2))
       EMPTY-ENV))
 
   (define (cons-env x v env)
@@ -434,17 +432,17 @@
 	   env1)
 	  ((pair? env1)
 	   (if (pair? env2)
-	       (%merge-envs2 (car env1) (cdr env1)
-			     (car env2) (cdr env2))
+	       (%merge-envs2 ($car env1) ($cdr env1)
+			     ($car env2) ($cdr env2))
 	     env1))
 	  (else
 	   env2)))
 
   (define (%merge-envs2 a1 env1 a2 env2)
-    (let ((x1 (car a1))
-	  (x2 (car a2)))
+    (let ((x1 ($car a1))
+	  (x2 ($car a2)))
       (cond ((eq? x1 x2)
-	     (cons-env x1 (T:and (cdr a1) (cdr a2))
+	     (cons-env x1 (T:and ($cdr a1) ($cdr a2))
 		       (%merge-envs env1 env2)))
 	    ((< x2 x1)
 	     (cons a2 (%merge-envs1 a1 env1 env2)))
@@ -453,7 +451,7 @@
 
   (define (%merge-envs1 a1 env1 env2)
     (if (pair? env2)
-	(%merge-envs2 a1 env1 (car env2) (cdr env2))
+	(%merge-envs2 a1 env1 ($car env2) ($cdr env2))
       env1))
 
   (define (cons-env x v env)
