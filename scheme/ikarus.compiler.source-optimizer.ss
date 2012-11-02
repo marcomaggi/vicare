@@ -39,6 +39,22 @@
   (define cp0-size-limit
     (make-parameter 8))
 
+  (define (source-optimize expr)
+    (define (%doit expr)
+      (E expr 'v empty-env (passive-counter) (passive-counter)))
+    (case (optimize-level)
+      ;;It is determined that trying to comment out the clause for level
+      ;;2  makes the  process crash!!!   Commenting out  the clause  for
+      ;;level 1 does not crash.  (Marco Maggi, Mon Jun 7, 2010)
+      ;;
+      ((2)
+       (%doit expr))
+      ((1)
+       (parameterize ((cp0-size-limit 0))
+	 (%doit expr)))
+      (else
+       expr)))
+
 
 ;;;; type definitions
 
@@ -450,28 +466,51 @@
   #| end of module: primprop |# )
 
 
-
 (define (primitive-info op args)
-  (define (matches? x)
-    (let f ((args args) (params (car x)))
-      (cond
-       ((pair? params)
-	(and (pair? args)
-	     (case (car params)
-	       ((_) (f (cdr args) (cdr params)))
-	       ((#f 0 ())
-		(let ((v (value-visit-operand! (car args))))
-		  (and (constant? v)
-		       (equal? (constant-value v) (car params))
-		       (f (cdr args) (cdr params)))))
-	       (else
-		(error 'primitive-info "cannot happen" op (car params))))))
-       ((eq? params '_) #t)
-       ((null? params) (null? args))
-       (else (error 'primitive-info "cannot happen" op params)))))
-  (cond
-   ((find matches? (primprop op)))
-   (else '())))
+  ;;OP must be  a symbol representing the name of  a primitive function.
+  ;;ARGS must be null or a list representing the arguments in a function
+  ;;call to OP.
+  ;;
+  ;;This function scans the attributes  list of OP searching for entries
+  ;;that match  the arguments call represented  by ARGS.  If a  match is
+  ;;found: return  a list of  symbols representing the  attributes; else
+  ;;return nil.
+  ;;
+  (define who 'primitive-info)
+  (define (%matches? attributes-sublist)
+    (let loop ((args            args)
+	       (template-params (car attributes-sublist)))
+      (cond ((pair? template-params)
+	     (and (pair? args)
+		  (let ((template-arg (car template-params)))
+		    (case template-arg
+		      ((_)
+		       ;;An argument matched.  Go on with the rest.
+		       (loop (cdr args) (cdr template-params)))
+		      ((#f 0 ())
+		       ;;The template specifies  that this argument must
+		       ;;be one among: #f, 0, nil;  if it is: go on with
+		       ;;the rest; else this template does not match.
+		       (let ((v (value-visit-operand! (car args))))
+			 (and (constant? v)
+			      (equal? template-arg (constant-value v))
+			      (loop (cdr args) (cdr template-params)))))
+		      (else
+		       ;;Invalid template specification.
+		       (error who "internal error" op (car template-params)))))))
+	    ((eq? template-params '_)
+	     ;;Success!  The  template represents  a call  accepting any
+	     ;;number  of  arguments   (possibly  after  some  mandatory
+	     ;;arguments).
+	     #t)
+	    ((null? template-params)
+	     ;;If ARGS is null: success:  the template matches the args!
+	     ;;Else this template does not match.
+	     (null? args))
+	    (else
+	     (error who "internal error" op template-params)))))
+  (or (find %matches? (primprop op))
+      '()))
 
 (define (info-foldable? info) (memq 'foldable info))
 (define (info-effect-free? info) (memq 'effect-free info))
@@ -929,20 +968,6 @@
       (if (memv x '(0 1 2))
 	  x
 	(die 'optimize-level "valid levels are 0, 1, and 2")))))
-(define (source-optimize expr)
-  (define (source-optimize expr)
-    (E expr 'v empty-env (passive-counter) (passive-counter)))
-  (case (optimize-level)
-    ;;It is determined that trying to comment out the clause for level
-    ;;2  makes the  process crash!!!   Commenting out  the  clause for
-    ;;level 1 does not crash.  (Marco Maggi, Mon Jun 7, 2010)
-    ;;
-    ((2)
-     (source-optimize expr))
-    ((1)
-     (parameterize ((cp0-size-limit 0))
-       (source-optimize expr)))
-    (else expr)))
 
 
 ;;;; done
