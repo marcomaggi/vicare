@@ -417,6 +417,10 @@
   (cogen-primop cogen-debug-primop)
   (import cogen-handler-maker)
 
+  (define (%make-no-interrupt-call op args)
+    (let ((pref (make-primref op)))
+      (make-funcall (V pref) args)))
+
   (module (%make-interrupt-call)
 
     (define (%make-interrupt-call op args)
@@ -438,10 +442,6 @@
 
     #| end of module: %make-interrupt-call |# )
 
-  (define (%make-no-interrupt-call op args)
-    (let ((pref (make-primref op)))
-      (make-funcall (V pref) args)))
-
   (define cogen-primop
     (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
 
@@ -452,7 +452,7 @@
     (define (%make-call op args)
       ;;This function clauses upon the argument SRC/LOC.
       ;;
-      (make-funcall (make-primref 'debug-call)
+      (make-funcall (V (make-primref 'debug-call))
 		    (cons* (V src/loc)
 			   (V (make-primref op))
 			   args)))

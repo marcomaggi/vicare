@@ -7,7 +7,7 @@
 (import (vicare)
   (vicare debugging compiler))
 
-(module (doit library-doit)
+#;(module (doit library-doit)
 
   (define-syntax doit
     (syntax-rules ()
@@ -70,14 +70,10 @@
     (define (hello)
       123)))
 
-(library-doit $assign-frame-sizes
- '(library (beta)
-    (export ciao)
-    (import (vicare))
-    (define (ciao)
-      (hello))
-    (define (hello)
-      123)))
+(define (ciao)
+  123)
+
+(display (ciao))
 
 ;;; end of file
 ;;Local Variables:
