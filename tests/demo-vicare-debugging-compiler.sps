@@ -11,7 +11,7 @@
     (%print form)
     (%display "==> ")
     (%print* ($unparse-recordized-code/pretty
-	      (compile-up-to $optimize-closures/lift-codes #;$source-optimize
+	      (compile-up-to #;$specify-representation $source-optimize
 		(expand form)))
 	     3)
     (%display "\n\n"))
@@ -74,18 +74,7 @@
 
 
 
-(doit '(let ()
-	 (define (b)
-	   (list 1 2)
-	   #;(display "ciao\n"))
-	 (quasiquote (,(b)))))
-
-(set-port-buffer-mode! (current-output-port)
-		       (buffer-mode none))
-
-(define (b)
-  (display "ciao\n"))
-(quasiquote (,(b)))
+(doit '(list (display "ciao\n")))
 
 ;;; end of file
 ;; Local Variables:

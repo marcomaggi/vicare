@@ -813,8 +813,9 @@
 
   (define (cogen-debug-call op ctxt arg* kont)
     ;;This function is used to process struct instances of type PRIMCALL
-    ;;when  debug mode  is on.   In  such situation  function calls  are
-    ;;wrapped in calls to "debug-call".  So:
+    ;;with operand "debug-call"; such PRIMCALLs are inserted in the code
+    ;;when debug  mode is  on, function  calls are  wrapped in  calls to
+    ;;"debug-call".  So:
     ;;
     ;;   (list 1 2)
     ;;
@@ -825,6 +826,8 @@
     ;;where the  #f at  the beginning  of the  quoted list  represents a
     ;;missing annotation source.  See the function RECORDIZE for details
     ;;about how "debug-call" PRIMREFs are generated.
+    ;;
+    ;;This function returns a FUNCALL struct instance.
     ;;
     ;;OP is  always the symbol "debug-call";  it is the value  of the OP
     ;;field of the PRIMCALL structure.
