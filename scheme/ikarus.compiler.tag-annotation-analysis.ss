@@ -17,8 +17,7 @@
 
 (include/verbose "ikarus.compiler.ontology.ss")
 
-(module (introduce-tags
-	 tag-analysis-output)
+(module (introduce-tags tag-analysis-output)
   (define who 'introduce-tags)
 
   (define tag-analysis-output
@@ -28,167 +27,168 @@
     '())
 
   (define (introduce-tags x)
-
-    (define number!
-      (let ((i 0))
-	(lambda (x)
-	  (set-prelex-operand! x i)
-	  (set! i (+ i 1)))))
-
-    (define (V* x* env)
-      (if (null? x*)
-	  (values '() env '())
-	(let-values (((x  env1 t)  (V  (car x*) env))
-		     ((x* env2 t*) (V* (cdr x*) env)))
-	  (values (cons x x*)
-		  (and-envs env1 env2)
-		  (cons t t*)))))
-
-    (module (constant-type)
-
-      (define (constant-type x)
-	(cond ((number? x)    (%numeric x))
-	      ((boolean? x)   (if x T:true T:false))
-	      ((null? x)      T:null)
-	      ((char? x)      T:char)
-	      ((string? x)    T:string)
-	      ((vector? x)    T:vector)
-	      ((pair? x)      T:pair)
-	      ((eq? x (void)) T:void)
-	      (else           T:object)))
-
-      (define (%numeric x)
-	(cond ((fixnum? x)
-	       (%sign x T:fixnum))
-	      ((flonum? x)
-	       (%sign x T:flonum))
-	      ((or (bignum? x)
-		   (ratnum? x))
-	       (%sign x (T:and T:exact T:other-number)))
-	      (else
-	       T:number)))
-
-      (define (%sign x t)
-	(T:and t (cond ((< x 0) T:negative)
-		       ((> x 0) T:positive)
-		       ((= x 0) T:zero)
-		       (else    t))))
-
-      #| end of module: constant-type |# )
-
-    (define (V x env)
-      (struct-case x
-	((constant k)
-	 (values x env (constant-type k)))
-
-	((prelex)
-	 (values x env (lookup x env)))
-
-	((primref op)
-	 (values x env T:procedure))
-
-	((seq e0 e1)
-	 (let-values (((e0 env t) (V e0 env)))
-	   (cond ((eq? (T:object? t) 'no)
-		  (values e0 env t))
-		 (else
-		  (let-values (((e1 env t) (V e1 env)))
-		    (values (make-seq e0 e1) env t))))))
-
-	((conditional x.test x.conseq x.altern)
-	 (let-values (((x.test env t) (V x.test env)))
-	   (cond ((eq? (T:object? t) 'no)
-		  (values x.test env t))
-		 ((eq? (T:false? t) 'yes)
-		  (let-values (((x.altern env t) (V x.altern env)))
-		    (values (make-seq x.test x.altern) env t)))
-		 ((eq? (T:false? t) 'no)
-		  (let-values (((x.conseq env t) (V x.conseq env)))
-		    (values (make-seq x.test x.conseq) env t)))
-		 (else
-		  (let-values (((x.conseq env1 t1) (V x.conseq env))
-			       ((x.altern env2 t2) (V x.altern env)))
-		    (values (make-conditional x.test x.conseq x.altern)
-			    (or-envs env1 env2)
-			    (T:or t1 t2)))))))
-
-	((bind lhs* rhs* body)
-	 (let-values (((rhs* env t*) (V* rhs* env)))
-	   (for-each number! lhs*)
-	   (let ((env (extend-env* lhs* t* env)))
-	     (let-values (((body env t) (V body env)))
-	       (values (make-bind lhs* rhs* body) env t)))))
-
-	((fix lhs* rhs* body)
-	 (for-each number! lhs*)
-	 (let-values (((rhs* env t*) (V* rhs* env)))
-	   (let ((env (extend-env* lhs* t* env)))
-	     (let-values (((body env t) (V body env)))
-	       (values (make-fix lhs* rhs* body) env t)))))
-
-	((clambda label cls* cp free name)
-	 (values (make-clambda label
-			       (map
-				   (lambda (x)
-				     (struct-case x
-				       ((clambda-case info body)
-					(for-each number! (case-info-args info))
-					(let-values (((body env t) (V body env)))
-					  ;;dropped env and t
-					  (make-clambda-case info body)))))
-				 cls*)
-			       cp free name)
-		 env
-		 T:procedure))
-
-	((funcall rator rand*)
-	 (let-values (((rator rator-env rator-val) (V  rator env))
-		      ((rand* rand*-env rand*-val) (V* rand* env)))
-	   (apply-funcall rator     rand*
-			  rator-val rand*-val
-			  rator-env rand*-env)))
-
-	((forcall rator rand*)
-	 (let-values (((rand* rand*-env rand*-val) (V* rand* env)))
-	   (values (make-forcall rator rand*) rand*-env T:object)))
-
-	(else
-	 (error who "invalid expression" (unparse-recordized-code x)))))
-
-    (define (annotate x t)
-      (if (T=? t T:object)
-	  x
-	(make-known x t)))
-
-;;; --------------------------------------------------------------------
-
-    (define (apply-funcall rator rand* rator-val rand*-val rator-env rand*-env)
-      (let ((env   (and-envs rator-env rand*-env))
-	    (rand* (map annotate rand* rand*-val)))
-	(struct-case rator
-	  ((primref op)
-	   (apply-primcall op rand* env))
-	  (else
-	   (values (make-funcall (annotate rator rator-val) rand*)
-		   env
-		   T:object)))))
-
-;;; --------------------------------------------------------------------
-
-;;; --------------------------------------------------------------------
-
-    (define (lookup x env)
-      (if (eq? env 'bottom)
-	  #f
-	(cond ((assq (prelex-operand x) env)
-	       => cdr)
-	      (else
-	       T:object))))
-
     (let-values (((x env t) (V x EMPTY-ENV)))
       (when (tag-analysis-output)
 	(pretty-print (unparse-recordized-code/pretty x)))
       x))
+
+
+(module (V)
+
+  (define (V x env)
+    (struct-case x
+      ((constant k)
+       (values x env (constant-type k)))
+
+      ((prelex)
+       (values x env (%lookup x env)))
+
+      ((primref op)
+       (values x env T:procedure))
+
+      ((seq e0 e1)
+       (let-values (((e0 env t) (V e0 env)))
+	 (cond ((eq? (T:object? t) 'no)
+		(values e0 env t))
+	       (else
+		(let-values (((e1 env t) (V e1 env)))
+		  (values (make-seq e0 e1) env t))))))
+
+      ((conditional x.test x.conseq x.altern)
+       (let-values (((x.test env t) (V x.test env)))
+	 (cond ((eq? (T:object? t) 'no)
+		(values x.test env t))
+	       ((eq? (T:false? t) 'yes)
+		(let-values (((x.altern env t) (V x.altern env)))
+		  (values (make-seq x.test x.altern) env t)))
+	       ((eq? (T:false? t) 'no)
+		(let-values (((x.conseq env t) (V x.conseq env)))
+		  (values (make-seq x.test x.conseq) env t)))
+	       (else
+		(let-values (((x.conseq env1 t1) (V x.conseq env))
+			     ((x.altern env2 t2) (V x.altern env)))
+		  (values (make-conditional x.test x.conseq x.altern)
+			  (or-envs env1 env2)
+			  (T:or t1 t2)))))))
+
+      ((bind lhs* rhs* body)
+       (let-values (((rhs* env t*) (V* rhs* env)))
+	 (for-each number! lhs*)
+	 (let ((env (extend-env* lhs* t* env)))
+	   (let-values (((body env t) (V body env)))
+	     (values (make-bind lhs* rhs* body) env t)))))
+
+      ((fix lhs* rhs* body)
+       (for-each number! lhs*)
+       (let-values (((rhs* env t*) (V* rhs* env)))
+	 (let ((env (extend-env* lhs* t* env)))
+	   (let-values (((body env t) (V body env)))
+	     (values (make-fix lhs* rhs* body) env t)))))
+
+      ((clambda label cls* cp free name)
+       (values (make-clambda label
+			     (map
+				 (lambda (x)
+				   (struct-case x
+				     ((clambda-case info body)
+				      (for-each number! (case-info-args info))
+				      (let-values (((body env t) (V body env)))
+					;;dropped env and t
+					(make-clambda-case info body)))))
+			       cls*)
+			     cp free name)
+	       env
+	       T:procedure))
+
+      ((funcall rator rand*)
+       (let-values (((rator rator-env rator-val) (V  rator env))
+		    ((rand* rand*-env rand*-val) (V* rand* env)))
+	 (%apply-funcall rator     rand*
+			 rator-val rand*-val
+			 rator-env rand*-env)))
+
+      ((forcall rator rand*)
+       (let-values (((rand* rand*-env rand*-val) (V* rand* env)))
+	 (values (make-forcall rator rand*) rand*-env T:object)))
+
+      (else
+       (error who "invalid expression" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (V* x* env)
+    (if (null? x*)
+	(values '() env '())
+      (let-values (((x  env1 t)  (V  (car x*) env))
+		   ((x* env2 t*) (V* (cdr x*) env)))
+	(values (cons x x*)
+		(and-envs env1 env2)
+		(cons t t*)))))
+
+  (define number!
+    (let ((i 0))
+      (lambda (x)
+	(set-prelex-operand! x i)
+	(set! i (+ i 1)))))
+
+  (define (%lookup x env)
+    (if (eq? env 'bottom)
+	#f
+      (cond ((assq (prelex-operand x) env)
+	     => cdr)
+	    (else
+	     T:object))))
+
+  (define (%apply-funcall rator rand* rator-val rand*-val rator-env rand*-env)
+    (let ((env   (and-envs rator-env rand*-env))
+	  (rand* (map %annotate rand* rand*-val)))
+      (struct-case rator
+	((primref op)
+	 (apply-primcall op rand* env))
+	(else
+	 (values (make-funcall (%annotate rator rator-val) rand*)
+		 env
+		 T:object)))))
+
+  (define (%annotate x t)
+    (if (T=? t T:object)
+	x
+      (make-known x t)))
+
+  #| end of module: V |# )
+
+
+(module (constant-type)
+
+  (define (constant-type x)
+    (cond ((number? x)    (%numeric x))
+	  ((boolean? x)   (if x T:true T:false))
+	  ((null? x)      T:null)
+	  ((char? x)      T:char)
+	  ((string? x)    T:string)
+	  ((vector? x)    T:vector)
+	  ((pair? x)      T:pair)
+	  ((eq? x (void)) T:void)
+	  (else           T:object)))
+
+  (define (%numeric x)
+    (cond ((fixnum? x)
+	   (%sign x T:fixnum))
+	  ((flonum? x)
+	   (%sign x T:flonum))
+	  ((or (bignum? x)
+	       (ratnum? x))
+	   (%sign x (T:and T:exact T:other-number)))
+	  (else
+	   T:number)))
+
+  (define (%sign x t)
+    (T:and t (cond ((< x 0) T:negative)
+		   ((> x 0) T:positive)
+		   ((= x 0) T:zero)
+		   (else    t))))
+
+  #| end of module: constant-type |# )
 
 
 (module (apply-primcall)
