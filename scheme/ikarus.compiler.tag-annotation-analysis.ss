@@ -24,6 +24,9 @@
   (define tag-analysis-output
     (make-parameter #f))
 
+  (define-inline-constant EMPTY-ENV
+    '())
+
   (define (introduce-tags x)
 
     (define number!
@@ -204,6 +207,8 @@
 
 	#| end of module: inject |# )
 
+;;; --------------------------------------------------------------------
+
       (module (inject*)
 
 	(define (inject* ret-t arg-t)
@@ -309,62 +314,45 @@
 	((fixnum-width greatest-fixnum least-fixnum)
 	 (return T:fixnum))
 	(else
-	 (return T:object)))) ;;end of APPLY-primcall
+	 (return T:object)))) ;;end of APPLY-PRIMCALL
 
 ;;; --------------------------------------------------------------------
-
-    (define (extend-env* x* v* env)
-      (if (null? x*)
-	  env
-	(extend-env* (cdr x*) (cdr v*)
-		     (extend-env (car x*) (car v*) env))))
-
-    (define (extend-env x t env)
-      (if (T=? t T:object)
-	  env
-	(let ((x (prelex-operand x)))
-	  (let recur ((env env))
-	    (if (or (null? env)
-		    (< x (caar env)))
-		(cons (cons x t) env)
-	      (cons (car env) (recur (cdr env))))))))
 
     (module (or-envs)
 
       (define (or-envs env1 env2)
-
-	(define (cons-env x v env)
-	  (if (T=? v T:object)
-	      env
-	    (cons (cons x v) env)))
-
-	(define (merge-envs1 a1 env1 env2)
-	  (if (pair? env2)
-	      (merge-envs2 a1 env1 (car env2) (cdr env2))
-	    empty-env))
-
-	(define (merge-envs2 a1 env1 a2 env2)
-	  (let ((x1 (car a1))
-		(x2 (car a2)))
-	    (if (eq? x1 x2)
-		(cons-env x1 (T:or (cdr a1) (cdr a2))
-			  (merge-envs env1 env2))
-	      (if (< x2 x1)
-		  (merge-envs1 a1 env1 env2)
-		(merge-envs1 a2 env2 env1)))))
-
-	(define (merge-envs env1 env2)
-	  (cond ((eq? env1 env2)
-		 env1)
-		((pair? env1)
-		 (if (pair? env2)
-		     (merge-envs2 (car env1) (cdr env1)
-				  (car env2) (cdr env2))
-		   empty-env))
-		(else
-		 empty-env)))
-
 	(merge-envs env1 env2))
+
+      (define (merge-envs env1 env2)
+	(cond ((eq? env1 env2)
+	       env1)
+	      ((pair? env1)
+	       (if (pair? env2)
+		   (merge-envs2 (car env1) (cdr env1)
+				(car env2) (cdr env2))
+		 EMPTY-ENV))
+	      (else
+	       EMPTY-ENV)))
+
+      (define (merge-envs2 a1 env1 a2 env2)
+	(let ((x1 (car a1))
+	      (x2 (car a2)))
+	  (if (eq? x1 x2)
+	      (cons-env x1 (T:or (cdr a1) (cdr a2))
+			(merge-envs env1 env2))
+	    (if (< x2 x1)
+		(merge-envs1 a1 env1 env2)
+	      (merge-envs1 a2 env2 env1)))))
+
+      (define (merge-envs1 a1 env1 env2)
+	(if (pair? env2)
+	    (merge-envs2 a1 env1 (car env2) (cdr env2))
+	  EMPTY-ENV))
+
+      (define (cons-env x v env)
+	(if (T=? v T:object)
+	    env
+	  (cons (cons x v) env)))
 
       #| end of module: or-envs |# )
 
@@ -394,7 +382,6 @@
 		env1)
 	    env2)))
       (merge-envs env1 env2))
-    (define empty-env '())
     (define (lookup x env)
       (cond
        ((eq? env 'bottom) #f)
@@ -403,10 +390,29 @@
 	  (cond
            ((assq x env) => cdr)
            (else T:object))))))
-    (let-values (((x env t) (V x empty-env)))
+    (let-values (((x env t) (V x EMPTY-ENV)))
       (when (tag-analysis-output)
 	(pretty-print (unparse-recordized-code/pretty x)))
       x))
+
+
+;;;; env functions
+
+(define (extend-env* x* v* env)
+  (if (null? x*)
+      env
+    (extend-env* (cdr x*) (cdr v*)
+		 (extend-env (car x*) (car v*) env))))
+
+(define (extend-env x t env)
+  (if (T=? t T:object)
+      env
+    (let ((x (prelex-operand x)))
+      (let recur ((env env))
+	(if (or (null? env)
+		(< x (caar env)))
+	    (cons (cons x t) env)
+	  (cons (car env) (recur (cdr env))))))))
 
 
 ;;;; miscellaneous stuff
