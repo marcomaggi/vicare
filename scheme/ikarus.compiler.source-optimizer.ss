@@ -647,106 +647,125 @@
       (value-visit-operand! rand)
     (decrement sc (operand-size rand))))
 
+
 (define (E-call rator rand* env ctxt ec sc)
-  (let ((ctxt (make-app rand* ctxt)))
-    (let ((rator (E rator ctxt env ec sc)))
-      (if (app-inlined ctxt)
-	  (residualize-operands rator rand* sc)
-	(begin
-	  (decrement sc (if (primref? rator) 1 3))
-	  (make-funcall rator
-			(map (lambda (x) (score-value-visit-operand! x sc))
-			  rand*)))))))
-  ;;;
+  (let* ((ctxt  (make-app rand* ctxt))
+	 (rator (E rator ctxt env ec sc)))
+    (if (app-inlined ctxt)
+	(residualize-operands rator rand* sc)
+      (begin
+	(decrement sc (if (primref? rator) 1 3))
+	(make-funcall rator (map (lambda (x)
+				   (score-value-visit-operand! x sc))
+			      rand*))))))
+
 (define (E-debug-call ctxt ec sc)
   (let ((rand* (app-rand* ctxt)))
-    (cond
-     ((< (length rand*) 2)
-      (decrement sc 1)
-      (make-primref 'debug-call))
-     (else
-      (let ((src/expr (car rand*))
-	    (rator (cadr rand*))
-	    (rands (cddr rand*)))
-	(let ((ctxt2 (make-app rands (app-ctxt ctxt))))
-	  (let ((rator (E (operand-expr rator)
-			  ctxt2
-			  (operand-env rator)
-			  (operand-ec rator)
-			  sc)))
-	    (if (app-inlined ctxt2)
-		(begin
-		  (set-app-inlined! ctxt #t)
-		  (residualize-operands rator (cons src/expr rands) sc))
-	      (begin
-		(decrement sc 1)
-		(make-primref 'debug-call))))))))))
-  ;;;
+    (if (< (length rand*) 2)
+	(begin
+	  (decrement sc 1)
+	  (make-primref 'debug-call))
+      (begin
+       (let ((src/expr (car rand*))
+	     (rator (cadr rand*))
+	     (rands (cddr rand*)))
+	 (let ((ctxt2 (make-app rands (app-ctxt ctxt))))
+	   (let ((rator (E (operand-expr rator)
+			   ctxt2
+			   (operand-env rator)
+			   (operand-ec rator)
+			   sc)))
+	     (if (app-inlined ctxt2)
+		 (begin
+		   (set-app-inlined! ctxt #t)
+		   (residualize-operands rator (cons src/expr rands) sc))
+	       (begin
+		 (decrement sc 1)
+		 (make-primref 'debug-call))))))))))
+
 (define (E-var x ctxt env ec sc)
   (ctxt-case ctxt
-	     ((e) (make-constant (void)))
-	     (else
-	      (let ((x (lookup x env)))
-		(let ((opnd (prelex-operand x)))
-		  (if (and opnd (not (operand-inner-pending opnd)))
-		      (begin
-			(dynamic-wind
-			    (lambda () (set-operand-inner-pending! opnd #t))
-			    (lambda () (value-visit-operand! opnd))
-			    (lambda () (set-operand-inner-pending! opnd #f)))
-			(if (prelex-source-assigned? x)
-			    (residualize-ref x sc)
-			  (copy x opnd ctxt ec sc)))
-		    (residualize-ref x sc)))))))
-  ;;;
-(define (copy x opnd ctxt ec sc)
-  (let ((rhs (result-expr (operand-value opnd))))
-    (struct-case rhs
-      ((constant) rhs)
-      ((prelex)
-       (if (prelex-source-assigned? rhs)
-	   (residualize-ref x sc)
-	 (let ((opnd (prelex-operand rhs)))
-	   (if (and opnd (operand-value opnd))
-	       (copy2 rhs opnd ctxt ec sc)
-	     (residualize-ref rhs sc)))))
-      (else (copy2 x opnd ctxt ec sc)))))
-  ;;;
-(define (copy2 x opnd ctxt ec sc)
-  (let ((rhs (result-expr (operand-value opnd))))
-    (struct-case rhs
-      ((clambda)
-       (ctxt-case ctxt
-		  ((v) (residualize-ref x sc))
-		  ((p) (make-constant #t))
-		  ((e) (make-constant (void)))
-		  ((app)
-		   (or (and (not (operand-outer-pending opnd))
-			    (dynamic-wind
-				(lambda () (set-operand-outer-pending! opnd #t))
-				(lambda ()
-				  (call/cc
-				      (lambda (abort)
-					(inline rhs ctxt EMPTY-ENV
-						(if (active-counter? ec)
-						    ec
-						  (make-counter
-						   (cp0-effort-limit)
-						   ctxt abort))
-						(make-counter
-						 (if (active-counter? sc)
-						     (counter-value sc)
-						   (cp0-size-limit))
-						 ctxt abort)))))
-				(lambda () (set-operand-outer-pending! opnd #f))))
-		       (residualize-ref x sc)))))
-      ((primref p)
-       (ctxt-case ctxt
-		  ((v) rhs)
-		  ((p) (make-constant #t))
-		  ((e) (make-constant (void)))
-		  ((app) (fold-prim p ctxt ec sc))))
-      (else (residualize-ref x sc)))))
+    ((e)
+     (make-constant (void)))
+    (else
+     (let* ((x    (lookup x env))
+	    (opnd (prelex-operand x)))
+       (if (and opnd (not (operand-inner-pending opnd)))
+	   (begin
+	     (dynamic-wind
+		 (lambda () (set-operand-inner-pending! opnd #t))
+		 (lambda () (value-visit-operand! opnd))
+		 (lambda () (set-operand-inner-pending! opnd #f)))
+	     (if (prelex-source-assigned? x)
+		 (residualize-ref x sc)
+	       (copy x opnd ctxt ec sc)))
+	 (residualize-ref x sc))))))
+
+
+(module (copy)
+
+  (define (copy x opnd ctxt ec sc)
+    (let ((rhs (result-expr (operand-value opnd))))
+      (struct-case rhs
+	((constant)
+	 rhs)
+	((prelex)
+	 (if (prelex-source-assigned? rhs)
+	     (residualize-ref x sc)
+	   (let ((opnd (prelex-operand rhs)))
+	     (if (and opnd (operand-value opnd))
+		 (copy2 rhs opnd ctxt ec sc)
+	       (residualize-ref rhs sc)))))
+	(else
+	 (copy2 x opnd ctxt ec sc)))))
+
+  (define (copy2 x opnd ctxt ec sc)
+    (let ((rhs (result-expr (operand-value opnd))))
+      (struct-case rhs
+	((clambda)
+	 (ctxt-case ctxt
+	   ((v)
+	    (residualize-ref x sc))
+	   ((p)
+	    (make-constant #t))
+	   ((e)
+	    (make-constant (void)))
+	   ((app)
+	    (or (and (not (operand-outer-pending opnd))
+		     (dynamic-wind
+			 (lambda ()
+			   (set-operand-outer-pending! opnd #t))
+			 (lambda ()
+			   (call/cc
+			       (lambda (abort)
+				 (inline rhs ctxt EMPTY-ENV
+					 (if (active-counter? ec)
+					     ec
+					   (make-counter
+					    (cp0-effort-limit)
+					    ctxt abort))
+					 (make-counter
+					  (if (active-counter? sc)
+					      (counter-value sc)
+					    (cp0-size-limit))
+					  ctxt abort)))))
+			 (lambda ()
+			   (set-operand-outer-pending! opnd #f))))
+		(residualize-ref x sc)))))
+
+	((primref p)
+	 (ctxt-case ctxt
+	   ((v)		rhs)
+	   ((p)		(make-constant #t))
+	   ((e)		(make-constant (void)))
+	   ((app)	(fold-prim p ctxt ec sc))))
+
+	(else
+	 (residualize-ref x sc)))))
+
+  #| end of module: copy |# )
+
+
 (define (inline proc ctxt env ec sc)
   (define (get-case cases rand*)
     (define (compatible? x)
@@ -777,31 +796,33 @@
 	    ((case-info label args proper)
 	     (cond
 	      (proper
-	       (with-extended-env ((env args) (env args rand*))
-				  (let ((body (E body (app-ctxt ctxt) env ec sc)))
-				    (let ((result (make-let-binding args rand* body sc)))
-				      (set-app-inlined! ctxt #t)
-				      result))))
+	       (with-extended-env ((env args)
+				   (env args rand*))
+		 (let ((body (E body (app-ctxt ctxt) env ec sc)))
+		   (let ((result (make-let-binding args rand* body sc)))
+		     (set-app-inlined! ctxt #t)
+		     result))))
 	      (else
 	       (let-values (((x* t* r) (partition args rand*)))
 		 (with-extended-env ((env a*)
 				     (env (append x* t*) rand*))
-				    (let ((rarg (make-operand
-						 (make-funcall (make-primref 'list) t*)
-						 env ec)))
-				      (with-extended-env ((env b*)
-							  (env (list r) (list rarg)))
-							 (let ((result
-								(make-let-binding a* rand*
-										  (make-let-binding b* (list rarg)
-												    (E body (app-ctxt ctxt) env ec sc)
-												    sc)
-										  sc)))
-							   (set-app-inlined! ctxt #t)
-							   result))))))))))
+		   (let ((rarg (make-operand
+				(make-funcall (make-primref 'list) t*)
+				env ec)))
+		     (with-extended-env ((env b*)
+					 (env (list r) (list rarg)))
+		       (let ((result
+			      (make-let-binding a* rand*
+						(make-let-binding b* (list rarg)
+								  (E body (app-ctxt ctxt) env ec sc)
+								  sc)
+						sc)))
+			 (set-app-inlined! ctxt #t)
+			 result))))))))))
 	 (else
 	  (E proc 'v env ec sc)))))))
-  ;;;
+
+
 (define (do-bind lhs* rhs* body ctxt env ec sc)
   (let ((rand* (map (lambda (x) (make-operand x env ec)) rhs*)))
     (with-extended-env ((env lhs*) (env lhs* rand*))
@@ -1016,5 +1037,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'ctxt-case 'scheme-indent-function 1)
+;; eval: (put 'with-extended-env 'scheme-indent-function 1)
 ;; End:
 
