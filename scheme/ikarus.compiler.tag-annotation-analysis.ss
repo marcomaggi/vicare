@@ -355,34 +355,34 @@
 
 (module (or-envs)
 
-  (define (or-envs env1 env2)
-    (merge-envs env1 env2))
+  (define-inline (or-envs env1 env2)
+    (%merge-envs env1 env2))
 
-  (define (merge-envs env1 env2)
+  (define (%merge-envs env1 env2)
     (cond ((eq? env1 env2)
 	   env1)
 	  ((pair? env1)
 	   (if (pair? env2)
-	       (merge-envs2 (car env1) (cdr env1)
-			    (car env2) (cdr env2))
+	       (%merge-envs2 (car env1) (cdr env1)
+			     (car env2) (cdr env2))
 	     EMPTY-ENV))
 	  (else
 	   EMPTY-ENV)))
 
-  (define (merge-envs2 a1 env1 a2 env2)
+  (define (%merge-envs2 a1 env1 a2 env2)
     (let ((x1 (car a1))
 	  (x2 (car a2)))
       (cond ((eq? x1 x2)
 	     (cons-env x1 (T:or (cdr a1) (cdr a2))
-		       (merge-envs env1 env2)))
+		       (%merge-envs env1 env2)))
 	    ((< x2 x1)
-	     (merge-envs1 a1 env1 env2))
+	     (%merge-envs1 a1 env1 env2))
 	    (else
-	     (merge-envs1 a2 env2 env1)))))
+	     (%merge-envs1 a2 env2 env1)))))
 
-  (define (merge-envs1 a1 env1 env2)
+  (define (%merge-envs1 a1 env1 env2)
     (if (pair? env2)
-	(merge-envs2 a1 env1 (car env2) (cdr env2))
+	(%merge-envs2 a1 env1 (car env2) (cdr env2))
       EMPTY-ENV))
 
   (define (cons-env x v env)
@@ -396,40 +396,40 @@
 
 (module (and-envs)
 
-  (define (and-envs env1 env2)
-    (merge-envs env1 env2))
+  (define-inline (and-envs env1 env2)
+    (%merge-envs env1 env2))
+
+  (define (%merge-envs env1 env2)
+    (cond ((eq? env1 env2)
+	   env1)
+	  ((pair? env1)
+	   (if (pair? env2)
+	       (%merge-envs2 (car env1) (cdr env1)
+			     (car env2) (cdr env2))
+	     env1))
+	  (else
+	   env2)))
+
+  (define (%merge-envs2 a1 env1 a2 env2)
+    (let ((x1 (car a1))
+	  (x2 (car a2)))
+      (cond ((eq? x1 x2)
+	     (cons-env x1 (T:and (cdr a1) (cdr a2))
+		       (%merge-envs env1 env2)))
+	    ((< x2 x1)
+	     (cons a2 (%merge-envs1 a1 env1 env2)))
+	    (else
+	     (cons a1 (%merge-envs1 a2 env2 env1))))))
+
+  (define (%merge-envs1 a1 env1 env2)
+    (if (pair? env2)
+	(%merge-envs2 a1 env1 (car env2) (cdr env2))
+      env1))
 
   (define (cons-env x v env)
     (if (T=? v T:object)
 	env
       (cons (cons x v) env)))
-
-  (define (merge-envs1 a1 env1 env2)
-    (if (pair? env2)
-	(merge-envs2 a1 env1 (car env2) (cdr env2))
-      env1))
-
-  (define (merge-envs2 a1 env1 a2 env2)
-    (let ((x1 (car a1))
-	  (x2 (car a2)))
-      (cond ((eq? x1 x2)
-	     (cons-env x1 (T:and (cdr a1) (cdr a2))
-		       (merge-envs env1 env2)))
-	    ((< x2 x1)
-	     (cons a2 (merge-envs1 a1 env1 env2)))
-	    (else
-	     (cons a1 (merge-envs1 a2 env2 env1))))))
-
-  (define (merge-envs env1 env2)
-    (cond ((eq? env1 env2)
-	   env1)
-	  ((pair? env1)
-	   (if (pair? env2)
-	       (merge-envs2 (car env1) (cdr env1)
-			    (car env2) (cdr env2))
-	     env1))
-	  (else
-	   env2)))
 
   #| end of module: and-envs |# )
 
