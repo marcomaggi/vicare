@@ -812,11 +812,53 @@
   (import cogen-primop-stuff)
 
   (define (cogen-debug-call op ctxt arg* kont)
+    ;;This function is used to process struct instances of type PRIMCALL
+    ;;when  debug mode  is on.   In  such situation  function calls  are
+    ;;wrapped in calls to "debug-call".  So:
+    ;;
+    ;;   (list 1 2)
+    ;;
+    ;;becomes:
+    ;;
+    ;;   (debug-call '(#f list 1 2) 'list '1 '2)
+    ;;
+    ;;where the  #f at  the beginning  of the  quoted list  represents a
+    ;;missing annotation source.  See the function RECORDIZE for details
+    ;;about how "debug-call" PRIMREFs are generated.
+    ;;
+    ;;OP is  always the symbol "debug-call";  it is the value  of the OP
+    ;;field of the PRIMCALL structure.
+    ;;
+    ;;CTXT is one of the symbols: V, E, P.  It represents the context in
+    ;;which the PRIMCALL was found in recordized code.
+    ;;
+    ;;ARG* is  a list  of struct  instance representing  recordized code
+    ;;that,   when  evaluated,   will  return   the  arguments   to  the
+    ;;"debug-call".  It is composed of 3 items:
+    ;;
+    ;;1.  A  symbolic expression  representing the  source form  of this
+    ;;   function call.
+    ;;
+    ;;2. A  struct instance representing  the function to call  in debug
+    ;;   mode.
+    ;;
+    ;;3.   A  list of  struct  instances  representing code  that,  when
+    ;;   evaluated,  will return the  arguments of the  wrapped function
+    ;;   call.
+    ;;
+    ;;KONT is  a continuation function.   For the  context V: it  is the
+    ;;function  V; for  the context  P: it  is the  function P;  for the
+    ;;context E: it is the function E.
+    ;;
+    ;;Notice that  DEBUG-CALL is actually a  primitive function exported
+    ;;by "ikarus.debugger.sls".
+    ;;
+    (assert (eq? op 'debug-call))
     (assert (>= (length arg*) 2))
-    (let ((src/expr	(car  arg*))
-	  (op		(cadr arg*))
-	  (args		(cddr arg*)))
-      (struct-case (%remove-tag op)
+    (let ((src/expr	(car  arg*))  ;source expression
+	  (func		(cadr arg*))  ;the wrapped function
+	  (args		(cddr arg*))) ;args to the wrapped function
+      (struct-case (%remove-tag func)
 	((primref name)
 	 (if (primop? name)
 	     (cogen-debug-primop name src/expr ctxt args)
@@ -908,7 +950,7 @@
        (make-seq (E e0) (V e1)))
 
       ((primcall op arg*)
-       (case op
+       (case-symbols op
 	 ((debug-call)
 	  (cogen-debug-call op 'V arg* V))
 	 (else
@@ -974,7 +1016,7 @@
      (handle-fix lhs* rhs* (P body)))
 
     ((primcall op arg*)
-     (case op
+     (case-symbols op
        ((debug-call)
 	(cogen-debug-call op 'P arg* P))
        (else
@@ -1038,7 +1080,7 @@
      (handle-fix lhs* rhs* (E body)))
 
     ((primcall op arg*)
-     (case op
+     (case-symbols op
        ((debug-call)
 	(cogen-debug-call op 'E arg* E))
        (else
