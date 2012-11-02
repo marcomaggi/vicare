@@ -1133,7 +1133,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (when (< 0 (optimize-level))
       (display "*** vicare warning: optimization level artificially set to 0\n"
 	       (current-error-port)))
-    #;(optimize-level 0)
+    (optimize-level 0)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
       (cafe-input-port (readline.make-readline-input-port)))

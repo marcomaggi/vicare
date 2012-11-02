@@ -4,7 +4,7 @@
 ;;
 
 #!r6rs
-(import (vicare))
+(import (ikarus))
 
 (let loop ((i 0))
   (when (zero? (mod i #e1e6))
