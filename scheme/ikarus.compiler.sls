@@ -969,7 +969,8 @@
 (define-struct closure
   (code
 		;A  struct instance  of  type  CLAMBDA representing  the
-		;closure's implementation.
+		;closure's implementation, or a  struct instance of type
+		;CODE-LOC.
    free*
 		;A list of struct instances of type VAR representing the
 		;free variables referenced by this CLOSURE.
@@ -4762,15 +4763,22 @@
   ;;   forcall		foreign-label	funcall
   ;;   known		prelex		primcall
   ;;   primref		rec*bind	recbind
-  ;;   seq
+  ;;   seq		var
   ;;
   ;;other values are not processed and are returned as they are.
   ;;
+  (define who 'unparse-recordized-code/pretty)
+  (import (only (ikarus system $symbols)
+		$symbol-string))
+
   (define (unparse-recordized-code/pretty x)
+    ;;
+    ;;A lot  of functions are nested  here because they make  use of the
+    ;;closure "Var", which has internal state.
+    ;;
     ;;*NOTE* Being  that this function  is used only when  debugging: it
     ;;makes no sense to use unsafe operations: LET'S KEEP IT SAFE!!!
     ;;
-
     (define (E x)
       (struct-case x
 	((constant c)
@@ -4779,20 +4787,52 @@
 	((prelex)
 	 (Var x))
 
+	((var)
+	 (Var x))
+
+	((assign lhs rhs)
+	 `(set! ,(E lhs) ,(E rhs)))
+
 	((primref x)
 	 x)
 
 	((known expr type)
 	 `(known ,(E expr) ,(T:description type)))
 
+	((clambda)
+	 (E-clambda x))
+
+	((closure code free* well-known?)
+	 `(closure ,(E code)
+		   ,(map E free*)
+		   ,well-known?))
+
+	((primcall op arg*)
+	 (cons op (%map-in-order E arg*)))
+
+	((funcall rator rand*)
+	 (let ((rator (E rator)))
+	   (cons rator (%map-in-order E rand*))))
+
+	((forcall rator rand*)
+	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
+
+	((jmpcall label op rand*)
+	 `(jmpcall ,label
+		   ,(E op)
+		   ,(map E rand*)))
+
+	((foreign-label x)
+	 `(foreign-label ,x))
+
+	((seq e0 e1)
+	 (%do-seq e0 e1))
+
 	((conditional test conseq altern)
 	 (let ((test^   (E test))
 	       (conseq^ (E conseq))
 	       (altern^ (E altern)))
 	   (list 'if test^ conseq^ altern^)))
-
-	((primcall op arg*)
-	 (cons op (%map-in-order E arg*)))
 
 	((bind lhs* rhs* body)
 	 (let* ((lhs* (%map-in-order Var lhs*))
@@ -4818,43 +4858,17 @@
 		(body (E body)))
 	   (list 'letrec* (map list lhs* rhs*) body)))
 
-	((seq e0 e1)
-	 (cons 'begin
-	       ;;Here  we flatten  nested  SEQ instances  into a  unique
-	       ;;output SEQ form.
-	       (let recur ((expr  e0)
-			   (expr* (list e1)))
-		 (struct-case expr
-		   ((seq expr.e0 expr.e1)
-		    (recur expr.e0 (cons expr.e1 expr*)))
-		   (else
-		    (let ((expr^ (E expr)))
-		      (if (null? expr*)
-			  (list expr^)
-			(cons expr^ (recur (car expr*) (cdr expr*))))))))))
-
-	((clambda)
-	 (E-clambda x))
-
-	((funcall rator rand*)
-	 (let ((rator (E rator)))
-	   (cons rator (%map-in-order E rand*))))
-
-	((forcall rator rand*)
-	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
-
-	((assign lhs rhs)
-	 `(set! ,(E lhs) ,(E rhs)))
-
-	((foreign-label x)
-	 `(foreign-label ,x))
+	((codes clambdas body)
+	 `(codes ,(map E clambdas)
+		 ,(E body)))
 
 	(else x)))
 
     (module (Var)
-      ;;Given a struct instance X of type PRELEX, identifying a binding:
-      ;;return a symbol representing a unique name for the binding.  The
-      ;;map between structures and symbols is cached in a hash table.
+      ;;Given a struct instance X of type PRELEX or VAR, identifying the
+      ;;location of  a binding:  return a  symbol representing  a unique
+      ;;name for the binding.  The map between structures and symbols is
+      ;;cached in a hash table.
       ;;
       ;;This function acts in such a way that the input:
       ;;
@@ -4869,24 +4883,47 @@
       ;;       a_1))
       ;;
       (define H
-	;;Map PRELEX structures to already built binding name symbols.
+	;;Map PRELEX  and VAR structures  to already built  binding name
+	;;symbols.
 	(make-eq-hashtable))
       (define T
 	;;Map binding pretty string names to indexes.
 	(make-hashtable string-hash string=?))
       (define (Var x)
-	(import (only (ikarus system $symbols)
-		      $symbol-string))
 	(or (hashtable-ref H x #f)
-	    (let* ((name ($symbol-string (prelex-name x)))
-		   (N    (hashtable-ref T name 0)))
-	      (hashtable-set! T name (+ N 1))
-	      (let ((sym (string->symbol (string-append name "_"
-							(number->string N)))))
-		(hashtable-set! H x sym)
-		sym))))
+	    (struct-case x
+	      ((prelex x.name)
+	       (%build-name x.name))
+	      ((var x.name)
+	       (%build-name x.name))
+	      (else
+	       x
+	       #;(error who "expected struct of type PRELEX or VAR" x)))))
+
+      (define (%build-name x.name)
+	(let* ((name ($symbol-string x.name))
+	       (N    (hashtable-ref T name 0)))
+	  (hashtable-set! T name (+ N 1))
+	  (let ((sym (string->symbol (string-append name "_" (number->string N)))))
+	    (hashtable-set! H x sym)
+	    sym)))
 
       #| end of module: Var |# )
+
+    (define(%do-seq e0 e1)
+      (cons 'begin
+	    ;;Here we flatten nested SEQ  instances into a unique output
+	    ;;SEQ form.
+	    (let recur ((expr  e0)
+			(expr* (list e1)))
+	      (struct-case expr
+		((seq expr.e0 expr.e1)
+		 (recur expr.e0 (cons expr.e1 expr*)))
+		(else
+		 (let ((expr^ (E expr)))
+		   (if (null? expr*)
+		       (list expr^)
+		     (cons expr^ (recur (car expr*) (cdr expr*))))))))))
 
     (module (E-clambda)
 

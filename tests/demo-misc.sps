@@ -5,19 +5,79 @@
 
 #!vicare
 (import (vicare)
-  (ikarus system $compiler))
+  (vicare debugging compiler))
 
-(define (print arg)
-  (pretty-print arg (current-error-port)))
+(module (doit library-doit)
 
-(define source
-  '(let loop ((i 0))
-     (when (zero? (mod i #e1e6))
-       (fprintf (current-error-port) "~a " i)
-       (flush-output-port (current-error-port))
-       (void))
-     (when (< i #e1e9)
-       (cons i (loop (+ 1 i))))))
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?pass ?form)
+       (let ((original-form ?form))
+	 (%unparse-and-print original-form
+			     (compile-up-to ?pass (%expand ?form)))))))
+
+  (define-syntax library-doit
+    (syntax-rules ()
+      ((_ ?pass ?form)
+       (let ((original-form ?form))
+	 (%unparse-and-print original-form
+			     (compile-up-to ?pass (%library-expand ?form)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expand form)
+    (let-values
+	(((code unused)
+	  (expand-form-to-core-language form (environment '(vicare)))))
+      code))
+
+  (define (%library-expand form)
+    (let-values (((id name ver imp* vis* inv*
+		      invoke-code visit-code
+		      export-subst export-env
+		      guard-code guard-req*)
+		  (expand-library form)))
+      invoke-code))
+
+;;; --------------------------------------------------------------------
+
+  (define (%unparse-and-print original-form core-form)
+    (%print original-form)
+    (%display "==> ")
+    (%print* ($unparse-recordized-code/pretty core-form) 3)
+    (%display "\n\n"))
+
+  (define (%print x)
+    (pretty-print x (current-error-port)))
+
+  (define (%print* x start)
+    (pretty-print* x (current-error-port) start #t))
+
+  (define (%display x)
+    (let ((port (current-error-port)))
+      (display x port)
+      (flush-output-port port)))
+
+  #| end of module: doit |# )
+
+
+#;(library-doit $introduce-tags
+ '(library (alpha)
+    (export ciao)
+    (import (vicare))
+    (define (ciao)
+      (hello))
+    (define (hello)
+      123)))
+
+(library-doit $assign-frame-sizes
+ '(library (beta)
+    (export ciao)
+    (import (vicare))
+    (define (ciao)
+      (hello))
+    (define (hello)
+      123)))
 
 ;;; end of file
 ;;Local Variables:
