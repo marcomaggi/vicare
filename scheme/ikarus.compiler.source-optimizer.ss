@@ -50,10 +50,6 @@
     (define (%doit expr)
       (E expr 'v EMPTY-ENV (passive-counter) (passive-counter)))
     (case (optimize-level)
-      ;;It is determined that trying to comment out the clause for level
-      ;;2  makes the  process crash!!!   Commenting out  the clause  for
-      ;;level 1 does not crash.  (Marco Maggi, Mon Jun 7, 2010)
-      ;;
       ((2)
        (%doit expr))
       ((1)
