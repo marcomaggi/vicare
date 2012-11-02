@@ -153,11 +153,12 @@
 	 (error who "invalid expression" (unparse-recordized-code x)))))
 
     (define (annotate x t)
-      (cond ((T=? t T:object) x)
-	    (else (make-known x t))))
+      (if (T=? t T:object)
+	  x
+	(make-known x t)))
 
     (define (apply-funcall rator rand* rator-val rand*-val rator-env rand*-env)
-      (let ((env (and-envs rator-env rand*-env))
+      (let ((env   (and-envs rator-env rand*-env))
 	    (rand* (map annotate rand* rand*-val)))
 	(struct-case rator
 	  ((primref op)
@@ -166,44 +167,63 @@
 	   (values (make-funcall (annotate rator rator-val) rand*)
 		   env
 		   T:object)))))
+
     (define (apply-primcall op rand* env)
+
       (define (return t)
 	(values (make-funcall (make-primref op) rand*) env t))
-      (define (inject ret-t . rand-t*)
-	(define (extend* x* t* env)
-	  (define (extend x t env)
-	    (struct-case x
-	      ((known expr t0)
-	       (extend expr (T:and t t0) env))
-	      ((prelex)
-	       (extend-env x t env))
-	      (else env)))
-	  (cond
-	   ((null? x*) env)
-	   (else (extend (car x*) (car t*)
-			 (extend* (cdr x*) (cdr t*) env)))))
-	(values
-	 (make-funcall (make-primref op) rand*)
-	 (if (= (length rand-t*) (length rand*))
-	     (extend* rand* rand-t* env)
-	   env) ;;; incorrect number of args
-	 ret-t))
-      (define (inject* ret-t arg-t)
-	(define (extend* x* env)
-	  (define (extend x t env)
-	    (struct-case x
-	      ((known expr t0)
-	       (extend expr (T:and t t0) env))
-	      ((prelex)
-	       (extend-env x t env))
-	      (else env)))
-	  (cond
-	   ((null? x*) env)
-	   (else (extend (car x*) arg-t
-			 (extend* (cdr x*) env)))))
-	(values (make-funcall (make-primref op) rand*)
-		(extend* rand* env)
-		ret-t))
+
+      (module (inject)
+
+	(define (inject ret-t . rand-t*)
+	  (values (make-funcall (make-primref op) rand*)
+		  (if (= (length rand-t*) (length rand*))
+		      (%extend* rand* rand-t* env)
+		    ;;Incorrect number of args.
+		    env)
+		  ret-t))
+
+	(define (%extend* x* t* env)
+	  (if (null? x*)
+	      env
+	    (%extend (car x*) (car t*)
+		     (%extend* (cdr x*) (cdr t*) env))))
+
+	(define (%extend x t env)
+	  (struct-case x
+	    ((known expr t0)
+	     (%extend expr (T:and t t0) env))
+	    ((prelex)
+	     (extend-env x t env))
+	    (else
+	     env)))
+
+	#| end of module: inject |# )
+
+      (module (inject*)
+
+	(define (inject* ret-t arg-t)
+	  (values (make-funcall (make-primref op) rand*)
+		  (%extend* rand* env arg-t)
+		  ret-t))
+
+	(define (%extend* x* env arg-t)
+	  (if (null? x*)
+	      env
+	    (%extend (car x*) arg-t
+		     (%extend* (cdr x*) env arg-t))))
+
+	(define (%extend x t env)
+	  (struct-case x
+	    ((known expr t0)
+	     (%extend expr (T:and t t0) env))
+	    ((prelex)
+	     (extend-env x t env))
+	    (else
+	     env)))
+
+	#| end of module: inject* |# )
+
       (case op
 	((cons)
 	 (return T:pair))
@@ -285,7 +305,7 @@
 	((fixnum-width greatest-fixnum least-fixnum)
 	 (return T:fixnum))
 	(else
-	 (return T:object))))
+	 (return T:object)))) ;;end of APPLY-primcall
 
 
 ;;;
