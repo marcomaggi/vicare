@@ -39,6 +39,13 @@
   (define cp0-size-limit
     (make-parameter 8))
 
+  (define optimize-level
+    (make-parameter 0
+      (lambda (x)
+	(if (memv x '(0 1 2))
+	    x
+	  (error 'optimize-level "valid optimization levels are 0, 1, and 2")))))
+
   (define (source-optimize expr)
     (define (%doit expr)
       (E expr 'v EMPTY-ENV (passive-counter) (passive-counter)))
@@ -1022,12 +1029,6 @@
        ((eq? x (car lhs*)) (car rhs*))
        (else (f (cdr lhs*) (cdr rhs*))))))
    (else x)))
-(define optimize-level
-  (make-parameter 0
-    (lambda (x)
-      (if (memv x '(0 1 2))
-	  x
-	(die 'optimize-level "valid levels are 0, 1, and 2")))))
 
 
 ;;;; done
