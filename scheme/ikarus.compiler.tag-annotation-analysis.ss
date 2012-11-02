@@ -157,6 +157,8 @@
 	  x
 	(make-known x t)))
 
+;;; --------------------------------------------------------------------
+
     (define (apply-funcall rator rand* rator-val rand*-val rator-env rand*-env)
       (let ((env   (and-envs rator-env rand*-env))
 	    (rand* (map annotate rand* rand*-val)))
@@ -167,6 +169,8 @@
 	   (values (make-funcall (annotate rator rator-val) rand*)
 		   env
 		   T:object)))))
+
+;;; --------------------------------------------------------------------
 
     (define (apply-primcall op rand* env)
 
@@ -307,51 +311,63 @@
 	(else
 	 (return T:object)))) ;;end of APPLY-primcall
 
+;;; --------------------------------------------------------------------
 
-;;;
     (define (extend-env* x* v* env)
-      (cond
-       ((null? x*) env)
-       (else
+      (if (null? x*)
+	  env
 	(extend-env* (cdr x*) (cdr v*)
-		     (extend-env (car x*) (car v*) env)))))
+		     (extend-env (car x*) (car v*) env))))
+
     (define (extend-env x t env)
-      (cond
-       ((T=? t T:object) env)
-       (else
+      (if (T=? t T:object)
+	  env
 	(let ((x (prelex-operand x)))
-	  (let f ((env env))
-	    (cond
-             ((or (null? env) (< x (caar env)))
-              (cons (cons x t) env))
-             (else
-              (cons (car env) (f (cdr env))))))))))
-    (define (or-envs env1 env2)
-      (define (cons-env x v env)
-	(cond
-	 ((T=? v T:object) env)
-	 (else (cons (cons x v) env))))
-      (define (merge-envs1 a1 env1 env2)
-	(if (pair? env2)
-	    (merge-envs2 a1 env1 (car env2) (cdr env2))
-          empty-env))
-      (define (merge-envs2 a1 env1 a2 env2)
-	(let ((x1 (car a1)) (x2 (car a2)))
-	  (if (eq? x1 x2)
-	      (cons-env x1 (T:or (cdr a1) (cdr a2))
-			(merge-envs env1 env2))
-            (if (< x2 x1)
-                (merge-envs1 a1 env1 env2)
-	      (merge-envs1 a2 env2 env1)))))
-      (define (merge-envs env1 env2)
-	(if (eq? env1 env2)
-	    env1
-          (if (pair? env1)
-              (if (pair? env2)
-                  (merge-envs2 (car env1) (cdr env1) (car env2) (cdr env2))
-		empty-env)
-	    empty-env)))
-      (merge-envs env1 env2))
+	  (let recur ((env env))
+	    (if (or (null? env)
+		    (< x (caar env)))
+		(cons (cons x t) env)
+	      (cons (car env) (recur (cdr env))))))))
+
+    (module (or-envs)
+
+      (define (or-envs env1 env2)
+
+	(define (cons-env x v env)
+	  (if (T=? v T:object)
+	      env
+	    (cons (cons x v) env)))
+
+	(define (merge-envs1 a1 env1 env2)
+	  (if (pair? env2)
+	      (merge-envs2 a1 env1 (car env2) (cdr env2))
+	    empty-env))
+
+	(define (merge-envs2 a1 env1 a2 env2)
+	  (let ((x1 (car a1))
+		(x2 (car a2)))
+	    (if (eq? x1 x2)
+		(cons-env x1 (T:or (cdr a1) (cdr a2))
+			  (merge-envs env1 env2))
+	      (if (< x2 x1)
+		  (merge-envs1 a1 env1 env2)
+		(merge-envs1 a2 env2 env1)))))
+
+	(define (merge-envs env1 env2)
+	  (cond ((eq? env1 env2)
+		 env1)
+		((pair? env1)
+		 (if (pair? env2)
+		     (merge-envs2 (car env1) (cdr env1)
+				  (car env2) (cdr env2))
+		   empty-env))
+		(else
+		 empty-env)))
+
+	(merge-envs env1 env2))
+
+      #| end of module: or-envs |# )
+
     (define (and-envs env1 env2)
       (define (cons-env x v env)
 	(cond
