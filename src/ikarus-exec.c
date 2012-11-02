@@ -39,7 +39,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
    Return the return value of the last executed continuation. */
 {
 #if DEBUG_EXEC
-  fprintf(stderr, "%s: enter ", __func__);
+  fprintf(stderr, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n%s: enter ", __func__);
   ik_fprint(stderr, s_closure);
   fprintf(stderr, ", ");
   ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
@@ -107,7 +107,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     pcb->next_k = p_next_k->next;
 #if DEBUG_EXEC
     fprintf(stderr, "%s: reenter, argc %lu\n", __func__, IK_UNFIX(-s_argc));
-    ik_fprint(stderr, IK_REF(pcb->frame_base - wordsize + s_argc, 0));
+    /* ik_fprint(stderr, IK_REF(pcb->frame_base - wordsize + s_argc, 0)); */
     fprintf(stderr, "\n");
 #endif
     { /* Move the arguments from the old frame to the new frame.  Notice

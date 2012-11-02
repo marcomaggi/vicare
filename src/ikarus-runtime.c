@@ -702,7 +702,7 @@ ik_stack_overflow (ikpcb* pcb)
 {
   ikptr		underflow_handler;
 #ifdef VICARE_DEBUGGING
-  ik_debug_message("entered ik_stack_overflow pcb=0x%016lx", (long)pcb);
+  ik_debug_message("%s: entered pcb=0x%016lx", __func__, (long)pcb);
 #endif
   /* Mark the old Scheme stack segment as "data". */
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
@@ -719,6 +719,7 @@ ik_stack_overflow (ikpcb* pcb)
     IK_REF(s_kont, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
+    //ik_debug_message("%s: saved cont 0x%lx", __func__, (long)s_kont);
   }
   { /* Allocate a  new memory  segment to  be used  as Scheme  stack and
      * initialise the PCB as follows:
@@ -740,6 +741,9 @@ ik_stack_overflow (ikpcb* pcb)
        segment. */
     IK_REF(pcb->frame_pointer, 0) = underflow_handler;
   }
+#ifdef VICARE_DEBUGGING
+  ik_debug_message("%s: leave pcb=0x%016lx", __func__, (long)pcb);
+#endif
   return;
 }
 
