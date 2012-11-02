@@ -82,6 +82,208 @@
   (value ctxt k))
 
 
+(module (E)
+
+  (define (E x ctxt env ec sc)
+    (decrement ec 1)
+    (struct-case x
+      ((constant)
+       (decrement sc 1) x)
+
+      ((prelex)
+       (E-var x ctxt env ec sc))
+
+      ((seq e0 e1)
+       (mkseq (E e0 'e env ec sc)
+	      (E e1 ctxt env ec sc)))
+
+      ((conditional e0 e1 e2)
+       (let ((e0 (E e0 'p env ec sc)))
+	 (struct-case (result-expr e0)
+	   ((constant k)
+	    (mkseq e0 (E (if k e1 e2) ctxt env ec sc)))
+	   (else
+	    (let ((ctxt (ctxt-case ctxt
+			  ((app) 'v)
+			  (else  ctxt))))
+	      (let ((e1 (E e1 ctxt env ec sc))
+		    (e2 (E e2 ctxt env ec sc)))
+		(if (records-equal? e1 e2 ctxt)
+		    (mkseq e0 e1)
+		  (begin
+		    (decrement sc 1)
+		    (%build-conditional e0 e1 e2)))))))))
+
+      ((assign x v)
+       (mkseq (let ((x (lookup x env)))
+		(if (not (prelex-source-referenced? x))
+		    ;;dead on arrival
+		    (E v 'e env ec sc)
+		  (begin
+		    (decrement sc 1)
+		    (set-prelex-residual-assigned?! x (prelex-source-assigned? x))
+		    (make-assign x (E v 'v env ec sc)))))
+	      (make-constant (void))))
+
+      ((funcall rator rand*)
+       (E-call rator (map (lambda (x)
+			    (make-operand x env ec))
+		       rand*)
+	       env ctxt ec sc))
+
+      ((forcall name rand*)
+       (decrement sc 1)
+       (make-forcall name (map (lambda (x)
+				 (E x 'v env ec sc))
+			    rand*)))
+
+      ((primref name)
+       (ctxt-case ctxt
+	 ((app)
+	  (case name
+	    ((debug-call)
+	     (E-debug-call ctxt ec sc))
+	    (else
+	     (fold-prim name ctxt ec sc))))
+	 ((v)
+	  (decrement sc 1) x)
+	 (else
+	  (make-constant #t))))
+
+      ((clambda g cases cp free name)
+       (ctxt-case ctxt
+	 ((app)
+	  (inline x ctxt env ec sc))
+	 ((p e)
+	  (make-constant #t))
+	 (else
+	  (decrement sc 2)
+	  (make-clambda (gensym)
+			(map (lambda (x)
+			       (struct-case x
+				 ((clambda-case info body)
+				  (struct-case info
+				    ((case-info label args proper)
+				     (with-extended-env ((env args)
+							 (env args #f))
+				       (make-clambda-case
+					(make-case-info (gensym) args proper)
+					(E body 'v env ec sc))))))))
+			  cases)
+			cp free name))))
+
+      ((bind lhs* rhs* body)
+       (do-bind lhs* rhs* body ctxt env ec sc))
+
+      ((fix lhs* rhs* body)
+       (with-extended-env ((env lhs*)
+			   (env lhs* #f))
+	 (for-each (lambda (lhs rhs)
+		     (set-prelex-operand! lhs (make-operand rhs env ec)))
+	   lhs* rhs*)
+	 (let* ((body (E body ctxt env ec sc))
+		(lhs* (remp (lambda (x)
+			      (not (prelex-residual-referenced? x)))
+			lhs*)))
+	   (if (null? lhs*)
+	       body
+	     (begin
+	       (decrement sc 1)
+	       (make-fix lhs* (map (lambda (x)
+				     (let ((opnd (prelex-operand x)))
+				       (decrement sc (+ (operand-size opnd) 1))
+				       (value-visit-operand! opnd)))
+				lhs*)
+		 body))))))
+
+      (else
+       (error who "invalid expression" x))))
+
+;;; --------------------------------------------------------------------
+
+  (define (E-call rator rand* env ctxt ec sc)
+    (let* ((ctxt  (make-app rand* ctxt))
+	   (rator (E rator ctxt env ec sc)))
+      (if (app-inlined ctxt)
+	  (residualize-operands rator rand* sc)
+	(begin
+	  (decrement sc (if (primref? rator) 1 3))
+	  (make-funcall rator (map (lambda (x)
+				     (score-value-visit-operand! x sc))
+				rand*))))))
+
+  (define (E-debug-call ctxt ec sc)
+    (let ((rand* (app-rand* ctxt)))
+      (if (< (length rand*) 2)
+	  (begin
+	    (decrement sc 1)
+	    (make-primref 'debug-call))
+	(begin
+	  (let ((src/expr (car rand*))
+		(rator (cadr rand*))
+		(rands (cddr rand*)))
+	    (let ((ctxt2 (make-app rands (app-ctxt ctxt))))
+	      (let ((rator (E (operand-expr rator)
+			      ctxt2
+			      (operand-env rator)
+			      (operand-ec rator)
+			      sc)))
+		(if (app-inlined ctxt2)
+		    (begin
+		      (set-app-inlined! ctxt #t)
+		      (residualize-operands rator (cons src/expr rands) sc))
+		  (begin
+		    (decrement sc 1)
+		    (make-primref 'debug-call))))))))))
+
+  (define (E-var x ctxt env ec sc)
+    (ctxt-case ctxt
+      ((e)
+       (make-constant (void)))
+      (else
+       (let* ((x    (lookup x env))
+	      (opnd (prelex-operand x)))
+	 (if (and opnd (not (operand-inner-pending opnd)))
+	     (begin
+	       (dynamic-wind
+		   (lambda () (set-operand-inner-pending! opnd #t))
+		   (lambda () (value-visit-operand! opnd))
+		   (lambda () (set-operand-inner-pending! opnd #f)))
+	       (if (prelex-source-assigned? x)
+		   (residualize-ref x sc)
+		 (copy x opnd ctxt ec sc)))
+	   (residualize-ref x sc))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (lookup x env)
+    (if (vector? env)
+	(let f ((lhs* (vector-ref env 0)) (rhs* (vector-ref env 1)))
+	  (cond ((null? lhs*)
+		 (lookup x (vector-ref env 2)))
+		((eq? x (car lhs*))
+		 (car rhs*))
+		(else
+		 (f (cdr lhs*) (cdr rhs*)))))
+      x))
+
+  (define (%build-conditional e0 e1 e2)
+    (or (struct-case e0
+	  ((funcall rator rand*)
+	   (struct-case rator
+	     ((primref op)
+	      (and (eq? op 'not)
+		   (= (length rand*) 1)
+		   (%build-conditional (car rand*) e2 e1)))
+	     (else
+	      #f)))
+	  (else
+	   #f))
+	(make-conditional e0 e1 e2)))
+
+  #| end of module: E |# )
+
+
 (define (passive-counter)
   (make-counter (greatest-fixnum) #f (lambda args
 				       (error 'passive-counter "invalid abort"))))
@@ -110,6 +312,11 @@
   (let ((ctxt (app-ctxt ctxt)))
     (when (app? ctxt)
       (reset-integrated! ctxt))))
+
+(define (residualize-ref x sc)
+  (decrement sc 1)
+  (set-prelex-residual-referenced?! x #t)
+  x)
 
 
 (module (with-extended-env copy-var)
@@ -655,60 +862,6 @@
     (decrement sc (operand-size rand))))
 
 
-(define (E-call rator rand* env ctxt ec sc)
-  (let* ((ctxt  (make-app rand* ctxt))
-	 (rator (E rator ctxt env ec sc)))
-    (if (app-inlined ctxt)
-	(residualize-operands rator rand* sc)
-      (begin
-	(decrement sc (if (primref? rator) 1 3))
-	(make-funcall rator (map (lambda (x)
-				   (score-value-visit-operand! x sc))
-			      rand*))))))
-
-(define (E-debug-call ctxt ec sc)
-  (let ((rand* (app-rand* ctxt)))
-    (if (< (length rand*) 2)
-	(begin
-	  (decrement sc 1)
-	  (make-primref 'debug-call))
-      (begin
-       (let ((src/expr (car rand*))
-	     (rator (cadr rand*))
-	     (rands (cddr rand*)))
-	 (let ((ctxt2 (make-app rands (app-ctxt ctxt))))
-	   (let ((rator (E (operand-expr rator)
-			   ctxt2
-			   (operand-env rator)
-			   (operand-ec rator)
-			   sc)))
-	     (if (app-inlined ctxt2)
-		 (begin
-		   (set-app-inlined! ctxt #t)
-		   (residualize-operands rator (cons src/expr rands) sc))
-	       (begin
-		 (decrement sc 1)
-		 (make-primref 'debug-call))))))))))
-
-(define (E-var x ctxt env ec sc)
-  (ctxt-case ctxt
-    ((e)
-     (make-constant (void)))
-    (else
-     (let* ((x    (lookup x env))
-	    (opnd (prelex-operand x)))
-       (if (and opnd (not (operand-inner-pending opnd)))
-	   (begin
-	     (dynamic-wind
-		 (lambda () (set-operand-inner-pending! opnd #t))
-		 (lambda () (value-visit-operand! opnd))
-		 (lambda () (set-operand-inner-pending! opnd #f)))
-	     (if (prelex-source-assigned? x)
-		 (residualize-ref x sc)
-	       (copy x opnd ctxt ec sc)))
-	 (residualize-ref x sc))))))
-
-
 (module (copy)
 
   (define (copy x opnd ctxt ec sc)
@@ -930,129 +1083,6 @@
               (make-constant (apply (system-value p) ls)))))))
 
   #| end of module: fold-prim |# )
-
-
-(define (residualize-ref x sc)
-  (decrement sc 1)
-  (set-prelex-residual-referenced?! x #t)
-  x)
-  ;;;
-(define (build-conditional e0 e1 e2)
-  (or (struct-case e0
-	((funcall rator rand*)
-	 (struct-case rator
-	   ((primref op)
-	    (and (eq? op 'not)
-		 (= (length rand*) 1)
-		 (build-conditional (car rand*) e2 e1)))
-	   (else #f)))
-	(else #f))
-      (make-conditional e0 e1 e2)))
-
-(define (E x ctxt env ec sc)
-  (decrement ec 1)
-  (struct-case x
-    ((constant) (decrement sc 1) x)
-    ((prelex) (E-var x ctxt env ec sc))
-    ((seq e0 e1)
-     (mkseq (E e0 'e env ec sc) (E e1 ctxt env ec sc)))
-    ((conditional e0 e1 e2)
-     (let ((e0 (E e0 'p env ec sc)))
-       (struct-case (result-expr e0)
-	 ((constant k)
-	  (mkseq e0 (E (if k e1 e2) ctxt env ec sc)))
-	 (else
-	  (let ((ctxt (ctxt-case ctxt ((app) 'v) (else ctxt))))
-	    (let ((e1 (E e1 ctxt env ec sc))
-		  (e2 (E e2 ctxt env ec sc)))
-	      (if (records-equal? e1 e2 ctxt)
-		  (mkseq e0 e1)
-		(begin
-		  (decrement sc 1)
-		  (build-conditional e0 e1 e2)))))))))
-    ((assign x v)
-     (mkseq
-      (let ((x (lookup x env)))
-	(cond
-	 ((not (prelex-source-referenced? x))
-              ;;; dead on arrival
-	  (E v 'e env ec sc))
-	 (else
-	  (decrement sc 1)
-	  (set-prelex-residual-assigned?! x
-					  (prelex-source-assigned? x))
-	  (make-assign x (E v 'v env ec sc)))))
-      (make-constant (void))))
-    ((funcall rator rand*)
-     (E-call rator
-	     (map (lambda (x) (make-operand x env ec)) rand*)
-	     env ctxt ec sc))
-    ((forcall name rand*)
-     (decrement sc 1)
-     (make-forcall name (map (lambda (x) (E x 'v env ec sc)) rand*)))
-    ((primref name)
-     (ctxt-case ctxt
-       ((app)
-	(case name
-	  ((debug-call) (E-debug-call ctxt ec sc))
-	  (else (fold-prim name ctxt ec sc))))
-       ((v) (decrement sc 1) x)
-       (else (make-constant #t))))
-    ((clambda g cases cp free name)
-     (ctxt-case ctxt
-       ((app) (inline x ctxt env ec sc))
-       ((p e) (make-constant #t))
-       (else
-	(decrement sc 2)
-	(make-clambda (gensym)
-		      (map
-			  (lambda (x)
-			    (struct-case x
-			      ((clambda-case info body)
-			       (struct-case info
-				 ((case-info label args proper)
-				  (with-extended-env ((env args) (env args #f))
-				    (make-clambda-case
-				     (make-case-info (gensym) args proper)
-				     (E body 'v env ec sc))))))))
-			cases)
-		      cp free name))))
-    ((bind lhs* rhs* body)
-     (do-bind lhs* rhs* body ctxt env ec sc))
-    ((fix lhs* rhs* body)
-     (with-extended-env ((env lhs*) (env lhs* #f))
-       (for-each
-	   (lambda (lhs rhs)
-	     (set-prelex-operand! lhs (make-operand rhs env ec)))
-	 lhs* rhs*)
-       (let ((body (E body ctxt env ec sc)))
-	 (let ((lhs* (remp
-			 (lambda (x)
-			   (not (prelex-residual-referenced? x)))
-		       lhs*)))
-	   (cond
-	    ((null? lhs*) body)
-	    (else
-	     (decrement sc 1)
-	     (make-fix lhs*
-		 (map (lambda (x)
-			(let ((opnd (prelex-operand x)))
-			  (decrement sc (+ (operand-size opnd) 1))
-			  (value-visit-operand! opnd)))
-		   lhs*)
-	       body)))))))
-    (else
-     (error who "invalid expression" x))))
-
-(define (lookup x env)
-  (cond
-   ((vector? env)
-    (let f ((lhs* (vector-ref env 0)) (rhs* (vector-ref env 1)))
-      (cond
-       ((null? lhs*) (lookup x (vector-ref env 2)))
-       ((eq? x (car lhs*)) (car rhs*))
-       (else (f (cdr lhs*) (cdr rhs*))))))
-   (else x)))
 
 
 ;;;; done
