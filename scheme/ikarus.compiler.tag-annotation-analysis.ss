@@ -132,12 +132,12 @@
 	(set! i (+ i 1)))))
 
   (define (%lookup x env)
-    (if (eq? env 'bottom)
-	#f
-      (cond ((assq (prelex-operand x) env)
-	     => cdr)
-	    (else
-	     T:object))))
+    (cond ((eq? env 'bottom)
+	   #f)
+	  ((assq (prelex-operand x) env)
+	   => cdr)
+	  (else
+	   T:object)))
 
   (define (%apply-funcall rator rand* rator-val rand*-val rator-env rand*-env)
     (let ((env   (and-envs rator-env rand*-env))
