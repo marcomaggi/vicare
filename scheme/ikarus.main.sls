@@ -804,8 +804,7 @@ Other options:
    -O0
    -O1
    -O2
-        Turn  on  various levels  of  compiler optimisations  (currently
-        unsupported).
+        Turn on various levels of compiler optimisations.
 
    --print-assembly
         Print  to  the  current  error port  the  assembly  instructions
@@ -1127,13 +1126,18 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (config.print-loaded-libraries cfg.print-libraries)
 
     (execution-state-initialisation-according-to-command-line-options)
-    ;;Added to fix Vicare issue #3.  The optimisation code is unfinished
-    ;;anyway according to comments in the relevant files.  (Marco Maggi,
-    ;;Mon Jun 7, 2010)
-    (when (< 0 (optimize-level))
-      (display "*** vicare warning: optimization level artificially set to 0\n"
-	       (current-error-port)))
-    (optimize-level 0)
+    ;;FIXME This was  added to word around Vicare issue  #3, because the
+    ;;optimisation code  was unfinished anyway according  to comments in
+    ;;the relevant files.
+    ;;
+    ;;It is  now reinserted to just  play with more bugs.   It should be
+    ;;removed if the source optimizer becomes stable.  (Marco Maggi; Nov
+    ;;2, 2012)
+    ;;
+    ;; (when (< 0 (optimize-level))
+    ;;   (display "*** vicare warning: optimization level artificially set to 0\n"
+    ;; 	       (current-error-port)))
+    ;; (optimize-level 0)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
       (cafe-input-port (readline.make-readline-input-port)))

@@ -1311,7 +1311,7 @@ Disables the effect of @option{--print-loaded-libraries}.
 @item -O0
 @itemx -O1
 @itemx -O2
-Turn on various levels of compile optimisations (currently unsupported).
+Turn on various levels of compile optimisations.
 
 @item --print-assembly
 Print to the current error port the assembly instructions generated when
