@@ -395,7 +395,7 @@
       ((console-input-port . _))
       ((console-output-port . _))
       ((console-error-port . _))
-      ((printf . _)) ;;; FIXME: reduce to display
+      ((printf . _)) ;;; FIXME: reduce to display (Abdulaziz Ghuloum)
       ((newline . _))
       ((native-transcoder . _))
       ((open-string-output-port . _))
@@ -418,7 +418,7 @@
       ((get-annotated-datum . _))
       (($collect-key . _))
       ((make-non-continuable-violation . _))
-      ((format . _)) ;;; FIXME, reduce to string-copy
+      ((format . _)) ;;; FIXME, reduce to string-copy (Abdulaziz Ghuloum)
       ((uuid . _))
       ((print-graph . _))
       ((interaction-environment . _))
