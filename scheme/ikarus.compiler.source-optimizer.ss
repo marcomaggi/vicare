@@ -193,80 +193,13 @@
 	  (make-constant #t))))
 
       ((clambda label.unused clause* cp free name)
-       (case-context ctxt
-	 ((app)
-	  ;;This  is the  case of  CASE-LAMBDA evaluation  and immediate
-	  ;;application:
-	  ;;
-	  ;;   ((lambda (x) (do-something-with x))
-	  ;;    123)
-	  ;;
-	  (inline x ctxt env ec sc))
-	 ((p e)
-	  ;;This is the case of "predicate" context:
-	  ;;
-	  ;;   (if (case-lambda ---)
-	  ;;       (if-true)
-	  ;;     (if-false))
-	  ;;
-	  ;;or "for side effect" context:
-	  ;;
-	  ;;   (begin
-	  ;;     (case-lambda ---)
-	  ;;     (return-value))
-	  ;;
-	  (make-constant #t))
-	 (else
-	  ;;This is the  case "for returned value" context,  which for a
-	  ;;function means (for example):
-	  ;;
-	  ;;  (define the-name (case-lambda ---))
-	  ;;
-	  ;;or:
-	  ;;
-	  ;;  (do-something 1 2 (case-lambda ---))
-	  ;;
-	  ;;So here  we want to  optimize the body of  every CASE-LAMBDA
-	  ;;clause.
-	  ;;
-	  (decrement sc 2)
-	  (make-clambda (gensym)
-			(map (lambda (x)
-			       (struct-case x
-				 ((clambda-case info body)
-				  (struct-case info
-				    ((case-info label args proper)
-				     (with-extended-env ((env args)
-							 (env args #f))
-				       (make-clambda-case
-					(make-case-info (gensym) args proper)
-					(E body 'v env ec sc))))))))
-			  clause*)
-			cp free name))))
+       (%do-clambda clause* cp free name   x ctxt env ec sc))
 
       ((bind lhs* rhs* body)
-       (do-bind lhs* rhs* body ctxt env ec sc))
+       (%do-bind lhs* rhs* body ctxt env ec sc))
 
       ((fix lhs* rhs* body)
-       (with-extended-env ((env lhs*)
-			   (env lhs* #f))
-	 (for-each (lambda (lhs rhs)
-		     (set-prelex-operand! lhs (make-operand rhs env ec)))
-	   lhs* rhs*)
-	 (let* ((body (E body ctxt env ec sc))
-		(lhs* (remp (lambda (x)
-			      (not (prelex-residual-referenced? x)))
-			lhs*)))
-	   (if (null? lhs*)
-	       body
-	     (begin
-	       (decrement sc 1)
-	       (make-fix lhs* (map (lambda (x)
-				     (let ((opnd (prelex-operand x)))
-				       (decrement sc (+ (operand-size opnd) 1))
-				       (value-visit-operand! opnd)))
-				lhs*)
-			 body))))))
+       (%do-fix  lhs* rhs* body ctxt env ec sc))
 
       (else
        (error who "invalid expression" x))))
@@ -352,6 +285,88 @@
 	  (else
 	   #f))
 	(make-conditional e0 e1 e2)))
+
+  (define (%do-bind lhs* rhs* body ctxt env ec sc)
+    (let ((rand* (map (lambda (x)
+			(make-operand x env ec))
+		   rhs*)))
+      (with-extended-env ((env lhs*)
+			  (env lhs* rand*))
+	(residualize-operands (make-let-binding lhs* rand* (E body ctxt env ec sc) sc)
+			      rand* sc))))
+
+  (define (%do-fix lhs* rhs* body ctxt env ec sc)
+    (with-extended-env ((env lhs*)
+			(env lhs* #f))
+      (for-each (lambda (lhs rhs)
+		  (set-prelex-operand! lhs (make-operand rhs env ec)))
+	lhs* rhs*)
+      (let* ((body (E body ctxt env ec sc))
+	     (lhs* (remp (lambda (x)
+			   (not (prelex-residual-referenced? x)))
+		     lhs*)))
+	(if (null? lhs*)
+	    body
+	  (begin
+	    (decrement sc 1)
+	    (make-fix lhs* (map (lambda (x)
+				  (let ((opnd (prelex-operand x)))
+				    (decrement sc (+ (operand-size opnd) 1))
+				    (value-visit-operand! opnd)))
+			     lhs*)
+		      body))))))
+
+  (define (%do-clambda clause* cp free name   x ctxt env ec sc)
+    (case-context ctxt
+      ((app)
+       ;;This  is  the  case  of CASE-LAMBDA  evaluation  and  immediate
+       ;;application:
+       ;;
+       ;;   ((lambda (x) (do-something-with x))
+       ;;    123)
+       ;;
+       (inline x ctxt env ec sc))
+      ((p e)
+       ;;This is the case of "predicate" context:
+       ;;
+       ;;   (if (case-lambda ---)
+       ;;       (if-true)
+       ;;     (if-false))
+       ;;
+       ;;or "for side effect" context:
+       ;;
+       ;;   (begin
+       ;;     (case-lambda ---)
+       ;;     (return-value))
+       ;;
+       (make-constant #t))
+      (else
+       ;;This  is the  case "for  returned value"  context, which  for a
+       ;;function means (for example):
+       ;;
+       ;;  (define the-name (case-lambda ---))
+       ;;
+       ;;or:
+       ;;
+       ;;  (do-something 1 2 (case-lambda ---))
+       ;;
+       ;;So here  we want to  optimize the body of  every CASE-LAMBDA
+       ;;clause.
+       ;;
+       (decrement sc 2)
+       (make-clambda (gensym)
+		     (map (lambda (x)
+			    (struct-case x
+			      ((clambda-case info body)
+			       (struct-case info
+				 ((case-info label args proper)
+				  (with-extended-env ((env args)
+						      (env args #f))
+				    (make-clambda-case
+				     (make-case-info (gensym) args proper)
+				     (E body 'v env ec sc))))))))
+		       clause*)
+		     cp free name))))
 
   #| end of module: E |# )
 
@@ -1229,18 +1244,6 @@
 	  (values (cons x x*) t* r)))))
 
   #| end of module: inline |# )
-
-
-(define (do-bind lhs* rhs* body ctxt env ec sc)
-  (let ((rand* (map (lambda (x)
-		      (make-operand x env ec))
-		 rhs*)))
-    (with-extended-env ((env lhs*)
-			(env lhs* rand*))
-      (residualize-operands (make-let-binding lhs* rand*
-					      (E body ctxt env ec sc)
-					      sc)
-			    rand* sc))))
 
 
 (module (make-let-binding)
