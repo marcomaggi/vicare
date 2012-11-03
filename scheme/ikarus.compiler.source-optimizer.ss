@@ -767,11 +767,9 @@
 ;;; --------------------------------------------------------------------
 
       ;;This must return a new flonum every time.
-;;;(($make-flonum . _))
       (($make-flonum . _)		     effect-free result-true)
 
       ;;This must return a new struct every time.
-;;;(($struct . _))
       (($struct . _)			     effect-free result-true)
 
       ((condition . _))
@@ -837,7 +835,6 @@
       ((uuid . _))
       ((print-graph . _))
       ((interaction-environment . _))
-;;;((make-guardian))
       ((make-guardian)					 effect-free result-true)
       ((command-line-arguments))
       ;;FIXME (Abdulaziz Ghuloum)
@@ -847,7 +844,6 @@
       ((getenv . _))
       ((gensym-prefix . _))
       (($arg-list . _))
-;;;(($make-symbol . _))
       (($make-symbol . _)				 effect-free result-true)
       ((string->utf8 . _)				 effect-free result-true)
       ((string->utf16be . _)				 effect-free result-true)
@@ -866,7 +862,6 @@
       ;;The base struct type descriptor is a constant created at process
       ;;boot time.
       ((base-rtd . _))
-;;;(($data->transcoder . _))
       (($data->transcoder . _)			foldable effect-free result-true)
       ((current-time . _))
       ))
