@@ -53,14 +53,8 @@
       ((2)
        (%doit expr))
       ((1)
-       (%doit expr)
-       ;;FIXME  As  documented at  Github  for  issue #3:  forcing  this
-       ;;parameter setting makes a but go away.  It is now commented out
-       ;;to let me play with more bugs.  (Marco Maggi; Nov 2, 2012)
-       ;;
-       ;; (parameterize ((cp0-size-limit 0))
-       ;;   (%doit expr))
-       )
+       (parameterize ((cp0-size-limit 0))
+	 (%doit expr)))
       (else
        expr)))
 
