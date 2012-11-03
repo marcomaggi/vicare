@@ -393,8 +393,8 @@
 ;;;; size and effort counters handling
 
 (define (passive-counter)
-  ;;Return a counter with such a  big initial value that it should never
-  ;;decremented below the threshold value.
+  ;;Return a counter  with such a big initial value  that it could never
+  ;;be decremented below the threshold value.
   ;;
   (make-counter (greatest-fixnum) #f (lambda args
 				       (error 'passive-counter "invalid abort"))))
@@ -436,11 +436,6 @@
 	(%reset-integrated! nested-appctxt))))
 
   #| end of module: decrement |# )
-
-(define (residualize-ref x sc)
-  (decrement sc 1)
-  (set-prelex-residual-referenced?! x #t)
-  x)
 
 
 (module (with-extended-env copy-var)
@@ -927,65 +922,6 @@
   #| end of module: primprop |# )
 
 
-(define (primitive-info op args)
-  ;;OP must be  a symbol representing the name of  a primitive function.
-  ;;ARGS must be null or a list representing the arguments in a function
-  ;;call to OP.
-  ;;
-  ;;This function scans the attributes  list of OP searching for entries
-  ;;that match  the arguments call represented  by ARGS.  If a  match is
-  ;;found: return  a list of  symbols representing the  attributes; else
-  ;;return nil.
-  ;;
-  (define who 'primitive-info)
-  (define (%matches? attributes-sublist)
-    (let loop ((args            args)
-	       (template-params (car attributes-sublist)))
-      (cond ((pair? template-params)
-	     (and (pair? args)
-		  (let ((template-arg (car template-params)))
-		    (case template-arg
-		      ((_)
-		       ;;An argument matched.  Go on with the rest.
-		       (loop (cdr args) (cdr template-params)))
-		      ((#f 0 ())
-		       ;;The template specifies  that this argument must
-		       ;;be one among: #f, 0, nil;  if it is: go on with
-		       ;;the rest; else this template does not match.
-		       (let ((v (value-visit-operand! (car args))))
-			 (and (constant? v)
-			      (equal? template-arg (constant-value v))
-			      (loop (cdr args) (cdr template-params)))))
-		      (else
-		       ;;Invalid template specification.
-		       (error who "internal error" op (car template-params)))))))
-	    ((eq? template-params '_)
-	     ;;Success!  The  template represents  a call  accepting any
-	     ;;number  of  arguments   (possibly  after  some  mandatory
-	     ;;arguments).
-	     #t)
-	    ((null? template-params)
-	     ;;If ARGS is null: success:  the template matches the args!
-	     ;;Else this template does not match.
-	     (null? args))
-	    (else
-	     (error who "internal error" op template-params)))))
-  (or (find %matches? (primprop op))
-      '()))
-
-(define-inline (info-foldable? info)
-  (memq 'foldable info))
-
-(define-inline (info-effect-free? info)
-  (memq 'effect-free info))
-
-(define-inline (info-result-true? info)
-  (memq 'result-true info))
-
-(define-inline (info-result-false? info)
-  (memq 'result-false info))
-
-
 (define-syntax case-context
   ;;Dispatch to a  branch specialised for a  specific evaluation context
   ;;among:  predicate  (p),   for  value  (v),  for   side  effect  (e),
@@ -1211,6 +1147,11 @@
 
   #| end of module: copy |# )
 
+(define (residualize-ref x sc)
+  (decrement sc 1)
+  (set-prelex-residual-referenced?! x #t)
+  x)
+
 
 (module (inline)
 
@@ -1358,51 +1299,114 @@
       (else
        #f)))
 
-    (define (%precompute-foldable-primitive primsym rand* ec)
-      ;;The function call  is foldable; if all the  operands are constant:
-      ;;precompute the function call and  return a struct instance of type
-      ;;CONSTANT; else return false.
-      ;;
-      ;;PRIMSYM must be a symbol being the name of a primitive function.
-      ;;
-      ;;RAND* must be  a list of struct  instances representing recordized
-      ;;code which, when evaluated, will return the arguments.
-      ;;
-      ;;EC is a counter.
-      ;;
-      (let ((val* (map (lambda (x)
-			 (value-visit-operand! x))
-		    rand*)))
-	(cond ((andmap constant? val*)
-	       (%apply-at-compile-time primsym (map constant-value val*) ec))
+  (define (%precompute-foldable-primitive primsym rand* ec)
+    ;;The function call  is foldable; if all the  operands are constant:
+    ;;precompute the function call and  return a struct instance of type
+    ;;CONSTANT; else return false.
+    ;;
+    ;;PRIMSYM must be a symbol being the name of a primitive function.
+    ;;
+    ;;RAND* must be  a list of struct  instances representing recordized
+    ;;code which, when evaluated, will return the arguments.
+    ;;
+    ;;EC is a counter.
+    ;;
+    (let ((val* (map (lambda (x)
+		       (value-visit-operand! x))
+		  rand*)))
+      (cond ((andmap constant? val*)
+	     (%apply-at-compile-time primsym (map constant-value val*) ec))
+	    (else
+	     #f))))
+
+  (define (%apply-at-compile-time primsym args ec)
+    ;;PRIMSYM must be a symbol being the name of a primitive function.
+    ;;
+    ;;ARGS must be a list  of constant values representing the arguments
+    ;;of a call to P.
+    ;;
+    ;;EC is a counter.
+    ;;
+    ;;Apply the primitive  associated to P to the list  of arguments; if
+    ;;successful: return a struct instance  of type CONSTANT holding the
+    ;;result; else return false.
+    ;;
+    ;;See  the  documentation  of   the  function  SYSTEM-VALUE  for  an
+    ;;explanation of why we can extract the function from PRIMSYM.
+    ;;
+    (call/cc
+	(lambda (k)
+	  (with-exception-handler
+	      (lambda (con)
+		(decrement ec 10)
+		(k #f))
+	    (lambda ()
+	      (make-constant (apply (system-value primsym) args)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (primitive-info primsym args)
+    ;;PRIMSYM  must be  a symbol  representing the  name of  a primitive
+    ;;function.  ARGS must be null  or a list representing the arguments
+    ;;in a function call to PRIMSYM.
+    ;;
+    ;;This function scans  the attributes list of  PRIMSYM searching for
+    ;;entries that match  the arguments call represented by  ARGS.  If a
+    ;;match  is  found:  return  a  list  of  symbols  representing  the
+    ;;attributes; else return nil.
+    ;;
+    (define who 'primitive-info)
+    (define (%matches? attributes-sublist)
+      (let loop ((args            args)
+		 (template-params (car attributes-sublist)))
+	(cond ((pair? template-params)
+	       (and (pair? args)
+		    (let ((template-arg (car template-params)))
+		      (case template-arg
+			((_)
+			 ;;An argument matched.  Go on with the rest.
+			 (loop (cdr args) (cdr template-params)))
+			((#f 0 ())
+			 ;;The  template  specifies that  this  argument
+			 ;;must be one  among: #f, 0, nil; if  it is: go
+			 ;;on with the rest; else this template does not
+			 ;;match.
+			 (let ((v (value-visit-operand! (car args))))
+			   (and (constant? v)
+				(equal? template-arg (constant-value v))
+				(loop (cdr args) (cdr template-params)))))
+			(else
+			 ;;Invalid template specification.
+			 (error who "internal error" primsym (car template-params)))))))
+	      ((eq? template-params '_)
+	       ;;Success!  The template represents  a call accepting any
+	       ;;number  of  arguments  (possibly after  some  mandatory
+	       ;;arguments).
+	       #t)
+	      ((null? template-params)
+	       ;;If  ARGS is  null:  success: the  template matches  the
+	       ;;args!  Else this template does not match.
+	       (null? args))
 	      (else
-	       #f))))
+	       (error who "internal error" primsym template-params)))))
+    (or (find %matches? (primprop primsym))
+	'()))
 
-    (define (%apply-at-compile-time primsym args ec)
-      ;;PRIMSYM must be a symbol being the name of a primitive function.
-      ;;
-      ;;ARGS must be a list  of constant values representing the arguments
-      ;;of a call to P.
-      ;;
-      ;;EC is a counter.
-      ;;
-      ;;Apply the primitive  associated to P to the list  of arguments; if
-      ;;successful: return a struct instance  of type CONSTANT holding the
-      ;;result; else return false.
-      ;;
-      ;;See  the  documentation  of   the  function  SYSTEM-VALUE  for  an
-      ;;explanation of why we can extract the function from PRIMSYM.
-      ;;
-      (call/cc
-	  (lambda (k)
-	    (with-exception-handler
-		(lambda (con)
-		  (decrement ec 10)
-		  (k #f))
-	      (lambda ()
-		(make-constant (apply (system-value primsym) args)))))))
+;;; --------------------------------------------------------------------
 
-    #| end of module: fold-prim |# )
+  (define-inline (info-foldable? info)
+    (memq 'foldable info))
+
+  (define-inline (info-effect-free? info)
+    (memq 'effect-free info))
+
+  (define-inline (info-result-true? info)
+    (memq 'result-true info))
+
+  (define-inline (info-result-false? info)
+    (memq 'result-false info))
+
+  #| end of module: fold-prim |# )
 
 
 ;;;; done
