@@ -1235,18 +1235,7 @@
     (let* ((rand*  (app-rand* appctxt))
 	   (info   (primitive-info primsym rand*))
 	   (result (or (and (info-effect-free? info)
-			    (case-context (app-ctxt appctxt)
-			      ((e)
-			       (make-constant (void)))
-			      ((p)
-			       (cond ((info-result-true? info)
-				      (make-constant #t))
-				     ((info-result-false? info)
-				      (make-constant #f))
-				     (else
-				      #f)))
-			      (else
-			       #f)))
+			    (%precompute-effect-free-primitive info appctxt))
 		       (and (info-foldable? info)
 			    (%precompute-foldable-primitive primsym rand* ec)))))
       (if result
@@ -1261,51 +1250,67 @@
 	  (decrement sc 1)
 	  (make-primref primsym)))))
 
-  (define (%precompute-foldable-primitive primsym rand* ec)
-    ;;The function call  is foldable; if all the  operands are constant:
-    ;;precompute the function call and  return a struct instance of type
-    ;;CONSTANT; else return false.
+  (define (%precompute-effect-free-primitive info appctxt)
+    ;;The function  call is effect  free.  If the evaluation  context is
+    ;;"for  side effects":  the function  call can  be removed.   If the
+    ;;evaluation context is "predicate": check  if the function call has
+    ;;known boolean result.
     ;;
-    ;;PRIMSYM must be a symbol being the name of a primitive function.
-    ;;
-    ;;RAND* must be  a list of struct  instances representing recordized
-    ;;code which, when evaluated, will return the arguments.
-    ;;
-    ;;EC is a counter.
-    ;;
-    (let ((val* (map (lambda (x)
-		       (value-visit-operand! x))
-		  rand*)))
-      (cond ((andmap constant? val*)
-	     (%apply-at-compile-time primsym (map constant-value val*) ec))
-	    (else
-	     #f))))
+    (case-context (app-ctxt appctxt)
+      ((e)
+       (make-constant (void)))
+      ((p)
+       (cond ((info-result-true?  info)	(make-constant #t))
+	     ((info-result-false? info)	(make-constant #f))
+	     (else			#f)))
+      (else
+       #f)))
 
-  (define (%apply-at-compile-time primsym args ec)
-    ;;PRIMSYM must be a symbol being the name of a primitive function.
-    ;;
-    ;;ARGS must be a list  of constant values representing the arguments
-    ;;of a call to P.
-    ;;
-    ;;EC is a counter.
-    ;;
-    ;;Apply the primitive  associated to P to the list  of arguments; if
-    ;;successful: return a struct instance  of type CONSTANT holding the
-    ;;result; else return false.
-    ;;
-    ;;See  the  documentation  of   the  function  SYSTEM-VALUE  for  an
-    ;;explanation of why we can extract the function from PRIMSYM.
-    ;;
-    (call/cc
-        (lambda (k)
-          (with-exception-handler
-	      (lambda (con)
-		(decrement ec 10)
-		(k #f))
-            (lambda ()
-              (make-constant (apply (system-value primsym) args)))))))
+    (define (%precompute-foldable-primitive primsym rand* ec)
+      ;;The function call  is foldable; if all the  operands are constant:
+      ;;precompute the function call and  return a struct instance of type
+      ;;CONSTANT; else return false.
+      ;;
+      ;;PRIMSYM must be a symbol being the name of a primitive function.
+      ;;
+      ;;RAND* must be  a list of struct  instances representing recordized
+      ;;code which, when evaluated, will return the arguments.
+      ;;
+      ;;EC is a counter.
+      ;;
+      (let ((val* (map (lambda (x)
+			 (value-visit-operand! x))
+		    rand*)))
+	(cond ((andmap constant? val*)
+	       (%apply-at-compile-time primsym (map constant-value val*) ec))
+	      (else
+	       #f))))
 
-  #| end of module: fold-prim |# )
+    (define (%apply-at-compile-time primsym args ec)
+      ;;PRIMSYM must be a symbol being the name of a primitive function.
+      ;;
+      ;;ARGS must be a list  of constant values representing the arguments
+      ;;of a call to P.
+      ;;
+      ;;EC is a counter.
+      ;;
+      ;;Apply the primitive  associated to P to the list  of arguments; if
+      ;;successful: return a struct instance  of type CONSTANT holding the
+      ;;result; else return false.
+      ;;
+      ;;See  the  documentation  of   the  function  SYSTEM-VALUE  for  an
+      ;;explanation of why we can extract the function from PRIMSYM.
+      ;;
+      (call/cc
+	  (lambda (k)
+	    (with-exception-handler
+		(lambda (con)
+		  (decrement ec 10)
+		  (k #f))
+	      (lambda ()
+		(make-constant (apply (system-value primsym) args)))))))
+
+    #| end of module: fold-prim |# )
 
 
 ;;;; done

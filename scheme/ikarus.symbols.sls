@@ -309,6 +309,29 @@
 (define system-value-gensym (gensym))
 
 (define (system-value x)
+  ;;When  the boot  image is  loaded, it  initialises itself;  for every
+  ;;primitive function (CONS, CAR, ...)  one of the operations is to put
+  ;;the actual  function (a closure  object) in  the "value" field  of a
+  ;;gensym, and then put such gensym  in the property list of the symbol
+  ;;being the name of the primitive,  using an internal gensym (bound to
+  ;;SYSTEM-VALUE-GENSYM) as key.
+  ;;
+  ;;For example, this is more or less what happens to CONS:
+  ;;
+  ;;   (define G-cons (gensym "cons"))
+  ;;   ($set-symbol-value 'G-cons #<procedure cons>)
+  ;;   (putprop 'cons system-value-gensym 'G-cons)
+  ;;
+  ;;so later we can do:
+  ;;
+  ;;   ($symbol-value (getprop x system-value-gensym))
+  ;;   => #<procedure cons>
+  ;;
+  ;;
+  ;;or use the equivalent public API:
+  ;;
+  ;;   (system-value 'cons)    => #<procedure cons>
+  ;;
   (define who 'system-value)
   (with-arguments-validation (who)
       ((symbol x))
