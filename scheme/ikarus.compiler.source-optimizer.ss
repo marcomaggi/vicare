@@ -385,6 +385,24 @@
 
 
 ;;;; size and effort counters handling
+;;
+;;Resource counters  keep track  of the  resources used  when optimizing
+;;code; if the optimization of an  expression consumes "too much", it is
+;;aborted and the original expression is inserted in the code.
+;;
+;;It is like this: the source optimizer is a recursive function, calling
+;;itself to  optimize nested subexpressions;  when first calling  it, we
+;;build resource usage  counters with such a big value  that they should
+;;never trigger an optimization abortion.  Upon entering optimization of
+;;expressions known to be in some known category: counters with specific
+;;limit values are created to limit the resources.
+;;
+;;The counters  with "such  big values"  are called  "passive"; counters
+;;with  actual resoruce  limits are  called "active".   Passive counters
+;;have no evaluation context, while active counters are associated to an
+;;expression evaluation context (predicate, for returned value, for side
+;;effects, function application).
+;;
 
 (define (passive-counter)
   ;;Return a counter  with such a big initial value  that it could never
@@ -406,7 +424,8 @@
   (define (decrement x amount)
     ;;Decrement the counter  X, which must be a struct  instance of type
     ;;COUNTER,  and  if  the  threshold   value  is  reached:  call  the
-    ;;registered continuation.
+    ;;registered continuation  to abort the optimization  of the current
+    ;;expression.
     ;;
     (let ((n (- (counter-value x) amount)))
       (set-counter-value! x n)
@@ -1112,7 +1131,7 @@
 	   ((e)
 	    (make-constant (void)))
 	   ((app)
-	    (or (and (not (operand-outer-pending opnd))
+	    (or (and (not (operand-outer-pending opnd)) ;avoid evaluation cycles?
 		     (dynamic-wind
 			 (lambda ()
 			   (set-operand-outer-pending! opnd #t))
