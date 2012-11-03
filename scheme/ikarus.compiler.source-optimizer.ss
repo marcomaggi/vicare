@@ -382,6 +382,19 @@
 
 
 (module (primprop)
+  ;;Prepare a distributed  table of primitive function  attributes to be
+  ;;used to precompute results of function applications.
+  ;;
+  ;;Attributes are the symbols:
+  ;;
+  ;;effect-free -  The application produces no side effects.
+  ;;
+  ;;foldable -     The application can be precomputed at compile time.
+  ;;
+  ;;result-true -  The application always has non-#f result.
+  ;;
+  (define (primprop p)
+    (or (getprop p UNIQUE-PROPERTY-KEY) '()))
 
   (define-constant UNIQUE-PROPERTY-KEY
     (let-syntax
@@ -389,9 +402,6 @@
 			       (with-syntax ((SYM (datum->syntax #'here (gensym))))
 				 #'(quote SYM)))))
       (expand-time-gensym)))
-
-  (define (primprop p)
-    (or (getprop p UNIQUE-PROPERTY-KEY) '()))
 
   (module (%initialise-primitive-properties)
     ;;For each  symbol being the  name of  a primitive function:  add an
@@ -1208,11 +1218,24 @@
 
 (module (fold-prim)
 
-  (define (fold-prim primsym ctxt ec sc)
-    (let* ((rand*  (app-rand* ctxt))
+  (define (fold-prim primsym appctxt ec sc)
+    ;;Whenever possible attempt to precompute  the result of a primitive
+    ;;function  application.  This  is the  place where  the "foldable",
+    ;;"effect-free" and "result-true" primitive attributes are used.
+    ;;
+    ;;PRIMSYM must be a symbol being the name of a primitive function.
+    ;;
+    ;;APPCTXT must  be a struct  instance of type APP,  representing the
+    ;;context of appliction for PRIMSYM.
+    ;;
+    ;;EC is the effort counter.
+    ;;
+    ;;SC is the size counter.
+    ;;
+    (let* ((rand*  (app-rand* appctxt))
 	   (info   (primitive-info primsym rand*))
 	   (result (or (and (info-effect-free? info)
-			    (case-context (app-ctxt ctxt)
+			    (case-context (app-ctxt appctxt)
 			      ((e)
 			       (make-constant (void)))
 			      ((p)
@@ -1232,7 +1255,7 @@
 	    (for-each (lambda (x)
 			(set-operand-residualize-for-effect! x #t))
 	      rand*)
-	    (set-app-inlined! ctxt #t)
+	    (set-app-inlined! appctxt #t)
 	    result)
 	(begin
 	  (decrement sc 1)

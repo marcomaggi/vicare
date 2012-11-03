@@ -1582,30 +1582,11 @@
       ;;Evaluate to true if OP references a primitive operation exported
       ;;by the boot image.
       ;;
-      ;;When the boot image is  loaded, it initialises itself; for every
-      ;;primitive function (CONS, CAR, ...)  one of the operations is to
-      ;;put the actual function (a closure object) in the VALUE field of
-      ;;a gensym, and  then put such gensym in the  property list of the
-      ;;symbol being the  name of the primitive, using  the gensym bound
-      ;;to SYSTEM-VALUE-GENSYM  as key.   For example,  this is  more or
-      ;;less what happens to CONS:
-      ;;
-      ;;   (define G-cons (gensym))
-      ;;   ($set-symbol-value 'G-cons #<procedure cons>)
-      ;;   (putprop 'cons system-value-gensym 'G-cons)
-      ;;
-      ;;so later we can do:
-      ;;
-      ;;   ($symbol-value (getprop x system-value-gensym))
-      ;;   => #<procedure cons>
-      ;;
-      ;;or use the equivalent public API:
-      ;;
-      ;;   (system-value 'cons)	=> #<procedure cons>
-      ;;
       ;;The  SYSTEM-VALUE  call  below   will  fail  with  an  assertion
       ;;violation  if NAME  is not  a  symbol associated  to a  function
       ;;exported by the boot image.
+      ;;
+      ;;See the documentation of SYSTEM-VALUE for more details.
       ;;
       (struct-case op
 	((primref name)

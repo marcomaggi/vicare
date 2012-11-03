@@ -3709,7 +3709,7 @@ gensym (bound to @code{system-value-gensym}) as key.  For example, this
 is more or less what happens to @func{cons}:
 
 @example
-(define G-cons (gensym))
+(define G-cons (gensym "cons"))
 ($set-symbol-value 'G-cons #<procedure cons>)
 (putprop 'cons system-value-gensym 'G-cons)
 @end example
