@@ -3927,7 +3927,7 @@
       ((constant idx.val)
        (unless (and (fx? idx.val)
 		    (<= 0 idx.val))
-	 (assertion-violation 'cogen
+	 (error 'cogen/string-ref
 	   "expected non-negative fixnum as constant character index" idx.val))
        ;;IDX.VAL is an  exact integer whose payload bits  are the binary
        ;;representation of a fixnum.
