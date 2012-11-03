@@ -131,25 +131,32 @@
        (mkseq (E e0 'e env ec sc)
 	      (E e1 ctxt env ec sc)))
 
-      ((conditional e0 e1 e2)
-       (let ((e0 (E e0 'p env ec sc)))
-	 (struct-case (result-expr e0)
-	   ((constant k)
-	    (mkseq e0 (E (if k e1 e2) ctxt env ec sc)))
+      ((conditional x.test x.conseq x.altern)
+       (let ((test (E x.test 'p env ec sc)))
+	 (struct-case (result-expr test)
+	   ((constant test.val)
+	    ;;We could precompute  the result of the TEST,  so we output
+	    ;;only the CONSEQ or the ALTERN.
+	    (mkseq test (E (if test.val x.conseq x.altern)
+			   ctxt env ec sc)))
 	   (else
+	    ;;The TEST could not be precomputed.
 	    (let ((ctxt (case-context ctxt
 			  ((app) 'v)
 			  (else  ctxt))))
-	      (let ((e1 (E e1 ctxt env ec sc))
-		    (e2 (E e2 ctxt env ec sc)))
-		(if (records-equal? e1 e2 ctxt)
-		    (mkseq e0 e1)
+	      (let ((x.conseq (E x.conseq ctxt env ec sc))
+		    (x.altern (E x.altern ctxt env ec sc)))
+		(if (records-equal? x.conseq x.altern ctxt)
+		    ;;If the results  of CONSEQ and ALTERN  are known to
+		    ;;be  equal:  we  just  include TEST  for  its  side
+		    ;;effects, followed by CONSEQ.
+		    (mkseq test x.conseq)
 		  (begin
 		    (decrement sc 1)
-		    (%build-conditional e0 e1 e2)))))))))
+		    (%build-conditional test x.conseq x.altern)))))))))
 
       ((assign x v)
-       (mkseq (let ((x (lookup x env)))
+       (mkseq (let ((x (%lookup x env)))
 		(if (not (prelex-source-referenced? x))
 		    ;;dead on arrival
 		    (E v 'e env ec sc)
@@ -185,13 +192,43 @@
 	 (else
 	  (make-constant #t))))
 
-      ((clambda g cases cp free name)
+      ((clambda label.unused clause* cp free name)
        (case-context ctxt
 	 ((app)
+	  ;;This  is the  case of  CASE-LAMBDA evaluation  and immediate
+	  ;;application:
+	  ;;
+	  ;;   ((lambda (x) (do-something-with x))
+	  ;;    123)
+	  ;;
 	  (inline x ctxt env ec sc))
 	 ((p e)
+	  ;;This is the case of "predicate" context:
+	  ;;
+	  ;;   (if (case-lambda ---)
+	  ;;       (if-true)
+	  ;;     (if-false))
+	  ;;
+	  ;;or "for side effect" context:
+	  ;;
+	  ;;   (begin
+	  ;;     (case-lambda ---)
+	  ;;     (return-value))
+	  ;;
 	  (make-constant #t))
 	 (else
+	  ;;This is the  case "for returned value" context,  which for a
+	  ;;function means (for example):
+	  ;;
+	  ;;  (define the-name (case-lambda ---))
+	  ;;
+	  ;;or:
+	  ;;
+	  ;;  (do-something 1 2 (case-lambda ---))
+	  ;;
+	  ;;So here  we want to  optimize the body of  every CASE-LAMBDA
+	  ;;clause.
+	  ;;
 	  (decrement sc 2)
 	  (make-clambda (gensym)
 			(map (lambda (x)
@@ -204,7 +241,7 @@
 				       (make-clambda-case
 					(make-case-info (gensym) args proper)
 					(E body 'v env ec sc))))))))
-			  cases)
+			  clause*)
 			cp free name))))
 
       ((bind lhs* rhs* body)
@@ -229,7 +266,7 @@
 				       (decrement sc (+ (operand-size opnd) 1))
 				       (value-visit-operand! opnd)))
 				lhs*)
-		 body))))))
+			 body))))))
 
       (else
        (error who "invalid expression" x))))
@@ -276,7 +313,7 @@
       ((e)
        (make-constant (void)))
       (else
-       (let* ((x    (lookup x env))
+       (let* ((x    (%lookup x env))
 	      (opnd (prelex-operand x)))
 	 (if (and opnd (not (operand-inner-pending opnd)))
 	     (begin
@@ -291,11 +328,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (lookup x env)
+  (define (%lookup x env)
     (if (vector? env)
 	(let f ((lhs* (vector-ref env 0)) (rhs* (vector-ref env 1)))
 	  (cond ((null? lhs*)
-		 (lookup x (vector-ref env 2)))
+		 (%lookup x (vector-ref env 2)))
 		((eq? x (car lhs*))
 		 (car rhs*))
 		(else
