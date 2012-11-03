@@ -3606,6 +3606,7 @@ returns @false{}.
 @menu
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
+* iklib symbols system::        System values.
 @end menu
 
 @c page
@@ -3692,6 +3693,49 @@ Remove property @var{key} from the list associated to @var{symbol}.
 Return a new association list representing the property list of
 @var{symbol}.  The order of the entries is the same as the property
 creation order.
+@end defun
+
+@c page
+@node iklib symbols system
+@subsection System values
+
+
+When @value{PRJNAME}'s boot image is loaded, it initialises itself; for
+every primitive function (@func{cons}, @func{car}, @dots{})  one of the
+operations is to put the actual function (a closure object) in the
+@code{value} field of a gensym, and then put such gensym in the property
+list of the symbol being the name of the primitive, using an internal
+gensym (bound to @code{system-value-gensym}) as key.  For example, this
+is more or less what happens to @func{cons}:
+
+@example
+(define G-cons (gensym))
+($set-symbol-value 'G-cons #<procedure cons>)
+(putprop 'cons system-value-gensym 'G-cons)
+@end example
+
+@noindent
+so later we can do:
+
+@example
+($symbol-value (getprop x system-value-gensym))
+@result{} #<procedure cons>
+@end example
+
+@noindent
+or use the equivalent public @api{}:
+
+@example
+(system-value 'cons)    @result{} #<procedure cons>
+@end example
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun system-value @var{symbol}
+Attempt to extract from the @var{symbol} the primitive procedure of
+which @var{symbol} is the name; if successful return a closure object,
+else raise an assertion violation.
 @end defun
 
 @c page

@@ -74,9 +74,14 @@
   ((inlined			#f)))
 
 (define-structure (operand expr env ec)
+  ;;Represent an expression being the operand to a function call.
+  ;;
   ((value			#f)
+		;If it is  possible to precompute the  value: such value
+		;is saved here.
    (residualize-for-effect	#f)
    (size			0)
+		;The expected size of the result.
    (inner-pending		#f)
    (outer-pending		#f)))
 
@@ -87,6 +92,15 @@
 (module (E)
 
   (define (E x ctxt env ec sc)
+    ;;
+    ;;X must be a struct instance representing recordized code.
+    ;;
+    ;;CTXT must be a context symbol among: p, e, v, app.
+    ;;
+    ;;EC is the effort counter.
+    ;;
+    ;;SC is the size counter.
+    ;;
     (decrement ec 1)
     (struct-case x
       ((constant)
@@ -105,7 +119,7 @@
 	   ((constant k)
 	    (mkseq e0 (E (if k e1 e2) ctxt env ec sc)))
 	   (else
-	    (let ((ctxt (ctxt-case ctxt
+	    (let ((ctxt (case-context ctxt
 			  ((app) 'v)
 			  (else  ctxt))))
 	      (let ((e1 (E e1 ctxt env ec sc))
@@ -140,20 +154,21 @@
 			    rand*)))
 
       ((primref name)
-       (ctxt-case ctxt
+       (case-context ctxt
 	 ((app)
-	  (case name
+	  (case-symbols name
 	    ((debug-call)
 	     (E-debug-call ctxt ec sc))
 	    (else
 	     (fold-prim name ctxt ec sc))))
 	 ((v)
-	  (decrement sc 1) x)
+	  (decrement sc 1)
+	  x)
 	 (else
 	  (make-constant #t))))
 
       ((clambda g cases cp free name)
-       (ctxt-case ctxt
+       (case-context ctxt
 	 ((app)
 	  (inline x ctxt env ec sc))
 	 ((p e)
@@ -239,7 +254,7 @@
 		    (make-primref 'debug-call))))))))))
 
   (define (E-var x ctxt env ec sc)
-    (ctxt-case ctxt
+    (case-context ctxt
       ((e)
        (make-constant (void)))
       (else
@@ -854,7 +869,44 @@
   (memq 'result-false info))
 
 
-(define-syntax ctxt-case
+(define-syntax case-context
+  ;;Dispatch to a  branch specialised for a  specific evaluation context
+  ;;among:  predicate  (p),   for  value  (v),  for   side  effect  (e),
+  ;;application (app).
+  ;;
+  ;;Usage template:
+  ;;
+  ;;  (case-context ?ctxt-expr
+  ;;    ((p)	?predicate-body)
+  ;;    ((e)	?side-effects-body)
+  ;;    ((v)	?value-body)
+  ;;    ((app)	?application-body)
+  ;;    (else	?else-body))
+  ;;
+  ;;where ?CTXT-EXPR is  an expression evaluating to one  of the symbols
+  ;;"p", "v",  "e", "app".   The clauses  can appear  in any  order; the
+  ;;clauses are optional, a clause for a context might be there or not.
+  ;;
+  ;;The usage template above will expand to:
+  ;;
+  ;;  (let ((t ?ctxt-expr))
+  ;;    (if (eq? t 'p)
+  ;;        (begin ?predicate-body)
+  ;;      (if (eq? t 'e)
+  ;;          (begin ?side-effects-body)
+  ;;        (if (eq? t 'v)
+  ;;            (begin ?value-body)
+  ;;          (if (eq? t 'app)
+  ;;              (begin ?application-body)
+  ;;            (begin ?else-body))))))
+  ;;
+  ;;It is possible to put multiple context selectors in a single clause,
+  ;;for example:
+  ;;
+  ;;  (case-context ?ctxt-expr
+  ;;    ((p e v)	?stuff-body)
+  ;;    (else		?else-body))
+  ;;
   (lambda (stx)
     (define (%test x)
       (case (syntax->datum x)
@@ -869,15 +921,15 @@
 	(()
 	 #'(error '%extract "unmatched ctxt" t))
 
-	(((else e e* ...))
-	 #'(begin e e* ...))
+	(((else ?body0 ?body ...))
+	 #'(begin ?body0 ?body ...))
 
-	((((t* ...) e e* ...) rest ...)
-	 (with-syntax (((t* ...) (map %test #'(t* ...)))
-		       (body     (%extract #'(rest ...))))
-	   #'(if (or t* ...)
-		 (begin e e* ...)
-	       body)))
+	((((t* ...) ?body0 ?body ...) rest ...)
+	 (with-syntax (((T* ...) (map %test #'(t* ...)))
+		       (BODY     (%extract #'(rest ...))))
+	   #'(if (or T* ...)
+		 (begin ?body0 ?body ...)
+	       BODY)))
 	))
     (syntax-case stx ()
       ((_ ?expr ?clause ...)
@@ -886,6 +938,7 @@
 	     BODY)))
       )))
 
+
 (define (mkseq e0 e1)
   ;;Return  a (seq  e0 e1)  with a  seq-less e1  if both  e0 and  e1 are
   ;;constructed properly.
@@ -929,7 +982,7 @@
     ((constant kx)
      (struct-case y
        ((constant ky)
-	(ctxt-case ctxt
+	(case-context ctxt
 	  ((e)
 	   #t)
 	  ((p)
@@ -959,6 +1012,10 @@
 		 (mkseq e1 (residualize-operands e (cdr rand*) sc)))))))))
 
 (define (value-visit-operand! rand)
+  ;;RAND  must  be  a  struct  instance of  type  OPERAND.   Attempt  to
+  ;;precompute the value  of RAND and return it; the  value and its size
+  ;;are cached in the fields "value" and "size" of RAND.
+  ;;
   (or (operand-value rand)
       (let* ((sc (passive-counter))
 	     (e  (struct-case rand
@@ -969,6 +1026,9 @@
 	e)))
 
 (define (score-value-visit-operand! rand sc)
+  ;;Like  VALUE-VISIT-OPERAND! but  also accounts  for the  operation by
+  ;;decrementing the counter SC.
+  ;;
   (begin0
       (value-visit-operand! rand)
     (decrement sc (operand-size rand))))
@@ -995,7 +1055,7 @@
     (let ((rhs (result-expr (operand-value opnd))))
       (struct-case rhs
 	((clambda)
-	 (ctxt-case ctxt
+	 (case-context ctxt
 	   ((v)
 	    (residualize-ref x sc))
 	   ((p)
@@ -1026,7 +1086,7 @@
 		(residualize-ref x sc)))))
 
 	((primref p)
-	 (ctxt-case ctxt
+	 (case-context ctxt
 	   ((v)		rhs)
 	   ((p)		(make-constant #t))
 	   ((e)		(make-constant (void)))
@@ -1148,11 +1208,11 @@
 
 (module (fold-prim)
 
-  (define (fold-prim p ctxt ec sc)
+  (define (fold-prim primsym ctxt ec sc)
     (let* ((rand*  (app-rand* ctxt))
-	   (info   (primitive-info p rand*))
+	   (info   (primitive-info primsym rand*))
 	   (result (or (and (info-effect-free? info)
-			    (ctxt-case (app-ctxt ctxt)
+			    (case-context (app-ctxt ctxt)
 			      ((e)
 			       (make-constant (void)))
 			      ((p)
@@ -1165,13 +1225,7 @@
 			      (else
 			       #f)))
 		       (and (info-foldable? info)
-			    (let ((val* (map (lambda (x)
-					       (value-visit-operand! x))
-					  rand*)))
-			      (cond ((andmap constant? val*)
-				     (%get-value p (map constant-value val*) ec))
-				    (else
-				     #f)))))))
+			    (%precompute-foldable-primitive primsym rand* ec)))))
       (if result
 	  (begin
 	    (decrement ec 1)
@@ -1182,9 +1236,43 @@
 	    result)
 	(begin
 	  (decrement sc 1)
-	  (make-primref p)))))
+	  (make-primref primsym)))))
 
-  (define (%get-value p ls ec)
+  (define (%precompute-foldable-primitive primsym rand* ec)
+    ;;The function call  is foldable; if all the  operands are constant:
+    ;;precompute the function call and  return a struct instance of type
+    ;;CONSTANT; else return false.
+    ;;
+    ;;PRIMSYM must be a symbol being the name of a primitive function.
+    ;;
+    ;;RAND* must be  a list of struct  instances representing recordized
+    ;;code which, when evaluated, will return the arguments.
+    ;;
+    ;;EC is a counter.
+    ;;
+    (let ((val* (map (lambda (x)
+		       (value-visit-operand! x))
+		  rand*)))
+      (cond ((andmap constant? val*)
+	     (%apply-at-compile-time primsym (map constant-value val*) ec))
+	    (else
+	     #f))))
+
+  (define (%apply-at-compile-time primsym args ec)
+    ;;PRIMSYM must be a symbol being the name of a primitive function.
+    ;;
+    ;;ARGS must be a list  of constant values representing the arguments
+    ;;of a call to P.
+    ;;
+    ;;EC is a counter.
+    ;;
+    ;;Apply the primitive  associated to P to the list  of arguments; if
+    ;;successful: return a struct instance  of type CONSTANT holding the
+    ;;result; else return false.
+    ;;
+    ;;See  the  documentation  of   the  function  SYSTEM-VALUE  for  an
+    ;;explanation of why we can extract the function from PRIMSYM.
+    ;;
     (call/cc
         (lambda (k)
           (with-exception-handler
@@ -1192,7 +1280,7 @@
 		(decrement ec 10)
 		(k #f))
             (lambda ()
-              (make-constant (apply (system-value p) ls)))))))
+              (make-constant (apply (system-value primsym) args)))))))
 
   #| end of module: fold-prim |# )
 
@@ -1203,7 +1291,7 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'ctxt-case 'scheme-indent-function 1)
+;; eval: (put 'case-context 'scheme-indent-function 1)
 ;; eval: (put 'with-extended-env 'scheme-indent-function 1)
 ;; End:
 
