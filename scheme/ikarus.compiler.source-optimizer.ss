@@ -495,6 +495,8 @@
   ;;
   ;;result-true -  The application always has non-#f result.
   ;;
+  ;;result-false - The application always has #f result.
+  ;;
   (define (primprop p)
     (or (getprop p UNIQUE-PROPERTY-KEY) '()))
 
@@ -1266,10 +1268,10 @@
     ;;SC is the size counter.
     ;;
     (let* ((rand*  (app-rand* appctxt))
-	   (info   (primitive-info primsym rand*))
-	   (result (or (and (info-effect-free? info)
+	   (info   (%primitive-info primsym rand*))
+	   (result (or (and (%info-effect-free? info)
 			    (%precompute-effect-free-primitive info appctxt))
-		       (and (info-foldable? info)
+		       (and (%info-foldable? info)
 			    (%precompute-foldable-primitive primsym rand* ec)))))
       (if result
 	  (begin
@@ -1293,9 +1295,9 @@
       ((e)
        (make-constant (void)))
       ((p)
-       (cond ((info-result-true?  info)	(make-constant #t))
-	     ((info-result-false? info)	(make-constant #f))
-	     (else			#f)))
+       (cond ((%info-result-true?  info)	(make-constant #t))
+	     ((%info-result-false? info)	(make-constant #f))
+	     (else				#f)))
       (else
        #f)))
 
@@ -1345,36 +1347,36 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (primitive-info primsym args)
+  (define (%primitive-info primsym rand*)
     ;;PRIMSYM  must be  a symbol  representing the  name of  a primitive
-    ;;function.  ARGS must be null  or a list representing the arguments
+    ;;function.  RAND* must be null  or a list representing the arguments
     ;;in a function call to PRIMSYM.
     ;;
     ;;This function scans  the attributes list of  PRIMSYM searching for
-    ;;entries that match  the arguments call represented by  ARGS.  If a
+    ;;entries that match the arguments  call represented by RAND*.  If a
     ;;match  is  found:  return  a  list  of  symbols  representing  the
     ;;attributes; else return nil.
     ;;
-    (define who 'primitive-info)
+    (define who '%primitive-info)
     (define (%matches? attributes-sublist)
-      (let loop ((args            args)
+      (let loop ((rand*           rand*)
 		 (template-params (car attributes-sublist)))
 	(cond ((pair? template-params)
-	       (and (pair? args)
+	       (and (pair? rand*)
 		    (let ((template-arg (car template-params)))
 		      (case template-arg
 			((_)
 			 ;;An argument matched.  Go on with the rest.
-			 (loop (cdr args) (cdr template-params)))
+			 (loop (cdr rand*) (cdr template-params)))
 			((#f 0 ())
 			 ;;The  template  specifies that  this  argument
 			 ;;must be one  among: #f, 0, nil; if  it is: go
 			 ;;on with the rest; else this template does not
 			 ;;match.
-			 (let ((v (value-visit-operand! (car args))))
+			 (let ((v (value-visit-operand! (car rand*))))
 			   (and (constant? v)
 				(equal? template-arg (constant-value v))
-				(loop (cdr args) (cdr template-params)))))
+				(loop (cdr rand*) (cdr template-params)))))
 			(else
 			 ;;Invalid template specification.
 			 (error who "internal error" primsym (car template-params)))))))
@@ -1384,9 +1386,9 @@
 	       ;;arguments).
 	       #t)
 	      ((null? template-params)
-	       ;;If  ARGS is  null:  success: the  template matches  the
-	       ;;args!  Else this template does not match.
-	       (null? args))
+	       ;;If  RAND* is  null: success,  the template  matches the
+	       ;;arguments!  Else this template does not match.
+	       (null? rand*))
 	      (else
 	       (error who "internal error" primsym template-params)))))
     (or (find %matches? (primprop primsym))
@@ -1394,16 +1396,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (info-foldable? info)
+  (define-inline (%info-foldable? info)
     (memq 'foldable info))
 
-  (define-inline (info-effect-free? info)
+  (define-inline (%info-effect-free? info)
     (memq 'effect-free info))
 
-  (define-inline (info-result-true? info)
+  (define-inline (%info-result-true? info)
     (memq 'result-true info))
 
-  (define-inline (info-result-false? info)
+  (define-inline (%info-result-false? info)
     (memq 'result-false info))
 
   #| end of module: fold-prim |# )
