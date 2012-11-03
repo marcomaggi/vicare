@@ -70,12 +70,26 @@
 
 ;;;; type definitions
 
+;;Represent the context  in which a primitive function  (CONS, CAR, ...)
+;;is applied.
+;;
+;;Fields:
+;;
+;;RAND*  is  a  list  of  struct  instances  representing  the  function
+;;application operands.
+;;
+;;CTXT is an evaluation context symbol among: p, e, v, app.
+;;
+;;INLINED is a boolean, true  if the function application represented by
+;;this struct instance has been expanded inline (taking advantage of the
+;;known primitive function attributes).
+;;
 (define-structure (app rand* ctxt)
   ((inlined			#f)))
 
+;;Represent an expression being the operand to a function call.
+;;
 (define-structure (operand expr env ec)
-  ;;Represent an expression being the operand to a function call.
-  ;;
   ((value			#f)
 		;If it is  possible to precompute the  value: such value
 		;is saved here.
@@ -90,8 +104,11 @@
 
 
 (module (E)
-
+  ;;Iterate   over  recordized   code  performing   source  optimization
+  ;;transformations; this module is the actual source optimizer.
+  ;;
   (define (E x ctxt env ec sc)
+    ;;Recursive function performing source optimizations.
     ;;
     ;;X must be a struct instance representing recordized code.
     ;;
@@ -104,7 +121,8 @@
     (decrement ec 1)
     (struct-case x
       ((constant)
-       (decrement sc 1) x)
+       (decrement sc 1)
+       x)
 
       ((prelex)
        (E-var x ctxt env ec sc))
@@ -301,6 +319,8 @@
   #| end of module: E |# )
 
 
+;;;; size and effort counters handling
+
 (define (passive-counter)
   (make-counter (greatest-fixnum) #f (lambda args
 				       (error 'passive-counter "invalid abort"))))
@@ -313,22 +333,28 @@
   (and (counter? x)
        (counter-ctxt x)))
 
-(define (decrement x amt)
-  (let ((n (- (counter-value x) amt)))
-    (set-counter-value! x n)
-    (when (< n 0)
-      (reset-integrated! (counter-ctxt x))
-      ((counter-k x) #f))))
+(module (decrement)
 
-(define (abort-counter! x)
-  (reset-integrated! (counter-ctxt x))
-  ((counter-k x) #f))
+  (define (decrement x amt)
+    (let ((n (- (counter-value x) amt)))
+      (set-counter-value! x n)
+      (when (< n 0)
+	(%reset-integrated! (counter-ctxt x))
+	((counter-k x) #f))))
 
-(define (reset-integrated! ctxt)
-  (set-app-inlined! ctxt #f)
-  (let ((ctxt (app-ctxt ctxt)))
-    (when (app? ctxt)
-      (reset-integrated! ctxt))))
+  ;;Commented out because never used.  (Marco Maggi; Nov  3, 2012)
+  ;;
+  ;; (define (abort-counter! x)
+  ;;   (%reset-integrated! (counter-ctxt x))
+  ;;   ((counter-k x) #f))
+
+  (define (%reset-integrated! ctxt)
+    (set-app-inlined! ctxt #f)
+    (let ((ctxt (app-ctxt ctxt)))
+      (when (app? ctxt)
+	(%reset-integrated! ctxt))))
+
+  #| end of module: decrement |# )
 
 (define (residualize-ref x sc)
   (decrement sc 1)
@@ -1083,14 +1109,11 @@
 				 (inline rhs ctxt EMPTY-ENV
 					 (if (active-counter? ec)
 					     ec
-					   (make-counter
-					    (cp0-effort-limit)
-					    ctxt abort))
-					 (make-counter
-					  (if (active-counter? sc)
-					      (counter-value sc)
-					    (cp0-size-limit))
-					  ctxt abort)))))
+					   (make-counter (cp0-effort-limit) ctxt abort))
+					 (make-counter (if (active-counter? sc)
+							   (counter-value sc)
+							 (cp0-size-limit))
+						       ctxt abort)))))
 			 (lambda ()
 			   (set-operand-outer-pending! opnd #f))))
 		(residualize-ref x sc)))))
