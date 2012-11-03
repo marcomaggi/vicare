@@ -1265,12 +1265,12 @@
 
 
 (module (fold-prim)
-
+  ;;Whenever possible  attempt to precompute  the result of  a primitive
+  ;;function  application.   This is  the  place  where the  "foldable",
+  ;;"effect-free", "result-true" and "result-false" primitive attributes
+  ;;are used.
+  ;;
   (define (fold-prim primsym appctxt ec sc)
-    ;;Whenever possible attempt to precompute  the result of a primitive
-    ;;function  application.  This  is the  place where  the "foldable",
-    ;;"effect-free" and "result-true" primitive attributes are used.
-    ;;
     ;;PRIMSYM must be a symbol being the name of a primitive function.
     ;;
     ;;APPCTXT must  be a struct  instance of type APP,  representing the
