@@ -5896,6 +5896,13 @@ values: the @eof{} object or a fixnum representing first octet, the
 @end defun
 
 
+@deffn Parameter current-input-port
+@deffnx Parameter current-output-port
+@deffnx Parameter current-error-port
+These are like defined by @rnrs{6}, but in addition they are parameters.
+@end deffn
+
+
 @defun console-input-port
 Return the default value of the @func{current-input-port} parameter.
 When the readline interface is not used, this port is used by the
