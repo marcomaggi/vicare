@@ -572,6 +572,9 @@
     ;;function.  There  can be any  number of specs for  each primitive,
     ;;but they must be in adjacent items.
     ;;
+    ;;FIXME  There are  a  lot more  functions for  which  it should  be
+    ;;interesting to specify attributes.  (Marco Maggi; Nov 3, 2012)
+    ;;
     '(((cons _ _)				 effect-free result-true)
       ((cons* _)			foldable effect-free            )
       ((cons* _ . _)				 effect-free result-true)
@@ -764,12 +767,12 @@
 ;;; --------------------------------------------------------------------
 
       ;;This must return a new flonum every time.
-      (($make-flonum . _))
-;;;(($make-flonum . _)		     effect-free result-true)
+;;;(($make-flonum . _))
+      (($make-flonum . _)		     effect-free result-true)
 
       ;;This must return a new struct every time.
-      (($struct . _))
-;;;(($struct . _)			     effect-free result-true)
+;;;(($struct . _))
+      (($struct . _)			     effect-free result-true)
 
       ((condition . _))
       ((top-level-value . _))
@@ -790,7 +793,7 @@
       ((values . _))
       ((error . _))
       ((assertion-violation . _))
-      ;;FIXME Reduce to display (Abdulaziz Ghuloum).
+      ;;FIXME Reduce to display.  (Abdulaziz Ghuloum)
       ((printf . _))
       ((newline . _))
       ((native-transcoder . _))
@@ -808,18 +811,20 @@
       ((standard-input-port . _))
       ((standard-output-port . _))
       ((standard-error-port . _))
-      ;; ((console-input-port . _))
-      ;; ((console-output-port . _))
-      ;; ((console-error-port . _))
-      ;; ((current-input-port . _)				 effect-free result-true)
-      ;; ((current-output-port . _)			 effect-free result-true)
-      ;; ((current-error-port . _)				 effect-free result-true)
-      ;; ((standard-input-port . _)			 effect-free result-true)
-      ;; ((standard-output-port . _)			 effect-free result-true)
-      ;; ((standard-error-port . _)			 effect-free result-true)
-      ;; ((console-input-port . _)				 effect-free result-true)
-      ;; ((console-output-port . _)			 effect-free result-true)
-      ;; ((console-error-port . _)				 effect-free result-true)
+
+      ;;It appears that something can go  wrong if we do these, not sure
+      ;;why.  (Marco Maggi; Nov 3, 2012)
+      ;;
+      ;;((current-input-port . _)		 effect-free result-true)
+      ;;((current-output-port . _)		 effect-free result-true)
+      ;;((current-error-port . _)		 effect-free result-true)
+
+      ((standard-input-port . _)		 effect-free result-true)
+      ((standard-output-port . _)		 effect-free result-true)
+      ((standard-error-port . _)		 effect-free result-true)
+      ((console-input-port . _)			 effect-free result-true)
+      ((console-output-port . _)		 effect-free result-true)
+      ((console-error-port . _)			 effect-free result-true)
       (($current-frame . _))
       ((pretty-width . _))
       (($fp-at-base . _))
@@ -832,8 +837,8 @@
       ((uuid . _))
       ((print-graph . _))
       ((interaction-environment . _))
-      ((make-guardian))
-;;;((make-guardian)					 effect-free result-true)
+;;;((make-guardian))
+      ((make-guardian)					 effect-free result-true)
       ((command-line-arguments))
       ;;FIXME (Abdulaziz Ghuloum)
       ((make-record-type-descriptor . _))
@@ -842,9 +847,15 @@
       ((getenv . _))
       ((gensym-prefix . _))
       (($arg-list . _))
-      (($make-symbol . _))
-;;;(($make-symbol . _)				 effect-free result-true)
-      ((string->utf8 . _))
+;;;(($make-symbol . _))
+      (($make-symbol . _)				 effect-free result-true)
+      ((string->utf8 . _)				 effect-free result-true)
+      ((string->utf16be . _)				 effect-free result-true)
+      ((string->utf16le . _)				 effect-free result-true)
+      ((string->utf16n . _)				 effect-free result-true)
+      ((string->keyword . _)				 effect-free result-true)
+      ((string->ascii . _)				 effect-free result-true)
+      ((string->latin1 . _)				 effect-free result-true)
       (($make-call-with-values-procedure . _))
       (($make-values-procedure . _))
       (($unset-interrupted! . _))
@@ -855,8 +866,8 @@
       ;;The base struct type descriptor is a constant created at process
       ;;boot time.
       ((base-rtd . _))
-      (($data->transcoder . _))
-;;;(($data->transcoder . _)			foldable effect-free result-true)
+;;;(($data->transcoder . _))
+      (($data->transcoder . _)			foldable effect-free result-true)
       ((current-time . _))
       ))
 
