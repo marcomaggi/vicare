@@ -1011,11 +1011,11 @@
   ;;Return  a (seq  e0 e1)  with a  seq-less e1  if both  e0 and  e1 are
   ;;constructed properly.
   ;;
-  (if (simple? e0)
+  (if (simple-expression-without-side-effects? e0)
       e1
     (let ((e0 (struct-case e0
 		((seq e0a e0b)
-		 (if (simple? e0b)
+		 (if (simple-expression-without-side-effects? e0b)
 		     e0a
 		   e0))
 		(else
@@ -1026,7 +1026,7 @@
 	(else
 	 (make-seq e0 e1))))))
 
-(define (simple? x)
+(define (simple-expression-without-side-effects? x)
   ;;Check quickly whether something is effect-free.
   ;;
   (struct-case x
@@ -1073,7 +1073,7 @@
 			 (struct-case opnd
 			   ((operand expr env ec)
 			    (E expr 'e env ec sc))))))
-	     (if (simple? e1)
+	     (if (simple-expression-without-side-effects? e1)
 		 (residualize-operands e (cdr rand*) sc)
 	       (begin
 		 (decrement sc (operand-size opnd))
