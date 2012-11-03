@@ -99,13 +99,32 @@
    (inner-pending		#f)
    (outer-pending		#f)))
 
+;;Counter  structure;  keeps  track  of  the  resources  consumed  while
+;;optimization is  performed, so  that when "too  much" is  consumed the
+;;optimizer can give up and return the original expression.
+;;
 (define-struct counter
-  (value ctxt k))
+  (value
+   ctxt
+   k
+		;Continuation function to be called if the threshold for
+		;this counter has been reached.
+   ))
 
 
 (module (E)
   ;;Iterate   over  recordized   code  performing   source  optimization
   ;;transformations; this module is the actual source optimizer.
+  ;;
+  ;;This module accepts  as input recordized code  containing the struct
+  ;;instances of the following types:
+  ;;
+  ;;assign		bind		clambda
+  ;;conditional		constant	fix
+  ;;forcall		funcall		prelex
+  ;;primref		seq
+  ;;
+  ;;and returns recordized code composed of the same struct types.
   ;;
   (define (E x ctxt env ec sc)
     ;;Recursive function performing source optimizations.
@@ -374,6 +393,9 @@
 ;;;; size and effort counters handling
 
 (define (passive-counter)
+  ;;Return a counter with such a  big initial value that it should never
+  ;;decremented below the threshold value.
+  ;;
   (make-counter (greatest-fixnum) #f (lambda args
 				       (error 'passive-counter "invalid abort"))))
 
@@ -387,8 +409,12 @@
 
 (module (decrement)
 
-  (define (decrement x amt)
-    (let ((n (- (counter-value x) amt)))
+  (define (decrement x amount)
+    ;;Decrement the counter  X, which must be a struct  instance of type
+    ;;COUNTER,  and  if  the  threshold   value  is  reached:  call  the
+    ;;registered continuation.
+    ;;
+    (let ((n (- (counter-value x) amount)))
       (set-counter-value! x n)
       (when (< n 0)
 	(%reset-integrated! (counter-ctxt x))
@@ -400,11 +426,14 @@
   ;;   (%reset-integrated! (counter-ctxt x))
   ;;   ((counter-k x) #f))
 
-  (define (%reset-integrated! ctxt)
-    (set-app-inlined! ctxt #f)
-    (let ((ctxt (app-ctxt ctxt)))
-      (when (app? ctxt)
-	(%reset-integrated! ctxt))))
+  (define (%reset-integrated! appctxt)
+    ;;Recursively reset the  inlined status of APPCTXT, which  must be a
+    ;;struct instance of type APP.
+    ;;
+    (set-app-inlined! appctxt #f)
+    (let ((nested-appctxt (app-ctxt appctxt)))
+      (when (app? nested-appctxt)
+	(%reset-integrated! nested-appctxt))))
 
   #| end of module: decrement |# )
 
