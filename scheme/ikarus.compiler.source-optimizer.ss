@@ -1369,9 +1369,10 @@
 ;;; --------------------------------------------------------------------
 
 (define (value-visit-operand! rand)
-  ;;RAND  must  be  a  struct  instance of  type  OPERAND.   Attempt  to
-  ;;precompute the value  of RAND and return it; the  value and its size
-  ;;are cached in the fields "value" and "size" of RAND.
+  ;;RAND  must  be  a  struct  instance of  type  OPERAND.   Run  source
+  ;;optimization for  RAND and  return the  result.  Also  the optimized
+  ;;result and  its counted size  are cached  in the fields  "value" and
+  ;;"size" of RAND.
   ;;
   (or (operand-value rand)
       (let* ((sc (passive-counter))
@@ -1384,7 +1385,7 @@
 
 (define (score-value-visit-operand! rand sc)
   ;;Like  VALUE-VISIT-OPERAND! but  also accounts  for the  operation by
-  ;;decrementing the counter SC.
+  ;;decrementing the size counter SC.
   ;;
   (begin0
       (value-visit-operand! rand)
