@@ -660,14 +660,16 @@
 (module (with-extended-env copy-var)
 
   (define-syntax with-extended-env
-    (syntax-rules ()
-      ((_ ((?new-env ?args2)
-	   (?old-env ?args1 ?rands))
-	  ?body0 ?body ...)
-       (let-values (((?new-env ?args2) (%extend ?old-env ?args1 ?rands)))
-	 (begin0
-	     (let () ?body0 ?body ...)
-	   (%copy-back ?args2))))))
+    (lambda (stx)
+      (syntax-case stx ()
+	((_ ((?new-env ?new-lhs-id) (?old-env ?args1 ?rands))
+	    ?body0 ?body ...)
+	 (and (identifier? #'?new-env)
+	      (identifier? #'?new-lhs-id))
+	 #'(let-values (((?new-env ?new-lhs-id) (%extend-env ?old-env ?args1 ?rands)))
+	     (begin0
+		 (let () ?body0 ?body ...)
+	       (%copy-assigned-to-source! ?new-lhs-id)))))))
 
   (define (copy-var x)
     ;;Given a  struct instance X of  type PRELEX build and  return a new
@@ -687,15 +689,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%extend env lhs* rands)
+  (define (%extend-env env lhs* rands)
     ;;
     ;;ENV must be an environment.
     ;;
     ;;LHS* must  be a  list of  struct instances of  type PRELEX,  to be
     ;;added to the environment.
     ;;
-    ;;RANDS  must be  #f or  a  list of  struct instances,  representing
-    ;;recordized code, being the values bound to the PRELEX in LHS*.
+    ;;RANDS must  be #f or a  list of struct instances  of type OPERAND,
+    ;;representing  recordized  code,  being  the values  bound  to  the
+    ;;structures in LHS*.
     ;;
     (if (null? lhs*)
 	(values env '())
@@ -706,10 +709,10 @@
 	    copy* rands))
 	(values (make-env lhs* copy* env) copy*))))
 
-  (define (%copy-back ls)
+  (define (%copy-assigned-to-source! ls)
     (for-each (lambda (x)
-		(set-prelex-source-assigned?!   x (prelex-residual-assigned?   x))
-		(set-prelex-source-referenced?! x (prelex-residual-referenced? x)))
+		($set-prelex-source-assigned?!   x ($prelex-residual-assigned?   x))
+		($set-prelex-source-referenced?! x ($prelex-residual-referenced? x)))
       ls))
 
   #| end of module: with-extended-env |# )
