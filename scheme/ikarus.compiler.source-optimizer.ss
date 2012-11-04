@@ -1276,7 +1276,7 @@
   ;;X  must  be  a  struct  instance  of  type  PRELEX  representing  an
   ;;identifier in reference position.  SC is the size counter.
   ;;
-  ;;Just  return  X   after  marking  is  as   "still  referenced  after
+  ;;Just  return  X   after  marking  it  as   "still  referenced  after
   ;;optimization attempt".
   ;;
   (decrement sc 1)
@@ -1447,17 +1447,17 @@
 	      ((case-info label args proper)
 	       (if proper
 		   (with-extended-env ((env args) <== (env args rand*))
-		     (let ((body^ (E body (app-ctxt ctxt) env ec sc)))
+		     (let ((optimized-body (E body (app-ctxt ctxt) env ec sc)))
 		       (begin0
-			   (make-let-binding args rand* body^ sc)
+			   (make-let-binding args rand* optimized-body sc)
 			 (set-app-inlined! ctxt #t))))
 		 (let-values (((x* t* r) (%partition args rand*)))
 		   (with-extended-env ((env a*) <== (env (append x* t*) rand*))
 		     (let* ((clis (make-funcall (make-primref 'list) t*))
 			    (rarg (make-operand clis env ec)))
 		       (with-extended-env ((env b*) <== (env (list r) (list rarg)))
-			 (let* ((body^  (E body (app-ctxt ctxt) env ec sc))
-				(body^^ (make-let-binding b* (list rarg) body^ sc))
+			 (let* ((optimized-body  (E body (app-ctxt ctxt) env ec sc))
+				(body^^ (make-let-binding b* (list rarg) optimized-body sc))
 				(result (make-let-binding a* rand* body^^ sc)))
 			   (set-app-inlined! ctxt #t)
 			   result)))))))))
@@ -1496,12 +1496,29 @@
 
 
 (module (make-let-binding)
-
-  (define (make-let-binding var* rand* body sc)
+  ;;This module is used to process a LET-like set of bindings.
+  ;;
+  ;;
+  (define (make-let-binding var* rand* optimized-body sc)
+    ;;
+    ;;VAR*  is  a list  of  struct  instances  of type  PRELEX,  already
+    ;;processed by WITH-EXTENDED-ENV, representing the left-hand sides.
+    ;;
+    ;;RAND* is a  list of struct instances of  type OPERAND representing
+    ;;the right-hand sides.
+    ;;
+    ;;OPTIMIZED-BODY is a struct instance representing already optimized
+    ;;recordized code.
+    ;;
+    ;;SC is the size counter.
+    ;;
+    ;;If there are no bindings to  begin with, or they are all optimized
+    ;;away: just return the OPTIMIZED-BODY.  Else return a BIND struct.
+    ;;
     (let-values (((lhs* rhs*) (%process var* rand* sc)))
       (if (null? lhs*)
-	  body
-	(make-bind lhs* rhs* body))))
+	  optimized-body
+	(make-bind lhs* rhs* optimized-body))))
 
   (define (%process var* rand* sc)
     (if (null? var*)
