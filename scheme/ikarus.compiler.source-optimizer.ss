@@ -1578,14 +1578,25 @@
   ;;and transform bindings that are  only assigned and not referenced as
   ;;follows:
   ;;
-  ;;   (let ((a (do-this)))
+  ;;   (letrec ((a (display "ciao"))
+  ;;            (b (lambda (x) a (list x))))
   ;;     (set! a 123)
-  ;;     456)
-  ;;   ==> (begin
-  ;;         (do-this)
-  ;;         (let ((a #<unspecified>))
-  ;;           (set! a 123)
-  ;;           456))
+  ;;     123)
+  ;;
+  ;;here A is referenced  in the original source code, but  B is not and
+  ;;so it is removed by the optimizer leaving:
+  ;;
+  ;;   (let ((a (display "ciao")))
+  ;;     (set! a 123)
+  ;;     123)
+  ;;
+  ;;and we want to transform it into:
+  ;;
+  ;;   (begin
+  ;;     (do-this)
+  ;;     (let ((a #<unspecified>))
+  ;;       (set! a 123)
+  ;;       456))
   ;;
   ;;this  is because,  with the  optimizer doing  a single  pass, it  is
   ;;impossible to  go back  to the assignment  places and  transform the
