@@ -204,7 +204,10 @@
        (E-fix  lhs* rhs* body ctxt env ec sc))
 
       (else
-       (error who "invalid expression" (source-optimizer-input) x))))
+       (error who
+	 "invalid expression for source optimizer"
+	 (unparse-recordized-code (source-optimizer-input))
+	 x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -256,21 +259,11 @@
       ;;
       ;;  (not (not (not ?nested-test)))
       ;;
-      #;(struct-case test
-	((funcall rator rand*)
-	 (struct-case rator
-	   ((primref op)
-	    (and (eq? op 'not)
-		 (= (length rand*) 1)
-		 (%build-conditional (car rand*) altern conseq)))
-	   (else
-	    (make-conditional test conseq altern))))
-	(else
-	 (make-conditional test conseq altern)))
       (or (struct-case test
 	    ((funcall rator rand*)
 	     (struct-case rator
 	       ((primref op)
+		;;*NOTE* This form can return #f too!!!
 		(and (eq? op 'not)
 		     (= (length rand*) 1)
 		     (%build-conditional (car rand*) altern conseq)))
