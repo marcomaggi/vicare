@@ -95,6 +95,12 @@
 	   (set! a 123)
 	   123)))
 
+(parametrise ((optimize-level 2))
+  (doit '((lambda (a)
+	    (set! a 123)
+	    (display "ciao"))
+	  123)))
+
 
 
 #;(doit '(list (display "ciao\n")))
