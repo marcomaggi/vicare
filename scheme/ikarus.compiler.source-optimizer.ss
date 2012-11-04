@@ -1541,15 +1541,15 @@
     ;;If there are no bindings to  begin with, or they are all optimized
     ;;away: just return the OPTIMIZED-BODY.  Else return a BIND struct.
     ;;
-    (let-values (((lhs* rhs*) (%process var* rand* sc)))
+    (let-values (((lhs* rhs*) (%attempt-bindings-removal var* rand* sc)))
       (if (null? lhs*)
 	  optimized-body
 	(make-bind lhs* rhs* optimized-body))))
 
-  (define (%process var* rand* sc)
+  (define (%attempt-bindings-removal var* rand* sc)
     (if (null? var*)
 	(values '() '())
-      (let-values (((lhs* rhs*) (%process (cdr var*) (cdr rand*) sc)))
+      (let-values (((lhs* rhs*) (%attempt-bindings-removal (cdr var*) (cdr rand*) sc)))
 	(%process-single-binding (car var*) (car rand*) lhs* rhs* sc))))
 
   (define (%process-single-binding var rand lhs* rhs* sc)
