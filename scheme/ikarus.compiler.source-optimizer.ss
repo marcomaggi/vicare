@@ -588,7 +588,7 @@
        ;;   ((lambda (x) (do-something-with x))
        ;;    123)
        ;;
-       (inline x ctxt env ec sc))
+       (inline-function-application x ctxt env ec sc))
       ((p e)
        ;;This is the case of "predicate" context:
        ;;
@@ -1470,16 +1470,17 @@
 			 (lambda ()
 			   (call/cc
 			       (lambda (abort)
-				 (inline rhs ctxt (make-empty-env)
-					 ;;effort counter
-					 (if (active-counter? ec)
-					     ec
-					   (make-counter (cp0-effort-limit) ctxt abort))
-					 ;;size counter
-					 (make-counter (if (active-counter? sc)
-							   (counter-value sc)
-							 (cp0-size-limit))
-						       ctxt abort)))))
+				 (inline-function-application
+				  rhs ctxt (make-empty-env)
+				  ;;effort counter
+				  (if (active-counter? ec)
+				      ec
+				    (make-counter (cp0-effort-limit) ctxt abort))
+				  ;;size counter
+				  (make-counter (if (active-counter? sc)
+						    (counter-value sc)
+						  (cp0-size-limit))
+						ctxt abort)))))
 			 (lambda () (set-operand-outer-pending! opnd #f))))
 		(residualize-ref x sc)))))
 
@@ -1502,8 +1503,7 @@
   #| end of module: copy |# )
 
 
-(module (inline)
-  ;;
+(module (inline-function-application)
   ;;How do we inline a function?  Let's suppose we have this definition:
   ;;
   ;;   (define (fun x y)
@@ -1526,7 +1526,7 @@
   ;;
   ;;and now we have an expression to optimize as all the others.
   ;;
-  (define (inline proc ctxt env ec sc)
+  (define (inline-function-application proc ctxt env ec sc)
     ;;
     ;;PROC  is  a  struct  instance of  type  CLAMBDA  representing  the
     ;;function to be applied.
@@ -1591,7 +1591,9 @@
 	    (make-let-binding formals rand* optimized-body sc)
 	  (set-app-inlined! ctxt #t)))))
 
-  (define (%application-with-var-formals formals rand* body ctxt env ec sc)
+;;; --------------------------------------------------------------------
+
+  (module (%application-with-var-formals)
     ;;Here we have a function with a variable number of arguments:
     ;;
     ;;   ((lambda (x y . rest) (list x y rest))
@@ -1599,36 +1601,58 @@
     ;;
     ;;and consider it equivalent to:
     ;;
-    ;;   (let ((x 123)
-    ;;         (y 456))
-    ;;     (let ((rest (list 7 8 9)))
+    ;;   (let ((x    123)
+    ;;         (y    456)
+    ;;         (tmp0 7)
+    ;;         (tmp1 8)
+    ;;         (tmp2 9))
+    ;;     (let ((rest (list tmp0 tmp1 tmp2)))
     ;;       (list x y rest)))
     ;;
-    (let-values (((x* t* r) (%partition formals rand*)))
-      (with-extended-env ((env a*) <== (env (append x* t*) rand*))
-	(let ((rest-arg (make-operand (make-funcall (make-primref 'list) t*)
-				      env ec)))
-	  (with-extended-env ((env b*) <== (env (list r) (list rest-arg)))
-	    (let* ((optim-body (E body (app-ctxt ctxt) env ec sc))
-		   (sublet     (make-let-binding b* (list rest-arg) optim-body sc))
-		   (result     (make-let-binding a* rand* sublet sc)))
-	      (set-app-inlined! ctxt #t)
-	      result))))))
+    ;;We also want to support the case:
+    ;;
+    ;;   ((lambda args (list args))
+    ;;    1 2 3)
+    ;;
+    ;;and consider it equivalent to:
+    ;;
+    ;;   (let ((tmp0 1)
+    ;;         (tmp1 2)
+    ;;         (tmp3 3))
+    ;;     (let ((args (list tmp0 tmp1 tmp2)))
+    ;;       (list args)))
+    ;;
+    (define (%application-with-var-formals formals rand* body ctxt env ec sc)
+      (let-values (((x* t* r) (%partition formals rand*)))
+	(with-extended-env ((env a*) <== (env (append x* t*) rand*))
+	  (let ((rest-arg (make-operand (make-funcall (make-primref 'list) t*)
+					env ec)))
+	    (with-extended-env ((env b*) <== (env (list r) (list rest-arg)))
+	      (let* ((optim-body (E body (app-ctxt ctxt) env ec sc))
+		     (sublet     (make-let-binding b* (list rest-arg) optim-body sc))
+		     (result     (make-let-binding a* rand* sublet sc)))
+		(set-app-inlined! ctxt #t)
+		result))))))
 
-;;; --------------------------------------------------------------------
+    (define (%partition formals rand*)
+      ;;Given a  list of  CLAMBDA formals  with rest arg  and a  list of
+      ;;operands:
+      ;;
+      (if (null? (cdr formals))
+	  ;;Everything else goes into the rest argument.
+	  (let* ((rest-formal (car formals))
+		 (tmp-formal* (map (lambda (unused)
+				     (make-prelex-replacement rest-formal))
+				rand*)))
+	    (values '() tmp-formal* rest-formal))
+	(let ((lhs (car formals)))
+	  (let-values (((lhs* tmp-formal* rest-formal)
+			(%partition (cdr formals) (cdr rand*))))
+	    (values (cons lhs lhs*) tmp-formal* rest-formal)))))
 
-    (define (%partition args rand*)
-      (if (null? (cdr args))
-	  (let* ((r  (car args))
-		 (t* (map (lambda (x)
-			    (make-prelex-replacement r))
-		       rand*)))
-	    (values '() t* r))
-	(let ((x (car args)))
-	  (let-values (((x* t* r) (%partition (cdr args) (cdr rand*))))
-	    (values (cons x x*) t* r)))))
+    #| end of module: %application-with-var-formals |# )
 
-    #| end of module: inline |# )
+  #| end of module: inline |# )
 
 
 (module (make-let-binding)
