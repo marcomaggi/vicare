@@ -187,13 +187,13 @@
 	  (make-constant #t))))
 
       ((clambda label.unused clause* cp free name)
-       (%do-clambda clause* cp free name   x ctxt env ec sc))
+       (%E-clambda clause* cp free name   x ctxt env ec sc))
 
       ((bind lhs* rhs* body)
-       (%do-bind lhs* rhs* body ctxt env ec sc))
+       (E-bind lhs* rhs* body ctxt env ec sc))
 
       ((fix lhs* rhs* body)
-       (%do-fix  lhs* rhs* body ctxt env ec sc))
+       (E-fix  lhs* rhs* body ctxt env ec sc))
 
       (else
        (error who "invalid expression" x))))
@@ -223,16 +223,16 @@
 	   (let ((ctxt (case-context ctxt
 			 ((app) 'v)
 			 (else  ctxt))))
-	     (let ((conseq (E x.conseq ctxt env ec sc))
-		   (altern (E x.altern ctxt env ec sc)))
-	       (if (records-equal? conseq altern ctxt)
+	     (let ((optimized-conseq (E x.conseq ctxt env ec sc))
+		   (optimized-altern (E x.altern ctxt env ec sc)))
+	       (if (records-equal? optimized-conseq optimized-altern ctxt)
 		   ;;If the results of CONSEQ and ALTERN are known to be
 		   ;;equal: we  just include TEST for  its side effects,
 		   ;;followed by CONSEQ.
-		   (mkseq test conseq)
+		   (mkseq test optimized-conseq)
 		 (begin
 		   (decrement sc 1)
-		   (%build-conditional test conseq altern)))))))))
+		   (%build-conditional test optimized-conseq optimized-altern)))))))))
 
     (define (%build-conditional test conseq altern)
       ;;If the test as the form:
@@ -248,6 +248,17 @@
       ;;
       ;;  (not (not (not ?nested-test)))
       ;;
+      #;(struct-case test
+	((funcall rator rand*)
+	 (struct-case rator
+	   ((primref op)
+	    (and (eq? op 'not)
+		 (= (length rand*) 1)
+		 (%build-conditional (car rand*) altern conseq)))
+	   (else
+	    (make-conditional test conseq altern))))
+	(else
+	 (make-conditional test conseq altern)))
       (or (struct-case test
 	    ((funcall rator rand*)
 	     (struct-case rator
@@ -369,21 +380,7 @@
 		 (copy x opnd ctxt ec sc)))
 	   (residualize-ref x sc))))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%lookup x env)
-    (if (vector? env)
-	(let loop ((lhs* (vector-ref env 0))
-		   (rhs* (vector-ref env 1)))
-	  (cond ((null? lhs*)
-		 (%lookup x (vector-ref env 2)))
-		((eq? x (car lhs*))
-		 (car rhs*))
-		(else
-		 (loop (cdr lhs*) (cdr rhs*)))))
-      x))
-
-  (define (%do-bind lhs* rhs* body ctxt env ec sc)
+  (define (E-bind lhs* rhs* body ctxt env ec sc)
     (let ((rand* (map (lambda (x)
 			(make-operand x env ec))
 		   rhs*)))
@@ -392,7 +389,7 @@
 	(residualize-operands (make-let-binding lhs* rand* (E body ctxt env ec sc) sc)
 			      rand* sc))))
 
-  (define (%do-fix lhs* rhs* body ctxt env ec sc)
+  (define (E-fix lhs* rhs* body ctxt env ec sc)
     (with-extended-env ((env lhs*)
 			(env lhs* #f))
       (for-each (lambda (lhs rhs)
@@ -413,7 +410,19 @@
 			     lhs*)
 		      body))))))
 
-  (define (%do-clambda clause* cp free name   x ctxt env ec sc)
+  (define (%E-clambda clause* cp free name   x ctxt env ec sc)
+    ;;Process a struct intance of type CLAMBDA.
+    ;;
+    ;;X is the  original struct instance of type CLAMBDA;  we need it if
+    ;;we attempt to inline the function.
+    ;;
+    ;;ENV
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v) or a struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
     (case-context ctxt
       ((app)
        ;;This  is  the  case  of CASE-LAMBDA  evaluation  and  immediate
@@ -430,7 +439,7 @@
        ;;       (if-true)
        ;;     (if-false))
        ;;
-       ;;or "for side effect" context:
+       ;;or "for side effects" context:
        ;;
        ;;   (begin
        ;;     (case-lambda ---)
@@ -452,8 +461,8 @@
        ;;
        (decrement sc 2)
        (make-clambda (gensym)
-		     (map (lambda (x)
-			    (struct-case x
+		     (map (lambda (clause)
+			    (struct-case clause
 			      ((clambda-case info body)
 			       (struct-case info
 				 ((case-info label args proper)
@@ -464,6 +473,20 @@
 				     (E body 'v env ec sc))))))))
 		       clause*)
 		     cp free name))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%lookup x env)
+    (if (vector? env)
+	(let loop ((lhs* (vector-ref env 0))
+  		   (rhs* (vector-ref env 1)))
+	  (cond ((null? lhs*)
+		 (%lookup x (vector-ref env 2)))
+		((eq? x (car lhs*))
+		 (car rhs*))
+		(else
+		 (loop (cdr lhs*) (cdr rhs*)))))
+      x))
 
   #| end of module: E |# )
 
