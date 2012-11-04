@@ -1636,7 +1636,16 @@
 
     (define (%partition formals rand*)
       ;;Given a  list of  CLAMBDA formals  with rest arg  and a  list of
-      ;;operands:
+      ;;operands, return 3 values:
+      ;;
+      ;;1. A  list of struct instances  of type PRELEX being  the LHS of
+      ;;   the fixed formals.
+      ;;
+      ;;2. A  list of struct instances  of type PRELEX being  the LHS of
+      ;;   the left-over arguments.
+      ;;
+      ;;3. A  struct instance of type  PRELEX being the LHS  of the rest
+      ;;   argument binding.
       ;;
       (if (null? (cdr formals))
 	  ;;Everything else goes into the rest argument.
