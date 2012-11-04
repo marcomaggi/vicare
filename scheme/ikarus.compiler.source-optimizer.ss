@@ -257,7 +257,7 @@
 			 (else  ctxt))))
 	     (let ((optimized-conseq (E x.conseq ctxt env ec sc))
 		   (optimized-altern (E x.altern ctxt env ec sc)))
-	       (if (records-equal? optimized-conseq optimized-altern ctxt)
+	       (if (%records-equal? optimized-conseq optimized-altern ctxt)
 		   ;;If the results of CONSEQ and ALTERN are known to be
 		   ;;equal: we  just include TEST for  its side effects,
 		   ;;followed by CONSEQ.
@@ -265,6 +265,42 @@
 		 (begin
 		   (decrement sc 1)
 		   (%build-conditional test optimized-conseq optimized-altern)))))))))
+
+    (define (%records-equal? x y ctxt)
+      ;;Given the struct instances X and Y, representing recordized code
+      ;;to be evaluated in the same context CTXT, do what is possible to
+      ;;determine if X and Y are equivalent.
+      ;;
+      ;;If the context  is "predicate": X and Y are  equivalent if it is
+      ;;known that  both of them return  true or or both  of them return
+      ;;false.
+      ;;
+      ;;If the context is "for side  effects": X and Y are equivalent if
+      ;;it is known that both of them have no side effects.
+      ;;
+      ;;FIXME This can be probably improved with more deep inspection of
+      ;;X and Y.  (Marco Maggi; Nov 4, 2012)
+      ;;
+      (struct-case x
+	((constant x.val)
+	 (struct-case y
+	   ((constant y.val)
+	    (case-context ctxt
+	      ((e)
+	       ;;Both X and Y are constants and the context if "for side
+	       ;;effect"; constants  have no  side effects, so  they are
+	       ;;equivalent.
+	       #t)
+	      ((p)
+	       ;;Are they both non-false or both false?
+	       (if x.val y.val (not y.val)))
+	      (else
+	       ;;Are they just the same constant?
+	       (eq? x.val y.val))))
+	   (else
+	    #f)))
+	(else
+	 #f)))
 
     (define (%build-conditional test conseq altern)
       ;;If the test as the form:
@@ -1191,6 +1227,15 @@
   ;;Return  a (seq  e0 e1)  with a  seq-less e1  if both  e0 and  e1 are
   ;;constructed properly.
   ;;
+  ;;In other words, given:
+  ;;
+  ;;   (begin e0a e0b e1)
+  ;;
+  ;;the  purpose  of  this  function  is to  check  if  E0B  is  without
+  ;;side-effects, and in this case discard it and return:
+  ;;
+  ;;   (begin e0a e1)
+  ;;
   (if (simple-expression-without-side-effects? e0)
       e1
     (let ((e0 (struct-case e0
@@ -1224,23 +1269,6 @@
      e1)
     (else
      x)))
-
-(define (records-equal? x y ctxt)
-  (struct-case x
-    ((constant kx)
-     (struct-case y
-       ((constant ky)
-	(case-context ctxt
-	  ((e)
-	   #t)
-	  ((p)
-	   (if kx ky (not ky)))
-	  (else
-	   (eq? kx ky))))
-       (else
-	#f)))
-    (else
-     #f)))
 
 ;;; --------------------------------------------------------------------
 
