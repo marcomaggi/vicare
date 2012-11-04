@@ -200,37 +200,68 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (E-conditional x.test x.conseq x.altern ctxt env ec sc)
-    ;;Process a  struct instance of  type CONDITIONAL.  Return  either a
-    ;;struct of type CONDITIONAL or of type SEQ.
-    ;;
-    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
-    ;;v) or a struct instance of type APP.
-    ;;
-    ;;EC is the effort counter.  SC is the size counter.
-    ;;
-    (let ((test (E x.test 'p env ec sc)))
-      (struct-case (result-expr test)
-	((constant test.val)
-	 ;;We could precompute the result of the TEST, so we output only
-	 ;;the CONSEQ or the ALTERN.
-	 (mkseq test (E (if test.val x.conseq x.altern)
-			ctxt env ec sc)))
-	(else
-	 ;;The TEST could not be precomputed.
-	 (let ((ctxt (case-context ctxt
-		       ((app) 'v)
-		       (else  ctxt))))
-	   (let ((conseq (E x.conseq ctxt env ec sc))
-		 (altern (E x.altern ctxt env ec sc)))
-	     (if (records-equal? conseq altern ctxt)
-		 ;;If the results  of CONSEQ and ALTERN are  known to be
-		 ;;equal:  we just  include TEST  for its  side effects,
-		 ;;followed by CONSEQ.
-		 (mkseq test conseq)
-	       (begin
-		 (decrement sc 1)
-		 (%build-conditional test conseq altern)))))))))
+  (module (E-conditional)
+
+    (define (E-conditional x.test x.conseq x.altern ctxt env ec sc)
+      ;;Process a struct instance of  type CONDITIONAL.  Return either a
+      ;;struct of type CONDITIONAL or of type SEQ.
+      ;;
+      ;;CTXT can be  either an evaluation context symbol  (one among: p,
+      ;;e, v) or a struct instance of type APP.
+      ;;
+      ;;EC is the effort counter.  SC is the size counter.
+      ;;
+      (let ((test (E x.test 'p env ec sc)))
+	(struct-case (result-expr test)
+	  ((constant test.val)
+	   ;;We could  precompute the result  of the TEST, so  we output
+	   ;;only the CONSEQ or the ALTERN.
+	   (mkseq test (E (if test.val x.conseq x.altern)
+			  ctxt env ec sc)))
+	  (else
+	   ;;The TEST could not be precomputed.
+	   (let ((ctxt (case-context ctxt
+			 ((app) 'v)
+			 (else  ctxt))))
+	     (let ((conseq (E x.conseq ctxt env ec sc))
+		   (altern (E x.altern ctxt env ec sc)))
+	       (if (records-equal? conseq altern ctxt)
+		   ;;If the results of CONSEQ and ALTERN are known to be
+		   ;;equal: we  just include TEST for  its side effects,
+		   ;;followed by CONSEQ.
+		   (mkseq test conseq)
+		 (begin
+		   (decrement sc 1)
+		   (%build-conditional test conseq altern)))))))))
+
+    (define (%build-conditional test conseq altern)
+      ;;If the test as the form:
+      ;;
+      ;;  (not ?nested-test)
+      ;;
+      ;;we can just optimize:
+      ;;
+      ;;  (if (not ?nested-test) ?conseq ?altern)
+      ;;  ==> (if ?nested-test ?altern ?conseq)
+      ;;
+      ;;This is a recursive function to process tests like:
+      ;;
+      ;;  (not (not (not ?nested-test)))
+      ;;
+      (or (struct-case test
+	    ((funcall rator rand*)
+	     (struct-case rator
+	       ((primref op)
+		(and (eq? op 'not)
+		     (= (length rand*) 1)
+		     (%build-conditional (car rand*) altern conseq)))
+	       (else
+		#f)))
+	    (else
+	     #f))
+	  (make-conditional test conseq altern)))
+
+    #| end of module: E-conditional |# )
 
   (define (E-assign lhs rhs env ec sc)
     ;;Process  a  struct  instance  of type  ASSIGN.   Return  a  struct
@@ -287,8 +318,10 @@
 				 rand*))))))
 
   (define (E-debug-call ctxt ec sc)
-    ;;Process a struct  instance of type FUNCALL representing  a call to
-    ;;DEBUG-CALL.
+    ;;Process a struct  instance of type PRIMREF  requesting a reference
+    ;;to DEBUG-CALL; this PRIMREF can be either the operand of a FUNCALL
+    ;;to DEBUG-CALL or  an actual standalone reference  to DEBUG-CALL to
+    ;;be sent around as argument.
     ;;
     ;;CTXT can be either an evaluation  context symbol (one among: p, e,
     ;;v) or a struct instance of type APP.
@@ -297,26 +330,26 @@
     ;;
     (let ((rand* (app-rand* ctxt)))
       (if (< (length rand*) 2)
-	  (begin
+	  (begin ;It is a standalone reference to DEBUG-CALL.
 	    (decrement sc 1)
 	    (make-primref 'debug-call))
-	(begin
-	  (let ((src/expr (car rand*))
-		(rator (cadr rand*))
-		(rands (cddr rand*)))
-	    (let ((ctxt2 (make-app rands (app-ctxt ctxt))))
-	      (let ((rator (E (operand-expr rator)
-			      ctxt2
-			      (operand-env rator)
-			      (operand-ec rator)
-			      sc)))
-		(if (app-inlined ctxt2)
-		    (begin
-		      (set-app-inlined! ctxt #t)
-		      (residualize-operands rator (cons src/expr rands) sc))
+	(begin	;It is the operand of a FUNCALL to DEBUG-CALL.
+	  (let ((src/expr  (car rand*))		;the source annotation
+		(rator     (cadr rand*))	;the wrapped function
+		(rands     (cddr rand*)))	;operands to the wrapped function
+	    (let* ((ctxt2 (make-app rands (app-ctxt ctxt)))
+		   (rator (E (operand-expr rator)
+			     ctxt2
+			     (operand-env rator)
+			     (operand-ec rator)
+			     sc)))
+	      (if (app-inlined ctxt2)
 		  (begin
-		    (decrement sc 1)
-		    (make-primref 'debug-call))))))))))
+		    (set-app-inlined! ctxt #t)
+		    (residualize-operands rator (cons src/expr rands) sc))
+		(begin
+		  (decrement sc 1)
+		  (make-primref 'debug-call)))))))))
 
   (define (E-var x ctxt env ec sc)
     (case-context ctxt
@@ -349,20 +382,6 @@
 		(else
 		 (loop (cdr lhs*) (cdr rhs*)))))
       x))
-
-  (define (%build-conditional e0 e1 e2)
-    (or (struct-case e0
-	  ((funcall rator rand*)
-	   (struct-case rator
-	     ((primref op)
-	      (and (eq? op 'not)
-		   (= (length rand*) 1)
-		   (%build-conditional (car rand*) e2 e1)))
-	     (else
-	      #f)))
-	  (else
-	   #f))
-	(make-conditional e0 e1 e2)))
 
   (define (%do-bind lhs* rhs* body ctxt env ec sc)
     (let ((rand* (map (lambda (x)
