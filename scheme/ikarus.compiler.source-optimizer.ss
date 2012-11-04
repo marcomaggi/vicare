@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-;;; Work in progress
+;;;; the source code optimizer
 ;;
 ;;See the paper:
 ;;
@@ -46,9 +46,16 @@
 	    x
 	  (error 'optimize-level "valid optimization levels are 0, 1, and 2")))))
 
+  (define source-optimizer-input
+    ;;This  is used  in  case of  internal error  to  show better  error
+    ;;context.
+    ;;
+    (make-parameter #f))
+
   (define (source-optimize expr)
     (define (%doit expr)
-      (E expr 'v EMPTY-ENV (passive-counter) (passive-counter)))
+      (parametrise ((source-optimizer-input expr))
+	(E expr 'v EMPTY-ENV (passive-counter) (passive-counter))))
     (case (optimize-level)
       ((2)
        (%doit expr))
@@ -187,7 +194,8 @@
 	  (make-constant #t))))
 
       ((clambda label.unused clause* cp free name)
-       (%E-clambda clause* cp free name   x ctxt env ec sc))
+       (parametrise ((source-optimizer-input x))
+	 (%E-clambda clause* cp free name   x ctxt env ec sc)))
 
       ((bind lhs* rhs* body)
        (E-bind lhs* rhs* body ctxt env ec sc))
@@ -196,7 +204,7 @@
        (E-fix  lhs* rhs* body ctxt env ec sc))
 
       (else
-       (error who "invalid expression" x))))
+       (error who "invalid expression" (source-optimizer-input) x))))
 
 ;;; --------------------------------------------------------------------
 
