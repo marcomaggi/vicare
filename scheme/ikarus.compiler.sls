@@ -604,7 +604,21 @@
 		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
    (residual-referenced? #f)
    (residual-assigned?   #f)
-		;This field is used by the source optimizer.
+		;Boolean,  this  field  is   used  only  by  the  source
+		;optimizer.   When optimizing  source  code, an  attempt
+		;will  be  made to  substitute  every  reference to  the
+		;binding this struct represents with an expansion of the
+		;referenced value.
+		;
+		;For example, an attempt will be made to simplify:
+		;
+		;   (let ((x 1) (y 2)) (list x y))
+		;   ==> (let ((x 1) (y 2)) (list 1 2))
+		;
+		;When such optimization attempts  fail, the reference to
+		;variable is just left in place and this field is set to
+		;true.   So   the  meaning  of  this   field  is:  still
+		;referenced after optimization attempt.
    (global-location      #f)
 		;When this  binding describes a top  level binding, this
 		;field  is set  to  a unique  gensym  associated to  the

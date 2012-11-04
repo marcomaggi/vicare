@@ -400,11 +400,24 @@
 		   (lambda () (value-visit-operand! opnd))
 		   (lambda () (set-operand-inner-pending! opnd #f)))
 	       ;;We  would  like  to   attempt  replacing  the  variable
-	       ;;reference with a  value, but we cannot  if the variable
-	       ;;is assigned somewhere because its value will change.
+	       ;;reference with the expansion of the referenced value.
 	       (if (prelex-source-assigned? x)
+		   ;;No optimizations  possible because the  variable is
+		   ;;assigned somewhere, so its  value will change; just
+		   ;;output the reference to variable.
 		   (residualize-ref x sc)
-		 (copy-variable-reference x opnd ctxt ec sc)))
+		 ;;Attempt to  substitute the reference with  the result
+		 ;;of optimizing the referenced value.  Notice that this
+		 ;;case includes:
+		 ;;
+		 ;;  (define (a)
+		 ;;    (do-something))
+		 ;;
+		 ;;  (a) ;; <-- reference to variable
+		 ;;
+		 (inline-referenced-operand x opnd ctxt ec sc)))
+	   ;;No optimizations  possible.  Just  output the  reference to
+	   ;;variable.
 	   (residualize-ref x sc))))))
 
   (define (E-bind lhs* rhs* body ctxt env ec sc)
@@ -1161,6 +1174,19 @@
     (else
      #f)))
 
+;;; --------------------------------------------------------------------
+
+(define (residualize-ref x sc)
+  ;;X  must  be  a  struct  instance  of  type  PRELEX  representing  an
+  ;;identifier in reference position.  SC is the size counter.
+  ;;
+  ;;Just  return  X   after  marking  is  as   "still  referenced  after
+  ;;optimization attempt".
+  ;;
+  (decrement sc 1)
+  (set-prelex-residual-referenced?! x #t)
+  x)
+
 (define (residualize-operands e rand* sc)
   (cond ((null? rand*)
 	 e)
@@ -1177,6 +1203,8 @@
 	       (begin
 		 (decrement sc (operand-size opnd))
 		 (mkseq e1 (residualize-operands e (cdr rand*) sc)))))))))
+
+;;; --------------------------------------------------------------------
 
 (define (value-visit-operand! rand)
   ;;RAND  must  be  a  struct  instance of  type  OPERAND.   Attempt  to
@@ -1201,9 +1229,16 @@
     (decrement sc (operand-size rand))))
 
 
-(module (copy-variable-reference)
+(module (inline-referenced-operand)
 
-  (define (copy-variable-reference x opnd ctxt ec sc)
+  (define (inline-referenced-operand x opnd ctxt ec sc)
+    ;;Attempt to substitute a variable reference to with an expansion of
+    ;;the referenced value.
+    ;;
+    ;;For example, an attempt will be made to simplify as follows:
+    ;;
+    ;;   (let ((x 1) (y 2)) (list x y))
+    ;;   ==> (let ((x 1) (y 2)) (list 1 2))
     ;;
     ;;X is a  struct instance of type PRELEX  representing an identifier
     ;;in reference position.
@@ -1262,22 +1297,17 @@
 			   (set-operand-outer-pending! opnd #f))))
 		(residualize-ref x sc)))))
 
-	((primref p)
+	((primref primsym)
 	 (case-context ctxt
 	   ((v)		rhs)
 	   ((p)		(make-constant #t))
 	   ((e)		(make-constant (void)))
-	   ((app)	(fold-prim p ctxt ec sc))))
+	   ((app)	(fold-prim primsym ctxt ec sc))))
 
 	(else
 	 (residualize-ref x sc)))))
 
   #| end of module: copy |# )
-
-(define (residualize-ref x sc)
-  (decrement sc 1)
-  (set-prelex-residual-referenced?! x #t)
-  x)
 
 
 (module (inline)
