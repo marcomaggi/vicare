@@ -490,8 +490,8 @@
 	     ;;all  the calls  to a  CLAMBDAs have  been inlined:  it is
 	     ;;useless to keep it.
 	     ;;
-	     ;;FIXME  What happens  to  the CLAMBDAs  referenced in  the
-	     ;;RHS*?  (Marco Maggi; Nov 4, 2012)
+	     ;;FIXME Document what happens to the CLAMBDAs referenced in
+	     ;;the RHS* but not in the BODY.  (Marco Maggi; Nov 4, 2012)
 	     (referenced-lhs* (remp (lambda (x)
 				      (not (prelex-residual-referenced? x)))
 				lhs*)))
@@ -693,6 +693,8 @@
       ($set-prelex-source-referenced?! y ($prelex-source-referenced? x))
       ($set-prelex-source-assigned?!   y ($prelex-source-assigned?   x))
       (let ((loc ($prelex-global-location x)))
+	;;Top level  bindings are  never removed, even  if they  are not
+	;;referenced in this compilation unit.
 	(when loc
 	  ($set-prelex-global-location!      y loc)
 	  ($set-prelex-source-referenced?!   y #t)
