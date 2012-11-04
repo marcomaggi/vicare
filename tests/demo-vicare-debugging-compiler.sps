@@ -11,7 +11,10 @@
     (%print form)
     (%display "==> ")
     (%print* ($unparse-recordized-code/pretty
-	      (compile-up-to #;$specify-representation $source-optimize
+	      (compile-up-to
+		  #;$optimize-letrec
+		  #;$specify-representation
+		  $source-optimize
 		(expand form)))
 	     3)
     (%display "\n\n"))
@@ -72,9 +75,14 @@
 ;; 	 (set! d 123)
 ;; 	 b))
 
+(parametrise ((optimize-level 2))
+  (doit '(letrec* ((f (lambda () (g)))
+		   (g (lambda () (f))))
+	   (list f g))))
+
 
 
-(doit '(list (display "ciao\n")))
+#;(doit '(list (display "ciao\n")))
 
 ;;; end of file
 ;; Local Variables:

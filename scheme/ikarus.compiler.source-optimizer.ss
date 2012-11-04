@@ -639,15 +639,18 @@
 
   (define-syntax with-extended-env
     (syntax-rules ()
-      ((_ ((?e2 ?args2)
-	   (?e1 ?args1 ?rands))
+      ((_ ((?new-env ?args2)
+	   (?old-env ?args1 ?rands))
 	  ?body0 ?body ...)
-       (let-values (((?e2 ?args2) (%extend ?e1 ?args1 ?rands)))
-	 (let ((v (let () ?body0 ?body ...)))
-	   (%copy-back ?args2)
-	   v)))))
+       (let-values (((?new-env ?args2) (%extend ?old-env ?args1 ?rands)))
+	 (begin0
+	     (let () ?body0 ?body ...)
+	   (%copy-back ?args2))))))
 
   (define (copy-var x)
+    ;;Given a  struct instance X of  type PRELEX build and  return a new
+    ;;PRELEX struct.
+    ;;
     (let ((y (make-prelex (prelex-name x) #f)))
       (set-prelex-source-referenced?! y (prelex-source-referenced? x))
       (set-prelex-source-assigned?!   y (prelex-source-assigned?   x))
