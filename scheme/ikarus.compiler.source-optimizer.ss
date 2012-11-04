@@ -69,8 +69,14 @@
       (else
        expr)))
 
-  (define-inline-constant EMPTY-ENV
-    '())
+
+;;;; variables environment
+;;
+;;
+;;
+
+(define-inline-constant EMPTY-ENV
+  #f)
 
 
 ;;;; type definitions
