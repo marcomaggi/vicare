@@ -82,7 +82,8 @@
 		;the bindings introduced at a lexical contour.
    copy*
 		;A list of struct instances  of type PRELEX being copies
-		;of the ones in the field "lhs*" produced by COPY-VAR.
+		;of   the  ones   in  the   field  "lhs*"   produced  by
+		;MAKE-PRELEX-REPLACEMENT.
    old-env
 		;False or a struct instance of type ENV representing the
 		;environment that encloses this one.
@@ -655,12 +656,17 @@
   #| end of module: decrement |# )
 
 
-(module (with-extended-env <== copy-var)
+(module (with-extended-env <== make-prelex-replacement)
   ;;Every time the  source optimizer enters a  construct introducing new
   ;;bindings,  it makes  use of  this syntax  to keep  track of  the new
   ;;bindings  and to  replace all  the  old PRELEX  structures with  new
   ;;PRELEX structures.
   ;;
+  ;;In recordized  code handed to  the source optimizer: all  the PRELEX
+  ;;structures  in  reference  position  representing  values  from  the
+  ;;environment  (or unbound)  are left  in the  output, all  the PRELEX
+  ;;structures  in binding  position or  referencing local  bindings are
+  ;;replaced.
   ;;
   (define-syntax with-extended-env
     (lambda (stx)
@@ -677,7 +683,7 @@
   (define-syntax <==
     (syntax-rules ()))
 
-  (define (copy-var x)
+  (define (make-prelex-replacement x)
     ;;Given a  struct instance X of  type PRELEX build and  return a new
     ;;PRELEX struct  containing the same  values in the  fields: "name",
     ;;"source-reference?", "global-location", and optionally more.
@@ -708,7 +714,7 @@
     ;;
     (if (null? lhs*)
 	(values env '())
-      (let ((copy* (map copy-var lhs*)))
+      (let ((copy* (map make-prelex-replacement lhs*)))
 	(when rands
 	  (for-each (lambda (lhs rhs)
 		      (set-prelex-operand! lhs rhs))
@@ -1441,7 +1447,7 @@
     (if (null? (cdr args))
 	(let* ((r  (car args))
 	       (t* (map (lambda (x)
-			  (copy-var r))
+			  (make-prelex-replacement r))
 		     rand*)))
 	  (values '() t* r))
       (let ((x (car args)))
