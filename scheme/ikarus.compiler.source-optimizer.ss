@@ -518,7 +518,7 @@
 			      rand* sc))))
 
   (define (E-fix lhs* rhs* body ctxt env ec sc)
-    ;;Process a BIND.
+    ;;Process a FIX structure.
     ;;
     ;;LHS* is a list of PRELEX structures being the left-hand sides.  We
     ;;know that these LHSes will never be assigned.
