@@ -244,14 +244,15 @@
       ;;EC is the effort counter.  SC is the size counter.
       ;;
       (let ((test (E x.test 'p env ec sc)))
+	;;Remember that TEST can be a sequence of expressions, too.
 	(struct-case (result-expr test)
-	  ((constant test.val)
+	  ((constant test.result.val)
 	   ;;We could  precompute the result  of the TEST, so  we output
 	   ;;only the CONSEQ or the ALTERN.
-	   (mkseq test (E (if test.val x.conseq x.altern)
+	   (mkseq test (E (if test.result.val x.conseq x.altern)
 			  ctxt env ec sc)))
 	  (else
-	   ;;The TEST could not be precomputed.
+	   ;;The last expression in TEST could not be precomputed.
 	   (let ((ctxt (case-context ctxt
 			 ((app) 'v)
 			 (else  ctxt))))
@@ -1279,7 +1280,11 @@
     (else       #f)))
 
 (define (result-expr x)
-  ;;Return the "last" value of an expression.
+  ;;Return the "last"  value of an expression.
+  ;;
+  ;;Notice  that for  this  to  work the  SEQ  structure  must be  built
+  ;;everywhere with  nested structures in  the first field and  the last
+  ;;expression in the second field
   ;;
   (struct-case x
     ((seq e0 e1)

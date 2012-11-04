@@ -74,8 +74,8 @@
   (syntax-rules ()
     ((_ ?e)
      ?e)
-    ((_ ?e* ... ?e)
-     (make-seq (multiple-forms-sequence ?e* ...) ?e))))
+    ((_ ?expr ... ?last-expr)
+     (make-seq (multiple-forms-sequence ?expr ...) ?last-expr))))
 
 (define (print-code x)
   (parameterize ((print-gensym '#t))
@@ -662,7 +662,8 @@
 
     (define (%process-body body)
       (if (%tail? body)
-	  (make-seq (make-primcall '$stack-overflow-check '()) body)
+	  (make-seq (make-primcall '$stack-overflow-check '())
+		    body)
 	body))
 
     #| end of module |# )
@@ -870,7 +871,7 @@
 				(if (null? args)
 				    (Tail cas.body)
 				  (make-seq (%make-move ($car args) ($car locs))
-					    (recur    ($cdr args) ($cdr locs)))))))
+					    (recur      ($cdr args) ($cdr locs)))))))
 		    (make-clambda-case
 		     (make-case-info cas.info.label (append rlocs flocs) cas.info.proper)
 		     (make-locals (locals) body))))))))))

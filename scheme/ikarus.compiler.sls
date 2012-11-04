@@ -664,27 +664,33 @@
    ))
 
 ;;An instance  of this  type represents  a form in  a sequence  of forms
-;;inside a core language BEGIN.  We can think of the form:
+;;inside a  core language BEGIN.
+;;
+;;*NOTE* We  want the SEQ structure  to be built everywhere  with nested
+;;structures in  the first field and  the last expression in  the second
+;;field; this allows easy extraction of  the last form, which is useful,
+;;for example, in the source optimizer.
+;;
+;;We can think of the form:
 ;;
 ;;   (begin ?b0 ?b1 ?last)
 ;;
 ;;as:
 ;;
-;;   (begin ?b0 (begin ?b1 (begin ?last)))
+;;   (begin (begin ?b0 ?b1) ?last)
 ;;
 ;;and it becomes the nested hierarchy:
 ;;
-;;   (make-seq (recordize ?b0)
-;;             (make-seq (recordize ?b1) (recordize ?last)))
+;;   (make-seq (make-eq (recordize ?b0) (recordize ?b1))
+;;             (recordize ?last))
 ;;
 (define-struct seq
   (e0
 		;A struct  instance representing  the first form  in the
-		;sequence.
+		;sequence.  It can be a nested SEQ struct.
    e1
 		;A  struct instance  representing the  last form  in the
-		;sequence or a struct  instance of type SEQ representing
-		;a subsequence.
+		;sequence.  It *should not* be a SEQ struct.
    ))
 
 ;;An instance of this type represents an IF form.
