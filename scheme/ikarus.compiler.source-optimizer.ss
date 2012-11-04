@@ -1350,18 +1350,21 @@
   (cond ((null? rand*)
 	 tail-expr)
 	((not (operand-residualize-for-effect (car rand*)))
+	 ;;This operand does not need evaluation.
 	 (residualize-operands tail-expr (cdr rand*) sc))
 	(else
-	 (let* ((opnd (car rand*))
-		(e1   (or (operand-value opnd)
-			  (struct-case opnd
-			    ((operand expr env ec)
-			     (E expr 'e env ec sc))))))
-	   (if (simple-expression-without-side-effects? e1)
+	 (let* ((opnd     (car rand*))
+		(pre-expr (or (operand-value opnd)
+			      (struct-case opnd
+				((operand opnd.expr opnd.env opnd.ec)
+				 (E opnd.expr 'e opnd.env opnd.ec sc))))))
+	   (if (simple-expression-without-side-effects? pre-expr)
+	       ;;This operand has no side effects.
 	       (residualize-operands tail-expr (cdr rand*) sc)
 	     (begin
 	       (decrement sc (operand-size opnd))
-	       (mkseq e1 (residualize-operands tail-expr (cdr rand*) sc))))))))
+	       (mkseq pre-expr
+		      (residualize-operands tail-expr (cdr rand*) sc))))))))
 
 ;;; --------------------------------------------------------------------
 
