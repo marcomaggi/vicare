@@ -1690,24 +1690,55 @@
   ;;     (set! a 123)
   ;;     123)
   ;;
-  ;;here A is referenced  in the original source code, but  B is not and
-  ;;so it is removed by the optimizer leaving:
+  ;;Here  is  an  interesting  example  of  what  happens.   After  full
+  ;;expansion the code in the core language is:
   ;;
-  ;;   (let ((a (display "ciao")))
+  ;;   (letrec ((a (display "ciao"))
+  ;;            (b (lambda (x) a (list x))))
   ;;     (set! a 123)
   ;;     123)
   ;;
-  ;;and we want to transform it into:
+  ;;in  which A  is referenced  and assigned,  so an  internal structure
+  ;;reports  that it  is  "referenced before  optimization"; the  LETREC
+  ;;optimizer transforms the code into (not quite but close enough):
+  ;;
+  ;;   (let ((a (display '"ciao")))
+  ;;     (let ((b (lambda (x)
+  ;;                (begin
+  ;;                  a
+  ;;                  (list x)))))
+  ;;       (begin
+  ;;         (set! a '123)
+  ;;         '123)))
+  ;;
+  ;;and now comes the source optimizer:
+  ;;
+  ;;*  First it  processes the  inner  body, and  since A  is marked  as
+  ;;  referenced before optimization, it does not remove the assignment;
+  ;;  rather it marks A as "still assigned after optimization".
+  ;;
+  ;;* Then it processes the inner LET, recognising the function B as not
+  ;;  referenced; so it removes it:
+  ;;
+  ;;   (let ((a (display '"ciao")))
+  ;;     (begin
+  ;;       (set! a '123)
+  ;;       '123))
+  ;;
+  ;;  A is left marked as "not referenced after optimization".
+  ;;
+  ;;* Finally  it processes  the outer  LET, now A  is actually  no more
+  ;;  referenced, but still assigned after optimization and so the final
+  ;;  transformation is:
   ;;
   ;;   (begin
-  ;;     (do-this)
+  ;;     (display '"ciao")
   ;;     (let ((a #<unspecified>))
-  ;;       (set! a 123)
-  ;;       456))
+  ;;       (begin
+  ;;         (set! a '123)
+  ;;         '123)))
   ;;
-  ;;this  is because,  with the  optimizer doing  a single  pass, it  is
-  ;;impossible to  go back  to the assignment  places and  transform the
-  ;;assignment into an RHS evaluation for side effects.
+  ;;  because it is too late to remove the assignment.
   ;;
   (define (make-let-binding var* rand* optimized-body sc)
     ;;
