@@ -73,7 +73,8 @@
 ;;;; type definitions
 
 ;;Represent  the   bindings  introduce   at  a  lexical   contour:  BIND
-;;structures, FIX structures, CLAMBDA-CASE structures.
+;;structures,   FIX  structures,   CLAMBDA-CASE  structures.    See  the
+;;documentation of the syntax WITH-EXTENDED-ENV for more details.
 ;;
 (define-struct env
   (lhs*
@@ -457,8 +458,7 @@
     (let ((rand* (map (lambda (x)
 			(make-operand x env ec))
 		   rhs*)))
-      (with-extended-env ((env lhs*)
-			  (env lhs* rand*))
+      (with-extended-env ((env lhs*) <== (env lhs* rand*))
 	(residualize-operands (make-let-binding lhs* rand* (E body ctxt env ec sc) sc)
 			      rand* sc))))
 
@@ -478,8 +478,7 @@
     ;;
     ;;EC is the effort counter.  SC is the size counter.
     ;;
-    (with-extended-env ((env lhs*)
-			(env lhs* #f))
+    (with-extended-env ((env lhs*) <== (env lhs* #f))
       ;;Register the RHS as operand for the associated LHS.
       (for-each (lambda (lhs rhs)
 		  (set-prelex-operand! lhs (make-operand rhs env ec)))
@@ -562,8 +561,7 @@
 			      ((clambda-case info body)
 			       (struct-case info
 				 ((case-info label args proper)
-				  (with-extended-env ((env args)
-						      (env args #f))
+				  (with-extended-env ((env args) <== (env args #f))
 				    (make-clambda-case
 				     (make-case-info (gensym) args proper)
 				     (E body 'v env ec sc))))))))
@@ -657,12 +655,17 @@
   #| end of module: decrement |# )
 
 
-(module (with-extended-env copy-var)
-
+(module (with-extended-env <== copy-var)
+  ;;Every time the  source optimizer enters a  construct introducing new
+  ;;bindings,  it makes  use of  this syntax  to keep  track of  the new
+  ;;bindings  and to  replace all  the  old PRELEX  structures with  new
+  ;;PRELEX structures.
+  ;;
+  ;;
   (define-syntax with-extended-env
     (lambda (stx)
-      (syntax-case stx ()
-	((_ ((?new-env ?new-lhs-id) (?old-env ?args1 ?rands))
+      (syntax-case stx (<==)
+	((_ ((?new-env ?new-lhs-id) <== (?old-env ?args1 ?rands))
 	    ?body0 ?body ...)
 	 (and (identifier? #'?new-env)
 	      (identifier? #'?new-lhs-id))
@@ -670,6 +673,9 @@
 	     (begin0
 		 (let () ?body0 ?body ...)
 	       (%copy-assigned-to-source! ?new-lhs-id)))))))
+
+  (define-syntax <==
+    (syntax-rules ()))
 
   (define (copy-var x)
     ;;Given a  struct instance X of  type PRELEX build and  return a new
@@ -1396,19 +1402,16 @@
 	    (struct-case info
 	      ((case-info label args proper)
 	       (if proper
-		   (with-extended-env ((env args)
-				       (env args rand*))
+		   (with-extended-env ((env args) <== (env args rand*))
 		     (let ((body^ (E body (app-ctxt ctxt) env ec sc)))
 		       (begin0
 			   (make-let-binding args rand* body^ sc)
 			 (set-app-inlined! ctxt #t))))
 		 (let-values (((x* t* r) (%partition args rand*)))
-		   (with-extended-env ((env a*)
-				       (env (append x* t*) rand*))
+		   (with-extended-env ((env a*) <== (env (append x* t*) rand*))
 		     (let* ((clis (make-funcall (make-primref 'list) t*))
 			    (rarg (make-operand clis env ec)))
-		       (with-extended-env ((env b*)
-					   (env (list r) (list rarg)))
+		       (with-extended-env ((env b*) <== (env (list r) (list rarg)))
 			 (let* ((body^  (E body (app-ctxt ctxt) env ec sc))
 				(body^^ (make-let-binding b* (list rarg) body^ sc))
 				(result (make-let-binding a* rand* body^^ sc)))
