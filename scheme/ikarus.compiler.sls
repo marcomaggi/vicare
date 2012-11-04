@@ -594,7 +594,10 @@
      )
   ((source-referenced?   #f)
 		;Boolean, true when the region  in which this binding is
-		;defined has at least one reference to it.
+		;defined  in   the  source  code  (before   source  code
+		;optimization) has at least one reference to it.
+		;
+		;See also the field RESIDUAL-REFERENCED?.
    (source-assigned?     #f)
 		;Boolean or symbol.
 		;
@@ -603,7 +606,6 @@
 		;
 		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
    (residual-referenced? #f)
-   (residual-assigned?   #f)
 		;Boolean,  this  field  is   used  only  by  the  source
 		;optimizer.   When optimizing  source  code, an  attempt
 		;will  be  made to  substitute  every  reference to  the
@@ -619,6 +621,27 @@
 		;variable is just left in place and this field is set to
 		;true.   So   the  meaning  of  this   field  is:  still
 		;referenced after optimization attempt.
+   (residual-assigned?   #f)
+		;Boolean,  this  field  is   used  only  by  the  source
+		;optimizer.   When optimizing  source  code, an  attempt
+		;will be made to remove  every assignment to the binding
+		;this struct represents if the new value is never used.
+		;
+		;For example, an attempt will be made to simplify:
+		;
+		;   (let ((x 1))
+		;     (set! x (do-something))
+		;     1)
+		;   ==> (let ((x 1))
+		;         (do-something)
+		;         1)
+		;
+		;because X is never referenced.
+		;
+		;When such optimization attempts fail, the assignment to
+		;variable is just left in place and this field is set to
+		;true.  So the meaning of  this field is: still assigned
+		;after optimization attempt.
    (global-location      #f)
 		;When this  binding describes a top  level binding, this
 		;field  is set  to  a unique  gensym  associated to  the

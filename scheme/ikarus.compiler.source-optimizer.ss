@@ -461,23 +461,31 @@
     ;;
     (with-extended-env ((env lhs*)
 			(env lhs* #f))
+      ;;Register the RHS as operand for the associated LHS.
       (for-each (lambda (lhs rhs)
 		  (set-prelex-operand! lhs (make-operand rhs env ec)))
 	lhs* rhs*)
-      (let* ((body (E body ctxt env ec sc))
-	     (lhs* (remp (lambda (x)
-			   (not (prelex-residual-referenced? x)))
-		     lhs*)))
-	(if (null? lhs*)
-	    body
+      (let* ((optimized-body  (E body ctxt env ec sc))
+	     ;;Do  this after  BODY optimization!!!   Discard the  LHSes
+	     ;;that are not still referenced after body optimization; if
+	     ;;all  the calls  to a  CLAMBDAs have  been inlined:  it is
+	     ;;useless to keep it.
+	     ;;
+	     ;;FIXME  What happens  to  the CLAMBDAs  referenced in  the
+	     ;;RHS*?  (Marco Maggi; Nov 4, 2012)
+	     (referenced-lhs* (remp (lambda (x)
+				      (not (prelex-residual-referenced? x)))
+				lhs*)))
+	(if (null? referenced-lhs*)
+	    optimized-body
 	  (begin
 	    (decrement sc 1)
-	    (make-fix lhs* (map (lambda (x)
-				  (let ((opnd (prelex-operand x)))
-				    (decrement sc (+ (operand-size opnd) 1))
-				    (value-visit-operand! opnd)))
-			     lhs*)
-		      body))))))
+	    (make-fix referenced-lhs* (map (lambda (ref-lhs)
+					     (let ((opnd (prelex-operand ref-lhs)))
+					       (decrement sc (+ (operand-size opnd) 1))
+					       (value-visit-operand! opnd)))
+					referenced-lhs*)
+	      optimized-body))))))
 
   (define (%E-clambda clause* cp free name   x ctxt env ec sc)
     ;;Process a struct intance of type CLAMBDA.
