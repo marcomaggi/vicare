@@ -1288,7 +1288,7 @@
   ;;
   (struct-case x
     ((seq e0 e1)
-     e1)
+     (result-expr e1))
     (else
      x)))
 
