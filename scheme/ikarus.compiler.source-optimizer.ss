@@ -1574,6 +1574,17 @@
 ;;; --------------------------------------------------------------------
 
   (define (%application-with-fixed-formals formals rand* body ctxt env ec sc)
+    ;;Here we have a function with a fixed number of arguments:
+    ;;
+    ;;   ((lambda (x y) (list x y))
+    ;;    123 456)
+    ;;
+    ;;and consider it equivalent to:
+    ;;
+    ;;   (let ((x 123)
+    ;;         (y 456))
+    ;;     (list x y))
+    ;;
     (with-extended-env ((env formals) <== (env formals rand*))
       (let ((optimized-body (E body (app-ctxt ctxt) env ec sc)))
 	(begin0
@@ -1581,14 +1592,26 @@
 	  (set-app-inlined! ctxt #t)))))
 
   (define (%application-with-var-formals formals rand* body ctxt env ec sc)
+    ;;Here we have a function with a variable number of arguments:
+    ;;
+    ;;   ((lambda (x y . rest) (list x y rest))
+    ;;    123 456 7 8 9)
+    ;;
+    ;;and consider it equivalent to:
+    ;;
+    ;;   (let ((x 123)
+    ;;         (y 456))
+    ;;     (let ((rest (list 7 8 9)))
+    ;;       (list x y rest)))
+    ;;
     (let-values (((x* t* r) (%partition formals rand*)))
       (with-extended-env ((env a*) <== (env (append x* t*) rand*))
-	(let* ((clis (make-funcall (make-primref 'list) t*))
-	       (rarg (make-operand clis env ec)))
-	  (with-extended-env ((env b*) <== (env (list r) (list rarg)))
-	    (let* ((optimized-body  (E body (app-ctxt ctxt) env ec sc))
-		   (body^^ (make-let-binding b* (list rarg) optimized-body sc))
-		   (result (make-let-binding a* rand* body^^ sc)))
+	(let ((rest-arg (make-operand (make-funcall (make-primref 'list) t*)
+				      env ec)))
+	  (with-extended-env ((env b*) <== (env (list r) (list rest-arg)))
+	    (let* ((optim-body (E body (app-ctxt ctxt) env ec sc))
+		   (sublet     (make-let-binding b* (list rest-arg) optim-body sc))
+		   (result     (make-let-binding a* rand* sublet sc)))
 	      (set-app-inlined! ctxt #t)
 	      result))))))
 

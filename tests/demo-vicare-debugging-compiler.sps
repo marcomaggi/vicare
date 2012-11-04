@@ -90,17 +90,21 @@
 ;; 		   (g (lambda () 2)))
 ;; 	   123)))
 
-(parametrise ((optimize-level 2))
-  (doit '(letrec ((a (display "ciao"))
-		  (b (lambda (x) a (list x))))
-	   (set! a 123)
-	   123)))
+;; (parametrise ((optimize-level 2))
+;;   (doit '(letrec ((a (display "ciao"))
+;; 		  (b (lambda (x) a (list x))))
+;; 	   (set! a 123)
+;; 	   123)))
+
+;; (parametrise ((optimize-level 2))
+;;   (doit '((lambda (a)
+;; 	    (set! a 123)
+;; 	    (display "ciao"))
+;; 	  123)))
 
 (parametrise ((optimize-level 2))
-  (doit '((lambda (a)
-	    (set! a 123)
-	    (display "ciao"))
-	  123)))
+  (doit '((lambda (x y . rest) (list x y rest))
+	  123 456 7 8 9)))
 
 
 
