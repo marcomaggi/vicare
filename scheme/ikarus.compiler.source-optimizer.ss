@@ -1300,7 +1300,7 @@
   (set-prelex-residual-referenced?! x #t)
   x)
 
-(define (residualize-operands e rand* sc)
+(define (residualize-operands tail-expr rand* sc)
   ;;Generate a sequence of expressions to allow evaluating some operands
   ;;for their side effects.
   ;;
@@ -1335,21 +1335,33 @@
   ;;     (let ((b 123))
   ;;       (do-that b)))
   ;;
+  ;;TAIL-EXPR  is  a  struct  instance  representing  already  optimized
+  ;;recordized  code which  may have  left some  of its  operands to  be
+  ;;evaluated; this code must be evaluated after the left-over operands.
+  ;;
+  ;;RAND* must  be null or  a list of  struct instances of  type OPERAND
+  ;;representing all  the operands that  were present in  the expression
+  ;;that originated TAIL-EXPR; some of them may need to be evaluated for
+  ;;their side effects,  others can be ignored  because already included
+  ;;in TAIL-EXPR.
+  ;;
+  ;;SC is the size counter.
+  ;;
   (cond ((null? rand*)
-	 e)
+	 tail-expr)
 	((not (operand-residualize-for-effect (car rand*)))
-	 (residualize-operands e (cdr rand*) sc))
+	 (residualize-operands tail-expr (cdr rand*) sc))
 	(else
-	 (let ((opnd (car rand*)))
-	   (let ((e1 (or (operand-value opnd)
-			 (struct-case opnd
-			   ((operand expr env ec)
-			    (E expr 'e env ec sc))))))
-	     (if (simple-expression-without-side-effects? e1)
-		 (residualize-operands e (cdr rand*) sc)
-	       (begin
-		 (decrement sc (operand-size opnd))
-		 (mkseq e1 (residualize-operands e (cdr rand*) sc)))))))))
+	 (let* ((opnd (car rand*))
+		(e1   (or (operand-value opnd)
+			  (struct-case opnd
+			    ((operand expr env ec)
+			     (E expr 'e env ec sc))))))
+	   (if (simple-expression-without-side-effects? e1)
+	       (residualize-operands tail-expr (cdr rand*) sc)
+	     (begin
+	       (decrement sc (operand-size opnd))
+	       (mkseq e1 (residualize-operands tail-expr (cdr rand*) sc))))))))
 
 ;;; --------------------------------------------------------------------
 
