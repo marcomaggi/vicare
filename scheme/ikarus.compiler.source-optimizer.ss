@@ -17,13 +17,17 @@
 
 ;;;; the source code optimizer
 ;;
+;;Check the  "makefile.sps" used to build  the boot image to  see if the
+;;source  optimizer  is used  (it  should  be, at  maximum  optimization
+;;level).
+;;
 ;;See the paper:
 ;;
 ;;   Oscar  Waddell.  "Extending  the Scope  of Syntactic  Abstraction".
 ;;   PhD.   Thesis.   Indiana  University Computer  Science  Department.
 ;;   August 1999.
 ;;
-;;Available online:
+;;available online:
 ;;
 ;;   <http://www.cs.indiana.edu/~owaddell/papers/thesis.ps.gz>
 ;;
@@ -649,30 +653,41 @@
 
   (define (copy-var x)
     ;;Given a  struct instance X of  type PRELEX build and  return a new
-    ;;PRELEX struct.
+    ;;PRELEX struct  containing the same  values in the  fields: "name",
+    ;;"source-reference?", "global-location", and optionally more.
     ;;
-    (let ((y (make-prelex (prelex-name x) #f)))
-      (set-prelex-source-referenced?! y (prelex-source-referenced? x))
-      (set-prelex-source-assigned?!   y (prelex-source-assigned?   x))
-      (let ((loc (prelex-global-location x)))
+    (assert (prelex? x))
+    (let ((y (make-prelex ($prelex-name x) #f)))
+      ($set-prelex-source-referenced?! y ($prelex-source-referenced? x))
+      ($set-prelex-source-assigned?!   y ($prelex-source-assigned?   x))
+      (let ((loc ($prelex-global-location x)))
 	(when loc
-	  (set-prelex-global-location!      y loc)
-	  (set-prelex-source-referenced?!   y #t)
-	  (set-prelex-residual-referenced?! y #t)))
+	  ($set-prelex-global-location!      y loc)
+	  ($set-prelex-source-referenced?!   y #t)
+	  ($set-prelex-residual-referenced?! y #t)))
       y))
 
 ;;; --------------------------------------------------------------------
 
   (define (%extend env lhs* rands)
+    ;;
+    ;;ENV must be an environment.
+    ;;
+    ;;LHS* must  be a  list of  struct instances of  type PRELEX,  to be
+    ;;added to the environment.
+    ;;
+    ;;RANDS  must be  #f or  a  list of  struct instances,  representing
+    ;;recordized code, being the values bound to the PRELEX in LHS*.
+    ;;
     (if (null? lhs*)
 	(values env '())
-      (let ((nlhs* (map copy-var lhs*)))
+      (let ((lhs*-copies (map copy-var lhs*)))
 	(when rands
 	  (for-each (lambda (lhs rhs)
 		      (set-prelex-operand! lhs rhs))
-	    nlhs* rands))
-	(values (vector lhs* nlhs* env)
-		nlhs*))))
+	    lhs*-copies rands))
+	(values (vector lhs* lhs*-copies env)
+		lhs*-copies))))
 
   (define (%copy-back ls)
     (for-each (lambda (x)
