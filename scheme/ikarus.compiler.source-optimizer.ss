@@ -1503,33 +1503,56 @@
 
 
 (module (inline)
-
+  ;;
+  ;;How do we inline a function?  Let's suppose we have this definition:
+  ;;
+  ;;   (define (fun x y)
+  ;;     (list x y))
+  ;;
+  ;;and the function application:
+  ;;
+  ;;   (fun 123 456)
+  ;;
+  ;;we consider the function application as equivalent to:
+  ;;
+  ;;   ((lambda (x y) (list x y))
+  ;;    123 456)
+  ;;
+  ;;which is equivalent to:
+  ;;
+  ;;   (let ((x 123)
+  ;;         (y 456))
+  ;;     (list x y))
+  ;;
+  ;;and now we have an expression to optimize as all the others.
+  ;;
   (define (inline proc ctxt env ec sc)
+    ;;
+    ;;PROC  is  a  struct  instance of  type  CLAMBDA  representing  the
+    ;;function to be applied.
+    ;;
+    ;;CTXT is a struct instance of  type APP representing the context of
+    ;;the function application.
+    ;;
+    ;;ENV is  a struct  instance of type  ENV representing  the bindings
+    ;;visible from this function application.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
     (struct-case proc
-      ((clambda g cases cp free name)
+      ((clambda label.unused cases)
        (let ((rand* (app-rand* ctxt)))
 	 (struct-case (get-case cases rand*)
 	   ((clambda-case info body)
 	    (struct-case info
-	      ((case-info label args proper)
-	       (if proper
-		   (with-extended-env ((env args) <== (env args rand*))
-		     (let ((optimized-body (E body (app-ctxt ctxt) env ec sc)))
-		       (begin0
-			   (make-let-binding args rand* optimized-body sc)
-			 (set-app-inlined! ctxt #t))))
-		 (let-values (((x* t* r) (%partition args rand*)))
-		   (with-extended-env ((env a*) <== (env (append x* t*) rand*))
-		     (let* ((clis (make-funcall (make-primref 'list) t*))
-			    (rarg (make-operand clis env ec)))
-		       (with-extended-env ((env b*) <== (env (list r) (list rarg)))
-			 (let* ((optimized-body  (E body (app-ctxt ctxt) env ec sc))
-				(body^^ (make-let-binding b* (list rarg) optimized-body sc))
-				(result (make-let-binding a* rand* body^^ sc)))
-			   (set-app-inlined! ctxt #t)
-			   result)))))))))
+	      ((case-info label.unused formals proper?)
+	       (if proper?
+		   (%application-with-fixed-formals formals rand* body ctxt env ec sc)
+		 (%application-with-var-formals formals rand* body ctxt env ec sc)))))
 	   (else
 	    (E proc 'v env ec sc)))))))
+
+;;; --------------------------------------------------------------------
 
   (define (get-case cases rand*)
     (define-inline (main)
@@ -1548,18 +1571,41 @@
 
     (main))
 
-  (define (%partition args rand*)
-    (if (null? (cdr args))
-	(let* ((r  (car args))
-	       (t* (map (lambda (x)
-			  (make-prelex-replacement r))
-		     rand*)))
-	  (values '() t* r))
-      (let ((x (car args)))
-	(let-values (((x* t* r) (%partition (cdr args) (cdr rand*))))
-	  (values (cons x x*) t* r)))))
+;;; --------------------------------------------------------------------
 
-  #| end of module: inline |# )
+  (define (%application-with-fixed-formals formals rand* body ctxt env ec sc)
+    (with-extended-env ((env formals) <== (env formals rand*))
+      (let ((optimized-body (E body (app-ctxt ctxt) env ec sc)))
+	(begin0
+	    (make-let-binding formals rand* optimized-body sc)
+	  (set-app-inlined! ctxt #t)))))
+
+  (define (%application-with-var-formals formals rand* body ctxt env ec sc)
+    (let-values (((x* t* r) (%partition formals rand*)))
+      (with-extended-env ((env a*) <== (env (append x* t*) rand*))
+	(let* ((clis (make-funcall (make-primref 'list) t*))
+	       (rarg (make-operand clis env ec)))
+	  (with-extended-env ((env b*) <== (env (list r) (list rarg)))
+	    (let* ((optimized-body  (E body (app-ctxt ctxt) env ec sc))
+		   (body^^ (make-let-binding b* (list rarg) optimized-body sc))
+		   (result (make-let-binding a* rand* body^^ sc)))
+	      (set-app-inlined! ctxt #t)
+	      result))))))
+
+;;; --------------------------------------------------------------------
+
+    (define (%partition args rand*)
+      (if (null? (cdr args))
+	  (let* ((r  (car args))
+		 (t* (map (lambda (x)
+			    (make-prelex-replacement r))
+		       rand*)))
+	    (values '() t* r))
+	(let ((x (car args)))
+	  (let-values (((x* t* r) (%partition (cdr args) (cdr rand*))))
+	    (values (cons x x*) t* r)))))
+
+    #| end of module: inline |# )
 
 
 (module (make-let-binding)
