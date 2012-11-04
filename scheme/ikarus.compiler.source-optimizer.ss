@@ -379,6 +379,23 @@
     (let* ((ctxt^  (make-app rand* ctxt))
 	   (rator^ (E rator ctxt^ env ec sc)))
       (if (app-inlined ctxt^)
+	  ;;If this function  call was inlined, we may  need to evaluate
+	  ;;some of  the operands for  their side effect.   For example,
+	  ;;given the function definition:
+	  ;;
+	  ;;   (define (fun x y)
+	  ;;     (list 123 x))
+	  ;;
+	  ;;in which Y is not used, we want the call:
+	  ;;
+	  ;;   (fun 456 (display "ciao"))
+	  ;;
+	  ;;to be transformed into:
+	  ;;
+	  ;;   (begin
+	  ;;     (display "ciao")
+	  ;;     (list 123 456))
+	  ;;
 	  (residualize-operands rator^ rand* sc)
 	(begin
 	  (decrement sc (if (primref? rator^) 1 3))
@@ -1284,6 +1301,40 @@
   x)
 
 (define (residualize-operands e rand* sc)
+  ;;Generate a sequence of expressions to allow evaluating some operands
+  ;;for their side effects.
+  ;;
+  ;;Example: if a function call is inlined, we may need to evaluate some
+  ;;of  its  operands   for  their  side  effect;   given  the  function
+  ;;definition:
+  ;;
+  ;;   (define (fun x y)
+  ;;     (list 123 x))
+  ;;
+  ;;in which Y is not used, we want the call:
+  ;;
+  ;;   (fun 456 (display "ciao"))
+  ;;
+  ;;to be transformed into:
+  ;;
+  ;;   (begin
+  ;;     (display "ciao")
+  ;;     (list 123 456))
+  ;;
+  ;;Example: if a LET binding is never referenced, we want the following
+  ;;code:
+  ;;
+  ;;   (let ((a (do-this))
+  ;;         (b 123))
+  ;;     (do-that b))
+  ;;
+  ;;to be optimized into:
+  ;;
+  ;;   (begin
+  ;;     (do-this)
+  ;;     (let ((b 123))
+  ;;       (do-that b)))
+  ;;
   (cond ((null? rand*)
 	 e)
 	((not (operand-residualize-for-effect (car rand*)))
@@ -1608,6 +1659,20 @@
       (if result
 	  (begin
 	    (decrement ec 1)
+	    ;;When we  avoid calling a primitive  function, its operands
+	    ;;must still  be evaluated for  their side effects;  so mark
+	    ;;them for this.  In other words, we want:
+	    ;;
+	    ;;  (begin
+	    ;;    (list (display "ciao"))
+	    ;;    123)
+	    ;;
+	    ;;to be transformed into:
+	    ;;
+	    ;;  (begin
+	    ;;    (display "ciao")
+	    ;;    123)
+	    ;;
 	    (for-each (lambda (x)
 			(set-operand-residualize-for-effect! x #t))
 	      rand*)

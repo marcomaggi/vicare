@@ -90,6 +90,11 @@
 ;; 		   (g (lambda () 2)))
 ;; 	   123)))
 
+(parametrise ((optimize-level 2))
+  (doit '(let ((a (display "ciao")))
+	   (set! a 123)
+	   123)))
+
 
 
 #;(doit '(list (display "ciao\n")))
