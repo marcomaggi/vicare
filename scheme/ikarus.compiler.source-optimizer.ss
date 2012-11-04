@@ -59,7 +59,7 @@
   (define (source-optimize expr)
     (define (%doit expr)
       (parametrise ((source-optimizer-input expr))
-	(E expr 'v EMPTY-ENV (passive-counter) (passive-counter))))
+	(E expr 'v (make-empty-env) (passive-counter) (passive-counter))))
     (case (optimize-level)
       ((2)
        (%doit expr))
@@ -70,16 +70,25 @@
        expr)))
 
 
-;;;; variables environment
-;;
-;;
-;;
-
-(define-inline-constant EMPTY-ENV
-  #f)
-
-
 ;;;; type definitions
+
+;;Represent  the   bindings  introduce   at  a  lexical   contour:  BIND
+;;structures, FIX structures, CLAMBDA-CASE structures.
+;;
+(define-struct env
+  (lhs*
+		;A list of struct  instances of type PRELEX representing
+		;the bindings introduced at a lexical contour.
+   copy*
+		;A list of struct instances  of type PRELEX being copies
+		;of the ones in the field "lhs*" produced by COPY-VAR.
+   old-env
+		;False or a struct instance of type ENV representing the
+		;environment that encloses this one.
+   ))
+
+(define-inline (make-empty-env)
+  #f)
 
 ;;Represent the context  in which a primitive function  (CONS, CAR, ...)
 ;;is  applied.  Instances  of this  type are  moved around  in the  CTXT
@@ -305,13 +314,13 @@
     ;;     ?rhs
     ;;     #t)
     ;;
-    (mkseq (let ((lhs^ (%lookup lhs env)))
+    (mkseq (let ((lhs.copy (%lookup lhs env)))
 	     (if (not (prelex-source-referenced? lhs))
 		 (E rhs 'e env ec sc)
 	       (begin
 		 (decrement sc 1)
-		 (set-prelex-residual-assigned?! lhs^ (prelex-source-assigned? lhs^))
-		 (make-assign lhs^ (E rhs 'v env ec sc)))))
+		 (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
+		 (make-assign lhs.copy (E rhs 'v env ec sc)))))
 	   (make-constant (void))))
 
   (define (E-funcall rator rand* env ctxt ec sc)
@@ -401,8 +410,8 @@
        ;;
        (make-constant (void)))
       (else
-       (let* ((x    (%lookup x env))
-	      (opnd (prelex-operand x)))
+       (let* ((x.copy (%lookup x env))
+	      (opnd   (prelex-operand x.copy)))
 	 (if (and opnd (not (operand-inner-pending opnd)))
 	     (begin
 	       (dynamic-wind ;avoid evaluation cycles
@@ -411,11 +420,11 @@
 		   (lambda () (set-operand-inner-pending! opnd #f)))
 	       ;;We  would  like  to   attempt  replacing  the  variable
 	       ;;reference with the expansion of the referenced value.
-	       (if (prelex-source-assigned? x)
+	       (if (prelex-source-assigned? x.copy)
 		   ;;No optimizations  possible because the  variable is
 		   ;;assigned somewhere, so its  value will change; just
 		   ;;output the reference to variable.
-		   (residualize-ref x sc)
+		   (residualize-ref x.copy sc)
 		 ;;Attempt to  substitute the reference with  the result
 		 ;;of optimizing the referenced value.  Notice that this
 		 ;;case includes:
@@ -425,10 +434,10 @@
 		 ;;
 		 ;;  (a) ;; <-- reference to variable
 		 ;;
-		 (inline-referenced-operand x opnd ctxt ec sc)))
+		 (inline-referenced-operand x.copy opnd ctxt ec sc)))
 	   ;;No optimizations  possible.  Just  output the  reference to
 	   ;;variable.
-	   (residualize-ref x sc))))))
+	   (residualize-ref x.copy sc))))))
 
   (define (E-bind lhs* rhs* body ctxt env ec sc)
     ;;Process a BIND.
@@ -564,15 +573,18 @@
 ;;; --------------------------------------------------------------------
 
   (define (%lookup x env)
-    (if (vector? env)
-	(let loop ((lhs* (vector-ref env 0))
-  		   (rhs* (vector-ref env 1)))
+    ;;Search X,  a struct  instance of type  PRELEX, in  the environment
+    ;;ENV; if found: return its copy; if not found: return X itself.
+    ;;
+    (if (env? env)
+	(let loop ((lhs*  ($env-lhs* env))
+  		   (copy* ($env-copy* env)))
 	  (cond ((null? lhs*)
-		 (%lookup x (vector-ref env 2)))
+		 (%lookup x ($env-old-env env)))
 		((eq? x (car lhs*))
-		 (car rhs*))
+		 (car copy*))
 		(else
-		 (loop (cdr lhs*) (cdr rhs*)))))
+		 (loop (cdr lhs*) (cdr copy*)))))
       x))
 
   #| end of module: E |# )
@@ -687,13 +699,12 @@
     ;;
     (if (null? lhs*)
 	(values env '())
-      (let ((lhs*-copies (map copy-var lhs*)))
+      (let ((copy* (map copy-var lhs*)))
 	(when rands
 	  (for-each (lambda (lhs rhs)
 		      (set-prelex-operand! lhs rhs))
-	    lhs*-copies rands))
-	(values (vector lhs* lhs*-copies env)
-		lhs*-copies))))
+	    copy* rands))
+	(values (make-env lhs* copy* env) copy*))))
 
   (define (%copy-back ls)
     (for-each (lambda (x)
@@ -1339,7 +1350,7 @@
 			 (lambda ()
 			   (call/cc
 			       (lambda (abort)
-				 (inline rhs ctxt EMPTY-ENV
+				 (inline rhs ctxt (make-empty-env)
 					 ;;effort counter
 					 (if (active-counter? ec)
 					     ec
