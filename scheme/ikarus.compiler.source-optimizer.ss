@@ -1502,10 +1502,11 @@
   (define (make-let-binding var* rand* optimized-body sc)
     ;;
     ;;VAR*  is  a list  of  struct  instances  of type  PRELEX,  already
-    ;;processed by WITH-EXTENDED-ENV, representing the left-hand sides.
+    ;;processed  by  WITH-EXTENDED-ENV,  being the  left-hand  sides  of
+    ;;bindings.
     ;;
-    ;;RAND* is a  list of struct instances of  type OPERAND representing
-    ;;the right-hand sides.
+    ;;RAND* is  a list  of struct  instances of  type OPERAND  being the
+    ;;right-hand sides of bindings.
     ;;
     ;;OPTIMIZED-BODY is a struct instance representing already optimized
     ;;recordized code.
@@ -1523,17 +1524,26 @@
   (define (%process var* rand* sc)
     (if (null? var*)
 	(values '() '())
-      (let ((var  (car var*))
-	    (rand (car rand*)))
-	(let-values (((lhs* rhs*) (%process (cdr var*) (cdr rand*) sc)))
-	  (%process1 var rand lhs* rhs* sc)))))
+      (let-values (((lhs* rhs*) (%process (cdr var*) (cdr rand*) sc)))
+	(%process-single-binding (car var*) (car rand*) lhs* rhs* sc))))
 
-  (define (%process1 var rand lhs* rhs* sc)
+  (define (%process-single-binding var rand lhs* rhs* sc)
+    ;;
+    ;;VAR must be  a struct instance of type PRELEX  being the left-hand
+    ;;side of the binding.
+    ;;
+    ;;RAND  must  be  a  struct  instance  of  type  OPERAND  being  the
+    ;;right-hand side of the binding.
+    ;;
     (cond ((prelex-residual-referenced? var)
+	   ;;After optimization, this binding is still referenced; so we
+	   ;;include it in the output.
 	   (values (cons var lhs*)
 		   (cons (score-value-visit-operand! rand sc)
 			 rhs*)))
 	  ((prelex-residual-assigned? var)
+	   ;;After  optimization, this  binding  is  not referenced  but
+	   ;;assigned; so we include it in the output.
 	   (set-operand-residualize-for-effect! rand #t)
 	   (values (cons var lhs*)
 		   (cons (make-constant (void))
