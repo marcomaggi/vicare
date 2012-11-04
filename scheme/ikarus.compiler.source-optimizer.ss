@@ -1623,9 +1623,9 @@
     ;;       (list args)))
     ;;
     (define (%application-with-var-formals formals rand* body ctxt env ec sc)
-      (let-values (((x* t* r) (%partition formals rand*)))
-	(with-extended-env ((env a*) <== (env (append x* t*) rand*))
-	  (let ((rest-arg (make-operand (make-funcall (make-primref 'list) t*)
+      (let-values (((lhs* tmp* r) (%partition formals rand*)))
+	(with-extended-env ((env a*) <== (env (append lhs* tmp*) rand*))
+	  (let ((rest-arg (make-operand (make-funcall (make-primref 'list) tmp*)
 					env ec)))
 	    (with-extended-env ((env b*) <== (env (list r) (list rest-arg)))
 	      (let* ((optim-body (E body (app-ctxt ctxt) env ec sc))
