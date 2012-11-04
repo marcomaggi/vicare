@@ -150,16 +150,8 @@
       ((conditional x.test x.conseq x.altern)
        (E-conditional x.test x.conseq x.altern ctxt env ec sc))
 
-      ((assign x v)
-       (mkseq (let ((x (%lookup x env)))
-		(if (not (prelex-source-referenced? x))
-		    ;;dead on arrival
-		    (E v 'e env ec sc)
-		  (begin
-		    (decrement sc 1)
-		    (set-prelex-residual-assigned?! x (prelex-source-assigned? x))
-		    (make-assign x (E v 'v env ec sc)))))
-	      (make-constant (void))))
+      ((assign lhs rhs)
+       (E-assign lhs rhs env ec sc))
 
       ((funcall rator rand*)
        (E-call rator (map (lambda (x)
@@ -233,6 +225,35 @@
 		 (decrement sc 1)
 		 (%build-conditional test conseq altern)))))))))
 
+  (define (E-assign lhs rhs env ec sc)
+    ;;Process  a  struct  instance  of type  ASSIGN.   Return  a  struct
+    ;;instance  representing  recordized  code;   due  to  the  possible
+    ;;optimizations: the type of the returned instance is not known.
+    ;;
+    ;;If the binding represented by LHS has been created but it is never
+    ;;referenced in its region: assigning it is useless, because the new
+    ;;value  is never  used; so  we just  include the  RHS for  its side
+    ;;effects.  For example:
+    ;;
+    ;;   (let ((?lhs (some-value)))
+    ;;     (set! ?lhs ?rhs)
+    ;;     #t)
+    ;;
+    ;;becomes:
+    ;;
+    ;;   (let ((?lhs (some-value)))
+    ;;     ?rhs
+    ;;     #t)
+    ;;
+    (mkseq (let ((lhs^ (%lookup lhs env)))
+	     (if (not (prelex-source-referenced? lhs))
+		 (E rhs 'e env ec sc)
+	       (begin
+		 (decrement sc 1)
+		 (set-prelex-residual-assigned?! lhs^ (prelex-source-assigned? lhs^))
+		 (make-assign lhs^ (E rhs 'v env ec sc)))))
+	   (make-constant (void))))
+
   (define (E-call rator rand* env ctxt ec sc)
     ;;Process a struct instance of type FUNCALL.  RATOR must be a struct
     ;;instance of type
@@ -304,13 +325,14 @@
 
   (define (%lookup x env)
     (if (vector? env)
-	(let f ((lhs* (vector-ref env 0)) (rhs* (vector-ref env 1)))
+	(let loop ((lhs* (vector-ref env 0))
+		   (rhs* (vector-ref env 1)))
 	  (cond ((null? lhs*)
 		 (%lookup x (vector-ref env 2)))
 		((eq? x (car lhs*))
 		 (car rhs*))
 		(else
-		 (f (cdr lhs*) (cdr rhs*)))))
+		 (loop (cdr lhs*) (cdr rhs*)))))
       x))
 
   (define (%build-conditional e0 e1 e2)

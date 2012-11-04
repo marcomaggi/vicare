@@ -604,6 +604,7 @@
 		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
    (residual-referenced? #f)
    (residual-assigned?   #f)
+		;This field is used by the source optimizer.
    (global-location      #f)
 		;When this  binding describes a top  level binding, this
 		;field  is set  to  a unique  gensym  associated to  the
