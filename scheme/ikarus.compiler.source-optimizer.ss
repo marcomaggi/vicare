@@ -1536,19 +1536,22 @@
     ;;right-hand side of the binding.
     ;;
     (cond ((prelex-residual-referenced? var)
-	   ;;After optimization, this binding is still referenced; so we
-	   ;;include it in the output.
+	   ;;After optimization,  this variable is still  referenced; so
+	   ;;we include it in the output.
 	   (values (cons var lhs*)
 		   (cons (score-value-visit-operand! rand sc)
 			 rhs*)))
 	  ((prelex-residual-assigned? var)
-	   ;;After  optimization, this  binding  is  not referenced  but
+	   ;;After  optimization, this  variable is  not referenced  but
 	   ;;assigned; so we include it in the output.
 	   (set-operand-residualize-for-effect! rand #t)
 	   (values (cons var lhs*)
 		   (cons (make-constant (void))
 			 rhs*)))
 	  (else
+	   ;;After optimization, this variable is neither referenced not
+	   ;;assigned; so we exclude the binding and mark the operand to
+	   ;;be evaluated for its side effects.
 	   (set-operand-residualize-for-effect! rand #t)
 	   (values lhs* rhs*))))
 
