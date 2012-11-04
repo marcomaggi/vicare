@@ -364,24 +364,64 @@
 		  (make-primref 'debug-call)))))))))
 
   (define (E-var x ctxt env ec sc)
+    ;;Process a variable reference.
+    ;;
+    ;;X is a struct instance of type PRELEX.
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v) or a struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
     (case-context ctxt
       ((e)
+       ;;Variable reference for side effect is nothing.  For example:
+       ;;
+       ;;   (let ((x 1))
+       ;;     (begin
+       ;;       x
+       ;;       2))
+       ;;
+       ;;is simplified to:
+       ;;
+       ;;   (let ((x 1))
+       ;;     (begin
+       ;;       (void)
+       ;;       2))
+       ;;
        (make-constant (void)))
       (else
        (let* ((x    (%lookup x env))
 	      (opnd (prelex-operand x)))
 	 (if (and opnd (not (operand-inner-pending opnd)))
 	     (begin
-	       (dynamic-wind
+	       (dynamic-wind ;avoid evaluation cycles
 		   (lambda () (set-operand-inner-pending! opnd #t))
 		   (lambda () (value-visit-operand! opnd))
 		   (lambda () (set-operand-inner-pending! opnd #f)))
+	       ;;We  would  like  to   attempt  replacing  the  variable
+	       ;;reference with a  value, but we cannot  if the variable
+	       ;;is assigned somewhere because its value will change.
 	       (if (prelex-source-assigned? x)
 		   (residualize-ref x sc)
-		 (copy x opnd ctxt ec sc)))
+		 (copy-variable-reference x opnd ctxt ec sc)))
 	   (residualize-ref x sc))))))
 
   (define (E-bind lhs* rhs* body ctxt env ec sc)
+    ;;Process a BIND.
+    ;;
+    ;;LHS* is a list of PRELEX structures being the left-hand sides.
+    ;;
+    ;;RHS* is a  list of struct instances  representing recordized code,
+    ;;being the right-hand sides.
+    ;;
+    ;;BODY is a struct instance representing recordized code.
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v) or a struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
     (let ((rand* (map (lambda (x)
 			(make-operand x env ec))
 		   rhs*)))
@@ -391,6 +431,21 @@
 			      rand* sc))))
 
   (define (E-fix lhs* rhs* body ctxt env ec sc)
+    ;;Process a BIND.
+    ;;
+    ;;LHS* is a list of PRELEX structures being the left-hand sides.  We
+    ;;know that these LHSes will never be assigned.
+    ;;
+    ;;RHS* is  a list  of struct  instances of  type CLAMBDA,  being the
+    ;;right-hand sides.
+    ;;
+    ;;BODY is a struct instance representing recordized code.
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v) or a struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
     (with-extended-env ((env lhs*)
 			(env lhs* #f))
       (for-each (lambda (lhs rhs)
@@ -1146,9 +1201,22 @@
     (decrement sc (operand-size rand))))
 
 
-(module (copy)
+(module (copy-variable-reference)
 
-  (define (copy x opnd ctxt ec sc)
+  (define (copy-variable-reference x opnd ctxt ec sc)
+    ;;
+    ;;X is a  struct instance of type PRELEX  representing an identifier
+    ;;in reference position.
+    ;;
+    ;;OPND is the operand associated to X.
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v) or a struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.
+    ;;
+    ;;SC is the size counter.
+    ;;
     (let ((rhs (result-expr (operand-value opnd))))
       (struct-case rhs
 	((constant)
@@ -1158,12 +1226,12 @@
 	     (residualize-ref x sc)
 	   (let ((opnd (prelex-operand rhs)))
 	     (if (and opnd (operand-value opnd))
-		 (copy2 rhs opnd ctxt ec sc)
+		 (%copy2 rhs opnd ctxt ec sc)
 	       (residualize-ref rhs sc)))))
 	(else
-	 (copy2 x opnd ctxt ec sc)))))
+	 (%copy2 x opnd ctxt ec sc)))))
 
-  (define (copy2 x opnd ctxt ec sc)
+  (define (%copy2 x opnd ctxt ec sc)
     (let ((rhs (result-expr (operand-value opnd))))
       (struct-case rhs
 	((clambda)
