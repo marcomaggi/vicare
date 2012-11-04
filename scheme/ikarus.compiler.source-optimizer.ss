@@ -686,7 +686,7 @@
 	 #'(let-values (((?new-env ?new-lhs-id) (%extend-env ?old-env ?args1 ?rands)))
 	     (begin0
 		 (let () ?body0 ?body ...)
-	       (%copy-assigned-to-source! ?new-lhs-id)))))))
+	       (%copy-assigned-fields-to-source-fields! ?new-lhs-id)))))))
 
   (define-syntax <==
     (syntax-rules ()))
@@ -731,7 +731,7 @@
 	    copy* rands))
 	(values (make-env lhs* copy* env) copy*))))
 
-  (define (%copy-assigned-to-source! ls)
+  (define (%copy-assigned-fields-to-source-fields! ls)
     (for-each (lambda (x)
 		($set-prelex-source-assigned?!   x ($prelex-residual-assigned?   x))
 		($set-prelex-source-referenced?! x ($prelex-residual-referenced? x)))
