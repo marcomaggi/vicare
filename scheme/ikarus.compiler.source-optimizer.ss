@@ -1235,11 +1235,6 @@
     ;;Attempt to substitute a variable reference to with an expansion of
     ;;the referenced value.
     ;;
-    ;;For example, an attempt will be made to simplify as follows:
-    ;;
-    ;;   (let ((x 1) (y 2)) (list x y))
-    ;;   ==> (let ((x 1) (y 2)) (list 1 2))
-    ;;
     ;;X is a  struct instance of type PRELEX  representing an identifier
     ;;in reference position.
     ;;
@@ -1255,8 +1250,26 @@
     (let ((rhs (result-expr (operand-value opnd))))
       (struct-case rhs
 	((constant)
+	 ;;The referenced value is a constant.  For example, simplify as
+	 ;;follows:
+	 ;;
+	 ;;   (let ((X 1))
+	 ;;     X) ;; <- reference to varaible
+	 ;;   ==> (let ((X 1))
+	 ;;         1)
+	 ;;
 	 rhs)
 	((prelex)
+	 ;;The referenced value is itself a variable reference.  Attempt
+	 ;;to simplify as follows:
+	 ;;
+	 ;;   (let ((y 1)
+	 ;;         (X y))
+	 ;;     X) ;; <- reference to variable
+	 ;;   ==> (let ((y 1)
+	 ;;             (X y))
+	 ;;         y)
+	 ;;
 	 (if (prelex-source-assigned? rhs)
 	     (residualize-ref x sc)
 	   (let ((opnd (prelex-operand rhs)))
@@ -1270,6 +1283,7 @@
     (let ((rhs (result-expr (operand-value opnd))))
       (struct-case rhs
 	((clambda)
+	 ;;X is a reference to user defined function (not a Vicare primitive).
 	 (case-context ctxt
 	   ((v)
 	    (residualize-ref x sc))
@@ -1278,26 +1292,40 @@
 	   ((e)
 	    (make-constant (void)))
 	   ((app)
-	    (or (and (not (operand-outer-pending opnd)) ;avoid evaluation cycles?
+	    ;;This is the case:
+	    ;;
+	    ;;  (define (a)
+	    ;;    (do-something))
+	    ;;
+	    ;;  (a) ;; <-- reference to variable
+	    ;;
+	    ;;Attempt to inline the function application.
+	    ;;
+	    (or (and (not (operand-outer-pending opnd)) ;avoid evaluation cycles
 		     (dynamic-wind
-			 (lambda ()
-			   (set-operand-outer-pending! opnd #t))
+			 (lambda () (set-operand-outer-pending! opnd #t))
 			 (lambda ()
 			   (call/cc
 			       (lambda (abort)
 				 (inline rhs ctxt EMPTY-ENV
+					 ;;effort counter
 					 (if (active-counter? ec)
 					     ec
 					   (make-counter (cp0-effort-limit) ctxt abort))
+					 ;;size counter
 					 (make-counter (if (active-counter? sc)
 							   (counter-value sc)
 							 (cp0-size-limit))
 						       ctxt abort)))))
-			 (lambda ()
-			   (set-operand-outer-pending! opnd #f))))
+			 (lambda () (set-operand-outer-pending! opnd #f))))
 		(residualize-ref x sc)))))
 
 	((primref primsym)
+	 ;;X is a reference to Vicare primitive function.  For example:
+	 ;;
+	 ;;   (list   ;; <- reference to variable
+	 ;;    1 2 3)
+	 ;;
 	 (case-context ctxt
 	   ((v)		rhs)
 	   ((p)		(make-constant #t))
@@ -1305,6 +1333,7 @@
 	   ((app)	(fold-prim primsym ctxt ec sc))))
 
 	(else
+	 ;;Give up.  No optimizations possible.
 	 (residualize-ref x sc)))))
 
   #| end of module: copy |# )
