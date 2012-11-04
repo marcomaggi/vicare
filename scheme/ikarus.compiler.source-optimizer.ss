@@ -1498,6 +1498,31 @@
 (module (make-let-binding)
   ;;This module is used to process a LET-like set of bindings.
   ;;
+  ;;Basically we want to remove unreferenced bindings:
+  ;;
+  ;;   (let ((a (do-this))
+  ;;         (b 123))
+  ;;     (do-that b))
+  ;;   ==> (begin
+  ;;         (do-this)
+  ;;         (let ((b 123))
+  ;;           (do-that b)))
+  ;;
+  ;;and transform bindings that are  only assigned and not referenced as
+  ;;follows:
+  ;;
+  ;;   (let ((a (do-this)))
+  ;;     (set! a 123)
+  ;;     456)
+  ;;   ==> (begin
+  ;;         (do-this)
+  ;;         (let ((a #<unspecified>))
+  ;;           (set! a 123)
+  ;;           456))
+  ;;
+  ;;this  is because,  with the  optimizer doing  a single  pass, it  is
+  ;;impossible to  go back  to the assignment  places and  transform the
+  ;;assignment into an RHS evaluation for side effects.
   ;;
   (define (make-let-binding var* rand* optimized-body sc)
     ;;
