@@ -65,14 +65,16 @@
 ;;;; type definitions
 
 ;;Represent the context  in which a primitive function  (CONS, CAR, ...)
-;;is applied.
+;;is  applied.  Instances  of this  type are  moved around  in the  CTXT
+;;arguments to functions.
 ;;
 ;;Fields:
 ;;
 ;;RAND*  is  a  list  of  struct  instances  representing  the  function
 ;;application operands.
 ;;
-;;CTXT is an evaluation context symbol among: p, e, v, app.
+;;CTXT can be  either an evaluation context symbol (one  among: p, e, v,
+;;app) or a nested struct instance of type APP.
 ;;
 ;;INLINED is a boolean, true  if the function application represented by
 ;;this struct instance has been expanded inline (taking advantage of the
@@ -125,7 +127,8 @@
     ;;
     ;;X must be a struct instance representing recordized code.
     ;;
-    ;;CTXT must be a context symbol among: p, e, v, app.
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v, app) or a nested struct instance of type APP.
     ;;
     ;;EC is the effort counter.
     ;;
@@ -145,28 +148,7 @@
 	      (E e1 ctxt env ec sc)))
 
       ((conditional x.test x.conseq x.altern)
-       (let ((test (E x.test 'p env ec sc)))
-	 (struct-case (result-expr test)
-	   ((constant test.val)
-	    ;;We could precompute  the result of the TEST,  so we output
-	    ;;only the CONSEQ or the ALTERN.
-	    (mkseq test (E (if test.val x.conseq x.altern)
-			   ctxt env ec sc)))
-	   (else
-	    ;;The TEST could not be precomputed.
-	    (let ((ctxt (case-context ctxt
-			  ((app) 'v)
-			  (else  ctxt))))
-	      (let ((x.conseq (E x.conseq ctxt env ec sc))
-		    (x.altern (E x.altern ctxt env ec sc)))
-		(if (records-equal? x.conseq x.altern ctxt)
-		    ;;If the results  of CONSEQ and ALTERN  are known to
-		    ;;be  equal:  we  just  include TEST  for  its  side
-		    ;;effects, followed by CONSEQ.
-		    (mkseq test x.conseq)
-		  (begin
-		    (decrement sc 1)
-		    (%build-conditional test x.conseq x.altern)))))))))
+       (E-conditional x.test x.conseq x.altern ctxt env ec sc))
 
       ((assign x v)
        (mkseq (let ((x (%lookup x env)))
@@ -219,16 +201,62 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (E-conditional x.test x.conseq x.altern ctxt env ec sc)
+    ;;Process a  struct instance of  type CONDITIONAL.  Return  either a
+    ;;struct of type CONDITIONAL or of type SEQ.
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v, app) or a nested struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
+    (let ((test (E x.test 'p env ec sc)))
+      (struct-case (result-expr test)
+	((constant test.val)
+	 ;;We could precompute the result of the TEST, so we output only
+	 ;;the CONSEQ or the ALTERN.
+	 (mkseq test (E (if test.val x.conseq x.altern)
+			ctxt env ec sc)))
+	(else
+	 ;;The TEST could not be precomputed.
+	 (let ((ctxt (case-context ctxt
+		       ((app) 'v)
+		       (else  ctxt))))
+	   (let ((conseq (E x.conseq ctxt env ec sc))
+		 (altern (E x.altern ctxt env ec sc)))
+	     (if (records-equal? conseq altern ctxt)
+		 ;;If the results  of CONSEQ and ALTERN are  known to be
+		 ;;equal:  we just  include TEST  for its  side effects,
+		 ;;followed by CONSEQ.
+		 (mkseq test conseq)
+	       (begin
+		 (decrement sc 1)
+		 (%build-conditional test conseq altern)))))))))
+
   (define (E-call rator rand* env ctxt ec sc)
-    (let* ((ctxt  (make-app rand* ctxt))
-	   (rator (E rator ctxt env ec sc)))
-      (if (app-inlined ctxt)
-	  (residualize-operands rator rand* sc)
+    ;;Process a struct instance of type FUNCALL.  RATOR must be a struct
+    ;;instance of type
+    ;;
+    ;;RAND* is a list of  struct instances of type OPERAND, representing
+    ;;recordized code which, when evaluated, will return the operands of
+    ;;the function call.
+    ;;
+    ;;ENV
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v, app) or a nested struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
+    (let* ((ctxt^  (make-app rand* ctxt))
+	   (rator^ (E rator ctxt^ env ec sc)))
+      (if (app-inlined ctxt^)
+	  (residualize-operands rator^ rand* sc)
 	(begin
-	  (decrement sc (if (primref? rator) 1 3))
-	  (make-funcall rator (map (lambda (x)
-				     (score-value-visit-operand! x sc))
-				rand*))))))
+	  (decrement sc (if (primref? rator^) 1 3))
+	  (make-funcall rator^ (map (lambda (x)
+				      (score-value-visit-operand! x sc))
+				 rand*))))))
 
   (define (E-debug-call ctxt ec sc)
     (let ((rand* (app-rand* ctxt)))
@@ -887,8 +915,9 @@
   ;;    (else	?else-body))
   ;;
   ;;where ?CTXT-EXPR is  an expression evaluating to one  of the symbols
-  ;;"p", "v",  "e", "app".   The clauses  can appear  in any  order; the
-  ;;clauses are optional, a clause for a context might be there or not.
+  ;;"p", "v",  "e" or a  struct instance of  type APP.  The  clauses can
+  ;;appear  in any  order;  the clauses  are optional,  a  clause for  a
+  ;;context might be there or not.
   ;;
   ;;The usage template above will expand to:
   ;;
@@ -899,7 +928,7 @@
   ;;          (begin ?side-effects-body)
   ;;        (if (eq? t 'v)
   ;;            (begin ?value-body)
-  ;;          (if (eq? t 'app)
+  ;;          (if (app? t)
   ;;              (begin ?application-body)
   ;;            (begin ?else-body))))))
   ;;
