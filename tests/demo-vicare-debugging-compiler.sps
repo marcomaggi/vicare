@@ -75,10 +75,20 @@
 ;; 	 (set! d 123)
 ;; 	 b))
 
-(parametrise ((optimize-level 2))
-  (doit '(letrec* ((f (lambda () (g)))
-		   (g (lambda () (f))))
-	   (list f g))))
+;; (parametrise ((optimize-level 2))
+;;   (doit '(letrec* ((f (lambda () (g)))
+;; 		   (g (lambda () (f))))
+;; 	   (list f g))))
+
+;; (parametrise ((optimize-level 2))
+;;   (doit '(letrec* ((f (lambda () (g)))
+;; 		   (g (lambda () (f))))
+;; 	   123)))
+
+;; (parametrise ((optimize-level 2))
+;;   (doit '(letrec* ((f (lambda () 1))
+;; 		   (g (lambda () 2)))
+;; 	   123)))
 
 
 

@@ -486,12 +486,20 @@
 	lhs* rhs*)
       (let* ((optimized-body  (E body ctxt env ec sc))
 	     ;;Do  this after  BODY optimization!!!   Discard the  LHSes
-	     ;;that are not still referenced after body optimization; if
-	     ;;all  the calls  to a  CLAMBDAs have  been inlined:  it is
+	     ;;that are still *not* referenced after body optimization.
+	     ;;
+	     ;;If all the  calls to a CLAMBDAs have been  inlined: it is
 	     ;;useless to keep it.
 	     ;;
-	     ;;FIXME Document what happens to the CLAMBDAs referenced in
-	     ;;the RHS* but not in the BODY.  (Marco Maggi; Nov 4, 2012)
+	     ;;Also if none of the  CLAMBDAs are referenced in the body:
+	     ;;all of them are  discarded!!!  For example, the following
+	     ;;optimization is performed:
+	     ;;
+	     ;;  (letrec* ((f (lambda () (g)))
+	     ;;            (g (lambda () (f))))
+	     ;;    123)
+	     ;;  ==> 123
+	     ;;
 	     (referenced-lhs* (remp (lambda (x)
 				      (not (prelex-residual-referenced? x)))
 				lhs*)))
