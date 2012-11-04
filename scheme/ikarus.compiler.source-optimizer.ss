@@ -73,8 +73,8 @@
 ;;RAND*  is  a  list  of  struct  instances  representing  the  function
 ;;application operands.
 ;;
-;;CTXT can be  either an evaluation context symbol (one  among: p, e, v,
-;;app) or a nested struct instance of type APP.
+;;CTXT can be  either an evaluation context symbol (one  among: p, e, v)
+;;or a nested struct instance of type APP.
 ;;
 ;;INLINED is a boolean, true  if the function application represented by
 ;;this struct instance has been expanded inline (taking advantage of the
@@ -101,7 +101,14 @@
 ;;
 (define-struct counter
   (value
+		;A fixnum being the current  value of the counter.  This
+		;fixnum   is   decremented   while   optimizations   are
+		;performed;  when  it  reaches zero:  the  threshold  is
+		;crossed.
    ctxt
+		;For  a passive  counter:  #f.  For  an active  counter:
+		;either an  evaluation context symbol (one  among: p, e,
+		;v) or a struct instance of type APP.
    k
 		;Continuation function to be called if the threshold for
 		;this counter has been reached.
@@ -128,7 +135,7 @@
     ;;X must be a struct instance representing recordized code.
     ;;
     ;;CTXT can be either an evaluation  context symbol (one among: p, e,
-    ;;v, app) or a nested struct instance of type APP.
+    ;;v) or a struct instance of type APP.
     ;;
     ;;EC is the effort counter.
     ;;
@@ -154,10 +161,10 @@
        (E-assign lhs rhs env ec sc))
 
       ((funcall rator rand*)
-       (E-call rator (map (lambda (x)
-			    (make-operand x env ec))
-		       rand*)
-	       env ctxt ec sc))
+       (E-funcall rator (map (lambda (x)
+			       (make-operand x env ec))
+			  rand*)
+		  env ctxt ec sc))
 
       ((forcall name rand*)
        (decrement sc 1)
@@ -198,7 +205,7 @@
     ;;struct of type CONDITIONAL or of type SEQ.
     ;;
     ;;CTXT can be either an evaluation  context symbol (one among: p, e,
-    ;;v, app) or a nested struct instance of type APP.
+    ;;v) or a struct instance of type APP.
     ;;
     ;;EC is the effort counter.  SC is the size counter.
     ;;
@@ -254,9 +261,9 @@
 		 (make-assign lhs^ (E rhs 'v env ec sc)))))
 	   (make-constant (void))))
 
-  (define (E-call rator rand* env ctxt ec sc)
-    ;;Process a struct instance of type FUNCALL.  RATOR must be a struct
-    ;;instance of type
+  (define (E-funcall rator rand* env ctxt ec sc)
+    ;;Process a  struct instance of  type FUNCALL, *not*  representing a
+    ;;call to DEBUG-CALL.  RATOR must be a struct instance of type
     ;;
     ;;RAND* is a list of  struct instances of type OPERAND, representing
     ;;recordized code which, when evaluated, will return the operands of
@@ -265,7 +272,7 @@
     ;;ENV
     ;;
     ;;CTXT can be either an evaluation  context symbol (one among: p, e,
-    ;;v, app) or a nested struct instance of type APP.
+    ;;v) or a struct instance of type APP.
     ;;
     ;;EC is the effort counter.  SC is the size counter.
     ;;
@@ -280,6 +287,14 @@
 				 rand*))))))
 
   (define (E-debug-call ctxt ec sc)
+    ;;Process a struct  instance of type FUNCALL representing  a call to
+    ;;DEBUG-CALL.
+    ;;
+    ;;CTXT can be either an evaluation  context symbol (one among: p, e,
+    ;;v) or a struct instance of type APP.
+    ;;
+    ;;EC is the effort counter.  SC is the size counter.
+    ;;
     (let ((rand* (app-rand* ctxt)))
       (if (< (length rand*) 2)
 	  (begin
@@ -489,14 +504,14 @@
   ;;   (%reset-integrated! (counter-ctxt x))
   ;;   ((counter-k x) #f))
 
-  (define (%reset-integrated! appctxt)
-    ;;Recursively reset the  inlined status of APPCTXT, which  must be a
+  (define (%reset-integrated! ctxt)
+    ;;Recursively  reset the  inlined status  of CTXT,  which must  be a
     ;;struct instance of type APP.
     ;;
-    (set-app-inlined! appctxt #f)
-    (let ((nested-appctxt (app-ctxt appctxt)))
-      (when (app? nested-appctxt)
-	(%reset-integrated! nested-appctxt))))
+    (set-app-inlined! ctxt #f)
+    (let ((nested-ctxt (app-ctxt ctxt)))
+      (when (app? nested-ctxt)
+	(%reset-integrated! nested-ctxt))))
 
   #| end of module: decrement |# )
 
