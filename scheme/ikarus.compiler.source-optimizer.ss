@@ -429,9 +429,7 @@
 
   (define (E-debug-call ctxt ec sc)
     ;;Process a struct  instance of type PRIMREF  requesting a reference
-    ;;to DEBUG-CALL; this PRIMREF can be either the operand of a FUNCALL
-    ;;to DEBUG-CALL or  an actual standalone reference  to DEBUG-CALL to
-    ;;be sent around as argument.
+    ;;to DEBUG-CALL.
     ;;
     ;;CTXT can be either an evaluation  context symbol (one among: p, e,
     ;;v) or a struct instance of type APP.
@@ -440,7 +438,7 @@
     ;;
     (let ((rand* (app-rand* ctxt)))
       (if (< (length rand*) 2)
-	  ;;It is a standalone reference to DEBUG-CALL.
+	  ;;It is a standalone reference to DEBUG-CALL, or maybe not.
 	  (begin
 	    (decrement sc 1)
 	    (make-primref 'debug-call))
