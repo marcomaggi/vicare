@@ -440,26 +440,45 @@
     ;;
     (let ((rand* (app-rand* ctxt)))
       (if (< (length rand*) 2)
-	  (begin ;It is a standalone reference to DEBUG-CALL.
+	  ;;It is a standalone reference to DEBUG-CALL.
+	  (begin
 	    (decrement sc 1)
 	    (make-primref 'debug-call))
-	(begin	;It is the operand of a FUNCALL to DEBUG-CALL.
-	  (let ((src/expr  (car rand*))		;the source annotation
-		(rator     (cadr rand*))	;the wrapped function
-		(rands     (cddr rand*)))	;operands to the wrapped function
-	    (let* ((ctxt2 (make-app rands (app-ctxt ctxt)))
-		   (rator (E (operand-expr rator)
-			     ctxt2
-			     (operand-env rator)
-			     (operand-ec rator)
-			     sc)))
-	      (if (app-inlined ctxt2)
-		  (begin
-		    (set-app-inlined! ctxt #t)
-		    (residualize-operands rator (cons src/expr rands) sc))
-		(begin
-		  (decrement sc 1)
-		  (make-primref 'debug-call)))))))))
+	;;It is the operand of a FUNCALL to DEBUG-CALL.
+	(make-primref 'debug-call)
+	;;FIXME Commenting out  this chunk fixes issue  #3, which caused
+	;;the following program:
+	;;
+	;;   (import (rnrs))
+	;;   (list (display "ciao\n"))
+	;;
+	;;to print "ciao"  twice when run with both  the options --debug
+	;;and -O2.  Is this because the call to "E-debug-call" is nested
+	;;in a call to "E-funcall", so we do twice the same thing?
+	;;
+	;;This chunk is  left here for future  reference, but eventually
+	;;it will be removed.  Do we want to optimize debug calls?  When
+	;;debugging, do we not want the  code to be as close as possible
+	;;to the original?  (Marco Maggi; Nov 5, 2012)
+	;;
+	;; (begin
+	;;   (let ((src/expr  (car rand*))	;the source annotation
+	;; 	(rator     (cadr rand*))	;the wrapped function
+	;; 	(rands     (cddr rand*)))	;operands to the wrapped function
+	;;     (let* ((ctxt2 (make-app rands (app-ctxt ctxt)))
+	;; 	   (rator (E (operand-expr rator)
+	;; 		     ctxt2
+	;; 		     (operand-env  rator)
+	;; 		     (operand-ec   rator)
+	;; 		     sc)))
+	;;       (if (app-inlined ctxt2)
+	;; 	  (begin
+	;; 	    (set-app-inlined! ctxt #t)
+	;; 	    (residualize-operands rator (cons src/expr rands) sc))
+	;; 	(begin
+	;; 	  (decrement sc 1)
+	;; 	  (make-primref 'debug-call))))))
+	)))
 
   (define (E-var x ctxt env ec sc)
     ;;Process a variable reference.

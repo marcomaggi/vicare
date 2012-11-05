@@ -139,12 +139,6 @@
 (doit-program '((import (rnrs))
 		(list (display "ciao\n"))))
 
-#;(set-port-buffer-mode! (current-output-port)
-		       (buffer-mode none))
-
-#;(list (eval '(list (display "ciao\n"))
-	    (environment '(rnrs))))
-
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'compile-up-to 'scheme-indent-function 1)
