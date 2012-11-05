@@ -2636,14 +2636,14 @@ Example:
 
 @defun expand-top-level @var{sexp}
 Expand a top level program whose symbolic expression is @var{sexp}.
-Return
+Return @math{5} values:
 
 @enumerate
 @item
 @var{lib*}, to be documented.
 
 @item
-@var{invoke-code}, to be documented.
+@var{invoke-code}, the fully expanded code from the body of the program.
 
 @item
 @var{macro*}, to be documented.

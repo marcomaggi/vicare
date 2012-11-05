@@ -40,6 +40,13 @@
   (define (%expand-program sexp)
     (let-values (((lib* invoke-code macro* export-subst export-env)
 		  (expand-top-level sexp)))
+      #;(pretty-print (list #;lib*
+			  #;invoke-code
+			  #;macro*
+			  #;export-subst
+			  #;export-env
+			  )
+		    (current-error-port))
       invoke-code))
 
   (define (%print x)
@@ -137,7 +144,7 @@
 
 
 (doit-program '((import (rnrs))
-		(list (display "ciao\n"))))
+		(display "ciao\n")))
 
 ;;; end of file
 ;; Local Variables:
