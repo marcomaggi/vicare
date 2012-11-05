@@ -438,50 +438,6 @@
 	(refresh-cached-labels!))))))
 
 
-;;;; commented out because not useful (Marco Maggi; Oct 27, 2012)
-
-;; (define (expand/pretty x env who . passes)
-;;   (unless (environment? env)
-;;     (die who "not an environment" env))
-;;   (let-values (((x libs) (expand-form-to-core-language x env)))
-;;     (let loop ((x      (recordize x))
-;; 	       (passes passes))
-;;       (if (null? passes)
-;;           (unparse-recordized-code/pretty x)
-;; 	(loop ((car passes) x) (cdr passes))))))
-
-;; (define expand/scc-letrec
-;;   (case-lambda
-;;    ((x)
-;;     (expand/scc-letrec x (interaction-environment)))
-;;    ((x env)
-;;     (expand/pretty x env 'expand/scc-letrec
-;; 		   (lambda (x)
-;; 		     (parameterize ((open-mvcalls #f))
-;; 		       (optimize-direct-calls x)))
-;; 		   (lambda (x)
-;; 		     (optimize-letrec x))))))
-
-;; (define expand/optimize
-;;   (case-lambda
-;;    ((x)
-;;     (expand/optimize x (interaction-environment)))
-;;    ((x env)
-;;     (expand/pretty x env 'expand/optimize
-;; 		   (lambda (x)
-;; 		     (parameterize ((open-mvcalls #f))
-;; 		       (optimize-direct-calls x)))
-;; 		   optimize-letrec
-;; 		   source-optimize))))
-
-;; (define expand
-;;   (case-lambda
-;;    ((x)
-;;     (expand x (interaction-environment)))
-;;    ((x env)
-;;     (expand/pretty x env 'expand))))
-
-
 (module (compile-core-expr-to-port
 	 compile-core-expr
 	 compile-core-expr->code)
