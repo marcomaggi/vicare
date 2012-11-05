@@ -42,7 +42,8 @@
 		  host-info
 		  $struct-guardian
 		  struct-guardian-logger
-		  struct-guardian-log)
+		  struct-guardian-log
+		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
