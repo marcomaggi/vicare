@@ -5,7 +5,7 @@
 (import (vicare)
   (vicare debugging compiler))
 
-(module (doit)
+(module (doit doit-program)
 
   (define (doit form)
     (%print form)
@@ -19,11 +19,28 @@
 	     3)
     (%display "\n\n"))
 
+  (define (doit-program form)
+    (%print form)
+    (%display "==> ")
+    (%print* ($unparse-recordized-code/pretty
+	      (compile-up-to
+		  #;$optimize-letrec
+		  #;$specify-representation
+		  $source-optimize
+		(%expand-program form)))
+	     3)
+    (%display "\n\n"))
+
   (define (expand form)
     (let-values
 	(((code unused)
 	  (expand-form-to-core-language form (environment '(vicare)))))
       code))
+
+  (define (%expand-program sexp)
+    (let-values (((lib* invoke-code macro* export-subst export-env)
+		  (expand-top-level sexp)))
+      invoke-code))
 
   (define (%print x)
     (pretty-print x (current-error-port)))
@@ -119,12 +136,13 @@
 
 
 
-(doit '(list (display "ciao\n")))
+(doit-program '((import (rnrs))
+		(list (display "ciao\n"))))
 
-(set-port-buffer-mode! (current-output-port)
+#;(set-port-buffer-mode! (current-output-port)
 		       (buffer-mode none))
 
-(list (eval '(list (display "ciao\n"))
+#;(list (eval '(list (display "ciao\n"))
 	    (environment '(rnrs))))
 
 ;;; end of file

@@ -59,6 +59,8 @@ Notes for revision 0.2d20
   EXPAND-LIBRARY  (formerly  LIBRARY-EXPANDER)  has been  added  to  the
   export list of the boot image.
 
+* Added EXPAND-TOP-LEVEL to (vicare).
+
 * Issue 8  is fixed  in an  R6RS incompatible  way.  R6RS  mandates that
   illegal references to  bindings established by LETREC  and LETREC* are
   detected at  run time and cause  an assertion violation to  be raised.

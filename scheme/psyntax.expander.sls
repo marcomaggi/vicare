@@ -30,7 +30,7 @@
     interaction-environment		new-interaction-environment
     environment-symbols
 
-    expand-form-to-core-language		top-level-expander
+    expand-form-to-core-language	expand-top-level
     expand-library
     compile-r6rs-top-level		boot-library-expand
     make-compile-time-value
@@ -4667,7 +4667,7 @@
 	(datum->stx id datum)
       (assertion-violation 'datum->syntax "not an identifier" id))))
 
-(define top-level-expander
+(define expand-top-level
   (lambda (e*)
     (let-values (((imp* b*) (parse-top-level-program e*)))
       (let-values (((imp* invoke-req* visit-req* invoke-code
@@ -4679,7 +4679,7 @@
 (define compile-r6rs-top-level
   (lambda (x*)
     (let-values (((lib* invoke-code macro* export-subst export-env)
-		  (top-level-expander x*)))
+		  (expand-top-level x*)))
       (lambda ()
 	(for-each invoke-library lib*)
 	(initial-visit! macro*)

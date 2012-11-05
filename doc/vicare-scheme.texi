@@ -2634,6 +2634,29 @@ Example:
 @end defun
 
 
+@defun expand-top-level @var{sexp}
+Expand a top level program whose symbolic expression is @var{sexp}.
+Return
+
+@enumerate
+@item
+@var{lib*}, to be documented.
+
+@item
+@var{invoke-code}, to be documented.
+
+@item
+@var{macro*}, to be documented.
+
+@item
+@var{export-subst}, to be documented.
+
+@item
+@var{export-env}, to be documented.
+@end enumerate
+@end defun
+
+
 @defun expand-form-to-core-language @var{sexp} @var{env}
 Interface to the internal expression expander, it is the expansion
 engine used by @rnrs{6}'s @func{eval} function.
