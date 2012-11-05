@@ -1309,9 +1309,15 @@ port.  This is for debugging purposes.
 Disables the effect of @option{--print-loaded-libraries}.
 
 @item -O0
+Turn off use of the source optimizer.
+
 @itemx -O1
 @itemx -O2
 Turn on various levels of compile optimisations.
+
+@item --optimizer-passes-count @var{COUNT}
+Specify how many passes to perform with the source optimizer.  Must be a
+positive fixnum.  Defaults to 1.
 
 @item --print-assembly
 Print to the current error port the assembly instructions generated when
@@ -16701,7 +16707,46 @@ system $compiler}.
 
 
 @defun $source-optimize @var{input}
+Perform source code optimizations on the recordized @var{input} code and
+return the resulting recordized code.
 @end defun
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deffn Parameter optimize-level
+The optimization level; accepted values are the fixnums @code{0},
+@code{1}, @code{2}.  Defaults to @code{0}.
+
+@quotation
+@strong{NOTE} When building the boot image this parameter is set to
+@code{2}.
+@end quotation
+@end deffn
+
+
+@deffn Parameter source-optimizer-passes-count
+Specify how many passes to perform with the source optimizer; it must be
+a positive fixnum.  Defaults to 1.
+
+It makes sense to perform zero, one or two passes; it is unlikely that
+more passes can do significant improvement.
+@end deffn
+
+
+@deffn Parameter cp0-effort-limit
+An effort counter that is decremented every time an optimization is
+performed by the source optimizer.  It is set every time the optimizer
+enters specific subexpressions of the input.
+@end deffn
+
+
+@deffn Parameter cp0-size-limit
+A code size counter (estimated) that is decremented every time an
+optimization is performed by the source optimizer.  It is set every time
+the optimizer enters specific subexpressions of the input.
+@end deffn
 
 @c page
 @node syslib compiler assignments

@@ -2152,6 +2152,7 @@
     (ellipsis-map)
     (optimize-cp				i v $language)
     (optimize-level				i v $language)
+    (source-optimizer-passes-count		i v $language)
     (cp0-size-limit				i v $language)
     (cp0-effort-limit				i v $language)
     (tag-analysis-output			i v $language)

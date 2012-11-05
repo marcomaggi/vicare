@@ -42,14 +42,16 @@
 		  host-info
 		  $struct-guardian
 		  struct-guardian-logger
-		  struct-guardian-log)
+		  struct-guardian-log
+		  source-optimizer-passes-count)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
 		  print-loaded-libraries)
 	    config.)
     (only (ikarus.compiler)
-	  generate-debug-calls)
+	  generate-debug-calls
+	  source-optimizer-passes-count)
     (only (ikarus.debugger)
 	  guarded-start)
     (only (psyntax expander)
@@ -584,6 +586,15 @@
 		 ($current-letrec-pass (string->symbol (cadr args))))
 	       (next-option (cddr args) k))))
 
+	  ((%option= "--optimizer-passes-count")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--optimizer-passes-count requires a number argument")
+	     (begin
+	       (guard (E (else
+			  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
+		 (source-optimizer-passes-count (string->number (cadr args))))
+	       (next-option (cddr args) k))))
+
 ;;; --------------------------------------------------------------------
 ;;; program options
 
@@ -802,9 +813,15 @@ Other options:
         Disables the effect of --print-loaded-libraries.
 
    -O0
+        Turn off the source optimizer.
+
    -O1
    -O2
         Turn on various levels of compiler optimisations.
+
+   --optimizer-passes-count COUNT
+        Specify how  many passes to  perform with the  source optimizer.
+        Must be a positive fixnum.  Defaults to 1.
 
    --print-assembly
         Print  to  the  current  error port  the  assembly  instructions

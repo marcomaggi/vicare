@@ -30,7 +30,7 @@
     eval-core				current-core-eval
     compile-core-expr
     cp0-effort-limit			cp0-size-limit
-    optimize-level
+    optimize-level			source-optimizer-passes-count
     perform-tag-analysis		tag-analysis-output
     strip-source-info			generate-debug-calls
     current-letrec-pass

@@ -12,9 +12,9 @@
     (%display "==> ")
     (%print* ($unparse-recordized-code/pretty
 	      (compile-up-to
-		  $optimize-letrec
+		  #;$optimize-letrec
 		  #;$specify-representation
-		  #;$source-optimize
+		  $source-optimize
 		(expand form)))
 	     3)
     (%display "\n\n"))
@@ -91,6 +91,13 @@
 ;; 	   123)))
 
 (parametrise ((optimize-level 2))
+  (doit '(letrec ((a (display "ciao"))
+		  (b (lambda (x) a (list x))))
+	   (set! a 123)
+	   123)))
+
+(parametrise ((optimize-level 2)
+	      (source-optimizer-passes-count 2))
   (doit '(letrec ((a (display "ciao"))
 		  (b (lambda (x) a (list x))))
 	   (set! a 123)

@@ -33,6 +33,7 @@
 ;;
 (module (source-optimize
 	 optimize-level
+	 source-optimizer-passes-count
 	 cp0-effort-limit
 	 cp0-size-limit)
   (define who 'source-optimize)
@@ -50,24 +51,40 @@
 	    x
 	  (error 'optimize-level "valid optimization levels are 0, 1, and 2")))))
 
+  (define source-optimizer-passes-count
+    (make-parameter 1
+      (lambda (obj)
+	(define who 'source-optimizer-passes-count)
+	(with-arguments-validation (who)
+	    ((positive-fixnum	obj))
+	  obj))))
+
   (define source-optimizer-input
     ;;This  is used  in  case of  internal error  to  show better  error
     ;;context.
     ;;
     (make-parameter #f))
 
-  (define (source-optimize expr)
-    (define (%doit expr)
-      (parametrise ((source-optimizer-input expr))
-	(E expr 'v (make-empty-env) (passive-counter) (passive-counter))))
-    (case (optimize-level)
-      ((2)
-       (%doit expr))
-      ((1)
-       (parameterize ((cp0-size-limit 0))
-	 (%doit expr)))
-      (else
-       expr)))
+  (module (source-optimize)
+
+    (define (source-optimize expr)
+      (case (optimize-level)
+	((2)
+	 (%do-one-pass expr (source-optimizer-passes-count)))
+	((1)
+	 (parameterize ((cp0-size-limit 0))
+	   (%do-one-pass expr (source-optimizer-passes-count))))
+	(else
+	 expr)))
+
+    (define (%do-one-pass expr passes-count)
+      (if (fxzero? passes-count)
+	  expr
+	(%do-one-pass (parametrise ((source-optimizer-input expr))
+			(E expr 'v (make-empty-env) (passive-counter) (passive-counter)))
+		      (fxsub1 passes-count))))
+
+    #| end of module: source-optimize |# )
 
 
 ;;;; type definitions
