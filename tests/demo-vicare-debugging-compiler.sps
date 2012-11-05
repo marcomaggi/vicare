@@ -90,18 +90,22 @@
 ;; 		   (g (lambda () 2)))
 ;; 	   123)))
 
-(parametrise ((optimize-level 2))
-  (doit '(letrec ((a (display "ciao"))
-		  (b (lambda (x) a (list x))))
-	   (set! a 123)
-	   123)))
+;;; --------------------------------------------------------------------
 
-(parametrise ((optimize-level 2)
-	      ($source-optimizer-passes-count 2))
-  (doit '(letrec ((a (display "ciao"))
-		  (b (lambda (x) a (list x))))
-	   (set! a 123)
-	   123)))
+;; (parametrise ((optimize-level 2))
+;;   (doit '(letrec ((a (display "ciao"))
+;; 		  (b (lambda (x) a (list x))))
+;; 	   (set! a 123)
+;; 	   123)))
+
+;; (parametrise ((optimize-level 2)
+;; 	      ($source-optimizer-passes-count 2))
+;;   (doit '(letrec ((a (display "ciao"))
+;; 		  (b (lambda (x) a (list x))))
+;; 	   (set! a 123)
+;; 	   123)))
+
+;;; --------------------------------------------------------------------
 
 ;; (parametrise ((optimize-level 2))
 ;;   (doit '((lambda (a)
@@ -115,7 +119,13 @@
 
 
 
-#;(doit '(list (display "ciao\n")))
+(doit '(list (display "ciao\n")))
+
+(set-port-buffer-mode! (current-output-port)
+		       (buffer-mode none))
+
+(list (eval '(list (display "ciao\n"))
+	    (environment '(rnrs))))
 
 ;;; end of file
 ;; Local Variables:

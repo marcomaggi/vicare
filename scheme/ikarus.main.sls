@@ -959,8 +959,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define-syntax doit
   (syntax-rules ()
-    ((_ e e* ...)
-     (start (lambda () e e* ...)))))
+    ((_ ?body0 ?body ...)
+     (start (lambda () ?body0 ?body ...)))))
 
 (define (start proc)
   (if (generate-debug-calls)
@@ -1033,14 +1033,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (flush-output-port port)))))
 
 
-;;;; main expressions
+;;;; some utility modules
 
 (module ()
   ;;See "ikarus.symbol-table.ss"  for an  explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
-  ($initialize-symbol-table!)
-
-  #| end of module |#)
+  ($initialize-symbol-table!))
 
 (module ($struct-guardian struct-guardian-logger struct-guardian-log)
   (define %struct-guardian
@@ -1128,6 +1126,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
 
   #| end of module |# )
+
+
+;;;; main expressions
 
 (let-values (((cfg execution-state-initialisation-according-to-command-line-options)
 	      (parse-command-line-arguments)))
