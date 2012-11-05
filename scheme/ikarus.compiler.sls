@@ -76,7 +76,6 @@
 		  current-primitive-locations
 		  eval-core
 		  optimize-level
-		  #;fasl-write
 		  cp0-size-limit			cp0-effort-limit
 		  tag-analysis-output			perform-tag-analysis
 		  current-core-eval			current-letrec-pass
@@ -89,7 +88,6 @@
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
     (vicare include)
-    #;(ikarus.fasl.write)
     (ikarus.intel-assembler)
     (except (vicare syntactic-extensions)
 	    begin0)
