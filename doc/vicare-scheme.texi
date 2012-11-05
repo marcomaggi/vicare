@@ -16728,6 +16728,15 @@ return the resulting recordized code.
 @end defun
 
 
+@deffn Parameter $source-optimizer-passes-count
+Specify how many passes to perform with the source optimizer; it must be
+a positive fixnum.  Defaults to 1.
+
+It makes sense to perform zero, one or two passes; it is unlikely that
+more passes can do significant improvement.
+@end deffn
+
+
 The following bindings are exported by the library @library{vicare}.
 
 
@@ -16739,15 +16748,6 @@ The optimization level; accepted values are the fixnums @code{0},
 @strong{NOTE} When building the boot image this parameter is set to
 @code{2}.
 @end quotation
-@end deffn
-
-
-@deffn Parameter source-optimizer-passes-count
-Specify how many passes to perform with the source optimizer; it must be
-a positive fixnum.  Defaults to 1.
-
-It makes sense to perform zero, one or two passes; it is unlikely that
-more passes can do significant improvement.
 @end deffn
 
 

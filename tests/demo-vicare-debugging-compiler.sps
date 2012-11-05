@@ -97,7 +97,7 @@
 	   123)))
 
 (parametrise ((optimize-level 2)
-	      (source-optimizer-passes-count 2))
+	      ($source-optimizer-passes-count 2))
   (doit '(letrec ((a (display "ciao"))
 		  (b (lambda (x) a (list x))))
 	   (set! a 123)

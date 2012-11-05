@@ -42,8 +42,7 @@
 		  host-info
 		  $struct-guardian
 		  struct-guardian-logger
-		  struct-guardian-log
-		  source-optimizer-passes-count)
+		  struct-guardian-log)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
@@ -51,7 +50,7 @@
 	    config.)
     (only (ikarus.compiler)
 	  generate-debug-calls
-	  source-optimizer-passes-count)
+	  $source-optimizer-passes-count)
     (only (ikarus.debugger)
 	  guarded-start)
     (only (psyntax expander)
@@ -591,8 +590,8 @@
 	       (%error-and-exit "--optimizer-passes-count requires a number argument")
 	     (begin
 	       (guard (E (else
-			  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
-		 (source-optimizer-passes-count (string->number (cadr args))))
+			  (%error-and-exit "invalid argument to --optimizer-passes-count")))
+		 ($source-optimizer-passes-count (string->number (cadr args))))
 	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------

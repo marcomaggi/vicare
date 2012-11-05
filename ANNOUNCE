@@ -83,7 +83,7 @@ Notes for revision 0.2d20
   rewriting   code  for   readability  in   "ik_collect()"  to   compute
   "new_heap_size".
 
-* Added   parameter  SOURCE-OPTIMIZER-PASSES-COUNT   and  command   line
+* Added  parameter   $SOURCE-OPTIMIZER-PASSES-COUNT  and   command  line
   argument --optimizer-passes-count  to select the number  of passes the
   source optimizer has to perform.
 

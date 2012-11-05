@@ -21,7 +21,7 @@
 ;;source  optimizer  is used  (it  should  be, at  maximum  optimization
 ;;level).
 ;;
-;;See the paper:
+;;See the thesis:
 ;;
 ;;   Oscar  Waddell.  "Extending  the Scope  of Syntactic  Abstraction".
 ;;   PhD.   Thesis.   Indiana  University Computer  Science  Department.
@@ -30,6 +30,12 @@
 ;;available online:
 ;;
 ;;   <http://www.cs.indiana.edu/~owaddell/papers/thesis.ps.gz>
+;;
+;;See also the paper:
+;;
+;;   Oscar  Waddell,  R. Kent  Dybvig.   "Fast  and Effective  Procedure
+;;   Inlining".   Indiana  University.    Computer  Science  Department.
+;;   Technical Report No. 484.
 ;;
 (module (source-optimize
 	 optimize-level

@@ -33,6 +33,7 @@
     ;; configuration
     $current-letrec-pass
     $check-for-illegal-letrec
+    $source-optimizer-passes-count
 
     ;; compiler passes
     $compile-core-expr->code

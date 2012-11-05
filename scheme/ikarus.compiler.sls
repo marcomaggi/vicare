@@ -30,7 +30,7 @@
     eval-core				current-core-eval
     compile-core-expr
     cp0-effort-limit			cp0-size-limit
-    optimize-level			source-optimizer-passes-count
+    optimize-level
     perform-tag-analysis		tag-analysis-output
     strip-source-info			generate-debug-calls
     current-letrec-pass
@@ -39,6 +39,7 @@
     (rename
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
+     (source-optimizer-passes-count		$source-optimizer-passes-count)
 
      (compile-core-expr->code			$compile-core-expr->code)
      (recordize					$recordize)
@@ -75,11 +76,8 @@
 		  current-primitive-locations
 		  eval-core
 		  optimize-level
-		  debug-optimizer
-		  fasl-write
+		  #;fasl-write
 		  cp0-size-limit			cp0-effort-limit
-		  expand				expand/optimize
-		  expand/scc-letrec
 		  tag-analysis-output			perform-tag-analysis
 		  current-core-eval			current-letrec-pass
 		  bind)
@@ -91,7 +89,7 @@
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
     (vicare include)
-    (ikarus.fasl.write)
+    #;(ikarus.fasl.write)
     (ikarus.intel-assembler)
     (except (vicare syntactic-extensions)
 	    begin0)
