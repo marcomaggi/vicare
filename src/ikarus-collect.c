@@ -915,33 +915,32 @@ collect_locatives(gc_t* gc, ik_callback_locative* loc) {
 
 #define DEBUG_STACK 0
 
-static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
+static void
+collect_stack (gc_t* gc, ikptr top, ikptr end)
+{
   if (DEBUG_STACK) {
     fprintf(stderr, "collecting stack (size=%ld) from 0x%016lx .. 0x%016lx\n",
-        (long)end - (long)top, (long) top, (long) end);
+	    (long)end - (long)top, (long) top, (long) end);
   }
-  while(top < end) {
+  while (top < end) {
+    ikptr	rp	  = IK_REF(top, 0);
+    long	rp_offset = IK_UNFIX(IK_REF(rp, disp_frame_offset));
     if (DEBUG_STACK) {
       fprintf(stderr, "collecting frame at 0x%016lx: \n", (long) top);
-    }
-    ikptr rp = ref(top, 0);
-    long rp_offset = IK_UNFIX(ref(rp, disp_frame_offset));
-    if (DEBUG_STACK) {
       fprintf(stderr, "rp=0x%016lx\n", rp);
       fprintf(stderr, "rp_offset=%ld\n", rp_offset);
     }
     if (rp_offset <= 0) {
       ik_abort("invalid rp_offset %ld\n", rp_offset);
     }
-    /* since the return point is alive, we need to find the code
-     * object containing it and mark it live as well.  the rp is
-     * updated to reflect the new code object. */
-
-    long code_offset = rp_offset - disp_frame_offset;
-    ikptr code_entry = rp - code_offset;
-    ikptr new_code_entry = add_code_entry(gc, code_entry);
-    ikptr new_rp = new_code_entry + code_offset;
-    ref(top, 0) = new_rp;
+    /* Since the return point is alive,  we need to find the code object
+       containing it  and mark it  live as well.   The RP is  updated to
+       reflect the new code object. */
+    long	code_offset	= rp_offset - disp_frame_offset;
+    ikptr	code_entry	= rp - code_offset;
+    ikptr	new_code_entry	= add_code_entry(gc, code_entry);
+    ikptr	new_rp		= new_code_entry + code_offset;
+    IK_REF(top, 0) = new_rp;
 
     /* now for some livemask action.
      * every return point has a live mark above it.  the live mask
@@ -977,32 +976,30 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
      *   there is no live mask in this case, instead all values in the
      *   frame are live.
      */
-    long framesize =  ref(rp, disp_frame_size);
+    long framesize =  IK_REF(rp, disp_frame_size);
     if (DEBUG_STACK) {
       fprintf(stderr, "fs=%ld\n", (long)framesize);
     }
     if (framesize < 0) {
       ik_abort("invalid frame size %ld\n", (long)framesize);
-    }
-    else if (framesize == 0) {
-      framesize = ref(top, wordsize);
+    } else if (framesize == 0) {
+      framesize = IK_REF(top, wordsize);
       if (framesize <= 0) {
         ik_abort("invalid redirected framesize=%ld\n", (long)framesize);
       }
       ikptr base = top + framesize - wordsize;
-      while(base > top) {
-        ikptr new_obj = add_object(gc,ref(base,0), "frame");
-        ref(base,0) = new_obj;
+      while (base > top) {
+        ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
+        IK_REF(base,0) = new_obj;
         base -= wordsize;
       }
     } else {
-      long frame_cells = framesize >> fx_shift;
-      long bytes_in_mask = (frame_cells+7) >> 3;
-      char* mask = (char*)(long)(rp+disp_frame_size-bytes_in_mask);
-
-      ikptr* fp = (ikptr*)(long)(top + framesize);
-      long i;
-      for(i=0; i<bytes_in_mask; i++, fp-=8) {
+      long	frame_cells	= framesize >> fx_shift;
+      long	bytes_in_mask	= (frame_cells+7) >> 3;
+      char *	mask		= (char*)(long)(rp + disp_frame_size - bytes_in_mask);
+      ikptr *	fp		= (ikptr*)(long)(top + framesize);
+      long	i;
+      for (i=0; i<bytes_in_mask; i++, fp-=8) {
         unsigned char m = mask[i];
 #if DEBUG_STACK
         fprintf(stderr, "m[%ld]=0x%x\n", i, m);
@@ -1020,7 +1017,7 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
     top += framesize;
   }
   if (top != end)
-    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long) top, (long) end);
+    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long)top, (long)end);
   if (DEBUG_STACK) {
     fprintf(stderr, "done with stack!\n");
   }
