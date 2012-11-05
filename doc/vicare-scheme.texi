@@ -16702,6 +16702,22 @@ This is the default.
 @subsection Source optimisation
 
 
+For an introduction to the source code see the thesis:
+
+@quotation
+Oscar Waddell.  ``Extending the Scope of Syntactic Abstraction''.  PhD.
+Thesis.  Indiana University Computer Science Department.  August 1999.
+@end quotation
+
+@noindent
+and the paper:
+
+@quotation
+Oscar Waddell, R. Kent Dybvig.  ``Fast and Effective Procedure
+Inlining''.  Indiana University.  Computer Science Department.
+Technical Report No. 484.
+@end quotation
+
 The following bindings are exported by the library @library{ikarus
 system $compiler}.
 
