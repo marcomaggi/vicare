@@ -3796,7 +3796,7 @@
 (define symbol-tag			#x5F)
 (define symbol-record-tag		#x5F)
 
-(define disp-symbol-record-tag		#;(fx* 0 wordsize) 0)
+(define disp-symbol-record-tag		0 #;(fx* 0 wordsize))
 (define disp-symbol-record-string	(fx* 1 wordsize))
 (define disp-symbol-record-ustring	(fx* 2 wordsize))
 (define disp-symbol-record-value	(fx* 3 wordsize))
@@ -4050,6 +4050,9 @@
   #| end od module |# )
 
 (define (primref->symbol op)
+  ;;Given the  symbol, which must  be the  name of a  primitive function
+  ;;exported by the boot image,
+  ;;
   (define who 'primref->symbol)
   (with-arguments-validation (who)
       ((symbol	op))
@@ -4062,8 +4065,7 @@
 	   (error who "BUG: primitive missing from makefile.sps" op)))))
 
 ;;(define (primref-loc op)
-;;  (mem (fx- disp-symbol-record-proc record-tag)
-;;       (obj (primref->symbol op))))
+;;  (mem off-symbol-record-proc (obj (primref->symbol op))))
 
 
 ;;;; more assembly code helpers
@@ -4237,11 +4239,17 @@
 
   (define-cached refresh-cached-labels!
 
+    ;;SL-ANNOTATED-PROCEDURE-LABEL Given a reference to a closure object
+    ;;stored  in the  Closure  Pointer Register  (CPR), representing  an
+    ;;annotated closure, retrieve the actual closure and call it.
+    ;;
+    ;;Notice that we do not touch the stack here.
+    ;;
     ((public-function		sl-annotated-procedure-label)
      (entry-point-label		SL_annotated)
      (number-of-free-variables	2)
      ;;ANNOTATION-INDIRECT is a  struct type without fields;  it is used
-     ;;to generate unique values or disjoint type.  This will end in the
+     ;;to generate unique values of disjoint type.  This will end in the
      ;;code object's annotation field.
      (code-annotation		`(name ,(make-annotation-indirect)))
      (definitions
@@ -4250,14 +4258,22 @@
      (local-labels)
      (assembly
       (label SL_annotated)
-      ;;Load  into CPR  (Closure Pointer  Register) the  address of  the
-      ;;first byte of binary code  in the closure actually referenced by
-      ;;the CPR itself.
+      ;;Load into CPR (Closure Pointer  Register) a reference to closure
+      ;;object retrieving it  from the second free variable  slot in the
+      ;;closure object actually referenced by the CPR itself.
+      ;;
+      ;;     ---
+      ;;  CPR | -------------> |---|---|---| closure object
+      ;;     ---                         |
+      ;;      ^                          |
+      ;;      |                          |
+      ;;       --------------------------
+      ;;
       (movl (mem ($fx- ($fx+ disp-closure-data wordsize) closure-tag)
 		 cpr)
 	    cpr)
       ;;Fetch a binary  code address from the  closure object referenced
-      ;;by the CPR (Closure Pointer Register) and jump directly there.
+      ;;by the CPR (Closure Pointer Register) and call it.
       (tail-indirect-cpr-call)
       ))
 
@@ -4400,7 +4416,7 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;and "pcb->next_k"  references to continuation object  we must go
+      ;;and "pcb->next_k" references the  continuation object we must go
       ;;back to.
       ;;
       (label L_cont_one_arg)
@@ -4425,7 +4441,7 @@
       ;;          low memory
       ;;
       ;;EAX  still contains  the encoded  1 as  number of  arguments and
-      ;;"pcb->next_k" references to continuation  object we must go back
+      ;;"pcb->next_k" references the continuation object we must go back
       ;;to.
       ;;
       (ret)
@@ -4448,7 +4464,7 @@
       ;;          low memory
       ;;
       ;;EAX  still contains  the encoded  0 as  number of  arguments and
-      ;;"pcb->next_k" references to continuation  object we must go back
+      ;;"pcb->next_k" references the continuation object we must go back
       ;;to.
       ;;
       (label L_cont_zero_args)
@@ -4478,6 +4494,10 @@
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
+      ;;
+      ;;EAX  still  contains  the  zero   as  number  of  arguments  and
+      ;;"pcb->next_k" references the continuation object we must go back
+      ;;to.
       ;;
       (jmp (mem disp-multivalue-rp ebx))
 
@@ -4531,6 +4551,10 @@
       ;;   |                      |
       ;;          low memory
       ;;
+      ;;EAX  still   contains  the  encoded  number   of  arguments  and
+      ;;"pcb->next_k" references the continuation object we must go back
+      ;;to.
+      ;;
       (jmp (mem disp-multivalue-rp ebx))
 
       ;;Copy the  arguments from the  current frame  to the base  of the
@@ -4576,11 +4600,51 @@
       ;;   |                      |
       ;;          low memory
       ;;
+      ;;EAX  still   contains  the  encoded  number   of  arguments  and
+      ;;"pcb->next_k" references the continuation object we must go back
+      ;;to.
+      ;;
       (jmp (mem disp-multivalue-rp ebx))
       ))
 
 ;;; --------------------------------------------------------------------
 
+    ;;SL-INVALID-ARGS-LABEL  This subroutine  handles calls  to function
+    ;;with the  wrong number  of arguments.   We just  want to  call the
+    ;;primitive function
+    ;;
+    ;;Upon entering this label:
+    ;;
+    ;;**The Frame Pointer  Register (FPR) must reference the  top of the
+    ;;  Scheme stack.
+    ;;
+    ;;**The Closure  Pointer Register (CPR)  must hold a reference  to a
+    ;;  closure  object; such closure  is the  one that has  been called
+    ;;  with the wrong number of arguments.
+    ;;
+    ;;The situation on the Scheme stack when arriving here is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |     return address   | <-- Frame Pointer Register (%esp)
+    ;;   |----------------------|
+    ;;   |      argument 0      |
+    ;;   |----------------------|
+    ;;   |      argument 1      |
+    ;;   |----------------------|
+    ;;   |      argument 3      |
+    ;;   |----------------------|
+    ;;   |                      |
+    ;;          low memory
+    ;;
+    ;;and EAX contains the encoded  number of arguments.  We just ignore
+    ;;the arguments.
+    ;;
+    ;;FIXME It would be  good to call $INCORRECT-ARGS-ERROR-HANDLER with
+    ;;the arguments that are already on the stack.  (Marco Maggi; Nov 6,
+    ;;2012)
+    ;;
     ((public-function		sl-invalid-args-label)
      (entry-point-label		SL_invalid_args)
      (number-of-free-variables	0)
@@ -4588,14 +4652,28 @@
      (definitions)
      (local-labels)
      (assembly
-      (movl cpr (mem ($fx- 0 wordsize) fpr)) ; first arg
+      ;;Store on the  stack a reference to the closure  object (from the
+      ;;Closure  Pointer Register)  as  first argument  to  the call  to
+      ;;$INCORRECT-ARGS-ERROR-HANDLER.
+      (movl cpr (mem ($fx- 0 wordsize) fpr))
+      ;;Decode  the incorrect  number  of  arguments, so  that  it is  a
+      ;;non-negative fixnum.
       (negl eax)
+      ;;Store on the  stack the incorrect number of  arguments as second
+      ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
       (movl eax (mem ($fx- 0 ($fx* 2 wordsize)) fpr))
+      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
+      ;;symbol  object  containing a  reference  to  the closure  object
+      ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
       (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
-      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+      ;;Load in the Closure Pointer  Register a reference to the closure
+      ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
+      (movl (mem off-symbol-record-proc cpr) cpr)
+      ;;Load in  EAX the  encoded number  of arguments  for the  call to
+      ;;$INCORRECT-ARGS-ERROR-HANDLER.
       (movl (int (argc-convention 2)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
-      ;;by the CPR (Closure Pointer Register) and jump directly there.
+      ;;by the Closure Pointer Register and jump directly there.
       (tail-indirect-cpr-call)
       ))
 
@@ -4613,6 +4691,20 @@
 
 ;;; --------------------------------------------------------------------
 
+    ;;SL-MV-ERROR-RP-LABEL This subrouting is called whenever an attempt
+    ;;to return zero or multiple, but  not one, values to a single value
+    ;;contest is performed, as in:
+    ;;
+    ;;   (let ((x (values 1 2)))
+    ;;     x)
+    ;;
+    ;;or:
+    ;;
+    ;;   (let ((x (values)))
+    ;;     x)
+    ;;
+    ;;This happens *only* when VALUES is used.
+    ;;
     ((public-function		sl-mv-error-rp-label)
      (entry-point-label		SL_multiple_values_error_rp)
      (number-of-free-variables	0)
@@ -4620,8 +4712,13 @@
      (definitions)
      (local-labels)
      (assembly
+      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
+      ;;symbol  object  containing a  reference  to  the closure  object
+      ;;implementing the function $MULTIPLE-VALUES-ERROR.
       (movl (obj (primref->symbol '$multiple-values-error)) cpr)
-      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+      ;;Load in the Closure Pointer  Register a reference to the closure
+      ;;object implementing the function $MULTIPLE-VALUES-ERROR.
+      (movl (mem off-symbol-record-proc cpr) cpr)
       ;;Fetch a binary  code address from the  closure object referenced
       ;;by the CPR (Closure Pointer Register) and jump directly there.
       (tail-indirect-cpr-call)
@@ -4640,21 +4737,52 @@
 		   L_values_many_values)
      (assembly
       (label SL_values)
-      ;;If the encoded number of arguments in EAX is 1 ...
+      ;;Dispatch accortdng to the number of arguments.
       (cmpl (int (argc-convention 1)) eax)
       (je (label L_values_one_value))
 
+      ;;Return many values.
       (label L_values_many_values)
       (movl (mem 0 fpr) ebx)			     ; return point
       (jmp (mem disp-multivalue-rp ebx))	     ; go
 
+      ;;Return a single  value.  The situation on the  Scheme stack when
+      ;;arriving here is:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |    return address    | <-- Frame Pointer Register (%esp)
+      ;;   |----------------------|
+      ;;   |     return value     |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
       (label L_values_one_value)
+      ;;Store in EAX the single return value.
       (movl (mem (fx- 0 wordsize) fpr) eax)
+      ;;Return to the caller.
       (ret)
       ))
 
 ;;; --------------------------------------------------------------------
 
+    ;;This is the implementation  of the function CALL-WITH-VALUES.  The
+    ;;situation on the Scheme stack when arriving here is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |    return address    | <-- Frame Pointer Register (%esp)
+    ;;   |----------------------|
+    ;;   |   closure reference  | --> producer closure object
+    ;;   |----------------------|
+    ;;   |   closure reference  | --> consumer closure object
+    ;;   |----------------------|
+    ;;   |                      |
+    ;;          low memory
+    ;;
     ((public-function		sl-cwv-label)
      (entry-point-label		SL_call_with_values)
      (number-of-free-variables	0)
@@ -4668,13 +4796,21 @@
 		   SL_invalid_args)
      (assembly
       (label SL_call_with_values)
+      ;;CALL-WITH-VALUES must  be called  with two values:  the producer
+      ;;function, the consumer function.
       (cmpl (int (argc-convention 2)) eax)
       (jne (label SL_invalid_args))
-      (movl (mem (fx- 0 wordsize) fpr) ebx) ; producer
+      ;;Store in EBX a reference to the producer closure object.
+      (movl (mem (fx- 0 wordsize) fpr) ebx)
+      ;;Store in the Continuation Pointer  Register (CPR) a reference to
+      ;;the producer closure object.
       (movl ebx cpr)
+      ;;Check that EBX actually contains  a reference to closure object;
+      ;;else jump to the appropriate error handler.
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
       (jne (label SL_nonprocedure))
+      ;;The producer is called with zero arguments.
       (movl (int (argc-convention 0)) eax)
       ;;This evaluates to a nested sequence of assembly instructions.
       (compile-call-frame 3	      ;framesize
@@ -4685,24 +4821,36 @@
 			  ;;Pointer  Register)  and  perform a  call  to
 			  ;;there.
 			  (indirect-cpr-call)) ;call-sequence
-      ;; one value returned
-      (movl (mem (fx* -2 wordsize) fpr) ebx) ; consumer
+      ;;If we  are here it means  that the producer returned  one value.
+      ;;Store in EBX a reference to the consumer closure object.
+      (movl (mem (fx* -2 wordsize) fpr) ebx)
+      ;;Store in EBX a reference to the consumer closure object.
       (movl ebx cpr)
+      ;;Store the  returned value on  the stack, right below  the return
+      ;;address.
       (movl eax (mem (fx- 0 wordsize) fpr))
+      ;;We will call the consumer closure with one argument.
       (movl (int (argc-convention 1)) eax)
+      ;;Check that EBX actually contains  a reference to closure object;
+      ;;else jump to the appropriate error handler.
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
       (jne (label SL_nonprocedure))
       ;;Fetch a binary  code address from the  closure object referenced
-      ;;by the CPR (Closure Pointer Register) and jump directly there.
+      ;;by the Closure Pointer Register and jump directly there.
       (tail-indirect-cpr-call)
 
-      ;; multiple values returned
+      ;;If  we are  here it  means that  the producer  returned zero  or
+      ;;multiple  values, but  not one  value.  The  number of  returned
+      ;;values is encoded in EAX.
       (label L_cwv_multi_rp)
-      ;;Because values does  not pop the return point we  have to adjust
-      ;;fp one more word here.
+      ;;Because VALUES does  not pop the return point we  have to adjust
+      ;;FPR one more word here.
       (addl (int (fx* wordsize 3)) fpr)
-      (movl (mem (fx* -2 wordsize) fpr) cpr) ; consumer
+      ;;Store  in  the  Closure  Pointer Register  a  reference  to  the
+      ;;consumer closure object.
+      (movl (mem (fx* -2 wordsize) fpr) cpr)
+      ;;Check if the number of returned value is zero.
       (cmpl (int (argc-convention 0)) eax)
       (je (label L_cwv_done))
       (movl (int (fx* -4 wordsize)) ebx)
@@ -4719,6 +4867,8 @@
 
       (label L_cwv_done)
       (movl cpr ebx)
+      ;;Check that EBX actually contains  a reference to closure object;
+      ;;else jump to the appropriate error handler.
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
       (jne (label SL_nonprocedure))
@@ -4726,21 +4876,40 @@
       ;;by the CPR (Closure Pointer Register) and jump directly there.
       (tail-indirect-cpr-call)
 
+      ;;We come here if either the  producer or the consumer argument is
+      ;;not a closure object.
       (label SL_nonprocedure)
       (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
       (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
-      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+      (movl (mem off-symbol-record-proc cpr) cpr)
       (movl (int (argc-convention 1)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
       ;;by the CPR (Closure Pointer Register) and jump directly there.
       (tail-indirect-cpr-call)
 
+      ;;We come here if CALL-WITH-VALUES was applied to the wrong number
+      ;;of  arguments.  We  just  want to  call  the primitive  function
+      ;;$INCORRECT-ARGS-ERROR-HANDLER.
       (label SL_invalid_args)
-      (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
+      ;;Put on the stack a  reference to the closure object implementing
+      ;;CALL-WITH-VALUES,        as       first        argument       to
+      ;;$INCORRECT-ARGS-ERROR-HANDLER.
+      (movl cpr (mem (fx- 0 wordsize) fpr))
+      ;;Decode the  number of  arguments, so that  it is  a non-negative
+      ;;fixnum.
       (negl eax)
+      ;;Put on the stack the incorrect number of arguments as fixnum, as
+      ;;second argument to $INCORRECT-ARGS-ERROR-HANDLER.
       (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
+      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
+      ;;symbol  object  containing a  reference  to  the closure  object
+      ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
       (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
-      (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+      ;;Load in the Closure Pointer  Register a reference to the closure
+      ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
+      (movl (mem off-symbol-record-proc cpr) cpr)
+      ;;Load in  EAX the  encoded number  of arguments  for the  call to
+      ;;$INCORRECT-ARGS-ERROR-HANDLER.
       (movl (int (argc-convention 2)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
       ;;by the CPR (Closure Pointer Register) and jump directly there.

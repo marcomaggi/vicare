@@ -57,6 +57,7 @@
 	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
 (define (do-post-gc ls n)
+;;;  (emergency-write)
   (let ((k0 (collect-key)))
     ;;Run the hook functions.
     (parameterize ((post-gc-hooks '()))

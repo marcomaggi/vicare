@@ -62,9 +62,33 @@
   (assertion-violation 'apply "not a procedure" x))
 
 (define ($incorrect-args-error-handler p . ls)
+  ;;Whenever an attempt to apply a closure object to the wrong number of
+  ;;arguments  is  performed:  the assembly  subroutine  SL_INVALID_ARGS
+  ;;calls this function to handle the error.
+  ;;
+  ;;P is a reference to closure object, being the offended one.
+  ;;
+  ;;LS is  a list containing  a single non-negative  fixnum representing
+  ;;the incorrect number of arguments.
+  ;;
   (apply assertion-violation 'apply "incorrect number of arguments" p ls))
 
 (define ($multiple-values-error . args)
+  ;;Whenever an attempt to return zero  or multiple, but not one, values
+  ;;number of values is performed, as in:
+  ;;
+  ;;   (let ((x (values 1 2)))
+  ;;     x)
+  ;;
+  ;;or:
+  ;;
+  ;;   (let ((x (values)))
+  ;;     x)
+  ;;
+  ;;this function is called to handle the error.
+  ;;
+  ;;ARGS is the list of invalid arguments.
+  ;;
   (assertion-violation 'apply
     "incorrect number of values returned to single value context" args))
 
