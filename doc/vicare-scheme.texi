@@ -28410,9 +28410,8 @@ because the original compiler code is fully undocumented.
 
 @menu
 * compiler intro::              Introduction to the compiler.
-* compiler conventions::        Coding conventions in the compiler
-                                code.
-* compiler cogen::              Stuff in @file{ikarus.compiler.altcogen.ss}.
+* compiler conventions::        Coding conventions in compiler's code.
+* compiler stack::              Scheme stack management.
 @end menu
 
 @c page
@@ -28443,7 +28442,7 @@ value'', the second kind are the ``side effects''.
 
 @c page
 @node compiler conventions
-@section Coding conventions in the compiler code
+@section Coding conventions in compiler's code
 
 
 Throughout the compiler code variables with the following names appear:
@@ -28475,9 +28474,140 @@ which generate an assignment operation to store the first element of
 @end table
 
 @c page
-@node compiler cogen
-@section Stuff in @file{ikarus.compiler.altcogen.ss}
+@node compiler stack
+@section Scheme stack management
 
+
+In this section we want to explain how the Scheme stack in managed while
+Scheme code is running.
+
+The usual mechanism of performing an assembly language @code{call}
+instruction is this:
+
+@example
+caller's code   callee's code       stack
+ --- lo mem       --- lo mem         --- hi mem
+  .                .                  .
+  .                .                  .  caller stuff
+  .                .                  .
+ call FUNC        enter <-- FUNC      .   <--- %esp before
+ after <-- ADDR    .                 ADDR <--- %esp after
+  .                .                  .
+  .               ret                 .   calleee stuff
+  .                .                  .
+ --- hi mem       --- hi mem         --- lo mem
+@end example
+
+@noindent
+when the caller executes a @code{call} instruction:
+
+@enumerate
+@item
+The stack pointer register @code{%esp} is decremented by the size of a
+machine word.
+
+@item
+The memory address referencing the first byte of the instruction
+@code{after} is stored on the memory location referenced by the stack
+pointer register @code{%esp}.
+
+@item
+The execution flow jumps to the memory address @code{FUNC}, which must
+contain the first byte of the instruction @code{enter}.
+@end enumerate
+
+The usual mechanism of performing an assembly language @code{ret}
+instruction is this:
+
+@example
+caller's code   callee's code       stack
+ --- lo mem       --- lo mem         --- hi mem
+  .                .                  .
+  .                .                  .  caller stuff
+  .                .                  .
+ call FUNC       enter <-- FUNC       .   <--- %esp after
+ after <-- ADDR    .                 ADDR <--- %esp before
+  .                .                  .
+  .               ret                 .   calleee stuff
+  .                .                  .
+ --- hi mem       --- hi mem         --- lo mem
+@end example
+
+@noindent
+when the callee executes a @code{ret} instruction:
+
+@enumerate
+@item
+The memory address referenced by the stack pointer register @code{%esp}
+is stored in then instruction pointer register.
+
+@item
+The stack pointer register @code{%esp} is incremented by the size of a
+machine word.
+
+@item
+The execution flow jumps to the memory address in the instruction
+pointer.
+@end enumerate
+
+@noindent
+after the @code{ret} the stack is left in the same state it was at the
+moment the @code{call} was executed.
+
+Now let's say that, when generating binary code for a @code{call}
+instruction, we put some static data right before the @code{call}:
+
+@example
+ caller's code              stack
+    --- lo mem               --- hi mem
+     .                        .
+     .                        .
+     .                        .
+    jmp L0                    .
+    data_machine_word_1       .   <--- %esp before call
+    data_machine_word_2      ADDR <--- %esp after call
+    data_machine_word_3       .
+    call FUNC  <--- L0        .
+    after      <--- ADDR      .
+     .                        .
+     .                        .
+     .                        .
+    --- hi mem               --- lo mem
+@end example
+
+@noindent
+let's name @code{call_size} the number of bytes occupied by the
+instruction @code{call FUNC}; when the callee begins execution:
+
+@itemize
+@item
+It can access the return address by retrieving the machine word at
+@code{%esp}.
+
+@item
+It can access the constant @code{data_machine_word_1} by retrieving the
+machine word at:
+
+@example
+%esp - call_size - 0 * wordsize
+@end example
+
+@item
+It can access the constant @code{data_machine_word_2} by retrieving the
+machine word at:
+
+@example
+%esp - call_size - 1 * wordsize
+@end example
+
+@item
+It can access the constant @code{data_machine_word_3} by retrieving the
+machine word at:
+
+@example
+%esp - call_size - 2 * wordsize
+@end example
+@end itemize
 
 
 @c page

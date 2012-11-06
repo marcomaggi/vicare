@@ -94,7 +94,6 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
         ik_abort("failed to unmap fasl file: %s", strerror(errno));
       close(fd);
     }
-    fprintf(stderr, "%s: calling ik_exec_code for %s\n", __func__, fasl_file);
     ikptr val = ik_exec_code(pcb, v, 0, 0);
     if (val != IK_VOID_OBJECT)
       ik_print(val);

@@ -915,22 +915,48 @@ collect_locatives(gc_t* gc, ik_callback_locative* loc) {
   }
 }
 
+
 #define DEBUG_STACK 0
 
 static void
 collect_stack (gc_t* gc, ikptr top, ikptr end)
+/* Remember how the Scheme stack looks:
+ *
+ *    stack_base     frame_pointer=top     end   frame_base
+ *         v                   v             v   v
+ *  lo mem |-------------------+-------------+---| hi mem
+ *                       Scheme stack        |...| underflow_handler
+ *
+ *         |.....................................|
+ *                        stack_size
+ *
+ * The  argument  END is  "pcb->frame_base  -  wordsize", a  raw  memory
+ * pointer.
+ *
+ * The argument TOP is "pcb->frame_pointer", a raw memory pointer.  This
+ * argument is used as iterator to climb the stack, frame by frame, from
+ * low memory addresses to high memory addresses until END is reached.
+ *
+ *            frame   frame   frame   frame   frame
+ *   lo mem |-----+-|-----+-|-----+-|-----+-|-----+-|-| hi mem
+ *                 ^       ^       ^       ^       ^  ^
+ *                top     top1    top2    top3     |  frame_base
+ *                                               top4 = end
+ *
+ *  Upon entering this  function TOP must reference the  highest word in
+ *  the lowest frame.
+ */
 {
   if (DEBUG_STACK) {
-    fprintf(stderr, "collecting stack (size=%ld) from 0x%016lx .. 0x%016lx\n",
-	    (long)end - (long)top, (long) top, (long) end);
+    ik_debug_message_start("%s: enter (size=%ld) from 0x%016lx .. 0x%016lx",
+			   __func__, (long)end - (long)top, (long) top, (long) end);
   }
   while (top < end) {
     ikptr	rp	  = IK_REF(top, 0);
     long	rp_offset = IK_UNFIX(IK_REF(rp, disp_frame_offset));
     if (DEBUG_STACK) {
-      fprintf(stderr, "collecting frame at 0x%016lx: \n", (long) top);
-      fprintf(stderr, "rp=0x%016lx\n", rp);
-      fprintf(stderr, "rp_offset=%ld\n", rp_offset);
+      ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, rp_offset=%ld",
+		       (long) top, rp, rp_offset);
     }
     if (rp_offset <= 0) {
       ik_abort("invalid rp_offset %ld\n", rp_offset);
@@ -963,7 +989,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   | multivalue |
      *   |    word    |
      *   +------------+
-     *   | frameoffst |  the frame offset determined how far its
+     *   | frameoffst |  the frame offset determines how far its
      *   |    word    |  address is off from the start of the code
      *   +------------+
      *   |  padding   |  the size of this part is fixed so that we
@@ -980,7 +1006,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      */
     long framesize =  IK_REF(rp, disp_frame_size);
     if (DEBUG_STACK) {
-      fprintf(stderr, "fs=%ld\n", (long)framesize);
+      ik_debug_message("fs=%ld", (long)framesize);
     }
     if (framesize < 0) {
       ik_abort("invalid frame size %ld\n", (long)framesize);
@@ -1004,7 +1030,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
       for (i=0; i<bytes_in_mask; i++, fp-=8) {
         unsigned char m = mask[i];
 #if DEBUG_STACK
-        fprintf(stderr, "m[%ld]=0x%x\n", i, m);
+        ik_debug_message("m[%ld]=0x%x", i, m);
 #endif
         if (m & 0x01) { fp[-0] = add_object(gc, fp[-0], "frame0"); }
         if (m & 0x02) { fp[-1] = add_object(gc, fp[-1], "frame1"); }
@@ -1021,7 +1047,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
   if (top != end)
     ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long)top, (long)end);
   if (DEBUG_STACK) {
-    fprintf(stderr, "done with stack!\n");
+    ik_debug_message("%s: leave\n", __func__);
   }
 }
 

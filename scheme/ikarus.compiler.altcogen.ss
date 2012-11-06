@@ -938,6 +938,19 @@
 	  ((primcall op rands)
 	   (case-symbols op
 	     (($call-with-underflow-handler)
+	      ;;This    is    used    by   the    primitive    operation
+	      ;;$SEAL-FRAME-AND-CALL to implement  CALL/CC.  There are 3
+	      ;;operands:
+	      ;;
+	      ;;**The  underflow handler,  being  a  raw memory  address
+	      ;;  equal to the assembly label "ik_underflow_handler".
+	      ;;
+	      ;;**The closure object to jump to.
+	      ;;
+	      ;;**A machine  word being the reference  to a continuation
+	      ;;  object  describing the continuation right  before this
+	      ;;  function call.
+	      ;;
 	      (let ((t0		(unique-var 't))
 		    (t1		(unique-var 't))
 		    (t2		(unique-var 't))
@@ -949,11 +962,21 @@
 		 (V t0 handler)
 		 (V t1 k)
 		 (V t2 proc)
+		 ;;Push the underflow handler on the Scheme stack.
 		 (%make-move (mkfvar 1) t0)
+		 ;;Push  the reference  to  continuation  object on  the
+		 ;;Scheme stack.
 		 (%make-move (mkfvar 2) t1)
+		 ;;Load the  reference to closure object  in the Closure
+		 ;;Pointer Register.
 		 (%make-move cpr t2)
+		 ;;Load  in  the  Argument Count  Register  the  encoded
+		 ;;number of arguments.
 		 (%make-move ARGC-REGISTER (make-constant (argc-convention 1)))
+		 ;;Decrement  the  Frame  Pointer Register  so  that  it
+		 ;;points to the underflow handler.
 		 (make-asm-instr 'int- fpr (make-constant wordsize))
+		 ;;Jump to the closure.
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	     (else

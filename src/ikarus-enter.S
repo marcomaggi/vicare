@@ -220,15 +220,15 @@ _ik_asm_enter:
   # on the Scheme stack.  The C arguments are on the C stack:
   #
   #   argument 4: 16(%esp) = "ikptr" value referencing the closure
-  #   argument 3: 12(%esp) = "ikptr" fixnum being the number of
-  #                          Scheme arguments
+  #   argument 3: 12(%esp) = "ikptr" fixnum being the negated number
+  #                          of Scheme arguments
   #   argument 2:  8(%esp) = raw memory pointer referencing the
   #	                     entry point in the closure's code
   #                          object
   #   argument 1:  4(%esp) = raw memory pointer referencing the
   #                          PCB C language structure
   #
-  # The return address is at: 0(%esp).
+  # The return address to go back to the C caller is at: 0(%esp).
   #
   # To call the Scheme closure we:
   #
@@ -240,49 +240,83 @@ _ik_asm_enter:
   # 3. Store a pointer to the PCB structure in %esi.
   #
   # 4. Store the allocation pointer "pcb->allocation_pointer" in %ebp.
+  #    The allocation pointer is the first word in the PCB structure.
   #
   # 5. Save the C stack pointer from %esp to "pcb->system_stack".
   #
   # 6. Store the pointer to the Scheme stack "pcb->frame_pointer"
-  #    in %esp.
+  #    in %esp.  The frame pointer is the 3rd word in the PCB
+  #    structure (32-bit offset = 8).
   #
-  movl 12(%esp), %eax    # arg count
-  movl 16(%esp), %edi    # closure pointer
+  movl 12(%esp), %eax    # %eax = fixnum representing the num of args
+  movl 16(%esp), %edi    # %edi = pointer to closure object
   movl %esi, -4(%esp)    # preserve
   movl %ebp, -8(%esp)    # preserve
   movl %edi, -12(%esp)   # preserve
-  movl 4(%esp), %esi     # store the pointer to PCB into %esi
-  movl 0(%esi), %ebp     # allocation pointer is at 0(pcb)
-  movl %esp, %ecx        # save the C stack
+  movl 4(%esp), %esi     # %esi = pointer to PCB
+  movl 0(%esi), %ebp     # %ebp = allocation pointer is at 0(pcb)
+  movl %esp, %ecx        # save the C stack, to be used later
   subl $16, %esp         # 16 for alignment
-  movl %esp, 24(%esi)    # save esp in "pcb->system_stack"
+  movl %esp, 24(%esi)    # save %esp in "pcb->system_stack"
   movl 8(%esi), %esp     # load scheme stack from "pcb->frame_pointer"
   jmp L_call
-  .long 4
-  .long 0
-  .long  L_multivalue_underflow
+  .long 4			# We can access this data word
+				# by summing "disp_frame_size"
+				# to "ik_underflow_handler".
+
+  .long 0			# We can access this data word
+				# by summing "disp_frame_offset"
+				# to "ik_underflow_handler".
+
+  .long L_multivalue_underflow	# We can access this data word by
+				# summing "disp_multivale_rp" to
+				# "ik_underflow_handler".
   .byte 0
   .byte 0
+
+  # Call the binary code in the code object.  This instruction pushes
+  # the return address to the memory location referenced by %esp.
+  # Such return address is the label "ik_underflow_handler", which is
+  # often named in the comments as "underflow_handler".
 L_call:
-  call *8(%ecx)         # call the binary code in the code object
+  call *8(%ecx)
   # Here we are back from the Scheme code, but there may be a
   # continuation waiting to be entered in "pcb->next_k".
   #
-  # The register %esi (PCB), %edi (closure), %ebp (alloc pointer),
+  # The registers %esi (PCB), %edi (closure), %ebp (alloc pointer),
   # %esp (stack pointer) still have the meaning we gave them before.
 ik_underflow_handler:
+  # Here the Scheme stack looks like this:
+  #
+  #   |            high memory             |
+  #   |------------------------------------|
+  #   |               ???                  | <-- %esp
+  #   |------------------------------------|
+  #   |            low memory              |
+  #
+  # and we want to set it like this:
+  #
+  #   |            high memory             |
+  #   |------------------------------------|
+  #   |               ???                  | <-- %esp
+  #   |------------------------------------|
+  #   |               ???                  | <-- %esp - wordsize
+  #   |------------------------------------|
+  #   |        Scheme return value         | <-- %esp - 2 * wordsize
+  #   |------------------------------------|
+  #   |            low memory              |
+  #
   movl %eax, -8(%esp)   # store the return value
-  movl $-4, %eax        # set rvcount = 1
+  movl $-4, %eax        # set to 1 the number of returned values
 L_do_underflow:
   movl %esp, 8(%esi)    # store scheme stack in "pcb->frame_pointer"
   movl %ebp, 0(%esi)    # store allocation pointer in "pcb->allocation_pointer"
-  movl 24(%esi), %esp   # restore system stack from "pcb->system_stack"
+  movl 24(%esi), %esp   # restore C stack from "pcb->system_stack"
   addl $16, %esp        # 24 for alignment (>= 16)
   movl -4(%esp), %esi   # restore callee-save registers
   movl -8(%esp), %ebp   #
   movl -12(%esp), %edi  #
-  ret                   # back to the C function "ik_exec_code()", which
-                        # handled the underflow
+  ret                   # back to the C function "ik_exec_code()"
 L_multivalue_underflow:
   addl $4, %esp
   jmp L_do_underflow
@@ -304,7 +338,7 @@ _ik_asm_reenter:
   #   argument 1:  4(%esp) = raw memory pointer referencing the
   #                          PCB C language structure
   #
-  # The return address is at: 0(%esp).
+  # The return address to go back to the C caller is at: 0(%esp).
   #
 
   # Make %eax hold a fixnum representing the negated number of args.
@@ -332,8 +366,9 @@ _ik_asm_reenter:
   # Make %esp reference the Scheme stack.
   movl %ebx, %esp
 
-  # The machine word -4 is the fixnum -1, which represents
-  # a single argument.
+  # The 32-bit machine word -4 is the fixnum -1, which represents
+  # a single argument.  If %eax = -4, then there is a single
+  # return value; else there are multiple return values.
   cmpl $-4, %eax
   jne L_multi_value_reentry
 

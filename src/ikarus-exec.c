@@ -39,9 +39,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
    Return the return value of the last executed continuation. */
 {
 #if DEBUG_EXEC
-  fprintf(stderr, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n%s: enter ", __func__);
-  ik_fprint(stderr, s_closure);
-  fprintf(stderr, ", ");
+  ik_debug_message_start("%s: enter closure 0x%016lx", __func__, (long)s_closure);
   ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
   fprintf(stderr, "\n");
 #endif
@@ -50,23 +48,45 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   s_argc   = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
   s_next_k = pcb->next_k;
   while (s_next_k) {
-    /* FIXME We are here because???  (Marco Maggi; Oct 26, 2012) */
+#if (DEBUG_EXEC)
+    ik_debug_message("%s: resuming saved continuation 0x%016lx",
+		     __func__, (long)s_next_k);
+#endif
+    /* We are here  because the Scheme code wants to  return to a Scheme
+       continuation   object.   This   requires   installation  of   the
+       appropriate (previously saved) stack. */
     ikcont * p_next_k = (ikcont *)(long)(s_next_k - vector_tag);
     /* System continuations are created by the FFI to save the current C
-       execution contest just before calling back a Scheme function. */
+       execution contest just before calling back a Scheme function.  So
+       if S_NEXT_K is  a system continuation: we have no  Scheme code to
+       go back to, we just return to the caller of this C function. */
     if (system_continuation_tag == p_next_k->tag)
       break;
+    /* TOP is  a raw memory pointer  to the highest machine  word in the
+       last function call frame of the continuation.
+
+       RP is a  raw memory address being the entry  point in binary code
+       we have to jump back to.
+
+       FRAMESIZE is the function call frame size of the function we have
+       to return to.  This value was computed at compile time and stored
+       in binary code just before the "call" instruction. */
     ikptr	top       = p_next_k->top;
     ikptr	rp        = IK_REF(top, 0);
     long	framesize = (long) IK_REF(rp, disp_frame_size);
 #if DEBUG_EXEC
-    fprintf(stderr, "%s: exec framesize=0x%016lx kontsize=%ld rp=0x%016lx\n",
-	    __func__, framesize, p_next_k->size, rp);
+    ik_debug_message("%s: exec framesize=%ld kontsize=%ld rp=0x%016lx",
+		     __func__, framesize, p_next_k->size, rp);
 #endif
-    if (0 == framesize)
+    if (0 == framesize) {
       framesize = IK_REF(top, wordsize);
+#if (DEBUG_EXEC)
+      ik_debug_message("%s: retrieved framesize=%ld from above top",
+		       __func__, (long)framesize);
+#endif
+    }
     if (framesize <= 0)
-      ik_abort("invalid framesize %ld\n", framesize);
+      ik_abort("invalid caller function framesize %ld\n", framesize);
     if (framesize < p_next_k->size) {
       /* Insert  a new  continuation  between "s_next_k"  and its  next.
        * Before:
@@ -101,14 +121,13 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	((int*)(long)(pcb->dirty_vector))[idx] = -1;
       }
     } else if (framesize > p_next_k->size) {
-      ik_abort("invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
+      ik_abort("while resuming continuation 0x%016lx (rp=0x%016lx):\n\tinvalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
+	       (long)s_next_k, (long)rp,
 	       framesize, p_next_k->size, rp, IK_REF(rp, disp_frame_offset));
     }
     pcb->next_k = p_next_k->next;
 #if DEBUG_EXEC
-    fprintf(stderr, "%s: reenter, argc %lu\n", __func__, IK_UNFIX(-s_argc));
-    /* ik_fprint(stderr, IK_REF(pcb->frame_base - wordsize + s_argc, 0)); */
-    fprintf(stderr, "\n");
+    ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_argc));
 #endif
     { /* Move the arguments from the old frame to the new frame.  Notice
 	 that S_ARGC is negative for a reason! */
@@ -129,15 +148,16 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
    *
    *     high memory
    *   |            |
-   *   |            |
    *   |------------|
    *   |            | <-- pcb->frame_base
-   *   |------------|
-   *   |            | <-- pcb->frame_base - wordsize
-   *   |------------|
-   *   |            | <-- pcb->frame_base - 2 * wordsize
-   *   |------------|
-   *   |            |
+   *   |------------|                                     --
+   *   |            | <-- pcb->frame_base - wordsize      .
+   *   |------------|                                     .
+   *   |            | <-- pcb->frame_base - 2 * wordsize  . Scheme
+   *   |------------|                                     . stack
+   *   |            |                                     .
+   *   |            |                                     .
+   *   |------------| <-- pcb->stack_base                 --
    *   |            |
    *     low memory
    *

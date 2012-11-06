@@ -272,7 +272,7 @@ ik_make_pcb (void)
    * at the first subsequent function  call, the current Scheme stack is
    * stored away  in a Scheme continuation  and a new memory  segment is
    * allocated  and  installed as  Scheme  stack;  see for  example  the
-   * "ik_stack_overflow()"  function.   When  the function  return:  the
+   * "ik_stack_overflow()"  function.  When  the  function returns:  the
    * stored continuation  is reinstated  and execution continues  on the
    * old stack.
    *
@@ -280,21 +280,33 @@ ik_make_pcb (void)
    *
    *    stack_base                   frame_pointer = frame_base
    *         v                                     v
-   *  lo mem |-------------------------+-----------| hi mem
+   *  lo mem |-------------------------------------| hi mem
    *                       Scheme stack
    *
    * then, while nested  functions are called, new frames  are pushed on
    * the stack:
    *
-   *    stack_base    frame_pointer  frame_base
-   *         v             v           v
-   *  lo mem |-------------+-----------+-----------| hi mem
-   *                       Scheme stack
+   *    stack_base    frame_pointer            frame_base
+   *         v             v                       v
+   *  lo mem |-------------+-----------------------| hi mem
+   *                  |....|
+   *                           Scheme stack
    *
    * Notice how "pcb->frame_base" references a  word that is one-off the
    * end of the stack segment; so the first word in the stack is:
    *
    *    pcb->frame_base - wordsize
+   *
+   * Also,  when   C  code   is  running,   "pcb->frame_pointer"  always
+   * references the highest  memory address in the  lowest function call
+   * frame; the machine word referenced by "pcb->frame_pointer" contains
+   * the return address of the last  function call.  When Scheme code is
+   * entered: "pcb->frame_pointer" is stored  in the %esp register; when
+   * Scheme   code  is   exited   the  %esp   register   is  stored   in
+   * "pcb->frame_pointer".
+   *
+   * See the function "ik_exec_code()" for details about entering Scheme
+   * code execution.
    */
   {
     pcb->stack_base    = ik_mmap(IK_STAKSIZE);
@@ -670,7 +682,17 @@ ik_debug_message (const char * error_message, ...)
 {
   va_list        ap;
   va_start(ap, error_message);
-  fprintf(stderr, "*** Vicare debug message: ");
+  fprintf(stderr, "*** Vicare debug: ");
+  vfprintf(stderr, error_message, ap);
+  fprintf(stderr, "\n");
+  va_end(ap);
+}
+void
+ik_debug_message_start (const char * error_message, ...)
+{
+  va_list        ap;
+  va_start(ap, error_message);
+  fprintf(stderr, "\n*** Vicare debug: ");
   vfprintf(stderr, error_message, ap);
   fprintf(stderr, "\n");
   va_end(ap);
@@ -699,15 +721,47 @@ ik_error (ikptr args)
 
 void
 ik_stack_overflow (ikpcb* pcb)
+/* Let's recall  how the  Scheme stack  is managed; at  first we  have a
+ * single stack segment:
+ *
+ *    stack_base   redline        growth     frame_base
+ *         v          v          <------       v
+ *  lo mem |----------+----------------------|-| hi mem
+ *                                            |
+ *                                             -> ik_underflow_handler
+ *
+ * where the highest machine word is  set to the address of the assembly
+ * label "ik_underflow_handler",  defined in the  file "ikarus-enter.S",
+ * to  which the  execution  flow  returns after  the  last Scheme  code
+ * execution completes.
+ *
+ * When the use  of the stack passes the redline:  this very function is
+ * called; the old  stack segment is stored into  a continuation object,
+ * saved  in  the  PCB,  and  a  new  stack  segment  is  allocated  and
+ * initialised in the same way of the old:
+ *
+ *    stack_base   redline        growth    frame_base
+ *         v          v          <------       v
+ *  lo mem |----------+----------------------|-| hi mem
+ *                                            |
+ *                                             -> ik_underflow_handler
+ *
+ * When use of  the new stack segment is finished:  the Scheme code goes
+ * back  to the  "ik_underflow_handler"  label, which  will  do what  is
+ * needed to  retrieve the  old stack  segment from  the PCB  and resume
+ * execution in the old stack.
+ */
+#define STACK_DEBUG	1
 {
   ikptr		underflow_handler;
-#ifdef VICARE_DEBUGGING
+#if STACK_DEBUG
   ik_debug_message("%s: entered pcb=0x%016lx", __func__, (long)pcb);
 #endif
   /* Mark the old Scheme stack segment as "data". */
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
+  /* Retrieve the address of the under flow handler. */
   underflow_handler = IK_REF(pcb->frame_base, -wordsize);
-#ifdef VICARE_DEBUGGING
+#if STACK_DEBUG
   ik_debug_message("underflow_handler = 0x%08x", (long)underflow_handler);
 #endif
   { /* Save the whole  Scheme stack into a continuation and  store it in
@@ -719,29 +773,23 @@ ik_stack_overflow (ikpcb* pcb)
     IK_REF(s_kont, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
-    //ik_debug_message("%s: saved cont 0x%lx", __func__, (long)s_kont);
+#if STACK_DEBUG
+    ik_debug_message("%s: saved stack continuation 0x%016lx (rp=0x%016lx)",
+		     __func__, (long)s_kont, IK_REF(pcb->frame_pointer, 0));
+#endif
   }
   { /* Allocate a  new memory  segment to  be used  as Scheme  stack and
-     * initialise the PCB as follows:
-     *
-     *    stack_base                 frame_pointer   frame_base
-     *         v                                 v   v
-     *  lo mem |---------------------------------+---| hi mem
-     *                       Scheme stack        |...| underflow_handler
-     *
-     *         |.....................................|
-     *                        stack_size
-     */
+       set the PCB accordingly. */
     pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STAKSIZE, mainstack_mt, pcb);
     pcb->stack_size    = IK_STAKSIZE;
     pcb->frame_base    = pcb->stack_base + pcb->stack_size;
     pcb->frame_pointer = pcb->frame_base - wordsize;
     pcb->frame_redline = pcb->stack_base + 2 * 4096;
-    /* Store  the  underflow handler  in  the  last  word of  the  Stack
-       segment. */
+    /* Store the address of the underflow handler in the highest machine
+       word, so that it is referenced by "pcb->frame_pointer". */
     IK_REF(pcb->frame_pointer, 0) = underflow_handler;
   }
-#ifdef VICARE_DEBUGGING
+#if STACK_DEBUG
   ik_debug_message("%s: leave pcb=0x%016lx", __func__, (long)pcb);
 #endif
   return;

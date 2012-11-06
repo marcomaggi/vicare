@@ -4333,6 +4333,22 @@
       ))
 
     ((public-function		sl-continuation-code-label)
+     ;;This subroutine is used to resume execution of a previously saved
+     ;;Scheme  continuation;  it is  used  to  implement CALL/CC.   Upon
+     ;;entering this subroutine:
+     ;;
+     ;;**The  Process  Control Register  (PCR)  must  reference the  PCB
+     ;;  structure.
+     ;;
+     ;;**The Frame Pointer Register (FPR)  must reference the top of the
+     ;;  stack.
+     ;;
+     ;;**The Closure Pointer  Register (CPR) must hold a  reference to a
+     ;;  closure object, whose first  slot for free variables contains a
+     ;;  reference to  the continuation object to  resume.  Such closure
+     ;;  is an  internal component of the  continuation function created
+     ;;  by CALL/CC.
+     ;;
      (entry-point-label		SL_continuation_code)
      (number-of-free-variables	1)
      (code-annotation		(label SL_continuation_code))
@@ -4343,25 +4359,69 @@
 		   L_cont_mult_move_args
 		   L_cont_mult_copy_loop)
      (assembly
-      (movl (mem off-closure-data cpr) ebx) ; captured-k
-      (movl ebx (mem pcb-next-continuation pcr))	       ; set
+      ;;Move in EBX the reference to the continuation object.
+      (movl (mem off-closure-data cpr) ebx)
+      ;;Move the reference to continuation  object in the "next_k" field
+      ;;of the PCB structure (overwriting the old value!!!).
+      (movl ebx (mem pcb-next-continuation pcr))
+      ;;Move in EBX the field "frame_base" of the PCB structure.
       (movl (mem pcb-frame-base pcr) ebx)
+      ;;Dispatch according to  the number of arguments to  return to the
+      ;;continuation.
       (cmpl (int (argc-convention 1)) eax)
-      (jg (label L_cont_zero_args))
-      (jl (label L_cont_mult_args))
+      (jg (label L_cont_zero_args)) ;jump if greater, more than one arg
+      (jl (label L_cont_mult_args)) ;jump if less, less than one arg
 
+      ;;We give one argument to  the continuation.  The situation on the
+      ;;stack when arriving here is:
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler |
+      ;;   |----------------------|
+      ;;   |         ...          |
+      ;;   |----------------------|
+      ;;   |  old return address  | <-- Frame Pointer Register (%esp)
+      ;;   |----------------------|
+      ;;   |     return value     |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
       (label L_cont_one_arg)
+      ;;Load in EAX the the return value.
       (movl (mem (fx- 0 wordsize) fpr) eax)
+      ;;Load   in   the   Frame    Pointer   Register   the   value   of
+      ;;"pcb->frame_base".
       (movl ebx fpr)
+      ;;Decrement  Frame Pointer  Register of  a word  size, so  that it
+      ;;contains the address of the  highest machine word in the current
+      ;;Scheme stack segment: such  memory location contains the address
+      ;;of    the     underflow    handler,    the     assembly    label
+      ;;"ik_underflow_handler" defined in the file "ikarus-enter.S".
       (subl (int wordsize) fpr)
+      ;;Jump to the underflow handler.   The situation on the stack when
+      ;;arriving here is:
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- Frame Pointer Register (%esp)
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
       (ret)
 
+      ;;We give zero arguments to the continuation.
       (label L_cont_zero_args)
       (subl (int wordsize) ebx)
       (movl ebx fpr)
       (movl (mem 0 ebx) ebx)			   ; return point
       (jmp (mem disp-multivalue-rp ebx))	   ; go
 
+      ;;We more than one argument to the continuation.
       (label L_cont_mult_args)
       (subl (int wordsize) ebx)
       (cmpl ebx fpr)

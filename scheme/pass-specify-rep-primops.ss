@@ -4493,42 +4493,49 @@
 ;;
 ;;These primitives are mostly used by "ikarus.control.sls".
 ;;
-;;Recall that the Scheme stack is:
+;;Recall that a Scheme stack segment is laid out as follows:
 ;;
-;;     high memory
-;;   |            |
-;;   |------------|
-;;   |            | <-- pcb->frame_base
-;;   |------------|
-;;   | used word  | <-- pcb->frame_base - wordsize
-;;   |------------|
-;;   | used word  |
-;;   |------------|
-;;   |     .      |
-;;   |     .      |
-;;   |     .      |
-;;   |------------|
-;;   | free word  | <-- pcb->frame_pointer
-;;   |------------|
-;;   |     .      |
-;;   |     .      |
-;;   |     .      |
-;;   |------------|
-;;   | free word  | <-- pcb->stack_base
-;;   |------------|
-;;   |            |
-;;    low memory
+;;         high memory
+;;   |                      |
+;;   |----------------------|
+;;   |                      | <-- pcb->frame_base
+;;   |----------------------|
+;;   | ik_underflow_handler |   <-- pcb->frame_base - wordsize
+;;   |----------------------|
+;;   |      used word       |
+;;   |----------------------|
+;;   |           .          |
+;;   |           .          |
+;;   |           .          |
+;;   |----------------------|
+;;   |     return address   | <-- pcb->frame_pointer
+;;   |----------------------|
+;;   |           .          |
+;;   |           .          |
+;;   |           .          |
+;;   |----------------------|
+;;   | free word            | <-- pcb->stack_base
+;;   |----------------------|
+;;   |                      |
+;;          low memory
 ;;
 ;;and remember that "pcb->frame_base" references  a word that is one-off
 ;;the end of the stack segment; so the first word in the stack is:
 ;;
 ;;   pcb->frame_base - wordsize
 ;;
+;;"ik_underflow_handler"  is  an  assembly  label defined  in  the  file
+;;"ikarus-enter.S", to which  the execution flow returns  after the last
+;;Scheme code execution using this stack segment completes.
+;;
 (section
 
  (define-primop $fp-at-base unsafe
    ;;Evaluate to true if the frame pointer register (FPR) references the
-   ;;base of the stack as described by the PCB structure.
+   ;;highest  machine  word  in  the  stack  as  described  by  the  PCB
+   ;;structure; the highest machine word  is the one holding the address
+   ;;of  "ik_underflow_handler".  PCR  is  the  register containing  the
+   ;;memory address of the PCB structure.
    ;;
    ((P)
     (prm '= (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
@@ -4537,18 +4544,22 @@
 
  (define-primop $current-frame unsafe
    ;;Extract from the  PCB structure a pointer to  the next continuation
-   ;;and return it.
+   ;;and return it.  In C the returned value is "pcb->next_k".
    ;;
    ((V)
     (prm 'mref pcr (K pcb-next-continuation))))
 
  (define-primop $seal-frame-and-call unsafe
-   ;;Save the current Scheme stack  into a new continuation object (yes,
-   ;;the whole  Scheme stack); store  such new continuation as  the next
-   ;;continuation; call the object X.
+   ;;This is used to implement CALL/CC.
    ;;
-   ;;     high memory address
-   ;;    ----------------
+   ;;Save the current  Scheme stack, as described by  the PCB structure,
+   ;;into a new continuation object (yes, the whole Scheme stack); store
+   ;;such new  continuation as the  next continuation; call  the closure
+   ;;object X.
+   ;;
+   ;;Before this primitive operation:
+   ;;
+   ;;       high memory
    ;;   |                | <-- pcb->frame_base
    ;;   |----------------|
    ;;   |    1st word    | <-- BASE = pcb->frame_base - wordsize
@@ -4556,16 +4567,32 @@
    ;;           ...
    ;;   |----------------|
    ;;   |    Nth word    | <-- frame pointer register (FPR)
-   ;;    ----------------
-   ;;     low memory address
+   ;;   |----------------|
+   ;;   |                |
+   ;;       low memory
+   ;;
+   ;;just before performing the actual call:
+   ;;
+   ;;       high memory
+   ;;   |                |
+   ;;   |----------------|
+   ;;   |    1st word    | <-- BASE
+   ;;   |----------------|
+   ;;           ...
+   ;;   |----------------|
+   ;;   |    Nth word    | <-- frame pointer register (FPR)
+   ;;   |----------------|     = pcb->frame_base
+   ;;   |                |
+   ;;       low memory
    ;;
    ((V x)
-    (with-tmp* ((kont (prm 'alloc
-			   (K continuation-size)
-			   (K vector-tag)))
-		(base (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
-			   (K (- wordsize))))
-		(underflow-handler (prm 'mref base (K 0))))
+    (with-tmp* ((kont			(prm 'alloc
+					     (K continuation-size)
+					     (K vector-tag)))
+		(base			(prm 'int+
+					     (prm 'mref pcr (K pcb-frame-base))
+					      (K (- wordsize))))
+		(underflow-handler	(prm 'mref base (K 0))))
       ;;Store the continuation tag in the first word.
       (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
       ;;Save the current Frame Pointer Register.
@@ -4577,7 +4604,8 @@
       (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
       ;;Set the new continuation object as the next continuation.
       (prm 'mset pcr (K pcb-next-continuation) kont)
-      ;;The  first free  word on  the stack  is the  new stack  base for
+      ;;The machine word at the top  of the stack (the one referenced by
+      ;;the  stack pointer  register, %esp)  is the  new stack  base for
       ;;subsequent code  execution.  Store the current  frame pointer in
       ;;the PCB as frame base.
       (prm 'mset pcr (K pcb-frame-base) fpr)
@@ -4588,6 +4616,14 @@
     (interrupt)))
 
  (define-primop $frame->continuation unsafe
+   ;;Build  and return  a  new  closure object.   When  such closure  is
+   ;;invoked:    it   makes    use    of    the   assembly    subroutine
+   ;;SL-CONTINUATION-CODE to  resume the  execution of  the continuation
+   ;;object X.
+   ;;
+   ;;The continuation  object X  is stored  in the  first slot  for free
+   ;;variables.
+   ;;
    ((V x)
     (with-tmp ((clo (prm 'alloc
 			 (K (align (+ disp-closure-data wordsize)))
