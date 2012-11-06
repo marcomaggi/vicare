@@ -4726,7 +4726,9 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;This is the implementation of the VALUES function.
+    ;;This is the implementation of  the VALUES function.  When only one
+    ;;argument is  given: this routine  just returns that  single value;
+    ;;nothing special.
     ;;
     ((public-function		sl-values-label)
      (entry-point-label		SL_values)
@@ -4737,7 +4739,7 @@
 		   L_values_many_values)
      (assembly
       (label SL_values)
-      ;;Dispatch accortdng to the number of arguments.
+      ;;Dispatch according to the number of arguments.
       (cmpl (int (argc-convention 1)) eax)
       (je (label L_values_one_value))
 
@@ -4746,7 +4748,8 @@
       (movl (mem 0 fpr) ebx)			     ; return point
       (jmp (mem disp-multivalue-rp ebx))	     ; go
 
-      ;;Return a single  value.  The situation on the  Scheme stack when
+      ;;Return a  single value;  this is a  simple return  from function
+      ;;call, nothing special.   The situation on the  Scheme stack when
       ;;arriving here is:
       ;;
       ;;         high memory
@@ -4760,7 +4763,8 @@
       ;;          low memory
       ;;
       (label L_values_one_value)
-      ;;Store in EAX the single return value.
+      ;;Store in  EAX the  single return value.   The caller  expects it
+      ;;there, rather than on the stack.
       (movl (mem (fx- 0 wordsize) fpr) eax)
       ;;Return to the caller.
       (ret)

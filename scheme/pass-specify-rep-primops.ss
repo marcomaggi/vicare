@@ -4637,6 +4637,9 @@
     (nop)))
 
  (define-primop $make-call-with-values-procedure unsafe
+   ;;Return a closure object implementing the CALL-WITH-VALUES primitive
+   ;;function through an assembly routine.
+   ;;
    ((V)
     (K (make-closure (make-code-loc (sl-cwv-label))
 		     '() #f)))
@@ -4646,6 +4649,9 @@
     (interrupt)))
 
  (define-primop $make-values-procedure unsafe
+   ;;Return a closure object  implementing the VALUES primitive function
+   ;;through an assembly routine.
+   ;;
    ((V)
     (K (make-closure (make-code-loc (sl-values-label))
 		     '() #f)))
@@ -4655,8 +4661,15 @@
     (interrupt)))
 
  (define-primop $make-annotated-procedure unsafe
-   ;;FIXME It  appears that this is  never used.  (Marco Maggi;  Oct 25,
-   ;;2012)
+   ;;Build and return  a new closure object wrapping  the closure object
+   ;;PROC  and  just adding  an  annotation  object  to it.   When  such
+   ;;annotated closure is applied: it  makes use of the assembly routine
+   ;;"SL_annotated" to call the closure PROC.
+   ;;
+   ;;FIXME  It appears  that  this is  never used:  it  is available  as
+   ;;primitive operation for the brave user.  Notice, though, that it is
+   ;;interesting to annotate  a function with whatever  Scheme object we
+   ;;want.  (Marco Maggi; Oct 25, 2012)
    ;;
    ((V annotation proc)
     (with-tmp ((clo (prm 'alloc
@@ -4675,6 +4688,9 @@
     (interrupt)))
 
  (define-primop $annotated-procedure-annotation unsafe
+   ;;Given a closure object PROC being an annotated procedure created by
+   ;;$MAKE-ANNOTATED-PROCEDURE: return the annotation object.
+   ;;
    ((V proc)
     (prm 'mref (T proc) (K off-closure-data))))
 

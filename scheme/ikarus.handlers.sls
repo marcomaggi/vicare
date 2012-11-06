@@ -75,7 +75,7 @@
 
 (define ($multiple-values-error . args)
   ;;Whenever an attempt to return zero  or multiple, but not one, values
-  ;;number of values is performed, as in:
+  ;;to a single value contest is performed, as in:
   ;;
   ;;   (let ((x (values 1 2)))
   ;;     x)
