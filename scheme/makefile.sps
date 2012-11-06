@@ -535,6 +535,7 @@
 ;;;
     (posix		(vicare $posix)				#t	#t)
     ($language		(vicare language-extensions)		#f	#f)
+    ($compiler		(ikarus system $compiler)		#f	#f)
     ))
 
 
@@ -629,6 +630,7 @@
     (print-gensym				i v $language symbols)
     (print-graph				i v $language)
     (print-unicode				i v $language)
+    (printer-integer-radix			i v $language)
     (unicode-printable-char?			i v $language)
     (gensym-count				i v $language symbols)
     (gensym-prefix				i v $language symbols)
@@ -639,15 +641,15 @@
     (engine-handler				i v $language)
     (assembler-output				i v $language)
     (optimizer-output				i v $language)
+    (assembler-property-key			$codes)
     (new-cafe					i v $language)
     (waiter-prompt-string			i v $language)
     (readline-enabled?				i v $language)
     (readline					i v $language)
     (make-readline-input-port			i v $language)
-    (expand					i v $language)
-    (core-expand				i v $language)
-    (expand/optimize				i v $language)
-    (expand/scc-letrec				i v $language)
+    (expand-form-to-core-language		i v $language)
+    (expand-library				i v $language)
+    (expand-top-level				i v $language)
     (environment?				i v $language)
     (environment-symbols			i v $language)
     (time-and-gather				i v $language)
@@ -807,6 +809,7 @@
     ($make-symbol				$symbols)
     ($symbol-unique-string			$symbols)
     ($symbol-value				$symbols)
+    ($symbol-proc				$symbols)
     ($symbol-string				$symbols)
     ($symbol-plist				$symbols)
     ($set-symbol-value!				$symbols)
@@ -847,6 +850,7 @@
     (procedure-annotation			i v $language)
     ($make-annotated-procedure			$codes)
     ($annotated-procedure-annotation		$codes)
+    ($cpref					$codes)
     ($make-tcbucket				$tcbuckets)
     ($tcbucket-key				$tcbuckets)
     ($tcbucket-val				$tcbuckets)
@@ -969,6 +973,8 @@
     (acosh					i v $language)
     (atanh					i v $language)
     (angle					i v r ba se)
+    (bignum->bytevector				i v $language)
+    (bytevector->bignum				i v $language)
     (append					i v r ba se)
     (apply					i v r ba se)
     (assert					i v r ba)
@@ -1029,6 +1035,7 @@
     (div0-and-mod0				i v r ba)
     (dynamic-wind				i v r ba se)
     (eq?					i v r ba se)
+    (neq?					i v $language)
     (equal?					i v r ba se)
     (eqv?					i v r ba se)
     (error					i v r ba)
@@ -1246,6 +1253,8 @@
     (fltruncate					i v r fl)
     (flzero?					i v r fl)
     (real->flonum				i v r fl)
+    (bytevector->flonum				i v $language)
+    (flonum->bytevector				i v $language)
     (make-no-infinities-violation		i v r fl)
     (make-no-nans-violation			i v r fl)
     (&no-infinities				i v r fl)
@@ -2140,7 +2149,7 @@
     (free-c-callback				$for)
 
 ;;; --------------------------------------------------------------------
-;;;
+
     (ellipsis-map)
     (optimize-cp				i v $language)
     (optimize-level				i v $language)
@@ -2159,6 +2168,42 @@
     (keyword?					i v $language)
     (keyword=?					i v $language)
     (keyword-hash				i v $language)
+
+;;; --------------------------------------------------------------------
+
+    ($current-letrec-pass			$compiler)
+    ($check-for-illegal-letrec			$compiler)
+    ($source-optimizer-passes-count		$compiler)
+
+
+    ($compile-core-expr->code			$compiler)
+    ($recordize					$compiler)
+    ($optimize-direct-calls			$compiler)
+    ($optimize-letrec				$compiler)
+    ($source-optimize				$compiler)
+    ($rewrite-references-and-assignments	$compiler)
+    ($introduce-tags				$compiler)
+    ($introduce-vars				$compiler)
+    ($sanitize-bindings				$compiler)
+    ($optimize-for-direct-jumps			$compiler)
+    ($insert-global-assignments			$compiler)
+    ($convert-closures				$compiler)
+    ($optimize-closures/lift-codes		$compiler)
+    ($alt-cogen					$compiler)
+    ($assemble-sources				$compiler)
+
+    ($introduce-primcalls			$compiler)
+    ($eliminate-fix				$compiler)
+    ($insert-engine-checks			$compiler)
+    ($insert-stack-overflow-check		$compiler)
+    ($specify-representation			$compiler)
+    ($impose-calling-convention/evaluation-order $compiler)
+    ($assign-frame-sizes			$compiler)
+    ($color-by-chaitin				$compiler)
+    ($flatten-codes				$compiler)
+
+    ($unparse-recordized-code			$compiler)
+    ($unparse-recordized-code/pretty		$compiler)
     ))
 
 

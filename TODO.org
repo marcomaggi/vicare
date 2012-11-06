@@ -23,14 +23,12 @@
    scheme/ikarus.exceptions.ss
    scheme/ikarus.debugger.ss
 
-   scheme/ikarus.code-objects.ss
    scheme/ikarus.collect.ss
    scheme/ikarus.control.ss
    scheme/ikarus.date-string.ss
    scheme/ikarus.fasl.ss
    scheme/ikarus.fasl.write.ss
    scheme/ikarus.hash-tables.ss
-   scheme/ikarus.multiple-values.ss
    scheme/ikarus.pretty-formats.ss
    scheme/ikarus.pretty-print.ss
    scheme/ikarus.singular-objects.ss

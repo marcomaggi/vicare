@@ -52,6 +52,7 @@
     case-word-size		case-endianness
     case-one-operand		case-two-operands
     case-fixnums		case-integers
+    case-symbols
     define-exact-integer->symbol-function
 
     ;; auxiliary syntaxes
@@ -90,10 +91,24 @@
        (define-syntax ?name
 	 (identifier-syntax ghost))))))
 
-(define-syntax define-inline-constant
+#;(define-syntax define-inline-constant
   (syntax-rules ()
     ((_ ?name ?value)
      (define-syntax ?name (identifier-syntax ?value)))))
+(define-syntax define-inline-constant
+  ;;We want to allow a generic expression to generate the constant value
+  ;;at expand time.
+  ;;
+  (syntax-rules ()
+    ((_ ?name ?expr)
+     (define-syntax ?name
+       (let ((const ?expr))
+	 (lambda (stx)
+	   (syntax-case stx ()
+	     (?id
+	      (identifier? #'?id)
+	      (with-syntax ((VALUE const))
+		#'(quote VALUE))))))))))
 
 (define-syntax define-syntax*
   (syntax-rules ()
@@ -388,6 +403,34 @@
 		  (= ?integer  int)
 		  ...)
 	      ?body0 ?body ...)
+	     ...)))
+    ))
+
+(define-syntax case-symbols
+  (syntax-rules (else)
+    ((_ ?expr
+	((?symbol0 ?symbol ...)
+	 ?sym-body0 ?sym-body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((sym ?expr))
+       (cond ((or (eq? (quote ?symbol0) sym)
+		  (eq? (quote ?symbol)  sym)
+		  ...)
+	      ?sym-body0 ?sym-body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?symbol0 ?symbol ...)
+	 ?sym-body0 ?sym-body ...)
+	...)
+     (let ((sym ?expr))
+       (cond ((or (eq? (quote ?symbol0) sym)
+		  (eq? (quote ?symbol)  sym)
+		  ...)
+	      ?sym-body0 ?sym-body ...)
 	     ...)))
     ))
 

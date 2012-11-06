@@ -1910,12 +1910,6 @@
 
 ;;;; any integer list to bytevector functions
 
-(define uint-list->bytevector
-  (%make-xint-list->bytevector 'uint-list->bytevector bytevector-uint-set!/who))
-
-(define sint-list->bytevector
-  (%make-xint-list->bytevector 'sint-list->bytevector bytevector-sint-set!/who))
-
 (define (%make-xint-list->bytevector who bv-set!)
   (define (race h t ls idx endianness size)
     (if (pair? h)
@@ -1941,6 +1935,12 @@
     (if (and (fixnum? size) (fx> size 0))
 	(race ls ls ls 0 endianness size)
       (die who "size must be a positive integer" size))))
+
+(define uint-list->bytevector
+  (%make-xint-list->bytevector 'uint-list->bytevector bytevector-uint-set!/who))
+
+(define sint-list->bytevector
+  (%make-xint-list->bytevector 'sint-list->bytevector bytevector-sint-set!/who))
 
 
 

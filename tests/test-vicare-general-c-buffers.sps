@@ -31,7 +31,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare general C buffers handling\n")
+(check-display "*** testing Vicare general C buffers handling\n")
 
 
 (parametrise ((check-test-name	'strings))

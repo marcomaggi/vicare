@@ -42,18 +42,20 @@
 		  host-info
 		  $struct-guardian
 		  struct-guardian-logger
-		  struct-guardian-log)
+		  struct-guardian-log
+		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
 		  print-loaded-libraries)
 	    config.)
     (only (ikarus.compiler)
-	  generate-debug-calls)
+	  generate-debug-calls
+	  $source-optimizer-passes-count)
     (only (ikarus.debugger)
 	  guarded-start)
     (only (psyntax expander)
-	  top-level-expander)
+	  expand-top-level)
     (only (psyntax library-manager)
 	  current-library-expander)
     (only (ikarus.reader)
@@ -74,6 +76,8 @@
     (only (ikarus system $structs)
 	  $struct-ref
 	  $struct-rtd)
+    #;(only (ikarus system $compiler)
+	  $current-letrec-pass)
     (only (ikarus cafe)
 	  cafe-input-port)
     (prefix (only (ikarus.readline)
@@ -446,7 +450,8 @@
 	   (cond ((null? (cdr args))
 		  (%error-and-exit "option --compile-dependencies requires a script name"))
 		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --compile-dependencies given after other mode option"))
+		  (%error-and-exit
+		   "option --compile-dependencies given after other mode option"))
 		 (else
 		  (set-run-time-config-exec-mode! cfg 'compile)
 		  (set-run-time-config-script!    cfg (cadr args))
@@ -531,7 +536,8 @@
 	   (if (null? (cdr args))
 	       (%error-and-exit "-e or --eval-expr requires an expression argument")
 	     (begin
-	       (run-time-config-eval-codes-register! cfg (cons 'expr (%string->sexp (cadr args))))
+	       (run-time-config-eval-codes-register! cfg (cons 'expr
+							       (%string->sexp (cadr args))))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "-l" "--load-library")
@@ -567,6 +573,27 @@
 	       (%error-and-exit "--prompt requires a string argument")
 	     (let ((prompt (cadr args)))
 	       (next-option (cddr args) (lambda () (k) (waiter-prompt-string prompt))))))
+
+;;; --------------------------------------------------------------------
+;;; compiler options with argument
+
+	  #;((%option= "--compiler-letrec-pass")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--compiler-letrec-pass requires a mode argument")
+	     (begin
+	       (guard (E (else
+			  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
+		 ($current-letrec-pass (string->symbol (cadr args))))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "--optimizer-passes-count")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--optimizer-passes-count requires a number argument")
+	     (begin
+	       (guard (E (else
+			  (%error-and-exit "invalid argument to --optimizer-passes-count")))
+		 ($source-optimizer-passes-count (string->number (cadr args))))
+	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
 ;;; program options
@@ -786,10 +813,15 @@ Other options:
         Disables the effect of --print-loaded-libraries.
 
    -O0
+        Turn off the source optimizer.
+
    -O1
    -O2
-        Turn  on  various levels  of  compiler optimisations  (currently
-        unsupported).
+        Turn on various levels of compiler optimisations.
+
+   --optimizer-passes-count COUNT
+        Specify how  many passes to  perform with the  source optimizer.
+        Must be a positive fixnum.  Defaults to 1.
 
    --print-assembly
         Print  to  the  current  error port  the  assembly  instructions
@@ -928,8 +960,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define-syntax doit
   (syntax-rules ()
-    ((_ e e* ...)
-     (start (lambda () e e* ...)))))
+    ((_ ?body0 ?body ...)
+     (start (lambda () ?body0 ?body ...)))))
 
 (define (start proc)
   (if (generate-debug-calls)
@@ -988,7 +1020,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit
      (let-values (((lib* invoke-code macro* export-subst export-env)
-		   (top-level-expander (read-script-source-file cfg.script))))
+		   (expand-top-level (read-script-source-file cfg.script))))
        (define port (current-output-port))
        (pretty-print invoke-code port)
        ;; (newline port)
@@ -1002,14 +1034,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (flush-output-port port)))))
 
 
-;;;; main expressions
+;;;; some utility modules
 
 (module ()
   ;;See "ikarus.symbol-table.ss"  for an  explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
-  ($initialize-symbol-table!)
-
-  #| end of module |#)
+  ($initialize-symbol-table!))
 
 (module ($struct-guardian struct-guardian-logger struct-guardian-log)
   (define %struct-guardian
@@ -1098,6 +1128,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   #| end of module |# )
 
+
+;;;; main expressions
+
 (let-values (((cfg execution-state-initialisation-according-to-command-line-options)
 	      (parse-command-line-arguments)))
   (with-run-time-config (cfg)
@@ -1111,13 +1144,18 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (config.print-loaded-libraries cfg.print-libraries)
 
     (execution-state-initialisation-according-to-command-line-options)
-    ;;Added to fix Vicare issue #3.  The optimisation code is unfinished
-    ;;anyway according to comments in the relevant files.  (Marco Maggi,
-    ;;Mon Jun 7, 2010)
-    (when (< 0 (optimize-level))
-      (display "*** vicare warning: optimization level artificially set to 0\n"
-	       (current-error-port)))
-    (optimize-level 0)
+    ;;FIXME This was  added to word around Vicare issue  #3, because the
+    ;;optimisation code  was unfinished anyway according  to comments in
+    ;;the relevant files.
+    ;;
+    ;;It is  now reinserted to just  play with more bugs.   It should be
+    ;;removed if the source optimizer becomes stable.  (Marco Maggi; Nov
+    ;;2, 2012)
+    ;;
+    ;; (when (< 0 (optimize-level))
+    ;;   (display "*** vicare warning: optimization level artificially set to 0\n"
+    ;; 	       (current-error-port)))
+    ;; (optimize-level 0)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
       (cafe-input-port (readline.make-readline-input-port)))

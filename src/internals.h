@@ -145,7 +145,10 @@
 
 #define IK_GUARDIANS_GENERATION_NUMBER	0
 
+/* This  definition must  be  kept  in sync  with  the primitive  Scheme
+   operation $FORWARD-PTR? */
 #define IK_FORWARD_PTR		((ikptr)-1)
+
 #define IK_MOST_BYTES_IN_MINOR	0x10000000
 
 #define old_gen_mask		0x00000007
@@ -288,22 +291,24 @@ typedef struct ik_ptr_page {
   ikptr		ptr[IK_PTR_PAGE_SIZE];
 } ik_ptr_page;
 
+/* For  more  documentation  on  the PCB  structure:  see  the  function
+   "ik_make_pcb()". */
 typedef struct ikpcb {
   /* The  first locations  may	be  accessed by	 some  compiled code  to
      perform overflow/underflow ops. */
-  ikptr	  allocation_pointer;		/* 32-bit offset =  0 */
-  ikptr	  allocation_redline;		/* 32-bit offset =  4 */
-  ikptr	  frame_pointer;		/* 32-bit offset =  8 */
-  ikptr	  frame_base;			/* 32-bit offset = 12 */
-  ikptr	  frame_redline;		/* 32-bit offset = 16 */
-  ikptr	  next_k;			/* 32-bit offset = 20 */
-  ikptr	  system_stack;			/* 32-bit offset = 24 */
-  ikptr	  dirty_vector;			/* 32-bit offset = 28 */
-  ikptr	  arg_list;			/* 32-bit offset = 32 */
-  ikptr	  engine_counter;		/* 32-bit offset = 36 */
-  ikptr	  interrupted;			/* 32-bit offset = 40 */
-  ikptr	  base_rtd;			/* 32-bit offset = 44 */
-  ikptr	  collect_key;			/* 32-bit offset = 48 */
+  ikptr	  allocation_pointer;	/* offset =  0 * wordsize, 32-bit offset =  0 */
+  ikptr	  allocation_redline;	/* offset =  1 * wordsize, 32-bit offset =  4 */
+  ikptr	  frame_pointer;	/* offset =  2 * wordsize, 32-bit offset =  8 */
+  ikptr	  frame_base;		/* offset =  3 * wordsize, 32-bit offset = 12 */
+  ikptr	  frame_redline;	/* offset =  4 * wordsize, 32-bit offset = 16 */
+  ikptr	  next_k;		/* offset =  5 * wordsize, 32-bit offset = 20 */
+  ikptr	  system_stack;		/* offset =  6 * wordsize, 32-bit offset = 24 */
+  ikptr	  dirty_vector;		/* offset =  7 * wordsize, 32-bit offset = 28 */
+  ikptr	  arg_list;		/* offset =  8 * wordsize, 32-bit offset = 32 */
+  ikptr	  engine_counter;	/* offset =  9 * wordsize, 32-bit offset = 36 */
+  ikptr	  interrupted;		/* offset = 10 * wordsize, 32-bit offset = 40 */
+  ikptr	  base_rtd;		/* offset = 11 * wordsize, 32-bit offset = 44 */
+  ikptr	  collect_key;		/* offset = 12 * wordsize, 32-bit offset = 48 */
 
   /* ------------------------------------------------------------------ */
   /* The  following fields are	not used  by any  scheme code  they only
@@ -337,8 +342,8 @@ typedef struct ikpcb {
   ik_uint *		segment_vector;
   ikptr			weak_pairs_ap;
   ikptr			weak_pairs_ep;
-  /* Pointer to and number of  bytes of the current heap memory segment.
-     New objects are allocated here. */
+  /* Pointer to  and number of  bytes of  the current heap  memory.  New
+     objects are allocated here. */
   ikptr			heap_base;
   ik_ulong		heap_size;
   /* Pointer to first node in  linked list of allocated memory segments.
@@ -350,8 +355,10 @@ typedef struct ikpcb {
   ikpage *		cached_pages;
   /* Linked list of cached ikpages so that we don't malloc/free. */
   ikpage *		uncached_pages;
+  /* Pointer to and size of the cached pages array. */
   ikptr			cached_pages_base;
   int			cached_pages_size;
+  /* Pointer to and number of bytes of the current stack memory. */
   ikptr			stack_base;
   ik_ulong		stack_size;
   /* The hash table holding interned symbols. */
@@ -387,7 +394,13 @@ typedef struct ikpcb {
 
 } ikpcb;
 
-/* Node in a linked list of continuations. */
+/* This C language data structure  is used to access Scheme continuation
+   objects: given an "ikptr" reference to continuation, we subtract from
+   it "vector_tag"  and the result  is an untagged pointer  to "ikcont".
+   This  struct is  a useful  helper to  be used  inplace of  the IK_REF
+   getter.
+
+   Every "ikcont" struct is a node in a linked list of continuations. */
 typedef struct ikcont {
   ikptr		tag;
   ikptr		top;
@@ -531,28 +544,6 @@ ik_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_VOID			IK_VOID_OBJECT
 #define IK_BWP			IK_BWP_OBJECT
 #define IK_UNBOUND		IK_UNBOUND_OBJECT
-
-
-/** --------------------------------------------------------------------
- ** Code objects.
- ** ----------------------------------------------------------------- */
-
-/* This	 is the	 primary tag,  in the  machine word  referencing  a code
-   object. */
-#define code_pri_tag		vector_tag
-/* This is the	secondary tag, in the first word  of the referenced heap
-   vector. */
-#define code_tag		((ikptr)0x2F)
-#define disp_code_code_tag	0
-#define disp_code_code_size	(1 * wordsize)
-#define disp_code_reloc_vector	(2 * wordsize)
-#define disp_code_freevars	(3 * wordsize)
-#define disp_code_annotation	(4 * wordsize)
-#define disp_code_unused	(5 * wordsize)
-#define disp_code_data		(6 * wordsize)
-#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
-#define off_code_data		(disp_code_data		- code_pri_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
 
 
 /** --------------------------------------------------------------------
@@ -1071,6 +1062,54 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_port_cookie		(disp_port_cookie	- vector_tag)
 #define off_port_unused1	(disp_port_unused1	- vector_tag)
 #define off_port_unused2	(disp_port_unused2	- vector_tag)
+
+
+/** --------------------------------------------------------------------
+ ** Code objects.
+ ** ----------------------------------------------------------------- */
+
+/* This	 is the	 primary tag,  in the  machine word  referencing  a code
+   object. */
+#define code_pri_tag		vector_tag
+/* This is the	secondary tag, in the first word  of the referenced heap
+   vector. */
+#define code_tag		((ikptr)0x2F)
+#define disp_code_code_tag	0
+#define disp_code_code_size	(1 * wordsize)
+#define disp_code_reloc_vector	(2 * wordsize)
+#define disp_code_freevars	(3 * wordsize)
+#define disp_code_annotation	(4 * wordsize)
+#define disp_code_unused	(5 * wordsize)
+#define disp_code_data		(6 * wordsize)
+#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
+#define off_code_data		(disp_code_data		- code_pri_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
+
+/* Accessors for the words of relocation vector's records. */
+#undef  IK_RELOC_RECORD_REF
+#define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
+#undef  IK_RELOC_RECORD_1ST
+#define IK_RELOC_RECORD_1ST(VEC)	IK_RELOC_RECORD_REF((VEC),0)
+#undef  IK_RELOC_RECORD_2ND
+#define IK_RELOC_RECORD_2ND(VEC)	IK_RELOC_RECORD_REF((VEC),1)
+#undef  IK_RELOC_RECORD_3RD
+#define IK_RELOC_RECORD_3RD(VEC)	IK_RELOC_RECORD_REF((VEC),2)
+
+/* Least significant  bits tags  for the  first word  in records  of the
+   relocation vector for code objects. */
+#define IK_RELOC_RECORD_MASK_TAG		0b11
+#define IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0
+#define IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1
+#define IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2
+#define IK_RELOC_RECORD_JUMP_LABEL_TAG		3
+
+/* Given a  machine word representing  the bits in  the first word  of a
+   record in a relocation vector: evaluate to the record type tag. */
+#define IK_RELOC_RECORD_1ST_BITS_TAG(WORD)	((WORD) & IK_RELOC_RECORD_MASK_TAG)
+
+/* Given a  machine word representing  the bits in  the first word  of a
+   record in a relocation vector: evaluate to the offset. */
+#define IK_RELOC_RECORD_1ST_BITS_OFFSET(WORD)	((WORD) >> 2)
 
 
 /** --------------------------------------------------------------------

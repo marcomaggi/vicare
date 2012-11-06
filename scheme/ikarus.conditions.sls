@@ -542,8 +542,13 @@
 		 (display "       " port)
 		 (display (vector-ref v i) port)
 		 (display ": " port)
-		 (write ((record-accessor rtd i) x) port)
-		 (newline port)
+		 ;;Sometimes WRITE is better than PRETTY-PRINT, but what
+		 ;;can I do?  (Marco Maggi; Oct 31, 2012)
+		 (pretty-print ((record-accessor rtd i) x)
+			       port)
+		 ;; (begin
+		 ;;   (write ((record-accessor rtd i) x) port)
+		 ;;   (newline port))
 		 (loop (unsafe.fxadd1 i) rtd v))))
 	 rf)))))
 

@@ -4,7 +4,7 @@
 set -xe
 
 prefix=/usr/local
-LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.10/include
+LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.11/include
 
 ../configure \
     --config-cache                              \

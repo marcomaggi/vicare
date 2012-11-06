@@ -261,7 +261,7 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (glibc.glob/string "*" 0 #f)
+      (glibc.glob/string "Makefile*" 0 #f)
     => '("Makefile"))
 
   (when #f

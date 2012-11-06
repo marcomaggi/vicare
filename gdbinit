@@ -4,6 +4,11 @@
 # usually "$(top_builddir)/tests".  Run gdb as "gdb --args" so that
 # command line arguments in the Makefile are handed to "vicare" rather
 # than to "gdb".
+#
+# From the commmand line of make:
+#
+#   $ make GDB='gdb --args' ...
+#
 
 directory ../../src
 run
