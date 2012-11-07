@@ -939,10 +939,8 @@
 	   (case-symbols op
 	     (($call-with-underflow-handler)
 	      ;;This    is    used    by   the    primitive    operation
-	      ;;$SEAL-FRAME-AND-CALL to  implement CALL/CC.  We  want to
-	      ;;jump to the provided closure object.
-	      ;;
-	      ;;There are 3 operands in RANDS:
+	      ;;$SEAL-FRAME-AND-CALL to implement  CALL/CC.  There are 3
+	      ;;operands in RANDS:
 	      ;;
 	      ;;**The  underflow handler,  being  a  raw memory  address
 	      ;;  equal to the assembly label "ik_underflow_handler".
@@ -952,6 +950,17 @@
 	      ;;**A machine  word being the reference  to a continuation
 	      ;;  object  describing the  continuation just  before this
 	      ;;  function call.
+	      ;;
+	      ;;Remember that CALL/CC is like this:
+	      ;;
+	      ;;   (define (func kont) ---)
+	      ;;   (call/cc func)
+	      ;;
+	      ;;this  primitive has  the purpose  of calling  a function
+	      ;;which is  a wrapper  for FUNC.  The  continuation object
+	      ;;argument  represents  the  continuation wrapped  by  the
+	      ;;function KONT; such continuation object has already been
+	      ;;prepended to the list "pcb->next_k".
 	      ;;
 	      (let ((t0		(unique-var 't))
 		    (t1		(unique-var 't))
@@ -973,17 +982,17 @@
 		 ;;When we arrive here the situation on the Scheme stack
 		 ;;is:
 		 ;;
-		 ;;         high memory
-		 ;;   |                     |
-		 ;;   |---------------------|
-		 ;;   |    return address   | <-- frame pointer register (FPR)
-		 ;;   |---------------------|
-		 ;;   |  underflow handler  |
-		 ;;   |---------------------|
-		 ;;   | continuation object |
-		 ;;   |---------------------|
-		 ;;   |                     |
-		 ;;         low memory
+		 ;;          high memory
+		 ;;   |                      |
+		 ;;   |----------------------|
+		 ;;   |    return address    | <-- frame pointer register (FPR)
+		 ;;   |----------------------|
+		 ;;   | ik_underflow_handler |
+		 ;;   |----------------------|
+		 ;;   | continuation object  |
+		 ;;   |----------------------|
+		 ;;   |                      |
+		 ;;          low memory
 		 ;;
 
 		 ;;Load the  reference to closure object  in the Closure
@@ -998,22 +1007,26 @@
 		 ;;Jump  to  the  closure.   When  we  arrive  here  the
 		 ;;situation on the Scheme stack is:
 		 ;;
-		 ;;         high memory
-		 ;;   |                     |
-		 ;;   |---------------------|
-		 ;;   |    return address   |
-		 ;;   |---------------------|
-		 ;;   |  underflow handler  | <-- frame pointer register (FPR)
-		 ;;   |---------------------|
-		 ;;   | continuation object |
-		 ;;   |---------------------|
-		 ;;   |                     |
-		 ;;         low memory
+		 ;;          high memory
+		 ;;   |                      |
+		 ;;   |----------------------|
+		 ;;   |    return address    |
+		 ;;   |----------------------|
+		 ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
+		 ;;   |----------------------|
+		 ;;   | continuation object  |
+		 ;;   |----------------------|
+		 ;;   |                      |
+		 ;;          low memory
 		 ;;
 		 ;;The following indirect jump instruction just jumps to
 		 ;;the binary code in the closure referenced by the CPR.
-		 ;;When  the  closure returns:  it  will  return to  the
-		 ;;underflow handler.
+		 ;;
+		 ;;If   such  closure   returns   without  calling   the
+		 ;;continuation   function:  it   will  return   to  the
+		 ;;underflow  handler  we have  put  on  the stack;  the
+		 ;;handler will have to pop the continuation object from
+		 ;;"pcb->next_k".
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	     (else

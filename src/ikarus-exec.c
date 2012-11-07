@@ -88,25 +88,24 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     if (framesize <= 0)
       ik_abort("invalid caller function framesize %ld\n", framesize);
     if (framesize < p_next_k->size) {
-      /* Insert  a new  continuation  between "s_next_k"  and its  next.
-       * Before:
+      /* Insert  a new  continuation  between "s_next_k"  and its  next;
+       * notice that below  we will pop "s_next_k" from the  list in the
+       * PCB.  Before:
        *
-       *    pcb
-       *     |          s_next_k
-       *     |------------>|        s_further
-       *         next_k    |--------->|
-       *                      next    |-------> NULL
-       *                                next
+       *    s_next_k
+       *       |        s_further
+       *       |--------->|
+       *          next    |-------> NULL
+       *                    next
        *
        * after:
        *
-       *    pcb
-       *     |          s_next_k
-       *     |------------>|       s_new_kont
-       *         next_k    |--------->|       s_further
-       *                      next    |-------->|
-       *                                next    |--------> NULL
-       *                                           next
+       *    s_next_k
+       *       |       s_new_kont
+       *       |--------->|       s_further
+       *          next    |-------->|
+       *                    next    |--------> NULL
+       *                               next
        */
       ikcont *	p_new_kont = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
       p_new_kont->tag  = p_next_k->tag;
@@ -125,6 +124,8 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	       (long)s_next_k, (long)rp,
 	       framesize, p_next_k->size, rp, IK_REF(rp, disp_frame_offset));
     }
+    /* Pop  "s_next_k" from  the  list  in the  PCB  structure: we  have
+       consumed it. */
     pcb->next_k = p_next_k->next;
 #if DEBUG_EXEC
     ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_argc));

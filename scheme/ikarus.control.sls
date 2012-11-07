@@ -213,6 +213,9 @@
 			  ;;snapshot  of the  Scheme  stack right  after
 			  ;;entering %PRIMITIVE-CALL/CF.
 			  ;;
+			  ;;When FRM  arrives here, it has  already been
+			  ;;prepended to the list "pcb->next_k".
+			  ;;
 			  ;;The return value  of $FRAME->CONTINUATION is
 			  ;;a  closure  object  which,  when  evaluated,
 			  ;;resumes the continuation represented by FRM.
