@@ -403,15 +403,37 @@ L_multi_value_reentry:
 
 ## ------------------------------------------------------------
 
+# Call a C function From Scheme.   When entering this function:
+#
+# * %esi must contain the address of the PCB structure.
+#
+# * %edi must contain the address of the C function to call.
+#
+# * %eax must contain the encoded number of arguments to the
+#   C function, excluding the last argument (the "ikpcb * pcb").
+#
+# NOTE When we enter this routine to call the C function
+# "ik_stack_overflow()", we enter with a Scheme stack segment
+# and come back with another Scheme stack segment.
+#
 .align 8
 ik_foreign_call:
 _ik_foreign_call:
-  movl %esp, 8(%esi)     # (movl fpr (pcb-ref 'frame-pointer))
-  movl %ebp, 0(%esi)     # (movl apr (pcb-ref 'allocation-pointer))
-  movl %esp, %ebx        # (movl fpr ebx)
+  # Store the Frame Pointer Register into "pcb->frame_pointer".
+  movl %esp, 8(%esi)
+  # Store the Allocation Pointer Register into "pcb->allocation_pointer".
+  movl %ebp, 0(%esi)
+  # Save the Frame Pointer Register (FPR, %esp) into EBX.
+  movl %esp, %ebx
+  # Store in %esp the C stack from "pcb->system_stack".
   movl 24(%esi), %esp    # (movl (pcb-ref 'system-stack) esp)
-  # %esp is the system stack, %eax is the index to the last arg,
-  # %esi is the pcb.
+
+  # We want that: after pushing the C arguments on the C stack,
+  # %esp is 16-byte aligned.  Every argument will occupy a wordsize
+  # on the Stack, here we want to pad the C stack with zeros as
+  # needed.
+  #
+  # %eax is the index to the last arg,
   # 0 args require 6 (2) pushes => argc=   0 (0000): %esp +=  -8
   # 1 args require 5 (1) pushes => argc=  -4 (1100): %esp +=  -4
   # 2 args require 4 (0) pushes => argc=  -8 (1000): %esp +=   0
@@ -432,12 +454,50 @@ L_one:
   push $0
 L_zero:
 
-  # Now, the value of %esp is 16-byte aligned
-  # we always push %esi (4 bytes) and do a call (4 bytes),
+  # Now, the value of %esp is 16-byte aligned.
+
+  # When calling a foreign C function: we always push the Process
+  # Control Register (%esi, 4 bytes) to the stack; this is the
+  # pointer to PCB which is the last argument to every C function.
   push %esi             # (pushl pcr)
 
   cmpl $0, %eax          # (cmpl (int 0) eax)
   je L_set               # (je (label Lset))
+  # Remember that when arriving here %ebx references the top of
+  # the Scheme stack.  For 3 arguments, on the Scheme stack we
+  # have:
+  #
+  #         high memory
+  #   |                      |
+  #   |----------------------|
+  #   |    return address    | <-- %ebx
+  #   |----------------------|
+  #   |      argument 0      | <-- %ebx - 1 * wordsize
+  #   |----------------------|
+  #   |      argument 1      | <-- %ebx - 2 * wordsize
+  #   |----------------------|
+  #   |      argument 2      | <-- %ebx - 3 * wordsize
+  #   |----------------------|
+  #   |                      |
+  #          low memory
+  #
+  # and %eax set to -12, which is the offset to add to %ebx to
+  # reference "argument 2".
+  #
+  # On the C stack we want:
+  #
+  #         high memory
+  #   |                      |
+  #   |----------------------|
+  #   |      argument 2      | <-- %esp + 2 * wordsize
+  #   |----------------------|
+  #   |      argument 1      | <-- %esp + 1 * wordsize
+  #   |----------------------|
+  #   |      argument 0      | <-- %esp
+  #   |----------------------|
+  #   |                      |
+  #          low memory
+  #
 L_loop:                  # (label Lloop)
   movl (%ebx,%eax), %ecx # (movl (mem ebx eax) ecx)
   push %ecx             # (pushl ecx)
@@ -446,9 +506,14 @@ L_loop:                  # (label Lloop)
   jne L_loop             # (jne (label Lloop))
 L_set:                   # (label Lset)
   call *%edi             # (call cpr)
+  # The C functions callable here always returns a single argument
+  # of type "ikptr", and it is in %eax.
+
+  # Load in the Stack Pointer Register "pcb->frame_pointer".
   movl 8(%esi), %esp     # (movl (pcb-ref 'frame-pointer) fpr)
+  # Load in the Allocation Pointer Register "pcb->allocation_poiner"
   movl 0(%esi), %ebp     # (movl (pcb-ref 'allocation-pointer) apr)
-  ret                    # (ret)))
+  ret                    # (ret)
 
 #endif
 

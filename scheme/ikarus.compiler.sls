@@ -4016,6 +4016,20 @@
 
 ;;; --------------------------------------------------------------------
 
+;;Whenever a "call" assembly instruction  is generated: the compiler, in
+;;truth, generates this sequence:
+;;
+;;     jmp L0
+;;     frame-size	;; a data word
+;;     frame-offset	;; a data word
+;;     multi-value-rp	;; a data word
+;;   L0:
+;;     call function-address
+;;   single-value-rp:
+;;     ... instructions...
+;;   multi-value-rp:
+;;     ... instructions...
+
 ;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
 ;;call-frames are laid out (search for livemask).
 ;;
@@ -4023,8 +4037,17 @@
   (case-word-size
    ((32) 5)
    ((64) 10)))
-(define disp-frame-size		(- (+ call-instruction-size (* 3 wordsize))))
-(define disp-frame-offset	(- (+ call-instruction-size (* 2 wordsize))))
+
+;;Commented out because unused.
+;;
+;;(define disp-frame-size	(- (+ call-instruction-size (* 3 wordsize))))
+
+;;Commented out because unused.
+;;
+;;(define disp-frame-offset	(- (+ call-instruction-size (* 2 wordsize))))
+
+;;Multivalue return point.
+;;
 (define disp-multivalue-rp	(- (+ call-instruction-size (* 1 wordsize))))
 
 (define dirty-word		-1)
