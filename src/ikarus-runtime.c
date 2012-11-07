@@ -762,7 +762,7 @@ ik_stack_overflow (ikpcb* pcb)
   /* Retrieve the address of the underflow handler. */
   underflow_handler = IK_REF(pcb->frame_base, -wordsize);
 #if STACK_DEBUG
-  ik_debug_message("underflow_handler = 0x%08x", (long)underflow_handler);
+  ik_debug_message("underflow_handler = 0x%016x", (long)underflow_handler);
 #endif
   { /* Save the whole  Scheme stack into a continuation and  store it in
        the PCB as "next_k". */

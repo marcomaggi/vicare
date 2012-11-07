@@ -121,9 +121,13 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	((int*)(long)(pcb->dirty_vector))[idx] = -1;
       }
     } else if (framesize > p_next_k->size) {
-      ik_abort("while resuming continuation 0x%016lx (rp=0x%016lx):\n\tinvalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
-	       (long)s_next_k, (long)rp,
-	       framesize, p_next_k->size, rp, IK_REF(rp, disp_frame_offset));
+      /* long	rp_offset	= IK_UNFIX(IK_REF(rp, disp_frame_offset)); */
+      /* long	code_offset	= rp_offset - disp_frame_offset; */
+      /* ikptr	code_entry	= rp - code_offset; */
+      /* ikptr	p_code		= code_entry - disp_code_data; */
+      ik_abort("while resuming continuation 0x%016lx:\n\tinvalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
+	       (long)s_next_k, framesize, p_next_k->size,
+	       rp, IK_REF(rp, disp_frame_offset));
     }
     /* Pop "s_next_k" from  the list in the PCB  structure.  Notice that
        if "s_next_k" represents a  continuation saved with CALL/CC: such
