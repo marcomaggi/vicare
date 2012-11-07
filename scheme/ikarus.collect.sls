@@ -94,6 +94,8 @@
   (do-overflow 4096))
 
 (define (do-stack-overflow)
+  ;;FIXME This is unused.  (Marco Maggi; Nov  7, 2012)
+  ;;
   (foreign-call "ik_stack_overflow"))
 
 (define (dump-metatable)

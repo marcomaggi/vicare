@@ -759,7 +759,7 @@ ik_stack_overflow (ikpcb* pcb)
 #endif
   /* Mark the old Scheme stack segment as "data". */
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
-  /* Retrieve the address of the under flow handler. */
+  /* Retrieve the address of the underflow handler. */
   underflow_handler = IK_REF(pcb->frame_base, -wordsize);
 #if STACK_DEBUG
   ik_debug_message("underflow_handler = 0x%08x", (long)underflow_handler);

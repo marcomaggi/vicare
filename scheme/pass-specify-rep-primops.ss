@@ -4478,11 +4478,10 @@
    ;;
    ((E)
     (make-shortcut
-     (make-conditional
-	 ;; ESP = stack base pointer
-	 ;; PCR = pointer to the PCB structure
-     	 (prm 'u< esp (prm 'mref pcr (K pcb-frame-redline)))
-       (prm 'interrupt)
+     ;;ESP =  stack pointer  register; PCR  = Process  Control Register,
+     ;;pointer to the PCB structure.
+     (make-conditional (prm 'u< esp (prm 'mref pcr (K pcb-frame-redline)))
+	 (prm 'interrupt)
        (prm 'nop))
      (make-forcall "ik_stack_overflow" '()))))
 
@@ -4500,7 +4499,7 @@
 ;;   |----------------------|
 ;;   |                      | <-- pcb->frame_base
 ;;   |----------------------|
-;;   | ik_underflow_handler |   <-- pcb->frame_base - wordsize
+;;   | ik_underflow_handler | <-- pcb->frame_base - wordsize
 ;;   |----------------------|
 ;;   |      used word       |
 ;;   |----------------------|
