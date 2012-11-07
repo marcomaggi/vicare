@@ -4020,9 +4020,10 @@
 ;;truth, generates this sequence:
 ;;
 ;;     jmp L0
-;;     frame-size		;a data word
-;;     frame-offset		;a data word
-;;     multi-value-rp		;a data word
+;;     livemask-bytes		;array of bytes
+;;     framesize		;data word, a "long"
+;;     rp_offset		;data word, a fixnum
+;;     multi-value-rp		;data word, assembly label
 ;;     pad-bytes
 ;;   L0:
 ;;     call function-address

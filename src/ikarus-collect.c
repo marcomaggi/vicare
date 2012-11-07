@@ -952,6 +952,52 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
 			   __func__, (long)end - (long)top, (long) top, (long) end);
   }
   while (top < end) {
+    /* A Scheme stack frame looks like this:
+     *
+     *          high memory
+     *   |                      | <-- pcb->frame_base
+     *   |----------------------|
+     *   | ik_underflow_handler |
+     *   |----------------------|
+     *             ...
+     *   |----------------------|
+     *   | return address = rp  | <-- top = frame pointer register (FPR)
+     *   |----------------------|
+     *   |                      |
+     *         low memory
+     *
+     * and the  return address RP  is an assembly  label SINGLE-VALUE-RP
+     * (for  single return  values) right  after the  "call" instruction
+     * that created this stack frame:
+     *
+     *     ;; low memory
+     *
+     *     jmp L0
+     *     livemask-bytes		;array of bytes
+     *     framesize			;data word
+     *     rp_offset			;data word, a fixnum
+     *     multi-value-rp		;data word, assembly label
+     *     pad-bytes
+     *   L0:
+     *     call function-address
+     *   single-value-rp:		;single value return point
+     *     ... instructions...
+     *   multi-value-rp:		;multi value return point
+     *     ... instructions...
+     *
+     *     ;; high memory
+     *
+     * The fixnum "rp_offset"  is the number of bytes  between the first
+     * byte of binary code in this code object and the location in which
+     * "rp_offset" itself is stored:
+     *
+     *    metadata                    binary code
+     *   |--------|-------------+-+----------------------| code object
+     *            |.............|^
+     *               rp_offset   |
+     *                  |        |
+     *                   --------
+     */
     ikptr	rp	  = IK_REF(top, 0);
     long	rp_offset = IK_UNFIX(IK_REF(rp, disp_frame_offset));
     if (DEBUG_STACK) {
