@@ -280,34 +280,52 @@ _ik_asm_enter:
   # often named in the comments as "underflow_handler".
 L_call:
   call *8(%ecx)
+ik_underflow_handler:
   # Here we are back from the Scheme code, but there may be a
   # continuation waiting to be entered in "pcb->next_k".
   #
-  # The registers %esi (PCB), %edi (closure), %ebp (alloc pointer),
-  # %esp (stack pointer) still have the meaning we gave them before.
-ik_underflow_handler:
-  # Here the Scheme stack looks like this:
+  # If we are here it is because a single argument was returned,
+  # neither zero arguments nor 2 or more arguments.  This single
+  # argument is in %eax.
   #
-  #   |            high memory             |
-  #   |------------------------------------|
-  #   |               ???                  | <-- %esp
-  #   |------------------------------------|
-  #   |            low memory              |
+  # Knowing that to return here a "ret" instruction must have
+  # incremented the %esp while it was referencing the label
+  # "ik_underflow_handler", now the Scheme stack looks like this:
   #
-  # and we want to set it like this:
+  #         high memory
+  #   |                      |
+  #   |----------------------|
+  #   |    return address    | <-- %esp = pcb->frame_base
+  #   |----------------------|
+  #   | ik_underflow_handler | <-- %esp - wordsize
+  #   |----------------------|
+  #   |                      |
+  #          low memory
   #
-  #   |            high memory             |
-  #   |------------------------------------|
-  #   |               ???                  | <-- %esp
-  #   |------------------------------------|
-  #   |               ???                  | <-- %esp - wordsize
-  #   |------------------------------------|
-  #   |        Scheme return value         | <-- %esp - 2 * wordsize
-  #   |------------------------------------|
-  #   |            low memory              |
+  # where "return address" must have been left on the stack by some
+  # function.  See for example the primitive instructions in
+  # $CALL-WITH-UNDERFLOW-HANDLER.
+  #
+  # We want to set the Scheme stack like this:
+  #
+  #         high memory
+  #   |                      |
+  #   |----------------------|
+  #   |    return address    | <-- %esp
+  #   |----------------------|
+  #   | ik_underflow_handler | <-- %esp - wordsize
+  #   |----------------------|
+  #   | Scheme return value  | <-- %esp - 2 * wordsize
+  #   |----------------------|
+  #   |                      |
+  #          low memory
+  #
+  # and then do what is needed to go back to the C caller.
   #
   movl %eax, -8(%esp)   # store the return value
-  movl $-4, %eax        # set to 1 the number of returned values
+  # Set the value returned to the C caller to 1 encoded as
+  # number of arguments.
+  movl $-4, %eax
 L_do_underflow:
   movl %esp, 8(%esi)    # store scheme stack in "pcb->frame_pointer"
   movl %ebp, 0(%esi)    # store allocation pointer in "pcb->allocation_pointer"
@@ -317,6 +335,7 @@ L_do_underflow:
   movl -8(%esp), %ebp   #
   movl -12(%esp), %edi  #
   ret                   # back to the C function "ik_exec_code()"
+
 L_multivalue_underflow:
   addl $4, %esp
   jmp L_do_underflow

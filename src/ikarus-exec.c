@@ -88,9 +88,10 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     if (framesize <= 0)
       ik_abort("invalid caller function framesize %ld\n", framesize);
     if (framesize < p_next_k->size) {
-      /* Insert  a new  continuation  between "s_next_k"  and its  next;
-       * notice that below  we will pop "s_next_k" from the  list in the
-       * PCB.  Before:
+      /* Insert a  new continuation "p_new_cont" between  "p_next_k" and
+       * its next;  notice that  below we will  pop "s_next_k"  from the
+       * list  in  the  PCB,  so "p_new_cont"  will  become  the  first.
+       * Before:
        *
        *    s_next_k
        *       |        s_further
@@ -113,7 +114,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       p_new_kont->top  = top + framesize;
       p_new_kont->size = p_next_k->size - framesize;
       p_next_k->size   = framesize;
-      p_next_k->next   = vector_tag | (ikptr)(long)p_new_kont;
+      p_next_k->next   = (ikptr)(long)p_new_kont | vector_tag;
       { /* Record in  the dirty vector  the side effect of  mutating the
 	   field "p_next_k->next". */
 	ik_ulong idx = ((ik_ulong)(&p_next_k->next)) >> IK_PAGESHIFT;
@@ -124,8 +125,10 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	       (long)s_next_k, (long)rp,
 	       framesize, p_next_k->size, rp, IK_REF(rp, disp_frame_offset));
     }
-    /* Pop  "s_next_k" from  the  list  in the  PCB  structure: we  have
-       consumed it. */
+    /* Pop "s_next_k" from  the list in the PCB  structure.  Notice that
+       if "s_next_k" represents a  continuation saved with CALL/CC: such
+       continuation object is still  referenced somewhere by the closure
+       object implementing the continuation function. */
     pcb->next_k = p_next_k->next;
 #if DEBUG_EXEC
     ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_argc));
