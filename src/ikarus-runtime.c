@@ -751,7 +751,7 @@ ik_stack_overflow (ikpcb* pcb)
  * needed to  retrieve the  old stack  segment from  the PCB  and resume
  * execution in the old stack.
  */
-#define STACK_DEBUG	1
+#define STACK_DEBUG	0
 {
   ikptr		underflow_handler;
 #if STACK_DEBUG

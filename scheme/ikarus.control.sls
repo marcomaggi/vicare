@@ -138,6 +138,10 @@
 ;;;; continuations
 
 (define (%primitive-call/cf func)
+  ;;Low level function: call the function FUNC with a description of the
+  ;;current  Scheme stack  frame, stored  in a  continuation object,  as
+  ;;argument.
+  ;;
   (if ($fp-at-base)
       ;;The situation of the Scheme stack is:
       ;;
@@ -204,6 +208,14 @@
 
   (define-inline (%primitive-call/cc ?func)
     (%primitive-call/cf (lambda (frm)
+			  ;;FRM  is  a  continuation object  created  by
+			  ;;%PRIMITIVE-CALL/CF   and    representing   a
+			  ;;snapshot  of the  Scheme  stack right  after
+			  ;;entering %PRIMITIVE-CALL/CF.
+			  ;;
+			  ;;The return value  of $FRAME->CONTINUATION is
+			  ;;a  closure  object  which,  when  evaluated,
+			  ;;resumes the continuation represented by FRM.
 			  (?func ($frame->continuation frm)))))
 
   (module (%do-wind)

@@ -156,6 +156,8 @@
 (define (stacked-call pre thunk post)
   (call/cf
    (lambda (cf)
+     ;;CF is  a continuation  object describing  the Scheme  stack frame
+     ;;right after CALL/CF has been called.
      (if (eq? cf (scell-cf *scell*))
 	 (thunk)
        (dynamic-wind
