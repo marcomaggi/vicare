@@ -939,8 +939,10 @@
 	   (case-symbols op
 	     (($call-with-underflow-handler)
 	      ;;This    is    used    by   the    primitive    operation
-	      ;;$SEAL-FRAME-AND-CALL to implement  CALL/CC.  There are 3
-	      ;;operands:
+	      ;;$SEAL-FRAME-AND-CALL to  implement CALL/CC.  We  want to
+	      ;;jump to the provided closure object.
+	      ;;
+	      ;;There are 3 operands in RANDS:
 	      ;;
 	      ;;**The  underflow handler,  being  a  raw memory  address
 	      ;;  equal to the assembly label "ik_underflow_handler".
@@ -948,7 +950,7 @@
 	      ;;**The closure object to jump to.
 	      ;;
 	      ;;**A machine  word being the reference  to a continuation
-	      ;;  object  describing the continuation right  before this
+	      ;;  object  describing the  continuation just  before this
 	      ;;  function call.
 	      ;;
 	      (let ((t0		(unique-var 't))
@@ -959,16 +961,33 @@
 		    (k		($caddr rands)))
 		(%locals-cons* t0 t1 t2)
 		(multiple-forms-sequence
+		 ;;Store the arguments in memory locations.
 		 (V t0 handler)
 		 (V t1 k)
 		 (V t2 proc)
-		 ;;Push the underflow handler on the Scheme stack.
+		 ;;Move the underflow handler on the Scheme stack.
 		 (%make-move (mkfvar 1) t0)
-		 ;;Push  the reference  to  continuation  object on  the
+		 ;;Move  the reference  to  continuation  object on  the
 		 ;;Scheme stack.
 		 (%make-move (mkfvar 2) t1)
+		 ;;When we arrive here the situation on the Scheme stack
+		 ;;is:
+		 ;;
+		 ;;         high memory
+		 ;;   |                     |
+		 ;;   |---------------------|
+		 ;;   |    return address   | <-- frame pointer register (FPR)
+		 ;;   |---------------------|
+		 ;;   |  underflow handler  |
+		 ;;   |---------------------|
+		 ;;   | continuation object |
+		 ;;   |---------------------|
+		 ;;   |                     |
+		 ;;         low memory
+		 ;;
+
 		 ;;Load the  reference to closure object  in the Closure
-		 ;;Pointer Register.
+		 ;;Pointer Register (CPR).
 		 (%make-move cpr t2)
 		 ;;Load  in  the  Argument Count  Register  the  encoded
 		 ;;number of arguments.
@@ -976,7 +995,25 @@
 		 ;;Decrement  the  Frame  Pointer Register  so  that  it
 		 ;;points to the underflow handler.
 		 (make-asm-instr 'int- fpr (make-constant wordsize))
-		 ;;Jump to the closure.
+		 ;;Jump  to  the  closure.   When  we  arrive  here  the
+		 ;;situation on the Scheme stack is:
+		 ;;
+		 ;;         high memory
+		 ;;   |                     |
+		 ;;   |---------------------|
+		 ;;   |    return address   |
+		 ;;   |---------------------|
+		 ;;   |  underflow handler  | <-- frame pointer register (FPR)
+		 ;;   |---------------------|
+		 ;;   | continuation object |
+		 ;;   |---------------------|
+		 ;;   |                     |
+		 ;;         low memory
+		 ;;
+		 ;;The following indirect jump instruction just jumps to
+		 ;;the binary code in the closure referenced by the CPR.
+		 ;;When  the  closure returns:  it  will  return to  the
+		 ;;underflow handler.
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	     (else
@@ -3892,12 +3929,14 @@
 	  (cons '(ret) accum))
 
 	 ((indirect-jump)
-	  ;;The CPU's  CP-REGISTER contains  a reference to  the closure
-	  ;;object we want to jump to.
+	  ;;The CPU's Closure Pointer  Register (CP-REGISTER) contains a
+	  ;;reference to the closure object we want to jump to.
 	  (cons `(jmp (disp ,off-closure-code ,CP-REGISTER))
 		accum))
 
 	 ((direct-jump)
+	  ;;We jump directly to a  known address, available as immediate
+	  ;;value.
 	  (cons `(jmp (label ,(code-loc-label (car rands))))
 		accum))
 
@@ -4314,6 +4353,23 @@
 ;;; --------------------------------------------------------------------
 
   (define (FVar i)
+    ;;Convert the index  of an FVAR into a reference  to machine word on
+    ;;the stack.
+    ;;
+    ;;       high memory
+    ;;   |                |
+    ;;   |----------------|
+    ;;   | return address | <-- frame pointer register (FPR)
+    ;;   |----------------|
+    ;;   |                | <-- index 1
+    ;;   |----------------|
+    ;;   |                | <-- index 2
+    ;;   |----------------|
+    ;;   |                | <-- index 3
+    ;;   |----------------|
+    ;;   |                |
+    ;;       low memory
+    ;;
     `(disp ,(* i (- wordsize)) ,fpr))
 
   (module (R R/l D)

@@ -139,7 +139,38 @@
 
 (define (%primitive-call/cf func)
   (if ($fp-at-base)
+      ;;The situation of the Scheme stack is:
+      ;;
+      ;;          high memory
+      ;;   |                      | <-- pcb->frame_base
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;so there is no continuation to  be saved, because we already are
+      ;;at the  base of  the stack;  so we just  call the  function FUNC
+      ;;using the current "pcb->next_k" as continuation object.
+      ;;
+      ;;Notice that "pcb->next_k" is not removed from the PCB structure.
       (func ($current-frame))
+    ;;The situation of the Scheme stack is:
+    ;;
+    ;;         high memory
+    ;;   |                      | <-- pcb->frame_base
+    ;;   |----------------------|
+    ;;   | ik_underflow_handler |
+    ;;   |----------------------|
+    ;;             ...
+    ;;   |----------------------|
+    ;;   |    return address    | <-- frame pointer register (FPR)
+    ;;   |----------------------|
+    ;;   |                      |
+    ;;          low memory
+    ;;
+    ;;so we  need to save the  current stack into a  continuation object
+    ;;and then call FUNC.
     ($seal-frame-and-call func)))
 
 (define (call/cf func)

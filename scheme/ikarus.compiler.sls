@@ -1058,8 +1058,32 @@
    handler
    ))
 
+;;Represent  a machine  word  on  the Scheme  stack,  below the  address
+;;referenced  by  the  Frame  Pointer  Register  (FPR).   The  index  is
+;;interpreted as follows:
+;;
+;;       high memory
+;;   |                |
+;;   |----------------|
+;;   | return address | <-- frame pointer register (FPR)
+;;   |----------------|
+;;   |                | <-- idx = 1
+;;   |----------------|
+;;   |                | <-- idx = 2
+;;   |----------------|
+;;   |                | <-- idx = 3
+;;   |----------------|
+;;   |                |
+;;       low memory
+;;
+;;It is  used to represent memory  locations used as local  variables in
+;;the execution of a Scheme function.
+;;
 (define-struct fvar
-  (idx))
+  (idx
+		;A fixnum  representing the index  of a machine  word on
+		;the Scheme stack.
+   ))
 
 (define-struct locals
   (vars

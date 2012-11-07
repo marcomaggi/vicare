@@ -4531,11 +4531,13 @@
 (section
 
  (define-primop $fp-at-base unsafe
-   ;;Evaluate to true if the frame pointer register (FPR) references the
+   ;;Evaluate to true if the Frame Pointer Register (FPR) references the
    ;;highest  machine  word  in  the  stack  as  described  by  the  PCB
    ;;structure; the highest machine word  is the one holding the address
-   ;;of  "ik_underflow_handler".  PCR  is  the  register containing  the
-   ;;memory address of the PCB structure.
+   ;;of the assembly label  "ik_underflow_handler".
+   ;;
+   ;;The Process Control  Register (PCR) contains the  memory address of
+   ;;the PCB structure.
    ;;
    ((P)
     (prm '= (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
@@ -4550,14 +4552,36 @@
     (prm 'mref pcr (K pcb-next-continuation))))
 
  (define-primop $seal-frame-and-call unsafe
-   ;;This is used to implement CALL/CC.
+   ;;This is used to implement  CALL/CC.  It goes like this:
    ;;
-   ;;Save the current  Scheme stack, as described by  the PCB structure,
-   ;;into a new continuation object (yes, the whole Scheme stack); store
-   ;;such new  continuation as the  next continuation; call  the closure
-   ;;object X.
+   ;;1.   Save  the  current  Scheme  stack, as  described  by  the  PCB
+   ;;   structure, into  a new continuation object KONT  (yes, the whole
+   ;;   Scheme stack).
    ;;
-   ;;Before this primitive operation:
+   ;;2.  Prepend  the new  continuation  object  to  the list  of  "next
+   ;;   continuations" in the PCB structure.  Before:
+   ;;
+   ;;    PCB
+   ;;     |           first
+   ;;     |------------>|        second
+   ;;         next_k    |--------->|
+   ;;                      next    |-------> NULL
+   ;;                                next
+   ;;
+   ;;  after:
+   ;;
+   ;;    pcb
+   ;;     |            kont
+   ;;     |------------>|        first
+   ;;         next_k    |--------->|       second
+   ;;                      next    |-------->|
+   ;;                                next    |--------> NULL
+   ;;                                           next
+   ;;
+   ;;3. Call the closure object X.
+   ;;
+   ;;Before this primitive  operation the situation of  the Scheme stack
+   ;;is:
    ;;
    ;;       high memory
    ;;   |                | <-- pcb->frame_base
@@ -4591,7 +4615,7 @@
 					     (K vector-tag)))
 		(base			(prm 'int+
 					     (prm 'mref pcr (K pcb-frame-base))
-					      (K (- wordsize))))
+					     (K (- wordsize))))
 		(underflow-handler	(prm 'mref base (K 0))))
       ;;Store the continuation tag in the first word.
       (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
@@ -4600,12 +4624,14 @@
       ;;Save the next continuation.
       (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
       ;;Save  the number  of bytes  representing  the size  of the  used
-      ;;Scheme stack.
+      ;;Scheme stack.   Notice that we  do not  include in the  size the
+      ;;word containing the address of the underflow handler.
       (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
-      ;;Set the new continuation object as the next continuation.
+      ;;Set the new continuation object  as the next continuation in the
+      ;;PCB.
       (prm 'mset pcr (K pcb-next-continuation) kont)
       ;;The machine word at the top  of the stack (the one referenced by
-      ;;the  stack pointer  register, %esp)  is the  new stack  base for
+      ;;the  Frame Pointer  Register, FPR)  is  the new  stack base  for
       ;;subsequent code  execution.  Store the current  frame pointer in
       ;;the PCB as frame base.
       (prm 'mset pcr (K pcb-frame-base) fpr)
@@ -4636,13 +4662,14 @@
    ((E x)
     (nop)))
 
+;;; --------------------------------------------------------------------
+
  (define-primop $make-call-with-values-procedure unsafe
    ;;Return a closure object implementing the CALL-WITH-VALUES primitive
-   ;;function through an assembly routine.
+   ;;function through the assembly routine "SL_call_with_values".
    ;;
    ((V)
-    (K (make-closure (make-code-loc (sl-cwv-label))
-		     '() #f)))
+    (K (make-closure (make-code-loc (sl-cwv-label)) '() #f)))
    ((P)
     (interrupt))
    ((E)
@@ -4650,15 +4677,25 @@
 
  (define-primop $make-values-procedure unsafe
    ;;Return a closure object  implementing the VALUES primitive function
-   ;;through an assembly routine.
+   ;;through the assembly routine "SL_values".
    ;;
    ((V)
-    (K (make-closure (make-code-loc (sl-values-label))
-		     '() #f)))
+    (K (make-closure (make-code-loc (sl-values-label)) '() #f)))
    ((P)
     (interrupt))
    ((E)
     (interrupt)))
+
+ /section)
+
+
+;;;; annotated procedures
+;;
+;;Annotated  procedures  are  closure  objects  wrapping  other  closure
+;;objects;  the outer  closure just  hands  its arguments  to the  inner
+;;closure.  An annotated procedure contains an annotation object.
+;;
+(section
 
  (define-primop $make-annotated-procedure unsafe
    ;;Build and return  a new closure object wrapping  the closure object
@@ -4677,10 +4714,10 @@
 			 (K closure-tag))))
       (prm 'mset clo (K off-closure-code)
 	   (K (make-code-loc (sl-annotated-procedure-label))))
-      (prm 'mset clo (K off-closure-data)
-	   (T annotation))
-      (prm 'mset clo (K (+ off-closure-data wordsize))
-	   (T proc))
+      ;;Store the annotation in the first slot for free variables.
+      (prm 'mset clo (K off-closure-data)              (T annotation))
+      ;;Store the wrapped closure in the second slot for free variables.
+      (prm 'mset clo (K (+ off-closure-data wordsize)) (T proc))
       clo))
    ((P)
     (interrupt))
@@ -4693,7 +4730,6 @@
    ;;
    ((V proc)
     (prm 'mref (T proc) (K off-closure-data))))
-
 
  /section)
 
