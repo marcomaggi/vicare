@@ -4245,6 +4245,11 @@
     ;;
     ;;Notice that we do not touch the stack here.
     ;;
+    ;;NOTE This is for debugging purposes,  they are not used by Vicare;
+    ;;see   the  primitive   operations  $MAKE-ANNOTATED-PROCEDURE   and
+    ;;$ANNOTATED-PROCEDURE-ANNOTATION  for  more  details  on  annotated
+    ;;procedures.
+    ;;
     ((public-function		sl-annotated-procedure-label)
      (entry-point-label		SL_annotated)
      (number-of-free-variables	2)
@@ -4328,9 +4333,9 @@
 
       (label L_apply_loop)
       ;;Load in ECX the car.
-      (movl (mem ($fx- disp-car pair-tag) ebx) ecx)
+      (movl (mem off-car ebx) ecx)
       ;;Load in EBX the cdr.
-      (movl (mem ($fx- disp-cdr pair-tag) ebx) ebx)
+      (movl (mem off-cdr ebx) ebx)
       ;;Move the car at offset EAX from the frame pointer.
       (movl ecx (mem fpr eax))
       ;;Decrement EAX  by the  word size:  offset of  the next

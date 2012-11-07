@@ -16512,6 +16512,43 @@ To know at run time how many free variables are associated to
 @var{closure} we have to inspect the associated code object.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Annotating closure objects
+
+
+Annotated procedures exists for debugging purposes, they allow the
+association of an arbitrary annotation object to a function.
+
+@example
+(import (rnrs)
+  (ikarus system $codes))
+
+(define (the-proc)
+  123)
+
+(define the-annotated
+  ($make-annotated-procedure 456 the-proc))
+
+(the-annotated)                         @result{} 123
+($annotated-procedure-annotation)       @result{} 456
+@end example
+
+
+@defun $make-annotated-procedure @var{annotation} @var{clo}
+Build and return a new closure object wrapping the closure object
+@var{clo} and just adding an @var{annotation} object to it.  When such
+annotated closure is applied: it applies @var{clo} to the arguments.
+
+@var{annotation} can be any Scheme object.
+@end defun
+
+
+@defun $annotated-procedure-annotation @var{clo}
+Given a closure object @var{clo} being an annotated procedure created by
+@func{$make-annotated-procedure}: return the annotation object.
+@end defun
+
 @c page
 @node syslib compiler
 @section Interface to compiler passes
