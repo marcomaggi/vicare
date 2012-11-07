@@ -192,7 +192,7 @@
 #define call_instruction_size	((wordsize == 4) ? 5 : 10)
 #define disp_frame_size		(- (call_instruction_size + 3 * wordsize))
 #define disp_frame_offset	(- (call_instruction_size + 2 * wordsize))
-#define disp_multivale_rp	(- (call_instruction_size + 1 * wordsize))
+#define disp_multivalue_rp	(- (call_instruction_size + 1 * wordsize))
 
 /* ------------------------------------------------------------------ */
 

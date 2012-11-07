@@ -4020,15 +4020,28 @@
 ;;truth, generates this sequence:
 ;;
 ;;     jmp L0
-;;     frame-size	;; a data word
-;;     frame-offset	;; a data word
-;;     multi-value-rp	;; a data word
+;;     frame-size		;a data word
+;;     frame-offset		;a data word
+;;     multi-value-rp		;a data word
+;;     pad-bytes
 ;;   L0:
 ;;     call function-address
-;;   single-value-rp:
+;;   single-value-rp:		;single value return point
 ;;     ... instructions...
-;;   multi-value-rp:
+;;   multi-value-rp:		;multi value return point
 ;;     ... instructions...
+;;
+;;and remember that  the "call" pushes on the stack  the return address,
+;;which is the label SINGLE-VALUE-RP.
+;;
+;;If the called function wants to  return a single argument: it can just
+;;put it in EAX  and perform a "ret"; this will  make the execution flow
+;;jump back to the entry point SINGLE-VALUE-RP.
+;;
+;;If the called function wants to return zero or 2 or more arguments: it
+;;retrieves  the address  SINGLE-VALUE-RP  from the  stack,  adds to  it
+;;DISP-MULTIVALUE-RP  as  defined  below  and  it  obtains  the  address
+;;MULTI-VALUE-RP, then performs a "jmp" directly to MULTI-VALUE-RP.
 
 ;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
 ;;call-frames are laid out (search for livemask).

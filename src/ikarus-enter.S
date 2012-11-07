@@ -269,7 +269,7 @@ _ik_asm_enter:
 				# to "ik_underflow_handler".
 
   .long L_multivalue_underflow	# We can access this data word by
-				# summing "disp_multivale_rp" to
+				# summing "disp_multivalue_rp" to
 				# "ik_underflow_handler".
   .byte 0
   .byte 0
