@@ -4552,7 +4552,9 @@
     (prm 'mref pcr (K pcb-next-continuation))))
 
  (define-primop $seal-frame-and-call unsafe
-   ;;This is used to implement  CALL/CC.  It goes like this:
+   ;;This primitive  operation is  used to  implement CALL/CC;  only the
+   ;;function  %PRIMITIVE-CALL/CF (file  "ikarus.control.sls") calls  it
+   ;;when the Scheme stack is not empty.  It goes like this:
    ;;
    ;;1.   Save  the  current  Scheme  stack, as  described  by  the  PCB
    ;;   structure, into  a new continuation object KONT  (yes, the whole
@@ -4583,31 +4585,40 @@
    ;;Before this primitive  operation the situation of  the Scheme stack
    ;;is:
    ;;
-   ;;       high memory
-   ;;   |                | <-- pcb->frame_base
-   ;;   |----------------|
-   ;;   |    1st word    | <-- BASE = pcb->frame_base - wordsize
-   ;;   |----------------|
-   ;;           ...
-   ;;   |----------------|
-   ;;   |    Nth word    | <-- frame pointer register (FPR)
-   ;;   |----------------|
-   ;;   |                |
-   ;;       low memory
+   ;;          high memory
+   ;;   |                      | <-- pcb->frame_base
+   ;;   |----------------------|
+   ;;   | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
+   ;;   |----------------------|
+   ;;             ...
+   ;;   |----------------------|
+   ;;   |    return address    | <-- frame pointer register (FPR)
+   ;;   |----------------------|
+   ;;   |   closure reference  | --> closure object
+   ;;   |----------------------|
+   ;;   |                      |
+   ;;         low memory
    ;;
-   ;;just before performing the actual call:
+   ;;where the return address leads  to the caller of %PRIMITIVE-CALL/CF
+   ;;and the closure reference is the argument to %PRIMITIVE-CALL/CF.
    ;;
-   ;;       high memory
-   ;;   |                |
-   ;;   |----------------|
-   ;;   |    1st word    | <-- BASE
-   ;;   |----------------|
-   ;;           ...
-   ;;   |----------------|
-   ;;   |    Nth word    | <-- frame pointer register (FPR)
-   ;;   |----------------|     = pcb->frame_base
-   ;;   |                |
-   ;;       low memory
+   ;;Just  before  performing  $CALL-WITH-UNDERFLOW-HANDLER  below,  the
+   ;;situation of the Scheme stack is:
+   ;;
+   ;;          high memory
+   ;;   |                      |
+   ;;   |----------------------|
+   ;;   | ik_underflow_handler | <-- BASE
+   ;;   |----------------------|
+   ;;             ...
+   ;;   |----------------------|
+   ;;   |    return address    | <-- FPR = pcb->frame_base
+   ;;   |----------------------|
+   ;;   |   closure reference  | --> closure object
+   ;;   |----------------------|
+   ;;   |                      |
+   ;;   |                      |
+   ;;          low memory
    ;;
    ((V x)
     (with-tmp* ((kont			(prm 'alloc

@@ -974,7 +974,22 @@
 		 (V t0 handler)
 		 (V t1 k)
 		 (V t2 proc)
-		 ;;Move the underflow handler on the Scheme stack.
+		 ;;When we arrive here the situation on the Scheme stack
+		 ;;is the one upon entering %PRIMITIVE-CALL/CF, modified
+		 ;;by $SEAL-FRAME-AND-CALL:
+		 ;;
+		 ;;          high memory
+		 ;;   |                      |
+		 ;;   |----------------------|
+		 ;;   |    return address    | <-- FPR = pcb->frame_base
+		 ;;   |----------------------|
+		 ;;   |   closure reference  | --> closure object
+		 ;;   |----------------------|
+		 ;;   |                      |
+		 ;;          low memory
+		 ;;
+		 ;;Move  the  underflow  handler on  the  Scheme  stack,
+		 ;;overwriting the closure reference.
 		 (%make-move (mkfvar 1) t0)
 		 ;;Move  the reference  to  continuation  object on  the
 		 ;;Scheme stack.
@@ -985,7 +1000,7 @@
 		 ;;          high memory
 		 ;;   |                      |
 		 ;;   |----------------------|
-		 ;;   |    return address    | <-- frame pointer register (FPR)
+		 ;;   |    return address    | <-- FPR = pcb->frame_base
 		 ;;   |----------------------|
 		 ;;   | ik_underflow_handler |
 		 ;;   |----------------------|
@@ -1026,7 +1041,8 @@
 		 ;;continuation   function:  it   will  return   to  the
 		 ;;underflow  handler  we have  put  on  the stack;  the
 		 ;;handler will have to pop the continuation object from
-		 ;;"pcb->next_k".
+		 ;;"pcb->next_k"  and jump  to the  "return address"  we
+		 ;;have left on the stack.
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	     (else
