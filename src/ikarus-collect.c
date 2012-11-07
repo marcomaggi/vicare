@@ -952,7 +952,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
 			   __func__, (long)end - (long)top, (long) top, (long) end);
   }
   while (top < end) {
-    /* A Scheme stack frame looks like this:
+    /* A Scheme stack with frames looks like this:
      *
      *          high memory
      *   |                      | <-- pcb->frame_base
@@ -960,7 +960,11 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   | ik_underflow_handler |
      *   |----------------------|
      *             ...
-     *   |----------------------|
+     *   |----------------------|             ---
+     *   |   return address 1   | <-- top 1    .
+     *   |----------------------|              . framesize
+     *             ...                         .
+     *   |----------------------|             ---
      *   | return address = rp  | <-- top = frame pointer register (FPR)
      *   |----------------------|
      *   |                      |
@@ -974,7 +978,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *
      *     jmp L0
      *     livemask-bytes		;array of bytes
-     *     framesize			;data word
+     *     framesize			;data word, a "long"
      *     rp_offset			;data word, a fixnum
      *     multi-value-rp		;data word, assembly label
      *     pad-bytes
@@ -987,6 +991,26 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *
      *     ;; high memory
      *
+     * The  "long" word  "framesize" is  an offset  to add  to "top"  to
+     * obtain  the  top of  the  uplevel  frame;  it  is also  a  fixnum
+     * representing the  number of Scheme  objects on this  stack frame.
+     * Exception: if  the data word  "framesize" is zero, then  the true
+     * frame size  could not be computed  at compile time, and  so it is
+     * stored on the stack itself:
+     *
+     *         high memory
+     *   |                      |
+     *   |----------------------|
+     *   |      framesize       | <-- top + wordsize
+     *   |----------------------|
+     *   | return address = rp  | <-- top
+     *   |----------------------|
+     *   |                      |
+     *         low memory
+     *
+     * also in this case all the words  on this frame are live, the live
+     * mask in the code object is unused.
+     *
      * The fixnum "rp_offset"  is the number of bytes  between the first
      * byte of binary code in this code object and the location in which
      * "rp_offset" itself is stored:
@@ -997,6 +1021,9 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *               rp_offset   |
      *                  |        |
      *                   --------
+     *
+     * NOTE The  preprocessor symbol  "disp_frame_offset" is  a negative
+     * integer.
      */
     ikptr	rp	  = IK_REF(top, 0);
     long	rp_offset = IK_UNFIX(IK_REF(rp, disp_frame_offset));
@@ -1032,16 +1059,16 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   |  framesize |
      *   |    word    |
      *   +------------+
-     *   | multivalue |
-     *   |    word    |
-     *   +------------+
      *   | frameoffst |  the frame offset determines how far its
      *   |    word    |  address is off from the start of the code
+     *   +------------+
+     *   | multivalue |
+     *   |    word    |
      *   +------------+
      *   |  padding   |  the size of this part is fixed so that we
      *   |  and call  |  can correlate the frame info (above) with rp
      *   +------------+
-     *   | code  junk | <---- rp
+     *   |   code     | <---- rp
      *   |    ...     |
      *
      *   WITH ONE EXCEPTION:
@@ -1057,10 +1084,24 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
     if (framesize < 0) {
       ik_abort("invalid frame size %ld\n", (long)framesize);
     } else if (framesize == 0) {
+      /* Keep alive all the objects on the stack. */
       framesize = IK_REF(top, wordsize);
       if (framesize <= 0) {
         ik_abort("invalid redirected framesize=%ld\n", (long)framesize);
       }
+      /*
+       *       high memory
+       *   |----------------|
+       *   | return address | <-- uplevel top
+       *   |----------------|
+       *   | Scheme object  | <-- top + framesize - wordsize
+       *   |----------------|
+       *   | Scheme object  |
+       *   |----------------|
+       *   | return address | <-- top
+       *   |----------------|
+       *      low memory
+       */
       ikptr base = top + framesize - wordsize;
       while (base > top) {
         ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
@@ -1068,9 +1109,15 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
         base -= wordsize;
       }
     } else {
+      /* Keep alive only the objects selected by the livemask. */
+      /* Number of Scheme objects on this stack frame. */
       long	frame_cells	= framesize >> fx_shift;
+      /* Number of  bytes in the  livemask array, knowing that  there is
+	 one bit for every frame cell. */
       long	bytes_in_mask	= (frame_cells+7) >> 3;
+      /* Pointer to the livemask bytevector */
       char *	mask		= (char*)(long)(rp + disp_frame_size - bytes_in_mask);
+      /* Pointer to the Scheme objects on the stack. */
       ikptr *	fp		= (ikptr*)(long)(top + framesize);
       long	i;
       for (i=0; i<bytes_in_mask; i++, fp-=8) {
