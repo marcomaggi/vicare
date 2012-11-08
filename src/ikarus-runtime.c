@@ -268,7 +268,7 @@ ik_make_pcb (void)
    *                       Scheme stack
    *         |.....................................| stack size
    *
-   * when Scheme code  execution uses the heap crossing  the "red line":
+   * when Scheme code execution uses  the stack crossing the "red line":
    * at the first subsequent function  call, the current Scheme stack is
    * stored away  in a Scheme continuation  and a new memory  segment is
    * allocated  and  installed as  Scheme  stack;  see for  example  the

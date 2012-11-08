@@ -28439,17 +28439,17 @@ displaying the stack trace and offering the continuation alternatives.
 @chapter Wild notes on the compiler internals
 
 
-@quotation
-This chapter is a collection of notes on the internals of the compiler;
-there is guarantee of neither their correctness nor their completeness,
-because the original compiler code is fully undocumented.
-@end quotation
+This chapter is a collection of notes on the internals of the compiler.
 
 @menu
 * compiler intro::              Introduction to the compiler.
 * compiler conventions::        Coding conventions in compiler's code.
 * compiler stack::              Scheme stack management.
 @end menu
+
+@macro fpr{}
+@acronym{FPR}
+@end macro
 
 @c page
 @node compiler intro
@@ -28515,8 +28515,146 @@ which generate an assignment operation to store the first element of
 @section Scheme stack management
 
 
-In this section we want to explain how the Scheme stack in managed while
-Scheme code is running.
+In this section we want to explain how the Scheme stack in managed by
+@value{PRJNAME}.
+
+@menu
+* compiler stack intro::        Stack allocation and basic management.
+* compiler stack call::         Executing a @code{call} instruction.
+@end menu
+
+@c page
+@node compiler stack intro
+@subsection Stack allocation and basic management
+
+
+The Scheme stack is a block of memory allocated with @cfunc{mmap};
+multiple blocks are allocated as more space is needed, each block is
+called @dfn{stack segment}.  At any moment, the stack segment currently
+in use is referenced by the following fields of the @pcb{} structure:
+
+@table @code
+@item ikptr stack_base
+Raw memory pointer referencing the first byte in the stack segment.
+
+@item unsigned long stack_size
+Number of bytes allocated for this stack segment; it is always a
+multiple of the host system page size.
+@end table
+
+@example
+  stack_base            use growth
+       v              <-------------
+lo mem |-------------------------------------| hi mem
+
+       |.....................................| stack_size
+@end example
+
+When first allocated by C code, the stack is empty.  In the tradition of
+stacks: the use of a stack segment grows from high memory addresses to
+low memory addresses.
+
+@c ------------------------------------------------------------
+
+@subsubheading Entering Scheme code
+
+Entering Scheme code from C code and exiting Scheme code to C code is
+performed by running some assembly instructions in the file
+@file{ikarus-enter.S}.  Entering Scheme code execution from C code
+always involves a @code{call} assembly instruction.
+
+When we enter Scheme code for the first time, we set the @cpu{}'s Frame
+Pointer Register (@fpr{}) so that it references the machine word just
+after the end of the stack segment:
+
+@example
+  stack_base            use growth           FPR
+       v              <-------------          v
+lo mem |-------------------------------------|-| hi mem
+
+       |.....................................| stack_size
+@end example
+
+@noindent
+and perform a @code{call} instruction which pushes a return address on
+the stack segment, decrementing @fpr{} by a wordsize; such return
+address is identified by the assembly label @code{ik_underflow_handler}.
+So right after the first @code{call}, the stack segment looks as
+follows:
+
+@example
+                        high memory
+                  |                      |
+               -- |----------------------|
+                . | ik_underflow_handler | <-- FPR
+                . |----------------------|
+pcb->stack_size .            ...
+                . |----------------------|
+                . |                      | <-- pcb->stack_base
+               -- |----------------------|
+                  |                      |
+                         low memory
+@end example
+
+@noindent
+performing a @code{ret} assembly instruction in this situation would
+just increment the @fpr{} and let the control flow go back to the code
+at the assembly label @code{ik_underflow_handler}.
+
+
+ The first stack frame starts from the end of the stack:
+
+    stack_base                   frame_pointer = frame_base
+         v                                     v
+  lo mem |-------------------------------------| hi mem
+                       Scheme stack
+
+ then, while nested  functions are called, new frames  are pushed on
+ the stack:
+
+    stack_base    frame_pointer            frame_base
+         v             v                       v
+  lo mem |-------------+-----------------------| hi mem
+                  |....|
+                           Scheme stack
+
+ Notice how "pcb->frame_base" references a  word that is one-off the
+ end of the stack segment; so the first word in the stack is:
+
+    pcb->frame_base - wordsize
+
+ Also,  when   C  code   is  running,   "pcb->frame_pointer"  always
+ references the highest  memory address in the  lowest function call
+ frame; the machine word referenced by "pcb->frame_pointer" contains
+ the return address of the last  function call.  When Scheme code is
+ entered: "pcb->frame_pointer" is stored  in the %esp register; when
+ Scheme   code  is   exited   the  %esp   register   is  stored   in
+ "pcb->frame_pointer".
+
+@table @code
+@item ikptr frame_redline
+Raw memory pointer referencing a location in the current stack segment.
+When Scheme code execution uses the stack crossing the ``red line''
+represented by this field: at the first subsequent Scheme function call,
+the current Scheme stack is stored away in a Scheme continuation and a
+new stack segment is allocated and installed as Scheme stack.  See the C
+function @cfunc{ik_stack_overflow} for how this is implemented.
+@end table
+
+@table @code
+@item ikptr frame_pointer
+@item ikptr frame_base
+@end table
+
+
+When the function returns: the stored continuation is reinstated and
+execution continues on the old stack.
+
+
+@c page
+@node compiler stack call
+@subsection Executing a @code{call} instruction
+
 
 The usual mechanism of performing an assembly language @code{call}
 instruction is this:
@@ -28645,7 +28783,6 @@ machine word at:
 %esp - call_size - 2 * wordsize
 @end example
 @end itemize
-
 
 @c page
 @node missing

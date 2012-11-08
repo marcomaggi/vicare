@@ -521,7 +521,34 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
   ikptr         rv;
   pcb->frame_pointer = pcb->frame_base;
   pcb->root0 = &s_proc;
-  { /* Push arguments on the Scheme stack. */
+  { /* Push arguments on  the Scheme stack.  We will enter  the stack by
+     * executing the assembly instruction "call", which will push on the
+     * stack  the return  address  "ik_underflow_handler",  which is  an
+     * assembly label.   For a Scheme callback  function call equivalent
+     * to:
+     *
+     *    (func arg0 arg1 arg2)
+     *
+     * we want to put the arguments on the Scheme stack as follows:
+     *
+     *        high memory
+     *    |                |
+     *    |----------------|
+     *    | return address | <-- pcb->frame_pointer
+     *    |----------------|
+     *    |     unused     | <-- pcb->frame_pointer - wordsize
+     *    |----------------|
+     *    |   argument 0   | <-- pcb->frame_pointer - (2 + 0) * wordsize
+     *    |----------------|
+     *    |   argument 1   | <-- pcb->frame_pointer - (2 + 1) * wordsize
+     *    |----------------|
+     *    |   argument 2   | <-- pcb->frame_pointer - (2 + 2) * wordsize
+     *    |----------------|
+     *    |                |
+     *        low memory
+     *
+     * where "return address" is the return address left on the stack by
+     */
     for (i=0; i<cif->arity; ++i) {
       ikptr	s_value;
       s_value = ika_native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
