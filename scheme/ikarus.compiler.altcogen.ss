@@ -1000,7 +1000,7 @@
 		 ;;          high memory
 		 ;;   |                      |
 		 ;;   |----------------------|
-		 ;;   |    return address    | <-- FPR = pcb->frame_base
+		 ;;   |  old return address  | <-- FPR = pcb->frame_base
 		 ;;   |----------------------|
 		 ;;   | ik_underflow_handler |
 		 ;;   |----------------------|
@@ -1025,7 +1025,7 @@
 		 ;;          high memory
 		 ;;   |                      |
 		 ;;   |----------------------|
-		 ;;   |    return address    |
+		 ;;   |  old return address  | <-- pcb->frame_base
 		 ;;   |----------------------|
 		 ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
 		 ;;   |----------------------|

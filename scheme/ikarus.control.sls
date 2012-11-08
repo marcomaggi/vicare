@@ -29,6 +29,7 @@
     (ikarus system $stack)
     (ikarus system $pairs)
     (ikarus system $fx)
+    (ikarus.emergency)
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
 	  define-inline))
@@ -138,6 +139,7 @@
 ;;;; continuations
 
 (define (%primitive-call/cf func)
+  #;(emergency-write "enter call/cf")
   ;;Low level function: call the function FUNC with a description of the
   ;;current  Scheme stack  frame, stored  in a  continuation object,  as
   ;;argument.
@@ -148,16 +150,49 @@
       ;;          high memory
       ;;   |                      | <-- pcb->frame_base
       ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
+      ;;   |    return address    | <-- frame pointer register (FPR)
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
       ;;
       ;;so there is no continuation to  be saved, because we already are
       ;;at the  base of  the stack;  so we just  call the  function FUNC
-      ;;using the current "pcb->next_k" as continuation object.
+      ;;using the current "pcb->next_k"  as continuation object.  Notice
+      ;;that "pcb->next_k" is not removed from the PCB structure.
       ;;
-      ;;Notice that "pcb->next_k" is not removed from the PCB structure.
+      ;;Notice that there  are at least two situations in  which the FPR
+      ;;is  at the  base of  the stack;  one is  when the  execution has
+      ;;rewind the stack until the base of an allocated stack segment:
+      ;;
+      ;;          high memory
+      ;;   |                      | <-- pcb->frame_base = end of segment
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;the other is when $SEAL-FRAME-AND-CALL has been used to save the
+      ;;current  stack  inside   a  call  to  this   very  function  and
+      ;;$CALL-WITH-UNDERFLOW-HANDLER has  prepared the stack  as follows
+      ;;before calling the argument function FUNC:
+      ;;
+      ;;          high memory
+      ;;   |                      | <-- end of segment
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler |
+      ;;   |----------------------|
+      ;;   |         ...          |
+      ;;   |----------------------|
+      ;;   |  old return address  | <-- pcb->frame_base
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- frame pointer register (FPR)
+      ;;   |----------------------|
+      ;;   | continuation object  |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
       (func ($current-frame))
     ;;The situation of the Scheme stack is:
     ;;
