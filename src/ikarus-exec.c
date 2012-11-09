@@ -48,7 +48,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   s_argc   = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
   s_next_k = pcb->next_k;
   while (s_next_k) {
-#if (DEBUG_EXEC)
+#if ( DEBUG_EXEC)
     ik_debug_message("%s: resuming saved continuation 0x%016lx",
 		     __func__, (long)s_next_k);
 #endif

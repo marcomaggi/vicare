@@ -28675,17 +28675,32 @@ just increment the @fpr{} and let the execution flow go back to the code
 at the assembly label @code{ik_underflow_handler}.  Notice that we first
 enter a Scheme program by calling a Scheme function with zero arguments.
 
-@ref{compiler stack args, Function arguments on the stack} for details
-on how function arguments are put on the stack; here we only need to
-know that a function occupies some space on the stacke, called a
-@dfn{frame}:
+@ref{compiler stack args} for details on how function arguments are put
+on the stack; here we only need to know that a function occupies some
+space on the stack, called a @dfn{stack frame}:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+|    return address    | <-- FPR .
+|----------------------|         .
+|     local value 0    |         . function
+|----------------------|         . stack
+|     local value 1    |         . frame
+|----------------------|         .
+|     local value 2    |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
 
 @c ------------------------------------------------------------
 
-@subsubheading Handling stack underflow
+@subsubheading Handling stack overflow
 
 Nested function call after nested function call the stack segment fills
-up:
+up towards low memory addresses:
 
 @example
 pcb->stack_base         use growth
@@ -28696,23 +28711,88 @@ lo mem |-------------------------------------| hi mem
                             frame frame frame
 @end example
 
-
+@noindent
+there is a limit, a ``red line'', below which the current stack segment
+is considered full: we need to allocate a new one and allocate the
+function frames there.  The limit is registered in the @pcb{} structure
+fields:
 
 @table @code
 @item ikptr frame_redline
-Raw memory pointer referencing a location in the current stack segment.
-When Scheme code execution uses the stack crossing the ``red line''
-represented by this field: at the first subsequent Scheme function call,
-the current Scheme stack is stored away in a Scheme continuation and a
-new stack segment is allocated and installed as Scheme stack.  See the C
-function @cfunc{ik_stack_overflow} for how this is implemented.
+Raw memory pointer referencing a location in the current stack segment;
+when Scheme code execution uses the stack crossing the ``red line''
+represented by this field: the current stack segment is considered full.
 @end table
 
+A stack segment in stack overflow looks like this:
 
-When the function returns: the stored continuation is reinstated and
-execution continues on the old stack.
+@example
+pcb->stack_base  pcb->frame_redline
+       v          v
+lo mem |----------+--------------------------| hi mem
+
+       |.......|.....|.....|.....|.....|.....|
+        unused  frame frame frame frame frame
+@end example
+
+Each compiled Scheme function contains, right at the beginning, code
+that checks if the red line has been crossed; so, when a stack segment
+is full, at the first subsequent Scheme function call, @value{PRJNAME}
+takes control and allocates a new stack segment doing what is needed to
+proceed the execution on the new stack.  This ``proceeding on the new
+stack'' is called @dfn{stack overflow}.
+
+How is this implemented?  Let's say we have called a function
+@func{alpha} whose frame has crossed the red line, then the function
+@func{beta} is called:
+
+@example
+      high memory
+|                      |
+|----------------------|                         --
+|    return address    |                         .
+|----------------------|                         .
+|     local value 0    |                         . alpha
+|----------------------|                         . frame
+|     local value 1    | <-- pcb->frame_redline  .
+|----------------------|                         .
+|     local value 2    |                         .
+|----------------------|                         --
+|    return address    | <-- FPR                 .
+|----------------------|                         .
+|     local value 0    |                         . beta
+|----------------------|                         . frame
+|     local value 1    |                         .
+|----------------------|                         .
+|     local value 2    |                         .
+|----------------------|                         --
+|                      |
+       low memory
+@end example
+
+@noindent
+the code in @func{beta} detects the situation simply by the comparison:
+
+@example
+pcb->frame_redline < FPR
+@end example
+
+@noindent
+and calls an routine to exit Scheme code execution and call the C
+function @cfunc{ik_stack_overflow}.  A new stack segment is called
+
+@c QUIIIIIIIIIIIIIIIIIIIIII
+
+the current
+Scheme stack is stored away in a Scheme continuation and a new stack
+segment is allocated and installed as Scheme stack.  See the C function
+ for how this is implemented.  When the
+function returns: the stored continuation is reinstated and execution
+continues on the old stack.
 
 @c ------------------------------------------------------------
+
+@subsubheading Context switching between Scheme code and C code
 
 @table @code
 @item ikptr frame_pointer

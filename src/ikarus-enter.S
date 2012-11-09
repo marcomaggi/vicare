@@ -500,7 +500,7 @@ L_zero:
   #
 L_loop:                  # (label Lloop)
   movl (%ebx,%eax), %ecx # (movl (mem ebx eax) ecx)
-  push %ecx             # (pushl ecx)
+  push %ecx              # (pushl ecx)
   addl $4, %eax          # (addl (int 4) eax)
   cmpl $0, %eax          # (cmpl (int 0) eax)
   jne L_loop             # (jne (label Lloop))
@@ -509,10 +509,16 @@ L_set:                   # (label Lset)
   # The C functions callable here always returns a single argument
   # of type "ikptr", and it is in %eax.
 
-  # Load in the Stack Pointer Register "pcb->frame_pointer".
+  # Load "pcb->frame_pointer" in the Stack Pointer Register.
   movl 8(%esi), %esp     # (movl (pcb-ref 'frame-pointer) fpr)
-  # Load in the Allocation Pointer Register "pcb->allocation_poiner"
+  # Load "pcb->allocation_pointer" in the Allocation Pointer Register.
   movl 0(%esi), %ebp     # (movl (pcb-ref 'allocation-pointer) apr)
+
+  # Return to the caller.  If the C function has not touched the
+  # Scheme stack: we go back to right after the "call" instruction
+  # that entered "ik_foreign_call".  If the foreign function is
+  # "ik_stack_overflow()": we return to the assembly label
+  # "ik_underflow_handler".
   ret                    # (ret)
 
 #endif
