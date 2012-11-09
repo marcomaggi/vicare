@@ -28520,6 +28520,7 @@ In this section we want to explain how the Scheme stack in managed by
 
 @menu
 * compiler stack intro::        Stack allocation and basic management.
+* compiler stack args::         Function arguments on the stack.
 * compiler stack call::         Executing a @code{call} instruction.
 @end menu
 
@@ -28529,7 +28530,7 @@ In this section we want to explain how the Scheme stack in managed by
 
 
 The Scheme stack is a block of memory allocated with @cfunc{mmap};
-multiple blocks are allocated as more space is needed, each block is
+multiple blocks are allocated when more space is needed, each block is
 called @dfn{stack segment}.  At any moment, the stack segment currently
 in use is referenced by the following fields of the @pcb{} structure:
 
@@ -28543,11 +28544,11 @@ multiple of the host system page size.
 @end table
 
 @example
-  stack_base            use growth
+pcb->stack_base         use growth
        v              <-------------
 lo mem |-------------------------------------| hi mem
 
-       |.....................................| stack_size
+       |.....................................| pcb->stack_size
 @end example
 
 When first allocated by C code, the stack is empty.  In the tradition of
@@ -28556,38 +28557,110 @@ low memory addresses.
 
 @c ------------------------------------------------------------
 
-@subsubheading Entering Scheme code
+@subsubheading Calling Scheme functions and returning
 
-Entering Scheme code from C code and exiting Scheme code to C code is
-performed by running some assembly instructions in the file
-@file{ikarus-enter.S}.  Entering Scheme code execution from C code
-always involves a @code{call} assembly instruction.
+Entering Scheme code from C code and exiting Scheme code to C code does
+not happen directly; rather it involves hand--written assembly code:
 
-When we enter Scheme code for the first time, we set the @cpu{}'s Frame
-Pointer Register (@fpr{}) so that it references the machine word just
-after the end of the stack segment:
+@itemize
+@item
+The C code calls an assembly routine which prepares the @cpu{}
+registers, then calls a Scheme function.
+
+@item
+The Scheme code returns to the assembly routine, which in turn restores
+the @cpu{} registers and returns to the C code.
+@end itemize
+
+@noindent
+the assembly code is in the file @file{ikarus-enter.S}, the C function
+calling the assembly routine is in the file @file{ikarus-exec.c}.
+
+Calling functions and returning from them is performed as follows:
+
+@itemize
+@item
+Entering Scheme code execution from assembly code always involves the
+execution of the assembly instruction @code{call}.
+
+@item
+Calling a Scheme function from Scheme code happens through a @code{call}
+or @code{jmp} instruction.
+
+@item
+Returning from Scheme code to Scheme code happens through a @code{ret}
+or @code{jmp} instruction.
+
+@item
+Returning from Scheme code to assembly code happens through a @code{ret}
+or @code{jmp} instruction.
+@end itemize
+
+For simplicity in introducing the stack management, we assume that:
+
+@itemize
+@item
+Calling a Scheme function always happens through a @code{call}
+instruction.
+
+@item
+Returning from a function call always happens through a @code{ret}
+instruction.
+
+@item
+All the Scheme functions return a single value.
+@end itemize
+
+The assembly routine calling Scheme code is @code{ik_asm_enter} and its
+return address is labeled @code{ik_underflow_handler}; assuming
+@var{REG} is a @cpu{} register holding the address of a Scheme function,
+the assembly code is similar to:
 
 @example
-  stack_base            use growth           FPR
-       v              <-------------          v
-lo mem |-------------------------------------|-| hi mem
-
-       |.....................................| stack_size
+ik_asm_enter:
+   ...                          ;assembly instructions
+   call *@var{REG}
+ik_underflow_handler:
+   ...                          ;assembly instructions
+   ret                          ;return to C code
 @end example
 
 @noindent
-and perform a @code{call} instruction which pushes a return address on
-the stack segment, decrementing @fpr{} by a wordsize; such return
-address is identified by the assembly label @code{ik_underflow_handler}.
-So right after the first @code{call}, the stack segment looks as
-follows:
+when the @code{call} is performed: the return address
+@code{ik_underflow_handler} is pushed on the stack.
+
+@c ------------------------------------------------------------
+
+@subsubheading Stack frames
+
+The @cpu{} keeps track of the current position on the stack with the
+@dfn{Frame Pointer Register} (@fpr{}, which is @code{%esp} on the Intel
+architecture); such register contains the memory address of the current
+stack location, the @dfn{top} of the stack.  The first function frame
+starts from the end of the stack segment; when we enter Scheme code for
+the first time, we set the @fpr{} so that it references the machine word
+right after the end of the stack segment:
+
+@example
+pcb->stack_base         use growth           FPR
+       v              <-------------          v
+lo mem |-------------------------------------|-| hi mem
+
+       |.....................................| pcb->stack_size
+@end example
+
+@noindent
+and perform a @code{call} instruction which pushes the return address
+@code{ik_underflow_handler} on the stack segment, decrementing @fpr{} by
+a wordsize; so right after the first @code{call}, the stack segment
+looks as follows:
 
 @example
                         high memory
                   |                      |
-               -- |----------------------|
-                . | ik_underflow_handler | <-- FPR
-                . |----------------------|
+               -- |----------------------|          --
+                . | ik_underflow_handler | <-- FPR  . frame
+                . |----------------------|          --
 pcb->stack_size .            ...
                 . |----------------------|
                 . |                      | <-- pcb->stack_base
@@ -28598,38 +28671,32 @@ pcb->stack_size .            ...
 
 @noindent
 performing a @code{ret} assembly instruction in this situation would
-just increment the @fpr{} and let the control flow go back to the code
-at the assembly label @code{ik_underflow_handler}.
+just increment the @fpr{} and let the execution flow go back to the code
+at the assembly label @code{ik_underflow_handler}.  Notice that we first
+enter a Scheme program by calling a Scheme function with zero arguments.
+
+@ref{compiler stack args, Function arguments on the stack} for details
+on how function arguments are put on the stack; here we only need to
+know that a function occupies some space on the stacke, called a
+@dfn{frame}:
+
+@c ------------------------------------------------------------
+
+@subsubheading Handling stack underflow
+
+Nested function call after nested function call the stack segment fills
+up:
+
+@example
+pcb->stack_base         use growth
+       v              <-------------
+lo mem |-------------------------------------| hi mem
+
+       |...................|.....|.....|.....|
+                            frame frame frame
+@end example
 
 
- The first stack frame starts from the end of the stack:
-
-    stack_base                   frame_pointer = frame_base
-         v                                     v
-  lo mem |-------------------------------------| hi mem
-                       Scheme stack
-
- then, while nested  functions are called, new frames  are pushed on
- the stack:
-
-    stack_base    frame_pointer            frame_base
-         v             v                       v
-  lo mem |-------------+-----------------------| hi mem
-                  |....|
-                           Scheme stack
-
- Notice how "pcb->frame_base" references a  word that is one-off the
- end of the stack segment; so the first word in the stack is:
-
-    pcb->frame_base - wordsize
-
- Also,  when   C  code   is  running,   "pcb->frame_pointer"  always
- references the highest  memory address in the  lowest function call
- frame; the machine word referenced by "pcb->frame_pointer" contains
- the return address of the last  function call.  When Scheme code is
- entered: "pcb->frame_pointer" is stored  in the %esp register; when
- Scheme   code  is   exited   the  %esp   register   is  stored   in
- "pcb->frame_pointer".
 
 @table @code
 @item ikptr frame_redline
@@ -28641,15 +28708,198 @@ new stack segment is allocated and installed as Scheme stack.  See the C
 function @cfunc{ik_stack_overflow} for how this is implemented.
 @end table
 
+
+When the function returns: the stored continuation is reinstated and
+execution continues on the old stack.
+
+@c ------------------------------------------------------------
+
 @table @code
 @item ikptr frame_pointer
 @item ikptr frame_base
 @end table
 
+@c page
+@node compiler stack args
+@subsection Function arguments on the stack
 
-When the function returns: the stored continuation is reinstated and
-execution continues on the old stack.
 
+Right after the first function call that enters Scheme code from
+assembly code, the stack segment looks as follows:
+
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <-- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <-- FPR
+|----------------------|
+           ...
+|----------------------|
+|                      | <-- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+
+If the called Scheme function needs some local variables, it allocates
+them on the stack:
+
+@example
+      high memory
+|                      |
+|----------------------|                         --
+| ik_underflow_handler | <-- FPR                 .
+|----------------------|                         .
+|   local variable 0   | <-- FPR - 1 * wordsize  . first
+|----------------------|                         . called
+|   local variable 1   | <-- FPR - 2 * wordsize  . function
+|----------------------|                         . frame
+|   local variable 2   | <-- FPR - 3 * wordsize  .
+|----------------------|                         --
+|                      |
+       low memory
+@end example
+
+@noindent
+notice that local values are ``moved'' on the stack, not ``pushed'':
+executing the assembly instruction @code{push} would decrement the
+@fpr{}, we do not want this; rather we reserve frame space for a
+function call and never mutate the @fpr{} until the function returns or
+calls another function.
+
+If the Scheme function needs to call another Scheme function, as in:
+
+@example
+(sub-func arg0 arg1 arg2)
+@end example
+
+@noindent
+it moves the arguments on the stack, leaving an empty machine word:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler | <-- FPR .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   |         .
+|----------------------|         --
+|                      |
+|----------------------|
+|      argument 0      |
+|----------------------|
+|      argument 1      |
+|----------------------|
+|      argument 2      |
+|----------------------|
+|                      |
+       low memory
+@end example
+
+@noindent
+it adjusts the @fpr{} by explicitly subtracting the appropriate offset
+from it:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler |         .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   | <-- FPR .
+|----------------------|         --
+|                      |
+|----------------------|
+|      argument 0      |
+|----------------------|
+|      argument 1      |
+|----------------------|
+|      argument 2      |
+|----------------------|
+|                      |
+       low memory
+@end example
+
+@noindent
+and finally it performs a @code{call} instruction, which pushes a return
+address on the stack right in the empty machine word:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler |         .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   |         .
+|----------------------|         --
+|    return address    | <-- FPR .
+|----------------------|         .
+|      argument 0      |         . sub-func
+|----------------------|         . called
+|      argument 1      |         . function
+|----------------------|         . frame
+|      argument 2      |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+When the function @func{sub-func} executes a @code{ret} instruction: the
+execution flow returns to @code{return address} and the @fpr{} is
+incremented by a machine word:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler |         .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   | <-- FPR .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+@noindent
+now the first called function adjusts the @fpr{} by explicitly adding
+the appropriate offset to it:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler | <-- FPR .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+@noindent
+and is finally ready to go on with the execution.
 
 @c page
 @node compiler stack call
