@@ -57,12 +57,12 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        continuation object, handing  to the continuation -S_RETVAL_COUNT
        return  values.  This  requires installation  of the  appropriate
        (previously saved) stack. */
-    ikcont * p_next_k = (ikcont *)(long)(s_kont - vector_tag);
+    ikcont * p_kont = (ikcont *)(long)(s_kont - vector_tag);
     /* System continuations are created by the FFI to save the current C
        execution contest just before calling back a Scheme function.  So
        if S_KONT is  a system continuation: we have no  Scheme code to
        go back to, we just return to the caller of this C function. */
-    if (system_continuation_tag == p_next_k->tag)
+    if (system_continuation_tag == p_kont->tag)
       break;
     /* TOP is  a raw memory pointer  to the highest machine  word in the
        last function call frame of the continuation.
@@ -73,12 +73,12 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        FRAMESIZE is the function call frame size of the function we have
        to return to.  This value was computed at compile time and stored
        in binary code just before the "call" instruction. */
-    ikptr	top       = p_next_k->top;
+    ikptr	top       = p_kont->top;
     ikptr	rp        = IK_REF(top, 0);
     long	framesize = (long) IK_REF(rp, disp_frame_size);
 #if DEBUG_EXEC
     ik_debug_message("%s: exec framesize=%ld kontsize=%ld rp=0x%016lx",
-		     __func__, framesize, p_next_k->size, rp);
+		     __func__, framesize, p_kont->size, rp);
 #endif
     if (0 == framesize) {
       framesize = IK_REF(top, wordsize);
@@ -89,8 +89,8 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     }
     if (framesize <= 0)
       ik_abort("invalid caller function framesize %ld\n", framesize);
-    if (framesize < p_next_k->size) {
-      /* Insert a  new continuation "p_new_cont" between  "p_next_k" and
+    if (framesize < p_kont->size) {
+      /* Insert a  new continuation "p_new_cont" between  "p_kont" and
        * its next;  notice that  below we will  pop "s_kont"  from the
        * list in the PCB, so  "p_new_cont" will become the first, before
        * reentering assembly code.  Before:
@@ -111,31 +111,31 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *                               next
        */
       ikcont *	p_new_kont = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
-      p_new_kont->tag  = p_next_k->tag;
-      p_new_kont->next = p_next_k->next;
+      p_new_kont->tag  = p_kont->tag;
+      p_new_kont->next = p_kont->next;
       p_new_kont->top  = top + framesize;
-      p_new_kont->size = p_next_k->size - framesize;
-      p_next_k->size   = framesize;
-      p_next_k->next   = (ikptr)(long)p_new_kont | vector_tag;
+      p_new_kont->size = p_kont->size - framesize;
+      p_kont->size   = framesize;
+      p_kont->next   = (ikptr)(long)p_new_kont | vector_tag;
       { /* Record in  the dirty vector  the side effect of  mutating the
-	   field "p_next_k->next". */
-	ik_ulong idx = ((ik_ulong)(&p_next_k->next)) >> IK_PAGESHIFT;
+	   field "p_kont->next". */
+	ik_ulong idx = ((ik_ulong)(&p_kont->next)) >> IK_PAGESHIFT;
 	((int*)(long)(pcb->dirty_vector))[idx] = -1;
       }
-    } else if (framesize > p_next_k->size) {
+    } else if (framesize > p_kont->size) {
       /* long	rp_offset	= IK_UNFIX(IK_REF(rp, disp_frame_offset)); */
       /* long	code_offset	= rp_offset - disp_frame_offset; */
       /* ikptr	code_entry	= rp - code_offset; */
       /* ikptr	p_code		= code_entry - disp_code_data; */
       ik_abort("while resuming continuation 0x%016lx:\n\tinvalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
-	       (long)s_kont, framesize, p_next_k->size,
+	       (long)s_kont, framesize, p_kont->size,
 	       rp, IK_REF(rp, disp_frame_offset));
     }
     /* Pop "s_kont" from  the list in the PCB  structure.  Notice that
        if "s_kont" represents a  continuation saved with CALL/CC: such
        continuation object is still  referenced somewhere by the closure
        object implementing the continuation function. */
-    pcb->next_k = p_next_k->next;
+    pcb->next_k = p_kont->next;
 #if DEBUG_EXEC
     ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_retval_count));
 #endif
@@ -145,13 +145,13 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *        high memory
        *  |                       | <-- pcb->frame_pointer = pcb->frame_base
        *  |-----------------------|
-       *  | ik_underflow_handler  |
+       *  | ik_underflow_handler  | <-- fbase
        *  |-----------------------|
        *  | Scheme return value 0 |
        *  |-----------------------|
-       *  | Scheme return value 1 | <-- pcb->frame_pointer - s_retval_count
+       *  | Scheme return value 1 |
        *  |-----------------------|
-       *  | Scheme return value 2 |
+       *  | Scheme return value 2 | <-- fbase + s_retval_count
        *  |-----------------------|
        *  |                       |
        *        low memory
@@ -207,15 +207,15 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  | Scheme return value 2 dst |                .
        *  |---------------------------|                --
        *               ...
-       *  |---------------------------|                --
-       *  |     frame value 0 src     |                .
-       *  |---------------------------|                .
-       *  |     frame value 1 src     |                .
-       *  |---------------------------|                . framesize
-       *  |     frame value 2 src     |                .
-       *  |---------------------------|                .
-       *  |       return address      | <-- top        .
-       *  |---------------------------|                --
+       *  |---------------------------|                 --
+       *  |     frame value 0 src     |                 .
+       *  |---------------------------|                 .
+       *  |     frame value 1 src     |                 .
+       *  |---------------------------|                 . framesize
+       *  |     frame value 2 src     |                 .
+       *  |---------------------------|                 .
+       *  |       return address      | <-- p_kont->top .
+       *  |---------------------------|                 --
        *  |                           |
        *           low memory
        */
