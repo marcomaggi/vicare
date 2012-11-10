@@ -531,23 +531,26 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
      *
      * we want to put the arguments on the Scheme stack as follows:
      *
-     *        high memory
-     *    |                |
-     *    |----------------|
-     *    | return address | <-- pcb->frame_pointer
-     *    |----------------|
-     *    |     unused     | <-- pcb->frame_pointer - wordsize
-     *    |----------------|
-     *    |   argument 0   | <-- pcb->frame_pointer - (2 + 0) * wordsize
-     *    |----------------|
-     *    |   argument 1   | <-- pcb->frame_pointer - (2 + 1) * wordsize
-     *    |----------------|
-     *    |   argument 2   | <-- pcb->frame_pointer - (2 + 2) * wordsize
-     *    |----------------|
-     *    |                |
-     *        low memory
+     *          high memory
+     *    |                      |
+     *    |----------------------|
+     *    | ik_underflow_handler | <-- pcb->frame_pointer
+     *    |----------------------|
+     *    |      empty word      | <-- pcb->frame_pointer - wordsize
+     *    |----------------------|
+     *    |      argument 0      | <-- pcb->frame_pointer - (2 + 0) * wordsize
+     *    |----------------------|
+     *    |      argument 1      | <-- pcb->frame_pointer - (2 + 1) * wordsize
+     *    |----------------------|
+     *    |      argument 2      | <-- pcb->frame_pointer - (2 + 2) * wordsize
+     *    |----------------------|
+     *    |                      |
+     *          low memory
      *
-     * where "return address" is the return address left on the stack by
+     * where  "ik_underflow_handler"  has  been  left on  the  stack  by
+     * "seal_stack()".   Notice  that  the  "empty word"  is  where  the
+     * assembly  instruction  "call"  in "ik_asm_enter"  will  push  the
+     * return address.
      */
     for (i=0; i<cif->arity; ++i) {
       ikptr	s_value;
@@ -603,50 +606,57 @@ ik_enter_c_function (ikpcb* pcb)
 void
 ik_leave_c_function (ikpcb * pcb, ikptr sk)
 /* Call this  function whenever we exit  a C function that  may invoke a
-   Scheme callback. */
+   Scheme callback.
+
+   FIXME The argument SK is unused!!!  (Marco Maggi; Nov 10, 2012) */
 {
   pcb->frame_pointer = pcb->frame_base - wordsize;
   sk = pcb->next_k - vector_tag;
   if (system_continuation_tag != IK_REF(sk, disp_system_continuation_tag)) {
     ik_abort("%s: invalid system cont", __func__);
   }
+  /* Remove the system continuation from the stack of continuations. */
   pcb->next_k       = IK_REF(sk, disp_system_continuation_next);
+  /* Restore the pointer to the top of the C code stack. */
   pcb->system_stack = IK_REF(sk, disp_system_continuation_top);
 }
 static ikptr
 seal_scheme_stack(ikpcb* pcb)
-/* FIXME Handle stack overflow.  (Abdulaziz Ghuloum) */
+/* Create a new continuation object  referencing the used portion of the
+   current stack segment  and push it on the  PCB's continuations stack.
+
+   FIXME Handle stack overflow.  (Abdulaziz Ghuloum) */
 #ifndef DEBUG_FFI
 {
-  /*
-   *      low memory
-   *   |      .       |
-   *   |      .       |
-   *   |      .       |
-   *   +--------------+
-   *   |   underflow  |  <-- new frame pointer
-   *   +--------------+
-   *   | return point |  <-- old frame pointer, new frame base
-   *   +--------------+
-   *   |      .       |
-   *   |      .       |
-   *   |      .       |
-   *   +--------------+
-   *   |   underflow  |  <-- old frame base
-   *   +--------------+
-   *     high memory
+  /* The situation on the Scheme stack is as follows:
+   *
+   *          high memory
+   *   |                      |
+   *   |----------------------|
+   *   |                      | <-- old_frame_base
+   *   |----------------------|
+   *   | ik_underflow_handler |
+   *   |----------------------|
+   *             ...
+   *   |----------------------|
+   *   |    return address    | <-- old_frame_pointer = new_frame_base
+   *   |----------------------|
+   *   | ik_underflow_handler | <--                     new_frame_pointer
+   *   |----------------------|
+   *   |                      |
+   *           low memory
    */
   ikptr		old_frame_base    = pcb->frame_base;
   ikptr		old_frame_pointer = pcb->frame_pointer;
   if ((old_frame_base - wordsize) != old_frame_pointer) {
     ikptr	underflow_handler = IK_REF(old_frame_base, -wordsize);
-    ikcont *	old_next_kont     = (ikcont*) pcb->next_k;
-    ikcont *	new_next_kont     = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
-    new_next_kont->tag  = continuation_tag;
-    new_next_kont->next = (ikptr) old_next_kont;
-    new_next_kont->top  = old_frame_pointer;
-    new_next_kont->size = old_frame_base - old_frame_pointer - wordsize;
-    pcb->next_k         = vector_tag + (ikptr)new_next_kont;
+    ikptr	s_old_next_kont   = pcb->next_k;
+    ikcont *	p_new_next_kont   = (ikcont*) ik_unsafe_alloc(pcb, sizeof(ikcont));
+    p_new_next_kont->tag  = continuation_tag;
+    p_new_next_kont->next = s_old_next_kont;
+    p_new_next_kont->top  = old_frame_pointer;
+    p_new_next_kont->size = old_frame_base - old_frame_pointer - wordsize;
+    pcb->next_k         = vector_tag | (ikptr)p_new_next_kont;
     pcb->frame_base     = old_frame_pointer;
     pcb->frame_pointer  = pcb->frame_base - wordsize;
     IK_REF(pcb->frame_pointer, 0) = underflow_handler;

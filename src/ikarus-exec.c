@@ -137,8 +137,8 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 #if DEBUG_EXEC
     ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_argc));
 #endif
-    { /* Move the arguments from the old frame to the new frame.  Notice
-	 that S_ARGC is negative for a reason! */
+    { /* Move the local  variables from the old frame to  the new frame.
+	 Notice that S_ARGC is negative for a reason! */
       ikptr	fbase     = pcb->frame_base - wordsize;
       ikptr	new_fbase = fbase - framesize;
       char *	arg_dst   = ((char*)(long)new_fbase) + s_argc;

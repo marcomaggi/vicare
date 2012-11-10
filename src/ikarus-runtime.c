@@ -762,10 +762,10 @@ ik_stack_overflow (ikpcb* pcb)
   /* Retrieve the address of the underflow handler. */
   underflow_handler = IK_REF(pcb->frame_base, -wordsize);
 #if (0 || STACK_DEBUG)
-  ik_debug_message("underflow_handler = 0x%016x", (long)underflow_handler);
+  ik_debug_message("ik_underflow_handler = 0x%016x", (long)underflow_handler);
 #endif
-  { /* Save the whole  Scheme stack into a continuation and  store it in
-       the PCB as "next_k". */
+  { /* Save  the  used  portion  of  the Scheme  stack  segment  into  a
+       continuation and store it in the PCB as "next_k". */
     ikptr	s_kont;
     s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
     IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
@@ -774,8 +774,10 @@ ik_stack_overflow (ikpcb* pcb)
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
 #if STACK_DEBUG
-    ik_debug_message("%s: saved stack continuation 0x%016lx (rp=0x%016lx)",
-		     __func__, (long)s_kont, IK_REF(pcb->frame_pointer, 0));
+    ik_debug_message("%s: saved stack continuation s_kont=0x%016lx\n\ttop = 0x%016lx\n\tsize = %ld",
+		     __func__, (long)s_kont,
+		     IK_REF(s_kont, off_continuation_top),
+		     IK_REF(s_kont, off_continuation_size));
 #endif
   }
   { /* Allocate a  new memory  segment to  be used  as Scheme  stack and

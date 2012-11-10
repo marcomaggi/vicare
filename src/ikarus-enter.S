@@ -260,6 +260,7 @@ _ik_asm_enter:
   movl %esp, 24(%esi)    # save %esp in "pcb->system_stack"
   movl 8(%esi), %esp     # load scheme stack from "pcb->frame_pointer"
   jmp L_call
+  # Notice that there is no livemask bytevector here.
   .long 4			# We can access this data word
 				# by summing "disp_frame_size"
 				# to "ik_underflow_handler".

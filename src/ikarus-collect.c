@@ -925,13 +925,14 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
  *    stack_base     frame_pointer=top     end   frame_base
  *         v                   v             v   v
  *  lo mem |-------------------+-------------+---| hi mem
- *                       Scheme stack        |...| underflow_handler
+ *                       Scheme stack        |...| ik_underflow_handler
  *
  *         |.....................................|
  *                        stack_size
  *
  * The  argument  END is  "pcb->frame_base  -  wordsize", a  raw  memory
- * pointer.
+ * pointer referencing  the highest  machine word  on the  stack segment
+ * (the one containing "ik_underflow_handler").
  *
  * The argument TOP is "pcb->frame_pointer", a raw memory pointer.  This
  * argument is used as iterator to climb the stack, frame by frame, from
@@ -1083,7 +1084,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
     }
     if (framesize < 0) {
       ik_abort("invalid frame size %ld\n", (long)framesize);
-    } else if (framesize == 0) {
+    } else if (0 == framesize) {
       /* Keep alive all the objects on the stack. */
       framesize = IK_REF(top, wordsize);
       if (framesize <= 0) {
@@ -1091,13 +1092,13 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
       }
       /*
        *       high memory
-       *   |----------------|
-       *   | return address | <-- uplevel top
-       *   |----------------|
-       *   | Scheme object  | <-- top + framesize - wordsize
-       *   |----------------|
-       *   | Scheme object  |
-       *   |----------------|
+       *   |----------------|                                --
+       *   | return address | <-- uplevel top                .
+       *   |----------------|                                . uplevel
+       *   | Scheme object  | <-- top + framesize - wordsize . frame
+       *   |----------------|                                .
+       *   | Scheme object  |                                .
+       *   |----------------|                                --
        *   | return address | <-- top
        *   |----------------|
        *      low memory
@@ -1113,7 +1114,9 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
       /* Number of Scheme objects on this stack frame. */
       long	frame_cells	= framesize >> fx_shift;
       /* Number of  bytes in the  livemask array, knowing that  there is
-	 one bit for every frame cell. */
+	 one bit for  every frame cell.  When the framesize  is 4 (there
+	 is only one machine word on  the stack) the livemask array must
+	 contain a single byte. */
       long	bytes_in_mask	= (frame_cells+7) >> 3;
       /* Pointer to the livemask bytevector */
       char *	mask		= (char*)(long)(rp + disp_frame_size - bytes_in_mask);
