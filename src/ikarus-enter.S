@@ -536,7 +536,8 @@ L_single_value_reentry:
 
   # There are multiple return values.  Rather than returning to
   # "Scheme return address" we jump directly to the entry point at
-  # offset "disp_multivalue_rp" from "Scheme return address".
+  # offset "disp_multivalue_rp" from "Scheme return address",
+  # with %eax holding the fixnum being the negated number of args.
 L_multi_value_reentry:
   movl 0(%esp), %ebx
   jmp *-9(%ebx)

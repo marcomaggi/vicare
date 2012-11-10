@@ -139,8 +139,26 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 #if DEBUG_EXEC
     ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_retval_count));
 #endif
-    { /* Move the local  variables from the old frame to  the new frame.
-       * Notice that S_RETVAL_COUNT is negative for a reason!
+    { /* When we  arrive here the  situation on  the Scheme stack  is as
+       * follows:
+       *
+       *        high memory
+       *  |                       | <-- pcb->frame_pointer = pcb->frame_base
+       *  |-----------------------|
+       *  | ik_underflow_handler  |
+       *  |-----------------------|
+       *  | Scheme return value 0 |
+       *  |-----------------------|
+       *  | Scheme return value 1 | <-- pcb->frame_pointer - s_retval_count
+       *  |-----------------------|
+       *  | Scheme return value 2 |
+       *  |-----------------------|
+       *  |                       |
+       *        low memory
+       *
+       * QUIIIIIIIIIIIIIIIIIIIIIIIIIII
+       *
+       * Move the local variables from the old frame to the new frame.
        *
        *      high memory
        *  |                   | <-- pcb->frame_base
