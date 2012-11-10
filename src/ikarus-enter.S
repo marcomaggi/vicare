@@ -216,19 +216,58 @@ L_back:
 ik_asm_enter:
 _ik_asm_enter:
   # Called by the C function "ik_exec_code()" to enter Scheme code
-  # execution.  When we enter here: the Scheme arguments are already
-  # on the Scheme stack.  The C arguments are on the C stack:
+  # execution; this assembly label is called with the C calling
+  # convention.
   #
-  #   argument 4: 16(%esp) = "ikptr" value referencing the closure
-  #   argument 3: 12(%esp) = "ikptr" fixnum being the negated number
-  #                          of Scheme arguments
-  #   argument 2:  8(%esp) = raw memory pointer referencing the
-  #	                     entry point in the closure's code
-  #                          object
-  #   argument 1:  4(%esp) = raw memory pointer referencing the
-  #                          PCB C language structure
+  # When we enter here the situation on the C stack is as follows:
   #
-  # The return address to go back to the C caller is at: 0(%esp).
+  #        high memory
+  #    |                  |
+  #    |------------------|
+  #    |  C argument 3    | <-- %esp + 4 * wordsize = 16(%esp)
+  #    |------------------|
+  #    |  C argument 2    | <-- %esp + 3 * wordsize = 12(%esp)
+  #    |------------------|
+  #    |  C argument 1    | <-- %esp + 2 * wordsize =  8(%esp)
+  #    |------------------|
+  #    |  C argument 0    | <-- %esp + 1 * wordsize =  4(%esp)
+  #    |------------------|
+  #    | C return address | <-- %esp                =  0(%esp)
+  #    |------------------|
+  #    |                  |
+  #         low memory
+  #
+  # the C arguments are:
+  #
+  #   argument 0: raw memory pointer referencing the PCB structure
+  #   argument 1: raw memory pointer referencing the entry point in
+  #               the closure's code object
+  #   argument 2: fixnum being the negated number of Scheme arguments
+  #   argument 3: tagged pointer referencing the closure object
+  #
+  # and the "C return address" at 0(%esp) leads back to the C caller.
+  #
+  # When we enter here we expect the situation on the Scheme stack to be
+  # as follows:
+  #
+  #          high memory
+  #    |                   |
+  #    |-------------------|
+  #    |                   | <-- pcb->frame_pointer = pcb->frame_base
+  #    |-------------------|
+  #    |    empty word     | <-- pcb->frame_pointer - wordsize
+  #    |-------------------|
+  #    | Scheme argument 0 | <-- pcb->frame_pointer - 2 * wordsize
+  #    |-------------------|
+  #    | Scheme argument 1 | <-- pcb->frame_pointer - 3 * wordsize
+  #    |-------------------|
+  #    | Scheme argument 2 | <-- pcb->frame_pointer - 4 * wordsize
+  #    |-------------------|
+  #    |                   |
+  #          low memory
+  #
+  # and the "empty" word will be the one containing the return address
+  # "ik_underflow_handler".
   #
   # To call the Scheme closure we:
   #
@@ -248,7 +287,7 @@ _ik_asm_enter:
   #    in %esp.  The frame pointer is the 3rd word in the PCB
   #    structure (32-bit offset = 8).
   #
-  movl 12(%esp), %eax    # %eax = fixnum representing the num of args
+  movl 12(%esp), %eax    # %eax = fixnum being the negated num of args
   movl 16(%esp), %edi    # %edi = pointer to closure object
   movl %esi, -4(%esp)    # preserve
   movl %ebp, -8(%esp)    # preserve
@@ -275,10 +314,28 @@ _ik_asm_enter:
   .byte 0
   .byte 0
 
-  # Call the binary code in the code object.  This instruction pushes
-  # the return address to the memory location referenced by %esp.
-  # Such return address is the label "ik_underflow_handler", which is
-  # often named in the comments as "underflow_handler".
+  # Call the binary code in the code object.  This instruction decrements
+  # %esp and stores in the newly referenced location the return address
+  # for the Scheme code; such return address is the label
+  # "ik_underflow_handler".  Right after the jump to the Scheme code, the
+  # situation on the Scheme stack is as follows:
+  #
+  #          high memory
+  #    |                      |
+  #    |----------------------|
+  #    |                      | <-- pcb->frame_pointer = pcb->frame_base
+  #    |----------------------|
+  #    | ik_underflow_handler | <-- %esp
+  #    |----------------------|
+  #    |   Scheme argument 0  | <-- %esp - 1 * wordsize
+  #    |----------------------|
+  #    |   Scheme argument 1  | <-- %esp - 2 * wordsize
+  #    |----------------------|
+  #    |   Scheme argument 2  | <-- %esp - 3 * wordsize = %esp + %eax
+  #    |----------------------|
+  #    |                      |
+  #           low memory
+  #
 L_call:
   call *8(%ecx)
 ik_underflow_handler:
@@ -296,7 +353,7 @@ ik_underflow_handler:
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |                      | <-- %esp = pcb->frame_base
+  #   |                      | <-- %esp = pcb->frame_base = pcb->frame_pointer
   #   |----------------------|
   #   | ik_underflow_handler | <-- %esp - wordsize
   #   |----------------------|
@@ -310,9 +367,9 @@ ik_underflow_handler:
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |                      | <-- %esp = pcb->frame_base
+  #   |                      | <-- %esp = pcb->frame_base = pcb->frame_pointer
   #   |----------------------|
-  #   | ik_underflow_handler | <-- %esp - wordsize
+  #   | ik_underflow_handler | <-- %esp - 1 * wordsize = %esp + %eax
   #   |----------------------|
   #   | Scheme return value  | <-- %esp - 2 * wordsize
   #   |----------------------|
@@ -342,11 +399,31 @@ L_multivalue_underflow:
   #
   # If we are here it is because zero, 2 or more arguments were returned
   # by a Scheme function; these returned values are on the Scheme stack,
-  # while the number of returned values is in %eax as negated fixnum.
+  # while the negated number of returned values is in %eax as fixnum.
   #
-  # Knowing that to return here a "ret" instruction must have
-  # incremented the %esp while it was referencing the label
-  # "ik_underflow_handler", now the Scheme stack looks like this:
+  # Knowing that to return here a "jmp" instruction was executed
+  # while %esp was referencing the label "ik_underflow_handler", now the
+  # Scheme stack looks like this:
+  #
+  #         high memory
+  #   |                       |
+  #   |-----------------------|
+  #   |                       | <-- pcb->frame_base
+  #   |-----------------------|
+  #   | ik_underflow_handler  | <-- %esp
+  #   |-----------------------|
+  #   | Scheme return value 0 | <-- %esp - 1 * wordsize
+  #   |-----------------------|
+  #   | Scheme return value 1 | <-- %esp - 2 * wordsize = %esp + %eax
+  #   |-----------------------|
+  #   | Scheme return value 2 | <-- %esp - 3 * wordsize
+  #   |-----------------------|
+  #   |                       |
+  #          low memory
+  #
+  # the word referenced by %esp is unused here: it may be one-off the
+  # end of the stack segment or it may be part of an uplevel Scheme
+  # continuation.  We want to set the Scheme stack as follows:
   #
   #         high memory
   #   |                       |
@@ -360,26 +437,6 @@ L_multivalue_underflow:
   #   | Scheme return value 1 | <-- %esp - 3 * wordsize = %esp + %eax
   #   |-----------------------|
   #   | Scheme return value 2 | <-- %esp - 4 * wordsize
-  #   |-----------------------|
-  #   |                       |
-  #          low memory
-  #
-  # the word referenced by %esp is unused here: it may be one-off the
-  # end of the stack segment or it may be part of an uplevel Scheme
-  # continuation.  We want to set the Scheme stack as follows:
-  #
-  #         high memory
-  #   |                       |
-  #   |-----------------------|
-  #   |                       | <-- pcb->frame_base
-  #   |-----------------------|
-  #   | ik_underflow_handler  | <-- %esp
-  #   |-----------------------|
-  #   | Scheme return value 0 | <-- %esp - 1 * wordsize
-  #   |-----------------------|
-  #   | Scheme return value 1 | <-- %esp - 2 * wordsize
-  #   |-----------------------|
-  #   | Scheme return value 2 | <-- %esp - 3 * wordsize = %esp + %eax
   #   |-----------------------|
   #   |                       |
   #          low memory
