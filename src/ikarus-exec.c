@@ -171,8 +171,6 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *
        *      high memory
        *  |                   | <-- pcb->frame_base
-       *  |-------------------|
-       *           ...
        *  |-------------------|                --
        *  | frame value 0 dst |                .
        *  |-------------------|                .
@@ -199,9 +197,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  |   return address  | <-- top        .
        *  |-------------------|                --
        *  |                   |
-       *
        *       low memory
-       *
        */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_argc = ik_asm_reenter(pcb, new_fbase, s_argc);
@@ -212,25 +208,20 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   /* Retrieve  the return  value from  the stack  and return  it to  the
    * caller.
    *
-   *     high memory
-   *   |            |
-   *   |------------|
-   *   |            | <-- pcb->frame_base
-   *   |------------|                                     --
-   *   |            | <-- pcb->frame_base - wordsize      .
-   *   |------------|                                     .
-   *   |            | <-- pcb->frame_base - 2 * wordsize  . Scheme
-   *   |------------|                                     . stack
-   *   |            |                                     .
-   *   |            |                                     .
-   *   |------------| <-- pcb->stack_base                 --
-   *   |            |
-   *     low memory
-   *
-   * Remember that  "pcb->frame_base" references a word  that is one-off
-   * the end of the stack segment; so the first word in the stack is:
-   *
-   *    pcb->frame_base - wordsize
+   *      high memory
+   *   |              |
+   *   |--------------|
+   *   |              | <-- pcb->frame_base
+   *   |--------------|                                     --
+   *   |              | <-- pcb->frame_base - wordsize      .
+   *   |--------------|                                     .
+   *   | return value | <-- pcb->frame_base - 2 * wordsize  . Scheme
+   *   |--------------|                                     . stack
+   *   |              |                                     .
+   *   |              |                                     .
+   *   |--------------| <-- pcb->stack_base                 --
+   *   |              |
+   *      low memory
    */
   ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
   return rv;
