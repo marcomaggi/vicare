@@ -90,8 +90,8 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     if (framesize < p_next_k->size) {
       /* Insert a  new continuation "p_new_cont" between  "p_next_k" and
        * its next;  notice that  below we will  pop "s_next_k"  from the
-       * list  in  the  PCB,  so "p_new_cont"  will  become  the  first.
-       * Before:
+       * list in the PCB, so  "p_new_cont" will become the first, before
+       * reentering assembly code.  Before:
        *
        *    s_next_k
        *       |        s_further
@@ -138,13 +138,71 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_argc));
 #endif
     { /* Move the local  variables from the old frame to  the new frame.
-	 Notice that S_ARGC is negative for a reason! */
+       * Notice that S_ARGC is negative for a reason!
+       *
+       *      high memory
+       *  |                   | <-- pcb->frame_base
+       *  |-------------------|                          --
+       *  |                   | <-- fbase                .
+       *  |-------------------|                --        .
+       *  | local value 0 src |                .         .
+       *  |-------------------|                .         .
+       *  | local value 1 src |                .         . framesize
+       *  |-------------------|                . -s_argc .
+       *  | local value 2 src | <-- arg_src    .         .
+       *  |-------------------|                --        --
+       *  |                   | <-- new_fbase
+       *  |-------------------|                --
+       *  | local value 0 dst |                .
+       *  |-------------------|                .
+       *  | local value 1 dst |                .
+       *  |-------------------|                . -s_argc
+       *  | local value 2 dst | <-- arg_dst    .
+       *  |-------------------|                --
+       *  |                   |
+       *       low memory
+       */
       ikptr	fbase     = pcb->frame_base - wordsize;
       ikptr	new_fbase = fbase - framesize;
       char *	arg_dst   = ((char*)(long)new_fbase) + s_argc;
       char *	arg_src   = ((char*)(long)fbase)     + s_argc;
       memmove(arg_dst, arg_src, -s_argc);
-      /* Copy the frame. */
+      /* Copy the frame.
+       *
+       *      high memory
+       *  |                   | <-- pcb->frame_base
+       *  |-------------------|
+       *           ...
+       *  |-------------------|                --
+       *  | frame value 0 dst |                .
+       *  |-------------------|                .
+       *  | frame value 1 dst |                .
+       *  |-------------------|                . framesize
+       *  | frame value 2 dst |                .
+       *  |-------------------|                .
+       *  |   return address  | <-- new_fbase  .
+       *  |-------------------|                --
+       *  | local value 0 dst |                .
+       *  |-------------------|                .
+       *  | local value 1 dst |                .
+       *  |-------------------|                . -s_argc
+       *  | local value 2 dst |                .
+       *  |-------------------|                --
+       *           ...
+       *  |-------------------|                --
+       *  | frame value 0 src |                .
+       *  |-------------------|                .
+       *  | frame value 1 src |                .
+       *  |-------------------|                . framesize
+       *  | frame value 2 src |                .
+       *  |-------------------|                .
+       *  |   return address  | <-- top        .
+       *  |-------------------|                --
+       *  |                   |
+       *
+       *       low memory
+       *
+       */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_argc = ik_asm_reenter(pcb, new_fbase, s_argc);
     }
