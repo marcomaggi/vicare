@@ -43,22 +43,24 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
   fprintf(stderr, "\n");
 #endif
-  ikptr		s_argc;
-  ikptr		s_next_k;
-  s_argc   = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
-  s_next_k = pcb->next_k;
-  while (s_next_k) {
-#if ( DEBUG_EXEC)
-    ik_debug_message("%s: resuming saved continuation 0x%016lx",
-		     __func__, (long)s_next_k);
+  /* A possibly zero fixnum representing  the negated number of returned
+     Scheme values. */
+  ikptr	s_retval_count = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
+  /* Reference to the  continuation object representing the  C or Scheme
+     continuation we want to go back to. */
+  ikptr s_kont       = pcb->next_k;
+  while (s_kont) {
+#if (0 || DEBUG_EXEC)
+    ik_debug_message("%s: resuming saved continuation 0x%016lx", __func__, (long)s_kont);
 #endif
     /* We are here  because the Scheme code wants to  return to a Scheme
-       continuation   object.   This   requires   installation  of   the
-       appropriate (previously saved) stack. */
-    ikcont * p_next_k = (ikcont *)(long)(s_next_k - vector_tag);
+       continuation object, handing  to the continuation -S_RETVAL_COUNT
+       return  values.  This  requires installation  of the  appropriate
+       (previously saved) stack. */
+    ikcont * p_next_k = (ikcont *)(long)(s_kont - vector_tag);
     /* System continuations are created by the FFI to save the current C
        execution contest just before calling back a Scheme function.  So
-       if S_NEXT_K is  a system continuation: we have no  Scheme code to
+       if S_KONT is  a system continuation: we have no  Scheme code to
        go back to, we just return to the caller of this C function. */
     if (system_continuation_tag == p_next_k->tag)
       break;
@@ -89,11 +91,11 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       ik_abort("invalid caller function framesize %ld\n", framesize);
     if (framesize < p_next_k->size) {
       /* Insert a  new continuation "p_new_cont" between  "p_next_k" and
-       * its next;  notice that  below we will  pop "s_next_k"  from the
+       * its next;  notice that  below we will  pop "s_kont"  from the
        * list in the PCB, so  "p_new_cont" will become the first, before
        * reentering assembly code.  Before:
        *
-       *    s_next_k
+       *    s_kont
        *       |        s_further
        *       |--------->|
        *          next    |-------> NULL
@@ -101,7 +103,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *
        * after:
        *
-       *    s_next_k
+       *    s_kont
        *       |       s_new_kont
        *       |--------->|       s_further
        *          next    |-------->|
@@ -126,19 +128,19 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       /* ikptr	code_entry	= rp - code_offset; */
       /* ikptr	p_code		= code_entry - disp_code_data; */
       ik_abort("while resuming continuation 0x%016lx:\n\tinvalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
-	       (long)s_next_k, framesize, p_next_k->size,
+	       (long)s_kont, framesize, p_next_k->size,
 	       rp, IK_REF(rp, disp_frame_offset));
     }
-    /* Pop "s_next_k" from  the list in the PCB  structure.  Notice that
-       if "s_next_k" represents a  continuation saved with CALL/CC: such
+    /* Pop "s_kont" from  the list in the PCB  structure.  Notice that
+       if "s_kont" represents a  continuation saved with CALL/CC: such
        continuation object is still  referenced somewhere by the closure
        object implementing the continuation function. */
     pcb->next_k = p_next_k->next;
 #if DEBUG_EXEC
-    ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_argc));
+    ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_retval_count));
 #endif
     { /* Move the local  variables from the old frame to  the new frame.
-       * Notice that S_ARGC is negative for a reason!
+       * Notice that S_RETVAL_COUNT is negative for a reason!
        *
        *      high memory
        *  |                   | <-- pcb->frame_base
@@ -148,7 +150,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  | local value 0 src |                .         .
        *  |-------------------|                .         .
        *  | local value 1 src |                .         . framesize
-       *  |-------------------|                . -s_argc .
+       *  |-------------------|                . -s_retval_count .
        *  | local value 2 src | <-- arg_src    .         .
        *  |-------------------|                --        --
        *  |                   | <-- new_fbase
@@ -156,7 +158,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  | local value 0 dst |                .
        *  |-------------------|                .
        *  | local value 1 dst |                .
-       *  |-------------------|                . -s_argc
+       *  |-------------------|                . -s_retval_count
        *  | local value 2 dst | <-- arg_dst    .
        *  |-------------------|                --
        *  |                   |
@@ -164,9 +166,9 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        */
       ikptr	fbase     = pcb->frame_base - wordsize;
       ikptr	new_fbase = fbase - framesize;
-      char *	arg_dst   = ((char*)(long)new_fbase) + s_argc;
-      char *	arg_src   = ((char*)(long)fbase)     + s_argc;
-      memmove(arg_dst, arg_src, -s_argc);
+      char *	arg_dst   = ((char*)(long)new_fbase) + s_retval_count;
+      char *	arg_src   = ((char*)(long)fbase)     + s_retval_count;
+      memmove(arg_dst, arg_src, -s_retval_count);
       /* Copy the frame.
        *
        *      high memory
@@ -183,7 +185,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  | local value 0 dst |                .
        *  |-------------------|                .
        *  | local value 1 dst |                .
-       *  |-------------------|                . -s_argc
+       *  |-------------------|                . -s_retval_count
        *  | local value 2 dst |                .
        *  |-------------------|                --
        *           ...
@@ -200,9 +202,9 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *       low memory
        */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
-      s_argc = ik_asm_reenter(pcb, new_fbase, s_argc);
+      s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
     }
-    s_next_k =  pcb->next_k;
+    s_kont =  pcb->next_k;
   }  /* end of while() */
 
   /* Retrieve  the return  value from  the stack  and return  it to  the

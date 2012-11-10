@@ -289,30 +289,28 @@ ik_underflow_handler:
   # neither zero arguments nor 2 or more arguments.  This single
   # argument is in %eax.
   #
-  # Knowing that to return here a "ret" instruction must have
-  # incremented the %esp while it was referencing the label
-  # "ik_underflow_handler", now the Scheme stack looks like this:
+  # Knowing that to return here a "ret" instruction must have incremented
+  # the %esp while it was referencing the label "ik_underflow_handler",
+  # now the Scheme stack looks like this:
   #
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |    return address    | <-- %esp = pcb->frame_base
+  #   |                      | <-- %esp = pcb->frame_base
   #   |----------------------|
   #   | ik_underflow_handler | <-- %esp - wordsize
   #   |----------------------|
   #   |                      |
   #          low memory
   #
-  # where "return address" must have been left on the stack by some
-  # function.  See for example the primitive instructions in
-  # $CALL-WITH-UNDERFLOW-HANDLER.
-  #
-  # We want to set the Scheme stack like this:
+  # the word referenced by %esp is unused here: it may be one-off the
+  # end of the stack segment or it may be part of an uplevel Scheme
+  # continuation.  We want to set the Scheme stack as follows:
   #
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |    return address    | <-- %esp
+  #   |                      | <-- %esp = pcb->frame_base
   #   |----------------------|
   #   | ik_underflow_handler | <-- %esp - wordsize
   #   |----------------------|
@@ -321,12 +319,13 @@ ik_underflow_handler:
   #   |                      |
   #          low memory
   #
-  # and then do what is needed to go back to the C caller.
+  # and then do what is needed to go back to the C caller.  Notice that
+  # the Scheme return value is at "pcb->frame_base - 2 * wordsize".
   #
-  movl %eax, -8(%esp)   # store the return value
-  # Set the value returned to the C caller to 1 encoded as
-  # number of arguments.
-  movl $-4, %eax
+  movl %eax, -8(%esp)		# Put the return value on the stack.
+  movl $-4, %eax		# Return to the C caller a fixnum
+  				# representing the negated number of
+  				# Scheme return values.
 L_do_underflow:
   movl %esp, 8(%esi)    # store scheme stack in "pcb->frame_pointer"
   movl %ebp, 0(%esi)    # store allocation pointer in "pcb->allocation_pointer"
@@ -338,6 +337,56 @@ L_do_underflow:
   ret                   # back to the C function "ik_exec_code()"
 
 L_multivalue_underflow:
+  # Here we are back from the Scheme code, but there may be a
+  # continuation waiting to be entered in "pcb->next_k".
+  #
+  # If we are here it is because zero, 2 or more arguments were returned
+  # by a Scheme function; these returned values are on the Scheme stack,
+  # while the number of returned values is in %eax as negated fixnum.
+  #
+  # Knowing that to return here a "ret" instruction must have
+  # incremented the %esp while it was referencing the label
+  # "ik_underflow_handler", now the Scheme stack looks like this:
+  #
+  #         high memory
+  #   |                       |
+  #   |-----------------------|
+  #   |                       | <-- %esp = pcb->frame_base
+  #   |-----------------------|
+  #   | ik_underflow_handler  | <-- %esp - 1 * wordsize
+  #   |-----------------------|
+  #   | Scheme return value 0 | <-- %esp - 2 * wordsize
+  #   |-----------------------|
+  #   | Scheme return value 1 | <-- %esp - 3 * wordsize = %esp + %eax
+  #   |-----------------------|
+  #   | Scheme return value 2 | <-- %esp - 4 * wordsize
+  #   |-----------------------|
+  #   |                       |
+  #          low memory
+  #
+  # the word referenced by %esp is unused here: it may be one-off the
+  # end of the stack segment or it may be part of an uplevel Scheme
+  # continuation.  We want to set the Scheme stack as follows:
+  #
+  #         high memory
+  #   |                       |
+  #   |-----------------------|
+  #   |                       | <-- pcb->frame_base
+  #   |-----------------------|
+  #   | ik_underflow_handler  | <-- %esp
+  #   |-----------------------|
+  #   | Scheme return value 0 | <-- %esp - 1 * wordsize
+  #   |-----------------------|
+  #   | Scheme return value 1 | <-- %esp - 2 * wordsize
+  #   |-----------------------|
+  #   | Scheme return value 2 | <-- %esp - 3 * wordsize = %esp + %eax
+  #   |-----------------------|
+  #   |                       |
+  #          low memory
+  #
+  # and then do what is needed to go back to the C caller.  Notice that
+  # the first Scheme return value is at "pcb->frame_base - 2 * wordsize".
+  #
   addl $4, %esp
   jmp L_do_underflow
 
@@ -347,24 +396,54 @@ L_multivalue_underflow:
 ik_asm_reenter:
 _ik_asm_reenter:
   # Called by the C function "ik_exec_code()" to reenter Scheme code
-  # execution at a previously saved continuation.  When we enter here:
-  # the Scheme arguments are already on the Scheme stack.  The C
-  # arguments are on the C stack:
+  # execution at a previously saved continuation; this assembly label
+  # is called with the C calling convention.
   #
-  #   argument 3: 12(%esp) = "ikptr" fixnum being the negated number
-  #                          of Scheme arguments
-  #   argument 2:  8(%esp) = raw memory pointer referencing the
-  #	                     previously saved Scheme stack
-  #   argument 1:  4(%esp) = raw memory pointer referencing the
-  #                          PCB C language structure
+  # When we enter here the situation on the C stack is as follows:
   #
-  # The return address to go back to the C caller is at: 0(%esp).
+  #        high memory
+  #    |                  |
+  #    |------------------|
+  #    |  C argument 2    | <-- %esp + 3 * wordsize = 12(%esp)
+  #    |------------------|
+  #    |  C argument 1    | <-- %esp + 2 * wordsize =  8(%esp)
+  #    |------------------|
+  #    |  C argument 0    | <-- %esp + 1 * wordsize =  4(%esp)
+  #    |------------------|
+  #    | C return address | <-- %esp                =  0(%esp)
+  #    |------------------|
+  #    |                  |
+  #         low memory
+  #
+  # the C arguments are:
+  #
+  #   argument 0: raw memory pointer referencing the PCB structure
+  #   argument 1: raw memory pointer, the top of the Scheme stack
+  #   argument 2: fixnum being the negated number of return values
+  #
+  # and the "C return address" at 0(%esp) leads back to the C caller.
+  #
+  # The situation on the Scheme stack is as follows:
+  #
+  #         high memory
+  #    |                       |
+  #    |-----------------------|
+  #    | Scheme return address | <-- 8(%esp) = top of Scheme stack
+  #    |-----------------------|
+  #    | Scheme return value 0 | <-- 8(%esp) - 1 * wordsize
+  #    |-----------------------|
+  #    | Scheme return value 1 | <-- 8(%esp) - 2 * wordsize
+  #    |-----------------------|
+  #    | Scheme return value 2 | <-- 8(%esp) - 3 * wordsize = 8(%esp) + 12(%esp)
+  #    |-----------------------|
+  #    |                       |
+  #          low memory
   #
 
   # Make %eax hold a fixnum representing the negated number of args.
   movl 12(%esp), %eax
 
-  # Make %ebx reference the Scheme stack.
+  # Make %ebx reference the top of the Scheme stack.
   movl  8(%esp), %ebx
 
   # Preserve registers not preserved by the C call.
@@ -388,7 +467,7 @@ _ik_asm_reenter:
 
   # The 32-bit machine word -4 is the fixnum -1, which represents
   # a single argument.  If %eax = -4, then there is a single
-  # return value; else there are multiple return values.
+  # argument to the Scheme continuation.
   cmpl $-4, %eax
   jne L_multi_value_reentry
 
@@ -398,6 +477,9 @@ L_single_value_reentry:
   # Return to the Scheme continuation.
   ret
 
+  # There are multiple return values.  Rather than returning to
+  # "Scheme return address" we jump directly to the entry point at
+  # offset "disp_multivalue_rp" from "Scheme return address".
 L_multi_value_reentry:
   movl 0(%esp), %ebx
   jmp *-9(%ebx)
