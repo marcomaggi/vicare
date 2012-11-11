@@ -4792,11 +4792,40 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;This is the implementation of  the VALUES function.  When only one
-    ;;argument is  given: this routine  just returns that  single value;
-    ;;nothing special.
+    ;;This is the implementation of  the VALUES function.  The arguments
+    ;;to VALUES are  the return values of VALUES.  When  arriving from a
+    ;;call:
     ;;
-    ((public-function		sl-values-label)
+    ;;   (values ret-val-0 ret-val-1 ret-val-2)
+    ;;
+    ;;here the situation on the Scheme stack is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |    return address    | <-- Frame Pointer Register (FPR)
+    ;;   |----------------------|
+    ;;   |    return value 0    |
+    ;;   |----------------------|
+    ;;   |    return value 1    |
+    ;;   |----------------------|
+    ;;   |    return value 2    |
+    ;;   |----------------------|
+    ;;   |                      |
+    ;;          low memory
+    ;;
+    ;;and EAX  holds a fixnum being  the negated number of  arguments to
+    ;;VALUES, which is the negated number of return values of VALUES.
+    ;;
+    ;;* When  only one argument  is given:  this routine just  puts that
+    ;;   single  value  in  EAX,  then  it  executes  a  "ret"  assembly
+    ;;  instruction to plainly go back to "return address".
+    ;;
+    ;;* When  multiple values are  given: this routine leaves  the stack
+    ;;  and  EAX untouched  and jumps to  the multivalue  assembly label
+    ;;  associated to "return address".
+    ;;
+    ((public-function sl-values-label)
      (entry-point-label		SL_values)
      (number-of-free-variables	0)
      (code-annotation		'(name values))
@@ -4805,34 +4834,22 @@
 		   L_values_many_values)
      (assembly
       (label SL_values)
-      ;;Dispatch according to the number of arguments.
+      ;;Dispatch according  to the number  of arguments.  Jump  when one
+      ;;argument (slower)  because, usually, when  we use VALUES  we are
+      ;;returning multiple values.
       (cmpl (int (argc-convention 1)) eax)
       (je (label L_values_one_value))
 
-      ;;Return many values.
+      ;;Return  many values.   Retrieve  the address  of the  multivalue
+      ;;assembly label by adding DISP-MULTIVALUE-RP to "return address".
       (label L_values_many_values)
-      (movl (mem 0 fpr) ebx)			     ; return point
-      (jmp (mem disp-multivalue-rp ebx))	     ; go
+      (movl (mem 0 fpr) ebx)
+      (jmp (mem disp-multivalue-rp ebx))
 
-      ;;Return a  single value;  this is a  simple return  from function
-      ;;call, nothing special.   The situation on the  Scheme stack when
-      ;;arriving here is:
-      ;;
-      ;;         high memory
-      ;;   |                      |
-      ;;   |----------------------|
-      ;;   |    return address    | <-- Frame Pointer Register (%esp)
-      ;;   |----------------------|
-      ;;   |     return value     |
-      ;;   |----------------------|
-      ;;   |                      |
-      ;;          low memory
-      ;;
+      ;;Return a  single value.  Store  in EAX the single  return value,
+      ;;then "ret".
       (label L_values_one_value)
-      ;;Store in  EAX the  single return value.   The caller  expects it
-      ;;there, rather than on the stack.
       (movl (mem (fx- 0 wordsize) fpr) eax)
-      ;;Return to the caller.
       (ret)
       ))
 
@@ -4844,7 +4861,7 @@
     ;;         high memory
     ;;   |                      |
     ;;   |----------------------|
-    ;;   |    return address    | <-- Frame Pointer Register (%esp)
+    ;;   |    return address    | <-- Frame Pointer Register (FPR)
     ;;   |----------------------|
     ;;   |   closure reference  | --> producer closure object
     ;;   |----------------------|
@@ -4852,6 +4869,9 @@
     ;;   |----------------------|
     ;;   |                      |
     ;;          low memory
+    ;;
+    ;;and EAX holds a fixnum being the negated number of arguments, that
+    ;;is: -2.
     ;;
     ((public-function		sl-cwv-label)
      (entry-point-label		SL_call_with_values)
@@ -4866,31 +4886,46 @@
 		   SL_invalid_args)
      (assembly
       (label SL_call_with_values)
-      ;;CALL-WITH-VALUES must  be called  with two values:  the producer
-      ;;function, the consumer function.
+
+      ;;Validate the number of arguments.
       (cmpl (int (argc-convention 2)) eax)
       (jne (label SL_invalid_args))
-      ;;Store in EBX a reference to the producer closure object.
+
+      ;;Calling the producer:
+      ;;
+      ;;1..Fetch from  the stack the  reference to the  producer closure
+      ;;   object and store it in EBX.
+      ;;
+      ;;2..Store in the Continuation  Pointer Register (CPR) a reference
+      ;;   to the producer closure object.
+      ;;
+      ;;3..Check that EBX actually contains a reference to object tagged
+      ;;   as closure; else jump to the appropriate error handler.
+      ;;
       (movl (mem (fx- 0 wordsize) fpr) ebx)
-      ;;Store in the Continuation Pointer  Register (CPR) a reference to
-      ;;the producer closure object.
       (movl ebx cpr)
-      ;;Check that EBX actually contains  a reference to closure object;
-      ;;else jump to the appropriate error handler.
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
       (jne (label SL_nonprocedure))
-      ;;The producer is called with zero arguments.
+      ;;
+      ;;4..The producer is  called with zero arguments: load  in EAX the
+      ;;   fixnum zero.
+      ;;
+      ;;5..Call the producer closure in  CPR executing a "call" assembly
+      ;;   instruction.
+      ;;
       (movl (int (argc-convention 0)) eax)
-      ;;This evaluates to a nested sequence of assembly instructions.
-      (compile-call-frame 3	      ;framesize
-			  '#(#b110)   ;livemask-vec
-			  (label-address L_cwv_multi_rp) ;multiarg-rp
-			  ;;Fetch a binary code address from the closure
-			  ;;object  referenced   by  the   CPR  (Closure
-			  ;;Pointer  Register)  and  perform a  call  to
-			  ;;there.
-			  (indirect-cpr-call)) ;call-sequence
+      (compile-call-frame
+       3	;The   framesize  is   3   because  on   the  stack   of
+		;CALL-WITH-VALUES  there  are  3 machine  words:  return
+		;address, producer closure, consumer closure.
+       '#(#b110) ;This  livemask tells  the garbage collector  that: the
+		;highest word (return address) is not a live object, the
+		;middle word  (producer closure)  is a live  object, the
+		;lowest word (consumer object) is a live object.
+       (label-address L_cwv_multi_rp)
+       (indirect-cpr-call))
+
       ;;If we  are here it means  that the producer returned  one value.
       ;;Store in EBX a reference to the consumer closure object.
       (movl (mem (fx* -2 wordsize) fpr) ebx)
@@ -4910,9 +4945,9 @@
       ;;by the Closure Pointer Register and jump directly there.
       (tail-indirect-cpr-call)
 
-      ;;If  we are  here it  means that  the producer  returned zero  or
-      ;;multiple  values, but  not one  value.  The  number of  returned
-      ;;values is encoded in EAX.
+      ;;If we  are here it means  that the producer returned  zero, 2 or
+      ;;more values (not  one value).  The number of  returned values is
+      ;;encoded in EAX.
       (label L_cwv_multi_rp)
       ;;Because VALUES does  not pop the return point we  have to adjust
       ;;FPR one more word here.
@@ -4947,19 +4982,86 @@
       (tail-indirect-cpr-call)
 
       ;;We come here if either the  producer or the consumer argument is
-      ;;not a closure object.
+      ;;not  a closure  object.  The  offending  object must  be in  the
+      ;;Closure Pointer Register (CPR).
+      ;;
+      ;;We    want    to    tail    call    the    primitive    function
+      ;;$APPLY-NONPROCEDURE-ERROR-HANDLER,  which accepts  the offending
+      ;;value as single argument.  We reset the stack from:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |   closure reference  | --> producer closure object
+      ;;   |----------------------|
+      ;;   |   closure reference  | --> consumer closure object
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;to:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |   offending object   |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
       (label SL_nonprocedure)
-      (movl cpr (mem (fx- 0 wordsize) fpr)) ; first arg
+      ;;Put on the stack the offending object.
+      (movl cpr (mem (fx- 0 wordsize) fpr))
+      ;;Retrieve the reference  of the error handler closure  and put it
+      ;;into CPR.
       (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
       (movl (mem off-symbol-record-proc cpr) cpr)
+      ;;Put in EAX the encoded number of arguments, which is 1.
       (movl (int (argc-convention 1)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
       ;;by the CPR (Closure Pointer Register) and jump directly there.
       (tail-indirect-cpr-call)
 
       ;;We come here if CALL-WITH-VALUES was applied to the wrong number
-      ;;of  arguments.  We  just  want to  call  the primitive  function
-      ;;$INCORRECT-ARGS-ERROR-HANDLER.
+      ;;of arguments.  A reference  to the CALL-WITH-VALUES closure must
+      ;;be in the Closure Pointer Register (CPR).
+      ;;
+      ;;We    want    to    tail    call    the    primitive    function
+      ;;$INCORRECT-ARGS-ERROR-HANDLER,  which  accepts  2  arguments:  a
+      ;;reference to the CALL-WITH-VALUES closure, a non-negative fixnum
+      ;;representing the  incorrect number  of arguments.  We  reset the
+      ;;stack from:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |   closure reference  | --> producer closure object
+      ;;   |----------------------|
+      ;;   |   closure reference  | --> consumer closure object
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;to:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |   closure reference  | --> CALL-WITH-VALUES
+      ;;   |----------------------|
+      ;;   |  encoded num of args |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
       (label SL_invalid_args)
       ;;Put on the stack a  reference to the closure object implementing
       ;;CALL-WITH-VALUES,        as       first        argument       to
