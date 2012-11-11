@@ -4110,14 +4110,14 @@
 ;;; --------------------------------------------------------------------
 
   (define (T x accum)
+    ;;Process X  as if it  is in tail  position in some  enclosing form;
+    ;;return a new accumulated list of assembly instructions.
+    ;;
     ;;X must be a struct instance representing recordized code.
     ;;
     ;;ACCUM must  be the list  of assembly instructions,  accumulated so
     ;;far, that must be included in  binary code after the ones to which
     ;;X will expand.
-    ;;
-    ;;Process X  as if it  is in tail  position in some  enclosing form;
-    ;;return a new accumulated list of assembly instructions.
     ;;
     (struct-case x
       ((seq e0 e1)
@@ -4150,18 +4150,22 @@
 	  (error who "invalid tail" x))))
 
       ((shortcut body handler)
-       ;;What the heck is a shortcut?
+       ;;Flatten the body instructions:
        ;;
-       ;;HANDLER is expanded to a list of assembly instructions like:
+       ;;  (body-asm)
+       ;;  ...
        ;;
-       ;;  (label "ERROR-0")
-       ;;  (?assembly)
+       ;;and  prepend to  the exception  routines the  flattened handler
+       ;;instructions:
+       ;;
+       ;;  (label L)
+       ;;  (handler-asm)
        ;;  ...
        ;;
        (let ((L (unique-interrupt-label)))
-         (let* ((hand (cons L (T handler '())))
-		(tc   (exceptions-conc)))
-	   (set-cdr! tc (append hand (cdr tc))))
+	 (let* ((handler^ (cons L (T handler '())))
+		(tc       (exceptions-conc)))
+	   (set-cdr! tc (append handler^ (cdr tc))))
          (parameterize ((exception-label L))
            (T body accum))))
 
@@ -4173,24 +4177,33 @@
   (module (E)
 
     (define (E x accum)
-      ;;flatten effect
+      ;;Flatten X for side effects.
+      ;;
+      ;;X must be a struct instance representing recordized code.
+      ;;
+      ;;ACCUM must be the list  of assembly instructions, accumulated so
+      ;;far, that  must be  included in  binary code  after the  ones to
+      ;;which X will expand.
+      ;;
       (struct-case x
 	((seq e0 e1)
 	 (E e0 (E e1 accum)))
 
-	((conditional e0 e1 e2)
-	 (cond ((interrupt? e1)
+	((conditional x.test x.conseq x.altern)
+	 (cond ((interrupt? x.conseq)
 		(let ((L (or (exception-label)
 			     (error who "no exception label"))))
-		  (P e0 L #f (E e2 accum))))
-	       ((interrupt? e2)
+		  (P x.test L #f (E x.altern accum))))
+	       ((interrupt? x.altern)
 		(let ((L (or (exception-label)
 			     (error who "no exception label"))))
-		  (P e0 #f L (E e1 accum))))
+		  (P x.test #f L (E x.conseq accum))))
 	       (else
-		(let ((lf (unique-label)) (le (unique-label)))
-		  (P e0 #f lf (E e1 (cons* `(jmp ,le) lf
-					   (E e2 (cons le accum)))))))))
+		(let ((lf (unique-label))
+		      (le (unique-label)))
+		  (P x.test #f lf (E x.conseq (cons* `(jmp ,le)
+						     lf
+						     (E x.altern (cons le accum)))))))))
 
 	((ntcall target value args mask size)
 	 (E-ntcall target value args mask size accum))
@@ -4202,8 +4215,19 @@
 	 (E-primcall op rands x accum))
 
 	((shortcut body handler)
-	 ;;Prepend  BODY to  the accumulator;  prepend an  error HANDLER
-	 ;;routine to the tail of the accumulator.
+	 ;;Flatten the body instructions inserting a label at the end:
+	 ;;
+	 ;;  (body-asm)
+	 ;;  ...
+	 ;;  (label L2)
+	 ;;
+	 ;;and  prepend to  the exception  routines the  flattened handler
+	 ;;instructions:
+	 ;;
+	 ;;  (label L)
+	 ;;  (handler-asm)
+	 ;;  ...
+	 ;;  (jmp L2)
 	 ;;
 	 (let ((L  (unique-interrupt-label))
 	       (L2 (unique-label)))
@@ -4421,83 +4445,98 @@
 
   (module (P)
 
-    (define (P x lt lf accum)
+    (define (P x label-true label-false accum)
+      ;;Flatten X as code in predicate position.
+      ;;
+      ;;X must be a struct instance representing recordized code.
+      ;;
+      ;;LABEL-TRUE must be the label entry  point for the code to be run
+      ;;when X returns true.
+      ;;
+      ;;LABEL-FALSE must be the label entry point for the code to be run
+      ;;when X returns false.
+      ;;
+      ;;ACCUM must be the list  of assembly instructions, accumulated so
+      ;;far, that  must be  included in  binary code  after the  ones to
+      ;;which X will expand.
+      ;;
       (struct-case x
 	((constant c)
-	 (if c
-	     (if lt
-		 (cons `(jmp ,lt) accum)
-	       accum)
-	   (if lf
-	       (cons `(jmp ,lf) accum)
-	     accum)))
+	 (cond (c
+		(if label-true
+		    (cons `(jmp ,label-true) accum)
+		  accum))
+	       (label-false
+		(cons `(jmp ,label-false) accum))
+	       (else
+		accum)))
 
 	((seq e0 e1)
-	 (E e0 (P e1 lt lf accum)))
+	 (E e0 (P e1 label-true label-false accum)))
 
 	((conditional e0 e1 e2)
-	 (P-conditional e0 e1 e2 lt lf accum))
+	 (P-conditional e0 e1 e2 label-true label-false accum))
 
 	((asm-instr op a0 a1)
-	 (P-asm-instr op a0 a1 lt lf accum))
+	 (P-asm-instr op a0 a1 label-true label-false accum))
 
 	((shortcut body handler)
 	 (let ((L  (unique-interrupt-label))
 	       (lj (unique-label)))
-	   (let ((accum (if (and lt lf)
+	   (let ((accum (if (and label-true label-false)
 			    accum
 			  (cons lj accum))))
-	     (let* ((hand (cons L (P handler (or lt lj) (or lf lj) '())))
+	     (let* ((hand (cons L (P handler (or label-true lj) (or label-false lj) '())))
 		    (tc   (exceptions-conc)))
 	       (set-cdr! tc (append hand (cdr tc))))
 	     (parameterize ((exception-label L))
-	       (P body lt lf accum)))))
+	       (P body label-true label-false accum)))))
 
 	(else
 	 (error who "invalid pred" x))))
 
-    (define (P-conditional e0 e1 e2 lt lf accum)
+    (define (P-conditional e0 e1 e2 label-true label-false accum)
       (cond ((and (constant=? e1 #t)
 		  (constant=? e2 #f))
-	     (P e0 lt lf accum))
+	     (P e0 label-true label-false accum))
 
 	    ((and (constant=? e1 #f)
 		  (constant=? e2 #t))
-	     (P e0 lf lt accum))
+	     (P e0 label-false label-true accum))
 
-	    ((and lt lf)
+	    ((and label-true label-false)
 	     (let ((l (unique-label)))
-	       (P e0 #f l (P e1 lt lf
-			     (cons l (P e2 lt lf accum))))))
+	       (P e0 #f l (P e1 label-true label-false
+			     (cons l (P e2 label-true label-false accum))))))
 
-	    (lt
-	     (let ((lf (unique-label))
+	    (label-true
+	     (let ((label-false (unique-label))
 		   (l (unique-label)))
-	       (P e0 #f l (P e1 lt lf
-			     (cons l (P e2 lt #f (cons lf accum)))))))
+	       (P e0 #f l (P e1 label-true label-false
+			     (cons l (P e2 label-true #f (cons label-false accum)))))))
 
-	    (lf
-	     (let ((lt (unique-label))
+	    (label-false
+	     (let ((label-true (unique-label))
 		   (l  (unique-label)))
-	       (P e0 #f l (P e1 lt lf
-			     (cons l (P e2 #f lf (cons lt accum)))))))
+	       (P e0 #f l (P e1 label-true label-false
+			     (cons l (P e2 #f label-false (cons label-true accum)))))))
 
 	    (else
-	     (let ((lf (unique-label))
+	     (let ((label-false (unique-label))
 		   (l  (unique-label)))
 	       (P e0 #f l (P e1 #f #f
-			     (cons `(jmp ,lf)
-				   (cons l (P e2 #f #f (cons lf accum))))))))))
+			     (cons `(jmp ,label-false)
+				   (cons l (P e2 #f #f (cons label-false accum))))))))))
 
     (module (P-asm-instr)
 
-      (define (P-asm-instr op a0 a1 lt lf accum)
-	(cond ((and lt lf)
-	       (cmp op a0 a1 lt (cons `(jmp ,lf) accum)))
-	      (lt
-	       (cmp op a0 a1 lt accum))
-	      (lf
-	       (cmp (notop op) a0 a1 lf accum))
+      (define (P-asm-instr op a0 a1 label-true label-false accum)
+	(cond ((and label-true label-false)
+	       (cmp op a0 a1 label-true (cons `(jmp ,label-false) accum)))
+	      (label-true
+	       (cmp op a0 a1 label-true accum))
+	      (label-false
+	       (cmp (notop op) a0 a1 label-false accum))
 	      (else
 	       accum)))
 
