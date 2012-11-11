@@ -3933,6 +3933,10 @@
   ;;   |                           |
   ;;           low memory
   ;;
+  ;;  whenever  the execution flow returns  here we will have  to adjust
+  ;;   back the  FPR so  that it  again references  the "uplevel  return
+  ;;  address".
+  ;;
   (let ((L_CALL (label (gensym))))
     (define %adjust-frame-pointer-register
       (let ((FPR-DELTA (if (or (fxzero? frame-words-count)
