@@ -5051,16 +5051,21 @@
       ;;address.
       (addl (int (fx* wordsize 3)) fpr)
       ;;Store  in  the  Closure  Pointer Register  a  reference  to  the
-      ;;consumer closure object.
+      ;;consumer  closure  object.  We  will  check  below that  CPR  is
+      ;;actually a  reference to closure  object (to avoid  moving stuff
+      ;;into registers twice).
       (movl (mem (fx* -2 wordsize) fpr) cpr)
       ;;Check if the number of returned values is zero.
       (cmpl (int (argc-convention 0)) eax)
       (je (label L_cwv_done))
+      ;;Make EBX reference the first return value on the stack.
       (movl (int (fx* -4 wordsize)) ebx)
-      (addl fpr ebx) ; ebx points to first value
+      (addl fpr ebx)
+      ;;Make ECX reference the last return value on the stack.
       (movl ebx ecx)
-      (addl eax ecx) ; ecx points to the last value
-
+      (addl eax ecx)
+      ;;Copy the return  values in the correct position  right below the
+      ;;CWV return address.
       (label L_cwv_loop)
       (movl (mem 0 ebx) edx)
       (movl edx (mem (fx* 3 wordsize) ebx))
@@ -5069,9 +5074,9 @@
       (jge (label L_cwv_loop))
 
       (label L_cwv_done)
-      (movl cpr ebx)
-      ;;Check that EBX actually contains  a reference to closure object;
+      ;;Check that CPR actually contains  a reference to closure object;
       ;;else jump to the appropriate error handler.
+      (movl cpr ebx)
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
       (jne (label SL_nonprocedure))
