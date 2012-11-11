@@ -757,6 +757,7 @@ ik_stack_overflow (ikpcb* pcb)
 #if STACK_DEBUG
   ik_debug_message_start("%s: entered pcb=0x%016lx", __func__, (long)pcb);
 #endif
+  assert(pcb->frame_pointer <= pcb->frame_base);
   /* Mark the old Scheme stack segment as "data". */
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
   /* Retrieve the address of the underflow handler. */
@@ -785,8 +786,8 @@ ik_stack_overflow (ikpcb* pcb)
 		     __func__, (long)s_kont,
 		     pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
 		     pcb->frame_redline,
-		     (pcb->frame_redline-pcb->stack_base)/wordsize,
-		     pcb->frame_base, pcb->frame_pointer,
+		     (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
+		     pcb->frame_pointer, pcb->frame_base,
 		     IK_REF(s_kont, off_continuation_top),
 		     IK_REF(s_kont, off_continuation_size));
 #endif

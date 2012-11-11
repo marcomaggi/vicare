@@ -3965,8 +3965,10 @@
   ;;This module converts a struct instance  of type CODES into a list of
   ;;assembly language instructions, all inclusive.
   ;;
-  (define who 'alt-cogen.flatten-codes)
-
+  ;;
+  ;;Error handling routines
+  ;;-----------------------
+  ;;
   ;;The input of this  module X has is composed of a  set of CLAMBDA and
   ;;an expression  BODY; each of  them is converted into  assembly code.
   ;;
@@ -3984,8 +3986,15 @@
   ;;The main  routine is built  by traversing the input  depth-first and
   ;;accumulating a list of assembly instructions; the error handlers are
   ;;appended to such accumulated list by storing a reference to the last
-  ;;pair in the list of
+  ;;pair  in  the  main  list into  the  parameter  EXCEPTIONS-CONC  and
+  ;;prepending to the tail error handler routines as follows:
   ;;
+  ;;  (let ((tail-pair (exceptions-conc)))
+  ;;    (set-cdr! tail-pair (append ?error-handler-instructions
+  ;;                                (cdr tail-pair))))
+  ;;
+  (define who 'alt-cogen.flatten-codes)
+
   (define exceptions-conc
     (make-parameter #f))
 
@@ -4193,11 +4202,14 @@
 	 (E-primcall op rands x accum))
 
 	((shortcut body handler)
-	 (let ((L (unique-interrupt-label))
+	 ;;Prepend  BODY to  the accumulator;  prepend an  error HANDLER
+	 ;;routine to the tail of the accumulator.
+	 ;;
+	 (let ((L  (unique-interrupt-label))
 	       (L2 (unique-label)))
-	   (let* ((hand (cons L (E handler `((jmp ,L2)))))
-		  (tc   (exceptions-conc)))
-	     (set-cdr! tc (append hand (cdr tc))))
+	   (let* ((handler^ (cons L (E handler `((jmp ,L2)))))
+		  (tc       (exceptions-conc)))
+	     (set-cdr! tc (append handler^ (cdr tc))))
 	   (parameterize ((exception-label L))
 	     (E body (cons L2 accum)))))
 
