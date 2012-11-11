@@ -4792,9 +4792,8 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;This is the implementation of  the VALUES function.  The arguments
-    ;;to VALUES are  the return values of VALUES.  When  arriving from a
-    ;;call:
+    ;;Implementation of  the function  VALUES.  The arguments  to VALUES
+    ;;are the return values of VALUES.  When arriving from a call:
     ;;
     ;;   (values ret-val-0 ret-val-1 ret-val-2)
     ;;
@@ -4855,13 +4854,13 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;This is the implementation  of the function CALL-WITH-VALUES.  The
-    ;;situation on the Scheme stack when arriving here is:
+    ;;Implementation  of the  function  CALL-WITH-VALUES (shortly  named
+    ;;CWV).  When arriving here, the situation on the Scheme stack is:
     ;;
     ;;         high memory
     ;;   |                      |
     ;;   |----------------------|
-    ;;   |    return address    | <-- Frame Pointer Register (FPR)
+    ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
     ;;   |----------------------|
     ;;   |   closure reference  | --> producer closure object
     ;;   |----------------------|
@@ -4870,8 +4869,11 @@
     ;;   |                      |
     ;;          low memory
     ;;
-    ;;and EAX holds a fixnum being the negated number of arguments, that
-    ;;is: -2.
+    ;;the  register EAX  holds  a  fixnum being  the  negated number  of
+    ;;arguments: as fixnum it is -2, as  machine word it is -8 on 32-bit
+    ;;platforms  and  -16  on  64-bit  platforms;  the  Closure  Pointer
+    ;;Register  (CPR)  holds a  reference  to  the closure  implementing
+    ;;CALL-WITH-VALUES itself.
     ;;
     ((public-function		sl-cwv-label)
      (entry-point-label		SL_call_with_values)
@@ -4912,50 +4914,146 @@
       ;;   fixnum zero.
       ;;
       ;;5..Call the producer closure in  CPR executing a "call" assembly
-      ;;   instruction.
+      ;;   instruction.   The situation  on the  stack right  before the
+      ;;   "call" instruction is:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  |
+      ;;   |----------------------|
+      ;;   |  producer reference  |
+      ;;   |----------------------|
+      ;;   |  consumer reference  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |     empty word       |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
       ;;
       (movl (int (argc-convention 0)) eax)
       (compile-call-frame
        3	;The   framesize  is   3   because  on   the  stack   of
 		;CALL-WITH-VALUES  there  are  3 machine  words:  return
 		;address, producer closure, consumer closure.
-       '#(#b110) ;This  livemask tells  the garbage collector  that: the
-		;highest word (return address) is not a live object, the
-		;middle word  (producer closure)  is a live  object, the
-		;lowest word (consumer object) is a live object.
+       '#(#b110) ;This livemask tells the  garbage collector that on the
+		;stack: the highest word (return address) is not a live
+		;object, the  middle word (producer closure)  is a live
+		;object, the  lowest word  (consumer object) is  a live
+		;object.
        (label-address L_cwv_multi_rp)
        (indirect-cpr-call))
 
-      ;;If we  are here it means  that the producer returned  one value.
+      ;;If we are here it means that the producer returned one value; we
+      ;;want  to  hand  such  single  value  to  the  consumer  closure,
+      ;;performing a tail call to it.
+      ;;
+      ;;The call  chunk above adjusts the  FPR, so the situation  on the
+      ;;stack when we arrive here is:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |  producer reference  |
+      ;;   |----------------------|
+      ;;   |  consumer reference  |
+      ;;   |----------------------|
+      ;;   | producer return addr |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;and the returned value  is in EAX.  We want to  set the stack as
+      ;;follows:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |     return value     |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;then perform a "jmp" to the entry point of the consumer code.
+      ;;
       ;;Store in EBX a reference to the consumer closure object.
       (movl (mem (fx* -2 wordsize) fpr) ebx)
       ;;Store in EBX a reference to the consumer closure object.
       (movl ebx cpr)
-      ;;Store the  returned value on  the stack, right below  the return
-      ;;address.
-      (movl eax (mem (fx- 0 wordsize) fpr))
-      ;;We will call the consumer closure with one argument.
-      (movl (int (argc-convention 1)) eax)
       ;;Check that EBX actually contains  a reference to closure object;
       ;;else jump to the appropriate error handler.
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
       (jne (label SL_nonprocedure))
+      ;;Store the  returned value on  the stack, right below  the return
+      ;;address.
+      (movl eax (mem (fx- 0 wordsize) fpr))
+      ;;We will call the consumer closure with one argument.
+      (movl (int (argc-convention 1)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
       ;;by the Closure Pointer Register and jump directly there.
       (tail-indirect-cpr-call)
 
       ;;If we  are here it means  that the producer returned  zero, 2 or
-      ;;more values (not  one value).  The number of  returned values is
-      ;;encoded in EAX.
+      ;;more values (not one value) performing a tail call to VALUES; we
+      ;;want  to hand  such  multiple values  to  the consumer  closure,
+      ;;performing a tail call to it.
+      ;;
+      ;;When returning  0, 2  or more values:  VALUES performs  a direct
+      ;;"jmp" to the label "L_cwv_multi_rp"; the FPR is not adjusted, so
+      ;;the situation on the stack when we arrive here is:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  |
+      ;;   |----------------------|
+      ;;   |  producer reference  |
+      ;;   |----------------------|
+      ;;   |  consumer reference  |
+      ;;   |----------------------|
+      ;;   | producer return addr | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |    return value 0    |
+      ;;   |----------------------|
+      ;;   |    return value 1    |
+      ;;   |----------------------|
+      ;;   |    return value 2    |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;and the number of returned values is encoded in EAX.  We want to
+      ;;set the stack as follows:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |    return value 0    |
+      ;;   |----------------------|
+      ;;   |    return value 1    |
+      ;;   |----------------------|
+      ;;   |    return value 2    |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;then perform a "jmp" to the entry point of the consumer code.
+      ;;
       (label L_cwv_multi_rp)
-      ;;Because VALUES does  not pop the return point we  have to adjust
-      ;;FPR one more word here.
+      ;;Adjust the  Frame Pointer Register  to reference the  CWV return
+      ;;address.
       (addl (int (fx* wordsize 3)) fpr)
       ;;Store  in  the  Closure  Pointer Register  a  reference  to  the
       ;;consumer closure object.
       (movl (mem (fx* -2 wordsize) fpr) cpr)
-      ;;Check if the number of returned value is zero.
+      ;;Check if the number of returned values is zero.
       (cmpl (int (argc-convention 0)) eax)
       (je (label L_cwv_done))
       (movl (int (fx* -4 wordsize)) ebx)
