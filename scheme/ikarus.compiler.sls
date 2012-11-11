@@ -4676,8 +4676,8 @@
 ;;; --------------------------------------------------------------------
 
     ;;SL-INVALID-ARGS-LABEL  This subroutine  handles calls  to function
-    ;;with the  wrong number  of arguments.   We just  want to  call the
-    ;;primitive function
+    ;;with the wrong number of arguments.  We just want to tail call the
+    ;;primitive function $INCORRECT-ARGS-ERROR-HANDLER.
     ;;
     ;;Upon entering this label:
     ;;
@@ -4745,6 +4745,11 @@
 
 ;;; --------------------------------------------------------------------
 
+    ;;SL-MV-ERROR-RP-LABEL This subroutine is called whenever an attempt
+    ;;to return zero  or 2 or more  values to a single  value context is
+    ;;performed, and  the receiving  function just  wants to  ignore the
+    ;;error.
+    ;;
     ((public-function		sl-mv-ignore-rp-label)
      (entry-point-label		SL_multiple_values_ignore_rp)
      (number-of-free-variables	0)
@@ -4757,9 +4762,9 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;SL-MV-ERROR-RP-LABEL This subrouting is called whenever an attempt
-    ;;to return zero or multiple, but  not one, values to a single value
-    ;;contest is performed, as in:
+    ;;SL-MV-ERROR-RP-LABEL This subroutine is called whenever an attempt
+    ;;to return zero  or 2 or more  values to a single  value context is
+    ;;performed, as in:
     ;;
     ;;   (let ((x (values 1 2)))
     ;;     x)
@@ -4769,7 +4774,13 @@
     ;;   (let ((x (values)))
     ;;     x)
     ;;
-    ;;This happens *only* when VALUES is used.
+    ;;This happens *only*  when VALUES is used.  We just  call the error
+    ;;handler $MULTIPLE-VALUES-ERROR.
+    ;;
+    ;;The  label "SL_multiple_values_error_rp"  defines  a return  point
+    ;;(rp) for functions  accepting only a single return  value; so this
+    ;;label should be used when generating all the call chunks for those
+    ;;function calls.
     ;;
     ((public-function		sl-mv-error-rp-label)
      (entry-point-label		SL_multiple_values_error_rp)
