@@ -755,7 +755,7 @@ ik_stack_overflow (ikpcb* pcb)
 {
   ikptr		underflow_handler;
 #if STACK_DEBUG
-  ik_debug_message("%s: entered pcb=0x%016lx", __func__, (long)pcb);
+  ik_debug_message_start("%s: entered pcb=0x%016lx", __func__, (long)pcb);
 #endif
   /* Mark the old Scheme stack segment as "data". */
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
@@ -774,8 +774,19 @@ ik_stack_overflow (ikpcb* pcb)
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
 #if STACK_DEBUG
-    ik_debug_message("%s: saved stack continuation s_kont=0x%016lx\n\ttop = 0x%016lx\n\tsize = %ld",
+    ik_debug_message("%s: saved stack continuation s_kont=0x%016lx\n\
+\tpcb->stack_base    = 0x%016lx\n\
+\tpcb->stack_size    = %ld bytes, %ld words\n\
+\tpcb->frame_redline = 0x%016lx, delta %ld words\n\
+\tpcb->frame_pointer = 0x%016lx\n\
+\tpcb->frame_base    = 0x%016lx\n\
+\ttop  = 0x%016lx\n\
+\tsize = %ld",
 		     __func__, (long)s_kont,
+		     pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
+		     pcb->frame_redline,
+		     (pcb->frame_redline-pcb->stack_base)/wordsize,
+		     pcb->frame_base, pcb->frame_pointer,
 		     IK_REF(s_kont, off_continuation_top),
 		     IK_REF(s_kont, off_continuation_size));
 #endif

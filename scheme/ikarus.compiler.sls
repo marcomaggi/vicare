@@ -4955,7 +4955,7 @@
       ;;
       (movl (int (argc-convention 0)) eax)
       (compile-call-frame
-       3	;The   framesize  is   3   because  on   the  stack   of
+       3	;The  frame-words-count is  3  because on  the stack  of
 		;CALL-WITH-VALUES  there  are  3 machine  words:  return
 		;address, producer closure, consumer closure.
        '#(#b110) ;This livemask tells the  garbage collector that on the
