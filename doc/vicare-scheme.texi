@@ -28804,6 +28804,15 @@ continues on the old stack.
 @subsection Function arguments on the stack
 
 
+The protocol to handle multiple return values is explained in:
+
+@quotation
+J. Michael Ashley, R. Kent Dybvig. ``An Efficient Implementation of
+Multiple Return Values in Scheme''.  Proceedings of the 1994 ACM
+Conference on LISP and Functional Programming, 140--149, 1994.
+Copyright @copyright{} 1994 ACM.
+@end quotation
+
 Right after the first function call that enters Scheme code from
 assembly code, the stack segment looks as follows:
 
@@ -30569,7 +30578,13 @@ Construct''.
 
 @noindent
 Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
-Workshop on Scheme and Functional Programming '09
+Workshop on Scheme and Functional Programming '09.
+
+@noindent
+J. Michael Ashley, R. Kent Dybvig. ``An Efficient Implementation of
+Multiple Return Values in Scheme''.  Proceedings of the 1994 ACM
+Conference on LISP and Functional Programming, 140--149, 1994.
+Copyright @copyright{} 1994 ACM.
 
 @c page
 @node concept index

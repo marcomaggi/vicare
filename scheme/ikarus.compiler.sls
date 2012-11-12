@@ -17,6 +17,13 @@
 
 ;;;; Introduction
 ;;
+;;The protocol to handle multiple return values is explained in:
+;;
+;;   J. Michael Ashley, R. Kent Dybvig. ``An Efficient Implementation of
+;;   Multiple Return  Values in Scheme''.   Proceedings of the  1994 ACM
+;;   Conference  on LISP  and  Functional  Programming, 140--149,  1994.
+;;   Copyright (c) 1994 ACM.
+;;
 ;;NOTE This library is loaded by "makefile.sps" to build the boot image.
 ;;
 
