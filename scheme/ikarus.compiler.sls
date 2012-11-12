@@ -857,7 +857,7 @@
 		;used to  generate, when possible, direct  jumps to this
 		;clause rather than calling the whole closure.
    args
-		;In  the  earlier  compiler  passes: a  list  of  struct
+		;In  the  earliest compiler  passes:  a  list of  struct
 		;instances of  type PRELEX representing the  ?FORMALS as
 		;follows:
 		;

@@ -4045,7 +4045,10 @@
       ;;
       ;;   (?asm-list-for-body ?asm-list-for-clambda ...)
       ;;
-      ;;the ?ASM-LIST-FOR-BODY has the following format:
+      ;;for each  sublist in  the returned  list a  code object  will be
+      ;;created.
+      ;;
+      ;;The ?ASM-LIST-FOR-BODY has the following format:
       ;;
       ;;   (?number-of-free-vars
       ;;    (label ?body-entry-point)
@@ -4159,64 +4162,145 @@
 			    `(jg ,next-case-entry-point-label))
 			   (else
 			    `(jl ,next-case-entry-point-label)))
-		     (%properize x.info.args x.info.proper?
-				 (cons (label x.info.case-entry-point-label)
-				       (T x.body
-					  (cons next-case-entry-point-label accum)))))))))))
+		     (let ((accum^ (cons (label x.info.case-entry-point-label)
+					 (T x.body
+					    (cons next-case-entry-point-label accum)))))
+		       (if x.info.proper?
+			   accum^
+			 (%handle-vararg (length (cdr x.info.args)) accum^))))))))))
 
-    (define (%properize args proper accum)
-      (if proper
-	  accum
-	(%handle-vararg (length (cdr args)) accum)))
-
-    (define (%handle-vararg fml-count accum)
+    (define (%handle-vararg formals-count accum)
+      ;;Generate the assembly code needed to handle the application of a
+      ;;CLAMBDA case accepting a variable number of arguments.
+      ;;
+      ;;FORMALS-COUNT is  a fixnum representing the  number of mandatory
+      ;;requested arguments.
+      ;;
+      ;;ACCUM is a list of assembly instruction representing the body of
+      ;;this CLAMBDA case.
+      ;;
+      ;;Let's say we want to call the function:
+      ;;
+      ;;   (define (the-func arg . rest) . ?body)
+      ;;   (the-func 1 2 3)
+      ;;
+      ;;this is  the Scheme language,  so the  caller does not  know how
+      ;;THE-FUNC  will  handle  its  arguments:  it  can  only  put  the
+      ;;arguments  on  the  Scheme  stack.   Right  after  the  assembly
+      ;;instruction "call"  has been  executed: ARGC-REGISTER is  set to
+      ;;the fixnum -3, which is the negated number of arguments, and the
+      ;;Scheme stack is:
+      ;;
+      ;;     high memory
+      ;; |                |
+      ;; |----------------|
+      ;; | return address | <-- Frame Pointer Register (FPR)
+      ;; |----------------|
+      ;; |    fixnum 1    | <-- FPR - 1 * wordsize
+      ;; |----------------|
+      ;; |    fixnum 2    | <-- FPR - 2 * wordsize
+      ;; |----------------|
+      ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + ARGC-REGISTER
+      ;; |----------------|
+      ;; |                |
+      ;;     low memory
+      ;;
+      ;;The fixnum 1 is right where we need it; the fixnums 2 and 3 must
+      ;;be put into a proper list.  We want to set the stack to:
+      ;;
+      ;;     high memory
+      ;; |                |
+      ;; |----------------|
+      ;; | return address | <-- Frame Pointer Register (FPR)
+      ;; |----------------|
+      ;; |    fixnum 1    | <-- FPR - 1 * wordsize
+      ;; |----------------|
+      ;; | pair reference | --> (2 3)
+      ;; |----------------|
+      ;; |                |
+      ;;     low memory
+      ;;
       (define CONTINUE_LABEL	(unique-label))
       (define DONE_LABEL	(unique-label))
       (define CONS_LABEL	(unique-label))
       (define LOOP_HEAD		(unique-label))
-      (cons* (cmpl (int (argc-convention (fxsub1 fml-count))) eax)
-	     (jl CONS_LABEL)
-	     (movl (int nil) ebx)
-	     (jmp DONE_LABEL)
-	     CONS_LABEL
-	     (movl (mem pcb-allocation-redline pcr) ebx)
-	     (addl eax ebx)
-	     (addl eax ebx)
-	     (cmpl ebx apr)
-	     (jle LOOP_HEAD)
-		; overflow
-	     (addl eax esp) ; advance esp to cover args
-	     (pushl cpr)    ; push current cp
-	     (pushl eax)    ; push argc
-	     (negl eax)	    ; make argc positive
-	     (addl (int (fx* 4 wordsize)) eax) ; add 4 words to adjust frame size
-	     (pushl eax)		       ; push frame size
-	     (addl eax eax) ; double the number of args
-	     (movl eax (mem (fx* -2 wordsize) fpr)) ; pass it as first arg
-	     (movl (int (argc-convention 1)) eax)   ; setup argc
-	     (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
-	     (movl (mem off-symbol-record-proc cpr) cpr)
-	     ;;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
-	     (compile-call-frame 0 '#() '(int 0) (indirect-cpr-call))
-	     (popl eax)	    ; pop framesize and drop it
-	     (popl eax)	    ; reload argc
-	     (popl cpr)	    ; reload cp
-	     (subl eax fpr) ; readjust fp
-	     LOOP_HEAD
-	     (movl (int nil) ebx)
-	     CONTINUE_LABEL
-	     (movl ebx (mem disp-cdr apr))
-	     (movl (mem fpr eax) ebx)
-	     (movl ebx (mem disp-car apr))
-	     (movl apr ebx)
-	     (addl (int pair-tag) ebx)
-	     (addl (int pair-size) apr)
-	     (addl (int (fxsll 1 fx-shift)) eax)
-	     (cmpl (int (fx- 0 (fxsll fml-count fx-shift))) eax)
-	     (jle CONTINUE_LABEL)
-	     DONE_LABEL
-	     (movl ebx (mem (fx- 0 (fxsll fml-count fx-shift)) fpr))
-	     accum))
+      (cons*
+       ;;Check if there are rest arguments to put into a list.
+       (cmpl (int (argc-convention (fxsub1 formals-count))) eax)
+       (jl CONS_LABEL)
+
+       ;;There are no rest arguments:  the function has been called with
+       ;;enough argument to match the mandatory arguments, as in:
+       ;;
+       ;;   (define (the-func arg . rest) . ?body)
+       ;;   (the-func 1)
+       ;;
+       ;;the REST binding will be set to nil.
+       (movl (int nil) ebx)
+       (jmp DONE_LABEL)
+
+       ;;Check that  there is enough  room on  the heap to  allocate the
+       ;;list of rest arguments; the amount  of words needed to hold the
+       ;;list is twice the number of rest arguments.
+       CONS_LABEL
+       (movl (mem pcb-allocation-redline pcr) ebx)
+       (addl eax ebx)
+       (addl eax ebx)
+       (cmpl ebx apr)
+       (jle LOOP_HEAD)
+       ;;If we are here: there is not  enough room on the heap; call the
+       ;;primitive  function  DO-VARARG-OVERFLOW  to allocate  new  heap
+       ;;space.
+       (addl eax fpr)	 ;advance FPR to cover args
+       (pushl cpr)	 ;push current closure pointer
+       (pushl eax)	 ;push argc
+       (negl eax)	 ;make argc positive
+       (addl (int (fx* 4 wordsize)) eax) ;add 4 words to adjust frame size
+       (pushl eax)			 ;push frame size
+       (addl eax eax)			 ;double the number of args
+       (movl eax (mem (fx* -2 wordsize) fpr))	  ;pass it as first arg
+       (movl (int (argc-convention 1)) eax)	  ;setup argc
+       ;;Load intp CPR a reference to the closure object implementing of
+       ;;DO-VARARG-OVERFLOW.
+       (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
+       (movl (mem off-symbol-record-proc cpr) cpr)
+       (compile-call-frame 0	    ;frame words count
+			   '#()	    ;livemask
+			   '(int 0) ;multivalue return point
+			   (indirect-cpr-call))
+       (popl eax)	    ;pop framesize and drop it
+       (popl eax)	    ;reload argc
+       (popl cpr)	    ;reload cp
+       (subl eax fpr)	    ;readjust frame pointer
+
+       ;;There is enough room on the heap to allocate the rest list.  We
+       ;;allocate it backwards, the list (2 3) is laid out as:
+       ;;
+       ;;    fixnum 3    nil   fixnum 2 pair ref
+       ;;   |--------|--------|--------|--------| heap
+       ;;       ^                          |
+       ;;       |                          |
+       ;;        --------------------------
+       ;;
+       LOOP_HEAD
+       (movl (int nil) ebx)
+
+       CONTINUE_LABEL
+       (movl ebx (mem disp-cdr apr))	;store the cdr
+       (movl (mem fpr eax) ebx)		;load the next car value
+       (movl ebx (mem disp-car apr))	;store the car value
+       (movl apr ebx)			;load the allocation pointer
+       (addl (int pair-tag) ebx)	;tag the pointer as reference to pair
+       (addl (int pair-size) apr)	;increment the allocation pointer
+       (addl (int (fxsll 1 fx-shift)) eax) ;increment the negative arguments count
+       ;;Loop if more arguments.
+       (cmpl (int (fx- 0 (fxsll formals-count fx-shift))) eax)
+       (jle CONTINUE_LABEL)
+
+       DONE_LABEL
+       ;;Store the last cdr.
+       (movl ebx (mem (fx- 0 (fxsll formals-count fx-shift)) fpr))
+       accum))
 
     #| end of module: Program |# )
 
