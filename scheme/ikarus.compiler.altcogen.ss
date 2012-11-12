@@ -4009,6 +4009,20 @@
   ;;directives   like  "int+"   are   expanded   into  actual   assembly
   ;;instructions for the underlying CPU.
   ;;
+  ;;Accept  as input  recordized  code containing  the following  struct
+  ;;types:
+  ;;
+  ;;   asm-instr	conditional	constant
+  ;;   ntcall		primcall	seq
+  ;;   shortcut
+  ;;
+  ;;only the following types are accepted in tail position:
+  ;;
+  ;;   conditional
+  ;;   primcall
+  ;;   seq
+  ;;   shortcut
+  ;;
   ;;Error handling routines
   ;;-----------------------
   ;;
