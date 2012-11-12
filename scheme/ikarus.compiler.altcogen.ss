@@ -4229,7 +4229,13 @@
       (define CONS_LABEL	(unique-label))
       (define LOOP_HEAD		(unique-label))
       (cons*
-       ;;Check if there are rest arguments to put into a list.
+       ;;Check if there are rest arguments to put into a list.  We could
+       ;;check if:
+       ;;
+       ;;  (= (argc-convention formals-count) EAX)
+       ;;
+       ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we
+       ;;do:
        (cmpl (int (argc-convention (fxsub1 formals-count))) eax)
        (jl CONS_LABEL)
 
