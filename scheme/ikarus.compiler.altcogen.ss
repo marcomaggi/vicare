@@ -1191,16 +1191,13 @@
 
     (define (alloc-check size)
       (E (make-shortcut
-	  (make-conditional ;;; PCB ALLOC-REDLINE
-	      (%test size)
+	  (make-conditional (%test size)
 	      (make-primcall 'nop '())
 	    (make-primcall 'interrupt '()))
-	  (make-funcall
-	   (make-primcall 'mref
-	     (list
-	      (make-constant (make-object (primref->symbol 'do-overflow)))
-	      (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
-	   (list size)))))
+	  (make-funcall (make-primcall 'mref
+			  (list (make-constant (make-object (primref->symbol 'do-overflow)))
+				(make-constant off-symbol-record-proc)))
+			(list size)))))
 
     (define (%test size)
       (if (struct-case size

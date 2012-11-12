@@ -127,7 +127,12 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       /* long	code_offset	= rp_offset - disp_frame_offset; */
       /* ikptr	code_entry	= rp - code_offset; */
       /* ikptr	p_code		= code_entry - disp_code_data; */
-      ik_abort("while resuming continuation 0x%016lx:\n\tinvalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
+      /* ik_debug_message("ik_underflow_handler = 0x%016x", */
+      /* 		       (long)(pcb->stack_base + pcb->stack_size - wordsize)); */
+      ik_abort("while resuming continuation 0x%016lx:\n\
+\tinvalid framesize=%ld, expected p_kont->size=%ld or less\n\
+\treturn point (rp) = 0x%016lx\n\
+\trp offset = %ld",
 	       (long)s_kont, framesize, p_kont->size,
 	       rp, IK_REF(rp, disp_frame_offset));
     }

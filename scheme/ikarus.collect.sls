@@ -57,7 +57,7 @@
 	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
 (define (do-post-gc ls n)
-;;;  (emergency-write)
+  #;(emergency-write "do-post-gc enter")
   (let ((k0 (collect-key)))
     ;;Run the hook functions.
     (parameterize ((post-gc-hooks '()))
@@ -66,14 +66,19 @@
       ;;fixed.  (Marco Maggi; Nov 1, 2012)
       #;(void)
       (for-each (lambda (x) (x)) ls))
+    #;(emergency-write "do-post-gc check for redoing gc")
     (if (eq? k0 (collect-key))
         (let ((was-enough? (foreign-call "ik_collect_check" n)))
-          ;;Handlers ran without GC but there is was not enough space in
+          ;;Handlers ran  without GC but  there was not enough  space in
           ;;the nursery for the pending allocation.
-          (unless was-enough? (do-post-gc ls n)))
-        (let ()
-          ;;Handlers did cause a GC, so, do the handlers again.
-          (do-post-gc ls n)))))
+          (unless was-enough?
+	    #;(emergency-write "do-post-gc again after run without GC")
+	    (do-post-gc ls n))
+	  #;(emergency-write "do-post-gc leaving"))
+      (let ()
+	;;Handlers did cause a GC, so, do the handlers again.
+	#;(emergency-write "do-post-gc again after run with GC")
+	(do-post-gc ls n)))))
 
 (define (do-overflow n)
   (foreign-call "ik_collect" n)
