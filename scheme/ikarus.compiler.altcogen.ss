@@ -3939,6 +3939,38 @@
   ;;
   ;;* When FRAME-WORDS-COUNT is 1:
   ;;
+  ;;           high memory
+  ;;   |                           |
+  ;;   |---------------------------|
+  ;;   | uplevel return address    |
+  ;;   |---------------------------|
+  ;;   |        empty word         | <-- Frame Pointer Register (FPR)
+  ;;   |---------------------------|
+  ;;   |      Scheme argument 0    |
+  ;;   |---------------------------|
+  ;;   |      Scheme argument 1    |
+  ;;   |---------------------------|
+  ;;   |                           |
+  ;;           low memory
+  ;;
+  ;;  only the return  address is there in the uplevel  frame; we do not
+  ;;  need to adjust the FPR, rather we just do the "call" so that right
+  ;;  after it the stack looks like this:
+  ;;
+  ;;           high memory
+  ;;   |                           |
+  ;;   |---------------------------|
+  ;;   | uplevel return address    |
+  ;;   |---------------------------|
+  ;;   |       return address      | <-- Frame Pointer Register (FPR)
+  ;;   |---------------------------|
+  ;;   |      Scheme argument 0    |
+  ;;   |---------------------------|
+  ;;   |      Scheme argument 1    |
+  ;;   |---------------------------|
+  ;;   |                           |
+  ;;           low memory
+  ;;
   (let ((L_CALL (label (gensym))))
     (define %adjust-frame-pointer-register
       (let ((FPR-DELTA (if (or (fxzero? frame-words-count)
@@ -4006,15 +4038,55 @@
   (module (Program)
 
     (define (Program x)
+      ;;Flatten  the struct  instance X  of type  CODES into  a list  of
+      ;;assembly instructions:  the BODY expressions first,  the CLAMBDA
+      ;;implementations last.  Return a list of lists with the following
+      ;;format:
+      ;;
+      ;;   (?asm-list-for-body ?asm-list-for-clambda ...)
+      ;;
+      ;;the ?ASM-LIST-FOR-BODY has the following format:
+      ;;
+      ;;   (?number-of-free-vars
+      ;;    (label ?body-entry-point)
+      ;;    ?asm-instr
+      ;;    ...)
+      ;;
+      ;;where the ?NUMBER-OF-FREE-VARS is always zero.
+      ;;
       (struct-case x
-	((codes code* body)
+	((codes x.clambda* x.body)
 	 (cons (cons* 0 (label (gensym))
 		      (let ((accum (list '(nop))))
 			(parameterize ((exceptions-conc accum))
-			  (T body accum))))
-	       (map Clambda code*)))))
+			  (T x.body accum))))
+	       (map Clambda x.clambda*)))))
 
     (define (Clambda x)
+      ;;Flatten the the  struct instance X of type CLAMBDA,  using a new
+      ;;error handler routines tail, as follows:
+      ;;
+      ;;  (?number-of-free-vars ?annotation
+      ;;   (label ?clambda-entry-point)
+      ;;   ?asm-instr
+      ;;   ...
+      ;;   (jmp (label SL_invalid_args))
+      ;;   ?handler-asm-instr
+      ;;   ...)
+      ;;
+      ;;where:
+      ;;
+      ;;* ?ASM-INSTR  are assembly instructions that  select the CLAMBDA
+      ;;  case with  the correct number of arguments and  run the actual
+      ;;  function code.
+      ;;
+      ;;*  ?HANDLER-ASM-INSTR  are  assembly  instructions  implementing
+      ;;  error handler routines.
+      ;;
+      ;;If a  CLAMBDA case with the  correct number of arguments  is not
+      ;;found: the execution jumps to  the default routine to handle the
+      ;;error "wrong number of arguments".
+      ;;
       (struct-case x
 	((clambda L case* cp free* name)
 	 (cons* (length free*)
@@ -4029,26 +4101,68 @@
 				     (recur (cdr case*)))))))))))
 
     (define (ClambdaCase x accum)
+      ;;Flatten the struct instance of  type CLAMBDA-CASE into a list of
+      ;;assembly instructions  prepended to  the accumulator  ACCUM; the
+      ;;error  handler  routines are  prepended  to  the tail  of  ACCUM
+      ;;referenced by EXCEPTIONS-CONC.
+      ;;
+      ;;The generated assembly code must  check if this CLAMBDA case has
+      ;;a specification  of requested  arguments matching  the arguments
+      ;;given to the CLAMBDA function application; when arriving to this
+      ;;code: ARGC-REGISTER  contains a fixnum being  the encoded number
+      ;;of given arguments.
+      ;;
+      ;;For  a CLAMBDA  case with  fixed number  of requested  arguments
+      ;;(that is: the  formals are a proper list), we  must check if the
+      ;;number  of  requested  arguments  equals  the  number  of  given
+      ;;arguments, else we jump to the next case.  The returned list has
+      ;;the format:
+      ;;
+      ;;   ((cmpl ?this-case-number-of-args ARGC-REGISTER)
+      ;;    (jne ?next-case-entry-point-label)
+      ;;    (label ?case-entry-point)
+      ;;    ?case-asm-instr
+      ;;    ...
+      ;;    (label ?next-case-entry-point-label)
+      ;;    . ACCUM)
+      ;;
+      ;;
+      ;;For a CLAMBDA  case with variable number  of requested arguments
+      ;;(that is:  the formals are an  improper list), we must  check if
+      ;;the number  of requested  mandatory arguments  is less  than the
+      ;;number  of given  arguments,  else  we jump  to  the next  case;
+      ;;remember  that  the comparison  is  between  encoded numbers  of
+      ;;arguments.  The returned list has the format:
+      ;;
+      ;;   ((cmpl ?this-case-number-of-args ARGC-REGISTER)
+      ;;    (jg ?next-case-entry-point-label)
+      ;;    (label ?case-entry-point)
+      ;;    ?case-asm-instr
+      ;;    ...
+      ;;    (label ?next-case-entry-point-label)
+      ;;    . ACCUM)
+      ;;
       (struct-case x
-	((clambda-case info body)
-	 (struct-case info
-	   ((case-info L args proper)
-	    (let ((lothers (unique-label)))
+	((clambda-case x.info x.body)
+	 (struct-case x.info
+	   ((case-info x.info.case-entry-point-label x.info.args x.info.proper?)
+	    (let ((next-case-entry-point-label (unique-label)))
 	      (cons* `(cmpl ,(argc-convention
-			      (if proper
-				  (length (cdr args))
-				(length (cddr args))))
+			      (if x.info.proper?
+				  (length (cdr x.info.args))
+				(length (cddr x.info.args))))
 			    ,ARGC-REGISTER)
-		     (cond (proper
-			    `(jne ,lothers))
+		     (cond (x.info.proper?
+			    `(jne ,next-case-entry-point-label))
 			   ((> (argc-convention 0)
 			       (argc-convention 1))
-			    `(jg ,lothers))
+			    `(jg ,next-case-entry-point-label))
 			   (else
-			    `(jl ,lothers)))
-		     (%properize args proper
-				 (cons (label L)
-				       (T body (cons lothers accum)))))))))))
+			    `(jl ,next-case-entry-point-label)))
+		     (%properize x.info.args x.info.proper?
+				 (cons (label x.info.case-entry-point-label)
+				       (T x.body
+					  (cons next-case-entry-point-label accum)))))))))))
 
     (define (%properize args proper accum)
       (if proper
@@ -4060,7 +4174,6 @@
       (define DONE_LABEL	(unique-label))
       (define CONS_LABEL	(unique-label))
       (define LOOP_HEAD		(unique-label))
-      (define L_CALL		(unique-label))
       (cons* (cmpl (int (argc-convention (fxsub1 fml-count))) eax)
 	     (jl CONS_LABEL)
 	     (movl (int nil) ebx)
@@ -4082,7 +4195,7 @@
 	     (movl eax (mem (fx* -2 wordsize) fpr)) ; pass it as first arg
 	     (movl (int (argc-convention 1)) eax)   ; setup argc
 	     (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
-	     (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+	     (movl (mem off-symbol-record-proc cpr) cpr)
 	     ;;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
 	     (compile-call-frame 0 '#() '(int 0) (indirect-cpr-call))
 	     (popl eax)	    ; pop framesize and drop it
@@ -4110,10 +4223,9 @@
 ;;; --------------------------------------------------------------------
 
   (define (T x accum)
-    ;;Process X  as if it  is in tail  position in some  enclosing form;
-    ;;return a new accumulated list of assembly instructions.
-    ;;
-    ;;X must be a struct instance representing recordized code.
+    ;;Flatten the struct instance X as if it is in tail position in some
+    ;;enclosing   form;  return   the  accumulated   list  of   assembly
+    ;;instructions having ACCUM as tail.
     ;;
     ;;ACCUM must  be the list  of assembly instructions,  accumulated so
     ;;far, that must be included in  binary code after the ones to which
@@ -4124,10 +4236,12 @@
        (E e0 (T e1 accum)))
 
       ((conditional x.test x.conseq x.altern)
-       (let ((L (unique-label)))
-         (P x.test #f L
+       (let ((label-for-true-predicate  #f)
+	     (label-for-false-predicate (unique-label)))
+         (P x.test label-for-true-predicate label-for-false-predicate
 	    (T x.conseq
-	       (cons L (T x.altern accum))))))
+	       (cons label-for-false-predicate
+		     (T x.altern accum))))))
 
       ((primcall op rands)
        (case-symbols op

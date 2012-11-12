@@ -776,7 +776,9 @@
 ;;
 (define-struct clambda
   (label
-		;A unique gensym associated to this closure.
+		;A unique gensym associated  to this closure.  This will
+		;become the name of  the assembly label representing the
+		;entry point to the CLAMBDA.
    cases
 		;A  list  of  struct   instances  of  type  CLAMBDA-CASE
 		;representing the clauses.
