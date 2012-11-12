@@ -4215,6 +4215,10 @@
       ;; |----------------|
       ;; |    fixnum 1    | <-- FPR - 1 * wordsize
       ;; |----------------|
+      ;; |    fixnum 2    | <-- FPR - 2 * wordsize
+      ;; |----------------|
+      ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + ARGC-REGISTER
+      ;; |----------------|
       ;; | pair reference | --> (2 3)
       ;; |----------------|
       ;; |                |
@@ -4260,13 +4264,39 @@
        (addl eax eax)			 ;double the number of args
        (movl eax (mem (fx* -2 wordsize) fpr))	  ;pass it as first arg
        (movl (int (argc-convention 1)) eax)	  ;setup argc
-       ;;Load intp CPR a reference to the closure object implementing of
+       ;;Load intp  CPR a reference  to the closure  object implementing
        ;;DO-VARARG-OVERFLOW.
        (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
        (movl (mem off-symbol-record-proc cpr) cpr)
+       ;;When arriving here the Scheme stack is as follows:
+       ;;
+       ;;       high memory
+       ;;   |                |
+       ;;   |----------------|
+       ;;   | return address |
+       ;;   |----------------|
+       ;;   |    fixnum 1    |
+       ;;   |----------------|
+       ;;   |    fixnum 2    |
+       ;;   |----------------|
+       ;;   |    fixnum 3    |
+       ;;   |----------------|
+       ;;   |  closure ref   |
+       ;;   |----------------|
+       ;;   |    arg count   |
+       ;;   |----------------|
+       ;;   | full frame size| <-- FPR
+       ;;   |----------------|
+       ;;   |   empty word   |
+       ;;   |----------------|
+       ;;   |needed heap room|
+       ;;   |----------------|
+       ;;   |                |
+       ;;       low memory
+       ;;
        (compile-call-frame 0	    ;frame words count
 			   '#()	    ;livemask
-			   '(int 0) ;multivalue return point
+			   '(int 0) ;multivalue return point, NULL because unused
 			   (indirect-cpr-call))
        (popl eax)	    ;pop framesize and drop it
        (popl eax)	    ;reload argc
@@ -4298,7 +4328,8 @@
        (jle CONTINUE_LABEL)
 
        DONE_LABEL
-       ;;Store the last cdr.
+       ;;Store nil or the reference to the rest list on the stack, below
+       ;;the plain arguments.
        (movl ebx (mem (fx- 0 (fxsll formals-count fx-shift)) fpr))
        accum))
 

@@ -874,8 +874,7 @@
 		;   => (prelex-args)
 		;
 		;In  the  latest  compiler  passes:  a  list  of  struct
-		;instances of type VAR representing the formals.  In the
-		;very latest passes.
+		;instances of type VAR representing the formals.
    proper
 		;A boolean: true if ?FORMALS  is a proper list, false if
 		;?FORMALS is a symbol or improper list.
