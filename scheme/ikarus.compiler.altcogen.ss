@@ -4213,13 +4213,11 @@
       ;; |----------------|
       ;; | return address | <-- Frame Pointer Register (FPR)
       ;; |----------------|
-      ;; |    fixnum 1    | <-- FPR - 1 * wordsize
-      ;; |----------------|
-      ;; |    fixnum 2    | <-- FPR - 2 * wordsize
-      ;; |----------------|
-      ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + ARGC-REGISTER
+      ;; |    fixnum 1    |
       ;; |----------------|
       ;; | pair reference | --> (2 3)
+      ;; |----------------|
+      ;; |    fixnum 3    |
       ;; |----------------|
       ;; |                |
       ;;     low memory
@@ -4228,15 +4226,17 @@
       (define DONE_LABEL	(unique-label))
       (define CONS_LABEL	(unique-label))
       (define LOOP_HEAD		(unique-label))
+      (define mandatory-formals-count-argc
+	(fx- 0 (fxsll formals-count fx-shift)))
       (cons*
        ;;Check if there are rest arguments to put into a list.  We could
        ;;check if:
        ;;
-       ;;  (= (argc-convention formals-count) EAX)
+       ;;  (= (argc-convention formals-count) ARGC-REGISTER)
        ;;
        ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we
        ;;do:
-       (cmpl (int (argc-convention (fxsub1 formals-count))) eax)
+       (cmpl (int (argc-convention (fxsub1 formals-count))) ARGC-REGISTER)
        (jl CONS_LABEL)
 
        ;;There are no rest arguments:  the function has been called with
@@ -4254,22 +4254,32 @@
        ;;list is twice the number of rest arguments.
        CONS_LABEL
        (movl (mem pcb-allocation-redline pcr) ebx)
-       (addl eax ebx)
-       (addl eax ebx)
+       (addl ARGC-REGISTER ebx)
+       (addl ARGC-REGISTER ebx)
        (cmpl ebx apr)
        (jle LOOP_HEAD)
+
        ;;If we are here: there is not  enough room on the heap; call the
        ;;primitive  function  DO-VARARG-OVERFLOW  to allocate  new  heap
        ;;space.
-       (addl eax fpr)	 ;advance FPR to cover args
-       (pushl cpr)	 ;push current closure pointer
-       (pushl eax)	 ;push argc
-       (negl eax)	 ;make argc positive
-       (addl (int (fx* 4 wordsize)) eax) ;add 4 words to adjust frame size
-       (pushl eax)			 ;push frame size
-       (addl eax eax)			 ;double the number of args
-       (movl eax (mem (fx* -2 wordsize) fpr))	  ;pass it as first arg
-       (movl (int (argc-convention 1)) eax)	  ;setup argc
+       ;;
+       ;;Advance FPR to cover the plain arguments on the stack.
+       (addl ARGC-REGISTER fpr)
+       (pushl cpr)
+       (pushl ARGC-REGISTER)
+       ;;Make argc positive.
+       (negl ARGC-REGISTER)
+       ;;Add 4 words to adjust frame size (see the picture below).
+       (addl (int (fx* 4 wordsize)) ARGC-REGISTER)
+       ;;Push the frame size.
+       (pushl ARGC-REGISTER)
+       ;;Double the  number of arguments  obtaining the number  of bytes
+       ;;needed on the heap ...
+       (addl ARGC-REGISTER ARGC-REGISTER)
+       ;;... pass it as first argument to DO-VARARG-OVERFLOW.
+       (movl ARGC-REGISTER (mem (fx* -2 wordsize) fpr))
+       ;;DO-VARARG-OVERFLOW is called with one argument.
+       (movl (int (argc-convention 1)) ARGC-REGISTER)
        ;;Load intp  CPR a reference  to the closure  object implementing
        ;;DO-VARARG-OVERFLOW.
        (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
@@ -4278,36 +4288,41 @@
        ;;
        ;;       high memory
        ;;   |                |
-       ;;   |----------------|
-       ;;   | return address |
-       ;;   |----------------|
-       ;;   |    fixnum 1    |
-       ;;   |----------------|
-       ;;   |    fixnum 2    |
-       ;;   |----------------|
-       ;;   |    fixnum 3    |
-       ;;   |----------------|
-       ;;   |  closure ref   |
-       ;;   |----------------|
-       ;;   |    arg count   |
-       ;;   |----------------|
-       ;;   | full frame size| <-- FPR
-       ;;   |----------------|
-       ;;   |   empty word   |
-       ;;   |----------------|
+       ;;   |----------------|          --
+       ;;   | return address |          .
+       ;;   |----------------|          .
+       ;;   |    fixnum 1    |          . frame size associated
+       ;;   |----------------|          . to this CLAMBDA case
+       ;;   |    fixnum 2    |          .
+       ;;   |----------------|          .
+       ;;   |    fixnum 3    |          .
+       ;;   |----------------|          --
+       ;;   |  closure ref   |          .
+       ;;   |----------------|          .
+       ;;   |    arg count   |          . 4 words needed to
+       ;;   |----------------|          . prepare the call
+       ;;   | full frame size| <-- FPR  . to DO-VARARG-OVERFLOW
+       ;;   |----------------|          .
+       ;;   |   empty word   |          .
+       ;;   |----------------|          --
        ;;   |needed heap room|
        ;;   |----------------|
        ;;   |                |
        ;;       low memory
        ;;
-       (compile-call-frame 0	    ;frame words count
-			   '#()	    ;livemask
+       (compile-call-frame 0	;frame words count
+			   '#()	;livemask
 			   '(int 0) ;multivalue return point, NULL because unused
 			   (indirect-cpr-call))
-       (popl eax)	    ;pop framesize and drop it
-       (popl eax)	    ;reload argc
-       (popl cpr)	    ;reload cp
-       (subl eax fpr)	    ;readjust frame pointer
+       ;;Pop framesize and drop it.
+       (popl ARGC-REGISTER)
+       ;;Reload number of arguments for this CLAMBDA case.
+       (popl ARGC-REGISTER)
+       ;;Reload pointer to current closure object.
+       (popl cpr)
+       ;;Readjust the  frame pointer to  uncover the plain  arguments on
+       ;;the stack.
+       (subl ARGC-REGISTER fpr)
 
        ;;There is enough room on the heap to allocate the rest list.  We
        ;;allocate it backwards, the list (2 3) is laid out as:
@@ -4322,21 +4337,21 @@
        (movl (int nil) ebx)
 
        CONTINUE_LABEL
-       (movl ebx (mem disp-cdr apr))	;store the cdr
-       (movl (mem fpr eax) ebx)		;load the next car value
-       (movl ebx (mem disp-car apr))	;store the car value
-       (movl apr ebx)			;load the allocation pointer
-       (addl (int pair-tag) ebx)	;tag the pointer as reference to pair
-       (addl (int pair-size) apr)	;increment the allocation pointer
-       (addl (int (fxsll 1 fx-shift)) eax) ;increment the negative arguments count
+       (movl ebx (mem disp-cdr apr))	  ;store the cdr
+       (movl (mem fpr ARGC-REGISTER) ebx) ;load the next car value
+       (movl ebx (mem disp-car apr))	  ;store the car value
+       (movl apr ebx)			  ;load the allocation pointer
+       (addl (int pair-tag) ebx)  ;tag the pointer as reference to pair
+       (addl (int pair-size) apr) ;increment the allocation pointer
+       (addl (int wordsize) ARGC-REGISTER) ;increment the negative arguments count
        ;;Loop if more arguments.
-       (cmpl (int (fx- 0 (fxsll formals-count fx-shift))) eax)
+       (cmpl (int mandatory-formals-count-argc) ARGC-REGISTER)
        (jle CONTINUE_LABEL)
 
        DONE_LABEL
        ;;Store nil or the reference to the rest list on the stack, below
-       ;;the plain arguments.
-       (movl ebx (mem (fx- 0 (fxsll formals-count fx-shift)) fpr))
+       ;;the mandatory plain arguments.
+       (movl ebx (mem mandatory-formals-count-argc fpr))
        accum))
 
     #| end of module: Program |# )
