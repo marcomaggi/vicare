@@ -1228,7 +1228,7 @@
     ;;         (make-primcall 'mref
     ;; 			 (list
     ;; 			  (make-constant (make-object (primref->symbol 'do-overflow)))
-    ;; 			  (make-constant (- disp-symbol-record-proc symbol-primary-tag))))
+    ;; 			  (make-constant off-symbol-record-proc)))
     ;;         (list size)))))
 
     #| end of module: alloc-check |# )
