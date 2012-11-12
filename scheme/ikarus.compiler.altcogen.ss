@@ -366,6 +366,9 @@
 	   (struct-case info
 	     ((case-info label args proper?)
 	      (let* ((cpvar (unique-var 'cp))
+		     ;;Prepend  to the  properized list  of formals  the
+		     ;;symbol representing the  CPU register holding the
+		     ;;current closure pointer.
 		     (info^ (make-case-info label (cons cpvar args) proper?))
 		     (E     (make-E main-cp cpvar free*))
 		     (body^ (E body)))
@@ -3995,8 +3998,16 @@
 
 (module (alt-cogen.flatten-codes)
   ;;This module converts a struct instance  of type CODES into a list of
-  ;;assembly language instructions, all inclusive.
+  ;;assembly  language instructions,  all inclusive.   Return a  list of
+  ;;lists with the following format:
   ;;
+  ;;   (?asm-list-for-body ?asm-list-for-clambda ...)
+  ;;
+  ;;for each sublist in the returned list a code object will be created.
+  ;;
+  ;;This  operation   is  called   "flattening"  because   the  assembly
+  ;;directives   like  "int+"   are   expanded   into  actual   assembly
+  ;;instructions for the underlying CPU.
   ;;
   ;;Error handling routines
   ;;-----------------------
@@ -4137,7 +4148,7 @@
       ;;remember  that  the comparison  is  between  encoded numbers  of
       ;;arguments.  The returned list has the format:
       ;;
-      ;;   ((cmpl ?this-case-number-of-args ARGC-REGISTER)
+      ;;   ((cmpl ?this-case-number-of-mandatory-args ARGC-REGISTER)
       ;;    (jg ?next-case-entry-point-label)
       ;;    (label ?case-entry-point)
       ;;    ?case-asm-instr
@@ -4149,11 +4160,14 @@
 	((clambda-case x.info x.body)
 	 (struct-case x.info
 	   ((case-info x.info.case-entry-point-label x.info.args x.info.proper?)
+	    ;;Here  X.INFO.ARGS  is  a  pair   whose  car  is  a  symbol
+	    ;;representing the  CPU register holding the  pointer to the
+	    ;;current  closure object,  and  whose cdr  is  the list  of
+	    ;;properized formals.
 	    (let ((next-case-entry-point-label (unique-label)))
-	      (cons* `(cmpl ,(argc-convention
-			      (if x.info.proper?
-				  (length (cdr x.info.args))
-				(length (cddr x.info.args))))
+	      (cons* `(cmpl ,(argc-convention (if x.info.proper?
+						  (length (cdr x.info.args))
+						(length (cddr x.info.args))))
 			    ,ARGC-REGISTER)
 		     (cond (x.info.proper?
 			    `(jne ,next-case-entry-point-label))
@@ -4169,12 +4183,16 @@
 			   accum^
 			 (%handle-vararg (length (cdr x.info.args)) accum^))))))))))
 
-    (define (%handle-vararg formals-count accum)
+    (define (%handle-vararg properized-formals-count accum)
       ;;Generate the assembly code needed to handle the application of a
       ;;CLAMBDA case accepting a variable number of arguments.
       ;;
-      ;;FORMALS-COUNT is  a fixnum representing the  number of mandatory
-      ;;requested arguments.
+      ;;PROPERIZED-FORMALS-COUNT is a fixnum  representing the number of
+      ;;arguments, including the rest argument.  For the function:
+      ;;
+      ;;   (lambda (a b c . rest) . ?body)
+      ;;
+      ;;this argument is 4.
       ;;
       ;;ACCUM is a list of assembly instruction representing the body of
       ;;this CLAMBDA case.
@@ -4226,17 +4244,19 @@
       (define DONE_LABEL	(unique-label))
       (define CONS_LABEL	(unique-label))
       (define LOOP_HEAD		(unique-label))
-      (define mandatory-formals-count-argc
-	(fx- 0 (fxsll formals-count fx-shift)))
+      (define mandatory-formals-count
+	(fxsub1 properized-formals-count))
+      (define properized-formals-argc
+	(argc-convention properized-formals-count))
       (cons*
        ;;Check if there are rest arguments to put into a list.  We could
        ;;check if:
        ;;
-       ;;  (= (argc-convention formals-count) ARGC-REGISTER)
+       ;;  (= (argc-convention properized-formals-count) ARGC-REGISTER)
        ;;
        ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we
        ;;do:
-       (cmpl (int (argc-convention (fxsub1 formals-count))) ARGC-REGISTER)
+       (cmpl (int (argc-convention mandatory-formals-count)) ARGC-REGISTER)
        (jl CONS_LABEL)
 
        ;;There are no rest arguments:  the function has been called with
@@ -4345,13 +4365,14 @@
        (addl (int pair-size) apr) ;increment the allocation pointer
        (addl (int wordsize) ARGC-REGISTER) ;increment the negative arguments count
        ;;Loop if more arguments.
-       (cmpl (int mandatory-formals-count-argc) ARGC-REGISTER)
+       (cmpl (int properized-formals-argc) ARGC-REGISTER)
        (jle CONTINUE_LABEL)
 
        DONE_LABEL
-       ;;Store nil or the reference to the rest list on the stack, below
-       ;;the mandatory plain arguments.
-       (movl ebx (mem mandatory-formals-count-argc fpr))
+       ;;Store nil or the reference to the rest list on the stack, right
+       ;;below the  last mandatory argument (overwriting  the first rest
+       ;;argument).
+       (movl ebx (mem properized-formals-argc fpr))
        accum))
 
     #| end of module: Program |# )

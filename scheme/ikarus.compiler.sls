@@ -873,8 +873,13 @@
 		;   (args ?body0 ?body ...)
 		;   => (prelex-args)
 		;
-		;In  the  latest  compiler  passes:  a  list  of  struct
+		;In  the  middle  compiler  passes:  a  list  of  struct
 		;instances of type VAR representing the formals.
+		;
+		;In the  latest compiler passes:  a pair whose car  is a
+		;symbol  representing  the   CPU  register  holding  the
+		;pointer to the current closure object, and whose cdr is
+		;the list of formals as described above.
    proper
 		;A boolean: true if ?FORMALS  is a proper list, false if
 		;?FORMALS is a symbol or improper list.
