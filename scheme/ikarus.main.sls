@@ -49,9 +49,11 @@
     (prefix (only (vicare options)
 		  print-loaded-libraries)
 	    config.)
-    (only (ikarus.compiler)
-	  generate-debug-calls
-	  $source-optimizer-passes-count)
+    (prefix (only (ikarus.compiler)
+		  generate-debug-calls
+		  $open-mvcalls
+		  $source-optimizer-passes-count)
+	    compiler.)
     (only (ikarus.debugger)
 	  guarded-start)
     (only (psyntax expander)
@@ -471,10 +473,10 @@
 ;;; Vicare options without argument
 
 	  ((%option= "-d" "--debug")
-	   (next-option (cdr args) (lambda () (k) (generate-debug-calls #t))))
+	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #t))))
 
 	  ((%option= "-nd" "--no-debug")
-	   (next-option (cdr args) (lambda () (k) (generate-debug-calls #f))))
+	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
 
 	  ((%option= "--no-greetings")
 	   (set-run-time-config-no-greetings! cfg #t)
@@ -485,15 +487,6 @@
 
 	  ((%option= "--print-optimizer" "--print-optimiser")
 	   (next-option (cdr args) (lambda () (k) (optimizer-output #t))))
-
-	  ((%option= "-O2")
-	   (next-option (cdr args) (lambda () (k) (optimize-level 2))))
-
-	  ((%option= "-O1")
-	   (next-option (cdr args) (lambda () (k) (optimize-level 1))))
-
-	  ((%option= "-O0")
-	   (next-option (cdr args) (lambda () (k) (optimize-level 0))))
 
 	  ((%option= "--no-rcfile")
 	   (run-time-config-rcfiles-register! cfg #f)
@@ -577,14 +570,14 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler options with argument
 
-	  #;((%option= "--compiler-letrec-pass")
-	   (if (null? (cdr args))
-	       (%error-and-exit "--compiler-letrec-pass requires a mode argument")
-	     (begin
-	       (guard (E (else
-			  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
-		 ($current-letrec-pass (string->symbol (cadr args))))
-	       (next-option (cddr args) k))))
+	  ;; ((%option= "--compiler-letrec-pass")
+	  ;;  (if (null? (cdr args))
+	  ;;      (%error-and-exit "--compiler-letrec-pass requires a mode argument")
+	  ;;    (begin
+	  ;;      (guard (E (else
+	  ;; 		  (%error-and-exit "invalid argument to --compiler-letrec-pass")))
+	  ;; 	 ($current-letrec-pass (string->symbol (cadr args))))
+	  ;;      (next-option (cddr args) k))))
 
 	  ((%option= "--optimizer-passes-count")
 	   (if (null? (cdr args))
@@ -592,8 +585,26 @@
 	     (begin
 	       (guard (E (else
 			  (%error-and-exit "invalid argument to --optimizer-passes-count")))
-		 ($source-optimizer-passes-count (string->number (cadr args))))
+		 (compiler.$source-optimizer-passes-count (string->number (cadr args))))
 	       (next-option (cddr args) k))))
+
+;;; --------------------------------------------------------------------
+;;; compiler options without argument
+
+	  ((%option= "-O2")
+	   (next-option (cdr args) (lambda () (k) (optimize-level 2))))
+
+	  ((%option= "-O1")
+	   (next-option (cdr args) (lambda () (k) (optimize-level 1))))
+
+	  ((%option= "-O0")
+	   (next-option (cdr args) (lambda () (k) (optimize-level 0))))
+
+	  ((%option= "--enable-open-mvcalls")
+	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #t))))
+
+	  ((%option= "--disable-open-mvcalls-open")
+	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #f))))
 
 ;;; --------------------------------------------------------------------
 ;;; program options
@@ -823,6 +834,11 @@ Other options:
         Specify how  many passes to  perform with the  source optimizer.
         Must be a positive fixnum.  Defaults to 1.
 
+   --enable-open-mvcalls
+   --disable-open-mvcalls
+        Enable  or  disable  inlining   of  calls  to  CALL-WITH-VALUES.
+        Defaults to disable.
+
    --print-assembly
         Print  to  the  current  error port  the  assembly  instructions
 	generated when compiling code.
@@ -964,7 +980,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
      (start (lambda () ?body0 ?body ...)))))
 
 (define (start proc)
-  (if (generate-debug-calls)
+  (if (compiler.generate-debug-calls)
       (guarded-start proc)
     (proc)))
 

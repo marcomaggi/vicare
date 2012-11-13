@@ -89,6 +89,14 @@ Notes for revision 0.2d20
   argument --optimizer-passes-count  to select the number  of passes the
   source optimizer has to perform.
 
+* Added command line options:
+
+     --enable-open-mvcalls
+     --disable-open-mvcalls
+
+  to enable or  disable inlining of calls  to CALL-WITH-VALUES.  Default
+  to disable.
+
 
 Notes for revision 0.2d19
 -------------------------

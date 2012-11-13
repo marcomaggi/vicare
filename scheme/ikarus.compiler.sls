@@ -24,22 +24,27 @@
 #!vicare
 (library (ikarus.compiler)
   (export
-    compile-core-expr-to-port		assembler-output
-    optimize-cp				optimizer-output
     current-primitive-locations
     eval-core				current-core-eval
-    compile-core-expr
+    compile-core-expr-to-port		compile-core-expr
+
+    ;; middle pass inspection
+    assembler-output
+    optimizer-output
+    tag-analysis-output
+
+    ;; configuration parameters
     cp0-effort-limit			cp0-size-limit
-    optimize-level
-    perform-tag-analysis		tag-analysis-output
-    strip-source-info			generate-debug-calls
-    current-letrec-pass
+    current-letrec-pass			generate-debug-calls
+    optimize-cp				optimize-level
+    perform-tag-analysis		strip-source-info
 
     ;; these go in (ikarus system $compiler)
     (rename
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
+     (open-mvcalls				$open-mvcalls)
 
      (compile-core-expr->code			$compile-core-expr->code)
      (recordize					$recordize)
@@ -71,15 +76,19 @@
      (unparse-recordized-code			$unparse-recordized-code)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import (except (ikarus)
-		  compile-core-expr-to-port		assembler-output
-		  optimize-cp				optimizer-output
 		  current-primitive-locations
-		  eval-core
-		  optimize-level
-		  cp0-size-limit			cp0-effort-limit
-		  tag-analysis-output			perform-tag-analysis
-		  current-core-eval			current-letrec-pass
-		  bind)
+		  eval-core			current-core-eval
+		  compile-core-expr-to-port	compile-core-expr
+		  #;bind
+
+		  assembler-output
+		  optimizer-output
+		  tag-analysis-output
+
+		  cp0-effort-limit		cp0-size-limit
+		  current-letrec-pass		generate-debug-calls
+		  optimize-cp			optimize-level
+		  perform-tag-analysis		strip-source-info)
     ;;Remember that this file defines the primitive operations.
     (ikarus system $fx)
     (ikarus system $pairs)

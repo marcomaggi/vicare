@@ -1319,6 +1319,11 @@ Turn on various levels of compile optimisations.
 Specify how many passes to perform with the source optimizer.  Must be a
 positive fixnum.  Defaults to 1.
 
+@item --enable-open-mvcalls
+@itemx --disable-open-mvcalls
+Enable or disable inlining of calls to @func{call-with-values}.
+Defaults to disable.
+
 @item --print-assembly
 Print to the current error port the assembly instructions generated when
 compiling code.
@@ -16675,6 +16680,12 @@ system $compiler}.
 @defun $optimize-direct-calls @var{input}
 @end defun
 
+
+@deffn Parameter open-mvcalls
+When set to true: an attempt is made to expand inline calls to
+@func{call-with-values} by inserting local bindings.  Defaults to
+@false{}.
+@end deffn
 
 @c page
 @node syslib compiler letrec

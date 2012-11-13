@@ -2174,7 +2174,7 @@
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
     ($source-optimizer-passes-count		$compiler)
-
+    ($open-mvcalls				$compiler)
 
     ($compile-core-expr->code			$compiler)
     ($recordize					$compiler)
