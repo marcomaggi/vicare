@@ -28467,26 +28467,8 @@ This chapter is a collection of notes on the internals of the compiler.
 @section Introduction to the compiler
 
 
-@value{PACKAGE}'s compiler supports only the Intel architecture.  The
-compiler is coded in the following files
-
-@table @file
-@item ikarus.compiler.altcogen.ss
-Generate assembly code in S--expression format.
-@end table
-
-
-How do we generate assembly code?  First we need to generate a single
-line of assembly code; this is done by @func{make-asm-instr} which
-accepts as first argument a Scheme symbol representing the instruction,
-for example: @samp{move}, @samp{idiv}, @samp{int+}.
-
-Then we need to generate blocks of assembly instructions: sequences of
-instructions which must be executed in order.  There are two types of
-blocks: the ones which at the end generate a value to be stored in a
-location (register or memory), the ones which perform some operation but
-do not generate a value.  The first kind are blocks which ``impose a
-value'', the second kind are the ``side effects''.
+At present, @value{PRJNAME}'s compiler supports only the Intel
+architecture.
 
 @c page
 @node compiler conventions
