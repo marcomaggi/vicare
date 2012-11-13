@@ -4503,8 +4503,8 @@
    ;;   |                 |
    ;;        low memory
    ;;
-   ;;The pseudo-assembly  implementation of  a function  "the-func" goes
-   ;;like this:
+   ;;The  pseudo-assembly  implementation   of  a  function  "the-func",
+   ;;accepting 2 arguments, goes like this:
    ;;
    ;;   the-func_entry_point:
    ;;     cmp FPR, pcb->frame_redline
@@ -4514,31 +4514,60 @@
    ;;     ret
    ;;
    ;;   overflow:
+   ;;     subl 2*wordsize, FPR
+   ;;     jmp L0:
+   ;;     .long 4		;framesize
+   ;;     .long OFFSET		;offset from beginning of code object
+   ;;     .long SL_multiple_values_ignore_rp
+   ;;   L0:
    ;;     call "ik_stack_overflow"
+   ;;   overflow_rp:
+   ;;     addl 2*wordsize, FPR
    ;;     jmp go_on
    ;;
-   ;;and when a stack overflow happens, the stack is as follows:
+   ;;right  after entering  the function,  the situation  on the  Scheme
+   ;;stack is as follows:
    ;;
-   ;;         high memory
-   ;;   |                      | <-- pcb->frame_base
-   ;;   |----------------------|
-   ;;   | ik_underflow_handler |
-   ;;   |----------------------|
-   ;;             ...
-   ;;   |----------------------|
-   ;;   |                      | <-- pcb->frame-redline
-   ;;   |----------------------|
-   ;;   |    return address    | <-- Frame Pointer Register
-   ;;   |----------------------|
-   ;;   |      argument 0      |
-   ;;   |----------------------|
-   ;;   |      argument 1      |
-   ;;   |----------------------|
-   ;;   |                      |
-   ;;         low memory
+   ;;       high memory
+   ;; |                      | <-- pcb->frame_base
+   ;; |----------------------|
+   ;; | ik_underflow_handler |
+   ;; |----------------------|
+   ;;           ...
+   ;; |----------------------|
+   ;; |    return address    | <-- Frame Pointer Register
+   ;; |----------------------|
+   ;; |      argument 0      |
+   ;; |----------------------|
+   ;; |      argument 1      |
+   ;; |----------------------|
+   ;; |                      |
+   ;;       low memory
    ;;
-   ;;the  stack space  below  the  function arguments  is  used to  call
-   ;;"ik_stack_overflow()".
+   ;;and  when  a  stack  overflow   happens,  right  after  the  "call"
+   ;;instruction to "ik_stack_overflow", the stack is as follows:
+   ;;
+   ;;       high memory
+   ;; |                      | <-- pcb->frame_base
+   ;; |----------------------|
+   ;; | ik_underflow_handler |
+   ;; |----------------------|                            --
+   ;;           ...                                       .
+   ;; |----------------------|                            .
+   ;; |                      | <-- pcb->frame-redline     .
+   ;; |----------------------|                            .
+   ;;           ...                                       . saved stack
+   ;; |----------------------|                            . segment
+   ;; |    return address    |                            . portion
+   ;; |----------------------|                            . continuation
+   ;; |      argument 0      |                            . size
+   ;; |----------------------|                            .
+   ;; |      argument 1      |                            .
+   ;; |----------------------|                            .
+   ;; |     overflow_rp      | <-- Frame Pointer Register .
+   ;; |----------------------|                            --
+   ;; |                      |
+   ;;       low memory
    ;;
    ((E)
     (make-shortcut
