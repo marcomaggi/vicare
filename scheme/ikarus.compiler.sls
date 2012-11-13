@@ -1930,7 +1930,7 @@
 	 (try-inline clause* rand* (mk rator rand*)))
 
 	((primref op)
-	 (case op
+	 (case-symbols op
 	   ;;FIXME Here.  (Abdulaziz Ghuloum)
 	   ((call-with-values)
 	    (cond ((and (open-mvcalls)
