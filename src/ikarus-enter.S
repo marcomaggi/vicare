@@ -529,9 +529,9 @@ _ik_asm_reenter:
   jne L_multi_value_reentry
 
 L_single_value_reentry:
-  # Move the return value in %eax.
+  # Move the single return value in %eax.
   movl -4(%esp), %eax
-  # Return to the Scheme continuation.
+  # Return to the "Scheme return address".
   ret
 
   # There are multiple return values.  Rather than returning to

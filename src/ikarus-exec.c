@@ -189,7 +189,8 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  |                      |
        *        low memory
        *
-       * Move the return values:
+       * and it is  possible that there are no return  values.  Move the
+       * return values down a framesize:
        *
        *         high memory
        *  |                      | <-- pcb->frame_base
@@ -221,8 +222,9 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       char *	retval_dst = ((char*)(long)new_fbase) + s_retval_count;
       char *	retval_src = ((char*)(long)fbase)     + s_retval_count;
       memmove(retval_dst, retval_src, -s_retval_count);
-      /* Copy to this  stack segment the Scheme arguments  from the last
-       * stack frame in the saved continuation.
+      /* Copy, to this stack segment, the Scheme arguments from the last
+       * stack  frame in  the saved  continuation.  Then  reenter Scheme
+       * code execution using "new_fbase" as frame pointer.
        *
        *       high memory
        *  |                      | <-- pcb->frame_base
