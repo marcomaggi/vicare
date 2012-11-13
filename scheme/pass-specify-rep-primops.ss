@@ -4537,6 +4537,9 @@
    ;;   |                      |
    ;;         low memory
    ;;
+   ;;the  stack space  below  the  function arguments  is  used to  call
+   ;;"ik_stack_overflow()".
+   ;;
    ((E)
     (make-shortcut
      (make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))

@@ -750,6 +750,35 @@ ik_stack_overflow (ikpcb* pcb)
  * back  to the  "ik_underflow_handler"  label, which  will  do what  is
  * needed to  retrieve the  old stack  segment from  the PCB  and resume
  * execution in the old stack.
+ *
+ * Notice that  "ik_stack_overflow()" is  always called by  the assembly
+ * routine "ik_foreign_call"  with code that  does not touch  the Scheme
+ * stack  (because "ik_stack_overflow()"  has no  arguments).  So,  upon
+ * entering  this function,  the situation  on  the Scheme  stack is  as
+ * follows:
+ *
+ *         high memory
+ *   |                      | <-- pcb->frame_base
+ *   |----------------------|
+ *   | ik_underflow_handler |
+ *   |----------------------|
+ *             ...
+ *   |----------------------|
+ *   |                      | <-- pcb->frame-redline
+ *   |----------------------|
+ *   |    return address    | <-- pcb->frame_pointer
+ *   |----------------------|
+ *   |      argument 0      |
+ *   |----------------------|
+ *   |      argument 1      |
+ *   |----------------------|
+ *   |                      |
+ *         low memory
+ *
+ * where the  "return address" and  the arguments  are the frame  of the
+ * last    Scheme    function    called,    the    one    that    caused
+ * "ik_stack_overflow()" to be called; in a  way or the other we must go
+ * back to the execution of that Scheme function.
  */
 #define STACK_DEBUG	1
 {
@@ -762,8 +791,30 @@ ik_stack_overflow (ikpcb* pcb)
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
   /* Retrieve the address of the underflow handler. */
   underflow_handler = IK_REF(pcb->frame_base, -wordsize);
-  { /* Save  the  used  portion  of  the Scheme  stack  segment  into  a
-       continuation and store it in the PCB as "next_k". */
+  { /* Save the  used portion  of the  old Scheme  stack segment  into a
+     * continuation and store it in the PCB as "next_k".  Notice that we
+     * exclude the  arguments of the  last stack  frame, the one  of the
+     * Scheme  function  that  called "ik_stack_overflow()",  but  those
+     * arguments are still on the stack.
+     *
+     *         high memory
+     *   |                      | <-- pcb->frame_base
+     *   |----------------------|
+     *   | ik_underflow_handler |
+     *   |----------------------|                             --
+     *             ...                                        .
+     *   |----------------------|                             . saved
+     *   |                      | <-- pcb->frame-redline      . stack
+     *   |----------------------|                             . portion
+     *   |    return address    | <-- Frame Pointer Register  .
+     *   |----------------------|                             --
+     *   |      argument 0      |
+     *   |----------------------|
+     *   |      argument 1      |
+     *   |----------------------|
+     *   |                      |
+     *         low memory
+     */
     ikptr	s_kont;
     s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) | vector_tag;
     IK_REF(s_kont, off_continuation_tag)  = continuation_tag;

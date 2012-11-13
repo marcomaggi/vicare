@@ -551,7 +551,8 @@ L_multi_value_reentry:
 # * %edi must contain the address of the C function to call.
 #
 # * %eax must contain the encoded number of arguments to the
-#   C function, excluding the last argument (the "ikpcb * pcb").
+#   C function, excluding the last argument (the "ikpcb * pcb"),
+#   such arguments are on the Scheme stack.
 #
 # NOTE When we enter this routine to call the C function
 # "ik_stack_overflow()", we enter with a Scheme stack segment
