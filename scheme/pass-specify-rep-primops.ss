@@ -4472,110 +4472,6 @@
       (prm 'mset pcr (K pcb-engine-counter) x0)
       t)))
 
- (define-primop $stack-overflow-check unsafe
-   ;;This shortcut is inserted right  after entering a function body, to
-   ;;check  if we  have crossed  the red  line of  stack usage.   In the
-   ;;following stack situation *no* stack overflow occurred:
-   ;;
-   ;;       high memory
-   ;;   |                 |
-   ;;   |-----------------|
-   ;;   |                 | <-- Frame Pointer Register   |
-   ;;   |-----------------|                              | growing
-   ;;           ...                                      | stack
-   ;;   |-----------------|                              | use
-   ;;   |                 | <-- pcb->frame_redline       v
-   ;;   |-----------------|
-   ;;   |                 |
-   ;;        low memory
-   ;;
-   ;;in the follow stack situation a overflow *has* occurred:
-   ;;
-   ;;       high memory
-   ;;   |                 |
-   ;;   |-----------------|
-   ;;   |                 | <-- pcb->frame_redline       |
-   ;;   |-----------------|                              | growing
-   ;;           ...                                      | stack
-   ;;   |-----------------|                              | use
-   ;;   |                 | <-- Frame Pointer Register   v
-   ;;   |-----------------|
-   ;;   |                 |
-   ;;        low memory
-   ;;
-   ;;The  pseudo-assembly  implementation   of  a  function  "the-func",
-   ;;accepting 2 arguments, goes like this:
-   ;;
-   ;;   the-func_entry_point:
-   ;;     cmp FPR, pcb->frame_redline
-   ;;     jl overflow
-   ;;   go_on:
-   ;;     ... instructions ...
-   ;;     ret
-   ;;
-   ;;   overflow:
-   ;;     subl 2*wordsize, FPR
-   ;;     jmp L0:
-   ;;     .long 4		;framesize
-   ;;     .long OFFSET		;offset from beginning of code object
-   ;;     .long SL_multiple_values_ignore_rp
-   ;;   L0:
-   ;;     call "ik_stack_overflow"
-   ;;   overflow_rp:
-   ;;     addl 2*wordsize, FPR
-   ;;     jmp go_on
-   ;;
-   ;;right  after entering  the function,  the situation  on the  Scheme
-   ;;stack is as follows:
-   ;;
-   ;;       high memory
-   ;; |                      | <-- pcb->frame_base
-   ;; |----------------------|
-   ;; | ik_underflow_handler |
-   ;; |----------------------|
-   ;;           ...
-   ;; |----------------------|
-   ;; |    return address    | <-- Frame Pointer Register
-   ;; |----------------------|
-   ;; |      argument 0      |
-   ;; |----------------------|
-   ;; |      argument 1      |
-   ;; |----------------------|
-   ;; |                      |
-   ;;       low memory
-   ;;
-   ;;and  when  a  stack  overflow   happens,  right  after  the  "call"
-   ;;instruction to "ik_stack_overflow", the stack is as follows:
-   ;;
-   ;;       high memory
-   ;; |                      | <-- pcb->frame_base
-   ;; |----------------------|
-   ;; | ik_underflow_handler |
-   ;; |----------------------|                            --
-   ;;           ...                                       .
-   ;; |----------------------|                            .
-   ;; |                      | <-- pcb->frame-redline     .
-   ;; |----------------------|                            .
-   ;;           ...                                       . saved stack
-   ;; |----------------------|                            . segment
-   ;; |    return address    |                            . portion
-   ;; |----------------------|                            . continuation
-   ;; |      argument 0      |                            . size
-   ;; |----------------------|                            .
-   ;; |      argument 1      |                            .
-   ;; |----------------------|                            .
-   ;; |     overflow_rp      | <-- Frame Pointer Register .
-   ;; |----------------------|                            --
-   ;; |                      |
-   ;;       low memory
-   ;;
-   ((E)
-    (make-shortcut
-     (make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
-	 (prm 'interrupt)
-       (prm 'nop))
-     (make-forcall "ik_stack_overflow" '()))))
-
  /section)
 
 
@@ -4771,7 +4667,116 @@
    ((E x)
     (nop)))
 
-;;; --------------------------------------------------------------------
+ (define-primop $stack-overflow-check unsafe
+   ;;This shortcut is inserted right  after entering a function body, to
+   ;;check  if we  have crossed  the red  line of  stack usage.   In the
+   ;;following stack situation *no* stack overflow occurred:
+   ;;
+   ;;       high memory
+   ;;   |                 |
+   ;;   |-----------------|
+   ;;   |                 | <-- Frame Pointer Register   |
+   ;;   |-----------------|                              | growing
+   ;;           ...                                      | stack
+   ;;   |-----------------|                              | use
+   ;;   |                 | <-- pcb->frame_redline       v
+   ;;   |-----------------|
+   ;;   |                 |
+   ;;        low memory
+   ;;
+   ;;in the follow stack situation a overflow *has* occurred:
+   ;;
+   ;;       high memory
+   ;;   |                 |
+   ;;   |-----------------|
+   ;;   |                 | <-- pcb->frame_redline       |
+   ;;   |-----------------|                              | growing
+   ;;           ...                                      | stack
+   ;;   |-----------------|                              | use
+   ;;   |                 | <-- Frame Pointer Register   v
+   ;;   |-----------------|
+   ;;   |                 |
+   ;;        low memory
+   ;;
+   ;;The  pseudo-assembly  implementation   of  a  function  "the-func",
+   ;;accepting 2 arguments, goes like this:
+   ;;
+   ;;   the-func_entry_point:
+   ;;     cmp FPR, pcb->frame_redline
+   ;;     jl overflow
+   ;;   go_on:
+   ;;     ... instructions ...
+   ;;     ret
+   ;;
+   ;;   overflow:
+   ;;     subl 2*wordsize, FPR
+   ;;     jmp L0:
+   ;;     .long 4		;framesize
+   ;;     .long OFFSET		;offset from beginning of code object
+   ;;     .long SL_multiple_values_ignore_rp
+   ;;   L0:
+   ;;     call "ik_stack_overflow"
+   ;;   overflow_rp:
+   ;;     addl 2*wordsize, FPR
+   ;;     jmp go_on
+   ;;
+   ;;right  after entering  the function,  the situation  on the  Scheme
+   ;;stack is as follows:
+   ;;
+   ;;       high memory
+   ;; |                      | <-- pcb->frame_base
+   ;; |----------------------|
+   ;; | ik_underflow_handler |
+   ;; |----------------------|
+   ;;           ...
+   ;; |----------------------|
+   ;; |    return address    | <-- Frame Pointer Register
+   ;; |----------------------|
+   ;; |      argument 0      |
+   ;; |----------------------|
+   ;; |      argument 1      |
+   ;; |----------------------|
+   ;; |                      |
+   ;;       low memory
+   ;;
+   ;;and  when  a  stack  overflow   happens,  right  after  the  "call"
+   ;;instruction to "ik_stack_overflow", the stack is as follows:
+   ;;
+   ;;       high memory
+   ;; |                      | <-- pcb->frame_base
+   ;; |----------------------|
+   ;; | ik_underflow_handler |
+   ;; |----------------------|                            --
+   ;;           ...                                       .
+   ;; |----------------------|                            .
+   ;; |                      | <-- pcb->frame-redline     .
+   ;; |----------------------|                            .
+   ;;           ...                                       . saved stack
+   ;; |----------------------|                            . segment
+   ;; |    return address    |                            . portion
+   ;; |----------------------|                            . continuation
+   ;; |      argument 0      |                            . size
+   ;; |----------------------|                            .
+   ;; |      argument 1      |                            .
+   ;; |----------------------|                            .
+   ;; |     overflow_rp      | <-- Frame Pointer Register .
+   ;; |----------------------|                            --
+   ;; |                      |
+   ;;       low memory
+   ;;
+   ((E)
+    (make-shortcut
+     (make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
+	 (prm 'interrupt)
+       (prm 'nop))
+     (make-forcall "ik_stack_overflow" '()))))
+
+ /section)
+
+
+;;;; multiple values operations
+;;
+(section
 
  (define-primop $make-call-with-values-procedure unsafe
    ;;Return a closure object implementing the CALL-WITH-VALUES primitive
