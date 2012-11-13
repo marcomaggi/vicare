@@ -46,6 +46,11 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   /* A possibly zero fixnum representing  the negated number of returned
      Scheme values. */
   ikptr	s_retval_count = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
+  /* If we are here:
+   *
+   * ik_underflow_handler = *(void **)(pcb->frame_pointer - wordsize)
+   */
+
   /* Reference to the  continuation object representing the  C or Scheme
      continuation we want to go back to. */
   ikptr s_kont       = pcb->next_k;
@@ -123,16 +128,41 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	((int*)(long)(pcb->dirty_vector))[idx] = -1;
       }
     } else if (framesize > p_kont->size) {
-      /* long	rp_offset	= IK_UNFIX(IK_REF(rp, disp_frame_offset)); */
-      /* long	code_offset	= rp_offset - disp_frame_offset; */
-      /* ikptr	code_entry	= rp - code_offset; */
-      /* ikptr	p_code		= code_entry - disp_code_data; */
-      /* ik_debug_message("ik_underflow_handler = 0x%016x", */
-      /* 		       (long)(pcb->stack_base + pcb->stack_size - wordsize)); */
+      long	entry_point		= (long)*((void **)top);
+      long	entry_point_offset	= IK_REF(entry_point, disp_frame_offset);
+      long	entry_point_code_offset	= entry_point_offset - disp_frame_offset;
+      ikptr	entry_point_code_entry	= entry_point - entry_point_code_offset;
+      IK_UNUSED ikptr p_entry_point_code= entry_point_code_entry - disp_code_data;
+      ik_debug_message("%s: inspecting stack:\n\
+\tpcb->heap_base     = 0x%016lx\n\
+\tpcb->heap_size     = %ld bytes, %ld words\n\
+\tpcb->stack_base    = 0x%016lx\n\
+\tpcb->stack_size    = %ld bytes, %ld words\n\
+\tpcb->frame_redline = 0x%016lx, delta %ld words\n\
+\tpcb->frame_pointer = 0x%016lx\n\
+\tpcb->frame_base    = 0x%016lx\n\
+\tik_underflow_handler = 0x%016x\n\
+\ts_kont        = 0x%016lx\n\
+\tp_kont        = 0x%016lx\n\
+\tp_kont->top   = 0x%016lx\n\
+\tp_kont->size  = %ld\n\
+\ts_kont entry point        = 0x%016lx\n\
+\ts_kong entry point offset = %ld",
+		       __func__,
+		       pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
+		       pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
+		       pcb->frame_redline,
+		       (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
+		       pcb->frame_pointer, pcb->frame_base,
+		       *(void **)(pcb->frame_pointer - wordsize),
+		       (long)s_kont, (long)p_kont,
+		       IK_REF(p_kont, disp_continuation_top),
+		       IK_REF(p_kont, disp_continuation_size),
+		       entry_point, entry_point_offset);
       ik_abort("while resuming continuation 0x%016lx:\n\
 \tinvalid framesize=%ld, expected p_kont->size=%ld or less\n\
-\treturn point (rp) = 0x%016lx\n\
-\trp offset = %ld",
+\treturn point (rp) = 0x%016lx (should be ik_underflow_handler)\n\
+\trp offset = %ld (should be zero)",
 	       (long)s_kont, framesize, p_kont->size,
 	       rp, IK_REF(rp, disp_frame_offset));
     }
@@ -185,6 +215,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  |                           |
        *           low memory
        */
+      assert(pcb->frame_pointer == pcb->frame_base);
       ikptr	fbase     = pcb->frame_base - wordsize;
       ikptr	new_fbase = fbase - framesize;
       char *	arg_dst   = ((char*)(long)new_fbase) + s_retval_count;

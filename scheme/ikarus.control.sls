@@ -139,11 +139,11 @@
 ;;;; continuations
 
 (define (%primitive-call/cf func)
-  #;(emergency-write "enter call/cf")
   ;;Low level function: call the function FUNC with a description of the
   ;;current  Scheme stack  frame, stored  in a  continuation object,  as
   ;;argument.
   ;;
+  #;(emergency-write "enter call/cf")
   (if ($fp-at-base)
       ;;The situation of the Scheme stack is:
       ;;
@@ -162,7 +162,7 @@
       ;;
       ;;Notice that there  are at least two situations in  which the FPR
       ;;is  at the  base of  the stack;  one is  when the  execution has
-      ;;rewind the stack until the base of an allocated stack segment:
+      ;;rewind the stack until the base of the current stack segment:
       ;;
       ;;          high memory
       ;;   |                      | <-- pcb->frame_base = end of segment

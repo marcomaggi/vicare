@@ -4553,73 +4553,50 @@
  (define-primop $seal-frame-and-call unsafe
    ;;This primitive  operation is  used to  implement CALL/CC;  only the
    ;;function  %PRIMITIVE-CALL/CF (file  "ikarus.control.sls") calls  it
-   ;;when the Scheme stack is not empty.  It goes like this:
-   ;;
-   ;;1.   Save  the  current  Scheme  stack, as  described  by  the  PCB
-   ;;   structure, into  a new continuation object KONT  (yes, the whole
-   ;;   Scheme stack).
-   ;;
-   ;;2.  Prepend  the new  continuation  object  to  the list  of  "next
-   ;;   continuations" in the PCB structure.  Before:
-   ;;
-   ;;    PCB
-   ;;     |           first
-   ;;     |------------>|        second
-   ;;         next_k    |--------->|
-   ;;                      next    |-------> NULL
-   ;;                                next
-   ;;
-   ;;  after:
-   ;;
-   ;;    pcb
-   ;;     |            kont
-   ;;     |------------>|        first
-   ;;         next_k    |--------->|       second
-   ;;                      next    |-------->|
-   ;;                                next    |--------> NULL
-   ;;                                           next
-   ;;
-   ;;3. Call the closure object X.
-   ;;
-   ;;Before this primitive  operation the situation of  the Scheme stack
-   ;;is:
-   ;;
-   ;;          high memory
-   ;;   |                      | <-- pcb->frame_base
-   ;;   |----------------------|
-   ;;   | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
-   ;;   |----------------------|
-   ;;             ...
-   ;;   |----------------------|
-   ;;   |    return address    | <-- frame pointer register (FPR)
-   ;;   |----------------------|
-   ;;   |   closure reference  | --> closure object
-   ;;   |----------------------|
-   ;;   |                      |
-   ;;         low memory
-   ;;
-   ;;where the return address leads  to the caller of %PRIMITIVE-CALL/CF
-   ;;and the closure reference is the argument to %PRIMITIVE-CALL/CF.
-   ;;
-   ;;Just  before  performing  $CALL-WITH-UNDERFLOW-HANDLER  below,  the
-   ;;situation of the Scheme stack is:
-   ;;
-   ;;          high memory
-   ;;   |                      |
-   ;;   |----------------------|
-   ;;   | ik_underflow_handler | <-- BASE
-   ;;   |----------------------|
-   ;;             ...
-   ;;   |----------------------|
-   ;;   |    return address    | <-- FPR = pcb->frame_base
-   ;;   |----------------------|
-   ;;   |   closure reference  | --> closure object
-   ;;   |----------------------|
-   ;;   |                      |
-   ;;   |                      |
-   ;;          low memory
-   ;;
-   ((V x)
+   ;;when the Scheme stack is not empty.
+   ((V func)
+    ;;When arriving  here the situation of  the Scheme stack is  the one
+    ;;right after the entering %PRIMITIVE-CALL/CF:
+    ;;
+    ;;          high memory
+    ;;   |                      | <-- pcb->frame_base
+    ;;   |----------------------|
+    ;;   | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
+    ;;   |----------------------|
+    ;;             ...
+    ;;   |----------------------| --
+    ;;   | uplevel return addr  | .
+    ;;   |----------------------| .
+    ;;   |   uplevel argument   | . uplevel framesize
+    ;;   |----------------------| .
+    ;;             ...            .
+    ;;   |----------------------| --
+    ;;   |    return address    | <-- frame pointer register (FPR)
+    ;;   |----------------------|
+    ;;   |  closure ref = FUNC  | --> closure object
+    ;;   |----------------------|
+    ;;   |                      |
+    ;;         low memory
+    ;;
+    ;;where "return  address" leads to the  caller of %PRIMITIVE-CALL/CF
+    ;;and  the reference  to  closure  object FUNC  is  the argument  to
+    ;;%PRIMITIVE-CALL/CF.  ARGC-REGISTER contains  the encoded number of
+    ;;arguments, counting the single argument FUNC.
+    ;;
+    ;;Notice that  by inspecting the  call frame of "return  address" we
+    ;;can obtain the uplevel framesize.
+    ;;
+    ;;It goes like this:
+    ;;
+    ;;1..Save the used  portion of the current Scheme  stack segment, as
+    ;;   described by the PCB  structure, into a new continuation object
+    ;;   KONT (yes, the whole Scheme stack).
+    ;;
+    ;;2..Puse the  new continuation object  to the PCB's stack  of "next
+    ;;   continuations".
+    ;;
+    ;;3..Call the closure object X.
+    ;;
     (with-tmp* ((kont			(prm 'alloc
 					     (K continuation-size)
 					     (K vector-tag)))
@@ -4645,7 +4622,34 @@
       ;;subsequent code  execution.  Store the current  frame pointer in
       ;;the PCB as frame base.
       (prm 'mset pcr (K pcb-frame-base) fpr)
-      (prm '$call-with-underflow-handler underflow-handler (T x) kont)))
+      ;;When arriving here the situation of the Scheme stack is:
+      ;;
+      ;;          high memory
+      ;;   |                      |
+      ;;   |----------------------|              --
+      ;;   | ik_underflow_handler | <-- BASE     .
+      ;;   |----------------------|              .
+      ;;             ...                         .
+      ;;   |----------------------| --           .
+      ;;   | uplevel return addr  | .            . continuation
+      ;;   |----------------------| . uplevel    . stack
+      ;;   |   uplevel argument   | . framesize  .
+      ;;   |----------------------| .            .
+      ;;             ...            .            .
+      ;;   |----------------------| --           --
+      ;;   |    return address    | <-- FPR = pcb->frame_base
+      ;;   |----------------------|
+      ;;   |  closure ref = FUNC  | --> closure object
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;ARGC-REGISTER still  contains the  encoded number  of arguments,
+      ;;counting the single argument FUNC; the reference to continuation
+      ;;object KONT is in some variable location; the raw memory pointer
+      ;;UNDERFLOW-HANDLER is in some variable location.
+      ;;
+      (prm '$call-with-underflow-handler underflow-handler (T func) kont)))
    ((E . args)
     (interrupt))
    ((P . args)

@@ -522,7 +522,7 @@ _ik_asm_reenter:
   # Make %esp reference the Scheme stack.
   movl %ebx, %esp
 
-  # The 32-bit machine word -4 is the fixnum -1, which represents
+  # The machine word -4 is the fixnum -1, which represents
   # a single argument.  If %eax = -4, then there is a single
   # argument to the Scheme continuation.
   cmpl $-4, %eax
