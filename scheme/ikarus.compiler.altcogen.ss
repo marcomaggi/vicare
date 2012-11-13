@@ -964,9 +964,9 @@
 	      ;;   | ik_underflow_handler |              .
 	      ;;   |----------------------|              .
 	      ;;             ...                         .
-	      ;;   |----------------------| --           .
+	      ;;   |----------------------| --           . full stack
 	      ;;   | uplevel return addr  | .            . continuation
-	      ;;   |----------------------| . uplevel    . stack
+	      ;;   |----------------------| . uplevel    . size
 	      ;;   |   uplevel argument   | . framesize  .
 	      ;;   |----------------------| .            .
 	      ;;             ...            .            .
@@ -1025,9 +1025,9 @@
 		 ;; | ik_underflow_handler |              .
 		 ;; |----------------------|              .
 		 ;;           ...                         .
-		 ;; |----------------------| --           .
+		 ;; |----------------------| --           . full stack
 		 ;; | uplevel return addr  | .            . continuation
-		 ;; |----------------------| . uplevel    . stack
+		 ;; |----------------------| . uplevel    . size
 		 ;; |   uplevel argument   | . framesize  .
 		 ;; |----------------------| .            .
 		 ;;           ...            .            .
@@ -1060,9 +1060,9 @@
 		 ;; | ik_underflow_handler |              .
 		 ;; |----------------------|              .
 		 ;;           ...                         .
-		 ;; |----------------------| --           .
+		 ;; |----------------------| --           . full stack
 		 ;; | uplevel return addr  | .            . continuation
-		 ;; |----------------------| . uplevel    . stack
+		 ;; |----------------------| . uplevel    . size
 		 ;; |   uplevel argument   | . framesize  .
 		 ;; |----------------------| .            .
 		 ;;           ...            .            .
@@ -1076,9 +1076,9 @@
 		 ;; |                      |
 		 ;;        low memory
 		 ;;
-		 ;;The following indirect jump instruction just jumps to
-		 ;;the binary code in the closure referenced by the CPR,
-		 ;;which is FUNC.
+		 ;;The  following INDIRECT-JUMP  instruction just  jumps
+		 ;;with  "jmp"  to  the   binary  code  in  the  closure
+		 ;;referenced by the CPR, which is FUNC.
 		 ;;
 		 ;;Notice that: by inspecting  the call frame of "return
 		 ;;address" we  can obtain  the uplevel  framesize; such
@@ -2632,7 +2632,8 @@
       ((primcall op arg*)
        (case-symbols op
          ((return indirect-jump direct-jump)
-          (R* arg* (empty-var-set)
+          (R* arg*
+	      (empty-var-set)
               (empty-reg-set)
               (empty-frm-set)
               (empty-nfv-set)))

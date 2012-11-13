@@ -762,9 +762,6 @@ ik_stack_overflow (ikpcb* pcb)
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
   /* Retrieve the address of the underflow handler. */
   underflow_handler = IK_REF(pcb->frame_base, -wordsize);
-#if (0 || STACK_DEBUG)
-  ik_debug_message("ik_underflow_handler = 0x%016x", (long)underflow_handler);
-#endif
   { /* Save  the  used  portion  of  the Scheme  stack  segment  into  a
        continuation and store it in the PCB as "next_k". */
     ikptr	s_kont;
@@ -775,19 +772,23 @@ ik_stack_overflow (ikpcb* pcb)
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
 #if STACK_DEBUG
-    ik_debug_message("%s: saved stack continuation s_kont=0x%016lx\n\
+    ik_debug_message("%s: saved stack continuation:\n\
 \tpcb->stack_base    = 0x%016lx\n\
 \tpcb->stack_size    = %ld bytes, %ld words\n\
 \tpcb->frame_redline = 0x%016lx, delta %ld words\n\
 \tpcb->frame_pointer = 0x%016lx\n\
 \tpcb->frame_base    = 0x%016lx\n\
-\ttop  = 0x%016lx\n\
-\tsize = %ld",
-		     __func__, (long)s_kont,
+\tik_underflow_handler = 0x%016x\n\
+\ts_kont      = 0x%016lx\n\
+\ts_kont.top  = 0x%016lx\n\
+\ts_kont.size = %ld",
+		     __func__,
 		     pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
 		     pcb->frame_redline,
 		     (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
 		     pcb->frame_pointer, pcb->frame_base,
+		     (long)underflow_handler,
+		     (long)s_kont,
 		     IK_REF(s_kont, off_continuation_top),
 		     IK_REF(s_kont, off_continuation_size));
 #endif

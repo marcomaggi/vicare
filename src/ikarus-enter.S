@@ -647,7 +647,7 @@ L_loop:                  # (label Lloop)
   jne L_loop             # (jne (label Lloop))
 L_set:                   # (label Lset)
   call *%edi             # (call cpr)
-  # The C functions callable here always returns a single argument
+  # The C functions callable here always return a single argument
   # of type "ikptr", and it is in %eax.
 
   # Load "pcb->frame_pointer" in the Stack Pointer Register.

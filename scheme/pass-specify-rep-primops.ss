@@ -4473,14 +4473,73 @@
       t)))
 
  (define-primop $stack-overflow-check unsafe
-   ;;If the  field "frame_redline"  of the C  language structure  PCB is
-   ;;less than stack base pointer: ???
+   ;;This shortcut is inserted right  after entering a function body, to
+   ;;check  if we  have crossed  the red  line of  stack usage.   In the
+   ;;following stack situation *no* stack overflow occurred:
+   ;;
+   ;;       high memory
+   ;;   |                 |
+   ;;   |-----------------|
+   ;;   |                 | <-- Frame Pointer Register   |
+   ;;   |-----------------|                              | growing
+   ;;           ...                                      | stack
+   ;;   |-----------------|                              | use
+   ;;   |                 | <-- pcb->frame_redline       v
+   ;;   |-----------------|
+   ;;   |                 |
+   ;;        low memory
+   ;;
+   ;;in the follow stack situation a overflow *has* occurred:
+   ;;
+   ;;       high memory
+   ;;   |                 |
+   ;;   |-----------------|
+   ;;   |                 | <-- pcb->frame_redline       |
+   ;;   |-----------------|                              | growing
+   ;;           ...                                      | stack
+   ;;   |-----------------|                              | use
+   ;;   |                 | <-- Frame Pointer Register   v
+   ;;   |-----------------|
+   ;;   |                 |
+   ;;        low memory
+   ;;
+   ;;The pseudo-assembly  implementation of  a function  "the-func" goes
+   ;;like this:
+   ;;
+   ;;   the-func_entry_point:
+   ;;     cmp FPR, pcb->frame_redline
+   ;;     jl overflow
+   ;;   go_on:
+   ;;     ... instructions ...
+   ;;     ret
+   ;;
+   ;;   overflow:
+   ;;     call "ik_stack_overflow"
+   ;;     jmp go_on
+   ;;
+   ;;and when a stack overflow happens, the stack is as follows:
+   ;;
+   ;;         high memory
+   ;;   |                      | <-- pcb->frame_base
+   ;;   |----------------------|
+   ;;   | ik_underflow_handler |
+   ;;   |----------------------|
+   ;;             ...
+   ;;   |----------------------|
+   ;;   |                      | <-- pcb->frame-redline
+   ;;   |----------------------|
+   ;;   |    return address    | <-- Frame Pointer Register
+   ;;   |----------------------|
+   ;;   |      argument 0      |
+   ;;   |----------------------|
+   ;;   |      argument 1      |
+   ;;   |----------------------|
+   ;;   |                      |
+   ;;         low memory
    ;;
    ((E)
     (make-shortcut
-     ;;ESP =  stack pointer  register; PCR  = Process  Control Register,
-     ;;pointer to the PCB structure.
-     (make-conditional (prm 'u< esp (prm 'mref pcr (K pcb-frame-redline)))
+     (make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
 	 (prm 'interrupt)
        (prm 'nop))
      (make-forcall "ik_stack_overflow" '()))))
@@ -4630,9 +4689,9 @@
       ;;   | ik_underflow_handler | <-- BASE     .
       ;;   |----------------------|              .
       ;;             ...                         .
-      ;;   |----------------------| --           .
+      ;;   |----------------------| --           . full stack
       ;;   | uplevel return addr  | .            . continuation
-      ;;   |----------------------| . uplevel    . stack
+      ;;   |----------------------| . uplevel    . size
       ;;   |   uplevel argument   | . framesize  .
       ;;   |----------------------| .            .
       ;;             ...            .            .
@@ -4648,6 +4707,10 @@
       ;;counting the single argument FUNC; the reference to continuation
       ;;object KONT is in some variable location; the raw memory pointer
       ;;UNDERFLOW-HANDLER is in some variable location.
+      ;;
+      ;;Notice that: by inspecting the call frame of "return address" we
+      ;;can obtain the  uplevel framesize; such uplevel  framesize is <=
+      ;;continuation size.
       ;;
       (prm '$call-with-underflow-handler underflow-handler (T func) kont)))
    ((E . args)
