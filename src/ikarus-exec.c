@@ -261,6 +261,14 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  |----------------------|                 --
        *  |                      |
        *        low memory
+       *
+       * Every time we return to a previously saved continuation we copy
+       * all  the  stack frames  from  the  original stack  segment  (or
+       * portion  of  stack segment)  to  this  stack segment  (or  this
+       * portion of  stack segment);  so the  original stack  frames are
+       * immutable and we can reenter the saved continuations any number
+       * of times.   This comes at  the price  of copying all  the stack
+       * frames while rewinding the stack.
        */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
