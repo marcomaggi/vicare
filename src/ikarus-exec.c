@@ -176,82 +176,89 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        * follows:
        *
        *        high memory
-       *  |                       | <-- pcb->frame_pointer = pcb->frame_base
-       *  |-----------------------|
-       *  | ik_underflow_handler  | <-- fbase
-       *  |-----------------------|
-       *  | Scheme return value 0 |
-       *  |-----------------------|
-       *  | Scheme return value 1 |
-       *  |-----------------------|
-       *  | Scheme return value 2 | <-- fbase + s_retval_count
-       *  |-----------------------|
-       *  |                       |
+       *  |                      | <-- pcb->frame_pointer = pcb->frame_base
+       *  |----------------------|
+       *  | ik_underflow_handler | <-- fbase
+       *  |----------------------|
+       *  |    return value 0    |
+       *  |----------------------|
+       *  |    return value 1    |
+       *  |----------------------|
+       *  |    return value 2    | <-- fbase + s_retval_count
+       *  |----------------------|
+       *  |                      |
        *        low memory
        *
        * Move the return values:
        *
-       *          high memory
-       *  |                           | <-- pcb->frame_base
-       *  |---------------------------|
-       *  |    ik_underflow_handler   | <-- fbase
-       *  |---------------------------|                --        --
-       *  | Scheme return value 0 src |                .         .
-       *  |---------------------------|                .         .
-       *  | Scheme return value 1 src |                .         . framesize
-       *  |---------------------------|                . -s_retval_count
-       *  | Scheme return value 2 src | <-- arg_src    .         .
-       *  |---------------------------|                --        .
-       *  |                           | <-- new_fbase            .
-       *  |---------------------------|                --        --
-       *  | Scheme return value 0 dst |                .
-       *  |---------------------------|                .
-       *  | Scheme return value 1 dst |                .
-       *  |---------------------------|                . -s_retval_count
-       *  | Scheme return value 2 dst | <-- arg_dst    .
-       *  |---------------------------|                --
-       *  |                           |
+       *         high memory
+       *  |                      | <-- pcb->frame_base
+       *  |----------------------|                          --
+       *  | ik_underflow_handler | <-- fbase                .
+       *  |----------------------|                --        .
+       *  |  return value 0 src  |                .         .
+       *  |----------------------|                .         .
+       *  |  return value 1 src  |                .         . framesize
+       *  |----------------------|                . -s_retval_count
+       *  |  return value 2 src  | <-- retval_src .         .
+       *  |----------------------|                --        .
+       *            ...                                     .
+       *  |----------------------|                          --
+       *  |                      | <-- new_fbase
+       *  |----------------------|                --
+       *  |  return value 0 dst  |                .
+       *  |----------------------|                .
+       *  |  return value 1 dst  |                .
+       *  |----------------------|                . -s_retval_count
+       *  |  return value 2 dst  | <-- retval_dst .
+       *  |----------------------|                --
+       *  |                      |
        *           low memory
        */
       assert(pcb->frame_pointer == pcb->frame_base);
-      ikptr	fbase     = pcb->frame_base - wordsize;
-      ikptr	new_fbase = fbase - framesize;
-      char *	arg_dst   = ((char*)(long)new_fbase) + s_retval_count;
-      char *	arg_src   = ((char*)(long)fbase)     + s_retval_count;
-      memmove(arg_dst, arg_src, -s_retval_count);
-      /* Copy the frame.
+      ikptr	fbase      = pcb->frame_base - wordsize;
+      ikptr	new_fbase  = fbase - framesize;
+      char *	retval_dst = ((char*)(long)new_fbase) + s_retval_count;
+      char *	retval_src = ((char*)(long)fbase)     + s_retval_count;
+      memmove(retval_dst, retval_src, -s_retval_count);
+      /* Copy to this  stack segment the Scheme arguments  from the last
+       * stack frame in the saved continuation.
        *
-       *          high memory
-       *  |                           | <-- pcb->frame_base
-       *  |---------------------------|
-       *  |   ik_underflow_handler    |
-       *  |---------------------------|                --
-       *  |     frame value 0 dst     |                .
-       *  |---------------------------|                .
-       *  |     frame value 1 dst     |                .
-       *  |---------------------------|                . framesize
-       *  |     frame value 2 dst     |                .
-       *  |---------------------------|                .
-       *  |       return address      | <-- new_fbase  .
-       *  |---------------------------|                --
-       *  | Scheme return value 0 dst |                .
-       *  |---------------------------|                .
-       *  | Scheme return value 1 dst |                .
-       *  |---------------------------|                . -s_retval_count
-       *  | Scheme return value 2 dst |                .
-       *  |---------------------------|                --
-       *               ...
-       *  |---------------------------|                 --
-       *  |     frame value 0 src     |                 .
-       *  |---------------------------|                 .
-       *  |     frame value 1 src     |                 .
-       *  |---------------------------|                 . framesize
-       *  |     frame value 2 src     |                 .
-       *  |---------------------------|                 .
-       *  |       return address      | <-- p_kont->top .
-       *  |---------------------------|                 --
-       *  |                           |
-       *           low memory
+       *       high memory
+       *  |                      | <-- pcb->frame_base
+       *  |----------------------|                --
+       *  | ik_underflow_handler | <-- fbase      .
+       *  |----------------------|                .
+       *  |    argument 0 dst    |                .
+       *  |----------------------|                . framesize
+       *  |    argument 1 dst    |                .
+       *  |----------------------|                .
+       *  |    argument 2 dst    |                .
+       *  |----------------------|                --
+       *  |    return address    | <-- new_fbase
+       *  |----------------------|
+       *  |  return value 0 dst  |
+       *  |----------------------|
+       *  |  return value 1 dst  |
+       *  |----------------------|
+       *  |  return value 2 dst  |
+       *  |----------------------|
+       *  |                      |
+       *        low memory
+       *
+       *        high memory
+       *  |                      |
+       *  |----------------------|                 --
+       *  |    argument 0 src    |                 .
+       *  |----------------------|                 .
+       *  |    argument 1 src    |                 .
+       *  |----------------------|                 . framesize
+       *  |    argument 2 src    |                 .
+       *  |----------------------|                 .
+       *  |    return address    | <-- p_kont->top .
+       *  |----------------------|                 --
+       *  |                      |
+       *        low memory
        */
       memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
       s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
