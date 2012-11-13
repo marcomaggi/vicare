@@ -4575,7 +4575,7 @@
 ;;   |           .          |
 ;;   |           .          |
 ;;   |----------------------|
-;;   | free word            | <-- pcb->stack_base
+;;   |      free word       | <-- pcb->stack_base
 ;;   |----------------------|
 ;;   |                      |
 ;;          low memory
@@ -4688,19 +4688,19 @@
       ;;
       ;;          high memory
       ;;   |                      |
-      ;;   |----------------------|              --
-      ;;   | ik_underflow_handler | <-- BASE     .
-      ;;   |----------------------|              .
-      ;;             ...                         .
-      ;;   |----------------------| --           . full stack
-      ;;   | uplevel return addr  | .            . continuation
-      ;;   |----------------------| . uplevel    . size
-      ;;   |   uplevel argument   | . framesize  .
-      ;;   |----------------------| .            .
-      ;;             ...            .            .
-      ;;   |----------------------| --           --
-      ;;   |    return address    | <-- FPR = pcb->frame_base
       ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- BASE
+      ;;   |----------------------|                           --
+      ;;             ...                                      .
+      ;;   |----------------------| --                        .
+      ;;   | uplevel return addr  | .                         . full stack
+      ;;   |----------------------| . uplevel                 . continuation
+      ;;   |   uplevel argument   | . framesize               . size
+      ;;   |----------------------| .                         .
+      ;;             ...            .                         .
+      ;;   |----------------------| --                        .
+      ;;   |    return address    | <-- FPR = pcb->frame_base .
+      ;;   |----------------------|                           --
       ;;   |  closure ref = FUNC  | --> closure object
       ;;   |----------------------|
       ;;   |                      |

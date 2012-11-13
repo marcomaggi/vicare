@@ -128,12 +128,13 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	((int*)(long)(pcb->dirty_vector))[idx] = -1;
       }
     } else if (framesize > p_kont->size) {
-      long	entry_point		= (long)*((void **)top);
-      long	entry_point_offset	= IK_REF(entry_point, disp_frame_offset);
-      long	entry_point_code_offset	= entry_point_offset - disp_frame_offset;
-      ikptr	entry_point_code_entry	= entry_point - entry_point_code_offset;
-      IK_UNUSED ikptr p_entry_point_code= entry_point_code_entry - disp_code_data;
-      ik_debug_message("%s: inspecting stack:\n\
+      ikptr	return_point		= IK_REF(top, 0);
+      ikptr	return_point_offset	= IK_REF(return_point, disp_frame_offset);
+      ikptr	return_point_framesize	= IK_REF(return_point, disp_frame_size);
+      ikptr	return_point_code_offset= return_point_offset - disp_frame_offset;
+      ikptr	return_point_code_entry	= return_point - return_point_code_offset;
+      IK_UNUSED ikptr p_return_point_code= return_point_code_entry - disp_code_data;
+      ik_abort("%s: internal error while resuming continuation:\n\
 \tpcb->heap_base     = 0x%016lx\n\
 \tpcb->heap_size     = %ld bytes, %ld words\n\
 \tpcb->stack_base    = 0x%016lx\n\
@@ -146,25 +147,22 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 \tp_kont        = 0x%016lx\n\
 \tp_kont->top   = 0x%016lx\n\
 \tp_kont->size  = %ld\n\
-\ts_kont entry point        = 0x%016lx\n\
-\ts_kong entry point offset = %ld",
-		       __func__,
-		       pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
-		       pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
-		       pcb->frame_redline,
-		       (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
-		       pcb->frame_pointer, pcb->frame_base,
-		       *(void **)(pcb->frame_pointer - wordsize),
-		       (long)s_kont, (long)p_kont,
-		       IK_REF(p_kont, disp_continuation_top),
-		       IK_REF(p_kont, disp_continuation_size),
-		       entry_point, entry_point_offset);
-      ik_abort("while resuming continuation 0x%016lx:\n\
-\tinvalid framesize=%ld, expected p_kont->size=%ld or less\n\
-\treturn point (rp) = 0x%016lx (should be ik_underflow_handler)\n\
-\trp offset = %ld (should be zero)",
-	       (long)s_kont, framesize, p_kont->size,
-	       rp, IK_REF(rp, disp_frame_offset));
+\ts_kont return point           = 0x%016lx\n\
+\ts_kont return point offset    = %ld\n\
+\ts_kont return point framesize = %ld\n\
+\tinvalid return_point_framesize=%ld, expected p_kont->size=%ld or less",
+	       __func__,
+	       pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
+	       pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
+	       pcb->frame_redline,
+	       (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
+	       pcb->frame_pointer, pcb->frame_base,
+	       *(void **)(pcb->frame_pointer - wordsize),
+	       (long)s_kont, (long)p_kont,
+	       IK_REF(p_kont, disp_continuation_top),
+	       IK_REF(p_kont, disp_continuation_size),
+	       return_point, return_point_offset, return_point_framesize,
+	       framesize, p_kont->size);
     }
     /* Pop "s_kont" from  the list in the PCB  structure.  Notice that
        if "s_kont" represents a  continuation saved with CALL/CC: such

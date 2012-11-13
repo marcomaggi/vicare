@@ -958,25 +958,25 @@
 	      ;;
 	      ;;When arriving here the situation of the Scheme stack is:
 	      ;;
-	      ;;          high memory
-	      ;;   |                      |
-	      ;;   |----------------------|              --
-	      ;;   | ik_underflow_handler |              .
-	      ;;   |----------------------|              .
-	      ;;             ...                         .
-	      ;;   |----------------------| --           . full stack
-	      ;;   | uplevel return addr  | .            . continuation
-	      ;;   |----------------------| . uplevel    . size
-	      ;;   |   uplevel argument   | . framesize  .
-	      ;;   |----------------------| .            .
-	      ;;             ...            .            .
-	      ;;   |----------------------| --           --
-	      ;;   |    return address    | <-- FPR = pcb->frame_base
-	      ;;   |----------------------|
-	      ;;   |  closure ref = FUNC  | --> closure object
-	      ;;   |----------------------|
-	      ;;   |                      |
-	      ;;          low memory
+	      ;;        high memory
+	      ;; |                      |
+	      ;; |----------------------|
+	      ;; | ik_underflow_handler |
+	      ;; |----------------------|                           --
+	      ;;           ...                                      .
+	      ;; |----------------------| --                        . full stack
+	      ;; | uplevel return addr  | .                         . continuation
+	      ;; |----------------------| . uplevel                 . size
+	      ;; |   uplevel argument   | . framesize               .
+	      ;; |----------------------| .                         .
+	      ;;           ...            .                         .
+	      ;; |----------------------| --                        .
+	      ;; |    return address    | <-- FPR = pcb->frame_base .
+	      ;; |----------------------|                           --
+	      ;; |  closure ref = FUNC  | --> closure object
+	      ;; |----------------------|
+	      ;; |                      |
+	      ;;        low memory
 	      ;;
 	      ;;where   "return  address"   leads  to   the  caller   of
 	      ;;%PRIMITIVE-CALL/CF.  ARGC-REGISTER  contains the encoded
@@ -1021,19 +1021,19 @@
 		 ;;
 		 ;;        high memory
 		 ;; |                      |
-		 ;; |----------------------|              --
-		 ;; | ik_underflow_handler |              .
-		 ;; |----------------------|              .
-		 ;;           ...                         .
-		 ;; |----------------------| --           . full stack
-		 ;; | uplevel return addr  | .            . continuation
-		 ;; |----------------------| . uplevel    . size
-		 ;; |   uplevel argument   | . framesize  .
-		 ;; |----------------------| .            .
-		 ;;           ...            .            .
-		 ;; |----------------------| --           --
-		 ;; |    return address    | <-- FPR = pcb->frame_base
 		 ;; |----------------------|
+		 ;; | ik_underflow_handler |
+		 ;; |----------------------|              --
+		 ;;           ...                         .
+		 ;; |----------------------| --           .
+		 ;; | uplevel return addr  | .            .
+		 ;; |----------------------| . uplevel    . full stack
+		 ;; |   uplevel argument   | . framesize  . continuation
+		 ;; |----------------------| .            . size
+		 ;;           ...            .            .
+		 ;; |----------------------| --           .
+		 ;; |    return address    | <-- FPR      .
+		 ;; |----------------------|              --
 		 ;; | ik_underflow_handler |
 		 ;; |----------------------|
 		 ;; | continuation object  |
@@ -1056,19 +1056,19 @@
 		 ;;
 		 ;;       high memory
 		 ;; |                      |
-		 ;; |----------------------|              --
-		 ;; | ik_underflow_handler |              .
-		 ;; |----------------------|              .
-		 ;;           ...                         .
-		 ;; |----------------------| --           . full stack
-		 ;; | uplevel return addr  | .            . continuation
-		 ;; |----------------------| . uplevel    . size
-		 ;; |   uplevel argument   | . framesize  .
-		 ;; |----------------------| .            .
-		 ;;           ...            .            .
-		 ;; |----------------------| --           --
-		 ;; |    return address    | <-- pcb->frame_base
 		 ;; |----------------------|
+		 ;; | ik_underflow_handler |
+		 ;; |----------------------|                     --
+		 ;;           ...                                .
+		 ;; |----------------------| --                  .
+		 ;; | uplevel return addr  | .                   .
+		 ;; |----------------------| . uplevel           . full stack
+		 ;; |   uplevel argument   | . framesize         . continuation
+		 ;; |----------------------| .                   . size
+		 ;;           ...            .                   .
+		 ;; |----------------------| --                  .
+		 ;; |    return address    | <-- pcb->frame_base .
+		 ;; |----------------------|                     --
 		 ;; | ik_underflow_handler | <-- frame pointer register (FPR)
 		 ;; |----------------------|
 		 ;; | continuation object  |
