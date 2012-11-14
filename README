@@ -43,6 +43,8 @@ an optionally included foreign-functions interface based on Libffi.  The
 last time  the maintainer updated  this paragraph, it had  tested Libffi
 version 3.0.10.
 
+  A port to R6RS of the SRFI libraries is included in the distribution.
+
   Current official maintainers are:
 
 Marco Maggi <marco.maggi-ipsu@poste.it>
@@ -218,6 +220,9 @@ notice.
     Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
     Collector".   In  Proceedings  of  the  SIGPLAN  '93  Conference  on
     Programming Language Design and Implementation, 207-216, June 1993.
+
+  The included SRFI  libraries were ported to R6RS  by Derick Eddington;
+see the files README.srfi and LICENSE.srfi for details.
 
 
 B. Bug reports

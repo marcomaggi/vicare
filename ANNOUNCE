@@ -97,6 +97,9 @@ Notes for revision 0.2d20
   to enable or  disable inlining of calls  to CALL-WITH-VALUES.  Default
   to disable.
 
+* Starting  with this  revision, the  SRFI libraries  ported to  R6RS by
+  Derick Eddington are included in the distribution.
+
 
 Notes for revision 0.2d19
 -------------------------
