@@ -1,0 +1,1821 @@
+@node srfi eager-comp
+@section @ansrfi{42} eager comprehensions
+
+
+@cindex @srfi{} eager-comp
+
+
+The library @library{srfi :42} is by Sebastian Egner as the reference
+implementation for @ansrfi{42}; see:
+
+@center @url{http://srfi.schemers.org/srfi-42/srfi-42.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi eager-comp license::     Original document license.
+* srfi eager-comp abstract::    Abstract.
+* srfi eager-comp rationale::   Rationale.
+* srfi eager-comp spec::        Specification.
+* srfi eager-comp design::      Design rationale.
+* srfi eager-comp ack::         Related work and acknowledgements.
+* srfi eager-comp references::  References.
+@end menu
+
+@c page
+@node srfi eager-comp license
+@subsection Original document license
+
+
+Copyright @copyright{} 2003 Sebastian Egner.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi eager-comp abstract
+@subsection Abstract
+
+
+This @srfi{} defines a modular and portable mechanism for eager
+comprehensions extending the algorithmic language Scheme.  An eager
+comprehension is a convenient notation for one or more nested or
+parallel loops generating a sequence of values, and accumulating this
+sequence into a result.  In its most simple form, a comprehension
+according to this @srfi{} looks like this:
+
+@example
+(list-ec (: i 5)
+  (* i i))
+=> (0 1 4 9 16)
+@end example
+
+@noindent
+Here, @var{i} is a local variable that is sequentially bound to the
+values 0, 1, @dots{}, 4, and the squares of these numbers are collected
+in a list.  The following example illustrates most conventions of this
+@srfi{} with respect to nesting and syntax:
+
+@example
+(list-ec (: n 1 4)
+         (: i n)
+  (list n i))
+=> ((1 0) (2 0) (2 1) (3 0) (3 1) (3 2))
+@end example
+
+@noindent
+In the example, the variable @var{n} is first bound to 1 then to 2 and
+finally to 3, and for each binding of @var{n} the variable @var{i} is
+bound to the values 0, 1, ..., @var{n}-1 in turn.  The expression
+@code{(list n i)} constructs a two--element list for each bindings, and
+the comprehension @func{list-ec} collects all these results in a list.
+
+The mechanism defined in this @srfi{} has the following properties:
+
+@itemize
+@item
+The set of comprehensions defined for this @srfi{} is inspired by those
+procedures and macros of @rnrs{5} leading to natural comprehensions such
+as @func{list-ec}, @func{append-ec}, @func{sum-ec}, @func{min-ec},
+@func{every?-ec}, @func{do-ec}, and others.  Some other natural
+comprehensions (e.g. @func{gcd-ec}) have not been included into this
+@srfi{} due to their low significance for most applications.  On the
+other hand, a few comprehensions (@func{fold-ec}, @func{fold3-ec}) not
+inspired by @rnrs{5} have been included due to their broad
+applicability.
+
+@item
+There are typed generators (@code{:list}, @code{:string}, @dots{})
+expecting certain types of objects for their arguments.  These
+generators usually produce code as efficient as hand coded
+@func{do}--loops.
+
+@item
+There is also the special generator @code{:} (read ``run through'')
+dispatching on the value of its argument list at runtime.  In the
+examples above, one or two integers were used to define a range.  The
+convenience of omitting the type comes at a certain performance penalty,
+both per iteration and during startup of the loop.
+
+@item
+Generators can be nested depth--first (as in the example above), run in
+parallel (with an optional index variable or more generally with
+@code{:parallel}), and can be stopped early before (@code{:while}) or
+after (@code{:until}) producing the current value.
+
+@item
+The sequence of values can be filtered (@func{if}, @func{not},
+@func{and}, @func{or}), intermediate commands can be evaluated between
+generators (@func{begin}), and intermediate variables can be introduced
+(@func{:let}).
+
+@item
+The mechanism is fully modular.  This means that no existing macro or
+procedure needs to be modified when adding application--specific
+comprehensions, application--specific typed generators, or
+application--specific dispatching generators.
+
+@item
+Syntactically, this @srfi{} uses the @code{[outer .. inner | expr]}
+convention, meaning that the most right generator (@var{inner}) spins
+fastest and is followed by the result expression over which the
+comprehension ranges (@var{expr}).  @ref{srfi eager-comp design} for
+details.  Moreover, the syntax is strictly prefix and the naming
+convention @code{my-comprehension-ec}, @code{:my-generator} is used
+systematically.
+@end itemize
+
+@ignore
+The remainder of this document is organized as follows.  In section
+Rationale a brief introduction is given what the motivation is for this
+@srfi{}.  The following section Specification defines the mechanism.
+Section Suggestions for Application-specific Extensions presents some
+ideas how extensions using this @srfi{} could look like.  The section
+Design Rationale contains some considerations that went into the design
+of the mechanism as defined in the specification.  The following section
+Related Work and Acknowledgements briefly reviews other proposals
+related to Scheme and comprehensions or loops.  Finally, the section
+Reference Implementation gives source code for a reference
+implementation together with a collection of runnable examples and a few
+examples on extensions.
+@end ignore
+
+@c page
+@node srfi eager-comp rationale
+@subsection Rationale
+
+
+The purpose of this @srfi{} is to provide a compact notation for many
+common cases of loops, in particular those constructing values for
+further computation.  The origin of this @srfi{} is my frustration that
+there is no simple way to iterate the list of integers from 0 to
+@var{n}-1.  With this @srfi{} it is @func{(list-ec (: i n) i)}.  Refer
+to the collection of examples for the reference implementation to
+understand what it can be used for, and what it should not be used for.
+To give a practically useful example, the following procedure computes
+the sorted list of all prime numbers below a certain bound (you may want
+to run it yourself to get an idea of its efficiency):
+
+@example
+;; primes in @{2..n-1@} for n >= 1
+(define (eratosthenes n)
+  (let ([p? (make-string n #\1)])
+    (do-ec (:range k 2 n)
+           (if (char=? (string-ref p? k) #\1))
+           (:range i (* 2 k) n k)
+      (string-set! p? i #\0))
+    (list-ec (:range k 2 n)
+             (if (char=? (string-ref p? k) #\1))
+      k)))
+@end example
+
+Apart from making simple things simple, there is no other paradigm
+involved for this @srfi{}.  In particular, it is not the ambition to
+implement the powerful lazy list comprehensions of other functional
+programming languages in Scheme.  If you are looking for that you may
+want to refer to @ansrfi{41}.  (The usual definition of the stream of all
+primes does in fact also use Eratosthenes' sieve method.  It is
+instructive to compare.)
+
+The main focus of the design of this @srfi{} is portability under
+@rnrs{5} and modularity for extension.  Portability is achieved by
+limiting the features included.  Modularity for generators is achieved
+by a special implementation technique using Continuation Passing Style
+for macros (which I learned from Richard Kelsey's implementation of
+``Macros for writing loops'') and by limiting the expressive power of
+generators.  Modularity for comprehensions requires no additional
+effort.  As modularity was a major design goal, I hope many people will
+find it easy to define their own comprehensions and generators.  As a
+starting point for doing so, I have included several suggestions for
+extensions.
+
+@ref{srfi eager-comp design} for a detailed motivation of the design
+decisions.
+
+@c page
+@node srfi eager-comp spec
+@subsection Specification
+
+
+A comprehensions is a hygienic referentially transparent macro in the
+sense of @rnrs{5} Section 4.3.  The macros extend the
+@code{<expression>}--syntax defined in @rnrs{5} Section 7.1.3.  The main
+syntactic pattern used for defining a comprehension is
+@code{<qualifier>}, representing a generator or a filter.  It is defined
+in Section ``Qualifiers''.
+
+The most important instances of @code{<qualifier>} are generators.
+These are defined in Section ``Generators''.  Generators come in three
+flavors, as typed generators (@code{:list}, @code{:range}, etc.), as the
+dispatching generator @code{:} (pronounced as ``run through''), and as
+combined and modified generators (@code{:parallel}, @code{:while},
+@code{:until}).  Most generators in this @srfi{} also support an
+optional index variable counting the values being generated.
+
+Finally, it is explained how to add a new application--specific
+comprehension, how to add a new application--specific typed generator,
+and how to add a new application--specific dispatching generator.  As
+this concerns code unknown at the time this is being written, the
+explanation should not be taken as a specification in the literal sense.
+It rather suggests a convention to follow in order to ensure new
+comprehensions and generators blend seamlessly with the ones defined in
+this @srfi{}.
+
+@menu
+* srfi eager-comp spec comprehensions:: Comprehensions.
+* srfi eager-comp spec qualifiers::     Qualifiers.
+* srfi eager-comp spec generators::     Generators.
+* srfi eager-comp spec suggest::        Suggestions for application
+                                        specific extensions.
+@end menu
+
+@c page
+@node srfi eager-comp spec comprehensions
+@subsubsection Comprehensions
+
+
+@deffn Syntax do-ec @var{qualifier*} @var{command}
+Evaluate the @var{command} exactly once for each binding in the sequence
+defined by the qualifiers.  If there are no qualifiers @var{command} is
+evaluated exactly once.  The expression is evaluated for its
+side--effects only.  The result of the comprehension is unspecified.
+@end deffn
+
+
+@deffn Syntax list-ec @var{qualifier*} @var{expression}
+The list of values obtained by evaluating @var{expression} once for each
+binding in the sequence defined by the qualifiers.  If there are no
+qualifiers the result is the list with the value of @var{expression}.
+@end deffn
+
+
+@deffn Syntax append-ec @var{qualifier*} @var{expression}
+The list obtained by appending all values of @var{expression}, which
+must all be lists.  Think of it as:
+
+@example
+(apply append (list-ec @var{qualifier*} @var{expression}))
+@end example
+@end deffn
+
+
+@deffn Syntax string-ec @var{qualifier*} @var{expression}
+The string of all values of @var{expression}.  Think of it as:
+
+@example
+(list->string (list-ec @var{qualifier*} @var{expression}))
+@end example
+@end deffn
+
+
+@deffn Syntax string-append-ec @var{qualifier*} @var{expression}
+The string obtained by appending all values of @var{expression}, which
+must all be strings.  Think of it as:
+
+@example
+(apply string-append (list-ec @var{qualifier*} @var{expression}))
+@end example
+@end deffn
+
+
+@deffn Syntax vector-ec @var{qualifier*} @var{expression}
+The vector of all values of @var{expression}.  Think of it as:
+
+@example
+(list->vector (list-ec @var{qualifier*} @var{expression}))
+@end example
+@end deffn
+
+
+@deffn Syntax vector-of-length-ec @var{k} @var{qualifier*} @var{expression}
+The vector of all values of @var{expression}, of which there must be
+exactly @var{k}.  This comprehension behaves like @func{vector-ec} but
+can be implemented more efficiently.
+@end deffn
+
+
+@deffn Syntax sum-ec @var{qualifier*} @var{expression}
+The sum of all values of @var{expression}.  Think of it as:
+
+@example
+(apply + (list-ec @var{qualifier*} @var{expression}))
+@end example
+@end deffn
+
+
+@deffn Syntax product-ec @var{qualifier*} @var{expression}
+The product of all values of @var{expression}.  Think of it as:
+
+@example
+(apply * (list-ec @var{qualifier*} @var{expression}))
+@end example
+@end deffn
+
+
+@deffn Syntax min-ec @var{qualifier*} @var{expression}
+@deffnx Syntax max-ec @var{qualifier*} @var{expression}
+The minimum and maximum of all values of @var{expression}.  The sequence
+of values must be non-empty.  Think of these as
+
+@example
+(apply min (list-ec @var{qualifier*} @var{expression}))
+(apply max (list-ec @var{qualifier*} @var{expression}))
+@end example
+
+If you want to return a default value in case the sequence is empty you
+may want to consider:
+
+@example
+(fold3-ec 'infinity @var{qualifier*} @var{expression} min min)
+@end example
+@end deffn
+
+
+@deffn Syntax any?-ec @var{qualifier*} @var{test}
+Tests whether any value of @var{test} in the sequence of bindings
+specified by the qualifiers is non--@false{}.  If this is the case,
+@true{} is returned, otherwise @false{}.  If there are no bindings at
+all, in the sequence specified by the qualifiers, then the result is
+@false{}.  The enumeration of values stops after the first non--@false{}
+encountered.
+@end deffn
+
+
+@deffn Syntax every?-ec @var{qualifier*} @var{test}
+Tests whether all values of @var{test} are non--@false{}.  If this is
+the case, @true{} is returned, otherwise @false{}.  If the sequence is
+empty the result is @true{}.  Enumeration stops after the first
+@false{}.
+@end deffn
+
+
+@deffn Syntax first-ec @var{default} @var{qualifier*} @var{expression}
+@deffnx Syntax last-ec  @var{default} @var{qualifier*} @var{expression}
+The first or last value of @var{expression} in the sequence of bindings
+specified by the qualifiers.  Before enumeration, the result is
+initialized with the value of @var{default}; so this will be the result
+if the sequence is empty.  Enumeration is terminated in @func{first-ec}
+when the first value has been computed.
+@end deffn
+
+
+@deffn Syntax fold-ec  @var{x0} @var{qualifier*} @var{expression} @var{f2})
+@deffnx Syntax fold3-ec @var{x0} @var{qualifier*} @var{expression} @var{f1} @var{f2})
+Reduce the sequence @var{x}[0], @var{x}[1], @dots{}, @var{x}[n-1] of
+values obtained by evaluating @var{expression} once for each binding as
+specified by @var{qualifier*}.  The arguments @var{x0}, @var{f2}, and
+@var{f1}, all syntactically equivalent to @var{expression}, specify the
+reduction process.
+
+The reduction process for @func{fold-ec} is defined as follows.  A
+reduction variable @var{x} is initialized to the value of @var{x0}, and
+for each @var{k} in @code{@{0, ..., n-1@}} the command:
+
+@example
+(set! x (f2 x[k] x))
+@end example
+
+@noindent
+is evaluated.  Finally, @var{x} is returned as the value of the
+comprehension.
+
+The reduction process for @func{fold3-ec} is different.  If and only if
+@code{n = 0}, i.e. the sequence is empty, then @var{x0} is evaluated and
+returned as the value of the comprehension.  Otherwise, a reduction
+variable @var{x} is initialized to the value of @code{(f1 x[0])}, and
+for each @var{k} in @code{@{1, ..., n-1@}} the command:
+
+@example
+(set! x (f2 x[k] x))
+@end example
+
+@noindent
+is evaluated.  Finally, @var{x} is returned as the value of the
+comprehension.
+
+As the order of the arguments suggests, @var{x0} is evaluated outside
+the scope of the qualifiers, whereas the reduction expressions involving
+@var{f1} and @var{f2} are inside the scope of the qualifiers (so they
+may depend on any variable introduced by the qualifiers).  Note that
+@var{f2} is evaluated repeatedly, with any side--effect or overhead this
+might have.
+
+The main purpose of these comprehensions is implementing other
+comprehensions as special cases.  They are generalizations of the
+procedures @func{fold} and @func{reduce} in the sense of @ansrfi{1}.
+(Concerning naming and argument order, please refer to the discussion
+archive of @ansrfi{1}, in particular the posting [Folds].)  Note that
+@func{fold3-ec} is defined such that @var{x0} is only evaluated in case
+the sequence is empty.  This allows raising an error for the empty
+sequence, as in the example definition of @func{min-ec} below.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Application--specific comprehension
+
+
+An important aspect of this @srfi{} is a modular mechanism to define
+application--specific comprehensions.  To create a new comprehension a
+hygienic macro with that name is defined.  The macro transforms the new
+comprehension patterns into instances of @func{do-ec}, which is the most
+fundamental eager comprehension, or any other comprehension already
+defined.  For example, the following code defines @func{list-ec} and
+@func{min-ec} in terms of @func{fold-ec} and @func{fold3-ec}:
+
+@example
+(define-syntax list-ec
+  (syntax-rules ()
+    [(list-ec etc1 etc ...)
+     (reverse (fold-ec '() etc1 etc ... cons))]))
+
+(define-syntax min-ec
+  (syntax-rules ()
+    [(min-ec etc1 etc ...)
+     (fold3-ec (min) etc1 etc ... min min)]))
+@end example
+
+Note that the pattern @code{@var{etc1} ...} matches the syntax
+@var{qualifier*} @var{expression} without separate access to
+@var{qualifier*} and @var{expression}.  In order to define a
+comprehension that does need explicit access to the @var{expression}
+part, the following method is used.
+
+First, all qualifiers are collected into a nested--qualifier, and then
+the ``exactly one qualifier'' case is implemented.  For illustration,
+the following code defines @func{fold3-ec} in terms of @func{do-ec}:
+
+@example
+(define-syntax fold3-ec
+  (syntax-rules (nested)
+    [(fold3-ec x0 (nested q1 ...) q etc1 etc2 etc3 etc ...)
+     (fold3-ec x0 (nested q1 ... q) etc1 etc2 etc3 etc ...)]
+    [(fold3-ec x0 q1 q2 etc1 etc2 etc3 etc ...)
+     (fold3-ec x0 (nested q1 q2) etc1 etc2 etc3 etc ...)]
+    [(fold3-ec x0 expression f1 f2)
+     (fold3-ec x0 (nested) expression f1 f2)]
+
+    [(fold3-ec x0 qualifier expression f1 f2)
+     (let ([result #f]
+           [empty  #t])
+       (do-ec qualifier
+         (let ([value expression]) ; don't duplicate code
+           (if empty
+               (begin
+                 (set! result (f1 value))
+                 (set! empty #f))
+             (set! result (f2 value result)))))
+       (if empty x0 result))]))
+@end example
+
+Finally, observe that the newly defined @func{fold3-ec} comprehension
+inherits all types of qualifiers supported by @func{do-ec}, including
+all application--specific generators; no further definitions are
+necessary.
+
+@c page
+@node srfi eager-comp spec qualifiers
+@subsubsection Qualifiers
+
+
+This section defines the syntax @var{qualifier}.  The nesting of
+qualifiers is from left (outer) to right (inner).  In other words, the
+rightmost generator spins fastest.  The nesting also defines the scope
+of the variables introduced by the generators.  This implies that inner
+generators may depend on the variables of outer generators.  The
+sequence of enumeration of values is strictly depth first.  These
+conventions are illustrated by the first example.
+
+The syntax @var{qualifier} consists of the following alternatives.
+
+@deffn Qualifier @var{generator}
+Enumerate a sequence of bindings of one or more variables.  The scope of
+the variables starts at the generator and extends over all subsequent
+qualifiers and expressions in the comprehension.  @ref{srfi eager-comp
+spec generators}.
+@end deffn
+
+
+@deffn Qualifier if @var{test}
+Filters the sequence of bindings by testing if @var{test} evaluates to
+non--@false{}.  Only for those bindings for which this is the case, the
+subsequent qualifiers of the comprehension are evaluated.
+@end deffn
+
+
+@deffn Qualifier not @var{test}
+@deffnx Qualifier and @var{test}*
+@deffnx Qualifier or @var{test}*
+Abbreviated notations for filters of the form @code{(if (not
+@var{test}))}, @code{(if (and @var{test}*))}, and @code{(if (or
+@var{test}*))}.  These represent frequent cases of filters.
+@end deffn
+
+
+@deffn Qualifier begin @var{sequence}
+Evaluate @var{sequence}, consisting of @code{@var{command}*
+@var{expression}}, once for each binding of the variables defined by the
+previous qualifiers in the comprehension.  Using this qualifier, side
+effects can be inserted into the body of a comprehension.
+@end deffn
+
+
+@deffn Qualifier nested @var{qualifier}*
+A syntactic construct to group qualifiers.  The meaning of a qualifier
+according to the @func{nested} syntax is the same as inserting
+@var{qualifier}* into the enclosing comprehension.  This construct can
+be used to reduce comprehensions with several qualifiers into a form
+with exactly one qualifier.
+@end deffn
+
+@c page
+@node srfi eager-comp spec generators
+@subsubsection Generators
+
+
+This section defines the syntax @var{generator}.  Each generator defines
+a sequence of bindings through which one or more variables are run.  The
+scope of the variables begins after the closing parenthesis of the
+generator expression and extends to the end of the comprehension it is
+part of.
+
+The variables defined by the generators are specified using the syntax:
+
+@example
+<vars> --> <variable1> [ (index <variable2>) ]
+@end example
+
+@noindent
+where @var{variable1} runs through the values in the sequence defined by
+the generator, and the optional @var{variable2} is an exact
+integer--valued index variable counting the values (starting from 0).
+The names of the variables must be distinct.  The following example
+illustrates the index variable:
+
+@example
+(list-ec (: x (index i) "abc")
+   (list x i))
+=> ((#\a 0) (#\b 1) (#\c 2))
+@end example
+
+Unless defined otherwise, all generators make sure that the expressions
+provided for their syntactic arguments are evaluated exactly once,
+before enumeration begins.  Moreover, it may be assumed that the
+generators do not copy the code provided for their arguments, because
+that could lead to exponential growth in code size.  Finally, it is
+possible to assign a value to the variables defined by a generator, but
+the effect of this assignment is unspecified.
+
+The syntax @var{generator} consists of the following alternatives.
+
+@ignore
+(Tue Oct 28, 2008, Info version 4.8) The ':' is not recognised by the
+function index code as a valid function name.  No error is generated
+when compiling this document, but the index reference does not work.
+@end ignore
+@deffn Generator {:} @var{vars} @var{arg1} @var{arg}*
+First the expressions @var{arg1} @var{arg}* are evaluated into
+@code{@var{a}[1]}, @code{@var{a}[2]}, @dots{}, @code{@var{a}[n]} and
+then a global dispatch procedure is used to dispatch on the number and
+types of the arguments and run the resulting generator.  Initially
+(after loading the @srfi{}), the following cases are recognized:
+
+@example
+:list           if      for all i in @{1..n@}: (list? a[i])
+
+:string         if      for all i in @{1..n@}: (string? a[i])
+
+:vector         if      for all i in @{1..n@}: (vector? a[i])
+
+:range          if      n in @{1..3@} and for all i in @{1..n@}:
+                        (integer? a[i]) and (exact? a[i])
+
+:real-range     if      n in @{1..3@} and for all i in @{1..n@}:
+                        (real? a[i])
+
+:char-range     if      n = 2 and for all i in @{1, 2@}:
+                        (char? a[i])
+
+:port           if      n in @{1, 2@} and (input-port? a[1])
+                        and (procedure? a[2])
+@end example
+
+The current dispatcher can be retrieved as @code{(:-dispatch-ref)}, a
+new dispatcher @var{d} can be installed by @code{(:-dispatch-set! d)}
+yielding an unspecified result, and a copy of the initial dispatcher can
+be obtained as @code{(make-initial-:-dispatch)}.  Please refer to the
+section below for recommendation how to add cases to the dispatcher.
+@end deffn
+
+
+@deffn Generator {:list} @var{vars} @var{arg1} @var{arg}*
+@deffnx Generator {:string} @var{vars} @var{arg1} @var{arg}*
+@deffnx Generator {:vector} @var{vars} @var{arg1} @var{arg}*
+Run through one or more lists, strings, or vectors.  First all
+expressions in @var{arg1} @code{@var{arg}*} are evaluated and then all
+elements of the resulting values are enumerated from left to right.  One
+can think of it as first appending all arguments and then enumerating
+the combined object.  As a clarifying example, consider:
+
+@example
+(list-ec (:string c (index i) "a" "b")
+  (cons c i))
+=> ((#\a . 0)
+    (#\b . 1))
+@end example
+@end deffn
+
+
+@deffn Generator {:integers} @var{vars}
+Runs through the sequence @code{0}, @code{1}, @code{2}, @dots{} of
+non--negative integers.  This is most useful in combination with
+@code{:parallel}, @code{:while}, and @code{:until} or with a non--local
+exit in the body of the comprehension.
+@end deffn
+
+
+@deffn Generator {:range} @var{vars} @var{stop}
+@deffnx Generator {:range} @var{vars} @var{start} @var{stop}
+@deffnx Generator {:range} @var{vars} @var{start} @var{stop} @var{step}
+Runs through a range of exact rational numbers.
+
+The form @code{(:range @var{vars} @var{stop})} evaluates the expression
+@var{stop}, which must result in an exact integer @var{n}, and runs
+through the finite sequence @code{0}, @code{1}, @code{2}, @dots{},
+@code{@var{n}-1}.  If @var{n} is zero or negative the sequence is empty.
+
+The form @code{(:range @var{vars} @var{start} @var{stop})} evaluates the
+expressions @var{start} and @var{stop}, which must result in exact
+integers @var{a} and @var{b}, and runs through the finite sequence
+@var{a}, @code{@var{a}+1}, @code{@var{a}+2}, @dots{}, @code{@var{b}-1}.
+If @var{b} is less or equal @var{a} then the sequence is empty.
+
+The form @code{(:range @var{vars} @var{start} @var{stop} @var{step})}
+first evaluates the expressions @var{start}, @var{stop}, and @var{step},
+which must result in exact integers @var{a}, @var{b}, and @var{s} such
+that @var{s} is unequal to zero.  Then the sequence @var{a},
+@code{@var{a} + @var{s}}, @code{@var{a} + 2 @var{s}}, @dots{},
+@code{@var{a} + (@var{n}-1) @var{s}} is enumerated where @code{@var{n} =
+ceil((@var{b}-@var{a})/@var{s})}.  In other words, the sequence starts
+at @var{a}, increments by @var{s}, and stops when the next value would
+reach or cross @var{b}.  If @var{n} is zero or negative the sequence is
+empty.
+@end deffn
+
+
+@deffn Generator {:real-range} @var{vars} @var{stop}
+@deffnx Generator {:real-range} @var{vars} @var{start} @var{stop}
+@deffnx Generator {:real-range} @var{vars} @var{start} @var{stop} @var{step}
+Runs through a range of real numbers using an explicit index variable.
+This form of range enumeration avoids accumulation of rounding errors
+and is the one to use if any of the numbers defining the range is
+inexact, not an integer, or a bignum of large magnitude.
+
+Providing default value @code{0} for @var{start} and @code{1} for
+@var{step}, the generator first evaluates @var{start}, @var{stop}, and
+@var{step}, which must result in reals @var{a}, @var{b}, and @var{s}
+such that @code{@var{n} = (@var{b}-@var{a})/@var{s}} is also
+representable as a real.  Then the sequence @code{0}, @code{1},
+@code{2}, @dots{} is enumerated while the current value @var{i} is less
+than @var{n}, and the variable in @var{vars} is bound to the value
+@code{@var{a} + @var{i} @var{s}}.  If any of the values @var{a},
+@var{b}, or @var{s} is non--exact then all values in the sequence are
+non--exact.
+@end deffn
+
+
+@deffn Generator {:char-range} @var{vars} @var{min} @var{max}
+Run through a range of characters.  First @var{min} and @var{max} are
+evaluated, which must result in two characters @var{a} and @var{b}.
+Then the sequence of characters @var{a}, @code{@var{a}+1},
+@code{@var{a}+2}, @dots{}, @var{b} is enumerated in the order defined by
+@func{char<=?} in the sense of @rnrs{5} Section 6.3.4.  If @var{b} is
+smaller than @var{a} then the sequence is empty.  (Note that @var{b} is
+included in the sequence.)
+@end deffn
+
+
+@deffn Generator {:port} @var{vars} @var{port}
+@deffnx Generator {:port} @var{vars} @var{port} @var{read-proc}
+Read from the port until the eof--object is read.  Providing the default
+read for @var{read-proc}, the generator first evaluates @var{port} and
+@var{read-proc}, which must result in an input port @var{p} and a
+procedure @var{r}.  Then the variable is run through the sequence
+obtained by @code{(@var{r} @var{p})} while the result does not satisfy
+@func{eof-object?}.
+@end deffn
+
+
+@deffn Generator {:dispatched} @var{vars} @var{dispatch} @var{arg1} @var{arg}*
+Runs the variables through a sequence defined by @var{dispatch} and
+@var{arg1} @var{arg}*.  The purpose of @code{:dispatched} is
+implementing dispatched generators, in particular the predefined
+dispatching generator @code{:}.
+
+The working of @code{:dispatched} is as follows.  First @var{dispatch}
+and @var{arg1} @var{arg}* are evaluated, resulting in a procedure
+@var{d} (the ``dispatcher'') and the values @code{@var{a}[1]},
+@code{@var{a}[2]}, @dots{}, @code{@var{a}[n]}.  Then:
+
+@example
+(d (list a[1] a[2] ... a[n]))
+@end example
+
+@noindent
+is evaluated, resulting in a value @var{g}.  If @var{g} is not a
+procedure then the dispatcher did not recognize the argument list and an
+error is raised.  Otherwise the ``generator procedure'' @var{g} is used
+to run @var{vars} through a sequence of values.
+
+The sequence defined by @var{g} is obtained by repeated evaluation of
+@code{(@var{g} @var{empty})} until the result is @var{empty}.  In other
+words, @var{g} indicates the end of the sequence by returning its only
+argument, for which the caller has provided an object distinct from
+anything @var{g} can produce.  (Generator procedures are state based,
+they are no such noble things as streams in the sense of @ansrfi{41}.)
+
+The definition of dispatchers is greatly simplified by the macro
+@code{:generator-proc} that constructs a generator procedure from a
+typed generator.  Let @code{(@var{g} @var{var} @var{arg1} @var{arg}
+...)} be an instance of the @var{generator} syntax, for example an
+application--specific typed generator, with a single variable @var{var}
+and no index variable.  Then:
+
+@example
+(:generator-proc (g arg1 arg ...))
+=> g
+@end example
+
+@noindent
+where the generator procedure @var{g} runs through the list:
+
+@example
+(list-ec (g var arg1 arg ...) var)
+@end example
+
+In order to define a new dispatching generator (say @code{:my}) first a
+dispatching procedure (say @code{:my-dispatch}) is defined.  The
+dispatcher will be called with a single (!) argument containing the list
+of all values to dispatch on.  To enable informative error messages, the
+dispatcher should return a descriptive object (e.g.  a symbol for the
+module name) when it is called with the empty list.  Otherwise (if there
+is at least one value to dispatch on), the dispatcher must either return
+a generator procedure or @false{} (which means: no interest).  As an
+example, the following skeleton code defines a dispatcher similar to the
+initial dispatcher of @code{:}:
+
+@example
+(define (:my-dispatch args)
+  (case (length args)
+    [(0) 'SRFI-NN]
+    [(1) (let ([a1 (car args)])
+           (cond
+            [(list? a1)
+             (:generator-proc (:list a1))]
+            [(string? a1)
+             (:generator-proc (:string a1))]
+            ...more unary cases...
+            [else
+             #f]))]
+    [(2) (let ([a1 (car args)]
+               [a2 (cadr args)])
+           (cond
+            [(and (list? a1) (list? a2))
+             (:generator-proc (:list a1 a2))]
+            ...more binary cases...
+            [else
+             #f]))]
+    ...more arity cases...
+    [else
+     (cond
+      [(every?-ec (:list a args) (list? a))
+       (:generator-proc (:list (apply append args)))]
+      ...more large variable arity cases...
+      [else
+       #f])]))
+@end example
+
+Once the dispatcher has been defined, the following macro implements the
+new dispatching generator:
+
+@example
+(define-syntax :my
+  (syntax-rules (index)
+    [(:my cc var (index i) arg1 arg ...)
+     (:dispatched cc var (index i) :my-dispatch arg1 arg ...)]
+    [(:my cc var arg1 arg ...)
+     (:dispatched cc var :my-dispatch arg1 arg ...)]))
+@end example
+
+This method of extension yields complete control of the dispatching
+process.  Other modules can only add cases to @code{:my} if they have
+access to @code{:my-dispatch}.
+
+Extending the predefined dispatched generator.  An alternative to adding
+a new dispatched generator is to extend the predefined generator
+@code{:}.  Technically, extending @code{:} means installing a new global
+dispatching procedure using @code{:-dispatch-set!} as described above.
+In most cases, however, the already installed dispatcher should be
+extended by new cases.  The following procedure is a utility for doing
+so:
+
+@example
+(dispatch-union d1 d2)
+=> d
+@end example
+
+@noindent
+where the new dispatcher @var{d} recognizes the union of the cases
+recognized by the dispatchers @var{d1} and @var{d2}.  The new dispatcher
+always tries both component dispatchers and raises an error in case of
+conflict.  The identification returned by @code{(d)} is the
+concatenation of the component identifications @code{(d1)} and
+@code{(d2)}, enclosed in lists if necessary.  For illustration, consider
+the following code:
+
+@example
+(define (example-dispatch args)
+  (cond
+   [(null? args)
+    'example]
+   [(and (= (length args) 1) (symbol? (car args)) )
+    (:generator-proc (:string (symbol->string (car args))))]
+   [else
+    #f]))
+
+(:-dispatch-set! (dispatch-union (:-dispatch-ref) example-dispatch))
+@end example
+
+After evaluation of this code, the following example will work:
+
+@example
+(list-ec (: c 'abc)
+  c)
+=> (#\a #\b #\c)
+@end example
+
+Adding cases to @code{:} is particularly useful for frequent cases of
+interactive input.  Be warned, however, that the advantage of global
+extension also carries the danger of conflicts, unexpected
+side--effects, and slow dispatching.
+@end deffn
+
+
+@deffn Generator :do (@var{lb}*) @var{ne1?} (@var{ls}*)
+@deffnx Generator :do (let (@var{ob}*) @var{oc}*) (@var{lb}*) @var{ne1?} (let (@var{ib}*) @var{ic}*) @var{ne2?} (@var{ls}*)
+Defines a generator in terms of a named--@func{let}, optionally
+decorated with inner and outer lets.  This generator is for defining
+other generators.  (In fact, the reference implementation transforms any
+other generator into an instance of fully decorated @code{:do}.)
+
+The generator is a compromise between expressive power (more flexible
+loops) and fixed structure (necessary for merging and modifying
+generators).
+
+In the fully decorated form, the syntactic variables @var{ob} (outer
+binding), @var{oc} (outer command), @var{lb} (loop binding), @var{ne1?}
+(not-end1?), @var{ib} (inner binding), @var{ic} (inner command),
+@var{ne2?}  (not-end2?), and @var{ls} (loop step) define the following
+loop skeleton:
+
+@example
+(let (@var{ob}*)
+  @var{oc}*
+  (let loop (@var{lb}*)
+    (if @var{ne1?}
+        (let (@var{ib}*)
+          @var{ic}*
+          payload
+          (if @var{ne2?}
+              (loop @var{ls}*) )))))
+@end example
+
+@noindent
+where @code{@var{oc}*} and @code{@var{ic}*} are syntactically equivalent
+to @var{command}*, i.e. they do not begin with a @var{definition}.  The
+latter requirement allows the code generator to produce more efficient
+code for special cases by removing empty @func{let}--expressions
+altogether.
+@end deffn
+
+
+@deffn Generator :let @var{vars} @var{expression}
+Run through the sequence consisting of the value of @var{expression},
+only.  This is the same as:
+
+@example
+(:list @var{vars} (list @var{expression}))
+@end example
+
+If an index variable is specified, its value is @code{0}.  The
+@code{:let} generator can be used to introduce an intermediate variable
+depending on outer generators.
+@end deffn
+
+
+@deffn Generator :parallel @var{generator}*
+Run several generators in parallel.  This means that the next binding
+in the sequence is obtained by advancing each generator in
+@code{@var{generator}*} by one step.  The parallel generator terminates
+when any of its component generators terminate.  The generators share a
+common scope for the variables they introduce.  This implies that the
+names of the variables introduced by the various generators must be
+distinct.
+@end deffn
+
+
+@deffn Generator :while @var{generator} @var{expression}
+Run @var{generator} while @var{expression} evaluates to non--@false{}.
+The guarding expression is included in the scope of the variables
+introduced by the generator.
+
+Note the distinction between the filter @code{if} and the modified
+generator expressed by @code{:while}.
+@end deffn
+
+
+@deffn Generator :until @var{generator} @var{expression}
+Run @var{generator} until after @var{expression} has evaluated to
+non--@false{}.  The guarding expression is included in the scope of the
+variables introduced by the generator.
+
+Note the distinction between @code{:while}, stopping at a certain
+condition, and @code{:until}, stopping after a certain condition has
+occurred.  The latter implies that the binding that has triggered
+termination has been processed by the comprehension.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Application specific typed generator
+
+
+An important aspect of this @srfi{} is a modular mechanism to define
+new typed generators.  To define a new typed generator a hygienic
+referentially transparent macro of the same name is defined to transform
+the generator pattern into an instance of the @code{:do-generator}.  The
+extension is fully modular, meaning that no other macro has to be
+modified to add the new generator.  This is achieved by defining the new
+macro in Continuation Passing Style.
+
+Technically, this works as follows.  Assume the generator syntax:
+
+@example
+(:mygen @var{var} @var{arg})
+@end example
+
+@noindent
+is to be implemented, for example running the variable @var{var} through
+the list @code{(reverse @var{arg})}.  The following definition
+implements @code{:mygen} in terms of @code{:list} using the additional
+syntactic variable @var{cc} (read current continuation):
+
+@example
+(define-syntax :mygen
+  (syntax-rules ()
+    [(:mygen cc var arg)
+     (:list cc var (reverse arg))]))
+@end example
+
+After this definition, any comprehension will accept the @code{:mygen}
+generator and produce the proper code for it.  This works as follows.
+When a comprehension sees something of the form @code{(@var{g} @var{arg}
+...)} in the position of a @var{qualifier} then it will transform the
+entire comprehension into:
+
+@example
+(@var{g} (continue ...) @var{arg} ...)
+@end example
+
+This effectively ``transfers control'' to the macro @var{g}, for example
+@code{:mygen}.  The macro @var{g} has full control of the
+transformation, but eventually it should transform the expression into:
+
+@example
+(:do (continue ...)  etc ...)
+@end example
+
+In the @code{:mygen} example this is done by the @code{:list-macro}.
+The macro @code{:do} finally transforms into:
+
+@example
+(continue ... (:do etc ...))
+@end example
+
+As @code{continue} has been chosen by the macro implementing the
+comprehension, it can regain control and proceed with other qualifiers.
+
+In order to ensure consistency of new generators with the ones defined
+in this @srfi{}, a few conventions are in order.  Firstly, the
+generator patterns begin with one or more variables followed by
+arguments defining the sequence.  Secondly, each generator except
+@code{:do} can handle an optional index variable.  This is most easily
+implemented using @code{:parallel} together with @code{:integers}.  In
+case the payload generator needs an index anyhow (e.g. @code{:vector})
+it is more efficient to add an index variable if none is given and to
+implement the indexed case.  Finally, make sure that no syntactic
+variable of the generator pattern ever gets duplicated in the code (to
+avoid exponential code size in nested application), and introduce
+sufficient intermediate variables to make sure expressions are evaluated
+at the correct time.
+
+@c page
+@node srfi eager-comp spec suggest
+@subsubsection Suggestions for application specific extensions
+
+
+@subsubheading Arrays in the sense of @ansrfi{25}
+
+In order to create an array from a sequence of elements, a comprehension
+with the following syntax would be useful:
+
+@example
+(array-ec @var{shape} @var{qualifier}* @var{expression})
+@end example
+
+The comprehension constructs a new array of the given shape by filling
+it row--major with the sequence of elements as specified by the
+qualifiers.  On the generator side, it would be most useful to have a
+generator of the form:
+
+@example
+(:array @var{vars} @var{arg})
+@end example
+
+@noindent
+running through the elements of the array in row--major.  For the
+optional index variable, the extension @code{(index @var{k1} @var{k}*)}
+could be defined where @var{k1} @code{@var{k}*} are variable names
+indexing the various dimensions.
+
+@c ------------------------------------------------------------
+
+@subsubheading Random Numbers in the sense of @ansrfi{27}
+
+In order to create a vector or list of random numbers, it would be
+convenient to have generators of the following form:
+
+@example
+(:random-integer [ @var{range} [ @var{number} ] ] )
+(:random-real    [ @var{number} ] )
+@end example
+
+@noindent
+where @var{range} (default 2) indicates the range of the integers and
+@var{number} (default infinity) specifies how many elements are to be
+generated.  Derived from these basic generators, one could define
+several other generators for other distributions (e.g. Gaussian).
+
+@c ------------------------------------------------------------
+
+@subsubheading Bitstrings in the sense of @ansrfi{33}
+
+As eager comprehensions are efficient, they can be useful for operations
+involving strings of bits.  It could be useful to have the following
+comprehension:
+
+@example
+(bitwise-ec @var{qualifier}* @var{expression})
+@end example
+
+@noindent
+which constructs an integer from bits obtained as values of
+@var{expression} in the ordering defined by @ansrfi{33}.  In other words,
+if the sequence of values is @code{@var{x}[0]}, @code{@var{x}[1]},
+@dots{}, @code{@var{x}[n-1]} then the result is:
+
+@example
+x[0] + x[1] 2 + ... + x[n-1] 2^(n-1)
+@end example
+
+On the generator side, a generator of the form:
+
+@example
+(:bitwise @var{vars} @var{arg1} @var{arg}*)
+@end example
+
+@noindent
+runs through the sequence of bits obtained by appending the binary
+digits of the integers @var{arg1} @var{arg}*.
+
+@c ------------------------------------------------------------
+
+@subsubheading Streams in the sense of @ansrfi{41}
+
+It is possible to ``lazify'' the eager comprehension @func{list-ec},
+constructing a stream in the sense of @ansrfi{41}.  Clearly, such a
+comprehension (@func{stream-ec}) is not eager at all since it only runs
+the loops when results are requested.  It is also possible to define a
+@code{:stream} generator with the same @api{} as @code{:list} but
+running through streams instead of lists.
+
+For what is worth, the file @file{srfi40-ec.scm} implements
+@code{:stream} and @func{stream-ec} and gives an example.  The
+implementation makes substantial use of
+@func{call-with-current-continuation} to run the loop only when
+necessary.  In some implementations of Scheme this may involve
+considerable overhead.
+
+@c ------------------------------------------------------------
+
+@subsubheading Reading Text Files
+
+Eager comprehensions can also be used to process files.  However, bear
+in mind that an eager comprehension wants to read and process the entire
+file right away.  Nevertheless, these generators would be useful for
+reading through the lines of a file or through the characters of a file:
+
+@example
+(:lines-of-file @var{vars} @var{file})
+(:chars-of-file @var{vars} [ (line @var{variable1}) ] [ (column @var{variable2}) ] @var{file})
+@end example
+
+Here @var{file} is either an input port or a string interpreted as a
+filename.  In a similar fashion, generators reading from sockets defined
+by @aurl{}s or other communication facilities could be defined.
+
+@c ------------------------------------------------------------
+
+@subsubheading The Scheme shell Scsh
+
+In the Scheme--shell, Scsh, it could be useful to have certain
+comprehensions and generators.  Candidates for comprehensions are
+@func{begin-ec}, @func{|-ec}, @func{||-ec}, and @func{&&-ec}.
+
+Concerning generators, it might be useful to have @code{:directory}
+running through the records of a directory, and maybe a sophisticated
+@code{:file-match-generator} could enumerate file record in a directory
+structure.  Optional variables of the generators could give convenient
+access frequent components of the file records (e.g. the filename).
+Another candidate is @code{:env} to run through the environment
+associations.  It is left to other authors and other @srfi{}s to define
+a useful set of comprehensions and generators for Scsh.
+
+@c page
+@node srfi eager-comp design
+@subsection Design rationale
+
+
+@subsubheading What is the difference between eager and lazy comprehensions?
+
+A lazy comprehension, for example @func{stream-of} in the sense of
+@ansrfi{41}, constructs an object representing a sequence of values.  They
+are actually produced only at the time they are needed.  An eager
+comprehension, on the other hand, is an instruction to run through a
+certain sequence of values and do something with it, for example as in
+@func{do-ec}.  In other words, it is nothing more sophisticated than a
+loop, potentially with a more convenient notation.  This also explains
+why @func{stream-of} is the most fundamental lazy comprehension, and all
+others can be formulated in terms of it, whereas the most fundamental
+eager comprehension is @func{do-ec}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why the @code{[@var{outer} .. @var{inner} | @var{expr}]} order of qualifiers?
+
+In principle, there are six possible orders in which the qualifiers and
+the expression of a comprehension can be written.  We denote the
+different conventions with a pattern in which @var{expr} denotes the
+expression over which the comprehension ranges, @var{inner} denotes the
+generator spinning fastest, and @var{outer} denotes the generator
+spinning slowest.  For example, Haskell and Python use:
+
+@example
+[@var{expr} | @var{outer} .. @var{inner}]
+@end example
+
+Probably with sufficient persistence, instances for any of the
+conventions can be found on the Internet.  In addition, there is the
+common mathematical notation @code{@{f(x) | x in X@}}.
+
+It is important to understand that the notational convention does not
+only determine the order of enumeration but also the scope of the
+variables introduced by the generators.  The scope of @var{inner}
+includes @var{expr}, and the scope of @var{outer} should include
+@var{inner} to allow @var{inner} generators to depend on @var{outer}
+generators.  Eventually, the choice for a particular syntactic
+convention is largely a matter of personal preferences.  However, there
+are a few considerations that went into the choice made for this
+@srfi{}:
+
+@enumerate
+@item
+The mathematical notation is universally known and widely used.
+However, the mathematical notation denotes a set of comprehensions in
+which the order of the qualifiers is either irrelevant or must be
+deduced from the context.  For the purpose of eager comprehensions as a
+programming language construct, the order does matter and a simple
+convention is a plus.  For these reasons, the mathematical notation as
+such is undesirable, but its widespread use is in favor of:
+
+@example
+[@var{expr} | @var{inner} .. @var{outer}]
+@end example
+
+@noindent
+and:
+
+@example
+[@var{expr} | @var{outer} .. @var{inner}]
+@end example
+
+@item
+It is desirable to have the scope of the variables increase into one
+direction, as in:
+
+@example
+[@var{expr} | @var{inner} .. @var{outer}]
+@end example
+
+@noindent
+and:
+
+@example
+[@var{outer} .. @var{inner} | @var{expr}]
+@end example
+
+@noindent
+and not change direction, as in:
+
+@example
+[@var{expr} | @var{outer} .. @var{inner}]
+@end example
+
+@noindent
+where @var{expr} is in the scope of @var{inner} but @var{outer} is not.
+This is even more important if the syntax in Scheme does not explicitly
+contain the @code{|} separator.
+
+@item
+More complicated comprehensions with several nested generators
+eventually look like nested loops and Scheme always introduces them
+@var{outer} @dots{} @var{inner} as in @func{do} and named @func{let}.
+This is in favor of:
+
+@example
+[@var{expr} | @var{outer} .. @var{inner}]
+@end example
+
+@noindent
+and:
+
+@example
+[@var{outer} .. @var{inner} | @var{expr}]
+@end example
+
+Shorter comprehensions may look more naturally the other way around.
+@end enumerate
+
+Regarding these contradicting preferences, I regard linearity in scoping
+(point 2) most important, followed by readability for more complicated
+comprehensions (point 3).  This leads to:
+
+@example
+[@var{outer} .. @var{inner} | @var{expr}]
+@end example
+
+An example in Scheme syntax is:
+
+@example
+(list-ec (: x 10) (: y x) (f x y))
+@end example
+
+@noindent
+which looks acceptable to me even without similarity to the mathematical
+notation.  As a downside, the convention clashes with other the
+convention used in other languages (e.g. Haskell and Python).
+
+@c ------------------------------------------------------------
+
+@subsubheading You forgot @emph{choose your favorite here}--@code{ec!}
+
+I tried to construct a reasonably useful set of tools according to what
+@rnrs{5} specifies.  Nevertheless, the choice about what to include and
+what to leave out is a matter of personal preference.
+
+When ``packing the toolbox'' I went for travelling light; this @srfi{}
+does not include everything imaginable or even everything useful.  I
+oriented myself at the standard procedures of @rnrs{5}, with a few
+omissions and additions.  A notable omission are @func{gcd-ec} and
+@func{lcm-ec} because they are one--liners, and more severely, of
+questionable value in practice.  Notable additions are @func{fold-ec}
+and @func{fold3-ec}, providing a mechanism to define lots of useful
+one--liners.  The other notable addition is @func{first-ec}, which is
+the fundamental ``early stopping'' comprehension.  It is used to define
+@func{any?-ec} and @func{every?-ec} which are among the most frequent
+comprehensions.
+
+Concerning the generators, the same principle has been used.  Additions
+include @code{:range} and friends because they are universally needed,
+and @code{:dispatched} which is primarily intended for implementing
+@code{:}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is the order of enumeration specified?
+
+For the purpose of this @srfi{}, every generator runs through its
+sequence of bindings in a well specified order, and nested generators
+run through the Cartesian product in the order of nested loops.  The
+purpose of this definition is making the sequence as easily predictable
+as possible.  On the other hand, many mechanisms for lazy comprehensions
+do not specify the order in which the elements are enumerated.  When it
+comes to infinite streams, this has the great advantage that a
+comprehension may interleave an inner and an outer enumeration, a method
+also known as ``dove--tailing'' or ``diagonalizing''.  Interleaving
+ensures that any value of the resulting stream is produced after a
+finite amount of time, even if one or more inner streams are infinite.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why both typed and dispatching generators?
+
+The reason for typed generators is runtime efficiency.  In fact, the
+code produced by @code{:range} and others will run as fast as a
+hand--coded @func{do} loop.  The primary purpose of the dispatching
+generator is convenience.  It comes at the price of reduced runtime
+performance, both for loop iteration and startup.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why the @func{something-ec} and @code{:type} naming?
+
+The purpose of the @code{:type} convention is to keep many common
+comprehensions down to one--liners.  In my opinion, the fundamental
+nature of eager comprehensions justifies a single character naming
+convention.  The @func{something-ec} convention is primarily intended to
+stay away from the widely used @func{something-of}.  It reduces
+confusion and conflict with related mechanisms.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why combine variable binding and sequence definition?
+
+The generators of this @srfi{} do two different things with a single
+syntactic construct: They define a sequence of values to enumerate and
+they specify a variable (within a certain scope) to run through that
+sequence.  An alternative is to separate the two, for example as it has
+been done in @ansrfi{41}.
+
+The reason for combining sequence definition and enumeration for the
+purpose of this @srfi{} is threefold.  Firstly, sequences of values are
+not explicitly represented as objects in the typed generators; the
+generators merely manipulate an internal state.  Secondly, this @srfi{}
+aims at a most concise notation for common comprehensions and reduces
+syntax to the naked minimum.  Thirdly, this @srfi{} aims at the highest
+possible performance for typed generators, which is achieved if the
+state being manipulated is represented by the loop variable itself.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is @code{(: @var{vars})} illegal?
+
+It is reasonable and easy to define:
+
+@example
+(: @var{vars})
+@end example
+
+@noindent
+as:
+
+@example
+(:integers @var{vars})
+@end example
+
+@noindent
+enumerating the non--negative integers.  However, it turned out that a
+frequent mistake in using the eager comprehensions is to forget either
+the variable or an argument for the enumeration.  As this would lead to
+an infinite loop (not always equally pleasant in interactive sessions),
+it is not allowed.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is there no @code{:sequential}?
+
+Just like @code{:parallel} enumerates generators in parallel, a
+@code{:sequential} generator could enumerate a concatenation of several
+generator, starting the next one when the previous has finished.  The
+reason for not having such a qualifier is that the generators should use
+all the same variable name and there is no hygienic and referentially
+transparent way of enforcing this (or even knowing the variable).
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is there no general @func{let} qualifier?
+
+It is easy to add @func{let}, @func{let*}, and @func{letrec} as cases to
+@var{qualifier}.  This would allow more sophisticated local variables
+and expressions than possible with:
+
+@example
+(:let @var{vars} @var{expression})
+@end example
+
+@noindent
+and:
+
+@example
+(begin @var{sequence}*)
+@end example
+
+In particular, a local @var{definition} in the sense of @rnrs{5} Section
+7.1.5 would be possible.
+
+There are two reasons for not including @func{let} and friends as
+qualifiers.  The first reason concerns readability.  A qualifier of the
+form:
+
+@example
+(let (@var{binding-spec}*) @var{body})
+@end example
+
+@noindent
+only makes sense if the scope of the new variables ends at the end of
+the comprehension, and not already after @var{body}.  The similarity
+with ordinary @func{let} expressions would be very confusing.  The
+second reason concerns the design rationale.  If sophisticated
+@func{let} qualifiers involving recursion or local definitions are
+needed, it is likely that eager comprehensions are being overused.  In
+that case it might be better to define a procedure for the task.  So
+including an invitation to overuse the mechanism would be a serious
+violation of the Keep It Simple and Stupid principle.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is there no @code{:nested} generator?
+
+The specification above defines nested as a qualifier but
+@code{:parallel} as a generator.  In particular, this makes it
+impossible to make parallel generators from nested ones.
+
+This design simply reflects an implementability limitation.  All
+component generators of @code{:parallel} are transformed into
+@code{:do-generators} and these can be merged into a parallel generator.
+However, nested generators cannot be merged easily without losing the
+type of the generator, which would seriously hurt modularity and
+performance.
+
+@c ------------------------------------------------------------
+
+@subsubheading Is @func{any?-ec} eager?
+
+Yes, it is still eager because it immediately starts to run through the
+sequence.
+
+In fact, the reference implementation makes sure @func{first-ec},
+@func{any?-ec}, and @func{every?-ec} execute efficiently so they can be
+used conveniently as in:
+
+@example
+(every?-ec (:list x my-list) (pred? x))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Why this whole @code{:dispatched} business?
+
+It is specified above that the dispatching generator, called @code{:},
+is just a special case of @code{:dispatched} using a global dispatching
+procedure.  Alternatively, a simple fixed global mechanism to extend
+@code{:} could have been used.  This is much simpler but does not
+support the definition of new dispatched generators.
+
+The purpose of @code{:dispatched} and its utilities
+(@code{:generator-proc} and @func{dispatch-union}) is the following.
+Assume @code{:} is to be used inside a module but it is essential that
+no other module can spoil it, e.g. by installing a very slow dispatcher.
+The recommended way to proceed in this case is to define a local copy of
+the original dispatching generator @code{:}, for example with the
+following code:
+
+@example
+(define :my-dispatch
+  (make-initial-:-dispatch))
+
+(define-syntax :my
+  (syntax-rules (index)
+    [(:my cc var (index i) arg1 arg ...)
+     (:dispatched cc var (index i) :my-dispatch arg1 arg ...)]
+    [(:my cc var arg1 arg ...)
+     (:dispatched cc var :my-dispatch arg1 arg ...)]))
+@end example
+
+@noindent
+and to use the new generator @code{:my} instead of @code{:}.
+
+An alternative for the dispatching mechanism as defined in this @srfi{}
+is the use of parameter objects in the sense of @ansrfi{39}.  The
+dispatching generator would then access a dynamically scoped variable to
+find the dispatcher, allowing full control over dispatching.  However,
+this approach does not solve the dilemma that it is sometimes useful
+that @code{:} is global and sometimes undesired.  The approach specified
+for this @srfi{} addresses this dilemma by offering options.
+
+Another alternative for dealing with the dispatching problem is adding
+an optional argument to the syntax of @code{:} through which the
+dispatcher can be passed explicitly.  However, as @code{:} has variable
+arity and the identifier for the variable cannot be distinguished from
+any value for a dispatcher, this is syntactically problematic.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is there no local mechanism for adding to @code{:}?
+
+According to @rnrs{5} Section 7.1.6 macros can only be defined at the
+level of the @code{<program>} syntax.  This implies that the scope of
+typed generators cannot easily be limited to local scopes.  As typed and
+dispatched generators go together, there is also no strong need for a
+limited scope of dispatched generators either.  Furthermore, locally
+extendable dispatchers are another major headache to those trying to
+understand other people's code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why are dispatchers unary?
+
+As defined in @code{:dispatched}, a dispatching procedure is called with
+a single argument being the list of values to dispatch on.  An
+alternative is to apply the dispatcher to the list of values to dispatch
+on, which would be more natural in Scheme.
+
+The reason for not using apply is a minor improvement in efficiency.
+Every time @var{apply} is used on a procedure of variable arity, an
+object containing the argument list is allocated on the heap.  As a
+dispatcher may call many other dispatchers, this will add to the
+overhead of dispatching, which is relevant in inner loops.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why are there two fold comprehensions?
+
+The reason for having two fold comprehensions (@func{fold-ec} and
+@func{fold3-ec}) is efficiency.
+
+Clearly, the more general construction is @func{fold3-ec} as it allows
+individual treatment of the empty sequence case and the singleton
+sequence case.  However, this comes at the price of more book--keeping
+as can be seen from the implementation example.  As the overhead is
+located within inner loops, it makes sense to define another fold
+comprehension for the case where the added flexibility is not needed.
+This is @func{fold-ec}.
+
+The names @func{fold-ec} and @func{fold3-ec} have been chosen for the
+comprehensions in order to stay clear any other 'fold' that may be
+around.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is @code{:char-range} not defined by @func{integer->char}?
+
+The definition of @code{:char-range} specifies a sequence of adjacent
+characters ordered by @code{char<=?}.  The reason for not using
+@func{char->integer} and @func{integer->char} is the fact that @rnrs{5}
+Section 6.3.4 leaves it to the implementation whether the integers
+representing characters are consecutive or not.  In effect, this
+underspecification is inherited by @code{:char-range}.
+
+@c page
+@node srfi eager-comp ack
+@subsection Related work and acknowledgements
+
+
+Several other proposals related to the mechanism specified here exists.
+The following mechanisms are made for and in Scheme (or at least a
+specific dialect thereof).
+
+First of all, the report @rnrs{5} of Scheme itself defines two
+constructs for writing loops: @func{do} and named @func{let}.  Both
+constructs express a single loop (not nested), possibly with several
+variables running in parallel, based on explicit manipulation of the
+state variables.  For example:
+
+@example
+(do ([x 0 (+ x 1)])
+    ([= x 10])
+  (display x))
+@end example
+
+@noindent
+explicitly mentions how to obtain the next binding of @var{x}.
+
+Richard Kelsey's ``Macros for writing loops'', are an extension to
+Scheme48 to simplify the formulation of loops.  The basic idea is to
+stick with a @func{do}--like syntax for more sophisticated loop
+constructs, not necessarily manipulating a state variable explicitly.
+For example:
+
+@example
+(list* x '(1 2 3))
+@end example
+
+@noindent
+expresses an enumeration of the variable @var{x} through the list
+@code{(1 2 3)} without explicit state manipulation.  The iteration
+constructs of MWL, @func{named} @func{iterate} and @func{reduce},
+express a single (not nested) loop (@func{iterate}) or comprehension
+(@func{reduce}) with any number of parallel enumerations.
+
+A most important feature of the MWL--concept is a modular way to add
+sequence types (generators).  In effect, the addition of a new sequence
+type does not require a modification of the existing macros.  This is
+achieved by carefully limiting the expressive power of the loop
+constructs and by using the macros in Continuation Passing Style to call
+other macros.  The MWL--concept, and its implementation, were most
+influential for this @srfi{}.
+
+Another related mechanism is the library of streams recently submitted
+by Phil L. Bewig as @srfi{40} (superseded by @srfi{41}).  The library
+contains a data type to represent even streams (both car and cdr
+potentially delayed) and defines procedures for manipulating these
+streams.  Moreover, the macro @func{stream-of} defines a lazy
+comprehension resulting in the stream of values of an expression subject
+to generators and filters.
+
+A fixed set of generators (lists, vector, string, port, and naturally:
+streams) is supported; extending the list of generators requires
+changing @func{stream-of}.  Nevertheless, modularity is high since it is
+easy to define a procedure producing a stream object and this can be
+used for enumeration.  The order of enumeration is left unspecified to
+allow interleaving of generators (also refer to above).
+
+Before Phil submitted his @srfi{}s, we had a short discussion in which
+we clarified the semantic and syntactic differences of our approaches.
+It turned out that the mechanisms are sufficiently different not to
+unify them.  The most important difference is the design rationale: Phil
+created his library to support the stream paradigm in Scheme, inspired
+by the work done for Haskell and other lazy languages, and intrigued by
+the beauty of programming with infinite streams.  My work only aims at a
+convenient way of expressing frequent patterns of loops in a compact
+way.  For what it is worth, section @srfi{40}-ec contains a suggestion
+for extending the eager comprehension mechanism for @srfi{41} streams.
+
+Phil's work on streams and lazy comprehensions in Scheme triggered Eli
+Barzilay to implement a library of eager comprehensions for
+@acronym{PLT}--Scheme.  The mechanism implemented by Eli is in essence
+very similar to the one proposed in this @srfi{}, and the two efforts
+have been independent until recently.  Syntactically, Eli uses infix
+operators for generators, whereas this @srfi{} is purely prefix, and Eli
+uses the:
+
+@example
+[@var{expr} | @var{outer} .. @var{inner}]
+@end example
+
+@noindent
+convention for nesting, whereas this @srfi{} uses the:
+
+@example
+[outer .. inner | expr]
+@end example
+
+@noindent
+convention.  Semantically, Eli's mechanism defines more flexible loops
+than this @srfi{}.  Comprehensions are regarded as generalized
+collection processes like @func{fold} and @func{reduce}.  The mechanism
+in this @srfi{} is more restricted with respect to control flow (there
+is no general @func{while}) and more extensive with respect to
+generators and comprehensions.  Despite the strong conceptual
+similarity, the design rationales are different.  This @srfi{} focuses
+on portability and modular extension, whatever that may cost in terms of
+expressive power.
+
+Finally, I would like to thank Mike Sperber for his encouragement to
+proceed with the @srfi{} and for several discussions of the matter.  In
+particular, the dispatching mechanism evolved rapidly during discussions
+with Mike.
+
+@c page
+@node srfi eager-comp references
+@subsection References
+
+
+@emph{Revised(5) Report on the Algorithmic Language Scheme}.  Richard
+Kelsey, William Clinger, and Jonathan Rees (eds.).  February 20, 1998.
+Higher--Order and Symbolic Computation, Vol. 11, No. 1, September
+1998.
+
+@center @url{http://schemers.org/Documents/Standards/R5RS/}
+
+@noindent
+@emph{The Incomplete Scheme48 Reference Manual for Release 0.57 (July
+15, 2001)}.  Richard Kelsey, Jonathan Rees. Section ``Macros for writing
+loops''.
+
+@center @url{http://s48.org/0.57/manual/s48manual_49.html}
+
+@noindent
+@emph{@ansrfi{1} List library}.  Olin Shivers.
+
+@center @url{http://srfi.schemers.org/srfi-1/}
+
+@noindent
+@emph{@ansrfi{23} Error reporting mechanism}.  Stephan Houben:.
+
+@center @url{http://srfi.schemers.org/srfi-23/}
+
+@noindent
+@emph{@ansrfi{25} Multi--dimensional Array Primitives}.  Jussi
+Piitulainen.
+
+@center @url{http://srfi.schemers.org/srfi-25/}
+
+@noindent
+@emph{@ansrfi{27} Sources of Random Bits}.  Sebastian Egner.
+
+@center @url{http://srfi.schemers.org/srfi-27/}
+
+@noindent
+@emph{@ansrfi{33} Integer Bitwise-operation Library}.  Olin Shivers.
+
+@center @url{http://srfi.schemers.org/srfi-33/}
+
+@noindent
+@emph{@ansrfi{39} Parameter objects}.  Marc Feeley.
+
+@center @url{http://srfi.schemers.org/srfi-39/}
+
+@noindent
+@emph{@ansrfi{41} A Library of Streams}. Philip L. Bewig.
+
+@center @url{http://srfi.schemers.org/srfi-41/}
+
+@noindent
+@emph{Documentation for @file{misc.ss}}.  Eli Barzilay.  2002.
+
+@center @url{http://www.cs.cornell.edu/eli/Swindle/misc-doc.html#collect}
+
+@noindent
+@emph{Folds and reductions}.  John David Stone.  Posting in relation to
+@ansrfi{1} on 8-Jan-1999.
+
+@center @url{http://srfi.schemers.org/srfi-1/mail-archive/msg00021.html}
+
+@noindent
+@emph{The Haskell 98 Report 1 February 1999}.  Simon L. Peyton Jones,
+John Hughes.  Section 3.11 ``List Comprehensions''.
+
+@center @url{http://www.haskell.org/onlinereport/exps.html#sect3.11}
+
+@noindent
+@emph{Python Reference Manual}.  Guido van Rossum, Fred L. Drake
+Jr. (eds.).  Section 5.2.4 ``List displays''.  Release 2.2, December 21,
+2001.
+
+@center @url{http://python.org/doc/2.2/ref/lists.html}
+
+@noindent
+@emph{Structure and Interpretation of Computer Programs}.  Harold
+Abelson, Gerald J. Sussman, Julie Sussman.  @acronym{MIT} Press,
+1985.
+
+@center @url{http://mitpress.mit.edu/sicp/}
+
+@noindent
+@emph{List Comprehensions (Chapter 7)}.  Philip Wadler.  In: Simon
+L. Peyton Jones: The Implementation of Functional Programming Languages.
+Prentice Hall, 1987.
+
+@noindent
+@emph{Scheme48 Release 0.57 (July 15, 2001)}.  Richard Kelsey, Jonathan
+Rees.
+
+@center @url{http://s48.org/}
+
+@noindent
+@emph{SCM Scheme Implementation. Version 5d7 (November 27, 2002)}.
+Aubrey Jaffer.
+
+@center @url{http://www.swiss.ai.mit.edu/~jaffer/SCM.html}
+
+@noindent
+@emph{@acronym{PLT} Scheme, DrScheme Version 203}.  @acronym{PLT}
+People.
+
+@center @url{http://www.plt-scheme.org/}
+
+@noindent
+@emph{Scsh Reference Manual}.  Olin Shivers, Brian D. Carlstrom, Martin
+Gasbichler, Mike Sperber.  For scsh release 0.6.3.
+
+@center @url{http://scsh.net/}
+
+@c end of file

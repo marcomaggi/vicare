@@ -19497,7 +19497,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi parameters::             @ansrfi{39} parameter objects.
 * srfi args-fold::              @ansrfi{37} a program argument processor.
 * srfi streams::                @ansrfi{41} streams.
-@c * srfi eager-comp::                  @ansrfi{42} eager comprehensions.
+* srfi eager-comp::             @ansrfi{42} eager comprehensions.
 @c * srfi vector::                      @ansrfi{43} vector library.
 @c * srfi general-cond::                @ansrfi{61} a more general @func{cond} clause.
 @c * srfi lightweight-testing::         @ansrfi{78} lightweight testing.
@@ -19524,6 +19524,7 @@ minor modification of the original documents by Marco Maggi.
 @include parameters.texi
 @include args-fold.texi
 @include streams.texi
+@include eager-comp.texi
 
 @c page
 @node libs
