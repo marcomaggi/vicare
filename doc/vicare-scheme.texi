@@ -19483,8 +19483,8 @@ minor modification of the original documents by Marco Maggi.
 * srfi let-values::             @ansrfi{11} syntax for receiving
                                 multiple values.
 * srfi strings::                @ansrfi{13} string library.
-@c * srfi case-lambda::                 @ansrfi{16} syntax for procedures of
-@c                                 variable arity.
+* srfi case-lambda::            @ansrfi{16} syntax for procedures of
+                                variable arity.
 @c * srfi time::                        @ansrfi{19} time data types and procedures.
 @c * srfi error-reporting::             @ansrfi{23} error reporting mechanism.
 @c * srfi shared structures::           @ansrfi{38} representation for data with
@@ -19514,6 +19514,7 @@ minor modification of the original documents by Marco Maggi.
 @include records.texi
 @include let-values.texi
 @include strings.texi
+@include case-lambda.texi
 
 @include args-fold.texi
 

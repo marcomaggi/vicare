@@ -1,0 +1,121 @@
+@node srfi case-lambda
+@section @ansrfi{16} syntax for procedures of variable arity
+
+
+@cindex @srfi{} case-lambda
+
+
+The library @library{srfi case-lambda} is by Lars T Hansen as the
+reference implementation for @ansrfi{16}; see:
+
+@center @url{http://srfi.schemers.org/srfi-16/srfi-16.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi case-lambda license::        Case-Lambda document license.
+* srfi case-lambda abstract::       Abstract.
+* srfi case-lambda rationale::      Rationale.
+* srfi case-lambda spec::           Specification.
+@end menu
+
+@c page
+@node srfi case-lambda license
+@subsection Case--lambda document license
+
+
+Copyright @copyright{} 1999 Lars T Hansen.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi case-lambda abstract
+@subsection Abstract
+
+
+@func{case-lambda}, a syntax for procedures with a variable number of
+arguments, is introduced.
+
+@c page
+@node srfi case-lambda rationale
+@subsection Rationale
+
+
+@func{case-lambda} reduces the clutter of procedures that execute
+different code depending on the number of arguments they were passed; it
+is a pattern--matching mechanism that matches on the number of
+arguments.  @func{case-lambda} is available in some Scheme systems.
+
+While @func{case-lambda} can be implemented as a macro using only
+facilities available in @rnrs{5} Scheme, it admits considerable
+implementation--specific optimization.
+
+@c page
+@node srfi case-lambda spec
+@subsection Specification
+
+
+@deffn Syntax case-lambda @var{clause} ...
+Eeach @var{clause} has the format @code{(formals body)}, were
+@var{formals} is a formal arguments list as for @func{lambda} (cf
+section 4.1.4 of the @rnrs{5}).  Each @var{body} is a @code{tail-body}
+(cf section 3.5 of the @rnrs{5}).
+
+A @func{case-lambda} expression evaluates to a procedure that accepts a
+variable number of arguments and is lexically scoped in the same manner
+as procedures resulting from @func{lambda} expressions.
+
+When the procedure is called with some arguments @var{V1}, ...,
+@var{Vk}, then the first clause for which the arguments agree with
+@var{formals} is selected, where agreement is specified as for the
+@var{formals} of a LAMBDA expression.
+
+The variables of @var{formals} are bound to fresh locations, the values
+@var{V1}, ..., @var{Vk} are stored in those locations, the @var{body} is
+evaluated in the extended environment, and the results of @var{body} are
+returned as the results of the procedure call.
+
+It is an error for the arguments not to agree with the @var{formals} of
+any @var{clause}.
+
+Error:
+
+@example
+(define plus
+  (case-lambda
+    [()         0]
+    [(x)        x]
+    [(x y)      (+ x y)]
+    [(x y z)    (+ (+ x y) z)]
+    [args       (apply + args)]))
+
+(plus)                     => 0
+(plus 1)                   => 1
+(plus 1 2 3)               => 6
+
+((case-lambda
+   [(a)         a]
+   [(a b)       (* a b)])
+ 1 2 3)                    => error
+@end example
+@end deffn
+
+@c end of file

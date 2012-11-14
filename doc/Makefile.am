@@ -9,6 +9,7 @@ vicare_scheme_TEXINFOS	= \
 	\
 	and-let-star.texi	\
 	args-fold.texi		\
+	case-lambda.texi	\
 	cond-expand.texi	\
 	let-values.texi		\
 	list.texi		\
