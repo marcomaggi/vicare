@@ -780,7 +780,7 @@ ik_stack_overflow (ikpcb* pcb)
  * "ik_stack_overflow()" to be called; in a  way or the other we must go
  * back to the execution of that Scheme function.
  */
-#define STACK_DEBUG	1
+#define STACK_DEBUG	0
 {
   ikptr		underflow_handler;
 #if STACK_DEBUG
