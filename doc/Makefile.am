@@ -14,6 +14,7 @@ vicare_scheme_TEXINFOS	= \
 	error-reporting.texi		\
 	let-values.texi			\
 	list.texi			\
+	random.texi			\
 	receive.texi			\
 	records.texi			\
 	shared-structures.texi		\

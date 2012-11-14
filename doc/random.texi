@@ -1,0 +1,534 @@
+@node srfi random
+@section @ansrfi{27} sources of random bits
+
+
+@cindex @srfi{} random
+
+
+The library @library{srfi :27} is by Sebastian Egner as the reference
+implementation for @ansrfi{27}; see:
+
+@center @url{http://srfi.schemers.org/srfi-27/srfi-27.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi random license::         Random document license.
+* srfi random abstract::        Abstract.
+* srfi random rationale::       Rationale.
+* srfi random spec::            Specification.
+* srfi random design::          Design rationale.
+* srfi random usage::           Recommended usage patterns.
+* srfi random ack::             Acknowledgements.
+* srfi random references::      References.
+@end menu
+
+@c page
+@node srfi random license
+@subsection Random document license
+
+
+Copyright @copyright{} 2002 Sebastian Egner.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi random abstract
+@subsection Abstract
+
+
+This document specifies an interface to sources of random bits, or
+``random sources'' for brevity.  In particular, there are three
+different ways to use the interface, with varying demands on the quality
+of the source and the amout of control over the production process:
+
+@itemize
+@item
+The ``no fuss'' interface specifies that @code{(random-integer n)}
+produces the next random integer in @code{@{0, ..., n-1@}} and
+@func{(random-real)} produces the next random real number between zero
+and one.  The details of how these random values are produced may not be
+very relevant, as long as they appear to be sufficiently random.
+
+@item
+For simulation purposes, on the contrary, it is usually necessary to
+know that the numbers are produced deterministically by a pseudo random
+number generator of high quality and to have explicit access to its
+state.  In addition, one might want to use several independent sources
+of random numbers at the same time and it can be useful to have some
+simple form of randomization.
+
+@item
+For security applications a serious form of true randomization is
+essential, in the sense that it is difficult for an adversary to exploit
+or introduce imperfections into the distribution of random bits.
+Moreover, the linear complexity of the stream of random bits is more
+important than its statistical properties.  In these applications, an
+entropy source (producing truly random bits at a low rate) is used to
+randomize a pseudo random number generator to increase the rate of
+available bits.
+@end itemize
+
+Once random sources provide the infrastructure to obtain random bits,
+these can be used to construct other random deviates.  Most important
+are floating point numbers of various distributions and random discrete
+structures, such as permutations or graphs.  As there is an essentially
+unlimited number of such objects (with limited use elsewhere), we do not
+include them in this @srfi{}.  In other words, this @srfi{} is not
+about making all sorts of random objects; it is about obtaining random
+bits in a portable, flexible, reliable, and efficient way.
+
+@c page
+@node srfi random rationale
+@subsection Rationale
+
+
+This @srfi{} defines an interface for sources of random bits computed
+by a pseudo random number generator.  The interface provides
+range--limited integer and real numbers.  It allows accessing the state
+of the underlying generator.  Moreover, it is possible to obtain a large
+number of independent generators and to invoke a mild form of true
+randomization.
+
+The design aims at sufficient flexibility to cover the usage patterns of
+many applications as diverse as discrete structures, numerical
+simulations, and cryptographic protocols.  At the same time, the
+interface aims at simplicity, which is important for occasional use.  As
+there is no ``one size fits all'' random number generator, the design
+necessarily represents some form of compromise between the needs of the
+various applications.
+
+Although strictly speaking not part of the specification, the emphasis
+of this proposal is on high quality random numbers and on high
+performance.  As the state of the art in pseudo random number generators
+is still advancing considerably, the choice of method for the reference
+implementation should essentially be considered preliminary.
+
+@c page
+@node srfi random spec
+@subsection Specification
+
+
+@defun random-integer @var{n}
+The next integer @var{x} in @code{@{0, ..., n-1@}} obtained from
+@func{default--random--source}.  Subsequent results of this procedure
+appear to be independent uniformly distributed over the range @code{@{0,
+..., n-1@}}.  The argument @var{n} must be a positive integer, otherwise
+an error is signalled.
+@end defun
+
+
+@defun random-real
+The next number @code{0 < x < 1} obtained from
+@func{default-random-source}.  Subsequent results of this procedure
+appear to be independent uniformly distributed.  The numerical type of
+the results and the quantization of the output range depend on the
+implementation; refer to @func{random-source-make-reals} for details.
+@end defun
+
+
+@defvar default-random-source
+A random source from which @func{random-integer} and @func{random-real}
+have been derived using @func{random-source-make-integers} and
+@func{random-source-make-reals}.
+
+Note that an assignment to @func{default-random-source} does not change
+the already built @func{random-integer} or @func{random-real}; it is
+also strongly recommended not to assign a new value.
+@end defvar
+
+
+@defun make-random-source
+Create a new random source @var{s}.  Implementations may accept
+additional, optional arguments in order to create different types of
+random sources.  A random source created with @func{make-random-source}
+represents a deterministic stream of random bits generated by some form
+of pseudo random number generator.  Each random source obtained as
+@code{(make-random-source)} generates the same stream of values, unless
+the state is modified with one of the procedures below.
+@end defun
+
+
+@defun random-source? @var{obj}
+Tests if @var{obj} is a random source.  Objects of type random source
+are distinct from all other types of objects.
+@end defun
+
+
+@defun random-source-state-ref @var{s}
+@defunx random-source-state-set! @var{s} @var{state}
+Get and set the current state of a random source @var{s}.  The structure
+of the object state depends on the implementation; the only portable use
+of it is as argument to @func{random-source-state-set!}.  It is,
+however, required that a state possess an external representation.
+@end defun
+
+
+@defun random-source-randomize! @var{s}
+Makes an effort to set the state of the random source s to a truly
+random state.  The actual quality of this randomization depends on the
+implementation but it can at least be assumed that the procedure sets s
+to a different state for each subsequent run of the Scheme system.
+@end defun
+
+
+@defun random-source-pseudo-randomize! @var{s} @var{i} @var{j}
+Changes the state of the random source @var{s} into the initial state of
+the (@var{i}, @var{j})--th independent random source, where @var{i} and
+@var{j} are non--negative integers.  This procedure provides a mechanism
+to obtain a large number of independent random sources (usually all
+derived from the same backbone generator), indexed by two integers.  In
+contrast to @func{random-source-randomize!}, this procedure is entirely
+deterministic.
+@end defun
+
+
+@defun random-source-make-integers @var{s}
+Obtains a procedure @var{rand} to generate random integers using the
+random source @var{s}.  @var{rand} takes a single argument @var{n},
+which must be a positive integer, and returns the next uniformly
+distributed random integer from the interval @code{@{0, ..., n-1@}} by
+advancing the state of the source @var{s}.
+
+If an application obtains and uses several generators for the same
+random source @var{s}, a call to any of these generators advances the
+state of @var{s}.  Hence, the generators do not produce the same
+sequence of random integers each but rather share a state.  This also
+holds for all other types of generators derived from a fixed random
+source.  Implementations that support concurrency make sure that the
+state of a generator is properly advanced.
+@end defun
+
+
+@defun random-source-make-reals @var{s}
+@defunx random-source-make-reals @var{s} @var{unit}
+Obtains a procedure @var{rand} to generate random real numbers @code{0 <
+x < 1} using the random source @var{s}.  The procedure @var{rand} is
+called without arguments.
+
+The optional parameter @var{unit} determines the type of numbers being
+produced by @var{rand} and the quantization of the output.  @var{unit}
+must be a number such that @code{0 < unit < 1}.  The numbers created by
+rand are of the same numerical type as unit and the potential output
+values are spaced by at most @var{unit}.
+
+One can imagine @var{rand} to create numbers as @code{x*unit} where
+@var{x} is a random integer in @code{@{1, ..., floor(1/unit)-1@}}.
+Note, however, that this need not be the way the values are actually
+created and that the actual resolution of @var{rand} can be much higher
+than @var{unit}.  In case @var{unit} is absent it defaults to a
+reasonably small value (related to the width of the mantissa of an
+efficient number format).
+@end defun
+
+@c page
+@node srfi random design
+@subsection Design rationale
+
+
+@subsubheading Why not combine @func{random-integer} and @func{random-real?}
+
+The two procedures are not combined into a single variable--arity
+procedures to save a little time and space during execution.  Although
+some Scheme systems can deal with variable arity as efficiently as with
+fixed arity this is not always the case and time efficiency is very
+important here.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why not some object--oriented interface?
+
+@noindent
+There are many alternatives to the interface as specified in this
+@srfi{}.  In particular, every framework for object--orientation can be
+used to define a class for random sources and specify the interface for
+the methods on random sources.  However, as the object--oriented
+frameworks differ considerably in terms of syntax and functionality,
+this @srfi{} does not make use of any particular framework.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is there not just a generator with a fixed range?
+
+@noindent
+A bare fixed--range generator is of very limited use.  Nearly every
+application has to add some functionality to make use of the random
+numbers.  The most fundamental task in manipulating random numbers is to
+change the range and quantization.  This is exactly what is provided by
+@func{random-integer} and @func{random-real}.  In addition, is saves the
+user from the pitfall of changing the range with a simple
+modulo-computation which may substantially reduce the quality of the
+numbers being produced.
+
+The design of the interface is based on three prototype applications:
+
+@itemize
+@item
+Repeatedly choose from relatively small sets: As the size of the set is
+likely to vary from call to call, @func{random-integer} accepts a range
+argument @var{n} in every call.  The implementation should try to avoid
+boxing/unboxing of values if the ranges fit into immediate integers.
+
+@item
+Generate a few large integers with a fixed number of bits: As generating
+the random number itself is expensive, passing the range argument in
+every call does not hurt performance.  Hence, the same interface as in
+the first application can be used.
+
+@item
+Generate real numbers: Unlike the choose--from--set case, the range and
+the quantization is constant over a potentially very large number of
+calls.  In addition, there are usually just a few distinct instances of
+quantization and number type, most likely corresponding to underlying
+@code{float} and @code{double} representations.  Therefore,
+@func{random-real} does not accept any parameters but the procedure
+@func{random-source-make-reals} creates a properly configured
+@func{random-real} procedure.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Why bother about floating point numbers at all?
+
+@noindent
+A proper floating point implementation of a random number generator is
+potentially much more efficient that an integer implementation because
+it can use more powerful arithmetics hardware.  If in addition the
+application needs floating point random numbers it would be an
+intolerable waste to run an integer generator to produce floating point
+random numbers.  A secondary reason is to save the user from the ``not
+as easy as it seems'' task of converting an integer generator into a
+real generator.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why are zero and one excluded from @func{random-real}?
+
+@noindent
+The procedure @func{random-real} does not return @code{x = 0} or @code{x
+= 1} in order to allow @code{(log x)} and @code{(log (- 1 x))} without
+the danger of a numerical exception.
+
+@c page
+@node srfi random usage
+@subsection Recommended usage patterns
+
+
+Unless the functionality defined in this @srfi{} is sufficient, an
+application has to implement more procedures to construct other random
+deviates.  This section contains some recommendation on how to do this
+technically by presenting examples of increasing difficulty with respect
+to the interface.  Note that the code below is not part of the
+specification, it is merely meant to illustrate the spirit
+
+@c ------------------------------------------------------------
+
+@subsubheading Generating Random Permutations
+
+@noindent
+The following code defines procedures to generate random permutations of
+the set @code{@{0, ..., n-1@}}.  Such a permutation is represented by a
+vector of length @var{n} for the images of the points.
+
+Observe that the implementation first defines the procedure
+@func{random-source-make-permutations} to turn a random source @var{s}
+into a procedure to generate permutations of given degree @var{n}.  In a
+second step, this is applied to the default source to define a
+ready--to--use procedure for permutations: @code{(random-permutation n)}
+constructs a random permutation of degree @var{n}.
+
+@example
+(define (random-source-make-permutations s)
+  (let ([rand (random-source-make-integers s)])
+    (lambda (n)
+      (let ([x (make-vector n 0)])
+        (do ([i 0 (+ i 1)])
+            ([= i n])
+          (vector-set! x i i))
+        (do ([k n (- k 1)])
+            ([= k 1] x)
+          (let* ([i (- k 1)]
+                 [j (rand k)]
+                 [xi (vector-ref x i)]
+                 [xj (vector-ref x j)])
+            (vector-set! x i xj)
+            (vector-set! x j xi)))))))
+
+(define random-permutation
+  (random-source-make-permutations default-random-source))
+@end example
+
+For the algorithm refer to Knuth's ``The Art of Computer Programming'',
+Vol. II, 2nd ed., Algorithm P of Section 3.4.2.
+
+@c ------------------------------------------------------------
+
+@subsubheading Generating Exponentially-Distributed Random Numbers
+
+@noindent
+The following code defines procedures to generate exponentially
+Exp(mu)--distributed random numbers.  The technical difficulty of the
+interface addressed here is how to pass optional arguments to
+@func{random-source-make-reals}.
+
+@example
+(define (random-source-make-exponentials s . unit)
+  (let ((rand (apply random-source-make-reals s unit)))
+    (lambda (mu)
+      (- (* mu (log (rand)))))))
+
+(define random-exponential
+  (random-source-make-exponentials default-random-source))
+@end example
+
+The algorithm is folklore.  Refer to Knuth's ``The Art of Computer
+Programming'', Vol. II, 2nd ed., Section 3.4.1.D.
+
+@c ------------------------------------------------------------
+
+@subsubheading Generating Normally-Distributed Random Numbers
+
+@noindent
+The following code defines procedures to generate normal N(mu,
+sigma)--distributed real numbers using the polar method.
+
+The technical difficulty of the interface addressed here is that the
+polar method generates two results per computation.  We return one of
+the result and store the second one to be returned by the next call to
+the procedure.  Note that this implies that
+@func{random-source-state-set!} (and the other procedures modifying the
+state) does not necessarily affect the output of @func{random-normal}
+immediately!
+
+@example
+(define (random-source-make-normals s . unit)
+  (let ([rand (apply random-source-make-reals s unit)]
+        [next #f])
+    (lambda (mu sigma)
+      (if next
+          (let ([result next])
+            (set! next #f)
+            (+ mu (* sigma result)))
+        (let loop ()
+          (let* ([v1 (- (* 2 (rand)) 1)]
+                 [v2 (- (* 2 (rand)) 1)]
+                 [s (+ (* v1 v1) (* v2 v2))])
+            (if (>= s 1)
+                (loop)
+              (let ([scale (sqrt (/ (* -2 (log s)) s))])
+                (set! next (* scale v2))
+                (+ mu (* sigma scale v1))))))))))
+
+(define random-normal
+  (random-source-make-normals default-random-source))
+@end example
+
+For the algorithm refer to Knuth's ``The Art of Computer Programming'',
+Vol. II, 2nd ed., Algorithm P of Section 3.4.1.C.
+
+@c page
+@node srfi random ack
+@subsection Acknowledgements
+
+
+I would like to thank all people who have participated in the
+discussion, in particular Brad Lucier and Pierre l'Ecuyer.  Their
+contributions have greatly improved the design of this @srfi{}.
+Moreover, Brad has optimized the Gambit implementation quite
+substantially.
+
+@c page
+@node srfi random references
+@subsection References
+
+
+@emph{Diehard----Testsuite for Random Number Generators}.  G. Marsaglia.
+Also contains some generators that do pass Diehard.
+
+@center @url{stat.fsu.edu/~geo/diehard.html}
+
+@noindent
+@emph{The Art of Computer Programming; Volume II Seminumerical
+Algorithms. 2nd ed.}  D. E. Knuth. Addison-Wesley, 1981.  The famous
+chapter on random number generators.
+
+@noindent
+@emph{Software for Uniform Random Number Generation: Distinguishing the
+Good and the Bad}.  P. L'Ecuyer.  Proceedings of the 2001 Winter
+Simulation Conference, @acronym{IEEE} Press, Dec. 2001, 95--105.
+Profound discussion of random number generators.
+
+@center @url{www.iro.umontreal.ca/~lecuyer/myftp/papers/wsc01rng.pdf}
+
+@noindent
+@emph{Good Parameter Sets for Combined Multiple Recursive Random Number
+Generators}.  P. L'Ecuyer.  Shorter version in Operations Research, 47,
+1 (1999), 159--164.  Actual numbers for good generators.
+
+@center @url{www.iro.umontreal.ca/~lecuyer/myftp/papers/combmrg2.ps}
+
+@noindent
+@emph{@acronym{MIT} Scheme v7.6}.  A mechanism to run a fixed
+unspecified generator.
+
+@center @url{http://www.swiss.ai.mit.edu/projects/scheme/documentation/scheme_5.html#SEC53}
+
+@noindent
+@emph{SLIB 2d2 with @code{(require 'random)}}.  A. Jaffer.
+
+@center @url{http://swiss.csail.mit.edu/~jaffer/slib_5.html#SEC108}
+
+@noindent
+@emph{Scheme 48 v0.57}.  R. Kelsey, J. Rees.  Internal procedures of
+Scheme48; a fixed 28-bit generator.
+
+@noindent
+@emph{@acronym{PLT} MzScheme Version 200alpha1}.  M. Flatt.  A mechanism
+to run a generator and to exchange the generator.
+
+@center @url{http://download.plt-scheme.org/doc/200alpha1/html/mzscheme/mzscheme-Z-H-3.html#%_idx_144}
+
+@noindent
+@emph{Structure and Interpretation of Computer Programs}.  H. Abelson,
+G. J. Sussmann, J. Sussman.  The rand--example shows a textbook way to
+define a random number generator.
+
+@center @url{http://mitpress.mit.edu/sicp/full-text/book/book-Z-H-20.html#%_idx_2934}
+
+@noindent
+@emph{A portable random-number generator}.  John David Stone.  An
+implementation of a linear congruental generator in Scheme.
+
+@center @url{http://www.math.grin.edu/~stone/events/scheme-workshop/random.html}
+
+@noindent
+@emph{RFC1750: Randomness Recommendations for Security}. Network Working
+Group.  A serious discussion of serious randomness for serious security.
+
+@center @url{http://www.cis.ohio-state.edu/htbin/rfc/rfc1750.html}
+
+@noindent
+Resources on random number generators and randomness:
+
+@center @url{http://www.random.org/essay.html}
+@center @url{http://www.taygeta.com/random/randrefs.html}
+
+@c end of file
