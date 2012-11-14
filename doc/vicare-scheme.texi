@@ -19461,7 +19461,10 @@ be @code{AF_INET} or @code{AF_INET6}.
 
 
 A port to @rnrs{6} of the @srfi{} libraries is included in the
-distribution of @value{PRJNAME}.
+distribution of @value{PRJNAME}.  The libraries' names conform to
+@srfi{} 97: @srfi{} Libraries.  There is a registry of available
+@srfi{}s and other platform features which works alongside @srfi{} 0:
+Feature--Based Conditional Expansion.
 
 @quotation
 This @srfi{} documentation is an unofficial Texinfo reformatting and
