@@ -19496,7 +19496,7 @@ minor modification of the original documents by Marco Maggi.
                                 for recursive evaluation.
 * srfi parameters::             @ansrfi{39} parameter objects.
 * srfi args-fold::              @ansrfi{37} a program argument processor.
-@c * srfi streams::                     @ansrfi{41} streams.
+* srfi streams::                @ansrfi{41} streams.
 @c * srfi eager-comp::                  @ansrfi{42} eager comprehensions.
 @c * srfi vector::                      @ansrfi{43} vector library.
 @c * srfi general-cond::                @ansrfi{61} a more general @func{cond} clause.
@@ -19522,8 +19522,8 @@ minor modification of the original documents by Marco Maggi.
 @include random.texi
 @include rec.texi
 @include parameters.texi
-
 @include args-fold.texi
+@include streams.texi
 
 @c page
 @node libs

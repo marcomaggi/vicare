@@ -21,6 +21,7 @@ vicare_scheme_TEXINFOS	= \
 	records.texi			\
 	shared-structures.texi		\
 	specialize-procedures.texi	\
+	streams.texi			\
 	string-ports.texi		\
 	strings.texi			\
 	time.texi
