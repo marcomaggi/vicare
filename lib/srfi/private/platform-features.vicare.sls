@@ -12,7 +12,7 @@
     (srfi private OS-id-features))
 
   (define (expand-time-features)
-    '(ikarus))
+    '(vicare))
 
   (define (run-time-features)
     (OS-id-features

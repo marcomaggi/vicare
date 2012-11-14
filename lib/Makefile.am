@@ -51,7 +51,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a1/lists.sls				\
 	srfi/%3a1.sls					\
 	srfi/%3a1/srfi-1-reference.scm			\
-	srfi/%3a23/error				\
 	srfi/%3a23/error.sls				\
 	srfi/%3a23/error/tricks.sls			\
 	srfi/%3a23.sls					\
@@ -59,7 +58,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a25/array.scm				\
 	srfi/%3a25/ix-ctor.scm				\
 	srfi/%3a25/list.scm				\
-	srfi/%3a25/multi-dimensional-arrays		\
 	srfi/%3a25/multi-dimensional-arrays/all.sls	\
 	srfi/%3a25/multi-dimensional-arrays/arlib.sls	\
 	srfi/%3a25/multi-dimensional-arrays.sls		\
@@ -88,7 +86,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a39/parameters.sls			\
 	srfi/%3a39.sls					\
 	srfi/%3a41.sls					\
-	srfi/%3a41/streams				\
 	srfi/%3a41/streams/derived.sls			\
 	srfi/%3a41/streams/primitive.sls		\
 	srfi/%3a41/streams.sls				\
@@ -101,7 +98,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a43/vectors.sls				\
 	srfi/%3a45/lazy.sls				\
 	srfi/%3a45.sls					\
-	srfi/%3a48/intermediate-format-strings		\
 	srfi/%3a48/intermediate-format-strings/compat.vicare.sls	\
 	srfi/%3a48/intermediate-format-strings.sls			\
 	srfi/%3a48.sls					\
@@ -117,13 +113,11 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a67.sls					\
 	srfi/%3a69/basic-hash-tables.sls		\
 	srfi/%3a69.sls					\
-	srfi/%3a6/basic-string-ports			\
 	srfi/%3a6/basic-string-ports/compat.vicare.sls		\
 	srfi/%3a6/basic-string-ports.sls			\
 	srfi/%3a6.sls					\
 	srfi/%3a78/check.scm				\
 	srfi/%3a78/examples.scm				\
-	srfi/%3a78/lightweight-testing			\
 	srfi/%3a78/lightweight-testing/compat.vicare.sls	\
 	srfi/%3a78/lightweight-testing.sls			\
 	srfi/%3a78.sls					\
