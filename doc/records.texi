@@ -1,0 +1,191 @@
+@node srfi records
+@section @ansrfi{9} defining record types
+
+
+@cindex @srfi{} records
+
+
+The library @library{srfi records} is by Richard Kelsey as the reference
+implementation for @ansrfi{9}; see:
+
+@center @url{http://srfi.schemers.org/srfi-9/srfi-9.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi records license::        Records document license.
+* srfi records abstract::       Abstract.
+* srfi records rationale::      Rationale.
+* srfi records spec::           Specification.
+@end menu
+
+@c page
+@node srfi records license
+@subsection Records document license
+
+
+Copyright @copyright{} 1999 Richard Kelsey.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi records abstract
+@subsection Abstract
+
+
+This @srfi{} describes syntax for creating new data types, called
+record types.  A predicate, a constructor, and field accessors and
+modifiers are defined for each record type.  Each new record type is
+distinct from all existing types, including other record types and
+Scheme's predefined types.
+
+@c page
+@node srfi records rationale
+@subsection Rationale
+
+
+Many Scheme implementations provide means for creating new types,
+usually called either records or structures.  The
+@func{DEFINE-RECORD-TYPE} syntax described here is a slight
+simplification of one written for Scheme 48 by Jonathan Rees.  Unlike
+many record--defining macros or special forms, it does not create any
+new identifiers.  Instead, the names of the record type, predicate,
+constructor, and so on are all listed explicitly in the source.  This
+has the following advantages:
+
+@itemize
+@item
+It can be defined using a simple @func{syntax-rules} macro in Scheme
+implementations that provide a procedural interface for creating record
+types.
+
+@item
+It does not restrict users to a particular naming convention.
+
+@item
+Tools like grep and @gnu{} Emacs's tag facility will see the defining
+occurance of each identifier.
+@end itemize
+
+@c page
+@node srfi records spec
+@subsection Specification
+
+
+@cindex @srfi{} record @api{}
+@findex define-record-type
+
+
+The syntax of a record--type definition is:
+
+@example
+<command or definition>
+  -> <record type definition>           ; addition to 8.1.6 in R5RS
+
+<record type definition>
+  -> (define-record-type <type name>
+       (<constructor name> <field tag> ...)
+       <predicate name>
+       <field spec> ...)
+
+<field spec> -> (<field tag> <accessor name>)
+             -> (<field tag> <accessor name> <modifier name>)
+
+<field tag> -> <identifier>
+<... name>  -> <identifier>
+@end example
+
+@func{define-record-type} is generative: each use creates a new record
+type that is distinct from all existing types, including other record
+types and Scheme's predefined types.  Record--type definitions may only
+occur at top--level (there are two possible semantics for ``internal''
+record--type definitions, generative and nongenerative, and no consensus
+as to which is better).
+
+An instance of @func{define-record-type} is equivalent to the following
+definitions:
+
+@itemize
+@item
+@code{<type name>} is bound to a representation of the record type
+itself.  Operations on record types, such as defining print methods,
+reflection, etc. are left to other @srfi{}s.
+
+@item
+@code{<constructor name>} is bound to a procedure that takes as many
+arguments as there are @code{<field tag>}s in the @code{(<constructor
+name> ...)}  subform and returns a new @code{<type name>} record.
+Fields whose tags are listed with @code{<constructor name>} have the
+corresponding argument as their initial value.  The initial values of
+all other fields are unspecified.
+
+@item
+@code{<predicate name>} is a predicate that returns @true{} when given a
+value returned by @code{<constructor name>} and @false{} for everything
+else.
+
+@item
+Each @code{<accessor name>} is a procedure that takes a record of type
+@code{<type name>} and returns the current value of the corresponding
+field.  It is an error to pass an accessor a value which is not a record
+of the appropriate type.
+
+@item
+Each @code{<modifier name>} is a procedure that takes a record of type
+@code{<type name>} and a value which becomes the new value of the
+corresponding field; an unspecified value is returned.  It is an error
+to pass a modifier a first argument which is not a record of the
+appropriate type.
+@end itemize
+
+Records are disjoint from the types listed in Section 4.2 of @rnrs{5}.
+
+@func{set!}--ing the value of any of these identifiers has no effect on
+the behavior of any of their original values.
+
+The following:
+
+@example
+(define-record-type :pare
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+@end example
+
+@noindent
+defines @var{kons} to be a constructor, @var{kar} and @var{kdr} to be
+accessors, @var{set-kar!} to be a modifier, and @var{pare?} to be a
+predicate for @code{:pare}s.
+
+Example:
+
+@example
+(pare? (kons 1 2))        => #t
+(pare? (cons 1 2))        => #f
+(kar (kons 1 2))          => 1
+(kdr (kons 1 2))          => 2
+(let ([k (kons 1 2)])
+  (set-kar! k 3)
+  (kar k))                => 3
+@end example
+
+@c end of file

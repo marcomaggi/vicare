@@ -12,6 +12,7 @@ vicare_scheme_TEXINFOS	= \
 	cond-expand.texi	\
 	list.texi		\
 	receive.texi		\
+	records.texi		\
 	string-ports.texi
 
 ### end of file

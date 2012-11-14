@@ -19479,7 +19479,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi string-ports::           @ansrfi{6} basic string ports.
 * srfi receive::                @ansrfi{8} @func{receive}: Binding to
                                 multiple values.
-@c * srfi records::                     @ansrfi{9} defining record types.
+* srfi records::                @ansrfi{9} defining record types.
 @c * srfi let-values::                   @ansrfi{11} syntax for receiving
 @c                                 multiple values.
 @c * srfi strings::                     @ansrfi{13} string library.
@@ -19511,6 +19511,7 @@ minor modification of the original documents by Marco Maggi.
 @include and-let-star.texi
 @include string-ports.texi
 @include receive.texi
+@include records.texi
 @include args-fold.texi
 
 @c page
