@@ -5,7 +5,7 @@
 @cindex @srfi{} records
 
 
-The library @library{srfi records} is by Richard Kelsey as the reference
+The library @library{srfi :9} is by Richard Kelsey as the reference
 implementation for @ansrfi{9}; see:
 
 @center @url{http://srfi.schemers.org/srfi-9/srfi-9.html}

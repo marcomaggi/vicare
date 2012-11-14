@@ -5,8 +5,8 @@
 @cindex @srfi{} case-lambda
 
 
-The library @library{srfi case-lambda} is by Lars T Hansen as the
-reference implementation for @ansrfi{16}; see:
+The library @library{srfi :16} is by Lars T Hansen as the reference
+implementation for @ansrfi{16}; see:
 
 @center @url{http://srfi.schemers.org/srfi-16/srfi-16.html}
 

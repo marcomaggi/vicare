@@ -1,0 +1,781 @@
+@node srfi time
+@section @ansrfi{19} time data types and procedures
+
+
+@cindex @srfi{} time
+
+
+The library @library{srfi :19} is by Will Fitzgerald as the reference
+implementation for @ansrfi{19}; see:
+
+@center @url{http://srfi.schemers.org/srfi-19/srfi-19.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi time license::        Time document license.
+* srfi time abstract::       Abstract.
+* srfi time rationale::      Rationale.
+* srfi time spec::           Specification.
+* srfi time ack::            Acknowledgements.
+@end menu
+
+@c page
+@node srfi time license
+@subsection Time document license
+
+
+Copyright @copyright{} 2000 Neodesic Corporation.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi time abstract
+@subsection Abstract
+
+
+Points in time are represented a the number of seconds (with nanosecond
+precision) since ``the epoch'', a zero point in time.  Several standard
+variants are defined, including @utc{} (Universal Coordinated Time),
+@tai{} (international atomic time), and monotonic time.  A point in time
+can also be represented as a Julian Day or Modified Julian Day number.
+
+Time durations, including time spent in a process or thread, are
+defined.  Conversion routines are provided.  The procedure
+@func{current-time} queries the current time in a specified variant,
+with a system--dependent resolution.  Procedures for time arithmetic and
+time comparisons are also provided.
+
+A date is a representation of a point in time in the Gregorian calendar,
+a 24 hour clock (with nanosecond precision) and a time zone offset from
+@utc{}.  Procedures for converting between time and dates are provided,
+as well as for reading and writing string representations of dates.
+
+@c page
+@node srfi time rationale
+@subsection Rationale
+
+
+@rnrs{5} Scheme does not provide standard data types for time.  This
+@srfi{} addresses this lack by specifying data types for time and
+associated procedures.
+
+@c page
+@node srfi time spec
+@subsection Specification
+
+
+@menu
+* srfi time spec intro::          Introduction.
+* srfi time spec const::          Constants.
+* srfi time spec current::        Current time and clock resolution.
+* srfi time spec timeobj::        Time object and accessors.
+* srfi time spec timeobj compar:: Time object comparison procedures.
+* srfi time spec timeobj arithm:: Time object arithmetic procedures.
+* srfi time spec dateobj::        Date object and accessors.
+* srfi time spec julian::         Time/Date/Julian Day/Modified
+                                  Julian Day Converters.
+* srfi time spec string::         Date to string/string to date
+                                  converters.
+@end menu
+
+@c page
+@node srfi time spec intro
+@appendixsubsubsec Introduction
+
+
+A @emph{Time} object, which is distinct from all existing types, defines
+a point in time or a time duration in some standard time system.  The
+standard time systems are:
+
+@itemize
+@item
+Universal Coordinated Time (@utc{}),
+
+@item
+International Atomic Time (@tai{}),
+
+@item
+monotonic time (a monotonically increasing point in time from some
+epoch, which is implementation--dependent),
+
+@item
+@cpu{} time in current thread (implementation dependent),
+
+@item
+@cpu{} time in current process (implementation dependent),
+
+@item
+time duration.
+@end itemize
+
+Implementations are required to implement @utc{}, monotonic time, @cpu{}
+time in current process, and time duration.  Implementations are allowed
+to create extensions (for example, amount of time spent in garbage
+collection).
+
+A @emph{Time} object consists of three components:
+
+@table @emph
+@item Time type
+A symbol representing the time system representation used.  The
+constants @code{TIME-TAI}, @code{TIME-UTC}, @code{TIME-MONOTONIC},
+@code{TIME-THREAD}, @code{TIME-PROCESS}, and @code{TIME-DURATION} must
+be provided for these symbols.  Implementations should provide constants
+for time type extensions.
+
+@item Second
+An integer representing the number of whole seconds from ``the epoch''.
+
+@item Nanosecond
+An integer of the number of nanoseconds in the fractional portion.
+Although a time object has nanosecond precision, clocks may have a lower
+resolution.
+@end table
+
+A @emph{Date} object, which is distinct from all existing types,
+represents a point in time as represented by the Gregorian calendar as
+well as by a time zone.  @emph{Date} objects are immutable.  A
+@emph{Date} object consists of the following components:
+
+@table @emph
+@item Nanosecond
+An integer between 0 and 9,999,999, inclusive.
+
+@item Second
+An integer 0 and 60, inclusive, (60 represents a leap second).
+
+@item Minute
+An integer between 0 and 59, inclusive.
+
+@item Hour
+An integer between 0 and 23, inclusive.
+
+@item Day
+An integer between 0 and 31, inclusive, the upper limit depending on the
+month and year of the point in time.
+
+@item Month
+An integer between 1 and 12, inclusive; in which 1 means January, 2
+February, and so on.
+
+@item Year
+An integer representing the year.
+
+@item Time zone
+A integer the number of seconds east of GMT for this timezone.
+@end table
+
+A @emph{Julian Day} represents a point in time as a real number of days
+since -4714-11-24T12:00:00Z (November 24, -4714 at noon, @utc{}).
+
+A @emph{Modified Julian Day} represents a point in time as a real number
+of days since 1858-11-17T00:00:00Z (November 17, 1858 at midnight, UTC).
+
+@c page
+@node srfi time spec const
+@appendixsubsubsec Constants
+
+
+The following constants are required:
+
+@deffn Constant time-duration
+Symbol representing @emph{Time} duration.
+@end deffn
+
+
+@deffn Constant time-monotonic
+Symbol representing monotonic time.
+@end deffn
+
+
+@deffn Constant time-process
+Symbol representing time spent in current process.
+@end deffn
+
+
+@deffn Constant time-tai
+Symbol representing @tai{} time.
+@end deffn
+
+
+@deffn Constant time-thread
+Symbol representing time spent in current thread.
+@end deffn
+
+
+@deffn Constant time-utc
+Symbol representting @utc{} time.
+@end deffn
+
+@c page
+@node srfi time spec current
+@appendixsubsubsec Current time and clock resolution
+
+
+The following procedures are required.
+
+
+@defun current-date [@var{tz-offset}]
+Return a @emph{Date} corresponding to the current @utc{} time.
+@end defun
+
+@defun current-julian-day
+Current Julian Day.
+@end defun
+
+
+@defun current-modified-julian-day
+Current Modified Julian Day.
+@end defun
+
+
+@defun current-time [@var{time-type}]
+Current time, of type @var{time-type} system, which defaults to
+@code{time-utc}.
+@end defun
+
+
+@defun time-resolution [@var{time-type}]
+Return an exact integer representing the clock resolution, in
+nanoseconds, of the system clock of type type @var{time-type} system,
+which defaults to @code{time-utc}.
+@end defun
+
+@c page
+@node srfi time spec timeobj
+@appendixsubsubsec Time object and accessors
+
+
+The following procedures are required:
+
+
+@defun make-time @var{time-type} @var{nanosecond} @var{second}
+Return a new time object.
+@end defun
+
+
+@defun time? @var{object}
+@true{} if @var{object} is a @emph{Time} object, otherwise, @false{}.
+@end defun
+
+
+@defun time-type @var{time}
+Return the @var{Time type} symbol of @var{time}.  @ref{srfi time spec
+intro} for details.
+@end defun
+
+
+@defun time-nanosecond @var{time}
+Return the @emph{Nanosecond} component of @var{time}.
+@end defun
+
+
+@defun time-second @var{time}
+Return the @emph{Second} component of @var{time}.
+@end defun
+
+
+@defun set-time-type! @var{time} @var{time-type}
+Set the @emph{Time type} component of @var{time} to @var{time-type},
+which must be one of the time type symbols.  @ref{srfi time spec intro}
+for details.
+
+Note: This changes the semantics of the time object.  To convert a time
+to another system of representation, use one of the conversion
+procedures.
+@end defun
+
+
+@defun set-time-nanosecond! @var{time} @var{integer}
+Set the @emph{Nanosecond} component of @var{time} to @var{integer}.
+@end defun
+
+
+@defun set-time-second! time integer
+Set the @emph{Second} component of @var{time} to @var{integer}.
+@end defun
+
+
+@defun copy-time @var{time}
+Create a new time object, with the same @emph{Time type},
+@emph{nanosecond}, and @emph{Second} as @var{time}.
+@end defun
+
+@c page
+@node srfi time spec timeobj compar
+@appendixsubsubsec Time object comparison procedures
+
+
+All of the time comparison procedures require the time objects to be of
+the same type.  It is an error to use these procedures on time objects
+of different types.  For the point--in--time measurements (e.g.
+@code{time-tai} and @code{time-utc}), the semantics are described in
+plain text.  For durations (e.g. @code{time-duration}, @code{time-cpu})
+the semantics are described in parentheses.
+
+The following procedures are required.
+
+
+@defun time<=? @var{time1} @var{time2}
+@true{} if @var{time1} is before or at (less than or equal to)
+@var{time2}, @false{} otherwise.
+@end defun
+
+
+@defun time<? @var{time1} @var{time2}
+@true{} if @var{time1} is before (less than) @var{time2}, @false{}
+otherwise.
+@end defun
+
+
+@defun time=? @var{time1} @var{time2}
+@true{} if @var{time1} at (equal) @var{time2}, @false{} otherwise.
+@end defun
+
+
+@defun time>=? @var{time1} @var{time2}
+@true{} if @var{time1} is at or after (greater than or equal to)
+@var{time2}, @false{} otherwise.
+@end defun
+
+
+@defun time>? @var{time1} @var{time2}
+@true{} if @var{time1} is after (greater than) @var{time2}, @false{}
+otherwise.
+@end defun
+
+@c page
+@node srfi time spec timeobj arithm
+@appendixsubsubsec Time object arithmetic procedures
+
+
+The following procedures are required.
+
+
+@defun time-difference time1 time2 -> time-duration
+The TIME-DURATION between time1 and time2. It is an error if time1 and time2 are of different time types. A new time object is created.
+@end defun
+
+
+@defun time-difference! time1 time2 -> time-duration
+The TIME-DURATION between time1 and time2. It is an error if time1 and time2 are of different time types. Time1 may be used to create the resulting TIME-DURATION object.
+@end defun
+
+
+@defun add-duration time1 time-duration -> time
+The time resulting from adding time-duration to time1, which is a time object of the same time type as time1. A new time object is created.
+@end defun
+
+
+@defun add-duration! time1 time-duration -> time
+The time resulting from adding time-duration to time1, which is a time object of the same time type as time1. Time1 may used to create the resulting time object.
+@end defun
+
+
+@defun subtract-duration time1 time-duration -> time
+The time resulting from subtracting time-duration to time1, which is a time object of the same time type as time1. A new time object is created.
+@end defun
+
+
+@defun subtract-duration! time1 time-duration -> time
+The time resulting from subtracting time-duration to time1, which is a time object of the same time type as time1. Time1 may used to create the resulting time object.
+@end defun
+
+@c page
+@node srfi time spec dateobj
+@appendixsubsubsec Date object and accessors
+
+
+Date objects are immutable once created.  The following procedures are
+required.
+
+
+@defun make-date @var{nanosecond} @var{second} @var{minute} @var{hour} @var{day} @var{month} @var{year} @var{zone-offset}
+Creates a date object.
+@end defun
+
+
+@defun date? @var{object}
+Return @true{} if @var{object} is a @emph{Date} object; otherwise return
+@false{}.
+@end defun
+
+
+@defun date-nanosecond @var{date}
+Return the @emph{Nanosecond} component of @var{date}.
+@end defun
+
+
+@defun date-second @var{date}
+Return the @emph{Second} component of @var{date}.
+@end defun
+
+
+@defun date-minute @var{date}
+Return the @emph{Minute} component of @var{date}.
+@end defun
+
+
+@defun date-hour @var{date}
+Return the @emph{Hour} component of @var{date}.
+@end defun
+
+
+@defun date-day @var{date}
+Return the @emph{Date} component of @var{date}.
+@end defun
+
+
+@defun date-month @var{date}
+Return the @emph{Month} component of @var{date}.
+@end defun
+
+
+@defun date-year @var{date}
+Return the @emph{Year} component of @var{date}.
+@end defun
+
+
+@defun date-zone-offset @var{date}
+Return the @emph{Time zone} component of @var{date}.
+@end defun
+
+
+@defun date-year-day @var{date}
+Return the ordinal day of the year of this date.  January 1 is 1, etc.
+@end defun
+
+
+@defun date-week-day @var{date}
+Return the day of the week of this date, where Sunday=0, Monday=1, etc.
+@end defun
+
+
+@defun date-week-number date day-of-week-starting-week
+Return the ordinal week of the year which holds this date, ignoring a
+first partial week.  @var{day-of-week-starting-week} is the integer
+corresponding to the day of the week which is to be considered the first
+day of the week (Sunday=0, Monday=1, etc.).
+@end defun
+
+@c page
+@node srfi time spec julian
+@appendixsubsubsec Time/Date/Julian Day/Modified Julian Day Converters
+
+
+The following conversion procedures are required.
+
+
+@defun date->julian-day @var{date}
+Convert date to @emph{Julian Day}.
+@end defun
+
+
+@defun date->modified-julian-day @var{date}
+Convert date to @emph{Modified Julian Day}.
+@end defun
+
+
+@defun date->time-monotonic @var{date}
+Convert date to monotonic time.
+@end defun
+
+
+@defun date->time-tai @var{date}
+Convert date to @tai{} time.
+@end defun
+
+
+@defun date->time-utc @var{date}
+Convert date to @utc{} time.
+@end defun
+
+
+@defun julian-day->date @var{jd} [@var{tz-offset}]
+Convert a @emph{Julian Day} to a date, using a time zone offset, which
+defaults to the local time zone.
+@end defun
+
+
+@defun julian-day->time-monotonic @var{jd}
+Convert a @emph{Julian Day} to monotonic time.
+@end defun
+
+
+@defun julian-day->time-tai @var{jd}
+Convert a @emph{Julian Day} to @tai{} time.
+@end defun
+
+
+@defun julian-day->time-utc @var{jd}
+Convert a @emph{Julian Day} to @utc{} time.
+@end defun
+
+
+@defun modified-julian-day->date @var{mjd} [@var{tz-offset}]
+Convert a @emph{Modified Julian Day} to adate, using a time zone offset,
+which defaults to the local time zone.
+@end defun
+
+
+@defun modified-julian-day->time-monotonic @var{mjd}
+Convert @emph{Modified Julian Day} to monotonic time.
+@end defun
+
+
+@defun modified-julian-day->time-tai @var{mjd}
+Convert a @emph{Modified Julian Day} to @tai{} time.
+@end defun
+
+
+@defun modified-julian-day->time-utc @var{mjd}
+Convert @emph{Modified Julian Day} to @utc{} time.
+@end defun
+
+
+@defun time-monotonic->date time-monotonic [@var{tz-offset}]
+Convert monotonic time to date, using time zone offset, which defaults
+to the local time zone.
+@end defun
+
+
+@defun time-monotonic->julian-day @var{time-monotonic}
+Convert monotonic time to @emph{Julian Day}.
+@end defun
+
+
+@defun time-monotonic->modified-julian-day time-monotonic
+Convert monotonic time to @emph{Modified Julian Day}.
+@end defun
+
+
+@defun time-monotonic->time-tai @var{time-monotonic}
+Convert monotonic time to @tai{} time.
+@end defun
+
+
+@defun time-monotonic->time-tai! @var{time-monotonic}
+Convert monotonic time to @tai{} time.  The @emph{Time} structure may be
+reused.
+@end defun
+
+
+@defun time-monotonic->time-utc @var{time-monotonic}
+Convert monotonic time to @utc{} time.
+@end defun
+
+
+@defun time-monotonic->time-utc! @var{time-monotonic}
+Convert monotonic time to @utc{} time.  The @emph{Time} structure may be
+reused.
+@end defun
+
+
+@defun time-tai->date @var{time-tai} [@var{tz-offset}]
+Convert @tai{} time to date, using time zone offset, which defaults to
+the local time zone.
+@end defun
+
+
+@defun time-tai->julian-day @var{time-tai}
+Convert @tai{} time to @emph{Julian Day}.
+@end defun
+
+
+@defun time-tai->modified-julian-day @var{time-tai}
+Convert @tai{} time to @emph{Modified Julian Day}.
+@end defun
+
+
+@defun time-tai->time-monotonic @var{time-tai}
+Convert @tai{} time to monotonic time.
+@end defun
+
+
+@defun time-tai->time-monotonic! @var{time-tai}
+Convert @tai{} time to monotonic time.  The @emph{Time} structure may be
+reused.
+@end defun
+
+
+@defun time-tai->time-utc @var{time-tai}
+Convert @tai{} time to monotonic time.
+@end defun
+
+
+@defun time-tai->time-utc! @var{time-tai}
+Convert @tai{} time to monotonic time.  The @emph{time} structure may be
+reused.
+@end defun
+
+
+@defun time-utc->date @var{time-utc} [@var{tz-offset}]
+Convert @utc{} time to date, using time zone offset, which defaults to
+the local time zone.
+@end defun
+
+
+@defun time-utc->julian-day @var{time-utc}
+Convert @utc{} time to @emph{Julian Day}.
+@end defun
+
+
+@defun time-utc->modified-julian-day @var{time-utc}
+Convert @utc{} time to @emph{Modified Julian Day}.
+@end defun
+
+
+@defun time-utc->time-monotonic @var{time-utc}
+Convert @utc{} time to monotonic time.
+@end defun
+
+
+@defun time-utc->time-monotonic! @var{time-utc}
+Convert @utc{} time to monotonic time.  The @emph{Time} structure may be
+reused.
+@end defun
+
+
+@defun time-utc->time-tai @var{time-utc}
+Convert @utc{} time to @tai{} time.
+@end defun
+
+
+@defun time-utc->time-tai! @var{time-utc}
+Convert @utc{} time to @tai{} time.  The @emph{Time} structure may be
+reused.
+@end defun
+
+@c page
+@node srfi time spec string
+@appendixsubsubsec Date to string/string to date converters
+
+
+The following procedures provide conversion to and from strings.  They
+are required.  The specification below describes a ``locale''; the
+specification of locales is beyond this @srfi{}.
+
+
+@defun date->string @var{date} [@var{format-string}]
+Converts a date to a string, using the format string.  The format string
+is copied as is; except escape characters (indicated by the tilde) are
+replaced with specfic conversions.  The following table lists the
+required conversion specifiers; implementations are free to extend this
+list.
+
+@multitable {Escape Char} {scrappy dappy doo, scrappy dappy doo, scappy dappy}
+@headitem Escape Char @tab Conversion
+@item ~~ @tab a literal ~
+@item ~a @tab locale's abbreviated weekday name (Sun...Sat)
+@item ~A @tab locale's full weekday name (Sunday...Saturday)
+@item ~b @tab locale's abbreviate month name (Jan...Dec)
+@item ~B @tab locale's full month day (January...December)
+@item ~c @tab locale's date and time (e.g., "Fri Jul 14 20:28:42-0400 2000")
+@item ~d @tab day of month, zero padded (01...31)
+@item ~D @tab date (mm/dd/yy)
+@item ~e @tab day of month, blank padded ( 1...31)
+@item ~f @tab seconds+fractional seconds, using locale's decimal separator (e.g. 5.2).
+@item ~h @tab same as ~b
+@item ~H @tab hour, zero padded, 24-hour clock (00...23)
+@item ~I @tab hour, zero padded, 12-hour clock (01...12)
+@item ~j @tab day of year, zero padded
+@item ~k @tab hour, blank padded, 24-hour clock (00...23)
+@item ~l @tab hour, blank padded, 12-hour clock (01...12)
+@item ~m @tab month, zero padded (01...12)
+@item ~M @tab minute, zero padded (00...59)
+@item ~n @tab new line
+@item ~N @tab nanosecond, zero padded
+@item ~p @tab locale's AM or PM
+@item ~r @tab time, 12 hour clock, same as "~I:~M:~S ~p"
+@item ~s @tab number of full seconds since "the epoch" (in UTC)
+@item ~S @tab second, zero padded (00...60)
+@item ~t @tab horizontal tab
+@item ~T @tab time, 24 hour clock, same as "~H:~M:~S"
+@item ~U @tab week number of year with Sunday as first day of week (00...53)
+@item ~V @tab week number of year with Monday as first day of week (01...52)
+@item ~w @tab day of week (0...6)
+@item ~W @tab week number of year with Monday as first day of week (01...52)
+@item ~x @tab week number of year with Monday as first day of week (00...53)
+@item ~X @tab locale's date representation, for example: "07/31/00"
+@item ~y @tab last two digits of year (00...99)
+@item ~Y @tab year
+@item ~z @tab time zone in RFC-822 style
+@item ~Z @tab symbol time zone (not--implemented)
+@item ~1 @tab @iso{}--8601 year--month--day format
+@item ~2 @tab @iso{}--8601 hour--minute--second-timezone format
+@item ~3 @tab @iso{}--8601 hour--minute--second format
+@item ~4 @tab @iso{}--8601 year--month--day--hour--minute--second--timezone format
+@item ~5 @tab @iso{}--8601 year--month--day--hour--minute--second format
+@end multitable
+@end defun
+
+
+@defun string->date @func{input-string} @func{template-string}
+Converts an input string to a date, using the template string.  The
+input string must match the template string as is; except escape
+characters (preceded by a the tilde) indicate special converters which
+(1) move to the next character in the input string fulfilling a
+criterion; (2) read a value, and (3) act on this value in some way. The
+table below lists the required converters; implementations are free to
+extend this list.
+
+@multitable {Escape} {char-alphabetic?} {Scrappy dappy doo, scrappy} {Scrappy dappy}
+@headitem Escape @tab Skip to @tab Read @tab Contract
+@item ~~ @tab any @tab read literal ~ @tab nothing
+@item ~a @tab char-alphabetic? @tab abbreviated weekday in locale @tab nothing
+@item ~A @tab char-alphabetic? @tab full weekday in locale @tab nothing
+@item ~b @tab char-alphabetic? @tab abbreviated month name in locale @tab nothing
+@item ~B @tab char-alphabetic? @tab full month name in locale @tab nothing
+@item ~d @tab char-numeric? @tab day of month  @tab date--day
+@item ~e @tab any @tab day of month, blank padded @tab date--day
+@item ~h @tab char-alphabetic? @tab same as ~b @tab nothing
+@item ~H @tab char-numeric? @tab hour @tab date--hour
+@item ~k @tab any @tab hour, blank padded @tab date--hour
+@item ~m @tab char-numeric? @tab month @tab date--month
+@item ~M @tab char-numeric? @tab minute @tab date--minute
+@item ~S @tab char-numeric? @tab second @tab date--second
+@item ~y @tab any @tab 2--digit year @tab date--year within 50 years
+@item ~Y @tab char-numeric? @tab year @tab date-year
+@item ~z @tab any @tab time zone @tab date--zone--offset
+@end multitable
+@end defun
+
+@c page
+@node srfi time ack
+@subsection Acknowledgements
+
+
+Claus Toendering's Frequently Asked Questions about calendars was a very
+useful resource.  The implementation of Julian Day, Modified Julian Day,
+and Year Day comes from his @acronym{FAQ}.  Markus Kuhn has a useful
+description of the @iso{} Standard 8601 for Date/Time notation.  The W3
+Consortium also has a useful Note.
+
+Mike Sperber, Marc Feely, Dave Mason, and ``Prfnoff'' all made useful
+comments on previous versions of this draft.  Thanks to Shriram
+Krishnamurthi for his editing help.
+
+The @func{date->string} procedure uses a format string, based on @gnu{}
+C's @cfunc{date} procedure, as well as Scsh's @code{format-date}
+procedure.
+
+@c end of file
