@@ -228,6 +228,7 @@ Trademarks used herein are the property of their respective owners.
 * linux::                       The @gnu{}+Linux interface.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
+* srfi::                        Scheme Requests For Implementation.
 * libs::                        Other libraries.
 
 Internals
@@ -19453,6 +19454,51 @@ Names, gethostbyname2}.  Like @cfunc{ikrt_posix_gethostbyname} but
 allows the selection of the address type with @var{addrtype} which must
 be @code{AF_INET} or @code{AF_INET6}.
 @end deftypefun
+
+@c page
+@node srfi
+@chapter Scheme Requests For Implementation
+
+
+A port to @rnrs{6} of the @srfi{} libraries is included in the
+distribution of @value{PRJNAME}.
+
+@menu
+@c * cond-expand::                 @ansrfi{0} feature based conditional
+@c                                 expansion construct.
+@c * list::                        @ansrfi{1} list library.
+* srfi and-let-star::           @ansrfi{2} @func{and-let*}.
+@c * string-ports::                @ansrfi{6} basic string ports.
+@c * receive::                     @ansrfi{8} @func{receive}: Binding to
+@c                                 multiple values.
+@c * records::                     @ansrfi{9} defining record types.
+@c * let-values::                   @ansrfi{11} syntax for receiving
+@c                                 multiple values.
+@c * strings::                     @ansrfi{13} string library.
+@c * case-lambda::                 @ansrfi{16} syntax for procedures of
+@c                                 variable arity.
+@c * time::                        @ansrfi{19} time data types and procedures.
+@c * error-reporting::             @ansrfi{23} error reporting mechanism.
+@c * shared structures::           @ansrfi{38} representation for data with
+@c                                 shared structure.
+@c * specialize-procedures::       @ansrfi{26} notation for specializing
+@c                                 parameters without currying.
+@c * random::                      @ansrfi{27} sources of random bits.
+@c * rec::                         @ansrfi{31} a special form @func{rec}
+@c                                 for recursive evaluation.
+@c * parameters::                  @ansrfi{39} parameter objects.
+@c * args-fold::                   @ansrfi{37} a program argument processor.
+@c * streams::                     @ansrfi{41} streams.
+@c * eager-comp::                  @ansrfi{42} eager comprehensions.
+@c * vector::                      @ansrfi{43} vector library.
+@c * general-cond::                @ansrfi{61} a more general @func{cond} clause.
+@c * lightweight-testing::         @ansrfi{78} lightweight testing.
+@c * environment-variables::       @ansrfi{98} environment variables.
+@end menu
+
+@c ------------------------------------------------------------
+
+@include and-let-star.texi
 
 @c page
 @node libs
