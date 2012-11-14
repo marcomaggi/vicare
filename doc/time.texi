@@ -99,7 +99,7 @@ associated procedures.
 
 @c page
 @node srfi time spec intro
-@appendixsubsubsec Introduction
+@subsubsection Introduction
 
 
 A @emph{Time} object, which is distinct from all existing types, defines
@@ -192,7 +192,7 @@ of days since 1858-11-17T00:00:00Z (November 17, 1858 at midnight, UTC).
 
 @c page
 @node srfi time spec const
-@appendixsubsubsec Constants
+@subsubsection Constants
 
 
 The following constants are required:
@@ -228,7 +228,7 @@ Symbol representting @utc{} time.
 
 @c page
 @node srfi time spec current
-@appendixsubsubsec Current time and clock resolution
+@subsubsection Current time and clock resolution
 
 
 The following procedures are required.
@@ -262,7 +262,7 @@ which defaults to @code{time-utc}.
 
 @c page
 @node srfi time spec timeobj
-@appendixsubsubsec Time object and accessors
+@subsubsection Time object and accessors
 
 
 The following procedures are required:
@@ -322,7 +322,7 @@ Create a new time object, with the same @emph{Time type},
 
 @c page
 @node srfi time spec timeobj compar
-@appendixsubsubsec Time object comparison procedures
+@subsubsection Time object comparison procedures
 
 
 All of the time comparison procedures require the time objects to be of
@@ -365,7 +365,7 @@ otherwise.
 
 @c page
 @node srfi time spec timeobj arithm
-@appendixsubsubsec Time object arithmetic procedures
+@subsubsection Time object arithmetic procedures
 
 
 The following procedures are required.
@@ -402,7 +402,7 @@ The time resulting from subtracting time-duration to time1, which is a time obje
 
 @c page
 @node srfi time spec dateobj
-@appendixsubsubsec Date object and accessors
+@subsubsection Date object and accessors
 
 
 Date objects are immutable once created.  The following procedures are
@@ -479,7 +479,7 @@ day of the week (Sunday=0, Monday=1, etc.).
 
 @c page
 @node srfi time spec julian
-@appendixsubsubsec Time/Date/Julian Day/Modified Julian Day Converters
+@subsubsection Time/Date/Julian Day/Modified Julian Day Converters
 
 
 The following conversion procedures are required.
@@ -667,7 +667,7 @@ reused.
 
 @c page
 @node srfi time spec string
-@appendixsubsubsec Date to string/string to date converters
+@subsubsection Date to string/string to date converters
 
 
 The following procedures provide conversion to and from strings.  They

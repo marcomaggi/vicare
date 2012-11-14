@@ -146,7 +146,7 @@ Scheme implementations: here for Chicken, and here for Scsh.
 
 @c page
 @node srfi args-fold spec
-@appendixsubsec Specification
+@subsection Specification
 
 
 @findex args-fold

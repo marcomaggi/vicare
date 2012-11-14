@@ -350,9 +350,9 @@ virtual address space could be used and unneeded memory is released back
 to the operating system.
 
 @item Supports many operating systems
-@value{PRJNAME} runs on the most popular and widely used operating systems for
-servers and personal computers.  The supported systems include Mac OS X,
-@gnu{}+Linux, FreeBSD, NetBSD, and Microsoft Windows (under Cygwin).
+@value{PRJNAME} runs on @gnu{}+Linux, but it is possible to port it to
+the most popular and widely used operating systems for servers and
+personal computers.
 @end table
 
 @c page
@@ -416,28 +416,6 @@ The @value{PRJNAME} compiler generates @acronym{SSE2} instructions to
 handle Scheme's @acronym{IEEE} floating point representation
 (@emph{flonums}) for inexact numbers.
 
-
-@subsubheading Operating systems
-
-@value{PRJNAME} is tested under the following operating systems; in
-general, any later version of one of these systems should be usable:
-
-@itemize
-@item
-Mac OS X version 10.4 and 10.5.
-
-@item
-Linux 2.6.18 (Debian, Fedora, Gentoo, and Ubuntu).
-
-@item
-FreeBSD version 6.2.
-
-@item
-NetBSD version 3.1.
-
-@item
-Microsoft Windows XP, using Cygwin 1.5.24 (@url{http://@/cygwin.org}).
-@end itemize
 
 @c page
 @node overview system software

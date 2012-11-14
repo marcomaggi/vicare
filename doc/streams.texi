@@ -1405,7 +1405,7 @@ the Scheme versions to the originals in other languages.
 
 @c page
 @node srfi streams examples infinite
-@appendixsubsubsec Infinite streams
+@subsubsection Infinite streams
 
 
 As a simple illustration of infinite streams, consider this definition
@@ -1533,7 +1533,7 @@ rational numbers without duplicates:
 
 @c page
 @node srfi streams examples generators
-@appendixsubsubsec Generators and co--routines
+@subsubsection Generators and co--routines
 
 
 It is possible to model generators and co--routines using streams.
@@ -1615,7 +1615,7 @@ streams enhance modularity.
 
 @c page
 @node srfi streams examples pipeline
-@appendixsubsubsec A pipeline of procedures
+@subsubsection A pipeline of procedures
 
 
 Another way in which streams promote modularity is enabling the use of
@@ -1774,7 +1774,7 @@ repetitive code.  Streams ensure procedures are called as needed.
 
 @c page
 @node srfi streams examples persistent
-@appendixsubsubsec Persistent data
+@subsubsection Persistent data
 
 
 Queues are one of the fundamental data structures of computer science.
@@ -1858,7 +1858,7 @@ all elements in the queue, persistently, is restored.
 
 @c page
 @node srfi streams examples passes
-@appendixsubsubsec Reducing two passes to one
+@subsubsection Reducing two passes to one
 
 
 The final example is a lazy dictionary, where definitions and uses may
@@ -1947,7 +1947,7 @@ because it is never needed.
 
 @c page
 @node srfi streams examples pitfalls
-@appendixsubsubsec Pitfalls
+@subsubsection Pitfalls
 
 
 Programming with streams, or any lazy evaluator, can be tricky, even for
