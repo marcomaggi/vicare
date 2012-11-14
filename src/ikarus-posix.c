@@ -4487,13 +4487,13 @@ ikrt_current_time (ikptr t)
 ikptr
 ikrt_gmt_offset (ikptr t)
 {
-#if ((defined HAVE_GMTIME) && (defined HAVE_MKTIME))
+#if ((defined HAVE_GMTIME_R) && (defined HAVE_MKTIME))
   time_t	clock;
-  struct tm *	m;
+  struct tm	m;
   time_t	gmtclock;
   clock	   = IK_UNFIX(IK_FIELD(t, 0)) * 1000000 + IK_UNFIX(IK_FIELD(t, 1));
   gmtime_r(&clock, &m);
-  gmtclock = mktime(m);
+  gmtclock = mktime(&m);
   return IK_FIX(clock - gmtclock);
 #else
   feature_failure(__func__);

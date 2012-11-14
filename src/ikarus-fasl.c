@@ -132,65 +132,108 @@ alloc_code (long int size, ikpcb* pcb, fasl_port* p)
 
 
 void
-ik_relocate_code (ikptr code)
+ik_relocate_code (ikptr p_code)
+/* Accept as  argument an *untagged*  pointer to a code  object; process
+   the code object's relocation vector.
+
+   This function called:
+
+   - whenever a code  object is allocated, in this  case CODE references
+     an allocated but still empty code object;
+
+   - whenever a  code object is read  from a FASL file;
+
+   - whenever a code object is created by the assembler. */
 {
-  ikptr	vec  = IK_REF(code, disp_code_reloc_vector);
-  ikptr size = IK_REF(vec, off_vector_length);
-  ikptr data = code + disp_code_data;
-  ikptr p    = vec + off_vector_data;
-  ikptr q    = p + size;
-  while(p < q) {
-    long	r = IK_UNFIX(IK_REF(p, 0));
-    if (0 == r)
-      ik_abort("unset reloc!");
-    long tag = r & 3;
-    long code_off = r >> 2;
-    if (tag == 0) {
-      /* vanilla object */
-      IK_REF(data, code_off) = IK_REF(p, wordsize);
-      p += (2*wordsize);
+  /* The relocation vector. */
+  const ikptr s_reloc_vec = IK_REF(p_code, disp_code_reloc_vector);
+  /* The  number of  items in  the relocation  vector; it  can be  zero.
+     Remember  that the  fixnum representing  the number  of items  in a
+     vector, taken as "long", also represents the number of bytes in the
+     data area of the vector. */
+  const ikptr s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
+  /* The variable P_DATA is an  *untagged* pointer referencing the first
+     byte in the data area of the code object. */
+  const ikptr p_data = p_code + disp_code_data;
+  /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
+     word in the data area of the relocation vector RELOC_VEC. */
+  ikptr p_reloc_vec_cur  = s_reloc_vec + off_vector_data;
+  /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
+     right after the data area of the relocation vector VEC. */
+  const ikptr p_reloc_vec_end = p_reloc_vec_cur + s_reloc_vec_len;
+  /* If the relocation vector is empty: do nothing. */
+  while (p_reloc_vec_cur < p_reloc_vec_end) {
+    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
+    if (0 == first_record_bits)
+      ik_abort("invalid empty record in code object's relocation vector");
+    const long	reloc_record_tag = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const long	disp_code_word   = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+    switch (reloc_record_tag) {
+    case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
+      /* This record represents a vanilla object; this record is 2 words
+	 wide.  The second word contains the reference to the object (or
+	 the object itself if immediate). */
+      IK_REF(p_data, disp_code_word) = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      p_reloc_vec_cur += (2*wordsize);
+      break;
     }
-    else if (tag == 2) {
-      /* displaced object */
-      long obj_off = IK_UNFIX(IK_REF(p, wordsize));
-      ikptr obj = IK_REF(p, 2*wordsize);
-      IK_REF(data, code_off) = obj + obj_off;
-      p += (3*wordsize);
+    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
+      /* This record  represents a  displaced object;  this record  is 3
+	 words  wide.  The  second word  contains the  displacement, the
+	 third word contains the reference to the object. */
+      const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const ikptr s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      IK_REF(p_data, disp_code_word) = s_obj + obj_off;
+      p_reloc_vec_cur += (3*wordsize);
+      break;
     }
-    else if (tag == 3) {
-      /* jump label */
-      long obj_off = IK_UNFIX(IK_REF(p, wordsize));
-      long obj = IK_REF(p, 2*wordsize);
-      long displaced_object = obj + obj_off;
-      long next_word = data + code_off + 4;
-      long relative_distance = displaced_object - next_word;
+    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
+      /* This record  represents a  jump label; this  record is  3 words
+	 wide. */
+      const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const long obj               =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      const long displaced_object  = obj + obj_off;
+      const long next_word         = p_data + disp_code_word + 4;
+      const long relative_distance = displaced_object - next_word;
 #if 0
       if (wordsize == 8) {
         relative_distance += 4;
       }
 #endif
-      *((int*)(data+code_off)) = relative_distance;
-      //      IK_REF(next_word, -wordsize) = relative_distance;
-      p += (3*wordsize);
+      /* FIXME Why  is the target  word an  "int" rather than  a "long"?
+	 (Marco Maggi; Oct 5, 2012) */
+      *((int*)(p_data + disp_code_word)) = relative_distance;
+      /* IK_REF(next_word, -wordsize) = relative_distance; */
+      p_reloc_vec_cur += (3*wordsize);
+      break;
     }
-    else if (tag == 1) {
-      /* foreign object */
-      ikptr str = IK_REF(p, wordsize);
-      char* name = NULL;
-      if (IK_TAGOF(str) == bytevector_tag) {
-        name = (char*)(long) str + off_bytevector_data;
+    case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
+      /* This record represents a foreign object; this record is 2 words
+	 wide.   We store  directly the  address of  the foreign  object
+	 (usually a C function) in the data area. */
+      ikptr	s_str	= IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      char *	name	= NULL;
+      if (IK_TAGOF(s_str) == bytevector_tag) {
+        name = IK_BYTEVECTOR_DATA_CHARP(s_str);
       } else
         ik_abort("foreign name is not a bytevector");
+      /* We call "dlerror()" here to  clean up possible previous errors.
+	 (Marco Maggi; Oct 4, 2012) */
       dlerror();
-      void* sym = dlsym(RTLD_DEFAULT, name);
-      char* err = dlerror();
+      void *	sym	= dlsym(RTLD_DEFAULT, name);
+      char *	err	= dlerror();
       if (err)
-        ik_abort("failed to find foreign name %s: %s", name, err);
-      IK_REF(data,code_off) = (ikptr)sym;
-      p += (2*wordsize);
-    } else
-      ik_abort("invalid reloc 0x%016lx (tag=%ld)", r, tag);
-  }
+        ik_abort("dlsym() failed to find foreign name %s: %s", name, err);
+      IK_REF(p_data, disp_code_word) = (ikptr)sym;
+      p_reloc_vec_cur += (2*wordsize);
+      break;
+    }
+    default:
+      ik_abort("invalid first word in relocation vector's record: 0x%016lx (tag=%ld)",
+	       first_record_bits, reloc_record_tag);
+      break;
+    } /* end of switch() */
+  } /* end of while() */
 }
 
 
@@ -247,24 +290,26 @@ do_read (ikpcb* pcb, fasl_port* p)
       p->marks_size = 2*IK_PAGESIZE;
     }
   }
-  if (c == 'x') {
-    long code_size;
-    ikptr freevars;
+  if (c == 'x') {	/* code object */
+    long	code_size;
+    ikptr	freevars;
+    ikptr	annotation;
+    ikptr	p_code;
     fasl_read_buf(p, &code_size, sizeof(long));
-    fasl_read_buf(p, &freevars, sizeof(ikptr));
-    ikptr annotation = do_read(pcb, p);
-    ikptr code = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
-    IK_REF(code, 0) = code_tag;
-    IK_REF(code, disp_code_code_size) = IK_FIX(code_size);
-    IK_REF(code, disp_code_freevars) = freevars;
-    IK_REF(code, disp_code_annotation) = annotation;
-    fasl_read_buf(p, (void*)(disp_code_data+(long)code), code_size);
+    fasl_read_buf(p, &freevars,  sizeof(ikptr));
+    annotation = do_read(pcb, p);
+    p_code     = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
+    IK_REF(p_code, 0)			= code_tag;
+    IK_REF(p_code, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(p_code, disp_code_freevars)	= freevars;
+    IK_REF(p_code, disp_code_annotation)= annotation;
+    fasl_read_buf(p, (void*)(disp_code_data+(long)p_code), code_size);
     if (put_mark_index) {
-      p->marks[put_mark_index] = code+vector_tag;
+      p->marks[put_mark_index] = p_code | vector_tag;
     }
-    IK_REF(code, disp_code_reloc_vector) = do_read(pcb, p);
-    ik_relocate_code(code);
-    return code+vector_tag;
+    IK_REF(p_code, disp_code_reloc_vector) = do_read(pcb, p);
+    ik_relocate_code(p_code);
+    return p_code | vector_tag;
   }
   else if (c == 'P') {
     ikptr pair = ik_unsafe_alloc(pcb, pair_size) | pair_tag;
@@ -411,13 +456,15 @@ do_read (ikpcb* pcb, fasl_port* p)
     return rtd;
   }
   else if (c == 'Q') { /* thunk */
-    ikptr proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
+    ikptr s_proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
     if (put_mark_index) {
-      p->marks[put_mark_index] = proc;
+      p->marks[put_mark_index] = s_proc;
     }
-    ikptr code = do_read(pcb, p);
-    IK_REF(proc, -closure_tag) = code + off_code_data;
-    return proc;
+    ikptr s_code = do_read(pcb, p);
+    /* Store in  the closure's memory block  a raw pointer to  the first
+       byte of the code object's data area. */
+    IK_REF(s_proc, off_closure_code) = s_code + off_code_data;
+    return s_proc;
   }
   else if (c == '<') {
     int idx;

@@ -56,7 +56,7 @@ $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
   VICARE_FASL_DIRECTORY=''				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
   $(NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT)		\
-  --r6rs-script $(srcdir)/makefile.sps
+  $(user_flags) --r6rs-script $(srcdir)/makefile.sps
 
 #$(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss last-revision
 # 	VICARE_SRC_DIR=$(srcdir)			\
@@ -111,7 +111,7 @@ try-vicare-boot: $(EXTRA_DIST) ikarus.config.ss last-revision
    VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY)	\
    VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)	\
    $(NEW_EXECUTABLE) -b vicare.boot.try			\
-   --r6rs-script $(srcdir)/makefile.sps
+   $(user_flags) --r6rs-script $(srcdir)/makefile.sps
 
 #page
 #### stuff needed by GNU Automake

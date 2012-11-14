@@ -628,6 +628,9 @@
 ;;additional codecs.  Notice that the fixnum  0 is not a valid fast tag,
 ;;this fact can be used to speed up a little dispatching of evaluation.
 ;;
+;;These  values  must  be  kept  in   sync  with  the  ones  defined  in
+;;"ikarus.compiler.sls".
+;;
 ;;					  32109876543210
 ;;                type bits                         ||||
 ;;                codec bits                   |||||
@@ -980,7 +983,7 @@
       (define (%unsupported-by-latin-1)
 	(assertion-violation who
 	  "EOL style conversion unsupported by Latin-1 codec" style))
-      (case style
+      (case-symbols style
 	((none)		0)
 	((lf)		EOL-LINEFEED-TAG)
 	((cr)		EOL-CARRIAGE-RETURN-TAG)
@@ -1029,22 +1032,14 @@
 	 (else					. ?none-body))
        (and (identifier? #'?eol-bits)
 	    (identifier? #'?who))
-       ;;FIXME It  would be better here  to use a  specialised CASE form
-       ;;capable of efficiently dispatch evaluation based on fixnums.
-       #'(cond ((unsafe.fxzero? ?eol-bits)
-		(begin . ?none-body))
-	       ((unsafe.fx= ?eol-bits EOL-LINEFEED-TAG)
-		(begin . ?linefeed-body))
-	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-TAG)
-		(begin . ?carriage-return-body))
-	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-LINEFEED-TAG)
-		(begin . ?carriage-return-linefeed-body))
-	       ((unsafe.fx= ?eol-bits EOL-NEXT-LINE-TAG)
-		(begin . ?next-line-body))
-	       ((unsafe.fx= ?eol-bits EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)
-		(begin . ?carriage-return-next-line-body))
-	       ((unsafe.fx= ?eol-bits EOL-LINE-SEPARATOR-TAG)
-		(begin . ?line-separator-body)))
+       #'(case-fixnums ?eol-bits
+	   ((0)					. ?none-body)
+	   ((EOL-LINEFEED-TAG)			. ?linefeed-body)
+	   ((EOL-CARRIAGE-RETURN-TAG)		. ?carriage-return-body)
+	   ((EOL-CARRIAGE-RETURN-LINEFEED-TAG)	. ?carriage-return-linefeed-body)
+	   ((EOL-NEXT-LINE-TAG)			. ?next-line-body)
+	   ((EOL-CARRIAGE-RETURN-NEXT-LINE-TAG)	. ?carriage-return-next-line-body)
+	   ((EOL-LINE-SEPARATOR-TAG)		. ?line-separator-body))
        ))))
 
 ;;; --------------------------------------------------------------------
@@ -1143,40 +1138,38 @@
 	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
-	 ;;FIXME It would be better  here to use a specialised CASE form
-	 ;;capable of efficiently dispatch evaluation based on fixnums.
-	 (cond ((unsafe.fx= m FAST-GET-UTF8-TAG)	. ?utf8-tag-body)
-	       ((unsafe.fx= m FAST-GET-CHAR-TAG)	. ?char-tag-body)
-	       ((unsafe.fx= m FAST-GET-LATIN-TAG)	. ?latin-tag-body)
-	       ((unsafe.fx= m FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
-	       ((unsafe.fx= m FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
-	       ((unsafe.fx= m INIT-GET-UTF16-TAG)
-		(if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
-		    (eof-object)
-		  (retry-after-tagging-port ($port-fast-attrs ?port))))
-	       ((unsafe.fx= m FAST-GET-BYTE-TAG)
-		(assertion-violation ?who "expected textual port" ?port))
-	       ((and (port? ?port)
+	 (case-fixnums m
+	   ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
+	   ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
+	   ((FAST-GET-LATIN-TAG)	. ?latin-tag-body)
+	   ((FAST-GET-UTF16LE-TAG)	. ?utf16le-tag-body)
+	   ((FAST-GET-UTF16BE-TAG)	. ?utf16be-tag-body)
+	   ((INIT-GET-UTF16-TAG)
+	    (if (%unsafe.parse-utf16-bom-and-add-fast-tag ?who ?port)
+		(eof-object)
+	      (retry-after-tagging-port ($port-fast-attrs ?port))))
+	   ((FAST-GET-BYTE-TAG)
+	    (assertion-violation ?who "expected textual port" ?port))
+	   (else
+	    (if (and (port? ?port)
 		     (%unsafe.input-and-output-port? ?port))
-		;;FIXME It  would be better here to  use a specialised
-		;;CASE form capable of efficiently dispatch evaluation
-		;;based on fixnums.
-		(cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)
-		       (%reconfigure-as-input FAST-GET-UTF8-TAG))
-		      ((unsafe.fx= m FAST-PUT-CHAR-TAG)
-		       (%reconfigure-as-input FAST-GET-CHAR-TAG))
-		      ((unsafe.fx= m FAST-PUT-LATIN-TAG)
-		       (%reconfigure-as-input FAST-GET-LATIN-TAG))
-		      ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)
-		       (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
-		      ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)
-		       (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
-		      ((unsafe.fx= m FAST-PUT-BYTE-TAG)
-		       (assertion-violation ?who "expected textual port" ?port))
-		      (else
-		       (%validate-and-tag))))
-	       (else
-		(%validate-and-tag)))))))
+		(case-fixnums m
+		  ((FAST-PUT-UTF8-TAG)
+		   (%reconfigure-as-input FAST-GET-UTF8-TAG))
+		  ((FAST-PUT-CHAR-TAG)
+		   (%reconfigure-as-input FAST-GET-CHAR-TAG))
+		  ((FAST-PUT-LATIN-TAG)
+		   (%reconfigure-as-input FAST-GET-LATIN-TAG))
+		  ((FAST-PUT-UTF16LE-TAG)
+		   (%reconfigure-as-input FAST-GET-UTF16LE-TAG))
+		  ((FAST-PUT-UTF16BE-TAG)
+		   (%reconfigure-as-input FAST-GET-UTF16BE-TAG))
+		  ((FAST-PUT-BYTE-TAG)
+		   (assertion-violation ?who "expected textual port" ?port))
+		  (else
+		   (%validate-and-tag)))
+	      (%validate-and-tag))))
+	 ))))
 
 (define-syntax* (%case-textual-output-port-fast-tag stx)
   ;;For  a port fast  tagged for  output: select  a body  of code  to be
@@ -1210,36 +1203,34 @@
 	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
-	 ;;FIXME It would be better  here to use a specialised CASE form
-	 ;;capable of efficiently dispatch evaluation based on fixnums.
-	 (cond ((unsafe.fx= m FAST-PUT-UTF8-TAG)	. ?utf8-tag-body)
-	       ((unsafe.fx= m FAST-PUT-CHAR-TAG)	. ?char-tag-body)
-	       ((unsafe.fx= m FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
-	       ((unsafe.fx= m FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
-	       ((unsafe.fx= m FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body)
-	       ((unsafe.fx= m FAST-PUT-BYTE-TAG)
-		(assertion-violation ?who "expected textual port" ?port))
-	       ((and (port? ?port)
+	 (case-fixnums m
+	   ((FAST-PUT-UTF8-TAG)		. ?utf8-tag-body)
+	   ((FAST-PUT-CHAR-TAG)		. ?char-tag-body)
+	   ((FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
+	   ((FAST-PUT-UTF16LE-TAG)	. ?utf16le-tag-body)
+	   ((FAST-PUT-UTF16BE-TAG)	. ?utf16be-tag-body)
+	   ((FAST-PUT-BYTE-TAG)
+	    (assertion-violation ?who "expected textual port" ?port))
+	   (else
+	    (if (and (port? ?port)
 		     (%unsafe.input-and-output-port? ?port))
-		;;FIXME  It would be  better here  to use  a specialised
-		;;CASE form  capable of efficiently  dispatch evaluation
-		;;based on fixnums.
-		(cond ((unsafe.fx= m FAST-GET-UTF8-TAG)
-		       (%reconfigure-as-output FAST-PUT-UTF8-TAG))
-		      ((unsafe.fx= m FAST-GET-CHAR-TAG)
-		       (%reconfigure-as-output FAST-PUT-CHAR-TAG))
-		      ((unsafe.fx= m FAST-GET-LATIN-TAG)
-		       (%reconfigure-as-output FAST-PUT-LATIN-TAG))
-		      ((unsafe.fx= m FAST-GET-UTF16LE-TAG)
-		       (%reconfigure-as-output FAST-PUT-UTF16LE-TAG))
-		      ((unsafe.fx= m FAST-GET-UTF16BE-TAG)
-		       (%reconfigure-as-output FAST-PUT-UTF16BE-TAG))
-		      ((unsafe.fx= m FAST-GET-BYTE-TAG)
-		       (assertion-violation ?who "expected textual port" ?port))
-		      (else
-		       (%validate))))
-	       (else
-		(%validate)))))))
+		(case-fixnums m
+		  ((FAST-GET-UTF8-TAG)
+		   (%reconfigure-as-output FAST-PUT-UTF8-TAG))
+		  ((FAST-GET-CHAR-TAG)
+		   (%reconfigure-as-output FAST-PUT-CHAR-TAG))
+		  ((FAST-GET-LATIN-TAG)
+		   (%reconfigure-as-output FAST-PUT-LATIN-TAG))
+		  ((FAST-GET-UTF16LE-TAG)
+		   (%reconfigure-as-output FAST-PUT-UTF16LE-TAG))
+		  ((FAST-GET-UTF16BE-TAG)
+		   (%reconfigure-as-output FAST-PUT-UTF16BE-TAG))
+		  ((FAST-GET-BYTE-TAG)
+		   (assertion-violation ?who "expected textual port" ?port))
+		  (else
+		   (%validate)))
+	      (%validate))))
+	 ))))
 
 ;;; --------------------------------------------------------------------
 ;;; Backup of original Ikarus values
@@ -2141,11 +2132,12 @@
        (unsafe.fx<  obj BUFFER-SIZE-UPPER-LIMIT)))
 
 (define %make-buffer-size-parameter
-  (let ((error-message/invalid-buffer-size (string-append "expected fixnum in range "
-							  (number->string BUFFER-SIZE-LOWER-LIMIT)
-							  " <= x < "
-							  (number->string BUFFER-SIZE-UPPER-LIMIT)
-							  " as buffer size")))
+  (let ((error-message/invalid-buffer-size
+	 (string-append "expected fixnum in range "
+			(number->string BUFFER-SIZE-LOWER-LIMIT)
+			" <= x < "
+			(number->string BUFFER-SIZE-UPPER-LIMIT)
+			" as buffer size")))
     (lambda (init who)
       (make-parameter init
 	(lambda (obj)
@@ -2156,7 +2148,7 @@
 (let-syntax ((define-buffer-size-parameter (syntax-rules ()
 					     ((_ ?who ?init)
 					      (define ?who
-						(%make-buffer-size-parameter ?init ?who))))))
+						(%make-buffer-size-parameter ?init '?who))))))
 
   ;;Customisable buffer size for bytevector ports.  To be used by:
   ;;
@@ -2308,28 +2300,30 @@
 ;;
 
 (define port-guardian
-  (let ((G (make-guardian)))
-    (define (close-garbage-collected-ports)
-      (let ((port (G)))
-	(when port
-	  ;;Notice that, as defined  by R6RS, CLOSE-PORT does nothing if
-	  ;;PORT has already been closed.
+  (make-guardian))
 
-;;;FIXME This CLOSE-PORT is the  whole purpose of having a guardian.  If
-;;;it  is commented  out:  it is  to  investigate if  it  is causing  an
-;;;"invalid frame  size" error  with some builds.   Once the  problem is
-;;;fixed, it should be reincluded.  (Marco Maggi; Nov 2, 2011)
-	  #;(close-port port)
-;;;The code below differs from  CLOSE-PORT because it does not flush the
-;;;buffer.
-	  (with-port (port)
-	    (unless port.closed?
-	      (port.mark-as-closed!)
-	      (when (procedure? port.close)
-		(port.close))))
-	  (close-garbage-collected-ports))))
-    (post-gc-hooks (cons close-garbage-collected-ports (post-gc-hooks)))
-    G))
+(define (%close-garbage-collected-ports)
+  (let ((port (port-guardian)))
+    (when port
+      ;;FIXME  This CLOSE-PORT  call is  the whole  purpose of  having a
+      ;;guardian here.  If it is commented  out: it is to investigate if
+      ;;it is  causing an  "invalid frame size"  error with  some builds
+      ;;(issue 35 at  Github).  Once the problem is fixed,  it should be
+      ;;reincluded.  (Marco Maggi; Nov 2, 2011)
+
+      ;;Notice that, as defined by R6RS, CLOSE-PORT does nothing if PORT
+      ;;has already been closed.
+      (close-port port)
+
+      ;;The code below differs from CLOSE-PORT because it does not flush
+      ;;the buffer.
+      #;(with-port (port)
+	(unless port.closed?
+	  (port.mark-as-closed!)
+	  (when (procedure? port.close)
+	    (port.close))))
+
+      (%close-garbage-collected-ports))))
 
 (define (%port->maybe-guarded-port port)
   ;;Accept a port  as argument and return the port  itself.  If the port
@@ -4029,7 +4023,7 @@
     ;;
     ;;See %UNSAFE.FLUSH-OUTPUT-PORT for further details.
     ;;
-    (define who who)
+    (define who 'flush-output-port)
     (with-arguments-validation (who)
 	((port               port)
 	 (unsafe.output-port port)
@@ -7612,6 +7606,8 @@
 
 
 ;;;; done
+
+(post-gc-hooks (cons %close-garbage-collected-ports (post-gc-hooks)))
 
 )
 

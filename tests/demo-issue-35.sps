@@ -4,10 +4,10 @@
 ;;
 
 #!r6rs
-(import (vicare))
+(import (ikarus))
 
 (let loop ((i 0))
-  (when (zero? (mod i #e1e3))
+  (when (zero? (mod i #e1e6))
     (fprintf (current-error-port) "~a " i)
     (flush-output-port (current-error-port))
     (void))

@@ -18,53 +18,282 @@
 
 #include "internals.h"
 
-#undef DEBUG_EXEC
+#define DEBUG_EXEC	0
 
 ikptr
-ik_exec_code (ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp)
+ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
+/* Execute  Scheme  code  and  all   its  continuations  until  no  more
+   continuations are stored in the PCB or a system continuation is found
+   in the continuations linked list.
+
+   S_CODE  is  a  tagged  memory pointer  referencing  the  code  object
+   implementing S_CLOSURE, if any.
+
+   S_ARGCOUNT  is a  fixnum representing  the negated  number of  Scheme
+   arguments.
+
+   S_CLOSURE is a reference to the  closure object to execute; it can be
+   the fixnum zero if there is no closure to execute, as when we enter a
+   loaded FASL file.
+
+   Return the return value of the last executed continuation. */
 {
-  ikptr argc   = ik_asm_enter(pcb, code_ptr+off_code_data, argcount, cp);
-  ikptr next_k = pcb->next_k;
-  while (next_k) {
-    ikcont* k = (ikcont*)(long)(next_k - vector_tag);
-    if (k->tag == system_continuation_tag) {
-      break;
-    }
-    ikptr top = k->top;
-    ikptr rp = IK_REF(top, 0);
-    long int framesize = (long int) IK_REF(rp, disp_frame_size);
-#ifdef DEBUG_EXEC
-    fprintf(stderr, "exec framesize=0x%016lx ksize=%ld rp=0x%016lx\n", framesize, k->size, rp);
+#if DEBUG_EXEC
+  ik_debug_message_start("%s: enter closure 0x%016lx", __func__, (long)s_closure);
+  ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
+  fprintf(stderr, "\n");
 #endif
-    if (0 == framesize)
+  /* A possibly zero fixnum representing  the negated number of returned
+     Scheme values. */
+  ikptr	s_retval_count = ik_asm_enter(pcb, s_code+off_code_data, s_argcount, s_closure);
+  /* If we are here:
+   *
+   * ik_underflow_handler = *(void **)(pcb->frame_pointer - wordsize)
+   */
+
+  /* Reference to the  continuation object representing the  C or Scheme
+     continuation we want to go back to. */
+  ikptr s_kont       = pcb->next_k;
+  while (s_kont) {
+#if (0 || DEBUG_EXEC)
+    ik_debug_message("%s: resuming saved continuation 0x%016lx", __func__, (long)s_kont);
+#endif
+    /* We are here  because the Scheme code wants to  return to a Scheme
+       continuation object, handing  to the continuation -S_RETVAL_COUNT
+       return  values.  This  requires installation  of the  appropriate
+       (previously saved) stack. */
+    ikcont * p_kont = (ikcont *)(long)(s_kont - vector_tag);
+    /* System continuations are created by the FFI to save the current C
+       execution contest just before calling back a Scheme function.  So
+       if S_KONT is  a system continuation: we have no  Scheme code to
+       go back to, we just return to the caller of this C function. */
+    if (system_continuation_tag == p_kont->tag)
+      break;
+    /* TOP is  a raw memory pointer  to the highest machine  word in the
+       last function call frame of the continuation.
+
+       RP is a  raw memory address being the entry  point in binary code
+       we have to jump back to.
+
+       FRAMESIZE is the function call frame size of the function we have
+       to return to.  This value was computed at compile time and stored
+       in binary code just before the "call" instruction. */
+    ikptr	top       = p_kont->top;
+    ikptr	rp        = IK_REF(top, 0);
+    long	framesize = (long) IK_REF(rp, disp_frame_size);
+#if DEBUG_EXEC
+    ik_debug_message("%s: exec framesize=%ld kontsize=%ld rp=0x%016lx",
+		     __func__, framesize, p_kont->size, rp);
+#endif
+    if (0 == framesize) {
       framesize = IK_REF(top, wordsize);
-    if (framesize <= 0)
-      ik_abort("invalid framesize %ld\n", framesize);
-    if (framesize < k->size) {
-      ikcont *	nk = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
-      nk->tag	= k->tag;
-      nk->next	= k->next;
-      nk->top	= top + framesize;
-      nk->size	= k->size - framesize;
-      k->size	= framesize;
-      k->next	= vector_tag + (ikptr)(long)nk;
-      /* record side effect */
-      ik_ulong idx = ((ik_ulong)(&k->next)) >> IK_PAGESHIFT;
-      ((int*)(long)(pcb->dirty_vector))[idx] = -1;
-    } else if (framesize > k->size) {
-      ik_abort("invalid framesize %ld, expected %ld or less\n\trp = 0x%016lx\n\trp offset = %ld",
-	       framesize, k->size, rp, IK_REF(rp, disp_frame_offset));
+#if (DEBUG_EXEC)
+      ik_debug_message("%s: retrieved framesize=%ld from above top",
+		       __func__, (long)framesize);
+#endif
     }
-    pcb->next_k = k->next;
-    ikptr fbase = pcb->frame_base - wordsize;
-    ikptr new_fbase = fbase - framesize;
-    memmove((char*)(long)new_fbase + argc,
-	    (char*)(long)fbase + argc,
-	    -argc);
-    memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
-    argc = ik_asm_reenter(pcb, new_fbase, argc);
-    next_k =  pcb->next_k;
-  }
+    if (framesize <= 0)
+      ik_abort("invalid caller function framesize %ld\n", framesize);
+    if (framesize < p_kont->size) {
+      /* Insert a  new continuation "p_new_cont" between  "p_kont" and
+       * its next;  notice that  below we will  pop "s_kont"  from the
+       * list in the PCB, so  "p_new_cont" will become the first, before
+       * reentering assembly code.  Before:
+       *
+       *    s_kont
+       *       |        s_further
+       *       |--------->|
+       *          next    |-------> NULL
+       *                    next
+       *
+       * after:
+       *
+       *    s_kont
+       *       |       s_new_kont
+       *       |--------->|       s_further
+       *          next    |-------->|
+       *                    next    |--------> NULL
+       *                               next
+       */
+      ikcont *	p_new_kont = (ikcont*)(long)ik_unsafe_alloc(pcb, sizeof(ikcont));
+      p_new_kont->tag  = p_kont->tag;
+      p_new_kont->next = p_kont->next;
+      p_new_kont->top  = top + framesize;
+      p_new_kont->size = p_kont->size - framesize;
+      p_kont->size   = framesize;
+      p_kont->next   = (ikptr)(long)p_new_kont | vector_tag;
+      { /* Record in  the dirty vector  the side effect of  mutating the
+	   field "p_kont->next". */
+	ik_ulong idx = ((ik_ulong)(&p_kont->next)) >> IK_PAGESHIFT;
+	((int*)(long)(pcb->dirty_vector))[idx] = -1;
+      }
+    } else if (framesize > p_kont->size) {
+      ikptr	return_point		= IK_REF(top, 0);
+      ikptr	return_point_offset	= IK_REF(return_point, disp_frame_offset);
+      ikptr	return_point_framesize	= IK_REF(return_point, disp_frame_size);
+      ikptr	return_point_code_offset= return_point_offset - disp_frame_offset;
+      ikptr	return_point_code_entry	= return_point - return_point_code_offset;
+      IK_UNUSED ikptr p_return_point_code= return_point_code_entry - disp_code_data;
+      ik_abort("%s: internal error while resuming continuation:\n\
+\tpcb->heap_base     = 0x%016lx\n\
+\tpcb->heap_size     = %ld bytes, %ld words\n\
+\tpcb->stack_base    = 0x%016lx\n\
+\tpcb->stack_size    = %ld bytes, %ld words\n\
+\tpcb->frame_redline = 0x%016lx, delta %ld words\n\
+\tpcb->frame_pointer = 0x%016lx\n\
+\tpcb->frame_base    = 0x%016lx\n\
+\tik_underflow_handler = 0x%016x\n\
+\ts_kont        = 0x%016lx\n\
+\tp_kont        = 0x%016lx\n\
+\tp_kont->top   = 0x%016lx\n\
+\tp_kont->size  = %ld\n\
+\ts_kont return point           = 0x%016lx\n\
+\ts_kont return point offset    = %ld\n\
+\ts_kont return point framesize = %ld\n\
+\tinvalid return_point_framesize=%ld, expected p_kont->size=%ld or less",
+	       __func__,
+	       pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
+	       pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
+	       pcb->frame_redline,
+	       (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
+	       pcb->frame_pointer, pcb->frame_base,
+	       *(void **)(pcb->frame_pointer - wordsize),
+	       (long)s_kont, (long)p_kont,
+	       IK_REF(p_kont, disp_continuation_top),
+	       IK_REF(p_kont, disp_continuation_size),
+	       return_point, return_point_offset, return_point_framesize,
+	       framesize, p_kont->size);
+    }
+    /* Pop "s_kont" from  the list in the PCB  structure.  Notice that
+       if "s_kont" represents a  continuation saved with CALL/CC: such
+       continuation object is still  referenced somewhere by the closure
+       object implementing the continuation function. */
+    pcb->next_k = p_kont->next;
+#if DEBUG_EXEC
+    ik_debug_message("%s: reenter, argc %lu", __func__, IK_UNFIX(-s_retval_count));
+#endif
+    { /* When we  arrive here the  situation on  the Scheme stack  is as
+       * follows:
+       *
+       *        high memory
+       *  |                      | <-- pcb->frame_pointer = pcb->frame_base
+       *  |----------------------|
+       *  | ik_underflow_handler | <-- fbase
+       *  |----------------------|
+       *  |    return value 0    |
+       *  |----------------------|
+       *  |    return value 1    |
+       *  |----------------------|
+       *  |    return value 2    | <-- fbase + s_retval_count
+       *  |----------------------|
+       *  |                      |
+       *        low memory
+       *
+       * and it is  possible that there are no return  values.  Move the
+       * return values down a framesize:
+       *
+       *         high memory
+       *  |                      | <-- pcb->frame_base
+       *  |----------------------|                          --
+       *  | ik_underflow_handler | <-- fbase                .
+       *  |----------------------|                --        .
+       *  |  return value 0 src  |                .         .
+       *  |----------------------|                .         .
+       *  |  return value 1 src  |                .         . framesize
+       *  |----------------------|                . -s_retval_count
+       *  |  return value 2 src  | <-- retval_src .         .
+       *  |----------------------|                --        .
+       *            ...                                     .
+       *  |----------------------|                          --
+       *  |                      | <-- new_fbase
+       *  |----------------------|                --
+       *  |  return value 0 dst  |                .
+       *  |----------------------|                .
+       *  |  return value 1 dst  |                .
+       *  |----------------------|                . -s_retval_count
+       *  |  return value 2 dst  | <-- retval_dst .
+       *  |----------------------|                --
+       *  |                      |
+       *           low memory
+       */
+      assert(pcb->frame_pointer == pcb->frame_base);
+      ikptr	fbase      = pcb->frame_base - wordsize;
+      ikptr	new_fbase  = fbase - framesize;
+      char *	retval_dst = ((char*)(long)new_fbase) + s_retval_count;
+      char *	retval_src = ((char*)(long)fbase)     + s_retval_count;
+      memmove(retval_dst, retval_src, -s_retval_count);
+      /* Copy, to this stack segment, the Scheme arguments from the last
+       * stack  frame in  the saved  continuation.  Then  reenter Scheme
+       * code execution using "new_fbase" as frame pointer.
+       *
+       *       high memory
+       *  |                      | <-- pcb->frame_base
+       *  |----------------------|                --
+       *  | ik_underflow_handler | <-- fbase      .
+       *  |----------------------|                .
+       *  |    argument 0 dst    |                .
+       *  |----------------------|                . framesize
+       *  |    argument 1 dst    |                .
+       *  |----------------------|                .
+       *  |    argument 2 dst    |                .
+       *  |----------------------|                --
+       *  |    return address    | <-- new_fbase
+       *  |----------------------|
+       *  |  return value 0 dst  |
+       *  |----------------------|
+       *  |  return value 1 dst  |
+       *  |----------------------|
+       *  |  return value 2 dst  |
+       *  |----------------------|
+       *  |                      |
+       *        low memory
+       *
+       *        high memory
+       *  |                      |
+       *  |----------------------|                 --
+       *  |    argument 0 src    |                 .
+       *  |----------------------|                 .
+       *  |    argument 1 src    |                 .
+       *  |----------------------|                 . framesize
+       *  |    argument 2 src    |                 .
+       *  |----------------------|                 .
+       *  |    return address    | <-- p_kont->top .
+       *  |----------------------|                 --
+       *  |                      |
+       *        low memory
+       *
+       * Every time we return to a previously saved continuation we copy
+       * all  the  stack frames  from  the  original stack  segment  (or
+       * portion  of  stack segment)  to  this  stack segment  (or  this
+       * portion of  stack segment);  so the  original stack  frames are
+       * immutable and we can reenter the saved continuations any number
+       * of times.   This comes at  the price  of copying all  the stack
+       * frames while rewinding the stack.
+       */
+      memcpy((char*)(long)new_fbase, (char*)(long)top, framesize);
+      s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
+    }
+    s_kont =  pcb->next_k;
+  }  /* end of while() */
+
+  /* Retrieve  the return  value from  the stack  and return  it to  the
+   * caller.
+   *
+   *      high memory
+   *   |              |
+   *   |--------------|
+   *   |              | <-- pcb->frame_base
+   *   |--------------|                                     --
+   *   |              | <-- pcb->frame_base - wordsize      .
+   *   |--------------|                                     .
+   *   | return value | <-- pcb->frame_base - 2 * wordsize  . Scheme
+   *   |--------------|                                     . stack
+   *   |              |                                     .
+   *   |              |                                     .
+   *   |--------------| <-- pcb->stack_base                 --
+   *   |              |
+   *      low memory
+   */
   ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
   return rv;
 }

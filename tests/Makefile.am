@@ -140,6 +140,7 @@ TESTS			=	\
 	test-vicare-errno.sps				\
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
+	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
 	test-vicare-general-c-buffers.sps		\
@@ -147,6 +148,7 @@ TESTS			=	\
 	test-vicare-infix.sps				\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
+	test-vicare-letrec-syntax.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
@@ -169,6 +171,7 @@ TESTS			=	\
 	test-vicare-words.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
+	test-issue-003.sps				\
 	test-issue-006-fxreverse-bit-field.sps		\
 	test-issue-007.sps				\
 	test-issue-008.sps				\
@@ -222,8 +225,7 @@ installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
 XFAIL_TESTS = \
-	test-vicare-log.sps			\
-	test-issue-008.sps
+	test-vicare-log.sps
 
 #page
 #### extra files to be distributed
@@ -345,6 +347,7 @@ EXTRA_DIST = \
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
 	test-vicare-ffi.sps				\
+	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
 	test-vicare-flonum-parser.sps			\
 	test-vicare-general-c-buffers.sps		\
@@ -354,6 +357,7 @@ EXTRA_DIST = \
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-linux.sps				\
+	test-vicare-letrec-syntax.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-parameters.sps			\
@@ -390,6 +394,7 @@ EXTRA_DIST = \
 	test-vicare-words.sps				\
 	\
 	test-issue-001-equal-hash.sps			\
+	test-issue-003.sps				\
 	test-issue-006-fxreverse-bit-field.sps		\
 	test-issue-007.sps				\
 	test-issue-008.sps				\

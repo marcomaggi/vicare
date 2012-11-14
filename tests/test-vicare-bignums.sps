@@ -6,7 +6,7 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	Test for fixnums and bignums on 32-bit platforms.
+;;;	Test for fixnums and bignums.
 ;;;
 ;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -143,6 +143,28 @@
   (check
       (- (+ (+ 10 least-positive-bn) least-positive-bn) least-positive-bn)
     => (+ 10 least-positive-bn))
+
+  #t)
+
+
+(parametrise ((check-test-name	'debug))
+
+  (when #f
+    (check-pretty-print
+     (list 'least-positive-bn least-positive-bn
+	   'bv (bignum->bytevector least-positive-bn))))
+  (when #f
+    (check-pretty-print
+     (list 'greatest-negative-bn greatest-negative-bn
+	   'bv (bignum->bytevector greatest-negative-bn))))
+
+  (check
+      (bytevector->bignum (bignum->bytevector least-positive-bn))
+    => least-positive-bn)
+
+  (check
+      (bytevector->bignum (bignum->bytevector greatest-negative-bn))
+    => greatest-negative-bn)
 
   #t)
 

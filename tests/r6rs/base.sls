@@ -208,17 +208,32 @@
                      (foo (+ x 3))))
           45)
 
-    ;;This  test fails  (Jul  21, 2012)  and it  is  already covered  in
-    ;;another test file.
+    ;;This  is commented  out because  R6RS mandates  that an  assertion
+    ;;violation must  be raised  at runtime, while  Vicare raises  it at
+    ;;compile time.
+    ;;
+    ;;If we do not comment out  this test: the execution of this program
+    ;;will stop  here; we  prefer to  go on  with the  subsequent tests.
+    ;;(Marco Maggi; Oct 31, 2012)
     ;;
     #;(test/exn (letrec ([x y]
                        [y x])
                 'should-not-get-here)
               &assertion)
 
-    (test (letrec ([x (if (eq? (cons 1 2) (cons 1 2))
+    ;;In this  test: X is  referenced outside of a  LAMBDA, so it  is an
+    ;;illegal reference  to its binding  X; but: R6RS mandates  that the
+    ;;check for illegal references be performed at runtime, so this test
+    ;;succeeds  when  run  on  a  fully  R6RS-compliant  implementation.
+    ;;Vicare raises an exception at compile time, so this test fails.
+    ;;
+    ;;If we  do not comment  out this test  here: the execution  of this
+    ;;program will  stop here; we  prefer to  go on with  the subsequent
+    ;;tests.  (Marco Maggi; Oct 31, 2012)
+    ;;
+    #;(test (letrec ([x (if (eq? (cons 1 2) (cons 1 2))
                           x
-                          1)])
+			1)])
             x)
           1)
 

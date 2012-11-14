@@ -148,45 +148,48 @@ next_gen_tag[generation_count] = {
 static void
 ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
 /* Given  a  block of  memory  starting at  BASE  and  SIZE bytes  wide:
-   unregister    it   from    "pcb->segment_vector";    reset   it    in
-   "pcb->dirty_vector"; finally either register it in the uncached pages
-   or unmap it. */
+
+   - Mark all its pages as "holes" in the segment vector.
+
+   - Mark all its pages as pure in the dirty vector.
+
+   - Either register it in the uncached pages or unmap it. */
 {
-  unsigned *	p;
-  unsigned *	s;
-  unsigned *	q;
-  ikpage *	r;
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == IK_ALIGN_TO_NEXT_PAGE(size));
-  p = ((unsigned *)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
-  s = ((unsigned *)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
-  q = p + IK_PAGE_INDEX(size);
-  while (p < q) {
-    assert(*p != hole_mt);
-    *p = hole_mt; /* holes */
-    *s = 0;
-    p++; s++;
+  {
+    unsigned *	segme = ((unsigned *)(long)(pcb->segment_vector)) + IK_PAGE_INDEX(base);
+    unsigned *	dirty = ((unsigned *)(long)(pcb->dirty_vector))   + IK_PAGE_INDEX(base);
+    unsigned *	past  = segme + IK_PAGE_INDEX(size);
+    for (; segme < past; ++segme, ++dirty) {
+      assert(*segme != hole_mt);
+      *segme = hole_mt;
+      *dirty = 0;
+    }
   }
-  r = pcb->uncached_pages;
-  if (r) {
-    ikpage *	cache = pcb->cached_pages;
-    ikpage *	next;
-    do {
-      r->base = base;
-      next    = r->next;
-      r->next = cache;
-      cache   = r;
-      r       = next;
-      base   += IK_PAGESIZE;
-      size   -= IK_PAGESIZE;
-    } while (r && size);
-    pcb->cached_pages = cache;
-    pcb->uncached_pages = r;
+  {
+    ikpage *	UNcache = pcb->uncached_pages;
+    if (UNcache) {
+      ikpage *	cache = pcb->cached_pages;
+      ikpage *	next;
+      /* Split the BASE and SIZE block into cached pages. */
+      do {
+	UNcache->base	= base;
+	next		= UNcache->next;
+	UNcache->next	= cache;
+	cache		= UNcache;
+	UNcache		= next;
+	base		+= IK_PAGESIZE;
+	size		-= IK_PAGESIZE;
+      } while (UNcache && size);
+      pcb->cached_pages   = cache;
+      pcb->uncached_pages = UNcache;
+    }
   }
-  if (size) {
+  /* Unmap the leftovers. */
+  if (size)
     ik_munmap(base, size);
-  }
 }
 
 
@@ -226,15 +229,15 @@ meta_alloc_extending (long size, gc_t* gc, int meta_id)
   return mem;
 }
 static inline ikptr
-meta_alloc (long size, gc_t* gc, int meta_id)
+meta_alloc (long aligned_size, gc_t* gc, int meta_id)
 {
-  assert(size == IK_ALIGN(size));
+  assert(aligned_size == IK_ALIGN(aligned_size));
   meta_t *	meta = &gc->meta[meta_id];
   ikptr		ap   = meta->ap;
   ikptr		ep   = meta->ep;
-  ikptr		nap  = ap + size;
+  ikptr		nap  = ap + aligned_size;
   if (nap > ep) {
-    return meta_alloc_extending(size, gc, meta_id);
+    return meta_alloc_extending(aligned_size, gc, meta_id);
   } else {
     meta->ap = nap;
     return ap;
@@ -301,10 +304,9 @@ gc_alloc_new_weak_pair(gc_t* gc) {
   ikptr ep = meta->ep;
   ikptr nap = ap + pair_size;
   if (nap > ep) {
-      ikptr mem = ik_mmap_typed(
-                   IK_PAGESIZE,
-                   meta_mt[meta_weak] | gc->collect_gen_tag,
-                   gc->pcb);
+      ikptr mem = ik_mmap_typed(IK_PAGESIZE,
+				meta_mt[meta_weak] | gc->collect_gen_tag,
+				gc->pcb);
       gc->segment_vector = gc->pcb->segment_vector;
       meta->ap = mem + pair_size;
       meta->aq = mem;
@@ -324,18 +326,29 @@ gc_alloc_new_data(int size, gc_t* gc) {
 }
 
 static inline ikptr
-gc_alloc_new_code(long size, gc_t* gc) {
-  assert(size == IK_ALIGN(size));
-  if (size < IK_PAGESIZE) {
-    return meta_alloc(size, gc, meta_code);
-  } else {
-    long memreq = IK_ALIGN_TO_NEXT_PAGE(size);
-    ikptr mem = ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
+gc_alloc_new_code (long aligned_size, gc_t* gc)
+/* Allocate a new memory block to be as code object; the allocated block
+   size is an  exact multiple of the page size;  allocation is performed
+   with "mmap()" to  have read, write and  execution protection.
+
+   Return an *untagged* pointer referencing  the first byte of allocated
+   memory. */
+{
+  assert(aligned_size == IK_ALIGN(aligned_size));
+  if (aligned_size < IK_PAGESIZE) {
+    return meta_alloc(aligned_size, gc, meta_code);
+  } else { /* More than one page needed. */
+    long	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
+    ikptr	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
+    qupages_t *	p;
+    /* FIXME In this function we never access the "segment_vector" field
+       of  "gc", do  we  need  this assignment?   (Marco  Maggi; Oct  5,
+       2012) */
     gc->segment_vector = gc->pcb->segment_vector;
-    qupages_t* p = ik_malloc(sizeof(qupages_t));
+    p    = ik_malloc(sizeof(qupages_t));
     p->p = mem;
-    p->q = mem+size;
-    bzero((char*)(long)(mem+size), memreq-size);
+    p->q = mem+aligned_size;
+    bzero((char*)(long)(mem+aligned_size), memreq-aligned_size);
     p->next = gc->queues[meta_code];
     gc->queues[meta_code] = p;
     return mem;
@@ -361,10 +374,9 @@ gc_tconc_push_extending(gc_t* gc, ikptr tcbucket) {
     p->next = gc->tconc_queue;
     gc->tconc_queue = p;
   }
-  ikptr ap =
-     ik_mmap_typed(IK_PAGESIZE,
-        meta_mt[meta_ptrs] | gc->collect_gen_tag,
-        gc->pcb);
+  ikptr ap = ik_mmap_typed(IK_PAGESIZE,
+			   meta_mt[meta_ptrs] | gc->collect_gen_tag,
+			   gc->pcb);
   add_to_collect_count(gc->pcb, IK_PAGESIZE);
   gc->segment_vector = gc->pcb->segment_vector;
   bzero((char*)(long)ap, IK_PAGESIZE);
@@ -432,6 +444,8 @@ static void fix_new_pages(gc_t* gc);
 
 ikptr
 ik_collect_check (unsigned long req, ikpcb* pcb)
+/* Check if there  are REQ bytes already allocated and  available on the
+   heap; return #t if there are, run a GC and return #f otherwise. */
 {
   long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
   if (bytes >= req) {
@@ -586,11 +600,13 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
-    long memsize   = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
-    long new_heap_size = memsize + 2 * IK_PAGESIZE;
-    memsize = IK_ALIGN_TO_NEXT_PAGE(memsize);
+    long	memsize = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
+    long	new_heap_size;
+    ikptr	ptr;
+    memsize	  = IK_ALIGN_TO_NEXT_PAGE(memsize);
+    new_heap_size = memsize + 2 * IK_PAGESIZE;
     ik_munmap_from_segment(pcb->heap_base, pcb->heap_size, pcb);
-    ikptr ptr = ik_mmap_mixed(new_heap_size, pcb);
+    ptr = ik_mmap_mixed(new_heap_size, pcb);
     pcb->allocation_pointer = ptr;
     pcb->allocation_redline = ptr+memsize;
     pcb->heap_base = ptr;
@@ -838,52 +854,59 @@ gc_finalize_guardians (gc_t* gc)
 static int alloc_code_count = 0;
 
 static ikptr
-add_code_entry(gc_t* gc, ikptr entry) {
-  ikptr x = entry - disp_code_data;
-  if (ref(x,0) == IK_FORWARD_PTR) {
-    return ref(x,wordsize) + off_code_data;
+add_code_entry (gc_t* gc, ikptr entry)
+/* Add a code object. */
+{
+  ikptr		x = entry - disp_code_data;
+  if (IK_FORWARD_PTR == IK_REF(x,0)) {
+    return IK_REF(x,wordsize) + off_code_data;
   }
-  long idx = IK_PAGE_INDEX(x);
-  unsigned int t = gc->segment_vector[idx];
-  int gen = t & gen_mask;
-  if (gen > gc->collect_gen) {
+  long		idx	= IK_PAGE_INDEX(x);
+  unsigned	t	= gc->segment_vector[idx];
+  int		gen	= t & gen_mask;
+  if (gen > gc->collect_gen)
     return entry;
-  }
-  long code_size = IK_UNFIX(ref(x, disp_code_code_size));
-  ikptr reloc_vec = ref(x, disp_code_reloc_vector);
-  ikptr freevars = ref(x, disp_code_freevars);
-  ikptr annotation = ref(x, disp_code_annotation);
-  long required_mem = IK_ALIGN(disp_code_data + code_size);
+  /* The number of bytes actually used in the allocated memory block. */
+  long		code_size	= IK_UNFIX(IK_REF(x, disp_code_code_size));
+  /* The total number of allocated bytes. */
+  long		required_mem	= IK_ALIGN(disp_code_data + code_size);
+  /* The relocation vector. */
+  ikptr		s_reloc_vec	= IK_REF(x, disp_code_reloc_vector);
+  /* A fixnum representing th enumber of free variables. */
+  ikptr		s_freevars	= IK_REF(x, disp_code_freevars);
+  /* An object that annotates the code object. */
+  ikptr		s_annotation	= IK_REF(x, disp_code_annotation);
   if (required_mem >= IK_PAGESIZE) {
-    int new_tag = gc->collect_gen_tag;
-    long idx = IK_PAGE_INDEX(x);
+    int		new_tag	= gc->collect_gen_tag;
+    long	idx	= IK_PAGE_INDEX(x);
+    long	i;
     gc->segment_vector[idx] = new_tag | code_mt;
-    long i;
-    for(i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
+    for (i=IK_PAGESIZE, idx++; i<required_mem; i+=IK_PAGESIZE, idx++) {
       gc->segment_vector[idx] = new_tag | data_mt;
     }
-    qupages_t* p = ik_malloc(sizeof(qupages_t));
+    qupages_t *	p = ik_malloc(sizeof(qupages_t));
     p->p = x;
     p->q = x+required_mem;
     p->next = gc->queues[meta_code];
     gc->queues[meta_code] = p;
     return entry;
-  } else {
-    ikptr y = gc_alloc_new_code(required_mem, gc);
-    ref(y, 0) = code_tag;
-    ref(y, disp_code_code_size) = IK_FIX(code_size);
-    ref(y, disp_code_reloc_vector) = reloc_vec;
-    ref(y, disp_code_freevars) = freevars;
-    ref(y, disp_code_annotation) = annotation;
+  } else { /* Only one memory page allocated. */
+    ikptr	y = gc_alloc_new_code(required_mem, gc);
+    IK_REF(y, 0) = code_tag;
+    IK_REF(y, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(y, disp_code_reloc_vector)	= s_reloc_vec;
+    IK_REF(y, disp_code_freevars)	= s_freevars;
+    IK_REF(y, disp_code_annotation)	= s_annotation;
     memcpy((char*)(long)(y+disp_code_data),
            (char*)(long)(x+disp_code_data),
            code_size);
-    ref(x, 0) = IK_FORWARD_PTR;
-    ref(x, wordsize) = y | vector_tag;
+    IK_REF(x, 0)	= IK_FORWARD_PTR;
+    IK_REF(x, wordsize)	= y | vector_tag;
     return y+disp_code_data;
   }
 }
 
+
 static void
 collect_locatives(gc_t* gc, ik_callback_locative* loc) {
   while(loc) {
@@ -892,35 +915,134 @@ collect_locatives(gc_t* gc, ik_callback_locative* loc) {
   }
 }
 
+
 #define DEBUG_STACK 0
 
-static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
+static void
+collect_stack (gc_t* gc, ikptr top, ikptr end)
+/* Remember how the Scheme stack looks:
+ *
+ *    stack_base     frame_pointer=top     end   frame_base
+ *         v                   v             v   v
+ *  lo mem |-------------------+-------------+---| hi mem
+ *                       Scheme stack        |...| ik_underflow_handler
+ *
+ *         |.....................................|
+ *                        stack_size
+ *
+ * The  argument  END is  "pcb->frame_base  -  wordsize", a  raw  memory
+ * pointer referencing  the highest  machine word  on the  stack segment
+ * (the one containing "ik_underflow_handler").
+ *
+ * The argument TOP is "pcb->frame_pointer", a raw memory pointer.  This
+ * argument is used as iterator to climb the stack, frame by frame, from
+ * low memory addresses to high memory addresses until END is reached.
+ *
+ *            frame   frame   frame   frame   frame
+ *   lo mem |-----+-|-----+-|-----+-|-----+-|-----+-|-| hi mem
+ *                 ^       ^       ^       ^       ^  ^
+ *                top     top1    top2    top3     |  frame_base
+ *                                               top4 = end
+ *
+ *  Upon entering this  function TOP must reference the  highest word in
+ *  the lowest frame.
+ */
+{
   if (DEBUG_STACK) {
-    fprintf(stderr, "collecting stack (size=%ld) from 0x%016lx .. 0x%016lx\n",
-        (long)end - (long)top, (long) top, (long) end);
+    ik_debug_message_start("%s: enter (size=%ld) from 0x%016lx .. 0x%016lx",
+			   __func__, (long)end - (long)top, (long) top, (long) end);
   }
-  while(top < end) {
+  while (top < end) {
+    /* A Scheme stack with frames looks like this:
+     *
+     *          high memory
+     *   |                      | <-- pcb->frame_base
+     *   |----------------------|
+     *   | ik_underflow_handler |
+     *   |----------------------|
+     *             ...
+     *   |----------------------|             ---
+     *   |   return address 1   | <-- top 1    .
+     *   |----------------------|              . framesize
+     *             ...                         .
+     *   |----------------------|             ---
+     *   | return address = rp  | <-- top = frame pointer register (FPR)
+     *   |----------------------|
+     *   |                      |
+     *         low memory
+     *
+     * and the  return address RP  is an assembly  label SINGLE-VALUE-RP
+     * (for  single return  values) right  after the  "call" instruction
+     * that created this stack frame:
+     *
+     *     ;; low memory
+     *
+     *     jmp L0
+     *     livemask-bytes		;array of bytes
+     *     framesize			;data word, a "long"
+     *     rp_offset			;data word, a fixnum
+     *     multi-value-rp		;data word, assembly label
+     *     pad-bytes
+     *   L0:
+     *     call function-address
+     *   single-value-rp:		;single value return point
+     *     ... instructions...
+     *   multi-value-rp:		;multi value return point
+     *     ... instructions...
+     *
+     *     ;; high memory
+     *
+     * The  "long" word  "framesize" is  an offset  to add  to "top"  to
+     * obtain  the  top of  the  uplevel  frame;  it  is also  a  fixnum
+     * representing the  number of Scheme  objects on this  stack frame.
+     * Exception: if  the data word  "framesize" is zero, then  the true
+     * frame size  could not be computed  at compile time, and  so it is
+     * stored on the stack itself:
+     *
+     *         high memory
+     *   |                      |
+     *   |----------------------|
+     *   |      framesize       | <-- top + wordsize
+     *   |----------------------|
+     *   | return address = rp  | <-- top
+     *   |----------------------|
+     *   |                      |
+     *         low memory
+     *
+     * also in this case all the words  on this frame are live, the live
+     * mask in the code object is unused.
+     *
+     * The fixnum "rp_offset"  is the number of bytes  between the first
+     * byte of binary code in this code object and the location in which
+     * "rp_offset" itself is stored:
+     *
+     *    metadata                    binary code
+     *   |--------|-------------+-+----------------------| code object
+     *            |.............|^
+     *               rp_offset   |
+     *                  |        |
+     *                   --------
+     *
+     * NOTE The  preprocessor symbol  "disp_frame_offset" is  a negative
+     * integer.
+     */
+    ikptr	rp	  = IK_REF(top, 0);
+    long	rp_offset = IK_UNFIX(IK_REF(rp, disp_frame_offset));
     if (DEBUG_STACK) {
-      fprintf(stderr, "collecting frame at 0x%016lx: \n", (long) top);
-    }
-    ikptr rp = ref(top, 0);
-    long rp_offset = IK_UNFIX(ref(rp, disp_frame_offset));
-    if (DEBUG_STACK) {
-      fprintf(stderr, "rp=0x%016lx\n", rp);
-      fprintf(stderr, "rp_offset=%ld\n", rp_offset);
+      ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, rp_offset=%ld",
+		       (long) top, rp, rp_offset);
     }
     if (rp_offset <= 0) {
       ik_abort("invalid rp_offset %ld\n", rp_offset);
     }
-    /* since the return point is alive, we need to find the code
-     * object containing it and mark it live as well.  the rp is
-     * updated to reflect the new code object. */
-
-    long code_offset = rp_offset - disp_frame_offset;
-    ikptr code_entry = rp - code_offset;
-    ikptr new_code_entry = add_code_entry(gc, code_entry);
-    ikptr new_rp = new_code_entry + code_offset;
-    ref(top, 0) = new_rp;
+    /* Since the return point is alive,  we need to find the code object
+       containing it  and mark it  live as well.   The RP is  updated to
+       reflect the new code object. */
+    long	code_offset	= rp_offset - disp_frame_offset;
+    ikptr	code_entry	= rp - code_offset;
+    ikptr	new_code_entry	= add_code_entry(gc, code_entry);
+    ikptr	new_rp		= new_code_entry + code_offset;
+    IK_REF(top, 0) = new_rp;
 
     /* now for some livemask action.
      * every return point has a live mark above it.  the live mask
@@ -938,16 +1060,16 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
      *   |  framesize |
      *   |    word    |
      *   +------------+
+     *   | frameoffst |  the frame offset determines how far its
+     *   |    word    |  address is off from the start of the code
+     *   +------------+
      *   | multivalue |
      *   |    word    |
-     *   +------------+
-     *   | frameoffst |  the frame offset determined how far its
-     *   |    word    |  address is off from the start of the code
      *   +------------+
      *   |  padding   |  the size of this part is fixed so that we
      *   |  and call  |  can correlate the frame info (above) with rp
      *   +------------+
-     *   | code  junk | <---- rp
+     *   |   code     | <---- rp
      *   |    ...     |
      *
      *   WITH ONE EXCEPTION:
@@ -956,35 +1078,55 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
      *   there is no live mask in this case, instead all values in the
      *   frame are live.
      */
-    long framesize =  ref(rp, disp_frame_size);
+    long framesize =  IK_REF(rp, disp_frame_size);
     if (DEBUG_STACK) {
-      fprintf(stderr, "fs=%ld\n", (long)framesize);
+      ik_debug_message("fs=%ld", (long)framesize);
     }
     if (framesize < 0) {
       ik_abort("invalid frame size %ld\n", (long)framesize);
-    }
-    else if (framesize == 0) {
-      framesize = ref(top, wordsize);
+    } else if (0 == framesize) {
+      /* Keep alive all the objects on the stack. */
+      framesize = IK_REF(top, wordsize);
       if (framesize <= 0) {
         ik_abort("invalid redirected framesize=%ld\n", (long)framesize);
       }
+      /*
+       *       high memory
+       *   |----------------|                                --
+       *   | return address | <-- uplevel top                .
+       *   |----------------|                                . uplevel
+       *   | Scheme object  | <-- top + framesize - wordsize . frame
+       *   |----------------|                                .
+       *   | Scheme object  |                                .
+       *   |----------------|                                --
+       *   | return address | <-- top
+       *   |----------------|
+       *      low memory
+       */
       ikptr base = top + framesize - wordsize;
-      while(base > top) {
-        ikptr new_obj = add_object(gc,ref(base,0), "frame");
-        ref(base,0) = new_obj;
+      while (base > top) {
+        ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
+        IK_REF(base,0) = new_obj;
         base -= wordsize;
       }
     } else {
-      long frame_cells = framesize >> fx_shift;
-      long bytes_in_mask = (frame_cells+7) >> 3;
-      char* mask = (char*)(long)(rp+disp_frame_size-bytes_in_mask);
-
-      ikptr* fp = (ikptr*)(long)(top + framesize);
-      long i;
-      for(i=0; i<bytes_in_mask; i++, fp-=8) {
+      /* Keep alive only the objects selected by the livemask. */
+      /* Number of Scheme objects on this stack frame. */
+      long	frame_cells	= framesize >> fx_shift;
+      /* Number of  bytes in the  livemask array, knowing that  there is
+	 one bit for  every frame cell.  When the framesize  is 4 (there
+	 is only one machine word on  the stack) the livemask array must
+	 contain a single byte. */
+      long	bytes_in_mask	= (frame_cells+7) >> 3;
+      /* Pointer to the livemask bytevector */
+      char *	mask		= (char*)(long)(rp + disp_frame_size - bytes_in_mask);
+      /* Pointer to the Scheme objects on the stack. */
+      ikptr *	fp		= (ikptr*)(long)(top + framesize);
+      long	i;
+      for (i=0; i<bytes_in_mask; i++, fp-=8) {
         unsigned char m = mask[i];
 #if DEBUG_STACK
-        fprintf(stderr, "m[%ld]=0x%x\n", i, m);
+        ik_debug_message("m[%ld]=0x%x", i, m);
 #endif
         if (m & 0x01) { fp[-0] = add_object(gc, fp[-0], "frame0"); }
         if (m & 0x02) { fp[-1] = add_object(gc, fp[-1], "frame1"); }
@@ -999,9 +1141,9 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end) {
     top += framesize;
   }
   if (top != end)
-    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long) top, (long) end);
+    ik_abort("frames did not match up 0x%016lx .. 0x%016lx", (long)top, (long)end);
   if (DEBUG_STACK) {
-    fprintf(stderr, "done with stack!\n");
+    ik_debug_message("%s: leave\n", __func__);
   }
 }
 
@@ -1150,9 +1292,9 @@ add_object_proc (gc_t* gc, ikptr X)
 #endif
     return Y;
   }
-  else if (tag == vector_tag) {
-    /* Move  a  vector.   Notice  that   we  do  *not*  move  its  items
-       recursively.  */
+  else if (vector_tag == tag) {
+    /* Move an object whose reference  is tagged as vector; such objects
+       are "vector like" in that they are arrays of words. */
     if (IK_IS_FIXNUM(first_word)) { /* real vector */
       /* Notice that  FIRST_WORD is a fixnum  and we use  it directly as
 	 number of  bytes to allocate for  the data area  of the vector;
@@ -1296,6 +1438,8 @@ add_object_proc (gc_t* gc, ikptr X)
       return Y;
     }
     else if (code_tag == first_word) {
+      /* The memory block of a code object references a number of Scheme
+	 values. */
       ikptr	entry     = X + off_code_data;
       ikptr	new_entry = add_code_entry(gc, entry);
       return new_entry - off_code_data;
@@ -1481,67 +1625,91 @@ add_object_proc (gc_t* gc, ikptr X)
 
 
 static void
-relocate_new_code(ikptr x, gc_t* gc) {
-  ikptr relocvector = ref(x, disp_code_reloc_vector);
-  relocvector = add_object(gc, relocvector, "relocvec");
-  ref(x, disp_code_reloc_vector) = relocvector;
-  ref(x, disp_code_annotation) =
-    add_object(gc, ref(x, disp_code_annotation), "annotation");
-  ikptr relocsize = ref(relocvector, off_vector_length);
-  ikptr p = relocvector + off_vector_data;
-  ikptr q = p + relocsize;
-  ikptr code = x + disp_code_data;
-  while(p < q) {
-    long r = IK_UNFIX(ref(p, 0));
-    long tag = r & 3;
-    long code_off = r >> 2;
-    if (tag == 0) {
-      /* undisplaced pointer */
+relocate_new_code (ikptr p_X, gc_t* gc)
+/* Process  the relocation  vector of  a code  object.  p_X  must be  an
+  *untagged* pointer referencing the code object.
+
+  This function has similarities with "ik_relocate_code()". */
+{
+  const ikptr	s_reloc_vec = add_object(gc, IK_REF(p_X, disp_code_reloc_vector), "relocvec");
+  IK_REF(p_X, disp_code_reloc_vector) = s_reloc_vec;
+  IK_REF(p_X, disp_code_annotation)   = add_object(gc, IK_REF(p_X, disp_code_annotation),
+						 "annotation");
+  /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
+     word in the data area of the relocation vector VEC. */
+  ikptr		p_reloc_vec_cur = s_reloc_vec + off_vector_data;
+  /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
+     right after the data area of the relocation vector VEC.
+
+     Remember  that the  fixnum representing  the number  of items  in a
+     vector, taken as "long", also represents the number of bytes in the
+     data area. */
+  const ikptr	p_reloc_vec_end = p_reloc_vec_cur + IK_VECTOR_LENGTH_FX(s_reloc_vec);
+  /* The variable P_DATA is an  *untagged* pointer referencing the first
+     byte in the data area of the code object. */
+  const ikptr	p_data = p_X + disp_code_data;
+  /* Scan the records in the relocation vector. */
+  while (p_reloc_vec_cur < p_reloc_vec_end) {
+    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
+    const long	reloc_record_tag  = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const long	disp_code_word    = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+    switch (reloc_record_tag) {
+    case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
+      /* This record represents a vanilla object; this record is 2 words
+	 wide. */
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-     // fprintf(stderr, "r=0x%08x code_off=%d reloc_size=0x%08x\n",
-     //     r, code_off, relocsize);
+      fprintf(stderr, "r=0x%08x disp_code_word=%d reloc_size=0x%08x\n",
+	      first_record_bits, disp_code_word, IK_VECTOR_LENGTH_FX(s_reloc_vec));
 #endif
-      ikptr old_object = ref(p, wordsize);
-      ikptr new_object = add_object(gc, old_object, "reloc1");
-      ref(code, code_off) = new_object;
-      p += (2*wordsize);
+      ikptr	s_old_object = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      ikptr	s_new_object = add_object(gc, s_old_object, "reloc1");
+      IK_REF(p_data, disp_code_word) = s_new_object;
+      p_reloc_vec_cur += (2*wordsize);
+      break;
     }
-    else if (tag == 2) {
-      /* displaced pointer */
-      long obj_off = IK_UNFIX(ref(p, wordsize));
-      ikptr old_object = ref(p, 2*wordsize);
-      ikptr new_object = add_object(gc, old_object, "reloc2");
-      ref(code, code_off) = new_object + obj_off;
-      p += (3 * wordsize);
+    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
+      /* This record  represents a  displaced object;  this record  is 3
+	 words wide. */
+      long	obj_off      = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      ikptr	s_old_object =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      ikptr	s_new_object = add_object(gc, s_old_object, "reloc2");
+      IK_REF(p_data, disp_code_word) = s_new_object + obj_off;
+      p_reloc_vec_cur += (3 * wordsize);
+      break;
     }
-    else if (tag == 3) {
-      /* displaced relative pointer */
-      long obj_off = IK_UNFIX(ref(p, wordsize));
-      ikptr obj = ref(p, 2*wordsize);
+    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
+      /* This record  represents a  jump label; this  record is  3 words
+	 wide. */
+      long	obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      ikptr	s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      //fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)obj,
-      //    obj_off);
+      fprintf(stderr, "obj=0x%08x, obj_off=0x%08x\n", (int)s_obj, obj_off);
 #endif
-      obj = add_object(gc, obj, "reloc3");
-      ikptr displaced_object = obj + obj_off;
-      long next_word = code + code_off + 4;
-      ikptr relative_distance = displaced_object - (long)next_word;
+      s_obj = add_object(gc, s_obj, "reloc3");
+      ikptr	displaced_object  = s_obj + obj_off;
+      long	next_word         = p_data + disp_code_word + 4;
+      ikptr	relative_distance = displaced_object - (long)next_word;
       if (((long)relative_distance) != ((long)((int)relative_distance)))
         ik_abort("relocation error with relative=0x%016lx", relative_distance);
-      *((int*)(code+code_off)) = (int)relative_distance;
-      p += (3*wordsize);
+      *((int*)(p_data + disp_code_word)) = (int)relative_distance;
+      p_reloc_vec_cur += (3*wordsize);
+      break;
     }
-    else if (tag == 1) {
-      /* do nothing */
-      p += (2 * wordsize);
+    case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
+      /* This record represents a foreign object; this record is 2 words
+	 wide.  Do nothing. */
+      p_reloc_vec_cur += (2 * wordsize);
+      break;
     }
-    else
-      ik_abort("invalid rtag %ld in 0x%016lx", tag, r);
-  }
+    default:
+      ik_abort("invalid relocation record tag %ld in 0x%016lx",
+	       reloc_record_tag, first_record_bits);
+      break;
+    } /* end of switch() */
+  } /* end of while() */
 }
 
-
-
+
 static void
 collect_loop(gc_t* gc) {
   int done;
@@ -1846,46 +2014,46 @@ scan_dirty_pointers_page(gc_t* gc, long page_idx, int mask) {
 }
 
 static void
-scan_dirty_code_page(gc_t* gc, long page_idx) {
-  ikptr p = (ikptr)(page_idx << IK_PAGESHIFT);
-  ikptr start = p;
-  ikptr q = p + IK_PAGESIZE;
-  unsigned int* segment_vec = (unsigned int*)(long)gc->segment_vector;
-  unsigned int* dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
+scan_dirty_code_page (gc_t* gc, long page_idx)
+{
+  ikptr		p		= (ikptr)(page_idx << IK_PAGESHIFT);
+  ikptr		start		= p;
+  ikptr		q		= p + IK_PAGESIZE;
+  unsigned *	segment_vec	= (unsigned *)(long)gc->segment_vector;
+  unsigned *	dirty_vec	= (unsigned *)(long)gc->pcb->dirty_vector;
   //unsigned int d = dirty_vec[page_idx];
-  unsigned int t = segment_vec[page_idx];
+  unsigned	t		= segment_vec[page_idx];
   //unsigned int masked_d = d & mask;
-  unsigned int new_d = 0;
-  while(p < q) {
-    if (ref(p, 0) != code_tag) {
+  unsigned	new_d		= 0;
+  while (p < q) {
+    if (IK_REF(p, 0) != code_tag) {
       p = q;
-    }
-    else {
-      long j = ((long)p - (long)start) / cardsize;
-      long code_size = IK_UNFIX(ref(p, disp_code_code_size));
+    } else {
+      long	j		= ((long)p - (long)start) / cardsize;
+      long	code_size	= IK_UNFIX(IK_REF(p, disp_code_code_size));
       relocate_new_code(p, gc);
       segment_vec = gc->segment_vector;
-      ikptr rvec = ref(p, disp_code_reloc_vector);
-      ikptr len = ref(rvec, off_vector_length);
+      ikptr	rvec		= IK_REF(p, disp_code_reloc_vector);
+      ikptr	len		= IK_REF(rvec, off_vector_length);
       assert(((long)len) >= 0);
-      unsigned long i;
-      unsigned long code_d = segment_vec[IK_PAGE_INDEX(rvec)];
-      for(i=0; i<len; i+=wordsize) {
-        ikptr r = ref(rvec, i+off_vector_data);
+      unsigned long	i;
+      unsigned long	code_d	= segment_vec[IK_PAGE_INDEX(rvec)];
+      for (i=0; i<len; i+=wordsize) {
+        ikptr		r = IK_REF(rvec, i+off_vector_data);
         if (IK_IS_FIXNUM(r) || (IK_TAGOF(r) == immediate_tag)) {
           /* do nothing */
         } else {
-          r = add_object(gc, r, "nothing2");
-          segment_vec = gc->segment_vector;
-          code_d = code_d | segment_vec[IK_PAGE_INDEX(r)];
+          r		= add_object(gc, r, "nothing2");
+          segment_vec	= gc->segment_vector;
+          code_d	= code_d | segment_vec[IK_PAGE_INDEX(r)];
         }
       }
-      new_d = new_d | (code_d<<(j*meta_dirty_shift));
-      p += IK_ALIGN(code_size + disp_code_data);
+      new_d	= new_d | (code_d << (j * meta_dirty_shift));
+      p		+= IK_ALIGN(code_size + disp_code_data);
     }
   }
-  dirty_vec = (unsigned int*)(long)gc->pcb->dirty_vector;
-  new_d = new_d & cleanup_mask[t & gen_mask];
+  dirty_vec	= (unsigned int*)(long)gc->pcb->dirty_vector;
+  new_d		= new_d & cleanup_mask[t & gen_mask];
   dirty_vec[page_idx] = new_d;
 }
 

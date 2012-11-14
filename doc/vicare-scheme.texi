@@ -64,6 +64,10 @@
 @acronym{SEL}
 @end macro
 
+@macro std{}
+@acronym{STD}
+@end macro
+
 @macro urldate{DATE}
 (@acronym{URL} last verified \DATE\)
 @end macro
@@ -844,6 +848,30 @@ values (it could be greater than this).  As comparison: LispWorks for
 Unix sets this value to 300, LispWorks for Windows and LispWorks for
 Linux set this value to 255 (last verified from its online documenattion
 in November, 2011).
+
+@item
+@rnrs{6} mandates that illegal references to bindings established by
+@func{letrec} and @func{letrec*} are detected at run time and cause an
+assertion violation to be raised.  @value{PRJNAME} detects them at
+compile time, so some fully @rnrs{6}--compliant code will not work under
+@value{PRJNAME}.
+
+For example, the following program will run under a @rnrs{6}--compliant
+implementation:
+
+@example
+(import (rnrs))
+(letrec ((x (if (eq? (cons 1 2)
+                     (cons 1 2))
+                x
+              1)))
+  x)
+@end example
+
+@noindent
+because the form @code{x} in reference position in the right-hand side
+of the binding is never evaluated; under @value{PRJNAME} this code will
+rather raise a syntax violation at compile time.
 @end enumerate
 
 @c page
@@ -1281,9 +1309,20 @@ port.  This is for debugging purposes.
 Disables the effect of @option{--print-loaded-libraries}.
 
 @item -O0
+Turn off use of the source optimizer.
+
 @itemx -O1
 @itemx -O2
-Turn on various levels of compile optimisations (currently unsupported).
+Turn on various levels of compile optimisations.
+
+@item --optimizer-passes-count @var{COUNT}
+Specify how many passes to perform with the source optimizer.  Must be a
+positive fixnum.  Defaults to 1.
+
+@item --enable-open-mvcalls
+@itemx --disable-open-mvcalls
+Enable or disable inlining of calls to @func{call-with-values}.
+Defaults to disable.
 
 @item --print-assembly
 Print to the current error port the assembly instructions generated when
@@ -1847,6 +1886,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib symbols::               Additional symbol functions.
 * iklib numerics::              Additional functions on numbers.
 * iklib enumerations::          Additional functions on enumerations.
+* iklib hashtables::            Additional functions on hashtables.
 * iklib load::                  Loading source files.
 * iklib import::                Local library imports.
 * iklib export::                Extended library exports.
@@ -2448,6 +2488,12 @@ object.  A condition object of type @condition{source-position}
 representing the position of the expression in the source code.
 @end defun
 
+
+@defun annotation-source @var{ann}
+A pair whose car is the port identifier and whose cdr is the offset of
+the character.
+@end defun
+
 @c page
 @node iklib expander
 @section Interface to the expander
@@ -2517,23 +2563,140 @@ Undocumented.
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun expand
-Undocumented.
+@defun expand-library
+Given a @code{(library . ---)} symbolic expression, expand it and
+register it with the library manager; return @math{12} values:
+
+@enumerate
+@item
+@var{id}, to be documented.
+
+@item
+@var{name}, to be documented.
+
+@item
+@var{ver}, to be documented.
+
+@item
+@var{imp*}, to be documented.
+
+@item
+@var{vis*}, to be documented.
+
+@item
+@var{inv*}, to be documented.
+
+@item
+@var{invoke-code}, the expanded code expressed in the core lanugage.
+
+@item
+@var{visit-code}, to be documented.
+
+@item
+@var{export-subst}, to be documented.
+
+@item
+@var{export-env}, to be documented.
+
+@item
+@var{guard-code}, to be documented.
+
+@item
+@var{guard-req*}, to be documented.
+@end enumerate
+
+Example:
+
+@example
+(import (vicare))
+
+(let-values (((id name ver imp* vis* inv*
+               invoke-code visit-code
+               export-subst export-env
+               guard-code guard-req*)
+              (expand-library
+               '(library (doit)
+                  (export doit)
+                  (import (vicare))
+                  (define (doit x)
+                    (if (null? x)
+                        #f
+                      (doit (cdr x))))))))
+  invoke-code)
+@result{} (library-letrec*
+     ((#@{doit |$B>4=68o!fJIWV2u|@} #@{doit |wz6BfVVqmV65xcyl|@}
+        (annotated-case-lambda doit
+          ((#@{x |ua9qt/Qp%FG%z984|@})
+            (if (annotated-call (null? x) (primitive null?)
+                  #@{x |ua9qt/Qp%FG%z984|@})
+                '#f
+                (annotated-call (doit (cdr x))
+                  #@{doit |$B>4=68o!fJIWV2u|@}
+                  (annotated-call (cdr x) (primitive cdr)
+                    #@{x |ua9qt/Qp%FG%z984|@})))))))
+     ((primitive void)))
+@end example
 @end defun
 
 
-@defun core-expand
-Undocumented.
+@defun expand-top-level @var{sexp}
+Expand a top level program whose symbolic expression is @var{sexp}.
+Return @math{5} values:
+
+@enumerate
+@item
+@var{lib*}, to be documented.
+
+@item
+@var{invoke-code}, the fully expanded code from the body of the program.
+
+@item
+@var{macro*}, to be documented.
+
+@item
+@var{export-subst}, to be documented.
+
+@item
+@var{export-env}, to be documented.
+@end enumerate
 @end defun
 
 
-@defun expand/optimize
-Undocumented.
-@end defun
+@defun expand-form-to-core-language @var{sexp} @var{env}
+Interface to the internal expression expander, it is the expansion
+engine used by @rnrs{6}'s @func{eval} function.
 
+@var{sexp} must be a symbolic expression representing a Scheme form;
+@var{env} must be an evaluation environment.
 
-@defun expand/scc-letrec
-Undocumented.
+Return two values: the result of the expansion as symbolic expression in
+the core language; a list of libraries that must be invoked before
+evaluating the returned expression.
+
+Example:
+
+@example
+(import (vicare))
+
+(let-values (((code libs)
+              (expand-form-to-core-language
+               '(define (doit x)
+                  (if (null? x)
+                      #f
+                    (doit (cdr x))))
+               (interaction-environment))))
+  code)
+@result{} (set! #@{doit |UB$jGCqqJFloHg6X|@}
+     (annotated-case-lambda doit
+       ((#@{x |O3I3z7rSrwZ9/X2O|@})
+         (if (annotated-call (null? x) (primitive null?)
+               #@{x |O3I3z7rSrwZ9/X2O|@})
+             '#f
+             (annotated-call (doit (cdr x))
+               #@{doit |UB$jGCqqJFloHg6X|@}
+               (annotated-call (cdr x) (primitive cdr)
+                 #@{x |O3I3z7rSrwZ9/X2O|@}))))))
+@end example
 @end defun
 
 @c page
@@ -2806,9 +2969,9 @@ symbols representing the field names.
 
 The optional @var{uid} argument must be a symbol uniquely identifying
 this type; when not supplied, a symbol is automatically generated.  The
-@func{$symbol-value} field of @var{uid} is set to the newly created RTD;
-if @var{uid} already has a symbol value: such value must be a struct
-descriptor equal to the newly created RTD.
+@func{$symbol-value} field of @var{uid} is set to the newly created
+@rtd{}; if @var{uid} already has a symbol value: such value must be a
+struct descriptor equal to the newly created @rtd{}.
 @end defun
 
 
@@ -3477,6 +3640,7 @@ returns @false{}.
 @menu
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
+* iklib symbols system::        System values.
 @end menu
 
 @c page
@@ -3508,7 +3672,8 @@ Return the value in the @func{$symbol-value} field of the symbol
 
 @defun symbol-bound? @var{sym}
 Return true if @var{sym} is a symbol and its @func{$symbol-value} field
-is set to the special ``unbound'' machine word value.
+is set to the special ``unbound'' machine word value.  @ref{objects
+symbols} for details.
 @end defun
 
 @c page
@@ -3562,6 +3727,49 @@ Remove property @var{key} from the list associated to @var{symbol}.
 Return a new association list representing the property list of
 @var{symbol}.  The order of the entries is the same as the property
 creation order.
+@end defun
+
+@c page
+@node iklib symbols system
+@subsection System values
+
+
+When @value{PRJNAME}'s boot image is loaded, it initialises itself; for
+every primitive function (@func{cons}, @func{car}, @dots{})  one of the
+operations is to put the actual function (a closure object) in the
+@code{value} field of a gensym, and then put such gensym in the property
+list of the symbol being the name of the primitive, using an internal
+gensym (bound to @code{system-value-gensym}) as key.  For example, this
+is more or less what happens to @func{cons}:
+
+@example
+(define G-cons (gensym "cons"))
+($set-symbol-value 'G-cons #<procedure cons>)
+(putprop 'cons system-value-gensym 'G-cons)
+@end example
+
+@noindent
+so later we can do:
+
+@example
+($symbol-value (getprop x system-value-gensym))
+@result{} #<procedure cons>
+@end example
+
+@noindent
+or use the equivalent public @api{}:
+
+@example
+(system-value 'cons)    @result{} #<procedure cons>
+@end example
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun system-value @var{symbol}
+Attempt to extract from the @var{symbol} the primitive procedure of
+which @var{symbol} is the name; if successful return a closure object,
+else raise an assertion violation.
 @end defun
 
 @c page
@@ -3670,6 +3878,15 @@ The following bindings are exported by the @library{ikarus} and
 @defun enum-set? @var{obj}
 Return @true{} if @var{obj} is an enumeration set object, else return
 @false{}.
+@end defun
+
+@c page
+@node iklib hashtables
+@section Additional functions on hashtables
+
+
+@defun string-ci-hash @var{str}
+Case--insensitive hash function for strings.
 @end defun
 
 @c page
@@ -4722,6 +4939,14 @@ output port.  The default is false.
 @end deffn
 
 
+@deffn Parameter printer-integer-radix
+The radix used to print exact integers (fixnums and bignums) with
+@func{write}, @func{display} and similar functions.  Initialised to
+@code{10}, it must hold a value usable as second argument to
+@func{string->number}.
+@end deffn
+
+
 @deffn Parameter print-gensym
 @deffnx Parameter print-gensym #t
 @deffnx Parameter print-gensym #f
@@ -4751,7 +4976,6 @@ printed using the @code{#:pretty} notation.
 @end example
 
 The initial value of @code{print-gensym} is @true{}.
-
 @end deffn
 
 
@@ -5704,6 +5928,13 @@ Like @func{lookahead-u8} but peeks at @math{2} octets and return two
 values: the @eof{} object or a fixnum representing first octet, the
 @eof{} object or a fixnum representing the second octet.
 @end defun
+
+
+@deffn Parameter current-input-port
+@deffnx Parameter current-output-port
+@deffnx Parameter current-error-port
+These are like defined by @rnrs{6}, but in addition they are parameters.
+@end deffn
 
 
 @defun console-input-port
@@ -7441,9 +7672,45 @@ cause undefined behaviour.
 @end example
 @end defun
 
+
+@defun flonum->bytevector @var{flo}
+@defunx bytevector->flonum @var{bv}
+Convert a flonum to a bytevector and vice versa.  The flonum's memory
+block is copied byte by byte in the data area of the bytevector; and
+vice versa.
+
+For @func{bytevector->flonum}: if the bytevector does not have the
+length of a flonum's memory block, the return value is @false{}.
+@end defun
+
+
+@defun bignum->bytevector @var{flo}
+@defunx bytevector->bignum @var{bv}
+Convert a bignum to a bytevector and vice versa.  The bignum's memory
+block is copied byte by byte in the data area of the bytevector; and
+vice versa.
+@end defun
+
 @c page
 @node iklib misc
 @section Miscellaneous functions
+
+
+@defun neq? @vari{obj} @varii{obj}
+Compare the arguments as @func{eq?} would do, but return a negated
+result.  Equivalent (but more efficient) to:
+
+@example
+(not (eq? @vari{obj} @varii{obj}))
+@end example
+@end defun
+
+
+@defun immediate? @var{obj}
+Return true if @var{obj} is an immediate object: an object contained in
+a single machine word.  Compound objects (like lists and vectors) are
+@strong{not} immediate.
+@end defun
 
 
 @defun void
@@ -15304,11 +15571,18 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib ports::                Low level port structures.
 * syslib transcoders::          Low level transcoder operations.
 * syslib pointers::             Low level pointer operations.
+* syslib codes::                Low level code objects operations.
+* syslib closures::             Low level closures operations.
+* syslib compiler::             Interface to compiler passes.
 @end menu
 
 @c page
 @node syslib symbols
 @section Low level symbol operations
+
+
+@cindex @library{ikarus system $symbols}, library
+@cindex Library @library{ikarus system $symbols}
 
 
 The arguments @var{sym} must be references to symbol blocks, the
@@ -15329,7 +15603,6 @@ meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @deffn {Unsafe Operation} $symbol-string @var{sym}
 @deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
 @deffnx {Unsafe Operation} $symbol-plist @var{sym}
-@deffnx {Unsafe Operation} $symbol-value @var{sym}
 Accessors for the fields of @var{sym}.
 @end deffn
 
@@ -15337,9 +15610,30 @@ Accessors for the fields of @var{sym}.
 @deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
 @deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
 @deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
-@deffnx {Unsafe Operation} $set-symbol-value! @var{sym} @var{val}
-@deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
 Mutators for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-value @var{sym}
+@deffnx {Unsafe Operation} $set-symbol-value! @var{sym} @var{val}
+The @code{value} field has multiple purposes:
+
+@itemize
+@item
+When @var{sym} is the unique identifier of a data structure type: the
+@code{value} field holds the @rtd{} of the data structure.
+
+@item
+Top level bindings in compiled Scheme code are represented by gensyms;
+the value of a top level binding is stored in the @code{value} field of
+a gensym memory block.
+@end itemize
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-proc @var{sym}
+@deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
+Accessor and mutator for the field @code{proc}.
 @end deffn
 
 
@@ -15392,6 +15686,10 @@ vicare>
 @c page
 @node syslib fixnums
 @section Low level fixnum operations
+
+
+@cindex @library{ikarus system $fx}, library
+@cindex Library @library{ikarus system $fx}
 
 
 The following bindings are exported by the @library{ikarus system $fx}
@@ -15504,6 +15802,10 @@ Evaluate to a fixnum which can be used as hash value.
 @section Low level bignum operations
 
 
+@cindex @library{ikarus system $bignums}, library
+@cindex Library @library{ikarus system $bignums}
+
+
 The arguments @var{bn} to these operations must be bignums.  The
 following bindings are exported by the @library{ikarus system $bignums}
 library.  @ref{iklib numerics} for more functions acting on bignums.
@@ -15530,6 +15832,10 @@ portion of a bignum memory block.
 @section Low level flonum operations
 
 
+@cindex @library{ikarus system $flonums}, library
+@cindex Library @library{ikarus system $flonums}
+
+
 The arguments @var{fl} to these operations must be flonums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the @library{ikarus system $flonums} library.  @ref{iklib numerics}
@@ -15544,6 +15850,19 @@ not initialise the data area.
 
 @deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
 Return the octet at index @var{fx} in the data area of @var{fl}.
+
+Notice that the @var{fx} offset is positive, but it represents an offset
+from the end of the data area; on a 32-bit platform, the indexes of the
+bytes are:
+
+@example
+   1st word    2nd word    3rd word    4th word
+|-----------|-----------|-----------|-----------|
+                        |--|--|--|--|--|--|--|--| bytes
+                          7  6  5  4  3  2  1  0  offsets
+                        |.......................|
+                             IEEE 754 flonum
+@end example
 @end deffn
 
 
@@ -15586,6 +15905,10 @@ format of @ieee{} double precision flonums.
 @section Low level ratnum operations
 
 
+@cindex @library{ikarus system $ratnums}, library
+@cindex Library @library{ikarus system $ratnums}
+
+
 The arguments @var{rat} to these operations must be ratnums, the
 arguments @var{num} must be references to either fixnums or bignums.
 The following bindings are exported by the @library{ikarus system
@@ -15612,6 +15935,10 @@ Return the reference to the denominator.
 @c page
 @node syslib compnums
 @section Low level compnum operations
+
+
+@cindex @library{ikarus system $compnums}, library
+@cindex Library @library{ikarus system $compnums}
 
 
 The arguments @var{cmp} to these operations must be compnums, the
@@ -15642,6 +15969,10 @@ Return the reference to the imaginary part.
 @section Low level cflonum operations
 
 
+@cindex @library{ikarus system $compnums}, library
+@cindex Library @library{ikarus system $compnums}
+
+
 The arguments @var{cmp} to these operations must be cflonums, the
 arguments @var{fl} must be references to flonums.  The following
 bindings are exported by the @library{ikarus system $compnums} library.
@@ -15667,6 +15998,10 @@ Return the reference to the imaginary part.
 @c page
 @node syslib chars
 @section Low level character operations
+
+
+@cindex @library{ikarus system $chars}, library
+@cindex Library @library{ikarus system $chars}
 
 
 The arguments @var{ch} to these operations must be characters, the
@@ -15715,6 +16050,10 @@ Return a fixnum representing the code point of the operand.
 @section Low level pair operations
 
 
+@cindex @library{ikarus system $pairs}, library
+@cindex Library @library{ikarus system $pairs}
+
+
 The arguments @var{P} to these operations must be pairs.  The following
 bindings are exported by the @library{ikarus system $pairs} library.
 @ref{objects pairs} for details of pair representation.
@@ -15742,6 +16081,10 @@ Store @var{value} in the cdr location of @var{P}.
 @c page
 @node syslib structs
 @section Low level structure operations
+
+
+@cindex @library{ikarus system $structs}, library
+@cindex Library @library{ikarus system $structs}
 
 
 The arguments @var{stru} to these operations must be references to data
@@ -15806,6 +16149,10 @@ such values.  Return a reference to the structure.
 @section Low level vector operations
 
 
+@cindex @library{ikarus system $vectors}, library
+@cindex Library @library{ikarus system $vectors}
+
+
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
 by the @library{ikarus system $vectors} library.
@@ -15842,6 +16189,10 @@ Store @var{value} at index @var{fx} in @var{vec}.
 @c page
 @node syslib bytevectors
 @section Low level bytevector operations
+
+
+@cindex @library{ikarus system $bytevectors}, library
+@cindex Library @library{ikarus system $bytevectors}
 
 
 The arguments @var{bv} to these operations must be references to
@@ -15929,6 +16280,10 @@ Store @var{fl} at index @var{fx} of @var{bv}.
 @section Low level string operations
 
 
+@cindex @library{ikarus system $strings}, library
+@cindex Library @library{ikarus system $strings}
+
+
 The arguments @var{str} to these operations must be references to
 strings, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{ch} must be characters.  The following
@@ -15958,6 +16313,10 @@ Store @var{ch} at index @var{fx} of @var{str}.
 @c page
 @node syslib ports
 @section Low level port structures
+
+
+@cindex @library{ikarus system $io}, library
+@cindex Library @library{ikarus system $io}
 
 
 The following bindings are exported by the @library{ikarus system $io}
@@ -16021,6 +16380,10 @@ Mutator for the port attributes.
 @section Low level transcoder operations
 
 
+@cindex @library{ikarus system $transcoders}, library
+@cindex Library @library{ikarus system $transcoders}
+
+
 The arguments @var{tran} to these operations must be transcoders, the
 arguments @var{fx} must be fixnums in the appropriate range.  The
 following bindings are exported by the @library{ikarus system
@@ -16042,8 +16405,13 @@ Extract the payload bits from a transcoder and return them as fixnum.
 @section Low level pointer operations
 
 
+@cindex @library{ikarus system $pointers}, library
+@cindex Library @library{ikarus system $pointers}
+
+
 In the following definitions the @var{ptr} arguments must be pointer
-objects.
+objects.  The following bindings are exported by the @library{ikarus
+system $pointers} library.
 
 
 @deffn {Primitive Operation} $pointer? @var{obj}
@@ -16056,6 +16424,657 @@ else return @false{}.
 Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @false{}.
 @end deffn
+
+@c page
+@node syslib codes
+@section Low level code objects operations
+
+
+@cindex @library{ikarus system $codes}, library
+@cindex Library @library{ikarus system $codes}
+
+
+In the following definitions: the @var{code} arguments must be code
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
+
+
+@defun code? @var{obj}
+Return @true{} if @var{obj} is a code object.
+@end defun
+
+
+@deffn {Primitive Operation} $code-freevars @var{code}
+Return a fixnum representing the number of free variables referenced by
+@var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-reloc-vector @var{code}
+Return the relocation vector of @var{code}.  The relocation vector is a
+Scheme vector, @ref{objects codes reloc}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-size @var{code}
+Return a fixnum representing the number of bytes used in the data area
+of @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-annotation @var{code}
+Return an object used as annotation for @var{code}.  The default value
+for the annotation is @false{}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code->closure @var{code}
+Return a closure object wrapping @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-ref @var{code} @var{index}
+Return the byte at @var{index} in the data area of @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-set! @var{code} @var{index} @var{octet}
+Store @var{octet} at @var{index} in the data area of @var{code}.  Both
+@var{index} and @var{octet} must be fixnums; @var{octet} must be in the
+range @math{[0, 255]}.
+@end deffn
+
+
+@deffn {Primitive Operation} $set-code-annotation @var{code} @var{obj}
+Store @var{obj} in the annotation field of @var{code}.
+@end deffn
+
+@c page
+@node syslib closures
+@section Low level closures operations
+
+
+@cindex @library{ikarus system $codes}, library
+@cindex Library @library{ikarus system $codes}
+
+
+In the following definitions the @var{closure} arguments must be closure
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
+
+
+@deffn {Primitive Operation} $closure-code @var{closure}
+Return the code object wrapped by the @var{closure}.
+@end deffn
+
+
+@deffn {Primitive Operation} $cpref @var{closure} @var{idx}
+Evaluate to the contents of the word at index @var{idx} (a non--negative
+fixnum) in the array of free variables in the @var{closure} memory
+block.
+
+To know at run time how many free variables are associated to
+@var{closure} we have to inspect the associated code object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Annotating closure objects
+
+
+Annotated procedures exists for debugging purposes, they allow the
+association of an arbitrary annotation object to a function.
+
+@example
+(import (rnrs)
+  (ikarus system $codes))
+
+(define (the-proc)
+  123)
+
+(define the-annotated
+  ($make-annotated-procedure 456 the-proc))
+
+(the-annotated)                         @result{} 123
+($annotated-procedure-annotation)       @result{} 456
+@end example
+
+
+@defun $make-annotated-procedure @var{annotation} @var{clo}
+Build and return a new closure object wrapping the closure object
+@var{clo} and just adding an @var{annotation} object to it.  When such
+annotated closure is applied: it applies @var{clo} to the arguments.
+
+@var{annotation} can be any Scheme object.
+@end defun
+
+
+@defun $annotated-procedure-annotation @var{clo}
+Given a closure object @var{clo} being an annotated procedure created by
+@func{$make-annotated-procedure}: return the annotation object.
+@end defun
+
+@c page
+@node syslib compiler
+@section Interface to compiler passes
+
+
+@cindex @library{ikarus system $compiler}, library
+@cindex Library @library{ikarus system $compiler}
+
+
+@value{PRJNAME} is a compiler for the Scheme language; internally it
+implements a multitude of passes, each of which performing a
+transformation from Scheme code to executable binary code.  The library
+@library{ikarus system $compiler} exports one binding for each compiler
+pass, allowing inspection of the performed transformations.
+
+The sequence in which the passes are performed @strong{cannot} be
+changed; they must be performed in the specified order.  The passes
+functions are to be considered unsafe: if the input is invalid, the
+behaviour is undefined.
+
+This section contains some documentation for each pass; however, it is
+almost impossible to truly understand what a pass does without reading
+the source code, where additional documentation is present in the form
+of comments.
+
+@menu
+* syslib compiler unparse::       Unparsing intermediate
+                                  representations.
+
+Compiler passes
+
+* syslib compiler full::          The full transformation.
+* syslib compiler recordize::     Scheme code to nested structs.
+* syslib compiler direct calls::  Optimisation for direct calls.
+* syslib compiler letrec::        Optimisation of @code{letrec} forms.
+* syslib compiler optimisation::  Source optimisation.
+* syslib compiler assignments::   Rewriting references and assignments.
+* syslib compiler tags::          Tagging known properties.
+* syslib compiler vars::          Introducing storage locations.
+* syslib compiler bindings::      Sanitizing bindings.
+* syslib compiler direct jumps::  Optimisation for direct jumps.
+* syslib compiler global::        Inserting global assignments.
+* syslib compiler closures::      Closures conversion.
+* syslib compiler lift::          Closures optimization and codes
+                                  lifting.
+* syslib compiler cogen::         Full assembly code generation.
+* syslib compiler assember::      Binary code generation.
+
+Code generation passes
+
+* syslib compiler primcall::      Introducing primitive calls.
+* syslib compiler fix::           Removing fixes.
+* syslib compiler engine::        Inserting engine checks.
+* syslib compiler stack::         Inserting stack overflow checks.
+* syslib compiler primop::        Expanding primitive operations.
+* syslib compiler order::         Imposing calling convention and
+                                  evaluation order.
+* syslib compiler frame::         Assigning frame sizes.
+* syslib compiler color::         Colorising by Chaitin.
+* syslib compiler flatten::       Flattening codes.
+@end menu
+
+@c page
+@node syslib compiler unparse
+@subsection Unparsing intermediate representations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $unparse-recordized-code @var{input}
+Given as argument a struct instance representing recordized code: build
+and return a symbolic expression that can be printed in human readable
+form.
+
+@var{input} can be any structure that is produced by the compiler
+passes.
+@end defun
+
+
+@defun $unparse-recordized-code/pretty @var{input}
+Unparse the struct instance @var{input} (representing recordized code in
+the core language already processed by the compiler) into a human
+readable symbolic expression to be used when printing to some port for
+miscellaneous debugging purposes.
+
+This function attempts to unparse recordized code and reconstruct a
+Scheme-like symbolic expression; the returned sexp does @strong{not}
+exactly represent the input.
+@end defun
+
+@c page
+@node syslib compiler full
+@subsection The full transformation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compile-core-expr->code @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler recordize
+@subsection Scheme code to nested structs
+
+
+@defun $recordize @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler direct calls
+@subsection Optimisation for direct calls
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-direct-calls @var{input}
+@end defun
+
+
+@deffn Parameter open-mvcalls
+When set to true: an attempt is made to expand inline calls to
+@func{call-with-values} by inserting local bindings.  Defaults to
+@false{}.
+@end deffn
+
+@c page
+@node syslib compiler letrec
+@subsection Optimisation of @code{letrec} forms
+
+
+For an introduction to processing @func{letrec} and @func{letrec*}
+syntaxes, and specifically to understand the code, we @strong{must} read
+the following paper:
+
+@quotation
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
+Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+Construct''.
+@end quotation
+
+@noindent
+then we can move to the following paper, which describes the SCC
+transformation used by default:
+
+@quotation
+Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
+Workshop on Scheme and Functional Programming '09.
+@end quotation
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-letrec @var{input}
+Perform transformations to convert the recordized representation of
+@func{libary-letrec*}, @func{LETREC} and @func{letrec*} forms into low
+level binding constructs and assignments.  The result is such that the
+order of bindings in a single binding construct can be changed at will.
+@end defun
+
+
+@deffn Parameter $check-for-illegal-letrec
+If set to true: @func{$optimize-letrec} will perform an
+additional recordized code pass to check for illegal binding references
+in the right--hand sides of @func{letrec}, @func{letrec*} and
+@func{library-letrec*} syntaxes, raising a syntax violation error if one
+is found.  This is the default.
+
+If set to false: the validating pass is not performed, faithfully hoping
+for not problems in code.
+@end deffn
+
+
+@deffn Parameter $current-letrec-pass
+Select the transformations performed by
+@func{$optimize-letrec}; possible values are the symbols:
+
+@table @code
+@item basic
+The transformations are equivalent to:
+
+@example
+(letrec* ((?var ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (set! ?var ?init) ... . ?body)
+
+(library-letrec* ((?var ?loc ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (set! ?var ?init) ... . ?body)
+
+(letrec ((?var ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (let ((?tmp ?init) ...)
+        (set! ?var ?tmp) ... . ?body))
+@end example
+
+@item waddell
+Perform a transformation similar (but no equal) to the one described in
+the ``Fixing Letrec'' paper by Waddell et al.
+
+@item scc
+This is the default.
+@end table
+@end deffn
+
+
+@c page
+@node syslib compiler optimisation
+@subsection Source optimisation
+
+
+For an introduction to the source code see the thesis:
+
+@quotation
+Oscar Waddell.  ``Extending the Scope of Syntactic Abstraction''.  PhD.
+Thesis.  Indiana University Computer Science Department.  August 1999.
+@end quotation
+
+@noindent
+and the paper:
+
+@quotation
+Oscar Waddell, R. Kent Dybvig.  ``Fast and Effective Procedure
+Inlining''.  Indiana University.  Computer Science Department.
+Technical Report No. 484.
+@end quotation
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $source-optimize @var{input}
+Perform source code optimizations on the recordized @var{input} code and
+return the resulting recordized code.
+@end defun
+
+
+@deffn Parameter $source-optimizer-passes-count
+Specify how many passes to perform with the source optimizer; it must be
+a positive fixnum.  Defaults to 1.
+
+It makes sense to perform zero, one or two passes; it is unlikely that
+more passes can do significant improvement.
+@end deffn
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deffn Parameter optimize-level
+The optimization level; accepted values are the fixnums @code{0},
+@code{1}, @code{2}.  Defaults to @code{0}.
+
+@quotation
+@strong{NOTE} When building the boot image this parameter is set to
+@code{2}.
+@end quotation
+@end deffn
+
+
+@deffn Parameter cp0-effort-limit
+An effort counter that is decremented every time an optimization is
+performed by the source optimizer.  It is set every time the optimizer
+enters specific subexpressions of the input.
+@end deffn
+
+
+@deffn Parameter cp0-size-limit
+A code size counter (estimated) that is decremented every time an
+optimization is performed by the source optimizer.  It is set every time
+the optimizer enters specific subexpressions of the input.
+@end deffn
+
+@c page
+@node syslib compiler assignments
+@subsection Rewriting references and assignments
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $rewrite-references-and-assignments @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler tags
+@subsection Tagging known properties
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $introduce-tags @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler vars
+@subsection Introducing storage locations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $introduce-vars @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler bindings
+@subsection Sanitizing bindings
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $sanitize-bindings @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler direct jumps
+@subsection Optimisation for direct jumps
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-for-direct-jumps @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler global
+@subsection Inserting global assignments
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $insert-global-assignments @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler closures
+@subsection Closure conversion
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $convert-closures @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler lift
+@subsection Cloaures optimization and codes lifting
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-closures/lift-codes @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler cogen
+@subsection Full assembly code generation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler assember
+@subsection Binary code generation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $assemble-sources @var{input}
+@end defun
+
+@c page
+@node syslib compiler primcall
+@subsection Introducing primitive calls
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $introduce-primcalls @var{input}
+@end defun
+
+@c page
+@node syslib compiler fix
+@subsection Removing fixes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $eliminate-fix @var{input}
+@end defun
+
+@c page
+@node syslib compiler engine
+@subsection Inserting engine checks
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $insert-engine-checks @var{input}
+@end defun
+
+@c page
+@node syslib compiler stack
+@subsection Inserting stack overflow checks
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $insert-stack-overflow-check @var{input}
+@end defun
+
+@c page
+@node syslib compiler primop
+@subsection Expanding primitive operations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $specify-representation @var{input}
+@end defun
+
+@c page
+@node syslib compiler order
+@subsection Imposing calling convention and evaluation order
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $impose-calling-convention/evaluation-order @var{input}
+@end defun
+
+@c page
+@node syslib compiler frame
+@subsection Assigning frame sizes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $assign-frame-sizes @var{input}
+@end defun
+
+@c page
+@node syslib compiler color
+@subsection Colorising by Chaitin
+
+
+For an introduction to register allocation see:
+
+@center @url{http://en.wikipedia.org/wiki/Register_allocation}
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $color-by-chaitin @var{input}
+@end defun
+
+@c page
+@node syslib compiler flatten
+@subsection Flattening codes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $flatten-codes @var{input}
+@end defun
 
 @c page
 @node capi
@@ -18459,6 +19478,7 @@ be @code{AF_INET} or @code{AF_INET6}.
 * flonum parse::                Parsing flonums.
 * sel::                         Simple event loop.
 * infix::                       Infix to prefix transformer.
+* debugging::                   Debugging facilities.
 @end menu
 
 @c page
@@ -18677,6 +19697,8 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined enum-sets::      Validating enum-sets.
 * args predefined pointers::       Validating pointers.
 * args predefined memory-blocks::  Validating @code{meory-block} values.
+* args predefined flonums::        Validating flonums.
+* args predefined bignums::        Validating bignums.
 * args predefined ports::          Validating input/output ports.
 * args predefined genstrings::     Validating generalised C string
                                    arguments.
@@ -19328,6 +20350,12 @@ Succeed if @var{obj} is a pointer.
 Succeed if @var{obj} is @false{} or a pointer.
 @end deffn
 
+
+@deffn {Validation Clause} non-null-pointer @var{obj}
+Succeed if @var{obj} is a pointer and it does @strong{not} represent
+@cnull{}.
+@end deffn
+
 @c page
 @node args predefined memory-blocks
 @subsubsection Validating @code{meory-block} values
@@ -19344,6 +20372,32 @@ Succeed if @var{obj} is a memory-block.
 
 @deffn {Validation Clause} memory-block/false @var{obj}
 Succeed if @var{obj} is @false{} or a memory-block.
+@end deffn
+
+@c page
+@node args predefined flonums
+@subsubsection Validating flonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} flonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{flonum?}.
+@end deffn
+
+@c page
+@node args predefined bignums
+@subsubsection Validating bignums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bignum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{bignum?}.
 @end deffn
 
 @c page
@@ -20243,19 +21297,27 @@ acting upon @meta{name}.
 @end defmac
 
 
-@defmac define-inline-constant @meta{name} @meta{value}
-Wrapper for @func{identifier-syntax}, expand to:
+@defmac define-inline-constant @meta{name} @meta{expr}
+Expand to:
 
 @example
 (define-syntax @meta{name}
-  (identifier-syntax @meta{value}))
+  (let ((const @meta{expr}))
+    (lambda (stx)
+      (syntax-case stx ()
+        (?id
+         (identifier? #'?id)
+         (with-syntax ((VALUE const))
+           #'(quote VALUE)))))))
 @end example
 
 @noindent
-@meta{value} is evaluated every time @meta{name} is referenced; it is
-impossible to modify the @meta{value} by acting upon @meta{name}.  This
-syntax is useful to defined constants resulting from @gnu{} Autoconf
-expansion:
+@meta{expr} is evaluated only once at expand time; it is impossible to
+modify the result of the expansion of @meta{name} by acting upon
+@meta{name}.
+
+This syntax is also useful to defined constants resulting from @gnu{}
+Autoconf expansion:
 
 @example
 (define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
@@ -20456,7 +21518,7 @@ expand to @meta{big-body}.
 @deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
 @deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
 @deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expeting only fixnums as datums;
+Special implementation of @func{case} expecting only fixnums as datums;
 for maximum speed, it makes use of unsafe operations on fixnums.
 @func{else} must be the binding exported by @library{rnrs} and
 @library{vicare}.
@@ -20475,6 +21537,18 @@ datums.  @func{else} must be the binding exported by @library{rnrs} and
 
 @meta{expr} must be an expression evaluating to an exact integer, else
 the behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only symbols as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a symbol, else the
+behaviour is undefined.
 @end deffn
 
 @c page
@@ -22540,6 +23614,27 @@ fxarithmetic-shift-right          -> fx>>
 @end itemize
 
 @c page
+@node debugging
+@section Debugging facilities
+
+
+@menu
+* debugging compiler::          Inspecting the compiler internals.
+@end menu
+
+@c page
+@node debugging compiler
+@subsection Inspecting the compiler internals
+
+
+@cindex Library @library{vicare debugging compiler}
+@cindex @library{vicare debugging compiler}, library
+
+
+The following bindings are exported by the library @library{vicare
+debugging compiler}.
+
+@c page
 @node objects
 @chapter Built in Scheme objects
 
@@ -22574,6 +23669,10 @@ values is duplicated in the Scheme language compiler
 * objects ports::               Port objects.
 * objects transcoders::         Transcoder objects.
 * objects pointers::            Pointer objects.
+* objects tcbuckets::           Components for hashtables.
+* objects codes::               Code objects.
+* objects closures::            Closure objects.
+* objects continuations::       Continuation objects.
 * objects misc::                Miscellaneous functions and
                                 preprocessor macros.
 * objects callbacks::           Notes on calling Scheme code from C.
@@ -22690,24 +23789,84 @@ Return an integer representing the @math{3} least significant bits of an
 
 @deftypefn {Preprocessor Macro} ikptr IK_REF (ikptr @var{value_ref}, long @var{byte_offset})
 @deftypefnx {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
-Getter and setter for machine words allocated on the heap.  Interpret
-@var{value_ref} as a pointer to an array of @ikptr{} and locate the
-value at the zero--based @var{byte_offset}.  A use of this macro can
-appear both as operand and as left--side of an assignment.
+Getter and setter for machine words.  Interpret @var{value_ref} as a
+pointer to an array of @ikptr{} values and locate the value at the
+zero--based @var{byte_offset}.  A use of this macro can appear both as
+operand and as left--side of an assignment.
 
 @example
 ikptr   P, Q;
 
-Q = IK_REF(P, 2);     /* retrieve the 3rd word */
-IK_REF(P, 0) = 123L;  /* store a value in the 1st word */
+Q = IK_REF(P, 2*wordsize); /* retrieve the 3rd word */
+IK_REF(P, 0) = 123L;       /* store a value in the 1st word */
 @end example
 
 Both @var{value_ref} and @var{byte_offset} are first cast to @code{long}
 values, then added and the sum is cast to @code{ikptr *}.
 
-Values for @var{byte_offset} are usually precomputed and take into
-account a component used to remove the tag from the pointer in
-@var{value_ref}.
+There are two categories of values for @var{byte_offset}: offsets and
+displacements; both are usually precomputed at compile time and are
+predefined for the built in Scheme values.
+
+@table @dfn
+@item Displacements
+They are plain numbers of bytes to be added to an @strong{untagged}
+pointer to obtain the memory address of a machine word.
+
+@item Offsets
+They are number of bytes from which a Scheme value's tag is subtracted:
+adding an offset to a @strong{tagged} pointer removes the tag and
+computes the memory address of a machine word, in a single step.
+@end table
+
+Given an @strong{untagged} pointer to a vector, the fixnum representing
+the length of the vector can be obtained with:
+
+@example
+ikptr   p_vector = ...;
+ikptr   s_length = IK_REF(p_vector, disp_vector_length);
+@end example
+
+@noindent
+predefined displacements have names prefixed with @code{disp_}; given a
+@strong{tagged} pointer to a vector, the fixnum representing the length
+of the vector can be obtained with:
+
+@example
+ikptr   s_vector = ...;
+ikptr   s_length = IK_REF(s_vector, off_vector_length);
+@end example
+
+@noindent
+predefined offsets have names prefixed with @code{off_}.  An offset can
+be computed from a displacement simply by subtracting the tag:
+
+@example
+off_vector_length = disp_vector_length - vector_tag
+@end example
+
+@noindent
+this because we can build a tagged pointer from an untagged and aligned
+one with:
+
+@example
+s_vector = p_vector | vector_tag = p_vector + vector_tag
+@end example
+
+@noindent
+and vice versa we can compute an untagged pointer from a tagged one
+with:
+
+@example
+p_vector = s_vector - vector_tag
+@end example
+
+@noindent
+and so:
+
+@example
+s_vector + off_vector_length = p_vector + disp_vector_length
+@end example
 
 @quotation
 @strong{NOTE} @cfunc{ref} is defined only in the internal header file
@@ -23014,11 +24173,12 @@ zero, so that such bits can be used to hold an object's type tag.
 
 @noindent
 for these reasons we must always filter the requested size (in bytes)
-through the @cfunc{IK_ALIGN} macro.  The @pcb{} always references a
-``pointer to the next free block'' with alignment constraints satisfied;
-if we filter the requested number of bytes through @cfunc{IK_ALIGN}, we
-obtain a number of bytes which, added to the pointer, gives a correctly
-aligned pointer:
+through the @cfunc{IK_ALIGN} macro.
+
+The @pcb{} always references a ``pointer to the next free block'' with
+alignment constraints satisfied; if we filter the requested number of
+bytes through @cfunc{IK_ALIGN}, we obtain a number of bytes which, added
+to the pointer, gives a correctly aligned pointer:
 
 @example
 uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
@@ -23054,7 +24214,11 @@ Convert @var{number_of_bytes} to the number of bytes requested to
 satisfy pointer alignment constraints.  The aligned size is always an
 exact multiple of the underlying platform's word size (32-bit or
 64-bit); precisely: it is the smallest multiple of the wordsize which is
-greater than @var{number_of_bytes}.
+greater than @var{number_of_bytes} and makes the pointer have the
+@math{3} least significant bits set to zero.
+
+This means that it is impossible to allocate less than @math{2} machine
+words.
 @ignore
 We can simulate the computation with:
 
@@ -23075,22 +24239,41 @@ We can simulate the computation with:
             align_shift)
         align_shift)))
 
-(define (print-align n)
-  (let ((m (align n))
-        (base-pointer (expt 2 (- (* 8 (sizeof-ikptr)) 1))))
-    (display n)
-    (display " -> ")
-    (display m)
-    (display "\t")
-    (display (number->string base-pointer 2))
-    (display " -> ")
-    (display (number->string (+ base-pointer m) 2))
-    (newline)))
+(define (print-align number-of-bytes)
+  (let ((m              (align number-of-bytes))
+        (base-pointer   (expt 2 (- (* 8 (sizeof-ikptr)) 1))))
+    (printf "Number of bytes: ~a\n" number-of-bytes)
+    (printf "\tAligned number of bytes: ~a\n" m)
+    (printf "\tAllocated number of words: ~a\n" (div m (sizeof-ikptr)))
+    (if (= 4 (sizeof-ikptr))
+        (begin
+          (printf "\t                    3         2         1         0\n")
+          (printf "\t                   10987654321098765432109876543210\n"))
+      (begin
+        (printf "\t                      6         5         4         3         2         1         0\n")
+        (printf "\t                   3210987654321098765432109876543210987654321098765432109876543210\n")))
+    (printf "\tWith base pointer: ~a\n"
+            (number->string base-pointer       2))
+    (printf "\tnext pointer is:   ~a\n"
+            (number->string (+ base-pointer m) 2))))
 
+(display "32-bit platforms:\n")
 (parameterize ((sizeof-ikptr 4)) ; 32 bits platform
+  (print-align 2)
+  (print-align 4)
   (print-align 12)
   (print-align 17)
   (print-align 1234))
+
+(display "64-bit platforms:\n")
+(parameterize ((sizeof-ikptr 8)) ;64 bits platform
+  (print-align 2)
+  (print-align 4)
+  (print-align 12)
+  (print-align 17)
+  (print-align 1234))
+
+(flush-output-port (current-output-port))
 @end example
 @end ignore
 @end deftypefn
@@ -23354,6 +24537,8 @@ are available to store the number:
 (- (expt 2 29))         @result{} -536870912
 @end example
 
+@itemize
+@item
 With machine words 32-bit wide, which means the word size is @math{4}
 bytes, the representation of a fixnum is:
 
@@ -23367,9 +24552,11 @@ bytes, the representation of a fixnum is:
 
 @noindent
 the two least significant bits are set to zero: this ``tags'' the
-machine words which embed fixnums.  With machine words 64-bit wide,
-which means the word size is @math{8} bytes, the representation of a
-fixnum is:
+machine words which embed fixnums.
+
+@item
+With machine words 64-bit wide, which means the word size is @math{8}
+bytes, the representation of a fixnum is:
 
 @example
          61 bits fixnum representation
@@ -23382,13 +24569,24 @@ fixnum is:
 @noindent
 the three least significant bits are set to zero: this ``tags'' the
 machine words which embed fixnums.
+@end itemize
 
 The fixnums tag is @code{00} on 32-bit platforms and @code{000} on
-64-bit platforms; given the symbol @code{fx_shift}, which is set to the
-number of bits in the tag, the value is selected in such a way that:
+64-bit platforms; given the symbols:
+
+@table @code
+@item fx_shift
+Set to the number of bits in the tag.
+
+@item fx_scale
+Set to the number of bytes in a machine word.
+@end table
+
+@noindent
+the value is selected in such a way that:
 
 @example
-length_in_bytes = number_of_words *  fx_shift
+length_in_bytes = number_of_words *  fx_scale
                 = number_of_words *  wordsize
                 = number_of_words << fx_shift
 @end example
@@ -24005,10 +25203,8 @@ be non--negative fixnums.  Return unspecified values.
 
 Vectors are variable length blocks of memory referenced by machine words
 tagged as vectors.  The first machine word of a vector block contains a
-fixnum representing the vector length; a vector is capable of holding at
-most a number of values equal to the return value of
-@func{greatest-fixnum}.  This means that the first word of a vector is
-tagged as a fixnum.
+fixnum representing the vector length; this means that the first word of
+a vector is tagged as a fixnum.
 
 @example
 |------------------------|-------------| reference to vector
@@ -24017,6 +25213,27 @@ tagged as a fixnum.
 |------------------------|-------------| vector first word
      number of words       fixnum tag
 @end example
+
+After the length machine word comes the data area: an array of machine
+words, one for each vector slot; slot indexes are zero--based.
+
+@example
+      0   1   2   3   4   5   6   7
+|---|---|---|---|---|---|---|---|---| vector memory block
+  ^ |...............................|
+  |        slots = data area
+length
+fixnum
+@end example
+
+A vector is capable of holding at most a number of values equal to the
+return value of @func{greatest-fixnum}.  The fixnum representing the
+vector length, interpreted as raw signed integer, also represents the
+number of bytes in the data area.
+
+A fixnum representing the index of slot N, interpreted as raw signed
+integer, also represents the offset in bytes of the firts byte of the
+slot with respect the beginning of the data area.
 
 @c ------------------------------------------------------------
 
@@ -24212,10 +25429,10 @@ fixnums.  Return unspecified values.
 
 
 A data structure is a variable--length block of memory referenced by
-machine words tagged as vectors; the first machine word of the structure
-is a reference to the type descriptor (@rtd{}), which is itself a data
-structure; the subsequent words, if any, are the fields of the
-structure.  A block of memory is a data structure if and only if: a
+machine words tagged as vectors; the first machine word of a structure
+is a reference to its structure type descriptor (@std{}), which is
+itself a data structure; the subsequent words, if any, are the fields of
+the structure.  A block of memory is a data structure if and only if: a
 reference to it is tagged as vector and its first word is tagged as
 vector.
 
@@ -24224,41 +25441,68 @@ vector.
   heap pointer    vector tag
 
 |----------------|----------| first word of structure
-  heap pointer    vector tag    = reference to rtd
+  heap pointer    vector tag    = reference to STD
                                 = reference to structure
 @end example
 
-The type descriptor of the type descriptors is the return value of
-@func{base-rtd} at the Scheme level and the structure referenced by the
-field @code{base_rtd} in the process control block.  Such base type
-descriptor is built at @value{PRJNAME}'s startup.  The graph of
-references for a structure and its type descriptor is as follows:
+The whole memory block layout of a struct with @math{5} fields is as
+follows:
 
 @example
-      rtd ref
+|-----|------|------|------|------|------|
+  STD  field0 field1 field2 field3 field4
+@end example
+
+@noindent
+fields are indexed starting at zero.
+
+The type descriptor of the type descriptors is the return value of
+@func{base-rtd} at the Scheme level and the structure referenced by the
+field @code{base_rtd} in the process control block (@pcb{}).  Such base
+type descriptor is built at @value{PRJNAME}'s startup.
+
+The graph of references for a structure and its type descriptor is as
+follows:
+
+@example
+      STD ref
      |-------|---------------| structure instance
          |
   ---<---
  |
- |     rtd ref
-  -->|-------|---------------| type descriptor
+ |    RTD ref
+  -->|-------|---------------| struct type descriptor
          |
   ---<---
  |
- |     rtd ref
- +-->|-------|---------------| base type descriptor
+ |    STD ref
+ +-->|-------|---------------| base struct type descriptor
  |       |
   ---<---
 @end example
 
 @noindent
-the type descriptor of the base type descriptor is the base type
-descriptor itself.
+the struct type descriptor of the base struct type descriptor is the
+base type descriptor itself.
 
-An @rnrs{6} record--type descriptor is a struct instance of type @rtd{}.
+About @rnrs{6} records and their types:
+
+@itemize
+@item
 An @rnrs{6} record instance is a struct instance whose first word
-references its type descriptor, that is a struct instance of type
-@rtd{}.
+references its @rnrs{6} record type descriptor (@rtd{}).
+
+@item
+An @rnrs{6} record type descriptor (@rtd{}) is a struct instance of type
+@code{<rtd>}.
+
+@item
+An @rnrs{6} record constructor descriptor is a struct instance of type
+@code{<rcd>}.
+@end itemize
+
+The graph of references for an @rnrs{6} record and its type descriptor
+is as follows:
 
 @example
      RTD ref
@@ -24266,33 +25510,33 @@ references its type descriptor, that is a struct instance of type
         |
  ---<---
 |
-|     std ref
+|    STD ref
  -->|-------|---------------| R6RS record type descriptor
-        |                      = struct instance of type RTD
+        |                      = struct instance of type <rtd>
  ---<---
 |
-|     std ref
-+-->|-------|---------------| RTD type descriptor
+|    STD ref
++-->|-------|---------------| <rtd> struct type descriptor
         |
  ---<---
 |
-|     std ref
+|    STD ref
 +-->|-------|---------------| base struct type descriptor
 |       |
  ---<---
 @end example
 
-A struct type descriptor is a fixed--length block of memory composed of
-@math{6} machine words interpreted as follows:
+A struct type descriptor (@std{}) is a fixed--length block of memory
+composed of @math{6} machine words interpreted as follows:
 
 @enumerate
 @item
-A reference to the base @rtd{}.
+A reference to the base @std{}.
 
 @item
 A fixnum representing the number of machine words in the structure minus
 @math{1}; this is the number of fields in the structure excluding the
-reference to the @rtd{}.  This value is @math{5} in the base @rtd{}.
+reference to the @std{}.  This value is @math{5} in the base @std{}.
 
 @item
 Scheme symbol representing the name of this structure type.
@@ -24303,7 +25547,7 @@ this type.
 
 @item
 False or a reference to closure used to print to a Scheme port the
-structures of this type.  This is the printer function.
+structures of this type.  This is the @dfn{printer} function.
 
 @item
 Scheme symbol used as unique identifier for this type.
@@ -24700,7 +25944,14 @@ value of @func{greatest-fixnum}.
 All the remaining space in the memory block is filled with 32-bit
 unsigned integers whose least significant bits are set to the character
 tag and whose most significant bits are set to the character's Unicode
-code point.
+code point:
+
+@example
+ tag ch0 ch1 ch2 ch3 ch4 ch5 ch6 ch7
+|---|---|---|---|---|---|---|---|---| string memory block
+@end example
+
+Character indexes are zero--based.
 
 @c ------------------------------------------------------------
 
@@ -24877,8 +26128,21 @@ bits set to zero.
 @end example
 
 A symbol memory block is @math{6} words wide and contains references to
-the following fields: @code{string}, @code{ustring}, @code{value},
-@code{proc}, @code{plist}.
+objects begin the following fields: @code{string}, @code{ustring},
+@code{value}, @code{proc}, @code{plist}.
+
+The @code{value} field has multiple purposes:
+
+@itemize
+@item
+When the symbol is the unique identifier of a data structure type: the
+@code{value} field holds the @rtd{} of the data structure.
+
+@item
+Top level bindings in compiled Scheme code are represented by gensyms;
+the value of a top level binding is stored in the @code{value} field of
+a gensym memory block.
+@end itemize
 
 @c ------------------------------------------------------------
 
@@ -24975,15 +26239,15 @@ is as follows:
 
 @example
 |----|-----|-----|-----|-----| ...
- fst  limb0 limb1 limb2 limb3
+ 1st  limb0 limb1 limb2 limb3
 @end example
 
 @noindent
-where the first word @code{fst} is header of meta informations encoded
-as explained above and each limb is a machine word stored in native
-endianness; the big number is the concatenation of limbs with
-@code{limb0} being the least significant one.  There is always at least
-one limb; when a bignum is composed of a single limb, its value is
+where the first word @code{1st} is header of meta informations encoded
+as explained above and each limb is a machine word stored in
+@strong{native} endianness; the big number is the concatenation of limbs
+with @code{limb0} being the least significant one.  There is always at
+least one limb; when a bignum is composed of a single limb, its value is
 always non--zero and outside the range of fixnums.
 
 @c ------------------------------------------------------------
@@ -25508,6 +26772,8 @@ platforms; to allow for the same binary layout on both platforms, on a
    1st word     2nd word     3rd word     4th word
 |------------|------------|------------|------------|
  tagged word     unused           data words
+                          |.........................|
+                                    flonum
 @end example
 
 @noindent
@@ -25517,6 +26783,8 @@ on a 64-bit platform the actual number is stored in the second word:
           1st word                 2nd word
 |-------------------------|-------------------------|
          tagged word               data word
+                          |.........................|
+                                    flonum
 @end example
 
 @c ------------------------------------------------------------
@@ -25983,24 +27251,58 @@ collection is run while this function is evaluating.
 @section Port objects
 
 
-A port value is a block of memory allocated as a vector; a reference to
-a port value is a reference to a vector.  The first word of the vector
-is the bitwise OR between a port tag and a bitvector of port attributes.
+A port object is a fixed--length memory block referenced by machine
+words tagged as vectors; the first word of the vector is the bitwise OR
+between a port tag and a bitvector of port attributes.
 
 @example
-|----------------|----------| port value
+|----------------|----------| reference to port
   heap pointer    vector tag
 
-|----------------|----------| 1st word of port's memory block
+|----------------|----------| 1st word of memory block
  port attributes   port tag
 @end example
 
-At present the port tag is @math{6} bits wide, so we have: on 32-bit
-platforms: @math{32 - 6 = 24} bits available for attributes; on 64-bit
-platforms: @math{64 - 6 = 58} bits available for attributes.
+At present the port tag is @math{6} bits wide, so we have:
+
+@itemize
+@item
+On 32-bit platforms: @math{32 - 6 = 24} bits available for attributes.
+
+@item
+On 64-bit platforms: @math{64 - 6 = 58} bits available for attributes.
+@end itemize
 
 See the source code in @file{ikarus.io.sls} for a more comprehensive
 documentation.
+
+@c page
+@node objects transcoders
+@section Transcoder objects
+
+
+A transcoder is a machine word tagged to make it of a disjoint type.
+The transcoder data (codec, @eol{} style, error handling) is encoded in
+the most significant bits of this word:
+
+@example
+|---------------------------|------------| transcoder
+       payload bits          transcoder-tag
+@end example
+
+@noindent
+the payload of this word is an 8-bit vector whose format is as follows:
+
+@example
+765 432 10
+ |   |   |
+ |   |    -- error handling mode
+ |    ------ end of line style
+  ---------- codec
+@end example
+
+See the source code in the file @file{ikarus.codecs.sls} for more
+details.
 
 @c page
 @node objects pointers
@@ -26168,32 +27470,688 @@ Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
 @end deftypefun
 
 @c page
-@node objects transcoders
-@section Transcoder objects
+@node objects tcbuckets
+@section Components for hashtables
 
 
-A transcoder is a machine word tagged to make it of a disjoint type.
-The transcoder data (codec, @eol{} style, error handling) is encoded in
-the most significant bits of this word:
+A tcbucket is a fixed--length memory block referenced by machine words
+tagged as vectors.
 
 @example
-|---------------------------|------------| transcoder
-       payload bits          transcoder-tag
+|------------------------|-------------| reference to tcbucket
+      heap pointer         vector tag
+@end example
+
+A tcbucket is not a Scheme object like all the others; it is used only
+to store values in a hashtable.  The memory layout of a tcbucket is as
+follows:
+
+@example
+|-----|-----|-----|-----| tcbucket memory block
+ tconc  key   val  next
+@end example
+
+For details on such objects, see the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} disp_tcbucket_tconc
+@defvrx {Preprocessor Symbol} disp_tcbucket_key
+@defvrx {Preprocessor Symbol} disp_tcbucket_val
+@defvrx {Preprocessor Symbol} disp_tcbucket_next
+Displacement of fields.  The number of bytes to add to an
+@strong{untagged} pointer to tcbucket to get the pointer to the first
+byte in the word of the tcbucket's field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_tcbucket_tconc
+@defvrx {Preprocessor Symbol} off_tcbucket_key
+@defvrx {Preprocessor Symbol} off_tcbucket_val
+@defvrx {Preprocessor Symbol} off_tcbucket_next
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the tcbucket's field.
+@end defvr
+
+@c page
+@node objects codes
+@section Code objects
+
+
+Code objects contain compiled binary code ready to be executed by the
+host's processor.
+
+@menu
+* objects codes layout::        Memory layout of code objects.
+* objects codes reloc::         The relocation vector.
+* objects codes gc::            Memory and garbage collection.
+@end menu
+
+@c page
+@node objects codes layout
+@subsection Memory layout of code objects
+
+
+A code object is a fixed length memory block, of variable size equal to
+a multiple of the host's page size, referenced by machine words tagged
+as vectors; the memory is allocated with @cfunc{mmap} and is given read,
+write and execution protection.  The memory layout of a code object is
+as follows:
+
+@example
+     page size          page size          page size
+|..................|..................|..................|
+|-----------|-----------------------------------|++++++++|
+  meta data                 data area             unused
 @end example
 
 @noindent
-the payload of this word is an 8-bit vector whose format is as follows:
+if the requested memory is less than the exact multiple of a page size,
+the last allocated bytes are unused and set to zero at allocation time.
+
+The first machine word of a code memory block is tagged has code in its
+least significant bits and it has the most significant bits set to zero.
 
 @example
-765 432 10
- |   |   |
- |   |    -- error handling mode
- |    ------ end of line style
-  ---------- codec
+|------------------------|-------------| reference to code
+    memory pointer         vector tag
+
+|------------------------|-------------| code first word
+   all set to zero          code tag
 @end example
 
-See the source code in the file @file{ikarus.codecs.sls} for more
-details.
+@c ------------------------------------------------------------
+
+@subsubheading Meta data in a code memory block
+
+The first words of a code memory block hold meta data:
+
+@enumerate
+@item
+The first word contains the secondary tag needed to recognise a Scheme
+object as code object.
+
+@item
+The second word contains a non--negative fixnum representing the number
+of used bytes in the allocated block; this is @strong{not} the number of
+allocated bytes (multiple of the page size), just the number of bytes
+actually used by meta data and binary code.
+
+@item
+The third word contains the reference to a Scheme vector used as
+relocation vector.
+
+@item
+The fourth word contains a non--negative fixnum representing the number
+of free variables in the contained code.  If such values is zero: the
+code is a thunk.
+
+@item
+The fifth word contains a code annotation; it is initialised to
+@false{}.
+
+@item
+The sixth word is currently unused; it is initialised to the fixnum
+zero.
+@end enumerate
+
+@noindent
+the subsequent words in the memory block are the code object's data
+area.
+
+@c page
+@node objects codes reloc
+@subsection The relocation vector
+
+
+The @dfn{relocation vector} is a Scheme vector referenced by the meta
+data of a code object; the relocation vector can be empty.
+
+The relocation vector is divided into records, each some words long:
+
+@example
+   0     1     2     3     4     5     6     7
+|-----|-----|-----|-----|-----|-----|-----|-----| relocation vector
+|...........|.................|.................|
+ 1st record      2nd record        3rd record
+@end example
+
+@noindent
+the first word in each record contains a fixnum which must be
+interpreted as bit field; such fixnum must never be zero.  On 32-bit
+platforms the layout of such fixnum is:
+
+@example
+     bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+... |----|----|----|----|----|----|----|----|
+........................|.........|.........| 1st record word
+ number of bytes        record tag fixnum tag
+@end example
+
+@noindent
+on 64-bit platforms the layout of such fixnum is:
+
+@example
+        bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+   ... |----|----|----|----|----|----|----|----|
+......................|.........|..............| 1st record word
+ number of bytes      record tag   fixnum tag
+@end example
+
+@noindent
+the @math{2} least significant bits of the fixnum's data represent a
+type tag for the record; the remaining most significant bits of the
+fixnum's data area represent a number of bytes: a displacement in the
+data area of the code object selecting the target word.
+
+Whenever a code object is serialised into a @fasl{} file: the relocation
+vector is appended to it in the @fasl{} file.  Whenever the garbage
+collector moves a code object into a new location: the relocation vector
+must be processed again to update the addresses.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: vanilla object
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains the reference to the Scheme object (or the
+Scheme object itself, if immediate).
+
+When these records are processed: the object reference is stored into
+the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |     ------------------
+     |    |
+  |----|----| vanilla object record
+   1st  2nd
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: displaced object
+
+Such records are composed by @math{3} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains a fixnum representing a byte offset; the third
+word contains the reference to the Scheme object (or the Scheme object
+itself, if immediate).
+
+When these records are processed: the object reference is added to the
+offset in bytes and the result is stored into the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |       ----------------
+     |      |
+     |  off + obj
+  |----|----|----| vanilla object record
+   1st  2nd  3rd
+@end example
+
+Examples of displaced objects are: Scheme symbols referenced in the
+code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: jump label
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+@dots{}
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: foreign address
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains the reference to a bytevector object holding
+the C string representation of a foreign object name, in the format
+suitable to be handed to @cfunc{dlsym}.
+
+When these records are processed: @cfunc{dlsym} is used to retrieve the
+address of the foreign object (which must be present in the global
+namespace), then the address is stored directly in the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |     --- dlsym() ------
+     |    |
+     |    |
+  |----|----| vanilla object record
+   1st  2nd
+@end example
+
+Examples of foreign objects are: the C functions exported by the runtime
+program @command{vicare} to be called from Scheme; the C functions
+exported by the shared library when using an extension to Vicare with
+the model proposed by the Vicare/Template project (for example
+Vicare/SQLite).
+
+@c page
+@node objects codes gc
+@subsection Memory and garbage collection
+
+
+Code objects are @strong{not} allocated on the heap like other common
+objects (pairs, vectors, @dots{}); rather they are allocated in
+specially memory mapped regions which receive execution protection.
+
+Whenever the garbage collector encounters a reference to a code object:
+it moves the code object itself into a new location to reduce
+fragmentation.
+
+@c page
+@node objects closures
+@section Closure objects
+
+
+Closure objects are actual procedures: closure objects are the ones for
+which the @func{procedure?} predicate returns @true{}.  A closure object
+is a fixed length memory block referenced by machine words tagged as
+closures; each closure object is associated to a code object that
+implements the procedure.  The memory layout of a closure object is as
+follows:
+
+@example
+|------------------------|-------------| reference to closure
+      heap pointer         closure tag
+
+                       0   1   2   3   4   5
+|--------------------|---|---|---|---|---|---| memory block
+  raw memory pointer    one slot for every
+  to binary code        free variable
+@end example
+
+@noindent
+the first word in the memory block holds a raw memory pointer
+referencing the first byte in the code object implementing the closure;
+the subsequent words (if any) are slots associated to the free variables
+referenced by the closure's code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting a closure's free variables
+
+
+We can take a look at the free variables referenced by a closure with
+the facilities of the library @library{ikarus system $codes}.  In a
+normal application: we must @strong{not} mess with the internals of
+closure and code objects.
+
+We start by noticing that in the following example: the function
+@func{f} has no ``true'' free variables, because it accesses only global
+variables:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+(define a 123)
+(define (f)
+  a)
+($code-freevars ($closure-code f))      @result{} 0
+@end example
+
+In the following example: the function @func{f} is the only one
+referencing the free variable @code{a}, so such variable is stored
+directly in the closure's slot:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+(define f
+  (let ((a 123))
+    (lambda () a)))
+($code-freevars ($closure-code f))      @result{} 1
+($cpref f 0)                            @result{} 123
+@end example
+
+@noindent
+when there are two such variables:
+
+@example
+#!r6rs
+(import (vicare)
+  (ikarus system $codes))
+
+(define f
+  (let ((a 123)
+        (b 456))
+    (lambda ()
+      (list a b))))
+($code-freevars ($closure-code f))      @result{} 2
+($cpref f 0)                            @result{} 456
+($cpref f 1)                            @result{} 123
+@end example
+
+When more than one closure references the same free variable, the
+storage of the variable is inside a Scheme vector and such vector is
+referenced by the slots of the closures:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+(define f #f)
+(define g #f)
+(let ((a 123))
+  (set! f (lambda () a))
+  (set! g (lambda (x)
+            (set! a x)
+            a)))
+($code-freevars ($closure-code f))      @result{} 1
+($cpref f 0)                            @result{} #(123)
+($code-freevars ($closure-code g))      @result{} 1
+($cpref g 0)                            @result{} #(123)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Closure objects are allocated on the heap; to perform the allocation and
+initialisation we do:
+
+@example
+ikptr   p_closure;
+ikptr   s_closure;
+ikptr   s_code = ...;
+
+p_closure = ik_safe_alloc(pcb, IK_ALIGN(disp_closure_data));
+s_closure = p_closure | closure_tag;
+IK_REF(s_closure, off_closure_code) = s_code + off_code_data;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the closure tag (an integer value fitting in @math{3} bits) which
+allows to recognise closures among all the other built in objects.
+
+
+@defvr {Preprocessor Symbol} closure_tag
+An integer used to tag @ikptr{} references to closure memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} closure_mask
+An integer representing the bitmask used to extract (with a bitwise
+logic AND) the tag from @ikptr{} references to closure objects.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_closure_code
+Displacement of code pointer.  The number of bytes to add to an
+@strong{untagged} pointer to closure to get the pointer to the first
+byte in the word of the closure's data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_closure_data
+Number of bytes needed to hold a closure's memory block.  An integer to
+add to an @strong{untagged} pointer to closure to obtain a pointer to
+the first byte after the closure's memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_closure_code
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the closure's data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_closure_data
+An integer to add to a tagged @ikptr{} vector reference to obtain a
+pointer to the first byte after the closure's memory block.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr @var{X})
+Evaluate to true if @var{X} is a reference to closure object.
+@end deftypefn
+
+@c page
+@node objects continuations
+@section Continuation objects
+
+
+Continuation objects are memory blocks referenced by machine words
+tagged as vectors, whose first word is tagged as continuation:
+
+@example
+|----------------|----------| reference to continuation
+  heap pointer    vector tag
+
+|----------------|----------| first word of continuation
+ all set to zero  vector tag
+@end example
+
+@noindent
+the layout of a continuation memory block is:
+
+@example
+|-----|-----|-----|-----|
+  tag   top  size  next
+@end example
+
+To understand the contents of a continuation object, we have to recall
+how the Scheme stack is used:
+
+@example
+ high memory
+|            |
+|------------|
+|            | <-- pcb->frame_base
+|------------|
+| used word  | <-- pcb->frame_base - wordsize
+|------------|
+|     .      |
+|     .      |
+|     .      |
+|------------|
+| free word  | <-- pcb->frame_pointer
+|------------|
+|     .      |
+|     .      |
+|     .      |
+|------------|
+| free word  | <-- pcb->stack_base
+|------------|
+|            |
+  low memory
+@end example
+
+@noindent
+and remember that @code{pcb->frame_base} references a word that is
+one--off the end of the stack segment; so the first word in the stack
+is:
+
+@example
+pcb->frame_base - wordsize
+@end example
+
+@noindent
+A continuation references the portion of the Scheme stack memory segment
+between @code{frame_base} and @code{frame_pointer}.
+
+There are two kinds of continuation objects:
+
+@table @dfn
+@item Scheme continuations
+Represent a Scheme continuation.  They are expliticly created by
+@func{call/cc}, but also used to represent a previous Scheme code
+execution when the allocated Scheme stack runs out of space.
+
+@item system continuations
+Represent a C continuation.  They are used by the @ffi{} to save the C
+execution context just before calling back to Scheme from C code.
+@end table
+
+The fields of a Scheme continuation are:
+
+@table @code
+@item top
+Untagged pointer referencing the first free word on the Scheme stack.
+
+@item size
+Number of bytes used on the Scheme stack, @strong{not} counting the free
+word referenced by the frame pointer.
+
+@item next
+Tagged pointer referencing a continuation object; it represents the
+continuation to go back to after the execution of tthis continuation is
+finished.  This ``going back'' is performed by the C function
+@cfunc{ik_exec_code}.
+@end table
+
+The fields of a Scheme continuation are:
+
+@table @code
+@item top
+Untagged memory pointer referencing the C language stack last saved by
+Scheme code; it is the content of the field @code{pcb->system_stack} at
+the time this system continuation object was created.
+
+@item size
+Unused.
+
+@item next
+Tagged memory pointer referencing the next continuation; it is the
+content of the field @code{pcb->next_k} at the time this system
+continuation object was created.
+@end table
+
+Whatever the kind, usually a continuation is created and then saved in
+the field @code{pcb->next_k} in such a way that continuation objects
+create a linked list:
+
+@example
+        next_k
+|------|------|-----| PCB
+          |
+          v     next
+       |-------|----| continuation
+                  |
+                  v     next
+               |-------|----| continuation
+                          |
+                           --> NULL
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} continuation_tag
+@defvrx {Preprocessor Symbol} system_continuation_tag
+Integer values used to tag and recognise the first word in continuation
+memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} continuation_size
+@defvrx {Preprocessor Symbol} system_continuation_size
+The number of bytes needed to hold a continuation memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_continuation_tag
+@defvrx {Preprocessor Symbol} disp_continuation_top
+@defvrx {Preprocessor Symbol} disp_continuation_size
+@defvrx {Preprocessor Symbol} disp_continuation_next
+Scheme continuation field displacements.  The number of bytes to add to
+an untagged pointer to Scheme continuations to get the pointer to the
+first byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_system_continuation_tag
+@defvrx {Preprocessor Symbol} disp_system_continuation_top
+@defvrx {Preprocessor Symbol} disp_system_continuation_size
+@defvrx {Preprocessor Symbol} disp_system_continuation_next
+System continuation field displacements.  The number of bytes to add to
+an untagged pointer to system continuations to get the pointer to the
+first byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_continuation_tag
+@defvrx {Preprocessor Symbol} off_continuation_top
+@defvrx {Preprocessor Symbol} off_continuation_size
+@defvrx {Preprocessor Symbol} off_continuation_next
+Scheme continuation field offsets.  The number of bytes to add to a
+tagged pointer to Scheme continuation to get the pointer to the first
+byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_system_continuation_tag
+@defvrx {Preprocessor Symbol} off_system_continuation_top
+@defvrx {Preprocessor Symbol} off_system_continuation_size
+@defvrx {Preprocessor Symbol} off_system_continuation_next
+System continuation field offsets.  The number of bytes to add to a
+tagged pointer to system continuation to get the pointer to the first
+byte in the word holding the specified field.
+@end defvr
+
+
+A Scheme continuation object is usually allocated as follows:
+
+@example
+ikpcb *     pcb = ...;
+ikptr       s_kont;
+
+s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) \
+   | vector_tag;
+IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
+IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
+IK_REF(s_kont, off_continuation_size) = \
+   pcb->frame_base - pcb->frame_pointer - wordsize;
+IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+pcb->next_k = s_kont;
+@end example
 
 @c page
 @node objects misc
@@ -26492,48 +28450,29 @@ displaying the stack trace and offering the continuation alternatives.
 @chapter Wild notes on the compiler internals
 
 
-@quotation
-This chapter is a collection of notes on the internals of the compiler;
-there is guarantee of neither their correctness nor their completeness,
-because the original compiler code is fully undocumented.
-@end quotation
+This chapter is a collection of notes on the internals of the compiler.
 
 @menu
 * compiler intro::              Introduction to the compiler.
-* compiler conventions::        Coding conventions in the compiler
-                                code.
-* compiler cogen::              Stuff in @file{ikarus.compiler.altcogen.ss}.
+* compiler conventions::        Coding conventions in compiler's code.
+* compiler stack::              Scheme stack management.
 @end menu
+
+@macro fpr{}
+@acronym{FPR}
+@end macro
 
 @c page
 @node compiler intro
 @section Introduction to the compiler
 
 
-@value{PACKAGE}'s compiler supports only the Intel architecture.  The
-compiler is coded in the following files
-
-@table @file
-@item ikarus.compiler.altcogen.ss
-Generate assembly code in S--expression format.
-@end table
-
-
-How do we generate assembly code?  First we need to generate a single
-line of assembly code; this is done by @func{make-asm-instr} which
-accepts as first argument a Scheme symbol representing the instruction,
-for example: @samp{move}, @samp{idiv}, @samp{int+}.
-
-Then we need to generate blocks of assembly instructions: sequences of
-instructions which must be executed in order.  There are two types of
-blocks: the ones which at the end generate a value to be stored in a
-location (register or memory), the ones which perform some operation but
-do not generate a value.  The first kind are blocks which ``impose a
-value'', the second kind are the ``side effects''.
+At present, @value{PRJNAME}'s compiler supports only the Intel
+architecture.
 
 @c page
 @node compiler conventions
-@section Coding conventions in the compiler code
+@section Coding conventions in compiler's code
 
 
 Throughout the compiler code variables with the following names appear:
@@ -26565,10 +28504,608 @@ which generate an assignment operation to store the first element of
 @end table
 
 @c page
-@node compiler cogen
-@section Stuff in @file{ikarus.compiler.altcogen.ss}
+@node compiler stack
+@section Scheme stack management
 
 
+In this section we want to explain how the Scheme stack in managed by
+@value{PRJNAME}.
+
+@menu
+* compiler stack intro::        Stack allocation and basic management.
+* compiler stack args::         Function arguments on the stack.
+* compiler stack call::         Executing a @code{call} instruction.
+@end menu
+
+@c page
+@node compiler stack intro
+@subsection Stack allocation and basic management
+
+
+The Scheme stack is a block of memory allocated with @cfunc{mmap};
+multiple blocks are allocated when more space is needed, each block is
+called @dfn{stack segment}.  At any moment, the stack segment currently
+in use is referenced by the following fields of the @pcb{} structure:
+
+@table @code
+@item ikptr stack_base
+Raw memory pointer referencing the first byte in the stack segment.
+
+@item unsigned long stack_size
+Number of bytes allocated for this stack segment; it is always a
+multiple of the host system page size.
+@end table
+
+@example
+pcb->stack_base         use growth
+       v              <-------------
+lo mem |-------------------------------------| hi mem
+
+       |.....................................| pcb->stack_size
+@end example
+
+When first allocated by C code, the stack is empty.  In the tradition of
+stacks: the use of a stack segment grows from high memory addresses to
+low memory addresses.
+
+@c ------------------------------------------------------------
+
+@subsubheading Calling Scheme functions and returning
+
+Entering Scheme code from C code and exiting Scheme code to C code does
+not happen directly; rather it involves hand--written assembly code:
+
+@itemize
+@item
+The C code calls an assembly routine which prepares the @cpu{}
+registers, then calls a Scheme function.
+
+@item
+The Scheme code returns to the assembly routine, which in turn restores
+the @cpu{} registers and returns to the C code.
+@end itemize
+
+@noindent
+the assembly code is in the file @file{ikarus-enter.S}, the C function
+calling the assembly routine is in the file @file{ikarus-exec.c}.
+
+Calling functions and returning from them is performed as follows:
+
+@itemize
+@item
+Entering Scheme code execution from assembly code always involves the
+execution of the assembly instruction @code{call}.
+
+@item
+Calling a Scheme function from Scheme code happens through a @code{call}
+or @code{jmp} instruction.
+
+@item
+Returning from Scheme code to Scheme code happens through a @code{ret}
+or @code{jmp} instruction.
+
+@item
+Returning from Scheme code to assembly code happens through a @code{ret}
+or @code{jmp} instruction.
+@end itemize
+
+For simplicity in introducing the stack management, we assume that:
+
+@itemize
+@item
+Calling a Scheme function always happens through a @code{call}
+instruction.
+
+@item
+Returning from a function call always happens through a @code{ret}
+instruction.
+
+@item
+All the Scheme functions return a single value.
+@end itemize
+
+The assembly routine calling Scheme code is @code{ik_asm_enter} and its
+return address is labeled @code{ik_underflow_handler}; assuming
+@var{REG} is a @cpu{} register holding the address of a Scheme function,
+the assembly code is similar to:
+
+@example
+ik_asm_enter:
+   ...                          ;assembly instructions
+   call *@var{REG}
+ik_underflow_handler:
+   ...                          ;assembly instructions
+   ret                          ;return to C code
+@end example
+
+@noindent
+when the @code{call} is performed: the return address
+@code{ik_underflow_handler} is pushed on the stack.
+
+@c ------------------------------------------------------------
+
+@subsubheading Stack frames
+
+The @cpu{} keeps track of the current position on the stack with the
+@dfn{Frame Pointer Register} (@fpr{}, which is @code{%esp} on the Intel
+architecture); such register contains the memory address of the current
+stack location, the @dfn{top} of the stack.  The first function frame
+starts from the end of the stack segment; when we enter Scheme code for
+the first time, we set the @fpr{} so that it references the machine word
+right after the end of the stack segment:
+
+@example
+pcb->stack_base         use growth           FPR
+       v              <-------------          v
+lo mem |-------------------------------------|-| hi mem
+
+       |.....................................| pcb->stack_size
+@end example
+
+@noindent
+and perform a @code{call} instruction which pushes the return address
+@code{ik_underflow_handler} on the stack segment, decrementing @fpr{} by
+a wordsize; so right after the first @code{call}, the stack segment
+looks as follows:
+
+@example
+                        high memory
+                  |                      |
+               -- |----------------------|          --
+                . | ik_underflow_handler | <-- FPR  . frame
+                . |----------------------|          --
+pcb->stack_size .            ...
+                . |----------------------|
+                . |                      | <-- pcb->stack_base
+               -- |----------------------|
+                  |                      |
+                         low memory
+@end example
+
+@noindent
+performing a @code{ret} assembly instruction in this situation would
+just increment the @fpr{} and let the execution flow go back to the code
+at the assembly label @code{ik_underflow_handler}.  Notice that we first
+enter a Scheme program by calling a Scheme function with zero arguments.
+
+@ref{compiler stack args} for details on how function arguments are put
+on the stack; here we only need to know that a function occupies some
+space on the stack, called a @dfn{stack frame}:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+|    return address    | <-- FPR .
+|----------------------|         .
+|     local value 0    |         . function
+|----------------------|         . stack
+|     local value 1    |         . frame
+|----------------------|         .
+|     local value 2    |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Handling stack overflow
+
+Nested function call after nested function call the stack segment fills
+up towards low memory addresses:
+
+@example
+pcb->stack_base         use growth
+       v              <-------------
+lo mem |-------------------------------------| hi mem
+
+       |...................|.....|.....|.....|
+                            frame frame frame
+@end example
+
+@noindent
+there is a limit, a ``red line'', below which the current stack segment
+is considered full: we need to allocate a new one and allocate the
+function frames there.  The limit is registered in the @pcb{} structure
+fields:
+
+@table @code
+@item ikptr frame_redline
+Raw memory pointer referencing a location in the current stack segment;
+when Scheme code execution uses the stack crossing the ``red line''
+represented by this field: the current stack segment is considered full.
+@end table
+
+A stack segment in stack overflow looks like this:
+
+@example
+pcb->stack_base  pcb->frame_redline
+       v          v
+lo mem |----------+--------------------------| hi mem
+
+       |.......|.....|.....|.....|.....|.....|
+        unused  frame frame frame frame frame
+@end example
+
+Each compiled Scheme function contains, right at the beginning, code
+that checks if the red line has been crossed; so, when a stack segment
+is full, at the first subsequent Scheme function call, @value{PRJNAME}
+takes control and allocates a new stack segment doing what is needed to
+proceed the execution on the new stack.  This ``proceeding on the new
+stack'' is called @dfn{stack overflow}.
+
+How is this implemented?  Let's say we have called a function
+@func{alpha} whose frame has crossed the red line, then the function
+@func{beta} is called:
+
+@example
+      high memory
+|                      |
+|----------------------|                         --
+|    return address    |                         .
+|----------------------|                         .
+|     local value 0    |                         . alpha
+|----------------------|                         . frame
+|     local value 1    | <-- pcb->frame_redline  .
+|----------------------|                         .
+|     local value 2    |                         .
+|----------------------|                         --
+|    return address    | <-- FPR                 .
+|----------------------|                         .
+|     local value 0    |                         . beta
+|----------------------|                         . frame
+|     local value 1    |                         .
+|----------------------|                         .
+|     local value 2    |                         .
+|----------------------|                         --
+|                      |
+       low memory
+@end example
+
+@noindent
+the code in @func{beta} detects the situation simply by the comparison:
+
+@example
+pcb->frame_redline < FPR
+@end example
+
+@noindent
+and calls an routine to exit Scheme code execution and call the C
+function @cfunc{ik_stack_overflow}.  A new stack segment is called
+
+@c QUIIIIIIIIIIIIIIIIIIIIII
+
+the current
+Scheme stack is stored away in a Scheme continuation and a new stack
+segment is allocated and installed as Scheme stack.  See the C function
+ for how this is implemented.  When the
+function returns: the stored continuation is reinstated and execution
+continues on the old stack.
+
+@c ------------------------------------------------------------
+
+@subsubheading Context switching between Scheme code and C code
+
+@table @code
+@item ikptr frame_pointer
+@item ikptr frame_base
+@end table
+
+@c page
+@node compiler stack args
+@subsection Function arguments on the stack
+
+
+Right after the first function call that enters Scheme code from
+assembly code, the stack segment looks as follows:
+
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <-- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <-- FPR
+|----------------------|
+           ...
+|----------------------|
+|                      | <-- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+
+If the called Scheme function needs some local variables, it allocates
+them on the stack:
+
+@example
+      high memory
+|                      |
+|----------------------|                         --
+| ik_underflow_handler | <-- FPR                 .
+|----------------------|                         .
+|   local variable 0   | <-- FPR - 1 * wordsize  . first
+|----------------------|                         . called
+|   local variable 1   | <-- FPR - 2 * wordsize  . function
+|----------------------|                         . frame
+|   local variable 2   | <-- FPR - 3 * wordsize  .
+|----------------------|                         --
+|                      |
+       low memory
+@end example
+
+@noindent
+notice that local values are ``moved'' on the stack, not ``pushed'':
+executing the assembly instruction @code{push} would decrement the
+@fpr{}, we do not want this; rather we reserve frame space for a
+function call and never mutate the @fpr{} until the function returns or
+calls another function.
+
+If the Scheme function needs to call another Scheme function, as in:
+
+@example
+(sub-func arg0 arg1 arg2)
+@end example
+
+@noindent
+it moves the arguments on the stack, leaving an empty machine word:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler | <-- FPR .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   |         .
+|----------------------|         --
+|                      |
+|----------------------|
+|      argument 0      |
+|----------------------|
+|      argument 1      |
+|----------------------|
+|      argument 2      |
+|----------------------|
+|                      |
+       low memory
+@end example
+
+@noindent
+it adjusts the @fpr{} by explicitly subtracting the appropriate offset
+from it:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler |         .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   | <-- FPR .
+|----------------------|         --
+|                      |
+|----------------------|
+|      argument 0      |
+|----------------------|
+|      argument 1      |
+|----------------------|
+|      argument 2      |
+|----------------------|
+|                      |
+       low memory
+@end example
+
+@noindent
+and finally it performs a @code{call} instruction, which pushes a return
+address on the stack right in the empty machine word:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler |         .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   |         .
+|----------------------|         --
+|    return address    | <-- FPR .
+|----------------------|         .
+|      argument 0      |         . sub-func
+|----------------------|         . called
+|      argument 1      |         . function
+|----------------------|         . frame
+|      argument 2      |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+When the function @func{sub-func} executes a @code{ret} instruction: the
+execution flow returns to @code{return address} and the @fpr{} is
+incremented by a machine word:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler |         .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   | <-- FPR .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+@noindent
+now the first called function adjusts the @fpr{} by explicitly adding
+the appropriate offset to it:
+
+@example
+      high memory
+|                      |
+|----------------------|         --
+| ik_underflow_handler | <-- FPR .
+|----------------------|         .
+|   local variable 0   |         . first
+|----------------------|         . called
+|   local variable 1   |         . function
+|----------------------|         . frame
+|   local variable 2   |         .
+|----------------------|         --
+|                      |
+       low memory
+@end example
+
+@noindent
+and is finally ready to go on with the execution.
+
+@c page
+@node compiler stack call
+@subsection Executing a @code{call} instruction
+
+
+The usual mechanism of performing an assembly language @code{call}
+instruction is this:
+
+@example
+caller's code   callee's code       stack
+ --- lo mem       --- lo mem         --- hi mem
+  .                .                  .
+  .                .                  .  caller stuff
+  .                .                  .
+ call FUNC        enter <-- FUNC      .   <--- %esp before
+ after <-- ADDR    .                 ADDR <--- %esp after
+  .                .                  .
+  .               ret                 .   calleee stuff
+  .                .                  .
+ --- hi mem       --- hi mem         --- lo mem
+@end example
+
+@noindent
+when the caller executes a @code{call} instruction:
+
+@enumerate
+@item
+The stack pointer register @code{%esp} is decremented by the size of a
+machine word.
+
+@item
+The memory address referencing the first byte of the instruction
+@code{after} is stored on the memory location referenced by the stack
+pointer register @code{%esp}.
+
+@item
+The execution flow jumps to the memory address @code{FUNC}, which must
+contain the first byte of the instruction @code{enter}.
+@end enumerate
+
+The usual mechanism of performing an assembly language @code{ret}
+instruction is this:
+
+@example
+caller's code   callee's code       stack
+ --- lo mem       --- lo mem         --- hi mem
+  .                .                  .
+  .                .                  .  caller stuff
+  .                .                  .
+ call FUNC       enter <-- FUNC       .   <--- %esp after
+ after <-- ADDR    .                 ADDR <--- %esp before
+  .                .                  .
+  .               ret                 .   calleee stuff
+  .                .                  .
+ --- hi mem       --- hi mem         --- lo mem
+@end example
+
+@noindent
+when the callee executes a @code{ret} instruction:
+
+@enumerate
+@item
+The memory address referenced by the stack pointer register @code{%esp}
+is stored in then instruction pointer register.
+
+@item
+The stack pointer register @code{%esp} is incremented by the size of a
+machine word.
+
+@item
+The execution flow jumps to the memory address in the instruction
+pointer.
+@end enumerate
+
+@noindent
+after the @code{ret} the stack is left in the same state it was at the
+moment the @code{call} was executed.
+
+Now let's say that, when generating binary code for a @code{call}
+instruction, we put some static data right before the @code{call}:
+
+@example
+ caller's code              stack
+    --- lo mem               --- hi mem
+     .                        .
+     .                        .
+     .                        .
+    jmp L0                    .
+    data_machine_word_1       .   <--- %esp before call
+    data_machine_word_2      ADDR <--- %esp after call
+    data_machine_word_3       .
+    call FUNC  <--- L0        .
+    after      <--- ADDR      .
+     .                        .
+     .                        .
+     .                        .
+    --- hi mem               --- lo mem
+@end example
+
+@noindent
+let's name @code{call_size} the number of bytes occupied by the
+instruction @code{call FUNC}; when the callee begins execution:
+
+@itemize
+@item
+It can access the return address by retrieving the machine word at
+@code{%esp}.
+
+@item
+It can access the constant @code{data_machine_word_1} by retrieving the
+machine word at:
+
+@example
+%esp - call_size - 0 * wordsize
+@end example
+
+@item
+It can access the constant @code{data_machine_word_2} by retrieving the
+machine word at:
+
+@example
+%esp - call_size - 1 * wordsize
+@end example
+
+@item
+It can access the constant @code{data_machine_word_3} by retrieving the
+machine word at:
+
+@example
+%esp - call_size - 2 * wordsize
+@end example
+@end itemize
 
 @c page
 @node missing
@@ -26964,21 +29501,61 @@ A list of @math{N > 255} elements followed by the elements.
 @func{eqv?} hashtable, first vector keys, second vector values.
 
 @item "W" + name + parent + uid + sealed? + opaque? + count + (bool + field) ...
-An @rnrs{6} record type descriptor.  @code{name} must be the return
-value of @func{record-type-name}.  @code{parent} must be the return
-value of @func{record-type-parent}.  @code{uid} must be the return value
-of @func{record-type-uid}.  @code{sealed?} must be the return value of
-@func{record-type-sealed?}.  @code{opaque?} must be the return value of
-@func{record-type-opaque?}.  @code{count} must be a fixnum representing
-the number of fields.  Each @code{bool + field} sequence must be a
-boolean representing the mutability of the record field, followed by
-symbol representing the name of the record field.
+An @rnrs{6} record type descriptor.
 
-@item "x"
-Denotes code.
+@table @code
+@item name
+Must be the return value of @func{record-type-name}.
 
-@item "Q"
-Procedure; followed by code.
+@item parent
+Must be the return value of @func{record-type-parent}.
+
+@item uid
+Must be the return value of @func{record-type-uid}.
+
+@item sealed?
+Must be the return value of @func{record-type-sealed?}.
+
+@item opaque?
+Must be the return value of @func{record-type-opaque?}.
+
+@item count
+Must be a fixnum representing the number of fields.
+@end table
+
+Each @code{bool + field} sequence must be a boolean representing the
+mutability of the record field, followed by symbol representing the name
+of the record field.
+
+@item "x" + int + int + annotation + bytes + relocation vector
+Denotes code.  A serialised code object is represented as follows, after
+the @samp{x} header:
+
+@enumerate
+@item
+An exact integer representing the number of bytes actually used in the
+data area of the code object.  On 32-bit platforms: a big endian 32-bit
+integer.  On 64-bit platforms: a sequence of two big endian 32-bit
+integers.
+
+@item
+An exact integer representing the number of free variables in the code.
+On 32-bit platforms: a big endian 32-bit integer.  On 64-bit platforms:
+a sequence of two big endian 32-bit integers.
+
+@item
+A Scheme object representing the code annotation.
+
+@item
+An array of bytes being the binary code.
+
+@item
+The code relocation vector as an ordinary Scheme vector.
+@end enumerate
+
+@item "Q" + "x" + code object
+Procedure.  A procedure is represented by the header @code{Q} followed
+by the serialisation of a code object, header @code{x} included.
 
 @item ">" + int32(I)
 Mark the next object with index @math{I}.
@@ -27977,6 +30554,25 @@ equality checking for trees and graphs.''  In ICFP '08: Proceeding of
 the 13th ACM SIGPLAN international conference on Functional programming,
 pages 179-188.  ACM, New York, NY, USA, 2008.  ISBN
 978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+
+@noindent
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
+Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+Construct''.
+
+@noindent
+Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
+Workshop on Scheme and Functional Programming '09.
+
+@c ------------------------------------------------------------
+
+@subsubheading Also of interest
+
+@noindent
+J. Michael Ashley, R. Kent Dybvig. ``An Efficient Implementation of
+Multiple Return Values in Scheme''.  Proceedings of the 1994 ACM
+Conference on LISP and Functional Programming, 140--149, 1994.
+Copyright @copyright{} 1994 ACM.
 
 @c page
 @node concept index

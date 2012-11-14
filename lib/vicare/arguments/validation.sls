@@ -174,11 +174,18 @@
 
     ;; pointers
     pointer.vicare-arguments-validation
+    non-null-pointer.vicare-arguments-validation
     pointer/false.vicare-arguments-validation
 
     ;; memory-blocks
     memory-block.vicare-arguments-validation
     memory-block/false.vicare-arguments-validation
+
+    ;; flonums
+    flonum.vicare-arguments-validation
+
+    ;; bignums
+    bignum.vicare-arguments-validation
 
     ;; input/output ports
     port.vicare-arguments-validation
@@ -1156,6 +1163,11 @@
   (or (not obj) (pointer? obj))
   (assertion-violation who "expected false or pointer as argument" obj))
 
+(define-argument-validation (non-null-pointer who obj)
+  (and (pointer? obj)
+       (not (pointer-null? obj)))
+  (assertion-violation who "expected non NULL pointer as argument" obj))
+
 
 ;;;; memory-blocks
 
@@ -1166,6 +1178,20 @@
 (define-argument-validation (memory-block/false who obj)
   (or (not obj) (memory-block? obj))
   (assertion-violation who "expected false or memory-block as argument" obj))
+
+
+;;;; flonums validation
+
+(define-argument-validation (flonum who obj)
+  (flonum? obj)
+  (assertion-violation who "expected flonum as argument" obj))
+
+
+;;;; bignums validation
+
+(define-argument-validation (bignum who obj)
+  (bignum? obj)
+  (assertion-violation who "expected bignum as argument" obj))
 
 
 ;;;; ports

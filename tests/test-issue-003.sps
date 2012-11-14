@@ -1,14 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for issue 8
-;;;Date: Mon Jun  7, 2010
+;;;Contents: tests for issue 003
+;;;Date: Fri Nov  2, 2012
 ;;;
 ;;;Abstract
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,26 +25,24 @@
 ;;;
 
 
-(import (rnrs)
-  (rnrs eval)
+(import (vicare)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing issue 8, letrec constraints\n")
+(check-display "*** testing issue #3\n")
 
 
-;;;; code
-
+;;The bug  will appear only when  the options '--debug -O2'  or '--debug
+;;-O1' are used.
+;;
 (check
-    (guard (E ((syntax-violation? E)
-               #t)
-              (else #f))
-      (eval '(letrec ((c b)
-                      (b a)
-                      (a 12))
-               c)
-            (environment '(rnrs))))
-  => #t)
+    (call-with-string-output-port
+	(lambda (port)
+	  (define (b)
+	    (display "ciao\n" port))
+	  (quasiquote (,(b)))
+	  (flush-output-port port)))
+  => "ciao\n")
 
 
 ;;;; done
