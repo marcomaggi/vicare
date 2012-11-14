@@ -19499,7 +19499,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi streams::                @ansrfi{41} streams.
 * srfi eager-comp::             @ansrfi{42} eager comprehensions.
 * srfi vector::                 @ansrfi{43} vector library.
-@c * srfi general-cond::                @ansrfi{61} a more general @func{cond} clause.
+* srfi general-cond::           @ansrfi{61} a more general @func{cond} clause.
 @c * srfi lightweight-testing::         @ansrfi{78} lightweight testing.
 @c * srfi environment-variables::       @ansrfi{98} environment variables.
 @end menu
@@ -19526,6 +19526,7 @@ minor modification of the original documents by Marco Maggi.
 @include streams.texi
 @include eager-comp.texi
 @include vector.texi
+@include general-cond.texi
 
 @c page
 @node libs

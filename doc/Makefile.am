@@ -13,6 +13,7 @@ vicare_scheme_TEXINFOS	= \
 	cond-expand.texi		\
 	eager-comp.texi			\
 	error-reporting.texi		\
+	general-cond.texi		\
 	let-values.texi			\
 	list.texi			\
 	parameters.texi			\

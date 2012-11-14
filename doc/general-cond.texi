@@ -1,0 +1,140 @@
+@node srfi general-cond
+@section @ansrfi{61} a more general @func{cond} clause
+
+
+@cindex @srfi{} general-cond
+
+
+The library @library{srfi :61} are written by Taylor Campbell as the
+reference implementation for @ansrfi{61}; see:
+
+@center @url{http://srfi.schemers.org/srfi-61/srfi-61.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi general-cond license::   Original document license.
+* srfi general-cond abstract::  Abstract.
+* srfi general-cond rationale:: Rationale.
+* srfi general-cond spec::      Specification.
+@end menu
+
+@c page
+@node srfi general-cond license
+@subsection Original document license
+
+
+Copyright @copyright{} 2004 Taylor Campbell.  All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi general-cond abstract
+@subsection Abstract
+
+
+This @srfi{} proposes an extension to the @func{cond} syntax to allow a
+more general clause, one that allows binding the results of tests as in
+the @code{=>} clauses and user--defined meaning of the success and
+failure of tests.
+
+@c page
+@node srfi general-cond rationale
+@subsection Rationale
+
+
+The present set of @func{cond} clauses is based on simple boolean
+testing.  It is prohibitively inexpressive in that the condition part of
+a @func{cond} clause that uses @code{=>} may pass only a single value to
+the receiver, and it enforces a semantics whereby @false{} implies
+failure of the condition.
+
+Programmers frequently use different tokens to imply failure, such as in
+@rnrs{5}'s I/O readers which return a distinguished ``EOF object'' to
+denote failure, and a successful condition may produce more than one
+useful value.  This simple extension allows any meaning of ``failure''
+to be assigned on a per--clause basis, and it also allows the condition
+to return multiple values to be passed to the receiver.
+
+@c page
+@node srfi general-cond spec
+@subsection Specification
+
+
+@findex cond
+
+The @code{<cond clause>} production in the formal syntax of Scheme as
+written by @rnrs{5} Section 7.1.3 is extended with a new option:
+
+@example
+<cond clause> --->
+    ...
+  | (<generator> <guard> => <receiver>)
+@end example
+
+@noindent
+where @code{<generator>}, @code{<guard>} and @code{<receiver>} are all
+@code{<expression>}.
+
+Clauses of this form have the following semantics: @code{<generator>} is
+evaluated and it may return arbitrarily many values.  @code{<guard>} is
+applied to an argument list containing the values in order that
+@code{<generator>} returned.  If @code{<guard>} returns a true value for
+that argument list, @code{<receiver>} is applied with an equivalent
+argument list.  If @code{<guard>} returns a false value, however, the
+clause is abandoned and the next one is tried.
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples
+
+
+This @func{port->char-list} procedure accepts an input port and returns
+a list of all the characters it produces until the end.
+
+@example
+(define (port->char-list port)
+  (cond [(read-char port)
+            char?
+         => (lambda (c)
+              (cons c (port->char-list port)))]
+        [else '()]))
+@end example
+
+Consider now a hypothetical @func{table-entry} procedure that accepts
+two arguments, a table (perhaps a hash table) and a key to an entry that
+may be in the table; it returns two values: a boolean that denotes
+whether or not an entry with the given key was in the table and, if it
+was, the value associated with the key.  Also, a hypothetical
+@var{proj0} combinator (projection of argument 0) returns its 0th
+argument and ignores all others.  One might conditionally branch to a
+certain body of code if the table contains the desired entry like so
+with the new type of @func{cond} clause:
+
+@example
+(cond ...
+      [(table-entry <table> <key>) proj0
+       => (lambda (present? value)
+            ...[VALUE is bound to the value of the entry]...)]
+      ...)
+@end example
+
+@c end of file
