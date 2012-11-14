@@ -15,6 +15,7 @@ vicare_scheme_TEXINFOS	= \
 	error-reporting.texi		\
 	general-cond.texi		\
 	let-values.texi			\
+	lightweight-testing.texi	\
 	list.texi			\
 	parameters.texi			\
 	random.texi			\

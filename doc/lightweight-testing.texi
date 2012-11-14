@@ -1,0 +1,338 @@
+@node srfi lightweight-testing
+@section @ansrfi{78} lightweight testing
+
+
+@cindex @srfi{} lightweight-testing
+
+
+The library @library{srfi :78} are written by Sebastian Egner as the
+reference implementation for @ansrfi{78}; see:
+
+@center @url{http://srfi.schemers.org/srfi-78/srfi-78.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi lightweight-testing license::    Original document license.
+* srfi lightweight-testing abstract::   Abstract.
+* srfi lightweight-testing rationale::  Rationale.
+* srfi lightweight-testing spec::       Specification.
+* srfi lightweight-testing references:: References.
+@end menu
+
+@c page
+@node srfi lightweight-testing license
+@subsection Original document license
+
+
+Copyright @copyright{} 2005--2006 Sebastian Egner.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi lightweight-testing abstract
+@subsection Abstract
+
+
+A simple mechanism is defined for testing Scheme programs.  As a most
+primitive example, the expression:
+
+@example
+(check (+ 1 1) => 3)
+@end example
+
+@noindent
+evaluates the expression @code{(+ 1 1)} and compares the result with the
+expected result @code{3} provided after the syntactic keyword @code{=>}.
+Then the outcome of this comparison is reported in human--readable form
+by printing a message of the form:
+
+@example
+(+ 1 1) => 2 ; *** failed ***
+; expected result: 3
+@end example
+
+Moreover, the outcome of any executed check is recorded in a global
+state counting the number of correct and failed checks and storing the
+first failed check.  At the end of a file, or at any other point, the
+user can print a summary using @func{check-report}.
+
+In addition to the simple test above, it is also possible to execute a
+parametric sequence of checks.  Syntactically, this takes the form of an
+eager comprehension in the sense of @ansrfi{42}.  For example:
+
+@example
+(check-ec (:range e 100)
+          (:let x (expt 2.0 e))
+  (= (+ x 1) x) => #f (e x))
+@end example
+
+This statement runs the variable e through @code{@{0..99@}} and for each
+binding defines @var{x} as @code{(expt 2.0 e)}.  Then it is checked if
+@code{(+ x 1)} is equal to @var{x}, and it is expected that this is not
+the case (i.e. expected value is @false{}).  The trailing @code{(e x)}
+tells the reporting mechanism to print the values of both @var{e} and
+@var{x} in case of a failed check.  The output could look like this:
+
+@example
+(let ((e 53) (x 9007199254740992.0)) (= (+ x 1) x)) => #t ; *** failed ***
+; expected result: #f
+@end example
+
+The specification of bindings to report, @code{(e x)} in the example, is
+optional but very informative.  Other features of this @srfi{} are:
+
+@itemize
+@item
+a way to specify a different equality predicate (default is
+@func{equal?});
+
+@item
+controlling the amount of reporting being printed;
+
+@item
+switching off the execution and reporting of checks entriely;
+
+@item
+retrieving a boolean if all checks have been executed and passed.
+@end itemize
+
+@c page
+@node srfi lightweight-testing rationale
+@subsection Rationale
+
+
+The mechanism defined in this @srfi{} should be available in every
+Scheme system because it has already proven useful for interactive
+development----of @srfi{}s.
+
+Although it is extremely straightforward, the origin of the particular
+mechanism described here is the @file{examples.scm} file accompanying
+the reference implementation of @ansrfi{42}.  The same mechanism has been
+reimplemented for the reference implementation of @srfi{67}, and a
+simplified version is yet again found in the reference implementation of
+@ansrfi{77}.
+
+The mechanism in this @srfi{} does not replace more sophisticated
+approaches to unit testing, like @srfi{64} or SchemeUnit.  These
+systems provide more control of the testing, separate the definition of
+a test, its execution, and its reports, and provide several other
+features.
+
+Neil Van Dyke's Testeez library is very close in spirit to this
+@srfi{}.  In Testeez, tests are disabled by (re--)defining a macro.
+The advantage of this method is that the code for the test cases can be
+removed entirely, and hence even the dependency on the Testeez library.
+This @srfi{} on the other hand, uses a Scheme conditional @code{(cond,
+if)} to prevent execution of the testing code.  This method is more
+dynamic but retains dead testing code, unless a compiler and a module
+system are used to apply constant folding and dead code elimination.
+The only major addition in @srfi{} over Testeez is the comprehension
+for formulating parametric tests.
+
+Design considerations for this @srfi{} include the following:
+
+@itemize
+@item
+Reporting is human--readable and as specific as possible, i.e. not just
+``assertion failed'' but the expression with actual and expected value,
+and if possibly the relevant part of the bindings environment.
+
+@item
+An effort is made to print closed Scheme expressions, i.e. expressions
+that can directly be copy/pasted into a @repl{} for further analysis
+(e.g. the let expression in the abstract).
+
+@item
+By default the checks report both correct and failed checks.  However,
+it is possible to reduce the output, or even to switch off the execution
+of checks.  It has turned out useful to be able to run only some subset
+checks for the features currently under development.  This can be done
+by changing the reporting mode between differnt sections.
+
+@item
+The global state (correct/failed count) is not made available to the
+user program.  This reduces the dependencies between different checks
+because it is not possible to use the state.
+
+@item
+Ocassionally, it is useful to check that a certain expression does not
+yield an ordinary result but raises an error.  However, @rnrs{5} does
+not specify the mechanism by which this occurs (e.g. raising exception,
+breaking into a @repl{}, aborting the program, etc.).  For this reason,
+this @srfi{} is restricted to the case that the checked expressions
+evaluate normally.
+
+@item
+Though usually I am very much in favor of strictly prefix syntax, for
+this @srfi{} I make an exception because the infix @code{=>} syntax is
+widely used and intuitive.
+@end itemize
+
+@c page
+@node srfi lightweight-testing spec
+@subsection Specification
+
+
+@deffn Syntax check @var{expr} (=> @var{equal}) @var{expected}
+@deffnx Syntax check @var{expr} => @var{expected}
+Evaluate @var{expr} and compare the value to the value of @var{expected}
+using the predicate @var{equal}, which is @func{equal?} when omitted.
+Then a report is printed according to the current mode setting (see
+below) and the outcome is recorded in a global state to be used in
+@func{check-report}.
+
+The precise order of evaluation is that first @var{equal} and
+@var{expected} are evaluated (in unspecified order) and then @var{expr}
+is evaluated.  Example: @code{(check (+ 1 1) => 2)}.
+@end deffn
+
+
+@deffn Syntax check-ec @var{qualifier*} @var{expr} (=> @var{equal}) @var{expected} (@var{argument*}))
+@deffnx Syntax check-ec @var{qualifier*} @var{expr} => @var{expected} (@var{argument*})
+@deffnx Syntax check-ec @var{qualifier*} @var{expr} (=> @var{equal}) @var{expected}
+@deffnx Syntax check-ec @var{qualifier*} @var{expr} => @var{expected}
+An eager comprehension for executing a parametric sequence of checks.
+
+Enumerate the sequence of bindings specified by @var{qualifier*}.  For
+each binding evaluate @var{equal} and @var{expected} in unspecified
+order. Then evaluate @var{expr} and compare the value obtained to the
+value of @var{expected} using the value of @var{equal} as predicate,
+which is @func{equal?} when omitted.
+
+The comprehension stops after the first failed check, if there is any.
+Then a report is printed according to the current mode setting (see
+below) and the outcome is recorded in a global state to be used in
+@func{check-report}.  The entire @func{check-ec} counts as a single
+check.
+
+In case the check fails @var{argument*} is used for constructing an
+informative message with the argument values.  Use @var{argument*} to
+list the relevant free variables of @var{expr} (see examples) that you
+want to have printed.
+
+A @var{qualifier} is any qualifier of an eager comprehension as
+specified in @srfi{42}.
+
+Examples:
+
+@example
+(check-ec (: e 100)
+          (positive? (expt 2 e))
+          => #t (e)) ; fails on fixnums
+
+(check-ec (: e 100)
+          (:let x (expt 2.0 e))
+          (= (+ x 1) x)
+          => #f (x)) ; fails
+
+(check-ec (: x 10)
+          (: y 10)
+          (: z 10)
+          (* x (+ y z))
+          => (+ (* x y) (* x z))
+             (x y z)) ; passes with 10^3 cases checked
+@end example
+@end deffn
+
+
+@defun check-report
+Print a summary and the first failed check, if there is any, depending
+on the current mode settings.
+@end defun
+
+
+@defun check-set-mode! @var{mode}
+Set the current mode to @var{mode}, which must be a symbol among:
+@code{off}, @code{summary}, @code{report-failed}, @code{report}; the
+default is @code{report}.  Note that you can change the mode at any
+time, and that @func{check}, @func{check-ec} and @func{check-report} use
+the current value.
+
+The mode symbols have the following meaning:
+
+@table @code
+@item off
+do not execute any of the checks;
+
+@item summary
+print only summary in @func{check-report} and nothing else;
+
+@item report-failed
+report failed checks when they happen, and in summary;
+
+@item report
+report every example executed.
+@end table
+@end defun
+
+
+@defun check-reset!
+Reset the global state (counters of correct/failed examples) to the
+state immediately after loading the module for the first time, i.e. no
+checks have been executed.
+@end defun
+
+
+@defun check-passed? @var{expected-total-count}
+Return @true{} if there were no failed checks and
+@var{expected-total-count} correct checks, @false{} otherwise.
+
+Rationale: This procedure can be used in automatized tests by
+terminating a test program with the statement:
+
+@example
+(exit (if (check-passed? n) 0 1))
+@end example
+@end defun
+
+@c page
+@node srfi lightweight-testing references
+@subsection References
+
+
+@emph{@ansrfi{64}: a Scheme @api{} for test suites}. Per Bothner. January,
+2005.
+
+@center @url{http://srfi.schemers.org/srfi-64}
+
+@noindent
+@emph{SchemeUnit}.  Noel Welsh.  February, 2003.
+
+@center @url{http://schematics.sourceforge.net/schemeunit.html}
+
+@noindent
+@emph{Testeez, Lightweight Unit Test Mechanism for Scheme}.  Neil Van
+Dyke.  May, 2005.
+
+@center @url{http://www.neilvandyke.org/testeez}
+
+@noindent
+@emph{Revised^5 Report on the Algorithmic Language Scheme}.
+
+@center @url{http://www.schemers.org/Documents/Standards/R5RS/}
+
+@noindent
+@emph{@ansrfi{42}: eager comprehensions}.  Sebastian Egner.
+
+@center @url{http://srfi.schemers.org/srfi-42}
+
+@c end of file
