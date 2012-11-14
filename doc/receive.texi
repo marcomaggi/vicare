@@ -1,0 +1,163 @@
+@node srfi receive
+@section @ansrfi{8} @func{receive}: Binding to multiple values
+
+
+@cindex @srfi{} receive
+
+
+The library @library{srfi :8} is by John David Stone (Department of
+Mathematics and Computer Science, Grinnell College, Grinnell, Iowa
+50112, @email{stone@@cs.grinnell.edu}) as the reference implementation
+for @ansrfi{8}; see:
+
+@center @url{http://srfi.schemers.org/srfi-8/srfi-8.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi receive license::        Receive document license.
+* srfi receive abstract::       Abstract.
+* srfi receive rationale::      Rationale.
+* srfi receive spec::           Specification.
+@end menu
+
+@c page
+@node srfi receive license
+@subsection Receive document license
+
+
+Copyright @copyright{} 1999 John David Stone.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi receive abstract
+@subsection Abstract
+
+
+The only mechanism that @rnrs{5} provides for binding identifiers to the
+values of a multiple--valued expression is the primitive
+@func{call-with-values}.  This @srfi{} proposes a more concise, more
+readable syntax for creating such bindings.
+
+@c page
+@node srfi receive rationale
+@subsection Rationale
+
+
+Although @rnrs{5} supports multiple--valued expressions, it provides
+only the essential procedures @func{values} and @func{call-with-values}.
+It is evident that the authors expected Scheme programmers to define
+other constructs in terms of these, abstracting common patterns of use.
+
+One such pattern consists in binding an identifier to each of the values
+of a multiple--valued expression and then evaluating an expression in
+the scope of the bindings.  As an instance of this pattern, consider the
+following excerpt from a quicksort procedure:
+
+@example
+(call-with-values
+  [lambda ()
+    (partition (precedes pivot) others)]
+  [lambda (fore aft)
+    (append (qsort fore) (cons pivot (qsort aft)))])
+@end example
+
+Here @func{partition} is a multiple--valued procedure that takes two
+arguments, a predicate and a list, and returns two lists, one comprising
+the list elements that satisfy the predicate, the other those that do
+not.  The purpose of the expression shown is to partition the list
+@var{others}, sort each of the sublists, and recombine the results into
+a sorted list.
+
+For our purposes, the important step is the binding of the identifiers
+fore and aft to the values returned by @func{partition}.  Expressing the
+construction and use of these bindings with the @func{call-by-values}
+primitive is cumbersome: One must explicitly embed the expression that
+provides the values for the bindings in a parameterless procedure, and
+one must explicitly embed the expression to be evaluated in the scope of
+those bindings in another procedure, writing as its parameters the
+identifiers that are to be bound to the values received.
+
+These embeddings are boilerplate, exposing the underlying binding
+mechanism but not revealing anything relevant to the particular program
+in which it occurs.  So the use of a syntactic abstraction that exposes
+only the interesting parts (the identifiers to be bound, the
+multiple--valued expression that supplies the values, and the body of
+the receiving procedure) makes the code more concise and more readable:
+
+@example
+(receive (fore aft)
+    [partition (precedes pivot) others]
+  [append (qsort fore)
+          (cons pivot (qsort aft))])
+@end example
+
+The advantages are similar to those of a @func{let}--expression over a
+procedure call with a @func{lambda}--expression as its operator.  In
+both cases, cleanly separating a ``header'' in which the bindings are
+established from a ``body'' in which they are used makes it easier to
+follow the code.
+
+@c page
+@node srfi receive spec
+@subsection Specification
+
+
+@cindex @srfi{} receive api
+
+
+@deffn Syntax receive @var{formals} @var{expression} @var{body}
+@var{formals}, @var{expression}, and @var{body} are as described in
+@rnrs{5}.  Specifically, @var{formals} can have any of three forms:
+
+@table @code
+@item (variable1 ... variablen)
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @var{variable1}, ..., @var{variablen} to fresh
+locations.  The @var{expression} is evaluated, and its values are stored
+into those locations (it is an error if @var{expression} does not have
+exactly @var{n} values).
+
+@item variable
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @var{variable} to a fresh location.  The
+@var{expression} is evaluated, its values are converted into a newly
+allocated list, and the list is stored in the location bound to
+@var{variable}.
+
+@item (variable1 ... variablen . variablen+1)
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @var{variable1}, ..., @var{variablen+1} to fresh
+locations.  The @var{expression} is evaluated.  Its first @var{n} values
+are stored into the locations bound to @var{variable1}, ...,
+@var{variablen}.  Any remaining values are converted into a newly
+allocated list, which is stored into the location bound to
+@var{variablen+1} (it is an error if @var{expression} does not have at
+least @var{n} values.
+@end table
+
+In any case, the expressions in @var{body} are evaluated sequentially in
+the extended environment.  The results of the last expression in the
+body are the values of the @var{receive}--expression.
+@end deffn
+
+@c end of file
