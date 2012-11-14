@@ -35,7 +35,7 @@ ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
 	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
-	echo '(define scheme-lib-dir "$(libdir)/scheme")' >>$@
+	echo '(define scheme-lib-dir "$(libdir)/vicare-scheme")' >>$@
 	echo '(define (host-info) "$(target)")' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
