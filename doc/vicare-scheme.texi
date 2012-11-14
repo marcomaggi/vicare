@@ -19482,7 +19482,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi records::                @ansrfi{9} defining record types.
 * srfi let-values::             @ansrfi{11} syntax for receiving
                                 multiple values.
-@c * srfi strings::                     @ansrfi{13} string library.
+* srfi strings::                @ansrfi{13} string library.
 @c * srfi case-lambda::                 @ansrfi{16} syntax for procedures of
 @c                                 variable arity.
 @c * srfi time::                        @ansrfi{19} time data types and procedures.
@@ -19513,6 +19513,8 @@ minor modification of the original documents by Marco Maggi.
 @include receive.texi
 @include records.texi
 @include let-values.texi
+@include strings.texi
+
 @include args-fold.texi
 
 @c page

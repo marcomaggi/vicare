@@ -14,6 +14,7 @@ vicare_scheme_TEXINFOS	= \
 	list.texi		\
 	receive.texi		\
 	records.texi		\
-	string-ports.texi
+	string-ports.texi	\
+	strings.texi
 
 ### end of file
