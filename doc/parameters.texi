@@ -1,0 +1,257 @@
+@node srfi parameters
+@section @ansrfi{39} parameter objects
+
+
+@cindex @srfi{} parameters
+
+
+The library @library{srfi :39} is by Marc Feeley as the reference
+implementation for @ansrfi{39}; see:
+
+@center @url{http://srfi.schemers.org/srfi-39/srfi-39.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi parameters license::     Parameters document license.
+* srfi parameters abstract::    Abstract.
+* srfi parameters rationale::   Rationale.
+* srfi parameters spec::        Specification.
+@end menu
+
+@c page
+@node srfi parameters license
+@subsection Parameters document license
+
+
+Copyright @copyright{} 2002 Marc Feeley.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi parameters abstract
+@subsection Abstract
+
+
+This @srfi{} defines parameter objects, the procedure
+@func{make-parameter} to create parameter objects and the
+@func{parameterize} special form to dynamically bind parameter objects.
+
+In the dynamic environment, each parameter object is bound to a cell
+containing the value of the parameter.  When a procedure is called the
+called procedure inherits the dynamic environment from the caller.  The
+@func{parameterize} special form allows the binding of a parameter
+object to be changed for the dynamic extent of its body.
+
+@c page
+@node srfi parameters rationale
+@subsection Rationale
+
+
+The @emph{dynamic environment} is the structure which allows the system
+to find the value returned by the @rnrs{5} procedures
+@func{current-input-port} and @func{current-output-port}.  The @rnrs{5}
+procedures @func{with-input-from-file} and @func{with-output-to-file}
+extend the dynamic environment to produce a new dynamic environment
+which is in effect for the dynamic extent of the call to the thunk
+passed as their last argument.
+
+These procedures are essentially special purpose dynamic binding
+operations on hidden dynamic variables (one for
+@func{current-input-port} and one for @func{current-output-port}).  The
+purpose of this @srfi{} is to generalize this dynamic binding mechanism
+(which exists in all @rnrs{5} compliant systems) to allow the user to
+introduce new dynamic variables and dynamically bind them.
+
+General dynamic binding mechanisms exist in several implementations of
+Scheme under various names, including ``fluid'' variables and parameter
+objects.  The parameter objects specified in this @srfi{} are
+compatible with the semantics of all implementations of Scheme we know
+which currently support parameter objects (in the sense that it is
+possible to implement this @srfi{} so that old code works the same as
+before).  We believe Chez--Scheme was the first implementation of Scheme
+to have used parameter objects.
+
+In the presence of threads, the dynamic binding mechanism does not
+behave the same way in all implementations of Scheme supporting dynamic
+binding.  The issue is the relationship between the dynamic environments
+of the parent and child threads when a thread is created.  In Scheme 48
+the child gets a fresh dynamic environment where (typically but not
+necessarily) all the bindings are to their initial value.
+
+In MzScheme and Gambit--C the child is given a dynamic environment
+inherited from the parent.  In this inherited dynamic environment the
+dynamic variables have the same values as the parent's dynamic
+environment.  However, in MzScheme the cells bound to the dynamic
+variables in the child are distinct from those of the parent (i.e. an
+assignment of a value to a dynamic variable is not visible in the other
+thread).  In Gambit--C the child and parent dynamic environment share
+the same cells (i.e. an assignment of a value to a dynamic variable is
+visible in the other thread).  Note that in the absence of assignment to
+dynamic variables the MzScheme and Gambit--C approaches are equivalent.
+
+Given that there are semantic differences in the presence of threads and
+that there are valid reasons for choosing each semantics, this @srfi{}
+does not specify the semantics of parameter objects in the presence of
+threads.  It is left to the implementation and other @srfi{}s which
+extend this @srfi{} to specify the interaction between parameter
+objects and threads.
+
+@c page
+@node srfi parameters spec
+@subsection Specification
+
+
+The @emph{dynamic environment} is composed of two parts: the @emph{local
+dynamic environment} and the @emph{global dynamic environment}.  The
+global dynamic environment is used to lookup parameter objects that
+can't be found in the local dynamic environment.  When parameter objects
+are created, their initial binding is put in the global dynamic
+environment (by mutation).  The local dynamic environment is only
+extended by the @func{parameterize} form.
+
+@emph{Parameter objects} are created with the @func{make-parameter}
+procedure which takes one or two arguments.  The second argument is a
+one argument conversion procedure.  If only one argument is passed to
+@func{make-parameter} the identity function is used as a conversion
+procedure.  The global dynamic environment is updated to associate the
+parameter object to a new cell.  The initial content of the cell is the
+result of applying the conversion procedure to the first argument of
+@func{make-parameter}.
+
+A @emph{parameter object} is a procedure which accepts zero or one
+argument.  The cell bound to a particular parameter object in the
+dynamic environment is accessed by calling the parameter object.  When
+no argument is passed, the content of the cell is returned.  When one
+argument is passed the content of the cell is updated with the result of
+applying the parameter object's conversion procedure to the argument.
+
+The @func{parameterize} special form, when given a parameter object and
+a value, binds for the dynamic extent of its body the parameter object
+to a new cell.  The initial content of the cell is the result of
+applying the parameter object's conversion procedure to the value.  The
+parameterize special form behaves analogously to let when binding more
+than one parameter object (that is the order of evaluation is
+unspecified and the new bindings are only visible in the body of the
+parameterize special form).
+
+Note that the conversion procedure can be used for guaranteeing the type
+of the parameter object's binding and/or to perform some conversion of
+the value.
+
+Because it is possible to implement the @rnrs{5} procedures
+@func{current-input-port} and @func{current-output-port} as parameter
+objects and this offers added functionnality, it is required by this
+@srfi{} that they be implemented as parameter objects created with
+@func{make-parameter}.
+
+
+@defun make-parameter @var{init} [@var{converter}]
+Returns a new parameter object which is bound in the global dynamic
+environment to a cell containing the value returned by the call
+@code{(converter init)}.  If the conversion procedure converter is not
+specified the identity function is used instead.
+
+The parameter object is a procedure which accepts zero or one argument.
+When it is called with no argument, the content of the cell bound to
+this parameter object in the current dynamic environment is returned.
+When it is called with one argument, the content of the cell bound to
+this parameter object in the current dynamic environment is set to the
+result of the call @code{(converter arg)}, where @var{arg} is the
+argument passed to the parameter object, and an unspecified value is
+returned.
+
+@example
+(define radix
+  (make-parameter 10))
+
+(define write-shared
+  (make-parameter #f
+    (lambda (x)
+      (if (boolean? x)
+          x
+        (error "only booleans are accepted by write-shared")))))
+
+(radix)           =>  10
+(radix 2)
+(radix)           =>  2
+(write-shared 0)  gives an error
+
+(define prompt
+  (make-parameter 123
+    (lambda (x)
+      (if (string? x)
+          x
+        (with-output-to-string (lambda () (write x)))))))
+
+(prompt)       =>  "123"
+(prompt ">")
+(prompt)       =>  ">"
+@end example
+@end defun
+
+
+@deffn Syntax parameterize ((@var{expr1} @var{expr2}) ...) @var{body})
+The expressions @var{expr1} and @var{expr2} are evaluated in an
+unspecified order.  The value of the @var{expr1} expressions must be
+parameter objects.  For each @var{expr1} expression and in an
+unspecified order, the local dynamic environment is extended with a
+binding of the parameter object @var{expr1} to a new cell whose content
+is the result of the call @code{(converter val)}, where @var{val} is the
+value of @var{expr2} and @var{converter} is the conversion procedure of
+the parameter object.
+
+The resulting dynamic environment is then used for the evaluation of
+@var{body} (which refers to the @rnrs{5} grammar nonterminal of that
+name).  The result(s) of the parameterize form are the result(s) of the
+@var{body}.
+
+With reference to thte example above:
+
+@example
+(radix)
+=>  2
+
+(parameterize ([radix 16])
+  (radix))
+=>  16
+
+(radix)
+=>  2
+
+(define (f n)
+  (number->string n (radix)))
+
+(f 10)
+=>  "1010"
+
+(parameterize ([radix 8])
+  (f 10))
+=>  "12"
+
+(parameterize ([radix 8]
+               [prompt (f 10)])
+  (prompt))
+=>  "1010"
+@end example
+@end deffn
+
+@c end of file
