@@ -19471,7 +19471,7 @@ minor modification of the original documents by Marco Maggi.
 @menu
 * srfi cond-expand::            @ansrfi{0} feature based conditional
                                 expansion construct.
-@c * srfi list::                        @ansrfi{1} list library.
+* srfi list::                   @ansrfi{1} list library.
 * srfi and-let-star::           @ansrfi{2} @func{and-let*}.
 @c * srfi string-ports::                @ansrfi{6} basic string ports.
 @c * srfi receive::                     @ansrfi{8} @func{receive}: Binding to
@@ -19504,6 +19504,7 @@ minor modification of the original documents by Marco Maggi.
 @c ------------------------------------------------------------
 
 @include cond-expand.texi
+@include list.texi
 @include and-let-star.texi
 @include args-fold.texi
 

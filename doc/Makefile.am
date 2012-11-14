@@ -9,6 +9,7 @@ vicare_scheme_TEXINFOS	= \
 	\
 	and-let-star.texi	\
 	args-fold.texi		\
-	cond-expand.texi
+	cond-expand.texi	\
+	list.texi
 
 ### end of file

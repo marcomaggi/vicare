@@ -1,0 +1,2757 @@
+@node srfi list
+@section @ansrfi{1} list library
+
+
+@cindex @srfi{} list library
+
+
+The library @library{srfi :1} is by Olin Shivers
+@email{shivers@@ai.mit.edu} as the reference implementation for
+@ansrfi{1}; see:
+
+@center @url{http://srfi.schemers.org/srfi-1/srfi-1.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi list license::           List library document license.
+* srfi list abstract::          Abstract.
+* srfi list rationale::         Rationale.
+* srfi list discussion::        Discussion.
+* srfi list spec::              Specifications.
+* srfi list ack::               Acknowledgements.
+* srfi list references::        References.
+@end menu
+
+@c page
+@node srfi list license
+@subsection List library document license
+
+
+Certain portions of this document----the specific, marked segments of
+text describing the R5RS procedures----were adapted with permission from
+the @rnrs{5} report.
+
+All other text is copyright @copyright{} 1998, 1999 Olin Shivers.  All
+Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi list abstract
+@subsection Abstract
+
+
+@rnrs{5} Scheme has an impoverished set of list--processing utilities,
+which is a problem for authors of portable code.  This @srfi{} proposes
+a coherent and comprehensive set of list--processing procedures; it is
+accompanied by a reference implementation of the spec.  The reference
+implementation is:
+
+@itemize
+@item
+portable;
+
+@item
+efficient;
+
+@item
+completely open, public--domain source.
+@end itemize
+
+@c page
+@node srfi list rationale
+@subsection Rationale
+
+
+The set of basic list and pair operations provided by @rnrs{4}/@rnrs{5}
+Scheme is far from satisfactory.  Because this set is so small and
+basic, most implementations provide additional utilities, such as a
+list--filtering function, or a ``left fold'' operator, and so forth.
+But, of course, this introduces incompatibilities----different Scheme
+implementations provide different sets of procedures.
+
+I have designed a full--featured library of procedures for list
+processing.  While putting this library together, I checked as many
+Schemes as I could get my hands on.  (I have a fair amount of experience
+with several of these already.)  I missed Chez (no on--line manual that
+I can find) but I hit most of the other big, full--featured Schemes.
+The complete list of list--processing systems I checked is:
+
+@example
+R4RS/R5RS Scheme
+MIT Scheme
+Gambit
+RScheme
+MzScheme
+slib
+Common Lisp
+Bigloo
+guile
+T
+APL and the SML standard basis
+@end example
+
+As a result, the library I am proposing is fairly rich.
+
+Following this initial design phase, this library went through several
+months of discussion on the @srfi{} mailing lists, and was altered in
+light of the ideas and suggestions put forth during this discussion.
+
+In parallel with designing this @api{}, I have also written a reference
+implementation.  I have placed this source on the Net with an
+unencumbered, ``open'' copyright.  A few notes about the reference
+implementation:
+
+@itemize
+@item
+Although I got procedure names and specs from many Schemes, I wrote this
+code myself.  Thus, there are no entanglements.  Any Scheme implementor
+can pick this library up with no worries about copyright problems, both
+commercial and non--commercial systems.
+
+@item
+The code is written for portability and should be trivial to port to any
+Scheme.  It has only four deviations from @rnrs{4}, clearly discussed in
+the comments:
+
+@itemize
+@item
+use of an error procedure;
+
+@item
+use of the @rnrs{5} values and a simple receive macro for producing and
+consuming multiple return values;
+
+@item
+use of simple @code{:optional} and @func{let-optionals} macros for
+optional argument parsing and defaulting;
+
+@item
+use of a simple @func{check-arg} procedure for argument checking.
+@end itemize
+
+@item
+It is written for clarity and well--commented.  The current source is
+768 lines of source code and 826 lines of comments and white space.
+
+@item
+It is written for efficiency.  Fast paths are provided for common cases.
+Side--effecting procedures such as @func{filter!} avoid unnecessary,
+redundant @func{set-cdr!} calls which would thrash a generational
+garbage--collection's write barrier and the store buffers of fast
+processors.  Functions reuse longest common tails from input parameters
+to construct their results where possible.  Constant--space iterations
+are used in preference to recursions; local recursions are used in
+preference to consing temporary intermediate data structures.
+@end itemize
+
+This is not to say that the implementation can't be tuned up for a
+specific Scheme implementation.  There are notes in comments addressing
+ways implementors can tune the reference implementation for performance.
+
+In short, I've written the reference implementation to make it as
+painless as possible for an implementor, or a regular programmer, to
+adopt this library and get good results with it.
+
+@c page
+@node srfi list discussion
+@subsection Discussion
+
+
+@menu
+* srfi list disc general::       General discussion.
+* srfi list disc linear update:: ``Linear update'' procedures.
+* srfi list disc improper::      Improper lists.
+* srfi list disc errors::        Errors.
+* srfi list disc not included::  Not included in this library.
+@end menu
+
+@c page
+@node srfi list disc general
+@subsubsection General discussion
+
+
+A set of general criteria guided the design of this library.
+
+I don't require ``destructive'' (what I call ``linear update'')
+procedures to alter and recycle cons cells from the argument lists.
+They are allowed to, but not required to.  (And the reference
+implementations I have written do recycle the argument lists.)
+
+List--filtering procedures such as @func{filter} or @func{delete} do not
+disorder lists.  Elements appear in the answer list in the same order as
+they appear in the argument list.  This constrains implementation, but
+seems like a desirable feature, since in many uses of lists, order
+matters.  (In particular, disordering an alist is definitely a bad
+idea.)
+
+Contrariwise, although the reference implementations of the
+list--filtering procedures share longest common tails between argument
+and answer lists, it not is part of the spec.
+
+Because lists are an inherently sequential data structure (unlike, say,
+vectors), list--inspection functions such as @func{find},
+@func{find-tail}, @func{for-each}, any and every commit to a
+left--to--right traversal order of their argument list.
+
+However, constructor functions, such as @func{list-tabulate} and the
+mapping procedures (@func{append-map}, @func{append-map!}, @func{map!},
+@func{pair-for-each}, @func{filter-map}, @func{map-in-order}), do not
+specify the dynamic order in which their procedural argument is applied
+to its various values.
+
+Predicates return useful true values wherever possible.  Thus any must
+return the true value produced by its predicate, and every returns the
+final true value produced by applying its predicate argument to the last
+element of its argument list.
+
+Functionality is provided both in pure and linear--update (potentially
+destructive) forms wherever this makes sense.
+
+No special status accorded Scheme's built--in equality functions.  Any
+functionality provided in terms of @func{eq?}, @func{eqv?},
+@func{equal?} is also available using a client--provided equality
+function.
+
+Proper design counts for more than backwards compatibility, but I have
+tried, ceteris paribus, to be as backwards--compatible as possible with
+existing list--processing libraries, in order to facilitate porting old
+code to run as a client of the procedures in this library.  Name choices
+and semantics are, for the most part, in agreement with existing
+practice in many current Scheme systems.  I have indicated some
+incompatibilities in the following text.
+
+These procedures are not ``sequence generic''----i.e. procedures that
+operate on either vectors and lists.  They are list--specific.  I prefer
+to keep the library simple and focused.
+
+I have named these procedures without a qualifying initial @code{list-}
+lexeme, which is in keeping with the existing set of list--processing
+utilities in Scheme.  I follow the general Scheme convention
+(@func{vector-length}, @func{string-ref}) of placing the type--name
+before the action when naming procedures----so we have @func{list-copy}
+and @func{pair-for-each} rather than the perhaps more fluid, but less
+consistent, @func{copy-list} or @func{for-each-pair}.
+
+I have generally followed a regular and consistent naming scheme,
+composing procedure names from a set of basic lexemes.
+
+@c page
+@node srfi list disc linear update
+@subsubsection ``Linear update'' procedures
+
+
+Many procedures in this library have ``pure'' and ``linear update''
+variants.  A ``pure'' procedure has no side--effects, and in particular
+does not alter its arguments in any way.  A ``linear update'' procedure
+is allowed, but not required, to side--effect its arguments in order to
+construct its result.  ``Linear update'' procedures are typically given
+names ending with an exclamation point.
+
+So, for example, @code{(append!  list1 list2)} is allowed to construct
+its result by simply using @func{set-cdr!} to set the cdr of the last
+pair of @var{list1} to point to @var{list2}, and then returning
+@var{list1} (unless @var{list1} is the empty list, in which case it
+would simply return @var{list2}).  However, @func{append!} may also
+elect to perform a pure append operation, this is a legal definition of
+append!:
+
+@example
+(define append! append)
+@end example
+
+This is why we do not call these procedures ``destructive'', because
+they aren't required to be destructive.  They are @emph{potentially}
+destructive.
+
+What this means is that you may only apply linear--update procedures to
+values that you know are ``dead'', values that will never be used again
+in your program.  This must be so, since you can't rely on the value
+passed to a linear--update procedure after that procedure has been
+called.  It might be unchanged; it might be altered.
+
+The ``linear'' in ``linear update'' doesn't mean ``linear time'' or
+``linear space'' or any sort of multiple--of--n kind of meaning.  It's a
+fancy term that type theorists and pure functional programmers use to
+describe systems where you are only allowed to have exactly one
+reference to each variable.  This provides a guarantee that the value
+bound to a variable is bound to no other variable.  So when you use a
+variable in a variable reference, you ``use it up''.  Knowing that no
+one else has a pointer to that value means the a system primitive is
+free to side--effect its arguments to produce what is, observationally,
+a pure--functional result.
+
+In the context of this library, ``linear update'' means you, the
+programmer, know there are no other live references to the value passed
+to the procedure; after passing the value to one of these procedures,
+the value of the old pointer is indeterminate.  Basically, you are
+licensing the Scheme implementation to alter the data structure if it
+feels like it; you have declared you don't care either way.
+
+You get no help from Scheme in checking that the values you claim are
+``linear'' really are.  So you better get it right.  Or play it safe and
+use the non--@code{!} procedures; it doesn't do any good to compute
+quickly if you get the wrong answer.
+
+Why go to all this trouble to define the notion of ``linear update'' and
+use it in a procedure spec, instead of the more common notion of a
+``destructive'' operation?
+
+First, note that destructive list--processing procedures are almost
+always used in a linear--update fashion.  This is in part required by
+the special case of operating upon the empty list, which can't be
+side--effected.  This means that destructive operators are not pure
+side--effects, they have to return a result.
+
+Second, note that code written using linear--update operators can be
+trivially ported to a pure, functional subset of Scheme by simply
+providing pure implementations of the linear--update operators.
+
+Finally, requiring destructive side--effects ruins opportunities to
+parallelise these operations, and the places where one has taken the
+trouble to spell out destructive operations are usually exactly the code
+one would want a parallelising compiler to parallelise: the
+efficiency--critical kernels of the algorithm.
+
+Linear--update operations are easily parallelised.  Going with a
+linear--update spec doesn't close off these valuable alternative
+implementation techniques.  This list library is intended as a set of
+low--level, basic operators, so we don't want to exclude these possible
+implementations.
+
+The linear--update procedures in this library are:
+
+@example
+alist-delete!           append!
+append-map!             append-reverse!
+break!                  concatenate!
+delete!                 delete-duplicates!
+drop-right!             filter!
+lset-adjoin!            lset-diff+intersection!
+lset-difference!        lset-xor!
+lset-intersection!      lset-union!
+map!                    partition!
+remove!                 reverse!
+span!                   split-at!
+take!                   take-while!
+@end example
+
+@c page
+@node srfi list disc improper
+@subsubsection Improper Lists
+
+
+Scheme does not properly have a list type, just as the C language does
+not have a string type.  Rather, Scheme has a binary--tuple type, from
+which one can build binary trees.  There is an interpretation of Scheme
+values that allows one to treat these trees as lists.  Further
+complications ensue from the fact that Scheme allows side--effects to
+these tuples, raising the possibility of lists of unbounded length, and
+trees of unbounded depth (that is, circular data structures).
+
+However, there is a simple view of the world of Scheme values that
+considers every value to be a list of some sort.  That is, every value
+is either:
+
+@itemize
+@item
+a ``proper list'' (a finite, nil--terminated list) such as:
+
+@example
+(a b c)
+()
+(32)
+@end example
+
+@item
+a ``dotted list'' (a finite, non--nil terminated list) such as:
+
+@example
+(a b c . d)
+(x . y)
+42
+george
+@end example
+
+@item
+or a ``circular list'' (an infinite, unterminated list).
+@end itemize
+
+Note that the zero--length dotted lists are simply all the non--null,
+non--pair values.
+
+This view is captured by the predicates @func{proper-list?},
+@func{dotted-list?}, and @func{circular-list?}.  This list library users
+should note that dotted lists are not commonly used, and are considered
+by many Scheme programmers to be an ugly artifact of Scheme's lack of a
+true list type.  However, dotted lists do play a noticeable role in the
+syntax of Scheme, in the ``rest'' parameters used by n--ary lambdas:
+
+@example
+(lambda (x y . rest) ...)
+@end example
+
+Dotted lists are not fully supported by this list library.  Most
+procedures are defined only on proper lists, that is: finite,
+nil--terminated lists.  The procedures that will also handle circular or
+dotted lists are specifically marked.  While this design decision
+restricts the domain of possible arguments one can pass to these
+procedures, it has the benefit of allowing the procedures to catch the
+error cases where programmers inadvertently pass scalar values to a list
+procedure by accident, e.g., by switching the arguments to a procedure
+call.
+
+@c page
+@node srfi list disc errors
+@subsubsection Errors
+
+
+Note that statements of the form ``it is an error'' merely mean ``don't
+do that''.  They are no a guarantees that a conforming implementation
+will ``catch'' such improper use by, for example, raising some kind of
+exception.  Regrettably, @rnrs{5} Scheme requires no firmer guarantee
+even for basic operators such as @func{car} and @func{cdr}, so there's
+little point in requiring these procedures to do more.  Here is the
+relevant section of the @rnrs{5}:
+
+@quotation
+When speaking of an error situation, this report uses the phrase ``an
+error is signalled'' to indicate that implementations must detect and
+report the error.  If such wording does not appear in the discussion of
+an error, then implementations are not required to detect or report the
+error, though they are encouraged to do so.  An error situation that
+implementations are not required to detect is usually referred to simply
+as ``an error''.
+
+For example, it is an error for a procedure to be passed an argument
+that the procedure is not explicitly specified to handle, even though
+such domain errors are seldom mentioned in this report.  Implementations
+may extend a procedure's domain of definition to include such arguments.
+@end quotation
+
+@c page
+@node srfi list disc not included
+@subsubsection Not included in this library
+
+
+The following items are not in this library:
+
+@itemize
+@item
+sort routines;
+
+@item
+destructuring/pattern--matching macro;
+
+@item
+tree--processing routines.
+@end itemize
+
+@noindent
+they should have their own @srfi{} specs.
+
+@c page
+@node srfi list spec
+@subsection Specifications
+
+
+@cindex List library interface
+
+
+@menu
+* srfi list spec intro::        Introduction.
+* srfi list spec cons::         Constructors.
+* srfi list spec pred::         Predicates.
+* srfi list spec select::       Selectors.
+* srfi list spec misc::         Miscellaneous: length, append,
+                                concatenate, reverse, zip and
+                                count.
+* srfi list spec fold::         Fold, unfold and map.
+* srfi list spec filter::       Filtering and partitioning.
+* srfi list spec search::       Searching.
+* srfi list spec delete::       Deletion.
+* srfi list spec alist::        Association lists.
+* srfi list spec set::          Set operations on lists.
+* srfi list spec side::         Primitive side--effects.
+@end menu
+
+@c page
+@node srfi list spec intro
+@subsubsection Introduction
+
+
+In a Scheme system that has a module or package system, these procedures
+should be contained in a module named @code{list-lib}.  The templates
+given below obey the following conventions for procedure formals:
+
+@table @code
+@item list
+a proper (finite, nil--terminated) list;
+
+@item clist
+a proper or circular list;
+
+@item flist
+a finite (proper or dotted) list;
+
+@item pair
+a pair;
+
+@item x, y, d, a
+any value;
+
+@item object, value
+any value;
+
+@item n, i
+a natural number (an integer >= 0);
+
+@item proc
+a procedure;
+
+@item pred
+a procedure whose return value is treated as a boolean;
+
+@item =
+a boolean procedure taking two arguments.
+@end table
+
+It is an error to pass a circular or dotted list to a procedure not
+defined to accept such an argument.
+
+@c page
+@node srfi list spec cons
+@subsubsection Constructors
+
+
+@cindex List constructors
+
+
+@defun cons @var{a} @var{d}
+@rnrs{5} The primitive constructor.  Return a newly allocated pair whose
+car is @var{a} and whose cdr is @var{d}.  The pair is guaranteed to be
+different (in the sense of @func{eqv?}) from every existing object.
+
+@example
+(cons 'a '())        => (a)
+(cons '(a) '(b c d)) => ((a) b c d)
+(cons "a" '(b c))    => ("a" b c)
+(cons 'a 3)          => (a . 3)
+(cons '(a b) 'c)     => ((a b) . c)
+@end example
+@end defun
+
+
+@defun list @var{object} ...
+@rnrs{5} Return a newly allocated list of its arguments.
+
+@example
+(list 'a (+ 3 4) 'c) =>  (a 7 c)
+(list)               =>  ()
+@end example
+@end defun
+
+
+@defun xcons @var{d} @var{a}
+Defined as @code{(lambda (d a) (cons a d))}.  Of utility only as a value
+to be conveniently passed to higher--order procedures.
+
+@example
+(xcons '(b c) 'a) => (a b c)
+@end example
+
+The name stands for ``eXchanged CONS''.
+@end defun
+
+
+@defun {cons*} @var{elt1} @var{elt2} ...
+Like @func{list}, but the last argument provides the tail of the
+constructed list, returning:
+
+@example
+(cons elt1 (cons elt2 (cons ... eltn)))
+@end example
+
+This function is called @func{list*} in Common Lisp and about half of
+the Schemes that provide it, and @func{cons*} in the other half.
+
+@example
+(cons* 1 2 3 4) => (1 2 3 . 4)
+(cons* 1) => 1
+@end example
+@end defun
+
+
+@defun make-list @var{n} [@var{fill}]
+Return an @var{n}--element list, whose elements are all the value
+@var{fill}.  If the fill argument is not given, the elements of the list
+may be arbitrary values.
+
+@example
+(make-list 4 'c) => (c c c c)
+@end example
+@end defun
+
+
+@defun list-tabulate @var{n} @var{init-proc}
+Return an @var{n}--element list.  Element @var{i} of the list, where
+@code{0 <= i < n}, is produced by @code{(init-proc i)}.  No guarantee is
+made about the dynamic order in which @var{init-proc} is applied to
+these indices.
+
+@example
+(list-tabulate 4 values) => (0 1 2 3)
+@end example
+@end defun
+
+
+@defun list-copy @var{flist}
+Copy the spine of the argument.
+@end defun
+
+
+@defun circular-list @var{elt1} @var{elt2} ...
+Construct a circular list of the elements.
+
+@example
+(circular-list 'z 'q) => (z q z q z q ...)
+@end example
+@end defun
+
+
+@defun iota @var{count} [@var{start} @var{step}]
+Return a list containing the elements:
+
+@example
+(start start+step ... start+(count-1)*step)
+@end example
+
+The @var{start} and @var{step} parameters default to @code{0} and
+@code{1}, respectively.  This procedure takes its name from the
+@acronym{APL} primitive.
+
+@example
+(iota 5) => (0 1 2 3 4)
+(iota 5 0 -0.1) => (0 -0.1 -0.2 -0.3 -0.4)
+@end example
+@end defun
+
+@c page
+@node srfi list spec pred
+@subsubsection Predicates
+
+
+@cindex List predicates
+
+
+Note: the predicates @func{proper-list?}, @func{circular-list?}, and
+@func{dotted-list?} partition the entire universe of Scheme values.
+
+@defun proper-list? @var{x}
+Return true if, and only if, @var{x} is a proper list: a finite,
+nil--terminated list.  More carefully: The empty list is a proper list.
+A pair whose cdr is a proper list is also a proper list:
+
+@example
+<proper-list> ::= ()                            (Empty proper list)
+              |   (cons <x> <proper-list>)      (Proper-list pair)
+@end example
+
+Note that this definition rules out circular lists.  This function is
+required to detect this case and return false.
+
+Nil--terminated lists are called ``proper'' lists by @rnrs{5} and Common
+Lisp.  The opposite of proper is improper.
+
+@rnrs{5} binds this function to the variable @func{list?}.
+
+@example
+(not (proper-list? x)) = (or (dotted-list? x) (circular-list? x))
+@end example
+@end defun
+
+
+@defun circular-list? @var{x}
+True if @var{x} is a circular list.  A circular list is a value such
+that for every @code{n >= 0}, @code{cdrn(x)} is a pair.
+
+Terminology: The opposite of circular is finite.
+
+@example
+(not (circular-list? x)) = (or (proper-list? x) (dotted-list? x))
+@end example
+@end defun
+
+
+@defun dotted-list? @var{x}
+True if @var{x} is a finite, non--nil--terminated list.  That is, there
+exists an @code{n >= 0} such that @code{cdrn(x)} is neither a pair nor
+@code{()}.  This includes non--pair, non--@code{()} values
+(e.g. symbols, numbers), which are considered to be dotted lists of
+length 0.
+
+@example
+(not (dotted-list? x)) = (or (proper-list? x) (circular-list? x))
+@end example
+@end defun
+
+
+@defun pair? @var{object}
+@rnrs{5} Return @true{} if object is a pair; otherwise @false{}.
+
+@example
+(pair? '(a . b)) =>  #t
+(pair? '(a b c)) =>  #t
+(pair? '())      =>  #f
+(pair? '#(a b))  =>  #f
+(pair? 7)        =>  #f
+(pair? 'a)       =>  #f
+@end example
+@end defun
+
+
+@defun null? @var{object}
+@rnrs{5} Return @true{}t if object is the empty list; otherwise
+@false{}.
+@end defun
+
+
+@defun null-list? list
+@var{list} is a proper or circular list.  This procedure returns true if
+the argument is the empty list @code{()}, and @false{} otherwise.  It is
+an error to pass this procedure a value which is not a proper or
+circular list.  This procedure is recommended as the termination
+condition for list--processing procedures that are not defined on dotted
+lists.
+@end defun
+
+
+@defun not-pair? @var{x}
+Defined as: @code{(lambda (x) (not (pair? x)))}.  Provided as a
+procedure as it can be useful as the termination condition for
+list--processing procedures that wish to handle all finite lists, both
+proper and dotted.
+@end defun
+
+
+@defun list= @var{elt=} @var{list1} ...
+Determines list equality, given an element--equality procedure
+@var{elt=}.  Proper list @var{AL} equals proper list @var{BL} if they
+are of the same length, and their corresponding elements are equal, as
+determined by @var{elt=}.  If the element--comparison procedure's first
+argument is from @var{listi}, then its second argument is from
+@var{listi+1}, i.e. it is always called as @code{(elt= a b)} for @var{a}
+an element of list @var{AL}, and @var{b} an element of list @var{BL}.
+
+In the n--ary case, every @var{listi} is compared to @var{listi+1} (as
+opposed, for example, to comparing @var{list1} to every @var{listi}, for
+@code{i>1}).  If there are no list arguments at all, @func{list=} simply
+returns true.
+
+It is an error to apply @func{list=} to anything except proper lists.
+While implementations may choose to extend it to circular lists, note
+that it cannot reasonably be extended to dotted lists, as it provides no
+way to specify an equality procedure for comparing the list terminators.
+
+Note that the dynamic order in which the @var{elt=} procedure is applied
+to pairs of elements is not specified.  For example, if @func{list=} is
+applied to three lists, @var{AL}, @var{BL}, and @var{CL}, it may first
+completely compare @var{AL} to @var{BL}, then compare @var{BL} to
+@var{CL}, or it may compare the first elements of @var{AL} and @var{BL},
+then the first elements of @var{BL} and @var{CL}, then the second
+elements of @var{AL} and @var{BL}, and so forth.
+
+The equality procedure must be consistent with @func{eq?}.  That is, it
+must be the case that:
+
+@example
+(eq? x y) => (elt= x y)
+@end example
+
+Note that this implies that two lists which are @func{eq?} are always
+@func{list=}, as well; implementations may exploit this fact to
+``short--cut'' the element--by--element comparisons.
+
+@example
+(list= eq?) => #t       ; Trivial cases
+(list= eq? '(a)) => #t
+@end example
+@end defun
+
+@c page
+@node srfi list spec select
+@subsubsection Selectors
+
+
+@cindex List selectors
+
+
+@defun car @var{pair}
+@defunx cdr @var{pair}
+@rnrs{5} These functions return the contents of the car and cdr field of
+their argument, respectively.  Note that it is an error to apply them to
+the empty list.
+
+@example
+(car '(a b c))     =>  a       | (cdr '(a b c))     =>  (b c)
+(car '((a) b c d)) =>  (a)     | (cdr '((a) b c d)) =>  (b c d)
+(car '(1 . 2))     =>  1       | (cdr '(1 . 2))     =>  2
+(car '())          =>  *error* | (cdr '())          =>  *error*
+@end example
+@end defun
+
+
+@defun caar @var{pair}
+@defunx cadr @var{pair}
+@defunx c...r @var{pair}
+@defunx cdddar @var{pair}
+@defunx cddddr @var{pair}
+@rnrs{5} These procedures are compositions of @func{car} and @func{cdr},
+where for example @func{caddr} could be defined by:
+
+@example
+(define caddr (lambda (x) (car (cdr (cdr x)))))
+@end example
+
+Arbitrary compositions, up to four deep, are provided. There are
+twenty-eight of these procedures in all.
+@end defun
+
+
+@defun list-ref @var{clist} @var{i}
+@rnrs{5} Return the @var{i}-th element of clist.  This is the same as
+the car of @code{(drop clist i)}.  It is an error if @code{i >= n},
+where @var{n} is the length of clist.
+
+@example
+(list-ref '(a b c d) 2) => c
+@end example
+@end defun
+
+
+@defun first   pair -> object
+@defunx second  @var{pair}
+@defunx third   @var{pair}
+@defunx fourth  @var{pair}
+@defunx fifth   @var{pair}
+@defunx sixth   @var{pair}
+@defunx seventh @var{pair}
+@defunx eighth  @var{pair}
+@defunx ninth   @var{pair}
+@defunx tenth   @var{pair}
+Synonyms for @func{car}, @func{cadr}, @func{caddr}, ...
+
+@example
+(third '(a b c d e)) => c
+@end example
+@end defun
+
+
+@defun {car+cdr} @var{pair}
+The fundamental pair deconstructor:
+
+@example
+(lambda (p) (values (car p) (cdr p)))
+@end example
+
+This can, of course, be implemented more efficiently by a compiler.
+@end defun
+
+
+@defun take @var{x} @var{i}
+@defunx drop @var{x} @var{i}
+@func{take} returns the first @var{i} elements of list @var{x}.
+@func{drop} returns all but the first @var{i} elements of list @var{x}.
+
+@example
+(take '(a b c d e)  2) => (a b)
+(drop '(a b c d e)  2) => (c d e)
+@end example
+
+@var{x} may be any value: a proper, circular, or dotted list:
+
+@example
+(take '(1 2 3 . d) 2) => (1 2)
+(drop '(1 2 3 . d) 2) => (3 . d)
+(take '(1 2 3 . d) 3) => (1 2 3)
+(drop '(1 2 3 . d) 3) => d
+@end example
+
+For a legal @var{i}, @func{take} and @func{drop} partition the list in a
+manner which can be inverted with append:
+
+@example
+(append (take x i) (drop x i)) = x
+@end example
+
+@func{drop} is exactly equivalent to performing @var{i} @func{cdr}
+operations on @var{x}; the returned value shares a common tail with
+@var{x}.
+
+If the argument is a list of non--zero length, @func{take} is guaranteed
+to return a freshly--allocated list, even in the case where the entire
+list is taken, e.g. @code{(take lis (length lis))}.
+@end defun
+
+
+@defun take-right @var{flist} @var{i}
+@defunx drop-right @var{flist} @var{i}
+@func{take-right} returns the last @var{i} elements of @var{flist}.
+@func{drop-right} returns all but the last @var{i} elements of
+@var{flist}.
+
+@example
+(take-right '(a b c d e) 2) => (d e)
+(drop-right '(a b c d e) 2) => (a b c)
+@end example
+
+The returned list may share a common tail with the argument list.
+
+@var{flist} may be any finite list, either proper or dotted:
+
+@example
+(take-right '(1 2 3 . d) 2) => (2 3 . d)
+(drop-right '(1 2 3 . d) 2) => (1)
+(take-right '(1 2 3 . d) 0) => d
+(drop-right '(1 2 3 . d) 0) => (1 2 3)
+@end example
+
+For a legal @var{i}, @func{take-right} and @var{drop-right} partition
+the list in a manner which can be inverted with append:
+
+@example
+(append (take flist i) (drop flist i)) = flist
+@end example
+
+The return value of @func{take-right} is guaranteed to share a common
+tail with @var{flist}.
+
+If the argument is a list of non--zero length, @func{drop-right} is
+guaranteed to return a freshly--allocated list, even in the case where
+nothing is dropped, e.g. @code{(drop-right lis 0)}.
+@end defun
+
+
+@defun take! @var{x} @var{i}
+@defunx drop-right! @var{flist} @var{i}
+@func{take!} and @func{drop-right!} are linear--update variants of
+@func{take} and @func{drop-right}: the procedure is allowed, but not
+required, to alter the argument list to produce the result.
+
+If @var{x} is circular, @func{take!} may return a
+shorter--than--expected list:
+
+@example
+(take! (circular-list 1 3 5) 8) => (1 3)
+(take! (circular-list 1 3 5) 8) => (1 3 5 1 3 5 1 3)
+@end example
+@end defun
+
+
+@defun split-at @var{x} @var{i}
+@defunx split-at! @var{x} @var{i}
+@func{split-at} splits the list @var{x} at index @var{i}, returning a
+list of the first @var{i} elements, and the remaining tail.  It is
+equivalent to:
+
+@example
+(values (take x i) (drop x i))
+@end example
+
+@func{split-at!} is the linear--update variant.  It is allowed, but not
+required, to alter the argument list to produce the result.
+
+@example
+(split-at '(a b c d e f g h) 3)
+=> (a b c)
+   (d e f g h)
+@end example
+@end defun
+
+
+@defun last @var{pair}
+@defunx last-pair @var{pair}
+@func{last} returns the last element of the non--empty, finite list
+@var{pair}.  @func{last-pair} returns the last pair in the non--empty,
+finite list @var{pair}.
+
+@example
+(last '(a b c)) => c
+(last-pair '(a b c)) => (c)
+@end example
+@end defun
+
+@c page
+@node srfi list spec misc
+@subsubsection Miscellaneous: length, append, concatenate, reverse, zip and count
+
+
+@cindex List length
+@cindex List appending
+@cindex List contatenation
+@cindex List reversing
+@cindex List zip
+@cindex List counting
+
+
+@defun length @var{list}
+@defunx {length+} @var{clist}
+Both @func{length} and @func{length+} return the length of the argument.
+It is an error to pass a value to @func{length} which is not a proper
+list (finite and nil--terminated).  In particular, this means an
+implementation may diverge or signal an error when @func{length} is
+applied to a circular list.
+
+@func{length+}, on the other hand, returns @false{} when applied to a
+circular list.
+
+The length of a proper list is a non--negative integer @var{n} such that
+@func{cdr} applied @var{n} times to the list produces the empty list.
+@end defun
+
+
+@defun append @var{list1} ...
+@defunx append! @var{list1} ...
+@rnrs{5} @func{append} returns a list consisting of the elements of
+@var{list1} followed by the elements of the other list parameters.
+
+@example
+(append '(x) '(y))        =>  (x y)
+(append '(a) '(b c d))    =>  (a b c d)
+(append '(a (b)) '((c)))  =>  (a (b) (c))
+@end example
+
+The resulting list is always newly allocated, except that it shares
+structure with the final @var{listi} argument.  This last argument may
+be any value at all; an improper list results if it is not a proper
+list.  All other arguments must be proper lists.
+
+@example
+(append '(a b) '(c . d))  =>  (a b c . d)
+(append '() 'a)           =>  a
+(append '(x y))           =>  (x y)
+(append)                  =>  ()
+@end example
+
+@func{append!} is the linear--update variant of @func{append}; it is
+allowed, but not required, to alter cons cells in the argument lists to
+construct the result list.  The last argument is never altered; the
+result list shares structure with this parameter.
+@end defun
+
+
+@defun concatenate @var{list-of-lists}
+@defunx concatenate! @var{list-of-lists}
+These functions append the elements of their argument together.  That
+is, @func{concatenate} returns:
+
+@example
+(apply append list-of-lists)
+@end example
+
+@noindent
+or, equivalently:
+
+@example
+(reduce-right append '() list-of-lists)
+@end example
+
+@func{concatenate!} is the linear--update variant, defined in terms
+of @func{append!} instead of @func{append}.
+
+Note that some Scheme implementations do not support passing more than a
+certain number (e.g. 64) of arguments to an n--ary procedure.  In these
+implementations, the @code{(apply append ...)} idiom would fail when
+applied to long lists, but concatenate would continue to function
+properly.
+
+As with @func{append} and @func{append!}, the last element of the input
+list may be any value at all.
+@end defun
+
+
+@defun reverse @var{list}
+@defunx reverse! @var{list}
+@rnrs{5} @func{reverse} returns a newly allocated list consisting of the
+elements of @var{list} in reverse order.
+
+@example
+(reverse '(a b c))              =>  (c b a)
+(reverse '(a (b c) d (e (f))))  =>  ((e (f)) d (b c) a)
+@end example
+
+@func{reverse!} is the linear--update variant of @func{reverse}.  It
+is permitted, but not required, to alter the argument's cons cells to
+produce the reversed list.
+@end defun
+
+
+@defun append-reverse @var{rev-head} @var{tail}
+@defunx append-reverse! @var{rev-head} @var{tail}
+@func{append-reverse} returns:
+
+@example
+(append (reverse rev-head) tail)
+@end example
+
+It is provided because it is a common operation, a common
+list--processing style calls for this exact operation to transfer values
+accumulated in reverse order onto the front of another list, and because
+the implementation is significantly more efficient than the simple
+composition it replaces.
+
+@quotation
+But note that this pattern of iterative computation followed by a
+@func{reverse} can frequently be rewritten as a recursion, dispensing
+with the @func{reverse} and @func{append-reverse} steps, and shifting
+temporary, intermediate storage from the heap to the stack, which is
+typically a win for reasons of cache locality and eager storage
+reclamation.
+@end quotation
+
+@func{append-reverse!} is just the linear--update variant; it is
+allowed, but not required, to alter @var{rev-head}'s cons cells to
+construct the result.
+@end defun
+
+
+@defun zip @var{clist1} @var{clist2} ...
+Defined as:
+
+@example
+(lambda lists (apply map list lists))
+@end example
+
+If @func{zip} is passed @var{n} lists, it returns a list as long as the
+shortest of these lists, each element of which is an @var{n}--element
+list comprised of the corresponding elements from the parameter lists.
+
+@example
+(zip '(one two three)
+     '(1 2 3)
+     '(odd even odd even odd even odd even))
+  => ((one 1 odd) (two 2 even) (three 3 odd))
+
+(zip '(1 2 3))
+  => ((1) (2) (3))
+@end example
+
+At least one of the argument lists must be finite:
+
+@example
+(zip '(3 1 4 1) (circular-list #f #t))
+  => ((3 #f) (1 #t) (4 #f) (1 #t))
+@end example
+@end defun
+
+
+@defun unzip1 @var{list}
+@defunx unzip2 @var{list}
+@defunx unzip3 @var{list}
+@defunx unzip4 @var{list}
+@defunx unzip5 @var{list}
+@func{unzip1} takes a list of lists, where every list must contain at
+least one element, and returns a list containing the initial element of
+each such list.  That is, it returns @code{(map car lists)}.
+
+@func{unzip2} takes a list of lists, where every list must contain at
+least two elements, and returns two values: a list of the first
+elements, and a list of the second elements.
+
+@func{unzip3} does the same for the first three elements of the lists,
+and so forth.
+
+@example
+(unzip2 '((1 one) (2 two) (3 three)))
+  => (1 2 3)
+     (one two three)
+@end example
+@end defun
+
+
+@defun count @var{pred} @var{clist1} ...
+@var{pred} is a procedure taking as many arguments as there are lists
+and returning a single value.  It is applied element--wise to the
+elements of the lists, and a count is tallied of the number of elements
+that produce a true value.  This count is returned.
+
+@func{count} is ``iterative'' in that it is guaranteed to apply
+@var{pred} to the list elements in a left--to--right order.  The
+counting stops when the shortest list expires.
+
+@example
+(count even? '(3 1 4 1 5 9 2 5 6))                => 3
+(count <     '(1 2 4 8) '(2 4 6 8 10 12 14 16))   => 3
+@end example
+
+At least one of the argument lists must be finite:
+
+@example
+(count < '(3 1 4 1) (circular-list 1 10)) => 2
+@end example
+@end defun
+
+@c page
+@node srfi list spec fold
+@subsubsection Fold, unfold and map
+
+
+@cindex List fold, unfold and map
+
+
+@defun fold @var{kons} @var{knil} @var{clist1} @var{clist2} ...
+The fundamental list iterator.  First, consider the single
+list--parameter case: if @code{clist1 = (e1 e2 ... en)}, then this
+procedure returns:
+
+@example
+(kons en ... (kons e2 (kons e1 knil)) ... )
+@end example
+
+@noindent
+that is, it obeys the (tail) recursion:
+
+@example
+(fold kons knil lis) = (fold kons (kons (car lis) knil) (cdr lis))
+(fold kons knil '()) = knil
+@end example
+
+Examples:
+
+@example
+(fold + 0 lis)			; Add up the elements of LIS.
+
+(fold cons '() lis)		; Reverse LIS.
+
+(fold cons tail rev-head)	; See APPEND-REVERSE.
+
+;; How many symbols in LIS?
+(fold (lambda (x count) (if (symbol? x) (+ count 1) count))
+      0
+      lis)
+
+;; Length of the longest string in LIS:
+(fold (lambda (s max-len) (max max-len (string-length s)))
+      0
+      lis)
+@end example
+
+If @var{n} list arguments are provided, then the @var{kons} function
+must take @var{n+1} parameters: one element from each list, and the
+``seed'' or fold state, which is initially @var{knil}.  The fold
+operation terminates when the shortest list runs out of values:
+
+@example
+(fold cons* '() '(a b c) '(1 2 3 4 5)) => (c 3 b 2 a 1)
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun fold-right @var{kons} @var{knil} @var{clist1} @var{clist2} ...
+The fundamental list recursion operator.  First, consider the single
+list--parameter case.  If @code{clist1 = (e1 e2 ... en)}, then this
+procedure returns:
+
+@example
+(kons e1 (kons e2 ... (kons en knil)))
+@end example
+
+@noindent
+that is, it obeys the recursion:
+
+@example
+(fold-right kons knil lis) = (kons (car lis) (fold-right kons knil (cdr lis)))
+(fold-right kons knil '()) = knil
+@end example
+
+Examples:
+
+@example
+(fold-right cons '() lis)		; Copy LIS.
+
+;; Filter the even numbers out of LIS.
+(fold-right (lambda (x l) (if (even? x) (cons x l) l)) '() lis))
+@end example
+
+If @var{n} list arguments are provided, then the @var{kons} function
+must take @var{n+1} parameters: one element from each list, and the
+``seed'' or fold state, which is initially @var{knil}.  The fold
+operation terminates when the shortest list runs out of values:
+
+@example
+(fold-right cons* '() '(a b c) '(1 2 3 4 5)) => (a 1 b 2 c 3)
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun pair-fold @var{kons} @var{knil} @var{clist1} @var{clist2} ...
+Analogous to @func{fold}, but @var{kons} is applied to successive
+sublists of the lists, rather than successive elements; that is,
+@var{kons} is applied to the pairs making up the lists, giving this
+(tail) recursion:
+
+@example
+(pair-fold kons knil lis) = (let ((tail (cdr lis)))
+                              (pair-fold kons (kons lis knil) tail))
+(pair-fold kons knil '()) = knil
+@end example
+
+For finite lists, the @var{kons} function may reliably apply
+@func{set-cdr!} to the pairs it is given without altering the sequence
+of execution.
+
+Example:
+
+@example
+;;; Destructively reverse a list.
+(pair-fold (lambda (pair tail) (set-cdr! pair tail) pair) '() lis))
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun pair-fold-right @var{kons} @var{knil} @var{clist1} @var{clist2} ...
+Holds the same relationship with @func{fold-right} that @func{pair-fold}
+holds with fold.  Obeys the recursion:
+
+@example
+(pair-fold-right kons knil lis) =
+    (kons lis (pair-fold-right kons knil (cdr lis)))
+(pair-fold-right kons knil '()) = knil
+@end example
+
+Example:
+
+@example
+(pair-fold-right cons '() '(a b c)) => ((a b c) (b c) (c))
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun reduce @var{f} @var{ridentity} @var{list}
+@func{reduce} is a variant of @func{fold}.  @var{ridentity} should be a
+``right identity'' of the procedure @var{f}; that is, for any value
+@var{x} acceptable to @var{f}:
+
+@example
+(f x ridentity) = x
+@end example
+
+@func{reduce} has the following definition:
+
+@example
+if list = (), return ridentity;
+otherwise, return (fold f (car list) (cdr list)).
+@end example
+
+@noindent
+in other words, we compute @code{(fold f ridentity list)}.
+
+Note that @var{ridentity} is used only in the empty--list case.
+
+You typically use @func{reduce} when applying @var{f} is expensive and
+you'd like to avoid the extra application incurred when fold applies
+@var{f} to the head of list and the identity value, redundantly
+producing the same value passed in to @var{f}.  For example, if @var{f}
+involves searching a file directory or performing a database query, this
+can be significant.
+
+In general, however, @func{fold} is useful in many contexts where
+@func{reduce} is not (consider the examples given in the @func{fold}
+definition: only one of the five folds uses a function with a right
+identity; the other four may not be performed with @func{reduce}).
+
+Note: @acronym{MIT} Scheme and Haskell flip @var{f}'s arguments order
+for their @func{reduce} and @func{fold} functions.
+
+@example
+;; Take the max of a list of non-negative integers.
+(reduce max 0 nums) ; i.e., (apply max 0 nums)
+@end example
+@end defun
+
+
+@defun reduce-right @var{f} @var{ridentity} @var{list}
+@func{reduce-right} is the @func{fold-right} variant of
+@func{reduce}.  It obeys the following definition:
+
+@example
+(reduce-right f ridentity '()) = ridentity
+(reduce-right f ridentity '(e1)) = (f e1 ridentity) = e1
+(reduce-right f ridentity '(e1 e2 ...)) =
+    (f e1 (reduce f ridentity (e2 ...)))
+@end example
+
+@noindent
+in other words, we compute @code{(fold-right f ridentity list)}.
+
+@example
+;; Append a bunch of lists together.
+;; I.e., (apply append list-of-lists)
+(reduce-right append '() list-of-lists)
+@end example
+@end defun
+
+
+@defun unfold @var{p} @var{f} @var{g} @var{seed} [@var{tail-gen}]
+@func{unfold} is best described by its basic recursion:
+
+@example
+(unfold p f g seed) =
+    (if (p seed)
+        (tail-gen seed)
+      (cons (f seed)
+            (unfold p f g (g seed))))
+@end example
+
+@table @var
+@item p
+Determines when to stop unfolding.
+
+@item f
+Maps each seed value to the corresponding list element.
+
+@item g
+Maps each seed value to next seed value.
+
+@item seed
+The ``state'' value for the unfold.
+
+@item tail-gen
+Creates the tail of the list; defaults to @code{(lambda (x) '())}.
+@end table
+
+In other words, we use @var{g} to generate a sequence of seed values:
+
+@example
+seed, g(seed), g2(seed), g3(seed), ...
+@end example
+
+These seed values are mapped to list elements by @var{f}, producing the
+elements of the result list in a left--to--right order.  @var{p} says
+when to stop.
+
+@func{unfold} is the fundamental recursive list constructor, just as
+@func{fold-right} is the fundamental recursive list consumer.  While
+@func{unfold} may seem a bit abstract to novice functional programmers,
+it can be used in a number of ways:
+
+@example
+;; List of squares: 1^2 ... 10^2
+(unfold (lambda (x) (> x 10))
+        (lambda (x) (* x x))
+    lambda (x) (+ x 1))
+    1)
+
+(unfold null-list? car cdr lis) ; Copy a proper list.
+
+;; Read current input port into a list of values.
+(unfold eof-object? values (lambda (x) (read)) (read))
+
+;; Copy a possibly non-proper list:
+(unfold not-pair? car cdr lis values)
+
+;; Append HEAD onto TAIL:
+(unfold null-list? car cdr head (lambda (x) tail))
+@end example
+
+Interested functional programmers may enjoy noting that
+@func{fold-right} and @func{unfold} are in some sense inverses.  That
+is, given operations @var{knull?}, @var{kar}, @var{kdr}, @var{kons}, and
+@var{knil} satisfying:
+
+@example
+(kons (kar x) (kdr x)) = x and (knull? knil) = #t
+@end example
+
+@noindent
+then:
+
+@example
+(fold-right kons knil (unfold knull? kar kdr x)) = x
+@end example
+
+@noindent
+and:
+
+@example
+(unfold knull? kar kdr (fold-right kons knil x)) = x.
+@end example
+
+This combinator sometimes is called an ``anamorphism''; when an explicit
+@var{tail-gen} procedure is supplied, it is called an ``apomorphism''.
+@end defun
+
+
+@defun unfold-right @var{p} @var{f} @var{g} @var{seed} [@var{tail}]
+@func{unfold-right} constructs a list with the following loop:
+
+@example
+(let lp ([seed seed]
+         [lis tail])
+  (if (p seed)
+      lis
+    (lp (g seed)
+        (cons (f seed) lis))))
+@end example
+
+@table @var
+@item p
+Determines when to stop unfolding.
+
+@item f
+Maps each seed value to the corresponding list element.
+
+@item g
+Maps each seed value to next seed value.
+
+@item seed
+The ``state'' value for the unfold.
+
+@item tail
+List terminator; defaults to @code{'()}.
+@end table
+
+In other words, we use @var{g} to generate a sequence of seed values:
+
+@example
+seed, g(seed), g2(seed), g3(seed), ...
+@end example
+
+@noindent
+these seed values are mapped to list elements by @var{f}, producing the
+elements of the result list in a right--to--left order.  @var{p} says
+when to stop.
+
+@func{unfold-right} is the fundamental iterative list constructor, just
+as @func{fold} is the fundamental iterative list consumer.  While
+@func{unfold-right} may seem a bit abstract to novice functional
+programmers, it can be used in a number of ways:
+
+@example
+;; List of squares: 1^2 ... 10^2
+(unfold-right zero?
+              (lambda (x) (* x x))
+              (lambda (x) (- x 1))
+              10)
+
+;; Reverse a proper list.
+(unfold-right null-list? car cdr lis)
+
+;; Read current input port into a list of values.
+(unfold-right eof-object? values (lambda (x) (read)) (read))
+
+;; (append-reverse rev-head tail)
+(unfold-right null-list? car cdr rev-head tail)
+@end example
+
+Interested functional programmers may enjoy noting that @func{fold} and
+@func{unfold-right} are in some sense inverses.  That is, given
+operations @var{knull?}, @var{kar}, @var{kdr}, @var{kons}, and
+@var{knil} satisfying:
+
+@example
+(kons (kar x) (kdr x)) = x and (knull? knil) = #t
+@end example
+
+@noindent
+then:
+
+@example
+(fold kons knil (unfold-right knull? kar kdr x)) = x
+@end example
+
+@noindent
+and:
+
+@example
+(unfold-right knull? kar kdr (fold kons knil x)) = x.
+@end example
+
+This combinator presumably has some pretentious mathematical name;
+interested readers are invited to communicate it to the author.
+@end defun
+
+
+@defun map @var{proc} @var{clist1} @var{clist2} ...
+@rnrs{5}+ @var{proc} is a procedure taking as many arguments as there
+are list arguments and returning a single value.  @func{map} applies
+@var{proc} element--wise to the elements of the lists and returns a list
+of the results, in order.  The dynamic order in which @var{proc} is
+applied to the elements of the lists is unspecified.
+
+@example
+(map cadr '((a b) (d e) (g h))) =>  (b e h)
+
+(map (lambda (n) (expt n n))
+     '(1 2 3 4 5))
+  =>  (1 4 27 256 3125)
+
+(map + '(1 2 3) '(4 5 6)) =>  (5 7 9)
+
+(let ([count 0])
+  (map (lambda (ignored)
+         (set! count (+ count 1))
+         count)
+       '(a b)))
+  =>  (1 2) or (2 1)
+@end example
+
+This procedure is extended from its @rnrs{5} specification to allow the
+arguments to be of unequal length; it terminates when the shortest list
+runs out.
+
+At least one of the argument lists must be finite:
+
+@example
+(map + '(3 1 4 1) (circular-list 1 0)) => (4 1 5 1)
+@end example
+@end defun
+
+
+@defun for-each @var{proc} @var{clist1} @var{clist2} ...
+@rnrs{5}+ The arguments to @func{for-each} are like the arguments to
+@func{map}, but @func{for-each} calls @var{proc} for its side effects
+rather than for its values.  Unlike @func{map}, @func{for-each} is
+guaranteed to call @var{proc} on the elements of the lists in order from
+the first element(s) to the last, and the value returned by
+@func{for-each} is unspecified.
+
+@example
+(let ([v (make-vector 5)])
+  (for-each (lambda (i)
+              (vector-set! v i (* i i)))
+            '(0 1 2 3 4))
+  v)  =>  #(0 1 4 9 16)
+@end example
+
+This procedure is extended from its @rnrs{5} specification to allow the
+arguments to be of unequal length; it terminates when the shortest list
+runs out.
+
+At least one of the argument lists must be finite.
+@end defun
+
+
+@defun append-map @var{f} @var{clist1} @var{clist2} ...
+@defunx append-map! @var{f} @var{clist1} @var{clist2} ...
+Equivalent to:
+
+@example
+(apply append (map f clist1 clist2 ...))
+@end example
+
+@noindent
+and:
+
+@example
+(apply append! (map f clist1 clist2 ...))
+@end example
+
+Map @var{f} over the elements of the lists, just as in the @func{map}
+function.  However, the results of the applications are appended
+together to make the final result.  @func{append-map} uses @func{append}
+to append the results together; @func{append-map!} uses @func{append!}.
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.
+
+Example:
+
+@example
+(append-map! (lambda (x) (list x (- x))) '(1 3 8))
+  => (1 -1 3 -3 8 -8)
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun {map!} @var{f} @var{list1} @var{clist2} ...
+Linear--update variant of @func{map}, @func{map!} is allowed, but not
+required, to alter the cons cells of @var{list1} to construct the result
+list.
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.  In the n--ary case, @var{clist2}, @var{clist3},
+... must have at least as many elements as @var{list1}.
+@end defun
+
+
+@defun map-in-order @var{f} @var{clist1} @var{clist2} ...
+A variant of the @func{map} procedure that guarantees to apply @var{f}
+across the elements of the @var{listi} arguments in a left--to--right
+order.  This is useful for mapping procedures that both have side
+effects and return useful values.
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun pair-for-each @var{f} @var{clist1} @var{clist2} ...
+Like @func{for-each}, but @var{f} is applied to successive sublists of
+the argument lists.  That is, @var{f} is applied to the cons cells of
+the lists, rather than the lists' elements.  These applications occur in
+left--to--right order.
+
+The @var{f} procedure may reliably apply @func{set-cdr!} to the pairs it
+is given without altering the sequence of execution.
+
+@example
+(pair-for-each (lambda (pair) (display pair) (newline)) '(a b c)) ==>
+    (a b c)
+    (b c)
+    (c)
+@end example
+
+At least one of the list arguments must be finite.
+@end defun
+
+
+@defun filter-map @var{f} @var{clist1} @var{clist2} ...
+Like @func{map}, but only true values are saved.
+
+@example
+(filter-map (lambda (x)
+              (and (number? x) (* x x)))
+            '(a 1 b 3 c 7))
+  => (1 9 49)
+@end example
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.
+
+At least one of the list arguments must be finite.
+@end defun
+
+@c page
+@node srfi list spec filter
+@subsubsection Filtering and partitioning
+
+
+@cindex List filtering
+
+
+@defun filter @var{pred} @var{list}
+@defunx filter! @var{pred} @var{list}
+Return all the elements of @var{list} that satisfy predicate @var{pred}.
+The list is not disordered: elements that appear in the result list
+occur in the same order as they occur in @var{list}.  The returned list
+may share a common tail with @var{list}.  The dynamic order in which the
+various applications of @var{pred} are made is not specified.
+
+@example
+(filter even? '(0 7 8 8 43 -4)) => (0 8 8 -4)
+@end example
+
+@func{filter!} is the linear--update variant of @func{filter}.  It is
+allowed, but not required, to alter the cons cells in @var{list} to
+construct the result lists.
+@end defun
+
+
+@defun partition @var{pred} @var{list}
+@defunx partition! @var{pred} @var{list}
+Partition the elements of @var{list} with predicate @var{pred}, and
+return two values: the list of in--elements and the list of
+out--elements.  The list is not disordered: elements occur in the result
+lists in the same order as they occur in @var{list}.  The dynamic order
+in which the various applications of @var{pred} are made is not
+specified.  One of the returned lists may share a common tail with
+@var{list}.
+
+@example
+(partition symbol? '(one 2 3 four five 6))
+  => (one four five)
+     (2 3 6)
+@end example
+
+@func{partition!} is the linear--update variant of @func{partition}.
+It is allowed, but not required, to alter the cons cells in @var{list}
+to construct the result lists.
+@end defun
+
+
+@defun remove @var{pred} @var{list}
+@defunx remove! @var{pred} @var{list}
+Return @var{list} without the elements that satisfy predicate
+@var{pred}:
+
+@example
+(lambda (pred list)
+  (filter (lambda (x)
+            (not (pred x)))
+          list))
+@end example
+
+The list is not disordered: elements that appear in the result list
+occur in the same order as they occur in @var{list}.  The returned list
+may share a common tail with @var{list}.  The dynamic order in which the
+various applications of pred are made is not specified.
+
+@example
+(remove even? '(0 7 8 8 43 -4)) => (7 43)
+@end example
+
+@func{remove!} is the linear--update variant of @func{remove}.  It is
+allowed, but not required, to alter the cons cells in @var{list} to
+construct the result lists.
+@end defun
+
+@c page
+@node srfi list spec search
+@subsubsection Searching
+
+
+@cindex List searching
+@cindex Searching in lists
+
+
+The following procedures all search lists for a leftmost element
+satisfying some criteria.  This means they do not always examine the
+entire list; thus, there is no efficient way for them to reliably detect
+and signal an error when passed a dotted or circular list.  Here are the
+general rules describing how these procedures work when applied to
+different kinds of lists:
+
+@table @emph
+@item proper lists
+The standard, canonical behavior happens in this case.
+
+@item dotted lists
+It is an error to pass these procedures a dotted list that does not
+contain an element satisfying the search criteria.  That is, it is an
+error if the procedure has to search all the way to the end of the
+dotted list.
+
+However, this @srfi{} does not specify anything at all about the
+behavior of these procedures when passed a dotted list containing an
+element satisfying the search criteria.  It may finish successfully,
+signal an error, or perform some third action.
+
+Different implementations may provide different functionality in this
+case; code which is compliant with this @srfi{} may not rely on any
+particular behavior.  Future @srfi{}'s may refine @ansrfi{1} to define
+specific behavior in this case.
+
+In brief, @ansrfi{1} compliant code may not pass a dotted list argument to
+these procedures.
+
+@item circular lists
+It is an error to pass these procedures a circular list that does not
+contain an element satisfying the search criteria.  Note that the
+procedure is not required to detect this case; it may simply diverge.
+It is, however, acceptable to search a circular list if the search is
+successful; that is, if the list contains an element satisfying the
+search criteria.
+@end table
+
+Here are some examples, using the @func{find} and @func{any} procedures
+as canonical representatives:
+
+@example
+;; Proper list -- success
+(find even? '(1 2 3))	=> 2
+(any  even? '(1 2 3))	=> #t
+
+;; proper list -- failure
+(find even? '(1 7 3))	=> #f
+(any  even? '(1 7 3))	=> #f
+
+;; Failure is error on a dotted list.
+(find even? '(1 3 . x))	=> error
+(any  even? '(1 3 . x))	=> error
+
+;; The dotted list contains an element satisfying the search.
+;; This case is not specified -- it could be success, an error,
+;; or some third possibility.
+(find even? '(1 2 . x))	=> error/undefined
+(any  even? '(1 2 . x))	=> error/undefined ; success, error or other.
+
+;; circular list -- success
+(find even? (circular-list 1 6 3)) => 6
+(any  even? (circular-list 1 6 3)) => #t
+
+;; circular list -- failure is error. Procedure may diverge.
+(find even? (circular-list 1 3)) => error
+(any  even? (circular-list 1 3)) => error
+@end example
+
+
+@defun find @var{pred} @var{clist}
+Return the first element of @var{clist} that satisfies predicate
+@var{pred}; return @false{} if no element does.
+
+@example
+(find even? '(3 1 4 1 5 9)) => 4
+@end example
+
+Note that @func{find} has an ambiguity in its lookup semantics: if
+@func{find} returns @false{}, you cannot tell (in general) if it found a
+@false{} element that satisfied @var{pred}, or if it did not find any
+element at all.  In many situations, this ambiguity cannot arise: either
+the list being searched is known not to contain any @false{} elements,
+or the list is guaranteed to have an element satisfying @var{pred}.
+However, in cases where this ambiguity can arise, you should use
+@func{find-tail} instead of @func{find}, @func{find-tail} has no such
+ambiguity:
+
+@example
+(cond [(find-tail pred lis) => (lambda (pair) ...)] ; Handle (CAR PAIR)
+      [else ...]) ; Search failed.
+@end example
+@end defun
+
+
+@defun find-tail @var{pred} @var{clist}
+Return the first pair of @var{clist} whose car satisfies @var{pred}.  If
+no pair does, return @false{}.
+
+@func{find-tail} can be viewed as a general--predicate variant of the
+@func{member} function.
+
+Examples:
+
+@example
+(find-tail even? '(3 1 37 -8 -5 0 0)) => (-8 -5 0 0)
+(find-tail even? '(3 1 37 -5)) => #f
+
+;; MEMBER X LIS:
+(find-tail (lambda (elt) (equal? x elt)) lis)
+@end example
+
+In the circular--list case, this procedure ``rotates'' the list.
+
+@func{find-tail} is essentially @func{drop-while}, where the sense of
+the predicate is inverted: @func{find-tail} searches until it finds an
+element satisfying the predicate; @func{drop-while} searches until it
+finds an element that doesn't satisfy the predicate.
+@end defun
+
+
+@defun take-while @var{pred} @var{clist}
+@defunx take-while! @var{pred} @var{clist}
+Return the longest initial prefix of @var{clist} whose elements all
+satisfy the predicate @var{pred}.
+
+@func{take-while!} is the linear--update variant.  It is allowed, but
+not required, to alter the argument list to produce the result.
+
+Example:
+
+@example
+(take-while even? '(2 18 3 10 22 9)) => (2 18)
+@end example
+@end defun
+
+
+@defun drop-while @var{pred} @var{clist}
+Drops the longest initial prefix of @var{clist} whose elements all
+satisfy the predicate @var{pred}, and returns the rest of the list.
+
+Example:
+
+@example
+(drop-while even? '(2 18 3 10 22 9)) => (3 10 22 9)
+@end example
+
+The circular--list case may be viewed as ``rotating'' the list.
+@end defun
+
+
+@defun span @var{pred} @var{clist}
+@defunx span! @var{pred} @var{list}
+@defunx break @var{pred} @var{clist}
+@defunx break! @var{pred} @var{list}
+@func{span} splits the list into the longest initial prefix whose
+elements all satisfy @var{pred}, and the remaining tail.  @func{break}
+inverts the sense of the predicate: the tail commences with the first
+element of the input list that satisfies the predicate.
+
+In other words: @func{span} finds the intial span of elements satisfying
+@var{pred}, and @func{break} breaks the list at the first element
+satisfying @var{pred}.
+
+@func{span} is equivalent to:
+
+@example
+(values (take-while pred clist)
+        (drop-while pred clist))
+@end example
+
+@func{span!} and @func{break!} are the linear--update variants.  They
+are allowed, but not required, to alter the argument list to produce the
+result.
+
+Examples:
+
+@example
+(span even? '(2 18 3 10 22 9))
+  => (2 18)
+     (3 10 22 9)
+
+(break even? '(3 1 4 1 5 9))
+  => (3 1)
+     (4 1 5 9)
+@end example
+@end defun
+
+
+@defun any @var{pred} @var{clist1} @var{clist2} ...
+Apply the predicate across the lists, returning true if the predicate
+returns true on any application.
+
+If there are n list arguments @var{clist1} ... @var{clistn}, then
+@var{pred} must be a procedure taking n arguments and returning a
+boolean result.
+
+@func{any} applies @var{pred} to the first elements of the @var{clisti}
+parameters.  If this application returns a true value, @func{any}
+immediately returns that value.  Otherwise, it iterates, applying pred
+to the second elements of the @var{clisti} parameters, then the third,
+and so forth.  The iteration stops when a true value is produced or one
+of the lists runs out of values; in the latter case, @func{any} returns
+@false{}.  The application of @var{pred} to the last element of the
+lists is a tail call.
+
+Note the difference between @func{find} and @func{any}: @func{find}
+returns the element that satisfied the predicate; @func{any} returns the
+true value that the predicate produced.
+
+Like @func{every}, @func{any}'s name does not end with a question mark:
+this is to indicate that it does not return a simple boolean (@true{} or
+@false{}), but a general value.
+
+Examples:
+
+@example
+(any integer? '(a 3 b 2.7))   => #t
+(any integer? '(a 3.1 b 2.7)) => #f
+(any < '(3 1 4 1 5)
+       '(2 7 1 8 2)) => #t
+@end example
+@end defun
+
+
+@defun every @var{pred} @var{clist1} @var{clist2} ...
+Apply the predicate across the lists, returning true if the predicate
+returns true on every application.
+
+If there are n list arguments @var{clist1} ... @var{clistn}, then
+@var{pred} must be a procedure taking n arguments and returning a
+boolean result.
+
+@func{every} applies @var{pred} to the first elements of the
+@var{clisti} parameters.  If this application returns @false{},
+@func{every} immediately returns @false{}.  Otherwise, it iterates,
+applying @var{pred} to the second elements of the @var{clisti}
+parameters, then the third, and so forth.  The iteration stops when a
+@false{} value is produced or one of the lists runs out of values.  In
+the latter case, @func{every} returns the true value produced by its
+final application of @var{pred}.  The application of @var{pred} to the
+last element of the lists is a tail call.
+
+If one of the @var{clisti} has no elements, @func{every} simply returns
+@true{}.
+
+Like @func{any}, @func{every}'s name does not end with a question mark:
+this is to indicate that it does not return a simple boolean (@true{} or
+@false{}), but a general value.
+@end defun
+
+
+@defun list-index @var{pred} @var{clist1} @var{clist2} ...
+Return the index of the leftmost element that satisfies @var{pred}.
+
+If there are n list arguments, then @var{pred} must be a function taking
+n arguments and returning a boolean result.
+
+@func{list-index} applies @var{pred} to the first elements of the
+@var{clisti} parameters.  If this application returns true,
+@func{list-index} immediately returns zero.  Otherwise, it iterates,
+applying @var{pred} to the second elements of the @var{clisti}
+parameters, then the third, and so forth.  When it finds a tuple of list
+elements that cause @var{pred} to return true, it stops and returns the
+zero--based index of that position in the lists.
+
+The iteration stops when one of the lists runs out of values; in this
+case, @func{list-index} returns @false{}.
+
+Examples:
+
+@example
+(list-index even? '(3 1 4 1 5 9)) => 2
+(list-index < '(3 1 4 1 5 9 2 5 6) '(2 7 1 8 2)) => 1
+(list-index = '(3 1 4 1 5 9 2 5 6) '(2 7 1 8 2)) => #f
+@end example
+@end defun
+
+
+@defun member @var{x} @var{list} [@var{=}]
+@defunx memq @var{x} @var{list}
+@defunx memv @var{x} @var{list}
+@rnrs{5}+ These procedures return the first sublist of @var{list} whose
+car is @var{x}, where the sublists of list are the non--empty lists
+returned by @code{(drop list i)} for @var{i} less than the length of
+@var{list}.  If @var{x} does not occur in @var{list}, then @false{} is
+returned.
+
+@func{memq} uses @func{eq?} to compare @var{x} with the elements of
+@var{list}, while @var{memv} uses @func{eqv?}, and @func{member} uses
+@func{equal?}.
+
+Examples:
+
+@example
+(memq 'a '(a b c))          =>  (a b c)
+(memq 'b '(a b c))          =>  (b c)
+(memq 'a '(b c d))          =>  #f
+(memq (list 'a) '(b (a) c)) =>  #f
+(member (list 'a)
+        '(b (a) c))         =>  ((a) c)
+(memq 101 '(100 101 102))   =>  *unspecified*
+(memv 101 '(100 101 102))   =>  (101 102)
+@end example
+
+@func{member} is extended from its @rnrs{5} definition to allow the
+client to pass in an optional equality procedure @var{=} used to compare
+keys.
+
+The comparison procedure is used to compare the elements @var{ei} of
+list to the key @var{x} in this way:
+
+@example
+(= x ei) ; list is (E1 ... En)
+@end example
+
+@noindent
+that is, the first argument is always @var{x}, and the second argument
+is one of the list elements.  Thus one can reliably find the first
+element of list that is greater than five with @code{(member 5 list <)}.
+
+Note that fully general list searching may be performed with the
+@func{find-tail} and @func{find} procedures:
+
+@example
+(find-tail even? list) ; Find the first elt with an even key.
+@end example
+@end defun
+
+@c page
+@node srfi list spec delete
+@subsubsection Deletion
+
+
+@cindex List deletion
+
+
+@defun delete @var{x} @var{list} [@var{=}]
+@defunx delete! @var{x} @var{list} [@var{=}]
+Use the comparison procedure @var{=} (which defaults to @func{equal?})
+to find all elements of list that are equal to @var{x}, and delete them
+from @var{list}.  The dynamic order in which the various applications of
+@var{=} are made is not specified.
+
+The list is not disordered: elements that appear in the result list
+occur in the same order as they occur in the argument list.  The result
+may share a common tail with the argument list.
+
+Note that fully general element deletion can be performed with the
+@func{remove} and @func{remove!} procedures:
+
+@example
+;; Delete all the even elements from LIS:
+(remove even? lis)
+@end example
+
+The comparison procedure is used in this way: @code{(= x ei)}; that is,
+@var{x} is always the first argument, and a list element is always the
+second argument.  The comparison procedure will be used to compare each
+element of list exactly once; the order in which it is applied to the
+various @var{ei} is not specified.  Thus, one can reliably remove all
+the numbers greater than 5 from a list with @code{(delete 5 list <)}.
+
+@func{delete!} is the linear--update variant of @func{delete}.  It is
+allowed, but not required, to alter the cons cells in its argument list
+to construct the result.
+@end defun
+
+
+@defun delete-duplicates @var{list} [@var{=}]
+@defunx {delete-duplicates!} @var{list} [@var{=}]
+Remove duplicate elements from the list argument.  If there are multiple
+equal elements in @var{list}, the result list only contains the first or
+leftmost of these elements in the result.  The order of these surviving
+elements is the same as in the original list: @func{delete-duplicates}
+does not disorder the list (hence it is useful for ``cleaning up''
+association lists).
+
+The @var{=} parameter is used to compare the elements of the list; it
+defaults to @func{equal?}.  If @var{x} comes before @var{y} in
+@var{list}, then the comparison is performed @code{(= x y)}.  The
+comparison procedure will be used to compare each pair of elements in
+list no more than once; the order in which it is applied to the various
+pairs is not specified.
+
+Implementations of @func{delete-duplicates} are allowed to share common
+tails between argument and result lists; for example, if the list
+argument contains only unique elements, it may simply return exactly
+this list.
+
+Be aware that, in general, @func{delete-duplicates} runs in time O(n2)
+for n--element lists.  Uniquifying long lists can be accomplished in O(n
+lg n) time by sorting the list to bring equal elements together, then
+using a linear--time algorithm to remove equal elements.  Alternatively,
+one can use algorithms based on element--marking, with linear--time
+results.
+
+@func{delete-duplicates!} is the linear--update variant of
+@func{delete-duplicates}; it is allowed, but not required, to alter the
+cons cells in its argument list to construct the result.
+
+@example
+(delete-duplicates '(a b a c a b c z)) => (a b c z)
+
+;; Clean up an alist:
+(delete-duplicates '((a . 3) (b . 7) (a . 9) (c . 1))
+                   (lambda (x y)
+                     (eq? (car x) (car y))))
+  => ((a . 3) (b . 7) (c . 1))
+@end example
+@end defun
+
+@c page
+@node srfi list spec alist
+@subsubsection Association lists
+
+
+@cindex List, association lists
+@cindex Association lists
+@cindex Alists
+
+
+An ``association list'' (or ``alist'') is a list of pairs.  The car of
+each pair contains a key value, and the cdr contains the associated data
+value.  They can be used to construct simple look--up tables in Scheme.
+Note that association lists are probably inappropriate for
+performance--critical use on large data; in these cases, hash tables or
+some other alternative should be employed.
+
+
+@defun assoc @var{key} @var{alist} [@var{=}]
+@defunx assq @var{key} @var{alist}
+@defunx assv @var{key} @var{alist}
+@rnrs{5}+ @var{alist} must be an association list: a list of pairs.
+These procedures find the first pair in @var{alist} whose car field is
+@var{key}, and returns that pair.  If no pair in @var{alist} has
+@var{key} as its car, then @false{} is returned.
+
+@func{assq} uses @func{eq?} to compare @var{key} with the car fields of
+the pairs in @var{alist}, while @func{assv} uses @func{eqv?} and
+@func{assoc} uses @func{equal?}.
+
+Example:
+
+@example
+(define e '((a 1) (b 2) (c 3)))
+(assq 'a e)                            =>  (a 1)
+(assq 'b e)                            =>  (b 2)
+(assq 'd e)                            =>  #f
+(assq (list 'a) '(((a)) ((b)) ((c))))  =>  #f
+(assoc (list 'a) '(((a)) ((b)) ((c)))) =>  ((a))
+(assq 5 '((2 3) (5 7) (11 13)))    =>  *unspecified*
+(assv 5 '((2 3) (5 7) (11 13)))    =>  (5 7)
+@end example
+
+@func{assoc} is extended from its @rnrs{5} definition to allow the
+client to pass in an optional equality procedure @var{=} used to compare
+keys.
+
+The comparison procedure is used to compare the elements @var{ei} of
+list to the key parameter in this way:
+
+@example
+(= key (car ei)) ; list is (E1 ... En)
+@end example
+
+@noindent
+that is, the first argument is always @var{key}, and the second argument
+is one of the list elements.  Thus one can reliably find the first entry
+of @var{alist} whose @var{key} is greater than five with @code{(assoc 5
+alist <)}.
+
+Note that fully general alist searching may be performed with the
+@func{find-tail} and @func{find} procedures:
+
+@example
+;; Look up the first association in alist with an even key:
+(find (lambda (a)
+        (even? (car a)))
+      alist)
+@end example
+@end defun
+
+
+@defun alist-cons @var{key} @var{datum} @var{alist}
+Defined as:
+
+@example
+(lambda (key datum alist)
+  (cons (cons key datum) alist))
+@end example
+
+Cons a new alist entry mapping @var{key} to @var{datum} onto
+@var{alist}.
+@end defun
+
+
+@defun alist-copy @var{alist}
+Make a fresh copy of @var{alist}.  This means copying each pair that
+forms an association as well as the spine of the list:
+
+@example
+(lambda (a)
+  (map (lambda (elt)
+         (cons (car elt) (cdr elt)))
+       a))
+@end example
+@end defun
+
+
+@defun alist-delete @var{key} @var{alist} [@var{=}]
+@defunx alist-delete! @var{key} @var{alist} [@var{=}]
+Delete all associations from @var{alist} with the given @var{key}, using
+the key-comparison procedure @var{=}, which defaults to @func{equal?}.
+The dynamic order in which the various applications of @var{=} are made
+is not specified.
+
+Return values may share common tails with the @var{alist} argument.  The
+alist is not disordered: elements that appear in the result alist occur
+in the same order as they occur in @var{alist}.
+
+The comparison procedure is used to compare the element keys @var{ki} of
+@var{alist}'s entries to the key parameter in this way: @code{(= key
+ki)}.  Thus, one can reliably remove all entries of @var{alist} whose
+key is greater than five with @code{(alist-delete 5 alist <)}.
+
+@func{alist-delete!} is the linear--update variant of
+@func{alist-delete}; it is allowed, but not required, to alter cons
+cells from the alist parameter to construct the result.
+@end defun
+
+@c page
+@node srfi list spec set
+@subsubsection Set operations on lists
+
+
+@cindex List set operations
+@cindex Set operations on lists
+
+
+These procedures implement operations on sets represented as lists of
+elements.  They all take an @var{=} argument used to compare elements of
+lists.  This equality procedure is required to be consistent with
+@func{eq?}.  That is, it must be the case that:
+
+@example
+(eq? x y) => (= x y)
+@end example
+
+Note that this implies, in turn, that two lists that are @func{eq?} are
+also set--equal by any legal comparison procedure.  This allows for
+constant--time determination of set operations on @func{eq?} lists.
+
+Be aware that these procedures typically run in time O(n * m) for n--
+and m--element list arguments.  Performance--critical applications
+operating upon large sets will probably wish to use other data
+structures and algorithms.
+
+
+@defun lset<= @var{=} @var{list1} ...
+Return true if, and only if, every @var{listi} is a subset of
+@var{listi+1}, using @var{=} for the element--equality procedure.  List
+@var{AL} is a subset of list @var{BL} if every element in @var{AL} is
+equal to some element of @var{BL}.  When performing an element
+comparison, the @var{=} procedure's first argument is an element of
+@var{AL}, its second argument an element of @var{BL}.
+
+Examples:
+
+@example
+(lset<= eq? '(a) '(a b a) '(a b c c)) => #t
+
+(lset<= eq?) => #t             ; Trivial cases
+(lset<= eq? '(a)) => #t
+@end example
+@end defun
+
+
+@defun lset= @var{=} @var{list1} @var{list2} ...
+Return true if, and only if, every @var{listi} is set--equal to
+@var{listi+1}, using @var{=} for the element--equality procedure.
+``Set--equal'' simply means that @var{listi} is a subset of
+@var{listi+1}, and @var{listi+1} is a subset of @var{listi}.  The
+@var{=} procedure's first argument is an element of @var{listi}, its
+second argument is an element of @var{listi+1}.
+
+Examples:
+
+@example
+(lset= eq? '(b e a) '(a e b) '(e e b a)) => #t
+
+(lset= eq?) => #t               ; Trivial cases
+(lset= eq? '(a)) => #t
+@end example
+@end defun
+
+
+@defun lset-adjoin @var{=} @var{list} @var{elt1} ...
+Add the @var{elti} elements not already in the @var{list} parameter to
+the result list.  The result shares a common tail with the @var{list}
+parameter.  The new elements are added to the front of the list, but no
+guarantees are made about their order.  The @var{=} parameter is an
+equality procedure used to determine if an elti is already a member of
+list.  Its first argument is an element of @var{list}, its second is one
+of the @var{elti}.
+
+The @var{list} parameter is always a suffix of the result; even if the
+list parameter contains repeated elements, these are not reduced.
+
+Example:
+
+@example
+(lset-adjoin eq? '(a b c d c e) 'a 'e 'i 'o 'u)
+  => (u o i a b c d c e)
+@end example
+@end defun
+
+
+@defun lset-union @var{=} @var{list1} ...
+@defunx lset-union! @var{=} @var{list1} ...
+Return the union of the lists, using @var{=} for the element--equality
+procedure.
+
+The union of lists @var{AL} and @var{BL} is constructed as follows:
+
+@enumerate
+@item
+If @var{AL} is the empty list, the answer is @var{BL} (or a copy of
+@var{BL}).
+
+@item
+Otherwise, the result is initialised to be list @var{AL} (or a copy of
+@var{AL}).
+
+@item
+Proceed through the elements of list @var{BL} in a left--to--right
+order.  If @var{b} is such an element of @var{BL}, compare every element
+@var{r} of the current result list to @var{b}: @code{(= r b)}.  If all
+comparisons fail, @var{b} is consed onto the front of the result.
+@end enumerate
+
+However, there is no guarantee that @var{=} will be applied to every
+pair of arguments from @var{AL} and @var{BL}.  In particular, if
+@var{AL} is @func{eq?} to @var{BL}, the operation may immediately
+terminate.
+
+In the n--ary case, the two--argument @func{list-union} operation is
+simply folded across the argument lists.
+
+Examples:
+
+@example
+(lset-union eq? '(a b c d e) '(a e i o u))
+  => (u o i a b c d e)
+
+;; Repeated elements in LIST1 are preserved.
+(lset-union eq? '(a a c) '(x a x)) => (x a a c)
+
+;; Trivial cases
+(lset-union eq?) => ()
+(lset-union eq? '(a b c)) => (a b c)
+@end example
+
+@func{lset-union!} is the linear--update variant of @func{lset-union}.
+It is allowed, but not required, to use the cons cells in the first list
+parameter to construct its answer.  @func{lset-union!} is permitted to
+recycle cons cells from any of its list arguments.
+@end defun
+
+
+@defun lset-intersection @var{=} @var{list1} @var{list2} ...
+@defunx lset-intersection! @var{=} @var{list1} ...
+Return the intersection of the lists, using @var{=} for the
+element--equality procedure.
+
+The intersection of lists @var{AL} and @var{BL} is comprised of every
+element of @var{AL} that is @var{=} to some element of @var{BL}:
+@code{(= a b)}, for @var{a} in @var{AL}, and @var{b} in @var{BL}.  Note
+this implies that an element which appears in @var{BL} and multiple
+times in list @var{AL} will also appear multiple times in the result.
+
+The order in which elements appear in the result is the same as they
+appear in @var{list1}; that is, @func{lset-intersection} essentially
+filters @var{list1}, without disarranging element order.  The result may
+share a common tail with @var{list1}.
+
+In the n--ary case, the two--argument @func{list-intersection} operation
+is simply folded across the argument lists.  However, the dynamic order
+in which the applications of @var{=} are made is not specified.  The
+procedure may check an element of @var{list1} for membership in every
+other list before proceeding to consider the next element of
+@var{list1}, or it may completely intersect @var{list1} and @var{list2}
+before proceeding to @var{list3}, or it may go about its work in some
+third order.
+
+Examples:
+
+@example
+(lset-intersection eq? '(a b c d e) '(a e i o u))
+  => (a e)
+
+;; Repeated elements in LIST1 are preserved.
+(lset-intersection eq? '(a x y a) '(x a x z))
+  => '(a x a)
+
+(lset-intersection eq? '(a b c))        ; Trivial case
+  => (a b c)
+@end example
+
+@func{lset-intersection!} is the linear--update variant of
+@func{lset-intersection}.  It is allowed, but not required, to use the
+cons cells in the first list parameter to construct its answer.
+@end defun
+
+
+@defun lset-difference @var{=} @var{list1} @var{list2} ...
+@defunx lset-difference! @var{=} @var{list1} ...
+Return the difference of the lists, using @var{=} for the
+element--equality procedure: all the elements of @var{list1} that are
+not @var{=} to any element from one of the other @var{listi} parameters.
+
+The @var{=} procedure's first argument is always an element of
+@var{list1}; its second is an element of one of the other @var{listi}.
+Elements that are repeated multiple times in the @var{list1} parameter
+will occur multiple times in the result.
+
+The order in which elements appear in the result is the same as they
+appear in @var{list1}; that is, @func{lset-difference} essentially
+filters @var{list1}, without disarranging element order.  The result may
+share a common tail with @var{list1}.
+
+The dynamic order in which the applications of @var{=} are made is not
+specified.  The procedure may check an element of @var{list1} for
+membership in every other list before proceeding to consider the next
+element of @var{list1}, or it may completely compute the difference of
+@var{list1} and @var{list2} before proceeding to @var{list3}, or it may
+go about its work in some third order.
+
+@example
+(lset-difference eq? '(a b c d e) '(a e i o u))
+  => (b c d)
+
+(lset-difference eq? '(a b c))   ; Trivial case
+  => (a b c)
+@end example
+
+@func{lset-difference!} is the linear--update variant of
+@func{lset-difference}.  It is allowed, but not required, to use the
+cons cells in the first list parameter to construct its answer.
+@end defun
+
+
+@defun lset-xor @var{=} @var{list1} ...
+@defunx lset-xor! @var{=} @var{list1} ...
+Return the exclusive--or of the sets, using @var{=} for the
+element--equality procedure.  If there are exactly two lists, this is
+all the elements that appear in exactly one of the two lists.  The
+operation is associative, and thus extends to the n--ary case, in which
+the result is a list of the elements that appear in an odd number of the
+lists.  The result may share a common tail with any of the @var{listi}
+parameters.
+
+More precisely, for two lists @var{AL} and @var{BL}, @var{AL} xor
+@var{BL} is a list of:
+
+@itemize
+@item
+every element @var{a} of @var{AL} such that there is no element @var{b}
+of @var{BL} such that @code{(= a b)}, and
+
+@item
+every element @var{b} of @var{BL} such that there is no element @var{a}
+of @var{AL} such that @code{(= b a)}.
+@end itemize
+
+However, an implementation is allowed to assume that @var{=} is
+symmetric; that is, that @code{(= a b) => (= b a)}.
+
+This means, for example, that if a comparison @code{(= a b)} produces
+true for some @var{a} in @var{AL} and @var{b} in @var{BL}, both @var{a}
+and @var{b} may be removed from inclusion in the result.
+
+In the n--ary case, the binary--xor operation is simply folded across
+the lists.
+
+Examples:
+
+@example
+(lset-xor eq? '(a b c d e) '(a e i o u))
+  => (d c b i o u)
+
+;; Trivial cases.
+(lset-xor eq?) => ()
+(lset-xor eq? '(a b c d e)) => (a b c d e)
+@end example
+
+@func{lset-xor!} is the linear--update variant of @func{lset-xor}.  It
+is allowed, but not required, to use the cons cells in the first list
+parameter to construct its answer.
+@end defun
+
+
+@defun {lset-diff+intersection} @var{=} @var{list1} @var{list2} ...
+@defunx {lset-diff+intersection!} @var{=} @var{list1} @var{list2} ...
+Return two values: the difference and the intersection of the lists.  It
+is equivalent to:
+
+@example
+(values (lset-difference = list1 list2 ...)
+        (lset-intersection = list1
+                             (lset-union = list2 ...)))
+@end example
+
+@noindent
+but can be implemented more efficiently.
+
+The @var{=} procedure's first argument is an element of @var{list1}; its
+second is an element of one of the other @var{listi}.
+
+Either of the answer lists may share a common tail with @var{list1}.
+This operation essentially partitions @var{list1}.
+
+@func{lset-diff+intersection!} is the linear--update variant of
+@func{lset-diff+intersection}.  It is allowed, but not required, to use
+the cons cells in the first list parameter to construct its answer.
+@end defun
+
+@c page
+@node srfi list spec side
+@subsubsection Primitive side--effects
+
+
+@cindex List side effects
+@cindex Side effects on lists
+
+
+These two procedures are the primitive, @rnrs{5} side--effect operations
+on pairs.
+
+@defun set-car! @var{pair} @var{object}
+@defunx set-cdr! pair @var{object}
+@rnrs{5} These procedures store object in the car and cdr field of pair,
+respectively.  The returned value is unspecified.
+
+@example
+(define (f) (list 'not-a-constant-list))
+(define (g) '(constant-list))
+(set-car! (f) 3) =>  *unspecified*
+(set-car! (g) 3) =>  *error*
+@end example
+@end defun
+
+@c page
+@node srfi list ack
+@subsection Acknowledgements
+
+
+The design of this library benefited greatly from the feedback provided
+during the @srfi{} discussion phase.  Among those contributing
+thoughtful commentary and suggestions, both on the mailing list and by
+private discussion, were Mike Ashley, Darius Bacon, Alan Bawden, Phil
+Bewig, Jim Blandy, Dan Bornstein, Per Bothner, Anthony Carrico, Doug
+Currie, Kent Dybvig, Sergei Egorov, Doug Evans, Marc Feeley, Matthias
+Felleisen, Will Fitzgerald, Matthew Flatt, Dan Friedman, Lars Thomas
+Hansen, Brian Harvey, Erik Hilsdale, Wolfgang Hukriede, Richard Kelsey,
+Donovan Kolbly, Shriram Krishnamurthi, Dave Mason, Jussi Piitulainen,
+David Pokorny, Duncan Smith, Mike Sperber, Maciej Stachowiak, Harvey
+J. Stein, John David Stone, and Joerg F. Wittenberger.  I am grateful to
+them for their assistance.
+
+I am also grateful the authors, implementors and documentors of all the
+systems mentioned in the rationale.  Aubrey Jaffer and Kent Pitman
+should be noted for their work in producing Web--accessible versions of
+the @rnrs{5} and Common Lisp spec, which was a tremendous aid.
+
+This is not to imply that these individuals necessarily endorse the
+final results, of course.
+
+@c page
+@node srfi list references
+@subsection References
+
+
+This document, in @acronym{HTML}:
+
+@center @url{http://srfi.schemers.org/srfi-1/srfi-1.html}
+
+@noindent
+source code for the reference implementation:
+
+@center @url{http://srfi.schemers.org/srfi-1/srfi-1-reference.scm}
+
+@noindent
+archive of @ansrfi{1} discussion--list email:
+
+@center @url{http://srfi.schemers.org/srfi-1/mail-archive/maillist.html}
+
+@noindent
+@srfi{} web site:
+
+@center @url{http://srfi.schemers.org/}
+
+@noindent
+@emph{Common Lisp: the Language}.  Guy L. Steele Jr. (editor).  Digital
+Press, Maynard, Mass., second edition 1990.  Available at:
+
+@center @url{http://www.elwood.com/alu/table/references.htm#cltl2}
+
+@noindent
+@emph{The Common Lisp "HyperSpec"}, produced by Kent Pitman, is
+essentially the @ansi{} spec for Common Lisp:
+
+@center @url{http://www.harlequin.com/education/books/HyperSpec/}
+
+@emph{Revised^5 report on the algorithmic language Scheme}.  R. Kelsey,
+W. Clinger, J. Rees (editors).  Higher--Order and Symbolic Computation,
+Vol. 11, No. 1, September, 1998, and ACM SIGPLAN Notices, Vol. 33,
+No. 9, October, 1998.  Available at
+
+@center @url{http://www.schemers.org/Documents/Standards/}
+
