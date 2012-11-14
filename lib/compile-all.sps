@@ -50,6 +50,41 @@
 
   (only (vicare assembler inspection))
   (only (vicare debugging compiler))
+
+;;; --------------------------------------------------------------------
+
+  (only (srfi :0))
+  (only (srfi :1))
+  (only (srfi :2))
+  (only (srfi :6))
+  (only (srfi :8))
+  (only (srfi :9))
+  (only (srfi :11))
+  (only (srfi :13))
+  (only (srfi :14))
+  (only (srfi :16))
+  (only (srfi :19))
+  (only (srfi :23))
+  (only (srfi :25))
+  (only (srfi :26))
+  (only (srfi :27))
+  (only (srfi :31))
+  (only (srfi :37))
+  (only (srfi :38))
+  (only (srfi :39))
+  (only (srfi :41))
+  (only (srfi :42))
+  (only (srfi :43))
+  (only (srfi :45))
+  (only (srfi :48))
+  (only (srfi :61))
+  (only (srfi :64))
+  (only (srfi :67))
+  (only (srfi :69))
+  (only (srfi :78))
+  (only (srfi :98))
+  (only (srfi :99))
+
   )
 
 ;;; end of file
