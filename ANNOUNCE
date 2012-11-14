@@ -42,6 +42,13 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d20
 -------------------------
 
+* BACKWARDS INCOMPATIBILITY  Starting with  this revision  the libraries
+  installed  by the  package are  under "$prefix/vicare-scheme",  rather
+  than under "$prefix/scheme".
+
+* Starting  with this  revision, the  SRFI libraries  ported to  R6RS by
+  Derick Eddington are included in the distribution.
+
 * Added functions to (vicare):
 
     printer-integer-radix
@@ -96,9 +103,6 @@ Notes for revision 0.2d20
 
   to enable or  disable inlining of calls  to CALL-WITH-VALUES.  Default
   to disable.
-
-* Starting  with this  revision, the  SRFI libraries  ported to  R6RS by
-  Derick Eddington are included in the distribution.
 
 
 Notes for revision 0.2d19
