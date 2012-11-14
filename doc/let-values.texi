@@ -1,0 +1,134 @@
+@node srfi let-values
+@section @ansrfi{11} syntax for receiving multiple values
+
+
+@cindex @srfi{} let-values
+
+
+The library @library{srfi :11} is by Lars T Hansen as the reference
+implementation for @ansrfi{11}; see:
+
+@center @url{http://srfi.schemers.org/srfi-11/srfi-11.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi let-values license::     Let-Values document license.
+* srfi let-values abstract::    Abstract.
+* srfi let-values rationale::   Rationale.
+* srfi let-values spec::        Specification.
+@end menu
+
+@c page
+@node srfi let-values license
+@subsection Let-Values document license
+
+
+Copyright @copyright{} 1999 Lars T Hansen.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi let-values abstract
+@subsection Abstract
+
+
+This @srfi{} introduces syntactic forms @func{let-values} and
+@func{let*-values} that bind the values of expressions that return
+multiple values.
+
+@c page
+@node srfi let-values rationale
+@subsection Rationale
+
+
+@func{let-values} and @func{let*-values} reduce the clutter of the
+@func{call-with-values} notation for receiving multiple values.
+
+@c page
+@node srfi let-values spec
+@subsection Specification
+
+
+@cindex @srfi{} let-values @api{}
+
+
+@deffn Syntax let-values ((@var{formals} @var{expression}) ...) @var{body}
+Each @var{formals} should be a formal arguments list as for a
+@func{lambda} expression (cf section 4.1.4 of the @rnrs{5}).
+
+The @var{expression}s are evaluated in the current environment, the
+variables of the @var{formals} are bound to fresh locations, the return
+values of the @var{expression}s are stored in the variables, the
+@var{body} is evaluated in the extended environment, and the values of
+the last expression of @var{body} are returned.  The @var{body} is a
+@code{tail-body} (cf section 3.5 of the @rnrs{5}).
+
+The matching of each @var{formals} to values is as for the matching of
+@var{formals} to arguments in a @func{lambda} expression, and it is an
+error for an @var{expression} to return a number of values that does not
+match its corresponding @var{formals}.
+
+Examples:
+
+@example
+(let-values ([(a b . c) (values 1 2 3 4)])
+  (list a b c))
+=> (1 2 (3 4))
+
+(let ([a 'a]
+      [b 'b]
+      [x 'x]
+      [y 'y])
+  (let-values ([(a b) (values x y)]
+               [(x y) (values a b)])
+    (list a b x y)))
+=> (x y a b)
+@end example
+@end deffn
+
+
+@deffn Syntax {let*-values} ((@var{formals} @var{expression}) ...) @var{body}
+Each @var{formals} should be a formal arguments list as for a
+@func{lambda} expression (cf section 4.1.4 of the @rnrs{5}).
+
+@func{let*-values} is similar to @func{let-values}, but the bindings are
+performed sequentially from left to right, and the region of a binding
+indicated by @code{(formals expression)} is that part of the
+@func{let*-values} expression to the right of the binding.  Thus the
+second binding is done in an environment in which the first binding is
+visible, and so on.
+
+Example:
+
+@example
+(let ([a 'a]
+      [b 'b]
+      [x 'x]
+      [y 'y])
+  (let*-values ([(a b) (values x y)]
+                [(x y) (values a b)])
+    (list a b x y)))
+=> (x y x y)
+@end example
+@end deffn
+
+@c end of file

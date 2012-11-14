@@ -19480,8 +19480,8 @@ minor modification of the original documents by Marco Maggi.
 * srfi receive::                @ansrfi{8} @func{receive}: Binding to
                                 multiple values.
 * srfi records::                @ansrfi{9} defining record types.
-@c * srfi let-values::                   @ansrfi{11} syntax for receiving
-@c                                 multiple values.
+* srfi let-values::             @ansrfi{11} syntax for receiving
+                                multiple values.
 @c * srfi strings::                     @ansrfi{13} string library.
 @c * srfi case-lambda::                 @ansrfi{16} syntax for procedures of
 @c                                 variable arity.
@@ -19512,6 +19512,7 @@ minor modification of the original documents by Marco Maggi.
 @include string-ports.texi
 @include receive.texi
 @include records.texi
+@include let-values.texi
 @include args-fold.texi
 
 @c page

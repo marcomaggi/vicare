@@ -10,6 +10,7 @@ vicare_scheme_TEXINFOS	= \
 	and-let-star.texi	\
 	args-fold.texi		\
 	cond-expand.texi	\
+	let-values.texi		\
 	list.texi		\
 	receive.texi		\
 	records.texi		\
