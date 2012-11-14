@@ -19486,7 +19486,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi case-lambda::            @ansrfi{16} syntax for procedures of
                                 variable arity.
 * srfi time::                   @ansrfi{19} time data types and procedures.
-@c * srfi error-reporting::             @ansrfi{23} error reporting mechanism.
+* srfi error-reporting::        @ansrfi{23} error reporting mechanism.
 @c * srfi shared structures::           @ansrfi{38} representation for data with
 @c                                 shared structure.
 @c * srfi specialize-procedures::       @ansrfi{26} notation for specializing
@@ -19516,6 +19516,7 @@ minor modification of the original documents by Marco Maggi.
 @include strings.texi
 @include case-lambda.texi
 @include time.texi
+@include error-reporting.texi
 
 @include args-fold.texi
 

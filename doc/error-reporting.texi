@@ -1,0 +1,167 @@
+@node srfi error-reporting
+@section @ansrfi{23} error reporting mechanism
+
+
+@cindex @srfi{} error-reporting
+
+
+The library @library{srfi :23} is by Stephan Houben as the reference
+implementation for @ansrfi{23}; see:
+
+@center @url{http://srfi.schemers.org/srfi-23/srfi-23.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi error-reporting license::   Error-reporting document
+                                   license.
+* srfi error-reporting abstract::  Abstract.
+* srfi error-reporting rationale:: Rationale.
+* srfi error-reporting spec::      Specification.
+@end menu
+
+@c page
+@node srfi error-reporting license
+@subsection Error--reporting document license
+
+
+Copyright @copyright{} 2001 Stephan Houben @email{stephanh@@win.tue.nl}.
+All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi error-reporting abstract
+@subsection Abstract
+
+
+A mechanism is proposed to allow Scheme code to report errors and abort
+execution.  The proposed mechanism is already implemented in several
+Scheme systems and can be implemented, albeit imperfectly, in any
+@rnrs{5} conforming Scheme.
+
+@c page
+@node srfi error-reporting rationale
+@subsection Rationale
+
+
+@rnrs{5} Scheme requires certain operations to signal an error when they
+fail.  ``Signalling an error'' means that implementations must detect
+and report the error.  Moreover, @rnrs{5} encourages, but not requires,
+implementations to signal an error in many more circumstances.
+
+However, there is no direct way for the Scheme application programmer to
+report an error that occured in his or her own application.  This means
+that Scheme procedures created by applications or libraries are in this
+respect not on equal footing with procedures provided by the Scheme
+system.
+
+Many Scheme systems already provide a mechanism that allows application
+code to report an error.  At least the following implementations support
+such a mechanism: Bigloo, Guile, @acronym{MIT} Scheme, @acronym{PLT}
+Scheme, RScheme, Scsh, SCM, all implementations supported by Slib.  Of
+these implementations, the following have an error mechanism compatible
+with this @srfi{}: Guile, @acronym{MIT} Scheme, @acronym{PLT} Scheme,
+RScheme, Scsh.  The implementation in Slib has a different name than the
+one proposed in this @srfi{}.
+
+To summarise, many implementations already have the error reporting
+mechanism described in this @srfi{} and others are easily made
+compatible with this @srfi{}.  This shows that the proposed mechanism
+is considered useful and that it is easy to implement in most major
+implementations.
+
+@c page
+@node srfi error-reporting spec
+@subsection Specification
+
+
+@defun error @var{reason} [@var{arg1} [@var{arg2} ...]])
+The argument @var{reason} should be a string.  The procedure error will
+signal an error, as described in @rnrs{5}, and it will report the
+message @var{reason} and the objects @var{arg1}, @var{arg2}, ...
+
+What exactly constitutes ``signalling'' and ``reporting'' is not
+prescribed, because of the large variation in Scheme systems.  So it is
+left to the implementor to do something reasonable.  To that end, a few
+examples of possible behaviour are given.
+
+@enumerate
+@item
+Display @var{reason} and @var{arg1}... on the screen and terminate the
+Scheme program.  This might be suitable for a Scheme system implemented
+as a batch compiler.
+
+@item
+Display @var{reason} and @var{arg1}... on the screen and go back to the
+read--evaluate--print loop.  This might be suitable for an interactive
+implementation.
+
+@item
+In the case of a multi--threaded system: terminate the current thread,
+but do not terminate the other threads.  Possibly make the arguments to
+error available to other threads in some way.  See the
+@func{thread-join!}  mechanism in @ansrfi{18} on how this could be done.
+
+@item
+Package @var{reason} and @var{arg1}... up into an error object and pass
+this error object to an exception handler.  The default exception
+handler then might do something as described in points 1 to 3.
+
+@item
+In the case of a Scheme system that runs completely unattended and that
+has no way to notify a human, the only reasonable course of action might
+be to do nothing at all.  However, this should be considered a last
+resort.  Clearly, if all implementors would choose this strategy, this
+@srfi{} would not be very useful.
+@end enumerate
+
+An implementation might report more information than just @var{reason}
+and @var{arg1}...  For instance, it might report the procedure name in
+which the error occured or even print a stack trace.  However, this will
+require additional support in the Scheme implementation.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Why error is a procedure
+
+
+@noindent
+It is conceivable to allow error to be a special form, such as a macro,
+rather than a procedure.  This might make providing information such as
+the source code location easier.  This possibility has been considered,
+but rejected, for two reasons.
+
+@enumerate
+@item
+Since error accepts a variable number of arguments, it could
+occasionally be useful to use apply to call error.  However, this is not
+possible if error was allowed to be a special form.
+
+@item
+Since error is currently a procedure in all Scheme implementations
+mentioned above, it doesn't seem all that worthwhile to allow it to be a
+special form.
+@end enumerate
+
+@c end of file

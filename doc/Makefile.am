@@ -11,6 +11,7 @@ vicare_scheme_TEXINFOS	= \
 	args-fold.texi		\
 	case-lambda.texi	\
 	cond-expand.texi	\
+	error-reporting.texi	\
 	let-values.texi		\
 	list.texi		\
 	receive.texi		\
