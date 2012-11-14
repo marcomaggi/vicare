@@ -19463,42 +19463,49 @@ be @code{AF_INET} or @code{AF_INET6}.
 A port to @rnrs{6} of the @srfi{} libraries is included in the
 distribution of @value{PRJNAME}.
 
+@quotation
+This @srfi{} documentation is an unofficial Texinfo reformatting and
+minor modification of the original documents by Marco Maggi.
+@end quotation
+
 @menu
-@c * cond-expand::                 @ansrfi{0} feature based conditional
-@c                                 expansion construct.
-@c * list::                        @ansrfi{1} list library.
+* srfi cond-expand::            @ansrfi{0} feature based conditional
+                                expansion construct.
+@c * srfi list::                        @ansrfi{1} list library.
 * srfi and-let-star::           @ansrfi{2} @func{and-let*}.
-@c * string-ports::                @ansrfi{6} basic string ports.
-@c * receive::                     @ansrfi{8} @func{receive}: Binding to
+@c * srfi string-ports::                @ansrfi{6} basic string ports.
+@c * srfi receive::                     @ansrfi{8} @func{receive}: Binding to
 @c                                 multiple values.
-@c * records::                     @ansrfi{9} defining record types.
-@c * let-values::                   @ansrfi{11} syntax for receiving
+@c * srfi records::                     @ansrfi{9} defining record types.
+@c * srfi let-values::                   @ansrfi{11} syntax for receiving
 @c                                 multiple values.
-@c * strings::                     @ansrfi{13} string library.
-@c * case-lambda::                 @ansrfi{16} syntax for procedures of
+@c * srfi strings::                     @ansrfi{13} string library.
+@c * srfi case-lambda::                 @ansrfi{16} syntax for procedures of
 @c                                 variable arity.
-@c * time::                        @ansrfi{19} time data types and procedures.
-@c * error-reporting::             @ansrfi{23} error reporting mechanism.
-@c * shared structures::           @ansrfi{38} representation for data with
+@c * srfi time::                        @ansrfi{19} time data types and procedures.
+@c * srfi error-reporting::             @ansrfi{23} error reporting mechanism.
+@c * srfi shared structures::           @ansrfi{38} representation for data with
 @c                                 shared structure.
-@c * specialize-procedures::       @ansrfi{26} notation for specializing
+@c * srfi specialize-procedures::       @ansrfi{26} notation for specializing
 @c                                 parameters without currying.
-@c * random::                      @ansrfi{27} sources of random bits.
-@c * rec::                         @ansrfi{31} a special form @func{rec}
+@c * srfi random::                      @ansrfi{27} sources of random bits.
+@c * srfi rec::                         @ansrfi{31} a special form @func{rec}
 @c                                 for recursive evaluation.
-@c * parameters::                  @ansrfi{39} parameter objects.
-@c * args-fold::                   @ansrfi{37} a program argument processor.
-@c * streams::                     @ansrfi{41} streams.
-@c * eager-comp::                  @ansrfi{42} eager comprehensions.
-@c * vector::                      @ansrfi{43} vector library.
-@c * general-cond::                @ansrfi{61} a more general @func{cond} clause.
-@c * lightweight-testing::         @ansrfi{78} lightweight testing.
-@c * environment-variables::       @ansrfi{98} environment variables.
+@c * srfi parameters::                  @ansrfi{39} parameter objects.
+* srfi args-fold::              @ansrfi{37} a program argument processor.
+@c * srfi streams::                     @ansrfi{41} streams.
+@c * srfi eager-comp::                  @ansrfi{42} eager comprehensions.
+@c * srfi vector::                      @ansrfi{43} vector library.
+@c * srfi general-cond::                @ansrfi{61} a more general @func{cond} clause.
+@c * srfi lightweight-testing::         @ansrfi{78} lightweight testing.
+@c * srfi environment-variables::       @ansrfi{98} environment variables.
 @end menu
 
 @c ------------------------------------------------------------
 
+@include cond-expand.texi
 @include and-let-star.texi
+@include args-fold.texi
 
 @c page
 @node libs

@@ -1,0 +1,221 @@
+@node srfi cond-expand
+@section @ansrfi{0} feature based conditional expansion construct
+
+
+The library @library{srfi :0} is by Marc Feeley as the reference
+implementation for @ansrfi{0}; see:
+
+@center @url{http://srfi.schemers.org/srfi-0/srfi-0.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi cond-expand license::    Original document license.
+* srfi cond-expand abstract::   Abstract.
+* srfi cond-expand rationale::  Rationale.
+* srfi cond-expand spec::       Specifications.
+@end menu
+
+@c page
+@node srfi cond-expand license
+@subsection Original document license
+
+
+Copyright @copyright{} Marc Feeley 1999.  All Rights Reserved.
+
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it or
+assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are included
+on all such copies and derivative works.  However, this document itself
+may not be modified in any way, such as by removing the copyright notice
+or references to the Scheme Request For Implementation process or
+editors, except as needed for the purpose of developing SRFIs in which
+case the procedures for copyrights defined in the SRFI process must be
+followed, or as required to translate it into languages other than
+English.
+
+The limited permissions granted above are perpetual and will not be
+revoked by the authors or their successors or assigns.
+
+This document and the information contained herein is provided on an
+``AS IS'' basis and THE AUTHOR AND THE SRFI EDITORS DISCLAIM ALL
+WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY
+WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
+RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A
+PARTICULAR PURPOSE.
+
+@c page
+@node srfi cond-expand abstract
+@subsection Abstract
+
+
+It is desirable that programs which depend on additions to standard
+Scheme name those additions.  @srfi{}s provide the specifications of
+these additions (``features''), and @ansrfi{0} provides the means to
+actually check that these features are present in the Scheme system by
+means of the @func{cond-expand} construct.  It is anticipated that there
+will be two main classes of features:
+
+@itemize
+@item
+sets of value and syntax bindings;
+
+@item
+reader syntax extensions;
+@end itemize
+
+@noindent
+``reader syntax'' refers to aspects of the syntax described by the
+grammars in the Scheme reports.
+
+The former class of features will probably include most @srfi{}s,
+exemplified by the list library specified in @ansrfi{1}.  The latter class
+includes Unicode source code support and different kinds of parentheses.
+
+Control over the presence of individual features will vary over
+different Scheme systems.  A given feature may be absent or provided by
+default in some Scheme systems and in others some mechanism (such as an
+@func{import} clause in the code or a program configuration file, a
+command line option, a dependency declaration in a module definition,
+etc.) will be required for the feature to be present in the system.
+
+Moreover, in some systems a given feature may be in effect throughout
+the entire program if it is in effect anywhere at all.  Other systems
+may have more precise mechanisms to control the scope of a feature (this
+might be the case for example when a module system is supported).  In
+general it is thus possible that a feature is in effect in some parts of
+the program and not in others.  This allows conflicting @srfi{}s to be
+present in a given program as long as their scope do not intersect.
+
+@ansrfi{0} does not prescribe a particular mechanism for controling the
+presence of a feature as it is our opinion that this should be the role
+of a module system.  We expect that future module system @srfi{}s will
+need to extend the semantics of @ansrfi{0} for their purposes, for example
+by defining feature scoping rules or by generalizing the feature testing
+construct.
+
+@c page
+@node srfi cond-expand rationale
+@subsection Rationale
+
+
+Most Scheme systems extend the language with some additional features
+(such as the ability to manipulate Unicode characters and strings, to do
+binary I/O, or to handle asynchronous interrupts).  Such features may be
+provided in a variety of ways including new procedures, new program
+syntax, and extended behavior of standard procedures and special--forms.
+
+A particular functionality may exist in several or even most Scheme
+systems but its @api{} may be different (use of a procedure or
+special--form, name, number of parameters, etc).  To write code that
+will run on several Scheme systems, it is useful to have a common
+construct to enable or disable sections of code based on the existence
+or absence of a feature in the Scheme system being used.  For example,
+the construct could be used to check if a particular binary I/O
+procedure is present, and if not, load a portable library which
+implements that procedure.
+
+Features are identified by feature identifiers.  In order for the
+semantics of this construct to be well--defined, the feature identifier
+must of course refer to a feature which has a well--defined meaning.
+There is thus a need for a registry, independent of this @srfi{}, to
+keep track of the formal specification associated with each valid
+feature--identifier.  The @srfi{} registry is used for this purpose.
+It is expected that features will eventually be assigned meaningful
+names (aliases) by the @srfi{} editors to make reading and writing code
+less tedious than when using @code{srfi-N} feature identifiers.
+
+Another issue is the binding time of this construct (i.e.  the moment
+when it operates).  It is important that the binding time be early so
+that a compiler can discard the sections of code that are not needed,
+and perform better static analyses.  Expressing this construct through a
+procedure returning a boolean, such as:
+
+@example
+(feature-implemented? 'srfi-5)
+@end example
+
+@noindent
+would not achieve this goal, as its binding time is too late
+(i.e. program run--time).  A read--time construct, such as Common Lisp's
+@code{#+} read-macro, is very early but would require non--trivial
+changes to the reader of existing Scheme systems and the syntax is not
+particularly human friendly.  Instead, a macro--expansion--time
+construct is used.
+
+The construct is restricted to the top level of a program in order to
+simplify its implementation and to force a more disciplined use of the
+construct (to facilitate reading and understanding programs) and to
+avoid (some) misunderstandings related to the scope of features.  These
+restrictions can of course be lifted by some Scheme systems or by other
+@srfi{}s (in particular module system @srfi{}s).
+
+@c page
+@node srfi cond-expand spec
+@subsection Specifications
+
+
+@findex cond-expand
+
+
+Syntax:
+
+@example
+<command or definition>
+    --> <command>
+      | <definition>
+      | <syntax definition>
+      | (begin <command or definition>+)
+      | <conditional expansion form>
+<conditional expansion form>
+    --> (cond-expand <cond-expand clause>+)
+      | (cond-expand <cond-expand clause>* (else <command or definition>*))
+<cond-expand clause>
+    --> (<feature requirement> <command or definition>*)
+<feature requirement>
+    --> <feature identifier>
+      | (and <feature requirement>*)
+      | (or <feature requirement>*)
+      | (not <feature requirement>)
+<feature identifier>
+    --> a symbol which is the name or alias of a SRFI
+@end example
+
+The @func{cond-expand} form tests for the existence of features at
+macro--expansion time.  It either expands into the body of one of its
+clauses or signals an error during syntactic processing.
+@func{cond-expand} expands into the body of the first clause whose
+feature requirement is currently satisfied (the else clause, if present,
+is selected if none of the previous clauses is selected).
+
+A feature requirement has an obvious interpretation as a logical
+formula, where the @code{<feature identifier>} variables have meaning
+TRUE if the feature corresponding to the feature identifier, as
+specified in the @srfi{} registry, is in effect at the location of the
+@func{cond-expand} form, and FALSE otherwise.  A feature requirement is
+satisfied if its formula is true under this interpretation.
+
+Examples:
+
+@example
+(cond-expand
+  [(and srfi-1 srfi-10)
+   (write 1)]
+  [(or srfi-1 srfi-10)
+   (write 2)]
+  [else])
+
+(cond-expand
+  (command-line
+   (define (program-name) (car (argv)))))
+@end example
+
+The second example assumes that @func{command-line} is an alias for some
+feature which gives access to command line arguments.  Note that an
+error will be signaled at macro--expansion time if this feature is not
+present.
+
+@c end of file

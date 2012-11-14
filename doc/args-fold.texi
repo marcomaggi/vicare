@@ -1,0 +1,221 @@
+@c page
+@node srfi args-fold
+@section @ansrfi{37} a program argument processor
+
+
+@cindex @srfi{} args-fold
+
+
+The library @library{srfi :37} is by Anthony Carrico as the reference
+implementation for @ansrfi{37}; see:
+
+@center @url{http://srfi.schemers.org/srfi-37/srfi-37.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi args-fold license::      Original document license.
+* srfi args-fold abstract::     Abstract.
+* srfi args-fold rationale::    Rationale.
+* srfi args-fold spec::         Specification.
+@end menu
+
+@c page
+@node srfi args-fold license
+@subsection Original document license
+
+
+Copyright @copyright{} 2002 Anthony Carrico (2002).  All Rights
+Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi args-fold abstract
+@subsection Abstract
+
+
+Many operating systems make the set of argument strings used to invoke a
+program available (often following the program name string in an array
+called @code{argv}).  Most programs need to parse and process these
+argument strings in one way or another.  This @srfi{} describes a set
+of procedures that support processing program arguments according to
+@posix{} and @gnu{} C Library Reference Manual guidelines.
+
+@c page
+@node srfi args-fold rationale
+@subsection Rationale
+
+
+Program arguments are the primary interface to many programs, so
+processing arguments is a common programming task.  There are many common
+(often conflicting) ways take care of this task, so a custom processor
+is often necessary; however, many programmers (and their users) would
+welcome a convenient interface supporting common guidelines.
+
+@posix{} provides several guidelines for the specification of program
+options, option--arguments, and operands.  It also notes historical
+exceptions to these guidelines.  The @gnu{} C Library Reference Manual
+describes long option extensions to the @posix{} guidelines.
+
+This @srfi{} supports creating programs following the guidelines
+mentioned above by:
+
+@itemize
+@item
+parsing short--options and long--options in any order and possibly
+repeated;
+
+@item
+option-arguments (possibly required or forbidden);
+
+@item
+operands (non-option argument strings);
+
+@item
+recognizing option processing termination.
+@end itemize
+
+It parses argument strings according to the following rules:
+
+@enumerate
+@item
+each short--option name is a single character;
+
+@item
+one or more short--options are accepted in a single argument string when
+grouped behind one @code{-} delimiter character; examples: @code{-a},
+@code{-bcd};
+
+@item
+a short--option--argument is accepted in a separate argument string
+immediately following a short--option; examples: @code{-a foo},
+@code{-bcd bar};
+
+@item
+also (for historical reasons) a short--option--argument is accepted
+immediately following the last short--option in a single argument
+string; examples: @code{-afoo}, @code{-bcdbar};
+
+@item
+each long--option name is one or more characters;
+
+@item
+one long--option is accepted in a single argument string when preceded
+by two @code{-} delimiter characters; example: @code{--help};
+
+@item
+in a single argument string, a long--option followed by one @code{=}
+delimiter character followed by a long--option--argument is accepted;
+example: @code{--speed=fast};
+
+@item
+the first @code{--} argument string is accepted as a delimiter
+indicating the end of options; it is not treated as an option or an
+operand; any argument strings following this delimiter are treated as
+operands, even if they begin with the @code{-} character;
+
+@item
+all other argument strings are treated as operands; this includes
+argument strings consisting of a single - character;
+
+@item
+operands may be intermingled with options in any order.
+@end enumerate
+
+Preliminary versions of this interface are already available for some
+Scheme implementations: here for Chicken, and here for Scsh.
+
+@c page
+@node srfi args-fold spec
+@appendixsubsec Specification
+
+
+@findex args-fold
+
+
+@func{args-fold} is an iterator similar to @ansrfi{1} fold procedure
+(``the fundamental list iterator'').  As it parses options and operands,
+it calls their corresponding operand and option processors.  Unlike
+mapping, folding passes state, called seeds, from one processor to the
+next.
+
+For example, a program may need a list of operands and a table of
+options.  To build these, @func{args-fold} could be seeded with an empty
+operand list, and an empty option table.  The operand processor could
+add the operands to the operand list, and the option processors could
+add the options to the option table.  Along the way, some option
+processors might even take immediate action for options like
+@code{--version} or @code{--help}.  This kind of heterogeneous
+processing is appropriate for program arguments, and folding allows a
+functional implementation if desired.
+
+
+@deffn {Procedure Prototype} option-processor @var{option} @var{name} @var{arg} @var{seeds} ...
+Prototype for an option--processor.  It should return the next seeds as
+values.  @var{option} will be the option.  @var{name} will be one of the
+@var{OPTION}'s option--names as encountered by @func{args-fold}.
+@var{arg} will be a string, or @false{} if @func{args-fold} didn't
+encounter an option--argument.
+@end deffn
+
+
+@deffn {Procedure Prototype} operand-processor @var{operand} @var{seeds}
+Prototype for an operand--processor.  It should return the next seeds as
+values.  @var{operand} will be a string.
+@end deffn
+
+
+@defun option @var{names} @var{required-arg?} @var{optional-arg?} @var{option-proc}
+Return an option.  @var{names} is a list of short (character) and long
+(string) option names.  @var{required-arg?} specifies if this options
+requires an option--argument (boolean).  @var{optional-arg?} specifies
+if this option can accept an option--argument (boolean).
+@var{option-proc} is a procedure (following the option--processor
+prototype) used to process this option.
+@end defun
+
+
+@defun option-names @var{option}
+@defunx option-required-arg? @var{option}
+@defunx option-optional-arg? @var{option}
+@defunx option-processor @var{option}
+Return the contents of corresponding fields of @var{option}.
+@end defun
+
+
+@defun args-fold @var{args} @var{options} @var{unrecognized-option-proc} @var{operand-proc} @var{seeds} ...
+Parse argument strings left--to--right, calling the appropriate
+processors in--order (for the parsed known options, unknown options, and
+operands), passing the seed values from one processor to the next and
+returning the final seeds values as results.
+
+@var{args} is a list of strings.  @var{options} is a list of options.
+@var{unrecognized-option-proc} is a procedure (following the
+@code{option-processor} prototype) for unrecognized options.
+@func{operand-proc} is a procedure (following the
+@code{operand-processor} prototype) for operands.
+
+@emph{Note:} @func{args-fold} will create temporary options as necessary
+for the @func{unrecognized-option-proc}.
+@end defun
+
+@c end of file
