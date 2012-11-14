@@ -25,6 +25,7 @@ vicare_scheme_TEXINFOS	= \
 	streams.texi			\
 	string-ports.texi		\
 	strings.texi			\
-	time.texi
+	time.texi			\
+	vector.texi
 
 ### end of file
