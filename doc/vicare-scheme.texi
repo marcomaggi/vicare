@@ -19501,7 +19501,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi vector::                 @ansrfi{43} vector library.
 * srfi general-cond::           @ansrfi{61} a more general @func{cond} clause.
 * srfi lightweight-testing::    @ansrfi{78} lightweight testing.
-@c * srfi environment-variables::       @ansrfi{98} environment variables.
+* srfi environment-variables::  @ansrfi{98} environment variables.
 @end menu
 
 @c ------------------------------------------------------------
@@ -19528,6 +19528,7 @@ minor modification of the original documents by Marco Maggi.
 @include vector.texi
 @include general-cond.texi
 @include lightweight-testing.texi
+@include environment-variables.texi
 
 @c page
 @node libs

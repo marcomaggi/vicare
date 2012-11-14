@@ -12,6 +12,7 @@ vicare_scheme_TEXINFOS	= \
 	case-lambda.texi		\
 	cond-expand.texi		\
 	eager-comp.texi			\
+	environment-variables.texi	\
 	error-reporting.texi		\
 	general-cond.texi		\
 	let-values.texi			\

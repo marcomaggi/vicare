@@ -1,0 +1,167 @@
+@node srfi environment-variables
+@section @ansrfi{98} environment-variables
+
+
+@cindex @srfi{} environment-variables
+
+
+The library @library{srfi :98} is by by Taro Minowa (Higepon) as the
+reference implementation for @ansrfi{98}; see:
+
+@center @url{http://srfi.schemers.org/srfi-98/srfi-98.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi environment-variables license::    Original document license.
+* srfi environment-variables abstract::   Abstract.
+* srfi environment-variables rationale::  Rationale.
+* srfi environment-variables spec::       Specification.
+* srfi environment-variables issues::     Issues.
+* srfi environment-variables ack::        Acknowledgements.
+@end menu
+
+@c page
+@node srfi environment-variables license
+@subsection Original document license
+
+
+Copyright @copyright{} 2008 Taro Minowa (Higepon).  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi environment-variables abstract
+@subsection Abstract
+
+
+This @srfi{} specifies the procedure @func{get-environment-variable},
+which gets the value of the specified environment variable, and the
+procedure @func{get-environment-variables}, which gets an association
+list of all environment-variables.
+
+@c page
+@node srfi environment-variables rationale
+@subsection Rationale
+
+
+Most operating systems provide a mechanism for passing auxiliary
+parameters implicitly to child processes.  Usually, this mechanism is
+called ``the environment'', and is conceptually a map from string names
+to string values.  The string names are called environment variables.
+
+Some applications rely on environment variables to modify their behavior
+according to local settings.  Also, various established protocols rely
+on environment variables as a form of interprocess communication.  For
+example, most implementations of the common gateway interface
+(@acronym{CGI}) use environment variables to pass Meta--Variables from
+the server to the script.  Environment variables are also required by
+@ansrfi{96} @acronym{SLIB} Prerequisites.  Providing a means to access
+environment variables is therefore indispensable for writing practical
+programs in Scheme.
+
+Most widely--used Scheme implementations provide a function for getting
+the value of a specified environment variable.  The name for this
+function is usually getenv, but varies (see below).  Some
+implementations also provide a way to get all the environment variables,
+but others do not.
+
+This @srfi{} specifies a uniform interface for accessing environment
+variables.  That should make it easier to write portable programs that
+need access to their environment.  For example, a @acronym{CGI} program
+may portably obtain the values of the Meta--Variables
+@env{QUERY_STRING}, @env{CONTENT_LENGTH} and @env{REQUEST_METHOD} as in
+the following examples:
+
+@example
+(get-environment-variable "QUERY_STRING") => "foo=bar&huga=hige"
+(get-environment-variable "CONTENT_LENGTH") => "512"
+(get-environment-variable "REQUEST_METHOD") => "post"
+@end example
+
+@c page
+@node srfi environment-variables spec
+@subsection Specification
+
+
+The following two procedures belong to the @rnrs{6} library named
+@library{system}.  This is a provisional library name until the naming
+rules for @rnrs{6} @srfi{} libraries are specified.
+
+@deffn Procedure get-environment-variable @var{name}
+Return the value of the named environment variable as a string, or
+@false{} if the named environment variable is not found.  The name
+argument is expected to be a string.  @func{get-environment-variable}
+may use locale--setting information to encode the name and decode the
+value of the environment variable.  If @func{get-environment-variable}
+can't decode the value, @func{get-environment-variable} may raise an
+exception.
+
+@example
+(get-environment-variable "PATH")
+=> "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+@end example
+@end deffn
+
+
+@deffn Procedure get-environment-variables
+Return names and values of all the environment variables as an alist.
+The same decoding considerations as for @func{get-environment-variable}
+apply.
+
+@example
+(get-environment-variables)
+=> (("PATH" . "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin")
+    ("USERNAME" . "taro"))
+@end example
+@end deffn
+
+@c page
+@node srfi environment-variables issues
+@subsection Issues
+
+
+@func{get-environment-variable} is expected to return a ``Scheme
+string''.
+
+Unfortunately, many current platforms, including @posix{}--like ones, do
+not require environment variables to be interpretable as sequences of
+characters.  In particular, environment variables can be used to name
+files, and filenames on the system can amount to @code{NULL}--terminated
+byte vectors, which, if the Scheme program were to collect uninterpreted
+and pass to, say, the open call, would work just fine, but which might
+not represent a string in the particular encoding the program expects.
+
+While in principle it may be desirable to provide a mechanism for
+accessing environment variables raw, this @srfi{} specifies a ``string''
+return type because that best represents the consensus of existing
+implementations, and captures the semantically desirable behavior in the
+common case that the byte sequence is interpretable as a string.
+
+@c page
+@node srfi environment-variables ack
+@subsection Acknowledgements
+
+
+Thanks to Shiro Kawai, Alexey Radul, jmuk, Kokosabu, leque and all the
+members of the @code{#Lisp_Scheme} @acronym{IRC} channel on Freenode.
+
+@c end of file
