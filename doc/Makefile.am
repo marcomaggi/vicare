@@ -10,6 +10,7 @@ vicare_scheme_TEXINFOS	= \
 	and-let-star.texi	\
 	args-fold.texi		\
 	cond-expand.texi	\
-	list.texi
+	list.texi		\
+	string-ports.texi
 
 ### end of file

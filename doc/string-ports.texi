@@ -1,0 +1,131 @@
+@node srfi string-ports
+@section @ansrfi{6} basic string ports
+
+
+@cindex @srfi{} string-ports
+
+
+The library @library{srfi :6} is by William D Clinger as the reference
+implementation for @ansrfi{6}; see:
+
+@center @url{http://srfi.schemers.org/srfi-6/srfi-6.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi string-ports license::   String--ports document license.
+* srfi string-ports abstract::  Abstract.
+* srfi string-ports rationale:: Rationale.
+* srfi string-ports spec::      Specification.
+@end menu
+
+@c page
+@node srfi string-ports license
+@subsection String--ports document license
+
+
+Copyright @copyright{} 1999 William D Clinger.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi string-ports abstract
+@subsection Abstract
+
+
+Scheme's I/O primitives are extended by adding three new procedures that
+
+@itemize
+@item
+create an input port from a string;
+
+@item
+create an output port whose contents are accumulated in Scheme's working
+memory instead of an external file;
+
+@item
+extract the accumulated contents of an in--memory output port and return
+them in the form of a string.
+@end itemize
+
+@c page
+@node srfi string-ports rationale
+@subsection Rationale
+
+
+Scheme's procedures for performing input and output from and to ports
+become more useful when extended by string ports.  The interface
+described here has been in use since 1986 or before, and is currently
+supported by several of the major implementations.
+
+@c page
+@node srfi string-ports spec
+@subsection Specification
+
+
+@cindex @srfi{} string-ports api
+
+
+This specification is taken from the MacScheme Reference Manual.
+
+@defun open-input-string @var{string}
+Take a string and return an input port that delivers characters from the
+string.  The port can be closed by @func{close-input-port}, though its
+storage will be reclaimed by the garbage collector if it becomes
+inaccessible.
+
+Example:
+
+@example
+(define p (open-input-string "(a . (b . c . ())) 34"))
+
+(input-port? p)                 =>  #t
+(read p)                        =>  (a b c)
+(read p)                        =>  34
+(eof-object? (peek-char p))     =>  #t
+@end example
+@end defun
+
+
+@defun open-output-string
+Return an output port that will accumulate characters for retrieval by
+@func{get-output-string}.  The port can be closed by the procedure
+@code{close-output-port}, though its storage will be reclaimed by the
+garbage collector if it becomes inaccessible.
+
+@example
+(let ([q (open-output-string)]
+      [x '(a b c)])
+  (write (car x) q)
+  (write (cdr x) q)
+  (get-output-string q))
+  =>  "a(b c)"
+@end example
+@end defun
+
+
+@defun get-output-string @var{output-port}
+Given an output port created by @func{open-output-string}, return a
+string consisting of the characters that have been output to the port so
+far.
+@end defun
+
+@c end of file

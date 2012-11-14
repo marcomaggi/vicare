@@ -19473,7 +19473,7 @@ minor modification of the original documents by Marco Maggi.
                                 expansion construct.
 * srfi list::                   @ansrfi{1} list library.
 * srfi and-let-star::           @ansrfi{2} @func{and-let*}.
-@c * srfi string-ports::                @ansrfi{6} basic string ports.
+* srfi string-ports::           @ansrfi{6} basic string ports.
 @c * srfi receive::                     @ansrfi{8} @func{receive}: Binding to
 @c                                 multiple values.
 @c * srfi records::                     @ansrfi{9} defining record types.
@@ -19506,6 +19506,7 @@ minor modification of the original documents by Marco Maggi.
 @include cond-expand.texi
 @include list.texi
 @include and-let-star.texi
+@include string-ports.texi
 @include args-fold.texi
 
 @c page
