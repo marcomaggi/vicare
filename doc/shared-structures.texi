@@ -1,0 +1,230 @@
+@node srfi shared structures
+@section @ansrfi{38} representation for data with  shared structure
+
+
+@cindex @srfi{} shared structures
+
+
+The library @library{srfi :38} was written by Ray Dillinger as the
+reference implementation for @ansrfi{38}; see:
+
+@center @url{http://srfi.schemers.org/srfi-38/srfi-38.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi shared structures license::      Original document license.
+* srfi shared structures abstract::     Abstract.
+* srfi shared structures rationale::    Rationale.
+* srfi shared structures spec::         Specification.
+@end menu
+
+@c page
+@node srfi shared structures license
+@subsection Original document license
+
+
+Copyright @copyright{} 2003 Ray Dillinger.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi shared structures abstract
+@subsection Abstract
+
+
+This @srfi{} proposes @func{write-with-shared-structure} and
+@func{read-with-shared-structure}, procedures for writing and reading
+external representations of data containing shared structure.  These
+procedures implement a proposed standard external notation for data
+containing shared structure.
+
+This @srfi{} permits but does not require replacing the standard
+@func{write} and @func{read} functions.  These functions may be
+implemented without the overhead in time and space required to detect
+and specify shared structure.
+
+An implementation conforms to this @srfi{} if it provides procedures
+named @func{write-with-shared-structure} and
+@func{read-with-shared-structure}, which produce and read the same
+notation as produced by the reference implementation.  It may also
+provide @func{read/ss} and @func{write/ss}, equivalent functions with
+shorter names.
+
+@c page
+@node srfi shared structures rationale
+@subsection Rationale
+
+
+@rnrs{5} scheme and @ieee{} scheme provide the procedure @func{write},
+which prints machine--readable representations of lists and other
+objects.  However, the printed representation does not preserve
+information about what parts of the structure are shared, and in the
+case of self--referential objects the behavior of @func{write} itself is
+undefined; it is permitted to go into an infinite loop or invoke the
+dreaded curse of the nasal demons.
+
+For example, it is possible to have a list within which two or more
+members are the same string (in the sense of @func{eq?}), but when the
+list is written, there is not sufficient information in the
+representation to recover the @func{eq?} relationship.  When the list is
+read back in, there will be two or more copies of the string which are
+@func{eqv?} but not @func{eq?}.
+
+As an example of the second problem, the results of evaluating:
+
+@example
+(begin (define a (cons 'val1 'val2))
+       (set-cdr! a a)
+       (write a))
+@end example
+
+@noindent
+are undefined; in @rnrs{5} parlance, calling @func{write} on such a
+structure ``is an error'', but not one that is necessarily signalled.
+The routine is permitted to print a nonstandard notation such as the one
+proposed in this standard or a different one, fail silently, signal an
+error, go into an infinite loop, or make demons fly out of your nose.
+Some of these results are unacceptable in some cases.  This @srfi{}
+hopes to provide a standard way of dealing with this problem by
+providing a method of writing data which is guaranteed to be
+well--behaved and predictable even on data containing shared structures.
+
+The extended functionality described below in the implementation of
+@func{write-with-shared-structure} is already present in the
+@func{write} function of several major scheme implementations (PLT,
+SISC, Chez, Bigloo, MIT scheme, and possibly others).
+
+@c page
+@node srfi shared structures spec
+@subsection Specification
+
+
+@subsubheading Formal Grammar of the New External Representation
+
+
+This @srfi{} creates an alternative external representation for data
+written and read under @func{write/ss} and @func{read/ss}.  It is
+identical to the grammar for external representation for data written
+and read under @func{write} and @func{read} given in section 7 of
+@rnrs{5}, except that the single production:
+
+@example
+<datum> --> <simple datum> | <compound datum>
+@end example
+
+Is replaced by the following five productions.
+
+@example
+<datum> --> <defining datum> | <nondefining datum> | <defined datum>
+
+<defining datum> -->  #<indexnum>=<nondefining datum>
+
+<defined datum> --> #<indexnum>#
+
+<nondefining datum> --> <simple datum> | <compound datum>
+
+<indexnum> --> <digit 10>+
+@end example
+
+
+@subsubheading New Procedures
+
+
+@deffn Procedure write-with-shared-structure @var{obj}
+@deffnx Procedure write-with-shared-structure @var{obj} @var{port}
+@deffnx Procedure write-with-shared-structure @var{obj} @var{port} @var{optarg}
+Writes a written representation of @var{obj} to the given @var{port}.
+Strings that appear in the written representation are enclosed in
+doublequotes, and within those strings backslash and doublequote
+characters are escaped by backslashes.  Character objects are written
+using the @code{#\} notation.
+
+Objects which denote locations rather than values (cons cells, vectors,
+and non--zero--length strings in @rnrs{5} scheme; also mutable objects,
+records, or containers if provided by the implementation), if they
+appear at more than one point in the data being written, must be
+preceded by @code{#N=} the first time they are written and replaced by
+@code{#N#} all subsequent times they are written, where @var{N} is a
+natural number used to identify that particular object.
+
+If objects which denote locations occur only once in the structure, then
+@func{write-with-shared-structure} must produce the same external
+representation for those objects as @func{write}.
+
+@func{write-with-shared-structure} must terminate in finite time when
+writing finite data.  @func{write-with-shared-structure} must produce a
+finite representation when writing finite data.
+
+@func{write-with-shared-structure} returns an unspecified value.
+
+The @var{port} argument may be omitted, in which case it defaults to the
+value returned by @func{current-output-port}.
+
+The @var{optarg} argument may also be omitted.  If present, its effects
+on the output and return value are unspecified but
+@func{write-with-shared-structure} must still write a representation
+that can be read by @func{read-with-shared-structure}.  Some
+implementations may wish to use @var{optarg} to specify formatting
+conventions, numeric radixes, or return values.  The reference
+implementation ignores optarg.
+
+For example, the code:
+
+@example
+(begin (define a (cons 'val1 'val2))
+       (set-cdr! a a)
+       (write-with-shared-structure a))
+@end example
+
+@noindent
+should produce the output @code{#1=(val1 . #1#)}.  This shows a cons
+cell whose cdr contains itself.
+@end deffn
+
+
+@deffn Procedure read-with-shared-structure
+@deffnx Procedure read-with-shared-structure @var{port}
+@func{read-with-shared-structure} converts the external representations
+of Scheme objects produced by @func{write-with-shared-structure} into
+scheme objects.  That is, it is a parser for the nonterminal
+@code{<datum>} in the augmented external representation grammar defined
+above.
+
+@func{read-with-shared-structure} returns the next object parsable from
+the given input port, updating port to point to the first character past
+the end of the external representation of the object.
+
+If an end--of--file is encountered in the input before any characters
+are found that can begin an object, then an end--of--file object is
+returned.  The port remains open, and further attempts to read it (by
+@func{read-with-shared-structure} or @func{read}) will also return an
+end--of--file object.  If an end--of--file is encountered after the
+beginning of an object's external representation, but the external
+representation is incomplete and therefore not parsable, an error is
+signalled.
+
+The @var{port} argument may be omitted, in which case it defaults to the
+value returned by @func{current-input-port}.  It is an error to read
+from a closed port.
+@end deffn
+
+@c end of file

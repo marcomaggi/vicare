@@ -16,6 +16,7 @@ vicare_scheme_TEXINFOS	= \
 	list.texi		\
 	receive.texi		\
 	records.texi		\
+	shared-structures.texi	\
 	string-ports.texi	\
 	strings.texi		\
 	time.texi
