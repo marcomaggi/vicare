@@ -19489,8 +19489,8 @@ minor modification of the original documents by Marco Maggi.
 * srfi error-reporting::        @ansrfi{23} error reporting mechanism.
 * srfi shared structures::      @ansrfi{38} representation for data with
                                 shared structure.
-@c * srfi specialize-procedures::       @ansrfi{26} notation for specializing
-@c                                 parameters without currying.
+* srfi specialize-procedures::  @ansrfi{26} notation for specializing
+                                parameters without currying.
 @c * srfi random::                      @ansrfi{27} sources of random bits.
 @c * srfi rec::                         @ansrfi{31} a special form @func{rec}
 @c                                 for recursive evaluation.
@@ -19518,6 +19518,7 @@ minor modification of the original documents by Marco Maggi.
 @include time.texi
 @include error-reporting.texi
 @include shared-structures.texi
+@include specialize-procedures.texi
 
 @include args-fold.texi
 

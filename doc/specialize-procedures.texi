@@ -1,0 +1,323 @@
+@node srfi specialize-procedures
+@section @ansrfi{26} Notation for specializing parameters without currying
+
+
+@cindex @srfi{} specialize-procedures
+
+
+The library @library{srfi :26} is by Sebastian Egner as the reference
+implementation for @ansrfi{26}; see:
+
+@center @url{http://srfi.schemers.org/srfi-26/srfi-26.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi specialize-procedures license::    Original document license.
+* srfi specialize-procedures abstract::   Abstract.
+* srfi specialize-procedures rationale::  Rationale.
+* srfi specialize-procedures spec::       Specification.
+* srfi specialize-procedures design::     Rationale design.
+* srfi specialize-procedures ack::        Acknowledgements.
+@end menu
+
+@c page
+@node srfi specialize-procedures license
+@subsection Original document license
+
+
+Copyright @copyright{} 2002 Sebastian Egner.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi specialize-procedures abstract
+@subsection Abstract
+
+
+When programming in functional style, it is frequently necessary to
+specialize some of the parameters of a multi--parameter procedure.  For
+example, from the binary operation @func{cons} one might want to obtain
+the unary operation @code{(lambda (x) (cons 1 x))}.  This specialization
+of parameters is also known as ``partial application'', ``operator
+section'' or ``projection''.
+
+The mechanism proposed here allows to write this sort of specialization
+in a simple and compact way.  The mechanism is best explained by a few
+examples:
+
+@example
+(cut cons (+ a 1) <>)   = (lambda (x2) (cons (+ a 1) x2))
+(cut list 1 <> 3 <> 5)  = (lambda (x2 x4) (list 1 x2 3 x4 5))
+(cut list)              = (lambda () (list))
+(cut list 1 <> 3 <...>) = (lambda (x2 . xs) (apply list 1 x2 3 xs))
+(cut <> a b)            = (lambda (f) (f a b))
+@end example
+
+As you see, the macro @func{cut} specializes some of the parameters of
+its first argument.  The parameters that are to show up as formal
+variables of the result are indicated by the symbol @code{<>}, pronouced
+as ``slot''.  In addition, the symbol @code{<...>}, pronounced as
+``rest--slot'', matches all residual arguments of a variable argument
+procedure.  As you can see from the last example above, the first
+argument can also be a slot, as one should expect in Scheme.
+
+In addition to @func{cut}, there is a variant called @func{cute} (a
+mnemonic for ``@func{cut} with evaluated non--slots'') which evaluates
+the non--slot expressions at the time the procedure is specialized, not
+at the time the specialized procedure is called.  For example:
+
+@example
+(cute cons (+ a 1) <>) = (let ([a1 (+ a 1)])
+                           (lambda (x2)
+                             (cons a1 x2)))
+@end example
+
+As you see from comparing this example with the first example above, the
+@func{cute}--variant will evaluate @code{(+ a 1)} once, while the
+@func{cut}--variant will evaluate it during every invocation of the
+resulting procedure.
+
+The mechanism proposed in this @srfi{} allows specializing any subset
+of the variables of a procedure.  The result can be of fixed arity or of
+variable arity.  The mechanism does not allow permutation, omission,
+duplication or any other processing of the arguments; for this it is
+necessary to write to use a different mechanism such as @func{lambda}.
+
+@c page
+@node srfi specialize-procedures rationale
+@subsection Rationale
+
+
+A particularly elegant way to deal with specialization is known as
+currying (Schoenfinkel 1924, Curry 1958).  The idea of currying is to
+reduce multi--argument functions to single--argument functions by
+regarding an @var{n}--ary function as a unary function mapping its first
+argument into an (@var{n-1})--ary function (which is curried in turn).
+This point of view, apart from its theoretical elegance, allows an
+extremely compact notation for specializing the first argument of a
+function.  In the first example, one could simply write @code{(cons 1)}.
+
+Yet, Scheme is not a curried language---the number of arguments passed
+to a procedure must match the number of its parameters at all times.
+This allows zero--arity and variable--arity procedures but in order to
+specialize parameters one usually has to write down a lambda--expression
+and invent some irrelevant identifiers for its formal variables (@var{x}
+in the examples in the Abstract).  For this reason, the mechanism
+proposed in this @srfi{} provides a simple and compact notation for
+specializing any subset of the parameters of a procedure.
+
+Note: @emph{The mechanism proposed here is not currying!}
+
+The purpose of the mechanism proposed here is to make the benefits of
+currying available within the programming language Scheme.  There are
+two primary benefits of currying in practice: Higher--order types are
+substantially simplified and there is a simple notation for specializing
+parameters.  The type aspect is irrelevant as Scheme has latent typing.
+The specialization aspect is largly covered with this @srfi{}.
+
+Here are a few more examples for illustration:
+
+@example
+(map (cut * 2 <>) '(1 2 3 4))
+(map (cut vector-set! x <> 0) indices)
+(for-each (cut write <> port) exprs)
+(map (cut <> x y z) (list min max))
+(for-each (cut <>) thunks)
+@end example
+
+@c page
+@node srfi specialize-procedures spec
+@subsection Specification
+
+
+@findex cut
+@findex cute
+
+The formal syntax of a specialized expression, in the style of the
+Revised^5 Report on the Algorithmic Language Scheme:
+
+@example
+<cut-expression> -->  (cut  <slot-or-expr> <slot-or-expr>*)
+                    | (cut  <slot-or-expr> <slot-or-expr>* <...>)
+                    | (cute <slot-or-expr> <slot-or-expr>*)
+                    | (cute <slot-or-expr> <slot-or-expr>* <...>)
+
+<slot-or-expr>   -->  <>              ; a "slot"
+                    | <expression>    ; a "non-slot expression"
+@end example
+
+The macro @func{cut} transforms a @code{<cut-expression>} into a
+@code{<lambda expression>} with as many formal variables as there are
+slots in the list @code{<slot-or-expr>*}.  The body of the resulting
+@code{<lambda expression>} calls the first @code{<slot-or-expr>} with
+arguments from @code{<slot-or-expr>*} in the order they appear.
+
+In case there is a rest--slot symbol, the resulting procedure is also of
+variable arity, and the body calls the first @code{<slot-or-expr>} with
+all arguments provided to the actual call of the specialized procedure.
+
+The macro @func{cute} is similar to the macro @func{cut}, except that it
+first binds new variables to the result of evaluating the non--slot
+expressions (in an unspecific order) and then substituting the variables
+for the non--slot expressions.  In effect, @func{cut} evaluates
+non--slot expressions at the time the resulting procedure is called,
+whereas @func{cute} evaluates the non--slot expressions at the time the
+procedure is constructed.
+
+@c page
+@node srfi specialize-procedures design
+@subsection Rationale design
+
+
+@subsubheading Why not real currying/uncurrying?
+
+It is possible in Scheme to implement a macro turning a multi--argument
+procedure into a nesting of single--argument procedures and back.  These
+operations are usually called ``curry'' and ``uncurry'' in other
+programming languages.
+
+Yet, Scheme remains an inherently uncurried language and is not prepared
+to deal with curried procedures in a convenient way.  Hence, a ``by the
+book'' implementation of currying would only be useful if you apply it
+in the sequence ``curry, specialize some arguments, and uncurry again'',
+which is exactly the purpose of the macro @func{cut} specified in this
+document.  The primary relevance of currying/uncurrying in Scheme is to
+teach concepts of combinatory logic.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why not a more general mechanism, also allowing permutation omission and duplication of arguments?
+
+@noindent
+The reason is that I, the author of this @srfi{}, consider more general
+mechanisms too dangerous to mix them with the mechanism proposed here.
+In particular, as soon as parameters are being rearranged it is usually
+necessary to be aware of the meaning of the parameters; unnamed
+variables can be quite harmful then.  The mechanism proposed here is
+designed to prevent this.
+
+Please refer to the discussion threads ``OK, how about...,'' (Alan
+Bawden), ``is that useful?'' (Walter C.  Pelissero), and ``l, the
+ultimate curry that is not curry'' (Al Petrofsky).
+
+@c ------------------------------------------------------------
+
+@subsubheading Why are the macro called @func{cut}/@func{cute} and not [enter your favourite here]?
+
+@noindent
+Well, the original name proposed for this @srfi{} was @func{curry}
+which immediately stirred some emotions as it does not what is commonly
+known as currying.  Some alternatives have been discussed, such as:
+
+@example
+section         specialise      specialize,
+partial-apply   partial-call    partial-lambda,
+_j              _i              $
+&               srfi-26         foobar
+xyz             schoenfinkelize curry-which-isnt-curry
+tandoori
+@end example
+
+@noindent
+and it has also been suggested to pick a five letter symbol uniformly at
+random and fix this as a name.  To be fair, not all of these name have
+been put forward as serious proposals, some of them were merely to
+illustrate a point in the discussion.  In addition, I have played with
+the game of the name quite a bit and considered other candidates not
+listed here.
+
+Despite the fact that the discussion list only represents a highly
+biased random sample of people's opinion (motivation to post a message
+is higher if you disagree, for example) it told me that the @srfi{}
+could potentially benefit from a different name; however impractical it
+may be to go for unanimous popularity.
+
+The name @func{cut} refers to ``operator section'', as the concept is
+often called in other programming languages, but I tend to remember it
+as the acronym for ``Curry Upon This''. ;-) The names for the evaluating
+version of @func{cut} that have been proposed were @func{cut!},
+@func{cutlet}, @func{cut*}, and @func{cute}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Is it possible to implement the @srfi{} without macros?
+
+@noindent
+Not really.  As Stephan Houben has pointed out during the discussion
+(refer to ``Implementing it as a procedure'') it is possible to
+implement the @func{cute}--mechanism as a procedure.  Refer also to Al
+Petrofsky's posting ``Problems with @emph{curry}'s formal
+specification'' for details.
+
+However, the procedural implementation comes with a slight performance
+penalty and it is not possible the implement the @func{cut}--mechanism
+as a procedure, too.
+
+As both are needed, we rely on macros to implement the @srfi{}.  Why is
+there another symbol for the rest--slot when @func{lambda}--expressions
+use the dotted notation for variable length argument lists?  There are
+two reasons.  The first one is the existence of a procedural
+implementation of a related mechanism (refer to the previous paragraph).
+For a procedure, however, it is not possible to have dotted notation.
+The second reason is the way the hygienic macro mechanism in @rnrs{5} is
+defined to deal with dotted notation, as Felix Winkelmann has pointed
+out.  Refer to the discussion threads ``Improper lists in macros [WAS:
+none]''.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is it impossible to specify when a non--slot is evaluate individually per non--slot?
+
+@noindent
+@func{cut} evaluates all non--slots at the time the specialized
+procedure is called and @func{cute} evaluates all non--slots at the time
+the procedure is being specialized.  These are only the two extremes and
+it is possible to define a syntax that allows to choose per non--slot.
+However, I am convinced that the benefit of the greater flexibility is
+not worth the risk of confusion.  If a piece of code really depends on
+the distinction, it might be better to make this explicit through
+@func{let} and @func{lambda}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why is @code{(cut if <> 0 1)} etc. illegal?
+
+@noindent
+It is specified that a @code{<slot-or-expr>} must be either the slot
+symbol or an @func{<expression>} in the sense of @rnrs{5}, Section
+7.1.3.  As if is no @func{<expression>}, the above case is illegal.  The
+reason why @func{cut} and @func{cute} are restricted in this sense is
+the difficulty of defining the meaning of such generalized expressions.
+Please refer to the discussion archive for details.
+
+@c page
+@node srfi specialize-procedures ack
+@subsection Acknowledgements
+
+
+An important part of this @srfi{} is based on the contribution of other
+people, mostly through the discussion archive.  In particular, the
+semantics and the design rationale have been greatly improved in the
+course of the discussion.  I would like to thank all who have
+contributed.
+
+@c end of file
