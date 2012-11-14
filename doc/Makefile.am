@@ -15,6 +15,7 @@ vicare_scheme_TEXINFOS	= \
 	let-values.texi			\
 	list.texi			\
 	random.texi			\
+	rec.texi			\
 	receive.texi			\
 	records.texi			\
 	shared-structures.texi		\

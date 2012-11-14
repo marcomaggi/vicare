@@ -19492,8 +19492,8 @@ minor modification of the original documents by Marco Maggi.
 * srfi specialize-procedures::  @ansrfi{26} notation for specializing
                                 parameters without currying.
 * srfi random::                 @ansrfi{27} sources of random bits.
-@c * srfi rec::                         @ansrfi{31} a special form @func{rec}
-@c                                 for recursive evaluation.
+* srfi rec::                    @ansrfi{31} a special form @func{rec}
+                                for recursive evaluation.
 @c * srfi parameters::                  @ansrfi{39} parameter objects.
 * srfi args-fold::              @ansrfi{37} a program argument processor.
 @c * srfi streams::                     @ansrfi{41} streams.
@@ -19520,6 +19520,7 @@ minor modification of the original documents by Marco Maggi.
 @include shared-structures.texi
 @include specialize-procedures.texi
 @include random.texi
+@include rec.texi
 
 @include args-fold.texi
 

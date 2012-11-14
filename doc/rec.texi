@@ -1,0 +1,357 @@
+@node srfi rec
+@section @ansrfi{31} a special form @func{rec} for recursive evaluation
+
+
+@cindex @srfi{} rec
+
+
+The library @library{srfi :31} is by Mirko Luedde
+@email{Mirko.Luedde@@SAP.com} as the reference implementation for
+@ansrfi{31}; see:
+
+@center @url{http://srfi.schemers.org/srfi-31/srfi-31.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi rec license::            Rec document license.
+* srfi rec abstract::           Abstract.
+* srfi rec rationale::          Rationale.
+* srfi rec spec::               Specification.
+* srfi rec ack::                Acknowledgements.
+* srfi rec references::         References.
+@end menu
+
+@c page
+@node srfi rec license
+@subsection Rec document license
+
+
+Copyright @copyright{} 2002 Dr. Mirko Luedde.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi rec abstract
+@subsection Abstract
+
+
+We propose the implementation of a special form called @func{rec}.  This
+form is a generalization and combination of the forms @func{rec} and
+@func{named-lambda} of [Clinger1985].  It allows the simple and
+non--imperative construction of self--referential expressions.
+
+As an important special case, it extends the A. Church form
+@func{lambda} such that it allows the direct definition of recursive
+procedures without using further special forms like @func{let} or
+@func{letrec}, without using advanced constructions like the H. B. Curry
+combinator and, unlike @func{define}, without introducing variable
+bindings into the external environment.
+
+@c page
+@node srfi rec rationale
+@subsection Rationale
+
+
+@subheading General
+
+
+Among the prominent features of the Scheme programming language as
+defined in [KCR1998] are the following:
+
+@itemize
+@item
+it has simple syntax;
+
+@item
+it encourages recursive definitions, e.g. by ensuring memory efficient
+tail recursion;
+
+@item
+it supports non--imperative programming.
+@end itemize
+
+Nevertheless Scheme does not provide a syntax for recursive evaluations
+with the properties of:
+
+@itemize
+@item
+being as simple, intuitive and close to the mathematical standard
+notation as possible;
+
+@item
+allowing general recursion;
+
+@item
+being non--imperative.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subheading Example
+
+@subsubheading Problem 1
+
+@noindent
+Let us look at the factorial function.  In mathematical notation this
+function is expressed as:
+
+@example
+(F : N |--> 1,            if N = 0;
+            N * F(N - 1), otherwise
+@end example
+
+This expression is a term and not a definition or proposition.
+
+We investigate some approaches to express the factorial function in
+Scheme.
+
+@itemize
+@item
+The simplest way perhaps is as:
+
+@example
+(define (F N)
+  (if (zero? N)
+      1
+    (* N (F (- N 1)))))
+@end example
+
+But this expression is not a term.  It binds the factorial function to
+the variable @var{f}.  The expression itself may not occur in a
+syntactical context where a name of the factorial is required.
+
+@item
+We list several ways to express the factorial as a function term.
+
+@enumerate
+@item
+@example
+(let ()
+  (define (F N)
+    (if (zero? N)
+        1
+      (* N (F (- N 1)))))
+      F)
+@end example
+
+@item
+@example
+(lambda (N)
+  (let F ([N N])
+    (if (zero? N)
+        1
+      (* N (F (- N 1))))))
+@end example
+
+@item
+@example
+(letrec ([F (lambda (N)
+              (if (zero? N)
+                  1
+                (* N (F (- N 1)))))])
+  F)
+@end example
+
+@item
+@example
+((lambda (F)
+   (F F))
+ (lambda (G)
+   (lambda (N)
+     (if (zero? N)
+         1
+       (* N ((G G) (- N 1)))))))
+@end example
+@end enumerate
+
+All these expressions define the factorial anonymously, not binding it
+to a variable.  However, all these expressions are more verbose than it
+seems necessary and they are less intuitive than it seems desirable.
+@end itemize
+
+@subsubheading Solution 1
+
+@noindent
+A solution to our problem was already provided in [Clinger1985] by the
+form @func{named-lambda}.  An even earlier solution with a slightly
+different syntax was implemented in Kent Dybvig's Chez Scheme system.
+Using this special form, we can denote the factorial simply by:
+
+@example
+(named-lambda (F N)
+  (if (zero? N)
+      1
+    (* N (F (- N 1)))))
+@end example
+
+This expression is a function term that denotes the factorial in the
+appropriate brevity.
+
+However, the form @func{named-lambda} has been dropped from later
+versions of the Scheme Report.  Also it is missing in
+state--of--the--art implementations such as Chez Scheme (6.0a) and
+@acronym{MIT} Scheme (7.7.0).  (The latter actually knows a form
+@func{named-lambda} with different semantics.)
+
+@c ------------------------------------------------------------
+
+@subsubheading Problem 2
+
+@noindent
+The constant stream of ones can be defined via:
+
+@example
+(define S (cons 1 (delay S)))
+@end example
+
+As in the case of the factorial, we are able to define the recursive
+object at the price of spending an externally bound name.  Remedying
+this with let or letrec leads to similar objections as above.
+
+@subsubheading Solution 2
+
+@noindent
+This particular case of the self--referential problem was solved by the
+@func{rec} form in [Clinger1985].  This form allows writing:
+
+@example
+(rec S (cons 1 (delay S)))
+@end example
+
+This expression is non--imperative and does not introduce an external
+variable binding.
+
+Also this form has been dropped from later versions of the Scheme
+Report.  Moreover, from our point of view this form alone is not capable
+of solving Problem 1.  The respective definition would look like:
+
+@example
+(rec F
+  (lambda (N)
+    (if (zero? N)
+        1
+      (* N (F (- N 1))))))
+@end example
+
+This again does not seem quite as simple and intuitive as the
+mathematical notation.
+
+@c ------------------------------------------------------------
+
+@subheading Proposal
+
+@noindent
+We therefore propose to implement the @func{rec} special form in a
+generalized way that combines the advantages of the @func{named-lambda}
+and @func{rec} forms.  The factorial function could be written:
+
+@example
+(rec (F N)
+  (if (zero? N)
+      1
+    (* N (F (- N 1)))))
+@end example
+
+@c page
+@node srfi rec spec
+@subsection Specification
+
+
+@findex rec
+
+
+@subsubheading Syntax
+
+The following production rules are to be added to those of [KCR1998] (we
+reuse names of non--terminals).
+
+@example
+<derived expression> --> <rec expression>
+<rec expression>     --> (rec <variable>    <expression>)
+<rec expression>     --> (rec (<variable>+) <body>)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Semantics
+
+@noindent
+Scheme versions such as [KCR1998] providing @func{define-syntax},
+@func{syntax-rules}, @func{letrec} and @func{lambda} might implement
+@func{rec} as follows.
+
+@example
+(define-syntax rec
+  (syntax-rules ()
+    [(rec (NAME . VARIABLES) . BODY)
+     (letrec ( (NAME (lambda VARIABLES . BODY)) ) NAME)]
+    [(rec NAME EXPRESSION)
+     (letrec ( (NAME EXPRESSION) ) NAME)]))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Test
+
+@noindent
+The following session shows in which way @func{rec} allows a
+tail--recursive implementation of the factorial function.
+
+@example
+> (define F (rec (F N)
+                ((rec (G K L)
+                   (if (zero? K) L
+                     (G (- K 1) (* K L)))) N 1)))
+> F
+#<procedure>
+> (F 0)
+1
+> (F 10)
+3628800
+@end example
+
+@c page
+@node srfi rec ack
+@subsection Acknowledgements
+
+
+The author thanks Al Petrofsky for the final solution and Hal Abelson,
+Chris Hanson and others for their input.  The work of the maintainers of
+the @srfi{} forum is highly appreciated.
+
+@c page
+@node srfi rec references
+@subsection References
+
+
+[Clinger1985] @emph{Draft of Report of the October 1984 Workshop on
+Scheme}.  W. Clinger.  Proceedings Brandeis Workshop Oct. 22--23, 1984.
+March, 1985.
+
+@center @url{http://www.swiss.ai.mit.edu/ftpdir/scheme-mail/HTML/rrrs-1985}
+
+@noindent
+[KCR1998] @emph{Revised^5 Report on the Algorithmic Language Scheme}.
+R. Kelsey, W. Clinger, J. Rees.  Higher--Order and Symbolic Computation,
+volume 11, number 1, September 1998.
+
+@c end of file
