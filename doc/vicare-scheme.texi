@@ -16816,7 +16816,7 @@ in the right--hand sides of @func{letrec}, @func{letrec*} and
 is found.  This is the default.
 
 If set to false: the validating pass is not performed, faithfully hoping
-for not problems in code.
+for no problems in code.
 @end deffn
 
 
@@ -16896,7 +16896,7 @@ more passes can do significant improvement.
 The following bindings are exported by the library @library{vicare}.
 
 
-@deffn Parameter optimize-level
+@deffn Parameter $optimize-level
 The optimization level; accepted values are the fixnums @code{0},
 @code{1}, @code{2}.  Defaults to @code{0}.
 
@@ -16907,14 +16907,14 @@ The optimization level; accepted values are the fixnums @code{0},
 @end deffn
 
 
-@deffn Parameter cp0-effort-limit
+@deffn Parameter $cp0-effort-limit
 An effort counter that is decremented every time an optimization is
 performed by the source optimizer.  It is set every time the optimizer
 enters specific subexpressions of the input.
 @end deffn
 
 
-@deffn Parameter cp0-size-limit
+@deffn Parameter $cp0-size-limit
 A code size counter (estimated) that is decremented every time an
 optimization is performed by the source optimizer.  It is set every time
 the optimizer enters specific subexpressions of the input.
@@ -16945,6 +16945,11 @@ system $compiler}.
 @defun $introduce-tags @var{input}
 @end defun
 
+
+@deffn Parameter $perform-tag-analysis
+When true the pass @func{$introduce-tags} is performed, else it is
+skipped.  Defaults to @true{}.
+@end deffn
 
 @c page
 @node syslib compiler vars
@@ -17010,6 +17015,10 @@ system $compiler}.
 @defun $convert-closures @var{input}
 @end defun
 
+
+@deffn Parameter $optimize-cp
+To be documented.
+@end deffn
 
 @c page
 @node syslib compiler lift

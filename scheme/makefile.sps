@@ -162,13 +162,13 @@
                 compile-core-expr-to-port))
 (import (ikarus.compiler)) ; just for fun
 
-(optimize-level 2)
-(perform-tag-analysis #t)
+($optimize-level 2)
+($perform-tag-analysis #t)
 (pretty-width 160)
 ((pretty-format 'fix)
  ((pretty-format 'letrec)))
-(strip-source-info #t)
-(current-letrec-pass 'scc)
+($strip-source-info #t)
+($current-letrec-pass 'scc)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
@@ -2159,13 +2159,6 @@
 ;;; --------------------------------------------------------------------
 
     (ellipsis-map)
-    (optimize-cp				i v $language)
-    (optimize-level				i v $language)
-    (cp0-size-limit				i v $language)
-    (cp0-effort-limit				i v $language)
-    (tag-analysis-output			i v $language)
-    (perform-tag-analysis			i v $language)
-    (current-letrec-pass			i v $language)
     (host-info					i v $language)
     (debug-call)
 
@@ -2179,10 +2172,23 @@
 
 ;;; --------------------------------------------------------------------
 
+    (optimize-level				i v $language)
+    (tag-analysis-output			i v $language)
+    (current-letrec-pass			i v $language)
+
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
+    ($optimize-cp				$compiler)
+    ($optimize-level				$compiler)
     ($source-optimizer-passes-count		$compiler)
+    ($perform-tag-analysis			$compiler)
+    ($cp0-size-limit				$compiler)
+    ($cp0-effort-limit				$compiler)
+    ($strip-source-info				$compiler)
+    ($generate-debug-calls			$compiler)
     ($open-mvcalls				$compiler)
+
+    ($tag-analysis-output			$compiler)
 
     ($compile-core-expr->code			$compiler)
     ($recordize					$compiler)

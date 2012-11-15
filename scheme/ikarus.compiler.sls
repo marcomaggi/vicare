@@ -34,16 +34,21 @@
     tag-analysis-output
 
     ;; configuration parameters
-    cp0-effort-limit			cp0-size-limit
     current-letrec-pass			generate-debug-calls
-    optimize-cp				optimize-level
-    perform-tag-analysis		strip-source-info
+    optimize-level			strip-source-info
 
     ;; these go in (ikarus system $compiler)
     (rename
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
+     (optimize-cp				$optimize-cp)
+     (optimize-level				$optimize-level)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
+     (perform-tag-analysis			$perform-tag-analysis)
+     (cp0-effort-limit				$cp0-effort-limit)
+     (cp0-size-limit				$cp0-size-limit)
+     (strip-source-info				$strip-source-info)
+     (generate-debug-calls			$generate-debug-calls)
      (open-mvcalls				$open-mvcalls)
 
      (compile-core-expr->code			$compile-core-expr->code)
@@ -79,7 +84,6 @@
 		  current-primitive-locations
 		  eval-core			current-core-eval
 		  compile-core-expr-to-port	compile-core-expr
-		  #;bind
 
 		  assembler-output
 		  optimizer-output
@@ -131,6 +135,8 @@
   (make-parameter #f))
 
 (define perform-tag-analysis
+  ;;When true the pass INTRODUCE-TAGS is performed, else it is skipped.
+  ;;
   (make-parameter #t))
 
 (define assembler-output
@@ -3246,8 +3252,8 @@
 
       ((jmpcall label rator rand*)
        (let-values (((rator^ rat-free)   (if (optimize-cp)
-					    (Rator rator)
-					  (E rator)))
+					     (Rator rator)
+					   (E rator)))
                     ((rand*^ rand*-free) (E-known* rand*)))
          (values (make-jmpcall label rator^ rand*^)
                  (union rat-free rand*-free))))
