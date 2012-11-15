@@ -156,6 +156,7 @@ TESTS			=	\
 	test-vicare-platform.sps			\
 	test-vicare-pointers.sps			\
 	test-vicare-promises.sps			\
+	test-vicare-time.sps				\
 	test-vicare-reader.sps				\
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
@@ -377,6 +378,7 @@ EXTRA_DIST = \
 	test-vicare-posix-sigwait.sps			\
 	\
 	test-vicare-promises.sps			\
+	test-vicare-time.sps				\
 	test-vicare-reader.sps				\
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\

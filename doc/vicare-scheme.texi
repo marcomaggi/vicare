@@ -1882,6 +1882,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib memory::                Memory management.
 * iklib cstrings::              Raw C strings.
 * iklib errno::                 Interface to @code{errno}.
+* iklib time::                  Basic time and date functions.
 * iklib readline::              Readline interface.
 * iklib debug::                 Debugging utilities.
 * iklib misc::                  Miscellaneous functions.
@@ -7583,6 +7584,40 @@ The mechanism is such that the following form:
 performs a foreign--function call and evaluates to two values: the
 return value from the foreign function and the value of the C variable
 @code{errno} right after the foreign call.
+@end defun
+
+@c page
+@node iklib time
+@section Basic time and date functions
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus}.
+
+
+@defun current-time
+Return an object of disjoint type representing the current time as
+determined by @cfunc{gettimeofday}: this is the elapsed time since the
+Epoch.
+@end defun
+
+
+@defun time? @var{obj}
+Return @true{} if @var{obj} is a time object returned by
+@func{current-time}.
+@end defun
+
+
+@defun time-second @var{time}
+@defunx time-nanosecond @var{time}
+Accessors, returning exact integers, for the seconds and nanoseconds
+components of the time objects returned by @func{current-time}.
+@end defun
+
+
+@defun time-gmt-offset @var{time}
+Return the @acronym{GMT} offset in seconds of the @var{time} object
+returned by @func{current-time}, as determined ty @cfunc{gmtime_r}.
 @end defun
 
 @c page
