@@ -27,7 +27,9 @@
 		  char>?		char>=?)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    unsafe.)
+    (vicare arguments validation))
+
 
 ;;;; arguments validation
 
@@ -36,10 +38,6 @@
        (unsafe.fx>= obj 0)
        (unsafe.fx<= obj #x10FFFF))
   (assertion-violation who "expected fixnum in range [0, #x10FFFF] as argument" obj))
-
-(define-argument-validation (char who obj)
-  (char? obj)
-  (assertion-violation who "expected character as argument" obj))
 
 (define-argument-validation (list-of-chars who obj)
   (for-all char? obj)
@@ -69,7 +67,8 @@
   ;;Defined  by  R6RS.  Given  a  character,  CHAR->INTEGER returns  its
   ;;Unicode scalar value as an exact integer object.
   ;;
-  (with-arguments-validation (char->integer)
+  (define who 'char->integer)
+  (with-arguments-validation (who)
       ((char  ch))
     (unsafe.char->fixnum ch)))
 

@@ -7807,6 +7807,18 @@ of the system function @cfunc{strerror}.  If @var{errno} is not a valid
 @glibcref{Error Messages, Error Messages}
 @end defun
 
+
+@defun warning @var{who} @var{message} @var{irritant} ...
+Similar to @func{error}, but raise a @strong{continuable} exception with
+condition components: @condition{warning}, @condition{who},
+@condition{message}, @condition{irritants}.
+@end defun
+
+
+@defun die @var{who} @var{message} @var{irritant} ...
+A deprecated alias for @func{assertion-violation}.
+@end defun
+
 @c page
 @node ffi
 @chapter Foreign functions interface
@@ -19782,6 +19794,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined bits::           Validating bit--sized integers.
 * args predefined signed int::     Validating C language @code{int} values.
 * args predefined clang::          Validating C language values.
+* args predefined chars::          Validating characters.
 * args predefined strings::        Validating string and
                                    related arguments.
 * args predefined vectors::        Validating vector and
@@ -20175,6 +20188,19 @@ variant, in the range of a C language type @code{off_t}.
 @deffnx {Validation Clause} ptrdiff_t/false @var{obj}
 Succeed if @var{obj} is an exact integer, or @false{} for the second
 variant, in the range of a C language type @code{ptrdiff_t}.
+@end deffn
+
+@c page
+@node args predefined chars
+@subsubsection Validating characters
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} char @var{obj}
+Succeed if @var{obj} is a character.
 @end deffn
 
 @c page

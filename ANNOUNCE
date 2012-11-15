@@ -107,6 +107,8 @@ Notes for revision 0.2d20
 * Documented  the basic  time functions  exported by  (vicare), see  the
   documentation node "iklib time".
 
+* Added documentation for the functions: WARNING and DIE.
+
 
 Notes for revision 0.2d19
 -------------------------
