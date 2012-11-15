@@ -33,10 +33,6 @@
     optimizer-output
     tag-analysis-output
 
-    ;; configuration parameters
-    current-letrec-pass			generate-debug-calls
-    optimize-level			strip-source-info
-
     ;; these go in (ikarus system $compiler)
     (rename
      (current-letrec-pass			$current-letrec-pass)

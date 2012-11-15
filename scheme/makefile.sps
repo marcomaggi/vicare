@@ -2172,10 +2172,6 @@
 
 ;;; --------------------------------------------------------------------
 
-    (optimize-level				i v $language)
-    (tag-analysis-output			i v $language)
-    (current-letrec-pass			i v $language)
-
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
     ($optimize-cp				$compiler)
