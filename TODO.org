@@ -18,7 +18,14 @@
 ** list of Scheme files still to review
 
    scheme/ikarus.fixnums.ss
-   scheme/ikarus.numerics.ss
+   scheme/ikarus.numerics.bitwise.misc.sls
+   scheme/ikarus.numerics.flonums.sls
+   scheme/ikarus.numerics.rationalize.sls
+   scheme/ikarus.numerics.complex-numbers.sls
+   scheme/ikarus.numerics.div-and-mod.sls
+   scheme/ikarus.numerics.flonums.div-and-mod.sls
+   scheme/ikarus.numerics.flonum-conversion.sls
+   scheme/ikarus.numerics.generic-arithmetic.sls
 
    scheme/ikarus.debugger.ss
 
