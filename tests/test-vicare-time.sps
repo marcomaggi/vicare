@@ -35,7 +35,7 @@
 
 (parametrise ((check-test-name	'base))
 
-  (when #t
+  (when #f
     (let ((T (current-time)))
       (check-pretty-print (list T
 				(time-second     T)
