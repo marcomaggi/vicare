@@ -55,11 +55,6 @@
    scheme/psyntax.internal.ss
    scheme/psyntax.library-manager.ss
 
-** list of Scheme files that maybe will be reviewed
-
-   scheme/x86-64-repl.ss
-
-
 ** list of C code that must be reviewed
 
 *** ikarus-numerics.c
