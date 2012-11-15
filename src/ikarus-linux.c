@@ -708,7 +708,7 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
    return an encoded "errno" value. */
 {
 #undef IK_INOTIFY_EVENT_BUFFER_SIZE
-#define IK_INOTIFY_EVENT_BUFFER_SIZE	4096
+#define IK_INOTIFY_EVENT_BUFFER_SIZE	IK_CHUNK_SIZE
   uint8_t	buffer[IK_INOTIFY_EVENT_BUFFER_SIZE];
   int		rv;
   errno = 0;

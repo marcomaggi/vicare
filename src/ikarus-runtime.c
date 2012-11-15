@@ -48,9 +48,6 @@ static int total_malloced = 0;
 
 #define CACHE_SIZE		(IK_PAGESIZE * 1) /* must be multiple of IK_PAGESIZE */
 
-#define IK_STAKSIZE		(1024 * IK_PAGESIZE)
-/* #define IK_STAKSIZE		(256 * 4096) */
-
 
 static void
 extend_table_maybe (ikptr p, ik_ulong size, ikpcb* pcb)
@@ -256,7 +253,7 @@ ik_make_pcb (void)
     pcb->heap_base          = ik_mmap(IK_HEAPSIZE);
     pcb->heap_size          = IK_HEAPSIZE;
     pcb->allocation_pointer = pcb->heap_base;
-    pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - 2 * 4096;
+    pcb->allocation_redline = pcb->heap_base + IK_HEAPSIZE - 2 * IK_CHUNK_SIZE;
   }
 
   /* The Scheme  stack grows  from high memory  addresses to  low memory
@@ -309,11 +306,11 @@ ik_make_pcb (void)
    * code execution.
    */
   {
-    pcb->stack_base    = ik_mmap(IK_STAKSIZE);
-    pcb->stack_size    = IK_STAKSIZE;
+    pcb->stack_base    = ik_mmap(IK_STACKSIZE);
+    pcb->stack_size    = IK_STACKSIZE;
     pcb->frame_pointer = pcb->stack_base + pcb->stack_size;
     pcb->frame_base    = pcb->frame_pointer;
-    pcb->frame_redline = pcb->stack_base + 2 * 4096;
+    pcb->frame_redline = pcb->stack_base + 2 * IK_CHUNK_SIZE;
   }
 
   /* Allocate  and initialise  the page  cache.  The  PCB references  an
@@ -665,11 +662,11 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       ikptr	heap_ptr;
       ik_ulong	new_size = (requested_size > IK_HEAP_EXT_SIZE)? \
 	requested_size : IK_HEAP_EXT_SIZE;
-      new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + 2 * 4096);
+      new_size			= IK_ALIGN_TO_NEXT_PAGE(new_size + 2 * IK_CHUNK_SIZE);
       heap_ptr			= ik_mmap_mixed(new_size, pcb);
       pcb->heap_base		= heap_ptr;
       pcb->heap_size		= new_size;
-      pcb->allocation_redline	= heap_ptr + new_size - 2 * 4096;
+      pcb->allocation_redline	= heap_ptr + new_size - 2 * IK_CHUNK_SIZE;
       pcb->allocation_pointer	= heap_ptr + requested_size;
       return heap_ptr;
     }
@@ -846,11 +843,11 @@ ik_stack_overflow (ikpcb* pcb)
   }
   { /* Allocate a  new memory  segment to  be used  as Scheme  stack and
        set the PCB accordingly. */
-    pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STAKSIZE, mainstack_mt, pcb);
-    pcb->stack_size    = IK_STAKSIZE;
+    pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STACKSIZE, mainstack_mt, pcb);
+    pcb->stack_size    = IK_STACKSIZE;
     pcb->frame_base    = pcb->stack_base + pcb->stack_size;
     pcb->frame_pointer = pcb->frame_base - wordsize;
-    pcb->frame_redline = pcb->stack_base + 2 * 4096;
+    pcb->frame_redline = pcb->stack_base + 2 * IK_CHUNK_SIZE;
     /* Store the address of the underflow handler in the highest machine
        word, so that it is referenced by "pcb->frame_pointer". */
     IK_REF(pcb->frame_pointer, 0) = underflow_handler;

@@ -196,6 +196,9 @@
 
 /* ------------------------------------------------------------------ */
 
+/* This must be 4096: never change it!!! */
+#define IK_CHUNK_SIZE		4096
+
 /* The IK_PAGESIZE  is used  to determine the  size of memory  blocks to
    allocate with "mmap()".
 
@@ -206,10 +209,11 @@
        8000 >> 12 = 1
       10000 >> 12 = 2
 
-   The value 12 for pageshift is correct for a pagesize of 4096.
+   The  value   12  for   pageshift  is  correct   for  a   pagesize  of
+   IK_CHUNK_SIZE.
 
-   #define IK_PAGESIZE		4096
-   #define IK_PAGESHIFT		12
+      #define IK_PAGESIZE	IK_CHUNK_SIZE
+      #define IK_PAGESHIFT	12
 
    These values  are determined by  the "configure" script,  because the
    page size  is platform-dependent.  In  truth we should  determine the
@@ -218,8 +222,11 @@
 
 #define generation_count	5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
-#define IK_HEAP_EXT_SIZE	(32 * 4096)
-#define IK_HEAPSIZE		(1024 * 4096 * ((wordsize==4)?1:2)) /* 4/8 MB */
+#define IK_HEAP_EXT_SIZE	(32 * IK_CHUNK_SIZE)
+#define IK_HEAPSIZE		(1024 * IK_CHUNK_SIZE * ((wordsize==4)?1:2)) /* 4/8 MB */
+
+#define IK_STACKSIZE		(1024 * IK_CHUNK_SIZE)
+/* #define IK_STACKSIZE		(256 * IK_CHUNK_SIZE) */
 
 #define IK_FASL_HEADER		((sizeof(ikptr) == 4)? "#@IK01" : "#@IK02")
 #define IK_FASL_HEADER_LEN	(strlen(IK_FASL_HEADER))

@@ -4422,7 +4422,7 @@ ikrt_posix_strftime (ikptr s_template, ikptr s_tm_struct, ikpcb *pcb)
   struct tm	T;
   const char *	template;
 #undef SIZE
-#define SIZE	4096
+#define SIZE	IK_CHUNK_SIZE
   size_t	size=SIZE;
   char		output[SIZE+1];
   template = IK_BYTEVECTOR_DATA_CHARP(s_template);

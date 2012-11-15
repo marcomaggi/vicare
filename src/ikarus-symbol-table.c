@@ -24,7 +24,7 @@
 #include "internals.h"
 
 #undef NUM_OF_BUCKETS
-#define NUM_OF_BUCKETS		4096 /* power of 2 */
+#define NUM_OF_BUCKETS		IK_CHUNK_SIZE /* power of 2 */
 
 
 static ikptr

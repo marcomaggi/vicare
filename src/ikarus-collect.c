@@ -1448,7 +1448,7 @@ add_object_proc (gc_t* gc, ikptr X)
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-      if (size > 4096)
+      if (size > IK_CHUNK_SIZE)
         ik_debug_message("large cont size=0x%016lx", size);
 #endif
       ikptr	next = IK_REF(X, off_continuation_next);
