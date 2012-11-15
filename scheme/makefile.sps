@@ -260,7 +260,6 @@
     "ikarus.records.procedural.sls"
     "ikarus.strings.sls"
     "ikarus.unicode-conversion.sls"
-    "ikarus.date-string.sls"
     "ikarus.symbols.sls"
     "ikarus.vectors.sls"
     "ikarus.unicode.sls"
@@ -296,6 +295,7 @@
     "ikarus.cafe.sls"
     "ikarus.timer.sls"
     "ikarus.time-and-date.sls"
+    "ikarus.date-string.sls"
     "ikarus.sort.sls"
     "ikarus.promises.sls"
     "ikarus.enumerations.sls"
@@ -570,7 +570,6 @@
     (weak-cons					i v $language)
     (weak-pair?					i v $language)
     (uuid					i v $language)
-    (date-string				i v $language)
     (andmap					i v $language)
     (ormap					i v $language)
     (fx<					i v $language)
@@ -671,11 +670,14 @@
     (stats-bytes-major				i v $language)
     (time-it					i v $language)
     (verbose-timer				i v $language)
+;;;
     (current-time				i v $language)
     (time?					i v $language)
     (time-second				i v $language)
-    (time-gmt-offset				i v $language)
     (time-nanosecond				i v $language)
+    (time-gmt-offset				i v $language)
+    (date-string				i v $language)
+;;;
     (command-line-arguments			i v $language)
     (set-rtd-printer!				i v $language)
     (set-rtd-destructor!			i v $language)

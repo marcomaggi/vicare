@@ -35,12 +35,13 @@
 
 (parametrise ((check-test-name	'base))
 
-  (when #f
+  (when #t
     (let ((T (current-time)))
       (check-pretty-print (list T
 				(time-second     T)
 				(time-nanosecond T)
-				(time-gmt-offset T)))))
+				(time-gmt-offset T)
+				(date-string)))))
 
   (check
       (time? (current-time))
@@ -58,6 +59,10 @@
 
   (check
       (fixnum? (time-gmt-offset (current-time)))
+    => #t)
+
+  (check
+      (string? (date-string))
     => #t)
 
   #t)

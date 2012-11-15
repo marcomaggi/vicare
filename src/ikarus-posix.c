@@ -4499,6 +4499,30 @@ ikrt_gmt_offset (ikptr t)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_bvftime (ikptr outbv, ikptr fmtbv)
+{
+#if ((defined HAVE_TIME) && (defined HAVE_LOCALTIME_R) && (defined HAVE_STRFTIME))
+  time_t	t;
+  struct tm	tmp;
+  int		rv;
+  t     = time(NULL);
+  errno = 0;
+  localtime_r(&t, &tmp);
+  errno = 0;
+  rv    = strftime((char*)(long)(outbv + off_bytevector_data),
+		   IK_UNFIX(IK_REF(outbv, off_bytevector_length)) + 1,
+		   (char*)(long)(fmtbv + off_bytevector_data),
+		   &tmp);
+#ifdef VICARE_DEBUGGING
+  if (rv == 0)
+    ik_debug_message("error in strftime: %s\n", strerror(errno));
+#endif
+  return IK_FIX(rv);
+#else
+  feature_failure(__func__);
+#endif
+}
 
 /* ------------------------------------------------------------------ */
 

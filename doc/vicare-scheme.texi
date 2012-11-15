@@ -7620,6 +7620,12 @@ Return the @acronym{GMT} offset in seconds of the @var{time} object
 returned by @func{current-time}, as determined ty @cfunc{gmtime_r}.
 @end defun
 
+
+@defun date-string
+Return a string representing the current date in the simple format:
+year, month, day.
+@end defun
+
 @c page
 @node iklib readline
 @section Readline interface

@@ -1025,32 +1025,6 @@ ikrt_set_code_annotation (ikptr s_code, ikptr s_annot, ikpcb* pcb)
 }
 
 
-ikptr
-ikrt_bvftime (ikptr outbv, ikptr fmtbv)
-{
-  time_t	t;
-  struct tm *	tmp;
-  int		rv;
-  t     = time(NULL);
-  errno = 0;
-  tmp   = localtime(&t);
-#ifdef VICARE_DEBUGGING
-  if (tmp == NULL)
-    ik_debug_message("error in time: %s\n", strerror(errno));
-#endif
-  errno = 0;
-  rv    = strftime((char*)(long)(outbv + off_bytevector_data),
-		   IK_UNFIX(IK_REF(outbv, off_bytevector_length)) + 1,
-		   (char*)(long)(fmtbv + off_bytevector_data),
-		   tmp);
-#ifdef VICARE_DEBUGGING
-  if (rv == 0)
-    ik_debug_message("error in strftime: %s\n", strerror(errno));
-#endif
-  return IK_FIX(rv);
-}
-
-
 /** --------------------------------------------------------------------
  ** Guardians handling.
  ** ----------------------------------------------------------------- */

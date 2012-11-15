@@ -208,9 +208,9 @@ AC_FUNC_MEMCMP
 AC_FUNC_MMAP
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([bzero gettimeofday memmove memset mmap munmap sqrt strerror getaddrinfo])
+AC_CHECK_FUNCS([bzero memmove memset mmap munmap sqrt strerror getaddrinfo])
 AC_CHECK_FUNCS([stat lstat realpath unlink mkdir])
-AC_CHECK_FUNCS([mktime gmtime_r])
+AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime])
 AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
 AC_CHECK_FUNCS([getenv])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
@@ -359,7 +359,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([getgrgid getgrnam setgrent getgrent endgrent])
   AC_CHECK_FUNCS([ctermid setsid getsid getpgrp setpgid tcgetpgrp tcsetpgrp tcgetsid])
   AC_CHECK_TYPES([struct tms],,,[VICARE_INCLUDES])
-  AC_CHECK_FUNCS([clock time times localtime_r timelocal timegm strftime nanosleep])
+  AC_CHECK_FUNCS([clock times timelocal timegm nanosleep])
   AC_CHECK_FUNCS([setitimer getitimer alarm])
   AC_CHECK_FUNCS([getrusage getrlimit setrlimit])
 
