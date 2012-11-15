@@ -20,7 +20,6 @@
    scheme/ikarus.fixnums.ss
    scheme/ikarus.numerics.ss
 
-   scheme/ikarus.exceptions.ss
    scheme/ikarus.debugger.ss
 
    scheme/ikarus.collect.ss
