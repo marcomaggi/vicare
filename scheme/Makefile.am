@@ -165,7 +165,7 @@ EXTRA_DIST= last-revision				\
 	ikarus.numerics.div-and-mod.sls			\
 	ikarus.numerics.flonums.div-and-mod.sls		\
 	ikarus.numerics.bitwise.misc.sls		\
-	ikarus.numerics.sls				\
+	ikarus.numerics.complex-numbers.sls		\
 	ikarus.options.sls				\
 	ikarus.pairs.sls				\
 	ikarus.pointers.sls				\

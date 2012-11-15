@@ -271,7 +271,7 @@
     "ikarus.numerics.div-and-mod.sls"
     "ikarus.numerics.flonums.div-and-mod.sls"
     "ikarus.numerics.bitwise.misc.sls"
-    "ikarus.numerics.sls"
+    "ikarus.numerics.complex-numbers.sls"
     "ikarus.conditions.sls"
     "ikarus.guardians.sls"
     "ikarus.symbol-table.sls"
