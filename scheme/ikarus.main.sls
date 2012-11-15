@@ -78,8 +78,6 @@
     (only (ikarus system $structs)
 	  $struct-ref
 	  $struct-rtd)
-    #;(only (ikarus system $compiler)
-	  $current-letrec-pass)
     (only (ikarus cafe)
 	  cafe-input-port)
     (prefix (only (ikarus.readline)

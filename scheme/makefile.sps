@@ -295,7 +295,6 @@
     "ikarus.cafe.sls"
     "ikarus.timer.sls"
     "ikarus.time-and-date.sls"
-    "ikarus.date-string.sls"
     "ikarus.sort.sls"
     "ikarus.promises.sls"
     "ikarus.enumerations.sls"

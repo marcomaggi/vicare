@@ -19,12 +19,12 @@
   (export
     current-time	time?
     time-second		time-nanosecond
-    time-gmt-offset)
+    time-gmt-offset	date-string)
   (import (except (ikarus)
 		  time
 		  current-time		time?
 		  time-second		time-nanosecond
-		  time-gmt-offset)
+		  time-gmt-offset	date-string)
     (vicare arguments validation))
 
 
@@ -62,6 +62,13 @@
   (with-arguments-validation (who)
       ((time	x))
     (foreign-call "ikrt_gmt_offset" x)))
+
+;;; --------------------------------------------------------------------
+
+(define (date-string)
+  (let ((s (make-bytevector 10)))
+    (foreign-call "ikrt_bvftime" s (string->utf8 "%F"))
+    (utf8->string s)))
 
 
 ;;;; done

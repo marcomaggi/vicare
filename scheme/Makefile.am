@@ -140,7 +140,6 @@ EXTRA_DIST= last-revision				\
 	ikarus.command-line.sls				\
 	ikarus.conditions.sls				\
 	ikarus.control.sls				\
-	ikarus.date-string.sls				\
 	ikarus.debugger.sls				\
 	ikarus.emergency.sls				\
 	ikarus.enumerations.sls				\
