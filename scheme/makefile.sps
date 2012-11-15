@@ -541,7 +541,7 @@
 ;;;
     (posix		(vicare $posix)				#t	#t)
     ($language		(vicare language-extensions)		#f	#f)
-    ($compiler		(ikarus system $compiler)		#f	#f)
+    ($compiler		(ikarus system $compiler)		#t	#t)
     ))
 
 
