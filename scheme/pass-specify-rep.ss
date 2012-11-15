@@ -267,6 +267,13 @@
     ;;local binding definition.  It works  like LET* for recordized code
     ;;generation
     ;;
+    #;(syntax-rules ()
+      ((_ () ?body0 ?body ...)
+       (begin ?body0 ?body ...))
+      ((_ ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body0 ?body ...)
+       (with-tmp ((?lhs0 ?rhs0))
+	 (with-tmp* ((?lhs ?rhs) ...)
+	   ?body0 ?body ...))))
     (lambda (x)
       (syntax-case x ()
 	((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
