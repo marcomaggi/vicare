@@ -242,6 +242,7 @@
     setsockopt/linger			getsockopt/linger
     getnetbyname			getnetbyaddr
     network-entries
+    tcp-connect
 
     make-struct-hostent			struct-hostent?
     struct-hostent-h_name		struct-hostent-h_aliases
@@ -3400,6 +3401,39 @@
       (if (pair? rv)
 	  (values (unsafe.car rv) (unsafe.cdr rv))
 	(%raise-errno-error who rv sock)))))
+
+;;; --------------------------------------------------------------------
+
+(module (tcp-connect)
+
+  (define (tcp-connect hostname service)
+    (define who 'tcp-connect)
+    (with-arguments-validation (who)
+	((string	hostname)
+	 (string	service))
+      (let ((addrinfos (getaddrinfo hostname service HINTS)))
+	(if (null? addrinfos)
+	    (error who
+	      "unable to determine usable address of remote host"
+	      hostname service)
+	  (let* ((info		(car addrinfos))
+		 (sockaddr	(struct-addrinfo-ai_addr info))
+		 (sock		(socket PF_INET SOCK_STREAM 0)))
+	    (connect sock sockaddr)
+	    (let ((port (make-textual-socket-input/output-port
+			 sock "client socket" TCP-TRANSCODER)))
+	      (set-port-buffer-mode! port (buffer-mode line))
+	      port))))))
+
+  (define-constant HINTS
+    (make-struct-addrinfo AI_CANONNAME AF_INET SOCK_STREAM 0 #f #f #f))
+
+  (define-constant TCP-TRANSCODER
+    (make-transcoder (utf-8-codec)
+		     (eol-style none)
+		     (error-handling-mode raise)))
+
+  #| end of module: tcp-connect |# )
 
 
 ;;;; users and groups

@@ -109,6 +109,8 @@ Notes for revision 0.2d20
 
 * Added documentation for the functions: WARNING and DIE.
 
+* Added convenience function TCP-CONNECT to (vicare posix).
+
 
 Notes for revision 0.2d19
 -------------------------

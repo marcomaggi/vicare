@@ -281,6 +281,7 @@ EXTRA_DIST = \
 	demo-vicare-readline.sps			\
 	demo-vicare-timerfd.sps				\
 	demo-issue-35.sps				\
+	demo-tcp-connect.sps				\
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
