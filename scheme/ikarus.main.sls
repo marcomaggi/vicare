@@ -52,6 +52,8 @@
     (prefix (only (ikarus.compiler)
 		  $optimize-level
 		  $generate-debug-calls
+		  $assembler-output
+		  $optimizer-output
 		  $open-mvcalls
 		  $source-optimizer-passes-count)
 	    compiler.)
@@ -482,10 +484,10 @@
 	   (next-option (cdr args) k))
 
 	  ((%option= "--print-assembly")
-	   (next-option (cdr args) (lambda () (k) (assembler-output #t))))
+	   (next-option (cdr args) (lambda () (k) (compiler.$assembler-output #t))))
 
 	  ((%option= "--print-optimizer" "--print-optimiser")
-	   (next-option (cdr args) (lambda () (k) (optimizer-output #t))))
+	   (next-option (cdr args) (lambda () (k) (compiler.$optimizer-output #t))))
 
 	  ((%option= "--no-rcfile")
 	   (run-time-config-rcfiles-register! cfg #f)

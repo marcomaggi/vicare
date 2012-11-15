@@ -28,13 +28,9 @@
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
 
-    ;; middle pass inspection
-    assembler-output
-    optimizer-output
-    tag-analysis-output
-
     ;; these go in (ikarus system $compiler)
     (rename
+     ;; configuration parameters
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (optimize-cp				$optimize-cp)
@@ -46,6 +42,11 @@
      (strip-source-info				$strip-source-info)
      (generate-debug-calls			$generate-debug-calls)
      (open-mvcalls				$open-mvcalls)
+
+     ;; middle pass inspection
+     (assembler-output				$assembler-output)
+     (optimizer-output				$optimizer-output)
+     (tag-analysis-output			$tag-analysis-output)
 
      (compile-core-expr->code			$compile-core-expr->code)
      (recordize					$recordize)

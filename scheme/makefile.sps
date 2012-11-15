@@ -2185,6 +2185,8 @@
     ($open-mvcalls				$compiler)
 
     ($tag-analysis-output			$compiler)
+    ($assembler-output				$compiler)
+    ($optimizer-output				$compiler)
 
     ($compile-core-expr->code			$compiler)
     ($recordize					$compiler)
