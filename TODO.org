@@ -29,7 +29,6 @@
    scheme/ikarus.fasl.write.ss
    scheme/ikarus.pretty-formats.ss
    scheme/ikarus.pretty-print.ss
-   scheme/ikarus.singular-objects.ss
    scheme/ikarus.sort.ss
    scheme/ikarus.timer.ss
    scheme/ikarus.unicode-conversion.ss
