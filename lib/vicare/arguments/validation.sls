@@ -181,6 +181,9 @@
     memory-block.vicare-arguments-validation
     memory-block/false.vicare-arguments-validation
 
+    ;; characters
+    char.vicare-arguments-validation
+
     ;; flonums
     flonum.vicare-arguments-validation
 
@@ -1185,6 +1188,13 @@
 (define-argument-validation (flonum who obj)
   (flonum? obj)
   (assertion-violation who "expected flonum as argument" obj))
+
+
+;;;; characters
+
+(define-argument-validation (char who obj)
+  (char? obj)
+  (assertion-violation who "expected character as argument" obj))
 
 
 ;;;; bignums validation
