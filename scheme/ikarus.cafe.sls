@@ -19,15 +19,7 @@
   (import (except (ikarus)
 		  new-cafe
 		  waiter-prompt-string
-		  cafe-input-port
-
-		  ;;To  be  removed at  the  next  boot image  rotation.
-		  ;;(Marco Maggi; Oct 23, 2012)
-		  printer-integer-radix)
-    ;;To be removed at the next  boot image rotation.  (Marco Maggi; Oct
-    ;;23, 2012)
-    (only (ikarus writer)
-	  printer-integer-radix)
+		  cafe-input-port)
     (vicare syntactic-extensions))
 
 

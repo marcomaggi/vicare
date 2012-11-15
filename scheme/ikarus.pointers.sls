@@ -659,8 +659,8 @@
   ;;
   (syntax-rules ()
     ((_ ?pointer ?size ?owner?)
-     ($struct-guardian ($struct (type-descriptor memory-block) ?pointer ?size ?owner?))
-     #;(make-memory-block ?pointer ?size ?owner?)
+     #;($struct-guardian ($struct (type-descriptor memory-block) ?pointer ?size ?owner?))
+     (make-memory-block ?pointer ?size ?owner?)
      )))
 
 (define (%unsafe.memory-block-destructor S)
