@@ -535,13 +535,13 @@
     ($for		(ikarus system $foreign)		#f	#t)
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
+    ($compiler		(ikarus system $compiler)		#t	#t)
 ;;;
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
     (posix		(vicare $posix)				#t	#t)
     ($language		(vicare language-extensions)		#f	#f)
-    ($compiler		(ikarus system $compiler)		#t	#t)
     ))
 
 
