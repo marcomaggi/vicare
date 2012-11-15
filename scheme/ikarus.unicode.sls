@@ -101,8 +101,8 @@
 (define (char- x y)
   (fx- (char->integer x) (char->integer y)))
 
-(include "unicode/unicode-char-cases.ss")
-(include "unicode/unicode-charinfo.ss")
+(include/verbose "unicode/unicode-char-cases.ss")
+(include/verbose "unicode/unicode-charinfo.ss")
 
 (define-syntax define-char-op
   (syntax-rules ()

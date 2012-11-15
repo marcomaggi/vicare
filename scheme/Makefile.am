@@ -158,6 +158,13 @@ EXTRA_DIST= last-revision				\
 	ikarus.load.sls					\
 	ikarus.main.sls					\
 	ikarus.multiple-values.sls			\
+	ikarus.numerics.flonums.sls			\
+	ikarus.numerics.generic-arithmetic.sls		\
+	ikarus.numerics.flonum-conversion.sls		\
+	ikarus.numerics.rationalize.sls			\
+	ikarus.numerics.div-and-mod.sls			\
+	ikarus.numerics.flonums.div-and-mod.sls		\
+	ikarus.numerics.bitwise.misc.sls		\
 	ikarus.numerics.sls				\
 	ikarus.options.sls				\
 	ikarus.pairs.sls				\

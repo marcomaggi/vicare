@@ -28,7 +28,7 @@
   (import (except (ikarus)
 		  host-info)
     (vicare include))
-  (include "ikarus.config.ss"))
+  (include/verbose "ikarus.config.ss"))
 
 
 (library (ikarus main)

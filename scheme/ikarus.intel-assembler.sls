@@ -34,7 +34,7 @@
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
     (import (vicare include))
-    (include "ikarus.config.ss"))
+    (include/verbose "ikarus.config.ss"))
 
 
 ;;;; Introduction

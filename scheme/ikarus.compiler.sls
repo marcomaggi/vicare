@@ -3671,7 +3671,7 @@
 
 (module (wordsize)
   (import (vicare include))
-  (include "ikarus.config.ss"))
+  (include/verbose "ikarus.config.ss"))
 
 (define wordshift
   (case-word-size
