@@ -17,21 +17,22 @@
 
 (library (ikarus flonums)
   (export
-    $flonum-integer?	$flonum-rational?
-    $flonum->exact
-
-    inexact->exact	exact
+    inexact->exact
+    exact		$flonum->exact
     fixnum->flonum
 
-    flpositive?
-    $flzero?		$flnegative?
-
+    flzero?		$flzero?
+    flpositive?		$flpositive?
+    flnegative?		$flnegative?
     fleven?		$fleven?
     flodd?		$flodd?
+			$flonum-integer?
+			$flonum-rational?
 
     flround		$flround
     flfloor		$flfloor
     flceiling		$flceiling
+    fltruncate		$fltruncate
 
     flnumerator		$flnumerator
     fldenominator	$fldenominator
@@ -42,46 +43,80 @@
     fltan		$fltan
     flasin		$flasin
     flacos		$flacos
-    flatan		$flatan
+    flatan		$flatan		$flatan2
     flexp		$flexp
-    fllog		$fllog
+    fllog		$fllog		$fllog2
     flexpm1		$flexpm1
     fllog1p		$fllog1p
     flexpt		$flexpt
+    flsqrt		$flsqrt
 
     flinteger?		flnan?
     flfinite?		flinfinite?
 
+    fl=?
+    fl<?		fl>?
+    fl<=?		fl>=?
+    fl+			fl-
+    fl*			fl/
+
+    flmax		$flmax
+    flmin		$flmin
+
     flonum-parts	flonum-bytes
     bytevector->flonum	flonum->bytevector)
   (import (except (ikarus)
-		  inexact->exact	exact
-		  flabs			flpositive?
-		  fixnum->flonum
-		  flsin			flasin
-		  flcos			flacos
-		  fltan			flatan
-		  fleven?		flodd?
-		  flfloor		flceiling
-		  flnumerator		fldenominator
-		  flexp			fllog
-		  flexpm1		fllog1p
-		  flexpt
+		  inexact->exact	exact		fixnum->flonum
+		  flzero?		flpositive?	flnegative?
+		  fleven?		flodd?		flround
+		  flfloor		flceiling	fltruncate
+		  flnumerator		fldenominator	flabs
+		  flsin			flcos		fltan
+		  flasin		flacos		flatan
+		  flexp			fllog		flexpm1
+		  fllog1p		flexpt		flsqrt
+		  flinteger?		flnan?		flfinite?
+		  flinfinite?		fl=?		fl<?
+		  fl>?			fl<=?		fl>=?
+		  fl+			fl-		fl*
+		  fl/			flmax		flmin
 		  flonum-parts		flonum-bytes
-		  flinteger?		flnan?
-		  flfinite?		flinfinite?
-		  flround
 		  bytevector->flonum	flonum->bytevector)
+    (ikarus system $pairs)
     (ikarus system $fx)
     (ikarus system $bignums)
+    (ikarus system $ratnums)
     (ikarus system $bytevectors)
-    (only (ikarus system $flonums)
-	  $fl>=
-	  $flonum-sbe)
     (except (ikarus system $flonums)
+	    $flonum->exact
+	    $flzero?
+	    $flpositive?
+	    $flnegative?
+	    $fleven?
+	    $flodd?
+	    $flonum-integer?
 	    $flonum-rational?
-            $flonum-integer?
-	    $flround)
+	    $flround
+	    $flfloor
+	    $flceiling
+	    $fltruncate
+	    $flnumerator
+	    $fldenominator
+	    $flabs
+	    $flsin
+	    $flcos
+	    $fltan
+	    $flasin
+	    $flacos
+	    $flatan		$flatan2
+	    $flexp
+	    $fllog		$fllog2
+	    $flexpm1
+	    $fllog1p
+	    $flexpt
+	    $flsqrt
+	    $flmax
+	    $flmin)
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
 	  cond-numeric-operand))
@@ -148,32 +183,6 @@
 		    (expt 2 24)))))))
 
 
-(define ($flonum-rational? x)
-  (let ((be ($fxlogand ($flonum-sbe x)
-		       ($fxsub1 ($fxsll 1 11)))))
-    ($fx< be 2047)))
-
-(define ($flonum-integer? x)
-  (let ((be ($fxlogand ($flonum-sbe x)
-		       ($fxsub1 ($fxsll 1 11)))))
-    (cond (($fx= be 2047) ;nans and infs
-	   #f)
-	  (($fx>= be 1075) ;magnitue large enough
-	   #t)
-	  (($fx= be 0) ;denormalized double, only +/-0.0 is integer
-	   (and ($fx= ($flonum-u8-ref x 7) 0)
-		($fx= ($flonum-u8-ref x 6) 0)
-		($fx= ($flonum-u8-ref x 5) 0)
-		($fx= ($flonum-u8-ref x 4) 0)
-		($fx= ($flonum-u8-ref x 3) 0)
-		($fx= ($flonum-u8-ref x 2) 0)
-		($fx= ($flonum-u8-ref x 1) 0)))
-	  (($fx< be ($fx+ 1075 -52)) ;too small to be an integer
-	   #f)
-	  (else
-	   ($fl= x (foreign-call "ikrt_fl_round" x ($make-flonum)))))))
-
-
 ;;;; rounding
 
 (define-fl-operation/one flround $flround)
@@ -236,13 +245,32 @@
 	x)))
 
   (define (%ratnum-floor x)
-    (import (ikarus system $ratnums))
     (let* ((n ($ratnum-n x))
 	   (d ($ratnum-d x))
 	   (q (quotient n d)))
       (if (>= n 0)
 	  q
 	(- q 1))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (fltruncate $fltruncate)
+
+  (define-fl-operation/one fltruncate $fltruncate)
+
+  (define ($fltruncate x)
+    ;;FIXME It should preserve the sign of -0.0.  (Abdulaziz Ghuloum)
+    (let ((v ($flonum->exact x)))
+      (if (ratnum? v)
+	  (exact->inexact ($ratnum-truncate v))
+	x)))
+
+  (define ($ratnum-truncate x)
+    (let ((n ($ratnum-n x))
+	  (d ($ratnum-d x)))
+      (quotient n d)))
 
   #| end of module |# )
 
@@ -389,6 +417,8 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-fl-operation/one flzero? $flzero?)
+
 (define ($flzero? x)
   (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
     (and ($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
@@ -400,15 +430,42 @@
 	      ($fx= ($flonum-u8-ref x 2) 0)
 	      ($fx= ($flonum-u8-ref x 1) 0)))))
 
-(define (flpositive? x)
-  (define who 'flpositive?)
-  (with-arguments-validation (who)
-      ((flonum	x))
-    ($fl> x 0.0)))
+(define-fl-operation/one flpositive? $flpositive?)
+(define-fl-operation/one flnegative? $flnegative?)
+
+(define ($flpositive? x)
+  ($fl> x 0.0))
 
 (define ($flnegative? x)
   (let ((b0 ($flonum-u8-ref x 0)))
     ($fx> b0 127)))
+
+;;; --------------------------------------------------------------------
+
+(define ($flonum-rational? x)
+  (let ((be ($fxlogand ($flonum-sbe x)
+		       ($fxsub1 ($fxsll 1 11)))))
+    ($fx< be 2047)))
+
+(define ($flonum-integer? x)
+  (let ((be ($fxlogand ($flonum-sbe x)
+		       ($fxsub1 ($fxsll 1 11)))))
+    (cond (($fx= be 2047) ;nans and infs
+	   #f)
+	  (($fx>= be 1075) ;magnitue large enough
+	   #t)
+	  (($fx= be 0) ;denormalized double, only +/-0.0 is integer
+	   (and ($fx= ($flonum-u8-ref x 7) 0)
+		($fx= ($flonum-u8-ref x 6) 0)
+		($fx= ($flonum-u8-ref x 5) 0)
+		($fx= ($flonum-u8-ref x 4) 0)
+		($fx= ($flonum-u8-ref x 3) 0)
+		($fx= ($flonum-u8-ref x 2) 0)
+		($fx= ($flonum-u8-ref x 1) 0)))
+	  (($fx< be ($fx+ 1075 -52)) ;too small to be an integer
+	   #f)
+	  (else
+	   ($fl= x (foreign-call "ikrt_fl_round" x ($make-flonum)))))))
 
 
 ;;;; exactness
@@ -449,6 +506,216 @@
     (assertion-violation who "number has no real value" x))
 
   #| end of module |# )
+
+
+;;;; min max
+
+(module (flmax $flmax)
+
+  (define who 'flmax)
+
+  (define ($flmax x y)
+    (if ($fl< x y)
+	y
+      x))
+
+  (define flmax
+    (case-lambda
+     ((x y)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y))
+	($flmax x y)))
+     ((x y z . rest)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y)
+	   (flonum	z))
+	(let loop ((a  ($flmax x y))
+		   (b  z)
+		   (ls rest))
+	  (with-arguments-validation (who)
+	      ((flonum	z))
+	    (if (null? ls)
+		($flmax a b)
+	      (loop ($flmax a b) ($car ls) ($cdr ls)))))))
+     ((x)
+      (with-arguments-validation (who)
+	  ((flonum	x))
+	x))))
+
+  #| end of module |# )
+
+(module (flmin $flmin)
+
+  (define ($flmin x y)
+    (if ($fl< x y) x y))
+
+  (define who 'flmin)
+
+  (define flmin
+    (case-lambda
+     ((x y)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y))
+	($flmin x y)))
+     ((x y z . rest)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y))
+	(let loop ((a  ($flmin x y))
+		   (b  z)
+		   (ls rest))
+	  (with-arguments-validation (who)
+	      ((flonum	z))
+	    (if (null? ls)
+		($flmin a b)
+	      (loop ($flmin a b) ($car ls) ($cdr ls)))))))
+     ((x)
+      (with-arguments-validation (who)
+	  ((flonum	x))
+	x))))
+
+  #| end of module |# )
+
+
+;;;; comparison
+
+(define-syntax define-flcmp
+  (syntax-rules ()
+    ((_ fl<? $fl<)
+     (define fl<?
+       (case-lambda
+	((x y)
+	 (if (flonum? x)
+	     (if (flonum? y)
+		 ($fl< x y)
+	       (die 'fl<? "not a flonum" y))
+	   (die 'fl<? "not a flonum" x)))
+	((x y z)
+	 (if (flonum? x)
+	     (if (flonum? y)
+		 (if (flonum? z)
+		     (and ($fl< x y) ($fl< y z))
+		   (die 'fl<? "not a flonum" z))
+	       (die 'fl<? "not a flonum" y))
+	   (die 'fl<? "not a flonum" x)))
+	((x)
+	 (or (flonum? x)
+	     (die 'fl<? "not a flonum" x)))
+	((x y . rest)
+	 (let ()
+	   (define (loopf a ls)
+	     (unless (flonum? a)
+	       (die 'fl<? "not a flonum" a))
+	     (if (null? ls)
+		 #f
+	       (loopf (car ls) (cdr ls))))
+	   (if (flonum? x)
+	       (if (flonum? y)
+		   (if ($fl< x y)
+		       (let f ((x y) (y (car rest)) (ls (cdr rest)))
+			 (if (flonum? y)
+			     (if (null? ls)
+				 ($fl< x y)
+			       (if ($fl< x y)
+				   (f y (car ls) (cdr ls))
+				 (loopf (car ls) (cdr ls))))
+			   (die 'fl<? "not a flonum" y)))
+		     (loopf (car rest) (cdr rest)))
+		 (die 'fl<? "not a flonum" y))
+	     (die 'fl<? "not a flonum" x)))))))))
+(define-flcmp fl=? $fl=)
+(define-flcmp fl<? $fl<)
+(define-flcmp fl<=? $fl<=)
+(define-flcmp fl>? $fl>)
+(define-flcmp fl>=? $fl>=)
+
+
+;;;; arithmetic
+
+(define fl+
+  (case-lambda
+   ((x y)
+    (if (flonum? x)
+	(if (flonum? y)
+	    ($fl+ x y)
+	  (die 'fl+ "not a flonum" y))
+      (die 'fl+ "not a flonum" x)))
+   ((x y z)
+    (fl+ (fl+ x y) z))
+   ((x y z q . rest)
+    (let f ((ac (fl+ (fl+ (fl+ x y) z) q)) (rest rest))
+      (if (null? rest)
+	  ac
+	(f (fl+ ac (car rest)) (cdr rest)))))
+   ((x)
+    (if (flonum? x)
+	x
+      (die 'fl+ "not a flonum" x)))
+   (() (exact->inexact 0))))
+
+(define fl-
+  (case-lambda
+   ((x y)
+    (if (flonum? x)
+	(if (flonum? y)
+	    ($fl- x y)
+	  (die 'fl- "not a flonum" y))
+      (die 'fl- "not a flonum" x)))
+   ((x y z)
+    (fl- (fl- x y) z))
+   ((x y z q . rest)
+    (let f ((ac (fl- (fl- (fl- x y) z) q)) (rest rest))
+      (if (null? rest)
+	  ac
+	(f (fl- ac (car rest)) (cdr rest)))))
+   ((x)
+    (if (flonum? x)
+	($fl* -1.0 x)
+      (die 'fl- "not a flonum" x)))))
+
+(define fl*
+  (case-lambda
+   ((x y)
+    (if (flonum? x)
+	(if (flonum? y)
+	    ($fl* x y)
+	  (die 'fl* "not a flonum" y))
+      (die 'fl* "not a flonum" x)))
+   ((x y z)
+    (fl* (fl* x y) z))
+   ((x y z q . rest)
+    (let f ((ac (fl* (fl* (fl* x y) z) q)) (rest rest))
+      (if (null? rest)
+	  ac
+	(f (fl* ac (car rest)) (cdr rest)))))
+   ((x)
+    (if (flonum? x)
+	x
+      (die 'fl* "not a flonum" x)))
+   (() 1.0)))
+
+(define fl/
+  (case-lambda
+   ((x y)
+    (if (flonum? x)
+	(if (flonum? y)
+	    ($fl/ x y)
+	  (die 'fl/ "not a flonum" y))
+      (die 'fl/ "not a flonum" x)))
+   ((x y z)
+    (fl/ (fl/ x y) z))
+   ((x y z q . rest)
+    (let f ((ac (fl/ (fl/ (fl/ x y) z) q)) (rest rest))
+      (if (null? rest)
+	  ac
+	(f (fl/ ac (car rest)) (cdr rest)))))
+   ((x)
+    (if (flonum? x)
+	($fl/ 1.0 x)
+      (die 'fl/ "not a flonum" x)))))
 
 
 ;;;; functions
@@ -542,6 +809,8 @@
 	   (inexact (expt x y^)))
 	  (else
 	   (foreign-call "ikrt_flfl_expt" x y ($make-flonum))))))
+
+(define-fl-operation/one/forcall flsqrt $flsqrt "ikrt_fl_sqrt")
 
 
 ;;;; debugging functions

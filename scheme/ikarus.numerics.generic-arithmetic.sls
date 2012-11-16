@@ -66,14 +66,12 @@
           positive? negative? expt gcd lcm numerator denominator
           exact-integer-sqrt
           quotient+remainder number->string min max
-          abs truncate fltruncate sra sll real->flonum
-          exact->inexact inexact floor ceiling round log fl=? fl<? fl<=? fl>?
-          fl>=? fl+ fl- fl* fl/ flsqrt flmin flzero? flnegative?
+          abs truncate sra sll real->flonum
+          exact->inexact inexact floor ceiling round log
           sin cos tan asin acos atan sqrt exp
           sinh cosh tanh asinh acosh atanh
-          flmax random
+          random
           error@add1 error@sub1
-
 	  bytevector->bignum		bignum->bytevector)
   (import (except (ikarus)
 		  + - * / zero? = < <= > >= add1 sub1 quotient
@@ -89,12 +87,10 @@
 		  expt gcd lcm numerator denominator
 		  exact->inexact inexact floor ceiling round log
 		  exact-integer-sqrt min max abs real->flonum
-		  fl=? fl<? fl<=? fl>? fl>=? fl+ fl- fl* fl/ flsqrt flmin
-		  flzero? flnegative? sra sll exp
-		  sin cos tan asin acos atan sqrt truncate fltruncate
+		  sra sll exp
+		  sin cos tan asin acos atan sqrt truncate
 		  sinh cosh tanh asinh acosh atanh
-		  flmax random
-
+		  random
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $fx)
     (ikarus system $flonums)
@@ -1119,27 +1115,6 @@
        (else (f (binary/ a b) (car ls) (cdr ls))))))))
 
 
-(define flmax
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    (if ($fl< x y)
-		y
-	      x)
-	  (die 'flmax "not a flonum" y))
-      (die 'flmax "not a flonum" x)))
-   ((x y z . rest)
-    (let f ((a (flmax x y)) (b z) (ls rest))
-      (cond
-       ((null? ls) (flmax a b))
-       (else
-	(f (flmax a b) (car ls) (cdr ls))))))
-   ((x)
-    (if (flonum? x)
-	x
-      (die 'flmax "not a number" x)))))
-
 (define max
   (case-lambda
    ((x y)
@@ -1282,25 +1257,6 @@
 	  ($make-ratnum (- n) ($ratnum-d x))
 	x)))
    (else (die 'abs "not a real number" x))))
-
-(define flmin
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    (if ($fl< x y) x y)
-	  (die 'flmin "not a flonum" y))
-      (die 'flmin "not a flonum" x)))
-   ((x y z . rest)
-    (let f ((a (flmin x y)) (b z) (ls rest))
-      (cond
-       ((null? ls) (flmin a b))
-       (else
-	(f (flmin a b) (car ls) (cdr ls))))))
-   ((x)
-    (if (flonum? x)
-	x
-      (die 'flmin "not a flonum" x)))))
 
 (define (->inexact x who)
   (cond
@@ -1743,157 +1699,12 @@
        (define-syntax bnfl?
 	 (syntax-rules () ((_ x y) (fl? (bignum->flonum x) y))))))))
 
- ;;;  #;
- ;;; (begin
- ;;;   (define-syntax $fl=
- ;;;     (syntax-rules () ((_ x y) (foreign-call "ikrt_fl_equal" x y))))
- ;;;   (define-syntax $fl<
- ;;;     (syntax-rules () ((_ x y) (foreign-call "ikrt_fl_less" x y))))
- ;;;   (define-syntax $fl<=
- ;;;     (syntax-rules () ((_ x y) (foreign-call "ikrt_fl_less_or_equal" x y))))
- ;;;   (define-syntax $fl>
- ;;;     (syntax-rules () ((_ x y) (foreign-call "ikrt_fl_less" y x))))
- ;;;   (define-syntax $fl>=
- ;;;     (syntax-rules () ((_ x y) (foreign-call "ikrt_fl_less_or_equal" y x)))))
-
-(define-syntax define-flcmp
-  (syntax-rules ()
-    ((_ fl<? $fl<)
-     (define fl<?
-       (case-lambda
-	((x y)
-	 (if (flonum? x)
-	     (if (flonum? y)
-		 ($fl< x y)
-	       (die 'fl<? "not a flonum" y))
-	   (die 'fl<? "not a flonum" x)))
-	((x y z)
-	 (if (flonum? x)
-	     (if (flonum? y)
-		 (if (flonum? z)
-		     (and ($fl< x y) ($fl< y z))
-		   (die 'fl<? "not a flonum" z))
-	       (die 'fl<? "not a flonum" y))
-	   (die 'fl<? "not a flonum" x)))
-	((x)
-	 (or (flonum? x)
-	     (die 'fl<? "not a flonum" x)))
-	((x y . rest)
-	 (let ()
-	   (define (loopf a ls)
-	     (unless (flonum? a)
-	       (die 'fl<? "not a flonum" a))
-	     (if (null? ls)
-		 #f
-	       (loopf (car ls) (cdr ls))))
-	   (if (flonum? x)
-	       (if (flonum? y)
-		   (if ($fl< x y)
-		       (let f ((x y) (y (car rest)) (ls (cdr rest)))
-			 (if (flonum? y)
-			     (if (null? ls)
-				 ($fl< x y)
-			       (if ($fl< x y)
-				   (f y (car ls) (cdr ls))
-				 (loopf (car ls) (cdr ls))))
-			   (die 'fl<? "not a flonum" y)))
-		     (loopf (car rest) (cdr rest)))
-		 (die 'fl<? "not a flonum" y))
-	     (die 'fl<? "not a flonum" x)))))))))
-(define-flcmp fl=? $fl=)
-(define-flcmp fl<? $fl<)
-(define-flcmp fl<=? $fl<=)
-(define-flcmp fl>? $fl>)
-(define-flcmp fl>=? $fl>=)
-
-(define fl+
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    ($fl+ x y)
-	  (die 'fl+ "not a flonum" y))
-      (die 'fl+ "not a flonum" x)))
-   ((x y z)
-    (fl+ (fl+ x y) z))
-   ((x y z q . rest)
-    (let f ((ac (fl+ (fl+ (fl+ x y) z) q)) (rest rest))
-      (if (null? rest)
-	  ac
-	(f (fl+ ac (car rest)) (cdr rest)))))
-   ((x)
-    (if (flonum? x)
-	x
-      (die 'fl+ "not a flonum" x)))
-   (() (exact->inexact 0))))
-
-
-(define fl-
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    ($fl- x y)
-	  (die 'fl- "not a flonum" y))
-      (die 'fl- "not a flonum" x)))
-   ((x y z)
-    (fl- (fl- x y) z))
-   ((x y z q . rest)
-    (let f ((ac (fl- (fl- (fl- x y) z) q)) (rest rest))
-      (if (null? rest)
-	  ac
-	(f (fl- ac (car rest)) (cdr rest)))))
-   ((x)
-    (if (flonum? x)
-	($fl* -1.0 x)
-      (die 'fl- "not a flonum" x)))))
-
-(define fl*
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    ($fl* x y)
-	  (die 'fl* "not a flonum" y))
-      (die 'fl* "not a flonum" x)))
-   ((x y z)
-    (fl* (fl* x y) z))
-   ((x y z q . rest)
-    (let f ((ac (fl* (fl* (fl* x y) z) q)) (rest rest))
-      (if (null? rest)
-	  ac
-	(f (fl* ac (car rest)) (cdr rest)))))
-   ((x)
-    (if (flonum? x)
-	x
-      (die 'fl* "not a flonum" x)))
-   (() 1.0)))
-
-(define fl/
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    ($fl/ x y)
-	  (die 'fl/ "not a flonum" y))
-      (die 'fl/ "not a flonum" x)))
-   ((x y z)
-    (fl/ (fl/ x y) z))
-   ((x y z q . rest)
-    (let f ((ac (fl/ (fl/ (fl/ x y) z) q)) (rest rest))
-      (if (null? rest)
-	  ac
-	(f (fl/ ac (car rest)) (cdr rest)))))
-   ((x)
-    (if (flonum? x)
-	($fl/ 1.0 x)
-      (die 'fl/ "not a flonum" x)))))
-
 (flcmp flfl= flfx= fxfl= flbn= bnfl= $fl=)
 (flcmp flfl< flfx< fxfl< flbn< bnfl< $fl<)
 (flcmp flfl> flfx> fxfl> flbn> bnfl> $fl>)
 (flcmp flfl<= flfx<= fxfl<= flbn<= bnfl<= $fl<=)
 (flcmp flfl>= flfx>= fxfl>= flbn>= bnfl>= $fl>=)
+
 
 (define-syntax cmp-ex/in
   (syntax-rules ()
@@ -2632,24 +2443,6 @@
 	   (* s (sqrt (/ (- m xr) 2)))))))
      (else (die 'sqrt "not a number" x)))))
 
-(define flsqrt
-  (lambda (x)
-    (if (flonum? x)
-	(foreign-call "ikrt_fl_sqrt" x)
-      (die 'flsqrt "not a flonum" x))))
-
-(define flzero?
-  (lambda (x)
-    (if (flonum? x)
-	($flzero? x)
-      (die 'flzero? "not a flonum" x))))
-
-(define flnegative?
-  (lambda (x)
-    (if (flonum? x)
-	($fl< x 0.0)
-      (die 'flnegative? "not a flonum" x))))
-
 (define exact-integer-sqrt
   (lambda (x)
     (define who 'exact-integer-sqrt)
@@ -2755,15 +2548,6 @@
    ((or (fixnum? x) (bignum? x)) x)
    (else (die 'truncate "not a number" x))))
 
-
-(define (fltruncate x)
-    ;;; FIXME: fltruncate should preserve the sign of -0.0.
-  (unless (flonum? x)
-    (die 'fltruncate "not a flonum" x))
-  (let ((v ($flonum->exact x)))
-    (cond
-     ((ratnum? v) (exact->inexact ($ratnum-truncate v)))
-     (else x))))
 
 (define log
   (case-lambda

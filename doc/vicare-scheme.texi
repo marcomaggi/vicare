@@ -15962,6 +15962,10 @@ Allocate a new flonum memory block and return a reference to it.  Does
 not initialise the data area.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Binary representation inspection
+
 
 @deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
 Return the octet at index @var{fx} in the data area of @var{fl}.
@@ -15987,10 +15991,14 @@ Store the byte or octet represented by @var{fx-value} at index
 @end deffn
 
 
-@deffn {Unsafe Operation} $fixnum->flonum @var{fx}
-Convert the fixnum operand into a flonum and return a reference to the
-result.
+@deffn {Unsafe Operation} $flonum-sbe @var{fl}
+Return a fixnum@dots{} Still undocumented, read the code look at the
+format of @ieee{} double precision flonums.
 @end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Arithmetic operations
 
 
 @deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
@@ -15999,6 +16007,175 @@ result.
 @deffnx {Unsafe Operation} $fl/ @vari{fl} @varii{fl}
 Perform arithmetic operations.
 @end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Exactness and conversion
+
+
+@deffn {Unsafe Operation} $flonum->exact @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->flonum @var{fx}
+Convert the fixnum operand into a flonum and return a reference to the
+result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Predicates
+
+
+@deffn {Unsafe Operation} $flzero? @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $flpositive? @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $flnegative? @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $fleven? @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $flodd? @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-integer? @var{fl}
+
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-rational? @var{fl}
+
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Rounding
+
+
+@deffn {Unsafe Operation} $flround @var{fl}
+Return the closest integral flonum to the operand, rounding to even when
+@var{fl} represents a number halfway between two integers.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flfloor @var{fl}
+Return the largest integral flonum not larger than the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flceiling @var{fl}
+Return the smallest integral flonum not larger than the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fltruncate @var{fl}
+Return the integral flonum closest to the operand whose absolute value
+is not larger than the absolute value of the operand itself.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Parts
+
+
+@deffn {Unsafe Operation} $flnumerator @var{fl}
+@deffnx {Unsafe Operation} $fldenominator @var{fl}
+Return the numerator or denominator of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flabs @var{fl}
+Return the absolute value of the operand.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Trigonometric operations
+
+
+@deffn {Unsafe Operation} $flsin @var{fl}
+@deffnx {Unsafe Operation} $flcos @var{fl}
+@deffnx {Unsafe Operation} $fltan @var{fl}
+Return the sine, cosine and tangent of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flasin @var{fl}
+@deffnx {Unsafe Operation} $flacos @var{fl}
+@deffnx {Unsafe Operation} $flatan @var{fl}
+Return the arcsine, arccosine and arctangent of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flatan2 @vari{fl} @varii{fl}
+Return an equivalent of:
+
+@example
+(angle (make-rectangular @varii{fl} @vari{fl}))
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Exponentials and logarithms
+
+
+@deffn {Unsafe Operation} $flexp @var{fl}
+Return the base @math{e} exponential of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fllog @var{fl}
+Return the natural logarithm of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fllog2 @vari{fl} @varii{fl}
+Return the base--@varii{fl} logarithme of @vari{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flexpm1 @var{fl}
+Return an equivalent of @math{exp(@var{fl}) - 1}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fllog1p @var{fl}
+Return an equivalent of @math{log(1 + @var{fl})}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Power operations
+
+
+@deffn {Unsafe Operation} $flexpt @vari{fl} @varii{fl}
+Return @vari{fl} raised to the power of @varii{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flsqrt @var{fl}
+Return the square root of the operand.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison operations
 
 
 @deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
@@ -16010,9 +16187,13 @@ Perform comparison operations
 @end deffn
 
 
-@deffn {Unsafe Operation} $flonum-sbe @var{fl}
-Return a fixnum@dots{} Still undocumented, read the code look at the
-format of @ieee{} double precision flonums.
+@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
+Return the maximum between the operands.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
+Return the minimum between the operands.
 @end deffn
 
 @c page
