@@ -27,86 +27,9 @@
 		  angle			magnitude)
     (except (ikarus system $compnums)
 	    $make-rectangular)
-    (vicare arguments validation))
-
-
-;;;; helpers
-
-(define-syntax cond-number
-  (syntax-rules (else
-		 zero? exact? inexact?
-		 fixnum? bignum? ratnum? flonum? compnum? cflonum? real? complex?)
-
-    ((_ ?num
-	((fixnum?)	?body-fx0 ?body-fx ...)
-	((bignum?)	?body-bg0 ?body-bg ...)
-	((ratnum?)	?body-rt0 ?body-rt ...)
-	((flonum?)	?body-fl0 ?body-fl ...)
-	((compnum?)	?body-cn0 ?body-cn ...)
-	((cflonum?)	?body-cf0 ?body-cf ...)
-	(else		?body-el0 ?body-el ...))
-     (let ((num ?num))
-       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
-	     ((bignum?  num)	?body-bg0 ?body-bg ...)
-	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
-	     ((flonum?  num)	?body-fl0 ?body-fl ...)
-	     ((compnum? num)	?body-cn0 ?body-cn ...)
-	     ((cflonum? num)	?body-cf0 ?body-cf ...)
-	     (else		?body-el0 ?body-el ...))))
-
-    ;; --------------------------------------------------
-
-    ((_ ?num
-	((real?)	?body-re0 ?body-re ...)
-	((compnum?)	?body-cn0 ?body-cn ...)
-	((cflonum?)	?body-cf0 ?body-cf ...)
-	(else		?body-el0 ?body-el ...))
-     (let ((num ?num))
-       (cond ((or (fixnum?  num)
-		  (bignum?  num)
-		  (ratnum?  num)
-		  (flonum?  num))
-	      ?body-re0 ?body-re ...)
-	     ((compnum? num)	?body-cn0 ?body-cn ...)
-	     ((cflonum? num)	?body-cf0 ?body-cf ...)
-	     (else		?body-el0 ?body-el ...))))
-
-    ;; --------------------------------------------------
-
-    ((_ ?num
-	((flonum?)	?body-fl0 ?body-fl ...)
-	((zero?)	?body-zr0 ?body-zr ...)
-	((real? exact?)	?body-re0 ?body-re ...)
-	(else		?body-el0 ?body-el ...))
-     (let ((num ?num))
-       (import (only (ikarus system $fx)
-		     $fxzero?))
-       (cond ((flonum? num)
-	      ?body-fl0 ?body-fl ...)
-	     ((and (fixnum? num) ($fxzero? num))
-	      ?body-zr0 ?body-zr ...)
-	     ((or (fixnum? num) (bignum? num) (ratnum? num))
-	      ?body-re0 ?body-re ...)
-	     (else
-	      ?body-el0 ?body-el ...))))
-
-    ;; --------------------------------------------------
-
-    ((_ ?num
-	((flonum?)	?body-fl0 ?body-fl ...)
-	((real? exact?)	?body-re0 ?body-re ...)
-	(else		?body-el0 ?body-el ...))
-     (let ((num ?num))
-       (cond ((flonum? num)
-	      ?body-fl0 ?body-fl ...)
-	     ((or (fixnum? num) (bignum? num) (ratnum? num))
-	      ?body-re0 ?body-re ...)
-	     (else
-	      ?body-el0 ?body-el ...))))
-
-    ;; --------------------------------------------------
-
-    ))
+    (vicare arguments validation)
+    (only (vicare syntactic-extensions)
+	  cond-numeric-operand))
 
 
 (define ($make-rectangular r i)
@@ -121,16 +44,16 @@
   (define who 'make-rectangular)
 
   (define (make-rectangular rep imp)
-    (cond-number imp
+    (cond-numeric-operand imp
       ((flonum?)
-       (cond-number rep
+       (cond-numeric-operand rep
 	 ((flonum?)		($make-cflonum rep imp))
 	 ((real? exact?)	($make-compnum rep imp))
 	 (else			(%error-real rep))))
       ((zero?)
        rep)
       ((real? exact?)
-       (cond-number rep
+       (cond-numeric-operand rep
 	 ((flonum?)		($make-compnum rep imp))
 	 ((real? exact?)	($make-compnum rep imp))
 	 (else			(%error-real rep))))
@@ -156,7 +79,7 @@
 
 (define (magnitude x)
   (define who 'magnitude)
-  (cond-number x
+  (cond-numeric-operand x
     ((real?)
      (abs x))
     ((compnum?)
@@ -176,7 +99,7 @@
     (ikarus system $ratnums))
   (define who 'angle)
   (define PI  (acos -1))
-  (cond-number x
+  (cond-numeric-operand x
     ((fixnum?)
      (cond (($fx> x 0)	0)
 	   (($fx< x 0)	PI)
@@ -202,7 +125,7 @@
 
 (define (real-part x)
   (define who 'real-part)
-  (cond-number x
+  (cond-numeric-operand x
     ((fixnum?)	0)
     ((bignum?)	0)
     ((ratnum?)	0)
@@ -214,7 +137,7 @@
 
 (define (imag-part x)
   (define who 'imag-part)
-  (cond-number x
+  (cond-numeric-operand x
     ((fixnum?)	0)
     ((bignum?)	0)
     ((ratnum?)	0)
@@ -231,5 +154,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'cond-number 'scheme-indent-function 1)
+;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
 ;; End:
