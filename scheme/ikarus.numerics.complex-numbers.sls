@@ -26,7 +26,87 @@
 		  real-part		imag-part
 		  angle			magnitude)
     (except (ikarus system $compnums)
-	    $make-rectangular))
+	    $make-rectangular)
+    (vicare arguments validation))
+
+
+;;;; helpers
+
+(define-syntax cond-number
+  (syntax-rules (else
+		 zero? exact? inexact?
+		 fixnum? bignum? ratnum? flonum? compnum? cflonum? real? complex?)
+
+    ((_ ?num
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((compnum?)	?body-cn0 ?body-cn ...)
+	((cflonum?)	?body-cf0 ?body-cf ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
+	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     ((compnum? num)	?body-cn0 ?body-cn ...)
+	     ((cflonum? num)	?body-cf0 ?body-cf ...)
+	     (else		?body-el0 ?body-el ...))))
+
+    ;; --------------------------------------------------
+
+    ((_ ?num
+	((real?)	?body-re0 ?body-re ...)
+	((compnum?)	?body-cn0 ?body-cn ...)
+	((cflonum?)	?body-cf0 ?body-cf ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((or (fixnum?  num)
+		  (bignum?  num)
+		  (ratnum?  num)
+		  (flonum?  num))
+	      ?body-re0 ?body-re ...)
+	     ((compnum? num)	?body-cn0 ?body-cn ...)
+	     ((cflonum? num)	?body-cf0 ?body-cf ...)
+	     (else		?body-el0 ?body-el ...))))
+
+    ;; --------------------------------------------------
+
+    ((_ ?num
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((zero?)	?body-zr0 ?body-zr ...)
+	((real? exact?)	?body-re0 ?body-re ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (import (only (ikarus system $fx)
+		     $fxzero?))
+       (cond ((flonum? num)
+	      ?body-fl0 ?body-fl ...)
+	     ((and (fixnum? num) ($fxzero? num))
+	      ?body-zr0 ?body-zr ...)
+	     ((or (fixnum? num) (bignum? num) (ratnum? num))
+	      ?body-re0 ?body-re ...)
+	     (else
+	      ?body-el0 ?body-el ...))))
+
+    ;; --------------------------------------------------
+
+    ((_ ?num
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((real? exact?)	?body-re0 ?body-re ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((flonum? num)
+	      ?body-fl0 ?body-fl ...)
+	     ((or (fixnum? num) (bignum? num) (ratnum? num))
+	      ?body-re0 ?body-re ...)
+	     (else
+	      ?body-el0 ?body-el ...))))
+
+    ;; --------------------------------------------------
+
+    ))
 
 
 (define ($make-rectangular r i)
@@ -35,104 +115,114 @@
       r
     ($make-compnum r i)))
 
-(define (make-rectangular r i)
-  (define who 'make-rectangular)
-  (define (err x)
-    (die who "invalid argument" x))
-  (cond
-   ((flonum? i)
-    (cond
-     ((flonum? r) ($make-cflonum r i))
-     ((or (fixnum? r) (bignum? r) (ratnum? r))
-      ($make-cflonum (inexact r) i))
-     (else (err r))))
-   ((eqv? i 0) (if (number? r) r (err r)))
-   ((or (fixnum? i) (bignum? i) (ratnum? i))
-    (cond
-     ((or (fixnum? r) (bignum? r) (ratnum? r))
-      ($make-rectangular r i))
-     ((flonum? r)
-      ($make-cflonum r (inexact i)))
-     (else (err r))))
-   (else (err i))))
+
+(module (make-rectangular)
 
+  (define who 'make-rectangular)
+
+  (define (make-rectangular rep imp)
+    (cond-number imp
+      ((flonum?)
+       (cond-number rep
+	 ((flonum?)		($make-cflonum rep imp))
+	 ((real? exact?)	($make-compnum rep imp))
+	 (else			(%error-real rep))))
+      ((zero?)
+       rep)
+      ((real? exact?)
+       (cond-number rep
+	 ((flonum?)		($make-compnum rep imp))
+	 ((real? exact?)	($make-compnum rep imp))
+	 (else			(%error-real rep))))
+      (else
+       (%error-imag imp))))
+
+  (define (%error-real x)
+    (assertion-violation who "invalid real part argument" x))
+
+  (define (%error-imag x)
+    (assertion-violation who "invalid imag part argument" x))
+
+  #| end of module |# )
+
+
 (define (make-polar mag angle)
   (define who 'make-polar)
-  (unless (real? mag)
-    (die who "not a real number" mag))
-  (unless (real? angle)
-    (die who "not a real number" angle))
-  (make-rectangular
-   (* mag (cos angle))
-   (* mag (sin angle))))
+  (with-arguments-validation (who)
+      ((real	mag)
+       (real	angle))
+    (make-rectangular (* mag (cos angle))
+		      (* mag (sin angle)))))
 
 (define (magnitude x)
-  (cond
-   ((or (fixnum? x) (bignum? x) (ratnum? x) (flonum? x))
-    (abs x))
-   ((compnum? x)
-    (let ((r ($compnum-real x))
-	  (i ($compnum-imag x)))
-      (sqrt (+ (* r r) (* i i)))))
-   ((cflonum? x)
-    (let ((r ($cflonum-real x))
-	  (i ($cflonum-imag x)))
-      (sqrt (+ (* r r) (* i i)))))
-   (else
-    (die 'magnitude "not a number" x))))
+  (define who 'magnitude)
+  (cond-number x
+    ((real?)
+     (abs x))
+    ((compnum?)
+     (let ((r ($compnum-real x))
+	   (i ($compnum-imag x)))
+       (sqrt (+ (* r r) (* i i)))))
+    ((cflonum?)
+     (let ((r ($cflonum-real x))
+	   (i ($cflonum-imag x)))
+       (sqrt (+ (* r r) (* i i)))))
+    (else
+     (assertion-violation who "expected number as argument" x))))
 
 (define (angle x)
-  (import (ikarus system $bignums)
+  (import (ikarus system $fx)
+    (ikarus system $bignums)
     (ikarus system $ratnums))
-  (define PI (acos -1))
-  (cond
-   ((fixnum? x)
-    (if (fx>? x 0)
-	0
-      (if (fx<? x 0)
-	  PI
-	(die 'angle "undefined for 0"))))
-   ((bignum? x)
-    (if ($bignum-positive? x) 0 PI))
-   ((ratnum? x)
-    (let ((n ($ratnum-n x)))
-      (if (> n 0) 0 PI)))
-   ((flonum? x)
-    (atan 0.0 x))
-   ((compnum? x)
-    (let ((r ($compnum-real x))
-	  (i ($compnum-imag x)))
-      (atan i r)))
-   ((cflonum? x)
-    (let ((r ($cflonum-real x))
-	  (i ($cflonum-imag x)))
-      (atan i r)))
-   (else
-    (die 'angle "not a number" x))))
+  (define who 'angle)
+  (define PI  (acos -1))
+  (cond-number x
+    ((fixnum?)
+     (cond (($fx> x 0)	0)
+	   (($fx< x 0)	PI)
+	   (else
+	    (assertion-violation who "undefined for 0"))))
+    ((bignum?)
+     (if ($bignum-positive? x) 0 PI))
+    ((ratnum?)
+     (let ((n ($ratnum-n x)))
+       (if (> n 0) 0 PI)))
+    ((flonum?)
+     (atan 0.0 x))
+    ((compnum?)
+     (let ((r ($compnum-real x))
+	   (i ($compnum-imag x)))
+       (atan i r)))
+    ((cflonum?)
+     (let ((r ($cflonum-real x))
+	   (i ($cflonum-imag x)))
+       (atan i r)))
+    (else
+     (assertion-violation who "expected number as argument" x))))
 
-(define real-part
-  (lambda (x)
-    (cond
-     ((fixnum? x) x)
-     ((bignum? x) x)
-     ((ratnum? x) x)
-     ((flonum? x) x)
-     ((compnum? x) ($compnum-real x))
-     ((cflonum? x) ($cflonum-real x))
-     (else
-      (die 'real-part "not a number" x)))))
+(define (real-part x)
+  (define who 'real-part)
+  (cond-number x
+    ((fixnum?)	0)
+    ((bignum?)	0)
+    ((ratnum?)	0)
+    ((flonum?)	0)
+    ((compnum?)	($compnum-real x))
+    ((cflonum?)	($cflonum-real x))
+    (else
+     (assertion-violation who "expected number as argument" x))))
 
-(define imag-part
-  (lambda (x)
-    (cond
-     ((fixnum? x) 0)
-     ((bignum? x) 0)
-     ((ratnum? x) 0)
-     ((flonum? x) 0)
-     ((compnum? x) ($compnum-imag x))
-     ((cflonum? x) ($cflonum-imag x))
-     (else
-      (die 'imag-part "not a number" x)))))
+(define (imag-part x)
+  (define who 'imag-part)
+  (cond-number x
+    ((fixnum?)	0)
+    ((bignum?)	0)
+    ((ratnum?)	0)
+    ((flonum?)	0)
+    ((compnum?)	($compnum-imag x))
+    ((cflonum?)	($cflonum-imag x))
+    (else
+     (assertion-violation who "expected number as argument" x))))
 
 
 ;;;; done
@@ -140,3 +230,6 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'cond-number 'scheme-indent-function 1)
+;; End:

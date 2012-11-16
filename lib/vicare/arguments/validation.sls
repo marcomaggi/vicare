@@ -190,6 +190,22 @@
     ;; bignums
     bignum.vicare-arguments-validation
 
+    ;; ratnums
+    ratnum.vicare-arguments-validation
+
+    ;; real
+    real.vicare-arguments-validation
+    real-exact.vicare-arguments-validation
+
+    ;; compnum
+    compnum.vicare-arguments-validation
+
+    ;; cflonum
+    cflonum.vicare-arguments-validation
+
+    ;; complex
+    complex.vicare-arguments-validation
+
     ;; input/output ports
     port.vicare-arguments-validation
     port/false.vicare-arguments-validation
@@ -1189,19 +1205,54 @@
   (flonum? obj)
   (assertion-violation who "expected flonum as argument" obj))
 
+;;;; bignums validation
+
+(define-argument-validation (bignum who obj)
+  (bignum? obj)
+  (assertion-violation who "expected bignum as argument" obj))
+
+;;;; ratnums validation
+
+(define-argument-validation (ratnum who obj)
+  (ratnum? obj)
+  (assertion-violation who "expected ratnum as argument" obj))
+
+;;;; compnums validation
+
+(define-argument-validation (compnum who obj)
+  (compnum? obj)
+  (assertion-violation who "expected compnum as argument" obj))
+
+;;;; cflonums validation
+
+(define-argument-validation (cflonum who obj)
+  (cflonum? obj)
+  (assertion-violation who "expected cflonum as argument" obj))
+
+;;;; real validation
+
+(define-argument-validation (real who obj)
+  (real? obj)
+  (assertion-violation who "expected real number as argument" obj))
+
+(define-argument-validation (real-exact who obj)
+  (or (fixnum? obj)
+      (bignum? obj)
+      (ratnum? obj))
+  (assertion-violation who "expected exact real number as argument" obj))
+
+;;;; complex validation
+
+(define-argument-validation (complex who obj)
+  (complex? obj)
+  (assertion-violation who "expected complex number as argument" obj))
+
 
 ;;;; characters
 
 (define-argument-validation (char who obj)
   (char? obj)
   (assertion-violation who "expected character as argument" obj))
-
-
-;;;; bignums validation
-
-(define-argument-validation (bignum who obj)
-  (bignum? obj)
-  (assertion-violation who "expected bignum as argument" obj))
 
 
 ;;;; ports

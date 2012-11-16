@@ -19869,6 +19869,11 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined memory-blocks::  Validating @code{meory-block} values.
 * args predefined flonums::        Validating flonums.
 * args predefined bignums::        Validating bignums.
+* args predefined ratnums::        Validating ratnums.
+* args predefined reals::          Validating reals.
+* args predefined compnums::       Validating compnums.
+* args predefined cflonums::       Validating cflonums.
+* args predefined complexes::      Validating complexes.
 * args predefined ports::          Validating input/output ports.
 * args predefined genstrings::     Validating generalised C string
                                    arguments.
@@ -20581,6 +20586,77 @@ arguments validation}.
 
 @deffn {Validation Clause} bignum @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{bignum?}.
+@end deffn
+
+@c page
+@node args predefined ratnums
+@subsubsection Validating ratnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} ratnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{ratnum?}.
+@end deffn
+
+@c page
+@node args predefined reals
+@subsubsection Validating reals
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} real @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{real?}.
+@end deffn
+
+
+@deffn {Validation Clause} real-exact @var{obj}
+Succeed if @var{obj} satisfies one of the predicates @func{fixnum?},
+@func{bignum?}, @func{ratnum?}.
+@end deffn
+
+@c page
+@node args predefined compnums
+@subsubsection Validating compnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} compnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{compnum?}.
+@end deffn
+
+@c page
+@node args predefined cflonums
+@subsubsection Validating cflonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} cflonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{cflonum?}.
+@end deffn
+
+@c page
+@node args predefined complexes
+@subsubsection Validating complexes
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} complex @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{complex?}.
 @end deffn
 
 @c page
