@@ -644,26 +644,47 @@
 
 ;;;; arithmetic
 
-(define fl+
-  (case-lambda
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    ($fl+ x y)
-	  (die 'fl+ "not a flonum" y))
-      (die 'fl+ "not a flonum" x)))
-   ((x y z)
-    (fl+ (fl+ x y) z))
-   ((x y z q . rest)
-    (let f ((ac (fl+ (fl+ (fl+ x y) z) q)) (rest rest))
-      (if (null? rest)
-	  ac
-	(f (fl+ ac (car rest)) (cdr rest)))))
-   ((x)
-    (if (flonum? x)
-	x
-      (die 'fl+ "not a flonum" x)))
-   (() (exact->inexact 0))))
+(module (fl+)
+
+  (define who 'fl+)
+
+  (define fl+
+    (case-lambda
+     ((x y)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y))
+	($fl+ x y)))
+     ((x y z)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y)
+	   (flonum	z))
+	($fl+ ($fl+ x y) z)))
+     ((x y z q . rest)
+      (with-arguments-validation (who)
+	  ((fixnum	x)
+	   (fixnum	y)
+	   (fixnum	z)
+	   (fixnum	q))
+	(let loop ((ac   ($fl+ ($fl+ ($fl+ x y) z) q))
+		   (rest rest))
+	  (if (null? rest)
+	      ac
+	    (let ((x ($car rest)))
+	      (with-arguments-validation (who)
+		  ((fixnum	x))
+		(loop ($fl+ ac x) ($cdr rest))))))))
+     ((x)
+      (with-arguments-validation (who)
+	  ((flonum	x))
+	x))
+     (()
+      ;;We return always the same flonum object: is this bad?
+      0.0
+      #;(exact->inexact 0))))
+
+  #| end of module |# )
 
 (define fl-
   (case-lambda
