@@ -104,15 +104,6 @@
 		    (expt 2 24)))))))
 
 
-(define ($zero-m? f)
-  (and ($fxzero? ($flonum-u8-ref f 7))
-       ($fxzero? ($flonum-u8-ref f 6))
-       ($fxzero? ($flonum-u8-ref f 5))
-       ($fxzero? ($flonum-u8-ref f 4))
-       ($fxzero? ($flonum-u8-ref f 3))
-       ($fxzero? ($flonum-u8-ref f 2))
-       ($fxzero? ($fxlogand ($flonum-u8-ref f 1) #b1111))))
-
 (define ($flonum-rational? x)
   (let ((be ($fxlogand ($flonum-sbe x)
 		       ($fxsub1 ($fxsll 1 11)))))
@@ -227,229 +218,321 @@
   #| end of module: $flonum->exact |# )
 
 
+;;;; numerator and denominator
+
 (define (flnumerator x)
-  (unless (flonum? x)
-    (die 'flnumerator "not a flonum" x))
-  (cond
-   (($flonum-integer? x) x)
-   (($flonum-rational? x)
-    (exact->inexact (numerator ($flonum->exact x))))
-   (else x)))
+  (define who 'flnumerator)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    (cond (($flonum-integer? x)
+	   x)
+	  (($flonum-rational? x)
+	   (exact->inexact (numerator ($flonum->exact x))))
+	  (else x))))
 
 (define (fldenominator x)
-  (unless (flonum? x)
-    (die 'fldenominator "not a flonum" x))
-  (cond
-   (($flonum-integer? x) 1.0)
-   (($flonum-rational? x)
-    (exact->inexact (denominator ($flonum->exact x))))
-   ((flnan? x) x)
-   (else 1.0)))
+  (define who 'fldenominator)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    (cond (($flonum-integer? x)
+	   1.0)
+	  (($flonum-rational? x)
+	   (exact->inexact (denominator ($flonum->exact x))))
+	  ((flnan? x)
+	   x)
+	  (else 1.0))))
+
+
+;;;; even and odd
 
 (define (fleven? x)
-    ;;; FIXME: optimize
-  (unless (flonum? x)
-    (die 'fleven? "not a flonum" x))
-  (let ((v ($flonum->exact x)))
-    (cond
-     ((fixnum? v) ($fx= ($fxlogand v 1) 0))
-     ((bignum? v)
-      (foreign-call "ikrt_even_bn" v))
-     (else (die 'fleven? "not an integer flonum" x)))))
+  ;;FIXME Optimize.  (Abdulaziz Ghuloum)
+  (define who 'fleven?)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    (let ((v ($flonum->exact x)))
+      (cond ((fixnum? v)
+	     ($fx= ($fxlogand v 1) 0))
+	    ((bignum? v)
+	     (foreign-call "ikrt_even_bn" v))
+	    (else
+	     (assertion-violation who "not an integer flonum" x))))))
 
 (define (flodd? x)
-  (unless (flonum? x)
-    (die 'flodd? "not a flonum" x))
-    ;;; FIXME: optimize
-  (let ((v ($flonum->exact x)))
-    (cond
-     ((fixnum? v) ($fx= ($fxlogand v 1) 1))
-     ((bignum? v)
-      (not (foreign-call "ikrt_even_bn" v)))
-     (else (die 'flodd? "not an integer flonum" x)))))
+  (define who 'flodd?)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    ;;FIXME Optimize.  (Abdulaziz Ghuloum)
+    (let ((v ($flonum->exact x)))
+      (cond ((fixnum? v)
+	     ($fx= ($fxlogand v 1) 1))
+	    ((bignum? v)
+	     (not (foreign-call "ikrt_even_bn" v)))
+	    (else
+	     (assertion-violation who "not an integer flonum" x))))))
+
+
+;;;; predicates
 
 (define (flinteger? x)
-  (if (flonum? x)
-      ($flonum-integer? x)
-    (die 'flinteger? "not a flonum" x)))
-
-(define (flinfinite? x)
-  (if (flonum? x)
-      (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-	(and (fx= be 2047)  ;;; nans and infs
-	     ($zero-m? x)))
-    (die 'flinfinite? "not a flonum" x)))
-
-(define (flnan? x)
-  (if (flonum? x)
-      (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-	(and (fx= be 2047)  ;;; nans and infs
-	     (not ($zero-m? x))))
-    (die 'flnan? "not a flonum" x)))
+  (define who 'flinteger?)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    ($flonum-integer? x)))
 
 (define (flfinite? x)
-  (if (flonum? x)
-      (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-	(not (fx= be 2047)))
-    (die 'flfinite? "not a flonum" x)))
+  (define who 'flfinite?)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+      (not ($fx= be 2047)))))
+
+(module (flinfinite? flnan?)
+
+  (define (flinfinite? x)
+    (define who 'flinfinite?)
+    (with-arguments-validation (who)
+	((flonum	x))
+      (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+	(and ($fx= be 2047) ;nans and infs
+	     ($zero-m? x)))))
+
+  (define (flnan? x)
+    (define who 'flnan?)
+    (with-arguments-validation (who)
+	((flonum	x))
+      (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+	(and ($fx= be 2047) ;;; nans and infs
+	     (not ($zero-m? x))))))
+
+  (define ($zero-m? f)
+    (and ($fxzero? ($flonum-u8-ref f 7))
+	 ($fxzero? ($flonum-u8-ref f 6))
+	 ($fxzero? ($flonum-u8-ref f 5))
+	 ($fxzero? ($flonum-u8-ref f 4))
+	 ($fxzero? ($flonum-u8-ref f 3))
+	 ($fxzero? ($flonum-u8-ref f 2))
+	 ($fxzero? ($fxlogand ($flonum-u8-ref f 1) #b1111))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
 (define ($flzero? x)
-  (let ((be (fxlogand ($flonum-sbe x) (sub1 (fxsll 1 11)))))
-    (and
-     (fx= be 0) ;;; denormalized double, only +/-0.0 is integer
-     (and (fx= ($flonum-u8-ref x 7) 0)
-	  (fx= ($flonum-u8-ref x 6) 0)
-	  (fx= ($flonum-u8-ref x 5) 0)
-	  (fx= ($flonum-u8-ref x 4) 0)
-	  (fx= ($flonum-u8-ref x 3) 0)
-	  (fx= ($flonum-u8-ref x 2) 0)
-	  (fx= ($flonum-u8-ref x 1) 0)))))
+  (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+    (and ($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
+	 (and ($fx= ($flonum-u8-ref x 7) 0)
+	      ($fx= ($flonum-u8-ref x 6) 0)
+	      ($fx= ($flonum-u8-ref x 5) 0)
+	      ($fx= ($flonum-u8-ref x 4) 0)
+	      ($fx= ($flonum-u8-ref x 3) 0)
+	      ($fx= ($flonum-u8-ref x 2) 0)
+	      ($fx= ($flonum-u8-ref x 1) 0)))))
+
+(define (flpositive? x)
+  (define who 'flpositive?)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    ($fl> x 0.0)))
 
 (define ($flnegative? x)
   (let ((b0 ($flonum-u8-ref x 0)))
-    (fx> b0 127)))
+    ($fx> b0 127)))
 
-(define ($exact x who)
-  (import (ikarus system $compnums))
-  (cond
-   ((flonum? x)
-    (or ($flonum->exact x)
-	(die who "number has no real value" x)))
-   ((cflonum? x)
-    (make-rectangular
-     (or ($flonum->exact ($cflonum-real x))
-	 (die who "number has no real value" x))
-     (or ($flonum->exact ($cflonum-imag x))
-	 (die who "number has no real value" x))))
-   ((or (fixnum? x) (ratnum? x) (bignum? x) (compnum? x)) x)
-   (else (die who "not a number" x))))
-
-(define (inexact->exact x) ($exact x 'inexact->exact))
-(define (exact x) ($exact x 'exact))
-
-
-(define (flpositive? x)
-  (if (flonum? x)
-      ($fl> x 0.0)
-    (die 'flpositive? "not a flonum" x)))
-
-(define (flabs x)
-  (if (flonum? x)
-      (if ($fx> ($flonum-u8-ref x 0) 127)
-	  ($fl* x -1.0)
-	x)
-    (die 'flabs "not a flonum" x)))
+
+;;;; exactness
 
 (define (fixnum->flonum x)
-  (if (fixnum? x)
-      ($fixnum->flonum x)
-    (die 'fixnum->flonum "not a fixnum")))
+  (define who 'fixnum->flonum)
+  (with-arguments-validation (who)
+      ((fixnum	x))
+    ($fixnum->flonum x)))
 
-(define (flsin x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_sin" x)
-    (die 'flsin "not a flonum" x)))
+(module (inexact->exact exact)
 
-(define (flcos x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_cos" x)
-    (die 'flcos "not a flonum" x)))
+  (define (inexact->exact x)
+    ($exact x 'inexact->exact))
 
-(define (fltan x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_tan" x)
-    (die 'fltan "not a flonum" x)))
+  (define (exact x)
+    ($exact x 'exact))
 
-(define (flasin x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_asin" x)
-    (die 'flasin "not a flonum" x)))
+  (define ($exact x who)
+    (import (ikarus system $compnums))
+    (cond ((flonum? x)
+	   (or ($flonum->exact x)
+	       (%error-no-real-value who x)))
+	  ((cflonum? x)
+	   (make-rectangular (or ($flonum->exact ($cflonum-real x))
+				 (%error-no-real-value who x))
+			     (or ($flonum->exact ($cflonum-imag x))
+				 (%error-no-real-value who x))))
+	  ((or (fixnum?  x)
+	       (ratnum?  x)
+	       (bignum?  x)
+	       (compnum? x))
+	   x)
+	  (else
+	   (assertion-violation who "expected number as argument" x))))
 
-(define (flacos x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_acos" x)
-    (die 'flacos "not a flonum" x)))
+  (define (%error-no-real-value who x)
+    (assertion-violation who "number has no real value" x))
 
-(define flatan
-  (case-lambda
-   ((x)
-    (if (flonum? x)
-	(foreign-call "ikrt_fl_atan" x)
-      (die 'flatan "not a flonum" x)))
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    (foreign-call "ikrt_atan2" x y)
-	  (die 'flatan "not a flonum" y))
-      (die 'flatan "not a flonum" x)))))
+  #| end of module |# )
 
-(define (flfloor x)
-  (define (ratnum-floor x)
-    (let ((n (numerator x)) (d (denominator x)))
-      (let ((q (quotient n d)))
-	(if (>= n 0) q (- q 1)))))
-  (cond
-   ((flonum? x)
-       ;;; optimize for integer flonums case
+
+;;;; functions
+
+(define-syntax define-fl-operation/one
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((flonum	x))
+	 (?unsafe-who x))))))
+
+(define-syntax define-fl-operation/one/forcall
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who ?foreign-who)
+     (begin
+       (define-fl-operation/one ?safe-who ?unsafe-who)
+       (define (?unsafe-who x)
+	 (foreign-call ?foreign-who x))))))
+
+(define-syntax define-fl-operation/two
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x y)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((flonum	x)
+	    (flonum	y))
+	 (?unsafe-who x y))))))
+
+;;; --------------------------------------------------------------------
+
+(define-fl-operation/one flabs $flabs)
+(define ($flabs x)
+  (if ($fx> ($flonum-u8-ref x 0) 127)
+      ($fl* x -1.0)
+    x))
+
+(define-fl-operation/one/forcall flsin $flsin "ikrt_fl_sin")
+(define-fl-operation/one/forcall flcos $flcos "ikrt_fl_cos")
+(define-fl-operation/one/forcall fltan $fltan "ikrt_fl_tan")
+
+(define-fl-operation/one/forcall flasin $flasin "ikrt_fl_asin")
+(define-fl-operation/one/forcall flacos $flacos "ikrt_fl_acos")
+
+(module (flatan $flatan $flatan2)
+
+  (define who 'flatan)
+
+  (define flatan
+    (case-lambda
+     ((x)
+      (with-arguments-validation (who)
+	  ((flonum	x))
+	($flatan x)))
+     ((x y)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y))
+	($flatan2 x y)))))
+
+  (define ($flatan x)
+    (foreign-call "ikrt_fl_atan" x))
+
+  (define ($flatan2 x y)
+    (foreign-call "ikrt_atan2" x y))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (flfloor $flfloor)
+
+  (define-fl-operation/one flfloor $flfloor)
+
+  (define ($flfloor x)
+    ;;FIXME Optimize for integer flonums case.  (Abdulaziz Ghuloum)
     (let ((e ($flonum->exact x)))
-      (cond
-       ((ratnum? e)
-	(exact->inexact (ratnum-floor e)))
-       (else x))))
-   (else (die 'flfloor "not a flonum" x))))
+      (if (ratnum? e)
+	  (exact->inexact ($ratnum-floor e))
+	x)))
 
-(define (flceiling x)
-  (cond
-   ((flonum? x)
-       ;;; optimize for integer flonums case
-    (let ((e ($flonum->exact x)))
-      (cond
-       ((ratnum? e)
-	(exact->inexact (ceiling e)))
-       (else x))))
-   (else (die 'flceiling "not a flonum" x))))
+  (define ($ratnum-floor x)
+    (import (ikarus system $ratnums))
+    (let* ((n ($ratnum-n x))
+	   (d ($ratnum-d x))
+	   (q (quotient n d)))
+      (if (>= n 0)
+	  q
+	(- q 1))))
 
-(define (flexp x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_exp" x ($make-flonum))
-    (die 'flexp "not a flonum" x)))
+  #| end of module |# )
 
-(define (flexpm1 x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_expm1" x ($make-flonum))
-    (die 'flexpm1 "not a flonum" x)))
+(define-fl-operation/one flceiling $flceiling)
 
-(define fllog
-  (case-lambda
-   ((x)
-    (if (flonum? x)
-	(foreign-call "ikrt_fl_log" x)
-      (die 'fllog "not a flonum" x)))
-   ((x y)
-    (if (flonum? x)
-	(if (flonum? y)
-	    (fl/ (foreign-call "ikrt_fl_log" x)
-		 (foreign-call "ikrt_fl_log" y))
-	  (die 'fllog "not a flonum" y))
-      (die 'fllog "not a flonum" x)))))
+(define ($flceiling x)
+  ;;FIXME Optimize for integer flonums case.  (Abdulaziz Ghuloum)
+  (let ((e ($flonum->exact x)))
+    (if (ratnum? e)
+	(exact->inexact (ceiling e))
+      x)))
 
-(define (fllog1p x)
-  (if (flonum? x)
-      (foreign-call "ikrt_fl_log1p" x)
-    (die 'fllog1p "not a flonum" x)))
+;;; --------------------------------------------------------------------
 
-(define (flexpt x y)
-  (if (flonum? x)
-      (if (flonum? y)
-	  (let ((y^ ($flonum->exact y)))
-              ;;; FIXME: performance bottleneck?
-	    (cond
-	     ((fixnum? y^) (inexact (expt x y^)))
-	     ((bignum? y^) (inexact (expt x y^)))
-	     (else
-	      (foreign-call "ikrt_flfl_expt" x y ($make-flonum)))))
-	(die 'flexpt "not a flonum" y))
-    (die 'fllog "not a flonum" x)))
+(define-fl-operation/one flexp $flexp)
+
+(define ($flexp x)
+  (foreign-call "ikrt_fl_exp" x ($make-flonum)))
+
+(define-fl-operation/one flexpm1 $flexpm1)
+
+(define ($flexpm1 x)
+  (foreign-call "ikrt_fl_expm1" x ($make-flonum)))
+
+(define-fl-operation/one/forcall fllog1p $fllog1p "ikrt_fl_log1p")
+
+(module (fllog $fllog $fllog2)
+
+  (define who 'fllog)
+
+  (define fllog
+    (case-lambda
+     ((x)
+      (with-arguments-validation (who)
+	  ((flonum	x))
+	($fllog x)))
+     ((x y)
+      (with-arguments-validation (who)
+	  ((flonum	x)
+	   (flonum	y))
+	($fllog2 x y)))))
+
+  (define ($fllog x)
+    (foreign-call "ikrt_fl_log" x))
+
+  (define ($fllog2 x y)
+    ($fl/ (foreign-call "ikrt_fl_log" x)
+	  (foreign-call "ikrt_fl_log" y)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define-fl-operation/two flexpt $flexpt)
+
+(define ($flexpt x y)
+  (let ((y^ ($flonum->exact y)))
+    ;;FIXME Performance bottleneck?  (Abdulaziz Ghuloum)
+    (cond ((fixnum? y^)
+	   (inexact (expt x y^)))
+	  ((bignum? y^)
+	   (inexact (expt x y^)))
+	  (else
+	   (foreign-call "ikrt_flfl_expt" x y ($make-flonum))))))
 
 
 ;;;; debugging functions
