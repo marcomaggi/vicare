@@ -16014,7 +16014,7 @@ Perform arithmetic operations.
 
 
 @deffn {Unsafe Operation} $flonum->exact @var{fl}
-
+Rationalize the operand and return the result.
 @end deffn
 
 
@@ -16029,37 +16029,38 @@ result.
 
 
 @deffn {Unsafe Operation} $flzero? @var{fl}
-
+Return true if the operand is zero.
 @end deffn
 
 
 @deffn {Unsafe Operation} $flpositive? @var{fl}
-
+Return true if the operand is strictly positive.
 @end deffn
 
 
 @deffn {Unsafe Operation} $flnegative? @var{fl}
-
+Return true if the operand is strictly negative.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fleven? @var{fl}
-
+Return true if the operand is even.
 @end deffn
 
 
 @deffn {Unsafe Operation} $flodd? @var{fl}
-
+Return true if the operand is odd.
 @end deffn
 
 
 @deffn {Unsafe Operation} $flonum-integer? @var{fl}
-
+Return true if the operand is integer.
 @end deffn
 
 
 @deffn {Unsafe Operation} $flonum-rational? @var{fl}
-
+Return true if the operand is rational.  All the flonums are rational
+with the exception of infinities and not--a--number.
 @end deffn
 
 @c ------------------------------------------------------------
