@@ -68,37 +68,42 @@
 	    $flonum-rational?
             $flonum-integer?
 	    $flround)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (only (vicare syntactic-extensions)
+	  cond-numeric-operand))
 
 
-;;;; flonums
+;;;; flonums parts
 
-(define (flonum-bytes f)
-  (unless (flonum? f)
-    (die 'flonum-bytes "not a flonum" f))
-  (values
-   ($flonum-u8-ref f 0)
-   ($flonum-u8-ref f 1)
-   ($flonum-u8-ref f 2)
-   ($flonum-u8-ref f 3)
-   ($flonum-u8-ref f 4)
-   ($flonum-u8-ref f 5)
-   ($flonum-u8-ref f 6)
-   ($flonum-u8-ref f 7)))
+(define (flonum-bytes x)
+  (define who 'flonum-bytes)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    (values ($flonum-u8-ref x 0)
+	    ($flonum-u8-ref x 1)
+	    ($flonum-u8-ref x 2)
+	    ($flonum-u8-ref x 3)
+	    ($flonum-u8-ref x 4)
+	    ($flonum-u8-ref x 5)
+	    ($flonum-u8-ref x 6)
+	    ($flonum-u8-ref x 7))))
+
 (define (flonum-parts x)
-  (unless (flonum? x)
-    (die 'flonum-parts "not a flonum" x))
-  (let-values (((b0 b1 b2 b3 b4 b5 b6 b7) (flonum-bytes x)))
-    (values
-     (zero? (fxlogand b0 128))
-     (+ (fxsll (fxlogand b0 127) 4)
-	(fxsra b1 4))
-     (+ (+ b7 (fxsll b6 8) (fxsll b5 16))
-	(* (+ b4
-	      (fxsll b3 8)
-	      (fxsll b2 16)
-	      (fxsll (fxlogand b1 #b1111) 24))
-	   (expt 2 24))))))
+  (define who 'flonum-parts)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    (let-values (((b0 b1 b2 b3 b4 b5 b6 b7) (flonum-bytes x)))
+      (values ($fxzero? ($fxlogand b0 128))
+	      (+ ($fxsll ($fxlogand b0 127) 4)
+		 ($fxsra b1 4))
+	      (+ (+ b7 ($fxsll b6 8) ($fxsll b5 16))
+		 (* (+ b4
+		       ($fxsll b3 8)
+		       ($fxsll b2 16)
+		       ($fxsll ($fxlogand b1 #b1111) 24))
+		    (expt 2 24)))))))
+
+
 (define ($zero-m? f)
   (and ($fxzero? ($flonum-u8-ref f 7))
        ($fxzero? ($flonum-u8-ref f 6))
@@ -116,61 +121,89 @@
 (define ($flonum-integer? x)
   (let ((be ($fxlogand ($flonum-sbe x)
 		       ($fxsub1 ($fxsll 1 11)))))
-    (cond
-     (($fx= be 2047)  ;;; nans and infs
-      #f)
-     (($fx>= be 1075) ;;; magnitue large enough
-      #t)
-     (($fx= be 0) ;;; denormalized double, only +/-0.0 is integer
-      (and ($fx= ($flonum-u8-ref x 7) 0)
-	   ($fx= ($flonum-u8-ref x 6) 0)
-	   ($fx= ($flonum-u8-ref x 5) 0)
-	   ($fx= ($flonum-u8-ref x 4) 0)
-	   ($fx= ($flonum-u8-ref x 3) 0)
-	   ($fx= ($flonum-u8-ref x 2) 0)
-	   ($fx= ($flonum-u8-ref x 1) 0)))
-     (($fx< be ($fx+ 1075 -52)) ;;; too small to be an integer
-      #f)
-     (else ($fl= x ($$flround x))))))
+    (cond (($fx= be 2047) ;nans and infs
+	   #f)
+	  (($fx>= be 1075) ;magnitue large enough
+	   #t)
+	  (($fx= be 0) ;denormalized double, only +/-0.0 is integer
+	   (and ($fx= ($flonum-u8-ref x 7) 0)
+		($fx= ($flonum-u8-ref x 6) 0)
+		($fx= ($flonum-u8-ref x 5) 0)
+		($fx= ($flonum-u8-ref x 4) 0)
+		($fx= ($flonum-u8-ref x 3) 0)
+		($fx= ($flonum-u8-ref x 2) 0)
+		($fx= ($flonum-u8-ref x 1) 0)))
+	  (($fx< be ($fx+ 1075 -52)) ;too small to be an integer
+	   #f)
+	  (else
+	   ($fl= x (foreign-call "ikrt_fl_round" x ($make-flonum)))))))
 
-
-(define ($$flround x)
-  (foreign-call "ikrt_fl_round" x ($make-flonum)))
-
-(define ($flround x)
-    ;;; optimize for integer flonums case
-  (define (ratnum-round n nbe)
-    (let ((d (sll 1 nbe)))
-      (let ((q (sra n nbe))
-	    (r (bitwise-and n (sub1 d))))
-	(let ((r2 (+ r r)))
-	  (cond
-	   ((< r2 d) q)
-	   ((> r2 d) (+ q 1))
-	   (else (if (even? q) q (+ q 1))))))))
-  (let ((sbe ($flonum-sbe x)))
-    (let ((be ($fxlogand sbe #x7FF)))
-      (cond
-          ;;; nans/infs/magnitude large enough to be an integer
-       (($fx>= be 1075) x)
-       (else
-           ;;; this really needs to get optimized.
-	(let-values (((pos? be m) (flonum-parts x)))
-	  (cond
-	   ((= be 0) ;;; denormalized
-	    (if pos? +0.0 -0.0))
-	   (else ; normalized flonum
-	    (let ((r
-		   (inexact
-		    (ratnum-round (+ m (expt 2 52)) (- 1075 be)))))
-	      (if pos? r ($fl* r -1.0)))))))))))
+
+;;;; rounding
 
 (define (flround x)
-  (if (flonum? x)
-      ($flround x)
-    (die 'flround "not a flonum" x)))
+  (define who 'flround)
+  (with-arguments-validation (who)
+      ((flonum	x))
+    ($flround x)))
 
+(module ($flround)
+
+  (define ($flround x)
+    (let* ((sbe ($flonum-sbe x))	;this is a fixnum
+	   (be  ($fxlogand sbe #x7FF)))	;this is a fixnum
+      (if ($fx>= be 1075)
+	  ;;Nans, infinities, magnitude large enough to be an integer.
+	  x
+	;;This really needs to get optimized.
+	(let-values (((positive? be mantissa) (flonum-parts x)))
+	  (if ($fxzero? be)
+	      ;;denormalized
+	      (if positive? +0.0 -0.0)
+	    ;;normalized flonum
+	    (let ((r (inexact (%ratnum-round (+ mantissa (expt 2 52)) ($fx- 1075 be)))))
+	      (if positive?
+		  r
+		($fl* r -1.0))))))))
+
+  (define (%ratnum-round n nbe)
+    (let* ((d  (sll 1 nbe))
+	   (q  (sra n nbe))
+	   (r  (bitwise-and n (sub1 d)))
+	   (r2 (+ r r)))
+      (cond ((< r2 d)	q)
+	    ((> r2 d)	(+ q 1))
+	    (else
+	     (if (even? q)
+		 q
+	       (+ q 1))))))
+
+  #| end of module: $flround |# )
+
+
 (module ($flonum->exact)
+
+  (define ($flonum->exact x)
+    (let* ((sbe ($flonum-sbe x))
+	   (be ($fxlogand sbe #x7FF)))
+      (cond (($fx= be 2047) ;nans/infs
+	     #f)
+	    (($fx>= be 1075) ;magnitude large enough to be an integer
+	     (bitwise-arithmetic-shift-left ($flonum-signed-mantissa x)
+					    ($fx- be 1075)))
+	    (else
+	     ;;This really needs to get optimized.
+	     (let-values (((pos? be m) (flonum-parts x)))
+	       (cond ((= be 0) ;denormalized
+		      (if (= m 0)
+			  0
+			(* (if pos? 1 -1)
+			   (/ m (expt 2 1074)))))
+		     (else ;normalized flonum
+		      (/ (+ m (expt 2 52))
+			 (bitwise-arithmetic-shift-left (if pos? 1 -1)
+							(- 1075 be))))))))))
+
   (define ($flonum-signed-mantissa x)
     (let ((b0 ($flonum-u8-ref x 0)))
       (let ((m0 ($fx+ ($flonum-u8-ref x 7)
@@ -189,31 +222,11 @@
 	  (+ (bitwise-arithmetic-shift-left
 	      ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
 	     ($fx- 0 m0))))))
-  (define ($flonum->exact x)
-    (import (ikarus))
-    (let ((sbe ($flonum-sbe x)))
-      (let ((be ($fxlogand sbe #x7FF)))
-	(cond
-	 (($fx= be 2047) #f) ;;; nans/infs
-	 (($fx>= be 1075)    ;;; magnitude large enough to be an integer
-	  (bitwise-arithmetic-shift-left
-	   ($flonum-signed-mantissa x)
-	   (- be 1075)))
-	 (else
-             ;;; this really needs to get optimized.
-	  (let-values (((pos? be m) (flonum-parts x)))
-	    (cond
-	     ((= be 0) ;;; denormalized
-	      (if (= m 0)
-		  0
-		(* (if pos? 1 -1)
-		   (/ m (expt 2 1074)))))
-	     (else ; normalized flonum
-	      (/ (+ m (expt 2 52))
-		 (bitwise-arithmetic-shift-left
-		  (if pos? 1 -1)
-		  (- 1075 be))))))))))))
 
+
+  #| end of module: $flonum->exact |# )
+
+
 (define (flnumerator x)
   (unless (flonum? x)
     (die 'flnumerator "not a flonum" x))
@@ -464,3 +477,6 @@
   (define $fixnum->flonum fixnum->flonum))
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
+;; End:

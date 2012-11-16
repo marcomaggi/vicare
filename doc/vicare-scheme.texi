@@ -3817,6 +3817,36 @@ Return a flonum equivalent to @math{log(1 + @var{fl})}.
 Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Miscellaneous functions
+
+
+@defun flonum-bytes @var{fl}
+Return @math{8} values being fixnums representing octects from the
+binary representation of @var{fl}.
+@end defun
+
+
+@defun flonum-parts @var{fl}
+Return @math{3} values begin: a boolean, true if @var{fl} is positive; a
+fixnum representing the exponent's @math{11} bits; an exact integer
+representing the mantissa's @math{53} bits.
+
+@example
+(flonum-parts 2.0)
+@result{} #t #b10000000000 #b0
+
+(flonum-parts 4.0)
+@result{} #t #b10000000001 #b0
+
+(flonum-parts +0.0)
+@result{} #t #b00000000000 #b0
+
+(flonum-parts -0.0)
+@result{} #f #b00000000000 #b0
+@end example
+@end defun
 
 @c page
 @node iklib numerics math
