@@ -582,55 +582,64 @@
 
 ;;;; comparison
 
-(define-syntax define-flcmp
-  (syntax-rules ()
-    ((_ fl<? $fl<)
-     (define fl<?
-       (case-lambda
-	((x y)
-	 (if (flonum? x)
-	     (if (flonum? y)
-		 ($fl< x y)
-	       (die 'fl<? "not a flonum" y))
-	   (die 'fl<? "not a flonum" x)))
-	((x y z)
-	 (if (flonum? x)
-	     (if (flonum? y)
-		 (if (flonum? z)
-		     (and ($fl< x y) ($fl< y z))
-		   (die 'fl<? "not a flonum" z))
-	       (die 'fl<? "not a flonum" y))
-	   (die 'fl<? "not a flonum" x)))
-	((x)
-	 (or (flonum? x)
-	     (die 'fl<? "not a flonum" x)))
-	((x y . rest)
-	 (let ()
-	   (define (loopf a ls)
-	     (unless (flonum? a)
-	       (die 'fl<? "not a flonum" a))
-	     (if (null? ls)
-		 #f
-	       (loopf (car ls) (cdr ls))))
-	   (if (flonum? x)
-	       (if (flonum? y)
-		   (if ($fl< x y)
-		       (let f ((x y) (y (car rest)) (ls (cdr rest)))
-			 (if (flonum? y)
-			     (if (null? ls)
-				 ($fl< x y)
-			       (if ($fl< x y)
-				   (f y (car ls) (cdr ls))
-				 (loopf (car ls) (cdr ls))))
-			   (die 'fl<? "not a flonum" y)))
-		     (loopf (car rest) (cdr rest)))
-		 (die 'fl<? "not a flonum" y))
-	     (die 'fl<? "not a flonum" x)))))))))
-(define-flcmp fl=? $fl=)
-(define-flcmp fl<? $fl<)
-(define-flcmp fl<=? $fl<=)
-(define-flcmp fl>? $fl>)
-(define-flcmp fl>=? $fl>=)
+(let-syntax ((define-flcmp
+	       (syntax-rules ()
+		 ((_ fl<? $fl<)
+		  (module (fl<?)
+		    (define who (quote fl<?))
+
+		    (define fl<?
+		      (case-lambda
+		       ((x y)
+			(with-arguments-validation (who)
+			    ((flonum	x)
+			     (flonum	y))
+			  ($fl< x y)))
+
+		       ((x y z)
+			(with-arguments-validation (who)
+			    ((flonum	x)
+			     (flonum	y)
+			     (flonum	z))
+			  (and ($fl< x y)
+			       ($fl< y z))))
+
+		       ((x)
+			(or (flonum? x)
+			    (assertion-violation who "expected flonum as argument" x)))
+
+		       ((x y . rest)
+			(with-arguments-validation (who)
+			    ((flonum	x)
+			     (flonum	y))
+			  (if ($fl< x y)
+			      (let loop ((x  y)
+					 (y  (car rest))
+					 (ls (cdr rest)))
+				(with-arguments-validation (who)
+				    ((flonum	y))
+				  (if (null? ls)
+				      ($fl< x y)
+				    (if ($fl< x y)
+					(loop y ($car ls) ($cdr ls))
+				      (%validate-rest ($car ls) ($cdr ls))))))
+			    (%validate-rest (car rest) (cdr rest)))))
+		       ))
+
+		    (define (%validate-rest a ls)
+		      (with-arguments-validation (who)
+			  ((flonum	a))
+			(if (null? ls)
+			    #f
+			  (%validate-rest ($car ls) ($cdr ls)))))
+
+		    #| end of module |# )
+		  ))))
+  (define-flcmp fl=?	$fl=)
+  (define-flcmp fl<?	$fl<)
+  (define-flcmp fl<=?	$fl<=)
+  (define-flcmp fl>?	$fl>)
+  (define-flcmp fl>=?	$fl>=))
 
 
 ;;;; arithmetic
