@@ -2188,6 +2188,20 @@
     ($flcmp-aux 'fl:>= x y)))
 
 ;;; --------------------------------------------------------------------
+
+;;NOTE $flzero?  is more complicated because we must check for both +0.0
+;;and -0.0; so  it is not a primitive operation.   (Marco Maggi; Nov 17,
+;;2012)
+
+ (define-primop $flpositive? unsafe
+   ((P x)
+    ($flcmp-aux 'fl:> x (K +0.0))))
+
+ (define-primop $flnegative? unsafe
+   ((P x)
+    ($flcmp-aux 'fl:< x (K -0.0))))
+
+;;; --------------------------------------------------------------------
 ;;; safe comparison primitive operations
 
  (define-primop fl=? safe

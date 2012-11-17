@@ -2437,54 +2437,55 @@
     (unless (real? y) (die 'atan "not a real number" y))
     (foreign-call "ikrt_atan2" (inexact y) (inexact x)))))
 
-(define sqrt
-  (lambda (x)
-    (cond
-     ((flonum? x)
-      (if ($fl< x 0.0)
-	  (make-rectangular 0.0
-			    (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
-	(foreign-call "ikrt_fl_sqrt" x)))
-     ((fixnum? x)
-      (cond
-       (($fx< x 0)
-	(make-rectangular 0 (sqrt (- x))))
-       (else
-	(let-values (((s r) (exact-integer-sqrt x)))
-	  (cond
-	   ((eq? r 0) s)
-	   (else (foreign-call "ikrt_fx_sqrt" x)))))))
-     ((bignum? x)
-      (cond
-       (($bignum-positive? x)
-	(let-values (((s r) (exact-integer-sqrt x)))
-	  (cond
-	   ((eq? r 0) s)
-	   (else
-	    (let ((v (sqrt (inexact x))))
-                   ;;; could the (dropped) residual ever affect the answer?
-	      (cond
-	       ((infinite? v)
-		(if (bignum? s)
-		    (foreign-call "ikrt_bignum_to_flonum"
-				  s
-				  1 ;;; round up in case of a tie
-				  ($make-flonum))
-		  (inexact s)))
-	       (else v)))))))
-       (else
-	(make-rectangular 0 (sqrt (- x))))))
-     ((ratnum? x)
-         ;;; FIXME: incorrect as per bug 180170
-      (/ (sqrt ($ratnum-n x)) (sqrt ($ratnum-d x))))
-     ((or (compnum? x) (cflonum? x))
-      (let ((xr (real-part x)) (xi (imag-part x)))
-	(let ((m (sqrt (+ (* xr xr) (* xi xi))))
-	      (s (if (> xi 0) 1 -1)))
-	  (make-rectangular
-	   (sqrt (/ (+ m xr) 2))
-	   (* s (sqrt (/ (- m xr) 2)))))))
-     (else (die 'sqrt "not a number" x)))))
+
+;;;; square roots
+
+(define (sqrt x)
+  (cond ((flonum? x)
+	 (if ($fl< x 0.0)
+	     (make-rectangular 0.0 (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
+	   (foreign-call "ikrt_fl_sqrt" x)))
+	((fixnum? x)
+	 (cond
+	  (($fx< x 0)
+	   (make-rectangular 0 (sqrt (- x))))
+	  (else
+	   (let-values (((s r) (exact-integer-sqrt x)))
+	     (cond
+	      ((eq? r 0) s)
+	      (else (foreign-call "ikrt_fx_sqrt" x)))))))
+	((bignum? x)
+	 (cond
+	  (($bignum-positive? x)
+	   (let-values (((s r) (exact-integer-sqrt x)))
+	     (cond
+	      ((eq? r 0) s)
+	      (else
+	       (let ((v (sqrt (inexact x))))
+		 ;; could the (dropped) residual ever affect the answer?
+		 (cond
+		  ((infinite? v)
+		   (if (bignum? s)
+		       (foreign-call "ikrt_bignum_to_flonum"
+				     s
+				     1 ;;; round up in case of a tie
+				     ($make-flonum))
+		     (inexact s)))
+		  (else v)))))))
+	  (else
+	   (make-rectangular 0 (sqrt (- x))))))
+	((ratnum? x)
+	 ;;FIXME Incorrect as per bug 180170.
+	 (/ (sqrt ($ratnum-n x)) (sqrt ($ratnum-d x))))
+	((or (compnum? x) (cflonum? x))
+	 (let ((xr (real-part x)) (xi (imag-part x)))
+	   (let ((m (sqrt (+ (* xr xr) (* xi xi))))
+		 (s (if (> xi 0) 1 -1)))
+	     (make-rectangular
+	      (sqrt (/ (+ m xr) 2))
+	      (* s (sqrt (/ (- m xr) 2)))))))
+	(else
+	 (die 'sqrt "not a number" x))))
 
 (define exact-integer-sqrt
   (lambda (x)
@@ -2505,7 +2506,7 @@
        (else (die who "invalid argument" x))))
      (else (die who "invalid argument" x)))))
 
-
+
 (define numerator
   (lambda (x)
     (cond
