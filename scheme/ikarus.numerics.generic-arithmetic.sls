@@ -55,42 +55,125 @@
 
 
 (library (ikarus generic-arithmetic)
-  (export + - * / zero? = < <= > >= add1 sub1 quotient remainder
-          modulo even? odd? bitwise-and bitwise-not bitwise-ior
-          bitwise-xor bitwise-if
-          bitwise-arithmetic-shift-right bitwise-arithmetic-shift-left
-          bitwise-arithmetic-shift
-          bitwise-length bitwise-copy-bit-field
-          bitwise-copy-bit bitwise-bit-field
-	  bitwise-reverse-bit-field bitwise-rotate-bit-field
-          positive? negative? expt gcd lcm numerator denominator
-          exact-integer-sqrt
-          quotient+remainder number->string min max
-          abs truncate sra sll real->flonum
-          exact->inexact inexact floor ceiling round log
-          sin cos tan asin acos atan sqrt exp
-          sinh cosh tanh asinh acosh atanh
-          random
-          error@add1 error@sub1
-	  bytevector->bignum		bignum->bytevector)
-  (import (except (ikarus)
-		  + - * / zero? = < <= > >= add1 sub1 quotient
-		  remainder modulo even? odd? quotient+remainder number->string
-		  bitwise-arithmetic-shift-right bitwise-arithmetic-shift-left
-		  bitwise-arithmetic-shift
-		  bitwise-length bitwise-copy-bit-field
-		  bitwise-copy-bit bitwise-bit-field
-		  bitwise-reverse-bit-field bitwise-rotate-bit-field
+  (export
+    + - * / = < <= > >=
+    min				max
+    add1			sub1
+    quotient			remainder
+    quotient+remainder		modulo
+    zero?
+    positive?			negative?
+    even?			odd?
 
-		  positive? negative? bitwise-and bitwise-not bitwise-ior
-		  bitwise-xor bitwise-if
-		  expt gcd lcm numerator denominator
-		  exact->inexact inexact floor ceiling round log
-		  exact-integer-sqrt min max abs real->flonum
-		  sra sll exp
-		  sin cos tan asin acos atan sqrt truncate
-		  sinh cosh tanh asinh acosh atanh
+    ;; exactness
+    exact->inexact		inexact
+
+    ;; part functions
+    abs
+    floor			ceiling
+    round			truncate
+    numerator			denominator
+    gcd				lcm
+
+    ;; bitwise operations
+    bitwise-and			bitwise-not
+    bitwise-ior			bitwise-xor
+    bitwise-if
+    bitwise-arithmetic-shift-right
+    bitwise-arithmetic-shift-left
+    bitwise-arithmetic-shift
+    bitwise-length		bitwise-copy-bit-field
+    bitwise-copy-bit		bitwise-bit-field
+    bitwise-reverse-bit-field	bitwise-rotate-bit-field
+    sra				sll
+
+    ;; powers and square roots
+    expt
+    sqrt			exact-integer-sqrt
+
+    ;; logarithms and exponentials
+    log exp
+
+    ;; trigonometric functions
+    sin				asin
+    cos				acos
+    tan				atan
+
+    ;; hyperbolic functions
+    sinh			asinh
+    cosh			acosh
+    tanh			atanh
+
+    ;; other functions
+    number->string		real->flonum
+    random
+    error@add1			error@sub1
+    bytevector->bignum		bignum->bytevector
+
+    ;; the following go in (ikarus system $numerics)
+    $sqrt/fixnum
+    $sqrt/flonum
+    $sqrt/bignum
+    $sqrt/ratnum
+    $sqrt/compnum
+    $sqrt/cflonum
+
+    $exact-integer-sqrt/fixnum
+    $exact-integer-sqrt/bignum
+    )
+  (import (except (ikarus)
+		  + - * / = < <= > >=
+		  min				max
+		  add1				sub1
+		  quotient			remainder
+		  quotient+remainder		modulo
+		  zero?
+		  positive?			negative?
+		  even?				odd?
+
+		  ;; exactness
+		  exact->inexact		inexact
+
+		  ;; part functions
+		  abs
+		  floor				ceiling
+		  round				truncate
+		  numerator			denominator
+		  gcd				lcm
+
+		  ;; bitwise operations
+		  bitwise-and			bitwise-not
+		  bitwise-ior			bitwise-xor
+		  bitwise-if
+		  bitwise-arithmetic-shift-right
+		  bitwise-arithmetic-shift-left
+		  bitwise-arithmetic-shift
+		  bitwise-length		bitwise-copy-bit-field
+		  bitwise-copy-bit		bitwise-bit-field
+		  bitwise-reverse-bit-field	bitwise-rotate-bit-field
+		  sra				sll
+
+		  ;; powers and square roots
+		  expt
+		  sqrt				exact-integer-sqrt
+
+		  ;; logarithms and exponentials
+		  log exp
+
+		  ;; trigonometric functions
+		  sin				asin
+		  cos				acos
+		  tan				atan
+
+		  ;; hyperbolic functions
+		  sinh				asinh
+		  cosh				acosh
+		  tanh				atanh
+
+		  ;; other functions
+		  number->string		real->flonum
 		  random
+		  error@add1			error@sub1
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $pairs)
     (ikarus system $fx)
@@ -111,7 +194,8 @@
     (ikarus system $compnums)
     (ikarus system $chars)
     (ikarus system $strings)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (vicare syntactic-extensions))
 
 
 (define (bignum->flonum x)
@@ -2443,64 +2527,75 @@
 
 (module (sqrt
 	 $sqrt/fixnum
-	 $sqrt/flonum)
+	 $sqrt/flonum
+	 $sqrt/bignum
+	 $sqrt/ratnum
+	 $sqrt/compnum
+	 $sqrt/cflonum)
 
   (define (sqrt x)
-    (define who 'sqrt)
-    (cond ((flonum? x)
-	   ($sqrt/flonum x))
-
-	  ((fixnum? x)
-	   ($sqrt/fixnum x))
-
-	  ((bignum? x)
-	   (cond
-	    (($bignum-positive? x)
-	     (let-values (((s r) (exact-integer-sqrt x)))
-	       (cond
-		((eq? r 0) s)
-		(else
-		 (let ((v (sqrt (inexact x))))
-		   ;; could the (dropped) residual ever affect the answer?
-		   (cond
-		    ((infinite? v)
-		     (if (bignum? s)
-			 (foreign-call "ikrt_bignum_to_flonum"
-				       s
-				       1 ;;; round up in case of a tie
-				       ($make-flonum))
-		       (inexact s)))
-		    (else v)))))))
-	    (else
-	     (make-rectangular 0 (sqrt (- x))))))
-
-	  ((ratnum? x)
-	   ;;FIXME Incorrect as per bug 180170.
-	   (/ (sqrt ($ratnum-n x)) (sqrt ($ratnum-d x))))
-
-	  ((or (compnum? x) (cflonum? x))
-	   (let ((xr (real-part x)) (xi (imag-part x)))
-	     (let ((m (sqrt (+ (* xr xr) (* xi xi))))
-		   (s (if (> xi 0) 1 -1)))
-	       (make-rectangular
-		(sqrt (/ (+ m xr) 2))
-		(* s (sqrt (/ (- m xr) 2)))))))
-
-	  (else
-	   (assertion-violation who "not a number" x))))
+    (cond-numeric-operand x
+      ((fixnum?)	($sqrt/fixnum x))
+      ((bignum?)	($sqrt/bignum x))
+      ((ratnum?)	($sqrt/ratnum x))
+      ((flonum?)	($sqrt/flonum x))
+      ((compnum?)	($sqrt/compnum x))
+      ((cflonum?)	($sqrt/cflonum x))
+      (else
+       (assertion-violation 'sqrt "expected number as argument" x))))
 
   (define ($sqrt/flonum x)
     (if ($fl< x 0.0)
-	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
+	;;This case includes: X = -0.0
+	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
       (foreign-call "ikrt_fl_sqrt" x)))
 
   (define ($sqrt/fixnum x)
     (if ($fxnegative? x)
 	(make-rectangular 0 ($sqrt/fixnum ($fx- x)))
-      (let-values (((root remainder) ($exact-integer-sqrt/fixnum x)))
-	(if ($fxzero? remainder)
+      (let-values (((root residual) ($exact-integer-sqrt/fixnum x)))
+	(if ($fxzero? residual)
 	    root
 	  (foreign-call "ikrt_fx_sqrt" x)))))
+
+  (define ($sqrt/bignum x)
+    (if ($bignum-positive? x)
+	(let-values (((root residual) ($exact-integer-sqrt/bignum x)))
+	  (if (eq? residual 0)
+	      root
+	    (let ((v ($sqrt/flonum (inexact x))))
+	      ;;Could the (dropped) residual ever affect the answer?
+	      (if (flinfinite? v)
+		  (if (bignum? root)
+		      ;;The argument  1 makes it  round up in case  of a
+		      ;;tie.
+		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
+		    (inexact root))
+		v))))
+      (make-rectangular 0 ($sqrt/bignum (- x)))))
+
+  (define ($sqrt/ratnum x)
+    ;;FIXME Incorrect as per bug 180170.
+    (/ (sqrt ($ratnum-n x))
+       (sqrt ($ratnum-d x))))
+
+  (define ($sqrt/compnum x)
+    (let ((x.rep (real-part x))
+	  (x.imp (imag-part x)))
+      (let ((m (sqrt (+ (* x.rep x.rep)
+			(* x.imp x.imp))))
+	    (s (if (> x.imp 0) 1 -1)))
+	(make-rectangular (sqrt (/ (+ m x.rep) 2))
+			  (* s (sqrt (/ (- m x.rep) 2)))))))
+
+  (define ($sqrt/cflonum x)
+    (let ((x.rep (real-part x))
+	  (x.imp (imag-part x)))
+      (let ((m (sqrt (+ (* x.rep x.rep)
+			(* x.imp x.imp))))
+	    (s (if (> x.imp 0) 1 -1)))
+	(make-rectangular (sqrt (/ (+ m x.rep) 2))
+			  (* s (sqrt (/ (- m x.rep) 2)))))))
 
   ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
   ;;Sat Nov 17, 2012)
@@ -2886,3 +2981,6 @@
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
+;; End:

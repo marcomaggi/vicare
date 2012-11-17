@@ -536,6 +536,7 @@
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
     ($compiler		(ikarus system $compiler)		#t	#t)
+    ($numerics		(ikarus system $numerics)		#f	#f)
 ;;;
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
@@ -2253,6 +2254,18 @@
 
     ($unparse-recordized-code			$compiler)
     ($unparse-recordized-code/pretty		$compiler)
+
+;;; --------------------------------------------------------------------
+
+    ($sqrt/fixnum				$numerics)
+    ($sqrt/flonum				$numerics)
+    ($sqrt/bignum				$numerics)
+    ($sqrt/ratnum				$numerics)
+    ($sqrt/compnum				$numerics)
+    ($sqrt/cflonum				$numerics)
+
+    ($exact-integer-sqrt/fixnum			$numerics)
+    ($exact-integer-sqrt/bignum			$numerics)
     ))
 
 
