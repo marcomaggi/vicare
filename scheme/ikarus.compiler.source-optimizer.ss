@@ -1065,6 +1065,10 @@
       ((make-eq-hashtable)		    effect-free result-true)
       ((string->number _)	   foldable effect-free		   )
       ((string->number _ _)	   foldable effect-free		   )
+
+;;; --------------------------------------------------------------------
+;;; fixnums
+
       (($fixnum->flonum _)	   foldable effect-free result-true)
       (($char->fixnum _)	   foldable effect-free result-true)
       (($fixnum->char _)	   foldable effect-free result-true)
@@ -1087,8 +1091,125 @@
       (($fxlogand _ _)		   foldable effect-free result-true)
       (($fxadd1 _)		   foldable effect-free result-true)
       (($fxsub1 _)		   foldable effect-free result-true)
+
+;;; --------------------------------------------------------------------
+;;; flonums
+
+      ((inexact->exact _)	   foldable effect-free result-true)
+      ((exact _)		   foldable effect-free result-true)
+      ((fixnum->flonum _)	   foldable effect-free result-true)
+      ((flzero? _)		   foldable effect-free            )
+      ((flpositive? _)		   foldable effect-free            )
+      ((flnegative? _)		   foldable effect-free            )
+      ((fleven? _)		   foldable effect-free            )
+      ((flodd? _)		   foldable effect-free            )
+      ((flround _)		   foldable effect-free result-true)
+      ((flfloor _)		   foldable effect-free result-true)
+      ((flceiling _)		   foldable effect-free result-true)
+      ((fltruncate _)		   foldable effect-free result-true)
+      ((flnumerator _)		   foldable effect-free result-true)
+      ((fldenominator _)	   foldable effect-free result-true)
+      ((flabs _)		   foldable effect-free result-true)
+      ((flsin _)		   foldable effect-free result-true)
+      ((flcos _)		   foldable effect-free result-true)
+      ((fltan _)		   foldable effect-free result-true)
+      ((flasin _)		   foldable effect-free result-true)
+      ((flacos _)		   foldable effect-free result-true)
+      ((flatan _)		   foldable effect-free result-true)
+      ((flatan _ _)		   foldable effect-free result-true)
+      ((flexp _)		   foldable effect-free result-true)
+      ((fllog _)		   foldable effect-free result-true)
+      ((fllog _ _)		   foldable effect-free result-true)
+      ((flexpm1 _)		   foldable effect-free result-true)
+      ((fllog1p _)		   foldable effect-free result-true)
+      ((flexpt _)		   foldable effect-free result-true)
+      ((flsqrt _)		   foldable effect-free result-true)
+      ((flinteger? _)		   foldable effect-free            )
+      ((flnan? _)		   foldable effect-free            )
+      ((flfinite? _)		   foldable effect-free            )
+      ((flinfinite? _)		   foldable effect-free            )
+      ((fl=? _ _)		   foldable effect-free            )
+      ((fl<? _ _)		   foldable effect-free            )
+      ((fl>? _ _)		   foldable effect-free            )
+      ((fl<=? _ _)		   foldable effect-free            )
+      ((fl>=? _ _)		   foldable effect-free            )
+      ((fl+)			   foldable effect-free result-true)
+      ((fl+ _)			   foldable effect-free result-true)
+      ((fl+ _ _)		   foldable effect-free result-true)
+      ((fl+ _ _ _)		   foldable effect-free result-true)
+      ((fl+ _ _ _ _ . _)	   foldable effect-free result-true)
+      ((fl- _)			   foldable effect-free result-true)
+      ((fl- _ _)		   foldable effect-free result-true)
+      ((fl- _ _ _)		   foldable effect-free result-true)
+      ((fl- _ _ _ _ . _)	   foldable effect-free result-true)
+      ((fl*)			   foldable effect-free result-true)
+      ((fl* _)			   foldable effect-free result-true)
+      ((fl* _ _)		   foldable effect-free result-true)
+      ((fl* _ _ _)		   foldable effect-free result-true)
+      ((fl* _ _ _ . _)		   foldable effect-free result-true)
+      ((fl/ _)			   foldable effect-free result-true)
+      ((fl/ _ _)		   foldable effect-free result-true)
+      ((fl/ _ _ _)		   foldable effect-free result-true)
+      ((fl/ _ _ _ . _)		   foldable effect-free result-true)
+      ((flmax _)		   foldable effect-free result-true)
+      ((flmax _ _)		   foldable effect-free result-true)
+      ((flmax _ _ _ . _)	   foldable effect-free result-true)
+      ((flmin _)		   foldable effect-free result-true)
+      ((flmin _ _)		   foldable effect-free result-true)
+      ((flmin _ _ _ . _)	   foldable effect-free result-true)
+
+      ;;$MAKE-FLONUM must return a new flonum every time.
+      (($make-flonum . _)	            effect-free result-true)
+      (($flonum->exact _)	   foldable effect-free result-true)
+      (($flzero? _)		   foldable effect-free            )
+      (($flpositive? _)		   foldable effect-free            )
+      (($flnegative? _)		   foldable effect-free            )
+      (($fleven? _)		   foldable effect-free            )
+      (($flodd? _)		   foldable effect-free            )
+      (($flonum-integer? _)	   foldable effect-free            )
+      (($flonum-rational? _)	   foldable effect-free            )
+      (($flround _)		   foldable effect-free result-true)
+      (($flfloor _)		   foldable effect-free result-true)
+      (($flceiling _)		   foldable effect-free result-true)
+      (($fltruncate _)		   foldable effect-free result-true)
+      (($flnumerator _)		   foldable effect-free result-true)
+      (($fldenominator _)	   foldable effect-free result-true)
+      (($flabs _)		   foldable effect-free result-true)
+      (($flsin _)		   foldable effect-free result-true)
+      (($flcos _)		   foldable effect-free result-true)
+      (($fltan _)		   foldable effect-free result-true)
+      (($flasin _)		   foldable effect-free result-true)
+      (($flacos _)		   foldable effect-free result-true)
+      (($flatan _)		   foldable effect-free result-true)
+      (($flatan2 _ _)		   foldable effect-free result-true)
+      (($flexp _)		   foldable effect-free result-true)
+      (($fllog _)		   foldable effect-free result-true)
+      (($fllog2 _ _)		   foldable effect-free result-true)
+      (($flexpm1 _)		   foldable effect-free result-true)
+      (($fllog1p _)		   foldable effect-free result-true)
+      (($flexpt _)		   foldable effect-free result-true)
+      (($flsqrt _)		   foldable effect-free result-true)
+      (($flmax _ _)		   foldable effect-free result-true)
+      (($flmin _ _)		   foldable effect-free result-true)
+      (($fl= _ _)		   foldable effect-free            )
+      (($fl< _ _)		   foldable effect-free            )
+      (($fl> _ _)		   foldable effect-free            )
+      (($fl<= _ _)		   foldable effect-free            )
+      (($fl>= _ _)		   foldable effect-free            )
+      (($fl+ _ _)		   foldable effect-free result-true)
+      (($fl- _ _)		   foldable effect-free result-true)
+      (($fl* _ _)		   foldable effect-free result-true)
+      (($fl/ _ _)		   foldable effect-free result-true)
+
+;;; --------------------------------------------------------------------
+;;; vectors
+
       (($vector-length _)	   foldable effect-free result-true)
       (($vector-ref _ _)	   foldable effect-free result-true)
+
+;;; --------------------------------------------------------------------
+;;; bytevectors
+
       ;;$MAKE-BYTEVECTOR  must not  be foldable:  it must  return a  new
       ;;bytevector every time.
       (($make-bytevector 0)		    effect-free result-true)
@@ -1103,9 +1224,6 @@
       ((annotation-stripped #f)	    foldable effect-free result-false)
 
 ;;; --------------------------------------------------------------------
-
-      ;;This must return a new flonum every time.
-      (($make-flonum . _)		     effect-free result-true)
 
       ;;This must return a new struct every time.
       (($struct . _)			     effect-free result-true)
