@@ -2441,22 +2441,17 @@
 
 ;;;; square roots
 
-(module (sqrt)
+(module (sqrt
+	 $sqrt/fixnum
+	 $sqrt/flonum)
 
   (define (sqrt x)
     (define who 'sqrt)
     (cond ((flonum? x)
-	   ($flonum-sqrt x))
+	   ($sqrt/flonum x))
 
 	  ((fixnum? x)
-	   (cond
-	    (($fx< x 0)
-	     (make-rectangular 0 (sqrt (- x))))
-	    (else
-	     (let-values (((s r) (exact-integer-sqrt x)))
-	       (cond
-		((eq? r 0) s)
-		(else (foreign-call "ikrt_fx_sqrt" x)))))))
+	   ($sqrt/fixnum x))
 
 	  ((bignum? x)
 	   (cond
@@ -2494,30 +2489,45 @@
 	  (else
 	   (assertion-violation who "not a number" x))))
 
-  (define ($flonum-sqrt x)
+  (define ($sqrt/flonum x)
     (if ($fl< x 0.0)
 	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
       (foreign-call "ikrt_fl_sqrt" x)))
+
+  (define ($sqrt/fixnum x)
+    (if ($fxnegative? x)
+	(make-rectangular 0 ($sqrt/fixnum ($fx- x)))
+      (let-values (((root remainder) ($exact-integer-sqrt/fixnum x)))
+	(if ($fxzero? remainder)
+	    root
+	  (foreign-call "ikrt_fx_sqrt" x)))))
+
+  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
+  ;;Sat Nov 17, 2012)
+  (define ($fxnegative? x)
+    ($fx< x 0))
 
   #| end of module: sqrt |# )
 
 ;;; --------------------------------------------------------------------
 
-(module (exact-integer-sqrt $fixnum-sqrt $bignum-sqrt)
+(module (exact-integer-sqrt
+	 $exact-integer-sqrt/fixnum
+	 $exact-integer-sqrt/bignum)
 
   (define who 'exact-integer-sqrt)
 
   (define (exact-integer-sqrt x)
     (cond ((fixnum? x)
-	   ($fixnum-sqrt x))
+	   ($exact-integer-sqrt/fixnum x))
 
 	  ((bignum? x)
-	   ($bignum-sqrt x))
+	   ($exact-integer-sqrt/bignum x))
 
 	  (else
 	   (assertion-violation who "expected exact integer as argument" x))))
 
-  (define ($fixnum-sqrt x)
+  (define ($exact-integer-sqrt/fixnum x)
     (cond (($fx> x 0)
 	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
 	     (values s ($fx- x ($fx* s s)))))
@@ -2526,7 +2536,7 @@
 	  (else
 	   (%error-negative-operand x))))
 
-  (define ($bignum-sqrt x)
+  (define ($exact-integer-sqrt/bignum x)
     (if ($bignum-positive? x)
 	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
 	  (values ($car r) ($cdr r)))

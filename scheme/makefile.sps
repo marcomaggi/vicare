@@ -826,6 +826,8 @@
     ($vector-set!				$vectors)
 ;;;
     ($fxzero?					$fx)
+    ($fxpositive?				$fx)
+    ($fxnegative?				$fx)
     ($fxadd1					$fx)
     ($fxsub1					$fx)
     ($fx>=					$fx)

@@ -1347,6 +1347,18 @@
    ((E x)
     (nop)))
 
+ (define-primop $fxnegative? unsafe
+   ((P x)
+    (prm '< (T x) (K 0)))
+   ((E x)
+    (nop)))
+
+ (define-primop $fxpositive? unsafe
+   ((P x)
+    (prm '> (T x) (K 0)))
+   ((E x)
+    (nop)))
+
  (define-primop $fx= unsafe
    ((P x y)
     (prm '= (T x) (T y)))
@@ -1461,6 +1473,7 @@
    ((E x y) (nop)))
 
  (define-primop $fx- unsafe
+   ((V x)   (prm 'int- (K 0) (T x)))
    ((V x y) (prm 'int- (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
@@ -2091,6 +2104,10 @@
     ($flop-aux 'fl:add! x y)))
 
  (define-primop $fl- unsafe
+   ((V x)
+    ;;Notice that we cannot do this as: +0.0 - x, because such operation
+    ;;does not handle correctly the case: +0.0 - +0.0 = -0.0.
+    ($flop-aux 'fl:mul! (K -1.0) x))
    ((V x y)
     ($flop-aux 'fl:sub! x y)))
 

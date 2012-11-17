@@ -15817,6 +15817,16 @@ Evaluate to true if @var{fx} is zero.
 @end deffn
 
 
+@deffn {Unsafe Operation} $fxpositive? @var{fx}
+Evaluate to true if @var{fx} is strictly positive.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxnegative? @var{fx}
+Evaluate to true if @var{fx} is strictly negative.
+@end deffn
+
+
 @deffn {Unsafe Operation} $fx= @vari{fx} @varii{fx}
 Evaluate to true if the arguments are equal.
 @end deffn
@@ -15857,8 +15867,10 @@ Sum the operands and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fx- @vari{fx} @varii{fx}
-Subtract the operands and return the result.
+@deffn {Unsafe Operation} $fx- @var{fx}
+@deffnx {Unsafe Operation} $fx- @vari{fx} @varii{fx}
+With one operand: return @var{fx} negated.  With two operands: subtract
+the operands and return the result.
 @end deffn
 
 
@@ -16002,10 +16014,16 @@ format of @ieee{} double precision flonums.
 
 
 @deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl- @vari{fl} @varii{fl}
 @deffnx {Unsafe Operation} $fl* @vari{fl} @varii{fl}
 @deffnx {Unsafe Operation} $fl/ @vari{fl} @varii{fl}
 Perform arithmetic operations.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fl- @var{fl}
+@deffnx {Unsafe Operation} $fl- @vari{fl} @varii{fl}
+With one operand: return @var{fl} negated.  With two operands: subtract
+the operands and return the result.
 @end deffn
 
 @c ------------------------------------------------------------

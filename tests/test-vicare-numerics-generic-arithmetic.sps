@@ -38,10 +38,30 @@
 (define epsilon 1e-5)
 
 (define (quasi=? x y)
-  (< (magnitude (- x y)) epsilon))
+  (and (< (abs (- (real-part x)
+		  (real-part y)))
+	  epsilon)
+       (< (abs (- (imag-part x)
+		  (imag-part y)))
+	  epsilon)))
+
+(define (general=? x y)
+  (or (= x y)
+      (and (nan? (real-part x)) (nan? (imag-part x))
+	   (nan? (real-part y)) (nan? (imag-part y)))))
+
+(define (nan=? x y)
+  (and (nan? x)
+       (nan? y)))
 
 
 (parametrise ((check-test-name	'sqrt))
+
+;;; fixnums
+
+  (check
+      (sqrt 0)
+    => 0)
 
   (check
       (sqrt 5)
@@ -51,6 +71,28 @@
       (sqrt -5)
     (=> quasi=?) 0.0+2.23606797749979i)
 
+;;; --------------------------------------------------------------------
+;;; flonums
+
+  (check
+      (sqrt +0.0)
+    => +0.0)
+
+  (check
+      (sqrt -0.0)
+    => -0.0)
+
+  (check
+      (sqrt +5.0)
+    (=> quasi=?) 2.23606797749979)
+
+  (check
+      (sqrt -5.0)
+    (=> quasi=?) 0.0+2.23606797749979i)
+
+;;; --------------------------------------------------------------------
+;;; infinities
+
   (check
       (sqrt +inf.0)
     => +inf.0)
@@ -58,6 +100,45 @@
   (check
       (sqrt -inf.0)
     => +inf.0i)
+
+  (check
+      (sqrt 12+inf.0i)
+    => +inf.0+inf.0i)
+
+  (check
+      (sqrt +inf.0+12i)
+    (=> nan=?) +nan.0)
+
+  (check
+      (sqrt +inf.0+inf.0i)
+    (=> nan=?) +nan.0)
+
+  (check
+      (sqrt +inf.0-inf.0i)
+    (=> nan=?) +nan.0)
+
+  (check
+      (sqrt -inf.0+inf.0i)
+    (=> nan=?) +nan.0)
+
+;;; --------------------------------------------------------------------
+;;; not-a-number
+
+  (check
+      (sqrt +nan.0)
+    => +nan.0)
+
+  (check
+      (sqrt +nan.0+12i)
+    (=> general=?) +nan.0+nan.0i)
+
+  (check
+      (sqrt 12+nan.0i)
+    (=> general=?) +nan.0+nan.0i)
+
+  (check
+      (sqrt +nan.0+nan.0i)
+    (=> general=?) +nan.0+nan.0i)
 
   #t)
 

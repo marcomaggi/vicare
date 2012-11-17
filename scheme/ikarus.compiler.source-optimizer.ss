@@ -1073,6 +1073,8 @@
       (($char->fixnum _)	   foldable effect-free result-true)
       (($fixnum->char _)	   foldable effect-free result-true)
       (($fxzero? _)		   foldable effect-free		   )
+      (($fxpositive? _)		   foldable effect-free		   )
+      (($fxnegative? _)		   foldable effect-free		   )
       (($fx+ _ _)		   foldable effect-free result-true)
       (($fx* _ _)		   foldable effect-free result-true)
       (($fx- _ _)		   foldable effect-free result-true)
