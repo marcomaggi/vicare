@@ -2134,24 +2134,21 @@
     (check-flonums x*
       (nop))))
 
-;;;FIXME The following implementation of FL- was used by the compiler to
-;;;override   the  implemtation   in  "ikarus.numerics.ss"   for  speed.
-;;;Unfortunately it does not handle correctly the case:
-;;;
-;;;  (FL- 0.0) => -0.0
-;;;
-;;;returning "+0.0" because:
-;;;
-;;;  (FL- 0.0 0.0) => 0.0
-;;;
-;;;for this  reason I  commented it out.   It there  a way to  include a
-;;;conditional to fix this implementation? (Marco Maggi; Aug 27, 2011)
-;;;
-;;; (define-primop fl- safe
-;;;   ((V x) (check-flonums (list x) ($flop-aux 'fl:sub! (K 0.0) x)))
-;;;   ((V x . x*) (check-flonums (cons x x*) ($flop-aux* 'fl:sub! x x*)))
-;;;   ((P x . x*) (check-flonums (cons x x*) (K #t)))
-;;;   ((E x . x*) (check-flonums (cons x x*) (nop))))
+ (define-primop fl- safe
+   ((V x)
+    ;;Notice that we cannot do this as: +0.0 - x, because such operation
+    ;;does not handle correctly the case: +0.0 - +0.0 = -0.0.
+    (check-flonums (list x)
+      ($flop-aux 'fl:mul! (K -1.0) x)))
+   ((V x . x*)
+    (check-flonums (cons x x*)
+      ($flop-aux* 'fl:sub! x x*)))
+   ((P x . x*)
+    (check-flonums (cons x x*)
+      (K #t)))
+   ((E x . x*)
+    (check-flonums (cons x x*)
+      (nop))))
 
  (define-primop fl/ safe
    ((V x)

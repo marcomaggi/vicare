@@ -93,17 +93,23 @@
 		  random
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $fx)
-    (ikarus system $flonums)
-    (ikarus system $ratnums)
-    (ikarus system $bignums)
-    (ikarus system $compnums)
-    (ikarus system $chars)
-    (ikarus system $strings)
+    (except (ikarus system $flonums)
+	    $flonum->exact
+	    $flzero?
+	    $flnegative?
+	    $flround)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Nov 17, 2012)
     (only (ikarus flonums)
 	  $flonum->exact
 	  $flzero?
 	  $flnegative?
           $flround)
+    (ikarus system $ratnums)
+    (ikarus system $bignums)
+    (ikarus system $compnums)
+    (ikarus system $chars)
+    (ikarus system $strings)
     (vicare arguments validation))
 
 
