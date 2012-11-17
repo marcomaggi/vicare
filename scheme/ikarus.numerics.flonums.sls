@@ -434,11 +434,17 @@
 (define-fl-operation/one flnegative? $flnegative?)
 
 (define ($flpositive? x)
-  ($fl> x 0.0))
+  ($fl> x +0.0))
 
 (define ($flnegative? x)
-  (let ((b0 ($flonum-u8-ref x 0)))
-    ($fx> b0 127)))
+  ($fl< x -0.0)
+  ;;Below  is an  old implementation  from Ikarus.   It does  not behave
+  ;;correctly when X = -0.0, which  should return #f.  (Marco Maggi; Sat
+  ;;Nov 17, 2012)
+  ;;
+  ;; (let ((b0 ($flonum-u8-ref x 0)))
+  ;;   ($fx> b0 127))
+  )
 
 ;;; --------------------------------------------------------------------
 
