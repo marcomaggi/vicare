@@ -92,6 +92,7 @@
 		  sinh cosh tanh asinh acosh atanh
 		  random
 		  bytevector->bignum		bignum->bytevector)
+    (ikarus system $pairs)
     (ikarus system $fx)
     (except (ikarus system $flonums)
 	    $flonum->exact
@@ -2440,71 +2441,101 @@
 
 ;;;; square roots
 
-(define (sqrt x)
-  (cond ((flonum? x)
-	 (if ($fl< x 0.0)
-	     (make-rectangular 0.0 (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
-	   (foreign-call "ikrt_fl_sqrt" x)))
-	((fixnum? x)
-	 (cond
-	  (($fx< x 0)
-	   (make-rectangular 0 (sqrt (- x))))
-	  (else
-	   (let-values (((s r) (exact-integer-sqrt x)))
-	     (cond
-	      ((eq? r 0) s)
-	      (else (foreign-call "ikrt_fx_sqrt" x)))))))
-	((bignum? x)
-	 (cond
-	  (($bignum-positive? x)
-	   (let-values (((s r) (exact-integer-sqrt x)))
-	     (cond
-	      ((eq? r 0) s)
-	      (else
-	       (let ((v (sqrt (inexact x))))
-		 ;; could the (dropped) residual ever affect the answer?
-		 (cond
-		  ((infinite? v)
-		   (if (bignum? s)
-		       (foreign-call "ikrt_bignum_to_flonum"
-				     s
-				     1 ;;; round up in case of a tie
-				     ($make-flonum))
-		     (inexact s)))
-		  (else v)))))))
-	  (else
-	   (make-rectangular 0 (sqrt (- x))))))
-	((ratnum? x)
-	 ;;FIXME Incorrect as per bug 180170.
-	 (/ (sqrt ($ratnum-n x)) (sqrt ($ratnum-d x))))
-	((or (compnum? x) (cflonum? x))
-	 (let ((xr (real-part x)) (xi (imag-part x)))
-	   (let ((m (sqrt (+ (* xr xr) (* xi xi))))
-		 (s (if (> xi 0) 1 -1)))
-	     (make-rectangular
-	      (sqrt (/ (+ m xr) 2))
-	      (* s (sqrt (/ (- m xr) 2)))))))
-	(else
-	 (die 'sqrt "not a number" x))))
+(module (sqrt)
 
-(define exact-integer-sqrt
-  (lambda (x)
-    (define who 'exact-integer-sqrt)
-    (cond
-     ((fixnum? x)
-      (cond
-       (($fx= x 0) (values 0 0))
-       (($fx< x 0) (die who "invalid argument" x))
-       (else
-	(let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
-	  (values s ($fx- x ($fx* s s)))))))
-     ((bignum? x)
-      (cond
-       (($bignum-positive? x)
+  (define (sqrt x)
+    (define who 'sqrt)
+    (cond ((flonum? x)
+	   ($flonum-sqrt x))
+
+	  ((fixnum? x)
+	   (cond
+	    (($fx< x 0)
+	     (make-rectangular 0 (sqrt (- x))))
+	    (else
+	     (let-values (((s r) (exact-integer-sqrt x)))
+	       (cond
+		((eq? r 0) s)
+		(else (foreign-call "ikrt_fx_sqrt" x)))))))
+
+	  ((bignum? x)
+	   (cond
+	    (($bignum-positive? x)
+	     (let-values (((s r) (exact-integer-sqrt x)))
+	       (cond
+		((eq? r 0) s)
+		(else
+		 (let ((v (sqrt (inexact x))))
+		   ;; could the (dropped) residual ever affect the answer?
+		   (cond
+		    ((infinite? v)
+		     (if (bignum? s)
+			 (foreign-call "ikrt_bignum_to_flonum"
+				       s
+				       1 ;;; round up in case of a tie
+				       ($make-flonum))
+		       (inexact s)))
+		    (else v)))))))
+	    (else
+	     (make-rectangular 0 (sqrt (- x))))))
+
+	  ((ratnum? x)
+	   ;;FIXME Incorrect as per bug 180170.
+	   (/ (sqrt ($ratnum-n x)) (sqrt ($ratnum-d x))))
+
+	  ((or (compnum? x) (cflonum? x))
+	   (let ((xr (real-part x)) (xi (imag-part x)))
+	     (let ((m (sqrt (+ (* xr xr) (* xi xi))))
+		   (s (if (> xi 0) 1 -1)))
+	       (make-rectangular
+		(sqrt (/ (+ m xr) 2))
+		(* s (sqrt (/ (- m xr) 2)))))))
+
+	  (else
+	   (assertion-violation who "not a number" x))))
+
+  (define ($flonum-sqrt x)
+    (if ($fl< x 0.0)
+	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- 0.0 x)))
+      (foreign-call "ikrt_fl_sqrt" x)))
+
+  #| end of module: sqrt |# )
+
+;;; --------------------------------------------------------------------
+
+(module (exact-integer-sqrt $fixnum-sqrt $bignum-sqrt)
+
+  (define who 'exact-integer-sqrt)
+
+  (define (exact-integer-sqrt x)
+    (cond ((fixnum? x)
+	   ($fixnum-sqrt x))
+
+	  ((bignum? x)
+	   ($bignum-sqrt x))
+
+	  (else
+	   (assertion-violation who "expected exact integer as argument" x))))
+
+  (define ($fixnum-sqrt x)
+    (cond (($fx> x 0)
+	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
+	     (values s ($fx- x ($fx* s s)))))
+	  (($fxzero? x)
+	   (values 0 0))
+	  (else
+	   (%error-negative-operand x))))
+
+  (define ($bignum-sqrt x)
+    (if ($bignum-positive? x)
 	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
-	  (values (car r) (cdr r))))
-       (else (die who "invalid argument" x))))
-     (else (die who "invalid argument" x)))))
+	  (values ($car r) ($cdr r)))
+      (%error-negative-operand x)))
+
+  (define (%error-negative-operand x)
+    (assertion-violation who "expected non-negative exact integer as argument" x))
+
+  #| end of module: exact-integer-sqrt |# )
 
 
 (define numerator
