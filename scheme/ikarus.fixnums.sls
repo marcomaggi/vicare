@@ -180,7 +180,6 @@
        (define who (quote ?safe-who))
        (with-arguments-validation (who)
 	   ((fixnum		x)
-	    (fixnum		y)
 	    (non-zero-fixnum	y))
 	 (?unsafe-who x y))))))
 
@@ -520,7 +519,6 @@
   (define who 'fxquotient)
   (with-arguments-validation (who)
       ((fixnum		x)
-       (fixnum		y)
        (non-zero-fixnum	y))
     (if (eq? y -1)
 	(if (eq? x (least-fixnum))
@@ -626,65 +624,98 @@
   #| end of module: fixnum->string |# )
 
 
-(module (fxdiv fxmod fxdiv-and-mod fxdiv0 fxmod0 fxdiv0-and-mod0)
+(module (fxdiv			fxdiv0
+	 fxmod			fxmod0
+	 fxdiv-and-mod		fxdiv0-and-mod0)
+
+  (let-syntax
+      ((define-div-proc
+	 (syntax-rules ()
+	   ((_ ?who $unsafe-op overflow-check?)
+	    (define (?who x y)
+	      (define who (quote ?who))
+	      (with-arguments-validation (who)
+		  ((fixnum		x)
+		   (non-zero-fixnum	y))
+		(if ($fx> y 0)
+		    ($unsafe-op x y)
+		  (if (and overflow-check? ($fx= y -1))
+		      (if ($fx= x (least-fixnum))
+			  (%error-result-not-fixnum who x y)
+			($unsafe-op x y))
+		    ($unsafe-op x y)))))
+	    ))))
+    (define-div-proc fxdiv $fxdiv #t)
+    (define-div-proc fxmod $fxmod #f)
+    (define-div-proc fxdiv-and-mod $fxdiv-and-mod #t))
+
+;;; --------------------------------------------------------------------
+
+  (define (fxdiv0-and-mod0 x y)
+    (define who 'fxdiv0-and-mod0)
+    (with-arguments-validation (who)
+	((fixnum		x)
+	 (non-zero-fixnum	y))
+      (%check-div-result-not-fixnum who x y)
+      (let-values (((d m) ($fxdiv0-and-mod0 x y)))
+	(with-arguments-validation (who)
+	    ((fixnum-representable	d)
+	     (fixnum-representable	m))
+	  (values d m)))))
+
+  (define (fxdiv0 x y)
+    (define who 'fxdiv0)
+    (with-arguments-validation (who)
+	((fixnum		x)
+	 (non-zero-fixnum	y))
+      (%check-div-result-not-fixnum who x y)
+      (let ((d ($fxdiv0 x y)))
+	(with-arguments-validation (who)
+	    ((fixnum-representable	d))
+	  d))))
+
+  (define (fxmod0 x y)
+    (define who 'fxmod0)
+    (with-arguments-validation (who)
+	((fixnum		x)
+	 (non-zero-fixnum	y))
+      (let ((d ($fxmod0 x y)))
+	(with-arguments-validation (who)
+	    ((fixnum-representable	d))
+	  d))))
+
+;;; --------------------------------------------------------------------
 
   (define ($fxdiv-and-mod n m)
-    (let ((d0 ($fxquotient n m)))
-      (let ((m0 ($fx- n ($fx* d0 m))))
-        (if ($fx>= m0 0)
-            (values d0 m0)
-	  (if ($fx>= m 0)
-	      (values ($fx- d0 1) ($fx+ m0 m))
-	    (values ($fx+ d0 1) ($fx- m0 m)))))))
+    (let* ((d0 ($fxquotient n m))
+	   (m0 ($fx- n ($fx* d0 m))))
+      (cond (($fx>= m0 0)
+	     (values d0 m0))
+	    (($fx>= m 0)
+	     (values ($fx- d0 1) ($fx+ m0 m)))
+	    (else
+	     (values ($fx+ d0 1) ($fx- m0 m))))))
 
   (define ($fxdiv n m)
     (let ((d0 ($fxquotient n m)))
-      (if ($fx>= n ($fx* d0 m))
-          d0
-	(if ($fx>= m 0)
-	    ($fx- d0 1)
-	  ($fx+ d0 1)))))
+      (cond (($fx>= n ($fx* d0 m))
+	     d0)
+	    (($fx>= m 0)
+	     ($fx- d0 1))
+	    (else
+	     ($fx+ d0 1)))))
 
   (define ($fxmod n m)
-    (let ((d0 ($fxquotient n m)))
-      (let ((m0 ($fx- n ($fx* d0 m))))
-        (if ($fx>= m0 0)
-            m0
-	  (if ($fx>= m 0)
-	      ($fx+ m0 m)
-	    ($fx- m0 m))))))
+    (let* ((d0 ($fxquotient n m))
+	   (m0 ($fx- n ($fx* d0 m))))
+      (cond (($fx>= m0 0)
+	     m0)
+	    (($fx>= m 0)
+	     ($fx+ m0 m))
+	    (else
+	     ($fx- m0 m)))))
 
-  (define-syntax define-div-proc
-    (syntax-rules ()
-      ((_ who $unsafe-op overflow-check?)
-       (define (who x y)
-         (if (fixnum? x)
-             (if (fixnum? y)
-                 (if ($fx> y 0)
-                     ($unsafe-op x y)
-		   (if ($fx= y 0)
-		       (assertion-violation 'who "division by 0" x y)
-		     (if (and overflow-check? ($fx= y -1))
-			 (if ($fx= x (least-fixnum))
-;;;Flatt's  test suite for  R6RS expects  an &implementation-restriction
-;;;condition  here, in truth  for no  reason I  can figure  out.  (Marco
-;;;Maggi; Oct 14, 2011)
-			     (raise
-			      (condition
-			       (make-implementation-restriction-violation)
-			       (make-who-condition 'who)
-			       (make-message-condition "result not representable as fixnum")
-			       (make-irritants-condition (list x y))))
-			   #;(assertion-violation 'who "result not representable as fixnum" x y)
-			   ($unsafe-op x y))
-		       ($unsafe-op x y))))
-	       (assertion-violation 'who "not a fixnum" y))
-	   (assertion-violation 'who "not a fixnum" x))))))
-
-  (define-div-proc fxdiv $fxdiv #t)
-  (define-div-proc fxmod $fxmod #f)
-  (define-div-proc fxdiv-and-mod $fxdiv-and-mod #t)
-
+;;; --------------------------------------------------------------------
 
   (define ($fxdiv0-and-mod0 n m)
     (let ((d0 (quotient n m)))
@@ -731,59 +762,23 @@
 		(- m0 m))
 	    (+ m0 m))))))
 
-  (define (fxdiv0-and-mod0 x y)
-    (if (fixnum? x)
-        (if (fixnum? y)
-            (if ($fx= y 0)
-                (assertion-violation 'fxdiv0-and-mod0 "division by 0")
-	      (begin
-		(when (and ($fx= y -1) ($fx= x (least-fixnum)))
-		  (raise (condition
-			  (make-implementation-restriction-violation)
-			  (make-who-condition 'fxdiv0-and-mod0)
-			  (make-message-condition "result not representable as fixnum")
-			  (make-irritants-condition (list x y)))))
-		(let-values (((d m) ($fxdiv0-and-mod0 x y)))
-		  (if (and (fixnum? d) (fixnum? m))
-		      (values d m)
-		    (assertion-violation 'fxdiv0-and-mod0
-		      "results not representable as fixnums"
-		      x y)))))
-	  (assertion-violation 'fxdiv0-and-mod0 "not a fixnum" y))
-      (assertion-violation 'fxdiv0-and-mod0 "not a fixnum" x)))
+;;; --------------------------------------------------------------------
 
-  (define (fxdiv0 x y)
-    (if (fixnum? x)
-        (if (fixnum? y)
-            (if ($fx= y 0)
-                (assertion-violation 'fxdiv0 "division by 0")
-	      (begin
-		(when (and ($fx= y -1) ($fx= x (least-fixnum)))
-		  (raise (condition
-			  (make-implementation-restriction-violation)
-			  (make-who-condition 'fxdiv0)
-			  (make-message-condition "result not representable as fixnum")
-			  (make-irritants-condition (list x y)))))
-		(let ((d ($fxdiv0 x y)))
-		  (if (fixnum? d)
-		      d
-		    (assertion-violation 'fxdiv0 "result not representable as fixnum" x y)))))
-	  (assertion-violation 'fxdiv0 "not a fixnum" y))
-      (assertion-violation 'fxdiv0 "not a fixnum" x)))
+  (define-argument-validation (fixnum-representable who obj)
+    (fixnum? obj)
+    (%error-result-not-fixnum who obj))
 
-  (define (fxmod0 x y)
-    (if (fixnum? x)
-	(if (fixnum? y)
-	    (if ($fx= y 0)
-		(assertion-violation 'fxmod0 "division by 0")
-	      (let ((d ($fxmod0 x y)))
-		(if (fixnum? d)
-		    d
-		  (assertion-violation 'fxmod0
-		    "result not representable as fixnum"
-		    x y))))
-	  (assertion-violation 'fxmod0 "not a fixnum" y))
-      (assertion-violation 'fxmod0 "not a fixnum" x)))
+  (define (%check-div-result-not-fixnum who x y)
+    (when (and ($fx= y -1)
+	       ($fx= x (least-fixnum)))
+      (%error-result-not-fixnum who x y)))
+
+  (define (%error-result-not-fixnum who . irritants)
+    (raise (condition
+	    (make-implementation-restriction-violation)
+	    (make-who-condition who)
+	    (make-message-condition "result not representable as fixnum")
+	    (make-irritants-condition irritants))))
 
   #| end of module |# )
 

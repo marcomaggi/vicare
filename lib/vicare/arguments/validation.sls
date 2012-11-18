@@ -472,7 +472,8 @@
   (assertion-violation who "expected non-negative fixnum as argument" obj))
 
 (define-argument-validation (non-zero-fixnum who obj)
-  (not (fxzero? obj))
+  (and (fixnum? obj)
+       (not (fxzero? obj)))
   (assertion-violation who "expected non-zero fixnum as argument" obj))
 
 (define-argument-validation (fixnum-in-inclusive-range who obj min max)
