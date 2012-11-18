@@ -26,6 +26,9 @@
     fx*
     fx+/carry		fx*/carry
     fx-/carry
+    fxdiv		fxmod
+    fxdiv0		fxmod0
+    fxdiv-and-mod	fxdiv0-and-mod0
     fxquotient		fxremainder
     fxmodulo		fxsign
 
@@ -76,6 +79,9 @@
 		  fx*
 		  fx+/carry		fx*/carry
 		  fx-/carry
+		  fxdiv			fxmod
+		  fxdiv0		fxmod0
+		  fxdiv-and-mod		fxdiv0-and-mod0
 
 		  fxlogor		fxlogand
 		  fxlogxor		fxlognot
@@ -109,7 +115,8 @@
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (vicare syntactic-extensions))
 
 
 ;;;; helpers
@@ -565,62 +572,58 @@
      s0
      (sra (- (- fx1 fx2) (+ s0 fx3)) (fixnum-width)))))
 
+
 (module (fixnum->string)
-  (define mapping-string "0123456789ABCDEF")
-  (define f
-    (lambda (n i j radix)
-      (cond
-       (($fxzero? n)
-	(values (make-string i) j))
-       (else
-	(let* ((q ($fxquotient n radix))
-	       (c ($string-ref mapping-string
-			       ($fx- n ($fx* q radix)))))
-	  (call-with-values
-	      (lambda () (f q ($fxadd1 i) j radix))
-	    (lambda (str j)
-	      (string-set! str j c)
-	      (values str ($fxadd1 j)))))))))
-  (define $fixnum->string
-    (lambda (x radix)
-      (cond
-       (($fxzero? x) (string #\0))
-       (($fx> x 0)
-	(call-with-values
-	    (lambda () (f x 0 0 radix))
-	  (lambda (str j) str)))
-       (($fx= x (least-fixnum))
-	(string-append
-	 ($fixnum->string ($fxquotient x radix) radix)
-	 ($fixnum->string ($fx- radix ($fxmodulo x radix)) radix)))
-       (else
-	(call-with-values
-	    (lambda () (f ($fx- 0 x) 1 1 radix))
-	  (lambda (str j)
-	    ($string-set! str 0 #\-)
-	    str))))))
+
+  (define who 'fixnum->string)
+
   (define fixnum->string
     (case-lambda
      ((x)
-      (unless (fixnum? x) (assertion-violation 'fixnum->string "not a fixnum" x))
-      ($fixnum->string x 10))
+      (with-arguments-validation (who)
+	  ((fixnum	x))
+	($fixnum->string x 10)))
      ((x r)
-      (unless (fixnum? x) (assertion-violation 'fixnum->string "not a fixnum" x))
-      (case r
-	((2)  ($fixnum->string x 2))
-	((8)  ($fixnum->string x 8))
-	((10) ($fixnum->string x 10))
-	((16) ($fixnum->string x 16))
-	(else (assertion-violation 'fixnum->string "invalid radix" r)))))))
+      (with-arguments-validation (who)
+	  ((fixnum	x))
+	(case-fixnums r
+	  ((2)  ($fixnum->string x 2))
+	  ((8)  ($fixnum->string x 8))
+	  ((10) ($fixnum->string x 10))
+	  ((16) ($fixnum->string x 16))
+	  (else
+	   (assertion-violation who "invalid radix" r)))))))
 
+  (define ($fixnum->string x radix)
+    (cond (($fxzero? x)
+	   (string #\0))
+	  (($fx> x 0)
+	   (call-with-values
+	       (lambda () (f x 0 0 radix))
+	     (lambda (str j) str)))
+	  (($fx= x (least-fixnum))
+	   (string-append ($fixnum->string ($fxquotient x radix)            radix)
+			  ($fixnum->string ($fx- radix ($fxmodulo x radix)) radix)))
+	  (else
+	   (let-values (((str j) (f ($fx- 0 x) 1 1 radix)))
+	     ($string-set! str 0 #\-)
+	     str))))
 
-)
+  (define (f n i j radix)
+    (if ($fxzero? n)
+	(values (make-string i) j)
+      (let* ((q ($fxquotient n radix))
+	     (c ($string-ref mapping-string ($fx- n ($fx* q radix)))))
+	(let-values (((str j) (f q ($fxadd1 i) j radix)))
+	  (string-set! str j c)
+	  (values str ($fxadd1 j))))))
 
-(library (ikarus fixnums div-and-mod)
-  (export fxdiv fxmod fxdiv-and-mod fxdiv0 fxmod0 fxdiv0-and-mod0)
-  (import
-      (ikarus system $fx)
-    (except (ikarus) fxdiv fxmod fxdiv-and-mod fxdiv0 fxmod0 fxdiv0-and-mod0))
+  (define mapping-string "0123456789ABCDEF")
+
+  #| end of module: fixnum->string |# )
+
+
+(module (fxdiv fxmod fxdiv-and-mod fxdiv0 fxmod0 fxdiv0-and-mod0)
 
   (define ($fxdiv-and-mod n m)
     (let ((d0 ($fxquotient n m)))
@@ -741,8 +744,8 @@
 		  (if (and (fixnum? d) (fixnum? m))
 		      (values d m)
 		    (assertion-violation 'fxdiv0-and-mod0
-			 "results not representable as fixnums"
-			 x y)))))
+		      "results not representable as fixnums"
+		      x y)))))
 	  (assertion-violation 'fxdiv0-and-mod0 "not a fixnum" y))
       (assertion-violation 'fxdiv0-and-mod0 "not a fixnum" x)))
 
@@ -774,10 +777,12 @@
 		(if (fixnum? d)
 		    d
 		  (assertion-violation 'fxmod0
-		       "result not representable as fixnum"
-		       x y))))
+		    "result not representable as fixnum"
+		    x y))))
 	  (assertion-violation 'fxmod0 "not a fixnum" y))
       (assertion-violation 'fxmod0 "not a fixnum" x)))
+
+  #| end of module |# )
 
 
 ;;;; done
