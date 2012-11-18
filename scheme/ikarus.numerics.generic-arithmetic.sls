@@ -2585,15 +2585,19 @@
        (sqrt ($ratnum-d x))))
 
   (define ($sqrt/compnum Z)
-    ;;The function R = sqrt(Z) is computed as follows:
+    ;;The function:
     ;;
-    ;; magn  = sqrt(x.rep^2 + Z.imp^2)
+    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
     ;;
-    ;;              m + Z.rep
-    ;; R.rep = sqrt ---------
-    ;;                 2.
+    ;;is computed as follows:
     ;;
-    ;; R.imp = s * R.rep
+    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep                         magn - Z.rep
+    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
+    ;;                   2.                                   2.
+    ;;
+    ;;See <http://en.wikipedia.org/wiki/Square_root>.
     ;;
     (let ((Z.rep (real-part Z))
 	  (Z.imp (imag-part Z)))
@@ -2604,17 +2608,19 @@
 			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
 
   (define ($sqrt/cflonum Z)
-    ;;The function R = sqrt(Z) is computed as follows:
+    ;;The function:
     ;;
-    ;; magn  = sqrt(x.rep^2 + Z.imp^2)
+    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
     ;;
-    ;;              magn + Z.rep
-    ;; R.rep = sqrt ------------
-    ;;                   2.
+    ;;is computed as follows:
     ;;
-    ;;                  magn - Z.rep
-    ;; R.imp = s * sqrt ------------
-    ;;                       2.
+    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep                         magn - Z.rep
+    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
+    ;;                   2.                                   2.
+    ;;
+    ;;See <http://en.wikipedia.org/wiki/Square_root>.
     ;;
     (let ((Z.rep (real-part Z))
 	  (Z.imp (imag-part Z)))
