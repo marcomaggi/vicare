@@ -180,14 +180,18 @@
     (except (ikarus system $flonums)
 	    $flonum->exact
 	    $flzero?
+	    $flpositive?
 	    $flnegative?
+	    $flsqr
 	    $flround)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 17, 2012)
     (only (ikarus flonums)
 	  $flonum->exact
 	  $flzero?
+	  $flpositive?
 	  $flnegative?
+	  $flsqr
           $flround)
     (ikarus system $ratnums)
     (ikarus system $bignums)
@@ -2545,6 +2549,8 @@
        (assertion-violation 'sqrt "expected number as argument" x))))
 
   (define ($sqrt/flonum x)
+    ;;This can return both a flonum or a compnum!!!
+    ;;
     (if ($fl< x 0.0)
 	;;This case includes: X = -0.0
 	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
@@ -2575,27 +2581,50 @@
       (make-rectangular 0 ($sqrt/bignum (- x)))))
 
   (define ($sqrt/ratnum x)
-    ;;FIXME Incorrect as per bug 180170.
     (/ (sqrt ($ratnum-n x))
        (sqrt ($ratnum-d x))))
 
-  (define ($sqrt/compnum x)
-    (let ((x.rep (real-part x))
-	  (x.imp (imag-part x)))
-      (let ((m (sqrt (+ (* x.rep x.rep)
-			(* x.imp x.imp))))
-	    (s (if (> x.imp 0) 1 -1)))
-	(make-rectangular (sqrt (/ (+ m x.rep) 2))
-			  (* s (sqrt (/ (- m x.rep) 2)))))))
+  (define ($sqrt/compnum Z)
+    ;;The function R = sqrt(Z) is computed as follows:
+    ;;
+    ;; magn  = sqrt(x.rep^2 + Z.imp^2)
+    ;;
+    ;;              m + Z.rep
+    ;; R.rep = sqrt ---------
+    ;;                 2.
+    ;;
+    ;; R.imp = s * R.rep
+    ;;
+    (let ((Z.rep (real-part Z))
+	  (Z.imp (imag-part Z)))
+      (let ((magn (sqrt (+ (* Z.rep Z.rep)
+			   (* Z.imp Z.imp))))
+	    (sgn  (if (> Z.imp 0) 1 -1)))
+	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
+			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
 
-  (define ($sqrt/cflonum x)
-    (let ((x.rep (real-part x))
-	  (x.imp (imag-part x)))
-      (let ((m (sqrt (+ (* x.rep x.rep)
-			(* x.imp x.imp))))
-	    (s (if (> x.imp 0) 1 -1)))
-	(make-rectangular (sqrt (/ (+ m x.rep) 2))
-			  (* s (sqrt (/ (- m x.rep) 2)))))))
+  (define ($sqrt/cflonum Z)
+    ;;The function R = sqrt(Z) is computed as follows:
+    ;;
+    ;; magn  = sqrt(x.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep
+    ;; R.rep = sqrt ------------
+    ;;                   2.
+    ;;
+    ;;                  magn - Z.rep
+    ;; R.imp = s * sqrt ------------
+    ;;                       2.
+    ;;
+    (let ((Z.rep (real-part Z))
+	  (Z.imp (imag-part Z)))
+      ;;Remember  that  $SQRT/FLONUM  can  return both  a  flonum  or  a
+      ;;compnum!!!
+      (let* ((magn  ($sqrt/flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
+	     (sgn   (if ($flpositive? Z.imp) 1 -1))
+	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
+	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
+	(make-rectangular R.rep R.imp))))
 
   ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
   ;;Sat Nov 17, 2012)

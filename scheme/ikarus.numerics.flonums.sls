@@ -49,6 +49,7 @@
     flexpm1		$flexpm1
     fllog1p		$fllog1p
     flexpt		$flexpt
+    flsqr		$flsqr
     flsqrt		$flsqrt
 
     flinteger?		flnan?
@@ -75,6 +76,7 @@
 		  flasin		flacos		flatan
 		  flexp			fllog		flexpm1
 		  fllog1p		flexpt		flsqrt
+		  flsqr
 		  flinteger?		flnan?		flfinite?
 		  flinfinite?		fl=?		fl<?
 		  fl>?			fl<=?		fl>=?
@@ -115,6 +117,7 @@
 	    $fllog1p
 	    $flexpt
 	    $flsqrt
+	    $flsqr
 	    $flmax
 	    $flmin)
     (vicare arguments validation)
@@ -900,6 +903,11 @@
 	   (foreign-call "ikrt_flfl_expt" x y ($make-flonum))))))
 
 (define-fl-operation/one/forcall flsqrt $flsqrt "ikrt_fl_sqrt")
+
+(define-fl-operation/two flsqr $flsqr)
+
+(define ($flsqr x)
+  ($fl* x x))
 
 
 ;;;; debugging functions

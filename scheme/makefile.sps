@@ -801,6 +801,7 @@
     ($fllog1p					$flonums)
     ($flexpt					$flonums)
     ($flsqrt					$flonums)
+    ($flsqr					$flonums)
     ($flmax					$flonums)
     ($flmin					$flonums)
 ;;;
@@ -1295,6 +1296,7 @@
     (flround					i v r fl)
     (flsin					i v r fl)
     (flsqrt					i v r fl)
+    (flsqr					i v $language)
     (fltan					i v r fl)
     (fltruncate					i v r fl)
     (flzero?					i v r fl)

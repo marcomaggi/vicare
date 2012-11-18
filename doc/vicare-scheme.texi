@@ -3819,6 +3819,15 @@ Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Power functions
+
+
+@defun flsqr @var{fl}
+Return the square of @var{fl}.
+@end defun
+
+@c ------------------------------------------------------------
+
 @subsubheading Miscellaneous functions
 
 
@@ -16190,6 +16199,11 @@ Return @vari{fl} raised to the power of @varii{fl}.
 
 @deffn {Unsafe Operation} $flsqrt @var{fl}
 Return the square root of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flsqr @var{fl}
+Return the square of @var{fl}.
 @end deffn
 
 @c ------------------------------------------------------------
