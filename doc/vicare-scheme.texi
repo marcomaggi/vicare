@@ -20176,6 +20176,11 @@ The clause @code{fixnum-index} is an alias for
 @end deffn
 
 
+@deffn {Validation Clause} non-zero-fixnum @var{obj}
+Fails if @var{obj} satisfies the predicate @func{fxzero?}.
+@end deffn
+
+
 @deffn {Validation Clause} fixnum-in-inclusive-range @var{obj} @var{min} @var{max}
 @deffnx {Validation Clause} fixnum-in-exclusive-range @var{obj} @var{min} @var{max}
 Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is in

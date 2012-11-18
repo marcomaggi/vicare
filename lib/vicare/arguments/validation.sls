@@ -43,6 +43,7 @@
     negative-fixnum.vicare-arguments-validation
     non-positive-fixnum.vicare-arguments-validation
     non-negative-fixnum.vicare-arguments-validation
+    non-zero-fixnum.vicare-arguments-validation
     fixnum-in-inclusive-range.vicare-arguments-validation
     fixnum-in-exclusive-range.vicare-arguments-validation
     even-fixnum.vicare-arguments-validation
@@ -469,6 +470,10 @@
   (and (fixnum? obj)
        ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as argument" obj))
+
+(define-argument-validation (non-zero-fixnum who obj)
+  (not (fxzero? obj))
+  (assertion-violation who "expected non-zero fixnum as argument" obj))
 
 (define-argument-validation (fixnum-in-inclusive-range who obj min max)
   (and (fixnum? obj)
