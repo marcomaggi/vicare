@@ -1863,6 +1863,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib strings::               Additional string functions.
 * iklib vectors::               Additional vector functions.
 * iklib symbols::               Additional symbol functions.
+* iklib fixnums::               Additional functions on fixnums.
 * iklib numerics::              Additional functions on numbers.
 * iklib enumerations::          Additional functions on enumerations.
 * iklib hashtables::            Additional functions on hashtables.
@@ -3750,6 +3751,20 @@ The following bindings are exported by the library @library{vicare}.
 Attempt to extract from the @var{symbol} the primitive procedure of
 which @var{symbol} is the name; if successful return a closure object,
 else raise an assertion violation.
+@end defun
+
+@c page
+@node iklib fixnums
+@section Additional functions on fixnums
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun fxsign @var{fx}
+Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
+the sign of the fixnum @var{fx}.
 @end defun
 
 @c page
@@ -15833,6 +15848,12 @@ Evaluate to true if @var{fx} is strictly positive.
 
 @deffn {Unsafe Operation} $fxnegative? @var{fx}
 Evaluate to true if @var{fx} is strictly negative.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsign @var{fx}
+Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
+the sign of @var{fx}.
 @end deffn
 
 

@@ -177,6 +177,10 @@
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $pairs)
     (ikarus system $fx)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Nov 18, 2012)
+    (only (ikarus fixnums)
+	  $fxnegative?)
     (except (ikarus system $flonums)
 	    $flonum->exact
 	    $flzero?
@@ -2631,11 +2635,6 @@
 	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
 	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
 	(make-rectangular R.rep R.imp))))
-
-  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
-  ;;Sat Nov 17, 2012)
-  (define ($fxnegative? x)
-    ($fx< x 0))
 
   #| end of module: sqrt |# )
 

@@ -27,7 +27,7 @@
     fx+/carry		fx*/carry
     fx-/carry
     fxquotient		fxremainder
-    fxmodulo
+    fxmodulo		fxsign
 
     fxlogor		fxlogand
     fxlogxor		fxlognot
@@ -47,7 +47,15 @@
     fxmin		fxmax
 
     fixnum->string
-    $fxmodulo
+
+;;; --------------------------------------------------------------------
+
+    $fxpositive?	$fxnegative?
+    $fxeven?		$fxodd?
+    $fxmodulo		$fxremainder
+    $fxsign
+
+;;; --------------------------------------------------------------------
 
     error@fx+		error@fx*
     error@fx-		error@fxadd1
@@ -60,7 +68,7 @@
 		  fxeven?		fxodd?
 
 		  fxquotient		fxremainder
-		  fxmodulo
+		  fxmodulo		fxsign
 
 		  fxadd1		fxsub1
 		  fx+			fx-
@@ -92,7 +100,10 @@
 		  fx+ fx* fx-)
 	    sys:)
     (except (ikarus system $fx)
-	    $fxmodulo)
+	    $fxpositive?	$fxnegative?
+	    $fxeven?		$fxodd?
+	    $fxmodulo		$fxremainder
+	    $fxsign)
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
@@ -101,12 +112,68 @@
 
 ;;;; helpers
 
-(define (die/overflow who . args)
+(define (%overflow-violation who . args)
   (raise
    (condition (make-implementation-restriction-violation)
 	      (make-who-condition who)
 	      (make-message-condition "overflow")
 	      (make-irritants-condition args))))
+
+(define-syntax define-fx-operation/one
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((fixnum	x))
+	 (?unsafe-who x))))))
+
+(define-syntax define-fx-operation/two
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x y)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((fixnum	x)
+	    (fixnum	y))
+	 (?unsafe-who x y))))))
+
+(define-syntax define-fx-operation/shift
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x y)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((fixnum		x)
+	    (fixnum-shift	y))
+	 (?unsafe-who x y))))))
+
+(define-argument-validation (fixnum-shift who obj)
+  (and (fixnum? obj)
+       ($fx<= 0 obj))
+  (assertion-violation who "expected non-negative fixnum as shfit argument" obj))
+
+(define-syntax define-fx-operation/three
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x y z)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((fixnum	x)
+	    (fixnum	y)
+	    (fixnum	z))
+	 (?unsafe-who x y))))))
+
+(define-syntax define-fx-operation/div
+  (syntax-rules ()
+    ((_ ?safe-who ?unsafe-who)
+     (define (?safe-who x y)
+       (define who (quote ?safe-who))
+       (with-arguments-validation (who)
+	   ((fixnum		x)
+	    (fixnum		y)
+	    (non-zero-fixnum	y))
+	 (?unsafe-who x y))))))
 
 
 ;;;; predicates
@@ -117,6 +184,16 @@
 	(else
 	 (assertion-violation 'fxzero? "expected fixnum as argument" x))))
 
+(define ($fxpositive? N)	($fx> N 0))
+(define ($fxnegative? N)	($fx< N 0))
+(define ($fxeven?     N)	($fxzero? ($fxlogand N 1)))
+(define ($fxodd?      N)	(not ($fxzero? ($fxlogand N 1))))
+
+(define-fx-operation/one fxpositive?	$fxpositive?)
+(define-fx-operation/one fxnegative?	$fxnegative?)
+(define-fx-operation/one fxeven?	$fxeven?)
+(define-fx-operation/one fxodd?		$fxodd?)
+
 
 ;;;; bitwise logic operations
 
@@ -126,11 +203,121 @@
       ((fixnum	x))
     ($fxlognot x)))
 
-(define (fxnot x)
-  (define who 'fxnot)
-  (with-arguments-validation (who)
-      ((fixnum	x))
-    ($fxlognot x)))
+(define fxnot fxlognot)
+
+(define-syntax define-fxbitop
+  (syntax-rules ()
+    ((_ ?who1 ?who2 ?unsafe-op ?identity)
+     (module (?who1 ?who2)
+       (define who (quote ?who1))
+
+       (define ?who1
+	 (case-lambda
+	  ((x y)
+	   (with-arguments-validation (who)
+	       ((fixnum	x)
+		(fixnum	y))
+	     (?unsafe-op x y)))
+	  ((x y . ls)
+	   (with-arguments-validation (who)
+	       ((fixnum	x)
+		(fixnum	y))
+	     (let loop ((a  (?unsafe-op x y))
+			(ls ls))
+	       (if (pair? ls)
+		   (let ((b ($car ls)))
+		     (with-arguments-validation (who)
+			 ((fixnum	b))
+		       (loop (?unsafe-op a b) ($cdr ls))))
+		 a))))
+	  ((x)
+	   (with-arguments-validation (who)
+	       ((fixnum	x))
+	     x))
+	  (()
+	   ?identity)))
+
+       (define ?who2 ?who1)
+
+       #| end of module |# )
+     )))
+
+(define-fxbitop fxlogor		fxior		$fxlogor	 0)
+(define-fxbitop fxlogand	fxand		$fxlogand	-1)
+(define-fxbitop fxlogxor	fxxor		$fxlogxor	 0)
+
+
+;;;; bitwise operations
+
+(define-fx-operation/shift fxsra $fxsra)
+(define-fx-operation/shift fxsll $fxsll)
+(define-fx-operation/three fxif  $fxif)
+
+(define ($fxif x y z)
+  ($fxlogor ($fxlogand x             y)
+	    ($fxlogand ($fxlognot x) z)))
+
+;;; --------------------------------------------------------------------
+
+(define (fxarithmetic-shift-right x y)
+  (import (ikarus))
+  (fxarithmetic-shift-right x y))
+
+(define (fxarithmetic-shift-left x y)
+  (import (ikarus))
+  (fxarithmetic-shift-left x y))
+
+(module (fxarithmetic-shift)
+
+  (define (fxarithmetic-shift x y)
+    (import (ikarus))
+    (define who 'fxarithmetic-shift)
+    (with-arguments-validation (who)
+	((fixnum	x)
+	 (fixnum	y))
+      (if ($fx>= y 0)
+	  (with-arguments-validation (who)
+	      ((positive-fixnum-shift-width	y))
+	    (let ((r ($fxsll x y)))
+	      (if ($fx= x ($fxsra r y))
+		  r
+		(%overflow-violation who x y))))
+	(with-arguments-validation (who)
+	    ((negative-fixnum-shift-width	y))
+	  ($fxsra x ($fx- 0 y))))))
+
+  (define-argument-validation (positive-fixnum-shift-width who obj)
+    ($fx< obj (fixnum-width))
+    (assertion-violation who
+      "expected positive fixnum less than fixnum width as shift argument"
+      obj))
+
+  (define-argument-validation (negative-fixnum-shift-width who obj)
+    ($fx> obj (- (fixnum-width)))
+    (assertion-violation who
+      "expected negative fixnum less than fixnum width as shift argument"
+      obj))
+
+  #| end of module: fxarithmetic-shift |# )
+
+;;; --------------------------------------------------------------------
+
+(define (error@fxarithmetic-shift who x y)
+  (unless (fixnum? x)
+    (assertion-violation who "not a fixnum" x))
+  (unless (fixnum? y)
+    (assertion-violation who "not a fixnum" y))
+  (unless ($fx>= y 0)
+    (assertion-violation who "negative shift not allowed" y))
+  (unless ($fx< y (fixnum-width))
+    (assertion-violation who "shift is not less than fixnum-width" y))
+  (%overflow-violation who x y))
+
+(define (error@fxarithmetic-shift-left x y)
+  (error@fxarithmetic-shift 'arithmetic-shift-left x y))
+
+(define (error@fxarithmetic-shift-right x y)
+  (error@fxarithmetic-shift 'arithmetic-shift-right x y))
 
 
 ;;;; arithmetic operations
@@ -154,7 +341,8 @@
   (import (ikarus))
   (fxsub1 n))
 
-
+;;; --------------------------------------------------------------------
+
 (module (error@fx+
 	 error@fx-
 	 error@fx*
@@ -167,11 +355,11 @@
       (with-arguments-validation (who)
 	  ((fixnum	x)
 	   (fixnum	y))
-	(die/overflow who x y)))
+	(%overflow-violation who x y)))
      ((x)
       (with-arguments-validation (who)
 	  ((fixnum	x))
-	(die/overflow who x)))))
+	(%overflow-violation who x)))))
 
   (define error@fx+    (make-fx-error 'fx+))
   (define error@fx-    (make-fx-error 'fx-))
@@ -240,179 +428,7 @@
 (define-fxcmp fx>=?	fx>=	$fx>=)
 
 
-(define fxquotient
-  (lambda (x y)
-    (unless (fixnum? x)
-      (assertion-violation 'fxquotient "not a fixnum" x))
-    (unless (fixnum? y)
-      (assertion-violation 'fxquotient "not a fixnum" y))
-    (when ($fxzero? y)
-      (assertion-violation 'fxquotient "zero dividend" y))
-    (if (eq? y -1)
-	(if (eq? x (least-fixnum))
-	    (die/overflow 'fxquotient x y)
-	  ($fx- 0 x))
-      ($fxquotient x y))))
-
-(define fxremainder
-  (lambda (x y)
-    (unless (fixnum? x)
-      (assertion-violation 'fxremainder "not a fixnum" x))
-    (unless (fixnum? y)
-      (assertion-violation 'fxremainder "not a fixnum" y))
-    (when ($fxzero? y)
-      (assertion-violation 'fxremainder "zero dividend" y))
-    (let ((q ($fxquotient x y)))
-      ($fx- x ($fx* q y)))))
-
-(define ($fxmodulo n1 n2)
-  (* (fxsign n2) (mod (* (fxsign n2) n1) (abs n2))))
-
-(define fxmodulo
-  (lambda (x y)
-    (unless (fixnum? x)
-      (assertion-violation 'fxmodulo "not a fixnum" x))
-    (unless (fixnum? y)
-      (assertion-violation 'fxmodulo "not a fixnum" y))
-    (when ($fxzero? y)
-      (assertion-violation 'fxmodulo "zero dividend" y))
-    ($fxmodulo x y)))
-
-(define (fxsign n)
-  (cond
-   ((fxnegative? n) -1)
-   ((fxpositive? n) 1)
-   (else 0)))
-
-(define-syntax fxbitop
-  (syntax-rules ()
-    ((_ who $op identity)
-     (case-lambda
-      ((x y)
-       (if (fixnum? x)
-	   (if (fixnum? y)
-	       ($op x y)
-	     (assertion-violation 'who "not a fixnum" y))
-	 (assertion-violation 'who "not a fixnum" x)))
-      ((x y . ls)
-       (if (fixnum? x)
-	   (if (fixnum? y)
-	       (let f ((a ($op x y)) (ls ls))
-		 (cond
-		  ((pair? ls)
-		   (let ((b ($car ls)))
-		     (if (fixnum? b)
-			 (f ($op a b) ($cdr ls))
-		       (assertion-violation 'who "not a fixnum" b))))
-		  (else a)))
-	     (assertion-violation 'who "not a fixnum" y))
-	 (assertion-violation 'who "not a fixnum" x)))
-      ((x) (if (fixnum? x) x (assertion-violation 'who "not a fixnum" x)))
-      (()   identity)))))
-
-(define fxlogor (fxbitop fxlogor $fxlogor 0))
-(define fxlogand (fxbitop fxlogand $fxlogand -1))
-(define fxlogxor (fxbitop fxlogxor $fxlogxor 0))
-(define fxior (fxbitop fxior $fxlogor 0))
-(define fxand (fxbitop fxand $fxlogand -1))
-(define fxxor (fxbitop fxxor $fxlogxor 0))
-
-(define (fxif x y z)
-  (if (fixnum? x)
-      (if (fixnum? y)
-	  (if (fixnum? z)
-	      ($fxlogor
-	       ($fxlogand x y)
-	       ($fxlogand ($fxlognot x) z))
-	    (assertion-violation 'fxif "not a fixnum" z))
-	(assertion-violation 'fxif "not a fixnum" y))
-    (assertion-violation 'fxif "not a fixnum" x)))
-
-(define fxsra
-  (lambda (x y)
-    (unless (fixnum? x)
-      (assertion-violation 'fxsra "not a fixnum" x))
-    (unless (fixnum? y)
-      (assertion-violation 'fxsra "not a fixnum" y))
-    (unless ($fx>= y 0)
-      (assertion-violation 'fxsra "negative shift not allowed" y))
-    ($fxsra x y)))
-
-
-(define fxarithmetic-shift-right
-  (lambda (x y)
-    (import (ikarus))
-    (fxarithmetic-shift-right x y)))
-
-(define fxsll
-  (lambda (x y)
-    (unless (fixnum? x)
-      (assertion-violation 'fxsll "not a fixnum" x))
-    (unless (fixnum? y)
-      (assertion-violation 'fxsll "not a fixnum" y))
-    (unless ($fx>= y 0)
-      (assertion-violation 'fxsll "negative shift not allowed" y))
-    ($fxsll x y)))
-
-
-(define (error@fxarithmetic-shift who x y)
-  (unless (fixnum? x)
-    (assertion-violation who "not a fixnum" x))
-  (unless (fixnum? y)
-    (assertion-violation who "not a fixnum" y))
-  (unless ($fx>= y 0)
-    (assertion-violation who "negative shift not allowed" y))
-  (unless ($fx< y (fixnum-width))
-    (assertion-violation who "shift is not less than fixnum-width" y))
-  (die/overflow who x y))
-
-(define (error@fxarithmetic-shift-left x y)
-  (error@fxarithmetic-shift 'arithmetic-shift-left x y))
-
-(define (error@fxarithmetic-shift-right x y)
-  (error@fxarithmetic-shift 'arithmetic-shift-right x y))
-
-(define fxarithmetic-shift-left
-  (lambda (x y)
-    (import (ikarus))
-    (fxarithmetic-shift-left x y)))
-
-(define fxarithmetic-shift
-  (lambda (x y)
-    (import (ikarus))
-    (define (err str x) (assertion-violation 'fxarithmetic-shift str x))
-    (unless (fixnum? x) (err "not a fixnum" x))
-    (unless (fixnum? y) (err "not a fixnum" y))
-    (if ($fx>= y 0)
-	(if ($fx< y (fixnum-width))
-	    (let ((r ($fxsll x y)))
-	      (if ($fx= x ($fxsra r y))
-		  r
-		(die/overflow 'fxarithmetic-shift x y)))
-	  (err "invalid shift amount" y))
-      (if ($fx> y (- (fixnum-width)))
-	  ($fxsra x ($fx- 0 y))
-	(err "invalid shift amount" y)))))
-
-(define (fxpositive? x)
-  (if (fixnum? x)
-      ($fx> x 0)
-    (assertion-violation 'fxpositive? "not a fixnum" x)))
-
-(define (fxnegative? x)
-  (if (fixnum? x)
-      ($fx< x 0)
-    (assertion-violation 'fxnegative? "not a fixnum" x)))
-
-(define (fxeven? x)
-  (if (fixnum? x)
-      ($fxzero? ($fxlogand x 1))
-    (assertion-violation 'fxeven? "not a fixnum" x)))
-
-(define (fxodd? x)
-  (if (fixnum? x)
-      (not ($fxzero? ($fxlogand x 1)))
-    (assertion-violation 'fxodd? "not a fixnum" x)))
+;;;; comparison functions
 
 (define fxmin
   (case-lambda
@@ -460,6 +476,38 @@
              (assertion-violation 'fxmax "not a fixnum" z))))
    ((x) (if (fixnum? x) x (assertion-violation 'fxmax "not a fixnum" x)))))
 
+
+(define (fxquotient x y)
+  (define who 'fxquotient)
+  (with-arguments-validation (who)
+      ((fixnum		x)
+       (fixnum		y)
+       (non-zero-fixnum	y))
+    (if (eq? y -1)
+	(if (eq? x (least-fixnum))
+	    (%overflow-violation who x y)
+	  ($fx- 0 x))
+      ($fxquotient x y))))
+
+(define-fx-operation/div fxremainder $fxremainder)
+(define-fx-operation/div fxmodulo $fxmodulo)
+(define-fx-operation/one fxsign $fxsign)
+
+(define ($fxremainder x y)
+  (let ((q ($fxquotient x y)))
+    ($fx- x ($fx* q y))))
+
+(define ($fxmodulo n1 n2)
+  (* (fxsign n2)
+     (mod (* (fxsign n2) n1)
+	  (abs n2))))
+
+(define ($fxsign n)
+  (cond (($fxnegative? n)	-1)
+	(($fxpositive? n)	+1)
+	(else			0)))
+
+
 (define-syntax define-fx
   (syntax-rules ()
     ((_ (name arg* ...) body)
@@ -707,7 +755,7 @@
 (library (ikarus fixnums unsafe)
   (export
     $fxzero?
-    $fxpositive?	$fxnegative?
+    #;$fxpositive?	#;$fxnegative?
     $fxadd1		$fxsub1
     $fx+		$fx*
     $fx-
@@ -719,8 +767,8 @@
     $fxlognot)
   (import (ikarus))
   (define $fxzero? fxzero?)
-  (define $fxpositive? fxpositive?)
-  (define $fxnegative? fxnegative?)
+  #;(define $fxpositive? fxpositive?)
+  #;(define $fxnegative? fxnegative?)
   (define $fxadd1 fxadd1)
   (define $fxsub1 fxsub1)
   (define $fx+ fx+)
