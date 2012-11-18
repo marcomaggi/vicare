@@ -855,6 +855,12 @@
     ($fx*					$fx)
     ($fx-					$fx)
     ($fxinthash					$fx)
+    ($fxdiv					$fx)
+    ($fxdiv0					$fx)
+    ($fxmod					$fx)
+    ($fxmod0					$fx)
+    ($fxdiv-and-mod				$fx)
+    ($fxdiv0-and-mod0				$fx)
 ;;;
     ($make-symbol				$symbols)
     ($symbol-unique-string			$symbols)

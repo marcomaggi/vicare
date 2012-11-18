@@ -1104,6 +1104,13 @@
       (($fxadd1 _)		   foldable effect-free result-true)
       (($fxsub1 _)		   foldable effect-free result-true)
       (($fxsign _)		   foldable effect-free result-true)
+      (($fxdiv _ _)		   foldable effect-free result-true)
+      (($fxdiv0 _ _)		   foldable effect-free result-true)
+      (($fxmod _ _)		   foldable effect-free result-true)
+      (($fxmod0 _ _)		   foldable effect-free result-true)
+      ;;Do we support multiple values?  No!!!
+      ;;(($fxdiv-and-mod _ _)	   foldable effect-free result-true)
+      ;;(($fxdiv0-and-mod0 _ _)	   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 ;;; flonums

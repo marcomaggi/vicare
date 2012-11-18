@@ -59,6 +59,10 @@
     $fxsign
     $fxmin		$fxmax
 
+    $fxdiv		$fxdiv0
+    $fxmod		$fxmod0
+    $fxdiv-and-mod	$fxdiv0-and-mod0
+
 ;;; --------------------------------------------------------------------
 
     error@fx+		error@fx*
@@ -111,7 +115,10 @@
 	    $fxeven?		$fxodd?
 	    $fxmodulo		$fxremainder
 	    $fxsign
-	    $fxmin		$fxmax)
+	    $fxmin		$fxmax
+	    $fxdiv		$fxdiv0
+	    $fxmod		$fxmod0
+	    $fxdiv-and-mod	$fxdiv0-and-mod0)
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
@@ -626,7 +633,10 @@
 
 (module (fxdiv			fxdiv0
 	 fxmod			fxmod0
-	 fxdiv-and-mod		fxdiv0-and-mod0)
+	 fxdiv-and-mod		fxdiv0-and-mod0
+	 $fxdiv			$fxdiv0
+	 $fxmod			$fxmod0
+	 $fxdiv-and-mod		$fxdiv0-and-mod0)
 
   (let-syntax
       ((define-div-proc
