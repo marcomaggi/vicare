@@ -3767,6 +3767,11 @@ Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
 the sign of the fixnum @var{fx}.
 @end defun
 
+
+@defun fixnum->string @var{fx}
+Return a string representation of @var{fx}.
+@end defun
+
 @c page
 @node iklib numerics
 @section Additional functions on numbers

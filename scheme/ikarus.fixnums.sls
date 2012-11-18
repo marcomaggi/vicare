@@ -549,10 +549,13 @@
 
 (define-syntax define-fx
   (syntax-rules ()
-    ((_ (name arg* ...) body)
-     (define (name arg* ...)
-       (unless (fixnum? arg*) (assertion-violation 'name "not a fixnum" arg*)) ...
-       body))))
+    ((_ (?who ?arg ...) ?body)
+     (define (?who ?arg ...)
+       (define who (quote ?who))
+       (with-arguments-validation (who)
+	   ((fixnum	?arg)
+	    ...)
+	 ?body)))))
 
 (define-fx (fx*/carry fx1 fx2 fx3)
   (let ((s0 ($fx+ ($fx* fx1 fx2) fx3)))
