@@ -1864,6 +1864,7 @@ It exports all the bindings exported by @library{vicare} that are
 * iklib vectors::               Additional vector functions.
 * iklib symbols::               Additional symbol functions.
 * iklib fixnums::               Additional functions on fixnums.
+* iklib flonums::               Additional functions on flonums.
 * iklib numerics::              Additional functions on numbers.
 * iklib enumerations::          Additional functions on enumerations.
 * iklib hashtables::            Additional functions on hashtables.
@@ -3773,55 +3774,22 @@ Return a string representation of @var{fx}.
 @end defun
 
 @c page
-@node iklib numerics
-@section Additional functions on numbers
-
-
-@menu
-* iklib numerics preds::        Additional numeric predicates.
-* iklib numerics flonums::      Additional flonum functions.
-* iklib numerics math::         Additional math functions.
-@end menu
-
-@c page
-@node iklib numerics preds
-@subsection Additional numeric predicates
+@node iklib flonums
+@section Additional functions on flonums
 
 
 The following bindings are exported by the @library{ikarus} and
 @library{vicare} libraries.
 
+@c ------------------------------------------------------------
 
-@defun bignum? @var{obj}
-Return true if @var{obj} is an exact integer represented by a big
-number.
+@subsubheading String conversion
+
+
+@defun string->flonum @var{fl}
+@defunx flonum->string @var{str}
+Convert between a flonum and its string representation.
 @end defun
-
-
-@defun ratnum? @var{obj}
-Return true if @var{obj} is an exact rational number.
-@end defun
-
-
-@defun cflonum? @var{obj}
-Return true if @var{obj} is a complex number having flonums as both real
-and imaginary parts.
-@end defun
-
-
-@defun compnum? @var{obj}
-Return true if @var{obj} is a complex number having any possible
-combination of number representations as real and imaginary parts, but
-not both flonums.
-@end defun
-
-@c page
-@node iklib numerics flonums
-@subsection Additional flonum functions
-
-
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
 
 @c ------------------------------------------------------------
 
@@ -3875,6 +3843,48 @@ representing the mantissa's @math{53} bits.
 (flonum-parts -0.0)
 @result{} #f #b00000000000 #b0
 @end example
+@end defun
+
+@c page
+@node iklib numerics
+@section Additional functions on numbers
+
+
+@menu
+* iklib numerics preds::        Additional numeric predicates.
+* iklib numerics math::         Additional math functions.
+@end menu
+
+@c page
+@node iklib numerics preds
+@subsection Additional numeric predicates
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun bignum? @var{obj}
+Return true if @var{obj} is an exact integer represented by a big
+number.
+@end defun
+
+
+@defun ratnum? @var{obj}
+Return true if @var{obj} is an exact rational number.
+@end defun
+
+
+@defun cflonum? @var{obj}
+Return true if @var{obj} is a complex number having flonums as both real
+and imaginary parts.
+@end defun
+
+
+@defun compnum? @var{obj}
+Return true if @var{obj} is a complex number having any possible
+combination of number representations as real and imaginary parts, but
+not both flonums.
 @end defun
 
 @c page
