@@ -205,46 +205,47 @@
 
 (define fxnot fxlognot)
 
-(define-syntax define-fxbitop
-  (syntax-rules ()
-    ((_ ?who1 ?who2 ?unsafe-op ?identity)
-     (module (?who1 ?who2)
-       (define who (quote ?who1))
+(let-syntax
+    ((define-fxbitop
+       (syntax-rules ()
+	 ((_ ?who1 ?who2 ?unsafe-op ?identity)
+	  (module (?who1 ?who2)
+	    (define who (quote ?who1))
 
-       (define ?who1
-	 (case-lambda
-	  ((x y)
-	   (with-arguments-validation (who)
-	       ((fixnum	x)
-		(fixnum	y))
-	     (?unsafe-op x y)))
-	  ((x y . ls)
-	   (with-arguments-validation (who)
-	       ((fixnum	x)
-		(fixnum	y))
-	     (let loop ((a  (?unsafe-op x y))
-			(ls ls))
-	       (if (pair? ls)
-		   (let ((b ($car ls)))
-		     (with-arguments-validation (who)
-			 ((fixnum	b))
-		       (loop (?unsafe-op a b) ($cdr ls))))
-		 a))))
-	  ((x)
-	   (with-arguments-validation (who)
-	       ((fixnum	x))
-	     x))
-	  (()
-	   ?identity)))
+	    (define ?who1
+	      (case-lambda
+	       ((x y)
+		(with-arguments-validation (who)
+		    ((fixnum	x)
+		     (fixnum	y))
+		  (?unsafe-op x y)))
+	       ((x y . ls)
+		(with-arguments-validation (who)
+		    ((fixnum	x)
+		     (fixnum	y))
+		  (let loop ((a  (?unsafe-op x y))
+			     (ls ls))
+		    (if (pair? ls)
+			(let ((b ($car ls)))
+			  (with-arguments-validation (who)
+			      ((fixnum	b))
+			    (loop (?unsafe-op a b) ($cdr ls))))
+		      a))))
+	       ((x)
+		(with-arguments-validation (who)
+		    ((fixnum	x))
+		  x))
+	       (()
+		?identity)))
 
-       (define ?who2 ?who1)
+	    (define ?who2 ?who1)
 
-       #| end of module |# )
-     )))
+	    #| end of module |# )
+	  ))))
 
-(define-fxbitop fxlogor		fxior		$fxlogor	 0)
-(define-fxbitop fxlogand	fxand		$fxlogand	-1)
-(define-fxbitop fxlogxor	fxxor		$fxlogxor	 0)
+  (define-fxbitop fxlogor	fxior		$fxlogor	 0)
+  (define-fxbitop fxlogand	fxand		$fxlogand	-1)
+  (define-fxbitop fxlogxor	fxxor		$fxlogxor	 0))
 
 
 ;;;; bitwise operations
@@ -379,53 +380,54 @@
 	(%fxcmp-validate-rest who ($cdr ls)))
     #f))
 
-(define-syntax define-fxcmp
-  (syntax-rules ()
-    ((_ ?who1 ?who2 $op)
-     (module (?who1 ?who2)
-       (define who (quote ?who1))
+(let-syntax
+    ((define-fxcmp
+       (syntax-rules ()
+	 ((_ ?who1 ?who2 $op)
+	  (module (?who1 ?who2)
+	    (define who (quote ?who1))
 
-       (define ?who1
-	 (case-lambda
-	  ((x y)
-	   (with-arguments-validation (who)
-	       ((fixnum	x)
-		(fixnum	y))
-	     ($op x y)))
+	    (define ?who1
+	      (case-lambda
+	       ((x y)
+		(with-arguments-validation (who)
+		    ((fixnum	x)
+		     (fixnum	y))
+		  ($op x y)))
 
-	  ((x y . ls)
-	   (with-arguments-validation (who)
-	       ((fixnum	x)
-		(fixnum	y))
-	     (if ($op x y)
-		 (let loop ((x  y)
-			    (ls ls))
-		   (if (pair? ls)
-		       (let ((y  ($car ls))
-			     (ls ($cdr ls)))
-			 (with-arguments-validation (who)
-			     ((fixnum	y))
-			   (if ($op x y)
-			       (loop y ls)
-			     (%fxcmp-validate-rest 'who ls))))
-		     #t))
-	       (%fxcmp-validate-rest 'who ls))))
+	       ((x y . ls)
+		(with-arguments-validation (who)
+		    ((fixnum	x)
+		     (fixnum	y))
+		  (if ($op x y)
+		      (let loop ((x  y)
+				 (ls ls))
+			(if (pair? ls)
+			    (let ((y  ($car ls))
+				  (ls ($cdr ls)))
+			      (with-arguments-validation (who)
+				  ((fixnum	y))
+				(if ($op x y)
+				    (loop y ls)
+				  (%fxcmp-validate-rest 'who ls))))
+			  #t))
+		    (%fxcmp-validate-rest 'who ls))))
 
-	  ((x)
-	   (with-arguments-validation (who)
-	       ((fixnum	x))
-	     #t))))
+	       ((x)
+		(with-arguments-validation (who)
+		    ((fixnum	x))
+		  #t))))
 
-       (define ?who2 ?who1)
+	    (define ?who2 ?who1)
 
-       #| end of module |# )
-     )))
+	    #| end of module |# )
+	  ))))
 
-(define-fxcmp fx=?	fx=	$fx=)
-(define-fxcmp fx<?	fx<	$fx<)
-(define-fxcmp fx<=?	fx<=	$fx<=)
-(define-fxcmp fx>?	fx>	$fx>)
-(define-fxcmp fx>=?	fx>=	$fx>=)
+  (define-fxcmp fx=?	fx=	$fx=)
+  (define-fxcmp fx<?	fx<	$fx<)
+  (define-fxcmp fx<=?	fx<=	$fx<=)
+  (define-fxcmp fx>?	fx>	$fx>)
+  (define-fxcmp fx>=?	fx>=	$fx>=))
 
 
 ;;;; comparison functions
