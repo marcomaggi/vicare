@@ -15924,6 +15924,17 @@ Multiply the operands and return the result.
 @end deffn
 
 
+@deffn {Unsafe Operation} $fxdiv @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxdiv0 @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxmod @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxmod0 @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxdiv-and-mod  @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxdiv0-and-mod0 @vari{fx} @varii{fx}
+Perform the number theoretic division.
+@end deffn
+
+@c ------------------------------------------------------------
+
 @deffn {Unsafe Operation} $fxlognot @var{fx}
 Perform the bitwise NOT on the operand and return the result.
 @end deffn
