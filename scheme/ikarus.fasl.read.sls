@@ -21,8 +21,6 @@
 		  fasl-read)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-;;;    (ikarus system $codes)
-;;;    (ikarus system $structs)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
     (prefix (vicare unsafe-operations)

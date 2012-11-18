@@ -282,7 +282,9 @@
     #| end of export |# )
   (import (ikarus)
     (ikarus system $structs)
-    (ikarus system $fx)
+    (except (ikarus system $fx)
+	    $fxmax
+	    $fxmin)
     (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $flonums)
@@ -393,10 +395,25 @@
     ((_ ?op)
      ?op)
     ((_ ?op1 ?op2)
-     (if ($fx> ?op1 ?op2) ?op1 ?op2))
+     (let ((a ?op1)
+	   (b ?op2))
+       (if ($fx>= a b) a b)))
     ((_ ?op1 ?op2 . ?ops)
      (let ((X ($fxmax ?op1 ?op2)))
        ($fxmax X . ?ops)))
+    ))
+
+(define-syntax $fxmin
+  (syntax-rules ()
+    ((_ ?op)
+     ?op)
+    ((_ ?op1 ?op2)
+     (let ((a ?op1)
+	   (b ?op2))
+       (if ($fx<= a b) a b)))
+    ((_ ?op1 ?op2 . ?ops)
+     (let ((X ($fxmin ?op1 ?op2)))
+       ($fxmin X . ?ops)))
     ))
 
 ;;; --------------------------------------------------------------------

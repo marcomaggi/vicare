@@ -176,7 +176,8 @@
 		  error@add1			error@sub1
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $pairs)
-    (ikarus system $fx)
+    (except (ikarus system $fx)
+	    $fxnegative?)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 18, 2012)
     (only (ikarus fixnums)

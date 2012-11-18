@@ -54,6 +54,7 @@
     $fxeven?		$fxodd?
     $fxmodulo		$fxremainder
     $fxsign
+    $fxmin		$fxmax
 
 ;;; --------------------------------------------------------------------
 
@@ -103,7 +104,8 @@
 	    $fxpositive?	$fxnegative?
 	    $fxeven?		$fxodd?
 	    $fxmodulo		$fxremainder
-	    $fxsign)
+	    $fxsign
+	    $fxmin		$fxmax)
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
@@ -432,51 +434,79 @@
 
 ;;;; comparison functions
 
-(define fxmin
-  (case-lambda
-   ((x y)
-    (if (fixnum? x)
-	(if (fixnum? y)
-	    (if ($fx< x y) x y)
-	  (assertion-violation 'fxmin "not a fixnum" y))
-      (assertion-violation 'fxmin "not a fixnum" x)))
-   ((x y z . ls)
-    (fxmin (fxmin x y)
-	   (if (fixnum? z)
-	       (let f ((z z) (ls ls))
-		 (if (null? ls)
-		     z
-                   (let ((a ($car ls)))
-                     (if (fixnum? a)
-                         (if ($fx< a z)
-                             (f a ($cdr ls))
-			   (f z ($cdr ls)))
-		       (assertion-violation 'fxmin "not a fixnum" a)))))
-             (assertion-violation 'fxmin "not a fixnum" z))))
-   ((x) (if (fixnum? x) x (assertion-violation 'fxmin "not a fixnum" x)))))
+(module (fxmin $fxmin)
+  (define who 'fxmin)
 
-(define fxmax
-  (case-lambda
-   ((x y)
-    (if (fixnum? x)
-	(if (fixnum? y)
-	    (if ($fx> x y) x y)
-	  (assertion-violation 'fxmax "not a fixnum" y))
-      (assertion-violation 'fxmax "not a fixnum" x)))
-   ((x y z . ls)
-    (fxmax (fxmax x y)
-	   (if (fixnum? z)
-	       (let f ((z z) (ls ls))
-		 (if (null? ls)
-		     z
-                   (let ((a ($car ls)))
-                     (if (fixnum? a)
-                         (if ($fx> a z)
-                             (f a ($cdr ls))
-			   (f z ($cdr ls)))
-		       (assertion-violation 'fxmax "not a fixnum" a)))))
-             (assertion-violation 'fxmax "not a fixnum" z))))
-   ((x) (if (fixnum? x) x (assertion-violation 'fxmax "not a fixnum" x)))))
+  (define ($fxmin x y)
+    (if ($fx< x y)
+	x
+      y))
+
+  (define fxmin
+    (case-lambda
+     ((x y)
+      (with-arguments-validation (who)
+	  ((fixnum	x)
+	   (fixnum	y))
+	($fxmin x y)))
+
+     ((x y z . ls)
+      (with-arguments-validation (who)
+	  ((fixnum	x)
+	   (fixnum	y)
+	   (fixnum	z))
+	(let loop ((z  ($fxmin ($fxmin x y) z))
+		   (ls ls))
+	  (if (null? ls)
+	      z
+	    (let ((a ($car ls)))
+	      (with-arguments-validation (who)
+		  ((fixnum	a))
+		(loop ($fxmin a z) ($cdr ls))))))))
+
+     ((x)
+      (with-arguments-validation (who)
+	  ((fixnum	x))
+	x))))
+
+  #| end of module: fxmin |# )
+
+(module (fxmax $fxmax)
+  (define who 'fxmax)
+
+  (define ($fxmax x y)
+    (if ($fx< x y)
+	x
+      y))
+
+  (define fxmax
+    (case-lambda
+     ((x y)
+      (with-arguments-validation (who)
+	  ((fixnum	x)
+	   (fixnum	y))
+	($fxmax x y)))
+
+     ((x y z . ls)
+      (with-arguments-validation (who)
+	  ((fixnum	x)
+	   (fixnum	y)
+	   (fixnum	z))
+	(let loop ((z  ($fxmax ($fxmax x y) z))
+		   (ls ls))
+	  (if (null? ls)
+	      z
+	    (let ((a ($car ls)))
+	      (with-arguments-validation (who)
+		  ((fixnum	a))
+		(loop ($fxmax a z) ($cdr ls))))))))
+
+     ((x)
+      (with-arguments-validation (who)
+	  ((fixnum	x))
+	x))))
+
+  #| end of module: fxmax |# )
 
 
 (define (fxquotient x y)
