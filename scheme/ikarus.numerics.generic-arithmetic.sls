@@ -1428,6 +1428,108 @@
 
   (define who 'number->string)
 
+  (module (number->string)
+
+    (define number->string
+      (case-lambda
+       ((x)
+	($number->string x 10))
+       ((x r)
+	(with-arguments-validation (who)
+	    ((radix	r))
+	  ($number->string x r)))
+       ((x r precision)
+	;;(do-warn)
+	(number->string x r))))
+
+    (define (do-warn)
+      (set! do-warn values)
+      (raise-continuable
+       (condition (make-warning)
+		  (make-who-condition who)
+		  (make-message-condition "precision argument is not supported"))))
+
+    (define-argument-validation (radix who obj)
+      (memv obj '(2 8 10 16))
+      (assertion-violation who "invalid radix" obj))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module ($number->string)
+
+    (define ($number->string x r)
+      (import (ikarus system $compnums))
+      (cond ((fixnum? x)
+	     (fixnum->string x r))
+
+	    ((bignum? x)
+	     (bignum->string x r))
+
+	    ((flonum? x)
+	     (if (eqv? r 10)
+		 (flonum->string x)
+	       (assertion-violation who "invalid radix for inexact number" r x)))
+
+	    ((ratnum? x)
+	     (ratnum->string x r))
+
+	    ((compnum? x)
+	     (let ((x.rep ($compnum-real x))
+		   (x.imp ($compnum-imag x)))
+	       (if (and (fixnum?  x.rep)
+			($fxzero? x.rep))
+		   (string-append (imag x.imp r) "i")
+		 (string-append ($number->string x.rep r) (imag x.imp r) "i"))))
+
+	    ((cflonum? x)
+	     (let ((x.rep ($cflonum-real x))
+		   (x.imp ($cflonum-imag x)))
+	       (cond ((flnan? x.imp)
+		      (string-append ($number->string x.rep r) "+nan.0i"))
+		     ((flinfinite? x.imp)
+		      (string-append ($number->string x.rep r) (if ($fl> x.imp 0.0)
+								   "+inf.0i"
+								 "-inf.0i")))
+		     (else
+		      (string-append ($number->string x.rep r) (imag x.imp r) "i")))))
+
+	    (else
+	     (assertion-violation who "not a number" x))))
+
+    (define (imag x radix)
+      ;;Compose a string for the imaginary part of a cflonum or compnum.
+      ;;X can be any real number, including infinities and NaN.
+      ;;
+      (cond
+       ;;Special case to allow printing: "Rep+i".
+       ((and (fixnum? x)
+	     ($fx= x +1))
+	"+")
+       ;;Special case to allow printing: "Rep-i".
+       ((and (fixnum? x)
+	     ($fx= x -1))
+	"-")
+       ;;If X is  negative: omit the sign here, a  negative sign will be
+       ;;inserted by $NUMBER->STRING.
+       ((or (< x 0)
+	    (and (flonum? x)
+		 ($fl= x -0.0)))
+	($number->string x radix))
+       ;;If we are here X is exact zero or positive.
+       ;;
+       ;;If X is +inf.0 avoid prepending an additional positive sign.
+       ((and (flonum? x)
+	     (flinfinite? x))
+	"+inf.0")
+       (else
+	(string-append "+" ($number->string x radix)))))
+
+    #| end of module: $number->string |# )
+
+;;; --------------------------------------------------------------------
+
   (module (bignum->string)
 
     (define (bignum->decimal-string x)
@@ -1486,90 +1588,6 @@
     (string-append ($number->string ($ratnum-n x) r)
 		   "/"
 		   ($number->string ($ratnum-d x) r)))
-
-  (module ($number->string)
-
-    (define ($number->string x r)
-      (import (ikarus system $compnums))
-      (cond ((fixnum? x)
-	     (fixnum->string x r))
-	    ((bignum? x)
-	     (bignum->string x r))
-	    ((flonum? x)
-	     (if (eqv? r 10)
-		 (flonum->string x)
-	       (assertion-violation who "invalid radix for inexact number" r x)))
-	    ((ratnum? x)
-	     (ratnum->string x r))
-	    ((compnum? x)
-	     (let ((x.rep ($compnum-real x))
-		   (x.imp ($compnum-imag x)))
-	       (if (and (fixnum?  x.rep)
-			($fxzero? x.rep))
-		   (string-append (imag x.imp r) "i")
-		 (string-append ($number->string x.rep r) (imag x.imp r) "i"))))
-	    ((cflonum? x)
-	     (let ((x.rep ($cflonum-real x))
-		   (x.imp ($cflonum-imag x)))
-	       (cond ((flnan? x.imp)
-		      (string-append ($number->string x.rep r) "+nan.0i"))
-		     ((flinfinite? x.imp)
-		      (string-append ($number->string x.rep r) (if ($fl> x.imp 0.0)
-								   "+inf.0i"
-								 "-inf.0i")))
-		     (else
-		      (string-append ($number->string x.rep r) (imag x.imp r) "i")))))
-	    (else
-	     (assertion-violation who "not a number" x))))
-
-    (define (imag x radix)
-      ;;Compose a string for the imaginary part of a cflonum or compnum.
-      ;;X can be any real number, including infinities and NaN.
-      ;;
-      (cond
-       ;;Special case to allow printing: "Rep+i".
-       ((and (fixnum? x)
-	     ($fx= x +1))
-	"+")
-       ;;Special case to allow printing: "Rep-i".
-       ((and (fixnum? x)
-	     ($fx= x -1))
-	"-")
-       ;;If X is  negative: omit the sign here, a  negative sign will be
-       ;;inserted by $NUMBER->STRING.
-       ((or (< x 0)
-	    (and (flonum? x)
-		 ($fl= x -0.0)))
-	($number->string x radix))
-       ;;If we are here X is exact zero or positive.
-       ;;
-       ;;If X is +inf.0 avoid prepending an additional positive sign.
-       ((and (flonum? x)
-	     (flinfinite? x))
-	"+inf.0")
-       (else
-	(string-append "+" ($number->string x radix)))))
-
-    #| end of module: $number->string |# )
-
-  (define (do-warn)
-    (set! do-warn values)
-    (raise-continuable
-     (condition (make-warning)
-		(make-who-condition who)
-		(make-message-condition "precision argument is not supported"))))
-
-  (define number->string
-    (case-lambda
-     ((x)
-      ($number->string x 10))
-     ((x r)
-      (unless (memv r '(2 8 10 16))
-	(assertion-violation who "invalid radix" r))
-      ($number->string x r))
-     ((x r precision)
-      ;;(do-warn)
-      (number->string x r))))
 
   #| end of module: number->string |# )
 

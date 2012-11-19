@@ -52,6 +52,7 @@
 	    not)
     (ikarus system $fx)
     (ikarus system $flonums)
+    (ikarus system $compnums)
     (ikarus system $pairs)
     (ikarus system $chars)
     (ikarus system $strings)
@@ -141,6 +142,19 @@
 	((cflonum? x)
 	 (and ($fl= ($cflonum-imag x) 0.0)
 	      ($flonum-rational? ($cflonum-real x))))
+	((compnum? x)
+	 ;;The real  part must be  rational valued.  The  imaginary part
+	 ;;must be exact or inexact zero.
+	 (and (let ((imp ($compnum-imag x)))
+		(or (and (fixnum?  imp)
+			 ($fxzero? imp))
+		    (and (flonum?  imp)
+			 ($fl= 0.0 imp))))
+	      (let ((rep ($compnum-real x)))
+		(or (fixnum?   rep)
+		    (bignum?   rep)
+		    (rational? rep)
+		    ($flonum-rational? rep)))))
 	(else #f)))
 
 (define (integer? x)
@@ -155,6 +169,19 @@
 	((cflonum? x)
 	 (and ($fl= ($cflonum-imag x) 0.0)
 	      ($flonum-integer? ($cflonum-real x))))
+	((compnum? x)
+	 ;;The real part must be an integer.  The imaginary part must be
+	 ;;exact or inexact zero.
+	 (and (let ((imp ($compnum-imag x)))
+		(cond ((and (fixnum?  imp)
+			    ($fxzero? imp)))
+		      ((and (flonum?  imp)
+			    ($fl= 0.0 imp)))
+		      (else #f)))
+	      (let ((rep ($compnum-real x)))
+		(or (fixnum? rep)
+		    (bignum? rep)
+		    ($flonum-integer? rep)))))
 	(else #f)))
 
 
