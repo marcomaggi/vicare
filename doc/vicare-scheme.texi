@@ -16082,6 +16082,16 @@ With one operand: return @var{fl} negated.  With two operands: subtract
 the operands and return the result.
 @end deffn
 
+
+@deffn {Unsafe Operation} $fldiv @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $flmod @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fldiv0 @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $flmod0 @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fldiv-and-mod @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fldiv0-and-mod0 @vari{fl} @varii{fl}
+Implement the number--theoretic integer divisions.
+@end deffn
+
 @c ------------------------------------------------------------
 
 @subsubheading Exactness and conversion

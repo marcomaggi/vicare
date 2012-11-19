@@ -1222,6 +1222,13 @@
       (($fl- _ _)		   foldable effect-free result-true)
       (($fl* _ _)		   foldable effect-free result-true)
       (($fl/ _ _)		   foldable effect-free result-true)
+      (($fldiv _ _)		   foldable effect-free result-true)
+      (($flmod _ _)		   foldable effect-free result-true)
+      (($fldiv0 _ _)		   foldable effect-free result-true)
+      (($flmod0 _ _)		   foldable effect-free result-true)
+      ;;We do not do multiple return values.
+      ;;(($fldiv-and-mod _ _)	   foldable effect-free result-true)
+      ;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 ;;; vectors
