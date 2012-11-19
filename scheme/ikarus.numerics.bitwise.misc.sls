@@ -172,25 +172,38 @@
   #| end of module |# )
 
 
-(define (fxlength x)
+(module (fxlength)
+
   (define who 'fxlength)
-  (define (fxlength32 x)
+
+  (define (fxlength x)
+    (with-arguments-validation (who)
+	((fixnum x))
+      (let ((x^ (if ($fx< x 0)
+		    ($fxlognot x)
+		  x)))
+	(case-word-size
+	 ((32)
+	  (%fxlength32 x^))
+	 ((64)
+	  (%fxlength64 x^))))))
+
+  (define (%fxlength32 x)
     (let* ((fl  ($fixnum->flonum x))
 	   (sbe ($fxlogor ($fxsll ($flonum-u8-ref fl 0) 4)
-				($fxsra ($flonum-u8-ref fl 1) 4))))
+			  ($fxsra ($flonum-u8-ref fl 1) 4))))
       (if ($fx= sbe 0)
 	  0
 	($fx- sbe 1022))))
-  (define (fxlength64 x)
-    (if ($fx> x #x7FFFFFFF)
-	($fx+ 31 (fxlength32 ($fxsra x 31)))
-      (fxlength32 x)))
-  (with-arguments-validation (who)
-      ((fixnum x))
-    (if ($fx= 30 (fixnum-width))
-	(fxlength32 (if ($fx< x 0) ($fxlognot x) x))
-      (fxlength64 (if ($fx< x 0) ($fxlognot x) x)))))
 
+  (define (%fxlength64 x)
+    (if ($fx> x #x7FFFFFFF)
+	($fx+ 31 (%fxlength32 ($fxsra x 31)))
+      (%fxlength32 x)))
+
+  #| end of module: fxlength |# )
+
+
 (define (fxbit-set? x i)
   ;;Updated to the R6RS errata (Marco Maggi; Nov 5, 2011).
   ;;
