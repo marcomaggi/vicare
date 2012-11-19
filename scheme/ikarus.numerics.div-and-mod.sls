@@ -33,83 +33,107 @@
     (vicare syntactic-extensions))
 
 
-(define (div-and-mod* n m who)
+(module (div-and-mod*)
   (import (ikarus system $fx)
-    (only (ikarus system $flonums) $fl=)
+    (only (ikarus system $flonums)
+	  $fl=)
     (ikarus flonums))
+
+  (define (div-and-mod* n m who)
+    (cond ((fixnum? m)
+	   (cond (($fx= m 0)
+		  (assertion-violation who "division by 0"))
+		 ((or (fixnum? n)
+		      (bignum? n))
+		  (int-div-and-mod n m))
+		 ((flonum? n)
+		  (fldiv-and-mod n (fixnum->flonum m)))
+		 ((ratnum? n)
+		  (rat-div-and-mod n m))
+		 (else
+		  (%error-not-a-number who n))))
+
+	  ((bignum? m)
+	   (cond ((or (fixnum? n)
+		      (bignum? n))
+		  (int-div-and-mod n m))
+		 ((flonum? n)
+		  (let ((v ($flonum->exact n)))
+		    (unless v
+		      (assertion-violation who "invalid argument" n))
+		    (receive (a b)
+			(div-and-mod* v m who)
+		      (values (inexact a) (inexact b)))))
+		 ((ratnum? n)
+		  (rat-div-and-mod n m))
+		 (else
+		  (%error-not-a-number who n))))
+
+	  ((ratnum? m)
+	   (cond ((or (fixnum? n)
+		      (bignum? n)
+		      (ratnum? n))
+		  (rat-div-and-mod n m))
+		 ((flonum? n)
+		  (let ((v ($flonum->exact n)))
+		    (unless v
+		      (assertion-violation who "invalid argument" n))
+		    (receive (a b)
+			(div-and-mod* v m who)
+		      (values (inexact a) (inexact b)))))
+		 (else
+		  (%error-not-a-number who n))))
+
+	  ((flonum? m)
+	   (cond (($fl= m 0.0)
+		  (assertion-violation who "division by 0.0"))
+		 ((flonum? n)
+		  (fldiv-and-mod n m))
+		 ((fixnum? n)
+		  (fldiv-and-mod (fixnum->flonum n) m))
+		 ((or (bignum? n)
+		      (ratnum? n))
+		  (let ((v ($flonum->exact m)))
+		    (unless v
+		      (assertion-violation who "invalid argument" m))
+		    (let-values (((a b) (div-and-mod* n v who)))
+		      (values (inexact a) (inexact b)))))
+		 (else
+		  (%error-not-a-number who n))))
+
+	  (else
+	   (%error-not-a-number who m))))
+
   (define (int-div-and-mod n m)
-    (let ((d0 (quotient n m)))
-      (let ((m0 (- n (* d0 m))))
-	(if (>= m0 0)
-	    (values d0 m0)
-	  (if (>= m 0)
-	      (values (- d0 1) (+ m0 m))
-	    (values (+ d0 1) (- m0 m)))))))
+    (let* ((d0 (quotient n m))
+	   (m0 (- n (* d0 m))))
+      (cond ((>= m0 0)
+	     (values d0       m0))
+	    ((>= m 0)
+	     (values (- d0 1) (+ m0 m)))
+	    (else
+	     (values (+ d0 1) (- m0 m))))))
+
   (define (rat-div-and-mod n m)
     (let ((x (/ n m)))
-      (cond
-       ((or (fixnum? x) (bignum? x))
-	(values x 0))
-       (else
-	(let ((n0 (numerator x)) (d0 (denominator x)))
-	  (let ((q (quotient n0 d0)))
-	    (let ((r (- n (* q m))))
-	      (if (>= r 0)
-		  (values q r)
-		(if (> m 0)
-		    (values (- q 1) (+ r m))
-		  (values (+ q 1) (- r m)))))))))))
-  (cond
-   ((fixnum? m)
-    (cond
-     (($fx= m 0)
-      (assertion-violation who "division by 0"))
-     ((or (fixnum? n) (bignum? n))
-      (int-div-and-mod n m))
-     ((flonum? n)
-      (fldiv-and-mod n (fixnum->flonum m)))
-     ((ratnum? n)
-      (rat-div-and-mod n m))
-     (else (assertion-violation who "not a number" n))))
-   ((bignum? m)
-    (cond
-     ((or (fixnum? n) (bignum? n))
-      (int-div-and-mod n m))
-     ((flonum? n)
-      (let ((v ($flonum->exact n)))
-	(unless v
-	  (assertion-violation who "invalid argument" n))
-	(let-values (((a b) (div-and-mod* v m who)))
-	  (values (inexact a) (inexact b)))))
-     ((ratnum? n)
-      (rat-div-and-mod n m))
-     (else (assertion-violation who "not a number" n))))
-   ((ratnum? m)
-    (cond
-     ((or (fixnum? n) (bignum? n) (ratnum? n))
-      (rat-div-and-mod n m))
-     ((flonum? n)
-      (let ((v ($flonum->exact n)))
-	(unless v
-	  (assertion-violation who "invalid argument" n))
-	(let-values (((a b) (div-and-mod* v m who)))
-	  (values (inexact a) (inexact b)))))
-     (else (assertion-violation who "not a number" n))))
-   ((flonum? m)
-    (cond
-     (($fl= m 0.0)
-      (assertion-violation who "division by 0.0"))
-     ((flonum? n) (fldiv-and-mod n m))
-     ((fixnum? n)
-      (fldiv-and-mod (fixnum->flonum n) m))
-     ((or (bignum? n) (ratnum? n))
-      (let ((v ($flonum->exact m)))
-	(unless v
-	  (assertion-violation who "invalid argument" m))
-	(let-values (((a b) (div-and-mod* n v who)))
-	  (values (inexact a) (inexact b)))))
-     (else (assertion-violation who "not a number" n))))
-   (else (assertion-violation who "not a number" m))))
+      (if  (or (fixnum? x)
+	       (bignum? x))
+	  (values x 0)
+	(let* ((n0 (numerator   x))
+	       (d0 (denominator x))
+	       (q  (quotient n0 d0))
+	       (r  (- n (* q m))))
+	  (cond ((>= r 0)
+		 (values q       r))
+		((> m 0)
+		 (values (- q 1) (+ r m)))
+		(else
+		 (values (+ q 1) (- r m))))))))
+
+  (define (%error-not-a-number who n)
+    (assertion-violation who "expected number as argument" n))
+
+  #| end of module: div-and-mod* |# )
 
 
 (define (div-and-mod n m)
@@ -124,14 +148,18 @@
 	((0)
 	 (assertion-violation who "division by 0"))
 	((-1)
-	 ($fx- n))
+	 ;;Notice  that we  *cannot* use  $fx-  here because  when N  is
+	 ;;(least-fixnum)   it  would   result   in   an  overflow:   (-
+	 ;;(least-fixnum)) is *not* a fixnum.
+	 (- n))
 	(else
 	 (let ((d0 ($fxquotient n m)))
-	   (if ($fx>= n ($fx* d0 m))
-	       d0
-	     (if ($fx>= m 0)
-		 ($fx- d0 1)
-	       ($fx+ d0 1))))))
+	   (cond (($fx>= n ($fx* d0 m))
+		  d0)
+		 (($fx>= m 0)
+		  ($fx- d0 1))
+		 (else
+		  ($fx+ d0 1))))))
     (receive (a b)
 	(div-and-mod* n m who)
       a)))
@@ -144,14 +172,17 @@
       (case-fixnums m
 	((0)
 	 (assertion-violation who "division by 0"))
+	((-1)
+	 0)
 	(else
-	 (let ((d0 ($fxquotient n m)))
-	   (let ((m0 ($fx- n ($fx* d0 m))))
-	     (if ($fx>= m0 0)
-		 m0
-	       (if ($fx>= m 0)
-		   ($fx+ m0 m)
-		 ($fx- m0 m)))))))
+	 (let* ((d0 ($fxquotient n m))
+		(m0 ($fx- n ($fx* d0 m))))
+	   (cond (($fx>= m0 0)
+		  m0)
+		 (($fx>= m 0)
+		  ($fx+ m0 m))
+		 (else
+		  ($fx- m0 m))))))
     (receive (a b)
 	(div-and-mod* n m who)
       b)))
