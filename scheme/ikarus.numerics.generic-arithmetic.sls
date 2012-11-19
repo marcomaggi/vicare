@@ -185,6 +185,7 @@
     (except (ikarus system $flonums)
 	    $flonum->exact
 	    $flzero?
+	    $flzero?/negative
 	    $flpositive?
 	    $flnegative?
 	    $flsqr
@@ -194,6 +195,7 @@
     (only (ikarus flonums)
 	  $flonum->exact
 	  $flzero?
+	  $flzero?/negative
 	  $flpositive?
 	  $flnegative?
 	  $flsqr
@@ -1514,8 +1516,8 @@
        ;;If X is  negative: omit the sign here, a  negative sign will be
        ;;inserted by $NUMBER->STRING.
        ((or (< x 0)
-	    #;(and (flonum? x)
-		 ($fl= x -0.0)))
+	    (and (flonum? x)
+		 ($flzero?/negative x)))
 	($number->string x radix))
        ;;If we are here X is exact zero or positive.
        ;;
