@@ -27,7 +27,10 @@
     fxlength			fxbit-set?
     fxcopy-bit			fxcopy-bit-field
     fxrotate-bit-field		fxreverse-bit-field
-    fxbit-field)
+    fxbit-field
+
+    $fxcopy-bit			$fxcopy-bit-field
+    $fxrotate-bit-field)
   (import (except (ikarus)
 		  bitwise-bit-set?		bitwise-first-bit-set
 		  bitwise-bit-count
@@ -36,7 +39,10 @@
 		  fxcopy-bit			fxcopy-bit-field
 		  fxrotate-bit-field		fxreverse-bit-field
 		  fxbit-field)
-    (ikarus system $fx)
+    (except (ikarus system $fx)
+	    $fxcopy-bit
+	    $fxcopy-bit-field
+	    $fxrotate-bit-field)
     (ikarus system $bignums)
     (ikarus system $flonums)
     (vicare syntactic-extensions)
@@ -248,119 +254,141 @@
 	(else
 	 (assertion-violation who "index is not an exact integer" i))))
 
-
-(define (fxcopy-bit x i b)
+
+(module (fxcopy-bit
+	 $fxcopy-bit)
   (define who 'fxcopy-bit)
-  (if (fixnum? x)
-      (if (fixnum? i)
-	  (if (and ($fx<= 0 i) ($fx< i (fixnum-width)))
-	      (case b
-		((0) ($fxlogand x ($fxlognot ($fxsll 1 i))))
-		((1) ($fxlogor x ($fxsll 1 i)))
-		(else (assertion-violation who "invalid bit value" b)))
-	    (assertion-violation who "index out of range" i))
-	(assertion-violation who "index is not a fixnum" i))
-    (assertion-violation who "not a fixnum" x)))
 
-(define (fxcopy-bit-field x i j b)
+  (define (fxcopy-bit x i b)
+    (with-arguments-validation (who)
+	((fixnum	x)
+	 (fixnum	i)
+	 (fixnum	b)
+	 ($bit-index	i))
+      ($fxcopy-bit x i b)))
+
+  (define ($fxcopy-bit x i b)
+    (case-fixnums b
+      ((0)
+       ($fxlogand x ($fxlognot ($fxsll 1 i))))
+      ((1)
+       ($fxlogor x ($fxsll 1 i)))
+      (else
+       (assertion-violation who "invalid bit value" b))))
+
+  (define-argument-validation ($bit-index who obj)
+    (and ($fx>= obj 0)
+	 ($fx<  obj (fixnum-width)))
+    (assertion-violation who "bit index out of range" obj))
+
+  #| end of module: fxcopy-bit |# )
+
+
+(module (fxcopy-bit-field
+	 $fxcopy-bit-field)
   (define who 'fxcopy-bit-field)
-  (if (fixnum? x)
-      (if (fixnum? i)
-	  (if ($fx<= 0 i)
-	      (if (fixnum? j)
-		  (if ($fx< j (fixnum-width))
-		      (if ($fx<= i j)
-			  (if (fixnum? b)
-			      (let ((m
-				     ($fxlogxor
-				      ($fxsub1 ($fxsll 1 i))
-				      ($fxsub1 ($fxsll 1 j)))))
-				($fxlogor
-				 ($fxlogand m ($fxsll b i))
-				 ($fxlogand ($fxlognot m) x)))
-			    (assertion-violation who "not a fixnum" b))
-			(if ($fx<= 0 j)
-			    (assertion-violation who "index out of range" j)
-			  (assertion-violation who "indices not in order" i j)))
-		    (assertion-violation who "index out of range" j))
-		(assertion-violation who "not a fixnum" j))
-	    (assertion-violation who "index out of range" i))
-	(assertion-violation who "not a fixnum" i))
-    (assertion-violation who "not a fixnum" x)))
 
-(define ($fxrotate-bit-field x i j c w)
-  (let ((m ($fxsll ($fxsub1 ($fxsll 1 w)) i)))
-    (let ((x0 ($fxlogand x m)))
-      (let ((lt ($fxsll x0 c)) (rt ($fxsra x0 ($fx- w c))))
-	(let ((x0 ($fxlogand ($fxlogor lt rt) m)))
-	  ($fxlogor x0 ($fxlogand x ($fxlognot m))))))))
+  (define (fxcopy-bit-field x i j b)
+    (with-arguments-validation (who)
+	((fixnum		x)
+	 (non-negative-fixnum	i)
+	 ($bit-index		i)
+	 (fixnum		j)
+	 ($bit-index		j)
+	 ($bit-indexes-in-order i j)
+	 (fixnum		b))
+      ($fxcopy-bit-field x i j b)))
 
-(define (fxrotate-bit-field x i j c)
-  ;;FIXME  This must  be checked  and eventually  updated from  the R6RS
-  ;;errata (Marco Maggi; Nov 5, 2011).
-  ;;
+  (define ($fxcopy-bit-field x i j b)
+    (let ((m ($fxlogxor ($fxsub1 ($fxsll 1 i))
+			($fxsub1 ($fxsll 1 j)))))
+      ($fxlogor ($fxlogand m ($fxsll b i))
+		($fxlogand ($fxlognot m) x))))
+
+  (define-argument-validation ($bit-index who obj)
+    (and ($fx>= obj 0)
+	 ($fx<  obj (fixnum-width)))
+    (assertion-violation who "bit index out of range" obj))
+
+  (define-argument-validation ($bit-indexes-in-order who i j)
+    ($fx<= i j)
+    (assertion-violation who "bit indexes not in order" i j))
+
+  #| end of module: fxcopy-bit-field |# )
+
+
+(module (fxrotate-bit-field
+	 $fxrotate-bit-field)
   (define who 'fxrotate-bit-field)
-  (if (fixnum? x)
-      (if (fixnum? i)
-	  (if ($fx>= i 0)
-	      (if (fixnum? j)
-		  (if ($fx< j (fixnum-width))
-		      (let ((w ($fx- j i)))
-			(if ($fx>= w 0)
-			    (if (fixnum? c)
-				(if (and ($fx>= c 0) ($fx< c w))
-				    ($fxrotate-bit-field x i j c w)
-				  (assertion-violation who "count is invalid" c))
-			      (assertion-violation who "count is not a fixnum" c))
-			  (assertion-violation who "field width is negative" i j)))
-		    (assertion-violation who "end index is out of range" j))
-		(assertion-violation who "end index is not a fixnum" j))
-	    (assertion-violation who "start index is out of range" i))
-	(assertion-violation who "start index is not a fixnum" i))
-    (assertion-violation who "not a fixnum" x)))
 
-(define (fxreverse-bit-field v start end)
+  (define (fxrotate-bit-field x i j c)
+    ;;FIXME  This must  be checked  and eventually  updated from  the R6RS
+    ;;errata (Marco Maggi; Nov 5, 2011).
+    ;;
+    (with-arguments-validation (who)
+	((fixnum		x)
+	 (non-negative-fixnum	i)
+	 (fixnum		j)
+	 ($bit-index-positive-limit	j))
+      (let ((w ($fx- j i)))
+	(with-arguments-validation (who)
+	    (($field-width	w i j)
+	     (fixnum		c)
+	     ($count		c w))
+	  ($fxrotate-bit-field x i j c w)))))
 
-  ;;This is from  the original patch by Göran  Weinholt, posted on the
-  ;;Ikarus bug tracker.
-  ;;
-  ;; (define (%fxreverse-bit-field61 v)
-  ;;   ;; Based on <http://aggregate.org/MAGIC/#Bit Reversal>.
-  ;;   (assert (= (fixnum-width) 61))
-  ;;   (let* ( ;; Swap pairs of bits
-  ;; 	     (v (fxior (fxarithmetic-shift-right
-  ;; 			(fxand v #b101010101010101010101010101010101010101010101010101010101010) 1)
-  ;; 		       (fxarithmetic-shift-left
-  ;; 			(fxand v #b010101010101010101010101010101010101010101010101010101010101) 1)))
-  ;; 	     ;; Swap 2-bit fields
-  ;; 	     (v (fxior (fxarithmetic-shift-right
-  ;; 			(fxand v #b110011001100110011001100110011001100110011001100110011001100) 2)
-  ;; 		       (fxarithmetic-shift-left
-  ;; 			(fxand v #b001100110011001100110011001100110011001100110011001100110011) 2)))
-  ;; 	     ;; Swap 4-bit fields
-  ;; 	     (tmp1     (fxarithmetic-shift-right
-  ;; 			(fxand v #b111100000000000000000000000000000000000000000000000000000000) 56))
-  ;; 	     (v (fxior (fxarithmetic-shift-right
-  ;; 			(fxand v #b000011110000111100001111000011110000111100001111000011110000) 4)
-  ;; 		       (fxarithmetic-shift-left
-  ;; 			(fxand v #b000000001111000011110000111100001111000011110000111100001111) 4)))
-  ;; 	     ;; Swap bytes
-  ;; 	     (tmp2     (fxarithmetic-shift-right
-  ;; 			(fxand v #b000011111111000000000000000000000000000000000000000000000000) 44))
-  ;; 	     (v (fxior (fxarithmetic-shift-right
-  ;; 			(fxand v #b111100000000111111110000000011111111000000001111111100000000) 8)
-  ;; 		       (fxarithmetic-shift-left
-  ;; 			(fxand v #b000000000000000000001111111100000000111111110000000011111111) 8)))
-  ;; 	     ;; Swap 16-bit fields
-  ;; 	     (tmp3     (fxarithmetic-shift-right
-  ;; 			(fxand v #b000000000000111111111111111100000000000000000000000000000000) 20))
-  ;; 	     (v (fxior (fxarithmetic-shift-right
-  ;; 			(fxand v #b111111111111000000000000000011111111111111110000000000000000) 16)
-  ;; 		       (fxarithmetic-shift-left
-  ;; 			(fxand v #b000000000000000000000000000000000000000000001111111111111111) 16))))
-  ;; 	;; Put together the pieces
-  ;; 	(fxior (fxarithmetic-shift-left v 28)
-  ;; 	       tmp1 tmp2 tmp3)))
+  (define ($fxrotate-bit-field x i j c w)
+    (let* ((m  ($fxsll ($fxsub1 ($fxsll 1 w)) i))
+	   (x0 ($fxlogand x m))
+	   (lt ($fxsll x0 c))
+	   (rt ($fxsra x0 ($fx- w c)))
+	   (x0 ($fxlogand ($fxlogor lt rt) m)))
+      ($fxlogor x0 ($fxlogand x ($fxlognot m)))))
+
+  (define-argument-validation ($bit-index-positive-limit who obj)
+    ($fx< obj (fixnum-width))
+    (assertion-violation who "bit index out of range" obj))
+
+  (define-argument-validation ($field-width who w i j)
+    ($fx>= w 0)
+    (assertion-violation who "field width is negative" i j))
+
+  (define-argument-validation ($count who c w)
+    (and ($fx>= c 0)
+	 ($fx<  c w))
+    (assertion-violation who "count is invalid" c))
+
+  #| end of module: fxrotate-bit-field |# )
+
+
+(module (fxreverse-bit-field)
+  (define who 'fxreverse-bit-field)
+
+  (define (fxreverse-bit-field v start end)
+    (with-arguments-validation (who)
+	((fixnum		v)
+	 (fixnum		start)
+	 (fixnum		end)
+	 ($bit-index		start)
+	 ($bit-index		end)
+	 ($bit-index-order	start end))
+      (case-fixnums (fixnum-width)
+	((61)
+	 (fxior (fxarithmetic-shift-right (%fxreverse-bit-field61 (fxbit-field v start end))
+					  (fx- 60 end))
+		(fxcopy-bit-field v start end 0)))
+	((30)
+	 (fxior (fxarithmetic-shift-right (%fxreverse-bit-field30 (fxbit-field v start end))
+					  (fx- 29 end))
+		(fxcopy-bit-field v start end 0)))
+	(else
+	 (do ((i start (fx+ i 1))
+	      (ret 0 (if (fxbit-set? v i)
+			 (fxior ret (fxarithmetic-shift-left 1 (fx- (fx- end i) 1)))
+		       ret)))
+	     ((fx=? i end)
+	      (fxior (fxarithmetic-shift-left ret start)
+		     (fxcopy-bit-field v start end 0))))))))
 
   (define (%fxreverse-bit-field30 v)
     (assert (= (fixnum-width) 30))
@@ -383,57 +411,77 @@
       (fxior (fxarithmetic-shift-left v 13)
 	     tmp1 tmp2 tmp3)))
 
-  (define who 'fxreverse-bit-field)
-  (unless (fixnum? v)
-    (assertion-violation who "expected fixnum as first argument" v))
-  (unless (and (integer? start) (exact? start))
-    (assertion-violation who "expected exact integer as second argument" start))
-  (unless (and (integer? end) (exact? end))
-    (assertion-violation who "expected exact integer as third argument" end))
-  (unless (< -1 start (fixnum-width))
+  (define (%fxreverse-bit-field61 v)
+    ;; Based on <http://aggregate.org/MAGIC/#Bit Reversal>.
+    (assert (= (fixnum-width) 61))
+    (let* ( ;; Swap pairs of bits
+	   (v (fxior
+	       (fxarithmetic-shift-right
+                (fxand v #b101010101010101010101010101010101010101010101010101010101010)
+                1)
+	       (fxarithmetic-shift-left
+                (fxand v #b010101010101010101010101010101010101010101010101010101010101)
+                1)))
+	   ;; Swap 2-bit fields
+	   (v (fxior
+	       (fxarithmetic-shift-right
+                (fxand v #b110011001100110011001100110011001100110011001100110011001100)
+                2)
+	       (fxarithmetic-shift-left
+                (fxand v #b001100110011001100110011001100110011001100110011001100110011)
+                2)))
+	   ;; Swap 4-bit fields
+	   (tmp1 (fxarithmetic-shift-right
+		  (fxand v #b111100000000000000000000000000000000000000000000000000000000)
+		  56))
+	   (v (fxior
+	       (fxarithmetic-shift-right
+                (fxand v #b000011110000111100001111000011110000111100001111000011110000)
+                4)
+	       (fxarithmetic-shift-left
+                (fxand v #b000000001111000011110000111100001111000011110000111100001111)
+                4)))
+	   ;; Swap bytes
+	   (tmp2 (fxarithmetic-shift-right
+                  (fxand v #b000011111111000000000000000000000000000000000000000000000000)
+                  44))
+	   (v (fxior
+               (fxarithmetic-shift-right
+		(fxand v #b111100000000111111110000000011111111000000001111111100000000)
+		8)
+               (fxarithmetic-shift-left
+		(fxand v #b000000000000000000001111111100000000111111110000000011111111)
+		8)))
+	   ;; Swap 16-bit fields
+	   (tmp3 (fxarithmetic-shift-right
+                  (fxand v #b000000000000111111111111111100000000000000000000000000000000)
+                  20))
+	   (v (fxior
+               (fxarithmetic-shift-right
+		(fxand v #b111111111111000000000000000011111111111111110000000000000000)
+		16)
+               (fxarithmetic-shift-left
+		(fxand v #b000000000000000000000000000000000000000000001111111111111111)
+		16))))
+      ;; Put together the pieces
+      (fxior (fxarithmetic-shift-left v 28)
+	     tmp1 tmp2 tmp3)))
+
+;;; --------------------------------------------------------------------
+
+  (define-argument-validation ($bit-index who obj)
+    (and ($fx>= obj 0)
+	 ($fx<  obj (fixnum-width)))
+    (assertion-violation who "bit index out of range" obj))
+
+  (define-argument-validation ($bit-index-order who start end)
+    ($fx<= start end)
     (assertion-violation who
-      (string-append "expected second argument between zero (included) and fixnum width "
-		     (number->string (fixnum-width)))
-      start))
-  (unless (< -1 end (fixnum-width))
-    (assertion-violation who
-      (string-append "expected third argument between zero (included) and fixnum width "
-		     (number->string (fixnum-width)))
-      end))
-  (unless (<= 0 start end)
-    (assertion-violation who
-      "expected second argument between zero (included) and third argument"
-      start end))
+      "expected second argument less than, or equal to, third argument" start end))
 
-  ;;This is from  the original patch by Göran  Weinholt, posted on the
-  ;;Ikarus bug tracker.
-  ;;
-  ;; (cond ((= (fixnum-width) 61)
-  ;;        (fxior (fxarithmetic-shift-right
-  ;;                (%fxreverse-bit-field61 (fxbit-field v start end))
-  ;;                (fx- 60 end))
-  ;;               (fxcopy-bit-field v start end 0)))
-  ;;       ((= (fixnum-width) 30)
-  ;;        (fxior (fxarithmetic-shift-right
-  ;;                (%fxreverse-bit-field30 (fxbit-field v start end))
-  ;;                (fx- 29 end))
-  ;;               (fxcopy-bit-field v start end 0)))
-  ;;       (else
-  ;;        (do ((i start (fx+ i 1))
-  ;;             (ret 0 (if (fxbit-set? v i)
-  ;;                        (fxior ret (fxarithmetic-shift-left 1 (fx- (fx- end i) 1)))
-  ;; 			 ret)))
-  ;;            ((fx=? i end)
-  ;;             (fxior (fxarithmetic-shift-left ret start)
-  ;;                    (fxcopy-bit-field v start end 0))))))
+  #| end of module: fxreverse-bit-field |# )
 
-  ;;We have FIXNUM-WIDTH equal to 30.
-  (fxior (fxarithmetic-shift-right
-	  (%fxreverse-bit-field30 (fxbit-field v start end))
-	  (fx- 29 end))
-	 (fxcopy-bit-field v start end 0)))
-
-
+
 (define (fxbit-field x i j)
   (define who 'fxbit-field)
   (if (fixnum? x)

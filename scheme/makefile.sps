@@ -867,6 +867,9 @@
     ($fxmod0					$fx)
     ($fxdiv-and-mod				$fx)
     ($fxdiv0-and-mod0				$fx)
+    ($fxcopy-bit				$fx)
+    ($fxcopy-bit-field				$fx)
+    ($fxrotate-bit-field			$fx)
 ;;;
     ($make-symbol				$symbols)
     ($symbol-unique-string			$symbols)
