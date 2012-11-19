@@ -15974,6 +15974,27 @@ return the result.
 @end deffn
 
 
+@deffn {Unsafe Operation} $fxcopy-bit @vari{fx} @varii{fx} @variii{fx}
+Unsafe version of @func{fxcopy-bit}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxcopy-bit-field @vari{fx} @varii{fx} @variii{fx} @variv{fx}
+Unsafe version of @func{fxcopy-bit-field}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxrotate-bit-field @vari{fx} @varii{fx} @variii{fx} @variv{fx}
+Unsafe version of @func{fxrotate-bit-field}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxbit-field @vari{fx} @varii{fx} @variii{fx}
+Unsafe version of @func{fxbit-field}.
+@end deffn
+
+@c ------------------------------------------------------------
+
 @deffn {Unsafe Operation} $fxquotient @vari{fx} @varii{fx}
 Compute the quotient between the operands and return the result.
 @end deffn

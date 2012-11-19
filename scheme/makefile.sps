@@ -870,6 +870,7 @@
     ($fxcopy-bit				$fx)
     ($fxcopy-bit-field				$fx)
     ($fxrotate-bit-field			$fx)
+    ($fxbit-field				$fx)
 ;;;
     ($make-symbol				$symbols)
     ($symbol-unique-string			$symbols)

@@ -30,7 +30,7 @@
     fxbit-field
 
     $fxcopy-bit			$fxcopy-bit-field
-    $fxrotate-bit-field)
+    $fxrotate-bit-field		$fxbit-field)
   (import (except (ikarus)
 		  bitwise-bit-set?		bitwise-first-bit-set
 		  bitwise-bit-count
@@ -42,7 +42,8 @@
     (except (ikarus system $fx)
 	    $fxcopy-bit
 	    $fxcopy-bit-field
-	    $fxrotate-bit-field)
+	    $fxrotate-bit-field
+	    $fxbit-field)
     (ikarus system $bignums)
     (ikarus system $flonums)
     (vicare syntactic-extensions)
@@ -482,25 +483,35 @@
   #| end of module: fxreverse-bit-field |# )
 
 
-(define (fxbit-field x i j)
+(module (fxbit-field
+	 $fxbit-field)
   (define who 'fxbit-field)
-  (if (fixnum? x)
-      (if (fixnum? i)
-	  (if ($fx<= 0 i)
-	      (if (fixnum? j)
-		  (if ($fx< j (fixnum-width))
-		      (if ($fx<= i j)
-			  ($fxsra
-			   ($fxlogand x ($fxsub1 ($fxsll 1 j)))
-			   i)
-			(if ($fx<= 0 j)
-			    (assertion-violation who "index out of range" j)
-			  (assertion-violation who "indices not in order" i j)))
-		    (assertion-violation who "index out of range" j))
-		(assertion-violation who "not a fixnum" j))
-	    (assertion-violation who "index out of range" i))
-	(assertion-violation who "not a fixnum" i))
-    (assertion-violation who "not a fixnum" x)))
+
+  (define (fxbit-field x i j)
+    (with-arguments-validation (who)
+	((fixnum		x)
+	 (fixnum		i)
+	 ($bit-index		i)
+	 (fixnum		j)
+	 ($bit-index		j)
+	 ($bit-index-order	i j))
+      ($fxbit-field x i j)))
+
+  (define ($fxbit-field x i j)
+    ($fxsra ($fxlogand x ($fxsub1 ($fxsll 1 j)))
+	    i))
+
+  (define-argument-validation ($bit-index who obj)
+    (and ($fx>= obj 0)
+	 ($fx<  obj (fixnum-width)))
+    (assertion-violation who "bit index out of range" obj))
+
+  (define-argument-validation ($bit-index-order who i j)
+    ($fx<= i j)
+    (assertion-violation who
+      "expected second argument less than, or equal to, third argument" i j))
+
+  #| end of module: fxbit-field |#)
 
 
 ;;;; done
