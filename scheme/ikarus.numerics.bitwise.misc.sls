@@ -40,22 +40,12 @@
     (ikarus system $bignums)
     (ikarus system $flonums)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
-	    unsafe.))
+    (vicare arguments validation))
 
 
-;;;; arguments validation
+(module (bitwise-first-bit-set
+	 fxfirst-bit-set)
 
-(define-argument-validation (fixnum who obj)
-  (fixnum? obj)
-  (assertion-violation who "expected fixnum as argument" obj))
-
-(define-argument-validation (fixnum-index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
-  (assertion-violation who "expected fixnum as index argument" obj))
-
-
-(module (bitwise-first-bit-set fxfirst-bit-set)
   (define (byte-first-bit-set x i)
     (import (ikarus system $bytevectors))
     (define-syntax make-first-bit-set-bytevector
@@ -72,16 +62,19 @@
                   (else (cons (fst i) (f (+ i 1))))))))))
     (define bv (make-first-bit-set-bytevector))
     ($fx+ i ($bytevector-u8-ref bv x)))
+
   (define ($fxloop x i)
     (let ((y ($fxlogand x 255)))
       (if ($fx= y 0)
 	  ($fxloop ($fxsra x 8) ($fx+ i 8))
 	(byte-first-bit-set y i))))
+
   (define ($bnloop x i idx)
     (let ((b ($bignum-byte-ref x idx)))
       (if ($fxzero? b)
 	  ($bnloop x ($fx+ i 8) ($fx+ idx 1))
 	(byte-first-bit-set b i))))
+
   (define ($fxfirst-bit-set x)
     (if ($fx> x 0)
 	($fxloop x 0)
@@ -90,24 +83,30 @@
 	(if ($fx> x (least-fixnum))
 	    ($fxloop ($fx- 0 x) 0)
 	  ($bnloop (- x) 0 0)))))
+
   (define (fxfirst-bit-set x)
-    (cond
-     ((fixnum? x)
-      ($fxfirst-bit-set x))
-     (else (die 'fxfirst-bit-set "not a fixnum" x))))
+    (define who 'fxfirst-bit-set)
+    (with-arguments-validation (who)
+	((fixnum	x))
+      ($fxfirst-bit-set x)))
+
   (define (bitwise-first-bit-set x)
-    (cond
-     ((fixnum? x)
-      ($fxfirst-bit-set x))
-     ((bignum? x) ($bnloop x 0 0))
-     (else (die 'bitwise-first-bit-set "not an exact integer" x)))))
+    (define who 'bitwise-first-bit-set)
+    (with-arguments-validation (who)
+	((exact-integer	x))
+      (if (fixnum? x)
+	  ($fxfirst-bit-set x)
+	($bnloop x 0 0))))
+
+  #| end of module: |# )
 
 
 (module (fxbit-count bitwise-bit-count)
+
   (define (pos-fxbitcount n)
       ;;; nifty parrallel count from:
       ;;; http://infolab.stanford.edu/~manku/bitcount/bitcount.html
-    (case (fixnum-width)
+    (case-fixnums (fixnum-width)
       ((30)
        (let ((m0 #x15555555)
 	     (m1 #x13333333)
@@ -126,60 +125,71 @@
 		(n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2)))
 		(n ($fx+ ($fxlogand n m3) ($fxlogand ($fxsra n 8) m3))))
 	   (fxmodulo n 255))))))
+
   (define ($fxbitcount n)
     (if ($fx< n 0)
 	(fxlognot (pos-fxbitcount (fxlognot n)))
       (pos-fxbitcount n)))
-  (define (bnbitcount n)
-    (define (poscount x idx c)
-      (let ((c (+ c
-		  ($fx+ (pos-fxbitcount
-			 ($fxlogor
-			  ($fxsll ($bignum-byte-ref x ($fx+ idx 3)) 8)
-			  ($bignum-byte-ref x ($fx+ idx 2))))
-			(pos-fxbitcount
-			 ($fxlogor
-			  ($fxsll ($bignum-byte-ref x ($fxadd1 idx)) 8)
-			  ($bignum-byte-ref x idx)))))))
+
+  (module (bnbitcount)
+
+    (define (bnbitcount n)
+      (if ($bignum-positive? n)
+	  (%poscount n ($fx- ($bignum-size n) 4) 0)
+	(let ((n (bitwise-not n)))
+	  (bitwise-not (%poscount n ($fx- ($bignum-size n) 4) 0)))))
+
+    (define (%poscount x idx c)
+      (let ((c (+ c ($fx+ (pos-fxbitcount ($fxlogor
+					   ($fxsll ($bignum-byte-ref x ($fx+ idx 3)) 8)
+					   ($bignum-byte-ref x ($fx+ idx 2))))
+			  (pos-fxbitcount ($fxlogor
+					   ($fxsll ($bignum-byte-ref x ($fxadd1 idx)) 8)
+					   ($bignum-byte-ref x idx)))))))
 	(if ($fx= idx 0)
 	    c
-	  (poscount x ($fx- idx 4) c))))
-    (if ($bignum-positive? n)
-	(poscount n ($fx- ($bignum-size n) 4) 0)
-      (let ((n (bitwise-not n)))
-	(bitwise-not (poscount n ($fx- ($bignum-size n) 4) 0)))))
+	  (%poscount x ($fx- idx 4) c))))
+
+    #| end of module: bnbitcount |# )
+
   (define (fxbit-count n)
     ;;FIXME  To be  checked against  R6RS  errata (Marco  Maggi; Nov  5,
     ;;2011).
     ;;
-    (cond
-     ((fixnum? n) ($fxbitcount n))
-     (else (die 'fxbit-count "not a fixnum" n))))
+    (define who 'fxbit-count)
+    (with-arguments-validation (who)
+	((fixnum	n))
+      ($fxbitcount n)))
+
   (define (bitwise-bit-count n)
-    (cond
-     ((fixnum? n) ($fxbitcount n))
-     ((bignum? n) (bnbitcount n))
-     (else (die 'bitwise-bit-count "not an exact integer" n)))))
+    (define who 'bitwise-bit-count)
+    (with-arguments-validation (who)
+	((exact-integer	n))
+      (if (fixnum? n)
+	  ($fxbitcount n)
+	(bnbitcount n))))
+
+  #| end of module |# )
 
 
 (define (fxlength x)
   (define who 'fxlength)
   (define (fxlength32 x)
-    (let* ((fl  (unsafe.fixnum->flonum x))
-	   (sbe (unsafe.fxlogor (unsafe.fxsll ($flonum-u8-ref fl 0) 4)
-				(unsafe.fxsra ($flonum-u8-ref fl 1) 4))))
-      (if (unsafe.fx= sbe 0)
+    (let* ((fl  ($fixnum->flonum x))
+	   (sbe ($fxlogor ($fxsll ($flonum-u8-ref fl 0) 4)
+				($fxsra ($flonum-u8-ref fl 1) 4))))
+      (if ($fx= sbe 0)
 	  0
-	(unsafe.fx- sbe 1022))))
+	($fx- sbe 1022))))
   (define (fxlength64 x)
-    (if (unsafe.fx> x #x7FFFFFFF)
-	(unsafe.fx+ 31 (fxlength32 (unsafe.fxsra x 31)))
+    (if ($fx> x #x7FFFFFFF)
+	($fx+ 31 (fxlength32 ($fxsra x 31)))
       (fxlength32 x)))
   (with-arguments-validation (who)
       ((fixnum x))
-    (if (unsafe.fx= 30 (fixnum-width))
-	(fxlength32 (if (unsafe.fx< x 0) (unsafe.fxnot x) x))
-      (fxlength64 (if (unsafe.fx< x 0) (unsafe.fxnot x) x)))))
+    (if ($fx= 30 (fixnum-width))
+	(fxlength32 (if ($fx< x 0) ($fxlognot x) x))
+      (fxlength64 (if ($fx< x 0) ($fxlognot x) x)))))
 
 (define (fxbit-set? x i)
   ;;Updated to the R6RS errata (Marco Maggi; Nov 5, 2011).
@@ -188,89 +198,89 @@
   (with-arguments-validation (who)
       ((fixnum        x)
        (fixnum-index  i))
-    (if (unsafe.fx>= i (unsafe.fxsub1 (fixnum-width)))
-	(unsafe.fx< x 0)
-      (not (unsafe.fxzero? (unsafe.fxand (unsafe.fxsra x i) 1))))))
+    (if ($fx>= i ($fxsub1 (fixnum-width)))
+	($fx< x 0)
+      (not ($fxzero? ($fxlogand ($fxsra x i) 1))))))
 
 (define (bitwise-bit-set? x i)
   (define who 'bitwise-bit-set?)
   (cond ((fixnum? i)
-	 (when (unsafe.fx< i 0)
-	   (die who "index must be non-negative" i))
+	 (when ($fx< i 0)
+	   (assertion-violation who "index must be non-negative" i))
 	 (cond ((fixnum? x)
-		(if (unsafe.fx< i (fixnum-width))
-		    (unsafe.fx= (unsafe.fxlogand (unsafe.fxsra x i) 1) 1)
-		  (unsafe.fx< x 0)))
+		(if ($fx< i (fixnum-width))
+		    ($fx= ($fxlogand ($fxsra x i) 1) 1)
+		  ($fx< x 0)))
 	       ((bignum? x)
 		(let ((n ($bignum-size x)))
-		  (let ((m (unsafe.fx* n 8)))
-		    (cond ((unsafe.fx< m i)
+		  (let ((m ($fx* n 8)))
+		    (cond (($fx< m i)
 			   (not ($bignum-positive? x)))
 			  (($bignum-positive? x)
-			   (let ((b ($bignum-byte-ref x (unsafe.fxsra i 3))))
-			     (unsafe.fx= (unsafe.fxlogand (unsafe.fxsra b (unsafe.fxlogand i 7)) 1) 1)))
+			   (let ((b ($bignum-byte-ref x ($fxsra i 3))))
+			     ($fx= ($fxlogand ($fxsra b ($fxlogand i 7)) 1) 1)))
 			  (else
 			   (= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1)))))))
 	       (else
-		(die who "not an exact integer" x))))
+		(assertion-violation who "not an exact integer" x))))
 	((bignum? i)
 	 (unless ($bignum-positive? i)
-	   (die who "index must be non-negative"))
+	   (assertion-violation who "index must be non-negative"))
 	 (cond ((fixnum? x)
-		(unsafe.fx< x 0))
+		($fx< x 0))
 	       ((bignum? x)
 		(= 1 (bitwise-and (bitwise-arithmetic-shift-right x i) 1)))
 	       (else
-		(die who "not an exact integer" x))))
+		(assertion-violation who "not an exact integer" x))))
 	(else
-	 (die who "index is not an exact integer" i))))
+	 (assertion-violation who "index is not an exact integer" i))))
 
 
 (define (fxcopy-bit x i b)
   (define who 'fxcopy-bit)
   (if (fixnum? x)
       (if (fixnum? i)
-	  (if (and (unsafe.fx<= 0 i) (unsafe.fx< i (fixnum-width)))
+	  (if (and ($fx<= 0 i) ($fx< i (fixnum-width)))
 	      (case b
-		((0) (unsafe.fxlogand x (unsafe.fxnot (unsafe.fxsll 1 i))))
-		((1) (unsafe.fxlogor x (unsafe.fxsll 1 i)))
-		(else (die who "invalid bit value" b)))
-	    (die who "index out of range" i))
-	(die who "index is not a fixnum" i))
-    (die who "not a fixnum" x)))
+		((0) ($fxlogand x ($fxlognot ($fxsll 1 i))))
+		((1) ($fxlogor x ($fxsll 1 i)))
+		(else (assertion-violation who "invalid bit value" b)))
+	    (assertion-violation who "index out of range" i))
+	(assertion-violation who "index is not a fixnum" i))
+    (assertion-violation who "not a fixnum" x)))
 
 (define (fxcopy-bit-field x i j b)
   (define who 'fxcopy-bit-field)
   (if (fixnum? x)
       (if (fixnum? i)
-	  (if (unsafe.fx<= 0 i)
+	  (if ($fx<= 0 i)
 	      (if (fixnum? j)
-		  (if (unsafe.fx< j (fixnum-width))
-		      (if (unsafe.fx<= i j)
+		  (if ($fx< j (fixnum-width))
+		      (if ($fx<= i j)
 			  (if (fixnum? b)
 			      (let ((m
-				     (unsafe.fxlogxor
-				      (unsafe.fxsub1 (unsafe.fxsll 1 i))
-				      (unsafe.fxsub1 (unsafe.fxsll 1 j)))))
-				(unsafe.fxlogor
-				 (unsafe.fxlogand m (unsafe.fxsll b i))
-				 (unsafe.fxlogand (unsafe.fxnot m) x)))
-			    (die who "not a fixnum" b))
-			(if (unsafe.fx<= 0 j)
-			    (die who "index out of range" j)
-			  (die who "indices not in order" i j)))
-		    (die who "index out of range" j))
-		(die who "not a fixnum" j))
-	    (die who "index out of range" i))
-	(die who "not a fixnum" i))
-    (die who "not a fixnum" x)))
+				     ($fxlogxor
+				      ($fxsub1 ($fxsll 1 i))
+				      ($fxsub1 ($fxsll 1 j)))))
+				($fxlogor
+				 ($fxlogand m ($fxsll b i))
+				 ($fxlogand ($fxlognot m) x)))
+			    (assertion-violation who "not a fixnum" b))
+			(if ($fx<= 0 j)
+			    (assertion-violation who "index out of range" j)
+			  (assertion-violation who "indices not in order" i j)))
+		    (assertion-violation who "index out of range" j))
+		(assertion-violation who "not a fixnum" j))
+	    (assertion-violation who "index out of range" i))
+	(assertion-violation who "not a fixnum" i))
+    (assertion-violation who "not a fixnum" x)))
 
-(define (unsafe.fxrotate-bit-field x i j c w)
-  (let ((m (unsafe.fxsll (unsafe.fxsub1 (unsafe.fxsll 1 w)) i)))
-    (let ((x0 (unsafe.fxlogand x m)))
-      (let ((lt (unsafe.fxsll x0 c)) (rt (unsafe.fxsra x0 (unsafe.fx- w c))))
-	(let ((x0 (unsafe.fxlogand (unsafe.fxlogor lt rt) m)))
-	  (unsafe.fxlogor x0 (unsafe.fxlogand x (unsafe.fxnot m))))))))
+(define ($fxrotate-bit-field x i j c w)
+  (let ((m ($fxsll ($fxsub1 ($fxsll 1 w)) i)))
+    (let ((x0 ($fxlogand x m)))
+      (let ((lt ($fxsll x0 c)) (rt ($fxsra x0 ($fx- w c))))
+	(let ((x0 ($fxlogand ($fxlogor lt rt) m)))
+	  ($fxlogor x0 ($fxlogand x ($fxlognot m))))))))
 
 (define (fxrotate-bit-field x i j c)
   ;;FIXME  This must  be checked  and eventually  updated from  the R6RS
@@ -279,22 +289,22 @@
   (define who 'fxrotate-bit-field)
   (if (fixnum? x)
       (if (fixnum? i)
-	  (if (unsafe.fx>= i 0)
+	  (if ($fx>= i 0)
 	      (if (fixnum? j)
-		  (if (unsafe.fx< j (fixnum-width))
-		      (let ((w (unsafe.fx- j i)))
-			(if (unsafe.fx>= w 0)
+		  (if ($fx< j (fixnum-width))
+		      (let ((w ($fx- j i)))
+			(if ($fx>= w 0)
 			    (if (fixnum? c)
-				(if (and (unsafe.fx>= c 0) (unsafe.fx< c w))
-				    (unsafe.fxrotate-bit-field x i j c w)
-				  (die who "count is invalid" c))
-			      (die who "count is not a fixnum" c))
-			  (die who "field width is negative" i j)))
-		    (die who "end index is out of range" j))
-		(die who "end index is not a fixnum" j))
-	    (die who "start index is out of range" i))
-	(die who "start index is not a fixnum" i))
-    (die who "not a fixnum" x)))
+				(if (and ($fx>= c 0) ($fx< c w))
+				    ($fxrotate-bit-field x i j c w)
+				  (assertion-violation who "count is invalid" c))
+			      (assertion-violation who "count is not a fixnum" c))
+			  (assertion-violation who "field width is negative" i j)))
+		    (assertion-violation who "end index is out of range" j))
+		(assertion-violation who "end index is not a fixnum" j))
+	    (assertion-violation who "start index is out of range" i))
+	(assertion-violation who "start index is not a fixnum" i))
+    (assertion-violation who "not a fixnum" x)))
 
 (define (fxreverse-bit-field v start end)
 
@@ -415,21 +425,21 @@
   (define who 'fxbit-field)
   (if (fixnum? x)
       (if (fixnum? i)
-	  (if (unsafe.fx<= 0 i)
+	  (if ($fx<= 0 i)
 	      (if (fixnum? j)
-		  (if (unsafe.fx< j (fixnum-width))
-		      (if (unsafe.fx<= i j)
-			  (unsafe.fxsra
-			   (unsafe.fxlogand x (unsafe.fxsub1 (unsafe.fxsll 1 j)))
+		  (if ($fx< j (fixnum-width))
+		      (if ($fx<= i j)
+			  ($fxsra
+			   ($fxlogand x ($fxsub1 ($fxsll 1 j)))
 			   i)
-			(if (unsafe.fx<= 0 j)
-			    (die who "index out of range" j)
-			  (die who "indices not in order" i j)))
-		    (die who "index out of range" j))
-		(die who "not a fixnum" j))
-	    (die who "index out of range" i))
-	(die who "not a fixnum" i))
-    (die who "not a fixnum" x)))
+			(if ($fx<= 0 j)
+			    (assertion-violation who "index out of range" j)
+			  (assertion-violation who "indices not in order" i j)))
+		    (assertion-violation who "index out of range" j))
+		(assertion-violation who "not a fixnum" j))
+	    (assertion-violation who "index out of range" i))
+	(assertion-violation who "not a fixnum" i))
+    (assertion-violation who "not a fixnum" x)))
 
 
 ;;;; done
