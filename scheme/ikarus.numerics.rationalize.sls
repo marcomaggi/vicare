@@ -17,59 +17,93 @@
 
 (library (ikarus rationalize)
   (export rationalize)
-  (import
-    (except (ikarus) rationalize))
+  (import (except (ikarus)
+		  rationalize)
+    (vicare syntactic-extensions))
 
-  (define (rationalize x eps)
-    (define who 'rationalize)
-    (define (simplest x y)
-      (cond
-        ((< y x) (simplest y x))
-        ((= x y) x)
-        ((> x 0)
-         (let ((n (numerator x)) (d (denominator x))
-               (n^ (numerator y)) (d^ (denominator y)))
-           (simplest^ n d n^ d^)))
-        ((< y 0)
-         (let ((n (numerator x)) (d (denominator x))
-               (n^ (numerator y)) (d^ (denominator y)))
-           (- (simplest^ (- n^) d^ (- n) d))))
-        (else 0)))
-    (define (simplest^ n d n^ d^)
-      (let-values (((q r) (div-and-mod n d)))
-        (if (= r 0)
-            q
-            (let-values (((q^ r^) (div-and-mod n^ d^)))
-              (if (= q q^)
-                  (let ((v (simplest^ d^ r^ d r)))
-                    (let ((n^^ (numerator v)) (d^^ (denominator v)))
-                      (/ (+ (* q n^^) d^^) n^^)))
-                  (+ q 1))))))
-    (define (go x eps)
-      (simplest (- x eps) (+ x eps)))
-    (cond
-      ((flonum? x)
-       (if (flfinite? x)
-           (cond
-             ((flonum? eps)
-              (if (flfinite? eps) (go x eps) +0.0))
-             ((or (fixnum? eps) (bignum? eps) (ratnum? eps))
-              (go x eps))
-             (else (die who "not a number" eps)))
-           (cond
-             ((flonum? eps)
-              (if (flfinite? eps) x +nan.0))
-             ((or (fixnum? eps) (bignum? eps) (ratnum? eps))
-              x)
-             (else (die who "not a number" eps)))))
-      ((or (fixnum? x) (bignum? x) (ratnum? x))
-       (cond
-         ((flonum? eps)
-          (if (flfinite? eps) (go x eps) +0.0))
-         ((or (fixnum? eps) (bignum? eps) (ratnum? eps))
-          (go x eps))
-         (else (die who "not a number" eps))))
-      (else (die who "not a number" x))))
+
+(define who 'rationalize)
+
+(define (rationalize x eps)
+  (cond ((flonum? x)
+	 (if (flfinite? x)
+	     (cond ((flonum? eps)
+		    (if (flfinite? eps)
+			(%go x eps)
+		      +0.0))
+		   ((or (fixnum? eps)
+			(bignum? eps)
+			(ratnum? eps))
+		    (%go x eps))
+		   (else
+		    (%error-not-a-number eps)))
+	   (cond ((flonum? eps)
+		  (if (flfinite? eps)
+		      x
+		    +nan.0))
+		 ((or (fixnum? eps)
+		      (bignum? eps)
+		      (ratnum? eps))
+		  x)
+		 (else
+		  (%error-not-a-number eps)))))
+
+	((or (fixnum? x)
+	     (bignum? x)
+	     (ratnum? x))
+	 (cond ((flonum? eps)
+		(if (flfinite? eps)
+		    (%go x eps)
+		  +0.0))
+	       ((or (fixnum? eps)
+		    (bignum? eps)
+		    (ratnum? eps))
+		(%go x eps))
+	       (else
+		(%error-not-a-number eps))))
+
+	(else
+	 (%error-not-a-number eps))))
+
+(define (%go x eps)
+  (%simplest (- x eps) (+ x eps)))
+
+(define (%simplest^ n d n^ d^)
+  (receive (q r)
+      (div-and-mod n d)
+    (if (= r 0)
+	q
+      (receive (q^ r^)
+	  (div-and-mod n^ d^)
+	(if (= q q^)
+	    (let* ((v   (%simplest^ d^ r^ d r))
+		   (n^^ (numerator   v))
+		   (d^^ (denominator v)))
+	      (/ (+ (* q n^^) d^^) n^^))
+	  (+ q 1))))))
+
+(define (%simplest x y)
+  (cond ((< y x)
+	 (%simplest y x))
+	((= x y)
+	 x)
+	((> x 0)
+	 (let ((n  (numerator   x))
+	       (d  (denominator x))
+	       (n^ (numerator   y))
+	       (d^ (denominator y)))
+	   (%simplest^ n d n^ d^)))
+	((< y 0)
+	 (let ((n  (numerator   x))
+	       (d  (denominator x))
+	       (n^ (numerator   y))
+	       (d^ (denominator y)))
+	   (- (%simplest^ (- n^) d^ (- n) d))))
+	(else
+	 0)))
+
+(define (%error-not-a-number obj)
+  (assertion-violation who "expected number as argument" obj))
 
 
 ;;;; done
