@@ -21960,6 +21960,46 @@ Wrapper for @func{let-syntax}, expand to:
 @end example
 @end defmac
 
+
+@deffn Syntax receive @var{formals} @var{expression} . @var{body}
+The mechanism provided for binding identifiers to the values of a
+multiple--valued expression are @func{call-with-values},
+@func{let-values}, @func{let*-values}.  @func{receive} is another
+concise and readable syntax for creating such bindings.
+
+@var{formals} can have any of 3 forms:
+
+@table @code
+@item (@vari{variable} ... @varn{variable})
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @vari{variable}, ..., @varn{variable} to fresh
+locations.  The @var{expression} is evaluated, and its values are
+stored into those locations (it is an error if @var{expression} does
+not have exactly @math{N} values).
+
+@item @var{variable}
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @var{variable} to a fresh location.  The
+@var{expression} is evaluated, its values are converted into a newly
+allocated list, and the list is stored in the location bound to
+@var{variable}.
+
+@item (@vari{variable} ... @varn{variable} . @varni{variable})
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @vari{variable}, ..., @varni{variable} to fresh
+locations.  The @var{expression} is evaluated.  Its first @math{N}
+values are stored into the locations bound to @vari{variable}, ...,
+@varn{variable}.  Any remaining values are converted into a newly
+allocated list, which is stored into the location bound to
+@varni{variable} (it is an error if @var{expression} does not have at
+least @math{N} values.
+@end table
+
+In any case, the expressions in @var{body} are evaluated sequentially in
+the extended environment.  The results of the last expression in the
+body are the values of the @var{receive}--expression.
+@end deffn
+
 @c page
 @node syntaxes sequencing
 @subsection Sequencing execution
