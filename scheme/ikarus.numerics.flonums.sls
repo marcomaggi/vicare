@@ -22,6 +22,8 @@
     fixnum->flonum
 
     flzero?		$flzero?
+    flzero?/positive	$flzero?/positive
+    flzero?/negative	$flzero?/negative
     flpositive?		$flpositive?
     flnegative?		$flnegative?
     fleven?		$fleven?
@@ -92,6 +94,8 @@
     (except (ikarus system $flonums)
 	    $flonum->exact
 	    $flzero?
+	    $flzero?/positive
+	    $flzero?/negative
 	    $flpositive?
 	    $flnegative?
 	    $fleven?
@@ -421,6 +425,8 @@
 ;;; --------------------------------------------------------------------
 
 (define-fl-operation/one flzero? $flzero?)
+(define-fl-operation/one flzero?/positive $flzero?/positive)
+(define-fl-operation/one flzero?/negative $flzero?/negative)
 
 (define ($flzero? x)
   (let ((be ($fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
@@ -432,6 +438,14 @@
 	      ($fx= ($flonum-u8-ref x 3) 0)
 	      ($fx= ($flonum-u8-ref x 2) 0)
 	      ($fx= ($flonum-u8-ref x 1) 0)))))
+
+(define ($flzero?/positive x)
+  (and ($flzero? x)
+       ($fxzero? ($fxlogand ($flonum-u8-ref x 0) 128))))
+
+(define ($flzero?/negative x)
+  (and ($flzero? x)
+       (not ($fxzero? ($fxlogand ($flonum-u8-ref x 0) 128)))))
 
 (define-fl-operation/one flpositive? $flpositive?)
 (define-fl-operation/one flnegative? $flnegative?)

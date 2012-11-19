@@ -34,6 +34,63 @@
 (check-display "*** testing Vicare flonum functions\n")
 
 
+(parametrise ((check-test-name	'predicates))
+
+  (check
+      (flzero? +0.0)
+    => #t)
+
+  (check
+      (flzero? -0.0)
+    => #t)
+
+  (check
+      (flzero? -123.0)
+    => #f)
+
+  (check
+      (flzero? -123.0)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (flzero?/positive +0.0)
+    => #t)
+
+  (check
+      (flzero?/positive -0.0)
+    => #f)
+
+  (check
+      (flzero?/positive -123.0)
+    => #f)
+
+  (check
+      (flzero?/positive -123.0)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (flzero?/negative +0.0)
+    => #f)
+
+  (check
+      (flzero?/negative -0.0)
+    => #t)
+
+  (check
+      (flzero?/negative -123.0)
+    => #f)
+
+  (check
+      (flzero?/negative -123.0)
+    => #f)
+
+  #t)
+
+
 (parametrise ((check-test-name	'debug))
 
   (when #f

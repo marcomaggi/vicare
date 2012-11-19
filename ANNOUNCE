@@ -113,6 +113,11 @@ Notes for revision 0.2d20
 
 * Added convenience function TCP-CONNECT to (vicare posix).
 
+* Added functions to (vicare):
+
+     flzero?/positive
+     flzero?/negative
+
 
 Notes for revision 0.2d19
 -------------------------

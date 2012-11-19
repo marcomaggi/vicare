@@ -3786,6 +3786,17 @@ The following bindings are exported by the @library{ikarus} and
 @subsubheading String conversion
 
 
+@defun flzero?/positive @var{fl}
+@defunx flzero?/negative @var{fl}
+Return true if the operand is @code{+0.0} or @code{-0.0}, respectively.
+Notice that @func{flzero?} does @strong{not} make this distinction.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading String conversion
+
+
 @defun string->flonum @var{fl}
 @defunx flonum->string @var{str}
 Convert between a flonum and its string representation.
@@ -16141,7 +16152,14 @@ result.
 
 
 @deffn {Unsafe Operation} $flzero? @var{fl}
-Return true if the operand is zero.
+Return true if the operand is zero.  Notice that the return value will
+be true for both @code{+0.0} or @code{-0.0}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flzero?/positive @var{fl}
+@deffnx {Unsafe Operation} $flzero?/negative @var{fl}
+Return true if the operand is @code{+0.0} or @code{-0.0}, respectively.
 @end deffn
 
 

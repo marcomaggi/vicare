@@ -1514,7 +1514,7 @@
        ;;If X is  negative: omit the sign here, a  negative sign will be
        ;;inserted by $NUMBER->STRING.
        ((or (< x 0)
-	    (and (flonum? x)
+	    #;(and (flonum? x)
 		 ($fl= x -0.0)))
 	($number->string x radix))
        ;;If we are here X is exact zero or positive.
@@ -1531,6 +1531,15 @@
 ;;; --------------------------------------------------------------------
 
   (module (bignum->string)
+
+    (define (bignum->string x r)
+      (case-fixnums r
+	((10) (bignum->decimal-string x))
+	((2)  (bignum->power-string x  1 1))
+	((8)  (bignum->power-string x  7 3))
+	((16) (bignum->power-string x 15 4))
+	(else
+	 (assertion-violation who "BUG"))))
 
     (define (bignum->decimal-string x)
       (utf8->string (foreign-call "ikrt_bignum_to_bytevector" x)))
@@ -1573,14 +1582,6 @@
 			       (string-ref string-map
 					   ($fxlogand mask b)))
 		  (f ($fxadd1 i) j ($fx- k shift) ($fxsra b shift))))))))))
-
-    (define (bignum->string x r)
-      (case r
-	((10) (bignum->decimal-string x))
-	((2)  (bignum->power-string x  1 1))
-	((8)  (bignum->power-string x  7 3))
-	((16) (bignum->power-string x 15 4))
-	(else (assertion-violation who "BUG"))))
 
     #| end of module: bignum->string |# )
 
