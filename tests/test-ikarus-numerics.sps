@@ -32,17 +32,17 @@
 
 (define (test-rounding)
   (define (test-round x)
-    (let ([rx (round x)])
+    (define who 'test-round)
+    (let ((rx (round x)))
       (unless (integer? rx)
-	(error 'test-round "not an integer result for" x rx))
-      (let ([diff (abs (- (abs x) (abs rx)))])
-	(cond
-	 [(= diff 1/2)
-	  (unless (even? rx)
-	    (error 'test-round "non-even rounding for" x rx))]
-	 [else
-	  (unless (< diff 1/2)
-	    (error 'test-round "rounding the wrong way for" x rx))]))))
+	(error who "not an integer result for" x rx))
+      (let ((diff (abs (- (abs x) (abs rx)))))
+	(cond ((= diff 1/2)
+	       (unless (even? rx)
+		 (error who "non-even rounding for" x rx)))
+	      (else
+	       (unless (< diff 1/2)
+		 (error who "rounding the wrong way for" x rx)))))))
   (test-round -251/100)
   (test-round -250/100)
   (test-round -249/100)
@@ -110,7 +110,7 @@
 (define (test-exact-integer-sqrt)
   (define (f i j inc)
     (when (< i j)
-      (let-values ([(s r) (exact-integer-sqrt i)])
+      (let-values (((s r) (exact-integer-sqrt i)))
 	(unless (and (= (+ (* s s) r) i)
 		     (< i (* (+ s 1) (+ s 1))))
 	  (error 'exact-integer-sqrt "wrong result" i))

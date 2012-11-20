@@ -1112,7 +1112,7 @@
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      (binary/ ($ratnum-number x.num ($fixnum*number y x.den))
+      (binary/ (binary- x.num ($fixnum*number y x.den))
 	       x.den)))
 
   (define ($ratnum-bignum x y)
@@ -1122,7 +1122,7 @@
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      (binary/ ($ratnum-number x.num ($bignum*number y x.den))
+      (binary/ (binary- x.num ($bignum*number y x.den))
 	       x.den)))
 
   (define ($ratnum-flonum x y)
@@ -1132,7 +1132,7 @@
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      (binary/ ($ratnum-number x.num ($flonum*number y x.den))
+      (binary/ (binary- x.num ($flonum*number y x.den))
 	       x.den)))
 
   (define ($ratnum-ratnum x y)
