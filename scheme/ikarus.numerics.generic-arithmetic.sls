@@ -56,7 +56,8 @@
 
 (library (ikarus generic-arithmetic)
   (export
-    + - * / = < <= > >=
+    + - * /
+    = < <= > >=
     min				max
     add1			sub1
     quotient			remainder
@@ -209,71 +210,41 @@
     (vicare syntactic-extensions))
 
 
+;;;; helpers
+
+(define (err who x)
+  (die who (if (number? x) "invalid argument" "not a number") x))
+
+
+;;;; conversion between numeric representations
+
 (define (bignum->flonum x)
   (foreign-call "ikrt_bignum_to_flonum" x 0 ($make-flonum)))
 
-;; (define (ratnum->flonum x)
-;;   (define (->flonum n d)
-;;     (let-values (((q r) (quotient+remainder n d)))
-;;       (if (= r 0)
-;;           (inexact q)
-;;           (if (= q 0)
-;;               (/ (->flonum d n))
-;;               (+ q (->flonum r d))))))
-;;   (let ((n (numerator x)) (d (denominator x)))
-;;     (let ((b (bitwise-first-bit-set n)))
-;;       (if (eqv? b 0)
-;;           (let ((b (bitwise-first-bit-set d)))
-;;             (if (eqv? b 0)
-;;                 (->flonum n d)
-;;                 (/ (->flonum n (bitwise-arithmetic-shift-right d b))
-;;                    (expt 2.0 b))))
-;;           (* (->flonum (bitwise-arithmetic-shift-right n b) d)
-;;              (expt 2.0 b))))))
+(module (ratnum->flonum)
 
-;; (define (ratnum->flonum x)
-;;   (let f ((n ($ratnum-n x)) (d ($ratnum-d x)))
-;;     (let-values (((q r) (quotient+remainder n d)))
-;;       (if (= q 0)
-;;           (/ 1.0 (f d n))
-;;           (if (= r 0)
-;;               (inexact q)
-;;               (+ q (f r d)))))))
+  (define (ratnum->flonum num)
+    (let ((n ($ratnum-n num)) (d ($ratnum-d num)))
+      (if (> n 0)
+	  (pos n d)
+	(- (pos (- n) d)))))
 
-;; (define (ratnum->flonum num)
-;;   (define (rat n m)
-;;     (let-values (((q r) (quotient+remainder n m)))
-;;        (if (= r 0)
-;;            (inexact q)
-;;            (fl+ (inexact q) (fl/ 1.0 (rat  m r))))))
-;;   (define (pos n d)
-;;     (cond
-;;       ((even? n)
-;;        (* (pos (sra n 1) d) 2.0))
-;;       ((even? d)
-;;        (/ (pos n (sra d 1)) 2.0))
-;;       ((> n d) (rat n d))
-;;       (else
-;;        (/ (rat d n)))))
-;;   (let ((n ($ratnum-n num)) (d ($ratnum-d num)))
-;;     (if (> n 0)
-;;         (pos n d)
-;;         (- (pos (- n) d)))))
-
-(define (ratnum->flonum num)
   (define *precision* 53)
+
   (define (long-div1 n d)
     (let-values (((q r) (quotient+remainder n d)))
       (cond
        ((< (* r 2) d) (inexact q))
        (else (inexact (+ q 1)))
-		;(else (error #f "invalid" n d q r))
+       ;;(else (error #f "invalid" n d q r))
        )))
+
   (define (long-div2 n d bits)
     (let f ((bits bits) (ac (long-div1 n d)))
       (cond
        ((= bits 0) ac)
        (else (f (- bits 1) (/ ac 2.0))))))
+
   (define (pos n d)
     (let ((nbits (bitwise-length n))
 	  (dbits (bitwise-length d)))
@@ -282,94 +253,56 @@
 	    (long-div1 n d)
 	  (let ((extra-bits (- *precision* diff-bits)))
 	    (long-div2 (sll n extra-bits) d extra-bits))))))
-  (let ((n ($ratnum-n num)) (d ($ratnum-d num)))
-    (if (> n 0)
-	(pos n d)
-      (- (pos (- n) d)))))
 
-(define (err who x)
-  (die who (if (number? x) "invalid argument" "not a number") x))
+  ;; (define (ratnum->flonum x)
+  ;;   (define (->flonum n d)
+  ;;     (let-values (((q r) (quotient+remainder n d)))
+  ;;       (if (= r 0)
+  ;;           (inexact q)
+  ;;           (if (= q 0)
+  ;;               (/ (->flonum d n))
+  ;;               (+ q (->flonum r d))))))
+  ;;   (let ((n (numerator x)) (d (denominator x)))
+  ;;     (let ((b (bitwise-first-bit-set n)))
+  ;;       (if (eqv? b 0)
+  ;;           (let ((b (bitwise-first-bit-set d)))
+  ;;             (if (eqv? b 0)
+  ;;                 (->flonum n d)
+  ;;                 (/ (->flonum n (bitwise-arithmetic-shift-right d b))
+  ;;                    (expt 2.0 b))))
+  ;;           (* (->flonum (bitwise-arithmetic-shift-right n b) d)
+  ;;              (expt 2.0 b))))))
 
-
-;;;; binary bitwise operations
+  ;; (define (ratnum->flonum x)
+  ;;   (let f ((n ($ratnum-n x)) (d ($ratnum-d x)))
+  ;;     (let-values (((q r) (quotient+remainder n d)))
+  ;;       (if (= q 0)
+  ;;           (/ 1.0 (f d n))
+  ;;           (if (= r 0)
+  ;;               (inexact q)
+  ;;               (+ q (f r d)))))))
 
-(define binary-bitwise-and
-  (lambda (x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y) ($fxlogand x y))
-       ((bignum? y)
-	(foreign-call "ikrt_fxbnlogand" x y))
-       (else
-	(die 'bitwise-and "not an exact integer" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(foreign-call "ikrt_fxbnlogand" y x))
-       ((bignum? y)
-	(foreign-call "ikrt_bnbnlogand" x y))
-       (else
-	(die 'bitwise-and "not an exact integer" y))))
-     (else (die 'bitwise-and "not an exact integer" x)))))
+  ;; (define (ratnum->flonum num)
+  ;;   (define (rat n m)
+  ;;     (let-values (((q r) (quotient+remainder n m)))
+  ;;        (if (= r 0)
+  ;;            (inexact q)
+  ;;            (fl+ (inexact q) (fl/ 1.0 (rat  m r))))))
+  ;;   (define (pos n d)
+  ;;     (cond
+  ;;       ((even? n)
+  ;;        (* (pos (sra n 1) d) 2.0))
+  ;;       ((even? d)
+  ;;        (/ (pos n (sra d 1)) 2.0))
+  ;;       ((> n d) (rat n d))
+  ;;       (else
+  ;;        (/ (rat d n)))))
+  ;;   (let ((n ($ratnum-n num)) (d ($ratnum-d num)))
+  ;;     (if (> n 0)
+  ;;         (pos n d)
+  ;;         (- (pos (- n) d)))))
 
-(define binary-bitwise-ior
-  (lambda (x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y) ($fxlogor x y))
-       ((bignum? y)
-	(foreign-call "ikrt_fxbnlogor" x y))
-       (else
-	(die 'bitwise-ior "not an exact integer" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(foreign-call "ikrt_fxbnlogor" y x))
-       ((bignum? y)
-	(foreign-call "ikrt_bnbnlogor" x y))
-       (else
-	(die 'bitwise-ior "not an exact integer" y))))
-     (else (die 'bitwise-ior "not an exact integer" x)))))
-
-
-(define binary-bitwise-xor
-  (lambda (x y)
-    (define (fxbn x y)
-      (let ((y0 (bitwise-and y (greatest-fixnum)))
-	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
-	(bitwise-ior
-	 ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
-	 (bitwise-arithmetic-shift-left
-	  (bitwise-arithmetic-shift-right
-	   (if ($fx>= x 0) y (bitwise-not y))
-	   (- (fixnum-width) 1))
-	  (- (fixnum-width) 1)))))
-    (define (bnbn x y)
-      (let ((x0 (bitwise-and x (greatest-fixnum)))
-	    (x1 (bitwise-arithmetic-shift-right x (- (fixnum-width) 1)))
-	    (y0 (bitwise-and y (greatest-fixnum)))
-	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
-	(bitwise-ior
-	 ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
-	 (bitwise-arithmetic-shift-left
-	  (binary-bitwise-xor x1 y1)
-	  (- (fixnum-width) 1)))))
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y) ($fxlogxor x y))
-       ((bignum? y) (fxbn x y))
-       (else
-	(die 'bitwise-xor "not an exact integer" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y) (fxbn y x))
-       ((bignum? y) (bnbn x y))
-       (else
-	(die 'bitwise-xor "not an exact integer" y))))
-     (else (die 'bitwise-xor "not an exact integer" x)))))
+  #| end of module |# )
 
 
 ;;;; generic arithmetic functions
@@ -2164,7 +2097,7 @@
   #| end of module: binary/ |# )
 
 
-;;;; bitwise operations
+;;;; common bitwise operations
 
 (define bitwise-and
   (case-lambda
@@ -2228,6 +2161,89 @@
    ((fixnum? x) ($fxlognot x))
    ((bignum? x) (foreign-call "ikrt_bnlognot" x))
    (else (die 'bitwise-not "invalid argument" x))))
+
+;;; --------------------------------------------------------------------
+
+(define binary-bitwise-and
+  (lambda (x y)
+    (cond
+     ((fixnum? x)
+      (cond
+       ((fixnum? y) ($fxlogand x y))
+       ((bignum? y)
+	(foreign-call "ikrt_fxbnlogand" x y))
+       (else
+	(die 'bitwise-and "not an exact integer" y))))
+     ((bignum? x)
+      (cond
+       ((fixnum? y)
+	(foreign-call "ikrt_fxbnlogand" y x))
+       ((bignum? y)
+	(foreign-call "ikrt_bnbnlogand" x y))
+       (else
+	(die 'bitwise-and "not an exact integer" y))))
+     (else (die 'bitwise-and "not an exact integer" x)))))
+
+(define binary-bitwise-ior
+  (lambda (x y)
+    (cond
+     ((fixnum? x)
+      (cond
+       ((fixnum? y) ($fxlogor x y))
+       ((bignum? y)
+	(foreign-call "ikrt_fxbnlogor" x y))
+       (else
+	(die 'bitwise-ior "not an exact integer" y))))
+     ((bignum? x)
+      (cond
+       ((fixnum? y)
+	(foreign-call "ikrt_fxbnlogor" y x))
+       ((bignum? y)
+	(foreign-call "ikrt_bnbnlogor" x y))
+       (else
+	(die 'bitwise-ior "not an exact integer" y))))
+     (else (die 'bitwise-ior "not an exact integer" x)))))
+
+
+(define binary-bitwise-xor
+  (lambda (x y)
+    (define (fxbn x y)
+      (let ((y0 (bitwise-and y (greatest-fixnum)))
+	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
+	(bitwise-ior
+	 ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
+	 (bitwise-arithmetic-shift-left
+	  (bitwise-arithmetic-shift-right
+	   (if ($fx>= x 0) y (bitwise-not y))
+	   (- (fixnum-width) 1))
+	  (- (fixnum-width) 1)))))
+    (define (bnbn x y)
+      (let ((x0 (bitwise-and x (greatest-fixnum)))
+	    (x1 (bitwise-arithmetic-shift-right x (- (fixnum-width) 1)))
+	    (y0 (bitwise-and y (greatest-fixnum)))
+	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
+	(bitwise-ior
+	 ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
+	 (bitwise-arithmetic-shift-left
+	  (binary-bitwise-xor x1 y1)
+	  (- (fixnum-width) 1)))))
+    (cond
+     ((fixnum? x)
+      (cond
+       ((fixnum? y) ($fxlogxor x y))
+       ((bignum? y) (fxbn x y))
+       (else
+	(die 'bitwise-xor "not an exact integer" y))))
+     ((bignum? x)
+      (cond
+       ((fixnum? y) (fxbn y x))
+       ((bignum? y) (bnbn x y))
+       (else
+	(die 'bitwise-xor "not an exact integer" y))))
+     (else (die 'bitwise-xor "not an exact integer" x)))))
+
+
+;;;; uncommon bitwise operations
 
 (define (bitwise-if x y z)
   (define who 'bitwise-if)
