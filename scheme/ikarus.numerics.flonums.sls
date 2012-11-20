@@ -71,6 +71,7 @@
   (import (except (ikarus)
 		  inexact->exact	exact		fixnum->flonum
 		  flzero?		flpositive?	flnegative?
+		  flzero?/positive	flzero?/negative
 		  fleven?		flodd?		flround
 		  flfloor		flceiling	fltruncate
 		  flnumerator		fldenominator	flabs

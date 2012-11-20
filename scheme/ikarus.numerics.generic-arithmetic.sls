@@ -624,136 +624,253 @@
 	(err '- y))))
      (else (err '- x)))))
 
-(define binary*
-  (lambda (x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y)
-	(foreign-call "ikrt_fxfxmult" x y))
-       ((bignum? y)
-	(foreign-call "ikrt_fxbnmult" x y))
-       ((flonum? y)
-	($fl* ($fixnum->flonum x) y))
-       ((ratnum? y)
-	(binary/ (binary* x ($ratnum-n y)) ($ratnum-d y)))
-       ((compnum? y)
-	($make-rectangular
-	 (binary* x ($compnum-real y))
-	 (binary* x ($compnum-imag y))))
-       ((cflonum? y)
-	($make-cflonum
-	 (binary* x ($cflonum-real y))
-	 (binary* x ($cflonum-imag y))))
-       (else (err '* y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(foreign-call "ikrt_fxbnmult" y x))
-       ((bignum? y)
-	(foreign-call "ikrt_bnbnmult" x y))
-       ((flonum? y)
-	($fl* (bignum->flonum x) y))
-       ((ratnum? y)
-	(binary/ (binary* x ($ratnum-n y)) ($ratnum-d y)))
-       ((compnum? y)
-	($make-rectangular
-	 (binary* x ($compnum-real y))
-	 (binary* x ($compnum-imag y))))
-       ((cflonum? y)
-	($make-cflonum
-	 (binary* x ($cflonum-real y))
-	 (binary* x ($cflonum-imag y))))
-       (else (err '* y))))
-     ((flonum? x)
-      (cond
-       ((flonum? y)
-	($fl* x y))
-       ((cflonum? y)
-	($make-cflonum
-	 ($fl* x ($cflonum-real y))
-	 ($fl* x ($cflonum-imag y))))
-       ((fixnum? y)
-	($fl* x ($fixnum->flonum y)))
-       ((bignum? y)
-	($fl* x (bignum->flonum y)))
-       ((ratnum? y)
-	(binary/ (binary* x ($ratnum-n y)) ($ratnum-d y)))
-       ((compnum? y)
-	($make-cflonum
-	 (binary* x ($compnum-real y))
-	 (binary* x ($compnum-imag y))))
-       (else (err '* y))))
-     ((ratnum? x)
-      (cond
-       ((ratnum? y)
-	(binary/ (binary* ($ratnum-n x) ($ratnum-n y))
-		 (binary* ($ratnum-d x) ($ratnum-d y))))
-       ((compnum? y)
-	($make-rectangular
-	 (binary* x ($compnum-real y))
-	 (binary* x ($compnum-imag y))))
-       ((cflonum? y)
-	($make-cflonum
-	 (binary* x ($cflonum-real y))
-	 (binary* x ($cflonum-imag y))))
-       (else (binary* y x))))
-     ((compnum? x)
-      (cond
-       ((or (fixnum? y) (bignum? y) (ratnum? y))
-	($make-rectangular
-	 (binary* ($compnum-real x) y)
-	 (binary* ($compnum-imag x) y)))
-       ((flonum? y)
-	($make-cflonum
-	 (binary* ($compnum-real x) y)
-	 (binary* ($compnum-imag x) y)))
-       ((compnum? y)
-	(let ((r0 ($compnum-real x))
-	      (r1 ($compnum-real y))
-	      (i0 ($compnum-imag x))
-	      (i1 ($compnum-imag y)))
-	  (make-rectangular
-	   (- (* r0 r1) (* i0 i1))
-	   (+ (* r0 i1) (* i0 r1)))))
-       ((cflonum? y)
-	(let ((r0 ($compnum-real x))
-	      (r1 ($cflonum-real y))
-	      (i0 ($compnum-imag x))
-	      (i1 ($cflonum-imag y)))
-	  (make-rectangular
-	   (- (* r0 r1) (* i0 i1))
-	   (+ (* r0 i1) (* i0 r1)))))
-       (else (err '* y))))
-     ((cflonum? x)
-      (cond
-       ((flonum? y)
-	($make-cflonum
-	 ($fl* ($cflonum-real x) y)
-	 ($fl* ($cflonum-imag x) y)))
-       ((cflonum? y)
-	(let ((r0 ($cflonum-real x))
-	      (r1 ($cflonum-real y))
-	      (i0 ($cflonum-imag x))
-	      (i1 ($cflonum-imag y)))
-	  ($make-cflonum
-	   ($fl- ($fl* r0 r1) ($fl* i0 i1))
-	   ($fl+ ($fl* r0 i1) ($fl* i0 r1)))))
-       ((or (fixnum? y) (bignum? y) (ratnum? y))
-	($make-cflonum
-	 (binary* ($compnum-real x) y)
-	 (binary* ($compnum-imag x) y)))
-       ((compnum? y)
-	(let ((r0 ($compnum-real x))
-	      (r1 ($compnum-real y))
-	      (i0 ($compnum-imag x))
-	      (i1 ($compnum-imag y)))
-	  (make-rectangular
-	   (- (* r0 r1) (* i0 i1))
-	   (+ (* r0 i1) (* i0 r1)))))
-       (else (err '* y))))
-     (else (err '* x)))))
+
+(module (binary*
+	 $fixnum*Y		$bignum*Y		$flonum*Y
+	 $ratnum*Y		$compnum*Y		$cflonum*Y
+	 $fixnum*fixnum		$fixnum*bignum		$fixnum*flonum
+	 $fixnum*ratnum		$fixnum*compnum		$fixnum*cflonum
+	 $bignum*fixnum		$bignum*bignum		$bignum*flonum
+	 $bignum*ratnum		$bignum*compnum		$bignum*cflonum
+	 $flonum*flonum		$flonum*cflonum		$flonum*fixnum
+	 $flonum*bignum		$flonum*ratnum		$flonum*compnum
+	 $ratnum*ratnum		$ratnum*compnum		$ratnum*cflonum
+	 $compnum*fixnum	$compnum*bignum		$compnum*ratnum
+	 $compnum*flonum	$compnum*compnum	$compnum*cflonum
+	 $cflonum*fixnum	$cflonum*bignum		$cflonum*ratnum
+	 $cflonum*flonum	$cflonum*compnum	$cflonum*cflonum)
+  (define who (quote *))
 
+  (define (binary* x y)
+    (cond-numeric-operand x
+      ((fixnum?)	($fixnum*Y  x y))
+      ((bignum?)	($bignum*Y  x y))
+      ((flonum?)	($flonum*Y  x y))
+      ((ratnum?)	($ratnum*Y  x y))
+      ((compnum?)	($compnum*Y x y))
+      ((cflonum?)	($cflonum*Y x y))
+      (else
+       (err who x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($fixnum*Y x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($fixnum*fixnum  x y))
+      ((bignum?)	($fixnum*bignum  x y))
+      ((flonum?)	($fixnum*flonum  x y))
+      ((ratnum?)	($fixnum*ratnum  x y))
+      ((compnum?)	($fixnum*compnum x y))
+      ((cflonum?)	($fixnum*cflonum x y))
+      (else
+       (err who y))))
+
+  (define ($bignum*Y x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($bignum*fixnum  x y))
+      ((bignum?)	($bignum*bignum  x y))
+      ((flonum?)	($bignum*flonum  x y))
+      ((ratnum?)	($bignum*ratnum  x y))
+      ((compnum?)	($bignum*compnum x y))
+      ((cflonum?)	($bignum*cflonum x y))
+      (else
+       (err who y))))
+
+  (define ($flonum*Y x y)
+    (cond-numeric-operand y
+      ((flonum?)	($flonum*flonum  x y))
+      ((cflonum?)	($flonum*cflonum x y))
+      ((fixnum?)	($flonum*fixnum  x y))
+      ((bignum?)	($flonum*bignum  x y))
+      ((ratnum?)	($flonum*ratnum  x y))
+      ((compnum?)	($flonum*compnum x y))
+      (else
+       (err who y))))
+
+  (define ($ratnum*Y x y)
+    (cond ((ratnum?  y)		($ratnum*ratnum  x y))
+	  ((compnum? y)		($ratnum*compnum x y))
+	  ((cflonum? y)		($ratnum*cflonum x y))
+	  (else
+	   (binary* y x))))
+
+  (define ($compnum*Y x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($compnum*fixnum  x y))
+      ((bignum?)	($compnum*bignum  x y))
+      ((ratnum?)	($compnum*ratnum  x y))
+      ((flonum?)	($compnum*flonum  x y))
+      ((compnum?)	($compnum*compnum x y))
+      ((cflonum?)	($compnum*cflonum x y))
+      (else
+       (err who y))))
+
+  (define ($cflonum*Y x y)
+    (cond-numeric-operand y
+      ((flonum?)	($cflonum*flonum  x y))
+      ((cflonum?)	($cflonum*cflonum x y))
+      ((fixnum?)	($cflonum*fixnum  x y))
+      ((bignum?)	($cflonum*bignum  x y))
+      ((ratnum?)	($cflonum*ratnum  x y))
+      ((compnum?)	($cflonum*compnum x y))
+      (else
+       (err who y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($fixnum*fixnum x y)
+    (foreign-call "ikrt_fxfxmult" x y))
+
+  (define ($fixnum*bignum x y)
+    (foreign-call "ikrt_fxbnmult" x y))
+
+  (define ($fixnum*flonum x y)
+    ($fl* ($fixnum->flonum x) y))
+
+  (define ($fixnum*ratnum x y)
+    (binary/ ($fixnum*Y x ($ratnum-n y))
+	     ($ratnum-d y)))
+
+  (define ($fixnum*compnum x y)
+    ($make-rectangular ($fixnum*Y x ($compnum-real y))
+		       ($fixnum*Y x ($compnum-imag y))))
+
+  (define ($fixnum*cflonum x y)
+    ($make-cflonum ($fixnum*flonum x ($cflonum-real y))
+		   ($fixnum*flonum x ($cflonum-imag y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bignum*fixnum x y)
+    (foreign-call "ikrt_fxbnmult" y x))
+
+  (define ($bignum*bignum x y)
+    (foreign-call "ikrt_bnbnmult" x y))
+
+  (define ($bignum*flonum x y)
+    ($fl* (bignum->flonum x) y))
+
+  (define ($bignum*ratnum x y)
+    (binary/ ($bignum*Y x ($ratnum-n y))
+	     ($ratnum-d y)))
+
+  (define ($bignum*compnum x y)
+    ($make-rectangular ($bignum*Y x ($compnum-real y))
+		       ($bignum*Y x ($compnum-imag y))))
+
+  (define ($bignum*cflonum x y)
+    ($make-cflonum ($bignum*flonum x ($cflonum-real y))
+		   ($bignum*flonum x ($cflonum-imag y))))
+
+;;; --------------------------------------------------------------------
+;;; flonum * Y = flonum or cflonum
+
+  (define ($flonum*flonum x y)
+    ($fl* x y))
+
+  (define ($flonum*cflonum x y)
+    ($make-cflonum ($fl* x ($cflonum-real y))
+		   ($fl* x ($cflonum-imag y))))
+
+  (define ($flonum*fixnum x y)
+    ($fl* x ($fixnum->flonum y)))
+
+  (define ($flonum*bignum x y)
+    ($fl* x (bignum->flonum y)))
+
+  (define ($flonum*ratnum x y)
+    (binary/ ($flonum*Y x ($ratnum-n y))
+	     ($ratnum-d y)))
+
+  (define ($flonum*compnum x y)
+    ($make-cflonum ($flonum*Y x ($compnum-real y))
+		   ($flonum*Y x ($compnum-imag y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($ratnum*ratnum x y)
+    (binary/ (binary* ($ratnum-n x) ($ratnum-n y))
+	     (binary* ($ratnum-d x) ($ratnum-d y))))
+
+  (define ($ratnum*compnum x y)
+    ($make-rectangular ($ratnum*Y x ($compnum-real y))
+		       ($ratnum*Y x ($compnum-imag y))))
+
+  (define ($ratnum*cflonum x y)
+    ($make-cflonum ($flonum*ratnum ($cflonum-real y) x)
+		   ($flonum*ratnum ($cflonum-imag y) x)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($compnum*fixnum x y)
+    ($make-rectangular ($fixnum*Y y ($compnum-real x))
+		       ($fixnum*Y y ($compnum-imag x))))
+
+  (define ($compnum*bignum x y)
+    ($make-rectangular ($bignum*Y y ($compnum-real x))
+		       ($bignum*Y y ($compnum-imag x))))
+
+  (define ($compnum*ratnum x y)
+    ($make-rectangular ($ratnum*Y y ($compnum-real x))
+		       ($ratnum*Y y ($compnum-imag x))))
+
+  (define ($compnum*flonum x y)
+    ($make-cflonum ($flonum*Y y ($compnum-real x))
+		   ($flonum*Y y ($compnum-imag x))))
+
+  (define ($compnum*compnum x y)
+    (let ((x.rep ($compnum-real x))
+	  (y.rep ($compnum-real y))
+	  (x.imp ($compnum-imag x))
+	  (y.imp ($compnum-imag y)))
+      ($make-rectangular (binary- (binary* x.rep y.rep) (binary* x.imp y.imp))
+			 (binary+ (binary* x.rep y.imp) (binary* x.imp y.rep)))))
+
+  (define ($compnum*cflonum x y)
+    (let ((x.rep ($compnum-real x))
+	  (y.rep ($cflonum-real y))
+	  (x.imp ($compnum-imag x))
+	  (y.imp ($cflonum-imag y)))
+      ($make-rectangular (binary- ($flonum*Y y.rep x.rep) ($flonum*Y y.imp x.imp))
+			 (binary+ ($flonum*Y y.imp x.rep) ($flonum*Y y.rep x.imp)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($cflonum*fixnum x y)
+    ($make-cflonum ($flonum*fixnum ($compnum-real x) y)
+		   ($flonum*fixnum ($compnum-imag x) y)))
+
+  (define ($cflonum*bignum x y)
+    ($make-cflonum ($flonum*bignum ($compnum-real x) y)
+		   ($flonum*bignum ($compnum-imag x) y)))
+
+  (define ($cflonum*ratnum x y)
+    ($make-cflonum ($flonum*ratnum ($compnum-real x) y)
+		   ($flonum*ratnum ($compnum-imag x) y)))
+
+  (define ($cflonum*flonum x y)
+    ($make-cflonum ($fl* ($cflonum-real x) y)
+		   ($fl* ($cflonum-imag x) y)))
+
+  (define ($cflonum*compnum x y)
+    (let ((x.rep ($compnum-real x))
+	  (y.rep ($compnum-real y))
+	  (x.imp ($compnum-imag x))
+	  (y.imp ($compnum-imag y)))
+      ($make-rectangular (binary- ($flonum*Y x.rep y.rep) ($flonum*Y x.imp y.imp))
+			 (binary+ ($flonum*Y x.rep y.imp) ($flonum*Y x.imp y.rep)))))
+
+  (define ($cflonum*cflonum x y)
+    (let ((r0 ($cflonum-real x))
+	  (r1 ($cflonum-real y))
+	  (i0 ($cflonum-imag x))
+	  (i1 ($cflonum-imag y)))
+      ($make-cflonum ($fl- ($fl* r0 r1) ($fl* i0 i1))
+		     ($fl+ ($fl* r0 i1) ($fl* i0 r1)))))
+
+  #| end of module: binary* |# )
+
+
 (define +
   (case-lambda
    ((x y) (binary+ x y))
@@ -2065,8 +2182,9 @@
      (else
       (die 'zero? "not a number" x)))))
 
-(define (expt n m)
-  ;;Return N raised to the power  M.  For non--zero N, this is:
+
+(module (expt)
+  ;;Return N raised to the power  M.  For non-zero N, this is:
   ;;
   ;;    (expt N M) === (exp (log (expt N M)))
   ;;               === (exp (* M (log N)))
@@ -2076,8 +2194,8 @@
   ;;    (expt 0.0 Z) = 1.0 if Z = 0.0
   ;;                 = 0.0 if (real-part Z) is positive
   ;;
-  ;;for  other cases  in which  the first  argument is  zero,  either an
-  ;;exception       is       raised       with      condition       type
+  ;;for  other cases  in which  the first  argument is  zero, either  an
+  ;;exception       is       raised      with       condition       type
   ;;"&implementation-restriction",  or an  unspecified number  object is
   ;;returned.
   ;;
@@ -2139,104 +2257,126 @@
   ;;
   ;;   (* +inf.0 0.0i) => +nan.0
   ;;
+  (define who 'expt)
 
-  (define (%expt-fx n m)
-    ;;Recursive function computing N^M when M is a fixnum and N is:
-    ;;
-    ;;* A real number, infinite included, NaN excluded.
-    ;;
-    ;;* A finite complex number.
-    ;;
-    ;;This function recurses a number of  times equal to the bits in the
-    ;;representation of M.
-    ;;
-    ;;Notes about used procedures:
-    ;;
-    ;;* ($fxlogand  m 1) is 1  for even m and  0 for odd m,  or in other
-    ;;words: the return value is the rightmost bit of M.
-    ;;
-    ;;* $fxsra means "fixnum shift right arithmetic".
-    ;;
-    ;;* binary* is the multiplication with two arguments.
-    ;;
-    (cond (($fxzero? m)
-	   1)
-	  (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
-	   (%expt-fx (binary* n n) ($fxsra m 1)))
-	  (else ;the rightmost bit in M is one
-	   (binary* n (%expt-fx (binary* n n) ($fxsra m 1))))))
+  (define (expt n m)
+    (with-arguments-validation (who)
+	((number	n))
+      (cond ((fixnum? m)	(%expt-fixnum-exponent n m))
+	    ((bignum? m)	(%expt-bignum-exponent n m))
+	    ((flonum? m)	(%expt-flonum-exponent n m))
+	    ((ratnum? m)	(%expt-ratnum-exponent n m))
+	    ((or (compnum? m)
+		 (cflonum? m))	(%expt-complex-exponent n m))
+	    (else
+	     (assertion-violation who "not a number" m)))))
 
-  (unless (number? n)
-    (die 'expt "not a numebr" n))
-  (cond ((fixnum? m)
-	 (cond (($fxzero? m)
-		(cond ((nan? n)		+nan.0)
-		      ((exact? n)	1)
-		      (else		1.)))
-	       (($fx> m 0)
-		(cond ((integer? n)
-		       (%expt-fx n m))
-		      ((ratnum? n)
-		       ($make-ratnum (%expt-fx ($ratnum-n n) m)
-				     (%expt-fx ($ratnum-d n) m)))
-		      ((real? n) ;this includes the real infinite +inf.0
-		       (if (nan? n)
-			   +nan.0
-			 (%expt-fx n m)))
-		      ;;In the following clauses N is a non-real.
-		      ((or (nan? (real-part n))
-			   (nan? (imag-part n)))
-		       +nan.0+nan.0i)
-		      ((infinite? n) ;this handles correctly some special cases
-		       (exp (* m (log n))))
-		      (else
-		       (%expt-fx n m))))
-	       (else ;M is negative
-		(let ((v (expt n (- m))))
-		  (if (eq? v 0)
-		      0
-		    (/ 1 v))))))
-	((bignum? m)
-	 (cond ((eq? n 0)	0)
-	       ((eq? n 1)	1)
-	       ((eq? n -1)	(if (even-bignum? m) 1 -1))
-	       ((nan? n)	+nan.0)
-	       (else
-		(die 'expt "result is too big to compute" n m))))
-	((flonum? m)
-	 (cond ((real? n)
-		(cond ((nan? n)
-		       +nan.0)
-		      ((integer? m)
-		       ;;N^M  when M  is an  integer always  has  a real
-		       ;;number as result.
-		       (flexpt (inexact n) m))
-		      ((negative? n)
-		       (exp (* m (log n))))
-		      (else
-		       (flexpt (inexact n) m))))
-	       ((or (nan? (real-part n))
-		    (nan? (imag-part n)))
-		+nan.0+nan.0i)
-	       (else
-		(exp (* m (log n))))))
-	((ratnum? m)
-;;; (expt (expt n ($ratnum-n m))
-;;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
-	 (expt n (inexact m)))
-	((or (compnum? m) (cflonum? m))
-	 (cond ((eq? n 0)
-		0)
-	       ((or (nan? (real-part n))
-		    (nan? (imag-part n)))
-		+nan.0+nan.0i)
-	       ((zero? n)
-		(if (flonum? n) 0.0 0.0+0.0i))
-	       (else
-		(exp (* m (log n))))))
-	(else
-	 (die 'expt "not a number" m))))
+  (module (%expt-fixnum-exponent)
 
+    (define (%expt-fixnum-exponent n m)
+      (cond (($fxzero? m)
+	     (cond ((nan?   n)	+nan.0)
+		   ((exact? n)	1)
+		   (else	1.)))
+	    (($fx> m 0)
+	     (cond ((integer? n)
+		    (%expt-fx n m))
+		   ((ratnum? n)
+		    ($make-ratnum (%expt-fx ($ratnum-n n) m)
+				  (%expt-fx ($ratnum-d n) m)))
+		   ((real? n) ;this includes the real infinite +inf.0
+		    (if (nan? n)
+			+nan.0
+		      (%expt-fx n m)))
+		   ;;In the following clauses N is a non-real.
+		   ;;
+		   ((nan? n)
+		    +nan.0+nan.0i)
+		   ((infinite? n) ;this handles correctly some special cases
+		    (exp (* m (log n))))
+		   (else
+		    (%expt-fx n m))))
+	    (else ;M is negative
+	     (let ((v (expt n (- m))))
+	       (if (eq? v 0)
+		   0
+		 (/ 1 v))))))
+
+    (define (%expt-fx n m)
+      ;;Recursive function computing N^M when M is a fixnum and N is:
+      ;;
+      ;;* A real number, infinite included, NaN excluded.
+      ;;
+      ;;* A finite complex number.
+      ;;
+      ;;This function  recurses a number of  times equal to the  bits in
+      ;;the representation of M.
+      ;;
+      ;;Notes about used procedures:
+      ;;
+      ;;* ($fxlogand m 1)  is 1 for even m and 0 for  odd m, or in other
+      ;;  words: the return value is the rightmost bit of M.
+      ;;
+      ;;* $fxsra means "fixnum shift right arithmetic".
+      ;;
+      ;;* binary* is the multiplication with two arguments.
+      ;;
+      (cond (($fxzero? m)
+	     1)
+	    (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
+	     (%expt-fx (binary* n n) ($fxsra m 1)))
+	    (else ;the rightmost bit in M is one
+	     (binary* n (%expt-fx (binary* n n) ($fxsra m 1))))))
+
+    #| end of module: %expt-fixnum-exponent |# )
+
+  (define (%expt-bignum-exponent n m)
+    (cond ((eq? n 0)	0)
+	  ((eq? n 1)	1)
+	  ((eq? n -1)	(if (even-bignum? m) 1 -1))
+	  ((nan? n)	+nan.0)
+	  (else
+	   (assertion-violation who "result is too big to compute" n m))))
+
+  (define (%expt-flonum-exponent n m)
+    (cond ((real? n)
+	   (cond ((nan? n)
+		  +nan.0)
+		 ((integer? m)
+		  ;;N^M when M is an integer always has a real number as
+		  ;;result.
+		  (flexpt (inexact n) m))
+		 ((negative? n)
+		  (exp (* m (log n))))
+		 (else
+		  (flexpt (inexact n) m))))
+	  ;;If we are here: N is complex or NaN.
+	  ;;
+	  ((nan? n)
+	   +nan.0+nan.0i)
+	  (else
+	   (exp (* m (log n))))))
+
+  (define (%expt-ratnum-exponent n m)
+    ;; (expt (expt n ($ratnum-n m))
+    ;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
+    (expt n (inexact m)))
+
+  (define (%expt-complex-exponent n m)
+    (cond ((eq? n 0)
+	   0)
+	  ((nan? n)
+	   +nan.0+nan.0i)
+	  ((zero? n)
+	   (if (flonum? n)
+	       0.0
+	     0.0+0.0i))
+	  (else
+	   (exp (* m (log n))))))
+
+  #| end of module: expt |# )
+
+
 (define quotient
   (lambda (x y)
     (let-values (((q r) (quotient+remainder x y)))

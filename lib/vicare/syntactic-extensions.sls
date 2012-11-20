@@ -490,6 +490,8 @@
 		 zero? exact? inexact?
 		 fixnum? bignum? ratnum? flonum? compnum? cflonum? real? complex?)
 
+    ;;Dispatch for all the numeric types.
+    ;;
     ((_ ?num
 	((fixnum?)	?body-fx0 ?body-fx ...)
 	((bignum?)	?body-bg0 ?body-bg ...)
@@ -505,6 +507,48 @@
 	     ((flonum?  num)	?body-fl0 ?body-fl ...)
 	     ((compnum? num)	?body-cn0 ?body-cn ...)
 	     ((cflonum? num)	?body-cf0 ?body-cf ...)
+	     (else		?body-el0 ?body-el ...))))
+
+    ;;Dispatch for  all the  numeric types,  but flonums  before ratnums
+    ;;because they are more likely.
+    ;;
+    ((_ ?num
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	((compnum?)	?body-cn0 ?body-cn ...)
+	((cflonum?)	?body-cf0 ?body-cf ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
+	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     ((compnum? num)	?body-cn0 ?body-cn ...)
+	     ((cflonum? num)	?body-cf0 ?body-cf ...)
+	     (else		?body-el0 ?body-el ...))))
+
+    ;; --------------------------------------------------
+
+    ;;Dispatch for all the numeric types, but flonums first because they
+    ;;are most likely.
+    ;;
+    ((_ ?num
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((cflonum?)	?body-cf0 ?body-cf ...)
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	((compnum?)	?body-cn0 ?body-cn ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     ((cflonum? num)	?body-cf0 ?body-cf ...)
+	     ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
+	     ((compnum? num)	?body-cn0 ?body-cn ...)
 	     (else		?body-el0 ?body-el ...))))
 
     ;; --------------------------------------------------

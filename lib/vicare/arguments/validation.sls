@@ -36,6 +36,9 @@
     ;; booleans
     boolean.vicare-arguments-validation
 
+    ;; numbers
+    number.vicare-arguments-validation
+
     ;; fixnums
     fixnum.vicare-arguments-validation
     fixnum/false.vicare-arguments-validation
@@ -439,6 +442,13 @@
 (define-argument-validation (boolean who obj)
   (boolean? obj)
   (assertion-violation who "expected boolean as argument" obj))
+
+
+;;;; numbers
+
+(define-argument-validation (number who obj)
+  (number? obj)
+  (assertion-violation who "expected number as argument" obj))
 
 
 ;;;; fixnums validation
