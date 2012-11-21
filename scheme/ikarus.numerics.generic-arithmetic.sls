@@ -311,6 +311,25 @@
 
   #| end of module |# )
 
+(module (real->flonum)
+  (define who 'real->flonum)
+
+  (define (real->flonum x)
+    (cond-numeric-operand x
+      ((fixnum?)	($fixnum->flonum x))
+      ((bignum?)	(bignum->flonum x))
+      ((ratnum?)	(ratnum->flonum x))
+      ((flonum?)	x)
+      ((compnum?)	(%error-not-real x))
+      ((cflonum?)	(%error-not-real x))
+      (else
+       (%error-not-real x))))
+
+  (define (%error-not-real x)
+    (assertion-violation who "expected real number as argument" x))
+
+  #| end of module: real->flonum |# )
+
 
 ;;;; generic arithmetic functions
 
@@ -3146,53 +3165,80 @@
   #| end of module: min |# )
 
 
-(define (abs x)
-  (cond
-   ((fixnum? x)
-    (if ($fx< x 0) (- x) x))
-   ((bignum? x)
-    (if ($bignum-positive? x) x (- x)))
-   ((flonum? x)
+(module (abs
+	 $fixnum-abs		$bignum-abs
+	 $flonum-abs		$ratnum-abs)
+  (define who 'abs)
+
+  (define (abs x)
+    (cond-numeric-operand x
+      ((fixnum?)	($fixnum-abs x))
+      ((bignum?)	($bignum-abs x))
+      ((flonum?)	($flonum-abs x))
+      ((ratnum?)	($ratnum-abs x))
+      ((compnum?)	(%error-not-real-number x))
+      ((cflonum?)	(%error-not-real-number x))
+      (else
+       (%error-not-real-number x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($fixnum-abs x)
+    (if ($fx< x 0)
+	($fx- x)
+      x))
+
+  (define ($bignum-abs x)
+    (if ($bignum-positive? x)
+	x
+      ($bignum- x)))
+
+  (define ($flonum-abs x)
     (if ($fx> ($flonum-u8-ref x 0) 127)
+	;;We must also handle corrently -0.0, that is why we use $FX*.
 	($fl* x -1.0)
       x))
-   ((ratnum? x)
-    (let ((n ($ratnum-n x)))
-      (if (< n 0)
-	  ($make-ratnum (- n) ($ratnum-d x))
+
+  (define ($ratnum-abs x)
+    (let ((x.num ($ratnum-n x)))
+      (if (negative? x.num)
+	  ($make-ratnum (- x.num) ($ratnum-d x))
 	x)))
-   (else (die 'abs "not a real number" x))))
 
-(define (->inexact x who)
-  (cond
-   ((fixnum? x) ($fixnum->flonum x))
-   ((bignum? x) (bignum->flonum x))
-   ((ratnum? x) (ratnum->flonum x))
-   ((flonum? x) x)
-   ((compnum? x)
-    (make-rectangular
-     (->inexact (real-part x) who)
-     (->inexact (imag-part x) who)))
-   ((cflonum? x) x)
-   (else
-    (die who "not a number" x))))
+;;; --------------------------------------------------------------------
 
-(define (exact->inexact x)
-  (->inexact x 'exact->inexact))
+  (define (%error-not-real-number x)
+    (assertion-violation who "not a real number" x))
 
-(define (inexact x)
-  (->inexact x 'inexact))
+  #| end of module: abs |# )
 
-(define real->flonum
-  (lambda (x)
+
+(module (inexact
+	 exact->inexact)
+
+  (define (exact->inexact x)
+    (->inexact x 'exact->inexact))
+
+  (define (inexact x)
+    (->inexact x 'inexact))
+
+  (define (->inexact x who)
     (cond
      ((fixnum? x) ($fixnum->flonum x))
      ((bignum? x) (bignum->flonum x))
      ((ratnum? x) (ratnum->flonum x))
      ((flonum? x) x)
+     ((compnum? x)
+      (make-rectangular
+       (->inexact (real-part x) who)
+       (->inexact (imag-part x) who)))
+     ((cflonum? x) x)
      (else
-      (die 'real->flonum "not a real number" x)))))
+      (assertion-violation who "not a number" x))))
 
+  #| end of module |# )
+
+
 (define ($fxeven? x)
   ($fxzero? ($fxlogand x 1)))
 
