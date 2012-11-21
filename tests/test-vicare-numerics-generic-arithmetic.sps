@@ -55,6 +55,17 @@
        (nan? y)))
 
 
+(parametrise ((check-test-name	'unary-division))
+
+  (define big-1		(+ 10 (greatest-fixnum)))
+  (define rat-1		(/ big-1 13))
+  (define rat-1-inv	(/ 13 big-1))
+
+  (check (/ rat-1)	=> rat-1-inv)
+
+  #t)
+
+
 (parametrise ((check-test-name	'sqrt))
 
 ;;; fixnums

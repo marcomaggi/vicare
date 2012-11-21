@@ -87,8 +87,22 @@
 		  flonum-parts		flonum-bytes
 		  bytevector->flonum	flonum->bytevector)
     (ikarus system $pairs)
-    (ikarus system $fx)
-    (ikarus system $bignums)
+    (except (ikarus system $fx)
+	    $fxeven?
+	    $fxodd?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Wed Nov 21, 2012)
+    (only (ikarus fixnums)
+	  $fxeven?
+	  $fxodd?)
+    (except (ikarus system $bignums)
+	    $bignum-even?
+	    $bignum-odd?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Wed Nov 21, 2012)
+    (only (ikarus bignums)
+	  $bignum-even?
+	  $bignum-odd?)
     (ikarus system $ratnums)
     (ikarus system $bytevectors)
     (except (ikarus system $flonums)
@@ -127,6 +141,7 @@
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
 	  cond-numeric-operand
+	  cond-exact-integer-operand
 	  receive))
 
 
@@ -312,26 +327,22 @@
 (define-fl-operation/one flodd?  $flodd?)
 
 (define ($fleven? x)
-  ;;FIXME Optimize.  (Abdulaziz Ghuloum)
   (define who '$fleven?)
   (let ((v ($flonum->exact x)))
-    (cond ((fixnum? v)
-	   ($fx= ($fxlogand v 1) 0))
-	  ((bignum? v)
-	   (foreign-call "ikrt_even_bn" v))
-	  (else
-	   (assertion-violation who "not an integer flonum" x)))))
+    (cond-exact-integer-operand v
+      ((fixnum?)	($fxeven? v))
+      ((bignum?)	($bignum-even? v))
+      (else
+       (assertion-violation who "not an integer flonum" x)))))
 
 (define ($flodd? x)
-  ;;FIXME Optimize.  (Abdulaziz Ghuloum)
   (define who '$flodd?)
   (let ((v ($flonum->exact x)))
-    (cond ((fixnum? v)
-	   ($fx= ($fxlogand v 1) 1))
-	  ((bignum? v)
-	   (not (foreign-call "ikrt_even_bn" v)))
-	  (else
-	   (assertion-violation who "not an integer flonum" x)))))
+    (cond-exact-integer-operand v
+      ((fixnum?)	($fxodd? v))
+      ((bignum?)	($bignum-odd? v))
+      (else
+       (assertion-violation who "not an integer flonum" x)))))
 
 
 ;;;; predicates

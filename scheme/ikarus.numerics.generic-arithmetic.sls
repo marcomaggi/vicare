@@ -120,8 +120,7 @@
     $sqrt/cflonum
 
     $exact-integer-sqrt/fixnum
-    $exact-integer-sqrt/bignum
-    )
+    $exact-integer-sqrt/bignum)
   (import (except (ikarus)
 		  + - * / = < <= > >=
 		  min				max
@@ -178,17 +177,23 @@
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $pairs)
     (except (ikarus system $fx)
-	    $fxnegative?)
+	    $fxnegative?
+	    $fxeven?
+	    $fxodd?)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 18, 2012)
     (only (ikarus fixnums)
-	  $fxnegative?)
+	  $fxnegative?
+	  $fxeven?
+	  $fxodd?)
     (except (ikarus system $flonums)
 	    $flonum->exact
 	    $flzero?
 	    $flzero?/negative
 	    $flpositive?
 	    $flnegative?
+	    $fleven?
+	    $flodd?
 	    $flsqr
 	    $flround)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -199,6 +204,8 @@
 	  $flzero?/negative
 	  $flpositive?
 	  $flnegative?
+	  $fleven?
+	  $flodd?
 	  $flsqr
           $flround)
     (except (ikarus system $ratnums)
@@ -3156,32 +3163,43 @@
   #| end of module |# )
 
 
-(define ($fxeven? x)
-  ($fxzero? ($fxlogand x 1)))
+(module (even?)
+  (define who 'even?)
 
-(define (even? x)
-  (cond
-   ((fixnum? x) ($fxeven? x))
-   ((bignum? x) ($bignum-even? x))
-   ((flonum? x)
-    (let ((v ($flonum->exact x)))
-      (cond
-       ((fixnum? v) ($fxeven? v))
-       ((bignum? v) ($bignum-even? v))
-       (else (die 'even? "not an integer" x)))))
-   (else (die 'even? "not an integer" x))))
+  (define (even? x)
+    (cond-numeric-operand x
+      ((fixnum?)	($fxeven? x))
+      ((bignum?)	($bignum-even? x))
+      ((flonum?)	($fleven? x))
+      ((ratnum?)	(%error-not-integer x))
+      ((compnum?)	(%error-not-integer x))
+      ((cflonum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
 
-(define (odd? x)
-  (cond
-   ((fixnum? x) (not ($fxeven? x)))
-   ((bignum? x) (not ($bignum-even? x)))
-   ((flonum? x)
-    (let ((v ($flonum->exact x)))
-      (cond
-       ((fixnum? v) (not ($fxeven? v)))
-       ((bignum? v) (not ($bignum-even? v)))
-       (else (die 'odd? "not an integer" x)))))
-   (else (die 'odd? "not an integer" x))))
+  (define (%error-not-integer x)
+    (assertion-violation who "expected integer as argument" x))
+
+  #| end of module: even? |# )
+
+(module (odd?)
+  (define who 'odd?)
+
+  (define (odd? x)
+    (cond-numeric-operand x
+      ((fixnum?)	($fxodd? x))
+      ((bignum?)	($bignum-odd? x))
+      ((flonum?)	($flodd? x))
+      ((ratnum?)	(%error-not-integer x))
+      ((compnum?)	(%error-not-integer x))
+      ((cflonum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
+
+  (define (%error-not-integer x)
+    (assertion-violation who "expected integer as argument" x))
+
+  #| end of module: odd? |# )
 
 
 (module (number->string)
@@ -3199,11 +3217,12 @@
 	    ((radix	r))
 	  ($number->string x r)))
        ((x r precision)
-	;;(do-warn)
+	;;(%do-warn)
 	(number->string x r))))
 
-    (define (do-warn)
-      (set! do-warn values)
+    (define (%do-warn)
+      ;;Overwrite the binding so that the warning is raised only once.
+      (set! %do-warn values)
       (raise-continuable
        (condition (make-warning)
 		  (make-who-condition who)
@@ -3221,42 +3240,43 @@
 
     (define ($number->string x r)
       (import (ikarus system $compnums))
-      (cond ((fixnum? x)
-	     (fixnum->string x r))
+      (cond-numeric-operand x
+	((fixnum?)
+	 (fixnum->string x r))
 
-	    ((bignum? x)
-	     (bignum->string x r))
+	((bignum?)
+	 (bignum->string x r))
 
-	    ((flonum? x)
-	     (if (eqv? r 10)
-		 (flonum->string x)
-	       (assertion-violation who "invalid radix for inexact number" r x)))
+	((flonum?)
+	 (if (eqv? r 10)
+	     (flonum->string x)
+	   (assertion-violation who "invalid radix for inexact number" r x)))
 
-	    ((ratnum? x)
-	     (ratnum->string x r))
+	((ratnum?)
+	 (ratnum->string x r))
 
-	    ((compnum? x)
-	     (let ((x.rep ($compnum-real x))
-		   (x.imp ($compnum-imag x)))
-	       (if (and (fixnum?  x.rep)
-			($fxzero? x.rep))
-		   (string-append (imag x.imp r) "i")
-		 (string-append ($number->string x.rep r) (imag x.imp r) "i"))))
+	((compnum?)
+	 (let ((x.rep ($compnum-real x))
+	       (x.imp ($compnum-imag x)))
+	   (if (and (fixnum?  x.rep)
+		    ($fxzero? x.rep))
+	       (string-append (imag x.imp r) "i")
+	     (string-append ($number->string x.rep r) (imag x.imp r) "i"))))
 
-	    ((cflonum? x)
-	     (let ((x.rep ($cflonum-real x))
-		   (x.imp ($cflonum-imag x)))
-	       (cond ((flnan? x.imp)
-		      (string-append ($number->string x.rep r) "+nan.0i"))
-		     ((flinfinite? x.imp)
-		      (string-append ($number->string x.rep r) (if ($fl> x.imp 0.0)
-								   "+inf.0i"
-								 "-inf.0i")))
-		     (else
-		      (string-append ($number->string x.rep r) (imag x.imp r) "i")))))
+	((cflonum?)
+	 (let ((x.rep ($cflonum-real x))
+	       (x.imp ($cflonum-imag x)))
+	   (cond ((flnan? x.imp)
+		  (string-append ($number->string x.rep r) "+nan.0i"))
+		 ((flinfinite? x.imp)
+		  (string-append ($number->string x.rep r) (if ($fl> x.imp 0.0)
+							       "+inf.0i"
+							     "-inf.0i")))
+		 (else
+		  (string-append ($number->string x.rep r) (imag x.imp r) "i")))))
 
-	    (else
-	     (assertion-violation who "not a number" x))))
+	(else
+	 (assertion-violation who "expected number as argument" x))))
 
     (define (imag x radix)
       ;;Compose a string for the imaginary part of a cflonum or compnum.
