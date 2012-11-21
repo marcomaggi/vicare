@@ -80,6 +80,7 @@
     case-symbols
     define-exact-integer->symbol-function
     cond-numeric-operand	cond-exact-integer-operand
+    cond-real-numeric-operand
 
     ;; auxiliary syntaxes
     big				little)
@@ -494,8 +495,57 @@
      (let ((num ?num))
        (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
 	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     (else		?body-el0 ?body-el ...))))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax cond-real-numeric-operand
+  (syntax-rules (else fixnum? bignum? ratnum? flonum?)
+    ((_ ?num
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	((flonum?)	?body-fl0 ?body-fl ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
+	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     (else		?body-el0 ?body-el ...))))
+
+    ;;As above but with flonums before ratnums.
+    ;;
+    ((_ ?num
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
+	     (else		?body-el0 ?body-el ...))))
+
+    ;;As above but with flonums first.
+    ;;
+    ((_ ?num
+	((flonum?)	?body-fl0 ?body-fl ...)
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
 	     (else		?body-el0 ?body-el ...))))
     ))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax cond-numeric-operand
   (syntax-rules (else
@@ -535,8 +585,8 @@
      (let ((num ?num))
        (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
 	     ((bignum?  num)	?body-bg0 ?body-bg ...)
-	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
 	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
 	     ((compnum? num)	?body-cn0 ?body-cn ...)
 	     ((cflonum? num)	?body-cf0 ?body-cf ...)
 	     (else		?body-el0 ?body-el ...))))

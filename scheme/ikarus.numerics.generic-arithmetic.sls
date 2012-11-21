@@ -2697,68 +2697,225 @@
   #| end of module |# )
 
 
-(define max
-  (case-lambda
-   ((x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y)
-	(if ($fx> x y) x y))
-       ((bignum? y)
-	(if (positive-bignum? y) y x))
-       ((flonum? y)
-	(let ((x ($fixnum->flonum x)))
-	  (if ($fl>= y x) y x)))
-       ((ratnum? y) ;;; FIXME: optimize
-	(if (>= x y) x y))
-       (else (die 'max "not a number" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(if (positive-bignum? x) x y))
-       ((bignum? y)
-	(if (bnbn> x y) x y))
-       ((flonum? y)
-	(let ((x (bignum->flonum x)))
-	  (if ($fl>= y x) y x)))
-       ((ratnum? y) ;;; FIXME: optimize
-	(if (>= x y) x y))
-       (else (die 'max "not a number" y))))
-     ((flonum? x)
-      (cond
-       ((flonum? y)
-	(if ($fl>= x y) x y))
-       ((fixnum? y)
-	(let ((y ($fixnum->flonum y)))
-	  (if ($fl>= y x) y x)))
-       ((bignum? y)
-	(let ((y (bignum->flonum y)))
-	  (if ($fl>= y x) y x)))
-       ((ratnum? y)
-             ;;; FIXME: may be incorrect
-	(let ((y (ratnum->flonum y)))
-	  (if ($fl>= y x) y x)))
-       (else (die 'max "not a number" y))))
-     ((ratnum? x)
-      (cond
-       ((or (fixnum? y) (bignum? y) (ratnum? y))
-	(if (>= x y) x y))
-       ((flonum? y)
-	(let ((x (ratnum->flonum x)))
-	  (if ($fl>= x y) x y)))
-       (else (die 'max "not a number" y))))
-     (else (die 'max "not a number" x))))
-   ((x y z . rest)
-    (let f ((a (max x y)) (b z) (ls rest))
-      (cond
-       ((null? ls) (max a b))
-       (else
-	(f (max a b) (car ls) (cdr ls))))))
-   ((x)
-    (cond
-     ((or (fixnum? x) (bignum? x) (ratnum? x) (flonum? x)) x)
-     (else (die 'max "not a number" x))))))
+(module (max
+	 $max-fixnum-number $max-bignum-number $max-flonum-number $max-ratnum-number
+	 $max-number-fixnum $max-number-bignum $max-number-flonum $max-number-ratnum
+	 $max-fixnum-fixnum $max-fixnum-bignum $max-fixnum-flonum $max-fixnum-ratnum
+	 $max-bignum-fixnum $max-bignum-bignum $max-bignum-flonum $max-bignum-ratnum
+	 $max-flonum-flonum $max-flonum-fixnum $max-flonum-bignum $max-flonum-ratnum
+	 $max-ratnum-fixnum $max-ratnum-bignum $max-ratnum-ratnum $max-ratnum-flonum)
+  (define who 'max)
+
+  (define max
+    (case-lambda
+     ((x y)
+      (%binary-max x y))
+     ((x y z . rest)
+      (let loop ((a  (%binary-max x y))
+		 (b  z)
+		 (ls rest))
+	(if (null? ls)
+	    (%binary-max a b)
+	  (loop (%binary-max a b)
+		($car ls)
+		($cdr ls)))))
+     ((x)
+      (if (or (fixnum? x)
+	      (bignum? x)
+	      (ratnum? x)
+	      (flonum? x))
+	  x
+	(%error-not-real-number x)))
+     ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%binary-max x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($max-fixnum-number x y))
+      ((bignum?)	($max-bignum-number x y))
+      ((flonum?)	($max-flonum-number x y))
+      ((ratnum?)	($max-ratnum-number x y))
+      (else
+       (%error-not-real-number x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($max-fixnum-number x y)
+    (cond-real-numeric-operand y
+      ((fixnum?)	($max-fixnum-fixnum x y))
+      ((bignum?)	($max-fixnum-bignum x y))
+      ((flonum?)	($max-fixnum-flonum x y))
+      ((ratnum?)	($max-fixnum-ratnum x y))
+      (else
+       (%error-not-real-number y))))
+
+  (define ($max-bignum-number x y)
+    (cond-real-numeric-operand y
+      ((fixnum?)	($max-bignum-fixnum x y))
+      ((bignum?)	($max-bignum-bignum x y))
+      ((flonum?)	($max-bignum-flonum x y))
+      ((ratnum?)	($max-bignum-ratnum x y))
+      (else
+       (%error-not-real-number y))))
+
+  (define ($max-flonum-number x y)
+    (cond-real-numeric-operand y
+      ((flonum?)	($max-flonum-flonum x y))
+      ((fixnum?)	($max-flonum-fixnum x y))
+      ((bignum?)	($max-flonum-bignum x y))
+      ((ratnum?)	($max-flonum-ratnum x y))
+      (else
+       (%error-not-real-number y))))
+
+  (define ($max-ratnum-number x y)
+    (cond-real-numeric-operand y
+      ((fixnum?)	($max-ratnum-fixnum x y))
+      ((bignum?)	($max-ratnum-bignum x y))
+      ((ratnum?)	($max-ratnum-ratnum x y))
+      ((flonum?)	($max-ratnum-flonum x y))
+      (else
+       (%error-not-real-number y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($max-number-fixnum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($max-fixnum-fixnum x y))
+      ((bignum?)	($max-bignum-fixnum x y))
+      ((flonum?)	($max-flonum-fixnum x y))
+      ((ratnum?)	($max-ratnum-fixnum x y))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($max-number-bignum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($max-fixnum-bignum x y))
+      ((bignum?)	($max-bignum-bignum x y))
+      ((flonum?)	($max-flonum-bignum x y))
+      ((ratnum?)	($max-ratnum-bignum x y))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($max-number-flonum x y)
+    (cond-real-numeric-operand x
+      ((flonum?)	($max-flonum-flonum x y))
+      ((fixnum?)	($max-fixnum-flonum x y))
+      ((bignum?)	($max-bignum-flonum x y))
+      ((ratnum?)	($max-ratnum-flonum x y))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($max-number-ratnum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($max-fixnum-ratnum x y))
+      ((bignum?)	($max-bignum-ratnum x y))
+      ((ratnum?)	($max-ratnum-ratnum x y))
+      ((flonum?)	($max-flonum-ratnum x y))
+      (else
+       (%error-not-real-number x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($max-fixnum-fixnum x y)
+    (if ($fx> x y)
+	x
+      y))
+
+  (define ($max-fixnum-bignum x y)
+    (if (positive-bignum? y)
+	y
+      x))
+
+  (define ($max-fixnum-flonum x y)
+    (let ((x ($fixnum->flonum x)))
+      (if ($fl>= y x)
+	  y
+	x)))
+
+  (define ($max-fixnum-ratnum x y)
+    (if (>= x y)
+	x
+      y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($max-bignum-fixnum x y)
+    (if (positive-bignum? x)
+	x
+      y))
+
+  (define ($max-bignum-bignum x y)
+    (if (bnbn> x y)
+	x
+      y))
+
+  (define ($max-bignum-flonum x y)
+    (let ((x (bignum->flonum x)))
+      (if ($fl>= y x)
+	  y
+	x)))
+
+  (define ($max-bignum-ratnum x y)
+    (if (>= x y)
+	x
+      y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($max-flonum-flonum x y)
+    (if ($fl>= x y)
+	x
+      y))
+
+  (define ($max-flonum-fixnum x y)
+    (let ((y ($fixnum->flonum y)))
+      (if ($fl>= y x)
+	  y
+	x)))
+
+  (define ($max-flonum-bignum x y)
+    (let ((y (bignum->flonum y)))
+      (if ($fl>= y x)
+	  y
+	x)))
+
+  (define ($max-flonum-ratnum x y)
+    ;;FIXME May be incorrect.  (Abdulaziz Ghuloum)
+    (let ((y (ratnum->flonum y)))
+      (if ($fl>= y x)
+	  y
+	x)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($max-ratnum-fixnum x y)
+    (if (>= x y)
+	x
+      y))
+
+  (define ($max-ratnum-bignum x y)
+    (if (>= x y)
+	x
+      y))
+
+  (define ($max-ratnum-ratnum x y)
+    (if (>= x y)
+	x
+      y))
+
+  (define ($max-ratnum-flonum x y)
+    (let ((x (ratnum->flonum x)))
+      (if ($fl>= x y)
+	  x
+	y)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-real-number x)
+    (assertion-violation who "expected real number as argument" x))
+
+  #| end of module: max |# )
 
 
 (define min
@@ -4553,4 +4710,5 @@
 ;; Local Variables:
 ;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-exact-integer-operand 'scheme-indent-function 1)
+;; eval: (put 'cond-real-numeric-operand 'scheme-indent-function 1)
 ;; End:
