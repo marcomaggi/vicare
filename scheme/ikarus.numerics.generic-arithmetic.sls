@@ -202,7 +202,14 @@
 	  $flsqr
           $flround)
     (ikarus system $ratnums)
-    (ikarus system $bignums)
+    (except (ikarus system $bignums)
+	    $bignum-positive?	$bignum-negative?
+	    $bignum-even?	$bignum-odd?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Nov 21, 2012)
+    (only (ikarus bignums)
+	  $bignum-positive?	$bignum-negative?
+	  $bignum-even?		$bignum-odd?)
     (ikarus system $compnums)
     (ikarus system $chars)
     (ikarus system $strings)
@@ -2823,7 +2830,7 @@
       y))
 
   (define ($max-fixnum-bignum x y)
-    (if (positive-bignum? y)
+    (if ($bignum-positive? y)
 	y
       x))
 
@@ -2841,7 +2848,7 @@
 ;;; --------------------------------------------------------------------
 
   (define ($max-bignum-fixnum x y)
-    (if (positive-bignum? x)
+    (if ($bignum-positive? x)
 	x
       y))
 
@@ -2918,68 +2925,225 @@
   #| end of module: max |# )
 
 
-(define min
-  (case-lambda
-   ((x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y)
-	(if ($fx> x y) y x))
-       ((bignum? y)
-	(if (positive-bignum? y) x y))
-       ((flonum? y)
-	(let ((x ($fixnum->flonum x)))
-	  (if ($fl>= y x) x y)))
-       ((ratnum? y) ;;; FIXME: optimize
-	(if (>= x y) y x))
-       (else (die 'min "not a number" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(if (positive-bignum? x) y x))
-       ((bignum? y)
-	(if (bnbn> x y) y x))
-       ((flonum? y)
-	(let ((x (bignum->flonum x)))
-	  (if ($fl>= y x) x y)))
-       ((ratnum? y) ;;; FIXME: optimize
-	(if (>= x y) y x))
-       (else (die 'min "not a number" y))))
-     ((flonum? x)
-      (cond
-       ((flonum? y)
-	(if ($fl>= x y) y x))
-       ((fixnum? y)
-	(let ((y ($fixnum->flonum y)))
-	  (if ($fl>= y x) x y)))
-       ((bignum? y)
-	(let ((y (bignum->flonum y)))
-	  (if ($fl>= y x) x y)))
-       ((ratnum? y)
-             ;;; FIXME: may be incorrect
-	(let ((y (ratnum->flonum y)))
-	  (if ($fl>= y x) x y)))
-       (else (die 'min "not a number" y))))
-     ((ratnum? x)
-      (cond
-       ((or (fixnum? y) (bignum? y) (ratnum? y))
-	(if (>= x y) y x))
-       ((flonum? y)
-	(let ((x (ratnum->flonum x)))
-	  (if ($fl>= x y) y x)))
-       (else (die 'min "not a number" y))))
-     (else (die 'min "not a number" x))))
-   ((x y z . rest)
-    (let f ((a (min x y)) (b z) (ls rest))
-      (cond
-       ((null? ls) (min a b))
-       (else
-	(f (min a b) (car ls) (cdr ls))))))
-   ((x)
-    (cond
-     ((or (fixnum? x) (bignum? x) (ratnum? x) (flonum? x)) x)
-     (else (die 'min "not a number" x))))))
+(module (min
+	 $min-fixnum-number $min-bignum-number $min-flonum-number $min-ratnum-number
+	 $min-number-fixnum $min-number-bignum $min-number-flonum $min-number-ratnum
+	 $min-fixnum-fixnum $min-fixnum-bignum $min-fixnum-flonum $min-fixnum-ratnum
+	 $min-bignum-fixnum $min-bignum-bignum $min-bignum-flonum $min-bignum-ratnum
+	 $min-flonum-flonum $min-flonum-fixnum $min-flonum-bignum $min-flonum-ratnum
+	 $min-ratnum-fixnum $min-ratnum-bignum $min-ratnum-ratnum $min-ratnum-flonum)
+  (define who 'min)
+
+  (define min
+    (case-lambda
+     ((x y)
+      (%binary-min x y))
+     ((x y z . rest)
+      (let loop ((a  (%binary-min x y))
+		 (b  z)
+		 (ls rest))
+	(if (null? ls)
+	    (%binary-min a b)
+	  (loop (%binary-min a b)
+		($car ls)
+		($cdr ls)))))
+     ((x)
+      (if (or (fixnum? x)
+	      (bignum? x)
+	      (ratnum? x)
+	      (flonum? x))
+	  x
+	(%error-not-real-number x)))
+     ))
+
+;;; --------------------------------------------------------------------
+
+  (define (%binary-min x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($min-fixnum-number x y))
+      ((bignum?)	($min-bignum-number x y))
+      ((flonum?)	($min-flonum-number x y))
+      ((ratnum?)	($min-ratnum-number x y))
+      (else
+       (%error-not-real-number x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($min-fixnum-number x y)
+    (cond-real-numeric-operand y
+      ((fixnum?)	($min-fixnum-fixnum x y))
+      ((bignum?)	($min-fixnum-bignum x y))
+      ((flonum?)	($min-fixnum-flonum x y))
+      ((ratnum?)	($min-fixnum-ratnum x y))
+      (else
+       (%error-not-real-number y))))
+
+  (define ($min-bignum-number x y)
+    (cond-real-numeric-operand y
+      ((fixnum?)	($min-bignum-fixnum x y))
+      ((bignum?)	($min-bignum-bignum x y))
+      ((flonum?)	($min-bignum-flonum x y))
+      ((ratnum?)	($min-bignum-ratnum x y))
+      (else
+       (%error-not-real-number y))))
+
+  (define ($min-flonum-number x y)
+    (cond-real-numeric-operand y
+      ((flonum?)	($min-flonum-flonum x y))
+      ((fixnum?)	($min-flonum-fixnum x y))
+      ((bignum?)	($min-flonum-bignum x y))
+      ((ratnum?)	($min-flonum-ratnum x y))
+      (else
+       (%error-not-real-number y))))
+
+  (define ($min-ratnum-number x y)
+    (cond-real-numeric-operand y
+      ((fixnum?)	($min-ratnum-fixnum x y))
+      ((bignum?)	($min-ratnum-bignum x y))
+      ((ratnum?)	($min-ratnum-ratnum x y))
+      ((flonum?)	($min-ratnum-flonum x y))
+      (else
+       (%error-not-real-number y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($min-number-fixnum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($min-fixnum-fixnum x y))
+      ((bignum?)	($min-bignum-fixnum x y))
+      ((flonum?)	($min-flonum-fixnum x y))
+      ((ratnum?)	($min-ratnum-fixnum x y))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($min-number-bignum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($min-fixnum-bignum x y))
+      ((bignum?)	($min-bignum-bignum x y))
+      ((flonum?)	($min-flonum-bignum x y))
+      ((ratnum?)	($min-ratnum-bignum x y))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($min-number-flonum x y)
+    (cond-real-numeric-operand x
+      ((flonum?)	($min-flonum-flonum x y))
+      ((fixnum?)	($min-fixnum-flonum x y))
+      ((bignum?)	($min-bignum-flonum x y))
+      ((ratnum?)	($min-ratnum-flonum x y))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($min-number-ratnum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($min-fixnum-ratnum x y))
+      ((bignum?)	($min-bignum-ratnum x y))
+      ((ratnum?)	($min-ratnum-ratnum x y))
+      ((flonum?)	($min-flonum-ratnum x y))
+      (else
+       (%error-not-real-number x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($min-fixnum-fixnum x y)
+    (if ($fx< x y)
+	x
+      y))
+
+  (define ($min-fixnum-bignum x y)
+    (if ($bignum-negative? y)
+	y
+      x))
+
+  (define ($min-fixnum-flonum x y)
+    (let ((x ($fixnum->flonum x)))
+      (if ($fl<= y x)
+	  y
+	x)))
+
+  (define ($min-fixnum-ratnum x y)
+    (if (<= x y)
+	x
+      y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($min-bignum-fixnum x y)
+    (if ($bignum-negative? x)
+	x
+      y))
+
+  (define ($min-bignum-bignum x y)
+    (if (bnbn< x y)
+	x
+      y))
+
+  (define ($min-bignum-flonum x y)
+    (let ((x (bignum->flonum x)))
+      (if ($fl<= y x)
+	  y
+	x)))
+
+  (define ($min-bignum-ratnum x y)
+    (if (<= x y)
+	x
+      y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($min-flonum-flonum x y)
+    (if ($fl<= x y)
+	x
+      y))
+
+  (define ($min-flonum-fixnum x y)
+    (let ((y ($fixnum->flonum y)))
+      (if ($fl<= y x)
+	  y
+	x)))
+
+  (define ($min-flonum-bignum x y)
+    (let ((y (bignum->flonum y)))
+      (if ($fl<= y x)
+	  y
+	x)))
+
+  (define ($min-flonum-ratnum x y)
+    ;;FIXME May be incorrect.  (Abdulaziz Ghuloum)
+    (let ((y (ratnum->flonum y)))
+      (if ($fl<= y x)
+	  y
+	x)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($min-ratnum-fixnum x y)
+    (if (<= x y)
+	x
+      y))
+
+  (define ($min-ratnum-bignum x y)
+    (if (<= x y)
+	x
+      y))
+
+  (define ($min-ratnum-ratnum x y)
+    (if (<= x y)
+	x
+      y))
+
+  (define ($min-ratnum-flonum x y)
+    (let ((x (ratnum->flonum x)))
+      (if ($fl<= x y)
+	  x
+	y)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-real-number x)
+    (assertion-violation who "expected real number as argument" x))
+
+  #| end of module: min |# )
 
 
 (define (abs x)
@@ -3029,38 +3193,30 @@
      (else
       (die 'real->flonum "not a real number" x)))))
 
-(define positive-bignum?
-  (lambda (x)
-    (foreign-call "ikrt_positive_bn" x)))
-
-(define even-bignum?
-  (lambda (x)
-    (foreign-call "ikrt_even_bn" x)))
-
 (define ($fxeven? x)
   ($fxzero? ($fxlogand x 1)))
 
 (define (even? x)
   (cond
    ((fixnum? x) ($fxeven? x))
-   ((bignum? x) (even-bignum? x))
+   ((bignum? x) ($bignum-even? x))
    ((flonum? x)
     (let ((v ($flonum->exact x)))
       (cond
        ((fixnum? v) ($fxeven? v))
-       ((bignum? v) (even-bignum? v))
+       ((bignum? v) ($bignum-even? v))
        (else (die 'even? "not an integer" x)))))
    (else (die 'even? "not an integer" x))))
 
 (define (odd? x)
   (cond
    ((fixnum? x) (not ($fxeven? x)))
-   ((bignum? x) (not (even-bignum? x)))
+   ((bignum? x) (not ($bignum-even? x)))
    ((flonum? x)
     (let ((v ($flonum->exact x)))
       (cond
        ((fixnum? v) (not ($fxeven? v)))
-       ((bignum? v) (not (even-bignum? v)))
+       ((bignum? v) (not ($bignum-even? v)))
        (else (die 'odd? "not an integer" x)))))
    (else (die 'odd? "not an integer" x))))
 
@@ -3477,10 +3633,10 @@
 (define-syntax bnbn> (syntax-rules () ((_ x y) (bnbncmp x y $fx>))))
 (define-syntax bnbn<= (syntax-rules () ((_ x y) (bnbncmp x y $fx<=))))
 (define-syntax bnbn>= (syntax-rules () ((_ x y) (bnbncmp x y $fx>=))))
-(define-syntax fxbn< (syntax-rules () ((_ x y) (positive-bignum? y))))
-(define-syntax bnfx< (syntax-rules () ((_ x y) (not (positive-bignum? x)))))
-(define-syntax fxbn> (syntax-rules () ((_ x y) (not (positive-bignum? y)))))
-(define-syntax bnfx> (syntax-rules () ((_ x y) (positive-bignum? x))))
+(define-syntax fxbn< (syntax-rules () ((_ x y) ($bignum-positive? y))))
+(define-syntax bnfx< (syntax-rules () ((_ x y) (not ($bignum-positive? x)))))
+(define-syntax fxbn> (syntax-rules () ((_ x y) (not ($bignum-positive? y)))))
+(define-syntax bnfx> (syntax-rules () ((_ x y) ($bignum-positive? x))))
 
 
 (define-syntax flcmp
@@ -3857,7 +4013,7 @@
   (define (%expt-bignum-exponent n m)
     (cond ((eq? n 0)	0)
 	  ((eq? n 1)	1)
-	  ((eq? n -1)	(if (even-bignum? m) 1 -1))
+	  ((eq? n -1)	(if ($bignum-even? m) 1 -1))
 	  ((nan? n)	+nan.0)
 	  (else
 	   (assertion-violation who "result is too big to compute" n m))))
@@ -3965,7 +4121,7 @@
     (cond
      ((fixnum? x) ($fx> x 0))
      ((flonum? x) ($fl> x 0.0))
-     ((bignum? x) (positive-bignum? x))
+     ((bignum? x) ($bignum-positive? x))
      ((ratnum? x) (positive? ($ratnum-n x)))
      (else (die 'positive? "not a real number" x)))))
 
@@ -3974,7 +4130,7 @@
     (cond
      ((fixnum? x) ($fx< x 0))
      ((flonum? x) ($fl< x 0.0))
-     ((bignum? x) (not (positive-bignum? x)))
+     ((bignum? x) (not ($bignum-positive? x)))
      ((ratnum? x) (negative? ($ratnum-n x)))
      (else (die 'negative? "not a real number" x)))))
 

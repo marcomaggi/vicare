@@ -16034,7 +16034,14 @@ library.  @ref{iklib numerics} for more functions acting on bignums.
 
 
 @deffn {Unsafe Operation} $bignum-positive? @var{bn}
-Evaluate to true if the operand is positive.
+@deffnx {Unsafe Operation} $bignum-negative? @var{bn}
+Evaluate to true if the operand is positive or negative.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bignum-even? @var{bn}
+@deffnx {Unsafe Operation} $bignum-odd? @var{bn}
+Evaluate to true if the operand is even or odd.
 @end deffn
 
 

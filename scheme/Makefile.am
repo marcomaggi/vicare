@@ -131,6 +131,7 @@ EXTRA_DIST= last-revision				\
 	\
 	ikarus.apply.sls				\
 	ikarus.apropos.sls				\
+	ikarus.bignums.sls				\
 	ikarus.bytevectors.sls				\
 	ikarus.cafe.sls					\
 	ikarus.chars.sls				\
