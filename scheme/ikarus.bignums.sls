@@ -18,12 +18,14 @@
 (library (ikarus bignums)
   (export
     $bignum-positive?	$bignum-negative?
-    $bignum-even?	$bignum-odd?)
+    $bignum-even?	$bignum-odd?
+    $bignum->flonum)
   (import (ikarus)
     (except (ikarus system $bignums)
 	    $bignum-positive?	$bignum-negative?
 	    $bignum-even?	$bignum-odd?
-	    ))
+	    $bignum->flonum)
+    (ikarus system $flonums))
 
 
 (define ($bignum-positive? x)
@@ -37,6 +39,12 @@
 
 (define ($bignum-odd? x)
   (not ($bignum-even? x)))
+
+
+;;;; conversion
+
+(define ($bignum->flonum x)
+  (foreign-call "ikrt_bignum_to_flonum" x 0 ($make-flonum)))
 
 
 ;;;; done

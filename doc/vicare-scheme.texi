@@ -16056,6 +16056,11 @@ Return a fixnum representing the number of machine words in the data
 portion of a bignum memory block.
 @end deffn
 
+
+@deffn {Unsafe Operation} $bignum->flonum @var{bn}
+Return a flonum object representing @var{bn} as inexact number.
+@end deffn
+
 @c page
 @node syslib flonums
 @section Low level flonum operations
@@ -16369,6 +16374,11 @@ Return the reference to the numerator.
 
 @deffn {Unsafe Operation} $ratnum-d @var{rat}
 Return the reference to the denominator.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum->flonum @var{rat}
+Return a flonum object representing @var{rat} as inexact number.
 @end deffn
 
 @c page

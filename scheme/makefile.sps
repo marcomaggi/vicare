@@ -265,6 +265,7 @@
     "ikarus.unicode.sls"
     "ikarus.string-to-number.sls"
     "ikarus.bignums.sls"
+    "ikarus.ratnums.sls"
     "ikarus.numerics.flonums.sls"
     "ikarus.numerics.generic-arithmetic.sls"
     "ikarus.numerics.flonum-conversion.sls"
@@ -823,10 +824,12 @@
     ($bignum-byte-set!				$bignums)
     ($bignum-even?				$bignums)
     ($bignum-odd?				$bignums)
+    ($bignum->flonum				$bignums)
 ;;;
     ($make-ratnum				$rat)
     ($ratnum-n					$rat)
     ($ratnum-d					$rat)
+    ($ratnum->flonum				$rat)
 ;;;
     ($make-compnum				$comp)
     ($compnum-real				$comp)
