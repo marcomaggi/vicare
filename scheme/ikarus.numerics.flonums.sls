@@ -17,8 +17,7 @@
 
 (library (ikarus flonums)
   (export
-    inexact->exact
-    exact		$flonum->exact
+    inexact->exact	exact		$flonum->exact
     fixnum->flonum
 
     flzero?		$flzero?
@@ -127,7 +126,8 @@
 	    $flmin)
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
-	  cond-numeric-operand))
+	  cond-numeric-operand
+	  receive))
 
 
 ;;;; helpers
@@ -204,7 +204,8 @@
 	  ;;Nans, infinities, magnitude large enough to be an integer.
 	  x
 	;;This really needs to get optimized.
-	(let-values (((positive? be mantissa) (flonum-parts x)))
+	(receive (positive? be mantissa)
+	    (flonum-parts x)
 	  (if ($fxzero? be)
 	      ;;denormalized
 	      (if positive? +0.0 -0.0)
@@ -281,52 +282,6 @@
       (quotient n d)))
 
   #| end of module |# )
-
-
-(module ($flonum->exact)
-
-  (define ($flonum->exact x)
-    (let* ((sbe ($flonum-sbe x))
-	   (be ($fxlogand sbe #x7FF)))
-      (cond (($fx= be 2047) ;nans/infs
-	     #f)
-	    (($fx>= be 1075) ;magnitude large enough to be an integer
-	     (bitwise-arithmetic-shift-left ($flonum-signed-mantissa x)
-					    ($fx- be 1075)))
-	    (else
-	     ;;This really needs to get optimized.
-	     (let-values (((pos? be m) (flonum-parts x)))
-	       (cond ((= be 0) ;denormalized
-		      (if (= m 0)
-			  0
-			(* (if pos? 1 -1)
-			   (/ m (expt 2 1074)))))
-		     (else ;normalized flonum
-		      (/ (+ m (expt 2 52))
-			 (bitwise-arithmetic-shift-left (if pos? 1 -1)
-							(- 1075 be))))))))))
-
-  (define ($flonum-signed-mantissa x)
-    (let ((b0 ($flonum-u8-ref x 0)))
-      (let ((m0 ($fx+ ($flonum-u8-ref x 7)
-		      ($fx+ ($fxsll ($flonum-u8-ref x 6) 8)
-			    ($fxsll ($flonum-u8-ref x 5) 16))))
-	    (m1 ($fx+ ($flonum-u8-ref x 4)
-		      ($fx+ ($fxsll ($flonum-u8-ref x 3) 8)
-			    ($fxsll ($flonum-u8-ref x 2) 16))))
-	    (m2 (let ((b1 ($flonum-u8-ref x 1)))
-		  (if (and ($fx= ($fxlogand b0 #x7F) 0)
-			   ($fx= ($fxsra b1 4) 0))
-		      ($fxlogand b1 #xF)
-		    ($fxlogor ($fxlogand b1 #xF) #x10)))))
-	(if ($fx= 0 ($fxlogand #x80 b0))
-	    (+ (bitwise-arithmetic-shift-left ($fxlogor m1 ($fxsll m2 24)) 24) m0)
-	  (+ (bitwise-arithmetic-shift-left
-	      ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
-	     ($fx- 0 m0))))))
-
-
-  #| end of module: $flonum->exact |# )
 
 
 ;;;; numerator and denominator
@@ -500,7 +455,10 @@
       ((fixnum	x))
     ($fixnum->flonum x)))
 
-(module (inexact->exact exact)
+(module (inexact->exact
+	 exact
+	 $flexact
+	 $cflexact)
 
   (define (inexact->exact x)
     ($exact x 'inexact->exact))
@@ -509,27 +467,75 @@
     ($exact x 'exact))
 
   (define ($exact x who)
+    (cond-numeric-operand x
+      ((flonum?)	($flexact x))
+      ((cflonum?)	($cflexact x))
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((ratnum?)	x)
+      ((compnum?)	x)
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($flexact x)
+    (or ($flonum->exact x)
+	(%error-no-real-value '$flexact x)))
+
+  (define ($cflexact x)
     (import (ikarus system $compnums))
-    (cond ((flonum? x)
-	   (or ($flonum->exact x)
-	       (%error-no-real-value who x)))
-	  ((cflonum? x)
-	   (make-rectangular (or ($flonum->exact ($cflonum-real x))
-				 (%error-no-real-value who x))
-			     (or ($flonum->exact ($cflonum-imag x))
-				 (%error-no-real-value who x))))
-	  ((or (fixnum?  x)
-	       (ratnum?  x)
-	       (bignum?  x)
-	       (compnum? x))
-	   x)
-	  (else
-	   (assertion-violation who "expected number as argument" x))))
+    (define who '$cflexact)
+    (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value who x))
+		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value who x))))
 
   (define (%error-no-real-value who x)
     (assertion-violation who "number has no real value" x))
 
   #| end of module |# )
+
+(module ($flonum->exact)
+
+  (define ($flonum->exact x)
+    (let* ((sbe ($flonum-sbe x))
+	   (be  ($fxlogand sbe #x7FF)))
+      (cond (($fx= be 2047) ;nans/infs
+	     #f)
+	    (($fx>= be 1075) ;magnitude large enough to be an integer
+	     (bitwise-arithmetic-shift-left ($flonum-signed-mantissa x)
+					    ($fx- be 1075)))
+	    (else
+	     ;;This really needs to get optimized.
+	     (receive (pos? be m)
+		 (flonum-parts x)
+	       (cond (($fx= be 0) ;denormalized
+		      (if (= m 0)
+			  0
+			(* (if pos? 1 -1)
+			   (/ m (expt 2 1074)))))
+		     (else ;normalized flonum
+		      (/ (+ m (expt 2 52))
+			 (bitwise-arithmetic-shift-left (if pos? 1 -1)
+							(- 1075 be))))))))))
+
+  (define ($flonum-signed-mantissa x)
+    (let ((b0 ($flonum-u8-ref x 0)))
+      (let ((m0 ($fx+ ($flonum-u8-ref x 7)
+		      ($fx+ ($fxsll ($flonum-u8-ref x 6) 8)
+			    ($fxsll ($flonum-u8-ref x 5) 16))))
+	    (m1 ($fx+ ($flonum-u8-ref x 4)
+		      ($fx+ ($fxsll ($flonum-u8-ref x 3) 8)
+			    ($fxsll ($flonum-u8-ref x 2) 16))))
+	    (m2 (let ((b1 ($flonum-u8-ref x 1)))
+		  (if (and ($fx= ($fxlogand b0 #x7F) 0)
+			   ($fx= ($fxsra b1 4) 0))
+		      ($fxlogand b1 #xF)
+		    ($fxlogor ($fxlogand b1 #xF) #x10)))))
+	(if ($fx= 0 ($fxlogand #x80 b0))
+	    (+ (bitwise-arithmetic-shift-left ($fxlogor m1 ($fxsll m2 24)) 24)
+	       m0)
+	  (+ (bitwise-arithmetic-shift-left ($fx- 0 ($fxlogor m1 ($fxsll m2 24))) 24)
+	     ($fx- 0 m0))))))
+
+  #| end of module: $flonum->exact |# )
 
 
 ;;;; min max

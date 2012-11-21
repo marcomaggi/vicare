@@ -79,7 +79,7 @@
     case-fixnums		case-integers
     case-symbols
     define-exact-integer->symbol-function
-    cond-numeric-operand
+    cond-numeric-operand	cond-exact-integer-operand
 
     ;; auxiliary syntaxes
     big				little)
@@ -484,6 +484,18 @@
 
 
 ;;;; math functions dispatching
+
+(define-syntax cond-exact-integer-operand
+  (syntax-rules (else fixnum? bignum?)
+    ((_ ?num
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     (else		?body-el0 ?body-el ...))))
+    ))
 
 (define-syntax cond-numeric-operand
   (syntax-rules (else

@@ -323,107 +323,155 @@
    (()
     0)
    ((a b c d . e*)
-    (let f ((ac (binary+ (binary+ (binary+ a b) c) d))
-	    (e* e*))
+    (let loop ((ac (binary+ (binary+ (binary+ a b) c) d))
+	       (e* e*))
       (if (null? e*)
 	  ac
-	(f (binary+ ac (car e*)) (cdr e*)))))))
+	(loop (binary+ ac ($car e*)) ($cdr e*)))))))
 
 (define -
   (case-lambda
-   ((x y) (binary- x y))
-   ((x y z) (binary- (binary- x y) z))
+   ((x y)
+    (binary- x y))
+   ((x y z)
+    (binary- (binary- x y) z))
    ((a)
     (binary- 0 a))
    ((a b c d . e*)
-    (let f ((ac (binary- (binary- (binary- a b) c) d))
-	    (e* e*))
-      (cond
-       ((null? e*) ac)
-       (else (f (binary- ac (car e*)) (cdr e*))))))))
-
-(define (unary- x)
-  ($fixnum-number 0 x))
+    (let loop ((ac (binary- (binary- (binary- a b) c) d))
+	       (e* e*))
+      (if (null? e*)
+	  ac
+	(loop (binary- ac ($car e*)) ($cdr e*)))))))
 
 (define *
   (case-lambda
-   ((x y) (binary* x y))
-   ((x y z) (binary* (binary* x y) z))
+   ((x y)
+    (binary* x y))
+   ((x y z)
+    (binary* (binary* x y) z))
    ((a)
-    (cond
-     ((fixnum? a) a)
-     ((number? a) a)
-     (else (die '* "not a number" a))))
-   (() 1)
+    (cond ((fixnum? a) a)
+	  ((number? a) a)
+	  (else
+	   (assertion-violation '* "not a number" a))))
+   (()
+    1)
    ((a b c d . e*)
-    (let f ((ac (binary* (binary* (binary* a b) c) d))
-	    (e* e*))
-      (cond
-       ((null? e*) ac)
-       (else (f (binary* ac (car e*)) (cdr e*))))))))
+    (let loop ((ac (binary* (binary* (binary* a b) c) d))
+	       (e* e*))
+      (if (null? e*)
+	  ac
+	(loop (binary* ac ($car e*)) ($cdr e*)))))))
 
-(module (/)
-  (define who (quote /))
+(define /
+  (case-lambda
+   ((x y)
+    (binary/ x y))
+   ((x)
+    (unary/ x))
+   ((x y z . ls)
+    (let loop ((a  (binary/ x y))
+	       (b  z)
+	       (ls ls))
+      (if (null? ls)
+	  (binary/ a b)
+	(loop (binary/ a b) ($car ls) ($cdr ls)))))
+   ))
 
-  (define /
-    (case-lambda
-     ((x y)
-      (binary/ x y))
-     ((x)
-      (unary/ x))
-     ((x y z . ls)
-      (let loop ((a  (binary/ x y))
-		 (b  z)
-		 (ls ls))
-	(if (null? ls)
-	    (binary/ a b)
-	  (loop (binary/ a b) ($car ls) ($cdr ls)))))
-     ))
+
+(module (unary-
+	 $fixnum-	$bignum-	$flonum-
+	 $ratnum-	$compnum-	$cflonum-)
+  (define who (quote -))
 
-  (define (unary/ x)
+  (define (unary- x)
     (cond-numeric-operand x
-      ((fixnum?)
-       (cond (($fxzero? x)
-	      (assertion-violation who "division by 0"))
-	     (($fx> x 0)
-	      (if ($fx= x 1)
-		  1
-		($make-ratnum 1 x)))
-	     (else
-	      (if ($fx= x -1)
-		  -1
-		($make-ratnum -1 ($fx- 0 x))))))
-
-      ((bignum?)
-       (if ($bignum-positive? x)
-	   ($make-ratnum 1 x)
-	 ($make-ratnum -1 (- x))))
-
-      ((flonum?)
-       (foreign-call "ikrt_fl_invert" x))
-
-      ((ratnum?)
-       (let ((x.num ($ratnum-n x))
-	     (x.den ($ratnum-d x)))
-	 (cond (($fx= x.num +1)	;this works also when X.NUM is not a fixnum
-		x.den)
-	       (($fx= x.den -1)	;this works also when X.NUM is not a fixnum
-		(- x.den))
-	       (else
-		(if (> 0 x.num)
-		    ($make-ratnum (- x.den) (- x.num))
-		  ($make-ratnum x.den x.num))))))
-
-      ((compnum?)
-       ($fixnum/compnum 1 x))
-
-      ((cflonum?)
-       ($fixnum/cflonum 1 x))
-
+      ((fixnum?)	($fixnum-  x))
+      ((bignum?)	($bignum-  x))
+      ((flonum?)	($flonum-  x))
+      ((ratnum?)	($ratnum-  x))
+      ((compnum?)	($compnum- x))
+      ((cflonum?)	($cflonum- x))
       (else
        (assertion-violation who "expected number as argument" x))))
 
-  #| end of module: /|# )
+  (define ($fixnum- x)
+    ($fx- 0 x))
+
+  (define ($bignum- x)
+    ($fixnum-bignum 0 x))
+
+  (define ($flonum- x)
+    ($fl- 0.0 x))
+
+  (define ($ratnum- x)
+    ($fixnum-ratnum 0 x))
+
+  (define ($compnum- x)
+    ($fixnum-compnum 0 x))
+
+  (define ($cflonum- x)
+    ($flonum-cflonum 0.0 x))
+
+  #| end of module: unary- |# )
+
+
+(module (unary/
+	 $fixnum/	$bignum/	$flonum/
+	 $ratnum/	$compnum/	$cflonum/)
+  (define who (quote /))
+
+  (define (unary/ x)
+    (cond-numeric-operand x
+      ((fixnum?)	($fixnum/  x))
+      ((bignum?)	($bignum/  x))
+      ((flonum?)	($flonum/  x))
+      ((ratnum?)	($ratnum/  x))
+      ((compnum?)	($compnum/ x))
+      ((cflonum?)	($cflonum/ x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($fixnum/ x)
+    (cond (($fxzero? x)
+	   (assertion-violation who "unary division by 0"))
+	  (($fx> x 0)
+	   (if ($fx= x 1)
+	       1
+	     ($make-ratnum 1 x)))
+	  (else
+	   (if ($fx= x -1)
+	       -1
+	     ($make-ratnum -1 ($fx- 0 x))))))
+
+  (define ($bignum/ x)
+    (if ($bignum-positive? x)
+	($make-ratnum 1 x)
+      ($make-ratnum -1 (- x))))
+
+  (define ($flonum/ x)
+    (foreign-call "ikrt_fl_invert" x))
+
+  (define ($ratnum/ x)
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x)))
+      (cond (($fx= x.num +1) ;this works also when X.NUM is not a fixnum
+	     x.den)
+	    (($fx= x.den -1) ;this works also when X.NUM is not a fixnum
+	     (- x.den))
+	    (else
+	     (if (> 0 x.num)
+		 ($make-ratnum (- x.den) (- x.num))
+	       ($make-ratnum x.den x.num))))))
+
+  (define ($compnum/ x)
+    ($fixnum/compnum 1 x))
+
+  (define ($cflonum/ x)
+    ($fixnum/cflonum 1 x))
+
+  #| end of module: unary/ |# )
 
 
 (module (binary+
@@ -1781,7 +1829,7 @@
 	  (else
 	   ;;Here Y is negative.
 	   (if ($fx= y -1)
-	       (- x)
+	       ($bignum- x)
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
 	     ;;fixnum.
 	     (let ((g (binary-gcd x y)))
@@ -2099,148 +2147,229 @@
 
 ;;;; common bitwise operations
 
-(define bitwise-and
-  (case-lambda
-   ((x y) (binary-bitwise-and x y))
-   ((x y z) (binary-bitwise-and (binary-bitwise-and x y) z))
-   ((a)
-    (cond
-     ((fixnum? a) a)
-     ((bignum? a) a)
-     (else (die 'bitwise-and "not a number" a))))
-   (() -1)
-   ((a b c d . e*)
-    (let f ((ac (binary-bitwise-and a
-				    (binary-bitwise-and b
-							(binary-bitwise-and c d))))
-	    (e* e*))
-      (cond
-       ((null? e*) ac)
-       (else (f (binary-bitwise-and ac (car e*)) (cdr e*))))))))
+(let-syntax
+    ((define-bitwise-operation
+       (syntax-rules ()
+	 ((_ ?who ?binary-who)
+	  (define ?who
+	    (case-lambda
+	     ((x y)
+	      (?binary-who x y))
+	     ((x y z)
+	      (?binary-who (?binary-who x y) z))
+	     ((a)
+	      (cond ((fixnum? a)
+		     a)
+		    ((bignum? a) a)
+		    (else
+		     (assertion-violation (quote ?who)
+		       "expected number as argument" a))))
+	     (()
+	      -1)
+	     ((a b c d . e*)
+	      (let loop ((ac (?binary-who a (?binary-who b (?binary-who c d))))
+			 (e* e*))
+		(if (null? e*)
+		    ac
+		  (loop (?binary-who ac ($car e*))
+			($cdr e*)))))))
+	  ))))
+  (define-bitwise-operation bitwise-and binary-bitwise-and)
+  (define-bitwise-operation bitwise-ior binary-bitwise-ior)
+  (define-bitwise-operation bitwise-xor binary-bitwise-xor))
 
-(define bitwise-ior
-  (case-lambda
-   ((x y) (binary-bitwise-ior x y))
-   ((x y z) (binary-bitwise-ior (binary-bitwise-ior x y) z))
-   ((a)
-    (cond
-     ((fixnum? a) a)
-     ((bignum? a) a)
-     (else (die 'bitwise-ior "not a number" a))))
-   (() 0)
-   ((a b c d . e*)
-    (let f ((ac (binary-bitwise-ior a
-				    (binary-bitwise-ior b
-							(binary-bitwise-ior c d))))
-	    (e* e*))
-      (cond
-       ((null? e*) ac)
-       (else (f (binary-bitwise-ior ac (car e*)) (cdr e*))))))))
+(module (bitwise-not
+	 $fixnum-bitwise-not
+	 $bignum-bitwise-not)
+  (define who 'bitwise-not)
 
-(define bitwise-xor
-  (case-lambda
-   ((x y) (binary-bitwise-xor x y))
-   ((x y z) (binary-bitwise-xor (binary-bitwise-xor x y) z))
-   ((a)
-    (cond
-     ((fixnum? a) a)
-     ((bignum? a) a)
-     (else (die 'bitwise-xor "not a number" a))))
-   (() 0)
-   ((a b c d . e*)
-    (let f ((ac (binary-bitwise-xor a
-				    (binary-bitwise-xor b
-							(binary-bitwise-xor c d))))
-	    (e* e*))
-      (cond
-       ((null? e*) ac)
-       (else (f (binary-bitwise-xor ac (car e*)) (cdr e*))))))))
+  (define (bitwise-not x)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($fixnum-bitwise-not x))
+      ((bignum?)	($bignum-bitwise-not x))
+      (else
+       (assertion-violation who "expected exact integer as argument" x))))
 
-(define (bitwise-not x)
-  (cond
-   ((fixnum? x) ($fxlognot x))
-   ((bignum? x) (foreign-call "ikrt_bnlognot" x))
-   (else (die 'bitwise-not "invalid argument" x))))
+  (define ($fixnum-bitwise-not x)
+    ($fxlognot x))
+
+  (define ($bignum-bitwise-not x)
+    (foreign-call "ikrt_bnlognot" x))
+
+  #| end of module: bitwise-not |# )
+
+
+(module (binary-bitwise-and
+	 $bitwise-and-fixnum-number	$bitwise-and-bignum-number
+	 $bitwise-and-fixnum-fixnum	$bitwise-and-fixnum-bignum
+	 $bitwise-and-bignum-fixnum	$bitwise-and-bignum-bignum)
+  (define who 'bitwise-and)
+
+  (define (binary-bitwise-and x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($bitwise-and-fixnum-number x y))
+      ((bignum?)	($bitwise-and-bignum-number x y))
+      (else
+       (%error-expected-integer x))))
 
 ;;; --------------------------------------------------------------------
 
-(define binary-bitwise-and
-  (lambda (x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y) ($fxlogand x y))
-       ((bignum? y)
-	(foreign-call "ikrt_fxbnlogand" x y))
-       (else
-	(die 'bitwise-and "not an exact integer" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(foreign-call "ikrt_fxbnlogand" y x))
-       ((bignum? y)
-	(foreign-call "ikrt_bnbnlogand" x y))
-       (else
-	(die 'bitwise-and "not an exact integer" y))))
-     (else (die 'bitwise-and "not an exact integer" x)))))
+  (define ($bitwise-and-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-and-fixnum-fixnum x y))
+      ((bignum?)	($bitwise-and-fixnum-bignum x y))
+      (else
+       (%error-expected-integer y))))
 
-(define binary-bitwise-ior
-  (lambda (x y)
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y) ($fxlogor x y))
-       ((bignum? y)
-	(foreign-call "ikrt_fxbnlogor" x y))
-       (else
-	(die 'bitwise-ior "not an exact integer" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y)
-	(foreign-call "ikrt_fxbnlogor" y x))
-       ((bignum? y)
-	(foreign-call "ikrt_bnbnlogor" x y))
-       (else
-	(die 'bitwise-ior "not an exact integer" y))))
-     (else (die 'bitwise-ior "not an exact integer" x)))))
+  (define ($bitwise-and-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-and-bignum-fixnum x y))
+      ((bignum?)	($bitwise-and-bignum-bignum x y))
+      (else
+       (%error-expected-integer y))))
 
+;;; --------------------------------------------------------------------
 
-(define binary-bitwise-xor
-  (lambda (x y)
-    (define (fxbn x y)
-      (let ((y0 (bitwise-and y (greatest-fixnum)))
-	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
-	(bitwise-ior
-	 ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
-	 (bitwise-arithmetic-shift-left
-	  (bitwise-arithmetic-shift-right
-	   (if ($fx>= x 0) y (bitwise-not y))
-	   (- (fixnum-width) 1))
-	  (- (fixnum-width) 1)))))
-    (define (bnbn x y)
-      (let ((x0 (bitwise-and x (greatest-fixnum)))
-	    (x1 (bitwise-arithmetic-shift-right x (- (fixnum-width) 1)))
-	    (y0 (bitwise-and y (greatest-fixnum)))
-	    (y1 (bitwise-arithmetic-shift-right y (- (fixnum-width) 1))))
-	(bitwise-ior
-	 ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
-	 (bitwise-arithmetic-shift-left
-	  (binary-bitwise-xor x1 y1)
-	  (- (fixnum-width) 1)))))
-    (cond
-     ((fixnum? x)
-      (cond
-       ((fixnum? y) ($fxlogxor x y))
-       ((bignum? y) (fxbn x y))
-       (else
-	(die 'bitwise-xor "not an exact integer" y))))
-     ((bignum? x)
-      (cond
-       ((fixnum? y) (fxbn y x))
-       ((bignum? y) (bnbn x y))
-       (else
-	(die 'bitwise-xor "not an exact integer" y))))
-     (else (die 'bitwise-xor "not an exact integer" x)))))
+  (define ($bitwise-and-fixnum-fixnum x y)
+    ($fxlogand x y))
+
+  (define ($bitwise-and-fixnum-bignum x y)
+    (foreign-call "ikrt_fxbnlogand" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-and-bignum-fixnum x y)
+    (foreign-call "ikrt_fxbnlogand" y x))
+
+  (define ($bitwise-and-bignum-bignum x y)
+    (foreign-call "ikrt_bnbnlogand" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expected-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module: binary-bitwise-and |# )
+
+
+(module (binary-bitwise-ior
+	 $bitwise-ior-fixnum-number	$bitwise-ior-bignum-number
+	 $bitwise-ior-fixnum-fixnum	$bitwise-ior-fixnum-bignum
+	 $bitwise-ior-bignum-fixnum	$bitwise-ior-bignum-bignum)
+  (define who 'bitwise-ior)
+
+  (define (binary-bitwise-ior x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($bitwise-ior-fixnum-number x y))
+      ((bignum?)	($bitwise-ior-bignum-number x y))
+      (else
+       (%error-expected-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-ior-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-ior-fixnum-fixnum x y))
+      ((bignum?)	($bitwise-ior-fixnum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+  (define ($bitwise-ior-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-ior-bignum-fixnum x y))
+      ((bignum?)	($bitwise-ior-bignum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-ior-fixnum-fixnum x y)
+    ($fxlogor x y))
+
+  (define ($bitwise-ior-fixnum-bignum x y)
+    (foreign-call "ikrt_fxbnlogor" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-ior-bignum-fixnum x y)
+    (foreign-call "ikrt_fxbnlogor" y x))
+
+  (define ($bitwise-ior-bignum-bignum x y)
+    (foreign-call "ikrt_bnbnlogor" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expected-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module: binary-bitwise-ior |# )
+
+
+(module (binary-bitwise-xor
+	 $bitwise-xor-fixnum-number	$bitwise-xor-bignum-number
+	 $bitwise-xor-fixnum-fixnum	$bitwise-xor-fixnum-bignum
+	 $bitwise-xor-bignum-fixnum	$bitwise-xor-bignum-bignum)
+  (define who 'bitwise-xor)
+
+  (define (binary-bitwise-xor x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($bitwise-xor-fixnum-number x y))
+      ((bignum?)	($bitwise-xor-bignum-number x y))
+      (else
+       (%error-expected-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-xor-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-xor-fixnum-fixnum x y))
+      ((bignum?)	($bitwise-xor-fixnum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+  (define ($bitwise-xor-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-xor-bignum-fixnum x y))
+      ((bignum?)	($bitwise-xor-bignum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-xor-fixnum-fixnum x y)
+    ($fxlogxor x y))
+
+  (define ($bitwise-xor-fixnum-bignum x y)
+    (let* ((D  ($fx- (fixnum-width) 1))
+	   (y0 (bitwise-and y (greatest-fixnum)))
+	   (y1 (bitwise-arithmetic-shift-right y D)))
+      (bitwise-ior ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
+		   (bitwise-arithmetic-shift-left
+		    (bitwise-arithmetic-shift-right (if ($fx>= x 0) y (bitwise-not y))
+						    D)
+		    D))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-xor-bignum-fixnum x y)
+    ($bitwise-xor-fixnum-bignum y x))
+
+  (define ($bitwise-xor-bignum-bignum x y)
+    (let* ((D  ($fx- (fixnum-width) 1))
+	   (x0 (bitwise-and x (greatest-fixnum)))
+	   (y0 (bitwise-and y (greatest-fixnum)))
+	   (x1 (bitwise-arithmetic-shift-right x D))
+	   (y1 (bitwise-arithmetic-shift-right y D)))
+      (bitwise-ior ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
+		   (bitwise-arithmetic-shift-left (binary-bitwise-xor x1 y1)
+						  D))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expected-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module: binary-bitwise-xor |# )
 
 
 ;;;; uncommon bitwise operations
@@ -4267,4 +4396,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
+;; eval: (put 'cond-exact-integer-operand 'scheme-indent-function 1)
 ;; End:

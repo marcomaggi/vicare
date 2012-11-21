@@ -91,6 +91,17 @@
   #t)
 
 
+(parametrise ((check-test-name	'exactness))
+
+  (check (exact 1.2e2)	=> 120)
+  (check (exact +1.2e8)	=> +120000000)
+  (check (exact -1.2e8) => -120000000)
+  (check (exact +1.2e9)	=> +1200000000)
+  (check (exact -1.2e9) => -1200000000)
+
+  #t)
+
+
 (parametrise ((check-test-name	'debug))
 
   (when #f
