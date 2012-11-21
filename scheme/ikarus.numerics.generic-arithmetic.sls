@@ -2376,169 +2376,325 @@
 
 (define (bitwise-if x y z)
   (define who 'bitwise-if)
-  (define (err x) (die who "not an exact integer" x))
-  (unless (or (fixnum? x) (bignum? x)) (err x))
-  (unless (or (fixnum? y) (bignum? y)) (err y))
-  (unless (or (fixnum? z) (bignum? z)) (err z))
-  (bitwise-ior
-   (bitwise-and x y)
-   (bitwise-and (bitwise-not x) z)))
+  (with-arguments-validation (who)
+      ((exact-integer	x)
+       (exact-integer	y)
+       (exact-integer	z))
+    (bitwise-ior (bitwise-and x y)
+		 (bitwise-and (bitwise-not x) z))))
 
-(define (bitwise-copy-bit-field x i j n)
-  (define who 'bitwise-copy-bit-field)
-  (define (err x) (die who "not an exact integer" x))
-  (define (err2 x) (die who "index must be nonnegative" x))
-  (define (err3 x y) (die who "indices must be in nondescending order" x y))
-  (unless (or (fixnum? x) (bignum? x)) (err x))
-  (unless (or (fixnum? i) (bignum? i)) (err i))
-  (unless (or (fixnum? j) (bignum? j)) (err j))
-  (unless (or (fixnum? n) (bignum? n)) (err n))
-  (when (< i 0) (err2 i))
-  (when (< j i) (err3 i j))
-  (bitwise-if (sll (sub1 (sll 1 (- j i))) i) (sll n i) x))
+(module (bitwise-copy-bit-field
+	 bitwise-reverse-bit-field
+	 bitwise-rotate-bit-field)
 
-(define (bitwise-reverse-bit-field N start end)
-  (define who 'bitwise-reverse-bit-field)
-  (%assert-argument-is-exact-integer who N)
-  (%assert-argument-is-exact-non-negative-integer who start)
-  (%assert-argument-is-exact-non-negative-integer who end)
-  (%assert-arguments-are-start-and-end-bit-offsets who start end)
-  (let ((width (- end start)))
-    (if (positive? width)
-	(let loop ((reversed	0)
-		   (field	(bitwise-bit-field N start end))
-		   (width	width))
-	  (if (zero? width)
-	      (bitwise-copy-bit-field N start end reversed)
-	    (if (zero? (bitwise-and field 1))
-		(loop (bitwise-arithmetic-shift reversed 1)
-		      (bitwise-arithmetic-shift-right field 1)
-		      (- width 1))
-	      (loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
-		    (bitwise-arithmetic-shift-right field 1)
-		    (- width 1)))))
-      N)))
+  (define (bitwise-copy-bit-field x i j n)
+    (define who 'bitwise-copy-bit-field)
+    (with-arguments-validation (who)
+	((exact-integer		x)
+	 (exact-integer		i)
+	 (exact-integer		j)
+	 (exact-integer		n)
+	 (index-order		i j))
+      (bitwise-if (sll (sub1 (sll 1 (- j i))) i)
+		  (sll n i)
+		  x)))
 
-(define (bitwise-rotate-bit-field N start end count)
-  (define who 'bitwise-rotate-bit-field)
-  (%assert-argument-is-exact-integer who N)
-  (%assert-argument-is-exact-non-negative-integer who start)
-  (%assert-argument-is-exact-non-negative-integer who end)
-  (%assert-argument-is-exact-non-negative-integer who count)
-  (%assert-arguments-are-start-and-end-bit-offsets who start end)
+  (define (bitwise-reverse-bit-field N start end)
+    (define who 'bitwise-reverse-bit-field)
+    (with-arguments-validation (who)
+	((exact-integer			N)
+	 (non-negative-exact-integer	start)
+	 (non-negative-exact-integer	end)
+	 (index-order			start end))
+      (let ((width (- end start)))
+	(if (positive? width)
+	    (let loop ((reversed	0)
+		       (field	(bitwise-bit-field N start end))
+		       (width	width))
+	      (if (zero? width)
+		  (bitwise-copy-bit-field N start end reversed)
+		(if (zero? (bitwise-and field 1))
+		    (loop (bitwise-arithmetic-shift reversed 1)
+			  (bitwise-arithmetic-shift-right field 1)
+			  (- width 1))
+		  (loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
+			(bitwise-arithmetic-shift-right field 1)
+			(- width 1)))))
+	  N))))
 
-  (let ((width (- end start)))
-    (if (positive? width)
-	(let* ((count	(mod count width))
-	       (field0	(bitwise-bit-field N start end))
-	       (field1	(bitwise-arithmetic-shift-left field0 count))
-	       (field2	(bitwise-arithmetic-shift-right field0 (- width count)))
-	       (field	(bitwise-ior field1 field2)))
-	  (bitwise-copy-bit-field N start end field))
-      N)))
+  (define (bitwise-rotate-bit-field N start end count)
+    (define who 'bitwise-rotate-bit-field)
+    (with-arguments-validation (who)
+	((exact-integer			N)
+	 (non-negative-exact-integer	start)
+	 (non-negative-exact-integer	end)
+	 (non-negative-exact-integer	count)
+	 (index-order			start end))
+      (let ((width (- end start)))
+	(if (positive? width)
+	    (let* ((count  (mod count width))
+		   (field0 (bitwise-bit-field N start end))
+		   (field1 (bitwise-arithmetic-shift-left field0 count))
+		   (field2 (bitwise-arithmetic-shift-right field0 (- width count)))
+		   (field  (bitwise-ior field1 field2)))
+	      (bitwise-copy-bit-field N start end field))
+	  N))))
 
-(define (%assert-argument-is-exact-integer who obj)
-  (unless (and (integer? obj) (exact? obj))
-    (assertion-violation who "expected exact integer as argument" obj)))
+  (define-argument-validation (index-order who i j)
+    (<= i j)
+    (assertion-violation who "indexes must be in nondescending order" i j))
 
-(define (%assert-argument-is-exact-non-negative-integer who obj)
-  (%assert-argument-is-exact-integer who obj)
-  (unless (<= 0 obj)
-    (assertion-violation who "expected non negative exact integer as argument" obj)))
-
-(define (%assert-arguments-are-start-and-end-bit-offsets who start end)
-  (unless (<= start end)
-    (assertion-violation who
-      "expected start bit offset less than or equal to end bit offset" start end)))
+  #| end of module |# )
 
 
-(define (binary-gcd x y)
-  (define (gcd x y)
-    (cond
-     (($fx= y 0) x)
-     (else (gcd y (remainder x y)))))
-  (let ((x (if (< x 0) (- x) x))
-	(y (if (< y 0) (- y) y)))
-    (cond
-     ((> x y) (gcd x y))
-     ((< x y) (gcd y x))
-     (else x))))
+(module (gcd
+	 binary-gcd
+	 $gcd-fixnum-number	$gcd-bignum-number
+	 $gcd-number-fixnum	$gcd-number-bignum
+	 $gcd-fixnum-fixnum	$gcd-fixnum-bignum
+	 $gcd-bignum-fixnum	$gcd-bignum-bignum)
+  (define who 'gcd)
 
-(define gcd
-  (case-lambda
-   ((x y)
-    (cond
-     ((or (fixnum? x) (bignum? x))
-      (cond
-       ((or (fixnum? y) (bignum? y))
-	(binary-gcd x y))
-       ((number? y)
-	(die 'gcd "not an exact integer" y))
-       (else
-	(die 'gcd "not a number" y))))
-     ((number? x)
-      (die 'gcd "not an exact integer" x))
-     (else
-      (die 'gcd "not a number" x))))
-   ((x)
-    (cond
-     ((or (fixnum? x) (bignum? x)) x)
-     ((number? x)
-      (die 'gcd "not an exact integer" x))
-     (else
-      (die 'gcd "not a number" x))))
-   (() 0)
-   ((x y z . ls)
-    (let f ((g (gcd (gcd x y) z)) (ls ls))
-      (cond
-       ((null? ls) g)
-       (else (f (gcd g (car ls)) (cdr ls))))))))
+  (define gcd
+    (case-lambda
+     ((x y)
+      (cond-exact-integer-operand x
+	((fixnum?)	($gcd-fixnum-number x y))
+	((bignum?)	($gcd-bignum-number x y))
+	(else
+	 (%error-not-exact-integer x))))
 
+     ((x)
+      (cond-exact-integer-operand x
+	((fixnum?)	x)
+	((bignum?)	x)
+	(else
+	 (%error-not-exact-integer x))))
 
-(define lcm
-  (case-lambda
-   ((x y)
-    (cond
-     ((or (fixnum? x) (bignum? x))
-      (cond
-       ((or (fixnum? y) (bignum? y))
-	(let ((x (if (< x 0) (- x) x))
-	      (y (if (< y 0) (- y) y)))
-	  (let ((g (binary-gcd x y)))
-	    (binary* y (quotient x g)))))
-       ((flonum? y)
-	(let ((v ($flonum->exact y)))
-	  (cond
-	   ((or (fixnum? v) (bignum? v))
-	    (inexact (lcm x v)))
-	   (else (die 'lcm "not an integer" y)))))
-       (else
-	(die 'lcm "not an integer" y))))
-     ((flonum? x)
-      (let ((v ($flonum->exact x)))
-	(cond
-	 ((or (fixnum? v) (bignum? v))
-	  (inexact (lcm v y)))
-	 (else (die 'lcm "not an integer" x)))))
-     (else
-      (die 'lcm "not an integer" x))))
-   ((x)
-    (cond
-     ((or (fixnum? x) (bignum? x)) x)
-     ((flonum? x)
-      (let ((v ($flonum->exact x)))
-	(cond
-	 ((or (fixnum? v) (bignum? v)) x)
-	 (else (die 'lcm "not an integer" x)))))
-     (else
-      (die 'lcm "not an integer" x))))
-   (() 1)
-   ((x y z . ls)
-       ;;; FIXME: incorrect for multiple roundings
-    (let f ((g (lcm (lcm x y) z)) (ls ls))
-      (cond
-       ((null? ls) g)
-       (else (f (lcm g (car ls)) (cdr ls))))))))
+     (() 0)
+
+     ((x y z . ls)
+      (let loop ((g  (gcd (gcd x y) z))
+		 (ls ls))
+	(if (null? ls)
+	    g
+	  (loop (gcd g ($car ls))
+		($cdr ls)))))
+     ))
+
+;;; --------------------------------------------------------------------
+
+  (define ($gcd-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($gcd-fixnum-fixnum x y))
+      ((bignum?)	($gcd-fixnum-bignum x y))
+      (else
+       (%error-not-exact-integer y))))
+
+  (define ($gcd-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($gcd-bignum-fixnum x y))
+      ((bignum?)	($gcd-bignum-bignum x y))
+      (else
+       (%error-not-exact-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($gcd-number-fixnum x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($gcd-fixnum-fixnum x y))
+      ((bignum?)	($gcd-bignum-fixnum x y))
+      (else
+       (%error-not-exact-integer x))))
+
+  (define ($gcd-number-bignum x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($gcd-fixnum-bignum x y))
+      ((bignum?)	($gcd-bignum-bignum x y))
+      (else
+       (%error-not-exact-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($gcd-fixnum-fixnum x y)
+    (binary-gcd x y))
+
+  (define ($gcd-fixnum-bignum x y)
+    (binary-gcd x y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($gcd-bignum-fixnum x y)
+    (binary-gcd x y))
+
+  (define ($gcd-bignum-bignum x y)
+    (binary-gcd x y))
+
+;;; --------------------------------------------------------------------
+
+  (module (binary-gcd)
+
+    (define (binary-gcd x y)
+      (let ((x (if (< x 0) (- x) x))
+	    (y (if (< y 0) (- y) y)))
+	(cond ((> x y)
+	       (%greatest-common-divisor x y))
+	      ((< x y)
+	       (%greatest-common-divisor y x))
+	      (else
+	       x))))
+
+    (define (%greatest-common-divisor x y)
+      (if ($fxzero? y)
+	  x
+	(%greatest-common-divisor y (remainder x y))))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-exact-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module |# )
+
+
+(module (lcm
+	 binary-lcm)
+  (define who 'lcm)
+
+  (define lcm
+    (case-lambda
+     ((x y)
+      (binary-lcm x y))
+     ((x)
+      (unary-lcm x))
+     (() 1)
+     ((x y z . ls)
+      ;;FIXME Incorrect for multiple roundings.  (Abdulaziz Ghuloum)
+      (let loop ((g  (binary-lcm (binary-lcm x y) z))
+		 (ls ls))
+	(if (null? ls)
+	    g
+	  (loop (binary-lcm g ($car ls))
+		($cdr ls)))))
+     ))
+
+;;; --------------------------------------------------------------------
+
+  (define (unary-lcm x)
+    (cond-numeric-operand x
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((flonum?)
+       (let ((v ($flonum->exact x)))
+	 (cond-exact-integer-operand v
+	   ((fixnum?)	x)
+	   ((bignum?)	x)
+	   (else
+	    (%error-not-integer x)))))
+      ((ratnum?)	(%error-not-integer x))
+      ((compnum?)	(%error-not-integer x))
+      ((cflonum?)	(%error-not-integer x))
+      (else
+       (%error-not-exact-integer x))))
+
+  (define (binary-lcm x y)
+    (cond-numeric-operand x
+      ((fixnum?)	($lcm-fixnum-number x y))
+      ((bignum?)	($lcm-bignum-number x y))
+      ((flonum?)	($lcm-flonum-number x y))
+      ((ratnum?)	(%error-not-integer x))
+      ((compnum?)	(%error-not-integer x))
+      ((cflonum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($lcm-fixnum-number x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($lcm-fixnum-fixnum x y))
+      ((bignum?)	($lcm-fixnum-bignum x y))
+      ((flonum?)	($lcm-fixnum-flonum x y))
+      ((ratnum?)	(%error-not-integer y))
+      ((compnum?)	(%error-not-integer y))
+      ((cflonum?)	(%error-not-integer y))
+      (else
+       (%error-not-integer y))))
+
+  (define ($lcm-bignum-number x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($lcm-bignum-fixnum x y))
+      ((bignum?)	($lcm-bignum-bignum x y))
+      ((flonum?)	($lcm-bignum-flonum x y))
+      ((ratnum?)	(%error-not-integer y))
+      ((compnum?)	(%error-not-integer y))
+      ((cflonum?)	(%error-not-integer y))
+      (else
+       (%error-not-integer y))))
+
+  (define ($lcm-flonum-number x y)
+    (let ((v ($flonum->exact x)))
+      (cond-exact-integer-operand v
+	((fixnum?)	(inexact (lcm v y)))
+	((bignum?)	(inexact (lcm v y)))
+	(else
+	 (%error-not-integer x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($lcm-fixnum-fixnum x y)
+    (let ((x (if (< x 0) (- x) x))
+	  (y (if (< y 0) (- y) y)))
+      (let ((g (binary-gcd x y)))
+	(binary* y (quotient x g)))))
+
+  (define ($lcm-fixnum-bignum x y)
+    (let ((x (if (< x 0) (- x) x))
+	  (y (if (< y 0) (- y) y)))
+      (let ((g (binary-gcd x y)))
+	(binary* y (quotient x g)))))
+
+  (define ($lcm-fixnum-flonum x y)
+    (let ((v ($flonum->exact y)))
+      (cond-exact-integer-operand v
+	((fixnum?)	(inexact (lcm x v)))
+	((bignum?)	(inexact (lcm x v)))
+	(else
+	 (%error-not-integer y)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($lcm-bignum-fixnum x y)
+    (let ((x (if (< x 0) (- x) x))
+	  (y (if (< y 0) (- y) y)))
+      (let ((g (binary-gcd x y)))
+	(binary* y (quotient x g)))))
+
+  (define ($lcm-bignum-bignum x y)
+    (let ((x (if (< x 0) (- x) x))
+	  (y (if (< y 0) (- y) y)))
+      (let ((g (binary-gcd x y)))
+	(binary* y (quotient x g)))))
+
+  (define ($lcm-bignum-flonum x y)
+    (let ((v ($flonum->exact y)))
+      (cond-exact-integer-operand v
+	((fixnum?)	(inexact (lcm x v)))
+	((bignum?)	(inexact (lcm x v)))
+	(else
+	 (%error-not-integer y)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-integer x)
+    (assertion-violation who "expected integer as argument" x))
+
+  (define (%error-not-exact-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module |# )
 
 
 (define max
