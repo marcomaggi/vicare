@@ -3814,7 +3814,7 @@
       ((bignum?)	#f)
       ((flonum?)	(fxfl= x y))
       ((ratnum?)	#f)
-      ((compnum?)	#f) ;remember that a compnum as non-zero imag part
+      ((compnum?)	#f) ;remember that a compnum has non-zero imag part
       ((cflonum?)
        (and ($flzero? ($cflonum-imag y))
 	    (fxfl= x  ($cflonum-real y))))
@@ -3827,7 +3827,7 @@
       ((bignum?)	(bnbn= x y))
       ((flonum?)	(bnfl= x y))
       ((ratnum?)	#f)
-      ((compnum?)	#f) ;remember that a compnum as non-zero imag part
+      ((compnum?)	#f) ;remember that a compnum has non-zero imag part
       ((cflonum?)
        (and ($flzero? ($cflonum-imag y))
 	    (bnfl= x  ($cflonum-real y))))
@@ -3843,7 +3843,7 @@
       ((fixnum?)	(flfx= x y))
       ((bignum?)	(flbn= x y))
       ((ratnum?)	(flrt= x y))
-      ((compnum?)	#f) ;remember that a compnum as non-zero imag part
+      ((compnum?)	#f) ;remember that a compnum has non-zero imag part
       (else
        (%error-not-number y))))
 
@@ -3853,7 +3853,7 @@
       ((bignum?)	#f)
       ((ratnum?)	(rtrt= x y))
       ((flonum?)	(rtfl= x y))
-      ((compnum?)	#f) ;remember that a compnum as non-zero imag part
+      ((compnum?)	#f) ;remember that a compnum has non-zero imag part
       ((cflonum?)
        (and ($flzero? ($cflonum-imag y))
 	    (rtfl= x  ($cflonum-real y))))
