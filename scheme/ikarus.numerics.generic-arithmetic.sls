@@ -190,26 +190,22 @@
 	  $fxmodulo		$fxremainder)
     (except (ikarus system $flonums)
 	    $flonum->exact
-	    $flzero?
-	    $flzero?/negative
-	    $flpositive?
-	    $flnegative?
-	    $fleven?
-	    $flodd?
+	    $flzero?		$flzero?/negative
+	    $flpositive?	$flnegative?
+	    $fleven?		$flodd?
 	    $flsqr
-	    $flround)
+	    $flround
+	    $fllog		$flatan2)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 17, 2012)
     (only (ikarus flonums)
 	  $flonum->exact
-	  $flzero?
-	  $flzero?/negative
-	  $flpositive?
-	  $flnegative?
-	  $fleven?
-	  $flodd?
+	  $flzero?		$flzero?/negative
+	  $flpositive?		$flnegative?
+	  $fleven?		$flodd?
 	  $flsqr
-          $flround)
+          $flround
+	  $fllog		$flatan2)
     (except (ikarus system $ratnums)
 	    $ratnum->flonum)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -4425,7 +4421,9 @@
      (assertion-violation 'negative? "expected real number as argument" x))))
 
 
-(module (expt)
+(module (expt
+	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
+	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum)
   ;;Return N raised to the power  M.  For non-zero N, this is:
   ;;
   ;;    (expt N M) === (exp (log (expt N M)))
@@ -4504,18 +4502,19 @@
   (define (expt n m)
     (with-arguments-validation (who)
 	((number	n))
-      (cond ((fixnum? m)	(%expt-fixnum-exponent n m))
-	    ((bignum? m)	(%expt-bignum-exponent n m))
-	    ((flonum? m)	(%expt-flonum-exponent n m))
-	    ((ratnum? m)	(%expt-ratnum-exponent n m))
-	    ((or (compnum? m)
-		 (cflonum? m))	(%expt-complex-exponent n m))
-	    (else
-	     (assertion-violation who "not a number" m)))))
+      (cond-numeric-operand m
+	((fixnum?)	($expt-number-fixnum  n m))
+	((bignum?)	($expt-number-bignum  n m))
+	((flonum?)	($expt-number-flonum  n m))
+	((ratnum?)	($expt-number-ratnum  n m))
+	((compnum?)	($expt-number-compnum n m))
+	((cflonum?)	($expt-number-cflonum n m))
+	(else
+	 (assertion-violation who "not a number" m)))))
 
-  (module (%expt-fixnum-exponent)
+  (module ($expt-number-fixnum)
 
-    (define (%expt-fixnum-exponent n m)
+    (define ($expt-number-fixnum n m)
       (cond (($fxzero? m)
 	     (cond ((nan?   n)	+nan.0)
 		   ((exact? n)	1)
@@ -4570,9 +4569,9 @@
 	    (else ;the rightmost bit in M is one
 	     (binary* n (%expt-fx (binary* n n) ($fxsra m 1))))))
 
-    #| end of module: %expt-fixnum-exponent |# )
+    #| end of module: $expt-number-fixnum |# )
 
-  (define (%expt-bignum-exponent n m)
+  (define ($expt-number-bignum n m)
     (cond ((eq? n 0)	0)
 	  ((eq? n 1)	1)
 	  ((eq? n -1)	(if ($bignum-even? m) 1 -1))
@@ -4580,7 +4579,7 @@
 	  (else
 	   (assertion-violation who "result is too big to compute" n m))))
 
-  (define (%expt-flonum-exponent n m)
+  (define ($expt-number-flonum n m)
     (cond ((real? n)
 	   (cond ((nan? n)
 		  +nan.0)
@@ -4599,12 +4598,24 @@
 	  (else
 	   (exp (* m (log n))))))
 
-  (define (%expt-ratnum-exponent n m)
+  (define ($expt-number-ratnum n m)
     ;; (expt (expt n ($ratnum-n m))
     ;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
-    (expt n (inexact m)))
+    ($expt-number-flonum n (inexact m)))
 
-  (define (%expt-complex-exponent n m)
+  (define ($expt-number-compnum n m)
+    (cond ((eq? n 0)
+	   0)
+	  ((nan? n)
+	   +nan.0+nan.0i)
+	  ((zero? n)
+	   (if (flonum? n)
+	       0.0
+	     0.0+0.0i))
+	  (else
+	   (exp (* m (log n))))))
+
+  (define ($expt-number-cflonum n m)
     (cond ((eq? n 0)
 	   0)
 	  ((nan? n)
@@ -4617,6 +4628,98 @@
 	   (exp (* m (log n))))))
 
   #| end of module: expt |# )
+
+
+(module (log
+	 $log-fixnum		$log-flonum		$log-bignum
+	 $log-ratnum		$log-compnum		$log-cflonum)
+  (define who 'log)
+
+  (define log
+    (case-lambda
+     ((x)
+      (cond-numeric-operand x
+	((fixnum?)	($log-fixnum  x))
+	((bignum?)	($log-bignum  x))
+	((ratnum?)	($log-ratnum  x))
+	((flonum?)	($log-flonum  x))
+	((compnum?)	($log-compnum x))
+	((cflonum?)	($log-cflonum x))
+	(else
+	 (assertion-violation who "not a number" x))))
+     ((x y)
+      (let ((ly (log y)))
+	(if (eq? ly 0)
+	    (assertion-violation who "invalid arguments" x y)
+	  (/ (log x) ly))))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($log-fixnum x)
+    (cond (($fx= x 1)
+	   0)
+	  (($fxzero? x)
+	   (assertion-violation who "undefined around 0"))
+	  (($fxpositive? x)
+	   (foreign-call "ikrt_fx_log" x))
+	  (else
+	   ;;We must assume that the opposite of X may be a bignum.
+	   ($make-rectangular (log (- x))
+			      (acos -1)))))
+
+  (define ($log-flonum x)
+    (cond ((nan? x)
+	   +nan.0)
+	  (($fl>= x 0.0)
+	   (foreign-call "ikrt_fl_log" x))
+	  (else
+	   (make-rectangular ($fllog ($fl- x))
+			     (acos -1)))))
+
+  (define ($log-bignum x)
+    (if ($bignum-positive? x)
+	(let ((v (log (inexact x))))
+	  (if (infinite? v)
+	      (receive (s r)
+		  (exact-integer-sqrt x)
+		;;Could  the  (dropped)   residual  ever  affect  the
+		;;answer?
+		(fl* 2.0 (log s)))
+	    v))
+      (make-rectangular (log (- x))
+			(acos -1))))
+
+  (define ($log-ratnum x)
+    (- (log ($ratnum-n x))
+       (log ($ratnum-d x))))
+
+  (define ($log-compnum x)
+    ;;
+    ;;         log (x.rep^2 + x.imp^2)
+    ;; log x = ----------------------- + i * atan(x.imp, x.rep)
+    ;;                    2
+    ;;
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular (/ (log (+ (* x.rep x.rep)
+				    (* x.imp x.imp)))
+			    2)
+			 (atan x.imp x.rep))))
+
+  (define ($log-cflonum x)
+    ;;
+    ;;         log (x.rep^2 + x.imp^2)
+    ;; log x = ----------------------- + i * atan(x.imp, x.rep)
+    ;;                    2
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl/ ($fllog ($fl+ ($flsqr x.rep)
+					 ($flsqr x.imp)))
+			   2.0)
+		     ($flatan2 x.imp x.rep))))
+
+  #| end of module |# )
 
 
 (define sinh
@@ -5090,49 +5193,6 @@
    ((ratnum? x) ($ratnum-truncate x))
    ((or (fixnum? x) (bignum? x)) x)
    (else (die 'truncate "not a number" x))))
-
-
-(define log
-  (case-lambda
-   ((x)
-    (cond
-     ((fixnum? x)
-      (cond
-       (($fx= x 1) 0)
-       (($fx= x 0) (die 'log "undefined around 0"))
-       (($fx> x 0) (foreign-call "ikrt_fx_log" x))
-       (else (make-rectangular (log (- x)) (acos -1)))))
-     ((flonum? x)
-      (cond
-       ((nan? x)	  +nan.0)
-       ((fl>=? x 0.0) (foreign-call "ikrt_fl_log" x))
-       (else
-	(make-rectangular
-	 (log (fl- 0.0 x))
-	 (acos -1)))))
-     ((bignum? x)
-      (if ($bignum-positive? x)
-	  (let ((v (log (inexact x))))
-	    (cond
-	     ((infinite? v)
-	      (let-values (((s r) (exact-integer-sqrt x)))
-                     ;;; could the (dropped) residual ever affect the answer?
-		(fl* 2.0 (log s))))
-	     (else v)))
-	(make-rectangular (log (- x)) (acos -1))))
-     ((ratnum? x)
-      (- (log (numerator x)) (log (denominator x))))
-     ((or (compnum? x) (cflonum? x))
-      (let ((xr (real-part x)) (xi (imag-part x)))
-	(make-rectangular
-	 (/ (log (+ (* xr xr) (* xi xi))) 2)
-	 (atan xi xr))))
-     (else (die 'log "not a number" x))))
-   ((x y)
-    (let ((ly (log y)))
-      (if (eqv? ly 0)
-	  (die 'log "invalid arguments" x y)
-	(/ (log x) ly))))))
 
 
 (define (random n)
