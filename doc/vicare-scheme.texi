@@ -3908,6 +3908,20 @@ The following bindings are exported by the @library{ikarus} and
 
 @c ------------------------------------------------------------
 
+@subsubheading Arithmetic functions
+
+@defun quotient+remainder @vari{N} @varii{N}
+Return two values: the quotient and the remainder of the
+number--theoretic integer division between the operands.  @vari{N} and
+@varii{N} must be exact or inexact integers; @varii{N} must be
+non--zero.
+
+The operations are defined like for @func{quotient} and @func{remainder}
+from @rsixlibrary{r5rs}.
+@end defun
+
+@c ------------------------------------------------------------
+
 @subsubheading Hyperbolic functions
 
 The @var{num} operand must be a real or complex number.

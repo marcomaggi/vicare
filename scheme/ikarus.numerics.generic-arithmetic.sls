@@ -180,14 +180,14 @@
 	    $fxnegative?
 	    $fxeven?		$fxodd?
 	    $fxabs
-	    $fxmodulo)
+	    $fxmodulo		$fxremainder)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 18, 2012)
     (only (ikarus fixnums)
 	  $fxnegative?
 	  $fxeven?		$fxodd?
 	  $fxabs
-	  $fxmodulo)
+	  $fxmodulo		$fxremainder)
     (except (ikarus system $flonums)
 	    $flonum->exact
 	    $flzero?
@@ -3427,9 +3427,9 @@
       ((fixnum?)	($modulo-fixnum-fixnum n m))
       ((bignum?)	($modulo-bignum-fixnum n m))
       ((flonum?)	($modulo-flonum-fixnum n m))
-      ((ratnum?)	(%error-not-integer m))
-      ((compnum?)	(%error-not-integer m))
-      ((cflonum?)	(%error-not-integer m))
+      ((ratnum?)	(%error-not-integer n))
+      ((compnum?)	(%error-not-integer n))
+      ((cflonum?)	(%error-not-integer n))
       (else
        (%error-not-integer n))))
 
@@ -3438,9 +3438,9 @@
       ((fixnum?)	($modulo-fixnum-bignum n m))
       ((bignum?)	($modulo-bignum-bignum n m))
       ((flonum?)	($modulo-flonum-bignum n m))
-      ((ratnum?)	(%error-not-integer m))
-      ((compnum?)	(%error-not-integer m))
-      ((cflonum?)	(%error-not-integer m))
+      ((ratnum?)	(%error-not-integer n))
+      ((compnum?)	(%error-not-integer n))
+      ((cflonum?)	(%error-not-integer n))
       (else
        (%error-not-integer n))))
 
@@ -3546,55 +3546,197 @@
       (quotient+remainder x y)
     r))
 
-(module (quotient+remainder)
+(module (quotient+remainder
+	 $quotient+remainder-fixnum-number	$quotient+remainder-number-fixnum
+	 $quotient+remainder-bignum-number	$quotient+remainder-number-bignum
+	 $quotient+remainder-flonum-number	$quotient+remainder-number-flonum
+	 $quotient+remainder-fixnum-fixnum	$quotient+remainder-bignum-fixnum
+	 $quotient+remainder-fixnum-bignum	$quotient+remainder-bignum-bignum
+	 $quotient+remainder-fixnum-flonum	$quotient+remainder-bignum-flonum
+	 $quotient+remainder-flonum-fixnum
+	 $quotient+remainder-flonum-bignum
+	 $quotient+remainder-flonum-flonum)
   (define who 'quotient+remainder)
 
-  (define quotient+remainder
-    (lambda (x y)
-      (cond
-       ((eq? y 0)
-	(die who "second argument must be non-zero"))
-       ((fixnum? x)
-	(cond
-	 ((fixnum? y)
-	  (if (eq? y -1)
-	      (values (- x) 0)
-	    (values (fxquotient x y) (fxremainder x y))))
-	 ((bignum? y) (values 0 x))
-	 ((flonum? y)
-	  (let ((v ($flonum->exact y)))
-	    (cond
-	     ((or (fixnum? v) (bignum? v))
-	      (let-values (((q r) (quotient+remainder x v)))
-		(values (inexact q) (inexact r))))
-	     (else
-	      (die 'quotient+remainder "not an integer" y)))))
-	 (else (die 'quotient+remainder "not an integer" y))))
-       ((bignum? x)
-	(cond
-	 ((fixnum? y)
-	  (let ((p (foreign-call "ikrt_bnfxdivrem" x y)))
-	    (values (car p) (cdr p))))
-	 ((bignum? y)
-	  (let ((p (foreign-call "ikrt_bnbndivrem" x y)))
-	    (values (car p) (cdr p))))
-	 ((flonum? y)
-	  (let ((v ($flonum->exact y)))
-	    (cond
-	     ((or (fixnum? v) (bignum? v))
-	      (let-values (((q r) (quotient+remainder x v)))
-		(values (inexact q) (inexact r))))
-	     (else
-	      (die 'quotient+remainder "not an integer" y)))))
-	 (else (die 'quotient+remainder "not an integer" y))))
-       ((flonum? x)
-	(let ((v ($flonum->exact x)))
-	  (cond
-	   ((or (fixnum? v) (bignum? v))
-	    (let-values (((q r) (quotient+remainder v y)))
-	      (values (inexact q) (inexact r))))
-	   (else (die 'quotient+remainder "not an integer" x)))))
-       (else (die 'quotient+remainder "not an integer" x)))))
+  (define (quotient+remainder x y)
+    (if (eq? y 0)
+	(assertion-violation who "second argument must be non-zero")
+      (cond-numeric-operand x
+       ((fixnum?)	($quotient+remainder-fixnum-number x y))
+       ((bignum?)	($quotient+remainder-bignum-number x y))
+       ((flonum?)	($quotient+remainder-flonum-number x y))
+       ((ratnum?)	(%error-not-integer x))
+       ((compnum?)	(%error-not-integer x))
+       ((cflonum?)	(%error-not-integer x))
+       (else
+	(%error-not-integer x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($quotient+remainder-fixnum-number x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($quotient+remainder-fixnum-fixnum x y))
+      ((bignum?)	($quotient+remainder-fixnum-bignum x y))
+      ((flonum?)	($quotient+remainder-fixnum-flonum x y))
+      ((ratnum?)	(%error-not-integer y))
+      ((compnum?)	(%error-not-integer y))
+      ((cflonum?)	(%error-not-integer y))
+      (else
+       (%error-not-integer y))))
+
+  (define ($quotient+remainder-bignum-number x y)
+    (cond-numeric-operand y
+      ((fixnum?)	($quotient+remainder-bignum-fixnum x y))
+      ((bignum?)	($quotient+remainder-bignum-bignum x y))
+      ((flonum?)	($quotient+remainder-bignum-flonum x y))
+      ((ratnum?)	(%error-not-integer y))
+      ((compnum?)	(%error-not-integer y))
+      ((cflonum?)	(%error-not-integer y))
+      (else
+       (%error-not-integer y))))
+
+  (define ($quotient+remainder-flonum-number x y)
+    (let ((v ($flonum->exact x)))
+      (cond-exact-integer-operand v
+	((fixnum?)
+	 (receive (q r)
+	     ($quotient+remainder-fixnum-number v y)
+	   (values (inexact q) (inexact r))))
+	((bignum?)
+	 (receive (q r)
+	     ($quotient+remainder-bignum-number v y)
+	   (values (inexact q) (inexact r))))
+	(else
+	 (%error-not-integer x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($quotient+remainder-number-fixnum x y)
+    (cond-numeric-operand x
+      ((fixnum?)	($quotient+remainder-fixnum-fixnum x y))
+      ((bignum?)	($quotient+remainder-bignum-fixnum x y))
+      ((flonum?)	($quotient+remainder-flonum-fixnum x y))
+      ((ratnum?)	(%error-not-integer x))
+      ((compnum?)	(%error-not-integer x))
+      ((cflonum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
+
+  (define ($quotient+remainder-number-bignum x y)
+    (cond-numeric-operand x
+      ((fixnum?)	($quotient+remainder-fixnum-bignum x y))
+      ((bignum?)	($quotient+remainder-bignum-bignum x y))
+      ((flonum?)	($quotient+remainder-flonum-bignum x y))
+      ((ratnum?)	(%error-not-integer x))
+      ((compnum?)	(%error-not-integer x))
+      ((cflonum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
+
+  (define ($quotient+remainder-number-flonum x y)
+    (let ((v ($flonum->exact y)))
+      (cond-exact-integer-operand v
+	((fixnum?)
+	 (receive (q r)
+	     ($quotient+remainder-number-fixnum x v)
+	   (values (inexact q) (inexact r))))
+	((bignum?)
+	 (receive (q r)
+	     ($quotient+remainder-number-bignum x v)
+	   (values (inexact q) (inexact r))))
+	(else
+	 (%error-not-integer y)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($quotient+remainder-fixnum-fixnum x y)
+    (if ($fx= y -1)
+	(values ($fx- x) 0)
+      (values ($fxquotient x y) ($fxremainder x y))))
+
+  (define ($quotient+remainder-fixnum-bignum x y)
+    (values 0 x))
+
+  (define ($quotient+remainder-fixnum-flonum x y)
+    (let ((v ($flonum->exact y)))
+      (cond-exact-integer-operand v
+	((fixnum?)
+	 (receive (q r)
+	     ($quotient+remainder-fixnum-fixnum x v)
+	   (values (inexact q) (inexact r))))
+	((bignum?)
+	 (receive (q r)
+	     ($quotient+remainder-fixnum-bignum x v)
+	   (values (inexact q) (inexact r))))
+	(else
+	 (%error-not-integer y)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($quotient+remainder-bignum-fixnum x y)
+    (let ((p (foreign-call "ikrt_bnfxdivrem" x y)))
+      (values ($car p) ($cdr p))))
+
+  (define ($quotient+remainder-bignum-bignum x y)
+    (let ((p (foreign-call "ikrt_bnbndivrem" x y)))
+      (values ($car p) ($cdr p))))
+
+  (define ($quotient+remainder-bignum-flonum x y)
+    (let ((v ($flonum->exact y)))
+      (cond-exact-integer-operand v
+	((fixnum?)
+	 (receive (q r)
+	     ($quotient+remainder-bignum-fixnum x v)
+	   (values (inexact q) (inexact r))))
+	((bignum?)
+	 (receive (q r)
+	     ($quotient+remainder-bignum-bignum x v)
+	   (values (inexact q) (inexact r))))
+	(else
+	 (%error-not-integer y)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($quotient+remainder-flonum-fixnum x y)
+    (let ((v ($flonum->exact x)))
+      (cond-exact-integer-operand v
+	((fixnum?)
+	 (receive (q r)
+	     ($quotient+remainder-fixnum-fixnum x y)
+	   (values (inexact q) (inexact r))))
+	((bignum?)
+	 (receive (q r)
+	     ($quotient+remainder-bignum-fixnum x y)
+	   (values (inexact q) (inexact r))))
+	(else
+	 (%error-not-integer x)))))
+
+  (define ($quotient+remainder-flonum-bignum x y)
+    (let ((v ($flonum->exact x)))
+      (cond-exact-integer-operand v
+	((fixnum?)
+	 (receive (q r)
+	     ($quotient+remainder-fixnum-bignum x y)
+	   (values (inexact q) (inexact r))))
+	((bignum?)
+	 (receive (q r)
+	     ($quotient+remainder-bignum-bignum x y)
+	   (values (inexact q) (inexact r))))
+	(else
+	 (%error-not-integer x)))))
+
+  (define ($quotient+remainder-flonum-flonum x y)
+    (let ((v ($flonum->exact x)))
+      (cond-exact-integer-operand v
+	((fixnum?)	($quotient+remainder-fixnum-flonum x y))
+	((bignum?)	($quotient+remainder-bignum-flonum x y))
+	(else
+	 (%error-not-integer x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-integer x)
+    (assertion-violation who "expected integer as argument" x))
 
   #| end of module: quotient+remainder |# )
 
