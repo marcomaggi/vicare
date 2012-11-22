@@ -718,7 +718,8 @@
 ;;; --------------------------------------------------------------------
 
   (define ($fxdiv-and-mod n m)
-    (let* ((d0 ($fxquotient n m))
+    ;;Be careful to use FXQUOTIENT to avoid overflows!!!
+    (let* ((d0 (fxquotient n m))
 	   (m0 ($fx- n ($fx* d0 m))))
       (cond (($fx>= m0 0)
 	     (values d0 m0))
@@ -728,7 +729,8 @@
 	     (values ($fx+ d0 1) ($fx- m0 m))))))
 
   (define ($fxdiv n m)
-    (let ((d0 ($fxquotient n m)))
+    ;;Be careful to use FXQUOTIENT to avoid overflows!!!
+    (let ((d0 (fxquotient n m)))
       (cond (($fx>= n ($fx* d0 m))
 	     d0)
 	    (($fx>= m 0)
@@ -737,7 +739,8 @@
 	     ($fx+ d0 1)))))
 
   (define ($fxmod n m)
-    (let* ((d0 ($fxquotient n m))
+    ;;Be careful to use FXQUOTIENT to avoid overflows!!!
+    (let* ((d0 (fxquotient n m))
 	   (m0 ($fx- n ($fx* d0 m))))
       (cond (($fx>= m0 0)
 	     m0)

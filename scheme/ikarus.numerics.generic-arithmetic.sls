@@ -1792,7 +1792,7 @@
 	       (if (= ($fixnum- g) y)
 		   (unary- (quotient x g))
 		 ($make-ratnum (unary- (quotient x g))
-			       ($fixnum- ($fxquotient y g)))))))))
+			       ($fx- 0 ($fxquotient y g)))))))))
 
   (define ($bignum/bignum x y)
     (let ((g (binary-gcd x y)))
