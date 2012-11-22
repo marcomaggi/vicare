@@ -27403,10 +27403,14 @@ Evaluate to true if @var{obj} is either a fixnum or a bignum.
 
 
 Ratnums are exact rational numbers, having a fixnum or bignum as
-numerator and a fixnum or bignum as denominator.  A ratnum is a fixed
-length memory block referenced by machine words tagged as vectors.  The
-first machine word of a ratnum block is tagged has ratnum in its least
-significant bits and it has the most significant bits set to zero.
+numerator and a fixnum or bignum as denominator; the numerator is always
+non--zero; the denominator is always strictly positive, the sign of a
+ratnum is the sign of the numerator.
+
+A ratnum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a ratnum block is tagged
+has ratnum in its least significant bits and it has the most significant
+bits set to zero.
 
 @example
 |------------------------|-------------| reference to ratnum
@@ -27418,7 +27422,7 @@ significant bits and it has the most significant bits set to zero.
 
 A ratnum memory block is @math{4} words wide; a reference to the
 numerator is stored in the second word and a reference to the
-denominator is stored in the third word
+denominator is stored in the third word:
 
 @example
    1st word     2nd word     3rd word     4th word
@@ -27735,7 +27739,8 @@ intialised with @var{N}.
 
 Compnums are complex numbers having a fixnum, bignum, ratnum or flonum
 as real part and a fixnum, bignum, ratnum or flonum as imaginary part,
-but @strong{not} both flonums.
+but @strong{not} both flonums.  The imaginary part of a compnum object
+is never the exact zero.
 
 A compnum is a fixed length memory block referenced by machine words
 tagged as vectors.  The first machine word of a compnum block is tagged
