@@ -177,14 +177,14 @@
 		  bytevector->bignum		bignum->bytevector)
     (ikarus system $pairs)
     (except (ikarus system $fx)
-	    $fxnegative?
+	    $fxpositive?	$fxnegative?
 	    $fxeven?		$fxodd?
 	    $fxabs
 	    $fxmodulo		$fxremainder)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 18, 2012)
     (only (ikarus fixnums)
-	  $fxnegative?
+	  $fxpositive?		$fxnegative?
 	  $fxeven?		$fxodd?
 	  $fxabs
 	  $fxmodulo		$fxremainder)
@@ -4190,109 +4190,239 @@
   #| end of module |# )
 
 
-(define-syntax flcmp
-  (syntax-rules ()
-    ((_ flfl? flfx? fxfl? flbn? bnfl? fl?)
-     (begin
-       (define-syntax flfl?
-	 (syntax-rules () ((_ x y) (fl? x y))))
-       (define-syntax flfx?
-	 (syntax-rules () ((_ x y) (fl? x ($fixnum->flonum y)))))
-       (define-syntax flbn?
-	 (syntax-rules () ((_ x y) (fl? x ($bignum->flonum y)))))
-       (define-syntax fxfl?
-	 (syntax-rules () ((_ x y) (fl? ($fixnum->flonum x) y))))
-       (define-syntax bnfl?
-	 (syntax-rules () ((_ x y) (fl? ($bignum->flonum x) y))))))))
+(let-syntax
+    ((define-flonum-comparisons
+       (syntax-rules ()
+	 ((_ flfl? flfx? fxfl? flbn? bnfl? fl?)
+	  (begin
+	    (define-syntax flfl?
+	      (syntax-rules () ((_ x y) (fl? x y))))
+	    (define-syntax flfx?
+	      (syntax-rules () ((_ x y) (fl? x ($fixnum->flonum y)))))
+	    (define-syntax flbn?
+	      (syntax-rules () ((_ x y) (fl? x ($bignum->flonum y)))))
+	    (define-syntax fxfl?
+	      (syntax-rules () ((_ x y) (fl? ($fixnum->flonum x) y))))
+	    (define-syntax bnfl?
+	      (syntax-rules () ((_ x y) (fl? ($bignum->flonum x) y)))))))))
 
-(flcmp flfl= flfx= fxfl= flbn= bnfl= $fl=)
-(flcmp flfl< flfx< fxfl< flbn< bnfl< $fl<)
-(flcmp flfl> flfx> fxfl> flbn> bnfl> $fl>)
-(flcmp flfl<= flfx<= fxfl<= flbn<= bnfl<= $fl<=)
-(flcmp flfl>= flfx>= fxfl>= flbn>= bnfl>= $fl>=)
+  (define-flonum-comparisons flfl=  flfx=  fxfl=  flbn=  bnfl=		$fl=)
+  (define-flonum-comparisons flfl<  flfx<  fxfl<  flbn<  bnfl<		$fl<)
+  (define-flonum-comparisons flfl>  flfx>  fxfl>  flbn>  bnfl>		$fl>)
+  (define-flonum-comparisons flfl<= flfx<= fxfl<= flbn<= bnfl<=		$fl<=)
+  (define-flonum-comparisons flfl>= flfx>= fxfl>= flbn>= bnfl>=		$fl>=))
 
 
-(define-syntax cmp-ex/in
-  (syntax-rules ()
-    ((_ pred)
-     (syntax-rules ()
-       ((_ ex in)
-	(let ((x ex) (y in))
-	  (if ($flonum-rational? y)
-	      (pred x (exact y))
-	    (pred (inexact x) y))))))))
-(define-syntax cmp-in/ex
-  (syntax-rules ()
-    ((_ pred)
-     (syntax-rules ()
-       ((_ in ex)
-	(let ((x in) (y ex))
-	  (if ($flonum-rational? x)
-	      (pred (exact x) y)
-	    (pred x (inexact y)))))))))
+(module (flrt= flrt< flrt<= flrt> flrt>=)
 
-(define-syntax flrt=  (cmp-in/ex =))
-(define-syntax rtfl=  (cmp-ex/in =))
-(define-syntax flrt<  (cmp-in/ex <))
-(define-syntax rtfl<  (cmp-ex/in <))
-(define-syntax flrt<= (cmp-in/ex <=))
-(define-syntax rtfl<= (cmp-ex/in <=))
-(define-syntax flrt>  (cmp-in/ex >))
-(define-syntax rtfl>  (cmp-ex/in >))
-(define-syntax flrt>= (cmp-in/ex >=))
-(define-syntax rtfl>= (cmp-ex/in >=))
+  (define-syntax cmp-flonum/ratnum
+    (syntax-rules ()
+      ((_ ?pred)
+       (syntax-rules ()
+	 ((_ ?flonum-expr ?ratnum-expr)
+	  (let ((fl ?flonum-expr)
+		(rn ?ratnum-expr))
+	    (if ($flonum-rational? fl)
+		(?pred (exact fl) rn)
+	      (?pred fl (inexact rn)))))))))
 
-(define (exrt< x y) (< (* x ($ratnum-d y)) ($ratnum-n y)))
-(define (rtex< x y) (< ($ratnum-n x) (* y ($ratnum-d x))))
-(define (rtrt< x y) (< (* ($ratnum-n x) ($ratnum-d y)) (* ($ratnum-n y) ($ratnum-d x))))
-(define (rtrt<= x y) (<= (* ($ratnum-n x) ($ratnum-d y)) (* ($ratnum-n y) ($ratnum-d x))))
-(define (exrt> x y) (> (* x ($ratnum-d y)) ($ratnum-n y)))
-(define (rtex> x y) (> ($ratnum-n x) (* y ($ratnum-d x))))
-(define (rtrt> x y) (> (* ($ratnum-n x) ($ratnum-d y)) (* ($ratnum-n y) ($ratnum-d x))))
-(define (rtrt>= x y) (>= (* ($ratnum-n x) ($ratnum-d y)) (* ($ratnum-n y) ($ratnum-d x))))
+  (define-syntax flrt=  (cmp-flonum/ratnum =))
+  (define-syntax flrt<  (cmp-flonum/ratnum <))
+  (define-syntax flrt>  (cmp-flonum/ratnum >))
+  (define-syntax flrt<= (cmp-flonum/ratnum <=))
+  (define-syntax flrt>= (cmp-flonum/ratnum >=))
+
+  #| end of module |# )
+
+(module (rtfl= rtfl< rtfl<= rtfl> rtfl>=)
+
+  (define-syntax cmp-ratnum/flonum
+    (syntax-rules ()
+      ((_ ?pred)
+       (syntax-rules ()
+	 ((_ ?ratnum-expr ?flonum-expr)
+	  (let ((rn ?ratnum-expr)
+		(fl ?flonum-expr))
+	    (if ($flonum-rational? fl)
+		(?pred rn (exact fl))
+	      (?pred (inexact rn) fl))))))))
+
+  (define-syntax rtfl=  (cmp-ratnum/flonum =))
+  (define-syntax rtfl<  (cmp-ratnum/flonum <))
+  (define-syntax rtfl<= (cmp-ratnum/flonum <=))
+  (define-syntax rtfl>  (cmp-ratnum/flonum >))
+  (define-syntax rtfl>= (cmp-ratnum/flonum >=))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+;;; comparisons between ratnum and exact integer
+
+;;Notice that a ratnum can never be equal to an exact integer.
+
+(define (exrt< x y)
+  ;;Comparison: exact-integer < ratnum.
+  ;;
+  ;;     y.num
+  ;; x < -----   <=>   x * y.den < y.num
+  ;;     y.den
+  ;;
+  (< (* x ($ratnum-d y))
+     ($ratnum-n y)))
+
+(define (rtex< x y)
+  ;;Comparison: ratnum < exact-integer.
+  ;;
+  ;; x.num
+  ;; ----- < y   <=>   x.num < y * x.den
+  ;; x.den
+  ;;
+  (< ($ratnum-n x)
+     (* y ($ratnum-d x))))
+
+(define (exrt> x y)
+  ;;Comparison: exact-integer > ratnum.
+  ;;
+  ;;     y.num
+  ;; x > -----   <=>   x * y.den > y.num
+  ;;     y.den
+  ;;
+  (> (* x ($ratnum-d y))
+     ($ratnum-n y)))
+
+(define (rtex> x y)
+  ;;Comparison: ratnum > exact-integer.
+  ;;
+  ;; x.num
+  ;; ----- > y   <=>   x.num > y * x.den
+  ;; x.den
+  ;;
+  (> ($ratnum-n x)
+     (* y ($ratnum-d x))))
+
+;;; --------------------------------------------------------------------
+
 (define (rtrt= x y)
-  (and (= ($ratnum-n x) ($ratnum-n y)) (= ($ratnum-d x) ($ratnum-d y))))
+  ;;Comparison: ratnum = ratnum.
+  ;;
+  (and (= ($ratnum-n x) ($ratnum-n y))
+       (= ($ratnum-d x) ($ratnum-d y))))
+
+(define (rtrt< x y)
+  ;;Comparison: ratnum < ratnum.
+  ;;
+  ;; x.num   y.num
+  ;; ----- < -----   <=>   x.num * y.den < y.num * x.den
+  ;; x.den   y.den
+  ;;
+  (< (* ($ratnum-n x) ($ratnum-d y))
+     (* ($ratnum-n y) ($ratnum-d x))))
+
+(define (rtrt<= x y)
+  ;;Comparison: ratnum <= ratnum.
+  ;;
+  ;; x.num    y.num
+  ;; ----- <= -----   <=>   x.num * y.den <= y.num * x.den
+  ;; x.den    y.den
+  ;;
+  (<= (* ($ratnum-n x) ($ratnum-d y))
+      (* ($ratnum-n y) ($ratnum-d x))))
+
+(define (rtrt> x y)
+  ;;Comparison: ratnum > ratnum.
+  ;;
+  ;; x.num   y.num
+  ;; ----- > -----   <=>   x.num * y.den > y.num * x.den
+  ;; x.den   y.den
+  ;;
+  (> (* ($ratnum-n x) ($ratnum-d y))
+     (* ($ratnum-n y) ($ratnum-d x))))
+
+(define (rtrt>= x y)
+  ;;Comparison: ratnum >= ratnum.
+  ;;
+  ;; x.num    y.num
+  ;; ----- >= -----   <=>   x.num * y.den >= y.num * x.den
+  ;; x.den    y.den
+  ;;
+  (>= (* ($ratnum-n x) ($ratnum-d y))
+      (* ($ratnum-n y) ($ratnum-d x))))
 
 
-(define error@add1
-  (lambda (x)
-    (import (ikarus))
-    (cond
-     ((fixnum? x) (+ (greatest-fixnum) 1))
-     ((number? x) (+ x 1))
-     (else (die 'add1 "not a number" x)))))
+(define (error@add1 x)
+  ;;This is the error handler  function called when an interrupt happens
+  ;;while executing ADD1.
+  ;;
+  ;;By importing  the library here  we shadow the bindings,  causing the
+  ;;forms  below to  be expanded  by  the optimizer  with the  primitive
+  ;;operations.
+  (import (ikarus))
+  (cond ((fixnum? x)	(+ (greatest-fixnum) 1))
+	((number? x)	(+ x 1))
+	(else
+	 (assertion-violation 'add1 "not a number" x))))
 
-(define add1
-  (lambda (x)
-    (import (ikarus))
-    (add1 x)))
+(define (add1 x)
+  ;;By importing  the library here  we shadow the binding  ADD1, causing
+  ;;the form  below to be expanded  by the optimizer with  the primitive
+  ;;operation ADD1.
+  (import (only (ikarus)
+		add1))
+  (add1 x))
 
-(define error@sub1
-  (lambda (x)
-    (import (ikarus))
-    (cond
-     ((fixnum? x) (- (least-fixnum) 1))
-     ((number? x) (- x 1))
-     (else (die 'sub1 "not a number" x)))))
+(define (error@sub1 x)
+  ;;This is the error handler  function called when an interrupt happens
+  ;;while executing ADD1.
+  ;;
+  ;;By importing  the library here  we shadow the bindings,  causing the
+  ;;forms  below to  be expanded  by  the optimizer  with the  primitive
+  ;;operations.
+  (import (ikarus))
+  (cond ((fixnum? x)	(- (least-fixnum) 1))
+	((number? x)	(- x 1))
+	(else
+	 (assertion-violation 'sub1 "not a number" x))))
 
-(define sub1
-  (lambda (x)
-    (import (ikarus))
-    (sub1 x)))
+(define (sub1 x)
+  ;;By importing  the library here  we shadow the binding  SUB1, causing
+  ;;the form  below to be expanded  by the optimizer with  the primitive
+  ;;operation SUB1.
+  (import (ikarus))
+  (sub1 x))
 
-(define zero?
-  (lambda (x)
-    (cond
-     ((fixnum? x) (eq? x 0))
-     ((bignum? x) #f)
-     ((ratnum? x) #f)
-     ((flonum? x)
-      (or ($fl= x 0.0) ($fl= x -0.0)))
-     ((cflonum? x)
-      (and ($fl= ($cflonum-real x) 0.0) ($fl= ($cflonum-imag x) 0.0)))
-     ((compnum? x) #f)
-     (else
-      (die 'zero? "not a number" x)))))
+
+(define (zero? x)
+  (cond-numeric-operand x
+    ((fixnum?)	($fxzero? x))
+    ((bignum?)	#f)
+    ;;The numerator of a ratnum is always non-zero.
+    ((ratnum?)	#f)
+    ((flonum?)	(or ($fl= x 0.0) ($fl= x -0.0)))
+    ((compnum?)	#f)
+    ((cflonum?)	(and ($flzero? ($cflonum-real x))
+		     ($flzero? ($cflonum-imag x))))
+    (else
+     (assertion-violation 'zero? "expected number as argument" x))))
+
+(define (positive? x)
+  (cond-real-numeric-operand x
+    ((fixnum?)	($fxpositive? x))
+    ((bignum?)	($bignum-positive? x))
+    ((flonum?)	($flpositive? x))
+    ;;The denominator of a ratnum is always strictly positive.
+    ((ratnum?)	(positive? ($ratnum-n x)))
+    (else
+     (assertion-violation 'positive? "expected real number as argument" x))))
+
+(define (negative? x)
+  (cond-real-numeric-operand x
+    ((fixnum?)	($fxnegative? x))
+    ((bignum?)	($bignum-negative? x))
+    ;;The denominator of a ratnum is always strictly positive.
+    ((ratnum?)	(negative? ($ratnum-n x)))
+    ((flonum?)	($flnegative? x))
+    (else
+     (assertion-violation 'negative? "expected real number as argument" x))))
 
 
 (module (expt)
@@ -4487,26 +4617,6 @@
 	   (exp (* m (log n))))))
 
   #| end of module: expt |# )
-
-
-
-(define positive?
-  (lambda (x)
-    (cond
-     ((fixnum? x) ($fx> x 0))
-     ((flonum? x) ($fl> x 0.0))
-     ((bignum? x) ($bignum-positive? x))
-     ((ratnum? x) (positive? ($ratnum-n x)))
-     (else (die 'positive? "not a real number" x)))))
-
-(define negative?
-  (lambda (x)
-    (cond
-     ((fixnum? x) ($fx< x 0))
-     ((flonum? x) ($fl< x 0.0))
-     ((bignum? x) (not ($bignum-positive? x)))
-     ((ratnum? x) (negative? ($ratnum-n x)))
-     (else (die 'negative? "not a real number" x)))))
 
 
 (define sinh
