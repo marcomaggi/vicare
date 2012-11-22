@@ -153,6 +153,8 @@
 	 ;;(least-fixnum)) is *not* a fixnum.
 	 (- n))
 	(else
+	 ;;After  the exclusion  of  M=0  and M=-1:  the  result of  the
+	 ;;quotient between fixnums is a fixnum.
 	 (let ((d0 ($fxquotient n m)))
 	   (cond (($fx>= n ($fx* d0 m))
 		  d0)
@@ -175,7 +177,11 @@
 	((-1)
 	 0)
 	(else
+	 ;;After  the exclusion  of  M=0  and M=-1:  the  result of  the
+	 ;;quotient between fixnums is a fixnum.
 	 (let* ((d0 ($fxquotient n m))
+		;;N can  be (least-fixnum), but the  second operand here
+		;;cannot be -1.
 		(m0 ($fx- n ($fx* d0 m))))
 	   (cond (($fx>= m0 0)
 		  m0)

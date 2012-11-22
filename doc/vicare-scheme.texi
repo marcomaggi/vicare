@@ -15939,31 +15939,41 @@ Increment the operand by one and return the result.
 
 
 @deffn {Unsafe Operation} $fxsub1 @var{fx}
-Decrement the operand by one and return the result.
+Decrement the operand by one and return the result.  The result of this
+operation is a fixnum, but notice that if @var{fx} is
+@code{(least-fixnum)}: the result overflows the fixnum capacity and the
+return value is invalid.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fx+ @vari{fx} @varii{fx}
-Sum the operands and return the result.
+Sum the operands and return the result.  The result of this operatio is
+a fixnum, but notice that it could overflow the fixnum capacity.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fx- @var{fx}
 @deffnx {Unsafe Operation} $fx- @vari{fx} @varii{fx}
 With one operand: return @var{fx} negated.  With two operands: subtract
-the operands and return the result.
+the operands and return the result.  The result of this operation is a
+fixnum, but notice that it could overflow the fixnum capacity and the
+return value would be invalid.
 
-@quotation
-@strong{NOTE} Be very careful in using @func{$fx-} with a single
-argument or with two arguments when @vari{fx} is zero: if @var{fx} or
-@varii{fx} is @code{(least-fixnum)} the result will overflow, because
-@code{(- (least-fixnum))} is @strong{not} a fixnum.
-@end quotation
+Also with a single argument, knowing that @code{(- (least-fixnum))} is a
+bignum, if @var{fx} is @code{(least-fixnum)} the result overflows the
+fixnum capacity and the return value is invalid.
+
+With two arguments: if @vari{fx} is zero and @varii{fx} is
+@code{(least-fixnum)} the result overflows the fixnum capacity and the
+return value is invalid.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fx* @vari{fx} @varii{fx}
-Multiply the operands and return the result.
+Multiply the operands and return the result.  The result of this
+operation is a fixnum, but notice that if one operand is @code{-1} and
+the other is @code{(least-fixnum)}: the result overflows the fixnum
+capacity and the return value is invalid.
 @end deffn
 
 
@@ -16019,7 +16029,18 @@ Perform the number theoretic division.
 
 @deffn {Unsafe Operation} $fxquotient @vari{fx} @varii{fx}
 Compute the quotient between the operands and return the result.  The
-result of this operation can be a fixnum or bignum.
+result of this operation is a fixnum, but notice that:
+
+@itemize
+@item
+When @varii{fx} is @code{0}: the result is undefined, most likely the
+process will abort.
+
+@item
+When @vari{fx} is @code{(least-fixnum)} and @varii{fx} is @code{-1}: the
+result will overflow the fixnum capacity, and the return value will be
+invalid (the result should be a bignum).
+@end itemize
 @end deffn
 
 
