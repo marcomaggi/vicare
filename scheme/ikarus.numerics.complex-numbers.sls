@@ -32,11 +32,13 @@
 	  cond-numeric-operand))
 
 
-(define ($make-rectangular r i)
-  ;; should be called with 2 exacts
-  (if (eqv? i 0)
-      r
-    ($make-compnum r i)))
+(define ($make-rectangular rep imp)
+  ;;REP and  IMP can be any  combination of numbers except  two flonums.
+  ;;If IMP is exact zero: the returned value is REP, a real.
+  ;;
+  (if (eq? imp 0)
+      rep
+    ($make-compnum rep imp)))
 
 
 (module (make-rectangular)
