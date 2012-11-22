@@ -15960,6 +15960,46 @@ Multiply the operands and return the result.
 @deffnx {Unsafe Operation} $fxdiv-and-mod  @vari{fx} @varii{fx}
 @deffnx {Unsafe Operation} $fxdiv0-and-mod0 @vari{fx} @varii{fx}
 Perform the number theoretic division.
+
+@example
+(import (rnrs)
+  (ikarus system $fx))
+
+($fxmod +12 +12)        @result{} 0
+($fxmod +12 -12)        @result{} 0
+($fxmod -12 +12)        @result{} 0
+($fxmod -12 -12)        @result{} 0
+
+($fxmod +12 +3)         @result{} 0
+($fxmod +12 -3)         @result{} 0
+($fxmod -12 +3)         @result{} 0
+($fxmod -12 -3)         @result{} 0
+
+($fxmod +12 +4)         @result{} 0
+($fxmod +12 -4)         @result{} 0
+($fxmod -12 +4)         @result{} 0
+($fxmod -12 -4)         @result{} 0
+
+($fxmod +12 +5)         @result{} +2
+($fxmod +12 -5)         @result{} +2
+($fxmod -12 +5)         @result{} +3
+($fxmod -12 -5)         @result{} +3
+
+($fxmod +12 +7)         @result{} +5
+($fxmod +12 -7)         @result{} +5
+($fxmod -12 +7)         @result{} +2
+($fxmod -12 -7)         @result{} +2
+
+($fxmod +12 +24)        @result{} +12
+($fxmod +12 -24)        @result{} +12
+($fxmod -12 +24)        @result{} +12
+($fxmod -12 -24)        @result{} +12
+
+($fxmod +12 +20)        @result{} +12
+($fxmod +12 -20)        @result{} +12
+($fxmod -12 +20)        @result{} +8
+($fxmod -12 -20)        @result{} +8
+@end example
 @end deffn
 
 
@@ -15972,19 +16012,43 @@ Compute the quotient between the operands and return the result.
 Compute the modulo between the operands and return the result.
 
 @example
-(import (vicare)
+(import (rnrs)
   (ikarus system $fx))
 
-($fxmodulo +12 +3)      @result{} 0
-($fxmodulo +12 +4)      @result{} 0
-($fxmodulo +12 -3)      @result{} 0
-($fxmodulo +12 -4)      @result{} 0
-
-($fxmodulo +12 +5)      @result{} 2
-($fxmodulo +12 -5)      @result{} -3
-
+($fxmodulo +12 +12)     @result{} 0
 ($fxmodulo +12 -12)     @result{} 0
-($fxmodulo +12 0)       @error{} division by zero
+($fxmodulo -12 +12)     @result{} 0
+($fxmodulo -12 -12)     @result{} 0
+
+($fxmodulo +12 +3)      @result{} 0
+($fxmodulo +12 -3)      @result{} 0
+($fxmodulo -12 +3)      @result{} 0
+($fxmodulo -12 -3)      @result{} 0
+
+($fxmodulo +12 +4)      @result{} 0
+($fxmodulo +12 -4)      @result{} 0
+($fxmodulo -12 +4)      @result{} 0
+($fxmodulo -12 -4)      @result{} 0
+
+($fxmodulo +12 +5)      @result{} +2
+($fxmodulo +12 -5)      @result{} -3
+($fxmodulo -12 +5)      @result{} +3
+($fxmodulo -12 -5)      @result{} -2
+
+($fxmodulo +12 +7)      @result{} +5
+($fxmodulo +12 -7)      @result{} -2
+($fxmodulo -12 +7)      @result{} +2
+($fxmodulo -12 -7)      @result{} -5
+
+($fxmodulo +12 +24)     @result{} +12
+($fxmodulo +12 -24)     @result{} -12
+($fxmodulo -12 +24)     @result{} +12
+($fxmodulo -12 -24)     @result{} -12
+
+($fxmodulo +12 +20)     @result{} +12
+($fxmodulo +12 -20)     @result{}  -8
+($fxmodulo -12 +20)     @result{}  +8
+($fxmodulo -12 -20)     @result{} -12
 @end example
 @end deffn
 
