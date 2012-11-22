@@ -3745,179 +3745,249 @@
   #| end of module: quotient+remainder |# )
 
 
-(define-syntax mk<
-  (syntax-rules ()
-    ((_ name fxfx< fxbn< bnfx< bnbn<
-	fxfl< flfx< bnfl< flbn< flfl<
-	fxrt< rtfx< bnrt< rtbn< flrt< rtfl< rtrt<)
-     (let ()
-       (define err
-	 (lambda (x) (die 'name "not a real number" x)))
-       (define fxloopt
-	 (lambda (x y ls)
-	   (cond
-	    ((fixnum? y)
-	     (if (null? ls)
-		 (fxfx< x y)
-	       (if (fxfx< x y)
-		   (fxloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((bignum? y)
-	     (if (null? ls)
-		 (fxbn< x y)
-	       (if (fxbn< x y)
-		   (bnloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((flonum? y)
-	     (if (null? ls)
-		 (fxfl< x y)
-	       (if (fxfl< x y)
-		   (flloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((ratnum? y)
-	     (if (null? ls)
-		 (fxrt< x y)
-	       (if (fxrt< x y)
-		   (rtloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    (else (err y)))))
-       (define bnloopt
-	 (lambda (x y ls)
-	   (cond
-	    ((fixnum? y)
-	     (if (null? ls)
-		 (bnfx< x y)
-	       (if (bnfx< x y)
-		   (fxloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((bignum? y)
-	     (if (null? ls)
-		 (bnbn< x y)
-	       (if (bnbn< x y)
-		   (bnloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((flonum? y)
-	     (if (null? ls)
-		 (bnfl< x y)
-	       (if (bnfl< x y)
-		   (flloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((ratnum? y)
-	     (if (null? ls)
-		 (bnrt< x y)
-	       (if (bnrt< x y)
-		   (rtloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    (else (err y)))))
-       (define flloopt
-	 (lambda (x y ls)
-	   (cond
-	    ((fixnum? y)
-	     (if (null? ls)
-		 (flfx< x y)
-	       (if (flfx< x y)
-		   (fxloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((bignum? y)
-	     (if (null? ls)
-		 (flbn< x y)
-	       (if (flbn< x y)
-		   (bnloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((flonum? y)
-	     (if (null? ls)
-		 (flfl< x y)
-	       (if (flfl< x y)
-		   (flloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((ratnum? y)
-	     (if (null? ls)
-		 (flrt< x y)
-	       (if (flrt< x y)
-		   (rtloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    (else (err y)))))
-       (define rtloopt
-	 (lambda (x y ls)
-	   (cond
-	    ((fixnum? y)
-	     (if (null? ls)
-		 (rtfx< x y)
-	       (if (rtfx< x y)
-		   (fxloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((bignum? y)
-	     (if (null? ls)
-		 (rtbn< x y)
-	       (if (rtbn< x y)
-		   (bnloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((flonum? y)
-	     (if (null? ls)
-		 (rtfl< x y)
-	       (if (rtfl< x y)
-		   (flloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    ((ratnum? y)
-	     (if (null? ls)
-		 (rtrt< x y)
-	       (if (rtrt< x y)
-		   (rtloopt y (car ls) (cdr ls))
-		 (loopf (car ls) (cdr ls)))))
-	    (else (err y)))))
-       (define loopf
-	 (lambda (x ls)
-	   (cond
-	    ((number? x)
-	     (if (null? ls)
-		 #f
-	       (loopf (car ls) (cdr ls))))
-	    (else (err x)))))
-       (define name
-	 (case-lambda
-	  ((x y)
-	   (cond
-	    ((fixnum? x)
-	     (cond
-	      ((fixnum? y) (fxfx< x y))
-	      ((bignum? y) (fxbn< x y))
-	      ((flonum? y) (fxfl< x y))
-	      ((ratnum? y) (fxrt< x y))
-	      (else (err y))))
-	    ((bignum? x)
-	     (cond
-	      ((fixnum? y) (bnfx< x y))
-	      ((bignum? y) (bnbn< x y))
-	      ((flonum? y) (bnfl< x y))
-	      ((ratnum? y) (bnrt< x y))
-	      (else (err y))))
-	    ((flonum? x)
-	     (cond
-	      ((fixnum? y) (flfx< x y))
-	      ((bignum? y) (flbn< x y))
-	      ((flonum? y) (flfl< x y))
-	      ((ratnum? y) (flrt< x y))
-	      (else (err y))))
-	    ((ratnum? x)
-	     (cond
-	      ((fixnum? y) (rtfx< x y))
-	      ((bignum? y) (rtbn< x y))
-	      ((flonum? y) (rtfl< x y))
-	      ((ratnum? y) (rtrt< x y))
-	      (else (err y))))
-	    (else (err x))))
-	  ((x y z) (and (name x y) (name y z)))
-	  ((x) (if (number? x) #t (err x)))
-	  ((x y . ls)
-	   (cond
-	    ((fixnum? x) (fxloopt x y ls))
-	    ((bignum? x) (bnloopt x y ls))
-	    ((flonum? x) (flloopt x y ls))
-	    ((ratnum? x) (rtloopt x y ls))
-	    (else (err x))))))
-       name))))
+(module (< <= > >=)
 
+  (define-syntax define-ordered-comparison
+    (syntax-rules ()
+      ((_ ?who
+	  fxfx< fxbn< bnfx< bnbn<
+	  fxfl< flfx< bnfl< flbn< flfl<
+	  fxrt< rtfx< bnrt< rtbn< flrt< rtfl< rtrt<)
+       (module (?who)
 
+	 (define ?who
+	   (case-lambda
+	    ((x y)
+	     (cond-real-numeric-operand x
+	       ((fixnum?)
+		(cond-real-numeric-operand y
+		  ((fixnum?)	(fxfx< x y))
+		  ((bignum?)	(fxbn< x y))
+		  ((flonum?)	(fxfl< x y))
+		  ((ratnum?)	(fxrt< x y))
+		  (else
+		   (%error-not-real y))))
+	       ((bignum?)
+		(cond-real-numeric-operand y
+		  ((fixnum?)	(bnfx< x y))
+		  ((bignum?)	(bnbn< x y))
+		  ((flonum?)	(bnfl< x y))
+		  ((ratnum?)	(bnrt< x y))
+		  (else
+		   (%error-not-real y))))
+	       ((flonum?)
+		(cond-real-numeric-operand y
+		  ((fixnum?)	(flfx< x y))
+		  ((bignum?)	(flbn< x y))
+		  ((flonum?)	(flfl< x y))
+		  ((ratnum?)	(flrt< x y))
+		  (else
+		   (%error-not-real y))))
+	       ((ratnum?)
+		(cond-real-numeric-operand y
+		  ((fixnum?)	(rtfx< x y))
+		  ((bignum?)	(rtbn< x y))
+		  ((flonum?)	(rtfl< x y))
+		  ((ratnum?)	(rtrt< x y))
+		  (else
+		   (%error-not-real y))))
+	       (else
+		(%error-not-real x))))
+
+	    ((x y z)
+	     (and (?who x y)
+		  (?who y z)))
+
+	    ((x)
+	     (if (real? x)
+		 #t
+	       (%error-not-real x)))
+
+	    ((x y . ls)
+	     (cond-real-numeric-operand x
+	       ((fixnum?)		(%loop-with-fixnum-as-first x y ls))
+	       ((bignum?)		(%loop-with-bignum-as-first x y ls))
+	       ((flonum?)		(%loop-with-flonum-as-first x y ls))
+	       ((ratnum?)		(%loop-with-ratnum-as-first x y ls))
+	       (else
+		(%error-not-real x))))))
+
+;;; --------------------------------------------------------------------
+
+	 (define (%loop-with-fixnum-as-first x y ls)
+	   (cond-real-numeric-operand y
+	     ((fixnum?)
+	      (cond ((null? ls)
+		     (fxfx< x y))
+		    ((fxfx< x y)
+		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((bignum?)
+	      (cond ((null? ls)
+		     (fxbn< x y))
+		    ((fxbn< x y)
+		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((flonum?)
+	      (cond ((null? ls)
+		     (fxfl< x y))
+		    ((fxfl< x y)
+		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((ratnum?)
+	      (cond ((null? ls)
+		     (fxrt< x y))
+		    ((fxrt< x y)
+		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     (else
+	      (%error-not-real y))))
+
+;;; --------------------------------------------------------------------
+
+	 (define (%loop-with-bignum-as-first x y ls)
+	   (cond-real-numeric-operand y
+	     ((fixnum?)
+	      (cond ((null? ls)
+		     (bnfx< x y))
+		    ((bnfx< x y)
+		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((bignum?)
+	      (cond ((null? ls)
+		     (bnbn< x y))
+		    ((bnbn< x y)
+		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((flonum?)
+	      (cond ((null? ls)
+		     (bnfl< x y))
+		    ((bnfl< x y)
+		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((ratnum?)
+	      (cond ((null? ls)
+		     (bnrt< x y))
+		    ((bnrt< x y)
+		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     (else
+	      (%error-not-real y))))
+
+;;; --------------------------------------------------------------------
+
+	 (define (%loop-with-flonum-as-first x y ls)
+	   (cond-real-numeric-operand y
+	     ((fixnum?)
+	      (cond ((null? ls)
+		     (flfx< x y))
+		    ((flfx< x y)
+		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((bignum?)
+	      (cond ((null? ls)
+		     (flbn< x y))
+		    ((flbn< x y)
+		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((flonum?)
+	      (cond ((null? ls)
+		     (flfl< x y))
+		    ((flfl< x y)
+		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((ratnum?)
+	      (cond ((null? ls)
+		     (flrt< x y))
+		    ((flrt< x y)
+		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     (else
+	      (%error-not-real y))))
+
+;;; --------------------------------------------------------------------
+
+	 (define (%loop-with-ratnum-as-first x y ls)
+	   (cond-real-numeric-operand y
+	     ((fixnum?)
+	      (cond ((null? ls)
+		     (rtfx< x y))
+		    ((rtfx< x y)
+		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((bignum?)
+	      (cond ((null? ls)
+		     (rtbn< x y))
+		    ((rtbn< x y)
+		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((flonum?)
+	      (cond ((null? ls)
+		     (rtfl< x y))
+		    ((rtfl< x y)
+		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     ((ratnum?)
+	      (cond ((null? ls)
+		     (rtrt< x y))
+		    ((rtrt< x y)
+		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		    (else
+		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	     (else
+	      (%error-not-real y))))
+
+;;; --------------------------------------------------------------------
+
+	 (define (%validate-rest-arguments x ls)
+	   (if (real? x)
+	       (if (null? ls)
+		   #f
+		 (%validate-rest-arguments ($car ls) ($cdr ls)))
+	     (%error-not-real x)))
+
+	 (define (%error-not-real x)
+	   (assertion-violation '?who "expected real number as argument" x))
+
+	 #| end of module: ?who |# )
+       )))
+
+  (define-ordered-comparison <
+    $fx< fxbn< bnfx< bnbn< fxfl< flfx< bnfl< flbn< flfl<
+    exrt< rtex< exrt< rtex< flrt< rtfl< rtrt<)
+
+  (define-ordered-comparison >
+    $fx> fxbn> bnfx> bnbn> fxfl> flfx> bnfl> flbn> flfl>
+    exrt> rtex> exrt> rtex> flrt> rtfl> rtrt>)
+
+  (define-ordered-comparison <=
+    $fx<= fxbn< bnfx< bnbn<= fxfl<= flfx<= bnfl<= flbn<= flfl<=
+    exrt< rtex< exrt< rtex< flrt<= rtfl<= rtrt<=)
+
+  (define-ordered-comparison >=
+    $fx>= fxbn> bnfx> bnbn>= fxfl>= flfx>= bnfl>= flbn>= flfl>=
+    exrt> rtex> exrt> rtex> flrt>= rtfl>= rtrt>=)
+
+;;; --------------------------------------------------------------------
+
+  #| end of module |# )
+
+
 (define-syntax false (syntax-rules () ((_ x y) #f)))
 (define-syntax bnbncmp
   (syntax-rules ()
@@ -4098,23 +4168,6 @@
 	 ((cflonum? x) (doloop cf? x y ls))
 	 (else (err x))))))
     =))
-
-
-;; (define =
-;;   (mk< = $fx= false false bnbn= fxfl= flfx= bnfl= flbn= flfl=
-;;        false false false false flrt= rtfl= rtrt=))
-(define <
-  (mk< < $fx< fxbn< bnfx< bnbn< fxfl< flfx< bnfl< flbn< flfl<
-       exrt< rtex< exrt< rtex< flrt< rtfl< rtrt<))
-(define >
-  (mk< > $fx> fxbn> bnfx> bnbn> fxfl> flfx> bnfl> flbn> flfl>
-       exrt> rtex> exrt> rtex> flrt> rtfl> rtrt>))
-(define <=
-  (mk< <= $fx<= fxbn< bnfx< bnbn<= fxfl<= flfx<= bnfl<= flbn<= flfl<=
-       exrt< rtex< exrt< rtex< flrt<= rtfl<= rtrt<=))
-(define >=
-  (mk< >= $fx>= fxbn> bnfx> bnbn>= fxfl>= flfx>= bnfl>= flbn>= flfl>=
-       exrt> rtex> exrt> rtex> flrt>= rtfl>= rtrt>=))
 
 
 (define error@add1
