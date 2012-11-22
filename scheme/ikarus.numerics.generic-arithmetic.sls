@@ -3967,6 +3967,8 @@
 	 #| end of module: ?who |# )
        )))
 
+;;; --------------------------------------------------------------------
+
   (define-ordered-comparison <
     $fx< fxbn< bnfx< bnbn< fxfl< flfx< bnfl< flbn< flfl<
     exrt< rtex< exrt< rtex< flrt< rtfl< rtrt<)
@@ -3983,25 +3985,48 @@
     $fx>= fxbn> bnfx> bnbn>= fxfl>= flfx>= bnfl>= flbn>= flfl>=
     exrt> rtex> exrt> rtex> flrt>= rtfl>= rtrt>=)
 
-;;; --------------------------------------------------------------------
-
   #| end of module |# )
 
 
-(define-syntax false (syntax-rules () ((_ x y) #f)))
-(define-syntax bnbncmp
-  (syntax-rules ()
-    ((_ x y cmp)
-     (cmp (foreign-call "ikrt_bnbncomp" x y) 0))))
-(define-syntax bnbn= (syntax-rules () ((_ x y) (bnbncmp x y $fx=))))
-(define-syntax bnbn< (syntax-rules () ((_ x y) (bnbncmp x y $fx<))))
-(define-syntax bnbn> (syntax-rules () ((_ x y) (bnbncmp x y $fx>))))
-(define-syntax bnbn<= (syntax-rules () ((_ x y) (bnbncmp x y $fx<=))))
-(define-syntax bnbn>= (syntax-rules () ((_ x y) (bnbncmp x y $fx>=))))
-(define-syntax fxbn< (syntax-rules () ((_ x y) ($bignum-positive? y))))
-(define-syntax bnfx< (syntax-rules () ((_ x y) (not ($bignum-positive? x)))))
-(define-syntax fxbn> (syntax-rules () ((_ x y) (not ($bignum-positive? y)))))
-(define-syntax bnfx> (syntax-rules () ((_ x y) ($bignum-positive? x))))
+(module (bnbn= bnbn< bnbn> bnbn<= bnbn>= fxbn< bnfx< fxbn> bnfx>)
+
+  (define-syntax bnbncmp
+    (syntax-rules ()
+      ((_ ?x ?y ?fxcmp)
+       (?fxcmp (foreign-call "ikrt_bnbncomp" ?x ?y) 0))))
+
+  (define-syntax define-comparison1
+    (syntax-rules ()
+      ((_ ?who ?fxcmp)
+       (define-syntax ?who
+	 (syntax-rules ()
+	   ((_ x y)
+	    (bnbncmp x y ?fxcmp))))
+       )))
+
+  (define-syntax define-comparison2
+    (syntax-rules ()
+      ((_ ?who ?pred ?x ?y ?op)
+       (define-syntax ?who
+	 (syntax-rules ()
+	   ((_ ?x ?y)
+	    (?pred ?op))))
+       )))
+
+;;; --------------------------------------------------------------------
+
+  (define-comparison1 bnbn=	$fx=)
+  (define-comparison1 bnbn<	$fx<)
+  (define-comparison1 bnbn>	$fx>)
+  (define-comparison1 bnbn<=	$fx<=)
+  (define-comparison1 bnbn>=	$fx>=)
+
+  (define-comparison2 fxbn<	$bignum-positive?	x y	y)
+  (define-comparison2 bnfx<	$bignum-negative?	x y	x)
+  (define-comparison2 fxbn>	$bignum-negative?	x y	y)
+  (define-comparison2 bnfx>	$bignum-positive?	x y	x)
+
+  #| end of module |# )
 
 
 (define-syntax flcmp
