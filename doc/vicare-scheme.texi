@@ -15967,6 +15967,32 @@ Perform the number theoretic division.
 Compute the quotient between the operands and return the result.
 @end deffn
 
+
+@deffn {Unsafe Operation} $fxmodulo @vari{fx} @varii{fx}
+Compute the modulo between the operands and return the result.
+
+@example
+(import (vicare)
+  (ikarus system $fx))
+
+($fxmodulo +12 +3)      @result{} 0
+($fxmodulo +12 +4)      @result{} 0
+($fxmodulo +12 -3)      @result{} 0
+($fxmodulo +12 -4)      @result{} 0
+
+($fxmodulo +12 +5)      @result{} 2
+($fxmodulo +12 -5)      @result{} -3
+
+($fxmodulo +12 -12)     @result{} 0
+($fxmodulo +12 0)       @error{} division by zero
+@end example
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxabs @var{fx}
+Return the absolute value of @var{fx}.
+@end deffn
+
 @c ------------------------------------------------------------
 
 @subsubheading Bitwise logic operations

@@ -31,6 +31,7 @@
     fxdiv-and-mod	fxdiv0-and-mod0
     fxquotient		fxremainder
     fxmodulo		fxsign
+    fxabs
 
     fxlogor		fxlogand
     fxlogxor		fxlognot
@@ -62,6 +63,7 @@
     $fxdiv		$fxdiv0
     $fxmod		$fxmod0
     $fxdiv-and-mod	$fxdiv0-and-mod0
+    $fxabs
 
 ;;; --------------------------------------------------------------------
 
@@ -86,6 +88,7 @@
 		  fxdiv			fxmod
 		  fxdiv0		fxmod0
 		  fxdiv-and-mod		fxdiv0-and-mod0
+		  fxabs
 
 		  fxlogor		fxlogand
 		  fxlogxor		fxlognot
@@ -118,7 +121,8 @@
 	    $fxmin		$fxmax
 	    $fxdiv		$fxdiv0
 	    $fxmod		$fxmod0
-	    $fxdiv-and-mod	$fxdiv0-and-mod0)
+	    $fxdiv-and-mod	$fxdiv0-and-mod0
+	    $fxabs)
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
@@ -533,23 +537,29 @@
 	  ($fx- 0 x))
       ($fxquotient x y))))
 
-(define-fx-operation/div fxremainder $fxremainder)
-(define-fx-operation/div fxmodulo $fxmodulo)
-(define-fx-operation/one fxsign $fxsign)
+(define-fx-operation/one fxabs		$fxabs)
+(define-fx-operation/div fxremainder	$fxremainder)
+(define-fx-operation/div fxmodulo	$fxmodulo)
+(define-fx-operation/one fxsign		$fxsign)
+
+(define ($fxabs x)
+  (if ($fx< x 0)
+      ($fx- x)
+    x))
+
+(define ($fxsign n)
+  (cond (($fxnegative? n)	-1)
+	(($fxpositive? n)	+1)
+	(else			0)))
 
 (define ($fxremainder x y)
   (let ((q ($fxquotient x y)))
     ($fx- x ($fx* q y))))
 
 (define ($fxmodulo n1 n2)
-  (* (fxsign n2)
-     (mod (* (fxsign n2) n1)
-	  (abs n2))))
-
-(define ($fxsign n)
-  (cond (($fxnegative? n)	-1)
-	(($fxpositive? n)	+1)
-	(else			0)))
+  ($fx* ($fxsign n2)
+	($fxmod ($fx* ($fxsign n2) n1)
+		($fxabs n2))))
 
 
 (define-syntax define-fx

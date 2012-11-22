@@ -1679,9 +1679,9 @@
    ((V a b)
     (prm 'int-remainder (T a))))
 
- ;;This  implementation is  wrong  as documented  in  issue 9:  incorrect
- ;;results for negative numbers.  It  is replaced with another version in
- ;;"ikarus.fixnums.ss".
+ ;;This  implementation is  wrong as  documented in  issue 9:  incorrect
+ ;;results for negative numbers.  It is replaced with another version in
+ ;;"ikarus.fixnums.sls".  (Marco Maggi)
  ;;
  ;; (define-primop $fxmodulo unsafe
  ;;   ((V a b)
@@ -1692,6 +1692,17 @@
  ;;        (prm 'int+ c (prm 'int-remainder (T a) b)))))
  ;;   ((P a b) (K #t))
  ;;   ((E a b) (nop)))
+
+ (define-primop $fxabs unsafe
+   ((V x)
+    (with-tmp ((n (T x)))
+      (make-conditional (prm '< n (K 0))
+	  (prm 'int- (K 0) n)
+	n)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
 
  ;;FIXME This looks  to be used nowhere; is it  finished?  (Marco Maggi;
  ;;Oct 19, 2012)
