@@ -1659,7 +1659,6 @@
 
  (define-primop $fxquotient unsafe
    ((V a b)
-    ;;FIXME Why is quotient called remainder?  (Abdulaziz Ghuloum)
     (with-tmp ((b (T b)))
       (prm-tag-as-fixnum (prm 'int-quotient (T a) b))))
    ((P a b)

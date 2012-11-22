@@ -41,7 +41,7 @@
 
 (define (test-div-and-mod)
   (define (test x1 x2)
-    (let-values ([(d m) (div-and-mod x1 x2)])
+    (let-values (((d m) (div-and-mod x1 x2)))
       (when #f	;this produces A LOT of output
 	(printf "(div-and-mod ~s ~s) = ~s ~s\n" x1 x2 d m))
       (assert (= d (div x1 x2)))
@@ -88,7 +88,7 @@
 
 (define (test-div0-and-mod0)
   (define (test x1 x2)
-    (let-values ([(d m) (div0-and-mod0 x1 x2)])
+    (let-values (((d m) (div0-and-mod0 x1 x2)))
       (when #f	;this produces A LOT of output
 	(printf "(div0-and-mod0 ~s ~s) = ~s ~s\n" x1 x2 d m))
       (assert (= d (div0 x1 x2)))

@@ -532,9 +532,11 @@
       ((fixnum		x)
        (non-zero-fixnum	y))
     (if (eq? y -1)
+	;;Remember  that  we cannot  simpy  use  $fx-  because if  X  is
+	;;(least-fixnum) the result will overflow.
 	(if (eq? x (least-fixnum))
 	    (%overflow-violation who x y)
-	  ($fx- 0 x))
+	  ($fx- x))
       ($fxquotient x y))))
 
 (define-fx-operation/one fxabs		$fxabs)
@@ -543,8 +545,13 @@
 (define-fx-operation/one fxsign		$fxsign)
 
 (define ($fxabs x)
+  (define who '$fxabs)
   (if ($fx< x 0)
-      ($fx- x)
+      ;;Remember  that  we  cannot  simpy  use  $fx-  because  if  X  is
+      ;;(least-fixnum) the result will overflow.
+      (if (eq? x (least-fixnum))
+	  (%overflow-violation who x)
+	($fx- x))
     x))
 
 (define ($fxsign n)
@@ -553,13 +560,17 @@
 	(else			0)))
 
 (define ($fxremainder x y)
-  (let ((q ($fxquotient x y)))
-    ($fx- x ($fx* q y))))
+  ;;We have to assume that the result may not be a fixnum!!!
+  (let ((q (fxquotient x y)))
+    (- x (* q y))))
 
 (define ($fxmodulo n1 n2)
-  ($fx* ($fxsign n2)
-	($fxmod ($fx* ($fxsign n2) n1)
-		($fxabs n2))))
+  (* ($fxsign n2)
+     ;;We have  to assume that  the result of the  product may not  be a
+     ;;fixnum!!!  If N1 is (least-fixnum) and  the sign is -1 the result
+     ;;of the product is a bignum.
+     (mod (* ($fxsign n2) n1)
+	  (abs n2))))
 
 
 (define-syntax define-fx

@@ -351,7 +351,9 @@
        (assertion-violation who "expected number as argument" x))))
 
   (define ($fixnum- x)
-    ($fx- 0 x))
+    (if ($fx= x (least-fixnum))
+	(- (least-fixnum))
+      ($fx- x)))
 
   (define ($bignum- x)
     ($fixnum-bignum 0 x))
@@ -397,7 +399,7 @@
 	  (else
 	   (if ($fx= x -1)
 	       -1
-	     ($make-ratnum -1 ($fx- 0 x))))))
+	     ($make-ratnum -1 ($fixnum- x))))))
 
   (define ($bignum/ x)
     (if ($bignum-positive? x)
@@ -1710,14 +1712,14 @@
 	   (if ($fx= y -1)
 	       (binary- 0 x)
 	     (let ((g (binary-gcd x y)))
-	       (cond (($fx= ($fx- 0 g) y)
-		      ($fx- 0 ($fxquotient x g)))
+	       (cond (($fx= ($fixnum- g) y)
+		      ($fixnum- ($fxquotient x g)))
 		     (($fx= g 1)
-		      ($make-ratnum ($fx- 0 x)
-				    ($fx- 0 y)))
+		      ($make-ratnum ($fixnum- x)
+				    ($fixnum- y)))
 		     (else
-		      ($make-ratnum ($fx- 0 ($fxquotient x g))
-				    ($fx- 0 ($fxquotient y g))))))))))
+		      ($make-ratnum ($fixnum- ($fxquotient x g))
+				    ($fixnum- ($fxquotient y g))))))))))
 
   (define ($fixnum/bignum x y)
     (if ($fx= x 0)
@@ -1733,9 +1735,9 @@
 			       (quotient y g))))
 	      (else
 	       (if ($fx= g 1)
-		   ($make-ratnum ($fx- 0 x)
+		   ($make-ratnum ($fixnum- x)
 				 (binary- 0 y))
-		 ($make-ratnum ($fx- 0 ($fxquotient x g))
+		 ($make-ratnum ($fixnum- ($fxquotient x g))
 			       ($fixnum-number 0 (quotient y g)))))))))
 
   (define ($fixnum/ratnum x y)
@@ -1749,7 +1751,7 @@
 			    (binary* y.imp y.imp))))
 	($make-rectangular (binary/ ($fixnum*number x y.rep)
 				    denom)
-			   (binary/ ($fixnum*number ($fx- 0 x) y.imp)
+			   (binary/ ($fixnum*number ($fixnum- x) y.imp)
 				    denom)))))
 
   (define ($fixnum/cflonum x y)
@@ -1759,7 +1761,7 @@
 				   ($flonum*flonum y.imp y.imp))))
 	($make-rectangular ($flonum/flonum ($fixnum*flonum x y.rep)
 					   denom)
-			   ($flonum/flonum ($fixnum*flonum ($fx- 0 x) y.imp)
+			   ($flonum/flonum ($fixnum*flonum ($fixnum- x) y.imp)
 					   denom)))))
 
 ;;; --------------------------------------------------------------------
@@ -1787,10 +1789,10 @@
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
 	     ;;fixnum.
 	     (let ((g (binary-gcd x y)))
-	       (if (= ($fx- 0 g) y)
+	       (if (= ($fixnum- g) y)
 		   (unary- (quotient x g))
 		 ($make-ratnum (unary- (quotient x g))
-			       ($fx- 0 ($fxquotient y g)))))))))
+			       ($fixnum- ($fxquotient y g)))))))))
 
   (define ($bignum/bignum x y)
     (let ((g (binary-gcd x y)))
@@ -3651,7 +3653,9 @@
 
   (define ($quotient+remainder-fixnum-fixnum x y)
     (if ($fx= y -1)
-	(values ($fx- x) 0)
+	;;We have  to assume that  the result of  negating X may  not be
+	;;fixnum!!!  This happens when X is (least-fixnum).
+	(values (- x) 0)
       (values ($fxquotient x y) ($fxremainder x y))))
 
   (define ($quotient+remainder-fixnum-bignum x y)

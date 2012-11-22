@@ -16018,12 +16018,14 @@ Perform the number theoretic division.
 
 
 @deffn {Unsafe Operation} $fxquotient @vari{fx} @varii{fx}
-Compute the quotient between the operands and return the result.
+Compute the quotient between the operands and return the result.  The
+result of this operation can be a fixnum or bignum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $fxmodulo @vari{fx} @varii{fx}
-Compute the modulo between the operands and return the result.
+Compute the modulo between the operands and return the result.  The
+result of this operation can be a fixnum or bignum.
 
 @example
 (import (rnrs)
@@ -16068,7 +16070,8 @@ Compute the modulo between the operands and return the result.
 
 
 @deffn {Unsafe Operation} $fxabs @var{fx}
-Return the absolute value of @var{fx}.
+Return the absolute value of @var{fx}.  The result of this operation is
+fixnum; an error is raised if the result would overflow.
 @end deffn
 
 @c ------------------------------------------------------------
