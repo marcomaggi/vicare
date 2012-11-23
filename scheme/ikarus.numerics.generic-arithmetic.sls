@@ -194,6 +194,7 @@
 	    $flpositive?	$flnegative?
 	    $fleven?		$flodd?
 	    $flsqr		$flsqrt
+	    $flnumerator	$fldenominator
 	    $flround
 	    $fllog		$flexp
 	    $flsin		$flasin
@@ -211,6 +212,7 @@
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
 	  $flsqr		$flsqrt
+	  $flnumerator		$fldenominator
           $flround
 	  $fllog		$flexp
 	  $flsin		$flasin
@@ -5084,7 +5086,7 @@
 	       ;;B is a flonum.
 	       (B	($fl- A 1.0))
 	       ;;C is a non-negative flonum.
-	       (C	($flsqr B B))
+	       (C	($flsqr B))
 	       ;;D is a non-negative flonum.
 	       (D	($flsqr x.imp))
 	       ;;Q is a non-negative flonum.
@@ -5192,10 +5194,10 @@
     ;;
     (if ($flzero? ($cflonum-imag x))
 	($flatan ($cflonum-real x))
-      ($flonum*cflonum +0.5i
-		       ($cflonum-cflonum
-			($log-cflonum ($flonum-cflonum 1.0 ($cflonum*cflonum +1.0i x)))
-			($log-cflonum ($flonum+cflonum 1.0 ($cflonum*cflonum +1.0i x)))))))
+      ($cflonum*cflonum +0.5i
+			($cflonum-cflonum
+			 ($log-cflonum ($flonum-cflonum 1.0 ($cflonum*cflonum +1.0i x)))
+			 ($log-cflonum ($flonum+cflonum 1.0 ($cflonum*cflonum +1.0i x)))))))
 
   #| end of module |# )
 
@@ -5745,22 +5747,26 @@
   #| end of module: exact-integer-sqrt |# )
 
 
-(define numerator
-  (lambda (x)
-    (cond
-     ((ratnum? x) ($ratnum-n x))
-     ((or (fixnum? x) (bignum? x)) x)
-     ((flonum? x) (flnumerator x))
-     (else (die 'numerator "not an exact integer" x)))))
+(define (numerator x)
+  (cond-real-numeric-operand x
+    ((fixnum?)		x)
+    ((bignum?)		x)
+    ((ratnum?)		($ratnum-n x))
+    ((flonum?)		($flnumerator x))
+    (else
+     (assertion-violation 'numerator "expected exact integer as argument" x))))
 
-(define denominator
-  (lambda (x)
-    (cond
-     ((ratnum? x) ($ratnum-d x))
-     ((or (fixnum? x) (bignum? x)) 1)
-     ((flonum? x) (fldenominator x))
-     (else (die 'denominator "not an exact integer" x)))))
+(define (denominator x)
+  (cond-real-numeric-operand x
+    ((fixnum?)		1)
+    ((bignum?)		1)
+    ((ratnum?)		($ratnum-d x))
+    ((flonum?)		($fldenominator x))
+    (else
+     (assertion-violation 'denominator "expected exact integer as argument" x))))
 
+
+;;;; rounding functions
 
 (define (floor x)
   (define (ratnum-floor x)
@@ -5777,7 +5783,7 @@
        (else x))))
    ((ratnum? x) (ratnum-floor x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'floor "expected number as argument" x))))
+   (else (assertion-violation 'floor "expected number as argument" x))))
 
 (define (ceiling x)
   (define (ratnum-ceiling x)
@@ -5793,7 +5799,7 @@
        (else x))))
    ((ratnum? x) (ratnum-ceiling x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'ceiling "expected number as argument" x))))
+   (else (assertion-violation 'ceiling "expected number as argument" x))))
 
 
 (define ($ratnum-round x)
@@ -5815,7 +5821,7 @@
    ((flonum? x) ($flround x))
    ((ratnum? x) ($ratnum-round x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'round "expected number as argument" x))))
+   (else (assertion-violation 'round "expected number as argument" x))))
 
 (define (truncate x)
     ;;; FIXME: fltruncate should preserve the sign of -0.0.
@@ -5828,7 +5834,7 @@
        (else x))))
    ((ratnum? x) ($ratnum-truncate x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'truncate "expected number as argument" x))))
+   (else (assertion-violation 'truncate "expected number as argument" x))))
 
 
 (define (random n)
