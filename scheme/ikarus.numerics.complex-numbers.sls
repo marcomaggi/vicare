@@ -33,12 +33,16 @@
 
 
 (define ($make-rectangular rep imp)
-  ;;REP and  IMP can be any  combination of numbers except  two flonums.
-  ;;If IMP is exact zero: the returned value is REP, a real.
+  ;;REP and IMP can be any combination of real numbers.  If IMP is exact
+  ;;zero: the returned value is REP, a real.
   ;;
-  (if (eq? imp 0)
-      rep
-    ($make-compnum rep imp)))
+  (cond ((eq? imp 0)
+	 rep)
+	((and (flonum? rep)
+	      (flonum? imp))
+	 ($make-cflonum rep imp))
+	(else
+	 ($make-compnum rep imp))))
 
 
 (module (make-rectangular)
