@@ -112,12 +112,12 @@
     bytevector->bignum		bignum->bytevector
 
     ;; the following go in (ikarus system $numerics)
-    $sqrt/fixnum
-    $sqrt/flonum
-    $sqrt/bignum
-    $sqrt/ratnum
-    $sqrt/compnum
-    $sqrt/cflonum
+    $sqrt-fixnum
+    $sqrt-flonum
+    $sqrt-bignum
+    $sqrt-ratnum
+    $sqrt-compnum
+    $sqrt-cflonum
 
     $exact-integer-sqrt/fixnum
     $exact-integer-sqrt/bignum)
@@ -193,12 +193,15 @@
 	    $flzero?		$flzero?/negative
 	    $flpositive?	$flnegative?
 	    $fleven?		$flodd?
-	    $flsqr
+	    $flsqr		$flsqrt
 	    $flround
 	    $fllog		$flexp
 	    $flsin		$flasin
 	    $flcos		$flacos
 	    $fltan		$flatan
+	    $flsinh		$flasinh
+	    $flcosh		$flacosh
+	    $fltanh		$flatanh
 	    $flatan2)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 17, 2012)
@@ -207,12 +210,15 @@
 	  $flzero?		$flzero?/negative
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
-	  $flsqr
+	  $flsqr		$flsqrt
           $flround
 	  $fllog		$flexp
 	  $flsin		$flasin
 	  $flcos		$flacos
 	  $fltan		$flatan
+	  $flsinh		$flasinh
+	  $flcosh		$flacosh
+	  $fltanh		$flatanh
 	  $flatan2)
     (except (ikarus system $ratnums)
 	    $ratnum->flonum)
@@ -241,6 +247,11 @@
 
 (define (err who x)
   (die who (if (number? x) "invalid argument" "not a number") x))
+
+(module (PI PI/2)
+  (import (ikarus))
+  (define PI (acos -1))
+  (define PI/2 (/ PI 2)))
 
 
 (module (real->flonum)
@@ -4681,8 +4692,8 @@
 	  (($fl>= x 0.0)
 	   (foreign-call "ikrt_fl_log" x))
 	  (else
-	   (make-rectangular ($fllog ($fl- x))
-			     (acos -1)))))
+	   ($make-cflonum ($fllog ($fl- x))
+			  (acos -1)))))
 
   (define ($log-bignum x)
     (if ($bignum-positive? x)
@@ -4792,269 +4803,676 @@
   #| end of module: exp |# )
 
 
-(define sinh
-  (lambda (x)
-    (define who 'sinh)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_sinh" x))
-     ((or (fixnum? x) (bignum? x) (ratnum? x))
-      (sinh (inexact x)))
-     ((or (compnum? x) (cflonum? x))
-      (let ((r (real-part x)) (i (imag-part x)))
-	(make-rectangular
-	 (* (sinh r) (cos i))
-	 (* (cosh r) (sin i)))))
-     (else (die who "not a number" x)))))
+(module (sin
+	 $sin-fixnum		$sin-bignum		$sin-ratnum
+	 $sin-cflonum		$sin-compnum)
 
-(define cosh
-  (lambda (x)
-    (define who 'cosh)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_cosh" x))
-     ((or (fixnum? x) (bignum? x) (ratnum? x))
-      (cosh (inexact x)))
-     ((or (compnum? x) (cflonum? x))
-      (let ((r (real-part x)) (i (imag-part x)))
-	(make-rectangular
-	 (* (cosh r) (cos i))
-	 (* (sinh r) (sin i)))))
-     (else (die who "not a number" x)))))
+  (define (sin x)
+    (cond-numeric-operand x
+      ((flonum?)	($flsin x))
+      ((cflonum?)	($sin-cflonum x))
+      ((fixnum?)	($sin-fixnum  x))
+      ((bignum?)	($sin-bignum  x))
+      ((ratnum?)	($sin-ratnum  x))
+      ((compnum?)	($sin-compnum x))
+      (else
+       (assertion-violation 'sin "expected number as argument" x))))
 
-(define tanh
-  (lambda (x)
-    (define who 'tanh)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_tanh" x))
-     ((or (fixnum? x) (bignum? x) (ratnum? x))
-      (tanh (inexact x)))
-     ((or (compnum? x) (cflonum? x))
-      (let ((r (real-part x)) (i (imag-part x)))
-	(let ((rr (* 2 r)) (ii (* 2 i)))
-	  (let ((cos2i (cos ii)) (cosh2r (cosh rr)))
-	    (make-rectangular
-	     (/ (tanh rr) (+ 1 (/ cos2i cosh2r)))
-	     (/ (sin ii) (+ cosh2r cos2i)))))))
-     (else (die who "not a number" x)))))
+  (define ($sin-fixnum x)
+    (if ($fxzero? x)
+	0
+      (foreign-call "ikrt_fx_sin" x)))
 
-(define asinh
-  (lambda (x)
-    (define who 'asinh)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_asinh" x))
-     ((or (fixnum? x) (bignum? x) (ratnum? x))
-      (asinh (inexact x)))
-     ((or (cflonum? x) (compnum? x))
-      (let ((x (real-part x)) (y (imag-part x)))
-	(cond
-	 ((= x 0)
-	  (let ((v (asin y)))
-	    (make-rectangular (imag-part v) (real-part v))))
-	 (else
-	  (let* ((z^2 (+ (* x x) (* y y)))
-		 (z^2-1 (- z^2 1))
-		 (z^2-1^2 (* z^2-1 z^2-1))
-		 (y^2 (* y y))
-		 (q (sqrt (+ z^2-1^2 (* 4 y^2)))))
-	    (define (sgn x) (if (< x 0) -1 1))
-	    (make-rectangular
-	     (* 0.5 (sgn x) (acosh (+ q z^2)))
-	     (* 0.5 (sgn y) (acos (- q z^2)))))))))
-     (else (die who "not a number" x)))))
+  (define ($sin-bignum x)
+    ($flsin (inexact x)))
 
-(define acosh
-  (lambda (x)
-    (define who 'acosh)
-    (cond
-     ((flonum? x)
-      (cond
-       (($fl>= x 1.0) (foreign-call "ikrt_fl_acosh" x))
-       (($fl>= x -1.0)
-	(make-rectangular 0 (atan (sqrt (- 1 (* x x))) x)))
-       (($fl< x -1.0)
-	(make-rectangular (acosh (- x)) PI))
-       (else +nan.0)))
-     ((or (fixnum? x) (bignum? x) (ratnum? x))
-      (acosh (inexact x)))
-     ((or (cflonum? x) (compnum? x))
-      (let ((x (real-part x)) (y (imag-part x)))
-	(cond
-	 ((= x 0) (+ (asinh y) (make-rectangular 0 PI/2)))
-	 (else
-	  (let* ((z^2 (+ (* x x) (* y y)))
-		 (z^2-1 (- z^2 1))
-		 (z^2-1^2 (* z^2-1 z^2-1))
-		 (y^2 (* y y))
-		 (q (sqrt (+ z^2-1^2 (* 4 y^2)))))
-	    (define (sgn x) (if (< x 0) -1 1))
-	    (+ (* 0.5 (sgn x) (acosh (+ q z^2)))
-	       (* 0.5i (sgn y)
-		  (- PI (* (sgn x) (acos (- q z^2)))))))))))
-     (else (die who "not a number" x)))))
+  (define ($sin-ratnum x)
+    ($flsin (inexact x)))
 
-(define atanh
-  (lambda (x)
-    (define who 'atanh)
-    (cond
-     ((flonum? x)
-      (cond
-       ((and (fl<=? x 1.0) (fl>=? x -1.0))
-	(foreign-call "ikrt_fl_atanh" x))
-       (else
-	(- (atanh (fl/ 1.0 x))
-	   (if (fl<? x 0.0) (* -i PI/2) (* +i PI/2))))))
-     ((or (fixnum? x) (bignum? x) (ratnum? x))
-      (atanh (inexact x)))
-     ((number? x) (error who "not implemented" x))
-     (else (die who "not a number" x)))))
+  (define ($sin-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular (* (sin x.rep) (cosh x.imp))
+			 (* (cos x.rep) (sinh x.imp)))))
+
+  (define ($sin-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl* ($flsin x.rep) ($flcosh x.imp))
+		     ($fl* ($flcos x.rep) ($flsinh x.imp)))))
+
+  #| end of module: sin |# )
 
 
-(define sin
-  (lambda (x)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_sin" x))
-     ((fixnum? x)
-      (if (fx=? x 0)
-	  0
-	(foreign-call "ikrt_fx_sin" x)))
-     ((or (cflonum? x) (compnum? x))
-      (let ((r (real-part x)) (i (imag-part x)))
-	(make-rectangular
-	 (* (sin r) (cosh i))
-	 (* (cos r) (sinh i)))))
-     ((number? x) (sin (inexact x)))
-     (else (die 'sin "not a number" x)))))
+(module (cos
+	 $cos-fixnum		$cos-bignum		$cos-ratnum
+	 $cos-cflonum		$cos-compnum)
 
-(define cos
-  (lambda (x)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_cos" x))
-     ((fixnum? x)
-      (if (fx=? x 0)
-	  1
-	(foreign-call "ikrt_fx_cos" x)))
-     ((or (cflonum? x) (compnum? x))
-      (let ((r (real-part x)) (i (imag-part x)))
-	(make-rectangular
-	 (* (cos r) (cosh i))
-	 (* (sin r) (sinh i)))))
-     ((number? x) (cos (inexact x)))
-     (else (die 'cos "not a number" x)))))
+  (define (cos x)
+    (cond-numeric-operand x
+      ((flonum?)	($flcos x))
+      ((cflonum?)	($cos-cflonum x))
+      ((fixnum?)	($cos-fixnum  x))
+      ((bignum?)	($cos-bignum  x))
+      ((ratnum?)	($cos-ratnum  x))
+      ((compnum?)	($cos-compnum x))
+      (else
+       (assertion-violation 'cos "expected number as argument" x))))
 
-(define tan
-  (lambda (x)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_tan" x))
-     ((fixnum? x)
-      (if (fx=? x 0)
-	  0
-	(foreign-call "ikrt_fx_tan" x)))
-     ((or (cflonum? x) (compnum? x))
-      (let ((r (real-part x)) (i (imag-part x)))
-	(make-rectangular
-	 (/ (sin (* 2 r))
-	    (+ (cos (* 2 r)) (cosh (* 2 i))))
-	 (/ (tanh (* 2 i))
-	    (+ 1 (/ (cos (* 2 r)) (cosh (* 2 i))))))))
-     ((number? x) (tan (inexact x)))
-     (else (die 'tan "not a number" x)))))
+  (define ($cos-fixnum x)
+    (if ($fxzero? x)
+	1
+      (foreign-call "ikrt_fx_cos" x)))
 
-(module (PI PI/2)
-  (import (ikarus))
-  (define PI (acos -1))
-  (define PI/2 (/ PI 2)))
+  (define ($cos-bignum x)
+    ($flcos (inexact x)))
 
-(define asin
-  (lambda (x)
-    (cond
-     ((flonum? x)
-      (cond
-       (($fl> x 1.0)
-	(make-rectangular PI/2 (acosh x)))
-       (($fl< x -1.0)
-	(make-rectangular (- PI/2) (- (acosh (- x)))))
-       (else
-	(foreign-call "ikrt_fl_asin" x))))
-     ((or (cflonum? x) (compnum? x))
-      (let ((x (real-part x)) (y (imag-part x)))
-	(cond
-	 ((= x 0) (make-rectangular 0 (asinh y)))
-	 (else
-	  (let* ((z^2 (+ (* x x) (* y y)))
-		 (z^2-1 (- z^2 1.0))
-		 (z^2-1^2 (* z^2-1 z^2-1))
-		 (y^2 (* y y))
-		 (q (sqrt (+ z^2-1^2 (* 4.0 y^2)))))
-	    (define (sgn x) (if (< x 0) -1.0 1.0))
-	    (make-rectangular
-	     (* 0.5 (sgn x) (acos (- q z^2)))
-	     (* 0.5 (sgn y) (acosh (+ q z^2)))))))))
-     ((number? x) (asin (inexact x)))
-     (else (die 'asin "not a number" x)))))
+  (define ($cos-ratnum x)
+    ($flcos (inexact x)))
 
-(define acos
-  (lambda (x)
-    (cond
-     ((flonum? x)
-      (cond
-       (($fl> x 1.0)
-	(make-rectangular 0 (acosh x)))
-       (($fl< x -1.0)
-	(make-rectangular PI (- (acosh (- x)))))
-       (else
-	(foreign-call "ikrt_fl_acos" x))))
-     ((or (cflonum? x) (compnum? x))
-      (- PI/2 (asin x)))
-     ((number? x) (acos (inexact x)))
-     (else (die 'acos "not a number" x)))))
+  (define ($cos-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular (* (cos x.rep) (cosh x.imp))
+			 (* (sin x.rep) (sinh x.imp)))))
 
-(define atan
-  (case-lambda
-   ((x)
-    (cond
-     ((flonum? x) (foreign-call "ikrt_fl_atan" x))
-     ((fixnum? x) (foreign-call "ikrt_fx_atan" x))
-     ((or (ratnum? x) (bignum? x) (compnum? x))
-      (atan (inexact x)))
-     ((cflonum? x)
-      ;;Formula from Wikipedia section "Logarithmic forms":
-      ;;
-      ;;	<http://en.wikipedia.org/wiki/Arc_tangent>
-      ;;
-      (if (let ((I (imag-part x)))
-	    (and (exact? I) (zero? I)))
-	  (flatan (real-part x))
-	(* +0.5i
-	   (- (log (- 1 (* +1i x)))
-	      (log (+ 1 (* +1i x)))))))
-     (else (die 'atan "not a number" x))))
-   ((y x)
-    (unless (real? x) (die 'atan "not a real number" x))
-    (unless (real? y) (die 'atan "not a real number" y))
-    (foreign-call "ikrt_atan2" (inexact y) (inexact x)))))
+  (define ($cos-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl* ($flcos x.rep) ($flcosh x.imp))
+		     ($fl* ($flsin x.rep) ($flsinh x.imp)))))
+
+  #| end of module: cos |# )
+
+
+(module (tan
+	 $tan-fixnum		$tan-bignum		$tan-ratnum
+	 $tan-compnum		$tan-cflonum)
+
+  (define (tan x)
+    (cond-numeric-operand x
+      ((flonum?)	($fltan       x))
+      ((cflonum?)	($tan-cflonum x))
+      ((fixnum?)	($tan-fixnum  x))
+      ((bignum?)	($tan-bignum  x))
+      ((ratnum?)	($tan-ratnum  x))
+      ((compnum?)	($tan-compnum x))
+      (else
+       (assertion-violation 'tan "expected number as argument" x))))
+
+  (define ($tan-fixnum x)
+    (if ($fxzero? x)
+	0
+      (foreign-call "ikrt_fx_tan" x)))
+
+  (define ($tan-bignum x)
+    ($fltan (inexact x)))
+
+  (define ($tan-ratnum x)
+    ($fltan (inexact x)))
+
+  (define ($tan-compnum x)
+    ;;
+    ;; tan (x) = z.rep + i * z.imp
+    ;;
+    ;;                  sin (2 * x.rep)
+    ;; z.rep = ----------------------------------
+    ;;         cos (2 * x.rep) + cosh (2 * x.imp)
+    ;;
+    ;;           tanh (2 * x.imp)
+    ;; z.imp = --------------------
+    ;;              cos (2 * x.rep)
+    ;;         1 + ----------------
+    ;;             cosh (2 * x.imp)
+    ;;
+    (let* ((x.rep		($compnum-real x))
+	   (x.imp		($compnum-imag x))
+	   (x.rep*2		(* 2 x.rep))
+	   (x.imp*2		(* 2 x.imp))
+	   (cos-2*x.imp		(cos  x.rep*2))
+	   (cosh-2*x.imp	(cosh x.imp*2)))
+      ($make-rectangular (/ (sin x.rep*2)
+			    (+ cos-2*x.imp cosh-2*x.imp))
+			 (/ (tanh x.imp*2)
+			    (+ 1 (/ cos-2*x.imp cosh-2*x.imp))))))
+
+  (define ($tan-cflonum x)
+    ;;
+    ;; tan (x) = z.rep + i * z.imp
+    ;;
+    ;;                  sin (2 * x.rep)
+    ;; z.rep = ----------------------------------
+    ;;         cos (2 * x.rep) + cosh (2 * x.imp)
+    ;;
+    ;;           tanh (2 * x.imp)
+    ;; z.imp = --------------------
+    ;;              cos (2 * x.rep)
+    ;;         1 + ----------------
+    ;;             cosh (2 * x.imp)
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (let ((x.rep*2	($fl* 2.0 x.rep))
+	    (x.imp*2	($fl* 2.0 x.imp)))
+	(let ((cos-2*x.rep	($flcos x.rep*2))
+	      (cosh-2*x.imp	($flcosh x.imp*2)))
+	  ($make-cflonum ($fl/ ($flsin x.rep*2)
+			       ($fl+ cos-2*x.rep cosh-2*x.imp))
+			 ($fl/ ($fltanh x.imp*2)
+			       ($fl+ 1.0 ($fl/ cos-2*x.rep cosh-2*x.imp))))))))
+
+  #| end of module: tan |# )
+
+
+(module (asin
+	 $asin-fixnum		$asin-bignum		$asin-ratnum
+	 $asin-flonum		$asin-cflonum		$asin-compnum)
+
+  (define (asin x)
+    (cond-numeric-operand x
+      ((flonum?)	($asin-flonum  x))
+      ((cflonum?)	($asin-cflonum x))
+      ((fixnum?)	($asin-fixnum  x))
+      ((bignum?)	($asin-bignum  x))
+      ((ratnum?)	($asin-ratnum  x))
+      ((compnum?)	($asin-compnum x))
+      (else
+       (assertion-violation 'asin "expected number as argument" x))))
+
+  (define ($asin-fixnum x)
+    ($asin-flonum (inexact x)))
+
+  (define ($asin-bignum x)
+    ($asin-flonum (inexact x)))
+
+  (define ($asin-ratnum x)
+    ($asin-flonum (inexact x)))
+
+  (define ($asin-flonum x)
+    ;;This is  different from $FLASIN:  $FLASIN returns a  flonum, while
+    ;;$ASIN-FLONUM accepts any  flonum as argument and  returns a flonum
+    ;;or cflonum.
+    ;;
+    (cond (($fl> x 1.0)
+	   ($make-cflonum PI/2 ($acosh-flonum x)))
+	  (($fl< x -1.0)
+	   ($make-cflonum ($fl- PI/2) ($fl- ($acosh-flonum ($fl- x)))))
+	  (else
+	   ($asin-flonum x))))
+
+  (define ($asin-compnum x)
+    (let ((x ($compnum-real x))
+	  (y ($compnum-imag x)))
+      (if ($fxzero? x) ;this works with any object
+	  ($make-compnum 0 (asinh y))
+	(let* ((z^2	(+ (* x x) (* y y)))
+	       (z^2-1	(- z^2 1.0))
+	       (z^2-1^2	(* z^2-1 z^2-1))
+	       (y^2	(* y y))
+	       (q	(sqrt (+ z^2-1^2 (* 4.0 y^2)))))
+	  (define (sgn x)
+	    (if (< x 0) -1.0 1.0))
+	  ($make-rectangular (* 0.5 (sgn x) (acos (- q z^2)))
+			     (* 0.5 (sgn y) (acosh (+ q z^2))))))))
+
+  (define ($asin-cflonum x)
+    (let ((x ($cflonum-real x))
+	  (y ($cflonum-imag x)))
+      (if ($flzero? x)
+	  ($make-cflonum 0.0 ($flasinh y))
+	(let* ((z^2	($fl+ ($flsqr x) ($flsqr y)))
+	       (z^2-1	($fl- z^2 1.0))
+	       (z^2-1^2	($fl* z^2-1 z^2-1))
+	       (y^2	($flsqr y))
+	       (q	($sqrt-flonum ($fl+ z^2-1^2 ($fl* 4.0 y^2)))))
+	  (define (sgn x)
+	    (if ($flnegative? x) -1.0 1.0))
+	  ;;We do not  know what ACOS and ACOSH will  return; neither we
+	  ;;know what type is Q.
+	  ($make-cflonum (* ($fl* 0.5 (sgn x)) (acos  (- q z^2)))
+			 (* ($fl* 0.5 (sgn y)) (acosh (+ q z^2))))))))
+
+  #| end of module: asin |# )
+
+
+(module (acos
+	 $acos-fixnum		$acos-bignum		$acos-ratnum
+	 $acos-flonum		$acos-cflonum		$acos-compnum)
+
+  (define (acos x)
+    (cond-numeric-operand x
+      ((flonum?)	($acos-flonum  x))
+      ((cflonum?)	($acos-cflonum x))
+      ((fixnum?)	($acos-fixnum  x))
+      ((bignum?)	($acos-bignum  x))
+      ((ratnum?)	($acos-ratnum  x))
+      ((compnum?)	($acos-compnum x))
+      (else
+       (assertion-violation 'acos "expected number as argument" x))))
+
+  (define ($acos-fixnum x)
+    ($acos-flonum (inexact x)))
+
+  (define ($acos-bignum x)
+    ($acos-flonum (inexact x)))
+
+  (define ($acos-ratnum x)
+    ($acos-flonum (inexact x)))
+
+  (define ($acos-flonum x)
+    ;;This is  different from $FLACOS:  $FLACOS returns a  flonum, while
+    ;;$ACOS-FLONUM accepts any  flonum as argument and  returns a flonum
+    ;;or cflonum.
+    ;;
+    (cond (($fl> x 1.0)
+	   ($make-compnum 0 ($acosh-flonum x)))
+	  (($fl< x -1.0)
+	   ($make-cflonum PI ($fl- ($acosh-flonum ($fl- x)))))
+	  (else
+	   ($flacos x))))
+
+  (define ($acos-compnum x)
+    ($flonum-number PI/2 ($asin-compnum x)))
+
+  (define ($acos-cflonum x)
+    ($flonum-cflonum PI/2 ($asin-cflonum x)))
+
+  #| end of module: acos |# )
+
+
+(module (atan
+	 $atan2-real-real
+	 $atan-fixnum		$atan-ratnum		$atan-bignum
+	 $atan-cflonum		$atan-compnum)
+  (define who 'atan)
+
+  (define atan
+    (case-lambda
+     ((x)
+      (cond-numeric-operand x
+	((flonum?)	($flatan       x))
+	((cflonum?)	($atan-cflonum x))
+	((fixnum?)	($atan-fixnum  x))
+	((bignum?)	($atan-bignum  x))
+	((ratnum?)	($atan-ratnum  x))
+	((compnum?)	($atan-compnum x))
+	(else
+	 (assertion-violation who "expected number as argument" x))))
+     ((y x)
+      (with-arguments-validation (who)
+	  ((real	x)
+	   (real	y))
+	($atan2-real-real x y)))))
+
+  (define ($atan2-real-real x y)
+    (foreign-call "ikrt_atan2" (inexact y) (inexact x)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($atan-fixnum x)
+    (foreign-call "ikrt_fx_atan" x))
+
+  (define ($atan-bignum x)
+    ($flatan (inexact x)))
+
+  (define ($atan-ratnum x)
+    ($flatan (inexact x)))
+
+  (define ($atan-compnum x)
+    ($flatan (inexact x)))
+
+  (define ($atan-cflonum x)
+    ;;Formula from Wikipedia section "Logarithmic forms":
+    ;;
+    ;;	<http://en.wikipedia.org/wiki/Arc_tangent>
+    ;;
+    ;;  atan x = 1/2 * i * (log (1 - i * x) - log (1 + i * x))
+    ;;
+    (if ($flzero? ($cflonum-imag x))
+	($flatan ($cflonum-real x))
+      ($flonum*cflonum +0.5i
+		       ($cflonum-cflonum
+			($log-cflonum ($flonum-cflonum 1.0 ($flonum*cflonum +1.0i x)))
+			($log-cflonum ($flonum+cflonum 1.0 ($flonum*cflonum +1.0i x)))))))
+
+  #| end of module |# )
+
+
+(module (sinh
+	 $sinh-fixnum		$sinh-bignum		$sinh-ratnum
+	 $sinh-compnum		$sinh-cflonum)
+  (define who 'sinh)
+
+  (define (sinh x)
+    (cond-numeric-operand x
+      ((flonum?)	($flsinh       x))
+      ((cflonum?)	($sinh-cflonum x))
+      ((fixnum?)	($sinh-fixnum  x))
+      ((bignum?)	($sinh-bignum  x))
+      ((ratnum?)	($sinh-ratnum  x))
+      ((compnum?)	($sinh-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($sinh-fixnum x)
+    ($flsinh (inexact x)))
+
+  (define ($sinh-bignum x)
+    ($flsinh (inexact x)))
+
+  (define ($sinh-ratnum x)
+    ($flsinh (inexact x)))
+
+  (define ($sinh-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular (* (sinh x.rep) (cos x.imp))
+			 (* (cosh x.rep) (sin x.imp)))))
+
+  (define ($sinh-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl* ($flsinh x.rep) ($flcos x.imp))
+		     ($fl* ($flcosh x.rep) ($flsin x.imp)))))
+
+  #| end of module |# )
+
+
+(module (cosh
+	 $cosh-fixnum		$cosh-bignum		$cosh-ratnum
+	 $cosh-compnum		$cosh-cflonum)
+  (define who 'cosh)
+
+  (define (cosh x)
+    (cond-numeric-operand x
+      ((flonum?)	($flcosh       x))
+      ((cflonum?)	($cosh-cflonum x))
+      ((fixnum?)	($cosh-fixnum  x))
+      ((bignum?)	($cosh-bignum  x))
+      ((ratnum?)	($cosh-ratnum  x))
+      ((compnum?)	($cosh-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($cosh-fixnum x)
+    ($flcosh (inexact x)))
+
+  (define ($cosh-bignum x)
+    ($flcosh (inexact x)))
+
+  (define ($cosh-ratnum x)
+    ($flcosh (inexact x)))
+
+  (define ($cosh-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular (* (cosh x.rep) (cos x.imp))
+			 (* (sinh x.rep) (sin x.imp)))))
+
+  (define ($cosh-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl* ($flcosh x.rep) ($flcos x.imp))
+		     ($fl* ($flsinh x.rep) ($flsin x.imp)))))
+
+  #| end of module: cosh |# )
+
+
+(module (tanh
+	 $tanh-fixnum		$tanh-bignum		$tanh-ratnum
+	 $tanh-compnum		$tanh-cflonum)
+  (define who 'tanh)
+
+  (define (tanh x)
+    (cond-numeric-operand x
+      ((flonum?)	($fltanh       x))
+      ((cflonum?)	($tanh-cflonum x))
+      ((fixnum?)	($tanh-fixnum  x))
+      ((bignum?)	($tanh-bignum  x))
+      ((ratnum?)	($tanh-ratnum  x))
+      ((compnum?)	($tanh-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($tanh-fixnum x)
+    ($fltanh (inexact x)))
+
+  (define ($tanh-bignum x)
+    ($fltanh (inexact x)))
+
+  (define ($tanh-ratnum x)
+    ($fltanh (inexact x)))
+
+  (define ($tanh-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (let ((rr (* 2 x.rep))
+	    (ii (* 2 x.imp)))
+	(let ((cos2i  (cos ii))
+	      (cosh2r (cosh rr)))
+	  ($make-rectangular (/ (tanh rr) (+ 1 (/ cos2i cosh2r)))
+			     (/ (sin ii)  (+ cosh2r cos2i)))))))
+
+  (define ($tanh-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (let ((rr ($fl* 2.0 x.rep))
+	    (ii ($fl* 2.0 x.imp)))
+	(let ((cos2i  ($flcos ii))
+	      (cosh2r ($flcosh rr)))
+	  ($make-cflonum ($fl/ ($fltanh rr) ($fl+ 1.0 ($fl/ cos2i cosh2r)))
+			 ($fl/ ($flsin ii)  ($fl+ cosh2r cos2i)))))))
+
+  #| end of module: tanh |# )
+
+
+(module (asinh
+	 $asinh-fixnum		$asinh-bignum		$asinh-ratnum
+	 $asinh-cflonum		$asinh-compnum)
+  (define who 'asinh)
+
+  (define (asinh x)
+    (cond-numeric-operand x
+      ((flonum?)	($flasinh x))
+      ((cflonum?)	($asinh-cflonum x))
+      ((fixnum?)	($asinh-fixnum x))
+      ((bignum?)	($asinh-bignum x))
+      ((ratnum?)	($asinh-ratnum x))
+      ((compnum?)	($asinh-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($asinh-fixnum x)
+    ($flasinh (inexact x)))
+
+  (define ($asinh-bignum x)
+    ($flasinh (inexact x)))
+
+  (define ($asinh-ratnum x)
+    ($flasinh (inexact x)))
+
+  (define ($asinh-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (if (zero? x.rep)
+	  (let ((v (asin x.imp)))
+	    ($make-rectangular (imag-part v) (real-part v)))
+	(let* ((z^2	(+ (* x.rep x.rep) (* x.imp x.imp)))
+	       (z^2-1	(- z^2 1))
+	       (z^2-1^2 (* z^2-1 z^2-1))
+	       (x.imp^2 (* x.imp x.imp))
+	       (q	(sqrt (+ z^2-1^2 (* 4 x.imp^2)))))
+	  (define (sgn N)
+	    (if (negative? N) -1 1))
+	  ($make-rectangular (* 0.5 (sgn x.rep) (acosh (+ q z^2)))
+			     (* 0.5 (sgn x.imp) (acos  (- q z^2))))))))
+
+  (define ($asinh-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (if ($flzero? x)
+	  (let* ((v     ($asin-flonum x.imp))
+		 (real? (flonum? v)))
+	    ($make-cflonum (if real? 0.0 ($cflonum-imag v))
+			   (if real? v   ($cflonum-real v))))
+	(let* ((x.imp^2 ($flsqr x.imp))
+	       (z^2	($fl+ ($flsqr x.rep) x.imp^2))
+	       (z^2-1	($fl- z^2 1.0))
+	       (z^2-1^2 ($fl* z^2-1 z^2-1))
+	       (q	($flsqrt (+ z^2-1^2 ($fl* 4.0 x.imp^2)))))
+	  (define (sgn N)
+	    (if ($flnegative? N) -1.0 1.0))
+	  ;;We do not  know what ACOSH and ACOS will  return; neither we
+	  ;;do kwnow what type is Q.
+	  ($make-cflonum (* ($fl* 0.5 (sgn x.rep)) (acosh (+ q z^2)))
+			 (* ($fl* 0.5 (sgn x.imp)) (acos  (- q z^2))))))))
+
+  #| end of module: asinh |# )
+
+
+(module (acosh
+	 $acosh-fixnum		$acosh-bignum		$acosh-ratnum
+	 $acosh-flonum		$acosh-cflonum		$acosh-compnum)
+  (define who 'acosh)
+
+  (define (acosh x)
+    (cond-numeric-operand x
+      ((flonum?)	($acosh-flonum x))
+      ((cflonum?)	($acosh-cflonum x))
+      ((fixnum?)	($acosh-fixnum x))
+      ((bignum?)	($acosh-bignum x))
+      ((ratnum?)	($acosh-ratnum x))
+      ((compnum?)	($acosh-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($acosh-fixnum x)
+    ($acosh-flonum (inexact x)))
+
+  (define ($acosh-bignum x)
+    ($acosh-flonum (inexact x)))
+
+  (define ($acosh-ratnum x)
+    ($acosh-flonum (inexact x)))
+
+  (define ($acosh-flonum x)
+    (cond (($fl>= x +1.0)
+	   ($flacosh x))
+	  (($fl>= x -1.0)
+	   (make-rectangular 0 (atan (sqrt (- 1 (* x x))) x)))
+	  (($fl< x -1.0)
+	   (make-rectangular (acosh (- x)) PI))
+	  (else +nan.0)))
+
+  (define ($acosh-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (if (zero? x.rep)
+	  ($number+compnum (asinh x.imp) ($make-compnum 0 PI/2))
+	(let* ((x.imp^2	(* x.imp x.imp))
+	       (z^2	(+ (* x.rep x.rep) x.imp^2))
+	       (z^2-1	(- z^2 1))
+	       (z^2-1^2	(* z^2-1 z^2-1))
+	       (q	(sqrt (+ z^2-1^2 (* 4 x.imp^2)))))
+	  (define (sgn x)
+	    (if (< x 0) -1 1))
+	  (+ (* 0.5 (sgn x.rep) (acosh (+ q z^2)))
+	     (* 0.5i (sgn x.imp)
+		(- PI (* (sgn x.rep) (acos (- q z^2))))))))))
+
+  (define ($acosh-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (if ($flzero? x.rep)
+	  (+ ($flasinh x.imp) ($make-cflonum 0.0 PI/2))
+	(let* ((x.imp^2	($flsqr x.imp))
+	       (z^2	($fl+ ($flsqr x.rep) x.imp^2))
+	       (z^2-1	($fl- z^2 1.0))
+	       (z^2-1^2	($fl* z^2-1 z^2-1))
+	       (q	($sqrt-flonum ($fl+ z^2-1^2 ($fl* 4.0 x.imp^2)))))
+	  (define (sgn N)
+	    (if ($flnegative? N) -1.0 1.0))
+	  ;;We do not kwnow what type is Q.
+	  (+ (* ($fl* 0.5  (sgn x.rep))
+		(acosh (+ q z^2)))
+	     (* ($fl* 0.5i (sgn x.imp))
+		(- PI (* (sgn x.rep) (acos (- q z^2))))))))))
+
+  #| end of module |# )
+
+
+(module (atanh
+	 $atanh-fixnum		$atanh-bignum		$atanh-ratnum
+	 $atanh-flonum		$atanh-cflonum		$atanh-compnum)
+  (define who 'atanh)
+
+  (define (atanh x)
+    (cond-numeric-operand x
+      ((flonum?)	($atanh-flonum  x))
+      ((cflonum?)	($atanh-cflonum x))
+      ((fixnum?)	($atanh-fixnum  x))
+      ((bignum?)	($atanh-bignum  x))
+      ((ratnum?)	($atanh-ratnum  x))
+      ((compnum?)	($atanh-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($atanh-fixnum x)
+    ($atanh-flonum (inexact x)))
+
+  (define ($atanh-bignum x)
+    ($atanh-flonum (inexact x)))
+
+  (define ($atanh-ratnum x)
+    ($atanh-flonum (inexact x)))
+
+  (define ($atanh-flonum x)
+    ;;This is different from $flatanh: it accepts any flonum as argument
+    ;;and it returns a flonum or cflonum.
+    ;;
+    (if (and ($fl<= x +1.0)
+	     ($fl>= x -1.0))
+	($flatanh x)
+      ($flonum*cflonum 0.5 ($log-flonum ($fl/ ($fl+ 1.0 x)
+					      ($fl- 1.0 x))))
+      ;; (- ($atanh-flonum ($fl/ 1.0 x))
+      ;; 	 (if ($flnegative? x)
+      ;; 	     ($fl* -1.0i PI/2)
+      ;; 	   ($fl* +1.0i PI/2)))
+      ))
+
+  (define ($atanh-compnum x)
+    ($atanh-cflonum (inexact x)))
+
+  (define ($atanh-cflonum x)
+    ($flonum*cflonum 0.5 ($log-cflonum ($cflonum/cflonum ($flonum+cflonum 1.0 x)
+							 ($flonum-cflonum 1.0 x)))))
+
+  #| end of module: atanh |# )
 
 
 ;;;; square roots
 
 (module (sqrt
-	 $sqrt/fixnum
-	 $sqrt/flonum
-	 $sqrt/bignum
-	 $sqrt/ratnum
-	 $sqrt/compnum
-	 $sqrt/cflonum)
+	 $sqrt-fixnum
+	 $sqrt-flonum
+	 $sqrt-bignum
+	 $sqrt-ratnum
+	 $sqrt-compnum
+	 $sqrt-cflonum)
 
   (define (sqrt x)
     (cond-numeric-operand x
-      ((fixnum?)	($sqrt/fixnum x))
-      ((bignum?)	($sqrt/bignum x))
-      ((ratnum?)	($sqrt/ratnum x))
-      ((flonum?)	($sqrt/flonum x))
-      ((compnum?)	($sqrt/compnum x))
-      ((cflonum?)	($sqrt/cflonum x))
+      ((fixnum?)	($sqrt-fixnum x))
+      ((bignum?)	($sqrt-bignum x))
+      ((ratnum?)	($sqrt-ratnum x))
+      ((flonum?)	($sqrt-flonum x))
+      ((compnum?)	($sqrt-compnum x))
+      ((cflonum?)	($sqrt-cflonum x))
       (else
        (assertion-violation 'sqrt "expected number as argument" x))))
 
-  (define ($sqrt/flonum x)
+  (define ($sqrt-flonum x)
     ;;This can return both a flonum or a compnum!!!
     ;;
     (if ($fl< x 0.0)
@@ -5062,20 +5480,20 @@
 	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
       (foreign-call "ikrt_fl_sqrt" x)))
 
-  (define ($sqrt/fixnum x)
+  (define ($sqrt-fixnum x)
     (if ($fxnegative? x)
-	(make-rectangular 0 ($sqrt/fixnum ($fx- x)))
+	(make-rectangular 0 ($sqrt-fixnum ($fx- x)))
       (let-values (((root residual) ($exact-integer-sqrt/fixnum x)))
 	(if ($fxzero? residual)
 	    root
 	  (foreign-call "ikrt_fx_sqrt" x)))))
 
-  (define ($sqrt/bignum x)
+  (define ($sqrt-bignum x)
     (if ($bignum-positive? x)
 	(let-values (((root residual) ($exact-integer-sqrt/bignum x)))
 	  (if (eq? residual 0)
 	      root
-	    (let ((v ($sqrt/flonum (inexact x))))
+	    (let ((v ($sqrt-flonum (inexact x))))
 	      ;;Could the (dropped) residual ever affect the answer?
 	      (if (flinfinite? v)
 		  (if (bignum? root)
@@ -5084,13 +5502,13 @@
 		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
 		    (inexact root))
 		v))))
-      (make-rectangular 0 ($sqrt/bignum (- x)))))
+      (make-rectangular 0 ($sqrt-bignum (- x)))))
 
-  (define ($sqrt/ratnum x)
+  (define ($sqrt-ratnum x)
     (/ (sqrt ($ratnum-n x))
        (sqrt ($ratnum-d x))))
 
-  (define ($sqrt/compnum Z)
+  (define ($sqrt-compnum Z)
     ;;The function:
     ;;
     ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
@@ -5113,7 +5531,7 @@
 	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
 			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
 
-  (define ($sqrt/cflonum Z)
+  (define ($sqrt-cflonum Z)
     ;;The function:
     ;;
     ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
@@ -5130,9 +5548,9 @@
     ;;
     (let ((Z.rep (real-part Z))
 	  (Z.imp (imag-part Z)))
-      ;;Remember  that  $SQRT/FLONUM  can  return both  a  flonum  or  a
+      ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
       ;;compnum!!!
-      (let* ((magn  ($sqrt/flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
+      (let* ((magn  ($sqrt-flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
 	     (sgn   (if ($flpositive? Z.imp) 1 -1))
 	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
 	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
@@ -5211,7 +5629,7 @@
        (else x))))
    ((ratnum? x) (ratnum-floor x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'floor "not a number" x))))
+   (else (die 'floor "expected number as argument" x))))
 
 (define (ceiling x)
   (define (ratnum-ceiling x)
@@ -5227,7 +5645,7 @@
        (else x))))
    ((ratnum? x) (ratnum-ceiling x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'ceiling "not a number" x))))
+   (else (die 'ceiling "expected number as argument" x))))
 
 
 (define ($ratnum-round x)
@@ -5249,7 +5667,7 @@
    ((flonum? x) ($flround x))
    ((ratnum? x) ($ratnum-round x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'round "not a number" x))))
+   (else (die 'round "expected number as argument" x))))
 
 (define (truncate x)
     ;;; FIXME: fltruncate should preserve the sign of -0.0.
@@ -5262,7 +5680,7 @@
        (else x))))
    ((ratnum? x) ($ratnum-truncate x))
    ((or (fixnum? x) (bignum? x)) x)
-   (else (die 'truncate "not a number" x))))
+   (else (die 'truncate "expected number as argument" x))))
 
 
 (define (random n)

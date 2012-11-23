@@ -3818,6 +3818,24 @@ Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Hyperbolic functions
+
+
+@defun flsinh @var{fl}
+@defunx flcosh @var{fl}
+@defunx fltanh @var{fl}
+Compute the hyperbolic functions.  Return flonum objects.
+@end defun
+
+
+@defun flasinh @var{fl}
+@defunx flacosh @var{fl}
+@defunx flatanh @var{fl}
+Compute the inverse hyperbolic functions.  Return flonum objects.
+@end defun
+
+@c ------------------------------------------------------------
+
 @subsubheading Power functions
 
 
@@ -16418,6 +16436,24 @@ Return an equivalent of:
 (angle (make-rectangular @varii{fl} @vari{fl}))
 @end example
 @end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic functions
+
+
+@defun $flsinh @var{fl}
+@defunx $flcosh @var{fl}
+@defunx $fltanh @var{fl}
+Compute the hyperbolic functions.  Return flonum objects.
+@end defun
+
+
+@defun $flasinh @var{fl}
+@defunx $flacosh @var{fl}
+@defunx $flatanh @var{fl}
+Compute the inverse hyperbolic functions.  Return flonum objects.
+@end defun
 
 @c ------------------------------------------------------------
 

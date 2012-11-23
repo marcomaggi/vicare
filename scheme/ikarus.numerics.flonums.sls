@@ -45,6 +45,12 @@
     flasin		$flasin
     flacos		$flacos
     flatan		$flatan		$flatan2
+    flsinh		$flsinh
+    flcosh		$flcosh
+    fltanh		$fltanh
+    flasinh		$flasinh
+    flacosh		$flacosh
+    flatanh		$flatanh
     flexp		$flexp
     fllog		$fllog		$fllog2
     flexpm1		$flexpm1
@@ -76,6 +82,8 @@
 		  flnumerator		fldenominator	flabs
 		  flsin			flcos		fltan
 		  flasin		flacos		flatan
+		  flsinh		flcosh		fltanh
+		  flasinh		flacosh		flatanh
 		  flexp			fllog		flexpm1
 		  fllog1p		flexpt		flsqrt
 		  flsqr
@@ -129,6 +137,12 @@
 	    $flasin
 	    $flacos
 	    $flatan		$flatan2
+	    $flsinh
+	    $flcosh
+	    $fltanh
+	    $flasinh
+	    $flacosh
+	    $flatanh
 	    $flexp
 	    $fllog		$fllog2
 	    $flexpm1
@@ -880,6 +894,16 @@
     (foreign-call "ikrt_atan2" x y))
 
   #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define-fl-operation/one/forcall flsinh $flsinh "ikrt_fl_sinh")
+(define-fl-operation/one/forcall flcosh $flcosh "ikrt_fl_cosh")
+(define-fl-operation/one/forcall fltanh $fltanh "ikrt_fl_tanh")
+
+(define-fl-operation/one/forcall flasinh $flasinh "ikrt_fl_asinh")
+(define-fl-operation/one/forcall flacosh $flacosh "ikrt_fl_acosh")
+(define-fl-operation/one/forcall flatanh $flatanh "ikrt_fl_atanh")
 
 ;;; --------------------------------------------------------------------
 
