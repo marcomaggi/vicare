@@ -89,11 +89,11 @@
     sra				sll
 
     ;; powers and square roots
-    expt
+    expt			sqr
     sqrt			exact-integer-sqrt
 
     ;; logarithms and exponentials
-    log exp
+    log				exp
 
     ;; trigonometric functions
     sin				asin
@@ -154,7 +154,7 @@
 		  sra				sll
 
 		  ;; powers and square roots
-		  expt
+		  expt				sqr
 		  sqrt				exact-integer-sqrt
 
 		  ;; logarithms and exponentials
@@ -4519,17 +4519,15 @@
   (define who 'expt)
 
   (define (expt n m)
-    (with-arguments-validation (who)
-	((number	n))
-      (cond-numeric-operand m
-	((fixnum?)	($expt-number-fixnum  n m))
-	((bignum?)	($expt-number-bignum  n m))
-	((flonum?)	($expt-number-flonum  n m))
-	((ratnum?)	($expt-number-ratnum  n m))
-	((compnum?)	($expt-number-compnum n m))
-	((cflonum?)	($expt-number-cflonum n m))
-	(else
-	 (assertion-violation who "not a number" m)))))
+    (cond-numeric-operand m
+      ((fixnum?)	($expt-number-fixnum  n m))
+      ((bignum?)	($expt-number-bignum  n m))
+      ((flonum?)	($expt-number-flonum  n m))
+      ((ratnum?)	($expt-number-ratnum  n m))
+      ((compnum?)	($expt-number-compnum n m))
+      ((cflonum?)	($expt-number-cflonum n m))
+      (else
+       (assertion-violation who "expected number as argument" m))))
 
   (module ($expt-number-fixnum)
 
@@ -4647,6 +4645,40 @@
 	   (exp (* m (log n))))))
 
   #| end of module: expt |# )
+
+
+(module (sqr
+	 $sqr-fixnum		$sqr-bignum		$sqr-ratnum
+	 $sqr-compnum		$sqr-cflonum)
+  (define who 'sqr)
+
+  (define (sqr x)
+    (cond-numeric-operand x
+      ((fixnum?)	($sqr-fixnum  x))
+      ((bignum?)	($sqr-bignum  x))
+      ((flonum?)	($flsqr       x))
+      ((ratnum?)	($sqr-ratnum  x))
+      ((compnum?)	($sqr-compnum x))
+      ((cflonum?)	($sqr-cflonum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($sqr-fixnum x)
+    ($fixnum*fixnum x x))
+
+  (define ($sqr-bignum x)
+    ($bignum*bignum x x))
+
+  (define ($sqr-ratnum x)
+    ($ratnum*ratnum x x))
+
+  (define ($sqr-compnum x)
+    ($compnum*compnum x x))
+
+  (define ($sqr-cflonum x)
+    ($cflonum*cflonum x))
+
+  #| end of module: sqr |# )
 
 
 (module (log
@@ -4925,16 +4957,14 @@
     ;;         1 + ----------------
     ;;             cosh (2 * x.imp)
     ;;
-    (let* ((x.rep		($compnum-real x))
-	   (x.imp		($compnum-imag x))
-	   (x.rep*2		(* 2 x.rep))
-	   (x.imp*2		(* 2 x.imp))
-	   (cos-2*x.imp		(cos  x.rep*2))
-	   (cosh-2*x.imp	(cosh x.imp*2)))
-      ($make-rectangular (/ (sin x.rep*2)
-			    (+ cos-2*x.imp cosh-2*x.imp))
-			 (/ (tanh x.imp*2)
-			    (+ 1 (/ cos-2*x.imp cosh-2*x.imp))))))
+    (let ((x.rep ($compnum-real x))
+	   (x.imp ($compnum-imag x)))
+      (let ((R2 (* 2 x.rep))
+	    (I2 (* 2 x.imp)))
+	(let ((CR2  (cos  R2))
+	      (CHI2 (cosh I2)))
+	  ($make-rectangular (/ (sin R2)  (+ CR2 CHI2))
+			     (/ (tanh I2) (+ 1 (/ CR2 CHI2))))))))
 
   (define ($tan-cflonum x)
     ;;
@@ -4952,14 +4982,12 @@
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      (let ((x.rep*2	($fl* 2.0 x.rep))
-	    (x.imp*2	($fl* 2.0 x.imp)))
-	(let ((cos-2*x.rep	($flcos x.rep*2))
-	      (cosh-2*x.imp	($flcosh x.imp*2)))
-	  ($make-cflonum ($fl/ ($flsin x.rep*2)
-			       ($fl+ cos-2*x.rep cosh-2*x.imp))
-			 ($fl/ ($fltanh x.imp*2)
-			       ($fl+ 1.0 ($fl/ cos-2*x.rep cosh-2*x.imp))))))))
+      (let ((R2	($fl* 2.0 x.rep))
+	    (I2	($fl* 2.0 x.imp)))
+	(let ((COSR2	($flcos R2))
+	      (COSHI2	($flcosh I2)))
+	  ($make-cflonum ($fl/ ($flsin  R2) ($fl+ COSR2 COSHI2))
+			 ($fl/ ($fltanh I2) ($fl+ 1.0 ($fl/ COSR2 COSHI2))))))))
 
   #| end of module: tan |# )
 
@@ -4994,43 +5022,77 @@
     ;;or cflonum.
     ;;
     (cond (($fl> x 1.0)
+	   ;;          pi
+	   ;; asin x = -- + i * acosh x
+	   ;;          2
 	   ($make-cflonum PI/2 ($acosh-flonum x)))
 	  (($fl< x -1.0)
+	   ;;            pi
+	   ;; asin x = - -- - i * acosh (- x)
+	   ;;            2
 	   ($make-cflonum ($fl- PI/2) ($fl- ($acosh-flonum ($fl- x)))))
 	  (else
 	   ($asin-flonum x))))
 
   (define ($asin-compnum x)
-    (let ((x ($compnum-real x))
-	  (y ($compnum-imag x)))
-      (if ($fxzero? x) ;this works with any object
-	  ($make-compnum 0 (asinh y))
-	(let* ((z^2	(+ (* x x) (* y y)))
-	       (z^2-1	(- z^2 1.0))
-	       (z^2-1^2	(* z^2-1 z^2-1))
-	       (y^2	(* y y))
-	       (q	(sqrt (+ z^2-1^2 (* 4.0 y^2)))))
-	  (define (sgn x)
-	    (if (< x 0) -1.0 1.0))
-	  ($make-rectangular (* 0.5 (sgn x) (acos (- q z^2)))
-			     (* 0.5 (sgn y) (acosh (+ q z^2))))))))
+    ;; asin(x) = z.rep + i * z.imp
+    ;;
+    ;; A = x.rep^2 + y.rep^2
+    ;; B = A - 1
+    ;; C = B^2
+    ;; D = sqrt(x.imp)
+    ;; Q = sqrt(C + 4 * D)
+    ;; z.rep = 1/2 * sgn(x.rep) * acos (Q - A)
+    ;; z.imp = 1/2 * sgn(x.imp) * acosh(Q + A)
+    ;;
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (if ($fxzero? x.rep) ;this works with any object
+	  ($make-compnum 0 (asinh x.imp))
+	(let* (	;;A is a non-negative real number.
+	       (A	(+ (sqr x.rep) (sqr x.imp)))
+	       ;;B is a real number.
+	       (B	(- A 1.0))
+	       ;;C is a non-negative real number.
+	       (C	(sqr B))
+	       ;;D is a non-negative real number.
+	       (D	(sqr x.imp))
+	       ;;Q is a non-negative real number.
+	       (Q	(sqrt (+ C (* 4 D)))))
+	  (define (sgn N)
+	    (if (negative? N) -1.0 1.0))
+	  ($make-rectangular ($flonum*number ($fl* 0.5 (sgn x.rep)) (acos  (- Q A)))
+			     ($flonum*number ($fl* 0.5 (sgn x.imp)) (acosh (+ Q A))))))))
 
   (define ($asin-cflonum x)
-    (let ((x ($cflonum-real x))
-	  (y ($cflonum-imag x)))
-      (if ($flzero? x)
-	  ($make-cflonum 0.0 ($flasinh y))
-	(let* ((z^2	($fl+ ($flsqr x) ($flsqr y)))
-	       (z^2-1	($fl- z^2 1.0))
-	       (z^2-1^2	($fl* z^2-1 z^2-1))
-	       (y^2	($flsqr y))
-	       (q	($sqrt-flonum ($fl+ z^2-1^2 ($fl* 4.0 y^2)))))
-	  (define (sgn x)
-	    (if ($flnegative? x) -1.0 1.0))
-	  ;;We do not  know what ACOS and ACOSH will  return; neither we
-	  ;;know what type is Q.
-	  ($make-cflonum (* ($fl* 0.5 (sgn x)) (acos  (- q z^2)))
-			 (* ($fl* 0.5 (sgn y)) (acosh (+ q z^2))))))))
+    ;; asin(x) = z.rep + i * z.imp
+    ;;
+    ;; A = x.rep^2 + y.rep^2
+    ;; B = A - 1
+    ;; C = B^2
+    ;; D = sqrt(x.imp)
+    ;; Q = sqrt(C + 4 * D)
+    ;; z.rep = 1/2 * sgn(x.rep) * acos (Q - A)
+    ;; z.imp = 1/2 * sgn(x.imp) * acosh(Q + A)
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (if ($flzero? x.rep)
+	  ($make-cflonum 0.0 ($flasinh x.imp))
+	(let* (	;;A is a non-negative flonum.
+	       (A	($fl+ ($flsqr x.rep) ($flsqr x.imp)))
+	       ;;B is a flonum.
+	       (B	($fl- A 1.0))
+	       ;;C is a non-negative flonum.
+	       (C	($flsqr B B))
+	       ;;D is a non-negative flonum.
+	       (D	($flsqr x.imp))
+	       ;;Q is a non-negative flonum.
+	       (Q	($sqrt-flonum ($fl+ C ($fl* 4.0 D)))))
+	  (define (sgn N)
+	    (if ($flnegative? N) -1.0 1.0))
+	  ($make-cflonum ($fl* ($fl* 0.5 (sgn x.rep)) ($acos-flonum  ($fl- Q A)))
+			 ($fl* ($fl* 0.5 (sgn x.imp)) ($acosh-flonum ($fl+ Q A))))))))
 
   #| end of module: asin |# )
 
@@ -5072,7 +5134,7 @@
 	   ($flacos x))))
 
   (define ($acos-compnum x)
-    ($flonum-number PI/2 ($asin-compnum x)))
+    ($flonum-number  PI/2 ($asin-compnum x)))
 
   (define ($acos-cflonum x)
     ($flonum-cflonum PI/2 ($asin-cflonum x)))
@@ -5119,7 +5181,7 @@
     ($flatan (inexact x)))
 
   (define ($atan-compnum x)
-    ($flatan (inexact x)))
+    ($atan-cflonum (inexact x)))
 
   (define ($atan-cflonum x)
     ;;Formula from Wikipedia section "Logarithmic forms":
@@ -5132,8 +5194,8 @@
 	($flatan ($cflonum-real x))
       ($flonum*cflonum +0.5i
 		       ($cflonum-cflonum
-			($log-cflonum ($flonum-cflonum 1.0 ($flonum*cflonum +1.0i x)))
-			($log-cflonum ($flonum+cflonum 1.0 ($flonum*cflonum +1.0i x)))))))
+			($log-cflonum ($flonum-cflonum 1.0 ($cflonum*cflonum +1.0i x)))
+			($log-cflonum ($flonum+cflonum 1.0 ($cflonum*cflonum +1.0i x)))))))
 
   #| end of module |# )
 
@@ -5244,24 +5306,50 @@
     ($fltanh (inexact x)))
 
   (define ($tanh-compnum x)
+    ;;
+    ;; tanh (x) = z.rep + i * z.imp
+    ;;
+    ;;           tanh (2 * x.imp)
+    ;; z.rep = --------------------
+    ;;              cos (2 * x.imp)
+    ;;         1 + ---------------
+    ;;             cosh (2 * x.rep)
+    ;;
+    ;;                  sin (2 * x.imp)
+    ;; z.imp = ----------------------------------
+    ;;         cosh (2 * x.rep) + cos (2 * x.imp)
+    ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
-      (let ((rr (* 2 x.rep))
-	    (ii (* 2 x.imp)))
-	(let ((cos2i  (cos ii))
-	      (cosh2r (cosh rr)))
-	  ($make-rectangular (/ (tanh rr) (+ 1 (/ cos2i cosh2r)))
-			     (/ (sin ii)  (+ cosh2r cos2i)))))))
+      (let ((R2 (* 2 x.rep))
+	    (I2 (* 2 x.imp)))
+	(let ((cos2i  (cos  I2))
+	      (cosh2r (cosh R2)))
+	  ($make-rectangular (/ (tanh R2) (+ 1 (/ cos2i cosh2r)))
+			     (/ (sin I2)  (+ cosh2r cos2i)))))))
 
   (define ($tanh-cflonum x)
+    ;;
+    ;; tanh (x) = z.rep + i * z.imp
+    ;;
+    ;;           tanh (2 * x.imp)
+    ;; z.rep = --------------------
+    ;;              cos (2 * x.imp)
+    ;;         1 + ---------------
+    ;;             cosh (2 * x.rep)
+    ;;
+    ;;                  sin (2 * x.imp)
+    ;; z.imp = ----------------------------------
+    ;;         cosh (2 * x.rep) + cos (2 * x.imp)
+    ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      (let ((rr ($fl* 2.0 x.rep))
-	    (ii ($fl* 2.0 x.imp)))
-	(let ((cos2i  ($flcos ii))
-	      (cosh2r ($flcosh rr)))
-	  ($make-cflonum ($fl/ ($fltanh rr) ($fl+ 1.0 ($fl/ cos2i cosh2r)))
-			 ($fl/ ($flsin ii)  ($fl+ cosh2r cos2i)))))))
+      (let ((R2 ($fl* 2.0 x.rep))
+	    (I2 ($fl* 2.0 x.imp)))
+	(let ((cos2i  ($flcos  I2))
+	      (cosh2r ($flcosh R2)))
+	  ($make-cflonum ($fl/ ($fltanh R2) ($fl+ 1.0 ($fl/ cos2i cosh2r)))
+			 ($fl/ ($flsin I2)  ($fl+ cosh2r cos2i)))))))
 
   #| end of module: tanh |# )
 
@@ -5292,22 +5380,49 @@
     ($flasinh (inexact x)))
 
   (define ($asinh-compnum x)
+    ;; asinh (x) = z.rep + i * z.imp
+    ;;
+    ;; D = x.imp^2
+    ;; A = x.rep^2 + D
+    ;; B = A - 1
+    ;; C = B^2
+    ;; Q = sqrt(C + 4 * D)
+    ;;
+    ;; z.rep = 1/2 * sgn(x.rep) * acosh (Q + A)
+    ;; z.imp = 1/2 * sgn(x.imp) * acos  (Q - A)
+    ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
       (if (zero? x.rep)
 	  (let ((v (asin x.imp)))
 	    ($make-rectangular (imag-part v) (real-part v)))
-	(let* ((z^2	(+ (* x.rep x.rep) (* x.imp x.imp)))
-	       (z^2-1	(- z^2 1))
-	       (z^2-1^2 (* z^2-1 z^2-1))
-	       (x.imp^2 (* x.imp x.imp))
-	       (q	(sqrt (+ z^2-1^2 (* 4 x.imp^2)))))
+	(let* (	;;D is a non-negative real number.
+	       (D (sqr x.imp))
+	       ;;A is a non-negative real number.
+	       (A (+ (sqr x.rep) D))
+	       ;;B is a real number.
+	       (B (- A 1))
+	       ;;C is a non-negative real number.
+	       (C (sqr B B))
+	       ;;Q is a non-negative real number.
+	       (Q (sqrt (+ C (* 4 D)))))
 	  (define (sgn N)
 	    (if (negative? N) -1 1))
-	  ($make-rectangular (* 0.5 (sgn x.rep) (acosh (+ q z^2)))
-			     (* 0.5 (sgn x.imp) (acos  (- q z^2))))))))
+	  ($make-rectangular ($flonum*number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
+			     ($flonum*number ($fl* 0.5 (sgn x.imp)) (acos  (- Q A))))))))
 
   (define ($asinh-cflonum x)
+    ;; asinh (x) = z.rep + i * z.imp
+    ;;
+    ;; D = x.imp^2
+    ;; A = x.rep^2 + D
+    ;; B = A - 1
+    ;; C = B^2
+    ;; Q = sqrt(C + 4 * D)
+    ;;
+    ;; z.rep = 1/2 * sgn(x.rep) * acosh (Q + A)
+    ;; z.imp = 1/2 * sgn(x.imp) * acos  (Q - A)
+    ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
       (if ($flzero? x)
@@ -5315,17 +5430,20 @@
 		 (real? (flonum? v)))
 	    ($make-cflonum (if real? 0.0 ($cflonum-imag v))
 			   (if real? v   ($cflonum-real v))))
-	(let* ((x.imp^2 ($flsqr x.imp))
-	       (z^2	($fl+ ($flsqr x.rep) x.imp^2))
-	       (z^2-1	($fl- z^2 1.0))
-	       (z^2-1^2 ($fl* z^2-1 z^2-1))
-	       (q	($flsqrt (+ z^2-1^2 ($fl* 4.0 x.imp^2)))))
+	(let* (	;;D is a non-negative flonum.
+	       (D ($flsqr x.imp))
+	       ;;A is a non-negative flonum.
+	       (A ($fl+ ($flsqr x.rep) D))
+	       ;;B is a flonum.
+	       (B ($fl- A 1.0))
+	       ;;C is a non-negative flonum.
+	       (C ($fl* B B))
+	       ;;Q is a non-negative flonum.
+	       (Q ($flsqrt (+ C ($fl* 4.0 D)))))
 	  (define (sgn N)
 	    (if ($flnegative? N) -1.0 1.0))
-	  ;;We do not  know what ACOSH and ACOS will  return; neither we
-	  ;;do kwnow what type is Q.
-	  ($make-cflonum (* ($fl* 0.5 (sgn x.rep)) (acosh (+ q z^2)))
-			 (* ($fl* 0.5 (sgn x.imp)) (acos  (- q z^2))))))))
+	  ($make-cflonum ($fl* ($fl* 0.5 (sgn x.rep)) ($acosh-flonum ($fl+ Q A)))
+			 ($fl* ($fl* 0.5 (sgn x.imp)) ($acos-flonum  ($fl- Q A))))))))
 
   #| end of module: asinh |# )
 
@@ -5356,47 +5474,77 @@
     ($acosh-flonum (inexact x)))
 
   (define ($acosh-flonum x)
-    (cond (($fl>= x +1.0)
+    (cond (($fl>= x +1.0) ; +1 <= X < +inf
 	   ($flacosh x))
-	  (($fl>= x -1.0)
-	   (make-rectangular 0 (atan (sqrt (- 1 (* x x))) x)))
-	  (($fl< x -1.0)
-	   (make-rectangular (acosh (- x)) PI))
+	  (($fl>= x -1.0) ; -1 <= X < +1
+	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsqr x x))) x)))
+	  (($fl< x -1.0)  ; -inf < X < -1
+	   ($make-cflonum ($flacosh ($fl- x)) PI))
 	  (else +nan.0)))
 
   (define ($acosh-compnum x)
+    ;;
+    ;; acosh (x) = 1/2 * sgn(x.rep) * acosh (Q + A) +
+    ;;           + i * 1/2 * sgn(x.imp) * (pi - sgn(x.rep) * acos (Q - A))
+    ;;
+    ;; D = x.imp^2
+    ;; A = x.rep^2 + D
+    ;; B = A - 1
+    ;; C = B ^2
+    ;; Q = sqrt (C + 4 * D)
+    ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
       (if (zero? x.rep)
 	  ($number+compnum (asinh x.imp) ($make-compnum 0 PI/2))
-	(let* ((x.imp^2	(* x.imp x.imp))
-	       (z^2	(+ (* x.rep x.rep) x.imp^2))
-	       (z^2-1	(- z^2 1))
-	       (z^2-1^2	(* z^2-1 z^2-1))
-	       (q	(sqrt (+ z^2-1^2 (* 4 x.imp^2)))))
+	(let* (	;;D is a non-negative real number.
+	       (D (sqr x.imp))
+	       ;;A is a non-negative real number.
+	       (A (+ (sqr x.rep) D))
+	       ;;B is a real number.
+	       (B (- A 1))
+	       ;;C is a non-negative real number.
+	       (C (sqr B))
+	       ;;Q is a non-negative real number.
+	       (Q (sqrt (+ C (* 4 D)))))
 	  (define (sgn x)
-	    (if (< x 0) -1 1))
-	  (+ (* 0.5 (sgn x.rep) (acosh (+ q z^2)))
-	     (* 0.5i (sgn x.imp)
-		(- PI (* (sgn x.rep) (acos (- q z^2))))))))))
+	    (if (negative? x) -1.0 1.0))
+	  (+ ($flonum*number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
+	     ($cflonum*number ($make-compnum 0 ($fl* 0.5 (sgn x.imp)))
+			      (- PI (* (sgn x.rep) (acos (- Q A))))))))))
 
   (define ($acosh-cflonum x)
+    ;;
+    ;; acosh (x) = 1/2 * sgn(x.rep) * acosh (Q + A) +
+    ;;           + i * 1/2 * sgn(x.imp) * (pi - sgn(x.rep) * acos (Q - A))
+    ;;
+    ;; D = x.imp^2
+    ;; A = x.rep^2 + D
+    ;; B = A - 1
+    ;; C = B ^2
+    ;; Q = sqrt (C + 4 * D)
+    ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
       (if ($flzero? x.rep)
 	  (+ ($flasinh x.imp) ($make-cflonum 0.0 PI/2))
-	(let* ((x.imp^2	($flsqr x.imp))
-	       (z^2	($fl+ ($flsqr x.rep) x.imp^2))
-	       (z^2-1	($fl- z^2 1.0))
-	       (z^2-1^2	($fl* z^2-1 z^2-1))
-	       (q	($sqrt-flonum ($fl+ z^2-1^2 ($fl* 4.0 x.imp^2)))))
+	(let* ( ;;D is a non-negative flonum.
+	       (D ($flsqr x.imp))
+	       ;;A is a non-negative flonum.
+	       (A ($fl+ ($flsqr x.rep) D))
+	       ;;B is a flonum.
+	       (B ($fl- A 1.0))
+	       ;;C is a non-negative flonum.
+	       (C ($flsqr B))
+	       ;;Q is a non-negative flonum
+	       (Q ($flsqrt ($fl+ C ($fl* 4.0 D)))))
 	  (define (sgn N)
 	    (if ($flnegative? N) -1.0 1.0))
-	  ;;We do not kwnow what type is Q.
-	  (+ (* ($fl* 0.5  (sgn x.rep))
-		(acosh (+ q z^2)))
-	     (* ($fl* 0.5i (sgn x.imp))
-		(- PI (* (sgn x.rep) (acos (- q z^2))))))))))
+	  (+ ($flonum*number ($fl* 0.5 (sgn x.rep))
+			     ($acosh-flonum ($fl+ Q A)))
+	     ($cflonum*number ($make-cflonum 0.0 ($fl* 0.5 (sgn x.imp)))
+			      (- PI ($flonum*number (sgn x.rep)
+						    ($acos-flonum ($fl- Q A))))))))))
 
   #| end of module |# )
 

@@ -1179,6 +1179,7 @@
     (round					i v r ba se)
     (sin					i v r ba se)
     (sqrt					i v r ba se)
+    (sqr					i v $language)
     (string					i v r ba se)
     (string->list				i v r ba se)
     (string->number				i v r ba se)

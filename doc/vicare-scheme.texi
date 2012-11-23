@@ -3928,6 +3928,11 @@ The following bindings are exported by the @library{ikarus} and
 
 @subsubheading Arithmetic functions
 
+@defun sqr @var{num}
+Return the square of @var{num}.
+@end defun
+
+
 @defun quotient+remainder @vari{N} @varii{N}
 Return two values: the quotient and the remainder of the
 number--theoretic integer division between the operands.  @vari{N} and
