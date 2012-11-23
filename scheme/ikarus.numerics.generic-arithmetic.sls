@@ -5766,75 +5766,126 @@
      (assertion-violation 'denominator "expected exact integer as argument" x))))
 
 
-;;;; rounding functions
+(module (floor)
 
-(define (floor x)
-  (define (ratnum-floor x)
-    (let ((n (numerator x)) (d (denominator x)))
-      (let ((q (quotient n d)))
-	(if (>= n 0) q (- q 1)))))
-  (cond
-   ((flonum? x)
-       ;;; optimize for integer flonums
+  (define (floor x)
+    ;;Return the largest integer object not larger than X.  Return exact
+    ;;objects  for  exact  operands  and  inexact  objects  for  inexact
+    ;;operands.
+    ;;
+    (cond-real-numeric-operand x
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((flonum?)	($floor-flonum x))
+      ((ratnum?)	($floor-ratnum x))
+      (else
+       (assertion-violation 'floor "expected number as argument" x))))
+
+  (define ($floor-ratnum x)
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x)))
+      (let ((q (quotient x.num x.den)))
+	(if (>= x.num 0)
+	    q
+	  (sub1 q)))))
+
+  (define ($floor-flonum x)
     (let ((e ($flonum->exact x)))
-      (cond
-       ((ratnum? e)
-	(exact->inexact (ratnum-floor e)))
-       (else x))))
-   ((ratnum? x) (ratnum-floor x))
-   ((or (fixnum? x) (bignum? x)) x)
-   (else (assertion-violation 'floor "expected number as argument" x))))
+      (if (ratnum? e)
+	  (inexact ($floor-ratnum e))
+	x)))
 
-(define (ceiling x)
-  (define (ratnum-ceiling x)
-    (let ((n (numerator x)) (d (denominator x)))
-      (let ((q (quotient n d)))
-	(if (< n 0) q (+ q 1)))))
-  (cond
-   ((flonum? x)
-       ;;; optimize for integer flonums
+  #| end of module |# )
+
+
+(module (ceiling)
+
+  (define (ceiling x)
+    ;;Return the  smallest integer  object not  smaller than  X.  Return
+    ;;exact objects for  exact operands and inexact  objects for inexact
+    ;;operands.
+    ;;
+    (cond-real-numeric-operand x
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((flonum?)	($ceiling-flonum x))
+      ((ratnum?)	($ceiling-ratnum x))
+      (else
+       (assertion-violation 'ceiling "expected number as argument" x))))
+
+  (define ($ceiling-ratnum x)
+    (let* ((x.num ($ratnum-n x))
+	   (x.den ($ratnum-d x))
+	   (q     (quotient x.num x.den)))
+      (if (negative? x.num)
+	  q
+	(add1 q))))
+
+  (define ($ceiling-flonum x)
     (let ((e ($flonum->exact x)))
-      (cond
-       ((ratnum? e) (exact->inexact (ratnum-ceiling e)))
-       (else x))))
-   ((ratnum? x) (ratnum-ceiling x))
-   ((or (fixnum? x) (bignum? x)) x)
-   (else (assertion-violation 'ceiling "expected number as argument" x))))
+      (if (ratnum? e)
+	  (inexact ($ceiling-ratnum e))
+	x)))
 
+  #| end of module |# )
 
-(define ($ratnum-round x)
-  (let ((n ($ratnum-n x)) (d ($ratnum-d x)))
-    (let-values (((q r) (div-and-mod n d)))
-      (let ((r2 (+ r r)))
-	(cond
-	 ((< r2 d) q)
-	 ((> r2 d) (+ q 1))
-	 (else (if (even? q) q (+ q 1))))))))
+
+(module (round)
 
-(define ($ratnum-truncate x)
-  (let ((n ($ratnum-n x)) (d ($ratnum-d x)))
-    (quotient n d)))
+  (define (round x)
+    ;;Return the  integer object closest to  X; round to even  when X is
+    ;;halfway.   Return exact  objects  for exact  operands and  inexact
+    ;;objects for inexact operands.
+    ;;
+    (cond-real-numeric-operand x
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((flonum?)	($flround x))
+      ((ratnum?)	($round-ratnum x))
+      (else
+       (assertion-violation 'round "expected number as argument" x))))
 
+  (define ($round-ratnum x)
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x)))
+      (receive (q r)
+	  (div-and-mod x.num x.den)
+	(let ((r2 (+ r r)))
+	  (cond ((< r2 x.den)
+		 q)
+		((> r2 x.den)
+		 (+ q 1))
+		((even? q)
+		 q)
+		(else
+		 (add1 q)))))))
 
-(define (round x)
-  (cond
-   ((flonum? x) ($flround x))
-   ((ratnum? x) ($ratnum-round x))
-   ((or (fixnum? x) (bignum? x)) x)
-   (else (assertion-violation 'round "expected number as argument" x))))
+  #| end of module |# )
 
-(define (truncate x)
-    ;;; FIXME: fltruncate should preserve the sign of -0.0.
-    ;;;
-  (cond
-   ((flonum? x)
+
+(module (truncate)
+
+  (define (truncate x)
+    (cond-real-numeric-operand x
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((flonum?)	($truncate-flonum x))
+      ((ratnum?)	($truncate-ratnum x))
+      (else
+       (assertion-violation 'truncate "expected number as argument" x))))
+
+  (define ($truncate-ratnum x)
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x)))
+      (quotient x.num x.den)))
+
+  (define ($truncate-flonum x)
     (let ((e ($flonum->exact x)))
-      (cond
-       ((ratnum? e) (exact->inexact ($ratnum-truncate e)))
-       (else x))))
-   ((ratnum? x) ($ratnum-truncate x))
-   ((or (fixnum? x) (bignum? x)) x)
-   (else (assertion-violation 'truncate "expected number as argument" x))))
+      (if (ratnum? e)
+	  (inexact ($truncate-ratnum e))
+	x)))
+
+  #| end of module |# )
 
 
 (define (random n)
