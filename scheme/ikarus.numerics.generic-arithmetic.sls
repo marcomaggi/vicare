@@ -195,7 +195,11 @@
 	    $fleven?		$flodd?
 	    $flsqr
 	    $flround
-	    $fllog		$flatan2)
+	    $fllog		$flexp
+	    $flsin		$flasin
+	    $flcos		$flacos
+	    $fltan		$flatan
+	    $flatan2)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Nov 17, 2012)
     (only (ikarus flonums)
@@ -205,7 +209,11 @@
 	  $fleven?		$flodd?
 	  $flsqr
           $flround
-	  $fllog		$flatan2)
+	  $fllog		$flexp
+	  $flsin		$flasin
+	  $flcos		$flacos
+	  $fltan		$flatan
+	  $flatan2)
     (except (ikarus system $ratnums)
 	    $ratnum->flonum)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -4722,6 +4730,68 @@
   #| end of module |# )
 
 
+(module (exp
+	 $exp-fixnum		$exp-bignum		$exp-ratnum
+	 $exp-compnum		$exp-cflonum)
+  (define who 'exp)
+
+  (define (exp x)
+    (cond-numeric-operand x
+      ((flonum?)	($flexp       x))
+      ((cflonum?)	($exp-cflonum x))
+      ((fixnum?)	($exp-fixnum  x))
+      ((bignum?)	($exp-bignum  x))
+      ((ratnum?)	($exp-ratnum  x))
+      ((compnum?)	($exp-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($exp-fixnum x)
+    (if ($fxzero? x)
+	1
+      ($flexp (fixnum->flonum x))))
+
+  (define ($exp-bignum x)
+    ($flexp ($bignum->flonum x)))
+
+  (define ($exp-ratnum x)
+    ($flexp ($ratnum->flonum x)))
+
+  (define ($exp-compnum x)
+    ;;
+    ;;   e^x = e^(x.rep + x.imp i) = e^x.rep cos(x.imp) + e^x.rep sin(x.imp) i
+    ;;
+    (let* ((x.rep	($compnum-real x))
+	   (x.imp	($compnum-imag x))
+	   (e^x.rep	(exp x.rep)))
+      ($make-rectangular (* e^x.rep (cos x.imp))
+			 (* e^x.rep (sin x.imp)))))
+
+  (define ($exp-cflonum x)
+    ;;In general:
+    ;;
+    ;;   e^x = e^(x.rep + i * x.imp)
+    ;;       = e^x.rep cos(x.imp) + i * e^x.rep sin(x.imp)
+    ;;
+    ;;and:
+    ;;
+    ;;   e^(x.rep+0.0i) = e^x.rep * e^(0.0 i) = e^x.rep * 1.0+0.0i
+    ;;
+    ;;so, in the special case x.rep=+inf.0, the imaginary part becomes:
+    ;;
+    ;;   e^x.rep * sin(x.imp) * i = +inf.0 * 0.0 * i = +nan.0 * i
+    ;;
+    (let* ((x.rep	($cflonum-real x))
+	   (x.imp	($cflonum-imag x))
+	   (e^x.rep	($flexp x.rep)))
+      ($make-cflonum ($fl* e^x.rep ($flcos x.imp))
+		     ($fl* e^x.rep ($flsin x.imp)))))
+
+  #| end of module: exp |# )
+
+
 (define sinh
   (lambda (x)
     (define who 'sinh)
@@ -5281,35 +5351,6 @@
 	  (die who "shift amount is too big" m))
 	(foreign-call "ikrt_bignum_shift_right" n m^)))))
    (else (die who "not an exact integer" n))))
-
-
-(define (exp x)
-  (cond
-   ((flonum? x) (flexp x))
-   ((fixnum? x)
-    (if ($fx= x 0) 1 (flexp (fixnum->flonum x))))
-   ((bignum? x) (flexp ($bignum->flonum x)))
-   ((ratnum? x) (flexp ($ratnum->flonum x)))
-   ((or (compnum? x) (cflonum? x))
-    ;;In general:
-    ;;
-    ;;   e^x = e^(xr + xi i)
-    ;;       = e^xr cos(xi) + e^xr sin(xi) i
-    ;;
-    ;;and:
-    ;;
-    ;;   e^(xr+0.0i) = e^xr * e^(0.0 i) = e^xr * 1.0+0.0i
-    ;;
-    ;;so, in the special case xr=+inf.0, the imaginary part becomes:
-    ;;
-    ;;   e^xr * sin(xi) * i = +inf.0 * 0.0 * i = +nan.0 * i
-    ;;
-    (let ((xr (real-part x)) (xi (imag-part x)))
-      (let ((e^xr (exp xr)))
-	(make-rectangular
-	 (* e^xr (cos xi))
-	 (* e^xr (sin xi))))))
-   (else (die 'exp "not a number" x))))
 
 
 (define (bitwise-length n)
