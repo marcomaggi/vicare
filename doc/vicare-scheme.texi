@@ -851,6 +851,19 @@ implementation:
 because the form @code{x} in reference position in the right-hand side
 of the binding is never evaluated; under @value{PRJNAME} this code will
 rather raise a syntax violation at compile time.
+
+@item
+The following functions accept only non--negative fixnums as offset
+argument:
+
+@example
+bitwise-arithmetic-shift-left
+bitwise-arithmetic-shift-right
+@end example
+
+@item
+The function @func{bitwise-arithmetic-shift} accepts only fixnums as
+offset argument.
 @end enumerate
 
 @c page
@@ -3882,6 +3895,7 @@ representing the mantissa's @math{53} bits.
 @menu
 * iklib numerics preds::        Additional numeric predicates.
 * iklib numerics math::         Additional math functions.
+* iklib numerics bitwise::      Additional bitwise functions.
 @end menu
 
 @c page
@@ -3961,6 +3975,24 @@ Hyperbolic functions.
 @defunx acosh @var{num}
 @defunx atanh @var{num}
 Inverse hyperbolic functions.
+@end defun
+
+@c page
+@node iklib numerics bitwise
+@subsection Additional bitwise functions
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun sra @var{integer} @var{offset}
+An alias for @func{bitwise-arithmetic-shift-right}.
+@end defun
+
+
+@defun sll @var{integer} @var{offset}
+An alias for @func{bitwise-arithmetic-shift-left}.
 @end defun
 
 @c page
@@ -7934,6 +7966,12 @@ condition components: @condition{warning}, @condition{who},
 
 @defun die @var{who} @var{message} @var{irritant} ...
 A deprecated alias for @func{assertion-violation}.
+@end defun
+
+
+@defun random @var{fx}
+Return a random fixnum object between zero (included) and @var{fx}
+(excluded).  @var{fx} must be a strictly positive fixnum.
 @end defun
 
 @c page

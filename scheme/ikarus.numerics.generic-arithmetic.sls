@@ -2118,308 +2118,6 @@
   #| end of module: binary/ |# )
 
 
-;;;; common bitwise operations
-
-(let-syntax
-    ((define-bitwise-operation
-       (syntax-rules ()
-	 ((_ ?who ?binary-who)
-	  (define ?who
-	    (case-lambda
-	     ((x y)
-	      (?binary-who x y))
-	     ((x y z)
-	      (?binary-who (?binary-who x y) z))
-	     ((a)
-	      (cond ((fixnum? a)
-		     a)
-		    ((bignum? a) a)
-		    (else
-		     (assertion-violation (quote ?who)
-		       "expected number as argument" a))))
-	     (()
-	      -1)
-	     ((a b c d . e*)
-	      (let loop ((ac (?binary-who a (?binary-who b (?binary-who c d))))
-			 (e* e*))
-		(if (null? e*)
-		    ac
-		  (loop (?binary-who ac ($car e*))
-			($cdr e*)))))))
-	  ))))
-  (define-bitwise-operation bitwise-and binary-bitwise-and)
-  (define-bitwise-operation bitwise-ior binary-bitwise-ior)
-  (define-bitwise-operation bitwise-xor binary-bitwise-xor))
-
-(module (bitwise-not
-	 $fixnum-bitwise-not
-	 $bignum-bitwise-not)
-  (define who 'bitwise-not)
-
-  (define (bitwise-not x)
-    (cond-exact-integer-operand x
-      ((fixnum?)	($fixnum-bitwise-not x))
-      ((bignum?)	($bignum-bitwise-not x))
-      (else
-       (assertion-violation who "expected exact integer as argument" x))))
-
-  (define ($fixnum-bitwise-not x)
-    ($fxlognot x))
-
-  (define ($bignum-bitwise-not x)
-    (foreign-call "ikrt_bnlognot" x))
-
-  #| end of module: bitwise-not |# )
-
-
-(module (binary-bitwise-and
-	 $bitwise-and-fixnum-number	$bitwise-and-bignum-number
-	 $bitwise-and-fixnum-fixnum	$bitwise-and-fixnum-bignum
-	 $bitwise-and-bignum-fixnum	$bitwise-and-bignum-bignum)
-  (define who 'bitwise-and)
-
-  (define (binary-bitwise-and x y)
-    (cond-exact-integer-operand x
-      ((fixnum?)	($bitwise-and-fixnum-number x y))
-      ((bignum?)	($bitwise-and-bignum-number x y))
-      (else
-       (%error-expected-integer x))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-and-fixnum-number x y)
-    (cond-exact-integer-operand y
-      ((fixnum?)	($bitwise-and-fixnum-fixnum x y))
-      ((bignum?)	($bitwise-and-fixnum-bignum x y))
-      (else
-       (%error-expected-integer y))))
-
-  (define ($bitwise-and-bignum-number x y)
-    (cond-exact-integer-operand y
-      ((fixnum?)	($bitwise-and-bignum-fixnum x y))
-      ((bignum?)	($bitwise-and-bignum-bignum x y))
-      (else
-       (%error-expected-integer y))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-and-fixnum-fixnum x y)
-    ($fxlogand x y))
-
-  (define ($bitwise-and-fixnum-bignum x y)
-    (foreign-call "ikrt_fxbnlogand" x y))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-and-bignum-fixnum x y)
-    (foreign-call "ikrt_fxbnlogand" y x))
-
-  (define ($bitwise-and-bignum-bignum x y)
-    (foreign-call "ikrt_bnbnlogand" x y))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-expected-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
-
-  #| end of module: binary-bitwise-and |# )
-
-
-(module (binary-bitwise-ior
-	 $bitwise-ior-fixnum-number	$bitwise-ior-bignum-number
-	 $bitwise-ior-fixnum-fixnum	$bitwise-ior-fixnum-bignum
-	 $bitwise-ior-bignum-fixnum	$bitwise-ior-bignum-bignum)
-  (define who 'bitwise-ior)
-
-  (define (binary-bitwise-ior x y)
-    (cond-exact-integer-operand x
-      ((fixnum?)	($bitwise-ior-fixnum-number x y))
-      ((bignum?)	($bitwise-ior-bignum-number x y))
-      (else
-       (%error-expected-integer x))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-ior-fixnum-number x y)
-    (cond-exact-integer-operand y
-      ((fixnum?)	($bitwise-ior-fixnum-fixnum x y))
-      ((bignum?)	($bitwise-ior-fixnum-bignum x y))
-      (else
-       (%error-expected-integer y))))
-
-  (define ($bitwise-ior-bignum-number x y)
-    (cond-exact-integer-operand y
-      ((fixnum?)	($bitwise-ior-bignum-fixnum x y))
-      ((bignum?)	($bitwise-ior-bignum-bignum x y))
-      (else
-       (%error-expected-integer y))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-ior-fixnum-fixnum x y)
-    ($fxlogor x y))
-
-  (define ($bitwise-ior-fixnum-bignum x y)
-    (foreign-call "ikrt_fxbnlogor" x y))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-ior-bignum-fixnum x y)
-    (foreign-call "ikrt_fxbnlogor" y x))
-
-  (define ($bitwise-ior-bignum-bignum x y)
-    (foreign-call "ikrt_bnbnlogor" x y))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-expected-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
-
-  #| end of module: binary-bitwise-ior |# )
-
-
-(module (binary-bitwise-xor
-	 $bitwise-xor-fixnum-number	$bitwise-xor-bignum-number
-	 $bitwise-xor-fixnum-fixnum	$bitwise-xor-fixnum-bignum
-	 $bitwise-xor-bignum-fixnum	$bitwise-xor-bignum-bignum)
-  (define who 'bitwise-xor)
-
-  (define (binary-bitwise-xor x y)
-    (cond-exact-integer-operand x
-      ((fixnum?)	($bitwise-xor-fixnum-number x y))
-      ((bignum?)	($bitwise-xor-bignum-number x y))
-      (else
-       (%error-expected-integer x))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-xor-fixnum-number x y)
-    (cond-exact-integer-operand y
-      ((fixnum?)	($bitwise-xor-fixnum-fixnum x y))
-      ((bignum?)	($bitwise-xor-fixnum-bignum x y))
-      (else
-       (%error-expected-integer y))))
-
-  (define ($bitwise-xor-bignum-number x y)
-    (cond-exact-integer-operand y
-      ((fixnum?)	($bitwise-xor-bignum-fixnum x y))
-      ((bignum?)	($bitwise-xor-bignum-bignum x y))
-      (else
-       (%error-expected-integer y))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-xor-fixnum-fixnum x y)
-    ($fxlogxor x y))
-
-  (define ($bitwise-xor-fixnum-bignum x y)
-    (let* ((D  ($fx- (fixnum-width) 1))
-	   (y0 (bitwise-and y (greatest-fixnum)))
-	   (y1 (bitwise-arithmetic-shift-right y D)))
-      (bitwise-ior ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
-		   (bitwise-arithmetic-shift-left
-		    (bitwise-arithmetic-shift-right (if ($fx>= x 0) y (bitwise-not y))
-						    D)
-		    D))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bitwise-xor-bignum-fixnum x y)
-    ($bitwise-xor-fixnum-bignum y x))
-
-  (define ($bitwise-xor-bignum-bignum x y)
-    (let* ((D  ($fx- (fixnum-width) 1))
-	   (x0 (bitwise-and x (greatest-fixnum)))
-	   (y0 (bitwise-and y (greatest-fixnum)))
-	   (x1 (bitwise-arithmetic-shift-right x D))
-	   (y1 (bitwise-arithmetic-shift-right y D)))
-      (bitwise-ior ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
-		   (bitwise-arithmetic-shift-left (binary-bitwise-xor x1 y1)
-						  D))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-expected-integer x)
-    (assertion-violation who "expected exact integer as argument" x))
-
-  #| end of module: binary-bitwise-xor |# )
-
-
-;;;; uncommon bitwise operations
-
-(define (bitwise-if x y z)
-  (define who 'bitwise-if)
-  (with-arguments-validation (who)
-      ((exact-integer	x)
-       (exact-integer	y)
-       (exact-integer	z))
-    (bitwise-ior (bitwise-and x y)
-		 (bitwise-and (bitwise-not x) z))))
-
-(module (bitwise-copy-bit-field
-	 bitwise-reverse-bit-field
-	 bitwise-rotate-bit-field)
-
-  (define (bitwise-copy-bit-field x i j n)
-    (define who 'bitwise-copy-bit-field)
-    (with-arguments-validation (who)
-	((exact-integer		x)
-	 (exact-integer		i)
-	 (exact-integer		j)
-	 (exact-integer		n)
-	 (index-order		i j))
-      (bitwise-if (sll (sub1 (sll 1 (- j i))) i)
-		  (sll n i)
-		  x)))
-
-  (define (bitwise-reverse-bit-field N start end)
-    (define who 'bitwise-reverse-bit-field)
-    (with-arguments-validation (who)
-	((exact-integer			N)
-	 (non-negative-exact-integer	start)
-	 (non-negative-exact-integer	end)
-	 (index-order			start end))
-      (let ((width (- end start)))
-	(if (positive? width)
-	    (let loop ((reversed	0)
-		       (field	(bitwise-bit-field N start end))
-		       (width	width))
-	      (if (zero? width)
-		  (bitwise-copy-bit-field N start end reversed)
-		(if (zero? (bitwise-and field 1))
-		    (loop (bitwise-arithmetic-shift reversed 1)
-			  (bitwise-arithmetic-shift-right field 1)
-			  (- width 1))
-		  (loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
-			(bitwise-arithmetic-shift-right field 1)
-			(- width 1)))))
-	  N))))
-
-  (define (bitwise-rotate-bit-field N start end count)
-    (define who 'bitwise-rotate-bit-field)
-    (with-arguments-validation (who)
-	((exact-integer			N)
-	 (non-negative-exact-integer	start)
-	 (non-negative-exact-integer	end)
-	 (non-negative-exact-integer	count)
-	 (index-order			start end))
-      (let ((width (- end start)))
-	(if (positive? width)
-	    (let* ((count  (mod count width))
-		   (field0 (bitwise-bit-field N start end))
-		   (field1 (bitwise-arithmetic-shift-left field0 count))
-		   (field2 (bitwise-arithmetic-shift-right field0 (- width count)))
-		   (field  (bitwise-ior field1 field2)))
-	      (bitwise-copy-bit-field N start end field))
-	  N))))
-
-  (define-argument-validation (index-order who i j)
-    (<= i j)
-    (assertion-violation who "indexes must be in nondescending order" i j))
-
-  #| end of module |# )
-
-
 (module (gcd
 	 binary-gcd
 	 $gcd-fixnum-number	$gcd-bignum-number
@@ -5889,166 +5587,547 @@
 
 
 (define (random n)
-  (if (fixnum? n)
-      (if (fx> n 1)
-	  (foreign-call "ikrt_fxrandom" n)
-	(if (fx= n 1)
-	    0
-	  (die 'random "incorrect argument" n)))
-    (die 'random "not a fixnum" n)))
+  (define who 'random)
+  (with-arguments-validation (who)
+      ((fixnum	n))
+    (cond (($fx> n 1)
+	   (foreign-call "ikrt_fxrandom" n))
+	  (($fx= n 1)
+	   0)
+	  (else
+	   (assertion-violation who "incorrect argument" n)))))
 
+
+;;;; common bitwise operations
 
-(define (shift-right-arithmetic n m who)
-  (cond
-   ((fixnum? m)
-    (cond
-     ((fixnum? n)
-      (cond
-       (($fx>= m 0) ($fxsra n m))
-       (else (die who "offset must be non-negative" m))))
-     ((bignum? n)
-      (cond
-       (($fx> m 0)
-	(foreign-call "ikrt_bignum_shift_right" n m))
-       (($fx= m 0) n)
-       (else (die who "offset must be non-negative" m))))
-     (else (die who "not an exact integer" n))))
-   ((bignum? m)
-    (cond
-     ((fixnum? n) (if ($fx>= n 0) 0 -1))
-     ((bignum? n) (if ($bignum-positive? n) 0 -1))
-     (else (die who "not an exact integer" n))))
-   (else (die who "not an exact integer offset" m))))
+(let-syntax
+    ((define-bitwise-operation
+       (syntax-rules ()
+	 ((_ ?who ?binary-who)
+	  (define ?who
+	    (case-lambda
+	     ((x y)
+	      (?binary-who x y))
+	     ((x y z)
+	      (?binary-who (?binary-who x y) z))
+	     ((a)
+	      (cond ((fixnum? a)
+		     a)
+		    ((bignum? a) a)
+		    (else
+		     (assertion-violation (quote ?who)
+		       "expected number as argument" a))))
+	     (()
+	      -1)
+	     ((a b c d . e*)
+	      (let loop ((ac (?binary-who a (?binary-who b (?binary-who c d))))
+			 (e* e*))
+		(if (null? e*)
+		    ac
+		  (loop (?binary-who ac ($car e*))
+			($cdr e*)))))))
+	  ))))
+  (define-bitwise-operation bitwise-and binary-bitwise-and)
+  (define-bitwise-operation bitwise-ior binary-bitwise-ior)
+  (define-bitwise-operation bitwise-xor binary-bitwise-xor))
 
-(define (sra n m)
-  (shift-right-arithmetic n m 'sra))
+(module (bitwise-not
+	 $fixnum-bitwise-not
+	 $bignum-bitwise-not)
+  (define who 'bitwise-not)
 
-(define (shift-left-logical n m who)
-  (unless (fixnum? m)
-    (die who "shift amount is not a fixnum"))
-  (cond
-   ((fixnum? n)
-    (cond
-     (($fx> m 0)
-      (foreign-call "ikrt_fixnum_shift_left" n m))
-     (($fx= m 0) n)
-     (else (die who "offset must be non-negative" m))))
-   ((bignum? n)
-    (cond
-     (($fx> m 0)
-      (foreign-call "ikrt_bignum_shift_left" n m))
-     (($fx= m 0) n)
-     (else (die who "offset must be non-negative" m))))
-   (else (die who "not an exact integer" n))))
+  (define (bitwise-not x)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($fixnum-bitwise-not x))
+      ((bignum?)	($bignum-bitwise-not x))
+      (else
+       (assertion-violation who "expected exact integer as argument" x))))
 
-(define (sll n m)
-  (shift-left-logical n m 'sll))
+  (define ($fixnum-bitwise-not x)
+    ($fxlognot x))
 
-(define (bitwise-arithmetic-shift-right n m)
-  (shift-right-arithmetic n m 'bitwise-arithmetic-shift-right))
-(define (bitwise-arithmetic-shift-left n m)
-  (shift-left-logical n m 'bitwise-arithmetic-shift-left))
-(define (bitwise-arithmetic-shift n m)
+  (define ($bignum-bitwise-not x)
+    (foreign-call "ikrt_bnlognot" x))
+
+  #| end of module: bitwise-not |# )
+
+
+(module (binary-bitwise-and
+	 $bitwise-and-fixnum-number	$bitwise-and-bignum-number
+	 $bitwise-and-fixnum-fixnum	$bitwise-and-fixnum-bignum
+	 $bitwise-and-bignum-fixnum	$bitwise-and-bignum-bignum)
+  (define who 'bitwise-and)
+
+  (define (binary-bitwise-and x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($bitwise-and-fixnum-number x y))
+      ((bignum?)	($bitwise-and-bignum-number x y))
+      (else
+       (%error-expected-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-and-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-and-fixnum-fixnum x y))
+      ((bignum?)	($bitwise-and-fixnum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+  (define ($bitwise-and-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-and-bignum-fixnum x y))
+      ((bignum?)	($bitwise-and-bignum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-and-fixnum-fixnum x y)
+    ($fxlogand x y))
+
+  (define ($bitwise-and-fixnum-bignum x y)
+    (foreign-call "ikrt_fxbnlogand" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-and-bignum-fixnum x y)
+    (foreign-call "ikrt_fxbnlogand" y x))
+
+  (define ($bitwise-and-bignum-bignum x y)
+    (foreign-call "ikrt_bnbnlogand" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expected-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module: binary-bitwise-and |# )
+
+
+(module (binary-bitwise-ior
+	 $bitwise-ior-fixnum-number	$bitwise-ior-bignum-number
+	 $bitwise-ior-fixnum-fixnum	$bitwise-ior-fixnum-bignum
+	 $bitwise-ior-bignum-fixnum	$bitwise-ior-bignum-bignum)
+  (define who 'bitwise-ior)
+
+  (define (binary-bitwise-ior x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($bitwise-ior-fixnum-number x y))
+      ((bignum?)	($bitwise-ior-bignum-number x y))
+      (else
+       (%error-expected-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-ior-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-ior-fixnum-fixnum x y))
+      ((bignum?)	($bitwise-ior-fixnum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+  (define ($bitwise-ior-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-ior-bignum-fixnum x y))
+      ((bignum?)	($bitwise-ior-bignum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-ior-fixnum-fixnum x y)
+    ($fxlogor x y))
+
+  (define ($bitwise-ior-fixnum-bignum x y)
+    (foreign-call "ikrt_fxbnlogor" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-ior-bignum-fixnum x y)
+    (foreign-call "ikrt_fxbnlogor" y x))
+
+  (define ($bitwise-ior-bignum-bignum x y)
+    (foreign-call "ikrt_bnbnlogor" x y))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expected-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module: binary-bitwise-ior |# )
+
+
+(module (binary-bitwise-xor
+	 $bitwise-xor-fixnum-number	$bitwise-xor-bignum-number
+	 $bitwise-xor-fixnum-fixnum	$bitwise-xor-fixnum-bignum
+	 $bitwise-xor-bignum-fixnum	$bitwise-xor-bignum-bignum)
+  (define who 'bitwise-xor)
+
+  (define (binary-bitwise-xor x y)
+    (cond-exact-integer-operand x
+      ((fixnum?)	($bitwise-xor-fixnum-number x y))
+      ((bignum?)	($bitwise-xor-bignum-number x y))
+      (else
+       (%error-expected-integer x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-xor-fixnum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-xor-fixnum-fixnum x y))
+      ((bignum?)	($bitwise-xor-fixnum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+  (define ($bitwise-xor-bignum-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($bitwise-xor-bignum-fixnum x y))
+      ((bignum?)	($bitwise-xor-bignum-bignum x y))
+      (else
+       (%error-expected-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-xor-fixnum-fixnum x y)
+    ($fxlogxor x y))
+
+  (define ($bitwise-xor-fixnum-bignum x y)
+    (let* ((D  ($fx- (fixnum-width) 1))
+	   (y0 (bitwise-and y (greatest-fixnum)))
+	   (y1 (bitwise-arithmetic-shift-right y D)))
+      (bitwise-ior ($fxlogand ($fxlogxor x y0) (greatest-fixnum))
+		   (bitwise-arithmetic-shift-left
+		    (bitwise-arithmetic-shift-right (if ($fx>= x 0) y (bitwise-not y))
+						    D)
+		    D))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($bitwise-xor-bignum-fixnum x y)
+    ($bitwise-xor-fixnum-bignum y x))
+
+  (define ($bitwise-xor-bignum-bignum x y)
+    (let* ((D  ($fx- (fixnum-width) 1))
+	   (x0 (bitwise-and x (greatest-fixnum)))
+	   (y0 (bitwise-and y (greatest-fixnum)))
+	   (x1 (bitwise-arithmetic-shift-right x D))
+	   (y1 (bitwise-arithmetic-shift-right y D)))
+      (bitwise-ior ($fxlogand ($fxlogxor x0 y0) (greatest-fixnum))
+		   (bitwise-arithmetic-shift-left (binary-bitwise-xor x1 y1)
+						  D))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-expected-integer x)
+    (assertion-violation who "expected exact integer as argument" x))
+
+  #| end of module: binary-bitwise-xor |# )
+
+
+;;;; uncommon bitwise operations
+
+(define (bitwise-if x y z)
+  (define who 'bitwise-if)
+  (with-arguments-validation (who)
+      ((exact-integer	x)
+       (exact-integer	y)
+       (exact-integer	z))
+    (bitwise-ior (bitwise-and x y)
+		 (bitwise-and (bitwise-not x) z))))
+
+(module (bitwise-copy-bit-field
+	 bitwise-reverse-bit-field
+	 bitwise-rotate-bit-field)
+
+  (define (bitwise-copy-bit-field x i j n)
+    (define who 'bitwise-copy-bit-field)
+    (with-arguments-validation (who)
+	((exact-integer		x)
+	 (exact-integer		i)
+	 (exact-integer		j)
+	 (exact-integer		n)
+	 (index-order		i j))
+      (bitwise-if (sll (sub1 (sll 1 (- j i))) i)
+		  (sll n i)
+		  x)))
+
+  (define (bitwise-reverse-bit-field N start end)
+    (define who 'bitwise-reverse-bit-field)
+    (with-arguments-validation (who)
+	((exact-integer			N)
+	 (non-negative-exact-integer	start)
+	 (non-negative-exact-integer	end)
+	 (index-order			start end))
+      (let ((width (- end start)))
+	(if (positive? width)
+	    (let loop ((reversed	0)
+		       (field	(bitwise-bit-field N start end))
+		       (width	width))
+	      (if (zero? width)
+		  (bitwise-copy-bit-field N start end reversed)
+		(if (zero? (bitwise-and field 1))
+		    (loop (bitwise-arithmetic-shift reversed 1)
+			  (bitwise-arithmetic-shift-right field 1)
+			  (- width 1))
+		  (loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
+			(bitwise-arithmetic-shift-right field 1)
+			(- width 1)))))
+	  N))))
+
+  (define (bitwise-rotate-bit-field N start end count)
+    (define who 'bitwise-rotate-bit-field)
+    (with-arguments-validation (who)
+	((exact-integer			N)
+	 (non-negative-exact-integer	start)
+	 (non-negative-exact-integer	end)
+	 (non-negative-exact-integer	count)
+	 (index-order			start end))
+      (let ((width (- end start)))
+	(if (positive? width)
+	    (let* ((count  (mod count width))
+		   (field0 (bitwise-bit-field N start end))
+		   (field1 (bitwise-arithmetic-shift-left field0 count))
+		   (field2 (bitwise-arithmetic-shift-right field0 (- width count)))
+		   (field  (bitwise-ior field1 field2)))
+	      (bitwise-copy-bit-field N start end field))
+	  N))))
+
+  (define-argument-validation (index-order who i j)
+    (<= i j)
+    (assertion-violation who "indexes must be in nondescending order" i j))
+
+  #| end of module |# )
+
+
+(module (bitwise-arithmetic-shift-right sra)
+  (define (sra integer offset)
+    (%shift-right-arithmetic integer offset 'sra))
+
+  (define (bitwise-arithmetic-shift-right integer offset)
+    (%shift-right-arithmetic integer offset 'bitwise-arithmetic-shift-right))
+
+  (define (%shift-right-arithmetic integer offset who)
+    ;;Shift right  the exact  INTEGER by OFFSET  and return  the result;
+    ;;OFFSET must be non-negative.  Fill the introduced most significant
+    ;;bits as appropriate to extend the sign of INTEGER.
+    ;;
+    (with-arguments-validation (who)
+	((fixnum	offset))
+      (cond-exact-integer-operand integer
+	((fixnum?)
+	 (if ($fx>= offset 0)
+	     ($fxsra integer offset)
+	   (%error-offset-non-negative who offset)))
+	((bignum?)
+	 (cond (($fxpositive? offset)
+		(foreign-call "ikrt_bignum_shift_right" integer offset))
+	       (($fxzero? offset)
+		integer)
+	       (else
+		(%error-offset-non-negative who offset))))
+	(else
+	 (%error-not-integer who offset)))))
+
+  (define (%error-offset-non-negative who obj)
+    (assertion-violation who "offset must be non-negative" obj))
+
+  (define (%error-not-integer who obj)
+    (assertion-violation who "expected exact integer as argument" obj))
+
+;;; --------------------------------------------------------------------
+
+  ;;The    one    below    is    the    original    implementation    of
+  ;;%SHIFT-RIGHT-ARITHMETIC.  (Marco Maggi; Fri Nov 23, 2012)
+  ;;
+  ;; (cond-exact-integer-operand offset
+  ;;   ((fixnum?)
+  ;;    (cond-exact-integer-operand integer
+  ;;      ((fixnum?)
+  ;; 	(if ($fx>= offset 0)
+  ;; 	    ($fxsra integer offset)
+  ;; 	  (%error-offset-non-negative offset)))
+  ;;      ((bignum?)
+  ;; 	(cond (($fx> offset 0)
+  ;; 	       (foreign-call "ikrt_bignum_shift_right" integer offset))
+  ;; 	      (($fxzero? offset)
+  ;; 	       integer)
+  ;; 	      (else
+  ;; 	       (%error-offset-non-negative offset))))
+  ;;      (else
+  ;; 	(%error-not-integer offset))))
+  ;;
+  ;;   ((bignum?)
+  ;;    (cond-exact-integer-operand integer
+  ;;      ((fixnum?)
+  ;; 	;;If the OFFSET is a bignum  and the INTEGER a fixnum: all the
+  ;; 	;;bits in INTEGER shifted out.
+  ;; 	(if ($fx>= integer 0)
+  ;; 	    0
+  ;; 	  -1))
+  ;;      ((bignum?)
+  ;; 	(if ($bignum-positive? integer)
+  ;; 	    0
+  ;; 	  ;;FIXME This  is not correct!!!   (Marco Maggi; Fri  Nov 23,
+  ;; 	  ;;2012)
+  ;; 	  -1))
+  ;;      (else
+  ;; 	(assertion-violation who "not an exact integer" integer))))
+  ;;
+  ;;   (else
+  ;;    (%error-not-integer offset)))))
+
+  #| end of module |# )
+
+
+(module (bitwise-arithmetic-shift-left sll)
+  (define (sll integer offset)
+    (%shift-left-logical integer offset 'sll))
+
+  (define (bitwise-arithmetic-shift-left integer offset)
+    (%shift-left-logical integer offset 'bitwise-arithmetic-shift-left))
+
+  (define (%shift-left-logical integer offset who)
+    (with-arguments-validation (who)
+	((fixnum	offset))
+      (cond-exact-integer-operand integer
+	((fixnum?)
+	 (cond (($fxpositive? offset)
+		(foreign-call "ikrt_fixnum_shift_left" integer offset))
+	       (($fxzero? offset)
+		integer)
+	       (else
+		(%error-positive-offset who offset))))
+	((bignum?)
+	 (cond (($fxpositive? offset)
+		(foreign-call "ikrt_bignum_shift_left" integer offset))
+	       (($fxzero? offset)
+		integer)
+	       (else
+		(%error-positive-offset who offset))))
+	(else
+	 (assertion-violation who "expected exact integer as argument" integer)))))
+
+  (define (%error-positive-offset who offset)
+    (assertion-violation who "offset must be non-negative" offset))
+
+  #| end of module |# )
+
+
+(define (bitwise-arithmetic-shift integer offset)
   (define who 'bitwise-arithmetic-shift)
-  (unless (fixnum? m)
-    (die who "shift amount is not a fixnum"))
-  (cond
-   ((fixnum? n)
-    (cond
-     (($fx> m 0)
-      (foreign-call "ikrt_fixnum_shift_left" n m))
-     (($fx= m 0) n)
-     (else
-      (let ((m^ (- m)))
-	(unless (fixnum? m^)
-	  (die who "shift amount is too big" m))
-	($fxsra n m^)))))
-   ((bignum? n)
-    (cond
-     (($fx> m 0)
-      (foreign-call "ikrt_bignum_shift_left" n m))
-     (($fx= m 0) n)
-     (else
-      (let ((m^ (- m)))
-	(unless (fixnum? m^)
-	  (die who "shift amount is too big" m))
-	(foreign-call "ikrt_bignum_shift_right" n m^)))))
-   (else (die who "not an exact integer" n))))
+  (with-arguments-validation (who)
+      ((fixnum	offset))
+    (cond-exact-integer-operand integer
+      ((fixnum?)
+       (cond (($fxpositive? offset)
+	      (foreign-call "ikrt_fixnum_shift_left" integer offset))
+	     (($fxzero? offset)
+	      integer)
+	     (else
+	      ;;Remember  that   when  OFFSET  is   (least-fixnum),  its
+	      ;;opposite is a bignum!!!
+	      (let ((offset^ (- offset)))
+		(if (fixnum? offset^)
+		    ($fxsra integer offset^)
+		  (assertion-violation who "shift amount is too big" offset))))))
+
+      ((bignum?)
+       (cond (($fxpositive? offset)
+	      (foreign-call "ikrt_bignum_shift_left" integer offset))
+	     (($fxzero? offset)
+	      integer)
+	     (else
+	      ;;Remember  that   when  OFFSET  is   (least-fixnum),  its
+	      ;;opposite is a bignum!!!
+	      (let ((offset^ (- offset)))
+		(if (fixnum? offset^)
+		    (foreign-call "ikrt_bignum_shift_right" integer offset^)
+		  (assertion-violation who "shift amount is too big" offset))))))
+
+      (else
+       (assertion-violation who "not an exact integer" integer)))))
 
 
 (define (bitwise-length n)
-  (cond
-   ((fixnum? n) (fxlength n))
-   ((bignum? n) (foreign-call "ikrt_bignum_length" n))
-   (else (die 'bitwise-length "not an exact integer" n))))
+  (cond-exact-integer-operand n
+    ((fixnum?)	(fxlength n))
+    ((bignum?)	(foreign-call "ikrt_bignum_length" n))
+    (else
+     (assertion-violation 'bitwise-length "not an exact integer" n))))
 
-(define (bitwise-copy-bit n idx bit)
+
+(module (bitwise-copy-bit)
   (define who 'bitwise-copy-bit)
-  (define (do-copy-bit n idx bit)
-    (case bit
-      ((0)
-       (cond
-	((bitwise-bit-set? n idx)
-	 (bitwise-and n (bitwise-not (sll 1 idx))))
-	(else n)))
-      ((1)
-       (cond
-	((bitwise-bit-set? n idx) n)
-	((>= n 0) (+ n (sll 1 idx)))
-	(else
-	 (bitwise-not
-	  (bitwise-and
-	   (bitwise-not n)
-	   (bitwise-not (sll 1 idx)))))))
-      (else (die who "bit must be either 0 or 1" bit))))
-  (cond
-   ((fixnum? idx)
-    (cond
-     ((fx< idx 0)
-      (die who "negative bit index" idx))
-     ((or (fixnum? n) (bignum? n))
-      (do-copy-bit n idx bit))
-     (else (die who "not an exact integer" n))))
-   ((bignum? idx)
-    (unless (or (fixnum? n) (bignum? n))
-      (die who "not an exact integer" n))
-    (if ($bignum-positive? idx)
-	(case bit
-	  ((0)
-	   (if (>= n 0)
-	       n
-	     (die who "unrepresentable result")))
-	  ((1)
-	   (if (< n 0)
-	       n
-	     (die who "unrepresentable result")))
-	  (else (die who "bit must be either 0 or 1" bit)))
-      (die who "negative bit index" idx)))
-   (else (die who "index is not an exact integer" idx))))
 
-(define (bitwise-bit-field n idx1 idx2)
+  (define (bitwise-copy-bit n idx bit)
+    (cond ((fixnum? idx)
+	   (cond ((fx< idx 0)
+		  (assertion-violation who "negative bit index" idx))
+		 ((or (fixnum? n) (bignum? n))
+		  (do-copy-bit n idx bit))
+		 (else
+		  (assertion-violation who "not an exact integer" n))))
+	  ((bignum? idx)
+	   (unless (or (fixnum? n) (bignum? n))
+	     (assertion-violation who "not an exact integer" n))
+	   (if ($bignum-positive? idx)
+	       (case-fixnums bit
+		 ((0)
+		  (if (>= n 0)
+		      n
+		    (assertion-violation who "unrepresentable result")))
+		 ((1)
+		  (if (< n 0)
+		      n
+		    (assertion-violation who "unrepresentable result")))
+		 (else
+		  (assertion-violation who "bit must be either 0 or 1" bit)))
+	     (assertion-violation who "negative bit index" idx)))
+	  (else
+	   (assertion-violation who "index is not an exact integer" idx))))
+
+  (define (do-copy-bit n idx bit)
+    (case-fixnums bit
+      ((0)
+       (if (bitwise-bit-set? n idx)
+	   (bitwise-and n (bitwise-not (sll 1 idx)))
+	 n))
+      ((1)
+       (cond ((bitwise-bit-set? n idx)
+	      n)
+	     ((>= n 0)
+	      (+ n (sll 1 idx)))
+	     (else
+	      (bitwise-not (bitwise-and (bitwise-not n)
+					(bitwise-not (sll 1 idx)))))))
+      (else
+       (assertion-violation who "bit must be either 0 or 1" bit))))
+
+  #| end of module |# )
+
+
+(define (bitwise-bit-field integer idx1 idx2)
   (define who 'bitwise-bit-field)
-  (cond
-   ((and (fixnum? idx1) (fx>= idx1 0))
-    (cond
-     ((and (fixnum? idx2) (fx>= idx2 0))
-      (cond
-       ((fx<= idx1 idx2)
-	(cond
-	 ((or (fixnum? n) (bignum? n))
-	  (bitwise-and
-	   (sra n idx1)
-	   (- (sll 1 (- idx2 idx1)) 1)))
-	 (else (die who "not an exact integer" n))))
-       (else (die who "invalid order for indices" idx1 idx2))))
-     (else
-      (if (not (fixnum? idx2))
-	  (die who "invalid index" idx2)
-	(die who "negative index" idx2)))))
-   (else
-    (if (not (fixnum? idx1))
-	(die who "invalid index" idx1)
-      (die who "negative index" idx1)))))
+  (cond ((and (fixnum? idx1)
+	      (fx>= idx1 0))
+	 (cond ((and (fixnum? idx2)
+		     ($fx>= idx2 0))
+		(if ($fx<= idx1 idx2)
+		    (if (or (fixnum? integer)
+			    (bignum? integer))
+			(bitwise-and (sra integer idx1)
+				     (- (sll 1 (- idx2 idx1)) 1))
+		      (assertion-violation who "not an exact integer" integer))
+		  (assertion-violation who "invalid order for indices" idx1 idx2)))
+	       ((not (fixnum? idx2))
+		(assertion-violation who "invalid index" idx2))
+	       (else
+		(assertion-violation who "negative index" idx2))))
+	((not (fixnum? idx1))
+	 (assertion-violation who "invalid index" idx1))
+	(else
+	 (assertion-violation who "negative index" idx1))))
 
 
 ;;;; debugging functions
