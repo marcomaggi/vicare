@@ -2480,7 +2480,12 @@
 
 
 (module (lcm
-	 $lcm-number-number)
+	 $lcm-number-number
+	 $lcm-fixnum-number	$lcm-bignum-number	$lcm-flonum-number
+	 $lcm-number-fixnum	$lcm-number-bignum	$lcm-number-flonum
+	 $lcm-fixnum-fixnum	$lcm-fixnum-bignum	$lcm-fixnum-flonum
+	 $lcm-bignum-fixnum	$lcm-bignum-bignum	$lcm-bignum-flonum
+	 $lcm-flonum-fixnum	$lcm-flonum-bignum	$lcm-flonum-flonum)
   (define who 'lcm)
 
   (define lcm
@@ -2503,7 +2508,7 @@
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-number x)
-    (cond-numeric-operand x
+    (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
       ((flonum?)
@@ -2514,97 +2519,145 @@
 	   (else
 	    (%error-not-integer x)))))
       ((ratnum?)	(%error-not-integer x))
-      ((compnum?)	(%error-not-integer x))
-      ((cflonum?)	(%error-not-integer x))
       (else
        (%error-not-exact-integer x))))
 
   (define ($lcm-number-number x y)
-    (cond-numeric-operand x
+    (cond-real-numeric-operand x
       ((fixnum?)	($lcm-fixnum-number x y))
       ((bignum?)	($lcm-bignum-number x y))
       ((flonum?)	($lcm-flonum-number x y))
       ((ratnum?)	(%error-not-integer x))
-      ((compnum?)	(%error-not-integer x))
-      ((cflonum?)	(%error-not-integer x))
       (else
        (%error-not-integer x))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-fixnum-number x y)
-    (cond-numeric-operand y
+    (cond-real-numeric-operand y
       ((fixnum?)	($lcm-fixnum-fixnum x y))
       ((bignum?)	($lcm-fixnum-bignum x y))
       ((flonum?)	($lcm-fixnum-flonum x y))
       ((ratnum?)	(%error-not-integer y))
-      ((compnum?)	(%error-not-integer y))
-      ((cflonum?)	(%error-not-integer y))
       (else
        (%error-not-integer y))))
 
   (define ($lcm-bignum-number x y)
-    (cond-numeric-operand y
+    (cond-real-numeric-operand y
       ((fixnum?)	($lcm-bignum-fixnum x y))
       ((bignum?)	($lcm-bignum-bignum x y))
       ((flonum?)	($lcm-bignum-flonum x y))
       ((ratnum?)	(%error-not-integer y))
-      ((compnum?)	(%error-not-integer y))
-      ((cflonum?)	(%error-not-integer y))
       (else
        (%error-not-integer y))))
 
   (define ($lcm-flonum-number x y)
-    (let ((v ($flonum->exact x)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact (lcm v y)))
-	((bignum?)	(inexact (lcm v y)))
-	(else
-	 (%error-not-integer x)))))
+    (cond-real-numeric-operand y
+      ((fixnum?)	($lcm-flonum-fixnum x y))
+      ((bignum?)	($lcm-flonum-bignum x y))
+      ((flonum?)	($lcm-flonum-flonum x y))
+      ((ratnum?)	(%error-not-integer y))
+      (else
+       (%error-not-integer y))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($lcm-number-fixnum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($lcm-fixnum-fixnum x y))
+      ((bignum?)	($lcm-bignum-fixnum x y))
+      ((flonum?)	($lcm-flonum-fixnum x y))
+      ((ratnum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
+
+  (define ($lcm-number-bignum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($lcm-fixnum-bignum x y))
+      ((bignum?)	($lcm-bignum-bignum x y))
+      ((flonum?)	($lcm-flonum-bignum x y))
+      ((ratnum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
+
+  (define ($lcm-number-flonum x y)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($lcm-fixnum-flonum x y))
+      ((bignum?)	($lcm-bignum-flonum x y))
+      ((flonum?)	($lcm-flonum-flonum x y))
+      ((ratnum?)	(%error-not-integer x))
+      (else
+       (%error-not-integer x))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-fixnum-fixnum x y)
-    (let ((x (if (< x 0) (- x) x))
-	  (y (if (< y 0) (- y) y)))
+    (let ((x (if ($fxnegative? x) ($neg-fixnum x) x))
+	  (y (if ($fxnegative? y) ($neg-fixnum y) y)))
       (let ((g ($gcd-number-number x y)))
 	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-fixnum-bignum x y)
-    (let ((x (if (< x 0) (- x) x))
-	  (y (if (< y 0) (- y) y)))
+    (let ((x (if ($fxnegative?      x) ($neg-fixnum x) x))
+	  (y (if ($bignum-negative? y) ($neg-bignum y) y)))
       (let ((g ($gcd-number-number x y)))
 	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-fixnum-flonum x y)
     (let ((v ($flonum->exact y)))
       (cond-exact-integer-operand v
-	((fixnum?)	(inexact (lcm x v)))
-	((bignum?)	(inexact (lcm x v)))
+	((fixnum?)	(inexact ($lcm-fixnum-fixnum x v)))
+	((bignum?)	(inexact ($lcm-fixnum-bignum x v)))
 	(else
 	 (%error-not-integer y)))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-bignum-fixnum x y)
-    (let ((x (if (< x 0) (- x) x))
-	  (y (if (< y 0) (- y) y)))
+    (let ((x (if ($bignum-negative? x) ($neg-bignum x) x))
+	  (y (if ($fxnegative?      y) ($neg-fixnum y) y)))
       (let ((g ($gcd-number-number x y)))
 	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-bignum-bignum x y)
-    (let ((x (if (< x 0) (- x) x))
-	  (y (if (< y 0) (- y) y)))
+    (let ((x (if ($bignum-negative? x) ($neg-bignum x) x))
+	  (y (if ($bignum-negative? y) ($neg-bignum y) y)))
       (let ((g ($gcd-number-number x y)))
 	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-bignum-flonum x y)
     (let ((v ($flonum->exact y)))
       (cond-exact-integer-operand v
-	((fixnum?)	(inexact (lcm x v)))
-	((bignum?)	(inexact (lcm x v)))
+	((fixnum?)	(inexact ($lcm-bignum-fixnum x v)))
+	((bignum?)	(inexact ($lcm-bignum-bignum x v)))
 	(else
 	 (%error-not-integer y)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($lcm-flonum-fixnum x y)
+    (let ((x.int ($flonum->exact x)))
+      (cond-exact-integer-operand x.int
+	((fixnum?)	(inexact ($lcm-fixnum-fixnum x.int y)))
+	((bignum?)	(inexact ($lcm-bignum-fixnum x.int y)))
+	(else
+	 (%error-not-integer x)))))
+
+  (define ($lcm-flonum-bignum x y)
+    (let ((x.int ($flonum->exact x)))
+      (cond-exact-integer-operand x.int
+	((fixnum?)	(inexact ($lcm-fixnum-bignum x.int y)))
+	((bignum?)	(inexact ($lcm-bignum-bignum x.int y)))
+	(else
+	 (%error-not-integer x)))))
+
+  (define ($lcm-flonum-flonum x y)
+    (let ((x.int ($flonum->exact x)))
+      (cond-exact-integer-operand x.int
+	((fixnum?)	($lcm-fixnum-flonum x.int y))
+	((bignum?)	($lcm-bignum-flonum x.int y))
+	(else
+	 (%error-not-integer x)))))
 
 ;;; --------------------------------------------------------------------
 
