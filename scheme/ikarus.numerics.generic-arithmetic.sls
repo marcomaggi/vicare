@@ -2382,8 +2382,8 @@
 	((fixnum?)	x)
 	((bignum?)	x)
 	((flonum?)
-	 (let ((x.int ($flonum->exact x)))
-	   (cond-exact-integer-operand x.int
+	 (let ((x.exact ($flonum->exact x)))
+	   (cond-exact-integer-operand x.exact
 	     ((fixnum?)		x)
 	     ((bignum?)		x)
 	     (else
@@ -2473,10 +2473,10 @@
     ($gcd x y))
 
   (define ($gcd-fixnum-flonum x y)
-    (let ((y.int ($flonum->exact y)))
-      (cond-exact-integer-operand y.int
-	((fixnum?)	(inexact ($lcm-fixnum-fixnum x y.int)))
-	((bignum?)	(inexact ($lcm-fixnum-bignum x y.int)))
+    (let ((y.exact ($flonum->exact y)))
+      (cond-exact-integer-operand y.exact
+	((fixnum?)	(inexact ($lcm-fixnum-fixnum x y.exact)))
+	((bignum?)	(inexact ($lcm-fixnum-bignum x y.exact)))
 	(else
 	 (%error-not-integer y)))))
 
@@ -2489,36 +2489,36 @@
     ($gcd x y))
 
   (define ($gcd-bignum-flonum x y)
-    (let ((y.int ($flonum->exact y)))
-      (cond-exact-integer-operand y.int
-	((fixnum?)	(inexact ($lcm-bignum-fixnum x y.int)))
-	((bignum?)	(inexact ($lcm-bignum-bignum x y.int)))
+    (let ((y.exact ($flonum->exact y)))
+      (cond-exact-integer-operand y.exact
+	((fixnum?)	(inexact ($lcm-bignum-fixnum x y.exact)))
+	((bignum?)	(inexact ($lcm-bignum-bignum x y.exact)))
 	(else
 	 (%error-not-integer y)))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-flonum-fixnum x y)
-    (let ((x.int ($flonum->exact x)))
-      (cond-exact-integer-operand x.int
-	((fixnum?)	(inexact ($gcd-fixnum-fixnum x.int y)))
-	((bignum?)	(inexact ($gcd-bignum-fixnum x.int y)))
+    (let ((x.exact ($flonum->exact x)))
+      (cond-exact-integer-operand x.exact
+	((fixnum?)	(inexact ($gcd-fixnum-fixnum x.exact y)))
+	((bignum?)	(inexact ($gcd-bignum-fixnum x.exact y)))
 	(else
 	 (%error-not-integer x)))))
 
   (define ($gcd-flonum-bignum x y)
-    (let ((x.int ($flonum->exact x)))
-      (cond-exact-integer-operand x.int
-	((fixnum?)	(inexact ($gcd-fixnum-bignum x.int y)))
-	((bignum?)	(inexact ($gcd-bignum-bignum x.int y)))
+    (let ((x.exact ($flonum->exact x)))
+      (cond-exact-integer-operand x.exact
+	((fixnum?)	(inexact ($gcd-fixnum-bignum x.exact y)))
+	((bignum?)	(inexact ($gcd-bignum-bignum x.exact y)))
 	(else
 	 (%error-not-integer x)))))
 
   (define ($gcd-flonum-flonum x y)
-    (let ((x.int ($flonum->exact x)))
-      (cond-exact-integer-operand x.int
-	((fixnum?)	($gcd-fixnum-flonum x.int y))
-	((bignum?)	($gcd-bignum-flonum x.int y))
+    (let ((x.exact ($flonum->exact x)))
+      (cond-exact-integer-operand x.exact
+	((fixnum?)	($gcd-fixnum-flonum x.exact y))
+	((bignum?)	($gcd-bignum-flonum x.exact y))
 	(else
 	 (%error-not-integer x)))))
 
@@ -2700,26 +2700,26 @@
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-flonum-fixnum x y)
-    (let ((x.int ($flonum->exact x)))
-      (cond-exact-integer-operand x.int
-	((fixnum?)	(inexact ($lcm-fixnum-fixnum x.int y)))
-	((bignum?)	(inexact ($lcm-bignum-fixnum x.int y)))
+    (let ((x.exact ($flonum->exact x)))
+      (cond-exact-integer-operand x.exact
+	((fixnum?)	(inexact ($lcm-fixnum-fixnum x.exact y)))
+	((bignum?)	(inexact ($lcm-bignum-fixnum x.exact y)))
 	(else
 	 (%error-not-integer x)))))
 
   (define ($lcm-flonum-bignum x y)
-    (let ((x.int ($flonum->exact x)))
-      (cond-exact-integer-operand x.int
-	((fixnum?)	(inexact ($lcm-fixnum-bignum x.int y)))
-	((bignum?)	(inexact ($lcm-bignum-bignum x.int y)))
+    (let ((x.exact ($flonum->exact x)))
+      (cond-exact-integer-operand x.exact
+	((fixnum?)	(inexact ($lcm-fixnum-bignum x.exact y)))
+	((bignum?)	(inexact ($lcm-bignum-bignum x.exact y)))
 	(else
 	 (%error-not-integer x)))))
 
   (define ($lcm-flonum-flonum x y)
-    (let ((x.int ($flonum->exact x)))
-      (cond-exact-integer-operand x.int
-	((fixnum?)	($lcm-fixnum-flonum x.int y))
-	((bignum?)	($lcm-bignum-flonum x.int y))
+    (let ((x.exact ($flonum->exact x)))
+      (cond-exact-integer-operand x.exact
+	((fixnum?)	($lcm-fixnum-flonum x.exact y))
+	((bignum?)	($lcm-bignum-flonum x.exact y))
 	(else
 	 (%error-not-integer x)))))
 
@@ -2851,7 +2851,7 @@
     (if ($fx= y -1)
 	;;We have  to assume that  the result of  negating X may  not be
 	;;fixnum!!!  This happens when X is (least-fixnum).
-	(values (- x) 0)
+	(values ($neg-fixnum x) 0)
       (values ($fxquotient x y) ($fxremainder x y))))
 
   (define ($quotient+remainder-fixnum-bignum x y)
