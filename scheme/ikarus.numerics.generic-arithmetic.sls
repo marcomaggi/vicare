@@ -281,9 +281,9 @@
 (define +
   (case-lambda
    ((x y)
-    (binary+ x y))
+    ($add-number-number x y))
    ((x y z)
-    (binary+ (binary+ x y) z))
+    ($add-number-number ($add-number-number x y) z))
    ((a)
     (cond ((fixnum? a)
 	   a)
@@ -294,33 +294,33 @@
    (()
     0)
    ((a b c d . e*)
-    (let loop ((ac (binary+ (binary+ (binary+ a b) c) d))
+    (let loop ((ac ($add-number-number ($add-number-number ($add-number-number a b) c) d))
 	       (e* e*))
       (if (null? e*)
 	  ac
-	(loop (binary+ ac ($car e*)) ($cdr e*)))))))
+	(loop ($add-number-number ac ($car e*)) ($cdr e*)))))))
 
 (define -
   (case-lambda
    ((x y)
-    (binary- x y))
+    ($sub-number-number x y))
    ((x y z)
-    (binary- (binary- x y) z))
+    ($sub-number-number ($sub-number-number x y) z))
    ((a)
-    (binary- 0 a))
+    ($sub-number-number 0 a))
    ((a b c d . e*)
-    (let loop ((ac (binary- (binary- (binary- a b) c) d))
+    (let loop ((ac ($sub-number-number ($sub-number-number ($sub-number-number a b) c) d))
 	       (e* e*))
       (if (null? e*)
 	  ac
-	(loop (binary- ac ($car e*)) ($cdr e*)))))))
+	(loop ($sub-number-number ac ($car e*)) ($cdr e*)))))))
 
 (define *
   (case-lambda
    ((x y)
-    (binary* x y))
+    ($mul-number-number x y))
    ((x y z)
-    (binary* (binary* x y) z))
+    ($mul-number-number ($mul-number-number x y) z))
    ((a)
     (cond ((fixnum? a) a)
 	  ((number? a) a)
@@ -329,25 +329,25 @@
    (()
     1)
    ((a b c d . e*)
-    (let loop ((ac (binary* (binary* (binary* a b) c) d))
+    (let loop ((ac ($mul-number-number ($mul-number-number ($mul-number-number a b) c) d))
 	       (e* e*))
       (if (null? e*)
 	  ac
-	(loop (binary* ac ($car e*)) ($cdr e*)))))))
+	(loop ($mul-number-number ac ($car e*)) ($cdr e*)))))))
 
 (define /
   (case-lambda
    ((x y)
-    (binary/ x y))
+    ($div-number-number x y))
    ((x)
     (unary/ x))
    ((x y z . ls)
-    (let loop ((a  (binary/ x y))
+    (let loop ((a  ($div-number-number x y))
 	       (b  z)
 	       (ls ls))
       (if (null? ls)
-	  (binary/ a b)
-	(loop (binary/ a b) ($car ls) ($cdr ls)))))
+	  ($div-number-number a b)
+	(loop ($div-number-number a b) ($car ls) ($cdr ls)))))
    ))
 
 
@@ -447,7 +447,7 @@
   #| end of module: unary/ |# )
 
 
-(module (binary+
+(module ($add-number-number
 	 $fixnum+number		$bignum+number		$flonum+number
 	 $ratnum+number		$compnum+number		$cflonum+number
 	 $number+fixnum		$number+bignum		$number+flonum
@@ -466,7 +466,7 @@
 	 $cflonum+flonum	$cflonum+compnum	$cflonum+cflonum)
   (define who (quote +))
 
-  (define (binary+ x y)
+  (define ($add-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($fixnum+number  x y))
       ((bignum?)	($bignum+number  x y))
@@ -631,7 +631,7 @@
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      ($make-ratnum (binary+ ($fixnum*number x y.den)
+      ($make-ratnum ($add-number-number ($fixnum*number x y.den)
 			     y.num)
 		    y.den)))
 
@@ -696,13 +696,13 @@
   (define ($ratnum+fixnum x y)
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($make-ratnum (binary+ ($fixnum*number y x.den) x.num)
+      ($make-ratnum ($add-number-number ($fixnum*number y x.den) x.num)
 		    x.den)))
 
   (define ($ratnum+bignum x y)
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($make-ratnum (binary+ ($bignum*number y x.den) x.num)
+      ($make-ratnum ($add-number-number ($bignum*number y x.den) x.num)
 		    x.den)))
 
   (define ($ratnum+flonum x y)
@@ -717,16 +717,16 @@
 	  (y.num ($ratnum-n y))
 	  (x.den ($ratnum-d x))
 	  (y.den ($ratnum-d y)))
-      (binary/ (binary+ (binary* x.num y.den)
-			(binary* x.den y.num))
-	       (binary* x.den y.den))))
+      ($div-number-number ($add-number-number ($mul-number-number x.num y.den)
+			($mul-number-number x.den y.num))
+	       ($mul-number-number x.den y.den))))
 
   (define ($ratnum+compnum x y)
-    ($make-rectangular (binary+ x ($compnum-real y))
+    ($make-rectangular ($add-number-number x ($compnum-real y))
 		       ($compnum-imag y)))
 
   (define ($ratnum+cflonum x y)
-    ($make-cflonum (binary+ x ($cflonum-real y))
+    ($make-cflonum ($add-number-number x ($cflonum-real y))
 		   ($cflonum-imag y)))
 
 ;;; --------------------------------------------------------------------
@@ -744,8 +744,8 @@
 		       ($compnum-imag x)))
 
   (define ($compnum+compnum x y)
-    ($make-rectangular (binary+ ($compnum-real x) ($compnum-real y))
-		       (binary+ ($compnum-imag x) ($compnum-imag y))))
+    ($make-rectangular ($add-number-number ($compnum-real x) ($compnum-real y))
+		       ($add-number-number ($compnum-imag x) ($compnum-imag y))))
 
   (define ($compnum+flonum x y)
     ($make-rectangular ($flonum+number y ($compnum-real x))
@@ -781,10 +781,10 @@
     ($make-cflonum ($fl+ ($cflonum-real x) ($cflonum-real y))
 		   ($fl+ ($cflonum-imag x) ($cflonum-imag y))))
 
-  #| end of module: binary+ |# )
+  #| end of module: $add-number-number |# )
 
 
-(module (binary-
+(module ($sub-number-number
 	 $fixnum-number		$bignum-number		$flonum-number
 	 $ratnum-number		$compnum-number		$cflonum-number
 	 $number-fixnum		$number-bignum		$number-flonum
@@ -803,7 +803,7 @@
 	 $cflonum-flonum	$cflonum-compnum	$cflonum-cflonum)
   (define who (quote -))
 
-  (define (binary- x y)
+  (define ($sub-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($fixnum-number  x y))
       ((bignum?)	($bignum-number  x y))
@@ -970,7 +970,7 @@
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      (binary/ (binary- ($fixnum*number x y.den) y.num)
+      ($div-number-number ($sub-number-number ($fixnum*number x y.den) y.num)
 	       y.den)))
 
   (define ($fixnum-compnum x y)
@@ -1005,7 +1005,7 @@
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      (binary/ (binary- ($bignum*number x y.den) y.num)
+      ($div-number-number ($sub-number-number ($bignum*number x y.den) y.num)
 	       y.den)))
 
   (define ($bignum-compnum x y)
@@ -1037,7 +1037,7 @@
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      (binary/ (binary- ($flonum*number x y.den) y.num)
+      ($div-number-number ($sub-number-number ($flonum*number x y.den) y.num)
 	       y.den)))
 
   (define ($flonum-flonum x y)
@@ -1066,7 +1066,7 @@
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      (binary/ (binary- x.num ($fixnum*number y x.den))
+      ($div-number-number ($sub-number-number x.num ($fixnum*number y x.den))
 	       x.den)))
 
   (define ($ratnum-bignum x y)
@@ -1076,7 +1076,7 @@
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      (binary/ (binary- x.num ($bignum*number y x.den))
+      ($div-number-number ($sub-number-number x.num ($bignum*number y x.den))
 	       x.den)))
 
   (define ($ratnum-flonum x y)
@@ -1086,7 +1086,7 @@
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      (binary/ (binary- x.num ($flonum*number y x.den))
+      ($div-number-number ($sub-number-number x.num ($flonum*number y x.den))
 	       x.den)))
 
   (define ($ratnum-ratnum x y)
@@ -1098,9 +1098,9 @@
 	  (x.den ($ratnum-d x))
 	  (y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      (binary/ (binary- (binary* x.num y.den)
-			(binary* y.num x.den))
-	       (binary* x.den y.den))))
+      ($div-number-number ($sub-number-number ($mul-number-number x.num y.den)
+			($mul-number-number y.num x.den))
+	       ($mul-number-number x.den y.den))))
 
   (define ($ratnum-compnum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
@@ -1142,8 +1142,8 @@
     ;; (x.rep + i * x.imp) - (y.rep + i * y.imp)
     ;; = (x.rep - y.rep) + i * (x.imp - y.imp)
     ;;
-    ($make-rectangular (binary- ($compnum-real x) ($compnum-real y))
-		       (binary- ($compnum-imag x) ($compnum-imag y))))
+    ($make-rectangular ($sub-number-number ($compnum-real x) ($compnum-real y))
+		       ($sub-number-number ($compnum-imag x) ($compnum-imag y))))
 
   (define ($compnum-flonum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
@@ -1198,10 +1198,10 @@
     ($make-cflonum ($fl- ($cflonum-real x) ($cflonum-real y))
 		   ($fl- ($cflonum-imag x) ($cflonum-imag y))))
 
-  #| end of module: binary- |# )
+  #| end of module: $sub-number-number |# )
 
 
-(module (binary*
+(module ($mul-number-number
 	 $fixnum*number		$bignum*number		$flonum*number
 	 $ratnum*number		$compnum*number		$cflonum*number
 	 $number*fixnum		$number*bignum		$number*flonum
@@ -1220,7 +1220,7 @@
 	 $cflonum*flonum	$cflonum*compnum	$cflonum*cflonum)
   (define who (quote *))
 
-  (define (binary* x y)
+  (define ($mul-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($fixnum*number  x y))
       ((bignum?)	($bignum*number  x y))
@@ -1339,7 +1339,7 @@
 	  ((compnum? x)		($compnum*ratnum x y))
 	  ((cflonum? x)		($cflonum*ratnum x y))
 	  (else
-	   (binary* y x))))
+	   ($mul-number-number y x))))
 
   (define ($number*compnum x y)
     (cond-numeric-operand x
@@ -1375,7 +1375,7 @@
     ($fl* ($fixnum->flonum x) y))
 
   (define ($fixnum*ratnum x y)
-    (binary/ ($fixnum*number x ($ratnum-n y))
+    ($div-number-number ($fixnum*number x ($ratnum-n y))
 	     ($ratnum-d y)))
 
   (define ($fixnum*compnum x y)
@@ -1398,7 +1398,7 @@
     ($fl* ($bignum->flonum x) y))
 
   (define ($bignum*ratnum x y)
-    (binary/ ($bignum*number x ($ratnum-n y))
+    ($div-number-number ($bignum*number x ($ratnum-n y))
 	     ($ratnum-d y)))
 
   (define ($bignum*compnum x y)
@@ -1427,7 +1427,7 @@
     ($fl* x ($bignum->flonum y)))
 
   (define ($flonum*ratnum x y)
-    (binary/ ($flonum*number x ($ratnum-n y))
+    ($div-number-number ($flonum*number x ($ratnum-n y))
 	     ($ratnum-d y)))
 
   (define ($flonum*compnum x y)
@@ -1443,8 +1443,8 @@
     ($bignum*ratnum y x))
 
   (define ($ratnum*ratnum x y)
-    (binary/ (binary* ($ratnum-n x) ($ratnum-n y))
-	     (binary* ($ratnum-d x) ($ratnum-d y))))
+    ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-n y))
+	     ($mul-number-number ($ratnum-d x) ($ratnum-d y))))
 
   (define ($ratnum*flonum x y)
     ($flonum*ratnum y x))
@@ -1483,8 +1483,8 @@
 	  (y.rep ($compnum-real y))
 	  (x.imp ($compnum-imag x))
 	  (y.imp ($compnum-imag y)))
-      ($make-rectangular (binary- (binary* x.rep y.rep) (binary* x.imp y.imp))
-			 (binary+ (binary* x.rep y.imp) (binary* x.imp y.rep)))))
+      ($make-rectangular ($sub-number-number ($mul-number-number x.rep y.rep) ($mul-number-number x.imp y.imp))
+			 ($add-number-number ($mul-number-number x.rep y.imp) ($mul-number-number x.imp y.rep)))))
 
   (define ($compnum*cflonum x y)
     ;; (x.rep + i * x.imp) * (y.rep + i * y.imp)
@@ -1537,10 +1537,10 @@
       ($make-cflonum ($fl- ($fl* r0 r1) ($fl* i0 i1))
 		     ($fl+ ($fl* r0 i1) ($fl* i0 r1)))))
 
-  #| end of module: binary* |# )
+  #| end of module: $mul-number-number |# )
 
 
-(module (binary/
+(module ($div-number-number
 	 $flonum/number		$fixnum/number		$bignum/number
 	 $ratnum/number		$compnum/number		$cflonum/number
 	 $number/flonum		$number/fixnum		$number/bignum
@@ -1559,7 +1559,7 @@
 	 $cflonum/flonum	$cflonum/compnum	$cflonum/cflonum)
   (define who (quote /))
 
-  (define (binary/ x y)
+  (define ($div-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($fixnum/number  x y))
       ((bignum?)	($bignum/number  x y))
@@ -1716,7 +1716,7 @@
 	  (($fx> y 0)
 	   (if ($fx= y 1)
 	       x
-	     (let ((g (binary-gcd x y)))
+	     (let ((g ($gcd-number-number x y)))
 	       (cond (($fx= g y)
 		      ($fxquotient x g))
 		     (($fx= g 1)
@@ -1727,8 +1727,8 @@
 	  (else
 	   ;;Here Y is negative.
 	   (if ($fx= y -1)
-	       (binary- 0 x)
-	     (let ((g (binary-gcd x y)))
+	       ($sub-number-number 0 x)
+	     (let ((g ($gcd-number-number x y)))
 	       (cond (($fx= ($fixnum- g) y)
 		      ($fixnum- ($fxquotient x g)))
 		     (($fx= g 1)
@@ -1742,7 +1742,7 @@
     (if ($fx= x 0)
 	0
       ;;The GCD between a fixnum and any exact integer is a fixnum.
-      (let ((g (binary-gcd x y)))
+      (let ((g ($gcd-number-number x y)))
 	(cond ((= g y)
 	       (quotient x g))
 	      (($bignum-positive? y)
@@ -1753,22 +1753,22 @@
 	      (else
 	       (if ($fx= g 1)
 		   ($make-ratnum ($fixnum- x)
-				 (binary- 0 y))
+				 (unary- y))
 		 ($make-ratnum ($fixnum- ($fxquotient x g))
 			       ($fixnum-number 0 (quotient y g)))))))))
 
   (define ($fixnum/ratnum x y)
-    (binary/ ($fixnum*number x ($ratnum-d y))
+    ($div-number-number ($fixnum*number x ($ratnum-d y))
 	     ($ratnum-n y)))
 
   (define ($fixnum/compnum x y)
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom (binary+ (binary* y.rep y.rep)
-			    (binary* y.imp y.imp))))
-	($make-rectangular (binary/ ($fixnum*number x y.rep)
+      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+			    ($mul-number-number y.imp y.imp))))
+	($make-rectangular ($div-number-number ($fixnum*number x y.rep)
 				    denom)
-			   (binary/ ($fixnum*number ($fixnum- x) y.imp)
+			   ($div-number-number ($fixnum*number ($fixnum- x) y.imp)
 				    denom)))))
 
   (define ($fixnum/cflonum x y)
@@ -1791,7 +1791,7 @@
 	       x
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
 	     ;;fixnum.
-	     (let ((g (binary-gcd x y)))
+	     (let ((g ($gcd-number-number x y)))
 	       (cond (($fx= g 1)
 		      ($make-ratnum x y))
 		     (($fx= g y)
@@ -1805,14 +1805,14 @@
 	       ($bignum- x)
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
 	     ;;fixnum.
-	     (let ((g (binary-gcd x y)))
+	     (let ((g ($gcd-number-number x y)))
 	       (if (= ($fixnum- g) y)
 		   (unary- (quotient x g))
 		 ($make-ratnum (unary- (quotient x g))
 			       ($fx- 0 ($fxquotient y g)))))))))
 
   (define ($bignum/bignum x y)
-    (let ((g (binary-gcd x y)))
+    (let ((g ($gcd-number-number x y)))
       (cond (($fx= g 1)
 	     (if ($bignum-positive? y)
 		 ($make-ratnum x y)
@@ -1824,9 +1824,9 @@
 	       ($make-ratnum (quotient x g)
 			     (quotient y g))))
 	    (else
-	     (let ((y (binary- 0 y)))
+	     (let ((y (unary- y)))
 	       (if (= g y)
-		   (binary- 0 (quotient x g))
+		   (unary- (quotient x g))
 		 ($make-ratnum ($fixnum-number 0 (quotient x g))
 			       (quotient y g))))))))
 
@@ -1834,16 +1834,16 @@
     ($fl/ ($bignum->flonum x) y))
 
   (define ($bignum/ratnum x y)
-    (binary/ (binary* x ($ratnum-d y)) ($ratnum-n y)))
+    ($div-number-number ($mul-number-number x ($ratnum-d y)) ($ratnum-n y)))
 
   (define ($bignum/compnum x y)
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom (binary+ (binary* y.rep y.rep)
-			    (binary* y.imp y.imp))))
-	($make-rectangular (binary/ ($bignum*number x y.rep)
+      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+			    ($mul-number-number y.imp y.imp))))
+	($make-rectangular ($div-number-number ($bignum*number x y.rep)
 				    denom)
-			   (binary/ ($bignum*number ($fixnum-bignum 0 x) y.imp)
+			   ($div-number-number ($bignum*number ($fixnum-bignum 0 x) y.imp)
 				    denom)))))
 
   (define ($bignum/cflonum x y)
@@ -1865,8 +1865,8 @@
     ($fixnum/number 1 ($bignum/ratnum y x)))
 
   (define ($ratnum/ratnum x y)
-    (binary/ (binary* ($ratnum-n x) ($ratnum-d y))
-	     (binary* ($ratnum-n y) ($ratnum-d x))))
+    ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-d y))
+	     ($mul-number-number ($ratnum-n y) ($ratnum-d x))))
 
   (define ($ratnum/flonum x y)
     ($fixnum/number 1 ($flonum/ratnum y x)))
@@ -1874,11 +1874,11 @@
   (define ($ratnum/compnum x y)
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom (binary+ (binary* y.rep y.rep)
-			    (binary* y.imp y.imp))))
-	($make-rectangular (binary/ ($ratnum*number x y.rep)
+      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+			    ($mul-number-number y.imp y.imp))))
+	($make-rectangular ($div-number-number ($ratnum*number x y.rep)
 				    denom)
-			   (binary/ ($ratnum*number ($fixnum-ratnum 0 x) y.imp)
+			   ($div-number-number ($ratnum*number ($fixnum-ratnum 0 x) y.imp)
 				    denom)))))
 
   (define ($ratnum/cflonum x y)
@@ -1908,8 +1908,8 @@
   (define ($flonum/compnum x y)
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom (binary+ (binary* y.rep y.rep)
-			    (binary* y.imp y.imp))))
+      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+			    ($mul-number-number y.imp y.imp))))
 	($make-cflonum ($fl/ ($flonum*number x y.rep)
 			     denom)
 		       ($fl/ ($flonum*number ($fl- 0.0 x) y.imp)
@@ -1968,13 +1968,13 @@
 	  (x.imp ($compnum-imag x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom (binary+ (binary* y.rep y.rep)
-			    (binary* y.imp y.imp))))
-	($make-rectangular (binary/ (binary+ (binary* x.rep y.rep)
-					     (binary* x.imp y.imp))
+      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+			    ($mul-number-number y.imp y.imp))))
+	($make-rectangular ($div-number-number ($add-number-number ($mul-number-number x.rep y.rep)
+					     ($mul-number-number x.imp y.imp))
 				    denom)
-			   (binary/ (binary- (binary* x.imp y.rep)
-					     (binary* x.rep y.imp))
+			   ($div-number-number ($sub-number-number ($mul-number-number x.imp y.rep)
+					     ($mul-number-number x.rep y.imp))
 				    denom)))))
 
   (define ($compnum/cflonum x y)
@@ -2088,38 +2088,38 @@
   ;;(define (%number/complex-number x y)
   ;;   (let ((y.rep (real-part y))
   ;; 	  (y.imp (imag-part y)))
-  ;;     (let ((denom (binary+ (binary* y.rep y.rep)
-  ;; 			    (binary* y.imp y.imp))))
-  ;; 	($make-rectangular (binary/ (binary* x y.rep)
+  ;;     (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+  ;; 			    ($mul-number-number y.imp y.imp))))
+  ;; 	($make-rectangular ($div-number-number ($mul-number-number x y.rep)
   ;; 				    denom)
-  ;; 			   (binary/ (binary* (unary- x) y.imp)
+  ;; 			   ($div-number-number ($mul-number-number (unary- x) y.imp)
   ;; 				    denom)))))
   ;;
   ;;(define (%complex-number/number x y)
   ;;   (let ((x.rep (real-part x))
   ;; 	  (x.imp (imag-part x)))
-  ;;     ($make-rectangular (binary/ x.rep y)
-  ;; 			 (binary/ x.imp y))))
+  ;;     ($make-rectangular ($div-number-number x.rep y)
+  ;; 			 ($div-number-number x.imp y))))
   ;;
   ;;(define (%complex-number/complex-number x y)
   ;;   (let ((x.rep (real-part x))
   ;; 	  (x.imp (imag-part x))
   ;; 	  (y.rep (real-part y))
   ;; 	  (y.imp (imag-part y)))
-  ;;     (let ((denom (binary+ (binary* y.rep y.rep)
-  ;; 			    (binary* y.imp y.imp))))
-  ;; 	($make-rectangular (binary/ (binary+ (binary* x.rep y.rep)
-  ;; 					     (binary* x.imp y.imp))
+  ;;     (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
+  ;; 			    ($mul-number-number y.imp y.imp))))
+  ;; 	($make-rectangular ($div-number-number ($add-number-number ($mul-number-number x.rep y.rep)
+  ;; 					     ($mul-number-number x.imp y.imp))
   ;; 				    denom)
-  ;; 			   (binary/ (binary- (binary* x.imp y.rep)
-  ;; 					     (binary* x.rep y.imp))
+  ;; 			   ($div-number-number ($sub-number-number ($mul-number-number x.imp y.rep)
+  ;; 					     ($mul-number-number x.rep y.imp))
   ;; 				    denom)))))
 
-  #| end of module: binary/ |# )
+  #| end of module: $div-number-number |# )
 
 
 (module (gcd
-	 binary-gcd
+	 $gcd-number-number
 	 $gcd-fixnum-number	$gcd-bignum-number
 	 $gcd-number-fixnum	$gcd-number-bignum
 	 $gcd-fixnum-fixnum	$gcd-fixnum-bignum
@@ -2188,24 +2188,24 @@
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-fixnum-fixnum x y)
-    (binary-gcd x y))
+    ($gcd-number-number x y))
 
   (define ($gcd-fixnum-bignum x y)
-    (binary-gcd x y))
+    ($gcd-number-number x y))
 
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-bignum-fixnum x y)
-    (binary-gcd x y))
+    ($gcd-number-number x y))
 
   (define ($gcd-bignum-bignum x y)
-    (binary-gcd x y))
+    ($gcd-number-number x y))
 
 ;;; --------------------------------------------------------------------
 
-  (module (binary-gcd)
+  (module ($gcd-number-number)
 
-    (define (binary-gcd x y)
+    (define ($gcd-number-number x y)
       (let ((x (if (< x 0) (- x) x))
 	    (y (if (< y 0) (- y) y)))
 	(cond ((> x y)
@@ -2231,23 +2231,23 @@
 
 
 (module (lcm
-	 binary-lcm)
+	 $lcm-number-number)
   (define who 'lcm)
 
   (define lcm
     (case-lambda
      ((x y)
-      (binary-lcm x y))
+      ($lcm-number-number x y))
      ((x)
       (unary-lcm x))
      (() 1)
      ((x y z . ls)
       ;;FIXME Incorrect for multiple roundings.  (Abdulaziz Ghuloum)
-      (let loop ((g  (binary-lcm (binary-lcm x y) z))
+      (let loop ((g  ($lcm-number-number ($lcm-number-number x y) z))
 		 (ls ls))
 	(if (null? ls)
 	    g
-	  (loop (binary-lcm g ($car ls))
+	  (loop ($lcm-number-number g ($car ls))
 		($cdr ls)))))
      ))
 
@@ -2270,7 +2270,7 @@
       (else
        (%error-not-exact-integer x))))
 
-  (define (binary-lcm x y)
+  (define ($lcm-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($lcm-fixnum-number x y))
       ((bignum?)	($lcm-bignum-number x y))
@@ -2318,14 +2318,14 @@
   (define ($lcm-fixnum-fixnum x y)
     (let ((x (if (< x 0) (- x) x))
 	  (y (if (< y 0) (- y) y)))
-      (let ((g (binary-gcd x y)))
-	(binary* y (quotient x g)))))
+      (let ((g ($gcd-number-number x y)))
+	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-fixnum-bignum x y)
     (let ((x (if (< x 0) (- x) x))
 	  (y (if (< y 0) (- y) y)))
-      (let ((g (binary-gcd x y)))
-	(binary* y (quotient x g)))))
+      (let ((g ($gcd-number-number x y)))
+	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-fixnum-flonum x y)
     (let ((v ($flonum->exact y)))
@@ -2340,14 +2340,14 @@
   (define ($lcm-bignum-fixnum x y)
     (let ((x (if (< x 0) (- x) x))
 	  (y (if (< y 0) (- y) y)))
-      (let ((g (binary-gcd x y)))
-	(binary* y (quotient x g)))))
+      (let ((g ($gcd-number-number x y)))
+	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-bignum-bignum x y)
     (let ((x (if (< x 0) (- x) x))
 	  (y (if (< y 0) (- y) y)))
-      (let ((g (binary-gcd x y)))
-	(binary* y (quotient x g)))))
+      (let ((g ($gcd-number-number x y)))
+	($mul-number-number y (quotient x g)))))
 
   (define ($lcm-bignum-flonum x y)
     (let ((v ($flonum->exact y)))
@@ -4277,14 +4277,14 @@
       ;;
       ;;* $fxsra means "fixnum shift right arithmetic".
       ;;
-      ;;* binary* is the multiplication with two arguments.
+      ;;* $mul-number-number is the multiplication with two arguments.
       ;;
       (cond (($fxzero? m)
 	     1)
 	    (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
-	     (%expt-fx (binary* n n) ($fxsra m 1)))
+	     (%expt-fx ($mul-number-number n n) ($fxsra m 1)))
 	    (else ;the rightmost bit in M is one
-	     (binary* n (%expt-fx (binary* n n) ($fxsra m 1))))))
+	     ($mul-number-number n (%expt-fx ($mul-number-number n n) ($fxsra m 1))))))
 
     #| end of module: $expt-number-fixnum |# )
 
