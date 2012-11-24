@@ -340,7 +340,7 @@
    ((x y)
     ($div-number-number x y))
    ((x)
-    (unary/ x))
+    ($inv-number x))
    ((x y z . ls)
     (let loop ((a  ($div-number-number x y))
 	       (b  z)
@@ -351,62 +351,65 @@
    ))
 
 
-(module (unary-
-	 $fixnum-	$bignum-	$flonum-
-	 $ratnum-	$compnum-	$cflonum-)
+(module ($neg-number
+	 $neg-fixnum	$neg-bignum	$neg-flonum
+	 $neg-ratnum	$neg-compnum	$neg-cflonum)
   (define who (quote -))
 
-  (define (unary- x)
+  (define ($neg-number x)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum-  x))
-      ((bignum?)	($bignum-  x))
-      ((flonum?)	($flonum-  x))
-      ((ratnum?)	($ratnum-  x))
-      ((compnum?)	($compnum- x))
-      ((cflonum?)	($cflonum- x))
+      ((fixnum?)	($neg-fixnum  x))
+      ((bignum?)	($neg-bignum  x))
+      ((flonum?)	($neg-flonum  x))
+      ((ratnum?)	($neg-ratnum  x))
+      ((compnum?)	($neg-compnum x))
+      ((cflonum?)	($neg-cflonum x))
       (else
        (assertion-violation who "expected number as argument" x))))
 
-  (define ($fixnum- x)
+  (define ($neg-fixnum x)
     (if ($fx= x (least-fixnum))
+	;;The following  constant expression will be  precomputed by the
+	;;optimizer.
 	(- (least-fixnum))
       ($fx- x)))
 
-  (define ($bignum- x)
-    ($fixnum-bignum 0 x))
+  (define ($neg-bignum x)
+    ($sub-fixnum-bignum 0 x))
 
-  (define ($flonum- x)
-    ($fl- 0.0 x))
+  (define ($neg-flonum x)
+    ($fl- x))
 
-  (define ($ratnum- x)
-    ($fixnum-ratnum 0 x))
+  (define ($neg-ratnum x)
+    ($sub-fixnum-ratnum 0 x))
 
-  (define ($compnum- x)
-    ($fixnum-compnum 0 x))
+  (define ($neg-compnum x)
+    ($sub-fixnum-compnum 0 x))
 
-  (define ($cflonum- x)
-    ($flonum-cflonum 0.0 x))
+  (define ($neg-cflonum x)
+    ($make-cflonum ($fl- ($cflonum-real x))
+		   ($fl- ($cflonum-imag x))))
 
-  #| end of module: unary- |# )
+  #| end of module: $neg-number |# )
 
 
-(module (unary/
-	 $fixnum/	$bignum/	$flonum/
-	 $ratnum/	$compnum/	$cflonum/)
+(module ($inv-number
+	 $inv-fixnum	$inv-bignum	$inv-flonum
+	 $inv-ratnum	$inv-compnum	$inv-cflonum)
   (define who (quote /))
 
-  (define (unary/ x)
+  (define ($inv-number x)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum/  x))
-      ((bignum?)	($bignum/  x))
-      ((flonum?)	($flonum/  x))
-      ((ratnum?)	($ratnum/  x))
-      ((compnum?)	($compnum/ x))
-      ((cflonum?)	($cflonum/ x))
+      ((fixnum?)	($inv-fixnum  x))
+      ((bignum?)	($inv-bignum  x))
+      ((flonum?)	($inv-flonum  x))
+      ((ratnum?)	($inv-ratnum  x))
+      ((compnum?)	($inv-compnum x))
+      ((cflonum?)	($inv-cflonum x))
       (else
        (assertion-violation who "expected number as argument" x))))
 
-  (define ($fixnum/ x)
+  (define ($inv-fixnum x)
     (cond (($fxzero? x)
 	   (assertion-violation who "unary division by 0"))
 	  (($fx> x 0)
@@ -416,299 +419,317 @@
 	  (else
 	   (if ($fx= x -1)
 	       -1
-	     ($make-ratnum -1 ($fixnum- x))))))
+	     ;;The denominator of a ratnum is always positive.
+	     ($make-ratnum -1 ($neg-fixnum x))))))
 
-  (define ($bignum/ x)
+  (define ($inv-bignum x)
     (if ($bignum-positive? x)
 	($make-ratnum 1 x)
-      ($make-ratnum -1 (- x))))
+      ($make-ratnum -1 ($neg-bignum x))))
 
-  (define ($flonum/ x)
+  (define ($inv-flonum x)
     (foreign-call "ikrt_fl_invert" x))
 
-  (define ($ratnum/ x)
+  (define ($inv-ratnum x)
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
       (cond (($fx= x.num +1) ;this works also when X.NUM is not a fixnum
 	     x.den)
 	    (($fx= x.den -1) ;this works also when X.NUM is not a fixnum
-	     (- x.den))
+	     ($neg-ratnum x.den))
 	    (else
 	     (if (> 0 x.num)
-		 ($make-ratnum (- x.den) (- x.num))
+		 ($make-ratnum ($neg-number x.den) ($neg-number x.num))
 	       ($make-ratnum x.den x.num))))))
 
-  (define ($compnum/ x)
-    ($fixnum/compnum 1 x))
+  (define ($inv-compnum x)
+    ($div-fixnum-compnum 1 x))
 
-  (define ($cflonum/ x)
-    ($fixnum/cflonum 1 x))
+  (define ($inv-cflonum x)
+    ($div-fixnum-cflonum 1 x))
 
-  #| end of module: unary/ |# )
+  #| end of module: $inv-number |# )
 
 
 (module ($add-number-number
-	 $fixnum+number		$bignum+number		$flonum+number
-	 $ratnum+number		$compnum+number		$cflonum+number
-	 $number+fixnum		$number+bignum		$number+flonum
-	 $number+ratnum		$number+compnum		$number+cflonum
-	 $fixnum+fixnum		$fixnum+bignum		$fixnum+flonum
-	 $fixnum+ratnum		$fixnum+compnum		$fixnum+cflonum
-	 $bignum+fixnum		$bignum+bignum		$bignum+flonum
-	 $bignum+ratnum		$bignum+compnum		$bignum+cflonum
-	 $flonum+fixnum		$flonum+bignum		$flonum+flonum
-	 $flonum+ratnum		$flonum+compnum		$flonum+cflonum
-	 $ratnum+fixnum		$ratnum+bignum		$ratnum+flonum
-	 $ratnum+ratnum		$ratnum+compnum		$ratnum+cflonum
-	 $compnum+fixnum	$compnum+bignum		$compnum+ratnum
-	 $compnum+compnum	$compnum+flonum		$compnum+cflonum
-	 $cflonum+fixnum	$cflonum+bignum		$cflonum+ratnum
-	 $cflonum+flonum	$cflonum+compnum	$cflonum+cflonum)
+	 $add-fixnum-number	$add-bignum-number	$add-flonum-number
+	 $add-ratnum-number	$add-compnum-number	$add-cflonum-number
+	 $add-number-fixnum	$add-number-bignum	$add-number-flonum
+	 $add-number-ratnum	$add-number-compnum	$add-number-cflonum
+	 $add-fixnum-fixnum	$add-fixnum-bignum	$add-fixnum-flonum
+	 $add-fixnum-ratnum	$add-fixnum-compnum	$add-fixnum-cflonum
+	 $add-bignum-fixnum	$add-bignum-bignum	$add-bignum-flonum
+	 $add-bignum-ratnum	$add-bignum-compnum	$add-bignum-cflonum
+	 $add-flonum-fixnum	$add-flonum-bignum	$add-flonum-flonum
+	 $add-flonum-ratnum	$add-flonum-compnum	$add-flonum-cflonum
+	 $add-ratnum-fixnum	$add-ratnum-bignum	$add-ratnum-flonum
+	 $add-ratnum-ratnum	$add-ratnum-compnum	$add-ratnum-cflonum
+	 $add-compnum-fixnum	$add-compnum-bignum	$add-compnum-ratnum
+	 $add-compnum-compnum	$add-compnum-flonum	$add-compnum-cflonum
+	 $add-cflonum-fixnum	$add-cflonum-bignum	$add-cflonum-ratnum
+	 $add-cflonum-flonum	$add-cflonum-compnum	$add-cflonum-cflonum)
   (define who (quote +))
 
   (define ($add-number-number x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum+number  x y))
-      ((bignum?)	($bignum+number  x y))
-      ((flonum?)	($flonum+number  x y))
-      ((ratnum?)	($ratnum+number  x y))
-      ((compnum?)	($compnum+number x y))
-      ((cflonum?)	($cflonum+number x y))
+      ((fixnum?)	($add-fixnum-number  x y))
+      ((bignum?)	($add-bignum-number  x y))
+      ((flonum?)	($add-flonum-number  x y))
+      ((ratnum?)	($add-ratnum-number  x y))
+      ((compnum?)	($add-compnum-number x y))
+      ((cflonum?)	($add-cflonum-number x y))
       (else
        (err who x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum+number x y)
+  (define ($add-fixnum-number x y)
     (cond-numeric-operand y
-     ((fixnum?)		($fixnum+fixnum  x y))
-     ((bignum?)		($fixnum+bignum  x y))
-     ((ratnum?)		($fixnum+ratnum  x y))
-     ((flonum?)		($fixnum+flonum  x y))
-     ((compnum?)	($fixnum+compnum x y))
-     ((cflonum?)	($fixnum+cflonum x y))
+     ((fixnum?)		($add-fixnum-fixnum  x y))
+     ((bignum?)		($add-fixnum-bignum  x y))
+     ((ratnum?)		($add-fixnum-ratnum  x y))
+     ((flonum?)		($add-fixnum-flonum  x y))
+     ((compnum?)	($add-fixnum-compnum x y))
+     ((cflonum?)	($add-fixnum-cflonum x y))
      (else
       (err who y))))
 
-  (define ($bignum+number x y)
+  (define ($add-bignum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($bignum+fixnum  x y))
-      ((bignum?)	($bignum+bignum  x y))
-      ((ratnum?)	($bignum+ratnum  x y))
-      ((flonum?)	($bignum+flonum  x y))
-      ((compnum?)	($bignum+compnum x y))
-      ((cflonum?)	($bignum+cflonum x y))
+      ((fixnum?)	($add-bignum-fixnum  x y))
+      ((bignum?)	($add-bignum-bignum  x y))
+      ((ratnum?)	($add-bignum-ratnum  x y))
+      ((flonum?)	($add-bignum-flonum  x y))
+      ((compnum?)	($add-bignum-compnum x y))
+      ((cflonum?)	($add-bignum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($flonum+number x y)
+  (define ($add-flonum-number x y)
     (cond-numeric-operand y
-     ((fixnum?)		($flonum+fixnum  x y))
-     ((bignum?)		($flonum+bignum  x y))
-     ((ratnum?)		($flonum+ratnum  x y))
-     ((flonum?)		($flonum+flonum  x y))
-     ((compnum?)	($flonum+compnum x y))
-     ((cflonum?)	($flonum+cflonum x y))
+     ((fixnum?)		($add-flonum-fixnum  x y))
+     ((bignum?)		($add-flonum-bignum  x y))
+     ((ratnum?)		($add-flonum-ratnum  x y))
+     ((flonum?)		($add-flonum-flonum  x y))
+     ((compnum?)	($add-flonum-compnum x y))
+     ((cflonum?)	($add-flonum-cflonum x y))
      (else
       (err who y))))
 
-  (define ($ratnum+number x y)
+  (define ($add-ratnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($ratnum+fixnum  x y))
-      ((bignum?)	($ratnum+bignum  x y))
-      ((flonum?)	($ratnum+flonum  x y))
-      ((ratnum?)	($ratnum+ratnum  x y))
-      ((compnum?)	($ratnum+compnum x y))
-      ((cflonum?)	($ratnum+cflonum x y))
+      ((fixnum?)	($add-ratnum-fixnum  x y))
+      ((bignum?)	($add-ratnum-bignum  x y))
+      ((flonum?)	($add-ratnum-flonum  x y))
+      ((ratnum?)	($add-ratnum-ratnum  x y))
+      ((compnum?)	($add-ratnum-compnum x y))
+      ((cflonum?)	($add-ratnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($compnum+number x y)
+  (define ($add-compnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($compnum+fixnum  x y))
-      ((bignum?)	($compnum+bignum  x y))
-      ((ratnum?)	($compnum+ratnum  x y))
-      ((flonum?)	($compnum+flonum  x y))
-      ((compnum?)	($compnum+compnum x y))
-      ((cflonum?)	($compnum+cflonum x y))
+      ((fixnum?)	($add-compnum-fixnum  x y))
+      ((bignum?)	($add-compnum-bignum  x y))
+      ((ratnum?)	($add-compnum-ratnum  x y))
+      ((flonum?)	($add-compnum-flonum  x y))
+      ((compnum?)	($add-compnum-compnum x y))
+      ((cflonum?)	($add-compnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($cflonum+number x y)
+  (define ($add-cflonum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($cflonum+flonum  x y))
-      ((cflonum?)	($cflonum+cflonum x y))
-      ((fixnum?)	($cflonum+fixnum  x y))
-      ((bignum?)	($cflonum+bignum  x y))
-      ((ratnum?)	($cflonum+ratnum  x y))
-      ((compnum?)	($cflonum+compnum x y))
+      ((flonum?)	($add-cflonum-flonum  x y))
+      ((cflonum?)	($add-cflonum-cflonum x y))
+      ((fixnum?)	($add-cflonum-fixnum  x y))
+      ((bignum?)	($add-cflonum-bignum  x y))
+      ((ratnum?)	($add-cflonum-ratnum  x y))
+      ((compnum?)	($add-cflonum-compnum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($number+fixnum x y)
+  (define ($add-number-fixnum x y)
     (cond-numeric-operand x
-     ((fixnum?)		($fixnum+fixnum  x y))
-     ((bignum?)		($bignum+fixnum  x y))
-     ((ratnum?)		($ratnum+fixnum  x y))
-     ((flonum?)		($flonum+fixnum  x y))
-     ((compnum?)	($compnum+fixnum x y))
-     ((cflonum?)	($cflonum+fixnum x y))
+     ((fixnum?)		($add-fixnum-fixnum  x y))
+     ((bignum?)		($add-bignum-fixnum  x y))
+     ((ratnum?)		($add-ratnum-fixnum  x y))
+     ((flonum?)		($add-flonum-fixnum  x y))
+     ((compnum?)	($add-compnum-fixnum x y))
+     ((cflonum?)	($add-cflonum-fixnum x y))
      (else
       (err who y))))
 
-  (define ($number+bignum x y)
+  (define ($add-number-bignum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum+bignum  x y))
-      ((bignum?)	($bignum+bignum  x y))
-      ((ratnum?)	($ratnum+bignum  x y))
-      ((flonum?)	($flonum+bignum  x y))
-      ((compnum?)	($compnum+bignum x y))
-      ((cflonum?)	($cflonum+bignum x y))
+      ((fixnum?)	($add-fixnum-bignum  x y))
+      ((bignum?)	($add-bignum-bignum  x y))
+      ((ratnum?)	($add-ratnum-bignum  x y))
+      ((flonum?)	($add-flonum-bignum  x y))
+      ((compnum?)	($add-compnum-bignum x y))
+      ((cflonum?)	($add-cflonum-bignum x y))
       (else
        (err who y))))
 
-  (define ($number+flonum x y)
+  (define ($add-number-flonum x y)
     (cond-numeric-operand x
-     ((fixnum?)		($fixnum+flonum  x y))
-     ((bignum?)		($bignum+flonum  x y))
-     ((ratnum?)		($ratnum+flonum  x y))
-     ((flonum?)		($flonum+flonum  x y))
-     ((compnum?)	($compnum+flonum x y))
-     ((cflonum?)	($cflonum+flonum x y))
+     ((fixnum?)		($add-fixnum-flonum  x y))
+     ((bignum?)		($add-bignum-flonum  x y))
+     ((ratnum?)		($add-ratnum-flonum  x y))
+     ((flonum?)		($add-flonum-flonum  x y))
+     ((compnum?)	($add-compnum-flonum x y))
+     ((cflonum?)	($add-cflonum-flonum x y))
      (else
       (err who y))))
 
-  (define ($number+ratnum x y)
+  (define ($add-number-ratnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum+ratnum  x y))
-      ((bignum?)	($bignum+ratnum  x y))
-      ((ratnum?)	($ratnum+ratnum  x y))
-      ((flonum?)	($flonum+ratnum  x y))
-      ((compnum?)	($compnum+ratnum x y))
-      ((cflonum?)	($cflonum+ratnum x y))
+      ((fixnum?)	($add-fixnum-ratnum  x y))
+      ((bignum?)	($add-bignum-ratnum  x y))
+      ((ratnum?)	($add-ratnum-ratnum  x y))
+      ((flonum?)	($add-flonum-ratnum  x y))
+      ((compnum?)	($add-compnum-ratnum x y))
+      ((cflonum?)	($add-cflonum-ratnum x y))
       (else
        (err who y))))
 
-  (define ($number+compnum x y)
+  (define ($add-number-compnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum+compnum  x y))
-      ((bignum?)	($bignum+compnum  x y))
-      ((ratnum?)	($ratnum+compnum  x y))
-      ((flonum?)	($flonum+compnum  x y))
-      ((compnum?)	($compnum+compnum x y))
-      ((cflonum?)	($cflonum+compnum x y))
+      ((fixnum?)	($add-fixnum-compnum  x y))
+      ((bignum?)	($add-bignum-compnum  x y))
+      ((ratnum?)	($add-ratnum-compnum  x y))
+      ((flonum?)	($add-flonum-compnum  x y))
+      ((compnum?)	($add-compnum-compnum x y))
+      ((cflonum?)	($add-cflonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($number+cflonum x y)
+  (define ($add-number-cflonum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum+cflonum  x y))
-      ((cflonum?)	($cflonum+cflonum x y))
-      ((fixnum?)	($fixnum+cflonum  x y))
-      ((bignum?)	($bignum+cflonum  x y))
-      ((ratnum?)	($ratnum+cflonum  x y))
-      ((compnum?)	($compnum+cflonum x y))
+      ((flonum?)	($add-flonum-cflonum  x y))
+      ((cflonum?)	($add-cflonum-cflonum x y))
+      ((fixnum?)	($add-fixnum-cflonum  x y))
+      ((bignum?)	($add-bignum-cflonum  x y))
+      ((ratnum?)	($add-ratnum-cflonum  x y))
+      ((compnum?)	($add-compnum-cflonum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum+fixnum x y)
+  (define ($add-fixnum-fixnum x y)
     (foreign-call "ikrt_fxfxplus" x y))
 
-  (define ($fixnum+bignum x y)
+  (define ($add-fixnum-bignum x y)
     (foreign-call "ikrt_fxbnplus" x y))
 
-  (define ($fixnum+flonum x y)
+  (define ($add-fixnum-flonum x y)
     ($fl+ ($fixnum->flonum x) y))
 
-  (define ($fixnum+ratnum x y)
+  (define ($add-fixnum-ratnum x y)
+    ;;
     ;;     y.num   x * y.den + y.num
     ;; x + ----- = -----------------
     ;;     y.den         y.den
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      ($make-ratnum ($add-number-number ($fixnum*number x y.den)
-			     y.num)
+      ($make-ratnum ($add-number-number ($mul-fixnum-number x y.den)
+					y.num)
 		    y.den)))
 
-  (define ($fixnum+compnum x y)
-    ($make-compnum ($fixnum+number x ($compnum-real y))
-		   ($compnum-imag y)))
-
-  (define ($fixnum+cflonum x y)
-    ($make-cflonum ($fixnum+flonum x   ($cflonum-real y))
-		   ($cflonum-imag y)))
-
-;;; --------------------------------------------------------------------
-
-  (define ($bignum+fixnum x y)
-    (foreign-call "ikrt_fxbnplus" y x))
-
-  (define ($bignum+bignum x y)
-    (foreign-call "ikrt_bnbnplus" x y))
-
-  (define ($bignum+flonum x y)
-    ($fl+ ($bignum->flonum x) y))
-
-  (define ($bignum+ratnum x y)
-    (let ((y.num ($ratnum-n y))
-	  (y.den ($ratnum-d y)))
-      ($make-ratnum (+ ($bignum*number x y.den)
-		       y.num)
-		    y.den)))
-
-  (define ($bignum+compnum x y)
-    ($make-compnum ($bignum+number x ($compnum-real y))
-		   ($compnum-imag y)))
-
-  (define ($bignum+cflonum x y)
-    ($make-cflonum ($bignum+flonum x ($cflonum-real y))
-		   ($cflonum-imag y)))
-
-;;; --------------------------------------------------------------------
-
-  (define ($flonum+fixnum x y)
-    ($fl+ x ($fixnum->flonum y)))
-
-  (define ($flonum+bignum x y)
-    ($fl+ x ($bignum->flonum y)))
-
-  (define ($flonum+flonum x y)
-    ($fl+ x y))
-
-  (define ($flonum+ratnum x y)
-    ($fl+ x ($ratnum->flonum y)))
-
-  (define ($flonum+compnum x y)
-    ($make-rectangular ($flonum+number x ($compnum-real y))
+  (define ($add-fixnum-compnum x y)
+    ($make-rectangular ($add-fixnum-number x ($compnum-real y))
 		       ($compnum-imag y)))
 
-  (define ($flonum+cflonum x y)
+  (define ($add-fixnum-cflonum x y)
+    ($make-cflonum ($add-fixnum-flonum x ($cflonum-real y))
+		   ($cflonum-imag y)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($add-bignum-fixnum x y)
+    (foreign-call "ikrt_fxbnplus" y x))
+
+  (define ($add-bignum-bignum x y)
+    (foreign-call "ikrt_bnbnplus" x y))
+
+  (define ($add-bignum-flonum x y)
+    ($fl+ ($bignum->flonum x) y))
+
+  (define ($add-bignum-ratnum x y)
+    ;;
+    ;;     y.num   x * y.den + y.num
+    ;; x + ----- = -----------------
+    ;;     y.den         y.den
+    ;;
+    (let ((y.num ($ratnum-n y))
+	  (y.den ($ratnum-d y)))
+      ($make-ratnum ($add-number-number ($mul-bignum-number x y.den)
+					y.num)
+		    y.den)))
+
+  (define ($add-bignum-compnum x y)
+    ($make-rectangular ($add-bignum-number x ($compnum-real y))
+		       ($compnum-imag y)))
+
+  (define ($add-bignum-cflonum x y)
+    ($make-cflonum ($add-bignum-flonum x ($cflonum-real y))
+		   ($cflonum-imag y)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($add-flonum-fixnum x y)
+    ($fl+ x ($fixnum->flonum y)))
+
+  (define ($add-flonum-bignum x y)
+    ($fl+ x ($bignum->flonum y)))
+
+  (define ($add-flonum-flonum x y)
+    ($fl+ x y))
+
+  (define ($add-flonum-ratnum x y)
+    ($fl+ x ($ratnum->flonum y)))
+
+  (define ($add-flonum-compnum x y)
+    (let ((y.rep ($compnum-real y))
+	  (y.imp ($compnum-imag y)))
+      ($make-rectangular ($add-flonum-number x y.rep)
+			 y.imp)))
+
+  (define ($add-flonum-cflonum x y)
     ($make-cflonum ($fl+ x ($cflonum-real y))
 		   ($cflonum-imag y)))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($ratnum+fixnum x y)
+  (define ($add-ratnum-fixnum x y)
+    ;;
+    ;; x.num       x.num + y * x.den
+    ;; ----- + y = -----------------
+    ;; x.den            x.den
+    ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($make-ratnum ($add-number-number ($fixnum*number y x.den) x.num)
+      ($make-ratnum ($add-number-number x.num ($mul-fixnum-number y x.den))
 		    x.den)))
 
-  (define ($ratnum+bignum x y)
+  (define ($add-ratnum-bignum x y)
+    ;; x.num       x.num + y * x.den
+    ;; ----- + y = -----------------
+    ;; x.den            x.den
+    ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($make-ratnum ($add-number-number ($bignum*number y x.den) x.num)
+      ($make-ratnum ($add-number-number x.num ($mul-bignum-number y x.den))
 		    x.den)))
 
-  (define ($ratnum+flonum x y)
+  (define ($add-ratnum-flonum x y)
     ($fl+ y ($ratnum->flonum x)))
 
-  (define ($ratnum+ratnum x y)
+  (define ($add-ratnum-ratnum x y)
     ;; x.num   y.num   x.num * y.den + x.den * y.num
     ;; ----- + ----- = -----------------------------
     ;; x.den   y.den          x.den * y.den
@@ -718,66 +739,76 @@
 	  (x.den ($ratnum-d x))
 	  (y.den ($ratnum-d y)))
       ($div-number-number ($add-number-number ($mul-number-number x.num y.den)
-			($mul-number-number x.den y.num))
-	       ($mul-number-number x.den y.den))))
+					      ($mul-number-number x.den y.num))
+			  ($mul-number-number x.den y.den))))
 
-  (define ($ratnum+compnum x y)
-    ($make-rectangular ($add-number-number x ($compnum-real y))
+  (define ($add-ratnum-compnum x y)
+    ;;
+    ;; x.num                       x.num + y.rep * x.den
+    ;; ----- + y.rep + i * y.imp = --------------------- + i * y.imp
+    ;; x.den                              x.den
+    ;;
+    ($make-rectangular ($add-ratnum-number x ($compnum-real y))
 		       ($compnum-imag y)))
 
-  (define ($ratnum+cflonum x y)
-    ($make-cflonum ($add-number-number x ($cflonum-real y))
+  (define ($add-ratnum-cflonum x y)
+    ;;
+    ;; x.num                       x.num + y.rep * x.den
+    ;; ----- + y.rep + i * y.imp = --------------------- + i * y.imp
+    ;; x.den                              x.den
+    ;;
+    ($make-cflonum ($add-ratnum-number x ($cflonum-real y))
 		   ($cflonum-imag y)))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($compnum+fixnum x y)
-    ($make-rectangular ($number+fixnum ($compnum-real x) y)
+  (define ($add-compnum-fixnum x y)
+    ($make-rectangular ($add-number-fixnum ($compnum-real x) y)
 		       ($compnum-imag x)))
 
-  (define ($compnum+bignum x y)
-    ($make-rectangular ($number+bignum ($compnum-real x) y)
+  (define ($add-compnum-bignum x y)
+    ($make-rectangular ($add-number-bignum ($compnum-real x) y)
 		       ($compnum-imag x)))
 
-  (define ($compnum+ratnum x y)
-    ($make-rectangular ($number+ratnum ($compnum-real x) y)
+  (define ($add-compnum-ratnum x y)
+    ($make-rectangular ($add-number-ratnum ($compnum-real x) y)
 		       ($compnum-imag x)))
 
-  (define ($compnum+compnum x y)
+  (define ($add-compnum-compnum x y)
     ($make-rectangular ($add-number-number ($compnum-real x) ($compnum-real y))
 		       ($add-number-number ($compnum-imag x) ($compnum-imag y))))
 
-  (define ($compnum+flonum x y)
-    ($make-rectangular ($flonum+number y ($compnum-real x))
+  (define ($add-compnum-flonum x y)
+    ($make-rectangular ($add-flonum-number y ($compnum-real x))
 		       ($compnum-imag x)))
 
-  (define ($compnum+cflonum x y)
-    ($make-cflonum ($number+flonum ($compnum-real x) ($cflonum-real y))
-		   ($number+flonum ($compnum-imag x) ($cflonum-imag y))))
+  (define ($add-compnum-cflonum x y)
+    ($make-cflonum ($add-number-flonum ($compnum-real x) ($cflonum-real y))
+		   ($add-number-flonum ($compnum-imag x) ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($cflonum+fixnum x y)
-    ($make-cflonum ($flonum+fixnum ($cflonum-real x) y)
+  (define ($add-cflonum-fixnum x y)
+    ($make-cflonum ($add-flonum-fixnum ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum+bignum x y)
-    ($make-cflonum ($flonum+bignum ($cflonum-real x) y)
+  (define ($add-cflonum-bignum x y)
+    ($make-cflonum ($add-flonum-bignum ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum+ratnum x y)
-    ($make-compnum ($flonum+ratnum ($cflonum-real x) y)
+  (define ($add-cflonum-ratnum x y)
+    ($make-compnum ($add-flonum-ratnum ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum+flonum x y)
+  (define ($add-cflonum-flonum x y)
     ($make-cflonum ($fl+ ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum+compnum x y)
-    ($make-cflonum ($flonum+number ($cflonum-real x) ($compnum-real y))
-		   ($flonum+number ($cflonum-imag x) ($compnum-imag y))))
+  (define ($add-cflonum-compnum x y)
+    ($make-cflonum ($add-flonum-number ($cflonum-real x) ($compnum-real y))
+		   ($add-flonum-number ($cflonum-imag x) ($compnum-imag y))))
 
-  (define ($cflonum+cflonum x y)
+  (define ($add-cflonum-cflonum x y)
     ($make-cflonum ($fl+ ($cflonum-real x) ($cflonum-real y))
 		   ($fl+ ($cflonum-imag x) ($cflonum-imag y))))
 
@@ -785,311 +816,311 @@
 
 
 (module ($sub-number-number
-	 $fixnum-number		$bignum-number		$flonum-number
-	 $ratnum-number		$compnum-number		$cflonum-number
-	 $number-fixnum		$number-bignum		$number-flonum
-	 $ratnum-number		$number-compnum		$number-cflonum
-	 $fixnum-fixnum		$fixnum-bignum		$fixnum-flonum
-	 $fixnum-ratnum		$fixnum-compnum		$fixnum-cflonum
-	 $bignum-fixnum		$bignum-bignum		$bignum-flonum
-	 $bignum-ratnum		$bignum-compnum		$bignum-cflonum
-	 $flonum-fixnum		$flonum-bignum		$flonum-ratnum
-	 $flonum-flonum		$flonum-compnum		$flonum-cflonum
-	 $ratnum-fixnum		$ratnum-bignum		$ratnum-flonum
-	 $ratnum-ratnum		$ratnum-compnum		$ratnum-cflonum
-	 $compnum-fixnum	$compnum-bignum		$compnum-ratnum
-	 $compnum-compnum	$compnum-flonum		$compnum-cflonum
-	 $cflonum-fixnum	$cflonum-bignum		$cflonum-ratnum
-	 $cflonum-flonum	$cflonum-compnum	$cflonum-cflonum)
+	 $sub-fixnum-number	$sub-bignum-number	$sub-flonum-number
+	 $sub-ratnum-number	$sub-compnum-number	$sub-cflonum-number
+	 $sub-number-fixnum	$sub-number-bignum	$sub-number-flonum
+	 $sub-ratnum-number	$sub-number-compnum	$sub-number-cflonum
+	 $sub-fixnum-fixnum	$sub-fixnum-bignum	$sub-fixnum-flonum
+	 $sub-fixnum-ratnum	$sub-fixnum-compnum	$sub-fixnum-cflonum
+	 $sub-bignum-fixnum	$sub-bignum-bignum	$sub-bignum-flonum
+	 $sub-bignum-ratnum	$sub-bignum-compnum	$sub-bignum-cflonum
+	 $sub-flonum-fixnum	$sub-flonum-bignum	$sub-flonum-ratnum
+	 $sub-flonum-flonum	$sub-flonum-compnum	$sub-flonum-cflonum
+	 $sub-ratnum-fixnum	$sub-ratnum-bignum	$sub-ratnum-flonum
+	 $sub-ratnum-ratnum	$sub-ratnum-compnum	$sub-ratnum-cflonum
+	 $sub-compnum-fixnum	$sub-compnum-bignum	$sub-compnum-ratnum
+	 $sub-compnum-compnum	$sub-compnum-flonum	$sub-compnum-cflonum
+	 $sub-cflonum-fixnum	$sub-cflonum-bignum	$sub-cflonum-ratnum
+	 $sub-cflonum-flonum	$sub-cflonum-compnum	$sub-cflonum-cflonum)
   (define who (quote -))
 
   (define ($sub-number-number x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum-number  x y))
-      ((bignum?)	($bignum-number  x y))
-      ((flonum?)	($flonum-number  x y))
-      ((ratnum?)	($ratnum-number  x y))
-      ((compnum?)	($compnum-number x y))
-      ((cflonum?)	($cflonum-number x y))
+      ((fixnum?)	($sub-fixnum-number  x y))
+      ((bignum?)	($sub-bignum-number  x y))
+      ((flonum?)	($sub-flonum-number  x y))
+      ((ratnum?)	($sub-ratnum-number  x y))
+      ((compnum?)	($sub-compnum-number x y))
+      ((cflonum?)	($sub-cflonum-number x y))
       (else
        (err who x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum-number x y)
+  (define ($sub-fixnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($fixnum-fixnum  x y))
-      ((bignum?)	($fixnum-bignum  x y))
-      ((flonum?)	($fixnum-flonum  x y))
-      ((ratnum?)	($fixnum-ratnum  x y))
-      ((compnum?)	($fixnum-compnum x y))
-      ((cflonum?)	($fixnum-cflonum x y))
+      ((fixnum?)	($sub-fixnum-fixnum  x y))
+      ((bignum?)	($sub-fixnum-bignum  x y))
+      ((flonum?)	($sub-fixnum-flonum  x y))
+      ((ratnum?)	($sub-fixnum-ratnum  x y))
+      ((compnum?)	($sub-fixnum-compnum x y))
+      ((cflonum?)	($sub-fixnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($bignum-number x y)
+  (define ($sub-bignum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($bignum-fixnum x y))
-      ((bignum?)	($bignum-bignum x y))
-      ((flonum?)	($bignum-flonum x y))
-      ((ratnum?)	($bignum-ratnum x y))
-      ((compnum?)	($bignum-compnum x y))
-      ((cflonum?)	($bignum-cflonum x y))
+      ((fixnum?)	($sub-bignum-fixnum x y))
+      ((bignum?)	($sub-bignum-bignum x y))
+      ((flonum?)	($sub-bignum-flonum x y))
+      ((ratnum?)	($sub-bignum-ratnum x y))
+      ((compnum?)	($sub-bignum-compnum x y))
+      ((cflonum?)	($sub-bignum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($flonum-number x y)
+  (define ($sub-flonum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($flonum-flonum  x y))
-      ((cflonum?)	($flonum-cflonum x y))
-      ((fixnum?)	($flonum-fixnum  x y))
-      ((bignum?)	($flonum-bignum  x y))
-      ((ratnum?)	($flonum-ratnum  x y))
-      ((compnum?)	($flonum-compnum x y))
+      ((flonum?)	($sub-flonum-flonum  x y))
+      ((cflonum?)	($sub-flonum-cflonum x y))
+      ((fixnum?)	($sub-flonum-fixnum  x y))
+      ((bignum?)	($sub-flonum-bignum  x y))
+      ((ratnum?)	($sub-flonum-ratnum  x y))
+      ((compnum?)	($sub-flonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($ratnum-number x y)
+  (define ($sub-ratnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($ratnum-fixnum  x y))
-      ((bignum?)	($ratnum-bignum  x y))
-      ((flonum?)	($ratnum-flonum  x y))
-      ((ratnum?)	($ratnum-ratnum  x y))
-      ((compnum?)	($ratnum-compnum x y))
-      ((cflonum?)	($ratnum-cflonum x y))
+      ((fixnum?)	($sub-ratnum-fixnum  x y))
+      ((bignum?)	($sub-ratnum-bignum  x y))
+      ((flonum?)	($sub-ratnum-flonum  x y))
+      ((ratnum?)	($sub-ratnum-ratnum  x y))
+      ((compnum?)	($sub-ratnum-compnum x y))
+      ((cflonum?)	($sub-ratnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($compnum-number x y)
+  (define ($sub-compnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($compnum-fixnum  x y))
-      ((bignum?)	($compnum-bignum  x y))
-      ((flonum?)	($compnum-flonum  x y))
-      ((ratnum?)	($compnum-ratnum  x y))
-      ((compnum?)	($compnum-compnum x y))
-      ((cflonum?)	($compnum-cflonum x y))
+      ((fixnum?)	($sub-compnum-fixnum  x y))
+      ((bignum?)	($sub-compnum-bignum  x y))
+      ((flonum?)	($sub-compnum-flonum  x y))
+      ((ratnum?)	($sub-compnum-ratnum  x y))
+      ((compnum?)	($sub-compnum-compnum x y))
+      ((cflonum?)	($sub-compnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($cflonum-number x y)
+  (define ($sub-cflonum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($cflonum-flonum  x y))
-      ((cflonum?)	($cflonum-cflonum x y))
-      ((fixnum?)	($cflonum-fixnum  x y))
-      ((bignum?)	($cflonum-bignum  x y))
-      ((ratnum?)	($cflonum-ratnum  x y))
-      ((compnum?)	($cflonum-compnum x y))
+      ((flonum?)	($sub-cflonum-flonum  x y))
+      ((cflonum?)	($sub-cflonum-cflonum x y))
+      ((fixnum?)	($sub-cflonum-fixnum  x y))
+      ((bignum?)	($sub-cflonum-bignum  x y))
+      ((ratnum?)	($sub-cflonum-ratnum  x y))
+      ((compnum?)	($sub-cflonum-compnum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($number-fixnum x y)
+  (define ($sub-number-fixnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum-fixnum  x y))
-      ((bignum?)	($bignum-fixnum  x y))
-      ((flonum?)	($flonum-fixnum  x y))
-      ((ratnum?)	($ratnum-fixnum  x y))
-      ((compnum?)	($compnum-fixnum x y))
-      ((cflonum?)	($cflonum-fixnum x y))
+      ((fixnum?)	($sub-fixnum-fixnum  x y))
+      ((bignum?)	($sub-bignum-fixnum  x y))
+      ((flonum?)	($sub-flonum-fixnum  x y))
+      ((ratnum?)	($sub-ratnum-fixnum  x y))
+      ((compnum?)	($sub-compnum-fixnum x y))
+      ((cflonum?)	($sub-cflonum-fixnum x y))
       (else
        (err who y))))
 
-  (define ($number-bignum x y)
+  (define ($sub-number-bignum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum-bignum x y))
-      ((bignum?)	($bignum-bignum x y))
-      ((flonum?)	($flonum-bignum x y))
-      ((ratnum?)	($ratnum-bignum x y))
-      ((compnum?)	($compnum-bignum x y))
-      ((cflonum?)	($cflonum-bignum x y))
+      ((fixnum?)	($sub-fixnum-bignum  x y))
+      ((bignum?)	($sub-bignum-bignum  x y))
+      ((flonum?)	($sub-flonum-bignum  x y))
+      ((ratnum?)	($sub-ratnum-bignum  x y))
+      ((compnum?)	($sub-compnum-bignum x y))
+      ((cflonum?)	($sub-cflonum-bignum x y))
       (else
        (err who y))))
 
-  (define ($number-flonum x y)
+  (define ($sub-number-flonum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum-flonum  x y))
-      ((cflonum?)	($cflonum-flonum x y))
-      ((fixnum?)	($fixnum-flonum  x y))
-      ((bignum?)	($bignum-flonum  x y))
-      ((ratnum?)	($ratnum-flonum  x y))
-      ((compnum?)	($compnum-flonum x y))
+      ((flonum?)	($sub-flonum-flonum  x y))
+      ((cflonum?)	($sub-cflonum-flonum x y))
+      ((fixnum?)	($sub-fixnum-flonum  x y))
+      ((bignum?)	($sub-bignum-flonum  x y))
+      ((ratnum?)	($sub-ratnum-flonum  x y))
+      ((compnum?)	($sub-compnum-flonum x y))
       (else
        (err who y))))
 
-  (define ($number-ratnum x y)
+  (define ($sub-number-ratnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum-ratnum  x y))
-      ((bignum?)	($bignum-ratnum  x y))
-      ((flonum?)	($flonum-ratnum  x y))
-      ((ratnum?)	($ratnum-ratnum  x y))
-      ((compnum?)	($compnum-ratnum x y))
-      ((cflonum?)	($cflonum-ratnum x y))
+      ((fixnum?)	($sub-fixnum-ratnum  x y))
+      ((bignum?)	($sub-bignum-ratnum  x y))
+      ((flonum?)	($sub-flonum-ratnum  x y))
+      ((ratnum?)	($sub-ratnum-ratnum  x y))
+      ((compnum?)	($sub-compnum-ratnum x y))
+      ((cflonum?)	($sub-cflonum-ratnum x y))
       (else
        (err who y))))
 
-  (define ($number-compnum x y)
+  (define ($sub-number-compnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum-compnum  x y))
-      ((bignum?)	($bignum-compnum  x y))
-      ((flonum?)	($flonum-compnum  x y))
-      ((ratnum?)	($ratnum-compnum  x y))
-      ((compnum?)	($compnum-compnum x y))
-      ((cflonum?)	($cflonum-compnum x y))
+      ((fixnum?)	($sub-fixnum-compnum  x y))
+      ((bignum?)	($sub-bignum-compnum  x y))
+      ((flonum?)	($sub-flonum-compnum  x y))
+      ((ratnum?)	($sub-ratnum-compnum  x y))
+      ((compnum?)	($sub-compnum-compnum x y))
+      ((cflonum?)	($sub-cflonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($number-cflonum x y)
+  (define ($sub-number-cflonum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum-cflonum  x y))
-      ((cflonum?)	($cflonum-cflonum x y))
-      ((fixnum?)	($fixnum-cflonum  x y))
-      ((bignum?)	($bignum-cflonum  x y))
-      ((ratnum?)	($ratnum-cflonum  x y))
-      ((compnum?)	($compnum-cflonum x y))
+      ((flonum?)	($sub-flonum-cflonum  x y))
+      ((cflonum?)	($sub-cflonum-cflonum x y))
+      ((fixnum?)	($sub-fixnum-cflonum  x y))
+      ((bignum?)	($sub-bignum-cflonum  x y))
+      ((ratnum?)	($sub-ratnum-cflonum  x y))
+      ((compnum?)	($sub-compnum-cflonum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum-fixnum x y)
+  (define ($sub-fixnum-fixnum x y)
     (foreign-call "ikrt_fxfxminus" x y))
 
-  (define ($fixnum-bignum x y)
+  (define ($sub-fixnum-bignum x y)
     (foreign-call "ikrt_fxbnminus" x y))
 
-  (define ($fixnum-flonum x y)
+  (define ($sub-fixnum-flonum x y)
     (if ($fxzero? x)
-	($fl* y -1.0)
+	($fl- y)
       ($fl- ($fixnum->flonum x) y)))
 
-  (define ($fixnum-ratnum x y)
+  (define ($sub-fixnum-ratnum x y)
     ;;     y.num   x * y.den - y.num
     ;; x - ----- = -----------------
     ;;     y.den        y.den
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      ($div-number-number ($sub-number-number ($fixnum*number x y.den) y.num)
-	       y.den)))
+      ($div-number-number ($sub-number-number ($mul-fixnum-number x y.den) y.num)
+			  y.den)))
 
-  (define ($fixnum-compnum x y)
+  (define ($sub-fixnum-compnum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-compnum ($fixnum-number x ($compnum-real y))
-		   ($fixnum-number 0 ($compnum-imag y))))
+    ($make-compnum ($sub-fixnum-number x ($compnum-real y))
+		   ($neg-number ($compnum-imag y))))
 
-  (define ($fixnum-cflonum x y)
+  (define ($sub-fixnum-cflonum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-cflonum ($fixnum-flonum x   ($cflonum-real y))
-		   ($fl-           0.0 ($cflonum-imag y))))
+    ($make-cflonum ($sub-fixnum-flonum x ($cflonum-real y))
+		   ($fl- ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bignum-fixnum x y)
+  (define ($sub-bignum-fixnum x y)
     (foreign-call "ikrt_bnfxminus" x y))
 
-  (define ($bignum-bignum x y)
+  (define ($sub-bignum-bignum x y)
     (foreign-call "ikrt_bnbnminus" x y))
 
-  (define ($bignum-flonum x y)
+  (define ($sub-bignum-flonum x y)
     ($fl- ($bignum->flonum x) y))
 
-  (define ($bignum-ratnum x y)
+  (define ($sub-bignum-ratnum x y)
     ;;     y.num   x * y.den - y.num
     ;; x - ----- = -----------------
     ;;     y.den        y.den
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      ($div-number-number ($sub-number-number ($bignum*number x y.den) y.num)
-	       y.den)))
+      ($div-number-number ($sub-number-number ($mul-bignum-number x y.den) y.num)
+			  y.den)))
 
-  (define ($bignum-compnum x y)
+  (define ($sub-bignum-compnum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-rectangular ($bignum-number x ($compnum-real y))
-		       ($fixnum-number 0 ($compnum-imag y))))
+    ($make-rectangular ($sub-bignum-number x ($compnum-real y))
+		       ($neg-number ($compnum-imag y))))
 
-  (define ($bignum-cflonum x y)
+  (define ($sub-bignum-cflonum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-cflonum ($bignum-flonum x   ($cflonum-real y))
-		   ($fl-           0.0 ($cflonum-imag y))))
+    ($make-cflonum ($sub-bignum-flonum x ($cflonum-real y))
+		   ($fl- ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($flonum-fixnum x y)
+  (define ($sub-flonum-fixnum x y)
     ($fl- x ($fixnum->flonum y)))
 
-  (define ($flonum-bignum x y)
+  (define ($sub-flonum-bignum x y)
     ($fl- x ($bignum->flonum y)))
 
-  (define ($flonum-ratnum x y)
+  (define ($sub-flonum-ratnum x y)
     ;;     y.num   x * y.den - y.num
     ;; x - ----- = -----------------
     ;;     y.den        y.den
     ;;
     (let ((y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
-      ($div-number-number ($sub-number-number ($flonum*number x y.den) y.num)
-	       y.den)))
+      ($div-flonum-number ($sub-flonum-number ($mul-flonum-number x y.den) y.num)
+			  y.den)))
 
-  (define ($flonum-flonum x y)
+  (define ($sub-flonum-flonum x y)
     ($fl- x y))
 
-  (define ($flonum-compnum x y)
+  (define ($sub-flonum-compnum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-rectangular ($flonum-number x ($compnum-real y))
-		       ($fixnum-number 0 ($compnum-imag y))))
+    ($make-rectangular ($sub-flonum-number x ($compnum-real y))
+		       ($neg-number ($compnum-imag y))))
 
-  (define ($flonum-cflonum x y)
+  (define ($sub-flonum-cflonum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-cflonum ($fl- x   ($cflonum-real y))
-		   ($fl- 0.0 ($cflonum-imag y))))
+    ($make-cflonum ($fl- x ($cflonum-real y))
+		   ($fl-   ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($ratnum-fixnum x y)
+  (define ($sub-ratnum-fixnum x y)
     ;; x.num       x.num - y * x.den
     ;; ----- - y = -----------------
     ;; x.den            x.den
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($div-number-number ($sub-number-number x.num ($fixnum*number y x.den))
-	       x.den)))
+      ($div-number-number ($sub-number-number x.num ($mul-fixnum-number y x.den))
+			  x.den)))
 
-  (define ($ratnum-bignum x y)
+  (define ($sub-ratnum-bignum x y)
     ;; x.num       x.num - y * x.den
     ;; ----- - y = -----------------
     ;; x.den            x.den
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($div-number-number ($sub-number-number x.num ($bignum*number y x.den))
-	       x.den)))
+      ($div-number-number ($sub-number-number x.num ($mul-bignum-number y x.den))
+			  x.den)))
 
-  (define ($ratnum-flonum x y)
+  (define ($sub-ratnum-flonum x y)
     ;; x.num       x.num - y * x.den
     ;; ----- - y = -----------------
     ;; x.den            x.den
     ;;
     (let ((x.num ($ratnum-n x))
 	  (x.den ($ratnum-d x)))
-      ($div-number-number ($sub-number-number x.num ($flonum*number y x.den))
-	       x.den)))
+      ($div-flonum-number ($sub-number-flonum x.num ($mul-flonum-number y x.den))
+			  x.den)))
 
-  (define ($ratnum-ratnum x y)
+  (define ($sub-ratnum-ratnum x y)
     ;; x.num   y.num   x.num * y.den - x.den * y.num
     ;; ----- - ----- = -----------------------------
     ;; x.den   y.den           x.den * y.den
@@ -1099,99 +1130,99 @@
 	  (y.num ($ratnum-n y))
 	  (y.den ($ratnum-d y)))
       ($div-number-number ($sub-number-number ($mul-number-number x.num y.den)
-			($mul-number-number y.num x.den))
-	       ($mul-number-number x.den y.den))))
+					      ($mul-number-number y.num x.den))
+			  ($mul-number-number x.den y.den))))
 
-  (define ($ratnum-compnum x y)
+  (define ($sub-ratnum-compnum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-rectangular ($ratnum-number x ($compnum-real y))
-		       ($fixnum-number 0 ($compnum-imag y))))
+    ($make-rectangular ($sub-ratnum-number x ($compnum-real y))
+		       ($neg-number ($compnum-imag y))))
 
-  (define ($ratnum-cflonum x y)
+  (define ($sub-ratnum-cflonum x y)
     ;; x - (y.rep + i * y.imp) = (x - y.rep) - i * y.imp
     ;;                         = (x - y.rep) + i * (0 - y.imp)
     ;;
-    ($make-cflonum ($ratnum-flonum x   ($cflonum-real y))
-		   ($fl-           0.0 ($cflonum-imag y))))
+    ($make-cflonum ($sub-ratnum-flonum x ($cflonum-real y))
+		   ($fl- ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($compnum-fixnum x y)
+  (define ($sub-compnum-fixnum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
-    ($make-rectangular ($number-fixnum ($compnum-real x) y)
+    ($make-rectangular ($sub-number-fixnum ($compnum-real x) y)
 		       ($compnum-imag x)))
 
-  (define ($compnum-bignum x y)
+  (define ($sub-compnum-bignum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
-    ($make-rectangular ($number-bignum ($compnum-real x) y)
+    ($make-rectangular ($sub-number-bignum ($compnum-real x) y)
 		       ($compnum-imag x)))
 
-  (define ($compnum-ratnum x y)
+  (define ($sub-compnum-ratnum x y)
     ;;                       y.num            y.num
     ;; (x.rep + i * x.imp) - ----- = (x.rep - -----) + i * x.imp
     ;;                       y.den            y.den
     ;;
-    ($make-compnum ($number-ratnum ($compnum-real x) y)
-		   ($compnum-imag x)))
+    ($make-rectangular ($sub-number-ratnum ($compnum-real x) y)
+		       ($compnum-imag x)))
 
-  (define ($compnum-compnum x y)
+  (define ($sub-compnum-compnum x y)
     ;; (x.rep + i * x.imp) - (y.rep + i * y.imp)
     ;; = (x.rep - y.rep) + i * (x.imp - y.imp)
     ;;
     ($make-rectangular ($sub-number-number ($compnum-real x) ($compnum-real y))
 		       ($sub-number-number ($compnum-imag x) ($compnum-imag y))))
 
-  (define ($compnum-flonum x y)
+  (define ($sub-compnum-flonum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
-    ($make-rectangular ($number-flonum ($compnum-real x) y)
+    ($make-rectangular ($sub-number-flonum ($compnum-real x) y)
 		       ($compnum-imag x)))
 
-  (define ($compnum-cflonum x y)
+  (define ($sub-compnum-cflonum x y)
     ;; (x.rep + i * x.imp) - (y.rep + i * y.imp)
     ;; = (x.rep - y.rep) + i * (x.imp - y.imp)
     ;;
-    ($make-cflonum ($number-flonum ($compnum-real x) ($cflonum-real y))
-		   ($number-flonum ($compnum-imag x) ($cflonum-imag y))))
+    ($make-cflonum ($sub-number-flonum ($compnum-real x) ($cflonum-real y))
+		   ($sub-number-flonum ($compnum-imag x) ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($cflonum-fixnum x y)
+  (define ($sub-cflonum-fixnum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
-    ($make-cflonum ($flonum-fixnum ($cflonum-real x) y)
+    ($make-cflonum ($sub-flonum-fixnum ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum-bignum x y)
+  (define ($sub-cflonum-bignum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
-    ($make-cflonum ($flonum-bignum ($cflonum-real x) y)
+    ($make-cflonum ($sub-flonum-bignum ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum-ratnum x y)
+  (define ($sub-cflonum-ratnum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
-    ($make-cflonum ($flonum-ratnum ($cflonum-real x) y)
+    ($make-cflonum ($sub-flonum-ratnum ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum-flonum x y)
+  (define ($sub-cflonum-flonum x y)
     ;; (x.rep + i * x.imp) - y = (x.rep - y) + i * x.imp
     ;;
     ($make-cflonum ($fl- ($cflonum-real x) y)
 		   ($cflonum-imag x)))
 
-  (define ($cflonum-compnum x y)
+  (define ($sub-cflonum-compnum x y)
     ;; (x.rep + i * x.imp) - (y.rep + i * y.imp)
     ;; = (x.rep - y.rep) + i * (x.imp - y.imp)
     ;;
-    ($make-cflonum ($flonum-number ($cflonum-real x) ($compnum-real y))
-		   ($flonum-number ($cflonum-imag x) ($compnum-imag y))))
+    ($make-cflonum ($sub-flonum-number ($cflonum-real x) ($compnum-real y))
+		   ($sub-flonum-number ($cflonum-imag x) ($compnum-imag y))))
 
-  (define ($cflonum-cflonum x y)
+  (define ($sub-cflonum-cflonum x y)
     ;; (x.rep + i * x.imp) - (y.rep + i * y.imp)
     ;; = (x.rep - y.rep) + i * (x.imp - y.imp)
     ;;
@@ -1202,280 +1233,280 @@
 
 
 (module ($mul-number-number
-	 $fixnum*number		$bignum*number		$flonum*number
-	 $ratnum*number		$compnum*number		$cflonum*number
-	 $number*fixnum		$number*bignum		$number*flonum
-	 $number*ratnum		$number*compnum		$number*cflonum
-	 $fixnum*fixnum		$fixnum*bignum		$fixnum*flonum
-	 $fixnum*ratnum		$fixnum*compnum		$fixnum*cflonum
-	 $bignum*fixnum		$bignum*bignum		$bignum*flonum
-	 $bignum*ratnum		$bignum*compnum		$bignum*cflonum
-	 $flonum*flonum		$flonum*cflonum		$flonum*fixnum
-	 $flonum*bignum		$flonum*ratnum		$flonum*compnum
-	 $ratnum*fixnum		$ratnum*bignum		$ratnum*flonum
-	 $ratnum*ratnum		$ratnum*compnum		$ratnum*cflonum
-	 $compnum*fixnum	$compnum*bignum		$compnum*ratnum
-	 $compnum*flonum	$compnum*compnum	$compnum*cflonum
-	 $cflonum*fixnum	$cflonum*bignum		$cflonum*ratnum
-	 $cflonum*flonum	$cflonum*compnum	$cflonum*cflonum)
+	 $mul-fixnum-number	$mul-bignum-number	$mul-flonum-number
+	 $mul-ratnum-number	$mul-compnum-number	$mul-cflonum-number
+	 $mul-number-fixnum	$mul-number-bignum	$mul-number-flonum
+	 $mul-number-ratnum	$mul-number-compnum	$mul-number-cflonum
+	 $mul-fixnum-fixnum	$mul-fixnum-bignum	$mul-fixnum-flonum
+	 $mul-fixnum-ratnum	$mul-fixnum-compnum	$mul-fixnum-cflonum
+	 $mul-bignum-fixnum	$mul-bignum-bignum	$mul-bignum-flonum
+	 $mul-bignum-ratnum	$mul-bignum-compnum	$mul-bignum-cflonum
+	 $mul-flonum-flonum	$mul-flonum-cflonum	$mul-flonum-fixnum
+	 $mul-flonum-bignum	$mul-flonum-ratnum	$mul-flonum-compnum
+	 $mul-ratnum-fixnum	$mul-ratnum-bignum	$mul-ratnum-flonum
+	 $mul-ratnum-ratnum	$mul-ratnum-compnum	$mul-ratnum-cflonum
+	 $mul-compnum-fixnum	$mul-compnum-bignum	$mul-compnum-ratnum
+	 $mul-compnum-flonum	$mul-compnum-compnum	$mul-compnum-cflonum
+	 $mul-cflonum-fixnum	$mul-cflonum-bignum	$mul-cflonum-ratnum
+	 $mul-cflonum-flonum	$mul-cflonum-compnum	$mul-cflonum-cflonum)
   (define who (quote *))
 
   (define ($mul-number-number x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum*number  x y))
-      ((bignum?)	($bignum*number  x y))
-      ((flonum?)	($flonum*number  x y))
-      ((ratnum?)	($ratnum*number  x y))
-      ((compnum?)	($compnum*number x y))
-      ((cflonum?)	($cflonum*number x y))
+      ((fixnum?)	($mul-fixnum-number  x y))
+      ((bignum?)	($mul-bignum-number  x y))
+      ((flonum?)	($mul-flonum-number  x y))
+      ((ratnum?)	($mul-ratnum-number  x y))
+      ((compnum?)	($mul-compnum-number x y))
+      ((cflonum?)	($mul-cflonum-number x y))
       (else
        (err who x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum*number x y)
+  (define ($mul-fixnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($fixnum*fixnum  x y))
-      ((bignum?)	($fixnum*bignum  x y))
-      ((flonum?)	($fixnum*flonum  x y))
-      ((ratnum?)	($fixnum*ratnum  x y))
-      ((compnum?)	($fixnum*compnum x y))
-      ((cflonum?)	($fixnum*cflonum x y))
+      ((fixnum?)	($mul-fixnum-fixnum  x y))
+      ((bignum?)	($mul-fixnum-bignum  x y))
+      ((flonum?)	($mul-fixnum-flonum  x y))
+      ((ratnum?)	($mul-fixnum-ratnum  x y))
+      ((compnum?)	($mul-fixnum-compnum x y))
+      ((cflonum?)	($mul-fixnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($bignum*number x y)
+  (define ($mul-bignum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($bignum*fixnum  x y))
-      ((bignum?)	($bignum*bignum  x y))
-      ((flonum?)	($bignum*flonum  x y))
-      ((ratnum?)	($bignum*ratnum  x y))
-      ((compnum?)	($bignum*compnum x y))
-      ((cflonum?)	($bignum*cflonum x y))
+      ((fixnum?)	($mul-bignum-fixnum  x y))
+      ((bignum?)	($mul-bignum-bignum  x y))
+      ((flonum?)	($mul-bignum-flonum  x y))
+      ((ratnum?)	($mul-bignum-ratnum  x y))
+      ((compnum?)	($mul-bignum-compnum x y))
+      ((cflonum?)	($mul-bignum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($flonum*number x y)
+  (define ($mul-flonum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($flonum*flonum  x y))
-      ((cflonum?)	($flonum*cflonum x y))
-      ((fixnum?)	($flonum*fixnum  x y))
-      ((bignum?)	($flonum*bignum  x y))
-      ((ratnum?)	($flonum*ratnum  x y))
-      ((compnum?)	($flonum*compnum x y))
+      ((flonum?)	($mul-flonum-flonum  x y))
+      ((cflonum?)	($mul-flonum-cflonum x y))
+      ((fixnum?)	($mul-flonum-fixnum  x y))
+      ((bignum?)	($mul-flonum-bignum  x y))
+      ((ratnum?)	($mul-flonum-ratnum  x y))
+      ((compnum?)	($mul-flonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($ratnum*number x y)
+  (define ($mul-ratnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($ratnum*fixnum  x y))
-      ((bignum?)	($ratnum*bignum  x y))
-      ((flonum?)	($ratnum*flonum  x y))
-      ((ratnum?)	($ratnum*ratnum  x y))
-      ((compnum?)	($ratnum*compnum x y))
-      ((cflonum?)	($ratnum*cflonum x y))
+      ((fixnum?)	($mul-ratnum-fixnum  x y))
+      ((bignum?)	($mul-ratnum-bignum  x y))
+      ((flonum?)	($mul-ratnum-flonum  x y))
+      ((ratnum?)	($mul-ratnum-ratnum  x y))
+      ((compnum?)	($mul-ratnum-compnum x y))
+      ((cflonum?)	($mul-ratnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($compnum*number x y)
+  (define ($mul-compnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($compnum*fixnum  x y))
-      ((bignum?)	($compnum*bignum  x y))
-      ((ratnum?)	($compnum*ratnum  x y))
-      ((flonum?)	($compnum*flonum  x y))
-      ((compnum?)	($compnum*compnum x y))
-      ((cflonum?)	($compnum*cflonum x y))
+      ((fixnum?)	($mul-compnum-fixnum  x y))
+      ((bignum?)	($mul-compnum-bignum  x y))
+      ((ratnum?)	($mul-compnum-ratnum  x y))
+      ((flonum?)	($mul-compnum-flonum  x y))
+      ((compnum?)	($mul-compnum-compnum x y))
+      ((cflonum?)	($mul-compnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($cflonum*number x y)
+  (define ($mul-cflonum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($cflonum*flonum  x y))
-      ((cflonum?)	($cflonum*cflonum x y))
-      ((fixnum?)	($cflonum*fixnum  x y))
-      ((bignum?)	($cflonum*bignum  x y))
-      ((ratnum?)	($cflonum*ratnum  x y))
-      ((compnum?)	($cflonum*compnum x y))
+      ((flonum?)	($mul-cflonum-flonum  x y))
+      ((cflonum?)	($mul-cflonum-cflonum x y))
+      ((fixnum?)	($mul-cflonum-fixnum  x y))
+      ((bignum?)	($mul-cflonum-bignum  x y))
+      ((ratnum?)	($mul-cflonum-ratnum  x y))
+      ((compnum?)	($mul-cflonum-compnum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($number*fixnum x y)
+  (define ($mul-number-fixnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum*fixnum  x y))
-      ((bignum?)	($bignum*fixnum  x y))
-      ((flonum?)	($flonum*fixnum  x y))
-      ((ratnum?)	($ratnum*fixnum  x y))
-      ((compnum?)	($compnum*fixnum x y))
-      ((cflonum?)	($cflonum*fixnum x y))
+      ((fixnum?)	($mul-fixnum-fixnum  x y))
+      ((bignum?)	($mul-bignum-fixnum  x y))
+      ((flonum?)	($mul-flonum-fixnum  x y))
+      ((ratnum?)	($mul-ratnum-fixnum  x y))
+      ((compnum?)	($mul-compnum-fixnum x y))
+      ((cflonum?)	($mul-cflonum-fixnum x y))
       (else
        (err who y))))
 
-  (define ($number*bignum x y)
+  (define ($mul-number-bignum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum*bignum  x y))
-      ((bignum?)	($bignum*bignum  x y))
-      ((flonum?)	($flonum*bignum  x y))
-      ((ratnum?)	($ratnum*bignum  x y))
-      ((compnum?)	($compnum*bignum x y))
-      ((cflonum?)	($cflonum*bignum x y))
+      ((fixnum?)	($mul-fixnum-bignum  x y))
+      ((bignum?)	($mul-bignum-bignum  x y))
+      ((flonum?)	($mul-flonum-bignum  x y))
+      ((ratnum?)	($mul-ratnum-bignum  x y))
+      ((compnum?)	($mul-compnum-bignum x y))
+      ((cflonum?)	($mul-cflonum-bignum x y))
       (else
        (err who y))))
 
-  (define ($number*flonum x y)
+  (define ($mul-number-flonum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum*flonum  x y))
-      ((cflonum?)	($cflonum*flonum x y))
-      ((fixnum?)	($fixnum*flonum  x y))
-      ((bignum?)	($bignum*flonum  x y))
-      ((ratnum?)	($ratnum*flonum  x y))
-      ((compnum?)	($compnum*flonum x y))
+      ((flonum?)	($mul-flonum-flonum  x y))
+      ((cflonum?)	($mul-cflonum-flonum x y))
+      ((fixnum?)	($mul-fixnum-flonum  x y))
+      ((bignum?)	($mul-bignum-flonum  x y))
+      ((ratnum?)	($mul-ratnum-flonum  x y))
+      ((compnum?)	($mul-compnum-flonum x y))
       (else
        (err who y))))
 
-  (define ($number*ratnum x y)
-    (cond ((ratnum?  x)		($ratnum*ratnum  x y))
-	  ((compnum? x)		($compnum*ratnum x y))
-	  ((cflonum? x)		($cflonum*ratnum x y))
+  (define ($mul-number-ratnum x y)
+    (cond ((ratnum?  x)		($mul-ratnum-ratnum  x y))
+	  ((compnum? x)		($mul-compnum-ratnum x y))
+	  ((cflonum? x)		($mul-cflonum-ratnum x y))
 	  (else
 	   ($mul-number-number y x))))
 
-  (define ($number*compnum x y)
+  (define ($mul-number-compnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum*compnum  x y))
-      ((bignum?)	($bignum*compnum  x y))
-      ((ratnum?)	($ratnum*compnum  x y))
-      ((flonum?)	($flonum*compnum  x y))
-      ((compnum?)	($compnum*compnum x y))
-      ((cflonum?)	($cflonum*compnum x y))
+      ((fixnum?)	($mul-fixnum-compnum  x y))
+      ((bignum?)	($mul-bignum-compnum  x y))
+      ((ratnum?)	($mul-ratnum-compnum  x y))
+      ((flonum?)	($mul-flonum-compnum  x y))
+      ((compnum?)	($mul-compnum-compnum x y))
+      ((cflonum?)	($mul-cflonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($number*cflonum x y)
+  (define ($mul-number-cflonum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum*cflonum  x y))
-      ((cflonum?)	($cflonum*cflonum x y))
-      ((fixnum?)	($fixnum*cflonum  x y))
-      ((bignum?)	($bignum*cflonum  x y))
-      ((ratnum?)	($ratnum*cflonum  x y))
-      ((compnum?)	($compnum*cflonum x y))
+      ((flonum?)	($mul-flonum-cflonum  x y))
+      ((cflonum?)	($mul-cflonum-cflonum x y))
+      ((fixnum?)	($mul-fixnum-cflonum  x y))
+      ((bignum?)	($mul-bignum-cflonum  x y))
+      ((ratnum?)	($mul-ratnum-cflonum  x y))
+      ((compnum?)	($mul-compnum-cflonum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum*fixnum x y)
+  (define ($mul-fixnum-fixnum x y)
     (foreign-call "ikrt_fxfxmult" x y))
 
-  (define ($fixnum*bignum x y)
+  (define ($mul-fixnum-bignum x y)
     (foreign-call "ikrt_fxbnmult" x y))
 
-  (define ($fixnum*flonum x y)
+  (define ($mul-fixnum-flonum x y)
     ($fl* ($fixnum->flonum x) y))
 
-  (define ($fixnum*ratnum x y)
-    ($div-number-number ($fixnum*number x ($ratnum-n y))
-	     ($ratnum-d y)))
+  (define ($mul-fixnum-ratnum x y)
+    ($div-number-number ($mul-fixnum-number x ($ratnum-n y))
+			($ratnum-d y)))
 
-  (define ($fixnum*compnum x y)
-    ($make-rectangular ($fixnum*number x ($compnum-real y))
-		       ($fixnum*number x ($compnum-imag y))))
+  (define ($mul-fixnum-compnum x y)
+    ($make-rectangular ($mul-fixnum-number x ($compnum-real y))
+		       ($mul-fixnum-number x ($compnum-imag y))))
 
-  (define ($fixnum*cflonum x y)
-    ($make-cflonum ($fixnum*flonum x ($cflonum-real y))
-		   ($fixnum*flonum x ($cflonum-imag y))))
+  (define ($mul-fixnum-cflonum x y)
+    ($make-cflonum ($mul-fixnum-flonum x ($cflonum-real y))
+		   ($mul-fixnum-flonum x ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bignum*fixnum x y)
+  (define ($mul-bignum-fixnum x y)
     (foreign-call "ikrt_fxbnmult" y x))
 
-  (define ($bignum*bignum x y)
+  (define ($mul-bignum-bignum x y)
     (foreign-call "ikrt_bnbnmult" x y))
 
-  (define ($bignum*flonum x y)
+  (define ($mul-bignum-flonum x y)
     ($fl* ($bignum->flonum x) y))
 
-  (define ($bignum*ratnum x y)
-    ($div-number-number ($bignum*number x ($ratnum-n y))
-	     ($ratnum-d y)))
+  (define ($mul-bignum-ratnum x y)
+    ($div-number-number ($mul-bignum-number x ($ratnum-n y))
+			($ratnum-d y)))
 
-  (define ($bignum*compnum x y)
-    ($make-rectangular ($bignum*number x ($compnum-real y))
-		       ($bignum*number x ($compnum-imag y))))
+  (define ($mul-bignum-compnum x y)
+    ($make-rectangular ($mul-bignum-number x ($compnum-real y))
+		       ($mul-bignum-number x ($compnum-imag y))))
 
-  (define ($bignum*cflonum x y)
-    ($make-cflonum ($bignum*flonum x ($cflonum-real y))
-		   ($bignum*flonum x ($cflonum-imag y))))
+  (define ($mul-bignum-cflonum x y)
+    ($make-cflonum ($mul-bignum-flonum x ($cflonum-real y))
+		   ($mul-bignum-flonum x ($cflonum-imag y))))
 
 ;;; --------------------------------------------------------------------
 ;;; flonum * number = flonum or cflonum
 ;;; flonum * real   = flonum
 
-  (define ($flonum*flonum x y)
+  (define ($mul-flonum-fixnum x y)
+    ($fl* x ($fixnum->flonum y)))
+
+  (define ($mul-flonum-bignum x y)
+    ($fl* x ($bignum->flonum y)))
+
+  (define ($mul-flonum-ratnum x y)
+    ($div-flonum-number ($mul-flonum-number x ($ratnum-n y))
+			($ratnum-d y)))
+
+  (define ($mul-flonum-flonum x y)
     ($fl* x y))
 
-  (define ($flonum*cflonum x y)
+  (define ($mul-flonum-cflonum x y)
     ($make-cflonum ($fl* x ($cflonum-real y))
 		   ($fl* x ($cflonum-imag y))))
 
-  (define ($flonum*fixnum x y)
-    ($fl* x ($fixnum->flonum y)))
-
-  (define ($flonum*bignum x y)
-    ($fl* x ($bignum->flonum y)))
-
-  (define ($flonum*ratnum x y)
-    ($div-number-number ($flonum*number x ($ratnum-n y))
-	     ($ratnum-d y)))
-
-  (define ($flonum*compnum x y)
-    ($make-cflonum ($flonum*number x ($compnum-real y))
-		   ($flonum*number x ($compnum-imag y))))
+  (define ($mul-flonum-compnum x y)
+    ($make-cflonum ($mul-flonum-number x ($compnum-real y))
+		   ($mul-flonum-number x ($compnum-imag y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($ratnum*fixnum x y)
-    ($fixnum*ratnum y x))
+  (define ($mul-ratnum-fixnum x y)
+    ($mul-fixnum-ratnum y x))
 
-  (define ($ratnum*bignum x y)
-    ($bignum*ratnum y x))
+  (define ($mul-ratnum-bignum x y)
+    ($mul-bignum-ratnum y x))
 
-  (define ($ratnum*ratnum x y)
+  (define ($mul-ratnum-ratnum x y)
     ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-n y))
-	     ($mul-number-number ($ratnum-d x) ($ratnum-d y))))
+			($mul-number-number ($ratnum-d x) ($ratnum-d y))))
 
-  (define ($ratnum*flonum x y)
-    ($flonum*ratnum y x))
+  (define ($mul-ratnum-flonum x y)
+    ($mul-flonum-ratnum y x))
 
-  (define ($ratnum*compnum x y)
-    ($make-rectangular ($ratnum*number x ($compnum-real y))
-		       ($ratnum*number x ($compnum-imag y))))
+  (define ($mul-ratnum-compnum x y)
+    ($make-rectangular ($mul-ratnum-number x ($compnum-real y))
+		       ($mul-ratnum-number x ($compnum-imag y))))
 
-  (define ($ratnum*cflonum x y)
-    ($make-cflonum ($flonum*ratnum ($cflonum-real y) x)
-		   ($flonum*ratnum ($cflonum-imag y) x)))
+  (define ($mul-ratnum-cflonum x y)
+    ($make-cflonum ($mul-flonum-ratnum ($cflonum-real y) x)
+		   ($mul-flonum-ratnum ($cflonum-imag y) x)))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($compnum*fixnum x y)
-    ($make-rectangular ($fixnum*number y ($compnum-real x))
-		       ($fixnum*number y ($compnum-imag x))))
+  (define ($mul-compnum-fixnum x y)
+    ($make-rectangular ($mul-fixnum-number y ($compnum-real x))
+		       ($mul-fixnum-number y ($compnum-imag x))))
 
-  (define ($compnum*bignum x y)
-    ($make-rectangular ($bignum*number y ($compnum-real x))
-		       ($bignum*number y ($compnum-imag x))))
+  (define ($mul-compnum-bignum x y)
+    ($make-rectangular ($mul-bignum-number y ($compnum-real x))
+		       ($mul-bignum-number y ($compnum-imag x))))
 
-  (define ($compnum*ratnum x y)
-    ($make-rectangular ($ratnum*number y ($compnum-real x))
-		       ($ratnum*number y ($compnum-imag x))))
+  (define ($mul-compnum-ratnum x y)
+    ($make-rectangular ($mul-ratnum-number y ($compnum-real x))
+		       ($mul-ratnum-number y ($compnum-imag x))))
 
-  (define ($compnum*flonum x y)
-    ($make-cflonum ($flonum*number y ($compnum-real x))
-		   ($flonum*number y ($compnum-imag x))))
+  (define ($mul-compnum-flonum x y)
+    ($make-cflonum ($mul-flonum-number y ($compnum-real x))
+		   ($mul-flonum-number y ($compnum-imag x))))
 
-  (define ($compnum*compnum x y)
+  (define ($mul-compnum-compnum x y)
     ;; (x.rep + i * x.imp) * (y.rep + i * y.imp)
     ;; = (x.rep * y.rep - x.imp * y.imp) + i * (x.rep * y.imp + x.imp * y.rep)
     ;;
@@ -1483,10 +1514,12 @@
 	  (y.rep ($compnum-real y))
 	  (x.imp ($compnum-imag x))
 	  (y.imp ($compnum-imag y)))
-      ($make-rectangular ($sub-number-number ($mul-number-number x.rep y.rep) ($mul-number-number x.imp y.imp))
-			 ($add-number-number ($mul-number-number x.rep y.imp) ($mul-number-number x.imp y.rep)))))
+      ($make-rectangular ($sub-number-number ($mul-number-number x.rep y.rep)
+					     ($mul-number-number x.imp y.imp))
+			 ($add-number-number ($mul-number-number x.rep y.imp)
+					     ($mul-number-number x.imp y.rep)))))
 
-  (define ($compnum*cflonum x y)
+  (define ($mul-compnum-cflonum x y)
     ;; (x.rep + i * x.imp) * (y.rep + i * y.imp)
     ;; = (x.rep * y.rep - x.imp * y.imp) + i * (x.rep * y.imp + x.imp * y.rep)
     ;;
@@ -1494,28 +1527,30 @@
 	  (y.rep ($cflonum-real y))
 	  (x.imp ($compnum-imag x))
 	  (y.imp ($cflonum-imag y)))
-      ($make-cflonum ($fl- ($flonum*number y.rep x.rep) ($flonum*number y.imp x.imp))
-		     ($fl+ ($flonum*number y.imp x.rep) ($flonum*number y.rep x.imp)))))
+      ($make-cflonum ($fl- ($mul-flonum-number y.rep x.rep)
+			   ($mul-flonum-number y.imp x.imp))
+		     ($fl+ ($mul-flonum-number y.imp x.rep)
+			   ($mul-flonum-number y.rep x.imp)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($cflonum*fixnum x y)
-    ($make-cflonum ($flonum*fixnum ($compnum-real x) y)
-		   ($flonum*fixnum ($compnum-imag x) y)))
+  (define ($mul-cflonum-fixnum x y)
+    ($make-cflonum ($mul-flonum-fixnum ($compnum-real x) y)
+		   ($mul-flonum-fixnum ($compnum-imag x) y)))
 
-  (define ($cflonum*bignum x y)
-    ($make-cflonum ($flonum*bignum ($compnum-real x) y)
-		   ($flonum*bignum ($compnum-imag x) y)))
+  (define ($mul-cflonum-bignum x y)
+    ($make-cflonum ($mul-flonum-bignum ($compnum-real x) y)
+		   ($mul-flonum-bignum ($compnum-imag x) y)))
 
-  (define ($cflonum*ratnum x y)
-    ($make-cflonum ($flonum*ratnum ($compnum-real x) y)
-		   ($flonum*ratnum ($compnum-imag x) y)))
+  (define ($mul-cflonum-ratnum x y)
+    ($make-cflonum ($mul-flonum-ratnum ($compnum-real x) y)
+		   ($mul-flonum-ratnum ($compnum-imag x) y)))
 
-  (define ($cflonum*flonum x y)
+  (define ($mul-cflonum-flonum x y)
     ($make-cflonum ($fl* ($cflonum-real x) y)
 		   ($fl* ($cflonum-imag x) y)))
 
-  (define ($cflonum*compnum x y)
+  (define ($mul-cflonum-compnum x y)
     ;; (x.rep + i * x.imp) * (y.rep + i * y.imp)
     ;; = (x.rep * y.rep - x.imp * y.imp) + i * (x.rep * y.imp + x.imp * y.rep)
     ;;
@@ -1523,599 +1558,804 @@
 	  (y.rep ($compnum-real y))
 	  (x.imp ($compnum-imag x))
 	  (y.imp ($compnum-imag y)))
-      ($make-cflonum ($fl- ($flonum*number x.rep y.rep) ($flonum*number x.imp y.imp))
-		     ($fl+ ($flonum*number x.rep y.imp) ($flonum*number x.imp y.rep)))))
+      ($make-cflonum ($fl- ($mul-flonum-number x.rep y.rep)
+			   ($mul-flonum-number x.imp y.imp))
+		     ($fl+ ($mul-flonum-number x.rep y.imp)
+			   ($mul-flonum-number x.imp y.rep)))))
 
-  (define ($cflonum*cflonum x y)
+  (define ($mul-cflonum-cflonum x y)
     ;; (x.rep + i * x.imp) * (y.rep + i * y.imp)
-    ;; = (x.rep * y.rep - x.imp * y.imp) + i * (x.rep * y.imp + x.imp * y.rep)
+    ;;    = (x.rep * y.rep - x.imp * y.imp) +
+    ;;    + i * (x.rep * y.imp + x.imp * y.rep)
     ;;
-    (let ((r0 ($cflonum-real x))
-	  (r1 ($cflonum-real y))
-	  (i0 ($cflonum-imag x))
-	  (i1 ($cflonum-imag y)))
-      ($make-cflonum ($fl- ($fl* r0 r1) ($fl* i0 i1))
-		     ($fl+ ($fl* r0 i1) ($fl* i0 r1)))))
+    (let ((x.rep ($cflonum-real x))
+	  (y.rep ($cflonum-real y))
+	  (x.imp ($cflonum-imag x))
+	  (y.imp ($cflonum-imag y)))
+      ($make-cflonum ($fl- ($fl* x.rep y.rep) ($fl* x.imp y.imp))
+		     ($fl+ ($fl* x.rep y.imp) ($fl* x.imp y.rep)))))
 
   #| end of module: $mul-number-number |# )
 
 
 (module ($div-number-number
-	 $flonum/number		$fixnum/number		$bignum/number
-	 $ratnum/number		$compnum/number		$cflonum/number
-	 $number/flonum		$number/fixnum		$number/bignum
-	 $number/ratnum		$number/compnum		$number/cflonum
-	 $fixnum/flonum		$fixnum/fixnum		$fixnum/bignum
-	 $fixnum/ratnum		$fixnum/compnum		$fixnum/cflonum
-	 $bignum/fixnum		$bignum/bignum		$bignum/flonum
-	 $bignum/ratnum		$bignum/compnum		$bignum/cflonum
-	 $ratnum/fixnum		$ratnum/bignum		$ratnum/ratnum
-	 $ratnum/flonum		$ratnum/compnum		$ratnum/cflonum
-	 $flonum/flonum		$flonum/cflonum		$flonum/fixnum
-	 $flonum/bignum		$flonum/ratnum		$flonum/compnum
-	 $compnum/fixnum	$compnum/bignum		$compnum/ratnum
-	 $compnum/flonum	$compnum/compnum	$compnum/cflonum
-	 $cflonum/fixnum	$cflonum/bignum		$cflonum/ratnum
-	 $cflonum/flonum	$cflonum/compnum	$cflonum/cflonum)
+	 $div-flonum-number	$div-fixnum-number	$div-bignum-number
+	 $div-ratnum-number	$div-compnum-number	$div-cflonum-number
+	 $div-number-flonum	$div-number-fixnum	$div-number-bignum
+	 $div-number-ratnum	$div-number-compnum	$div-number-cflonum
+	 $div-fixnum-flonum	$div-fixnum-fixnum	$div-fixnum-bignum
+	 $div-fixnum-ratnum	$div-fixnum-compnum	$div-fixnum-cflonum
+	 $div-bignum-fixnum	$div-bignum-bignum	$div-bignum-flonum
+	 $div-bignum-ratnum	$div-bignum-compnum	$div-bignum-cflonum
+	 $div-ratnum-fixnum	$div-ratnum-bignum	$div-ratnum-ratnum
+	 $div-ratnum-flonum	$div-ratnum-compnum	$div-ratnum-cflonum
+	 $div-flonum-flonum	$div-flonum-cflonum	$div-flonum-fixnum
+	 $div-flonum-bignum	$div-flonum-ratnum	$div-flonum-compnum
+	 $div-compnum-fixnum	$div-compnum-bignum	$div-compnum-ratnum
+	 $div-compnum-flonum	$div-compnum-compnum	$div-compnum-cflonum
+	 $div-cflonum-fixnum	$div-cflonum-bignum	$div-cflonum-ratnum
+	 $div-cflonum-flonum	$div-cflonum-compnum	$div-cflonum-cflonum)
   (define who (quote /))
 
   (define ($div-number-number x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum/number  x y))
-      ((bignum?)	($bignum/number  x y))
-      ((flonum?)	($flonum/number  x y))
-      ((ratnum?)	($ratnum/number  x y))
-      ((compnum?)	($compnum/number x y))
-      ((cflonum?)	($cflonum/number x y))
+      ((fixnum?)	($div-fixnum-number  x y))
+      ((bignum?)	($div-bignum-number  x y))
+      ((flonum?)	($div-flonum-number  x y))
+      ((ratnum?)	($div-ratnum-number  x y))
+      ((compnum?)	($div-compnum-number x y))
+      ((cflonum?)	($div-cflonum-number x y))
       (else
        (err who x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($flonum/number x y)
+  (define ($div-flonum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($flonum/flonum  x y))
-      ((cflonum?)	($flonum/cflonum x y))
-      ((fixnum?)	($flonum/fixnum  x y))
-      ((bignum?)	($flonum/bignum  x y))
-      ((ratnum?)	($flonum/ratnum  x y))
-      ((compnum?)	($flonum/compnum x y))
+      ((flonum?)	($div-flonum-flonum  x y))
+      ((cflonum?)	($div-flonum-cflonum x y))
+      ((fixnum?)	($div-flonum-fixnum  x y))
+      ((bignum?)	($div-flonum-bignum  x y))
+      ((ratnum?)	($div-flonum-ratnum  x y))
+      ((compnum?)	($div-flonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($fixnum/number x y)
+  (define ($div-fixnum-number x y)
     (cond-numeric-operand y
-      ((flonum?)	($fixnum/flonum  x y))
-      ((cflonum?)	($fixnum/cflonum x y))
-      ((fixnum?)	($fixnum/fixnum  x y))
-      ((bignum?)	($fixnum/bignum  x y))
-      ((ratnum?)	($fixnum/ratnum  x y))
-      ((compnum?)	($fixnum/compnum x y))
+      ((flonum?)	($div-fixnum-flonum  x y))
+      ((cflonum?)	($div-fixnum-cflonum x y))
+      ((fixnum?)	($div-fixnum-fixnum  x y))
+      ((bignum?)	($div-fixnum-bignum  x y))
+      ((ratnum?)	($div-fixnum-ratnum  x y))
+      ((compnum?)	($div-fixnum-compnum x y))
       (else
        (err who y))))
 
-  (define ($bignum/number x y)
+  (define ($div-bignum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($bignum/fixnum  x y))
-      ((bignum?)	($bignum/bignum  x y))
-      ((flonum?)	($bignum/flonum  x y))
-      ((ratnum?)	($bignum/ratnum  x y))
-      ((compnum?)	($bignum/compnum x y))
-      ((cflonum?)	($bignum/cflonum x y))
+      ((fixnum?)	($div-bignum-fixnum  x y))
+      ((bignum?)	($div-bignum-bignum  x y))
+      ((flonum?)	($div-bignum-flonum  x y))
+      ((ratnum?)	($div-bignum-ratnum  x y))
+      ((compnum?)	($div-bignum-compnum x y))
+      ((cflonum?)	($div-bignum-cflonum x y))
       (else (err who y))))
 
-  (define ($ratnum/number x y)
+  (define ($div-ratnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($ratnum/fixnum  x y))
-      ((bignum?)	($ratnum/bignum  x y))
-      ((ratnum?)	($ratnum/ratnum  x y))
-      ((flonum?)	($ratnum/flonum  x y))
-      ((compnum?)	($ratnum/compnum x y))
-      ((cflonum?)	($ratnum/cflonum x y))
+      ((fixnum?)	($div-ratnum-fixnum  x y))
+      ((bignum?)	($div-ratnum-bignum  x y))
+      ((ratnum?)	($div-ratnum-ratnum  x y))
+      ((flonum?)	($div-ratnum-flonum  x y))
+      ((compnum?)	($div-ratnum-compnum x y))
+      ((cflonum?)	($div-ratnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($compnum/number x y)
+  (define ($div-compnum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($compnum/fixnum  x y))
-      ((bignum?)	($compnum/bignum  x y))
-      ((ratnum?)	($compnum/ratnum  x y))
-      ((flonum?)	($compnum/flonum  x y))
-      ((compnum?)	($compnum/compnum x y))
-      ((cflonum?)	($compnum/cflonum x y))
+      ((fixnum?)	($div-compnum-fixnum  x y))
+      ((bignum?)	($div-compnum-bignum  x y))
+      ((ratnum?)	($div-compnum-ratnum  x y))
+      ((flonum?)	($div-compnum-flonum  x y))
+      ((compnum?)	($div-compnum-compnum x y))
+      ((cflonum?)	($div-compnum-cflonum x y))
       (else
        (err who y))))
 
-  (define ($cflonum/number x y)
+  (define ($div-cflonum-number x y)
     (cond-numeric-operand y
-      ((fixnum?)	($cflonum/fixnum  x y))
-      ((bignum?)	($cflonum/bignum  x y))
-      ((ratnum?)	($cflonum/ratnum  x y))
-      ((flonum?)	($cflonum/flonum  x y))
-      ((compnum?)	($cflonum/compnum x y))
-      ((cflonum?)	($cflonum/cflonum x y))
+      ((fixnum?)	($div-cflonum-fixnum  x y))
+      ((bignum?)	($div-cflonum-bignum  x y))
+      ((ratnum?)	($div-cflonum-ratnum  x y))
+      ((flonum?)	($div-cflonum-flonum  x y))
+      ((compnum?)	($div-cflonum-compnum x y))
+      ((cflonum?)	($div-cflonum-cflonum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($number/flonum x y)
+  (define ($div-number-flonum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum/flonum  x y))
-      ((cflonum?)	($cflonum/flonum x y))
-      ((fixnum?)	($fixnum/flonum  x y))
-      ((bignum?)	($bignum/flonum  x y))
-      ((ratnum?)	($ratnum/flonum  x y))
-      ((compnum?)	($compnum/flonum x y))
+      ((flonum?)	($div-flonum-flonum  x y))
+      ((cflonum?)	($div-cflonum-flonum x y))
+      ((fixnum?)	($div-fixnum-flonum  x y))
+      ((bignum?)	($div-bignum-flonum  x y))
+      ((ratnum?)	($div-ratnum-flonum  x y))
+      ((compnum?)	($div-compnum-flonum x y))
       (else
        (err who y))))
 
-  (define ($number/fixnum x y)
+  (define ($div-number-fixnum x y)
     (cond-numeric-operand x
-      ((flonum?)	($flonum/fixnum  x y))
-      ((cflonum?)	($cflonum/fixnum x y))
-      ((fixnum?)	($fixnum/fixnum  x y))
-      ((bignum?)	($bignum/fixnum  x y))
-      ((ratnum?)	($ratnum/fixnum  x y))
-      ((compnum?)	($compnum/fixnum x y))
+      ((flonum?)	($div-flonum-fixnum  x y))
+      ((cflonum?)	($div-cflonum-fixnum x y))
+      ((fixnum?)	($div-fixnum-fixnum  x y))
+      ((bignum?)	($div-bignum-fixnum  x y))
+      ((ratnum?)	($div-ratnum-fixnum  x y))
+      ((compnum?)	($div-compnum-fixnum x y))
       (else
        (err who y))))
 
-  (define ($number/bignum x y)
+  (define ($div-number-bignum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum/bignum  x y))
-      ((bignum?)	($bignum/bignum  x y))
-      ((ratnum?)	($ratnum/bignum  x y))
-      ((flonum?)	($flonum/bignum  x y))
-      ((compnum?)	($compnum/bignum x y))
-      ((cflonum?)	($cflonum/bignum x y))
+      ((fixnum?)	($div-fixnum-bignum  x y))
+      ((bignum?)	($div-bignum-bignum  x y))
+      ((ratnum?)	($div-ratnum-bignum  x y))
+      ((flonum?)	($div-flonum-bignum  x y))
+      ((compnum?)	($div-compnum-bignum x y))
+      ((cflonum?)	($div-cflonum-bignum x y))
       (else
        (err who y))))
 
-  (define ($number/ratnum x y)
+  (define ($div-number-ratnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum/ratnum  x y))
-      ((bignum?)	($bignum/ratnum  x y))
-      ((ratnum?)	($ratnum/ratnum  x y))
-      ((flonum?)	($flonum/ratnum  x y))
-      ((compnum?)	($compnum/ratnum x y))
-      ((cflonum?)	($cflonum/ratnum x y))
+      ((fixnum?)	($div-fixnum-ratnum  x y))
+      ((bignum?)	($div-bignum-ratnum  x y))
+      ((ratnum?)	($div-ratnum-ratnum  x y))
+      ((flonum?)	($div-flonum-ratnum  x y))
+      ((compnum?)	($div-compnum-ratnum x y))
+      ((cflonum?)	($div-cflonum-ratnum x y))
       (else
        (err who y))))
 
-  (define ($number/compnum x y)
+  (define ($div-number-compnum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum/compnum  x y))
-      ((bignum?)	($bignum/compnum  x y))
-      ((ratnum?)	($ratnum/compnum  x y))
-      ((flonum?)	($flonum/compnum  x y))
-      ((compnum?)	($compnum/compnum x y))
-      ((cflonum?)	($cflonum/compnum x y))
+      ((fixnum?)	($div-fixnum-compnum  x y))
+      ((bignum?)	($div-bignum-compnum  x y))
+      ((ratnum?)	($div-ratnum-compnum  x y))
+      ((flonum?)	($div-flonum-compnum  x y))
+      ((compnum?)	($div-compnum-compnum x y))
+      ((cflonum?)	($div-cflonum-compnum x y))
       (else
        (err who y))))
 
-  (define ($number/cflonum x y)
+  (define ($div-number-cflonum x y)
     (cond-numeric-operand x
-      ((fixnum?)	($fixnum/cflonum  x y))
-      ((bignum?)	($bignum/cflonum  x y))
-      ((ratnum?)	($ratnum/cflonum  x y))
-      ((flonum?)	($flonum/cflonum  x y))
-      ((compnum?)	($compnum/cflonum x y))
-      ((cflonum?)	($cflonum/cflonum x y))
+      ((fixnum?)	($div-fixnum-cflonum  x y))
+      ((bignum?)	($div-bignum-cflonum  x y))
+      ((ratnum?)	($div-ratnum-cflonum  x y))
+      ((flonum?)	($div-flonum-cflonum  x y))
+      ((compnum?)	($div-compnum-cflonum x y))
+      ((cflonum?)	($div-cflonum-cflonum x y))
       (else
        (err who y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum/flonum x y)
+  (define ($div-fixnum-flonum x y)
     ($fl/ ($fixnum->flonum x) y))
 
-  (define ($fixnum/fixnum x y)
-    (cond (($fx= y 0)
-	   (assertion-violation who "division by 0"))
-	  (($fx> y 0)
+  (define ($div-fixnum-fixnum x y)
+    (cond (($fxzero? y)
+	   (assertion-violation who "division by 0" x y))
+	  (($fxzero? x)
+	   0)
+	  (($fxpositive? y)
 	   (if ($fx= y 1)
 	       x
-	     (let ((g ($gcd-number-number x y)))
+	     (let ((g ($gcd-fixnum-fixnum x y)))
 	       (cond (($fx= g y)
+		      ;;X and Y are exactly divisible and their division
+		      ;;will not overflow.  Example:
+		      ;;
+		      ;;   gcd(12, 6) = 6	12/6 = 2
+		      ;;
 		      ($fxquotient x g))
 		     (($fx= g 1)
+		      ;;X and Y are not exactly divisible.  Example:
+		      ;;
+		      ;;   gcd(12, 7) = 1	12/7 = ratnum
+		      ;;
 		      ($make-ratnum x y))
 		     (else
+		      ;;X and Y are not  exactly divisible, but they can
+		      ;;be exactly divided by the same fixnum.  Example:
+		      ;;
+		      ;;   gcd(25, 10) = 5	25/10 = 5/2 ratnum
+		      ;;
 		      ($make-ratnum ($fxquotient x g)
 				    ($fxquotient y g)))))))
 	  (else
 	   ;;Here Y is negative.
 	   (if ($fx= y -1)
-	       ($sub-number-number 0 x)
-	     (let ((g ($gcd-number-number x y)))
-	       (cond (($fx= ($fixnum- g) y)
-		      ($fixnum- ($fxquotient x g)))
+	       ($neg-fixnum x)
+	     (let ((g ($gcd-fixnum-fixnum x y)))
+	       (cond (($fx= ($neg-fixnum g) y)
+		      ;;X and Y are exactly divisible and their division
+		      ;;will not overflow.  Example:
+		      ;;
+		      ;;   gcd(12, -6) = 6	12/-6 = -2
+		      ;;
+		      ($neg-fixnum ($fxquotient x g)))
 		     (($fx= g 1)
-		      ($make-ratnum ($fixnum- x)
-				    ($fixnum- y)))
+		      ;;X and Y are not exactly divisible.  Example:
+		      ;;
+		      ;;   gcd(12, -7) = 1	12/-7 = ratnum
+		      ;;
+		      ($make-ratnum ($neg-fixnum x)
+				    ($neg-fixnum y)))
 		     (else
-		      ($make-ratnum ($fixnum- ($fxquotient x g))
-				    ($fixnum- ($fxquotient y g))))))))))
+		      ;;X and Y are not  exactly divisible, but they can
+		      ;;be exactly divided by the same fixnum.  Example:
+		      ;;
+		      ;;   gcd(25, -10) = 5	25/-10 = -5/2 ratnum
+		      ;;
+		      ($make-ratnum ($neg-fixnum ($fxquotient x g))
+				    ($neg-fixnum ($fxquotient y g))))))))))
 
-  (define ($fixnum/bignum x y)
-    (if ($fx= x 0)
+  (define ($div-fixnum-bignum x y)
+    ;;Remember that a bignum cannot be zero, so Y is not zero here.
+    (if ($fxzero? x)
 	0
       ;;The GCD between a fixnum and any exact integer is a fixnum.
-      (let ((g ($gcd-number-number x y)))
+      (let ((g ($gcd-fixnum-bignum x y)))
+	(assert (fixnum? g))
 	(cond ((= g y)
+	       ;;FIXME This  should not be possible.   (Marco Maggi; Sat
+	       ;;Nov 24, 2012)
 	       (quotient x g))
 	      (($bignum-positive? y)
 	       (if ($fx= g 1)
+		   ;;X and Y are not exactly divisible.
 		   ($make-ratnum x y)
+		 ;;X and Y are not  exactly divisible by themselves, but
+		 ;;they are exactly divisible by their GCD.
 		 ($make-ratnum ($fxquotient x g)
 			       (quotient y g))))
-	      (else
+	      (else ;here Y is negative
+	       (assert ($bignum-negative? y))
 	       (if ($fx= g 1)
-		   ($make-ratnum ($fixnum- x)
-				 (unary- y))
-		 ($make-ratnum ($fixnum- ($fxquotient x g))
-			       ($fixnum-number 0 (quotient y g)))))))))
+		   ;;X  and Y  are  not exactly  divisible.   We want  a
+		   ;;ratnum with positive denominator.
+		   ($make-ratnum ($neg-fixnum x)
+				 ($neg-number y))
+		 ;;X and Y are not  exactly divisible by themselves, but
+		 ;;they are exactly  divisible by their GCD.   We want a
+		 ;;ratnum with positive denominator.
+		 ($make-ratnum ($neg-fixnum ($fxquotient x g))
+			       ($neg-number (quotient y g)))))))))
 
-  (define ($fixnum/ratnum x y)
-    ($div-number-number ($fixnum*number x ($ratnum-d y))
-	     ($ratnum-n y)))
+  (define ($div-fixnum-ratnum x y)
+    ;;     y.num       y.den
+    ;; x / ----- = x * -----
+    ;;     y.den       y.num
+    ;;
+    ($div-number-number ($mul-fixnum-number x ($ratnum-d y))
+			($ratnum-n y)))
 
-  (define ($fixnum/compnum x y)
+  (define ($div-fixnum-compnum x y)
+    ;;
+    ;;         x                   x           y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x * y.rep - i * x * y.imp      x * y.rep              - x * y.imp
+    ;; = ------------------------- = ----------------- + i * -----------------
+    ;;       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-			    ($mul-number-number y.imp y.imp))))
-	($make-rectangular ($div-number-number ($fixnum*number x y.rep)
-				    denom)
-			   ($div-number-number ($fixnum*number ($fixnum- x) y.imp)
-				    denom)))))
+      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+	    (num.rep ($mul-fixnum-number x y.rep))
+	    (num.imp ($mul-fixnum-number ($neg-fixnum x) y.imp)))
+	($make-rectangular ($div-number-number num.rep denom)
+			   ($div-number-number num.imp denom)))))
 
-  (define ($fixnum/cflonum x y)
+  (define ($div-fixnum-cflonum x y)
+    ;;
+    ;;         x                   x           y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x * y.rep - i * x * y.imp      x * y.rep              - x * y.imp
+    ;; = ------------------------- = ----------------- + i * -----------------
+    ;;       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom ($flonum+flonum ($flonum*flonum y.rep y.rep)
-				   ($flonum*flonum y.imp y.imp))))
-	($make-rectangular ($flonum/flonum ($fixnum*flonum x y.rep)
-					   denom)
-			   ($flonum/flonum ($fixnum*flonum ($fixnum- x) y.imp)
-					   denom)))))
+      (let ((denom   ($add-flonum-flonum ($flsqr y.rep) ($flsqr y.imp)))
+	    (num.rep ($mul-fixnum-flonum x y.rep))
+	    (num.imp ($mul-fixnum-flonum ($neg-fixnum x) y.imp)))
+	($make-cflonum ($div-flonum-flonum num.rep denom)
+		       ($div-flonum-flonum num.imp denom)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bignum/fixnum x y)
-    (cond (($fx= y 0)
-	   (assertion-violation who "division by 0"))
-	  (($fx> y 0)
+  (define ($div-bignum-fixnum x y)
+    ;;Remember that a bignum cannot be zero, so X is not zero here.
+    (cond (($fxzero? y)
+	   (assertion-violation who "division by 0" x y))
+	  (($fxpositive? y)
 	   (if ($fx= y 1)
 	       x
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
-	     ;;fixnum.
-	     (let ((g ($gcd-number-number x y)))
+	     ;;fixnum; the GDC is always positive.
+	     (let ((g ($gcd-bignum-fixnum x y)))
 	       (cond (($fx= g 1)
+		      ;;X and Y are not exactly divisible.
 		      ($make-ratnum x y))
 		     (($fx= g y)
+		      ;;X and Y are exactly divisible.
 		      (quotient x g))
 		     (else
+		      ;;X and Y are not  exactly divisible, but they are
+		      ;;both exactly divisible by their GCD.
 		      ($make-ratnum (quotient x g)
 				    ($fxquotient y g)))))))
-	  (else
-	   ;;Here Y is negative.
+	  (else ;here Y is negative
+	   (assert ($fxnegative? y))
 	   (if ($fx= y -1)
-	       ($bignum- x)
+	       ($neg-bignum x)
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
-	     ;;fixnum.
-	     (let ((g ($gcd-number-number x y)))
-	       (if (= ($fixnum- g) y)
-		   (unary- (quotient x g))
-		 ($make-ratnum (unary- (quotient x g))
-			       ($fx- 0 ($fxquotient y g)))))))))
+	     ;;fixnum; the GCD is always positive.
+	     (let ((g ($gcd-bignum-fixnum x y)))
+	       (cond (($fx= g 1)
+		      ;;X and  Y are not  exactly divisible.  We  want a
+		      ;;ratnum with positive denominator.
+		      ($make-ratnum ($neg-bignum x)
+				    ($neg-fixnum y)))
+		     ((= ($neg-fixnum g) y)
+		      ;;X and Y are exactly divisible.
+		      ($neg-number (quotient x g)))
+		     (else
+		      ;;X and Y are not  exactly divisible, but they are
+		      ;;both exactly divisible by  their GCD.  We want a
+		      ;;ratnum with positive denominator.
+		      ($make-ratnum ($neg-number (quotient x g))
+				    ($neg-fixnum ($fxquotient y g))))))))))
 
-  (define ($bignum/bignum x y)
-    (let ((g ($gcd-number-number x y)))
-      (cond (($fx= g 1)
+  (define ($div-bignum-bignum x y)
+    ;;Remember that a bignum cannot be zero, so neither X nor Y are zero
+    ;;here.
+    ;;
+    ;;The GCD of  two bignums is a  fixnum or bignum; the  GDC is always
+    ;;positive.
+    (let ((g ($gcd-bignum-bignum x y)))
+      (cond (($fx= g 1) ;this words with any object G
+	     ;;X and Y are not exactly divisible.  We want a ratnum with
+	     ;;positive denominator.
 	     (if ($bignum-positive? y)
 		 ($make-ratnum x y)
-	       ($make-ratnum ($fixnum-bignum 0 x)
-			     ($fixnum-bignum 0 y))))
+	       ($make-ratnum ($neg-bignum x)
+			     ($neg-bignum y))))
 	    (($bignum-positive? y)
 	     (if (= g y)
+		 ;;X and Y are exactly divisible.
 		 (quotient x g)
+	       ;;X and  Y are not  exactly divisible, but they  are both
+	       ;;divisible by their GCD.
 	       ($make-ratnum (quotient x g)
 			     (quotient y g))))
-	    (else
-	     (let ((y (unary- y)))
+	    (else ;here Y is negative
+	     (let ((y ($neg-number y)))
 	       (if (= g y)
-		   (unary- (quotient x g))
-		 ($make-ratnum ($fixnum-number 0 (quotient x g))
+		   ;;X and Y are exactly divisible.
+		   ($neg-number (quotient x g))
+		 ;;X and Y are not  exactly divisible, but they are both
+		 ;;divisible  by  their  GCD.   We want  a  ratnum  with
+		 ;;positive denominator.
+		 ($make-ratnum ($neg-number (quotient x g))
 			       (quotient y g))))))))
 
-  (define ($bignum/flonum x y)
+  (define ($div-bignum-flonum x y)
     ($fl/ ($bignum->flonum x) y))
 
-  (define ($bignum/ratnum x y)
-    ($div-number-number ($mul-number-number x ($ratnum-d y)) ($ratnum-n y)))
+  (define ($div-bignum-ratnum x y)
+    ;;     y.num       y.den
+    ;; x / ----- = x * -----
+    ;;     y.den       y.num
+    ;;
+    ($div-number-number ($mul-bignum-number x ($ratnum-d y))
+			($ratnum-n y)))
 
-  (define ($bignum/compnum x y)
+  (define ($div-bignum-compnum x y)
+    ;;         x                   x           y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x * y.rep - i * x * y.imp      x * y.rep              - x * y.imp
+    ;; = ------------------------- = ----------------- + i * -----------------
+    ;;       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-			    ($mul-number-number y.imp y.imp))))
-	($make-rectangular ($div-number-number ($bignum*number x y.rep)
-				    denom)
-			   ($div-number-number ($bignum*number ($fixnum-bignum 0 x) y.imp)
-				    denom)))))
+      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+	    (num.rep ($mul-bignum-number x y.rep))
+	    (num.imp ($mul-bignum-number ($neg-bignum x) y.imp)))
+	($make-rectangular ($div-number-number num.rep denom)
+			   ($div-number-number num.imp denom)))))
 
-  (define ($bignum/cflonum x y)
+  (define ($div-bignum-cflonum x y)
+    ;;         x                   x           y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x * y.rep - i * x * y.imp      x * y.rep              - x * y.imp
+    ;; = ------------------------- = ----------------- + i * -----------------
+    ;;       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom ($flonum+flonum ($flonum*flonum y.rep y.rep)
-				   ($flonum*flonum y.imp y.imp))))
-	($make-rectangular ($fl/ ($bignum*flonum x y.rep)
-				 denom)
-			   ($fl/ ($bignum*flonum ($fixnum-bignum 0 x) y.imp)
-				 denom)))))
+      (let ((denom   ($add-flonum-flonum ($flsqr y.rep) ($flsqr y.imp)))
+	    (num.rep ($mul-bignum-flonum x y.rep))
+	    (num.imp ($mul-bignum-flonum ($neg-bignum x) y.imp)))
+	($make-cflonum ($fl/ num.rep denom)
+		       ($fl/ num.imp denom)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($ratnum/fixnum x y)
-    ($fixnum/number 1 ($fixnum/ratnum y x)))
+  (define ($div-ratnum-fixnum x y)
+    ;; y.num       y.num   1     y.num
+    ;; ----- / x = ----- * - = ---------
+    ;; y.den       y.den   x   y.den * x
+    ;;
+    ($div-number-number ($ratnum-n y)
+			($mul-fixnum-number x ($ratnum-d y))))
 
-  (define ($ratnum/bignum x y)
-    ($fixnum/number 1 ($bignum/ratnum y x)))
+  (define ($div-ratnum-bignum x y)
+    ;; y.num       y.num   1     y.num
+    ;; ----- / x = ----- * - = ---------
+    ;; y.den       y.den   x   y.den * x
+    ;;
+    ($div-number-number ($ratnum-n y)
+			($mul-bignum-number x ($ratnum-d y))))
 
-  (define ($ratnum/ratnum x y)
+  (define ($div-ratnum-ratnum x y)
+    ;; x.num   y.num   x.num   y.den
+    ;; ----- / ----- = ----- * -----
+    ;; x.den   y.den   x.den   y.num
+    ;;
     ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-d y))
-	     ($mul-number-number ($ratnum-n y) ($ratnum-d x))))
+			($mul-number-number ($ratnum-d x) ($ratnum-n y))))
 
-  (define ($ratnum/flonum x y)
-    ($fixnum/number 1 ($flonum/ratnum y x)))
+  (define ($div-ratnum-flonum x y)
+    ;; y.num       y.num   1     y.num
+    ;; ----- / x = ----- * - = ---------
+    ;; y.den       y.den   x   y.den * x
+    ;;
+    ($div-number-flonum ($ratnum-n y)
+			($mul-flonum-number x ($ratnum-d y))))
 
-  (define ($ratnum/compnum x y)
-    (let ((y.rep ($compnum-real y))
+  (define ($div-ratnum-compnum x y)
+    ;; x.num                         x.num          1
+    ;; ----- / (y.rep + i * y.imp) = ----- * ----------------- =
+    ;; x.den                         x.den   y.rep + i * y.imp
+    ;;
+    ;;
+    ;;   x.num           1           y.rep - i * y.imp
+    ;; = ----- * ----------------- * ----------------- =
+    ;;   x.den   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x.num   y.rep - i * y.imp   x.num * y.rep - i * x.num * y.imp
+    ;; = ----- * ----------------- = ---------------------------------
+    ;;   x.den   y.rep^2 + y.imp^2     x.den * (y.rep^2 + y.imp^2)
+    ;;
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x))
+	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-			    ($mul-number-number y.imp y.imp))))
-	($make-rectangular ($div-number-number ($ratnum*number x y.rep)
-				    denom)
-			   ($div-number-number ($ratnum*number ($fixnum-ratnum 0 x) y.imp)
-				    denom)))))
+      (let ((denom   ($mul-number-number x.num ($add-number-number (sqr y.rep)
+								   (sqr y.imp))))
+	    (num.rep ($mul-number-number x.num y.rep))
+	    (num.imp ($mul-number-number ($neg-number x.num) y.imp)))
+	($make-rectangular ($div-number-number num.rep denom)
+			   ($div-number-number num.imp denom)))))
 
-  (define ($ratnum/cflonum x y)
-    (let ((y.rep ($cflonum-real y))
+  (define ($div-ratnum-cflonum x y)
+    ;; x.num                         x.num          1
+    ;; ----- / (y.rep + i * y.imp) = ----- * ----------------- =
+    ;; x.den                         x.den   y.rep + i * y.imp
+    ;;
+    ;;
+    ;;   x.num           1           y.rep - i * y.imp
+    ;; = ----- * ----------------- * ----------------- =
+    ;;   x.den   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x.num   y.rep - i * y.imp   x.num * y.rep - i * x.num * y.imp
+    ;; = ----- * ----------------- = ---------------------------------
+    ;;   x.den   y.rep^2 + y.imp^2     x.den * (y.rep^2 + y.imp^2)
+    ;;
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x))
+	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom ($flonum+flonum ($flonum*flonum y.rep y.rep)
-				   ($flonum*flonum y.imp y.imp))))
-	($make-rectangular ($flonum/flonum ($ratnum*flonum x y.rep)
-					   denom)
-			   ($flonum/flonum ($ratnum*flonum ($fixnum-ratnum 0 x) y.imp)
-					   denom)))))
+      (let ((denom   ($mul-number-flonum x.num ($fl+ ($flsqr y.rep)
+						     ($flsqr y.imp))))
+	    (num.rep ($mul-number-flonum x.num y.rep))
+	    (num.imp ($mul-number-flonum ($neg-number x.num) y.imp)))
+	($make-cflonum ($fl/ num.rep denom)
+		       ($fl/ num.imp denom)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($flonum/fixnum x y)
+  (define ($div-flonum-fixnum x y)
     ($fl/ x ($fixnum->flonum y)))
 
-  (define ($flonum/bignum x y)
+  (define ($div-flonum-bignum x y)
     ($fl/ x ($bignum->flonum y)))
 
-  (define ($flonum/ratnum x y)
+  (define ($div-flonum-ratnum x y)
     ($fl/ x ($ratnum->flonum y)))
 
-  (define ($flonum/flonum x y)
+  (define ($div-flonum-flonum x y)
     ($fl/ x y))
 
-  (define ($flonum/compnum x y)
+  (define ($div-flonum-compnum x y)
+    ;;         x                   x           y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x * y.rep - i * x * y.imp      x * y.rep              - x * y.imp
+    ;; = ------------------------- = ----------------- + i * -----------------
+    ;;       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-			    ($mul-number-number y.imp y.imp))))
-	($make-cflonum ($fl/ ($flonum*number x y.rep)
-			     denom)
-		       ($fl/ ($flonum*number ($fl- 0.0 x) y.imp)
-			     denom)))))
+      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+	    (num.rep ($mul-flonum-number x        y.rep))
+	    (num.imp ($mul-flonum-number ($fl- x) y.imp)))
+	($make-cflonum ($div-flonum-number num.rep denom)
+		       ($div-flonum-number num.imp denom)))))
 
-  (define ($flonum/cflonum x y)
+  (define ($div-flonum-cflonum x y)
+    ;;         x                   x           y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x * y.rep - i * x * y.imp      x * y.rep              - x * y.imp
+    ;; = ------------------------- = ----------------- + i * -----------------
+    ;;       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom ($flonum+flonum ($flonum*flonum y.rep y.rep)
-				   ($flonum*flonum y.imp y.imp))))
-	($make-cflonum ($fl/ ($fl* x y.rep)
-			     denom)
-		       ($fl/ ($fl* ($fl- 0.0 x) y.imp)
-			     denom)))))
+      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+	    (num.rep ($fl* x y.rep))
+	    (num.imp ($fl* ($fl- x) y.imp)))
+	($make-cflonum ($fl/ num.rep denom)
+		       ($fl/ num.imp denom)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($compnum/fixnum x y)
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-rectangular ($number/fixnum x.rep y)
-			 ($number/fixnum x.imp y))))
-
-  (define ($compnum/bignum x y)
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-rectangular ($number/bignum x.rep y)
-			 ($number/bignum x.imp y))))
-
-  (define ($compnum/ratnum x y)
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-rectangular ($number/ratnum x.rep y)
-			 ($number/ratnum x.imp y))))
-
-  (define ($compnum/flonum x y)
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-cflonum ($number/flonum x.rep y)
-		     ($number/flonum x.imp y))))
-
-  (define ($compnum/compnum x y)
-    ;; x.rep + i * x.imp
-    ;; ----------------- = z.rep + i * z.imp
-    ;; y.rep + i * y.imp
+  (define ($div-compnum-fixnum x y)
+    ;; x.rep + i * x.imp   x.rep       x.imp
+    ;; ----------------- = ----- + i * -----
+    ;;        y              y           y
     ;;
-    ;;         x.rep * y.rep + x.imp * y.imp
-    ;; z.rep = -----------------------------
-    ;;              y.rep^2 + y.imp^2
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular ($div-number-fixnum x.rep y)
+			 ($div-number-fixnum x.imp y))))
+
+  (define ($div-compnum-bignum x y)
+    ;; x.rep + i * x.imp   x.rep       x.imp
+    ;; ----------------- = ----- + i * -----
+    ;;        y              y           y
     ;;
-    ;;         x.imp * y.rep - x.rep * y.imp
-    ;; z.imp = -----------------------------
-    ;;              y.rep^2 + y.imp^2
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular ($div-number-bignum x.rep y)
+			 ($div-number-bignum x.imp y))))
+
+  (define ($div-compnum-ratnum x y)
+    ;;                       y.num                         y.den
+    ;; (x.rep + i * x.imp) / ----- = (x.rep + i * x.imp) * ----- =
+    ;;                       y.den                         y.num
+    ;;
+    ;;   x.rep * y.den       x.imp * y.den
+    ;; = ------------- + i * -------------
+    ;;       y.num               y.num
+    ;;
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x))
+	  (y.num ($ratnum-n y))
+	  (y.den ($ratnum-d y)))
+      ($make-rectangular ($div-number-ratnum ($mul-number-number x.rep y.den)
+					     y.num)
+			 ($div-number-ratnum ($mul-number-number x.imp y.den)
+					     y.num))))
+
+  (define ($div-compnum-flonum x y)
+    ;; x.rep + i * x.imp   x.rep       x.imp
+    ;; ----------------- = ----- + i * -----
+    ;;        y              y           y
+    ;;
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-cflonum ($div-number-flonum x.rep y)
+		     ($div-number-flonum x.imp y))))
+
+  (define ($div-compnum-compnum x y)
+    ;; x.rep + i * x.imp   x.rep + i * x.imp   y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x.rep * y.rep + x.imp * y.imp       x.imp * y.rep - x.rep * y.imp
+    ;; = ----------------------------- + i * -----------------------------
+    ;;        y.rep^2 + y.imp^2                     y.rep^2 + y.imp^2
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-			    ($mul-number-number y.imp y.imp))))
-	($make-rectangular ($div-number-number ($add-number-number ($mul-number-number x.rep y.rep)
-					     ($mul-number-number x.imp y.imp))
-				    denom)
-			   ($div-number-number ($sub-number-number ($mul-number-number x.imp y.rep)
-					     ($mul-number-number x.rep y.imp))
-				    denom)))))
+      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+	    (num.rep ($add-number-number ($mul-number-number x.rep y.rep)
+					 ($mul-number-number x.imp y.imp)))
+	    (num.imp ($sub-number-number ($mul-number-number x.imp y.rep)
+					 ($mul-number-number x.rep y.imp))))
+	($make-rectangular ($div-number-number num.rep denom)
+			   ($div-number-number num.imp denom)))))
 
-  (define ($compnum/cflonum x y)
-    ;; x.rep + i * x.imp
-    ;; ----------------- = z.rep + i * z.imp
-    ;; y.rep + i * y.imp
+  (define ($div-compnum-cflonum x y)
+    ;; x.rep + i * x.imp   x.rep + i * x.imp   y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
     ;;
-    ;;         x.rep * y.rep + x.imp * y.imp
-    ;; z.rep = -----------------------------
-    ;;              y.rep^2 + y.imp^2
-    ;;
-    ;;         x.imp * y.rep - x.rep * y.imp
-    ;; z.imp = -----------------------------
-    ;;              y.rep^2 + y.imp^2
+    ;;   x.rep * y.rep + x.imp * y.imp       x.imp * y.rep - x.rep * y.imp
+    ;; = ----------------------------- + i * -----------------------------
+    ;;        y.rep^2 + y.imp^2                     y.rep^2 + y.imp^2
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom ($fl+ ($fl* y.rep y.rep)
-			 ($fl* y.imp y.imp))))
-	($make-cflonum ($fl/ ($fl+ ($number*flonum x.rep y.rep)
-				   ($number*flonum x.imp y.imp))
-			     denom)
-		       ($fl/ ($fl- ($number*flonum x.imp y.rep)
-				   ($number*flonum x.rep y.imp))
-			     denom)))))
+      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+	    (num.rep ($fl+ ($mul-number-flonum x.rep y.rep)
+			   ($mul-number-flonum x.imp y.imp)))
+	    (num.imp ($fl- ($mul-number-flonum x.imp y.rep)
+			   ($mul-number-flonum x.rep y.imp))))
+	($make-cflonum ($fl/ num.rep denom)
+		       ($fl/ num.imp denom)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($cflonum/fixnum x y)
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($flonum/fixnum x.rep y)
-		     ($flonum/fixnum x.imp y))))
-
-  (define ($cflonum/bignum x y)
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($flonum/bignum x.rep y)
-		     ($flonum/bignum x.imp y))))
-
-  (define ($cflonum/ratnum x y)
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($flonum/ratnum x.rep y)
-		     ($flonum/ratnum x.imp y))))
-
-  (define ($cflonum/flonum x y)
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($flonum/flonum x.rep y)
-		     ($flonum/flonum x.imp y))))
-
-  (define ($cflonum/compnum x y)
-    ;; x.rep + i * x.imp
-    ;; ----------------- = z.rep + i * z.imp
-    ;; y.rep + i * y.imp
+  (define ($div-cflonum-fixnum x y)
+    ;; x.rep + i * x.imp   x.rep       x.imp
+    ;; ----------------- = ----- + i * -----
+    ;;        y              y           y
     ;;
-    ;;         x.rep * y.rep + x.imp * y.imp
-    ;; z.rep = -----------------------------
-    ;;              y.rep^2 + y.imp^2
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($div-flonum-fixnum x.rep y)
+		     ($div-flonum-fixnum x.imp y))))
+
+  (define ($div-cflonum-bignum x y)
+    ;; x.rep + i * x.imp   x.rep       x.imp
+    ;; ----------------- = ----- + i * -----
+    ;;        y              y           y
     ;;
-    ;;         x.imp * y.rep - x.rep * y.imp
-    ;; z.imp = -----------------------------
-    ;;              y.rep^2 + y.imp^2
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($div-flonum-bignum x.rep y)
+		     ($div-flonum-bignum x.imp y))))
+
+  (define ($div-cflonum-ratnum x y)
+    ;;                       y.num                         y.den
+    ;; (x.rep + i * x.imp) / ----- = (x.rep + i * x.imp) * ----- =
+    ;;                       y.den                         y.num
+    ;;
+    ;;   x.rep * y.den       x.imp * y.den
+    ;; = ------------- + i * -------------
+    ;;       y.num               y.num
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x))
+	  (y.num ($ratnum-n y))
+	  (y.den ($ratnum-d y)))
+      ($make-cflonum ($div-flonum-ratnum ($mul-flonum-number x.rep y.den)
+					 y.num)
+		     ($div-flonum-ratnum ($mul-flonum-number x.imp y.den)
+					 y.num))))
+
+  (define ($div-cflonum-flonum x y)
+    ;; x.rep + i * x.imp   x.rep       x.imp
+    ;; ----------------- = ----- + i * -----
+    ;;        y              y           y
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl/ x.rep y)
+		     ($fl/ x.imp y))))
+
+  (define ($div-cflonum-compnum x y)
+    ;; x.rep + i * x.imp   x.rep + i * x.imp   y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;;
+    ;;   x.rep * y.rep + x.imp * y.imp       x.imp * y.rep - x.rep * y.imp
+    ;; = ----------------------------- + i * -----------------------------
+    ;;        y.rep^2 + y.imp^2                     y.rep^2 + y.imp^2
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom ($fl+ ($fl* y.rep y.rep)
-			 ($fl* y.imp y.imp))))
-	($make-cflonum ($fl/ ($fl+ ($flonum*number x.rep y.rep)
-				   ($flonum*number x.imp y.imp))
-			     denom)
-		       ($fl/ ($fl- ($flonum*number x.imp y.rep)
-				   ($flonum*number x.rep y.imp))
-			     denom)))))
+      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+	    (num.rep ($fl+ ($mul-flonum-number x.rep y.rep)
+			   ($mul-flonum-number x.imp y.imp)))
+	    (num.imp ($fl- ($mul-flonum-number x.imp y.rep)
+			   ($mul-flonum-number x.rep y.imp))))
+	($make-cflonum ($div-flonum-number num.rep denom)
+		       ($div-flonum-number num.imp denom)))))
 
-  (define ($cflonum/cflonum x y)
-    ;; x.rep + i * x.imp
-    ;; ----------------- = z.rep + i * z.imp
-    ;; y.rep + i * y.imp
+  (define ($div-cflonum-cflonum x y)
+    ;; x.rep + i * x.imp   x.rep + i * x.imp   y.rep - i * y.imp
+    ;; ----------------- = ----------------- * ----------------- =
+    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
     ;;
-    ;;         x.rep * y.rep + x.imp * y.imp
-    ;; z.rep = -----------------------------
-    ;;              y.rep^2 + y.imp^2
-    ;;
-    ;;         x.imp * y.rep - x.rep * y.imp
-    ;; z.imp = -----------------------------
-    ;;              y.rep^2 + y.imp^2
+    ;;   x.rep * y.rep + x.imp * y.imp       x.imp * y.rep - x.rep * y.imp
+    ;; = ----------------------------- + i * -----------------------------
+    ;;        y.rep^2 + y.imp^2                     y.rep^2 + y.imp^2
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom ($fl+ ($fl* y.rep y.rep)
-			 ($fl* y.imp y.imp))))
-	($make-rectangular ($fl/ ($fl+ ($fl* x.rep y.rep)
-				       ($fl* x.imp y.imp))
-				 denom)
-			   ($fl/ ($fl- ($fl* x.imp y.rep)
-				       ($fl* x.rep y.imp))
-				 denom)))))
-
-;;; --------------------------------------------------------------------
-
-  ;;These were in the original Ikarus code.
-  ;;
-  ;;(define (%number/complex-number x y)
-  ;;   (let ((y.rep (real-part y))
-  ;; 	  (y.imp (imag-part y)))
-  ;;     (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-  ;; 			    ($mul-number-number y.imp y.imp))))
-  ;; 	($make-rectangular ($div-number-number ($mul-number-number x y.rep)
-  ;; 				    denom)
-  ;; 			   ($div-number-number ($mul-number-number (unary- x) y.imp)
-  ;; 				    denom)))))
-  ;;
-  ;;(define (%complex-number/number x y)
-  ;;   (let ((x.rep (real-part x))
-  ;; 	  (x.imp (imag-part x)))
-  ;;     ($make-rectangular ($div-number-number x.rep y)
-  ;; 			 ($div-number-number x.imp y))))
-  ;;
-  ;;(define (%complex-number/complex-number x y)
-  ;;   (let ((x.rep (real-part x))
-  ;; 	  (x.imp (imag-part x))
-  ;; 	  (y.rep (real-part y))
-  ;; 	  (y.imp (imag-part y)))
-  ;;     (let ((denom ($add-number-number ($mul-number-number y.rep y.rep)
-  ;; 			    ($mul-number-number y.imp y.imp))))
-  ;; 	($make-rectangular ($div-number-number ($add-number-number ($mul-number-number x.rep y.rep)
-  ;; 					     ($mul-number-number x.imp y.imp))
-  ;; 				    denom)
-  ;; 			   ($div-number-number ($sub-number-number ($mul-number-number x.imp y.rep)
-  ;; 					     ($mul-number-number x.rep y.imp))
-  ;; 				    denom)))))
+      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+	    (num.rep ($fl+ ($fl* x.rep y.rep)
+			   ($fl* x.imp y.imp)))
+	    (num.imp ($fl- ($fl* x.imp y.rep)
+			   ($fl* x.rep y.imp))))
+	($make-rectangular ($fl/ num.rep denom)
+			   ($fl/ num.imp denom)))))
 
   #| end of module: $div-number-number |# )
+
+
+(module (sqr
+	 $sqr-fixnum		$sqr-bignum		$sqr-ratnum
+	 $sqr-compnum		$sqr-cflonum)
+  (define who 'sqr)
+
+  (define (sqr x)
+    (cond-numeric-operand x
+      ((fixnum?)	($sqr-fixnum  x))
+      ((bignum?)	($sqr-bignum  x))
+      ((flonum?)	($flsqr       x))
+      ((ratnum?)	($sqr-ratnum  x))
+      ((compnum?)	($sqr-compnum x))
+      ((cflonum?)	($sqr-cflonum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($sqr-fixnum x)
+    ($mul-fixnum-fixnum x x))
+
+  (define ($sqr-bignum x)
+    ($mul-bignum-bignum x x))
+
+  (define ($sqr-ratnum x)
+    ($mul-ratnum-ratnum x x))
+
+  (define ($sqr-compnum x)
+    ($mul-compnum-compnum x x))
+
+  (define ($sqr-cflonum x)
+    ($mul-cflonum-cflonum x))
+
+  #| end of module: sqr |# )
 
 
 (module (gcd
@@ -2145,13 +2385,22 @@
      (() 0)
 
      ((x y z . ls)
-      (let loop ((g  (gcd (gcd x y) z))
+      (let loop ((g  ($gcd-number-number ($gcd-number-number x y) z))
 		 (ls ls))
 	(if (null? ls)
 	    g
-	  (loop (gcd g ($car ls))
+	  (loop ($gcd-number-number g ($car ls))
 		($cdr ls)))))
      ))
+
+;;; --------------------------------------------------------------------
+
+  (define ($gcd-number-number x y)
+    (cond-exact-integer-operand y
+      ((fixnum?)	($gcd-fixnum-number x y))
+      ((bignum?)	($gcd-fixnum-number x y))
+      (else
+       (%error-not-exact-integer y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2188,24 +2437,24 @@
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-fixnum-fixnum x y)
-    ($gcd-number-number x y))
+    ($gcd x y))
 
   (define ($gcd-fixnum-bignum x y)
-    ($gcd-number-number x y))
+    ($gcd x y))
 
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-bignum-fixnum x y)
-    ($gcd-number-number x y))
+    ($gcd x y))
 
   (define ($gcd-bignum-bignum x y)
-    ($gcd-number-number x y))
+    ($gcd x y))
 
 ;;; --------------------------------------------------------------------
 
-  (module ($gcd-number-number)
+  (module ($gcd)
 
-    (define ($gcd-number-number x y)
+    (define ($gcd x y)
       (let ((x (if (< x 0) (- x) x))
 	    (y (if (< y 0) (- y) y)))
 	(cond ((> x y)
@@ -2216,7 +2465,7 @@
 	       x))))
 
     (define (%greatest-common-divisor x y)
-      (if ($fxzero? y)
+      (if ($fxzero? y) ;this works with any object Y
 	  x
 	(%greatest-common-divisor y (remainder x y))))
 
@@ -2239,7 +2488,7 @@
      ((x y)
       ($lcm-number-number x y))
      ((x)
-      (unary-lcm x))
+      ($lcm-number x))
      (() 1)
      ((x y z . ls)
       ;;FIXME Incorrect for multiple roundings.  (Abdulaziz Ghuloum)
@@ -2253,7 +2502,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (unary-lcm x)
+  (define ($lcm-number x)
     (cond-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
@@ -2830,18 +3079,18 @@
   (define ($bignum-abs x)
     (if ($bignum-positive? x)
 	x
-      ($bignum- x)))
+      ($neg-bignum x)))
 
   (define ($flonum-abs x)
     (if ($fx> ($flonum-u8-ref x 0) 127)
-	;;We must also handle corrently -0.0, that is why we use $FX*.
-	($fl* x -1.0)
+	($fl- x)
       x))
 
   (define ($ratnum-abs x)
     (let ((x.num ($ratnum-n x)))
       (if (negative? x.num)
-	  ($make-ratnum (- x.num) ($ratnum-d x))
+	  ;;We want a ratnum with positive denominator.
+	  ($make-ratnum ($neg-number x.num) ($ratnum-d x))
 	x)))
 
 ;;; --------------------------------------------------------------------
@@ -4347,40 +4596,6 @@
   #| end of module: expt |# )
 
 
-(module (sqr
-	 $sqr-fixnum		$sqr-bignum		$sqr-ratnum
-	 $sqr-compnum		$sqr-cflonum)
-  (define who 'sqr)
-
-  (define (sqr x)
-    (cond-numeric-operand x
-      ((fixnum?)	($sqr-fixnum  x))
-      ((bignum?)	($sqr-bignum  x))
-      ((flonum?)	($flsqr       x))
-      ((ratnum?)	($sqr-ratnum  x))
-      ((compnum?)	($sqr-compnum x))
-      ((cflonum?)	($sqr-cflonum x))
-      (else
-       (assertion-violation who "expected number as argument" x))))
-
-  (define ($sqr-fixnum x)
-    ($fixnum*fixnum x x))
-
-  (define ($sqr-bignum x)
-    ($bignum*bignum x x))
-
-  (define ($sqr-ratnum x)
-    ($ratnum*ratnum x x))
-
-  (define ($sqr-compnum x)
-    ($compnum*compnum x x))
-
-  (define ($sqr-cflonum x)
-    ($cflonum*cflonum x))
-
-  #| end of module: sqr |# )
-
-
 (module (log
 	 $log-fixnum		$log-flonum		$log-bignum
 	 $log-ratnum		$log-compnum		$log-cflonum)
@@ -4761,8 +4976,8 @@
 	       (Q	(sqrt (+ C (* 4 D)))))
 	  (define (sgn N)
 	    (if (negative? N) -1.0 1.0))
-	  ($make-rectangular ($flonum*number ($fl* 0.5 (sgn x.rep)) (acos  (- Q A)))
-			     ($flonum*number ($fl* 0.5 (sgn x.imp)) (acosh (+ Q A))))))))
+	  ($make-rectangular ($mul-flonum-number ($fl* 0.5 (sgn x.rep)) (acos  (- Q A)))
+			     ($mul-flonum-number ($fl* 0.5 (sgn x.imp)) (acosh (+ Q A))))))))
 
   (define ($asin-cflonum x)
     ;; asin(x) = z.rep + i * z.imp
@@ -4834,10 +5049,10 @@
 	   ($flacos x))))
 
   (define ($acos-compnum x)
-    ($flonum-number  PI/2 ($asin-compnum x)))
+    ($sub-flonum-number  PI/2 ($asin-compnum x)))
 
   (define ($acos-cflonum x)
-    ($flonum-cflonum PI/2 ($asin-cflonum x)))
+    ($sub-flonum-cflonum PI/2 ($asin-cflonum x)))
 
   #| end of module: acos |# )
 
@@ -4892,10 +5107,9 @@
     ;;
     (if ($flzero? ($cflonum-imag x))
 	($flatan ($cflonum-real x))
-      ($cflonum*cflonum +0.5i
-			($cflonum-cflonum
-			 ($log-cflonum ($flonum-cflonum 1.0 ($cflonum*cflonum +1.0i x)))
-			 ($log-cflonum ($flonum+cflonum 1.0 ($cflonum*cflonum +1.0i x)))))))
+      (let ((log1 ($log-cflonum ($sub-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x))))
+	    (log2 ($log-cflonum ($add-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x)))))
+	($mul-cflonum-cflonum +0.5i ($sub-cflonum-cflonum log1 log2)))))
 
   #| end of module |# )
 
@@ -5108,8 +5322,8 @@
 	       (Q (sqrt (+ C (* 4 D)))))
 	  (define (sgn N)
 	    (if (negative? N) -1 1))
-	  ($make-rectangular ($flonum*number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
-			     ($flonum*number ($fl* 0.5 (sgn x.imp)) (acos  (- Q A))))))))
+	  ($make-rectangular ($mul-flonum-number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
+			     ($mul-flonum-number ($fl* 0.5 (sgn x.imp)) (acos  (- Q A))))))))
 
   (define ($asinh-cflonum x)
     ;; asinh (x) = z.rep + i * z.imp
@@ -5196,7 +5410,7 @@
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
       (if (zero? x.rep)
-	  ($number+compnum (asinh x.imp) ($make-compnum 0 PI/2))
+	  ($add-number-compnum (asinh x.imp) ($make-compnum 0 PI/2))
 	(let* (	;;D is a non-negative real number.
 	       (D (sqr x.imp))
 	       ;;A is a non-negative real number.
@@ -5209,9 +5423,9 @@
 	       (Q (sqrt (+ C (* 4 D)))))
 	  (define (sgn x)
 	    (if (negative? x) -1.0 1.0))
-	  (+ ($flonum*number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
-	     ($cflonum*number ($make-compnum 0 ($fl* 0.5 (sgn x.imp)))
-			      (- PI (* (sgn x.rep) (acos (- Q A))))))))))
+	  (+ ($mul-flonum-number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
+	     ($mul-cflonum-number ($make-compnum 0 ($fl* 0.5 (sgn x.imp)))
+				  (- PI (* (sgn x.rep) (acos (- Q A))))))))))
 
   (define ($acosh-cflonum x)
     ;;
@@ -5240,10 +5454,10 @@
 	       (Q ($flsqrt ($fl+ C ($fl* 4.0 D)))))
 	  (define (sgn N)
 	    (if ($flnegative? N) -1.0 1.0))
-	  (+ ($flonum*number ($fl* 0.5 (sgn x.rep))
+	  (+ ($mul-flonum-number ($fl* 0.5 (sgn x.rep))
 			     ($acosh-flonum ($fl+ Q A)))
-	     ($cflonum*number ($make-cflonum 0.0 ($fl* 0.5 (sgn x.imp)))
-			      (- PI ($flonum*number (sgn x.rep)
+	     ($mul-cflonum-number ($make-cflonum 0.0 ($fl* 0.5 (sgn x.imp)))
+			      (- PI ($mul-flonum-number (sgn x.rep)
 						    ($acos-flonum ($fl- Q A))))))))))
 
   #| end of module |# )
@@ -5281,7 +5495,7 @@
     (if (and ($fl<= x +1.0)
 	     ($fl>= x -1.0))
 	($flatanh x)
-      ($flonum*cflonum 0.5 ($log-flonum ($fl/ ($fl+ 1.0 x)
+      ($mul-flonum-cflonum 0.5 ($log-flonum ($fl/ ($fl+ 1.0 x)
 					      ($fl- 1.0 x))))
       ;; (- ($atanh-flonum ($fl/ 1.0 x))
       ;; 	 (if ($flnegative? x)
@@ -5293,8 +5507,9 @@
     ($atanh-cflonum (inexact x)))
 
   (define ($atanh-cflonum x)
-    ($flonum*cflonum 0.5 ($log-cflonum ($cflonum/cflonum ($flonum+cflonum 1.0 x)
-							 ($flonum-cflonum 1.0 x)))))
+    ($mul-flonum-cflonum 0.5 ($log-cflonum
+			      ($div-cflonum-cflonum ($add-flonum-cflonum 1.0 x)
+						    ($sub-flonum-cflonum 1.0 x)))))
 
   #| end of module: atanh |# )
 

@@ -66,6 +66,30 @@
   #t)
 
 
+(parametrise ((check-test-name	'binary-division))
+
+  (define-syntax make-test
+    (syntax-rules ()
+      ((_ ?op ?unsafe-op)
+       (syntax-rules ()
+	 ((_ ?op1 ?op2 ?expected-result)
+	  (begin
+	    (check
+		(?op ?op1 ?op2)
+	      => ?expected-result)
+	    (check
+		(?unsafe-op ?op1 ?op2)
+	      => ?expected-result)))))))
+
+  (let-syntax ((test (make-test / $div-fixnum-fixnum)))
+    (test 12 6 2)
+    (test 12 7 12/7)
+    (test 25 10 5/2)
+    #f)
+
+  #t)
+
+
 (parametrise ((check-test-name	'sqrt))
 
 ;;; fixnums
