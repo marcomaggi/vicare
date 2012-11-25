@@ -938,2054 +938,2075 @@ level operations on numbers.
 @subsection Negation negation
 
 
-@defun $neg-number
-@end defun
+@deffn {Unsafe Operation} $neg-number @var{num}
+Negate any number object and return the result.
+@end deffn
 
 
-@defun $neg-fixnum
-@end defun
+@deffn {Unsafe Operation} $neg-fixnum @var{fx}
+Negate a fixnum; return a fixnum or a bignum, the latter when @var{fx}
+is @code{(least-fixnum)}.
+@end deffn
 
 
-@defun $neg-bignum
-@end defun
+@deffn {Unsafe Operation} $neg-bignum @var{bn}
+Negate a bignum; return a bignum or a fixnum, the latter when @var{bn}
+is equal to @code{(- (least-fixnum))}.
+@end deffn
 
 
-@defun $neg-flonum
-@end defun
+@deffn {Unsafe Operation} $neg-flonum @var{fl}
+Negate a flonum and return the result as a flonum.
+@end deffn
 
 
-@defun $neg-ratnum
-@end defun
+@deffn {Unsafe Operation} $neg-ratnum @var{rn}
+Negate a ratnum and return the result as a ratnum.
+@end deffn
 
 
-@defun $neg-compnum
-@end defun
+@deffn {Unsafe Operation} $neg-compnum @var{cn}
+Negate a compnum and return the result as a compunm.
+@end deffn
 
 
-@defun $neg-cflonum
-@end defun
+@deffn {Unsafe Operation} $neg-cflonum @var{cfl}
+Negate a cflonum and return the result as cflonum.
+@end deffn
 
 @c page
 @node syslib numerics inv
 @subsection Numbers inversion
 
 
-@defun $inv-number
-@end defun
+If the operand is zero: the following operations raise an exception.
 
 
-@defun $inv-fixnum
-@end defun
+@deffn {Unsafe Operation} $inv-number @var{num}
+Compute the inverse of any number object and return the result.
+@end deffn
 
 
-@defun $inv-bignum
-@end defun
+@deffn {Unsafe Operation} $inv-fixnum @var{fx}
+Compute the inverse of a fixnum and return the result as a fixnum or
+ratnum.  A fixnum is returned if @var{fx} is @code{+1} or @code{-1}.
+@end deffn
 
 
-@defun $inv-flonum
-@end defun
+@deffn {Unsafe Operation} $inv-bignum @var{bn}
+Compute the inverse of a bignum and return the result as a ratnum.
+@end deffn
 
 
-@defun $inv-ratnum
-@end defun
+@deffn {Unsafe Operation} $inv-flonum @var{fl}
+Compute the inverse of a flonum and return the result as a flonum.
+@end deffn
 
 
-@defun $inv-compnum
-@end defun
+@deffn {Unsafe Operation} $inv-ratnum @var{rn}
+Compute the inverse of a ratnum and return the result as a fixnum,
+bignum or ratnum.  A fixnum or bignum is returned when the numerator of
+@var{rn} is @code{+1} or @code{-1}.
+@end deffn
 
 
-@defun $inv-cflonum
+@deffn {Unsafe Operation} $inv-compnum @var{cn}
+Compute the inverse of a compnum and return the result as a compnum.
+@end deffn
 
-@end defun
+
+@deffn {Unsafe Operation} $inv-cflonum @var{cfl}
+Compute the inverse of a cflonum and return the result as a cflonum.
+@end deffn
 
 @c page
 @node syslib numerics add
 @subsection Numbers addition
 
 
-@defun $add-number-number
-@end defun
+@deffn {Unsafe Operation} $add-number-number
+@end deffn
 
 
-@defun $add-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-number
+@end deffn
 
 
-@defun $add-bignum-number
-@end defun
+@deffn {Unsafe Operation} $add-bignum-number
+@end deffn
 
 
-@defun $add-flonum-number
-@end defun
+@deffn {Unsafe Operation} $add-flonum-number
+@end deffn
 
 
-@defun $add-ratnum-number
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-number
+@end deffn
 
 
-@defun $add-compnum-number
-@end defun
+@deffn {Unsafe Operation} $add-compnum-number
+@end deffn
 
 
-@defun $add-cflonum-number
-@end defun
+@deffn {Unsafe Operation} $add-cflonum-number
+@end deffn
 
 
-@defun $add-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-number-fixnum
+@end deffn
 
 
-@defun $add-number-bignum
-@end defun
+@deffn {Unsafe Operation} $add-number-bignum
+@end deffn
 
 
-@defun $add-number-flonum
-@end defun
+@deffn {Unsafe Operation} $add-number-flonum
+@end deffn
 
 
-@defun $add-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-number-ratnum
+@end deffn
 
 
-@defun $add-number-compnum
-@end defun
+@deffn {Unsafe Operation} $add-number-compnum
+@end deffn
 
 
-@defun $add-number-cflonum
-@end defun
+@deffn {Unsafe Operation} $add-number-cflonum
+@end deffn
 
 
-@defun $add-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-fixnum
+@end deffn
 
 
-@defun $add-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-bignum
+@end deffn
 
 
-@defun $add-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-flonum
+@end deffn
 
 
-@defun $add-fixnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-ratnum
+@end deffn
 
 
-@defun $add-fixnum-compnum
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-compnum
+@end deffn
 
 
-@defun $add-fixnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $add-fixnum-cflonum
+@end deffn
 
 
-@defun $add-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-bignum-fixnum
+@end deffn
 
 
-@defun $add-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $add-bignum-bignum
+@end deffn
 
 
-@defun $add-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $add-bignum-flonum
+@end deffn
 
 
-@defun $add-bignum-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-bignum-ratnum
+@end deffn
 
 
-@defun $add-bignum-compnum
-@end defun
+@deffn {Unsafe Operation} $add-bignum-compnum
+@end deffn
 
 
-@defun $add-bignum-cflonum
-@end defun
+@deffn {Unsafe Operation} $add-bignum-cflonum
+@end deffn
 
 
-@defun $add-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-flonum-fixnum
+@end deffn
 
 
-@defun $add-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $add-flonum-bignum
+@end deffn
 
 
-@defun $add-flonum-flonum
-@end defun
+@deffn {Unsafe Operation} $add-flonum-flonum
+@end deffn
 
 
-@defun $add-flonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-flonum-ratnum
+@end deffn
 
 
-@defun $add-flonum-compnum
-@end defun
+@deffn {Unsafe Operation} $add-flonum-compnum
+@end deffn
 
 
-@defun $add-flonum-cflonum
-@end defun
+@deffn {Unsafe Operation} $add-flonum-cflonum
+@end deffn
 
 
-@defun $add-ratnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-fixnum
+@end deffn
 
 
-@defun $add-ratnum-bignum
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-bignum
+@end deffn
 
 
-@defun $add-ratnum-flonum
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-flonum
+@end deffn
 
 
-@defun $add-ratnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-ratnum
+@end deffn
 
 
-@defun $add-ratnum-compnum
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-compnum
+@end deffn
 
 
-@defun $add-ratnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $add-ratnum-cflonum
+@end deffn
 
 
-@defun $add-compnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-compnum-fixnum
+@end deffn
 
 
-@defun $add-compnum-bignum
-@end defun
+@deffn {Unsafe Operation} $add-compnum-bignum
+@end deffn
 
 
-@defun $add-compnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-compnum-ratnum
+@end deffn
 
 
-@defun $add-compnum-compnum
-@end defun
+@deffn {Unsafe Operation} $add-compnum-compnum
+@end deffn
 
 
-@defun $add-compnum-flonum
-@end defun
+@deffn {Unsafe Operation} $add-compnum-flonum
+@end deffn
 
 
-@defun $add-compnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $add-compnum-cflonum
+@end deffn
 
 
-@defun $add-cflonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $add-cflonum-fixnum
+@end deffn
 
 
-@defun $add-cflonum-bignum
-@end defun
+@deffn {Unsafe Operation} $add-cflonum-bignum
+@end deffn
 
 
-@defun $add-cflonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $add-cflonum-ratnum
+@end deffn
 
 
-@defun $add-cflonum-flonum
-@end defun
+@deffn {Unsafe Operation} $add-cflonum-flonum
+@end deffn
 
 
-@defun $add-cflonum-compnum
-@end defun
+@deffn {Unsafe Operation} $add-cflonum-compnum
+@end deffn
 
 
-@defun $add-cflonum-cflonum
+@deffn {Unsafe Operation} $add-cflonum-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics sub
 @subsection Numbers subtraction
 
 
-@defun $sub-number-number
-@end defun
+@deffn {Unsafe Operation} $sub-number-number
+@end deffn
 
 
-@defun $sub-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-number
+@end deffn
 
 
-@defun $sub-bignum-number
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-number
+@end deffn
 
 
-@defun $sub-flonum-number
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-number
+@end deffn
 
 
-@defun $sub-ratnum-number
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-number
+@end deffn
 
 
-@defun $sub-compnum-number
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-number
+@end deffn
 
 
-@defun $sub-cflonum-number
-@end defun
+@deffn {Unsafe Operation} $sub-cflonum-number
+@end deffn
 
 
-@defun $sub-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-number-fixnum
+@end deffn
 
 
-@defun $sub-number-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-number-bignum
+@end deffn
 
 
-@defun $sub-number-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-number-flonum
+@end deffn
 
 
-@defun $sub-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-number-ratnum
+@end deffn
 
 
-@defun $sub-number-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-number-compnum
+@end deffn
 
 
-@defun $sub-number-cflonum
-@end defun
+@deffn {Unsafe Operation} $sub-number-cflonum
+@end deffn
 
 
-@defun $sub-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-fixnum
+@end deffn
 
 
-@defun $sub-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-bignum
+@end deffn
 
 
-@defun $sub-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-flonum
+@end deffn
 
 
-@defun $sub-fixnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-ratnum
+@end deffn
 
 
-@defun $sub-fixnum-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-compnum
+@end deffn
 
 
-@defun $sub-fixnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $sub-fixnum-cflonum
+@end deffn
 
 
-@defun $sub-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-fixnum
+@end deffn
 
 
-@defun $sub-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-bignum
+@end deffn
 
 
-@defun $sub-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-flonum
+@end deffn
 
 
-@defun $sub-bignum-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-ratnum
+@end deffn
 
 
-@defun $sub-bignum-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-compnum
+@end deffn
 
 
-@defun $sub-bignum-cflonum
-@end defun
+@deffn {Unsafe Operation} $sub-bignum-cflonum
+@end deffn
 
 
-@defun $sub-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-fixnum
+@end deffn
 
 
-@defun $sub-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-bignum
+@end deffn
 
 
-@defun $sub-flonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-ratnum
+@end deffn
 
 
-@defun $sub-flonum-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-flonum
+@end deffn
 
 
-@defun $sub-flonum-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-compnum
+@end deffn
 
 
-@defun $sub-flonum-cflonum
-@end defun
+@deffn {Unsafe Operation} $sub-flonum-cflonum
+@end deffn
 
 
-@defun $sub-ratnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-fixnum
+@end deffn
 
 
-@defun $sub-ratnum-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-bignum
+@end deffn
 
 
-@defun $sub-ratnum-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-flonum
+@end deffn
 
 
-@defun $sub-ratnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-ratnum
+@end deffn
 
 
-@defun $sub-ratnum-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-compnum
+@end deffn
 
 
-@defun $sub-ratnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $sub-ratnum-cflonum
+@end deffn
 
 
-@defun $sub-compnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-fixnum
+@end deffn
 
 
-@defun $sub-compnum-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-bignum
+@end deffn
 
 
-@defun $sub-compnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-ratnum
+@end deffn
 
 
-@defun $sub-compnum-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-compnum
+@end deffn
 
 
-@defun $sub-compnum-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-flonum
+@end deffn
 
 
-@defun $sub-compnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $sub-compnum-cflonum
+@end deffn
 
 
-@defun $sub-cflonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $sub-cflonum-fixnum
+@end deffn
 
 
-@defun $sub-cflonum-bignum
-@end defun
+@deffn {Unsafe Operation} $sub-cflonum-bignum
+@end deffn
 
 
-@defun $sub-cflonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $sub-cflonum-ratnum
+@end deffn
 
 
-@defun $sub-cflonum-flonum
-@end defun
+@deffn {Unsafe Operation} $sub-cflonum-flonum
+@end deffn
 
 
-@defun $sub-cflonum-compnum
-@end defun
+@deffn {Unsafe Operation} $sub-cflonum-compnum
+@end deffn
 
 
-@defun $sub-cflonum-cflonum
+@deffn {Unsafe Operation} $sub-cflonum-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics mul
 @subsection Numbers multiplication
 
 
-@defun $mul-number-number
-@end defun
+@deffn {Unsafe Operation} $mul-number-number
+@end deffn
 
 
-@defun $mul-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-number
+@end deffn
 
 
-@defun $mul-bignum-number
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-number
+@end deffn
 
 
-@defun $mul-flonum-number
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-number
+@end deffn
 
 
-@defun $mul-ratnum-number
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-number
+@end deffn
 
 
-@defun $mul-compnum-number
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-number
+@end deffn
 
 
-@defun $mul-cflonum-number
-@end defun
+@deffn {Unsafe Operation} $mul-cflonum-number
+@end deffn
 
 
-@defun $mul-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-number-fixnum
+@end deffn
 
 
-@defun $mul-number-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-number-bignum
+@end deffn
 
 
-@defun $mul-number-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-number-flonum
+@end deffn
 
 
-@defun $mul-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-number-ratnum
+@end deffn
 
 
-@defun $mul-number-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-number-compnum
+@end deffn
 
 
-@defun $mul-number-cflonum
-@end defun
+@deffn {Unsafe Operation} $mul-number-cflonum
+@end deffn
 
 
-@defun $mul-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-fixnum
+@end deffn
 
 
-@defun $mul-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-bignum
+@end deffn
 
 
-@defun $mul-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-flonum
+@end deffn
 
 
-@defun $mul-fixnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-ratnum
+@end deffn
 
 
-@defun $mul-fixnum-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-compnum
+@end deffn
 
 
-@defun $mul-fixnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $mul-fixnum-cflonum
+@end deffn
 
 
-@defun $mul-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-fixnum
+@end deffn
 
 
-@defun $mul-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-bignum
+@end deffn
 
 
-@defun $mul-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-flonum
+@end deffn
 
 
-@defun $mul-bignum-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-ratnum
+@end deffn
 
 
-@defun $mul-bignum-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-compnum
+@end deffn
 
 
-@defun $mul-bignum-cflonum
-@end defun
+@deffn {Unsafe Operation} $mul-bignum-cflonum
+@end deffn
 
 
-@defun $mul-flonum-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-flonum
+@end deffn
 
 
-@defun $mul-flonum-cflonum
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-cflonum
+@end deffn
 
 
-@defun $mul-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-fixnum
+@end deffn
 
 
-@defun $mul-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-bignum
+@end deffn
 
 
-@defun $mul-flonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-ratnum
+@end deffn
 
 
-@defun $mul-flonum-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-flonum-compnum
+@end deffn
 
 
-@defun $mul-ratnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-fixnum
+@end deffn
 
 
-@defun $mul-ratnum-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-bignum
+@end deffn
 
 
-@defun $mul-ratnum-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-flonum
+@end deffn
 
 
-@defun $mul-ratnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-ratnum
+@end deffn
 
 
-@defun $mul-ratnum-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-compnum
+@end deffn
 
 
-@defun $mul-ratnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $mul-ratnum-cflonum
+@end deffn
 
 
-@defun $mul-compnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-fixnum
+@end deffn
 
 
-@defun $mul-compnum-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-bignum
+@end deffn
 
 
-@defun $mul-compnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-ratnum
+@end deffn
 
 
-@defun $mul-compnum-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-flonum
+@end deffn
 
 
-@defun $mul-compnum-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-compnum
+@end deffn
 
 
-@defun $mul-compnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $mul-compnum-cflonum
+@end deffn
 
 
-@defun $mul-cflonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $mul-cflonum-fixnum
+@end deffn
 
 
-@defun $mul-cflonum-bignum
-@end defun
+@deffn {Unsafe Operation} $mul-cflonum-bignum
+@end deffn
 
 
-@defun $mul-cflonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $mul-cflonum-ratnum
+@end deffn
 
 
-@defun $mul-cflonum-flonum
-@end defun
+@deffn {Unsafe Operation} $mul-cflonum-flonum
+@end deffn
 
 
-@defun $mul-cflonum-compnum
-@end defun
+@deffn {Unsafe Operation} $mul-cflonum-compnum
+@end deffn
 
 
-@defun $mul-cflonum-cflonum
+@deffn {Unsafe Operation} $mul-cflonum-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics div
 @subsection Numbers division
 
 
-@defun $div-number-number
-@end defun
+@deffn {Unsafe Operation} $div-number-number
+@end deffn
 
 
-@defun $div-flonum-number
-@end defun
+@deffn {Unsafe Operation} $div-flonum-number
+@end deffn
 
 
-@defun $div-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-number
+@end deffn
 
 
-@defun $div-bignum-number
-@end defun
+@deffn {Unsafe Operation} $div-bignum-number
+@end deffn
 
 
-@defun $div-ratnum-number
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-number
+@end deffn
 
 
-@defun $div-compnum-number
-@end defun
+@deffn {Unsafe Operation} $div-compnum-number
+@end deffn
 
 
-@defun $div-cflonum-number
-@end defun
+@deffn {Unsafe Operation} $div-cflonum-number
+@end deffn
 
 
-@defun $div-number-flonum
-@end defun
+@deffn {Unsafe Operation} $div-number-flonum
+@end deffn
 
 
-@defun $div-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-number-fixnum
+@end deffn
 
 
-@defun $div-number-bignum
-@end defun
+@deffn {Unsafe Operation} $div-number-bignum
+@end deffn
 
 
-@defun $div-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-number-ratnum
+@end deffn
 
 
-@defun $div-number-compnum
-@end defun
+@deffn {Unsafe Operation} $div-number-compnum
+@end deffn
 
 
-@defun $div-number-cflonum
-@end defun
+@deffn {Unsafe Operation} $div-number-cflonum
+@end deffn
 
 
-@defun $div-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-flonum
+@end deffn
 
 
-@defun $div-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-fixnum
+@end deffn
 
 
-@defun $div-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-bignum
+@end deffn
 
 
-@defun $div-fixnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-ratnum
+@end deffn
 
 
-@defun $div-fixnum-compnum
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-compnum
+@end deffn
 
 
-@defun $div-fixnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $div-fixnum-cflonum
+@end deffn
 
 
-@defun $div-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-bignum-fixnum
+@end deffn
 
 
-@defun $div-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $div-bignum-bignum
+@end deffn
 
 
-@defun $div-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $div-bignum-flonum
+@end deffn
 
 
-@defun $div-bignum-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-bignum-ratnum
+@end deffn
 
 
-@defun $div-bignum-compnum
-@end defun
+@deffn {Unsafe Operation} $div-bignum-compnum
+@end deffn
 
 
-@defun $div-bignum-cflonum
-@end defun
+@deffn {Unsafe Operation} $div-bignum-cflonum
+@end deffn
 
 
-@defun $div-ratnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-fixnum
+@end deffn
 
 
-@defun $div-ratnum-bignum
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-bignum
+@end deffn
 
 
-@defun $div-ratnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-ratnum
+@end deffn
 
 
-@defun $div-ratnum-flonum
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-flonum
+@end deffn
 
 
-@defun $div-ratnum-compnum
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-compnum
+@end deffn
 
 
-@defun $div-ratnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $div-ratnum-cflonum
+@end deffn
 
 
-@defun $div-flonum-flonum
-@end defun
+@deffn {Unsafe Operation} $div-flonum-flonum
+@end deffn
 
 
-@defun $div-flonum-cflonum
-@end defun
+@deffn {Unsafe Operation} $div-flonum-cflonum
+@end deffn
 
 
-@defun $div-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-flonum-fixnum
+@end deffn
 
 
-@defun $div-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $div-flonum-bignum
+@end deffn
 
 
-@defun $div-flonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-flonum-ratnum
+@end deffn
 
 
-@defun $div-flonum-compnum
-@end defun
+@deffn {Unsafe Operation} $div-flonum-compnum
+@end deffn
 
 
-@defun $div-compnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-compnum-fixnum
+@end deffn
 
 
-@defun $div-compnum-bignum
-@end defun
+@deffn {Unsafe Operation} $div-compnum-bignum
+@end deffn
 
 
-@defun $div-compnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-compnum-ratnum
+@end deffn
 
 
-@defun $div-compnum-flonum
-@end defun
+@deffn {Unsafe Operation} $div-compnum-flonum
+@end deffn
 
 
-@defun $div-compnum-compnum
-@end defun
+@deffn {Unsafe Operation} $div-compnum-compnum
+@end deffn
 
 
-@defun $div-compnum-cflonum
-@end defun
+@deffn {Unsafe Operation} $div-compnum-cflonum
+@end deffn
 
 
-@defun $div-cflonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $div-cflonum-fixnum
+@end deffn
 
 
-@defun $div-cflonum-bignum
-@end defun
+@deffn {Unsafe Operation} $div-cflonum-bignum
+@end deffn
 
 
-@defun $div-cflonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $div-cflonum-ratnum
+@end deffn
 
 
-@defun $div-cflonum-flonum
-@end defun
+@deffn {Unsafe Operation} $div-cflonum-flonum
+@end deffn
 
 
-@defun $div-cflonum-compnum
-@end defun
+@deffn {Unsafe Operation} $div-cflonum-compnum
+@end deffn
 
 
-@defun $div-cflonum-cflonum
+@deffn {Unsafe Operation} $div-cflonum-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics sqr
 @subsection Numbers squaring
 
 
-@defun $sqr-fixnum
-@end defun
+@deffn {Unsafe Operation} $sqr-fixnum
+@end deffn
 
 
-@defun $sqr-bignum
-@end defun
+@deffn {Unsafe Operation} $sqr-bignum
+@end deffn
 
 
-@defun $sqr-ratnum
-@end defun
+@deffn {Unsafe Operation} $sqr-ratnum
+@end deffn
 
 
-@defun $sqr-compnum
-@end defun
+@deffn {Unsafe Operation} $sqr-compnum
+@end deffn
 
 
-@defun $sqr-cflonum
+@deffn {Unsafe Operation} $sqr-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics gcd
 @subsection Greatest common divisor
 
 
-@defun $gcd-number-number
-@end defun
+@deffn {Unsafe Operation} $gcd-number-number
+@end deffn
 
 
-@defun $gcd-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $gcd-fixnum-number
+@end deffn
 
 
-@defun $gcd-bignum-number
-@end defun
+@deffn {Unsafe Operation} $gcd-bignum-number
+@end deffn
 
 
-@defun $gcd-flonum-number
-@end defun
+@deffn {Unsafe Operation} $gcd-flonum-number
+@end deffn
 
 
-@defun $gcd-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $gcd-number-fixnum
+@end deffn
 
 
-@defun $gcd-number-bignum
-@end defun
+@deffn {Unsafe Operation} $gcd-number-bignum
+@end deffn
 
 
-@defun $gcd-number-flonum
-@end defun
+@deffn {Unsafe Operation} $gcd-number-flonum
+@end deffn
 
 
-@defun $gcd-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $gcd-fixnum-fixnum
+@end deffn
 
 
-@defun $gcd-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $gcd-fixnum-bignum
+@end deffn
 
 
-@defun $gcd-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $gcd-fixnum-flonum
+@end deffn
 
 
-@defun $gcd-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $gcd-bignum-fixnum
+@end deffn
 
 
-@defun $gcd-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $gcd-bignum-bignum
+@end deffn
 
 
-@defun $gcd-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $gcd-bignum-flonum
+@end deffn
 
 
-@defun $gcd-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $gcd-flonum-fixnum
+@end deffn
 
 
-@defun $gcd-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $gcd-flonum-bignum
+@end deffn
 
 
-@defun $gcd-flonum-flonum
+@deffn {Unsafe Operation} $gcd-flonum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics lcm
 @subsection Least common multiple
 
 
-@defun $lcm-number-number
-@end defun
+@deffn {Unsafe Operation} $lcm-number-number
+@end deffn
 
 
-@defun $lcm-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $lcm-fixnum-number
+@end deffn
 
 
-@defun $lcm-bignum-number
-@end defun
+@deffn {Unsafe Operation} $lcm-bignum-number
+@end deffn
 
 
-@defun $lcm-flonum-number
-@end defun
+@deffn {Unsafe Operation} $lcm-flonum-number
+@end deffn
 
 
-@defun $lcm-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $lcm-number-fixnum
+@end deffn
 
 
-@defun $lcm-number-bignum
-@end defun
+@deffn {Unsafe Operation} $lcm-number-bignum
+@end deffn
 
 
-@defun $lcm-number-flonum
-@end defun
+@deffn {Unsafe Operation} $lcm-number-flonum
+@end deffn
 
 
-@defun $lcm-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $lcm-fixnum-fixnum
+@end deffn
 
 
-@defun $lcm-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $lcm-fixnum-bignum
+@end deffn
 
 
-@defun $lcm-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $lcm-fixnum-flonum
+@end deffn
 
 
-@defun $lcm-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $lcm-bignum-fixnum
+@end deffn
 
 
-@defun $lcm-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $lcm-bignum-bignum
+@end deffn
 
 
-@defun $lcm-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $lcm-bignum-flonum
+@end deffn
 
 
-@defun $lcm-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $lcm-flonum-fixnum
+@end deffn
 
 
-@defun $lcm-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $lcm-flonum-bignum
+@end deffn
 
 
-@defun $lcm-flonum-flonum
+@deffn {Unsafe Operation} $lcm-flonum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics quorem
 @subsection Quotient and remainder
 
 
-@defun $quotient+remainder-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-number
+@end deffn
 
 
-@defun $quotient+remainder-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-number-fixnum
+@end deffn
 
 
-@defun $quotient+remainder-bignum-number
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-bignum-number
+@end deffn
 
 
-@defun $quotient+remainder-number-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-number-bignum
+@end deffn
 
 
-@defun $quotient+remainder-flonum-number
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-flonum-number
+@end deffn
 
 
-@defun $quotient+remainder-number-flonum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-number-flonum
+@end deffn
 
 
-@defun $quotient+remainder-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-fixnum
+@end deffn
 
 
-@defun $quotient+remainder-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-bignum-fixnum
+@end deffn
 
 
-@defun $quotient+remainder-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-bignum
+@end deffn
 
 
-@defun $quotient+remainder-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-bignum-bignum
+@end deffn
 
 
-@defun $quotient+remainder-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-flonum
+@end deffn
 
 
-@defun $quotient+remainder-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-bignum-flonum
+@end deffn
 
 
-@defun $quotient+remainder-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-flonum-fixnum
+@end deffn
 
 
-@defun $quotient+remainder-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient+remainder-flonum-bignum
+@end deffn
 
 
-@defun $quotient+remainder-flonum-flonum
+@deffn {Unsafe Operation} $quotient+remainder-flonum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics quotient
 @subsection Quotient between numbers
 
 
-@defun $quotient-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $quotient-fixnum-number
+@end deffn
 
 
-@defun $quotient-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient-number-fixnum
+@end deffn
 
 
-@defun $quotient-bignum-number
-@end defun
+@deffn {Unsafe Operation} $quotient-bignum-number
+@end deffn
 
 
-@defun $quotient-number-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient-number-bignum
+@end deffn
 
 
-@defun $quotient-flonum-number
-@end defun
+@deffn {Unsafe Operation} $quotient-flonum-number
+@end deffn
 
 
-@defun $quotient-number-flonum
-@end defun
+@deffn {Unsafe Operation} $quotient-number-flonum
+@end deffn
 
 
-@defun $quotient-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient-fixnum-fixnum
+@end deffn
 
 
-@defun $quotient-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient-fixnum-bignum
+@end deffn
 
 
-@defun $quotient-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $quotient-fixnum-flonum
+@end deffn
 
 
-@defun $quotient-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient-bignum-fixnum
+@end deffn
 
 
-@defun $quotient-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient-bignum-bignum
+@end deffn
 
 
-@defun $quotient-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $quotient-bignum-flonum
+@end deffn
 
 
-@defun $quotient-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $quotient-flonum-fixnum
+@end deffn
 
 
-@defun $quotient-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $quotient-flonum-bignum
+@end deffn
 
 
-@defun $quotient-flonum-flonum
+@deffn {Unsafe Operation} $quotient-flonum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics remainder
 @subsection Remainder between numbers
 
 
-@defun $remainder-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $remainder-fixnum-number
+@end deffn
 
 
-@defun $remainder-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $remainder-number-fixnum
+@end deffn
 
 
-@defun $remainder-bignum-number
-@end defun
+@deffn {Unsafe Operation} $remainder-bignum-number
+@end deffn
 
 
-@defun $remainder-number-bignum
-@end defun
+@deffn {Unsafe Operation} $remainder-number-bignum
+@end deffn
 
 
-@defun $remainder-flonum-number
-@end defun
+@deffn {Unsafe Operation} $remainder-flonum-number
+@end deffn
 
 
-@defun $remainder-number-flonum
-@end defun
+@deffn {Unsafe Operation} $remainder-number-flonum
+@end deffn
 
 
-@defun $remainder-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $remainder-fixnum-fixnum
+@end deffn
 
 
-@defun $remainder-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $remainder-fixnum-bignum
+@end deffn
 
 
-@defun $remainder-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $remainder-fixnum-flonum
+@end deffn
 
 
-@defun $remainder-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $remainder-bignum-fixnum
+@end deffn
 
 
-@defun $remainder-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $remainder-bignum-bignum
+@end deffn
 
 
-@defun $remainder-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $remainder-bignum-flonum
+@end deffn
 
 
-@defun $remainder-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $remainder-flonum-fixnum
+@end deffn
 
 
-@defun $remainder-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $remainder-flonum-bignum
+@end deffn
 
 
-@defun $remainder-flonum-flonum
+@deffn {Unsafe Operation} $remainder-flonum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics modulo
 @subsection Modulo between numbers
 
 
-@defun $modulo-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $modulo-fixnum-number
+@end deffn
 
 
-@defun $modulo-bignum-number
-@end defun
+@deffn {Unsafe Operation} $modulo-bignum-number
+@end deffn
 
 
-@defun $modulo-flonum-number
-@end defun
+@deffn {Unsafe Operation} $modulo-flonum-number
+@end deffn
 
 
-@defun $modulo-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $modulo-number-fixnum
+@end deffn
 
 
-@defun $modulo-number-bignum
-@end defun
+@deffn {Unsafe Operation} $modulo-number-bignum
+@end deffn
 
 
-@defun $modulo-number-flonum
-@end defun
+@deffn {Unsafe Operation} $modulo-number-flonum
+@end deffn
 
 
-@defun $modulo-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $modulo-fixnum-fixnum
+@end deffn
 
 
-@defun $modulo-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $modulo-fixnum-bignum
+@end deffn
 
 
-@defun $modulo-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $modulo-fixnum-flonum
+@end deffn
 
 
-@defun $modulo-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $modulo-bignum-fixnum
+@end deffn
 
 
-@defun $modulo-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $modulo-bignum-bignum
+@end deffn
 
 
-@defun $modulo-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $modulo-bignum-flonum
+@end deffn
 
 
-@defun $modulo-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $modulo-flonum-fixnum
+@end deffn
 
 
-@defun $modulo-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $modulo-flonum-bignum
+@end deffn
 
 
-@defun $modulo-flonum-flonum
+@deffn {Unsafe Operation} $modulo-flonum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics max
 @subsection Maximum between numbers
 
 
-@defun $max-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $max-fixnum-number
+@end deffn
 
 
-@defun $max-bignum-number
-@end defun
+@deffn {Unsafe Operation} $max-bignum-number
+@end deffn
 
 
-@defun $max-flonum-number
-@end defun
+@deffn {Unsafe Operation} $max-flonum-number
+@end deffn
 
 
-@defun $max-ratnum-number
-@end defun
+@deffn {Unsafe Operation} $max-ratnum-number
+@end deffn
 
 
-@defun $max-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $max-number-fixnum
+@end deffn
 
 
-@defun $max-number-bignum
-@end defun
+@deffn {Unsafe Operation} $max-number-bignum
+@end deffn
 
 
-@defun $max-number-flonum
-@end defun
+@deffn {Unsafe Operation} $max-number-flonum
+@end deffn
 
 
-@defun $max-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $max-number-ratnum
+@end deffn
 
 
-@defun $max-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $max-fixnum-fixnum
+@end deffn
 
 
-@defun $max-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $max-fixnum-bignum
+@end deffn
 
 
-@defun $max-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $max-fixnum-flonum
+@end deffn
 
 
-@defun $max-fixnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $max-fixnum-ratnum
+@end deffn
 
 
-@defun $max-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $max-bignum-fixnum
+@end deffn
 
 
-@defun $max-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $max-bignum-bignum
+@end deffn
 
 
-@defun $max-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $max-bignum-flonum
+@end deffn
 
 
-@defun $max-bignum-ratnum
-@end defun
+@deffn {Unsafe Operation} $max-bignum-ratnum
+@end deffn
 
 
-@defun $max-flonum-flonum
-@end defun
+@deffn {Unsafe Operation} $max-flonum-flonum
+@end deffn
 
 
-@defun $max-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $max-flonum-fixnum
+@end deffn
 
 
-@defun $max-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $max-flonum-bignum
+@end deffn
 
 
-@defun $max-flonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $max-flonum-ratnum
+@end deffn
 
 
-@defun $max-ratnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $max-ratnum-fixnum
+@end deffn
 
 
-@defun $max-ratnum-bignum
-@end defun
+@deffn {Unsafe Operation} $max-ratnum-bignum
+@end deffn
 
 
-@defun $max-ratnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $max-ratnum-ratnum
+@end deffn
 
 
-@defun $max-ratnum-flonum
+@deffn {Unsafe Operation} $max-ratnum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics min
 @subsection Minimum between numbers
 
 
-@defun $min-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $min-fixnum-number
+@end deffn
 
 
-@defun $min-bignum-number
-@end defun
+@deffn {Unsafe Operation} $min-bignum-number
+@end deffn
 
 
-@defun $min-flonum-number
-@end defun
+@deffn {Unsafe Operation} $min-flonum-number
+@end deffn
 
 
-@defun $min-ratnum-number
-@end defun
+@deffn {Unsafe Operation} $min-ratnum-number
+@end deffn
 
 
-@defun $min-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $min-number-fixnum
+@end deffn
 
 
-@defun $min-number-bignum
-@end defun
+@deffn {Unsafe Operation} $min-number-bignum
+@end deffn
 
 
-@defun $min-number-flonum
-@end defun
+@deffn {Unsafe Operation} $min-number-flonum
+@end deffn
 
 
-@defun $min-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $min-number-ratnum
+@end deffn
 
 
-@defun $min-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $min-fixnum-fixnum
+@end deffn
 
 
-@defun $min-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $min-fixnum-bignum
+@end deffn
 
 
-@defun $min-fixnum-flonum
-@end defun
+@deffn {Unsafe Operation} $min-fixnum-flonum
+@end deffn
 
 
-@defun $min-fixnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $min-fixnum-ratnum
+@end deffn
 
 
-@defun $min-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $min-bignum-fixnum
+@end deffn
 
 
-@defun $min-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $min-bignum-bignum
+@end deffn
 
 
-@defun $min-bignum-flonum
-@end defun
+@deffn {Unsafe Operation} $min-bignum-flonum
+@end deffn
 
 
-@defun $min-bignum-ratnum
-@end defun
+@deffn {Unsafe Operation} $min-bignum-ratnum
+@end deffn
 
 
-@defun $min-flonum-flonum
-@end defun
+@deffn {Unsafe Operation} $min-flonum-flonum
+@end deffn
 
 
-@defun $min-flonum-fixnum
-@end defun
+@deffn {Unsafe Operation} $min-flonum-fixnum
+@end deffn
 
 
-@defun $min-flonum-bignum
-@end defun
+@deffn {Unsafe Operation} $min-flonum-bignum
+@end deffn
 
 
-@defun $min-flonum-ratnum
-@end defun
+@deffn {Unsafe Operation} $min-flonum-ratnum
+@end deffn
 
 
-@defun $min-ratnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $min-ratnum-fixnum
+@end deffn
 
 
-@defun $min-ratnum-bignum
-@end defun
+@deffn {Unsafe Operation} $min-ratnum-bignum
+@end deffn
 
 
-@defun $min-ratnum-ratnum
-@end defun
+@deffn {Unsafe Operation} $min-ratnum-ratnum
+@end deffn
 
 
-@defun $min-ratnum-flonum
+@deffn {Unsafe Operation} $min-ratnum-flonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics abs
 @subsection Absolute value of numbers
 
 
-@defun $abs-bignum
-@end defun
+@deffn {Unsafe Operation} $abs-bignum
+@end deffn
 
 
-@defun $abs-flonum
-@end defun
+@deffn {Unsafe Operation} $abs-flonum
+@end deffn
 
 
-@defun $abs-ratnum
+@deffn {Unsafe Operation} $abs-ratnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics expt
 @subsection Raising numbers to power
 
 
-@defun $expt-number-fixnum
-@end defun
+@deffn {Unsafe Operation} $expt-number-fixnum
+@end deffn
 
 
-@defun $expt-number-bignum
-@end defun
+@deffn {Unsafe Operation} $expt-number-bignum
+@end deffn
 
 
-@defun $expt-number-flonum
-@end defun
+@deffn {Unsafe Operation} $expt-number-flonum
+@end deffn
 
 
-@defun $expt-number-ratnum
-@end defun
+@deffn {Unsafe Operation} $expt-number-ratnum
+@end deffn
 
 
-@defun $expt-number-compnum
-@end defun
+@deffn {Unsafe Operation} $expt-number-compnum
+@end deffn
 
 
-@defun $expt-number-cflonum
+@deffn {Unsafe Operation} $expt-number-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics sqrt
 @subsection Square root of numbers
 
 
-@defun $sqrt-fixnum
-@end defun
+@deffn {Unsafe Operation} $sqrt-fixnum
+@end deffn
 
 
-@defun $sqrt-flonum
-@end defun
+@deffn {Unsafe Operation} $sqrt-flonum
+@end deffn
 
 
-@defun $sqrt-bignum
-@end defun
+@deffn {Unsafe Operation} $sqrt-bignum
+@end deffn
 
 
-@defun $sqrt-ratnum
-@end defun
+@deffn {Unsafe Operation} $sqrt-ratnum
+@end deffn
 
 
-@defun $sqrt-compnum
-@end defun
+@deffn {Unsafe Operation} $sqrt-compnum
+@end deffn
 
 
-@defun $sqrt-cflonum
+@deffn {Unsafe Operation} $sqrt-cflonum
 
-@end defun
+@end deffn
 
 @c ------------------------------------------------------------
 
 
-@defun $exact-integer-sqrt-fixnum
-@end defun
+@deffn {Unsafe Operation} $exact-integer-sqrt-fixnum
+@end deffn
 
 
-@defun $exact-integer-sqrt-bignum
+@deffn {Unsafe Operation} $exact-integer-sqrt-bignum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics log
 @subsection Logarithms of numbers
 
 
-@defun $log-fixnum
-@end defun
+@deffn {Unsafe Operation} $log-fixnum
+@end deffn
 
 
-@defun $log-flonum
-@end defun
+@deffn {Unsafe Operation} $log-flonum
+@end deffn
 
 
-@defun $log-bignum
-@end defun
+@deffn {Unsafe Operation} $log-bignum
+@end deffn
 
 
-@defun $log-ratnum
-@end defun
+@deffn {Unsafe Operation} $log-ratnum
+@end deffn
 
 
-@defun $log-compnum
-@end defun
+@deffn {Unsafe Operation} $log-compnum
+@end deffn
 
 
-@defun $log-cflonum
+@deffn {Unsafe Operation} $log-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics exp
 @subsection Exponentials of numbers
 
 
-@defun $exp-fixnum
-@end defun
+@deffn {Unsafe Operation} $exp-fixnum
+@end deffn
 
 
-@defun $exp-bignum
-@end defun
+@deffn {Unsafe Operation} $exp-bignum
+@end deffn
 
 
-@defun $exp-ratnum
-@end defun
+@deffn {Unsafe Operation} $exp-ratnum
+@end deffn
 
 
-@defun $exp-compnum
-@end defun
+@deffn {Unsafe Operation} $exp-compnum
+@end deffn
 
 
-@defun $exp-cflonum
+@deffn {Unsafe Operation} $exp-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics sin
 @subsection Trigonometric sine
 
 
-@defun $sin-fixnum
-@end defun
+@deffn {Unsafe Operation} $sin-fixnum
+@end deffn
 
 
-@defun $sin-bignum
-@end defun
+@deffn {Unsafe Operation} $sin-bignum
+@end deffn
 
 
-@defun $sin-ratnum
-@end defun
+@deffn {Unsafe Operation} $sin-ratnum
+@end deffn
 
 
-@defun $sin-cflonum
-@end defun
+@deffn {Unsafe Operation} $sin-cflonum
+@end deffn
 
 
-@defun $sin-compnum
+@deffn {Unsafe Operation} $sin-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics cos
 @subsection Trigonometric cosine
 
 
-@defun $cos-fixnum
-@end defun
+@deffn {Unsafe Operation} $cos-fixnum
+@end deffn
 
 
-@defun $cos-bignum
-@end defun
+@deffn {Unsafe Operation} $cos-bignum
+@end deffn
 
 
-@defun $cos-ratnum
-@end defun
+@deffn {Unsafe Operation} $cos-ratnum
+@end deffn
 
 
-@defun $cos-cflonum
-@end defun
+@deffn {Unsafe Operation} $cos-cflonum
+@end deffn
 
 
-@defun $cos-compnum
+@deffn {Unsafe Operation} $cos-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics tan
 @subsection Trigonometric tangent
 
 
-@defun $tan-fixnum
-@end defun
+@deffn {Unsafe Operation} $tan-fixnum
+@end deffn
 
 
-@defun $tan-bignum
-@end defun
+@deffn {Unsafe Operation} $tan-bignum
+@end deffn
 
 
-@defun $tan-ratnum
-@end defun
+@deffn {Unsafe Operation} $tan-ratnum
+@end deffn
 
 
-@defun $tan-compnum
-@end defun
+@deffn {Unsafe Operation} $tan-compnum
+@end deffn
 
 
-@defun $tan-cflonum
+@deffn {Unsafe Operation} $tan-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics asin
 @subsection Trigonometric arc sine
 
 
-@defun $asin-fixnum
-@end defun
+@deffn {Unsafe Operation} $asin-fixnum
+@end deffn
 
 
-@defun $asin-bignum
-@end defun
+@deffn {Unsafe Operation} $asin-bignum
+@end deffn
 
 
-@defun $asin-ratnum
-@end defun
+@deffn {Unsafe Operation} $asin-ratnum
+@end deffn
 
 
-@defun $asin-flonum
-@end defun
+@deffn {Unsafe Operation} $asin-flonum
+@end deffn
 
 
-@defun $asin-cflonum
-@end defun
+@deffn {Unsafe Operation} $asin-cflonum
+@end deffn
 
 
-@defun $asin-compnum
+@deffn {Unsafe Operation} $asin-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics acos
 @subsection Trigonometric arc cosine
 
 
-@defun $acos-fixnum
-@end defun
+@deffn {Unsafe Operation} $acos-fixnum
+@end deffn
 
 
-@defun $acos-bignum
-@end defun
+@deffn {Unsafe Operation} $acos-bignum
+@end deffn
 
 
-@defun $acos-ratnum
-@end defun
+@deffn {Unsafe Operation} $acos-ratnum
+@end deffn
 
 
-@defun $acos-flonum
-@end defun
+@deffn {Unsafe Operation} $acos-flonum
+@end deffn
 
 
-@defun $acos-cflonum
-@end defun
+@deffn {Unsafe Operation} $acos-cflonum
+@end deffn
 
 
-@defun $acos-compnum
+@deffn {Unsafe Operation} $acos-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics atan
 @subsection Trigonometric arc tangent
 
 
-@defun $atan2-real-real
+@deffn {Unsafe Operation} $atan2-real-real
 
-@end defun
-
-
-@defun $atan-fixnum
-@end defun
+@end deffn
 
 
-@defun $atan-ratnum
-@end defun
+@deffn {Unsafe Operation} $atan-fixnum
+@end deffn
 
 
-@defun $atan-bignum
-@end defun
+@deffn {Unsafe Operation} $atan-ratnum
+@end deffn
 
 
-@defun $atan-cflonum
-@end defun
+@deffn {Unsafe Operation} $atan-bignum
+@end deffn
 
 
-@defun $atan-compnum
+@deffn {Unsafe Operation} $atan-cflonum
+@end deffn
 
-@end defun
+
+@deffn {Unsafe Operation} $atan-compnum
+
+@end deffn
 
 @c page
 @node syslib numerics sinh
 @subsection Hyperbolic sine
 
 
-@defun $sinh-fixnum
-@end defun
+@deffn {Unsafe Operation} $sinh-fixnum
+@end deffn
 
 
-@defun $sinh-bignum
-@end defun
+@deffn {Unsafe Operation} $sinh-bignum
+@end deffn
 
 
-@defun $sinh-ratnum
-@end defun
+@deffn {Unsafe Operation} $sinh-ratnum
+@end deffn
 
 
-@defun $sinh-compnum
-@end defun
+@deffn {Unsafe Operation} $sinh-compnum
+@end deffn
 
 
-@defun $sinh-cflonum
+@deffn {Unsafe Operation} $sinh-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics cosh
 @subsection Hyperbolic cosine
 
 
-@defun $cosh-fixnum
-@end defun
+@deffn {Unsafe Operation} $cosh-fixnum
+@end deffn
 
 
-@defun $cosh-bignum
-@end defun
+@deffn {Unsafe Operation} $cosh-bignum
+@end deffn
 
 
-@defun $cosh-ratnum
-@end defun
+@deffn {Unsafe Operation} $cosh-ratnum
+@end deffn
 
 
-@defun $cosh-compnum
-@end defun
+@deffn {Unsafe Operation} $cosh-compnum
+@end deffn
 
 
-@defun $cosh-cflonum
+@deffn {Unsafe Operation} $cosh-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics tanh
 @subsection Hyperbolic tangent
 
 
-@defun $tanh-fixnum
-@end defun
+@deffn {Unsafe Operation} $tanh-fixnum
+@end deffn
 
 
-@defun $tanh-bignum
-@end defun
+@deffn {Unsafe Operation} $tanh-bignum
+@end deffn
 
 
-@defun $tanh-ratnum
-@end defun
+@deffn {Unsafe Operation} $tanh-ratnum
+@end deffn
 
 
-@defun $tanh-compnum
-@end defun
+@deffn {Unsafe Operation} $tanh-compnum
+@end deffn
 
 
-@defun $tanh-cflonum
+@deffn {Unsafe Operation} $tanh-cflonum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics asinh
 @subsection Hyperbolic arc sine
 
 
-@defun $asinh-fixnum
-@end defun
+@deffn {Unsafe Operation} $asinh-fixnum
+@end deffn
 
 
-@defun $asinh-bignum
-@end defun
+@deffn {Unsafe Operation} $asinh-bignum
+@end deffn
 
 
-@defun $asinh-ratnum
-@end defun
+@deffn {Unsafe Operation} $asinh-ratnum
+@end deffn
 
 
-@defun $asinh-cflonum
-@end defun
+@deffn {Unsafe Operation} $asinh-cflonum
+@end deffn
 
 
-@defun $asinh-compnum
+@deffn {Unsafe Operation} $asinh-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics acosh
 @subsection Hyperbolic arc cosine
 
 
-@defun $acosh-fixnum
-@end defun
+@deffn {Unsafe Operation} $acosh-fixnum
+@end deffn
 
 
-@defun $acosh-bignum
-@end defun
+@deffn {Unsafe Operation} $acosh-bignum
+@end deffn
 
 
-@defun $acosh-ratnum
-@end defun
+@deffn {Unsafe Operation} $acosh-ratnum
+@end deffn
 
 
-@defun $acosh-flonum
-@end defun
+@deffn {Unsafe Operation} $acosh-flonum
+@end deffn
 
 
-@defun $acosh-cflonum
-@end defun
+@deffn {Unsafe Operation} $acosh-cflonum
+@end deffn
 
 
-@defun $acosh-compnum
+@deffn {Unsafe Operation} $acosh-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics atanh
 @subsection Hyperbolic arc tangent
 
 
-@defun $atanh-fixnum
-@end defun
+@deffn {Unsafe Operation} $atanh-fixnum
+@end deffn
 
 
-@defun $atanh-bignum
-@end defun
+@deffn {Unsafe Operation} $atanh-bignum
+@end deffn
 
 
-@defun $atanh-ratnum
-@end defun
+@deffn {Unsafe Operation} $atanh-ratnum
+@end deffn
 
 
-@defun $atanh-flonum
-@end defun
+@deffn {Unsafe Operation} $atanh-flonum
+@end deffn
 
 
-@defun $atanh-cflonum
-@end defun
+@deffn {Unsafe Operation} $atanh-cflonum
+@end deffn
 
 
-@defun $atanh-compnum
+@deffn {Unsafe Operation} $atanh-compnum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics bitnot
 @subsection Bitwise logic not
 
 
-@defun $bitwise-not-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-not-fixnum
+@end deffn
 
 
-@defun $bitwise-not-bignum
+@deffn {Unsafe Operation} $bitwise-not-bignum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics bitand
 @subsection Bitwise logic and
 
 
-@defun $bitwise-and-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $bitwise-and-fixnum-number
+@end deffn
 
 
-@defun $bitwise-and-bignum-number
-@end defun
+@deffn {Unsafe Operation} $bitwise-and-bignum-number
+@end deffn
 
 
-@defun $bitwise-and-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-and-fixnum-fixnum
+@end deffn
 
 
-@defun $bitwise-and-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $bitwise-and-fixnum-bignum
+@end deffn
 
 
-@defun $bitwise-and-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-and-bignum-fixnum
+@end deffn
 
 
-@defun $bitwise-and-bignum-bignum
+@deffn {Unsafe Operation} $bitwise-and-bignum-bignum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics bitior
 @subsection Bitwise logic inclusive or
 
 
-@defun $bitwise-ior-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $bitwise-ior-fixnum-number
+@end deffn
 
 
-@defun $bitwise-ior-bignum-number
-@end defun
+@deffn {Unsafe Operation} $bitwise-ior-bignum-number
+@end deffn
 
 
-@defun $bitwise-ior-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-ior-fixnum-fixnum
+@end deffn
 
 
-@defun $bitwise-ior-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $bitwise-ior-fixnum-bignum
+@end deffn
 
 
-@defun $bitwise-ior-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-ior-bignum-fixnum
+@end deffn
 
 
-@defun $bitwise-ior-bignum-bignum
+@deffn {Unsafe Operation} $bitwise-ior-bignum-bignum
 
-@end defun
+@end deffn
 
 @c page
 @node syslib numerics bitxor
 @subsection Bitwise logic exclusive or
 
 
-@defun $bitwise-xor-fixnum-number
-@end defun
+@deffn {Unsafe Operation} $bitwise-xor-fixnum-number
+@end deffn
 
 
-@defun $bitwise-xor-bignum-number
-@end defun
+@deffn {Unsafe Operation} $bitwise-xor-bignum-number
+@end deffn
 
 
-@defun $bitwise-xor-fixnum-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-xor-fixnum-fixnum
+@end deffn
 
 
-@defun $bitwise-xor-fixnum-bignum
-@end defun
+@deffn {Unsafe Operation} $bitwise-xor-fixnum-bignum
+@end deffn
 
 
-@defun $bitwise-xor-bignum-fixnum
-@end defun
+@deffn {Unsafe Operation} $bitwise-xor-bignum-fixnum
+@end deffn
 
 
-@defun $bitwise-xor-bignum-bignum
-@end defun
+@deffn {Unsafe Operation} $bitwise-xor-bignum-bignum
+@end deffn
 
 @c page
 @node syslib chars
