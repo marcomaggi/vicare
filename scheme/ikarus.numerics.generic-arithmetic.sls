@@ -111,7 +111,350 @@
     error@add1			error@sub1
     bytevector->bignum		bignum->bytevector
 
-    ;; the following go in (ikarus system $numerics)
+;;; --------------------------------------------------------------------
+;;; the following go in (ikarus system $numerics)
+
+    $neg-number		$neg-fixnum	$neg-bignum
+    $neg-flonum		$neg-ratnum	$neg-compnum
+    $neg-cflonum
+
+    $inv-number		$inv-fixnum	$inv-bignum
+    $inv-flonum		$inv-ratnum	$inv-compnum
+    $inv-cflonum
+
+    $add-number-number		$add-fixnum-number	$add-bignum-number
+    $add-flonum-number		$add-ratnum-number	$add-compnum-number
+    $add-cflonum-number		$add-number-fixnum	$add-number-bignum
+    $add-number-flonum		$add-number-ratnum	$add-number-compnum
+    $add-number-cflonum		$add-fixnum-fixnum	$add-fixnum-bignum
+    $add-fixnum-flonum		$add-fixnum-ratnum	$add-fixnum-compnum
+    $add-fixnum-cflonum		$add-bignum-fixnum	$add-bignum-bignum
+    $add-bignum-flonum		$add-bignum-ratnum	$add-bignum-compnum
+    $add-bignum-cflonum		$add-flonum-fixnum	$add-flonum-bignum
+    $add-flonum-flonum		$add-flonum-ratnum	$add-flonum-compnum
+    $add-flonum-cflonum		$add-ratnum-fixnum	$add-ratnum-bignum
+    $add-ratnum-flonum		$add-ratnum-ratnum	$add-ratnum-compnum
+    $add-ratnum-cflonum		$add-compnum-fixnum	$add-compnum-bignum
+    $add-compnum-ratnum		$add-compnum-compnum	$add-compnum-flonum
+    $add-compnum-cflonum	$add-cflonum-fixnum	$add-cflonum-bignum
+    $add-cflonum-ratnum		$add-cflonum-flonum	$add-cflonum-compnum
+    $add-cflonum-cflonum
+
+    $sub-number-number
+    $sub-fixnum-number
+    $sub-bignum-number
+    $sub-flonum-number
+    $sub-ratnum-number
+    $sub-compnum-number
+    $sub-cflonum-number
+    $sub-number-fixnum
+    $sub-number-bignum
+    $sub-number-flonum
+    $sub-number-ratnum
+    $sub-number-compnum
+    $sub-number-cflonum
+    $sub-fixnum-fixnum
+    $sub-fixnum-bignum
+    $sub-fixnum-flonum
+    $sub-fixnum-ratnum
+    $sub-fixnum-compnum
+    $sub-fixnum-cflonum
+    $sub-bignum-fixnum
+    $sub-bignum-bignum
+    $sub-bignum-flonum
+    $sub-bignum-ratnum
+    $sub-bignum-compnum
+    $sub-bignum-cflonum
+    $sub-flonum-fixnum
+    $sub-flonum-bignum
+    $sub-flonum-ratnum
+    $sub-flonum-flonum
+    $sub-flonum-compnum
+    $sub-flonum-cflonum
+    $sub-ratnum-fixnum
+    $sub-ratnum-bignum
+    $sub-ratnum-flonum
+    $sub-ratnum-ratnum
+    $sub-ratnum-compnum
+    $sub-ratnum-cflonum
+    $sub-compnum-fixnum
+    $sub-compnum-bignum
+    $sub-compnum-ratnum
+    $sub-compnum-compnum
+    $sub-compnum-flonum
+    $sub-compnum-cflonum
+    $sub-cflonum-fixnum
+    $sub-cflonum-bignum
+    $sub-cflonum-ratnum
+    $sub-cflonum-flonum
+    $sub-cflonum-compnum
+    $sub-cflonum-cflonum
+
+    $mul-number-number
+    $mul-fixnum-number
+    $mul-bignum-number
+    $mul-flonum-number
+    $mul-ratnum-number
+    $mul-compnum-number
+    $mul-cflonum-number
+    $mul-number-fixnum
+    $mul-number-bignum
+    $mul-number-flonum
+    $mul-number-ratnum
+    $mul-number-compnum
+    $mul-number-cflonum
+    $mul-fixnum-fixnum
+    $mul-fixnum-bignum
+    $mul-fixnum-flonum
+    $mul-fixnum-ratnum
+    $mul-fixnum-compnum
+    $mul-fixnum-cflonum
+    $mul-bignum-fixnum
+    $mul-bignum-bignum
+    $mul-bignum-flonum
+    $mul-bignum-ratnum
+    $mul-bignum-compnum
+    $mul-bignum-cflonum
+    $mul-flonum-flonum
+    $mul-flonum-cflonum
+    $mul-flonum-fixnum
+    $mul-flonum-bignum
+    $mul-flonum-ratnum
+    $mul-flonum-compnum
+    $mul-ratnum-fixnum
+    $mul-ratnum-bignum
+    $mul-ratnum-flonum
+    $mul-ratnum-ratnum
+    $mul-ratnum-compnum
+    $mul-ratnum-cflonum
+    $mul-compnum-fixnum
+    $mul-compnum-bignum
+    $mul-compnum-ratnum
+    $mul-compnum-flonum
+    $mul-compnum-compnum
+    $mul-compnum-cflonum
+    $mul-cflonum-fixnum
+    $mul-cflonum-bignum
+    $mul-cflonum-ratnum
+    $mul-cflonum-flonum
+    $mul-cflonum-compnum
+    $mul-cflonum-cflonum
+
+    $div-number-number
+    $div-flonum-number
+    $div-fixnum-number
+    $div-bignum-number
+    $div-ratnum-number
+    $div-compnum-number
+    $div-cflonum-number
+    $div-number-flonum
+    $div-number-fixnum
+    $div-number-bignum
+    $div-number-ratnum
+    $div-number-compnum
+    $div-number-cflonum
+    $div-fixnum-flonum
+    $div-fixnum-fixnum
+    $div-fixnum-bignum
+    $div-fixnum-ratnum
+    $div-fixnum-compnum
+    $div-fixnum-cflonum
+    $div-bignum-fixnum
+    $div-bignum-bignum
+    $div-bignum-flonum
+    $div-bignum-ratnum
+    $div-bignum-compnum
+    $div-bignum-cflonum
+    $div-ratnum-fixnum
+    $div-ratnum-bignum
+    $div-ratnum-ratnum
+    $div-ratnum-flonum
+    $div-ratnum-compnum
+    $div-ratnum-cflonum
+    $div-flonum-flonum
+    $div-flonum-cflonum
+    $div-flonum-fixnum
+    $div-flonum-bignum
+    $div-flonum-ratnum
+    $div-flonum-compnum
+    $div-compnum-fixnum
+    $div-compnum-bignum
+    $div-compnum-ratnum
+    $div-compnum-flonum
+    $div-compnum-compnum
+    $div-compnum-cflonum
+    $div-cflonum-fixnum
+    $div-cflonum-bignum
+    $div-cflonum-ratnum
+    $div-cflonum-flonum
+    $div-cflonum-compnum
+    $div-cflonum-cflonum
+
+    $sqr-fixnum
+    $sqr-bignum
+    $sqr-ratnum
+    $sqr-compnum
+    $sqr-cflonum
+
+    $gcd-number-number
+    $gcd-fixnum-number
+    $gcd-bignum-number
+    $gcd-flonum-number
+    $gcd-number-fixnum
+    $gcd-number-bignum
+    $gcd-number-flonum
+    $gcd-fixnum-fixnum
+    $gcd-fixnum-bignum
+    $gcd-fixnum-flonum
+    $gcd-bignum-fixnum
+    $gcd-bignum-bignum
+    $gcd-bignum-flonum
+    $gcd-flonum-fixnum
+    $gcd-flonum-bignum
+    $gcd-flonum-flonum
+
+    $lcm-number-number
+    $lcm-fixnum-number
+    $lcm-bignum-number
+    $lcm-flonum-number
+    $lcm-number-fixnum
+    $lcm-number-bignum
+    $lcm-number-flonum
+    $lcm-fixnum-fixnum
+    $lcm-fixnum-bignum
+    $lcm-fixnum-flonum
+    $lcm-bignum-fixnum
+    $lcm-bignum-bignum
+    $lcm-bignum-flonum
+    $lcm-flonum-fixnum
+    $lcm-flonum-bignum
+    $lcm-flonum-flonum
+
+    $quotient+remainder-fixnum-number
+    $quotient+remainder-number-fixnum
+    $quotient+remainder-bignum-number
+    $quotient+remainder-number-bignum
+    $quotient+remainder-flonum-number
+    $quotient+remainder-number-flonum
+    $quotient+remainder-fixnum-fixnum
+    $quotient+remainder-bignum-fixnum
+    $quotient+remainder-fixnum-bignum
+    $quotient+remainder-bignum-bignum
+    $quotient+remainder-fixnum-flonum
+    $quotient+remainder-bignum-flonum
+    $quotient+remainder-flonum-fixnum
+    $quotient+remainder-flonum-bignum
+    $quotient+remainder-flonum-flonum
+
+    $quotient-fixnum-number
+    $quotient-number-fixnum
+    $quotient-bignum-number
+    $quotient-number-bignum
+    $quotient-flonum-number
+    $quotient-number-flonum
+    $quotient-fixnum-fixnum
+    $quotient-fixnum-bignum
+    $quotient-fixnum-flonum
+    $quotient-bignum-fixnum
+    $quotient-bignum-bignum
+    $quotient-bignum-flonum
+    $quotient-flonum-fixnum
+    $quotient-flonum-bignum
+    $quotient-flonum-flonum
+
+    $remainder-fixnum-number
+    $remainder-number-fixnum
+    $remainder-bignum-number
+    $remainder-number-bignum
+    $remainder-flonum-number
+    $remainder-number-flonum
+    $remainder-fixnum-fixnum
+    $remainder-fixnum-bignum
+    $remainder-fixnum-flonum
+    $remainder-bignum-fixnum
+    $remainder-bignum-bignum
+    $remainder-bignum-flonum
+    $remainder-flonum-fixnum
+    $remainder-flonum-bignum
+    $remainder-flonum-flonum
+
+    $modulo-fixnum-number
+    $modulo-bignum-number
+    $modulo-flonum-number
+    $modulo-number-fixnum
+    $modulo-number-bignum
+    $modulo-number-flonum
+    $modulo-fixnum-fixnum
+    $modulo-fixnum-bignum
+    $modulo-fixnum-flonum
+    $modulo-bignum-fixnum
+    $modulo-bignum-bignum
+    $modulo-bignum-flonum
+    $modulo-flonum-fixnum
+    $modulo-flonum-bignum
+    $modulo-flonum-flonum
+
+    $max-fixnum-number
+    $max-bignum-number
+    $max-flonum-number
+    $max-ratnum-number
+    $max-number-fixnum
+    $max-number-bignum
+    $max-number-flonum
+    $max-number-ratnum
+    $max-fixnum-fixnum
+    $max-fixnum-bignum
+    $max-fixnum-flonum
+    $max-fixnum-ratnum
+    $max-bignum-fixnum
+    $max-bignum-bignum
+    $max-bignum-flonum
+    $max-bignum-ratnum
+    $max-flonum-flonum
+    $max-flonum-fixnum
+    $max-flonum-bignum
+    $max-flonum-ratnum
+    $max-ratnum-fixnum
+    $max-ratnum-bignum
+    $max-ratnum-ratnum
+    $max-ratnum-flonum
+
+    $min-fixnum-number
+    $min-bignum-number
+    $min-flonum-number
+    $min-ratnum-number
+    $min-number-fixnum
+    $min-number-bignum
+    $min-number-flonum
+    $min-number-ratnum
+    $min-fixnum-fixnum
+    $min-fixnum-bignum
+    $min-fixnum-flonum
+    $min-fixnum-ratnum
+    $min-bignum-fixnum
+    $min-bignum-bignum
+    $min-bignum-flonum
+    $min-bignum-ratnum
+    $min-flonum-flonum
+    $min-flonum-fixnum
+    $min-flonum-bignum
+    $min-flonum-ratnum
+    $min-ratnum-fixnum
+    $min-ratnum-bignum
+    $min-ratnum-ratnum
+    $min-ratnum-flonum
+
+    $bignum-abs
+    $flonum-abs
+    $ratnum-abs
+
+    $expt-number-fixnum
+    $expt-number-bignum
+    $expt-number-flonum
+    $expt-number-ratnum
+    $expt-number-compnum
+    $expt-number-cflonum
+
     $sqrt-fixnum
     $sqrt-flonum
     $sqrt-bignum
@@ -119,101 +462,203 @@
     $sqrt-compnum
     $sqrt-cflonum
 
-    $exact-integer-sqrt/fixnum
-    $exact-integer-sqrt/bignum)
-  (import (except (ikarus)
-		  + - * / = < <= > >=
-		  min				max
-		  add1				sub1
-		  quotient			remainder
-		  quotient+remainder		modulo
-		  zero?
-		  positive?			negative?
-		  even?				odd?
+    $exact-integer-sqrt-fixnum
+    $exact-integer-sqrt-bignum
 
-		  ;; exactness
-		  exact->inexact		inexact
+    $log-fixnum
+    $log-flonum
+    $log-bignum
+    $log-ratnum
+    $log-compnum
+    $log-cflonum
 
-		  ;; part functions
-		  abs
-		  floor				ceiling
-		  round				truncate
-		  numerator			denominator
-		  gcd				lcm
+    $exp-fixnum
+    $exp-bignum
+    $exp-ratnum
+    $exp-compnum
+    $exp-cflonum
 
-		  ;; bitwise operations
-		  bitwise-and			bitwise-not
-		  bitwise-ior			bitwise-xor
-		  bitwise-if
-		  bitwise-arithmetic-shift-right
-		  bitwise-arithmetic-shift-left
-		  bitwise-arithmetic-shift
-		  bitwise-length		bitwise-copy-bit-field
-		  bitwise-copy-bit		bitwise-bit-field
-		  bitwise-reverse-bit-field	bitwise-rotate-bit-field
-		  sra				sll
+    $sin-fixnum
+    $sin-bignum
+    $sin-ratnum
+    $sin-cflonum
+    $sin-compnum
 
-		  ;; powers and square roots
-		  expt				sqr
-		  sqrt				exact-integer-sqrt
+    $cos-fixnum
+    $cos-bignum
+    $cos-ratnum
+    $cos-cflonum
+    $cos-compnum
 
-		  ;; logarithms and exponentials
-		  log exp
+    $tan-fixnum
+    $tan-bignum
+    $tan-ratnum
+    $tan-compnum
+    $tan-cflonum
 
-		  ;; trigonometric functions
-		  sin				asin
-		  cos				acos
-		  tan				atan
+    $asin-fixnum
+    $asin-bignum
+    $asin-ratnum
+    $asin-flonum
+    $asin-cflonum
+    $asin-compnum
 
-		  ;; hyperbolic functions
-		  sinh				asinh
-		  cosh				acosh
-		  tanh				atanh
+    $acos-fixnum
+    $acos-bignum
+    $acos-ratnum
+    $acos-flonum
+    $acos-cflonum
+    $acos-compnum
 
-		  ;; other functions
-		  number->string		real->flonum
-		  random
-		  error@add1			error@sub1
-		  bytevector->bignum		bignum->bytevector)
-    (ikarus system $pairs)
-    (except (ikarus system $fx)
-	    $fxpositive?	$fxnegative?
-	    $fxeven?		$fxodd?
-	    $fxabs
-	    $fxmodulo		$fxremainder)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Nov 18, 2012)
-    (only (ikarus fixnums)
+    $atan2-real-real
+
+    $atan-fixnum
+    $atan-ratnum
+    $atan-bignum
+    $atan-cflonum
+    $atan-compnum
+
+    $sinh-fixnum
+    $sinh-bignum
+    $sinh-ratnum
+    $sinh-compnum
+    $sinh-cflonum
+
+    $cosh-fixnum
+    $cosh-bignum
+    $cosh-ratnum
+    $cosh-compnum
+    $cosh-cflonum
+
+    $tanh-fixnum
+    $tanh-bignum
+    $tanh-ratnum
+    $tanh-compnum
+    $tanh-cflonum
+
+    $asinh-fixnum
+    $asinh-bignum
+    $asinh-ratnum
+    $asinh-cflonum
+    $asinh-compnum
+
+    $acosh-fixnum
+    $acosh-bignum
+    $acosh-ratnum
+    $acosh-flonum
+    $acosh-cflonum
+    $acosh-compnum
+
+    $atanh-fixnum
+    $atanh-bignum
+    $atanh-ratnum
+    $atanh-flonum
+    $atanh-cflonum
+    $atanh-compnum
+
+    $fixnum-bitwise-not
+    $bignum-bitwise-not
+
+    $bitwise-and-fixnum-number
+    $bitwise-and-bignum-number
+    $bitwise-and-fixnum-fixnum
+    $bitwise-and-fixnum-bignum
+    $bitwise-and-bignum-fixnum
+    $bitwise-and-bignum-bignum
+
+    $bitwise-ior-fixnum-number
+    $bitwise-ior-bignum-number
+    $bitwise-ior-fixnum-fixnum
+    $bitwise-ior-fixnum-bignum
+    $bitwise-ior-bignum-fixnum
+    $bitwise-ior-bignum-bignum
+
+    $bitwise-xor-fixnum-number
+    $bitwise-xor-bignum-number
+    $bitwise-xor-fixnum-fixnum
+    $bitwise-xor-fixnum-bignum
+    $bitwise-xor-bignum-fixnum
+    $bitwise-xor-bignum-bignum
+
+
+    )
+
+
+(import (except (ikarus)
+		+ - * / = < <= > >=
+		min				max
+		add1				sub1
+		quotient			remainder
+		quotient+remainder		modulo
+		zero?
+		positive?			negative?
+		even?				odd?
+
+		;; exactness
+		exact->inexact			inexact
+
+		;; part functions
+		abs
+		floor				ceiling
+		round				truncate
+		numerator			denominator
+		gcd				lcm
+
+		;; bitwise operations
+		bitwise-and			bitwise-not
+		bitwise-ior			bitwise-xor
+		bitwise-if
+		bitwise-arithmetic-shift-right
+		bitwise-arithmetic-shift-left
+		bitwise-arithmetic-shift
+		bitwise-length		bitwise-copy-bit-field
+		bitwise-copy-bit		bitwise-bit-field
+		bitwise-reverse-bit-field	bitwise-rotate-bit-field
+		sra				sll
+
+		;; powers and square roots
+		expt				sqr
+		sqrt				exact-integer-sqrt
+
+		;; logarithms and exponentials
+		log exp
+
+		;; trigonometric functions
+		sin				asin
+		cos				acos
+		tan				atan
+
+		;; hyperbolic functions
+		sinh				asinh
+		cosh				acosh
+		tanh				atanh
+
+		;; other functions
+		number->string			real->flonum
+		random
+		error@add1			error@sub1
+		bytevector->bignum		bignum->bytevector)
+  (ikarus system $pairs)
+  (except (ikarus system $fx)
 	  $fxpositive?		$fxnegative?
 	  $fxeven?		$fxodd?
 	  $fxabs
 	  $fxmodulo		$fxremainder)
-    (except (ikarus system $flonums)
-	    $flonum->exact
-	    $flzero?		$flzero?/negative
-	    $flpositive?	$flnegative?
-	    $fleven?		$flodd?
-	    $flsqr		$flsqrt
-	    $flnumerator	$fldenominator
-	    $flround
-	    $fllog		$flexp
-	    $flsin		$flasin
-	    $flcos		$flacos
-	    $fltan		$flatan
-	    $flsinh		$flasinh
-	    $flcosh		$flacosh
-	    $fltanh		$flatanh
-	    $flatan2)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Nov 17, 2012)
-    (only (ikarus flonums)
+  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+  ;;Maggi; Nov 18, 2012)
+  (only (ikarus fixnums)
+	$fxpositive?		$fxnegative?
+	$fxeven?		$fxodd?
+	$fxabs
+	$fxmodulo		$fxremainder)
+  (except (ikarus system $flonums)
 	  $flonum->exact
 	  $flzero?		$flzero?/negative
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
 	  $flsqr		$flsqrt
 	  $flnumerator		$fldenominator
-          $flround
+	  $flround
 	  $fllog		$flexp
 	  $flsin		$flasin
 	  $flcos		$flacos
@@ -222,27 +667,45 @@
 	  $flcosh		$flacosh
 	  $fltanh		$flatanh
 	  $flatan2)
-    (except (ikarus system $ratnums)
-	    $ratnum->flonum)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Nov 21, 2012)
-    (only (ikarus ratnums)
+  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+  ;;Maggi; Nov 17, 2012)
+  (only (ikarus flonums)
+	$flonum->exact
+	$flzero?		$flzero?/negative
+	$flpositive?		$flnegative?
+	$fleven?		$flodd?
+	$flsqr			$flsqrt
+	$flnumerator		$fldenominator
+	$flround
+	$fllog			$flexp
+	$flsin			$flasin
+	$flcos			$flacos
+	$fltan			$flatan
+	$flsinh			$flasinh
+	$flcosh			$flacosh
+	$fltanh			$flatanh
+	$flatan2)
+  (except (ikarus system $ratnums)
 	  $ratnum->flonum)
-    (except (ikarus system $bignums)
-	    $bignum-positive?	$bignum-negative?
-	    $bignum-even?	$bignum-odd?
-	    $bignum->flonum)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Nov 21, 2012)
-    (only (ikarus bignums)
+  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+  ;;Maggi; Nov 21, 2012)
+  (only (ikarus ratnums)
+	$ratnum->flonum)
+  (except (ikarus system $bignums)
 	  $bignum-positive?	$bignum-negative?
 	  $bignum-even?		$bignum-odd?
 	  $bignum->flonum)
-    (ikarus system $compnums)
-    (ikarus system $chars)
-    (ikarus system $strings)
-    (vicare arguments validation)
-    (vicare syntactic-extensions))
+  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+  ;;Maggi; Nov 21, 2012)
+  (only (ikarus bignums)
+	$bignum-positive?	$bignum-negative?
+	$bignum-even?		$bignum-odd?
+	$bignum->flonum)
+  (ikarus system $compnums)
+  (ikarus system $chars)
+  (ikarus system $strings)
+  (vicare arguments validation)
+  (vicare syntactic-extensions))
 
 
 ;;;; helpers
@@ -823,7 +1286,7 @@
 	 $sub-fixnum-number	$sub-bignum-number	$sub-flonum-number
 	 $sub-ratnum-number	$sub-compnum-number	$sub-cflonum-number
 	 $sub-number-fixnum	$sub-number-bignum	$sub-number-flonum
-	 $sub-ratnum-number	$sub-number-compnum	$sub-number-cflonum
+	 $sub-number-ratnum	$sub-number-compnum	$sub-number-cflonum
 	 $sub-fixnum-fixnum	$sub-fixnum-bignum	$sub-fixnum-flonum
 	 $sub-fixnum-ratnum	$sub-fixnum-compnum	$sub-fixnum-cflonum
 	 $sub-bignum-fixnum	$sub-bignum-bignum	$sub-bignum-flonum
@@ -4756,6 +5219,152 @@
   #| end of module: expt |# )
 
 
+;;;; square roots
+
+(module (sqrt
+	 $sqrt-fixnum
+	 $sqrt-flonum
+	 $sqrt-bignum
+	 $sqrt-ratnum
+	 $sqrt-compnum
+	 $sqrt-cflonum)
+
+  (define (sqrt x)
+    (cond-numeric-operand x
+      ((fixnum?)	($sqrt-fixnum x))
+      ((bignum?)	($sqrt-bignum x))
+      ((ratnum?)	($sqrt-ratnum x))
+      ((flonum?)	($sqrt-flonum x))
+      ((compnum?)	($sqrt-compnum x))
+      ((cflonum?)	($sqrt-cflonum x))
+      (else
+       (assertion-violation 'sqrt "expected number as argument" x))))
+
+  (define ($sqrt-flonum x)
+    ;;This can return both a flonum or a compnum!!!
+    ;;
+    (if ($fl< x 0.0)
+	;;This case includes: X = -0.0
+	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
+      (foreign-call "ikrt_fl_sqrt" x)))
+
+  (define ($sqrt-fixnum x)
+    (if ($fxnegative? x)
+	(make-rectangular 0 ($sqrt-fixnum ($fx- x)))
+      (let-values (((root residual) ($exact-integer-sqrt-fixnum x)))
+	(if ($fxzero? residual)
+	    root
+	  (foreign-call "ikrt_fx_sqrt" x)))))
+
+  (define ($sqrt-bignum x)
+    (if ($bignum-positive? x)
+	(let-values (((root residual) ($exact-integer-sqrt-bignum x)))
+	  (if (eq? residual 0)
+	      root
+	    (let ((v ($sqrt-flonum (inexact x))))
+	      ;;Could the (dropped) residual ever affect the answer?
+	      (if (flinfinite? v)
+		  (if (bignum? root)
+		      ;;The argument  1 makes it  round up in case  of a
+		      ;;tie.
+		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
+		    (inexact root))
+		v))))
+      (make-rectangular 0 ($sqrt-bignum (- x)))))
+
+  (define ($sqrt-ratnum x)
+    (/ (sqrt ($ratnum-n x))
+       (sqrt ($ratnum-d x))))
+
+  (define ($sqrt-compnum Z)
+    ;;The function:
+    ;;
+    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
+    ;;
+    ;;is computed as follows:
+    ;;
+    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep                         magn - Z.rep
+    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
+    ;;                   2.                                   2.
+    ;;
+    ;;See <http://en.wikipedia.org/wiki/Square_root>.
+    ;;
+    (let ((Z.rep (real-part Z))
+	  (Z.imp (imag-part Z)))
+      (let ((magn (sqrt (+ (* Z.rep Z.rep)
+			   (* Z.imp Z.imp))))
+	    (sgn  (if (> Z.imp 0) 1 -1)))
+	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
+			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
+
+  (define ($sqrt-cflonum Z)
+    ;;The function:
+    ;;
+    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
+    ;;
+    ;;is computed as follows:
+    ;;
+    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep                         magn - Z.rep
+    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
+    ;;                   2.                                   2.
+    ;;
+    ;;See <http://en.wikipedia.org/wiki/Square_root>.
+    ;;
+    (let ((Z.rep (real-part Z))
+	  (Z.imp (imag-part Z)))
+      ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
+      ;;compnum!!!
+      (let* ((magn  ($sqrt-flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
+	     (sgn   (if ($flpositive? Z.imp) 1 -1))
+	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
+	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
+	(make-rectangular R.rep R.imp))))
+
+  #| end of module: sqrt |# )
+
+;;; --------------------------------------------------------------------
+
+(module (exact-integer-sqrt
+	 $exact-integer-sqrt-fixnum
+	 $exact-integer-sqrt-bignum)
+
+  (define who 'exact-integer-sqrt)
+
+  (define (exact-integer-sqrt x)
+    (cond ((fixnum? x)
+	   ($exact-integer-sqrt-fixnum x))
+
+	  ((bignum? x)
+	   ($exact-integer-sqrt-bignum x))
+
+	  (else
+	   (assertion-violation who "expected exact integer as argument" x))))
+
+  (define ($exact-integer-sqrt-fixnum x)
+    (cond (($fx> x 0)
+	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
+	     (values s ($fx- x ($fx* s s)))))
+	  (($fxzero? x)
+	   (values 0 0))
+	  (else
+	   (%error-negative-operand x))))
+
+  (define ($exact-integer-sqrt-bignum x)
+    (if ($bignum-positive? x)
+	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
+	  (values ($car r) ($cdr r)))
+      (%error-negative-operand x)))
+
+  (define (%error-negative-operand x)
+    (assertion-violation who "expected non-negative exact integer as argument" x))
+
+  #| end of module: exact-integer-sqrt |# )
+
+
 (module (log
 	 $log-fixnum		$log-flonum		$log-bignum
 	 $log-ratnum		$log-compnum		$log-cflonum)
@@ -5672,152 +6281,6 @@
 						    ($sub-flonum-cflonum 1.0 x)))))
 
   #| end of module: atanh |# )
-
-
-;;;; square roots
-
-(module (sqrt
-	 $sqrt-fixnum
-	 $sqrt-flonum
-	 $sqrt-bignum
-	 $sqrt-ratnum
-	 $sqrt-compnum
-	 $sqrt-cflonum)
-
-  (define (sqrt x)
-    (cond-numeric-operand x
-      ((fixnum?)	($sqrt-fixnum x))
-      ((bignum?)	($sqrt-bignum x))
-      ((ratnum?)	($sqrt-ratnum x))
-      ((flonum?)	($sqrt-flonum x))
-      ((compnum?)	($sqrt-compnum x))
-      ((cflonum?)	($sqrt-cflonum x))
-      (else
-       (assertion-violation 'sqrt "expected number as argument" x))))
-
-  (define ($sqrt-flonum x)
-    ;;This can return both a flonum or a compnum!!!
-    ;;
-    (if ($fl< x 0.0)
-	;;This case includes: X = -0.0
-	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
-      (foreign-call "ikrt_fl_sqrt" x)))
-
-  (define ($sqrt-fixnum x)
-    (if ($fxnegative? x)
-	(make-rectangular 0 ($sqrt-fixnum ($fx- x)))
-      (let-values (((root residual) ($exact-integer-sqrt/fixnum x)))
-	(if ($fxzero? residual)
-	    root
-	  (foreign-call "ikrt_fx_sqrt" x)))))
-
-  (define ($sqrt-bignum x)
-    (if ($bignum-positive? x)
-	(let-values (((root residual) ($exact-integer-sqrt/bignum x)))
-	  (if (eq? residual 0)
-	      root
-	    (let ((v ($sqrt-flonum (inexact x))))
-	      ;;Could the (dropped) residual ever affect the answer?
-	      (if (flinfinite? v)
-		  (if (bignum? root)
-		      ;;The argument  1 makes it  round up in case  of a
-		      ;;tie.
-		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
-		    (inexact root))
-		v))))
-      (make-rectangular 0 ($sqrt-bignum (- x)))))
-
-  (define ($sqrt-ratnum x)
-    (/ (sqrt ($ratnum-n x))
-       (sqrt ($ratnum-d x))))
-
-  (define ($sqrt-compnum Z)
-    ;;The function:
-    ;;
-    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
-    ;;
-    ;;is computed as follows:
-    ;;
-    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
-    ;;
-    ;;              magn + Z.rep                         magn - Z.rep
-    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
-    ;;                   2.                                   2.
-    ;;
-    ;;See <http://en.wikipedia.org/wiki/Square_root>.
-    ;;
-    (let ((Z.rep (real-part Z))
-	  (Z.imp (imag-part Z)))
-      (let ((magn (sqrt (+ (* Z.rep Z.rep)
-			   (* Z.imp Z.imp))))
-	    (sgn  (if (> Z.imp 0) 1 -1)))
-	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
-			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
-
-  (define ($sqrt-cflonum Z)
-    ;;The function:
-    ;;
-    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
-    ;;
-    ;;is computed as follows:
-    ;;
-    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
-    ;;
-    ;;              magn + Z.rep                         magn - Z.rep
-    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
-    ;;                   2.                                   2.
-    ;;
-    ;;See <http://en.wikipedia.org/wiki/Square_root>.
-    ;;
-    (let ((Z.rep (real-part Z))
-	  (Z.imp (imag-part Z)))
-      ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
-      ;;compnum!!!
-      (let* ((magn  ($sqrt-flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
-	     (sgn   (if ($flpositive? Z.imp) 1 -1))
-	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
-	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
-	(make-rectangular R.rep R.imp))))
-
-  #| end of module: sqrt |# )
-
-;;; --------------------------------------------------------------------
-
-(module (exact-integer-sqrt
-	 $exact-integer-sqrt/fixnum
-	 $exact-integer-sqrt/bignum)
-
-  (define who 'exact-integer-sqrt)
-
-  (define (exact-integer-sqrt x)
-    (cond ((fixnum? x)
-	   ($exact-integer-sqrt/fixnum x))
-
-	  ((bignum? x)
-	   ($exact-integer-sqrt/bignum x))
-
-	  (else
-	   (assertion-violation who "expected exact integer as argument" x))))
-
-  (define ($exact-integer-sqrt/fixnum x)
-    (cond (($fx> x 0)
-	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
-	     (values s ($fx- x ($fx* s s)))))
-	  (($fxzero? x)
-	   (values 0 0))
-	  (else
-	   (%error-negative-operand x))))
-
-  (define ($exact-integer-sqrt/bignum x)
-    (if ($bignum-positive? x)
-	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
-	  (values ($car r) ($cdr r)))
-      (%error-negative-operand x)))
-
-  (define (%error-negative-operand x)
-    (assertion-violation who "expected non-negative exact integer as argument" x))
-
-  #| end of module: exact-integer-sqrt |# )
 
 
 (define (numerator x)
