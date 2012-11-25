@@ -168,23 +168,23 @@
 ;;; --------------------------------------------------------------------
 ;;; hyperbolic functions
 
-  (check (flonum? (glibc.glibc-sinh 1.2))	=> #t)
-  (check (glibc.glibc-sinh 1.2)	(=> almost=) 1.509461)
+  (check (flonum? (glibc.sinh 1.2))	=> #t)
+  (check (glibc.sinh 1.2)	(=> almost=) 1.509461)
 
-  (check (flonum? (glibc.glibc-cosh 1.2))	=> #t)
-  (check (glibc.glibc-cosh 1.2)	(=> almost=) 1.810656)
+  (check (flonum? (glibc.cosh 1.2))	=> #t)
+  (check (glibc.cosh 1.2)	(=> almost=) 1.810656)
 
-  (check (flonum? (glibc.glibc-tanh 1.2))	=> #t)
-  (check (glibc.glibc-tanh 1.2)	(=> almost=) 0.833655)
+  (check (flonum? (glibc.tanh 1.2))	=> #t)
+  (check (glibc.tanh 1.2)	(=> almost=) 0.833655)
 
-  (check (flonum? (glibc.glibc-asinh 1.2))	=> #t)
-  (check (glibc.glibc-asinh 1.2) (=> almost=) 1.015973)
+  (check (flonum? (glibc.asinh 1.2))	=> #t)
+  (check (glibc.asinh 1.2)	(=> almost=) 1.015973)
 
-  (check (flonum? (glibc.glibc-acosh 1.2))	=> #t)
-  (check (glibc.glibc-acosh 1.2) (=> almost=) 0.622363)
+  (check (flonum? (glibc.acosh 1.2))	=> #t)
+  (check (glibc.acosh 1.2)	(=> almost=) 0.622363)
 
-  (check (flonum? (glibc.glibc-atanh .2))	=> #t)
-  (check (glibc.glibc-atanh 0.2) (=> almost=) 0.202733)
+  (check (flonum? (glibc.atanh .2))	=> #t)
+  (check (glibc.atanh 0.2)	(=> almost=) 0.202733)
 
   (check (cflonum? (glibc.csinh 1.2+3.4i))	=> #t)
   (check (glibc.csinh 1.2+3.4i)	(=> almost=) -1.459345-0.462697i)
