@@ -1,0 +1,704 @@
+@node ffi
+@chapter Foreign functions interface
+
+
+The library @library{vicare ffi} interfaces with the host operating
+system and other external libraries exposing a C language interface; it
+is suggested to import the @ffi{} library with the prefix @code{ffi.},
+as in the following prelude:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+@end example
+
+The facilities of the @library{vicare ffi} give the Scheme program
+unrestricted access to the computer memory, allowing one to allocate,
+access, modify, and free memory as needed.  The facilities also allow
+the Scheme program to @dfn{call out} to system procedures as well as
+allow the native procedures to @dfn{call back} into Scheme.
+
+Additionally, @library{vicare ffi} reexports all the bindings from the
+library @library{ikarus system $foreign}.
+
+@menu
+* ffi libffi::                  Installing and using Libffi.
+* ffi dl::                      Accessing shared libraries.
+* ffi shared::                  System-agnostic shared libraries @api{}.
+* ffi call::                    Callouts and callbacks.
+@end menu
+
+@c page
+@node ffi libffi
+@section Installing and using Libffi
+
+
+Currently @value{PRJNAME} implements the foreign--functions interface
+(@ffi{}) using an extenal library: Libffi, originally by Anthony Green.
+Libffi can be found at:
+
+@center @url{http://sourceware.org/libffi/}
+
+@noindent
+and it is distributed under a liberal license (look for it at the site,
+basically we can do everything but remove the original copyright
+notice).
+
+On Unix--like systems, we can install Libffi with the traditional
+sequence:
+
+@example
+$ ./configure [options]
+$ make
+$ make install
+@end example
+
+@noindent
+and the makefile supports the @env{DESTDIR} environment variable for
+installation under a different directory prefix.
+
+@quotation
+@strong{NOTE} Libffi version 3.0.10 installs its header files under:
+
+@example
+$@{prefix@}/lib/libffi-3.0.10/include
+@end example
+
+@noindent
+and trying to use the @option{--includedir} option to
+@command{configure} will @strong{not} work in changing this.  It means
+that when configuring @value{PRJNAME} for installation we have to specify where
+the Libffi headers are to be found; @ref{overview install} for details.
+@end quotation
+
+@c page
+@node ffi dl
+@section Accessing foreign objects from Scheme
+
+
+Most system implementations of dynamic loading employ reference counting
+for @func{dlopen} and @func{dlclose} in that library resources are not
+freed until the number of calls to @func{dlclose} matches the number of
+calls to @func{dlopen}.  The following bindings are exported by
+@library{vicare ffi}.
+
+
+@defun dlopen
+@defunx dlopen @var{library-name}
+@defunx dlopen @var{library-name} @var{lazy?} @var{global?}
+Interface to the C function @cfunc{dlopen}, see the manual page
+@code{dlopen(3)}.  Load a platform shared library and return a pointer
+object representing a handler for the library, which can be used as
+argument for @func{dlsym} and @func{dlclose}.  If the library cannot be
+loaded: return @false{} and the procedure @func{dlerror} can be used to
+obtain the cause of the failure.
+
+When no arguments are present: the returned pointer handler references
+the current process and it can be used to retrieve pointers to functions
+already loaded, for example the functions exported by the standard C
+library.  The @var{lazy?} and @var{global?} arguments are meaningless in
+this case.
+
+When given: @var{library-name} must be a string or a bytevector
+representing the name of the library; if it is a string: it is converted
+to bytevector using the function referenced by
+@func{filename->string-func}.
+
+Library names are system--dependent and must include the appropriate
+suffix (for exapmle @code{*.so} on Linux, @code{*.dylib} on Darwin and
+@code{*.dll} on Cygwin).  @var{library-name} may include a full path
+which identifies the location of the library, or it may just be the name
+of the library in which case the system will lookup the library name
+using the @env{LD_LIBRARY_PATH} environment variable.
+
+The argument @var{lazy?} specifies how library dependencies are loaded.
+If true, @func{dlopen} delays the resolution and loading of dependent
+libraries until they are actually used.  If false, all library
+dependencies are loaded before the call to @func{dlopen} returns.
+@var{lazy?} defaults to @false{}.
+
+The argument @var{global?} specifies the scope of the symbols exported
+from the loaded library.  If true, all exported symbols become part of
+the running image, and subsequent @func{dlsym} calls may not need to
+specify the library from which the symbol is loaded.  If false, the
+exported symbols are not global and the library pointer needs to be
+specified for @func{dlsym}.  @var{global?} defaults to @false{}.
+@end defun
+
+
+@defun dlclose @var{handle}
+Interface to the C function @cfunc{dlclose}, see the manual page
+@code{dlclose(3)}.  Release the resources loaded from the library
+referenced by the pointer handler @var{handle}.  If successful return
+@true{}, else return @false{} and @func{dlerror} can be used to obtain
+the cause of the error.
+
+Closing a library renders all symbols and static data structures that
+the library exports invalid and the program may crash or corrupt its
+memory if such symbols are used after a library is closed.
+@end defun
+
+
+@defun dlsym @var{handle} @var{name}
+Interface to the C function @cfunc{dlsym}, see the manual page
+@code{dlsym(3)}.  Search the loaded library referenced by the pointer
+@var{handle} for an exported symbol whose name is represented by the
+string @var{name}.  If successful return a pointer object, else return
+@false{} and @code{dlerror} can be used to obtain the cause of the
+error.
+
+If the returned value references a function: it can be used as argument
+to the callout generators built by @func{make-c-callout-maker}.
+@end defun
+
+
+@defun dlerror
+Interface to the C function @cfunc{dlerror}, see the manual page
+@code{dlerror(3)}.  If any of the dynamic loading operations fails, the
+cause of the error can be obtained by calling @func{dlerror} which
+returns a string describing the error; return @false{} if there was no
+dynamic loading error.
+@end defun
+
+@c page
+@node ffi shared
+@section System--agnostic shared libraries @api{}
+
+
+This @api{} to load shared libraries is more system--agnostic with
+respect to the functions described in @ref{ffi dl}.  The following
+bindings are exported by @library{vicare ffi}.
+
+
+@defun open-shared-object
+@defunx open-shared-object @var{so-name}
+Load a platform shared library and return a pointer object representing
+a handler for the library.  If the library cannot be loaded: raise a
+non--continuable exception with condition types @condition{who},
+@condition{message}, @condition{shared-object-opening-error}.
+
+When no arguments are present: the returned pointer handler references
+the current process and it can be used to retrieve pointers to functions
+already loaded, for example the functions exported by the standard C
+library.
+
+When given: @var{so-name} must be a string representing the name of the
+library; library names are system--dependent and must include the
+appropriate suffix (for exapmle @code{*.so} on Linux, @code{*.dylib} on
+Darwin and @code{*.dll} on Cygwin).  @var{so-name} may include a full
+path which identifies the location of the library, or it may just be the
+name of the library.
+
+@quotation
+@strong{For Unix} We can find documentation about the search path of
+shared objects in the manual page of @cfunc{dlopen}.  The system will
+lookup the library name using the @env{LD_LIBRARY_PATH} environment
+variable.
+@end quotation
+@end defun
+
+
+@defun close-shared-object @var{so-handle}
+Release the resources loaded from the library referenced by the
+@var{so-handle}.  If the library cannot be closed: raise a
+non--continuable exception with condition types @condition{who},
+@condition{message}, @condition{shared-object-closing-error}.
+
+Closing a library renders all symbols and static data structures that
+the library exports invalid and the program may crash or corrupt its
+memory if such symbols are used after a library is closed.
+@end defun
+
+
+@defun lookup-shared-object @var{so-handle} @var{name}
+Search the loaded library referenced by the @var{so-handle} for an
+exported symbol whose name is represented by the Scheme string
+@var{name}.  If successful return a pointer object, else raise a
+non--continuable exception with condition types @condition{who},
+@condition{message}, @condition{shared-object-lookup-error}.
+
+If the returned value references a function: it can be used as argument
+to the callout generators built by @func{make-c-callout-maker}.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Shared object errors
+
+@deftp {Condition Type} &shared-object-error
+Base condition type for all the exceptions associated to a shared
+object; it is derived from @condition{error}.  It has no fields.
+@end deftp
+
+
+@defun make-shared-object-error
+Build and return a new instance of @condition{shared-object-error}.
+@end defun
+
+
+@defun shared-object-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-error}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Opening shared objects
+
+@deftp {Condition Type} &shared-object-opening-error
+Condition type tagging exceptions associated to opening a shared object;
+it is derived from @condition{shared-object-error}.  It has the
+following fields:
+
+@table @code
+@item name
+Scheme string representing the file name of the shared object.
+@end table
+@end deftp
+
+
+@defun make-shared-object-opening-error @var{so-name}
+Build and return a new instance of
+@condition{shared-object-opening-error}.
+@end defun
+
+
+@defun shared-object-opening-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-opening-error}, else return @false{}.
+@end defun
+
+
+@defun condition-shared-object-opening-name @var{so-opening}
+Accessor for the field of @condition{shared-object-opening-error}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Closing shared objects
+
+@deftp {Condition Type} &shared-object-closing-error
+Condition type tagging exceptions associated to closing a shared object;
+it is derived from @condition{shared-object-error}.  It has the
+following fields:
+
+@table @code
+@item so-handle
+Pointer object referencing the shared object; it is the value returned
+by @func{open-shared-object}.
+@end table
+@end deftp
+
+
+@defun make-shared-object-closing-error @var{so-handle}
+Build and return a new instance of
+@condition{shared-object-closing-error}.
+@end defun
+
+
+@defun shared-object-closing-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-closing-error}, else return @false{}.
+@end defun
+
+
+@defun condition-shared-object-closing-so-handle @var{so-closing}
+Accessor for the field of @condition{shared-object-closing-error}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting shared objects
+
+@deftp {Condition Type} &shared-object-lookup-error
+Condition type tagging exceptions associated to looking up a symbol in a
+shared object; it is derived from @condition{shared-object-error}.  It
+has the following fields:
+
+@table @code
+@item so-handle
+Pointer object referencing the shared object; it is the value returned
+by @func{open-shared-object}.
+
+@item foreign-symbol
+Scheme string representing the shared object exported symbol whose
+address was requested.
+@end table
+@end deftp
+
+
+@defun make-shared-object-lookup-error @var{so-handle} @var{symbol}
+Build and return a new instance of
+@condition{shared-object-lookup-error}.
+@end defun
+
+
+@defun shared-object-lookup-error? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{shared-object-lookup-error}, else return @false{}.
+@end defun
+
+
+@defun condition-shared-object-lookup-so-handle @var{so-lookup}
+@defunx condition-shared-object-lookup-foreign-symbol @var{so-lookup}
+Accessors for the fields of @condition{shared-object-lookup-error}.
+@end defun
+
+@c page
+@node ffi call
+@section Callouts and callbacks
+
+
+Callouts allow Scheme code to invoke C functions in a foreign library;
+callbacks allow foreign C code to call a Scheme function.  The following
+example shows how Scheme code can call a callout which in turns calls a
+callback:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+
+(define callout-maker
+  (ffi.make-c-callout-maker  'unsigned-int '(unsigned-int)))
+
+(define callback-maker
+  (ffi.make-c-callback-maker 'unsigned-int '(unsigned-int)))
+
+(define callback
+  (callback-maker values))
+
+(define callout
+  (callout-maker callback))
+
+(callout 123)   @result{} 123
+
+(ffi.free-c-callback callback)
+@end example
+
+@menu
+* ffi call intro::              Overview of @ffi{} function calls.
+* ffi call out::                Calling out to foreign procedures.
+* ffi call back::               Calling back to Scheme.
+* ffi call types::              Specifying native types.
+@end menu
+
+@c page
+@node ffi call intro
+@subsection Overview of @ffi{} function calls
+
+
+Both callouts and callbacks are built on top of function signatures
+specifying the type of function arguments and returned value.  Libffi
+allows us to specify such signatures through a Call InterFace (@cif{})
+data structure; @value{PRJNAME} internally extends such a structure with
+additional data to speed up marshaling of values from Scheme to native
+representation and back.
+
+At present, @cif{} data structures are allocated with @cfunc{malloc} and
+never released.  Callouts and callbacks make use of @cif{} structures of
+the same format, so such structures are internally cached; a single
+@cif{} associated to a given function signature is used by all the
+callouts and callbacks having the same signature.
+
+@c ------------------------------------------------------------
+
+@subsubheading Calling out to foreign functions
+
+Callouts require only a @cif{} structure and the address of the foreign
+C function; no additional structure needs to be allocated and then
+released.
+
+@value{PRJNAME} organises the callout @api{} by creating a callout maker
+function, closed upon a @cif{} structure, which can build any number of
+callout functions associating the @cif{} to foreign function pointers.
+Maker functions are cached internally, so only one maker function for a
+given signature is created in a running process.
+
+@c ------------------------------------------------------------
+
+@subsubheading Calling back to Scheme functions
+
+Callbacks require an additional data structure, because they must
+generate at runtime callable machine code referenced by a pointer; such
+additional data structure cannot be automatically released by the
+garbage collector, but it can be explicitly freed by the program when
+the callback is no longer needed.
+
+We can think of the code handling a callback as organised like the
+following pseudo--code:
+
+@example
+cif_t  call_interface;
+
+int
+specific_callback (int a, long b, double c)
+@{
+  void *  args[3] = @{ &a, &b, &c @};
+  int     result;
+  generic_callback(&call_interface, &result, args);
+  return result;
+@}
+
+void
+generic_callback (cif_t * call_interface,
+                  void * result, void * args)
+@{
+  scheme_value  s_a, s_b, s_c;
+  scheme_value  s_result;
+  s_a = native_to_scheme(call_interface, 0, args);
+  s_b = native_to_scheme(call_interface, 1, args);
+  s_c = native_to_scheme(call_interface, 2, args);
+  s_result = scheme_callback(s_a, s_b, s_c);
+  scheme_to_native(call_interface, result, s_result);
+@}
+
+scheme_value
+scheme_callback (scheme_value s_a,
+                 scheme_value s_b,
+                 scheme_value s_c)
+@{
+  /* process arguments, return result */
+@}
+@end example
+
+@noindent
+where: @code{specific_callback} is generated at runtime by Libffi;
+@code{generic_callback}, @code{scheme_to_native} and
+@code{native_to_scheme} are implemented by @value{PRJNAME}'s runtime
+(using generic operations); @code{scheme callback} is implemented by the
+Scheme program.  A pointer to @code{specific_callback} is the one we
+need to acquire when creating a callback from Scheme.
+
+@value{PRJNAME} organises the callback @api{} by creating a callback
+maker function, closed upon a @cif{} structure, which can build any
+number of callback functions associating the @cif{} to Scheme functions.
+Maker functions are cached internally, so only one maker function for
+each given signature is created in a running process.
+
+@c page
+@node ffi call out
+@subsection Calling out to foreign procedures
+
+
+In order to call out to a foreign procedure, we must provide two pieces
+of information: the signature of the foreign procedure and the address
+of the procedure in memory.  The signature must usually be hard--coded
+into the program; the address is obtained using @func{dlsym}.
+
+Using the signature, the @ffi{} determines how Scheme values are
+converted to and from native values; a signature is composed of two
+parts: a Scheme symbol specifying the return type, a list of Scheme
+symbols specifying the argument types.
+
+Here is a simple example, without error checking, showing how to
+interface to the C function @cfunc{sinh}:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare ffi) ffi.))
+
+(define libc
+  (ffi.dlopen))
+
+(define sinh-address
+  (ffi.dlsym libc "sinh"))
+
+(define callout-maker
+  (ffi.make-c-callout-maker 'double '(double)))
+
+(define sinh
+  (callout-maker sinh-address))
+
+(sinh 1.2)      @result{} 1.5094613554121725
+@end example
+
+@noindent
+using the @ffi{} we build a callout function generator which can be used
+to create any number of callout functions having the same signature.
+Generated callout functions are garbage collected like any other Scheme
+value.
+
+
+@defun make-c-callout-maker @var{ret-type} @var{arg-types}
+Build and return a function to be used to generate callout Scheme
+functions wrapping foreign functions which follow the C language
+conventions for calling, arguments and return values.
+
+The returned generator function accepts as single argument a pointer
+object representing the address of a foreign function; the value
+returned by the generator function is a Scheme closure wrapping the
+foreign function.  The wrapper Scheme closure takes care of marshaling
+Scheme values as appropriate for the underlying platform.
+
+@var{ret-type} must be a Scheme symbol specifying the type of the
+returned value; if the foreign function returns no value: @var{ret-type}
+must be the symbol @code{void}.
+
+@var{arg-types} must be a list of Scheme symbols specifying the type of
+the arguments; if the foreign function accepts no arguments:
+@var{arg-types} must be nil or the list @code{(void)}.
+
+@ref{ffi call types} for the specification of accepted type symbols.
+@end defun
+
+
+@defun make-c-callout-maker/with-errno @var{ret-type} @var{arg-types}
+Like @func{make-c-callout-maker}, but the generated callout closures
+will return two values: the return value from the foreign function call
+and the value of the C language variable @code{errno} right after the
+foreign function call.
+@end defun
+
+@c page
+@node ffi call back
+@subsection Calling back to Scheme
+
+
+In order to arrange for a foreign library to callback to a Scheme
+function we need a suitable Scheme function and the signature of the
+procedure the foreign library expects.  The signature must usually be
+hard--coded in the program.
+
+Using the signature, the @ffi{} determines how native values are
+converted to and from Scheme values; a signature is composed of two
+parts: a Scheme symbol specifying the return type, a list of Scheme
+symbols specifying the argument types.  The signature format is the same
+as the one used for callouts; @ref{ffi call out} for details.
+
+Note that a callback function is indistinguishable from other native
+procedures whose address is obtained using @func{dlsym} or similar
+means.  In particular, such native pointers can be passed to callout
+generators resulting in a Scheme procedure that calls out to the native
+procedure that in turn calls back into Scheme.
+
+The following example shows how to create an identity function for
+native integers composed by a Scheme function calling out to a foreign
+function, calling back to the Scheme function @func{values}:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare ffi) ffi.))
+
+(define callout-maker
+  (ffi.make-c-callout-maker  'unsigned-int '(unsigned-int)))
+
+(define callback-maker
+  (ffi.make-c-callback-maker 'unsigned-int '(unsigned-int)))
+
+(define identity
+  (callout-maker (callback-maker values)))
+
+(identity 123)  @result{} 123
+@end example
+
+@noindent
+using the @ffi{} we build a callback function generator which can be
+used to create any number of callback functions having the same
+signature.  Generated callback functions are @strong{not} garbage
+collected like the other Scheme values.
+
+
+@defun make-c-callback-maker @var{ret-type} @var{arg-types}
+Build and return a function to be used to generate callback functions
+following the C language conventions for calling, arguments and return
+values and wrapping Scheme functions.
+
+The returned generator function accepts as single argument the Scheme
+function to be wrapped; the value returned by the generator function is
+a pointer object referencing a native function.  The wrapper native
+function takes care of marshaling Scheme values as appropriate for the
+underlying platform.
+
+@var{ret-type} must be a Scheme symbol specifying the type of the
+returned value; if the callback function must return no value:
+@var{ret-type} must be the symbol @code{void}.
+
+@var{arg-types} must be a list of Scheme symbols specifying the type of
+the arguments; if the callback function must accept no arguments:
+@var{arg-types} must be nil or the list @code{(void)}.
+
+@ref{ffi call types} for the specification of accepted type symbols.
+@end defun
+
+
+@defun free-c-callback @var{c-callback-pointer}
+Release the resources associated to the given C pointer referencing a
+callback function.  If the pointer is not a callback pointer: raise an
+assertion violation.
+@end defun
+
+@c page
+@node ffi call types
+@subsection Specifying native types
+
+
+The following is a list of Scheme symbols used to specify native types
+for both callouts and callbacks.  If a type is not available on a
+platform: the callout and callback generators will raise an error if the
+associated type specifier is used.
+
+@table @code
+@item signed-char
+@itemx unsigned-char
+Exact integers in the range for @code{char} and @code{unsigned char}.
+
+@item signed-short
+@itemx unsigned-short
+Exact integers in the range for @code{short int} and @code{unsigned short
+int}.
+
+@item signed-int
+@itemx unsigned-int
+Exact integers in the range for @code{int} and @code{unsigned int}.
+
+@item signed-long
+@itemx unsigned-long
+Exact integers in the range for @code{long} and @code{unsigned long}.
+
+@item signed-long-long
+@itemx unsigned-long-long
+Exact integers in the range for @code{long long} and @code{unsigned long
+long}.
+
+@item float
+@itemx double
+Flonum.
+
+@item pointer
+@itemx callback
+Pointer object.  The symbol @code{callback} can be used to specify a
+pointer to a callback, but it is a full synonym of @code{pointer}.
+
+@item int8_t
+@itemx uint8_t
+Exact integers in the range for @code{int8_t} and @code{uint8_t}.
+
+@item int16_t
+@itemx uint16_t
+Exact integers in the range for @code{int16_t} and @code{uint16_t}.
+
+@item int32_t
+@itemx uint32_t
+Exact integers in the range for @code{int32_t} and @code{uint32_t}.
+
+@item int64_t
+@itemx uint64_t
+Exact integers in the range for @code{int64_t} and @code{uint64_t}.
+
+@item size_t
+@itemx ssize_t
+Exact integers in the range for @code{size_t} and @code{ssize_t}.
+
+@item off_t
+Exact integers in the range for @code{off_t}.
+
+@item ptrdiff_t
+Exact integers in the range for @code{ptrdiff_t}.
+@end table
+
+@c end of file

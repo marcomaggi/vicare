@@ -1,0 +1,1978 @@
+@node syslib
+@chapter Low level, fast, unsafe operations
+
+
+The bindings documented in this chapter are low level operations inlined
+by the compiler; mostly they are defined in the source file
+@file{pass-specify-rep-primops.ss}.
+
+They are unsafe because when acting upon wrong arguments will cause
+undefined behaviour (probably a crash).  They are also faster than the
+public interface exported by @library{ikarus} and @library{rnrs}.
+
+@menu
+* syslib symbols::              Low level symbol operations.
+* syslib fixnums::              Low level fixnum operations.
+* syslib bignums::              Low level bignum operations.
+* syslib flonums::              Low level flonum operations.
+* syslib ratnums::              Low level ratnum operations.
+* syslib compnums::             Low level compnum operations.
+* syslib cflonums::             Low level cflonum operations.
+* syslib chars::                Low level character operations.
+* syslib pairs::                Low level pair operations.
+* syslib structs::              Low level structure operations.
+* syslib vectors::              Low level vector operations.
+* syslib bytevectors::          Low level bytevector operations.
+* syslib strings::              Low level string operations.
+* syslib ports::                Low level port structures.
+* syslib transcoders::          Low level transcoder operations.
+* syslib pointers::             Low level pointer operations.
+* syslib codes::                Low level code objects operations.
+* syslib closures::             Low level closures operations.
+* syslib compiler::             Interface to compiler passes.
+@end menu
+
+@c page
+@node syslib symbols
+@section Low level symbol operations
+
+
+@cindex @library{ikarus system $symbols}, library
+@cindex Library @library{ikarus system $symbols}
+
+
+The arguments @var{sym} must be references to symbol blocks, the
+arguments @var{str} must be references to strings.  The following
+bindings are exported by the @library{ikarus system $symbols} library.
+
+
+@deffn {Unsafe Operation} $make-symbol @var{str}
+Allocate a new symbol block and initialise the @code{string} field with
+@var{str}; return the reference to the symbol block.
+
+The @code{ustring} is initialised to the fixnum zero.  The @code{value}
+and @code{proc} fields are initialised to a special machine word value
+meaning ``unbound''.  The @code{plist} field is initialised to nil.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-string @var{sym}
+@deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
+@deffnx {Unsafe Operation} $symbol-plist @var{sym}
+Accessors for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
+@deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
+@deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
+Mutators for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-value @var{sym}
+@deffnx {Unsafe Operation} $set-symbol-value! @var{sym} @var{val}
+The @code{value} field has multiple purposes:
+
+@itemize
+@item
+When @var{sym} is the unique identifier of a data structure type: the
+@code{value} field holds the @rtd{} of the data structure.
+
+@item
+Top level bindings in compiled Scheme code are represented by gensyms;
+the value of a top level binding is stored in the @code{value} field of
+a gensym memory block.
+@end itemize
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol-proc @var{sym}
+@deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
+Accessor and mutator for the field @code{proc}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-symbol-value/proc! @var{sym} @var{val}
+Set both the fields @code{value} and @code{proc} of @var{sym} to
+@var{val}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $unbound-object? @var{sym}
+Return true if the @func{$symbol-value} field of @var{sym} is set to the
+special ``unbound'' machine word value.
+@end deffn
+
+
+@deffn {Unsafe Operation} top-level-value @var{sym}
+Still to be documented.
+@end deffn
+
+
+@deffn {Unsafe Operation} $init-symbol-function! @var{sym} @var{proc}
+Still to be documented.
+@end deffn
+
+
+The following bindings are related to the symbol table collecting
+interned symbols.
+
+
+@defun $symbol-table-size
+Return the number of interned symbols.
+@end defun
+
+
+@defun $log-symbol-table-status
+Write to the current error port a description of the current symbol
+table status.  Example:
+
+@example
+vicare> (import (ikarus system $symbols))
+vicare> ($log-symbol-table-status)
+Vicare internal symbol table status:
+        number of interned symbols: 2962
+        number of hash table buckets: 4096
+
+vicare>
+@end example
+@end defun
+
+@c page
+@node syslib fixnums
+@section Low level fixnum operations
+
+
+@cindex @library{ikarus system $fx}, library
+@cindex Library @library{ikarus system $fx}
+
+
+The following bindings are exported by the @library{ikarus system $fx}
+library.  The arguments to these operations must be fixnums.
+@ref{objects fixnums} for details on the representation of fixnums.
+
+@c ------------------------------------------------------------
+
+@subsubheading Predicates
+
+@deffn {Unsafe Operation} $fxzero? @var{fx}
+Evaluate to true if @var{fx} is zero.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxpositive? @var{fx}
+@deffnx {Unsafe Operation} $fxnegative? @var{fx}
+Evaluate to true if @var{fx} is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsign @var{fx}
+Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
+the sign of @var{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxeven? @var{fx}
+@deffnx {Unsafe Operation} $fxodd? @var{fx}
+Evaluate to true if @var{fx} is even or odd.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison operations
+
+@deffn {Unsafe Operation} $fx= @vari{fx} @varii{fx}
+Evaluate to true if the arguments are equal.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx< @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is less than @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx<= @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is less than or equal to @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx> @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is greater than @varii{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx>= @vari{fx} @varii{fx}
+Evaluate to true if @vari{fx} is greater than or equal to @varii{fx}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Arithmetic operations
+
+@deffn {Unsafe Operation} $fxadd1 @var{fx}
+Increment the operand by one and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsub1 @var{fx}
+Decrement the operand by one and return the result.  The result of this
+operation is a fixnum, but notice that if @var{fx} is
+@code{(least-fixnum)}: the result overflows the fixnum capacity and the
+return value is invalid.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx+ @vari{fx} @varii{fx}
+Sum the operands and return the result.  The result of this operatio is
+a fixnum, but notice that it could overflow the fixnum capacity.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx- @var{fx}
+@deffnx {Unsafe Operation} $fx- @vari{fx} @varii{fx}
+With one operand: return @var{fx} negated.  With two operands: subtract
+the operands and return the result.  The result of this operation is a
+fixnum, but notice that it could overflow the fixnum capacity and the
+return value would be invalid.
+
+Also with a single argument, knowing that @code{(- (least-fixnum))} is a
+bignum, if @var{fx} is @code{(least-fixnum)} the result overflows the
+fixnum capacity and the return value is invalid.
+
+With two arguments: if @vari{fx} is zero and @varii{fx} is
+@code{(least-fixnum)} the result overflows the fixnum capacity and the
+return value is invalid.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fx* @vari{fx} @varii{fx}
+Multiply the operands and return the result.  The result of this
+operation is a fixnum, but notice that if one operand is @code{-1} and
+the other is @code{(least-fixnum)}: the result overflows the fixnum
+capacity and the return value is invalid.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxdiv @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxdiv0 @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxmod @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxmod0 @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxdiv-and-mod  @vari{fx} @varii{fx}
+@deffnx {Unsafe Operation} $fxdiv0-and-mod0 @vari{fx} @varii{fx}
+Perform the number theoretic division.
+
+@example
+(import (rnrs)
+  (ikarus system $fx))
+
+($fxmod +12 +12)        @result{} 0
+($fxmod +12 -12)        @result{} 0
+($fxmod -12 +12)        @result{} 0
+($fxmod -12 -12)        @result{} 0
+
+($fxmod +12 +3)         @result{} 0
+($fxmod +12 -3)         @result{} 0
+($fxmod -12 +3)         @result{} 0
+($fxmod -12 -3)         @result{} 0
+
+($fxmod +12 +4)         @result{} 0
+($fxmod +12 -4)         @result{} 0
+($fxmod -12 +4)         @result{} 0
+($fxmod -12 -4)         @result{} 0
+
+($fxmod +12 +5)         @result{} +2
+($fxmod +12 -5)         @result{} +2
+($fxmod -12 +5)         @result{} +3
+($fxmod -12 -5)         @result{} +3
+
+($fxmod +12 +7)         @result{} +5
+($fxmod +12 -7)         @result{} +5
+($fxmod -12 +7)         @result{} +2
+($fxmod -12 -7)         @result{} +2
+
+($fxmod +12 +24)        @result{} +12
+($fxmod +12 -24)        @result{} +12
+($fxmod -12 +24)        @result{} +12
+($fxmod -12 -24)        @result{} +12
+
+($fxmod +12 +20)        @result{} +12
+($fxmod +12 -20)        @result{} +12
+($fxmod -12 +20)        @result{} +8
+($fxmod -12 -20)        @result{} +8
+@end example
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxquotient @vari{fx} @varii{fx}
+Compute the quotient between the operands and return the result.  The
+result of this operation is a fixnum, but notice that:
+
+@itemize
+@item
+When @varii{fx} is @code{0}: the result is undefined, most likely the
+process will abort.
+
+@item
+When @vari{fx} is @code{(least-fixnum)} and @varii{fx} is @code{-1}: the
+result will overflow the fixnum capacity, and the return value will be
+invalid (the result should be a bignum).
+@end itemize
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxmodulo @vari{fx} @varii{fx}
+Compute the modulo between the operands and return the result.  The
+result of this operation can be a fixnum or bignum.
+
+@example
+(import (rnrs)
+  (ikarus system $fx))
+
+($fxmodulo +12 +12)     @result{} 0
+($fxmodulo +12 -12)     @result{} 0
+($fxmodulo -12 +12)     @result{} 0
+($fxmodulo -12 -12)     @result{} 0
+
+($fxmodulo +12 +3)      @result{} 0
+($fxmodulo +12 -3)      @result{} 0
+($fxmodulo -12 +3)      @result{} 0
+($fxmodulo -12 -3)      @result{} 0
+
+($fxmodulo +12 +4)      @result{} 0
+($fxmodulo +12 -4)      @result{} 0
+($fxmodulo -12 +4)      @result{} 0
+($fxmodulo -12 -4)      @result{} 0
+
+($fxmodulo +12 +5)      @result{} +2
+($fxmodulo +12 -5)      @result{} -3
+($fxmodulo -12 +5)      @result{} +3
+($fxmodulo -12 -5)      @result{} -2
+
+($fxmodulo +12 +7)      @result{} +5
+($fxmodulo +12 -7)      @result{} -2
+($fxmodulo -12 +7)      @result{} +2
+($fxmodulo -12 -7)      @result{} -5
+
+($fxmodulo +12 +24)     @result{} +12
+($fxmodulo +12 -24)     @result{} -12
+($fxmodulo -12 +24)     @result{} +12
+($fxmodulo -12 -24)     @result{} -12
+
+($fxmodulo +12 +20)     @result{} +12
+($fxmodulo +12 -20)     @result{}  -8
+($fxmodulo -12 +20)     @result{}  +8
+($fxmodulo -12 -20)     @result{} -12
+@end example
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxabs @var{fx}
+Return the absolute value of @var{fx}.  The result of this operation is
+fixnum; an error is raised if the result would overflow.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bitwise logic operations
+
+@deffn {Unsafe Operation} $fxlognot @var{fx}
+Perform the bitwise NOT on the operand and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlogand @vari{fx} @varii{fx}
+Perform the bitwise AND on the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlogor @vari{fx} @varii{fx}
+Perform the bitwise inclusive OR on the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxlogxor @vari{fx} @varii{fx}
+Perform the bitwise exclusive OR on the operands and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Other bitwise operations
+
+@deffn {Unsafe Operation} $fxsll @vari{fx} @varii{fx}
+Perform bitwise shift left of @vari{fx} by @varii{fx} positions and
+return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxsra @vari{fx} @varii{fx}
+Perform bitwise shift right of @vari{fx} by @varii{fx} positions and
+return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxcopy-bit @vari{fx} @varii{fx} @variii{fx}
+Unsafe version of @func{fxcopy-bit}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxcopy-bit-field @vari{fx} @varii{fx} @variii{fx} @variv{fx}
+Unsafe version of @func{fxcopy-bit-field}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxrotate-bit-field @vari{fx} @varii{fx} @variii{fx} @variv{fx}
+Unsafe version of @func{fxrotate-bit-field}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fxbit-field @vari{fx} @varii{fx} @variii{fx}
+Unsafe version of @func{fxbit-field}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Miscellaneous operations
+
+@deffn {Unsafe Operation} $fxinthash @var{fx}
+Evaluate to a fixnum which can be used as hash value.
+
+@quotation
+@strong{NOTE}  This appears to be unused in the source.
+@end quotation
+@end deffn
+
+@c page
+@node syslib bignums
+@section Low level bignum operations
+
+
+@cindex @library{ikarus system $bignums}, library
+@cindex Library @library{ikarus system $bignums}
+
+
+The arguments @var{bn} to these operations must be bignums.  The
+following bindings are exported by the @library{ikarus system $bignums}
+library.  @ref{iklib numerics} for more functions acting on bignums.
+
+
+@deffn {Unsafe Operation} $bignum-positive? @var{bn}
+@deffnx {Unsafe Operation} $bignum-negative? @var{bn}
+Evaluate to true if the operand is positive or negative.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bignum-even? @var{bn}
+@deffnx {Unsafe Operation} $bignum-odd? @var{bn}
+Evaluate to true if the operand is even or odd.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bignum-byte-ref @var{bn} @var{fx}
+Return a fixnum representing the byte at index @var{fx} in the data of
+@var{bn}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bignum-size @var{bn}
+Return a fixnum representing the number of machine words in the data
+portion of a bignum memory block.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bignum->flonum @var{bn}
+Return a flonum object representing @var{bn} as inexact number.
+@end deffn
+
+@c page
+@node syslib flonums
+@section Low level flonum operations
+
+
+@cindex @library{ikarus system $flonums}, library
+@cindex Library @library{ikarus system $flonums}
+
+
+The arguments @var{fl} to these operations must be flonums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the @library{ikarus system $flonums} library.  @ref{iklib numerics}
+for more functions acting on flonums.
+
+
+@deffn {Unsafe Operation} $make-flonum
+Allocate a new flonum memory block and return a reference to it.  Does
+not initialise the data area.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Binary representation inspection
+
+
+@deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
+Return the octet at index @var{fx} in the data area of @var{fl}.
+
+Notice that the @var{fx} offset is positive, but it represents an offset
+from the end of the data area; on a 32-bit platform, the indexes of the
+bytes are:
+
+@example
+   1st word    2nd word    3rd word    4th word
+|-----------|-----------|-----------|-----------|
+                        |--|--|--|--|--|--|--|--| bytes
+                          7  6  5  4  3  2  1  0  offsets
+                        |.......................|
+                             IEEE 754 flonum
+@end example
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-set! @var{fl} @var{fx-index} @var{fx-value}
+Store the byte or octet represented by @var{fx-value} at index
+@var{fx-index} in the data area of @var{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-sbe @var{fl}
+Return a fixnum@dots{} Still undocumented, read the code look at the
+format of @ieee{} double precision flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Arithmetic operations
+
+
+@deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl* @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl/ @vari{fl} @varii{fl}
+Perform arithmetic operations.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fl- @var{fl}
+@deffnx {Unsafe Operation} $fl- @vari{fl} @varii{fl}
+With one operand: return @var{fl} negated.  With two operands: subtract
+the operands and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fldiv @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $flmod @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fldiv0 @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $flmod0 @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fldiv-and-mod @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fldiv0-and-mod0 @vari{fl} @varii{fl}
+Implement the number--theoretic integer divisions.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Exactness and conversion
+
+
+@deffn {Unsafe Operation} $flonum->exact @var{fl}
+Rationalize the operand and return the result.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->flonum @var{fx}
+Convert the fixnum operand into a flonum and return a reference to the
+result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Predicates
+
+
+@deffn {Unsafe Operation} $flzero? @var{fl}
+Return true if the operand is zero.  Notice that the return value will
+be true for both @code{+0.0} or @code{-0.0}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flzero?/positive @var{fl}
+@deffnx {Unsafe Operation} $flzero?/negative @var{fl}
+Return true if the operand is @code{+0.0} or @code{-0.0}, respectively.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flpositive? @var{fl}
+Return true if the operand is strictly positive.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flnegative? @var{fl}
+Return true if the operand is strictly negative.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fleven? @var{fl}
+Return true if the operand is even.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flodd? @var{fl}
+Return true if the operand is odd.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-integer? @var{fl}
+Return true if the operand is integer.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flonum-rational? @var{fl}
+Return true if the operand is rational.  All the flonums are rational
+with the exception of infinities and not--a--number.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Rounding
+
+
+@deffn {Unsafe Operation} $flround @var{fl}
+Return the closest integral flonum to the operand, rounding to even when
+@var{fl} represents a number halfway between two integers.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flfloor @var{fl}
+Return the largest integral flonum not larger than the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flceiling @var{fl}
+Return the smallest integral flonum not larger than the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fltruncate @var{fl}
+Return the integral flonum closest to the operand whose absolute value
+is not larger than the absolute value of the operand itself.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Parts
+
+
+@deffn {Unsafe Operation} $flnumerator @var{fl}
+@deffnx {Unsafe Operation} $fldenominator @var{fl}
+Return the numerator or denominator of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flabs @var{fl}
+Return the absolute value of the operand.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Trigonometric operations
+
+
+@deffn {Unsafe Operation} $flsin @var{fl}
+@deffnx {Unsafe Operation} $flcos @var{fl}
+@deffnx {Unsafe Operation} $fltan @var{fl}
+Return the sine, cosine and tangent of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flasin @var{fl}
+@deffnx {Unsafe Operation} $flacos @var{fl}
+@deffnx {Unsafe Operation} $flatan @var{fl}
+Return the arcsine, arccosine and arctangent of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flatan2 @vari{fl} @varii{fl}
+Return an equivalent of:
+
+@example
+(angle (make-rectangular @varii{fl} @vari{fl}))
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic functions
+
+
+@defun $flsinh @var{fl}
+@defunx $flcosh @var{fl}
+@defunx $fltanh @var{fl}
+Compute the hyperbolic functions.  Return flonum objects.
+@end defun
+
+
+@defun $flasinh @var{fl}
+@defunx $flacosh @var{fl}
+@defunx $flatanh @var{fl}
+Compute the inverse hyperbolic functions.  Return flonum objects.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Exponentials and logarithms
+
+
+@deffn {Unsafe Operation} $flexp @var{fl}
+Return the base @math{e} exponential of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fllog @var{fl}
+Return the natural logarithm of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fllog2 @vari{fl} @varii{fl}
+Return the base--@varii{fl} logarithme of @vari{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flexpm1 @var{fl}
+Return an equivalent of @math{exp(@var{fl}) - 1}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fllog1p @var{fl}
+Return an equivalent of @math{log(1 + @var{fl})}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Power operations
+
+
+@deffn {Unsafe Operation} $flexpt @vari{fl} @varii{fl}
+Return @vari{fl} raised to the power of @varii{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flsqrt @var{fl}
+Return the square root of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flsqr @var{fl}
+Return the square of @var{fl}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison operations
+
+
+@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
+Perform comparison operations
+@end deffn
+
+
+@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
+Return the maximum between the operands.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
+Return the minimum between the operands.
+@end deffn
+
+@c page
+@node syslib ratnums
+@section Low level ratnum operations
+
+
+@cindex @library{ikarus system $ratnums}, library
+@cindex Library @library{ikarus system $ratnums}
+
+
+The arguments @var{rat} to these operations must be ratnums, the
+arguments @var{num} must be references to either fixnums or bignums.
+The following bindings are exported by the @library{ikarus system
+$ratnums} library.  @ref{iklib numerics} for more functions acting on
+ratnums.
+
+
+@deffn {Unsafe Operation} $make-ratnum @vari{num} @varii{num}
+Allocate a new ratnum memory block, store @vari{num} as reference to the
+numerator and @varii{num} as reference to the denominator.  Return a
+reference to the ratnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-n @var{rat}
+Return the reference to the numerator.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum-d @var{rat}
+Return the reference to the denominator.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ratnum->flonum @var{rat}
+Return a flonum object representing @var{rat} as inexact number.
+@end deffn
+
+@c page
+@node syslib compnums
+@section Low level compnum operations
+
+
+@cindex @library{ikarus system $compnums}, library
+@cindex Library @library{ikarus system $compnums}
+
+
+The arguments @var{cmp} to these operations must be compnums, the
+arguments @var{num} must be references to either fixnums, bignums or
+flonums.  The following bindings are exported by the @library{ikarus
+system $compnums} library.  @ref{iklib numerics} for more functions
+acting on compnums.
+
+
+@deffn {Unsafe Operation} $make-compnum @vari{num} @varii{num}
+Allocate a new compnum memory block, store @vari{num} as reference to
+the real part and @varii{num} as reference to the imaginary part.
+Return a reference to the compnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $compnum-real @var{cmp}
+Return the reference to the real part.
+@end deffn
+
+
+@deffn {Unsafe Operation} $compnum-imag @var{cmp}
+Return the reference to the imaginary part.
+@end deffn
+
+@c page
+@node syslib cflonums
+@section Low level cflonum operations
+
+
+@cindex @library{ikarus system $compnums}, library
+@cindex Library @library{ikarus system $compnums}
+
+
+The arguments @var{cmp} to these operations must be cflonums, the
+arguments @var{fl} must be references to flonums.  The following
+bindings are exported by the @library{ikarus system $compnums} library.
+@ref{iklib numerics} for more functions acting on cflonums.
+
+
+@deffn {Unsafe Operation} $make-cflonum @vari{fl} @varii{fl}
+Allocate a new cflonum memory block, store @vari{fl} as reference to the
+real part and @varii{fl} as reference to the imaginary part.  Return a
+reference to the cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cflonum-real @var{cmp}
+Return the reference to the real part.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cflonum-imag @var{cmp}
+Return the reference to the imaginary part.
+@end deffn
+
+@c page
+@node syslib chars
+@section Low level character operations
+
+
+@cindex @library{ikarus system $chars}, library
+@cindex Library @library{ikarus system $chars}
+
+
+The arguments @var{ch} to these operations must be characters, the
+arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
+not in the range @code{[#xD800, #xDFFF]}.  The following bindings are
+exported by the @library{ikarus system $chars} library.
+
+
+@deffn {Unsafe Operation} $char= @vari{ch} @varii{ch}
+Evaluate to true if the operands are equal.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char< @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is less than @varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char<= @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is less than or equal to @varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char> @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is greater than @varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char>= @vari{ch} @varii{ch}
+Evaluate to true if the @vari{ch} is greater than or equal to
+@varii{ch}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $fixnum->char @var{fx}
+Return a new character value whose code point equals @var{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $char->fixnum @var{ch}
+Return a fixnum representing the code point of the operand.
+@end deffn
+
+@c page
+@node syslib pairs
+@section Low level pair operations
+
+
+@cindex @library{ikarus system $pairs}, library
+@cindex Library @library{ikarus system $pairs}
+
+
+The arguments @var{P} to these operations must be pairs.  The following
+bindings are exported by the @library{ikarus system $pairs} library.
+@ref{objects pairs} for details of pair representation.
+
+
+@deffn {Unsafe Operation} $car @var{P}
+Return the car of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cdr @var{P}
+Return the cdr of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-car! @var{P} @var{value}
+Store @var{value} in the car location of @var{P}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-cdr! @var{P} @var{value}
+Store @var{value} in the cdr location of @var{P}.
+@end deffn
+
+@c page
+@node syslib structs
+@section Low level structure operations
+
+
+@cindex @library{ikarus system $structs}, library
+@cindex Library @library{ikarus system $structs}
+
+
+The arguments @var{stru} to these operations must be references to data
+structures, the arguments @var{rtd} must be references to structure type
+descriptors, the arguments @var{fx} must be fixnums of appropriate
+value.  The following bindings are exported by the @library{ikarus
+system $structs} library.
+
+
+@deffn {Unsafe Operation} base-rtd
+Return a reference to the type descriptor used as type for all the type
+descriptors.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct? @var{obj}
+Evaluate to true if @var{obj} is the reference to a structure.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct/rtd? @var{stru} @var{rtd}
+Evaluate to true if @var{stru} is a structure of type @var{rtd}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $make-struct @var{rtd} @var{fx}
+Allocate a new data structure of type @var{rtd} capable of holding
+@var{fx} words and return a reference to it.
+
+@quotation
+@strong{NOTE} This operation does @strong{not} initialise the field
+words, leaving them holding whatever is on the heap.  We must be careful
+not to trigger a garbage collection before those fields are initialised
+with valid values, else the behaviour is undefined.
+@end quotation
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd @var{stru}
+Return a reference to the type descriptor of @var{stru}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-ref @var{stru} @var{fx}
+Return the value in the field at index @var{fx} of @var{stru}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-set! @var{stru} @var{fx} @var{value}
+Store @var{value} in the field at index @var{fx} of @var{stru}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct @var{rtd} @var{value} ...
+Allocate a new data structure of type @var{rtd} capable of holding as
+many words as given @var{value} arguments and initialise the fields with
+such values.  Return a reference to the structure.
+@end deffn
+
+@c page
+@node syslib vectors
+@section Low level vector operations
+
+
+@cindex @library{ikarus system $vectors}, library
+@cindex Library @library{ikarus system $vectors}
+
+
+The arguments @var{vec} to these operations must be fixnums, the
+arguments @var{fx} must be fixnums.  The following bindings are exported
+by the @library{ikarus system $vectors} library.
+
+
+@deffn {Unsafe Operation} $make-vector @var{fx}
+Allocate and return a new vector value of @var{fx} elements.
+
+@quotation
+@strong{NOTE} This operation does not initialise the data area, leaving
+the items set to whatever is on the Scheme heap; this is bad for garbage
+collection if the newly built vector is moved before the items are
+initialised to correct Scheme values.  We should use the
+@func{$make-clean-vector} operations from @library{vicare
+unsafe-operations}.
+@end quotation
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-length @var{vec}
+Evaluate to a fixnum representing the numbe of values in @var{vec}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-ref @var{vec} @var{fx}
+Return the value at index @var{fx} in @var{vec}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $vector-set! @var{vec} @var{fx} @var{value}
+Store @var{value} at index @var{fx} in @var{vec}.
+@end deffn
+
+@c page
+@node syslib bytevectors
+@section Low level bytevector operations
+
+
+@cindex @library{ikarus system $bytevectors}, library
+@cindex Library @library{ikarus system $bytevectors}
+
+
+The arguments @var{bv} to these operations must be references to
+bytevectors, the arguments @var{fx} must be fixnums in the appropriate
+range, the arguments @var{fl} must be flonums.  The following bindings
+are exported by the @library{ikarus system $bytevectors} library.
+
+
+@deffn {Unsafe Operation} $make-bytevector @var{fx}
+Allocate a new bytevector capable of holding @var{fx} bytes and return a
+reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-length @var{bv}
+Return a fixnum representing the number of bytes in the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-u8-ref @var{bv} @var{fx}
+Return a fixnum representing the octet at offset @var{fx} in @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-s8-ref @var{bv} @var{fx}
+Return a fixnum representing the byte at offset @var{fx} in @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-set! @var{bv} @var{fx-index} @var{fx-value}
+Store the octet or byte @var{fx-value} at index @var{fx-index} of
+@var{bv}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Double--precision @ieee{} flonums
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-native-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-native-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Single--precision @ieee{} flonums
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-native-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-native-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-ref @var{bv} @var{fx}
+Return a flonum representing the value at index @var{fx} of @var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-set! @var{bv} @var{fx} @var{fl}
+Store @var{fl} at index @var{fx} of @var{bv}.
+@end deffn
+
+@c page
+@node syslib strings
+@section Low level string operations
+
+
+@cindex @library{ikarus system $strings}, library
+@cindex Library @library{ikarus system $strings}
+
+
+The arguments @var{str} to these operations must be references to
+strings, the arguments @var{fx} must be fixnums in the appropriate
+range, the arguments @var{ch} must be characters.  The following
+bindings are exported by the @library{ikarus system $strings} library.
+
+
+@deffn {Unsafe Operation} $make-string @var{fx}
+Allocate a new string capable of holding @var{fx} characters and return
+a reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-length @var{str}
+Return a fixnum representing the length of the operand.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
+Return the character at offset @var{fx} in @var{str}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string-set! @var{str} @var{fx} @var{ch}
+Store @var{ch} at index @var{fx} of @var{str}.
+@end deffn
+
+@c page
+@node syslib ports
+@section Low level port structures
+
+
+@cindex @library{ikarus system $io}, library
+@cindex Library @library{ikarus system $io}
+
+
+The following bindings are exported by the @library{ikarus system $io}
+library.
+
+
+@defun port? @var{obj}
+Return true if @var{obj} is the reference to a port structure; return
+false otherwise.
+@end defun
+
+
+@deffn {Unsafe Operation} $make-port @var{attrs} @var{idx} @var{sz} @var{buf} @var{tr} @var{id} @var{read} @var{write} @var{getp} @var{setp} @var{cl} @var{cookie}
+Allocate a new port structure, initialise its fields with the arguments,
+return a reference to it.
+@end deffn
+
+
+@deffn {Unsafe Operation} $port-index @var{port}
+@deffnx {Unsafe Operation} $port-size @var{port}
+@deffnx {Unsafe Operation} $port-buffer @var{port}
+@deffnx {Unsafe Operation} $port-transcoder @var{port}
+@deffnx {Unsafe Operation} $port-id @var{port}
+@deffnx {Unsafe Operation} $port-read! @var{port}
+@deffnx {Unsafe Operation} $port-write! @var{port}
+@deffnx {Unsafe Operation} $port-get-position @var{port}
+@deffnx {Unsafe Operation} $port-set-position! @var{port}
+@deffnx {Unsafe Operation} $port-close @var{port}
+@deffnx {Unsafe Operation} $port-cookie @var{port}
+Accessors for the fields of a port structure.
+@end deffn
+
+
+@deffn {Unsafe Operation} $port-attrs @var{port}
+Given a port value: return a fixnum representing the port attributes.
+@end deffn
+
+
+@deffn {Safe Operation} $port-tag @var{port}
+Extract from a port reference a fixnum representing the port attributes;
+if the argument is not a port reference the return value is zero.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-port-index! @var{port} @var{new-index}
+Mutator for the buffer index field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-port-size! @var{port} @var{new-used-size}
+Mutator for the buffer used size field.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-port-attrs! @var{port} @var{new-attrs}
+Mutator for the port attributes.
+@end deffn
+
+@c page
+@node syslib transcoders
+@section Low level transcoder operations
+
+
+@cindex @library{ikarus system $transcoders}, library
+@cindex Library @library{ikarus system $transcoders}
+
+
+The arguments @var{tran} to these operations must be transcoders, the
+arguments @var{fx} must be fixnums in the appropriate range.  The
+following bindings are exported by the @library{ikarus system
+$transcoders} library.
+
+
+@deffn {Unsafe Operation} $data->transcoder @var{fx}
+Encode @var{fx} as payload bits of a transcoder word and return the
+resulting transcoder.
+@end deffn
+
+
+@deffn {Unsafe Operation} $transcoder->data @var{tran}
+Extract the payload bits from a transcoder and return them as fixnum.
+@end deffn
+
+@c page
+@node syslib pointers
+@section Low level pointer operations
+
+
+@cindex @library{ikarus system $pointers}, library
+@cindex Library @library{ikarus system $pointers}
+
+
+In the following definitions the @var{ptr} arguments must be pointer
+objects.  The following bindings are exported by the @library{ikarus
+system $pointers} library.
+
+
+@deffn {Primitive Operation} $pointer? @var{obj}
+Return @true{} if @var{obj} is a reference to a pointer memory block,
+else return @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $pointer= @vari{ptr} @varii{ptr}
+Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
+@false{}.
+@end deffn
+
+@c page
+@node syslib codes
+@section Low level code objects operations
+
+
+@cindex @library{ikarus system $codes}, library
+@cindex Library @library{ikarus system $codes}
+
+
+In the following definitions: the @var{code} arguments must be code
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
+
+
+@defun code? @var{obj}
+Return @true{} if @var{obj} is a code object.
+@end defun
+
+
+@deffn {Primitive Operation} $code-freevars @var{code}
+Return a fixnum representing the number of free variables referenced by
+@var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-reloc-vector @var{code}
+Return the relocation vector of @var{code}.  The relocation vector is a
+Scheme vector, @ref{objects codes reloc}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-size @var{code}
+Return a fixnum representing the number of bytes used in the data area
+of @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-annotation @var{code}
+Return an object used as annotation for @var{code}.  The default value
+for the annotation is @false{}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code->closure @var{code}
+Return a closure object wrapping @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-ref @var{code} @var{index}
+Return the byte at @var{index} in the data area of @var{code}.
+@end deffn
+
+
+@deffn {Primitive Operation} $code-set! @var{code} @var{index} @var{octet}
+Store @var{octet} at @var{index} in the data area of @var{code}.  Both
+@var{index} and @var{octet} must be fixnums; @var{octet} must be in the
+range @math{[0, 255]}.
+@end deffn
+
+
+@deffn {Primitive Operation} $set-code-annotation @var{code} @var{obj}
+Store @var{obj} in the annotation field of @var{code}.
+@end deffn
+
+@c page
+@node syslib closures
+@section Low level closures operations
+
+
+@cindex @library{ikarus system $codes}, library
+@cindex Library @library{ikarus system $codes}
+
+
+In the following definitions the @var{closure} arguments must be closure
+objects.  The following bindings are exported by the @library{ikarus
+system $codes} library.
+
+
+@deffn {Primitive Operation} $closure-code @var{closure}
+Return the code object wrapped by the @var{closure}.
+@end deffn
+
+
+@deffn {Primitive Operation} $cpref @var{closure} @var{idx}
+Evaluate to the contents of the word at index @var{idx} (a non--negative
+fixnum) in the array of free variables in the @var{closure} memory
+block.
+
+To know at run time how many free variables are associated to
+@var{closure} we have to inspect the associated code object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Annotating closure objects
+
+
+Annotated procedures exists for debugging purposes, they allow the
+association of an arbitrary annotation object to a function.
+
+@example
+(import (rnrs)
+  (ikarus system $codes))
+
+(define (the-proc)
+  123)
+
+(define the-annotated
+  ($make-annotated-procedure 456 the-proc))
+
+(the-annotated)                         @result{} 123
+($annotated-procedure-annotation)       @result{} 456
+@end example
+
+
+@defun $make-annotated-procedure @var{annotation} @var{clo}
+Build and return a new closure object wrapping the closure object
+@var{clo} and just adding an @var{annotation} object to it.  When such
+annotated closure is applied: it applies @var{clo} to the arguments.
+
+@var{annotation} can be any Scheme object.
+@end defun
+
+
+@defun $annotated-procedure-annotation @var{clo}
+Given a closure object @var{clo} being an annotated procedure created by
+@func{$make-annotated-procedure}: return the annotation object.
+@end defun
+
+@c page
+@node syslib compiler
+@section Interface to compiler passes
+
+
+@cindex @library{ikarus system $compiler}, library
+@cindex Library @library{ikarus system $compiler}
+
+
+@value{PRJNAME} is a compiler for the Scheme language; internally it
+implements a multitude of passes, each of which performing a
+transformation from Scheme code to executable binary code.  The library
+@library{ikarus system $compiler} exports one binding for each compiler
+pass, allowing inspection of the performed transformations.
+
+The sequence in which the passes are performed @strong{cannot} be
+changed; they must be performed in the specified order.  The passes
+functions are to be considered unsafe: if the input is invalid, the
+behaviour is undefined.
+
+This section contains some documentation for each pass; however, it is
+almost impossible to truly understand what a pass does without reading
+the source code, where additional documentation is present in the form
+of comments.
+
+@menu
+* syslib compiler unparse::       Unparsing intermediate
+                                  representations.
+
+Compiler passes
+
+* syslib compiler full::          The full transformation.
+* syslib compiler recordize::     Scheme code to nested structs.
+* syslib compiler direct calls::  Optimisation for direct calls.
+* syslib compiler letrec::        Optimisation of @code{letrec} forms.
+* syslib compiler optimisation::  Source optimisation.
+* syslib compiler assignments::   Rewriting references and assignments.
+* syslib compiler tags::          Tagging known properties.
+* syslib compiler vars::          Introducing storage locations.
+* syslib compiler bindings::      Sanitizing bindings.
+* syslib compiler direct jumps::  Optimisation for direct jumps.
+* syslib compiler global::        Inserting global assignments.
+* syslib compiler closures::      Closures conversion.
+* syslib compiler lift::          Closures optimization and codes
+                                  lifting.
+* syslib compiler cogen::         Full assembly code generation.
+* syslib compiler assember::      Binary code generation.
+
+Code generation passes
+
+* syslib compiler primcall::      Introducing primitive calls.
+* syslib compiler fix::           Removing fixes.
+* syslib compiler engine::        Inserting engine checks.
+* syslib compiler stack::         Inserting stack overflow checks.
+* syslib compiler primop::        Expanding primitive operations.
+* syslib compiler order::         Imposing calling convention and
+                                  evaluation order.
+* syslib compiler frame::         Assigning frame sizes.
+* syslib compiler color::         Colorising by Chaitin.
+* syslib compiler flatten::       Flattening codes.
+@end menu
+
+@c page
+@node syslib compiler unparse
+@subsection Unparsing intermediate representations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $unparse-recordized-code @var{input}
+Given as argument a struct instance representing recordized code: build
+and return a symbolic expression that can be printed in human readable
+form.
+
+@var{input} can be any structure that is produced by the compiler
+passes.
+@end defun
+
+
+@defun $unparse-recordized-code/pretty @var{input}
+Unparse the struct instance @var{input} (representing recordized code in
+the core language already processed by the compiler) into a human
+readable symbolic expression to be used when printing to some port for
+miscellaneous debugging purposes.
+
+This function attempts to unparse recordized code and reconstruct a
+Scheme-like symbolic expression; the returned sexp does @strong{not}
+exactly represent the input.
+@end defun
+
+@c page
+@node syslib compiler full
+@subsection The full transformation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $compile-core-expr->code @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler recordize
+@subsection Scheme code to nested structs
+
+
+@defun $recordize @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler direct calls
+@subsection Optimisation for direct calls
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-direct-calls @var{input}
+@end defun
+
+
+@deffn Parameter open-mvcalls
+When set to true: an attempt is made to expand inline calls to
+@func{call-with-values} by inserting local bindings.  Defaults to
+@false{}.
+@end deffn
+
+@c page
+@node syslib compiler letrec
+@subsection Optimisation of @code{letrec} forms
+
+
+For an introduction to processing @func{letrec} and @func{letrec*}
+syntaxes, and specifically to understand the code, we @strong{must} read
+the following paper:
+
+@quotation
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
+Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+Construct''.
+@end quotation
+
+@noindent
+then we can move to the following paper, which describes the SCC
+transformation used by default:
+
+@quotation
+Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
+Workshop on Scheme and Functional Programming '09.
+@end quotation
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-letrec @var{input}
+Perform transformations to convert the recordized representation of
+@func{libary-letrec*}, @func{LETREC} and @func{letrec*} forms into low
+level binding constructs and assignments.  The result is such that the
+order of bindings in a single binding construct can be changed at will.
+@end defun
+
+
+@deffn Parameter $check-for-illegal-letrec
+If set to true: @func{$optimize-letrec} will perform an
+additional recordized code pass to check for illegal binding references
+in the right--hand sides of @func{letrec}, @func{letrec*} and
+@func{library-letrec*} syntaxes, raising a syntax violation error if one
+is found.  This is the default.
+
+If set to false: the validating pass is not performed, faithfully hoping
+for no problems in code.
+@end deffn
+
+
+@deffn Parameter $current-letrec-pass
+Select the transformations performed by
+@func{$optimize-letrec}; possible values are the symbols:
+
+@table @code
+@item basic
+The transformations are equivalent to:
+
+@example
+(letrec* ((?var ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (set! ?var ?init) ... . ?body)
+
+(library-letrec* ((?var ?loc ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (set! ?var ?init) ... . ?body)
+
+(letrec ((?var ?init) ...) . ?body)
+@expansion{} (let ((?var (void)) ...)
+      (let ((?tmp ?init) ...)
+        (set! ?var ?tmp) ... . ?body))
+@end example
+
+@item waddell
+Perform a transformation similar (but no equal) to the one described in
+the ``Fixing Letrec'' paper by Waddell et al.
+
+@item scc
+This is the default.
+@end table
+@end deffn
+
+
+@c page
+@node syslib compiler optimisation
+@subsection Source optimisation
+
+
+For an introduction to the source code see the thesis:
+
+@quotation
+Oscar Waddell.  ``Extending the Scope of Syntactic Abstraction''.  PhD.
+Thesis.  Indiana University Computer Science Department.  August 1999.
+@end quotation
+
+@noindent
+and the paper:
+
+@quotation
+Oscar Waddell, R. Kent Dybvig.  ``Fast and Effective Procedure
+Inlining''.  Indiana University.  Computer Science Department.
+Technical Report No. 484.
+@end quotation
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $source-optimize @var{input}
+Perform source code optimizations on the recordized @var{input} code and
+return the resulting recordized code.
+@end defun
+
+
+@deffn Parameter $source-optimizer-passes-count
+Specify how many passes to perform with the source optimizer; it must be
+a positive fixnum.  Defaults to 1.
+
+It makes sense to perform zero, one or two passes; it is unlikely that
+more passes can do significant improvement.
+@end deffn
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deffn Parameter $optimize-level
+The optimization level; accepted values are the fixnums @code{0},
+@code{1}, @code{2}.  Defaults to @code{0}.
+
+@quotation
+@strong{NOTE} When building the boot image this parameter is set to
+@code{2}.
+@end quotation
+@end deffn
+
+
+@deffn Parameter $cp0-effort-limit
+An effort counter that is decremented every time an optimization is
+performed by the source optimizer.  It is set every time the optimizer
+enters specific subexpressions of the input.
+@end deffn
+
+
+@deffn Parameter $cp0-size-limit
+A code size counter (estimated) that is decremented every time an
+optimization is performed by the source optimizer.  It is set every time
+the optimizer enters specific subexpressions of the input.
+@end deffn
+
+@c page
+@node syslib compiler assignments
+@subsection Rewriting references and assignments
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $rewrite-references-and-assignments @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler tags
+@subsection Tagging known properties
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $introduce-tags @var{input}
+@end defun
+
+
+@deffn Parameter $perform-tag-analysis
+When true the pass @func{$introduce-tags} is performed, else it is
+skipped.  Defaults to @true{}.
+@end deffn
+
+@c page
+@node syslib compiler vars
+@subsection Introducing storage locations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $introduce-vars @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler bindings
+@subsection Sanitizing bindings
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $sanitize-bindings @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler direct jumps
+@subsection Optimisation for direct jumps
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-for-direct-jumps @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler global
+@subsection Inserting global assignments
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $insert-global-assignments @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler closures
+@subsection Closure conversion
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $convert-closures @var{input}
+@end defun
+
+
+@deffn Parameter $optimize-cp
+To be documented.
+@end deffn
+
+@c page
+@node syslib compiler lift
+@subsection Cloaures optimization and codes lifting
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $optimize-closures/lift-codes @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler cogen
+@subsection Full assembly code generation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $alt-cogen @var{input}
+@end defun
+
+
+@c page
+@node syslib compiler assember
+@subsection Binary code generation
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $assemble-sources @var{input}
+@end defun
+
+@c page
+@node syslib compiler primcall
+@subsection Introducing primitive calls
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $introduce-primcalls @var{input}
+@end defun
+
+@c page
+@node syslib compiler fix
+@subsection Removing fixes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $eliminate-fix @var{input}
+@end defun
+
+@c page
+@node syslib compiler engine
+@subsection Inserting engine checks
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $insert-engine-checks @var{input}
+@end defun
+
+@c page
+@node syslib compiler stack
+@subsection Inserting stack overflow checks
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $insert-stack-overflow-check @var{input}
+@end defun
+
+@c page
+@node syslib compiler primop
+@subsection Expanding primitive operations
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $specify-representation @var{input}
+@end defun
+
+@c page
+@node syslib compiler order
+@subsection Imposing calling convention and evaluation order
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $impose-calling-convention/evaluation-order @var{input}
+@end defun
+
+@c page
+@node syslib compiler frame
+@subsection Assigning frame sizes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $assign-frame-sizes @var{input}
+@end defun
+
+@c page
+@node syslib compiler color
+@subsection Colorising by Chaitin
+
+
+For an introduction to register allocation see:
+
+@center @url{http://en.wikipedia.org/wiki/Register_allocation}
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $color-by-chaitin @var{input}
+@end defun
+
+@c page
+@node syslib compiler flatten
+@subsection Flattening codes
+
+
+The following bindings are exported by the library @library{ikarus
+system $compiler}.
+
+
+@defun $flatten-codes @var{input}
+@end defun
+
+@c end of file

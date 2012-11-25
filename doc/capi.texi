@@ -1,0 +1,2378 @@
+@node capi
+@chapter C language programming interface
+
+
+The executable @value{EXECUTABLE} defines a number of C language
+functions that can be invoked by compiled code to access various
+services, both to handle startup and to access the operating system.
+
+When on a @gnu{}+Linux system: the Linux specific functions are
+available; when on other systems: calling such functions will terminate
+the process.
+
+@menu
+* capi ffi::                    C language level @ffi{}.
+* capi posix::                  C language level @posix{} interface.
+* capi linux::                  C language level @gnu{}+Linux interface.
+* capi glibc::                  C language level @gnu{} C Library
+                                interface.
+@end menu
+
+@c page
+@node capi ffi
+@section C language level @ffi{}
+
+
+@menu
+* capi ffi accessors::          Raw memory accessors.
+* capi ffi mutators::           Raw memory mutators.
+@end menu
+
+@c page
+@node capi ffi accessors
+@subsection Raw memory accessors
+
+
+@subsubheading Bit--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_ref_uint8 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 8-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint8 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 8-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uint16 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 16-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint16 (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the 16-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uint32 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 32-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint32 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 32-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uint64 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 64-bit unsigned integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_sint64 (ikptr @var{pointer}, ikptr @var{offset}, ikpcb * @var{pcb})
+Extract and return the 64-bit signed integer at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading C language integer type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_ref_char (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_uchar (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_short (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_ushort (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_long (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_ulong (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_longlong (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{signed long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_ulonglong (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the exact integer representation of the C language
+@code{unsigned long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other C language type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_ref_float (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the flonum representation of the C language
+@code{float} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_double (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the flonum representation of the C language
+@code{double} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_ref_pointer (ikptr @var{pointer}, ikptr @var{offset})
+Extract and return the pointer representation of the C language
+@code{void *} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+@c page
+@node capi ffi mutators
+@subsection Raw memory mutators
+
+
+@subsubheading Bit--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} and @var{value} must be an exact integers.
+
+
+@deftypefun ikptr ikrt_set_uint8 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 8-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint8 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 8-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint16 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 16-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint16 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 16-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint32 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 32-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint32 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 32-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint64 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 64-bit unsigned integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_sint64 (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the 64-bit signed integer @var{value} at @var{offset} from
+@var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading C language integer type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} and @var{value} must be an exact integers.
+
+
+@deftypefun ikptr ikrt_set_char (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uchar (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned char} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_short (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_ushort (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned short int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_int (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_uint (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned int} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_long (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_ulong (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_longlong (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{signed long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_ulonglong (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the exact integer @var{value} representing a C language
+@code{unsigned long long} value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Other C language type--sized values
+
+In all the following definitions: @var{pointer} must be a pointer
+object, @var{offset} must be an exact integer.
+
+
+@deftypefun ikptr ikrt_set_float (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the flonum @var{value} representing a C language @code{float}
+value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_double (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the flonum @var{value} representing a C language @code{double}
+value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_set_pointer (ikptr @var{pointer}, ikptr @var{offset}, ikptr @var{value})
+Store the pointer @var{value} representing a C language @code{void *}
+value at @var{offset} from @var{pointer}.
+@end deftypefun
+
+@c page
+@node capi posix
+@section C language level @posix{} interface
+
+
+Several files are involved in the full implementation of the @posix{}
+interface:
+
+@example
+src/ikarus-posix.c
+lib/vicare/unsafe-capi.sls
+scheme/ikarus.posix.sls
+scheme/makefile.sps
+tests/test-vicare-posix.sps
+@end example
+
+File pathnames are bytevectors at the C language level and strings at
+the Scheme language level; the conversion is performed with the function
+in the parameter @func{string->filename-func}.
+
+The authoritative documentation for all the interface functions is the
+one of the C library on the platform's operating system; this file gives
+only a brief overview of the features and explains the Scheme
+adaptation.
+
+@menu
+* capi posix adding::           How to add a @posix{} primitive.
+* capi posix errno::            Handling @code{errno} codes.
+* capi posix env::              Operating system environment variables.
+* capi posix port::             File descriptors and Scheme ports.
+* capi posix pid::              Process identifier functions.
+* capi posix process::          Forking and executing processes.
+* capi posix status::           Process termination status.
+* capi posix signals::          Delivering interprocess signals.
+* capi posix stat::             File system inspection.
+* capi posix file::             File system interface.
+* capi posix link::             Hard and symbolic links.
+* capi posix dir::              File system directories.
+* capi posix fd::               File descriptors at low level.
+* capi posix socket::           Network sockets.
+* capi posix users::            Users and groups.
+* capi posix job::              Job control.
+* capi posix time::             Time and date.
+@end menu
+
+@c page
+@node capi posix adding
+@subsection How to add a @posix{} primitive
+
+
+We must remember that the @posix{} primitives end up exported by both
+the @library{vicare} and @library{ikarus} libraries; following the
+example of the @cfunc{getpid} function, to add a @posix{} primitive we
+should follow these steps:
+
+@enumerate
+@item
+In the file @file{src/ikarus-posix.c} add the primitive C language
+function:
+
+@example
+ikptr
+ikrt_posix_getpid(void)
+@{
+  int   retval = getpid();
+  return fix(retval);
+@}
+@end example
+
+@item
+In the file @file{lib/vicare/unsafe-capi.sls} add the following macro
+definition to the library:
+
+@example
+(define-inline (posix-getpid)
+  (foreign-call "ikrt_posix_getpid"))
+@end example
+
+@noindent
+and add the binding to the export list.
+
+@item
+In the file @file{scheme/ikarus.posix.sls}: add the binding to both the
+export list of the library and to the @code{except} import list from
+@library{ikarus}; add the function implementation calling a syntax
+associated to the foreign function:
+
+@example
+(define (getpid)
+  (posix-getpid))
+@end example
+
+@item
+In the file @file{scheme/makefile.sps}: add an entry for the function to
+the list bound to @code{identifier->library-map} to have the function
+exported by @library{ikarus} and @library{vicare}:
+
+@example
+(getpid         i v)
+@end example
+
+@item
+In the file @file{tests/test-vicare-posix.sps} add test cases for the
+function.
+@end enumerate
+
+@c page
+@node capi posix errno
+@subsection Handling @code{errno} codes
+
+
+@value{PRJNAME} makes use of the platform's own @code{errno} codes; they
+are negated to make them different from file descriptors, and so
+distinguishable when used as single return values from C functions, and
+converted to fixnums.  Example: if the C language code for @code{EPERM}
+is the integer @code{1}, the corresponding Scheme language value is the
+fixnum @code{-1}.
+
+
+@deftypefun ikptr ik_errno_to_code (void)
+Negate the current @code{errno} value and convert the result into a
+fixnum, return the fixnum.  When an error occurs: many functions call
+this function and return its return value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_strerror (ikptr @var{ec}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{strerror}, @glibcref{Error Messages,
+strerror}.  Convert a fixnum representing an encoded @code{errno} code
+into a bytevector holding the string message which describes it; return
+a reference to the bytevector; if @var{ec} is invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_last_errno (ikpcb * pcb)
+Return a fixnum representing the negated value of @code{errno} right
+after the last call to a foreign function through the @ffi{}.
+@end deftypefun
+
+@c page
+@node capi posix env
+@subsection Accessing environment variables
+
+
+@deftypefun ikptr ikrt_posix_getenv (ikptr @var{variable}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a bytevector object representing the name
+of the environment variable.  If the environment variable is set: return
+a bytevector representing its value; else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setenv (ikptr @var{variable}, ikptr @var{value}, ikptr @var{overwrite})
+Interface to the C function @cfunc{setenv}, @glibcref{Environment
+Access, setenv}.  Set a new value for an environment variable.
+
+@var{variable} must reference a bytevector object representing the name
+of the environment variable; @var{value} must reference a bytevector
+object representing the new value.  If @var{overwrite} is
+@code{IK_FALSE_OBJECT} and the environment variable already exists: the
+environment variable is left untouched; else the new value is set,
+either creating a new environment variable or replacing the old value.
+
+If successful return @code{IK_TRUE_OBJECT}; if an error occurs in
+@cfunc{setenv} return @code{IK_FALSE_OBJECT}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_unsetenv (ikptr @var{variable})
+Interface to the C function @cfunc{unsetenv}, @glibcref{Environment
+Access, unsetenv}.  Unset an environment variable.  @var{variable} must
+reference a bytevector object representing the name of the environment
+variable.  Return true if @var{variable} has the correct format, else
+return false; there is no way to know if a variable was actually unset.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_environ (ikpcb * @var{pcb})
+Interface to the global C variable @code{environ}, @glibcref{Environment
+Access, unsetenv}.  Retrieve the full environment.  Return a list of
+bytevectors representing the contents of the @code{environ} array; if
+the environment is empty (no environment variables set) return nil.
+@end deftypefun
+
+@c page
+@node capi posix port
+@subsection File descriptors and Scheme ports
+
+
+@menu
+* capi posix port open::        Opening and closing file descriptors.
+* capi posix port seek::        Handling file descriptor cursor.
+* capi posix port rw::          Reading and writing.
+* capi posix port event::       Handling file descriptor events.
+* capi posix port net::         Handling sockets.
+@end menu
+
+@c page
+@node capi posix port open
+@subsubsection Opening and closing file descriptors
+
+
+@deftypefun ikptr ikrt_close_fd (ikptr @var{fd})
+Interface to the @cfunc{close} C function.  @glibcref{Opening and
+Closing Files, close}.  Close a file descriptor.
+
+@var{fd} must be a fixnum representing a file descriptor.
+
+If successful return @code{IK_FALSE_OBJECT}; if an error occurs in
+@cfunc{close} return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_open_input_fd (ikptr @var{pathname})
+Interface to the @cfunc{open} C function.  @glibcref{Opening and Closing
+Files, open}.  Open a file for reading, using open mode @code{O_RDONLY}.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname.
+
+If successful return a fixnum representing the file descriptor; if an
+error occurs in @cfunc{open} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_open_output_fd (ikptr @var{pathname}, ikptr @var{opts})
+Interface to the @cfunc{open} C function.  @glibcref{Opening and Closing
+Files, open}.  Open a file for writing with configurable mode based on
+@code{O_WRONLY}; the access permissions when a new file is created are
+@code{S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH}.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname; @var{opts} must be a fixnum with the following encoding:
+
+@table @code
+@item 0
+The open mode is @code{O_WRONLY | O_CREAT | O_EXCL}.
+
+@item 1
+The open mode is @code{O_WRONLY | O_TRUNC}.
+
+@item 2
+The open mode is @code{O_WRONLY | O_TRUNC | O_CREAT}.
+
+@item 3
+The open mode is @code{O_WRONLY | O_TRUNC}.
+
+@item 4
+The open mode is @code{O_WRONLY | O_CREAT | O_EXCL}.
+
+@item 5
+The open mode is @code{O_WRONLY | O_CREAT}.
+
+@item 6
+The open mode is @code{O_WRONLY | O_CREAT}.
+
+@item 7
+The open mode is @code{O_WRONLY}.
+@end table
+
+If successful return a fixnum representing the file descriptor; if an
+error occurs in @cfunc{open} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_open_input_output_fd (ikptr @var{pathname}, ikptr @var{opts})
+Interface to the @cfunc{open} C function.  @glibcref{Opening and Closing
+Files, open}.  Open a file for reading and writing with configurable
+mode based on @code{O_RDWR}; the access permissions when a new file is
+created are @code{S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH}.
+
+@var{pathname} must reference a bytevector object holding the file
+pathname; @var{opts} must be a fixnum representing the opening flags, it
+has the same format of the @var{opts} argument to
+@func{ikrt_open_output_fd}.
+
+If successful return a fixnum representing the file descriptor; if an
+error occurs in @cfunc{open} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node capi posix port seek
+@subsubsection Handling file descriptor cursor
+
+
+@deftypefun ikptr ikrt_set_position (ikptr @var{fd}, ikptr @var{pos})
+Interface to the @cfunc{lseek} C function.  @glibcref{File Position
+Primitive, lseek}.  Set the cursor position.
+
+@var{fd} must be a fixnum representing a file descriptor; @var{pos} must
+be an exact integer in the range of the @code{off_t} platform type.
+
+If successful return @code{IK_FALSE_OBJECT}; if an error occurs in
+@cfunc{lseek} return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node capi posix port rw
+@subsubsection Reading and writing
+
+
+@deftypefun ikptr ikrt_read_fd (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{buffer-start}, ikptr @var{size})
+Interface to the @cfunc{read} C function.  @glibcref{Input and Output
+Primitives, read}.  Read data from a file descriptor.
+
+@var{fd} must be a fixnum representing a file descriptor; @var{buffer}
+must reference a bytevector object in which the data will be stored;
+@var{buffer-start} must be a fixnum representing the offset in the
+buffer at which data will be written; @var{size} must be a fixnum
+representing the number of bytes to read.
+
+If successful return a fixnum representing the number of bytes actually
+read and stored in the buffer; if an error occurs in @cfunc{read} return
+the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_write_fd (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{buffer-start}, ikptr @var{size})
+Interface to the @cfunc{write} C function.  @glibcref{Input and Output
+Primitives, write}.  Write data to a file descriptor.
+
+@var{fd} must be a fixnum representing a file descriptor; @var{buffer}
+must reference a bytevector object from which the data will be read;
+@var{buffer-start} must be a fixnum representing the offset in the
+buffer from which data will be read; @var{size} must be a fixnum
+representing the number of bytes to write.
+
+If successful return a fixnum representing the number of bytes actually
+written; if an error occurs in @cfunc{write} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node capi posix port event
+@subsubsection Handling file descriptor events
+
+
+@deftypefun ikptr ikrt_select (ikptr @var{max-fd}, ikptr @var{rfds}, ikptr @var{wfds}, ikptr @var{xfds})
+Interface to the @cfunc{select} C function.  @glibcref{Waiting for I/O,
+select}.  Poll for events on sets of file descriptors, without timeout.
+
+@var{max-fd} must be a fixnum representing the maximum file descriptor
+for which to wait for events; @var{rfds}, @var{wfds} and @var{xfds} must
+reference bytevectors holding @code{fd_set} data structures.
+
+If successful return a fixnum representing the return value from
+@cfunc{select}; if an error occurs in @cfunc{select} return the return
+value of @cfunc{ik_errno_to_code}.  Notice that if the call is
+interrupted by a signal, so it returns with @code{EINTR}, the function
+returns with error without reattempting the call.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_make_fd_nonblocking (ikptr @var{fd})
+Interface to the @cfunc{fcntl} C function.  @glibcref{Control
+Operations, fcntl}.  Set non--blocking mode for a file descriptor.
+
+@var{fd} must be a fixnum representing the file descriptor.
+
+If successful return the raw C language @cnull{} pointer; if an error
+occurs in @cfunc{fcntl} return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node capi posix port net
+@subsubsection Handling sockets
+
+
+@deftypefun ikptr ikrt_tcp_connect (ikptr @var{host}, ikptr @var{srvc})
+@deftypefunx ikptr ikrt_ucp_connect (ikptr @var{host}, ikptr @var{srvc})
+Interface to the @cfunc{getaddrinfo}, @cfunc{socket} and @cfunc{connect}
+C functions.  @glibcref{Sockets, Sockets}.  Establish a client
+connection to a remote server using the @code{SOCK_STREAM} or
+@code{SOCK_DGRAM} style.
+
+@var{host} must reference a bytevector holding the remote server
+hostname; @var{srvc} must reference a bytevector holding the service
+specification.
+
+If successful return a fixnum representing the socket; if an error
+occurs resolving the host name and address, return @code{IK_FALSE_OBJECT};
+if an error occurs in one of the C function calls, return the return
+value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_listen (ikptr @var{port-number})
+Interface to the @cfunc{socket}, @cfunc{bind}, @cfunc{listen} and
+@cfunc{setsockopt} C functions.  @glibcref{Sockets, Sockets}.  Create a
+server socket bound to the given port number for the local host, using
+the @code{AF_INET} namespace and the @code{SOCK_STREAM} style; the
+option @code{SO_REUSEADDR} is set for the server socket; at most
+@math{1024} concurrent connections to the socket will be enqueued.
+
+@var{port-number} must be a fixnum representing the port number to use.
+
+If successful return a fixnum representing the server socket; if an
+error occurs in one of the C function calls, return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_accept (ikptr @var{sock}, ikptr @var{sockaddr})
+Interface to the @cfunc{accept} C function.  @glibcref{Accepting
+Connections, accept}.  Accept a connection to a server socket.
+
+@var{sock} must be a fixnum representing the server socket;
+@var{sockaddr} must reference a bytevector object which will hold the
+@code{struct sockaddr} describing the client's address.
+
+If successful return a fixnum representing the client socket and fill
+@var{sockaddr} with the client address; if an error occurs in
+@cfunc{accept}, return the return value of @cfunc{ik_errno_to_code}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_shutdown (ikptr @var{sock})
+Interface to the @cfunc{shutdown} C function.  @glibcref{Closing a
+Socket, shutdown}.  Close a socket for both reading and writing.
+
+@var{sock} must be a fixnum representing the socket.
+
+If successful return the raw C language @cnull{} pointer; if an error
+occurs in @cfunc{shutdown}, return the return value of
+@cfunc{ik_errno_to_code}.
+@end deftypefun
+
+@c page
+@node capi posix pid
+@subsection Process identifier functions
+
+
+@deftypefun ikptr ikrt_posix_getpid (void)
+Return the process identifier as fixnum.  @glibcref{Process
+Identification, getpid}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getppid (void)
+Return the parent process identifier as fixnum.  @glibcref{Process
+Identification, getpid}.
+@end deftypefun
+
+@c page
+@node capi posix process
+@subsection Forking and executing processes
+
+
+@deftypefun ikptr ikrt_posix_system (ikptr @var{command})
+Interface to the C function @cfunc{system}, @glibcref{Running a Command,
+system}.  Execute a command through the system shell; @var{command} must
+reference a bytevector object holding the command to execute.  If
+successful return the termination status of the executed process,
+@ref{capi posix status} for details; if an error occurs: return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fork (void)
+Interface to the C function @cfunc{fork}, @glibcref{Creating a Process,
+fork}.  Create a new process by forking the current; if successful
+return a non--negative fixnum representing the the return value of
+@cfunc{fork}; if an error occurs: return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_execv (ikptr @var{filename}, ikptr @var{argv})
+Interface to the C function @cfunc{execv}, @glibcref{Executing a File,
+execv}.  @var{filename} must be a bytevector representing the pathname
+of an executable file; @var{argv} must be a list of bytevectors
+representing command line arguments.  Execute the command; if the
+function returns: an error has occurred, return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_execve (ikptr @var{filename}, ikptr @var{argv}, ikptr @var{env})
+Interface to the C function @cfunc{execve}, @glibcref{Executing a File,
+execve}.  @var{filename} must be a bytevector representing the pathname
+of an executable file; @var{argv} must be a list of bytevectors
+representing command line arguments; @var{env} must be a list of
+bytevectors representing environment variables assignments.  Execute the
+command; if the function returns: an error has occurred, return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_execvp (ikptr @var{filename}, ikptr @var{argv})
+Interface to the C function @cfunc{execvp}, @glibcref{Executing a File,
+execvp}.  @var{filename} must be a bytevector representing the file name
+of an executable file reachable in the current @env{PATH}; @var{argv}
+must be a list of bytevectors representing command line arguments.
+Execute the command; if the function returns: an error has occurred,
+return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix status
+@subsection Process termination status
+
+
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@cfunc{system} or the status acquired by @cfunc{waitpid}.
+
+
+@deftypefun ikptr ikrt_posix_waitpid (ikptr @var{pid}, ikptr @var{options})
+Interface to the C function @cfunc{waitpid}, @glibcref{Process
+Completion, waitpid}.  Request status informations on a process or group
+of processes knowing the identifier.  If successful return a fixnum
+representing the status; if an error occurs: return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_wait (void)
+Interface to the C function @cfunc{wait}, @glibcref{Process Completion,
+wait}.  Request status informations on any process or group of
+processes.  If successful return a fixnum representing the status; if an
+error occurs: return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WIFEXITED (ikptr @var{status})
+Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
+Status, WIFEXITED}.  Return true if the process terminated normally with
+@cfunc{exit}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WEXITSTATUS (ikptr @var{status})
+Interface to the C macro @cfunc{WEXITSTATUS}, @glibcref{Process
+Completion Status, WEXITSTATUS}.  If @cfunc{WIFEXITED} applied to
+@var{status} would return true: return the low--order @math{8} bits from
+the exit status, which is the process exit status selected with
+@cfunc{exit}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WIFSIGNALED (ikptr @var{status})
+Interface to the C macro @cfunc{WIFSIGNALED}, @glibcref{Process
+Completion Status, WIFSIGNALED}.  Return true if the process terminated
+because it received an interprocess signal which was not handled.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WTERMSIG (ikptr @var{status})
+Interface to the C macro @cfunc{WTERMSIG}, @glibcref{Process Completion
+Status, WTERMSIG}.  If @cfunc{WIFSIGNALED} applied to @var{status} would
+return true: return the number of the interprocess signal that
+terminated the process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WCOREDUMP (ikptr @var{status})
+Interface to the C macro @cfunc{WCOREDUMP}, @glibcref{Process Completion
+Status, WCOREDUMP}.  Return true if the process terminated and produced
+a core dump.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WIFSTOPPED (ikptr @var{status})
+Interface to the C macro @cfunc{WIFSTOPPED}, @glibcref{Process
+Completion Status, WIFSTOPPED}.  Return true if the process is stopped.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_WSTOPSIG (ikptr @var{status})
+Interface to the C macro @cfunc{WSTOPSIG}, @glibcref{Process Completion
+Status, WSTOPSIG}.  If @cfunc{WIFSTOPPED} applied to @var{status} would
+return true: return the number of the interprocess signal that caused
+the process to stop.
+@end deftypefun
+
+@c page
+@node capi posix signals
+@subsection Delivering interprocess signals
+
+
+@deftypefun ikptr ikrt_posix_raise (ikptr @var{signum})
+Interface to the C function @cfunc{raise}, @glibcref{Signaling Yourself,
+raise}.  Send the selected signal to the calling process.  If successful
+return zero, else return an encoded @code{errno} code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_kill (ikptr @var{pid}, ikptr @var{signum})
+Interface to the C function @cfunc{kill}, @glibcref{Signaling Another
+Process, kill}.  Send the selected signal to selected process.  If
+successful return zero, else return an encoded @code{errno} code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_pause (void)
+Interface to the C function @cfunc{pause}, @glibcref{Using Pause,
+pause}.  Suspend the process until a signal is received.  Return the
+void object.
+@end deftypefun
+
+@c page
+@node capi posix stat
+@subsection File system inspection
+
+
+@deftypefun ikptr ikrt_posix_stat (ikptr @var{pathname}, ikptr @var{stat}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_lstat (ikptr @var{pathname}, ikptr @var{stat}, ikpcb * @var{pcb})
+Interfaces to the C functions @cfunc{stat} and @cfunc{lstat},
+@glibcref{Reading Attributes, stat}.  Inspect the file system entry
+selected by @var{pathname}, which must be a bytevector, and fill the
+@code{struct-stat} instance referenced by @var{stat} with the results.
+If successful return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fstat (ikptr @var{fd}, ikptr @var{stat}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{fstat}, @glibcref{Reading Attributes,
+fstat}.  Inspect the file system entry associated to the file descriptor
+@var{fd}, which must be a fixnum, and fill the @code{struct-stat}
+instance referenced by @var{stat} with the results.  If successful
+return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_file_is_directory (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_char_device (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_block_device (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_regular_file (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_symbolic_link (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_socket (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_fifo (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_message_queue (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_semaphore (ikptr @var{pathname}, ikptr @var{follow})
+@deftypefunx ikptr ikrt_posix_file_is_shared_memory (ikptr @var{pathname}, ikptr @var{follow})
+Return @true{} or @false{} whether the file system entry selected by
+@var{pathname}, which must be a bytevector, is of the specified type; if
+an error occurs return an encoded @code{errno} value.  When @var{follow}
+is true: @cfunc{stat} is used to inspect the entry, else @cfunc{lstat}
+is used.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_access (ikptr @var{pathname}, ikptr @var{how})
+Interface to the C function @cfunc{access}, @glibcref{Testing File
+Access, access}.  Test the access mode selected by @var{how}, which must
+be a fixnum, for the file system entry selected by @var{pathname}, which
+must be a bytevector.  Return @true{} or @false{} or an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_file_size (ikptr @var{filename}, ikpcb * @var{pcb})
+Determine the size of the file selected by @var{filename}, which must be
+a bytevector, relying on a call to @cfunc{stat}.  If successful: return
+an exact integer representing the size, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_file_atime (ikptr @var{pathname}, ikptr @var{vector}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_file_mtime (ikptr @var{pathname}, ikptr @var{vector}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_file_ctime (ikptr @var{pathname}, ikptr @var{vector}, ikpcb * @var{pcb})
+Compute an exact integer representing the access, modification and
+creation times for @var{pathname}, which must be a bytevector.  If
+successful return zero, else return an encoded @code{errno} value.
+
+The @var{vector} argument must be a vector which is mutated as follows:
+the first item holds an exact integer representing the number of
+seconds, the second item holds an exact integer representing the number
+of microseconds.
+@end deftypefun
+
+@c page
+@node capi posix file
+@subsection File system interface
+
+
+@deftypefun ikptr ikrt_posix_chown (ikptr @var{pathname}, ikptr @var{owner}, ikptr @var{group})
+Interface to the C function @cfunc{chown}, @glibcref{File Owner, chown}.
+Changes the owner and group of the file system entry selected by
+@var{pathname}, which must be a bytevector.  @var{owner} and @var{group}
+must be fixnums.  If successful return zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fchown (ikptr @var{fd}, ikptr @var{owner}, ikptr @var{group})
+Interface to the C function @cfunc{fchown}, @glibcref{File Owner,
+fchown}.  Changes the owner and group of the file system entry selected
+by @var{fd}, which must be a fixnum representing a platform file
+descriptor.  @var{owner} and @var{group} must be fixnums.  If successful
+return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_chmod (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the C function @cfunc{chmod}, @glibcref{Setting
+Permissions, chmod}.  Change to @var{mode}, which must be a fixnum, the
+access permissions for the file system entry selected by @var{pathname},
+which must be a bytevector.  If successful return zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fchmod (ikptr @var{fd}, ikptr @var{mode})
+Interface to the C function @cfunc{fchmod}, @glibcref{Setting
+Permissions, fchmod}.  Change to @var{mode}, which must be a fixnum, the
+access permissions for the file system entry associated to @var{fd},
+which must be a fixnum representing a platform file descriptor.  If
+successful return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_umask (ikptr @var{mask})
+Interface to the C function @cfunc{umask}, @glibcref{Setting
+Permissions, umask}.  Set the current file creation mask to @var{mask}
+which must be a fixnum and return the previous mask as a fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getumask (void)
+Interface to the C function @cfunc{getumask}, @glibcref{Setting
+Permissions, getumask}.  Return the current file creation mask as a
+fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_utime (ikptr @var{pathname}, ikptr @var{atime_sec}, ikptr @var{mtime_sec})
+Interface to the C function @cfunc{utime}, @glibcref{File Times, utime}.
+Set the access and modification times of the file system entry selected
+by @var{pathname}, which must be a bytevector, to the specified counts
+of seconds; both @var{atime_sec} and @var{mtime_sec} must be fixnums.
+If successful return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_utimes (ikptr @var{pathname}, ikptr @var{atime_sec}, ikptr @var{atime_usec}, ikptr @var{mtime_sec}, ikptr @var{mtime_usec})
+@deftypefunx ikptr ikrt_posix_lutimes (ikptr @var{pathname}, ikptr @var{atime_sec}, ikptr @var{atime_usec}, ikptr @var{mtime_sec}, ikptr @var{mtime_usec})
+Interface to the C functions @cfunc{utimes} and @cfunc{lutimes},
+@glibcref{File Times, utimes}.  Set the access and modification times of
+the file system entry selected by @var{pathname}, which must be a
+bytevector, to the specified counts of seconds and microseconds; all the
+numeric arguments must be fixnums.  If successful return zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_futimes (ikptr @var{fd}, ikptr @var{atime_sec}, ikptr @var{atime_usec}, ikptr @var{mtime_sec}, ikptr @var{mtime_usec})
+Interface to the C function @cfunc{futimes}, @glibcref{File Times,
+futimes}.  Set the access and modification times of the file system
+entry associated to @var{fd}, which must be a fixnum representing a file
+descriptor, to the specified counts of seconds and microseconds; all the
+numeric arguments must be fixnums.  If successful return zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix link
+@subsection Hard and symbolic links
+
+
+@deftypefun ikptr ikrt_posix_link (ikptr @var{old_pathname}, ikptr @var{new_pathname})
+Interface to the C function @cfunc{link}, @glibcref{Hard Links, link}.
+Create a hard link @var{new_pathname} to the source file system entry
+@var{old_pathname}.  If successful return zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_symlink (ikptr @var{file_pathname}, ikptr @var{link_pathname})
+Interface to the C function @cfunc{symlink}, @glibcref{Symbolic Links,
+symlink}.  Create a symbolic link @var{link_pathname} to the source file
+system entry @var{file_pathname}.  If successful return zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_readlink (ikptr @var{link_pathname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{readlink}, @glibcref{Symbolic Links,
+readlink}.  If @var{pathname} references a symbolic link: follow it once
+and return the referenced pathname as bytevector; if an error occurs:
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_realpath (ikptr @var{pathname})
+Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
+realpath}.  If @var{pathname} references a symbolic link: follow it and
+return the real pathname as bytevector; if an error occurs: return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_unlink (ikptr @var{pathname})
+Interface to the C function @cfunc{unlink}, @glibcref{Deleting Files,
+unlink}.  Delete the file system entry referenced by @var{pathname},
+which must be a bytevector and referencing a file.  If successful return
+zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_remove (ikptr @var{pathname})
+Interface to the C function @cfunc{remove}, @glibcref{Deleting Files,
+remove}.  Delete the file system entry referenced by @var{pathname},
+which must be a bytevector and referencing a file or directory.  If
+successful return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_rename (ikptr @var{old_pathname}, ikptr @var{new_pathname})
+Interface to the C function @cfunc{rename}, @glibcref{Renaming Files,
+rename}.  Rename the file system entry @var{old_pathname} to
+@var{new_pathname}, both of which must be bytevectors.  If successful
+return zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix dir
+@subsection File system directories
+
+
+@deftypefun ikptr ikrt_posix_mkdir (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the C function @cfunc{mkdir}, @glibcref{Creating
+Directories, mkdir}.  Create a new directory file system entry with name
+@var{pathname}, which must be a bytevector; @var{mode} must be a fixnum
+specifying access permissions.  If successful return the fixnum zero,
+else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_rmdir (ikptr @var{pathname})
+Interface to the C function @cfunc{rmdir}, @glibcref{Creating
+Directories, rmdir}.  Remove the directory file system entry selected by
+@var{pathname}, which must be a bytevector.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getcwd (ikpcb * @var{pcb})
+Interface to the C function @cfunc{getcwd}, @glibcref{Working Directory,
+getcwd}.  Acquire the pathname of the current working directory.  If
+successful return a bytevector holding the pathname, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_chdir (ikptr @var{pathname})
+Interface to the C function @cfunc{chdir}, @glibcref{Working Directory,
+chdir}.  Change the current working directory to the file system entry
+selected by @var{pathname}, which must be a bytevector.  If successful
+return the fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fchdir (ikptr @var{fd})
+Interface to the C function @cfunc{fchdir}, @glibcref{Working Directory,
+fchdir}.  Change the current working directory to the file system entry
+associated to @var{fd}, which must be a fixnum representing a file
+descriptor.  If successful return the fixnum zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_opendir (ikptr @var{pathname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{opendir}, @glibcref{Opening a
+Directory, opendir}.  Open a directory stream for the inspection of the
+file system entry @var{pathname}, which must be a bytevector.  If
+successful return a pointer object, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_fdopendir (ikptr @var{fd}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{fdopendir}, @glibcref{Opening a
+Directory, fdopendir}.  Open a directory stream for the inspection of
+the file system entry associated to @var{fd}, which must be a fixnum
+representing a file descriptor.  If successful return a pointer object,
+else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_readdir (ikptr @var{pointer}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{readdir}, @glibcref{Reading/Closing
+Directory, readdir}.  Acquire the next entry from a directory stream
+referenced by @var{pointer}, which must be a pointer object.  If
+successful and an entry is available: return a pointer object; if
+successful and no more entries are available: return the false object;
+else return an encoded @code{errno} value.
+
+When no more entries are available or an error occurs: the directory
+stream is closed.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_closedir (ikptr @var{pointer}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{closedir}, @glibcref{Reading/Closing
+Directory, closedir}.  Close the directory stream referenced by
+@var{pointer}, which must be a pointer object.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_rewinddir (ikptr @var{pointer})
+Interface to the C function @cfunc{rewinddir}, @glibcref{Random Access
+Directory, rewinddir}.  Rewind to the beginning the directory stream
+referenced by @var{pointer}, which must be a pointer object.  Return the
+void object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_telldir (ikptr @var{pointer})
+Interface to the C function @cfunc{telldir}, @glibcref{Random Access
+Directory, telldir}.  Return an exact integer representing the current
+position in the directory stream referenced by @var{pointer}, which must
+be a pointer object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_seekdir (ikptr @var{pointer}, ikptr @var{pos})
+Interface to the C function @cfunc{seekdir}, @glibcref{Random Access
+Directory, seekdir}.  Set to @var{pos} the position of the directory
+stream referenced by @var{pointer}, which must be a pointer object;
+@var{pos} must be the return value of a previous call to
+@cfunc{telldir}.  Return the void object.
+@end deftypefun
+
+@c page
+@node capi posix fd
+@subsection File descriptors at low level
+
+
+@deftypefun ikptr ikrt_posix_open (ikptr @var{pathname}, ikptr @var{flags}, ikptr @var{mode})
+Interface to the C function @cfunc{open}, @glibcref{Opening and Closing
+Files, open}.  Open a file descriptor for the file system entry
+@var{pathname}, which must be a bytevector; @var{flags} and @var{mode}
+must be fixnums.  If successful return a fixnum representing the file
+descriptor, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_close (ikptr @var{fd})
+Interface to the C function @cfunc{close}, @glibcref{Opening and Closing
+Files, close}.  Close a file descriptor represented by @var{fd}, which
+must be a fixnum.  If successful return the fixnum zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_read (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
+Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
+read}.  Read bytes from the file descriptor @var{fd} and store them in
+the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes read, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_pread (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{off})
+Interface to the C function @cfunc{pread}, @glibcref{I/O Primitives,
+pread}.  Like @cfunc{ikrt_posix_read}, but start reading at offset
+@var{off} from the start of the file; @var{off} must be a non--negative
+exact integer.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_write (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size})
+Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
+write}.  Write bytes to the file descriptor @var{fd} from the bytevector
+@var{buffer}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of written bytes, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_pwrite (ikptr @var{fd}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{off})
+Interface to the C function @cfunc{pwrite}, @glibcref{I/O Primitives,
+pwrite}.  Like @cfunc{ikrt_posix_write}, but start writing at offset
+@var{off} from the start of the file; @var{off} must be a non--negative
+exact integer.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_lseek (ikptr @var{fd}, ikptr @var{off}, ikptr @var{whence}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{lseek}, @glibcref{File Position
+Primitive, lseek}.  Change the file position of the file descriptor
+@var{fd} to @var{off} from @var{whence}; @var{fd} and @var{whence} must
+be fixnums, @var{off} must be an exact integer.  If successful return a
+non--negative exact integer representing the number of bytes from the
+beginning of the file, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_readv (ikptr @var{fd}, ikptr @var{buffers}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{readv}, @glibcref{Scatter-Gather,
+readv}.  Read bytes from the file descriptor @var{fd} and store them
+into the list of bytevectors referenced by @var{buffers}.  If successful
+return a non--negative exact integer representing the number of bytes
+actually read, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_writev (ikptr @var{fd}, ikptr @var{buffers}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{writev}, @glibcref{Scatter-Gather,
+writev}.  Write bytes to the file descriptor @var{fd} from the list of
+bytevectors referenced by @var{buffers}.  If successful return a
+non--negative exact integer representing the number of bytes actually
+written, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_select (ikptr @var{nfds}, ikptr @var{read_fds}, ikptr @var{write_fds}, ikptr @var{except_fds}, ikptr @var{sec}, ikptr @var{usec}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to the maximum file descriptor value in the given lists; it is
+the maximum file descriptor number in the sets to be checked for events,
+plus one.  @var{read_fds}, @var{write_fds} and @var{except_fds} must be
+nil or lists of file descriptors to be checked for events.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
+
+Return the fixnum zero if the timeout expired before any event arrived;
+else return a vector of 3 elements being lists of file descriptors,
+respectively, ready for reading, writing or an exceptional condition.
+If an error occurs: return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_select_fd (ikptr @var{fd}, ikptr @var{sec}, ikptr @var{usec}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on the single file
+descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
+representing timeout seconds and microseconds.
+
+Return the fixnum zero if the timeout expired before any event arrived;
+else return a fixnum being the OR combination of the flags: @code{1} if
+@var{fd} is readable, @code{2} if @var{fd} is writable, @code{4} if
+@var{fd} received an exception.  If an error occurs: return an encoded
+@code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_fcntl (ikptr @var{fd}, ikptr @var{command}, ikptr @var{arg})
+Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
+fcntl}.  Perform the operation specified by @var{command} on the file
+descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
+fixnums; @var{arg} must be the false object, a fixnum, a bytevector or a
+pointer, if it is @false{} no argument is handed to @cfunc{fcntl}.  If
+successful return a fixnum representing the return value of
+@cfunc{fcntl}, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_ioctl (ikptr @var{fd}, ikptr @var{command}, ikptr @var{arg})
+Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
+Perform the operation specified by @var{command} on the file descriptor
+@var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
+@var{arg} must be the false object, a fixnum, a bytevector or a pointer,
+if it is @false{} no argument is handed to @cfunc{ioctl}.  If successful
+return a fixnum representing the return value of @cfunc{ioctl}, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_dup (ikptr @var{fd})
+Interface to the C function @cfunc{dup}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{fd}.  If
+successful return a non--negative fixnum representing the new
+descriptor, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_dup2 (ikptr @var{old}, ikptr @var{new})
+Interface to the C function @cfunc{dup2}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{old} to
+@var{new}.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_pipe (ikpcb * @var{pcb})
+Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
+pipe}.  Create a pair of file descriptors connected through a pipe.  If
+successful return a pair whose car and cdr are fixnums representing the
+file descriptors, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_mkfifo (ikptr @var{pathname}, ikptr @var{mode})
+Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
+Files, mkfifo}.  Create a FIFO special file with name @var{pathname},
+which must be a bytevector, and mode @var{mode}, which must be a fixnum.
+If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix socket
+@subsection Network sockets
+
+
+@subsubheading Address structures
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_un (ikptr @var{pathname}, ikpcb * @var{pcb})
+Given a bytevector @var{pathname} representing the pathname of a local
+socket, build and return a bytevector holding the @code{struct
+sockaddr_un} representing it.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_un_pathname (ikptr @var{socket_address}, ikpcb * @var{pcb})
+Given a bytevector @var{socket_address}, which must be the return value
+of a previous call to @cfunc{ikrt_posix_make_sockaddr_un}, holding a
+@code{struct sockaddr_un} build and return a bytevector holding the
+corresponding socket pathname.  If the data in @var{socket_address} is
+invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_in (ikptr @var{host_address}, ikptr @var{port}, ikpcb * @var{pcb})
+Given a bytevector @var{host_address} holding a @code{struct in_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in} initialised with
+this data.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_in_in_addr (ikptr @var{socket_address}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_sockaddr_in_in_port (ikptr @var{socket_address})
+Given a bytevector @var{socket_address} holding a @code{struct
+sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
+return them as bytevector holding the corresponding @code{struct
+in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
+return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_make_sockaddr_in6 (ikptr @var{host_address}, ikptr @var{port}, ikpcb * @var{pcb})
+Given a bytevector @var{host_address} holding a @code{struct in6_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in6} initialised
+with this data.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_sockaddr_in6_in6_addr (ikptr @var{socket_address}, ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_sockaddr_in6_in6_port (ikptr @var{socket_address})
+Given a bytevector @var{socket_address} holding a @code{struct
+sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
+and return them as bytevector holding the corresponding @code{struct
+in6_addr} and as fixnum.  If the data in @var{socket_address} is
+invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_in6addr_loopback (ikpcb * @var{pcb})
+@deftypefunx ikptr ikrt_posix_in6addr_any (ikpcb * @var{pcb})
+Build and return a bytevector holding the constant structures of type
+@code{struct in6_addr} defined by @code{in6addr_loopback} and
+@code{in6addr_any}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_inet_aton (ikptr @var{dotted_quad}, ikpcb * @var{pcb})
+Given the bytevector @var{dotted_quad} holding the @ascii{} dotted quad
+representation of a host address, build and return a bytevector holding
+the corresponding @code{struct in_addr}.  If @var{dotted_quad} is
+invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_inet_ntoa (ikptr @var{host_address}, ikpcb * @var{pcb})
+Given the bytevector @var{host_address} holding a @code{struct in_addr},
+build and return a bytevector holding the corresponding @ascii{} dotted
+quad representation.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_inet_pton (ikptr @var{af}, ikptr @var{presentation}, ikpcb * @var{pcb})
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{presentation} holding the @ascii{} presentation of
+an Internet address, build and return a bytevector holding the
+corresponding @code{struct in_addr} or @code{struct in6_addr}.  If
+either @var{af} or @var{presentation} is invalid: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_inet_ntop (ikptr @var{af}, ikptr @var{host_address}, ikpcb * @var{pcb})
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{host_address} holding a @code{struct in_addr} or
+@code{struct in6_addr}, build and return a bytevector holding the
+corresponding @ascii{} presentation of the Internet address .  If the
+arguments are invalid: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Host address resolution
+
+
+@deftypefun ikptr ikrt_posix_gethostbyname (ikptr @var{rtd}, ikptr @var{hostname}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the bytevector @var{hostname} holding the
+@ascii{} representation of a host name, build and return an instance of
+@code{struct-hostent} using @var{rtd} as its type descriptor.  If an
+error occurs, return an encoded @code{h_errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gethostbyaddr (ikptr @var{rtd}, ikptr @var{addr}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
+gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
+in_addr} or a @code{struct in6_addr}, build and return an instance of
+@code{struct-hostent} using @var{rtd} as its type descriptor; the type
+of address is automatically inferred from the length of the bytevector.
+If an error occurs, return an encoded @code{h_errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_host_entries (ikptr @var{rtd}, ikpcb * pcb)
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database, using @var{rtd} as type descriptor.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getaddrinfo (ikptr @var{rtd}, ikptr @var{node}, ikptr @var{service}, ikptr @var{hints}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getaddrinfo}, see the manual page
+@code{getaddrinfo(3)}.  Given the bytevectors @var{node} and
+@var{service} identifying an Internet host and a service, build a list
+of @code{struct-addrinfo} instances representing addresses to which
+sockets can be bound or connected.
+
+Both @var{node} and @var{service} can be false, in which case the
+corresponding arguments handed to the C function are @code{NULL}.
+
+@var{hints} must be an instance of @code{struct-addrinfo} used to select
+matching hosts.  @var{rtd} must be the type descriptor of
+@code{struct-addrinfo}.
+
+If successful: return the list of data structures, else return a fixnum
+representing an @code{EAI_} error code.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gai_strerror (ikptr @var{error_code}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gai_strerror}, see the manual page
+@code{gai_strerror(3)}.  Convert a @code{EAI_} error code into the
+corresponding error message, return a bytevector holding such message in
+@ascii{} coding.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Network protocols
+
+
+@deftypefun ikptr ikrt_posix_getprotobyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
+Database, getprotobyname}.  Given a bytevector @var{name} holding the
+@ascii{} coding of a network protocol name, query the network protocols
+database and build an instance of @code{struct-protoent} mirroring the
+resulting @code{struct protoent} entry; @var{rtd} must be the type
+descriptor of @code{struct-protoent}.  If successful return the data
+structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getprotobynumber (ikptr @var{rtd}, ikptr @var{proto_num}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getprotobynumber},
+@glibcref{Protocols Database, getprotobynumber}.  Given a fixnum
+@var{proto_num} being the number of a network protocol, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry; @var{rtd} must be the type descriptor of @code{struct-protoent}.
+If successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_protocol_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setprotoent}, @cfunc{getprotoent}
+and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
+Scan the network protocol database and build a list of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entries; @var{rtd} must be the type descriptor of
+@code{struct-protoent}.  Return the list of structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Network services
+
+
+@deftypefun ikptr ikrt_posix_getservbyname (ikptr @var{rtd}, ikptr @var{name}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getservbyname}, @glibcref{Services
+Database, getservbyname}.  Given the bytevectors @var{name} and
+@var{protocol} holding the @ascii{} coding of a network service name and
+protocol, query the network services database and build an instance of
+@code{struct-servent} mirroring the resulting @code{struct servent}
+entry.  @var{rtd} must be the type descriptor of @code{struct-servent}.
+If successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getservbynumber (ikptr @var{rtd}, ikptr @var{port}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getservbynumber}, @glibcref{Services
+Database, getservbynumber}.  Given a fixnum @var{port} and a string or
+bytevector @var{protocol} being the port number and protocol name of a
+network service, query the network services database and build an
+instance of @code{struct-servent} mirroring the resulting @code{struct
+servent} entry.  @var{rtd} must be the type descriptor of
+@code{struct-servent}.  If successful return the data structure, else
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_service_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
+@cfunc{endservent}, @glibcref{Services Database, setservent}.  Scan the
+network service database and build a list of @code{struct-servent}
+mirroring the resulting @code{struct servent} entries.  @var{rtd} must
+be the type descriptor of @code{struct-servent}.  Return the list of
+structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Networks database
+
+
+@deftypefun ikptr ikrt_posix_getnetbyname (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getnetbyname}, @glibcref{Networks
+Database, getnetbyname}.  Given the bytevector @var{name} holding the
+@ascii{} coding of a network name, query the networks database and build
+an instance of @code{struct-netent} mirroring the resulting @code{struct
+netent} entry.  @var{rtd} must be the type descriptor of
+@code{struct-netent}.  If successful return the data structure, else
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getnetbyaddr (ikptr @var{rtd}, ikptr @var{net}, ikptr @var{type}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getnetbyaddr}, @glibcref{Networks
+Database, getnetbyaddr}.  Given an exact integer @var{net} representing
+a network number and the fixnum @var{type} representing a network type,
+query the networks database and build an instance of
+@code{struct-netent} mirroring the resulting @code{struct netent} entry.
+@var{rtd} must be the type descriptor of @code{struct-netent}.  If
+successful return the data structure, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_network_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
+@cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
+networks database and build a list of @code{struct-netent} mirroring the
+resulting @code{struct netent} entries.  @var{rtd} must be the type
+descriptor of @code{struct-netent}.  Return the list of structures.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Sockets creation and shutdown
+
+
+@deftypefun ikptr ikrt_posix_socket (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol})
+Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
+socket}.  Create a new socket descriptor and return it as non--negative
+fixnum; if an error occurs return an encoded @code{errno} value.  All
+the arguments must be fixnums.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_shutdown (ikptr @var{sock}, ikptr @var{how})
+Interface to the C function @cfunc{shutdown}, @glibcref{Closing a
+Socket, shutdown}.  Close the socket @var{sock} according to @var{how}.
+If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_socketpair (ikptr @var{namespace}, ikptr @var{style}, ikptr @var{protocol}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{socketpair}, @glibcref{Socket Pairs,
+socketpair}.  Create a pairs of connected sockets and return a pair
+holding the descriptors as non--negative fixnums; if an error occurs
+return an encoded @code{errno} value.  All the arguments must be
+fixnums, but @var{pcb}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Socket operations
+
+
+@deftypefun ikptr ikrt_posix_connect (ikptr @var{sock}, ikptr @var{addr})
+Interface to the C function @cfunc{connect}, @glibcref{Connecting,
+connect}.  Connect the socket @var{sock} to the address specified by the
+bytevector @var{addr} which must hold a concrete instance of
+@code{struct sockaddr}.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_listen (ikptr @var{sock}, ikptr @var{pending_conns})
+Interface to the C function @cfunc{listen}, @glibcref{Listening,
+listen}.  Enable the socket @var{sock} to accept connections; the fixnum
+@var{pending_conns} specifies the maximum length of the pending
+connection requests queue.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_accept (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{accept}, @glibcref{Accepting
+Connections, accept}.  Accept an incoming connection to the server
+socket @var{sock}.  If successful return a pair whose car is a
+non--negative fixnum representing the socket and whose cdr is a
+bytevector representing the client address as @code{struct sockaddr};
+else return an encoded @code{errno} value, including @code{EWOULDBLOCK}
+which means that @var{sock} is in non--blocking mode and no pending
+connections exist.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_bind (ikptr @var{sock}, ikptr @var{sockaddr})
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Bind the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpeername (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpeername}, @glibcref{Who is
+Connected, getpeername}.  Retrieve informations about the address of the
+socket to which the @var{sock} socket is connected to.  If successful
+return a bytevector holding a @code{struct sockaddr}, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getsockname (ikptr @var{sock}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_send (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags})
+Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
+Like @cfunc{write} but with the additional argument @var{flags} which
+must be a fixnum: write data from the bytevector @var{buffer} to the
+socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually sent, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_recv (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags})
+Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
+recv}.  Like @cfunc{read} but with the additional argument @var{flags}
+which must be a fixnum: read data from @var{sock} and store it in the
+bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes actually received, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_sendto (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags}, ikptr @var{addr})
+Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
+sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
+which must be a bytevector holding a @code{struct sockaddr}: write data
+from the bytevector @var{buffer} to the socket @var{sock} to the
+destination specified by @var{addr}.
+
+If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
+false, write a number of bytes equal to the length of @var{buffer}.
+
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_recvfrom (ikptr @var{sock}, ikptr @var{buffer}, ikptr @var{size}, ikptr @var{flags}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
+Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
+informations about the address of the sender: read data from @var{sock}
+and store it in the bytevector @var{buffer}.
+
+If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
+false, read a number of bytes equal to the length of @var{buffer}.
+
+If successful return a pair whose car is a non--negative fixnum
+representing the number of bytes actually received and whose cdr is a
+bytevector holding a @code{struct sockaddr} representing the address of
+the sender; else return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getsockopt (ikptr @var{sock}, ikptr @var{level}, ikptr @var{option}, ikptr @var{optval}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
+Function, getsockopt}.  Retrieve the value of @var{option} of socket
+@var{sock} at @var{level} and store it in the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setsockopt (ikptr @var{sock}, ikptr @var{level}, ikptr @var{option}, ikptr @var{optval}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{setsockopt}, @glibcref{Socket Option
+Function, setsockopt}.  Set a new value for @var{option} of socket
+@var{sock} at @var{level} reading it from the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return the
+fixnum zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix users
+@subsection Users and groups
+
+
+@deftypefun ikptr ikrt_posix_getuid (void)
+Interface to the C function @cfunc{getuid}, @glibcref{Reading Persona,
+getuid}.  Return a fixnum representing the real user ID of the process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getgid (void)
+Interface to the C function @cfunc{getgid}, @glibcref{Reading Persona,
+getgid}.  Return a fixnum representing the real group ID of the process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_geteuid (void)
+Interface to the C function @cfunc{geteuid}, @glibcref{Reading Persona,
+geteuid}.  Return a fixnum representing the effective user ID of the
+process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getegid (void)
+Interface to the C function @cfunc{getegid}, @glibcref{Reading Persona,
+getegid}.  Return a fixnum representing the effective group ID of the
+process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getgroups (ikpcb * @var{pcb})
+Interface to the C function @cfunc{getgroups}, @glibcref{Reading
+Persona, getgroups}.  Return a list of fixnums representing the
+supplementary group IDs of the process; if an error occurs return an
+encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_seteuid (ikptr @var{new_uid})
+Interface to the C function @cfunc{seteuid}, @glibcref{Setting User ID,
+seteuid}.  Set the effective user ID to @var{new_uid}, which must be a
+fixnum.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setuid (ikptr @var{new_uid})
+Interface to the C function @cfunc{setuid}, @glibcref{Setting User ID,
+setuid}.  Set both the real and effective user IDs to @var{new_uid},
+which must be a fixnum.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setreuid (ikptr @var{real_uid}, ikptr @var{effective_uid})
+Interface to the C function @cfunc{setreuid}, @glibcref{Setting User ID,
+setreuid}.  Set the real user ID to @var{real_uid} and the effective
+user ID to @var{effective_uid}, both the arguments must be fixnums.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_setegid (ikptr @var{new_gid})
+Interface to the C function @cfunc{setegid}, @glibcref{Setting Groups,
+setegid}.  Set the effective group ID to @var{new_gid}, which must be a
+fixnum.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setgid (ikptr @var{new_gid})
+Interface to the C function @cfunc{setgid}, @glibcref{Setting Groups,
+setgid}.  Set both the real and effective group IDs to @var{new_gid},
+which must be a fixnum.  If successful return the fixnum zero, else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setregid (ikptr @var{real_gid}, ikptr @var{effective_gid})
+Interface to the C function @cfunc{setregid}, @glibcref{Setting Groups,
+setregid}.  Set the real group ID to @var{real_gid} and the effective
+group ID to @var{effective_gid}, both the arguments must be fixnums.  If
+successful return the fixnum zero, else return an encoded @code{errno}
+value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getlogin (ikpcb * @var{pcb})
+Interface to the C function @cfunc{getlogin}, @glibcref{Who Logged In,
+getlogin}.  Return a bytevector holding the @ascii{} coding of the name
+of the user logged in on the controlling terminal of the process; if the
+name cannot be determined: return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getpwuid (ikptr @var{rtd}, ikptr @var{uid}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpwuid}, @glibcref{Lookup User,
+getpwuid}.  Retrieve informations on the user with identifier @var{uid},
+which must be a fixnum.  If successful return an instance of
+@code{struct-passwd} initialised with @var{rtd}, which must be its type
+descriptor; if a user with such an ID does not exists: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpwnam (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getpwnam}, @glibcref{Lookup User,
+getpwnam}.  Retrieve informations on the user with name represented in
+@ascii{} coding by the bytevector @var{name}.  If successful return an
+instance of @code{struct-passwd} initialised with @var{rtd}, which must
+be its type descriptor; if a user with such an ID does not exists:
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_user_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setpwent}, @cfunc{getpwent} and
+@cfunc{endpwent}, @glibcref{Scanning All Users, setpwent}.  Iterate the
+database of users and return a list of @code{struct-passwd} representing
+the entries; the structures are initialised with @var{rtd} which must be
+the type descriptor of @code{struct-passwd}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_getgrgid (ikptr @var{rtd}, ikptr @var{gid}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getgrgid}, @glibcref{Lookup Group,
+getgrgid}.  Retrieve informations on the group with identifier
+@var{gid}, which must be a fixnum.  If successful return an instance of
+@code{struct-group} initialised with @var{rtd}, which must be its type
+descriptor; if a group with such an ID does not exists: return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getgrnam (ikptr @var{rtd}, ikptr @var{name}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{getgrnam}, @glibcref{Lookup Group,
+getgrnam}.  Retrieve informations on the group with name represented in
+@ascii{} coding by the bytevector @var{name}.  If successful return an
+instance of @code{struct-group} initialised with @var{rtd}, which must
+be its type descriptor; if a group with such an ID does not exists:
+return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_group_entries (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C functions @cfunc{setgrent}, @cfunc{getgrent} and
+@cfunc{endgrent}, @glibcref{Scanning All Groups, setgrent}.  Iterate the
+database of groups and return a list of @code{struct-group} representing
+the entries; the structures are initialised with @var{rtd} which must be
+the type descriptor of @code{struct-group}.
+@end deftypefun
+
+@c page
+@node capi posix job
+@subsection Job control
+
+
+@deftypefun ikptr ikrt_posix_ctermid (ikpcb * @var{pcb})
+Interface to the C function @cfunc{ctermid}, @glibcref{Identifying the
+Terminal, ctermid}.  Return a bytevector holding the @ascii{} coded
+pathname of the controlling terminal of the current process; the
+returned value may be the empty bytevector.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_setsid (void)
+Interface to the C function @cfunc{setsid}, @glibcref{Process Group
+Functions, setsid}.  Create a new session, making the current process
+the group leader with no controlling terminal.  If successful return a
+fixnum representing the new process groups ID, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getsid (ikptr @var{pid})
+Interface to the C function @cfunc{getsid}, @glibcref{Process Group
+Functions, getsid}.  If successful return a fixnum representing the
+session ID of the process with process ID @var{pid}, which must be a
+fixnum; else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_getpgrp (void)
+Interface to the C function @cfunc{getpgrp}, @glibcref{Process Group
+Functions, getpgrp}.  Return a fixnum representing the process group ID
+of the calling process.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_setpgid (ikptr @var{pid}, ikptr @var{pgid})
+Interface to the C function @cfunc{setpgid}, @glibcref{Process Group
+Functions, setpgid}.  Put the process @var{pid} in the process group
+@var{pgid}.  If successful return the fixnum zero, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_posix_tcgetpgrp (ikptr @var{fd})
+Interface to the C function @cfunc{tcgetpgrp}, @glibcref{Terminal Access
+Functions, tcgetpgrp}.  If successful return a fixnum representing the
+process group ID of the foreground process group associated with the
+terminal open on descriptor @var{fd}, which must be a fixnum; else
+return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_tcsetpgrp (ikptr @var{fd}, ikptr @var{pgid})
+Interface to the C function @cfunc{tcsetpgrp}, @glibcref{Terminal Access
+Functions, tcsetpgrp}.  Set to process group ID @var{pgid} the
+foreground process group for the terminal open on descriptor @var{fd};
+both the arguments must be fixnums.  If successful return the fixnum
+zero, else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_tcgetsid (ikptr @var{fd})
+Interface to the C function @cfunc{tcgetsid}, @glibcref{Terminal Access
+Functions, tcgetsid}.  If successful return a fixnum representing the
+process group ID of the session for which the terminal open on
+descriptor @var{fd} is the controlling terminal; else return an encoded
+@code{errno} value.
+@end deftypefun
+
+@c page
+@node capi posix time
+@subsection Date and time
+
+
+@deftypefun ikptr ikrt_posix_clock (ikpcb * @var{pcb})
+Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
+If successful return an @strong{inexact} integer representing the CPU
+time for the calling process expressed in clock ticks; if the clock time
+is not available return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_times (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{times}, @glibcref{Processor Time,
+times}.  If successful return an instance of @code{struct-tms}
+representing the current processor time with all the fields set to
+inexact integers, else return false; @var{rtd} must be the type
+descriptor of @code{struct-tms}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_time (ikpcb * @var{pcb})
+Interface to the C function @cfunc{time}, @glibcref{Simple Calendar
+Time, time}.  If successful return the calendar time as an
+@strong{inexact} integer, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gettimeofday (ikptr @var{rtd}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gettimeofday},
+@glibcref{High-Resolution Calendar, gettimeofday}.  Acquire the current
+time.  If successful return an instance of @code{struct-timeval}, else
+return an encoded @code{errno} value.  @var{rtd} must be the type
+descriptor of @code{struct-timeval}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_localtime (ikptr @var{rtd}, ikptr @var{time}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{localtime}, @glibcref{Broken-down
+Time, localtime}.  Given an exact integer @var{time} representing the
+local time as returned by the @func{time} function: build and return an
+instance of @code{struct-tm} representing the same time in human
+readable form; if an error occurs return false.  @var{rtd} must be the
+type descriptor of @code{struct-tm}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_gmtime (ikptr @var{rtd}, ikptr @var{time}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gmtime}, @glibcref{Broken-down Time,
+gmtime}.  Given an exact integer @var{time} representing the @utc{} time
+as returned by the @func{time} function: build and return an instance of
+@code{struct-tm} representing the same time in human readable form; if
+an error occurs return false.  @var{rtd} must be the type descriptor of
+@code{struct-tm}.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_timelocal (ikptr @var{tm}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{timelocal}, @glibcref{Broken-down
+Time, timelocal}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a local broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an @strong{inexact}
+integer representing the time value, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_timegm (ikptr @var{tm}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{timegm}, @glibcref{Broken-down Time,
+timegm}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a @utc{} broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an @strong{inexact}
+integer representing the time value, else return false.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_posix_strftime (ikptr @var{template}, ikptr @var{tm}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{strftime}, @glibcref{Formatting
+Calendar Time, strftime}.  Given a bytevector @var{template} holding an
+@ascii{} coded format string and a @code{struct-tm} instance @var{tm}:
+build a formatted time string; the resulting time string can be at most
+@math{4096} bytes wide.  If successful return a bytevector holding the
+time string in @ascii{} coding, else return false.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_nanosleep (ikptr @var{secs}, ikptr @var{nsecs})
+Interface to the C function @cfunc{nanosleep}, @glibcref{Sleeping,
+nanosleep}.  Halt the current process for the specified amount of time.
+
+The count of seconds @var{secs} must be an exact integer in the range
+@math{[0, 2^32)}; the count of nanoseconds @var{nsecs} must be an exact
+integer in the range @math{[0, 999999999]}.
+
+If successful and the requested time is elapsed: return a pair whose car
+is false and whose cdr is false.  If successful and the sleeping was
+interrupted by an interprocess signal: return a pair whose car is an
+exact integer representing the count of remaining seconds and whose cdr
+is an exact integer representing the count of remaining nanoseconds.  If
+an error occurs return an encoded @code{errno} value.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_current_time (ikptr @var{time})
+Interface to the @cfunc{gettimeofday} C function.
+@glibcref{High-Resolution Calendar, gettimeofday}.  Retrieve the current
+time.  @var{time} must reference a @code{time} internal structure, which
+is filled with three values: megaseconds, seconds and microseconds.
+Always return @var{time} itself.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_gmt_offset (ikptr @var{time})
+Compute the offset in seconds between the local time and the
+@acronym{UTC} time.  @var{time} must reference a @code{time} internal
+structure, already filled with megaseconds, seconds and microseconds.
+Return a fixnum representing the offset.
+@end deftypefun
+
+
+@c page
+@node capi linux
+@section C language level @gnu{}+Linux interface
+
+
+@menu
+* capi linux status::           Process termination status.
+@end menu
+
+@c page
+@node capi linux status
+@subsection Process termination status
+
+
+@deftypefun ikptr ikrt_linux_waitid (ikptr @var{idtype}, ikptr @var{id}, ikptr @var{info}, ikptr @var{options})
+Interface to the Linux specific C function @cfunc{waitid}, see the
+@cfunc{waitid} manual page for details.  Wait for the termination of one
+or more child processes with finer control of @cfunc{waitpid}.  The
+arguments @var{idtype}, @var{id} and @var{options} must be fixnums.
+@var{info} must be a reference to a structure of type
+@code{struct-siginfo_t}, @ref{linux status} for details.  If successful:
+return @var{info} itself, else raise an exception.
+@end deftypefun
+
+
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@cfunc{system} or the status acquired by @cfunc{waitpid}.
+
+
+@deftypefun ikptr ikrt_linux_WIFCONTINUED (ikptr @var{status})
+Interface to the Linux specific C macro @cfunc{WIFCONTINUED}.  Return
+true if the process was resumed by delivery of @code{SIGCONT}.
+@end deftypefun
+
+@c page
+@node capi glibc
+@section C language level @gnu{} C Library interface
+
+
+@menu
+* capi glibc env::              Operating system environment variables.
+* capi glibc dir::              File system directories.
+* capi glibc temp::             Temporary files and directories.
+* capi glibc sync::             File system synchronisation.
+* capi glibc socket::           Network sockets.
+@end menu
+
+@c page
+@node capi glibc env
+@subsection Operating system environment variables
+
+
+@deftypefun ikrt ikrt_glibc_clearenv (void)
+Interface to the C function @cfunc{clearenv}, @glibcref{Environment
+Access, clearenv}.  Remove all the entries from the environment.  Return
+the void object.
+@end deftypefun
+
+@c page
+@node capi glibc dir
+@subsection File system directories
+
+
+@deftypefun ikptr ikrt_glibc_dirfd (ikptr @var{pointer})
+Interface to the C function @cfunc{dirfd}, @glibcref{Opening a
+Directory, dirfd}.  Acquire a file descriptor associated to the
+directory entry referenced by @var{pointer}, which must be a pointer
+object to a directory entry.  If successful return a fixnum representing
+the file descriptor, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi glibc temp
+@subsection Temporary files and directories
+
+
+@deftypefun ikptr ikrt_glibc_mkstemp (ikptr @var{template}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{mkstemp}, @glibcref{Temporary Files,
+mkstemp}.  Create a temporary file, open it and open a file descriptor
+for reading and writing.  @var{template} must be a mutable bytevector
+holding a template pathname on entering and the actual pathname on
+returning.  If successful return a file descriptor, else return an
+encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_mkdtemp (ikptr @var{template}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{mkdtemp}, @glibcref{Temporary Files,
+mkdtemp}.  Create a temporary directory for reading and writing.
+@var{template} must be a mutable bytevector holding a template pathname
+on entering and the actual pathname on returning.  If successful return
+@var{template} itself, else return an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi glibc sync
+@subsection File system synchronisation
+
+
+@deftypefun ikptr ikrt_glibc_sync (void)
+Interface to the C function @cfunc{sync}, @glibcref{Synchronizing I/O}.
+Flush kernel buffer data and meta informations to the file system
+devices.  If successful return the fixnum zero, else return an encoded
+@code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_fsync (ikptr @var{fd})
+Interface to the C function @cfunc{fsync}, @glibcref{Synchronizing I/O}.
+Flush kernel buffer data and meta informations to the file system device
+for the file descriptor @var{fd}.  If successful return the fixnum zero,
+else return an encoded @code{errno} value.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_fdatasync (ikptr @var{fd})
+Interface to the C function @cfunc{fdatasync}, @glibcref{Synchronizing
+I/O}.  Flush kernel buffer data to the file system device for the file
+descriptor @var{fd}.  If successful return the fixnum zero, else return
+an encoded @code{errno} value.
+@end deftypefun
+
+@c page
+@node capi glibc socket
+@subsection Network sockets
+
+
+@deftypefun ikptr ikrt_glibc_if_nametoindex (ikptr @var{name})
+Interface to the C function @cfunc{if_nametoindex}, @glibcref{Interface
+Naming, if_nametoindex}.  Convert a string representing a network
+interface to the corresponding internal index.  @var{name} must be a
+bytevector holding the @utf{}-8 representation of the string.  Return a
+fixnum representing the index or false if @var{name} is invalid.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_if_indextoname (ikptr @var{index}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{if_indextoname}, @glibcref{Interface
+Naming, if_indextoname}.  Convert the index associated to an interface
+to the corresponding string name.  @var{index} must be a fixnum
+representing the index.  Return a bytevector holding the name or false
+if @var{index} is invalid.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_glibc_if_nameindex (ikpcb * @var{pcb})
+Interface to the C function @cfunc{if_nameindex}, @glibcref{Interface
+Naming, if_nameindex}.  Build and return an association list having
+fixnums as keys and bytevectors as values; the fixnums are the interface
+indexes, the bytevectors are the corresponding interface names.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@deftypefun ikptr ikrt_glibc_gethostbyname2 (ikptr @var{rtd}, ikptr @var{hostname}, ikptr @var{addrtype}, ikpcb * @var{pcb})
+Interface to the C function @cfunc{gethostbyname2}, @glibcref{Host
+Names, gethostbyname2}.  Like @cfunc{ikrt_posix_gethostbyname} but
+allows the selection of the address type with @var{addrtype} which must
+be @code{AF_INET} or @code{AF_INET6}.
+@end deftypefun
+
+@c end of file

@@ -1,0 +1,6142 @@
+@node iklib
+@chapter Language extensions
+
+
+@cindex Library @library{vicare}
+@cindex @library{vicare}, library
+@cindex Library @library{ikarus}
+@cindex @library{ikarus}, library
+@cindex Library @library{vicare language-extensions}
+@cindex @library{vicare language-extensions}, library
+
+
+In addition to the libraries listed in the @rnrs{6} standard,
+@value{PRJNAME} offers more libraries which provide additional features:
+
+@table @library
+@item ikarus
+It is a composite library, it exports a superset of all the supported
+bindings of @rnrs{6}.
+
+@item vicare
+It exports the same bindings of @library{ikarus}.
+
+@item vicare language-extensions
+It exports all the bindings exported by @library{vicare} that are
+@strong{not} exported by @library{rnrs (6)}.
+@end table
+
+@menu
+* iklib progname::              Finding the @command{vicare} executable.
+* iklib conditions::            Additional condition types.
+* iklib reader::                Extensions to the reader.
+* iklib expander::              Interface to the expander.
+* iklib shared::                Shared structures graph notation.
+* iklib environment::           Environments.
+* iklib cafe::                  Cafe.
+* iklib structs::               Structures and type descriptors.
+* iklib keywords::              Keyword objects.
+* iklib lists::                 Additional list functions.
+* iklib bytevectors::           Additional bytevector functions.
+* iklib strings::               Additional string functions.
+* iklib vectors::               Additional vector functions.
+* iklib symbols::               Additional symbol functions.
+* iklib fixnums::               Additional functions on fixnums.
+* iklib flonums::               Additional functions on flonums.
+* iklib numerics::              Additional functions on numbers.
+* iklib enumerations::          Additional functions on enumerations.
+* iklib hashtables::            Additional functions on hashtables.
+* iklib load::                  Loading source files.
+* iklib import::                Local library imports.
+* iklib export::                Extended library exports.
+* iklib modules::               Local modules.
+* iklib parameters::            Parameters.
+* iklib gensym::                Gensyms.
+* iklib printing::              Printing.
+* iklib tracing::               Tracing for debugging.
+* iklib timing::                Timing.
+* iklib gc::                    Interfacing with garbage collection.
+* iklib guardians::             Guardians and garbage collection.
+* iklib io::                    Input/output library.
+* iklib pointers::              Handling pointer objects.
+* iklib memory::                Memory management.
+* iklib cstrings::              Raw C strings.
+* iklib errno::                 Interface to @code{errno}.
+* iklib time::                  Basic time and date functions.
+* iklib readline::              Readline interface.
+* iklib debug::                 Debugging utilities.
+* iklib misc::                  Miscellaneous functions.
+@end menu
+
+@c page
+@node iklib progname
+@section Finding the @command{vicare} executable
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun vicare-argv0
+Return a bytevector holding the C string in the @code{argv[0]} argument
+to the @cfunc{main} function of the current @value{PRJNAME} process.
+@end defun
+
+
+@defun vicare-argv0-string
+Return a Scheme string holding the C string in the @code{argv[0]}
+argument to the @cfunc{main} function of the current @value{PRJNAME}
+process.
+@end defun
+
+@c page
+@node iklib conditions
+@section Additional condition types
+
+
+@menu
+* iklib conditions spos::       Scheme source code position.
+* iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
+@end menu
+
+@c page
+@node iklib conditions spos
+@subsection Scheme source code position
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftp {Condition Type} &source-position
+Condition type used to represent a position in Scheme source code read
+from a textual input port; it is derived from @condition{condition}.  It
+has the following fields:
+
+@table @code
+@item port-id
+A Scheme string representing the port identifier, for example the file
+name.
+
+@item byte
+An exact non--negative zero--based integer representing the byte offset
+of the position in the source.
+
+@item character
+An exact non--negative zero--based integer representing the character
+offset of the position in the source.
+
+@item line
+An exact non--negative one--based integer representing the line offset
+of the position in the source.
+
+@item column
+An exact non--negative one--based integer representing the column offset
+of the position in the source.
+@end table
+@end deftp
+
+
+@defun make-source-position-condition @var{port-id} @var{character}
+Build and return a new condition object of type
+@condition{source-position}.
+@end defun
+
+
+@defun source-position-condition? @var{obj}
+Return true if @var{obj} is a condition object with type
+@condition{source-position}.
+@end defun
+
+
+@defun source-position-port-id @var{spos}
+@defunx source-position-character @var{spos}
+Accessors for the fields of condition objects of type
+@condition{source-position}.
+@end defun
+
+@c page
+@node iklib conditions eagain
+@subsection Reporting @code{EAGAIN} exceptions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deftp {Condition Type} &i/o-eagain
+Used to signal that a system call returned with @code{errno} set to
+@code{EAGAIN}.  It is derived from @condition{i/o}.
+@end deftp
+
+
+@defun make-i/o-eagain
+Return a new condition object of type @condition{i/o-eagain}.
+@end defun
+
+
+@defun i/o-again-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{i/o-eagain}.
+@end defun
+
+@c page
+@node iklib reader
+@section Reader
+
+
+@menu
+* iklib reader mode::           Textual input port modes.
+* iklib reader bv::             Additional bytevector syntaxes.
+* iklib reader chars::          Custom named characters.
+* iklib reader stx::            Miscellaneous additional syntaxes.
+* iklib reader fun::            Additional reader functions.
+@end menu
+
+@c page
+@node iklib reader mode
+@subsection Textual input port modes
+
+
+@deffn {Reader Syntax} {#!vicare}
+@deffnx {Reader Syntax} {#!ikarus}
+@value{PRJNAME} extends Scheme's lexical syntax (@rnrs{6} Chapter 4) in
+a variety of ways including:
+
+@itemize
+@item
+End--of--file marker, @code{#!eof}.
+
+@item
+Gensym syntax, @code{#@{gensym@}}.
+
+@item
+Shared structures graph notation: @code{#nn=}, @code{#nn#}.
+
+@item
+Special symbols: @code{++}, @code{--}.
+@end itemize
+
+The syntax extensions are made available by default on all input ports,
+until the token @code{#!r6rs} is read; thus, reading the token
+@code{#!r6rs} disables all extensions to the lexical syntax on the
+specific port, and the token @code{#!vicare} enables them again.
+
+When writing code that is intended to be portable across different
+Scheme implementations, we should add the token @code{#!r6rs} to the top
+of every script and library that we write; this allows @value{PRJNAME}
+to alert us when using non--portable features.  When writing code that's
+intended to be @value{PRJNAME}--specific, we should add the token
+@code{#!vicare} in order to get an immediate error when the code is run
+under other implementations.
+
+The comment @code{#!ikarus} is accepted for backwards compatibility with
+Ikarus Scheme.
+@end deffn
+
+
+@deffn Procedure port-mode @var{input-port}
+Accept an input port as argument and return a symbol among: @code{r6rs},
+@code{vicare}.  All input ports start under @code{vicare} mode and thus
+accept @value{PRJNAME}--specific reader extensions.  When the token
+@code{#!r6rs} is read from a port: its mode changes to @code{r6rs}.
+
+@example
+> (port-mode (current-input-port))
+vicare
+> #!r6rs (port-mode (current-input-port))
+r6rs
+> #!vicare (port-mode (current-input-port))
+vicare
+@end example
+@end deffn
+
+
+@deffn Procedure set-port-mode! @var{input-port} @var{mode}
+Modifiy the lexical syntax accepted by subsequent calls to @func{read}
+on the input port.  The mode is a symbol among @code{r6rs} and
+@code{vicare}.  The effect of setting the port mode is similar to that
+of reading the token @code{#!r6rs} or @code{#!vicare} from that port.
+
+@example
+> (set-port-mode! (current-input-port) 'r6rs)
+> (port-mode (current-input-port))
+r6rs
+@end example
+@end deffn
+
+@c page
+@node iklib reader bv
+@subsection Additional bytevector syntaxes
+
+
+The following syntaxes are available only when the input port mode is
+set to @code{vicare}.
+
+
+@deffn {Reader Syntax} {#vs8(@var{byte} ...)}
+Read a bytevector as @code{#vu8(@var{octect} ...)} would do, but allow
+@var{byte} to be in the range @math{[-128, 127]}.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vu16l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu16b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu16n(@var{word} ...)}
+Read a bytevector of 16-bit unsigned words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vs16l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs16b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs16n(@var{word} ...)}
+Read a bytevector of 16-bit signed words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vu32l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu32b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu32n(@var{word} ...)}
+Read a bytevector of 32-bit unsigned words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vs32l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs32b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs32n(@var{word} ...)}
+Read a bytevector of 32-bit signed words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vu64l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu64b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vu64n(@var{word} ...)}
+Read a bytevector of 64-bit unsigned words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vs64l(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs64b(@var{word} ...)}
+@deffnx {Reader Syntax} {#vs64n(@var{word} ...)}
+Read a bytevector of 64-bit signed words stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vf4l(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf4b(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf4n(@var{flonum} ...)}
+Read a bytevector of single--precision flonums stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vf8l(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf8b(@var{flonum} ...)}
+@deffnx {Reader Syntax} {#vf8n(@var{flonum} ...)}
+Read a bytevector of double--precision flonums stored in little, big and
+native endianness.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vc4l(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc4b(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc4n(@var{cflonum} ...)}
+Read a bytevector of single--precision cflonums stored in little, big
+and native endianness, real part first.
+@end deffn
+
+
+@deffn {Reader Syntax} {#vc8l(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc8b(@var{cflonum} ...)}
+@deffnx {Reader Syntax} {#vc8n(@var{cflonum} ...)}
+Read a bytevector of double--precision cflonums stored in little, big
+and native endianness, real part first.
+@end deffn
+
+
+@deffn {Reader Syntax} {#ve(@var{encoding} @var{data})}
+Read a bytevector in some encoding which is supposed to be easy to type
+for human beings.  @var{encoding} is a symbol representing the encoding
+format, @var{data} is a datum to convert to bytevector.  At present the
+following encodings are supported:
+
+@table @code
+@item ascii
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->ascii}.
+
+@item latin1
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->latin1}.
+
+@item utf8
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf8}.
+
+@item utf16be
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf16be}.
+
+@item utf16le
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf16le}.
+
+@item utf16n
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string->utf16n}.
+@end table
+@end deffn
+
+@c page
+@node iklib reader chars
+@subsection Custom named characters
+
+
+The following syntaxes are available only when the input port mode is
+set to @code{vicare}.
+
+
+@deffn {Reader Syntax} {#!(char-names (@meta{name} . @meta{char}) ...)}
+Add new custom named characters to the internal table for the current
+reading operation.  Each @meta{name} must be a Scheme identifier
+starting with a @meta{constituent} character as defined by @rnrs{6};
+each @meta{char} must be a Scheme character.
+
+@example
+#!(char-names
+    (lambda . #\x0EBB))
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {#\@{@meta{name}@}}
+Reader syntax for standalone custom named characters.  @meta{name} must
+be an identifier previously defined with the @code{char-names} comment
+list defined above.
+
+@example
+#\@{lambda@}            @result{} #\xEBB
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {\@{@meta{name}@}}
+Reader syntax for custom named characters embedded in strings.
+@meta{name} must be an identifier previously defined with the
+@code{char-names} comment list defined above.
+
+@example
+"\@{lambda@}"           @result{} "\xEBB;"
+@end example
+@end deffn
+
+@c page
+@node iklib reader stx
+@subsection Miscellaneous additional syntaxes
+
+
+The following syntaxes are available only when the input port mode is
+set to @code{vicare}.
+
+
+@deffn {Reader Syntax} {|@var{symbol}|}
+The vertical bars can be used to specify symbols whose name do not
+comply with the @rnrs{6} specifications; this syntax is available only
+when the port mode is @code{#!vicare}.  Examples:
+
+@example
+(define port (open-string-input-port "|123|"))
+(set-port-mode! port 'vicare)
+(define sym (read port))
+
+(symbol? sym)           @result{} #t
+(symbol->string sym)    @result{} "123"
+@end example
+
+@noindent
+backslash sequences are allowed in bar symbols:
+
+@example
+(define port (open-string-input-port "|123-\x41;\x42;\x43;|"))
+(set-port-mode! port 'vicare)
+(define sym (read port))
+
+(symbol? sym)           @result{} #t
+(symbol->string sym)    @result{} "123-\x41;\x42;\x43;"
+@end example
+
+@noindent
+notice that the sequence of characters @code{|ciao|hello|} is split into
+@code{ciao}, @code{hello}, @code{|} and the ending vertical bar would
+cause an error if read:
+
+@example
+(define port (open-string-input-port "|ciao|hello|"))
+(set-port-mode! port 'vicare)
+
+(read port)             @result{} ciao
+(read port)             @result{} hello
+(port-eof? port)        @result{} #f
+(get-char port)         @result{} #\|
+(port-eof? port)        @result{} #t
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} {#@{unique-name@}}
+@deffnx {Reader Syntax} {#@{pretty-name unique-name@}}
+@c @deffnx {Reader Syntax} {#:pretty-name}
+@value{PRJNAME}'s @func{read} and @func{write} procedures extend the lexical
+syntax of Scheme by the ability to read and write gensyms using one of
+these three forms.
+
+@code{#@{unique-name@}} constructs, at read time, a gensym whose unique
+name is the one specified.  If a gensym with the same unique name
+already exists in the system's symbol table, that gensym is returned.
+
+@example
+> '#@{some-long-name@}
+#@{g0 |some-long-name|@}
+> (gensym? '#@{some-long-unique-name@})
+#t
+> (eq? '#@{another-unique-name@} '#@{another-unique-name@})
+#t
+@end example
+
+The two--part @code{#@{pretty-name unique-name@}} gensym syntax is
+similar to the syntax shown above with the exception that if a new
+gensym is constructed (that is, if the gensym did not already exist in
+the symbol table), the pretty name of the constructed gensym is set to
+@code{pretty-name}.
+
+@example
+> '#@{foo unique-identifier@}
+#@{foo |unique-identifier|@}
+> '#@{unique-identifier@}
+#@{foo |unique-identifier|@}
+> '#@{bar unique-identifier@}
+#@{foo |unique-identifier|@}
+@end example
+
+@ignore
+The @code{#:pretty-name} form constructs, at read time, a gensym whose
+pretty name is @code{pretty-name} and whose unique name is fresh.  This
+form guarantees that the resulting gensym is not @func{eq?} to any other
+symbol in the system.
+
+@example
+> '#:foo
+#@{foo |j=qTGlEwS/Zlp2Dj|@}
+> (eq? '#:foo '#:foo)
+#f
+@end example
+@end ignore
+@end deffn
+
+
+@deffn {Reader Syntax} {#:@var{symbol}}
+Read a keyword object using @var{symbol} as symbol.  @var{symbol} must
+be a symbol object as defined by @rnrs{6}.  @ref{iklib keywords, Keyword
+objects}.
+@end deffn
+
+
+@deffn {Reader Syntax} {#!eof}
+The end--of--file marker, @code{#!eof}, is an extension to the @rnrs{6}
+syntax.  The primary utility of the @code{#!eof} marker is to stop the
+reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
+the file.
+
+@example
+(import (ikarus))
+<some code>
+(display "goodbye\n")
+
+#!eof
+<some junk>
+@end example
+
+The @code{#!eof} marker also serves as a datum in @value{PRJNAME}, much
+like @true{} and @false{}, when it is found inside other expressions.
+
+@example
+> (eof-object)
+#!eof
+> (read (open-input-string ""))
+#!eof
+> (read (open-input-string "#!eof"))
+#!eof
+> (quote #!eof)
+#!eof
+> (eof-object? '#!eof)
+#t
+> #!r6rs #!eof
+Unhandled exception
+Condition components:
+  1. &error
+  2. &who: tokenize
+  3. &message: "invalid syntax: #!e"
+> #!vicare #!eof
+$
+@end example
+@end deffn
+
+
+@deffn {Reader Syntax} #ci @var{form}
+@deffnx {Reader Syntax} #cs @var{form}
+Switch between case sensitive and case insensitive identifiers; the
+default for @rnrs{6} source code is case sensitive.  When @code{#ci} is
+read: the next form read has case insensitive identifiers.  When
+@code{#cs} is read: the next form read has case sensitive identifiers.
+
+@example
+#ci(1 2 3)              @result{} (1 2 3)
+#cs(1 2 3)              @result{} (1 2 3)
+
+#ci(1 A 3)              @result{} (1 a 3)
+#cs(1 A 3)              @result{} (1 A 3)
+
+#ci CIAO #cs CIAO       @result{} ciao CIAO
+#ci CIAO CIAO           @result{} ciao CIAO
+
+#ci(A #csB C)           @result{} (a B c)
+#ci(A #cs B C)          @result{} (a B c)
+@end example
+@end deffn
+
+@c page
+@node iklib reader fun
+@subsection Additional reader functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun get-annotated-datum @var{port}
+Like @func{get-datum}, but rather than returning a datum return a
+hierarchy of @code{annotation} objects with the same hierarchy of the
+datum and embedding the datum itself.
+@end defun
+
+
+@defun annotation? @var{obj}
+Return @true{} if @var{obj} is an @code{annotation} object, else return
+@false{}.
+@end defun
+
+
+@defun annotation-expression @var{ann}
+Accessor for the @code{expression} field of an @code{annotation} object.
+Return a list, vector, identifier, what--have--you that may contain
+further annotations.
+@end defun
+
+
+@defun annotation-stripped @var{ann}
+Accessor for the @code{stripped} field of an @code{annotation} object.
+The same symbolic expression of the @code{expression} field with no
+annotations.
+@end defun
+
+
+@defun annotation-textual-position @var{ann}
+Accessor for the @code{textual-position} field of an @code{annotation}
+object.  A condition object of type @condition{source-position}
+representing the position of the expression in the source code.
+@end defun
+
+
+@defun annotation-source @var{ann}
+A pair whose car is the port identifier and whose cdr is the offset of
+the character.
+@end defun
+
+@c page
+@node iklib expander
+@section Interface to the expander
+
+
+@menu
+* iklib expander syntax::       Inspecting syntax objects.
+* iklib expander transformers:: Syntax transformers facilities.
+* iklib expander expand::       Expander facilities.
+@end menu
+
+@c page
+@node iklib expander syntax
+@subsection Inspecting syntax objects
+
+
+Under @value{PRJNAME}, a syntax object is the instance of a data
+structure.  The following bindings are exported by the library
+@library{vicare}.
+
+
+@defun syntax-object? @var{stx}
+Return @true{} if @var{stx} is a syntax object, else return @false{}.
+@end defun
+
+
+@defun syntax-object-expression @var{stx}
+@defunx syntax-object-marks @var{stx}
+@defunx syntax-object-substs @var{stx}
+@defunx syntax-object-source-objects @var{stx}
+Field accessors for the syntax object structure type, to be used for
+debugging purposes.
+@end defun
+
+@c page
+@node iklib expander transformers
+@subsection Syntax transformers facilities
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun variable-transformer?
+Undocumented.
+@end defun
+
+
+@defun variable-transformer-procedure
+Undocumented.
+@end defun
+
+
+@defun make-compile-time-value
+Undocumented.
+@end defun
+
+
+@defun syntax-transpose
+Undocumented.
+@end defun
+
+@c page
+@node iklib expander expand
+@subsection Expander facilities
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun expand-library
+Given a @code{(library . ---)} symbolic expression, expand it and
+register it with the library manager; return @math{12} values:
+
+@enumerate
+@item
+@var{id}, to be documented.
+
+@item
+@var{name}, to be documented.
+
+@item
+@var{ver}, to be documented.
+
+@item
+@var{imp*}, to be documented.
+
+@item
+@var{vis*}, to be documented.
+
+@item
+@var{inv*}, to be documented.
+
+@item
+@var{invoke-code}, the expanded code expressed in the core lanugage.
+
+@item
+@var{visit-code}, to be documented.
+
+@item
+@var{export-subst}, to be documented.
+
+@item
+@var{export-env}, to be documented.
+
+@item
+@var{guard-code}, to be documented.
+
+@item
+@var{guard-req*}, to be documented.
+@end enumerate
+
+Example:
+
+@example
+(import (vicare))
+
+(let-values (((id name ver imp* vis* inv*
+               invoke-code visit-code
+               export-subst export-env
+               guard-code guard-req*)
+              (expand-library
+               '(library (doit)
+                  (export doit)
+                  (import (vicare))
+                  (define (doit x)
+                    (if (null? x)
+                        #f
+                      (doit (cdr x))))))))
+  invoke-code)
+@result{} (library-letrec*
+     ((#@{doit |$B>4=68o!fJIWV2u|@} #@{doit |wz6BfVVqmV65xcyl|@}
+        (annotated-case-lambda doit
+          ((#@{x |ua9qt/Qp%FG%z984|@})
+            (if (annotated-call (null? x) (primitive null?)
+                  #@{x |ua9qt/Qp%FG%z984|@})
+                '#f
+                (annotated-call (doit (cdr x))
+                  #@{doit |$B>4=68o!fJIWV2u|@}
+                  (annotated-call (cdr x) (primitive cdr)
+                    #@{x |ua9qt/Qp%FG%z984|@})))))))
+     ((primitive void)))
+@end example
+@end defun
+
+
+@defun expand-top-level @var{sexp}
+Expand a top level program whose symbolic expression is @var{sexp}.
+Return @math{5} values:
+
+@enumerate
+@item
+@var{lib*}, to be documented.
+
+@item
+@var{invoke-code}, the fully expanded code from the body of the program.
+
+@item
+@var{macro*}, to be documented.
+
+@item
+@var{export-subst}, to be documented.
+
+@item
+@var{export-env}, to be documented.
+@end enumerate
+@end defun
+
+
+@defun expand-form-to-core-language @var{sexp} @var{env}
+Interface to the internal expression expander, it is the expansion
+engine used by @rnrs{6}'s @func{eval} function.
+
+@var{sexp} must be a symbolic expression representing a Scheme form;
+@var{env} must be an evaluation environment.
+
+Return two values: the result of the expansion as symbolic expression in
+the core language; a list of libraries that must be invoked before
+evaluating the returned expression.
+
+Example:
+
+@example
+(import (vicare))
+
+(let-values (((code libs)
+              (expand-form-to-core-language
+               '(define (doit x)
+                  (if (null? x)
+                      #f
+                    (doit (cdr x))))
+               (interaction-environment))))
+  code)
+@result{} (set! #@{doit |UB$jGCqqJFloHg6X|@}
+     (annotated-case-lambda doit
+       ((#@{x |O3I3z7rSrwZ9/X2O|@})
+         (if (annotated-call (null? x) (primitive null?)
+               #@{x |O3I3z7rSrwZ9/X2O|@})
+             '#f
+             (annotated-call (doit (cdr x))
+               #@{doit |UB$jGCqqJFloHg6X|@}
+               (annotated-call (cdr x) (primitive cdr)
+                 #@{x |O3I3z7rSrwZ9/X2O|@}))))))
+@end example
+@end defun
+
+@c page
+@node iklib shared
+@section Shared structures graph notation
+
+
+This feature of the reader is derived from the @srfi{} 38 ``External
+Representation for Data With Shared Structure'':
+
+@center @url{http://srfi.schemers.org/srfi-38/srfi-38.html}
+
+This graph notation allows the reader to build symbolic expressions with
+graph structure including cycles.  @strong{Shared structures must always
+be used inside quoted datums}; if we create a cycle in a symbolic
+expression passed as code to the expander: the result will be an
+infinite loop.  Graph notation is available only when the textual input
+port is configured in @code{#!vicare} mode.
+
+Graph notation extends the @rnrs{6} syntax with these additional cases:
+
+@example
+<lexeme>                -> <r6rs lexeme>
+                         | <defining datum>
+                         | <defined datum>
+<defining datum>        -> #<indexnum>=<r6rs lexeme>
+<defined datum>         -> #<indexnum>#
+<indexnum>              -> <digit>+
+@end example
+
+@noindent
+where @code{<r6rs lexeme>} is the lexeme definition in @rnrs{6}.
+
+
+@deffn Parameter print-graph
+@deffnx Parameter print-graph #t
+@deffnx Parameter print-graph #f
+The graph notation is a way of marking and referencing parts of a data
+structure and, consequently, creating shared and cyclic data structures
+at read time instead of resorting to explicit mutation at run time.  The
+@code{#n=} marks the following data structure with mark @var{n}, where
+@var{n} is a nonnegative integer.  The @code{#n#} references the data
+structure marked @var{n}.  Marks can be assigned and referenced in any
+order but each mark must be assigned to exactly once in an expression.
+
+@example
+> (let ([x '#0=(1 2 3)])
+    (eq? x '#0#))
+#t
+> (let ([x '#0#] [y '#0=(1 2 3)])
+    (eq? x y))
+#t
+> (eq? (cdr '(12 . #1#)) '#1=(1 2 3))
+#t
+> (let ([x '#1=(#1# . #1#)])
+    (and (eq? x (car x))
+         (eq? x (cdr x))))
+#t
+@end example
+
+The @func{print-graph} parameter controls how the writers (e.g.
+@func{pretty-print} and @func{write}) handle shared and cyclic data
+structures.  In @value{PRJNAME}, all writers detect cyclic data structures and
+they all terminate on all input, cyclic or otherwise.
+
+If the value of @func{print-graph} is set to @false{} (the default),
+then the writers do not attempt to detect shared data structures.  Any
+part of the input that is shared is printed as if no sharing is present.
+If the value of @func{print-graph} is set to @true{}, all sharing of
+data structures is marked using the @code{#n=} and @code{#n#} notation.
+
+@example
+> (parameterize ([print-graph #f])
+    (let ([x (list 1 2 3 4)])
+      (pretty-print (list x x x))))
+((1 2 3 4) (1 2 3 4) (1 2 3 4))
+
+> (parameterize ([print-graph #t])
+    (let ([x (list 1 2 3 4)])
+      (pretty-print (list x x x))))
+(#0=(1 2 3 4) #0# #0#)
+
+> (parameterize ([print-graph #f])
+    (let ([x (list 1 2)])
+      (let ([y (list x x x x)])
+        (set-car! (last-pair y) y)
+        (pretty-print (list y y)))))
+(#0=((1 2) (1 2) (1 2) #0#) #0#)
+
+> (parameterize ([print-graph #t])
+    (let ([x (list 1 2)])
+      (let ([y (list x x x x)])
+        (set-car! (last-pair y) y)
+        (pretty-print (list y y)))))
+(#0=(#1=(1 2) #1# #1# #0#) #0#)
+@end example
+@end deffn
+
+@c page
+@node iklib environment
+@section Environments
+
+
+@cindex Environment, interaction
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun environment? @var{env}
+Return @true{} if @var{env} is an environment object.
+@end defun
+
+
+@defun interaction-environment
+@defunx interaction-environment @var{env}
+When called with no arguments: return an environment object representing
+the environment active at the @repl{}; to be used as argument for
+@func{eval}.
+
+When called with the argument @var{env}, which must be an environment
+object: set @var{env} as interaction environment.
+@end defun
+
+
+@defun new-interaction-environment
+Build and return a new interaction environment object.
+@end defun
+
+
+@defun environment-symbols @var{env}
+Return a list of symbols representing the names of the bindings from
+@var{env}, which must be en environment.
+@end defun
+
+@c page
+@node iklib cafe
+@section Cafe
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun new-cafe
+@defunx new-cafe @var{eval}
+Start a new read--eval--print loop (@repl{}) inside the current cafe (if
+one exists).  It prompts the user for an expression, evaluates it,
+prints the result back, and repeats the process.  If @func{new-cafe} is
+called with an argument, @var{eval}, then that argument must be a
+procedure that takes a single argument; the @var{eval} procedure will be
+used to evaluate the expressions.
+
+Every time a new cafe is started, the prompt is changed to reflect the
+depth of the current cafe (i.e. how many eof objects is takes to exit
+the outermost cafe).
+
+When the readline interface is not used, input and output performed by
+the cafe can be changed by the @func{console-input-port} and
+@func{console-output-port} parameters; when readline support is
+available and used, the @repl{} input is performed through a readline
+input port.
+
+If an error occurs during reading, evaluating, or printing an
+expression, then the error message is printed to the error--port and the
+operations of the cafe resume as normal.
+
+To exit from a cafe we can write the @eof{} object.
+@end defun
+
+@c page
+@node iklib structs
+@section Structures and type descriptors
+
+
+A data structure is like a lightweight record as defined by @rnrs{6}.
+@ref{objects structs} for more informations on the internals of data
+structures.
+
+@menu
+* iklib structs rtd::           Structure type descriptors.
+* iklib structs using::         Using data structures.
+* iklib structs inspect::       Inspecting data structures.
+@end menu
+
+@c page
+@node iklib structs rtd
+@subsection Structure type descriptors
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deffn Syntax define-struct @meta{name} (@meta{field} ...)
+Define a new data structure type.  This macro is embedded in the
+expander.
+
+@meta{name} must be a symbol representing the name of the structure; it
+is used to build names for the constructor, predicate, field accessors
+and mutators.  The @meta{field} values must be symbols representing the
+names of the fields; they are used to build names for the accessors and
+mutators.
+
+The following definition:
+
+@example
+(define-struct color
+  (red green blue))
+@end example
+
+@noindent
+expands to the definition of the following bindings:
+
+@table @code
+@item color
+A keyword bound to a pair whose car is the symbol @samp{$rtd} and whose
+cdr is the return value of @func{make-struct-type} applied to the name
+of the structure and the list of fields.
+
+@item make-color @var{red} @var{green} @var{blue}
+A structure constructor accepting as much arguments as there are fields.
+The constructor makes use of the @func{$struct} low level operation.
+
+@item color? @var{obj}
+A predicate to distinguish between references to @code{color} structures
+and other values.  This predicate makes use of the @func{$struct/rtd?}
+low level operation.
+
+@item color-red @var{stru}
+@itemx color-green @var{stru}
+@itemx color-blue @var{stru}
+Accessor functions for the fields of the structure.  These accessors
+make use of the @func{$struct/rtd?} low level operation to validate the
+argument and if successful they use @func{$struct-ref} to extract the
+value; if the argument is of invalid type: an assertion violation is
+raised.
+
+@item set-color-red! @var{stru} @var{red}
+@itemx set-color-green! @var{stru} @var{green}
+@itemx set-color-blue! @var{stru} @var{blue}
+Mutator functions for the fields of the structure.  These mutators make
+use of the @func{$struct/rtd?} low level operation to validate the
+argument @var{stru} and if successful they use @func{$struct-set!} to
+set the value; if the argument @var{stru} is of invalid type: an
+assertion violation is raised.
+
+@item $color-red @var{stru}
+@itemx $color-green @var{stru}
+@itemx $color-blue @var{stru}
+Unsafe accessor syntaxes for the fields of the structure.  These
+accessors do not validate the arguments and expand directly to a use of
+@func{$struct-ref} to extract the value; if the argument is invalid: the
+behaviour is undefined.
+
+@item $set-color-red! @var{stru} @var{red}
+@itemx $set-color-green! @var{stru} @var{green}
+@itemx $set-color-blue! @var{stru} @var{blue}
+Unsafe mutator syntaxes for the fields of the structure.  These mutators
+do not validate the arguments and expand directly to a use of
+@func{$struct-set!} to set the value; if the argument @var{stru} is
+invalid: the behaviour is undefined.
+@end table
+@end deffn
+
+
+@defun make-struct-type @var{name} @var{fields}
+@defunx make-struct-type @var{name} @var{fields} @var{uid}
+Build and return a new structure type descriptor.  @var{name} must be a
+string representing the type name.  @var{fields} must be a list of
+symbols representing the field names.
+
+The optional @var{uid} argument must be a symbol uniquely identifying
+this type; when not supplied, a symbol is automatically generated.  The
+@func{$symbol-value} field of @var{uid} is set to the newly created
+@rtd{}; if @var{uid} already has a symbol value: such value must be a
+struct descriptor equal to the newly created @rtd{}.
+@end defun
+
+
+@deffn Syntax type-descriptor @meta{name}
+Evaluate to the type descriptor of the data structure @meta{name}, which
+must be the first argument to a previous use of @func{define-struct}.
+@end deffn
+
+
+@defun struct-type-name @var{rtd}
+Return a string represnting the name of structures of type @var{rtd}.
+@end defun
+
+
+@defun struct-type-symbol @var{rtd}
+Return a symbol uniquely identifying the data structure type @var{rtd}.
+@end defun
+
+
+@defun struct-type-field-names @var{rtd}
+Return a list of symbols representing the names of fields in structures
+of type @var{rtd}.
+@end defun
+
+
+@defun struct-type-destructor @var{rtd}
+Return @false{} or a procedure being the destructor for instances of
+@var{rtd}.  The destructor is registered in a structure type descriptor
+with @func{set-rtd-destructor!}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun set-rtd-printer! @var{rtd} @var{printer}
+Select the procedure @var{printer} as printer for data structures of
+type @var{rtd}; return unspecified values.  The printer accepts @math{3}
+arguments: the structure to be printed, the port to which write a string
+represention of the structure with @func{display}, a function to be
+optionally applied to the field values to print them.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Automatic finalisation of structures
+
+
+@defun set-rtd-destructor! @var{rtd} @var{destructor}
+Select the procedure @var{destructor} as destructor for data structures
+of type @var{rtd}; return unspecified values.  The destructor accepts a
+single argument being the structure instance to finalise; the destructor
+can return unspecified values.
+
+After a destructor is registered in @var{rtd}: new instances of this
+structure type are registered, upon creation, into an internal guardian,
+@ref{iklib guardians} for details; whenever such structures are garbage
+collected: the guardian applies @var{destructor} to them.
+
+Exceptions raised by @var{destructor} are catched with @func{guard} and
+discarded: destructor functions should take care of exceptions by
+themselves.
+@end defun
+
+
+@deffn Parameter struct-guardian-logger
+Select data structure destruction logging mode for debugging purposes.
+When a structure is finalised by the garbage collector, using the
+destructor registered in the @rtd{}:
+
+@itemize
+@item
+If this parameter is set to @false{}: no additional actions are
+performed.
+
+@item
+If this parameter is set to @true{}: the function
+@func{struct-guardian-log} is used to log the operations to the textual
+output port returned by @code{current-error-port}.
+
+@item
+If this parameter is set to a procedure: such procedure is used to log
+the operations in a user selected way.
+@end itemize
+
+See the documentation of @func{struct-guardian-log} for the calling
+protocol of the logger functions.
+@end deffn
+
+
+@defun struct-guardian-log @var{struct} @var{exception} @var{action}
+Built in logger function to be used to log data structure finalisation
+operations by the garbage collector.  @var{struct} is the structure to
+be finalised; @var{exception} is @false{} or an object raised by the
+structure destructor; @var{action} is one of the symbols:
+@code{before-destruction}, @code{after-destruction}, @code{exception}.
+
+When this function is used as value for the parameter
+@func{struct-guardian-logger}:
+
+@itemize
+@item
+The function is called whenever a data structure is registered in for
+destruction with @var{action} set to the symbol @code{registration} and
+@var{exception} set to @false{}.
+
+@item
+The function is called just before the structucture is finalised with
+@var{action} set to the symbol @code{before-destruction} and
+@var{exception} set to @false{}.
+
+@item
+The function is called right after the structucture has been finalised
+with @var{action} set to the symbol @code{after-destruction} and
+@var{exception} set to @false{}.
+
+@item
+If an exception is raised by the destructor: such exception is catched
+and this function is called with @var{action} set to @code{exception}
+and @var{exception} set to the raised object.
+@end itemize
+
+The current implementation is the following:
+
+@smallexample
+(define (struct-guardian-log S E action)
+  (case action
+    ((registration)
+     (fprintf (current-error-port)
+              "*** Vicare debug: struct guardian: registered struct:\n\
+               ***\t~s\n" S))
+    ((before-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: before destruction:\n\
+        ***\t~s\n" S))
+    ((after-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: after destruction:\n\
+        ***\t~s\n" S))
+    ((exception)
+     (fprintf (current-error-port)
+       "*** Vicare debug: struct guardian: exception:\n\
+        ***\t~s\n\
+        ***\t~s\n" S E))
+    (else
+     (assertion-violation 'struct-guardian-log
+       "invalid action in struct destruction process" S action))))
+@end smallexample
+@end defun
+
+@c page
+@node iklib structs using
+@subsection Using data structures
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun struct-constructor @var{rtd}
+Return a constructor function for data structures of type @var{rtd}.
+The constructor accepts as many arguments as fields defined by @var{rtd}
+and returns a new structure instance.
+@end defun
+
+
+@defun struct-predicate @var{rtd}
+Return a predicate function for structures of type @var{rtd}.
+@end defun
+
+
+@defun struct-field-accessor @var{rtd} @var{index}
+Return an accessor function for the field at @var{index} of data
+structures of type @var{rtd}.
+@end defun
+
+
+@defun struct-field-mutator @var{rtd} @var{index}
+Return a mutator function for the field at @var{index} of data
+structures of type @var{rtd}.
+@end defun
+
+@c page
+@node iklib structs inspect
+@subsection Inspecting data structures
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun struct? @var{stru}
+@defunx struct? @var{stru} @var{rtd}
+When no @var{rtd} argument is given: return true if @var{stru} is a data
+structure.  When @var{rtd} is given: return true if @var{stru} is a data
+structure and it is of type @var{rtd}, which must be a struct type
+descriptor.
+@end defun
+
+
+@defun struct-rtd @var{stru}
+@defunx struct-type-descriptor @var{stru}
+Return the @var{rtd} of the data structure @var{stru}.  Notice that this
+function works with both Vicare's structs and @rnrs{6} records.
+@end defun
+
+
+@defun struct-length @var{stru}
+Return the number of fields in the data structure @var{stru}.  Notice
+that this function works with both Vicare's structs and @rnrs{6}
+records.
+@end defun
+
+
+@defun struct-name @var{stru}
+Return a string representing the name of the data structure @var{stru}.
+Notice that this function works with both Vicare's structs and @rnrs{6}
+records.
+@end defun
+
+
+@defun struct-printer @var{stru}
+Return the procedure being the printer function for the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct-ref @var{stru} @var{index}
+Return the value of field at @var{index} in the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct-set! @var{stru} @var{index} @var{value}
+Store @var{value} in the field at @var{index} in the data structure
+@var{stru}.
+@end defun
+
+
+@defun struct=? @vari{obj} @varii{obj}
+Return true if @vari{obj} and @varii{obj} are two structures having the
+same @rtd{} and equal field values according to @func{eqv?}.
+@end defun
+
+
+@defun struct-reset @var{stru}
+Reset to void all the fields of a structure.
+@end defun
+
+@c page
+@node iklib keywords
+@section Keyword objects
+
+
+Keyword objects are struct instances embedding a Scheme symbol; keyword
+objects are a disjoint type; keyword objects are @strong{not} interned.
+
+Keyword objects can be compared with @func{eq?}, @func{eqv?} and
+@func{equal?}; a keyword object is @func{eq?} only to itself.  Keyword
+objects can also be compared with the @func{keyword=?} predicate which
+is faster than @func{eqv?} and @func{equal?} and slower than @func{eq?}
+for symbols.
+
+The reader supports a special syntax to read keyword objects, @ref{iklib
+reader stx, Miscellaneous additional syntaxes}.
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun symbol->keyword @var{symbol}
+@defunx keyword->symbol @var{keyword}
+Convert between a symbol and a keyword.
+@end defun
+
+
+@defun keyword? @var{obj}
+Return @true{} if @var{obj} is a keyword object, else return @false{}.
+@end defun
+
+
+@defun keyword=? @vari{keyword} @varii{keyword}
+Return @true{} if both @vari{keyword} and @varii{keyword} are keyword
+objects and they are equal.  A keyword object is equal to itself; two
+distinct keyword objects are equal if they have the same symbol.
+@end defun
+
+
+@defun keyword-hash @var{keyword}
+Return an exact integer suitable to be used as hash value for
+@var{keyword} used as key for hashtables.
+@end defun
+
+@c page
+@node iklib lists
+@section Additional list functions
+
+
+@menu
+* iklib lists weak::            Weak pairs.
+@end menu
+
+@c page
+@node iklib lists weak
+@subsection Weak pairs
+
+
+Weak references do not cause the referenced value to be considered used
+by the garbage collector.  The following bindings are exported by the
+library @library{vicare}.
+
+
+@defun weak-cons @var{A} @var{D}
+Like @func{cons} build and return a new pair, but holding weak
+references to @var{A}; notice that the reference to @var{D} is not weak.
+This function allows to build a non--weak list spine holding weak
+references to values.
+@end defun
+
+
+@defun weak-pair? @var{obj}
+Return true if @var{obj} is a weak pair.
+@end defun
+
+
+@defun bwp-obejct? @var{obj}
+Return true if @var{obj} is a weak reference to a value which has been
+already garbage collected.  Example:
+
+@example
+vicare> (define x (weak-cons (cons 1 2) #f))
+vicare> x
+((1 . 2) . #f)
+vicare> (bwp-object? (car x))
+#f
+vicare> (collect)
+vicare> x
+ (#!bwp . #f)
+vicare> (bwp-object? (car x))
+#t
+@end example
+@end defun
+
+@c page
+@node iklib bytevectors
+@section Additional bytevector functions
+
+
+The description of bytevectors uses the term @emph{byte} for an exact
+integer object in the inclusive interval @math{(-128, @dots{}, 127)} and
+the term @emph{octet} for an exact integer object in the inclusive
+interval @math{(0, @dots{}, 255)}.  A byte corresponds to its two's
+complement representation as an octet.
+
+@menu
+* iklib bytevectors sub::       Building subbytevectors.
+* iklib bytevectors conv::      Converting bytevectors.
+* iklib bytevectors generic::   Generic bytevectors operations.
+@end menu
+
+@c page
+@node iklib bytevectors sub
+@subsection Building subbytevectors
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun subbytevector-u8 @var{bv} @var{start}
+@defunx subbytevector-u8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-u8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8 @var{bv} @var{start}
+@defunx subbytevector-s8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+@c page
+@node iklib bytevectors conv
+@subsection Converting bytevectors
+
+
+These conversion functions work like @func{bytevector->u8-list} and
+@func{u8-list->bytevector}.  The following bindings are exported by the
+library @library{vicare}.
+
+
+@defun {bytevector->s8-list} @var{bytevector}
+@defunx {s8-list->bytevector} @var{list}
+Convert between a list of signed bytes and a bytevector.
+@end defun
+
+
+@defun s16l-list->bytevector @var{list}
+@defunx s16b-list->bytevector @var{list}
+@defunx s16n-list->bytevector @var{list}
+@defunx u16l-list->bytevector @var{list}
+@defunx u16b-list->bytevector @var{list}
+@defunx u16n-list->bytevector @var{list}
+@defunx bytevector->s16l-list @var{bytevector}
+@defunx bytevector->s16b-list @var{bytevector}
+@defunx bytevector->s16n-list @var{bytevector}
+@defunx bytevector->u16l-list @var{bytevector}
+@defunx bytevector->u16b-list @var{bytevector}
+@defunx bytevector->u16n-list @var{bytevector}
+Convert between a list of signed or unsigned 16-bit words and a
+bytevector in which the words are stored in little, big or native
+endianness.
+@end defun
+
+
+@defun s32l-list->bytevector @var{list}
+@defunx s32b-list->bytevector @var{list}
+@defunx s32n-list->bytevector @var{list}
+@defunx u32l-list->bytevector @var{list}
+@defunx u32b-list->bytevector @var{list}
+@defunx u32n-list->bytevector @var{list}
+@defunx bytevector->s32l-list @var{bytevector}
+@defunx bytevector->s32b-list @var{bytevector}
+@defunx bytevector->s32n-list @var{bytevector}
+@defunx bytevector->u32l-list @var{bytevector}
+@defunx bytevector->u32b-list @var{bytevector}
+@defunx bytevector->u32n-list @var{bytevector}
+Convert between a list of signed or unsigned 32-bit words and a
+bytevector in which the words are stored in little, big or native
+endianness.
+@end defun
+
+
+@defun s64l-list->bytevector @var{list}
+@defunx s64b-list->bytevector @var{list}
+@defunx s64n-list->bytevector @var{list}
+@defunx u64l-list->bytevector @var{list}
+@defunx u64b-list->bytevector @var{list}
+@defunx u64n-list->bytevector @var{list}
+@defunx bytevector->s64l-list @var{bytevector}
+@defunx bytevector->s64b-list @var{bytevector}
+@defunx bytevector->s64n-list @var{bytevector}
+@defunx bytevector->u64l-list @var{bytevector}
+@defunx bytevector->u64b-list @var{bytevector}
+@defunx bytevector->u64n-list @var{bytevector}
+Convert between a list of signed or unsigned 64-bit words and a
+bytevector in which the words are stored in little, big or native
+endianness.
+@end defun
+
+
+@defun f4l-list->bytevector @var{list}
+@defunx f4b-list->bytevector @var{list}
+@defunx f4n-list->bytevector @var{list}
+@defunx bytevector->f4l-list @var{bytevector}
+@defunx bytevector->f4b-list @var{bytevector}
+@defunx bytevector->f4n-list @var{bytevector}
+Convert between a list of single--precision flonums and a bytevector in
+which the flonums are stored in little, big or native endianness.
+@end defun
+
+
+@defun f8l-list->bytevector @var{list}
+@defunx f8b-list->bytevector @var{list}
+@defunx f8n-list->bytevector @var{list}
+@defunx bytevector->f8l-list @var{bytevector}
+@defunx bytevector->f8b-list @var{bytevector}
+@defunx bytevector->f8n-list @var{bytevector}
+Convert between a list of double--precision flonums and a bytevector in
+which the flonums are stored in little, big or native endianness.
+@end defun
+
+
+@defun c4l-list->bytevector @var{list}
+@defunx c4b-list->bytevector @var{list}
+@defunx c4n-list->bytevector @var{list}
+@defunx bytevector->c4l-list @var{bytevector}
+@defunx bytevector->c4b-list @var{bytevector}
+@defunx bytevector->c4n-list @var{bytevector}
+Convert between a list of single--precision cflonums and a bytevector in
+which the cflonums are stored in little, big or native endianness, real
+part first.
+@end defun
+
+
+@defun c8l-list->bytevector @var{list}
+@defunx c8b-list->bytevector @var{list}
+@defunx c8n-list->bytevector @var{list}
+@defunx bytevector->c8l-list @var{bytevector}
+@defunx bytevector->c8b-list @var{bytevector}
+@defunx bytevector->c8n-list @var{bytevector}
+Convert between a list of double--precision cflonums and a bytevector in
+which the flonums are stored in little, big or native endianness, real
+part first.
+@end defun
+
+@c page
+@node iklib bytevectors generic
+@subsection Generic bytevectors operations
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun bytevector-append @var{bytevector} ...
+Concatenate the bytevector arguments and return the result.  If no
+arguments are given: return the empty bytevector.
+@end defun
+
+@c page
+@node iklib strings
+@section Additional string functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
+Copy @var{count} characters from @var{src.str} starting at
+@var{src.start} (inclusive) to @var{dst.str} starting at
+@var{dst.start}.  Return unspecified values.
+@end defun
+
+
+@defun string->latin1 @var{string}
+@defunx latin1->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+Latin-1 encoding of the characters.
+@end defun
+
+
+@defun string->ascii @var{string}
+@defunx ascii->string @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+@ascii{} encoding of the characters.
+@end defun
+
+
+@defun string->utf16le @var{string}
+@defunx string->utf16be @var{string}
+@defunx string->utf16n @var{string}
+@defunx utf16le->string @var{bytevector}
+@defunx utf16be->string @var{bytevector}
+@defunx utf16n->string @var{bytevector}
+Convert to and from a Scheme string and a Scheme bytevector holding the
+@utf{}-16 encoding of the characters under little, big or native
+endianness respectively.
+@end defun
+
+
+@defun uuid
+Attempt to build a unique string and return it.  If an internal error
+occurs because of impossible generation: raise an error.
+@end defun
+
+@c page
+@node iklib vectors
+@section Additional vector functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun subvector @var{vec} @var{start} @var{end}
+@var{vec} must be a vector, and @var{start} and @var{end} must be exact
+integer objects satisfying:
+
+@example
+0 <= @var{start} <= @var{end} <= (vector-length @var{vec})
+@end example
+
+Return a newly allocated vector formed from the items of @var{vec}
+beginning with index @var{start} (inclusive) and ending with index
+@var{end} (exclusive).
+@end defun
+
+
+@defun vector-append @var{vec} ...
+Return a newly allocated vector whose items form the concatenation of
+the given vectors.
+@end defun
+
+
+@defun vector-copy @var{vec}
+Return a newly allocated copy of the given vector.  This is ``shallow''
+copy, @strong{not} a ``deep'' copy: the returned vector holds the same
+items of @var{vec}.
+@end defun
+
+
+@defun vector-copy! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
+Copy @var{count} items from @var{src.vec} starting at @var{src.start}
+(inclusive) to @var{dst.vec} starting at @var{dst.start}.  Return
+unspecified values.
+@end defun
+
+
+@deffn Procedure vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+@deffnx Procedure vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+The @var{vec}s should all have the same length, and @var{proc} should
+accept @math{N} arguments and return a single value.  @var{proc} should
+not mutate the @var{vec} arguments.
+
+For natural numbers @math{i = 0, 1, @dots{}}, the @func{vector-for-all}
+procedure successively applies @var{proc} to arguments @math{x_i^1
+@dots{} x_i^N}, where @math{x_i^j} is the @math{i}-th element of
+@var{vecj}, until @false{} is returned.
+
+If @var{proc} returns true values for all but the last element of
+@vari{vec}, @func{vector-for-all} performs a tail call of @var{proc} on
+the @math{k}-th elements, where @math{k} is the length of @vari{vec}.
+If @var{proc} returns @false{} on any set of elements,
+@func{vector-for-all} returns @false{} after the first such application
+of @var{proc}.  If the @var{vec}s are all empty, @func{vector-for-all}
+returns @true{}.
+
+For natural numbers @math{i = 0, 1, @dots{}}, the @func{vector-exists}
+procedure applies @var{proc} successively to arguments @math{x_i^1
+@dots{} x_i^n}, where @math{x_i^j} is the @math{i}-th element of
+@var{vecj}, until a true value is returned.
+
+If @var{proc} returns @false{} for all but the last elements of the
+@var{vec}s, @func{vector-exists} performs a tail call of @var{proc} on
+the @math{k}-th elements, where @math{k} is the length of @vari{vec}.
+If @var{proc} returns a true value on any set of elements,
+@func{vector-exists} returns that value after the first such application
+of @var{proc}.  If the @var{vec}s are all empty, @func{vector-exists}
+returns @false{}.
+
+@var{proc} is always called in the same dynamic environment as
+@func{vector-for-all} or, respectively, @func{vector-exists} itself.
+@end deffn
+
+@c page
+@node iklib symbols
+@section Additional symbol functions
+
+
+@menu
+* iklib symbols value::         Symbol values.
+* iklib symbols plists::        Property lists.
+* iklib symbols system::        System values.
+@end menu
+
+@c page
+@node iklib symbols value
+@subsection Symbol values
+
+
+Symbol values have miscellaneous uses: when a symbol is the unique
+identifier for a data structure, its symbol value field is set to the
+type descriptor of the data structure; when a symbol is the unique label
+of a binding in the expander, its symbol value is a reference to the
+binding.  @ref{syslib symbols} for more details on symbol values.
+
+The following bindings are exported by the @library{ikarus} and the
+@library{ikarus symbols} libraries.
+
+
+@defun set-symbol-value! @var{sym} @var{value}
+Store @var{value} in the @func{$symbol-value} field of the symbol
+@var{sym}.
+@end defun
+
+
+@defun symbol-value @var{sym}
+Return the value in the @func{$symbol-value} field of the symbol
+@var{sym}.
+@end defun
+
+
+@defun symbol-bound? @var{sym}
+Return true if @var{sym} is a symbol and its @func{$symbol-value} field
+is set to the special ``unbound'' machine word value.  @ref{objects
+symbols} for details.
+@end defun
+
+@c page
+@node iklib symbols plists
+@subsection Property lists
+
+
+Property lists are associations key/value that can be attached to any
+Scheme symbol.  The following bindings are exported by the
+@library{ikarus} and the @library{ikarus symbols} libraries.
+
+@example
+#!ikarus
+(import (ikarus))
+
+(putprop 'ciao 'british 'hello)
+(putprop 'ciao 'spanish 'hola)
+
+(getprop 'ciao 'british)        @result{} hello
+(getprop 'ciao 'spanish)        @result{} hola
+
+(remprop 'ciao 'british)
+(getprop 'ciao 'british)        @result{} #f
+
+(property-list 'ciao)           @result{} ((spanish . hola))
+@end example
+
+
+@defun putprop @var{symbol} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
+
+If @var{key} is already set: the old entry is mutated to reference the
+new @var{value}.
+@end defun
+
+
+@defun getprop @var{symbol} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
+symbol.
+@end defun
+
+
+@defun remprop @var{symbol} @var{key}
+Remove property @var{key} from the list associated to @var{symbol}.
+@end defun
+
+
+@defun property-list @var{symbol}
+Return a new association list representing the property list of
+@var{symbol}.  The order of the entries is the same as the property
+creation order.
+@end defun
+
+@c page
+@node iklib symbols system
+@subsection System values
+
+
+When @value{PRJNAME}'s boot image is loaded, it initialises itself; for
+every primitive function (@func{cons}, @func{car}, @dots{})  one of the
+operations is to put the actual function (a closure object) in the
+@code{value} field of a gensym, and then put such gensym in the property
+list of the symbol being the name of the primitive, using an internal
+gensym (bound to @code{system-value-gensym}) as key.  For example, this
+is more or less what happens to @func{cons}:
+
+@example
+(define G-cons (gensym "cons"))
+($set-symbol-value 'G-cons #<procedure cons>)
+(putprop 'cons system-value-gensym 'G-cons)
+@end example
+
+@noindent
+so later we can do:
+
+@example
+($symbol-value (getprop x system-value-gensym))
+@result{} #<procedure cons>
+@end example
+
+@noindent
+or use the equivalent public @api{}:
+
+@example
+(system-value 'cons)    @result{} #<procedure cons>
+@end example
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun system-value @var{symbol}
+Attempt to extract from the @var{symbol} the primitive procedure of
+which @var{symbol} is the name; if successful return a closure object,
+else raise an assertion violation.
+@end defun
+
+@c page
+@node iklib fixnums
+@section Additional functions on fixnums
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun fxsign @var{fx}
+Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
+the sign of the fixnum @var{fx}.
+@end defun
+
+
+@defun fixnum->string @var{fx}
+Return a string representation of @var{fx}.
+@end defun
+
+@c page
+@node iklib flonums
+@section Additional functions on flonums
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+@c ------------------------------------------------------------
+
+@subsubheading String conversion
+
+
+@defun flzero?/positive @var{fl}
+@defunx flzero?/negative @var{fl}
+Return true if the operand is @code{+0.0} or @code{-0.0}, respectively.
+Notice that @func{flzero?} does @strong{not} make this distinction.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading String conversion
+
+
+@defun string->flonum @var{fl}
+@defunx flonum->string @var{str}
+Convert between a flonum and its string representation.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Exponents and logarithms
+
+
+@defun fllog1p @var{fl}
+Return a flonum equivalent to @math{log(1 + @var{fl})}.
+@end defun
+
+
+@defun flexpm1 @var{fl}
+Return a flonum equivalent to @math{exp(@var{fl}) - 1}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic functions
+
+
+@defun flsinh @var{fl}
+@defunx flcosh @var{fl}
+@defunx fltanh @var{fl}
+Compute the hyperbolic functions.  Return flonum objects.
+@end defun
+
+
+@defun flasinh @var{fl}
+@defunx flacosh @var{fl}
+@defunx flatanh @var{fl}
+Compute the inverse hyperbolic functions.  Return flonum objects.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Power functions
+
+
+@defun flsqr @var{fl}
+Return the square of @var{fl}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Miscellaneous functions
+
+
+@defun flonum-bytes @var{fl}
+Return @math{8} values being fixnums representing octects from the
+binary representation of @var{fl}.
+@end defun
+
+
+@defun flonum-parts @var{fl}
+Return @math{3} values begin: a boolean, true if @var{fl} is positive; a
+fixnum representing the exponent's @math{11} bits; an exact integer
+representing the mantissa's @math{53} bits.
+
+@example
+(flonum-parts 2.0)
+@result{} #t #b10000000000 #b0
+
+(flonum-parts 4.0)
+@result{} #t #b10000000001 #b0
+
+(flonum-parts +0.0)
+@result{} #t #b00000000000 #b0
+
+(flonum-parts -0.0)
+@result{} #f #b00000000000 #b0
+@end example
+@end defun
+
+@c page
+@node iklib numerics
+@section Additional functions on numbers
+
+
+@menu
+* iklib numerics preds::        Additional numeric predicates.
+* iklib numerics math::         Additional math functions.
+* iklib numerics bitwise::      Additional bitwise functions.
+@end menu
+
+@c page
+@node iklib numerics preds
+@subsection Additional numeric predicates
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun bignum? @var{obj}
+Return true if @var{obj} is an exact integer represented by a big
+number.
+@end defun
+
+
+@defun ratnum? @var{obj}
+Return true if @var{obj} is an exact rational number.
+@end defun
+
+
+@defun cflonum? @var{obj}
+Return true if @var{obj} is a complex number having flonums as both real
+and imaginary parts.
+@end defun
+
+
+@defun compnum? @var{obj}
+Return true if @var{obj} is a complex number having any possible
+combination of number representations as real and imaginary parts, but
+not both flonums.
+@end defun
+
+@c page
+@node iklib numerics math
+@subsection Additional math functions
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+@c ------------------------------------------------------------
+
+@subsubheading Arithmetic functions
+
+@defun sqr @var{num}
+Return the square of @var{num}.
+@end defun
+
+
+@defun quotient+remainder @vari{N} @varii{N}
+Return two values: the quotient and the remainder of the
+number--theoretic integer division between the operands.  @vari{N} and
+@varii{N} must be exact or inexact integers; @varii{N} must be
+non--zero.
+
+The operations are defined like for @func{quotient} and @func{remainder}
+from @rsixlibrary{r5rs}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Hyperbolic functions
+
+The @var{num} operand must be a real or complex number.
+
+
+@defun sinh @var{num}
+@defunx cosh @var{num}
+@defunx tanh @var{num}
+Hyperbolic functions.
+@end defun
+
+
+@defun asinh @var{num}
+@defunx acosh @var{num}
+@defunx atanh @var{num}
+Inverse hyperbolic functions.
+@end defun
+
+@c page
+@node iklib numerics bitwise
+@subsection Additional bitwise functions
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun sra @var{integer} @var{offset}
+An alias for @func{bitwise-arithmetic-shift-right}.
+@end defun
+
+
+@defun sll @var{integer} @var{offset}
+An alias for @func{bitwise-arithmetic-shift-left}.
+@end defun
+
+@c page
+@node iklib enumerations
+@section Additional functions on enumerations
+
+
+The following bindings are exported by the @library{ikarus} and
+@library{vicare} libraries.
+
+
+@defun enum-set? @var{obj}
+Return @true{} if @var{obj} is an enumeration set object, else return
+@false{}.
+@end defun
+
+@c page
+@node iklib hashtables
+@section Additional functions on hashtables
+
+
+@defun string-ci-hash @var{str}
+Case--insensitive hash function for strings.
+@end defun
+
+@c page
+@node iklib load
+@section Loading source files
+
+
+Loading of source files can be done explicitly or by requesting a
+library with the @func{import} form.  Here we see how to load files by
+specifying their pathname on the file system.
+
+
+@defun load @var{pathname}
+@defunx load @var{pathname} @var{eval-proc}
+Read and evaluate the file selected by the string @var{pathname}.
+
+If @var{eval-proc} is given: it must be a procedure that takes a single
+argument, an annotated form, and evaluates it.  The default
+@var{eval-proc} looks like this:
+
+@example
+(define (load-handler x)
+  (eval x (interaction-environment)))
+@end example
+
+The format of the annotated source is the one which is comprehensible by
+@func{eval}.
+@end defun
+
+@c page
+@node iklib import
+@section Local library imports
+
+
+Local @func{import} forms are useful for the following reasons:
+
+@enumerate
+@item
+They minimize the namespace clutter that usually occurs when many
+libraries are imported at the top level.
+
+@item
+They limit the scope of the import and thus help modularize a library's
+dependencies.
+@end enumerate
+
+Let's suppose we are constructing a large library and at some point we
+realize that a procedure needs to make use of some other library to
+performing a specific task; importing that library at top level makes it
+available for the entire library.  Consequently, even if that library is
+no longer used anywhere in the code (say when the code that uses it is
+deleted), it becomes very hard to delete the import without first
+examiniming the entire library body for potential usage leaks.  By
+locally importing a library into the appropriate scope, we gain the
+ability to delete the @func{import} form when the procedure that was
+using it is deleted.
+
+
+@deffn Syntax import @meta{import-spec} ...
+This syntax can be used anywhere definitions can occur:
+
+@enumerate
+@item
+In a script body.
+
+@item
+At library's top--level.
+
+@item
+In internal definitions context.
+@end enumerate
+
+The syntax of the local @func{import} form is similar to the
+@func{import} that appears at the top of a library or a script form, and
+carries with it the same restrictions:
+
+@itemize
+@item
+No identifier name may be imported twice unless it denotes the same
+identifier.
+
+@item
+No identifier may be both imported and defined.
+
+@item
+Imported identifiers are immutable.
+@end itemize
+
+Each @meta{import-spec} can be as defined by @rnrs{6} or a symbol
+representing the name of a module; notice that module import
+specifications can be only symbols, @strong{without} prefixes, renaming
+and the features allowed for libraries.
+@end deffn
+
+
+In the following example we import a library in the body of a function:
+
+@example
+;;; file "alpha.sls"
+(library (alpha)
+  (export doit)
+  (import (vicare))
+  (define (doit)
+    (fprintf (current-error-port) "From alpha!\n")))
+
+;;; file "beta.sls"
+(library (beta)
+  (export doit)
+  (import (vicare))
+  (define (doit)
+    (fprintf (current-error-port) "From beta!\n")))
+
+;;; file "program.sps"
+(import (vicare)
+  (alpha))
+(define (do-that)
+  (import (beta))
+  (doit))
+(doit)
+(do-that)
+@print{} From alpha!
+@print{} From beta!
+@end example
+
+In the following example we import bindings from a module in the body of
+a function:
+
+@example
+(import (vicare))
+
+(define (doit)
+  (fprintf (current-error-port) "From body!\n"))
+
+(module do-stuff
+  (doit)
+  (define (doit)
+    (fprintf (current-error-port) "From module!\n")))
+
+(define (do-that)
+  (import do-stuff)
+  (doit))
+
+(doit)
+(do-that)
+@print{} From body!
+@print{} From module!
+@end example
+
+@c page
+@node iklib export
+@section Extended library exports
+
+
+@value{PRJNAME} allows the @func{export} syntax to appear at the top
+level of a library among the definitions, not only as third form of a
+@func{library} form.
+
+
+@deffn Syntax export @meta{export-spec} ...
+Export the specified bidings from the current library or module.  When
+@func{export} appears at the top level of a library: it exports the
+specified bindings from the library.  When @func{export} appears in the
+body of a module: it exports the specified bindings from the module
+(@strong{not} from the enclosing library).
+@end deffn
+
+
+Here is an example of library exporting a binding with a @func{export}
+at the end:
+
+@example
+;;; file "alpha.sls"
+(library (alpha)
+  (export red)
+  (import (vicare))
+  (define (blue)
+    'blue)
+  (define (red)
+    'red)
+  (export blue))
+
+;;; file "program.sps"
+(import (vicare)
+  (alpha))
+(pretty-print (red)  (current-error-port))
+(pretty-print (blue) (current-error-port))
+@end example
+
+Here is an example of module exporting a binding with @func{export}:
+
+@example
+(import (vicare))
+
+(module (green)
+  (define (green) 'green)
+  (define (yellow) 'yellow)
+  (export yellow))
+
+(list (green) (yellow)) @result{} (green yellow)
+@end example
+
+@c page
+@node iklib modules
+@section Local modules
+
+
+Modules are somewhat like libraries in that they define a set of
+bindings in a ``private namespace''; bindings can be exported from a
+module and imported into other modules and libraries.  The main
+difference between modules and @rnrs{6} libraries is that modules are
+defined in a single form nested into a library; so, in a way, they are
+sub--libraries.
+
+@ignore
+@quotation
+@strong{NOTE} In the official documentation of @value{PRJNAME} 0.0.3+
+(revision 1648) modules are yet not documented.  Please refer to Section
+10.5 of Chez Scheme User's Guide, Chapter 3 of Oscar Waddel's Ph.D
+Thesis, and its POPL99 paper for details on using the @func{module} and
+@func{import} keywords.  @value{PRJNAME}'s internal module system is
+similar in spirit to that of Chez Scheme.
+@end quotation
+@end ignore
+
+@deffn Syntax module @meta{interface} @meta{definition} ... @meta{expression} ...
+@deffnx Syntax module @meta{name} @meta{interface} @meta{definition} ... @meta{expression} ...
+Define a new local module.  The first form defines an @emph{anonymous}
+module, while the second form defines a @emph{named} module called
+@meta{name}, which must be a symbol.
+
+@meta{interface} is a list of symbols selecting bindings from this
+module to be exported; every listed symbol must be bound in this
+module's @meta{definition}, otherwise an error is raised.
+
+@meta{definition} is a set of bindings like the one that may appear at
+the beginning of a @func{let} body, with the addition of @func{import}
+forms that may import bindings from libraries and other modules.
+
+@meta{expression} is a set of expressions that is evaluated at module's
+definition time.
+
+Modules ``exist'' only in the enclosing region, bindings exported from a
+module are not accessible outside of the enclosing region.  Modules can
+be nested and import/export relations are possible according to the
+regions nesting hierarchy.
+
+Bindings in the @meta{interface} declared by anonymous modules are
+imported by default in the enclosing region: there is no need to use
+@func{import}.  Bindings in the @meta{interface} declared by named
+modules are visible only in regions that @func{import} the module.
+
+@meta{definition} and @meta{expression} have no default access to the
+bindings in the enclosing region; only imported bindings are visible
+from the module.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Examples of anonymous modules
+
+The following example defines an anonymous module, without expressions,
+and invokes its functions from the enclosing region (which is the top
+level):
+
+@example
+(import (vicare))
+
+(module (one two three)
+    (define (one)       'one)
+    (define (two)       'two)
+    (define (three)     (cons 'three (hidden)))
+    (define (hidden)    'hidden))
+
+(fprintf (current-error-port)
+         "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
+@end example
+
+@noindent
+notice that the @func{hidden} function is visible inside the module but
+not in the enclosing region.
+
+The following example defines a module, with expressions, and invokes
+its functions from the enclosing region (which is the top level):
+
+@example
+(import (vicare))
+
+(module (one two three)
+    (define (one)       'one)
+    (define (two)       'two)
+    (define (three)     (cons 'three (hidden)))
+    (define (hidden)    'hidden)
+
+    (fprintf (current-error-port)
+             "defining an anonymous module\n"))
+
+(fprintf (current-error-port)
+         "calling anonymous: ~s ~s ~s\n" (one) (two) (three))
+@end example
+
+@noindent
+notice that when the enclosing region is the top level: the expressions
+at the end of a module are evaluated @strong{after} the expressions at
+the top level; so the output from the example is:
+
+@example
+calling anonymous: one two (three . hidden)
+defining an anonymous module
+@end example
+
+@noindent
+this can lead to undesired results if the module's expressions are meant
+to initialise the state of the module, and the expressions at the top
+level invoke the module's functions (before initialisation).  On the
+other hand: this behaviour allows the module to access definitions from
+the enclosing region and the top level region despite their placement in
+the file; see below for an example.  The same behaviour is shown by
+named modules.
+
+The following example defines a module, with expressions, and invokes
+its functions from the enclosing region (which is a @func{let} form):
+
+@example
+(import (vicare))
+
+(let ()
+  (module (one two three)
+      (define (one)       'one)
+      (define (two)       'two)
+      (define (three)     (cons 'three (hidden)))
+      (define (hidden)    'hidden)
+
+      (printf (current-error-port)
+              "defining an anonymous module\n"))
+
+  (fprintf (current-error-port)
+           "calling anonymous: ~s ~s ~s\n" (one) (two) (three)))
+@end example
+
+@noindent
+notice that when the enclosing region is @strong{not} the top level: the
+expressions at the end of a module are evaluated @strong{before} the
+expressions in the body of the enclosing region; so the output from the
+example is:
+
+@example
+defining an anonymous module
+calling anonymous: one two (three . hidden)
+@end example
+
+@noindent
+so the state of the module can be correctly initialised before its
+functions are invoked.  The same behaviour is shown by named modules.
+
+The following example shows that bindings from the enclosing region and
+the top level environment are accessible from the modules:
+
+@example
+(import (vicare))
+
+(define (top-level-before) 'top-level-before)
+
+(let ()
+
+  (define (outer-before) 'outer-before)
+
+  (module (one two three)
+    (define (one)       'one)
+    (define (two)       'two)
+    (define (three)     (list 'three
+                              (outer-before)
+                              (outer-after)
+                              (top-level-before)
+                              (top-level-after))))
+
+  (define (outer-after) 'outer-after)
+
+  (fprintf (current-error-port)
+           "calling anonymous: ~s ~s ~s\n" (one) (two) (three)))
+
+(define (top-level-after) 'top-level-after)
+@end example
+
+@noindent
+this happens both when the enclosing region is the top level and when
+the enclosing region is not the top level.  The same behaviour is shown
+by named modules.
+
+@c ------------------------------------------------------------
+
+@subsubheading Named modules
+
+
+The following example defines a module named @code{blue} and invokes
+functions from it in the top level region:
+
+@example
+(import (vicare))
+
+(module blue (blue-one blue-two blue-three)
+    (define (blue-one)          'blue-one)
+    (define (blue-two)          'blue-two)
+    (define (blue-three)        (cons 'blue-three (hidden)))
+    (define (hidden)            'blue-hidden))
+
+(import blue)
+(fprintf (current-error-port)
+         "calling blue: ~s ~s ~s\n"
+         (blue-one) (blue-two) (blue-three))
+@end example
+
+@noindent
+notice that bindings from a named module are accessible only if imported
+in the enclosing region.
+
+The following example defines two modules named @code{green} and
+@code{red}, then it imports their bindings in different regions:
+
+@example
+(import (vicare))
+
+(let ()
+
+  (module green (one two three)
+    (define (one)       'green-one)
+    (define (two)       'green-two)
+    (define (three)     (cons 'green-three (hidden)))
+    (define (hidden)    'green-hidden))
+
+  (module red (one two three)
+    (define (one)       'red-one)
+    (define (two)       'red-two)
+    (define (three)     (cons 'red-three (hidden)))
+    (define (hidden)    'red-hidden))
+
+  (import green)
+
+  (let ()
+    (import red)
+    (fprintf (current-error-port)
+             "calling red: ~s ~s ~s\n" (one) (two) (three)))
+
+  (fprintf (current-error-port)
+           "calling green: ~s ~s ~s\n" (one) (two) (three)))
+@end example
+
+The following example shows that modules in the same enclosing region
+can import their bindings:
+
+@example
+(import (vicare))
+
+(let ()
+
+  (module green (one two)
+    (define (one)       'one)
+    (define (two)       'two))
+
+  (module red (f g)
+    (import green)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two))))
+
+  (import red)
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
+@end example
+
+@noindent
+while the following example shows that bindings from an anonymous module
+are automatically available in modules defined in the same enclosing
+region:
+
+@example
+(import (vicare))
+
+(let ()
+
+  (module (one two)
+    (define (one)       'one)
+    (define (two)       'two))
+
+  (module red (f g)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two))))
+
+  (import red)
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
+@end example
+
+@noindent
+and the following example shows that the order of module definitions
+does not matter in determining visibility of bindings from
+@strong{anonymous} modules:
+
+@example
+(import (vicare))
+
+(let ()
+
+  (module red (f g)
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two))))
+
+  (module (one two)
+    (define (one)       'one)
+    (define (two)       'two))
+
+  (import red)
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
+@end example
+
+@noindent
+the following is an @strong{error} because it tries to import bindings
+from a @strong{named} module before its definition:
+
+@example
+(import (vicare))
+
+(let ()
+
+  (module red (f g)
+    (import green) ;; error here!!!
+    (define (f)         (cons 'f (one)))
+    (define (g)         (cons 'g (two))))
+
+  (module green (one two)
+    (define (one)       'one)
+    (define (two)       'two))
+
+  (import red)
+  (fprintf (current-error-port)
+           "calling red: ~s ~s\n" (f) (g)))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Utilities examples
+
+
+The following example shows how syntactic abstractions can be used to
+access definitions in a module without explicitly using the
+@func{import} form:
+
+@example
+(import (vicare))
+
+(let ()
+
+  (define-syntax in-module
+    (syntax-rules ()
+      ((_ ?module ?expr ...)
+       (let () (import ?module) ?expr ...))))
+
+  (module red (one two)
+    (define (one arg)   (cons 'red-one arg))
+    (define (two arg)   (cons 'red-two arg)))
+
+  (module green (one two)
+    (define (one arg)   (cons 'green-one arg))
+    (define (two arg)   (cons 'green-two arg)))
+
+  (fprintf (current-error-port)
+           "calling ones: ~s ~s\n"
+           ((in-module red one)   123)
+           ((in-module green one) 456)))
+@end example
+
+@c page
+@node iklib parameters
+@section Parameters
+
+
+Parameters in @value{PRJNAME} are intended for customizing the behavior
+of a procedure during the dynamic execution of some piece of code.
+Parameters are first class entities (represented as procedures) that
+hold the parameter value.  We can think of a parameter functions as:
+
+@example
+(let ((the-value @meta{init-value})
+      (guard     @meta{guard-func}))
+  (case-lambda
+    (()
+     the-value)
+    ((new-value)
+     (set! the-value (guard new-value)))
+    ((new-value guard?)
+     (if guard?
+         (set! the-value (guard new-value))
+       (set! the-value new-value)))))
+@end example
+
+@noindent
+where @meta{init-value} is the parameter's initialisation value and
+@meta{guard-func} is a function accepting one argument and returning one
+value.  The behaviour is as follows:
+
+@itemize
+@item
+When given no arguments: it returns the current value of the parameter.
+
+@item
+When given a single argument: it sets the current value of the parameter
+to the return value of the guard function applied to the argument.
+
+@item
+When given two arguments: it sets the current value of the parameter to
+either the return value of the guard function applied to the first
+argument or directly to the first argument.
+@end itemize
+
+As of @value{PRJNAME} version 0.2d7 the parameter's initialisation value
+is @strong{not} automatically passed through the guard function.  About
+guarding or not the initialisation value there are pros and cons for
+both the choices; @value{PRJNAME} does not guard the initialisation
+value because a parameter can be used to hold ``complex'' objects and it
+is not always desirable to create one of those at program start time.
+When needed it is possible to validate the value by explicitly writing
+the required predicate.
+
+@quotation
+As example, consider a parameter used to hold the ``current database
+connection''; we may not want to connect to a database right at program
+start time.  With a validating parameter: we should create a ``null''
+connection object for the only purpose of initialising the parameter and
+then test for it; with a non--validating parameter: we just initialise
+the parameter to @false{} and test for it.
+@end quotation
+
+Parameters replace the older concept of using starred @code{*global*}
+customization variables.  For example, instead of writing:
+
+@example
+(define *screen-width* 72)
+@end example
+
+@noindent
+and then mutating the variable @code{*screen-width*} with @code{set!},
+we could wrap the variable @code{*screen-width*} with a
+@code{screen-width} parameter as follows:
+
+@example
+(define *screen-width* 72)
+(define screen-width
+   (case-lambda
+     (()  *screen-width*)
+     ((x) (set! *screen-width* x))))
+@end example
+
+@noindent
+the value of @code{screen-width} can now be passed as argument, returned
+as a value, and exported from libraries.  With parameters we can write
+this code succinctly as:
+
+@example
+(define screen-width (make-parameter 72))
+@end example
+
+Typical uses of the guard function include checking some constraints on
+the passed argument or converting it to a different data type.  The
+@code{screen-width} parameter may be constructed more robustly as:
+
+@example
+(define screen-width
+  (make-parameter 72
+    (lambda (w)
+      (assert (and (integer? w) (exact? w)))
+      (max w 1))))
+@end example
+
+@noindent
+this definition ensures, through @func{assert}, that the argument passed
+is an exact integer; it also ensures, through @func{max} that the
+assigned value is always positive.
+
+
+@deffn Procedure make-parameter @var{init}
+@deffnx Procedure make-parameter @var{init} @var{guard}
+Build and return a new parameter function using @var{init} as
+initialisation value and @var{guard} as guard function.
+@end deffn
+
+
+@deffn Syntax parameterize ((lhs* rhs*) ...) body body* ...
+@deffnx Syntax parametrise ((lhs* rhs*) ...) body body* ...
+Parameters can be assigned to by simply calling the parameter procedure
+with a single argument.  The @func{parameterize} syntax is used to set
+the value of a parameter within the dynamic extent of the @code{body
+body* ...} expressions.
+
+The @code{lhs* ...} are expressions, each of which must evaluate to a
+parameter.  Such parameters are not necessarily constructed by
+@func{make-parameter}---any procedure that follows the parameters
+protocol works.
+
+The advantage of using @func{parameterize} over explicitly assigning to
+parameters (same argument applies to global variables) is that you're
+guaranteed that whenever control exits the body of a @func{parameterize}
+expression, the value of the parameter is reset back to what it was
+before the body expressions were entered.  This is true even in the
+presence of @func{call/cc}, errors, and exceptions.
+
+The following example shows how to set the text property of a terminal
+window.  The parameter @code{terminal-property} sends an @ansi{} escape
+sequence to the terminal whenever the parameter value is changed.  The
+use of @code{terminal-property} within @func{parameterize} changes the
+property before @code{(display "RED!")} is called and resets it back to
+normal when the body returns.
+
+@example
+(define terminal-property
+  (make-parameter "0"
+    (lambda (x)
+      (display "\x1b;[")
+      (display x)
+      (display "m")
+      x)))
+
+(display "Normal and ")
+(parameterize ((terminal-property "41;37"))
+  (display "RED!"))
+(newline)
+@end example
+
+Notice that this syntax applies the parameters' guard functions when
+setting new values, but does @strong{not} apply them when restoring the
+original value.
+@end deffn
+
+@c page
+@node iklib gensym
+@section Gensyms
+
+
+Gensym stands for @emph{generated symbol}---a fresh symbol that is
+generated at run time and is guaranteed to be @emph{not} @func{eq?} to
+any other symbol present in the system.  Gensyms are useful in many
+applications including expanders, compilers, and interpreters when
+generating an arbitrary number of unique names is needed.
+
+@value{PRJNAME} is similar to Chez Scheme in that the readers (including the
+@func{read} procedure) and writers (including @func{write} and
+@func{pretty-print}) maintain the read/write invariance on gensyms.
+When a gensym is written to an output port, the system automatically
+generates a random unique identifier for the gensym.  When the gensym is
+read back though the @code{#@{gensym@}} read syntax, a new gensym is
+@emph{not} regenerated, but instead, it is looked up in the global
+symbol table.
+
+A gensym's name is composed of two parts: a @emph{pretty} string and a
+@emph{unique} string.  The Scheme procedure @func{symbol->string}
+returns the pretty string of the gensym and not its unique string.
+Gensyms are printed by default as @code{#@{pretty-string unique-string@}}.
+
+The reader supports special syntaxes to generate symbols, @ref{iklib
+reader stx}.
+
+
+@deffn Procedure gensym
+@deffnx Procedure gensym @var{string}
+@deffnx Procedure gensym @var{symbol}
+Construct a new gensym.  If passed no arguments, construct a gensym with
+no pretty name.  The pretty name is constructed when and if the pretty
+name of the resulting gensym is needed.  If @func{gensym} is passed a
+string, that string is used as the pretty name.  If @func{gensym} is
+passed a symbol, the pretty name of the symbol is used as the pretty
+name of the returned gensym.  See @func{gensym-prefix} and
+@func{gensym-count} for details.
+
+@example
+> (gensym)
+#@{g0 |y0zf>GlFvcTJE0xw|@}
+> (gensym)
+#@{g1 |U%X&sF6kX!YC8LW=|@}
+> (eq? (gensym) (gensym))
+#f
+@end example
+
+@code{(gensym string)} constructs a new gensym with @var{string} as its
+pretty name.  Similarly, @code{(gensym symbol)} constructs a new gensym
+with the pretty name of @var{symbol}, if it has one, as its pretty name.
+
+@example
+> (gensym "foo")
+#@{foo |>VgOllCM&$dSvRN=|@}
+> (gensym 'foo)
+#@{foo |!TqQLmtw2hoEYfU>|@}
+> (gensym (gensym 'foo))
+#@{foo |N2C>5O0>C?OROUBU|@}
+@end example
+@end deffn
+
+
+@deffn Procedure gensym? @var{x}
+Return @true{} if its argument is a gensym, return @false{} otherwise.
+
+@example
+> (gensym? (gensym))
+#t
+> (gensym? 'foo)
+#f
+> (gensym? 12)
+#f
+@end example
+@end deffn
+
+
+@deffn Procedure gensym->unique-string @var{gensym}
+Return the unique name associated with the gensym argument.
+
+@example
+> (gensym->unique-string (gensym))
+"YukrolLMgP?%ElcR"
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading An example
+
+The @library{rnrs syntax-case} library provides a
+@func{generate-temporaries} procedure, which takes a syntax object
+(representing a list of things) and returns a list of fresh identifiers.
+Using @func{gensym}, that procedure can be defined as follows:
+
+@example
+(define (generate-temporaries* stx)
+  (syntax-case stx ()
+    [(x* ...)
+     (map (lambda (x)
+            (datum->syntax #'unimportant
+              (gensym
+                (if (identifier? x)
+                    (syntax->datum x)
+                    't))))
+          #'(x* ...))]))
+@end example
+
+The above definition works by taking the input @var{stx} and
+destructuring it into the list of syntax objects @code{x* ...}.  The
+inner procedure maps each @var{x} into a new syntax object (constructed
+with @func{datum->syntax}).  The datum is a gensym, whose name is the
+same name as @var{x} if @var{x} is an identifier, or the symbol @code{t}
+if @var{x} is not an identifier.  The output of
+@func{generate-temporaries*} generates names similar to their input
+counterpart:
+
+@example
+> (print-gensym #f)
+> (generate-temporaries* #'(x y z 1 2))
+(#<syntax x> #<syntax y> #<syntax z> #<syntax t> #<syntax t>)
+@end example
+
+@c page
+@node iklib printing
+@section Printing
+
+
+@deffn Procedure pretty-print @var{datum}
+@deffnx Procedure pretty-print @var{datum} @var{output-port}
+The procedure @func{pretty-print} is intended for printing Scheme data,
+typically Scheme programs, in a format close to how a Scheme programmer
+would write it.  Unlike @func{write}, which writes its input all in one
+line, @func{pretty-print} inserts spaces and new lines in order to
+produce more pleasant output.
+
+@example
+(define fact-code
+  '(letrec ([fact (lambda (n)
+                    (if (zero? n)
+                        1
+                      (* n (fact (- n 1)))))])
+     (fact 5)))
+
+> (pretty-print fact-code)
+(letrec ((fact
+          (lambda (n) (if (zero? n) 1 (* n (fact (- n 1)))))))
+  (fact 5))
+@end example
+
+The second argument to @func{pretty-print}, if supplied, must be an
+output port.  If not supplied, the @func{current-output-port} is used.
+
+@quotation
+@strong{LIMITATIONS} As shown in the output above, the current
+implementation of @func{pretty-print} does not handle printing of square
+brackets properly.
+@end quotation
+@end deffn
+
+
+@defun pretty-print* @var{datum} @var{output-port} @var{start-column} @var{ending-newline?}
+Like @func{pretty-print} but accepts the additional arguments:
+
+@table @var
+@item start-column
+A non--negative fixnum.  The zero--based column offset at which the
+first line is displayed.  When printing a multiline symbolic expression,
+the column offset of the first line depends upon what has been already
+printed on such line; this argument allows us to correctly align the
+second and subsequent lines.  For example the following program:
+
+@example
+#!r6rs
+(import (vicare))
+
+(pretty-width 10)
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode none))
+
+(display "01234")
+(pretty-print  '("56789" "8 7 6 5"))
+
+(newline)
+
+(display "01234")
+(pretty-print* '("56789" "8 7 6 5")
+               (current-output-port) 5 #t)
+@end example
+
+@noindent
+prints:
+
+@example
+01234("56789"
+  "8 7 6 5")
+
+01234("56789"
+       "8 7 6 5")
+@end example
+
+@item ending-newline?
+Interpreted as boolean value.  If true: a newline character is output
+after the symbolic expression.
+@end table
+@end defun
+
+
+@deffn Parameter pretty-width
+@deffnx Parameter pretty-width @var{n}
+The parameter @func{pretty-width} controls the number of characters
+after which the @func{pretty-print} starts breaking long lines into
+multiple lines.  The initial value of @func{pretty-width} is set to 60
+characters, which is suitable for most terminals and printed material.
+
+@example
+> (parameterize ([pretty-width 40])
+     (pretty-print fact-code))
+(letrec ((fact
+          (lambda (n)
+            (if (zero? n)
+                1
+                (* n (fact (- n 1)))))))
+  (fact 5))
+@end example
+
+Note that @func{pretty-width} does not guarantee that the output will
+not extend beyond the specified number.  Very long symbols, for
+examples, cannot be split into multiple lines and may force the printer
+to go beyond the value of @func{pretty-width}.
+@end deffn
+
+
+@deffn Procedure format @var{fmt-string} @var{args} ...
+The procedure @func{format} produces a string formatted according to
+@func{fmt-string} and the supplied arguments.  The format string
+contains markers in which the string representation of each argument is
+placed.  The markers include:
+
+@table @code
+@item ~s
+instructs the formatter to place the next argument as if the procedure
+@func{write} has printed it; if the argument contains a string, the
+string will be quoted and all quotes and backslashes in the string will
+be escaped; similarly, characters will be printed using the @code{#\x}
+notation;
+
+@item ~a
+instructs the formatter to place the next argument as if the procedure
+@func{display} has printed it; strings and characters are placed as they
+are in the output;
+
+@item ~b
+instructs the formatter to convert the next argument to its binary (base
+2) representation; the argument must be an exact number;
+
+@item ~o
+is similar to @code{~b} except that the number is printed in octal (base
+8);
+
+@item ~x
+is similar to @code{~b} except that the number is printed in hexadecimal
+(base 16);
+
+@item ~d
+outputs the next argument, which can be an exact or inexact number, in
+its decimal (base 10) representation;
+
+@item ~~
+instructs the formatter to place a tilde character, @code{~}, in the
+output without consuming an argument;
+
+@item ~%
+instructs the formatter to place a newline character in the output
+without consuming an argument.
+@end table
+
+Note that the @code{#b}, @code{#o}, and @code{#x} numeric prefixes are
+not added to the output when @code{~b}, @code{~o}, and @code{~x} are
+used.
+
+@example
+> (format "message: ~s, ~s, and ~s" 'symbol "string" #\c)
+"message: symbol, \"string\", and #\\c"
+
+> (format "message: ~a, ~a, and ~a" 'symbol "string" #\c)
+"message: symbol, string, and c"
+@end example
+@end deffn
+
+
+@deffn Procedure printf @var{fmt-string} @var{args} ...
+The procedure @func{printf} is similar to @func{format} except that the
+output is sent to the @code{current-output-port} instead of being
+collected in a string.
+
+@example
+> (let ([n (+ (expt 2 32) #b11001)])
+    (printf "~d = #b~b = #x~x\n" n n n))
+4294967321 = #b100000000000000000000000000011001 = #x100000019
+@end example
+@end deffn
+
+
+@deffn Procedure fprintf @var{output-port} @var{fmt-string} @var{args} ...
+The procedure @func{fprintf} is similar to @func{printf} except that the
+output port to which the output is sent is specified as the first
+argument.
+@end deffn
+
+
+@deffn Parameter print-unicode
+@deffnx Parameter print-unicode #t
+@deffnx Parameter print-unicode #f
+If set to true: print Scheme Unicode characters outside of the printable
+@ascii{} range in hex format, else print them using the encoding of the
+output port.  The default is false.
+@end deffn
+
+
+@deffn Parameter printer-integer-radix
+The radix used to print exact integers (fixnums and bignums) with
+@func{write}, @func{display} and similar functions.  Initialised to
+@code{10}, it must hold a value usable as second argument to
+@func{string->number}.
+@end deffn
+
+
+@deffn Parameter print-gensym
+@deffnx Parameter print-gensym #t
+@deffnx Parameter print-gensym #f
+@deffnx Parameter print-gensym 'pretty
+The parameter @code{print-gensym} controls how gensyms are printed by
+the various writers.
+
+If the value of @code{print-gensym} is @false{}, then gensym syntax is
+suppressed by the writers and only the gensyms' pretty names are
+printed.  If the value of @code{print-gensym} is @true{}, then the full
+@code{#@{pretty unique@}} syntax is printed.  Finally, if the value of
+@code{print-gensym} is the symbol @code{pretty}, then gensyms are
+printed using the @code{#:pretty} notation.
+
+@example
+> (parameterize ([print-gensym #f])
+    (pretty-print (list (gensym) (gensym))))
+(g0 g1)
+
+> (parameterize ([print-gensym #t])
+    (pretty-print (list (gensym) (gensym))))
+(#@{g2 |KR1M2&CTt1<B0n/m|@} #@{g3 |FBAb&7NC6&=c82!O|@})
+
+> (parameterize ([print-gensym 'pretty])
+    (pretty-print (list (gensym) (gensym))))
+(#:g4 #:g5)
+@end example
+
+The initial value of @code{print-gensym} is @true{}.
+@end deffn
+
+
+@deffn Parameter gensym-prefix
+@deffnx Parameter gensym-prefix @var{string}
+The parameter @code{gensym-prefix} specifies the string to be used as
+the prefix to generated pretty names.  The default value of
+@code{gensym-prefix} is the string @code{g}, which causes generated
+strings to have pretty names in the sequence @code{g0}, @code{g1},
+@code{g2}, etc.
+
+@example
+> (parameterize ([gensym-prefix "var"]
+                 [print-gensym #f])
+     (pretty-print (list (gensym) (gensym) (gensym))))
+(var0 var1 var2)
+@end example
+
+Beware that the @code{gensym-prefix} controls how pretty names are
+generated, and has nothing to do with how @func{gensym} constructs a new
+gensym.  In particular, notice the difference between the output in the
+first example with the output of the examples below:
+
+@example
+> (pretty-print
+    (parameterize ([gensym-prefix "var"] [print-gensym #f])
+      (list (gensym) (gensym) (gensym))))
+(g3 g4 g5)
+
+> (let ([ls (list (gensym) (gensym) (gensym))])
+    (parameterize ([gensym-prefix "var"] [print-gensym #f])
+      (pretty-print ls)))
+(var5 var6 var7)
+@end example
+@end deffn
+
+
+@deffn Parameter gensym-count
+@deffnx Parameter gensym-count @var{n}
+The parameter @code{gensym-count} determines the number which is
+attached to the @code{gensym-prefix} when gensyms' pretty names are
+generated.  The initial value of @code{gensym-count} is 0 and is
+incremented every time a pretty name is generated.  It might be set to
+any non-negative integer value.
+
+@example
+> (let ([x (gensym)])
+    (parameterize ([gensym-count 100] [print-gensym #f])
+      (pretty-print (list (gensym) x (gensym)))))
+(g100 g101 g102)
+@end example
+@end deffn
+
+Notice from all the examples so far that pretty names are generated in
+the order at which the gensyms are printed, not in the order in which
+gensyms were created.
+
+@c page
+@node iklib tracing
+@section Tracing for debugging
+
+
+@deffn Syntax trace-define (name . args) body body* ...
+@deffnx Syntax trace-define name expression
+The @func{trace-define} syntax is similar to @func{define} except that
+the bound value, which must be a procedure, becomes a traced procedure.
+A traced procedure prints its arguments when it is called and prints its
+values when it returns.
+
+@example
+> (trace-define (fact n)
+    (if (zero? n) 1 (* n (fact (- n 1)))))
+> (fact 5)
+|(fact 5)
+| (fact 4)
+| |(fact 3)
+| | (fact 2)
+| | |(fact 1)
+| | | (fact 0)
+| | | 1
+| | |1
+| | 2
+| |6
+| 24
+|120
+120
+@end example
+
+The tracing facility in @value{PRJNAME} preserves and shows tail recursion and
+distinguishes it from non--tail recursion by showing tail calls starting
+at the same line in which their parent was called.
+
+@example
+> (trace-define (fact n)
+    (trace-define (fact-aux n m)
+      (if (zero? n) m (fact-aux (- n 1) (* n m))))
+    (fact-aux n 1))
+> (fact 5)
+|(fact 5)
+|(fact-aux 5 1)
+|(fact-aux 4 5)
+|(fact-aux 3 20)
+|(fact-aux 2 60)
+|(fact-aux 1 120)
+|(fact-aux 0 120)
+|120
+120
+@end example
+
+Moreover, the tracing facility interacts well with continuations and
+exceptions.
+
+@example
+> (call/cc
+    (lambda (k)
+      (trace-define (loop n)
+        (if (zero? n)
+            (k 'done)
+            (+ (loop (- n 1)) 1)))
+      (loop 5)))
+|(loop 5)
+| (loop 4)
+| |(loop 3)
+| | (loop 2)
+| | |(loop 1)
+| | | (loop 0)
+done
+@end example
+@end deffn
+
+
+@deffn Syntax trace-lambda name args body body* ...
+The @func{trace-lambda} macro is similar to @func{lambda} except that
+the resulting procedure is traced: it prints the arguments it receives
+and the results it returns.
+@end deffn
+
+
+@deffn Procedure make-traced-procedure @var{name} @var{proc}
+The procedure @func{make-traced-procedure} takes a name (typically a
+symbol) and a procedure.  It returns a procedure similar to @var{proc}
+except that it traces its arguments and values.
+
+@example
+> (define (fact n)
+    (if (zero? n)
+        (lambda (k) (k 1))
+        (lambda (k)
+          ((fact (- n 1))
+           (make-traced-procedure `(k ,n)
+             (lambda (v)
+               (k (* v n))))))))
+> (call/cc
+    (lambda (k)
+      ((fact 5) (make-traced-procedure 'K k))))
+|((k 1) 1)
+|((k 2) 1)
+|((k 3) 2)
+|((k 4) 6)
+|((k 5) 24)
+|(K 120)
+120
+@end example
+@end deffn
+
+
+@deffn Syntax trace-define-syntax @meta{keyword} @meta{expression}
+Like @func{define-syntax} but create a tracing transformer function.
+Whenever the macro is expanded the transformer function will print its
+argument (the input form) and its return value (the output form).
+Example:
+
+@example
+(trace-define-syntax ciao
+  (syntax-rules ()
+    ((_ ?a)
+     (list 1 ?a 3))))
+
+(ciao 2)
+@print{} |(ciao (ciao 2))
+@print{} |(list 1 2 3)
+@end example
+
+@noindent
+the first printed symbolic expression @code{(ciao (ciao 2))} shows the
+called tranformer function @code{(ciao ---)} and its argument being the
+input form @code{(ciao 2)}, filtered through @func{syntax->datum}.
+@end deffn
+
+
+@deffn Syntax trace-let-syntax @meta{bindings} @meta{form} ...
+@deffnx Syntax trace-letrec-syntax @meta{bindings} @meta{form} ...
+Like @func{let-syntax} and @func{letrec-syntax} but define tracing
+transformer functions.
+@end deffn
+
+@c page
+@node iklib timing
+@section Timing
+
+
+This section describes some of @value{PRJNAME}'s timing facilities which may be
+useful for benchmarking and performance tuning.
+
+
+@deffn Syntax time @var{expression}
+The @func{time} macro performs the following: it evaluates
+@var{expression}, then prints a summary of the run time statistics, then
+returns the values returned by @var{expression}.  The run--time summary
+includes the number of bytes allocated, the number of garbage collection
+runs, and the time spent in both the mutator and the collector.
+
+@example
+> (let ()                                   ;;; 10 million
+    (define ls (time (vector->list (make-vector 10000000))))
+    (time (append ls ls))
+    (values))
+running stats for (vector->list (make-vector 10000000)):
+    3 collections
+    672 ms elapsed cpu time, including 547 ms collecting
+    674 ms elapsed real time, including 549 ms collecting
+    120012328 bytes allocated
+running stats for (append ls ls):
+    4 collections
+    1536 ms elapsed cpu time, including 1336 ms collecting
+    1538 ms elapsed real time, including 1337 ms collecting
+    160000040 bytes allocated
+@end example
+
+@quotation
+@emph{Note:} The output listed above is @emph{just a sample} that was
+taken at some point on some machine.  The output on your machine at the
+time you read this may vary.
+@end quotation
+@end deffn
+
+
+@deffn Procedure time-it @var{who} @var{thunk}
+The procedure @func{time-it} takes a datum denoting the name of the
+computation and a thunk (i.e. a procedure with no arguments), invokes
+the thunk, prints the stats, and returns the values obtained from
+invoking the thunk.  If the value of @var{who} is non--false, @var{who}
+is used when displaying the run--time statistics.  If the value of
+@var{who} is @false{}, then no name for the computation is displayed.
+
+@example
+> (time-it "a very fast computation"
+    (lambda () (values 1 2 3)))
+running stats for a very fast computation:
+    no collections
+    0 ms elapsed cpu time, including 0 ms collecting
+    0 ms elapsed real time, including 0 ms collecting
+    24 bytes allocated
+1
+2
+3
+
+> (time-it #f (lambda () 12))
+running stats:
+    no collections
+    0 ms elapsed cpu time, including 0 ms collecting
+    0 ms elapsed real time, including 0 ms collecting
+    0 bytes allocated
+12
+@end example
+@end deffn
+
+
+@defun time-and-gather @var{gather} @var{thunk}
+Like @func{time-it} evaluate the procedure @var{thunk} timing its
+execution; return the return values of @var{thunk}.  Build two objects
+of type @code{stats} and apply the procedure @var{gather} to them: the
+first represents the statistics before @var{thunk} evaluation, the
+second represents the statistics after @var{thunk} evaluation.
+@end defun
+
+
+@defun stats? @var{obj}
+Return true if @var{obj} is an object of type @code{stats}.
+@end defun
+
+
+All the fields of a @code{stats} object hold fixnums.
+
+
+@defun stats-user-secs @var{stats}
+Return the user seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-user-usecs @var{stats}
+Return the user microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-sys-secs @var{stats}
+Return the system seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-sys-usecs @var{stats}
+Return the system microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-real-secs @var{stats}
+Return the real seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-real-usecs @var{stats}
+Return the real microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-collection-id @var{stats}
+Return the collection identifier field of @var{stats}.
+@end defun
+
+@defun stats-gc-user-secs @var{stats}
+Return the garbage collection user seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-user-usecs @var{stats}
+Return the garbage collection user microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-sys-secs @var{stats}
+Return the garbage collection system seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-sys-usecs @var{stats}
+Return the garbage collection system microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-real-secs @var{stats}
+Return the garbage collection real seconds field of @var{stats}.
+@end defun
+
+
+@defun stats-gc-real-usecs @var{stats}
+Return the garbage collection real microseconds field of @var{stats}.
+@end defun
+
+
+@defun stats-bytes-minor @var{stats}
+Return the garbage collection bytes minor field of @var{stats}.
+@end defun
+
+
+@defun stats-bytes-major @var{stats}
+Return the garbage collection bytes major field of @var{stats}.
+@end defun
+
+@c page
+@node iklib gc
+@section Interfacing with garbage collection
+
+
+@defun collect
+Run the garbage collector.  If post--garbage collection hooks are
+registered, they are run.  This binding is exported by the
+@library{ikarus} library.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Avoiding garbage collection of objects
+
+
+The following @api{} allows us to register objects in the internal state
+of Vicare so that they are not garbage collected even though we may
+loose all the Scheme references to them.
+
+This mechanism is useful when we create a Scheme object and register it
+in a data structure controlled by a foreign library (for example when
+interfacing with C language libraries); we can loose the Scheme
+references to such object without having it garbage collected, and later
+we retrieve the object reference and use it.
+
+@center @strong{This @api{} is to be considered experimental.}
+
+
+@defun register-to-avoid-collecting @var{obj}
+Register @var{obj} in the internal state of Vicare so that it is not
+garbage collected even when we loose all the Scheme references to it;
+return a pointer object which can be used to uniquely identify the
+collected @var{obj}.
+
+If @var{obj} is the return value of @code{(void)}: the returned value is
+a @cnull{} pointer.
+@end defun
+
+
+@defun forget-to-avoid-collecting @var{pointer}
+Remove the Scheme object associated to @var{pointer} from the internal
+state of Vicare, so that it is garbage collected when we loose all the
+Scheme references to it; return the referenced object.  @var{pointer}
+must be the return value of a previous call to
+@func{register-to-avoid-collecting}.
+
+If @var{pointer} is @cnull{}: nothing happens and the returned value is
+@code{(void)}.
+@end defun
+
+
+@defun retrieve-to-avoid-collecting @var{pointer}
+Return the Scheme object associated to @var{pointer} in the internal
+state of Vicare.  @var{pointer} must be the return value of a previous
+call to @func{register-to-avoid-collecting}.
+
+If @var{pointer} is @cnull{}: nothing happens and the returned value is
+@code{(void)}.
+@end defun
+
+
+@defun replace-to-avoid-collecting @var{pointer} @var{new-obj}
+Replace the Scheme object associated to @var{pointer} in the internal
+state of Vicare with @var{new-obj}; return the previously registered
+object.  @var{pointer} must be the return value of a previous call to
+@func{register-to-avoid-collecting}.
+
+If @var{pointer} is @cnull{}: nothing happens and the returned value is
+@code{(void)}.
+@end defun
+
+
+@defun collection-avoidance-list
+Return the list of objects that where registered to avoid collection by
+@func{register-to-avoid-collecting}; it can be the empty list.
+@end defun
+
+
+@defun purge-collection-avoidance-list
+Reset to empty the list of objects registered to avoid collection with
+@func{register-to-avoid-collecting}.  Use with care.
+@end defun
+
+@c page
+@node iklib guardians
+@section Guardians and garbage collection
+
+
+Guardians are available in the @library{ikarus} library; quoting
+@bibref{DYBGUA}:
+
+@quotation
+Guardians provide a means to protect objects from destruction by the
+garbage collector.  A guardian is an object with which objects can be
+registered for preservation and from which objects actually saved from
+destruction can be retrieved, one at a time, at the convenience of the
+program.
+@end quotation
+
+@menu
+* iklib guardians examples::    Usage examples for guardians.
+* iklib guardians api::         Guardians programming interface.
+@end menu
+
+@c page
+@node iklib guardians examples
+@subsection Usage examples for guardians
+
+
+Let's say that we use the @value{PRJNAME} @ffi{} to handle some memory
+block (@ref{ffi} for details on the @ffi{}); memory blocks allocated
+with @func{malloc} are not released by the @value{PRJNAME} garbage
+collector: we have to explicitly apply @func{free} to the pointer value
+referencing them.
+
+If we use the blocks synchronously with the evaluation of forms, we do
+(assuming we do not use continuations, so this use of
+@func{dynamic-wind} is fine):
+
+@example
+(import (ikarus)
+  (vicare ffi))
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(let ((p        #f)
+      (size     4096))
+  (dynamic-wind
+      (lambda ()
+        (set! p (malloc size))
+        (unless p (error #f "memory allocation")))
+      (lambda ()
+        (do-something-with p))
+      (lambda ()
+        (free p))))
+@end example
+
+@noindent
+and we can define a syntax for it:
+
+@example
+(import (ikarus)
+  (vicare ffi))
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(define-syntax with-block
+  (syntax-rules ()
+    ((_ ?pointer ?size ?body ...)
+     (let ((?pointer    #f))
+       (dynamic-wind
+           (lambda ()
+             (set! ?pointer (malloc ?size))
+             (unless ?pointer (error #f "memory allocation")))
+           (lambda ()
+             ?body ...)
+           (lambda ()
+             (free ?pointer)))))))
+
+(with-block p 2048
+  (do-something-with p))
+
+(with-block p 4096
+  (do-something-with p))
+
+(with-block p 8192
+  (do-something-with p))
+@end example
+
+If we need the block in an event driven program: we will probably need
+to use it asynchronously with the evaluation of forms.  For example, we
+store the pointer value that references a block in a thunk (a closure
+that takes no arguments):
+
+@example
+(import (ikarus)
+  (vicare ffi))
+
+(define *event-source* '())
+
+(define (enqueue-event event)
+  (set! *event-source*
+        (reverse (cons event (reverse *event-source*)))))
+
+(define (pop-event)
+  (if (null? *event-source*)
+      #f
+    (let ((event (car *event-source*)))
+      (set! *event-source* (cdr *event-source*))
+      event)))
+
+;; Usage:
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(let ((p (malloc 4096)))
+  (unless p (error #f "memory allocation"))
+  (enqueue-event (lambda ()
+                   (do-something-with p)))
+  (enqueue-event (lambda ()
+                   (do-something-with 123)))
+  (enqueue-event (lambda ()
+                   (do-something-with p))))
+
+(do ((event (pop-event) (pop-event)))
+    ((not event))
+  (event))
+@end example
+
+@noindent
+once the thunks have been evaluated, the pointer value is garbage
+collected, but the allocated memory block becomes leaked memory.  We
+need a way to be notified of the pointer value garbage collection, so
+that we can apply @func{free} to it; this is the job for guardians.
+
+The following script shows the usage of a guardian to free a memory
+block:
+
+@example
+(import (ikarus)
+  (vicare ffi))
+
+(define g (make-guardian))
+
+(let ((a (malloc (expt 2 20))))
+  (unless p (error #f "memory allocation"))
+  (g a)
+  (printf "value ~s~%" a))
+
+(printf "value from guardian ~s~%" (g))
+
+;; This triggers a garbage collection.
+(collect)
+
+(let ((p (g)))
+  (printf "value from guardian ~s~%" p)
+  (free p))
+@end example
+
+In an event driven program what we have to do is to register the pointer
+into the guardian, and then periodically enqueue as event a call to the
+guardian:
+
+@example
+(import (ikarus)
+  (vicare ffi))
+
+;; Event source handling.
+
+(define *event-source* '())
+
+(define (enqueue-event event)
+  (set! *event-source*
+        (reverse (cons event (reverse *event-source*)))))
+
+(define (pop-event)
+  (if (null? *event-source*)
+      #f
+    (let ((event (car *event-source*)))
+      (set! *event-source* (cdr *event-source*))
+      event)))
+
+;; Block guardian.
+
+(define block-guardian (make-guardian))
+
+(define (run-block-guardian)
+  (do ((p (block-guardian) (block-guardian)))
+      ((not p))
+    (printf "collecting ~s~%" p)
+    (free p)))
+
+;; Application follows.
+
+(define (do-something-with . args)
+  (display args)
+  (newline))
+
+(let ((p (malloc (expt 2 20))))
+  (unless p (error #f "memory allocation"))
+  (block-guardian p)
+  (enqueue-event (lambda () (do-something-with p)))
+  (enqueue-event (lambda () (do-something-with 123)))
+  (enqueue-event (lambda () (do-something-with p)))
+  (enqueue-event (lambda () (do-something-with 456))))
+
+(do ((event (pop-event) (pop-event))
+     (i 1 (+ i 1)))
+    ((= i 20))
+  (when event
+    (event))
+  (when (= 0 (modulo i 10))
+    (collect)
+    (enqueue-event run-block-guardian)))
+@end example
+
+@c page
+@node iklib guardians api
+@subsection Guardians programming interface
+
+
+@defun make-guardian
+Build and return a new guardian object: a closure that can be called
+with one or zero arguments, and that is interfaced with the garbage
+collector of @value{PRJNAME} in a non--portable way.
+
+The guardian work like this:
+
+@itemize
+@item
+When the closure is called with one argument: it adds the argument to an
+internal set of ``guarded values'', accessible to the garbage collector;
+the return value if the argument itself.
+
+@item
+When the garbage collector detects no other references to a value in the
+set of guarded values: the guardian removes it from the set and appends
+it to an internal queue (@acronym{FIFO}).
+
+@item
+When the closure is called with zero arguments: it removes the first
+value from the internal queue and returns it; if no values are in the
+queue it returns @false{}.
+@end itemize
+
+After an object has been returned by the guardian, it is no more
+``guarded'' so it will be garbage collected when it will become
+inaccessible (unless it is again registered in a guardian).
+
+@quotation
+@strong{NOTE} It is possible to register an object in more than one
+guardian; when the object is found inaccessible all the guardian
+closures that have it will return it to the caller.  This may lead to
+invalid finalisation operations, it is the responsibility of the
+programmer to avoid this.
+@end quotation
+
+@quotation
+@strong{NOTE} It is possible to register an object multiple times in the
+same guardian; when the object is found inaccessible the guardian
+closure that has it will return it to the caller multiple times.  This
+may lead to invalid finalisation operations, it is the responsibility of
+the programmer to avoid this.
+@end quotation
+@end defun
+
+
+@deffn Parameter post-gc-hooks
+Hold a list of thunks evaluated after each garbage collection run.  It
+can be used to run a guardian cleanup function like this (using the
+example in the previous section):
+
+@example
+(define (run-block-guardian)
+  (do ((p (block-guardian) (block-guardian)))
+      ((not p))
+    (free p)))
+
+(post-gc-hooks
+ (cons run-block-guardian
+  (post-gc-hooks)))
+@end example
+@end deffn
+
+@c page
+@node iklib io
+@section Input/output library
+
+
+@value{PRJNAME} extends the input/output facilities defined by @rnrs{6}.
+
+@menu
+* iklib io pathnames::          Pathnames handling.
+* iklib io codecs::             Transcoders and additional codecs.
+* iklib io binary::             Additional binary port features.
+* iklib io textual::            Additional textual port features.
+* iklib io buffer::             Buffer size customisation.
+* iklib io misc::               Miscellaneous port functions.
+@end menu
+
+@c page
+@node iklib io pathnames
+@subsection Pathnames handling
+
+
+All the file--related functions defined by @rnrs{6} accept a Scheme
+string as representing a file pathname; internally such string is
+converted to a bytevector to be handed to the underlying operating
+system.  The following bindings are exported by the @library{ikarus}
+library.
+
+
+@deffn Parameter string->filename-func
+@deffnx Parameter string->pathname-func
+In @value{PRJNAME} the string--to--filename conversion is performed by
+the function returned by @func{string->filename-func}, which defaults to
+@func{string->utf8}.
+@end deffn
+
+
+@deffn Parameter filename->string-func
+@deffnx Parameter pathname->string-func
+In @value{PRJNAME} the filename--to--string conversion is performed by
+the function returned by @func{filename->string-func}, which defaults to
+@func{utf8->string}.
+@end deffn
+
+
+@defun split-search-path @var{path}
+@defunx split-search-path-bytevector @var{bytevector-path}
+@defunx split-search-path-string @var{string-path}
+Split a file search path into its components and return a list of
+pathnames.  A search path is meant to be a list of directory pathnames
+separated by a colon character; @var{bytevector-path} must be a
+bytevector, @var{string-path} must be a Scheme string, @var{path} must
+be a Scheme string or bytevector.  Empty pathnames are discarded.
+
+@example
+#!vicare
+(import (vicare))
+
+(split-search-path-bytevector '#vu8())
+@result{} ()
+
+(split-search-path-bytevector #ve(ascii "ciao:hello"))
+@result{} (#ve(ascii "ciao") #ve(ascii "hello"))
+
+(split-search-path-bytevector '#ve(ascii "::::"))
+@result{} ()
+
+(split-search-path-string "")
+@result{} ()
+
+(split-search-path-string "ciao:hello:salut")
+@result{} ("ciao" "hello" "salut")
+
+(split-search-path-string "::::")
+@result{} ()
+
+(split-search-path "ciao:hello:salut")
+@result{} ("ciao" "hello" "salut")
+
+(split-search-path '#ve(ascii "ciao:hello:salut"))
+@result{} (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut"))
+@end example
+@end defun
+
+
+@defun split-pathname @var{pathname}
+@defunx split-pathname-bytevector @var{bytevector-pathname}
+@defunx split-pathname-string @var{string-pathname}
+Split a file pathname into its components and return two values: a
+boolean, true if the pathname starts with a slash characters; the list
+of components which can be empty.
+
+A pathname is meant to be a file or directory name with components
+separated by a slash character; @var{bytevector-pathname} must be a
+bytevector, @var{string-pathname} must be a Scheme string, @var{path}
+must be a Scheme string or bytevector.
+
+Empty components are discarded.
+
+@example
+#!vicare
+(import (vicare))
+
+(split-pathname-bytevector '#vu8())
+@result{} #f ()
+
+(split-pathname-bytevector '#ve(ascii "ciao/hello"))
+@result{} #f (#ve(ascii "ciao") #ve(ascii "hello"))
+
+(split-pathname-bytevector '#ve(ascii "////"))
+@result{} #t ()
+
+(split-pathname-string "")
+@result{} #f ()
+
+(split-pathname-string "ciao/hello/salut")
+@result{} #f ("ciao" "hello" "salut")
+
+(split-pathname-string "////")
+@result{} #t ()
+
+(split-pathname "ciao/hello/salut")
+@result{} #f ("ciao" "hello" "salut")
+
+(split-pathname '#ve(ascii "/ciao/hello/salut"))
+@result{} #t (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut"))
+@end example
+@end defun
+
+
+@c page
+@node iklib io codecs
+@subsection Transcoders and additional codecs
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Parameter native-transcoder
+@findex open-input-file
+@findex with-input-from-file
+@findex call-with-input-file
+@findex open-output-file
+@findex with-output-to-file
+@findex call-with-output-file
+The function @func{native-transcoder} defined by @rnrs{6} returns a
+transcoder representing acceptable defaults for the platform on which
+the Scheme implementation is running.  Under @value{PRJNAME} such
+default is:
+
+@example
+(make-transcoder (utf-8-codec) 'none 'replace)
+@end example
+
+@noindent
+and additionally the function is a parameter, so the default can be
+configured.  Notice that the following functions create Scheme ports
+using the transcoder returned by @func{native-transcoder}:
+
+@example
+open-input-file         open-output-file
+with-input-from-file    with-output-to-file
+call-with-input-file    call-with-output-file
+@end example
+@end deffn
+
+
+The codec returned by @func{utf-16-codec}, defined by @rnrs{6}, has
+different semantics depending upon the type of the port:
+
+@itemize
+@item
+For output and input/output ports it defaults to @utf{}-16 big endian
+(which seems mandated by the Unicode Consortium).
+
+@item
+For input ports the endianness is left unspecified until the first bytes
+are read: such bytes must be a valid @utf{}-16 Byte Order Mark which
+dynamically configures the port.@footnote{The big endian @acronym{BOM}
+for @utf{}-16 is the sequence of bytes @code{#xFE #xFF}; the little
+endian @acronym{BOM} for @utf{}-16 is the sequence of bytes @code{#xFF
+#xFE}.}
+@end itemize
+
+
+@deffn Procedure utf-16le-codec
+@deffnx Procedure utf-16be-codec
+Codecs for the @utf{}-16 encoding schemes, little endian and big endian.
+A call to any of these procedures returns a value that is equal in the
+sense of @func{eqv?} to the result of any other call to the same
+procedure.
+@end deffn
+
+
+@deffn Procedure utf-16n-codec
+Return a codec for the @utf{}-16 encoding scheme, with endianness equal
+to the one returned by @func{(native-endianness)}.  A call to this
+procedure returns a value that is equal in the sense of @func{eqv?} to
+the result of any other call to the same procedure.
+@end deffn
+
+
+@deffn Procedure utf-bom-codec
+Codec for @utf{} encoding schemes whose data open with a Byte Order
+Mark.  A call to this procedure returns a value that is equal in the
+sense of @func{eqv?} to the result of any other call to the same
+procedure.
+
+At present this codec is supported only by input ports.
+@end deffn
+
+@c page
+@node iklib io binary
+@subsection Additional binary port features
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun lookahead-two-u8 @var{port}
+Like @func{lookahead-u8} but peeks at @math{2} octets and return two
+values: the @eof{} object or a fixnum representing first octet, the
+@eof{} object or a fixnum representing the second octet.
+@end defun
+
+
+@deffn Parameter current-input-port
+@deffnx Parameter current-output-port
+@deffnx Parameter current-error-port
+These are like defined by @rnrs{6}, but in addition they are parameters.
+@end deffn
+
+
+@defun console-input-port
+Return the default value of the @func{current-input-port} parameter.
+When the readline interface is not used, this port is used by the
+@repl{} and the debugger.
+@end defun
+
+
+@defun console-output-port
+Return the default value of the @func{current-outptu-port} parameter.
+It is used by the @repl{} and the debugger.
+@end defun
+
+
+@defun console-error-port
+Return the default value of the @func{current-error-port} parameter.  It
+is used by the @repl{} and the debugger.
+@end defun
+
+
+@defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-output-port @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-input/output-port @var{fd} @var{identifier}
+Build and return binary Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  Closing the Scheme ports will close the file
+descriptors too.
+
+File descriptor ports do support port position operations.
+@end defun
+
+
+@defun make-binary-file-descriptor-input-port* @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-output-port* @var{fd} @var{identifier}
+@defunx make-binary-file-descriptor-input/output-port* @var{fd} @var{identifier}
+Build and return binary Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  Closing the Scheme ports will @strong{not} close the
+file descriptors.
+
+File descriptor ports do support port position operations.
+@end defun
+
+
+@defun make-binary-socket-input/output-port @var{sock} @var{identifier}
+Build and return a binary Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  Closing the Scheme port will close the
+socket descriptor too.
+
+Socket ports do @strong{not} support port position operations.
+@end defun
+
+
+@defun make-binary-socket-input/output-port* @var{sock} @var{identifier}
+Build and return a binary Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  Closing the Scheme port will @strong{not}
+close the socket descriptor.
+
+Socket ports do @strong{not} support port position operations.
+@end defun
+
+@c page
+@node iklib io textual
+@subsection Additional textual port features
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun open-string-input-port @var{string}
+@defunx open-string-input-port @var{string} @var{eol-style}
+As defined by @rnrs{6}: return a textual input port whose characters are
+drawn from @var{string}.  When @var{eol-style} is given: it must be a
+symbol selecting an end--of--line style conversion, as accepted by
+@func{eol-style}; such conversion is applied to the characters drawn
+from @var{string}.
+
+If @var{string} is modified after @func{open-string-input-port} has been
+called, the effect on the returned port is unspecified.
+@end defun
+
+
+@defun open-string-input-port/id @var{string} @var{id}
+@defunx open-string-input-port/id @var{string} @var{id} @var{eol-style}
+Like @func{open-string-input-port} but allows the specification of a
+customised port identifier @var{id}, which must be a Scheme string.
+@end defun
+
+
+@defun open-string-output-port
+@defunx open-string-output-port @var{eol-style}
+As defined by @rnrs{6}, return two values: a textual output port and an
+extraction procedure; the output port accumulates the characters written
+to it for later extraction by the procedure.
+
+As a @value{PRJNAME} extension, when @var{eol-style} is given: it must
+be a symbol selecting an end--of--line style conversion, as accepted by
+@func{eol-style}; such conversion is applied to the characters written
+to the port.
+@end defun
+
+
+@defun get-output-string @var{port}
+Return the string accumulated in the @var{port} opened by
+@func{open-string-output-port}.  This function can be called also when
+the port has been closed.
+@end defun
+
+
+@defun get-char-and-track-textual-position @var{port}
+Like @func{get-char} but track the textual position.  Recognise only
+linefeed characters as line-ending.
+@end defun
+
+
+@defun port-textual-position @var{port}
+Given a textual port, return the current textual position as a condition
+object of type @condition{source-position}.
+@end defun
+
+
+@defun make-textual-file-descriptor-input-port @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-output-port @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-input/output-port @var{fd} @var{identifier} @var{transcoder}
+Build and return textual Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  @var{transcoder} must be a transcoder object.  Closing
+the Scheme ports will close the file descriptors too.
+
+File descriptor ports do support port position operations.
+@end defun
+
+
+@defun make-textual-file-descriptor-input-port* @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-output-port* @var{fd} @var{identifier} @var{transcoder}
+@defunx make-textual-file-descriptor-input/output-port* @var{fd} @var{identifier} @var{transcoder}
+Build and return textual Scheme ports using the platform file descriptor
+@var{fd} as device.  @var{identifier} must be a string used for better
+error reporting.  @var{transcoder} must be a transcoder object.  Closing
+the Scheme ports will @strong{not} close the file descriptors.
+
+File descriptor ports do support port position operations.
+@end defun
+
+
+@defun make-textual-socket-input/output-port @var{sock} @var{identifier} @var{transcoder}
+Build and return a textual Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  @var{transcoder} must be a transcoder
+object.  Closing the Scheme port will close the socket descriptor too.
+
+Socket ports do @strong{not} support port position operations.
+@end defun
+
+
+@defun make-textual-socket-input/output-port* @var{sock} @var{identifier} @var{transcoder}
+Build and return a textual Scheme port using the platform socket
+descriptor @var{sock} as device.  @var{identifier} must be a string used
+for better error reporting.  @var{transcoder} must be a transcoder
+object.  Closing the Scheme port will @strong{not} close the socket
+descriptor.
+
+Socket ports do @strong{not} support port position operations.
+@end defun
+
+
+@defun read-line
+@defunx read-line @var{port}
+Read from the textual input @var{port} up to and including the linefeed
+character or end of file, decoding characters in the same manner as
+@func{get-string-n} and @func{get-string-n!}.  This function is exactly
+like @func{get-line}, defined by @rsixlibrary{io ports}, but it uses the
+return value of @func{current-input-port} if no @var{port} argument is
+used.
+@end defun
+
+@c page
+@node iklib io buffer
+@subsection Buffer size customisation
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@deffn Parameter bytevector-port-buffer-size
+@deffnx Parameter bytevector-port-buffer-size @var{fixnum}
+Hold the buffer size for bytevector ports, like the one returned by
+@func{open-bytevector-output-port}.  It is initialised to @math{16384}.
+@end deffn
+
+
+@deffn Parameter string-port-buffer-size
+@deffnx Parameter string-port-buffer-size @var{fixnum}
+Hold the buffer size for string ports, like the one returned by
+@func{open-string-output-port}.  It is initialised to @math{256}.
+@end deffn
+
+
+@deffn Parameter input-file-buffer-size
+@deffnx Parameter input-file-buffer-size @var{fixnum}
+Hold the buffer size for input file ports, like the one returned by
+@func{open-input-file}.  It is initialised to @math{16384}.
+@end deffn
+
+
+@deffn Parameter output-file-buffer-size
+@deffnx Parameter output-file-buffer-size @var{fixnum}
+Hold the buffer size for output file ports, like the one returned by
+@func{open-output-file}.  It is initialised to @math{16384}.
+@end deffn
+
+
+@deffn Parameter input/output-file-buffer-size
+@deffnx Parameter input/output-file-buffer-size @var{fixnum}
+Hold the buffer size for input/output file ports, like the one returned
+by @func{open-file-input/output-prot}.  It is initialised to
+@math{16384}.
+@end deffn
+
+
+@deffn Parameter input/output-socket-buffer-size
+@deffnx Parameter input/output-socket-buffer-size @var{fixnum}
+Hold the buffer size for socket ports.  It is initialised to
+@math{16384}.
+@end deffn
+
+@c page
+@node iklib io misc
+@subsection Miscellaneous port functions
+
+
+The following bindings are exported by the @library{ikarus} library.
+
+
+@defun input/output-port? @var{port}
+Return a boolean, @true{} if @var{port} is an input and output port.
+@end defun
+
+
+@defun port-fd @var{port}
+If @var{port} is a port with a file descriptor as device: return a
+fixnum representing the device, else return @false{}.
+@end defun
+
+
+@defun port-id @var{port}
+Return a Scheme string representing the identifier of @var{port}.
+@end defun
+
+
+@defun set-port-buffer-mode! @var{port} @var{buffer-mode}
+Reset the port buffer mode to @var{buffer-mode}, which must be one of
+the arguments accepted by @func{buffer-mode}.  It is an error to select
+@code{line} mode if @var{port} is a binary port.
+@end defun
+
+
+@defun port-dump-status @var{port}
+To be used for debugging purposes.  Write to the current error port some
+informations on the internals of @var{port}.
+@end defun
+
+@c page
+@node iklib pointers
+@section Handling pointer objects
+
+
+@menu
+* iklib pointers objects::      Handling pointer values.
+* iklib pointers poke::         Poking values.
+* iklib pointers peek::         Peeking values.
+* iklib arrays poke::           Poking values into arrays.
+* iklib arrays peek::           Peeking values from arrays.
+@end menu
+
+@c page
+@node iklib pointers objects
+@subsection Handling pointer values
+
+
+Pointer objects are a disjoint type identified by the @func{pointer?}
+predicate.  When applied to pointer objects:
+
+@itemize
+@item
+The result of calling @func{eq?} is true only if the two arguments are
+both pointers and they refer to the same Scheme storage location.
+
+@item
+The result of calling @func{eqv?} and @func{equal?} is true only if the
+two arguments are both pointers and they reference the same raw memory
+location.
+@end itemize
+
+@noindent
+pointers also have @func{pointer=?} as specialised comparison predicate.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@defun pointer? @var{obj}
+Return @true{} if @var{obj} is a pointer object, return @false{}
+otherwise.
+@end defun
+
+
+@defun pointer->integer @var{pointer}
+Convert the value of @var{pointer} to an exact integer value.  The
+result may be a fixnum or a bignum depending on the pointer.
+@end defun
+
+
+@defun integer->pointer @var{exact-integer}
+Convert @var{exact-integer} to a pointer value.  The argument must be
+non--negative and in the appropriate range for 32-bit or 64-bit
+platforms.  It is guaranteed that:
+
+@example
+(integer->pointer (pointer->integer p))
+@end example
+
+@noindent
+points to the same address as @var{p}.
+@end defun
+
+
+@defun null-pointer
+Return a newly allocated pointer object representing @cnull{}.
+@end defun
+
+
+@defun pointer-null? @var{obj}
+Return true if @var{obj} is a pointer object and it represents @cnull{}.
+@end defun
+
+
+@defun pointer-diff @vari{ptr} @varii{ptr}
+Return an exact integer representing the difference between the two
+pointer objects @vari{ptr} and @varii{ptr}.  The returned value is such
+that:
+
+@example
+(pointer=? P (pointer-add Q (pointer-diff P Q)))
+@result{} #t
+@end example
+@end defun
+
+
+@defun pointer-add @var{ptr} @var{diff}
+Return a new pointer object holding the memory reference resulting from
+adding @var{diff}, which must be an exact integer, to @var{ptr}.  If the
+addition would cause an overflow or underflow in machine words: raise an
+assertion violation.
+@end defun
+
+
+@defun pointer-and-offset? @var{ptr} @var{diff}
+Return true if the exact integer @var{diff} can be added to @var{ptr}
+without causing a pointer overflow or underflow.
+@end defun
+
+
+@defun pointer=? @vari{ptr} @varii{ptr}
+@defunx pointer<>? @vari{ptr} @varii{ptr}
+@defunx pointer<? @vari{ptr} @varii{ptr}
+@defunx pointer>? @vari{ptr} @varii{ptr}
+@defunx pointer<=? @vari{ptr} @varii{ptr}
+@defunx pointer>=? @vari{ptr} @varii{ptr}
+Comparison functions for pointers.  Return @true{} if the arguments
+satisfy the predicate, else return @false{}.
+@end defun
+
+
+@defun pointer-clone @var{pointer}
+Return a new pointer object being a copy of @var{pointer}.  This is
+useful when we need a pointer that might be reset to another value in
+the future.
+@end defun
+
+@c page
+@node iklib pointers poke
+@subsection Poking values
+
+
+With all the following functions: the @var{memory} argument must be a
+valid pointer object or @code{memory-block} instance; the @var{offset}
+argument must be an exact integer in the range of the C language type
+@code{ptrdiff_t}.  When adding an offset to a pointer: all the following
+functions @strong{do not} scale the offset to the size of the poked
+value; pointer arithmetics is performed with byte offsets.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+@macro bitpoker{BYTENUM,BITNUM}
+Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
+@var{memory}.  @var{VALUE} must be an exact integer in the range
+representable by \BITNUM\ bits.
+@end macro
+
+@macro cpoker{TYPE}
+Set to @var{value} a number of bytes corresponding to the @code{signed
+\TYPE\} or @code{unsigned \TYPE\} type located at @var{offset} from
+@var{memory}.
+@end macro
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking bitwise sized exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory location selecting the size with the number of bits required to
+represent the value.
+
+
+@defun pointer-set-c-sint8! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint8! @var{memory} @var{offset} @var{value}
+@bitpoker{single byte,8}
+@end defun
+
+
+@defun pointer-set-c-sint16! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint16! @var{memory} @var{offset} @var{value}
+@bitpoker{two bytes,16}
+@end defun
+
+
+@defun pointer-set-c-sint32! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint32! @var{memory} @var{offset} @var{value}
+@bitpoker{two bytes,32}
+@end defun
+
+
+@defun pointer-set-c-sint64! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-uint64! @var{memory} @var{offset} @var{value}
+@bitpoker{two bytes,64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking C language exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory locations selecting the size according to the one used by the C
+language implementation.
+
+
+@defun pointer-set-c-signed-char! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-char! @var{memory} @var{offset} @var{value}
+@cpoker{char}
+@end defun
+
+
+@defun pointer-set-c-signed-short! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-short! @var{memory} @var{offset} @var{value}
+@cpoker{short int}
+@end defun
+
+
+@defun pointer-set-c-signed-int! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-int! @var{memory} @var{offset} @var{value}
+@cpoker{int}
+@end defun
+
+
+
+@defun pointer-set-c-signed-long! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-long! @var{memory} @var{offset} @var{value}
+@cpoker{long}
+@end defun
+
+
+@defun pointer-set-c-signed-long-long! @var{memory} @var{offset} @var{value}
+@defunx pointer-set-c-unsigned-long-long! @var{memory} @var{offset} @var{value}
+@cpoker{long long}
+@end defun
+
+
+@defun pointer-set-c-size_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{size_t}
+type located at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-ssize_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{ssize_t}
+type located at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-off_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{off_t}
+type located at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-ptrdiff_t! @var{memory} @var{offset} @var{value}
+Set to @var{value} a number of bytes corresponding to the
+@code{ptrdiff_t} type located at @var{offset} from @var{memory}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking floating point numbers
+
+
+@defun pointer-set-c-float! @var{memory} @var{offset} @var{flonum}
+Convert the Scheme floating point number @var{flonum} (represented in
+@value{PRJNAME} as an @ieee{} 754 double precision floating point number) to a
+float (an @ieee{} 754 single precision floating point number) and store
+the result in the four bytes at @var{offset} from @var{memory}.
+@end defun
+
+
+@defun pointer-set-c-double! @var{memory} @var{offset} @var{flonum}
+Store the double precision @ieee{} 754 floating point value of the
+Scheme @var{flonum} in the eight bytes at @var{offset} from
+@var{memory}.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking pointers
+
+
+@defun pointer-set-c-pointer! @var{memory} @var{offset} @var{value}
+Store address of the raw memory location referenced by the pointer
+@var{value} at @var{offset} from @var{memory}.
+@end defun
+
+@c page
+@node iklib pointers peek
+@subsection Peeking values
+
+
+With all the following functions: the @var{memory} argument must be a
+valid pointer object; the @var{offset} argument must be an exact integer
+in the range of the C language type @code{ptrdiff_t}.  When adding an
+offset to a pointer: all the following functions @strong{do not} scale
+the offset to the size of the peeked value; pointer arithmetics is
+performed with byte offsets.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+@macro bitpeeker{BITNUM}
+Peek the \BITNUM\ bits located at @var{offset} from @var{memory} and
+return them as signed or unsigned exact integer.
+@end macro
+
+@macro cpeeker{TYPE}
+Peek the @code{signed \TYPE\} or @code{unsigned \TYPE\} integer located
+at @var{offset} from @var{memory} and return it as signed or unsigned
+exact integer.
+@end macro
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking bitwise sized exact integers
+
+The following functions retrieve signed and unsigned exact integers from
+raw memory location selecting the size with the number of bits required
+to represent the value.
+
+
+@defun pointer-ref-c-sint8 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint8 @var{memory} @var{offset}
+@bitpeeker{8}
+@end defun
+
+
+@defun pointer-ref-c-sint16 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint16 @var{memory} @var{offset}
+@bitpeeker{16}
+@end defun
+
+
+@defun pointer-ref-c-sint32 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint32 @var{memory} @var{offset}
+@bitpeeker{32}
+@end defun
+
+
+@defun pointer-ref-c-sint64 @var{memory} @var{offset}
+@defunx pointer-ref-c-uint64 @var{memory} @var{offset}
+@bitpeeker{64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking C language exact integers
+
+The following functions store signed and unsigned exact integers from
+raw memory locations selecting the size according to the one used by the
+C language implementation.
+
+
+@defun pointer-ref-c-signed-char @var{memory} @var{offset}
+@defunx pointer-ref-c-signed-char @var{memory} @var{offset}
+@cpeeker{char}
+@end defun
+
+
+@defun pointer-ref-c-signed-short @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-short @var{memory} @var{offset}
+@cpeeker{short int}
+@end defun
+
+
+@defun pointer-ref-c-signed-int @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-int @var{memory} @var{offset}
+@cpeeker{int}
+@end defun
+
+
+@defun pointer-ref-c-signed-long @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-long @var{memory} @var{offset}
+@cpeeker{long}
+@end defun
+
+
+@defun pointer-ref-c-signed-long-long @var{memory} @var{offset}
+@defunx pointer-ref-c-unsigned-long-long @var{memory} @var{offset}
+@cpeeker{long long}
+@end defun
+
+
+@defun pointer-ref-c-size_t @var{memory} @var{offset}
+Peek the @code{size_t} integer located at @var{offset} from @var{memory}
+and return it as exact integer.
+@end defun
+
+
+@defun pointer-ref-c-ssize_t @var{memory} @var{offset}
+Peek the @code{ssize_t} integer located at @var{offset} from @var{memory}
+and return it as exact integer.
+@end defun
+
+
+@defun pointer-ref-c-off_t @var{memory} @var{offset}
+Peek the @code{off_t} integer located at @var{offset} from @var{memory}
+and return it as exact integer.
+@end defun
+
+
+@defun pointer-ref-c-ptrdiff_t @var{memory} @var{offset}
+Peek the @code{ptrdiff_t} integer located at @var{offset} from
+@var{memory} and return it as exact integer.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking floating point numbers
+
+
+@defun pointer-ref-c-float @var{memory} @var{offset}
+Return the four--byte float (represented as @ieee{} 754 single precision
+floating point number) stored at @var{offset} from @var{memory}.  The
+value is extended to an @ieee{} 754 double precision floating point
+number that @value{PRJNAME} uses to represent inexact numbers.
+@end defun
+
+
+@defun pointer-ref-c-double @var{memory} @var{offset}
+Return the eight--byte float (represented as @ieee{} 754 double
+precision floating point number) stored at @var{offset} from
+@var{memory}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking pointers
+
+
+@defun pointer-ref-c-pointer @var{memory} @var{offset}
+Return the pointer stored at @var{offset} from @var{memory}.  The size
+of the pointer (also the number of bytes loaded) depends on the
+architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
+systems.
+@end defun
+
+@c page
+@node iklib arrays poke
+@subsection Poking values into arrays
+
+
+With all the following functions: the @var{memory} argument must be a
+valid pointer object or @code{memory-block} instance; the @var{index}
+argument must be an exact integer in the range of the C language type
+@code{ptrdiff_t}.  When adding an offset to a pointer: all the following
+functions @strong{do} scale the index to the size of the poked value.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+@macro abitpoker{BYTENUM,BITNUM}
+Set to @var{value} the \BYTENUM\ of memory located at @var{index} from
+@var{memory}.  @var{VALUE} must be an exact integer in the range
+representable by \BITNUM\ bits.
+@end macro
+
+@macro acpoker{TYPE}
+Set to @var{value} a number of bytes corresponding to the @code{signed
+\TYPE\} or @code{unsigned \TYPE\} type located at @var{index} from
+@var{memory}.
+@end macro
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking bitwise sized exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory location selecting the size with the number of bits required to
+represent the value.
+
+
+@defun array-set-c-sint8! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint8! @var{memory} @var{index} @var{value}
+@abitpoker{single byte,8}
+@end defun
+
+
+@defun array-set-c-sint16! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint16! @var{memory} @var{index} @var{value}
+@abitpoker{two bytes,16}
+@end defun
+
+
+@defun array-set-c-sint32! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint32! @var{memory} @var{index} @var{value}
+@abitpoker{two bytes,32}
+@end defun
+
+
+@defun array-set-c-sint64! @var{memory} @var{index} @var{value}
+@defunx array-set-c-uint64! @var{memory} @var{index} @var{value}
+@abitpoker{two bytes,64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking C language exact integers
+
+The following functions store signed and unsigned exact integers in raw
+memory locations selecting the size according to the one used by the C
+language implementation.
+
+
+@defun array-set-c-signed-char! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-char! @var{memory} @var{index} @var{value}
+@acpoker{char}
+@end defun
+
+
+@defun array-set-c-signed-short! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-short! @var{memory} @var{index} @var{value}
+@acpoker{short int}
+@end defun
+
+
+@defun array-set-c-signed-int! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-int! @var{memory} @var{index} @var{value}
+@acpoker{int}
+@end defun
+
+
+@defun array-set-c-signed-long! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-long! @var{memory} @var{index} @var{value}
+@acpoker{long}
+@end defun
+
+
+@defun array-set-c-signed-long-long! @var{memory} @var{index} @var{value}
+@defunx array-set-c-unsigned-long-long! @var{memory} @var{index} @var{value}
+@acpoker{long long}
+@end defun
+
+
+@defun array-set-c-size_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{size_t}
+type located at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-ssize_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{ssize_t}
+type located at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-off_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the @code{off_t}
+type located at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-ptrdiff_t! @var{memory} @var{index} @var{value}
+Set to @var{value} a number of bytes corresponding to the
+@code{ptrdiff_t} type located at @var{index} from @var{memory}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking floating point numbers
+
+
+@defun array-set-c-float! @var{memory} @var{index} @var{flonum}
+Convert the Scheme floating point number @var{flonum} (represented in
+@value{PRJNAME} as an @ieee{} 754 double precision floating point number) to a
+float (an @ieee{} 754 single precision floating point number) and store
+the result in the four bytes at @var{index} from @var{memory}.
+@end defun
+
+
+@defun array-set-c-double! @var{memory} @var{index} @var{flonum}
+Store the double precision @ieee{} 754 floating point value of the
+Scheme @var{flonum} in the eight bytes at @var{index} from
+@var{memory}.
+@end defun
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Poking pointers
+
+
+@defun array-set-c-pointer! @var{memory} @var{index} @var{value}
+Store address of the raw memory location referenced by the pointer
+@var{value} at @var{index} from @var{memory}.
+@end defun
+
+@c page
+@node iklib arrays peek
+@subsection Peeking values from arrays
+
+
+With all the following functions: the @var{memory} argument must be a
+valid pointer object; the @var{index} argument must be an exact integer
+in the range of the C language type @code{ptrdiff_t}.  When adding an
+offset to a pointer: all the following functions @strong{do} scale the
+index to the size of the peeked value.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+@macro abitpeeker{BITNUM}
+Peek the \BITNUM\ bits located at @var{index} from @var{memory} and
+return them as signed or unsigned exact integer.
+@end macro
+
+@macro acpeeker{TYPE}
+Peek the @code{signed \TYPE\} or @code{unsigned \TYPE\} integer located
+at @var{index} from @var{memory} and return it as signed or unsigned
+exact integer.
+@end macro
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking bitwise sized exact integers
+
+The following functions retrieve signed and unsigned exact integers from
+raw memory location selecting the size with the number of bits required
+to represent the value.
+
+
+@defun array-ref-c-sint8 @var{memory} @var{index}
+@defunx array-ref-c-uint8 @var{memory} @var{index}
+@abitpeeker{8}
+@end defun
+
+
+@defun array-ref-c-sint16 @var{memory} @var{index}
+@defunx array-ref-c-uint16 @var{memory} @var{index}
+@abitpeeker{16}
+@end defun
+
+
+@defun array-ref-c-sint32 @var{memory} @var{index}
+@defunx array-ref-c-uint32 @var{memory} @var{index}
+@abitpeeker{32}
+@end defun
+
+
+@defun array-ref-c-sint64 @var{memory} @var{index}
+@defunx array-ref-c-uint64 @var{memory} @var{index}
+@abitpeeker{64}
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking C language exact integers
+
+The following functions store signed and unsigned exact integers from
+raw memory locations selecting the size according to the one used by the
+C language implementation.
+
+
+@defun array-ref-c-signed-char @var{memory} @var{index}
+@defunx array-ref-c-signed-char @var{memory} @var{index}
+@acpeeker{char}
+@end defun
+
+
+@defun array-ref-c-signed-short @var{memory} @var{index}
+@defunx array-ref-c-unsigned-short @var{memory} @var{index}
+@acpeeker{short int}
+@end defun
+
+
+@defun array-ref-c-signed-int @var{memory} @var{index}
+@defunx array-ref-c-unsigned-int @var{memory} @var{index}
+@acpeeker{int}
+@end defun
+
+
+@defun array-ref-c-signed-long @var{memory} @var{index}
+@defunx array-ref-c-unsigned-long @var{memory} @var{index}
+@acpeeker{long}
+@end defun
+
+
+@defun array-ref-c-signed-long-long @var{memory} @var{index}
+@defunx array-ref-c-unsigned-long-long @var{memory} @var{index}
+@acpeeker{long long}
+@end defun
+
+
+@defun array-ref-c-size_t @var{memory} @var{index}
+Peek the @code{size_t} integer located at @var{index} from @var{memory}
+and return it as signed or unsigned exact integer.
+@end defun
+
+
+@defun array-ref-c-ssize_t @var{memory} @var{index}
+Peek the @code{ssize_t} integer located at @var{index} from @var{memory}
+and return it as signed or unsigned exact integer.
+@end defun
+
+
+@defun array-ref-c-off_t @var{memory} @var{index}
+Peek the @code{off_t} integer located at @var{index} from @var{memory}
+and return it as signed or unsigned exact integer.
+@end defun
+
+
+@defun array-ref-c-ptrdiff_t @var{memory} @var{index}
+Peek the @code{ptrdiff_t} integer located at @var{index} from
+@var{memory} and return it as signed or unsigned exact integer.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking floating point numbers
+
+
+@defun array-ref-c-float @var{memory} @var{index}
+Return the four--byte float (represented as @ieee{} 754 single precision
+floating point number) stored at @var{index} from @var{memory}.  The
+value is extended to an @ieee{} 754 double precision floating point
+number that @value{PRJNAME} uses to represent inexact numbers.
+@end defun
+
+
+@defun array-ref-c-double @var{memory} @var{index}
+Return the eight--byte float (represented as @ieee{} 754 double
+precision floating point number) stored at @var{index} from
+@var{memory}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Peeking pointers
+
+
+@defun array-ref-c-pointer @var{memory} @var{index}
+Return the pointer stored at @var{index} from @var{memory}.  The size
+of the pointer (also the number of bytes loaded) depends on the
+architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
+systems.
+@end defun
+
+@c page
+@node iklib memory
+@section Memory management
+
+
+@menu
+* iklib memory intro::          Introduction to managing memory.
+* iklib memory alloc::          Allocating and freeing memory.
+* iklib memory ops::            Memory operations.
+* iklib memory blocks::         Memory blocks.
+* iklib memory condition::      Memory allocation condition objects.
+@end menu
+
+@c page
+@node iklib memory intro
+@subsection Introduction to managing memory
+
+
+@value{PRJNAME} Scheme is a managed environment: Scheme objects are
+allocated in a special memory region (the Scheme heap) and have
+type--specific object layouts; this allows the run time system to
+distinguish object types and the garbage collector to locate all
+potentially live objects, and reclaim the memory of dead objects.
+
+Scheme objects are also @emph{opaque} in the sense that the data
+structures used to represent Scheme objects are not exposed, at the
+Scheme level, to the programmer who can only interact with objects
+through an interface.
+
+Unmanaged environments, such as the operating system on which
+@value{PRJNAME} runs, require that the programmer manages the allocation
+and deallocation of system resources herself.  Memory regions, file
+handles, external devices, the screen, etc., are all examples of
+resources whose management must be coordinated among the different parts
+of the system, and this becomes the responsibility of the programmer who
+is wiring the different subsystems together.
+
+The procedures acting on pointer objects are meant to provide a way to
+interface with the low level memory operations such as setting and
+getting bytes from specific locations in memory.
+
+@c page
+@node iklib memory alloc
+@subsection Allocating and freeing memory
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@defun malloc @var{number-of-bytes}
+@defunx guarded-malloc @var{number-of-bytes}
+Interface to the C function @cfunc{malloc}, @glibcref{Basic Allocation,
+malloc}.  Allocate a block of memory @var{number-of-bytes} wide;
+@var{number-of-bytes} must be an exact integer in the range of the C
+language type @code{size_t}.  If successful return a pointer object,
+else return @false{}.
+
+Memory allocated by @func{malloc} must be released by @func{free};
+memory allocated by @func{guarded-malloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun malloc* @var{number-of-bytes}
+@defunx guarded-malloc* @var{number-of-bytes}
+Like @func{malloc} and @func{guarded-malloc}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun realloc @var{memory} @var{number-of-bytes}
+@defunx guarded-realloc @var{memory} @var{number-of-bytes}
+Interface to the C function @cfunc{realloc}, @glibcref{Changing Block
+Size, realloc}.  Reallocate the block of memory referenced by
+@var{memory} to the new size @var{number-of-bytes}.
+
+@var{memory} must be a pointer object or @code{memory-block} instance.
+
+@var{number-of-bytes} must be an exact integer in the range of the C
+language type @code{size_t}.
+
+If successful: mutate the pointer in @var{memory} to reference the new
+memory block and return @var{memory} itself; when @var{memory} is a
+@code{memory-block}: mutate the size field to @var{number-of-bytes}.  If
+an error occurs: return @false{} and leave untouched both @var{memory}
+and its referenced memory.
+
+Memory allocated by @func{realloc} must be released by @func{free},
+unless @var{memory} was already scheduled to be removed by the garbage
+collector; when @func{guarded-realloc} is used:
+
+@itemize
+@item
+When @var{memory} is a pointer object: the allocated memory is
+automatically released whenever the returned pointer object is garbage
+collected.  If @var{memory} was already scheduled to be removed by the
+garbage collector: we should use @func{realloc} not
+@func{guarded-realloc}.
+
+@item
+When @var{memory} is an instance of @code{memory-block}: the allocated
+memory is automatically released by the garbage collector only if
+@code{memory-block} was built by @func{make-memory-block/guarded}.
+@end itemize
+@end defun
+
+
+@defun realloc* @var{pointer} @var{number-of-bytes}
+@defunx guarded-realloc* @var{pointer} @var{number-of-bytes}
+Like @func{realloc} and @func{guarded-realloc}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun calloc @var{number-of-elements} @var{element-size}
+@defunx guarded-calloc @var{number-of-elements} @var{element-size}
+Interface to the C function @cfunc{calloc}, @glibcref{Allocating Cleared
+Space, calloc}.  Allocate and clear to zero a block of memory capable of
+holding @var{number-of-elements} each @var{element-size} wide; both the
+arguments must be exact integers in the range of the C language type
+@code{size_t}.  If successful return a pointer object, else return
+@false{}.
+
+Memory allocated by @func{calloc} must be released by @func{free};
+memory allocated by @func{guarded-calloc} is automatically released
+whenever the returned pointer object is garbage collected.
+@end defun
+
+
+@defun calloc @var{number-of-elements} @var{element-size}
+@defunx guarded-calloc @var{number-of-elements} @var{element-size}
+Like @func{calloc} and @func{guarded-calloc}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun free @var{memory}
+Release the memory referenced by @var{memory}, which must be either a
+pointer object returned by @cfunc{malloc}, @cfunc{realloc},
+@cfunc{calloc} or a similar system procedure or an instance of
+@code{memory-block}.  The pointer object in @var{memory} is mutated to
+reference the @cnull{} pointer; when @var{memory} is a
+@code{memory-block}: the @code{size} field is also reset to zero.
+
+If memory allocated by a guarding function is released by @func{free}:
+@value{PRJNAME} will @strong{not} try to automatically release the old
+memory again.
+
+If the pointer in @var{memory} is @cnull{} nothing happens.
+@end defun
+
+
+@defun with-local-storage @var{lengths} @var{proc}
+Call @var{proc} with arguments being pointers to memory blocks allocated
+just for the dynamic extent of @var{proc}.  The number and size of the
+memory blocks is determined by @var{lengths}, which must be a vector of
+non--negative fixnums.
+
+@ignore
+@c This is not clear, so far letting the flow go through with an
+@c exception seems to work (Marco Maggi; Dec  7, 2011)
+
+We must not let control flow go through a call to
+@func{with-local-storage} by raising an exception.  @var{proc}
+@strong{must} return to the caller.
+@end ignore
+
+@strong{NOTE} We must not let control flow go through a call to
+@func{with-local-storage} with an escaping continuation.
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare ffi) ffi.))
+
+;; no allocated memory
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#()
+    (lambda ()
+      (+ a b 4))))
+@result{} 7
+
+;; allocate a single block of 4 bytes
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#(4)
+    (lambda (&int32)
+      (ffi.pointer-set-c-sint32! &int32 0 4)
+      (+ a b (ffi.pointer-ref-c-sint32 &int32 0)))))
+@result{} 7
+
+;; allocate two blocks of 4 and 8 bytes
+(let ((a 1) (b 2))
+  (ffi.with-local-storage '#(4 8)
+    (lambda (&int32 &int64)
+      (ffi.pointer-set-c-sint32! &int32 0 4)
+      (ffi.pointer-set-c-sint64! &int64 0 8)
+      (+ a b
+         (ffi.pointer-ref-c-sint32 &int32 0)
+         (ffi.pointer-ref-c-sint64 &int64 0)))))
+@result{} 15
+@end example
+
+The memory blocks are actually allocated on the stack of
+@value{PRJNAME}'s runtime.
+@end defun
+
+@c page
+@node iklib memory ops
+@subsection Memory operations
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@defun memcpy @var{dst} @var{src} @var{count}
+Interface to the C function @cfunc{memcpy}, @glibcref{Copying and
+Concatenation, memcpy}.  Copy @var{count} bytes from the memory
+referenced by the pointer @var{src} to the memory referenced by the
+pointer @var{dst}; @var{count} must be an exact integer in the range of
+the C language type @code{size_t}.  The two memory regions must not
+overlap.  Return unspecified values.
+@end defun
+
+
+@defun memmove @var{dst} @var{src} @var{count}
+Interface to the C function @cfunc{memmove}, @glibcref{Copying and
+Concatenation, memmove}.  Copy @var{count} bytes from the memory
+referenced by the pointer @var{src} to the memory referenced by the
+pointer @var{dst}; @var{count} must be an exact integer in the range of
+the C language type @code{size_t}.  The two memory regions can be
+overlapping.  Return unspecified values.
+@end defun
+
+
+@defun memset @var{ptr} @var{value} @var{count}
+Interface to the C function @cfunc{memset}, @glibcref{Copying and
+Concatenation, memset}.Set to @var{value} @var{count} bytes of the
+memory referenced by the pointer @var{ptr}.  @var{count} must be an
+exact integer in the range of the C language type @code{size_t},
+@var{value} must be an exact fixnum in the range @math{[-128, 255]}.
+Return unspecified values.
+@end defun
+
+
+@defun memcmp @vari{pointer} @varii{pointer} @var{count}
+Interface to the C function @cfunc{memcmp}, @glibcref{String/Array
+Comparison, memcmp}.  Compare @var{count} bytes in the memory blocks
+referenced by @vari{pointer} and @varii{pointer}, return a fixnum
+representing the classic comparison ternary result.  @var{count} must be
+an exact integer in the range of the C language type @code{size_t}.
+@end defun
+
+
+@defun memory-copy dst dst.start src src.start count
+Copy @var{count} bytes from @var{src} starting at offset @var{src.start}
+to @var{dst} starting at offset @var{dst.start}.  @var{src} and
+@var{dst} can be pointers or bytevectors; @var{dst.start},
+@var{src.start} and @var{count} must be non--negative fixnums.  The two
+memory regions must not overlap.  Return unspecified values.
+@end defun
+
+
+@defun memory->bytevector @var{pointer} @var{number-of-bytes}
+Build and return a new bytevector object holding @var{number-of-bytes}
+from the memory region starting at @var{pointer}.  @var{number-of-bytes}
+must be a non--negative fixnum.
+@end defun
+
+
+@defun bytevector->memory @var{bv}
+@defunx bytevector->guarded-memory @var{bv}
+Allocate a new raw memory block and copy into it the contents of
+@var{bv}.  If successful return two values being the pointer object
+referencing the memory and a fixnum representing the length of the
+memory block; if allocating memory fails return @false{} and @false{}.
+
+Memory allocated by @func{bytevector->memory} must be released by
+@func{free}; memory allocated by @func{bytevector->guarded-malloc} is
+automatically released whenever the returned pointer object is garbage
+collected.
+@end defun
+
+
+@defun bytevector->memory* @var{bv}
+@defunx bytevector->guarded-memory* @var{bv}
+Like @func{bytevector->memory*} and @func{bytevector->guarded-memory*},
+but if allocation fails raise a non--continuable exception with
+components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
+@end defun
+
+@c page
+@node iklib memory blocks
+@subsection Memory blocks
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@deftp {Struct Type} memory-block
+Data structure used to reference a raw memory block through a pointer
+and number of bytes.  It has the following public fields:
+
+@table @code
+@item pointer
+A pointer object referencing the first byte of memory.
+
+@item size
+The number of bytes in the memory block; it is an exact integer in the
+range of the C language type @code{size_t}.
+@end table
+@end deftp
+
+
+@defun make-memory-block @var{pointer} @var{size}
+@defunx make-memory-block/guarded @var{pointer} @var{size}
+Build and return a new instance of @code{memory-block} referencing a
+memory block pointed to by @var{pointer} and of @var{size} number of
+bytes.
+
+When a @code{memory-block} built by @func{make-memory-block} is garbage
+collected: nothing happens.
+
+When a @code{memory-block} built by @func{make-memory-block/guarded} is
+garbage collected: the referenced memory block is released with
+@func{free} from @library{vicare}.
+@end defun
+
+
+@defun memory-block? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{memory-block}.
+@end defun
+
+
+@defun memory-block?/non-null @var{obj}
+@defunx memory-block?/not-null @var{obj}
+Return @true{} if @var{obj} is an instance of @code{memory-block} and
+the pointer is not @cnull{}.
+@end defun
+
+
+@defun memory-block-pointer @var{mblock}
+@defunx memory-block-size @var{mblock}
+Accessors for the fields of @code{memory-block} instances.  The pointer
+object returned by @func{memory-block-pointer} is a copy of the pointer
+object in @var{mblock}.
+@end defun
+
+
+@defun memory-block-reset @var{mblock}
+Reset an instance of @code{memory-block} to a @cnull{} pointer and zero
+size; return unspecified values.  If @var{mblock} has been created to
+release the referenced memory block: the memory block is freed.
+@end defun
+
+
+@defun null-memory-block
+Build and return a new instance of @code{memory-block} holding a new
+@cnull{} pointer object and zero as size.
+@end defun
+
+@c page
+@node iklib memory condition
+@subsection Memory allocation condition objects
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@deftp {Condition Type} &out-of-memory-error
+Condition object type used to tag conditions representing memory
+allocation errors; it is derived from @condition{error}.  It has no
+fields.
+@end deftp
+
+
+@defun make-out-of-memory-error
+@defunx out-of-memory-error? @var{obj}
+Maker and predicate for condition objects of type
+@condition{out-of-memory-error}.
+@end defun
+
+@c page
+@node iklib cstrings
+@section Raw C strings
+
+
+The following functions perform operations on raw @ascii{} coded strings
+terminated by a zero byte, for short @asciiz{} strings; some functions
+act upon raw @utf{}-16 strings.  The following bindings are exported by
+the libraries @library{vicare}, @library{ikarus} and @library{ikarus
+system $foreign} and reexported by the library @library{vicare ffi}.
+
+
+@defun bytevector->cstring @var{bv}
+@defunx bytevector->guarded-cstring @var{bv}
+Convert from a Scheme bytevector to an @asciiz{} string.  If successful
+return a pointer object referencing the string, else return @false{}.
+
+Memory allocated by @func{bytevector->cstring} must be explicitly
+released by @func{free}; memory allocated by
+@func{bytevector->guarded-cstring} is automatically released by the
+garbage collector whenever the returned pointer is garbage collected.
+@end defun
+
+
+@defun bytevector->cstring* @var{bv}
+@defunx bytevector->guarded-cstring* @var{bv}
+Like @func{bytevector->cstring*} and @func{bytevector->guarded-cstring},
+but if allocation fails raise a non--continuable exception with
+components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
+@end defun
+
+
+@defun cstring->bytevector @var{pointer}
+@defunx cstring->bytevector @var{pointer} @var{count}
+Convert between an @asciiz{} string and a Scheme bytevector.  When used,
+@var{count} must be a fixnum representing the number of bytes to include
+in the bytevector.
+@end defun
+
+
+@defun string->cstring @var{str}
+@defunx string->guarded-cstring @var{str}
+Convert from a Scheme string to an @asciiz{} string.  If successful
+return a pointer object referencing the string, else return @false{}.
+
+The string argument must contain only characters with Unicode code
+points in the range @math{[0, 255]}.
+
+Memory allocated by @func{string->cstring} must be explicitly
+released by @func{free}; memory allocated by
+@func{string->guarded-cstring} is automatically released by the
+garbage collector whenever the returned pointer is garbage collected.
+@end defun
+
+
+@defun cstring16->bytevector @var{pointer}
+Convert between an @utf{}-16 string and a Scheme bytevector; this
+function works with all the possible encodings of the string.  The end
+of the string is determined by searching for a sequence of two
+consecutive zero bytes, starting at even offset.
+@end defun
+
+
+@defun cstring16n->string @var{pointer}
+@defunx cstring16le->string @var{pointer}
+@defunx cstring16be->string @var{pointer}
+Like @func{cstring16->bytevector}, but convert the result to a Scheme
+string assuming the specified byte order (native, little endian, big
+endian).
+@end defun
+
+
+@defun string->cstring* @var{str}
+@defunx string->guarded-cstring* @var{str}
+Like @func{string->cstring} and @func{string->guarded-cstring}, but if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun cstring->string @var{pointer}
+@defunx cstring->string @var{pointer} @var{count}
+Convert between an @asciiz{} string and a Scheme string.  When used,
+@var{count} must be a fixnum representing the number of bytes to include
+in the string.
+@end defun
+
+
+@defun strlen @var{pointer}
+Interface to the C function @cfunc{strlen}, @glibcref{String Length,
+strlen}.  Return an exact integer representing the length of the
+@asciiz{} string referenced by @var{pointer}.
+@end defun
+
+
+@defun strcmp @vari{pointer} @varii{pointer}
+Interface to the C function @cfunc{strcmp}, @glibcref{String/Array
+Comparison, strcmp}.  Return a fixnum representing the classic
+comparison ternary result of comparing the @asciiz{} strings referenced
+by @vari{pointer} and @varii{pointer}.
+@end defun
+
+
+@defun strncmp @vari{pointer} @varii{pointer} @var{count}
+Interface to the C function @cfunc{strncmp}, @glibcref{String/Array
+Comparison, strncmp}.  Return a fixnum representing the classic
+comparison ternary result of comparing the first @var{count} bytes in
+the @asciiz{} strings referenced by @vari{pointer} and @varii{pointer}.
+@var{count} must be an exact integer in the range of the C language type
+@code{size_t}.
+@end defun
+
+
+@defun strdup @var{pointer}
+@defunx guarded-strdup @var{pointer}
+Interface to the C function @cfunc{strdup}, @glibcref{Copying and
+Concatenation, strdup}.  Duplicate the @asciiz{} string referenced by
+@var{pointer}; if successful return a new pointer object, else return
+@false{}.
+
+Memory allocated by @func{strdup} must be explicitly released by
+@func{free}; memory allocated by @func{guarded-strdup} is automatically
+released by the garbage collector whenever the returned pointer is
+garbage collected.
+@end defun
+
+
+@defun strdup* @var{pointer}
+@defunx guarded-strdup* @var{pointer}
+Like @func{strdup} and @func{guarded-strdup}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun strndup @var{pointer} @var{count}
+@defunx guarded-strndup @var{pointer} @var{count}
+Interface to the C function @cfunc{strndup}, @glibcref{Copying and
+Concatenation, strndup}.  Duplicate the first @var{count} bytes in the
+@asciiz{} string referenced by @var{pointer}; if successful return a new
+pointer object, else return @false{}.  @var{count} must be an exact
+integer in the range of the C language type @code{size_t}.
+
+Memory allocated by @func{strdup} must be explicitly released by
+@func{free}; memory allocated by @func{guarded-strdup} is automatically
+released by the garbage collector whenever the returned pointer is
+garbage collected.
+@end defun
+
+
+@defun strndup* @var{pointer} @var{count}
+@defunx guarded-strndup* @var{pointer} @var{count}
+Like @func{strndup} and @func{guarded-strndup}, but if allocation fails
+raise a non--continuable exception with components: @condition{who},
+@condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun bytevectors->argv @var{list-of-bytevectors}
+@defunx bytevectors->guarded-argv @var{list-of-bytevectors}
+Given a list of bytevectors: convert them into @asciiz{} strings and
+build a @cnull{} terminated array of C pointers referencing the strings.
+Return a pointer to the array.  The strings and the array are stored in
+a single memory block.
+
+Memory allocated by @func{bytevectors->argv} must be explicitly released
+by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is
+automatically released by the garbage collector whenever the returned
+pointer is garbage collected.
+@end defun
+
+
+@defun bytevectors->argv* @var{list-of-bytevectors}
+@defunx bytevectors->guarded-argv* @var{list-of-bytevectors}
+Like @func{bytevectors->argv*} and @func{bytevectors->guarded-argv*},
+but if allocation fails raise a non--continuable exception with
+components: @condition{who}, @condition{message},
+@condition{out-of-memory-error}.
+@end defun
+
+
+@defun argv->bytevectors @var{pointer}
+Given a pointer to a @cnull{} terminated array of C pointers referencing
+@asciiz{} strings: build and return a list of bytevectors holding the
+same bytes of the strings.
+@end defun
+
+
+@defun strings->argv @var{list-of-strings}
+@defunx strings->guarded-argv @var{list-of-strings}
+Given a list of Scheme strings: convert them into @asciiz{} strings and
+build a @cnull{} terminated array of C pointers referencing the strings.
+Return a pointer to the array.  The strings and the array are stored in
+a single memory block.
+
+The string arguments must contain only characters with Unicode code
+points in the range @math{[0, 255]}.
+
+Memory allocated by @func{strings->argv} must be explicitly released
+by @func{free}; memory allocated by @func{strings->guarded-argv} is
+automatically released by the garbage collector whenever the returned
+pointer is garbage collected.
+@end defun
+
+
+@defun strings->argv* @var{list-of-strings}
+@defunx strings->guarded-argv* @var{list-of-strings}
+Like @func{strings->argv} and @func{strings->guarded-argv}, but if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+@defun argv->strings @var{pointer}
+Given a pointer to a @cnull{} terminated array of C pointers referencing
+@asciiz{} strings: build and return a list of strings holding the same
+bytes of the strings.
+@end defun
+
+
+@defun argv-length @var{argv}
+Return the number of strings in the @cnull{}--terminated array of
+strings referenced by the @var{argv} pointer.
+@end defun
+
+@c page
+@node iklib errno
+@section Interface to @code{errno}
+
+
+Most C language system functions report errors by setting a the special
+variable @code{errno} to some predefined integer constant,
+@glibcref{Checking for Errors, errno}.  The Scheme code accessing
+@code{errno} values should be agnostic with respect to the actual error
+codes; for this to happen we should use the following facilities along
+with bindings from @library{vicare errno}, @ref{errno} for details.
+
+Values for the C language variable @code{errno} are encoded as negated
+fixnum values: if @code{EPERM} is defined to @code{1} at the C language
+level, @value{PRJNAME} defines it as the fixnum @code{-1}; at present
+all the known error codes fit into fixnums range.  One syntax identifier
+binding for each known @code{errno} value is exported by the library
+@library{vicare errno} and reexported by the library @library{vicare
+platform constants}.
+
+If some error codes are not defined on a platform: the corresponding
+binding evaluates to @true{}.  Notice that if no error occurred
+@code{errno} is set to the fixnum zero.
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus} and @library{ikarus system $foreign} and reexported by
+the library @library{vicare ffi}.
+
+
+@defun errno
+@defunx errno @var{code}
+Interface to the C language level @code{errno} variable to be used with
+the foreign--functions interface (@ffi{}).
+
+When called with no values return the value of the C variable
+@code{errno} right after the last call to a C function performed by the
+current process through the @ffi{}.  When called with one argument: set
+the C variable @code{errno} of the current process to @var{code},
+appropriately handling the coding of the value.
+
+Notice that bindings exported by @library{vicare posix}, @library{vicare
+glibc} and @library{vicare linux} do @strong{not} use this mechanism;
+rather they raise an exception whenever an error happen.
+
+As special cases: when the C variable @code{errno} is set to zero,
+@func{errno} returns @false{}; when @var{code} is @false{}, the C
+variable @code{errno} is set to zero; when @var{code} is @true{}, the C
+variable @code{errno} is set to @code{EFAULT}.
+
+The mechanism is such that the following form:
+
+@example
+(let ((rv (call-foreign-function)))
+  (values rv (errno)))
+@end example
+
+@noindent
+performs a foreign--function call and evaluates to two values: the
+return value from the foreign function and the value of the C variable
+@code{errno} right after the foreign call.
+@end defun
+
+@c page
+@node iklib time
+@section Basic time and date functions
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus}.
+
+
+@defun current-time
+Return an object of disjoint type representing the current time as
+determined by @cfunc{gettimeofday}: this is the elapsed time since the
+Epoch.
+@end defun
+
+
+@defun time? @var{obj}
+Return @true{} if @var{obj} is a time object returned by
+@func{current-time}.
+@end defun
+
+
+@defun time-second @var{time}
+@defunx time-nanosecond @var{time}
+Accessors, returning exact integers, for the seconds and nanoseconds
+components of the time objects returned by @func{current-time}.
+@end defun
+
+
+@defun time-gmt-offset @var{time}
+Return the @acronym{GMT} offset in seconds of the @var{time} object
+returned by @func{current-time}, as determined ty @cfunc{gmtime_r}.
+@end defun
+
+
+@defun date-string
+Return a string representing the current date in the simple format:
+year, month, day.
+@end defun
+
+@c page
+@node iklib readline
+@section Readline interface
+
+
+The following bindings are exported by the libraries @library{vicare},
+@library{ikarus}.  An extended @api{} for @gnu{} Readline is available
+through the @library{vicare readline} library; @ref{readline} for
+details.
+
+
+@defun readline-enabled?
+Return @true{} is support for readline is enabled, return @false{}
+otherwise.  When this function returns @false{}: no other readline
+functions must be called, lest the process be aborted.
+@end defun
+
+
+@defun readline
+@defunx readline @var{prompt}
+Read a single line and return it as a Scheme string @strong{not}
+terminated by a newline character.  @var{prompt} must be @false{}, a
+bytevector or a string to be used as input prompt; when @false{} or not
+present: no prompt will be displayed.
+@end defun
+
+
+@defun make-readline-input-port
+@defunx make-readline-input-port @var{prompt-maker}
+Return a custom textual input port reading character through
+@func{readline}.
+
+@var{prompt-maker} must be a @false{} or a thunk, when not used it
+defaults to @false{}; the thunk, when evaluated, must return a string or
+bytevector representing the input prompt in @ascii{} characters; if the
+return value is @false{} or @var{prompt-maker} is not used: no prompt
+will be displayed.
+@end defun
+
+@c page
+@node iklib debug
+@section Debugging utilities
+
+
+@defun integer->machine-word @var{exact-integer}
+@defunx machine-word->integer @var{word}
+Convert between an exact integer and a machine word.  This operation
+shows at the Scheme level the internal representation of values.  Care
+must be taken when using these functions because it is very easy to
+cause undefined behaviour.
+
+@example
+;; on 32-bit platforms
+(integer->machine-word #b11100) @result{} #b111
+
+;; on 64-bit platforms
+(integer->machine-word #b111000) @result{} #b111
+
+(integer->machine-word #x3F)    @result{} #t
+(integer->machine-word #x2F)    @result{} #f
+
+(machine-word->integer #t)      @result{} #x3F
+(machine-word->integer #f)      @result{} #x2F
+@end example
+@end defun
+
+
+@defun flonum->bytevector @var{flo}
+@defunx bytevector->flonum @var{bv}
+Convert a flonum to a bytevector and vice versa.  The flonum's memory
+block is copied byte by byte in the data area of the bytevector; and
+vice versa.
+
+For @func{bytevector->flonum}: if the bytevector does not have the
+length of a flonum's memory block, the return value is @false{}.
+@end defun
+
+
+@defun bignum->bytevector @var{flo}
+@defunx bytevector->bignum @var{bv}
+Convert a bignum to a bytevector and vice versa.  The bignum's memory
+block is copied byte by byte in the data area of the bytevector; and
+vice versa.
+@end defun
+
+@c page
+@node iklib misc
+@section Miscellaneous functions
+
+
+@defun neq? @vari{obj} @varii{obj}
+Compare the arguments as @func{eq?} would do, but return a negated
+result.  Equivalent (but more efficient) to:
+
+@example
+(not (eq? @vari{obj} @varii{obj}))
+@end example
+@end defun
+
+
+@defun immediate? @var{obj}
+Return true if @var{obj} is an immediate object: an object contained in
+a single machine word.  Compound objects (like lists and vectors) are
+@strong{not} immediate.
+@end defun
+
+
+@defun void
+Return the void value.  It is the value returned by forms that do not
+return a meaningful value.
+@end defun
+
+
+@defun host-info
+Return a string being the value @gnu{} Autoconf assigned to the
+@code{target} variable.  Example: @code{i686-pc-linux-gnu}.
+@end defun
+
+
+@defun apropos @var{key}
+Given a string or symbol @var{key}, search among the internally
+installed libraries all the exported bindings having @var{key} as
+substring of their name and print a report to the standard output port.
+Useful when using the @repl{}.  Example:
+
+@example
+vicare> (apropos "-length")
+*** in library (ikarus):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+*** in library (rnrs):
+(bitwise-length bytevector-length string-length
+  vector-length)
+
+*** in library (rnrs arithmetic bitwise):
+(bitwise-length)
+
+*** in library (rnrs base):
+(string-length vector-length)
+
+*** in library (rnrs bytevectors):
+(bytevector-length)
+
+*** in library (vicare):
+(bitwise-length bytevector-length string-length
+  struct-length vector-length)
+
+vicare>
+@end example
+@end defun
+
+
+@defun getenv @var{varname}
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a string object representing the name of
+the environment variable.  If the environment variable is set: return a
+string representing its value; else return false.
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+
+The Scheme level representation of environment variables names and
+values is a string, but internally it is a bytevector; strings are
+internally converted to bytevectors using @func{string->utf8}.
+@end defun
+
+
+@defun strerror @var{errno}
+Return a string describing the @code{errno} code @var{errno}.  Makes use
+of the system function @cfunc{strerror}.  If @var{errno} is not a valid
+@code{errno} value: return a string telling it.  As special cases
+@var{errno} can be also @true{}, meaning ``unknown error'', and
+@false{}, meaning ``no error''.
+
+@glibcref{Error Messages, Error Messages}
+@end defun
+
+
+@defun warning @var{who} @var{message} @var{irritant} ...
+Similar to @func{error}, but raise a @strong{continuable} exception with
+condition components: @condition{warning}, @condition{who},
+@condition{message}, @condition{irritants}.
+@end defun
+
+
+@defun die @var{who} @var{message} @var{irritant} ...
+A deprecated alias for @func{assertion-violation}.
+@end defun
+
+
+@defun random @var{fx}
+Return a random fixnum object between zero (included) and @var{fx}
+(excluded).  @var{fx} must be a strictly positive fixnum.
+@end defun
+
+@c end of file

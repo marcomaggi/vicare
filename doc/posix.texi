@@ -1,0 +1,5453 @@
+@node posix
+@chapter The @posix{} interface
+
+
+The @posix{} functions are exported by the library @library{vicare
+posix}.  The @api{} attempts to create a one--to--one Scheme functions
+mapping towards @posix{} functions, keeping the same semantics as much
+as possible; the platform's own documentation is relevant at the Scheme
+level.  @ref{posix not} for a list of @posix{} functions not interfaced
+in this library, and reasons for not doing it.
+
+To avoid name collisions with bindings exported by @library{ikarus} and
+@library{vicare}, when importing @library{vicare posix} it is mandatory
+to assign it a prefix as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+@end example
+
+All the constants needed to use the interface are available as
+identifier syntaxes exported by the @library{vicare platform constants}
+library; if a constant value is not exported file a feature request for
+the project.  If a constant is not defined on a platform: its value is
+set to @false{}.
+
+The library @library{vicare platform features} exports one identifier
+syntax for each @code{HAVE_} symbol defined by @value{PRJNAME}
+@command{configure} script, expanding to @true{} or @false{}.
+
+@menu
+* posix conventions::           Conventions about the @posix{} @api{}.
+* posix conditions::            Condition object types.
+* posix env::                   Operating system environment variables.
+* posix pid::                   Process identifier functions.
+* posix process::               Spawning processes and the like.
+* posix status::                Process termination status.
+* posix signal::                Delivering signals to processes.
+* posix stat::                  File system inspection.
+* posix file::                  Interfacing with the file system.
+* posix link::                  Hard and symbolic links.
+* posix dir::                   File system directories.
+* posix fd::                    File descriptors.
+* posix mmap::                  Memory-mapped input/output.
+* posix socket::                Network sockets.
+* posix users::                 Users and groups.
+* posix job::                   Job control.
+* posix time::                  Time related functions.
+* posix timers::                @posix{} per--process timers.
+* posix config::                System configuration.
+* posix resources::             Resources usage.
+* posix mq::                    Message queues.
+* posix shm::                   Shared memory.
+* posix sem::                   Semaphores.
+* posix misc::                  Miscellaneous functions.
+* posix args::                  Arguments validation clauses.
+* posix not::                   @posix{} functions not interfaced.
+@end menu
+
+@c page
+@node posix conventions
+@section Conventions about the @posix{} @api{}
+
+
+The following common arguments are specified:
+
+@table @var
+@item fd
+It must be a non--negative fixnum repsesenting a platform's file
+descriptor.
+
+@item pathname
+@itemx filename
+@itemx dirname
+It must be a string or bytevector representing a file system entry.
+
+@item stat
+It must be an instance of @code{struct-stat} data structure, @ref{posix
+stat} for details.
+@end table
+
+The proper data type for file system pathnames is the bytevector; all
+the functions requiring a pathname as argument accept both a bytevector
+and a string for convenience.  String pathnames are converted to and
+from bytevectors using the functions referenced by the parameters
+@func{string->filename-func} and @func{filename->string-func}.
+
+Whenever a system call returns a file system pathname: two functions are
+provided by the @posix{} @api{}, one returning a bytevector and one
+returning a string; the one returning a string has name ending with the
+suffix @samp{/string}.
+
+Whenever a function in the @posix{} @api{} fails: it raises an exception
+with compound condition type @condition{error}, @condition{who},
+@condition{message}, @condition{irritants}; if the error is described by
+an @code{errno} value, an additional @condition{errno} component is
+present; if the function involves a file, an additional type
+@condition{i/o-filename} is present.
+
+Values of the @code{errno} C language variable are negated and encoded
+as fixnums.  Values of the @code{h_errno} C language variable are
+negated and encoded as fixnums.
+
+@c page
+@node posix conditions
+@section Condition object types
+
+
+@deftp {Condition Type} &errno
+Condition object type representing system errors described by an encoded
+@code{errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-errno-condition @var{errno}
+Build and return a new @condition{errno} condition object holding the
+given encoded @code{errno} value.
+@end defun
+
+
+@defun errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{errno}.
+@end defun
+
+
+@defun condition-errno @var{obj}
+Accessor for the encoded @code{errno} value in @var{obj}, which must be
+an instance of @condition{errno}.
+@end defun
+
+
+@deftp {Condition Type} &h_errno
+Condition object type representing system errors described by an encoded
+@code{h_errno} value; it is derived from @condition{condition}.
+@end deftp
+
+
+@defun make-h_errno-condition @var{h_errno}
+Build and return a new @condition{h_errno} condition object holding the
+given encoded @code{h_errno} value.
+@end defun
+
+
+@defun h_errno-condition? @var{obj}
+Return @true{} if @var{obj} is an instance of @condition{h_errno}.
+@end defun
+
+
+@defun condition-h_errno @var{obj}
+Accessor for the encoded @code{h_errno} value in @var{obj}, which must be
+an instance of @condition{h_errno}.
+@end defun
+
+@c page
+@node posix env
+@section Interfacing with the execution environment
+
+
+The Scheme level representation of environment variables names and
+values is a string, but internally it is a bytevector; strings are
+internally converted to bytevectors using @func{string->utf8}.
+
+
+@defun getenv @var{varname}
+Interface to the C function @cfunc{getenv}, @glibcref{Environment
+Access, getenv}.  Retrieve the value of environment variables.
+@var{variable} must reference a string object representing the name of
+the environment variable.  If the environment variable is set: return a
+string representing its value; else return false.
+
+@example
+(getenv "PATH")
+@result{} "/usr/local/bin:/usr/bin:/bin"
+@end example
+@end defun
+
+
+@defun setenv @var{variable} @var{value} @var{overwrite}
+Interface to the C function @cfunc{setenv}, @glibcref{Environment
+Access, setenv}.  Set a new value for an environment variable.
+
+@var{variable} must reference a string object representing the name of
+the environment variable; @var{value} must reference a string object
+representing the new value.  If @var{overwrite} is false and the
+environment variable already exists: the environment variable is left
+untouched; else the new value is set, either creating a new environment
+variable or replacing the old value.
+
+If successful return true, if an error occurs in @cfunc{setenv} return
+false.
+@end defun
+
+
+@defun unsetenv @var{variable}
+Interface to the C function @cfunc{unsetenv}, @glibcref{Environment
+Access, unsetenv}.  Unset an environment variable.  @var{variable} must
+reference a string object representing the name of the environment
+variable.  Return true if @var{variable} has the correct format, else
+return false; there is no way to know if a variable was actually unset.
+@end defun
+
+
+@defun environ
+Interface to the global C variable @code{environ}, @glibcref{Environment
+Access, unsetenv}.  Retrieve the full environment.  Return a list of
+strings representing the contents of the @code{environ} array; if the
+environment is empty (no environment variables set) return nil.
+@end defun
+
+
+@defun environ-table
+Internally invoke @func{environ} and convert the alist of strings into a
+hashtable; return the hashtable.  Both keys and values are strings.
+@end defun
+
+
+@defun environ->table @var{environ}
+@defunx table->environ @var{table}
+Convert between an alist in ``environ'' format and a hashtable.
+@end defun
+
+@c page
+@node posix pid
+@section Process identifier functions
+
+
+@defun getpid
+Return the process identifier as a fixnum.
+@end defun
+
+
+@defun getppid
+Return the process identifier of the parent as a fixnum.
+@end defun
+
+@c page
+@node posix process
+@section Spawning processes and the like
+
+
+@defun system @var{command}
+Interface to the C function @cfunc{system}, @glibcref{Running a Command,
+system}.  Execute a command through the system shell; @var{command} must
+be a string holding the command to execute.  If successful return the
+termination status of the executed process, @ref{posix status} for
+details; if an error occurs: an exception is raised.
+
+@example
+(system "ls -l")
+@end example
+@end defun
+
+
+@defun fork
+@defunx fork @var{parent-proc} @var{child-thunk}
+@cindex Forking processes
+@cindex Processes, forking
+Interface to the C function @cfunc{fork}, @glibcref{Creating a Process,
+fork}.
+
+When called with no arguments: create a new process by forking the
+current one; if successful return a non--negative fixnum representing
+the the return value of @cfunc{fork}, else raise an exception.
+
+When called with two arguments: create a new process by forking the
+current one; if successful the parent process applies @var{parent-proc}
+to a fixnum representing the child process pid and return its return
+value; if successful: the child process evaluates the @var{child-thunk}
+and returns its return value; if an error occurs: an exception is
+raised.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.fork
+ (lambda (child-pid)
+   (printf "in parent pid = ~a, child pid = ~s\n"
+	   (px.getpid) child-pid)
+   (flush-output-port (current-output-port)))
+ (lambda ()
+   (printf "in child, pid = ~a\n" (px.getpid))
+   (flush-output-port (current-output-port))
+   (exit)))
+
+(printf "here we are in the parent\n")
+(flush-output-port (current-output-port))
+@end example
+@end defun
+
+
+@defun execv @var{filename} @var{argv}
+@cindex Executing processes
+@cindex Processes, executing
+Interface to the C function @cfunc{execv}, @glibcref{Executing a File,
+execv}.  @var{filename} must be the pathname of an executable file;
+@var{argv} must be a list of strings representing command line
+arguments.  Execute the command; if the function returns: an error has
+occurred, an exception is raised.
+@end defun
+
+
+@defun execve @var{filename} @var{argv} @var{env}
+Interface to the C function @cfunc{execve}, @glibcref{Executing a File,
+execve}.  @var{filename} must be the pathname of an executable file;
+@var{argv} must be a list of strings representing command line
+arguments; @var{env} must be a list of strings representing environment
+variables assignments.  Execute the command; if the function returns: an
+error has occurred, an exception is raised.
+@end defun
+
+
+@defun execvp @var{filename} @var{argv}
+Interface to the C function @cfunc{execvp}, @glibcref{Executing a File,
+execvp}.  @var{filename} must be the pathname of an executable file
+reachable in the current @env{PATH}; @var{argv} must be a list of
+strings representing command line arguments.  Execute the command; if
+the function returns: an error has occurred, an exception is raised.
+@end defun
+
+
+@defun execl @var{filename} @varo{arg} @var{arg} ...
+Like @func{execv} but allows the arguments to be given expliticly.
+@end defun
+
+
+@defun execle @var{filename} @var{argv} @var{env} ...
+Like @func{execve} but allows the environment to be given expliticly.
+@end defun
+
+
+@defun execlp @var{filename} @varo{arg} @var{arg} ...
+Like @func{execvp} but allows the arguments to be given expliticly.
+@end defun
+
+
+@defun find-executable-as-bytevector @var{bv-pathname}
+@defunx find-executable-as-string @var{str-pathname}
+Given an absolute or relative file pathname or just the name of a file,
+search the file system for a matching executable file; when found return
+its absolute pathname as bytevector or Scheme string, else return
+@false{}.  If an error occurs while inspecting the file system: raise an
+exception.
+
+@var{bv-pathname} must be a bytevector, @var{str-pathname} must be a
+string.
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.find-executable-as-string "/usr/local/bin/vicare")
+@result{} "/usr/local/bin/vicare"
+
+(px.find-executable-as-string "vicare")
+@result{} "/usr/local/bin/vicare"
+
+(px.find-executable-as-string "this-cannot-exist")
+@result{} #f
+
+(px.find-executable-as-string "ls")
+@result{} "/usr/bin/ls"
+@end example
+@end defun
+
+
+@defun vicare-executable-as-bytevector
+@defunx vicare-executable-as-string
+Acquire the return value of @func{vicare-argv0} and search the file
+system for a matching executable file; when found return its absolute
+pathname as bytevector or Scheme string, else return @false{}.  If an
+error occurs while inspecting the file system: raise an exception.
+
+Upon starting a @value{PRJNAME} process:
+
+@itemize
+@item
+If the executable @command{vicare} is specified as pathname relative to
+the current working directory: these functions will return the wrong
+absolute path when the current working directory is changed before a
+call to them.
+
+@item
+If the executable @command{vicare} is specified as file name with no
+directory part: these functions may return the wrong absolute path when
+the environment variable @env{PATH} is changed before a call to them.
+@end itemize
+
+For these reasons: these functions are both invoked upon loading the
+library @library{vicare posix} and they cache the result internally.
+Beware of neither change the current working directory nor change the
+@env{PATH} before loading @library{vicare posix}.
+@end defun
+
+@c page
+@node posix status
+@section Process termination status.
+
+
+@defun waitpid @var{pid} @var{options}
+Interface to the C function @cfunc{waitpid}, @glibcref{Process
+Completion, waitpid}.  Request status informations on a process or group
+of processes knowing the identifier.  If successful return a fixnum
+representing the status; if an error occurs: an exception is raised.
+
+The fixnum @var{pid} selects the target of the request; the fixnum
+@var{options} must be the logical OR (@func{fxior}) of platform specific
+constants specifying how to wait for the availability of the status.
+@end defun
+
+
+@defun wait
+Interface to the C function @cfunc{wait}, @glibcref{Process Completion,
+wait}.  Request status informations on any process or group of
+processes.  If successful return a fixnum representing the status; if an
+error occurs: an exception is raised.
+@end defun
+
+
+The following functions accept as argument a fixnum representing the
+process termination status, for example the return value of
+@func{system} or the status acquired by @func{waitpid}.
+
+
+@defun WIFEXITED @var{status}
+Interface to the C macro @cfunc{WIFEXITED}, @glibcref{Process Completion
+Status, WIFEXITED}.  Return true if the process terminated normally with
+@cfunc{exit}.
+@end defun
+
+
+@defun WEXITSTATUS @var{status}
+Interface to the C macro @cfunc{WEXITSTATUS}, @glibcref{Process
+Completion Status, WEXITSTATUS}.  If @func{WIFEXITED} applied to
+@var{status} would return true: return the low--order @math{8} bits from
+the exit status, which is the process exit status selected with
+@cfunc{exit}.
+@end defun
+
+
+@defun WIFSIGNALED @var{status}
+Interface to the C macro @cfunc{WIFSIGNALED}, @glibcref{Process
+Completion Status, WIFSIGNALED}.  Return true if the process terminated
+because it received an interprocess signal which was not handled.
+@end defun
+
+
+@defun WTERMSIG @var{status}
+Interface to the C macro @cfunc{WTERMSIG}, @glibcref{Process Completion
+Status, WTERMSIG}.  If @func{WIFSIGNALED} applied to @var{status} would
+return true: return the number of the interprocess signal that
+terminated the process.
+@end defun
+
+
+@defun WCOREDUMP @var{status}
+Interface to the C macro @cfunc{WCOREDUMP}, @glibcref{Process Completion
+Status, WCOREDUMP}.  Return true if the process terminated and produced
+a core dump.
+@end defun
+
+
+@defun WIFSTOPPED @var{status}
+Interface to the C macro @cfunc{WIFSTOPPED}, @glibcref{Process
+Completion Status, WIFSTOPPED}.  Return true if the process is stopped.
+@end defun
+
+
+@defun WSTOPSIG @var{status}
+Interface to the C macro @cfunc{WSTOPSIG}, @glibcref{Process Completion
+Status, WSTOPSIG}.  If @func{WIFSTOPPED} applied to @var{status} would
+return true: return the number of the interprocess signal that caused
+the process to stop.
+@end defun
+
+@c page
+@node posix signal
+@section Delivering signals to processes
+
+
+@defun raise @var{signum}
+Interface to the C function @cfunc{raise}, @glibcref{Signaling Yourself,
+raise}.  Send the selected signal to the calling process.  If successful
+return zero, else raise an exception.
+@end defun
+
+
+@defun kill @var{pid} @var{signum}
+Interface to the C function @cfunc{kill}, @glibcref{Signaling Another
+Process, kill}.  Send the selected signal to selected process.  If
+successful return zero, else raise an exception.
+@end defun
+
+
+@defun pause
+Interface to the C function @cfunc{pause}, @glibcref{Using Pause,
+pause}.  Suspend the process until a signal is received; return the void
+object.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Block/unblock signals handling
+
+
+@cindex @bub{} interprocess signals @api{}
+@cindex @bub{} signals @api{}
+@cindex Block/unblock interprocess signals @api{}
+@cindex Interprocess signals, block/unblock @api{}
+@cindex Signals, block/unblock @api{}
+
+
+The block/unblock (@bub{}) @api{} is a simplified interface to detect
+the arrival of interprocess signals; if it does not suit the
+application's model, we should just ignore it.  It is impossible to use
+the @bub{} @api{} along with other interprocess signal @api{}s.  Here is
+a meaningless usage example:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(px.signal-bub-init)
+
+(px.raise SIGUSR1)
+(px.signal-bub-acquire)
+
+(px.signal-bub-delivered? SIGUSR1) @result{} #t
+(px.signal-bub-delivered? SIGUSR2) @result{} #f
+
+(signal-bub-final)
+@end example
+
+
+@defun signal-bub-init
+Block all the signals and initialise the @bub{} interface.
+@end defun
+
+
+@defun signal-bub-final
+Set all the signal handlers to @code{SIG_IGN}, then unblock all the
+signals and finalise the @bub{} interface.
+@end defun
+
+
+@defun signal-bub-acquire
+Unblock all the signals, then block them again.  This should allow all
+the pending signals to be delivered to the process.
+@end defun
+
+
+@defun signal-bub-delivered? @var{signum}
+Return @true{} if the signal @var{signum} has been delivered at least
+once @strong{before} the last call to @func{signal-bub-acquire}.
+Calling this function with @var{signum} clears the internal flag for
+this signal, so calling it again without acquiring new signals always
+returns @false{}.
+
+This function interferes with @func{signal-bub-all-delivered}.
+@end defun
+
+
+@defun signal-bub-all-delivered
+Return a list of fixnums representing the signals delivered before the
+last call to @func{signal-bub-acquire}.  Calling this function clears
+the internal flags for all the signals, so calling it again without
+acquiring new signals always returns the empty list.
+
+This function interferes with @func{signal-bub-delivered?}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Synchronously waiting for signals
+
+
+@deftp {Struct Type} struct-siginfo_t
+Scheme representation of the C language type @code{siginfo_t} which is a
+structure typedef.  It has the following fields (some of them are not
+present on all the architectures):
+
+@table @code
+@item si_signo
+Signal number.
+
+@item si_errno
+An @code{errno} value.
+
+@item si_code
+Signal code.
+
+@item si_trapno
+Trap number that caused hardware--generated signal (unused on most
+architectures).
+
+@item si_pid
+Sending process ID.
+
+@item si_uid
+Real user ID of sending process.
+
+@item si_status
+Exit value or signal.
+
+@item si_utime
+User time consumed.
+
+@item si_stime
+System time consumed.
+
+@item si_value.sival_int
+@itemx si_value.sival_ptr
+Signal value.  The C language type @code{sigval_t} is a union with
+fields @code{int sival_int} and @code{void *sival_ptr}.
+
+@item si_int
+POSIX.1b signal.
+
+@item si_ptr
+POSIX.1b signal.
+
+@item si_overrun
+Timer overrun count; POSIX.1b timers.
+
+@item si_timerid
+Timer ID; POSIX.1b timers.
+
+@item si_addr
+Memory location which caused fault.
+
+@item si_band
+Band event.
+
+@item si_fd
+File descriptor.
+
+@item si_addr_lsb
+Least significant bit of address.
+@end table
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux: for details on the @code{struct
+siginfo_t} type see the manual page @code{sigaction(2)}.
+@end quotation
+@end deftp
+
+
+@defun make-struct-siginfo_t
+@defunx make-struct-siginfo_t @var{signo} @var{errno} @var{code} @var{trapno} @var{pid} @var{uid} @var{status} @var{utime} @var{stime} @var{value-int} @var{value-ptr} @var{int} @var{ptr} @var{overrun} @var{timerid} @var{addr} @var{band} @var{fd} @var{addr_lsb}
+Build and return a new instance of @code{struct-siginfo_t}.  If no
+arguments are given: all the fields are initialised to @false{}.
+@end defun
+
+
+@defun struct-siginfo_t? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-siginfo_t}.
+@end defun
+
+
+@defun struct-siginfo_t-si_signo @var{info}
+@defunx struct-siginfo_t-si_errno @var{info}
+@defunx struct-siginfo_t-si_code @var{info}
+@defunx struct-siginfo_t-si_trapno @var{info}
+@defunx struct-siginfo_t-si_pid @var{info}
+@defunx struct-siginfo_t-si_uid @var{info}
+@defunx struct-siginfo_t-si_status @var{info}
+@defunx struct-siginfo_t-si_utime @var{info}
+@defunx struct-siginfo_t-si_stime @var{info}
+@defunx struct-siginfo_t-si_value.sival_int @var{info}
+@defunx struct-siginfo_t-si_value.sival_ptr @var{info}
+@defunx struct-siginfo_t-si_int @var{info}
+@defunx struct-siginfo_t-si_ptr @var{info}
+@defunx struct-siginfo_t-si_overrun @var{info}
+@defunx struct-siginfo_t-si_timerid @var{info}
+@defunx struct-siginfo_t-si_addr @var{info}
+@defunx struct-siginfo_t-si_band @var{info}
+@defunx struct-siginfo_t-si_fd @var{info}
+@defunx struct-siginfo_t-si_addr_lsb @var{info}
+Accessors for the fields of @code{struct-siginfo_t}.
+@end defun
+
+
+@defun set-struct-siginfo_t-si_signo! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_errno! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_code! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_trapno! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_pid! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_uid! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_status! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_utime! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_stime! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_value.sival_int! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_value.sival_ptr! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_int! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_ptr! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_overrun! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_timerid! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_addr! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_band! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_fd! @var{info} @var{value}
+@defunx set-struct-siginfo_t-si_addr_lsb! @var{info} @var{value}
+Mutators for the fields of @code{struct-siginfo_t}.
+@end defun
+
+
+@defun sigwaitinfo @var{signo}
+@defunx sigwaitinfo @var{signo} @var{siginfo}
+Interface to the C function @cfunc{sigwaitinfo}, see the manual page
+@code{sigwaitinfo(2)}.  Synchronously wait for a queued signal; if
+successful return two values: a fixnum representing a signal number and
+@var{siginfo}; else raise an exception.
+
+@var{signo} must be a fixnum representing an interprocess signal code.
+
+The optional @var{siginfo} must be an instance of
+@code{struct-siginfo_t}, which is filled with the informations attached
+to the signal; when not given a new instance is allocated internally.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(px.signal-bub-init)
+(px.raise SIGALRM)
+(let-values
+    (((signo info) (px.sigwaitinfo SIGALRM)))
+  signo @result{} SIGALRM
+  (px.struct-siginfo_t-si_signo info)) @result{} SIGALRM
+@end example
+@end defun
+
+
+@defun sigtimedwait @var{signo} @var{timeout}
+@defunx sigtimedwait @var{signo} @var{siginfo} @var{timeout}
+Interface to the C function @cfunc{sigtimedwait}, see the manual page
+@code{sigtimedwait(2)}.  Synchronously wait for a queued signal, with a
+timeout; if successful return two values: a fixnum representing a signal
+number and @var{siginfo}; else raise an exception.
+
+@var{signo} must be a fixnum representing an interprocess signal code.
+
+@var{siginfo} must be an instance of @code{struct-siginfo_t}, which is
+filled with the informations attached to the signal; when not given a
+new instance is allocated internally.
+
+@var{timeout} must be an instance of @code{struct-timespec}: it
+represents the maximum interval of time to wait for the signal;
+@ref{posix time timespec} for details.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(px.signal-bub-init)
+(px.raise SIGUSR1)
+(let-values
+    (((signo info)
+      (px.sigtimedwait SIGUSR1
+                       (px.make-struct-timespec 1 0))))
+  signo @result{} SIGUSR1
+  (px.struct-siginfo_t-si_signo info)) @result{} SIGUSR1
+@end example
+@end defun
+
+
+
+@c page
+@node posix stat
+@section File system inspection
+
+
+@deftp {Data Structure} struct-stat
+Data structure type representing at the Scheme level the C structure
+@code{struct stat}, @glibcref{Attribute Meanings, stat}.
+@end deftp
+
+
+@defun make-struct-stat @var{mode} @var{ino} @var{dev} @var{nlink} @var{uid} @var{gid} @var{size} @var{atime} @var{atime_usec} @var{mtime} @var{mtime_usec} @var{ctime} @var{ctime_usec} @var{blocks} @var{blksize}
+Build and return a new @code{struct-stat} instance.
+@end defun
+
+
+
+@defun struct-stat? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-stat}.
+@end defun
+
+
+@defun struct-stat-st_mode @var{stat}
+@defunx struct-stat-st_ino @var{stat}
+@defunx struct-stat-st_dev @var{stat}
+@defunx struct-stat-st_nlink @var{stat}
+@defunx struct-stat-st_uid @var{stat}
+@defunx struct-stat-st_gid @var{stat}
+@defunx struct-stat-st_size @var{stat}
+@defunx struct-stat-st_atime @var{stat}
+@defunx struct-stat-st_atime_usec @var{stat}
+@defunx struct-stat-st_mtime @var{stat}
+@defunx struct-stat-st_mtime_usec @var{stat}
+@defunx struct-stat-st_ctime @var{stat}
+@defunx struct-stat-st_ctime_usec @var{stat}
+@defunx struct-stat-st_blocks @var{stat}
+@defunx struct-stat-st_blksize @var{stat}
+Accessors for the field of @code{struct-stat} instances.
+@end defun
+
+
+@defun stat @var{pathname}
+@defunx lstat @var{pathname}
+Interfaces to the C functions @cfunc{stat} and @cfunc{lstat},
+@glibcref{Reading Attributes, stat}.  Inspect the file system entry
+selected by @var{pathname} and return an instance of @code{struct-stat}.
+If an error occurs: an exception is raised.
+@end defun
+
+
+@defun fstat @var{fd}
+Interface to the C function @cfunc{fstat}, @glibcref{Reading Attributes,
+fstat}.  Inspect the file system entry associated to the file descriptor
+@var{fd}, which must be a fixnum, and return an instance of
+@code{struct-stat}.  If an error occurs: an exception is raised.
+@end defun
+
+
+@defun file-is-directory? @var{pathname}
+@defunx file-is-char-device? @var{pathname}
+@defunx file-is-block-device? @var{pathname}
+@defunx file-is-regular-file? @var{pathname}
+@defunx file-is-symbolic-link? @var{pathname}
+@defunx file-is-socket? @var{pathname}
+@defunx file-is-fifo? @var{pathname}
+@defunx file-is-message-queue? @var{pathname}
+@defunx file-is-semaphore? @var{pathname}
+@defunx file-is-shared-memory? @var{pathname}
+@defunx file-is-directory? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-char-device? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-block-device? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-regular-file? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-symbolic-link? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-socket? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-fifo? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-message-queue? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-semaphore? @var{pathname} @var{follow-symlinks?}
+@defunx file-is-shared-memory? @var{pathname} @var{follow-symlinks?}
+Return @true{} or @false{} if the file system entry selected by
+@var{pathname} is of the specified type; if an error occurs: an
+exception is raised.  When @var{follow-symlinks?} is true: @cfunc{stat}
+is used to inspect the entry, else @cfunc{lstat} is used.
+@var{follow-symlinks?} defaults to @false{}.
+@end defun
+
+
+@defun S_ISDIR @var{st_mode}
+@defunx S_ISCHR @var{st_mode}
+@defunx S_ISBLK @var{st_mode}
+@defunx S_ISREG @var{st_mode}
+@defunx S_ISLNK @var{st_mode}
+@defunx S_ISSOCK @var{st_mode}
+@defunx S_ISFIFO @var{st_mode}
+Return @true{} or @false{} if the argument is associated to a file
+system entry of the specified type.  @var{st_mode} must be the value of
+the @code{st_mode} field of a @code{struct-stat} instance.
+@end defun
+
+
+@defun access @var{pathname} @var{how}
+Interface to the C function @cfunc{access}, @glibcref{Testing File
+Access, access}.  Test the access mode selected by @var{how}, which must
+be a fixnum, for the file system entry selected by @var{pathname}.
+Return @true{} or @false{} if the access is possible or not; if an error
+occurs: an exception is raised.
+@end defun
+
+
+@defun file-readable? @var{pathname}
+@defunx file-writable? @var{pathname}
+@defunx file-executable? @var{pathname}
+Return @true{} or @false{} if the file system entry selected by
+@var{pathname} is accessible in the specified mode.  These functions are
+equivalent but slower, respectively, to the following calls:
+
+@example
+(access pathname R_OK)
+(access pathname W_OK)
+(access pathname X_OK)
+@end example
+@end defun
+
+
+@defun file-size @var{filename}
+Determine the size of the file selected by @var{filename} relying on a
+call to @cfunc{stat}.  If successful: return an exact integer
+representing the size, else raise an exception.
+@end defun
+
+
+@defun file-atime @var{pathname}
+@defunx file-mtime @var{pathname}
+@defunx file-ctime @var{pathname}
+Return an exact integer representing the access, modification and
+creation times for @var{pathname}.  If an error occurs: raise an
+exception.
+@end defun
+
+@c page
+@node posix file
+@section Interfacing with the file system
+
+
+@defun chown @var{pathname} @var{owner} @var{group}
+Interface to the C function @cfunc{chown}, @glibcref{File Owner, chown}.
+Changes the owner and group of the file system entry selected by
+@var{pathname}.  @var{owner} and @var{group} must be fixnums.  If
+successful return zero, else raise an exception.
+@end defun
+
+
+@defun fchown @var{fd} @var{owner} @var{group}
+Interface to the C function @cfunc{fchown}, @glibcref{File Owner,
+fchown}.  Changes the owner and group of the file system entry selected
+by @var{fd}, which must be a fixnum representing a platform file
+descriptor.  @var{owner} and @var{group} must be fixnums.  If successful
+return zero, else raise an exception.
+@end defun
+
+
+@defun chmod @var{pathname} @var{mode}
+Interface to the C function @cfunc{chmod}, @glibcref{Setting
+Permissions, chmod}.  Change to @var{mode}, which must be a fixnum, the
+access permissions for the file system entry selected by @var{pathname}.
+If successful return zero, else raise an exception.
+@end defun
+
+
+@defun fchmod @var{fd} @var{mode}
+Interface to the C function @cfunc{fchmod}, @glibcref{Setting
+Permissions, fchmod}.  Change to @var{mode}, which must be a fixnum, the
+access permissions for the file system entry associated to @var{fd},
+which must be a fixnum representing a platform file descriptor.  If
+successful return zero, else raise an exception.
+@end defun
+
+
+@defun umask @var{mask}
+Interface to the C function @cfunc{umask}, @glibcref{Setting
+Permissions, umask}.  Set the current file creation mask to @var{mask},
+which must be a fixnum, and return the previous mask as a fixnum.
+@end defun
+
+
+@defun getumask
+Interface to the C function @cfunc{getumask}, @glibcref{Setting
+Permissions, getumask}.  Return the current file creation mask as a
+fixnum.
+@end defun
+
+
+@defun utime @var{pathname} @var{atime_sec} @var{mtime_sec}
+Interface to the C function @cfunc{utime}, @glibcref{File Times, utime}.
+Set the access and modification times of the file system entry selected
+by @var{pathname} to the specified counts of seconds; both
+@var{atime_sec} and @var{mtime_sec} must be fixnums.  If successful
+return zero, else raise an exception.
+@end defun
+
+
+@defun utimes @var{pathname} @var{atime_sec} @var{atime_usec} @var{mtime_sec} @var{mtime_usec}
+@defunx lutimes @var{pathname} @var{atime_sec} @var{atime_usec} @var{mtime_sec} @var{mtime_usec}
+Interface to the C functions @cfunc{utimes} and @cfunc{lutimes},
+@glibcref{File Times, utimes}.  Set the access and modification times of
+the file system entry selected by @var{pathname} to the specified counts
+of seconds and microseconds; all the numeric arguments must be fixnums.
+If successful return zero, else raise an exception.
+@end defun
+
+
+@defun futimes @var{fd} @var{atime_sec} @var{atime_usec} @var{mtime_sec} @var{mtime_usec}
+Interface to the C function @cfunc{futimes}, @glibcref{File Times,
+futimes}.  Set the access and modification times of the file system
+entry associated to @var{fd} to the specified counts of seconds and
+microseconds; all the numeric arguments must be fixnums.  If successful
+return zero, else raise an exception.
+@end defun
+
+@c page
+@node posix link
+@section Hard and symbolic links
+
+
+@defun link @var{old_pathname} @var{new_pathname}
+Interface to the C function @cfunc{link}, @glibcref{Hard Links, link}.
+Create a hard link @var{new_pathname} to the source file system entry
+@var{old_pathname}.  If successful return zero, else raise an exception.
+@end defun
+
+
+@defun symlink @var{file_pathname} @var{link_pathname}
+Interface to the C function @cfunc{symlink}, @glibcref{Symbolic Links,
+symlink}.  Create a symbolic link @var{link_pathname} to the source file
+system entry @var{file_pathname}.  If successful return zero, else raise
+an exception.
+@end defun
+
+
+@defun readlink @var{link_pathname}
+@defunx readlink/string @var{link_pathname}
+Interface to the C function @cfunc{readlink}, @glibcref{Symbolic Links,
+readlink}.  If @var{pathname} references a symbolic link: follow it once
+and return the referenced pathname; if an error occurs raise an
+exception.  @func{readlink} returns a bytevector; @func{readlink/string}
+returns a string.
+@end defun
+
+
+@defun realpath @var{pathname}
+@defunx realpath/string @var{pathname}
+Interface to the C function @cfunc{realpath}, @glibcref{Symbolic Links,
+realpath}.  If @var{pathname} references a symbolic link: follow it and
+return the real canonicalised pathname; if an error occurs: an exception
+is raised.  @func{realpath} returns a bytevector; @func{realpath/string}
+returns a string.
+@end defun
+
+
+@defun unlink @var{pathname}
+Interface to the C function @cfunc{unlink}, @glibcref{Deleting Files,
+unlink}.  Delete the file system entry referenced by @var{pathname},
+which must reference a file.  If successful return unspecified values,
+else raise an exception.
+
+This function is the same of @func{delete-file} defined by @rnrs{6}.
+@end defun
+
+
+@defun remove @var{pathname}
+Interface to the C function @cfunc{remove}, @glibcref{Deleting Files,
+remove}.  Delete the file system entry referenced by @var{pathname},
+which can reference a file or directory.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun rename @var{old-pathname} @var{new-pathname}
+Interface to the C function @cfunc{rename}, @glibcref{Renaming Files,
+rename}.  Rename the file system entry @var{old-pathname} to
+@var{new-pathname}.  If successful return unspecified values, else
+return an encoded @code{errno} value.
+@end defun
+
+@c page
+@node posix dir
+@section File system directories
+
+
+@defun mkdir @var{pathname} @var{mode}
+@cindex Creating directories
+@cindex Making directories
+@cindex Directories, creating
+@cindex Directories, making
+Interface to the C function @cfunc{mkdir}, @glibcref{Creating
+Directories, mkdir}.  Create a new directory file system entry with name
+@var{pathname}; @var{mode} must be a fixnum specifying access
+permissions.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun mkdir/parents @var{pathname} @var{mode}
+Create a new directory file system entry with name @var{pathname} and
+all its parents if they do not exist; @var{mode} must be a fixnum
+specifying access permissions for all the components.  If successful
+return unspecified values, else raise an exception.
+@end defun
+
+
+@defun rmdir @var{pathname}
+@cindex Removing directories
+@cindex Directories, removing
+Interface to the C function @cfunc{rmdir}, @glibcref{Creating
+Directories, rmdir}.  Remove the directory file system entry selected by
+@var{pathname}.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun getcwd
+@defunx getcwd/string
+@cindex Current working directory
+@cindex Process working directory
+@cindex Directories, current working
+Interface to the C function @cfunc{getcwd}, @glibcref{Working Directory,
+getcwd}.  Acquire the pathname of the current working directory.  If
+successful @func{getcwd} returns a bytevector holding the pathname,
+@func{getcwd/string} returns a string holding the pathname; else an
+exception is raised.
+@end defun
+
+
+@defun chdir @var{pathname}
+@cindex Changing current directory
+@cindex Directories, changing current
+Interface to the C function @cfunc{chdir}, @glibcref{Working Directory,
+chdir}.  Change the current working directory to the file system entry
+selected by @var{pathname}.  If successful return unspecified values,
+else raise an exception.
+@end defun
+
+
+@defun fchdir @var{fd}
+Interface to the C function @cfunc{fchdir}, @glibcref{Working Directory,
+fchdir}.  Change the current working directory to the file system entry
+associated to @var{fd}, which must be a fixnum representing a file
+descriptor.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@deftp {Structure Type} directory-stream
+Opaque data structure type used in the inspection of file system
+directory entries.  Instances of this type can be destroyed by
+@func{closedir}, but they are also automatically and correctly destroyed
+by the garbage collector.  It has the following fields:
+
+@table @code
+@item pathname
+False or a string representing the pathname.
+
+@item pointer
+A pointer object referencing the directory.
+
+@item fd
+False or a fixnum representing the file descriptor associated to the
+directory.
+
+@item closed?
+A boolean, true if this stream has already been closed.
+@end table
+@end deftp
+
+
+@defun make-directory-stream @var{pathname} @var{pointer} @var{fd} @var{closed?}
+Constructor for @code{directory-stream}.
+@end defun
+
+
+@defun directory-stream? @var{obj}
+Return true if @var{obj} is an instance of @code{directory-stream}.
+@end defun
+
+
+@defun directory-stream-pathname @var{stream}
+@defunx directory-stream-pointer @var{stream}
+@defunx directory-stream-fd @var{stream}
+@defunx directory-stream-closed? @var{stream}
+Accessors for the fields of @code{directory-stream}.
+@end defun
+
+
+@defun opendir @var{pathname}
+@cindex Opening a directory stream
+@cindex Directories, opening a stream
+Interface to the C function @cfunc{opendir}, @glibcref{Opening a
+Directory, opendir}.  Open a directory stream for the inspection of the
+file system entry @var{pathname}.  If successful return an instance of
+@code{directory-stream}, else raise an exception.
+@end defun
+
+
+@defun fdopendir @var{fd}
+Interface to the C function @cfunc{fdopendir}, @glibcref{Opening a
+Directory, fdopendir}.  Open a directory stream for the inspection of
+the file system entry associated to @var{fd}, which must be a fixnum
+representing a file descriptor.  If successful return an instance of
+@code{directory-stream}, else raise an exception.
+@end defun
+
+
+@defun readdir @var{stream}
+@defunx readdir/string @var{stream}
+@cindex Reading a directory stream
+@cindex Directories, reading a stream
+Interface to the C function @cfunc{readdir}, @glibcref{Reading/Closing
+Directory, readdir}.  Acquire the next entry from a directory stream
+referenced by @var{stream}, which must be an instance of
+@code{directory-stream}.  If successful and an entry is available:
+@func{readdir} returns a pathname as a bytevector, @func{readdir/string}
+returns a pathname as a string; if successful and no more entries are
+available: return @false{}; else raise an exception.
+
+When no more entries are available or an error occurs: the directory
+stream is closed.
+@end defun
+
+
+@defun closedir @var{stream}
+@cindex Closing a directory stream
+@cindex Directories, closing a stream
+Interface to the C function @cfunc{closedir}, @glibcref{Reading/Closing
+Directory, closedir}.  Close the directory stream referenced by
+@var{stream}, which must be an instance of @code{directory-stream}.  If
+successful return unspecified values, else raise an exception.
+
+This function has no effect if @var{stream} has been already closed.
+@end defun
+
+
+@defun rewinddir @var{stream}
+@cindex Rewinding a directory stream
+@cindex Directories, rewinding a stream
+Interface to the C function @cfunc{rewinddir}, @glibcref{Random Access
+Directory, rewinddir}.  Rewind to the beginning the directory stream
+referenced by @var{stream}, which must be an instance of
+@code{directory-stream}.  Return unspecified values.
+@end defun
+
+
+@defun telldir @var{stream}
+@cindex Inspecting a directory stream
+@cindex Directories, inspecting a stream
+Interface to the C function @cfunc{telldir}, @glibcref{Random Access
+Directory, telldir}.  Return an exact integer representing the current
+position in the directory stream referenced by @var{stream}, which must
+be an instance of @code{directory-stream}.
+@end defun
+
+
+@defun seekdir @var{pointer} @var{pos}
+@cindex Seeking a directory stream
+@cindex Directories, seeking a stream
+Interface to the C function @cfunc{seekdir}, @glibcref{Random Access
+Directory, seekdir}.  Set to @var{pos} the position of the directory
+stream referenced by @var{stream}, which must be an instance of
+@code{directory-stream}; @var{pos} must be the return value of a
+previous call to @func{telldir}.  Return unspecified values.
+@end defun
+
+@c page
+@node posix fd
+@section File descriptors
+
+
+@menu
+* posix fd open::               Opening and closing.
+* posix fd read::               Reading from file descriptors.
+* posix fd write::              Writing to file descriptors.
+* posix fd seek::               Moving the current position.
+* posix fd scatter::            Scatter--gather operations.
+* posix fd select::             Waiting for events with @func{select}.
+* posix fd poll::               Polling for events.
+* posix fd device::             Special device operations.
+* posix fd dup::                Duplicating file descriptors.
+* posix fd pipe::               File descriptor pipes.
+* posix fd fifo::               File descriptor fifos.
+* posix fd trunc::              Truncating files.
+@end menu
+
+@c page
+@node posix fd open
+@subsection Opening and closing
+
+
+@defun open @var{pathname} @var{flags} @var{mode}
+Interface to the C function @cfunc{open}, @glibcref{Opening and Closing
+Files, open}.  Open a file descriptor for the file system entry
+@var{pathname}; @var{flags} and @var{mode} must be fixnums.  If
+successful return a fixnum representing the file descriptor, else raise
+an exception.
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(define fd
+  (px.open "name.ext"
+           (fxior O_CREAT O_EXCL O_RDWR)
+           (fxior S_IRUSR S_IWUSR)))
+@end example
+@end defun
+
+
+@defun close @var{fd}
+Interface to the C function @cfunc{close}, @glibcref{Opening and Closing
+Files, close}.  Close a file descriptor represented by @var{fd}, which
+must be a fixnum.  If successful return unspecified values, else raise
+an exception.
+@end defun
+
+@c page
+@node posix fd read
+@subsection Reading from file descriptors
+
+
+@defun read @var{fd} @var{buffer}
+@defunx read @var{fd} @var{buffer} @var{size}
+Interface to the C function @cfunc{read}, @glibcref{I/O Primitives,
+read}.  Read bytes from the file descriptor @var{fd} and store them in
+the bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false or not given, read a number of bytes equal
+to the length of @var{buffer}.  If successful return a non--negative
+fixnum representing the number of bytes read, else raise an exception.
+@end defun
+
+
+@defun pread @var{fd} @var{buffer} @var{size} @var{off}
+Interface to the C function @cfunc{pread}, @glibcref{I/O Primitives,
+pread}.  Like @func{read}, but start reading at offset @var{off} from
+the start of the file; @var{off} must be a non--negative exact integer.
+@end defun
+
+@c page
+@node posix fd write
+@subsection Writing to file descriptors
+
+
+@defun write @var{fd} @var{buffer}
+@defunx write @var{fd} @var{buffer} @var{size}
+Interface to the C function @cfunc{write}, @glibcref{I/O Primitives,
+write}.  Write bytes to the file descriptor @var{fd} from the bytevector
+@var{buffer}; if @var{size} is a fixnum, read @var{size} bytes; if
+@var{size} is false or not given, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of written bytes, else raise an exception.
+@end defun
+
+
+@defun pwrite @var{fd} @var{buffer} @var{size} @var{off}
+Interface to the C function @cfunc{pwrite}, @glibcref{I/O Primitives,
+pwrite}.  Like @func{write}, but start writing at offset @var{off} from
+the start of the file; @var{off} must be a non--negative exact integer.
+@end defun
+
+@c page
+@node posix fd seek
+@subsection Moving the current position
+
+
+@defun lseek @var{fd} @var{off} @var{whence}
+Interface to the C function @cfunc{lseek}, @glibcref{File Position
+Primitive, lseek}.  Change the file position of the file descriptor
+@var{fd} to @var{off} from @var{whence}; @var{whence} must a fixnum,
+@var{off} must be an exact integer.  If successful return a
+non--negative exact integer representing the number of bytes from the
+beginning of the file, else raise an exception.
+@end defun
+
+@c page
+@node posix fd scatter
+@subsection Scatter--gather operations
+
+
+@defun readv @var{fd} @var{buffers}
+Interface to the C function @cfunc{readv}, @glibcref{Scatter-Gather,
+readv}.  Read bytes from the file descriptor @var{fd} and store them
+into the list of bytevectors referenced by @var{buffers}.  If successful
+return a non--negative exact integer representing the number of bytes
+actually read, else raise an exception.
+@end defun
+
+
+@defun writev @var{fd} @var{buffers}
+Interface to the C function @cfunc{writev}, @glibcref{Scatter-Gather,
+writev}.  Write bytes to the file descriptor @var{fd} from the list of
+bytevectors referenced by @var{buffers}.  If successful return a
+non--negative exact integer representing the number of bytes actually
+written, else raise an exception.
+@end defun
+
+@c page
+@node posix fd select
+@subsection Waiting for events with @func{select}
+
+
+@menu
+* posix fd select fdset::       Allocating and accessing
+                                file descriptor sets.
+* posix fd select select::      Selecting events to wait for.
+* posix fd select special::     Selecting special events to wait for.
+@end menu
+
+@c page
+@node posix fd select fdset
+@subsubsection Allocating and accessing file descriptor sets
+
+
+At low level, the @posix{} function @cfunc{select} keeps track of file
+descriptors organised in sets, represented by instances of the C
+language type @code{fd_set}; we can think of such data structures as
+arrays of integers, holding @code{FD_SETSIZE} bits, in which each bit
+represents a file descriptor: @code{1} for inclusion, @code{0} for
+exclusion.
+
+
+@defun sizeof-fd-set
+@defunx sizeof-fd-set @var{count}
+Return an exact integer representing the number of bytes needed to hold
+@var{count} instances of the C language type @code{fd_set}.  The
+optional @var{count} must be a positive fixnum; when not given: it
+defaults to @code{1}.
+@end defun
+
+
+@defun make-fd-set-bytevector
+@defunx make-fd-set-bytevector @var{count}
+Build and return a new bytevector capable of holding @var{count}
+instances of the C language type @code{fd_set} defined in
+@file{sys/types.h}; every allocated @code{fd_set} is initialised with
+@cfunc{FD_ZERO}.  The optional @var{count} must be a positive fixnum;
+when not given: allocate enough room for a single instance of
+@code{fd_set}.
+@end defun
+
+
+@defun make-fd-set-pointer
+@defunx make-fd-set-pointer @var{count}
+Use @cfunc{malloc} to allocate a memory block capable of holding
+@var{count} instances of the C language type @code{fd_set} defined in
+@file{sys/types.h}; every allocated @code{fd_set} is initialised with
+@cfunc{FD_ZERO}.
+
+The optional @var{count} must be a positive fixnum; when not given:
+allocate enough room for a single instance of @code{fd_set}.
+
+If successful: return a pointer object referencing the memory block;
+else return @false{}.
+@end defun
+
+
+@defun make-fd-set-memory-block
+@defunx make-fd-set-memory-block @var{count}
+Use @cfunc{malloc} to allocate a memory block capable of holding
+@var{count} instances of the C language type @code{fd_set} defined in
+@file{sys/types.h}; every allocated @code{fd_set} is initialised with
+@cfunc{FD_ZERO}.
+
+The optional @var{count} must be a positive fixnum; when not given:
+allocate enough room for a single instance of @code{fd_set}.
+
+If successful: return an instance of @code{memory-block} referencing the
+memory block; else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun FD_ZERO @var{fdsets}
+@defunx FD_ZERO @var{fdsets} @var{idx}
+Reset to empty the given file descriptor set; return unspecified values;
+@glibcref{Waiting for I/O, FD_ZERO}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+@var{idx} must be a non--negative fixnum representing the index of the
+selected @code{fd_set} in @var{fdsets}; when not given: it defaults to
+zero.
+@end defun
+
+
+@defun FD_SET @var{fd} @var{fdsets}
+@defunx FD_SET @var{fd} @var{fdsets} @var{idx}
+Add the file descriptor @var{fd} to the given set; return unspecified
+values; @glibcref{Waiting for I/O, FD_SET}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+
+@defun FD_CLR @var{fd} @var{fdsets}
+@defunx FD_CLR @var{fd} @var{fdsets} @var{idx}
+Remove the file descriptor @var{fd} from the given set; return
+unspecified values; @glibcref{Waiting for I/O, FD_CLR}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+
+@defun FD_ISSET @var{fd} @var{fdsets}
+@defunx FD_ISSET @var{fd} @var{fdsets} @var{idx}
+Return a boolean specifying if the file descriptor @var{fd} is contained
+in the given set; return unspecified values; @glibcref{Waiting for I/O,
+FD_ISSET}.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+
+@defun fd-set-inspection @var{fdsets}
+@defunx fd-set-inspection @var{fdsets} @var{idx}
+Return a list of fixnums representing the file descriptors set in the
+selected @code{fd_set} structure.  This function is for debugging
+purposes.
+
+@var{fdsets} must be a bytevector, pointer object or @code{memory-block}
+instance holding or referencing one or more instances of the C language
+type @code{fd_set}.
+
+The optional @var{idx} must be a non--negative fixnum representing the
+index of the selected @code{fd_set} in @var{fdsets}; when not given: it
+defaults to zero.
+@end defun
+
+@c page
+@node posix fd select select
+@subsubsection Selecting events to wait for
+
+
+@defun select @var{nfds} @var{read-fds} @var{write-fds} @var{except-fds} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to the maximum file descriptor value in the given lists; it is
+the maximum file descriptor number in the sets to be checked for events,
+plus one.  @var{read-fds}, @var{write-fds} and @var{except-fds} must be
+nil or lists of file descriptors to be checked for events.  @var{sec}
+and @var{usec} must be fixnums representing timeout seconds and
+microseconds.
+
+If the timeout expires before any event arrives: return @math{3} values
+all being nil.  If an error occurs: raise an exception.  Else return
+@math{3} values being lists of file descriptors, respectively, ready for
+reading, writing or an exceptional condition.
+@end defun
+
+
+@defun select-fd @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on the single file
+descriptor @var{fd}.  @var{sec} and @var{usec} must be fixnums
+representing timeout seconds and microseconds.
+
+If the timeout expires before any event arrives: return @math{3} values
+all being false.  If an error occurs: raise an exception.  Else return
+@math{3} values being false or @var{fd}, respectively, if @var{fd} is
+ready for reading, writing or an exceptional condition.
+@end defun
+
+
+@defun select-from-sets @var{nfds} @var{read-fds} @var{write-fds} @var{except-fds} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to @code{FD_SETSIZE}; it must be the maximum file descriptor
+number in the sets to be checked for events, plus one.
+
+@var{read-fds}, @var{write-fds} and @var{except-fds} must be @false{} or
+bytevectors, pointer objects or instances of @code{memory-block} holding
+an instance of the C language type @code{fd_set}; when @false{} or a
+@cnull{} pointer: an empty @code{fd_set} is internally allocated and
+used.
+
+@var{sec} and @var{usec} must be fixnums representing timeout seconds
+and microseconds.
+
+If the timeout expires before any event arrives: return @math{3} values
+all being @false{}; if an error occurs: raise an exception; else return
+@math{3} values being @var{read-fds}, @var{write-fds}, @var{except-fds}.
+@end defun
+
+
+@defun select-from-sets-array @var{nfds} @var{fdsets} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for read, write or exceptional events on selected lists
+of file descriptors.
+
+@var{nfds} must be false or a non--negative fixnum, when false it
+defaults to @code{FD_SETSIZE}; it must be the maximum file descriptor
+number in the sets to be checked for events, plus one.  @var{fdsets}
+must be a bytevector, pointer object or instance of @code{memory-block}
+holding @math{3} contiguous instances of the C language type
+@code{fd_set}.  @var{sec} and @var{usec} must be fixnums representing
+timeout seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}; if an
+error occurs: raise an exception; else return @var{fdsets} itself.
+@end defun
+
+@c page
+@node posix fd select special
+@subsubsection Selecting special events to wait for
+
+
+@defun select-fd-readable? @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for a readable event on the single file descriptor
+@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
+seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}.  If an
+error occurs: raise an exception.  Else return @true{} if the file
+descriptor becomes readable.
+@end defun
+
+
+@defun select-fd-writable? @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for a writable event on the single file descriptor
+@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
+seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}.  If an
+error occurs: raise an exception.  Else return @true{} if the file
+descriptor becomes writable.
+@end defun
+
+
+@defun select-fd-exceptional? @var{fd} @var{sec} @var{usec}
+Interface to the C function @cfunc{select}, @glibcref{Waiting for I/O,
+select}.  Wait for an exceptional event on the single file descriptor
+@var{fd}.  @var{sec} and @var{usec} must be fixnums representing timeout
+seconds and microseconds.
+
+If the timeout expires before any event arrives: return @false{}.  If an
+error occurs: raise an exception.  Else return @true{} if the file
+descriptor receives an exceptional notification.
+@end defun
+
+@c page
+@node posix fd poll
+@subsection Polling for events
+
+
+@defun poll @var{fds} @var{timeout}
+Interface to the C function @cfunc{poll}, see the manual page
+@code{poll(2)}.  Poll for events the file descriptors selected by
+@var{fds}; @var{timeout} must be an exact integer representing the
+timeout in milliseconds.  If successful: return the number of file
+descriptors ready for an event, else raise an exception.
+
+@var{fds} must be a vector of vectors each having @math{3} elements: a
+fixnum representing the file descriptor, a fixnum representing the
+@code{events} field of a @code{struct pollfd}, a fixnum representing the
+@code{revents} field of a @code{struct pollfd}.  On successful return:
+the third element of the subvectors is mutated to represent the events
+for which the file descriptor is ready.
+@end defun
+
+@c page
+@node posix fd device
+@subsection Special device operations
+
+
+@defun fcntl @var{fd} @var{command}
+@defunx fcntl @var{fd} @var{command} @var{arg}
+Interface to the C function @cfunc{fcntl}, @glibcref{Control Operations,
+fcntl}.  Perform the operation specified by @var{command} on the file
+descriptor @var{fd} using @var{arg}; @var{fd} and @var{command} must be
+fixnums; @var{arg} must be @false{}, a fixnum, a bytevector or a
+pointer, if it is @false{} or not given no argument is handed to
+@cfunc{fcntl}.  If successful return a fixnum representing the return
+value of @cfunc{fcntl}, else raise an exception.
+@end defun
+
+
+@defun ioctl @var{fd} @var{command}
+@defunx ioctl @var{fd} @var{command} @var{arg}
+Interface to the C function @cfunc{ioctl}, @glibcref{IOCTLs, ioctl}.
+Perform the operation specified by @var{command} on the file descriptor
+@var{fd} using @var{arg}; @var{fd} and @var{command} must be fixnums;
+@var{arg} must be @false{}, a fixnum, a bytevector or a pointer, if it
+is @false{} or not given no argument is handed to @cfunc{ioctl}.  If
+successful return a fixnum representing the return value of
+@cfunc{ioctl}, else raise an exception.
+@end defun
+
+@c page
+@node posix fd dup
+@subsection Duplicating file descriptors
+
+
+@defun dup @var{fd}
+Interface to the C function @cfunc{dup}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{fd}.  If
+successful return a non--negative fixnum representing the new
+descriptor, else raise an exception.
+@end defun
+
+
+@defun dup2 @var{old} @var{new}
+Interface to the C function @cfunc{dup2}, @glibcref{Duplicating
+Descriptors, dup}.  Duplicate the file descriptor @var{old} to
+@var{new}.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+@c page
+@node posix fd pipe
+@subsection File descriptor pipes
+
+
+@defun pipe
+Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
+pipe}.  Create a pair of file descriptors connected through a pipe.  If
+successful return two values being fixnums representing the file
+descriptors, else raise an exception.
+
+Simple example of process writing to itself through a pipe:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(let-values (((in ou) (px.pipe)))
+  (px.write ou '#vu8(1 2 3 4) 4)
+  (let ((bv (make-bytevector 4)))
+    (px.read in bv 4)
+    bv))
+@result{} #vu8(1 2 3 4)
+@end example
+
+@noindent
+here is how to fork a process and setup stdin and stdout in the children
+to use newly created pipe file descriptors to communicate with the
+parent:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(let-values
+    (((child-stdin       parent-to-child) (px.pipe))
+     ((parent-from-child child-stdout)    (px.pipe)))
+  (fork
+
+    (lambda (pid) ;parent
+      (let ((buf (make-bytevector 1)))
+        (px.read  parent-from-child buf 1)
+        (px.write parent-to-child '#vu8(2) 1)
+        buf))
+
+    (lambda () ;child
+      (begin ;setup stdin
+        (close-input-port (current-input-port))
+        (px.dup2 child-stdin 0)
+        (px.close child-stdin))
+
+      (begin ;setup stdout
+        (close-output-port (current-output-port))
+        (px.dup2 child-stdout 1)
+        (px.close child-stdout))
+
+      (let ((buf (make-bytevector 1)))
+        (px.write 1 '#vu8(1) 1)
+        (px.read  0 buf 1)
+        (exit 0)))))
+@result{} #vu8(1)
+@end example
+
+@noindent
+here is how to fork a process and setup stdin and stdout in the children
+to use newly created pipe file descriptors, through Scheme ports, to
+communicate with the parent:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(let-values (((child-stdin       parent-to-child) (px.pipe))
+             ((parent-from-child child-stdout)    (px.pipe)))
+  (fork
+   (lambda (pid)        ;parent
+     (let* ((inp (make-textual-file-descriptor-input-port
+                  parent-from-child "in" (native-transcoder)))
+            (oup (make-textual-file-descriptor-output-port
+                  parent-to-child "out" (native-transcoder)))
+            (buf (get-string-n inp 4)))
+       (display "hello" oup)
+       (flush-output-port oup)
+       buf))
+
+   (lambda ()           ;child
+
+     (begin      ;setup stdin
+       (close-input-port (current-input-port))
+       (current-input-port
+        (make-textual-file-descriptor-input-port
+         child-stdin "*stdin*" (native-transcoder))))
+
+     (begin ;setup stdout
+       (close-output-port (current-output-port))
+       (current-output-port
+        (make-textual-file-descriptor-output-port
+         child-stdout "*stdout*" (native-transcoder))))
+
+     (display "ciao")
+     (flush-output-port (current-output-port))
+     (get-string-n (current-input-port) 5)
+     (exit 0))))
+@result{} "ciao"
+@end example
+@end defun
+
+@c page
+@node posix fd fifo
+@subsection File descriptor fifos
+
+
+@defun mkfifo @var{pathname} @var{mode}
+Interface to the C function @cfunc{mkfifo}, @glibcref{FIFO Special
+Files, mkfifo}.  Create a FIFO special file with name @var{pathname} and
+mode @var{mode}, which must be a fixnum.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+@c page
+@node posix fd trunc
+@subsection Truncating files
+
+
+@defun truncate @var{pathname} @var{length}
+Interface to the C function @cfunc{truncate}, @glibcref{File Size,
+truncate}.  Change the size of the file selected by @var{pathname} to
+@var{length}; if successful return unspecified values, else raise an
+exception.
+
+@var{length} must be non--negative exact integer in the range of the C
+language type @code{off_t}.
+@end defun
+
+
+@defun ftruncate @var{fd} @var{length}
+Interface to the C function @cfunc{ftruncate}, @glibcref{File Size,
+ftruncate}.  Changes the size of the file selected by the file
+descriptor @var{fd} to @var{length}; if successful return unspecified
+values, else raise an exception.
+
+@var{length} must be non--negative exact integer in the range of the C
+language type @code{off_t}.
+@end defun
+
+@c page
+@node posix mmap
+@section Memory--mapped input/output
+
+
+@ref{shmem mmap} for a description of shared memory through @func{mmap}.
+
+
+@defun mmap @var{address} @var{length} @var{protect} @var{flags} @var{fd} @var{offset}
+Interface to the C function @cfunc{mmap}, @glibcref{Memory-mapped I/O,
+mmap}.  Create a new mapping and return a pointer object referencing the
+region of memory.
+
+@var{address} can be @false{} or a pointer object; @false{} is
+interpreted as a @cnull{} pointer.  @var{length} must be an exact
+integer in the range of the C language type @code{size_t}.
+@var{protect} and @var{flags} must fixnums of flags.  @var{fd} must be a
+fixnum representing a file descriptor.  @var{offset} must be an exact
+integer in the range of the C language type @code{off_t}.
+@end defun
+
+
+@defun munmap @var{address} @var{length}
+Interface to the C function @cfunc{munmap}, @glibcref{Memory-mapped I/O,
+munmap}.  Remove memory mapping.  Return unspecified values.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+must be an exact integer in the range of the C language type
+@code{size_t}.
+@end defun
+
+
+@defun msync @var{address} @var{length} @var{flags}
+Interface to the C function @cfunc{msync}, @glibcref{Memory-mapped I/O,
+msync}.  Synchronise the mapping with the underlying file.  Return
+unspecified values.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+must be an exact integer in the range of the C language type
+@code{size_t}.  @var{flags} is a fixnum of flags.
+@end defun
+
+
+@defun mremap @var{address} @var{length} @var{new-length} @var{flags}
+Interface to the C function @cfunc{mremap}, @glibcref{Memory-mapped I/O,
+mremap}.  Change the size of an existing memory mapping; return a
+pointer object referencing the new mapping.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+and @var{new-length} must be exact integers in the range of the C
+language type @code{size_t}.  @var{flags} is a fixnum of flags.
+@end defun
+
+
+@defun madvise @var{address} @var{length} @var{advice}
+Interface to the C function @cfunc{madvise}, @glibcref{Memory-mapped
+I/O, madvise}.  Synchronise the mapping with the underlying file.
+Return unspecified values.
+
+@var{address} is a pointer object referencing the mapping.  @var{length}
+must be an exact integer in the range of the C language type
+@code{size_t}.  @var{advice} is a fixnum of flags.
+@end defun
+
+
+@defun mlock @var{address} @var{length}
+@defunx munlock @var{address} @var{length}
+Interface to the C functions @cfunc{mlock} and @cfunc{munlock}, see the
+manual page @code{mlock(2)}.  Lock or unlock a segment of virtual
+address space, preventing the memory from begin paged to the swap area.
+If successful return unspecified values, else raise an exception.
+@end defun
+
+
+@defun mlockall @var{flags}
+@defunx munlockall
+Interface to the C functions @cfunc{mlockall} and @cfunc{munlockall},
+see the manual page @code{mlock(2)}.  Lock or unlock all pages.  If
+successful return unspecified values, else raise an exception.
+@var{flags} must be a fixnum being an OR combination of the constants:
+@code{MCL_CURRENT}, @code{MCL_FUTURE}.
+@end defun
+
+@c page
+@node posix socket
+@section Network sockets
+
+
+With the purpose of keeping at the Scheme level the same semantics of
+the C level @posix{} @api{}, socket--related data structures are stored
+in bytevectors; such raw manipulation can cause the process to crash if
+we mishandle the values.
+
+@menu
+* posix socket addresses::      Network address structures.
+* posix socket hosts::          Network hosts database.
+* posix socket protocols::      Network protocols database.
+* posix socket services::       Network services database.
+* posix socket networks::       Networks database.
+* posix socket socket::         Network sockets operations.
+* posix socket misc::           Error and miscellaneous functions.
+* posix socket examples::       Examples of clients and servers.
+* posix socket oob::            Notes on transmission of @oob{} data.
+@end menu
+
+@c page
+@node posix socket addresses
+@subsection Network address structures
+
+
+@menu
+* posix socket addresses local:: Local addresses.
+* posix socket addresses in::    @ip{}v4 addresses.
+* posix socket addresses in6::   @ip{}v6 addresses.
+* posix socket addresses rep::   @ascii{} address representations.
+* posix socket addresses info::  Host address informations.
+@end menu
+
+@c page
+@node posix socket addresses local
+@subsubsection Local addresses
+
+
+Instances of @code{struct sockaddr_un} can be handled at the Scheme
+level as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define sockaddr
+  (px.make-sockaddr_un "/tmp/the-unix-socket"))
+
+(px.sockaddr_un.pathname/string sockaddr)
+@result{} "/tmp/the-unix-socket"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_un @var{pathname}
+Given a @var{pathname} representing the pathname of a local socket,
+build and return a bytevector holding the @code{struct sockaddr_un}
+representing it.
+@end defun
+
+
+@defun sockaddr_un.pathname @var{socket_address}
+@defunx sockaddr_un.pathname/string @var{socket_address}
+Given a bytevector @var{socket_address}, which must be the return value
+of a previous call to @func{make-sockaddr_un}, holding a @code{struct
+sockaddr_un}: @func{sockaddr_un.pathname} builds and returns a
+bytevector holding the corresponding socket pathname,
+@func{sockaddr_un.pathname/string} builds and returns a string holding
+the corresponding socket pathname.  If the data in @var{socket_address}
+is invalid: an exception is raised.
+@end defun
+
+@c page
+@node posix socket addresses in
+@subsubsection @ip{}v4 addresses
+
+
+Instances of @code{struct sockaddr_in} can be handled at the Scheme
+level as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define sockaddr
+  (px.make-sockaddr_in '#vu8(1 2 3 4) 88))
+
+(px.sockaddr_in.in_addr sockaddr)  @result{} #vu8(1 2 3 4)
+(px.sockaddr_in.in_port sockaddr)  @result{} 88
+@end example
+
+@noindent
+and we can use constant values to initialise the fields:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(define addr (make-bytevector 4))
+(bytevector-u32-set! bv 0 INADDR_LOOPBACK (endianness big))
+
+(define sockaddr (px.make-sockaddr_in addr 88))
+
+(px.sockaddr_in.in_addr sockaddr)  @result{} #vu8(127 0 0 1)
+(px.sockaddr_in.in_port sockaddr)  @result{} 88
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_in @var{host-address} @var{port}
+Given a bytevector @var{host-address} holding a @code{struct in_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in} initialised with
+this data.
+
+Internally convert @var{port} to network byte order using @cfunc{htons}
+before storing the value in the data structure.
+@end defun
+
+
+@defun sockaddr_in.in_addr @var{socket-address}
+@defunx sockaddr_in.in_port @var{socket-address}
+Given a bytevector @var{socket-address} holding a @code{struct
+sockaddr_in}, extract the @code{in_addr} and @code{in_port} fields and
+return them as bytevector holding the corresponding @code{struct
+in_addr} and as fixnum.  If the data in @var{socket_address} is invalid:
+an exception is raised.
+
+Internally convert the port number to host byte order using
+@cfunc{ntohs} after the extraction of the value from the data structure.
+@end defun
+
+@c page
+@node posix socket addresses in6
+@subsubsection @ip{}v6 addresses
+
+
+Instances of @code{struct sockaddr_in6} can be handled at the Scheme
+level as follows:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define sockaddr
+  (px.make-sockaddr_in6 '#vu16b(1 2 3 4  5 6 7 8) 88))
+
+(px.sockaddr_in6.in6_addr sockaddr) @result{} #vu16b(1 2 3 4  5 6 7 8)
+(px.sockaddr_in6.in6_port sockaddr) @result{} 88
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun make-sockaddr_in6 @var{host-address} @var{port}
+Given a bytevector @var{host-address} holding a @code{struct in6_addr}
+and a fixnum @var{port} representing a network port number, build and
+return a bytevector holding a @code{struct sockaddr_in6} initialised
+with this data.
+@end defun
+
+
+@defun sockaddr_in6.in6_addr @var{socket-address}
+@defunx sockaddr_in6.in6_port @var{socket-address}
+Given a bytevector @var{socket-address} holding a @code{struct
+sockaddr_in6}, extract the @code{in6_addr} and @code{in6_port} fields
+and return them as bytevector holding the corresponding @code{struct
+in6_addr} and as fixnum.  If the data in @var{socket_address} is
+invalid: an exception is raised.
+
+Internally convert the port number to host byte order using
+@cfunc{ntohs} after the extraction of the value from the data structure.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun in6addr_loopback
+@defunx in6addr_any
+Build and return a bytevector holding the constant structures of type
+@code{struct in6_addr} defined by @code{in6addr_loopback} and
+@code{in6addr_any}.
+@end defun
+
+@c page
+@node posix socket addresses rep
+@subsubsection @ascii{} address representations
+
+
+Dotted quad address representations can be handled as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.inet-aton "127.0.0.1") @result{} #vu8(127 0 0 1)
+(px.inet-aton "ciao")      @error{} invalid argument
+
+(px.inet-ntoa/string '#vu8(127 0 0 1))
+@result{} "127.0.0.1"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun inet-aton @var{dotted-quad}
+@ascii{} to number.  Given the bytevector @var{dotted-quad} holding the
+@ascii{} dotted quad representation of a host address, build and return
+a bytevector holding the corresponding @code{struct in_addr}.  If
+@var{dotted-quad} is invalid: an exception is raised.
+@end defun
+
+
+@defun inet-ntoa @var{host-address}
+@defunx inet-ntoa/string @var{host-address}
+Number to @ascii{}.  Given the bytevector @var{host-address} holding a
+@code{struct in_addr}: @func{inet-ntoa} builds and returns a bytevector
+holding the corresponding @ascii{} dotted quad representation,
+@func{inet-ntoa/string} builds and returns a string holding the
+corresponding @ascii{} dotted quad representation.
+@end defun
+
+@c ------------------------------------------------------------
+
+Addresses in presentation format can be handled as follows:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(px.inet-pton AF_INET "127.0.0.1") @result{} #vu8(127 0 0 1)
+(px.inet-pton AF_INET "ciao")      @error{} invalid arguments
+
+(px.inet-pton AF_INET6 "1:2:3:4:5:6:7:8")
+@result{} #vu16b(1 2 3 4 5 6 7 8)
+
+(px.inet-ntop/string AF_INET '#vu8(127 0 0 1))
+@result{} "127.0.0.1"
+
+(px.inet-ntop/string AF_INET6 '#vu16b(1 2 3 4 5 6 7 8))
+@result{} "1:2:3:4:5:6:7:8"
+@end example
+
+@noindent
+care must be taken when handling such raw values.
+
+
+@defun inet-pton @var{af} @var{presentation}
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the string or bytevector @var{presentation} holding the @ascii{}
+presentation of an Internet address, build and return a bytevector
+holding the corresponding @code{struct in_addr} or @code{struct
+in6_addr}.  If either @var{af} or @var{presentation} is invalid: raise
+an exception.
+@end defun
+
+
+@defun inet-ntop @var{af} @var{host-address}
+@defunx inet-ntop/string @var{af} @var{host-address}
+Given the fixnum @var{af}, being @code{AF_INET} or @code{AF_INET6}, and
+the bytevector @var{host-address} holding a @code{struct in_addr} or
+@code{struct in6_addr}: @func{inet-ntop} builds and returns a bytevector
+holding the corresponding @ascii{} presentation of the Internet address,
+@func{inet-ntop/string} builds and returns a string holding the
+corresponding @ascii{} presentation of the Internet address.  If the
+arguments are invalid: an exception is raised.
+@end defun
+
+@c page
+@node posix socket addresses info
+@subsubsection Host address informations
+
+
+@deftp {Structure Type} struct-addrinfo
+Scheme level representation of @code{struct addrinfo}.  It has the
+following fields:
+
+@table @code
+@item ai_flags
+Fixnum.
+
+@item ai_family
+Fixnum, specifies the Internet address family; @code{AF_INET},
+@code{AF_INET6} of @code{AF_UNSPEC}.
+
+@item ai_socktype
+Fixnum, specifies the socket type; @code{SOCK_STREAM}, @code{SOCK_DGRAM}
+or other @code{SOCK_} value.
+
+@item ai_protocol
+Fixnum, specifies the protocol of the socket address.
+
+@item ai_addrlen
+Fixnum, the number of bytes in the bytevector referenced by
+@code{ai_addr}.
+
+@item ai_addr
+Bytevector, holds an instance of @code{struct sockaddr} of
+@code{ai_addrlen} bytes.
+
+@item ai_canonname
+False or bytevector, represents the canoncal name of the host when
+available.
+@end table
+@end deftp
+
+
+@defun make-struct-addrinfo @var{flags} @var{family} @var{socktype} @var{protocol} @var{addrlen} @var{addr} @var{canonname}
+Build and return an instance of @code{struct-addrinfo}.
+@end defun
+
+
+@defun struct-addrinfo? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-addrinfo}.
+@end defun
+
+
+@defun struct-addrinfo-ai_flags @var{addrinfo}
+@defunx struct-addrinfo-ai_family @var{addrinfo}
+@defunx struct-addrinfo-ai_socktype @var{addrinfo}
+@defunx struct-addrinfo-ai_protocol @var{addrinfo}
+@defunx struct-addrinfo-ai_addrlen @var{addrinfo}
+@defunx struct-addrinfo-ai_addr @var{addrinfo}
+@defunx struct-addrinfo-ai_canonname @var{addrinfo}
+Accessors for the fields of @code{struct-addrinfo}.
+@end defun
+
+
+@defun getaddrinfo @var{node} @var{service} @var{hints}
+Interface to the C function @cfunc{getaddrinfo}, see the manual page
+@code{getaddrinfo(3)}.  Given the strings or bytevectors @var{node} and
+@var{service} identifying an Internet host and a service, build a list
+of @code{struct-addrinfo} instances representing addresses to which
+sockets can be bound or connected.
+
+Both @var{node} and @var{service} can be false, in which case the
+corresponding arguments handed to the C function are @code{NULL}.
+@var{hints} must be an instance of @code{struct-addrinfo} used to select
+matching hosts.
+
+If successful: return the list of data structures, else raise an
+exception.
+
+@example
+(px.getaddrinfo "github.com" "smtp" #f)
+@result{} (#["struct-addrinfo"
+        ai_flags=40             ai_family=AF_INET
+        ai_socktype=SOCK_DGRAM  ai_protocol=17
+        ai_addrlen=16
+        ai_addr=#vu8(2 0 0 25 207 97 227 239 0 0 0 0 0 0 0 0)
+        ai_canonname=#f]
+    #["struct-addrinfo"
+        ai_flags=40             ai_family=AF_INET
+        ai_socktype=SOCK_STREAM ai_protocol=6
+        ai_addrlen=16
+        ai_addr=#vu8(2 0 0 25 207 97 227 239 0 0 0 0 0 0 0 0)
+        ai_canonname=#f])
+@end example
+@end defun
+
+@c page
+@node posix socket hosts
+@subsection Network hosts database
+
+
+@deftp {Struct Type} struct-hostent
+Data structure type used to represent at the Scheme level @code{struct
+hostent} values.  It has the following fields:
+
+@table @code
+@item h_name
+Bytevector, the official host name.
+
+@item h_aliases
+List of bytevectors, host name aliases.
+
+@item h_addrtype
+Fixnum, @code{AF_INET} or @code{AF_INET6}.
+
+@item h_length
+Fixnum, number of bytes in each host address bytevector.
+
+@item h_addr_list
+List of bytevectors each holding @code{struct in_addr} or @code{struct
+in6_addr}.
+
+@item h_addr
+Bytevector, it is the first in the list @code{h_addr_list}.
+@end table
+@end deftp
+
+
+@defun gethostbyname @var{hostname}
+Interface to the C function @cfunc{gethostbyname}, @glibcref{Host Names,
+gethostbyname}.  Given the string or bytevector @var{hostname} holding
+the @ascii{} representation of a host name, build and return an instance
+of @code{struct-hostent}.  If an error occurs, return an encoded
+@code{h_errno} value.
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.gethostbyname "github.com")
+@result{} #["struct-hostent"
+       h_name="github.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(207 97 227 239))
+       h_addr=#vu8(207 97 227 239)]
+
+(px.gethostbyname "google.com")
+@result{} #["struct-hostent"
+       h_name="google.com"
+       h_aliases=()
+       h_addrtype=AF_INET
+       h_length=4
+       h_addr_list=(#vu8(209 85 148 103)
+                    #vu8(209 85 148 99)
+                    #vu8(209 85 148 104)
+                    #vu8(209 85 148 105)
+                    #vu8(209 85 148 106)
+                    #vu8(209 85 148 147))
+       h_addr=#vu8(209 85 148 103)]
+@end example
+@end defun
+
+
+@defun gethostbyaddr @var{addr}
+Interface to the C function @cfunc{gethostbyaddr}, @glibcref{Host Names,
+gethostbyaddr}.  Given the bytevector @var{addr} holding a @code{struct
+in_addr} or a @code{struct in6_addr}, build and return an instance of
+@code{struct-hostent}; the type of address is automatically inferred
+from the length of the bytevector.  If an error occurs: an exception is
+raised.
+@end defun
+
+
+@defun host-entries
+Interface to the C functions @cfunc{sethostent}, @cfunc{gethostent} and
+@cfunc{endhostent}, @glibcref{Host Names, gethostbyaddr}.  Build and
+return a list of @code{struct-hostent} representing the entries in the
+hosts database.
+@end defun
+
+@c page
+@node posix socket protocols
+@subsection Network protocols database
+
+
+@deftp {Structure Type} struct-protoent
+Scheme level representation of @code{struct protoent}.  It has the
+following fields:
+
+@table @code
+@item p_name
+Bytevector, the @ascii{} coding of the official protocol name.
+
+@item p_aliases
+Null or list of bytevectors, the @ascii{} codings of protocol name
+aliases.
+
+@item p_proto
+Fixnum, the protocol number.
+@end table
+@end deftp
+
+
+@defun make-struct-protoent @var{name} @var{aliases} @var{proto}
+Build and return an instance of @code{struct-protoent}.
+@end defun
+
+
+@defun struct-protoent-p_name @var{protoent}
+@defunx struct-protoent-p_aliases @var{protoent}
+@defunx struct-protoent-p_proto @var{protoent}
+Accessors for the fields of @code{struct-protoent}.
+@end defun
+
+
+@defun getprotobyname @var{name}
+Interface to the C function @cfunc{getprotobyname}, @glibcref{Protocols
+Database, getprotobyname}.  Given a string or bytevector @var{name}
+holding the @ascii{} coding of a network protocol name, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(px.getprotobyname "udp")
+@result{} #["struct-protoent"
+        p_name="udp"
+        p_aliases=(UDP)
+        p_proto=17]
+@end example
+@end defun
+
+
+@defun getprotobynumber @var{proto_num}
+Interface to the C function @cfunc{getprotobynumber},
+@glibcref{Protocols Database, getprotobynumber}.  Given a fixnum
+@var{proto_num} being the number of a network protocol, query the
+network protocols database and build an instance of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(px.getprotobynumber 17)
+@result{} #["struct-protoent"
+        p_name="udp"
+        p_aliases=(UDP)
+        p_proto=17]
+@end example
+@end defun
+
+
+@defun protocol-entries
+Interface to the C functions @cfunc{setprotoent}, @cfunc{getprotoent}
+and @cfunc{endprotoent}, @glibcref{Protocols Database, setprotoent}.
+Scan the network protocol database and build a list of
+@code{struct-protoent} mirroring the resulting @code{struct protoent}
+entries.  Return the list of structures.
+@end defun
+
+@c page
+@node posix socket services
+@subsection Network services database
+
+
+@deftp {Structure Type} struct-servent
+Scheme level representation of @code{struct servent}.  It has the
+following fields:
+
+@table @code
+@item s_name
+Bytevector, the @ascii{} coding of the official service name.
+
+@item s_aliases
+Null or list of bytevectors, the @ascii{} codings of service name
+aliases.
+
+@item s_port
+Fixnum, the port number.
+
+@item s_proto
+Bytevector, @ascii{} coding of the associated protocol name.
+@end table
+@end deftp
+
+
+@defun make-struct-servent @var{name} @var{aliases} @var{port} @var{proto}
+Build and return an instance of @code{struct-servent}.
+@end defun
+
+
+@defun struct-servent-s_name @var{servent}
+@defunx struct-servent-s_aliases @var{servent}
+@defunx struct-servent-s_proto @var{servent}
+@defunx struct-servent-s_port @var{servent}
+Accessors for the fields of @code{struct-servent}.
+@end defun
+
+
+@defun getservbyname @var{name} @var{protocol}
+Interface to the C function @cfunc{getservbyname}, @glibcref{Services
+Database, getservbyname}.  Given the strings or bytevectors @var{name}
+and @var{protocol} holding the @ascii{} coding of a network service name
+and protocol, query the network services database and build an instance
+of @code{struct-servent} mirroring the resulting @code{struct servent}
+entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(px.getservbyname "smtp" "tcp")
+@result{} #["struct-servent"
+        s_name="smtp"
+        s_aliases=(mail)
+        s_port=25
+        s_proto=tcp]
+
+(px.getservbyname "ntp" "udp")
+@result{} #["struct-servent"
+        s_name="ntp"
+        s_aliases=()
+        s_port=123
+        s_proto=udp]
+@end example
+@end defun
+
+
+@defun getservbynumber @var{port} @var{protocol}
+Interface to the C function @cfunc{getservbynumber}, @glibcref{Services
+Database, getservbynumber}.  Given a fixnum @var{port} and a string or
+bytevector @var{protocol} being the port number and protocol name of a
+network service, query the network services database and build an
+instance of @code{struct-servent} mirroring the resulting @code{struct
+servent} entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(px.getservbyport 80 "tcp")
+@result{} #["struct-servent"
+        s_name="http"
+        s_aliases=(www-http www)
+        s_port=80
+        s_proto=tcp]
+@end example
+@end defun
+
+
+@defun service-entries
+Interface to the C functions @cfunc{setservent}, @cfunc{getservent} and
+@cfunc{endservent}, @glibcref{Services Database, setservent}.  Scan the
+network service database and build a list of @code{struct-servent}
+mirroring the resulting @code{struct servent} entries.  Return the list
+of structures.
+@end defun
+
+@c page
+@node posix socket networks
+@subsection Networks database
+
+
+@deftp {Structure Type} struct-netent
+Scheme level representation of @code{struct netent}.  It has the
+following fields:
+
+@table @code
+@item n_name
+Bytevector, @ascii{} coding of the official network name.
+
+@item n_aliases
+List of bytevectors, alias names for the network.
+
+@item n_addrtype
+Fixnum, the network type.
+
+@item n_net
+32-bit bytevector, the network number in network byte order.
+@end table
+@end deftp
+
+
+@defun make-struct-netent @var{name} @var{aliases} @var{addrtype} @var{net}
+Build and return a new instance of @code{struct-netent}.
+@end defun
+
+
+@defun struct-netent-n_name @var{netent}
+@defunx struct-netent-n_aliases @var{netent}
+@defunx struct-netent-n_addrtype @var{netent}
+@defunx struct-netent-n_net @var{netent}
+Accessors for the fields of @code{struct-netent}.
+@end defun
+
+
+@defun struct-netent? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-netent}.
+@end defun
+
+
+@defun getnetbyname @var{name}
+Interface to the C function @cfunc{getnetbyname}, @glibcref{Networks
+Database, getnetbyname}.  Given the bytevector @var{name} holding the
+@ascii{} coding of a network name, query the networks database and build
+an instance of @code{struct-netent} mirroring the resulting @code{struct
+netent} entry.  If successful return the data structure, else raise an
+exception.
+
+@example
+(px.getnetbyname "loopback")
+@result{} #["struct-netent"
+        n_name="loopback"
+        n_aliases=()
+        n_addrtype=AF_INET
+        n_net=#vu8(127 0 0 0)]
+@end example
+@end defun
+
+
+@defun getnetbyaddr @var{net} @var{type}
+Interface to the C function @cfunc{getnetbyaddr}, @glibcref{Networks
+Database, getnetbyaddr}.  Given an exact integer or bytevector @var{net}
+representing a network number and the fixnum @var{type} representing a
+network type, query the networks database and build an instance of
+@code{struct-netent} mirroring the resulting @code{struct netent} entry.
+If successful return the data structure, else raise an exception.
+
+@example
+(px.getnetbyaddr '#vu8(127 0 0 0) AF_INET)
+@result{} #["struct-netent"
+        n_name="loopback"
+        n_aliases=()
+        n_addrtype=AF_INET
+        n_net=#vu8(127 0 0 0)]
+@end example
+@end defun
+
+
+@defun network-entries
+Interface to the C functions @cfunc{setnetent}, @cfunc{getnetent} and
+@cfunc{endnetent}, @glibcref{Networks Database, setnetent}.  Scan the
+networks database and build a list of @code{struct-netent} mirroring the
+resulting @code{struct netent} entries.  Return the list of structures.
+@end defun
+
+@c page
+@node posix socket socket
+@subsection Network sockets operations
+
+
+@defun socket @var{namespace} @var{style} @var{protocol}
+Interface to the C function @cfunc{socket}, @glibcref{Creating a Socket,
+socket}.  Create a new socket descriptor and return it as non--negative
+fixnum; if an error occurs raise an exception.  All the arguments must
+be fixnums.
+@end defun
+
+
+@defun shutdown @var{sock} @var{how}
+Interface to the C function @cfunc{shutdown}, @glibcref{Closing a
+Socket, shutdown}.  Close the socket @var{sock} according to @var{how},
+which can be one of the constants @code{SHUT_RD}, @code{SHUT_WR} or
+@code{SHUT_RDWR}.  If successful return unspecified values, else raise
+an exception.
+@end defun
+
+
+@defun socketpair @var{namespace} @var{style} @var{protocol}
+Interface to the C function @cfunc{socketpair}, @glibcref{Socket Pairs,
+socketpair}.  Create a pairs of connected sockets and return two values
+being the descriptors as non--negative fixnums; if an error occurs raise
+an exception.  All the arguments must be fixnums; @var{namespace} must
+be @code{AF_LOCAL}.
+
+@example
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let-values (((a b) (px.socketpair AF_LOCAL SOCK_DGRAM 0)))
+  (px.write a '#vu8(1 2 3 4) 4)
+  (let ((buf (make-bytevector 4)))
+    (px.read b buf 4)
+    (px.shutdown a SHUT_RDWR)
+    (px.shutdown b SHUT_RDWR)
+    buf))
+@result{} #vu8(1 2 3 4)
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun connect @var{sock} @var{addr}
+Interface to the C function @cfunc{connect}, @glibcref{Connecting,
+connect}.  Connect the socket @var{sock} to the address specified by the
+bytevector @var{addr} which must hold a concrete instance of
+@code{struct sockaddr}.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun listen @var{sock} @var{pending_conns}
+Interface to the C function @cfunc{listen}, @glibcref{Listening,
+listen}.  Enable the socket @var{sock} to accept connections; the fixnum
+@var{pending_conns} specifies the maximum length of the pending
+connection requests queue.  If successful return unspecified values,
+else raise an exception.
+@end defun
+
+
+@defun accept @var{sock}
+Interface to the C function @cfunc{accept}, @glibcref{Accepting
+Connections, accept}.  Accept an incoming connection to the server
+socket @var{sock}.
+
+If successful and a connection is accepted return two values: a
+non--negative fixnum representing the socket, a bytevector representing
+the client address as @code{struct sockaddr}.
+
+If successful and no connection is accepted return two values both being
+false; this is the case of @cfunc{accept} returning @code{EWOULDBLOCK}
+which means that @var{sock} is in non--blocking mode and no pending
+connections exist.
+
+If an error occurs raise an exception.
+@end defun
+
+
+@defun bind @var{sock} @var{sockaddr}
+Interface to the C function @cfunc{bind}, @glibcref{Setting Address,
+bind}.  Bind the socket descriptor @var{sock} to the address specified
+by the @code{struct sockaddr} in the bytevector @var{sockaddr}.  If
+successful return unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getpeername @var{sock}
+Interface to the C function @cfunc{getpeername}, @glibcref{Who is
+Connected, getpeername}.  Retrieve informations about the address of the
+socket to which the @var{sock} socket is connected to.  If successful
+return a bytevector holding a @code{struct sockaddr}, else raise an
+exception.
+@end defun
+
+
+@defun getsockname @var{sock}
+Interface to the C function @cfunc{getsockanme}, @glibcref{Setting
+Address, getsockname}.  Retrieve informations about the address bound to
+the socket descriptor @var{sock}.  If successful return a bytevector
+holding the @code{struct sockaddr}, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun send @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{send}, @glibcref{Sending Data, send}.
+Like @cfunc{write} but with the additional argument @var{flags} which
+must be a fixnum: write data from the bytevector @var{buffer} to the
+socket @var{sock}; if @var{size} is a fixnum, write @var{size} bytes; if
+@var{size} is false, write a number of bytes equal to the length of
+@var{buffer}.  If successful return a non--negative fixnum representing
+the number of bytes actually sent, else raise an exception.
+@end defun
+
+
+@defun recv @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{recv}, @glibcref{Receiving Data,
+recv}.  Like @cfunc{read} but with the additional argument @var{flags}
+which must be a fixnum: read data from @var{sock} and store it in the
+bytevector @var{buffer}; if @var{size} is a fixnum, read @var{size}
+bytes; if @var{size} is false, read a number of bytes equal to the
+length of @var{buffer}.  If successful return a non--negative fixnum
+representing the number of bytes actually received, else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun sendto @var{sock} @var{buffer} @var{size} @var{flags} @var{addr}
+Interface to the C function @cfunc{sendto}, @glibcref{Sending Datagrams,
+sendto}.  Like @cfunc{send} but with the additional argument @var{addr}
+which must be a bytevector holding a @code{struct sockaddr}: write data
+from the bytevector @var{buffer} to the socket @var{sock} to the
+destination specified by @var{addr}.
+
+If @var{size} is a fixnum, write @var{size} bytes; if @var{size} is
+false, write a number of bytes equal to the length of @var{buffer}.
+
+If successful return a non--negative fixnum representing the number of
+bytes actually sent, else raise an exception.
+@end defun
+
+
+@defun recvfrom @var{sock} @var{buffer} @var{size} @var{flags}
+Interface to the C function @cfunc{recvfrom}, @glibcref{Receiving
+Datagrams, recvfrom}.  Like @cfunc{recv} but additionally retrieve
+informations about the address of the sender: read data from @var{sock}
+and store it in the bytevector @var{buffer}.
+
+If @var{size} is a fixnum, read @var{size} bytes; if @var{size} is
+false, read a number of bytes equal to the length of @var{buffer}.
+
+If successful return two values: a non--negative fixnum representing the
+number of bytes actually received, a bytevector holding a @code{struct
+sockaddr} representing the address of the sender; else raise an
+exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getsockopt @var{sock} @var{level} @var{option} @var{optval}
+Interface to the C function @cfunc{getsockopt}, @glibcref{Socket Option
+Function, getsockopt}.  Retrieve the value of @var{option} of socket
+@var{sock} at @var{level} and store it in the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun setsockopt @var{sock} @var{level} @var{option} @var{optval}
+Interface to the C function @cfunc{setsockopt}, @glibcref{Socket Option
+Function, setsockopt}.  Set a new value for @var{option} of socket
+@var{sock} at @var{level} reading it from the bytevector @var{optval}.
+@var{option} and @var{level} must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun getsockopt/int @var{sock} @var{level} @var{option}
+@defunx setsockopt/int @var{sock} @var{level} @var{option} @var{optval}
+Like @func{getsockopt} and @func{setsockopt} but specially handle the
+case of an option with value represented by a C language @code{int}.
+@var{optval} must appropriately be a boolean or an exact integer
+representable as a platform's C language @code{int}.
+@end defun
+
+
+@defun getsockopt/size_t @var{sock} @var{level} @var{option}
+@defunx setsockopt/size_t @var{sock} @var{level} @var{option} @var{optval}
+Like @func{getsockopt} and @func{setsockopt} but specially handle the
+case of an option with value represented by a C language @code{size_t}.
+@var{optval} must be an exact integer representable as a platform's C
+language @code{size_t}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun tcp-connect @var{hostname} @var{service}
+Establish a client connection to the remote host identified by the
+string @var{hostname}, connecting to the port associated to the string
+@var{service}.
+
+If successful return a textual input/output port associated to the
+socket file descriptor, configured with @code{line} buffer mode,
+@utf{}-8 transcoder, and @code{none} end--of--line translation.
+
+Closing the returned port will close the connection.
+
+The following example will download the main page from
+@url{http://google.it}:
+
+@example
+#!r6rs
+(import (except (vicare)
+                log)
+  (prefix (vicare posix) px.))
+
+(define (log template . args)
+  (apply fprintf (current-error-port)
+         template args))
+
+(define (send line port)
+  (log "sending: ~s\n" line)
+  (display line port))
+
+(define (recv in-port)
+  (let-values (((str-port getter) (open-string-output-port)))
+    (let next ((line (read-line in-port)))
+      (if (or (eof-object? line)
+              (string=? line "\r")
+              (string=? line ".\r"))
+          (getter)
+        (begin
+          (log "received: ~s\n" line)
+          (display line str-port)
+          (next (read-line in-port)))))))
+
+(define p
+  (px.tcp-connect "google.it" "http"))
+
+(send "GET / HTTP/1.0\r\n\r\n" p)
+(recv p)
+(recv p)
+
+(close-port p)
+@end example
+@end defun
+
+@c page
+@node posix socket misc
+@subsection Error and miscellaneous functions
+
+
+@defun h_errno->string @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding symbolic
+string.
+@end defun
+
+
+@defun h_strerror @var{h_errno-code}
+Convert an encoded @code{h_errno} value to the corresponding descriptive
+error message string.
+@end defun
+
+
+@defun gai-strerror @var{error-code}
+Interface to the C function @cfunc{gai_strerror}, see the manual page
+@code{gai_strerror(3)}.  Convert an @code{EAI_} error code into the
+corresponding error message, return a string holding such message.
+@end defun
+
+
+@defun htonl @var{host-long}
+@defunx ntohl @var{net-long}
+Convert an exact integer, in the range of the C language type
+@code{uint32_t}, between host byte order and network byte order;
+@glibcref{Byte Order, ntohl}.
+
+On the i386 platform: host byte order is least significant byte first.
+The network byte order is: most significant byte first.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.htonl #xA5B6C7D8)                   @result{} #xD8C7B6A5
+(px.ntohl #xA5B6C7D8)                   @result{} #xD8C7B6A5
+(px.ntohl (px.htonl #xA5B6C7D8))        @result{} #xA5B6C7D8
+@end example
+@end defun
+
+
+@defun htons @var{host-short}
+@defunx ntohs @var{net-short}
+Convert an exact integer, in the range of the C language type
+@code{uint16_t}, between host byte order and network byte order;
+@glibcref{Byte Order, htons}.
+
+On the i386 platform: host byte order is least significant byte first.
+The network byte order is: most significant byte first.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.htons #xA5B6)               @result{} #xB6A5
+(px.ntohs #xA5B6)               @result{} #xB6A5
+(px.ntohs (px.htons #xA5B6))    @result{} #xA5B6
+@end example
+@end defun
+
+@c page
+@node posix socket examples
+@subsection Examples of clients and servers
+
+
+Basically a @tcp{}/@ip{} server should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let ((sockaddr    (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (server-sock (px.socket PF_INET SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let-values (((sock client-address)
+                (px.accept server-sock)))
+    ;; ... talk with the client through SOCK ...
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+while a @tcp{}/@ip{} client should to:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let ((sockaddr (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock     (px.socket PF_INET SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  ;; ... talk to the server through SOCK ...
+  (px.close sock))
+@end example
+
+A @udp{}/@ip{} ``server'' should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let ((sockaddr   (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock       (px.socket PF_INET SOCK_DGRAM 0))
+      (in-buffer  (make-bytevector 1024))
+      (out-buffer (make-bytevector 1024)))
+  (px.bind sock sockaddr)
+  (let-values (((len sockaddr)
+                (px.recvfrom sock in-buffer #f 0)))
+    ;; ... process the received packet ...
+    ;; ... prepare the answer ...
+    (px.sendto sock out-buffer #f 0 sockaddr))
+  (px.close sock))
+@end example
+
+@noindent
+while a @udp{}/@ip{} ``client'' should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let ((sockaddr   (px.make-sockaddr_in '#vu8(127 0 0 1) 8081))
+      (sock       (px.socket PF_INET SOCK_DGRAM 0))
+      (out-buffer (make-bytevector 1024))
+      (in-buffer  (make-bytevector 1024)))
+  (px.bind sock sockaddr)
+  ;; ... prepare the request ...
+  (px.sendto sock out-buffer #f 0 sockaddr)
+  (let-values (((len sockaddr)
+                (px.recvfrom sock in-buffer #f 0)))
+    ;; ... process the received packet ...
+    )
+  (px.close sock))
+@end example
+
+A Unix--domain socket server should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let* ((tmpdir       (px.getenv "TMPDIR"))
+       (pathname     (string-append tmpdir "/use-me"))
+       (sockaddr     (px.make-sockaddr_un pathname))
+       (server-sock  (px.socket PF_LOCAL SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let-values (((sock client-address)
+                (px.accept server-sock)))
+    ;; ... talk to the client through SOCK ...
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+while a Unix--domain socket client should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let* ((tmpdir    (px.getenv "TMPDIR"))
+       (pathname  (string-append tmpdir "/use-me"))
+       (sockaddr  (px.make-sockaddr_un pathname))
+       (sock      (px.socket PF_LOCAL SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  ;; ... talk to the server through SOCK ...
+  (px.close sock))
+@end example
+
+To receive incoming data and Out Of Band data, a @tcp{}/@ip{} server
+should do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let ((sockaddr    (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (server-sock (px.socket PF_INET SOCK_STREAM 0)))
+  (px.bind   server-sock sockaddr)
+  (px.listen server-sock 2)
+  (let*-values
+      (((sock client-address) (px.accept server-sock))
+       ((bv)                  (make-bytevector 10)))
+    (let loop ()
+      (let-values (((rd wr ex) (px.select-fd sock 2 0)))
+        (cond (ex ;process exceptional conditions first!!!
+               ;; block until OOB data arrives
+               (let ((len (px.recv sock bv #f MSG_OOB)))
+                 ;; process data in BV between 0 and LEN,
+                 ;; which should be 1
+                 (loop)))
+              (rd
+               (let ((len (px.recv sock bv #f 0)))
+                 (when (positive? len)
+                   ;; process data in BV between 0
+                   ;; and LEN
+                   (loop))))
+              (else (loop)))))
+    (px.close sock))
+  (px.close server-sock))
+@end example
+
+@noindent
+to send outgoing data and Out Of Band data, a @tcp{}/@ip{} client should
+do:
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(let ((sockaddr  (px.make-sockaddr_in '#vu8(127 0 0 1) 8080))
+      (sock      (px.socket PF_INET SOCK_STREAM 0)))
+  (px.connect sock sockaddr)
+  (px.send sock '#vu8(1 2 3) #f 0)
+  ;; only the single byte 6 (the last) is sent as
+  ;; OOB data, 4 and 5 are sent as ordinary data
+  (px.send sock '#vu8(4 5 6) #f MSG_OOB)
+  (px.send sock '#vu8(7 8 9) #f 0)
+  (px.close sock))
+@end example
+
+@c page
+@node posix socket oob
+@subsection Notes on transmission of @oob{} data
+
+
+In a @tcp{}/@ip{} stream--oriented client/server architecture, the
+scenario is the following:
+
+@example
+ --------------------        ------------
+| sending appication |----->| sending OS |
+ --------------------        ------------
+                                  |
+                                  v
+ -----------------------     -------------
+| receiving application |<--| receving OS |
+ -----------------------     -------------
+@end example
+
+@noindent
+sending ordinary data works as follows:
+
+@enumerate
+@item
+The sending application calls (for example) the @func{send} function
+asking the sending @os{} to send data to the remote host.
+
+@item
+The sending @os{} enqueues the data in a @fifo{} buffer, which it
+progressively fragments in packets for delivery.
+
+@item
+The receiving @os{} orders and enqueues data from received packets in a
+@fifo{} buffer.
+
+@item
+The receiving application calls (for example) the @cfunc{recv} function
+to consume chunks of the input data.
+@end enumerate
+
+@noindent
+sending a single byte of @oob{} data works as follows:
+
+@enumerate
+@item
+The sending application calls the function @func{send} specifying the
+@code{MSG_OOB} flag, asking the sending @os{} to deliver a single byte
+of @oob{} data.
+
+@item
+The sending @os{} enqueues the single byte in its @fifo{} buffer and
+tags the next outgoing packet to announce future delivery of the @oob{}
+byte.
+
+@item
+The receiving @os{} orders and enqueues data from received packets in a
+@fifo{} buffer; when it detects a tagged packet announcing the @oob{}
+byte: it optionally informs the receiving application of its future
+arrival, signaling an exceptional condition on the socket descriptor, if
+requested.
+
+@item
+The sending @os{} proceeds in sending ordinary data from its @fifo{}
+buffer and whenever it reaches the @oob{} byte: it sends it in a
+specially tagged packet.
+
+@item
+The receiving @os{} orders and enqueues data from received packets in a
+@fifo{} buffer; when it detects a tagged packet holding the @oob{} byte:
+it makes it available to the receiving application.
+
+@item
+The receving application calls the function @func{recv} specifying the
+@code{MSG_OOB} flag and retrieves the single @oob{} byte.
+@end enumerate
+
+If we send the @oob{} byte with the form:
+
+@example
+(px.send sock '#vu8(8) #f MSG_OOB)
+@end example
+
+@noindent
+the byte @code{8} will be the @oob{} byte; if we send the @oob{} byte
+with the form:
+
+@example
+(px.send sock '#vu8(1 2 3) #f MSG_OOB)
+@end example
+
+@noindent
+the byte @code{3}, the last in the memory block, will be the @oob{} byte
+and the bytes @code{1} and @code{2} will be sent as ordinary data; the
+receiving application must @strong{not} assume that bytes @code{1} and
+@code{2} will be made available before the @oob{} byte @code{3}.
+
+When using @func{select} to be notified of incoming @oob{} data: the
+receiving application must assume that the exceptional condition is
+notified @strong{only once} and not persist in further calls to
+@func{select}; for this reason the exceptional condition must be
+recognised and registered by the application as soon as it is notified
+by @func{select}.
+
+The socket option @code{SO_OOBINLINE} allows the @oob{} byte to be
+places in the ordinary data @fifo{} buffer, so that it can be
+transparently consumed by a call to @func{read} or @func{recv} without
+the @code{MSG_OOB} flag.
+
+Notice that the single @oob{} byte, although limited, can represent
+@math{256} symbols in an appropriate alphabet of commands.
+
+@c page
+@node posix users
+@section Users and groups
+
+
+@defun getuid
+Interface to the C function @cfunc{getuid}, @glibcref{Reading Persona,
+getuid}.  Return a fixnum representing the real user ID of the process.
+@end defun
+
+
+@defun getgid
+Interface to the C function @cfunc{getgid}, @glibcref{Reading Persona,
+getgid}.  Return a fixnum representing the real group ID of the process.
+@end defun
+
+
+@defun geteuid
+Interface to the C function @cfunc{geteuid}, @glibcref{Reading Persona,
+geteuid}.  Return a fixnum representing the effective user ID of the
+process.
+@end defun
+
+
+@defun getegid
+Interface to the C function @cfunc{getegid}, @glibcref{Reading Persona,
+getegid}.  Return a fixnum representing the effective group ID of the
+process.
+@end defun
+
+
+@defun getgroups
+Interface to the C function @cfunc{getgroups}, @glibcref{Reading
+Persona, getgroups}.  Return a list of fixnums representing the
+supplementary group IDs of the process; if an error occurs an exception
+is raised.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun seteuid @var{new-uid}
+Interface to the C function @cfunc{seteuid}, @glibcref{Setting User ID,
+seteuid}.  Set the effective user ID to @var{new-uid}, which must be a
+fixnum.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun setuid @var{new-uid}
+Interface to the C function @cfunc{setuid}, @glibcref{Setting User ID,
+setuid}.  Set both the real and effective user IDs to @var{new-uid},
+which must be a fixnum.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun setreuid @var{real-uid} @var{effective-uid}
+Interface to the C function @cfunc{setreuid}, @glibcref{Setting User ID,
+setreuid}.  Set the real user ID to @var{real_uid} and the effective
+user ID to @var{effective_uid}, both the arguments must be fixnums.  If
+successful return unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun setegid @var{new-gid}
+Interface to the C function @cfunc{setegid}, @glibcref{Setting Group,
+setegid}.  Set the effective group ID to @var{new-gid}, which must be a
+fixnum.  If successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun setgid @var{new-gid}
+Interface to the C function @cfunc{setgid}, @glibcref{Setting Groups,
+setgid}.  Set both the real and effective group IDs to @var{new-gid},
+which must be a fixnum.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+@defun setregid @var{real-gid} @var{effective-gid}
+Interface to the C function @cfunc{setregid}, @glibcref{Setting Group,
+setregid}.  Set the real group ID to @var{real_gid} and the effective
+group ID to @var{effective_gid}, both the arguments must be fixnums.  If
+successful return unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun getlogin
+@defunx getlogin/string
+Interface to the C function @cfunc{getlogin}, @glibcref{Who Logged In,
+getlogin}.  @func{getlogin} returns a bytevector holding the @ascii{}
+coding of the name of the user logged in on the controlling terminal of
+the process; @func{getlogin/string} returns a string; if the name cannot
+be determined: return false.
+@end defun
+
+@c ------------------------------------------------------------
+
+@deftp {Structure Type} struct-passwd
+Scheme level representation of @code{struct passwd}.  It has the
+following fields:
+
+@table @code
+@item pw_name
+Bytevector, user login name.
+
+@item pw_passwd
+Bytevector, encrypted password.
+
+@item pw_uid
+Fixnum, user ID.
+
+@item pw_gid
+Fixnum, group ID.
+
+@item pw_gecos
+Bytevector, user data.
+
+@item pw_dir
+Bytevector, user's home directory.
+
+@item pw_shell
+Bytevector, user's default shell.
+@end table
+@end deftp
+
+
+@defun make-struct-passwd @var{name} @var{passwd} @var{uid} @var{gid} @var{gecos} @var{dir} @var{shell}
+Build and return a new instance of @code{struct-passwd}.
+@end defun
+
+
+@defun struct-passwd? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-passwd}.
+@end defun
+
+
+@defun struct-passwd-pw_name @var{passwd}
+@defunx struct-passwd-pw_passwd @var{passwd}
+@defunx struct-passwd-pw_uid @var{passwd}
+@defunx struct-passwd-pw_gid @var{passwd}
+@defunx struct-passwd-pw_gecos @var{passwd}
+@defunx struct-passwd-pw_dir @var{passwd}
+@defunx struct-passwd-pw_shell @var{passwd}
+Accessors for the fields of @code{struct-passwd}.
+@end defun
+
+
+@defun getpwuid @var{uid}
+Interface to the C function @cfunc{getpwuid}, @glibcref{Lookup User,
+getpwuid}.  Retrieve informations on the user with identifier @var{uid},
+which must be a fixnum.  If successful return an instance of
+@code{struct-passwd}; if a user with such an ID does not exists: return
+false.
+@end defun
+
+
+@defun getpwnam @var{name}
+Interface to the C function @cfunc{getpwnam}, @glibcref{Lookup User,
+getpwnam}.  Retrieve informations on the user with name represented in
+@ascii{} coding in the string or bytevector @var{name}.  If successful
+return an instance of @code{struct-passwd}; if a user with such an ID
+does not exists: return false.
+@end defun
+
+
+@defun user-entries
+Interface to the C functions @cfunc{setpwent}, @cfunc{getpwent} and
+@cfunc{endpwent}, @glibcref{Scanning All Users, setpwent}.  Iterate the
+database of users and return a list of @code{struct-passwd} representing
+the entries.
+@end defun
+
+@c ------------------------------------------------------------
+
+@deftp {Structure Type} struct-group
+Scheme level representation of @code{struct group}.  It has the
+following fields:
+
+@table @code
+@item gr_name
+Bytevector, group name.
+
+@item gr_gid
+Fixnum, group ID.
+
+@item gr_mem
+List of bytevectors, user names.
+@end table
+@end deftp
+
+
+@defun make-struct-group @var{name} @var{gid} @var{mem}
+Build and return a new instance of @code{struct-group}.
+@end defun
+
+
+@defun struct-group-gr_name @var{group}
+@defunx struct-group-gr_gid @var{group}
+@defunx struct-group-gr_mem @var{group}
+Accessors for the fields of @code{struct-group}.
+@end defun
+
+
+@defun getgrgid @var{gid}
+Interface to the C function @cfunc{getgrgid}, @glibcref{Lookup Group,
+getgrgid}.  Retrieve informations on the group with identifier
+@var{gid}, which must be a fixnum.  If successful return an instance of
+@code{struct-group}; if a group with such an ID does not exists: return
+false.
+@end defun
+
+
+@defun getgrnam @var{name}
+Interface to the C function @cfunc{getgrnam}, @glibcref{Lookup Group,
+getgrnam}.  Retrieve informations on the group with name represented in
+@ascii{} coding in the string or bytevector @var{name}.  If successful
+return an instance of @code{struct-group}; if a group with such an ID
+does not exists: return false.
+@end defun
+
+
+@defun group-entries
+Interface to the C functions @cfunc{setgrent}, @cfunc{getgrent} and
+@cfunc{endgrent}, @glibcref{Scanning All Groups, setgrent}.  Iterate the
+database of groups and return a list of @code{struct-group} representing
+the entries.
+@end defun
+
+@c page
+@node posix job
+@section Job control
+
+
+@defun ctermid
+@defunx ctermid/string
+Interface to the C function @cfunc{ctermid}, @glibcref{Identifying the
+Terminal, ctermid}.  Return a bytevector or string holding the @ascii{}
+coded pathname of the controlling terminal of the current process; the
+returned value may be the empty bytevector or string.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun setsid
+Interface to the C function @cfunc{setsid}, @glibcref{Process Group
+Functions, setsid}.  Create a new session, making the current process
+the group leader with no controlling terminal.  If successful return a
+fixnum representing the new process groups ID, else raise an exception.
+@end defun
+
+
+@defun getsid @var{pid}
+Interface to the C function @cfunc{getsid}, @glibcref{Process Group
+Functions, getsid}.  If successful return a fixnum representing the
+session ID of the process with process ID @var{pid}, which must be a
+fixnum; else raise an exception.
+@end defun
+
+
+@defun getpgrp
+Interface to the C function @cfunc{getpgrp}, @glibcref{Process Group
+Functions, getpgrp}.  Return a fixnum representing the process group ID
+of the calling process.
+@end defun
+
+
+@defun setpgid @var{pid} @var{pgid}
+Interface to the C function @cfunc{setpgid}, @glibcref{Process Group
+Functions, setpgid}.  Put the process @var{pid} in the process group
+@var{pgid}; both the arguments must be fixnums.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun tcgetpgrp @var{fd}
+Interface to the C function @cfunc{tcgetpgrp}, @glibcref{Terminal Access
+Functions, tcgetpgrp}.  If successful return a fixnum representing the
+process group ID of the foreground process group associated with the
+terminal open on descriptor @var{fd}, which must be a fixnum; else raise
+an exception.
+@end defun
+
+
+@defun tcsetpgrp @var{fd} @var{pgid}
+Interface to the C function @cfunc{tcsetpgrp}, @glibcref{Terminal Access
+Functions, tcsetpgrp}.  Set to process group ID @var{pgid} the
+foreground process group for the terminal open on descriptor @var{fd};
+both the arguments must be fixnums.  If successful return the fixnum
+zero, else raise an exception.
+@end defun
+
+
+@defun tcgetsid @var{fd}
+Interface to the C function @cfunc{tcgetsid}, @glibcref{Terminal Access
+Functions, tcgetsid}.  If successful return a fixnum representing the
+process group ID of the session for which the terminal open on
+descriptor @var{fd} is the controlling terminal; else raise an
+exception.
+@end defun
+
+
+@c page
+@node posix time
+@section Date and time
+
+
+@menu
+* posix time timeval::          Data structure @code{struct-timeval}.
+* posix time timespec::         Data structure @code{struct-timespec}.
+* posix time tms::              Data structure @code{struct-tms}.
+* posix time tm::               Data structure @code{struct-tm}.
+* posix time itimerval::        Data structure @code{struct-itimerval}.
+* posix time itimerspec::       Data structure @code{struct-itimerspec}.
+* posix time functions::        Date and time functions.
+@end menu
+
+@c page
+@node posix time timeval
+@subsection Data structure @code{struct-timeval}
+
+
+@deftp {Structure Type} struct-timeval
+Scheme level representation of @code{struct timeval}, @glibcref{Elapsed
+Time, struct timeval}.  It has the
+following fields:
+
+@table @code
+@item tv_sec
+Exact integer, represents a count of seconds.
+
+@item tv_usec
+Exact integer, represents a count of microseconds.
+@end table
+@end deftp
+
+
+@defun make-struct-timeval @var{sec} @var{usec}
+Build and return a new instance of @code{struct-timeval}.
+@end defun
+
+
+@defun struct-timeval? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-timeval}.
+@end defun
+
+
+@defun struct-timeval-tv_sec @var{timeval}
+@defunx struct-timeval-tv_usec @var{timeval}
+Accessors for the fields of @code{struct-timeval}.
+@end defun
+
+@c page
+@node posix time timespec
+@subsection Data structure @code{struct-timespec}
+
+
+@deftp {Structure Type} struct-timespec
+Scheme level representation of @code{struct timespec}, @glibcref{Elapsed
+Time, struct timeval}.  It has the following fields:
+
+@table @code
+@item tv_sec
+Exact integer, represents a count of seconds.
+
+@item tv_nsec
+Exact integer, represents a count of nanoseconds.
+@end table
+@end deftp
+
+
+@defun make-struct-timespec @var{sec} @var{usec}
+Build and return a new instance of @code{struct-timespec}.
+@end defun
+
+
+@defun struct-timespec? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-timespec}.
+@end defun
+
+
+@defun struct-timespec-tv_sec @var{timespec}
+@defunx struct-timespec-tv_nsec @var{timespec}
+Accessors for the fields of @code{struct-timespec}.
+@end defun
+
+@c page
+@node posix time tms
+@subsection Data structure @code{struct-tms}
+
+
+@deftp {Structure Type} struct-tms
+Scheme level representation of @code{struct tms}, @glibcref{Processor
+Time, struct tms}.  It has the following fields:
+
+@table @code
+@item tms_utime
+Exact integer.
+
+@item tms_stime
+Exact integer.
+
+@item tms_cutime
+Exact integer.
+
+@item tms_cstime
+Exact integer.
+@end table
+@end deftp
+
+
+@defun make-struct-tms @var{utime} @var{stime} @var{cutime} @var{cstime}
+Build and return a new instance of @code{struct-tms}.
+@end defun
+
+
+@defun struct-tms? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-tms}.
+@end defun
+
+
+@defun struct-tms-tms_utime @var{tms}
+@defunx struct-tms-tms_stime @var{tms}
+@defunx struct-tms-tms_cutime @var{tms}
+@defunx struct-tms-tms_cstime @var{tms}
+Accessors for the fields of @code{struct-tms}.
+@end defun
+
+@c page
+@node posix time tm
+@subsection Data structure @code{struct-tm}
+
+
+@deftp {Structure Type} struct-tm
+Scheme level representation of @code{struct tm}, @glibcref{Broken-down
+Time, struct tm}.  It has the following fields:
+
+@table @code
+@item tm_sec
+Exact integer.
+
+@item tm_min
+Exact integer.
+
+@item tm_hour
+Exact integer.
+
+@item tm_mday
+Exact integer.
+
+@item tm_mon
+Exact integer.
+
+@item tm_year
+Exact integer.
+
+@item tm_wday
+Exact integer.
+
+@item tm_yday
+Exact integer.
+
+@item tm_isdst
+Boolean.
+
+@item tm_gmtoff
+Exact integer.
+
+@item tm_zone
+Bytevector.
+@end table
+@end deftp
+
+
+@defun make-struct-tm @var{tm_sec} @var{tm_min} @var{tm_hour} @var{tm_mday} @var{tm_mon} @var{tm_year} @var{tm_wday} @var{tm_yday} @var{tm_isdst} @var{tm_gmtoff} @var{tm_zone}
+Build and return a new instance of @code{struct-tm}.
+@end defun
+
+
+@defun struct-tm? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-tm}.
+@end defun
+
+
+@defun struct-tm-tm_sec @var{tm}
+@defunx struct-tm-tm_min @var{tm}
+@defunx struct-tm-tm_hour @var{tm}
+@defunx struct-tm-tm_mday @var{tm}
+@defunx struct-tm-tm_mon @var{tm}
+@defunx struct-tm-tm_year @var{tm}
+@defunx struct-tm-tm_wday @var{tm}
+@defunx struct-tm-tm_yday @var{tm}
+@defunx struct-tm-tm_isdst @var{tm}
+@defunx struct-tm-tm_gmtoff @var{tm}
+@defunx struct-tm-tm_zone @var{tm}
+Accessors for instances of @var{struct-tm}
+@end defun
+
+@c page
+@node posix time itimerval
+@subsection Data structure @code{struct-itimerval}
+
+
+Structure representing interval timer values (ITimerVal).
+
+
+@deftp {Structure Type} struct-itimerval
+Scheme level representation of @code{struct itimerval},
+@glibcref{Setting an Alarm, struct itimerval}.  It has the following
+fields:
+
+@table @code
+@item it_interval
+An instance of @code{struct-timeval} representing the period between
+successive timer interrupts.
+
+@item it_value
+An instance of @code{struct-timeval} representing the time interval
+between now and the first timer interrupt.
+@end table
+@end deftp
+
+
+@defun make-struct-itimerval
+@defunx make-struct-itimerval @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerval}.  When called
+with no arguments: two new instances of @code{struct-timeval} are
+allocated and initialised to zero values, then used as field values.
+@end defun
+
+
+@defun struct-itimerval? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-itimerval}.
+@end defun
+
+
+@defun struct-itimerval-it_interval @var{itimerval}
+@defunx struct-itimerval-it_value @var{itimerval}
+Accessors for the fields of @code{struct-itimerval}.
+@end defun
+
+@c page
+@node posix time itimerspec
+@subsection Data structure @code{struct-itimerspec}
+
+
+Structure representing interval timer specifications (ITimerSpec).
+
+
+@deftp {Structure Type} struct-itimerspec
+Scheme level representation of @code{struct itimerspec}, see the manual
+pages @code{timer_create(2)} and @code{timerfd_create(2)}.  It has the
+following fields:
+
+@table @code
+@item it_interval
+An instance of @code{struct-timespec} representing the period between
+successive timer interrupts, in seconds and nanoseconds.  @ref{posix
+time timespec} for details on @code{struct-timespec}.
+
+@item it_value
+An instance of @code{struct-timespec} representing the time interval
+between now and the first timer interrupt, in seconds and nanoseconds.
+@ref{posix time timespec} for details on @code{struct-timespec}.
+@end table
+@end deftp
+
+
+@defun make-struct-itimerspec
+@defunx make-struct-itimerspec @var{interval} @var{value}
+Build and return a new instance of @code{struct-itimerspec}.  When
+called with no arguments: two new instances of @code{struct-timespec}
+are allocated and initialised to zero values, then used as field values.
+@end defun
+
+
+@defun struct-itimerspec? @var{obj}
+Return true if @var{obj} is an instance of @code{struct-itimerspec}.
+@end defun
+
+
+@defun struct-itimerspec-it_interval @var{itimerspec}
+@defunx struct-itimerspec-it_value @var{itimerspec}
+Accessors for the fields of @code{struct-itimerspec}.
+@end defun
+
+@c page
+@node posix time functions
+@subsection Date and time functions
+
+
+@defun clock
+Interface to the C function @cfunc{clock}, @glibcref{CPU Time, clock}.
+If successful return an exact integer representing the CPU time for the
+calling process expressed in clock ticks; if the clock time is not
+available return false.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun times
+Interface to the C function @cfunc{times}, @glibcref{Processor Time,
+times}.  If successful return an instance of @code{struct-tms}
+representing the current processor time, else return false.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun time
+Interface to the C function @cfunc{time}, @glibcref{Simple Calendar
+Time, time}.  If successful return the calendar time as an exact
+integer, else return false.
+@end defun
+
+
+@defun gettimeofday
+Interface to the C function @cfunc{gettimeofday},
+@glibcref{High-Resolution Calendar, gettimeofday}.  Acquire the current
+time.  If successful return an instance of @code{struct-timeval}, else
+raise an exception.
+@end defun
+
+
+@defun localtime @var{time}
+Interface to the C function @cfunc{localtime}, @glibcref{Broken-down
+Time, localtime}.  Given an exact integer @var{time} representing the
+local time as returned by the @func{time} function: build and return an
+instance of @code{struct-tm} representing the same time in human
+readable form; if an error occurs raise an exception.
+@end defun
+
+
+@defun gmtime @var{time}
+Interface to the C function @cfunc{gmtime}, @glibcref{Broken-down Time,
+gmtime}.  Given an exact integer @var{time} representing the @utc{} time
+as returned by the @func{time} function: build and return an instance of
+@code{struct-tm} representing the same time in human readable form; if
+an error occurs raise an exception.
+@end defun
+
+
+@defun timelocal @var{tm}
+Interface to the C function @cfunc{timelocal}, @glibcref{Broken-down
+Time, timelocal}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a local broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an exact integer
+representing the time value, else raise an exception.
+@end defun
+
+
+@defun timegm @var{tm}
+Interface to the C function @cfunc{timegm}, @glibcref{Broken-down Time,
+timegm}.  Given a reference to a @code{struct-rm}, @var{tm},
+representing a @utc{} broken time, convert it into a time value as
+returned by @cfunc{time}.  If successful return an exact integer
+representing the time value, else raise an exception.
+@end defun
+
+
+@defun strftime @var{template} @var{tm}
+@defunx strftime/string @var{template} @var{tm}
+Interface to the C function @cfunc{strftime}, @glibcref{Formatting
+Calendar Time, strftime}.  Given a bytevector @var{template} holding an
+@ascii{} coded format string and a @code{struct-tm} instance @var{tm}:
+build a formatted time string; the resulting time string can be at most
+@math{4096} bytes wide.  If successful @func{strftime} returns a
+bytevector holding the time string in @ascii{} coding and
+@func{strftime/string} returns a Scheme string, else raise an exception.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun nanosleep @var{secs} @var{nsecs}
+Interface to the C function @cfunc{nanosleep}, @glibcref{Sleeping,
+nanosleep}.  Halt the current process for the specified amount of time.
+
+The count of seconds @var{secs} must be an exact integer in the range
+@math{[0, 2^32)}; the count of nanoseconds @var{nsecs} must be an exact
+integer in the range @math{[0, 999999999]}.
+
+If successful and the requested time is elapsed: return a pair whose car
+is false and whose cdr is false.  If successful and the sleeping was
+interrupted by an interprocess signal: return a pair whose car is an
+exact integer representing the count of remaining seconds and whose cdr
+is an exact integer representing the count of remaining nanoseconds.  If
+an error occurs an exception is raised.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun setitimer @var{which} @var{itimerval}
+Interface to the C function @cfunc{setitimer}, @glibcref{Setting an
+Alarm, setitimer}.  Set the timer specified by @var{which} according to
+@var{itimerval}.  If successful return unspecified values, else raise an
+exception.
+
+@var{which} must be a fixnum representing one of the constants:
+@code{ITIMER_REAL}, @code{ITIMER_VIRTUAL}, @code{ITIMER_PROF}.
+
+@var{itimerval} must be an instance of @code{struct-itimerval}.
+@end defun
+
+
+@defun getitimer @var{which}
+Interface to the C function @cfunc{getitimer}, @glibcref{Setting an
+Alarm, getitimer}.  Build and return a new @code{struct-itimerval}
+representing the current timer.
+@end defun
+
+
+@defun alarm @var{seconds}
+Interface to the C function @cfunc{alarm}, @glibcref{Setting an Alarm,
+alarm}.  Set the real--time timer to expire in @var{seconds}.  Return an
+exact integer representing how many seconds remain before the previous
+alarm would have been sent.
+@end defun
+
+@c ------------------------------------------------------------
+
+The following are the real--time clock functions.  They are available
+when @value{PRJNAME} is linked with the @code{rt} library.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems the argument @var{clock-id} to the
+@code{clock-*} functions can be one among:
+
+@example
+CLOCK_REALTIME
+CLOCK_MONOTONIC                 CLOCK_MONOTONIC_RAW
+CLOCK_PROCESS_CPUTIME_ID        CLOCK_THREAD_CPUTIME_ID
+@end example
+
+@noindent
+or a value returned by @func{clock-getcpuclockid}.  The code assumes
+that clock identifiers of type @code{clockid_t} can be safely converted
+to C language @code{long} values.
+@end quotation
+
+
+@defun clock-getres @var{clock-id} @var{time}
+Interface to the C function @cfunc{clock-getres}, see the manual page
+@code{clock-getres(2)}.  Find the resolution of the clock selected by
+the fixnum @var{clock-id} and store it in @var{time}, which must be an
+instance of @code{struct-timespec}.  If successful return @var{time}
+itself, else raise an exception.
+@end defun
+
+
+@defun clock-gettime @var{clock-id} @var{time}
+Interface to the C function @cfunc{clock-gettime}, see the manual page
+@code{clock-gettime(2)}.  Retrieve the time of the clock selected by the
+fixnum @var{clock-id} and store it in @var{time}, which must be an
+instance of @code{struct-timespec}.  If successful return @var{time}
+itself, else raise an exception.
+@end defun
+
+
+@defun clock-settime @var{clock-id} @var{time}
+Interface to the C function @cfunc{clock-settime}, see the manual page
+@code{clock-settime(2)}.  Set the time of the clock selected by the
+fixnum @var{clock-id} acquiring it from @var{time}, which must be an
+instance of @code{struct-timespec}.  If successful return @var{time}
+itself, else raise an exception.
+@end defun
+
+
+@defun clock-getcpuclockid @var{pid}
+Interface to the C function @cfunc{clock_getcpuclockid}, see the manual
+page @code{clock_getcpuclockid(3)}.  Obtain the identifier of a process'
+@acronym{CPU}--time clock; if successful return an exact integer
+representing the clock identifier, else raise an exception.  @var{pid}
+must be a fixnum representing the process identifier (@acronym{PID}).
+@end defun
+
+@c page
+@node posix timers
+@section @posix{} per--process timers
+
+
+@cindex @posix{} timers
+@cindex @posix{} per--process timers
+@cindex Timer, @posix{} per--process timers
+@cindex Per--process timers
+
+
+The @posix{} timer @api{} allows the creation of per--process timers
+triggering time--periodic events by specification of two time intervals:
+
+@enumerate
+@item
+Initial expiration: how much time before the first event.
+
+@item
+Period: how much time between two time--adjacent events.  When the
+period is zero: only one event notification is delivered.
+@end enumerate
+
+@example
+    time before the
+    first event       period      period      period
+   |               |           |           |           |
+---+---------------+-----------+-----------+-----------+----
+   ^               ^           ^           ^           ^
+  now          1st event   2nd event   3rd event   4th event
+@end example
+
+Each timer can be started, stopped, reconfigured and queried for how
+much time until the next event.
+
+
+@defun timer-create @var{clock-id}
+Interface to the C function @cfunc{timer_create}, see the manual page
+@code{timer_create(2)}.  Create a new per--process interval timer,
+initially disarmed; if successful return an exact integer representing
+the timer identifier, else raise an exception.
+
+@var{clock-id} must be an exact integer representing the identifier of a
+clock to be used to measure time; it can be one of the constants:
+
+@example
+CLOCK_REALTIME                  CLOCK_MONOTONIC
+CLOCK_PROCESS_CPUTIME_ID        CLOCK_THREAD_CPUTIME_ID
+@end example
+
+@noindent
+or the return value of @func{clock-getcpuclockid}.
+
+The call sets up the notification as with a C language @code{struct
+sigevent} having: @code{sigev_notify} set to @code{SIGEV_SIGNAL},
+@code{sigev_signo} set to @code{SIGALRM}, @code{sigev.sival_int} set to
+the timer identifier.  This means the timer expirations are notified to
+the process by delivering @code{SIGALRM} signals.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems: for details on @code{struct
+sigevent} see the manual page @code{sigevent(7)}.
+@end quotation
+@end defun
+
+
+@defun timer-delete @var{timer-id}
+Interface to the C function @cfunc{timer_delete}, see the manual page
+@code{timer_delete(2)}.  Delete the timer referenced by @var{timer-id};
+if successful return unspecified values, else raise an exception.
+@end defun
+
+
+@defun timer-settime @var{timer-id} @var{flags} @var{new}
+@defunx timer-settime @var{timer-id} @var{flags} @var{new} @var{old}
+Interface to the C function @cfunc{timer_settime}, see the manual page
+@code{timer_settime(2)}.  Arm or disarm the timer referenced by
+@var{timer-id}.  If successful return @var{old} or @false{} when
+@var{old} is not given; if an error occurs raise an exception.
+
+@var{flags} can be either the fixnum zero or @code{TIMER_ABSTIME}.
+@var{new} must be a valid instance of @code{struct-itimerspec}, which is
+used to set the timer.  The optional @var{old} can be @false{} or a
+valid instance of @code{struct-itimerspec}; when given: it is filled
+with the old timer specification.
+@end defun
+
+
+@defun timer-gettime @var{timer-id}
+@defunx timer-gettime @var{timer-id} @var{curr}
+Interface to the C function @cfunc{timer_gettime}, see the manual page
+@code{timer_gettime(2)}.  Retrieve the current timer specification
+associated to the timer identifier @var{timer-id}.  If successful return
+@var{curr} or a newly built instance of @code{struct-itimerspec}; if an
+error occurs: raise an exception.
+
+The optional @var{curr} must be a valid instance of
+@code{struct-itimerspec}, when not given a new instance of this
+structure type is internally built: it is filled with the current timer
+specification.
+@end defun
+
+
+@defun timer-getoverrun @var{timer-id}
+Interface to the C function @cfunc{timer_getoverrun}, see the manual
+page @code{timer_getoverrun(2)}.  Get overrun count for the timer
+referenced by @var{timer-id}; if successful return a non--negative exact
+integer representing the overrun count of the specified timer, else
+raise an exception.
+@end defun
+
+
+In the following example program:
+
+@enumerate
+@item
+We use the @bub{} @api{} to block all the signals, so including
+@code{SIGALRM}.
+
+@item
+Then we create a @posix{} timer whose expirations are notified by
+delivering @code{SIGALRM} signals.
+
+@item
+Then we use @func{sigtimedwait} to count the expirations.
+@end enumerate
+
+Note very well that to recognise that a @code{SIGALRM} signal is
+delivered by the expiration of the timer, we have to check the
+@code{si_value.sival_int} field of the @code{struct-siginfo_t},
+@strong{not} the @code{si_timerid} field.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(px.signal-bub-init)
+
+(define timer-id
+  (px.timer-create CLOCK_REALTIME))
+(px.timer-settime timer-id 0
+      (px.make-struct-itimerspec
+         ;;one event every 1 seconds
+         (px.make-struct-timespec 1 0)
+         ;;the first event after 1 nanosecond
+         (px.make-struct-timespec 0 1)))
+
+(unwind-protect
+    (let next ((count 0))
+      (if (fx= count 3)
+          count
+        (let-values
+            (((signo info)
+              (px.sigtimedwait SIGALRM
+                 (px.make-struct-timespec 2 0))))
+          (define was-sigalrm?
+            (= signo SIGALRM))
+          (define right-timer?
+            (= timer-id
+               (px.struct-siginfo_t-si_value.sival_int info)))
+          (next (if (and was-sigalrm? right-timer?)
+                    (+ 1 count)
+                  count)))))
+  (px.timer-delete timer-id)
+  (px.signal-bub-final))
+@result{} 3
+@end example
+
+@c page
+@node posix config
+@section System configuration
+
+
+The following bindings are exported by the @library{vicare posix}
+library.  If an error occurs: all the following functions raise an
+exception with condition components @condition{errno},
+@condition{error}, @condition{who}, @condition{message},
+@condition{irritants}.
+
+
+@defun sysconf @var{parameter}
+Interface to the C function @cfunc{sysconf}, @glibcref{Sysconf
+Definition, sysconf}.  Query the system for a configuration value
+selected by the exact integer @var{parameter} among the @code{_SC_}
+constants.  If successful and a value is available: return a positive
+exact integer; if successful but no value is available return false; if
+@var{parameter} is invalid raise an exception.
+
+@strong{NOTE} This function assumes that all the validly returnable
+values are non--negative.  If a value is negative, the behaviour is
+unspecified.
+@end defun
+
+
+@defun pathconf @var{pathname} @var{parameter}
+Interface to the C function @cfunc{pathconf}, @glibcref{Pathconf,
+pathconf}.  Query the system for a configuration value associated to the
+file @var{pathname} selected by the exact integer @var{parameter} among
+the @code{_PC_} constants.
+
+@var{pathname} must be a string or bytevector; if it is a string: it is
+converted to bytevector with the function referenced by
+@func{string->filename-func}.
+
+If successful and a value is available: return a positive exact integer;
+if successful but no value is available return false; if @var{parameter}
+is invalid raise an exception.
+
+@strong{NOTE} This function assumes that all the validly returnable
+values are non--negative.  If a value is negative, the behaviour is
+unspecified.
+@end defun
+
+
+@defun fpathconf @var{fd} @var{parameter}
+Interface to the C function @cfunc{fpathconf}, @glibcref{Pathconf,
+fpathconf}.  Query the system for a configuration value associated to
+the file descriptor @var{fd} selected by the exact integer
+@var{parameter} among the @code{_PC_} constants.
+
+If successful and a value is available: return a positive exact integer;
+if successful but no value is available return false; if @var{parameter}
+is invalid raise an exception.
+
+@strong{NOTE} This function assumes that all the validly returnable
+values are non--negative.  If a value is negative, the behaviour is
+unspecified.
+@end defun
+
+
+@defun confstr @var{parameter}
+@defunx confstr/string @var{parameter}
+Interface to the C function @cfunc{confstr}, @glibcref{String
+Parameters, confstr}.  Query the system for a configuration value
+selected by the exact integer @var{parameter} among the @code{_CS_}
+constants.  If successful @func{confstr} returns a bytevector
+representing the value, @func{confstr/string} returns a string
+representing the value; else an exception is raised.
+
+@example
+#!r6rs
+(import (rnrs)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(px.confstr/string _CS_PATH)
+@result{} "/bin:/usr/bin"
+@end example
+@end defun
+
+@c page
+@node posix resources
+@section Resources usage
+
+
+@menu
+* posix resources rlimit::      Data structure @code{struct-rlimit}.
+* posix resources rusage::      Data structure @code{struct-rusage}.
+* posix resources funcs::       System resources functions.
+@end menu
+
+@c page
+@node posix resources rlimit
+@subsection Data structure @code{struct-rlimit}
+
+
+@deftp {Struct Type} struct-rlimit
+Scheme level representation of the C language type @code{struct rlimit},
+@glibcref{Limits on Resources, struct rlimit}.  Hold the soft and hard
+limits of a resource.
+
+@table @code
+@item rlim_cur
+An exact integer representing the soft limit.
+
+@item rlim_max
+An exact integer representing the hard limit.
+@end table
+@end deftp
+
+
+@defun make-struct-rlimit
+@defunx make-struct-rlimit @var{cur} @var{max}
+Build and return a new instance of @code{struct-rlimit}.  When no
+arguments are given: the fields are initialised with the fixnum zero.
+@end defun
+
+
+@defun struct-rlimit? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-rlimit}.
+@end defun
+
+
+@defun struct-rlimit-rlim_cur @var{rlim}
+@defunx struct-rlimit-rlim_max @var{rlim}
+Accessors for the fields of @code{struct-rlimit}.
+@end defun
+
+
+@defun set-struct-rlimit-rlim_cur! @var{rlim} @var{value}
+@defunx set-struct-rlimit-rlim_max! @var{rlim} @var{value}
+Mutators for the fields of @code{struct-rlimit}.
+@end defun
+
+@c page
+@node posix resources rusage
+@subsection Data structure @code{struct-rusage}
+
+
+@deftp {Struct Type} struct-rusage
+Scheme level representation of the C language type @code{struct rusage},
+@glibcref{Resource Usage, struct rusage}.  It has the following fields:
+
+@table @code
+@item ru_utime
+An instance of @code{struct-timeval}.
+
+@item ru_stime
+An instance of @code{struct-timeval}.
+
+@item ru_maxrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_ixrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_idrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_isrss
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_minflt
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_majflt
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nswap
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_inblock
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_oublock
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_msgsnd
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_msgrcv
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nsignals
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nvcsw
+An exact integer in the range of the C language type @code{long int}.
+
+@item ru_nivcsw
+An exact integer in the range of the C language type @code{long int}.
+@end table
+
+Notice some of the fields may be meaningless on some platforms, in which
+case they are set to @false{}.
+@end deftp
+
+
+@defun make-struct-rusage
+@defunx make-struct-rusage
+Build and return a new instance of @code{struct-rusage}.  When no
+arguments are given: the fields @code{ru_utime} and @code{ru_stime} are
+set to instance of @code{struct-timeval} with fields set to zero, all
+the other fields are set to @false{}.
+@end defun
+
+
+@defun struct-rusage? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-rusage}.
+@end defun
+
+
+@defun struct-rusage-ru_utime @var{rusage}
+@defunx struct-rusage-ru_stime @var{rusage}
+@defunx struct-rusage-ru_maxrss @var{rusage}
+@defunx struct-rusage-ru_ixrss @var{rusage}
+@defunx struct-rusage-ru_idrss @var{rusage}
+@defunx struct-rusage-ru_isrss @var{rusage}
+@defunx struct-rusage-ru_minflt @var{rusage}
+@defunx struct-rusage-ru_majflt @var{rusage}
+@defunx struct-rusage-ru_nswap @var{rusage}
+@defunx struct-rusage-ru_inblock @var{rusage}
+@defunx struct-rusage-ru_oublock @var{rusage}
+@defunx struct-rusage-ru_msgsnd @var{rusage}
+@defunx struct-rusage-ru_msgrcv @var{rusage}
+@defunx struct-rusage-ru_nsignals @var{rusage}
+@defunx struct-rusage-ru_nvcsw @var{rusage}
+@defunx struct-rusage-ru_nivcsw @var{rusage}
+Accessors for the fields of @code{struct-rusage}.
+@end defun
+
+
+@defun set-struct-rusage-ru_utime! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_stime! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_maxrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_ixrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_idrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_isrss! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_minflt! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_majflt! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nswap! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_inblock! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_oublock! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_msgsnd! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_msgrcv! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nsignals! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nvcsw! @var{rusage} @var{value}
+@defunx set-struct-rusage-ru_nivcsw! @var{rusage} @var{value}
+Mutators for the fields of @code{struct-rusage}.
+@end defun
+
+@c page
+@node posix resources funcs
+@subsection System resources functions
+
+
+@deffn {Identifier Syntax} RLIM_INFINITY
+The value of the corresponding @posix{} constant.  If the constant is
+defined: this identifier expands to an unsigned integer, else it expands
+to @false{}.
+@end deffn
+
+
+@defun getrlimit @var{resource}
+@defunx getrlimit @var{resource} @var{rlimit}
+Interface to the C function @cfunc{getrlimit}, @glibcref{Limits on
+Resources, getrlimit}.  Retrieve the soft and hard limits of a system
+resource; if successful return @var{rlimit}, else raise an exception.
+
+@var{resource} must be an exact integer representing the value of a
+@code{RLIMIT_} constant.
+
+The optional @var{rlimit} must be an instance of @code{struct-rlimit}:
+it is filled with the requested values and returned; when not given: a
+new instance is allocated, filled and returned.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants))
+
+(px.getrlimit RLIMIT_STACK)
+@result{} #["struct-rlimit" rlim_cur=8388608 rlim_max=4294967295]
+@end example
+@end defun
+
+
+@defun setrlimit @var{resource} @var{rlimit}
+Interface to the C function @cfunc{setrlimit}, @glibcref{Limits on
+Resources, setrlimit}.  Set the soft and hard limits of a system
+resource; if successful return unspecified values, else raise an
+exception.
+
+@var{resource} must be an exact integer representing the value of a
+@code{RLIMIT_} constant.  @var{rlimit} must be an instance of
+@code{struct-rlimit} filled with the selected values.
+@end defun
+
+
+@defun getrusage @var{processes}
+@defunx getrusage @var{processes} @var{rusage}
+Interface to the C function @cfunc{getrusage}, @glibcref{Resource Usage,
+getrusage}.  Reports resource usage totals for processes specified by
+@var{processes}; if successful return @var{rusage}, else raise an
+exception.
+
+@var{processes} must be an exact integer in the range of the C language
+type @code{int}; it should be one of the @code{RUSAGE_} platform
+constants.
+
+The optional @var{rusage} must be an instance of @code{struct-rusage}
+and it is filled with the usage values; when not given: a new instance
+of @code{struct-rusage} is internally allocated, filled and returned.
+@end defun
+
+@c page
+@node posix mq
+@section Message queues
+
+
+@posix{} message queues allow processes to exchange messages composed of
+arrays of bytes.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
+we must refer to the manual page @code{mq_overview(7)}.
+@end quotation
+
+@menu
+* posix mq attr::               Structure type @code{struct-mq-attr}.
+* posix mq api::                Message queues @api{}.
+* posix mq examples::           Simple examples of message queues usage.
+@end menu
+
+@c page
+@node posix mq attr
+@subsection Structure type @code{struct-mq-attr}
+
+
+The following bindings are exported by the @library{vicare posix}
+library.
+
+
+@deftp {Struct Type} struct-mq-attr
+Data structure type used to represent at the Scheme level @code{struct
+mq_attr} values, see the manual page @code{mq_getattr(3)}.  It has the
+following fields:
+
+@table @code
+@item mq_flags
+The fixnum zero or the constant @code{O_NONBLOCK}.
+
+@item mq_maxmsg
+Maximum number of messages on the queue.
+
+@item mq_msgsize
+Maximum message size in bytes.
+
+@item mq_curmsgs
+Number of messages currently on the queue.
+@end table
+@end deftp
+
+
+@defun make-struct-mq-attr @var{flags} @var{maxmsg} @var{msgsize} @var{curmsgs}
+Build and return a new instance of @code{struct-mq-attr}.
+@end defun
+
+
+@defun struct-mq-attr? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{struct-mq-attr} and
+its field values are valid, return @false{} otherwise.
+@end defun
+
+
+@defun struct-mq-attr-mq_flags @var{attr}
+@defunx struct-mq-attr-mq_maxmsg @var{attr}
+@defunx struct-mq-attr-mq_msgsize @var{attr}
+@defunx struct-mq-attr-mq_curmsgs @var{attr}
+Accessors for the fields of @code{struct-mq-attr}.
+@end defun
+
+
+@defun set-struct-mq-attr-mq_flags! @var{attr} @var{value}
+@defunx set-struct-mq-attr-mq_maxmsg! @var{attr} @var{value}
+@defunx set-struct-mq-attr-mq_msgsize! @var{attr} @var{value}
+@defunx set-struct-mq-attr-mq_curmsgs! @var{attr} @var{value}
+Mutators for the fields of @code{struct-mq-attr}.
+@end defun
+
+@c page
+@node posix mq api
+@subsection Message queues @api{}.
+
+
+The following bindings are exported by the @library{vicare posix}
+library.  On @gnu{}+Linux systems, for an introduction to the @api{} we
+must refer to the manual page @code{mq_overview(7)} and for the full
+documentation of each function we must refer to the manual pages.
+Notice that @code{mq_notify(3)} at present is not interfaced.
+
+@quotation
+@strong{NOTE} The code implementing the interface to @posix{} message
+queues assumes that the descriptor @code{mqd_t} is a fixnum.  On
+@gnu{}+Linux systems this value is known to be a file descriptor.
+@end quotation
+
+
+@defun mq-open @var{name} @var{oflag} @var{mode}
+@defunx mq-open @var{name} @var{oflag} @var{mode} @var{attr}
+Interface to the C function @cfunc{mq_open}, see the manual page
+@code{mq_open(3)}.  Create a new message queue or open an existing one.
+If successful return a message queue descriptor, else raise an
+exception.
+
+@var{name} must be a Scheme string or bytevector holding a pathname in
+@ascii{} encoding.
+
+@var{oflag} must be a fixnum representing the inclusive OR composition
+of some of the following flags:
+
+@example
+O_RDONLY    O_WRONLY  O_RDWR
+O_NONBLOCK  O_CREAT   O_EXCL
+@end example
+
+@var{mode} must be a fixnum representing access permissions for the
+message queue pathname; it should be an inclusive OR composition of some
+of the flags:
+
+@example
+S_IRUSR   S_IWUSR   S_IXUSR
+S_IRGRP   S_IWGRP   S_IXGRP
+S_IROTH   S_IWOTH   S_IXOTH
+@end example
+
+The optional @var{attr} must be false or an instance of
+@code{struct-mq-attr}; when false or not given: the queue is created
+with platform--dependent default attributes.  The fields @code{mq_flags}
+and @code{mq_curmsgs} are ignored in call to this function.
+@end defun
+
+
+@defun mq-close @var{mqd}
+Interface to the C function @cfunc{mq_close}, see the manual page
+@code{mq_close(3)}.  Close the message queue referenced by the
+descriptor @var{mqd}, which must be a descriptor returned by a previous
+call to @func{mq-open}; notice that the message queue will still exist
+until it is deleted with @cfunc{mq_unlink}.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun mq-unlink @var{name}
+Interface to the C function @cfunc{mq_unlink}, see the manual page
+@code{mq_unlink(3)}.  Remove the message queue whose name is @var{name},
+which must be a Scheme string or bytevector representing a pathname in
+ASCII encoding; the message queue name is removed immediately, while the
+message queue is removed when all the processes referencing it close
+their descriptors.  If successful return unspecified values, else raise
+an exception.
+@end defun
+
+
+@defun mq-send @var{mqd} @var{message} @var{priority}
+Interface to the C function @cfunc{mq_send}, see the manual page
+@code{mq_send(3)}.  Add a message to the queue referenced by the
+descriptor @var{mqd}, which must be a descriptor returned by a previous
+call to @func{mq-open}.  If successful return unspecified values, else
+raise an exception.
+
+@var{message} must be a Scheme bytevector representing the message data.
+@var{priority} must be an exact integer, in the range of the C language
+type @code{unsigned int}, representing the priority of the message.
+@end defun
+
+
+@defun mq-timedsend @var{mqd} @var{message} @var{priority} @var{epoch-timeout}
+Interface to the C function @cfunc{mq_timedsend}, see the manual page
+@code{mq_timedsend(3)}.  Add a message to the queue referenced by the
+descriptor @var{mqd}, which must be a descriptor returned by a previous
+call to @func{mq-open}.  If successful return unspecified values, else
+raise an exception.
+
+@var{message} must be a Scheme bytevector representing the message data.
+
+@var{priority} must be an exact integer, in the range of the C language
+type @code{unsigned int}, representing the priority of the message.
+
+@var{epoch-timeout} must be an instance of @code{struct-timespec}
+representing an absolute time since the Epoch: if the queue is in
+blocking mode, a call to this function will block until the timeout
+expires waiting to deliver the message.  @ref{posix time timespec,
+struct-timespec}
+@end defun
+
+
+@defun mq-receive @var{mqd} @var{message}
+Interface to the C function @cfunc{mq_receive}, see the manual page
+@code{mq_receive(3)}.  Remove the oldest message with the highest
+priority from the message queue referenced by @var{mqd}, which must be a
+descriptor returned by a previous call to @func{mq-open}.  If successful
+return two values: an exact integer representing the number of bytes in
+the message, a non--negative exact integer representing the priority of
+the message; else raise an exception.
+
+@var{message} must be a Scheme bytevector providing the buffer in which
+the function will write the received message; its length must be greater
+than the maximum message length specified in the queue attributes.
+@end defun
+
+
+@defun mq-timedreceive @var{mqd} @var{message} @var{epoch-timeout}
+Interface to the C function @cfunc{mq_timedreceive}, see the manual page
+@code{mq_timedreceive(3)}.  Remove the oldest message with the highest
+priority from the message queue referenced by @var{mqd}, which must be a
+descriptor returned by a previous call to @func{mq-open}.  If successful
+return two values: an exact integer representing the number of bytes in
+the message, a non--negative exact integer representing the priority of
+the message; else raise an exception.
+
+@var{message} must be a Scheme bytevector providing the buffer in which
+the function will write the received message; its length must be greater
+than the maximum message length specified in the queue attributes.
+
+@var{epoch-timeout} must be an instance of @code{struct-timespec}
+representing an absolute time since the Epoch: if the queue is in
+blocking mode, a call to this function will block until the timeout
+expires waiting to receive the message.  @ref{posix time timespec,
+struct-timespec}
+@end defun
+
+
+@defun mq-setattr @var{mqd} @var{new-attr}
+@defunx mq-setattr @var{mqd} @var{new-attr} @var{old-attr}
+Interface to the C function @cfunc{mq_setattr}, see the manual page
+@code{mq_setattr(3)}.  Modify the attributes of the message queue
+referenced by @var{mqd}, which must be a descriptor returned by a
+previous call to @func{mq-open}.  If successful return an instance of
+@code{struct-mq-attr} representing the old attributes, else raise an
+exception.
+
+The new values are read from @var{new-attr}, which must be an instance
+of @code{struct-mq-attr}.  On @gnu{}+Linux: the only attribute that can
+be modified is @code{mq_flags}, all the other values are ignored (last
+verified on Jul 7, 2012).
+
+The old values are stored in @var{old-attr}, which must be an instance
+of @code{struct-mq-attr}; when @var{old-attr} is not given: a new
+instance of @code{struct-mq-attr} is internally created.  @var{old-attr}
+or the new instance are the return value of this function.
+@end defun
+
+
+@defun mq-getattr @var{mqd}
+@defunx mq-getattr @var{mqd} @var{attr}
+Interface to the C function @cfunc{mq_getattr}, see the manual page
+@code{mq_getattr(3)}.  Retrieve the attributes of the message queue
+referenced by @var{mqd}, which must be a descriptor returned by a
+previous call to @func{mq-open}.  If successful return an instance of
+@code{struct-mq-attr} representing the old attributes, else raise an
+exception.
+
+The values are stored in @var{attr}, which must be an instance of
+@code{struct-mq-attr}; when @var{attr} is not given: a new instance of
+@code{struct-mq-attr} is internally created.  @var{attr} or the new
+instance are the return value of this function.
+@end defun
+
+
+@ignore
+@defun mq-notify
+Interface to the C function @cfunc{mq_notify}.
+@end defun
+@end ignore
+
+@c page
+@node posix mq examples
+@subsection Simple examples of message queues usage
+
+
+The following example shows how to create and close a message queue and
+how to send and receive a message:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(define name "/vicare-test")
+
+(define (parent child-pid)
+  ;; Create a message queue and block until a message
+  ;; is received from the child.
+  ;;
+  (let ((mqd (px.mq-open name
+                         (bitwise-ior O_CREAT O_EXCL O_RDWR)
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0)))
+        (buf (make-bytevector 16)))
+    (unwind-protect
+        (let-values (((len priority)
+                      (px.mq-receive mqd buf)))
+          (px.waitpid child-pid 0)
+          (list (subbytevector-u8 buf 0 len)
+                priority))
+      (px.mq-close mqd)
+      (px.mq-unlink name))))
+
+(define (child)
+  ;; Wait for the parent to create the queue, then
+  ;; send a message and exit.
+  ;;
+  (px.nanosleep 0 900000)
+  (let ((mqd (px.mq-open name O_RDWR
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0))))
+    (unwind-protect
+        (px.mq-send mqd '#ve(ascii "ciao") 1)
+      (px.mq-close mqd)))
+  (exit 0))
+
+(px.fork parent child)
+@end example
+
+The following example shows how to create and close a message queue and
+how to send and receive a message with timeout:
+
+@example
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(define name "/vicare-test")
+
+(define timeout
+  (let ((T (px.clock-gettime CLOCK_REALTIME
+              (px.make-struct-timespec 0 0))))
+    (px.set-struct-timespec-tv_sec! T
+       (+ 5 (px.struct-timespec-tv_sec T)))
+    T))
+
+(define (parent child-pid)
+  ;; Create a message queue and block with timeout
+  ;; until a message is received from the child.
+  ;;
+  (let ((mqd (px.mq-open name
+                         (bitwise-ior O_CREAT O_EXCL O_RDWR)
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0)))
+        (buf (make-bytevector 16)))
+    (unwind-protect
+        (let-values (((len priority)
+                      (px.mq-timedreceive mqd buf timeout)))
+          (px.waitpid child-pid 0)
+          (list (subbytevector-u8 buf 0 len)
+                priority))
+      (px.mq-close mqd)
+      (px.mq-unlink name))))
+
+(define (child)
+  ;; Wait for the parent to create the queue, then
+  ;; send a message with timeout and exit.
+  ;;
+  (px.nanosleep 0 900000)
+  (let ((mqd (px.mq-open name
+                         O_RDWR
+                         (bitwise-ior S_IRUSR S_IWUSR)
+                         (px.make-struct-mq-attr 0 3 16 0))))
+    (unwind-protect
+        (px.mq-timedsend mqd '#ve(ascii "ciao") 1 timeout)
+      (px.mq-close mqd)))
+  (exit 0))
+
+(px.fork parent child)
+@end example
+
+@c page
+@node posix shm
+@section Shared memory
+
+
+The @posix{} shared memory @api{} allow processes to communicate
+informations by sharing a region of memory.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
+we must refer to the manual page @code{shm_overview(7)}.
+@end quotation
+
+
+@defun shm-open @var{name} @var{oflag} @var{mode}
+Interface to the C function @cfunc{shm_open}, see the manual page
+@code{shm_open(3)}.  Open, and optionally create, a shared memory object
+and return a file descriptor referencing it.  If successful return a
+fixnum representing the file descriptor, else raise an exception.
+
+@var{name} must be the pathname representing the shared memory object.
+@var{oflag} must be the bitwise inclusive OR combination of some of the
+following values:
+
+@example
+O_RDONLY                O_RDWR
+O_CREAT                 O_EXCL
+O_TRUNC
+@end example
+
+@noindent
+@var{mode} must be the bitwise inclusive OR combination of some of the
+following values:
+
+@example
+S_IRUSR   S_IWUSR   S_IXUSR
+S_IRGRP   S_IWGRP   S_IXGRP
+S_IROTH   S_IWOTH   S_IXOTH
+@end example
+@end defun
+
+
+@defun shm-unlink @var{name}
+Interface to the C function @cfunc{shm_unlink}, see the manual page
+@code{shm_unlink(3)}.  Remove the shared memory object selected by the
+pathname @var{name}.  If successful return unspecified values, else
+raise an exception.
+@end defun
+
+
+The following example shows how two processes can exchange a signed
+integer; notice how the only information shared at the beginning is the
+pathname of the shared memory object and the dimension of the mapped
+memory.  Also notice that the correct way of synchronising two processes
+for shared memory access is with @posix{} semaphores, @ref{posix sem}
+for details.
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect
+        callet)
+
+(define shm.pathname
+  "/vicare-posix-shm.test")
+(define shm.dim
+  (px.sysconf _SC_PAGESIZE))
+
+(define (parent child-pid)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                        (oflags (fxior O_CREAT O_RDWR))
+                        (mode   (fxior S_IRUSR S_IWUSR)))))
+    (px.ftruncate shm.fd shm.dim)
+    (unwind-protect
+        (unwind-protect
+            (let ((shm.base (callet px.mmap
+                              (address #f)
+                              (size    shm.dim)
+                              (prot    (fxior PROT_READ
+                                              PROT_WRITE))
+                              (flags   MAP_SHARED)
+                              (fd      shm.fd)
+                              (offset  0))))
+              (unwind-protect
+                  (begin
+                    (px.waitpid child-pid 0)
+                    (pointer-ref-c-signed-int shm.base 0))
+                (px.munmap shm.base shm.dim)))
+          (px.close shm.fd))
+      (px.shm-unlink shm.pathname))))
+
+(define (child)
+  ;; Give the parent some time to create and open the
+  ;; shared memory object.
+  (px.nanosleep 1 0)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                        (oflags (fxior O_CREAT O_RDWR))
+                        (mode   (fxior S_IRUSR S_IWUSR)))))
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (pointer-set-c-signed-int! shm.base 0 123)
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)))
+  (exit 0))
+
+(px.fork parent child)
+@result{} 123
+@end example
+
+@c page
+@node posix sem
+@section @posix{} semaphores
+
+
+The @posix{} semaphores @api{} allow processes to synchronise their
+actions.
+
+@quotation
+@strong{NOTE} On @gnu{}+Linux systems, for an introduction to the @api{}
+we must refer to the manual page @code{sem_overview(7)}.
+@end quotation
+
+@menu
+* posix sem api::               Semaphores interface.
+* posix sem examples::          Usage examples of semaphores.
+@end menu
+
+@c page
+@node posix sem api
+@subsection Semaphores interface
+
+
+@defun sem-open @var{name} @var{oflag} @var{mode}
+@defunx sem-open @var{name} @var{oflag} @var{mode} @var{value}
+Interface to the C function @cfunc{sem_open}, see the manual page
+@code{sem_open(3)}.  Initialise and open a named semaphore using the
+pathname @var{name}.  If successful return a pointer object referencing
+the semaphore, else raise an exception.
+
+@var{oflag} must be a fixnum representing a bitwise inclusive OR
+combination of some of the following values: @code{O_CREAT},
+@code{O_EXCL}, @code{O_RDWR}.
+
+@var{mode} must be a fixnum representing a bitwise inclusive OR
+combination of some of the following values:
+
+@example
+S_IRUSR   S_IWUSR   S_IXUSR
+S_IRGRP   S_IWGRP   S_IXGRP
+S_IROTH   S_IWOTH   S_IXOTH
+@end example
+
+The optional @var{value} must be a exact integer in the range of the C
+language type @code{unsigned int}; when not given it defaults to zero.
+
+Named semaphores must be closed with @func{sem-close} and removed with
+@func{sem-unlink}.
+@end defun
+
+
+@defun sem-close @var{sem}
+Interface to the C function @cfunc{sem_close}, see the manual page
+@code{sem_close(3)}.  Close the named semaphore referenced by @var{sem},
+which must be a pointer object; note that the semaphore will continue to
+exist until @func{sem-unlink} is called.  If successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-unlink @var{name}
+Interface to the C function @cfunc{sem_unlink}, see the manual page
+@code{sem_unlink(3)}.  Remove the named semaphore referenced by the
+pathname @var{name}; note that the semaphore name is removed
+immediately, but the semaphore itself will continue to exist until all
+the processes referencing it will call @func{sem-close}.  If successful
+return unspecified values, else raise an exception.
+@end defun
+
+
+@defun sizeof-sem_t
+Return an exact integer representing the value of the C language
+expression @code{sizeof(sem_t)}.  This value is needed to allocate
+enough memory for @func{sem-init} to initialise a semaphore structure.
+@end defun
+
+
+@defun sem-init @var{sem} @var{pshared}
+@defunx sem-init @var{sem} @var{pshared} @var{value}
+Interface to the C function @cfunc{sem_init}, see the manual page
+@code{sem_init(3)}.  Initialise an unnamed semaphore; if successful
+return @var{sem} itself, else raise an exception.
+
+@var{sem} must be a pointer object referencing a memory region big
+enough to hold a C language @code{sem_t} data structure; such memory
+region must be allocated in such a way that it can be shared among the
+entities interested in accessing the semaphore.
+
+@var{pshared} is interpreted as a boolean value: when false, the
+semaphore is meant to be shared among multiple threads in this process;
+when true, the semaphore is meant to be shared among multiple processes
+resulting from forking the current process.
+
+The optional @var{value} must be an exact integer in the range of the C
+language type @code{unsigned int}: it represents the initial value of
+the semaphore; when not given: it defaults to zero.
+
+Unnamed semaphores must be finalised with @func{sem-destroy}.
+@end defun
+
+
+@defun sem-destroy @var{sem}
+Interface to the C function @cfunc{sem_destroy}, see the manual page
+@code{sem_destroy(3)}.  Finalise the unnamed semaphore referenced by
+@var{sem}, which must be a pointer object; if successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-post @var{sem}
+Interface to the C function @cfunc{sem_post}, see the manual page
+@code{sem_post(3)}.  Increment (unlock) the unnamed semaphore referenced
+by @var{sem}, which must be a pointer object; if successful return
+unspecified values, else raise an exception.
+@end defun
+
+
+@defun sem-wait @var{sem}
+Interface to the C function @cfunc{sem_wait}, see the manual page
+@code{sem_wait(3)}.  Decrement (lock) the unnamed semaphore referenced
+by @var{sem}, which must be a pointer object, until the semaphore is
+unlocked; if successful return unspecified values, else raise an
+exception.
+@end defun
+
+
+@defun sem-trywait @var{sem}
+Interface to the C function @cfunc{sem_trywait}, see the manual page
+@code{sem_trywait(3)}.  Decrement (lock) the unnamed semaphore
+referenced by @var{sem}, which must be a pointer object; if successful
+in locking return the boolean @true{}, if the semaphore is already
+locked return the boolean @false{}, else raise an exception.
+@end defun
+
+
+@defun sem-timedwait @var{sem} @var{abs-timeout}
+Interface to the C function @cfunc{sem_timedwait}, see the manual page
+@code{sem_timedwait(3)}.  Attempt to decrement (lock) the unnamed
+semaphore referenced by @var{sem}, which must be a pointer object, with
+a timeout.  If successful in locking return the boolean @true{}; if the
+semaphore is already locked and it is not unlocked before the timeout
+expiration: return the boolean @false{}; else raise an exception.
+
+@var{abs-timeout} must be an instance of @code{struct-timespec}
+representing the absolute timeout since the Epoch.  @ref{posix time
+timespec, struct-timespec}
+@end defun
+
+
+@defun sem-getvalue @var{sem}
+Interface to the C function @cfunc{sem_getvalue}, see the manual page
+@code{sem_getvalue(3)}.  Retrieve the current value of the semaphore
+referenced by @var{sem}, which must be a pointer object; if successful
+return an exact integer representing the value, else raise an exception.
+@end defun
+
+@c page
+@node posix sem examples
+@subsection Usage examples of semaphores
+
+
+The following example shows how two processes can synchronise themselves
+to exchange a signed integer using a @posix{} shared memory object and
+an unnamed @posix{} semaphore allocated in such an object; the parent
+process sets up the shared memory and initialises the semaphore, then it
+waits for the semaphore and reads the integer; the child process writes
+an integer in the shared memory, then it posts the semaphore.
+
+Notice that the informations the two processes share are:
+
+@enumerate
+@item
+The pathname of the shared memory object.
+
+@item
+The dimension of the allocated shared memory.
+
+@item
+The fact that the semaphore is allocated at the beginning of the shared
+memory.
+
+@item
+The fact that the signed integer exchange area is right after the
+semaphore structure in the shared memory.
+@end enumerate
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect
+        callet))
+
+(define shm.pathname
+  "/vicare.test")
+(define shm.dim
+  (px.sysconf _SC_PAGESIZE))
+
+(define (parent child-pid)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                  (oflags   (fxior O_CREAT O_EXCL O_RDWR))
+                  (mode     (fxior S_IRUSR S_IWUSR)))))
+    (px.ftruncate shm.fd shm.dim)
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (let* ((sem_t     shm.base)
+                     (shm.start (pointer-add shm.base
+                                  (px.sizeof-sem_t)))
+                     (sem_t     (callet px.sem-init sem_t
+                                  (pshared? #t)
+                                  (value    0))))
+                (define timeout
+                  (let ((T (px.clock-gettime CLOCK_REALTIME
+                             (px.make-struct-timespec 0 0))))
+                    (px.set-struct-timespec-tv_sec! T
+                      (+ 2 (px.struct-timespec-tv_sec T)))
+                    T))
+                (unwind-protect
+                    (begin
+                      (px.sem-timedwait sem_t timeout)
+                      (pointer-ref-c-signed-int shm.start 0))
+                  (px.sem-destroy sem_t)))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)
+      (px.shm-unlink shm.pathname))))
+
+(define (child)
+  ;; Give the parent some time to open the
+  ;; shared memory object.
+  (px.nanosleep 1 0)
+  (let ((shm.fd (callet px.shm-open shm.pathname
+                  (oflags   (fxior O_CREAT O_RDWR))
+                  (mode     (fxior S_IRUSR S_IWUSR)))))
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (let* ((sem_t     shm.base)
+                     (shm.start (pointer-add shm.base
+                                  (px.sizeof-sem_t))))
+                (pointer-set-c-signed-int! shm.start 0 123)
+                (px.sem-post sem_t))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)))
+  (exit 0))
+
+(px.fork parent child)  @result{} 123
+@end example
+
+The following example shows how two processes can synchronise themselves
+to exchange a signed integer using a @posix{} shared memory object and a
+named @posix{} semaphore; the parent process sets up the shared memory
+and the semaphore, then it waits for the semaphore and reads the
+integer; the child process writes an integer in the shared memory, then
+it posts the semaphore.
+
+Notice that the informations the two processes share are:
+
+@enumerate
+@item
+The pathname of the shared memory object.
+
+@item
+The pathname of the semaphore object.
+
+@item
+The dimension of the allocated shared memory.
+
+@item
+The fact that the signed integer exchange area is at the beginning of
+the shared memory.
+@end enumerate
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (only (vicare syntactic-extensions)
+        unwind-protect
+        callet))
+
+(define sem.pathname
+  "/vicare-posix-sem.test")
+(define shm.pathname
+  "/vicare-posix-shm.test")
+(define shm.dim
+  (px.sysconf _SC_PAGESIZE))
+
+(define (parent child-pid)
+  (let ((sem_t  (callet px.sem-open sem.pathname
+                  (oflags (fxior O_CREAT O_EXCL O_RDWR))
+                  (mode   (fxior S_IRUSR S_IWUSR))))
+        (shm.fd (callet px.shm-open shm.pathname
+                  (oflags   (fxior O_CREAT O_EXCL O_RDWR))
+                  (mode     (fxior S_IRUSR S_IWUSR)))))
+    (px.ftruncate shm.fd shm.dim)
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (begin
+                (px.sem-wait sem_t)
+                (pointer-ref-c-signed-int shm.base 0))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)
+      (px.shm-unlink shm.pathname)
+      (px.sem-close sem_t)
+      (px.sem-unlink sem.pathname))))
+
+(define (child)
+  ;; Give the parent some time to open the
+  ;; shared memory object.
+  (px.nanosleep 1 0)
+  (let ((sem_t  (callet px.sem-open sem.pathname
+                  (oflags (fxior O_CREAT O_RDWR))
+                  (mode   (fxior S_IRUSR S_IWUSR))))
+        (shm.fd (callet px.shm-open shm.pathname
+                  (oflags (fxior O_CREAT O_RDWR))
+                  (mode   (fxior S_IRUSR S_IWUSR)))))
+    (unwind-protect
+        (let ((shm.base (callet px.mmap
+                          (address #f)
+                          (size    shm.dim)
+                          (prot    (fxior PROT_READ
+                                          PROT_WRITE))
+                          (flags   MAP_SHARED)
+                          (fd      shm.fd)
+                          (offset  0))))
+          (unwind-protect
+              (begin
+                (pointer-set-c-signed-int! shm.base 0 123)
+                (px.sem-post sem_t))
+            (px.munmap shm.base shm.dim)))
+      (px.close shm.fd)
+      (px.sem-close sem_t)))
+  (exit 0))
+
+(px.fork parent child) @result{} 123
+@end example
+
+@c page
+@node posix misc
+@section Miscellaneous functions
+
+
+@defun strerror @var{errno}
+Return a string describing the @code{errno} code @var{errno}.  Makes use
+of the system function @cfunc{strerror}.  If @var{errno} is not a valid
+@code{errno} value: return a string telling it.  As special cases
+@var{errno} can be also @true{}, meaning ``unknown error'', and
+@false{}, meaning ``no error''.
+
+@glibcref{Error Messages, Error Messages}
+@end defun
+
+
+@defun file-descriptor? @var{obj}
+Return true if @var{obj} is a non--negative fixnum less than the value
+of @code{FD_SETSIZE}.
+@end defun
+
+@c page
+@node posix args
+@section Arguments validation clauses
+
+
+The clauses are meant to be used with the features of the library
+@library{vicare arguments validation}; notice that the name of the
+clause is @strong{not} the name of the exported binding.
+
+
+@deffn {Validation Clause} file-descriptor @var{obj}
+@deffnx {Validation Clause} file-descriptor/false @var{obj}
+Succeed if @var{obj} satisfies the @func{file-descriptor?} predicate or,
+for the second clause, it is @false{}.
+@end deffn
+
+@c page
+@node posix not
+@section @posix{} functions not interfaced
+
+
+Not all the functions defined by @posix{} are exposed by @library{vicare
+posix}; this section lists some of them along with reasons for not
+interface them.  This is not the last word: if good reasons arise to
+interface some of the functions, they will.
+
+@table @cfunc
+@item popen
+@itemx pclose
+@findex popen
+@findex pclose
+There seems to be no real advantage (in a Scheme @api{}) to use these
+rather than explicitly call @func{pipe}, @func{fork} and @func{exec}.
+@ref{posix fd, pipe} for details.
+@end table
+
+@c end of file

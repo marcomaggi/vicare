@@ -1,0 +1,821 @@
+@node overview
+@chapter Overview of Vicare Scheme
+
+
+Scheme is a statically scoped and properly tail--recursive dialect of
+the Lisp programming language invented by Guy Lewis Steele Jr.  and
+Gerald Jay Sussman.  It was designed to have an exceptionally clear and
+simple semantics and few different ways to form expressions.
+
+The ``Revised^6 Report on the Algorithmic Language Scheme'' (@rnrs{6})
+gives a defining description of the programming language Scheme.  The
+report is the work of many people in the course of many years; revision
+6 was edited by Michael Sperber, R. Kent Dybvig, Matthew Flatt and Anton
+Van Straaten.
+
+Ikarus Scheme is an almost @rnrs{6} compliant implementation of the
+Scheme programming language; it is the creation of Abdulaziz Ghuloum.
+
+Vicare Scheme is an @rnrs{6} compliant fork of Ikarus Scheme, aiming at
+becoming a native compiler producing single threaded programs running on
+Intel x86 32-bit processors, with experimental support for 64-bit
+machines.  @emph{Vicare} is pronounced the etruscan way.
+
+@menu
+* overview original::           Original Ikarus Scheme.
+* overview tech::               Technology overview.
+* overview resources::          Resources.
+* overview system::             System requirements.
+* overview install::            Installation and uninstallation.
+* overview restrictions::       Implementation restrictions.
+* overview extensions::         Implementation extensions.
+* overview repl::               The read-eval-print loop.
+* overview foreign::            Built in interface to external
+                                libraries.
+@end menu
+
+@c page
+@node overview original
+@section Original Ikarus Scheme
+
+
+The original Ikarus Scheme package is distributed under the terms of the
+@gnu{} General Public License (@gpl{}) and can be downloaded from:
+
+@center @url{http://www.ikarus-scheme.org/}
+
+@noindent
+or:
+
+@center @url{https://launchpad.net/ikarus}
+
+It was developed by Abdulaziz Ghuloum until the beginning of year 2010;
+at that time the Vicare fork was started.
+
+@c page
+@node overview tech
+@section Technology overview
+
+
+@value{PRJNAME} Scheme provides the programmer with many advantages:
+
+@table @strong
+
+@item Optimizing code generator
+The compiler's backend employs state of the art technologies in code
+generation that produce fast, efficient, machine code.  When developing
+computationally intensive programs, one is not constrained by using a
+slow interpreter.
+
+@item Fast incremental compilation
+Every library and script is quickly compiled to native machine code.
+When developing large software, one is not constrained by how slow the
+batch compiler runs.
+
+@item Robust and fine--tuned standard libraries
+The standard libraries are written such that they perform as much error
+checking as required to provide a safe and fast runtime environment.
+
+@item Multi--generational garbage collector
+The BiBOP based garbage collector used in @value{PRJNAME} allows the runtime
+system to expand its memory footprint as needed.  The entire 32-bit
+virtual address space could be used and unneeded memory is released back
+to the operating system.
+
+@item Supports many operating systems
+@value{PRJNAME} runs on @gnu{}+Linux, but it is possible to port it to
+the most popular and widely used operating systems for servers and
+personal computers.
+@end table
+
+@c page
+@node overview resources
+@section Resources
+
+
+The @value{PACKAGE} package is distributed under the terms of the @gnu{}
+General Public License (@gpl{}) and can be downloaded from:
+
+@center @value{TARBALLURL}
+
+@noindent
+the home page of the project is at:
+
+@center @url{http://marcomaggi.github.com/vicare.html}
+
+@noindent
+development takes place at:
+
+@center @value{REPOSITORYURL}
+
+Newcomers to Scheme should refer to @url{http://@/www.schemers.org},
+which contains listings of tutorials and books that are helpful in
+learning the language.
+
+This document is a supplement to the @emph{Revised^6 Report on the
+Algorithmic Language Scheme}, found at @url{http://@/www.r6rs.org}.
+Kent Dybvig's @emph{The Scheme Programming Language}, Fourth Edition, is
+an excellent tutorial and reference for @rnrs{6}.  Some extended
+features of @value{PRJNAME} have been inspired by similar features in
+@emph{Chez Scheme}; the @emph{Chez Scheme User's Guide} can be found at
+the same site.
+
+@c page
+@node overview system
+@section System requirements
+
+
+To run @value{PACKAGE}, we will need a system with a relatively recent
+Intel @emph{x86} processor; @value{PRJNAME} requires a Unix/Linux
+operating system (or emulation), and some prerequisite libraries.
+
+@menu
+* overview system hardware::    Hardware requirements.
+* overview system software::    Software requirements.
+@end menu
+
+@c page
+@node overview system hardware
+@subsection Hardware requirements
+
+
+@value{PACKAGE} runs on the IA-32 (@emph{x86}) architecture supporting
+@acronym{SSE2} extensions.  This includes the Athlon 64, Sempron 64, and
+Turion 64 processors from @acronym{AMD} and the Pentium 4, Xeon,
+Celeron, Pentium M, Core, and Core2 processors from Intel.  The system
+does not run on Intel Pentium III or earlier processors.
+
+The @value{PRJNAME} compiler generates @acronym{SSE2} instructions to
+handle Scheme's @acronym{IEEE} floating point representation
+(@emph{flonums}) for inexact numbers.
+
+
+@c page
+@node overview system software
+@subsection Software requirements
+
+
+We will need some additional libraries and tools to build
+@value{PACKAGE}.
+
+@table @strong
+@item GMP
+@value{PRJNAME} uses the @gnu{} Multiple Precision Arithmetic Library
+(@gmp{}) for some bignum arithmetic operations.  To build
+@value{PRJNAME} from scratch, @gmp{} version 4.2 or better must be
+installed along with the required header files.  Pre--built @gmp{}
+packages are available for most operating systems.  Alternatively,
+@gmp{} can be downloaded from @url{http://@/gmplib.org/}.
+
+The @gmp{} web page points out that @gmp{} has revealed subtle bugs in
+many C compilers.  Although the @gmp{} build process includes a
+comprehensive self--test (which we absolutely must run if building it
+ourselves), we may still prefer to obtain a prebuilt binary version for
+our system, if one is available.
+
+@quotation
+@strong{NOTE} @value{PRJNAME} runs in 32-bit mode only.  To run it in
+64-bit environments, we will have to obtain the 32-bit version of
+@gmp{}, or compile it ourselves after adding @code{ABI=32} to its
+configuration options.
+@end quotation
+
+@item libffi
+We will probably need @code{libffi}, a C library that simplifies
+run--time calls to arbitrary C functions.  @value{PRJNAME} will operate
+without @code{libffi}, but will not be able to call foreign procedures
+(those written in C).  @code{libffi} can be downloaded from
+@url{http://@/sourceware.org/@/libffi}.
+
+@item GCC
+The @gnu{} C Compiler is required to build the @value{PRJNAME}
+executable (e.g. the garbage collector, loader, and OS--related
+runtime).  @gcc{} versions 4.1 and 4.2 were successfully used to build
+@value{PRJNAME}.  It may be possible to build @value{PRJNAME} using
+other C compilers.
+
+@item Autoconf and Automake
+The @gnu{} Autoconf (version 2.61) and @gnu{} Automake (version 1.10)
+tools are required if one wishes to modify the @value{PRJNAME} source
+base.  They are not required to build the official release of
+@value{PRJNAME}.
+
+Prebuilt packages for these tools have been created for most Unix/Linux
+systems; if we prefer, we can download the source code from
+@url{http://@/www.gnu.org/@/software/@/autoconf} and
+@url{http://@/www.gnu.org/@/software/@/automake} respectively, and build
+them ourselves.
+
+@item Texinfo
+This document is provided in Texinfo format.  Texinfo is available as an
+installable package for most Unix/Linux systems.  Alternatively, we can
+download the source package
+@url{http://@/www.gnu.org/@/software/@/texinfo}.
+@end table
+
+@c page
+@node overview install
+@section Installation and uninstallation
+
+
+@cindex Installing @value{PRJNAME}
+@cindex Uninstalling @value{PRJNAME}
+@cindex Disinstalling @value{PRJNAME}
+@cindex @value{PRJNAME}, installing
+@cindex @value{PRJNAME}, uninstalling
+@cindex @value{PRJNAME}, disinstalling
+
+
+There are two ways to install @value{PACKAGE} on our system: we can
+either install a prebuilt package, if one is available for our operating
+system, or we can build it from source.  There are two reasons to prefer
+the ``build from source'' approach: first, not all Unix/Linux package
+repositories have an @value{PACKAGE} package at all; second, prebuilt
+packages often lag current revisions to the system by a considerable
+amount.  Therefore, the version we install from a package repository
+might not even have some of the features documented in this manual.
+
+We will assume in this section that we are building @value{PACKAGE}
+ourselves.  @value{PRJNAME} uses the standard installation method found
+in most other Unix software.  Thus we will follow the usual steps.
+
+@enumerate
+@item
+Download the software.
+
+@item
+Set configuration options.
+
+@item
+Build and install
+@end enumerate
+
+@menu
+* overview install quick::              Quick installation guide.
+* overview install prerequisites::      Installing the prerequisites.
+* overview install details::            Installation details.
+* overview install uninstall::          Uninstalling @value{PRJNAME}.
+@end menu
+
+@c page
+@node overview install quick
+@subsection Quick installation guide
+
+
+If familiar with installing Unix software on our system, then all we
+need to know is that @value{PRJNAME} uses the standard installation
+method found in most other Unix software.  Simply run the following
+commands from the shell:
+
+@example
+$ tar -xvzf vicare-n.n.n.tar.gz
+$ cd vicare-n.n.n
+$ ./configure [--prefix=path] [CFLAGS=-I/dir] [LDFLAGS=-L/dir]
+$ make
+$ make install
+@end example
+
+@noindent
+@ref{overview install details} for how to enable the foreign functions
+interface.
+
+After installation, under the directory
+@code{$libexecdir/vicare-scheme}, scripts with names like
+@file{compile-all.sps} can be executed to precompile the installed
+libraries; for example:
+
+@example
+$ sudo vicare --compile-dependencies \
+   /usr/local/libexec/vicare-scheme/compile-all.sps
+@end example
+
+To uninstall @value{PACKAGE}, use the following steps:
+
+@example
+$ cd path/to/vicare-n.n.n
+$ make uninstall
+@end example
+
+The rest of this section gives more detail on building, installing, and
+uninstalling @value{PACKAGE}.
+
+@c page
+@node overview install prerequisites
+@subsection Installing the prerequisites
+
+
+The first step is to ensure that we have @gmp{} and Libffi installed; we
+should generally use our system's package manager for these.  Note where
+the include (@code{.h}) and library (@code{.a}) files for each of these
+packages are installed.  (Typically this will be in either
+@file{/usr/@/include} and @file{/usr/@/lib}, or
+@file{/usr/@/local/@/include} and @file{/usr/@/local/@/lib}.)
+
+If we choose to download these as source and build them ourselves, refer
+to the installation instructions found in each package.  If we are
+installing @gmp{} from source, it is @emph{essential} that we run the
+self--tests after building, and verify that no errors were detected.  We
+do this by issuing the command @command{make check}; see the
+documentation for details.
+
+@c page
+@node overview install details
+@subsection Installation details
+
+
+We have two choices for downloading the @value{PACKAGE} source: we can
+either download a distribution from:
+
+@center @value{TARBALLURL}
+
+@noindent
+or we can checkout a revision from the GitHub repository:
+
+@center @value{REPOSITORYURL}
+
+@itemize
+@item
+@value{PACKAGE} source distributions are tarballs named
+@file{vicare-@-@var{@var{n.n.n}}.tar.gz}, where @file{@var{n.n.n}} is a
+3--component ID indicating the current revision.
+
+If we downloaded a distribution, unpack it.  From the shell prompt:
+
+@example
+$ tar -xvzf vicare-@var{n.n.n}.tar.gz
+@end example
+
+@noindent
+this creates the base directory @file{vicare-@var{n.n.n}}.
+
+@item
+If we downloaded a bleeding--edge snapshot, no unpacking is needed.
+@end itemize
+
+We configure the build system by running the @command{configure} script
+located in the base directory.  To do this, type the following commands:
+
+@example
+$ cd vicare-@var{n.n.n}
+$ ./configure
+checking build system type... i386-apple-darwin8.10.1
+checking host system type... i386-apple-darwin8.10.1
+...
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating src/Makefile
+config.status: creating scheme/Makefile
+config.status: creating doc/Makefile
+config.status: executing depfiles commands
+@end example
+
+This configures the system to be built then installed in the
+system--wide location (binaries are normally installed in
+@file{/usr/@/local/@/bin}).  To install it in another location (e.g. in
+your home directory), provide a @option{--prefix} location to
+@command{configure} as follows:
+
+@example
+$ ./configure --prefix=/opt/sw
+@end example
+
+@noindent
+this will install the executable in @file{/opt/@/sw/@/bin}, libraries in
+@file{/opt/@/sw/@/lib/@/ikarus}, and documentation in
+@file{/opt/@/sw/@/share/@/doc/@/ikarus}.
+
+To install @value{PACKAGE} for personal use (thus not requiring root
+permissions to install), specify @code{--prefix=$HOME/local}, which
+installs everything in a @file{local} directory of our home directory.
+
+@command{configure} allows us to fine--tune where things are installed,
+though this is rarely necessary or useful.  Do
+@code{./configure@tie{}--help} for a full list of options.
+
+The most common @command{configure} options are as follows.
+
+@table @asis
+@item @option{--prefix}
+Specify the location in the file system where @value{PACKAGE} will be
+installed.
+
+@item @option{--enable-ffi}
+Include @value{PACKAGE}'s Foreign Function Interface, so that
+@value{PRJNAME} code can invoke C code, and vice versa; requires Libffi.
+
+@item @option{--disable-arguments-validation}
+Disable arguments validation for the functions in Vicare's boot image;
+use with care: an invalid argument will cause undefined behaviour (most
+likely a process crash).
+
+@cindex @env{VICARE_ARGUMENTS_VALIDATION} environment variable
+@cindex Environment variable @env{VICARE_ARGUMENTS_VALIDATION}
+This setting can be overridden by setting the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}; @ref{args config} for details.
+
+@item @env{CFLAGS}
+Specify options to be used while compiling @value{PRJNAME}'s C code.
+
+@item @env{CPPFLAGS}
+Specify options to be used while preprocessing @value{PRJNAME}'s C code.
+
+@item @env{LDFLAGS}
+Specify options to be used while linking @value{PRJNAME}.
+@end table
+
+@command{configure} will fail if it cannot find the location where
+@gmp{} is installed.  The script will also fail if we have specified
+@option{--enable-ffi} and it can't find Libffi.  If running
+@command{configure} fails to locate either of these libraries, we will
+need to provide their locations.  Use the @env{CPPFLAGS} and
+@env{LDFLAGS} options to specify the locations of the header and library
+files.
+
+For example, assume that we have installed @gmp{} and Libffi in
+subdirectories of @file{/opt/sw}, and we wish to support foreign
+functions.@footnote{The @command{configure} command shown here is very
+imposing, and anyone can easily make mistakes.  In general, it's a good
+idea to create a shell script that has the sequence of
+@command{configure} and @command{make} commands needed to configure,
+build, and install a package; this not only allows us to re--install
+easily, but also gives us a concrete indication of what options we used
+to build the software the last time.  Of course, we should put this
+script somewhere other than in the actual @value{PRJNAME} software
+directory!}
+
+@example
+./configure                                                  \
+  --prefix=$HOME/local                                       \
+  --enable-ffi                                               \
+  CPPFLAGS="-I/opt/sw/gmp/include -I/opt/sw/libffi/include"  \
+  LDFLAGS="-L/opt/sw/gmp/lib -L/opt/sw/libffi/lib"
+@end example
+
+We can use the @env{CFLAGS} and @env{LDFLAGS} variables to select more
+specialized compilation and linking options; refer to the compiler
+documentation for more details.
+
+We can now build the system by running the command @command{make}, with
+no arguments; this performs two tasks:
+
+@enumerate
+@item
+It builds the @command{vicare} executable from the C files located in
+the @file{src} directory.
+
+@item
+It uses the @command{vicare} executable and the pre--built
+@file{ikarus.boot.orig} boot file to rebuild the Scheme boot image file
+@file{vicare.boot} from the Scheme sources located in the @file{scheme}
+directory.
+@end enumerate
+
+The final stage is to install @value{PRJNAME} via the command
+@command{make install}.  If we're installing @value{PRJNAME} in a
+system--wide location, we probably need to have administrator privileges
+(use the @command{sudo} or @command{su} commands); if that's not
+feasible, then we need to reconfigure to install within a directory tree
+under our home directory.
+
+Finally, try a small session, to verify that everything installed
+properly.
+
+@example
+$ vicare
+Vicare Scheme version 0.1d0+ \
+  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
+  build 2010-05-02)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
+
+> (display "hello, world!\n")
+hello, world!
+> (define twice (lambda (f) (lambda (x) (f (f x)))))
+> ((twice add1) 3)
+5
+@end example
+
+If we get the first @code{>} prompt, then @value{PRJNAME} was
+successfully installed on the system.  We may need to update the
+@env{PATH} variable in environment to contain the directory in which the
+@command{vicare} executable was installed.
+
+Finally, do @command{make clean} to get rid of executables, object
+files, and other build products in the @file{vicare-@var{n.n.n}}
+directory.  Do not delete the directory itself: it will be needed if we
+ever want to uninstall @value{PRJNAME}.
+
+After installation, under the directory
+@code{$libexecdir/vicare-scheme}, scripts with names like
+@file{compile-all.sps} can be executed to precompile the installed
+libraries; for example:
+
+@example
+$ sudo vicare --compile-dependencies \
+   /usr/local/libexec/vicare-scheme/compile-all.sps
+@end example
+
+@c page
+@node overview install uninstall
+@subsection Uninstalling @value{PRJNAME}
+
+
+@cindex @value{PRJNAME}, uninstalling
+@cindex @value{PRJNAME}, disinstalling
+@cindex Disinstalling @value{PRJNAME}
+@cindex Uninstalling @value{PRJNAME}
+
+
+To uninstall @value{PACKAGE}, go to the directory we built
+@value{PRJNAME} in (not the directory where you installed it), and do
+@command{make uninstall}.
+
+@example
+$ cd path/to/vicare-@var{n.n.n}
+$ make uninstall
+@end example
+
+@c page
+@node overview restrictions
+@section Implementation restrictions
+
+
+Here is a list of implementation constraints which may be non--compliant
+with @rnrs{6}.
+
+@enumerate
+@item
+Scheme strings can hold at most @code{(greatest-fixnum)} characters; the
+length of a string and all the valid indexes into strings are
+representable as fixnums.
+
+@item
+Scheme bytevectors can hold at most @code{(greatest-fixnum)} bytes; the
+length of a bytevector and all the valid indexes into bytevectors are
+representable as fixnums.
+
+@item
+The last argument to @func{apply} can be a list of at most @math{8192}
+values.  This is an artificially set limit to avoid problems with huge
+values (it could be greater than this).  As comparison: LispWorks for
+Unix sets this value to 300, LispWorks for Windows and LispWorks for
+Linux set this value to 255 (last verified from its online documenattion
+in November, 2011).
+
+@item
+@rnrs{6} mandates that illegal references to bindings established by
+@func{letrec} and @func{letrec*} are detected at run time and cause an
+assertion violation to be raised.  @value{PRJNAME} detects them at
+compile time, so some fully @rnrs{6}--compliant code will not work under
+@value{PRJNAME}.
+
+For example, the following program will run under a @rnrs{6}--compliant
+implementation:
+
+@example
+(import (rnrs))
+(letrec ((x (if (eq? (cons 1 2)
+                     (cons 1 2))
+                x
+              1)))
+  x)
+@end example
+
+@noindent
+because the form @code{x} in reference position in the right-hand side
+of the binding is never evaluated; under @value{PRJNAME} this code will
+rather raise a syntax violation at compile time.
+
+@item
+The following functions accept only non--negative fixnums as offset
+argument:
+
+@example
+bitwise-arithmetic-shift-left
+bitwise-arithmetic-shift-right
+@end example
+
+@item
+The function @func{bitwise-arithmetic-shift} accepts only fixnums as
+offset argument.
+@end enumerate
+
+@c page
+@node overview extensions
+@section Implementation extensions
+
+
+Here is a list of implementation extensions which may be non--compliant
+with @rnrs{6}.
+
+@enumerate
+@item
+According to @rnrs{6}: if the parent of a record type has a custom
+protocol function, the record type itself must have a custom protocol
+function; that is:
+
+@example
+(import (rnrs))
+
+(define-record-type alpha
+  (fields a)
+  (protocol (lambda (A) ---)))
+
+;; this is good
+(define-record-type beta
+  (parent alpha)
+  (fields b)
+  (protocol (lambda (A B) ---)))
+
+;; this is bad according to R6RS!!!
+(define-record-type gamma
+  (parent alpha)
+  (fields b))
+@end example
+
+This restriction is violated by @value{PRJNAME}, which allows the
+following:
+
+@example
+(import (rnrs))
+
+(define-record-type alpha
+  (fields a)
+  (protocol (lambda (A) ---)))
+
+;; this is good in Vicare!!!
+(define-record-type beta
+  (parent alpha)
+  (fields b))
+@end example
+
+@noindent
+@value{PRJNAME} just expects the parent protocol function to have the
+same interface of a default protocol function.
+
+@item
+The syntax @func{define-record-type} automatically generates unsafe
+field accessor and mutator syntaxes; in the following example:
+
+@example
+(define-record-type color
+  (fields (mutable red)
+          (mutable green)
+          (mutable blue)))
+@end example
+
+@noindent
+in addition to the safe accessor and mutator definitions for:
+
+@example
+color-red           color-red-set!
+color-green         color-green-set!
+color-blue          color-blue-set!
+@end example
+
+@noindent
+unsafe accessors and mutator definitions for:
+
+@example
+$color-red          $color-red-set!
+$color-green        $color-green-set!
+$color-blue         $color-blue-set!
+@end example
+
+@noindent
+are generated with code like:
+
+@example
+(define-syntax $color-red
+  (syntax-rules ()
+    ((_ x)
+     ($struct-ref x 0))))
+
+(define-syntax $color-red-set!
+  (syntax-rules ()
+    ((_ x v)
+     ($struct-set! x 0 v))))
+@end example
+
+Notice that the name of the unsafe accessors and mutators is always
+built from the field name, @strong{not} from the custom names given in
+the definition; for example:
+
+@example
+(import (rnrs))
+
+(define-record-type color
+  (fields (mutable red   the-red   set-the-red!)
+          (mutable green the-green set-the-green!)
+          (mutable blue  the-blue  set-the-blue!)))
+
+(define X
+  (make-color 1 2 3))
+
+(define Y
+  (make-color 1 2 3))
+
+(set-the-red!   X 10)
+(set-the-green! X 20)
+(set-the-blue!  X 30)
+(list (the-red   X)
+      (the-green X)
+      (the-blue  X)))
+@result{} (10 20 30)
+
+($color-red-set!   Y 10)
+($color-green-set! Y 20)
+($color-blue-set!  Y 30)
+(list ($color-red   Y)
+      ($color-green Y)
+      ($color-blue  Y)))
+@result{} (10 20 30)
+@end example
+@end enumerate
+
+@c page
+@node overview repl
+@section The read-eval-print loop
+
+
+Scheme implementations compliant with @rnrs{6} live in a somewhat uneasy
+tension with a standard Scheme @acronym{REPL} (read--eval--print loop),
+which the Report effectively does not define.
+
+In particular, the effect of reimporting a module, as you might do when
+reloading and rerunning a program, isn't well--defined by @rnrs{6}.
+This is a limitation caused by the particular design choices made in
+@rnrs{6}.
+
+Accordingly, the interactive mode is intended for quick experimenting
+with the built in features.  It is intended neither for developing
+applications nor for writing any substantial piece of code.
+
+@c page
+@node overview foreign
+@section Built in interface to external libraries
+
+
+@value{PRJNAME} comes with some interface to external libraries built
+into the @value{EXECUTABLE} C language executable itself; this is done
+only for some particular libraries which especially benefit from a
+dedicated interface inconvenient to implement with the @ffi{}.  At the
+Scheme level the @api{} is exported by libraries @strong{not} included
+in @value{PRJNAME}'s boot image.
+
+Such interfaces are excluded by default, they must be explicitly
+requested at installation--time with command line options for the
+@command{configure} script.
+
+@menu
+* overview foreign readline::   Interface to @gnu{} Readline.
+* overview foreign cre2::       Interface to @cretwo{}.
+@end menu
+
+@c page
+@node overview foreign readline
+@subsection Interface to @gnu{} Readline
+
+
+@gnu{} Readline is a library implementing advanced command line editing
+features for programs providing a @repl{} interface.  When given the
+@option{--with-readline} configuration option, the @command{configure}
+script will search for @gnu{} Readline or a compatible library and, if
+found, the interface will be enabled.  @ref{iklib readline} for the
+@api{} documentation.
+
+The home page of @gnu{} Readline is at:
+
+@center @url{http://www.gnu.org/software/readline/}
+
+@noindent
+a compatible alternative is Editline:
+
+@center @url{http://www.s11n.net/editline/}
+
+@noindent
+and another possible replacement is Libedit:
+
+@center @url{http://sourceforge.net/projects/libedit/}
+
+@c page
+@node overview foreign cre2
+@subsection Interface to @cretwo{}
+
+
+@cretwo{} is a C language wrapper for the @retwo{} library, which is
+implemented in C++.  @retwo{} is a fast, safe, thread--friendly
+alternative to backtracking regular expression engines like those used
+in PCRE, Perl, and Python; it is a Google project found at:
+
+@center @url{http://code.google.com/p/re2/}
+
+@noindent
+while @cretwo{} is available at:
+
+@center @url{http://github.com/marcomaggi/cre2/}
+
+@value{PRJNAME} interface to @cretwo{} can be included at package
+configuration time by giving the @option{--with-cre2} option to the
+@command{configure} script.  @ref{cre2} for the @api{} documentation.
+
+@c end of file

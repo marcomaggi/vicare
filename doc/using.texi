@@ -1,0 +1,747 @@
+@node using
+@chapter Using @value{PRJNAME}
+
+
+Once @value{PACKAGE} is properly installed, we can invoke it either in
+an interactive terminal session or as the interpreter for invoking a
+script.
+
+@cindex Command line
+@cindex Invoking @value{PRJNAME}
+
+@menu
+* using interactive::           Interactive sessions.
+* using invoking::              Command line arguments.
+* using script::                Using @command{scheme-script}.
+* using libraries::             @rnrs{6} libraries.
+* using rlwrap::                Using @command{rlwrap}.
+* using binfmt::                Launching programs on Linux.
+@end menu
+
+@c page
+@node using interactive
+@section Interactive sessions
+
+
+If we want an interactive session, use a bare @value{EXECUTABLE}
+command, with no options.
+
+@example
+$ @value{RAWEXECUTABLE}
+Vicare Scheme version 0.1d0+ \
+  (revision master/d844c006eb9ada1a047be3893d0dd40f8ae6204a, \
+   build 2010-05-02)
+Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
+
+> (+ 2 2)
+4
+@end example
+
+@noindent
+end--of--file (@key{Ctrl-D} in a typical terminal window) will terminate
+the session.
+
+@c page
+@node using invoking
+@section Command line arguments
+
+
+The synopsis of the @value{EXECUTABLE} program is as follows:
+
+@smallexample
+@value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM [-- [@var{PROGRAM OPTS}]]
+@end smallexample
+
+@noindent
+the @var{OPTIONS} are interpreted by @value{EXECUTABLE}, @var{PROGRAM
+OPTS} can be obtained using the @func{command-line} procedure in the
+@library{rnrs programs} library; when running the @repl{}: the first
+element of the returned list will be the string @samp{*interactive*},
+corresponding to the script name in @rnrs{6}--script mode.
+
+Some options cause code to be evaluated in the interaction environment:
+it initially contains all the bindings exported from the
+@library{ikarus} library.
+
+The @value{EXECUTABLE} executable recognises a few command line switches
+that influence how @value{PACKAGE} starts; the following are the main
+options, driving the execution mode.  It is an error to put on the
+command line two or more of these options.
+
+@table @code
+@item --r6rs-script @var{PROGRAM}
+Start Vicare in @rnrs{6}--script mode.  The @var{PROGRAM} file is handled
+as an @rnrs{6} program.  Example:
+
+@example
+$ cat test.sps
+(import (rnrs))
+(write (command-line))
+(newline)
+
+$ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
+("test.sps" "hi" "there")
+@end example
+
+@item --r6rs-repl @var{PROGRAM}
+Start Vicare in @rnrs{6}-script mode.  Act as if the
+@option{--r6rs-script} option had been used but, after the program
+execution, enter the @repl{} rather than exiting.  This allows
+inspection of bindings and state left behind by the program.
+
+@item --script @var{CODEFILE}
+Start Vicare in evaluation mode.  The @var{CODEFILE} is handled as a
+sequence of @rnrs{6} expressions: such expressions are used as first
+argument for @func{eval} under the interaction environment.  Example:
+
+@example
+$ cat test.sps
+(write (command-line))
+(newline)
+
+$ @value{RAWEXECUTABLE} --script test.sps hi there
+("test.sps" "hi" "there")
+@end example
+
+@item --compile-dependencies @var{IMPORTS-FILE}
+Load the @rnrs{6} program @var{IMPORTS-FILE}, compile all the libraries
+upon which it depends and store them in the FASL repository.
+@var{IMPORTS-FILE} itself is not evaluated.
+@end table
+
+When none of these options is given, but a standalone @var{PROGRAM}
+argument is present on the command line: act as if the
+@option{--r6rs-script} option had been used with the given file name.
+If no standalone @var{PROGRAM} argument is present: enter the @repl{}.
+
+The rest of the command line arguments are recognised by the standard
+Scheme run time system.
+
+@table @code
+@item -b path/to/boot/file.boot
+@itemx --boot path/to/boot/file.boot
+Use the specified boot file as the initial system boot file.  The boot
+file is a binary file that contains all the code and data of the Scheme
+system.  In the absence of the @option{-b} flag, the executable will use
+the default boot file.  Running @value{EXECUTABLE} with the @option{-h}
+option shows the location where the default boot file was installed.
+
+@item --no-rcfile
+Disable loading of run--command files.
+
+@item --rcfile @var{FILE}
+Load and evaluate @var{FILE} as an @rnrs{6} program at startup, before
+loading libraries, evaluating codes and running the main script.  This
+option can be used multiple times.
+
+@item -l @var{LIBFILE}
+@itemx --load-library @var{LIBFILE}
+Load @var{libfile} expecting it to contain one or more @rnrs{6}
+libraries; after executing the RC files, load the libraries in the
+internal collection, but do not add them to any environment.  This
+option can be used multiple times.
+
+@item -f @var{CODEFILE}
+@itemx --eval-file @var{CODEFILE}
+Load @var{CODEFILE} expecting it to contain valid @rnrs{6} expressions;
+after instantiating the libraries hand the code to @func{eval} under the
+interaction environment.  Bindings left behind by this code are
+available if we enter the @repl{}.  This option can be used multiple
+times.
+
+@item -e @var{EXPRESSION}
+@itemx --eval-expr @var{EXPRESSION}
+After instantiating the libraries hand the @var{EXPRESSION} to
+@func{eval} under the interaction environment.  Bindings left behind by
+this code are available if we enter the @repl{}. This option can be used
+multiple times.
+
+@item -L @var{DIRECTORY}
+@itemx --search-path @var{DIRECTORY}
+Add @var{DIRECTORY} to the library search path.  This option can be used
+multiple times.
+
+@item --fasl-path @var{DIRECTORY}
+Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
+multiple times.
+
+@item --fasl-directory @var{DIRECTORY}
+Select @var{DIRECTORY} as top pathname under which @fasl{} files are
+stored when libraries are compiled; @var{DIRECTORY} must exist.  When
+used multiple times: the last one wins.  The selected directory is
+always prepended to the @fasl{} search path.
+
+@item --more-file-extensions
+Rather than searching only libraries with extension @samp{.vicare.sls}
+and @samp{.sls}, search also for @samp{.vicare.ss}, @samp{.ss},
+@samp{.vicare.scm}, @samp{.scm} and the @samp{main} file.  @ref{using
+libraries searching} for more details.
+
+@item --prompt @var{STRING}
+Use @var{STRING} as prompt for the @repl{}.  Defaults to @samp{vicare},
+to which the character @samp{>} is appended for each nested @repl{}
+level.  @ref{iklib cafe} for more details.
+
+@item --repl-on-sigint
+When this option is used an interprocess signal handler is registered at
+program startup to enter a debugging @repl{} whenever a @code{SIGINT}
+signal is received.
+
+@item --raw-repl
+Do not create a readline console input port even if the readline
+interface is available.
+
+@item -d
+@itemx --debug
+Turn on debugging mode.  With this unhandled exceptions in the program
+will result in starting the debugger, which allows stack trace
+inspection.
+
+@item -nd
+@itemx --no-debug
+Turn off debugging mode.
+
+@item --print-loaded-libraries
+Whenever a library file is loaded print a message on the console error
+port.  This is for debugging purposes.
+
+@item --no-print-loaded-libraries
+Disables the effect of @option{--print-loaded-libraries}.
+
+@item -O0
+Turn off use of the source optimizer.
+
+@itemx -O1
+@itemx -O2
+Turn on various levels of compile optimisations.
+
+@item --optimizer-passes-count @var{COUNT}
+Specify how many passes to perform with the source optimizer.  Must be a
+positive fixnum.  Defaults to 1.
+
+@item --enable-open-mvcalls
+@itemx --disable-open-mvcalls
+Enable or disable inlining of calls to @func{call-with-values}.
+Defaults to disable.
+
+@item --print-assembly
+Print to the current error port the assembly instructions generated when
+compiling code.
+
+@item --print-optimizer
+@itemx --print-optimiser
+Print to the current error port a symbolic expression which results from
+running the optimiser.
+
+@item -V
+@itemx --version
+Display the version message then exit.
+
+@item --version-only
+Display only the version number on the standard error port, followed by
+a newline, then exit.
+
+@item --license
+Display the license message then exit.
+
+@item -h
+@itemx --help
+Display the help message then exit.
+
+@item --
+Mark the end of @value{EXECUTABLE} options; all the arguments after this
+marker can be obtained by calling the @func{command-line} procedure.
+@end table
+
+@cindex @env{VICARE_RC_FILES}
+If neither the @option{--no-rcfile} nor the @option{--rcfile} options
+are used: a list of run--command files is read from the environment
+variable @env{VICARE_RC_FILES}, which must contain a colon separated
+list of pathnames.  If the enviroment variable is empty or unset, by
+default the file @file{.vicarerc} is used searching it in the directory
+selected by the @env{HOME} environment variable.
+
+@c page
+@node using script
+@section Using @command{scheme-script}
+
+
+Scheme scripts can be executed using the following command:
+
+@example
+@value{RAWEXECUTABLE} @var{PROGRAM}
+@end example
+
+@noindent
+@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations
+and does not install a wrapper program called @command{scheme-script} to
+avoid conflicts with other Scheme implementations.
+
+Here is a sample script (Pig Latin---``Igpay Atinlay''---is a code that
+was at one time popular among very young North American children).
+
+@example
+(import (rnrs))
+
+;;; Convert a string to its Pig Latin equivalent.
+;;;
+;;; If the first character is a vowel, append "yay".
+;;; "egg" -> "eggyay"
+;;;
+;;; If the first character is a consonant, remove it,
+;;; and append it plus "ay" to the string.
+;;; "foo" -> "oofay"
+
+(define pig-latin
+  (lambda (str)
+    (let ((first (string-ref str 0)))
+      (if (memv first '(#\a #\e #\i #\o #\u))
+	  (string-append str "yay")
+	  (string-append
+ 	    (substring str 1 (string-length str))
+	    (string first) "ay")))))
+
+(display
+ (map pig-latin
+     (cdr (command-line))))
+(newline)
+@end example
+
+Assuming we have stored the script in the file @file{demo.sps}, we can
+invoke this script via @value{EXECUTABLE}:
+
+@example
+$ @value{RAWEXECUTABLE} --r6rs-script demo.sps ice cream after dinner
+(iceyay reamcay afteryay innerday)
+@end example
+
+On Unix/Linux systems, scripts generally start with a ``shebang'' line
+(@emph{sh}arp plus @emph{bang}) which names an interpreter for the
+script.  All modern systems have the @command{env} command which
+searches for a command in the user's path.
+
+@example
+#!/usr/bin/env @value{RAWEXECUTABLE} --r6rs-script
+(import (rnrs))
+
+...
+@end example
+
+Now we can make the file executable, and use it directly.
+
+@example
+$ chmod +x demo.sps
+$ ./demo.sps ice cream after dinner
+(iceyay reamcay afteryay innerday)
+@end example
+
+There are a few fine points.
+
+@itemize
+@item
+If the first two bytes of a script represent the sequence @samp{#!} in
+@ascii{} encoding: the first line is discarded and not parsed as Scheme
+code.  This allows scripts on Unix systems to start with the command
+line needed to use them; notice that this will discard valid sharp--bang
+comments (like @code{#!r6rs}) if the are at the very beginning of a
+file.
+
+@item
+Under Mac OS X, if a script name ends with the @code{.command}
+extension, then it can be executed from the Finder by double--clicking
+on it.  This brings up a terminal window in which the script is
+executed.  The @code{.command} extension can be hidden from the
+@emph{Get Info} item from the Finder's File menu.
+@end itemize
+
+@c page
+@node using libraries
+@section @rnrs{6} libraries
+
+
+A library exports features that can be imported into programs; a library
+is named by a list, e.g., @library{yoyodyne
+block-transfer-computations}.  The core features of the language is
+provided in the library @library{rnrs}.
+
+@menu
+* using libraries intro::       Introduction to @value{PRJNAME} libraries.
+* using libraries searching::   How @value{PRJNAME} finds libraries.
+* using libraries summary::     Library search summary.
+* using libraries examples::    Examples of libraries usage.
+@end menu
+
+@c page
+@node using libraries intro
+@subsection Introduction to libraries
+
+
+A library consists of a ``file'' (some assemblage of text) that contains
+a library form, which might look like this:
+
+@example
+(library (sample)
+  (export cube)
+  (import (rnrs))
+  (define cube
+    (lambda (x)
+      (* x x x))))
+@end example
+
+@noindent
+notice the @func{import} clause; libraries have no predefined namespace,
+and therefore at least @library{rnrs} must be imported.
+
+We can import @library{sample} into another library, a script, or a
+@value{PRJNAME} top--level session:
+
+@example
+> (import (sample))
+> (cube 3)
+27
+@end example
+
+Library names are lists, thus allowing the writer of one or more
+libraries to group related libraries together.  For example, as well as
+@library{yoyodyne block-transfer-computations}, we might also have
+@library{yoyodyne tardis navigation} and @library{yoyodyne tardis
+diagnostics}.  Leaving the parentheses off a single--component library
+name is a common error.
+
+@c page
+@node using libraries searching
+@subsection How @value{PRJNAME} finds libraries
+
+
+@findex library-path
+
+
+In @value{PRJNAME}, a library is a file with the same name as the last
+component of the library name.  For example, the library
+@library{sample} will correspond to a file named @file{sample.sls}
+somewhere in the file system.  The file extension @code{.sls} stands for
+``Scheme library source''; although @value{PRJNAME} will also accept the
+extensions @code{.ss} and @code{.scm} when the command line option
+@option{--more-file-extensions} is used, these really indicate scripts
+rather than libraries.
+
+@value{PRJNAME} has a search algorithm for libraries that is similar to
+those used in other languages.  @value{PRJNAME}'s search path comprises
+a series of directories; when we try to import a library whose name
+contains just one component, @value{PRJNAME} will examine each directory
+in the search path for a file with a matching name.  Importing a library
+whose name is a list of components causes @value{PRJNAME} to match to a
+series of subdirectories with matching names.
+
+Here is an example of each case:
+
+@itemize
+@item
+Importing @library{sample} causes @value{PRJNAME} to look in each
+directory on the path for a file named @file{sample.sls}.
+
+@item
+Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
+each directory on the path for a directory named @file{yoyodyne}, and
+within that a file named @file{sample.sls}.  The @func{library} form for
+this library must still specify the library name as @library{yoyodyne
+sample}, not @library{sample}.
+@end itemize
+
+@cindex @env{VICARE_LIBRARY_PATH}
+@value{PRJNAME}'s own Scheme libraries are installed in the directory
+@code{$(libdir)/scheme}, for example on @gnu{}+Linux systems
+@file{/usr@//local@//lib@//scheme}, and are under the @code{(vicare
+---)} hierarchy.  Additional libraries, and the boot image, are
+installed in the directory @code{$(libdir)/vicare-scheme}.  User
+libraries that are meant to be usable by @value{PRJNAME} should be
+installed in the @code{$(libdir)/scheme} directory.
+
+@value{PRJNAME} always places its own library directories at the end of
+the search path, so, as example, the default value of the search path on
+@gnu{}+Linux systems has the following directories:
+
+@example
+/usr/local/lib/scheme
+/usr/local/lib/vicare-scheme
+@end example
+
+@noindent
+other library directories can be added to the search path in two ways:
+by modifying an environment variable, or by setting @value{PRJNAME}'s
+@func{library-path} parameter.  @value{PRJNAME} consults the environment
+variable @env{VICARE_LIBRARY_PATH} at the beginning of execution, and
+places each of the directories there into its search path.  The search
+path is then set to the value of the parameter @func{library-path},
+which can be updated as necessary.
+
+In the following example session: the user sets
+@env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
+@code{(library-path)}; a further directory is then set during the
+session:
+
+@example
+$ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
+$ echo $VICARE_LIBRARY_PATH
+/home/marco/scheme:/tmp/library
+$ @value{RAWEXECUTABLE}
+...
+
+> (library-path)
+("/home/marco/scheme"
+ "/tmp/library"
+ "/usr/local/lib/scheme"
+ "/usr/local/lib/vicare-scheme")
+> (library-path (cons "/opt/sw/extra-libraries" (library-path)))
+> (library-path)
+("/opt/sw/extra-libraries"
+ "/home/marco/scheme"
+ "/tmp/library"
+ "/usr/local/lib/scheme"
+ "/usr/local/lib/vicare-scheme")
+@end example
+
+In programs intended to be distributed, you should resist the urge to
+set @code{(library-path)}, as the user's file hierarchies might not
+match yours.  For most libraries, simply telling the user to install the
+library in one of the libraries on the search path is good enough.
+
+There are two refinements of the library search algorithm, which are
+performed when the @option{--more-file-extensions} command line option
+is used.
+
+@itemize
+@item
+A common pattern is to distribute a main library along with a number of
+additional extensions: we might have a main library named @library{lib},
+and additional optional extensions named @library{lib extras} and
+@library{lib frills}.
+
+Although the previous packaging method can be used, @value{PRJNAME}
+allows you to use a simpler technique where the main library is stored
+in @file{lib/main.sls}, and the extensions are stored in
+@file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
+
+@item
+@value{PRJNAME} will also look in @file{lib/main.vicare.sls} before
+trying @file{lib/main.sls}.  This allows you to provide a
+@value{PRJNAME}--specific implementation as well as a generic
+implementation.
+@end itemize
+
+@c page
+@node using libraries summary
+@subsection Library search algorithm summary
+
+
+By default, @value{PRJNAME} attempts to import the library @library{a b
+c} as follows, for each directory in the search path:
+
+@enumerate
+@item
+Build the rootname @file{a/b/c}.
+
+@item
+Append each of the following strings to the rootname, in order, until a
+matching file is found:
+
+@example
+.vicare.sls
+.sls
+@end example
+@end enumerate
+
+When the the command line option @option{--more-file-extensions} is
+used, for each directory in the search path:
+
+@enumerate
+@item
+Build the rootname @file{a/b/c}.
+
+@item
+Append each of the following strings to the rootname, in order, until a
+matching file is found:
+
+@example
+/main.vicare.sls
+/main.vicare.ss
+/main.vicare.scm
+/main.sls
+/main.ss
+/main.scm
+.vicare.sls
+.vicare.ss
+.vicare.scm
+.sls
+.ss
+.scm
+@end example
+@end enumerate
+
+If there is no match, then the import request is in error.
+
+Whenever the library name component @code{main} appears as last and not
+unique component: when building the file rootname such component is
+``quoted'' by appending an underscore character; examples:
+
+@example
+(alpha beta main)       @result{} "alpha/beta/main_"
+(main alpha)            @result{} "main/alpha"
+(main)                  @result{} "main"
+@end example
+
+@c page
+@node using libraries examples
+@subsection Examples of library usage
+
+
+Consider a program using @func{pretty-print} procedure to format some
+code, and suppose further that pretty printing is just a nice add--on
+(e.g. using @file{write} suffices, but pretty--printing is @emph{just
+prettier}).
+
+@value{PRJNAME} exports a good pretty--printing facility in its
+@library{ikarus} library.  However, since @func{pretty-print} is not a
+standard procedure, a program that uses it would be rendered unportable
+to other @rnrs{6} Scheme implementations.
+
+The programmer can put the @code{.vicare.*} extensions to use in this
+situation, by writing two versions of a @library{pretty-printing}
+library: one for use by @value{PRJNAME}, and one portable for other
+implementations.
+
+@example
+;; pretty-printing.vicare.ss --
+;;
+;; Can be used only by @value{PRJNAME} Scheme.
+
+(library (pretty-printing)
+  (export pretty-print)
+  (import (only (ikarus) pretty-print)))
+
+;;; end of file
+@end example
+
+@example
+;; pretty-printing.sls --
+;;
+;; For any other Scheme implementation, portable though
+;; not very pretty.
+
+(library (pretty-printing)
+  (export pretty-print)
+  (import (rnrs))
+  (define (pretty-print x port)
+    (write x port)
+    (newline port)))
+
+;;; end of file
+@end example
+
+@c page
+@node using rlwrap
+@section Using @command{rlwrap}
+
+
+@cindex @command{rlwrap}
+
+
+While @value{PRJNAME} comes with an interface to @gnu{} Readline or
+compatible library, the @repl{} interaction, as of version 0.2d9, offers
+only very basic editing capabilities.  For this reason it is suggested
+to use @command{rlwrap}:
+
+@center @url{http://utopia.knoware.nl/~hlub/rlwrap/}
+
+@noindent
+to run @value{PRJNAME}'s @repl{} through this shell script:
+
+@smallexample
+#!/bin/sh
+#
+# Vicare Scheme GNU Readline wrapper using Rlwrap.
+
+## Configuration variables.
+
+vicare_PROGRAM=$(type -p vicare)
+rlwrap_PROGRAM=$(type -p rlwrap)
+
+COMPLETIONS_FILE=/home/marco/.vicare_completions
+COMPLETIONS_OPTION=--file=$@{COMPLETIONS_FILE@}
+
+## Data variables.
+
+# Do NOT include '\!' and '?' in this string.
+BREAK_CHARS="\"#'(),;\`\\|[]@{@}"
+
+## Check programs and data files existence.
+
+function error () @{
+    local MESSAGE=$@{1:?@}
+    printf 'vie error: %s\n' "$@{MESSAGE@}" >&2
+    exit 2
+@}
+function warning () @{
+    local MESSAGE=$@{1:?@}
+    printf 'vie warning: %s\n' "$@{MESSAGE@}" >&2
+@}
+
+test -x "$@{rlwrap_PROGRAM@}" || \
+  error "cannot find program 'rlwrap'"
+test -x "$@{vicare_PROGRAM@}" || \
+  error "cannot find program 'vicare'"
+
+if ! test -f "$@{COMPLETIONS_FILE@}" ; then
+    warning "cannot find completions file '$@{COMPLETIONS_FILE@}'"
+    COMPLETIONS_OPTION=
+fi
+
+## Run.
+
+exec "$@{rlwrap_PROGRAM@}"                    \
+    --ansi-colour-aware                     \
+    --break-chars=$@{BREAK_CHARS@}            \
+    --complete-filenames                    \
+    --history-no-dupes=2                    \
+    --multi-line                            \
+    --prompt-colour='1;31'                  \
+    --quote-characters='"'                  \
+    --remember                              \
+    $@{COMPLETIONS_OPTION@}                   \
+    "$@{vicare_PROGRAM@}" --raw-repl "$@@"
+
+### end of file
+@end smallexample
+
+@c page
+@node using binfmt
+@section Launching programs on Linux
+
+
+When running @value{PRJNAME} on a @gnu{}+Linux system we can take
+advantage of the features offered by the @code{binfmt_misc} kernel
+module to launch directly executable programs without prefixing the
+program name with the @command{vicare} executable.
+
+It all comes down to this: after setting up the feature as explained in
+the appendix @ref{binfmt}, we write a file containing:
+
+@example
+;;;!vicare
+(import (only (program-library) main))
+(main)
+@end example
+
+@noindent
+where @library{program-library} is an installed library containing the
+application code and @func{main} is the function that starts the
+application.  If we enable executable permissions for the file and make
+sure that the first bytes in the file are the sequence
+@code{;;;!vicare}, we can configure the Linux kernel to start the
+program handing its command line to the executable @command{vicare}.
+
+@c end of file

@@ -7,6 +7,15 @@ vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi			\
 	macros.texi			\
 	\
+	overview.texi			\
+	using.texi			\
+	iklib.texi			\
+	ffi.texi			\
+	posix.texi			\
+	glibc.texi			\
+	linux.texi			\
+	syslib.texi			\
+	capi.texi			\
 	libs.texi			\
 	objects.texi			\
 	debug.texi			\
