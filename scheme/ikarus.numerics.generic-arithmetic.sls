@@ -1816,7 +1816,7 @@
 	(cond ((= g y)
 	       ;;FIXME This  should not be possible.   (Marco Maggi; Sat
 	       ;;Nov 24, 2012)
-	       (quotient x g))
+	       ($quotient-fixnum-fixnum x g))
 	      (($bignum-positive? y)
 	       (if ($fx= g 1)
 		   ;;X and Y are not exactly divisible.
@@ -1824,7 +1824,7 @@
 		 ;;X and Y are not  exactly divisible by themselves, but
 		 ;;they are exactly divisible by their GCD.
 		 ($make-ratnum ($fxquotient x g)
-			       (quotient y g))))
+			       ($quotient-bignum-fixnum y g))))
 	      (else ;here Y is negative
 	       (assert ($bignum-negative? y))
 	       (if ($fx= g 1)
@@ -1836,7 +1836,7 @@
 		 ;;they are exactly  divisible by their GCD.   We want a
 		 ;;ratnum with positive denominator.
 		 ($make-ratnum ($neg-fixnum ($fxquotient x g))
-			       ($neg-number (quotient y g)))))))))
+			       ($neg-number ($quotient-bignum-fixnum y g)))))))))
 
   (define ($div-fixnum-ratnum x y)
     ;;     y.num       y.den
@@ -1894,16 +1894,17 @@
 	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
 	     ;;fixnum; the GDC is always positive.
 	     (let ((g ($gcd-bignum-fixnum x y)))
+	       (assert (fixnum? g))
 	       (cond (($fx= g 1)
 		      ;;X and Y are not exactly divisible.
 		      ($make-ratnum x y))
 		     (($fx= g y)
 		      ;;X and Y are exactly divisible.
-		      (quotient x g))
+		      ($quotient-bignum-fixnum x g))
 		     (else
 		      ;;X and Y are not  exactly divisible, but they are
 		      ;;both exactly divisible by their GCD.
-		      ($make-ratnum (quotient x g)
+		      ($make-ratnum ($quotient-bignum-fixnum x g)
 				    ($fxquotient y g)))))))
 	  (else ;here Y is negative
 	   (assert ($fxnegative? y))
@@ -1919,12 +1920,12 @@
 				    ($neg-fixnum y)))
 		     ((= ($neg-fixnum g) y)
 		      ;;X and Y are exactly divisible.
-		      ($neg-number (quotient x g)))
+		      ($neg-number ($quotient-bignum-fixnum x g)))
 		     (else
 		      ;;X and Y are not  exactly divisible, but they are
 		      ;;both exactly divisible by  their GCD.  We want a
 		      ;;ratnum with positive denominator.
-		      ($make-ratnum ($neg-number (quotient x g))
+		      ($make-ratnum ($neg-number ($quotient-bignum-fixnum x g))
 				    ($neg-fixnum ($fxquotient y g))))))))))
 
   (define ($div-bignum-bignum x y)
@@ -1944,21 +1945,21 @@
 	    (($bignum-positive? y)
 	     (if (= g y)
 		 ;;X and Y are exactly divisible.
-		 (quotient x g)
+		 ($quotient-bignum-number x g)
 	       ;;X and  Y are not  exactly divisible, but they  are both
 	       ;;divisible by their GCD.
-	       ($make-ratnum (quotient x g)
-			     (quotient y g))))
+	       ($make-ratnum ($quotient-bignum-number x g)
+			     ($quotient-bignum-number y g))))
 	    (else ;here Y is negative
 	     (let ((y ($neg-number y)))
 	       (if (= g y)
 		   ;;X and Y are exactly divisible.
-		   ($neg-number (quotient x g))
+		   ($neg-number ($quotient-bignum-number x g))
 		 ;;X and Y are not  exactly divisible, but they are both
 		 ;;divisible  by  their  GCD.   We want  a  ratnum  with
 		 ;;positive denominator.
-		 ($make-ratnum ($neg-number (quotient x g))
-			       (quotient y g))))))))
+		 ($make-ratnum ($neg-number ($quotient-bignum-number x g))
+			       ($quotient-bignum-number y g))))))))
 
   (define ($div-bignum-flonum x y)
     ($fl/ ($bignum->flonum x) y))
@@ -2655,45 +2656,54 @@
 
 ;;; --------------------------------------------------------------------
 
+;;;FIXME After negating fixnums and bignums we  do not know if X^ and Y^
+;;;are still fixnums or still bignums:
+;;;
+;;;   ($neg-fixnum (least-fixnum))	=> bignum
+;;;   ($neg-bignum (- (least-fixnum)))	=> fixnum
+;;;
+;;;Should we use  different branches when X and/or  Y are (least-fixnum)
+;;;or (- (least-fixnum))?  (Marco Maggi; Sun Nov 25, 2012)
+
   (define ($lcm-fixnum-fixnum x y)
-    (let ((x (if ($fxnegative? x) ($neg-fixnum x) x))
-	  (y (if ($fxnegative? y) ($neg-fixnum y) y)))
-      (let ((g ($gcd-number-number x y)))
-	($mul-number-number y (quotient x g)))))
+    (let ((x^ (if ($fxnegative? x) ($neg-fixnum x) x))
+	  (y^ (if ($fxnegative? y) ($neg-fixnum y) y)))
+      (let ((g ($gcd-number-number x^ y^)))
+	($mul-number-number y (quotient x^ g)))))
 
   (define ($lcm-fixnum-bignum x y)
-    (let ((x (if ($fxnegative?      x) ($neg-fixnum x) x))
-	  (y (if ($bignum-negative? y) ($neg-bignum y) y)))
-      (let ((g ($gcd-number-number x y)))
-	($mul-number-number y (quotient x g)))))
+    (let ((x^ (if ($fxnegative?      x) ($neg-fixnum x) x))
+	  (y^ (if ($bignum-negative? y) ($neg-bignum y) y)))
+      (let ((g ($gcd-number-number x^ y^)))
+	($mul-number-number y (quotient x^ g)))))
 
   (define ($lcm-fixnum-flonum x y)
-    (let ((v ($flonum->exact y)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($lcm-fixnum-fixnum x v)))
-	((bignum?)	(inexact ($lcm-fixnum-bignum x v)))
+    (let ((y.exact ($flonum->exact y)))
+      (cond-exact-integer-operand y.exact
+	((fixnum?)	(inexact ($lcm-fixnum-fixnum x y.exact)))
+	((bignum?)	(inexact ($lcm-fixnum-bignum x y.exact)))
 	(else
 	 (%error-not-integer y)))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-bignum-fixnum x y)
-    (let ((x (if ($bignum-negative? x) ($neg-bignum x) x))
-	  (y (if ($fxnegative?      y) ($neg-fixnum y) y)))
-      (let ((g ($gcd-number-number x y)))
-	($mul-number-number y (quotient x g)))))
+    (let ((x^ (if ($bignum-negative? x) ($neg-bignum x) x))
+	  (y^ (if ($fxnegative?      y) ($neg-fixnum y) y)))
+      (let ((g ($gcd-number-number x^ y^)))
+	($mul-number-number y^ (quotient x^ g)))))
 
   (define ($lcm-bignum-bignum x y)
-    (let ((x (if ($bignum-negative? x) ($neg-bignum x) x))
-	  (y (if ($bignum-negative? y) ($neg-bignum y) y)))
-      (let ((g ($gcd-number-number x y)))
-	($mul-number-number y (quotient x g)))))
+    (let ((x^ (if ($bignum-negative? x) ($neg-bignum x) x))
+	  (y^ (if ($bignum-negative? y) ($neg-bignum y) y)))
+      (let ((g ($gcd-number-number x^ y^)))
+	($mul-number-number y^ (quotient x^ g)))))
 
   (define ($lcm-bignum-flonum x y)
-    (let ((v ($flonum->exact y)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($lcm-bignum-fixnum x v)))
-	((bignum?)	(inexact ($lcm-bignum-bignum x v)))
+    (let ((y.exact ($flonum->exact y)))
+      (cond-exact-integer-operand y.exact
+	((fixnum?)	(inexact ($lcm-bignum-fixnum x y.exact)))
+	((bignum?)	(inexact ($lcm-bignum-bignum x y.exact)))
 	(else
 	 (%error-not-integer y)))))
 
@@ -2734,16 +2744,6 @@
   #| end of module |# )
 
 
-(define (quotient x y)
-  (receive (q r)
-      (quotient+remainder x y)
-    q))
-
-(define (remainder x y)
-  (receive (q r)
-      (quotient+remainder x y)
-    r))
-
 (module (quotient+remainder
 	 $quotient+remainder-fixnum-number	$quotient+remainder-number-fixnum
 	 $quotient+remainder-bignum-number	$quotient+remainder-number-bignum
@@ -2759,37 +2759,28 @@
   (define (quotient+remainder x y)
     (if (eq? y 0)
 	(assertion-violation who "second argument must be non-zero")
-      (cond-numeric-operand x
+      (cond-inexact-integer-operand x
        ((fixnum?)	($quotient+remainder-fixnum-number x y))
        ((bignum?)	($quotient+remainder-bignum-number x y))
        ((flonum?)	($quotient+remainder-flonum-number x y))
-       ((ratnum?)	(%error-not-integer x))
-       ((compnum?)	(%error-not-integer x))
-       ((cflonum?)	(%error-not-integer x))
        (else
 	(%error-not-integer x)))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($quotient+remainder-fixnum-number x y)
-    (cond-numeric-operand y
+    (cond-inexact-integer-operand y
       ((fixnum?)	($quotient+remainder-fixnum-fixnum x y))
       ((bignum?)	($quotient+remainder-fixnum-bignum x y))
       ((flonum?)	($quotient+remainder-fixnum-flonum x y))
-      ((ratnum?)	(%error-not-integer y))
-      ((compnum?)	(%error-not-integer y))
-      ((cflonum?)	(%error-not-integer y))
       (else
        (%error-not-integer y))))
 
   (define ($quotient+remainder-bignum-number x y)
-    (cond-numeric-operand y
+    (cond-inexact-integer-operand y
       ((fixnum?)	($quotient+remainder-bignum-fixnum x y))
       ((bignum?)	($quotient+remainder-bignum-bignum x y))
       ((flonum?)	($quotient+remainder-bignum-flonum x y))
-      ((ratnum?)	(%error-not-integer y))
-      ((compnum?)	(%error-not-integer y))
-      ((cflonum?)	(%error-not-integer y))
       (else
        (%error-not-integer y))))
 
@@ -2810,24 +2801,18 @@
 ;;; --------------------------------------------------------------------
 
   (define ($quotient+remainder-number-fixnum x y)
-    (cond-numeric-operand x
+    (cond-inexact-integer-operand x
       ((fixnum?)	($quotient+remainder-fixnum-fixnum x y))
       ((bignum?)	($quotient+remainder-bignum-fixnum x y))
       ((flonum?)	($quotient+remainder-flonum-fixnum x y))
-      ((ratnum?)	(%error-not-integer x))
-      ((compnum?)	(%error-not-integer x))
-      ((cflonum?)	(%error-not-integer x))
       (else
        (%error-not-integer x))))
 
   (define ($quotient+remainder-number-bignum x y)
-    (cond-numeric-operand x
+    (cond-inexact-integer-operand x
       ((fixnum?)	($quotient+remainder-fixnum-bignum x y))
       ((bignum?)	($quotient+remainder-bignum-bignum x y))
       ((flonum?)	($quotient+remainder-flonum-bignum x y))
-      ((ratnum?)	(%error-not-integer x))
-      ((compnum?)	(%error-not-integer x))
-      ((cflonum?)	(%error-not-integer x))
       (else
        (%error-not-integer x))))
 
@@ -2849,8 +2834,6 @@
 
   (define ($quotient+remainder-fixnum-fixnum x y)
     (if ($fx= y -1)
-	;;We have  to assume that  the result of  negating X may  not be
-	;;fixnum!!!  This happens when X is (least-fixnum).
 	(values ($neg-fixnum x) 0)
       (values ($fxquotient x y) ($fxremainder x y))))
 
@@ -2939,6 +2922,100 @@
     (assertion-violation who "expected integer as argument" x))
 
   #| end of module: quotient+remainder |# )
+
+
+(module (quotient
+	 remainder
+	 $quotient-fixnum-number	$remainder-fixnum-number
+	 $quotient-number-fixnum	$remainder-number-fixnum
+	 $quotient-bignum-number	$remainder-bignum-number
+	 $quotient-number-bignum	$remainder-number-bignum
+	 $quotient-flonum-number	$remainder-flonum-number
+	 $quotient-number-flonum	$remainder-number-flonum
+	 $quotient-fixnum-fixnum	$remainder-fixnum-fixnum
+	 $quotient-fixnum-bignum	$remainder-fixnum-bignum
+	 $quotient-fixnum-flonum	$remainder-fixnum-flonum
+	 $quotient-bignum-fixnum	$remainder-bignum-fixnum
+	 $quotient-bignum-bignum	$remainder-bignum-bignum
+	 $quotient-bignum-flonum	$remainder-bignum-flonum
+	 $quotient-flonum-fixnum	$remainder-flonum-fixnum
+	 $quotient-flonum-bignum	$remainder-flonum-bignum
+	 $quotient-flonum-flonum	$remainder-flonum-flonum)
+
+  (define-syntax define-quotient+remainder
+    (syntax-rules ()
+      ((_ ?quotient ?remainder ?quotient+remainder)
+       (begin
+	 (define (?quotient x y)
+	   (receive (q r)
+	       (?quotient+remainder x y)
+	     q))
+	 (define (?remainder x y)
+	   (receive (q r)
+	       (?quotient+remainder x y)
+	     r))))))
+
+  (define-quotient+remainder quotient remainder
+    quotient+remainder)
+
+;;; --------------------------------------------------------------------
+
+  (define-quotient+remainder $quotient-fixnum-number $remainder-fixnum-number
+    $quotient+remainder-fixnum-number)
+
+  (define-quotient+remainder $quotient-number-fixnum $remainder-number-fixnum
+    $quotient+remainder-number-fixnum)
+
+;;; --------------------------------------------------------------------
+
+  (define-quotient+remainder $quotient-bignum-number $remainder-bignum-number
+    $quotient+remainder-bignum-number)
+
+  (define-quotient+remainder $quotient-number-bignum $remainder-number-bignum
+    $quotient+remainder-number-bignum)
+
+;;; --------------------------------------------------------------------
+
+  (define-quotient+remainder $quotient-flonum-number $remainder-flonum-number
+    $quotient+remainder-flonum-number)
+
+  (define-quotient+remainder $quotient-number-flonum $remainder-number-flonum
+    $quotient+remainder-number-flonum)
+
+;;; --------------------------------------------------------------------
+
+  (define-quotient+remainder $quotient-fixnum-fixnum $remainder-fixnum-fixnum
+    $quotient+remainder-fixnum-fixnum)
+
+  (define-quotient+remainder $quotient-fixnum-bignum $remainder-fixnum-bignum
+    $quotient+remainder-fixnum-bignum)
+
+  (define-quotient+remainder $quotient-fixnum-flonum $remainder-fixnum-flonum
+    $quotient+remainder-fixnum-flonum)
+
+;;; --------------------------------------------------------------------
+
+  (define-quotient+remainder $quotient-bignum-fixnum $remainder-bignum-fixnum
+    $quotient+remainder-bignum-fixnum)
+
+  (define-quotient+remainder $quotient-bignum-bignum $remainder-bignum-bignum
+    $quotient+remainder-bignum-bignum)
+
+  (define-quotient+remainder $quotient-bignum-flonum $remainder-bignum-flonum
+    $quotient+remainder-bignum-flonum)
+
+;;; --------------------------------------------------------------------
+
+  (define-quotient+remainder $quotient-flonum-fixnum $remainder-flonum-fixnum
+    $quotient+remainder-flonum-fixnum)
+
+  (define-quotient+remainder $quotient-flonum-bignum $remainder-flonum-bignum
+    $quotient+remainder-flonum-bignum)
+
+  (define-quotient+remainder $quotient-flonum-flonum $remainder-flonum-flonum
+    $quotient+remainder-flonum-flonum)
+
+  #| end of module: quotient |# )
 
 
 (module (max
