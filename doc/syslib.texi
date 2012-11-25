@@ -18,6 +18,7 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 * syslib ratnums::              Low level ratnum operations.
 * syslib compnums::             Low level compnum operations.
 * syslib cflonums::             Low level cflonum operations.
+* syslib numerics::             Low level numerics operations.
 * syslib chars::                Low level character operations.
 * syslib pairs::                Low level pair operations.
 * syslib structs::              Low level structure operations.
@@ -884,6 +885,2107 @@ Return the reference to the real part.
 @deffn {Unsafe Operation} $cflonum-imag @var{cmp}
 Return the reference to the imaginary part.
 @end deffn
+
+@c page
+@node syslib numerics
+@section Low level numerics operations
+
+
+The library @library{ikarus syslib $numerics} exports bindings for low
+level operations on numbers.
+
+@menu
+* syslib numerics neg::         Numbers negation.
+* syslib numerics inv::         Numbers inversion.
+* syslib numerics add::         Numbers addition.
+* syslib numerics sub::         Numbers subtraction.
+* syslib numerics mul::         Numbers multiplication.
+* syslib numerics div::         Numbers division.
+* syslib numerics sqr::         Squaring of numbers.
+* syslib numerics gcd::         Greatest common divisor.
+* syslib numerics lcm::         Least common multiple.
+* syslib numerics quorem::      Quotient and remainder.
+* syslib numerics quotient::    Quotient between numbers.
+* syslib numerics remainder::   Remainder between numbers.
+* syslib numerics modulo::      Modulo between numbers.
+* syslib numerics max::         Maximum between numbers.
+* syslib numerics min::         Minimum between numbers.
+* syslib numerics abs::         Absolute value of numbers.
+* syslib numerics expt::        Raising numbers to power.
+* syslib numerics sqrt::        Square root of numbers.
+* syslib numerics log::         Logarithms of numbers.
+* syslib numerics exp::         Exponentials of numbers.
+* syslib numerics sin::         Trigonometric sine.
+* syslib numerics cos::         Trigonometric cosine.
+* syslib numerics tan::         Trigonometric tangent.
+* syslib numerics asin::        Trigonometric arc sine.
+* syslib numerics acos::        Trigonometric arc cosine.
+* syslib numerics atan::        Trigonometric arc tangent.
+* syslib numerics sinh::        Hyperbolic sine.
+* syslib numerics cosh::        Hyperbolic cosine.
+* syslib numerics tanh::        Hyperbolic tangent.
+* syslib numerics asinh::       Hyperbolic arc sine.
+* syslib numerics acosh::       Hyperbolic arc cosine.
+* syslib numerics atanh::       Hyperbolic arc tangent.
+* syslib numerics bitnot::      Bitwise logic not.
+* syslib numerics bitand::      Bitwise logic and.
+* syslib numerics bitior::      Bitwise logic inclusive or.
+* syslib numerics bitxor::      Bitwise logic exclusive or.
+@end menu
+
+@c page
+@node syslib numerics neg
+@subsection Negation negation
+
+
+@defun $neg-number
+@end defun
+
+
+@defun $neg-fixnum
+@end defun
+
+
+@defun $neg-bignum
+@end defun
+
+
+@defun $neg-flonum
+@end defun
+
+
+@defun $neg-ratnum
+@end defun
+
+
+@defun $neg-compnum
+@end defun
+
+
+@defun $neg-cflonum
+@end defun
+
+@c page
+@node syslib numerics inv
+@subsection Numbers inversion
+
+
+@defun $inv-number
+@end defun
+
+
+@defun $inv-fixnum
+@end defun
+
+
+@defun $inv-bignum
+@end defun
+
+
+@defun $inv-flonum
+@end defun
+
+
+@defun $inv-ratnum
+@end defun
+
+
+@defun $inv-compnum
+@end defun
+
+
+@defun $inv-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics add
+@subsection Numbers addition
+
+
+@defun $add-number-number
+@end defun
+
+
+@defun $add-fixnum-number
+@end defun
+
+
+@defun $add-bignum-number
+@end defun
+
+
+@defun $add-flonum-number
+@end defun
+
+
+@defun $add-ratnum-number
+@end defun
+
+
+@defun $add-compnum-number
+@end defun
+
+
+@defun $add-cflonum-number
+@end defun
+
+
+@defun $add-number-fixnum
+@end defun
+
+
+@defun $add-number-bignum
+@end defun
+
+
+@defun $add-number-flonum
+@end defun
+
+
+@defun $add-number-ratnum
+@end defun
+
+
+@defun $add-number-compnum
+@end defun
+
+
+@defun $add-number-cflonum
+@end defun
+
+
+@defun $add-fixnum-fixnum
+@end defun
+
+
+@defun $add-fixnum-bignum
+@end defun
+
+
+@defun $add-fixnum-flonum
+@end defun
+
+
+@defun $add-fixnum-ratnum
+@end defun
+
+
+@defun $add-fixnum-compnum
+@end defun
+
+
+@defun $add-fixnum-cflonum
+@end defun
+
+
+@defun $add-bignum-fixnum
+@end defun
+
+
+@defun $add-bignum-bignum
+@end defun
+
+
+@defun $add-bignum-flonum
+@end defun
+
+
+@defun $add-bignum-ratnum
+@end defun
+
+
+@defun $add-bignum-compnum
+@end defun
+
+
+@defun $add-bignum-cflonum
+@end defun
+
+
+@defun $add-flonum-fixnum
+@end defun
+
+
+@defun $add-flonum-bignum
+@end defun
+
+
+@defun $add-flonum-flonum
+@end defun
+
+
+@defun $add-flonum-ratnum
+@end defun
+
+
+@defun $add-flonum-compnum
+@end defun
+
+
+@defun $add-flonum-cflonum
+@end defun
+
+
+@defun $add-ratnum-fixnum
+@end defun
+
+
+@defun $add-ratnum-bignum
+@end defun
+
+
+@defun $add-ratnum-flonum
+@end defun
+
+
+@defun $add-ratnum-ratnum
+@end defun
+
+
+@defun $add-ratnum-compnum
+@end defun
+
+
+@defun $add-ratnum-cflonum
+@end defun
+
+
+@defun $add-compnum-fixnum
+@end defun
+
+
+@defun $add-compnum-bignum
+@end defun
+
+
+@defun $add-compnum-ratnum
+@end defun
+
+
+@defun $add-compnum-compnum
+@end defun
+
+
+@defun $add-compnum-flonum
+@end defun
+
+
+@defun $add-compnum-cflonum
+@end defun
+
+
+@defun $add-cflonum-fixnum
+@end defun
+
+
+@defun $add-cflonum-bignum
+@end defun
+
+
+@defun $add-cflonum-ratnum
+@end defun
+
+
+@defun $add-cflonum-flonum
+@end defun
+
+
+@defun $add-cflonum-compnum
+@end defun
+
+
+@defun $add-cflonum-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics sub
+@subsection Numbers subtraction
+
+
+@defun $sub-number-number
+@end defun
+
+
+@defun $sub-fixnum-number
+@end defun
+
+
+@defun $sub-bignum-number
+@end defun
+
+
+@defun $sub-flonum-number
+@end defun
+
+
+@defun $sub-ratnum-number
+@end defun
+
+
+@defun $sub-compnum-number
+@end defun
+
+
+@defun $sub-cflonum-number
+@end defun
+
+
+@defun $sub-number-fixnum
+@end defun
+
+
+@defun $sub-number-bignum
+@end defun
+
+
+@defun $sub-number-flonum
+@end defun
+
+
+@defun $sub-number-ratnum
+@end defun
+
+
+@defun $sub-number-compnum
+@end defun
+
+
+@defun $sub-number-cflonum
+@end defun
+
+
+@defun $sub-fixnum-fixnum
+@end defun
+
+
+@defun $sub-fixnum-bignum
+@end defun
+
+
+@defun $sub-fixnum-flonum
+@end defun
+
+
+@defun $sub-fixnum-ratnum
+@end defun
+
+
+@defun $sub-fixnum-compnum
+@end defun
+
+
+@defun $sub-fixnum-cflonum
+@end defun
+
+
+@defun $sub-bignum-fixnum
+@end defun
+
+
+@defun $sub-bignum-bignum
+@end defun
+
+
+@defun $sub-bignum-flonum
+@end defun
+
+
+@defun $sub-bignum-ratnum
+@end defun
+
+
+@defun $sub-bignum-compnum
+@end defun
+
+
+@defun $sub-bignum-cflonum
+@end defun
+
+
+@defun $sub-flonum-fixnum
+@end defun
+
+
+@defun $sub-flonum-bignum
+@end defun
+
+
+@defun $sub-flonum-ratnum
+@end defun
+
+
+@defun $sub-flonum-flonum
+@end defun
+
+
+@defun $sub-flonum-compnum
+@end defun
+
+
+@defun $sub-flonum-cflonum
+@end defun
+
+
+@defun $sub-ratnum-fixnum
+@end defun
+
+
+@defun $sub-ratnum-bignum
+@end defun
+
+
+@defun $sub-ratnum-flonum
+@end defun
+
+
+@defun $sub-ratnum-ratnum
+@end defun
+
+
+@defun $sub-ratnum-compnum
+@end defun
+
+
+@defun $sub-ratnum-cflonum
+@end defun
+
+
+@defun $sub-compnum-fixnum
+@end defun
+
+
+@defun $sub-compnum-bignum
+@end defun
+
+
+@defun $sub-compnum-ratnum
+@end defun
+
+
+@defun $sub-compnum-compnum
+@end defun
+
+
+@defun $sub-compnum-flonum
+@end defun
+
+
+@defun $sub-compnum-cflonum
+@end defun
+
+
+@defun $sub-cflonum-fixnum
+@end defun
+
+
+@defun $sub-cflonum-bignum
+@end defun
+
+
+@defun $sub-cflonum-ratnum
+@end defun
+
+
+@defun $sub-cflonum-flonum
+@end defun
+
+
+@defun $sub-cflonum-compnum
+@end defun
+
+
+@defun $sub-cflonum-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics mul
+@subsection Numbers multiplication
+
+
+@defun $mul-number-number
+@end defun
+
+
+@defun $mul-fixnum-number
+@end defun
+
+
+@defun $mul-bignum-number
+@end defun
+
+
+@defun $mul-flonum-number
+@end defun
+
+
+@defun $mul-ratnum-number
+@end defun
+
+
+@defun $mul-compnum-number
+@end defun
+
+
+@defun $mul-cflonum-number
+@end defun
+
+
+@defun $mul-number-fixnum
+@end defun
+
+
+@defun $mul-number-bignum
+@end defun
+
+
+@defun $mul-number-flonum
+@end defun
+
+
+@defun $mul-number-ratnum
+@end defun
+
+
+@defun $mul-number-compnum
+@end defun
+
+
+@defun $mul-number-cflonum
+@end defun
+
+
+@defun $mul-fixnum-fixnum
+@end defun
+
+
+@defun $mul-fixnum-bignum
+@end defun
+
+
+@defun $mul-fixnum-flonum
+@end defun
+
+
+@defun $mul-fixnum-ratnum
+@end defun
+
+
+@defun $mul-fixnum-compnum
+@end defun
+
+
+@defun $mul-fixnum-cflonum
+@end defun
+
+
+@defun $mul-bignum-fixnum
+@end defun
+
+
+@defun $mul-bignum-bignum
+@end defun
+
+
+@defun $mul-bignum-flonum
+@end defun
+
+
+@defun $mul-bignum-ratnum
+@end defun
+
+
+@defun $mul-bignum-compnum
+@end defun
+
+
+@defun $mul-bignum-cflonum
+@end defun
+
+
+@defun $mul-flonum-flonum
+@end defun
+
+
+@defun $mul-flonum-cflonum
+@end defun
+
+
+@defun $mul-flonum-fixnum
+@end defun
+
+
+@defun $mul-flonum-bignum
+@end defun
+
+
+@defun $mul-flonum-ratnum
+@end defun
+
+
+@defun $mul-flonum-compnum
+@end defun
+
+
+@defun $mul-ratnum-fixnum
+@end defun
+
+
+@defun $mul-ratnum-bignum
+@end defun
+
+
+@defun $mul-ratnum-flonum
+@end defun
+
+
+@defun $mul-ratnum-ratnum
+@end defun
+
+
+@defun $mul-ratnum-compnum
+@end defun
+
+
+@defun $mul-ratnum-cflonum
+@end defun
+
+
+@defun $mul-compnum-fixnum
+@end defun
+
+
+@defun $mul-compnum-bignum
+@end defun
+
+
+@defun $mul-compnum-ratnum
+@end defun
+
+
+@defun $mul-compnum-flonum
+@end defun
+
+
+@defun $mul-compnum-compnum
+@end defun
+
+
+@defun $mul-compnum-cflonum
+@end defun
+
+
+@defun $mul-cflonum-fixnum
+@end defun
+
+
+@defun $mul-cflonum-bignum
+@end defun
+
+
+@defun $mul-cflonum-ratnum
+@end defun
+
+
+@defun $mul-cflonum-flonum
+@end defun
+
+
+@defun $mul-cflonum-compnum
+@end defun
+
+
+@defun $mul-cflonum-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics div
+@subsection Numbers division
+
+
+@defun $div-number-number
+@end defun
+
+
+@defun $div-flonum-number
+@end defun
+
+
+@defun $div-fixnum-number
+@end defun
+
+
+@defun $div-bignum-number
+@end defun
+
+
+@defun $div-ratnum-number
+@end defun
+
+
+@defun $div-compnum-number
+@end defun
+
+
+@defun $div-cflonum-number
+@end defun
+
+
+@defun $div-number-flonum
+@end defun
+
+
+@defun $div-number-fixnum
+@end defun
+
+
+@defun $div-number-bignum
+@end defun
+
+
+@defun $div-number-ratnum
+@end defun
+
+
+@defun $div-number-compnum
+@end defun
+
+
+@defun $div-number-cflonum
+@end defun
+
+
+@defun $div-fixnum-flonum
+@end defun
+
+
+@defun $div-fixnum-fixnum
+@end defun
+
+
+@defun $div-fixnum-bignum
+@end defun
+
+
+@defun $div-fixnum-ratnum
+@end defun
+
+
+@defun $div-fixnum-compnum
+@end defun
+
+
+@defun $div-fixnum-cflonum
+@end defun
+
+
+@defun $div-bignum-fixnum
+@end defun
+
+
+@defun $div-bignum-bignum
+@end defun
+
+
+@defun $div-bignum-flonum
+@end defun
+
+
+@defun $div-bignum-ratnum
+@end defun
+
+
+@defun $div-bignum-compnum
+@end defun
+
+
+@defun $div-bignum-cflonum
+@end defun
+
+
+@defun $div-ratnum-fixnum
+@end defun
+
+
+@defun $div-ratnum-bignum
+@end defun
+
+
+@defun $div-ratnum-ratnum
+@end defun
+
+
+@defun $div-ratnum-flonum
+@end defun
+
+
+@defun $div-ratnum-compnum
+@end defun
+
+
+@defun $div-ratnum-cflonum
+@end defun
+
+
+@defun $div-flonum-flonum
+@end defun
+
+
+@defun $div-flonum-cflonum
+@end defun
+
+
+@defun $div-flonum-fixnum
+@end defun
+
+
+@defun $div-flonum-bignum
+@end defun
+
+
+@defun $div-flonum-ratnum
+@end defun
+
+
+@defun $div-flonum-compnum
+@end defun
+
+
+@defun $div-compnum-fixnum
+@end defun
+
+
+@defun $div-compnum-bignum
+@end defun
+
+
+@defun $div-compnum-ratnum
+@end defun
+
+
+@defun $div-compnum-flonum
+@end defun
+
+
+@defun $div-compnum-compnum
+@end defun
+
+
+@defun $div-compnum-cflonum
+@end defun
+
+
+@defun $div-cflonum-fixnum
+@end defun
+
+
+@defun $div-cflonum-bignum
+@end defun
+
+
+@defun $div-cflonum-ratnum
+@end defun
+
+
+@defun $div-cflonum-flonum
+@end defun
+
+
+@defun $div-cflonum-compnum
+@end defun
+
+
+@defun $div-cflonum-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics sqr
+@subsection Numbers squaring
+
+
+@defun $sqr-fixnum
+@end defun
+
+
+@defun $sqr-bignum
+@end defun
+
+
+@defun $sqr-ratnum
+@end defun
+
+
+@defun $sqr-compnum
+@end defun
+
+
+@defun $sqr-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics gcd
+@subsection Greatest common divisor
+
+
+@defun $gcd-number-number
+@end defun
+
+
+@defun $gcd-fixnum-number
+@end defun
+
+
+@defun $gcd-bignum-number
+@end defun
+
+
+@defun $gcd-flonum-number
+@end defun
+
+
+@defun $gcd-number-fixnum
+@end defun
+
+
+@defun $gcd-number-bignum
+@end defun
+
+
+@defun $gcd-number-flonum
+@end defun
+
+
+@defun $gcd-fixnum-fixnum
+@end defun
+
+
+@defun $gcd-fixnum-bignum
+@end defun
+
+
+@defun $gcd-fixnum-flonum
+@end defun
+
+
+@defun $gcd-bignum-fixnum
+@end defun
+
+
+@defun $gcd-bignum-bignum
+@end defun
+
+
+@defun $gcd-bignum-flonum
+@end defun
+
+
+@defun $gcd-flonum-fixnum
+@end defun
+
+
+@defun $gcd-flonum-bignum
+@end defun
+
+
+@defun $gcd-flonum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics lcm
+@subsection Least common multiple
+
+
+@defun $lcm-number-number
+@end defun
+
+
+@defun $lcm-fixnum-number
+@end defun
+
+
+@defun $lcm-bignum-number
+@end defun
+
+
+@defun $lcm-flonum-number
+@end defun
+
+
+@defun $lcm-number-fixnum
+@end defun
+
+
+@defun $lcm-number-bignum
+@end defun
+
+
+@defun $lcm-number-flonum
+@end defun
+
+
+@defun $lcm-fixnum-fixnum
+@end defun
+
+
+@defun $lcm-fixnum-bignum
+@end defun
+
+
+@defun $lcm-fixnum-flonum
+@end defun
+
+
+@defun $lcm-bignum-fixnum
+@end defun
+
+
+@defun $lcm-bignum-bignum
+@end defun
+
+
+@defun $lcm-bignum-flonum
+@end defun
+
+
+@defun $lcm-flonum-fixnum
+@end defun
+
+
+@defun $lcm-flonum-bignum
+@end defun
+
+
+@defun $lcm-flonum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics quorem
+@subsection Quotient and remainder
+
+
+@defun $quotient+remainder-fixnum-number
+@end defun
+
+
+@defun $quotient+remainder-number-fixnum
+@end defun
+
+
+@defun $quotient+remainder-bignum-number
+@end defun
+
+
+@defun $quotient+remainder-number-bignum
+@end defun
+
+
+@defun $quotient+remainder-flonum-number
+@end defun
+
+
+@defun $quotient+remainder-number-flonum
+@end defun
+
+
+@defun $quotient+remainder-fixnum-fixnum
+@end defun
+
+
+@defun $quotient+remainder-bignum-fixnum
+@end defun
+
+
+@defun $quotient+remainder-fixnum-bignum
+@end defun
+
+
+@defun $quotient+remainder-bignum-bignum
+@end defun
+
+
+@defun $quotient+remainder-fixnum-flonum
+@end defun
+
+
+@defun $quotient+remainder-bignum-flonum
+@end defun
+
+
+@defun $quotient+remainder-flonum-fixnum
+@end defun
+
+
+@defun $quotient+remainder-flonum-bignum
+@end defun
+
+
+@defun $quotient+remainder-flonum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics quotient
+@subsection Quotient between numbers
+
+
+@defun $quotient-fixnum-number
+@end defun
+
+
+@defun $quotient-number-fixnum
+@end defun
+
+
+@defun $quotient-bignum-number
+@end defun
+
+
+@defun $quotient-number-bignum
+@end defun
+
+
+@defun $quotient-flonum-number
+@end defun
+
+
+@defun $quotient-number-flonum
+@end defun
+
+
+@defun $quotient-fixnum-fixnum
+@end defun
+
+
+@defun $quotient-fixnum-bignum
+@end defun
+
+
+@defun $quotient-fixnum-flonum
+@end defun
+
+
+@defun $quotient-bignum-fixnum
+@end defun
+
+
+@defun $quotient-bignum-bignum
+@end defun
+
+
+@defun $quotient-bignum-flonum
+@end defun
+
+
+@defun $quotient-flonum-fixnum
+@end defun
+
+
+@defun $quotient-flonum-bignum
+@end defun
+
+
+@defun $quotient-flonum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics remainder
+@subsection Remainder between numbers
+
+
+@defun $remainder-fixnum-number
+@end defun
+
+
+@defun $remainder-number-fixnum
+@end defun
+
+
+@defun $remainder-bignum-number
+@end defun
+
+
+@defun $remainder-number-bignum
+@end defun
+
+
+@defun $remainder-flonum-number
+@end defun
+
+
+@defun $remainder-number-flonum
+@end defun
+
+
+@defun $remainder-fixnum-fixnum
+@end defun
+
+
+@defun $remainder-fixnum-bignum
+@end defun
+
+
+@defun $remainder-fixnum-flonum
+@end defun
+
+
+@defun $remainder-bignum-fixnum
+@end defun
+
+
+@defun $remainder-bignum-bignum
+@end defun
+
+
+@defun $remainder-bignum-flonum
+@end defun
+
+
+@defun $remainder-flonum-fixnum
+@end defun
+
+
+@defun $remainder-flonum-bignum
+@end defun
+
+
+@defun $remainder-flonum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics modulo
+@subsection Modulo between numbers
+
+
+@defun $modulo-fixnum-number
+@end defun
+
+
+@defun $modulo-bignum-number
+@end defun
+
+
+@defun $modulo-flonum-number
+@end defun
+
+
+@defun $modulo-number-fixnum
+@end defun
+
+
+@defun $modulo-number-bignum
+@end defun
+
+
+@defun $modulo-number-flonum
+@end defun
+
+
+@defun $modulo-fixnum-fixnum
+@end defun
+
+
+@defun $modulo-fixnum-bignum
+@end defun
+
+
+@defun $modulo-fixnum-flonum
+@end defun
+
+
+@defun $modulo-bignum-fixnum
+@end defun
+
+
+@defun $modulo-bignum-bignum
+@end defun
+
+
+@defun $modulo-bignum-flonum
+@end defun
+
+
+@defun $modulo-flonum-fixnum
+@end defun
+
+
+@defun $modulo-flonum-bignum
+@end defun
+
+
+@defun $modulo-flonum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics max
+@subsection Maximum between numbers
+
+
+@defun $max-fixnum-number
+@end defun
+
+
+@defun $max-bignum-number
+@end defun
+
+
+@defun $max-flonum-number
+@end defun
+
+
+@defun $max-ratnum-number
+@end defun
+
+
+@defun $max-number-fixnum
+@end defun
+
+
+@defun $max-number-bignum
+@end defun
+
+
+@defun $max-number-flonum
+@end defun
+
+
+@defun $max-number-ratnum
+@end defun
+
+
+@defun $max-fixnum-fixnum
+@end defun
+
+
+@defun $max-fixnum-bignum
+@end defun
+
+
+@defun $max-fixnum-flonum
+@end defun
+
+
+@defun $max-fixnum-ratnum
+@end defun
+
+
+@defun $max-bignum-fixnum
+@end defun
+
+
+@defun $max-bignum-bignum
+@end defun
+
+
+@defun $max-bignum-flonum
+@end defun
+
+
+@defun $max-bignum-ratnum
+@end defun
+
+
+@defun $max-flonum-flonum
+@end defun
+
+
+@defun $max-flonum-fixnum
+@end defun
+
+
+@defun $max-flonum-bignum
+@end defun
+
+
+@defun $max-flonum-ratnum
+@end defun
+
+
+@defun $max-ratnum-fixnum
+@end defun
+
+
+@defun $max-ratnum-bignum
+@end defun
+
+
+@defun $max-ratnum-ratnum
+@end defun
+
+
+@defun $max-ratnum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics min
+@subsection Minimum between numbers
+
+
+@defun $min-fixnum-number
+@end defun
+
+
+@defun $min-bignum-number
+@end defun
+
+
+@defun $min-flonum-number
+@end defun
+
+
+@defun $min-ratnum-number
+@end defun
+
+
+@defun $min-number-fixnum
+@end defun
+
+
+@defun $min-number-bignum
+@end defun
+
+
+@defun $min-number-flonum
+@end defun
+
+
+@defun $min-number-ratnum
+@end defun
+
+
+@defun $min-fixnum-fixnum
+@end defun
+
+
+@defun $min-fixnum-bignum
+@end defun
+
+
+@defun $min-fixnum-flonum
+@end defun
+
+
+@defun $min-fixnum-ratnum
+@end defun
+
+
+@defun $min-bignum-fixnum
+@end defun
+
+
+@defun $min-bignum-bignum
+@end defun
+
+
+@defun $min-bignum-flonum
+@end defun
+
+
+@defun $min-bignum-ratnum
+@end defun
+
+
+@defun $min-flonum-flonum
+@end defun
+
+
+@defun $min-flonum-fixnum
+@end defun
+
+
+@defun $min-flonum-bignum
+@end defun
+
+
+@defun $min-flonum-ratnum
+@end defun
+
+
+@defun $min-ratnum-fixnum
+@end defun
+
+
+@defun $min-ratnum-bignum
+@end defun
+
+
+@defun $min-ratnum-ratnum
+@end defun
+
+
+@defun $min-ratnum-flonum
+
+@end defun
+
+@c page
+@node syslib numerics abs
+@subsection Absolute value of numbers
+
+
+@defun $abs-bignum
+@end defun
+
+
+@defun $abs-flonum
+@end defun
+
+
+@defun $abs-ratnum
+
+@end defun
+
+@c page
+@node syslib numerics expt
+@subsection Raising numbers to power
+
+
+@defun $expt-number-fixnum
+@end defun
+
+
+@defun $expt-number-bignum
+@end defun
+
+
+@defun $expt-number-flonum
+@end defun
+
+
+@defun $expt-number-ratnum
+@end defun
+
+
+@defun $expt-number-compnum
+@end defun
+
+
+@defun $expt-number-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics sqrt
+@subsection Square root of numbers
+
+
+@defun $sqrt-fixnum
+@end defun
+
+
+@defun $sqrt-flonum
+@end defun
+
+
+@defun $sqrt-bignum
+@end defun
+
+
+@defun $sqrt-ratnum
+@end defun
+
+
+@defun $sqrt-compnum
+@end defun
+
+
+@defun $sqrt-cflonum
+
+@end defun
+
+@c ------------------------------------------------------------
+
+
+@defun $exact-integer-sqrt-fixnum
+@end defun
+
+
+@defun $exact-integer-sqrt-bignum
+
+@end defun
+
+@c page
+@node syslib numerics log
+@subsection Logarithms of numbers
+
+
+@defun $log-fixnum
+@end defun
+
+
+@defun $log-flonum
+@end defun
+
+
+@defun $log-bignum
+@end defun
+
+
+@defun $log-ratnum
+@end defun
+
+
+@defun $log-compnum
+@end defun
+
+
+@defun $log-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics exp
+@subsection Exponentials of numbers
+
+
+@defun $exp-fixnum
+@end defun
+
+
+@defun $exp-bignum
+@end defun
+
+
+@defun $exp-ratnum
+@end defun
+
+
+@defun $exp-compnum
+@end defun
+
+
+@defun $exp-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics sin
+@subsection Trigonometric sine
+
+
+@defun $sin-fixnum
+@end defun
+
+
+@defun $sin-bignum
+@end defun
+
+
+@defun $sin-ratnum
+@end defun
+
+
+@defun $sin-cflonum
+@end defun
+
+
+@defun $sin-compnum
+
+@end defun
+
+@c page
+@node syslib numerics cos
+@subsection Trigonometric cosine
+
+
+@defun $cos-fixnum
+@end defun
+
+
+@defun $cos-bignum
+@end defun
+
+
+@defun $cos-ratnum
+@end defun
+
+
+@defun $cos-cflonum
+@end defun
+
+
+@defun $cos-compnum
+
+@end defun
+
+@c page
+@node syslib numerics tan
+@subsection Trigonometric tangent
+
+
+@defun $tan-fixnum
+@end defun
+
+
+@defun $tan-bignum
+@end defun
+
+
+@defun $tan-ratnum
+@end defun
+
+
+@defun $tan-compnum
+@end defun
+
+
+@defun $tan-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics asin
+@subsection Trigonometric arc sine
+
+
+@defun $asin-fixnum
+@end defun
+
+
+@defun $asin-bignum
+@end defun
+
+
+@defun $asin-ratnum
+@end defun
+
+
+@defun $asin-flonum
+@end defun
+
+
+@defun $asin-cflonum
+@end defun
+
+
+@defun $asin-compnum
+
+@end defun
+
+@c page
+@node syslib numerics acos
+@subsection Trigonometric arc cosine
+
+
+@defun $acos-fixnum
+@end defun
+
+
+@defun $acos-bignum
+@end defun
+
+
+@defun $acos-ratnum
+@end defun
+
+
+@defun $acos-flonum
+@end defun
+
+
+@defun $acos-cflonum
+@end defun
+
+
+@defun $acos-compnum
+
+@end defun
+
+@c page
+@node syslib numerics atan
+@subsection Trigonometric arc tangent
+
+
+@defun $atan2-real-real
+
+@end defun
+
+
+@defun $atan-fixnum
+@end defun
+
+
+@defun $atan-ratnum
+@end defun
+
+
+@defun $atan-bignum
+@end defun
+
+
+@defun $atan-cflonum
+@end defun
+
+
+@defun $atan-compnum
+
+@end defun
+
+@c page
+@node syslib numerics sinh
+@subsection Hyperbolic sine
+
+
+@defun $sinh-fixnum
+@end defun
+
+
+@defun $sinh-bignum
+@end defun
+
+
+@defun $sinh-ratnum
+@end defun
+
+
+@defun $sinh-compnum
+@end defun
+
+
+@defun $sinh-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics cosh
+@subsection Hyperbolic cosine
+
+
+@defun $cosh-fixnum
+@end defun
+
+
+@defun $cosh-bignum
+@end defun
+
+
+@defun $cosh-ratnum
+@end defun
+
+
+@defun $cosh-compnum
+@end defun
+
+
+@defun $cosh-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics tanh
+@subsection Hyperbolic tangent
+
+
+@defun $tanh-fixnum
+@end defun
+
+
+@defun $tanh-bignum
+@end defun
+
+
+@defun $tanh-ratnum
+@end defun
+
+
+@defun $tanh-compnum
+@end defun
+
+
+@defun $tanh-cflonum
+
+@end defun
+
+@c page
+@node syslib numerics asinh
+@subsection Hyperbolic arc sine
+
+
+@defun $asinh-fixnum
+@end defun
+
+
+@defun $asinh-bignum
+@end defun
+
+
+@defun $asinh-ratnum
+@end defun
+
+
+@defun $asinh-cflonum
+@end defun
+
+
+@defun $asinh-compnum
+
+@end defun
+
+@c page
+@node syslib numerics acosh
+@subsection Hyperbolic arc cosine
+
+
+@defun $acosh-fixnum
+@end defun
+
+
+@defun $acosh-bignum
+@end defun
+
+
+@defun $acosh-ratnum
+@end defun
+
+
+@defun $acosh-flonum
+@end defun
+
+
+@defun $acosh-cflonum
+@end defun
+
+
+@defun $acosh-compnum
+
+@end defun
+
+@c page
+@node syslib numerics atanh
+@subsection Hyperbolic arc tangent
+
+
+@defun $atanh-fixnum
+@end defun
+
+
+@defun $atanh-bignum
+@end defun
+
+
+@defun $atanh-ratnum
+@end defun
+
+
+@defun $atanh-flonum
+@end defun
+
+
+@defun $atanh-cflonum
+@end defun
+
+
+@defun $atanh-compnum
+
+@end defun
+
+@c page
+@node syslib numerics bitnot
+@subsection Bitwise logic not
+
+
+@defun $bitwise-not-fixnum
+@end defun
+
+
+@defun $bitwise-not-bignum
+
+@end defun
+
+@c page
+@node syslib numerics bitand
+@subsection Bitwise logic and
+
+
+@defun $bitwise-and-fixnum-number
+@end defun
+
+
+@defun $bitwise-and-bignum-number
+@end defun
+
+
+@defun $bitwise-and-fixnum-fixnum
+@end defun
+
+
+@defun $bitwise-and-fixnum-bignum
+@end defun
+
+
+@defun $bitwise-and-bignum-fixnum
+@end defun
+
+
+@defun $bitwise-and-bignum-bignum
+
+@end defun
+
+@c page
+@node syslib numerics bitior
+@subsection Bitwise logic inclusive or
+
+
+@defun $bitwise-ior-fixnum-number
+@end defun
+
+
+@defun $bitwise-ior-bignum-number
+@end defun
+
+
+@defun $bitwise-ior-fixnum-fixnum
+@end defun
+
+
+@defun $bitwise-ior-fixnum-bignum
+@end defun
+
+
+@defun $bitwise-ior-bignum-fixnum
+@end defun
+
+
+@defun $bitwise-ior-bignum-bignum
+
+@end defun
+
+@c page
+@node syslib numerics bitxor
+@subsection Bitwise logic exclusive or
+
+
+@defun $bitwise-xor-fixnum-number
+@end defun
+
+
+@defun $bitwise-xor-bignum-number
+@end defun
+
+
+@defun $bitwise-xor-fixnum-fixnum
+@end defun
+
+
+@defun $bitwise-xor-fixnum-bignum
+@end defun
+
+
+@defun $bitwise-xor-bignum-fixnum
+@end defun
+
+
+@defun $bitwise-xor-bignum-bignum
+@end defun
 
 @c page
 @node syslib chars
