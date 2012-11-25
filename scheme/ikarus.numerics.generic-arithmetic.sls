@@ -3678,43 +3678,21 @@
   #| end of module |# )
 
 
-(module (even?)
-  (define who 'even?)
+(define (even? x)
+  (cond-inexact-integer-operand x
+    ((fixnum?)	($fxeven? x))
+    ((bignum?)	($bignum-even? x))
+    ((flonum?)	($fleven? x))
+    (else
+     (assertion-violation 'even? "expected integer as argument" x))))
 
-  (define (even? x)
-    (cond-numeric-operand x
-      ((fixnum?)	($fxeven? x))
-      ((bignum?)	($bignum-even? x))
-      ((flonum?)	($fleven? x))
-      ((ratnum?)	(%error-not-integer x))
-      ((compnum?)	(%error-not-integer x))
-      ((cflonum?)	(%error-not-integer x))
-      (else
-       (%error-not-integer x))))
-
-  (define (%error-not-integer x)
-    (assertion-violation who "expected integer as argument" x))
-
-  #| end of module: even? |# )
-
-(module (odd?)
-  (define who 'odd?)
-
-  (define (odd? x)
-    (cond-numeric-operand x
-      ((fixnum?)	($fxodd? x))
-      ((bignum?)	($bignum-odd? x))
-      ((flonum?)	($flodd? x))
-      ((ratnum?)	(%error-not-integer x))
-      ((compnum?)	(%error-not-integer x))
-      ((cflonum?)	(%error-not-integer x))
-      (else
-       (%error-not-integer x))))
-
-  (define (%error-not-integer x)
-    (assertion-violation who "expected integer as argument" x))
-
-  #| end of module: odd? |# )
+(define (odd? x)
+  (cond-inexact-integer-operand x
+    ((fixnum?)	($fxodd? x))
+    ((bignum?)	($bignum-odd? x))
+    ((flonum?)	($flodd? x))
+    (else
+     (assertion-violation 'odd? "expected integer as argument" x))))
 
 
 (module (number->string)
