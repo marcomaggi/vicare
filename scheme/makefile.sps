@@ -2674,9 +2674,9 @@
     ($min-ratnum-ratnum				$numerics)
     ($min-ratnum-flonum				$numerics)
 
-    ($bignum-abs				$numerics)
-    ($flonum-abs				$numerics)
-    ($ratnum-abs				$numerics)
+    ($abs-bignum				$numerics)
+    ($abs-flonum				$numerics)
+    ($abs-ratnum				$numerics)
 
     ($expt-number-fixnum			$numerics)
     ($expt-number-bignum			$numerics)
@@ -2786,8 +2786,8 @@
     ($atanh-cflonum				$numerics)
     ($atanh-compnum				$numerics)
 
-    ($fixnum-bitwise-not			$numerics)
-    ($bignum-bitwise-not			$numerics)
+    ($bitwise-not-fixnum			$numerics)
+    ($bitwise-not-bignum			$numerics)
 
     ($bitwise-and-fixnum-number			$numerics)
     ($bitwise-and-bignum-number			$numerics)

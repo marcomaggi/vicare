@@ -444,9 +444,9 @@
     $min-ratnum-ratnum
     $min-ratnum-flonum
 
-    $bignum-abs
-    $flonum-abs
-    $ratnum-abs
+    $abs-bignum
+    $abs-flonum
+    $abs-ratnum
 
     $expt-number-fixnum
     $expt-number-bignum
@@ -556,8 +556,8 @@
     $atanh-cflonum
     $atanh-compnum
 
-    $fixnum-bitwise-not
-    $bignum-bitwise-not
+    $bitwise-not-fixnum
+    $bitwise-not-bignum
 
     $bitwise-and-fixnum-number
     $bitwise-and-bignum-number
@@ -4080,15 +4080,15 @@
 
 
 (module (abs
-	 $bignum-abs		$flonum-abs		$ratnum-abs)
+	 $abs-bignum		$abs-flonum		$abs-ratnum)
   (define who 'abs)
 
   (define (abs x)
     (cond-numeric-operand x
       ((fixnum?)	($fxabs x))
-      ((bignum?)	($bignum-abs x))
-      ((flonum?)	($flonum-abs x))
-      ((ratnum?)	($ratnum-abs x))
+      ((bignum?)	($abs-bignum x))
+      ((flonum?)	($abs-flonum x))
+      ((ratnum?)	($abs-ratnum x))
       ((compnum?)	(%error-not-real-number x))
       ((cflonum?)	(%error-not-real-number x))
       (else
@@ -4096,17 +4096,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bignum-abs x)
+  (define ($abs-bignum x)
     (if ($bignum-positive? x)
 	x
       ($neg-bignum x)))
 
-  (define ($flonum-abs x)
+  (define ($abs-flonum x)
     (if ($fx> ($flonum-u8-ref x 0) 127)
 	($fl- x)
       x))
 
-  (define ($ratnum-abs x)
+  (define ($abs-ratnum x)
     (let ((x.num ($ratnum-n x)))
       (if (negative? x.num)
 	  ;;We want a ratnum with positive denominator.
@@ -6470,21 +6470,21 @@
   (define-bitwise-operation bitwise-xor binary-bitwise-xor))
 
 (module (bitwise-not
-	 $fixnum-bitwise-not
-	 $bignum-bitwise-not)
+	 $bitwise-not-fixnum
+	 $bitwise-not-bignum)
   (define who 'bitwise-not)
 
   (define (bitwise-not x)
     (cond-exact-integer-operand x
-      ((fixnum?)	($fixnum-bitwise-not x))
-      ((bignum?)	($bignum-bitwise-not x))
+      ((fixnum?)	($bitwise-not-fixnum x))
+      ((bignum?)	($bitwise-not-bignum x))
       (else
        (assertion-violation who "expected exact integer as argument" x))))
 
-  (define ($fixnum-bitwise-not x)
+  (define ($bitwise-not-fixnum x)
     ($fxlognot x))
 
-  (define ($bignum-bitwise-not x)
+  (define ($bitwise-not-bignum x)
     (foreign-call "ikrt_bnlognot" x))
 
   #| end of module: bitwise-not |# )
