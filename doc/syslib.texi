@@ -1024,57 +1024,72 @@ Compute the inverse of a cflonum and return the result as a cflonum.
 @subsection Numbers addition
 
 
-@deffn {Unsafe Operation} $add-number-number
+@deffn {Unsafe Operation} $add-number-number @vari{num} @varii{num}
+Add any couple of numbers and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-number
+@deffn {Unsafe Operation} $add-fixnum-number @var{fx} @var{num}
+Add a fixnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-number
+@deffn {Unsafe Operation} $add-bignum-number @var{bn} @var{num}
+Add a bignum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-number
+@deffn {Unsafe Operation} $add-flonum-number @var{fl} @var{num}
+Add a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-number
+@deffn {Unsafe Operation} $add-ratnum-number @var{rn} @var{num}
+Add a ratnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-number
+@deffn {Unsafe Operation} $add-compnum-number @var{cn} @var{num}
+Add a compnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-cflonum-number
+@deffn {Unsafe Operation} $add-cflonum-number @var{cfl} @var{num}
+Add a cflonum with a number and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Unsafe Operation} $add-number-fixnum @var{num} @var{fx}
+Add any number with a fixnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-number-fixnum
+@deffn {Unsafe Operation} $add-number-bignum @var{num} @var{bn}
+Add any number with a bignum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-number-bignum
+@deffn {Unsafe Operation} $add-number-flonum @var{num} @var{fl}
+Add any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-number-flonum
+@deffn {Unsafe Operation} $add-number-ratnum @var{num} @var{rn}
+Add any number with a ratnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-number-ratnum
+@deffn {Unsafe Operation} $add-number-compnum @var{num} @var{cn}
+Add any number with a compnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-number-compnum
+@deffn {Unsafe Operation} $add-number-cflonum @var{num} @var{cfl}
+Add any number with a cflonum and return the result.
 @end deffn
 
-
-@deffn {Unsafe Operation} $add-number-cflonum
-@end deffn
-
+@c ------------------------------------------------------------
 
 @deffn {Unsafe Operation} $add-fixnum-fixnum
 @end deffn
