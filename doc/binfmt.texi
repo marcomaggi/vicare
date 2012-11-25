@@ -1,0 +1,377 @@
+@node binfmt
+@appendix Launching programs directly
+
+
+This appendix describes an optional feature of that activates Scheme
+programs execution through the mechanism of the @code{binfmt_misc} Linux
+kernel module; it is available only on Unix--like platforms running the
+Linux kernel.
+
+By default the installation of the required files is disabled; to enable
+it: at configuration time we must pass the @option{--enable-binfmt}
+option to the @command{configure} script.
+
+The mechanism allows to run Scheme programs without explicitly invoking
+the executable runtime program.  It is a generalisation of the mechanism
+that runs shell scripts whose file begins with @code{#!/bin/sh}.
+
+@quotation
+This appendix is derived from the original @code{binfmt_misc}
+documentation text file by Richard Guenther.
+@end quotation
+
+@menu
+* binfmt overview::             Overview of the mechanism.
+* binfmt loading::              Loading the module.
+* binfmt registry::             The registry.
+* binfmt using::                Using the mechanism.
+* binfmt control::              Controlling the mechanism.
+* binfmt hints::                Hints.
+* binfmt scheme::               Running Scheme programs.
+@end menu
+
+@c page
+@node binfmt overview
+@appendixsec Overview of the mechanism
+
+@cindex Binary formats, kernel support
+@cindex Binary executables, kernel support
+
+This kernel feature allows us to invoke almost every program by simply
+typing its name in the shell.  This includes for example compiled Java,
+Python or Emacs programs, and of course Scheme programs.
+
+The feature is implemented in the @code{binfmt_misc} kernel module; it
+recognises the binary file type by matching some bytes at the beginning
+of the file with a magic byte sequence (masking out specified bits) we
+have supplied; it can also recognise a filename extension.
+
+
+@c page
+@node binfmt loading
+@appendixsec Loading the module
+
+
+If the module is installed on the system, we will find it in:
+
+@example
+/lib/modules/<version>/kernel/fs/binfmt_misc.ko
+@end example
+
+@noindent
+and to load it we do (as root):
+
+@example
+/sbin/modprobe binfmt_misc
+@end example
+
+@noindent
+for example on a Slackware Linux installation, loading can be done by
+uncommenting the relevant line in @file{/etc/rc.d/rc.modules}.
+
+Then we add the following line to @file{/etc/fstab}:
+
+@example
+none /proc/sys/fs/binfmt_misc binfmt_misc defaults 0 0
+@end example
+
+@noindent
+so that the @code{binfmt_misc} directory can be mounted and will be
+mounted when booting the system.  We can freely mount and unmount this
+virtual file system with (as root):
+
+@example
+$ mount  /proc/sys/fs/binfmt_misc
+$ umount /proc/sys/fs/binfmt_misc
+@end example
+
+@noindent
+but this is rarely useful.  There are other means of enabling and
+disabling the feature.
+
+@c page
+@node binfmt registry
+@appendixsec The registry
+
+
+To actually register a new binary type, we have to set up a string like:
+
+@example
+:name:type:offset:magic:mask:interpreter:
+@end example
+
+@noindent
+and echo it to @file{/proc/sys/fs/binfmt_misc/register}.  We can choose
+the @code{:} character upon our needs and we can omit a field by simply
+using an empty string; for example if we omit the offset and the mask
+fields:
+
+@example
+:name:type::magic::interpreter:
+@end example
+
+Fields description follows.
+
+@table @code
+@item name
+It is an identifier string.  A new @file{/proc} file will be created
+with this name under @file{/proc/sys/fs/binfmt_misc}, and we can use it
+to query and reset the configuration status.
+
+@item type
+It is the type of file recognition.  If set to @code{M} activates first
+bytes recognition (also known as ``magic'' recognition); if set to
+@code{E} activates file name extension recognition.
+
+@item offset
+It is the zero--based offset of the magic/mask in the file, counted in
+bytes.  It is used only with magic recognition.  It defaults to zero.
+
+@item magic
+It is the byte sequence @code{binfmt_misc} will look for file
+recognition.
+
+The magic string may contain hex--encoded characters like @code{\x0a} or
+@code{\xA4}.  When echoing the record from a shell environment, we will
+have to quote the backslash: @code{\\x0a}.
+
+If we chose filename extension matching, this is the extension to be
+recognised (without the @code{.}, the @code{\x0a} specials are not
+allowed).  Extension matching is case sensitive.
+
+@item mask
+It is a bitmask.  We can mask out some bits from matching by supplying a
+string with the same length of @code{magic}.  The mask is ANDed with the
+byte sequence from the file.  It defaults to @code{0xff}.
+
+@item interpreter
+It is the program that should be invoked with the binary as first
+argument.  @strong{We have to specify the full path.}
+@end table
+
+There are some restrictions:
+
+@itemize
+@item
+The whole @file{register} string may not exceed 255 characters.
+
+@item
+The magic must reside in the first @math{128} bytes of the file, i.e.
+@code{offset+size(magic)} has to be less than @math{128}.
+
+@item
+The interpreter string may not exceed @math{127} characters.
+@end itemize
+
+@c page
+@node binfmt using
+@appendixsec Using the mechanism
+
+
+We may want to add the binary formats in one of the shell scripts that
+are executed at system boot time.  For example, on a Slackware Linux
+system we can use @file{/etc/rc.d/rc.local}.
+
+To do it we can add to the shell script a chunk of code like the
+following, which activates the mechanism for Scheme programs compiled
+with @value{PRJNAME}:
+
+@example
+if test -f /proc/sys/fs/binfmt_misc/register
+then
+  if test -f /proc/sys/fs/binfmt_misc/VICARE
+  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE
+  fi
+  echo \
+   ':VICARE:M:0:;;;!vicare::/usr/local/bin/vicare:' \
+   >/proc/sys/fs/binfmt_misc/register
+fi
+@end example
+
+@noindent
+which does the following:
+
+@enumerate
+@item
+Verify if the @code{binfmt_misc} kernel module has been loaded by
+testing the existence of the @file{register} file; if the module is not
+there, nothing happens.
+
+@item
+Remove the configuration from the registry if it is already there; this
+is done by testing the existence of the special file:
+
+@example
+/proc/sys/fs/binfmt_misc/VICARE
+@end example
+
+@noindent
+echoing @code{-1} in it removes the @value{PRJNAME} record.
+
+@item
+echo the @value{PRJNAME} record into the registry with the following fields:
+
+@table @code
+@item VICARE
+It is the name of the special file representing the record in the
+registry.
+
+@item M
+Activates first bytes recognition.
+
+@item 0
+The offset of the magic string into the file.
+
+@item ;;;!vicare
+The magic string itself.
+
+@item /usr/local/bin/vicare
+The full pathname to the @value{PRJNAME} runtime system executable.
+@end table
+@end enumerate
+
+We see that the @code{mask} field is set to the empty string, that is:
+no mask is applied and @code{#!vicare} is matched literally.
+
+We have to care about the order of added entries: entries added later
+are matched first.
+
+@c page
+@node binfmt control
+@appendixsec Controlling the mechanism
+
+
+@subsubheading Overall control
+
+We can enable/disable the mechanism by echoing @code{0} (to disable) or
+@code{1} (to enable) to the special file:
+
+@example
+/proc/sys/fs/binfmt_misc/status
+@end example
+
+@noindent
+that is, at the shell prompt and with superuser privileges, to enable:
+
+@example
+# echo 1 >/proc/sys/fs/binfmt_misc/status
+@end example
+
+@noindent
+and to disable:
+
+@example
+# echo 0 >/proc/sys/fs/binfmt_misc/status
+@end example
+
+Applying the command @command{cat} to the @file{status} special file
+tells us the current status of @code{binfmt_misc}:
+
+@example
+$ cat /proc/sys/fs/binfmt_misc/status
+enabled
+@end example
+
+We can remove all the entries from the registry echoing @code{-1} to
+@file{status}; at the shell prompt and with superuser privileges:
+
+@example
+# echo -1 >/proc/sys/fs/binfmt_misc/status
+@end example
+
+@noindent
+removing the entries and disabling the mechanism are two distinct
+operations.
+
+
+@subsubheading Specific format control
+
+We can enable/disable recognition of a single binary format by echoing
+@code{0} or @code{1} to the format specific special file under
+@file{/proc/sys/fs/binfmt_misc}.  For example for @code{VICARE}, at the
+shell prompt and with superuser privileges, to enable:
+
+@example
+$ echo 1 >/proc/sys/fs/binfmt_misc/VICARE
+@end example
+
+@noindent
+and to disable:
+
+@example
+$ echo 0 >/proc/sys/fs/binfmt_misc/VICARE
+@end example
+
+@noindent
+disabled formats are @strong{not} removed from the internal table.
+
+Applying the command @command{cat} to the format's special file tells us
+the current status of that format and its configuration; for example for
+@code{VICARE}, at the shell prompt:
+
+@example
+$ cat /proc/sys/fs/binfmt_misc/VICARE
+@end example
+
+We can remove a specific format entry from the registry echoing
+@code{-1} to its special file; for @code{VICARE} at the shell prompt
+and with superuser privileges:
+
+@example
+$ echo -1 >/proc/sys/fs/binfmt_misc/VICARE
+@end example
+
+@noindent
+removing the entry and disabling the mechanism for a format are two
+distinct operations.
+
+@c page
+@node binfmt hints
+@appendixsec Hints
+
+
+If we want to pass command line arguments to the runtime executable, we
+must write a wrapper script for it.  There is no way to embed the
+arguments in the registry record.
+
+The runtime must @strong{not} look in the @env{PATH} environment
+variable for the filename; the kernel passes it the full filename to
+use.  Using the @env{PATH} can cause unexpected behaviour and be a
+security hazard.
+
+@c page
+@node binfmt scheme
+@appendixsec Running Scheme programs
+
+
+The @code{binfmt_misc} mechanism can be used to run both source and
+compiled programs.  @value{PRJNAME} adheres to the following rules,
+which we can change by customising the files in the distribution:
+
+@enumerate
+@item
+@value{PRJNAME} source programs are recognised if the file starts with
+the string @code{;;;!vicare}.  Notice that we @strong{cannot} use the
+sequence @code{#!vicare} because when @code{binfmt_misc} reads the
+prefix @code{#!} it activates the traditional shebang processing.
+
+@item
+The @code{binfmt_misc} configuration is stored in a Bourne shell script
+(@file{/bin/sh} interpreter) named @file{rc.vicare-scheme} installed in
+the @code{$(sysconfdir)/rc.d} directory.  If the default configuration
+is not changed, this ends up being:
+
+@example
+/usr/local/etc/rc.d/rc.vicare-scheme
+@end example
+
+The script can be executed at system boot time and again later any
+number of times: at each run it resets and reinitialises the
+configuration for Scheme programs.
+
+@item
+The @command{vicare} executable must be in @code{$(bindir)}, else we
+must customise the @file{rc.vicare-scheme} script.
+@end enumerate
+
+@c end of file

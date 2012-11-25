@@ -1,0 +1,374 @@
+@node fasl
+@appendix Handling @fasl{} files
+
+
+@fasl{} files are binary files in which compiled Scheme code and data is
+stored; we can easily create a @fasl{} file as follows:
+
+@example
+vicare> (define filename "/tmp/marco/p.fasl")
+vicare> (define p (open-file-output-port filename))
+vicare> (fasl-write '(1 ciao "hello") p)
+vicare> (close-port p)
+vicare> (define p (open-file-input-port filename))
+vicare> (fasl-read p)
+(1 ciao "hello")
+vicare> (close-port p)
+vicare>
+@end example
+
+@menu
+* fasl format::                 Binary format of a @fasl{} file.
+* fasl api::                    @fasl{} files @api{}.
+* fasl foreign::                Associating foreign libraries to
+                                @fasl{} files.
+@end menu
+
+@c page
+@node fasl format
+@appendixsec Binary format of a @fasl{} file
+
+
+A @fasl{} object is a header followed by one or more object fields
+followed by an end--of--@fasl{} marker.  After the end--of--@fasl{}
+marker the file must be at its @eof{}.
+
+The header is the string @code{#@@IK0}, followed by @code{1} if fixnum
+width is @math{30} bits, else followed by @code{2}; the end of fasl
+marker is @code{@@}.
+
+If the same object is referenced multiple times in the @fasl{} file: it
+can be included only once and ``marked'' with a fixnum; such mark is
+later dereferenced to insert a reference to the object in the loaded
+code.
+
+A data word is an exact signed integer of 32-bit or 64-bit depending on
+the word size of the underlying platform.
+
+An object field is a character in @ascii{} encoding, optionally followed
+by data representing the serialisation of a Scheme value:
+
+@table @asis
+@item "N"
+Denotes the empty list.
+
+@item "T"
+Denotes @true{}.
+
+@item "F"
+Denotes @false{}.
+
+@item "E"
+Denotes the end of file object.
+
+@item "U"
+Denotes the unspecified value (void).
+
+@item "I" + word
+A fixnum stored as a big endian word.
+
+@item "s" + word(N) + octet ...
+An @ascii{} string of @math{N} characters followed by @math{N} octets
+representing the characters in @ascii{} encoding.  The data word
+@math{N} must represent an exact integer in the range of fixnums.
+
+@item "S" + word(N) + int32 ...
+A Unicode string of @math{N} characters followed by @math{N} 32-bit
+integers in native order representing the characters as Unicode code
+points.  The data word @math{N} must represent an exact integer in the
+range of fixnums.
+
+@item "M" + symbol-name
+A symbol.  @code{symbol-name} is a string field.
+
+@item "G" + pretty-name + unique-name
+A gensym.  Both @code{pretty-name} and @code{unique-name} are strings.
+
+@item "c" + octet
+A character in the @ascii{} range (@math{<= 255}).
+
+@item "C" + int32
+A character store as 32-bit integer representing a Unicode code point.
+
+@item "P" + object1 + object2
+A pair.
+
+@item "V" + word(N) + object ...
+A vector of length @math{N} followed by @math{N} object fields.  The
+data word @math{N} must represent an exact integer in the range of
+fixnums.
+
+@item "v" + word(N) + octet ...
+A bytevector of length @math{N} followed by @math{N} octets.  The data
+word @math{N} must represent an exact integer in the range of fixnums.
+
+@item "R" + rtd-name + rtd-symbol + field-count + name ...
+A struct type descriptor.  @code{rtd-name} must be a symbol.
+@code{rtd-symbol} must be a symbol.  @code{field-count} must be a word
+in the fixnum range.  The @code{name} object fields must be symbols
+representing the field name and there must be @code{field-count} of
+them.
+
+@item "@{" + field-count + rtd + field ...
+A structure instance.  @code{field-count} must be a word in the fixnum
+range.  @code{rtd} must be a struct type descriptor.  The @code{field}
+object fields must be the fields of the structure instance and there
+must be @code{field-count} of them.
+
+@item "r" + denominator + numerator
+Ratnum.
+
+@item "f" + 8-byte
+@ieee{} double precision flonum.  The bytes are stored: most significant
+first, least significant last.
+
+@item "b" + word(N) + octet ...
+Denotes a bignum.  @var{N} is a signed integer word whose sign is the
+sign of the bignum and whose modulo is the number of octets representing
+the bignum.
+
+@item "i" + real-part + imag-part
+Complex numbers, both cflonum and compnum.
+
+@item "l" + octet(N) + object ...
+A list of @math{N <= 255} elements followed by the elements.
+
+@item "L" + word(N) + object ...
+A list of @math{N > 255} elements followed by the elements.
+
+@item "h" + vector + vector
+@func{eq?}  hashtable, first vector keys, second vector values.
+
+@item "H" + vector + vector
+@func{eqv?} hashtable, first vector keys, second vector values.
+
+@item "W" + name + parent + uid + sealed? + opaque? + count + (bool + field) ...
+An @rnrs{6} record type descriptor.
+
+@table @code
+@item name
+Must be the return value of @func{record-type-name}.
+
+@item parent
+Must be the return value of @func{record-type-parent}.
+
+@item uid
+Must be the return value of @func{record-type-uid}.
+
+@item sealed?
+Must be the return value of @func{record-type-sealed?}.
+
+@item opaque?
+Must be the return value of @func{record-type-opaque?}.
+
+@item count
+Must be a fixnum representing the number of fields.
+@end table
+
+Each @code{bool + field} sequence must be a boolean representing the
+mutability of the record field, followed by symbol representing the name
+of the record field.
+
+@item "x" + int + int + annotation + bytes + relocation vector
+Denotes code.  A serialised code object is represented as follows, after
+the @samp{x} header:
+
+@enumerate
+@item
+An exact integer representing the number of bytes actually used in the
+data area of the code object.  On 32-bit platforms: a big endian 32-bit
+integer.  On 64-bit platforms: a sequence of two big endian 32-bit
+integers.
+
+@item
+An exact integer representing the number of free variables in the code.
+On 32-bit platforms: a big endian 32-bit integer.  On 64-bit platforms:
+a sequence of two big endian 32-bit integers.
+
+@item
+A Scheme object representing the code annotation.
+
+@item
+An array of bytes being the binary code.
+
+@item
+The code relocation vector as an ordinary Scheme vector.
+@end enumerate
+
+@item "Q" + "x" + code object
+Procedure.  A procedure is represented by the header @code{Q} followed
+by the serialisation of a code object, header @code{x} included.
+
+@item ">" + int32(I)
+Mark the next object with index @math{I}.
+
+@item "<" + int32(I)
+Dereference the object marked with index @math{I}.
+
+@item "O" + libid
+Foreign library identifier.  @code{libid} must be a string representing
+the foreign shared library identifier: on Unix--like systems it is
+prefixed with @code{lib} and suffixed with @code{.so} to compose a
+library file name.
+@end table
+
+@c page
+@node fasl api
+@appendixsec @fasl{} files @api{}
+
+
+The following bindings are exported by the libraries @library{ikarus}
+and @library{vicare}.
+
+
+@defun fasl-write @var{obj} @var{port}
+@defunx fasl-write @var{obj} @var{port} @var{libraries}
+Serialise @var{obj} to the binary output port @var{port} prefixing it
+with the @fasl{} file header.  If @var{libraries} is present: it must be
+a list of strings representing foreign shared libraries to be loaded
+whenever the @fasl{} file is loaded, @ref{fasl foreign} for details.
+@end defun
+
+
+@defun fasl-read @var{port}
+Read and return a serialised object from the binary input @var{port}.
+@end defun
+
+
+@deffn Parameter fasl-directory
+Holds a string representing the top directory under which @fasl{} files
+are stored when libraries are compiled.  The default value is determined
+as follows:
+
+@enumerate
+@item
+Check the value of the system environment variable
+@env{VICARE_FASL_DIRECTORY}: if set and its value exists as pathname,
+the value is selected.  Else move to the next step.
+
+@item
+Acquire the value of the system environment variable @env{HOME}: if set
+and its value exists as pathname, compose a directory pathname by
+appending to the value the string:
+
+@example
+/.vicare/precompiled
+@end example
+
+Else move to the next step.
+
+@item
+Set the parameter to the empty string.  This means that a library with
+pathname: @file{/@/usr/@/local/@/scheme/@/vicare/@/posix.sls}
+will be compiled to
+@file{/@/usr/@/local/@/scheme/@/vicare/@/posix.sls.vicare-32bit-fasl}
+@end enumerate
+
+New values for this parameter must be Scheme strings representing
+existing pathnames.  The pathnames are normalised to their real
+pathname, removing symbolic links and useless @code{..} components.
+
+The default value of this parameter can be overridden by the command
+line option @option{--fasl-directory}.
+@end deffn
+
+
+@defun fasl-path @var{filename}
+Given a source file name return the associated full @fasl{} file name
+using the current value of @func{fasl-directory}.  Return false if
+@func{fasl-directory} is unset (which should never happen).  It is an
+error if the file @var{filename} does not exist.
+@end defun
+
+
+@deffn Parameter fasl-search-path
+@cindex @env{VICARE_FASL_PATH}, environment variable
+@cindex Environment variable @env{VICARE_FASL_PATH}
+Holds a list of strings representing directory pathnames.  This search
+path is used to locate @fasl{} files when loading precompiled libraries.
+The default value is determined as follows:
+
+@enumerate
+@item
+Check the value of the system environment variable
+@env{VICARE_FASL_PATH}: if set the value is selected.  Else move to the
+next step.
+
+@item
+Acquire the value of the system environment variable @env{HOME}: if set
+and its value exists as pathname, compose a directory pathname by
+appending to the value the string:
+
+@example
+/.vicare/precompiled
+@end example
+
+@noindent
+the result is put into a list and becomes the default value.
+@end enumerate
+
+Additional directories can be prepended to the search path with the
+command line option @option{--fasl-path}.  If a @fasl{} target directory
+is selected with the option @option{--fasl-directory}: the selected
+directory is always prepended to the @fasl{} search path.
+@end deffn
+
+@c page
+@node fasl foreign
+@appendixsec Associating foreign libraries to @fasl{} files
+
+
+@findex @func{foreign-call}
+
+
+The macro @func{foreign-call}, exported by the libraries
+@library{ikarus} and @library{vicare}, is expanded to compiled code
+which invokes a C function from the process image; the first argument to
+@func{foreign-call} is a string naming the C function.  Whenever the
+code is compiled, the C pointer to the named function is retrieved with
+a call to:
+
+@example
+dlsym(RTLD_DEFAULT, function_name);
+@end example
+
+@noindent
+so all the public functions from the running @command{vicare} executable
+are available and also all the functions from host's shared libraries
+loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
+RTLD_GLOBAL}.
+
+It is possible to associate one or more host's shared libraries to a
+@fasl{} file, so that: whenever the @fasl{} file is loaded, the shared
+library is loaded too and the functions required by @func{foreign-call}
+are available.  This is especially useful to implement bindings to
+foreign libraries without relying on the @ffi{} and making full use of
+garbage collection facilities and access to Scheme values' memory
+representations.
+
+@quotation
+@strong{NOTE} The mechanism described below is a temporary
+implementation which may change in the future.
+@end quotation
+
+Whenever @value{PRJNAME}'s source code reader, in @code{#!vicare} mode,
+finds a form like:
+
+@example
+#!(load-shared-library "vicarecre2")
+@end example
+
+@noindent
+it handles it as a special comment which causes no code to be expanded
+nor compiled.  Rather a foreign shared library whose identifier is
+@code{vicarecre2} is immediately loaded.
+
+If the library file containing such special comment is compiled to a
+@fasl{} file, an object field with header @code{O} is written to the
+@strong{beginning} of the @fasl{} file: such object will cause the
+foreign library to be loaded whenever the @fasl{} file is loaded.
+
+On Unix--like systems: the library identifier is prefixed with
+@code{lib} and suffixed with @code{.so} to compose a library file name.
+
+@c end of file

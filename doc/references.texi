@@ -1,0 +1,86 @@
+@node references
+@appendix Bibliography and references
+
+
+@noindent
+``Revised^6 Report on the Algorithmic Language Scheme.''  Michael
+Sperber and R. Kent Dybvig and Matthew Flatt and Anton Van Straaten
+(Editors).  2007.
+
+@noindent
+``Revised^6 Report on the Algorithmic Language Scheme---Standard
+Libraries.''  Michael Sperber and R. Kent Dybvig and Matthew Flatt and
+Anton Van Straaten (Editors). 2007.
+
+@noindent
+``Scheme Request for Implementation 41: Streams.''  Philip L. Bewig.
+2007.  @url{http://@/srfi.schemers.org/@/srfi-41/@/srfi-41.html}
+
+@noindent
+``Guardians in a generation--based garbage collector''.  R. Kent Dybvig
+and Carl Bruggeman and David Eby.  PLDI '93, pages 207--216, June 1993.
+Introduces guardians and describes the implementation of guardians and
+weak pairs in Chez Scheme.
+
+@noindent
+``Don't stop the BiBOP: Flexible and efficient storage management
+for dynamically--typed languages.''  R. Kent Dybvig and David Eby and
+Carl Bruggeman.  Technical Report 400, Indiana University, March 1994.
+Describes Chez Scheme's storage management system.
+
+@noindent
+``Generation Friendly Eq Hash Tables.''  Abdulaziz Ghuloum and
+R. Kent Dybvig. In ``Proceedings of the 2007 Workshop on Scheme and
+Functional Programming'', pages 207--216.  Universite Laval Technical
+Report DIUL-RT-0701, 2007.
+
+@noindent
+``Extending the Scope of Syntactic Abstraction.''  Oscar Waddell.
+PhD thesis, Indiana University Computer Science Department, August 1999.
+@url{http://www.cs.indiana.edu/@/~owaddell/@/papers/@/thesis.ps.gz}
+
+@noindent
+``Extending the Scope of Syntactic Abstraction.''  Oscar Waddell and
+R. Kent Dybvig.  In ``Conference Record of POPL'99: The 26th ACM
+SIGPLAN-SIGACT Symposium on Principles of Programming Languages'', pages
+203--213, January 1999.
+@url{http://www.cs.indiana.edu/@/~dyb/@/papers/@/popl99.ps.gz}
+
+@noindent
+``Chez Scheme Version 7 User's Guide.''  R. Kent Dybvig.  Cadence
+Research Systems, 2005.  User's guide and reference manual for Chez
+Scheme Version 7.  @url{http://@/www.scheme.com/@/csug7/}
+
+@noindent
+``Implicit phasing for R6RS libraries.''  Abdulaziz Ghuloum and
+R. Kent Dybvig.  In ``ICFP '07: Proceedings of the 2007 ACM SIGPLAN
+international conference on Functional programming'', pages 303--314.
+New York, NY, USA, 2007.  ACM.
+
+@noindent
+Michael D.  Adams and R.  Kent Dybvig.  ``Efficient nondestructive
+equality checking for trees and graphs.''  In ICFP '08: Proceeding of
+the 13th ACM SIGPLAN international conference on Functional programming,
+pages 179-188.  ACM, New York, NY, USA, 2008.  ISBN
+978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+
+@noindent
+Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
+Faithful Yet Efficient Implementation of Scheme's Recursive Binding
+Construct''.
+
+@noindent
+Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
+Workshop on Scheme and Functional Programming '09.
+
+@c ------------------------------------------------------------
+
+@subsubheading Also of interest
+
+@noindent
+J. Michael Ashley, R. Kent Dybvig. ``An Efficient Implementation of
+Multiple Return Values in Scheme''.  Proceedings of the 1994 ACM
+Conference on LISP and Functional Programming, 140--149, 1994.
+Copyright @copyright{} 1994 ACM.
+
+@c end of file

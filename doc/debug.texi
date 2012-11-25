@@ -1,0 +1,47 @@
+@node debug int
+@chapter Internals: debug mode
+
+
+@menu
+* debug int intro::             Introduction to debug mode.
+@end menu
+
+@c page
+@node debug int intro
+@section Introduction to debug mode
+
+
+Debug mode is driven with the following options:
+
+@table @option
+@item -d
+@itemx --debug
+Turn on debugging mode.  The parameter @func{generate-debug-calls} is
+set to true.
+
+@item -nd
+@itemx --no-debug
+Turn off debugging mode.  The parameter @func{generate-debug-calls} is
+set to false.
+@end table
+
+The implementation is mostly in @file{ikarus.debugger.sls} and
+@file{ikarus.compiler.sls}.
+
+
+@deffn Parameter generate-debug-calls
+Set to true when debug mode is turned on.  Defined in
+@file{ikarus.compiler.sls}, configured in @file{ikarus.main.sls}.
+@end deffn
+
+
+@defun guarded-start @var{proc}
+Evaluate the procedure @var{proc} under the debugging infrastructure.
+It is used in the @library{ikarus main} library (@file{ikarus.main.sls})
+to start the execution of a program and all the other execution modes.
+
+@var{proc} is evaluated under the installation of an exception handler
+displaying the stack trace and offering the continuation alternatives.
+@end defun
+
+@c end of file

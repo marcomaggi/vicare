@@ -1,0 +1,149 @@
+@node shmem
+@appendix Interprocess shared memory
+
+
+@menu
+* shmem mmap::                  Shared memory through @func{mmap}.
+@end menu
+
+@c page
+@node shmem mmap
+@appendixsec Shared memory through @func{mmap}
+
+
+This appendix shows some sample code describing how to exchange binary
+and Scheme data among multiple @value{PRJNAME} processes through shared
+memory.  It is assumed that @value{PRJNAME} is installed with the
+@posix{} interface enabled.
+
+The first example just exchanges a signed integer:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(let* ((shmem.len (px.sysconf _SC_PAGESIZE))
+       (shmem.ptr (px.mmap #f shmem.len
+                     (fxior PROT_READ PROT_WRITE)
+                     (fxior MAP_SHARED MAP_ANONYMOUS)
+                     0 0)))
+  (unwind-protect
+      (px.fork
+
+        ;; Parent: write a signed int, wait for the
+        ;; child to exit, read the incremented int.
+        (lambda (child-pid)
+          (pointer-set-c-signed-int! shmem.ptr 0 234)
+          (px.waitpid child-pid 0)
+          (pointer-ref-c-signed-int shmem.ptr 0))
+
+        ;; Child: wait for a while, then read a signed
+        ;; int and write it back incremented by 1000;
+        ;; finally exit.
+        (lambda ()
+          (px.nanosleep 1 0)
+          (pointer-set-c-signed-int! shmem.ptr 0
+            (+ 1000 (pointer-ref-c-signed-int shmem.ptr 0)))
+            (exit)))
+
+    (px.munmap shmem.ptr shmem.len)))
+@result{} 1234
+@end example
+
+The second example exchanges a bytevector of known length:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(let* ((shmem.len (px.sysconf _SC_PAGESIZE))
+       (shmem.ptr (px.mmap #f shmem.len
+                           (fxior PROT_READ PROT_WRITE)
+                           (fxior MAP_SHARED MAP_ANONYMOUS)
+                           0 0)))
+  (unwind-protect
+      (px.fork
+
+        ;; Parent: write the bytevector, wait for the
+        ;; child to exit, read back the bytevector.
+        (lambda (child-pid)
+          (memory-copy shmem.ptr 0
+            '#vu8(0 1 2 3 4 5 6 7 8 9) 0 10)
+          (px.waitpid child-pid 0)
+          (let ((bv (make-bytevector 10)))
+            (memory-copy bv 0 shmem.ptr 0 10)
+            bv))
+
+        ;; Child: wait for a while, read the bytevector,
+        ;; increment the bytes, write the bytevector,
+        ;; finally exit.
+        (lambda ()
+          (px.nanosleep 1 0)
+          (let ((bv (make-bytevector 10)))
+            (memory-copy bv 0 shmem.ptr 0 10)
+            (do ((i 0 (+ 1 i)))
+                ((= i 10)
+                 (memory-copy shmem.ptr 0 bv 0 10)
+                 (exit))
+              (bytevector-u8-set! bv i
+                (+ 100 (bytevector-u8-ref bv i)))))))
+
+    (px.munmap shmem.ptr shmem.len)))
+@result{} #vu8(100 101 102 103 104 105 106 107 108 109)
+@end example
+
+The third example shares a Scheme datum of length unknown by using
+@func{fasl-write} and @func{fasl-read}; the number of bytes is exchanged
+in the first location of shared memory, we assume that @math{16} pages
+of memory are enough:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare platform constants)
+  (vicare syntactic-extensions))
+
+(define data
+  '(1 2 #(3 4) ciao "hello" #vu8(99 98 97)))
+
+(let* ((shmem.len (* 16 (px.sysconf _SC_PAGESIZE)))
+       (shmem.ptr (px.mmap #f shmem.len
+                     (fxior PROT_READ PROT_WRITE)
+                     (fxior MAP_SHARED MAP_ANONYMOUS)
+                     0 0)))
+  (unwind-protect
+      (px.fork
+
+         ;; Parent: wait for the child process, read the data
+         ;; length, allocate a bytevector, read data.
+         (lambda (child-pid)
+           (px.waitpid child-pid 0)
+           (let* ((bv.len (pointer-ref-c-signed-int shmem.ptr 0))
+                  (bv     (make-bytevector bv.len)))
+             (memory-copy bv 0 shmem.ptr SIZEOF_INT bv.len)
+             (fasl-read (open-bytevector-input-port bv))))
+
+         ;; Child: convert Scheme data into a fasl bytevector,
+         ;; write data length, write data, finally exit.
+         (lambda ()
+           (let-values (((port getter)
+                        (open-bytevector-output-port)))
+             (fasl-write data port)
+             (let* ((bv     (getter))
+                    (bv.len (bytevector-length bv)))
+               (pointer-set-c-signed-int! shmem.ptr 0 bv.len)
+               (memory-copy shmem.ptr SIZEOF_INT bv 0 bv.len)
+               (exit))))
+
+    (px.munmap shmem.ptr shmem.len))))
+@result{} (1 2 #(3 4) ciao "hello" #vu8(99 98 97))
+@end example
+
+@c end of file

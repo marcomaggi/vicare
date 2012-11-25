@@ -1,0 +1,4329 @@
+@node libs
+@chapter Other libraries
+
+
+@value{PRJNAME} comes with a set of additional libraries.
+
+@menu
+* args::                        Optional function arguments validation.
+* include::                     Including source files at expand time.
+* errno::                       More features for @code{errno}.
+* platform::                    Hosting platform utilities.
+* words::                       Exact integer predicates and constants.
+* syntaxes::                    Language syntactic extensions.
+* cbuffers::                    Generalised C buffers.
+* keywords::                    More facilities for keyword objects.
+* readline::                    Extended interface to @gnu{} Readline.
+* parser logic::                Defining parsers logic.
+* gcc::                         A toy library interface to @gcc{}.
+* wtables::                     Weak hashtables.
+* flonum format::               Formatting flonums.
+* flonum parse::                Parsing flonums.
+* sel::                         Simple event loop.
+* infix::                       Infix to prefix transformer.
+* debugging::                   Debugging facilities.
+@end menu
+
+@c page
+@node args
+@section Optional function arguments validation
+
+
+@cindex Library @library{vicare arguments validation}
+@cindex @library{vicare arguments validation}, library
+
+
+The library @library{vicare arguments validation} provides bindings to
+macros that extend the Scheme language implemented by @library{vicare}
+and @library{rnrs}.
+
+@menu
+* args config::                 Enabling or disabling arguments
+                                validation.
+* args definitions::            Defining arguments validation clauses.
+* args using::                  Performing arguments validation.
+* args forms::                  Optional validation forms.
+
+* args predefined::             Predefined validation clauses.
+@end menu
+
+@c page
+@node args config
+@subsection Enabling or disabling arguments validation
+
+
+@cindex @env{VICARE_ARGUMENTS_VALIDATION} environment variable
+@cindex Environment variable @env{VICARE_ARGUMENTS_VALIDATION}
+
+
+Global arguments validation is enabled or disabled by setting to @true{}
+or @false{} the @code{arguments-validation} identifier syntax exported
+by @library{vicare installation-configuration}, the default is @true{};
+such value can be configured as follows:
+
+@enumerate
+@item
+Argument validation is @strong{enabled} by setting to the string
+@code{yes}, or the string @code{1}, the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}.
+
+@item
+Argument validation is @strong{disabled} by setting to the string
+@code{no}, or the string @code{0}, the environment variable
+@env{VICARE_ARGUMENTS_VALIDATION}.
+
+@item
+If the environment variable @env{VICARE_ARGUMENTS_VALIDATION} is unset
+or set to some string different from @code{yes}, @code{no}, @code{1},
+@code{0}:
+
+@itemize
+@item
+Arguments validation is @strong{enabled} if the
+@option{--enable-arguments-validation} option of the @command{configure}
+script was used.
+
+@item
+Arguments validation is @strong{disabled} if the
+@option{--disable-arguments-validation} option of the
+@command{configure} script was used.
+@end itemize
+@end enumerate
+
+@c page
+@node args definitions
+@subsection Defining argument validation clauses
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac define-argument-validation (@meta{name} @meta{who} @meta{arg} ...) @meta{predicate} @meta{error-handler}
+Define a validation clause to be used along with the syntax
+@func{WITH-ARGUMENTS-VALIDATION}.  Example:
+
+@example
+(define-argument-validation (bytevector who bv)
+  (bytevector? bv)
+  (assertion-violation who
+    "expected a bytevector as argument"
+    bv))
+@end example
+
+We have to assume that the values @meta{arg} are evaluated multiple
+times.
+@end defmac
+
+@c page
+@node args using
+@subsection Performing arguments validation
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac with-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) @metao{body} . @meta{body}
+If arguments validation is enabled: expand to code that validates the
+@meta{arg} expressions using to the @meta{validator} clause, then
+evaluate the @meta{body} forms; if arguments validation is disabled:
+just evaluate the @meta{body} forms.
+
+@meta{who} must be an identifier used as argument when building a
+@condition{who} condition object.
+
+@meta{validator} must be an identifier previously used as name of
+validation clause by the @func{define-argument-validation} macro.  As a
+special case when @meta{validator} is the identifier @func{void},
+exported by @library{vicare}, no validation is generated: the @var{arg}
+values are considered always valid; this is sometimes useful when using
+this macro in the expansion of another macro.
+
+Simple example:
+
+@example
+(define-argument-validation (fixnum who obj)
+  (fixnum? obj)
+  (assertion-violation who
+    "expected fixnum as argument"
+    obj))
+
+(define-argument-validation (integer who obj)
+  (integer? obj)
+  (assertion-violation who
+    "expected integer as argument"
+    obj))
+
+(with-arguments-validation (who)
+     ((fixnum  X)
+      (integer Y))
+  (do-this)
+  (do-that))
+@end example
+
+@noindent
+multiple clauses are evaluated from first to last, so the above example
+is equivalent to:
+
+@example
+(with-arguments-validation (who)
+     ((fixnum  X))
+  (with-arguments-validation (who)
+       ((integer Y))
+    (do-this)
+    (do-that)))
+@end example
+
+@noindent
+which is equivalent to something like:
+
+@example
+(if (fixnum? X)
+    (if (integer? X)
+        (begin
+          (do-this)
+          (do-that))
+      (assertion-violation who
+        "expected integer as argument"
+        obj))
+  (assertion-violation who
+    "expected fixnum as argument"
+    obj))
+@end example
+@end defmac
+
+
+@defmac with-dangerous-arguments-validation (@meta{who}) ((@meta{validator} @meta{arg} ...) ...) @metao{body} . @meta{body}
+Like @func{with-arguments-validation}, but the validation is always
+performed even when global arguments validation is disabled.
+@end defmac
+
+@c page
+@node args forms
+@subsection Optional validation forms
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@defmac arguments-validation-forms
+@defmacx arguments-validation-forms @metao{body} . @meta{body}
+When used without arguments or arguments validation disabled: expand to
+@code{(values)}; else expand to:
+
+@example
+(begin @metao{body} . @meta{body})
+@end example
+@end defmac
+
+@c page
+@node args predefined
+@subsection Predefined validation clauses
+
+
+@menu
+* args predefined booleans::       Validating booleans.
+* args predefined numbers::        Validating numbers.
+* args predefined fixnums::        Validating fixnums.
+* args predefined exact integers:: Validating exact integers.
+* args predefined bits::           Validating bit--sized integers.
+* args predefined signed int::     Validating C language @code{int} values.
+* args predefined clang::          Validating C language values.
+* args predefined chars::          Validating characters.
+* args predefined strings::        Validating string and
+                                   related arguments.
+* args predefined vectors::        Validating vector and
+                                   related arguments.
+* args predefined bytevectors::    Validating bytevector and related
+                                   arguments.
+* args predefined symbols::        Validating symbols.
+* args predefined enum-sets::      Validating enum-sets.
+* args predefined pointers::       Validating pointers.
+* args predefined memory-blocks::  Validating @code{meory-block} values.
+* args predefined flonums::        Validating flonums.
+* args predefined bignums::        Validating bignums.
+* args predefined ratnums::        Validating ratnums.
+* args predefined reals::          Validating reals.
+* args predefined compnums::       Validating compnums.
+* args predefined cflonums::       Validating cflonums.
+* args predefined complexes::      Validating complexes.
+* args predefined ports::          Validating input/output ports.
+* args predefined genstrings::     Validating generalised C string
+                                   arguments.
+* args predefined genbuffers::     Validating generalised C buffer
+                                   arguments.
+@end menu
+
+@c page
+@node args predefined booleans
+@subsubsection Validating booleans
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} boolean @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{boolean?}.
+@end deffn
+
+@c page
+@node args predefined numbers
+@subsubsection Validating numbers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} number @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{number?}.
+@end deffn
+
+@c page
+@node args predefined fixnums
+@subsubsection Validating fixnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?}.
+@end deffn
+
+
+@deffn {Validation Clause} fixnum/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicate
+@func{fixnum?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-fixnum @var{obj}
+@deffnx {Validation Clause} negative-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-fixnum @var{obj}
+@deffnx {Validation Clause} non-negative-fixnum @var{obj}
+@deffnx {Validation Clause} fixnum-index @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is
+strictly positive or strictly negative.
+
+The clause @code{fixnum-index} is an alias for
+@code{non-negative-fixnum}.
+@end deffn
+
+
+@deffn {Validation Clause} non-zero-fixnum @var{obj}
+Fails if @var{obj} satisfies the predicate @func{fxzero?}.
+@end deffn
+
+
+@deffn {Validation Clause} fixnum-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} fixnum-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and it is in
+the specified range.  @var{min} and @var{max} must be fixnums.
+@end deffn
+
+
+@deffn {Validation Clause} even-fixnum @var{obj}
+@deffnx {Validation Clause} odd-fixnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{fixnum?} and the
+predicate @func{fxeven?} or @func{fxodd?}.
+@end deffn
+
+@c page
+@node args predefined exact integers
+@subsubsection Validating exact integers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?}.
+@end deffn
+
+
+@deffn {Validation Clause} exact-integer/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicates
+@func{integer?} and @func{exact?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-exact-integer @var{obj}
+@deffnx {Validation Clause} negative-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-exact-integer @var{obj}
+@deffnx {Validation Clause} non-negative-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} exact-integer-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} exact-integer-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and it is in the specified range.  @var{min} and @var{max}
+must be exact integers.
+@end deffn
+
+
+@deffn {Validation Clause} even-exact-integer @var{obj}
+@deffnx {Validation Clause} odd-exact-integer @var{obj}
+Succeed if @var{obj} satisfies the predicates @func{integer?} and
+@func{exact?} and the predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args predefined bits
+@subsubsection Validating bit--sized integers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} word-u8 @var{obj}
+@deffnx {Validation Clause} word-u8/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an octet.
+@end deffn
+
+
+@deffn {Validation Clause} word-s8 @var{obj}
+@deffnx {Validation Clause} word-s8/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a byte.
+@end deffn
+
+
+@deffn {Validation Clause} word-u16 @var{obj}
+@deffnx {Validation Clause} word-u16/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{16}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s16 @var{obj}
+@deffnx {Validation Clause} word-s16/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{16}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u32 @var{obj}
+@deffnx {Validation Clause} word-u32/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{32}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s32 @var{obj}
+@deffnx {Validation Clause} word-s32/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{32}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u64 @var{obj}
+@deffnx {Validation Clause} word-u64/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{64}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s64 @var{obj}
+@deffnx {Validation Clause} word-s64/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{64}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u128 @var{obj}
+@deffnx {Validation Clause} word-u128/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{128}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s128 @var{obj}
+@deffnx {Validation Clause} word-s128/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{128}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-u256 @var{obj}
+@deffnx {Validation Clause} word-u256/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned @math{256}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} word-s256 @var{obj}
+@deffnx {Validation Clause} word-s256/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of a signed @math{256}-bit integer.
+@end deffn
+
+
+@deffn {Validation Clause} machine-word @var{obj}
+@deffnx {Validation Clause} machine-word/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, fitting in the range of an unsigned machine word integer; a
+machine word is @math{32}-bit or @math{64}-bit integer.
+@end deffn
+
+@c page
+@node args predefined signed int
+@subsubsection Validating C language @code{int} values
+
+
+Exact integers in the range of the C language type @code{int} are used
+often when interfacing with a foreign C language library; the library
+@library{vicare words} provides the predicate @func{signed-int?} to
+validated such values; @ref{words predicates} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-int/false @var{obj}
+Succeed if @var{obj} is @false{} or it satisfies the predicate
+@func{signed-int?}.
+@end deffn
+
+
+@deffn {Validation Clause} positive-signed-int @var{obj}
+@deffnx {Validation Clause} negative-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} non-positive-signed-int @var{obj}
+@deffnx {Validation Clause} non-negative-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is strictly positive or strictly negative.
+@end deffn
+
+
+@deffn {Validation Clause} signed-int-in-inclusive-range @var{obj} @var{min} @var{max}
+@deffnx {Validation Clause} signed-int-in-exclusive-range @var{obj} @var{min} @var{max}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and it
+is in the specified range.  @var{min} and @var{max} must be exact
+integers.
+@end deffn
+
+
+@deffn {Validation Clause} even-signed-int @var{obj}
+@deffnx {Validation Clause} odd-signed-int @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{signed-int?} and the
+predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args predefined clang
+@subsubsection Validating C language values
+
+
+The library @library{vicare words} provides the predicates to validate
+typical values used when interfacing with foreign C language libraries;
+@ref{words predicates} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} unsigned-char @var{obj}
+@deffnx {Validation Clause} unsigned-char/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned char}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-char @var{obj}
+@deffnx {Validation Clause} signed-char/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed char}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-short @var{obj}
+@deffnx {Validation Clause} unsigned-short/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned short int}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-short @var{obj}
+@deffnx {Validation Clause} signed-short/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed short int}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-int @var{obj}
+@deffnx {Validation Clause} unsigned-int/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned int}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-long @var{obj}
+@deffnx {Validation Clause} unsigned-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned long}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-long @var{obj}
+@deffnx {Validation Clause} signed-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed long}.
+@end deffn
+
+
+@deffn {Validation Clause} unsigned-long-long @var{obj}
+@deffnx {Validation Clause} unsigned-long-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{unsigned long long}.
+@end deffn
+
+
+@deffn {Validation Clause} signed-long-long @var{obj}
+@deffnx {Validation Clause} signed-long-long/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{signed long long}.
+@end deffn
+
+
+@deffn {Validation Clause} pointer-integer @var{obj}
+@deffnx {Validation Clause} pointer-integer/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{void *}.
+@end deffn
+
+
+@deffn {Validation Clause} size_t @var{obj}
+@deffnx {Validation Clause} size_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{size_t}.
+@end deffn
+
+
+@deffn {Validation Clause} ssize_t @var{obj}
+@deffnx {Validation Clause} ssize_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{ssize_t}.
+@end deffn
+
+
+@deffn {Validation Clause} off_t @var{obj}
+@deffnx {Validation Clause} off_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{off_t}.
+@end deffn
+
+
+@deffn {Validation Clause} ptrdiff_t @var{obj}
+@deffnx {Validation Clause} ptrdiff_t/false @var{obj}
+Succeed if @var{obj} is an exact integer, or @false{} for the second
+variant, in the range of a C language type @code{ptrdiff_t}.
+@end deffn
+
+@c page
+@node args predefined chars
+@subsubsection Validating characters
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} char @var{obj}
+Succeed if @var{obj} is a character.
+@end deffn
+
+@c page
+@node args predefined strings
+@subsubsection Validating string and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} string @var{obj}
+Succeed if @var{obj} is a string.
+@end deffn
+
+
+@deffn {Validation Clause} string/false @var{obj}
+Succeed if @var{obj} is @false{} or a string.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-string @var{obj}
+Succeed if @var{obj} is a string and its length is greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-string/false @var{obj}
+Succeed if @var{obj} is @false{} or a string and its length is greater
+than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-string @var{str} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{str}, which is expected to be an already validated string.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-string @var{str} @var{idx} @var{count}
+Assuming that @var{str} is an already validated string: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{str},
+and @var{count} is a fixnum which can be used as characters count in
+@var{str} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a substring of
+@var{str}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-string @var{str} @var{start} @var{end}
+Assuming that @var{str} is an already validated string: succeed if both
+@var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{str}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a substring of
+@var{str} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-string @var{str} @var{start} @var{past}
+Assuming that @var{str} is an already validated string: succeed if both
+@var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} < (string-length @var{str})
+@var{start} <= @var{past} <= (string-length @var{str})
+@end example
+
+In other words: @var{start} and @var{past} select a substring of
+@var{str} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined vectors
+@subsubsection Validating vector and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} vector @var{obj}
+Succeed if @var{obj} is a vector.
+@end deffn
+
+
+@deffn {Validation Clause} vector/false @var{obj}
+Succeed if @var{obj} is @false{} or a vector.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-vector @var{obj}
+Succeed if @var{obj} is a vector and its length is greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-vector/false @var{obj}
+Succeed if @var{obj} is @false{} or a vector and its length is greater
+than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-vector @var{vec} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{vec}, which is expected to be an already validated vector.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-vector @var{vec} @var{idx} @var{count}
+Assuming that @var{vec} is an already validated vector: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{vec},
+and @var{count} is a fixnum which can be used as characters count in
+@var{vec} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a subvector of
+@var{vec}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-vector @var{vec} @var{start} @var{end}
+Assuming that @var{vec} is an already validated vector: succeed if both
+@var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{vec}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a subvector of
+@var{vec} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-vector @var{vec} @var{start} @var{past}
+Assuming that @var{vec} is an already validated vector: succeed if both
+@var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} < (vector-length @var{vec})
+@var{start} <= @var{past} <= (vector-length @var{vec})
+@end example
+
+In other words: @var{start} and @var{past} select a subvector of
+@var{vec} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined bytevectors
+@subsubsection Validating bytevector and related arguments
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bytevector @var{obj}
+Succeed if @var{obj} is a bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector/false @var{obj}
+Succeed if @var{obj} is @false{} or a bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-bytevector @var{obj}
+Succeed if @var{obj} is a bytevector and its length is greater than
+zero.
+@end deffn
+
+
+@deffn {Validation Clause} non-empty-bytevector/false @var{obj}
+Succeed if @var{obj} is @false{} or a bytevector and its length is
+greater than zero.
+@end deffn
+
+
+@deffn {Validation Clause} index-for-bytevector @var{bv} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index (not out of range) for
+@var{bv}, which is expected to be an already validated bytevector.
+@end deffn
+
+
+@deffn {Validation Clause} index-and-count-for-bytevector @var{bv} @var{idx} @var{count}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+@var{idx} is a fixnum usable as index (not out of range) for @var{bv},
+and @var{count} is a fixnum which can be used as characters count in
+@var{bv} starting and @var{idx} without going out of range.
+
+In other words: @var{idx} and @var{count} select a subbytevector of
+@var{bv}.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-end-for-bytevector @var{bv} @var{start} @var{end}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+both @var{start} and @var{end} are fixnums usable as indexes (not out of
+range) for @var{bv}, and @var{start} is less than or equal to
+@var{end}.
+
+In other words: @var{start} and @var{end} select a subbytevector of
+@var{bv} by specifying inclusive limits.
+@end deffn
+
+
+@deffn {Validation Clause} start-and-past-for-bytevector @var{bv} @var{start} @var{past}
+Assuming that @var{bv} is an already validated bytevector: succeed if
+both @var{start} and @var{past} are fixnums satisfying the constraints:
+
+@example
+0 <= @var{start} < (bytevector-length @var{bv})
+@var{start} <= @var{past} <= (bytevector-length @var{bv})
+@end example
+
+In other words: @var{start} and @var{past} select a subbytevector of
+@var{bv} by specifying left--inclusive and right--exclusive limits.
+@end deffn
+
+@c page
+@node args predefined symbols
+@subsubsection Validating symbols
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} symbol @var{obj}
+Succeed if @var{obj} is a symbol.
+@end deffn
+
+
+@deffn {Validation Clause} symbol/false @var{obj}
+Succeed if @var{obj} is @false{} or a symbol.
+@end deffn
+
+@c page
+@node args predefined enum-sets
+@subsubsection Validating enum-sets
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} enum-set @var{obj}
+Succeed if @var{obj} is a enum-set.
+@end deffn
+
+
+@deffn {Validation Clause} enum-set/false @var{obj}
+Succeed if @var{obj} is @false{} or a enum-set.
+@end deffn
+
+@c page
+@node args predefined pointers
+@subsubsection Validating pointers
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} pointer @var{obj}
+Succeed if @var{obj} is a pointer.
+@end deffn
+
+
+@deffn {Validation Clause} pointer/false @var{obj}
+Succeed if @var{obj} is @false{} or a pointer.
+@end deffn
+
+
+@deffn {Validation Clause} non-null-pointer @var{obj}
+Succeed if @var{obj} is a pointer and it does @strong{not} represent
+@cnull{}.
+@end deffn
+
+@c page
+@node args predefined memory-blocks
+@subsubsection Validating @code{meory-block} values
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} memory-block @var{obj}
+Succeed if @var{obj} is a memory-block.
+@end deffn
+
+
+@deffn {Validation Clause} memory-block/false @var{obj}
+Succeed if @var{obj} is @false{} or a memory-block.
+@end deffn
+
+@c page
+@node args predefined flonums
+@subsubsection Validating flonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} flonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{flonum?}.
+@end deffn
+
+@c page
+@node args predefined bignums
+@subsubsection Validating bignums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} bignum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{bignum?}.
+@end deffn
+
+@c page
+@node args predefined ratnums
+@subsubsection Validating ratnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} ratnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{ratnum?}.
+@end deffn
+
+@c page
+@node args predefined reals
+@subsubsection Validating reals
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} real @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{real?}.
+@end deffn
+
+
+@deffn {Validation Clause} real-exact @var{obj}
+Succeed if @var{obj} satisfies one of the predicates @func{fixnum?},
+@func{bignum?}, @func{ratnum?}.
+@end deffn
+
+@c page
+@node args predefined compnums
+@subsubsection Validating compnums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} compnum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{compnum?}.
+@end deffn
+
+@c page
+@node args predefined cflonums
+@subsubsection Validating cflonums
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} cflonum @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{cflonum?}.
+@end deffn
+
+@c page
+@node args predefined complexes
+@subsubsection Validating complexes
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} complex @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{complex?}.
+@end deffn
+
+@c page
+@node args predefined ports
+@subsubsection Validating input/output ports
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} port @var{obj}
+Succeed if @var{obj} is a port.
+@end deffn
+
+
+@deffn {Validation Clause} port/false @var{obj}
+Succeed if @var{obj} is @false{} or a port.
+@end deffn
+
+
+@deffn {Validation Clause} input-port @var{obj}
+@deffnx {Validation Clause} output-port @var{obj}
+@deffnx {Validation Clause} input/output-port @var{obj}
+Succeed if @var{obj} is an input, output or input/output port.
+@end deffn
+
+
+@deffn {Validation Clause} input-port/false @var{obj}
+@deffnx {Validation Clause} output-port/false @var{obj}
+@deffnx {Validation Clause} input/output-port/false @var{obj}
+Succeed if @var{obj} is @false{} or an input, output or input/output
+port.
+@end deffn
+
+
+@deffn {Validation Clause} textual-port @var{obj}
+@deffnx {Validation Clause} binary-port @var{obj}
+Succeed if @var{obj} is an textual or binary port.
+@end deffn
+
+
+@deffn {Validation Clause} textual-port/false @var{obj}
+@deffnx {Validation Clause} binary-port/false @var{obj}
+Succeed if @var{obj} is @false{} or an textual or binary port.
+@end deffn
+
+@c page
+@node args predefined genstrings
+@subsubsection Validating generalised C string arguments
+
+
+Generalised C strings are meant to be used in interfaces to foreign C
+language libraries, when a pointer to C string or input buffer is
+required as argument.
+
+A @dfn{generalised C string} is an object capable of holding the
+representation of a C language string; such Scheme objects are: strings,
+bytevectors, pointer objects, instances of @code{memory-block}.
+
+When a Scheme string is used as generalised C string: the application
+must take care of converting the Scheme string into a C string
+representation, for example using @func{string->ascii}.
+
+When using generalised C strings we have to remember that:
+
+@itemize
+@item
+A run of the garbage collector may move the data area of Scheme
+bytevectors; for this reason Scheme bytevectors and Scheme strings
+converted to bytevectors are not suitable as arguments to Scheme
+functions interfacing to C functions that call back to Scheme.
+
+@item
+If a Scheme string is used as argument: the C function cannot modify it
+by using it as output buffer.
+@end itemize
+
+@noindent
+in these cases we should use generalised C buffers, @ref{args predefined
+genbuffers} for details.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn Syntax general-c-string? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string @var{obj}
+Succeed if @var{obj} is a generalised C string.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C string.
+@end deffn
+
+@c page
+@node args predefined genbuffers
+@subsubsection Validating generalised C buffer arguments
+
+
+Generalised C buffers are meant to be used in interfaces to foreign C
+language libraries, when a pointer to raw data is required as argument.
+
+A @dfn{generalised C buffer} is an object capable of holding an array of
+mutable bytes referenced by a pointer; such Scheme objects are:
+bytevectors, pointer objects, instances of @code{memory-block}.
+
+A @dfn{generalised C sticky buffer} is an object capable of holding an
+array of mutable bytes referenced by a pointer, whose data area is never
+moved around by the garbage collector; such Scheme objects are: pointer
+objects, instances of @code{memory-block}.  Sticky buffers are meant to
+be used when calling out to C functions that call back to Scheme.
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn Syntax general-c-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer @var{obj}
+Succeed if @var{obj} is a generalised C buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C buffer.
+@end deffn
+
+
+@deffn Syntax general-c-sticky-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer @var{obj}
+Succeed if @var{obj} is a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-sticky-buffer/false @var{obj}
+Succeed if @var{obj} is @false{} or a generalised C sticky buffer.
+@end deffn
+
+@c page
+@node include
+@section Including source files at expand time
+
+
+@cindex Library @library{vicare include}
+@cindex @library{vicare include}, library
+
+
+The following bindings are exported by the library @library{vicare
+include}.
+
+
+@deffn Syntax include @var{filename}
+Include in the current source file the contents of the file selected by
+the pathname @var{filename}, which must be a string.  Everything happens
+as if the code was present in place of the @func{include} form.
+@end deffn
+
+
+@deffn Syntax include/lexical-context @var{filename} @var{identifier}
+Include in the current source file the contents of the file selected by
+the pathname @var{filename}, which must be a string.  @var{identifier}
+must be a Scheme identifier and it is used to assign a lexical context
+to the sourced code.
+@end deffn
+
+@c page
+@node errno
+@section More features for @code{errno}
+
+
+@cindex Library @library{vicare errno}
+@cindex @library{vicare errno}, library
+
+
+One syntax identifier binding for each known @code{errno} value is
+exported by the library @library{vicare errno} and reexported by the
+library @library{vicare platform constants}; @ref{iklib errno} for
+details on @value{PRJNAME} internal encoding of @code{errno} codes.  The
+following bindings are exported by the library @library{vicare errno}.
+
+
+@deffn Syntax errno-code @meta{symbol}
+Verify that @meta{symbol} is one of the symbolic names of @code{errno};
+if successful expand to an expression evaluating to the coded
+@code{errno} value, else raise a syntax violation.
+@end deffn
+
+
+@deffn Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ...
+@deffnx Syntax case-errno @meta{errno} ((@metao{code} @meta{code} ...) . @meta{cbody}) ... (else . @meta{ebody})
+@deffnx {Auxiliary Syntax} else
+Specialised @func{case} macro for @code{errno} values.  @func{else} is
+the auxiliary keyword exported by @library{rnrs}.  Example:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare errno))
+
+(define identifier "some-port")
+
+(case-errno (errno)
+  ((EACCES EFAULT)
+   (make-i/o-file-protection-error identifier))
+  ((EROFS)
+   (make-i/o-file-is-read-only-error identifier))
+  ((EEXIST)
+   (make-i/o-file-already-exists-error identifier))
+  ((EIO)
+   (make-i/o-error))
+  ((ENOENT)
+   (make-i/o-file-does-not-exist-error identifier))
+  (else
+   (make-irritants-condition (list identifier))))
+@end example
+
+The @meta{code} must be symbols representing @code{errno} codes, they
+are @strong{not} meant to be binding identifiers.
+@end deffn
+
+@c page
+@node platform
+@section Hosting platform utilities
+
+
+@cindex Library @library{vicare platform constants}
+@cindex @library{vicare platform constants}, library
+@cindex Library @library{vicare platform utilities}
+@cindex @library{vicare platform utilities}, library
+
+
+The library @library{vicare platform constants} exports one syntax
+identifier binding for each platform constant that makes sense to access
+from Scheme.  The library @library{vicare platform utilities} defines
+helper functions to deal with platform specific issues.
+
+The following bindings are exported by the library @library{vicare
+platform utilities}.
+
+
+@deffn Syntax posix-signal->symbol @var{code}
+Given an integer representing an interprocess @posix{} signal code,
+return the corresponding symbol; if @var{code} is not recognised as
+@posix{} signal code: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform constants)
+  (vicare platform utilities))
+
+(posix-signal->symbol SIGTERM)            @result{} SIGTERM
+(posix-signal->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end deffn
+
+
+@defun errno-code->symbol @var{code}
+Given a fixnum representing an encoded @code{errno} value, return the
+corresponding symbol; if @var{code} is not recognised as encoded
+@code{errno} value: return @false{}.
+
+@example
+(import (rnrs)
+  (vicare platform constants)
+  (vicare platform utilities))
+
+(errno-code->symbol EINVAL)             @result{} EINVAL
+(errno-code->symbol (greatest-fixnum))  @result{} #f
+@end example
+@end defun
+
+@c page
+@node words
+@section Exact integer predicates and constants
+
+
+@cindex Library @library{vicare words}
+@cindex @library{vicare words}, library
+
+
+It is often needed to validate exact integers agains fixed range bounds,
+for example for 32-bit and 64-bit representations or some platform
+specific C language type.  The library @library{vicare words} implements
+such predicates and minimum/maximum range constants.
+
+@menu
+* words sizeof::                Knowing the size of C language types.
+* words predicates::            Verifying the range of integers.
+* words limits::                Exact integer range limits.
+@end menu
+
+@c page
+@node words sizeof
+@subsection Knowing the size of C language types
+
+
+The following bindings are exported by the @library{vicare words}
+library.
+
+
+@deffn {Identifier Syntax} SIZEOF_CHAR
+Number of bytes in the C language type @code{char}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SHORT
+Number of bytes in the C language type @code{short int}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_INT
+Number of bytes in the C language type @code{int}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_LONG
+Number of bytes in the C language type @code{long}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_LONG_LONG
+Number of bytes in the C language type @code{long long}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SIZE_T
+Number of bytes in the C language type @code{size_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_SSIZE_T
+Number of bytes in the C language type @code{ssize_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_OFF_T
+Number of bytes in the C language type @code{off_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_PTRDIFF_T
+Number of bytes in the C language type @code{ptrdiff_t}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_FLOAT
+Number of bytes in the C language type @code{float}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_DOUBLE
+Number of bytes in the C language type @code{double}.
+@end deffn
+
+
+@deffn {Identifier Syntax} SIZEOF_POINTER
+Number of bytes in the C language type @code{void *}.
+@end deffn
+
+@c page
+@node words predicates
+@subsection Verifying the range of integers
+
+
+The following bindings are exported by the @library{vicare words}
+library.
+
+
+@deffn Syntax word? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum, that is an exact
+integer; else return @false{}.
+@end deffn
+
+
+@deffn Syntax machine-word? @var{obj}
+On 32-bit platforms: return @true{} if @var{obj} is a fixnum or bignum
+in the 32-bit range; on 64-bit platforms: return @true{} if @var{obj} is
+a fixnum or bignum in the 64-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u8? @var{obj}
+@deffnx Syntax word-s8? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum in the 8-bit
+range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u16? @var{obj}
+@deffnx Syntax word-s16? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum in the 16-bit
+range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u32? @var{obj}
+@deffnx Syntax word-s32? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 32-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u64? @var{obj}
+@deffnx Syntax word-s64? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 64-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u128? @var{obj}
+@deffnx Syntax word-s128? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 128-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax word-u256? @var{obj}
+@deffnx Syntax word-s256? @var{obj}
+Return @true{} if @var{obj} is a signed or unsigned fixnum or bignum in
+the 256-bit range; else return @false{}.
+@end deffn
+
+
+@deffn Syntax unsigned-char? @var{obj}
+@deffnx Syntax signed-char? @var{obj}
+Return @true{} if @var{obj} is a fixnum in the range representable with
+a platform C language type @code{signed char} or @code{unsigned char}.
+@end deffn
+
+
+@deffn Syntax unsigned-short? @var{obj}
+@deffnx Syntax signed-short? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed short int} or
+@code{unsigned short int}.
+@end deffn
+
+
+@deffn Syntax unsigned-int? @var{obj}
+@deffnx Syntax signed-int? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed int} or
+@code{unsigned int}.
+@end deffn
+
+
+@deffn Syntax unsigned-long? @var{obj}
+@deffnx Syntax signed-long? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed long int} or
+@code{unsigned long int}.
+@end deffn
+
+
+@deffn Syntax unsigned-long-long? @var{obj}
+@deffnx Syntax signed-long-long? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{signed long long
+int} or @code{unsigned long long int}.
+@end deffn
+
+
+@deffn Syntax pointer-integer? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{void *}.
+@end deffn
+
+
+@deffn Syntax size_t? @var{obj}
+@deffnx Syntax ssize_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{size_t} or
+@code{ssize_t} as defined by @file{stddef.h}.
+@end deffn
+
+
+@deffn Syntax off_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{off_t} as defined by
+@file{stdio.h}.
+@end deffn
+
+
+@deffn Syntax ptrdiff_t? @var{obj}
+Return @true{} if @var{obj} is a fixnum or bignum in the range
+representable with a platform C language type @code{ptrdiff_t} as
+defined by @file{stddef.h}.
+@end deffn
+
+
+The following predicates are meant to be used to validate indices in
+bytevectors.
+
+
+@deffn Syntax fixnum-aligned-to-2? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{2}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to-4? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{4}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to-8? @var{N}
+@strong{Unsafe syntax: @var{N} must be a fixnum.}  Evaluate to @true{}
+if @var{N} is a fixnum multiple of @math{8}; else evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax fixnum-aligned-to? @var{N} @var{alignment}
+@strong{Unsafe syntax: @var{N} and @var{alignment} must be fixnums.}
+Evaluate to @true{} if @var{N} is a fixnum multiple of @math{alignment};
+else evaluate to @false{}.
+@end deffn
+
+@c page
+@node words limits
+@subsection Exact integer range limits
+
+
+The following bindings are exported by the @library{vicare words}
+library.
+
+@c ------------------------------------------------------------
+
+@subsubheading Inclusive limits
+
+
+@deffn Syntax greatest-u8
+@deffnx Syntax greatest-s8
+@deffnx Syntax least-u8
+@deffnx Syntax least-s8
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 8-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u16
+@deffnx Syntax greatest-s16
+@deffnx Syntax least-u16
+@deffnx Syntax least-s16
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 16-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u32
+@deffnx Syntax greatest-s32
+@deffnx Syntax least-u32
+@deffnx Syntax least-s32
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 32-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u64
+@deffnx Syntax greatest-s64
+@deffnx Syntax least-u64
+@deffnx Syntax least-s64
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s128
+@deffnx Syntax greatest-u128
+@deffnx Syntax least-u128
+@deffnx Syntax least-s128
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 128-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s256
+@deffnx Syntax greatest-u256
+@deffnx Syntax least-u256
+@deffnx Syntax least-s256
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the 256-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-machine-word
+@deffnx Syntax least-machine-word
+On 32-bit platforms: evaluate to the greatest or least unsigned exact
+integer in the 32-bit range.
+
+On 64-bit platforms: evaluate to the greatest or least unsigned exact
+integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-char
+@deffnx Syntax greatest-c-signed-char
+@deffnx Syntax least-c-unsigned-char
+@deffnx Syntax least-c-signed-char
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{char} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-short
+@deffnx Syntax greatest-c-signed-short
+@deffnx Syntax least-c-unsigned-short
+@deffnx Syntax least-c-signed-short
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{short int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-int
+@deffnx Syntax greatest-c-signed-int
+@deffnx Syntax least-c-unsigned-int
+@deffnx Syntax least-c-signed-int
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long
+@deffnx Syntax greatest-c-signed-long
+@deffnx Syntax least-c-unsigned-long
+@deffnx Syntax least-c-signed-long
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long-long
+@deffnx Syntax greatest-c-signed-long-long
+@deffnx Syntax least-c-unsigned-long-long
+@deffnx Syntax least-c-signed-long-long
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{long long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-pointer
+@deffnx Syntax least-c-pointer
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{void *} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-size_t
+@deffnx Syntax least-c-size_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{size_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ssize_t
+@deffnx Syntax least-c-ssize_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ssize_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-off_t
+@deffnx Syntax least-c-off_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{off_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ptrdiff_t
+@deffnx Syntax least-c-ptrdiff_t
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ptrdiff_t} range.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Exclusive limits
+
+
+@deffn Syntax greatest-u8*
+@deffnx Syntax greatest-s8*
+@deffnx Syntax least-u8*
+@deffnx Syntax least-s8*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 8-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u16*
+@deffnx Syntax greatest-s16*
+@deffnx Syntax least-u16*
+@deffnx Syntax least-s16*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 16-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u32*
+@deffnx Syntax greatest-s32*
+@deffnx Syntax least-u32*
+@deffnx Syntax least-s32*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 32-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-u64*
+@deffnx Syntax greatest-s64*
+@deffnx Syntax least-u64*
+@deffnx Syntax least-s64*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s128*
+@deffnx Syntax greatest-u128*
+@deffnx Syntax least-u128*
+@deffnx Syntax least-s128*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 128-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-s256*
+@deffnx Syntax greatest-u256*
+@deffnx Syntax least-u256*
+@deffnx Syntax least-s256*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the 256-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-machine-word*
+@deffnx Syntax least-machine-word*
+On 32-bit platforms: evaluate to the greatest--plus--1 or
+least--minus--1 unsigned exact integer in the 32-bit range.
+
+On 64-bit platforms: evaluate to the greatest--plus--1 or
+least--minus--1 unsigned exact integer in the 64-bit range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-char*
+@deffnx Syntax greatest-c-signed-char*
+@deffnx Syntax least-c-unsigned-char*
+@deffnx Syntax least-c-signed-char*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{char} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-short*
+@deffnx Syntax greatest-c-signed-short*
+@deffnx Syntax least-c-unsigned-short*
+@deffnx Syntax least-c-signed-short*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{short int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-int*
+@deffnx Syntax greatest-c-signed-int*
+@deffnx Syntax least-c-unsigned-int*
+@deffnx Syntax least-c-signed-int*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{int} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long*
+@deffnx Syntax greatest-c-signed-long*
+@deffnx Syntax least-c-unsigned-long*
+@deffnx Syntax least-c-signed-long*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-unsigned-long-long*
+@deffnx Syntax greatest-c-signed-long-long*
+@deffnx Syntax least-c-unsigned-long-long*
+@deffnx Syntax least-c-signed-long-long*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{long long} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-pointer*
+@deffnx Syntax least-c-pointer*
+Evaluate to the greatest--plus--1 or least--minus--1, signed or
+unsigned, exact integer in the C language @code{void *} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-size_t*
+@deffnx Syntax least-c-size_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{size_t*} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ssize_t*
+@deffnx Syntax least-c-ssize_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ssize_t*} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-off_t*
+@deffnx Syntax least-c-off_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{off_t} range.
+@end deffn
+
+
+@deffn Syntax greatest-c-ptrdiff_t*
+@deffnx Syntax least-c-ptrdiff_t*
+Evaluate to the greatest or least, signed or unsigned, exact integer in
+the C language @code{ptrdiff_t} range.
+@end deffn
+
+@c page
+@node syntaxes
+@section Language syntactic extensions
+
+
+@cindex Library @library{vicare syntactic-extensions}
+@cindex @library{vicare syntactic-extensions}, library
+
+
+The library @library{vicare syntactic-extensions} provides bindings to
+macros that extend the Scheme language implemented by @library{vicare}
+and @library{rnrs}.
+
+@menu
+* syntaxes defines::            Special definitions.
+* syntaxes bindings::           Special local bindings.
+* syntaxes sequencing::         Sequencing execution.
+* syntaxes conversion::         Converting common arguments.
+* syntaxes cases::              Special cases.
+* syntaxes args::               Arguments validation.
+* syntaxes misc::               Miscellaneous syntaxes.
+@end menu
+
+@c page
+@node syntaxes defines
+@subsection Special definitions
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{form} @meta{form} ...
+Wrapper for @func{syntax-rules}, expand to:
+
+@example
+(define-syntax @meta{name}
+  (syntax-rules ()
+    ((_ @meta{arg} ... . @meta{rest})
+     (begin @metao{form} @meta{form} ...))))
+@end example
+@end defmac
+
+
+@defmac define-constant @meta{name} @meta{expr}
+Wrapper for @func{identifier-syntax}, expand to:
+
+@example
+(begin
+  (define ghost @meta{expr})
+  (define-syntax @meta{name}
+    (identifier-syntax ghost)))
+@end example
+
+@noindent
+@meta{expr} is evaluated once and the identifier syntax @meta{name} can
+be used to access the result; it is impossible to modify the value by
+acting upon @meta{name}.
+@end defmac
+
+
+@defmac define-inline-constant @meta{name} @meta{expr}
+Expand to:
+
+@example
+(define-syntax @meta{name}
+  (let ((const @meta{expr}))
+    (lambda (stx)
+      (syntax-case stx ()
+        (?id
+         (identifier? #'?id)
+         (with-syntax ((VALUE const))
+           #'(quote VALUE)))))))
+@end example
+
+@noindent
+@meta{expr} is evaluated only once at expand time; it is impossible to
+modify the result of the expansion of @meta{name} by acting upon
+@meta{name}.
+
+This syntax is also useful to defined constants resulting from @gnu{}
+Autoconf expansion:
+
+@example
+(define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
+@end example
+@end defmac
+
+
+@defmac define-syntax* (@meta{who} @meta{stx}) . @meta{body}
+Wrapper for @func{define-syntax}, expand to:
+
+@example
+(define-syntax @meta{who}
+  (lambda (@meta{stx}) . @meta{body}))
+@end example
+@end defmac
+
+
+@defmac define-auxiliary-syntaxes @metao{name} @meta{name} ...
+Define auxiliary syntaxes to be used as literal identifiers by
+@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
+
+@example
+(define-syntax @metao{name} (syntax-rules ()))
+(define-syntax @meta{name}  (syntax-rules ()))
+...
+@end example
+@end defmac
+
+
+@defmac define-exact-integer->symbol-function @meta{who} (@meta{code} ...)
+Define a function used to convert exact intgers to the corresponding
+symbolic name.  Expand to:
+
+@example
+(define (@meta{who} code)
+  (define who '@meta{who})
+  (with-arguments-validation (who)
+      ((exact-integer      code))
+    (case-integers code
+      ((@meta{code})     '@meta{code})
+      ...
+      (else #f))))
+@end example
+@end defmac
+
+@c page
+@node syntaxes bindings
+@subsection Special local bindings
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac let-inline ((@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
+Wrapper for @func{let-syntax}, expand to:
+
+@example
+(let-syntax ((@meta{var} (identifier-syntax @meta{expr}))
+             ...)
+  @metao{body} . @meta{body})
+@end example
+@end defmac
+
+
+@defmac {let*-inline} () @metao{body} . @meta{body}
+@defmacx {let*-inline} ((@metao{var} @metao{expr}) (@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
+Wrapper for @func{let-syntax}, expand to:
+
+@example
+(let-syntax ((@metao{var} (identifier-syntax @meta{expr})))
+  (let*-inline ((@meta{var} @meta{expr})
+                ...)
+    @metao{body} . @meta{body}))
+@end example
+@end defmac
+
+
+@deffn Syntax receive @var{formals} @var{expression} . @var{body}
+The mechanism provided for binding identifiers to the values of a
+multiple--valued expression are @func{call-with-values},
+@func{let-values}, @func{let*-values}.  @func{receive} is another
+concise and readable syntax for creating such bindings.
+
+@var{formals} can have any of 3 forms:
+
+@table @code
+@item (@vari{variable} ... @varn{variable})
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @vari{variable}, ..., @varn{variable} to fresh
+locations.  The @var{expression} is evaluated, and its values are
+stored into those locations (it is an error if @var{expression} does
+not have exactly @math{N} values).
+
+@item @var{variable}
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @var{variable} to a fresh location.  The
+@var{expression} is evaluated, its values are converted into a newly
+allocated list, and the list is stored in the location bound to
+@var{variable}.
+
+@item (@vari{variable} ... @varn{variable} . @varni{variable})
+The environment in which the @func{receive}--expression is evaluated is
+extended by binding @vari{variable}, ..., @varni{variable} to fresh
+locations.  The @var{expression} is evaluated.  Its first @math{N}
+values are stored into the locations bound to @vari{variable}, ...,
+@varn{variable}.  Any remaining values are converted into a newly
+allocated list, which is stored into the location bound to
+@varni{variable} (it is an error if @var{expression} does not have at
+least @math{N} values.
+@end table
+
+In any case, the expressions in @var{body} are evaluated sequentially in
+the extended environment.  The results of the last expression in the
+body are the values of the @var{receive}--expression.
+@end deffn
+
+@c page
+@node syntaxes sequencing
+@subsection Sequencing execution
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac begin0 @metao{expr} @meta{expr} ...
+Expand to:
+
+@example
+(call-with-values
+     (lambda () @metao{expr})
+  (lambda args
+    @meta{expr} ...
+    (apply values args)))
+@end example
+
+This syntax comes from the @rnrs{6} original document, Appendix A
+``Formal semantics''.
+@end defmac
+
+
+@defmac begin0-let ((@metao{var} @metao{init}) (@meta{var} @meta{init}) ...) @metao{form} @meta{form} ...
+Expand to:
+
+@example
+(let ((@metao{var} @metao{init})
+      (@meta{var}  @meta{init})
+      ...)
+  @metao{form} @meta{form} ...
+  @metao{var})
+@end example
+@end defmac
+
+@c page
+@node syntaxes conversion
+@subsection Converting common arguments
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac with-pathnames ((@meta{pathname.bv} @meta{pathname}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors or
+strings representing pathnames; the strings are converted to
+bytevectors.  This macro assumes that the arguments have already been
+validated.  Expand to:
+
+@example
+(let ((@meta{pathname.bv} (let ((pathname @meta{pathname}))
+                      (if (bytevector? pathname)
+                          pathname
+                        ((string->filename-func) pathname))))
+      ...)
+  . @meta{body})
+@end example
+@end defmac
+
+
+@defmac with-bytevectors ((@meta{value.bv} @meta{value}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors or
+strings; the strings are converted to bytevectors.  This macro assumes
+that the arguments have already been validated.  Expand to:
+
+@example
+(let ((@meta{value.bv} (let ((V @meta{value}))
+                   (if (bytevector? V)
+                       V
+                     (string->latin1 V))))
+      ...)
+  . @meta{body})
+@end example
+@end defmac
+
+
+@defmac with-bytevectors/or-false ((@meta{value.bv} @meta{value}) ...) . @meta{body}
+Used to preprocess function arguments which must be bytevectors, strings
+or false; the strings are converted to bytevectors.  This macro assumes
+that the arguments have already been validated.  Expand to:
+
+@example
+(let ((?value.bv (let ((V ?value))
+                   (cond ((bytevector? V)
+                          V)
+                         ((string? V)
+                          (string->latin1 V))
+                         (else V))))
+      ...)
+  . ?body)
+@end example
+@end defmac
+
+@c page
+@node syntaxes cases
+@subsection Special cases
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
+If the platform word size is 32-bit expand to @meta{body-32}, else
+expand to @meta{body-64}.
+@end defmac
+
+
+@deffn Macro case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
+@deffnx Macro case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
+@deffnx {Auxiliary Syntax} big
+@deffnx {Auxiliary Syntax} little
+If the platform endianness is little expand to @meta{lit-body}, else
+expand to @meta{big-body}.
+@end deffn
+
+
+@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
+@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only fixnums as datums;
+for maximum speed, it makes use of unsafe operations on fixnums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a fixnum, else the
+behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
+@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only exact integers as
+datums.  @func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to an exact integer, else
+the behaviour is undefined (and you do not want it).
+@end deffn
+
+
+@deffn Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only symbols as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a symbol, else the
+behaviour is undefined.
+@end deffn
+
+@c page
+@node syntaxes args
+@subsection Arguments validation
+
+
+The following bindings are imported and reexported by @library{vicare
+syntactic-extension} from the library @library{vicare arguments
+validation}:
+
+@example
+define-argument-validation
+with-arguments-validation
+with-dangerous-arguments-validation
+arguments-validation-forms
+@end example
+
+@c page
+@node syntaxes misc
+@subsection Miscellaneous syntaxes
+
+
+The following bindings are exported by the library @library{vicare
+syntactic-extensions}.
+
+
+@defmac callet @meta{func} @meta{arg} ...
+Expand to a call to @meta{func}, which must evaluate to a function,
+applied to the arguments resulting from processing the @var{arg}
+syntaxes; @var{arg} can be one among:
+
+@example
+@meta{expr}
+(@meta{name} @meta{expr})
+@end example
+
+@noindent
+where @meta{expr} is an expression that will become the actual argument
+and @meta{name} must be an identifier used to comment the meaning of the
+arguments.  Examples:
+
+@example
+(callet printf
+        (string "ciao ~a")
+        (arg    123))
+@expansion{} (printf "ciao ~a" 123)
+@end example
+@end defmac
+
+
+@defmac callet* @meta{func} @meta{arg} ...
+Like @func{callet}, but define local @func{let*} bindings for the
+@var{arg} with name.  Example:
+
+@example
+(callet printf
+        (string "ciao ~a")
+        (arg    123))
+@expansion{} (let* ((string "ciao ~a")
+           (arg    123))
+      (printf string arg))
+@end example
+@end defmac
+
+
+@defmac unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
+Not a general @func{unwind-protect} for Scheme, but fine where we do not
+use continuations to escape from the body.  Expand to:
+
+@example
+(let ((cleanup (lambda ()
+                 @metao{cleanup}
+                 @meta{cleanup}
+                 ...)))
+  (with-exception-handler
+      (lambda (E)
+        (cleanup)
+        (raise E))
+    (lambda ()
+      (begin0
+          @meta{body}
+        (cleanup)))))
+@end example
+@end defmac
+
+@c page
+@node cbuffers
+@section Generalised C buffers
+
+
+@cindex Library @library{vicare arguments general-c-buffers}
+@cindex @library{vicare arguments general-c-buffers}, library
+
+
+Generalised C strings and buffers are meant to be used in interfaces to
+foreign C language libraries, when a pointer to C string or input and
+output buffer is required as argument.  @ref{args predefined genstrings}
+for details on generalised C strings.  @ref{args predefined genbuffers}
+for details on generalised C buffers.
+
+The following bindings are exported by the library @library{vicare
+arguments general-c-buffers}.
+
+
+@deffn Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) ((string-to-bytevector @meta{string->bytevector})) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Prepare some generalised C strings to be used by a chunk of code
+expecting access to raw memory holding a C language string or input
+buffer.
+
+The values @meta{str} must be identifiers, unique according to
+@func{bound-identifier=?}.
+
+The values @meta{expr} must be expressions which will always be
+evaluated only once.
+
+The value @meta{string->bytevector} must be an expression evaluating to
+a procedure which converts a string to a bytevector, for example
+@func{string->ascii}.
+
+For each couple @meta{str} and @meta{expr} do the following:
+
+@itemize
+@item
+If the result of evaluating @meta{expr} is a bytevector, pointer object
+or @code{memory-block} instance bind it to @meta{str}.
+
+@item
+If the result of evaluating @meta{expr} is a string: convert it to a
+bytevector using the procedure result of evaluating
+@meta{string->bytevector}, then bind it to @meta{str}.
+@end itemize
+
+Evaluate the @meta{body} forms in the region in which such bindings are
+effective.  Return the return value of the last @meta{body} form.
+@end deffn
+
+
+@deffn Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) ((string-to-bytevector @meta{string->bytevector})) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Like @func{with-general-c-strings} but if a @meta{expr} evaluates
+to @false{} accept the value.
+@end deffn
+
+
+@deffn Syntax with-general-c-pathnames ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Prepare some generalised C strings to be used by a chunk of code
+expecting access to raw memory holding a C language string representing
+a file system pathname.
+
+The values @meta{ptn} must be identifiers, unique according to
+@func{bound-identifier=?}.
+
+The values @meta{expr} must be expressions which will always be
+evaluated only once.
+
+For each couple @meta{ptn} and @meta{expr} do the following:
+
+@itemize
+@item
+If the result of evaluating @meta{expr} is a bytevector, pointer object
+or @code{memory-block} instance bind it to @meta{ptn}.
+
+@item
+If the result of evaluating @meta{expr} is a string: convert it to a
+bytevector using the function referenced by the parameter
+@func{string->pathname-func}, then bind it to @meta{ptn}.
+@end itemize
+
+Evaluate the @meta{body} forms in the region in which such bindings are
+effective.  Return the return value of the last @meta{body} form.
+@end deffn
+
+
+@deffn Syntax with-general-c-pathnames/false ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
+@deffnx {Auxiliary Syntax} string-to-bytevector
+Like @func{with-general-c-pathnames} but if a @meta{expr} evaluates to
+@false{} accept the value.
+@end deffn
+
+
+As example, let's say we have loaded C language code exposing a function
+@cfunc{ikptr_posix_file_size}, which given a file pathname returns its
+size; we can interface it as follows:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare arguments validation))
+
+(define (file-size pathname)
+  (define who 'file-size)
+  (with-arguments-validation (who)
+      ((general-c-string pathname))
+    (with-general-c-pathnames ((pathname^ pathname))
+      (foreign-call "ikptr_posix_file_size" pathname^))))
+@end example
+
+@c page
+@node keywords
+@section More facilities for keyword objects
+
+
+@cindex Library @library{vicare keywords}
+@cindex @library{vicare keywords}, library
+
+
+Keywords are disjoint objects which can be read by @value{PRJNAME}'s
+reader in @code{#!vicare} mode, @ref{iklib reader stx}.  The core
+bindings and keyword objects handling is embedded in @value{PRJNAME}'s
+boot image, but additional facilities are required to make use of
+keywords.
+
+The following bindings are exported by the library @library{vicare
+keywords}.  Additionally the following bindings are reexported from
+@library{vicare}:
+
+@example
+symbol->keyword         keyword->symbol
+keyword?                keyword=?
+keyword-hash
+@end example
+
+
+@defun keyword->string @var{keyword}
+@defunx string->keyword @var{string}
+Convert a keyword object to and from a string object.  The string is the
+name of the symbol embedded in the keyword.
+@end defun
+
+
+@deffn Syntax let-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax let*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax letrec-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx Syntax letrec*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
+@deffnx {Auxiliary Syntax} with-argument @meta{name} @meta{default} @meta{keyword}
+@deffnx {Auxiliary Syntax} without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given}
+Expand into a @func{let} like form whose bindings are configured from a
+list of arguments and options.
+
+@func{let-keywords} expands into a @func{let} syntax,
+@func{let*-keywords} expands into a @func{let*} syntax,
+@func{letrec-keywords} expands into a @func{letrec} syntax,
+@func{let-keywords} expands into a @func{let} syntax.
+
+@meta{input} must be an expression evaluating to a list of values and
+keywords; keywords must be compliant to the specification in
+@meta{options-spec}.  The same keyword can be present multiple times in
+@meta{input}.
+
+@meta{args} must be an identifier which will be bound to a list of
+values from @meta{input} not matching any of the options specified in
+@meta{options-spec}.
+
+@meta{allow} must be an expression meant to evaluate to @false{} or
+true; when @false{}: keyword values in @meta{input} not matched by
+specifications in @meta{options-spec} will cause an assertion violation;
+when true: keyword values in @meta{input} not matched by specifications
+in @meta{options-spec} will be collected in @meta{args}.
+
+@meta{options-spec} must be null or a list of lists, each with the
+following formats:
+
+@example
+(with-argument @meta{name} @meta{default} @meta{keyword})
+(without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given})
+@end example
+
+@noindent
+such specifications are interpreted as follows:
+
+@itemize
+@item
+The @func{with-argument} specification describes an optional keyword
+argument with mandatory value, which must @strong{not} be a keyword
+itself.
+
+@item
+The @func{without-argument} specification describes an optional keyword
+argument with mandatory value, which must @strong{not} be a keyword
+itself.
+
+@item
+@meta{name} must be an identifier which will become the name of a
+binding in the output @func{let} like syntax.
+
+@item
+@meta{default} must be an expression which will become a the value of
+binding in the output @func{let} like syntax.
+
+@item
+@meta{keyword} must be a keyword object which can be present in
+@meta{input} to mutate the associated @meta{name} binding.
+
+@item
+For keywords with argument: when the @meta{keyword} is present in
+@meta{input}, it must be followed by a value which will become the new
+value of the corresponding @meta{name} binding.
+
+
+@item
+For keywords without argument: when the @meta{keyword} is present in
+@meta{input}, the value resulting from the evaluation of
+@meta{when-given} will become the new value of the corresponding
+@meta{name} binding.
+@end itemize
+
+We can imagine the following macro use:
+
+@example
+(let-keywords @meta{input} args #f
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  (alpha)
+  (beta))
+@end example
+
+@noindent
+to expand to something like:
+
+@example
+(let ((a 1)
+      (b 2))
+  (let ((args @meta{options-parser}))
+    (alpha)
+    (beta)))
+@end example
+
+@noindent
+where @meta{options-parser} is a form which takes care of parsing the
+@meta{input}.
+@end deffn
+
+
+Examples:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare keywords))
+
+;; options with arguments
+(let-keywords '(#:a 1 #:b 2 #:d 4) args #f
+    ((with-argument a #\a #:a)
+     (with-argument b #\b #:b)
+     (with-argument c #\c #:c)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (1 2 #\c 4 ())
+
+;; options without arguments
+(let-keywords '(#:a #:b #:d 4) args #f
+    ((without-argument a #\a #:a #\A)
+     (without-argument b #\b #:b #\B)
+     (without-argument c #\c #:c #\C)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (#\A #\B #\c 4 ())
+
+;; options with arguments, leftover arguments
+(let-keywords '(#:a 1 ciao #:b 2 hello #:d 4) args #f
+    ((with-argument a #\a #:a)
+     (with-argument b #\b #:b)
+     (with-argument c #\c #:c)
+     (with-argument d #\d #:d))
+  (list a b c d args))
+@result{} (1 2 #\c 4 (ciao hello))
+
+;; no options, allow unknown
+(let-keywords '(#:a 1 #:b 2 #:d 4) args #t
+    ()
+  args)
+@result{} (#:a 1 #:b 2 #:d 4)
+
+(let-keywords '(#:a) args #f
+    ()
+  args)
+@error{} unknown option #:a
+
+(let-keywords '(#:a #:b 123) args #t
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  args)
+@error{} option value for #:a cannot be a keyword
+
+(let-keywords '(#:a) args #t
+    ((with-argument a 1 #:a)
+     (with-argument b 2 #:b))
+  args)
+@error{} option #:a requires argument
+
+;; keywords used multiple times
+(let-keywords '(#:verbose #:verbose #:verbose) args #f
+  ((without-argument verbosity 0 #:verbose (+ 1 verbosity)))
+  verbosity)
+@result{} 3
+@end example
+
+@c page
+@node readline
+@section Extended interface to @gnu{} Readline
+
+
+@cindex Library @library{vicare readline}
+@cindex @library{vicare readline}, library
+
+
+The library @library{vicare readline} extends the basic readline @api{}
+exported by @library{vicare} (@pxref{iklib readline}) with features
+specific to the @gnu{} Readline library.  The following bindings:
+
+@example
+readline-enabled?
+readline
+make-readline-input-port
+@end example
+
+@noindent
+exported by @library{vicare} are reexported by @library{vicare
+readline}.
+
+
+@defun rl-version
+If support for readline is enabled and the linked library is @gnu{}
+Readline: return an exact integer representing the @gnu{} Readline
+version number as encoded in the C symbol @code{RL_READLINE_VERSION};
+else return @false{}.  When this function returns @false{}: no other
+@gnu{} Readline functions must be called, lest the process be aborted.
+@end defun
+
+@c page
+@node parser logic
+@section Defining parsers logic
+
+
+@cindex Library @library{vicare parser-logic}
+@cindex @library{vicare parser-logic}, library
+
+
+The library @library{vicare parser-logic} defines an infrastructure to
+declare the logic of a parser for sequences of characters; such logic
+can be specialised for different underlying devices.  The library
+heavily relies on macros.
+
+@menu
+* parser logic intro::          Introductory examples.
+* parser logic operators::      The logic of parser operators.
+* parser logic api::            Programming interface to
+                                parser definition.
+@end menu
+
+@c page
+@node parser logic intro
+@subsection Introductory examples
+
+
+@subsubheading Parsing a string of selected characters
+
+As first usage example, let's see a simple parser using a full Scheme
+string as argument and accepting lexemes being the empty string or
+strings of characters @samp{#\a} and @samp{\#b}; the result of a call to
+the parser is the list of characters or @false{} if the input is
+invalid:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare parser-logic))
+
+(module (parse-abba)
+
+  (define (parse-abba input-string)
+    (assert (string? input-string))
+    (%parse-string input-string
+                   (string-length input-string)
+                   0    ;start index
+                   '()  ;start value for ACCUMULATOR
+                   ))
+
+  (define-parser-logic define-string->abba-parser ch next fail
+    (%parse-string (accumulator)
+       ((:end-of-input)
+        (reverse accumulator))
+       ((#\a #\b)
+        (next %parse-string (cons ch accumulator)))))
+
+  (define-string->abba-parser string->token-or-false
+    (%parse-string))
+
+  #| end of module |# )
+
+(parse-abba "")         @result{} ()
+(parse-abba "a")        @result{} (#\a)
+(parse-abba "b")        @result{} (#\b)
+(parse-abba "1")        @result{} #f)
+(parse-abba "ciao")     @result{} #f)
+(parse-abba "abb")      @result{} (#\a #\b #\b)
+@end example
+
+@noindent
+notice the use of @func{next} to recursively tail--call
+@func{parse-string}.
+
+The macro @func{string->token-or-false} is exported by @library{vicare
+parser-logic}; it implements the device logic for a full input Scheme
+string representing a lexeme; it is to be used in a parser returning
+@false{} when the input is invalid.
+
+The macros in the module combine their output and expand to the
+definition of a function @func{%parse-string} equivalent to the
+following:
+
+@example
+(define (%parse-string input.string input.length input.index
+                       accumulator)
+  (if (fx=? input.index input.length)
+      (reverse accumulator)
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((or (char=? #\a ch)
+                 (char=? #\b ch))
+             (%parse-string input.string input.length
+                            (fx+ 1 input.index)
+                            (cons ch accumulator)))
+            (else #f)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Parsing a string of intermixed selected characters
+
+Let's see a parser using a full Scheme string as argument and accepting
+lexemes being the empty string or strings of characters @samp{#\a} and
+@samp{\#b}:
+
+@itemize
+@item
+@samp{#\a} can be followed only by @samp{#\b} or end--of--input.
+
+@item
+@samp{#\b} can be followed only by @samp{#\a} or end--of--input.
+@end itemize
+
+@noindent
+the result of a call to the parser is the list of characters or @false{}
+if the input is invalid:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare parser-logic))
+
+(module (parse-abab)
+
+  (define (parse-abab input-string)
+    (assert (string? input-string))
+    (%parse-string input-string
+                   (string-length input-string)
+                   0    ;start index
+                   '()  ;start value for ACCUMULATOR
+                   ))
+
+  ;;Parser logic to convert a string of intermixed
+  ;;#\a and #\b into a list of characters.
+  (define-parser-logic define-string->abab-parser ch next fail
+    (%parse-string (accumulator)
+       ((:end-of-input)
+        (reverse accumulator))
+       ((#\a #\b)
+        (if (or (null? accumulator)
+                (case ch
+                  ((#\a) (char=? #\b (car accumulator)))
+                  ((#\b) (char=? #\a (car accumulator)))))
+            (next %parse-string (cons ch accumulator))
+          (fail)))))
+
+  ;;Actual parser drawing characters from an input string.
+  (define-string->abab-parser string->token-or-false
+    (%parse-string))
+
+  #| end of module |# )
+
+(parse-abab "")         @result{} ()
+(parse-abab "a")        @result{} (#\a)
+(parse-abab "b")        @result{} (#\b)
+(parse-abab "1")        @result{} #f
+(parse-abab "ciao")     @result{} #f
+(parse-abab "abb")      @result{} #f
+(parse-abab "baa")      @result{} #f
+(parse-abab "abab")     @result{} (#\a #\b #\a #\b)
+(parse-abab "baba")     @result{} (#\b #\a #\b #\a)
+@end example
+
+@noindent
+notice the use of @func{fail} to signal an input error from inside an
+operator clause.
+
+The macros in the module combine their output and expand to the
+definition of a function @func{%parse-string} equivalent to the
+following:
+
+@example
+(define (%parse-string input.string input.length input.index
+                       accumulator)
+  (if (fx=? input.index input.length)
+      (reverse accumulator)
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((or (char=? #\a ch)
+                 (char=? #\b ch))
+             (if (or (null? accumulator)
+                     (case ch
+                       ((#\a) (char=? #\b (car accumulator)))
+                       ((#\b) (char=? #\a (car accumulator)))))
+                 (%parse-string input.string input.length
+                                (fx+ 1 input.index)
+                                (cons ch accumulator))
+               #f))
+            (else #f)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Parsing exact integers in base @math{10}
+
+Let's see a parser using a full Scheme string as argument and accepting
+lexemes representing exact integers in base @math{10}; the result of a
+call to the parser is the exact integer object or @false{} if the input
+is invalid:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare parser-logic))
+
+(define (parse-integer input-string)
+
+  (define (%digit ch)
+    ;;Given a character argument: return the corresponding
+    ;;fixnum if the character is between #\0 and #\9, else
+    ;;return false.
+    ;;
+    (let ((N (fx- (char->integer ch) (char->integer #\0))))
+      (and (fx>= N 0)
+           (fx<  N 10)
+           N)))
+
+  ;;Parser logic to convert a string into an exact integer
+  ;;in base 10.
+  (define-parser-logic define-string->integer-parser ch next fail
+    (%parse-integer ()
+       ((%digit) => D
+        (next %parse-digit+ D)))
+    (%parse-digit+ (accumulator)
+       ((:end-of-input)
+        accumulator)
+       ((%digit) => D
+        (next %parse-digit+ (+ D (* 10 accumulator))))))
+
+  ;;Actual parser drawing characters from an input string.
+  (define-string->integer-parser string->token-or-false
+    (%parse-integer))
+
+  (assert (string? input-string))
+  (%parse-integer input-string (string-length input-string) 0))
+
+(parse-integer "")              @result{} #f
+(parse-integer "1")             @result{} 1
+(parse-integer "123")           @result{} 123
+(parse-integer "ciao")          @result{} #f
+(parse-integer "123ciao")       @result{} #f
+@end example
+
+The macros in the body of @func{parse-integer} combine their output and
+expand to the definition of two functions @func{%parse-integer} and
+@func{%parse-digit+} equivalent to the following:
+
+@example
+(define (%parse-integer input.string input.length input.index)
+  (if (fx=? input.index input.length)
+      #f
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((%digit ch)
+             => (lambda (D)
+                  (%parse-digit+ input.string input.length
+                                 (fx+ 1 input.index) D)))
+            (else #f)))))
+
+(define (%parse-digit+ input.string input.length input.index
+                       accumulator)
+  (if (fx=? input.index input.length)
+      accumulator
+    (let ((ch (string-ref input.string input.index)))
+      (cond ((%digit ch)
+             => (lambda (D)
+                  (%parse-digit+ input.string input.length
+                                 (fx+ 1 input.index)
+                                 (+ D (* 10 accumulator)))))
+            (else #f)))))
+@end example
+
+
+
+@c page
+@node parser logic operators
+@subsection The logic of parser operators
+
+
+After all the macros have been expanded, the parser is a set of
+@dfn{operator functions} extracting characters from an input device with
+the purpose of producing a token.  Some operators are ``entry points''
+to the parser: public functions we can call to start parsing; other
+operators are for internal use only.  Each operator is meant to either:
+tail--call another operator, terminate parsing by raising an exception,
+terminate parsing by returning an error value, terminate parsing
+successfully by returning a token value.
+
+@quotation
+@strong{NOTE} Operator functions are just ordinary Scheme functions
+playing a special role in a parser; they are given a name with the only
+purpose of letting us talk about them, and it happens that such name is
+``operator''.
+@end quotation
+
+Operators are generated by macros from a symbolic expression specifying
+an abstract parser:
+
+@example
+(define-parser-logic define-parser ch next fail . @meta{operators})
+@end example
+
+@noindent
+and containing a subexpression for each operator.  Access to the input
+device is specified by another macro which must implement a set of
+@func{syntax-rules}:
+
+@example
+(define-syntax device-logic
+  (syntax-rules (:introduce-device-arguments
+                 :generate-end-of-input-or-char-tests
+                 :unexpected-end-of-input
+                 :generate-delimiter-test
+                 :invalid-input-char)
+    ((_ :introduce-device-arguments          ---) ---)
+    ((_ :generate-end-of-input-or-char-tests ---) ---)
+    ((_ :unexpected-end-of-input             ---) ---)
+    ((_ :generate-delimiter-test             ---) ---)
+    ((_ :invalid-input-char                  ---) ---)))
+@end example
+
+Concrete parsers are defined by combining the parser logic with the
+device logic:
+
+@example
+(define-parser device-logic (@meta{operator-name} ...))
+@end example
+
+@noindent
+we can define any number of concrete parsers using the same parser logic
+and different device logics; at the end of the expansion, the input
+device forms are hard coded into the operator.  The list of
+@meta{operator-name} is a list of identifiers bound to the operators
+being entry points to the parser.
+
+To understand the semantics of operators, let's consider one accepting
+only the characters @samp{#\X} or @samp{#\Y} and rejecting the
+end--of-input:
+
+@example
+(define (operator-1 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (error-form))
+          ((char=? X ch)
+           (a-clause-form))
+          ((char=? Y ch)
+           (another-clause-form))
+          (else ;invalid input char
+           (error-form)))))
+@end example
+
+@noindent
+such operator would be specified by the following @meta{operator}
+symbolic subexpression:
+
+@example
+(operator-1 (parser-state)
+  ((#\X)
+   (a-clause-form))
+  ((#\Y)
+   (another-clause-form)))
+@end example
+
+@noindent
+notice how the end--of--input test is automatically generated.  The
+operator has some arguments representing the input device state and
+other arguments representing the parser state; the list of input device
+arguments comes first and is specified by the device logic, discussed
+later; the list of parser state arguments comes last and is specified in
+the @meta{operator} symbolic expression.
+
+An operator function accepting characters @samp{#\X}, @samp{#\Y} or
+@samp{#\Z}, with @samp{#\Y} and @samp{#\Z} to be processed in the same
+way, and rejecting the end--of-input looks like this:
+
+@example
+(define (operator-2 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (error-form))
+          ((char=? #\X ch)
+           (a-clause-form))
+          ((or (char=? #\Y ch)
+               (char=? #\Z ch))
+           (another-clause-form))
+          (else ;invalid input char
+           (error-form)))))
+@end example
+
+@noindent
+such operator would be specified by the following @meta{operator}
+symbolic subexpression:
+
+@example
+(operator-2 (parser-state)
+  ((#\X)
+   (a-clause-form))
+  ((#\Y #\Z)
+   (another-clause-form)))
+@end example
+
+An operator function accepting characters @samp{#\X} or @samp{#\Y}, but
+also the end--of--input from the device, looks like this:
+
+@example
+(define (operator-3 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (end-of-input-form))
+          ((char=? #\X ch)
+           (a-clause-form))
+          ((char=? #\Y ch)
+           (another-clause-form))
+          (else ;invalid input char
+           (error-form)))))
+@end example
+
+@noindent
+and is specified in the parser logic as the following @meta{operator}
+symbolic subexpression:
+
+@example
+(operator-3 (parser-state)
+  ((:end-of-input)
+   (end-of-input-form))
+  ((#\X)
+   (a-clause-form))
+  ((#\Y)
+   (another-clause-form)))
+@end example
+
+An operator function accepting characters @samp{#\X} or @samp{#\Y}, the
+end--of--input from the device, and also a set of end--of--lexeme
+delimiter characters, looks like this:
+
+@example
+(define (operator-4 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (end-of-input-form))
+          ((char=? #\X ch)
+           (a-clause-form))
+          ((char=? #\Y ch)
+           (another-clause-form))
+          ((end-of-lexeme-delimiter? ch)
+           (end-of-input-form))
+          (else ;invalid input char
+           (error-form)))))
+@end example
+
+@noindent
+notice how the @code{end-of-input-form} is used for both the proper
+end--of--input state and the end--of--lexeme state; such operator is
+specified in the parser logic as the following @meta{operator} symbolic
+subexpression:
+
+@example
+(operator-4 (parser-state)
+  ((:end-of-input)
+   (end-of-input-form))
+  ((X)
+   (a-clause-form))
+  ((Y)
+   (another-clause-form)))
+@end example
+
+@noindent
+notice that processing of the end--of--lexeme state is not specified in
+the parser logic: its generation is completely delegated to the device
+logic.
+
+Sometimes it is useful to apply a test function or macro to an input
+character and collect the result for further processing; this can be
+done as follows:
+
+@example
+(define (the-test ch arg1 arg2 arg3)
+  ---)
+
+(define (operator-5 input-device parser-state)
+  (let ((ch (get-next-char)))
+    (cond ((end-of-input? ch)
+           (error-form))
+          ((the-test ch 1 2 3)
+           => (lambda (result)
+                (a-clause-form)))
+          ((char=? #\Y ch)
+           (another-clause-form))
+          (else ;invalid input char
+           (error-form)))))
+@end example
+
+@noindent
+and is specified in the parser logic as the symbolic subexpression:
+
+@example
+(operator-5 (parser-state)
+  ((the-test 1 2 3) => result
+   (a-clause-form))
+  ((#\Y)
+   (another-clause-form)))
+@end example
+
+@noindent
+where @func{=>} is the auxiliary syntax exported by @rsixlibrary{base}.
+
+@c page
+@node parser logic api
+@subsection Programming interface to parser definition
+
+
+The following bindings are exported by the library @library{vicare
+parser-logic}.
+
+
+@deffn Syntax define-parser-logic @meta{definer} @meta{ch} @meta{next} @meta{fail} . @meta{operators}
+@deffnx {Auxiliary Syntax} :end-of-input
+Define an abstract parser specifying the rules for parsing the input
+characters through calls to a set of operator functions; the result of
+the expansion is a syntax definition which can be used to instantiate a
+concrete parser by combining the parser logic with the input device
+logic.
+
+The input arguments are:
+
+@table @meta
+@item definer
+It must be an identifier.  It is bound to the generated syntax
+definition; such syntax is used as follows:
+
+@example
+(@meta{definer} @meta{device-logic} (@meta{operator-name} @dots{}))
+@end example
+
+@noindent
+where: @meta{device-logic} is the identifier bound to the device logic
+syntax; the @meta{operator-name} are identifiers among the public
+operator function names.
+
+@item ch
+It must be an identifier.  When a character is successfully extracted
+from the input device, it is bound to this identifier and made available
+to the operator clauses.
+
+@item next
+It must be an identifier.  The device logic rule
+@code{:generate-end-of-input-or-char-tests} must bind it to a syntax;
+such syntax must expand to a tail--call to an operator processing the
+next input character.  @meta{next} is used as follows in the operator
+clauses:
+
+@example
+(next @meta{operator-name} @meta{operator-arg} @dots{})
+@end example
+
+@noindent
+and it should expand to something like:
+
+@example
+(@meta{operator-name} @meta{device-arg} @dots{} @meta{operator-arg} @dots{})
+@end example
+
+@noindent
+where: @meta{device-arg} are the arguments representing the input device
+state; @meta{operator-arg} are the arguments representing the parser
+state as specified in the @meta{operator-spec}.
+
+@item fail
+It must be an identifier.  The device logic rule
+@code{:generate-end-of-input-or-char-tests} must bind it to a syntax;
+such syntax is used to handle parsing errors detected by the operator
+clauses.  @meta{fail} is simply used as @code{(@meta{fail})}.
+@end table
+
+Each @meta{operator-spec} must have the form:
+
+@example
+(@meta{operator-name} (@meta{operator-arg} @dots{}) @meta{operator-clause} @dots{})
+@end example
+
+@noindent
+where:
+
+@table @meta
+@item operator-name
+Must be an identifier.  It is bound to a generated operator function.
+
+There is no difference in the way public operators and private ones are
+specified; the public operators names are listed in the concrete parser
+definition.  An operator can be public in a concrete parser and private
+in another concrete parser.
+
+@item operator-arg
+Must be identifiers bound to the formal arguments associated to the
+parser state.
+
+@item operator-clause
+Are symbolic expressions specifying the input accepted by the operator.
+@end table
+
+Each @meta{operator-clause} must have one of the formats:
+
+@table @code
+@item ((@metao{char} @meta{char} @dots{}) @metao{body} @meta{body} @dots{})
+Each @meta{char} must be an expression evaluating to a Scheme character
+object.  The @meta{body} forms are evaluated if the input character
+bound to @meta{ch} is equal, according to @func{char=?}, to one among
+the @meta{char} characters.
+
+@item ((@meta{func} @meta{expr} @dots{}) => @meta{ret} @metao{body} @meta{body} @dots{})
+@meta{func} must be an expression evaluating to a function; the
+@meta{expr} must be expressions; @meta{ret} must be an identifier.  The
+@meta{body} forms are evaluated if the form:
+
+@example
+(@meta{func} @meta{ch} @meta{expr} @dots{})
+@end example
+
+@noindent
+evaluates to a true value; such true value is bound to @meta{ret} prior
+to evaluating the @meta{body}.
+
+@item ((:end-of-input) @metao{body} @meta{body} @dots{})
+The @meta{body} forms are evaluated if no more characters are available
+from the input device.  This clause is to be used by operators accepting
+the end--of--input state as valid; if such rule is not present: the
+end--of--input will cause an error and the device logic is used to
+handle it.
+@end table
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn {Auxiliary Syntax} :introduce-device-arguments
+@deffnx {Auxiliary Syntax} :generate-end-of-input-or-char-tests
+@deffnx {Auxiliary Syntax} :unexpected-end-of-input
+@deffnx {Auxiliary Syntax} :generate-delimiter-test
+@deffnx {Auxiliary Syntax} :invalid-input-char
+Identifiers used to specify device logic syntax rules; they must be used
+in a syntax definition like:
+
+@example
+(define-syntax device-logic
+  (syntax-rules (:introduce-device-arguments
+                 :generate-end-of-input-or-char-tests
+                 :unexpected-end-of-input
+                 :generate-delimiter-test
+                 :invalid-input-char)
+    ((_ :introduce-device-arguments          ---) ---)
+    ((_ :generate-end-of-input-or-char-tests ---) ---)
+    ((_ :unexpected-end-of-input             ---) ---)
+    ((_ :generate-delimiter-test             ---) ---)
+    ((_ :invalid-input-char                  ---) ---)))
+@end example
+
+@noindent
+the rules have the following syntax:
+
+@table @code
+@item :introduce-device-arguments
+The input form is:
+
+@example
+(_ :introduce-device-arguments @meta{kont} . @meta{rest})
+@end example
+
+@noindent
+this rule introduces a list of identifiers used as device--specific
+arguments; they will be the first arguments for each parser operator
+function.  The output form must be:
+
+@example
+(@meta{kont} (@meta{device-arg} @dots{}) . @meta{rest})
+@end example
+
+@noindent
+where the @meta{device-arg} are identifiers.
+
+@item :generate-end-of-input-or-char-tests
+The input form is:
+
+@example
+(_ :generate-end-of-input-or-char-tests
+   @meta{ch} @meta{next} @meta{fail}
+   (@meta{device-arg} @dots{})
+   @meta{end-of-input-kont} @meta{parse-input-char-kont})
+@end example
+
+@noindent
+this rule is used to generate the input device tests for an operator
+function.  The expanded code must first test for the end--of--input
+state and then proceed to evaluate code for the input character; in
+pseudocode the output form should be:
+
+@example
+(if (end-of-input? @meta{device-arg} ...)
+    @meta{end-of-input-kont}
+  (let ((@meta{ch} (get-next-char @meta{device-arg} ...)))
+    @meta{parse-input-char-kont}))
+@end example
+
+@meta{ch} is an identifier.  The input character must be bound to it
+before evaluating @meta{parse-input-char-kont}.
+
+@meta{next} is an identifier.  This rule must bind it to a syntax used
+to tail--call another operator using @meta{device-arg} as first
+arguments; for example:
+
+@example
+(define-syntax @meta{next}
+  (syntax-rules ()
+    ((_ ?operator-name ?operator-arg ...)
+     (?operator-name @meta{device-arg} ... ?operator-arg))))
+@end example
+
+@meta{fail} is an identifier.  This rule must bind it to a syntax used
+to signal an error detected by an operator clause; for example:
+
+@example
+(define-syntax @meta{fail}
+  (syntax-rules ()
+    ((_)
+     (error #f "invalid input character"
+       @meta{device-arg} ...))))
+@end example
+
+The @meta{device-arg} are the identifiers introduced by
+@code{:introduce-device-arguments}.
+
+@meta{end-of-input-kont} is a form to be evaluated whenever the
+end--of--input is detected.
+
+@meta{parse-input-char-kont} is a form to be evaluated whenever a
+character is extracted from the input device.
+
+@item :unexpected-end-of-input
+The input form is:
+
+@example
+(_ :unexpected-end-of-input (@meta{device-arg} @dots{}))
+@end example
+
+@noindent
+whenever the end--of--input is found by an operator that does not accept
+it as valid, this rule is used to decide what to do.
+
+The @meta{device-arg} are the identifiers introduced by
+@code{:introduce-device-arguments}.
+
+The output form can return a value or raise an exception; the returned
+value becomes the return value of the call to the parser.
+
+@item :generate-delimiter-test
+The input form is:
+
+@example
+(_ :generate-delimiter-test
+   @meta{ch}
+   @meta{ch-is-delimiter-kont}
+   @meta{ch-is-not-delimiter-kont})
+@end example
+
+@noindent
+this rule is used for input devices for which the lexeme string is
+embedded into a sequence of other characters, so there exists a set of
+characters that delimit the end--of--lexeme.  The parser delegates to
+the device the responsibility of knowing which characters are
+delimiters, if any.
+
+@meta{ch} is an identifier bound to the input character.
+@meta{ch-is-delimiter-kont} is a form to be evaluated whenever @meta{ch}
+is a delimiter character.  @meta{ch-is-not-delimiter-kont} is a form to
+be evaluated whenever @meta{ch} is not a delimiter character.
+
+For parsers accepting a full Scheme string as lexeme: there are no
+delimiters,3 the end--of--lexeme is the end--of--input; such parsers
+should just use @meta{ch-is-not-delimiter-kont} as output form.
+
+For parsers having delimiter characters, for example, recognised by a
+function like:
+
+@example
+(define (delimiter? ch)
+  (or (char=? ch #\space)
+      (char=? ch #\linefeed)))
+@end example
+
+@noindent
+the output form should be something like:
+
+@example
+(if (delimiter? @meta{ch})
+    @meta{ch-is-delimiter-kont}
+  @meta{ch-is-not-delimiter-kont})
+@end example
+
+@item :invalid-input-char
+The input form is:
+
+@example
+(_ :invalid-input-char (@meta{device-arg} @dots{}) @meta{ch})
+@end example
+
+@noindent
+whenever an input character is not accepted by an operator function this
+rule is used to decide what to do.
+
+The @meta{device-arg} are the identifiers introduced by
+@code{:introduce-device-arguments}; @meta{ch} is an identifier bound to
+the invalid input character.
+
+The output form can return a value or raise an exception; the returned
+value becomes the return value of the call to the parser.
+@end table
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Syntax string->token-or-false @meta{keyword} @meta{arg} ...
+Define the device logic to parse a lexeme from a full Scheme string
+object as in @func{string->number}.  It is implemented as follows:
+
+@example
+(define-syntax string->token-or-false
+  (syntax-rules (:introduce-device-arguments
+                 :generate-end-of-input-or-char-tests
+                 :unexpected-end-of-input
+                 :generate-delimiter-test
+                 :invalid-input-char)
+    ((_ :introduce-device-arguments
+        ?kont . ?rest)
+     (?kont (input.string input.length input.index) . ?rest))
+
+    ((_ :invalid-input-char
+        (?input.string ?input.length ?input.index)
+        ?ch)
+     #f)
+
+    ((_ :unexpected-end-of-input
+        (?input.string ?input.length ?input.index))
+     #f)
+
+    ((_ :generate-delimiter-test
+        ?ch ?ch-is-delimiter-kont ?ch-is-not-delimiter-kont)
+     ?ch-is-not-delimiter-kont)
+
+    ((_ :generate-end-of-input-or-char-tests
+        ?ch ?next ?fail
+        (?input.string ?input.length ?input.index)
+        ?end-of-input-kont ?parse-input-char-kont)
+     (let-syntax
+         ((?fail (syntax-rules ()
+                   ((_) #f)))
+          (?next (syntax-rules ()
+                   ((_ ?operator-name ?operator-arg (... ...))
+                    (?operator-name ?input.string ?input.length
+                                    (fx+ 1 ?input.index)
+                                    ?operator-arg (... ...))))))
+       (if (fx=? ?input.index ?input.length)
+           ?end-of-input-kont
+         (let ((?ch (string-ref ?input.string ?input.index)))
+           ?parse-input-char-kont))))
+    ))
+@end example
+@end deffn
+
+@c page
+@node gcc
+@section A toy library interface to @gcc{}
+
+
+@cindex Library @library{vicare gcc}
+@cindex @library{vicare gcc}, library
+
+
+The library @library{vicare gcc} is installed along with
+@value{PRJNAME}; it implements a toy interface to @command{gcc}, the
+@gnu{} C Compiler.  Its purpose is to build, at runtime, a C language
+shared library from possibly dynamically constructed C code; then load
+the library and access a C function as @ffi{} callout.
+
+@library{vicare gcc} must be considered as a toy to demonstrate the
+features of @value{PRJNAME}; it is installed only if the @posix{},
+@gnu{} C library and Libffi @api{}s are enabled at package configuration
+time.
+
+The following is an example of function to increment an integer:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare gcc) gcc.))
+
+(gcc.initialise "/usr/local/bin/gcc" "/home/marco/var/tmp/")
+
+(gcc.define-c-function
+  signed-int incr (signed-int)
+  "#include <stdio.h>
+   int incr (int a) @{
+     return 1+a;
+   @}")
+
+(incr 1)        @result{} 2
+@end example
+
+@noindent
+the code creates a shared library @code{libincr.so} in a subdirectory of
+the given initialisation directory, then load it and access the symbol
+@code{incr}.
+
+@library{vicare gcc} depends upon the following libraries:
+
+@example
+(vicare ffi)
+(vicare posix)
+(vicare glibc)
+(vicare platform constants)
+(vicare syntactic-extensions)
+@end example
+
+
+@defun initialise @var{gcc} @var{tmpdir}
+Initialise the library.  @var{gcc} must be the string full filename of
+the @gcc{} executable.  @var{tmpdir} must be the string pathname of an
+existing directory on a partition with executable permissions; it is
+used to create temporary files, including the shared libraries.
+
+Temporary files go in a subdirectory of @var{tmpdir}; it is the
+responsibility of the system administrator to clean up regularly such
+subdirectories.
+@end defun
+
+
+@deffn Syntax define-c-function @meta{retval} @meta{name} @meta{args} @meta{code}
+Define a new Scheme function wrapping a C function from a shared
+library.  @meta{name} must be an identifier representing the name of the
+function.
+
+@meta{retval} must be a symbol selecting the type of the return value;
+@meta{args} must be a list of symbols selecting the types of the
+arguments; @ref{ffi call types} for details.
+
+@meta{code} must be a Scheme string representing the C code to be
+compiled.
+@end deffn
+
+
+@deffn Parameter COMPILE-FLAGS
+References a list of string.  Base options for the compiler, it is
+initialised to @code{("-c")}.
+@end deffn
+
+
+@deffn Parameter LINK-FLAGS
+References a list of string.  Base options for the linker, it is
+initialised to @code{("-pipe" "-shared" "-fPIC")}.
+@end deffn
+
+
+@deffn Parameter CFLAGS
+References a list of string.  Additional options for the compiler, it is
+initialised to @code{("-O2")}.
+@end deffn
+
+
+@deffn Parameter LDFLAGS
+References a list of string.  Additional options for the linker, it is
+initialised to nil.
+@end deffn
+
+@c page
+@node wtables
+@section Weak hashtables
+
+
+@cindex Library @library{vicare weak-hashtables}
+@cindex @library{vicare weak-hashtables}, library
+
+
+Weak hashtables are associative containers whose keys are held by weak
+references; registering a key into a weak hashtable does not prevent its
+garbage collection.  A weak hashtable is a vector holding nulls or
+alists; each vector location is called @dfn{bucket}.  Alists have the
+spine composed of strong pairs, while the entries are weak pairs:
+
+@example
+|-----|-----|-----|-----|-----| vector of buckets
+         |
+         v
+      |-----|-----|strong pair
+         |      |
+         |       ------------> |-----|-----|strong pair
+         |                        |     |
+      |-----|-----|weak pair      |      -------> null
+        key  value                v
+                               |-----|-----| weak pair
+                                 key  value
+@end example
+
+Whenever a key in a weak hashtable is garbage collected: the
+corresponding location in the weak pair is set to the @acronym{BWP}
+object; whenever a bucket is accessed, it is first cleared of weak pairs
+holding @acronym{BWP} in key position.  Notice that fixnums, characters
+and the other values that fit in a single machine word are never
+collected from the point of view of a weak hashtable.
+
+@quotation
+@strong{NOTE} Immediate values (@true{}, @false{}, nil, fixnums, etc.)
+used as weak hashtable keys are @strong{never} garbage collected; so the
+associated entries will never be removed from the table unless we
+explicitly do it with @func{weak-hashtable-delete!} or
+@func{weak-hashtable-clear!}.
+@end quotation
+
+When the number of collected objects equals the number of buckets
+(whatever the distribution of elements), the table is enlarged doubling
+the number of buckets; the table is @strong{never} restricted by
+reducing the number of buckets.
+
+Weak hashtables are subjected to the following constraints:
+
+@itemize
+@item
+The number of buckets is always an exact power of @math{2}.
+
+@item
+The maximum number of buckets is the value of @code{(greatest-fixnum)}.
+
+@item
+The maximum number of entries is the value of @code{(greatest-fixnum)}.
+@end itemize
+
+The @api{} of weak hashtables is similar to the @api{} of @rnrs{6}
+hashtables.  The following bindings are exported by the @library{vicare
+weak-hashtables} library.
+
+
+@defun make-weak-hashtable @var{hash-function} @var{equiv-function}
+@defunx make-weak-hashtable @var{hash-function} @var{equiv-function} @var{dimension}
+Build and return a new weak hashtable using @var{hash-function} as hash
+function for keys and @var{equiv-function} as comparison function
+between keys.  When @var{dimension} is used: it is approximately the
+initial number of buckets; when not used it defaults to @math{16}.
+@end defun
+
+
+@defun weak-hashtable? @var{obj}
+Return true if @var{obj} is a weak hashtable.  Weak hashtables are
+disjoint values.
+@end defun
+
+
+@defun weak-hashtable-set! @var{table} @var{key} @var{value}
+Add an entry to @var{table} holding @var{key} and @var{value}.  Return
+unspecified values.
+@end defun
+
+
+@defun weak-hashtable-ref @var{table} @var{key} @var{default}
+Search for @var{key} in @var{table}; if found: return the corresponding
+value, else return @var{default}.
+@end defun
+
+
+@defun weak-hashtable-contains? @var{table} @var{key}
+Return @true{} if @var{table} contains an entry for @var{key}, else
+return @false{}.
+@end defun
+
+
+@defun weak-hashtable-delete! @var{table} @var{key}
+If @var{key} is in @var{table}: remove it, else do nothing.  Return
+unspecified values.
+@end defun
+
+
+@defun weak-hashtable-size @var{table}
+Return the approximate number of entries in @var{table}.  The returned
+value can be incorrect if some keys have been garbage collected but the
+corresponding entries in the table are not yet removed.
+@end defun
+
+
+@defun weak-hashtable-clear! @var{table}
+Remove all the entries from @var{table}.  The number of buckets is reset
+to the its initial value.  Return unspecified values.
+@end defun
+
+
+@defun weak-hashtable-keys @var{table}
+Return a vector holding the keys in @var{table}.
+@end defun
+
+
+@defun weak-hashtable-entries @var{table}
+Return two values: a vector holding the keys in @var{table}, a vector
+holding the values in @var{table}.
+@end defun
+
+
+@defun weak-hashtable-update! @var{table} @var{key} @var{proc} @var{default}
+If no entry exists for @var{key} in @var{table}: create a new entry
+associating @var{key} to the result of applying @var{proc} to
+@var{default}.
+
+If an entry exists for @var{key} in @var{table}: replace the its value
+with the result of applying @var{proc} to the old value.
+@end defun
+
+@c page
+@node flonum format
+@section Formatting flonums
+
+
+@cindex Library @library{vicare flonum-formatter}
+@cindex @library{vicare flonum-formatter}, library
+
+
+The following bindings are exported by the library @library{vicare
+flonum-formatter}.
+
+
+@defun format-flonum @var{positive?} @var{digits} @var{exponent}
+Given a list of characters @var{digits} and a fixnum @var{exponent}
+compose a string representing the corresponding flonum.  @var{positive?}
+determines the sign.
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare flonum-formatter))
+
+(define digits
+  '(#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+
+(format-flonum #t digits 0)     @result{} "0.123456789"
+(format-flonum #t digits 1)     @result{} "1.23456789"
+(format-flonum #t digits 2)     @result{} "12.3456789"
+(format-flonum #t digits 3)     @result{} "123.456789"
+(format-flonum #t digits 8)     @result{} "12345678.9"
+(format-flonum #t digits 9)     @result{} "123456789.0"
+(format-flonum #t digits 10)    @result{} "1.23456789e9"
+
+(format-flonum #t digits -1)    @result{} "0.0123456789"
+(format-flonum #t digits -2)    @result{} "0.00123456789"
+(format-flonum #t digits -3)    @result{} "0.000123456789"
+(format-flonum #t digits -4)    @result{} "1.23456789e-5"
+
+(format-flonum #f digits 1)     @result{} "-1.23456789"
+(format-flonum #f digits 2)     @result{} "-12.3456789"
+(format-flonum #f digits 3)     @result{} "-123.456789"
+(format-flonum #f digits 8)     @result{} "-12345678.9"
+(format-flonum #f digits 9)     @result{} "-123456789.0"
+(format-flonum #f digits 10)    @result{} "-1.23456789e9"
+
+(format-flonum #f digits -1)    @result{} "-0.0123456789"
+(format-flonum #f digits -2)    @result{} "-0.00123456789"
+(format-flonum #f digits -3)    @result{} "-0.000123456789"
+(format-flonum #f digits -4)    @result{} "-1.23456789e-5"
+@end example
+@end defun
+
+@c page
+@node flonum parse
+@section Parsing flonums
+
+
+@cindex Library @library{vicare flonum-parser}
+@cindex @library{vicare flonum-parser}, library
+
+
+The following bindings are exported by the library @library{vicare
+flonum-parser}.
+
+
+@defun parse-flonum @var{flonum} @var{real-func} @var{unreal-func}
+Parse the @var{flonum} its components for string formatting.
+
+If @var{flonum} is representable as real number, apply the function
+@var{real-func} to @math{3} arguments: a boolean, true if @var{flonum}
+is positive; a list of characters representing the digits of
+@var{flonum}; a fixnum representing the exponent of @var{flonum}.
+Return the result of the application.
+
+If @var{flonum} is not representable as real number, apply the function
+@var{unreal-func} to a single argument being the string representation
+of @var{flonum}.  Return the result of the application.
+
+Notice how the arguments handed to @var{real-func} match the argument of
+@func{format-flonum} from @library{vicare flonum-formatter}.
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare flonum-parser))
+
+(parse-flonum 1.23456789
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (real #t
+    (#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9
+     #\0 #\0 #\0 #\0 #\0 #\0 #\0 #\1)
+    1)
+
+(parse-flonum 12.34e5
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (real #t (#\1 #\2 #\3 #\4) 7)
+
+(parse-flonum -12.34e5
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (real #f (#\1 #\2 #\3 #\4) 7)
+
+(parse-flonum +inf.0
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (unreal "+inf.0")
+
+(parse-flonum +nan.0
+              (lambda args (cons 'real args))
+              (lambda args (cons 'unreal args)))
+@result{} (unreal "+nan.0")
+@end example
+@end defun
+
+@c page
+@node sel
+@section Simple event loop (@sel{})
+
+
+@cindex Library @library{vicare simple-event-loop}
+@cindex @library{vicare simple-event-loop}, library
+
+
+The library @library{vicare simple-event-loop} implements an event loop
+capable of serving: file descriptors, interprocess signals, batch task
+execution.  The library is available if @value{PRJNAME} is configured
+with the @posix{} @api{} enabled.  The @sel{} makes use of the @bub{}
+@api{} for interprocess signals.
+
+When importing this library it is suggested to prefix the bindings as
+follows:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (prefix (vicare simple-event-loop) sel.))
+@end example
+
+@noindent
+in practice the @sel{} can be used only along with @library{vicare
+posix}.
+
+Exceptions raised by registered event handlers are catched with
+@func{guard} and silently discarded; it is our responsibility to handle
+errors appropriately in the handlers.
+
+
+@deffn Parameter logging
+When set to true cause debugging messages to be displayed on the current
+error port; when set to @false{} nothing happens.
+@end deffn
+
+
+@defun initialise
+@defunx finalise
+Initialise or finalise the infrastructure of @sel{}.  Prior to entering
+the loop we must call @func{initialise}.
+
+@func{initialise} calls @func{signal-bub-init} and @func{finalise} calls
+@func{signal-bub-final} from @library{vicare posix}.
+@end defun
+
+
+@defun do-one-event
+Serve all the events associated to pending received interprocess
+signals, then serve a single event from file descriptors or fragmented
+tasks.  Return @true{} if one event from file descriptors or fragmented
+tasks was served, return @false{} otherwise.
+@end defun
+
+
+@defun enter
+@defunx leave-asap
+Enter or leave the event loop.  @func{enter} starts servicing events
+from the registered event sources, indefinitely until @func{leave-asap}
+is called.
+@end defun
+
+
+@defun busy?
+Return a boolean, @true{} if at least one event source is registered.
+In this context: interprocess signals do @strong{not} count as event
+source.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Interprocess signals
+
+
+@defun receive-signal @var{signum} @var{handler}
+Register the thunk @var{handler} to be called whenever the signal
+@var{signum} is received.  Any number of handlers can be associated to a
+single signal.  Every handler is called @strong{once} and removed from
+the loop.
+@end defun
+
+
+@defun serve-interprocess-signals
+Serve all the pending events for received interprocess signals.  Return
+unspecified values.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading File descriptor events
+
+
+@sel{} can interface with both raw file descriptors and Scheme ports
+wrapping a file descriptor; other Scheme port types are not supported.
+
+
+@defun readable @var{port/fd} @var{handler}
+@defunx writable @var{port/fd} @var{handler}
+@defunx exception @var{port/fd} @var{handler}
+Register the thunk @var{handler} to be called whenever the port or file
+descriptor @var{port/fd} becomes readable, writable or receives an
+exceptional notification.  Every handler is called @strong{once} and
+removed from the loop.
+@end defun
+
+
+@defun forget-fd @var{port/fd}
+Remove all the registered handlers associated to the port or file
+descriptor @var{port/fd}.
+@end defun
+
+
+@defun do-one-fd-event
+Serve one file descriptor event, if any.  Return a boolean, @true{} if
+an event was served.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Fragmented tasks
+
+
+A @dfn{fragmented task} is a thunk performing a portion of a job.  If
+the thunk returns @false{}: the job is finished.  If the thunk returns a
+procedure: a portion of job was finished and the returned procedure is a
+thunk to call to execute the next portion.
+
+
+@defun task-fragment @var{thunk}
+Register the @var{thunk} as fragment of a task.  When @var{thunk} is
+evaluated: if its return value is a procedure, that procedure is
+automatically registered as task fragment.
+@end defun
+
+
+@defun do-one-task-event
+Evaluate one task event, if any.  Return a boolean, @true{} if a task
+was run.
+@end defun
+
+@c page
+@node infix
+@section Infix to prefix transformer
+
+
+@cindex Library @library{vicare infix}
+@cindex @library{vicare infix}, library
+
+
+The library @library{vicare infix} provides the @func{infix} macro which
+converts the traditional infix notation for expressions to the
+equivalent Scheme's prefix notation.
+
+To use the library just import @library{vicare infix} and use the
+@func{infix} macro: it expands to a prefix expression to be evaluated at
+runtime, in the lexical context of the macro use; as a special case
+@code{(infix)} is equivalent to @code{(values)}.
+
+The macro allows us to evaluate forms like:
+
+@example
+(let ((a 1) (b 2) (c 3))
+
+  (infix cos (a) * tan (b) / c)
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix (cos (a) * tan (b) / c))
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix a ? b : c)
+  @expansion{} (if a b c)
+
+ #f)
+@end example
+
+Some interpretation rules:
+
+@itemize
+@item
+Any Scheme value can be element of the input form.
+
+@item
+The following infix operators are supported; in order of descending
+precedence from top to bottom, operators on the same line have equal
+precedence:
+
+@example
+bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+bitwise-not
+bitwise-and bitwise-ior bitwise-xor
+incr! decr!
+(unary +) (unary -)
+expt
+mod mod0
+* / div div0
++ -
+< > <= >= = eq? eqv? equal?
+not
+and or xor
+@end example
+
+@noindent
+remember that the Scheme comparison operators are meant to return a
+boolean value, rather than a number object.
+
+@item
+All the operators are left--associative with the exception of
+@func{expt} which is right--associative and of the unary @func{+},
+@func{-}, @func{incr!}, @func{decr!}, @func{not} and @func{bitwise-not}
+which are non--associative:
+
+@example
+;; left-associative
+(infix 10 - 5 - 3) @expansion{} (- (- 10 5) 3)
+(infix 10 - 5 - 3) @expansion{} (- 10 5 3)
+(infix 10 / 5 / 3) @expansion{} (/ (/ 10 5) 3)
+(infix 10 / 5 / 3) @expansion{} (/ 10 5 3)
+
+;; right-associative
+(infix 10 expt 5 expt 3) @expansion{} (expt 10 (expt 5 3))
+@end example
+
+@item
+The following operators for fixnums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fx+               fx-
+fx*
+fxdiv             fxdiv0
+fxmod             fxmod0
+fx<?              fx>?
+fx<=?             fx>=?
+fx=?
+
+fxand             fxior
+fxxor             fxnot
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+All the operators are left-associative with the exception of FXNOT which
+is non-associative:
+
+@example
+(infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
+(infix 10 fxdiv 5 fxdiv 3) @expansion{} (fxdiv (fxdiv 10 5) 3)
+@end example
+
+@item
+The following operators for flonums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fl+               fl-
+fl*               fl/
+flexpt
+fl<?              fl>?
+fl<=?             fl>=?
+fl=?
+@end example
+
+All the operators are left--associative with the exception of
+@func{flexpt} which is right--associative:
+
+@example
+;; left-associative
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- (fl- 10. 5.) 3.))
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- 10. 5. 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ (fl/ 10. 5.) 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ 10. 5. 3.))
+
+;; right-associative
+(infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
+(infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
+@end example
+
+@item
+@func{incr!} and @func{decr!} are unary operators that can be applied to
+expressions both in prefix and suffix positions.  @library{vicare infix}
+exports the identifiers @func{++} and @func{--} as aliases for
+@func{incr!} and @func{decr!}; such aliases are invalid in @code{#!r6rs}
+mode, but are allowed by the reader when in @code{#!vicare} mode.
+
+When applied in prefix position to an identifier, @func{incr!} expands
+to:
+
+@example
+(infix incr! ?id) @expansion{} (begin (set! ?id (+ ?id 1)) ?id)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix decr! ?id) @expansion{} (begin (set! ?id (- ?id 1)) ?id)
+@end example
+
+When applied in suffix position to an identifier, @func{incr!} expands
+to:
+
+@example
+(infix ?id incr!) @expansion{} (let ((v ?id)) (set! ?id (+ ?id 1)) v)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix ?id decr!) @expansion{} (let ((v ?id)) (set! ?id (- ?id 1)) v)
+@end example
+
+When applied to a non--identifier expression, both in prefix and suffix
+position, @func{incr!} expands to:
+
+@example
+(infix incr! ?expr) @expansion{} (+ ?expr 1)
+(infix ?expr incr!) @expansion{} (+ ?expr 1)
+@end example
+
+@noindent
+and @func{decr!} expands to:
+
+@example
+(infix decr! ?expr) @expansion{} (- ?expr 1)
+(infix ?expr decr!) @expansion{} (- ?expr 1)
+@end example
+
+@item
+The if-then-else statement involves the identifiers @func{?}  and
+@func{:}.  This statement has the least precedence of all.
+
+@item
+Identifiers which are not operators are interpreted as variable
+references; if an identifier is followed by a list, it is a function
+call.
+
+@item
+Function calls with one or more arguments require the arguments to be
+grouped in a list; there is no special separator in the list of
+arguments.
+
+@example
+(define (fun a b c)
+  (+ a b c))
+
+(infix fun (1 2 3)) @expansion{} (fun 1 2 3)
+@end example
+
+Notice that grouping the function arguments in a list is a requirement
+of the infix expression grammar.
+
+@item
+Numbers and all the other values are just put there as operands.
+
+@item
+As a special exception: the binding @func{begin} from @library{vicare}
+is recognised in the input form and allows us to nest prefix--notation
+expressions.
+
+@example
+(infix (begin (+ 1 2))) @result{} 3
+
+(infix (begin
+         (let ((a 3))
+           (/ a 4))))
+@result{} 3/4
+
+(let ((a 3))
+  (infix (begin (/ a 4))))
+@result{} 3/4
+
+(let ((a 1) (b 2) (c 3))
+  (infix (1 + a ? (begin
+                    (+ 2 b))
+                : 3 + c - 4))
+  @expansion{} (if (+ 1 a)
+          (begin (+ 2 b))
+        (- (+ 3 c) 4))
+  #f)
+@end example
+
+@item
+The following binding aliases are exported by the library:
+
+@example
+and                               -> &&
+or                                -> !!
+xor                               -> ^^
+not                               -> ~~
+mod                               -> %
+bitwise-and                       -> &
+bitwise-ior                       -> !
+bitwise-xor                       -> ^
+bitwise-not                       -> ~
+bitwise-arithmetic-shift-left     -> <<
+bitwise-arithmetic-shift-right    -> >>
+fxand                             -> fx&
+fxior                             -> fx!
+fxxor                             -> fx^
+fxnot                             -> fx~
+fxarithmetic-shift-left           -> fx<<
+fxarithmetic-shift-right          -> fx>>
+@end example
+@end itemize
+
+@c page
+@node debugging
+@section Debugging facilities
+
+
+@menu
+* debugging compiler::          Inspecting the compiler internals.
+@end menu
+
+@c page
+@node debugging compiler
+@subsection Inspecting the compiler internals
+
+
+@cindex Library @library{vicare debugging compiler}
+@cindex @library{vicare debugging compiler}, library
+
+
+The following bindings are exported by the library @library{vicare
+debugging compiler}.
+
+@c end of file

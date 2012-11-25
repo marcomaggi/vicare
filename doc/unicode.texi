@@ -1,0 +1,174 @@
+@node unicode
+@appendix On Unicode and @utf{} encodings
+
+
+As required by @rnrs{6}, the Scheme implementations must support Unicode
+characters and input/output libraries must implement transcoders for
+textual ports supporting encoding and decoding between Scheme characters
+and @utf{}-8 and @utf{}-16.
+
+The mandatory starting points to learn about this stuff are the
+following (@aurl{}s last verified on Sep 9, 2011):
+
+@center @url{http://www.unicode.org/faq/utf_bom.html}
+@center @url{http://en.wikipedia.org/wiki/Universal_Character_Set}
+@center @url{http://en.wikipedia.org/wiki/Unicode}
+@center @url{http://en.wikipedia.org/wiki/Byte_order_mark}
+@center @url{http://en.wikipedia.org/wiki/UTF-8}
+@center @url{http://en.wikipedia.org/wiki/UTF-16}
+@center @url{http://en.wikipedia.org/wiki/UTF-32}
+
+@noindent
+here we give only a brief overview of the main definitions, drawing text
+from those pages.
+
+The @dfn{Universal Character Set} (@acronym{UCS}) is a standard set of
+characters upon which many character encodings are based; it contains
+abstract characters, each identified by an unambiguous name and an
+integer number called its ``code point''.
+
+@dfn{Unicode} is a computing industry standard for the consistent
+encoding, representation and handling of text expressed in most of the
+world's writing systems.
+
+@acronym{UCS} and Unicode have an identical repertoire and numbers: the
+same characters with the same numbers exist in both standards.
+@acronym{UCS} is a simple character map, Unicode adds rules for
+collation, normalization of forms, and the bidirectional algorithm for
+scripts.
+
+The Unicode Consortium, the nonprofit organization that coordinates
+Unicode's development, has the goal of eventually replacing existing
+character encoding schemes with Unicode and its standard ``Unicode
+Transformation Format'' alias ``@acronym{UCS} Transformation Format''
+(@utf{}) schemes.
+
+By convention a Unicode code point is referred to by writing @code{U+}
+followed by its hexadecimal number with at least @math{4} digits
+(@code{U+0044} is fine, @code{U+12} is not).
+
+In practice, Unicode code points are exact integers in the range
+@math{[0, @pounds{}x10FFFF]}, but outside the range
+@math{[@pounds{}xD800, @pounds{}xDFFF]} which has special meaning in
+@utf{} schemes.  A code point can be stored in @math{21} bits:
+
+@example
+(string-length (number->string #x10FFFF 2)) @result{} 21
+@end example
+
+@noindent
+@rnrs{6} defines fixnums to have at least @math{24} bits, so a fixnum is
+wide enough to hold a code point:
+
+@example
+(fixnum? #x10FFFF) @result{} #t
+@end example
+
+@noindent
+and indeed Scheme characters are a disjoint type of value holding such
+fixnums:
+
+@example
+(integer->char #x10FFFF) @result{} #\x10FFFF
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading @utf{}-8 scheme
+
+@utf{}-8 is a multioctet character encoding for Unicode which can
+represent every character in the Unicode set, that is it can represent
+every code point in the ranges @code{[0, #xD800)} and @code{(#xDFFF,
+#x10FFFF]}.
+
+A stream of @utf{}-8 encoded characters is meant to be stored octet by
+octet in fixed order (and so without the need to specify the endianness
+of words).
+
+The encoding scheme uses sequences of @math{1}, @math{2}, @math{3} or
+@math{4} octets to encode a each code point as shown in the following
+table; the first octet in a sequence has a unique bit pattern in the
+most significant bits and so it allows the determination of the sequence
+length; every octet contains a number of payload bits which must be
+concatenated (bitwise inclusive OR) to reconstruct the integer
+representation of a code point:
+
+@example
+| # of octets | 1st octet | 2nd octet | 3rd octet | 4th octet |
+|-------------+-----------+-----------+-----------+-----------|
+|     1        #b0xxxxxxx
+|     2        #b110xxxxx  #b10xxxxxx
+|     3        #b1110xxxx  #b10xxxxxx  #b10xxxxxx
+|     4        #b11110xxx  #b10xxxxxx  #b10xxxxxx  #b10xxxxxx
+
+| # of octets | # of payload bits |       hex range     |
+|-------------+-------------------+---------------------|
+|     1                         7    [#x0000,   #x007F]
+|     2                5 + 6 = 11    [#x0080,   #x07FF]
+|     3            4 + 6 + 6 = 16    [#x0800,   #xFFFF]
+|     4        3 + 6 + 6 + 6 = 21  [#x010000, #x10FFFF]
+@end example
+
+Note that octets @code{#xFE} and @code{#xFF} cannot appear in a valid
+stream of @utf{}-8 encoded characters.  The sequence of @math{3} octets
+is the one that could encode (but must not) the forbidden range
+@code{[#xD800, #xDFFF]}.
+
+The first @math{128} characters of the Unicode character set correspond
+one--to--one with @ascii{} and are encoded using a single octet with the
+same binary value as the corresponding @ascii{} character, making valid
+@ascii{} text valid @utf{}-8 encoded Unicode text as well.  Such encoded
+octets have the Most Significant Bit (@acronym{MSB}) set to zero.
+
+Although the standard does not define it, many programs start a @utf{}-8
+stream with a Byte Order Mark (@acronym{BOM}) composed of the @math{3}
+octets: @code{#xEF}, @code{#xBB}, @code{#xBF}.
+
+@c ------------------------------------------------------------
+
+@subsubheading @utf{}-16 decoding
+
+Given a 16-bit word in a @utf{}-16 stream, represented in Scheme as a
+fixnum in the range @code{[#x0000, #xFFFF]}, we can classify it on the
+following axis:
+
+@example
+0000        D7FF D800    DBFF DC00      DFFF E000       FFFF
+ |-------------||-----------||-------------||------------|
+  single word    first in     second in      single word
+  character      pair         pair           character
+@end example
+
+@noindent
+or the following logic:
+
+@example
+word in [#x0000, #xD7FF] => single word character
+word in [#xD800, #xDBFF] => first in surrogate pair
+word in [#xDC00, #xDFFF] => second in surrogate pair
+word in [#xE000, #xFFFF] => single word character
+@end example
+
+@c ------------------------------------------------------------
+
+@iso{}/@acronym{IEC} 8859-1 also known as Latin-1
+
+Latin-1 uses @math{1} octet per character.  The first @math{256} Unicode
+code points are identical to the content of Latin-1, the first
+@math{127} Latin-1 code points are identical to @ascii{}.  For an
+itroduction see:
+
+@center @url{http://en.wikipedia.org/wiki/ISO/IEC_8859-1}
+
+Latin-1 code points are identical to their octet encoding.
+
+Latin-1 code points in the range @math{[0, 127]} are identical to the
+same code points encoded in both @ascii{} and in @utf{}-8.
+
+Latin-1 code points in the range @math{[128, 255]} are
+@strong{different} from the same code points encoded in @utf{}-8.
+
+Every octet (that is: every fixnum in the range @math{[0, 255]}) can be
+interpreted as a character in Latin-1 encoding.
+
+@c end of file

@@ -1,0 +1,17 @@
+@node missing
+@appendix Missing Features
+
+
+@value{PRJNAME} does not fully conform to @rnrs{6} yet.  Although it
+implements most of @rnrs{6}'s macros and procedures, some are still
+missing.  This appendix summarizes the set of missing features and
+procedures.
+
+@itemize
+@item
+@func{number->string} does not accept the third argument (precision).
+Similarly, @func{string->number} and the reader do not recognize the
+@code{|p} notation.
+@end itemize
+
+@c end of file

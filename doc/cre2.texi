@@ -1,0 +1,230 @@
+@node cre2
+@appendix Binding to the library @cretwo{}
+
+
+@value{PRJNAME} implements an optional built in binding to the @cretwo{}
+library: a C wrapper for the @retwo{} regular expressions library from
+Google.  The Scheme @api{} is exported by the library @library{vicare
+cre2}; it is suggested to prefix the bindings at import time with
+@code{cre2}, as in the following example:
+
+@example
+(import (vicare)
+  (prefix (vicare cre2) cre2.))
+@end example
+
+@noindent
+the bindings do @strong{not} have the @code{cre2} prefix.
+
+@menu
+* cre2 version::                Version functions.
+* cre2 regexps::                Precompiled regular expressions
+                                construction.
+* cre2 options::                Matching configuration.
+* cre2 match::                  Matching regular expressions.
+@end menu
+
+@c page
+@node cre2 version
+@appendixsec Version functions
+
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun enabled?
+Return true if the binding to @cretwo{} was enabled in this
+@value{PRJNAME} process.
+@end defun
+
+
+@defun version-interface-current
+@defunx version-interface-revision
+@defunx version-interface-age
+Return a fixnum representing a component of interface version number for
+@cretwo{}.  For an explanation of interface numbers as managed by @gnu{}
+Libtool @xref{Libtool versioning, interface, Libtool's versioning
+system, libtool, Shared library support for @gnu{}}.
+@end defun
+
+@c page
+@node cre2 regexps
+@appendixsec Precompiled regular expressions construction
+
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun make-regexp @var{pattern}
+@defunx make-regexp @var{pattern} @var{opt}
+Build and return a precompiled regular expression object.  The returned
+object must be finalised with @func{delete-regexp}; this operation is
+automatically performed when the object is garbage collected.
+
+@var{pattern} must be a string or @utf{}-8 bytevector holding the
+regular expression pattern.  When used, @var{opt} must be a
+configuration options object returned by @func{make-options}.
+@end defun
+
+
+@defun delete-regexp @var{rex}
+Finalise a precompiled regular expression object releasing all the
+associated resources.  This function can be safely applied multiple
+times to the same @var{rex} object: the first time the object is
+finalised, the subsequent times nothing happens.
+@end defun
+
+
+@defun regexp? @var{obj}
+Return @true{} if @var{obj} is a precompiled regular expression object,
+return @false{} otherwise.
+@end defun
+
+@c page
+@node cre2 options
+@appendixsec Matching configuration
+
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun make-options
+Build and return a configuration option object initialised with default
+values.  The returned object must be finalised with
+@func{delete-options}; this operation is automatically performed when
+the object is garbage collected.
+@end defun
+
+
+@defun delete-options @var{opt}
+Finalise a configuration option object releasing all the associated
+resources.  This function can be safely applied multiple times to the
+same @var{opt} object: the first time the object is finalised, the
+subsequent times nothing happens.
+@end defun
+
+
+@defun options? @var{obj}
+Return @true{} if @var{obj} is a configuration options object, return
+@false{} otherwise.
+@end defun
+
+
+All the following functions are setters and getters for matching
+options; see the original documentation for details.
+
+
+@defun set-posix-syntax! @var{opt} @var{bool}
+@defunx set-longest-match! @var{opt} @var{bool}
+@defunx set-log-errors! @var{opt} @var{bool}
+@defunx set-literal! @var{opt} @var{bool}
+@defunx set-never-nl! @var{opt} @var{bool}
+@defunx set-case-sensitive! @var{opt} @var{bool}
+@defunx set-perl-classes! @var{opt} @var{bool}
+@defunx set-word-boundary! @var{opt} @var{bool}
+@defunx set-one-line! @var{opt} @var{bool}
+Configuration option setters.  @var{opt} must be configuration options
+object.  @var{bool} must be true or false.
+@end defun
+
+
+@defun posix-syntax @var{opt}
+@defunx longest-match @var{opt}
+@defunx log-errors @var{opt}
+@defunx literal @var{opt}
+@defunx never-nl @var{opt}
+@defunx case-sensitive @var{opt}
+@defunx perl-classes @var{opt}
+@defunx word-boundary @var{opt}
+@defunx one-line @var{opt}
+Configuration option setters; return @true{} if the option is set,
+@false{} otherwise.  @var{opt} must be configuration options object.
+@end defun
+
+
+@defun set-max-mem! @var{opt} @var{dimension}
+@defunx max-mem @var{opt}
+Setter and getter for the maximum memory configuration option.
+@var{opt} must be a configuration options object.  @var{dimension} must
+be a positive exact integer fitting in a platform's @code{int} C
+language data type.
+@end defun
+
+@c page
+@node cre2 match
+@appendixsec Matching regular expressions
+
+
+Basic regular expressions matching goes as follows:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare cre2) cre2.))
+
+(let ((rex (cre2.make-regexp "ciao|hello")))
+  (cre2.match rex "ciao" #f #f 'unanchored))
+@result{} #((0 . 4))
+
+(let ((rex (cre2.make-regexp "ciao|hello")))
+  (cre2.match rex "hello" #f #f 'unanchored))
+@result{} #((0 . 5))
+
+(let ((rex (cre2.make-regexp "ci(ao)|hello")))
+  (cre2.match rex "ciao" #f #f 'unanchored))
+@result{} #((0 . 4)
+     (2 . 4))
+
+(let ((rex (cre2.make-regexp "c(i(ao))|hello")))
+  (cre2.match rex "ciao" #f #f 'unanchored))
+@result{} #((0 . 4)
+     (1 . 4)
+     (2 . 4))
+@end example
+
+The following bindings are exported by the @library{vicare cre2}
+library.
+
+
+@defun match @var{rex} @var{text} @var{start} @var{end} @var{anchor}
+Match a substring of @var{text} against the regular expression object
+@var{rex}.  Return false if there is no match, else return a vector
+representing the matching portions.
+
+@var{text} must be a @utf{}-8 bytevector or a Scheme string which is
+internally transformed to a @utf{}-8 bytevector.  All the indices in
+@var{text} used by this function are relative to the
+@strong{bytevector}, not the Scheme string.  Only when the string
+contains only characters in the @ascii{} range the indices for the
+@utf{}-8 bytevector equal the indices for the string.
+
+The zero--based indices @var{start} (inclusive) and @var{end}
+(exclusive) select the range of @var{text} to be examined.  As special
+case: if @var{start} is @false{}, the start index is set to zero; if
+@var{end} is @false{}, the end index is set to the length of the
+bytevector.
+
+@var{anchor} selects the anchor point for the matching operation, it
+must be one of the symbols: @code{unanchored}, @code{start},
+@code{both}.
+
+Data about the matching groups is returned in a vector of pairs, which
+will have a number of slots equal to the number of parenthetical
+subexpressions in @var{rex} plus one.  Each pair selects a range of
+bytes in @var{text}: the car is a non--negative fixnum representing the
+inclusive start index, the cdr is a non--negative fixnum representing
+the exclusive end index.
+
+The first element of the match vector (index @math{0}) references the
+full portion of the substring of @var{text} matching the pattern; the
+second element of the match vector (index @math{1}) references the
+portion of text matching the first parenthetical subexpression, the
+third element of the match vector (index @math{2}) references the
+portion of text matching the second parenthetical subexpression; and so
+on.
+@end defun
+
+@c end of file

@@ -7,6 +7,21 @@ vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi			\
 	macros.texi			\
 	\
+	libs.texi			\
+	objects.texi			\
+	debug.texi			\
+	compiler.texi			\
+	\
+	missing.texi			\
+	building.texi			\
+	credits.texi			\
+	unicode.texi			\
+	fasl.texi			\
+	shmem.texi			\
+	binfmt.texi			\
+	cre2.texi			\
+	references.texi			\
+	\
 	srfi.texi			\
 	srfi-and-let-star.texi		\
 	srfi-args-fold.texi		\

@@ -1,0 +1,14 @@
+@node credits
+@appendix Credits for this document
+
+
+The skeleton of this document is the original ``Ikarus User's Guide'' in
+XeLaTeX format, by Abdulaziz Ghulom.  That document is available in the
+Ikarus distribution and is covered by the @gnu{} General Public License
+version 3 as published by the Free Software Foundation.  It is available
+at the following @aurl{}s:
+
+@center @url{http://www.cs.indiana.edu/~aghuloum/ikarus/}
+@center @url{https://launchpad.net/ikarus}
+
+@c end of file

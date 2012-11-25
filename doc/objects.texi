@@ -1,0 +1,4769 @@
+@node objects
+@chapter Built in Scheme objects
+
+
+Built in Scheme objects are mostly implemented in the C language portion
+of the source code, but many core operations are also reimplemented at
+the Scheme level.  The overall definitions are in the C language file
+@file{vicare.h} (for the public @api{}) the C language file
+@file{internal.h} (for the private @api{}) and the definition of many
+values is duplicated in the Scheme language compiler
+@file{ikarus.compiler.sls}.
+
+@menu
+* objects types::               Some basic type definitions.
+* objects refs::                Builtin objects and tags.
+* objects memory::              Memory allocation and collection.
+* objects booleans::            Boolean objects.
+* objects fixnums::             Fixnum objects.
+* objects pairs::               Pair objects and lists.
+* objects bytevectors::         Bytevector objects.
+* objects vectors::             Vector objects.
+* objects structs::             Struct objects.
+* objects chars::               Character objects.
+* objects strings::             String objects.
+* objects symbols::             Symbol objects.
+* objects bignums::             Bignum objects.
+* objects integers::            Exact integer objects.
+* objects ratnums::             Ratnum objects.
+* objects flonums::             Flonum objects.
+* objects compnums::            Compnum objects.
+* objects cflonums::            Cflonum objects.
+* objects ports::               Port objects.
+* objects transcoders::         Transcoder objects.
+* objects pointers::            Pointer objects.
+* objects tcbuckets::           Components for hashtables.
+* objects codes::               Code objects.
+* objects closures::            Closure objects.
+* objects continuations::       Continuation objects.
+* objects misc::                Miscellaneous functions and
+                                preprocessor macros.
+* objects callbacks::           Notes on calling Scheme code from C.
+@end menu
+
+@c page
+@node objects types
+@section Some basic type definitions
+
+
+@deftp Typedef ik_int
+An alias for @code{signed int}.
+@end deftp
+
+
+@deftp Typedef ik_long
+An alias for @code{signed long}.
+@end deftp
+
+
+@deftp Typedef ik_llong
+An alias for @code{signed long long}.
+@end deftp
+
+
+@deftp Typedef ik_uint
+An alias for @code{unsigned int}.
+@end deftp
+
+
+@deftp Typedef ik_ulong
+An alias for @code{unsigned long}.
+@end deftp
+
+
+@deftp Typedef ik_ullong
+An alias for @code{unsigned long long}.
+@end deftp
+
+@c page
+@node objects refs
+@section Built in object references
+
+
+Values of type @ikptr{} at the C language level are the ones we move
+around as arguments and return values at the Scheme level; they
+represent machine words.  @ikptr{} values have two major
+interpretations:
+
+@table @strong
+@item Immediate values
+Objects that fit in a single machine word: special constants, fixnums,
+characters and input/output port transcoders.
+
+@item Reference values
+Objects allocated on the heap and subject to garbage collection; they
+are represented by tagged pointers: symbols, pairs, vectors,
+bytevectors, structures, ports, bignums, ratnums, flonums, compnums,
+cflonums, strings, closures, continuations, codes, pointers.
+@end table
+
+@noindent
+immediate @ikptr{} values have two minor interpretations:
+
+@table @strong
+@item Immediate special constants
+These are @true{}, @false{}, nil, void, unbound, @acronym{BWP}.
+
+@item Immediate variable values
+These are fixnums, characters and transcoders.
+@end table
+
+@noindent
+reference @ikptr{} values have two minor interpretations:
+
+@table @strong
+@item Vector tagged references
+Memory pointer values whose @math{3} least significant bits are set to
+the vector tag.  They reference multiword objects allocated on the heap:
+vectors, bignums, structures, flonums, ratnums, compnums, cflonums,
+continuations, code, ports, symbols, pointers.
+
+@item Specially tagged references
+Pointer values whose @math{3} least significant bits are set to a
+type--specific tag.  They reference multiword objects allocated on the
+heap: pairs, bytevectors, closures, strings.
+@end table
+
+
+@deftp {Object Reference} ikptr
+An immediate built in object or a reference to a built in object;
+implemented as an @code{unsigned long int} it is meant to be the size of
+a machine word.  The definition assumes that:
+
+@itemize
+@item
+On 32-bit platforms, @code{unsigned long int} is a 32-bit value.
+
+@item
+On 64-bit platforms, @code{unsigned long int} is a 64-bit value.
+
+@item
+The type @code{unsigned long int} is big enough to hold a pointer for
+the underlying platform.
+@end itemize
+@end deftp
+
+
+@deftypefn {Preprocessor Macro} int IK_TAGOF (ikptr @var{ref})
+Return an integer representing the @math{3} least significant bits of an
+@ikptr{} value.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_REF (ikptr @var{value_ref}, long @var{byte_offset})
+@deftypefnx {Preprocessor Macro} ikptr ref (ikptr @var{value_ref}, long @var{byte_offset})
+Getter and setter for machine words.  Interpret @var{value_ref} as a
+pointer to an array of @ikptr{} values and locate the value at the
+zero--based @var{byte_offset}.  A use of this macro can appear both as
+operand and as left--side of an assignment.
+
+@example
+ikptr   P, Q;
+
+Q = IK_REF(P, 2*wordsize); /* retrieve the 3rd word */
+IK_REF(P, 0) = 123L;       /* store a value in the 1st word */
+@end example
+
+Both @var{value_ref} and @var{byte_offset} are first cast to @code{long}
+values, then added and the sum is cast to @code{ikptr *}.
+
+There are two categories of values for @var{byte_offset}: offsets and
+displacements; both are usually precomputed at compile time and are
+predefined for the built in Scheme values.
+
+@table @dfn
+@item Displacements
+They are plain numbers of bytes to be added to an @strong{untagged}
+pointer to obtain the memory address of a machine word.
+
+@item Offsets
+They are number of bytes from which a Scheme value's tag is subtracted:
+adding an offset to a @strong{tagged} pointer removes the tag and
+computes the memory address of a machine word, in a single step.
+@end table
+
+Given an @strong{untagged} pointer to a vector, the fixnum representing
+the length of the vector can be obtained with:
+
+@example
+ikptr   p_vector = ...;
+ikptr   s_length = IK_REF(p_vector, disp_vector_length);
+@end example
+
+@noindent
+predefined displacements have names prefixed with @code{disp_}; given a
+@strong{tagged} pointer to a vector, the fixnum representing the length
+of the vector can be obtained with:
+
+@example
+ikptr   s_vector = ...;
+ikptr   s_length = IK_REF(s_vector, off_vector_length);
+@end example
+
+@noindent
+predefined offsets have names prefixed with @code{off_}.  An offset can
+be computed from a displacement simply by subtracting the tag:
+
+@example
+off_vector_length = disp_vector_length - vector_tag
+@end example
+
+@noindent
+this because we can build a tagged pointer from an untagged and aligned
+one with:
+
+@example
+s_vector = p_vector | vector_tag = p_vector + vector_tag
+@end example
+
+@noindent
+and vice versa we can compute an untagged pointer from a tagged one
+with:
+
+@example
+p_vector = s_vector - vector_tag
+@end example
+
+@noindent
+and so:
+
+@example
+s_vector + off_vector_length = p_vector + disp_vector_length
+@end example
+
+@quotation
+@strong{NOTE} @cfunc{ref} is defined only in the internal header file
+and its use is deprecated.
+@end quotation
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Immediate values
+
+All the immediate values but fixnums have the @math{3} least significant
+bits set to @math{1}; to distinguish between immediate values and
+references we can do:
+
+@example
+ikptr   X;
+
+if (IK_IS_FIXNUM(X) || (immediate_tag == IK_TAGOF(X)))
+  it_is_immediate();
+else
+  it_is_not();
+@end example
+
+@noindent
+where:
+
+@example
+immediate_tag = 7 = #b111
+@end example
+
+
+@defmac IK_FALSE_OBJECT 0x2F
+@defmacx IK_FALSE
+@defmacx IK_TRUE_OBJECT 0x3F
+@defmacx IK_TRUE
+@defmacx IK_NULL_OBJECT 0x4F
+@defmacx IK_NULL
+@defmacx IK_EOF_OBJECT 0x5F
+@defmacx IK_EOF
+@defmacx IK_VOID_OBJECT 0x7F
+@defmacx IK_VOID
+Special machine words of type @ikptr{} representing, respectively:
+@false{}; @true{}; nil, the empty list; @eof{}, the end of file;
+@void{}, the return value of functions returning no value.
+@end defmac
+
+
+@defmac IK_UNBOUND_OBJECT 0x6F
+@defmacx IK_UNBOUND
+Special machine word value stored in the @code{value} and @code{proc}
+fields of Scheme symbol memory blocks to signal that these fields are
+unset.
+@end defmac
+
+
+@defmac IK_BWP_OBJECT 0x8F
+@defmacx IK_BWP
+Special machine word value stored in locations that used to hold weak
+references to values which have been already garbage collected.
+@end defmac
+
+The variable values that fit in a single machine word are fixnums,
+characters and port transcoders.  The last byte of these machine words
+is tagged as follows:
+
+@example
+   object      |  tag bits  | tag hex | mask bits
+---------------+------------+---------+------------
+fixnums 32-bit | #b??????00 |   --    | #b00000011
+fixnums 64-bit | #b?????000 |   --    | #b00000111
+characters     | #b00001111 |  #x0F   | #b11111111
+transcoders    | #b01111111 |  #x7F   | #b11111111
+@end example
+
+@noindent
+to identify a fixnum we can do:
+
+@example
+ikptr   X;
+
+if (fx_tag == (X & fx_mask))
+  it_is_a_fixnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+or just use the macro @cfunc{IK_IS_FIXNUM}; similarly for for the other
+immediate variable values.
+
+Notice that a @cnull{} pointer stored in a @ikptr{} with zero bits as
+tag represents the fixnum zero; also, the zero tag bits for fixnums are
+in such a number that: a tagged @ikptr{} fixnum can be interpreted as
+the number of bytes needed to hold a number of machine words equal to
+the number represented by the fixnum itself, that is the following holds
+true:
+
+@example
+long    number_of_words = ...;
+
+number_of_words * wordsize == number_of_words << fx_shift;
+@end example
+
+@noindent
+where @code{fx_shift} is the number of bits in the fixnum's tag.
+
+@c ------------------------------------------------------------
+
+@subsubheading Values allocated on the heap
+
+The values that do not fit into a single machine word are composed of a
+reference machine word and an array of machine words on the heap; they
+are: symbols, pairs, vectors, bytevectors, structures, ports, bignums,
+ratnums, flonums, compnums, cflonums, strings, closures, continuations,
+codes, pointers.
+
+The machine words used as reference have the @math{3} least significant
+bits used as tag and the remaining most significant bits used to store a
+pointer in memory; on 32-bit platforms the layout of such machine words
+is:
+
+@example
+ PPPPPPPP PPPPPPPP PPPPPPPP PPPPPTTT   P = bit of pointer
+|--------|--------|--------|--------|  T = bit of tag
+  byte 3   byte 2   byte 1   byte 0
+@end example
+
+@noindent
+the following tags are used:
+
+@example
+  object    | tag bits | tag hex | mask bits
+------------+----------+---------+------------
+pairs       |   #b001  |   #x1   | #b00000111
+bytevectors |   #b010  |   #x2   | #b00000111
+closure     |   #b011  |   #x3   | #b00000111
+vectors     |   #b101  |   #x5   | #b00000111
+strings     |   #b110  |   #x6   | #b00000111
+@end example
+
+@noindent
+notice how @strong{none} of the tags for reference words is
+@code{#b111}, which is reserved for immediate values; also notice how
+@code{#b100} must @strong{not} be used as tag, because on 32-bit
+platforms it would match the fixnums with the least significant bit set
+to zero.
+
+The vector tag is used to tag machine word references to multiple object
+types: vectors, bignums, structures, flonums, ratnums, compnums,
+cflonums, continuations, code, ports, symbols, pointers, system
+continuations.  The first word in the memory block of these types has
+the least significant bits set to a secondary tag.
+
+All the possible values for @math{3}-bit tags in reference values are
+already allocated; new object types can be added only defining a new
+secondary tag with references tagged as vector.
+
+While the @api{} defines predicates to recognise values, to identify a
+type--specific reference we can do:
+
+@example
+ikptr   X;
+
+if (pair_tag == (X & pair_mask))
+  it_is_a_pair();
+else
+  it_is_not();
+@end example
+
+@noindent
+similarly for the other types.  The vector tag acts as @dfn{primary
+tag}; a @dfn{secondary tag} is stored in the least significant bits of
+the referenced vector of words on the heap; to recognise such values we
+can do:
+
+@example
+ikptr  X;
+
+if ((vector_tag    == (X & vector_tag)) &&
+    (secondary_tag == (secondary_mask
+                       & IK_REF(X, -vector_tag))))
+  it_is();
+else
+  it_is_not();
+@end example
+
+@noindent
+where @code{secondary_tag} and @code{secondary_mask} are type--specific.
+The secondary tags and the associated masks are:
+
+@example
+   object           |  tag bits   | tag hex | tag mask
+                    |    76543210 |         |    76543210
+--------------------+-------------+---------+-------------
+vector              |  #b??????00 | fixnum  | #b00000111
+bignum              |  #b????s011 |   #x03  | #b00000111
+structure           |  #b?????101 |   #x05  | #b00000111
+flonum              |  #b00010111 |   #x17  |    --
+ratnum              |  #b00100111 |   #x27  |    --
+compnum             |  #b00110111 |   #x37  |    --
+cflonum             |  #b01000111 |   #x47  |    --
+continuation        |  #b00011111 |   #x1F  |    --
+code                |  #b00101111 |   #x2F  |    --
+port                |  #b??111111 |   #x3F  | #b00111111
+symbol              |  #b01011111 |   #x5F  |    --
+pointer             | #b100000111 |  #x107  |    --
+system continuation | #b100011111 |  #x11F  |    --
+@end example
+
+@noindent
+notice how the port secondary tag has all the @math{6} least significant
+bits set to @math{1}: no other tag must have all such bits set to
+@math{1}.  Secondary tags for new types can be allocated by selecting
+the least significant byte to @code{#x0F} and reserving a specific bit
+pattern in the most significant bytes.
+
+The only tags having an associated mask are the ones of objects storing
+additional informations in the first word of the heap vector:
+
+@table @strong
+@item Vectors
+The first word of a vector is a fixnum representing the number of
+elements.
+
+@item Bignums
+The first word uses the @math{3} least significant bits as tag, the
+@math{4}th bit representing the sign (@math{0} for positive, @math{1}
+for negative) and the remaining bits representing the number of words in
+the bignum data area.
+
+@item Structures
+The first word is tagged as vector, because the first word of a
+structure is itself a reference to a structure: the type descriptor.
+
+@item Ports
+The most significant bits of the first word are used for port
+attributes.
+@end table
+
+@c page
+@node objects memory
+@section Memory allocation and collection
+
+
+In short, memory allocation which may trigger a garbage collection is
+performed as follows:
+
+@example
+ikpcb *   pcb = ik_the_pcb();
+long int  number_of_bytes = the_number_of_bytes;
+ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
+@end example
+
+@noindent
+while memory allocation without garbage collection is performed as
+follows:
+
+@example
+ikpcb *   pcb = ik_the_pcb();
+long int  number_of_bytes = the_number_of_bytes;
+ikptr     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
+@end example
+
+@noindent
+where @code{p} is an untagged memory pointer and @code{pcb} is a pointer
+to the ``Process Control Block'' data structure.
+
+To add a tag, for example the @code{vector_tag}, to an untagged memory
+pointer we can do:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+long    len = IK_ALIGN(the_number_of_bytes);
+ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
+@end example
+
+Objects subject to garbage collection are allocated on the Scheme heap,
+which is an array of contiguous memory segments; the next object is
+allocated in the ``current segment'' of the heap:
+
+@example
+    allocated  allocated      allocated
+    block      block          block
+...|----------|--------------|--------|------...
+    ^          ^              ^        ^
+    |          |              |        |
+  pointer    pointer        pointer   pointer to
+                                      next block
+@end example
+
+@noindent
+every pointer must satisfy alignment constraints with the following
+purposes:
+
+@enumerate
+@item
+To make pointer indirection efficient for the underlying platform.
+
+@item
+To have pointer values with the @math{3} least significant bits set to
+zero, so that such bits can be used to hold an object's type tag.
+@end enumerate
+
+@noindent
+for these reasons we must always filter the requested size (in bytes)
+through the @cfunc{IK_ALIGN} macro.
+
+The @pcb{} always references a ``pointer to the next free block'' with
+alignment constraints satisfied; if we filter the requested number of
+bytes through @cfunc{IK_ALIGN}, we obtain a number of bytes which, added
+to the pointer, gives a correctly aligned pointer:
+
+@example
+uint8_t * allocated_block = (uint8_t *)pcb->allocation_pointer;
+long      requested_size  = ...;
+long      align_size      = IK_ALIGN(requested_size);
+uint8_t * next_free_block = allocated_block + align_size;
+pcb->allocation_pointer   = (ikptr)next_free_block;
+
+/* use "allocated_block" */
+
+
+            requested size
+       |.......................|
+            aligned size
+       |..........................|
+...----|--------------------------|-----------....
+        ^                          ^
+        |                          |
+      pointer to an              pointer to the
+      allocated block            next block
+@end example
+
+
+@deftypefun {ikpcb *} ik_the_pcb (void)
+Return a pointer to the current process control block.  It is rarely
+needed because when calling a C function from Scheme a pointer to the
+@pcb{} is always pushed on the C stack as last argument.
+@end deftypefun
+
+
+@deftypefn {Preprocessor Macro} {unsigned long} IK_ALIGN (unsigned long @var{number_of_bytes})
+Convert @var{number_of_bytes} to the number of bytes requested to
+satisfy pointer alignment constraints.  The aligned size is always an
+exact multiple of the underlying platform's word size (32-bit or
+64-bit); precisely: it is the smallest multiple of the wordsize which is
+greater than @var{number_of_bytes} and makes the pointer have the
+@math{3} least significant bits set to zero.
+
+This means that it is impossible to allocate less than @math{2} machine
+words.
+@ignore
+We can simulate the computation with:
+
+@example
+(import (ikarus))
+
+(define sizeof-ikptr
+  (make-parameter #f))
+
+(define (align n)
+  (let* ((wordsize      (sizeof-ikptr))
+         (wordshift     (if (= wordsize 4) 2 3))
+         (align_shift   (+ 1 wordshift))
+         (align_size    (* 2 wordsize))
+         (<<            bitwise-arithmetic-shift-left)
+         (>>            bitwise-arithmetic-shift-right))
+    (<< (>> (- (+ n align_size) 1)
+            align_shift)
+        align_shift)))
+
+(define (print-align number-of-bytes)
+  (let ((m              (align number-of-bytes))
+        (base-pointer   (expt 2 (- (* 8 (sizeof-ikptr)) 1))))
+    (printf "Number of bytes: ~a\n" number-of-bytes)
+    (printf "\tAligned number of bytes: ~a\n" m)
+    (printf "\tAllocated number of words: ~a\n" (div m (sizeof-ikptr)))
+    (if (= 4 (sizeof-ikptr))
+        (begin
+          (printf "\t                    3         2         1         0\n")
+          (printf "\t                   10987654321098765432109876543210\n"))
+      (begin
+        (printf "\t                      6         5         4         3         2         1         0\n")
+        (printf "\t                   3210987654321098765432109876543210987654321098765432109876543210\n")))
+    (printf "\tWith base pointer: ~a\n"
+            (number->string base-pointer       2))
+    (printf "\tnext pointer is:   ~a\n"
+            (number->string (+ base-pointer m) 2))))
+
+(display "32-bit platforms:\n")
+(parameterize ((sizeof-ikptr 4)) ; 32 bits platform
+  (print-align 2)
+  (print-align 4)
+  (print-align 12)
+  (print-align 17)
+  (print-align 1234))
+
+(display "64-bit platforms:\n")
+(parameterize ((sizeof-ikptr 8)) ;64 bits platform
+  (print-align 2)
+  (print-align 4)
+  (print-align 12)
+  (print-align 17)
+  (print-align 1234))
+
+(flush-output-port (current-output-port))
+@end example
+@end ignore
+@end deftypefn
+
+
+@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
+Allocate a memory block on the heap and return a reference to it as an
+@strong{untagged} pointer.  @var{pcb} must reference the process control
+block, @var{align_size} must be the requested number of bytes filtered
+through @cfunc{IK_ALIGN}.
+
+If not enough memory is available on the current heap segment: a garbage
+collection is triggered; then allocation is tried again: if it still
+fails the process is terminated with exit status @code{EXIT_FAILURE}.
+@end deftypefun
+
+
+@deftypefun ikptr ik_unsafe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
+Allocate a memory block on the Scheme heap and return a reference to it
+as an @strong{untagged} pointer.  @var{pcb} must reference the process
+control block, @var{align_size} must be the requested number of bytes
+filtered through @cfunc{IK_ALIGN}.
+
+If not enough memory is available on the current heap segment: a new
+heap segment is allocated; if such allocation fails: the process is
+terminated with exit status @code{EXIT_FAILURE}.
+
+We notice explicitly that this function @strong{does not} trigger a
+garbage collection run, so, when using it, it is not needed to register
+C pointers as garbage collection roots.
+@end deftypefun
+
+
+@deffn {Preprocessor Macro} IK_ASS (ikptr @var{left}, ikptr @var{right})
+Perform a C language assignment enforcing the order of evaluation of the
+left--side and right--side expressions.  First evaluate @var{right},
+then evaluate @var{left}, finally store the result of @var{right} in the
+lvalue resulting from evaluating @var{left}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Writing correct C language code
+
+The garbage collector considers an object ``in use'' if at least one
+reference to it is reachable from the roots of the garbage collection;
+if an @ikptr{} reference exists only in a @acronym{CPU} register or on
+the C language stack, or on the C language heap out of segments
+allocated for Scheme: the garbage collector will not see it.  This
+allows to avoid scanning the full process' stack for references to
+values, but imposes care when writing C language code.
+
+Whenever we call @cfunc{ik_safe_alloc} or a function relying on it for
+memory allocation: a garbage collection may run and Scheme objects may
+be moved from their location in memory to another memory segment; this
+renders invalid all the pointers in the @acronym{CPU} registers, on the
+C stack and the C heap.  Notice that this includes the arguments to C
+functions called from Scheme through the macro @func{foreign-call}.
+
+We must write C code with the following constraints:
+
+@itemize
+@item
+Before a call to @cfunc{ik_safe_alloc}: we must make sure that all the
+Scheme objects we are using in C code are reachable by the garbage
+collector.  This is done by registering an object as garbage collector
+root through the @code{root} fields of the @pcb{}.
+
+@item
+After a call to @cfunc{ik_safe_alloc}: we must reobtain all the pointers
+to the internals of the objects we are using.
+@end itemize
+
+To help identification of C functions and macros allocating memory: the
+ones calling @cfunc{ik_safe_alloc} are prefixed with @code{ika_} and
+@code{IKA_}; the ones calling @cfunc{ik_unsafe_alloc} are prefixed with
+@code{iku_} and @code{IKU_}.
+
+Example of @strong{correct} code: @code{s_one} is protected while
+allocating @code{s_two}:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+ikptr   s_one, s_two;
+
+s_one = ika_bytevector_alloc(pcb, 10);
+pcb->root0 = &s_one;
+@{
+  s_two = ika_bytevector_alloc(pcb, 10); /* GOOD */
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+example of @strong{wrong} code: after the second call to the allocation
+function the value in @code{s_one} may be invalid:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+ikptr   s_one, s_two;
+
+s_one = ika_bytevector_alloc(pcb, 10);
+s_two = ika_bytevector_alloc(pcb, 10);
+/* do something with "s_one" and "s_two" */ /* WRONG */
+@end example
+
+Example of @strong{correct} code: @code{s_one} is protected while
+allocating @code{s_two} and after the second allocation the pointer to
+the data area of @code{s_one} is retrieved again:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+ikptr   s_one;
+ikptr   s_two;
+char *  one;
+char *  two;
+
+s_one = ika_bytevector_alloc(pcb, 10);
+one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
+/* do something with "one" */
+pcb->root0 = &s_one;
+@{
+  s_two = ika_bytevector_alloc(pcb, 10);
+@}
+pcb->root0 = NULL;
+one   = IK_BYTEVECTOR_DATA_CHARP(s_one); /* GOOD */
+two   = IK_BYTEVECTOR_DATA_CHARP(s_two);
+/* do something with "one" and "two" */
+@end example
+
+@noindent
+example of @strong{wrong} code: after the second call to the allocation
+function the pointer to the data area of @code{s_one} may be invalid:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+ikptr   s_one;
+ikptr   s_two;
+char *  one;
+char *  two;
+
+s_one = ika_bytevector_alloc(pcb, 10);
+one   = IK_BYTEVECTOR_DATA_CHARP(s_one);
+/* do something with "one" */
+pcb->root0 = &s_one;
+@{
+  s_two = ika_bytevector_alloc(pcb, 10);
+@}
+pcb->root0 = NULL;
+two   = IK_BYTEVECTOR_DATA_CHARP(s_two);
+/* do something with "one" and "two" */ /* WRONG */
+@end example
+
+Notice that, according to the C standard Section 6.5.16 ``Assignment
+operators'': the order of evaluation of the operands is
+unspecified@footnote{For an introduction to such problems see
+@urldate{Jan 12, 2012}:
+
+@center @url{http://en.wikipedia.org/wiki/Sequence_point}
+}.  In the following code:
+
+@example
+IK_CAR(s_pair) = ika_bytevector_alloc(pcb, 8); /* WRONG */
+@end example
+
+@noindent
+the left--side expression may be evaluated before the right--side one,
+resulting in the value referenced by @code{s_pair} to be invalid when
+the memory assigment actually takes place; so we have to code:
+
+@example
+ikptr   s_tmp;
+s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
+IK_CAR(s_pair) = s_tmp;
+@end example
+
+@noindent
+or:
+
+@example
+IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
+@end example
+
+@noindent
+yes, it is a hard life.
+
+Let's consider the following snippet, which is @strong{wrong}:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+ikptr   s_one, s_two;
+
+s_one = IKA_PAIR_ALLOC(pcb); /* WRONG */
+pcb->root0 = &s_one;
+@{
+  s_two = IKA_PAIR_ALLOC(pcb);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+when the second pair is allocated, the first pair has car and cdr still
+uninitialised: the content of these words is undefined; this may cause
+undefined behaviour while the second allocation takes place and the
+garbage collection tries to scan the first pair.  The @strong{correct}
+code is:
+
+@example
+ikpcb * pcb = ik_the_pcb();
+ikptr   s_one, s_two;
+
+s_one = ika_pair_alloc(pcb); /* GOOD */
+pcb->root0 = &s_one;
+@{
+  s_two = IKA_PAIR_ALLOC(pcb);
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+because @cfunc{ika_pair_alloc} initialises the car and the cdr.
+
+@c page
+@node objects booleans
+@section Boolean objects
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_BOOLEAN (ikptr @var{obj})
+If @var{obj} is @code{IK_FALSE} or @code{IK_TRUE} return true, else
+return zero.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_BOOLEAN_TO_INT (ikptr @var{obj})
+If @var{obj} is @code{IK_FALSE} return @code{0}, else return @code{1}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_BOOLEAN_FROM_INT (int @var{val})
+If @var{val} is @code{0} return @code{IK_FALSE}, else return
+@code{IK_TRUE}.
+@end deftypefn
+
+@c page
+@node objects fixnums
+@section Fixnum objects
+
+
+Fixnums are ``small'' exact integers which fit in a single machine word:
+if the word size is @math{4}, @math{30} bits are used for fixnum
+representation; else the word size is @math{8} and @math{61} bits are
+used for fixnum representation.  On a 32-bit platform, @math{30} bits
+are available to store the number:
+
+@example
+(greatest-fixnum)       @result{} +536870911
+(expt 2 29)             @result{} +536870912
+(- (expt 2 29) 1)       @result{} +536870911
+
+(least-fixnum)          @result{} -536870912
+(- (expt 2 29))         @result{} -536870912
+@end example
+
+@itemize
+@item
+With machine words 32-bit wide, which means the word size is @math{4}
+bytes, the representation of a fixnum is:
+
+@example
+ 30 bits fixnum representation
+      |........................|00
+
+      |-----|-----|-----|------+--|
+       byte3 byte2 byte1   byte0
+@end example
+
+@noindent
+the two least significant bits are set to zero: this ``tags'' the
+machine words which embed fixnums.
+
+@item
+With machine words 64-bit wide, which means the word size is @math{8}
+bytes, the representation of a fixnum is:
+
+@example
+         61 bits fixnum representation
+|...............................................|000
+
+|-----|-----|-----|-----|-----|-----|-----|-----+---|
+ byte7 byte6 byte5 byte4 byte3 byte2 byte1  byte0
+@end example
+
+@noindent
+the three least significant bits are set to zero: this ``tags'' the
+machine words which embed fixnums.
+@end itemize
+
+The fixnums tag is @code{00} on 32-bit platforms and @code{000} on
+64-bit platforms; given the symbols:
+
+@table @code
+@item fx_shift
+Set to the number of bits in the tag.
+
+@item fx_scale
+Set to the number of bytes in a machine word.
+@end table
+
+@noindent
+the value is selected in such a way that:
+
+@example
+length_in_bytes = number_of_words *  fx_scale
+                = number_of_words *  wordsize
+                = number_of_words << fx_shift
+@end example
+
+@noindent
+this allows us, for example, to take the fixnum representing the number
+of items in a vector and consider it directly as size of the vector's
+data area in bytes.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Given an exact integer stored in a @code{long} value with the right
+amount of bits, we encode a fixnum as follows:
+
+@example
+long    the_value  = ...;
+ikptr   the_fixnum = (ikptr)(the_value << fx_shift);
+@end example
+
+@noindent
+and we decode it as follows:
+
+@example
+ikptr   the_fixnum = ...;
+long    the_value  = (long)(the_fixnum >> fx_shift);
+@end example
+
+@noindent
+to verify if a @code{ikptr} is a fixnum we do:
+
+@example
+ikptr   the_fixnum = ...;
+
+if (fx_tag == ((long)the_fixnum & fx_mask))
+  it_is_a_fixnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+it is better to use the convenience macros described below.
+
+
+@defmac fx_tag 0
+The fixnums tag.
+@end defmac
+
+
+@defmac fx_shift
+The number of bits in the fixnums tag.  It is the amount of bits we have
+to left--shift a machine word to encode its value as fixnum.
+@end defmac
+
+
+@defmac fx_mask
+Bit mask used to isolate the tag bits of a fixnum.
+@end defmac
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+Examples:
+
+@example
+long int  N = 123L;
+ikptr     P = IK_FIX(N);
+long int  M = IK_UNFIX(P);
+@end example
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_FIX (@var{num})
+@deftypefnx {Preprocessor Macro} ikptr fix (@var{num})
+Convert a small exact integer in the correct range for a fixnum, into a
+@ikptr{} value.  @var{num} is cast to @code{long int}.
+
+@quotation
+@strong{NOTE} The macro @func{fix} is defined only in the internal
+header file and its usage is deprecated.
+@end quotation
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_UNFIX (ikptr @var{ref})
+@deftypefnx {Preprocessor Macro} long unfix (ikptr @var{ref})
+Convert an @ikptr{} value holding a fixnum into a fixnum of type
+@code{long int}.
+
+@quotation
+@strong{NOTE} The macro @func{unfix} is defined only in the internal
+header file and its usage is deprecated.
+@end quotation
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_FIXNUM (ikptr @var{ref})
+Expand to true if @var{ref} is an @ikptr{} embedding a fixnum.  It
+just tests if the least significant bits in the tag are set to zero.
+@end deftypefn
+
+@c page
+@node objects pairs
+@section Pair objects and lists
+
+
+A pair is a fixed--length block of memory composed of two machine words;
+the @math{3} least significant bits of an @ikptr{} reference to a pair
+are the pair tag.
+
+@example
+|-------------------------|-------------| reference to pair
+      heap pointer           pair tag
+
+|-------------------|-------------------| pair memory block
+    word 0 = car        word 1 = cdr
+@end example
+
+The empty list is not a pair: it is a special constant fitting in a
+single @ikptr{} machine word, and it is defined by the preprocessor
+symbol @code{IK_NULL_OBJECT}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Pairs are allocated as follows, leaving the car and cdr uninitialised:
+
+@example
+ikpcb *  pcb = ik_the_pcb();
+ikptr    s_pair;
+
+s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
+@end example
+
+@noindent
+the car and cdr of a pair are extracted as follows:
+
+@example
+ikptr   s_pair = ...;
+ikptr   s_car, s_cdr;
+
+s_car = IK_REF(s_pair, off_car);
+s_cdr = IK_REF(s_pair, off_cdr);
+@end example
+
+@noindent
+or as follows:
+
+@example
+ikptr   s_pair = ...;
+ikptr   s_car, s_cdr;
+
+s_car = IK_CAR(s_pair);
+s_cdr = IK_CDR(s_pair);
+@end example
+
+@noindent
+the car and cdr of a pair are set as follows:
+
+@example
+ikptr   s_pair = ...;
+ikptr   s_car  = ...;
+ikptr   s_cdr  = ...;
+
+IK_REF(s_pair, off_car) = s_car;
+IK_REF(s_pair, off_cdr) = s_car;
+@end example
+
+@noindent
+or as follows:
+
+@example
+ikptr   s_pair = ...;
+ikptr   s_car  = ...;
+ikptr   s_cdr  = ...;
+
+IK_CAR(s_pair) = s_car;
+IK_CDR(s_pair) = s_car;
+@end example
+
+
+@defvr {Preprocessor Symbol} pair_mask
+@defvrx {Preprocessor Symbol} pair_tag
+@defvrx {Preprocessor Symbol} pair_size
+@code{pair_mask} is the bit pattern used to isolate a pair tag from a
+reference @ikptr{}; @code{pair_tag} is the tag of @ikptr{} values
+referencing a pair; @code{pair_size} is the number of bytes in a pair
+memory block on the heap.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_car
+@defvrx {Preprocessor Symbol} disp_cdr
+@defvrx {Preprocessor Symbol} off_car
+@defvrx {Preprocessor Symbol} off_cdr
+@code{disp_car} and @code{disp_cdr} are the offsets in bytes of the car
+and cdr from the beginning of a pair memory block; @code{off_car} and
+@code{off_cdr} are integers to be added to a reference @ikptr{} tagged
+as pair to retrieve the car and the cdr from a pair memory block.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_PAIR (ikptr @var{X})
+Evaluate to true if the machine word @var{X} is tagged as pair.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IKA_PAIR_ALLOC (ikpcb * @var{pcb})
+Allocate a new pair object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The pair words are left @strong{uninitialised}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IKU_PAIR_ALLOC (ikpcb * @var{pcb})
+Allocate a new pair object using @cfunc{ik_unsafe_alloc} and return a
+tagged reference to it.  The pair words are left @strong{uninitialised}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CAR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CDR (ikptr @var{pair})
+Evaluate to the locations of the car and cdr of a pair; uses of these
+macros can appear both as operands and as left--side of assignments.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CAAR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CDAR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CADR (ikptr @var{pair})
+@deftypefnx {Preprocessor Macro} ikptr IK_CDDR (ikptr @var{pair})
+Return, respectively: the car of the car, the cdr of the car, the car of
+the cdr, the cdr of the cdr.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on pairs and lists
+
+
+@deftypefun ikptr ika_pair_alloc (ikpcb * @var{pcb})
+@deftypefunx ikptr iku_pair_alloc (ikpcb * @var{pcb})
+Allocate and return a new pair object using, respectively,
+@cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
+reference to it.  Both the car and cdr are initialised to
+@code{IK_VOID_OBJECT}.
+@end deftypefun
+
+
+@deftypefun long ik_list_length (ikptr @var{list})
+Return the length of the proper list referenced by @var{list}.  Do not
+handle circular lists.  If the length exceeds @code{LONG_MAX}: terminate
+the process with @cfunc{ik_abort}.
+@end deftypefun
+
+
+@deftypefun void ik_list_to_argv (ikptr @var{list}, char ** @var{argv})
+Given a reference @var{list} to a proper list of bytevectors, fill
+@var{argv} with pointers to the data areas, setting the last element of
+@var{argv} to @cnull{}.  The array referenced by @var{argv} must be wide
+enough to hold all the pointers from @var{list} plus the terminating
+@cnull{}.
+@end deftypefun
+
+
+@deftypefun void ik_list_to_argv_and_argc (ikptr @var{list}, char ** @var{argv}, long * @var{argc})
+Given a reference @var{list} to a proper list of bytevectors: fill
+@var{argv} with pointers to the data areas, setting the last element of
+@var{argv} to @cnull{}; fill @var{argc} with the lengths of the
+bytevectors.  The array referenced by @var{argv} must be wide enough to
+hold all the pointers from @var{list} plus the terminating @cnull{}; the
+array referenced by @var{argc} must be wide enough to hold all the
+lengths.
+@end deftypefun
+
+
+@deftypefun ikptr ika_list_from_argv (ikpcb * @var{pcb}, char ** @var{argv})
+Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
+strings build and return a list of bytevectors holding a copy of the
+@asciiz{} strings.  Make use of @code{pcb->root8} and @code{pcb->root9}.
+@end deftypefun
+
+
+@deftypefun ikptr ika_list_from_argv_and_argc (ikpcb * @var{pcb}, char ** @var{argv}, int @var{argc})
+Given a pointer @var{argv} to an array of @asciiz{} strings holding
+@var{argc} pointers: build and return a list of bytevectors holding a
+copy of the @asciiz{} strings.  Make use of @code{pcb->root8} and
+@code{pcb->root9}.
+@end deftypefun
+
+@c ------------------------------------------------------------
+
+@subsubheading Pairs and lists code examples
+
+The suggested general way to allocate and initialise a pair is as
+follows:
+
+@example
+ikpcb * pcb    = ik_the_pcb();
+ikptr   s_pair = ika_pair_alloc(pcb);
+
+pcb->root0 = &s_pair;
+@{
+  IK_ASS(IK_CAR(s_pair), allocate_and_build_the_car(pcb));
+  IK_ASS(IK_CDR(s_pair), allocate_and_build_the_cdr(pcb));
+@}
+pcb->root0 = NULL;
+@end example
+
+@noindent
+notice how we take care of allocating the new pair with a function that
+initialises the component words and of registering the pair as garbage
+collection root before calling the constructors for the car and cdr.
+
+If the component words do not need memory allocation, for example
+because they are fixnums or already existing objects, we can use the
+faster code:
+
+@example
+ikpcb * pcb    = ik_the_pcb();
+ikptr   s_pair = IKA_PAIR_ALLOC(pcb);
+
+IK_CAR(s_pair) = IK_FIX(123);
+IK_CDR(s_pair) = IK_FIX(456);
+@end example
+
+Let's say we need to build a list of bytevectors from @asciiz{} strings
+in the array @code{argv} and there are @code{argc} of them:
+
+@example
+ikpcb *  pcb  = ik_the_pcb();
+char **  argv = ...;
+long     argc = ...;
+ikptr    s_list;
+
+if (argc) @{
+  ikptr  s_spine;
+  long   i;
+
+  s_list = s_spine = ika_pair_alloc(pcb);
+  pcb->root0 = &s_list;
+  pcb->root1 = &s_spine;
+  @{
+    for (i=0; i<argc;) @{
+      IK_ASS(IK_CAR(s_spine),
+             ika_bytevector_from_cstring(pcb, argv[i]));
+      if (++i < argc) @{
+        IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
+        s_spine = IK_CDR(s_spine);
+      @} else @{
+        IK_CDR(s_spine) = IK_NULL_OBJECT;
+        break;
+      @}
+    @}
+  @}
+  pcb->root1 = NULL;
+  pcb->root0 = NULL;
+@} else
+  s_list = IK_NULL_OBJECT;
+
+/* make use of S_LIST */
+@end example
+
+@c page
+@node objects bytevectors
+@section Bytevector objects
+
+
+Bytevectors are blocks of memory referenced by machine words tagged as
+bytevectors.  The first word in the memory block is a fixnum
+representing the number of bytes in the data area; a bytevector is
+capable of holding at most a number of bytes equal to the return value
+of @func{greatest-fixnum}.
+
+When allocating a bytevector capable of holding @math{N} bytes, the
+actual size of the allocated data area is @math{N+1}; the additional
+last byte is not part of the data area and is perpetually set to zero.
+All @value{PRJNAME}'s functions operating on bytevectors set to zero the
+byte right after the last used one in the data area.  This last byte
+allows every bytevector to be used as @asciiz{} string at the C language
+level.
+
+To allow for the same binary layout on both 32-bit and 64-bit platforms,
+the data area starts @math{8} bytes after the beginning; on a 32-bit
+platform the layout is:
+
+@example
+  1st word   2nd word                       last byte
+|----------|----------|-------------------|-----------|
+   length     unused        data area      set to zero
+@end example
+
+@noindent
+on a 64-bit platform the layout is:
+
+@example
+       1st word                             last byte
+|---------------------|-------------------|-----------|
+       length               data area      set to zero
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Bytevector objects are fully allocated on the heap and subject to
+garbage collection; to perform the allocation we compute the whole size
+of the bytevector data area, add to it room for meta data and finally
+compute the aligned block size:
+
+@example
+ikpcb * pcb        = ik_the_pcb();
+long    bv_len     = the_number_of_bytes;
+long    block_size = disp_bytevector_data + bv_len + 1;
+lont    align_size = IK_ALIGN(block_size);
+ikptr   bv = ik_safe_alloc(pcb, align_size) | bytevector_tag;
+@end example
+
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
+aligned pointer, having the @math{3} least significant bits set to zero;
+we add to it the bytevector tag (an integer value fitting in @math{3}
+bits) which allows to recognise bytevectors among all the other built in
+objects.
+
+We have to explicitly store the bytevector length in the memory block as
+a fixnum and set the last byte to zero, so usually a full allocation
+looks like this:
+
+@example
+ikptr
+ika_bytevector_alloc (ikpcb * pcb, long bv_len)
+@{
+  long   align_size;
+  ikptr  s_bv;
+  char * data;
+  align_size = IK_ALIGN(disp_bytevector_data + bv_len + 1);
+  s_bv       = ik_safe_alloc(pcb, align_size)
+               | bytevector_tag;
+  IK_REF(s_bv, off_bytevector_length) = IK_FIX(bv_len);
+  data = (char *)(long)(s_bv + off_bytevector_data);
+  data[bv_len] = '\0';
+  return s_bv;
+@}
+@end example
+
+@noindent
+to acquire the number of bytes we do:
+
+@example
+ikptr  s_bv = the_bytevector;
+long   bv_len;
+
+bv_len = IK_UNFIX(IK_REF(s_bv, off_bytevector_length));
+@end example
+
+@noindent
+and to access the data area we do:
+
+@example
+ikptr      s_bv = the_bytevector;
+uint8_t *  data_area;
+
+data_area = (uint8_t *)(long)(s_bv + off_bytevector_data);
+@end example
+
+
+@defvr {Preprocessor Symbol} bytevector_tag
+An integer used to tag @ikptr{} references to bytevector memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_bytevector_length
+Displacement of length.  The number of bytes to add to an untagged
+pointer to bytevector to get the pointer to the first byte in the
+machine word holding the bytevector length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_bytevector_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to bytevector to get the pointer to the first byte in the data
+area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_bytevector_length
+An integer to add to a tagged @ikptr{} bytevector reference to retrieve
+the pointer to the first byte of the fixnum representing the bytevector
+length.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_bytevector_data
+An integer to add to a tagged @ikptr{} bytevector reference to retrieve
+the pointer to the first byte of the data area.
+
+Notice that on both 32-bit and 64-bit platforms: the first byte of the
+data area is at the same byte offset from the first byte of the
+bytevector memory block.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefun {Preprocessor Macro} IK_IS_BYTEVECTOR (ikptr @var{obj})
+Evaluate to true if @var{obj} is a bytevector.
+@end deftypefun
+
+
+@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_LENGTH (ikptr @var{bv})
+Return the number of bytes in the data area of @var{bv}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_BYTEVECTOR_LENGTH_FX (ikptr @var{bv})
+Return a fixnum representing the number of bytes in the data area of
+@var{bv}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_BYTEVECTOR_DATA (ikptr @var{bv})
+Return a integer representing the memory address of the first byte in
+the data area of @var{bv}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_BYTEVECTOR_DATA_VOIDP (ikptr @var{bv})
+@deftypefnx {Preprocessor Macro} {char *} IK_BYTEVECTOR_DATA_CHARP (ikptr @var{bv})
+@deftypefnx {Preprocessor Macro} {uint8_t *} IK_BYTEVECTOR_DATA_UINT8P (ikptr @var{bv})
+Return a pointer referencing the first byte in the data area of
+@var{bv}.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on bytevectors
+
+
+@deftypefun ikptr ika_bytevector_alloc (ikpcb * @var{pcb}, long @var{requested_number_of_bytes})
+Allocate, initialise and return a new bytevector capable of holding the
+specified number of bytes.  The contents of the data area are
+unspecified.  The requested bytevector length @strong{must} be in the
+range of fixnums.
+@end deftypefun
+
+
+@deftypefun ikptr ika_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+Allocate, initialise and return a new bytevector and copy the contents
+of the @asciiz{} string referenced by @var{cstr} in the data area.
+
+@strong{NOTE} If the string length is greater than the maximum positive
+fixnum: the string is @strong{silently truncated} to a length equal to
+the maximum positive fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ika_bytevector_from_cstring_len (ikpcb * @var{pcb}, const char * @var{cstr}, size_t @var{len})
+Allocate, initialise and return a new bytevector and copy the @var{len}
+bytes of the @ascii{} string referenced by @var{cstr} in the data area.
+
+@strong{NOTE} If the string length is greater than the maximum positive
+fixnum: the string is @strong{silently truncated} to a length equal to
+the maximum positive fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb * @var{pcb}, const void * @var{memory}, size_t @var{length})
+Allocate, initialise and return a new bytevector and copy in the data
+area @var{length} bytes from of the memory block referenced by
+@var{memory}.
+
+@strong{NOTE} If the memory block length is greater than the maximum
+positive fixnum: the block is @strong{silently truncated} to a length
+equal to the maximum positive fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ik_bytevector_from_utf16z (ikpcb * @var{pcb}, const void * @var{data});
+Build and return a new bytevector from a memory block referencing a
+@utf{}-16 string terminated with two consecutive zeros starting at even
+offset:
+
+@example
+   char      char      char      char     0    0
+|----+----|----+----|----+----|----+----|----+----|
+ byte byte byte byte byte byte byte byte byte byte
+@end example
+
+If the the end of the string is not found before the byte index reaches
+the maximum fixnum: return the false object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_bytevector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} bytes from bytevector @var{src} starting at offset
+@var{src_start}, to bytevector @var{dst} starting at offset
+@var{dst_start}; @var{src_start}, @var{dst_start} and @var{count} must
+be non--negative fixnums.  Return unspecified values.
+@end deftypefun
+
+@c page
+@node objects vectors
+@section Vector objects
+
+
+Vectors are variable length blocks of memory referenced by machine words
+tagged as vectors.  The first machine word of a vector block contains a
+fixnum representing the vector length; this means that the first word of
+a vector is tagged as a fixnum.
+
+@example
+|------------------------|-------------| reference to vector
+      heap pointer         vector tag
+
+|------------------------|-------------| vector first word
+     number of words       fixnum tag
+@end example
+
+After the length machine word comes the data area: an array of machine
+words, one for each vector slot; slot indexes are zero--based.
+
+@example
+      0   1   2   3   4   5   6   7
+|---|---|---|---|---|---|---|---|---| vector memory block
+  ^ |...............................|
+  |        slots = data area
+length
+fixnum
+@end example
+
+A vector is capable of holding at most a number of values equal to the
+return value of @func{greatest-fixnum}.  The fixnum representing the
+vector length, interpreted as raw signed integer, also represents the
+number of bytes in the data area.
+
+A fixnum representing the index of slot N, interpreted as raw signed
+integer, also represents the offset in bytes of the firts byte of the
+slot with respect the beginning of the data area.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Vector objects are allocated on the heap; to perform the allocation we
+compute the whole size of the data area, add to it room for meta data
+and finally compute the aligned block size:
+
+@example
+ikpcb * pcb            = ik_the_pcb();
+long    length         = the_number_of_items;
+long    requested_size = wordsize * length;
+long    block_size     = disp_vector_data + requested_size;
+long    align_size     = IK_ALIGN(block_size);
+ikptr   vec = ik_safe_alloc(pcb, align_size) | vector_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the
+aligned pointer, having the @math{3} least significant bits set to zero;
+we add to it the vector tag (an integer value fitting in @math{3} bits)
+which allows to recognise vectors among all the other built in objects.
+
+We have to explicitly store the vector length in the memory block as a
+fixnum, so usually a full allocation looks like this:
+
+@example
+ikptr
+ika_vector_alloc (ikpcb * pcb, long number_of_items)
+@{
+  long  align_size;
+  ikptr s_len;
+  ikptr s_vec;
+  s_len      = IK_FIX(number_of_items);
+  align_size = IK_ALIGN(disp_vector_data + s_len);
+  s_vec      = ik_safe_alloc(pcb, align_size) | vector_tag;
+  IK_REF(s_vec, off_vector_length) = s_len;
+  return s_vec;
+@}
+@end example
+
+@noindent
+notice how we exploit the fact that the fixnum representing the number
+of elements equals the number of bytes in the data area needed to hold
+such elements.
+
+The allocation operations described above leaves the data area
+uninitialised: its content is undefined.  This is bad if the garbage
+collector moves the newly built vector before the elements are
+initialised to a correct Scheme value.  The following function resets
+the data area to a vector of zero fixnums:
+
+@example
+ikptr
+ikrt_vector_clean (ikptr s_vec)
+@{
+  ikptr	s_len = IK_VECTOR_LENGTH_FX(s_vec);
+  memset((char*)(long)(s_vec + off_vector_data), 0, s_len);
+  return s_vec;
+@}
+@end example
+
+To fill a vector of @math{3} items with fixnums we should do:
+
+@example
+ikptr  s_vec = the_vector;
+IK_REF(s_vec, off_vector_data + 0 * wordsize) = IK_FIX(10);
+IK_REF(s_vec, off_vector_data + 1 * wordsize) = IK_FIX(20);
+IK_REF(s_vec, off_vector_data + 2 * wordsize) = IK_FIX(30);
+@end example
+
+@noindent
+to retrieve the item at index @math{2} we do:
+
+@example
+ikptr  s_vec  = the_vector;
+ikptr  s_item = IK_REF(s_vec, off_vector_data + 2 * wordsize);
+@end example
+
+@noindent
+and to retrieve the vector length:
+
+@example
+ikptr  s_vec  = the_vector;
+ikptr  s_len  = IK_REF(s_vec, off_vector_length);
+long   length = IK_UNFIX(s_len);
+@end example
+
+
+@defvr {Preprocessor Symbol} vector_tag
+An integer used to tag @ikptr{} references  to vector memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_vector_length
+Displacement of length.  The number of bytes to add to an untagged
+pointer to vector to get the pointer to the first byte in the word
+holding the vector length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_vector_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to vector to get the pointer to the first byte in the data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_vector_length
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the vector length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_vector_data
+An integer to add to a tagged @ikptr{} vector reference to retrieve the
+pointer to the first byte of the data area.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_VECTOR_LENGTH_FX (ikptr @var{vec})
+Return a fixnum representing the number of items in the vector
+@var{vec}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_VECTOR_LENGTH (ikptr @var{vec})
+Return an integer representing the number of items in the vector
+@var{vec}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_ITEM (ikptr @var{vec}, long @var{idx})
+Evaluate to the item at index @var{idx} in the vector @var{vec}.  A use
+of this macro can appear both as operand and as left--side of an
+assignment; example:
+
+@example
+long    idx   = the_index;
+ikptr   s_vec = the_vector;
+ikptr   fx;
+
+IK_ITEM(s_vec, idx) = IK_FIX(10);
+fx = IK_ITEM(s_vec, idx);
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on vectors
+
+
+@deftypefun ikptr ika_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
+Allocate, initialise and return a new vector object capable of holding
+the specified number of items.  Leave the data area uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
+Allocate, initialise and return a new vector object capable of holding
+the specified number of items.  Initialise the data area so that all the
+items are set to the fixnum zero.
+@end deftypefun
+
+
+@deftypefun int ik_is_vector (ikptr @var{vec})
+Return true if @var{vec} is a reference to a vector object.  This
+predicate tests that @var{vec} is tagged as vector reference and that
+the first machine word in the referenced memory block is a fixnum.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_vector_clean (ikptr @var{vec})
+Clean the data area so that all the items are set to the fixnum
+zero.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from vector @var{src} starting at offset
+@var{src_start}, to vector @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
+@end deftypefun
+
+@c page
+@node objects structs
+@section Struct objects
+
+
+A data structure is a variable--length block of memory referenced by
+machine words tagged as vectors; the first machine word of a structure
+is a reference to its structure type descriptor (@std{}), which is
+itself a data structure; the subsequent words, if any, are the fields of
+the structure.  A block of memory is a data structure if and only if: a
+reference to it is tagged as vector and its first word is tagged as
+vector.
+
+@example
+|----------------|----------| reference to structure
+  heap pointer    vector tag
+
+|----------------|----------| first word of structure
+  heap pointer    vector tag    = reference to STD
+                                = reference to structure
+@end example
+
+The whole memory block layout of a struct with @math{5} fields is as
+follows:
+
+@example
+|-----|------|------|------|------|------|
+  STD  field0 field1 field2 field3 field4
+@end example
+
+@noindent
+fields are indexed starting at zero.
+
+The type descriptor of the type descriptors is the return value of
+@func{base-rtd} at the Scheme level and the structure referenced by the
+field @code{base_rtd} in the process control block (@pcb{}).  Such base
+type descriptor is built at @value{PRJNAME}'s startup.
+
+The graph of references for a structure and its type descriptor is as
+follows:
+
+@example
+      STD ref
+     |-------|---------------| structure instance
+         |
+  ---<---
+ |
+ |    RTD ref
+  -->|-------|---------------| struct type descriptor
+         |
+  ---<---
+ |
+ |    STD ref
+ +-->|-------|---------------| base struct type descriptor
+ |       |
+  ---<---
+@end example
+
+@noindent
+the struct type descriptor of the base struct type descriptor is the
+base type descriptor itself.
+
+About @rnrs{6} records and their types:
+
+@itemize
+@item
+An @rnrs{6} record instance is a struct instance whose first word
+references its @rnrs{6} record type descriptor (@rtd{}).
+
+@item
+An @rnrs{6} record type descriptor (@rtd{}) is a struct instance of type
+@code{<rtd>}.
+
+@item
+An @rnrs{6} record constructor descriptor is a struct instance of type
+@code{<rcd>}.
+@end itemize
+
+The graph of references for an @rnrs{6} record and its type descriptor
+is as follows:
+
+@example
+     RTD ref
+    |-------|---------------| R6RS record instance
+        |
+ ---<---
+|
+|    STD ref
+ -->|-------|---------------| R6RS record type descriptor
+        |                      = struct instance of type <rtd>
+ ---<---
+|
+|    STD ref
++-->|-------|---------------| <rtd> struct type descriptor
+        |
+ ---<---
+|
+|    STD ref
++-->|-------|---------------| base struct type descriptor
+|       |
+ ---<---
+@end example
+
+A struct type descriptor (@std{}) is a fixed--length block of memory
+composed of @math{6} machine words interpreted as follows:
+
+@enumerate
+@item
+A reference to the base @std{}.
+
+@item
+A fixnum representing the number of machine words in the structure minus
+@math{1}; this is the number of fields in the structure excluding the
+reference to the @std{}.  This value is @math{5} in the base @std{}.
+
+@item
+Scheme symbol representing the name of this structure type.
+
+@item
+Scheme list of symbols representing the names of fields in structures of
+this type.
+
+@item
+False or a reference to closure used to print to a Scheme port the
+structures of this type.  This is the @dfn{printer} function.
+
+@item
+Scheme symbol used as unique identifier for this type.
+@end enumerate
+
+Type descriptors are best defined at the Scheme level using the
+functions from the @library{vicare} library, @ref{iklib structs} for
+details.  To instantiate a structure at the C language level we should
+write a C function accepting the type descriptor as argument, and have
+the Scheme code hand the descriptor to it.  For example, at the Scheme
+level we do:
+
+@example
+(define-struct timeval
+  (tv_sec tv_usec))
+
+(define (gettimeofday)
+  (foreign-call "ikrt_posix_gettimeofday"
+                (type-descriptor timeval)))
+@end example
+
+@noindent
+and at the C level we do:
+
+@example
+ikptr
+ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
+@{
+  /* build and return an instance of "timeval" */
+@}
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Data structure objects are allocated on the heap; to perform the
+allocation we compute the whole size of the structure:
+
+@example
+ikpcb * pcb        = ik_the_pcb();
+long    num_of_fields = ...;
+long    block_size = disp_record_data +
+                     wordsize * num_of_fields;
+long    align_size = IK_ALIGN(block_size);
+ikptr   s_stru     = ik_safe_alloc(pcb, align_size) | record_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the record tag (an integer value fitting in @math{3} bits) which
+allows to recognise records among all the other built in objects.
+
+We have to explicitly store a reference to the @rtd{} in the first
+machine word of the structure, so a full allocation looks like this:
+
+@example
+ikptr
+ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
+@{
+  long	num_of_fields;
+  long  align_size;
+  ikptr s_stru;
+  num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  align_size = IK_ALIGN(disp_record_data +
+                        num_of_fields * wordsize);
+  pcb->root9 = &s_rtd;
+  @{
+    s_ stru = ik_safe_alloc(pcb, align_size) | record_tag;
+  @}
+  pcb->root9 = NULL;
+  IK_REF(s_stru, off_record_rtd) = s_rtd;
+  return s_stru;
+@}
+@end example
+
+The allocation operation described above leaves the data area
+uninitialised: its content is undefined.  This is bad if the garbage
+collector moves the newly built record before the elements are
+initialised to a correct Scheme value.
+
+To recognise an @ikptr{} value as reference to a structure we do:
+
+@example
+ikptr   R = the_value;
+
+if ((record_tag == (record_mask & R)) &&
+    (record_tag == (record_mask & IK_REF(R, off_record_rtd))))
+  it_is_a_structure();
+else
+  it_is_not();
+@end example
+
+@noindent
+structure fields are identified at the C level by a zero--based index;
+to store a value in field @math{2} of a structure we do:
+
+@example
+ikptr  s_stru  = the_structure;
+ikptr  s_field = the_field;
+
+IK_REF(s_stru, off_record_data + 2 * wordsize) = the_field;
+@end example
+
+@noindent
+and to retrieve a the value of field @math{2} we do:
+
+@example
+ikptr  s_stru  = the_structure;
+ikptr  s_field;
+
+s_field = IK_REF(s_stru, off_record_data + 2 * wordsize);
+@end example
+
+
+@defvr {Preprocessor Symbol} record_mask
+@defvrx {Preprocessor Symbol} record_tag
+Integer values used to tag and recognise @ikptr{} references to
+structures.  @code{record_mask} isolates the tag bits from an @ikptr{}
+and @code{record_tag} represents the tag bits.  These values are the
+same used for vectors.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_record_rtd
+Displacement of the @rtd{} from the beginning of a structure block.  The
+number of bytes to add to an untagged pointer to structure to get the
+pointer to the first byte in the word holding the @rtd{}.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_record_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to structure to get the pointer to the first byte of the first
+field in the data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_record_rtd
+An integer to add to a tagged @ikptr{} structure reference to retrieve
+the pointer to the first byte of the @rtd{}.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_record_data
+An integer to add to a tagged @ikptr{} structure reference to retrieve
+the pointer to the first byte of the first field of the structure.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_rtd_rtd
+Displacement of the base @rtd{} from the beginning of an @rtd{} block.
+The number of bytes to add to an untagged pointer to @rtd{} to get the
+pointer to the first byte of the reference to @rtd{}.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_rtd_name
+@defvrx {Preprocessor Symbol} disp_rtd_length
+@defvrx {Preprocessor Symbol} disp_rtd_fields
+@defvrx {Preprocessor Symbol} disp_rtd_printer
+@defvrx {Preprocessor Symbol} disp_rtd_symbol
+Displacements of the fields of an @rtd{}.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} rtd_size
+The total number of bytes in a memory block holding an @rtd{}.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_rtd_rtd
+@defvrx {Preprocessor Symbol} off_rtd_name
+@defvrx {Preprocessor Symbol} off_rtd_length
+@defvrx {Preprocessor Symbol} off_rtd_fields
+@defvrx {Preprocessor Symbol} off_rtd_printer
+@defvrx {Preprocessor Symbol} off_rtd_symbol
+Integer to add to a tagged @ikptr{} @rtd{} reference to retrieve the
+pointer to the first byte of the fields.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_FIELD (ikptr @var{stru}, @var{idx})
+Evaluate to the location of the field at zero--based index @var{idx} for
+the structure @var{stru}.  A use of this macro can appear both as
+operand and as left--side of an assignment.
+
+@example
+ikptr   s_stru = the_structure;
+ikptr   s_field;
+
+s_field = IK_FIELD(s_stru, 2);
+IK_FIELD(s_stru, 2) = s_field;
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on vectors
+
+
+@deftypefun ikptr ika_struct_alloc_no_init (ikpcb * @var{pcb}, ikptr @var{rtd})
+Allocate, initialise and return a new structure instance of type
+@var{rtd}.  The first word of the allocated block is initialised with
+@var{rtd}, the other words are left uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_struct_alloc_and_init (ikpcb * @var{pcb}, ikptr @var{rtd})
+Allocate, initialise and return a new structure instance of type
+@var{rtd}.  The first word of the allocated block is initialised with
+@var{rtd}, the other words are initialised to the fixnum zero.
+@end deftypefun
+
+
+@deftypefun int ik_is_struct (ikptr @var{R})
+Return true if @var{R} is a reference to a structure.
+@end deftypefun
+
+@c page
+@node objects chars
+@section Character objects
+
+
+A Scheme character has two representations:
+
+@itemize
+@item
+As a standalone Scheme object, it is a machine word whose least
+significant bits are set to the character tag and whose most significant
+bits are set to the character's Unicode code point.
+
+@item
+When embedded in a Scheme string, it is a 32-bit value whose least
+significant bits are set to the character tag and whose most significant
+bits are set to the character's Unicode code point.
+@end itemize
+
+@noindent
+the least significant 32 bits of the two representations are equal.
+@ref{unicode} for details on Unicode.
+
+Let's say that machine words are 32-bit values, which means the word
+size is @math{4} bytes; then the representation of a character is:
+
+@example
+|    Unicode code point    | char tag
+
+|--------|--------|--------|--------|
+  byte3    byte2    byte1    byte0
+@end example
+
+@noindent
+the least significant byte is set to @code{#x0F}: this ``tags'' the
+machine words which embed characters.  On 64-bit machines, the layout
+is:
+
+@example
+        Unused              |Unicode code point  |char tag
+|...........................|....................|......|
+
+|------|------|------|------|------|------|------|------|
+ byte7  byte6  byte5  byte4  byte3  byte2  byte1  byte0
+@end example
+
+At the Scheme level: standalone characters are moved around as @ikptr{}
+values, but when characters are stored in a string the @ikptr{} value is
+converted to a 32-bit integer of type @code{ikchar}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Standalone characters are encoded into @ikptr{} values as follows:
+
+@example
+unsigned long   unicode_code_point = the_code_point;
+ikptr           s_char;
+
+s_char = (unicode_code_point << char_shift) | char_tag;
+@end example
+
+@noindent
+decoded to @code{unsigned long} values as follows:
+
+@example
+ikptr           s_char = the_character;
+unsigned long   unicode_code_point;
+
+unicode_code_point = s_char >> char_shift;
+@end example
+
+@noindent
+and identified as follows:
+
+@example
+ikptr   X = the_value;
+
+if (char_tag == (char_mask & X))
+  it_is_a_character();
+else
+  it_is_not();
+@end example
+
+Characters from a Scheme string are decoded from @code{ikchar} to
+@code{unsigned long} as follows:
+
+@example
+ikchar          ch = the_32bit_character;
+unsigned long   unicode_code_point;
+
+unicode_code_point = s_char >> char_shift;
+@end example
+
+@noindent
+and encoded from @code{unsigned long} to @code{ikchar} as follows:
+
+@example
+unsigned long   unicode_code_point = the_code_point;
+ikchar          ch;
+
+ch = (ikchar)((unicode_code_point << char_shift) | char_tag);
+@end example
+
+
+@deftp {Type Definition} ikchar
+An alias for @code{uint32_t} used to store a Unicode code point tagged
+as character.
+@end deftp
+
+
+@defvr {Preprocessor Symbol} char_mask
+@defvrx {Preprocessor Symbol} char_tag
+Integer values used to tag and recognise @ikptr{} values representing
+characters.  @code{char_mask} isolates the tag bits from an @ikptr{} and
+@code{char_tag} represents the tag bits.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} char_shift
+Integer value representing the number of bits we must shift left to turn
+a C language @code{long} into a machine word ready to be tagged as
+Scheme character.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CHAR (ikptr @var{X})
+Evaluate to true if @var{X} is a Scheme character.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CHAR_FROM_INTEGER (unsigned long @var{X})
+@deftypefnx {Preprocessor Macro} {unsigned long} IK_CHAR_TO_INTEGER (ikptr @var{X})
+Convert a Scheme character to and from an @code{unsigned long} value
+representing the Unicode code point.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikchar IK_CHAR32_FROM_INTEGER (unsigned long @var{X})
+Convert a @code{unsigned long} value representing the Unicode code
+point into a 32-bit integer representing a Scheme character to be stored
+into a string.
+@end deftypefn
+
+@c page
+@node objects strings
+@section String objects
+
+
+Strings are variable--length blocks of memory referenced by machine
+words tagged as strings; strings are @strong{not} stored in memory in
+@utf{}-32 format.  The first word in the memory block is a fixnum
+representing the number of characters in the data area; a string is
+capable of holding at most a number of characters equal to the return
+value of @func{greatest-fixnum}.
+
+@example
+|------------------------|-------------| reference to string
+      heap pointer         string tag
+
+|------------------------|-------------| string first word
+     number of words       fixnum tag
+@end example
+
+All the remaining space in the memory block is filled with 32-bit
+unsigned integers whose least significant bits are set to the character
+tag and whose most significant bits are set to the character's Unicode
+code point:
+
+@example
+ tag ch0 ch1 ch2 ch3 ch4 ch5 ch6 ch7
+|---|---|---|---|---|---|---|---|---| string memory block
+@end example
+
+Character indexes are zero--based.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+String objects are allocated on the heap; to perform the allocation we
+compute the whole size of the data area, add to it room for meta data
+and finally compute the aligned block size:
+
+@example
+ikpcb * pcb            = ik_the_pcb();
+long    length         = the_number_of_chars;
+long    requested_size = sizeof(ikchar) * length;
+long    block_size     = disp_string_data + requested_size;
+long    align_size     = IK_ALIGN(block_size);
+ikptr   str = ik_safe_alloc(pcb, align_size) | string_tag;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the string tag (an integer value fitting in @math{3} bits) which
+allows to recognise strings among all the other built in objects.
+
+We have to explicitly store the string length in the memory block as a
+fixnum, so usually a full allocation looks like this:
+
+@example
+ikptr
+ik_string_alloc (ikpcb * pcb, long number_of_chars)
+@{
+  long  align_size;
+  ikptr str;
+  align_size = IK_ALIGN(disp_string_data
+                        + number_of_chars * sizeof(ikchar));
+  str        = ik_safe_alloc(pcb, align_size) | string_tag;
+  IK_REF(str, off_string_length) = IK_FIX(number_of_chars);
+  return str;
+@}
+@end example
+
+To fill a string of @math{3} chars with characters we should do:
+
+@example
+ikptr     s_str = the_string;
+ikchar *  ch    = (ikchar*)(s_str + off_string_data);
+
+ch[0] = IK_CHAR32_FROM_INTEGER(10);
+ch[1] = IK_CHAR32_FROM_INTEGER(20);
+ch[2] = IK_CHAR32_FROM_INTEGER(30);
+@end example
+
+@noindent
+to retrieve the character at index @math{2} we do:
+
+@example
+long      index  = 2;
+ikptr     s_str  = the_string;
+ikchar *  ch     = (ikchar*)(s_str + off_string_data);
+ikptr     s_char = (ikptr)ch[index];
+@end example
+
+@noindent
+and to retrieve the string length:
+
+@example
+ikptr  s_str    = the_string;
+ikptr  s_length = IK_REF(s_str, off_string_length);
+long   length   = IK_UNFIX(s_length);
+@end example
+
+
+@defvr {Preprocessor Symbol} string_char_size
+Integer value representing the number of bytes in a Scheme character
+stored in a Scheme string.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} string_mask
+@defvrx {Preprocessor Symbol} string_tag
+Integer values used to tag and recognise @ikptr{} values representing
+string references.  @code{string_mask} isolates the tag bits from an
+@ikptr{} and @code{string_tag} represents the tag bits.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_string_length
+Displacement of length.  The number of bytes to add to an untagged
+pointer to string to get the pointer to the first byte in the word
+holding the string length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_string_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to string to get the pointer to the first byte in the data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_string_length
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the string length as fixnum.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_string_data
+An integer to add to a tagged @ikptr{} string reference to retrieve the
+pointer to the first byte of the data area.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_STRING (ikptr @var{obj})
+Return true if @var{obj} is a reference to a string object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_STRING_LENGTH_FX (ikptr @var{str})
+Return a fixnum representing the number of characters in the string
+@var{str}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} long IK_STRING_LENGTH (ikptr @var{str})
+Return an integer representing the number of characters in the string
+@var{str}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikchar IK_CHAR32 (ikptr @var{str}, long @var{idx})
+Evaluate to the 32-bit character representation at index @var{idx} in
+the string @var{str}.  A use of this macro can appear both as operand
+and as left--side of an assignment; example:
+
+@example
+long    idx   = the_index;
+ikptr   s_str = the_string;
+ikchar  ch;
+
+IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
+ch = IK_CHAR32(s_str, idx);
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on strings
+
+
+@deftypefun ikptr ika_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
+Allocate, initialise and return a new string object capable of holding
+the specified number of chars.
+@end deftypefun
+
+@c page
+@node objects symbols
+@section Symbol objects
+
+
+A symbol is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a symbol block is tagged
+has symbol in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to symbol
+      heap pointer         vector tag
+
+|------------------------|-------------| symbol first word
+   all set to zero         symbol tag
+@end example
+
+A symbol memory block is @math{6} words wide and contains references to
+objects begin the following fields: @code{string}, @code{ustring},
+@code{value}, @code{proc}, @code{plist}.
+
+The @code{value} field has multiple purposes:
+
+@itemize
+@item
+When the symbol is the unique identifier of a data structure type: the
+@code{value} field holds the @rtd{} of the data structure.
+
+@item
+Top level bindings in compiled Scheme code are represented by gensyms;
+the value of a top level binding is stored in the @code{value} field of
+a gensym memory block.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Symbol objects are allocated on the heap and must be interned, that is
+registered in a global symbol table.
+
+
+@defvr {Preprocessor Symbol} symbol_mask
+@defvrx {Preprocessor Symbol} symbol_tag
+Integer values used to tag and recognise the first word in symbol memory
+blocks.  @code{symbol_mask} isolates the tag bits from an @ikptr{} and
+@code{symbol_tag} represents the tag bits.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} symbol_record_size
+Number of bytes needed to hold a symbol memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_symbol_record_tag
+@defvrx {Preprocessor Symbol} disp_symbol_record_string
+@defvrx {Preprocessor Symbol} disp_symbol_record_ustring
+@defvrx {Preprocessor Symbol} disp_symbol_record_value
+@defvrx {Preprocessor Symbol} disp_symbol_record_proc
+@defvrx {Preprocessor Symbol} disp_symbol_record_plist
+Symbol field displacements.  The number of bytes to add to an untagged
+pointer to symbol to get the pointer to the first byte in the word
+holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_symbol_record_tag
+@defvrx {Preprocessor Symbol} off_symbol_record_string
+@defvrx {Preprocessor Symbol} off_symbol_record_ustring
+@defvrx {Preprocessor Symbol} off_symbol_record_value
+@defvrx {Preprocessor Symbol} off_symbol_record_proc
+@defvrx {Preprocessor Symbol} off_symbol_record_plist
+Symbol field offsets.  The number of bytes to add to an tagged pointer
+to symbol to get the pointer to the first byte in the word holding the
+specified field.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on symbols
+
+
+@deftypefun int ik_is_symbol (ikptr @var{obj})
+Return true if @var{obj} is a symbol.
+@end deftypefun
+
+@c page
+@node objects bignums
+@section Bignum objects
+
+
+Bignums are multi--precision exact integers bigger than fixnums; they
+are implemented using the @code{mpn} @api{} of @gnu{} @gmp{},
+@xref{Low-level Functions, mpn, Low-level Functions, gmp}.
+
+@value{PRJNAME} only uses a bignum to represent an exact integer when
+the value does not fit in a fixnum; it follows that the following ranges
+are enforced:
+
+@example
+negative bignums < (least-fixnum) <= all fixnums
+
+all fixnums <= (greatest-fixnum) < positive bignums
+@end example
+
+A bignum is a variable length memory block referenced by machine words
+tagged as vectors.  The first machine word of a bignum block is tagged
+has bignum in its least significant bits; then comes a sign bit, zero if
+positive; the remaining most significant bits represent the number of
+words in the memory block after the first one.
+
+@example
+|------------------------|-------------| reference to bignum
+      heap pointer         vector tag
+
+                     sign bit
+|----------------------|-|-------------| bignum first word
+   number of words         bignum tag
+@end example
+
+A pointer to the second machine word in a bignum memory block is the
+pointer of type @code{mp_limb_t} accepted by the @code{mpn_} functions
+of @gmp{}; @dfn{limb}, in @gmp{} jargon, is a machine word holding a
+portion of multi--precision number.  The layout of a bignum memory block
+is as follows:
+
+@example
+|----|-----|-----|-----|-----| ...
+ 1st  limb0 limb1 limb2 limb3
+@end example
+
+@noindent
+where the first word @code{1st} is header of meta informations encoded
+as explained above and each limb is a machine word stored in
+@strong{native} endianness; the big number is the concatenation of limbs
+with @code{limb0} being the least significant one.  There is always at
+least one limb; when a bignum is composed of a single limb, its value is
+always non--zero and outside the range of fixnums.
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+To allocate a bignum we must know the number of required limbs:
+
+@example
+ikpcb * pcb        = ik_the_pcb();
+long    nlimbs     = the_number_of_limbs;
+long    block_size = disp_bignum_data + nlimbs * wordsize;
+long    align_size = IK_ALIGN(block_size);
+ikptr s_bn = ik_safe_alloc(pcb, align_size) | vector_tag;
+@end example
+
+@noindent
+we must explicitly build and encode the first word; the number of limbs
+is encoded as follows:
+
+@example
+long   nlimbs      = the_number_of_limbs;
+ikptr  meta_nlimbs = nlimbs << bignum_nlimbs_shift;
+@end example
+
+@noindent
+the sign bit is encoded as follows:
+
+@example
+long   sign      = zero_if_positive_one_if_negative;
+ikptr  meta_sign = sign << bignum_sign_shift;
+@end example
+
+@noindent
+and the full first word is composed and stored as follows:
+
+@example
+ikptr  s_bn        = the_bignum;
+ikptr  meta_nlimbs = ...;
+ikptr  meta_sign   = ...;
+ikptr  s_fst       = meta_nlimbs | meta_sign | bignum_tag;
+
+IK_REF(s_bn, off_bignum_tag) = s_fst;
+@end example
+
+To identify an object as bignum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag == IK_TAGOF(X)) &&
+    (bignum_tag == (bignum_mask & IK_REF(X, -vector_tag))))
+  it_is_a_bignum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to extract meta informations we must first extract the first word:
+
+@example
+ikptr   s_bn  = the_bignum;
+ikptr   s_fst = IK_REF(s_bn, off_bignum_tag);
+long    nlimbs;
+long    meta_sign;
+
+nlimbs    = ((ik_ulong)s_fst) >> bignum_nlimbs_shift;
+meta_sign = ((ik_ulong)s_fst) &  bignum_sign_mask;
+@end example
+
+@noindent
+if @code{meta_sign} is zero the bignum is positive, else it is negative.
+
+To acquire a pointer to the data area we do:
+
+@example
+ikptr        s_bn = the_bignum;
+mp_limb_t *  data;
+
+data = (mp_limb_t*)(long)(s_bn + off_bignum_data);
+@end example
+
+@noindent
+to extract the @math{N}-th limb we do:
+
+@example
+ikptr      s_bn = the_bignum;
+long       N    = the_index;
+mp_limb_t  limb;
+
+limb = (mp_limb_t)IK_REF(s_bn, off_bignum_data + N * wordsize);
+@end example
+
+
+@defvr {Preprocessor Symbol} bignum_mask
+@defvrx {Preprocessor Symbol} bignum_tag
+@code{bignum_mask} is the bit pattern used to isolate a bignum tag from
+an @ikptr{} value; @code{bignum_tag} is the tag of @ikptr{} values used
+as first words in bignum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} bignum_sign_mask
+A bit pattern used to isolate the sign bit from the @code{ikptr} value
+used as first word in bignum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} bignum_sign_shift
+The number representing the bit left--shift offset of the sign bit in
+the @code{ikptr} value used as first word in bignum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} bignum_nlimbs_shift
+The number representing the bit left--shift offset of the number of
+limbs in the @code{ikptr} value used as first word in bignum memory
+blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_bignum_tag
+Offset in bytes of the first word in a bignum memory block from the
+beginning of the block.  It is zero.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_bignum_data
+Offset in bytes of the first byte in the data area of a bignum memory
+block from the beginning of the block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_bignum_tag
+Number to add to a tagged @ikptr{} reference to bignum to obtain a
+pointer to the first word in a bignum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_bignum_data
+Number to add to a tagged @ikptr{} reference to bignum to obtain a
+pointer to the first byte in the data area of bignum memory block.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} long IK_BIGNUM_ALLOC_SIZE (long @var{nlimbs})
+Given a number of limbs: evaluate to the aligned size of the memory
+block needed to hold the bignum.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IKA_BIGNUM_ALLOC (ikpcb * @var{pcb}, long @var{nlimb})
+Given a number of limbs: allocate, using @cfunc{ik_safe_alloc}, the
+memory block needed to hold the bignum and return an untagged pointer to
+it.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_COMPOSE_BIGNUM_FIRST_WORD (long @var{nlimb}, ikptr @var{meta_sign})
+Given a number of limbs and the encoded sign bit: evaluate to the first
+word of a bignum object.  It is equivalent to the following:
+
+@example
+ikptr  meta_nlimbs;
+ikptr  s_fst;
+
+meta_nlimbs = (@var{nlimbs} << bignum_nlimbs_shift)
+s_fst       = meta_nlimbs | @var{meta_sign} | bignum_tag;
+@end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POSITIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+@deftypefnx {Preprocessor Macro} ikptr IK_NEGATIVE_BIGNUM_FIRST_WORD (long @var{nlimb})
+Given a number of limbs evaluate to the corresponding first word of
+bignum representing a positive or negative number.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_BIGNUM_FIRST (ikptr @var{bn})
+Given a reference to bignum: evaluate to the location of the first word
+holding meta informations.  Can be used both as operand or left--side of
+assignment:
+
+@example
+ikptr  s_bn = the_bignum;
+ikptr  s_fst;
+
+s_fst = IK_BIGNUM_FIRST(s_bn);
+IK_BIGNUM_FIRST(s_bn) = s_fst;
+@end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_LIMB (ikptr @var{bn}, long @var{N})
+Given a reference to bignum: evaluate to the location of the @var{N}-th
+limb in the data area.  Can be used both as operand or left--side of
+assignment:
+
+@example
+ikptr      s_bn = the_bignum;
+mp_limb_t  limb;
+
+limb = (mp_limb_t)IK_LIMB(s_bn);
+IK_LIMB(s_bn) = (ikptr)limb;
+@end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {mp_limb_t *} IK_BIGNUM_DATA_LIMBP (ikptr @var{bn})
+Given a reference to bignum: evaluate to a pointer to the first byte in
+the data area, which is a pointer to the least significant limb.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_FIRST_LIMB (ikptr @var{bn})
+Given a reference to bignum: evaluate to the least significant limb in
+the data area.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} mp_limb_t IK_BIGNUM_LAST_LIMB (ikptr @var{bn}, long @var{nlimbs})
+Given a reference to bignum and its number of limbs: evaluate to the
+most significant limb in the data area.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on exact integers
+
+
+@deftypefun int ik_is_bignum (ikptr @var{obj})
+Return true if @var{obj} is a bignum.
+@end deftypefun
+
+
+@deftypefun ikptr ika_integer_from_int (ikpcb * @var{pcb}, int @var{N})
+@deftypefunx ikptr ika_integer_from_long (ikpcb * @var{pcb}, long @var{N})
+@deftypefunx ikptr ika_integer_from_llong (ikpcb * @var{pcb}, ik_llong @var{N})
+@deftypefunx ikptr ika_integer_from_uint (ikpcb * @var{pcb}, ik_uint @var{N})
+@deftypefunx ikptr ika_integer_from_ulong (ikpcb * @var{pcb}, ik_ulong @var{N})
+@deftypefunx ikptr ika_integer_from_ullong (ikpcb * @var{pcb}, ik_ullong @var{N})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ika_integer_from_sint8 (ikpcb * @var{pcb}, int8_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint16 (ikpcb * @var{pcb}, int16_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint32 (ikpcb * @var{pcb}, int32_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint64 (ikpcb * @var{pcb}, int64_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint8 (ikpcb * @var{pcb}, uint8_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint16 (ikpcb * @var{pcb}, uint16_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint32 (ikpcb * @var{pcb}, uint32_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint64 (ikpcb * @var{pcb}, uint64_t @var{N})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
+@deftypefun ikptr ika_integer_from_off_t (ikpcb * @var{pcb}, off_t @var{N})
+@deftypefunx ikptr ika_integer_from_ssize_t (ikpcb * @var{pcb}, ssize_t @var{N})
+@deftypefunx ikptr ika_integer_from_size_t (ikpcb * @var{pcb}, size_t @var{N})
+@deftypefunx ikptr ika_integer_from_ptrdiff_t (ikpcb * @var{pcb}, ptrdiff_t @var{N})
+Build and return a new exact integer object from the given C language
+value.
+@end deftypefun
+
+
+@deftypefun int ik_integer_to_int (ikptr @var{X})
+@deftypefunx long ik_integer_to_long (ikptr @var{X})
+@deftypefunx ik_llong ik_integer_to_llong (ikptr @var{X})
+@deftypefunx ik_uint ik_integer_to_uint (ikptr @var{X})
+@deftypefunx ik_ulong ik_integer_to_ulong (ikptr @var{X})
+@deftypefunx ik_ullong ik_integer_to_ullong (ikptr @var{X})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
+@end deftypefun
+
+
+@deftypefun int8_t ik_integer_to_sint8 (ikptr @var{X})
+@deftypefunx int16_t ik_integer_to_sint16 (ikptr @var{X})
+@deftypefunx int32_t ik_integer_to_sint32 (ikptr @var{X})
+@deftypefunx int64_t ik_integer_to_sint64 (ikptr @var{X})
+@deftypefunx uint8_t ik_integer_to_uint8 (ikptr @var{X})
+@deftypefunx uint16_t ik_integer_to_uint16 (ikptr @var{X})
+@deftypefunx uint32_t ik_integer_to_uint32 (ikptr @var{X})
+@deftypefunx uint64_t ik_integer_to_uint64 (ikptr @var{X})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
+@end deftypefun
+
+
+@deftypefun off_t ik_integer_to_off_t (ikptr @var{x})
+@deftypefunx size_t ik_integer_to_size_t (ikptr @var{x})
+@deftypefunx ssize_t ik_integer_to_ssize_t (ikptr @var{x})
+@deftypefunx ptrdiff_t ik_integer_to_ptrdiff_t (ikptr @var{x})
+Return a C language number from a Scheme exact integer object.  The
+object @var{X} must be in the correct range for the requested
+conversion.
+@end deftypefun
+
+@c page
+@node objects integers
+@section Exact integer objects
+
+
+An exact integer is either a fixnum or a bignum.
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_INTEGER (ikptr @var{obj})
+Evaluate to true if @var{obj} is either a fixnum or a bignum.
+@end deftypefn
+
+@c page
+@node objects ratnums
+@section Ratnum objects
+
+
+Ratnums are exact rational numbers, having a fixnum or bignum as
+numerator and a fixnum or bignum as denominator; the numerator is always
+non--zero; the denominator is always strictly positive, the sign of a
+ratnum is the sign of the numerator.
+
+A ratnum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a ratnum block is tagged
+has ratnum in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to ratnum
+      heap pointer         vector tag
+
+|------------------------|-------------| ratnum first word
+   all set to zero         ratnum tag
+@end example
+
+A ratnum memory block is @math{4} words wide; a reference to the
+numerator is stored in the second word and a reference to the
+denominator is stored in the third word:
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   numerator   denominator     unused
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Ratnums are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = ik_the_pcb();
+ikptr   s_rn;
+
+s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+@end example
+
+@noindent
+after allocation we must always initialise the numerator and denominator
+fields to some correct value before running the next garbage collection;
+a full allocation and initialisation is as follows:
+
+@example
+ikpcb * pcb   = ik_the_pcb();
+ikptr   s_num = the_numerator;
+ikptr   s_den = the_denominator;
+ikptr   s_rn;
+
+pcb->root9 = &s_num;
+pcb->root8 = &s_den;
+@{
+  s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
+@}
+pcb->root8 = NULL;
+pcb->root9 = NULL;
+
+IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
+IK_REF(s_rn, off_ratnum_num) = s_num;
+IK_REF(s_rn, off_ratnum_den) = s_den;
+@end example
+
+To identify an object as ratnum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag == IK_TAGOF(X)) &&
+    (ratnum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_ratnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the numerator and denominator we do:
+
+@example
+ikptr  s_rn = the_ratnum;
+ikptr  s_num;
+ikptr  s_den;
+
+s_num = IK_REF(s_rn, off_ratnum_num);
+s_den = IK_REF(s_rn, off_ratnum_den);
+IK_REF(s_rn, off_ratnum_num) = s_num;
+IK_REF(s_rn, off_ratnum_den) = s_den;
+@end example
+
+
+@defvr {Preprocessor Symbol} ratnum_size
+The number of bytes to allocate to hold a ratnum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} ratnum_tag
+The tag of @ikptr{} values used as first words in ratnum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_ratnum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to ratnum to get the pointer to the first byte in the
+word holding the ratnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_ratnum_num
+@defvrx {Preprocessor Symbol} disp_ratnum_den
+Displacements of numerator and denominator.  The number of bytes to add
+to an untagged pointer to ratnum to get the pointer to the first byte of
+the reference to the numerator or denominator.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_ratnum_tag
+An integer to add to add to a tagged @ikptr{} pointer to ratnum to get
+the pointer to the first byte in the word holding the ratnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_ratnum_num
+@defvrx {Preprocessor Symbol} off_ratnum_den
+An integer to add to a tagged @ikptr{} pointer to ratnum to get the
+pointer to the first byte of the words referencing the numerator or
+denominator.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_NUMERATOR (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} ikptr IK_DENOMINATOR (ikptr @var{X})
+Evaluate to the location of the numerator or denominator in the ratnum
+memory block.  A use of these macros can appear both as operand and as
+left--side of an assignment:
+
+@example
+ikptr  s_rn  = the_ratnum;
+ikptr  s_num;
+
+s_num = IK_NUMERATOR(s_rn);
+IK_NUMERATOR(s_rn) = s_num;
+@end example
+@end deftypefn
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on ratnums
+
+
+@deftypefun int ik_is_ratnum (ikptr @var{obj})
+Return true if @var{obj} is a ratnum object.
+@end deftypefun
+
+
+@deftypefun ikptr ika_ratnum_alloc_no_init (ikpcb * @var{pcb})
+Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The fields are left uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_ratnum_alloc_and_init (ikpcb * @var{pcb})
+Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  Both the fields are set to the fixnum zero.
+@end deftypefun
+
+@c page
+@node objects flonums
+@section Flonum objects
+
+
+Flonums are double--precision floating point numbers (@math{8} bytes
+wide) implemented as specified by @ieee{} 754 on the hosting platform.
+A flonum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a flonum block is tagged
+has flonum in its least significant bits and it has the most significant
+bits set to zero.
+
+@example
+|------------------------|-------------| reference to flonum
+      heap pointer         vector tag
+
+|------------------------|-------------| flonum first word
+   all set to zero         flonum tag
+@end example
+
+A flonum memory block is @math{16} bytes wide on both 32-bit and 64-bit
+platforms; to allow for the same binary layout on both platforms, on a
+32-bit platform the actual number is stored in the last two words:
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word     unused           data words
+                          |.........................|
+                                    flonum
+@end example
+
+@noindent
+on a 64-bit platform the actual number is stored in the second word:
+
+@example
+          1st word                 2nd word
+|-------------------------|-------------------------|
+         tagged word               data word
+                          |.........................|
+                                    flonum
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Flonums are allcated on the heap as follows:
+
+@example
+ikpcb * pcb  = ik_the_pcb();
+ikptr   s_fl;
+
+s_fl = ik_safe_alloc(pcb, flonum_size) | vector_tag;
+IK_REF(s_fl, off_flonum_tag) = (ikptr)flonum_tag
+@end example
+
+@noindent
+to identify an object as flonum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag == IK_TAGOF(X)) &&
+    (flonum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_flonum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to obtain a pointer to the data area we do:
+
+@example
+ikptr     s_fl = the_flonum;
+double *  data;
+
+data = (double*)((long)(X) + off_flonum_data);
+@end example
+
+
+@defvr {Preprocessor Symbol} flonum_size
+The number of bytes to allocate to hold a flonum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} flonum_tag
+The tag of @ikptr{} values used as first words in bignum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_flonum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to flonum to get the pointer to the first byte in the
+word holding the flonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_flonum_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to flonum to get the pointer to the first byte in the data area
+holding the actual @code{double} value.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_flonum_tag
+An integer to add to add to a tagged @ikptr{} pointer to flonum to get
+the pointer to the first byte in the word holding the flonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_flonum_data
+An integer to add to a tagged @ikptr{} pointer to flonum to get the
+pointer to the first byte in the data area holding the actual
+@code{double} value.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} double IK_FLONUM_DATA (ikptr @var{fl})
+Set or retrieve the floating point number.  A use of this macro can
+appear both as operand or left--side of assignment:
+
+@example
+ikptr  s_fl = the_flonum;
+double num;
+
+IK_FLONUM_DATA(s_fl) = 1.2;
+num = IK_FLONUM_DATA(s_fl);
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on flonums
+
+
+@deftypefun int ik_is_flonum (ikptr @var{obj})
+Return true if @var{obj} is a flonum object.
+@end deftypefun
+
+
+@deftypefun ikptr iku_flonum_alloc (ikpcb * @var{pcb}, double @var{N})
+Allocate and return a new flonum object, using @cfunc{ik_unsafe_alloc},
+intialised with @var{N}.
+@end deftypefun
+
+
+@deftypefun ikptr ika_flonum_from_double (ikpcb * @var{pcb}, double @var{N})
+Allocate and return a new flonum object, using @cfunc{ik_safe_alloc},
+intialised with @var{N}.
+@end deftypefun
+
+@c page
+@node objects compnums
+@section Compnum objects
+
+
+Compnums are complex numbers having a fixnum, bignum, ratnum or flonum
+as real part and a fixnum, bignum, ratnum or flonum as imaginary part,
+but @strong{not} both flonums.  The imaginary part of a compnum object
+is never the exact zero.
+
+A compnum is a fixed length memory block referenced by machine words
+tagged as vectors.  The first machine word of a compnum block is tagged
+has compnum in its least significant bits and it has the most
+significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to compnum
+      heap pointer         vector tag
+
+|------------------------|-------------| compnum first word
+   all set to zero         compnum tag
+@end example
+
+A compnum memory block is @math{4} words wide; a reference to the real
+part is stored in the second word and a reference to the imaginary part
+is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   real part    imag part     unused
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Compnums are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = ik_the_pcb();
+ikptr   s_cn;
+
+s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+IK_REF(s_cn, off_compnum_tag) = compnum_tag;
+@end example
+
+@noindent
+after allocation we must always initialise the real and imaginary parts
+to some correct value before running the next garbage collection; a full
+allocation and initialisation is as follows:
+
+@example
+ikpcb * pcb  = ik_the_pcb();
+ikptr   s_re = the_real;
+ikptr   s_im = the_imag;
+ikptr   s_cn;
+
+pcb->root9 = &s_re;
+pcb->root8 = &s_im;
+@{
+  s_rn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
+@}
+pcb->root8 = NULL;
+pcb->root9 = NULL;
+
+IK_REF(s_cn, off_compnum_tag)  = compnum_tag;
+IK_REF(s_cn, off_compnum_real) = s_re;
+IK_REF(s_cn, off_compnum_imag) = s_im;
+@end example
+
+To identify an object as compnum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag  == IK_TAGOF(X)) &&
+    (compnum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_compnum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the real and imaginary parts we do:
+
+@example
+ikptr  s_cn = the_compnum;
+ikptr  s_re;
+ikptr  s_im;
+
+s_re = IK_REF(s_cn, off_compnum_real);
+s_im = IK_REF(s_cn, off_compnum_imag);
+IK_REF(s_cn, off_compnum_real) = s_re;
+IK_REF(s_cn, off_compnum_imag) = s_im;
+@end example
+
+
+@defvr {Preprocessor Symbol} compnum_size
+The number of bytes to allocate to hold a compnum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} compnum_tag
+The tag of @ikptr{} values used as first words in compnum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_compnum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to compnum to get the pointer to the first byte in the
+word holding the compnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_compnum_real
+@defvrx {Preprocessor Symbol} disp_compnum_imag
+Displacements of real and imaginary parts.  The number of bytes to add
+to an untagged pointer to compnum to get the pointer to the first byte
+of the reference to the real or imaginary part.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_compnum_tag
+An integer to add to add to a tagged @ikptr{} pointer to compnum to get
+the pointer to the first byte in the word holding the compnum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_compnum_real
+@defvrx {Preprocessor Symbol} off_compnum_imag
+An integer to add to a tagged @ikptr{} pointer to compnum to get the
+pointer to the first byte of the words referencing the real or
+imaginary part.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_COMPNUM_REAL (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} ikptr IK_COMPNUM_IMAG (ikptr @var{X})
+Evaluate to the location of the real and imaginary parts in the compnum
+memory block.  A use of these macros can appear both as operand and as
+left--side of an assignment:
+
+@example
+ikptr  s_cn = the_compnum;
+ikptr  s_re;
+
+s_re = IK_COMPNUM_REAL(s_cn);
+IK_COMPNUM_REAL(s_cn) = s_re;
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on compnums
+
+
+@deftypefun int ik_is_compnum (ikptr @var{obj})
+Return true if @var{obj} is a compnum object.
+@end deftypefun
+
+
+@deftypefun ikptr ika_compnum_alloc_no_init (ikpcb * @var{pcb})
+Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The fields are left uninitialised.
+@end deftypefun
+
+
+@deftypefun ikptr ika_compnum_alloc_and_init (ikpcb * @var{pcb})
+Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  Both the fields are set to the fixnum zero.
+@end deftypefun
+
+@c page
+@node objects cflonums
+@section Cflonum objects
+
+
+Cflonums are complex numbers having a flonum as real part and flonum as
+imaginary part.  A cflonum is a fixed length memory block referenced by
+machine words tagged as vectors.  The first machine word of a cflonum
+block is tagged has cflonum in its least significant bits and it has the
+most significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to cflonum
+      heap pointer         vector tag
+
+|------------------------|-------------| cflonum first word
+   all set to zero         cflonum tag
+@end example
+
+A cflonum memory block is @math{4} words wide; a reference to the real
+part is stored in the second word and a reference to the imaginary part
+is stored in the third word
+
+@example
+   1st word     2nd word     3rd word     4th word
+|------------|------------|------------|------------|
+ tagged word   real part    imag part     unused
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Cflonums are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = ik_the_pcb();
+ikptr   s_cn;
+
+s_cn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+IK_REF(s_cn, off_cflonum_tag) = cflonum_tag;
+@end example
+
+@noindent
+after allocation we must always initialise the real and imaginary parts
+to some correct value before running the next garbage collection; a full
+allocation and initialisation is as follows:
+
+@example
+ikpcb * pcb  = ik_the_pcb();
+ikptr   s_re = the_real;
+ikptr   s_im = the_imag;
+ikptr   s_cn;
+
+pcb->root9 = &s_re;
+pcb->root8 = &s_im;
+@{
+  s_rn = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+@}
+pcb->root8 = NULL;
+pcb->root9 = NULL;
+
+IK_REF(s_cn, off_cflonum_tag)  = cflonum_tag;
+IK_REF(s_cn, off_cflonum_real) = s_re;
+IK_REF(s_cn, off_cflonum_imag) = s_im;
+@end example
+
+To identify an object as cflonum we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag  == IK_TAGOF(X)) &&
+    (cflonum_tag == IK_REF(X, -vector_tag)))
+  it_is_a_cflonum();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the real and imaginary parts we do:
+
+@example
+ikptr  s_cn = the_cflonum;
+ikptr  s_re;
+ikptr  s_im;
+
+s_re = IK_REF(s_cn, off_cflonum_real);
+s_im = IK_REF(s_cn, off_cflonum_imag);
+IK_REF(s_cn, off_cflonum_real) = s_re;
+IK_REF(s_cn, off_cflonum_imag) = s_im;
+@end example
+
+
+@defvr {Preprocessor Symbol} cflonum_size
+The number of bytes to allocate to hold a cflonum memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} cflonum_tag
+The tag of @ikptr{} values used as first words in cflonum memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_cflonum_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to cflonum to get the pointer to the first byte in the
+word holding the cflonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_cflonum_real
+@defvrx {Preprocessor Symbol} disp_cflonum_imag
+Displacements of real and imaginary parts.  The number of bytes to add
+to an untagged pointer to cflonum to get the pointer to the first byte
+of the reference to the real or imaginary part.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_cflonum_tag
+An integer to add to add to a tagged @ikptr{} pointer to cflonum to get
+the pointer to the first byte in the word holding the cflonum tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_cflonum_real
+@defvrx {Preprocessor Symbol} off_cflonum_imag
+An integer to add to a tagged @ikptr{} pointer to cflonum to get the
+pointer to the first byte of the words referencing the real or
+imaginary part.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CFLONUM_REAL (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} ikptr IK_CFLONUM_IMAG (ikptr @var{X})
+Evaluate to the location of the real and imaginary parts in the cflonum
+memory block.  A use of these macros can appear both as operand and as
+left--side of an assignment:
+
+@example
+ikptr  s_cn = the_cflonum;
+ikptr  s_re;
+
+s_re = IK_CFLONUM_REAL(s_cn);
+IK_CFLONUM_REAL(s_cn) = s_re;
+@end example
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on cflonums
+
+
+@deftypefun int ik_is_cflonum (ikptr @var{obj})
+Return true if @var{obj} is a cflonum object.
+@end deftypefun
+
+
+@deftypefun ikptr iku_cflonum_alloc_and_init (ikpcb * @var{pcb}, double @var{re}, double @var{im})
+Allocate a cflonum and its flonum components using
+@cfunc{ik_unsafe_alloc} and return a tagged reference to it.  No garbage
+collection is run while this function is evaluating.
+@end deftypefun
+
+@c page
+@node objects ports
+@section Port objects
+
+
+A port object is a fixed--length memory block referenced by machine
+words tagged as vectors; the first word of the vector is the bitwise OR
+between a port tag and a bitvector of port attributes.
+
+@example
+|----------------|----------| reference to port
+  heap pointer    vector tag
+
+|----------------|----------| 1st word of memory block
+ port attributes   port tag
+@end example
+
+At present the port tag is @math{6} bits wide, so we have:
+
+@itemize
+@item
+On 32-bit platforms: @math{32 - 6 = 24} bits available for attributes.
+
+@item
+On 64-bit platforms: @math{64 - 6 = 58} bits available for attributes.
+@end itemize
+
+See the source code in @file{ikarus.io.sls} for a more comprehensive
+documentation.
+
+@c page
+@node objects transcoders
+@section Transcoder objects
+
+
+A transcoder is a machine word tagged to make it of a disjoint type.
+The transcoder data (codec, @eol{} style, error handling) is encoded in
+the most significant bits of this word:
+
+@example
+|---------------------------|------------| transcoder
+       payload bits          transcoder-tag
+@end example
+
+@noindent
+the payload of this word is an 8-bit vector whose format is as follows:
+
+@example
+765 432 10
+ |   |   |
+ |   |    -- error handling mode
+ |    ------ end of line style
+  ---------- codec
+@end example
+
+See the source code in the file @file{ikarus.codecs.sls} for more
+details.
+
+@c page
+@node objects pointers
+@section Pointer objects
+
+
+A pointer is a fixed length memory block, two words wide, referenced by
+machine words tagged as vectors.  The first machine word of a pointer
+block is tagged has pointer in its least significant bits and it has the
+most significant bits set to zero.  The second machine word of a pointer
+block holds the actual pointer value.
+
+@example
+|------------------------|-------------| reference to pointer
+      heap pointer         vector tag
+
+|------------------------|-------------| pointer first word
+   all set to zero         pointer tag
+
+|--------------------------------------| pointer second word
+            pointer value
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+Pointers are allocated on the Scheme heap as follows:
+
+@example
+ikpcb * pcb   = ik_the_pcb();
+ikptr   s_ptr;
+
+s_ptr = ik_safe_alloc(pcb, pointer_size) | vector_tag;
+IK_REF(s_ptr, off_pointer_tag) = pointer_tag;
+@end example
+
+@noindent
+to identify an object as pointer we do:
+
+@example
+ikptr  X = the_object;
+
+if ((vector_tag  == IK_TAGOF(X)) &&
+    (pointer_tag == IK_REF(X, -vector_tag)))
+  it_is_a_pointer();
+else
+  it_is_not();
+@end example
+
+@noindent
+to set or retrieve the pointer value we do:
+
+@example
+ikptr  s_ptr = the_pointer;
+void * ptr;
+
+ptr = (void *)IK_REF((X), off_pointer_data);
+IK_REF((X), off_pointer_data) = (ikptr)ptr;
+@end example
+
+
+@defvr {Preprocessor Symbol} pointer_size
+The number of bytes to allocate to hold a pointer memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} pointer_tag
+The tag of @ikptr{} values used as first words in pointer memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_pointer_tag
+Displacement of secondary tag word.  The number of bytes to add to an
+untagged pointer to pointer object to get the pointer to the first byte
+in the word holding the pointer tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_pointer_data
+Displacement of data area.  The number of bytes to add to an untagged
+pointer to pointer object to get the pointer to the first byte of the
+data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_pointer_tag
+An integer to add to add to a tagged @ikptr{} pointer to pointer object
+to get the pointer to the first byte in the word holding the pointer
+tag.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_pointer_data
+An integer to add to a tagged @ikptr{} pointer to pointer object to get
+the pointer to the first byte of the word holding the pointer value.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_POINTER (ikptr @var{X})
+Evaluate to true if @var{X} is a pointer object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_DATA (ikptr @var{X})
+Return the value of the pointer as @code{ikptr}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_DATA_VOIDP (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {char *} IK_POINTER_DATA_CHARP (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {uint8_t *} IK_POINTER_DATA_UINT8P (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {long *} IK_POINTER_DATA_LONG (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {ik_llong *} IK_POINTER_DATA_LLONG (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {ik_ulong *} IK_POINTER_DATA_ULONG (ikptr @var{X})
+@deftypefnx {Preprocessor Macro} {ik_ullong *} IK_POINTER_DATA_ULLONG (ikptr @var{X})
+Return the value of the pointer cast to a specific type.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET (ikptr @var{X}, void * @var{ptr})
+Reset to @var{ptr} the value of the pointer @var{X}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_SET_NULL (ikptr @var{X})
+Reset to @cnull{} the value of the pointer.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_POINTER_IS_NULL (ikptr @var{X})
+Evaluate to true if the pointer value is @cnull{}.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@subsubheading Operations on pointers
+
+
+@deftypefun ikptr ika_pointer_alloc (ikpcb * @var{pcb}, ik_ulong @var{memory})
+Allocate a pointer object using @cfunc{ik_safe_alloc} and return a
+tagged reference to it.  The pointer is initialised to @var{memory}.
+@end deftypefun
+
+
+@deftypefun ikptr iku_pointer_alloc (ikpcb* pcb, ik_ulong @var{memory})
+Allocate a pointer object using @cfunc{ik_unsafe_alloc} and return a
+tagged reference to it.  The pointer is initialised to @var{memory}.
+@end deftypefun
+
+
+@deftypefun int ik_is_pointer (ikptr @var{X})
+Return true if @var{X} is a pointer object.
+@end deftypefun
+
+
+@deftypefun ikptr ikrt_is_pointer (ikptr @var{X})
+Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
+@code{IK_FALSE_OBJECT}.
+@end deftypefun
+
+@c page
+@node objects tcbuckets
+@section Components for hashtables
+
+
+A tcbucket is a fixed--length memory block referenced by machine words
+tagged as vectors.
+
+@example
+|------------------------|-------------| reference to tcbucket
+      heap pointer         vector tag
+@end example
+
+A tcbucket is not a Scheme object like all the others; it is used only
+to store values in a hashtable.  The memory layout of a tcbucket is as
+follows:
+
+@example
+|-----|-----|-----|-----| tcbucket memory block
+ tconc  key   val  next
+@end example
+
+For details on such objects, see the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} disp_tcbucket_tconc
+@defvrx {Preprocessor Symbol} disp_tcbucket_key
+@defvrx {Preprocessor Symbol} disp_tcbucket_val
+@defvrx {Preprocessor Symbol} disp_tcbucket_next
+Displacement of fields.  The number of bytes to add to an
+@strong{untagged} pointer to tcbucket to get the pointer to the first
+byte in the word of the tcbucket's field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_tcbucket_tconc
+@defvrx {Preprocessor Symbol} off_tcbucket_key
+@defvrx {Preprocessor Symbol} off_tcbucket_val
+@defvrx {Preprocessor Symbol} off_tcbucket_next
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the tcbucket's field.
+@end defvr
+
+@c page
+@node objects codes
+@section Code objects
+
+
+Code objects contain compiled binary code ready to be executed by the
+host's processor.
+
+@menu
+* objects codes layout::        Memory layout of code objects.
+* objects codes reloc::         The relocation vector.
+* objects codes gc::            Memory and garbage collection.
+@end menu
+
+@c page
+@node objects codes layout
+@subsection Memory layout of code objects
+
+
+A code object is a fixed length memory block, of variable size equal to
+a multiple of the host's page size, referenced by machine words tagged
+as vectors; the memory is allocated with @cfunc{mmap} and is given read,
+write and execution protection.  The memory layout of a code object is
+as follows:
+
+@example
+     page size          page size          page size
+|..................|..................|..................|
+|-----------|-----------------------------------|++++++++|
+  meta data                 data area             unused
+@end example
+
+@noindent
+if the requested memory is less than the exact multiple of a page size,
+the last allocated bytes are unused and set to zero at allocation time.
+
+The first machine word of a code memory block is tagged has code in its
+least significant bits and it has the most significant bits set to zero.
+
+@example
+|------------------------|-------------| reference to code
+    memory pointer         vector tag
+
+|------------------------|-------------| code first word
+   all set to zero          code tag
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Meta data in a code memory block
+
+The first words of a code memory block hold meta data:
+
+@enumerate
+@item
+The first word contains the secondary tag needed to recognise a Scheme
+object as code object.
+
+@item
+The second word contains a non--negative fixnum representing the number
+of used bytes in the allocated block; this is @strong{not} the number of
+allocated bytes (multiple of the page size), just the number of bytes
+actually used by meta data and binary code.
+
+@item
+The third word contains the reference to a Scheme vector used as
+relocation vector.
+
+@item
+The fourth word contains a non--negative fixnum representing the number
+of free variables in the contained code.  If such values is zero: the
+code is a thunk.
+
+@item
+The fifth word contains a code annotation; it is initialised to
+@false{}.
+
+@item
+The sixth word is currently unused; it is initialised to the fixnum
+zero.
+@end enumerate
+
+@noindent
+the subsequent words in the memory block are the code object's data
+area.
+
+@c page
+@node objects codes reloc
+@subsection The relocation vector
+
+
+The @dfn{relocation vector} is a Scheme vector referenced by the meta
+data of a code object; the relocation vector can be empty.
+
+The relocation vector is divided into records, each some words long:
+
+@example
+   0     1     2     3     4     5     6     7
+|-----|-----|-----|-----|-----|-----|-----|-----| relocation vector
+|...........|.................|.................|
+ 1st record      2nd record        3rd record
+@end example
+
+@noindent
+the first word in each record contains a fixnum which must be
+interpreted as bit field; such fixnum must never be zero.  On 32-bit
+platforms the layout of such fixnum is:
+
+@example
+     bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+... |----|----|----|----|----|----|----|----|
+........................|.........|.........| 1st record word
+ number of bytes        record tag fixnum tag
+@end example
+
+@noindent
+on 64-bit platforms the layout of such fixnum is:
+
+@example
+        bit7 bit6 bit5 bit4 bit3 bit2 bit1 bit0
+   ... |----|----|----|----|----|----|----|----|
+......................|.........|..............| 1st record word
+ number of bytes      record tag   fixnum tag
+@end example
+
+@noindent
+the @math{2} least significant bits of the fixnum's data represent a
+type tag for the record; the remaining most significant bits of the
+fixnum's data area represent a number of bytes: a displacement in the
+data area of the code object selecting the target word.
+
+Whenever a code object is serialised into a @fasl{} file: the relocation
+vector is appended to it in the @fasl{} file.  Whenever the garbage
+collector moves a code object into a new location: the relocation vector
+must be processed again to update the addresses.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: vanilla object
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains the reference to the Scheme object (or the
+Scheme object itself, if immediate).
+
+When these records are processed: the object reference is stored into
+the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |     ------------------
+     |    |
+  |----|----| vanilla object record
+   1st  2nd
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: displaced object
+
+Such records are composed by @math{3} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains a fixnum representing a byte offset; the third
+word contains the reference to the Scheme object (or the Scheme object
+itself, if immediate).
+
+When these records are processed: the object reference is added to the
+offset in bytes and the result is stored into the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |       ----------------
+     |      |
+     |  off + obj
+  |----|----|----| vanilla object record
+   1st  2nd  3rd
+@end example
+
+Examples of displaced objects are: Scheme symbols referenced in the
+code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: jump label
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+@dots{}
+
+@c ------------------------------------------------------------
+
+@subsubheading Records of type: foreign address
+
+Such records are composed by @math{2} words: the first word contains the
+tag and the displacement in bytes of the target word in the data area;
+the second word contains the reference to a bytevector object holding
+the C string representation of a foreign object name, in the format
+suitable to be handed to @cfunc{dlsym}.
+
+When these records are processed: @cfunc{dlsym} is used to retrieve the
+address of the foreign object (which must be present in the global
+namespace), then the address is stored directly in the target word.
+
+@example
+   meta data         data area
+  |.........|..........................|
+
+s_code   p_data
+  v         v
+  |---------|--------------|----|------| code object
+            |..............|....|target word
+      ------->displacement   ^
+     |                       |
+     |     --- dlsym() ------
+     |    |
+     |    |
+  |----|----| vanilla object record
+   1st  2nd
+@end example
+
+Examples of foreign objects are: the C functions exported by the runtime
+program @command{vicare} to be called from Scheme; the C functions
+exported by the shared library when using an extension to Vicare with
+the model proposed by the Vicare/Template project (for example
+Vicare/SQLite).
+
+@c page
+@node objects codes gc
+@subsection Memory and garbage collection
+
+
+Code objects are @strong{not} allocated on the heap like other common
+objects (pairs, vectors, @dots{}); rather they are allocated in
+specially memory mapped regions which receive execution protection.
+
+Whenever the garbage collector encounters a reference to a code object:
+it moves the code object itself into a new location to reduce
+fragmentation.
+
+@c page
+@node objects closures
+@section Closure objects
+
+
+Closure objects are actual procedures: closure objects are the ones for
+which the @func{procedure?} predicate returns @true{}.  A closure object
+is a fixed length memory block referenced by machine words tagged as
+closures; each closure object is associated to a code object that
+implements the procedure.  The memory layout of a closure object is as
+follows:
+
+@example
+|------------------------|-------------| reference to closure
+      heap pointer         closure tag
+
+                       0   1   2   3   4   5
+|--------------------|---|---|---|---|---|---| memory block
+  raw memory pointer    one slot for every
+  to binary code        free variable
+@end example
+
+@noindent
+the first word in the memory block holds a raw memory pointer
+referencing the first byte in the code object implementing the closure;
+the subsequent words (if any) are slots associated to the free variables
+referenced by the closure's code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Inspecting a closure's free variables
+
+
+We can take a look at the free variables referenced by a closure with
+the facilities of the library @library{ikarus system $codes}.  In a
+normal application: we must @strong{not} mess with the internals of
+closure and code objects.
+
+We start by noticing that in the following example: the function
+@func{f} has no ``true'' free variables, because it accesses only global
+variables:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+(define a 123)
+(define (f)
+  a)
+($code-freevars ($closure-code f))      @result{} 0
+@end example
+
+In the following example: the function @func{f} is the only one
+referencing the free variable @code{a}, so such variable is stored
+directly in the closure's slot:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+(define f
+  (let ((a 123))
+    (lambda () a)))
+($code-freevars ($closure-code f))      @result{} 1
+($cpref f 0)                            @result{} 123
+@end example
+
+@noindent
+when there are two such variables:
+
+@example
+#!r6rs
+(import (vicare)
+  (ikarus system $codes))
+
+(define f
+  (let ((a 123)
+        (b 456))
+    (lambda ()
+      (list a b))))
+($code-freevars ($closure-code f))      @result{} 2
+($cpref f 0)                            @result{} 456
+($cpref f 1)                            @result{} 123
+@end example
+
+When more than one closure references the same free variable, the
+storage of the variable is inside a Scheme vector and such vector is
+referenced by the slots of the closures:
+
+@example
+#!r6rs
+(import (rnrs)
+  (ikarus system $codes))
+(define f #f)
+(define g #f)
+(let ((a 123))
+  (set! f (lambda () a))
+  (set! g (lambda (x)
+            (set! a x)
+            a)))
+($code-freevars ($closure-code f))      @result{} 1
+($cpref f 0)                            @result{} #(123)
+($code-freevars ($closure-code g))      @result{} 1
+($cpref g 0)                            @result{} #(123)
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+Closure objects are allocated on the heap; to perform the allocation and
+initialisation we do:
+
+@example
+ikptr   p_closure;
+ikptr   s_closure;
+ikptr   s_code = ...;
+
+p_closure = ik_safe_alloc(pcb, IK_ALIGN(disp_closure_data));
+s_closure = p_closure | closure_tag;
+IK_REF(s_closure, off_closure_code) = s_code + off_code_data;
+@end example
+
+@noindent
+@cfunc{ik_safe_alloc} returns an @ikptr{} value representing the aligned
+pointer, having the @math{3} least significant bits set to zero; we add
+to it the closure tag (an integer value fitting in @math{3} bits) which
+allows to recognise closures among all the other built in objects.
+
+
+@defvr {Preprocessor Symbol} closure_tag
+An integer used to tag @ikptr{} references to closure memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} closure_mask
+An integer representing the bitmask used to extract (with a bitwise
+logic AND) the tag from @ikptr{} references to closure objects.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_closure_code
+Displacement of code pointer.  The number of bytes to add to an
+@strong{untagged} pointer to closure to get the pointer to the first
+byte in the word of the closure's data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_closure_data
+Number of bytes needed to hold a closure's memory block.  An integer to
+add to an @strong{untagged} pointer to closure to obtain a pointer to
+the first byte after the closure's memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_closure_code
+An integer to add to a tagged @ikptr{} reference to retrieve the pointer
+to the first byte of the word in the closure's data area.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_closure_data
+An integer to add to a tagged @ikptr{} vector reference to obtain a
+pointer to the first byte after the closure's memory block.
+@end defvr
+
+@c ------------------------------------------------------------
+
+@subsubheading Convenience preprocessor macros
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr @var{X})
+Evaluate to true if @var{X} is a reference to closure object.
+@end deftypefn
+
+@c page
+@node objects continuations
+@section Continuation objects
+
+
+Continuation objects are memory blocks referenced by machine words
+tagged as vectors, whose first word is tagged as continuation:
+
+@example
+|----------------|----------| reference to continuation
+  heap pointer    vector tag
+
+|----------------|----------| first word of continuation
+ all set to zero  vector tag
+@end example
+
+@noindent
+the layout of a continuation memory block is:
+
+@example
+|-----|-----|-----|-----|
+  tag   top  size  next
+@end example
+
+To understand the contents of a continuation object, we have to recall
+how the Scheme stack is used:
+
+@example
+ high memory
+|            |
+|------------|
+|            | <-- pcb->frame_base
+|------------|
+| used word  | <-- pcb->frame_base - wordsize
+|------------|
+|     .      |
+|     .      |
+|     .      |
+|------------|
+| free word  | <-- pcb->frame_pointer
+|------------|
+|     .      |
+|     .      |
+|     .      |
+|------------|
+| free word  | <-- pcb->stack_base
+|------------|
+|            |
+  low memory
+@end example
+
+@noindent
+and remember that @code{pcb->frame_base} references a word that is
+one--off the end of the stack segment; so the first word in the stack
+is:
+
+@example
+pcb->frame_base - wordsize
+@end example
+
+@noindent
+A continuation references the portion of the Scheme stack memory segment
+between @code{frame_base} and @code{frame_pointer}.
+
+There are two kinds of continuation objects:
+
+@table @dfn
+@item Scheme continuations
+Represent a Scheme continuation.  They are expliticly created by
+@func{call/cc}, but also used to represent a previous Scheme code
+execution when the allocated Scheme stack runs out of space.
+
+@item system continuations
+Represent a C continuation.  They are used by the @ffi{} to save the C
+execution context just before calling back to Scheme from C code.
+@end table
+
+The fields of a Scheme continuation are:
+
+@table @code
+@item top
+Untagged pointer referencing the first free word on the Scheme stack.
+
+@item size
+Number of bytes used on the Scheme stack, @strong{not} counting the free
+word referenced by the frame pointer.
+
+@item next
+Tagged pointer referencing a continuation object; it represents the
+continuation to go back to after the execution of tthis continuation is
+finished.  This ``going back'' is performed by the C function
+@cfunc{ik_exec_code}.
+@end table
+
+The fields of a Scheme continuation are:
+
+@table @code
+@item top
+Untagged memory pointer referencing the C language stack last saved by
+Scheme code; it is the content of the field @code{pcb->system_stack} at
+the time this system continuation object was created.
+
+@item size
+Unused.
+
+@item next
+Tagged memory pointer referencing the next continuation; it is the
+content of the field @code{pcb->next_k} at the time this system
+continuation object was created.
+@end table
+
+Whatever the kind, usually a continuation is created and then saved in
+the field @code{pcb->next_k} in such a way that continuation objects
+create a linked list:
+
+@example
+        next_k
+|------|------|-----| PCB
+          |
+          v     next
+       |-------|----| continuation
+                  |
+                  v     next
+               |-------|----| continuation
+                          |
+                           --> NULL
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Basic operations
+
+
+@defvr {Preprocessor Symbol} continuation_tag
+@defvrx {Preprocessor Symbol} system_continuation_tag
+Integer values used to tag and recognise the first word in continuation
+memory blocks.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} continuation_size
+@defvrx {Preprocessor Symbol} system_continuation_size
+The number of bytes needed to hold a continuation memory block.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_continuation_tag
+@defvrx {Preprocessor Symbol} disp_continuation_top
+@defvrx {Preprocessor Symbol} disp_continuation_size
+@defvrx {Preprocessor Symbol} disp_continuation_next
+Scheme continuation field displacements.  The number of bytes to add to
+an untagged pointer to Scheme continuations to get the pointer to the
+first byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} disp_system_continuation_tag
+@defvrx {Preprocessor Symbol} disp_system_continuation_top
+@defvrx {Preprocessor Symbol} disp_system_continuation_size
+@defvrx {Preprocessor Symbol} disp_system_continuation_next
+System continuation field displacements.  The number of bytes to add to
+an untagged pointer to system continuations to get the pointer to the
+first byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_continuation_tag
+@defvrx {Preprocessor Symbol} off_continuation_top
+@defvrx {Preprocessor Symbol} off_continuation_size
+@defvrx {Preprocessor Symbol} off_continuation_next
+Scheme continuation field offsets.  The number of bytes to add to a
+tagged pointer to Scheme continuation to get the pointer to the first
+byte in the word holding the specified field.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} off_system_continuation_tag
+@defvrx {Preprocessor Symbol} off_system_continuation_top
+@defvrx {Preprocessor Symbol} off_system_continuation_size
+@defvrx {Preprocessor Symbol} off_system_continuation_next
+System continuation field offsets.  The number of bytes to add to a
+tagged pointer to system continuation to get the pointer to the first
+byte in the word holding the specified field.
+@end defvr
+
+
+A Scheme continuation object is usually allocated as follows:
+
+@example
+ikpcb *     pcb = ...;
+ikptr       s_kont;
+
+s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) \
+   | vector_tag;
+IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
+IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
+IK_REF(s_kont, off_continuation_size) = \
+   pcb->frame_base - pcb->frame_pointer - wordsize;
+IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+pcb->next_k = s_kont;
+@end example
+
+@c page
+@node objects misc
+@section Miscellaneous functions and preprocessor macros
+
+
+@menu
+* objects misc func::           Miscellaneous functions.
+* objects misc mblock::         Macros handling @code{memory-block}.
+* objects misc voidp::          Macros extracting @code{void *}.
+* objects misc charp::          Macros extracting @code{char *}.
+@end menu
+
+@c page
+@node objects misc func
+@subsection Miscellaneous functions
+
+
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from @var{src} starting at offset
+@var{src_start}, to @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
+
+Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
+a string.  For bytevectors and pointers: bytes are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
+strings: 32-bit values representing Unicode code points are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in character units.
+@end deftypefun
+
+@c page
+@node objects misc mblock
+@subsection Macros handling @code{memory-block}
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_MBLOCK_POINTER (ikptr @var{obj})
+Given an instance of @code{memory-block}, return a pointer object being
+the value of its @code{pointer} field.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_MBLOCK_SIZE (ikptr @var{obj})
+Given an instance of @code{memory-block}, return an exact integer being
+the value of its @code{size} field.  Notice that the returned value can
+be either a fixnum or a bignum.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} size_t IK_MBLOCK_SIZE_T (ikptr @var{obj})
+Given an instance of @code{memory-block}, return the value of the
+@code{size} field as @code{size_t}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_MBLOCK_DATA_VOIDP (ikptr @var{obj})
+Given an instance of @code{memory-block}, return a @code{void *} pointer
+referencing the first byte of data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_MBLOCK_DATA_CHARP (ikptr @var{obj})
+Given an instance of @code{memory-block}, return a @code{charp *} pointer
+referencing the first byte of data.
+@end deftypefn
+
+@c page
+@node objects misc voidp
+@subsection Macros extracting @code{void *}
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_VOIDP_FROM_POINTER_OR_FALSE (ikptr @var{obj})
+Given @false{} or a pointer object return a @code{void *} pointer
+referencing the data; when @var{obj} is @false{}: the returned value is
+@cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+Given @false{} or a bytevector object return a @code{void *} pointer
+referencing the data; when @var{obj} is @false{}: the returned value is
+@cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a @code{memory-block} object return a @code{void *}
+pointer referencing the data; when @var{obj} is @false{}: the returned
+value is @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+Given a bytevector object or a pointer object return a @code{void *}
+pointer referencing the data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+Given @false{} or a bytevector object or a pointer object return a
+@code{void *} pointer referencing the data; when @var{obj} is @false{}:
+the returned value is @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+Given a pointer object or @code{memory-block} object return a @code{void
+*} pointer referencing the data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a pointer object or a @code{memory-block} object
+return a @code{void *} pointer referencing the data; when @var{obj} is
+@false{}: the returned value is @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+Given a bytevector object or a pointer object or a @code{memory-block}
+object return a @code{void *} pointer referencing the data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a bytevector object or a pointer object or a
+@code{memory-block} object return a @code{void *} pointer referencing
+the data; when @var{obj} is @false{}: the returned value is @cnull{}.
+@end deftypefn
+
+@c page
+@node objects misc charp
+@subsection Macros extracting @code{char *}
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_POINTER_FROM_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_FALSE (ikptr @var{obj})
+Given @false{} or a pointer object return a @code{char *} pointer
+referencing the data; when @var{obj} is @false{}: the returned value is
+@cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+Given @false{} or a bytevector object return a @code{char *} pointer
+referencing the data; when @var{obj} is @false{}: the returned value is
+@cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a @code{memory-block} object return a @code{char *}
+pointer referencing the data; when @var{obj} is @false{}: the returned
+value is @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+Given a bytevector object or a pointer object return a @code{char *}
+pointer referencing the data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+Given @false{} or a bytevector object or a pointer object return a
+@code{char *} pointer referencing the data; when @var{obj} is @false{}:
+the returned value is @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+Given a pointer object or @code{memory-block} object return a @code{void
+*} pointer referencing the data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a pointer object or a @code{memory-block} object
+return a @code{char *} pointer referencing the data; when @var{obj} is
+@false{}: the returned value is @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+Given a bytevector object or a pointer object or a @code{memory-block}
+object return a @code{char *} pointer referencing the data.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+Given @false{} or a bytevector object or a pointer object or a
+@code{memory-block} object return a @code{char *} pointer referencing
+the data; when @var{obj} is @false{}: the returned value is @cnull{}.
+@end deftypefn
+
+@c page
+@node objects callbacks
+@section Notes on calling Scheme code from C
+
+
+While writing C language code interfacing with Scheme, if we call a C
+language function which calls back a Scheme function we have to save and
+restore the continuation:
+
+@example
+ikpcb * pcb = the_pcb;
+ikptr   sk;
+
+sk = ik_enter_c_function(pcb);
+@{
+  /* place here C code that calls Scheme code */
+@}
+ik_leave_c_function(pcb, sk);
+@end example
+
+@noindent
+else, upon returning from the Scheme code, the execution flow will go to
+the wrong continuation and undefined behaviour ensues.
+
+
+@deftypefun ikptr ik_enter_c_function (ikpcb * @var{pcb})
+Save the current Scheme continuation and return a reference to it.
+@end deftypefun
+
+
+@deftypefun ikptr ik_leave_c_function (ikpcb * @var{pcb}, ikptr @var{sk})
+Restore the previously saved Scheme continuation @var{sk}.
+@end deftypefun
+
+@c end of file
