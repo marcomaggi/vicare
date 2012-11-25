@@ -3018,6 +3018,158 @@
   #| end of module: quotient |# )
 
 
+(module (modulo
+	 $modulo-fixnum-number	$modulo-bignum-number	$modulo-flonum-number
+	 $modulo-number-fixnum	$modulo-number-bignum	$modulo-number-flonum
+	 $modulo-fixnum-fixnum	$modulo-fixnum-bignum	$modulo-fixnum-flonum
+	 $modulo-bignum-fixnum	$modulo-bignum-bignum	$modulo-bignum-flonum
+	 $modulo-flonum-fixnum	$modulo-flonum-bignum	$modulo-flonum-flonum)
+  (define who 'modulo)
+
+  (define (modulo n m)
+    (cond-inexact-integer-operand n
+      ((fixnum?)	($modulo-fixnum-number n m))
+      ((bignum?)	($modulo-bignum-number n m))
+      ((flonum?)	($modulo-flonum-number n m))
+      (else
+       (%error-not-integer n))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($modulo-fixnum-number n m)
+    (cond-inexact-integer-operand m
+      ((fixnum?)	($modulo-fixnum-fixnum n m))
+      ((bignum?)	($modulo-fixnum-bignum n m))
+      ((flonum?)	($modulo-fixnum-flonum n m))
+      (else
+       (%error-not-integer m))))
+
+  (define ($modulo-bignum-number n m)
+    (cond-inexact-integer-operand m
+      ((fixnum?)	($modulo-bignum-fixnum n m))
+      ((bignum?)	($modulo-bignum-bignum n m))
+      ((flonum?)	($modulo-bignum-flonum n m))
+      (else
+       (%error-not-integer m))))
+
+  (define ($modulo-flonum-number n m)
+    (let ((n.exact ($flonum->exact n)))
+      (cond-exact-integer-operand n.exact
+	((fixnum?)	(inexact ($modulo-fixnum-number n.exact m)))
+	((bignum?)	(inexact ($modulo-bignum-number n.exact m)))
+	(else
+	 (%error-not-integer n)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($modulo-number-fixnum n m)
+    (cond-inexact-integer-operand n
+      ((fixnum?)	($modulo-fixnum-fixnum n m))
+      ((bignum?)	($modulo-bignum-fixnum n m))
+      ((flonum?)	($modulo-flonum-fixnum n m))
+      (else
+       (%error-not-integer n))))
+
+  (define ($modulo-number-bignum n m)
+    (cond-inexact-integer-operand n
+      ((fixnum?)	($modulo-fixnum-bignum n m))
+      ((bignum?)	($modulo-bignum-bignum n m))
+      ((flonum?)	($modulo-flonum-bignum n m))
+      (else
+       (%error-not-integer n))))
+
+  (define ($modulo-number-flonum n m)
+    (let ((m.exact ($flonum->exact m)))
+      (cond-exact-integer-operand m.exact
+	((fixnum?)	(inexact ($modulo-number-fixnum n m.exact)))
+	((bignum?)	(inexact ($modulo-number-bignum n m.exact)))
+	(else
+	 (%error-not-integer m)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($modulo-fixnum-fixnum n m)
+    (if ($fxzero? m)
+	(assertion-violation who "division by zero" n m)
+      ($fxmodulo n m)))
+
+  (define ($modulo-fixnum-bignum n m)
+    (if ($fxnegative? n)
+	(if ($bignum-positive? m)
+	    (foreign-call "ikrt_fxbnplus" n m)
+	  n)
+      (if ($bignum-positive? m)
+	  n
+	(foreign-call "ikrt_fxbnplus" n m))))
+
+  (define ($modulo-fixnum-flonum n m)
+    (let ((v ($flonum->exact m)))
+      (cond-exact-integer-operand v
+	((fixnum?)	(inexact ($modulo-fixnum-fixnum n v)))
+	((bignum?)	(inexact ($modulo-fixnum-bignum n v)))
+	(else
+	 (%error-not-integer m)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($modulo-bignum-fixnum n m)
+    (if ($fxzero? m)
+	(assertion-violation who "division by zero" n m)
+      (foreign-call "ikrt_bnfx_modulo" n m)))
+
+  (define ($modulo-bignum-bignum n m)
+    ;;FIXME  Use type-specific  functions.   (Marco Maggi;  Thu Nov  22,
+    ;;2012)
+    (if ($bignum-positive? n)
+	(if ($bignum-positive? m)
+	    ($remainder-bignum-bignum n m)
+	  ($add-bignum-number m ($remainder-bignum-bignum n m)))
+      (if ($bignum-positive? m)
+	  ($add-bignum-number m ($remainder-bignum-bignum n m))
+	($remainder-bignum-bignum n m))))
+
+  (define ($modulo-bignum-flonum n m)
+    (let ((m.exact ($flonum->exact m)))
+      (cond-exact-integer-operand m.exact
+	((fixnum?)	(inexact ($modulo-bignum-fixnum n m.exact)))
+	((bignum?)	(inexact ($modulo-bignum-bignum n m.exact)))
+	(else
+	 (%error-not-integer m)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($modulo-flonum-fixnum n m)
+    (let ((n.exact ($flonum->exact n)))
+      (cond-exact-integer-operand n.exact
+	((fixnum?)	(inexact ($modulo-fixnum-fixnum n.exact m)))
+	((bignum?)	(inexact ($modulo-bignum-fixnum n.exact m)))
+	(else
+	 (%error-not-integer n)))))
+
+  (define ($modulo-flonum-bignum n m)
+    (let ((n.exact ($flonum->exact n)))
+      (cond-exact-integer-operand n.exact
+	((fixnum?)	(inexact ($modulo-fixnum-bignum n.exact m)))
+	((bignum?)	(inexact ($modulo-bignum-bignum n.exact m)))
+	(else
+	 (%error-not-integer n)))))
+
+  (define ($modulo-flonum-flonum n m)
+    (let ((n.exact ($flonum->exact n)))
+      (cond-exact-integer-operand n.exact
+	((fixnum?)	($modulo-fixnum-flonum n.exact m))
+	((bignum?)	($modulo-bignum-flonum n.exact m))
+	(else
+	 (%error-not-integer n)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-integer x)
+    (assertion-violation who "expected integer as argument" x))
+
+  #| end of module: modulo |# )
+
+
 (module (max
 	 $max-fixnum-number $max-bignum-number $max-flonum-number $max-ratnum-number
 	 $max-number-fixnum $max-number-bignum $max-number-flonum $max-number-ratnum
@@ -3734,173 +3886,6 @@
 		   ($number->string ($ratnum-d x) r)))
 
   #| end of module: number->string |# )
-
-
-(module (modulo
-	 $modulo-fixnum-number	$modulo-bignum-number	$modulo-flonum-number
-	 $modulo-number-fixnum	$modulo-number-bignum	$modulo-number-flonum
-	 $modulo-fixnum-fixnum	$modulo-fixnum-bignum	$modulo-fixnum-flonum
-	 $modulo-bignum-fixnum	$modulo-bignum-bignum	$modulo-bignum-flonum
-	 $modulo-flonum-fixnum	$modulo-flonum-bignum	$modulo-flonum-flonum)
-  (define who 'modulo)
-
-  (define (modulo n m)
-    (cond-numeric-operand n
-      ((fixnum?)	($modulo-fixnum-number n m))
-      ((bignum?)	($modulo-bignum-number n m))
-      ((flonum?)	($modulo-flonum-number n m))
-      ((ratnum?)	(%error-not-integer n))
-      ((compnum?)	(%error-not-integer n))
-      ((cflonum?)	(%error-not-integer n))
-      (else
-       (%error-not-integer n))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($modulo-fixnum-number n m)
-    (cond-numeric-operand m
-      ((fixnum?)	($modulo-fixnum-fixnum n m))
-      ((bignum?)	($modulo-fixnum-bignum n m))
-      ((flonum?)	($modulo-fixnum-flonum n m))
-      ((ratnum?)	(%error-not-integer m))
-      ((compnum?)	(%error-not-integer m))
-      ((cflonum?)	(%error-not-integer m))
-      (else
-       (%error-not-integer m))))
-
-  (define ($modulo-bignum-number n m)
-    (cond-numeric-operand m
-      ((fixnum?)	($modulo-bignum-fixnum n m))
-      ((bignum?)	($modulo-bignum-bignum n m))
-      ((flonum?)	($modulo-bignum-flonum n m))
-      ((ratnum?)	(%error-not-integer m))
-      ((compnum?)	(%error-not-integer m))
-      ((cflonum?)	(%error-not-integer m))
-      (else
-       (%error-not-integer m))))
-
-  (define ($modulo-flonum-number n m)
-    (let ((v ($flonum->exact n)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-fixnum-number v m)))
-	((bignum?)	(inexact ($modulo-bignum-number v m)))
-	(else
-	 (%error-not-integer n)))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($modulo-number-fixnum n m)
-    (cond-numeric-operand n
-      ((fixnum?)	($modulo-fixnum-fixnum n m))
-      ((bignum?)	($modulo-bignum-fixnum n m))
-      ((flonum?)	($modulo-flonum-fixnum n m))
-      ((ratnum?)	(%error-not-integer n))
-      ((compnum?)	(%error-not-integer n))
-      ((cflonum?)	(%error-not-integer n))
-      (else
-       (%error-not-integer n))))
-
-  (define ($modulo-number-bignum n m)
-    (cond-numeric-operand n
-      ((fixnum?)	($modulo-fixnum-bignum n m))
-      ((bignum?)	($modulo-bignum-bignum n m))
-      ((flonum?)	($modulo-flonum-bignum n m))
-      ((ratnum?)	(%error-not-integer n))
-      ((compnum?)	(%error-not-integer n))
-      ((cflonum?)	(%error-not-integer n))
-      (else
-       (%error-not-integer n))))
-
-  (define ($modulo-number-flonum n m)
-    (let ((v ($flonum->exact m)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-number-fixnum n v)))
-	((bignum?)	(inexact ($modulo-number-bignum n v)))
-	(else
-	 (%error-not-integer m)))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($modulo-fixnum-fixnum n m)
-    (if ($fxzero? m)
-	(assertion-violation who "division by zero" n m)
-      ($fxmodulo n m)))
-
-  (define ($modulo-fixnum-bignum n m)
-    (if ($fxnegative? n)
-	(if ($bignum-positive? m)
-	    (foreign-call "ikrt_fxbnplus" n m)
-	  n)
-      (if ($bignum-positive? m)
-	  n
-	(foreign-call "ikrt_fxbnplus" n m))))
-
-  (define ($modulo-fixnum-flonum n m)
-    (let ((v ($flonum->exact m)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-fixnum-fixnum n v)))
-	((bignum?)	(inexact ($modulo-fixnum-bignum n v)))
-	(else
-	 (%error-not-integer m)))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($modulo-bignum-fixnum n m)
-    (if ($fxzero? m)
-	(assertion-violation who "division by zero" n m)
-      (foreign-call "ikrt_bnfx_modulo" n m)))
-
-  (define ($modulo-bignum-bignum n m)
-    ;;FIXME  Use type-specific  functions.   (Marco Maggi;  Thu Nov  22,
-    ;;2012)
-    (if ($bignum-positive? n)
-	(if ($bignum-positive? m)
-	    (remainder n m)
-	  (+ m (remainder n m)))
-      (if ($bignum-positive? m)
-	  (+ m (remainder n m))
-	(remainder n m))))
-
-  (define ($modulo-bignum-flonum n m)
-    (let ((v ($flonum->exact m)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-bignum-fixnum n v)))
-	((bignum?)	(inexact ($modulo-bignum-bignum n v)))
-	(else
-	 (%error-not-integer m)))))
-
-;;; --------------------------------------------------------------------
-
-  (define ($modulo-flonum-fixnum n m)
-    (let ((v ($flonum->exact n)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-fixnum-fixnum v m)))
-	((bignum?)	(inexact ($modulo-bignum-fixnum v m)))
-	(else
-	 (%error-not-integer n)))))
-
-  (define ($modulo-flonum-bignum n m)
-    (let ((v ($flonum->exact n)))
-      (cond-exact-integer-operand v
-	((fixnum?)	(inexact ($modulo-fixnum-bignum v m)))
-	((bignum?)	(inexact ($modulo-bignum-bignum v m)))
-	(else
-	 (%error-not-integer n)))))
-
-  (define ($modulo-flonum-flonum n m)
-    (let ((v ($flonum->exact n)))
-      (cond-exact-integer-operand v
-	((fixnum?)	($modulo-fixnum-flonum v m))
-	((bignum?)	($modulo-bignum-flonum v m))
-	(else
-	 (%error-not-integer n)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-integer x)
-    (assertion-violation who "expected integer as argument" x))
-
-  #| end of module: modulo |# )
 
 
 (module (=)
@@ -6562,5 +6547,6 @@
 ;; Local Variables:
 ;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-exact-integer-operand 'scheme-indent-function 1)
+;; eval: (put 'cond-inexact-integer-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-real-numeric-operand 'scheme-indent-function 1)
 ;; End:
