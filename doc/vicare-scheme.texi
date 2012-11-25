@@ -20138,81 +20138,8 @@ be @code{AF_INET} or @code{AF_INET6}.
 @end deftypefun
 
 @c page
-@node srfi
-@chapter Scheme Requests For Implementation
+@include srfi.texi
 
-
-A port to @rnrs{6} of the @srfi{} libraries is included in the
-distribution of @value{PRJNAME}.  The libraries' names conform to
-@srfi{} 97: @srfi{} Libraries.  There is a registry of available
-@srfi{}s and other platform features which works alongside @srfi{} 0:
-Feature--Based Conditional Expansion.
-
-@quotation
-This @srfi{} documentation is an unofficial Texinfo reformatting and
-minor modification of the original documents by Marco Maggi.
-@end quotation
-
-@menu
-* srfi cond-expand::            @ansrfi{0} feature based conditional
-                                expansion construct.
-* srfi list::                   @ansrfi{1} list library.
-* srfi and-let-star::           @ansrfi{2} @func{and-let*}.
-* srfi string-ports::           @ansrfi{6} basic string ports.
-* srfi receive::                @ansrfi{8} @func{receive}: Binding to
-                                multiple values.
-* srfi records::                @ansrfi{9} defining record types.
-* srfi let-values::             @ansrfi{11} syntax for receiving
-                                multiple values.
-* srfi strings::                @ansrfi{13} string library.
-* srfi case-lambda::            @ansrfi{16} syntax for procedures of
-                                variable arity.
-* srfi time::                   @ansrfi{19} time data types and procedures.
-* srfi error-reporting::        @ansrfi{23} error reporting mechanism.
-* srfi shared structures::      @ansrfi{38} representation for data with
-                                shared structure.
-* srfi specialize-procedures::  @ansrfi{26} notation for specializing
-                                parameters without currying.
-* srfi random::                 @ansrfi{27} sources of random bits.
-* srfi rec::                    @ansrfi{31} a special form @func{rec}
-                                for recursive evaluation.
-* srfi parameters::             @ansrfi{39} parameter objects.
-* srfi args-fold::              @ansrfi{37} a program argument processor.
-* srfi streams::                @ansrfi{41} streams.
-* srfi eager-comp::             @ansrfi{42} eager comprehensions.
-* srfi vector::                 @ansrfi{43} vector library.
-* srfi general-cond::           @ansrfi{61} a more general @func{cond} clause.
-* srfi lightweight-testing::    @ansrfi{78} lightweight testing.
-* srfi environment-variables::  @ansrfi{98} environment variables.
-@end menu
-
-@c ------------------------------------------------------------
-
-@include cond-expand.texi
-@include list.texi
-@include and-let-star.texi
-@include string-ports.texi
-@include receive.texi
-@include records.texi
-@include let-values.texi
-@include strings.texi
-@include case-lambda.texi
-@include time.texi
-@include error-reporting.texi
-@include shared-structures.texi
-@include specialize-procedures.texi
-@include random.texi
-@include rec.texi
-@include parameters.texi
-@include args-fold.texi
-@include streams.texi
-@include eager-comp.texi
-@include vector.texi
-@include general-cond.texi
-@include lightweight-testing.texi
-@include environment-variables.texi
-
-@c page
 @node libs
 @chapter Other libraries
 
