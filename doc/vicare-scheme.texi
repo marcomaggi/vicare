@@ -14406,16 +14406,16 @@ Return @vari{cfl} raised to the power of @varii{cfl}.
 @subsubheading Hyperbolic functions
 
 
-@defun glibc-sinh @var{fl}
-@defunx glibc-cosh @var{fl}
-@defunx glibc-tanh @var{fl}
+@defun sinh @var{fl}
+@defunx cosh @var{fl}
+@defunx tanh @var{fl}
 Hyperbolic functions for flonums.
 @end defun
 
 
-@defun glibc-asinh @var{fl}
-@defunx glibc-acosh @var{fl}
-@defunx glibc-atanh @var{fl}
+@defun asinh @var{fl}
+@defunx acosh @var{fl}
+@defunx atanh @var{fl}
 Inverse hyperbolic functions for flonums.
 @end defun
 

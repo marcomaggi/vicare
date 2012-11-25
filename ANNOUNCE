@@ -118,6 +118,16 @@ Notes for revision 0.2d20
      flzero?/positive
      flzero?/negative
 
+* BACKWARDS INCOMPATIBILITY The functions from (vicare glibc):
+
+    glibc-sinh  glibc-cosh  glibc-tanh
+    glibc-asinh glibc-acosh glibc-atanh
+
+  have been renamed to:
+
+    sinh  cosh  tanh
+    asinh acosh atanh
+
 
 Notes for revision 0.2d19
 -------------------------

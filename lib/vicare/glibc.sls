@@ -49,8 +49,8 @@
     casin		cacos		catan
     cexp		clog		clog10
     csqrt		cpow
-    glibc-sinh		glibc-cosh	glibc-tanh
-    glibc-asinh		glibc-acosh	glibc-atanh
+    sinh		cosh		tanh
+    asinh		acosh		atanh
     csinh		ccosh		ctanh
     casinh		cacosh		catanh
     erf			erfc		tgamma		lgamma
@@ -76,7 +76,9 @@
     iconv-encoding-universe
     iconv-encoding-aliases?	iconv-encoding=?
     )
-  (import (vicare)
+  (import (except (vicare)
+		  sinh		cosh		tanh
+		  asinh		acosh		atanh)
     (prefix (only (vicare posix)
 		  directory-stream?
 		  directory-stream-closed?
@@ -346,12 +348,12 @@
 (define-one-operand/cflonum csqrt	capi.glibc-csqrt)
 (define-two-operands/cflonum cpow	capi.glibc-cpow)
 
-(define-one-operand/flonum glibc-sinh	capi.glibc-sinh)
-(define-one-operand/flonum glibc-cosh	capi.glibc-cosh)
-(define-one-operand/flonum glibc-tanh	capi.glibc-tanh)
-(define-one-operand/flonum glibc-asinh	capi.glibc-asinh)
-(define-one-operand/flonum glibc-acosh	capi.glibc-acosh)
-(define-one-operand/flonum glibc-atanh	capi.glibc-atanh)
+(define-one-operand/flonum sinh		capi.glibc-sinh)
+(define-one-operand/flonum cosh		capi.glibc-cosh)
+(define-one-operand/flonum tanh		capi.glibc-tanh)
+(define-one-operand/flonum asinh	capi.glibc-asinh)
+(define-one-operand/flonum acosh	capi.glibc-acosh)
+(define-one-operand/flonum atanh	capi.glibc-atanh)
 (define-one-operand/cflonum csinh	capi.glibc-csinh)
 (define-one-operand/cflonum ccosh	capi.glibc-ccosh)
 (define-one-operand/cflonum ctanh	capi.glibc-ctanh)
