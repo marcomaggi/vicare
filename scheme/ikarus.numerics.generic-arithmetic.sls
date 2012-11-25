@@ -248,7 +248,11 @@
 ;;;; helpers
 
 (define (err who x)
-  (die who (if (number? x) "invalid argument" "not a number") x))
+  (assertion-violation who
+    (if (number? x)
+	"invalid argument"
+      "expected number as argument")
+    x))
 
 (module (PI PI/2)
   (import (ikarus))
@@ -3678,23 +3682,6 @@
   #| end of module |# )
 
 
-(define (even? x)
-  (cond-inexact-integer-operand x
-    ((fixnum?)	($fxeven? x))
-    ((bignum?)	($bignum-even? x))
-    ((flonum?)	($fleven? x))
-    (else
-     (assertion-violation 'even? "expected integer as argument" x))))
-
-(define (odd? x)
-  (cond-inexact-integer-operand x
-    ((fixnum?)	($fxodd? x))
-    ((bignum?)	($bignum-odd? x))
-    ((flonum?)	($flodd? x))
-    (else
-     (assertion-violation 'odd? "expected integer as argument" x))))
-
-
 (module (number->string)
 
   (define who 'number->string)
@@ -4545,6 +4532,22 @@
     (else
      (assertion-violation 'negative? "expected real number as argument" x))))
 
+(define (even? x)
+  (cond-inexact-integer-operand x
+    ((fixnum?)	($fxeven? x))
+    ((bignum?)	($bignum-even? x))
+    ((flonum?)	($fleven? x))
+    (else
+     (assertion-violation 'even? "expected integer as argument" x))))
+
+(define (odd? x)
+  (cond-inexact-integer-operand x
+    ((fixnum?)	($fxodd? x))
+    ((bignum?)	($bignum-odd? x))
+    ((flonum?)	($flodd? x))
+    (else
+     (assertion-violation 'odd? "expected integer as argument" x))))
+
 
 (module (expt
 	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
@@ -4813,8 +4816,8 @@
 			(acos -1))))
 
   (define ($log-ratnum x)
-    (- (log ($ratnum-n x))
-       (log ($ratnum-d x))))
+    ($sub-number-number (log ($ratnum-n x))
+			(log ($ratnum-d x))))
 
   (define ($log-compnum x)
     ;;
