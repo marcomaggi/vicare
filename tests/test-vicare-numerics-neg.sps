@@ -49,6 +49,24 @@
 	  (check (?safe-fun   ?op)	=> (?unsafe-fun ?op))
 	  ))))))
 
+(define-syntax make-flonum-test
+  (syntax-rules ()
+    ((_ ?safe-fun ?unsafe-fun)
+     (syntax-rules ()
+       ((_ ?op ?expected-result)
+	(begin
+	  (check (?safe-fun   ?op)	(=> flonum=?) ?expected-result)
+	  (check (?unsafe-fun ?op)	(=> flonum=?) ?expected-result)
+	  (check (?safe-fun   ?op)	(=> flonum=?) (?unsafe-fun ?op))
+	  ))))))
+
+(define (flonum=? x y)
+  (cond ((flzero?/positive x)
+	 (flzero?/positive y))
+	((flzero?/negative x)
+	 (flzero?/negative y))
+	((fl=? x y))))
+
 
 ;;;; constants
 
@@ -174,6 +192,24 @@
 (define NEG-RN35	-536870913/536870912	#;(/ NEG-BN3 FX4))
 (define NEG-RN36	-134217753/134217728	#;(/ NEG-BN4 FX4))
 
+;;; --------------------------------------------------------------------
+
+(define FL1		+0.0)
+(define FL2		-0.0)
+(define FL3		+2.123)
+(define FL4		-2.123)
+(define FL5		+inf.0)
+(define FL6		-inf.0)
+(define FL7		+nan.0)
+
+(define NEG-FL1		-0.0)
+(define NEG-FL2		+0.0)
+(define NEG-FL3		-2.123)
+(define NEG-FL4		+2.123)
+(define NEG-FL5		-inf.0)
+(define NEG-FL6		+inf.0)
+(define NEG-FL7		+nan.0)
+
 
 (parametrise ((check-test-name	'fixnums))
 
@@ -248,6 +284,22 @@
   (test RN34	NEG-RN34)
   (test RN35	NEG-RN35)
   (test RN36	NEG-RN36)
+
+  #t)
+
+
+(parametrise ((check-test-name	'flonums))
+
+  (define-syntax test
+    (make-flonum-test - $neg-flonum))
+
+  (test FL1 NEG-FL1)
+  (test FL2 NEG-FL2)
+  (test FL3 NEG-FL3)
+  (test FL4 NEG-FL4)
+  (test FL5 NEG-FL5)
+  (test FL6 NEG-FL6)
+  (test FL7 NEG-FL7)
 
   #t)
 
