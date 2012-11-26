@@ -848,10 +848,14 @@
     ($fl- x))
 
   (define ($neg-ratnum x)
-    ($sub-fixnum-ratnum 0 x))
+    (let ((y.num ($ratnum-n x))
+	  (y.den ($ratnum-d x)))
+      ($div-number-number ($neg-number y.num)
+			  y.den)))
 
   (define ($neg-compnum x)
-    ($sub-fixnum-compnum 0 x))
+    ($make-rectangular ($neg-number ($compnum-real x))
+		       ($neg-number ($compnum-imag x))))
 
   (define ($neg-cflonum x)
     ($make-cflonum ($fl- ($cflonum-real x))
