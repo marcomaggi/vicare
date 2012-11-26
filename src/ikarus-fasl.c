@@ -274,20 +274,21 @@ do_read (ikpcb* pcb, fasl_port* p)
     put_mark_index = idx;
     c = fasl_read_byte(p);
     if (idx <= 0)
-      ik_abort("fasl_read: invalid index %d", idx);
+      ik_abort("%s: invalid index %d", __func__, idx);
     if (p->marks) {
       if (idx >= p->marks_size)
-        ik_abort("mark too big: %d", idx);
+        ik_abort("%s: mark too big: %d", __func__, idx);
       if (idx < p->marks_size) {
         if (p->marks[idx] != 0)
-          ik_abort("mark %d already set", idx);
+          ik_abort("%s: mark %d already set", __func__, idx);
       }
-    }
-    else {
+    } else {
       /* allocate marks */
-      p->marks = (ikptr*)(long)ik_mmap(2*IK_PAGESIZE*sizeof(ikptr*));
-      bzero(p->marks, 2*IK_PAGESIZE*sizeof(ikptr*));
-      p->marks_size = 2*IK_PAGESIZE;
+#define NUM_OF_MARKS		(4 * IK_CHUNK_SIZE)
+#define MARKS_BLOCK_SIZE	(NUM_OF_MARKS * sizeof(ikptr*))
+      p->marks = (ikptr*)(long)ik_mmap(MARKS_BLOCK_SIZE);
+      bzero(p->marks, MARKS_BLOCK_SIZE);
+      p->marks_size = NUM_OF_MARKS;
     }
   }
   if (c == 'x') {	/* code object */
