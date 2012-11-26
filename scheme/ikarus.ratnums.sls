@@ -17,11 +17,24 @@
 
 (library (ikarus ratnums)
   (export
+    $make-rational
     $ratnum->flonum)
   (import (ikarus)
     (except (ikarus system $ratnums)
 	    $ratnum->flonum)
     (ikarus system $flonums))
+
+
+(define ($make-rational num den)
+  (define who '$make-rational)
+  (cond ((zero? num)
+	 (assertion-violation who "ratnum numerator must be non-zero" num den))
+	((zero? den)
+	 (assertion-violation who "ratnum denominator must be non-zero" num den))
+	((positive? den)
+	 ($make-ratnum num den))
+	(else
+	 ($make-ratnum (- num) (- den)))))
 
 
 (module ($ratnum->flonum)

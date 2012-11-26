@@ -833,8 +833,11 @@
     ($bignum->flonum				$bignums)
 ;;;
     ($make-ratnum				$rat)
+    ($make-rational				$rat)
     ($ratnum-n					$rat)
+    ($ratnum-num				$rat)
     ($ratnum-d					$rat)
+    ($ratnum-den				$rat)
     ($ratnum->flonum				$rat)
 ;;;
     ($make-compnum				$comp)

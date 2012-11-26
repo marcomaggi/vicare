@@ -2357,10 +2357,20 @@
 
 
  (define-primop $ratnum-n unsafe
-   ((V x) (prm 'mref (T x) (K off-ratnum-num))))
+   ((V x)
+    (prm 'mref (T x) (K off-ratnum-num))))
+
+ (define-primop $ratnum-num unsafe
+   ((V x)
+    (prm 'mref (T x) (K off-ratnum-num))))
 
  (define-primop $ratnum-d unsafe
-   ((V x) (prm 'mref (T x) (K off-ratnum-den))))
+   ((V x)
+    (prm 'mref (T x) (K off-ratnum-den))))
+
+ (define-primop $ratnum-den unsafe
+   ((V x)
+    (prm 'mref (T x) (K off-ratnum-den))))
 
  /section)
 

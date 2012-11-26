@@ -120,13 +120,19 @@ Notes for revision 0.2d20
 
 * BACKWARDS INCOMPATIBILITY The functions from (vicare glibc):
 
-    glibc-sinh  glibc-cosh  glibc-tanh
-    glibc-asinh glibc-acosh glibc-atanh
+     glibc-sinh glibc-cosh glibc-tanh
+     glibc-asinh glibc-acosh glibc-atanh
 
   have been renamed to:
 
-    sinh  cosh  tanh
-    asinh acosh atanh
+     sinh cosh tanh
+     asinh acosh atanh
+
+* The following bindings have been added to (ikarus system $ratnums):
+
+     $make-rational
+     $ratnum-num
+     $ratnum-den
 
 
 Notes for revision 0.2d19
