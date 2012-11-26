@@ -910,38 +910,38 @@
 	       ($make-ratnum x.den x.num))))))
 
   (define ($inv-compnum x)
-    ;;         1                   1           y.rep - i * y.imp
+    ;;         1                   1           x.rep - i * x.imp
     ;; ----------------- = ----------------- * ----------------- =
-    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;; x.rep + i * x.imp   x.rep + i * x.imp   x.rep - i * x.imp
     ;;
-    ;;   y.rep - i * y.imp         y.rep                   - y.imp
+    ;;   x.rep - i * x.imp         x.rep                   - x.imp
     ;; = ------------------ = ----------------- + i * -----------------
-    ;;   y.rep^2 + x.rep^2    y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;   x.rep^2 + x.rep^2    x.rep^2 + x.rep^2       x.rep^2 + x.rep^2
     ;;
-    (let ((y.rep ($compnum-real y))
-	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
-	    (num.rep y.rep)
-	    (num.imp ($neg-number y.imp))
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (let ((denom   ($add-number-number (sqr x.rep) (sqr x.imp)))
+	    (num.rep x.rep)
+	    (num.imp ($neg-number x.imp)))
 	($make-rectangular ($div-number-number num.rep denom)
-			   ($div-number-number num.imp denom))))))
+			   ($div-number-number num.imp denom)))))
 
   (define ($inv-cflonum x)
-    ;;         1                   1           y.rep - i * y.imp
+    ;;         1                   1           x.rep - i * x.imp
     ;; ----------------- = ----------------- * ----------------- =
-    ;; y.rep + i * y.imp   y.rep + i * y.imp   y.rep - i * y.imp
+    ;; x.rep + i * x.imp   x.rep + i * x.imp   x.rep - i * x.imp
     ;;
-    ;;   y.rep - i * y.imp         y.rep                   - y.imp
+    ;;   x.rep - i * x.imp         x.rep                   - x.imp
     ;; = ------------------ = ----------------- + i * -----------------
-    ;;   y.rep^2 + x.rep^2    y.rep^2 + x.rep^2       y.rep^2 + x.rep^2
+    ;;   x.rep^2 + x.rep^2    x.rep^2 + x.rep^2       x.rep^2 + x.rep^2
     ;;
-    (let ((y.rep ($cflonum-real y))
-	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($add-flonum-flonum ($flsqr y.rep) ($flsqr y.imp)))
-	    (num.rep y.rep)
-	    (num.imp ($neg-flonum y.imp))
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (let ((denom   ($add-flonum-flonum ($flsqr x.rep) ($flsqr x.imp)))
+	    (num.rep x.rep)
+	    (num.imp ($neg-flonum x.imp)))
 	($make-cflonum ($div-flonum-flonum num.rep denom)
-		       ($div-flonum-flonum num.imp denom))))))
+		       ($div-flonum-flonum num.imp denom)))))
 
   #| end of module: $inv-number |# )
 
