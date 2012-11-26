@@ -1113,6 +1113,16 @@
       ;;(($fxdiv0-and-mod0 _ _)	   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
+;;; ratnums
+
+      (($make-ratnum _ _)	   foldable effect-free result-true)
+      (($make-rational _ _)	   foldable effect-free result-true)
+      (($ratnum-n _)		   foldable effect-free result-true)
+      (($ratnum-d _)		   foldable effect-free result-true)
+      (($ratnum-num _)		   foldable effect-free result-true)
+      (($ratnum-den _)		   foldable effect-free result-true)
+
+;;; --------------------------------------------------------------------
 ;;; flonums
 
       ((inexact->exact _)	   foldable effect-free result-true)

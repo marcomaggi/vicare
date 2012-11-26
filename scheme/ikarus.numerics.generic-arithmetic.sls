@@ -4321,18 +4321,19 @@
 	  (let ((chars (fxquotient (fx+ bits (fx- shift 1)) shift)))
 	    (let* ((s (init-string x chars))
 		   (n ($fx- (string-length s) 1)))
-	      (let f ((i 0) (j 0) (k 0) (b 0))
-		(cond
-		 (($fx= i chars) s)
-		 (($fx< k 8)
-		  (f i ($fxadd1 j) ($fx+ k 8)
-		     ($fxlogor b
-			       ($fxsll ($bignum-byte-ref x j) k))))
-		 (else
-		  (string-set! s ($fx- n i)
-			       (string-ref string-map
-					   ($fxlogand mask b)))
-		  (f ($fxadd1 i) j ($fx- k shift) ($fxsra b shift))))))))))
+	      (let loop ((i 0) (j 0) (k 0) (b 0))
+		(cond (($fx= i chars)
+		       s)
+		      (($fx< k 8)
+		       (loop i ($fxadd1 j) ($fx+ k 8)
+			  ($fxlogor b ($fxsll ($bignum-byte-ref x j) k))))
+		      (else
+		       (string-set! s ($fx- n i)
+				    (string-ref string-map
+						($fxlogand mask b)))
+		       (loop ($fxadd1 i) j ($fx- k shift) ($fxsra b shift)))))))))
+
+      #| end of module: bignum->power-string |# )
 
     #| end of module: bignum->string |# )
 

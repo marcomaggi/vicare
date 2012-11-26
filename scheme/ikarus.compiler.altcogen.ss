@@ -1711,6 +1711,7 @@
     (define-inline (fxlogor x y)	($fxlogor x y))
     (define-inline (fxlogand x y)	($fxlogand x y))
     (define-inline (fxlognot x)		($fxlognot x))
+    (define-inline (fxadd1 x)		($fxadd1 x))
     (define-inline (fx+ x y)		($fx+ x y))
     (define-inline (fxzero? x)		($fxzero? x))
     (define-inline (fxeven? x)		($fxzero? ($fxlogand x 1))))
@@ -1915,8 +1916,8 @@
 	  (if (fxeven? m)
 	      (if (fxzero? m)
 		  ac
-		(inner (fx+ i 1) (fxsra m 1) ac))
-	    (inner (fx+ i 1) (fxsra m 1) (cons i ac)))))))
+		(inner (fxadd1 i) (fxsra m 1) ac))
+	    (inner (fxadd1 i) (fxsra m 1) (cons i ac)))))))
 
   #| end of module: IntegerSet |# )
 
