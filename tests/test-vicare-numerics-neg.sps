@@ -60,12 +60,27 @@
 	  (check (?safe-fun   ?op)	(=> flonum=?) (?unsafe-fun ?op))
 	  ))))))
 
+(define-syntax make-cflonum-test
+  (syntax-rules ()
+    ((_ ?safe-fun ?unsafe-fun)
+     (syntax-rules ()
+       ((_ ?op ?expected-result)
+	(begin
+	  (check (?safe-fun   ?op)	(=> cflonum=?) ?expected-result)
+	  (check (?unsafe-fun ?op)	(=> cflonum=?) ?expected-result)
+	  (check (?safe-fun   ?op)	(=> cflonum=?) (?unsafe-fun ?op))
+	  ))))))
+
 (define (flonum=? x y)
   (cond ((flzero?/positive x)
 	 (flzero?/positive y))
 	((flzero?/negative x)
 	 (flzero?/negative y))
 	((fl=? x y))))
+
+(define (cflonum=? x y)
+  (and (flonum=? (real-part x) (real-part y))
+       (flonum=? (imag-part x) (imag-part y))))
 
 
 ;;;; constants
@@ -210,6 +225,48 @@
 (define NEG-FL6		+inf.0)
 (define NEG-FL7		+nan.0)
 
+;;; --------------------------------------------------------------------
+
+(define CFL01		+0.0+0.0i)
+(define CFL02		-0.0+0.0i)
+(define CFL03		+0.0-0.0i)
+(define CFL04		-0.0-0.0i)
+
+(define CFL05		-1.2-0.0i)
+(define CFL06		-1.2+0.0i)
+(define CFL07		+0.0-1.2i)
+(define CFL08		-0.0-1.2i)
+
+(define CFL09		-1.2-inf.0i)
+(define CFL10		-1.2+inf.0i)
+(define CFL11		+inf.0-1.2i)
+(define CFL12		-inf.0-1.2i)
+
+(define CFL13		-1.2-nan.0i)
+(define CFL14		-1.2+nan.0i)
+(define CFL15		+nan.0-1.2i)
+(define CFL16		-nan.0-1.2i)
+
+(define NEG-CFL01	-0.0-0.0i)
+(define NEG-CFL02	+0.0-0.0i)
+(define NEG-CFL03	-0.0+0.0i)
+(define NEG-CFL04	+0.0+0.0i)
+
+(define NEG-CFL05	+1.2+0.0i)
+(define NEG-CFL06	+1.2-0.0i)
+(define NEG-CFL07	-0.0+1.2i)
+(define NEG-CFL08	+0.0+1.2i)
+
+(define NEG-CFL09	+1.2+inf.0i)
+(define NEG-CFL10	+1.2-inf.0i)
+(define NEG-CFL11	-inf.0+1.2i)
+(define NEG-CFL12	+inf.0+1.2i)
+
+(define NEG-CFL13	+1.2+nan.0i)
+(define NEG-CFL14	+1.2-nan.0i)
+(define NEG-CFL15	-nan.0+1.2i)
+(define NEG-CFL16	+nan.0+1.2i)
+
 
 (parametrise ((check-test-name	'fixnums))
 
@@ -300,6 +357,31 @@
   (test FL5 NEG-FL5)
   (test FL6 NEG-FL6)
   (test FL7 NEG-FL7)
+
+  #t)
+
+
+(parametrise ((check-test-name	'cflonums))
+
+  (define-syntax test
+    (make-cflonum-test - $neg-cflonum))
+
+  (test CFL01 NEG-CFL01)
+  (test CFL02 NEG-CFL02)
+  (test CFL03 NEG-CFL03)
+  (test CFL04 NEG-CFL04)
+  (test CFL05 NEG-CFL05)
+  (test CFL06 NEG-CFL06)
+  (test CFL07 NEG-CFL07)
+  (test CFL08 NEG-CFL08)
+  (test CFL09 NEG-CFL09)
+
+  (test CFL11 NEG-CFL11)
+  (test CFL12 NEG-CFL12)
+  (test CFL13 NEG-CFL13)
+  (test CFL14 NEG-CFL14)
+  (test CFL15 NEG-CFL15)
+  (test CFL16 NEG-CFL16)
 
   #t)
 
