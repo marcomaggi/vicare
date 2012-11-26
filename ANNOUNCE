@@ -130,7 +130,6 @@ Notes for revision 0.2d20
 
 * The following bindings have been added to (ikarus system $ratnums):
 
-     $make-rational
      $ratnum-num
      $ratnum-den
 

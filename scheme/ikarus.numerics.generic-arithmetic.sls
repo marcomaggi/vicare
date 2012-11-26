@@ -2305,13 +2305,15 @@
     ;;Remember that a bignum cannot be zero, so Y is not zero here.
     (if ($fxzero? x)
 	0
-      ;;The GCD between a fixnum and any exact integer is a fixnum.
+      ;;The GCD between  a fixnum and any exact integer  is not always a
+      ;;fixnum; example:
+      ;;
+      ;;   (gcd (least-fixnum) (+ 1 (greatest-fixnum)))
+      ;;   => (+ 1 (greatest-fixnum))
+      ;;
       (let ((g ($gcd-fixnum-bignum x y)))
-	(assert (fixnum? g))
 	(cond ((= g y)
-	       ;;FIXME This  should not be possible.   (Marco Maggi; Sat
-	       ;;Nov 24, 2012)
-	       ($quotient-fixnum-fixnum x g))
+	       ($quotient-fixnum-number x g))
 	      (($bignum-positive? y)
 	       (if ($fx= g 1)
 		   ;;X and Y are not exactly divisible.
@@ -2319,7 +2321,7 @@
 		 ;;X and Y are not  exactly divisible by themselves, but
 		 ;;they are exactly divisible by their GCD.
 		 ($make-ratnum ($fxquotient x g)
-			       ($quotient-bignum-fixnum y g))))
+			       ($quotient-bignum-number y g))))
 	      (else ;here Y is negative
 	       (assert ($bignum-negative? y))
 	       (if ($fx= g 1)
@@ -2331,7 +2333,7 @@
 		 ;;they are exactly  divisible by their GCD.   We want a
 		 ;;ratnum with positive denominator.
 		 ($make-ratnum ($neg-fixnum ($fxquotient x g))
-			       ($neg-number ($quotient-bignum-fixnum y g)))))))))
+			       ($neg-number ($quotient-bignum-number y g)))))))))
 
   (define ($div-fixnum-ratnum x y)
     ;;     y.num       y.den
@@ -2386,27 +2388,26 @@
 	  (($fxpositive? y)
 	   (if ($fx= y 1)
 	       x
-	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
-	     ;;fixnum; the GDC is always positive.
+	     ;;The GCD between  any exact integer and a  fixnum is *not*
+	     ;;always a fixnum; the GDC is always positive.
 	     (let ((g ($gcd-bignum-fixnum x y)))
-	       (assert (fixnum? g))
 	       (cond (($fx= g 1)
 		      ;;X and Y are not exactly divisible.
 		      ($make-ratnum x y))
 		     (($fx= g y)
 		      ;;X and Y are exactly divisible.
-		      ($quotient-bignum-fixnum x g))
+		      ($quotient-bignum-number x g))
 		     (else
 		      ;;X and Y are not  exactly divisible, but they are
 		      ;;both exactly divisible by their GCD.
-		      ($make-ratnum ($quotient-bignum-fixnum x g)
+		      ($make-ratnum ($quotient-bignum-number x g)
 				    ($fxquotient y g)))))))
 	  (else ;here Y is negative
 	   (assert ($fxnegative? y))
 	   (if ($fx= y -1)
 	       ($neg-bignum x)
-	     ;;The  GCD between  any exact  integer  and a  fixnum is  a
-	     ;;fixnum; the GCD is always positive.
+	     ;;The GCD between  any exact integer and a  fixnum is *not*
+	     ;;always a fixnum; the GCD is always positive.
 	     (let ((g ($gcd-bignum-fixnum x y)))
 	       (cond (($fx= g 1)
 		      ;;X and  Y are not  exactly divisible.  We  want a
@@ -2415,12 +2416,12 @@
 				    ($neg-fixnum y)))
 		     ((= ($neg-fixnum g) y)
 		      ;;X and Y are exactly divisible.
-		      ($neg-number ($quotient-bignum-fixnum x g)))
+		      ($neg-number ($quotient-bignum-number x g)))
 		     (else
 		      ;;X and Y are not  exactly divisible, but they are
 		      ;;both exactly divisible by  their GCD.  We want a
 		      ;;ratnum with positive denominator.
-		      ($make-ratnum ($neg-number ($quotient-bignum-fixnum x g))
+		      ($make-ratnum ($neg-number ($quotient-bignum-number x g))
 				    ($neg-fixnum ($fxquotient y g))))))))))
 
   (define ($div-bignum-bignum x y)

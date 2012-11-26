@@ -46,119 +46,119 @@
 
 ;;; --------------------------------------------------------------------
 
-(define FX1			+1)
-(define FX2			-1)
-(define FX3			GREATEST-FX)
-(define FX4			LEAST-FX)
+(define FX1		+1)
+(define FX2		-1)
+(define FX3		GREATEST-FX)
+(define FX4		LEAST-FX)
 
-(define NEG-FX1			-1)
-(define NEG-FX2			+1)
-(define NEG-FX3			NEG-GREATEST-FX)
-(define NEG-FX4			NEG-LEAST-FX)
-
-;;; --------------------------------------------------------------------
-
-(define BN1			+536870912) ;GREATEST-FX + 1
-(define BN2			+536871011) ;GREATEST-FX + 100
-(define BN3			-536870913) ;LEAST-FX - 1
-(define BN4			-536871012) ;LEAST-FX - 100
-
-(define NEG-BN1			-536870912)
-(define NEG-BN2			-536871011)
-(define NEG-BN3			+536870913)
-(define NEG-BN4			+536871012)
+(define NEG-FX1		-1)
+(define NEG-FX2		+1)
+(define NEG-FX3		NEG-GREATEST-FX)
+(define NEG-FX4		NEG-LEAST-FX)
 
 ;;; --------------------------------------------------------------------
 
-(define RN01			($make-rational FX1 123))
-(define RN02			($make-rational FX2 123))
-(define RN03			($make-rational FX2 123))
-(define RN04			($make-rational FX4 123))
+(define BN1		+536870912) ;GREATEST-FX + 1
+(define BN2		+536871011) ;GREATEST-FX + 100
+(define BN3		-536870913) ;LEAST-FX - 1
+(define BN4		-536871012) ;LEAST-FX - 100
 
-(define RN05			($make-rational FX1 BN1))
-(define RN06			($make-rational FX2 BN1))
-(define RN07			($make-rational FX3 BN1))
-(define RN08			($make-rational FX4 BN1))
+(define NEG-BN1		-536870912)
+(define NEG-BN2		-536871011)
+(define NEG-BN3		+536870913)
+(define NEG-BN4		+536871012)
 
-(define RN09			($make-rational FX1 BN2))
-(define RN10			($make-rational FX2 BN2))
-(define RN11			($make-rational FX3 BN2))
-(define RN12			($make-rational FX4 BN2))
+;;; --------------------------------------------------------------------
 
-(define RN13			($make-rational FX1 BN3))
-(define RN14			($make-rational FX2 BN3))
-(define RN15			($make-rational FX3 BN3))
-(define RN16			($make-rational FX4 BN3))
+(define RN01		1/123			#;(/ FX1 123))
+(define RN02		-1/123			#;(/ FX2 123))
+(define RN03		-1/123			#;(/ FX2 123))
+(define RN04		-536870912/123		#;(/ FX4 123))
 
-(define RN17			($make-rational FX1 BN4))
-(define RN18			($make-rational FX2 BN4))
-(define RN19			($make-rational FX3 BN4))
-(define RN20			($make-rational FX4 BN4))
+(define RN05		1/536870912		#;(/ FX1 BN1))
+(define RN06		-1/536870912		#;(/ FX2 BN1))
+(define RN07		536870911/536870912	#;(/ FX3 BN1))
+;;(define RN08		-1			#;(/ FX4 BN1)) ;not a ratnum
 
-(define RN21			($make-rational BN1 FX1))
-(define RN22			($make-rational BN2 FX1))
-(define RN23			($make-rational BN3 FX1))
-(define RN24			($make-rational BN4 FX1))
+(define RN09		1/536871011		#;(/ FX1 BN2))
+(define RN10		-1/536871011		#;(/ FX2 BN2))
+(define RN11		536870911/536871011	#;(/ FX3 BN2))
+(define RN12		-536870912/536871011	#;(/ FX4 BN2))
 
-(define RN25			($make-rational BN1 FX2))
-(define RN26			($make-rational BN2 FX2))
-(define RN27			($make-rational BN3 FX2))
-(define RN28			($make-rational BN4 FX2))
+(define RN13		-1/536870913		#;(/ FX1 BN3))
+(define RN14		1/536870913		#;(/ FX2 BN3))
+(define RN15		-536870911/536870913	#;(/ FX3 BN3))
+(define RN16		536870912/536870913	#;(/ FX4 BN3))
 
-(define RN29			($make-rational BN1 FX3))
-(define RN30			($make-rational BN2 FX3))
-(define RN31			($make-rational BN3 FX3))
-(define RN32			($make-rational BN4 FX3))
+(define RN17		-1/536871012		#;(/ FX1 BN4))
+(define RN18		1/536871012		#;(/ FX2 BN4))
+(define RN19		-536870911/536871012	#;(/ FX3 BN4))
+(define RN20		134217728/134217753	#;(/ FX4 BN4))
 
-(define RN33			($make-rational BN1 FX4))
-(define RN34			($make-rational BN2 FX4))
-(define RN35			($make-rational BN3 FX4))
-(define RN36			($make-rational BN4 FX4))
+;;(define RN21		536870912		#;(/ BN1 FX1)) ;not a ratnum
+;;(define RN22		536871011		#;(/ BN2 FX1)) ;not a ratnum
+;;(define RN23		-536870913		#;(/ BN3 FX1)) ;not a ratnum
+;;(define RN24		-536871012		#;(/ BN4 FX1)) ;not a ratnum
 
-(define NEG-RN01		($make-rational NEG-FX1 123))
-(define NEG-RN02		($make-rational NEG-FX2 123))
-(define NEG-RN03		($make-rational NEG-FX2 123))
-(define NEG-RN04		($make-rational NEG-FX4 123))
+;;(define RN25		-536870912		#;(/ BN1 FX2)) ;not a ratnum
+;;(define RN26		-536871011		#;(/ BN2 FX2)) ;not a ratnum
+;;(define RN27		536870913		#;(/ BN3 FX2)) ;not a ratnum
+;;(define RN28		536871012		#;(/ BN4 FX2)) ;not a ratnum
 
-(define NEG-RN05		($make-rational NEG-FX1 BN1))
-(define NEG-RN06		($make-rational NEG-FX2 BN1))
-(define NEG-RN07		($make-rational NEG-FX3 BN1))
-(define NEG-RN08		($make-rational NEG-FX4 BN1))
+(define RN29		536870912/536870911	#;(/ BN1 FX3))
+(define RN30		536871011/536870911	#;(/ BN2 FX3))
+(define RN31		-536870913/536870911	#;(/ BN3 FX3))
+(define RN32		-536871012/536870911	#;(/ BN4 FX3))
 
-(define NEG-RN09		($make-rational NEG-FX1 BN2))
-(define NEG-RN10		($make-rational NEG-FX2 BN2))
-(define NEG-RN11		($make-rational NEG-FX3 BN2))
-(define NEG-RN12		($make-rational NEG-FX4 BN2))
+;;(define RN33		-1			#;(/ BN1 FX4)) ;not a ratnum
+(define RN34		-536871011/536870912	#;(/ BN2 FX4))
+(define RN35		536870913/536870912	#;(/ BN3 FX4))
+(define RN36		134217753/134217728	#;(/ BN4 FX4))
 
-(define NEG-RN13		($make-rational NEG-FX1 BN3))
-(define NEG-RN14		($make-rational NEG-FX2 BN3))
-(define NEG-RN15		($make-rational NEG-FX3 BN3))
-(define NEG-RN16		($make-rational NEG-FX4 BN3))
+(define NEG-RN01	-1/123			#;(/ NEG-FX1 123))
+(define NEG-RN02	1/123			#;(/ NEG-FX2 123))
+(define NEG-RN03	1/123			#;(/ NEG-FX2 123))
+(define NEG-RN04	536870912/123		#;(/ NEG-FX4 123))
 
-(define NEG-RN17		($make-rational NEG-FX1 BN4))
-(define NEG-RN18		($make-rational NEG-FX2 BN4))
-(define NEG-RN19		($make-rational NEG-FX3 BN4))
-(define NEG-RN20		($make-rational NEG-FX4 BN4))
+(define NEG-RN05	-1/536870912		#;(/ NEG-FX1 BN1))
+(define NEG-RN06	1/536870912		#;(/ NEG-FX2 BN1))
+(define NEG-RN07	-536870911/536870912	#;(/ NEG-FX3 BN1))
+;;(define NEG-RN08	1			#;(/ NEG-FX4 BN1)) ;not a ratnum
 
-(define NEG-RN21		($make-rational NEG-BN1 FX1))
-(define NEG-RN22		($make-rational NEG-BN2 FX1))
-(define NEG-RN23		($make-rational NEG-BN3 FX1))
-(define NEG-RN24		($make-rational NEG-BN4 FX1))
+(define NEG-RN09	-1/536871011		#;(/ NEG-FX1 BN2))
+(define NEG-RN10	1/536871011		#;(/ NEG-FX2 BN2))
+(define NEG-RN11	-536870911/536871011	#;(/ NEG-FX3 BN2))
+(define NEG-RN12	536870912/536871011	#;(/ NEG-FX4 BN2))
 
-(define NEG-RN25		($make-rational NEG-BN1 FX2))
-(define NEG-RN26		($make-rational NEG-BN2 FX2))
-(define NEG-RN27		($make-rational NEG-BN3 FX2))
-(define NEG-RN28		($make-rational NEG-BN4 FX2))
+(define NEG-RN13	1/536870913		#;(/ NEG-FX1 BN3))
+(define NEG-RN14	-1/536870913		#;(/ NEG-FX2 BN3))
+(define NEG-RN15	536870911/536870913	#;(/ NEG-FX3 BN3))
+(define NEG-RN16	-536870912/536870913	#;(/ NEG-FX4 BN3))
 
-(define NEG-RN29		($make-rational NEG-BN1 FX3))
-(define NEG-RN30		($make-rational NEG-BN2 FX3))
-(define NEG-RN31		($make-rational NEG-BN3 FX3))
-(define NEG-RN32		($make-rational NEG-BN4 FX3))
+(define NEG-RN17	1/536871012		#;(/ NEG-FX1 BN4))
+(define NEG-RN18	-1/536871012		#;(/ NEG-FX2 BN4))
+(define NEG-RN19	536870911/536871012	#;(/ NEG-FX3 BN4))
+(define NEG-RN20	-134217728/134217753	#;(/ NEG-FX4 BN4))
 
-(define NEG-RN33		($make-rational NEG-BN1 FX4))
-(define NEG-RN34		($make-rational NEG-BN2 FX4))
-(define NEG-RN35		($make-rational NEG-BN3 FX4))
-(define NEG-RN36		($make-rational NEG-BN4 FX4))
+;;(define NEG-RN21	-536870912		#;(/ NEG-BN1 FX1)) ;not a ratnum
+;;(define NEG-RN22	-536871011		#;(/ NEG-BN2 FX1)) ;not a ratnum
+;;(define NEG-RN23	536870913		#;(/ NEG-BN3 FX1)) ;not a ratnum
+;;(define NEG-RN24	536871012		#;(/ NEG-BN4 FX1)) ;not a ratnum
+
+;;(define NEG-RN25	536870912		#;(/ NEG-BN1 FX2)) ;not a ratnum
+;;(define NEG-RN26	536871011		#;(/ NEG-BN2 FX2)) ;not a ratnum
+;;(define NEG-RN27	-536870913		#;(/ NEG-BN3 FX2)) ;not a ratnum
+;;(define NEG-RN28	-536871012		#;(/ NEG-BN4 FX2)) ;not a ratnum
+
+(define NEG-RN29	-536870912/536870911	#;(/ NEG-BN1 FX3))
+(define NEG-RN30	-536871011/536870911	#;(/ NEG-BN2 FX3))
+(define NEG-RN31	536870913/536870911	#;(/ NEG-BN3 FX3))
+(define NEG-RN32	536871012/536870911	#;(/ NEG-BN4 FX3))
+
+;;(define NEG-RN33	1			#;(/ NEG-BN1 FX4)) ;not a ratnum
+(define NEG-RN34	536871011/536870912	#;(/ NEG-BN2 FX4))
+(define NEG-RN35	-536870913/536870912	#;(/ NEG-BN3 FX4))
+(define NEG-RN36	-134217753/134217728	#;(/ NEG-BN4 FX4))
 
 
 (parametrise ((check-test-name	'neg))
@@ -203,7 +203,7 @@
     (test RN05	NEG-RN05)
     (test RN06	NEG-RN06)
     (test RN07	NEG-RN07)
-    (test RN08	NEG-RN08)
+    ;;(test RN08	NEG-RN08) ;not a ratnum
     (test RN09	NEG-RN09)
 
     (test RN10	NEG-RN10)
@@ -218,20 +218,22 @@
     (test RN19	NEG-RN19)
 
     (test RN20	NEG-RN20)
-    (test RN21	NEG-RN21)
-    (test RN22	NEG-RN22)
-    (test RN23	NEG-RN23)
-    (test RN24	NEG-RN24)
-    (test RN25	NEG-RN25)
-    (test RN26	NEG-RN26)
-    (test RN27	NEG-RN27)
-    (test RN28	NEG-RN28)
+    ;;not ratnums
+    ;;
+    ;; (test RN21	NEG-RN21)
+    ;; (test RN22	NEG-RN22)
+    ;; (test RN23	NEG-RN23)
+    ;; (test RN24	NEG-RN24)
+    ;; (test RN25	NEG-RN25)
+    ;; (test RN26	NEG-RN26)
+    ;; (test RN27	NEG-RN27)
+    ;; (test RN28	NEG-RN28)
     (test RN29	NEG-RN29)
 
     (test RN30	NEG-RN30)
     (test RN31	NEG-RN31)
     (test RN32	NEG-RN32)
-    (test RN33	NEG-RN33)
+    ;;(test RN33	NEG-RN33) ;not a ratnum
     (test RN34	NEG-RN34)
     (test RN35	NEG-RN35)
     (test RN36	NEG-RN36)

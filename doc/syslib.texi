@@ -819,21 +819,11 @@ invalid:
 
 @item
 @var{den} must be strictly positive.
+
+@item
+@var{num} and @var{den} must have greatest common divisor equal to
+@code{1} (that is: they cannot be simplified).
 @end itemize
-@end deffn
-
-
-@deffn {Unsafe Operation} $make-rational @var{num} @var{den}
-Allocate a new ratnum memory block, store @var{num} as reference to the
-numerator and @var{den} as reference to the denominator; return a
-reference to the ratnum.
-
-@var{num} and @var{den} must be exact integers, else the returned value
-will be invalid.
-
-If either @var{num} or @var{den} is zero: raise an exception.  If
-@var{den} is negative: compose a ratnum having as numerator the negation
-of @var{num} and as denominator the negation of @var{den}.
 @end deffn
 
 
