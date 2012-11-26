@@ -38,6 +38,20 @@
 
 ;;;; helpers
 
+(define-syntax make-test
+  (syntax-rules ()
+    ((_ ?safe-fun ?unsafe-fun)
+     (syntax-rules ()
+       ((_ ?op ?expected-result)
+	(begin
+	  (check (?safe-fun   ?op)	=> ?expected-result)
+	  (check (?unsafe-fun ?op)	=> ?expected-result)
+	  (check (?safe-fun   ?op)	=> (?unsafe-fun ?op))
+	  ))))))
+
+
+;;;; constants
+
 (define GREATEST-FX		+536870911)
 (define LEAST-FX		-536870912)
 
@@ -161,84 +175,79 @@
 (define NEG-RN36	-134217753/134217728	#;(/ NEG-BN4 FX4))
 
 
-(parametrise ((check-test-name	'neg))
+(parametrise ((check-test-name	'fixnums))
 
-  (define-syntax make-test
-    (syntax-rules ()
-      ((_ ?safe-fun ?unsafe-fun)
-       (syntax-rules ()
-	 ((_ ?op ?expected-result)
-	  (begin
-	    (check (?safe-fun   ?op)	=> ?expected-result)
-	    (check (?unsafe-fun ?op)	=> ?expected-result)
-	    (check (?safe-fun   ?op)	=> (?unsafe-fun ?op))
-	    ))))))
+  (define-syntax test
+    (make-test - $neg-fixnum))
 
-;;; --------------------------------------------------------------------
+  (test 0	0)
+  (test FX1	NEG-FX1)
+  (test FX2	NEG-FX2)
+  (test FX3	NEG-FX3)
+  (test FX4	NEG-FX4)
 
-  (let-syntax ((test (make-test - $neg-fixnum)))
-    (test 0	0)
-    (test FX1	NEG-FX1)
-    (test FX2	NEG-FX2)
-    (test FX3	NEG-FX3)
-    (test FX4	NEG-FX4)
-    #f)
+  #t)
 
-;;; --------------------------------------------------------------------
+
+(parametrise ((check-test-name	'bignums))
 
-  (let-syntax ((test (make-test - $neg-bignum)))
-    (test BN1 NEG-BN1)
-    (test BN2 NEG-BN2)
-    (test BN3 NEG-BN3)
-    (test BN4 NEG-BN4)
-    #f)
+  (define-syntax test
+    (make-test - $neg-bignum))
 
-;;; --------------------------------------------------------------------
+  (test BN1 NEG-BN1)
+  (test BN2 NEG-BN2)
+  (test BN3 NEG-BN3)
+  (test BN4 NEG-BN4)
 
-  (let-syntax ((test (make-test - $neg-ratnum)))
-    (test RN01	NEG-RN01)
-    (test RN02	NEG-RN02)
-    (test RN03	NEG-RN03)
-    (test RN04	NEG-RN04)
-    (test RN05	NEG-RN05)
-    (test RN06	NEG-RN06)
-    (test RN07	NEG-RN07)
-    ;;(test RN08	NEG-RN08) ;not a ratnum
-    (test RN09	NEG-RN09)
+  #t)
 
-    (test RN10	NEG-RN10)
-    (test RN11	NEG-RN11)
-    (test RN12	NEG-RN12)
-    (test RN13	NEG-RN13)
-    (test RN14	NEG-RN14)
-    (test RN15	NEG-RN15)
-    (test RN16	NEG-RN16)
-    (test RN17	NEG-RN17)
-    (test RN18	NEG-RN18)
-    (test RN19	NEG-RN19)
+
+(parametrise ((check-test-name	'ratnums))
 
-    (test RN20	NEG-RN20)
-    ;;not ratnums
-    ;;
-    ;; (test RN21	NEG-RN21)
-    ;; (test RN22	NEG-RN22)
-    ;; (test RN23	NEG-RN23)
-    ;; (test RN24	NEG-RN24)
-    ;; (test RN25	NEG-RN25)
-    ;; (test RN26	NEG-RN26)
-    ;; (test RN27	NEG-RN27)
-    ;; (test RN28	NEG-RN28)
-    (test RN29	NEG-RN29)
+  (define-syntax test
+    (make-test - $neg-ratnum))
 
-    (test RN30	NEG-RN30)
-    (test RN31	NEG-RN31)
-    (test RN32	NEG-RN32)
-    ;;(test RN33	NEG-RN33) ;not a ratnum
-    (test RN34	NEG-RN34)
-    (test RN35	NEG-RN35)
-    (test RN36	NEG-RN36)
+  (test RN01	NEG-RN01)
+  (test RN02	NEG-RN02)
+  (test RN03	NEG-RN03)
+  (test RN04	NEG-RN04)
+  (test RN05	NEG-RN05)
+  (test RN06	NEG-RN06)
+  (test RN07	NEG-RN07)
+  ;;(test RN08	NEG-RN08) ;not a ratnum
+  (test RN09	NEG-RN09)
 
-    #f)
+  (test RN10	NEG-RN10)
+  (test RN11	NEG-RN11)
+  (test RN12	NEG-RN12)
+  (test RN13	NEG-RN13)
+  (test RN14	NEG-RN14)
+  (test RN15	NEG-RN15)
+  (test RN16	NEG-RN16)
+  (test RN17	NEG-RN17)
+  (test RN18	NEG-RN18)
+  (test RN19	NEG-RN19)
+
+  (test RN20	NEG-RN20)
+  ;;not ratnums
+  ;;
+  ;; (test RN21	NEG-RN21)
+  ;; (test RN22	NEG-RN22)
+  ;; (test RN23	NEG-RN23)
+  ;; (test RN24	NEG-RN24)
+  ;; (test RN25	NEG-RN25)
+  ;; (test RN26	NEG-RN26)
+  ;; (test RN27	NEG-RN27)
+  ;; (test RN28	NEG-RN28)
+  (test RN29	NEG-RN29)
+
+  (test RN30	NEG-RN30)
+  (test RN31	NEG-RN31)
+  (test RN32	NEG-RN32)
+  ;;(test RN33	NEG-RN33) ;not a ratnum
+  (test RN34	NEG-RN34)
+  (test RN35	NEG-RN35)
+  (test RN36	NEG-RN36)
 
   #t)
 
