@@ -511,15 +511,144 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'bignums))
+(parametrise ((check-test-name	'bignums))
 
-  (define-syntax test
-    (make-test / $add-bignum))
+  (let-syntax ((test (make-test + $add-bignum-fixnum)))
+    (test BN1 FX1 536870913)
+    (test BN2 FX1 536871012)
+    (test BN3 FX1 -536870912)
+    (test BN4 FX1 -536871011)
 
-  (test BN1 ADD-BN1)
-  (test BN2 ADD-BN2)
-  (test BN3 ADD-BN3)
-  (test BN4 ADD-BN4)
+    (test BN1 FX2 536870911)
+    (test BN2 FX2 536871010)
+    (test BN3 FX2 -536870914)
+    (test BN4 FX2 -536871013)
+
+    (test BN1 FX3 1073741823)
+    (test BN2 FX3 1073741922)
+    (test BN3 FX3 -2)
+    (test BN4 FX3 -101)
+
+    (test BN1 FX4 0)
+    (test BN2 FX4 99)
+    (test BN3 FX4 -1073741825)
+    (test BN4 FX4 -1073741924)
+    #f)
+
+  (let-syntax ((test (make-test + $add-bignum-bignum)))
+    (test BN1 BN1 1073741824)
+    (test BN2 BN1 1073741923)
+    (test BN3 BN1 -1)
+    (test BN4 BN1 -100)
+    (test BN1 BN2 1073741923)
+    (test BN2 BN2 1073742022)
+    (test BN3 BN2 98)
+    (test BN4 BN2 -1)
+    (test BN1 BN3 -1)
+    (test BN2 BN3 98)
+    (test BN3 BN3 -1073741826)
+    (test BN4 BN3 -1073741925)
+    (test BN1 BN4 -100)
+    (test BN2 BN4 -1)
+    (test BN3 BN4 -1073741925)
+    (test BN4 BN4 -1073742024)
+    #f)
+
+  (let-syntax ((test (make-test + $add-bignum-ratnum)))
+    (test BN1 RN01 66035122177/123)
+    (test BN2 RN01 66035134354/123)
+    (test BN3 RN01 -66035122298/123)
+    (test BN4 RN01 -66035134475/123)
+
+    (test BN1 RN02 66035122175/123)
+    (test BN2 RN02 66035134352/123)
+    (test BN3 RN02 -66035122300/123)
+    (test BN4 RN02 -66035134477/123)
+
+    (test BN1 RN03 66035122175/123)
+    (test BN2 RN03 66035134352/123)
+    (test BN3 RN03 -66035122300/123)
+    (test BN4 RN03 -66035134477/123)
+
+    (test BN1 RN04 65498251264/123)
+    (test BN2 RN04 65498263441/123)
+    (test BN3 RN04 -66571993211/123)
+    (test BN4 RN04 -66572005388/123)
+    #f)
+
+  (let-syntax ((test (make-flonum-test + $add-bignum-flonum)))
+    (test BN1 FL1 536870912.0)
+    (test BN2 FL1 536871011.0)
+    (test BN3 FL1 -536870913.0)
+    (test BN4 FL1 -536871012.0)
+
+    (test BN1 FL2 536870912.0)
+    (test BN2 FL2 536871011.0)
+    (test BN3 FL2 -536870913.0)
+    (test BN4 FL2 -536871012.0)
+
+    (test BN1 FL3 536870914.123)
+    (test BN2 FL3 536871013.123)
+    (test BN3 FL3 -536870910.877)
+    (test BN4 FL3 -536871009.877)
+
+    (test BN1 FL4 536870909.877)
+    (test BN2 FL4 536871008.877)
+    (test BN3 FL4 -536870915.123)
+    (test BN4 FL4 -536871014.123)
+    #f)
+
+  (let-syntax ((test (make-cflonum-test + $add-bignum-cflonum)))
+    (test BN1 CFL01 536870912.0+0.0i)
+    (test BN2 CFL01 536871011.0+0.0i)
+    (test BN3 CFL01 -536870913.0+0.0i)
+    (test BN4 CFL01 -536871012.0+0.0i)
+
+    (test BN1 CFL02 536870912.0+0.0i)
+    (test BN2 CFL02 536871011.0+0.0i)
+    (test BN3 CFL02 -536870913.0+0.0i)
+    (test BN4 CFL02 -536871012.0+0.0i)
+
+    (test BN1 CFL03 536870912.0-0.0i)
+    (test BN2 CFL03 536871011.0-0.0i)
+    (test BN3 CFL03 -536870913.0-0.0i)
+    (test BN4 CFL03 -536871012.0-0.0i)
+
+    (test BN1 CFL04 536870912.0-0.0i)
+    (test BN2 CFL04 536871011.0-0.0i)
+    (test BN3 CFL04 -536870913.0-0.0i)
+    (test BN4 CFL04 -536871012.0-0.0i)
+
+    (test BN1 CFL05 536870910.8-0.0i)
+    (test BN2 CFL05 536871009.8-0.0i)
+    (test BN3 CFL05 -536870914.2-0.0i)
+    (test BN4 CFL05 -536871013.2-0.0i)
+
+    (test BN1 CFL06 536870910.8+0.0i)
+    (test BN2 CFL06 536871009.8+0.0i)
+    (test BN3 CFL06 -536870914.2+0.0i)
+    (test BN4 CFL06 -536871013.2+0.0i)
+
+    (test BN1 CFL07 536870912.0-1.2i)
+    (test BN2 CFL07 536871011.0-1.2i)
+    (test BN3 CFL07 -536870913.0-1.2i)
+    (test BN4 CFL07 -536871012.0-1.2i)
+
+    (test BN1 CFL08 536870912.0-1.2i)
+    (test BN2 CFL08 536871011.0-1.2i)
+    (test BN3 CFL08 -536870913.0-1.2i)
+    (test BN4 CFL08 -536871012.0-1.2i)
+
+    (test BN1 CFL09 536870910.8-inf.0i)
+    (test BN1 CFL10 536870910.8+inf.0i)
+    (test BN1 CFL11 +inf.0-1.2i)
+    (test BN1 CFL12 -inf.0-1.2i)
+
+    (test BN1 CFL13 536870910.8+nan.0i)
+    (test BN1 CFL14 536870910.8+nan.0i)
+    (test BN1 CFL15 +nan.0-1.2i)
+    (test BN1 CFL16 +nan.0-1.2i)
+    #f)
 
   #t)
 
