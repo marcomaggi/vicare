@@ -153,6 +153,7 @@ TESTS			=	\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-numerics-neg.sps			\
+	test-vicare-numerics-inv.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-generic-arithmetic.sps	\
 	test-vicare-parameters.sps			\
@@ -368,6 +369,7 @@ EXTRA_DIST = \
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-numerics-neg.sps			\
+	test-vicare-numerics-inv.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-generic-arithmetic.sps	\
 	test-vicare-parameters.sps			\

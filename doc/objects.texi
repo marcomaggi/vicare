@@ -2579,6 +2579,18 @@ negative bignums < (least-fixnum) <= all fixnums
 all fixnums <= (greatest-fixnum) < positive bignums
 @end example
 
+@noindent
+and notice that:
+
+@itemize
+@item
+The smallest positive bignum is @code{(+ 1 (greatest-fixnum))} which can
+also be computed as @code{(- (least-fixnum))}.
+
+@item
+The greatest negative bignum is @code{(- (least-fixnum) 1)}.
+@end itemize
+
 A bignum is a variable length memory block referenced by machine words
 tagged as vectors.  The first machine word of a bignum block is tagged
 has bignum in its least significant bits; then comes a sign bit, zero if
