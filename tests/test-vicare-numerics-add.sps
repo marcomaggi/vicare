@@ -83,7 +83,9 @@
 	  ))))))
 
 (define (flonum=? x y)
-  (cond ((flzero?/positive x)
+  (cond ((flnan? x)
+	 (flnan? y))
+	((flzero?/positive x)
 	 (flzero?/positive y))
 	((flzero?/negative x)
 	 (flzero?/negative y))

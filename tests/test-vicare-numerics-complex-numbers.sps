@@ -30,7 +30,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare numerics functions, complex numbers\n")
+(check-display "*** testing Vicare numerics functions, complex numbers\n")
 
 
 ;;;; helpers

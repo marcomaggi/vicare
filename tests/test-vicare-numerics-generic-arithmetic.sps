@@ -31,7 +31,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare generic mathematics functions\n")
+(check-display "*** testing Vicare generic mathematics functions\n")
 
 
 ;;;; helpers
