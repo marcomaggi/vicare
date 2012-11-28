@@ -550,8 +550,8 @@
   (let-syntax ((test (make-test + $add-fixnum-compnum)))
     (test 1	10+20i		11+20i)
 
-    (test 1	1.0+20i		2.0+20i)
-    (test 1	10+2.0i		11+2.0i)
+    (test 1 1+20.0i 2+20.0i)
+    (test 1 10.0+2i 11.0+2i)
 
     (test 1	1/2+20i		3/2+20i)
     (test 1	10+2/3i		11+2/3i)
@@ -704,13 +704,10 @@
 
   (let-syntax ((test (make-test + $add-bignum-compnum)))
     (test BN1	10+20i		(make-rectangular (+ BN1 10) 20))
-
-    (test BN1	1.0+20i		(make-rectangular (+ BN1 1.0) 20))
-    (test BN1	10+2.0i		(make-rectangular (+ BN1 10) 2.0))
-
+    (test BN1 1+20.0i 536870913+20.0i)
+    (test BN1 10.0+2i 536870922+2.0i)
     (test BN1	1/2+20i		(make-rectangular (+ BN1 1/2) 20))
     (test BN1	10+2/3i		(make-rectangular (+ BN1 10) 2/3))
-
     (test BN1	(make-rectangular BN2 20)	(make-rectangular (+ BN1 BN2) 20))
     (test BN1	(make-rectangular 10 BN2)	(make-rectangular (+ BN1 10) BN2))
     #f)
@@ -813,8 +810,8 @@
 
   (let-syntax ((test (make-inexact-test + $add-ratnum-compnum)))
     (test RN01 10+20i 1231/123+20i)
-    (test RN01 1.0+20.0i 1.008130081300813+20.0i)
-    (test RN01 10.0+2.0i 10.008130081300813+2.0i)
+    (test RN01 1+20.0i 124/123+20.0i)
+    (test RN01 10.0+2i 10.008130081300813+2i)
     (test RN01 1/2+20i 125/246+20i)
     (test RN01 10+2/3i 1231/123+2/3i)
     (test RN01 (make-rectangular RN02 20) 0+20i)
@@ -947,8 +944,8 @@
 
   (let-syntax ((test (make-inexact-test + $add-flonum-compnum)))
     (test FL1 10+20i 10.0+20.0i)
-    (test FL1 1.0+20.0i 1.0+20.0i)
-    (test FL1 10.0+2.0i 10.0+2.0i)
+    (test FL1 1+20.0i 1.0+20.0i)
+    (test FL1 10.0+2i 10.0+2i)
     (test FL1 1/2+20i 0.5+20.0i)
     (test FL1 10+2/3i 10.0+2/3i)
     (test FL1 (make-rectangular BN2 20) 536871011.0+20.0i)
@@ -1081,8 +1078,8 @@
 
   (let-syntax ((test (make-inexact-test + $add-cflonum-compnum)))
     (test CFL01 10+20i 10.0+20.0i)
-    (test CFL01 1.0+20.0i 1.0+20.0i)
-    (test CFL01 10.0+2.0i 10.0+2.0i)
+    (test CFL01 1+20.0i 1.0+20.0i)
+    (test CFL01 10.0+2i 10.0+2.0i)
     (test CFL01 1/2+20i 0.5+20.0i)
     (test CFL01 10+2/3i 10.0+0.6666666666666666i)
     (test CFL01 (make-rectangular BN2 20) 536871011.0+20.0i)
@@ -1092,163 +1089,59 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'compnums))
+(parametrise ((check-test-name	'compnums))
 
-  (define-syntax test
-    (make-compnum-test / $add-compnum))
+  (let-syntax ((test (make-test + $add-compnum-fixnum)))
+    (test 10+20i 1 11+20i)
+    (test 1.0+20.0i 1 2.0+20.0i)
+    (test 10.0+2.0i 1 11.0+2.0i)
+    (test 1/2+20i 1 3/2+20i)
+    (test 10+2/3i 1 11+2/3i)
+    (test (make-rectangular BN1 20) 1 536870913+20i)
+    (test (make-rectangular 10 BN1) 1 11+536870912i)
+    #f)
 
+  (let-syntax ((test (make-test + $add-compnum-bignum)))
+    (test 10+20i BN1 536870922+20i)
+    (test 1.0+20.0i BN1 536870913.0+20.0i)
+    (test 10.0+2.0i BN1 536870922.0+2.0i)
+    (test 1/2+20i BN1 1073741825/2+20i)
+    (test 10+2/3i BN1 536870922+2/3i)
+    (test (make-rectangular BN2 20) BN1 1073741923+20i)
+    (test (make-rectangular 10 BN2) BN1 536870922+536871011i)
+    #f)
 
-  (test CN001 ADD-CN001)
-  (test CN002 ADD-CN002)
-  (test CN003 ADD-CN003)
-  (test CN004 ADD-CN004)
+  (let-syntax ((test (make-inexact-test + $add-compnum-ratnum)))
+    (test 10+20i RN01 1231/123+20i)
+    (test 1+20.0i RN01 124/123+20.0i)
+    (test 10.0+2.0i RN01 10.008130081300813+2.0i)
+    (test 1/2+20i RN01 125/246+20i)
+    (test 10+2/3i RN01 1231/123+2/3i)
+    (test (make-rectangular RN02 20) RN01 0+20i)
+    (test (make-rectangular 10 RN02) RN01 1231/123-1/123i)
+    #f)
 
-  (test CN005 ADD-CN005)
-  (test CN006 ADD-CN006)
-  (test CN007 ADD-CN007)
-  (test CN008 ADD-CN008)
+  (let-syntax ((test (make-inexact-test + $add-compnum-flonum)))
+    (test 10+20i FL1 10.0+20.0i)
+    (test 1+20.0i FL1 1.0+20.0i)
+    (test 10.0+2i FL1 10.0+2.0i)
+    (test 1.0+20.0i FL1 1.0+20.0i)
+    (test 10.0+2.0i FL1 10.0+2.0i)
+    (test 1/2+20i FL1 0.5+20.0i)
+    (test 10+2/3i FL1 10.0+2/3i)
+    (test (make-rectangular BN2 20) FL1 536871011.0+20.0i)
+    (test (make-rectangular 10 BN2) FL1 10.0+536871011.0i)
+    #f)
 
-  (test CN009 ADD-CN009)
-  (test CN010 ADD-CN010)
-  (test CN011 ADD-CN011)
-  (test CN012 ADD-CN012)
-
-  (test CN013 ADD-CN013)
-  (test CN014 ADD-CN014)
-  (test CN015 ADD-CN015)
-  (test CN016 ADD-CN016)
-
-;;; --------------------------------------------------------------------
-
-  (test CN017 ADD-CN017)
-  (test CN018 ADD-CN018)
-  (test CN019 ADD-CN019)
-  (test CN020 ADD-CN020)
-
-  (test CN021 ADD-CN021)
-  (test CN022 ADD-CN022)
-  (test CN023 ADD-CN023)
-  (test CN024 ADD-CN024)
-
-  (test CN025 ADD-CN025)
-  (test CN026 ADD-CN026)
-  (test CN027 ADD-CN027)
-  (test CN028 ADD-CN028)
-
-  (test CN029 ADD-CN029)
-  (test CN030 ADD-CN030)
-  (test CN031 ADD-CN031)
-  (test CN032 ADD-CN032)
-
-;;; --------------------------------------------------------------------
-
-  (test CN033 ADD-CN033)
-  (test CN034 ADD-CN034)
-  (test CN035 ADD-CN035)
-  (test CN036 ADD-CN036)
-
-  (test CN037 ADD-CN037)
-  (test CN038 ADD-CN038)
-  (test CN039 ADD-CN039)
-  (test CN040 ADD-CN040)
-
-  (test CN041 ADD-CN041)
-  (test CN042 ADD-CN042)
-  (test CN043 ADD-CN043)
-  (test CN044 ADD-CN044)
-
-  (test CN045 ADD-CN045)
-  (test CN046 ADD-CN046)
-  (test CN047 ADD-CN047)
-  (test CN048 ADD-CN048)
-
-;;; --------------------------------------------------------------------
-
-  (test CN049 ADD-CN049)
-  (test CN050 ADD-CN050)
-  (test CN051 ADD-CN051)
-  (test CN052 ADD-CN052)
-
-  (test CN053 ADD-CN053)
-  (test CN054 ADD-CN054)
-  (test CN055 ADD-CN055)
-  (test CN056 ADD-CN056)
-
-  (test CN057 ADD-CN057)
-  (test CN058 ADD-CN058)
-  (test CN059 ADD-CN059)
-  (test CN060 ADD-CN060)
-
-  (test CN061 ADD-CN061)
-  (test CN062 ADD-CN062)
-  (test CN063 ADD-CN063)
-  (test CN064 ADD-CN064)
-
-;;; --------------------------------------------------------------------
-
-  (test CN065 ADD-CN065)
-  (test CN066 ADD-CN066)
-  (test CN067 ADD-CN067)
-  (test CN068 ADD-CN068)
-
-  (test CN069 ADD-CN069)
-  (test CN070 ADD-CN070)
-  (test CN071 ADD-CN071)
-  (test CN072 ADD-CN072)
-
-  (test CN073 ADD-CN073)
-  (test CN074 ADD-CN074)
-  (test CN075 ADD-CN075)
-  (test CN076 ADD-CN076)
-
-  (test CN077 ADD-CN077)
-  (test CN078 ADD-CN078)
-  (test CN079 ADD-CN079)
-  (test CN080 ADD-CN080)
-
-;;; --------------------------------------------------------------------
-
-  (test CN081 ADD-CN081)
-  (test CN082 ADD-CN082)
-  (test CN083 ADD-CN083)
-  (test CN084 ADD-CN084)
-
-  (test CN085 ADD-CN085)
-  (test CN086 ADD-CN086)
-  (test CN087 ADD-CN087)
-  (test CN088 ADD-CN088)
-
-  (test CN089 ADD-CN089)
-  (test CN090 ADD-CN090)
-  (test CN091 ADD-CN091)
-  (test CN092 ADD-CN092)
-
-  (test CN093 ADD-CN093)
-  (test CN094 ADD-CN094)
-  (test CN095 ADD-CN095)
-  (test CN096 ADD-CN096)
-
-;;; --------------------------------------------------------------------
-
-  (test CN097 ADD-CN097)
-  (test CN098 ADD-CN098)
-  (test CN099 ADD-CN099)
-  (test CN100 ADD-CN100)
-
-  (test CN101 ADD-CN101)
-  (test CN102 ADD-CN102)
-  (test CN103 ADD-CN103)
-  (test CN104 ADD-CN104)
-
-  (test CN105 ADD-CN105)
-  (test CN106 ADD-CN106)
-  (test CN107 ADD-CN107)
-  (test CN108 ADD-CN108)
-
-  (test CN109 ADD-CN109)
-  (test CN110 ADD-CN110)
-  (test CN111 ADD-CN111)
-  (test CN112 ADD-CN112)
+  (let-syntax ((test (make-inexact-test + $add-compnum-cflonum)))
+    (test 10+20i CFL01 10.0+20.0i)
+    (test 1.0+20.0i CFL01 1.0+20.0i)
+    (test 10.0+2.0i CFL01 10.0+2.0i)
+    (test 1/2+20i CFL01 0.5+20.0i)
+    (test 10+2/3i CFL01 10.0+0.6666666666666666i)
+    (test (make-rectangular BN2 20) CFL01 536871011.0+20.0i)
+    (test (make-rectangular 10 BN2) CFL01 10.0+536871011.0i)
+    #f)
 
   #t)
 
