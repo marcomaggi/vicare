@@ -100,15 +100,22 @@
      (assertion-violation who "expected number as argument" x))))
 
 (define (angle x)
-  (import (ikarus system $fx)
+  (import (except (ikarus system $fx)
+		  $fxpositive?
+		  $fxnegative?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Wed Nov 28, 2012)
+    (only (ikarus fixnums)
+	  $fxpositive?
+	  $fxnegative?)
     (ikarus system $bignums)
     (ikarus system $ratnums))
   (define who 'angle)
   (define PI  (acos -1))
   (cond-numeric-operand x
     ((fixnum?)
-     (cond (($fx> x 0)	0)
-	   (($fx< x 0)	PI)
+     (cond (($fxpositive? x)	0)
+	   (($fxnegative? x)	PI)
 	   (else
 	    (assertion-violation who "undefined for 0"))))
     ((bignum?)
@@ -132,10 +139,10 @@
 (define (real-part x)
   (define who 'real-part)
   (cond-numeric-operand x
-    ((fixnum?)	0)
-    ((bignum?)	0)
-    ((ratnum?)	0)
-    ((flonum?)	0)
+    ((fixnum?)	x)
+    ((bignum?)	x)
+    ((ratnum?)	x)
+    ((flonum?)	x)
     ((compnum?)	($compnum-real x))
     ((cflonum?)	($cflonum-real x))
     (else
