@@ -113,6 +113,14 @@
   (define who 'angle)
   (define PI  (acos -1))
   (cond-numeric-operand x
+    ((compnum?)
+     (let ((r ($compnum-real x))
+	   (i ($compnum-imag x)))
+       (atan i r)))
+    ((cflonum?)
+     (let ((r ($cflonum-real x))
+	   (i ($cflonum-imag x)))
+       (atan i r)))
     ((fixnum?)
      (cond (($fxpositive? x)	0)
 	   (($fxnegative? x)	PI)
@@ -125,26 +133,18 @@
        (if (> n 0) 0 PI)))
     ((flonum?)
      (atan 0.0 x))
-    ((compnum?)
-     (let ((r ($compnum-real x))
-	   (i ($compnum-imag x)))
-       (atan i r)))
-    ((cflonum?)
-     (let ((r ($cflonum-real x))
-	   (i ($cflonum-imag x)))
-       (atan i r)))
     (else
      (assertion-violation who "expected number as argument" x))))
 
 (define (real-part x)
   (define who 'real-part)
   (cond-numeric-operand x
+    ((compnum?)	($compnum-real x))
+    ((cflonum?)	($cflonum-real x))
     ((fixnum?)	x)
     ((bignum?)	x)
     ((ratnum?)	x)
     ((flonum?)	x)
-    ((compnum?)	($compnum-real x))
-    ((cflonum?)	($cflonum-real x))
     (else
      (assertion-violation who "expected number as argument" x))))
 

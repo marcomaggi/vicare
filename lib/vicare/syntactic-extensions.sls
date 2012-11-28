@@ -678,6 +678,24 @@
 
     ;; --------------------------------------------------
 
+    ;;Dispatch for all the numeric types, complex first.
+    ;;
+    ((_ ?num
+	((compnum?)	?body-cn0 ?body-cn ...)
+	((cflonum?)	?body-cf0 ?body-cf ...)
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((ratnum?)	?body-rt0 ?body-rt ...)
+	((flonum?)	?body-fl0 ?body-fl ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((compnum? num)	?body-cn0 ?body-cn ...)
+	     ((cflonum? num)	?body-cf0 ?body-cf ...)
+	     ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rt0 ?body-rt ...)
+	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     (else		?body-el0 ?body-el ...))))
     ))
 
 ;;; --------------------------------------------------------------------
