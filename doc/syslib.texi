@@ -1048,6 +1048,10 @@ Compute the inverse of a cflonum and return the result as a cflonum.
 Add any couple of numbers and return the result.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as second operand
+
 
 @deffn {Unsafe Operation} $add-fixnum-number @var{fx} @var{num}
 Add a fixnum with a number and return the result.
@@ -1080,6 +1084,9 @@ Add a cflonum with a number and return the result.
 
 @c ------------------------------------------------------------
 
+@subsubheading Generic number as first operand
+
+
 @deffn {Unsafe Operation} $add-number-fixnum @var{num} @var{fx}
 Add any number with a fixnum and return the result.
 @end deffn
@@ -1111,148 +1118,208 @@ Add any number with a cflonum and return the result.
 
 @c ------------------------------------------------------------
 
-@deffn {Unsafe Operation} $add-fixnum-fixnum
+@subsubheading Fixnum as first operand
+
+
+@deffn {Unsafe Operation} $add-fixnum-fixnum @vari{fx} @varii{fx}
+Add a fixnum with a fixnum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-bignum
+@deffn {Unsafe Operation} $add-fixnum-bignum @var{fx} @var{bn}
+Add a fixnum with a bignum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-flonum
+@deffn {Unsafe Operation} $add-fixnum-flonum @var{fx} @var{fl}
+Add a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-ratnum
+@deffn {Unsafe Operation} $add-fixnum-ratnum @var{fx} @var{rn}
+Add a fixnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-compnum
+@deffn {Unsafe Operation} $add-fixnum-compnum @var{fx} @var{cn}
+Add a fixnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-cflonum
+@deffn {Unsafe Operation} $add-fixnum-cflonum @var{fx} @var{cfl}
+Add a fixnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first operand
+
+
+@deffn {Unsafe Operation} $add-bignum-fixnum @var{bn} @var{fx}
+Add a bignum with a fixnum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-fixnum
+@deffn {Unsafe Operation} $add-bignum-bignum @vari{bn} @varii{bn}
+Add a bignum with a bignum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-bignum
+@deffn {Unsafe Operation} $add-bignum-flonum @var{bn} @var{fl}
+Add a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-flonum
+@deffn {Unsafe Operation} $add-bignum-ratnum @var{bn} @var{rn}
+Add a bignum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-ratnum
+@deffn {Unsafe Operation} $add-bignum-compnum @var{bn} @var{cn}
+Add a bignum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-compnum
+@deffn {Unsafe Operation} $add-bignum-cflonum @var{bn} @var{cfl}
+Add a bignum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first operand
+
+
+@deffn {Unsafe Operation} $add-flonum-fixnum @var{fl} @var{fx}
+Add a flonum with a fixnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-cflonum
+@deffn {Unsafe Operation} $add-flonum-bignum @var{fl} @var{bn}
+Add a flonum with a bignum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-fixnum
+@deffn {Unsafe Operation} $add-flonum-flonum @vari{fl} @varii{fl}
+Add a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-bignum
+@deffn {Unsafe Operation} $add-flonum-ratnum @var{fl} @var{rn}
+Add a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-flonum
+@deffn {Unsafe Operation} $add-flonum-compnum @var{fl} @var{cn}
+Add a flonum with a compnum and return the result as a compnum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-ratnum
+@deffn {Unsafe Operation} $add-flonum-cflonum @var{fl} @var{cfl}
+Add a flonum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first operand
+
+
+@deffn {Unsafe Operation} $add-ratnum-fixnum @var{rn} @var{fx}
+Add a ratnum with a fixnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-compnum
+@deffn {Unsafe Operation} $add-ratnum-bignum @var{rn} @var{bn}
+Add a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-cflonum
+@deffn {Unsafe Operation} $add-ratnum-flonum @var{rn} @var{fl}
+Add a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-fixnum
+@deffn {Unsafe Operation} $add-ratnum-ratnum @vari{rn} @varii{rn}
+Add a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-bignum
+@deffn {Unsafe Operation} $add-ratnum-compnum @var{rn} @var{cn}
+Add a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-flonum
+@deffn {Unsafe Operation} $add-ratnum-cflonum @var{rn} @var{cfl}
+Add a ratnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Compnum as first operand
+
+
+@deffn {Unsafe Operation} $add-compnum-fixnum @var{cn} @var{fx}
+Add a compnum with a fixnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-ratnum
+@deffn {Unsafe Operation} $add-compnum-bignum @var{cn} @var{bn}
+Add a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-compnum
+@deffn {Unsafe Operation} $add-compnum-ratnum @var{cn} @var{rn}
+Add a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-cflonum
+@deffn {Unsafe Operation} $add-compnum-compnum @vari{cn} @varii{cn}
+Add a compnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-fixnum
+@deffn {Unsafe Operation} $add-compnum-flonum @var{cn} @var{fl}
+Add a compnum with a flonum and return the result as a compnum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-bignum
+@deffn {Unsafe Operation} $add-compnum-cflonum @var{cn} @var{cfl}
+Add a compnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Cflonum as first operand
+
+
+@deffn {Unsafe Operation} $add-cflonum-fixnum @var{cfl} @var{fx}
+Add a cflonum with a fixnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-ratnum
+@deffn {Unsafe Operation} $add-cflonum-bignum @var{cfl} @var{bn}
+Add a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-compnum
+@deffn {Unsafe Operation} $add-cflonum-ratnum @var{cfl} @var{rn}
+Add a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-flonum
+@deffn {Unsafe Operation} $add-cflonum-flonum @var{cfl} @var{fl}
+Add a cflonum with a flonum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-cflonum
+@deffn {Unsafe Operation} $add-cflonum-compnum @var{cfl} @var{cn}
+Add a cflonum with a compnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-cflonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $add-cflonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $add-cflonum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $add-cflonum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $add-cflonum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $add-cflonum-cflonum
-
+@deffn {Unsafe Operation} $add-cflonum-cflonum @vari{cfl} @varii{cfl}
+Add a cflonum with a cflonum and return the result as a cflonum.
 @end deffn
 
 @c page
@@ -1260,200 +1327,282 @@ Add any number with a cflonum and return the result.
 @subsection Numbers subtraction
 
 
-@deffn {Unsafe Operation} $sub-number-number
+@deffn {Unsafe Operation} $sub-number-number @vari{num} @varii{num}
+Subtract any couple of numbers and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as second operand
+
+
+@deffn {Unsafe Operation} $sub-fixnum-number @var{fx} @var{num}
+Subtract a fixnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-number
+@deffn {Unsafe Operation} $sub-bignum-number @var{bn} @var{num}
+Subtract a bignum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-number
+@deffn {Unsafe Operation} $sub-flonum-number @var{fl} @var{num}
+Subtract a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-number
+@deffn {Unsafe Operation} $sub-ratnum-number @var{rn} @var{num}
+Subtract a ratnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-number
+@deffn {Unsafe Operation} $sub-compnum-number @var{cn} @var{num}
+Subtract a compnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-compnum-number
+@deffn {Unsafe Operation} $sub-cflonum-number @var{cfl} @var{num}
+Subtract a cflonum with a number and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as first operand
+
+
+@deffn {Unsafe Operation} $sub-number-fixnum @var{num} @var{fx}
+Subtract any number with a fixnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-cflonum-number
+@deffn {Unsafe Operation} $sub-number-bignum @var{num} @var{bn}
+Subtract any number with a bignum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-fixnum
+@deffn {Unsafe Operation} $sub-number-flonum @var{num} @var{fl}
+Subtract any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-bignum
+@deffn {Unsafe Operation} $sub-number-ratnum @var{num} @var{rn}
+Subtract any number with a ratnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-flonum
+@deffn {Unsafe Operation} $sub-number-compnum @var{num} @var{cn}
+Subtract any number with a compnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-ratnum
+@deffn {Unsafe Operation} $sub-number-cflonum @var{num} @var{cfl}
+Subtract any number with a cflonum and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first operand
+
+
+@deffn {Unsafe Operation} $sub-fixnum-fixnum @vari{fx} @varii{fx}
+Subtract a fixnum with a fixnum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-compnum
+@deffn {Unsafe Operation} $sub-fixnum-bignum @var{fx} @var{bn}
+Subtract a fixnum with a bignum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-cflonum
+@deffn {Unsafe Operation} $sub-fixnum-flonum @var{fx} @var{fl}
+Subtract a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-fixnum
+@deffn {Unsafe Operation} $sub-fixnum-ratnum @var{fx} @var{rn}
+Subtract a fixnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-bignum
+@deffn {Unsafe Operation} $sub-fixnum-compnum @var{fx} @var{cn}
+Subtract a fixnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-flonum
+@deffn {Unsafe Operation} $sub-fixnum-cflonum @var{fx} @var{cfl}
+Subtract a fixnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first operand
+
+
+@deffn {Unsafe Operation} $sub-bignum-fixnum @var{bn} @var{fx}
+Subtract a bignum with a fixnum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-ratnum
+@deffn {Unsafe Operation} $sub-bignum-bignum @vari{bn} @varii{bn}
+Subtract a bignum with a bignum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-compnum
+@deffn {Unsafe Operation} $sub-bignum-flonum @var{bn} @var{fl}
+Subtract a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-cflonum
+@deffn {Unsafe Operation} $sub-bignum-ratnum @var{bn} @var{rn}
+Subtract a bignum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-fixnum
+@deffn {Unsafe Operation} $sub-bignum-compnum @var{bn} @var{cn}
+Subtract a bignum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-bignum
+@deffn {Unsafe Operation} $sub-bignum-cflonum @var{bn} @var{cfl}
+Subtract a bignum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first operand
+
+
+@deffn {Unsafe Operation} $sub-flonum-fixnum @var{fl} @var{fx}
+Subtract a flonum with a fixnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-flonum
+@deffn {Unsafe Operation} $sub-flonum-bignum @var{fl} @var{bn}
+Subtract a flonum with a bignum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-ratnum
+@deffn {Unsafe Operation} $sub-flonum-flonum @vari{fl} @varii{fl}
+Subtract a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-compnum
+@deffn {Unsafe Operation} $sub-flonum-ratnum @var{fl} @var{rn}
+Subtract a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-cflonum
+@deffn {Unsafe Operation} $sub-flonum-compnum @var{fl} @var{cn}
+Subtract a flonum with a compnum and return the result as a compnum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-fixnum
+@deffn {Unsafe Operation} $sub-flonum-cflonum @var{fl} @var{cfl}
+Subtract a flonum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first operand
+
+
+@deffn {Unsafe Operation} $sub-ratnum-fixnum @var{rn} @var{fx}
+Subtract a ratnum with a fixnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-bignum
+@deffn {Unsafe Operation} $sub-ratnum-bignum @var{rn} @var{bn}
+Subtract a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-ratnum
+@deffn {Unsafe Operation} $sub-ratnum-flonum @var{rn} @var{fl}
+Subtract a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-flonum
+@deffn {Unsafe Operation} $sub-ratnum-ratnum @vari{rn} @varii{rn}
+Subtract a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-compnum
+@deffn {Unsafe Operation} $sub-ratnum-compnum @var{rn} @var{cn}
+Subtract a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-cflonum
+@deffn {Unsafe Operation} $sub-ratnum-cflonum @var{rn} @var{cfl}
+Subtract a ratnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Compnum as first operand
+
+
+@deffn {Unsafe Operation} $sub-compnum-fixnum @var{cn} @var{fx}
+Subtract a compnum with a fixnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-fixnum
+@deffn {Unsafe Operation} $sub-compnum-bignum @var{cn} @var{bn}
+Subtract a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-bignum
+@deffn {Unsafe Operation} $sub-compnum-ratnum @var{cn} @var{rn}
+Subtract a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-flonum
+@deffn {Unsafe Operation} $sub-compnum-compnum @vari{cn} @varii{cn}
+Subtract a compnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-ratnum
+@deffn {Unsafe Operation} $sub-compnum-flonum @var{cn} @var{fl}
+Subtract a compnum with a flonum and return the result as a compnum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-compnum
+@deffn {Unsafe Operation} $sub-compnum-cflonum @var{cn} @var{cfl}
+Subtract a compnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Cflonum as first operand
+
+
+@deffn {Unsafe Operation} $sub-cflonum-fixnum @var{cfl} @var{fx}
+Subtract a cflonum with a fixnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-cflonum
+@deffn {Unsafe Operation} $sub-cflonum-bignum @var{cfl} @var{bn}
+Subtract a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-compnum-fixnum
+@deffn {Unsafe Operation} $sub-cflonum-ratnum @var{cfl} @var{rn}
+Subtract a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-compnum-bignum
+@deffn {Unsafe Operation} $sub-cflonum-flonum @var{cfl} @var{fl}
+Subtract a cflonum with a flonum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-compnum-ratnum
+@deffn {Unsafe Operation} $sub-cflonum-compnum @var{cfl} @var{cn}
+Subtract a cflonum with a compnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-compnum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-compnum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-compnum-cflonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-cflonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-cflonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-cflonum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-cflonum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-cflonum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $sub-cflonum-cflonum
-
+@deffn {Unsafe Operation} $sub-cflonum-cflonum @vari{cfl} @varii{cfl}
+Subtract a cflonum with a cflonum and return the result as a cflonum.
 @end deffn
 
 @c page
@@ -1461,200 +1610,280 @@ Add any number with a cflonum and return the result.
 @subsection Numbers multiplication
 
 
-@deffn {Unsafe Operation} $mul-number-number
+@deffn {Unsafe Operation} $mul-number-number @vari{num} @varii{num}
+Multiply any couple of numbers and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as second operand
+
+
+@deffn {Unsafe Operation} $mul-fixnum-number @var{fx} @var{num}
+Multiply a fixnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-number
+@deffn {Unsafe Operation} $mul-bignum-number @var{bn} @var{num}
+Multiply a bignum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-number
+@deffn {Unsafe Operation} $mul-flonum-number @var{fl} @var{num}
+Multiply a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-number
+@deffn {Unsafe Operation} $mul-ratnum-number @var{rn} @var{num}
+Multiply a ratnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-number
+@deffn {Unsafe Operation} $mul-compnum-number @var{cn} @var{num}
+Multiply a compnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-compnum-number
+@deffn {Unsafe Operation} $mul-cflonum-number @var{cfl} @var{num}
+Multiply a cflonum with a number and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as first operand
+
+
+@deffn {Unsafe Operation} $mul-number-fixnum @var{num} @var{fx}
+Multiply any number with a fixnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-cflonum-number
+@deffn {Unsafe Operation} $mul-number-bignum @var{num} @var{bn}
+Multiply any number with a bignum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-fixnum
+@deffn {Unsafe Operation} $mul-number-flonum @var{num} @var{fl}
+Multiply any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-bignum
+@deffn {Unsafe Operation} $mul-number-ratnum @var{num} @var{rn}
+Multiply any number with a ratnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-flonum
+@deffn {Unsafe Operation} $mul-number-compnum @var{num} @var{cn}
+Multiply any number with a compnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-ratnum
+@deffn {Unsafe Operation} $mul-number-cflonum @var{num} @var{cfl}
+Multiply any number with a cflonum and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first operand
+
+
+@deffn {Unsafe Operation} $mul-fixnum-fixnum @vari{fx} @varii{fx}
+Multiply a fixnum with a fixnum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-compnum
+@deffn {Unsafe Operation} $mul-fixnum-bignum @var{fx} @var{bn}
+Multiply a fixnum with a bignum and return the result as a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-cflonum
+@deffn {Unsafe Operation} $mul-fixnum-flonum @var{fx} @var{fl}
+Multiply a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-fixnum
+@deffn {Unsafe Operation} $mul-fixnum-ratnum @var{fx} @var{rn}
+Multiply a fixnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-bignum
+@deffn {Unsafe Operation} $mul-fixnum-compnum @var{fx} @var{cn}
+Multiply a fixnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-flonum
+@deffn {Unsafe Operation} $mul-fixnum-cflonum @var{fx} @var{cfl}
+Multiply a fixnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first operand
+
+
+@deffn {Unsafe Operation} $mul-bignum-fixnum @var{bn} @var{fx}
+Multiply a bignum with a fixnum and return the result as a bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-ratnum
+@deffn {Unsafe Operation} $mul-bignum-bignum @vari{bn} @varii{bn}
+Multiply a bignum with a bignum and return the result as a bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-compnum
+@deffn {Unsafe Operation} $mul-bignum-flonum @var{bn} @var{fl}
+Multiply a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-cflonum
+@deffn {Unsafe Operation} $mul-bignum-ratnum @var{bn} @var{rn}
+Multiply a bignum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-fixnum
+@deffn {Unsafe Operation} $mul-bignum-compnum @var{bn} @var{cn}
+Multiply a bignum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-bignum
+@deffn {Unsafe Operation} $mul-bignum-cflonum @var{bn} @var{cfl}
+Multiply a bignum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first operand
+
+
+@deffn {Unsafe Operation} $mul-flonum-fixnum @var{fl} @var{fx}
+Multiply a flonum with a fixnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-flonum
+@deffn {Unsafe Operation} $mul-flonum-bignum @var{fl} @var{bn}
+Multiply a flonum with a bignum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-ratnum
+@deffn {Unsafe Operation} $mul-flonum-flonum @vari{fl} @varii{fl}
+Multiply a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-compnum
+@deffn {Unsafe Operation} $mul-flonum-ratnum @var{fl} @var{rn}
+Multiply a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-cflonum
+@deffn {Unsafe Operation} $mul-flonum-compnum @var{fl} @var{cn}
+Multiply a flonum with a compnum and return the result as cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-flonum
+@deffn {Unsafe Operation} $mul-flonum-cflonum @var{fl} @var{cfl}
+Multiply a flonum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first operand
+
+
+@deffn {Unsafe Operation} $mul-ratnum-fixnum @var{rn} @var{fx}
+Multiply a ratnum with a fixnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-cflonum
+@deffn {Unsafe Operation} $mul-ratnum-bignum @var{rn} @var{bn}
+Multiply a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-fixnum
+@deffn {Unsafe Operation} $mul-ratnum-flonum @var{rn} @var{fl}
+Multiply a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-bignum
+@deffn {Unsafe Operation} $mul-ratnum-ratnum @vari{rn} @varii{rn}
+Multiply a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-ratnum
+@deffn {Unsafe Operation} $mul-ratnum-compnum @var{rn} @var{cn}
+Multiply a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-compnum
+@deffn {Unsafe Operation} $mul-ratnum-cflonum @var{rn} @var{cfl}
+Multiply a ratnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Compnum as first operand
+
+
+@deffn {Unsafe Operation} $mul-compnum-fixnum @var{cn} @var{fx}
+Multiply a compnum with a fixnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-fixnum
+@deffn {Unsafe Operation} $mul-compnum-bignum @var{cn} @var{bn}
+Multiply a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-bignum
+@deffn {Unsafe Operation} $mul-compnum-ratnum @var{cn} @var{rn}
+Multiply a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-flonum
+@deffn {Unsafe Operation} $mul-compnum-compnum @vari{cn} @varii{cn}
+Multiply a compnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-ratnum
+@deffn {Unsafe Operation} $mul-compnum-flonum @var{cn} @var{fl}
+Multiply a compnum with a flonum and return the result as cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-compnum
+@deffn {Unsafe Operation} $mul-compnum-cflonum @var{cn} @var{cfl}
+Multiply a compnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Cflonum as first operand
+
+
+@deffn {Unsafe Operation} $mul-cflonum-fixnum @var{cfl} @var{fx}
+Multiply a cflonum with a fixnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-cflonum
+@deffn {Unsafe Operation} $mul-cflonum-bignum @var{cfl} @var{bn}
+Multiply a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-compnum-fixnum
+@deffn {Unsafe Operation} $mul-cflonum-ratnum @var{cfl} @var{rn}
+Multiply a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-compnum-bignum
+@deffn {Unsafe Operation} $mul-cflonum-flonum @var{cfl} @var{fl}
+Multiply a cflonum with a flonum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-compnum-ratnum
+@deffn {Unsafe Operation} $mul-cflonum-compnum @var{cfl} @var{cn}
+Multiply a cflonum with a compnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-compnum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-compnum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-compnum-cflonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-cflonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-cflonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-cflonum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-cflonum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-cflonum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $mul-cflonum-cflonum
-
+@deffn {Unsafe Operation} $mul-cflonum-cflonum @vari{cfl} @varii{cfl}
+Multiply a cflonum with a cflonum and return the result as a cflonum.
 @end deffn
 
 @c page
@@ -1662,200 +1891,288 @@ Add any number with a cflonum and return the result.
 @subsection Numbers division
 
 
-@deffn {Unsafe Operation} $div-number-number
+@deffn {Unsafe Operation} $div-number-number @vari{num} @varii{num}
+Divide any couple of numbers and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as second operand
+
+
+@deffn {Unsafe Operation} $div-fixnum-number @var{fx} @var{num}
+Divide a fixnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-number
+@deffn {Unsafe Operation} $div-bignum-number @var{bn} @var{num}
+Divide a bignum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-number
+@deffn {Unsafe Operation} $div-flonum-number @var{fl} @var{num}
+Divide a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-number
+@deffn {Unsafe Operation} $div-ratnum-number @var{rn} @var{num}
+Divide a ratnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-number
+@deffn {Unsafe Operation} $div-compnum-number @var{cn} @var{num}
+Divide a compnum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-compnum-number
+@deffn {Unsafe Operation} $div-cflonum-number @var{cfl} @var{num}
+Divide a cflonum with a number and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Generic number as first operand
+
+
+@deffn {Unsafe Operation} $div-number-fixnum @var{num} @var{fx}
+Divide any number with a fixnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-cflonum-number
+@deffn {Unsafe Operation} $div-number-bignum @var{num} @var{bn}
+Divide any number with a bignum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-flonum
+@deffn {Unsafe Operation} $div-number-flonum @var{num} @var{fl}
+Divide any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-fixnum
+@deffn {Unsafe Operation} $div-number-ratnum @var{num} @var{rn}
+Divide any number with a ratnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-bignum
+@deffn {Unsafe Operation} $div-number-compnum @var{num} @var{cn}
+Divide any number with a compnum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-ratnum
+@deffn {Unsafe Operation} $div-number-cflonum @var{num} @var{cfl}
+Divide any number with a cflonum and return the result.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first operand
+
+
+@deffn {Unsafe Operation} $div-fixnum-fixnum @vari{fx} @varii{fx}
+Divide a fixnum with a fixnum and return the result as a fixnum or
+ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-compnum
+@deffn {Unsafe Operation} $div-fixnum-bignum @var{fx} @var{bn}
+Divide a fixnum with a bignum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-cflonum
+@deffn {Unsafe Operation} $div-fixnum-flonum @var{fx} @var{fl}
+Divide a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-flonum
+@deffn {Unsafe Operation} $div-fixnum-ratnum @var{fx} @var{rn}
+Divide a fixnum with a ratnum and return the result as fixnum, bignum or
+ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-fixnum
+@deffn {Unsafe Operation} $div-fixnum-compnum @var{fx} @var{cn}
+Divide a fixnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-bignum
+@deffn {Unsafe Operation} $div-fixnum-cflonum @var{fx} @var{cfl}
+Divide a fixnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first operand
+
+
+@deffn {Unsafe Operation} $div-bignum-fixnum @var{bn} @var{fx}
+Divide a bignum with a fixnum and return the result as a fixnum, bignum
+or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-ratnum
+@deffn {Unsafe Operation} $div-bignum-bignum @vari{bn} @varii{bn}
+Divide a bignum with a bignum and return the result as a fixnum, bignum
+or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-compnum
+@deffn {Unsafe Operation} $div-bignum-flonum @var{bn} @var{fl}
+Divide a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-cflonum
+@deffn {Unsafe Operation} $div-bignum-ratnum @var{bn} @var{rn}
+Divide a bignum with a ratnum and return the result as a fixnum, bignum
+or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-fixnum
+@deffn {Unsafe Operation} $div-bignum-compnum @var{bn} @var{cn}
+Divide a bignum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-bignum
+@deffn {Unsafe Operation} $div-bignum-cflonum @var{bn} @var{cfl}
+Divide a bignum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first operand
+
+
+@deffn {Unsafe Operation} $div-flonum-fixnum @var{fl} @var{fx}
+Divide a flonum with a fixnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-flonum
+@deffn {Unsafe Operation} $div-flonum-bignum @var{fl} @var{bn}
+Divide a flonum with a bignum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-ratnum
+@deffn {Unsafe Operation} $div-flonum-flonum @vari{fl} @varii{fl}
+Divide a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-compnum
+@deffn {Unsafe Operation} $div-flonum-ratnum @var{fl} @var{rn}
+Divide a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-cflonum
+@deffn {Unsafe Operation} $div-flonum-compnum @var{fl} @var{cn}
+Divide a flonum with a compnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-fixnum
+@deffn {Unsafe Operation} $div-flonum-cflonum @var{fl} @var{cfl}
+Divide a flonum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first operand
+
+
+@deffn {Unsafe Operation} $div-ratnum-fixnum @var{rn} @var{fx}
+Divide a ratnum with a fixnum and return the result as a fixnum, bignum
+or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-bignum
+@deffn {Unsafe Operation} $div-ratnum-bignum @var{rn} @var{bn}
+Divide a ratnum with a ratnum and return the result as a fixnum, bignum
+or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-ratnum
+@deffn {Unsafe Operation} $div-ratnum-flonum @var{rn} @var{fl}
+Divide a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-flonum
+@deffn {Unsafe Operation} $div-ratnum-ratnum @vari{rn} @varii{rn}
+Divide a ratnum with a ratnum and return the result as a fixnum, bignum
+or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-compnum
+@deffn {Unsafe Operation} $div-ratnum-compnum @var{rn} @var{cn}
+Divide a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-cflonum
+@deffn {Unsafe Operation} $div-ratnum-cflonum @var{rn} @var{cfl}
+Divide a ratnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Compnum as first operand
+
+
+@deffn {Unsafe Operation} $div-compnum-fixnum @var{cn} @var{fx}
+Divide a compnum with a fixnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-flonum
+@deffn {Unsafe Operation} $div-compnum-bignum @var{cn} @var{bn}
+Divide a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-cflonum
+@deffn {Unsafe Operation} $div-compnum-ratnum @var{cn} @var{rn}
+Divide a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-fixnum
+@deffn {Unsafe Operation} $div-compnum-compnum @vari{cn} @varii{cn}
+Divide a compnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-bignum
+@deffn {Unsafe Operation} $div-compnum-flonum @var{cn} @var{fl}
+Divide a compnum with a flonum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-ratnum
+@deffn {Unsafe Operation} $div-compnum-cflonum @var{cn} @var{cfl}
+Divide a compnum with a cflonum and return the result as a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Cflonum as first operand
+
+
+@deffn {Unsafe Operation} $div-cflonum-fixnum @var{cfl} @var{fx}
+Divide a cflonum with a fixnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-compnum
+@deffn {Unsafe Operation} $div-cflonum-bignum @var{cfl} @var{bn}
+Divide a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-compnum-fixnum
+@deffn {Unsafe Operation} $div-cflonum-ratnum @var{cfl} @var{rn}
+Divide a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-compnum-bignum
+@deffn {Unsafe Operation} $div-cflonum-flonum @var{cfl} @var{fl}
+Divide a cflonum with a flonum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-compnum-ratnum
+@deffn {Unsafe Operation} $div-cflonum-compnum @var{cfl} @var{cn}
+Divide a cflonum with a compnum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-compnum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-compnum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-compnum-cflonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-cflonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-cflonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-cflonum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-cflonum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-cflonum-compnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $div-cflonum-cflonum
-
+@deffn {Unsafe Operation} $div-cflonum-cflonum @vari{cfl} @varii{cfl}
+Divide a cflonum with a cflonum and return the result as a cflonum.
 @end deffn
 
 @c page
