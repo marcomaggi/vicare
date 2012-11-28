@@ -508,6 +508,19 @@
     (test FX1 CFL16 +nan.0-1.2i)
     #f)
 
+  (let-syntax ((test (make-test + $add-fixnum-compnum)))
+    (test 1	10+20i		11+20i)
+
+    (test 1	1.0+20i		2.0+20i)
+    (test 1	10+2.0i		11+2.0i)
+
+    (test 1	1/2+20i		3/2+20i)
+    (test 1	10+2/3i		11+2/3i)
+
+    (test 1	(make-rectangular BN1 20)	(make-rectangular (+ 1 BN1) 20))
+    (test 1	(make-rectangular 10 BN1)	(make-rectangular 11 BN1))
+    #f)
+
   #t)
 
 
@@ -650,71 +663,56 @@
     (test BN1 CFL16 +nan.0-1.2i)
     #f)
 
-  #t)
+  (let-syntax ((test (make-test + $add-bignum-compnum)))
+    (test BN1	10+20i		(make-rectangular (+ BN1 10) 20))
 
-
-#;(parametrise ((check-test-name	'ratnums))
+    (test BN1	1.0+20i		(make-rectangular (+ BN1 1.0) 20))
+    (test BN1	10+2.0i		(make-rectangular (+ BN1 10) 2.0))
 
-  (define-syntax test
-    (make-test / $add-ratnum))
+    (test BN1	1/2+20i		(make-rectangular (+ BN1 1/2) 20))
+    (test BN1	10+2/3i		(make-rectangular (+ BN1 10) 2/3))
 
-  (test RN01	ADD-RN01)
-  (test RN02	ADD-RN02)
-  (test RN03	ADD-RN03)
-  (test RN04	ADD-RN04)
-  (test RN05	ADD-RN05)
-  (test RN06	ADD-RN06)
-  (test RN07	ADD-RN07)
-  ;;(test RN08	ADD-RN08) ;not a ratnum
-  (test RN09	ADD-RN09)
-
-  (test RN10	ADD-RN10)
-  (test RN11	ADD-RN11)
-  (test RN12	ADD-RN12)
-  (test RN13	ADD-RN13)
-  (test RN14	ADD-RN14)
-  (test RN15	ADD-RN15)
-  (test RN16	ADD-RN16)
-  (test RN17	ADD-RN17)
-  (test RN18	ADD-RN18)
-  (test RN19	ADD-RN19)
-
-  (test RN20	ADD-RN20)
-  ;;not ratnums
-  ;;
-  ;; (test RN21	ADD-RN21)
-  ;; (test RN22	ADD-RN22)
-  ;; (test RN23	ADD-RN23)
-  ;; (test RN24	ADD-RN24)
-  ;; (test RN25	ADD-RN25)
-  ;; (test RN26	ADD-RN26)
-  ;; (test RN27	ADD-RN27)
-  ;; (test RN28	ADD-RN28)
-  (test RN29	ADD-RN29)
-
-  (test RN30	ADD-RN30)
-  (test RN31	ADD-RN31)
-  (test RN32	ADD-RN32)
-  ;;(test RN33	ADD-RN33) ;not a ratnum
-  (test RN34	ADD-RN34)
-  (test RN35	ADD-RN35)
-  (test RN36	ADD-RN36)
+    (test BN1	(make-rectangular BN2 20)	(make-rectangular (+ BN1 BN2) 20))
+    (test BN1	(make-rectangular 10 BN2)	(make-rectangular (+ BN1 10) BN2))
+    #f)
 
   #t)
 
 
-#;(parametrise ((check-test-name	'flonums))
+(parametrise ((check-test-name	'ratnums))
 
-  (define-syntax test
-    (make-flonum-test / $add-flonum))
+  (let-syntax ((test (make-test + $add-ratnum-fixnum)))
+    (test 1/2 0				1/2)
+    (test 1/2 10			21/2)
+    (test 1/2 (greatest-fixnum)		1073741823/2)
+    (test 1/2 (least-fixnum)		-1073741823/2)
+    #f)
 
-  (test FL1 ADD-FL1)
-  (test FL2 ADD-FL2)
-  (test FL3 ADD-FL3)
-  (test FL4 ADD-FL4)
-  (test FL5 ADD-FL5)
-  (test FL6 ADD-FL6)
-  (test FL7 ADD-FL7)
+  (let-syntax ((test (make-test + $add-ratnum-bignum)))
+    (test 1/2 BN1			1073741825/2)
+    (test 1/2 BN2			1073742023/2)
+    (test 1/2 BN3			-1073741825/2)
+    (test 1/2 BN4			-1073742023/2)
+    (test -1/2 BN1			1073741823/2)
+    (test -1/2 BN2			1073742021/2)
+    (test -1/2 BN3			-1073741827/2)
+    (test -1/2 BN4			-1073742025/2)
+    #f)
+
+  (let-syntax ((test (make-test + $add-ratnum-ratnum)))
+    (test 1/2	3/4			5/4)
+    (test -1/2	3/4			1/4)
+    (test -1/2	-3/4			-5/4)
+    #f)
+
+  (let-syntax ((test (make-test + $add-ratnum-bignum)))
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'flonums))
+
 
   #t)
 
