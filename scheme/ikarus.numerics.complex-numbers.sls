@@ -27,6 +27,18 @@
 		  angle			magnitude)
     (except (ikarus system $compnums)
 	    $make-rectangular)
+    ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
+    ;;Maggi; Thu Nov 29, 2012)
+    (only (ikarus generic-arithmetic)
+	  sqr)
+    (except (ikarus system $flonums)
+	    $flsqr
+	    $flsqrt)
+    ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
+    ;;Maggi; Thu Nov 29, 2012)
+    (only (ikarus flonums)
+	  $flsqr
+	  $flsqrt)
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
 	  cond-numeric-operand))
@@ -80,8 +92,8 @@
   (with-arguments-validation (who)
       ((real	mag)
        (real	angle))
-    (make-rectangular (* mag (cos angle))
-		      (* mag (sin angle)))))
+    ($make-rectangular (* mag (cos angle))
+		       (* mag (sin angle)))))
 
 (define (magnitude x)
   (define who 'magnitude)
@@ -89,13 +101,13 @@
     ((real?)
      (abs x))
     ((compnum?)
-     (let ((r ($compnum-real x))
-	   (i ($compnum-imag x)))
-       (sqrt (+ (* r r) (* i i)))))
+     (let ((x.rep ($compnum-real x))
+	   (x.imp ($compnum-imag x)))
+       (sqrt (+ (sqr x.rep) (sqr x.imp)))))
     ((cflonum?)
-     (let ((r ($cflonum-real x))
-	   (i ($cflonum-imag x)))
-       (sqrt (+ (* r r) (* i i)))))
+     (let ((x.rep ($cflonum-real x))
+	   (x.imp ($cflonum-imag x)))
+       ($flsqrt ($fl+ ($flsqr x.rep) ($flsqr x.imp)))))
     (else
      (assertion-violation who "expected number as argument" x))))
 

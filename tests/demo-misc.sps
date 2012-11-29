@@ -5,75 +5,36 @@
 
 #!vicare
 (import (vicare)
-  (vicare debugging compiler))
+  (ikarus system $flonums)
+  (ikarus system $numerics))
 
-#;(module (doit library-doit)
+(define LEAST-FX	-536870912)
 
-  (define-syntax doit
-    (syntax-rules ()
-      ((_ ?pass ?form)
-       (let ((original-form ?form))
-	 (%unparse-and-print original-form
-			     (compile-up-to ?pass (%expand ?form)))))))
+(define x 1)
+(define y 1/2+20i)
 
-  (define-syntax library-doit
-    (syntax-rules ()
-      ((_ ?pass ?form)
-       (let ((original-form ?form))
-	 (%unparse-and-print original-form
-			     (compile-up-to ?pass (%library-expand ?form)))))))
+(define y.rep (real-part y))
+(define y.imp (imag-part y))
 
-;;; --------------------------------------------------------------------
+(define denom (+ (sqr y.rep) (sqr y.imp)))
+(define num.rep ($mul-fixnum-number x y.rep))
+(define num.imp (let ((x.neg ($neg-fixnum x)))
+		  (if (fixnum? x.neg)
+		      ($mul-fixnum-number x.neg y.imp)
+		    ($mul-bignum-number x.neg y.imp))))
+(define rep ($div-number-number num.rep denom))
+(define imp ($div-number-number num.imp denom))
 
-  (define (%expand form)
-    (let-values
-	(((code unused)
-	  (expand-form-to-core-language form (environment '(vicare)))))
-      code))
+(set-port-buffer-mode! (current-output-port)
+		       (buffer-mode none))
 
-  (define (%library-expand form)
-    (let-values (((id name ver imp* vis* inv*
-		      invoke-code visit-code
-		      export-subst export-env
-		      guard-code guard-req*)
-		  (expand-library form)))
-      invoke-code))
+(pretty-print (list y.rep (sqr y.rep)))
+(pretty-print (list y.imp (sqr y.imp)))
+(pretty-print (list 'denom denom))
+(pretty-print (list 'num.rep num.rep))
+(pretty-print (list 'num.imp num.imp))
+(pretty-print (list rep imp))
 
-;;; --------------------------------------------------------------------
-
-  (define (%unparse-and-print original-form core-form)
-    (%print original-form)
-    (%display "==> ")
-    (%print* ($unparse-recordized-code/pretty core-form) 3)
-    (%display "\n\n"))
-
-  (define (%print x)
-    (pretty-print x (current-error-port)))
-
-  (define (%print* x start)
-    (pretty-print* x (current-error-port) start #t))
-
-  (define (%display x)
-    (let ((port (current-error-port)))
-      (display x port)
-      (flush-output-port port)))
-
-  #| end of module: doit |# )
-
-
-#;(library-doit $introduce-tags
- '(library (alpha)
-    (export ciao)
-    (import (vicare))
-    (define (ciao)
-      (hello))
-    (define (hello)
-      123)))
-
-(define (ciao)
-  123)
-
-(display (ciao))
 
 ;;; end of file
 ;;Local Variables:

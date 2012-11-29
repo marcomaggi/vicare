@@ -1973,6 +1973,10 @@
     ($mul-bignum-ratnum y x))
 
   (define ($mul-ratnum-ratnum x y)
+    ;; x.num   y.num   x.num * y.num
+    ;; ----- * ----- = -------------
+    ;; x.den   y.den   x.den * y.den
+    ;;
     ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-n y))
 			($mul-number-number ($ratnum-d x) ($ratnum-d y))))
 
@@ -2252,10 +2256,15 @@
 	   (assertion-violation who "division by 0" x y))
 	  (($fxzero? x)
 	   0)
+	  (($fx= x y)
+	   1)
 	  (($fxpositive? y)
 	   (if ($fx= y 1)
 	       x
-	     ;;The GCD between two fixnums is a fixnum.
+	     ;;The GCD  between two  fixnums is  *not* always  a fixnum:
+	     ;;when X and Y are both (least-fixnum) the GCD is a bignum.
+	     ;;But we have excluded the case X  = Y above, and here Y is
+	     ;;positive, so we are sure that here G is a fixnum.
 	     (let ((g ($gcd-fixnum-fixnum x y)))
 	       (cond (($fx= g y)
 		      ;;X and Y are exactly divisible and their division
@@ -2282,7 +2291,10 @@
 	   ;;Here Y is negative.
 	   (if ($fx= y -1)
 	       ($neg-fixnum x)
-	     ;;The GCD between two fixnums is a fixnum.
+	     ;;The GCD  between two  fixnums is  *not* always  a fixnum:
+	     ;;when X and Y are both (least-fixnum) the GCD is a bignum.
+	     ;;But we have excluded the case X = Y above, so we are sure
+	     ;;that here G is a fixnum.
 	     (let ((g ($gcd-fixnum-fixnum x y)))
 	       ;;The negation  of a fixnum  is not always a  fixnum, but
 	       ;;the following check works  even then ($neg-fixnum g) is
@@ -2363,8 +2375,15 @@
     ;; x / ----- = x * -----
     ;;     y.den       y.num
     ;;
-    ($div-number-number ($mul-fixnum-number x ($ratnum-d y))
-			($ratnum-n y)))
+    (let ((y.num ($ratnum-n y))
+	  (y.den ($ratnum-d y)))
+      ;;The case X = Y.NUM is rare, but we do check the equality because
+      ;;it is cheap between fixnums.  EQ? is fine to compare fixnums (it
+      ;;generates the same assembly code of $fx=).
+      (if (eq? x y.num)
+	  y.den
+	($div-number-number ($mul-fixnum-number x y.den)
+			    y.num))))
 
   (define ($div-fixnum-compnum x y)
     ;;
@@ -2380,7 +2399,13 @@
 	  (y.imp ($compnum-imag y)))
       (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
 	    (num.rep ($mul-fixnum-number x y.rep))
-	    (num.imp ($mul-fixnum-number ($neg-fixnum x) y.imp)))
+	    (num.imp (let ((x.neg ($neg-fixnum x)))
+		       ;;The  negation of  a  fixnum is  *not* always  a
+		       ;;fixnum; when  X is (least-fixnum)  its negation
+		       ;;is a bignum.
+		       (if (fixnum? x.neg)
+			   ($mul-fixnum-number x.neg y.imp)
+			 ($mul-bignum-number x.neg y.imp)))))
 	($make-rectangular ($div-number-number num.rep denom)
 			   ($div-number-number num.imp denom)))))
 
@@ -2396,11 +2421,17 @@
     ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($add-flonum-flonum ($flsqr y.rep) ($flsqr y.imp)))
+      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
 	    (num.rep ($mul-fixnum-flonum x y.rep))
-	    (num.imp ($mul-fixnum-flonum ($neg-fixnum x) y.imp)))
-	($make-cflonum ($div-flonum-flonum num.rep denom)
-		       ($div-flonum-flonum num.imp denom)))))
+	    (num.imp (let ((x.neg ($neg-fixnum x)))
+		       ;;The  negation of  a  fixnum is  *not* always  a
+		       ;;fixnum; when  X is (least-fixnum)  its negation
+		       ;;is a bignum.
+		       (if (fixnum? x.neg)
+			   ($mul-fixnum-flonum x.neg y.imp)
+			 ($mul-bignum-flonum x.neg y.imp)))))
+	($make-cflonum ($fl/ num.rep denom)
+		       ($fl/ num.imp denom)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2414,10 +2445,10 @@
 	     ;;The GCD between  any exact integer and a  fixnum is *not*
 	     ;;always a fixnum; the GDC is always positive.
 	     (let ((g ($gcd-bignum-fixnum x y)))
-	       (cond (($fx= g 1)
+	       (cond ((eq? g 1)
 		      ;;X and Y are not exactly divisible.
 		      ($make-ratnum x y))
-		     (($fx= g y)
+		     ((= g y)
 		      ;;X and Y are exactly divisible.
 		      ($quotient-bignum-number x g))
 		     (else
@@ -2432,12 +2463,12 @@
 	     ;;The GCD between  any exact integer and a  fixnum is *not*
 	     ;;always a fixnum; the GCD is always positive.
 	     (let ((g ($gcd-bignum-fixnum x y)))
-	       (cond (($fx= g 1)
+	       (cond ((eq? g 1)
 		      ;;X and  Y are not  exactly divisible.  We  want a
 		      ;;ratnum with positive denominator.
 		      ($make-ratnum ($neg-bignum x)
 				    ($neg-fixnum y)))
-		     ((= ($neg-fixnum g) y)
+		     ((= ($neg-number g) y)
 		      ;;X and Y are exactly divisible.
 		      ($neg-number ($quotient-bignum-number x g)))
 		     (else
@@ -2453,32 +2484,34 @@
     ;;
     ;;The GCD of  two bignums is a  fixnum or bignum; the  GDC is always
     ;;positive.
-    (let ((g ($gcd-bignum-bignum x y)))
-      (cond (($fx= g 1) ;this words with any object G
-	     ;;X and Y are not exactly divisible.  We want a ratnum with
-	     ;;positive denominator.
-	     (if ($bignum-positive? y)
-		 ($make-ratnum x y)
-	       ($make-ratnum ($neg-bignum x)
-			     ($neg-bignum y))))
-	    (($bignum-positive? y)
-	     (if (= g y)
-		 ;;X and Y are exactly divisible.
-		 ($quotient-bignum-number x g)
-	       ;;X and  Y are not  exactly divisible, but they  are both
-	       ;;divisible by their GCD.
-	       ($make-ratnum ($quotient-bignum-number x g)
-			     ($quotient-bignum-number y g))))
-	    (else ;here Y is negative
-	     (let ((y ($neg-number y)))
+    (if (bnbn= x y)
+	1
+      (let ((g ($gcd-bignum-bignum x y)))
+	(cond (($fx= g 1) ;this words with any object G
+	       ;;X and  Y are not  exactly divisible.  We want  a ratnum
+	       ;;with positive denominator.
+	       (if ($bignum-positive? y)
+		   ($make-ratnum x y)
+		 ($make-ratnum ($neg-bignum x)
+			       ($neg-bignum y))))
+	      (($bignum-positive? y)
 	       (if (= g y)
 		   ;;X and Y are exactly divisible.
-		   ($neg-number ($quotient-bignum-number x g))
+		   ($quotient-bignum-number x g)
 		 ;;X and Y are not  exactly divisible, but they are both
-		 ;;divisible  by  their  GCD.   We want  a  ratnum  with
-		 ;;positive denominator.
-		 ($make-ratnum ($neg-number ($quotient-bignum-number x g))
-			       ($quotient-bignum-number y g))))))))
+		 ;;divisible by their GCD.
+		 ($make-ratnum ($quotient-bignum-number x g)
+			       ($quotient-bignum-number y g))))
+	      (else ;here Y is negative
+	       (let ((y ($neg-number y)))
+		 (if (= g y)
+		     ;;X and Y are exactly divisible.
+		     ($neg-number ($quotient-bignum-number x g))
+		   ;;X and  Y are  not exactly  divisible, but  they are
+		   ;;both divisible by their GCD.  We want a ratnum with
+		   ;;positive denominator.
+		   ($make-ratnum ($neg-number ($quotient-bignum-number x g))
+				 ($quotient-bignum-number y g)))))))))
 
   (define ($div-bignum-flonum x y)
     ($fl/ ($bignum->flonum x) y))
@@ -2548,8 +2581,15 @@
     ;; ----- / ----- = ----- * -----
     ;; x.den   y.den   x.den   y.num
     ;;
-    ($div-number-number ($mul-number-number ($ratnum-n x) ($ratnum-d y))
-			($mul-number-number ($ratnum-d x) ($ratnum-n y))))
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x))
+	  (y.num ($ratnum-n y))
+	  (y.den ($ratnum-d y)))
+      (if (and (= x.num y.num)
+	       (= x.den y.den))
+	  1
+	($div-number-number ($mul-number-number x.num y.den)
+			    ($mul-number-number x.den y.num)))))
 
   (define ($div-ratnum-flonum x y)
     ;; x.num       x.num   1     x.num
@@ -2833,13 +2873,16 @@
 	  (x.imp ($cflonum-imag x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
-	    (num.rep ($fl+ ($fl* x.rep y.rep)
-			   ($fl* x.imp y.imp)))
-	    (num.imp ($fl- ($fl* x.imp y.rep)
-			   ($fl* x.rep y.imp))))
-	($make-rectangular ($fl/ num.rep denom)
-			   ($fl/ num.imp denom)))))
+      (if (and ($fl= x.rep y.rep)
+	       ($fl= x.imp y.imp))
+	  1.0+0.0i
+	(let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+	      (num.rep ($fl+ ($fl* x.rep y.rep)
+			     ($fl* x.imp y.imp)))
+	      (num.imp ($fl- ($fl* x.imp y.rep)
+			     ($fl* x.rep y.imp))))
+	  ($make-rectangular ($fl/ num.rep denom)
+			     ($fl/ num.imp denom))))))
 
   #| end of module: $div-number-number |# )
 
@@ -2867,7 +2910,8 @@
     ($mul-bignum-bignum x x))
 
   (define ($sqr-ratnum x)
-    ($mul-ratnum-ratnum x x))
+    ($div-number-number (sqr ($ratnum-n x))
+			(sqr ($ratnum-d x))))
 
   (define ($sqr-compnum x)
     ($mul-compnum-compnum x x))
@@ -2987,6 +3031,8 @@
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-fixnum-fixnum x y)
+    ;;The GCD between two fixnums is *not* always a fixnum: when X and Y
+    ;;are both (least-fixnum) the GCD is a bignum.
     ($gcd x y))
 
   (define ($gcd-fixnum-bignum x y)
