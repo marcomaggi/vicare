@@ -140,447 +140,197 @@
     $add-cflonum-ratnum		$add-cflonum-flonum	$add-cflonum-compnum
     $add-cflonum-cflonum
 
-    $sub-number-number
-    $sub-fixnum-number
-    $sub-bignum-number
-    $sub-flonum-number
-    $sub-ratnum-number
-    $sub-compnum-number
-    $sub-cflonum-number
-    $sub-number-fixnum
-    $sub-number-bignum
-    $sub-number-flonum
-    $sub-number-ratnum
-    $sub-number-compnum
-    $sub-number-cflonum
-    $sub-fixnum-fixnum
-    $sub-fixnum-bignum
-    $sub-fixnum-flonum
-    $sub-fixnum-ratnum
-    $sub-fixnum-compnum
-    $sub-fixnum-cflonum
-    $sub-bignum-fixnum
-    $sub-bignum-bignum
-    $sub-bignum-flonum
-    $sub-bignum-ratnum
-    $sub-bignum-compnum
-    $sub-bignum-cflonum
-    $sub-flonum-fixnum
-    $sub-flonum-bignum
-    $sub-flonum-ratnum
-    $sub-flonum-flonum
-    $sub-flonum-compnum
-    $sub-flonum-cflonum
-    $sub-ratnum-fixnum
-    $sub-ratnum-bignum
-    $sub-ratnum-flonum
-    $sub-ratnum-ratnum
-    $sub-ratnum-compnum
-    $sub-ratnum-cflonum
-    $sub-compnum-fixnum
-    $sub-compnum-bignum
-    $sub-compnum-ratnum
-    $sub-compnum-compnum
-    $sub-compnum-flonum
-    $sub-compnum-cflonum
-    $sub-cflonum-fixnum
-    $sub-cflonum-bignum
-    $sub-cflonum-ratnum
-    $sub-cflonum-flonum
-    $sub-cflonum-compnum
+    $sub-number-number		$sub-fixnum-number	$sub-bignum-number
+    $sub-flonum-number		$sub-ratnum-number	$sub-compnum-number
+    $sub-cflonum-number		$sub-number-fixnum	$sub-number-bignum
+    $sub-number-flonum		$sub-number-ratnum	$sub-number-compnum
+    $sub-number-cflonum		$sub-fixnum-fixnum	$sub-fixnum-bignum
+    $sub-fixnum-flonum		$sub-fixnum-ratnum	$sub-fixnum-compnum
+    $sub-fixnum-cflonum		$sub-bignum-fixnum	$sub-bignum-bignum
+    $sub-bignum-flonum		$sub-bignum-ratnum	$sub-bignum-compnum
+    $sub-bignum-cflonum		$sub-flonum-fixnum	$sub-flonum-bignum
+    $sub-flonum-ratnum		$sub-flonum-flonum	$sub-flonum-compnum
+    $sub-flonum-cflonum		$sub-ratnum-fixnum	$sub-ratnum-bignum
+    $sub-ratnum-flonum		$sub-ratnum-ratnum	$sub-ratnum-compnum
+    $sub-ratnum-cflonum		$sub-compnum-fixnum	$sub-compnum-bignum
+    $sub-compnum-ratnum		$sub-compnum-compnum	$sub-compnum-flonum
+    $sub-compnum-cflonum	$sub-cflonum-fixnum	$sub-cflonum-bignum
+    $sub-cflonum-ratnum		$sub-cflonum-flonum	$sub-cflonum-compnum
     $sub-cflonum-cflonum
 
-    $mul-number-number
-    $mul-fixnum-number
-    $mul-bignum-number
-    $mul-flonum-number
-    $mul-ratnum-number
-    $mul-compnum-number
-    $mul-cflonum-number
-    $mul-number-fixnum
-    $mul-number-bignum
-    $mul-number-flonum
-    $mul-number-ratnum
-    $mul-number-compnum
-    $mul-number-cflonum
-    $mul-fixnum-fixnum
-    $mul-fixnum-bignum
-    $mul-fixnum-flonum
-    $mul-fixnum-ratnum
-    $mul-fixnum-compnum
-    $mul-fixnum-cflonum
-    $mul-bignum-fixnum
-    $mul-bignum-bignum
-    $mul-bignum-flonum
-    $mul-bignum-ratnum
-    $mul-bignum-compnum
-    $mul-bignum-cflonum
-    $mul-flonum-flonum
-    $mul-flonum-cflonum
-    $mul-flonum-fixnum
-    $mul-flonum-bignum
-    $mul-flonum-ratnum
-    $mul-flonum-compnum
-    $mul-ratnum-fixnum
-    $mul-ratnum-bignum
-    $mul-ratnum-flonum
-    $mul-ratnum-ratnum
-    $mul-ratnum-compnum
-    $mul-ratnum-cflonum
-    $mul-compnum-fixnum
-    $mul-compnum-bignum
-    $mul-compnum-ratnum
-    $mul-compnum-flonum
-    $mul-compnum-compnum
-    $mul-compnum-cflonum
-    $mul-cflonum-fixnum
-    $mul-cflonum-bignum
-    $mul-cflonum-ratnum
-    $mul-cflonum-flonum
-    $mul-cflonum-compnum
+    $mul-number-number		$mul-fixnum-number	$mul-bignum-number
+    $mul-flonum-number		$mul-ratnum-number	$mul-compnum-number
+    $mul-cflonum-number		$mul-number-fixnum	$mul-number-bignum
+    $mul-number-flonum		$mul-number-ratnum	$mul-number-compnum
+    $mul-number-cflonum		$mul-fixnum-fixnum	$mul-fixnum-bignum
+    $mul-fixnum-flonum		$mul-fixnum-ratnum	$mul-fixnum-compnum
+    $mul-fixnum-cflonum		$mul-bignum-fixnum	$mul-bignum-bignum
+    $mul-bignum-flonum		$mul-bignum-ratnum	$mul-bignum-compnum
+    $mul-bignum-cflonum		$mul-flonum-flonum	$mul-flonum-cflonum
+    $mul-flonum-fixnum		$mul-flonum-bignum	$mul-flonum-ratnum
+    $mul-flonum-compnum		$mul-ratnum-fixnum	$mul-ratnum-bignum
+    $mul-ratnum-flonum		$mul-ratnum-ratnum	$mul-ratnum-compnum
+    $mul-ratnum-cflonum		$mul-compnum-fixnum	$mul-compnum-bignum
+    $mul-compnum-ratnum		$mul-compnum-flonum	$mul-compnum-compnum
+    $mul-compnum-cflonum	$mul-cflonum-fixnum	$mul-cflonum-bignum
+    $mul-cflonum-ratnum		$mul-cflonum-flonum	$mul-cflonum-compnum
     $mul-cflonum-cflonum
 
-    $div-number-number
-    $div-flonum-number
-    $div-fixnum-number
-    $div-bignum-number
-    $div-ratnum-number
-    $div-compnum-number
-    $div-cflonum-number
-    $div-number-flonum
-    $div-number-fixnum
-    $div-number-bignum
-    $div-number-ratnum
-    $div-number-compnum
-    $div-number-cflonum
-    $div-fixnum-flonum
-    $div-fixnum-fixnum
-    $div-fixnum-bignum
-    $div-fixnum-ratnum
-    $div-fixnum-compnum
-    $div-fixnum-cflonum
-    $div-bignum-fixnum
-    $div-bignum-bignum
-    $div-bignum-flonum
-    $div-bignum-ratnum
-    $div-bignum-compnum
-    $div-bignum-cflonum
-    $div-ratnum-fixnum
-    $div-ratnum-bignum
-    $div-ratnum-ratnum
-    $div-ratnum-flonum
-    $div-ratnum-compnum
-    $div-ratnum-cflonum
-    $div-flonum-flonum
-    $div-flonum-cflonum
-    $div-flonum-fixnum
-    $div-flonum-bignum
-    $div-flonum-ratnum
-    $div-flonum-compnum
-    $div-compnum-fixnum
-    $div-compnum-bignum
-    $div-compnum-ratnum
-    $div-compnum-flonum
-    $div-compnum-compnum
-    $div-compnum-cflonum
-    $div-cflonum-fixnum
-    $div-cflonum-bignum
-    $div-cflonum-ratnum
-    $div-cflonum-flonum
-    $div-cflonum-compnum
+    $div-number-number		$div-flonum-number	$div-fixnum-number
+    $div-bignum-number		$div-ratnum-number	$div-compnum-number
+    $div-cflonum-number		$div-number-flonum	$div-number-fixnum
+    $div-number-bignum		$div-number-ratnum	$div-number-compnum
+    $div-number-cflonum		$div-fixnum-flonum	$div-fixnum-fixnum
+    $div-fixnum-bignum		$div-fixnum-ratnum	$div-fixnum-compnum
+    $div-fixnum-cflonum		$div-bignum-fixnum	$div-bignum-bignum
+    $div-bignum-flonum		$div-bignum-ratnum	$div-bignum-compnum
+    $div-bignum-cflonum		$div-ratnum-fixnum	$div-ratnum-bignum
+    $div-ratnum-ratnum		$div-ratnum-flonum	$div-ratnum-compnum
+    $div-ratnum-cflonum		$div-flonum-flonum	$div-flonum-cflonum
+    $div-flonum-fixnum		$div-flonum-bignum	$div-flonum-ratnum
+    $div-flonum-compnum		$div-compnum-fixnum	$div-compnum-bignum
+    $div-compnum-ratnum		$div-compnum-flonum	$div-compnum-compnum
+    $div-compnum-cflonum	$div-cflonum-fixnum	$div-cflonum-bignum
+    $div-cflonum-ratnum		$div-cflonum-flonum	$div-cflonum-compnum
     $div-cflonum-cflonum
 
-    $sqr-fixnum
-    $sqr-bignum
-    $sqr-ratnum
-    $sqr-compnum
-    $sqr-cflonum
+    $sqr-fixnum			$sqr-bignum		$sqr-ratnum
+    $sqr-compnum		$sqr-cflonum
 
-    $gcd-number-number
-    $gcd-fixnum-number
-    $gcd-bignum-number
-    $gcd-flonum-number
-    $gcd-number-fixnum
-    $gcd-number-bignum
-    $gcd-number-flonum
-    $gcd-fixnum-fixnum
-    $gcd-fixnum-bignum
-    $gcd-fixnum-flonum
-    $gcd-bignum-fixnum
-    $gcd-bignum-bignum
-    $gcd-bignum-flonum
-    $gcd-flonum-fixnum
-    $gcd-flonum-bignum
+    $gcd-number-number		$gcd-fixnum-number	$gcd-bignum-number
+    $gcd-flonum-number		$gcd-number-fixnum	$gcd-number-bignum
+    $gcd-number-flonum		$gcd-fixnum-fixnum	$gcd-fixnum-bignum
+    $gcd-fixnum-flonum		$gcd-bignum-fixnum	$gcd-bignum-bignum
+    $gcd-bignum-flonum		$gcd-flonum-fixnum	$gcd-flonum-bignum
     $gcd-flonum-flonum
 
-    $lcm-number-number
-    $lcm-fixnum-number
-    $lcm-bignum-number
-    $lcm-flonum-number
-    $lcm-number-fixnum
-    $lcm-number-bignum
-    $lcm-number-flonum
-    $lcm-fixnum-fixnum
-    $lcm-fixnum-bignum
-    $lcm-fixnum-flonum
-    $lcm-bignum-fixnum
-    $lcm-bignum-bignum
-    $lcm-bignum-flonum
-    $lcm-flonum-fixnum
-    $lcm-flonum-bignum
+    $lcm-number-number		$lcm-fixnum-number	$lcm-bignum-number
+    $lcm-flonum-number		$lcm-number-fixnum	$lcm-number-bignum
+    $lcm-number-flonum		$lcm-fixnum-fixnum	$lcm-fixnum-bignum
+    $lcm-fixnum-flonum		$lcm-bignum-fixnum	$lcm-bignum-bignum
+    $lcm-bignum-flonum		$lcm-flonum-fixnum	$lcm-flonum-bignum
     $lcm-flonum-flonum
 
-    $quotient+remainder-fixnum-number
-    $quotient+remainder-number-fixnum
-    $quotient+remainder-bignum-number
-    $quotient+remainder-number-bignum
-    $quotient+remainder-flonum-number
-    $quotient+remainder-number-flonum
-    $quotient+remainder-fixnum-fixnum
-    $quotient+remainder-bignum-fixnum
-    $quotient+remainder-fixnum-bignum
-    $quotient+remainder-bignum-bignum
-    $quotient+remainder-fixnum-flonum
-    $quotient+remainder-bignum-flonum
-    $quotient+remainder-flonum-fixnum
-    $quotient+remainder-flonum-bignum
+    $quotient+remainder-fixnum-number	$quotient+remainder-number-fixnum
+    $quotient+remainder-bignum-number	$quotient+remainder-number-bignum
+    $quotient+remainder-flonum-number	$quotient+remainder-number-flonum
+    $quotient+remainder-fixnum-fixnum	$quotient+remainder-bignum-fixnum
+    $quotient+remainder-fixnum-bignum	$quotient+remainder-bignum-bignum
+    $quotient+remainder-fixnum-flonum	$quotient+remainder-bignum-flonum
+    $quotient+remainder-flonum-fixnum	$quotient+remainder-flonum-bignum
     $quotient+remainder-flonum-flonum
 
-    $quotient-fixnum-number
-    $quotient-number-fixnum
-    $quotient-bignum-number
-    $quotient-number-bignum
-    $quotient-flonum-number
-    $quotient-number-flonum
-    $quotient-fixnum-fixnum
-    $quotient-fixnum-bignum
-    $quotient-fixnum-flonum
-    $quotient-bignum-fixnum
-    $quotient-bignum-bignum
-    $quotient-bignum-flonum
-    $quotient-flonum-fixnum
-    $quotient-flonum-bignum
+    $quotient-fixnum-number		$quotient-number-fixnum
+    $quotient-bignum-number		$quotient-number-bignum
+    $quotient-flonum-number		$quotient-number-flonum
+    $quotient-fixnum-fixnum		$quotient-fixnum-bignum
+    $quotient-fixnum-flonum		$quotient-bignum-fixnum
+    $quotient-bignum-bignum		$quotient-bignum-flonum
+    $quotient-flonum-fixnum		$quotient-flonum-bignum
     $quotient-flonum-flonum
 
-    $remainder-fixnum-number
-    $remainder-number-fixnum
-    $remainder-bignum-number
-    $remainder-number-bignum
-    $remainder-flonum-number
-    $remainder-number-flonum
-    $remainder-fixnum-fixnum
-    $remainder-fixnum-bignum
-    $remainder-fixnum-flonum
-    $remainder-bignum-fixnum
-    $remainder-bignum-bignum
-    $remainder-bignum-flonum
-    $remainder-flonum-fixnum
-    $remainder-flonum-bignum
+    $remainder-fixnum-number		$remainder-number-fixnum
+    $remainder-bignum-number		$remainder-number-bignum
+    $remainder-flonum-number		$remainder-number-flonum
+    $remainder-fixnum-fixnum		$remainder-fixnum-bignum
+    $remainder-fixnum-flonum		$remainder-bignum-fixnum
+    $remainder-bignum-bignum		$remainder-bignum-flonum
+    $remainder-flonum-fixnum		$remainder-flonum-bignum
     $remainder-flonum-flonum
 
-    $modulo-fixnum-number
-    $modulo-bignum-number
-    $modulo-flonum-number
-    $modulo-number-fixnum
-    $modulo-number-bignum
-    $modulo-number-flonum
-    $modulo-fixnum-fixnum
-    $modulo-fixnum-bignum
-    $modulo-fixnum-flonum
-    $modulo-bignum-fixnum
-    $modulo-bignum-bignum
-    $modulo-bignum-flonum
-    $modulo-flonum-fixnum
-    $modulo-flonum-bignum
+    $modulo-fixnum-number		$modulo-bignum-number
+    $modulo-flonum-number		$modulo-number-fixnum
+    $modulo-number-bignum		$modulo-number-flonum
+    $modulo-fixnum-fixnum		$modulo-fixnum-bignum
+    $modulo-fixnum-flonum		$modulo-bignum-fixnum
+    $modulo-bignum-bignum		$modulo-bignum-flonum
+    $modulo-flonum-fixnum		$modulo-flonum-bignum
     $modulo-flonum-flonum
 
-    $max-fixnum-number
-    $max-bignum-number
-    $max-flonum-number
-    $max-ratnum-number
-    $max-number-fixnum
-    $max-number-bignum
-    $max-number-flonum
-    $max-number-ratnum
-    $max-fixnum-fixnum
-    $max-fixnum-bignum
-    $max-fixnum-flonum
-    $max-fixnum-ratnum
-    $max-bignum-fixnum
-    $max-bignum-bignum
-    $max-bignum-flonum
-    $max-bignum-ratnum
-    $max-flonum-flonum
-    $max-flonum-fixnum
-    $max-flonum-bignum
-    $max-flonum-ratnum
-    $max-ratnum-fixnum
-    $max-ratnum-bignum
-    $max-ratnum-ratnum
-    $max-ratnum-flonum
+    $max-fixnum-number		$max-bignum-number	$max-flonum-number
+    $max-ratnum-number		$max-number-fixnum	$max-number-bignum
+    $max-number-flonum		$max-number-ratnum	$max-fixnum-fixnum
+    $max-fixnum-bignum		$max-fixnum-flonum	$max-fixnum-ratnum
+    $max-bignum-fixnum		$max-bignum-bignum	$max-bignum-flonum
+    $max-bignum-ratnum		$max-flonum-flonum	$max-flonum-fixnum
+    $max-flonum-bignum		$max-flonum-ratnum	$max-ratnum-fixnum
+    $max-ratnum-bignum		$max-ratnum-ratnum	$max-ratnum-flonum
 
-    $min-fixnum-number
-    $min-bignum-number
-    $min-flonum-number
-    $min-ratnum-number
-    $min-number-fixnum
-    $min-number-bignum
-    $min-number-flonum
-    $min-number-ratnum
-    $min-fixnum-fixnum
-    $min-fixnum-bignum
-    $min-fixnum-flonum
-    $min-fixnum-ratnum
-    $min-bignum-fixnum
-    $min-bignum-bignum
-    $min-bignum-flonum
-    $min-bignum-ratnum
-    $min-flonum-flonum
-    $min-flonum-fixnum
-    $min-flonum-bignum
-    $min-flonum-ratnum
-    $min-ratnum-fixnum
-    $min-ratnum-bignum
-    $min-ratnum-ratnum
-    $min-ratnum-flonum
+    $min-fixnum-number		$min-bignum-number	$min-flonum-number
+    $min-ratnum-number		$min-number-fixnum	$min-number-bignum
+    $min-number-flonum		$min-number-ratnum	$min-fixnum-fixnum
+    $min-fixnum-bignum		$min-fixnum-flonum	$min-fixnum-ratnum
+    $min-bignum-fixnum		$min-bignum-bignum	$min-bignum-flonum
+    $min-bignum-ratnum		$min-flonum-flonum	$min-flonum-fixnum
+    $min-flonum-bignum		$min-flonum-ratnum	$min-ratnum-fixnum
+    $min-ratnum-bignum		$min-ratnum-ratnum	$min-ratnum-flonum
 
-    $abs-bignum
-    $abs-flonum
-    $abs-ratnum
+    $abs-bignum			$abs-flonum		$abs-ratnum
 
-    $expt-number-fixnum
-    $expt-number-bignum
-    $expt-number-flonum
-    $expt-number-ratnum
-    $expt-number-compnum
-    $expt-number-cflonum
+    $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
+    $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
 
-    $sqrt-fixnum
-    $sqrt-flonum
-    $sqrt-bignum
-    $sqrt-ratnum
-    $sqrt-compnum
-    $sqrt-cflonum
+    $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
+    $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
 
-    $exact-integer-sqrt-fixnum
-    $exact-integer-sqrt-bignum
+    $exact-integer-sqrt-fixnum	$exact-integer-sqrt-bignum
 
-    $log-fixnum
-    $log-flonum
-    $log-bignum
-    $log-ratnum
-    $log-compnum
-    $log-cflonum
+    $log-fixnum			$log-flonum		$log-bignum
+    $log-ratnum			$log-compnum		$log-cflonum
 
-    $exp-fixnum
-    $exp-bignum
-    $exp-ratnum
-    $exp-compnum
-    $exp-cflonum
+    $exp-fixnum			$exp-bignum		$exp-ratnum
+    $exp-compnum		$exp-cflonum
 
-    $sin-fixnum
-    $sin-bignum
-    $sin-ratnum
-    $sin-cflonum
-    $sin-compnum
+    $sin-fixnum			$sin-bignum		$sin-ratnum
+    $sin-cflonum		$sin-compnum
 
-    $cos-fixnum
-    $cos-bignum
-    $cos-ratnum
-    $cos-cflonum
-    $cos-compnum
+    $cos-fixnum			$cos-bignum		$cos-ratnum
+    $cos-cflonum		$cos-compnum
 
-    $tan-fixnum
-    $tan-bignum
-    $tan-ratnum
-    $tan-compnum
-    $tan-cflonum
+    $tan-fixnum			$tan-bignum		$tan-ratnum
+    $tan-compnum		$tan-cflonum
 
-    $asin-fixnum
-    $asin-bignum
-    $asin-ratnum
-    $asin-flonum
-    $asin-cflonum
-    $asin-compnum
+    $asin-fixnum		$asin-bignum		$asin-ratnum
+    $asin-flonum		$asin-cflonum		$asin-compnum
 
-    $acos-fixnum
-    $acos-bignum
-    $acos-ratnum
-    $acos-flonum
-    $acos-cflonum
-    $acos-compnum
+    $acos-fixnum		$acos-bignum		$acos-ratnum
+    $acos-flonum		$acos-cflonum		$acos-compnum
 
     $atan2-real-real
+    $atan-fixnum		$atan-ratnum		$atan-bignum
+    $atan-cflonum		$atan-compnum
 
-    $atan-fixnum
-    $atan-ratnum
-    $atan-bignum
-    $atan-cflonum
-    $atan-compnum
+    $sinh-fixnum		$sinh-bignum		$sinh-ratnum
+    $sinh-compnum		$sinh-cflonum
 
-    $sinh-fixnum
-    $sinh-bignum
-    $sinh-ratnum
-    $sinh-compnum
-    $sinh-cflonum
+    $cosh-fixnum		$cosh-bignum		$cosh-ratnum
+    $cosh-compnum		$cosh-cflonum
 
-    $cosh-fixnum
-    $cosh-bignum
-    $cosh-ratnum
-    $cosh-compnum
-    $cosh-cflonum
+    $tanh-fixnum		$tanh-bignum		$tanh-ratnum
+    $tanh-compnum		$tanh-cflonum
 
-    $tanh-fixnum
-    $tanh-bignum
-    $tanh-ratnum
-    $tanh-compnum
-    $tanh-cflonum
+    $asinh-fixnum		$asinh-bignum		$asinh-ratnum
+    $asinh-cflonum		$asinh-compnum
 
-    $asinh-fixnum
-    $asinh-bignum
-    $asinh-ratnum
-    $asinh-cflonum
-    $asinh-compnum
+    $acosh-fixnum		$acosh-bignum		$acosh-ratnum
+    $acosh-flonum		$acosh-cflonum		$acosh-compnum
 
-    $acosh-fixnum
-    $acosh-bignum
-    $acosh-ratnum
-    $acosh-flonum
-    $acosh-cflonum
-    $acosh-compnum
+    $atanh-fixnum		$atanh-bignum		$atanh-ratnum
+    $atanh-flonum		$atanh-cflonum		$atanh-compnum
 
-    $atanh-fixnum
-    $atanh-bignum
-    $atanh-ratnum
-    $atanh-flonum
-    $atanh-cflonum
-    $atanh-compnum
+    $bitwise-not-fixnum		$bitwise-not-bignum
 
-    $bitwise-not-fixnum
-    $bitwise-not-bignum
+    $bitwise-and-fixnum-number		$bitwise-and-bignum-number
+    $bitwise-and-fixnum-fixnum		$bitwise-and-fixnum-bignum
+    $bitwise-and-bignum-fixnum		$bitwise-and-bignum-bignum
 
-    $bitwise-and-fixnum-number
-    $bitwise-and-bignum-number
-    $bitwise-and-fixnum-fixnum
-    $bitwise-and-fixnum-bignum
-    $bitwise-and-bignum-fixnum
-    $bitwise-and-bignum-bignum
+    $bitwise-ior-fixnum-number		$bitwise-ior-bignum-number
+    $bitwise-ior-fixnum-fixnum		$bitwise-ior-fixnum-bignum
+    $bitwise-ior-bignum-fixnum		$bitwise-ior-bignum-bignum
 
-    $bitwise-ior-fixnum-number
-    $bitwise-ior-bignum-number
-    $bitwise-ior-fixnum-fixnum
-    $bitwise-ior-fixnum-bignum
-    $bitwise-ior-bignum-fixnum
-    $bitwise-ior-bignum-bignum
-
-    $bitwise-xor-fixnum-number
-    $bitwise-xor-bignum-number
-    $bitwise-xor-fixnum-fixnum
-    $bitwise-xor-fixnum-bignum
-    $bitwise-xor-bignum-fixnum
-    $bitwise-xor-bignum-bignum
-
-
+    $bitwise-xor-fixnum-number		$bitwise-xor-bignum-number
+    $bitwise-xor-fixnum-fixnum		$bitwise-xor-fixnum-bignum
+    $bitwise-xor-bignum-fixnum		$bitwise-xor-bignum-bignum
     )
 
 
@@ -842,7 +592,9 @@
       ($fx- x)))
 
   (define ($neg-bignum x)
-    ($sub-fixnum-bignum 0 x))
+    (if (eq? x (- (least-fixnum)))
+	(least-fixnum)
+      ($sub-fixnum-bignum 0 x)))
 
   (define ($neg-flonum x)
     ($fl- x))
@@ -2368,6 +2120,10 @@
 		   ($make-ratnum -1 ($quotient-bignum-bignum y g)))
 		  ;;Here Y is negative.
 		  (else
+		   ;;The negation of a bignum  is *not* always a bignum;
+		   ;;if  Y  is (-  (least-fixnum)),  its  negation is  a
+		   ;;fixnum.  But here we know that Y is negative, so we
+		   ;;know that its negation is a positive bignum.
 		   ($make-ratnum +1 ($quotient-bignum-bignum ($neg-bignum y) g)))))))))
 
   (define ($div-fixnum-ratnum x y)
@@ -2537,7 +2293,13 @@
 	  (y.imp ($compnum-imag y)))
       (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
 	    (num.rep ($mul-bignum-number x y.rep))
-	    (num.imp ($mul-bignum-number ($neg-bignum x) y.imp)))
+	    (num.imp (let ((x.neg ($neg-bignum x)))
+		       ;;The  negation of  a  bignum is  *not* always  a
+		       ;;bignum;  when  X  is  (-  (least-fixnum)),  its
+		       ;;negation is a fixnum.
+		       (if (bignum? x.neg)
+			   ($mul-bignum-number x.neg y.imp)
+			 ($mul-fixnum-number x.neg y.imp)))))
 	($make-rectangular ($div-number-number num.rep denom)
 			   ($div-number-number num.imp denom)))))
 
@@ -2554,7 +2316,13 @@
 	  (y.imp ($cflonum-imag y)))
       (let ((denom   ($add-flonum-flonum ($flsqr y.rep) ($flsqr y.imp)))
 	    (num.rep ($mul-bignum-flonum x y.rep))
-	    (num.imp ($mul-bignum-flonum ($neg-bignum x) y.imp)))
+	    (num.imp (let ((x.neg ($neg-bignum x)))
+		       ;;The  negation of  a  bignum is  *not* always  a
+		       ;;bignum;  when  X  is  (-  (least-fixnum)),  its
+		       ;;negation is a fixnum.
+		       (if (bignum? x.neg)
+			   ($mul-bignum-flonum x.neg y.imp)
+			 ($mul-fixnum-flonum x.neg y.imp)))))
 	($make-cflonum ($fl/ num.rep denom)
 		       ($fl/ num.imp denom)))))
 
@@ -4195,6 +3963,7 @@
 ;;; --------------------------------------------------------------------
 
   (define ($abs-bignum x)
+    ;;Return a bignum or fixnum.
     (if ($bignum-positive? x)
 	x
       ($neg-bignum x)))

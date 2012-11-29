@@ -2806,6 +2806,7 @@ Divide a cflonum with a cflonum and return the result as a cflonum.
 
 
 @deffn {Unsafe Operation} $abs-bignum
+Return a bignum or fixnum.
 @end deffn
 
 
