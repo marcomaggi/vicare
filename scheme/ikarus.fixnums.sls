@@ -182,7 +182,7 @@
 	   ((fixnum	x)
 	    (fixnum	y)
 	    (fixnum	z))
-	 (?unsafe-who x y))))))
+	 (?unsafe-who x y z))))))
 
 (define-syntax define-fx-operation/div
   (syntax-rules ()
