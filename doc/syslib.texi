@@ -2207,68 +2207,119 @@ Divide a cflonum with a cflonum and return the result as a cflonum.
 @subsection Greatest common divisor
 
 
-@deffn {Unsafe Operation} $gcd-number-number
+@deffn {Unsafe Operation} $gcd-number-number @vari{x} @varii{x}
+Return the greatest common divisor between any couple of real numbers;
+return a fixnum, bignum or flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Real number as second argument
+
+
+@deffn {Unsafe Operation} $gcd-fixnum-number @var{fx} @var{x}
+Return the greatest common divisor between a fixnum and any real number;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-fixnum-number
+@deffn {Unsafe Operation} $gcd-bignum-number @var{bn} @var{x}
+Return the greatest common divisor between a bignum and any real number;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-bignum-number
+@deffn {Unsafe Operation} $gcd-flonum-number @var{fl} @var{x}
+Return the greatest common divisor between a flonum and any real number;
+return a fixnum, bignum or flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Real number as first argument
+
+
+@deffn {Unsafe Operation} $gcd-number-fixnum @var{x} @var{fx}
+Return the greatest common divisor between any real number and a fixnum;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-flonum-number
+@deffn {Unsafe Operation} $gcd-number-bignum @var{x} @var{bn}
+Return the greatest common divisor between any real number and a bignum;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-number-fixnum
+@deffn {Unsafe Operation} $gcd-number-flonum @var{x} @var{fl}
+Return the greatest common divisor between any real number and a flonum;
+return a fixnum, bignum or flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $gcd-fixnum-fixnum @vari{fx} @varii{fx}
+Return the greatest common divisor between a fixnum and a fixnum; return
+a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-number-bignum
+@deffn {Unsafe Operation} $gcd-fixnum-bignum @var{fx} @var{bn}
+Return the greatest common divisor between a fixnum and a bignum; return
+a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-number-flonum
+@deffn {Unsafe Operation} $gcd-fixnum-flonum @var{fx} @var{fl}
+Return the greatest common divisor between a fixnum and a flonum; return
+a flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $gcd-bignum-fixnum @var{bn} @var{fx}
+Return the greatest common divisor between a bignum and a fixnum; return
+a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-fixnum-fixnum
+@deffn {Unsafe Operation} $gcd-bignum-bignum @vari{bn} @varii{bn}
+Return the greatest common divisor between a bignum and a bignum; return
+a bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-fixnum-bignum
+@deffn {Unsafe Operation} $gcd-bignum-flonum @var{bn} @var{fl}
+Return the greatest common divisor between a bignum and a flonum; return
+a flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $gcd-flonum-fixnum @var{fl} @var{fx}
+Return the greatest common divisor between a flonum and a fixnum; return
+a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-fixnum-flonum
+@deffn {Unsafe Operation} $gcd-flonum-bignum @var{fl} @var{bn}
+Return the greatest common divisor between a flonum and a bignum; return
+a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $gcd-bignum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $gcd-bignum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $gcd-bignum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $gcd-flonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $gcd-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $gcd-flonum-flonum
-
+@deffn {Unsafe Operation} $gcd-flonum-flonum @vari{fl} @varii{fl}
+Return the greatest common divisor between a flonum and a flonum; return
+a flonum.
 @end deffn
 
 @c page
