@@ -492,9 +492,7 @@
   (define who 'fxmax)
 
   (define ($fxmax x y)
-    (if ($fx< x y)
-	x
-      y))
+    (if ($fx> x y) x y))
 
   (define fxmax
     (case-lambda
