@@ -2840,10 +2840,30 @@
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-bignum-fixnum x y)
-    ($gcd x y))
+    (let ((x.abs ($abs-bignum x))
+	  (y.abs ($fxabs      y)))
+      (if (fixnum? y.abs)
+	  ;;Here X.ABS is a positive bignum, Y.ABS is a positive fixnum,
+	  ;;so X.ABS > Y.ABS.
+	  (%greatest-common-divisor x.abs y.abs)
+	;;Here both X.ABS and Y.ABS are positive bignums.
+	(cond ((bnbn> x.abs y.abs)
+	       (%greatest-common-divisor x.abs y.abs))
+	      ((bnbn< x.abs y.abs)
+	       (%greatest-common-divisor y.abs x.abs))
+	      (else
+	       x.abs)))))
 
   (define ($gcd-bignum-bignum x y)
-    ($gcd x y))
+    (let ((x.abs ($abs-bignum x))
+	  (y.abs ($abs-bignum y)))
+      ;;Here both X.ABS and Y.ABS are positive bignums.
+      (cond ((bnbn> x.abs y.abs)
+	     (%greatest-common-divisor x.abs y.abs))
+	    ((bnbn< x.abs y.abs)
+	     (%greatest-common-divisor y.abs x.abs))
+	    (else
+	     x.abs))))
 
   (define ($gcd-bignum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
