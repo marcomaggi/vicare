@@ -2182,24 +2182,33 @@ Divide a cflonum with a cflonum and return the result as a cflonum.
 @subsection Numbers squaring
 
 
-@deffn {Unsafe Operation} $sqr-fixnum
+To compute the square of any number, just use @func{sqr}.
+
+
+@deffn {Unsafe Operation} $sqr-fixnum @var{fx}
+Compute the square of a fixnum and return the result as fixnum or
+bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-bignum
+@deffn {Unsafe Operation} $sqr-bignum @var{bn}
+Compute the square of a bignum and return the result as bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-ratnum
+@deffn {Unsafe Operation} $sqr-ratnum @var{rn}
+Compute the square of a ratnum and return the result as ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-compnum
+@deffn {Unsafe Operation} $sqr-compnum @var{cn}
+Compute the square of a compnum and return the result as compnum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-cflonum
-
+@deffn {Unsafe Operation} $sqr-cflonum @var{cfl}
+Compute the square of a cflonum and return the result as cflonum.
 @end deffn
 
 @c page
