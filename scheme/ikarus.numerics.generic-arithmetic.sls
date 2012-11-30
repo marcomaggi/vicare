@@ -2691,12 +2691,7 @@
   (define gcd
     (case-lambda
      ((x y)
-      (cond-inexact-integer-operand x
-	((fixnum?)	($gcd-fixnum-number x y))
-	((bignum?)	($gcd-bignum-number x y))
-	((flonum?)	($gcd-flonum-number x y))
-	(else
-	 (%error-not-integer x))))
+      ($gcd-number-number x y))
 
      ((x)
       (cond-inexact-integer-operand x
@@ -2726,12 +2721,12 @@
 ;;; --------------------------------------------------------------------
 
   (define ($gcd-number-number x y)
-    (cond-inexact-integer-operand y
+    (cond-inexact-integer-operand x
       ((fixnum?)	($gcd-fixnum-number x y))
-      ((bignum?)	($gcd-fixnum-number x y))
+      ((bignum?)	($gcd-bignum-number x y))
       ((flonum?)	($gcd-flonum-number x y))
       (else
-       (%error-not-integer y))))
+       (%error-not-integer x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2789,7 +2784,7 @@
 
   (define ($gcd-fixnum-fixnum x y)
     ;;The GCD between two fixnums is *not* always a fixnum: when X and Y
-    ;;are both (least-fixnum) the GCD is a bignum.
+    ;;are both (least-fixnum) the GCD is the bignum (- (least-fixnum)).
     ($gcd x y))
 
   (define ($gcd-fixnum-bignum x y)
@@ -2798,8 +2793,8 @@
   (define ($gcd-fixnum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (cond-exact-integer-operand y.exact
-	((fixnum?)	(inexact ($lcm-fixnum-fixnum x y.exact)))
-	((bignum?)	(inexact ($lcm-fixnum-bignum x y.exact)))
+	((fixnum?)	(inexact ($gcd-fixnum-fixnum x y.exact)))
+	((bignum?)	(inexact ($gcd-fixnum-bignum x y.exact)))
 	(else
 	 (%error-not-integer y)))))
 
@@ -2814,8 +2809,8 @@
   (define ($gcd-bignum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (cond-exact-integer-operand y.exact
-	((fixnum?)	(inexact ($lcm-bignum-fixnum x y.exact)))
-	((bignum?)	(inexact ($lcm-bignum-bignum x y.exact)))
+	((fixnum?)	(inexact ($gcd-bignum-fixnum x y.exact)))
+	((bignum?)	(inexact ($gcd-bignum-bignum x y.exact)))
 	(else
 	 (%error-not-integer y)))))
 
@@ -2850,17 +2845,17 @@
   (module ($gcd)
 
     (define ($gcd x y)
-      (let ((x (if (< x 0) (- x) x))
-	    (y (if (< y 0) (- y) y)))
-	(cond ((> x y)
-	       (%greatest-common-divisor x y))
-	      ((< x y)
-	       (%greatest-common-divisor y x))
+      (let ((x.abs (abs x))
+	    (y.abs (abs y)))
+	(cond ((> x.abs y.abs)
+	       (%greatest-common-divisor x.abs y.abs))
+	      ((< x.abs y.abs)
+	       (%greatest-common-divisor y.abs x.abs))
 	      (else
-	       x))))
+	       x.abs))))
 
     (define (%greatest-common-divisor x y)
-      (if ($fxzero? y) ;this works with any object Y
+      (if (zero? y)
 	  x
 	(%greatest-common-divisor y (remainder x y))))
 
@@ -4343,13 +4338,11 @@
   (define who 'abs)
 
   (define (abs x)
-    (cond-numeric-operand x
+    (cond-real-numeric-operand x
       ((fixnum?)	($fxabs x))
       ((bignum?)	($abs-bignum x))
-      ((flonum?)	($abs-flonum x))
       ((ratnum?)	($abs-ratnum x))
-      ((compnum?)	(%error-not-real-number x))
-      ((cflonum?)	(%error-not-real-number x))
+      ((flonum?)	($abs-flonum x))
       (else
        (%error-not-real-number x))))
 

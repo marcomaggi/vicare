@@ -549,8 +549,8 @@
   (if ($fx< x 0)
       ;;Remember  that  we  cannot  simpy  use  $fx-  because  if  X  is
       ;;(least-fixnum) the result will overflow.
-      (if (eq? x (least-fixnum))
-	  (%overflow-violation who x)
+      (if ($fx= x (least-fixnum))
+	  (- (least-fixnum)) #;(%overflow-violation who x)
 	($fx- x))
     x))
 

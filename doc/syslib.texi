@@ -370,7 +370,9 @@ result of this operation can be a fixnum or bignum.
 
 @deffn {Unsafe Operation} $fxabs @var{fx}
 Return the absolute value of @var{fx}.  The result of this operation is
-fixnum; an error is raised if the result would overflow.
+a fixnum or bignum; a bignum is returned only when @var{fx} is
+@code{(least-fixnum)} and the returned value is @code{(-
+(least-fixnum))}.
 @end deffn
 
 @c ------------------------------------------------------------

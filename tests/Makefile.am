@@ -158,6 +158,7 @@ TESTS			=	\
 	test-vicare-numerics-sub.sps			\
 	test-vicare-numerics-mul.sps			\
 	test-vicare-numerics-div.sps			\
+	test-vicare-numerics-gcd.sps			\
 	test-vicare-numerics-sqr.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-generic-arithmetic.sps	\
@@ -379,6 +380,7 @@ EXTRA_DIST = \
 	test-vicare-numerics-sub.sps			\
 	test-vicare-numerics-mul.sps			\
 	test-vicare-numerics-div.sps			\
+	test-vicare-numerics-gcd.sps			\
 	test-vicare-numerics-sqr.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-generic-arithmetic.sps	\
