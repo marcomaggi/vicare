@@ -2785,7 +2785,31 @@
   (define ($gcd-fixnum-fixnum x y)
     ;;The GCD between two fixnums is *not* always a fixnum: when X and Y
     ;;are both (least-fixnum) the GCD is the bignum (- (least-fixnum)).
-    ($gcd x y))
+    ;;
+    (let ((x.abs ($fxabs x))
+	  (y.abs ($fxabs y)))
+      (if (fixnum? x.abs)
+	  (if (fixnum? y.abs)
+	      (cond (($fx> x.abs y.abs)
+		     (%greatest-common-divisor x.abs y.abs))
+		    (($fx< x.abs y.abs)
+		     (%greatest-common-divisor y.abs x.abs))
+		    (else
+		     x.abs))
+	    ;;Here  X.ABS is  a  positive fixnum,  Y.ABS  is a  positive
+	    ;;bignum, so X.ABS < Y.ABS.
+	    (%greatest-common-divisor y.abs x.abs))
+	(if (fixnum? y.abs)
+	    ;;Here  X.ABS is  a  positive bignum,  Y.ABS  is a  positive
+	    ;;fixnum, so X.ABS > Y.ABS.
+	    (%greatest-common-divisor x.abs y.abs)
+	  ;;Here both X.ABS and Y.ABS are positive bignums.
+	  (cond ((bnbn> x.abs y.abs)
+		 (%greatest-common-divisor x.abs y.abs))
+		((bnbn< x.abs y.abs)
+		 (%greatest-common-divisor y.abs x.abs))
+		(else
+		 x.abs))))))
 
   (define ($gcd-fixnum-bignum x y)
     ($gcd x y))
@@ -2842,24 +2866,20 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ($gcd)
+  (define ($gcd x y)
+    (let ((x.abs (abs x))
+	  (y.abs (abs y)))
+      (cond ((> x.abs y.abs)
+	     (%greatest-common-divisor x.abs y.abs))
+	    ((< x.abs y.abs)
+	     (%greatest-common-divisor y.abs x.abs))
+	    (else
+	     x.abs))))
 
-    (define ($gcd x y)
-      (let ((x.abs (abs x))
-	    (y.abs (abs y)))
-	(cond ((> x.abs y.abs)
-	       (%greatest-common-divisor x.abs y.abs))
-	      ((< x.abs y.abs)
-	       (%greatest-common-divisor y.abs x.abs))
-	      (else
-	       x.abs))))
-
-    (define (%greatest-common-divisor x y)
-      (if (zero? y)
-	  x
-	(%greatest-common-divisor y (remainder x y))))
-
-    #| end of module |# )
+  (define (%greatest-common-divisor x y)
+    (if (zero? y)
+	x
+      (%greatest-common-divisor y (remainder x y))))
 
 ;;; --------------------------------------------------------------------
 
