@@ -2113,14 +2113,50 @@ Return the square of @var{num}.
 @end defun
 
 
-@defun quotient+remainder @vari{N} @varii{N}
-Return two values: the quotient and the remainder of the
-number--theoretic integer division between the operands.  @vari{N} and
-@varii{N} must be exact or inexact integers; @varii{N} must be
-non--zero.
+@defun quotient @vari{N} @varii{N}
+@defunx remainder @vari{N} @varii{N}
+@defunx quotient+remainder @vari{N} @varii{N}
+@func{quotient+remainder} returns two values: the quotient and the
+remainder of the number--theoretic integer division between the
+operands; @func{quotient} returns the quotient; @func{remainder} returns
+the remainder.  @vari{N} and @varii{N} must be exact or inexact integers
+(fixnums, bignums, flonums); @varii{N} must be non--zero.
 
-The operations are defined like for @func{quotient} and @func{remainder}
+The operations are defined as for @func{quotient} and @func{remainder}
 from @rsixlibrary{r5rs}.
+
+Note that considering:
+
+@example
+(quotient+remainder X Y)
+@end example
+
+@noindent
+according to @rnrs{6}:
+
+@example
+(define (sign n)
+  (cond ((negative? n) -1)
+        ((positive? n) 1)
+        (else 0)))
+
+(define (quotient n1 n2)
+  (* (sign n1) (sign n2) (div (abs n1) (abs n2))))
+
+(define (remainder n1 n2)
+  (* (sign n1) (mod (abs n1) (abs n2))))
+
+(define (modulo n1 n2)
+  (* (sign n2) (mod (* (sign n2) n1) (abs n2))))
+@end example
+
+@noindent
+so we have:
+
+@example
+sign(quotient)  = sign(X) * sign(Y)
+sign(remainder) = sign(X)
+@end example
 @end defun
 
 

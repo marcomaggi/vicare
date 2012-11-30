@@ -3147,7 +3147,6 @@
   ;;
   ;;   (quotient+remainder X Y)
   ;;
-  ;;
   ;;according to R6RS:
   ;;
   ;;   (define (sign n)
