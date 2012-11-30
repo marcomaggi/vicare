@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for generic mathematics functions
+;;;Contents: tests for numeric functions: sqrt
 ;;;Date: Sat Nov 17, 2012
 ;;;
 ;;;Abstract
@@ -31,7 +31,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare generic mathematics functions\n")
+(check-display "*** testing Vicare numeric functions: sqrt, square root\n")
 
 
 ;;;; helpers
@@ -54,41 +54,6 @@
 (define (nan=? x y)
   (and (nan? x)
        (nan? y)))
-
-
-(parametrise ((check-test-name	'unary-division))
-
-  (define big-1		(+ 10 (greatest-fixnum)))
-  (define rat-1		(/ big-1 13))
-  (define rat-1-inv	(/ 13 big-1))
-
-  (check (/ rat-1)	=> rat-1-inv)
-
-  #t)
-
-
-(parametrise ((check-test-name	'binary-division))
-
-  (define-syntax make-test
-    (syntax-rules ()
-      ((_ ?op ?unsafe-op)
-       (syntax-rules ()
-	 ((_ ?op1 ?op2 ?expected-result)
-	  (begin
-	    (check
-		(?op ?op1 ?op2)
-	      => ?expected-result)
-	    (check
-		(?unsafe-op ?op1 ?op2)
-	      => ?expected-result)))))))
-
-  (let-syntax ((test (make-test / $div-fixnum-fixnum)))
-    (test 12 6 2)
-    (test 12 7 12/7)
-    (test 25 10 5/2)
-    #f)
-
-  #t)
 
 
 (parametrise ((check-test-name	'sqrt))
