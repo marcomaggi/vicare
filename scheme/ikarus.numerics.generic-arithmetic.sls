@@ -2812,7 +2812,22 @@
 		 x.abs))))))
 
   (define ($gcd-fixnum-bignum x y)
-    ($gcd x y))
+    ;;The GCD between a fixnum and a  bignum is a fixnum or bignum.  The
+    ;;returned value may be a bignum only when X is (least-fixnum).
+    ;;
+    (let ((x.abs ($fxabs      x))
+	  (y.abs ($abs-bignum y)))
+      (if (fixnum? x.abs)
+	  ;;Here X.ABS is a positive fixnum, Y.ABS is a positive bignum,
+	  ;;so X.ABS < Y.ABS.
+	  (%greatest-common-divisor y.abs x.abs)
+	;;Here both X.ABS and Y.ABS are positive bignums.
+	(cond ((bnbn> x.abs y.abs)
+	       (%greatest-common-divisor x.abs y.abs))
+	      ((bnbn< x.abs y.abs)
+	       (%greatest-common-divisor y.abs x.abs))
+	      (else
+	       x.abs)))))
 
   (define ($gcd-fixnum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
