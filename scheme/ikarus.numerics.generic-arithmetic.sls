@@ -2679,57 +2679,6 @@
   #| end of module: $div-number-number |# )
 
 
-(module (sqr
-	 $sqr-fixnum		$sqr-bignum		$sqr-ratnum
-	 $sqr-compnum		$sqr-cflonum)
-  (define who 'sqr)
-
-  (define (sqr x)
-    (cond-numeric-operand x
-      ((fixnum?)	($sqr-fixnum  x))
-      ((bignum?)	($sqr-bignum  x))
-      ((flonum?)	($flsqr       x))
-      ((ratnum?)	($sqr-ratnum  x))
-      ((compnum?)	($sqr-compnum x))
-      ((cflonum?)	($sqr-cflonum x))
-      (else
-       (assertion-violation who "expected number as argument" x))))
-
-  (define ($sqr-fixnum x)
-    ($mul-fixnum-fixnum x x))
-
-  (define ($sqr-bignum x)
-    ($mul-bignum-bignum x x))
-
-  (define ($sqr-ratnum x)
-    ($div-number-number (sqr ($ratnum-n x))
-			(sqr ($ratnum-d x))))
-
-  (define ($sqr-compnum x)
-    ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
-    ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
-    ;; = (x.rep^2 - x.imp^2) + i * (x.rep * x.imp + x.imp * x.rep)
-    ;;
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-rectangular ($sub-number-number (sqr x.rep) (sqr x.imp))
-			 (let ((t ($mul-number-number x.rep x.imp)))
-			   ($add-number-number t t)))))
-
-  (define ($sqr-cflonum x)
-    ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
-    ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
-    ;; = (x.rep^2 - x.imp^2) + i * 2 * x.rep * x.imp
-    ;;
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl- ($flsqr x.rep) ($flsqr x.imp))
-		     (let ((t ($fl* x.rep x.imp)))
-		       ($fl+ t t)))))
-
-  #| end of module: sqr |# )
-
-
 (module (gcd
 	 $gcd-number-number
 	 $gcd-fixnum-number	$gcd-bignum-number	$gcd-flonum-number
@@ -3541,6 +3490,410 @@
     (assertion-violation who "expected integer as argument" x))
 
   #| end of module: modulo |# )
+
+
+(module (sqr
+	 $sqr-fixnum		$sqr-bignum		$sqr-ratnum
+	 $sqr-compnum		$sqr-cflonum)
+  (define who 'sqr)
+
+  (define (sqr x)
+    (cond-numeric-operand x
+      ((fixnum?)	($sqr-fixnum  x))
+      ((bignum?)	($sqr-bignum  x))
+      ((flonum?)	($flsqr       x))
+      ((ratnum?)	($sqr-ratnum  x))
+      ((compnum?)	($sqr-compnum x))
+      ((cflonum?)	($sqr-cflonum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($sqr-fixnum x)
+    ($mul-fixnum-fixnum x x))
+
+  (define ($sqr-bignum x)
+    ($mul-bignum-bignum x x))
+
+  (define ($sqr-ratnum x)
+    ($div-number-number (sqr ($ratnum-n x))
+			(sqr ($ratnum-d x))))
+
+  (define ($sqr-compnum x)
+    ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
+    ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
+    ;; = (x.rep^2 - x.imp^2) + i * (x.rep * x.imp + x.imp * x.rep)
+    ;;
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular ($sub-number-number (sqr x.rep) (sqr x.imp))
+			 (let ((t ($mul-number-number x.rep x.imp)))
+			   ($add-number-number t t)))))
+
+  (define ($sqr-cflonum x)
+    ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
+    ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
+    ;; = (x.rep^2 - x.imp^2) + i * 2 * x.rep * x.imp
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl- ($flsqr x.rep) ($flsqr x.imp))
+		     (let ((t ($fl* x.rep x.imp)))
+		       ($fl+ t t)))))
+
+  #| end of module: sqr |# )
+
+
+(module (expt
+	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
+	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum)
+  ;;Return N raised to the power  M.  For non-zero N, this is:
+  ;;
+  ;;    (expt N M) === (exp (log (expt N M)))
+  ;;               === (exp (* M (log N)))
+  ;;
+  ;;for N equal to zero:
+  ;;
+  ;;    (expt 0.0 Z) = 1.0 if Z = 0.0
+  ;;                 = 0.0 if (real-part Z) is positive
+  ;;
+  ;;for  other cases  in which  the first  argument is  zero, either  an
+  ;;exception       is       raised      with       condition       type
+  ;;"&implementation-restriction",  or an  unspecified number  object is
+  ;;returned.
+  ;;
+  ;;For an  exact real number  object N and  an exact integer  object M,
+  ;;(expt N M)  must return an exact result.  For all  other values of N
+  ;;and M, (expt N M) may return an inexact result, even when both N and
+  ;;M are exact.
+  ;;
+  ;;Notice that this definition can  lead to unintuitive results; from a
+  ;;discussion with Kent Dybvig: It does seem like:
+  ;;
+  ;;   (expt +inf.0+2.i 2)
+  ;;
+  ;;would be equivalent to:
+  ;;
+  ;;   (* +inf.0+2.i +inf.0+2.i)
+  ;;
+  ;;which evaluates  to +inf.0+inf.0i.   Nevertheless, I'm not  sure the
+  ;;R6RS supports this interpretation.   According to the description of
+  ;;expt, when z1 is not zero,
+  ;;
+  ;;   (expt z1 z2) => e^{z2 log z1}
+  ;;
+  ;;so,
+  ;;
+  ;;   (expt +inf.0+2.i 2) => (exp (* 2 (log +inf.0+2.i)))
+  ;;
+  ;;Meanwhile, the Section 11.7.3 subsection on transcendental functions
+  ;;defines log as follows:
+  ;;
+  ;;   (log z) => log |z| + (angle z)i
+  ;;
+  ;;so,
+  ;;
+  ;;   (log +inf.0+2.i) =>
+  ;;     (make-rectangular
+  ;;       (log (magnitude +inf.0+2.0i))
+  ;;       (angle +inf.0+2.0i))
+  ;;
+  ;;Since:
+  ;;
+  ;;   (magnitude +inf.0+2.i) => +inf.0,
+  ;;   (log +inf.0) => +inf.0, and
+  ;;   (angle +inf.0+2.i) => 0.0,
+  ;;
+  ;;we have:
+  ;;
+  ;;   (log +inf.0+2.i) => +inf.0+0.0i
+  ;;
+  ;;and finally:
+  ;;
+  ;;   (expt +inf.0+2.i 2) => (exp (* 2 +inf.0+0.0i))
+  ;;                       => (exp +inf.0+0.0i)
+  ;;                       => (* (exp +inf.0) (exp 0.0i))
+  ;;                       => (* +inf.0 1.0+0.0i)
+  ;;                       => +inf.0+nan.0i
+  ;;
+  ;;because:
+  ;;
+  ;;   (* +inf.0 0.0i) => +nan.0
+  ;;
+  (define who 'expt)
+
+  (define (expt n m)
+    (cond-numeric-operand m
+      ((fixnum?)	($expt-number-fixnum  n m))
+      ((bignum?)	($expt-number-bignum  n m))
+      ((flonum?)	($expt-number-flonum  n m))
+      ((ratnum?)	($expt-number-ratnum  n m))
+      ((compnum?)	($expt-number-compnum n m))
+      ((cflonum?)	($expt-number-cflonum n m))
+      (else
+       (assertion-violation who "expected number as argument" m))))
+
+  (module ($expt-number-fixnum)
+
+    (define ($expt-number-fixnum n m)
+      (cond (($fxzero? m)
+	     (cond ((nan?   n)	+nan.0)
+		   ((exact? n)	1)
+		   (else	1.)))
+	    (($fx> m 0)
+	     (cond ((integer? n)
+		    (%expt-fx n m))
+		   ((ratnum? n)
+		    ($make-ratnum (%expt-fx ($ratnum-n n) m)
+				  (%expt-fx ($ratnum-d n) m)))
+		   ((real? n) ;this includes the real infinite +inf.0
+		    (if (nan? n)
+			+nan.0
+		      (%expt-fx n m)))
+		   ;;In the following clauses N is a non-real.
+		   ;;
+		   ((nan? n)
+		    +nan.0+nan.0i)
+		   ((infinite? n) ;this handles correctly some special cases
+		    (exp (* m (log n))))
+		   (else
+		    (%expt-fx n m))))
+	    (else ;M is negative
+	     (let ((v (expt n (- m))))
+	       (if (eq? v 0)
+		   0
+		 (/ 1 v))))))
+
+    (define (%expt-fx n m)
+      ;;Recursive function computing N^M when M is a fixnum and N is:
+      ;;
+      ;;* A real number, infinite included, NaN excluded.
+      ;;
+      ;;* A finite complex number.
+      ;;
+      ;;This function  recurses a number of  times equal to the  bits in
+      ;;the representation of M.
+      ;;
+      ;;Notes about used procedures:
+      ;;
+      ;;* ($fxlogand m 1)  is 1 for even m and 0 for  odd m, or in other
+      ;;  words: the return value is the rightmost bit of M.
+      ;;
+      ;;* $fxsra means "fixnum shift right arithmetic".
+      ;;
+      ;;* $mul-number-number is the multiplication with two arguments.
+      ;;
+      (cond (($fxzero? m)
+	     1)
+	    (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
+	     (%expt-fx ($mul-number-number n n) ($fxsra m 1)))
+	    (else ;the rightmost bit in M is one
+	     ($mul-number-number n (%expt-fx ($mul-number-number n n) ($fxsra m 1))))))
+
+    #| end of module: $expt-number-fixnum |# )
+
+  (define ($expt-number-bignum n m)
+    (cond ((eq? n 0)	0)
+	  ((eq? n 1)	1)
+	  ((eq? n -1)	(if ($bignum-even? m) 1 -1))
+	  ((nan? n)	+nan.0)
+	  (else
+	   (assertion-violation who "result is too big to compute" n m))))
+
+  (define ($expt-number-flonum n m)
+    (cond ((real? n)
+	   (cond ((nan? n)
+		  +nan.0)
+		 ((integer? m)
+		  ;;N^M when M is an integer always has a real number as
+		  ;;result.
+		  (flexpt (inexact n) m))
+		 ((negative? n)
+		  (exp (* m (log n))))
+		 (else
+		  (flexpt (inexact n) m))))
+	  ;;If we are here: N is complex or NaN.
+	  ;;
+	  ((nan? n)
+	   +nan.0+nan.0i)
+	  (else
+	   (exp (* m (log n))))))
+
+  (define ($expt-number-ratnum n m)
+    ;; (expt (expt n ($ratnum-n m))
+    ;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
+    ($expt-number-flonum n (inexact m)))
+
+  (define ($expt-number-compnum n m)
+    (cond ((eq? n 0)
+	   0)
+	  ((nan? n)
+	   +nan.0+nan.0i)
+	  ((zero? n)
+	   (if (flonum? n)
+	       0.0
+	     0.0+0.0i))
+	  (else
+	   (exp (* m (log n))))))
+
+  (define ($expt-number-cflonum n m)
+    (cond ((eq? n 0)
+	   0)
+	  ((nan? n)
+	   +nan.0+nan.0i)
+	  ((zero? n)
+	   (if (flonum? n)
+	       0.0
+	     0.0+0.0i))
+	  (else
+	   (exp (* m (log n))))))
+
+  #| end of module: expt |# )
+
+
+;;;; square roots
+
+(module (sqrt
+	 $sqrt-fixnum
+	 $sqrt-flonum
+	 $sqrt-bignum
+	 $sqrt-ratnum
+	 $sqrt-compnum
+	 $sqrt-cflonum)
+
+  (define (sqrt x)
+    (cond-numeric-operand x
+      ((fixnum?)	($sqrt-fixnum x))
+      ((bignum?)	($sqrt-bignum x))
+      ((ratnum?)	($sqrt-ratnum x))
+      ((flonum?)	($sqrt-flonum x))
+      ((compnum?)	($sqrt-compnum x))
+      ((cflonum?)	($sqrt-cflonum x))
+      (else
+       (assertion-violation 'sqrt "expected number as argument" x))))
+
+  (define ($sqrt-flonum x)
+    ;;This can return both a flonum or a compnum!!!
+    ;;
+    (if ($fl< x 0.0)
+	;;This case includes: X = -0.0
+	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
+      (foreign-call "ikrt_fl_sqrt" x)))
+
+  (define ($sqrt-fixnum x)
+    (if ($fxnegative? x)
+	(make-rectangular 0 ($sqrt-fixnum ($fx- x)))
+      (let-values (((root residual) ($exact-integer-sqrt-fixnum x)))
+	(if ($fxzero? residual)
+	    root
+	  (foreign-call "ikrt_fx_sqrt" x)))))
+
+  (define ($sqrt-bignum x)
+    (if ($bignum-positive? x)
+	(let-values (((root residual) ($exact-integer-sqrt-bignum x)))
+	  (if (eq? residual 0)
+	      root
+	    (let ((v ($sqrt-flonum (inexact x))))
+	      ;;Could the (dropped) residual ever affect the answer?
+	      (if (flinfinite? v)
+		  (if (bignum? root)
+		      ;;The argument  1 makes it  round up in case  of a
+		      ;;tie.
+		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
+		    (inexact root))
+		v))))
+      (make-rectangular 0 ($sqrt-bignum (- x)))))
+
+  (define ($sqrt-ratnum x)
+    (/ (sqrt ($ratnum-n x))
+       (sqrt ($ratnum-d x))))
+
+  (define ($sqrt-compnum Z)
+    ;;The function:
+    ;;
+    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
+    ;;
+    ;;is computed as follows:
+    ;;
+    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep                         magn - Z.rep
+    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
+    ;;                   2.                                   2.
+    ;;
+    ;;See <http://en.wikipedia.org/wiki/Square_root>.
+    ;;
+    (let ((Z.rep (real-part Z))
+	  (Z.imp (imag-part Z)))
+      (let ((magn (sqrt (+ (* Z.rep Z.rep)
+			   (* Z.imp Z.imp))))
+	    (sgn  (if (> Z.imp 0) 1 -1)))
+	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
+			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
+
+  (define ($sqrt-cflonum Z)
+    ;;The function:
+    ;;
+    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
+    ;;
+    ;;is computed as follows:
+    ;;
+    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
+    ;;
+    ;;              magn + Z.rep                         magn - Z.rep
+    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
+    ;;                   2.                                   2.
+    ;;
+    ;;See <http://en.wikipedia.org/wiki/Square_root>.
+    ;;
+    (let ((Z.rep (real-part Z))
+	  (Z.imp (imag-part Z)))
+      ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
+      ;;compnum!!!
+      (let* ((magn  ($sqrt-flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
+	     (sgn   (if ($flpositive? Z.imp) 1 -1))
+	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
+	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
+	(make-rectangular R.rep R.imp))))
+
+  #| end of module: sqrt |# )
+
+;;; --------------------------------------------------------------------
+
+(module (exact-integer-sqrt
+	 $exact-integer-sqrt-fixnum
+	 $exact-integer-sqrt-bignum)
+
+  (define who 'exact-integer-sqrt)
+
+  (define (exact-integer-sqrt x)
+    (cond ((fixnum? x)
+	   ($exact-integer-sqrt-fixnum x))
+
+	  ((bignum? x)
+	   ($exact-integer-sqrt-bignum x))
+
+	  (else
+	   (assertion-violation who "expected exact integer as argument" x))))
+
+  (define ($exact-integer-sqrt-fixnum x)
+    (cond (($fx> x 0)
+	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
+	     (values s ($fx- x ($fx* s s)))))
+	  (($fxzero? x)
+	   (values 0 0))
+	  (else
+	   (%error-negative-operand x))))
+
+  (define ($exact-integer-sqrt-bignum x)
+    (if ($bignum-positive? x)
+	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
+	  (values ($car r) ($cdr r)))
+      (%error-negative-operand x)))
+
+  (define (%error-negative-operand x)
+    (assertion-violation who "expected non-negative exact integer as argument" x))
+
+  #| end of module: exact-integer-sqrt |# )
 
 
 (module (max
@@ -4918,359 +5271,6 @@
     ((flonum?)	($flodd? x))
     (else
      (assertion-violation 'odd? "expected integer as argument" x))))
-
-
-(module (expt
-	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
-	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum)
-  ;;Return N raised to the power  M.  For non-zero N, this is:
-  ;;
-  ;;    (expt N M) === (exp (log (expt N M)))
-  ;;               === (exp (* M (log N)))
-  ;;
-  ;;for N equal to zero:
-  ;;
-  ;;    (expt 0.0 Z) = 1.0 if Z = 0.0
-  ;;                 = 0.0 if (real-part Z) is positive
-  ;;
-  ;;for  other cases  in which  the first  argument is  zero, either  an
-  ;;exception       is       raised      with       condition       type
-  ;;"&implementation-restriction",  or an  unspecified number  object is
-  ;;returned.
-  ;;
-  ;;For an  exact real number  object N and  an exact integer  object M,
-  ;;(expt N M)  must return an exact result.  For all  other values of N
-  ;;and M, (expt N M) may return an inexact result, even when both N and
-  ;;M are exact.
-  ;;
-  ;;Notice that this definition can  lead to unintuitive results; from a
-  ;;discussion with Kent Dybvig: It does seem like:
-  ;;
-  ;;   (expt +inf.0+2.i 2)
-  ;;
-  ;;would be equivalent to:
-  ;;
-  ;;   (* +inf.0+2.i +inf.0+2.i)
-  ;;
-  ;;which evaluates  to +inf.0+inf.0i.   Nevertheless, I'm not  sure the
-  ;;R6RS supports this interpretation.   According to the description of
-  ;;expt, when z1 is not zero,
-  ;;
-  ;;   (expt z1 z2) => e^{z2 log z1}
-  ;;
-  ;;so,
-  ;;
-  ;;   (expt +inf.0+2.i 2) => (exp (* 2 (log +inf.0+2.i)))
-  ;;
-  ;;Meanwhile, the Section 11.7.3 subsection on transcendental functions
-  ;;defines log as follows:
-  ;;
-  ;;   (log z) => log |z| + (angle z)i
-  ;;
-  ;;so,
-  ;;
-  ;;   (log +inf.0+2.i) =>
-  ;;     (make-rectangular
-  ;;       (log (magnitude +inf.0+2.0i))
-  ;;       (angle +inf.0+2.0i))
-  ;;
-  ;;Since:
-  ;;
-  ;;   (magnitude +inf.0+2.i) => +inf.0,
-  ;;   (log +inf.0) => +inf.0, and
-  ;;   (angle +inf.0+2.i) => 0.0,
-  ;;
-  ;;we have:
-  ;;
-  ;;   (log +inf.0+2.i) => +inf.0+0.0i
-  ;;
-  ;;and finally:
-  ;;
-  ;;   (expt +inf.0+2.i 2) => (exp (* 2 +inf.0+0.0i))
-  ;;                       => (exp +inf.0+0.0i)
-  ;;                       => (* (exp +inf.0) (exp 0.0i))
-  ;;                       => (* +inf.0 1.0+0.0i)
-  ;;                       => +inf.0+nan.0i
-  ;;
-  ;;because:
-  ;;
-  ;;   (* +inf.0 0.0i) => +nan.0
-  ;;
-  (define who 'expt)
-
-  (define (expt n m)
-    (cond-numeric-operand m
-      ((fixnum?)	($expt-number-fixnum  n m))
-      ((bignum?)	($expt-number-bignum  n m))
-      ((flonum?)	($expt-number-flonum  n m))
-      ((ratnum?)	($expt-number-ratnum  n m))
-      ((compnum?)	($expt-number-compnum n m))
-      ((cflonum?)	($expt-number-cflonum n m))
-      (else
-       (assertion-violation who "expected number as argument" m))))
-
-  (module ($expt-number-fixnum)
-
-    (define ($expt-number-fixnum n m)
-      (cond (($fxzero? m)
-	     (cond ((nan?   n)	+nan.0)
-		   ((exact? n)	1)
-		   (else	1.)))
-	    (($fx> m 0)
-	     (cond ((integer? n)
-		    (%expt-fx n m))
-		   ((ratnum? n)
-		    ($make-ratnum (%expt-fx ($ratnum-n n) m)
-				  (%expt-fx ($ratnum-d n) m)))
-		   ((real? n) ;this includes the real infinite +inf.0
-		    (if (nan? n)
-			+nan.0
-		      (%expt-fx n m)))
-		   ;;In the following clauses N is a non-real.
-		   ;;
-		   ((nan? n)
-		    +nan.0+nan.0i)
-		   ((infinite? n) ;this handles correctly some special cases
-		    (exp (* m (log n))))
-		   (else
-		    (%expt-fx n m))))
-	    (else ;M is negative
-	     (let ((v (expt n (- m))))
-	       (if (eq? v 0)
-		   0
-		 (/ 1 v))))))
-
-    (define (%expt-fx n m)
-      ;;Recursive function computing N^M when M is a fixnum and N is:
-      ;;
-      ;;* A real number, infinite included, NaN excluded.
-      ;;
-      ;;* A finite complex number.
-      ;;
-      ;;This function  recurses a number of  times equal to the  bits in
-      ;;the representation of M.
-      ;;
-      ;;Notes about used procedures:
-      ;;
-      ;;* ($fxlogand m 1)  is 1 for even m and 0 for  odd m, or in other
-      ;;  words: the return value is the rightmost bit of M.
-      ;;
-      ;;* $fxsra means "fixnum shift right arithmetic".
-      ;;
-      ;;* $mul-number-number is the multiplication with two arguments.
-      ;;
-      (cond (($fxzero? m)
-	     1)
-	    (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
-	     (%expt-fx ($mul-number-number n n) ($fxsra m 1)))
-	    (else ;the rightmost bit in M is one
-	     ($mul-number-number n (%expt-fx ($mul-number-number n n) ($fxsra m 1))))))
-
-    #| end of module: $expt-number-fixnum |# )
-
-  (define ($expt-number-bignum n m)
-    (cond ((eq? n 0)	0)
-	  ((eq? n 1)	1)
-	  ((eq? n -1)	(if ($bignum-even? m) 1 -1))
-	  ((nan? n)	+nan.0)
-	  (else
-	   (assertion-violation who "result is too big to compute" n m))))
-
-  (define ($expt-number-flonum n m)
-    (cond ((real? n)
-	   (cond ((nan? n)
-		  +nan.0)
-		 ((integer? m)
-		  ;;N^M when M is an integer always has a real number as
-		  ;;result.
-		  (flexpt (inexact n) m))
-		 ((negative? n)
-		  (exp (* m (log n))))
-		 (else
-		  (flexpt (inexact n) m))))
-	  ;;If we are here: N is complex or NaN.
-	  ;;
-	  ((nan? n)
-	   +nan.0+nan.0i)
-	  (else
-	   (exp (* m (log n))))))
-
-  (define ($expt-number-ratnum n m)
-    ;; (expt (expt n ($ratnum-n m))
-    ;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
-    ($expt-number-flonum n (inexact m)))
-
-  (define ($expt-number-compnum n m)
-    (cond ((eq? n 0)
-	   0)
-	  ((nan? n)
-	   +nan.0+nan.0i)
-	  ((zero? n)
-	   (if (flonum? n)
-	       0.0
-	     0.0+0.0i))
-	  (else
-	   (exp (* m (log n))))))
-
-  (define ($expt-number-cflonum n m)
-    (cond ((eq? n 0)
-	   0)
-	  ((nan? n)
-	   +nan.0+nan.0i)
-	  ((zero? n)
-	   (if (flonum? n)
-	       0.0
-	     0.0+0.0i))
-	  (else
-	   (exp (* m (log n))))))
-
-  #| end of module: expt |# )
-
-
-;;;; square roots
-
-(module (sqrt
-	 $sqrt-fixnum
-	 $sqrt-flonum
-	 $sqrt-bignum
-	 $sqrt-ratnum
-	 $sqrt-compnum
-	 $sqrt-cflonum)
-
-  (define (sqrt x)
-    (cond-numeric-operand x
-      ((fixnum?)	($sqrt-fixnum x))
-      ((bignum?)	($sqrt-bignum x))
-      ((ratnum?)	($sqrt-ratnum x))
-      ((flonum?)	($sqrt-flonum x))
-      ((compnum?)	($sqrt-compnum x))
-      ((cflonum?)	($sqrt-cflonum x))
-      (else
-       (assertion-violation 'sqrt "expected number as argument" x))))
-
-  (define ($sqrt-flonum x)
-    ;;This can return both a flonum or a compnum!!!
-    ;;
-    (if ($fl< x 0.0)
-	;;This case includes: X = -0.0
-	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
-      (foreign-call "ikrt_fl_sqrt" x)))
-
-  (define ($sqrt-fixnum x)
-    (if ($fxnegative? x)
-	(make-rectangular 0 ($sqrt-fixnum ($fx- x)))
-      (let-values (((root residual) ($exact-integer-sqrt-fixnum x)))
-	(if ($fxzero? residual)
-	    root
-	  (foreign-call "ikrt_fx_sqrt" x)))))
-
-  (define ($sqrt-bignum x)
-    (if ($bignum-positive? x)
-	(let-values (((root residual) ($exact-integer-sqrt-bignum x)))
-	  (if (eq? residual 0)
-	      root
-	    (let ((v ($sqrt-flonum (inexact x))))
-	      ;;Could the (dropped) residual ever affect the answer?
-	      (if (flinfinite? v)
-		  (if (bignum? root)
-		      ;;The argument  1 makes it  round up in case  of a
-		      ;;tie.
-		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
-		    (inexact root))
-		v))))
-      (make-rectangular 0 ($sqrt-bignum (- x)))))
-
-  (define ($sqrt-ratnum x)
-    (/ (sqrt ($ratnum-n x))
-       (sqrt ($ratnum-d x))))
-
-  (define ($sqrt-compnum Z)
-    ;;The function:
-    ;;
-    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
-    ;;
-    ;;is computed as follows:
-    ;;
-    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
-    ;;
-    ;;              magn + Z.rep                         magn - Z.rep
-    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
-    ;;                   2.                                   2.
-    ;;
-    ;;See <http://en.wikipedia.org/wiki/Square_root>.
-    ;;
-    (let ((Z.rep (real-part Z))
-	  (Z.imp (imag-part Z)))
-      (let ((magn (sqrt (+ (* Z.rep Z.rep)
-			   (* Z.imp Z.imp))))
-	    (sgn  (if (> Z.imp 0) 1 -1)))
-	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
-			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
-
-  (define ($sqrt-cflonum Z)
-    ;;The function:
-    ;;
-    ;;   R = sqrt(Z) = sqrt(Z.rep + i * Z.imp)
-    ;;
-    ;;is computed as follows:
-    ;;
-    ;; magn  = sqrt(Z.rep^2 + Z.imp^2)
-    ;;
-    ;;              magn + Z.rep                         magn - Z.rep
-    ;; R.rep = sqrt ------------ + i * sgn(Z.imp) * sqrt -----------
-    ;;                   2.                                   2.
-    ;;
-    ;;See <http://en.wikipedia.org/wiki/Square_root>.
-    ;;
-    (let ((Z.rep (real-part Z))
-	  (Z.imp (imag-part Z)))
-      ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
-      ;;compnum!!!
-      (let* ((magn  ($sqrt-flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
-	     (sgn   (if ($flpositive? Z.imp) 1 -1))
-	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
-	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
-	(make-rectangular R.rep R.imp))))
-
-  #| end of module: sqrt |# )
-
-;;; --------------------------------------------------------------------
-
-(module (exact-integer-sqrt
-	 $exact-integer-sqrt-fixnum
-	 $exact-integer-sqrt-bignum)
-
-  (define who 'exact-integer-sqrt)
-
-  (define (exact-integer-sqrt x)
-    (cond ((fixnum? x)
-	   ($exact-integer-sqrt-fixnum x))
-
-	  ((bignum? x)
-	   ($exact-integer-sqrt-bignum x))
-
-	  (else
-	   (assertion-violation who "expected exact integer as argument" x))))
-
-  (define ($exact-integer-sqrt-fixnum x)
-    (cond (($fx> x 0)
-	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
-	     (values s ($fx- x ($fx* s s)))))
-	  (($fxzero? x)
-	   (values 0 0))
-	  (else
-	   (%error-negative-operand x))))
-
-  (define ($exact-integer-sqrt-bignum x)
-    (if ($bignum-positive? x)
-	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
-	  (values ($car r) ($cdr r)))
-      (%error-negative-operand x)))
-
-  (define (%error-negative-operand x)
-    (assertion-violation who "expected non-negative exact integer as argument" x))
-
-  #| end of module: exact-integer-sqrt |# )
 
 
 (module (log
