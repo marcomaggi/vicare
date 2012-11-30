@@ -2796,11 +2796,11 @@
 		     (%greatest-common-divisor y.abs x.abs))
 		    (else
 		     x.abs))
-	    ;;Here  X.ABS is  a  positive fixnum,  Y.ABS  is a  positive
+	    ;;Here X.ABS is  a non-negative fixnum, Y.ABS  is a positive
 	    ;;bignum, so X.ABS < Y.ABS.
 	    (%greatest-common-divisor y.abs x.abs))
 	(if (fixnum? y.abs)
-	    ;;Here  X.ABS is  a  positive bignum,  Y.ABS  is a  positive
+	    ;;Here X.ABS is  a positive bignum, Y.ABS  is a non-negative
 	    ;;fixnum, so X.ABS > Y.ABS.
 	    (%greatest-common-divisor x.abs y.abs)
 	  ;;Here both X.ABS and Y.ABS are positive bignums.
@@ -2818,8 +2818,8 @@
     (let ((x.abs ($fxabs      x))
 	  (y.abs ($abs-bignum y)))
       (if (fixnum? x.abs)
-	  ;;Here X.ABS is a positive fixnum, Y.ABS is a positive bignum,
-	  ;;so X.ABS < Y.ABS.
+	  ;;Here X.ABS  is a  non-negative fixnum,  Y.ABS is  a positive
+	  ;;bignum, so X.ABS < Y.ABS.
 	  (%greatest-common-divisor y.abs x.abs)
 	;;Here both X.ABS and Y.ABS are positive bignums.
 	(cond ((bnbn> x.abs y.abs)
@@ -2843,8 +2843,8 @@
     (let ((x.abs ($abs-bignum x))
 	  (y.abs ($fxabs      y)))
       (if (fixnum? y.abs)
-	  ;;Here X.ABS is a positive bignum, Y.ABS is a positive fixnum,
-	  ;;so X.ABS > Y.ABS.
+	  ;;Here X.ABS  is a  positive bignum,  Y.ABS is  a non-negative
+	  ;;fixnum, so X.ABS > Y.ABS.
 	  (%greatest-common-divisor x.abs y.abs)
 	;;Here both X.ABS and Y.ABS are positive bignums.
 	(cond ((bnbn> x.abs y.abs)
@@ -2901,17 +2901,22 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($gcd x y)
-    (let ((x.abs (abs x))
-	  (y.abs (abs y)))
-      (cond ((> x.abs y.abs)
-	     (%greatest-common-divisor x.abs y.abs))
-	    ((< x.abs y.abs)
-	     (%greatest-common-divisor y.abs x.abs))
-	    (else
-	     x.abs))))
+  ;;This is the old generic implementation.
+  ;;
+  ;; (define ($gcd x y)
+  ;;   (let ((x.abs (abs x))
+  ;;         (y.abs (abs y)))
+  ;;     (cond ((> x.abs y.abs)
+  ;;            (%greatest-common-divisor x.abs y.abs))
+  ;;           ((< x.abs y.abs)
+  ;;            (%greatest-common-divisor y.abs x.abs))
+  ;;           (else
+  ;;            x.abs))))
 
   (define (%greatest-common-divisor x y)
+    ;;Both  X and  Y must  be non-negative  exact integers.   X must  be
+    ;;greater than Y.
+    ;;
     (if (zero? y)
 	x
       (%greatest-common-divisor y (remainder x y))))
