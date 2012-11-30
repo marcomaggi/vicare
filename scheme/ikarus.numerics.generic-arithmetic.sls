@@ -1820,8 +1820,7 @@
 
   (define ($mul-cflonum-cflonum x y)
     ;; (x.rep + i * x.imp) * (y.rep + i * y.imp)
-    ;;    = (x.rep * y.rep - x.imp * y.imp) +
-    ;;    + i * (x.rep * y.imp + x.imp * y.rep)
+    ;;    = (x.rep * y.rep - x.imp * y.imp) + i * (x.rep * y.imp + x.imp * y.rep)
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (y.rep ($cflonum-real y))
@@ -2694,10 +2693,26 @@
 			(sqr ($ratnum-d x))))
 
   (define ($sqr-compnum x)
-    ($mul-compnum-compnum x x))
+    ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
+    ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
+    ;; = (x.rep^2 - x.imp^2) + i * (x.rep * x.imp + x.imp * x.rep)
+    ;;
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular ($sub-number-number (sqr x.rep) (sqr x.imp))
+			 (let ((t ($mul-number-number x.rep x.imp)))
+			   ($add-number-number t t)))))
 
   (define ($sqr-cflonum x)
-    ($mul-cflonum-cflonum x))
+    ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
+    ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
+    ;; = (x.rep^2 - x.imp^2) + i * 2 * x.rep * x.imp
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($make-cflonum ($fl- ($flsqr x.rep) ($flsqr x.imp))
+		     (let ((t ($fl* x.rep x.imp)))
+		       ($fl+ t t)))))
 
   #| end of module: sqr |# )
 
