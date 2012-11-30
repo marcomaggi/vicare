@@ -2217,52 +2217,52 @@ Compute the square of a cflonum and return the result as cflonum.
 
 
 @deffn {Unsafe Operation} $gcd-number-number @vari{x} @varii{x}
-Return the greatest common divisor between any couple of real numbers;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between any couple of exact or
+inexact integers; return a fixnum, bignum or flonum.
 @end deffn
 
 @c ------------------------------------------------------------
 
-@subsubheading Real number as second argument
+@subsubheading Exact or inexact integer as second argument
 
 
 @deffn {Unsafe Operation} $gcd-fixnum-number @var{fx} @var{x}
-Return the greatest common divisor between a fixnum and any real number;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between a fixnum and any exact or
+inexact integer; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $gcd-bignum-number @var{bn} @var{x}
-Return the greatest common divisor between a bignum and any real number;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between a bignum and any exact or
+inexact integer; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $gcd-flonum-number @var{fl} @var{x}
-Return the greatest common divisor between a flonum and any real number;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between a flonum and any exact or
+inexact integer; return a fixnum, bignum or flonum.
 @end deffn
 
 @c ------------------------------------------------------------
 
-@subsubheading Real number as first argument
+@subsubheading Exact or inexact integer as first argument
 
 
 @deffn {Unsafe Operation} $gcd-number-fixnum @var{x} @var{fx}
-Return the greatest common divisor between any real number and a fixnum;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between any exact or inexact integer
+and a fixnum; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $gcd-number-bignum @var{x} @var{bn}
-Return the greatest common divisor between any real number and a bignum;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between any exact or inexact integer
+and a bignum; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $gcd-number-flonum @var{x} @var{fl}
-Return the greatest common divisor between any real number and a flonum;
-return a fixnum, bignum or flonum.
+Return the greatest common divisor between any exact or inexact integer
+and a flonum; return a fixnum, bignum or flonum.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -2337,52 +2337,52 @@ a flonum.
 
 
 @deffn {Unsafe Operation} $lcm-number-number @vari{x} @varii{x}
-Return the least common multiple between any couple of real numbers;
-return a fixnum, bignum or flonum.
+Return the least common multiple between any couple of exact and inexact
+integers; return a fixnum, bignum or flonum.
 @end deffn
 
 @c ------------------------------------------------------------
 
-@subsubheading Real number as second argument
+@subsubheading Exact or inexact integer as second argument
 
 
 @deffn {Unsafe Operation} $lcm-fixnum-number @var{fx} @var{x}
-Return the least common multiple between a fixnum and any real number;
-return a fixnum, bignum or flonum.
+Return the least common multiple between a fixnum and any exact or
+inexact integer; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $lcm-bignum-number @var{bn} @var{x}
-Return the least common multiple between a bignum and any real number;
-return a fixnum, bignum or flonum.
+Return the least common multiple between a bignum and any exact or
+inexact integer; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $lcm-flonum-number @var{fl} @var{x}
-Return the least common multiple between a flonum and any real number;
-return a fixnum, bignum or flonum.
+Return the least common multiple between a flonum and any exact or
+inexact integer; return a fixnum, bignum or flonum.
 @end deffn
 
 @c ------------------------------------------------------------
 
-@subsubheading Real number as first argument
+@subsubheading Exact or inexact integer as first argument
 
 
 @deffn {Unsafe Operation} $lcm-number-fixnum @var{x} @var{fx}
-Return the least common multiple between any real number and a fixnum;
-return a fixnum, bignum or flonum.
+Return the least common multiple between any exact or inexact integer
+and a fixnum; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $lcm-number-bignum @var{x} @var{bn}
-Return the least common multiple between any real number and a bignum;
-return a fixnum, bignum or flonum.
+Return the least common multiple between any exact or inexact integer
+and a bignum; return a fixnum, bignum or flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $lcm-number-flonum @var{x} @var{fl}
-Return the least common multiple between any real number and a flonum;
-return a fixnum, bignum or flonum.
+Return the least common multiple between any exact or inexact integer
+and a flonum; return a fixnum, bignum or flonum.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -2456,64 +2456,124 @@ flonum.
 @subsection Quotient and remainder
 
 
-@deffn {Unsafe Operation} $quotient+remainder-fixnum-number
+These functions perform the integer division between exact and inexact
+numbers and return two values: the quotient and the remainder.  For all
+the functions: the second argument must be non--zero.
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $quotient+remainder-number-fixnum @var{num} @var{fx}
+Perform the integer division between any exact or inexact integer and a
+fixnum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-number-fixnum
+@deffn {Unsafe Operation} $quotient+remainder-number-bignum @var{num} @var{bn}
+Perform the integer division between any exact or inexact integer and a
+bignum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-bignum-number
+@deffn {Unsafe Operation} $quotient+remainder-number-flonum @var{num} @var{fl}
+Perform the integer division between any exact or inexact integer and a
+flonum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as second argument
+
+
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-number @var{fx} @var{num}
+Perform the integer division between a fixnum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-number-bignum
+@deffn {Unsafe Operation} $quotient+remainder-bignum-number @var{bn} @var{num}
+Perform the integer division between a bignum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-flonum-number
+@deffn {Unsafe Operation} $quotient+remainder-flonum-number @var{fl} @var{num}
+Perform the integer division between a flonum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-fixnum @vari{fx} @varii{fx}
+Perform the integer division between a fixnum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-number-flonum
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-bignum @var{fx} @var{bn}
+Perform the integer division between a fixnum and a bignum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-fixnum-fixnum
+@deffn {Unsafe Operation} $quotient+remainder-fixnum-flonum @var{fx} @var{fl}
+Perform the integer division between a fixnum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $quotient+remainder-bignum-fixnum @var{bn} @var{fx}
+Perform the integer division between a bignum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-bignum-fixnum
+@deffn {Unsafe Operation} $quotient+remainder-bignum-bignum @vari{bn} @varii{bn}
+Perform the integer division between a bignum and a bignum; return
+fixnums or bignums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-fixnum-bignum
+@deffn {Unsafe Operation} $quotient+remainder-bignum-flonum @var{bn} @var{fl}
+Perform the integer division between a bignum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $quotient+remainder-flonum-fixnum @var{fl} @var{fx}
+Perform the integer division between a flonum and a fixnum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-bignum-bignum
+@deffn {Unsafe Operation} $quotient+remainder-flonum-bignum @var{fl} @var{bn}
+Perform the integer division between a flonum and a bignum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient+remainder-fixnum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient+remainder-bignum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient+remainder-flonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient+remainder-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient+remainder-flonum-flonum
-
+@deffn {Unsafe Operation} $quotient+remainder-flonum-flonum @vari{fl} @varii{fl}
+Perform the integer division between a flonum and a flonum; return
+flonums.
 @end deffn
 
 @c page
@@ -2521,64 +2581,124 @@ flonum.
 @subsection Quotient between numbers
 
 
-@deffn {Unsafe Operation} $quotient-fixnum-number
+These functions perform the integer division between exact and inexact
+numbers and return the quotient.  For all the functions: the second
+argument must be non--zero.
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $quotient-number-fixnum @var{num} @var{fx}
+Perform the integer division between any exact or inexact integer and a
+fixnum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-number-fixnum
+@deffn {Unsafe Operation} $quotient-number-bignum @var{num} @var{bn}
+Perform the integer division between any exact or inexact integer and a
+bignum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-bignum-number
+@deffn {Unsafe Operation} $quotient-number-flonum @var{num} @var{fl}
+Perform the integer division between any exact or inexact integer and a
+flonum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as second argument
+
+
+@deffn {Unsafe Operation} $quotient-fixnum-number @var{fx} @var{num}
+Perform the integer division between a fixnum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-number-bignum
+@deffn {Unsafe Operation} $quotient-bignum-number @var{bn} @var{num}
+Perform the integer division between a bignum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-flonum-number
+@deffn {Unsafe Operation} $quotient-flonum-number @var{fl} @var{num}
+Perform the integer division between a flonum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $quotient-fixnum-fixnum @vari{fx} @varii{fx}
+Perform the integer division between a fixnum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-number-flonum
+@deffn {Unsafe Operation} $quotient-fixnum-bignum @var{fx} @var{bn}
+Perform the integer division between a fixnum and a bignum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-fixnum-fixnum
+@deffn {Unsafe Operation} $quotient-fixnum-flonum @var{fx} @var{fl}
+Perform the integer division between a fixnum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $quotient-bignum-fixnum @var{bn} @var{fx}
+Perform the integer division between a bignum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-fixnum-bignum
+@deffn {Unsafe Operation} $quotient-bignum-bignum @vari{bn} @varii{bn}
+Perform the integer division between a bignum and a bignum; return
+fixnums or bignums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-fixnum-flonum
+@deffn {Unsafe Operation} $quotient-bignum-flonum @var{bn} @var{fl}
+Perform the integer division between a bignum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $quotient-flonum-fixnum @var{fl} @var{fx}
+Perform the integer division between a flonum and a fixnum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-bignum-fixnum
+@deffn {Unsafe Operation} $quotient-flonum-bignum @var{fl} @var{bn}
+Perform the integer division between a flonum and a bignum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $quotient-bignum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient-bignum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient-flonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $quotient-flonum-flonum
-
+@deffn {Unsafe Operation} $quotient-flonum-flonum @vari{fl} @varii{fl}
+Perform the integer division between a flonum and a flonum; return
+flonums.
 @end deffn
 
 @c page
@@ -2586,64 +2706,124 @@ flonum.
 @subsection Remainder between numbers
 
 
-@deffn {Unsafe Operation} $remainder-fixnum-number
+These functions perform the integer division between exact and inexact
+numbers and return the remainder.  For all the functions: the second
+argument must be non--zero.
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $remainder-number-fixnum @var{num} @var{fx}
+Perform the integer division between any exact or inexact integer and a
+fixnum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-number-fixnum
+@deffn {Unsafe Operation} $remainder-number-bignum @var{num} @var{bn}
+Perform the integer division between any exact or inexact integer and a
+bignum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-bignum-number
+@deffn {Unsafe Operation} $remainder-number-flonum @var{num} @var{fl}
+Perform the integer division between any exact or inexact integer and a
+flonum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as second argument
+
+
+@deffn {Unsafe Operation} $remainder-fixnum-number @var{fx} @var{num}
+Perform the integer division between a fixnum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-number-bignum
+@deffn {Unsafe Operation} $remainder-bignum-number @var{bn} @var{num}
+Perform the integer division between a bignum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-flonum-number
+@deffn {Unsafe Operation} $remainder-flonum-number @var{fl} @var{num}
+Perform the integer division between a flonum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $remainder-fixnum-fixnum @vari{fx} @varii{fx}
+Perform the integer division between a fixnum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-number-flonum
+@deffn {Unsafe Operation} $remainder-fixnum-bignum @var{fx} @var{bn}
+Perform the integer division between a fixnum and a bignum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-fixnum-fixnum
+@deffn {Unsafe Operation} $remainder-fixnum-flonum @var{fx} @var{fl}
+Perform the integer division between a fixnum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $remainder-bignum-fixnum @var{bn} @var{fx}
+Perform the integer division between a bignum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-fixnum-bignum
+@deffn {Unsafe Operation} $remainder-bignum-bignum @vari{bn} @varii{bn}
+Perform the integer division between a bignum and a bignum; return
+fixnums or bignums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-fixnum-flonum
+@deffn {Unsafe Operation} $remainder-bignum-flonum @var{bn} @var{fl}
+Perform the integer division between a bignum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $remainder-flonum-fixnum @var{fl} @var{fx}
+Perform the integer division between a flonum and a fixnum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-bignum-fixnum
+@deffn {Unsafe Operation} $remainder-flonum-bignum @var{fl} @var{bn}
+Perform the integer division between a flonum and a bignum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $remainder-bignum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $remainder-bignum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $remainder-flonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $remainder-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $remainder-flonum-flonum
-
+@deffn {Unsafe Operation} $remainder-flonum-flonum @vari{fl} @varii{fl}
+Perform the integer division between a flonum and a flonum; return
+flonums.
 @end deffn
 
 @c page
