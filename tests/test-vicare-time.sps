@@ -30,7 +30,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare basic time functions\n")
+(check-display "*** testing Vicare basic time functions\n")
 
 
 (parametrise ((check-test-name	'base))
