@@ -402,8 +402,8 @@
 	$fxabs
 	$fxmodulo		$fxremainder)
   (except (ikarus system $flonums)
-	  $flonum->exact
-	  $flzero?		$flzero?/negative
+	  $flonum->exact	$flzero?
+	  $flzero?/positive	$flzero?/negative
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
 	  $flsqr		$flsqrt
@@ -420,8 +420,8 @@
   ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
   ;;Maggi; Nov 17, 2012)
   (only (ikarus flonums)
-	$flonum->exact
-	$flzero?		$flzero?/negative
+	$flonum->exact		$flzero?
+	$flzero?/positive	$flzero?/negative
 	$flpositive?		$flnegative?
 	$fleven?		$flodd?
 	$flsqr			$flsqrt
@@ -3136,17 +3136,43 @@
 	 $quotient+remainder-flonum-fixnum
 	 $quotient+remainder-flonum-bignum
 	 $quotient+remainder-flonum-flonum)
+  ;;Note that considering:
+  ;;
+  ;;   (quotient+remainder X Y)
+  ;;
+  ;;
+  ;;according to R6RS:
+  ;;
+  ;;   (define (sign n)
+  ;;     (cond ((negative? n) -1)
+  ;;           ((positive? n) 1)
+  ;;           (else 0)))
+  ;;
+  ;;   (define (quotient n1 n2)
+  ;;     (* (sign n1) (sign n2) (div (abs n1) (abs n2))))
+  ;;
+  ;;   (define (remainder n1 n2)
+  ;;     (* (sign n1) (mod (abs n1) (abs n2))))
+  ;;
+  ;;   (define (modulo n1 n2)
+  ;;     (* (sign n2) (mod (* (sign n2) n1) (abs n2))))
+  ;;
+  ;;so we have:
+  ;;
+  ;;   sign(quotient)  = sign(X) * sign(Y)
+  ;;   sign(remainder) = sign(X)
+  ;;
   (define who 'quotient+remainder)
 
   (define (quotient+remainder x y)
-    (if (eq? y 0)
+    (if (zero? y) ;both exact and inexact
 	(assertion-violation who "second argument must be non-zero")
       (cond-inexact-integer-operand x
-       ((fixnum?)	($quotient+remainder-fixnum-number x y))
-       ((bignum?)	($quotient+remainder-bignum-number x y))
-       ((flonum?)	($quotient+remainder-flonum-number x y))
-       (else
-	(%error-not-integer x)))))
+	((fixnum?)	($quotient+remainder-fixnum-number x y))
+	((bignum?)	($quotient+remainder-bignum-number x y))
+	((flonum?)	($quotient+remainder-flonum-number x y))
+	(else
+	 (%error-not-integer x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3167,18 +3193,23 @@
        (%error-not-integer y))))
 
   (define ($quotient+remainder-flonum-number x y)
-    (let ((v ($flonum->exact x)))
-      (cond-exact-integer-operand v
-	((fixnum?)
-	 (receive (q r)
-	     ($quotient+remainder-fixnum-number v y)
-	   (values (inexact q) (inexact r))))
-	((bignum?)
-	 (receive (q r)
-	     ($quotient+remainder-bignum-number v y)
-	   (values (inexact q) (inexact r))))
-	(else
-	 (%error-not-integer x)))))
+    (cond (($flzero?/positive x)
+	   (values (if (positive? y) +0.0 -0.0)
+		   +0.0))
+	  (($flzero?/negative x)
+	   (values (if (positive? y) -0.0 +0.0)
+		   -0.0))
+	  (else
+	   (let ((x.exact ($flonum->exact x)))
+	     (receive (q r)
+		 (cond-exact-integer-operand x.exact
+		   ((fixnum?)
+		    ($quotient+remainder-fixnum-number x.exact y))
+		   ((bignum?)
+		    ($quotient+remainder-bignum-number x.exact y))
+		   (else
+		    (%error-not-integer x)))
+	       (values (inexact q) (inexact r)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3199,42 +3230,54 @@
        (%error-not-integer x))))
 
   (define ($quotient+remainder-number-flonum x y)
-    (let ((v ($flonum->exact y)))
-      (cond-exact-integer-operand v
-	((fixnum?)
-	 (receive (q r)
-	     ($quotient+remainder-number-fixnum x v)
-	   (values (inexact q) (inexact r))))
-	((bignum?)
-	 (receive (q r)
-	     ($quotient+remainder-number-bignum x v)
-	   (values (inexact q) (inexact r))))
-	(else
-	 (%error-not-integer y)))))
+    (let ((y.exact ($flonum->exact y)))
+      (receive (q r)
+	  (cond-exact-integer-operand y.exact
+	    ((fixnum?)
+	     ($quotient+remainder-number-fixnum x y.exact))
+	    ((bignum?)
+	     ($quotient+remainder-number-bignum x y.exact))
+	    (else
+	     (%error-not-integer y)))
+	(values (if (inexact? q) q (inexact q))
+		(if (inexact? r) r (inexact r))))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($quotient+remainder-fixnum-fixnum x y)
-    (if ($fx= y -1)
-	(values ($neg-fixnum x) 0)
-      (values ($fxquotient x y) ($fxremainder x y))))
+    (cond (($fx= y -1)
+	   (values ($neg-fixnum x) 0))
+	  (($fx= x (least-fixnum))
+	   ;;Avoid overflow by avoiding $fxquotient in this case.
+	   (receive (r q)
+	       ($quotient+remainder-bignum-fixnum (- (least-fixnum)) y)
+	     (values ($neg-number r) ($neg-number q))))
+	  (else
+	   (values ($fxquotient x y) ($fxremainder x y)))))
 
   (define ($quotient+remainder-fixnum-bignum x y)
-    (values 0 x))
+    (if ($fx= x (least-fixnum))
+	(receive (r q)
+	    ($quotient+remainder-bignum-bignum (- (least-fixnum)) y)
+	  (values ($neg-number r) ($neg-number q)))
+      (values 0 x)))
 
   (define ($quotient+remainder-fixnum-flonum x y)
-    (let ((v ($flonum->exact y)))
-      (cond-exact-integer-operand v
-	((fixnum?)
-	 (receive (q r)
-	     ($quotient+remainder-fixnum-fixnum x v)
-	   (values (inexact q) (inexact r))))
-	((bignum?)
-	 (receive (q r)
-	     ($quotient+remainder-fixnum-bignum x v)
-	   (values (inexact q) (inexact r))))
-	(else
-	 (%error-not-integer y)))))
+    (receive (q r)
+	(let ((y.exact ($flonum->exact y)))
+	  (cond-exact-integer-operand y.exact
+	    ((fixnum?)	($quotient+remainder-fixnum-fixnum x y.exact))
+	    ((bignum?)	($quotient+remainder-fixnum-bignum x y.exact))
+	    (else
+	     (%error-not-integer y))))
+      (values (if (zero? q)
+		  (if ($fxpositive? x)
+		      (if ($flpositive? y) +0.0 -0.0)
+		    (if ($flpositive? y) -0.0 +0.0))
+		(inexact q))
+	      (if (zero? r)
+		  (if ($fxpositive? x) 0.0 -0.0)
+		(inexact r)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -3247,56 +3290,79 @@
       (values ($car p) ($cdr p))))
 
   (define ($quotient+remainder-bignum-flonum x y)
-    (let ((v ($flonum->exact y)))
-      (cond-exact-integer-operand v
-	((fixnum?)
-	 (receive (q r)
-	     ($quotient+remainder-bignum-fixnum x v)
-	   (values (inexact q) (inexact r))))
-	((bignum?)
-	 (receive (q r)
-	     ($quotient+remainder-bignum-bignum x v)
-	   (values (inexact q) (inexact r))))
-	(else
-	 (%error-not-integer y)))))
+    (receive (q r)
+	(let ((y.exact ($flonum->exact y)))
+	  (cond-exact-integer-operand y.exact
+	    ((fixnum?)	($quotient+remainder-bignum-fixnum x y.exact))
+	    ((bignum?)	($quotient+remainder-bignum-bignum x y.exact))
+	    (else
+	     (%error-not-integer y))))
+      (values (if (zero? q)
+		  (if ($bignum-positive? x)
+		      (if ($flpositive? y) +0.0 -0.0)
+		    (if ($flpositive? y) -0.0 +0.0))
+		(inexact q))
+	      (if (zero? r)
+		  (if ($bignum-positive? x) 0.0 -0.0)
+		(inexact r)))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($quotient+remainder-flonum-fixnum x y)
-    (let ((v ($flonum->exact x)))
-      (cond-exact-integer-operand v
-	((fixnum?)
-	 (receive (q r)
-	     ($quotient+remainder-fixnum-fixnum x y)
-	   (values (inexact q) (inexact r))))
-	((bignum?)
-	 (receive (q r)
-	     ($quotient+remainder-bignum-fixnum x y)
-	   (values (inexact q) (inexact r))))
-	(else
-	 (%error-not-integer x)))))
+    (cond (($flzero?/positive x)
+	   (values (if ($fxpositive? y) +0.0 -0.0)
+		   +0.0))
+	  (($flzero?/negative x)
+	   (values (if ($fxpositive? y) -0.0 +0.0)
+		   -0.0))
+	  (else
+	   (receive (q r)
+	       (let ((x.exact ($flonum->exact x)))
+		 (cond-exact-integer-operand x.exact
+		   ((fixnum?)	($quotient+remainder-fixnum-fixnum x.exact y))
+		   ((bignum?)	($quotient+remainder-bignum-fixnum x.exact y))
+		   (else
+		    (%error-not-integer x))))
+	     (values (if (zero? q)
+			 (if ($flpositive? x)
+			     (if ($fxpositive? y) +0.0 -0.0)
+			   (if ($fxpositive? y) -0.0 +0.0))
+		       (inexact q))
+		     (if (zero? r)
+			 (if ($flpositive? x) +0.0 -0.0)
+		       (inexact r)))))))
 
   (define ($quotient+remainder-flonum-bignum x y)
-    (let ((v ($flonum->exact x)))
-      (cond-exact-integer-operand v
-	((fixnum?)
-	 (receive (q r)
-	     ($quotient+remainder-fixnum-bignum x y)
-	   (values (inexact q) (inexact r))))
-	((bignum?)
-	 (receive (q r)
-	     ($quotient+remainder-bignum-bignum x y)
-	   (values (inexact q) (inexact r))))
-	(else
-	 (%error-not-integer x)))))
+    (cond (($flzero?/positive x)
+	   (values (if ($bignum-positive? y) +0.0 -0.0)
+		   +0.0))
+	  (($flzero?/negative x)
+	   (values (if ($bignum-positive? y) -0.0 +0.0)
+		   -0.0))
+	  (else
+	   (receive (q r)
+	       (let ((x.exact ($flonum->exact x)))
+		 (cond-exact-integer-operand x.exact
+		   ((fixnum?)	($quotient+remainder-fixnum-bignum x.exact y))
+		   ((bignum?)	($quotient+remainder-bignum-bignum x.exact y))
+		   (else
+		    (%error-not-integer x))))
+	     (values (inexact q) (inexact r))))))
 
   (define ($quotient+remainder-flonum-flonum x y)
-    (let ((v ($flonum->exact x)))
-      (cond-exact-integer-operand v
-	((fixnum?)	($quotient+remainder-fixnum-flonum x y))
-	((bignum?)	($quotient+remainder-bignum-flonum x y))
-	(else
-	 (%error-not-integer x)))))
+    (cond (($flzero?/positive x)
+	   (values (if ($flpositive? y) +0.0 -0.0)
+		   +0.0))
+	  (($flzero?/negative x)
+	   (values (if ($flpositive? y) -0.0 +0.0)
+		   -0.0))
+	  (else
+	   (let ((x.exact ($flonum->exact x)))
+	     (cond-exact-integer-operand x.exact
+	       ((fixnum?)	($quotient+remainder-fixnum-flonum x.exact y))
+	       ((bignum?)	($quotient+remainder-bignum-flonum x.exact y))
+	       (else
+		(%error-not-integer x)))))))
 
 ;;; --------------------------------------------------------------------
 

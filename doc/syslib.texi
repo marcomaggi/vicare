@@ -2516,8 +2516,8 @@ exact or inexact integers.
 
 
 @deffn {Unsafe Operation} $quotient+remainder-fixnum-fixnum @vari{fx} @varii{fx}
-Perform the integer division between a fixnum and a fixnum; return
-fixnums.
+Perform the integer division between a fixnum and a fixnum; return a
+fixnum or bignum as quotient, return a fixnum as remainder.
 @end deffn
 
 
@@ -2641,8 +2641,8 @@ exact or inexact integers.
 
 
 @deffn {Unsafe Operation} $quotient-fixnum-fixnum @vari{fx} @varii{fx}
-Perform the integer division between a fixnum and a fixnum; return
-fixnums.
+Perform the integer division between a fixnum and a fixnum; return a
+fixnum or bignum.
 @end deffn
 
 
