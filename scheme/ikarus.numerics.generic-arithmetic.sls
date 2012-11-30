@@ -89,7 +89,7 @@
     sra				sll
 
     ;; powers and square roots
-    expt			sqr
+    expt			square
     sqrt			exact-integer-sqrt
 
     ;; logarithms and exponentials
@@ -194,8 +194,8 @@
     $div-cflonum-ratnum		$div-cflonum-flonum	$div-cflonum-compnum
     $div-cflonum-cflonum
 
-    $sqr-fixnum			$sqr-bignum		$sqr-ratnum
-    $sqr-compnum		$sqr-cflonum
+    $square-fixnum		$square-bignum		$square-ratnum
+    $square-compnum		$square-cflonum
 
     $gcd-number-number		$gcd-fixnum-number	$gcd-bignum-number
     $gcd-flonum-number		$gcd-number-fixnum	$gcd-number-bignum
@@ -367,7 +367,7 @@
 		sra				sll
 
 		;; powers and square roots
-		expt				sqr
+		expt				square
 		sqrt				exact-integer-sqrt
 
 		;; logarithms and exponentials
@@ -406,7 +406,7 @@
 	  $flzero?/positive	$flzero?/negative
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
-	  $flsqr		$flsqrt
+	  $flsquare		$flsqrt
 	  $flnumerator		$fldenominator
 	  $flround
 	  $fllog		$flexp
@@ -424,7 +424,7 @@
 	$flzero?/positive	$flzero?/negative
 	$flpositive?		$flnegative?
 	$fleven?		$flodd?
-	$flsqr			$flsqrt
+	$flsquare		$flsqrt
 	$flnumerator		$fldenominator
 	$flround
 	$fllog			$flexp
@@ -676,7 +676,7 @@
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
-      (let ((denom   ($add-number-number (sqr x.rep) (sqr x.imp)))
+      (let ((denom   ($add-number-number (square x.rep) (square x.imp)))
 	    (num.rep x.rep)
 	    (num.imp ($neg-number x.imp)))
 	($make-rectangular ($div-number-number num.rep denom)
@@ -693,7 +693,7 @@
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      (let ((denom   ($add-flonum-flonum ($flsqr x.rep) ($flsqr x.imp)))
+      (let ((denom   ($add-flonum-flonum ($flsquare x.rep) ($flsquare x.imp)))
 	    (num.rep x.rep)
 	    (num.imp ($neg-flonum x.imp)))
 	($make-cflonum ($div-flonum-flonum num.rep denom)
@@ -2152,7 +2152,7 @@
     ;;
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+      (let ((denom   ($add-number-number (square y.rep) (square y.imp)))
 	    (num.rep ($mul-fixnum-number x y.rep))
 	    (num.imp (let ((x.neg ($neg-fixnum x)))
 		       ;;The  negation of  a  fixnum is  *not* always  a
@@ -2176,7 +2176,7 @@
     ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+      (let ((denom   ($fl+ ($flsquare y.rep) ($flsquare y.imp)))
 	    (num.rep ($mul-fixnum-flonum x y.rep))
 	    (num.imp (let ((x.neg ($neg-fixnum x)))
 		       ;;The  negation of  a  fixnum is  *not* always  a
@@ -2290,7 +2290,7 @@
     ;;
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+      (let ((denom   ($add-number-number (square y.rep) (square y.imp)))
 	    (num.rep ($mul-bignum-number x y.rep))
 	    (num.imp (let ((x.neg ($neg-bignum x)))
 		       ;;The  negation of  a  bignum is  *not* always  a
@@ -2313,7 +2313,7 @@
     ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($add-flonum-flonum ($flsqr y.rep) ($flsqr y.imp)))
+      (let ((denom   ($add-flonum-flonum ($flsquare y.rep) ($flsquare y.imp)))
 	    (num.rep ($mul-bignum-flonum x y.rep))
 	    (num.imp (let ((x.neg ($neg-bignum x)))
 		       ;;The  negation of  a  bignum is  *not* always  a
@@ -2384,8 +2384,8 @@
 	  (x.den ($ratnum-d x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($mul-number-number x.den ($add-number-number (sqr y.rep)
-								   (sqr y.imp))))
+      (let ((denom   ($mul-number-number x.den ($add-number-number (square y.rep)
+								   (square y.imp))))
 	    (num.rep ($mul-number-number x.num y.rep))
 	    (num.imp ($mul-number-number ($neg-number x.num) y.imp)))
 	($make-rectangular ($div-number-number num.rep denom)
@@ -2409,8 +2409,8 @@
 	  (x.den ($ratnum-d x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($mul-number-flonum x.den ($fl+ ($flsqr y.rep)
-						     ($flsqr y.imp))))
+      (let ((denom   ($mul-number-flonum x.den ($fl+ ($flsquare y.rep)
+						     ($flsquare y.imp))))
 	    (num.rep ($mul-number-flonum x.num y.rep))
 	    (num.imp ($mul-number-flonum ($neg-number x.num) y.imp)))
 	($make-cflonum ($fl/ num.rep denom)
@@ -2441,7 +2441,7 @@
     ;;
     (let ((y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+      (let ((denom   ($add-number-number (square y.rep) (square y.imp)))
 	    (num.rep ($mul-flonum-number x        y.rep))
 	    (num.imp ($mul-flonum-number ($fl- x) y.imp)))
 	($make-cflonum ($div-flonum-number num.rep denom)
@@ -2458,7 +2458,7 @@
     ;;
     (let ((y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+      (let ((denom   ($fl+ ($flsquare y.rep) ($flsquare y.imp)))
 	    (num.rep ($fl* x y.rep))
 	    (num.imp ($fl* ($fl- x) y.imp)))
 	($make-cflonum ($fl/ num.rep denom)
@@ -2527,7 +2527,7 @@
 	  (x.imp ($compnum-imag x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+      (let ((denom   ($add-number-number (square y.rep) (square y.imp)))
 	    (num.rep ($add-number-number ($mul-number-number x.rep y.rep)
 					 ($mul-number-number x.imp y.imp)))
 	    (num.imp ($sub-number-number ($mul-number-number x.imp y.rep)
@@ -2548,7 +2548,7 @@
 	  (x.imp ($compnum-imag x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+      (let ((denom   ($fl+ ($flsquare y.rep) ($flsquare y.imp)))
 	    (num.rep ($fl+ ($mul-number-flonum x.rep y.rep)
 			   ($mul-number-flonum x.imp y.imp)))
 	    (num.imp ($fl- ($mul-number-flonum x.imp y.rep)
@@ -2619,7 +2619,7 @@
 	  (x.imp ($cflonum-imag x))
 	  (y.rep ($compnum-real y))
 	  (y.imp ($compnum-imag y)))
-      (let ((denom   ($add-number-number (sqr y.rep) (sqr y.imp)))
+      (let ((denom   ($add-number-number (square y.rep) (square y.imp)))
 	    (num.rep ($fl+ ($mul-flonum-number x.rep y.rep)
 			   ($mul-flonum-number x.imp y.imp)))
 	    (num.imp ($fl- ($mul-flonum-number x.imp y.rep)
@@ -2640,7 +2640,7 @@
 	  (x.imp ($cflonum-imag x))
 	  (y.rep ($cflonum-real y))
 	  (y.imp ($cflonum-imag y)))
-      (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+      (let ((denom   ($fl+ ($flsquare y.rep) ($flsquare y.imp)))
 	    (num.rep ($fl+ ($fl* x.rep y.rep)
 			   ($fl* x.imp y.imp)))
 	    (num.imp ($fl- ($fl* x.imp y.rep)
@@ -2667,7 +2667,7 @@
       ;;                       ($flzero? y.imp))))
       ;;        1.0+0.0i)
       ;;       (else
-      ;;        (let ((denom   ($fl+ ($flsqr y.rep) ($flsqr y.imp)))
+      ;;        (let ((denom   ($fl+ ($flsquare y.rep) ($flsquare y.imp)))
       ;;              (num.rep ($fl+ ($fl* x.rep y.rep)
       ;;                             ($fl* x.imp y.imp)))
       ;;              (num.imp ($fl- ($fl* x.imp y.rep)
@@ -3618,55 +3618,55 @@
   #| end of module: modulo |# )
 
 
-(module (sqr
-	 $sqr-fixnum		$sqr-bignum		$sqr-ratnum
-	 $sqr-compnum		$sqr-cflonum)
-  (define who 'sqr)
+(module (square
+	 $square-fixnum		$square-bignum		$square-ratnum
+	 $square-compnum		$square-cflonum)
+  (define who 'square)
 
-  (define (sqr x)
+  (define (square x)
     (cond-numeric-operand x
-      ((fixnum?)	($sqr-fixnum  x))
-      ((bignum?)	($sqr-bignum  x))
-      ((flonum?)	($flsqr       x))
-      ((ratnum?)	($sqr-ratnum  x))
-      ((compnum?)	($sqr-compnum x))
-      ((cflonum?)	($sqr-cflonum x))
+      ((fixnum?)	($square-fixnum  x))
+      ((bignum?)	($square-bignum  x))
+      ((flonum?)	($flsquare       x))
+      ((ratnum?)	($square-ratnum  x))
+      ((compnum?)	($square-compnum x))
+      ((cflonum?)	($square-cflonum x))
       (else
        (assertion-violation who "expected number as argument" x))))
 
-  (define ($sqr-fixnum x)
+  (define ($square-fixnum x)
     ($mul-fixnum-fixnum x x))
 
-  (define ($sqr-bignum x)
+  (define ($square-bignum x)
     ($mul-bignum-bignum x x))
 
-  (define ($sqr-ratnum x)
-    ($div-number-number (sqr ($ratnum-n x))
-			(sqr ($ratnum-d x))))
+  (define ($square-ratnum x)
+    ($div-number-number (square ($ratnum-n x))
+			(square ($ratnum-d x))))
 
-  (define ($sqr-compnum x)
+  (define ($square-compnum x)
     ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
     ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
     ;; = (x.rep^2 - x.imp^2) + i * (x.rep * x.imp + x.imp * x.rep)
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
-      ($make-rectangular ($sub-number-number (sqr x.rep) (sqr x.imp))
+      ($make-rectangular ($sub-number-number (square x.rep) (square x.imp))
 			 (let ((t ($mul-number-number x.rep x.imp)))
 			   ($add-number-number t t)))))
 
-  (define ($sqr-cflonum x)
+  (define ($square-cflonum x)
     ;; (x.rep + i * x.imp) * (x.rep + i * x.imp)
     ;; = (x.rep * x.rep - x.imp * x.imp) + i * (x.rep * x.imp + x.imp * x.rep)
     ;; = (x.rep^2 - x.imp^2) + i * 2 * x.rep * x.imp
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl- ($flsqr x.rep) ($flsqr x.imp))
+      ($make-cflonum ($fl- ($flsquare x.rep) ($flsquare x.imp))
 		     (let ((t ($fl* x.rep x.imp)))
 		       ($fl+ t t)))))
 
-  #| end of module: sqr |# )
+  #| end of module: square |# )
 
 
 (module (expt
@@ -3950,9 +3950,8 @@
     ;;
     (let ((Z.rep (real-part Z))
 	  (Z.imp (imag-part Z)))
-      (let ((magn (sqrt (+ (* Z.rep Z.rep)
-			   (* Z.imp Z.imp))))
-	    (sgn  (if (> Z.imp 0) 1 -1)))
+      (let ((magn (sqrt (+ (square Z.rep) (square Z.imp))))
+	    (sgn  (if (positive? Z.imp) 1 -1)))
 	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
 			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
 
@@ -3975,7 +3974,7 @@
 	  (Z.imp (imag-part Z)))
       ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
       ;;compnum!!!
-      (let* ((magn  ($sqrt-flonum ($fl+ ($flsqr Z.rep) ($flsqr Z.imp))))
+      (let* ((magn  ($sqrt-flonum ($fl+ ($flsquare Z.rep) ($flsquare Z.imp))))
 	     (sgn   (if ($flpositive? Z.imp) 1 -1))
 	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
 	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
@@ -5481,8 +5480,8 @@
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl/ ($fllog ($fl+ ($flsqr x.rep)
-					 ($flsqr x.imp)))
+      ($make-cflonum ($fl/ ($fllog ($fl+ ($flsquare x.rep)
+					 ($flsquare x.imp)))
 			   2.0)
 		     ($flatan2 x.imp x.rep))))
 
@@ -5766,13 +5765,13 @@
       (if ($fxzero? x.rep) ;this works with any object
 	  ($make-compnum 0 (asinh x.imp))
 	(let* (	;;A is a non-negative real number.
-	       (A	(+ (sqr x.rep) (sqr x.imp)))
+	       (A	(+ (square x.rep) (square x.imp)))
 	       ;;B is a real number.
 	       (B	(- A 1.0))
 	       ;;C is a non-negative real number.
-	       (C	(sqr B))
+	       (C	(square B))
 	       ;;D is a non-negative real number.
-	       (D	(sqr x.imp))
+	       (D	(square x.imp))
 	       ;;Q is a non-negative real number.
 	       (Q	(sqrt (+ C (* 4 D)))))
 	  (define (sgn N)
@@ -5796,13 +5795,13 @@
       (if ($flzero? x.rep)
 	  ($make-cflonum 0.0 ($flasinh x.imp))
 	(let* (	;;A is a non-negative flonum.
-	       (A	($fl+ ($flsqr x.rep) ($flsqr x.imp)))
+	       (A	($fl+ ($flsquare x.rep) ($flsquare x.imp)))
 	       ;;B is a flonum.
 	       (B	($fl- A 1.0))
 	       ;;C is a non-negative flonum.
-	       (C	($flsqr B))
+	       (C	($flsquare B))
 	       ;;D is a non-negative flonum.
-	       (D	($flsqr x.imp))
+	       (D	($flsquare x.imp))
 	       ;;Q is a non-negative flonum.
 	       (Q	($sqrt-flonum ($fl+ C ($fl* 4.0 D)))))
 	  (define (sgn N)
@@ -6112,13 +6111,13 @@
 	  (let ((v (asin x.imp)))
 	    ($make-rectangular (imag-part v) (real-part v)))
 	(let* (	;;D is a non-negative real number.
-	       (D (sqr x.imp))
+	       (D (square x.imp))
 	       ;;A is a non-negative real number.
-	       (A (+ (sqr x.rep) D))
+	       (A (+ (square x.rep) D))
 	       ;;B is a real number.
 	       (B (- A 1))
 	       ;;C is a non-negative real number.
-	       (C (sqr B B))
+	       (C (square B B))
 	       ;;Q is a non-negative real number.
 	       (Q (sqrt (+ C (* 4 D)))))
 	  (define (sgn N)
@@ -6146,9 +6145,9 @@
 	    ($make-cflonum (if real? 0.0 ($cflonum-imag v))
 			   (if real? v   ($cflonum-real v))))
 	(let* (	;;D is a non-negative flonum.
-	       (D ($flsqr x.imp))
+	       (D ($flsquare x.imp))
 	       ;;A is a non-negative flonum.
-	       (A ($fl+ ($flsqr x.rep) D))
+	       (A ($fl+ ($flsquare x.rep) D))
 	       ;;B is a flonum.
 	       (B ($fl- A 1.0))
 	       ;;C is a non-negative flonum.
@@ -6192,7 +6191,7 @@
     (cond (($fl>= x +1.0) ; +1 <= X < +inf
 	   ($flacosh x))
 	  (($fl>= x -1.0) ; -1 <= X < +1
-	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsqr x x))) x)))
+	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x x))) x)))
 	  (($fl< x -1.0)  ; -inf < X < -1
 	   ($make-cflonum ($flacosh ($fl- x)) PI))
 	  (else +nan.0)))
@@ -6213,13 +6212,13 @@
       (if (zero? x.rep)
 	  ($add-number-compnum (asinh x.imp) ($make-compnum 0 PI/2))
 	(let* (	;;D is a non-negative real number.
-	       (D (sqr x.imp))
+	       (D (square x.imp))
 	       ;;A is a non-negative real number.
-	       (A (+ (sqr x.rep) D))
+	       (A (+ (square x.rep) D))
 	       ;;B is a real number.
 	       (B (- A 1))
 	       ;;C is a non-negative real number.
-	       (C (sqr B))
+	       (C (square B))
 	       ;;Q is a non-negative real number.
 	       (Q (sqrt (+ C (* 4 D)))))
 	  (define (sgn x)
@@ -6244,13 +6243,13 @@
       (if ($flzero? x.rep)
 	  (+ ($flasinh x.imp) ($make-cflonum 0.0 PI/2))
 	(let* ( ;;D is a non-negative flonum.
-	       (D ($flsqr x.imp))
+	       (D ($flsquare x.imp))
 	       ;;A is a non-negative flonum.
-	       (A ($fl+ ($flsqr x.rep) D))
+	       (A ($fl+ ($flsquare x.rep) D))
 	       ;;B is a flonum.
 	       (B ($fl- A 1.0))
 	       ;;C is a non-negative flonum.
-	       (C ($flsqr B))
+	       (C ($flsquare B))
 	       ;;Q is a non-negative flonum
 	       (Q ($flsqrt ($fl+ C ($fl* 4.0 D)))))
 	  (define (sgn N)

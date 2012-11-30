@@ -30,14 +30,14 @@
     ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
     ;;Maggi; Thu Nov 29, 2012)
     (only (ikarus generic-arithmetic)
-	  sqr)
+	  square)
     (except (ikarus system $flonums)
-	    $flsqr
+	    $flsquare
 	    $flsqrt)
     ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
     ;;Maggi; Thu Nov 29, 2012)
     (only (ikarus flonums)
-	  $flsqr
+	  $flsquare
 	  $flsqrt)
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
@@ -103,11 +103,11 @@
     ((compnum?)
      (let ((x.rep ($compnum-real x))
 	   (x.imp ($compnum-imag x)))
-       (sqrt (+ (sqr x.rep) (sqr x.imp)))))
+       (sqrt (+ (square x.rep) (square x.imp)))))
     ((cflonum?)
      (let ((x.rep ($cflonum-real x))
 	   (x.imp ($cflonum-imag x)))
-       ($flsqrt ($fl+ ($flsqr x.rep) ($flsqr x.imp)))))
+       ($flsqrt ($fl+ ($flsquare x.rep) ($flsquare x.imp)))))
     (else
      (assertion-violation who "expected number as argument" x))))
 

@@ -761,7 +761,7 @@ Return the square root of the operand.
 @end deffn
 
 
-@deffn {Unsafe Operation} $flsqr @var{fl}
+@deffn {Unsafe Operation} $flsquare @var{fl}
 Return the square of @var{fl}.
 @end deffn
 
@@ -923,7 +923,7 @@ level operations on numbers.
 * syslib numerics sub::         Numbers subtraction.
 * syslib numerics mul::         Numbers multiplication.
 * syslib numerics div::         Numbers division.
-* syslib numerics sqr::         Squaring of numbers.
+* syslib numerics square::      Squaring of numbers.
 * syslib numerics gcd::         Greatest common divisor.
 * syslib numerics lcm::         Least common multiple.
 * syslib numerics quorem::      Quotient and remainder.
@@ -2178,36 +2178,36 @@ Divide a cflonum with a cflonum and return the result as a cflonum.
 @end deffn
 
 @c page
-@node syslib numerics sqr
+@node syslib numerics square
 @subsection Numbers squaring
 
 
-To compute the square of any number, just use @func{sqr}.
+To compute the square of any number, just use @func{square}.
 
 
-@deffn {Unsafe Operation} $sqr-fixnum @var{fx}
+@deffn {Unsafe Operation} $square-fixnum @var{fx}
 Compute the square of a fixnum and return the result as fixnum or
 bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-bignum @var{bn}
+@deffn {Unsafe Operation} $square-bignum @var{bn}
 Compute the square of a bignum and return the result as bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-ratnum @var{rn}
+@deffn {Unsafe Operation} $square-ratnum @var{rn}
 Compute the square of a ratnum and return the result as ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-compnum @var{cn}
+@deffn {Unsafe Operation} $square-compnum @var{cn}
 Compute the square of a compnum and return the result as compnum or
 cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqr-cflonum @var{cfl}
+@deffn {Unsafe Operation} $square-cflonum @var{cfl}
 Compute the square of a cflonum and return the result as cflonum.
 @end deffn
 

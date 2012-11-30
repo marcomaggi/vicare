@@ -161,7 +161,7 @@ TESTS			=	\
 	test-vicare-numerics-gcd.sps			\
 	test-vicare-numerics-lcm.sps			\
 	test-vicare-numerics-quotient.sps		\
-	test-vicare-numerics-sqr.sps			\
+	test-vicare-numerics-square.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
@@ -385,7 +385,7 @@ EXTRA_DIST = \
 	test-vicare-numerics-gcd.sps			\
 	test-vicare-numerics-lcm.sps			\
 	test-vicare-numerics-quotient.sps		\
-	test-vicare-numerics-sqr.sps			\
+	test-vicare-numerics-square.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\

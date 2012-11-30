@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for numerics functions: sqr
+;;;Contents: tests for numerics functions: square
 ;;;Date: Thu Nov 29, 2012
 ;;;
 ;;;Abstract
@@ -268,7 +268,7 @@
 (parametrise ((check-test-name	'fixnums))
 
   (define-syntax test
-    (make-test sqr $sqr-fixnum))
+    (make-test square $square-fixnum))
 
   (test 0 0)
   (test 1 1)
@@ -284,7 +284,7 @@
 (parametrise ((check-test-name	'bignums))
 
   (define-syntax test
-    (make-test sqr $sqr-bignum))
+    (make-test square $square-bignum))
 
   (test BN1 288230376151711744)
   (test BN2 288230482452162121)
@@ -297,7 +297,7 @@
 (parametrise ((check-test-name	'ratnums))
 
   (define-syntax test
-    (make-test sqr $sqr-ratnum))
+    (make-test square $square-ratnum))
 
   (test 1/2 1/4)
   (test -1/2 1/4)
@@ -334,7 +334,7 @@
 (parametrise ((check-test-name	'flonums))
 
   (define-syntax test
-    (make-test sqr $flsqr))
+    (make-test square $flsquare))
 
   (test FL1 0.0)
   (test FL2 0.0)
@@ -350,7 +350,7 @@
 (parametrise ((check-test-name	'cflonums))
 
   (define-syntax test
-    (make-cflonum-test sqr $sqr-cflonum))
+    (make-cflonum-test square $square-cflonum))
 
   (test CFL01 0.0+0.0i)
   (test CFL02 0.0-0.0i)
@@ -375,7 +375,7 @@
 (parametrise ((check-test-name	'compnums))
 
   (define-syntax test
-    (make-test sqr $sqr-compnum))
+    (make-test square $square-compnum))
 
   (test 10+20i -300+400i)
   (test 1.0+20.0i -399.0+40.0i)
