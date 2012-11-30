@@ -932,7 +932,8 @@ level operations on numbers.
 * syslib numerics modulo::      Modulo between numbers.
 * syslib numerics max::         Maximum between numbers.
 * syslib numerics min::         Minimum between numbers.
-* syslib numerics abs::         Absolute value of numbers.
+* syslib numerics abs::         Absolute value of real numbers.
+* syslib numerics sign::        Sign of real numbers.
 * syslib numerics expt::        Raising numbers to power.
 * syslib numerics sqrt::        Square root of numbers.
 * syslib numerics log::         Logarithms of numbers.
@@ -3095,7 +3096,7 @@ flonums.
 
 @c page
 @node syslib numerics abs
-@subsection Absolute value of numbers
+@subsection Absolute value of real numbers
 
 
 @deffn {Unsafe Operation} $abs-bignum
@@ -3109,6 +3110,36 @@ Return a bignum or fixnum.
 
 @deffn {Unsafe Operation} $abs-ratnum
 
+@end deffn
+
+@c page
+@node syslib numerics sign
+@subsection Sign of real numbers
+
+
+@deffn {Unsafe Operation} $sign-fixnum @var{fx}
+Return a fixnum representing the sign of @var{fx}: @code{+1} for
+positive, @code{-1} for negative, @code{0} for zero.
+@end deffn
+
+
+@deffn {Unsafe Operation} $sign-bignum @var{bn}
+Return a fixnum representing the sign of @var{bn}: @code{+1} for
+positive, @code{-1} for negative, @code{0} for zero.
+@end deffn
+
+
+@deffn {Unsafe Operation} $sign-flonum @var{fl}
+Return a flonum representing the sign of @var{fx}: @code{+1.0} for
+positive, including @code{+0.0} and @code{+inf.0}; @code{-1} for
+negative, including @code{-0.0} and @code{-inf.0}; @code{+nan.0} for
+not--a--number.
+@end deffn
+
+
+@deffn {Unsafe Operation} $sign-ratnum @var{rn}
+Return a fixnum representing the sign of the numerator of @var{rn}:
+@code{+1} for positive, @code{-1} for negative, @code{0} for zero.
 @end deffn
 
 @c page

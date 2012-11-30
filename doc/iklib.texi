@@ -2107,7 +2107,8 @@ The following bindings are exported by the @library{ikarus} and
 
 @subsubheading Arithmetic functions
 
-@defun sqr @var{num}
+
+@defun square @var{num}
 Return the square of @var{num}.
 @end defun
 
@@ -2120,6 +2121,29 @@ non--zero.
 
 The operations are defined like for @func{quotient} and @func{remainder}
 from @rsixlibrary{r5rs}.
+@end defun
+
+
+@defun sign @var{X}
+Return a number object representing the sign of @var{X}, which must be
+a real number.  When @var{X} is a:
+
+@table @strong
+@item fixnum
+@itemx bignum
+Return a fixnum representing the sign of @var{X}: @code{+1} for
+positive, @code{-1} for negative, @code{0} for zero.
+
+@item flonum
+Return a flonum representing the sign of @var{X}: @code{+1.0} for
+positive, including @code{+0.0} and @code{+inf.0}; @code{-1} for
+negative, including @code{-0.0} and @code{-inf.0}; @code{+nan.0} for
+not--a--number.
+
+@item ratnum
+Return a fixnum representing the sign of the numerator of @var{rn}:
+@code{+1} for positive, @code{-1} for negative, @code{0} for zero.
+@end table
 @end defun
 
 @c ------------------------------------------------------------

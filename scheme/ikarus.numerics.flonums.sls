@@ -59,8 +59,10 @@
     flsquare		$flsquare
     flsqrt		$flsqrt
 
-    flinteger?		flnan?
-    flfinite?		flinfinite?
+    flinteger?
+    flnan?		$flnan?
+    flfinite?		$flfinite?
+    flinfinite?		$flinfinite?
 
     fl=?
     fl<?		fl>?
@@ -361,36 +363,26 @@
 
 ;;;; predicates
 
-(define (flinteger? x)
-  (define who 'flinteger?)
-  (with-arguments-validation (who)
-      ((flonum	x))
-    ($flonum-integer? x)))
+(define-fl-operation/one flinteger?	$flonum-integer?)
+(define-fl-operation/one flfinite?	$flfinite?)
+(define-fl-operation/one flinfinite?	$flinfinite?)
+(define-fl-operation/one flnan?		$flnan?)
 
-(define (flfinite? x)
-  (define who 'flfinite?)
-  (with-arguments-validation (who)
-      ((flonum	x))
+(define ($flfinite? x)
+  (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+    (not ($fx= be 2047))))
+
+(module ($flinfinite? $flnan?)
+
+  (define ($flinfinite? x)
     (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
-      (not ($fx= be 2047)))))
+      (and ($fx= be 2047) ;nans and infs
+	   ($zero-m? x))))
 
-(module (flinfinite? flnan?)
-
-  (define (flinfinite? x)
-    (define who 'flinfinite?)
-    (with-arguments-validation (who)
-	((flonum	x))
-      (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
-	(and ($fx= be 2047) ;nans and infs
-	     ($zero-m? x)))))
-
-  (define (flnan? x)
-    (define who 'flnan?)
-    (with-arguments-validation (who)
-	((flonum	x))
-      (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
-	(and ($fx= be 2047) ;;; nans and infs
-	     (not ($zero-m? x))))))
+  (define ($flnan? x)
+    (let ((be (fxlogand ($flonum-sbe x) ($fxsub1 ($fxsll 1 11)))))
+      (and ($fx= be 2047) ;;; nans and infs
+	   (not ($zero-m? x)))))
 
   (define ($zero-m? f)
     (and ($fxzero? ($flonum-u8-ref f 7))

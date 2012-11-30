@@ -70,7 +70,7 @@
     exact->inexact		inexact
 
     ;; part functions
-    abs
+    abs				sign
     floor			ceiling
     round			truncate
     numerator			denominator
@@ -267,6 +267,9 @@
 
     $abs-bignum			$abs-flonum		$abs-ratnum
 
+    $sign-fixnum		$sign-bignum
+    $sign-flonum		$sign-ratnum
+
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
 
@@ -406,6 +409,8 @@
 	  $flzero?/positive	$flzero?/negative
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
+	  $flnan?
+	  $flfinite?		$flinfinite?
 	  $flsquare		$flsqrt
 	  $flnumerator		$fldenominator
 	  $flround
@@ -424,6 +429,8 @@
 	$flzero?/positive	$flzero?/negative
 	$flpositive?		$flnegative?
 	$fleven?		$flodd?
+	$flnan?
+	$flfinite?		$flinfinite?
 	$flsquare		$flsqrt
 	$flnumerator		$fldenominator
 	$flround
@@ -4461,6 +4468,50 @@
     (assertion-violation who "expected real number as argument" x))
 
   #| end of module: min |# )
+
+
+(module (sign
+	 $sign-fixnum		$sign-bignum
+	 $sign-flonum		$sign-ratnum)
+  (define who 'sign)
+
+  (define (sign x)
+    (cond-real-numeric-operand x
+      ((fixnum?)	($sign-fixnum x))
+      ((bignum?)	($sign-bignum x))
+      ((ratnum?)	($sign-ratnum x))
+      ((flonum?)	($sign-flonum x))
+      (else
+       (%error-not-real-number x))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($sign-fixnum x)
+    (cond (($fxpositive? x)	+1)
+	  (($fxnegative? x)	-1)
+	  (else			0)))
+
+  (define ($sign-bignum x)
+    (if ($bignum-positive? x) +1 -1))
+
+  (define ($sign-flonum x)
+    (cond ((flnan? x)
+	   +nan.0)
+	  ((or ($flzero?/positive x)
+	       ($flpositive? x))
+	   +1.0)
+	  (else
+	   -1.0)))
+
+  (define ($sign-ratnum x)
+    (sign ($ratnum-n x)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-real-number x)
+    (assertion-violation who "not a real number" x))
+
+  #| end of module: sign |# )
 
 
 (module (abs
