@@ -2962,8 +2962,8 @@
       ((fixnum?)	x)
       ((bignum?)	x)
       ((flonum?)
-       (let ((v ($flonum->exact x)))
-	 (cond-exact-integer-operand v
+       (let ((x.exact ($flonum->exact x)))
+	 (cond-exact-integer-operand x.exact
 	   ((fixnum?)	x)
 	   ((bignum?)	x)
 	   (else
@@ -3033,26 +3033,26 @@
 
 ;;; --------------------------------------------------------------------
 
-;;;FIXME After negating fixnums and bignums we  do not know if X^ and Y^
-;;;are still fixnums or still bignums:
+;;;NOTE After  negating fixnums and  bignums X and Y  we do not  know if
+;;;X.ABS and Y.ABS are still fixnums or still bignums:
 ;;;
 ;;;   ($neg-fixnum (least-fixnum))	=> bignum
 ;;;   ($neg-bignum (- (least-fixnum)))	=> fixnum
 ;;;
-;;;Should we use  different branches when X and/or  Y are (least-fixnum)
-;;;or (- (least-fixnum))?  (Marco Maggi; Sun Nov 25, 2012)
 
   (define ($lcm-fixnum-fixnum x y)
-    (let ((x^ (if ($fxnegative? x) ($neg-fixnum x) x))
-	  (y^ (if ($fxnegative? y) ($neg-fixnum y) y)))
-      (let ((g ($gcd-number-number x^ y^)))
-	($mul-number-number y (quotient x^ g)))))
+    (let ((x.abs ($fxabs x))
+	  (y.abs ($fxabs y)))
+      (if (or (eq? x.abs 0)
+	      (eq? y.abs 0))
+	  0
+	($least-common-multiple x.abs y.abs))))
 
   (define ($lcm-fixnum-bignum x y)
-    (let ((x^ (if ($fxnegative?      x) ($neg-fixnum x) x))
-	  (y^ (if ($bignum-negative? y) ($neg-bignum y) y)))
-      (let ((g ($gcd-number-number x^ y^)))
-	($mul-number-number y (quotient x^ g)))))
+    (let ((x.abs ($fxabs x)))
+      (if (eq? x.abs 0)
+	  0
+	($least-common-multiple x.abs ($abs-bignum y)))))
 
   (define ($lcm-fixnum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
@@ -3065,16 +3065,13 @@
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-bignum-fixnum x y)
-    (let ((x^ (if ($bignum-negative? x) ($neg-bignum x) x))
-	  (y^ (if ($fxnegative?      y) ($neg-fixnum y) y)))
-      (let ((g ($gcd-number-number x^ y^)))
-	($mul-number-number y^ (quotient x^ g)))))
+    (let ((y.abs ($fxabs y)))
+      (if (eq? y.abs 0)
+	  0
+	($least-common-multiple ($abs-bignum x) y.abs))))
 
   (define ($lcm-bignum-bignum x y)
-    (let ((x^ (if ($bignum-negative? x) ($neg-bignum x) x))
-	  (y^ (if ($bignum-negative? y) ($neg-bignum y) y)))
-      (let ((g ($gcd-number-number x^ y^)))
-	($mul-number-number y^ (quotient x^ g)))))
+    ($least-common-multiple ($abs-bignum x) ($abs-bignum y)))
 
   (define ($lcm-bignum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
@@ -3109,6 +3106,14 @@
 	((bignum?)	($lcm-bignum-flonum x.exact y))
 	(else
 	 (%error-not-integer x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define ($least-common-multiple x.abs y.abs)
+    ;;Both X and Y must be non-negative exact integers.
+    ;;
+    (let ((g ($gcd-number-number x.abs y.abs)))
+      ($mul-number-number y.abs (quotient x.abs g))))
 
 ;;; --------------------------------------------------------------------
 

@@ -2336,68 +2336,119 @@ a flonum.
 @subsection Least common multiple
 
 
-@deffn {Unsafe Operation} $lcm-number-number
+@deffn {Unsafe Operation} $lcm-number-number @vari{x} @varii{x}
+Return the least common multiple between any couple of real numbers;
+return a fixnum, bignum or flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Real number as second argument
+
+
+@deffn {Unsafe Operation} $lcm-fixnum-number @var{fx} @var{x}
+Return the least common multiple between a fixnum and any real number;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-fixnum-number
+@deffn {Unsafe Operation} $lcm-bignum-number @var{bn} @var{x}
+Return the least common multiple between a bignum and any real number;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-bignum-number
+@deffn {Unsafe Operation} $lcm-flonum-number @var{fl} @var{x}
+Return the least common multiple between a flonum and any real number;
+return a fixnum, bignum or flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Real number as first argument
+
+
+@deffn {Unsafe Operation} $lcm-number-fixnum @var{x} @var{fx}
+Return the least common multiple between any real number and a fixnum;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-flonum-number
+@deffn {Unsafe Operation} $lcm-number-bignum @var{x} @var{bn}
+Return the least common multiple between any real number and a bignum;
+return a fixnum, bignum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-number-fixnum
+@deffn {Unsafe Operation} $lcm-number-flonum @var{x} @var{fl}
+Return the least common multiple between any real number and a flonum;
+return a fixnum, bignum or flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $lcm-fixnum-fixnum @vari{fx} @varii{fx}
+Return the least common multiple between a fixnum and a fixnum; return a
+fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-number-bignum
+@deffn {Unsafe Operation} $lcm-fixnum-bignum @var{fx} @var{bn}
+Return the least common multiple between a fixnum and a bignum; return a
+fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-number-flonum
+@deffn {Unsafe Operation} $lcm-fixnum-flonum @var{fx} @var{fl}
+Return the least common multiple between a fixnum and a flonum; return a
+flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $lcm-bignum-fixnum @var{bn} @var{fx}
+Return the least common multiple between a bignum and a fixnum; return a
+fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-fixnum-fixnum
+@deffn {Unsafe Operation} $lcm-bignum-bignum @vari{bn} @varii{bn}
+Return the least common multiple between a bignum and a bignum; return a
+bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-fixnum-bignum
+@deffn {Unsafe Operation} $lcm-bignum-flonum @var{bn} @var{fl}
+Return the least common multiple between a bignum and a flonum; return a
+flonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $lcm-flonum-fixnum @var{fl} @var{fx}
+Return the least common multiple between a flonum and a fixnum; return a
+flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-fixnum-flonum
+@deffn {Unsafe Operation} $lcm-flonum-bignum @var{fl} @var{bn}
+Return the least common multiple between a flonum and a bignum; return a
+flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $lcm-bignum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $lcm-bignum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $lcm-bignum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $lcm-flonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $lcm-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $lcm-flonum-flonum
-
+@deffn {Unsafe Operation} $lcm-flonum-flonum @vari{fl} @varii{fl}
+Return the least common multiple between a flonum and a flonum; return a
+flonum.
 @end deffn
 
 @c page
