@@ -25,29 +25,22 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
+
 #!ikarus
 (import (ikarus)
-  (ikarus-test-framework))
+  (ikarus-test-framework)
+  (vicare checks))
 
-(define (test-base-case op i0 i1 r)
-  (assert (= (op i0 i1) r)))
+(check-set-mode! 'report-failed)
+(check-display "*** testing Ikarus bitwise operations\n")
 
-(define (test-base-cases)
+
+;;;; helpers
 
-  (test-base-case bitwise-and 0 0 0)
-  (test-base-case bitwise-and 0 1 0)
-  (test-base-case bitwise-and 1 0 0)
-  (test-base-case bitwise-and 1 1 1)
-
-  (test-base-case bitwise-ior 0 0 0)
-  (test-base-case bitwise-ior 0 1 1)
-  (test-base-case bitwise-ior 1 0 1)
-  (test-base-case bitwise-ior 1 1 1)
-
-  (test-base-case bitwise-xor 0 0 0)
-  (test-base-case bitwise-xor 0 1 1)
-  (test-base-case bitwise-xor 1 0 1)
-  (test-base-case bitwise-xor 1 1 0))
+(define-syntax test-base-case
+  (syntax-rules ()
+    ((_ op i0 i1 r)
+     (check (op i0 i1) => r))))
 
 (define (generate-numbers)
   (define N 68)
@@ -55,14 +48,12 @@
     (if (zero? i)
 	'()
       (cons n (n* (bitwise-arithmetic-shift-left n 1) (- i 1)))))
-  (append
-   (n* 1 N)
-   (n* -1 N)
-   (map sub1 (n* 1 N))
-   (map sub1 (n* -1 N))
-   (map add1 (n* 1 N))
-   (map add1 (n* -1 N))))
-
+  (append (n* 1 N)
+	  (n* -1 N)
+	  (map sub1 (n* 1 N))
+	  (map sub1 (n* -1 N))
+	  (map add1 (n* 1 N))
+	  (map add1 (n* -1 N))))
 
 (define (one-bit n)
   (if (even? n) 0 1))
@@ -83,32 +74,46 @@
 (define (test-case op)
   (define ls (generate-numbers))
   (define id 0)
-  (for-each
-      (lambda (n1)
-        (for-each
-	    (lambda (n2)
-	      (let ([r0 (op n1 n2)]
-		    [r1 (trusted op n1 n2)])
-		(unless (= r0 r1)
-		  (printf "id=~s ~x ~x ~x ~x\n" id n1 n2 r0 r1)
-		  (error 'test-bitwise-op
-		    "mismatch/op/a0/a1/got/expected" op n1 n2 r0 r1))
-		(set! id (+ id 1))))
-          ls))
+  (for-each (lambda (n1)
+	      (for-each (lambda (n2)
+			  (let ((r0 (op n1 n2))
+				(r1 (trusted op n1 n2)))
+			    (check r0 => r1)
+			    (unless (= r0 r1)
+			      (printf "id=~s ~x ~x ~x ~x\n" id n1 n2 r0 r1)
+			      (error 'test-bitwise-op
+				"mismatch/op/a0/a1/got/expected" op n1 n2 r0 r1))
+			    (set! id (+ id 1))))
+		ls))
     ls))
 
-(define (test-other-cases)
-  (test-case bitwise-and)
-  (test-case bitwise-ior)
-  (test-case bitwise-xor))
+
+;;;; go
 
-(define (run-tests)
-  (test-base-cases)
-  (test-other-cases))
+(test-base-case bitwise-and 0 0 0)
+(test-base-case bitwise-and 0 1 0)
+(test-base-case bitwise-and 1 0 0)
+(test-base-case bitwise-and 1 1 1)
 
-(set-port-buffer-mode! (current-output-port) (buffer-mode none))
-(display "*** testing bitwise operations\n" (current-error-port))
-(run-tests)
-(display "; *** done\n" (current-error-port))
+(test-base-case bitwise-ior 0 0 0)
+(test-base-case bitwise-ior 0 1 1)
+(test-base-case bitwise-ior 1 0 1)
+(test-base-case bitwise-ior 1 1 1)
+
+(test-base-case bitwise-xor 0 0 0)
+(test-base-case bitwise-xor 0 1 1)
+(test-base-case bitwise-xor 1 0 1)
+(test-base-case bitwise-xor 1 1 0)
+
+;;; --------------------------------------------------------------------
+
+(test-case bitwise-and)
+(test-case bitwise-ior)
+(test-case bitwise-xor)
+
+
+;;;; done
+
+(check-report)
 
 ;;; end of file

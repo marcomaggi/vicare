@@ -3567,13 +3567,20 @@
 ;;; --------------------------------------------------------------------
 
   (define ($modulo-bignum-fixnum n m)
+    (pretty-print (list '$modulo-bignum-fixnum n m) (current-error-port))
     (if ($fxzero? m)
 	(assertion-violation who "division by zero" n m)
       (foreign-call "ikrt_bnfx_modulo" n m)))
 
   (define ($modulo-bignum-bignum n m)
-    ;;FIXME  Use type-specific  functions.   (Marco Maggi;  Thu Nov  22,
-    ;;2012)
+    ;;If both N and M are positive or both N and M are negative do:
+    ;;
+    ;;   ($remainder-bignum-bignum n m)
+    ;;
+    ;;else do:
+    ;;
+    ;;   ($add-bignum-number m ($remainder-bignum-bignum n m))
+    ;;
     (if ($bignum-positive? n)
 	(if ($bignum-positive? m)
 	    ($remainder-bignum-bignum n m)

@@ -110,7 +110,9 @@ TESTS			=	\
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
+	test-ikarus-bignums.sps				\
 	test-ikarus-bignum-to-flonum.sps		\
+	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
 	test-ikarus-case-folding.sps			\
 	test-ikarus-div-and-mod.sps			\
@@ -161,6 +163,8 @@ TESTS			=	\
 	test-vicare-numerics-gcd.sps			\
 	test-vicare-numerics-lcm.sps			\
 	test-vicare-numerics-quotient.sps		\
+	test-vicare-numerics-remainder.sps		\
+	test-vicare-numerics-moduloe.sps		\
 	test-vicare-numerics-square.sps			\
 	test-vicare-numerics-sign.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
@@ -299,8 +303,6 @@ EXTRA_DIST = \
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
-	long-test-ikarus-bignums.sps			\
-	long-test-ikarus-bitwise.sps			\
 	long-test-ikarus-fixnums.sps			\
 	long-test-ikarus-io.sps				\
 	long-test-ikarus-parse-flonums.sps		\
@@ -332,7 +334,9 @@ EXTRA_DIST = \
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
+	test-ikarus-bignums.sps				\
 	test-ikarus-bignum-to-flonum.sps		\
+	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
 	test-ikarus-case-folding.sps			\
 	test-ikarus-div-and-mod.sps			\
@@ -386,6 +390,8 @@ EXTRA_DIST = \
 	test-vicare-numerics-gcd.sps			\
 	test-vicare-numerics-lcm.sps			\
 	test-vicare-numerics-quotient.sps		\
+	test-vicare-numerics-remainder.sps		\
+	test-vicare-numerics-modulo.sps			\
 	test-vicare-numerics-square.sps			\
 	test-vicare-numerics-sign.sps			\
 	test-vicare-numerics-complex-numbers.sps	\

@@ -1726,12 +1726,14 @@ ikrt_bnfxdivrem(ikptr x, ikptr y, ikpcb* pcb) {
   return p+pair_tag;
 }
 
+
 ikptr
-ikrt_bnfx_modulo(ikptr x, ikptr y /*, ikpcb* pcb */) {
-  long yint = IK_UNFIX(y);
-  mp_limb_t* s2p = (mp_limb_t*)(long)(x+off_bignum_data);
-  ikptr first_word = ref(x, -vector_tag);
-  mp_size_t s2n = IK_BNFST_LIMB_COUNT(first_word);
+ikrt_bnfx_modulo (ikptr x, ikptr y /*, ikpcb* pcb */)
+{
+  long		yint		= IK_UNFIX(y);
+  mp_limb_t*	s2p		= (mp_limb_t*)(long)(x + off_bignum_data);
+  ikptr		first_word	= IK_REF(x, off_bignum_tag);
+  mp_size_t	s2n		= IK_BNFST_LIMB_COUNT(first_word);
   if (yint < 0) {
     if (IK_BNFST_NEGATIVE(first_word)) {
       /* x negative, y negative */
@@ -1755,7 +1757,7 @@ ikrt_bnfx_modulo(ikptr x, ikptr y /*, ikpcb* pcb */) {
   }
 }
 
-
+
 static int
 limb_length(ik_ulong n) {
   int i=0;
