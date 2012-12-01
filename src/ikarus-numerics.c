@@ -1661,7 +1661,7 @@ ikrt_bnbndivrem(ikptr x, ikptr y, ikpcb* pcb) {
 }
 
 
-#if 0
+/*
 [Function]
 
 mp_limb_t
@@ -1677,7 +1677,7 @@ Divide {s2p, s2n} by s3limb, and write the quotient at r1p. Return the remainder
 The integer quotient is written to {r1p+qxn, s2n} and in addition qxn fraction limbs are
 developed and written to {r1p, qxn}. Either or both s2n and qxn can be zero. For most
 usages, qxn will be zero.
-#endif
+*/
 
 ikptr
 ikrt_bnfxdivrem(ikptr x, ikptr y, ikpcb* pcb) {
@@ -1737,21 +1737,26 @@ ikrt_bnfx_modulo (ikptr x, ikptr y /*, ikpcb* pcb */)
   mp_limb_t*	s2p		= (mp_limb_t*)(long)(x + off_bignum_data);
   ikptr		first_word	= IK_REF(x, off_bignum_tag);
   mp_size_t	s2n		= IK_BNFST_LIMB_COUNT(first_word);
+  /* fprintf(stderr, "%s: yint = %ld\n", __func__, yint); */
   if (yint < 0) {
-    if (IK_BNFST_NEGATIVE(first_word)) {
+    if (-1 == yint) {
+      return IK_FIX(0);
+    } else if (IK_BNFST_NEGATIVE(first_word)) {
       /* x negative, y negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, -yint);
       return IK_FIX(-m);
     } else {
       /* x non-negative, y negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, -yint);
-      return IK_FIX(yint+m);
+      return (m)? IK_FIX(yint+m) : IK_FIX(0);
     }
   } else {
-    if (IK_BNFST_NEGATIVE(first_word)) {
+    if (1 == yint) {
+      return IK_FIX(0);
+    } else if (IK_BNFST_NEGATIVE(first_word)) {
       /* x negative, y non-negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, yint);
-      return IK_FIX(yint-m);
+      return (m)? IK_FIX(yint-m) : IK_FIX(0);
     } else {
       /* x positive, y non-negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, yint);

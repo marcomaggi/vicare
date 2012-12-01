@@ -3548,13 +3548,23 @@
       ($fxmodulo n m)))
 
   (define ($modulo-fixnum-bignum n m)
-    (if ($fxnegative? n)
-	(if ($bignum-positive? m)
-	    (foreign-call "ikrt_fxbnplus" n m)
-	  n)
-      (if ($bignum-positive? m)
-	  n
-	(foreign-call "ikrt_fxbnplus" n m))))
+    ;;When both N  and M are non-negative  or both N and  M are positive
+    ;;return N; else return N + M.
+    ;;
+    (cond (($fxzero? n)
+	   0)
+	  (($fxnegative? n)
+	   (if ($bignum-positive? m)
+	       ;;N negative, M positive
+	       (foreign-call "ikrt_fxbnplus" n m)
+	     ;;N negative, M negative
+	     n))
+	  (else ;N is positive here
+	   (if ($bignum-positive? m)
+	       ;;N positive, M positive
+	       n
+	     ;;N positive, M negative
+	     (foreign-call "ikrt_fxbnplus" n m)))))
 
   (define ($modulo-fixnum-flonum n m)
     (let ((v ($flonum->exact m)))
@@ -3583,9 +3593,15 @@
     (if ($bignum-positive? n)
 	(if ($bignum-positive? m)
 	    ($remainder-bignum-bignum n m)
-	  ($add-bignum-number m ($remainder-bignum-bignum n m)))
+	  (let ((rem ($remainder-bignum-bignum n m)))
+	    (if (zero? rem)
+		0
+	      ($add-bignum-number m rem))))
       (if ($bignum-positive? m)
-	  ($add-bignum-number m ($remainder-bignum-bignum n m))
+	  (let ((rem ($remainder-bignum-bignum n m)))
+	    (if (zero? rem)
+		0
+	      ($add-bignum-number m rem)))
 	($remainder-bignum-bignum n m))))
 
   (define ($modulo-bignum-flonum n m)
