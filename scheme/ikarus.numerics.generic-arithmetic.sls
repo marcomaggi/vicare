@@ -3478,6 +3478,30 @@
 	 $modulo-fixnum-fixnum	$modulo-fixnum-bignum	$modulo-fixnum-flonum
 	 $modulo-bignum-fixnum	$modulo-bignum-bignum	$modulo-bignum-flonum
 	 $modulo-flonum-fixnum	$modulo-flonum-bignum	$modulo-flonum-flonum)
+  ;;Note that considering X/Y according to R6RS:
+  ;;
+  ;;   (define (sign n)
+  ;;     (cond ((negative? n) -1)
+  ;;           ((positive? n) 1)
+  ;;           (else 0)))
+  ;;
+  ;;   (define (quotient n1 n2)
+  ;;     (* (sign n1) (sign n2) (div (abs n1) (abs n2))))
+  ;;
+  ;;   (define (remainder n1 n2)
+  ;;     (* (sign n1) (mod (abs n1) (abs n2))))
+  ;;
+  ;;   (define (modulo n1 n2)
+  ;;     (* (sign n2) (mod (* (sign n2) n1) (abs n2))))
+  ;;
+  ;;so we have:
+  ;;
+  ;;   sign(quotient)  = sign(X) * sign(Y)
+  ;;   sign(remainder) = sign(X)
+  ;;   sign(modulo)    = sign(Y)
+  ;;
+  ;;when computing the modulo we want Y to be non-zero.
+  ;;
   (define who 'modulo)
 
   (define (modulo n m)
