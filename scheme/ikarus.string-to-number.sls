@@ -29,7 +29,8 @@
     (vicare syntactic-extensions)
     (vicare parser-logic)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    $)
+    (vicare arguments validation))
 
 ;;; <number>          ::= <num 2>
 ;;;                     | <num 8>
@@ -135,16 +136,12 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
 (define-argument-validation (radix who obj)
   (and (fixnum? obj)
-       (or (unsafe.fx= obj 10)
-	   (unsafe.fx= obj 16)
-	   (unsafe.fx= obj 2)
-	   (unsafe.fx= obj 8)))
+       (or ($fx= obj 10)
+	   ($fx= obj 16)
+	   ($fx= obj 2)
+	   ($fx= obj 8)))
   (assertion-violation who "expected supported radix as argument" obj))
 
 
@@ -188,8 +185,8 @@
 
 (define-inline (sign ?ch)
   (let ((ch ?ch))
-    (cond ((unsafe.char= #\+ ch)	+1)
-	  ((unsafe.char= #\- ch)	-1)
+    (cond (($char= #\+ ch)	+1)
+	  (($char= #\- ch)	-1)
 	  (else				#f))))
 
 (define (digit ch radix)
@@ -199,20 +196,20 @@
   ;;
   ;;If the arguments are wrong: return false.
   ;;
-  (let* ((F (unsafe.char->fixnum ch))
-	 (N (unsafe.fx- F CHAR-FIXNUM-0)))
-    (cond ((and (unsafe.fx>= N 0)
-		(unsafe.fx<  N radix))
+  (let* ((F ($char->fixnum ch))
+	 (N ($fx- F CHAR-FIXNUM-0)))
+    (cond ((and ($fx>= N 0)
+		($fx<  N radix))
 	   N)
-	  ((unsafe.fx= radix 16)
-	   (let ((N (unsafe.fx- F CHAR-FIXNUM-a)))
-	     (if (and (unsafe.fx>= N 0)
-		      (unsafe.fx<  N 6))
-		 (unsafe.fx+ N 10)
-	       (let ((N (unsafe.fx- F CHAR-FIXNUM-A)))
-		 (if (and (unsafe.fx>= N 0)
-			  (unsafe.fx<  N 6))
-		     (unsafe.fx+ N 10)
+	  (($fx= radix 16)
+	   (let ((N ($fx- F CHAR-FIXNUM-a)))
+	     (if (and ($fx>= N 0)
+		      ($fx<  N 6))
+		 ($fx+ N 10)
+	       (let ((N ($fx- F CHAR-FIXNUM-A)))
+		 (if (and ($fx>= N 0)
+			  ($fx<  N 6))
+		     ($fx+ N 10)
 		   #f)))))
 	  (else #f))))
 
@@ -241,15 +238,16 @@
       ((_ ?fail ?realp ?imagp)
        (and (identifier? #'?fail)
 	    (identifier? #'?realp))
-       #'(let ((imagp ?imagp))
-	   (cond ((not ?realp)
+       #'(let ((realp ?realp)
+	       (imagp ?imagp))
+	   (cond ((not realp)
 		  (make-rectangular 0 imagp))
-		 ((pair? ?realp)
+		 ((pair? realp)
 		  ;;It is an error if a complex number in polar notation
 		  ;;ends with the character #\i.
 		  (?fail))
 		 (else
-		  (make-rectangular ?realp imagp))))))))
+		  (make-rectangular realp imagp))))))))
 
 (define-syntax %make-number-non-rectangular
   ;;To be  used to finalise  parsing of a  numeric string when  the last
@@ -265,12 +263,16 @@
   ;;
   (lambda (stx)
     (syntax-case stx ()
-      ((_ ?n0 ?n1)
+      ((_ ?n0 ?n1 ?fail)
        (identifier? #'?n0)
        #'(let ((n1 ?n1))
-	   (if (not ?n0)
-	       n1
-	     (make-polar (unsafe.cdr ?n0) n1)))))))
+	   (cond ((not ?n0)
+		  n1)
+		 ((and (pair? ?n0)
+		       (eq? ($car ?n0) 'polar))
+		  (make-polar ($cdr ?n0) n1))
+		 (else
+		  ?fail)))))))
 
 
 ;;;; string to number parser logic
@@ -393,7 +395,7 @@
      (let-inline ((n0 #f))
        (next u:sign radix n0 exactness sn)))
     ((#\.)
-     (if (unsafe.fx= radix 10)
+     (if ($fx= radix 10)
 	 (let-inline ((n0 #f)
 		      (sn +1))
 	   (next u:dot radix n0 exactness sn))
@@ -453,12 +455,12 @@
      (if (and n0 (not (pair? n0)))
 	 (fail)
        (let-inline ((n1 (sign*accum-with-exactness sn exactness accum)))
-	 (%make-number-non-rectangular n0 n1))))
+	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
      (let-inline ((accum (+ (* accum radix) digit-fx)))
        (next u:digit+ radix n0 exactness sn accum)))
     ((#\.)
-     (if (unsafe.fx= radix 10)
+     (if ($fx= radix 10)
 	 (let-inline ((exponent 0))
 	   (next u:digit+dot radix n0 exactness sn accum exponent))
        (fail)))
@@ -490,7 +492,7 @@
      ;;Terminate  the  significand  of   an  inexact  number;  the  next
      ;;character will be  part of the exponent.  We  ignore the specific
      ;;exponent because Vicare only has "double" flonums.
-     (if (unsafe.fx= radix 10)
+     (if ($fx= radix 10)
 	 (let-inline ((exponent 0))
 	   (next u:exponent radix n0 exactness sn accum exponent))
        (fail)))
@@ -514,7 +516,7 @@
 	 (fail)
        (let*-inline ((accum (* accum (expt 10 exponent)))
 		     (n1    (sign*accum-with-INexactness sn exactness accum)))
-	 (%make-number-non-rectangular n0 n1))))
+	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
      (let-inline ((accum    (+ (* accum radix) digit-fx))
 		  (exponent (- exponent 1)))
@@ -545,7 +547,7 @@
      ;;Terminate  the  significand  of   an  inexact  number;  the  next
      ;;character will be  part of the exponent.  We  ignore the specific
      ;;exponent because Vicare only has "double" flonums.
-     (if (unsafe.fx= radix 10)
+     (if ($fx= radix 10)
 	 (next u:exponent radix n0 exactness sn accum exponent)
        (fail)))
     ((#\|)
@@ -586,7 +588,7 @@
     ((#\n)
      (next u:sign-n radix n0 exactness))
     ((#\.)
-     (if (unsafe.fx= radix 10)
+     (if ($fx= radix 10)
 	 (next u:dot radix n0 exactness sn)
        (fail))))
 
@@ -612,7 +614,7 @@
      (if (zero? accum)
 	 (fail)
        (let-inline ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
-	 (%make-number-non-rectangular n0 n1))))
+	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
      (let-inline ((accum (+ (* accum radix) digit-fx)))
        (next u:denominator+ radix n0 exactness sn numerator accum)))
@@ -666,7 +668,7 @@
 		  (accum digit-fx))
        (next u:digit+ radix n0 exactness sn accum)))
     ((#\.)
-     (if (unsafe.fx= radix 10)
+     (if ($fx= radix 10)
 	 (let-inline ((n0 (cons 'polar mag))
 		      (sn +1))
 	   (next u:dot radix n0 exactness sn))
@@ -730,7 +732,7 @@
 	 (fail)
        (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
 		     (n1    (sign*accum-with-INexactness sn exactness accum)))
-	 (%make-number-non-rectangular n0 n1))))
+	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
      (let-inline ((exponent2 (+ (* exponent2 radix) digit-fx)))
        (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign)))
@@ -782,7 +784,7 @@
     ;;numbers with mantissa width specification.
     ;;
     ((:end-of-input)
-     (%make-number-non-rectangular n0 n1))
+     (%make-number-non-rectangular n0 n1 (fail)))
     ((digit radix) => digit-fx
      (next u:mant+ radix n0 n1 exactness))
     ((sign) => sn2
@@ -857,7 +859,7 @@
     ;;N1 is the parse infinity number +inf.0 or -inf.0.
     ;;
     ((:end-of-input)
-     (%make-number-non-rectangular n0 n1))
+     (%make-number-non-rectangular n0 n1 (fail)))
     ((sign) => sn2
      ;;Terminate  the  real part  of  a  complex  number in  rectangular
      ;;notation  (with  the real  part  being  infinity)  and start  the
@@ -916,7 +918,7 @@
     ;;"-nan.0".  This operator is a subroutine of "u:sign-nan.".
     ;;
     ((:end-of-input)
-     (%make-number-non-rectangular n0 +nan.0))
+     (%make-number-non-rectangular n0 +nan.0 (fail)))
     ((sign) => sn2
      ;;Terminate  the  real part  of  a  complex  number in  rectangular
      ;;notation (with the  real part being NaN) and  start the imaginary
@@ -960,7 +962,7 @@
 	((string S))
       ;;The arguments:
       ;;
-      ;;  S (unsafe.string-length S) 0
+      ;;  S ($string-length S) 0
       ;;
       ;;are  the device-specific arguments  for the  operator functions:
       ;;INPUT.STRING, INPUT.LENGTH, INPUT.INDEX.
@@ -977,14 +979,14 @@
       ;;selected by the  prefixes #i and #e.  This  value should be: #f,
       ;;the symbol "e" or the symbol "i".
       ;;
-      (parse-numeric-string S (unsafe.string-length S) 0
+      (parse-numeric-string S ($string-length S) 0
 			    10 #f #f)))
    ((S radix)
     (define who 'string->number)
     (with-arguments-validation (who)
 	((string S)
 	 (radix	 radix))
-      (parse-numeric-string S (unsafe.string-length S) 0
+      (parse-numeric-string S ($string-length S) 0
 			    radix #f #f)))))
 
 
