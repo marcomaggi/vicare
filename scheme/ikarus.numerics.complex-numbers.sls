@@ -24,7 +24,8 @@
   (import (except (ikarus)
 		  make-rectangular	make-polar
 		  real-part		imag-part
-		  angle			magnitude)
+		  angle			magnitude
+		  square)
     (except (ikarus system $compnums)
 	    $make-rectangular)
     ;;FIXME To  be removed after  the next boot image  rotation.  (Marco

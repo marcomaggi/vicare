@@ -1729,6 +1729,9 @@ ikrt_bnfxdivrem(ikptr x, ikptr y, ikpcb* pcb) {
 
 ikptr
 ikrt_bnfx_modulo (ikptr x, ikptr y /*, ikpcb* pcb */)
+/* Compute the modulo  of the integer division between the  bignum X and
+   the  fixnum  Y.   This  function  makes use  of  the  GMP's  function
+   "mpn_mod_1()". */
 {
   long		yint		= IK_UNFIX(y);
   mp_limb_t*	s2p		= (mp_limb_t*)(long)(x + off_bignum_data);
@@ -1740,17 +1743,17 @@ ikrt_bnfx_modulo (ikptr x, ikptr y /*, ikpcb* pcb */)
       mp_limb_t m = mpn_mod_1(s2p, s2n, -yint);
       return IK_FIX(-m);
     } else {
-      /* x positive, y negative */
+      /* x non-negative, y negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, -yint);
       return IK_FIX(yint+m);
     }
   } else {
     if (IK_BNFST_NEGATIVE(first_word)) {
-      /* x negative, y positive */
+      /* x negative, y non-negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, yint);
       return IK_FIX(yint-m);
     } else {
-      /* x positive, y positive */
+      /* x positive, y non-negative */
       mp_limb_t m = mpn_mod_1(s2p, s2n, yint);
       return IK_FIX(m);
     }

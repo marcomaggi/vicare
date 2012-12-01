@@ -124,6 +124,9 @@
 	    $flnegative?
 	    $fleven?
 	    $flodd?
+	    $flfinite?
+	    $flinfinite?
+	    $flnan?
 	    $flonum-integer?
 	    $flonum-rational?
 	    $flround

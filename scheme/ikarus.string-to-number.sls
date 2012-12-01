@@ -25,7 +25,8 @@
 (library (ikarus.string-to-number)
   (export string->number define-string->number-parser)
   (import (except (ikarus)
-		  string->number)
+		  string->number
+		  sign)
     (vicare syntactic-extensions)
     (vicare parser-logic)
     (prefix (vicare unsafe-operations)

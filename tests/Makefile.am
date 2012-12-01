@@ -171,7 +171,7 @@ TESTS			=	\
 	test-vicare-numerics-lcm.sps			\
 	test-vicare-numerics-quotient.sps		\
 	test-vicare-numerics-remainder.sps		\
-	test-vicare-numerics-moduloe.sps		\
+	test-vicare-numerics-modulo.sps			\
 	test-vicare-numerics-square.sps			\
 	test-vicare-numerics-sign.sps			\
 	test-vicare-numerics-complex-numbers.sps	\

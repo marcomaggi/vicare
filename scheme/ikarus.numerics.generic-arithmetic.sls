@@ -351,7 +351,7 @@
 		exact->inexact			inexact
 
 		;; part functions
-		abs
+		abs				sign
 		floor				ceiling
 		round				truncate
 		numerator			denominator
@@ -3567,7 +3567,6 @@
 ;;; --------------------------------------------------------------------
 
   (define ($modulo-bignum-fixnum n m)
-    (pretty-print (list '$modulo-bignum-fixnum n m) (current-error-port))
     (if ($fxzero? m)
 	(assertion-violation who "division by zero" n m)
       (foreign-call "ikrt_bnfx_modulo" n m)))
