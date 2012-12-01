@@ -31,12 +31,20 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing issue 18\n")
-(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
 (check (string->number "1-1")		=> #f)
+(check (string->number "12-34")		=> #f)
+
 (check (string->number "1.2-3.4")	=> #f)
 (check (string->number "1/2-3/4")	=> #f)
+(check (string->number "1.2-3/4")	=> #f)
+(check (string->number "1/2-3.4")	=> #f)
+
+(check (string->number "12.34-56.78")	=> #f)
+(check (string->number "12/34-56/78")	=> #f)
+(check (string->number "12.34-56/78")	=> #f)
+(check (string->number "12/34-56.78")	=> #f)
 
 
 (let ()
@@ -51,30 +59,31 @@
     (define (equal-results? x y)
       (define (== x y)
         (cond
-	 [(nan? x) (nan? y)]
-	 [(zero? x) (and (= x y) (= (atan 0.0 x) (atan 0.0 y)))]
-	 [else
+	 ((nan? x) (nan? y))
+	 ((zero? x) (and (= x y) (= (atan 0.0 x) (atan 0.0 y))))
+	 (else
 	  (and (or (and (exact? x) (exact? y))
 		   (and (inexact? x) (inexact? y)))
-	       (= x y))]))
+	       (= x y)))))
       (cond
-       [(and (number? x) (number? y))
+       ((and (number? x) (number? y))
 	(and (== (real-part x) (real-part y))
-	     (== (imag-part x) (imag-part y)))]
-       [else (equal? x y)]))
+	     (== (imag-part x) (imag-part y))))
+       (else (equal? x y))))
 
-    (let ([result (string->number string)])
+    (let ((result (string->number string)))
       (if expected
           (unless (number? result)
             (error 'test "did not parse as number" string))
 	(when result
 	  (error test "incorrectly parse as non-#f" string)))
+      (check result (=> equal-results?) expected)
       (unless (equal-results? result expected)
         (error 'test "failed/expected/got" string expected result))
       (when expected
-        (let ([s1 (call-with-string-output-port
+        (let ((s1 (call-with-string-output-port
 		      (lambda (port)
-			(write result port)))])
+			(write result port)))))
           (unless (string=? s1 string)
             (test s1 expected))))))
 
@@ -304,18 +313,18 @@
       (gen ls1 ls2 string-append comp))
 
     (define suffixed-int
-      '(["0" . 0]
-        ["1" . 1]
-        ["1." . 1.0]
-        ["1.0" . 1.0]
-        [".5" . 0.5]
-        ["0.5" . 0.5]))
+      '(("0" . 0)
+        ("1" . 1)
+        ("1." . 1.0)
+        ("1.0" . 1.0)
+        (".5" . 0.5)
+        ("0.5" . 0.5)))
 
     (define exponents
-      '(["e0" . 1.0]
-        ["e+0" . 1.0]
-        ["e-0" . 1.0]
-        ["e-1" . 0.1]))
+      '(("e0" . 1.0)
+        ("e+0" . 1.0)
+        ("e-0" . 1.0)
+        ("e-1" . 0.1)))
 
     (define decimal10
       (append
@@ -323,17 +332,17 @@
        (gensa suffixed-int exponents *)))
 
     (define naninf
-      '(["nan.0" . +nan.0]
-        ["inf.0" . +inf.0]))
+      '(("nan.0" . +nan.0)
+        ("inf.0" . +inf.0)))
 
     (define ureal
       (append
        decimal10
-       (gensa decimal10 '(["|53" . #f]) (lambda (x _) (inexact x)))))
+       (gensa decimal10 '(("|53" . #f)) (lambda (x _) (inexact x)))))
 
     (define sign
-      '(["+" . +1]
-        ["-" . -1]))
+      '(("+" . +1)
+        ("-" . -1)))
 
 ;;; <real> = <sign> <ureal>
 ;;;        | + <naninf>
@@ -358,9 +367,9 @@
 
     (define comps
       (append
-       (gensa sreal '(["i" . #f]) (lambda (x f) x))
-       '(["+i" . 1]
-	 ["-i" . -1])))
+       (gensa sreal '(("i" . #f)) (lambda (x f) x))
+       '(("+i" . 1)
+	 ("-i" . -1))))
 
     (define creal
       (map (lambda (x) (cons (car x) (make-rectangular 0 (cdr x)))) comps))
@@ -372,7 +381,7 @@
        (gen real real (lambda (x y) (string-append x "@" y)) make-polar)
        ))
 
-    (display (string-append "TESTING " (number->string (length complex)) " tests\n"))
+    (check-display (string-append "TESTING " (number->string (length complex)) " tests\n"))
     (for-each
 	(lambda (x)
 	  (test (car x) (cdr x)))
