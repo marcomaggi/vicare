@@ -118,6 +118,7 @@ TESTS			=	\
 	test-ikarus-div-and-mod.sps			\
 	test-ikarus-enums.sps				\
 	test-ikarus-fasl.sps				\
+	test-ikarus-fixnums.sps				\
 	test-ikarus-fldiv-and-mod.sps			\
 	test-ikarus-guardians.sps			\
 	test-ikarus-hashtables.sps			\
@@ -303,7 +304,6 @@ EXTRA_DIST = \
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
-	long-test-ikarus-fixnums.sps			\
 	long-test-ikarus-io.sps				\
 	long-test-ikarus-parse-flonums.sps		\
 	long-test-ikarus-string-to-number.sps		\
@@ -342,6 +342,7 @@ EXTRA_DIST = \
 	test-ikarus-div-and-mod.sps			\
 	test-ikarus-enums.sps				\
 	test-ikarus-fasl.sps				\
+	test-ikarus-fixnums.sps				\
 	test-ikarus-fldiv-and-mod.sps			\
 	test-ikarus-guardians.sps			\
 	test-ikarus-hashtables.sps			\
