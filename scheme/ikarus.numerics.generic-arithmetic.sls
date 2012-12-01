@@ -4680,12 +4680,15 @@
 	    (and (flonum? x)
 		 ($flzero?/negative x)))
 	($number->string x radix))
-       ;;If we are here X is exact zero or positive.
-       ;;
        ;;If X is +inf.0 avoid prepending an additional positive sign.
        ((and (flonum? x)
 	     (flinfinite? x))
 	"+inf.0")
+       ((and (flonum? x)
+	     (flnan? x))
+	"+nan.0")
+       ;;If we are here X is exact zero or positive.
+       ;;
        (else
 	(string-append "+" ($number->string x radix)))))
 
