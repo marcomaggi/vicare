@@ -10,6 +10,13 @@ VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
 
+# Enable timing of test files  execution.  We cannot include this in the
+# separator  because  it needs  to  be  placed  between the  environment
+# variables and the actual command line.
+if WANT_TIME_TESTS
+VICARE_TIME_TESTS	= $(TIME_PROGRAM) -p
+endif
+
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make".
 VICARE		= $(builddir)/../src/vicare
@@ -20,7 +27,7 @@ VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
 		  CHECK_TEST_NAME=$(name)				\
 		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
 		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
-VICARE_RUN	= $(VICARE_ENV) $(GDB) $(VICARE) $(VICARE_FLAGS)
+VICARE_RUN	= $(VICARE_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs long-test long-tests
 .PHONY: demo demos foreign-test foreign-tests

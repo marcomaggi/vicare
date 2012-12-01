@@ -101,6 +101,22 @@ AC_ARG_ENABLE([binfmt],
 AC_MSG_RESULT([$vicare_enable_binfmt])
 AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_binfmt = xyes])
 
+dnl --------------------------------------------------------------------
+
+AC_MSG_CHECKING([whether to enable timing of tests])
+AC_ARG_ENABLE([time-tests],
+  [AS_HELP_STRING([--enable-time-tests],
+     [enable timing of tests (default: no)])],
+  [if test x$enableval = xyes
+   then vicare_time_tests=yes
+   else vicare_time_tests=no
+   fi],
+  [vicare_time_tests=no])
+AC_MSG_RESULT([$vicare_time_tests])
+AM_CONDITIONAL([WANT_TIME_TESTS],[test x$vicare_time_tests = xyes])
+AM_COND_IF([WANT_TIME_TESTS],
+  [AC_CHECK_PROG([TIME_PROGRAM],[time],[time],[:])])
+
 #page
 #### basic system inspection
 
