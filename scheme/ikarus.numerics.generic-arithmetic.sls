@@ -3672,7 +3672,7 @@
 
 (module (square
 	 $square-fixnum		$square-bignum		$square-ratnum
-	 $square-compnum		$square-cflonum)
+	 $square-compnum	$square-cflonum)
   (define who 'square)
 
   (define (square x)
