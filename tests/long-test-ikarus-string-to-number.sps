@@ -27,9 +27,11 @@
 
 ;;; assume reader which loads this file can only read signed integers.
 
+
 #!ikarus
 (import (ikarus)
-  (ikarus-test-framework))
+  (ikarus-test-framework)
+  (vicare checks))
 
 (define (run-tests)
   (test-string-to-number)
@@ -39,28 +41,29 @@
   (define (equal-results? x y)
     (define (== x y)
       (cond
-       [(nan? x) (nan? y)]
-       [(zero? x) (and (= x y) (= (atan 0.0 x) (atan 0.0 y)))]
-       [else
+       ((nan? x) (nan? y))
+       ((zero? x) (and (= x y) (= (atan 0.0 x) (atan 0.0 y))))
+       (else
 	(and (or (and (exact? x) (exact? y))
 		 (and (inexact? x) (inexact? y)))
-	     (= x y))]))
+	     (= x y)))))
     (cond
-     [(and (number? x) (number? y))
+     ((and (number? x) (number? y))
       (and (== (real-part x) (real-part y))
-	   (== (imag-part x) (imag-part y)))]
-     [else (equal? x y)]))
-		;(printf "testing ~a -> ~s\n" string expected)
-  (let ([result (string->number string)])
+	   (== (imag-part x) (imag-part y))))
+     (else (equal? x y))))
+  ;;(printf "testing ~a -> ~s\n" string expected)
+  (let ((result (string->number string)))
     (if expected
 	(unless (number? result)
 	  (error 'test "did not parse as number" string))
       (when result
 	(error test "incorrectly parse as non-#f" string)))
+    (check result (=> equal-results?) expected)
     (unless (equal-results? result expected)
       (error 'test "failed/expected/got" string expected result))
     (when expected
-      (let ([s1 (format "~s" result)])
+      (let ((s1 (format "~s" result)))
 	(unless (string=? s1 string)
 	  (test s1 expected))))))
 
@@ -290,18 +293,18 @@
     (gen ls1 ls2 string-append comp))
 
   (define suffixed-int
-    '(["0" . 0]
-      ["1" . 1]
-      ["1." . 1.0]
-      ["1.0" . 1.0]
-      [".5" . 0.5]
-      ["0.5" . 0.5]))
+    '(("0" . 0)
+      ("1" . 1)
+      ("1." . 1.0)
+      ("1.0" . 1.0)
+      (".5" . 0.5)
+      ("0.5" . 0.5)))
 
   (define exponents
-    '(["e0" . 1.0]
-      ["e+0" . 1.0]
-      ["e-0" . 1.0]
-      ["e-1" . 0.1]))
+    '(("e0" . 1.0)
+      ("e+0" . 1.0)
+      ("e-0" . 1.0)
+      ("e-1" . 0.1)))
 
   (define decimal10
     (append
@@ -309,17 +312,17 @@
      (gensa suffixed-int exponents *)))
 
   (define naninf
-    '(["nan.0" . +nan.0]
-      ["inf.0" . +inf.0]))
+    '(("nan.0" . +nan.0)
+      ("inf.0" . +inf.0)))
 
   (define ureal
     (append
      decimal10
-     (gensa decimal10 '(["|53" . #f]) (lambda (x _) (inexact x)))))
+     (gensa decimal10 '(("|53" . #f)) (lambda (x _) (inexact x)))))
 
   (define sign
-    '(["+" . +1]
-      ["-" . -1]))
+    '(("+" . +1)
+      ("-" . -1)))
 
     ;;; <real> = <sign> <ureal>
     ;;;        | + <naninf>
@@ -344,9 +347,9 @@
 
   (define comps
     (append
-     (gensa sreal '(["i" . #f]) (lambda (x f) x))
-     '(["+i" . 1]
-       ["-i" . -1])))
+     (gensa sreal '(("i" . #f)) (lambda (x f) x))
+     '(("+i" . 1)
+       ("-i" . -1))))
 
   (define creal
     (map (lambda (x) (cons (car x) (make-rectangular 0 (cdr x)))) comps))
@@ -358,7 +361,7 @@
      (gen real real (lambda (x y) (string-append x "@" y)) make-polar)
      ))
 
-  (printf "TESTING ~s tests\n" (length complex))
+  (fprintf (current-error-port) "TESTING ~s tests\n" (length complex))
   (for-each
       (lambda (x)
         (test (car x) (cdr x)))
@@ -366,9 +369,12 @@
 
   )
 
-(set-port-buffer-mode! (current-output-port) (buffer-mode none))
-(display "*** testing string to number\n" (current-error-port))
+
+;;;; go
+
+(check-set-mode! 'report-failed)
+(check-display "*** testing Ikarus string to number conversion\n")
 (run-tests)
-(display "; *** done\n" (current-error-port))
+(check-report)
 
 ;;; end of file
