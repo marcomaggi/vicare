@@ -117,7 +117,6 @@ TESTS			=	\
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
-	test-ikarus-bignums.sps				\
 	test-ikarus-bignum-to-flonum.sps		\
 	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
@@ -311,6 +310,7 @@ EXTRA_DIST = \
 	\
 	long-test-r6rs-run.sps				\
 	long-test-r6rs-run-via-eval.sps			\
+	long-test-ikarus-bignums.sps			\
 	long-test-ikarus-io.sps				\
 	long-test-ikarus-parse-flonums.sps		\
 	long-test-ikarus-string-to-number.sps		\
@@ -341,7 +341,6 @@ EXTRA_DIST = \
 	test-r6rs-syntax-case.sps			\
 	test-r6rs-unicode.sps				\
 	\
-	test-ikarus-bignums.sps				\
 	test-ikarus-bignum-to-flonum.sps		\
 	test-ikarus-bitwise.sps				\
 	test-ikarus-bytevectors.sps			\
