@@ -2183,7 +2183,8 @@ Divide a cflonum with a cflonum and return the result as a cflonum.
 @subsection Numbers squaring
 
 
-To compute the square of any number, just use @func{square}.
+To compute the square of any number just use @func{square}; to compute
+the square of a flonum use @func{flsquare} or @func{$flsquare}.
 
 
 @deffn {Unsafe Operation} $square-fixnum @var{fx}

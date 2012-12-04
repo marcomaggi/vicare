@@ -164,6 +164,11 @@
     (and (inexact=? x.rep y.rep)
 	 (inexact=? x.imp y.imp))))
 
+;;; --------------------------------------------------------------------
+
+(define (cube x)
+  (* x x x))
+
 
 ;;;; constants
 
@@ -176,7 +181,7 @@
 (define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
 
 
-(parametrise ((check-test-name	'fixnum-zero-exponent))
+(parametrise ((check-test-name	'zero-fixnum-exponent))
 
   (define-syntax test
     (syntax-rules ()
@@ -237,7 +242,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'fixnum-positive-exponent))
+(parametrise ((check-test-name	'positive-fixnum-exponent))
 
   (define-syntax test
     (syntax-rules ()
@@ -282,11 +287,37 @@
   (test		+123	+11	+97489136981438262577827)
   (test		-123	+11	-97489136981438262577827)
 
+;;; --------------------------------------------------------------------
+;;; bignums
+
+  (test	SMALLEST-POSITIVE-BIGNUM	+1	SMALLEST-POSITIVE-BIGNUM)
+  (test	SMALLEST-NEGATIVE-BIGNUM	+1	SMALLEST-NEGATIVE-BIGNUM)
+  (test BN1				+1	BN1)
+  (test BN2				+1	BN2)
+  (test BN3				+1	BN3)
+  (test BN4				+1	BN4)
+
+  ;; even exponent
+  (test	SMALLEST-POSITIVE-BIGNUM	+2	(square SMALLEST-POSITIVE-BIGNUM))
+  (test	SMALLEST-NEGATIVE-BIGNUM	+2	(square SMALLEST-NEGATIVE-BIGNUM))
+  (test BN1				+2	(square BN1))
+  (test BN2				+2	(square BN2))
+  (test BN3				+2	(square BN3))
+  (test BN4				+2	(square BN4))
+
+  ;; odd exponent
+  (test	SMALLEST-POSITIVE-BIGNUM	+3	(cube SMALLEST-POSITIVE-BIGNUM))
+  (test	SMALLEST-NEGATIVE-BIGNUM	+3	(cube SMALLEST-NEGATIVE-BIGNUM))
+  (test BN1				+3	(cube BN1))
+  (test BN2				+3	(cube BN2))
+  (test BN3				+3	(cube BN3))
+  (test BN4				+3	(cube BN4))
+
 
   #t)
 
 
-(parametrise ((check-test-name	'fixnum-positive-exponent))
+(parametrise ((check-test-name	'negative-fixnum-exponent))
 
   (define-syntax test
     (syntax-rules ()
@@ -307,6 +338,54 @@
   (test		0	-1	0)
   (test		+1	-1	1)
   (test		-1	-1	-1)
+
+  ;; even exponent
+  (test		0	-10	0)
+  (test		+1	-10	1)
+  (test		-1	-10	1)
+  (test		+12	-2	+1/144)
+  (test		-12	-2	+1/144)
+
+  ;; odd exponent
+  (test		0	-11	0)
+  (test		+1	-11	+1)
+  (test		-1	-11	-1)
+  (test		+12	-3	+1/1728)
+  (test		-12	-3	-1/1728)
+
+  ;; even exponent, result bignum
+  (test		+123	-10	1/792594609605189126649)
+  (test		-123	-10	1/792594609605189126649)
+
+  ;; even exponent, result bignum
+  (test		+123	-11	+1/97489136981438262577827)
+  (test		-123	-11	-1/97489136981438262577827)
+
+;;; --------------------------------------------------------------------
+;;; bignums
+
+  (test	SMALLEST-POSITIVE-BIGNUM	-1	(/ SMALLEST-POSITIVE-BIGNUM))
+  (test	SMALLEST-NEGATIVE-BIGNUM	-1	(/ SMALLEST-NEGATIVE-BIGNUM))
+  (test BN1				-1	(/ BN1))
+  (test BN2				-1	(/ BN2))
+  (test BN3				-1	(/ BN3))
+  (test BN4				-1	(/ BN4))
+
+  ;; even exponent
+  (test	SMALLEST-POSITIVE-BIGNUM	-2	(/ (square SMALLEST-POSITIVE-BIGNUM)))
+  (test	SMALLEST-NEGATIVE-BIGNUM	-2	(/ (square SMALLEST-NEGATIVE-BIGNUM)))
+  (test BN1				-2	(/ (square BN1)))
+  (test BN2				-2	(/ (square BN2)))
+  (test BN3				-2	(/ (square BN3)))
+  (test BN4				-2	(/ (square BN4)))
+
+  ;; odd exponent
+  (test	SMALLEST-POSITIVE-BIGNUM	-3	(/ (cube SMALLEST-POSITIVE-BIGNUM)))
+  (test	SMALLEST-NEGATIVE-BIGNUM	-3	(/ (cube SMALLEST-NEGATIVE-BIGNUM)))
+  (test BN1				-3	(/ (cube BN1)))
+  (test BN2				-3	(/ (cube BN2)))
+  (test BN3				-3	(/ (cube BN3)))
+  (test BN4				-3	(/ (cube BN4)))
 
   #t)
 

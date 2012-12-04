@@ -1985,6 +1985,11 @@ Convert between a flonum and its string representation.
 @subsubheading Exponents and logarithms
 
 
+@defun flsquare @var{fl}
+Return the square of @var{fl}, that is @var{fl} multiplied by itself.
+@end defun
+
+
 @defun fllog1p @var{fl}
 Return a flonum equivalent to @math{log(1 + @var{fl})}.
 @end defun
