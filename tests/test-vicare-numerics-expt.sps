@@ -467,6 +467,40 @@
   (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	-3	(cube (/ 7 SMALLEST-POSITIVE-BIGNUM)))
   (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	-3	(cube (/ 7 SMALLEST-NEGATIVE-BIGNUM)))
 
+;;; --------------------------------------------------------------------
+;;; flonums
+
+  (test		+0.0		-1	+inf.0)
+  (test		-0.0		-1	-inf.0)
+  (test		+1.0		-1	+1.0)
+  (test		-1.0		-1	-1.0)
+  (test		+nan.0		-1	+nan.0)
+  (test		+inf.0		-1	+0.0)
+  (test		-inf.0		-1	-0.0)
+  (test		+123.456	-1	(/ +123.456))
+  (test		-123.456	-1	(/ -123.456))
+
+  ;; even exponent
+  (test		+0.0		-2	+inf.0)
+  (test		-0.0		-2	+inf.0)
+  (test		+1.0		-2	+1.0)
+  (test		-1.0		-2	+1.0)
+  (test		+nan.0		-2	+nan.0)
+  (test		+inf.0		-2	+0.0)
+  (test		-inf.0		-2	+0.0)
+  (test		+123.456	-2	(/ (square +123.456)))
+  (test		-123.456	-2	(/ (square -123.456)))
+
+  ;; odd exponent
+  (test		+0.0		-3	+inf.0)
+  (test		-0.0		-3	-inf.0)
+  (test		+1.0		-3	+1.0)
+  (test		-1.0		-3	-1.0)
+  (test		+nan.0		-3	+nan.0)
+  (test		+inf.0		-3	+0.0)
+  (test		-inf.0		-3	-0.0)
+  (test		+123.456	-3	(/ (cube +123.456)))
+  (test		-123.456	-3	(/ (cube -123.456)))
 
   #t)
 
