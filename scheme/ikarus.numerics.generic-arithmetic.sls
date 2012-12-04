@@ -3973,10 +3973,11 @@
       ;;
       (define-expt-num-positive-fixnum $expt-flonum-positive-fixnum/sub
 	1.0 $flsquare $fl*)
-      (cond (($flzero? n)	+0.0)
-	    (($flnan? n)	+nan.0)
-	    (($fl= n +inf.0)	+inf.0)
-	    (($fl= n -inf.0)	-inf.0)
+      (cond (($flzero?/positive n)	+0.0)
+	    (($flzero?/negative n)	(if ($fxeven? m) +0.0 -0.0))
+	    (($flnan? n)		+nan.0)
+	    (($fl= n +inf.0)		+inf.0)
+	    (($fl= n -inf.0)		(if ($fxeven? m) +inf.0 -inf.0))
 	    (else
 	     ($expt-flonum-positive-fixnum/sub n m))))
 

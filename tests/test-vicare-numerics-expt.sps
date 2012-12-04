@@ -313,6 +313,63 @@
   (test BN3				+3	(cube BN3))
   (test BN4				+3	(cube BN4))
 
+;;; --------------------------------------------------------------------
+;;; ratnums
+
+  (test		+2/3	+1	+2/3)
+  (test		-2/3	+1	-2/3)
+
+  (test	(/ 7 SMALLEST-POSITIVE-BIGNUM)	+1	(/ 7 SMALLEST-POSITIVE-BIGNUM))
+  (test	(/ 7 SMALLEST-NEGATIVE-BIGNUM)	+1	(/ 7 SMALLEST-NEGATIVE-BIGNUM))
+  (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	+1	(/ SMALLEST-POSITIVE-BIGNUM 7))
+  (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	+1	(/ SMALLEST-NEGATIVE-BIGNUM 7))
+
+  ;; even exponent
+  (test	(/ 7 SMALLEST-POSITIVE-BIGNUM)	+2	(square (/ 7 SMALLEST-POSITIVE-BIGNUM)))
+  (test	(/ 7 SMALLEST-NEGATIVE-BIGNUM)	+2	(square (/ 7 SMALLEST-NEGATIVE-BIGNUM)))
+  (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	+2	(square (/ SMALLEST-POSITIVE-BIGNUM 7)))
+  (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	+2	(square (/ SMALLEST-NEGATIVE-BIGNUM 7)))
+
+  ;; odd exponent
+  (test	(/ 7 SMALLEST-POSITIVE-BIGNUM)	+3	(cube (/ 7 SMALLEST-POSITIVE-BIGNUM)))
+  (test	(/ 7 SMALLEST-NEGATIVE-BIGNUM)	+3	(cube (/ 7 SMALLEST-NEGATIVE-BIGNUM)))
+  (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	+3	(cube (/ SMALLEST-POSITIVE-BIGNUM 7)))
+  (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	+3	(cube (/ SMALLEST-NEGATIVE-BIGNUM 7)))
+
+;;; --------------------------------------------------------------------
+;;; flonums
+
+  (test		+0.0		+1	+0.0)
+  (test		-0.0		+1	-0.0)
+  (test		+1.0		+1	+1.0)
+  (test		-1.0		+1	-1.0)
+  (test		+nan.0		+1	+nan.0)
+  (test		+inf.0		+1	+inf.0)
+  (test		-inf.0		+1	-inf.0)
+  (test		+123.456	+1	+123.456)
+  (test		-123.456	+1	-123.456)
+
+  ;; even exponent
+  (test		+0.0		+2	+0.0)
+  (test		-0.0		+2	+0.0)
+  (test		+1.0		+2	+1.0)
+  (test		-1.0		+2	+1.0)
+  (test		+nan.0		+2	+nan.0)
+  (test		+inf.0		+2	+inf.0)
+  (test		-inf.0		+2	+inf.0)
+  (test		+123.456	+2	(square +123.456))
+  (test		-123.456	+2	(square -123.456))
+
+  ;; odd exponent
+  (test		+0.0		+3	+0.0)
+  (test		-0.0		+3	-0.0)
+  (test		+1.0		+3	+1.0)
+  (test		-1.0		+3	-1.0)
+  (test		+nan.0		+3	+nan.0)
+  (test		+inf.0		+3	+inf.0)
+  (test		-inf.0		+3	-inf.0)
+  (test		+123.456	+3	(cube +123.456))
+  (test		-123.456	+3	(cube -123.456))
 
   #t)
 
@@ -386,6 +443,30 @@
   (test BN2				-3	(/ (cube BN2)))
   (test BN3				-3	(/ (cube BN3)))
   (test BN4				-3	(/ (cube BN4)))
+
+;;; --------------------------------------------------------------------
+;;; ratnums
+
+  (test		+2/3	-1	+3/2)
+  (test		-2/3	-1	-3/2)
+
+  (test	(/ 7 SMALLEST-POSITIVE-BIGNUM)	-1	(/ SMALLEST-POSITIVE-BIGNUM 7))
+  (test	(/ 7 SMALLEST-NEGATIVE-BIGNUM)	-1	(/ SMALLEST-NEGATIVE-BIGNUM 7))
+  (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	-1	(/ 7 SMALLEST-POSITIVE-BIGNUM))
+  (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	-1	(/ 7 SMALLEST-NEGATIVE-BIGNUM))
+
+  ;; even exponent
+  (test	(/ 7 SMALLEST-POSITIVE-BIGNUM)	-2	(square (/ SMALLEST-POSITIVE-BIGNUM 7)))
+  (test	(/ 7 SMALLEST-NEGATIVE-BIGNUM)	-2	(square (/ SMALLEST-NEGATIVE-BIGNUM 7)))
+  (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	-2	(square (/ 7 SMALLEST-POSITIVE-BIGNUM)))
+  (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	-2	(square (/ 7 SMALLEST-NEGATIVE-BIGNUM)))
+
+  ;; odd exponent
+  (test	(/ 7 SMALLEST-POSITIVE-BIGNUM)	-3	(cube (/ SMALLEST-POSITIVE-BIGNUM 7)))
+  (test	(/ 7 SMALLEST-NEGATIVE-BIGNUM)	-3	(cube (/ SMALLEST-NEGATIVE-BIGNUM 7)))
+  (test	(/ SMALLEST-POSITIVE-BIGNUM 7)	-3	(cube (/ 7 SMALLEST-POSITIVE-BIGNUM)))
+  (test	(/ SMALLEST-NEGATIVE-BIGNUM 7)	-3	(cube (/ 7 SMALLEST-NEGATIVE-BIGNUM)))
+
 
   #t)
 
