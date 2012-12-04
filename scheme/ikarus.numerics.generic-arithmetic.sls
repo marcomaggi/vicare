@@ -3864,7 +3864,7 @@
 	 (let ((n.rep ($compnum-real n))
 	       (n.imp ($compnum-imag n)))
 	   (cond ((or (and (flonum? n.rep) ($flnan? n.rep))
-		      (and (flonum? n.rep) ($flnan? n.imp)))
+		      (and (flonum? n.imp) ($flnan? n.imp)))
 		  +nan.0+nan.0i)
 		 ;;Return exact 1 if the operand is exact.
 		 ((and (or (fixnum? n.rep) (bignum? n.rep) (ratnum? n.rep))

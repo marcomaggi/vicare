@@ -227,6 +227,16 @@
 
   ;; compnums
   (test 123+456i	 +1)
+  (test 12.3+456i	 +1.0+0.0i)
+  (test 123+45.6i	 +1.0+0.0i)
+  (test 1/23+4/56i	 +1)
+
+  (test (make-rectangular 123 BN1)	+1)
+  (test (make-rectangular BN1 456)	+1)
+  (test (make-rectangular 1.23 BN1)	+1.0+0.0i)
+  (test (make-rectangular BN1 4.56)	+1.0+0.0i)
+  (test (make-rectangular 1/23 BN1)	+1)
+  (test (make-rectangular BN1 4/56)	+1)
 
   ;; cflonums
   (test 12.3+45.6i	+1.0+0.0i		compnum=?)
@@ -370,6 +380,10 @@
   (test		-inf.0		+3	-inf.0)
   (test		+123.456	+3	(cube +123.456))
   (test		-123.456	+3	(cube -123.456))
+
+;;; --------------------------------------------------------------------
+;;; compnums
+
 
   #t)
 
