@@ -81,6 +81,7 @@
     define-exact-integer->symbol-function
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
+    cond-exact-real-numeric-operand
 
     ;; auxiliary syntaxes
     big				little)
@@ -508,6 +509,19 @@
        (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
 	     ((bignum?  num)	?body-bg0 ?body-bg ...)
 	     ((flonum?  num)	?body-fl0 ?body-fl ...)
+	     (else		?body-el0 ?body-el ...))))))
+
+(define-syntax cond-exact-real-numeric-operand
+  (syntax-rules (else fixnum? bignum? ratnum?)
+    ((_ ?num
+	((fixnum?)	?body-fx0 ?body-fx ...)
+	((bignum?)	?body-bg0 ?body-bg ...)
+	((ratnum?)	?body-rn0 ?body-rn ...)
+	(else		?body-el0 ?body-el ...))
+     (let ((num ?num))
+       (cond ((fixnum?  num)	?body-fx0 ?body-fx ...)
+	     ((bignum?  num)	?body-bg0 ?body-bg ...)
+	     ((ratnum?  num)	?body-rn0 ?body-rn ...)
 	     (else		?body-el0 ?body-el ...))))))
 
 ;;; --------------------------------------------------------------------

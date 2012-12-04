@@ -2688,14 +2688,31 @@
     ($sign-bignum				$numerics)
     ($sign-flonum				$numerics)
     ($sign-ratnum				$numerics)
-
+;;;
     ($expt-number-fixnum			$numerics)
+    ($expt-number-zero-fixnum			$numerics)
+    ($expt-number-positive-fixnum		$numerics)
+    ($expt-number-negative-fixnum		$numerics)
+    ($expt-fixnum-positive-fixnum		$numerics)
+    ($expt-bignum-positive-fixnum		$numerics)
+    ($expt-flonum-positive-fixnum		$numerics)
+    ($expt-ratnum-positive-fixnum		$numerics)
+    ($expt-compnum-positive-fixnum		$numerics)
+    ($expt-cflonum-positive-fixnum		$numerics)
+
     ($expt-number-bignum			$numerics)
+    ($expt-fixnum-bignum			$numerics)
+    ($expt-bignum-bignum			$numerics)
+    ($expt-ratnum-bignum			$numerics)
+    ($expt-flonum-bignum			$numerics)
+    ($expt-compnum-bignum			$numerics)
+    ($expt-cflonum-bignum			$numerics)
+
     ($expt-number-flonum			$numerics)
     ($expt-number-ratnum			$numerics)
     ($expt-number-compnum			$numerics)
     ($expt-number-cflonum			$numerics)
-
+;;;
     ($sqrt-fixnum				$numerics)
     ($sqrt-flonum				$numerics)
     ($sqrt-bignum				$numerics)

@@ -273,6 +273,16 @@
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
 
+    $expt-number-zero-fixnum
+    $expt-number-positive-fixnum	$expt-number-negative-fixnum
+    $expt-fixnum-positive-fixnum	$expt-bignum-positive-fixnum
+    $expt-flonum-positive-fixnum	$expt-ratnum-positive-fixnum
+    $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum
+
+    $expt-fixnum-bignum		$expt-bignum-bignum	$expt-ratnum-bignum
+    $expt-flonum-bignum		$expt-compnum-bignum	$expt-cflonum-bignum
+
+
     $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
     $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
 
@@ -3723,16 +3733,27 @@
 
 (module (expt
 	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
-	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum)
-  ;;Return N raised to the power  M.  For non-zero N, this is:
+	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum
+
+	 $expt-number-zero-fixnum
+	 $expt-number-positive-fixnum		$expt-number-negative-fixnum
+	 $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
+	 $expt-flonum-positive-fixnum		$expt-ratnum-positive-fixnum
+	 $expt-compnum-positive-fixnum		$expt-cflonum-positive-fixnum
+
+	 $expt-fixnum-bignum	$expt-bignum-bignum	$expt-ratnum-bignum
+	 $expt-flonum-bignum	$expt-compnum-bignum	$expt-cflonum-bignum
+	 )
+  ;;Return N raised  to the power M.  According to  R6RS, for non-zero N
+  ;;this is:
   ;;
   ;;    (expt N M) === (exp (log (expt N M)))
   ;;               === (exp (* M (log N)))
   ;;
   ;;for N equal to zero:
   ;;
-  ;;    (expt 0.0 Z) = 1.0 if Z = 0.0
-  ;;                 = 0.0 if (real-part Z) is positive
+  ;;    (expt 0.0 M) = 1.0	if M = 0.0
+  ;;                 = 0.0	if (real-part M) is positive
   ;;
   ;;for  other cases  in which  the first  argument is  zero, either  an
   ;;exception       is       raised      with       condition       type
@@ -3745,7 +3766,7 @@
   ;;M are exact.
   ;;
   ;;Notice that this definition can  lead to unintuitive results; from a
-  ;;discussion with Kent Dybvig: It does seem like:
+  ;;discussion with Kent Dybvig, it does seem like:
   ;;
   ;;   (expt +inf.0+2.i 2)
   ;;
@@ -3808,74 +3829,273 @@
       ((compnum?)	($expt-number-compnum n m))
       ((cflonum?)	($expt-number-cflonum n m))
       (else
-       (assertion-violation who "expected number as argument" m))))
+       (%error-not-number m))))
 
-  (module ($expt-number-fixnum)
+;;; --------------------------------------------------------------------
 
+  (module ($expt-number-fixnum
+	   $expt-number-zero-fixnum
+	   $expt-number-positive-fixnum		$expt-number-negative-fixnum
+	   $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
+	   $expt-flonum-positive-fixnum		$expt-ratnum-positive-fixnum
+	   $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum)
+    ;;We  partition the  computation  in the  cases: positive  exponent,
+    ;;negative exponent, zero exponent.  The  case with zero exponent is
+    ;;computed by  itself; the case  of negative exponent is  reduced to
+    ;;the case of positive exponent.
+    ;;
     (define ($expt-number-fixnum n m)
       (cond (($fxzero? m)
-	     (cond ((nan?   n)	+nan.0)
-		   ((exact? n)	1)
-		   (else	1.)))
-	    (($fx> m 0)
-	     (cond ((integer? n)
-		    (%expt-fx n m))
-		   ((ratnum? n)
-		    ($make-ratnum (%expt-fx ($ratnum-n n) m)
-				  (%expt-fx ($ratnum-d n) m)))
-		   ((real? n) ;this includes the real infinite +inf.0
-		    (if (nan? n)
-			+nan.0
-		      (%expt-fx n m)))
-		   ;;In the following clauses N is a non-real.
-		   ;;
-		   ((nan? n)
-		    +nan.0+nan.0i)
-		   ((infinite? n) ;this handles correctly some special cases
-		    (exp (* m (log n))))
-		   (else
-		    (%expt-fx n m))))
+	     ($expt-number-zero-fixnum n))
+	    (($fxpositive? m)
+	     ($expt-number-positive-fixnum n m))
 	    (else ;M is negative
-	     (let ((v (expt n (- m))))
-	       (if (eq? v 0)
-		   0
-		 (/ 1 v))))))
+	     ($expt-number-negative-fixnum n m))))
 
-    (define (%expt-fx n m)
-      ;;Recursive function computing N^M when M is a fixnum and N is:
+    (define ($expt-number-zero-fixnum n)
+      ;;N is a number to be raised to the power of 0.
       ;;
-      ;;* A real number, infinite included, NaN excluded.
+      (cond-numeric-operand n
+	((fixnum?)	+1)
+	((bignum?)	+1)
+	((flonum?)	(if ($flnan? n) +nan.0 +1.0))
+	((ratnum?)	+1)
+	((compnum?)
+	 (let ((n.rep ($compnum-real n))
+	       (n.imp ($compnum-imag n)))
+	   (cond ((or (and (flonum? n.rep) ($flnan? n.rep))
+		      (and (flonum? n.rep) ($flnan? n.imp)))
+		  +nan.0+nan.0i)
+		 ;;Return exact 1 if the operand is exact.
+		 ((and (or (fixnum? n.rep) (bignum? n.rep) (ratnum? n.rep))
+		       (or (fixnum? n.imp) (bignum? n.imp) (ratnum? n.imp)))
+		  +1)
+		 (else
+		  1.0+0.0i))))
+	((cflonum?)
+	 (let ((n.rep ($cflonum-real n))
+	       (n.imp ($cflonum-imag n)))
+	   (if (or ($flnan? n.rep)
+		   ($flnan? n.imp))
+	       +nan.0+nan.0i
+	     1.0+0.0i)))
+	(else
+	 (%error-not-number n))))
+
+    (define ($expt-number-negative-fixnum n m)
+      ;;N is a number, M is a negative fixnum.
       ;;
-      ;;* A finite complex number.
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    (let ((v ($expt-number-positive-fixnum n m.neg)))
+	      (if (eq? v 0)
+		  0
+		($inv-number v)))
+	  ($expt-number-bignum n m.neg))))
+
+    ;;The case with positive exponent  is computed by recursing a number
+    ;;of times equal to the bits  in the representation of the exponent;
+    ;;given the operation R =  N^M and considering the representation of
+    ;;the exponent:
+    ;;
+    ;;   M = b_0 * 2^0 + b_1 * 2^1 + b_2 * 2^2 + b_3 * 2^3 + ...
+    ;;
+    ;;we can write:
+    ;;
+    ;;   N^M = N^(b_0 * 2^0 + b_1 * 2^1 + b_2 * 2^2 + b_3 * 2^3 + ...)
+    ;;       = N^(b_0 * 2^0) * N^(b_1 * 2^1) * N^(b_2 * 2^2) * N^(b_3 * 2^3) ...
+    ;;       = N^b_0 * N^(b_1 * 2) * N^(b_2 * 2 * 2) * N^(b_3 * 2 * 2 * 2) ...
+    ;;       = N^b_0 * (N^2)^b_1 * ((N^2)^2)^b_2 * (((N^2)^2)^2)^b_3 ...
+    ;;
+    ;;in  which we  have to  compute the  term with  bit b_(i+1)  before
+    ;;computing the  term with  bit b_i, a  non-tail recursion.   We can
+    ;;define:
+    ;;
+    ;;   N_0 = N
+    ;;   N_1 = N^2 = N_0^2
+    ;;   N_2 = (N^2)^2 = N_1^2
+    ;;   N_3 = ((N^2)^2)^2 = N_2^2
+    ;;   ...
+    ;;
+    ;;so:
+    ;;
+    ;;   N^M = N_0^b_0 * N_1^b_1 * N_2^b_2 * N_3^b_3 * ...
+    ;;
+    ;;where:
+    ;;
+    ;;   N_0 = 0
+    ;;   N_i = N_(i-1)^2    i = 1, 2, 3, ...
+    ;;
+    ;;Notes about used forms:
+    ;;
+    ;; ($fxeven? m)
+    ;;     The result is  1 for even M and 0 for odd  M; in other words:
+    ;;     the return value is the rightmost bit of M.
+    ;;
+    ;; ($fxsra m 1)
+    ;;     The  operation is "fixnum  shift right arithmetic";  when the
+    ;;     offset  is 1:  the rightmost  bit is  discarded and  the most
+    ;;     significant  bit inserted extends the  sign of M, the  bit is
+    ;;     zero if M is positive and 1 if M is negative.
+    ;;
+    (define ($expt-number-positive-fixnum n m)
+      ;;N is a number, M is a positive fixnum.
       ;;
-      ;;This function  recurses a number of  times equal to the  bits in
-      ;;the representation of M.
+      (cond-numeric-operand n
+	((fixnum?)	($expt-fixnum-positive-fixnum  n m))
+	((bignum?)	($expt-bignum-positive-fixnum  n m))
+	((flonum?)	($expt-flonum-positive-fixnum  n m))
+	((ratnum?)	($expt-ratnum-positive-fixnum  n m))
+	((compnum?)	($expt-compnum-positive-fixnum n m))
+	((cflonum?)	($expt-cflonum-positive-fixnum n m))
+	(else
+	 (%error-not-number n))))
+
+    (define-syntax define-expt-num-positive-fixnum
+      (syntax-rules ()
+	((_ ?who ?one ?square-num ?mul-num-number)
+	 (define (?who N_i-1 M)
+	   (if ($fxzero? M)
+	       ?one
+	     (let ((N_i ($expt-number-positive-fixnum (?square-num N_i-1) ($fxsra M 1))))
+	       (if ($fxeven? M)
+		   N_i
+		 (?mul-num-number N_i-1 N_i))))))))
+
+    (define-expt-num-positive-fixnum $expt-fixnum-positive-fixnum
+      1 $square-fixnum $mul-fixnum-number)
+
+    (define-expt-num-positive-fixnum $expt-bignum-positive-fixnum
+      1 $square-bignum $mul-bignum-number)
+
+    (define ($expt-flonum-positive-fixnum n m)
+      ;;N is a flonum, M is a positive fixnum.
       ;;
-      ;;Notes about used procedures:
+      (define-expt-num-positive-fixnum $expt-flonum-positive-fixnum/sub
+	1.0 $flsquare $fl*)
+      (cond (($flzero? n)	+0.0)
+	    (($flnan? n)	+nan.0)
+	    (($fl= n +inf.0)	+inf.0)
+	    (($fl= n -inf.0)	-inf.0)
+	    (else
+	     ($expt-flonum-positive-fixnum/sub n m))))
+
+    (define ($expt-ratnum-positive-fixnum n m)
+      ;;N is a ratnum, M is a positive fixnum.
       ;;
-      ;;* ($fxlogand m 1)  is 1 for even m and 0 for  odd m, or in other
-      ;;  words: the return value is the rightmost bit of M.
+      ($make-ratnum ($expt-number-positive-fixnum ($ratnum-n n) m)
+		    ($expt-number-positive-fixnum ($ratnum-d n) m)))
+
+    (define ($expt-compnum-positive-fixnum n m)
+      ;;N is a compnum, M is a positive fixnum.
       ;;
-      ;;* $fxsra means "fixnum shift right arithmetic".
+      (define-expt-num-positive-fixnum $expt-compnum-positive-fixnum/sub
+	1 $square-compnum $mul-compnum-number)
+      (cond ((nan? n)
+	     +nan.0+nan.0i)
+	    ((infinite? n)
+	     ;;There are special cases to be handled here.
+	     (exp (* m (log n))))
+	    (else
+	     ($expt-compnum-positive-fixnum/sub n m))))
+
+    (define ($expt-cflonum-positive-fixnum n m)
+      ;;N is a cflonum, M is a positive fixnum.
       ;;
-      ;;* $mul-number-number is the multiplication with two arguments.
-      ;;
-      (cond (($fxzero? m)
-	     1)
-	    (($fxzero? ($fxlogand m 1)) ;the rightmost bit in M is zero
-	     (%expt-fx ($mul-number-number n n) ($fxsra m 1)))
-	    (else ;the rightmost bit in M is one
-	     ($mul-number-number n (%expt-fx ($mul-number-number n n) ($fxsra m 1))))))
+      (define-expt-num-positive-fixnum $expt-cflonum-positive-fixnum/sub
+	1.0+0.0i $square-cflonum $mul-cflonum-cflonum)
+      (let ((n.rep ($cflonum-real n))
+	    (n.imp ($cflonum-imag n)))
+	(cond ((or ($flnan? n.rep)
+		   ($flnan? n.imp))
+	       +nan.0+nan.0i)
+	      ((or ($flinfinite? n.rep)
+		   ($flinfinite? n.imp))
+	       ;;There are special cases to be handled here.
+	       (exp (* m (log n))))
+	      (else
+	       ($expt-cflonum-positive-fixnum/sub n m)))))
 
     #| end of module: $expt-number-fixnum |# )
 
-  (define ($expt-number-bignum n m)
-    (cond ((eq? n 0)	0)
-	  ((eq? n 1)	1)
-	  ((eq? n -1)	(if ($bignum-even? m) 1 -1))
-	  ((nan? n)	+nan.0)
-	  (else
-	   (assertion-violation who "result is too big to compute" n m))))
+;;; --------------------------------------------------------------------
+
+  (module ($expt-number-bignum
+	   $expt-fixnum-bignum	$expt-bignum-bignum	$expt-ratnum-bignum
+	   $expt-flonum-bignum	$expt-compnum-bignum	$expt-cflonum-bignum)
+
+    (define ($expt-number-bignum n m)
+      ;;N is a number, M is a bignum.
+      ;;
+      (cond-numeric-operand n
+	((fixnum?)	($expt-fixnum-bignum   n m))
+	((bignum?)	($expt-bignum-bignum   n m))
+	((ratnum?)	($expt-ratnum-bignum   n m))
+	((flonum?)	($expt-flonum-bignum   n m))
+	((compnum?)	($expt-compnum-bignum  n m))
+	((cflonum?)	($expt-cflonum-bignum  n m))
+	(else
+	 (%error-not-number n))))
+
+    (define ($expt-fixnum-bignum n m)
+      ;;N is a fixnum, M is a bignum.
+      ;;
+      (cond (($fxzero? n)	0)
+	    (($fx= n +1)	1)
+	    (($fx= n -1)	(if ($bignum-even? m) +1 -1))
+	    (else
+	     (%error-result-too-big n m))))
+
+    (define ($expt-bignum-bignum n m)
+      ;;N is a bignum, M is a bignum.
+      ;;
+      (%error-result-too-big n m))
+
+    (define ($expt-ratnum-bignum n m)
+      ;;N is a ratnum, M is a bignum.
+      ;;
+      (%error-result-too-big n m))
+
+    (define ($expt-flonum-bignum n m)
+      ;;N is a flonum, M is a bignum.
+      ;;
+      (cond (($flzero? n)	+0.0)
+	    (($fl= n +1.0)	+1.0)
+	    (($fl= n -1.0)	(if ($bignum-even? m) +1.0 -1.0))
+	    (($flnan? n)	+nan.0)
+	    (($fl= n +inf.0)	+inf.0)
+	    (($fl= n -inf.0)	(if ($bignum-even? m) +inf.0 -inf.0))
+	    (else
+	     ;; N^M = exp (log N^M) = exp (M * log N)
+	     ($flexp ($fl* (inexact m) ($fllog n))))))
+
+    (define ($expt-compnum-bignum n m)
+      #f)
+
+    (define ($expt-cflonum-bignum n m)
+      ;;N is a cflonum, M is a bignum.
+      ;;
+      (let ((n.rep ($cflonum-real n))
+	    (n.imp ($cflonum-imag n)))
+	(cond ((or ($flnan? n.rep)
+		   ($flnan? n.imp))
+	       +nan.0+nan.0i)
+	      (($flzero? n.rep)
+	       (let ((R ($expt-flonum-bignum n.imp m)))
+		 (if ($bignum-even? m)
+		     ($mul-cflonum-flonum -1.0+0.0i R)
+		   ($mul-cflonum-flonum +1.0i R))))
+	      (($flzero? n.imp)
+	       ($make-cflonum ($expt-flonum-bignum n.rep m) 0.0))
+
+	      (($fl= n +inf.0)	+inf.0)
+	      (($fl= n -inf.0)	(if ($bignum-even? m) +inf.0 -inf.0))
+	      (else
+	       (%error-result-too-big n m)))))
+
+    #| end of module: $expt-number-bignum |# )
+
+;;; --------------------------------------------------------------------
 
   (define ($expt-number-flonum n m)
     (cond ((real? n)
@@ -3896,10 +4116,14 @@
 	  (else
 	   (exp (* m (log n))))))
 
+;;; --------------------------------------------------------------------
+
   (define ($expt-number-ratnum n m)
     ;; (expt (expt n ($ratnum-n m))
     ;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
     ($expt-number-flonum n (inexact m)))
+
+;;; --------------------------------------------------------------------
 
   (define ($expt-number-compnum n m)
     (cond ((eq? n 0)
@@ -3913,6 +4137,8 @@
 	  (else
 	   (exp (* m (log n))))))
 
+;;; --------------------------------------------------------------------
+
   (define ($expt-number-cflonum n m)
     (cond ((eq? n 0)
 	   0)
@@ -3924,6 +4150,14 @@
 	     0.0+0.0i))
 	  (else
 	   (exp (* m (log n))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-not-number x)
+    (assertion-violation who "expected number as argument" x))
+
+  (define (%error-result-too-big n m)
+    (assertion-violation who "result is too big to compute" n m))
 
   #| end of module: expt |# )
 

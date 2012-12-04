@@ -1359,6 +1359,16 @@
    ((E x)
     (nop)))
 
+ (define-primop $fxeven? unsafe
+   ((V x)
+    (prm '= (prm 'logand (T x) (K 1)) (K 0)))
+   ((P x)
+    (K #t))
+   ((E x)
+    (nop)))
+
+;;; --------------------------------------------------------------------
+
  (define-primop $fx= unsafe
    ((P x y)
     (prm '= (T x) (T y)))

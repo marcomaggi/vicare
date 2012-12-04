@@ -191,8 +191,8 @@
 	((sys:ratnum?  x) #t)
 	((sys:flonum?  x) #f)
 	((sys:compnum? x)
-	 (or (exact? ($compnum-real x))
-	     (exact? ($compnum-imag x))))
+	 (and (exact? ($compnum-real x))
+	      (exact? ($compnum-imag x))))
 	((sys:cflonum? x) #f)
 	(else
 	 (assertion-violation 'exact? "expected number as argument" x))))
