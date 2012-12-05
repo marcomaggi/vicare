@@ -117,6 +117,8 @@ Notes for revision 0.2d20
 
      flzero?/positive
      flzero?/negative
+     square
+     cube
 
 * BACKWARDS INCOMPATIBILITY The functions from (vicare glibc):
 

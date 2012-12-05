@@ -173,6 +173,7 @@ TESTS			=	\
 	test-vicare-numerics-remainder.sps		\
 	test-vicare-numerics-modulo.sps			\
 	test-vicare-numerics-square.sps			\
+	test-vicare-numerics-cube.sps			\
 	test-vicare-numerics-sign.sps			\
 	test-vicare-numerics-expt.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
@@ -401,6 +402,7 @@ EXTRA_DIST = \
 	test-vicare-numerics-remainder.sps		\
 	test-vicare-numerics-modulo.sps			\
 	test-vicare-numerics-square.sps			\
+	test-vicare-numerics-cube.sps			\
 	test-vicare-numerics-sign.sps			\
 	test-vicare-numerics-expt.sps			\
 	test-vicare-numerics-complex-numbers.sps	\

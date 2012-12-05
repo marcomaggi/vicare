@@ -90,6 +90,7 @@
 
     ;; powers and square roots
     expt			square
+    cube
     sqrt			exact-integer-sqrt
 
     ;; logarithms and exponentials
@@ -196,6 +197,9 @@
 
     $square-fixnum		$square-bignum		$square-ratnum
     $square-compnum		$square-cflonum
+
+    $cube-fixnum		$cube-bignum		$cube-ratnum
+    $cube-compnum		$cube-cflonum
 
     $gcd-number-number		$gcd-fixnum-number	$gcd-bignum-number
     $gcd-flonum-number		$gcd-number-fixnum	$gcd-number-bignum
@@ -381,6 +385,7 @@
 
 		;; powers and square roots
 		expt				square
+		cube
 		sqrt				exact-integer-sqrt
 
 		;; logarithms and exponentials
@@ -421,7 +426,8 @@
 	  $fleven?		$flodd?
 	  $flnan?
 	  $flfinite?		$flinfinite?
-	  $flsquare		$flsqrt
+	  $flsquare		$flcube
+	  $flsqrt
 	  $flnumerator		$fldenominator
 	  $flround
 	  $fllog		$flexp
@@ -441,7 +447,8 @@
 	$fleven?		$flodd?
 	$flnan?
 	$flfinite?		$flinfinite?
-	$flsquare		$flsqrt
+	$flsquare		$flcube
+	$flsqrt
 	$flnumerator		$fldenominator
 	$flround
 	$fllog			$flexp
@@ -3762,6 +3769,91 @@
 		       ($fl+ t t)))))
 
   #| end of module: square |# )
+
+
+(module (cube
+	 $cube-fixnum		$cube-bignum		$cube-ratnum
+	 $cube-compnum	$cube-cflonum)
+  (define who 'cube)
+
+  (define (cube x)
+    (cond-numeric-operand x
+      ((fixnum?)	($cube-fixnum  x))
+      ((bignum?)	($cube-bignum  x))
+      ((flonum?)	($flcube       x))
+      ((ratnum?)	($cube-ratnum  x))
+      ((compnum?)	($cube-compnum x))
+      ((cflonum?)	($cube-cflonum x))
+      (else
+       (%error-not-number x))))
+
+  (define ($cube-fixnum x)
+    (let ((x^2 ($square-fixnum x)))
+      (if (fixnum? x^2)
+	  ($mul-fixnum-fixnum x x^2)
+	($mul-fixnum-bignum x x^2))))
+
+  (define ($cube-bignum x)
+    ($mul-bignum-bignum x ($square-bignum x)))
+
+  (define ($cube-ratnum x)
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x)))
+      (let ((x.num^3 (if (fixnum? x.num) ($cube-fixnum x.num) ($cube-bignum x.num)))
+	    (x.den^3 (if (fixnum? x.den) ($cube-fixnum x.den) ($cube-bignum x.den))))
+	(if (fixnum? x.num^3)
+	    (if (fixnum? x.den^3)
+		($div-fixnum-fixnum x.num^3 x.den^3)
+	      ($div-fixnum-bignum x.num^3 x.den^3))
+	  (if (fixnum? x.den^3)
+	      ($div-bignum-fixnum x.num^3 x.den^3)
+	    ($div-bignum-bignum x.num^3 x.den^3))))))
+
+  (define ($cube-compnum x)
+    ;; (A + i B)^2 = (A^2 - B^2) + i 2 A B = D + i 2 A B
+    ;;
+    ;; (D + i 2 A B) (A + i B)
+    ;; = D A + i D B + i 2 A^2 B - 2 A B^2
+    ;; = (D A - 2 A B^2) + i (D B + 2 A^2 B)
+    ;; = A (D - 2 B^2) + i B (D + 2 A^2)
+    ;;
+    ;; rep = A (D - 2 B^2)
+    ;; imp = B (D + 2 A^2)
+    ;;
+    (let ((A ($compnum-real x))
+	  (B ($compnum-imag x)))
+      (let* ((A^2 (square A))
+	     (B^2 (square B))
+	     (D   ($sub-number-number A^2 B^2))
+	     (P   ($sub-number-number D ($mul-fixnum-number 2 B^2)))
+	     (Q   ($add-number-number D ($mul-fixnum-number 2 A^2))))
+	(let ((rep ($mul-number-number A P))
+	      (imp ($mul-number-number B Q)))
+	  ($make-rectangular rep imp)))))
+
+  (define ($cube-cflonum x)
+    ;; (A + i B)^2 = (A^2 - B^2) + i 2 A B = D + i 2 A B
+    ;;
+    ;; (D + i 2 A B) (A + i B)
+    ;; = D A + i D B + i 2 A^2 B - 2 A B^2
+    ;; = (D A - 2 A B^2) + i (D B + 2 A^2 B)
+    ;; = A (D - 2 B^2) + i B (D + 2 A^2)
+    ;;
+    ;; rep = A (D - 2 B^2)
+    ;; imp = B (D + 2 A^2)
+    ;;
+    (let ((A ($cflonum-real x))
+	  (B ($cflonum-imag x)))
+      (let* ((A^2 ($flsquare A))
+	     (B^2 ($flsquare B))
+	     (D   ($fl- A^2 B^2))
+	     (P   ($fl- D ($fl* 2.0 B^2)))
+	     (Q   ($fl+ D ($fl* 2.0 A^2))))
+	(let ((rep ($fl* A P))
+	      (imp ($fl* B Q)))
+	  ($make-cflonum rep imp)))))
+
+  #| end of module: cube |# )
 
 
 (module (expt

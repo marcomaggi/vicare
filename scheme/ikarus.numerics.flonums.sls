@@ -57,6 +57,7 @@
     fllog1p		$fllog1p
     flexpt		$flexpt
     flsquare		$flsquare
+    flcube		$flcube
     flsqrt		$flsqrt
 
     flinteger?
@@ -88,7 +89,7 @@
 		  flasinh		flacosh		flatanh
 		  flexp			fllog		flexpm1
 		  fllog1p		flexpt		flsqrt
-		  flsquare
+		  flsquare		flcube
 		  flinteger?		flnan?		flfinite?
 		  flinfinite?		fl=?		fl<?
 		  fl>?			fl<=?		fl>=?
@@ -155,6 +156,7 @@
 	    $flexpt
 	    $flsqrt
 	    $flsquare
+	    $flcube
 	    $flmax
 	    $flmin)
     (vicare arguments validation)
@@ -955,10 +957,14 @@
 
 (define-fl-operation/one/forcall flsqrt $flsqrt "ikrt_fl_sqrt")
 
-(define-fl-operation/two flsquare $flsquare)
+(define-fl-operation/two flsquare	$flsquare)
+(define-fl-operation/two flcube		$flcube)
 
 (define ($flsquare x)
   ($fl* x x))
+
+(define ($flcube x)
+  ($fl* ($flsquare x) x))
 
 
 ;;;; debugging functions

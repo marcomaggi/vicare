@@ -164,11 +164,6 @@
     (and (inexact=? x.rep y.rep)
 	 (inexact=? x.imp y.imp))))
 
-;;; --------------------------------------------------------------------
-
-(define (cube x)
-  (* x x x))
-
 
 ;;;; constants
 

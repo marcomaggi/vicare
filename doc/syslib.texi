@@ -762,7 +762,12 @@ Return the square root of the operand.
 
 
 @deffn {Unsafe Operation} $flsquare @var{fl}
-Return the square of @var{fl}.
+Return the square of @var{fl}: @var{fl} times @var{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flcube @var{fl}
+Return the cube of @var{fl}: @var{fl} times @var{fl} times @var{fl}.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -924,6 +929,7 @@ level operations on numbers.
 * syslib numerics mul::         Numbers multiplication.
 * syslib numerics div::         Numbers division.
 * syslib numerics square::      Squaring of numbers.
+* syslib numerics cube::        Cube of numbers.
 * syslib numerics gcd::         Greatest common divisor.
 * syslib numerics lcm::         Least common multiple.
 * syslib numerics quorem::      Quotient and remainder.
@@ -2211,6 +2217,41 @@ cflonum.
 
 @deffn {Unsafe Operation} $square-cflonum @var{cfl}
 Compute the square of a cflonum and return the result as cflonum.
+@end deffn
+
+@c page
+@node syslib numerics cube
+@subsection Cube of numbers
+
+
+To compute the cube of any number just use @func{cube}; to compute the
+cube of a flonum use @func{flcube} or @func{$flcube}.
+
+
+@deffn {Unsafe Operation} $cube-fixnum @var{fx}
+Compute the cube of a fixnum and return the result as fixnum or
+bignum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cube-bignum @var{bn}
+Compute the cube of a bignum and return the result as bignum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cube-ratnum @var{rn}
+Compute the cube of a ratnum and return the result as ratnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cube-compnum @var{cn}
+Compute the cube of a compnum and return the result as compnum or
+cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $cube-cflonum @var{cfl}
+Compute the cube of a cflonum and return the result as cflonum.
 @end deffn
 
 @c page

@@ -822,6 +822,7 @@
     ($flexpt					$flonums)
     ($flsqrt					$flonums)
     ($flsquare					$flonums)
+    ($flcube					$flonums)
     ($flmax					$flonums)
     ($flmin					$flonums)
 ;;;
@@ -1186,6 +1187,7 @@
     (sin					i v r ba se)
     (sqrt					i v r ba se)
     (square					i v $language)
+    (cube					i v $language)
     (string					i v r ba se)
     (string->list				i v r ba se)
     (string->number				i v r ba se)
@@ -1347,6 +1349,7 @@
     (flatanh					i v $language)
     (flsqrt					i v r fl)
     (flsquare					i v $language)
+    (flcube					i v $language)
     (fltruncate					i v r fl)
     (flzero?					i v r fl)
     (flzero?/positive				i v $language)
@@ -2531,6 +2534,12 @@
     ($square-ratnum				$numerics)
     ($square-compnum				$numerics)
     ($square-cflonum				$numerics)
+
+    ($cube-fixnum				$numerics)
+    ($cube-bignum				$numerics)
+    ($cube-ratnum				$numerics)
+    ($cube-compnum				$numerics)
+    ($cube-cflonum				$numerics)
 
     ($gcd-number-number				$numerics)
     ($gcd-fixnum-number				$numerics)

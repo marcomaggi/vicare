@@ -1985,11 +1985,6 @@ Convert between a flonum and its string representation.
 @subsubheading Exponents and logarithms
 
 
-@defun flsquare @var{fl}
-Return the square of @var{fl}, that is @var{fl} multiplied by itself.
-@end defun
-
-
 @defun fllog1p @var{fl}
 Return a flonum equivalent to @math{log(1 + @var{fl})}.
 @end defun
@@ -2022,8 +2017,14 @@ Compute the inverse hyperbolic functions.  Return flonum objects.
 @subsubheading Power functions
 
 
-@defun flsqr @var{fl}
-Return the square of @var{fl}.
+@defun flsquare @var{fl}
+Return the square of @var{fl}, that is @var{fl} multiplied by itself.
+@end defun
+
+
+@defun flcube @var{fl}
+Return the cube of @var{fl}, that is @var{fl} times @var{fl} times
+@var{fl}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -2114,7 +2115,12 @@ The following bindings are exported by the @library{ikarus} and
 
 
 @defun square @var{num}
-Return the square of @var{num}.
+Return the square of @var{num}: @var{num} times @var{num}.
+@end defun
+
+
+@defun cube @var{num}
+Return the cube of @var{num}: @var{num} times @var{num} times @var{num}.
 @end defun
 
 
