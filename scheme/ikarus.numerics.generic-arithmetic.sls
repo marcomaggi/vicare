@@ -1665,25 +1665,38 @@
 ;;; --------------------------------------------------------------------
 
   (define ($mul-fixnum-fixnum x y)
-    (foreign-call "ikrt_fxfxmult" x y))
+    (cond (($fx= x 1)	y)
+	  (($fx= y 1)	x)
+	  (else
+	   (foreign-call "ikrt_fxfxmult" x y))))
 
   (define ($mul-fixnum-bignum x y)
-    (foreign-call "ikrt_fxbnmult" x y))
+    (if ($fx= x 1)
+	y
+      (foreign-call "ikrt_fxbnmult" x y)))
 
   (define ($mul-fixnum-flonum x y)
-    ($fl* ($fixnum->flonum x) y))
+    (if ($fx= x 1)
+	y
+      ($fl* ($fixnum->flonum x) y)))
 
   (define ($mul-fixnum-ratnum x y)
-    ($div-number-number ($mul-fixnum-number x ($ratnum-n y))
-			($ratnum-d y)))
+    (if ($fx= x 1)
+	y
+      ($div-number-number ($mul-fixnum-number x ($ratnum-n y))
+			  ($ratnum-d y))))
 
   (define ($mul-fixnum-compnum x y)
-    ($make-rectangular ($mul-fixnum-number x ($compnum-real y))
-		       ($mul-fixnum-number x ($compnum-imag y))))
+    (if ($fx= x 1)
+	y
+      ($make-rectangular ($mul-fixnum-number x ($compnum-real y))
+			 ($mul-fixnum-number x ($compnum-imag y)))))
 
   (define ($mul-fixnum-cflonum x y)
-    ($make-cflonum ($mul-fixnum-flonum x ($cflonum-real y))
-		   ($mul-fixnum-flonum x ($cflonum-imag y))))
+    (if ($fx= x 1)
+	y
+      ($make-cflonum ($mul-fixnum-flonum x ($cflonum-real y))
+		     ($mul-fixnum-flonum x ($cflonum-imag y)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2024,6 +2037,8 @@
 	   (assertion-violation who "division by 0" x y))
 	  (($fxzero? x)
 	   0)
+	  (($fx= 1 y)
+	   x)
 	  (($fx= x y)
 	   1)
 	  (($fxpositive? y)
@@ -2211,6 +2226,8 @@
     ;;Remember that a bignum cannot be zero, so X is not zero here.
     (cond (($fxzero? y)
 	   (assertion-violation who "division by 0" x y))
+	  (($fx= 1 y)
+	   x)
 	  (($fxpositive? y)
 	   (if ($fx= y 1)
 	       x
@@ -2349,8 +2366,10 @@
     ;; ----- / y = ----- * - = ---------
     ;; x.den       x.den   y   x.den * y
     ;;
-    ($div-number-number ($ratnum-n x)
-			($mul-number-fixnum ($ratnum-d x) y)))
+    (if ($fx= 1 y)
+	x
+      ($div-number-number ($ratnum-n x)
+			  ($mul-number-fixnum ($ratnum-d x) y))))
 
   (define ($div-ratnum-bignum x y)
     ;; x.num       x.num   1     x.num
@@ -2436,7 +2455,9 @@
 ;;; --------------------------------------------------------------------
 
   (define ($div-flonum-fixnum x y)
-    ($fl/ x ($fixnum->flonum y)))
+    (if ($fx= 1 y)
+	x
+      ($fl/ x ($fixnum->flonum y))))
 
   (define ($div-flonum-bignum x y)
     ($fl/ x ($bignum->flonum y)))
@@ -2488,10 +2509,12 @@
     ;; ----------------- = ----- + i * -----
     ;;        y              y           y
     ;;
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-rectangular ($div-number-fixnum x.rep y)
-			 ($div-number-fixnum x.imp y))))
+    (if ($fx= 1 y)
+	x
+      (let ((x.rep ($compnum-real x))
+	    (x.imp ($compnum-imag x)))
+	($make-rectangular ($div-number-fixnum x.rep y)
+			   ($div-number-fixnum x.imp y)))))
 
   (define ($div-compnum-bignum x y)
     ;; x.rep + i * x.imp   x.rep       x.imp
@@ -2580,10 +2603,12 @@
     ;; ----------------- = ----- + i * -----
     ;;        y              y           y
     ;;
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($div-flonum-fixnum x.rep y)
-		     ($div-flonum-fixnum x.imp y))))
+    (if ($fx= 1 y)
+	x
+      (let ((x.rep ($cflonum-real x))
+	    (x.imp ($cflonum-imag x)))
+	($make-cflonum ($div-flonum-fixnum x.rep y)
+		       ($div-flonum-fixnum x.imp y)))))
 
   (define ($div-cflonum-bignum x y)
     ;; x.rep + i * x.imp   x.rep       x.imp
@@ -3845,12 +3870,14 @@
     ;;the case of positive exponent.
     ;;
     (define ($expt-number-fixnum n m)
-      (cond (($fxzero? m)
-	     ($expt-number-zero-fixnum n))
-	    (($fxpositive? m)
-	     ($expt-number-positive-fixnum n m))
-	    (else ;M is negative
-	     ($expt-number-negative-fixnum n m))))
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       ($expt-number-zero-fixnum n))
+	      (($fxpositive? m)
+	       ($expt-number-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
 
     (define ($expt-number-zero-fixnum n)
       ;;N is a number to be raised to the power of 0.
@@ -3941,26 +3968,31 @@
     (define ($expt-number-positive-fixnum n m)
       ;;N is a number, M is a positive fixnum.
       ;;
-      (cond-numeric-operand n
-	((fixnum?)	($expt-fixnum-positive-fixnum  n m))
-	((bignum?)	($expt-bignum-positive-fixnum  n m))
-	((flonum?)	($expt-flonum-positive-fixnum  n m))
-	((ratnum?)	($expt-ratnum-positive-fixnum  n m))
-	((compnum?)	($expt-compnum-positive-fixnum n m))
-	((cflonum?)	($expt-cflonum-positive-fixnum n m))
-	(else
-	 (%error-not-number n))))
+      (if ($fx= m 1)
+	  n
+	(cond-numeric-operand n
+	  ((fixnum?)	($expt-fixnum-positive-fixnum  n m))
+	  ((bignum?)	($expt-bignum-positive-fixnum  n m))
+	  ((flonum?)	($expt-flonum-positive-fixnum  n m))
+	  ((ratnum?)	($expt-ratnum-positive-fixnum  n m))
+	  ((compnum?)	($expt-compnum-positive-fixnum n m))
+	  ((cflonum?)	($expt-cflonum-positive-fixnum n m))
+	  (else
+	   (%error-not-number n)))))
 
     (define-syntax define-expt-num-positive-fixnum
       (syntax-rules ()
 	((_ ?who ?one ?square-num ?mul-num-number)
 	 (define (?who N_i-1 M)
-	   (if ($fxzero? M)
-	       ?one
-	     (let ((N_i ($expt-number-positive-fixnum (?square-num N_i-1) ($fxsra M 1))))
-	       (if ($fxeven? M)
-		   N_i
-		 (?mul-num-number N_i-1 N_i))))))))
+	   (cond (($fxzero? M)
+		  ?one)
+		 (($fx= M 1)
+		  N_i-1)
+		 (else
+		  (let ((N_i ($expt-number-positive-fixnum (?square-num N_i-1) ($fxsra M 1))))
+		    (if ($fxeven? M)
+			N_i
+		      (?mul-num-number N_i-1 N_i)))))))))
 
     (define-expt-num-positive-fixnum $expt-fixnum-positive-fixnum
       1 $square-fixnum $mul-fixnum-number)
@@ -3992,30 +4024,37 @@
       ;;
       (define-expt-num-positive-fixnum $expt-compnum-positive-fixnum/sub
 	1 $square-compnum $mul-compnum-number)
-      (cond ((nan? n)
-	     +nan.0+nan.0i)
-	    ((infinite? n)
-	     ;;There are special cases to be handled here.
-	     (exp (* m (log n))))
-	    (else
-	     ($expt-compnum-positive-fixnum/sub n m))))
+      (if ($fx= m 1)
+	  n
+	(let ((n.rep ($compnum-real n))
+	      (n.imp ($compnum-imag n)))
+	  (cond ((or (and (flonum? n.rep) ($flnan? n.rep))
+		     (and (flonum? n.imp) ($flnan? n.imp)))
+		 +nan.0+nan.0i)
+		((or (and (flonum? n.rep) ($flinfinite? n.rep))
+		     (and (flonum? n.imp) ($flinfinite? n.imp)))
+		 (exp ($mul-fixnum-number m ($log-compnum n))))
+		(else
+		 ($expt-compnum-positive-fixnum/sub n m))))))
 
     (define ($expt-cflonum-positive-fixnum n m)
       ;;N is a cflonum, M is a positive fixnum.
       ;;
       (define-expt-num-positive-fixnum $expt-cflonum-positive-fixnum/sub
 	1.0+0.0i $square-cflonum $mul-cflonum-cflonum)
-      (let ((n.rep ($cflonum-real n))
-	    (n.imp ($cflonum-imag n)))
-	(cond ((or ($flnan? n.rep)
-		   ($flnan? n.imp))
-	       +nan.0+nan.0i)
-	      ((or ($flinfinite? n.rep)
-		   ($flinfinite? n.imp))
-	       ;;There are special cases to be handled here.
-	       (exp (* m (log n))))
-	      (else
-	       ($expt-cflonum-positive-fixnum/sub n m)))))
+      (if ($fx= m 1)
+	  n
+	(let ((n.rep ($cflonum-real n))
+	      (n.imp ($cflonum-imag n)))
+	  (cond ((or ($flnan? n.rep)
+		     ($flnan? n.imp))
+		 +nan.0+nan.0i)
+		((or ($flinfinite? n.rep)
+		     ($flinfinite? n.imp))
+		 ;;There are special cases to be handled here.
+		 (exp (* m (log n))))
+		(else
+		 ($expt-cflonum-positive-fixnum/sub n m))))))
 
     #| end of module: $expt-number-fixnum |# )
 
@@ -4935,36 +4974,46 @@
 	(else
 	 (assertion-violation who "expected number as argument" x))))
 
-    (define (imag x radix)
+    (define (imag x.imp radix)
       ;;Compose a string for the imaginary part of a cflonum or compnum.
-      ;;X can be any real number, including infinities and NaN.
+      ;;X.IMP can be any real number, including infinities and NaN.  The
+      ;;caller will take care of  prepending the real part and appending
+      ;;the character #\i:
+      ;;
+      ;;   (string-append x.rep (imag x.imp radix) "i")
+      ;;
+      ;;this function has especially to decide what sign to put in front
+      ;;of the imaginary part, avoiding insertion of two signs.
       ;;
       (cond
        ;;Special case to allow printing: "Rep+i".
-       ((and (fixnum? x)
-	     ($fx= x +1))
+       ((and (fixnum? x.imp)
+	     ($fx= x.imp +1))
 	"+")
        ;;Special case to allow printing: "Rep-i".
-       ((and (fixnum? x)
-	     ($fx= x -1))
+       ((and (fixnum? x.imp)
+	     ($fx= x.imp -1))
 	"-")
-       ;;If X is  negative: omit the sign here, a  negative sign will be
-       ;;inserted by $NUMBER->STRING.
-       ((or (< x 0)
-	    (and (flonum? x)
-		 ($flzero?/negative x)))
-	($number->string x radix))
-       ;;If X is +inf.0 avoid prepending an additional positive sign.
-       ((and (flonum? x)
-	     (flinfinite? x))
+       ;;If X.IMP is negative: omit the  sign here, a negative sign will
+       ;;be inserted by the call to $NUMBER->STRING below.
+       ((or (< x.imp 0)
+	    (and (flonum? x.imp)
+		 ($flzero?/negative x.imp)))
+	($number->string x.imp radix))
+       ;;If  X.IMP is  +inf.0  avoid prepending  an additional  positive
+       ;;sign.
+       ((and (flonum? x.imp)
+	     ($flinfinite? x.imp))
 	"+inf.0")
-       ((and (flonum? x)
-	     (flnan? x))
+       ;;If  X.IMP is  +nan.0  avoid prepending  an additional  positive
+       ;;sign.
+       ((and (flonum? x.imp)
+	     ($flnan? x.imp))
 	"+nan.0")
-       ;;If we are here X is exact zero or positive.
+       ;;If we are here X.IMP is exact zero or positive.
        ;;
        (else
-	(string-append "+" ($number->string x radix)))))
+	(string-append "+" ($number->string x.imp radix)))))
 
     #| end of module: $number->string |# )
 
@@ -5764,7 +5813,7 @@
 	   (foreign-call "ikrt_fx_log" x))
 	  (else
 	   ;;We must assume that the opposite of X may be a bignum.
-	   ($make-rectangular (log (- x))
+	   ($make-rectangular (log ($neg-fixnum x))
 			      (acos -1)))))
 
   (define ($log-flonum x)

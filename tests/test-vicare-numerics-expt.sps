@@ -384,6 +384,156 @@
 ;;; --------------------------------------------------------------------
 ;;; compnums
 
+  (test		123+456i	+1	123+456i)
+  (test		12.3+456i	+1	12.3+456i)
+  (test		123+45.6i	+1	123+45.6i)
+  (test		1/23+4/56i	+1	1/23+4/56i)
+
+  (test		+nan.0+456i	+1	+nan.0+456i	inexact=?)
+  (test		123+nan.0i	+1	+123+nan.0i	inexact=?)
+
+  (test		+inf.0+456i	+1	+inf.0+456i	inexact=?)
+  (test		123+inf.0i	+1	+123+inf.0i	inexact=?)
+
+  (test		-inf.0+456i	+1	-inf.0+456i)
+  (test		123-inf.0i	+1	123-inf.0i)
+
+  (test (C 123 BN1)	+1	(C 123 BN1))
+  (test (C BN1 456)	+1	(C BN1 456))
+  (test (C 1.23 BN1)	+1	(C 1.23 BN1))
+  (test (C BN1 4.56)	+1	(C BN1 4.56))
+  (test (C 1/23 BN1)	+1	(C 1/23 BN1))
+  (test (C BN1 4/56)	+1	(C BN1 4/56))
+
+  (test (C 123 BN2)	+1	(C 123 BN2))
+  (test (C BN2 456)	+1	(C BN2 456))
+  (test (C 1.23 BN2)	+1	(C 1.23 BN2))
+  (test (C BN2 4.56)	+1	(C BN2 4.56))
+  (test (C 1/23 BN2)	+1	(C 1/23 BN2))
+  (test (C BN2 4/56)	+1	(C BN2 4/56))
+
+  (test (C 123 BN3)	+1	(C 123 BN3))
+  (test (C BN3 456)	+1	(C BN3 456))
+  (test (C 1.23 BN3)	+1	(C 1.23 BN3))
+  (test (C BN3 4.56)	+1	(C BN3 4.56))
+  (test (C 1/23 BN3)	+1	(C 1/23 BN3))
+  (test (C BN3 4/56)	+1	(C BN3 4/56))
+
+  (test (C 123 BN4)	+1	(C 123 BN4))
+  (test (C BN4 456)	+1	(C BN4 456))
+  (test (C 1.23 BN4)	+1	(C 1.23 BN4))
+  (test (C BN4 4.56)	+1	(C BN4 4.56))
+  (test (C 1/23 BN4)	+1	(C 1/23 BN4))
+  (test (C BN4 4/56)	+1	(C BN4 4/56))
+
+  ;; even exponent
+  (test		123+456i	+2	(square 123+456i))
+  (test		12.3+456i	+2	(square 12.3+456.0i))
+  (test		123+45.6i	+2	(square 123.0+45.6i))
+  (test		1/23+4/56i	+2	(square 1/23+4/56i))
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+456i	+2	+nan.0+nan.0i	inexact=?)
+  (test		123+nan.0i	+2	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+456i	+2	+inf.0+nan.0i	inexact=?)
+  (test		123+inf.0i	+2	-inf.0+inf.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		-inf.0+456i	+2	+inf.0-inf.0i	inexact=?)
+  (test		123-inf.0i	+2	-inf.0-inf.0i	inexact=?)
+
+  (test		(C 123 BN1)	+2	(square (C 123 BN1)))
+  (test		(C BN1 456)	+2	(square (C BN1 456)))
+  (test		(C 1.23 BN1)	+2	(square (C 1.23 BN1)))
+  (test		(C BN1 4.56)	+2	(square (C BN1 4.56)))
+  (test		(C 1/23 BN1)	+2	(square (C 1/23 BN1)))
+  (test		(C BN1 4/56)	+2	(square (C BN1 4/56)))
+
+  (test		(C 123 BN2)	+2	(square (C 123 BN2)))
+  (test		(C BN2 456)	+2	(square (C BN2 456)))
+  (test		(C 1.23 BN2)	+2	(square (C 1.23 BN2)))
+  (test		(C BN2 4.56)	+2	(square (C BN2 4.56)))
+  (test		(C 1/23 BN2)	+2	(square (C 1/23 BN2)))
+  (test		(C BN2 4/56)	+2	(square (C BN2 4/56)))
+
+  (test		(C 123 BN3)	+2	(square (C 123 BN3)))
+  (test		(C BN3 456)	+2	(square (C BN3 456)))
+  (test		(C 1.23 BN3)	+2	(square (C 1.23 BN3)))
+  (test		(C BN3 4.56)	+2	(square (C BN3 4.56)))
+  (test		(C 1/23 BN3)	+2	(square (C 1/23 BN3)))
+  (test		(C BN3 4/56)	+2	(square (C BN3 4/56)))
+
+  (test		(C 123 BN4)	+2	(square (C 123 BN4)))
+  (test		(C BN4 456)	+2	(square (C BN4 456)))
+  (test		(C 1.23 BN4)	+2	(square (C 1.23 BN4)))
+  (test		(C BN4 4.56)	+2	(square (C BN4 4.56)))
+  (test		(C 1/23 BN4)	+2	(square (C 1/23 BN4)))
+  (test		(C BN4 4/56)	+2	(square (C BN4 4/56)))
+
+  ;; even exponent
+  (test		123+456i	+3	(cube 123+456i))
+  (test		12.3+456i	+3	(cube 12.3+456.0i))
+  (test		123+45.6i	+3	(cube 123.0+45.6i))
+  (test		1/23+4/56i	+3	(cube 1/23+4/56i))
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+456i	+3	+nan.0+nan.0i	inexact=?)
+  (test		123+nan.0i	+3	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+456i	+3	+inf.0+nan.0i	inexact=?)
+  (test		123+inf.0i	+3	-inf.0-inf.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		-inf.0+456i	+3	-inf.0+inf.0i	inexact=?)
+  (test		123-inf.0i	+3	-inf.0+inf.0i	inexact=?)
+
+  (test		(C 123 BN1)	+3	(cube (C 123 BN1)))
+  (test		(C BN1 456)	+3	(cube (C BN1 456)))
+  (test		(C 1.23 BN1)	+3	(cube (C 1.23 BN1)))
+  (test		(C BN1 4.56)	+3	(cube (C BN1 4.56)))
+  (test		(C 1/23 BN1)	+3	(cube (C 1/23 BN1)))
+  (test		(C BN1 4/56)	+3	(cube (C BN1 4/56)))
+
+  (test		(C 123 BN2)	+3	(cube (C 123 BN2)))
+  (test		(C BN2 456)	+3	(cube (C BN2 456)))
+  (test		(C 1.23 BN2)	+3	(cube (C 1.23 BN2)))
+  (test		(C BN2 4.56)	+3	(cube (C BN2 4.56)))
+  (test		(C 1/23 BN2)	+3	(cube (C 1/23 BN2)))
+  (test		(C BN2 4/56)	+3	(cube (C BN2 4/56)))
+
+  (test		(C 123 BN3)	+3	(cube (C 123 BN3)))
+  (test		(C BN3 456)	+3	(cube (C BN3 456)))
+  (test		(C 1.23 BN3)	+3	(cube (C 1.23 BN3)))
+  (test		(C BN3 4.56)	+3	(cube (C BN3 4.56)))
+  (test		(C 1/23 BN3)	+3	(cube (C 1/23 BN3)))
+  (test		(C BN3 4/56)	+3	(cube (C BN3 4/56)))
+
+  (test		(C 123 BN4)	+3	(cube (C 123 BN4)))
+  (test		(C BN4 456)	+3	(cube (C BN4 456)))
+  (test		(C 1.23 BN4)	+3	(cube (C 1.23 BN4)))
+  (test		(C BN4 4.56)	+3	(cube (C BN4 4.56)))
+  (test		(C 1/23 BN4)	+3	(cube (C 1/23 BN4)))
+  (test		(C BN4 4/56)	+3	(cube (C BN4 4/56)))
+
+;;; --------------------------------------------------------------------
+;;; cflonums
+
+  (test		+nan.0+nan.0i	+1	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0+inf.0i	+1	+inf.0+inf.0i	inexact=?)
+  (test		-inf.0-inf.0i	+1	-inf.0-inf.0i)
+
+  ;; even exponent
+  (test		+inf.0+inf.0i	+2	+inf.0+inf.0i	inexact=?)
+  (test		+nan.0+nan.0i	+2	+nan.0+nan.0i	inexact=?)
+  (test		-inf.0-inf.0i	+2	-inf.0+inf.0i	inexact=?)
+
+  ;; odd exponent
+  (test		+nan.0+nan.0i	+3	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0+inf.0i	+3	-inf.0+inf.0i	inexact=?)
+  (test		-inf.0-inf.0i	+3	+inf.0-inf.0i	inexact=?)
 
   #t)
 
@@ -405,6 +555,7 @@
       ))
 
 ;;; --------------------------------------------------------------------
+;;; fixnums
 
   (test		0	-1	0)
   (test		+1	-1	1)
@@ -515,6 +666,162 @@
   (test		-inf.0		-3	-0.0)
   (test		+123.456	-3	(/ (cube +123.456)))
   (test		-123.456	-3	(/ (cube -123.456)))
+
+;;; --------------------------------------------------------------------
+;;; compnums
+
+  (test		123+456i	-1	(/ 123+456i))
+  (test		12.3+456i	-1	(/ 12.3+456i))
+  (test		123+45.6i	-1	(/ 123+45.6i))
+  (test		1/23+4/56i	-1	(/ 1/23+4/56i))
+
+  (test		+nan.0+456i	-1	(/ +nan.0+456i)		inexact=?)
+  (test		123+nan.0i	-1	(/ +123+nan.0i)		inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+456i	-1	+nan.0+0.0i		inexact=?)
+  (test		123+inf.0i	-1	+0.0+nan.0i		inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		-inf.0+456i	-1	+nan.0-0.0i		inexact=?)
+  (test		123-inf.0i	-1	+0.0+nan.0i		inexact=?)
+
+  (test (C 123 BN1)	-1	(/ (C 123 BN1)))
+  (test (C BN1 456)	-1	(/ (C BN1 456)))
+  (test (C 1.23 BN1)	-1	(/ (C 1.23 BN1)))
+  (test (C BN1 4.56)	-1	(/ (C BN1 4.56)))
+  (test (C 1/23 BN1)	-1	(/ (C 1/23 BN1)))
+  (test (C BN1 4/56)	-1	(/ (C BN1 4/56)))
+
+  (test (C 123 BN2)	-1	(/ (C 123 BN2)))
+  (test (C BN2 456)	-1	(/ (C BN2 456)))
+  (test (C 1.23 BN2)	-1	(/ (C 1.23 BN2)))
+  (test (C BN2 4.56)	-1	(/ (C BN2 4.56)))
+  (test (C 1/23 BN2)	-1	(/ (C 1/23 BN2)))
+  (test (C BN2 4/56)	-1	(/ (C BN2 4/56)))
+
+  (test (C 123 BN3)	-1	(/ (C 123 BN3)))
+  (test (C BN3 456)	-1	(/ (C BN3 456)))
+  (test (C 1.23 BN3)	-1	(/ (C 1.23 BN3)))
+  (test (C BN3 4.56)	-1	(/ (C BN3 4.56)))
+  (test (C 1/23 BN3)	-1	(/ (C 1/23 BN3)))
+  (test (C BN3 4/56)	-1	(/ (C BN3 4/56)))
+
+  (test (C 123 BN4)	-1	(/ (C 123 BN4)))
+  (test (C BN4 456)	-1	(/ (C BN4 456)))
+  (test (C 1.23 BN4)	-1	(/ (C 1.23 BN4)))
+  (test (C BN4 4.56)	-1	(/ (C BN4 4.56)))
+  (test (C 1/23 BN4)	-1	(/ (C 1/23 BN4)))
+  (test (C BN4 4/56)	-1	(/ (C BN4 4/56)))
+
+  ;; even exponent
+  (test		123+456i	-2	(/ (square 123+456i)))
+  (test		12.3+456i	-2	(/ (square 12.3+456.0i)))
+  (test		123+45.6i	-2	(/ (square 123.0+45.6i)))
+  (test		1/23+4/56i	-2	(/ (square 1/23+4/56i)))
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+456i	-2	(/ +nan.0+nan.0i)	inexact=?)
+  (test		123+nan.0i	-2	(/ +nan.0+nan.0i)	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+456i	-2	(/ +inf.0+nan.0i)	inexact=?)
+  (test		123+inf.0i	-2	(/ -inf.0+inf.0i)	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		-inf.0+456i	-2	(/ +inf.0-inf.0i)	inexact=?)
+  (test		123-inf.0i	-2	(/ -inf.0-inf.0i)	inexact=?)
+
+  (test		(C 123 BN1)	-2	(/ (square (C 123 BN1))))
+  (test		(C BN1 456)	-2	(/ (square (C BN1 456))))
+  (test		(C 1.23 BN1)	-2	(/ (square (C 1.23 BN1))))
+  (test		(C BN1 4.56)	-2	(/ (square (C BN1 4.56))))
+  (test		(C 1/23 BN1)	-2	(/ (square (C 1/23 BN1))))
+  (test		(C BN1 4/56)	-2	(/ (square (C BN1 4/56))))
+
+  (test		(C 123 BN2)	-2	(/ (square (C 123 BN2))))
+  (test		(C BN2 456)	-2	(/ (square (C BN2 456))))
+  (test		(C 1.23 BN2)	-2	(/ (square (C 1.23 BN2))))
+  (test		(C BN2 4.56)	-2	(/ (square (C BN2 4.56))))
+  (test		(C 1/23 BN2)	-2	(/ (square (C 1/23 BN2))))
+  (test		(C BN2 4/56)	-2	(/ (square (C BN2 4/56))))
+
+  (test		(C 123 BN3)	-2	(/ (square (C 123 BN3))))
+  (test		(C BN3 456)	-2	(/ (square (C BN3 456))))
+  (test		(C 1.23 BN3)	-2	(/ (square (C 1.23 BN3))))
+  (test		(C BN3 4.56)	-2	(/ (square (C BN3 4.56))))
+  (test		(C 1/23 BN3)	-2	(/ (square (C 1/23 BN3))))
+  (test		(C BN3 4/56)	-2	(/ (square (C BN3 4/56))))
+
+  (test		(C 123 BN4)	-2	(/ (square (C 123 BN4))))
+  (test		(C BN4 456)	-2	(/ (square (C BN4 456))))
+  (test		(C 1.23 BN4)	-2	(/ (square (C 1.23 BN4))))
+  (test		(C BN4 4.56)	-2	(/ (square (C BN4 4.56))))
+  (test		(C 1/23 BN4)	-2	(/ (square (C 1/23 BN4))))
+  (test		(C BN4 4/56)	-2	(/ (square (C BN4 4/56))))
+
+  ;; even exponent
+  (test		123+456i	-3	(/ (cube 123+456i)))
+  (test		12.3+456i	-3	(/ (cube 12.3+456.0i)))
+  (test		123+45.6i	-3	(/ (cube 123.0+45.6i)))
+  (test		1/23+4/56i	-3	(/ (cube 1/23+4/56i)))
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+456i	-3	+nan.0+nan.0i	inexact=?)
+  (test		123+nan.0i	-3	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+456i	-3	+nan.0+nan.0i	inexact=?)
+  (test		123+inf.0i	-3	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		-inf.0+456i	-3	+nan.0+nan.0i	inexact=?)
+  (test		123-inf.0i	-3	-nan.0+nan.0i	inexact=?)
+
+  (test		(C 123 BN1)	-3	(/ (cube (C 123 BN1))))
+  (test		(C BN1 456)	-3	(/ (cube (C BN1 456))))
+  (test		(C 1.23 BN1)	-3	(/ (cube (C 1.23 BN1))))
+  (test		(C BN1 4.56)	-3	(/ (cube (C BN1 4.56))))
+  (test		(C 1/23 BN1)	-3	(/ (cube (C 1/23 BN1))))
+  (test		(C BN1 4/56)	-3	(/ (cube (C BN1 4/56))))
+
+  (test		(C 123 BN2)	-3	(/ (cube (C 123 BN2))))
+  (test		(C BN2 456)	-3	(/ (cube (C BN2 456))))
+  (test		(C 1.23 BN2)	-3	(/ (cube (C 1.23 BN2))))
+  (test		(C BN2 4.56)	-3	(/ (cube (C BN2 4.56))))
+  (test		(C 1/23 BN2)	-3	(/ (cube (C 1/23 BN2))))
+  (test		(C BN2 4/56)	-3	(/ (cube (C BN2 4/56))))
+
+  (test		(C 123 BN3)	-3	(/ (cube (C 123 BN3))))
+  (test		(C BN3 456)	-3	(/ (cube (C BN3 456))))
+  (test		(C 1.23 BN3)	-3	(/ (cube (C 1.23 BN3))))
+  (test		(C BN3 4.56)	-3	(/ (cube (C BN3 4.56))))
+  (test		(C 1/23 BN3)	-3	(/ (cube (C 1/23 BN3))))
+  (test		(C BN3 4/56)	-3	(/ (cube (C BN3 4/56))))
+
+  (test		(C 123 BN4)	-3	(/ (cube (C 123 BN4))))
+  (test		(C BN4 456)	-3	(/ (cube (C BN4 456))))
+  (test		(C 1.23 BN4)	-3	(/ (cube (C 1.23 BN4))))
+  (test		(C BN4 4.56)	-3	(/ (cube (C BN4 4.56))))
+  (test		(C 1/23 BN4)	-3	(/ (cube (C 1/23 BN4))))
+  (test		(C BN4 4/56)	-3	(/ (cube (C BN4 4/56))))
+
+;;; --------------------------------------------------------------------
+;;; cflonums
+
+  (test		+nan.0+nan.0i	-1	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0+inf.0i	-1	+nan.0+nan.0i	inexact=?)
+  (test		-inf.0-inf.0i	-1	+nan.0+nan.0i	inexact=?)
+
+  ;; even exponent
+  (test		+nan.0+nan.0i	-2	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0+inf.0i	-2	+nan.0+nan.0i	inexact=?)
+  (test		-inf.0-inf.0i	-2	+nan.0+nan.0i	inexact=?)
+
+  ;; odd exponent
+  (test		+nan.0+nan.0i	-3	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0+inf.0i	-3	-nan.0+nan.0i	inexact=?)
+  (test		-inf.0-inf.0i	-3	+nan.0-nan.0i	inexact=?)
 
   #t)
 
