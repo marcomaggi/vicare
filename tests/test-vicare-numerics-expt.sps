@@ -521,18 +521,56 @@
 ;;; --------------------------------------------------------------------
 ;;; cflonums
 
+  (test		12.3+45.6i	+1	12.3+45.6i	inexact=?)
+  (test		12.3+0.0i	+1	12.3+0.0i	inexact=?)
+  (test		0.0+45.6i	+1	0.0+45.6i	inexact=?)
+  (test		+inf.0+45.6i	+1	+inf.0+45.6i	inexact=?)
+  (test		12.3+inf.0i	+1	12.3+inf.0i	inexact=?)
+
+  (test		+nan.0+45.6i	+1	+nan.0+45.6i	inexact=?)
+  (test		12.3+nan.0i	+1	+12.3+nan.0i	inexact=?)
   (test		+nan.0+nan.0i	+1	+nan.0+nan.0i	inexact=?)
+
   (test		+inf.0+inf.0i	+1	+inf.0+inf.0i	inexact=?)
-  (test		-inf.0-inf.0i	+1	-inf.0-inf.0i)
+  (test		+inf.0-inf.0i	+1	+inf.0-inf.0i	inexact=?)
+  (test		-inf.0+inf.0i	+1	-inf.0+inf.0i	inexact=?)
+  (test		-inf.0-inf.0i	+1	-inf.0-inf.0i	inexact=?)
 
   ;; even exponent
-  (test		+inf.0+inf.0i	+2	+inf.0+inf.0i	inexact=?)
-  (test		+nan.0+nan.0i	+2	+nan.0+nan.0i	inexact=?)
-  (test		-inf.0-inf.0i	+2	-inf.0+inf.0i	inexact=?)
+  (test		12.3+45.6i	+2	(square 12.3+45.6i)	inexact=?)
+  (test		12.3+0.0i	+2	(square 12.3+0.0i)	inexact=?)
+  (test		0.0+45.6i	+2	(square 0.0+45.6i)	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+45.6i	+2	+inf.0+nan.0i		inexact=?)
+  (test		12.3+inf.0i	+2	-inf.0+inf.0i		inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+45.6i	+2	+nan.0+nan.0i		inexact=?)
+  (test		12.3+nan.0i	+2	+nan.0+nan.0i		inexact=?)
+  (test		+nan.0+nan.0i	+2	+nan.0+nan.0i		inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+inf.0i	+2	+inf.0+inf.0i		inexact=?)
+  (test		+inf.0-inf.0i	+2	+inf.0-inf.0i		inexact=?)
+  (test		-inf.0+inf.0i	+2	-inf.0-inf.0i		inexact=?)
+  (test		-inf.0-inf.0i	+2	-inf.0+inf.0i		inexact=?)
 
   ;; odd exponent
-  (test		+nan.0+nan.0i	+3	+nan.0+nan.0i	inexact=?)
+  (test		12.3+45.6i	+3	(cube 12.3+45.6i)	inexact=?)
+  (test		12.3+0.0i	+3	(cube 12.3+0.0i)	inexact=?)
+  (test		0.0+45.6i	+3	(cube 0.0+45.6i)	inexact=?)
+  (test		+inf.0+45.6i	+3	+inf.0+nan.0i		inexact=?)
+  (test		12.3+inf.0i	+3	-inf.0-inf.0i		inexact=?)
+
+  (test		+nan.0+45.6i	+3	+nan.0+nan.0i		inexact=?)
+  (test		12.3+nan.0i	+3	+nan.0+nan.0i		inexact=?)
+  (test		+nan.0+nan.0i	+3	+nan.0+nan.0i		inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
   (test		+inf.0+inf.0i	+3	-inf.0+inf.0i	inexact=?)
+  (test		+inf.0-inf.0i	+3	-inf.0-inf.0i	inexact=?)
+  (test		-inf.0+inf.0i	+3	+inf.0+inf.0i	inexact=?)
   (test		-inf.0-inf.0i	+3	+inf.0-inf.0i	inexact=?)
 
   #t)
@@ -809,19 +847,64 @@
 ;;; --------------------------------------------------------------------
 ;;; cflonums
 
+  (test		12.3+45.6i	-1	(/ 12.3+45.6i)	inexact=?)
+  (test		12.3+0.0i	-1	(/ 12.3+0.0i)	inexact=?)
+  (test		0.0+45.6i	-1	(/ 0.0+45.6i)	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+45.6i	-1	+nan.0+0.0i	inexact=?)
+  (test		12.3+inf.0i	-1	+0.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+45.6i	-1	+nan.0+nan.0i	inexact=?)
+  (test		12.3+nan.0i	-1	+nan.0+nan.0i	inexact=?)
   (test		+nan.0+nan.0i	-1	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
   (test		+inf.0+inf.0i	-1	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0-inf.0i	-1	+nan.0-nan.0i	inexact=?)
+  (test		-inf.0+inf.0i	-1	+nan.0+nan.0i	inexact=?)
   (test		-inf.0-inf.0i	-1	+nan.0+nan.0i	inexact=?)
 
   ;; even exponent
+  (test		12.3+45.6i	-2	(/ (square 12.3+45.6i))	inexact=?)
+  (test		12.3+0.0i	-2	(/ (square 12.3+0.0i))	inexact=?)
+  (test		0.0+45.6i	-2	(/ (square 0.0+45.6i))	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+45.6i	-2	+nan.0+nan.0i	inexact=?)
+  (test		12.3+inf.0i	-2	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+45.6i	-2	+nan.0+nan.0i	inexact=?)
+  (test		12.3+nan.0i	-2	+nan.0+nan.0i	inexact=?)
   (test		+nan.0+nan.0i	-2	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
   (test		+inf.0+inf.0i	-2	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0-inf.0i	-2	+nan.0+nan.0i	inexact=?)
+  (test		-inf.0+inf.0i	-2	+nan.0+nan.0i	inexact=?)
   (test		-inf.0-inf.0i	-2	+nan.0+nan.0i	inexact=?)
 
   ;; odd exponent
+  (test		12.3+45.6i	-3	(/ (cube 12.3+45.6i))	inexact=?)
+  (test		12.3+0.0i	-3	(/ (cube 12.3+0.0i))	inexact=?)
+  (test		0.0+45.6i	-3	(/ (cube 0.0+45.6i))	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+45.6i	-3	+nan.0+nan.0i	inexact=?)
+  (test		12.3+inf.0i	-3	+nan.0+nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+nan.0+45.6i	-3	+nan.0+nan.0i	inexact=?)
+  (test		12.3+nan.0i	-3	+nan.0+nan.0i	inexact=?)
   (test		+nan.0+nan.0i	-3	+nan.0+nan.0i	inexact=?)
-  (test		+inf.0+inf.0i	-3	-nan.0+nan.0i	inexact=?)
-  (test		-inf.0-inf.0i	-3	+nan.0-nan.0i	inexact=?)
+
+		;these are whatever comes out of (exp (* M (log N)))
+  (test		+inf.0+inf.0i	-3	+nan.0+nan.0i	inexact=?)
+  (test		+inf.0-inf.0i	-3	+nan.0+nan.0i	inexact=?)
+  (test		-inf.0+inf.0i	-3	+nan.0+nan.0i	inexact=?)
+  (test		-inf.0-inf.0i	-3	+nan.0+nan.0i	inexact=?)
 
   #t)
 
