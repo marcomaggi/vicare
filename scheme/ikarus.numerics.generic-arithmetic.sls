@@ -484,6 +484,14 @@
       "expected number as argument")
     x))
 
+(define-syntax %error-not-number
+  (lambda (stx)
+    (syntax-case stx ()
+      ((?k ?arg)
+       (identifier? #'?arg)
+       (with-syntax ((WHO (datum->syntax #'?k 'who)))
+	 #'(assertion-violation WHO "expected number as argument" ?arg))))))
+
 (module (PI PI/2)
   (import (ikarus))
   (define PI (acos -1))
@@ -4192,9 +4200,6 @@
 	   (exp (* m (log n))))))
 
 ;;; --------------------------------------------------------------------
-
-  (define (%error-not-number x)
-    (assertion-violation who "expected number as argument" x))
 
   (define (%error-result-too-big n m)
     (assertion-violation who "result is too big to compute" n m))
