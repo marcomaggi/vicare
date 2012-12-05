@@ -468,10 +468,10 @@
   (test		(C BN4 4/56)	+2	(square (C BN4 4/56)))
 
   ;; even exponent
-  (test		123+456i	+3	(cube 123+456i))
-  (test		12.3+456i	+3	(cube 12.3+456.0i))
-  (test		123+45.6i	+3	(cube 123.0+45.6i))
-  (test		1/23+4/56i	+3	(cube 1/23+4/56i))
+  (test		123+456i	+3	(cube 123+456i)		inexact=?)
+  (test		12.3+456i	+3	(cube 12.3+456.0i)	inexact=?)
+  (test		123+45.6i	+3	(cube 123.0+45.6i)	inexact=?)
+  (test		1/23+4/56i	+3	(cube 1/23+4/56i)	inexact=?)
 
 		;these are whatever comes out of (exp (* M (log N)))
   (test		+nan.0+456i	+3	+nan.0+nan.0i	inexact=?)
@@ -487,29 +487,29 @@
 
   (test		(C 123 BN1)	+3	(cube (C 123 BN1)))
   (test		(C BN1 456)	+3	(cube (C BN1 456)))
-  (test		(C 1.23 BN1)	+3	(cube (C 1.23 BN1)))
-  (test		(C BN1 4.56)	+3	(cube (C BN1 4.56)))
+  (test		(C 1.23 BN1)	+3	(cube (C 1.23 BN1))	inexact=?)
+  (test		(C BN1 4.56)	+3	(cube (C BN1 4.56))	inexact=?)
   (test		(C 1/23 BN1)	+3	(cube (C 1/23 BN1)))
   (test		(C BN1 4/56)	+3	(cube (C BN1 4/56)))
 
   (test		(C 123 BN2)	+3	(cube (C 123 BN2)))
   (test		(C BN2 456)	+3	(cube (C BN2 456)))
-  (test		(C 1.23 BN2)	+3	(cube (C 1.23 BN2)))
-  (test		(C BN2 4.56)	+3	(cube (C BN2 4.56)))
+  (test		(C 1.23 BN2)	+3	(cube (C 1.23 BN2))	inexact=?)
+  (test		(C BN2 4.56)	+3	(cube (C BN2 4.56))	inexact=?)
   (test		(C 1/23 BN2)	+3	(cube (C 1/23 BN2)))
   (test		(C BN2 4/56)	+3	(cube (C BN2 4/56)))
 
   (test		(C 123 BN3)	+3	(cube (C 123 BN3)))
   (test		(C BN3 456)	+3	(cube (C BN3 456)))
-  (test		(C 1.23 BN3)	+3	(cube (C 1.23 BN3)))
-  (test		(C BN3 4.56)	+3	(cube (C BN3 4.56)))
+  (test		(C 1.23 BN3)	+3	(cube (C 1.23 BN3))	inexact=?)
+  (test		(C BN3 4.56)	+3	(cube (C BN3 4.56))	inexact=?)
   (test		(C 1/23 BN3)	+3	(cube (C 1/23 BN3)))
   (test		(C BN3 4/56)	+3	(cube (C BN3 4/56)))
 
   (test		(C 123 BN4)	+3	(cube (C 123 BN4)))
   (test		(C BN4 456)	+3	(cube (C BN4 456)))
-  (test		(C 1.23 BN4)	+3	(cube (C 1.23 BN4)))
-  (test		(C BN4 4.56)	+3	(cube (C BN4 4.56)))
+  (test		(C 1.23 BN4)	+3	(cube (C 1.23 BN4))	inexact=?)
+  (test		(C BN4 4.56)	+3	(cube (C BN4 4.56))	inexact=?)
   (test		(C 1/23 BN4)	+3	(cube (C 1/23 BN4)))
   (test		(C BN4 4/56)	+3	(cube (C BN4 4/56)))
 
@@ -795,8 +795,8 @@
 
   ;; even exponent
   (test		123+456i	-3	(/ (cube 123+456i)))
-  (test		12.3+456i	-3	(/ (cube 12.3+456.0i)))
-  (test		123+45.6i	-3	(/ (cube 123.0+45.6i)))
+  (test		12.3+456i	-3	(/ (cube 12.3+456.0i))	inexact=?)
+  (test		123+45.6i	-3	(/ (cube 123.0+45.6i))	inexact=?)
   (test		1/23+4/56i	-3	(/ (cube 1/23+4/56i)))
 
 		;these are whatever comes out of (exp (* M (log N)))
@@ -813,29 +813,29 @@
 
   (test		(C 123 BN1)	-3	(/ (cube (C 123 BN1))))
   (test		(C BN1 456)	-3	(/ (cube (C BN1 456))))
-  (test		(C 1.23 BN1)	-3	(/ (cube (C 1.23 BN1))))
-  (test		(C BN1 4.56)	-3	(/ (cube (C BN1 4.56))))
+  (test		(C 1.23 BN1)	-3	(/ (cube (C 1.23 BN1)))	inexact=?)
+  (test		(C BN1 4.56)	-3	(/ (cube (C BN1 4.56)))	inexact=?)
   (test		(C 1/23 BN1)	-3	(/ (cube (C 1/23 BN1))))
   (test		(C BN1 4/56)	-3	(/ (cube (C BN1 4/56))))
 
   (test		(C 123 BN2)	-3	(/ (cube (C 123 BN2))))
   (test		(C BN2 456)	-3	(/ (cube (C BN2 456))))
-  (test		(C 1.23 BN2)	-3	(/ (cube (C 1.23 BN2))))
-  (test		(C BN2 4.56)	-3	(/ (cube (C BN2 4.56))))
+  (test		(C 1.23 BN2)	-3	(/ (cube (C 1.23 BN2)))	inexact=?)
+  (test		(C BN2 4.56)	-3	(/ (cube (C BN2 4.56)))	inexact=?)
   (test		(C 1/23 BN2)	-3	(/ (cube (C 1/23 BN2))))
   (test		(C BN2 4/56)	-3	(/ (cube (C BN2 4/56))))
 
   (test		(C 123 BN3)	-3	(/ (cube (C 123 BN3))))
   (test		(C BN3 456)	-3	(/ (cube (C BN3 456))))
-  (test		(C 1.23 BN3)	-3	(/ (cube (C 1.23 BN3))))
-  (test		(C BN3 4.56)	-3	(/ (cube (C BN3 4.56))))
+  (test		(C 1.23 BN3)	-3	(/ (cube (C 1.23 BN3)))	inexact=?)
+  (test		(C BN3 4.56)	-3	(/ (cube (C BN3 4.56)))	inexact=?)
   (test		(C 1/23 BN3)	-3	(/ (cube (C 1/23 BN3))))
   (test		(C BN3 4/56)	-3	(/ (cube (C BN3 4/56))))
 
   (test		(C 123 BN4)	-3	(/ (cube (C 123 BN4))))
   (test		(C BN4 456)	-3	(/ (cube (C BN4 456))))
-  (test		(C 1.23 BN4)	-3	(/ (cube (C 1.23 BN4))))
-  (test		(C BN4 4.56)	-3	(/ (cube (C BN4 4.56))))
+  (test		(C 1.23 BN4)	-3	(/ (cube (C 1.23 BN4)))	inexact=?)
+  (test		(C BN4 4.56)	-3	(/ (cube (C BN4 4.56)))	inexact=?)
   (test		(C 1/23 BN4)	-3	(/ (cube (C 1/23 BN4))))
   (test		(C BN4 4/56)	-3	(/ (cube (C BN4 4/56))))
 
