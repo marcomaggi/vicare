@@ -232,7 +232,7 @@
 
   (catch-implementation-restriction
    "result is too big to compute"
-   ($expt-fixnum-bignum BN1 BN1))
+   ($expt-bignum-bignum BN1 BN1))
 
   #t)
 
