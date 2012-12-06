@@ -286,6 +286,8 @@
     $expt-fixnum-bignum		$expt-bignum-bignum	$expt-ratnum-bignum
     $expt-flonum-bignum		$expt-compnum-bignum	$expt-cflonum-bignum
 
+    $expt-fixnum-flonum		$expt-bignum-flonum	$expt-ratnum-flonum
+    $expt-flonum-flonum		$expt-compnum-flonum	$expt-cflonum-flonum
 
     $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
     $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
@@ -523,6 +525,10 @@
     (assertion-violation who "expected real number as argument" x))
 
   #| end of module: real->flonum |# )
+
+(define ($compnum->cflonum Z)
+  ($make-cflonum (real->flonum ($compnum-real Z))
+		 (real->flonum ($compnum-imag Z))))
 
 
 ;;;; generic arithmetic functions
@@ -3868,6 +3874,9 @@
 
 	 $expt-fixnum-bignum	$expt-bignum-bignum	$expt-ratnum-bignum
 	 $expt-flonum-bignum	$expt-compnum-bignum	$expt-cflonum-bignum
+
+	 $expt-fixnum-flonum	$expt-bignum-flonum	$expt-ratnum-flonum
+	 $expt-flonum-flonum	$expt-compnum-flonum	$expt-cflonum-flonum
 	 )
   ;;Return N raised  to the power M.  According to  R6RS, for non-zero N
   ;;this is:
@@ -4222,7 +4231,7 @@
 	    (n.imp ($compnum-imag n)))
 	(if (or (flonum? n.rep)
 		(flonum? n.imp))
-	    ($expt-cflonum-bignum (inexact n) m)
+	    ($expt-cflonum-bignum ($compnum->cflonum n) m)
 	  (%error-result-too-big n m))))
 
     (define ($expt-cflonum-bignum n m)
@@ -4234,31 +4243,103 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($expt-number-flonum n m)
-    (cond ((real? n)
-	   (cond ((nan? n)
-		  +nan.0)
-		 ((integer? m)
-		  ;;N^M when M is an integer always has a real number as
-		  ;;result.
-		  (flexpt (inexact n) m))
-		 ((negative? n)
-		  (exp (* m (log n))))
-		 (else
-		  (flexpt (inexact n) m))))
-	  ;;If we are here: N is complex or NaN.
-	  ;;
-	  ((nan? n)
-	   +nan.0+nan.0i)
-	  (else
-	   (exp (* m (log n))))))
+  (module ($expt-number-flonum
+	   $expt-fixnum-flonum	$expt-bignum-flonum	$expt-ratnum-flonum
+	   $expt-flonum-flonum	$expt-compnum-flonum	$expt-cflonum-flonum)
+
+    (define ($expt-number-flonum n m)
+      (cond-numeric-operand n
+	((fixnum?)	($expt-fixnum-flonum n m))
+	((bignum?)	($expt-bignum-flonum n m))
+	((ratnum?)	($expt-ratnum-flonum n m))
+	((flonum?)	($expt-flonum-flonum n m))
+	((compnum?)	($expt-compnum-flonum n m))
+	((cflonum?)	($expt-cflonum-flonum n m))
+	(else
+	 (%error-not-number n))))
+
+    (define ($expt-fixnum-flonum n m)
+      (cond (($fxzero? n)	(cond (($flzero?     m)	1.0)
+				      (($flpositive? m)	0.0)
+				      (else		+inf.0)))
+	    (($fx= n +1)	1.0)
+	    (else
+	     ($expt-flonum-flonum ($fixnum->flonum n) m))))
+
+    (define ($expt-bignum-flonum n m)
+      ($expt-flonum-flonum ($bignum->flonum n) m))
+
+    (define ($expt-ratnum-flonum n m)
+      ($expt-flonum-flonum ($ratnum->flonum n) m))
+
+    (define ($expt-flonum-flonum n m)
+      (cond (($flnan? n)	+nan.0)
+	    (($flnan? m)	+nan.0)
+	    (($flzero? n)
+	     0.0)
+	    (else
+	     (exp ($mul-flonum-number m ($log-flonum n))))))
+
+    (define ($expt-compnum-flonum n m)
+      ($expt-cflonum-flonum ($compnum->cflonum n) m))
+
+    (define ($expt-cflonum-flonum n m)
+      ($exp-cflonum ($mul-flonum-cflonum m ($log-cflonum n))))
+
+    #| end of module: $expt-number-flonum |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define ($expt-number-ratnum n m)
-    ;; (expt (expt n ($ratnum-n m))
-    ;;       (inexact ($make-ratnum 1 ($ratnum-d m))))
-    ($expt-number-flonum n (inexact m)))
+  (module ($expt-number-ratnum)
+    ;;In general we can consider doing:
+    ;;
+    ;;   N^M = N^(P/Q) = (N^P)^(1/Q)
+    ;;
+    ;;but we have to remember that R6RS states:
+    ;;
+    ;;   For an  exact real number object N and  an exact integer object
+    ;;    M, (expt  N M)  must return  an exact  result.  For  all other
+    ;;   values  of N and  M, (expt N M)  may return an  inexact result,
+    ;;   even when both N and M are exact.
+    ;;
+    ;;so let's not try to be heroes and do the inexact conversion.
+    ;;
+    (define ($expt-number-ratnum n m)
+      (cond-numeric-operand n
+	((fixnum?)	($expt-fixnum-ratnum  n m))
+	((bignum?)	($expt-bignum-ratnum  n m))
+	((ratnum?)	($expt-ratnum-ratnum  n m))
+	((flonum?)	($expt-flonum-ratnum  n m))
+	((compnum?)	($expt-compnum-ratnum n m))
+	((cflonum?)	($expt-cflonum-ratnum n m))
+	(else
+	 (%error-not-number n))))
+
+    (define ($expt-fixnum-ratnum n m)
+      ($expt-flonum-flonum ($fixnum->flonum n)
+			   ($ratnum->flonum m)))
+
+    (define ($expt-bignum-ratnum n m)
+      ($expt-flonum-flonum ($bignum->flonum n)
+			   ($ratnum->flonum m)))
+
+    (define ($expt-ratnum-ratnum n m)
+      ($expt-flonum-flonum ($ratnum->flonum n)
+			   ($ratnum->flonum m)))
+
+    (define ($expt-flonum-ratnum n m)
+      ($expt-flonum-flonum n
+			   ($ratnum->flonum m)))
+
+    (define ($expt-compnum-ratnum n m)
+      ($expt-cflonum-flonum ($compnum->cflonum n)
+			    ($ratnum->flonum m)))
+
+    (define ($expt-cflonum-ratnum n m)
+      ($expt-cflonum-flonum n
+			    ($ratnum->flonum m)))
+
+    #| end of module: $expt-number-ratnum |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -7505,4 +7586,5 @@
 ;; eval: (put 'cond-exact-integer-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-inexact-integer-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-real-numeric-operand 'scheme-indent-function 1)
+;; eval: (put 'cond-exact-real-numeric-operand 'scheme-indent-function 1)
 ;; End:

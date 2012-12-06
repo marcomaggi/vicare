@@ -2,7 +2,7 @@
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: tests for numerics functions: expt
-;;;Date: Sun Dec  2, 2012
+;;;Date: Thu Dec  6, 2012
 ;;;
 ;;;Abstract
 ;;;
@@ -33,7 +33,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare numerics functions: expt, bignum exponent\n")
+(check-display "*** testing Vicare numerics functions: expt, flonum exponent\n")
 
 
 ;;;; helpers
@@ -160,7 +160,9 @@
 	((flzero? x)
 	 (flzero? y))
 	(else
-	 (fl<? (fl/ (flabs (fl- x y))
+	 (fl<? (flabs (fl- x y))
+	       1e-5)
+	 #;(fl<? (fl/ (flabs (fl- x y))
 		    (flabs x))
 	       1e-5))))
 
@@ -191,65 +193,49 @@
 (parametrise ((check-test-name	'fixnum-base))
 
   (define-syntax test
-    (make-test expt $expt-number-bignum $expt-fixnum-bignum))
+    (make-inexact-test expt $expt-number-flonum $expt-fixnum-flonum))
 
-  (test 0	BN1	0)
-  (test +1	BN1	+1)
-  (test -1	BN1	(if (even? BN1) +1 -1))
+  (test 0	+0.0	+1.0)
+  (test +1	+0.0	+1.0)
+  (test -1	+0.0	+1.0+0.0i)
 
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-fixnum-bignum 123 BN1))
+  (test 0	-0.0	1.0)
+  (test +1	-0.0	+1.0)
+  (test -1	-0.0	+1.0+0.0i)
 
-  (test 0	BN2	0)
-  (test +1	BN2	+1)
-  (test -1	BN2	(if (even? BN2) +1 -1))
+  (test 0	+1.0	+0.0)
+  (test +1	+1.0	+1.0)
+  (test -1	+1.0	-1.0+0.0i)
 
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-fixnum-bignum 123 BN2))
-
-  (test 0	BN3	0)
-  (test +1	BN3	+1)
-  (test -1	BN3	(if (even? BN3) +1 -1))
-
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-fixnum-bignum 123 BN3))
-
-  (test 0	BN4	0)
-  (test +1	BN4	+1)
-  (test -1	BN4	(if (even? BN4) +1 -1))
-
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-fixnum-bignum 123 BN4))
+  (test 0	-1.0	+inf.0)
+  (test +1	-1.0	+1.0)
+  (test -1	-1.0	-1.0+0.0i)
 
   #t)
 
 
-(parametrise ((check-test-name	'bignum-base))
+#;(parametrise ((check-test-name	'bignum-base))
 
   (catch-implementation-restriction
    "result is too big to compute"
-   ($expt-bignum-bignum BN1 BN1))
+   ($expt-bignum-flonum BN1 BN1))
 
   #t)
 
 
-(parametrise ((check-test-name	'ratnum-base))
+#;(parametrise ((check-test-name	'ratnum-base))
 
   (catch-implementation-restriction
    "result is too big to compute"
-   ($expt-ratnum-bignum 1/2 BN1))
+   ($expt-ratnum-flonum 1/2 BN1))
 
   #t)
 
 
-(parametrise ((check-test-name	'flonum-base))
+#;(parametrise ((check-test-name	'flonum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-bignum $expt-flonum-bignum))
+    (make-inexact-test expt $expt-number-flonum $expt-flonum-flonum))
 
   (test	+0.0			BN1	+0.0)
   (test	-0.0			BN1	(if (even? BN1) +0.0 -0.0))
@@ -290,10 +276,10 @@
   #t)
 
 
-(parametrise ((check-test-name	'cflonum-base))
+#;(parametrise ((check-test-name	'cflonum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-bignum $expt-cflonum-bignum))
+    (make-inexact-test expt $expt-number-flonum $expt-cflonum-flonum))
 
   (test		+1.0+2.0i	BN1	-inf.0+inf.0i)
   (test		+0.1+0.2i	BN1	-0.0+0.0i)
@@ -304,10 +290,10 @@
   #t)
 
 
-(parametrise ((check-test-name	'compnum-base))
+#;(parametrise ((check-test-name	'compnum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-bignum $expt-compnum-bignum))
+    (make-inexact-test expt $expt-number-flonum $expt-compnum-flonum))
 
   (test		+1+2.i	BN1	-inf.0+inf.0i)
 
