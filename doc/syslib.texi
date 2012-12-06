@@ -728,7 +728,10 @@ Return the base @math{e} exponential of the operand.
 
 
 @deffn {Unsafe Operation} $fllog @var{fl}
-Return the natural logarithm of the operand.
+Return the natural logarithm of the operand.  For non--negative @var{fl}
+the return value is a numeric flonum; for negative @var{fl} the return
+value is not--a--number.  See also @func{$log-flonum} to compute the
+logarithm of negative flonums as a complex number.
 @end deffn
 
 
@@ -3297,7 +3300,11 @@ Return a fixnum representing the sign of the numerator of @var{rn}:
 @end deffn
 
 
-@deffn {Unsafe Operation} $log-flonum
+@deffn {Unsafe Operation} $log-flonum @var{fl}
+Compute the natural logarithms of @var{fl}; return a flonum or cflonum.
+This function computes the result also when @var{fl} is a negative
+flonum, whose logarithm is a complex number; this makes it different
+from @func{$fllog}.
 @end deffn
 
 

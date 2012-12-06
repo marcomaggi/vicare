@@ -44,58 +44,70 @@
 
 (define-syntax make-test
   (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
+    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
 	  (check (?safe-fun   ?op1 ?op2)	=> ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	=> ?expected-result)
 	  (check (?unsafe-fun ?op1 ?op2)	=> ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	=> (?unsafe-fun ?op1 ?op2))
 	  ))))))
 
 (define-syntax make-flonum-test
   (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
+    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
 	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
 	  (check (?unsafe-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> flonum=?) (?unsafe-fun ?op1 ?op2))
 	  ))))))
 
 (define-syntax make-cflonum-test
   (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
+    ((_ ?safe-fun ?middle-func ?unsafe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
 	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> flonum=?) ?expected-result)
 	  (check (?unsafe-fun ?op1 ?op2)	(=> cflonum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> cflonum=?) (?unsafe-fun ?op1 ?op2))
 	  ))))))
 
 (define-syntax make-compnum-test
   (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
+    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
 	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
 	  (check (?unsafe-fun ?op1 ?op2)	(=> compnum=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> compnum=?) (?unsafe-fun ?op1 ?op2))
 	  ))))))
 
 (define-syntax make-inexact-test
   (syntax-rules ()
-    ((_ ?safe-fun ?unsafe-fun)
+    ((_ ?safe-fun ?middle-fun ?unsafe-fun)
      (syntax-rules ()
        ((_ ?op1 ?op2 ?expected-result)
 	(begin
 	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) ?expected-result)
+	  (check (?middle-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
 	  (check (?unsafe-fun ?op1 ?op2)	(=> inexact=?) ?expected-result)
-	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) (?unsafe-fun ?op1 ?op2))
 	  ))))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax catch-implementation-restriction
+  (syntax-rules ()
+    ((_ ?message . ?body)
+     (check
+	 (guard (E ((implementation-restriction-violation? E)
+		    (condition-message E))
+		   (else E))
+	   (begin . ?body))
+       => ?message))))
 
 ;;; --------------------------------------------------------------------
 
@@ -176,108 +188,128 @@
 (define BN4	(+ -10 SMALLEST-NEGATIVE-BIGNUM))
 
 
-(parametrise ((check-test-name	'bignum-exponent))
+(parametrise ((check-test-name	'fixnum-base))
 
-  (let-syntax ((test (make-test expt $expt-fixnum-bignum)))
-    (test 0	BN1	0)
-    (test +1	BN1	+1)
-    (test -1	BN1	(if (even? BN1) +1 -1))
+  (define-syntax test
+    (make-test expt $expt-number-bignum $expt-fixnum-bignum))
 
-    ;; (test FX1 BN1 1)
-    ;; (test FX2 BN1 536871011/536870912)
-    ;; (test FX3 BN1 -536870913/536870912)
-    ;; (test FX4 BN1 -134217753/134217728)
-    ;; (test FX1 BN2 536870912/536871011)
-    ;; (test FX2 BN2 1)
-    ;; (test FX3 BN2 -536870913/536871011)
-    ;; (test FX4 BN2 -536871012/536871011)
-    ;; (test FX1 BN3 -536870912/536870913)
-    ;; (test FX2 BN3 -536871011/536870913)
-    ;; (test FX3 BN3 1)
-    ;; (test FX4 BN3 178957004/178956971)
-    ;; (test FX1 BN4 -134217728/134217753)
-    ;; (test FX2 BN4 -536871011/536871012)
-    ;; (test FX3 BN4 178956971/178957004)
-    ;; (test FX4 BN4 1)
-    #f)
+  (test 0	BN1	0)
+  (test +1	BN1	+1)
+  (test -1	BN1	(if (even? BN1) +1 -1))
 
-  #;(let-syntax ((test (make-test expt $expt-bignum-bignum)))
-    (test BN1 BN1 1)
-    (test BN2 BN1 536871011/536870912)
-    (test BN3 BN1 -536870913/536870912)
-    (test BN4 BN1 -134217753/134217728)
-    (test BN1 BN2 536870912/536871011)
-    (test BN2 BN2 1)
-    (test BN3 BN2 -536870913/536871011)
-    (test BN4 BN2 -536871012/536871011)
-    (test BN1 BN3 -536870912/536870913)
-    (test BN2 BN3 -536871011/536870913)
-    (test BN3 BN3 1)
-    (test BN4 BN3 178957004/178956971)
-    (test BN1 BN4 -134217728/134217753)
-    (test BN2 BN4 -536871011/536871012)
-    (test BN3 BN4 178956971/178957004)
-    (test BN4 BN4 1)
-    #f)
+  (catch-implementation-restriction
+   "result is too big to compute"
+   ($expt-fixnum-bignum 123 BN1))
 
-  #;(let-syntax ((test (make-test expt $expt-ratnum-bignum)))
-    (test 1/2 BN1 1/1073741824)
-    (test 1/2 BN2 1/1073742022)
-    (test 1/2 BN3 -1/1073741826)
-    (test 1/2 BN4 -1/1073742024)
-    (test -1/2 BN1 -1/1073741824)
-    (test -1/2 BN2 -1/1073742022)
-    (test -1/2 BN3 1/1073741826)
-    (test -1/2 BN4 1/1073742024)
-    #f)
+  (test 0	BN2	0)
+  (test +1	BN2	+1)
+  (test -1	BN2	(if (even? BN2) +1 -1))
 
-  #;(let-syntax ((test (make-inexact-test expt $expt-flonum-bignum)))
-    (test FL01 BN1 0.0)
-    (test FL02 BN1 -0.0)
-    (test FL03 BN1 3.954395651817322e-9)
-    (test FL04 BN1 -3.954395651817322e-9)
-    (test FL01 BN2 0.0)
-    (test FL02 BN2 -0.0)
-    (test FL03 BN2 3.954394922619505e-9)
-    (test FL04 BN2 -3.954394922619505e-9)
-    (test FL01 BN3 -0.0)
-    (test FL02 BN3 0.0)
-    (test FL03 BN3 -3.954395644451687e-9)
-    (test FL04 BN3 3.954395644451687e-9)
-    (test FL01 BN4 -0.0)
-    (test FL02 BN4 0.0)
-    (test FL03 BN4 -3.954394915253872e-9)
-    (test FL04 BN4 3.954394915253872e-9)
-    #f)
+  (catch-implementation-restriction
+   "result is too big to compute"
+   ($expt-fixnum-bignum 123 BN2))
 
-  #;(let-syntax ((test (make-inexact-test expt $expt-cflonum-bignum)))
-    (test CFL01 BN1 0.0+0.0i)
-    (test CFL02 BN1 -0.0+0.0i)
-    (test CFL03 BN1 0.0-0.0i)
-    (test CFL04 BN1 -0.0-0.0i)
-    (test CFL01 BN2 0.0+0.0i)
-    (test CFL02 BN2 -0.0+0.0i)
-    (test CFL03 BN2 0.0-0.0i)
-    (test CFL04 BN2 -0.0-0.0i)
-    (test CFL01 BN3 -0.0-0.0i)
-    (test CFL02 BN3 0.0-0.0i)
-    (test CFL03 BN3 -0.0+0.0i)
-    (test CFL04 BN3 0.0+0.0i)
-    (test CFL01 BN4 -0.0-0.0i)
-    (test CFL02 BN4 0.0-0.0i)
-    (test CFL03 BN4 -0.0+0.0i)
-    (test CFL04 BN4 0.0+0.0i)
-    #f)
+  (test 0	BN3	0)
+  (test +1	BN3	+1)
+  (test -1	BN3	(if (even? BN3) +1 -1))
 
-  #;(letrec-syntax ((test (make-test expt $expt-compnum-bignum)))
-    (test 10+20i BN1 5/268435456+5/134217728i)
-    (test 1+20.0i BN1 1/536870912+3.725290298461914e-8i)
-    (test 10.0+2i BN1 1.862645149230957e-8+2/536870912i)
-    (test 1/2+20i BN1 1/1073741824+5/134217728i)
-    (test 10+2/3i BN1 5/268435456+1/805306368i)
-    (test (C BN2 20) BN1 536871011/536870912+5/134217728i)
-    (test (C 10 BN2) BN1 5/268435456+536871011/536870912i)
-    #f)
+  (catch-implementation-restriction
+   "result is too big to compute"
+   ($expt-fixnum-bignum 123 BN3))
+
+  (test 0	BN4	0)
+  (test +1	BN4	+1)
+  (test -1	BN4	(if (even? BN4) +1 -1))
+
+  (catch-implementation-restriction
+   "result is too big to compute"
+   ($expt-fixnum-bignum 123 BN4))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bignum-base))
+
+  (catch-implementation-restriction
+   "result is too big to compute"
+   ($expt-fixnum-bignum BN1 BN1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'ratnum-base))
+
+  (catch-implementation-restriction
+   "result is too big to compute"
+   ($expt-ratnum-bignum 1/2 BN1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'flonum-base))
+
+  (define-syntax test
+    (make-inexact-test expt $expt-number-bignum $expt-flonum-bignum))
+
+  (test	+0.0			BN1	+0.0)
+  (test	-0.0			BN1	(if (even? BN1) +0.0 -0.0))
+  (test	+1.0			BN1	+1.0)
+  (test	-1.0			BN1	(if (even? BN1) +1.0 -1.0))
+  (test	+nan.0			BN1	+nan.0)
+  (test	+inf.0			BN1	+inf.0)
+  (test	-inf.0			BN1	(if (even? BN1) +inf.0 -inf.0))
+  (test	1.00000000000001	BN1	1.0000053644324274)
+
+  (test	+0.0			BN2	+0.0)
+  (test	-0.0			BN2	(if (even? BN2) +0.0 -0.0))
+  (test	+1.0			BN2	+1.0)
+  (test	-1.0			BN2	(if (even? BN2) +1.0 -1.0))
+  (test	+nan.0			BN2	+nan.0)
+  (test	+inf.0			BN2	+inf.0)
+  (test	-inf.0			BN2	(if (even? BN2) +inf.0 -inf.0))
+  (test	1.00000000000001	BN2	1.0000053644325173)
+
+  (test	+0.0			BN3	+0.0)
+  (test	-0.0			BN3	(if (even? BN3) +0.0 -0.0))
+  (test	+1.0			BN3	+1.0)
+  (test	-1.0			BN3	(if (even? BN3) +1.0 -1.0))
+  (test	+nan.0			BN3	+nan.0)
+  (test	+inf.0			BN3	+inf.0)
+  (test	-inf.0			BN3	(if (even? BN3) +inf.0 -inf.0))
+  (test	1.00000000000001	BN3	0.9999946355963379)
+
+  (test	+0.0			BN4	+0.0)
+  (test	-0.0			BN4	(if (even? BN4) +0.0 -0.0))
+  (test	+1.0			BN4	+1.0)
+  (test	-1.0			BN4	(if (even? BN4) +1.0 -1.0))
+  (test	+nan.0			BN4	+nan.0)
+  (test	+inf.0			BN4	+inf.0)
+  (test	-inf.0			BN4	(if (even? BN4) +inf.0 -inf.0))
+  (test	1.00000000000001	BN4	0.999994635596248)
+
+  #t)
+
+
+(parametrise ((check-test-name	'cflonum-base))
+
+  (define-syntax test
+    (make-inexact-test expt $expt-number-bignum $expt-cflonum-bignum))
+
+  (test		+1.0+2.0i	BN1	-inf.0+inf.0i)
+  (test		+0.1+0.2i	BN1	-0.0+0.0i)
+  (test		+1e-5+2e-5i	BN1	-0.0+0.0i)
+
+  (test		+1e-5+2e-5i	BN2	-0.0+0.0i)
+
+  #t)
+
+
+(parametrise ((check-test-name	'compnum-base))
+
+  (define-syntax test
+    (make-inexact-test expt $expt-number-bignum $expt-compnum-bignum))
+
+  (test		+1+2.i	BN1	-inf.0+inf.0i)
 
   #t)
 

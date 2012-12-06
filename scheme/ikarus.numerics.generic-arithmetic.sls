@@ -4199,39 +4199,36 @@
     (define ($expt-flonum-bignum n m)
       ;;N is a flonum, M is a bignum.
       ;;
-      (cond (($flzero? n)	+0.0)
-	    (($fl= n +1.0)	+1.0)
-	    (($fl= n -1.0)	(if ($bignum-even? m) +1.0 -1.0))
-	    (($flnan? n)	+nan.0)
-	    (($fl= n +inf.0)	+inf.0)
-	    (($fl= n -inf.0)	(if ($bignum-even? m) +inf.0 -inf.0))
+      (cond (($flzero?/positive n)	+0.0)
+	    (($flzero?/negative n)	(if ($bignum-even? m) +0.0 -0.0))
+	    (($fl= n +1.0)		+1.0)
+	    (($fl= n -1.0)		(if ($bignum-even? m) +1.0 -1.0))
+	    (($flnan? n)		+nan.0)
+	    (($fl= n +inf.0)		+inf.0)
+	    (($fl= n -inf.0)		(if ($bignum-even? m) +inf.0 -inf.0))
 	    (else
-	     ;; N^M = exp (log N^M) = exp (M * log N)
-	     ($flexp ($fl* (inexact m) ($fllog n))))))
+	     ;;Here  we  have  already  excluded the  cases  N=+0.0  and
+	     ;;N=-0.0.
+	     (if ($flpositive? n)
+		 ;;Positive operands have real logarithms.
+		 ($flexp ($fl* (inexact m) ($fllog n)))
+	       ;;Negative operands have complex logarithms.
+	       ($exp-cflonum ($mul-flonum-cflonum (inexact m) ($log-flonum n)))))))
 
     (define ($expt-compnum-bignum n m)
-      #f)
+      ;;N is a compnum, M is a bignum.
+      ;;
+      (let ((n.rep ($compnum-real n))
+	    (n.imp ($compnum-imag n)))
+	(if (or (flonum? n.rep)
+		(flonum? n.imp))
+	    ($expt-cflonum-bignum (inexact n) m)
+	  (%error-result-too-big n m))))
 
     (define ($expt-cflonum-bignum n m)
       ;;N is a cflonum, M is a bignum.
       ;;
-      (let ((n.rep ($cflonum-real n))
-	    (n.imp ($cflonum-imag n)))
-	(cond ((or ($flnan? n.rep)
-		   ($flnan? n.imp))
-	       +nan.0+nan.0i)
-	      (($flzero? n.rep)
-	       (let ((R ($expt-flonum-bignum n.imp m)))
-		 (if ($bignum-even? m)
-		     ($mul-cflonum-flonum -1.0+0.0i R)
-		   ($mul-cflonum-flonum +1.0i R))))
-	      (($flzero? n.imp)
-	       ($make-cflonum ($expt-flonum-bignum n.rep m) 0.0))
-
-	      (($fl= n +inf.0)	+inf.0)
-	      (($fl= n -inf.0)	(if ($bignum-even? m) +inf.0 -inf.0))
-	      (else
-	       (%error-result-too-big n m)))))
+      ($exp-cflonum ($mul-bignum-cflonum m ($log-cflonum n))))
 
     #| end of module: $expt-number-bignum |# )
 
@@ -4294,7 +4291,11 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error-result-too-big n m)
-    (assertion-violation who "result is too big to compute" n m))
+    (raise
+     (condition (make-who-condition who)
+		(make-implementation-restriction-violation)
+		(make-message-condition "result is too big to compute")
+		(make-irritants-condition (list n m)))))
 
   #| end of module: expt |# )
 
@@ -4986,8 +4987,8 @@
       ((bignum?)	($bignum->flonum x))
       ((ratnum?)	($ratnum->flonum x))
       ((flonum?)	x)
-      ((compnum?)	($make-rectangular (->inexact ($compnum-real x) who)
-					   (->inexact ($compnum-imag x) who)))
+      ((compnum?)	($make-cflonum (->inexact ($compnum-real x) who)
+				       (->inexact ($compnum-imag x) who)))
       ((cflonum?)	x)
       (else
        (assertion-violation who "not a number" x))))
