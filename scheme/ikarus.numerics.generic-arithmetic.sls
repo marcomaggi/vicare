@@ -276,18 +276,17 @@
 
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
-
     $expt-number-zero-fixnum
     $expt-number-positive-fixnum	$expt-number-negative-fixnum
     $expt-fixnum-positive-fixnum	$expt-bignum-positive-fixnum
     $expt-flonum-positive-fixnum	$expt-ratnum-positive-fixnum
     $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum
-
     $expt-fixnum-bignum		$expt-bignum-bignum	$expt-ratnum-bignum
     $expt-flonum-bignum		$expt-compnum-bignum	$expt-cflonum-bignum
-
     $expt-fixnum-flonum		$expt-bignum-flonum	$expt-ratnum-flonum
     $expt-flonum-flonum		$expt-compnum-flonum	$expt-cflonum-flonum
+    $expt-fixnum-ratnum		$expt-bignum-ratnum	$expt-ratnum-ratnum
+    $expt-flonum-ratnum		$expt-compnum-ratnum	$expt-cflonum-ratnum
 
     $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
     $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
@@ -3877,6 +3876,9 @@
 
 	 $expt-fixnum-flonum	$expt-bignum-flonum	$expt-ratnum-flonum
 	 $expt-flonum-flonum	$expt-compnum-flonum	$expt-cflonum-flonum
+
+	 $expt-fixnum-ratnum	$expt-bignum-ratnum	$expt-ratnum-ratnum
+	 $expt-flonum-ratnum	$expt-compnum-ratnum	$expt-cflonum-ratnum
 	 )
   ;;Return N raised  to the power M.  According to  R6RS, for non-zero N
   ;;this is:
@@ -4338,7 +4340,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ($expt-number-ratnum)
+  (module ($expt-number-ratnum
+	   $expt-fixnum-ratnum	$expt-bignum-ratnum	$expt-ratnum-ratnum
+	   $expt-flonum-ratnum	$expt-compnum-ratnum	$expt-cflonum-ratnum)
     ;;In general we can consider doing:
     ;;
     ;;   N^M = N^(P/Q) = (N^P)^(1/Q)
@@ -4364,8 +4368,13 @@
 	 (%error-not-number n))))
 
     (define ($expt-fixnum-ratnum n m)
-      ($expt-flonum-flonum ($fixnum->flonum n)
-			   ($ratnum->flonum m)))
+      (cond (($fxzero? n)
+	     0)
+	    (($fx= n 1)
+	     1)
+	    (else
+	     ($expt-flonum-flonum ($fixnum->flonum n)
+				  ($ratnum->flonum m)))))
 
     (define ($expt-bignum-ratnum n m)
       ($expt-flonum-flonum ($bignum->flonum n)
