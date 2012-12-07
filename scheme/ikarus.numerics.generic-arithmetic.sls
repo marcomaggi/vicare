@@ -4385,8 +4385,11 @@
 			   ($ratnum->flonum m)))
 
     (define ($expt-flonum-ratnum n m)
-      ($expt-flonum-flonum n
-			   ($ratnum->flonum m)))
+      (cond (($fl= n +inf.0)	+inf.0)
+	    (($fl= n -inf.0)	+inf.0i)
+	    (else
+	     ($expt-flonum-flonum n
+				  ($ratnum->flonum m)))))
 
     (define ($expt-compnum-ratnum n m)
       ($expt-cflonum-flonum ($compnum->cflonum n)

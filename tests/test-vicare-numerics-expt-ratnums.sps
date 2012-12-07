@@ -212,181 +212,59 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'bignum-base))
+(parametrise ((check-test-name	'bignum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-flonum $expt-bignum-flonum))
+    (make-inexact-test expt $expt-number-ratnum $expt-bignum-ratnum))
 
-  (test BN1	+0.0	+1.0)
-  (test BN2	+0.0	+1.0)
-  (test BN3	+0.0	+1.0+0.0i)
-  (test BN4	+0.0	+1.0+0.0i)
+  (test BN1	+1/2	(sqrt BN1))
+  (test BN2	+1/2	(sqrt BN2))
+  (test BN3	+1/2	(+ 0.0 (sqrt BN3)))
+  (test BN4	+1/2	(+ 0.0 (sqrt BN4)))
 
-  (test BN1	-0.0	+1.0)
-  (test BN2	-0.0	+1.0)
-  (test BN3	-0.0	+1.0+0.0i)
-  (test BN4	-0.0	+1.0+0.0i)
-
-  (test BN1	+1.0	(inexact BN1))
-  (test BN2	+1.0	(inexact BN2))
-  (test BN3	+1.0	(+ 0.0i (inexact BN3)))
-  (test BN4	+1.0	(+ 0.0i (inexact BN4)))
-
-  ;;The test comparison function is not good for these.
-  (test BN1	-1.0	(inexact (/ BN1)))
-  (test BN2	-1.0	(inexact (/ BN2)))
-  (test BN3	-1.0	(+ 0.0i (inexact (/ BN3))))
-  (test BN4	-1.0	(+ 0.0i (inexact (/ BN4))))
+  (test BN1	-1/2	(/ (sqrt BN1)))
+  (test BN2	-1/2	(/ (sqrt BN2)))
+  (test BN3	-1/2	(/ (sqrt BN3)))
+  (test BN4	-1/2	(/ (sqrt BN4)))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'ratnum-base))
+(parametrise ((check-test-name	'ratnum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-flonum $expt-ratnum-flonum))
+    (make-inexact-test expt $expt-number-ratnum $expt-ratnum-ratnum))
 
-  (test +1/2	+0.0	+1.0)
-  (test -1/2	+0.0	+1.0+0.0i)
-
-  (test +1/2	-0.0	+1.0)
-  (test -1/2	-0.0	+1.0+0.0i)
-
-  (test +1/2	+1.0	(inexact +1/2))
-  (test -1/2	+1.0	(+ +0.0i (inexact -1/2)))
-
-  (test +1/2	-1.0	(inexact (/ +1/2)))
-  (test -1/2	-1.0	(+ +0.0i (inexact (/ -1/2))))
-
-  (test +1/2	+2.0	(inexact +1/4))
-  (test -1/2	+2.0	(+ +0.0i (inexact +1/4)))
-
-  (test +1/2	-2.0	(inexact (/ +1/4)))
-  (test -1/2	-2.0	(+ +0.0i (inexact (/ +1/4))))
-
-  (test +1/2	+3.0	(inexact +1/8))
-  (test -1/2	+3.0	(+ +0.0i (inexact -1/8)))
-
-  (test +1/2	-3.0	(inexact (/ +1/8)))
-  (test -1/2	-3.0	(+ +0.0i (inexact (/ -1/8))))
+  (test +1/2	+1/2	(sqrt +1/2))
+  (test -1/2	+1/2	(sqrt -1/2))
 
   #t)
 
 
-#;(parametrise ((check-test-name	'flonum-base))
+(parametrise ((check-test-name	'flonum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-flonum $expt-flonum-flonum))
+    (make-inexact-test expt $expt-number-ratnum $expt-flonum-ratnum))
 
-  (test	+0.0		+0.0	+1.0)
-  (test	-0.0		+0.0	+1.0)
-  (test	+1.0		+0.0	+1.0)
-  (test	-1.0		+0.0	+1.0)
-  (test	+nan.0		+0.0	+nan.0)
-  (test	+inf.0		+0.0	+nan.0)
-  (test	-inf.0		+0.0	+nan.0+nan.0i)
-  (test +2.0		+0.0	+1.0)
-  (test -2.0		+0.0	+1.0)
+  (test	+0.0		+1/2	+0.0)
+  (test	-0.0		+1/2	+0.0)
+  (test	+1.0		+1/2	+1.0)
+  (test	-1.0		+1/2	0.0+1.0i)
+  (test	+nan.0		+1/2	+nan.0)
+  (test	+inf.0		+1/2	+inf.0)
+  (test	-inf.0		+1/2	+0.0+inf.0i)
+  (test +2.0		+1/2	(sqrt 2.0))
+  (test -2.0		+1/2	(+ 0.0 (sqrt -2.0)))
 
-  (test	+0.0		-0.0	+1.0)
-  (test	-0.0		-0.0	+1.0)
-  (test	+1.0		-0.0	+1.0)
-  (test	-1.0		-0.0	+1.0)
-  (test	+nan.0		-0.0	+nan.0)
-  (test	+inf.0		-0.0	+nan.0)
-  (test	-inf.0		-0.0	+nan.0+nan.0i)
-  (test +2.0		-0.0	+1.0)
-  (test -2.0		-0.0	+1.0)
-
-  (test	+0.0		+1.0	+0.0)
-  (test	-0.0		+1.0	-0.0)
-  (test	+1.0		+1.0	+1.0+0.0i)
-  (test	-1.0		+1.0	-1.0+0.0i)
-  (test	+nan.0		+1.0	+nan.0)
-  (test	+inf.0		+1.0	+inf.0+0.0i)
-  (test	-inf.0		+1.0	-inf.0)
-  (test +2.0		+1.0	+2.0)
-  (test -2.0		+1.0	-2.0)
-
-  (test	+0.0		-1.0	+inf.0)
-  (test	-0.0		-1.0	-inf.0)
-  (test	+1.0		-1.0	+1.0)
-  (test	-1.0		-1.0	-1.0+0.0i)
-  (test	+nan.0		-1.0	+nan.0)
-  (test	+inf.0		-1.0	+0.0)
-  (test	-inf.0		-1.0	+0.0+0.0i)
-  (test +2.0		-1.0	+0.5)
-  (test -2.0		-1.0	-0.5+0.0i)
-
-  (test	+0.0		+2.0	+0.0)
-  (test	-0.0		+2.0	-0.0)
-  (test	+1.0		+2.0	+1.0+0.0i)
-  (test	-1.0		+2.0	+1.0+0.0i)
-  (test	+nan.0		+2.0	+nan.0)
-  (test	+inf.0		+2.0	+inf.0+0.0i)
-  (test	-inf.0		+2.0	+inf.0-inf.0i)
-  (test +2.0		+2.0	+4.0)
-  (test -2.0		+2.0	+4.0+0.0i)
-
-  (test	+0.0		-2.0	+inf.0)
-  (test	-0.0		-2.0	-inf.0)
-  (test	+1.0		-2.0	+1.0+0.0i)
-  (test	-1.0		-2.0	+1.0+0.0i)
-  (test	+nan.0		-2.0	+nan.0)
-  (test	+inf.0		-2.0	+0.0)
-  (test	-inf.0		-2.0	-0.0)
-  (test +2.0		-2.0	+0.25)
-  (test -2.0		-2.0	+0.25+0.0i)
-
-  (test	+0.0		+3.0	+0.0)
-  (test	-0.0		+3.0	-0.0)
-  (test	+1.0		+3.0	+1.0+0.0i)
-  (test	-1.0		+3.0	-1.0+0.0i)
-  (test	+nan.0		+3.0	+nan.0)
-  (test	+inf.0		+3.0	+inf.0+0.0i)
-  (test	-inf.0		+3.0	-inf.0+inf.0i)
-  (test +2.0		+3.0	+8.0)
-  (test -2.0		+3.0	-8.0+0.0i)
-
-  (test	+0.0		-3.0	+inf.0)
-  (test	-0.0		-3.0	-inf.0)
-  (test	+1.0		-3.0	+1.0+0.0i)
-  (test	-1.0		-3.0	-1.0+0.0i)
-  (test	+nan.0		-3.0	+nan.0)
-  (test	+inf.0		-3.0	+0.0)
-  (test	-inf.0		-3.0	-0.0)
-  (test +2.0		-3.0	+0.125)
-  (test -2.0		-3.0	-0.125+0.0i)
-
-  (test	+0.0		+inf.0	+0.0)
-  (test	-0.0		+inf.0	-0.0)
-  (test	+1.0		+inf.0	+nan.0)
-  (test	-1.0		+inf.0	-nan.0+nan.0i)
-  (test	+nan.0		+inf.0	+nan.0)
-  (test	+inf.0		+inf.0	+inf.0+0.0i)
-  (test	-inf.0		+inf.0	+nan.0+nan.0i)
-  (test +2.0		+inf.0	+inf.0)
-  (test -2.0		+inf.0	-nan.0+nan.0i)
-
-  (test	+0.0		-inf.0	+inf.0)
-  (test	-0.0		-inf.0	-inf.0)
-  (test	+1.0		-inf.0	+nan.0)
-  (test	-1.0		-inf.0	+nan.0+nan.0i)
-  (test	+nan.0		-inf.0	+nan.0)
-  (test	+inf.0		-inf.0	+0.0)
-  (test	-inf.0		-inf.0	-nan.0+nan.0i)
-  (test +2.0		-inf.0	+0.0)
-  (test -2.0		-inf.0	-nan.0+nan.0i)
-
-  (test	+0.0		+nan.0	+nan.0)
-  (test	-0.0		+nan.0	+nan.0)
-  (test	+1.0		+nan.0	+nan.0)
-  (test	-1.0		+nan.0	+nan.0)
-  (test	+nan.0		+nan.0	+nan.0)
-  (test	+inf.0		+nan.0	+nan.0)
-  (test	-inf.0		+nan.0	+nan.0)
-  (test +2.0		+nan.0	+nan.0)
-  (test -2.0		+nan.0	-nan.0)
+  (test	+0.0		-1/2	+inf.0)
+  (test	-0.0		-1/2	-inf.0)
+  (test	+1.0		-1/2	+1.0)
+  (test	-1.0		-1/2	0.0-1.0i)
+  (test	+nan.0		-1/2	+nan.0)
+  (test	+inf.0		-1/2	+inf.0)
+  (test	-inf.0		-1/2	+0.0+inf.0i)
+  (test +2.0		-1/2	(/ (sqrt 2.0)))
+  (test -2.0		-1/2	(+ 0.0 (/ (sqrt -2.0))))
 
   #t)
 
@@ -394,7 +272,7 @@
 #;(parametrise ((check-test-name	'cflonum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-flonum $expt-cflonum-flonum))
+    (make-inexact-test expt $expt-number-ratnum $expt-cflonum-ratnum))
 
   (test	+0.0+0.0i	+0.0	+1.0+0.0i)
   (test	-0.0+0.0i	+0.0	+1.0+0.0i)
@@ -567,7 +445,7 @@
 #;(parametrise ((check-test-name	'compnum-base))
 
   (define-syntax test
-    (make-inexact-test expt $expt-number-flonum $expt-compnum-flonum))
+    (make-inexact-test expt $expt-number-ratnum $expt-compnum-ratnum))
 
   (test	+1.0+2i		+1.2	0.6299893381068001+2.549855239259246i)
 
