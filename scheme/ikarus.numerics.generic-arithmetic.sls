@@ -289,6 +289,8 @@
     $expt-flonum-ratnum		$expt-compnum-ratnum	$expt-cflonum-ratnum
     $expt-fixnum-cflonum	$expt-bignum-cflonum	$expt-ratnum-cflonum
     $expt-flonum-cflonum	$expt-compnum-cflonum	$expt-cflonum-cflonum
+    $expt-fixnum-compnum	$expt-bignum-compnum	$expt-ratnum-compnum
+    $expt-flonum-compnum	$expt-compnum-compnum	$expt-cflonum-compnum
 
     $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
     $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
@@ -3884,7 +3886,9 @@
 
 	 $expt-fixnum-cflonum	$expt-bignum-cflonum	$expt-ratnum-cflonum
 	 $expt-flonum-cflonum	$expt-compnum-cflonum	$expt-cflonum-cflonum
-	 )
+
+	 $expt-fixnum-compnum	$expt-bignum-compnum	$expt-ratnum-compnum
+	 $expt-flonum-compnum	$expt-compnum-compnum	$expt-cflonum-compnum)
   ;;Return N raised  to the power M.  According to  R6RS, for non-zero N
   ;;this is:
   ;;
@@ -4408,17 +4412,46 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($expt-number-compnum n m)
-    (cond ((eq? n 0)
-	   0)
-	  ((nan? n)
-	   +nan.0+nan.0i)
-	  ((zero? n)
-	   (if (flonum? n)
-	       0.0
-	     0.0+0.0i))
-	  (else
-	   (exp (* m (log n))))))
+  (module ($expt-number-compnum
+	   $expt-fixnum-compnum		$expt-bignum-compnum	$expt-ratnum-compnum
+	   $expt-flonum-compnum		$expt-compnum-compnum	$expt-cflonum-compnum)
+
+    (define ($expt-number-compnum n m)
+      (cond-numeric-operand n
+	((fixnum?)	($expt-fixnum-compnum  n m))
+	((bignum?)	($expt-bignum-compnum  n m))
+	((ratnum?)	($expt-ratnum-compnum  n m))
+	((flonum?)	($expt-flonum-compnum  n m))
+	((compnum?)	($expt-compnum-compnum n m))
+	((cflonum?)	($expt-cflonum-compnum n m))
+	(else
+	 (%error-not-number n))))
+
+    (define ($expt-fixnum-compnum n m)
+      ($expt-flonum-cflonum ($fixnum->flonum   n)
+			    ($compnum->cflonum m)))
+
+    (define ($expt-bignum-compnum n m)
+      ($expt-flonum-cflonum ($bignum->flonum   n)
+			    ($compnum->cflonum m)))
+
+    (define ($expt-ratnum-compnum n m)
+      ($expt-flonum-cflonum ($ratnum->flonum   n)
+			    ($compnum->cflonum m)))
+
+    (define ($expt-flonum-compnum n m)
+      ($expt-flonum-cflonum n
+			    ($compnum->cflonum m)))
+
+    (define ($expt-compnum-compnum n m)
+      ($expt-cflonum-cflonum ($compnum->cflonum n)
+			     ($compnum->cflonum m)))
+
+    (define ($expt-cflonum-compnum n m)
+      ($expt-cflonum-cflonum n
+			     ($compnum->cflonum m)))
+
+    #| end of module: $expt-number-cflonum |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -4564,7 +4597,7 @@
     ;;
     (if ($fl< x 0.0)
 	;;This case includes: X = -0.0
-	(make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
+	($make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
       (foreign-call "ikrt_fl_sqrt" x)))
 
   (define ($sqrt-fixnum x)

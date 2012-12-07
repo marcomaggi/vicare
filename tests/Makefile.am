@@ -180,6 +180,7 @@ TESTS			=	\
 	test-vicare-numerics-expt-flonums.sps		\
 	test-vicare-numerics-expt-ratnums.sps		\
 	test-vicare-numerics-expt-cflonums.sps		\
+	test-vicare-numerics-expt-compnums.sps		\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
@@ -413,6 +414,7 @@ EXTRA_DIST = \
 	test-vicare-numerics-expt-flonums.sps		\
 	test-vicare-numerics-expt-ratnums.sps		\
 	test-vicare-numerics-expt-cflonums.sps		\
+	test-vicare-numerics-expt-compnums.sps		\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
