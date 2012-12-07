@@ -228,7 +228,7 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'flonum-base))
+(parametrise ((check-test-name	'flonum-base))
 
   (define-syntax test
     (make-inexact-test expt $expt-number-compnum $expt-flonum-compnum))
