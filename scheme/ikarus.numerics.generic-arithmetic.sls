@@ -4317,14 +4317,22 @@
       ($expt-cflonum-flonum ($compnum->cflonum n) m))
 
     (define ($expt-cflonum-flonum n m)
-      (cond (($flnan? m)
-	     +nan.0+nan.0i)
-	    (($fl= m 1.0)
-	     n)
-	    (($flzero? m)
-	     1.0)
-	    (else
-	     ($exp-cflonum ($mul-flonum-cflonum m ($log-cflonum n))))))
+      (let ((n.rep ($cflonum-real n))
+	    (n.imp ($cflonum-imag n)))
+	(cond (($fl= m 1.0)
+	       n)
+	      ((or ($flnan? m)
+		   ($flnan? n.rep)
+		   ($flnan? n.imp))
+	       +nan.0+nan.0i)
+	      ((and ($flzero? n.rep)
+		    ($flzero? n.imp))
+	       (cond (($flzero? m)	1.0+0.0i)
+		     (($flpositive? m)	0.0+0.0i)
+		     (else
+		      ($exp-cflonum ($mul-flonum-cflonum m ($log-cflonum n))))))
+	      (else
+	       ($exp-cflonum ($mul-flonum-cflonum m ($log-cflonum n)))))))
 
     #| end of module: $expt-number-flonum |# )
 
