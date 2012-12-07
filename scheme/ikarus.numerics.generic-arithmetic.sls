@@ -287,6 +287,8 @@
     $expt-flonum-flonum		$expt-compnum-flonum	$expt-cflonum-flonum
     $expt-fixnum-ratnum		$expt-bignum-ratnum	$expt-ratnum-ratnum
     $expt-flonum-ratnum		$expt-compnum-ratnum	$expt-cflonum-ratnum
+    $expt-fixnum-cflonum	$expt-bignum-cflonum	$expt-ratnum-cflonum
+    $expt-flonum-cflonum	$expt-compnum-cflonum	$expt-cflonum-cflonum
 
     $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
     $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
@@ -3879,6 +3881,9 @@
 
 	 $expt-fixnum-ratnum	$expt-bignum-ratnum	$expt-ratnum-ratnum
 	 $expt-flonum-ratnum	$expt-compnum-ratnum	$expt-cflonum-ratnum
+
+	 $expt-fixnum-cflonum	$expt-bignum-cflonum	$expt-ratnum-cflonum
+	 $expt-flonum-cflonum	$expt-compnum-cflonum	$expt-cflonum-cflonum
 	 )
   ;;Return N raised  to the power M.  According to  R6RS, for non-zero N
   ;;this is:
@@ -4417,7 +4422,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ($expt-number-cflonum)
+  (module ($expt-number-cflonum
+	   $expt-fixnum-cflonum		$expt-bignum-cflonum	$expt-ratnum-cflonum
+	   $expt-flonum-cflonum		$expt-compnum-cflonum	$expt-cflonum-cflonum)
 
     (define ($expt-number-cflonum n m)
       (cond-numeric-operand n
@@ -4431,12 +4438,10 @@
 	 (%error-not-number n))))
 
     (define ($expt-fixnum-cflonum n m)
-      (if ($fxzero? n)
-	  0
-	($expt-flonum-cflonum ($fixnum->flonum n) m)))
+      ($expt-flonum-cflonum ($fixnum->flonum n) m))
 
     (define ($expt-bignum-cflonum n m)
-      ($expt-flonum-cflonum ($ratnum->flonum n) m))
+      ($expt-flonum-cflonum ($bignum->flonum n) m))
 
     (define ($expt-ratnum-cflonum n m)
       ($expt-flonum-cflonum ($ratnum->flonum n) m))
@@ -4484,7 +4489,7 @@
 	    (($flnan? n)
 	     +nan.0+nan.0i)
 	    (else
-	     ($mul-cflonum-cflonum ($mul-cflonum-number m ($log-flonum n))))))
+	     ($exp-cflonum ($mul-cflonum-number m ($log-flonum n))))))
 
     (define ($expt-compnum-cflonum n m)
       ($expt-cflonum-cflonum ($compnum->cflonum n) m))
@@ -4510,7 +4515,7 @@
 		      ;;cowardly for now.  (Marco Maggi; Dec 7, 2012)
 		      (%error-undefined-result n m))))
 	      (else
-	       ($mul-cflonum-cflonum ($mul-cflonum-number m ($log-flonum n)))))))
+	       ($exp-cflonum ($mul-cflonum-number m ($log-cflonum n)))))))
 
     #| end of module: $expt-number-cflonum |# )
 

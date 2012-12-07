@@ -2735,6 +2735,13 @@
     ($expt-flonum-ratnum			$numerics)
     ($expt-compnum-ratnum			$numerics)
     ($expt-cflonum-ratnum			$numerics)
+
+    ($expt-fixnum-cflonum			$numerics)
+    ($expt-bignum-cflonum			$numerics)
+    ($expt-ratnum-cflonum			$numerics)
+    ($expt-flonum-cflonum			$numerics)
+    ($expt-compnum-cflonum			$numerics)
+    ($expt-cflonum-cflonum			$numerics)
 ;;;
     ($sqrt-fixnum				$numerics)
     ($sqrt-flonum				$numerics)
