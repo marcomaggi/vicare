@@ -578,12 +578,12 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'compnum-base))
+(parametrise ((check-test-name	'compnum-base))
 
   (define-syntax test
     (make-inexact-test expt $expt-number-flonum $expt-compnum-flonum))
 
-  (test		+1+2.i	BN1	-inf.0+inf.0i)
+  (test	+1.0+2i		+1.2	0.6299893381068001+2.549855239259246i)
 
   #t)
 
