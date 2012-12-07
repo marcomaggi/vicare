@@ -4276,15 +4276,55 @@
       (cond (($flnan? n)	+nan.0)
 	    (($flnan? m)	+nan.0)
 	    (($flzero? n)
-	     0.0)
+	     ;;We should do:
+	     ;;
+	     ;;   (expt N M) = (exp (* M (log N)))
+	     ;;
+	     ;;and we know that:
+	     ;;
+	     ;;   (log 0.0)	=> -inf.0
+	     ;;   (* M -inf.0)	=> -inf.0
+	     ;;   (exp -inf.0)	=> +0.0
+	     ;;
+	     ;;but according to R6RS, for N equal to zero:
+	     ;;
+	     ;;   (expt 0.0 M) = 1.0	if M = 0.0
+	     ;;                = 0.0	if (real-part M) is positive
+	     ;;
+	     ;;for  other cases  in which  the first  argument is  zero,
+	     ;;either  an  exception  is   raised  with  condition  type
+	     ;;"&implementation-restriction",  or an  unspecified number
+	     ;;object is returned.
+	     ;;
+	     ;;We can also say that, with negative M:
+	     ;;
+	     ;;   (expt N M) = (/ 1 (expt N (- M))) = (/ 1 0.0) = +inf.0
+	     ;;
+	     ;;WolframAlpha agrees with this.
+	     ;;
+	     (cond (($flzero? m)	1.0)
+		   (($flpositive? m)	0.0)
+		   (else
+		    (if ($flzero?/positive n) +inf.0 -inf.0))))
+	    (($fl= m 1.0)
+	     n)
 	    (else
+	     ;;Notice that the result of  $LOG-FLONUM can be a flonum or
+	     ;;cflonum.
 	     (exp ($mul-flonum-number m ($log-flonum n))))))
 
     (define ($expt-compnum-flonum n m)
       ($expt-cflonum-flonum ($compnum->cflonum n) m))
 
     (define ($expt-cflonum-flonum n m)
-      ($exp-cflonum ($mul-flonum-cflonum m ($log-cflonum n))))
+      (cond (($flnan? m)
+	     +nan.0+nan.0i)
+	    (($fl= m 1.0)
+	     n)
+	    (($flzero? m)
+	     1.0)
+	    (else
+	     ($exp-cflonum ($mul-flonum-cflonum m ($log-cflonum n))))))
 
     #| end of module: $expt-number-flonum |# )
 
@@ -4357,17 +4397,102 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($expt-number-cflonum n m)
-    (cond ((eq? n 0)
-	   0)
-	  ((nan? n)
-	   +nan.0+nan.0i)
-	  ((zero? n)
-	   (if (flonum? n)
-	       0.0
-	     0.0+0.0i))
-	  (else
-	   (exp (* m (log n))))))
+  (module ($expt-number-cflonum)
+
+    (define ($expt-number-cflonum n m)
+      (cond-numeric-operand n
+	((fixnum?)	($expt-fixnum-cflonum  n m))
+	((bignum?)	($expt-bignum-cflonum  n m))
+	((ratnum?)	($expt-ratnum-cflonum  n m))
+	((flonum?)	($expt-flonum-cflonum  n m))
+	((compnum?)	($expt-compnum-cflonum n m))
+	((cflonum?)	($expt-cflonum-cflonum n m))
+	(else
+	 (%error-not-number n))))
+
+    (define ($expt-fixnum-cflonum n m)
+      (if ($fxzero? n)
+	  0
+	($expt-flonum-cflonum ($fixnum->flonum n) m)))
+
+    (define ($expt-bignum-cflonum n m)
+      ($expt-flonum-cflonum ($ratnum->flonum n) m))
+
+    (define ($expt-ratnum-cflonum n m)
+      ($expt-flonum-cflonum ($ratnum->flonum n) m))
+
+    (define ($expt-flonum-cflonum n m)
+      ;;We should do:
+      ;;
+      ;;   (expt N M) = (exp (* M (log N)))
+      ;;
+      ;;and we know that:
+      ;;
+      ;;   (log 0.0)	=> -inf.0
+      ;;   (* M -inf.0)	=> -inf.0+0.0i
+      ;;   (exp -inf.0)	=> +0.0+0.0i
+      ;;
+      ;;but according to R6RS, for N equal to zero:
+      ;;
+      ;;   (expt 0.0 M) = 1.0	if M = 0.0
+      ;;                = 0.0	if (real-part M) is positive
+      ;;
+      ;;for other cases  in which the first argument is  zero, either an
+      ;;exception      is      raised      with      condition      type
+      ;;"&implementation-restriction", or  an unspecified  number object
+      ;;is returned.
+      ;;
+      ;;We can also say that, with negative M:
+      ;;
+      ;;   (expt N M) = (/ 1 (expt N (- M))) = (/ 1 0.0) = +inf.0
+      ;;
+      ;;WolframAlpha agrees with this.
+      ;;
+      ;;With  M =  0.0+0.0i: WolframAlpha  says "indeterminate",  Petite
+      ;;Chez Scheme says 0.0, Ypsilon Scheme says +nan.0+nan.0i, Larceny
+      ;;says 1.0, Mosh says 0.0.  We go with raising an exception.
+      ;;
+      (cond (($flzero? n)
+	     (let ((m.rep ($cflonum-real m)))
+	       (cond (($flpositive? m.rep)
+		      0.0)
+		     ((and ($flzero? m.rep)
+			   ($flzero? ($cflonum-imag m)))
+		      (%error-undefined-result n m))
+		     (else
+		      +inf.0+0.0i))))
+	    (($flnan? n)
+	     +nan.0+nan.0i)
+	    (else
+	     ($mul-cflonum-cflonum ($mul-cflonum-number m ($log-flonum n))))))
+
+    (define ($expt-compnum-cflonum n m)
+      ($expt-cflonum-cflonum ($compnum->cflonum n) m))
+
+    (define ($expt-cflonum-cflonum n m)
+      ;;See the discussion for $EXPT-FLONUM-CFLONUM.
+      ;;
+      (let ((n.rep ($cflonum-real n))
+	    (n.imp ($cflonum-imag n))
+	    (m.rep ($cflonum-real m))
+	    (m.imp ($cflonum-imag m)))
+	(cond ((and ($flzero? n.rep)
+		    ($flzero? n.imp))
+	       (cond (($flpositive? m.rep)
+		      0.0+0.0i)
+		     ((and ($flzero? m.rep)
+			   ($flzero? m.imp))
+		      (%error-undefined-result n m))
+		     (else
+		      ;;According   to  Wolfram   Alpha  this   case  is
+		      ;;1.0+0.0i; I  dunno why: it looks  not consistent
+		      ;;with  the  result for  N  =  0.0.  Let's  do  it
+		      ;;cowardly for now.  (Marco Maggi; Dec 7, 2012)
+		      (%error-undefined-result n m))))
+	      (else
+	       ($mul-cflonum-cflonum ($mul-cflonum-number m ($log-flonum n)))))))
+
+    #| end of module: $expt-number-cflonum |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -4376,6 +4501,13 @@
      (condition (make-who-condition who)
 		(make-implementation-restriction-violation)
 		(make-message-condition "result is too big to compute")
+		(make-irritants-condition (list n m)))))
+
+  (define (%error-undefined-result n m)
+    (raise
+     (condition (make-implementation-restriction-violation)
+		(make-who-condition who)
+		(make-message-condition "undefined result")
 		(make-irritants-condition (list n m)))))
 
   #| end of module: expt |# )

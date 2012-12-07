@@ -211,67 +211,118 @@
   (test +1	-1.0	+1.0)
   (test -1	-1.0	-1.0+0.0i)
 
-  #t)
+  (test +10	2.0	100.0)
+  (test -10	2.0	100.0+0.0i)
 
-
-#;(parametrise ((check-test-name	'bignum-base))
+  (test +10	3.0	1000.0)
+  (test -10	3.0	-1000.0+0.0i)
 
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-bignum-flonum BN1 BN1))
+  (test +10	-2.0	1e-2)
+  (test -10	-2.0	1e-2+0.0i)
 
-  #t)
-
-
-#;(parametrise ((check-test-name	'ratnum-base))
-
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-ratnum-flonum 1/2 BN1))
+  (test +10	-3.0	+1e-3)
+  (test -10	-3.0	-1e-3+0.0i)
 
   #t)
 
 
-#;(parametrise ((check-test-name	'flonum-base))
+(parametrise ((check-test-name	'bignum-base))
+
+  (define-syntax test
+    (make-inexact-test expt $expt-number-flonum $expt-bignum-flonum))
+
+  (test BN1	+0.0	+1.0)
+  (test BN2	+0.0	+1.0)
+  (test BN3	+0.0	+1.0+0.0i)
+  (test BN4	+0.0	+1.0+0.0i)
+
+  (test BN1	-0.0	+1.0)
+  (test BN2	-0.0	+1.0)
+  (test BN3	-0.0	+1.0+0.0i)
+  (test BN4	-0.0	+1.0+0.0i)
+
+  (test BN1	+1.0	(inexact BN1))
+  (test BN2	+1.0	(inexact BN2))
+  (test BN3	+1.0	(+ 0.0i (inexact BN3)))
+  (test BN4	+1.0	(+ 0.0i (inexact BN4)))
+
+  ;;The test comparison function is not good for these.
+  (test BN1	-1.0	(inexact (/ BN1)))
+  (test BN2	-1.0	(inexact (/ BN2)))
+  (test BN3	-1.0	(+ 0.0i (inexact (/ BN3))))
+  (test BN4	-1.0	(+ 0.0i (inexact (/ BN4))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'ratnum-base))
+
+  (define-syntax test
+    (make-inexact-test expt $expt-number-flonum $expt-ratnum-flonum))
+
+  (test +1/2	+0.0	+1.0)
+  (test -1/2	+0.0	+1.0+0.0i)
+
+  (test +1/2	-0.0	+1.0)
+  (test -1/2	-0.0	+1.0+0.0i)
+
+  (test +1/2	+1.0	(inexact +1/2))
+  (test -1/2	+1.0	(+ +0.0i (inexact -1/2)))
+
+  (test +1/2	-1.0	(inexact (/ +1/2)))
+  (test -1/2	-1.0	(+ +0.0i (inexact (/ -1/2))))
+
+  (test +1/2	+2.0	(inexact +1/4))
+  (test -1/2	+2.0	(+ +0.0i (inexact +1/4)))
+
+  (test +1/2	-2.0	(inexact (/ +1/4)))
+  (test -1/2	-2.0	(+ +0.0i (inexact (/ +1/4))))
+
+  (test +1/2	+3.0	(inexact +1/8))
+  (test -1/2	+3.0	(+ +0.0i (inexact -1/8)))
+
+  (test +1/2	-3.0	(inexact (/ +1/8)))
+  (test -1/2	-3.0	(+ +0.0i (inexact (/ -1/8))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'flonum-base))
 
   (define-syntax test
     (make-inexact-test expt $expt-number-flonum $expt-flonum-flonum))
 
-  (test	+0.0			BN1	+0.0)
-  (test	-0.0			BN1	(if (even? BN1) +0.0 -0.0))
-  (test	+1.0			BN1	+1.0)
-  (test	-1.0			BN1	(if (even? BN1) +1.0 -1.0))
-  (test	+nan.0			BN1	+nan.0)
-  (test	+inf.0			BN1	+inf.0)
-  (test	-inf.0			BN1	(if (even? BN1) +inf.0 -inf.0))
-  (test	1.00000000000001	BN1	1.0000053644324274)
+  (test	+0.0		+0.0	+1.0)
+  (test	-0.0		+0.0	+1.0)
+  (test	+1.0		+0.0	+1.0)
+  (test	-1.0		+0.0	+1.0)
+  (test	+nan.0		+0.0	+nan.0)
+  (test	+inf.0		+0.0	+nan.0)
+  (test	-inf.0		+0.0	+nan.0+nan.0i)
 
-  (test	+0.0			BN2	+0.0)
-  (test	-0.0			BN2	(if (even? BN2) +0.0 -0.0))
-  (test	+1.0			BN2	+1.0)
-  (test	-1.0			BN2	(if (even? BN2) +1.0 -1.0))
-  (test	+nan.0			BN2	+nan.0)
-  (test	+inf.0			BN2	+inf.0)
-  (test	-inf.0			BN2	(if (even? BN2) +inf.0 -inf.0))
-  (test	1.00000000000001	BN2	1.0000053644325173)
+  (test	+0.0		-0.0	+1.0)
+  (test	-0.0		-0.0	+1.0)
+  (test	+1.0		-0.0	+1.0)
+  (test	-1.0		-0.0	+1.0)
+  (test	+nan.0		-0.0	+nan.0)
+  (test	+inf.0		-0.0	+nan.0)
+  (test	-inf.0		-0.0	+nan.0+nan.0i)
 
-  (test	+0.0			BN3	+0.0)
-  (test	-0.0			BN3	(if (even? BN3) +0.0 -0.0))
-  (test	+1.0			BN3	+1.0)
-  (test	-1.0			BN3	(if (even? BN3) +1.0 -1.0))
-  (test	+nan.0			BN3	+nan.0)
-  (test	+inf.0			BN3	+inf.0)
-  (test	-inf.0			BN3	(if (even? BN3) +inf.0 -inf.0))
-  (test	1.00000000000001	BN3	0.9999946355963379)
+  (test	+0.0		+1.0	+0.0)
+  (test	-0.0		+1.0	-0.0)
+  (test	+1.0		+1.0	+1.0+0.0i)
+  (test	-1.0		+1.0	-1.0+0.0i)
+  (test	+nan.0		+1.0	+nan.0)
+  (test	+inf.0		+1.0	+inf.0+0.0i)
+  (test	-inf.0		+1.0	-inf.0)
 
-  (test	+0.0			BN4	+0.0)
-  (test	-0.0			BN4	(if (even? BN4) +0.0 -0.0))
-  (test	+1.0			BN4	+1.0)
-  (test	-1.0			BN4	(if (even? BN4) +1.0 -1.0))
-  (test	+nan.0			BN4	+nan.0)
-  (test	+inf.0			BN4	+inf.0)
-  (test	-inf.0			BN4	(if (even? BN4) +inf.0 -inf.0))
-  (test	1.00000000000001	BN4	0.999994635596248)
+  (test	+0.0		-1.0	+inf.0)
+  (test	-0.0		-1.0	-inf.0)
+  (test	+1.0		-1.0	+1.0)
+  (test	-1.0		-1.0	-1.0+0.0i)
+  (test	+nan.0		-1.0	+nan.0)
+  (test	+inf.0		-1.0	+0.0)
+  (test	-inf.0		-1.0	+0.0+0.0i)
 
   #t)
 
