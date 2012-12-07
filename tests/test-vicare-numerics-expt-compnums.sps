@@ -252,21 +252,21 @@
     (make-inexact-test expt $expt-number-compnum $expt-cflonum-compnum))
 
   (test	+0.0+0.0i	+1+2i	+0.0+0.0i)
-  ;; (test	-0.0+0.0i	+1+2i	+0.0+0.0i)
-  ;; (test	+0.0-0.0i	+1+2i	+0.0+0.0i)
-  ;; (test	-0.0-0.0i	+1+2i	+0.0+0.0i)
-  ;; (test	+nan.0+2.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+1.0+nan.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+nan.0+nan.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+inf.0+2.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+1.0+inf.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+inf.0+inf.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	-inf.0+2.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+1.0-inf.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	-inf.0-inf.0i	+1+2i	+nan.0+nan.0i)
-  ;; (test	+1.0+2.0i	+1+2i	-0.22251715680177267+0.10070913113607541i)
+  (test	-0.0+0.0i	+1+2i	+0.0+0.0i)
+  (test	+0.0-0.0i	+1+2i	+0.0+0.0i)
+  (test	-0.0-0.0i	+1+2i	+0.0+0.0i)
+  (test	+nan.0+2.0i	+1+2i	+nan.0+nan.0i)
+  (test	+1.0+nan.0i	+1+2i	+nan.0+nan.0i)
+  (test	+nan.0+nan.0i	+1+2i	+nan.0+nan.0i)
+  (test	+inf.0+2.0i	+1+2i	+nan.0+nan.0i)
+  (test	+1.0+inf.0i	+1+2i	+nan.0+nan.0i)
+  (test	+inf.0+inf.0i	+1+2i	+nan.0+nan.0i)
+  (test	-inf.0+2.0i	+1+2i	+nan.0+nan.0i)
+  (test	+1.0-inf.0i	+1+2i	+nan.0+nan.0i)
+  (test	-inf.0-inf.0i	+1+2i	+nan.0+nan.0i)
+  (test	+1.0+2.0i	+1+2i	-0.22251715680177267+0.10070913113607541i)
 
-  #;(catch-implementation-restriction
+  (catch-implementation-restriction
    "undefined result"
    (expt +0.0+0.0i -1+2i))
 
