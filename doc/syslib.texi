@@ -1004,7 +1004,7 @@ Negate a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $neg-ratnum @var{rn}
+@deffn {Unsafe Operation} $neg-ratnum @var{rt}
 Negate a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1047,10 +1047,10 @@ Compute the inverse of a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $inv-ratnum @var{rn}
+@deffn {Unsafe Operation} $inv-ratnum @var{rt}
 Compute the inverse of a ratnum and return the result as a fixnum,
 bignum or ratnum.  A fixnum or bignum is returned when the numerator of
-@var{rn} is @code{+1} or @code{-1}.
+@var{rt} is @code{+1} or @code{-1}.
 @end deffn
 
 
@@ -1092,7 +1092,7 @@ Add a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-number @var{rn} @var{num}
+@deffn {Unsafe Operation} $add-ratnum-number @var{rt} @var{num}
 Add a ratnum with a number and return the result.
 @end deffn
 
@@ -1126,7 +1126,7 @@ Add any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-number-ratnum @var{num} @var{rn}
+@deffn {Unsafe Operation} $add-number-ratnum @var{num} @var{rt}
 Add any number with a ratnum and return the result.
 @end deffn
 
@@ -1160,7 +1160,7 @@ Add a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-fixnum-ratnum @var{fx} @var{rn}
+@deffn {Unsafe Operation} $add-fixnum-ratnum @var{fx} @var{rt}
 Add a fixnum with a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1194,7 +1194,7 @@ Add a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-bignum-ratnum @var{bn} @var{rn}
+@deffn {Unsafe Operation} $add-bignum-ratnum @var{bn} @var{rt}
 Add a bignum with a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1228,7 +1228,7 @@ Add a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-flonum-ratnum @var{fl} @var{rn}
+@deffn {Unsafe Operation} $add-flonum-ratnum @var{fl} @var{rt}
 Add a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
@@ -1248,32 +1248,32 @@ Add a flonum with a cflonum and return the result as a cflonum.
 @subsubheading Ratnum as first operand
 
 
-@deffn {Unsafe Operation} $add-ratnum-fixnum @var{rn} @var{fx}
+@deffn {Unsafe Operation} $add-ratnum-fixnum @var{rt} @var{fx}
 Add a ratnum with a fixnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-bignum @var{rn} @var{bn}
+@deffn {Unsafe Operation} $add-ratnum-bignum @var{rt} @var{bn}
 Add a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-flonum @var{rn} @var{fl}
+@deffn {Unsafe Operation} $add-ratnum-flonum @var{rt} @var{fl}
 Add a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-ratnum @vari{rn} @varii{rn}
+@deffn {Unsafe Operation} $add-ratnum-ratnum @vari{rt} @varii{rt}
 Add a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-compnum @var{rn} @var{cn}
+@deffn {Unsafe Operation} $add-ratnum-compnum @var{rt} @var{cn}
 Add a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-ratnum-cflonum @var{rn} @var{cfl}
+@deffn {Unsafe Operation} $add-ratnum-cflonum @var{rt} @var{cfl}
 Add a ratnum with a cflonum and return the result as a cflonum.
 @end deffn
 
@@ -1292,7 +1292,7 @@ Add a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-compnum-ratnum @var{cn} @var{rn}
+@deffn {Unsafe Operation} $add-compnum-ratnum @var{cn} @var{rt}
 Add a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
@@ -1327,7 +1327,7 @@ Add a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $add-cflonum-ratnum @var{cfl} @var{rn}
+@deffn {Unsafe Operation} $add-cflonum-ratnum @var{cfl} @var{rt}
 Add a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
@@ -1375,7 +1375,7 @@ Subtract a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-number @var{rn} @var{num}
+@deffn {Unsafe Operation} $sub-ratnum-number @var{rt} @var{num}
 Subtract a ratnum with a number and return the result.
 @end deffn
 
@@ -1409,7 +1409,7 @@ Subtract any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-number-ratnum @var{num} @var{rn}
+@deffn {Unsafe Operation} $sub-number-ratnum @var{num} @var{rt}
 Subtract any number with a ratnum and return the result.
 @end deffn
 
@@ -1443,7 +1443,7 @@ Subtract a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-fixnum-ratnum @var{fx} @var{rn}
+@deffn {Unsafe Operation} $sub-fixnum-ratnum @var{fx} @var{rt}
 Subtract a fixnum with a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1477,7 +1477,7 @@ Subtract a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-bignum-ratnum @var{bn} @var{rn}
+@deffn {Unsafe Operation} $sub-bignum-ratnum @var{bn} @var{rt}
 Subtract a bignum with a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1511,7 +1511,7 @@ Subtract a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-flonum-ratnum @var{fl} @var{rn}
+@deffn {Unsafe Operation} $sub-flonum-ratnum @var{fl} @var{rt}
 Subtract a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
@@ -1531,32 +1531,32 @@ Subtract a flonum with a cflonum and return the result as a cflonum.
 @subsubheading Ratnum as first operand
 
 
-@deffn {Unsafe Operation} $sub-ratnum-fixnum @var{rn} @var{fx}
+@deffn {Unsafe Operation} $sub-ratnum-fixnum @var{rt} @var{fx}
 Subtract a ratnum with a fixnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-bignum @var{rn} @var{bn}
+@deffn {Unsafe Operation} $sub-ratnum-bignum @var{rt} @var{bn}
 Subtract a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-flonum @var{rn} @var{fl}
+@deffn {Unsafe Operation} $sub-ratnum-flonum @var{rt} @var{fl}
 Subtract a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-ratnum @vari{rn} @varii{rn}
+@deffn {Unsafe Operation} $sub-ratnum-ratnum @vari{rt} @varii{rt}
 Subtract a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-compnum @var{rn} @var{cn}
+@deffn {Unsafe Operation} $sub-ratnum-compnum @var{rt} @var{cn}
 Subtract a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-ratnum-cflonum @var{rn} @var{cfl}
+@deffn {Unsafe Operation} $sub-ratnum-cflonum @var{rt} @var{cfl}
 Subtract a ratnum with a cflonum and return the result as a cflonum.
 @end deffn
 
@@ -1575,7 +1575,7 @@ Subtract a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-compnum-ratnum @var{cn} @var{rn}
+@deffn {Unsafe Operation} $sub-compnum-ratnum @var{cn} @var{rt}
 Subtract a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
@@ -1610,7 +1610,7 @@ Subtract a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sub-cflonum-ratnum @var{cfl} @var{rn}
+@deffn {Unsafe Operation} $sub-cflonum-ratnum @var{cfl} @var{rt}
 Subtract a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
@@ -1658,7 +1658,7 @@ Multiply a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-number @var{rn} @var{num}
+@deffn {Unsafe Operation} $mul-ratnum-number @var{rt} @var{num}
 Multiply a ratnum with a number and return the result.
 @end deffn
 
@@ -1692,7 +1692,7 @@ Multiply any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-number-ratnum @var{num} @var{rn}
+@deffn {Unsafe Operation} $mul-number-ratnum @var{num} @var{rt}
 Multiply any number with a ratnum and return the result.
 @end deffn
 
@@ -1726,7 +1726,7 @@ Multiply a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-fixnum-ratnum @var{fx} @var{rn}
+@deffn {Unsafe Operation} $mul-fixnum-ratnum @var{fx} @var{rt}
 Multiply a fixnum with a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1760,7 +1760,7 @@ Multiply a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-bignum-ratnum @var{bn} @var{rn}
+@deffn {Unsafe Operation} $mul-bignum-ratnum @var{bn} @var{rt}
 Multiply a bignum with a ratnum and return the result as a ratnum.
 @end deffn
 
@@ -1794,7 +1794,7 @@ Multiply a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-flonum-ratnum @var{fl} @var{rn}
+@deffn {Unsafe Operation} $mul-flonum-ratnum @var{fl} @var{rt}
 Multiply a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
@@ -1813,32 +1813,32 @@ Multiply a flonum with a cflonum and return the result as a cflonum.
 @subsubheading Ratnum as first operand
 
 
-@deffn {Unsafe Operation} $mul-ratnum-fixnum @var{rn} @var{fx}
+@deffn {Unsafe Operation} $mul-ratnum-fixnum @var{rt} @var{fx}
 Multiply a ratnum with a fixnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-bignum @var{rn} @var{bn}
+@deffn {Unsafe Operation} $mul-ratnum-bignum @var{rt} @var{bn}
 Multiply a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-flonum @var{rn} @var{fl}
+@deffn {Unsafe Operation} $mul-ratnum-flonum @var{rt} @var{fl}
 Multiply a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-ratnum @vari{rn} @varii{rn}
+@deffn {Unsafe Operation} $mul-ratnum-ratnum @vari{rt} @varii{rt}
 Multiply a ratnum with a ratnum and return the result as a ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-compnum @var{rn} @var{cn}
+@deffn {Unsafe Operation} $mul-ratnum-compnum @var{rt} @var{cn}
 Multiply a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-ratnum-cflonum @var{rn} @var{cfl}
+@deffn {Unsafe Operation} $mul-ratnum-cflonum @var{rt} @var{cfl}
 Multiply a ratnum with a cflonum and return the result as a cflonum.
 @end deffn
 
@@ -1857,7 +1857,7 @@ Multiply a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-compnum-ratnum @var{cn} @var{rn}
+@deffn {Unsafe Operation} $mul-compnum-ratnum @var{cn} @var{rt}
 Multiply a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
@@ -1891,7 +1891,7 @@ Multiply a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $mul-cflonum-ratnum @var{cfl} @var{rn}
+@deffn {Unsafe Operation} $mul-cflonum-ratnum @var{cfl} @var{rt}
 Multiply a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
@@ -1939,7 +1939,7 @@ Divide a flonum with a number and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-number @var{rn} @var{num}
+@deffn {Unsafe Operation} $div-ratnum-number @var{rt} @var{num}
 Divide a ratnum with a number and return the result.
 @end deffn
 
@@ -1973,7 +1973,7 @@ Divide any number with a flonum and return the result.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-number-ratnum @var{num} @var{rn}
+@deffn {Unsafe Operation} $div-number-ratnum @var{num} @var{rt}
 Divide any number with a ratnum and return the result.
 @end deffn
 
@@ -2008,7 +2008,7 @@ Divide a fixnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-fixnum-ratnum @var{fx} @var{rn}
+@deffn {Unsafe Operation} $div-fixnum-ratnum @var{fx} @var{rt}
 Divide a fixnum with a ratnum and return the result as fixnum, bignum or
 ratnum.
 @end deffn
@@ -2045,7 +2045,7 @@ Divide a bignum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-bignum-ratnum @var{bn} @var{rn}
+@deffn {Unsafe Operation} $div-bignum-ratnum @var{bn} @var{rt}
 Divide a bignum with a ratnum and return the result as a fixnum, bignum
 or ratnum.
 @end deffn
@@ -2080,7 +2080,7 @@ Divide a flonum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-flonum-ratnum @var{fl} @var{rn}
+@deffn {Unsafe Operation} $div-flonum-ratnum @var{fl} @var{rt}
 Divide a flonum with a ratnum and return the result as a flonum.
 @end deffn
 
@@ -2099,35 +2099,35 @@ Divide a flonum with a cflonum and return the result as a cflonum.
 @subsubheading Ratnum as first operand
 
 
-@deffn {Unsafe Operation} $div-ratnum-fixnum @var{rn} @var{fx}
+@deffn {Unsafe Operation} $div-ratnum-fixnum @var{rt} @var{fx}
 Divide a ratnum with a fixnum and return the result as a fixnum, bignum
 or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-bignum @var{rn} @var{bn}
+@deffn {Unsafe Operation} $div-ratnum-bignum @var{rt} @var{bn}
 Divide a ratnum with a ratnum and return the result as a fixnum, bignum
 or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-flonum @var{rn} @var{fl}
+@deffn {Unsafe Operation} $div-ratnum-flonum @var{rt} @var{fl}
 Divide a ratnum with a flonum and return the result as a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-ratnum @vari{rn} @varii{rn}
+@deffn {Unsafe Operation} $div-ratnum-ratnum @vari{rt} @varii{rt}
 Divide a ratnum with a ratnum and return the result as a fixnum, bignum
 or ratnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-compnum @var{rn} @var{cn}
+@deffn {Unsafe Operation} $div-ratnum-compnum @var{rt} @var{cn}
 Divide a ratnum with a compnum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-ratnum-cflonum @var{rn} @var{cfl}
+@deffn {Unsafe Operation} $div-ratnum-cflonum @var{rt} @var{cfl}
 Divide a ratnum with a cflonum and return the result as a cflonum.
 @end deffn
 
@@ -2146,7 +2146,7 @@ Divide a compnum with a bignum and return the result as a compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-compnum-ratnum @var{cn} @var{rn}
+@deffn {Unsafe Operation} $div-compnum-ratnum @var{cn} @var{rt}
 Divide a compnum with a ratnum and return the result as a compnum.
 @end deffn
 
@@ -2180,7 +2180,7 @@ Divide a cflonum with a bignum and return the result as a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $div-cflonum-ratnum @var{cfl} @var{rn}
+@deffn {Unsafe Operation} $div-cflonum-ratnum @var{cfl} @var{rt}
 Divide a cflonum with a ratnum and return the result as a cflonum.
 @end deffn
 
@@ -2219,7 +2219,7 @@ Compute the square of a bignum and return the result as bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $square-ratnum @var{rn}
+@deffn {Unsafe Operation} $square-ratnum @var{rt}
 Compute the square of a ratnum and return the result as ratnum.
 @end deffn
 
@@ -2254,7 +2254,7 @@ Compute the cube of a bignum and return the result as bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cube-ratnum @var{rn}
+@deffn {Unsafe Operation} $cube-ratnum @var{rt}
 Compute the cube of a ratnum and return the result as ratnum.
 @end deffn
 
@@ -3064,7 +3064,7 @@ Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-number-ratnum @var{num} @var{rn}
+@deffn {Unsafe Operation} $max-number-ratnum @var{num} @var{rt}
 Return the maximum between the arguments.
 @end deffn
 
@@ -3093,7 +3093,7 @@ Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-ratnum-number @var{rn} @var{num}
+@deffn {Unsafe Operation} $max-ratnum-number @var{rt} @var{num}
 Return the maximum between the arguments.
 @end deffn
 
@@ -3117,7 +3117,7 @@ Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-fixnum-ratnum @var{fx} @var{rn}
+@deffn {Unsafe Operation} $max-fixnum-ratnum @var{fx} @var{rt}
 Return the maximum between the arguments.
 @end deffn
 
@@ -3136,7 +3136,7 @@ Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-bignum-ratnum @var{bn} @var{rn}
+@deffn {Unsafe Operation} $max-bignum-ratnum @var{bn} @var{rt}
 Return the maximum between the arguments.
 @end deffn
 
@@ -3160,7 +3160,7 @@ Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-flonum-ratnum @var{fl} @var{rn}
+@deffn {Unsafe Operation} $max-flonum-ratnum @var{fl} @var{rt}
 Return the maximum between the arguments.
 @end deffn
 
@@ -3174,22 +3174,22 @@ Return the maximum between the arguments.
 @subsubheading Ratnum as first argument
 
 
-@deffn {Unsafe Operation} $max-ratnum-fixnum @var{rn} @var{fx}
+@deffn {Unsafe Operation} $max-ratnum-fixnum @var{rt} @var{fx}
 Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-ratnum-bignum @var{rn} @var{bn}
+@deffn {Unsafe Operation} $max-ratnum-bignum @var{rt} @var{bn}
 Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-ratnum-ratnum @vari{rn} @varii{rn}
+@deffn {Unsafe Operation} $max-ratnum-ratnum @vari{rt} @varii{rt}
 Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-ratnum-flonum @var{rn} @var{fl}
+@deffn {Unsafe Operation} $max-ratnum-flonum @var{rt} @var{fl}
 Return the maximum between the arguments.
 @end deffn
 
@@ -3337,8 +3337,8 @@ not--a--number.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sign-ratnum @var{rn}
-Return a fixnum representing the sign of the numerator of @var{rn}:
+@deffn {Unsafe Operation} $sign-ratnum @var{rt}
+Return a fixnum representing the sign of the numerator of @var{rt}:
 @code{+1} for positive, @code{-1} for negative, @code{0} for zero.
 @end deffn
 
@@ -3386,8 +3386,8 @@ inexact number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-number-ratnum @var{num} @var{rn}
-Compute @var{num} raised to the power @var{rn}; return an unspecified
+@deffn {Unsafe Operation} $expt-number-ratnum @var{num} @var{rt}
+Compute @var{num} raised to the power @var{rt}; return an unspecified
 number object.
 @end deffn
 
@@ -3420,8 +3420,8 @@ object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-fixnum-ratnum @var{fx} @var{rn}
-Compute @var{fx} raised to the power @var{rn}; return an exact number
+@deffn {Unsafe Operation} $expt-fixnum-ratnum @var{fx} @var{rt}
+Compute @var{fx} raised to the power @var{rt}; return an exact number
 object.
 @end deffn
 
@@ -3463,8 +3463,8 @@ object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-bignum-ratnum @var{bn} @var{rn}
-Compute @var{bn} raised to the power @var{rn}; return an inexact number
+@deffn {Unsafe Operation} $expt-bignum-ratnum @var{bn} @var{rt}
+Compute @var{bn} raised to the power @var{rt}; return an inexact number
 object.
 @end deffn
 
@@ -3491,38 +3491,38 @@ complex number object.
 @subsubheading Ratnum as first argument
 
 
-@deffn {Unsafe Operation} $expt-ratnum-positive-fixnum @var{rn} @var{fx}
-Compute @var{rn} raised to the power of positive @var{fx}; return an
+@deffn {Unsafe Operation} $expt-ratnum-positive-fixnum @var{rt} @var{fx}
+Compute @var{rt} raised to the power of positive @var{fx}; return an
 exact number object.  @var{fx} must be a positive fixnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-ratnum-bignum @var{rn} @var{bn}
-Compute @var{rn} raised to the power @var{bn}; return an inexact number
+@deffn {Unsafe Operation} $expt-ratnum-bignum @var{rt} @var{bn}
+Compute @var{rt} raised to the power @var{bn}; return an inexact number
 object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-ratnum-ratnum @vari{rn} @varii{rn}
-Compute @vari{rn} raised to the power @varii{rn}; return an inexact
+@deffn {Unsafe Operation} $expt-ratnum-ratnum @vari{rt} @varii{rt}
+Compute @vari{rt} raised to the power @varii{rt}; return an inexact
 number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-ratnum-flonum @var{rn} @var{fl}
-Compute @var{rn} raised to the power @var{fl}; return an inexact number
+@deffn {Unsafe Operation} $expt-ratnum-flonum @var{rt} @var{fl}
+Compute @var{rt} raised to the power @var{fl}; return an inexact number
 object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-ratnum-compnum @var{rn} @var{cn}
-Compute @var{rn} raised to the power @var{cn}; return an inexact complex
+@deffn {Unsafe Operation} $expt-ratnum-compnum @var{rt} @var{cn}
+Compute @var{rt} raised to the power @var{cn}; return an inexact complex
 number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-ratnum-cflonum @var{rn} @var{cfl}
-Compute @var{rn} raised to the power @var{cfl}; return an inexact
+@deffn {Unsafe Operation} $expt-ratnum-cflonum @var{rt} @var{cfl}
+Compute @var{rt} raised to the power @var{cfl}; return an inexact
 complex number object.
 @end deffn
 
@@ -3543,8 +3543,8 @@ object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-flonum-ratnum @var{fl} @var{rn}
-Compute @var{fl} raised to the power @var{rn}; return an inexact number
+@deffn {Unsafe Operation} $expt-flonum-ratnum @var{fl} @var{rt}
+Compute @var{fl} raised to the power @var{rt}; return an inexact number
 object.
 @end deffn
 
@@ -3582,8 +3582,8 @@ Compute @var{cn} raised to the power @var{bn}; return a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-compnum-ratnum @var{cn} @var{rn}
-Compute @var{cn} raised to the power @var{rn}; return a cflonum.
+@deffn {Unsafe Operation} $expt-compnum-ratnum @var{cn} @var{rt}
+Compute @var{cn} raised to the power @var{rt}; return a cflonum.
 @end deffn
 
 
@@ -3617,8 +3617,8 @@ Compute @var{cfl} raised to the power @var{bn}; return a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-cflonum-ratnum @var{cfl} @var{rn}
-Compute @var{cfl} raised to the power @var{rn}; return a cflonum.
+@deffn {Unsafe Operation} $expt-cflonum-ratnum @var{cfl} @var{rt}
+Compute @var{cfl} raised to the power @var{rt}; return a cflonum.
 @end deffn
 
 
@@ -3682,8 +3682,8 @@ number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqrt-ratnum @var{rn}
-Compute the principal square root of @var{rn}; return an unspecified
+@deffn {Unsafe Operation} $sqrt-ratnum @var{rt}
+Compute the principal square root of @var{rt}; return an unspecified
 number object.
 @end deffn
 

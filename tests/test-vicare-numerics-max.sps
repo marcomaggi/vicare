@@ -50,6 +50,27 @@
 (define RN4	-17/11)
 
 
+(parametrise ((check-test-name	'generic))
+
+  (check (max 1)		=> 1)
+  (check (max BN1)		=> BN1)
+  (check (max 1.)		=> 1.)
+  (check (max 1/2)		=> 1/2)
+
+  (check (max 1 2 3)		=> 3)
+  (check (max 1 3 2)		=> 3)
+  (check (max 3 1 2)		=> 3)
+
+  (check (max 1. 2 3)		=> 3.)
+  (check (max 1 3. 2)		=> 3.)
+  (check (max 3 1 2.)		=> 3.)
+
+  (check (max 3 1/2 2.)		=> 3.)
+  (check (max 3 13/3 2.)	=> 4.333333333333334)
+
+  #t)
+
+
 (parametrise ((check-test-name	'fixnums))
 
 ;;; fixnums

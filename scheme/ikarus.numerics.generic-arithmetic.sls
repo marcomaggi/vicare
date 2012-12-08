@@ -4858,9 +4858,9 @@
 	x)))
 
   (define ($max-fixnum-ratnum x y)
-    (if (>= x y)
-	x
-      y))
+    (if (fxrt< x y)
+	y
+      x))
 
 ;;; --------------------------------------------------------------------
 
@@ -4881,7 +4881,7 @@
 	x)))
 
   (define ($max-bignum-ratnum x y)
-    (if (>= x y)
+    (if (bnrt> x y)
 	x
       y))
 
@@ -4914,17 +4914,17 @@
 ;;; --------------------------------------------------------------------
 
   (define ($max-ratnum-fixnum x y)
-    (if (>= x y)
+    (if (rtfx> x y)
 	x
       y))
 
   (define ($max-ratnum-bignum x y)
-    (if (>= x y)
+    (if (rtbn> x y)
 	x
       y))
 
   (define ($max-ratnum-ratnum x y)
-    (if (>= x y)
+    (if (rtrt> x y)
 	x
       y))
 
@@ -5842,8 +5842,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-ordered-comparison <
-    $fx< fxbn< bnfx< bnbn< fxfl< flfx< bnfl< flbn< flfl<
+  (define-ordered-comparison < $fx<
+    fxbn< bnfx< bnbn< fxfl<
+    flfx< bnfl< flbn< flfl<
     exrt< rtex< exrt< rtex< flrt< rtfl< rtrt<)
 
   (define-ordered-comparison >
@@ -5967,10 +5968,11 @@
 
   #| end of module |# )
 
-;;; --------------------------------------------------------------------
-;;; comparisons between ratnum and exact integer
-
+
+;;;; comparisons between ratnum and exact integer
+;;
 ;;Notice that a ratnum can never be equal to an exact integer.
+;;
 
 (define (exrt< x y)
   ;;Comparison: exact-integer < ratnum.
@@ -5982,6 +5984,28 @@
   (< (* x ($ratnum-d y))
      ($ratnum-n y)))
 
+(define (fxrt< x y)
+  ;;Comparison: fixnum < ratnum.
+  ;;
+  ;;     y.num
+  ;; x < -----   <=>   x * y.den < y.num
+  ;;     y.den
+  ;;
+  (< ($mul-fixnum-number x ($ratnum-d y))
+     ($ratnum-n y)))
+
+(define (bnrt< x y)
+  ;;Comparison: bignum < ratnum.
+  ;;
+  ;;     y.num
+  ;; x < -----   <=>   x * y.den < y.num
+  ;;     y.den
+  ;;
+  (< ($mul-bignum-number x ($ratnum-d y))
+     ($ratnum-n y)))
+
+;;; --------------------------------------------------------------------
+
 (define (rtex< x y)
   ;;Comparison: ratnum < exact-integer.
   ;;
@@ -5991,6 +6015,28 @@
   ;;
   (< ($ratnum-n x)
      (* y ($ratnum-d x))))
+
+(define (rtfx< x y)
+  ;;Comparison: ratnum < fixnum.
+  ;;
+  ;; x.num
+  ;; ----- < y   <=>   x.num < y * x.den
+  ;; x.den
+  ;;
+  (< ($ratnum-n x)
+     ($mul-fixnum-number y ($ratnum-d x))))
+
+(define (rtbn< x y)
+  ;;Comparison: ratnum < bignum.
+  ;;
+  ;; x.num
+  ;; ----- < y   <=>   x.num < y * x.den
+  ;; x.den
+  ;;
+  (< ($ratnum-n x)
+     ($mul-bignum-number y ($ratnum-d x))))
+
+;;; --------------------------------------------------------------------
 
 (define (exrt> x y)
   ;;Comparison: exact-integer > ratnum.
@@ -6002,6 +6048,28 @@
   (> (* x ($ratnum-d y))
      ($ratnum-n y)))
 
+(define (fxrt> x y)
+  ;;Comparison: fixnum > ratnum.
+  ;;
+  ;;     y.num
+  ;; x > -----   <=>   x * y.den > y.num
+  ;;     y.den
+  ;;
+  (> ($mul-fixnum-number x ($ratnum-d y))
+     ($ratnum-n y)))
+
+(define (bnrt> x y)
+  ;;Comparison: bignum > ratnum.
+  ;;
+  ;;     y.num
+  ;; x > -----   <=>   x * y.den > y.num
+  ;;     y.den
+  ;;
+  (> ($mul-bignum-number x ($ratnum-d y))
+     ($ratnum-n y)))
+
+;;; --------------------------------------------------------------------
+
 (define (rtex> x y)
   ;;Comparison: ratnum > exact-integer.
   ;;
@@ -6011,6 +6079,26 @@
   ;;
   (> ($ratnum-n x)
      (* y ($ratnum-d x))))
+
+(define (rtfx> x y)
+  ;;Comparison: ratnum > fixnum.
+  ;;
+  ;; x.num
+  ;; ----- > y   <=>   x.num > y * x.den
+  ;; x.den
+  ;;
+  (> ($ratnum-n x)
+     ($mul-fixnum-number y ($ratnum-d x))))
+
+(define (rtbn> x y)
+  ;;Comparison: ratnum > bignum.
+  ;;
+  ;; x.num
+  ;; ----- > y   <=>   x.num > y * x.den
+  ;; x.den
+  ;;
+  (> ($ratnum-n x)
+     ($mul-bignum-number y ($ratnum-d x))))
 
 ;;; --------------------------------------------------------------------
 
