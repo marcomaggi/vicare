@@ -3051,100 +3051,146 @@ flonums.
 @subsection Maximum between numbers
 
 
-@deffn {Unsafe Operation} $max-fixnum-number
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $max-number-fixnum @var{num} @var{fx}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-bignum-number
+@deffn {Unsafe Operation} $max-number-bignum @var{num} @var{bn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-flonum-number
+@deffn {Unsafe Operation} $max-number-ratnum @var{num} @var{rn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-ratnum-number
+@deffn {Unsafe Operation} $max-number-flonum @var{num} @var{fl}
+Return the maximum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as second argument
+
+
+@deffn {Unsafe Operation} $max-fixnum-number @var{fx} @var{num}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-number-fixnum
+@deffn {Unsafe Operation} $max-bignum-number @var{bn} @var{num}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-number-bignum
+@deffn {Unsafe Operation} $max-flonum-number @var{fl} @var{num}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-number-flonum
+@deffn {Unsafe Operation} $max-ratnum-number @var{rn} @var{num}
+Return the maximum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $max-fixnum-fixnum @vari{fx} @varii{fx}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-number-ratnum
+@deffn {Unsafe Operation} $max-fixnum-bignum @var{fx} @var{bn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-fixnum-fixnum
+@deffn {Unsafe Operation} $max-fixnum-flonum @var{fx} @var{fl}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-fixnum-bignum
+@deffn {Unsafe Operation} $max-fixnum-ratnum @var{fx} @var{rn}
+Return the maximum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $max-bignum-fixnum @var{bn} @var{fx}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-fixnum-flonum
+@deffn {Unsafe Operation} $max-bignum-bignum @vari{bn} @varii{bn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-fixnum-ratnum
+@deffn {Unsafe Operation} $max-bignum-ratnum @var{bn} @var{rn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-bignum-fixnum
+@deffn {Unsafe Operation} $max-bignum-flonum @var{bn} @var{fl}
+Return the maximum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $max-flonum-fixnum @var{fl} @var{fx}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-bignum-bignum
+@deffn {Unsafe Operation} $max-flonum-bignum @var{fl} @var{bn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-bignum-flonum
+@deffn {Unsafe Operation} $max-flonum-ratnum @var{fl} @var{rn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-bignum-ratnum
+@deffn {Unsafe Operation} $max-flonum-flonum @vari{fl} @varii{fl}
+Return the maximum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first argument
+
+
+@deffn {Unsafe Operation} $max-ratnum-fixnum @var{rn} @var{fx}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-flonum-flonum
+@deffn {Unsafe Operation} $max-ratnum-bignum @var{rn} @var{bn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-flonum-fixnum
+@deffn {Unsafe Operation} $max-ratnum-ratnum @vari{rn} @varii{rn}
+Return the maximum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $max-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $max-flonum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $max-ratnum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $max-ratnum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $max-ratnum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $max-ratnum-flonum
-
+@deffn {Unsafe Operation} $max-ratnum-flonum @var{rn} @var{fl}
+Return the maximum between the arguments.
 @end deffn
 
 @c page
