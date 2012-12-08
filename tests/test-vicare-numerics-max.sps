@@ -612,6 +612,104 @@
   #t)
 
 
+(parametrise ((check-test-name	'flonums))
+
+;;; flonums
+
+  (check (max 1.0 2.0)			=> 2.0)
+  (check (max 2.0 1.0)			=> 2.0)
+  (check ($max-number-flonum 1.0 2.0)	=> 2.0)
+  (check ($max-number-flonum 2.0 1.0)	=> 2.0)
+  (check ($max-flonum-number 1.0 2.0)	=> 2.0)
+  (check ($max-flonum-number 2.0 1.0)	=> 2.0)
+  (check ($max-flonum-flonum 1.0 2.0)	=> 2.0)
+  (check ($max-flonum-flonum 2.0 1.0)	=> 2.0)
+
+;;; --------------------------------------------------------------------
+;;; bignums
+
+  (check (max 1.0 BN1)			=> (inexact BN1))
+  (check (max BN1 1.0)			=> (inexact BN1))
+  (check ($max-number-flonum BN1 1.0)	=> (inexact BN1))
+  (check ($max-flonum-number 1.0 BN1)	=> (inexact BN1))
+  (check ($max-flonum-bignum 1.0 BN1)	=> (inexact BN1))
+
+  (check (max 1.0 BN2)			=> (inexact BN2))
+  (check (max BN2 1.0)			=> (inexact BN2))
+  (check ($max-number-flonum BN2 1.0)	=> (inexact BN2))
+  (check ($max-flonum-number 1.0 BN2)	=> (inexact BN2))
+  (check ($max-flonum-bignum 1.0 BN2)	=> (inexact BN2))
+
+  (check (max 1.0 BN3)			=> 1.0)
+  (check (max BN3 1.0)			=> 1.0)
+  (check ($max-number-flonum BN3 1.0)	=> 1.0)
+  (check ($max-flonum-number 1.0 BN3)	=> 1.0)
+  (check ($max-flonum-bignum 1.0 BN3)	=> 1.0)
+
+  (check (max 1.0 BN4)			=> 1.0)
+  (check (max BN4 1.0)			=> 1.0)
+  (check ($max-number-flonum BN4 1.0)	=> 1.0)
+  (check ($max-flonum-number 1.0 BN4)	=> 1.0)
+  (check ($max-flonum-bignum 1.0 BN4)	=> 1.0)
+
+;;; --------------------------------------------------------------------
+;;; ratnums
+
+  (check (max 1.0 3/2)			=> (inexact 3/2))
+  (check (max 3/2 1.0)			=> (inexact 3/2))
+  (check ($max-flonum-number 1.0 3/2)	=> (inexact 3/2))
+  (check ($max-number-flonum 3/2 1.0)	=> (inexact 3/2))
+  (check ($max-flonum-ratnum 1.0 3/2)	=> (inexact 3/2))
+  (check ($max-ratnum-flonum 3/2 1.0)	=> (inexact 3/2))
+
+  (check (max 1.0 -3/2)			=> 1.0)
+  (check (max -3/2 1.0)			=> 1.0)
+  (check ($max-flonum-number 1.0 -3/2)	=> 1.0)
+  (check ($max-number-flonum -3/2 1.0)	=> 1.0)
+  (check ($max-flonum-ratnum 1.0 -3/2)	=> 1.0)
+  (check ($max-ratnum-flonum -3/2 1.0)	=> 1.0)
+
+;;; --------------------------------------------------------------------
+;;; flonums
+
+  (check (max 1.0 2.0)			=> 2.0)
+  (check (max 2.0 1.0)			=> 2.0)
+  (check ($max-flonum-number 1.0 2.0)	=> 2.0)
+  (check ($max-number-flonum 2.0 1.0)	=> 2.0)
+  (check ($max-flonum-flonum 1.0 2.0)	=> 2.0)
+  (check ($max-flonum-flonum 2.0 1.0)	=> 2.0)
+
+  (check (max 1.0 -2.3)			=> 1.0)
+  (check (max -2.3 1.0)			=> 1.0)
+  (check ($max-flonum-number 1.0 -2.3)	=> 1.0)
+  (check ($max-number-flonum -2.3 1.0)	=> 1.0)
+  (check ($max-flonum-flonum 1.0 -2.3)	=> 1.0)
+  (check ($max-flonum-flonum -2.3 1.0)	=> 1.0)
+
+  (check (max 1.0 +inf.0)			=> +inf.0)
+  (check (max +inf.0 1.0)			=> +inf.0)
+  (check ($max-flonum-number 1.0 +inf.0)	=> +inf.0)
+  (check ($max-number-flonum +inf.0 1.0)	=> +inf.0)
+  (check ($max-flonum-flonum 1.0 +inf.0)	=> +inf.0)
+  (check ($max-flonum-flonum +inf.0 1.0)	=> +inf.0)
+
+  (check (max 1.0 -inf.0)			=> 1.0)
+  (check (max -inf.0 1.0)			=> 1.0)
+  (check ($max-flonum-number 1.0 -inf.0)	=> 1.0)
+  (check ($max-number-flonum -inf.0 1.0)	=> 1.0)
+  (check ($max-flonum-flonum 1.0 -inf.0)	=> 1.0)
+  (check ($max-flonum-flonum -inf.0 1.0)	=> 1.0)
+
+  (check (max 1.0 +nan.0)			=> +nan.0)
+  (check (max +nan.0 1.0)			=> +nan.0)
+  (check ($max-flonum-number 1.0 +nan.0)	=> +nan.0)
+  (check ($max-number-flonum +nan.0 1.0)	=> +nan.0)
+  (check ($max-flonum-flonum 1.0 +nan.0)	=> +nan.0)
+  (check ($max-flonum-flonum +nan.0 1.0)	=> +nan.0)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
