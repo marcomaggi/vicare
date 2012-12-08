@@ -3198,100 +3198,146 @@ Return the maximum between the arguments.
 @subsection Minimum between numbers
 
 
-@deffn {Unsafe Operation} $min-fixnum-number
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $min-number-fixnum @var{num} @var{fx}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-bignum-number
+@deffn {Unsafe Operation} $min-number-bignum @var{num} @var{bn}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-flonum-number
+@deffn {Unsafe Operation} $min-number-ratnum @var{num} @var{rt}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-ratnum-number
+@deffn {Unsafe Operation} $min-number-flonum @var{num} @var{fl}
+Return the minimum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as second argument
+
+
+@deffn {Unsafe Operation} $min-fixnum-number @var{fx} @var{num}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-number-fixnum
+@deffn {Unsafe Operation} $min-bignum-number @var{bn} @var{num}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-number-bignum
+@deffn {Unsafe Operation} $min-flonum-number @var{fl} @var{num}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-number-flonum
+@deffn {Unsafe Operation} $min-ratnum-number @var{rt} @var{num}
+Return the minimum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $min-fixnum-fixnum @vari{fx} @varii{fx}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-number-ratnum
+@deffn {Unsafe Operation} $min-fixnum-bignum @var{fx} @var{bn}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-fixnum-fixnum
+@deffn {Unsafe Operation} $min-fixnum-flonum @var{fx} @var{fl}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-fixnum-bignum
+@deffn {Unsafe Operation} $min-fixnum-ratnum @var{fx} @var{rt}
+Return the minimum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $min-bignum-fixnum @var{bn} @var{fx}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-fixnum-flonum
+@deffn {Unsafe Operation} $min-bignum-bignum @vari{bn} @varii{bn}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-fixnum-ratnum
+@deffn {Unsafe Operation} $min-bignum-ratnum @var{bn} @var{rt}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-bignum-fixnum
+@deffn {Unsafe Operation} $min-bignum-flonum @var{bn} @var{fl}
+Return the minimum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $min-flonum-fixnum @var{fl} @var{fx}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-bignum-bignum
+@deffn {Unsafe Operation} $min-flonum-bignum @var{fl} @var{bn}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-bignum-flonum
+@deffn {Unsafe Operation} $min-flonum-ratnum @var{fl} @var{rt}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-bignum-ratnum
+@deffn {Unsafe Operation} $min-flonum-flonum @vari{fl} @varii{fl}
+Return the minimum between the arguments.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first argument
+
+
+@deffn {Unsafe Operation} $min-ratnum-fixnum @var{rt} @var{fx}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-flonum-flonum
+@deffn {Unsafe Operation} $min-ratnum-bignum @var{rt} @var{bn}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-flonum-fixnum
+@deffn {Unsafe Operation} $min-ratnum-ratnum @vari{rt} @varii{rt}
+Return the minimum between the arguments.
 @end deffn
 
 
-@deffn {Unsafe Operation} $min-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $min-flonum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $min-ratnum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $min-ratnum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $min-ratnum-ratnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $min-ratnum-flonum
-
+@deffn {Unsafe Operation} $min-ratnum-flonum @var{rt} @var{fl}
+Return the minimum between the arguments.
 @end deffn
 
 @c page
