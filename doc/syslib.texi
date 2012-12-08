@@ -602,12 +602,24 @@ Return true if the operand is @code{+0.0} or @code{-0.0}, respectively.
 
 
 @deffn {Unsafe Operation} $flpositive? @var{fl}
-Return true if the operand is strictly positive.
+Return true if the operand is strictly positive.  This predicate fails
+when applied to @code{+0.0}; to check for positivity including
+@code{+0.0} we must use:
+
+@example
+(or ($flzero?/positive @var{fl}) ($fl> @var{fl} +0.0))
+@end example
 @end deffn
 
 
 @deffn {Unsafe Operation} $flnegative? @var{fl}
-Return true if the operand is strictly negative.
+Return true if the operand is strictly negative.  This predicate fails
+when applied to @code{-0.0}; to check for negativity including
+@code{-0.0} we must use:
+
+@example
+(or ($flzero?/negative @var{fl}) ($fl< @var{fl} -0.0))
+@end example
 @end deffn
 
 
@@ -3521,39 +3533,100 @@ Compute @vari{cfl} raised to the power @varii{cfl}; return a cflonum.
 @subsection Square root of numbers
 
 
-@deffn {Unsafe Operation} $sqrt-fixnum
+@deffn {Unsafe Operation} $sqrt-fixnum @var{fx}
+Compute the principal square root of @var{fx}; return an unspecified
+number object.
+
+@example
+($sqrt-fixnum 0)       @result{} 0
+
+($sqrt-fixnum +1)      @result{} +1
+($sqrt-fixnum -1)      @result{} +1i
+
+($sqrt-fixnum +4)      @result{} +2
+($sqrt-fixnum -4)      @result{} +2i
+
+($sqrt-fixnum +5)      @result{} 2.23606797749979
+($sqrt-fixnum -5)      @result{} 0.0+2.23606797749979i
+@end example
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqrt-flonum
+@deffn {Unsafe Operation} $sqrt-bignum @var{bn}
+Compute the principal square root of @var{bn}; return an unspecified
+number object.
+
+@example
+(define SMALLEST-POSITIVE-BIGNUM (-    (least-fixnum)))
+(define SMALLEST-NEGATIVE-BIGNUM (+ -1 (least-fixnum)))
+
+(define BN1 (+ +1  SMALLEST-POSITIVE-BIGNUM))
+(define BN2 (+ +10 SMALLEST-POSITIVE-BIGNUM))
+(define BN3 (+ -1  SMALLEST-NEGATIVE-BIGNUM))
+(define BN4 (+ -10 SMALLEST-NEGATIVE-BIGNUM))
+
+;; on a 32-bit host
+($sqrt-bignum BN1)      @result{} 23170.475027499975
+($sqrt-bignum BN2)      @result{} 23170.47522171265
+($sqrt-bignum BN3)      @result{} 0.0+23170.475049079163i
+($sqrt-bignum BN4)      @result{} 0.0+23170.47524329184i
+@end example
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqrt-bignum
+@deffn {Unsafe Operation} $sqrt-ratnum @var{rn}
+Compute the principal square root of @var{rn}; return an unspecified
+number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqrt-ratnum
+@deffn {Unsafe Operation} $sqrt-flonum @var{fl}
+Compute the principal square root of @var{fl}; return an inexact number
+object.
+
+@example
+($sqrt-flonum +0.0)     @result{} +0.0
+($sqrt-flonum -0.0)     @result{} +0.0i
+
+($sqrt-flonum +4.0)     @result{} +2.0
+($sqrt-flonum -4.0)     @result{} +2.0i
+
+($sqrt-flonum +1.0)     @result{} +1.0
+($sqrt-flonum -1.0)     @result{} +1.0i
+
+($sqrt-flonum +5.0)     @result{} 2.23606797749979
+($sqrt-flonum -5.0)     @result{} 0.0+2.23606797749979i
+
+($sqrt-flonum +inf.0)   @result{} +inf.0
+($sqrt-flonum -inf.0)   @result{} +inf.0i
+
+($sqrt-flonum +nan.0)   @result{} +nan.0
+@end example
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqrt-compnum
+@deffn {Unsafe Operation} $sqrt-compnum @var{cn}
+Compute the principal square root of @var{cn}; return an unspecified
+number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sqrt-cflonum
-
+@deffn {Unsafe Operation} $sqrt-cflonum @var{cfl}
+Compute the principal square root of @var{cfl}; return a cflonum.
 @end deffn
 
 @c ------------------------------------------------------------
 
 
-@deffn {Unsafe Operation} $exact-integer-sqrt-fixnum
+@deffn {Unsafe Operation} $exact-integer-sqrt-fixnum @var{fx}
+Return two non--negative exact integer objects being the root and the
+residual of @var{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $exact-integer-sqrt-bignum
-
+@deffn {Unsafe Operation} $exact-integer-sqrt-bignum @var{bn}
+Return two non--negative exact integer objects being the root and the
+residual of @var{bn}.
 @end deffn
 
 @c page

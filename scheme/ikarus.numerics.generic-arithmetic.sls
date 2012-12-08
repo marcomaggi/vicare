@@ -4572,7 +4572,7 @@
   #| end of module: expt |# )
 
 
-;;;; square roots
+;;;; general square root
 
 (module (sqrt
 	 $sqrt-fixnum
@@ -4581,6 +4581,7 @@
 	 $sqrt-ratnum
 	 $sqrt-compnum
 	 $sqrt-cflonum)
+  (define who 'sqrt)
 
   (define (sqrt x)
     (cond-numeric-operand x
@@ -4591,13 +4592,13 @@
       ((compnum?)	($sqrt-compnum x))
       ((cflonum?)	($sqrt-cflonum x))
       (else
-       (assertion-violation 'sqrt "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($sqrt-flonum x)
     ;;This can return both a flonum or a compnum!!!
     ;;
-    (if ($fl< x 0.0)
-	;;This case includes: X = -0.0
+    (if (or ($flzero?/negative x)
+	    ($fl< x -0.0))
 	($make-rectangular 0 (foreign-call "ikrt_fl_sqrt" ($fl- x)))
       (foreign-call "ikrt_fl_sqrt" x)))
 
@@ -4614,16 +4615,17 @@
 	(let-values (((root residual) ($exact-integer-sqrt-bignum x)))
 	  (if (eq? residual 0)
 	      root
-	    (let ((v ($sqrt-flonum (inexact x))))
+	    (let ((v ($sqrt-flonum ($bignum->flonum x))))
 	      ;;Could the (dropped) residual ever affect the answer?
-	      (if (flinfinite? v)
+	      (if ($flinfinite? v)
 		  (if (bignum? root)
 		      ;;The argument  1 makes it  round up in case  of a
 		      ;;tie.
 		      (foreign-call "ikrt_bignum_to_flonum" root 1 ($make-flonum))
 		    (inexact root))
 		v))))
-      (make-rectangular 0 ($sqrt-bignum (- x)))))
+      ;;The negation of a negative bignum is always a bignum.
+      ($make-compnum 0 ($sqrt-bignum ($neg-bignum x)))))
 
   (define ($sqrt-ratnum x)
     (/ (sqrt ($ratnum-n x))
@@ -4644,10 +4646,10 @@
     ;;
     ;;See <http://en.wikipedia.org/wiki/Square_root>.
     ;;
-    (let ((Z.rep (real-part Z))
-	  (Z.imp (imag-part Z)))
+    (let ((Z.rep ($compnum-real Z))
+	  (Z.imp ($compnum-imag Z)))
       (let ((magn (sqrt (+ (square Z.rep) (square Z.imp))))
-	    (sgn  (if (positive? Z.imp) 1 -1)))
+	    (sgn  (sign Z.imp)))
 	(make-rectangular (sqrt (/ (+ magn Z.rep) 2))
 			  (* sgn (sqrt (/ (- magn Z.rep) 2)))))))
 
@@ -4666,19 +4668,21 @@
     ;;
     ;;See <http://en.wikipedia.org/wiki/Square_root>.
     ;;
-    (let ((Z.rep (real-part Z))
-	  (Z.imp (imag-part Z)))
+    (let ((Z.rep ($cflonum-real Z))
+	  (Z.imp ($cflonum-imag Z)))
       ;;Remember  that  $SQRT-FLONUM  can  return both  a  flonum  or  a
       ;;compnum!!!
       (let* ((magn  ($sqrt-flonum ($fl+ ($flsquare Z.rep) ($flsquare Z.imp))))
-	     (sgn   (if ($flpositive? Z.imp) 1 -1))
-	     (R.rep (sqrt (/ (+ magn Z.rep) 2)))
-	     (R.imp (* sgn (sqrt (/ (- magn Z.rep) 2)))))
-	(make-rectangular R.rep R.imp))))
+	     (sgn   ($sign-flonum Z.imp))
+	     (R.rep (sqrt ($div-number-flonum ($add-number-flonum magn Z.rep) 2.0)))
+	     (Q     (sqrt ($div-number-flonum ($sub-number-flonum magn Z.rep) 2.0)))
+	     (R.imp ($mul-flonum-number sgn Q)))
+	($make-cflonum R.rep R.imp))))
 
   #| end of module: sqrt |# )
 
-;;; --------------------------------------------------------------------
+
+;;;; exact integer square root
 
 (module (exact-integer-sqrt
 	 $exact-integer-sqrt-fixnum
