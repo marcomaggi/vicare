@@ -504,6 +504,14 @@
        (with-syntax ((WHO (datum->syntax #'?k 'who)))
 	 #'(assertion-violation WHO "expected number as argument" ?arg))))))
 
+(define-syntax %error-not-real-number
+  (lambda (stx)
+    (syntax-case stx ()
+      ((?k ?arg)
+       (identifier? #'?arg)
+       (with-syntax ((WHO (datum->syntax #'?k 'who)))
+	 #'(assertion-violation WHO "expected real number as argument" ?arg))))))
+
 (module (PI PI/2)
   (import (ikarus))
   (define PI (acos -1))
@@ -4934,11 +4942,6 @@
 	  x
 	y)))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-real-number x)
-    (assertion-violation who "expected real number as argument" x))
-
   #| end of module: max |# )
 
 
@@ -5079,7 +5082,7 @@
 	x)))
 
   (define ($min-fixnum-ratnum x y)
-    (if (<= x y)
+    (if (fxrt< x y)
 	x
       y))
 
@@ -5102,7 +5105,7 @@
 	x)))
 
   (define ($min-bignum-ratnum x y)
-    (if (<= x y)
+    (if (bnrt< x y)
 	x
       y))
 
@@ -5135,17 +5138,17 @@
 ;;; --------------------------------------------------------------------
 
   (define ($min-ratnum-fixnum x y)
-    (if (<= x y)
+    (if (rtfx< x y)
 	x
       y))
 
   (define ($min-ratnum-bignum x y)
-    (if (<= x y)
+    (if (rtbn< x y)
 	x
       y))
 
   (define ($min-ratnum-ratnum x y)
-    (if (<= x y)
+    (if (rtrt<= x y)
 	x
       y))
 
@@ -5154,11 +5157,6 @@
       (if ($fl<= x y)
 	  x
 	y)))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-real-number x)
-    (assertion-violation who "expected real number as argument" x))
 
   #| end of module: min |# )
 
