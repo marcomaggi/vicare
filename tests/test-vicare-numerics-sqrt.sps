@@ -253,6 +253,50 @@
 
 (parametrise ((check-test-name	'cflonums))
 
+  (check (sqrt 1.+2.i)		(=> %quasi=?) 1.272019649514069+0.7861513777574233i)
+  (check (sqrt 1.+2.i)		(=> %quasi=?) 1.272019649514069+0.7861513777574233i)
+  (check (sqrt 1.+2.i)		(=> %quasi=?) 1.272019649514069+0.7861513777574233i)
+
+;;; --------------------------------------------------------------------
+
+  (case-word-size
+   ((32)
+    (check
+	(sqrt (make-rectangular 123.0 (inexact BN1)))
+      (=> %quasi=?) 16384.00189208995+16383.998138427844i)
+    (check
+	(sqrt (make-rectangular 123.0 (inexact BN2)))
+      (=> %quasi=?) 16384.002029419036+16383.998275756958i)
+    (check
+	(sqrt (make-rectangular 123.0 (inexact BN3)))
+      (=> %quasi=?) 16384.001907348735-16383.998153686636i)
+    (check
+	(sqrt (make-rectangular 123.0 (inexact BN4)))
+      (=> %quasi=?) 16384.00204467782-16383.99829101575i))
+   ((64)
+    (void)))
+
+;;; --------------------------------------------------------------------
+
+  (case-word-size
+   ((32)
+    (check
+	(sqrt (make-rectangular (inexact BN1) 123.0))
+      (=> %quasi=?) 23170.475027500128+0.0026542399293500918i)
+    (check
+	(sqrt (make-rectangular (inexact BN2) 123.0))
+      (=> %quasi=?) 23170.475221712804+0.00265423990710251i)
+    (check
+	(sqrt (make-rectangular (inexact BN3) 123.0))
+      (=> %quasi=?) 0.0026542399268781377+23170.475049079316i)
+    (check
+	(sqrt (make-rectangular (inexact BN4) 123.0))
+      (=> %quasi=?) 0.0026542399046305563+23170.475243291992i))
+   ((64)
+    (void)))
+
+;;; --------------------------------------------------------------------
+
   (check (sqrt 12+inf.0i)	=> +inf.0+inf.0i)
   (check (sqrt +inf.0+12i)	(=> nan=?) +nan.0)
   (check (sqrt +inf.0+inf.0i)	(=> nan=?) +nan.0)
