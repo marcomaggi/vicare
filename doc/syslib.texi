@@ -2549,6 +2549,7 @@ so we have:
 @example
 sign(quotient)  = sign(X) * sign(Y)
 sign(remainder) = sign(X)
+sign(modulo)    = sign(Y)
 @end example
 
 @c ------------------------------------------------------------
@@ -2924,64 +2925,125 @@ flonums.
 @subsection Modulo between numbers
 
 
-@deffn {Unsafe Operation} $modulo-fixnum-number
+These functions perform the integer division between exact and inexact
+numbers and return the modulo.  For all the functions: the second
+argument must be non--zero.  @ref{syslib numerics quorem} for more
+details on the operations.
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $modulo-number-fixnum @var{num} @var{fx}
+Perform the integer division between any exact or inexact integer and a
+fixnum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-bignum-number
+@deffn {Unsafe Operation} $modulo-number-bignum @var{num} @var{bn}
+Perform the integer division between any exact or inexact integer and a
+bignum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-flonum-number
+@deffn {Unsafe Operation} $modulo-number-flonum @var{num} @var{fl}
+Perform the integer division between any exact or inexact integer and a
+flonum.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Any number as second argument
+
+
+@deffn {Unsafe Operation} $modulo-fixnum-number @var{fx} @var{num}
+Perform the integer division between a fixnum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-number-fixnum
+@deffn {Unsafe Operation} $modulo-bignum-number @var{bn} @var{num}
+Perform the integer division between a bignum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-number-bignum
+@deffn {Unsafe Operation} $modulo-flonum-number @var{fl} @var{num}
+Perform the integer division between a flonum and any exact or inexact
+integer.  If @var{num} is not an integer: an error is raised.  Return
+exact or inexact integers.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $modulo-fixnum-fixnum @vari{fx} @varii{fx}
+Perform the integer division between a fixnum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-number-flonum
+@deffn {Unsafe Operation} $modulo-fixnum-bignum @var{fx} @var{bn}
+Perform the integer division between a fixnum and a bignum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-fixnum-fixnum
+@deffn {Unsafe Operation} $modulo-fixnum-flonum @var{fx} @var{fl}
+Perform the integer division between a fixnum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $modulo-bignum-fixnum @var{bn} @var{fx}
+Perform the integer division between a bignum and a fixnum; return
+fixnums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-fixnum-bignum
+@deffn {Unsafe Operation} $modulo-bignum-bignum @vari{bn} @varii{bn}
+Perform the integer division between a bignum and a bignum; return
+fixnums or bignums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-fixnum-flonum
+@deffn {Unsafe Operation} $modulo-bignum-flonum @var{bn} @var{fl}
+Perform the integer division between a bignum and a flonum; return
+flonums.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $modulo-flonum-fixnum @var{fl} @var{fx}
+Perform the integer division between a flonum and a fixnum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-bignum-fixnum
+@deffn {Unsafe Operation} $modulo-flonum-bignum @var{fl} @var{bn}
+Perform the integer division between a flonum and a bignum; return
+flonums.
 @end deffn
 
 
-@deffn {Unsafe Operation} $modulo-bignum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $modulo-bignum-flonum
-@end deffn
-
-
-@deffn {Unsafe Operation} $modulo-flonum-fixnum
-@end deffn
-
-
-@deffn {Unsafe Operation} $modulo-flonum-bignum
-@end deffn
-
-
-@deffn {Unsafe Operation} $modulo-flonum-flonum
-
+@deffn {Unsafe Operation} $modulo-flonum-flonum @vari{fl} @varii{fl}
+Perform the integer division between a flonum and a flonum; return
+flonums.
 @end deffn
 
 @c page
