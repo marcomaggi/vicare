@@ -3978,9 +3978,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ($expt-number-fixnum
-	   $expt-number-zero-fixnum
+  (module ($expt-number-fixnum			$expt-number-zero-fixnum
 	   $expt-number-positive-fixnum		$expt-number-negative-fixnum
+
 	   $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
 	   $expt-flonum-positive-fixnum		$expt-ratnum-positive-fixnum
 	   $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum)
@@ -4214,7 +4214,8 @@
     (define ($expt-ratnum-bignum n m)
       ;;N is a ratnum, M is a bignum.
       ;;
-      (%error-result-too-big n m))
+      ($expt-flonum-flonum ($ratnum->flonum n)
+			   ($bignum->flonum m)))
 
     (define ($expt-flonum-bignum n m)
       ;;N is a flonum, M is a bignum.

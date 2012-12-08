@@ -239,9 +239,13 @@
 
 (parametrise ((check-test-name	'ratnum-base))
 
-  (catch-implementation-restriction
-   "result is too big to compute"
-   ($expt-ratnum-bignum 1/2 BN1))
+  (define-syntax test
+    (make-inexact-test expt $expt-number-bignum $expt-ratnum-bignum))
+
+  (test	+13/11	BN1	+inf.0)
+  (test	+13/11	BN2	+inf.0)
+  (test	+13/11	BN3	0.0)
+  (test	+13/11	BN4	0.0)
 
   #t)
 

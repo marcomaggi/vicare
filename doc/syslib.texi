@@ -3227,28 +3227,293 @@ Return a fixnum representing the sign of the numerator of @var{rn}:
 @subsection Raising numbers to power
 
 
-@deffn {Unsafe Operation} $expt-number-fixnum
+@subsubheading Any number as first argument
+
+
+@deffn {Unsafe Operation} $expt-number-fixnum @var{num} @var{fx}
+Compute @var{num} raised to the power @var{fx}; return an unspecified
+number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-number-bignum
+@deffn {Unsafe Operation} $expt-number-zero-fixnum @var{num}
+Compute @var{num} raised to the power of exact zero; return an
+unspecified number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-number-flonum
+@deffn {Unsafe Operation} $expt-number-positive-fixnum @var{num} @var{fx}
+Compute @var{num} raised to the power of positive @var{fx}; return an
+unspecified number object.  @var{fx} must be a positive fixnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-number-ratnum
+@deffn {Unsafe Operation} $expt-number-negative-fixnum @var{num} @var{fx}
+Compute @var{num} raised to the power of negative @var{fx}; return an
+unspecified number object.  @var{fx} must be a negative fixnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-number-compnum
+@deffn {Unsafe Operation} $expt-number-bignum @var{num} @var{bn}
+Compute @var{num} raised to the power @var{bn}; return an unspecified
+number object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $expt-number-cflonum
+@deffn {Unsafe Operation} $expt-number-flonum @var{num} @var{fl}
+Compute @var{num} raised to the power @var{fl}; return an unspecified
+inexact number object.
+@end deffn
 
+
+@deffn {Unsafe Operation} $expt-number-ratnum @var{num} @var{rn}
+Compute @var{num} raised to the power @var{rn}; return an unspecified
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-number-compnum @var{num} @var{cn}
+Compute @var{num} raised to the power @var{cn}; return an unspecified
+number object, but most likely a complex number.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-number-cflonum @var{num} @var{cfl}
+Compute @var{num} raised to the power @var{cfl}; return an unspecified
+inexact complex number object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Fixnum as first argument
+
+
+@deffn {Unsafe Operation} $expt-fixnum-positive-fixnum @vari{fx} @varii{fx}
+Compute @vari{fx} raised to the power of positive @varii{fx}; return an
+exact number object.  @varii{fx} must be a positive fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-fixnum-bignum @var{fx} @var{bn}
+Compute @var{fx} raised to the power @var{bn}; return an exact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-fixnum-ratnum @var{fx} @var{rn}
+Compute @var{fx} raised to the power @var{rn}; return an exact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-fixnum-flonum @var{fx} @var{fl}
+Compute @var{fx} raised to the power @var{fl}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-fixnum-compnum @var{fx} @var{cn}
+Compute @var{fx} raised to the power @var{cn}; return a complex number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-fixnum-cflonum @var{fx} @var{cfl}
+Compute @var{fx} raised to the power @var{cfl}; return an inexact
+complex number object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Bignum as first argument
+
+
+@deffn {Unsafe Operation} $expt-bignum-positive-fixnum @var{bn} @var{fx}
+Compute @var{bn} raised to the power of positive @var{fx}; return an
+exact number object.  @var{fx} must be a positive fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-bignum-bignum @vari{bn} @varii{bn}
+Raise an implementation restriction violation.
+@ignore
+Compute @vari{bn} raised to the power @varii{bn}; return an exact number
+object.
+@end ignore
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-bignum-ratnum @var{bn} @var{rn}
+Compute @var{bn} raised to the power @var{rn}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-bignum-flonum @var{bn} @var{fl}
+Compute @var{bn} raised to the power @var{fl}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-bignum-compnum @var{bn} @var{cn}
+Compute @var{bn} raised to the power @var{cn}; return an inexact complex
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-bignum-cflonum @var{bn} @var{cfl}
+Compute @var{bn} raised to the power @var{cfl}; return an inexact
+complex number object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Ratnum as first argument
+
+
+@deffn {Unsafe Operation} $expt-ratnum-positive-fixnum @var{rn} @var{fx}
+Compute @var{rn} raised to the power of positive @var{fx}; return an
+exact number object.  @var{fx} must be a positive fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-ratnum-bignum @var{rn} @var{bn}
+Compute @var{rn} raised to the power @var{bn}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-ratnum-ratnum @vari{rn} @varii{rn}
+Compute @vari{rn} raised to the power @varii{rn}; return an inexact
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-ratnum-flonum @var{rn} @var{fl}
+Compute @var{rn} raised to the power @var{fl}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-ratnum-compnum @var{rn} @var{cn}
+Compute @var{rn} raised to the power @var{cn}; return an inexact complex
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-ratnum-cflonum @var{rn} @var{cfl}
+Compute @var{rn} raised to the power @var{cfl}; return an inexact
+complex number object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Flonum as first argument
+
+
+@deffn {Unsafe Operation} $expt-flonum-positive-fixnum @var{fl} @var{fx}
+Compute @var{fl} raised to the power of positive @var{fx}; return an
+inexact number object.  @var{fx} must be a positive fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-flonum-bignum @var{fl} @var{bn}
+Compute @var{fl} raised to the power @var{bn}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-flonum-ratnum @var{fl} @var{rn}
+Compute @var{fl} raised to the power @var{rn}; return an inexact number
+object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-flonum-flonum @vari{fl} @varii{fl}
+Compute @vari{fl} raised to the power @varii{fl}; return an inexact
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-flonum-compnum @var{fl} @var{cn}
+Compute @var{fl} raised to the power @var{cn}; return an inexact complex
+number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-flonum-cflonum @var{fl} @var{cfl}
+Compute @var{fl} raised to the power @var{cfl}; return an inexact
+complex number object.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Compnum as first argument
+
+
+@deffn {Unsafe Operation} $expt-compnum-positive-fixnum @var{cn} @var{fx}
+Compute @var{cn} raised to the power of positive @var{fx}; return a
+cflonum.  @var{fx} must be a positive fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-compnum-bignum @var{cn} @var{bn}
+Compute @var{cn} raised to the power @var{bn}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-compnum-ratnum @var{cn} @var{rn}
+Compute @var{cn} raised to the power @var{rn}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-compnum-flonum @var{cn} @var{fl}
+Compute @var{cn} raised to the power @var{fl}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-compnum-compnum @vari{cn} @varii{cn}
+Compute @vari{cn} raised to the power @varii{cn}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-compnum-cflonum @var{cn} @var{cfl}
+Compute @var{cn} raised to the power @var{cfl}; return a cflonum.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Cflonum as first argument
+
+
+@deffn {Unsafe Operation} $expt-cflonum-positive-fixnum @var{cfl} @var{fx}
+Compute @var{cfl} raised to the power of positive @var{fx}; return a
+cflonum.  @var{fx} must be a positive fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-cflonum-bignum @var{cfl} @var{bn}
+Compute @var{cfl} raised to the power @var{bn}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-cflonum-ratnum @var{cfl} @var{rn}
+Compute @var{cfl} raised to the power @var{rn}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-cflonum-flonum @var{cfl} @var{fl}
+Compute @var{cfl} raised to the power @var{fl}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-cflonum-compnum @var{cfl} @var{cn}
+Compute @var{cfl} raised to the power @var{cfl}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $expt-cflonum-cflonum @vari{cfl} @varii{cfl}
+Compute @vari{cfl} raised to the power @varii{cfl}; return a cflonum.
 @end deffn
 
 @c page
