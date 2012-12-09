@@ -6281,16 +6281,6 @@
 	   ($make-rectangular (log ($neg-fixnum x))
 			      (acos -1)))))
 
-  (define ($log-flonum x)
-    (cond ((nan? x)
-	   +nan.0)
-	  ((or ($flpositive? x)
-	       ($flzero?/positive x))
-	   (foreign-call "ikrt_fl_log" x))
-	  (else
-	   ($make-cflonum ($fllog ($fl- x))
-			  (acos -1)))))
-
   (define ($log-bignum x)
     (if ($bignum-positive? x)
 	(let ((v (log (inexact x))))
@@ -6306,6 +6296,15 @@
     ($sub-number-number (log ($ratnum-n x))
 			(log ($ratnum-d x))))
 
+  (define ($log-flonum x)
+    (cond ((nan? x)
+	   +nan.0)
+	  ((or ($flpositive? x)
+	       ($flzero?/positive x))
+	   (foreign-call "ikrt_fl_log" x))
+	  (else
+	   ($make-cflonum ($fllog ($fl- x)) (acos -1)))))
+
   (define ($log-compnum x)
     ;;
     ;;         log (x.rep^2 + x.imp^2)
@@ -6314,10 +6313,22 @@
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
-      ($make-rectangular (/ (log (+ (* x.rep x.rep)
-				    (* x.imp x.imp)))
-			    2)
-			 (atan x.imp x.rep))))
+      (if (zero? x.imp)
+	  (let ((y (log x.rep)))
+	    (if (real? y)
+		($make-rectangular y 0.0)
+	      (if (flonum? x.imp)
+		  (if ($flzero?/positive x.imp)
+		      y
+		    ;;Return the conjugate of Y.
+		    (let ((y.rep (real-part y))
+			  (y.imp (imag-part y)))
+		      ($make-rectangular y.rep (- y.imp))))
+		;;Here X.IMP is exact zero.
+		y)))
+	($make-rectangular (/ (log (+ (square x.rep) (square x.imp)))
+			      2)
+			   (atan x.imp x.rep)))))
 
   (define ($log-cflonum x)
     ;;
@@ -6327,10 +6338,20 @@
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl/ ($fllog ($fl+ ($flsquare x.rep)
-					 ($flsquare x.imp)))
-			   2.0)
-		     ($flatan2 x.imp x.rep))))
+      (if ($flzero? x.imp)
+	  (let ((y ($log-flonum x.rep)))
+	    (if (flonum? y)
+		($make-cflonum y 0.0)
+	      (if ($flzero?/positive x.imp)
+		  y
+		;;Return the conjugate of Y.
+		(let ((y.rep ($cflonum-real y))
+		      (y.imp ($cflonum-imag y)))
+		  ($make-cflonum y.rep ($fl- y.imp))))))
+	($make-cflonum ($fl/ ($fllog ($fl+ ($flsquare x.rep)
+					   ($flsquare x.imp)))
+			     2.0)
+		       ($flatan2 x.imp x.rep)))))
 
   #| end of module |# )
 
@@ -6371,8 +6392,12 @@
     (let* ((x.rep	($compnum-real x))
 	   (x.imp	($compnum-imag x))
 	   (e^x.rep	(exp x.rep)))
-      ($make-rectangular (* e^x.rep (cos x.imp))
-			 (* e^x.rep (sin x.imp)))))
+      (if (zero? x.imp)
+	  (if (flonum? e^x.rep)
+	      ($make-cflonum e^x.rep 0.0)
+	    ($make-rectangular e^x.rep 0.0))
+	($make-rectangular (* e^x.rep (cos x.imp))
+			   (* e^x.rep (sin x.imp))))))
 
   (define ($exp-cflonum x)
     ;;In general:
