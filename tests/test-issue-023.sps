@@ -35,7 +35,7 @@
 
 ;;;; helpers
 
-(define (quasi=? X Y)
+(define (%quasi=? X Y)
   (define (sgn x)
     (cond ((zero? x)		0)
 	  ((positive? x)	+1)
@@ -50,16 +50,16 @@
 	     (and (eqv? (sgn X) (sgn Y))
 		  (< (abs (- X Y)) epsilon))))
 	((and (complex? X) (complex? Y))
-	 (and (quasi=? (real-part X) (real-part Y))
-	      (quasi=? (imag-part X) (imag-part Y))))
+	 (and (%quasi=? (real-part X) (real-part Y))
+	      (%quasi=? (imag-part X) (imag-part Y))))
 	((complex? X)
 	 (and (zero? (imag-part X))
-	      (quasi=? (real-part X) Y)))
+	      (%quasi=? (real-part X) Y)))
 	((complex? Y)
 	 (and (zero? (imag-part Y))
-	      (quasi=? (real-part Y) X)))
+	      (%quasi=? (real-part Y) X)))
 	(else
-	 (assertion-violation 'quasi=? "invalid arguments" X Y))))
+	 (assertion-violation '%quasi=? "invalid arguments" X Y))))
 
 
 ;;;; automatic printing of results
@@ -70,7 +70,7 @@
 ;;      (begin
 ;;        (display "(check ")
 ;;        (write (quote ?expr))
-;;        (display "\t\t(=> quasi=?) ")
+;;        (display "\t\t(=> %quasi=?) ")
 ;;        (write ?expr)
 ;;        (display ")\n")))))
 
@@ -124,49 +124,49 @@
 ;;        (log (+ 1 (* +1i x)))))
 ;;
 
-(check (atan 0)			(=> quasi=?) 0.0)
+(check (atan 0)			(=> %quasi=?) 0.0)
 
-(check (atan 1)			(=> quasi=?) 0.7853981633974483)
-(check (atan -1)		(=> quasi=?) -0.7853981633974483)
+(check (atan 1)			(=> %quasi=?) 0.7853981633974483)
+(check (atan -1)		(=> %quasi=?) -0.7853981633974483)
 
-(check (atan 13)		(=> quasi=?) 1.4940244355251187)
-(check (atan -13)		(=> quasi=?) -1.4940244355251187)
+(check (atan 13)		(=> %quasi=?) 1.4940244355251187)
+(check (atan -13)		(=> %quasi=?) -1.4940244355251187)
 
-(check (atan 0.0)		(=> quasi=?) 0.0)
-(check (atan -0.0)		(=> quasi=?) -0.0)
+(check (atan 0.0)		(=> %quasi=?) 0.0)
+(check (atan -0.0)		(=> %quasi=?) -0.0)
 
-(check (atan 1.1)		(=> quasi=?) 0.8329812666744317)
-(check (atan -1.1)		(=> quasi=?) -0.8329812666744317)
+(check (atan 1.1)		(=> %quasi=?) 0.8329812666744317)
+(check (atan -1.1)		(=> %quasi=?) -0.8329812666744317)
 
-(check (atan 13.1)		(=> quasi=?) 1.494608206620509)
-(check (atan -13.1)		(=> quasi=?) -1.494608206620509)
+(check (atan 13.1)		(=> %quasi=?) 1.494608206620509)
+(check (atan -13.1)		(=> %quasi=?) -1.494608206620509)
 
-(check (atan 0.0+0.0i)		(=> quasi=?) 0.0+0.0i)
-(check (atan 0.0-0.0i)		(=> quasi=?) 0.0+0.0i)
+(check (atan 0.0+0.0i)		(=> %quasi=?) 0.0+0.0i)
+(check (atan 0.0-0.0i)		(=> %quasi=?) 0.0+0.0i)
 
-(check (atan 0.0+1.0i)		(=> quasi=?) +nan.0+inf.0i)
-(check (atan 0.0-1.0i)		(=> quasi=?) +nan.0-inf.0i)
+(check (atan 0.0+1.0i)		(=> %quasi=?) +nan.0+inf.0i)
+(check (atan 0.0-1.0i)		(=> %quasi=?) +nan.0-inf.0i)
 
-(check (atan 0.0+1.1i)		(=> quasi=?) 1.5707963267948966+1.5222612188617113i)
-(check (atan 0.0-1.1i)		(=> quasi=?) -1.5707963267948966-1.5222612188617113i)
+(check (atan 0.0+1.1i)		(=> %quasi=?) 1.5707963267948966+1.5222612188617113i)
+(check (atan 0.0-1.1i)		(=> %quasi=?) -1.5707963267948966-1.5222612188617113i)
 
-(check (atan 0.0+13.1i)		(=> quasi=?) 1.5707963267948966+0.07648467239071355i)
-(check (atan 0.0-13.1i)		(=> quasi=?) -1.5707963267948966-0.07648467239071355i)
+(check (atan 0.0+13.1i)		(=> %quasi=?) 1.5707963267948966+0.07648467239071355i)
+(check (atan 0.0-13.1i)		(=> %quasi=?) -1.5707963267948966-0.07648467239071355i)
 
-(check (atan 0.0+0.0i)		(=> quasi=?) 0.0+0.0i)
-(check (atan 0.0-0.0i)		(=> quasi=?) 0.0+0.0i)
-(check (atan -0.0+0.0i)		(=> quasi=?) 0.0+0.0i)
-(check (atan -0.0-0.0i)		(=> quasi=?) 0.0+0.0i)
+(check (atan 0.0+0.0i)		(=> %quasi=?) 0.0+0.0i)
+(check (atan 0.0-0.0i)		(=> %quasi=?) 0.0+0.0i)
+(check (atan -0.0+0.0i)		(=> %quasi=?) 0.0+0.0i)
+(check (atan -0.0-0.0i)		(=> %quasi=?) 0.0+0.0i)
 
-(check (atan 1.0+1.0i)		(=> quasi=?) 1.0172219678978514+0.40235947810852507i)
-(check (atan 1.0-1.0i)		(=> quasi=?) 1.0172219678978514-0.40235947810852507i)
-(check (atan -1.0+1.0i)		(=> quasi=?) -1.0172219678978514+0.40235947810852507i)
-(check (atan -1.0-1.0i)		(=> quasi=?) -1.0172219678978514-0.40235947810852507i)
+(check (atan 1.0+1.0i)		(=> %quasi=?) 1.0172219678978514+0.40235947810852507i)
+(check (atan 1.0-1.0i)		(=> %quasi=?) 1.0172219678978514-0.40235947810852507i)
+(check (atan -1.0+1.0i)		(=> %quasi=?) -1.0172219678978514+0.40235947810852507i)
+(check (atan -1.0-1.0i)		(=> %quasi=?) -1.0172219678978514-0.40235947810852507i)
 
-(check (atan 13.1+3.2i)		(=> quasi=?) 1.4988610732266454+0.017507835549069872i)
-(check (atan 13.1-3.2i)		(=> quasi=?) 1.4988610732266454-0.017507835549069872i)
-(check (atan -13.1+3.2i)	(=> quasi=?) -1.4988610732266454+0.017507835549069872i)
-(check (atan -13.1-3.2i)	(=> quasi=?) -1.4988610732266454-0.017507835549069872i)
+(check (atan 13.1+3.2i)		(=> %quasi=?) 1.4988610732266454+0.017507835549069872i)
+(check (atan 13.1-3.2i)		(=> %quasi=?) 1.4988610732266454-0.017507835549069872i)
+(check (atan -13.1+3.2i)	(=> %quasi=?) -1.4988610732266454+0.017507835549069872i)
+(check (atan -13.1-3.2i)	(=> %quasi=?) -1.4988610732266454-0.017507835549069872i)
 
 
 ;;;; done
