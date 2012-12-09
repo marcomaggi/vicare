@@ -2313,6 +2313,8 @@
 
 ;;; --------------------------------------------------------------------
 
+    ($compnum->cflonum				$numerics)
+
     ($neg-number				$numerics)
     ($neg-fixnum				$numerics)
     ($neg-bignum				$numerics)

@@ -108,6 +108,7 @@
 
     ;; other functions
     number->string		real->flonum
+    $compnum->cflonum
     random
     error@add1			error@sub1
     bytevector->bignum		bignum->bytevector
@@ -5242,8 +5243,7 @@
   #| end of module: abs |# )
 
 
-(module (inexact
-	 exact->inexact)
+(module (inexact exact->inexact)
 
   (define (exact->inexact x)
     (->inexact x 'exact->inexact))
@@ -5257,11 +5257,10 @@
       ((bignum?)	($bignum->flonum x))
       ((ratnum?)	($ratnum->flonum x))
       ((flonum?)	x)
-      ((compnum?)	($make-cflonum (->inexact ($compnum-real x) who)
-				       (->inexact ($compnum-imag x) who)))
+      ((compnum?)	($compnum->cflonum x))
       ((cflonum?)	x)
       (else
-       (assertion-violation who "not a number" x))))
+       (%error-not-number x))))
 
   #| end of module |# )
 

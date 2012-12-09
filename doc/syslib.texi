@@ -876,7 +876,7 @@ Return a flonum object representing @var{rat} as inexact number.
 @cindex Library @library{ikarus system $compnums}
 
 
-The arguments @var{cmp} to these operations must be compnums, the
+The arguments @var{cn} to these operations must be compnums, the
 arguments @var{num} must be references to either fixnums, bignums or
 flonums.  The following bindings are exported by the @library{ikarus
 system $compnums} library.  @ref{iklib numerics} for more functions
@@ -890,13 +890,18 @@ Return a reference to the compnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $compnum-real @var{cmp}
+@deffn {Unsafe Operation} $compnum-real @var{cn}
 Return the reference to the real part.
 @end deffn
 
 
-@deffn {Unsafe Operation} $compnum-imag @var{cmp}
+@deffn {Unsafe Operation} $compnum-imag @var{cn}
 Return the reference to the imaginary part.
+@end deffn
+
+
+@deffn {Unsafe Operation} $compnum->cflonum @var{cn}
+Return the inexact representation of a compnum as a cflonum.
 @end deffn
 
 @c page
