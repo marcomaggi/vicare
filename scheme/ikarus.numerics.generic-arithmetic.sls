@@ -5608,11 +5608,6 @@
     (and (= ($cflonum-real x) ($cflonum-real y))
 	 (= ($cflonum-imag x) ($cflonum-imag y))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-number x)
-    (assertion-violation who "expected number as argument" x))
-
   #| end of module |# )
 
 

@@ -31,7 +31,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare numerics functions: abs\n")
+(check-display "*** testing Vicare numerics functions: abs\n")
 
 
 ;;;; constants
