@@ -6724,7 +6724,11 @@
     ($sub-flonum-number  PI/2 ($asin-compnum x)))
 
   (define ($acos-cflonum x)
-    ($sub-flonum-cflonum PI/2 ($asin-cflonum x)))
+    (let ((x.imp ($cflonum-imag x)))
+      (if ($flzero? x.imp)
+	  (let ((x.rep ($cflonum-real x)))
+	    ($make-cflonum ($acos-flonum x.rep) x.imp))
+	($sub-flonum-cflonum PI/2 ($asin-cflonum x)))))
 
   #| end of module: acos |# )
 
@@ -6777,11 +6781,14 @@
     ;;
     ;;  atan x = 1/2 * i * (log (1 - i * x) - log (1 + i * x))
     ;;
-    (if ($flzero? ($cflonum-imag x))
-	($flatan ($cflonum-real x))
-      (let ((log1 ($log-cflonum ($sub-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x))))
-	    (log2 ($log-cflonum ($add-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x)))))
-	($mul-cflonum-cflonum +0.5i ($sub-cflonum-cflonum log1 log2)))))
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (if ($flzero? x.imp)
+	  ;;FLATAN always returns a flonum.
+	  ($make-cflonum ($flatan x.rep) 0.0)
+	(let ((log1 ($log-cflonum ($sub-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x))))
+	      (log2 ($log-cflonum ($add-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x)))))
+	  ($mul-cflonum-cflonum +0.5i ($sub-cflonum-cflonum log1 log2))))))
 
   #| end of module |# )
 
