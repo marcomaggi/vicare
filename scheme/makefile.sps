@@ -2689,6 +2689,7 @@
     ($min-ratnum-ratnum				$numerics)
     ($min-ratnum-flonum				$numerics)
 
+    ($abs-fixnum				$numerics)
     ($abs-bignum				$numerics)
     ($abs-flonum				$numerics)
     ($abs-ratnum				$numerics)

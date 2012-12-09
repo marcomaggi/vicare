@@ -369,10 +369,12 @@ result of this operation can be a fixnum or bignum.
 
 
 @deffn {Unsafe Operation} $fxabs @var{fx}
-Return the absolute value of @var{fx}.  The result of this operation is
-a fixnum or bignum; a bignum is returned only when @var{fx} is
-@code{(least-fixnum)} and the returned value is @code{(-
-(least-fixnum))}.
+Return the absolute value of @var{fx} as a fixnum.  When @var{fx} is
+@code{(least-fixnum)}: its absolute value would be a fixnum, in which
+case this operation raises an implementation restriction violation.
+
+To compute the general absolute value without overflow we must use
+@func{abs} or @func{$abs-fixnum}.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -3345,17 +3347,23 @@ Return the minimum between the arguments.
 @subsection Absolute value of real numbers
 
 
-@deffn {Unsafe Operation} $abs-bignum
-Return a bignum or fixnum.
+@deffn {Unsafe Operation} $abs-fixnum @var{fx}
+Compute the absolute value of a fixnum; return a fixnum or bignum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $abs-flonum
+@deffn {Unsafe Operation} $abs-bignum @var{bn}
+Compute the absolute value of a bignum; return a fixnum or bignum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $abs-flonum @var{fl}
+Compute the absolute value of a flonum; return a flonum.
 @end deffn
 
 
 @deffn {Unsafe Operation} $abs-ratnum
-
+Compute the absolute value of a ratnum; return a ratnum.
 @end deffn
 
 @c page

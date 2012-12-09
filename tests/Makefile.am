@@ -183,6 +183,7 @@ TESTS			=	\
 	test-vicare-numerics-expt-compnums.sps		\
 	test-vicare-numerics-max.sps			\
 	test-vicare-numerics-min.sps			\
+	test-vicare-numerics-abs.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
@@ -419,6 +420,7 @@ EXTRA_DIST = \
 	test-vicare-numerics-expt-compnums.sps		\
 	test-vicare-numerics-max.sps			\
 	test-vicare-numerics-min.sps			\
+	test-vicare-numerics-abs.sps			\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\

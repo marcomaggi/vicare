@@ -269,7 +269,8 @@
     $min-flonum-bignum		$min-flonum-ratnum	$min-ratnum-fixnum
     $min-ratnum-bignum		$min-ratnum-ratnum	$min-ratnum-flonum
 
-    $abs-bignum			$abs-flonum		$abs-ratnum
+    $abs-fixnum			$abs-bignum
+    $abs-flonum			$abs-ratnum
 
     $sign-fixnum		$sign-bignum
     $sign-flonum		$sign-ratnum
@@ -415,14 +416,12 @@
   (except (ikarus system $fx)
 	  $fxpositive?		$fxnegative?
 	  $fxeven?		$fxodd?
-	  $fxabs
 	  $fxmodulo		$fxremainder)
   ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
   ;;Maggi; Nov 18, 2012)
   (only (ikarus fixnums)
 	$fxpositive?		$fxnegative?
 	$fxeven?		$fxodd?
-	$fxabs
 	$fxmodulo		$fxremainder)
   (except (ikarus system $flonums)
 	  $flonum->exact	$flzero?
@@ -2860,8 +2859,8 @@
     ;;The GCD between two fixnums is *not* always a fixnum: when X and Y
     ;;are both (least-fixnum) the GCD is the bignum (- (least-fixnum)).
     ;;
-    (let ((x.abs ($fxabs x))
-	  (y.abs ($fxabs y)))
+    (let ((x.abs ($abs-fixnum x))
+	  (y.abs ($abs-fixnum y)))
       (if (fixnum? x.abs)
 	  (if (fixnum? y.abs)
 	      (cond (($fx> x.abs y.abs)
@@ -2889,7 +2888,7 @@
     ;;The GCD between a fixnum and a  bignum is a fixnum or bignum.  The
     ;;returned value may be a bignum only when X is (least-fixnum).
     ;;
-    (let ((x.abs ($fxabs      x))
+    (let ((x.abs ($abs-fixnum x))
 	  (y.abs ($abs-bignum y)))
       (if (fixnum? x.abs)
 	  ;;Here X.ABS  is a  non-negative fixnum,  Y.ABS is  a positive
@@ -2915,7 +2914,7 @@
 
   (define ($gcd-bignum-fixnum x y)
     (let ((x.abs ($abs-bignum x))
-	  (y.abs ($fxabs      y)))
+	  (y.abs ($abs-fixnum y)))
       (if (fixnum? y.abs)
 	  ;;Here X.ABS  is a  positive bignum,  Y.ABS is  a non-negative
 	  ;;fixnum, so X.ABS > Y.ABS.
@@ -3115,15 +3114,15 @@
 ;;;
 
   (define ($lcm-fixnum-fixnum x y)
-    (let ((x.abs ($fxabs x))
-	  (y.abs ($fxabs y)))
+    (let ((x.abs ($abs-fixnum x))
+	  (y.abs ($abs-fixnum y)))
       (if (or (eq? x.abs 0)
 	      (eq? y.abs 0))
 	  0
 	($least-common-multiple x.abs y.abs))))
 
   (define ($lcm-fixnum-bignum x y)
-    (let ((x.abs ($fxabs x)))
+    (let ((x.abs ($abs-fixnum x)))
       (if (eq? x.abs 0)
 	  0
 	($least-common-multiple x.abs ($abs-bignum y)))))
@@ -3139,7 +3138,7 @@
 ;;; --------------------------------------------------------------------
 
   (define ($lcm-bignum-fixnum x y)
-    (let ((y.abs ($fxabs y)))
+    (let ((y.abs ($abs-fixnum y)))
       (if (eq? y.abs 0)
 	  0
 	($least-common-multiple ($abs-bignum x) y.abs))))
@@ -3790,7 +3789,7 @@
 
 (module (cube
 	 $cube-fixnum		$cube-bignum		$cube-ratnum
-	 $cube-compnum	$cube-cflonum)
+	 $cube-compnum		$cube-cflonum)
   (define who 'cube)
 
   (define (cube x)
@@ -4580,15 +4579,9 @@
   #| end of module: expt |# )
 
 
-;;;; general square root
-
 (module (sqrt
-	 $sqrt-fixnum
-	 $sqrt-flonum
-	 $sqrt-bignum
-	 $sqrt-ratnum
-	 $sqrt-compnum
-	 $sqrt-cflonum)
+	 $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
+	 $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum)
   (define who 'sqrt)
 
   (define (sqrt x)
@@ -4690,8 +4683,6 @@
   #| end of module: sqrt |# )
 
 
-;;;; exact integer square root
-
 (module (exact-integer-sqrt
 	 $exact-integer-sqrt-fixnum
 	 $exact-integer-sqrt-bignum)
@@ -5201,12 +5192,13 @@
 
 
 (module (abs
-	 $abs-bignum		$abs-flonum		$abs-ratnum)
+	 $abs-fixnum		$abs-bignum
+	 $abs-flonum		$abs-ratnum)
   (define who 'abs)
 
   (define (abs x)
     (cond-real-numeric-operand x
-      ((fixnum?)	($fxabs x))
+      ((fixnum?)	($abs-fixnum x))
       ((bignum?)	($abs-bignum x))
       ((ratnum?)	($abs-ratnum x))
       ((flonum?)	($abs-flonum x))
@@ -5214,6 +5206,13 @@
        (%error-not-real-number x))))
 
 ;;; --------------------------------------------------------------------
+
+  (define ($abs-fixnum x)
+    (if ($fxnegative? x)
+	(if ($fx= x (least-fixnum))
+	    (- (least-fixnum))
+	  ($fx- x))
+      x))
 
   (define ($abs-bignum x)
     ;;Return a bignum or fixnum.
@@ -5227,16 +5226,18 @@
       x))
 
   (define ($abs-ratnum x)
-    (let ((x.num ($ratnum-n x)))
-      (if (negative? x.num)
+    (let ((x.num ($ratnum-n x))
+	  (x.den ($ratnum-d x)))
+      (if (fixnum? x.num)
+	  (if ($fxpositive? x.num)
+	      x
+	    ;;We want a ratnum with positive denominator.
+	    ($make-ratnum ($neg-fixnum x.num) x.den))
+	;;X.NUM is a bignum.
+	(if ($bignum-positive? x.num)
+	    x
 	  ;;We want a ratnum with positive denominator.
-	  ($make-ratnum ($neg-number x.num) ($ratnum-d x))
-	x)))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-real-number x)
-    (assertion-violation who "not a real number" x))
+	  ($make-ratnum ($neg-bignum x.num) x.den)))))
 
   #| end of module: abs |# )
 

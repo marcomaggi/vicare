@@ -1941,6 +1941,16 @@ The following bindings are exported by the @library{ikarus} and
 @library{vicare} libraries.
 
 
+@defun fxabs @var{fx}
+Return the absolute value of the fixnum @var{fx} as a fixnum; if
+@var{fx} is @code{(least-fixnum)}: its absolute value is a bignum, in
+which case this function raises an implementation restriction violation.
+
+To compute the general absolute value without overflow we must use
+@func{abs} or @func{$abs-fixnum}.
+@end defun
+
+
 @defun fxsign @var{fx}
 Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
 the sign of the fixnum @var{fx}.
