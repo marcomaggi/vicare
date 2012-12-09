@@ -429,7 +429,7 @@
 	  $flzero?/positive	$flzero?/negative
 	  $flpositive?		$flnegative?
 	  $fleven?		$flodd?
-	  $flnan?
+	  $flnan?		$flonum-integer?
 	  $flfinite?		$flinfinite?
 	  $flsquare		$flcube
 	  $flsqrt
@@ -450,7 +450,7 @@
 	$flzero?/positive	$flzero?/negative
 	$flpositive?		$flnegative?
 	$fleven?		$flodd?
-	$flnan?
+	$flnan?			$flonum-integer?
 	$flfinite?		$flinfinite?
 	$flsquare		$flcube
 	$flsqrt
@@ -4292,10 +4292,20 @@
 	     ($expt-flonum-flonum ($fixnum->flonum n) m))))
 
     (define ($expt-bignum-flonum n m)
-      ($expt-flonum-flonum ($bignum->flonum n) m))
+      (if ($flonum-integer? m)
+	  (let ((m.exact (exact m)))
+	    (if (fixnum? m.exact)
+		(inexact ($expt-number-fixnum n m.exact))
+	      ($expt-flonum-flonum ($bignum->flonum n) m)))
+	($expt-flonum-flonum ($bignum->flonum n) m)))
 
     (define ($expt-ratnum-flonum n m)
-      ($expt-flonum-flonum ($ratnum->flonum n) m))
+      (if ($flonum-integer? m)
+	  (let ((m.exact (exact m)))
+	    (if (fixnum? m.exact)
+		(inexact ($expt-number-fixnum n m.exact))
+	      ($expt-flonum-flonum ($ratnum->flonum n) m)))
+	($expt-flonum-flonum ($ratnum->flonum n) m)))
 
     (define ($expt-flonum-flonum n m)
       (cond (($flnan? n)	+nan.0)

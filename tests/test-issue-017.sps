@@ -25,7 +25,7 @@
 ;;;
 
 
-(import (rnrs)
+(import (vicare)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -247,8 +247,8 @@
 (check (expt +inf.0+2.i 2)	(=> eq=?) +inf.0+nan.0i)
 (check (expt +inf.0-2.i 2)	(=> eq=?) +inf.0+nan.0i)
 
-(check (expt +inf.0+2.i 0)	=> 1.)
-(check (expt +2.+inf.0i 0)	=> 1.)
+(check (expt +inf.0+2.i 0)	=> 1.0+0.0i)
+(check (expt +2.+inf.0i 0)	=> 1.0+0.0i)
 
 (check (nan? (expt +nan.0+2.i 2))	=> #t)
 (check (nan? (expt +2.+nan.0i 2))	=> #t)
@@ -274,7 +274,7 @@
 (check (expt -2 +3/4)		(=> eq=?) -1.1892071150027208+1.189207115002721i)
 (check (expt -2 -3/4)		(=> eq=?) -0.4204482076268572-0.4204482076268573i)
 
-(check (expt 0 3/4)		=> 0.0)
+(check (expt 0 3/4)		=> 0)
 (check (expt 0 -3)		=> 0)
 
 ;;; --------------------------------------------------------------------
@@ -455,9 +455,9 @@
 (check (expt -1 (- bignum0))	=> 1) ;even negative exponent
 
 (check
-    (guard (E ((assertion-violation? E)
+    (guard (E ((implementation-restriction-violation? E)
 	       #t)
-	      (else #f))
+	      (else E))
       ;;result is too big to compute
       (expt 2 bignum0))
   => #t)
@@ -481,13 +481,13 @@
 (check (expt 2 +inf.0)		=> +inf.0)
 (check (expt 2 -inf.0)		=> 0.)
 
-(check (expt 2 +3.)		=> 8.)
+(check (expt 2 +3.)		(=> eq=?) 8.)
 (check (expt 2 -3.)		(=> eq=?) (inexact 1/8))
 
 (check (expt 2 +3.1)		(=> eq=?) 8.574187700290345)
 (check (expt 2 -3.1)		(=> eq=?) 0.11662912394210093)
 
-(check (expt -2 +3.)		=> -8.)
+(check (expt -2 +3.)		(=> eq=?) -8.+0.0i)
 (check (expt -2 -3.)		(=> eq=?) (inexact -1/8))
 
 (check (expt -2 3.1)		(=> eq=?) -8.15453708429889-2.6495697123503614i)
@@ -497,15 +497,15 @@
 (check (expt 0 -3.)		=> +inf.0)
 
 (check (expt +3 0.)		=> 1.)
-(check (expt -3 0.)		=> 1.)
+(check (expt -3 0.)		=> 1.+0.0i)
 
 ;;; --------------------------------------------------------------------
 ;;; rational base
 
-(check (expt +2/3 +3.)		=> (inexact 8/27))
-(check (expt +2/3 -3.)		=> (inexact 27/8))
-(check (expt -2/3 +3.)		=> (inexact -8/27))
-(check (expt -2/3 -3.)		=> (inexact -27/8))
+(check (expt +2/3 +3.)		(=> eq=?) (inexact 8/27))
+(check (expt +2/3 -3.)		(=> eq=?) (inexact 27/8))
+(check (expt -2/3 +3.)		(=> eq=?) (inexact -8/27))
+(check (expt -2/3 -3.)		(=> eq=?) (inexact -27/8))
 
 (check (expt +2/3 +3.1)		(=> eq=?) 0.284522815049546)
 (check (expt +2/3 -3.1)		(=> eq=?) 3.5146566359743865)
@@ -518,10 +518,10 @@
 ;;; --------------------------------------------------------------------
 ;;; bignum base
 
-(check (expt bignum0 +3.)	=> (inexact 79228162514264337593543950336))
-(check (expt bignum0 -3.)	=> (inexact 1/79228162514264337593543950336))
-(check (expt (- bignum0) +3.)	=> (inexact -79228162514264337593543950336))
-(check (expt (- bignum0) -3.)	=> (inexact -1/79228162514264337593543950336))
+(check (expt bignum0 +3.)	(=> eq=?) (inexact 79228162514264337593543950336))
+(check (expt bignum0 -3.)	(=> eq=?) (inexact 1/79228162514264337593543950336))
+(check (expt (- bignum0) +3.)	(=> eq=?) (inexact (cube (- bignum0))))
+(check (expt (- bignum0) -3.)	(=> eq=?) (inexact -1/79228162514264337593543950336))
 
 (check (expt bignum0 +3.1)	(=> eq=?) 7.28074079596587e29)
 (check (expt bignum0 -3.1)	(=> eq=?) 1.3734866108048818e-30)
@@ -529,7 +529,7 @@
 (check (expt (- bignum0) -3.1)	(=> eq=?) -1.306263391250138e-30+4.244307042851604e-31i)
 
 (check (expt bignum0 0.)	=> 1.)
-(check (expt (- bignum0) 0.)	=> 1.)
+(check (expt (- bignum0) 0.)	=> 1.0)
 
 ;;; --------------------------------------------------------------------
 ;;; flonum base
@@ -547,7 +547,7 @@
 (check (expt 0. -3.)		=> +inf.0)
 
 (check (expt +3. 0.)		=> 1.)
-(check (expt -3. 0.)		=> 1.)
+(check (expt -3. 0.)		=> 1.+0.0i)
 
 (check (expt +2.3 +3.)		(=> eq=?) 12.166999999999998)
 (check (expt +2.3 -3.)		(=> eq=?) 0.08218952905399854)
@@ -560,7 +560,7 @@
 (check (expt -2.3 -3.1)		(=> eq=?) -0.07192005881608006+0.02336824366357346i)
 
 (check (expt +3.4 0.)		=> 1.)
-(check (expt -3.4 0.)		=> 1.)
+(check (expt -3.4 0.)		=> 1.+0.0i)
 
 (check (expt +3.4 +0.25)	(=> eq=?) 1.3579060687170441)
 (check (expt -3.4 +0.25)	(=> eq=?) 0.9601845894041878+0.9601845894041876i)
@@ -575,15 +575,15 @@
 (check (expt +inf.0 -2.)	=> 0.0)
 (check (expt +inf.0 -3.)	=> 0.0)
 
-(check (expt -inf.0 0.)		=> 1.)
+(check (expt -inf.0 0.)		(=> eq=?) -nan.0+nan.0i)
 (check (expt -inf.0 1.)		=> -inf.0)
-(check (expt -inf.0 2.)		=> +inf.0)
-(check (expt -inf.0 3.)		=> -inf.0)
-(check (expt -inf.0 4.)		=> +inf.0)
-(check (expt -inf.0 -1.)	=> -0.0)
-(check (expt -inf.0 -2.)	=> 0.0)
-(check (expt -inf.0 -3.)	=> -0.0)
-(check (expt -inf.0 -4.)	=> 0.0)
+(check (expt -inf.0 2.)		=> +inf.0-inf.0i)
+(check (expt -inf.0 3.)		=> -inf.0+inf.0i)
+(check (expt -inf.0 4.)		=> +inf.0-inf.0i)
+(check (expt -inf.0 -1.)	=> -0.0-0.0i)
+(check (expt -inf.0 -2.)	=> 0.0+0.0i)
+(check (expt -inf.0 -3.)	=> -0.0-0.0i)
+(check (expt -inf.0 -4.)	=> 0.0+0.0i)
 
 (check (nan? (expt +nan.0 2.))	=> #t)
 (check (nan? (expt +nan.0 -2.))	=> #t)
@@ -725,10 +725,10 @@
 (check (expt -2 -3+4i)		(=> eq=?) 4.0657489351739836e-7-1.5722970312837445e-7i)
 (check (expt -2 -3-4i)		(=> eq=?) 33431.15550354123+12928.419188863143i)
 
-(check (expt 0 +3+4i)		=> 0)
-(check (expt 0 +3-4i)		=> 0)
-(check (expt 0 -3+4i)		=> 0)
-(check (expt 0 -3-4i)		=> 0)
+(check (expt 0 +3+4i)		=> 0.0)
+(check (expt 0 +3-4i)		=> 0.0)
+(check (expt 0 -3+4i)		=> +inf.0+0.0i)
+(check (expt 0 -3-4i)		=> +inf.0+0.0i)
 
 (check
     (expt 2 (make-rectangular bignum0 bignum0))
@@ -772,7 +772,7 @@
 (check (expt -2. -3+4i)		(=> eq=?) 4.0657489351739836e-7-1.5722970312837445e-7i)
 
 (check (expt 0. 3+4i)		(=> eq=?) 0.0)
-(check (expt 0. -3+4i)		(=> eq=?) 0.0)
+(check (expt 0. -3+4i)		(=> eq=?) +inf.0+0.0i)
 
 (check (expt  3. 0+0i)		(=> eq=?) 1)
 (check (expt -3. 0+0i)		(=> eq=?) 1)
@@ -812,13 +812,13 @@
 (check (expt 1. +2.0+inf.0i)	(=> eq=?) +nan.0+nan.0i)
 (check (expt 1. -2.0+inf.0i)	(=> eq=?) +nan.0+nan.0i)
 
-(check (expt 0. +inf.0+2.0i)	(=> eq=?) 0.0+0.0i)
-(check (expt 0. -inf.0+2.0i)	(=> eq=?) 0.0+0.0i)
+(check (expt 0. +inf.0+2.0i)	(=> eq=?) 0.0i)
+(check (expt 0. -inf.0+2.0i)	(=> eq=?) +inf.0+0.0i)
 
 (check (expt 0. 2.0+inf.0i)	(=> eq=?) 0.0+0.0i)
 (check (expt 0. 2.0-inf.0i)	(=> eq=?) 0.0+0.0i)
-(check (expt 0. -2.0+inf.0i)	(=> eq=?) 0.0+0.0i)
-(check (expt 0. -2.0-inf.0i)	(=> eq=?) 0.0+0.0i)
+(check (expt 0. -2.0+inf.0i)	(=> eq=?) +inf.0+0.0i)
+(check (expt 0. -2.0-inf.0i)	(=> eq=?) +inf.0+0.0i)
 
 ;;; --------------------------------------------------------------------
 ;;; complex fixnum base
