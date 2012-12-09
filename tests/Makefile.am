@@ -261,8 +261,7 @@ endif
 installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
-XFAIL_TESTS = \
-	test-vicare-log.sps
+#XFAIL_TESTS = test-vicare-log.sps
 
 #page
 #### extra files to be distributed
