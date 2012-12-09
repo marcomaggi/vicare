@@ -4136,8 +4136,11 @@
       (cond (($flzero?/positive n)	+0.0)
 	    (($flzero?/negative n)	(if ($fxeven? m) +0.0 -0.0))
 	    (($flnan? n)		+nan.0)
-	    (($fl= n +inf.0)		+inf.0)
-	    (($fl= n -inf.0)		(if ($fxeven? m) +inf.0 -inf.0))
+	    (($flinfinite? n)
+	     (if (or ($flpositive? n)
+		     ($fxeven? m))
+		 +inf.0
+	       -inf.0))
 	    (else
 	     ($expt-flonum-positive-fixnum/sub n m))))
 
@@ -4233,8 +4236,10 @@
 	    (($fl= n +1.0)		+1.0)
 	    (($fl= n -1.0)		(if ($bignum-even? m) +1.0 -1.0))
 	    (($flnan? n)		+nan.0)
-	    (($fl= n +inf.0)		+inf.0)
-	    (($fl= n -inf.0)		(if ($bignum-even? m) +inf.0 -inf.0))
+	    (($flinfinite? n)		(if (or ($flpositive? n)
+						($bignum-even? m))
+					    +inf.0
+					  -inf.0))
 	    (else
 	     ;;Here  we  have  already  excluded the  cases  N=+0.0  and
 	     ;;N=-0.0.
@@ -4403,11 +4408,7 @@
 			   ($ratnum->flonum m)))
 
     (define ($expt-flonum-ratnum n m)
-      (cond (($fl= n +inf.0)	+inf.0)
-	    (($fl= n -inf.0)	+inf.0i)
-	    (else
-	     ($expt-flonum-flonum n
-				  ($ratnum->flonum m)))))
+      ($expt-flonum-flonum n ($ratnum->flonum m)))
 
     (define ($expt-compnum-ratnum n m)
       ($expt-cflonum-flonum ($compnum->cflonum n)
@@ -5292,7 +5293,9 @@
 		  (make-message-condition "precision argument is not supported"))))
 
     (define-argument-validation (radix who obj)
-      (memv obj '(2 8 10 16))
+      (case-fixnums obj
+	((2 8 10 16)	#t)
+	(else		#f))
       (assertion-violation who "invalid radix" obj))
 
     #| end of module |# )
@@ -5301,45 +5304,43 @@
 
   (module ($number->string)
 
-    (define ($number->string x r)
-      (import (ikarus system $compnums))
+    (define ($number->string x radix)
       (cond-numeric-operand x
-	((fixnum?)
-	 (fixnum->string x r))
-
-	((bignum?)
-	 (bignum->string x r))
-
-	((flonum?)
-	 (if (eqv? r 10)
-	     (flonum->string x)
-	   (assertion-violation who "invalid radix for inexact number" r x)))
-
-	((ratnum?)
-	 (ratnum->string x r))
-
-	((compnum?)
-	 (let ((x.rep ($compnum-real x))
-	       (x.imp ($compnum-imag x)))
-	   (if (and (fixnum?  x.rep)
-		    ($fxzero? x.rep))
-	       (string-append (imag x.imp r) "i")
-	     (string-append ($number->string x.rep r) (imag x.imp r) "i"))))
-
-	((cflonum?)
-	 (let ((x.rep ($cflonum-real x))
-	       (x.imp ($cflonum-imag x)))
-	   (cond ((flnan? x.imp)
-		  (string-append ($number->string x.rep r) "+nan.0i"))
-		 ((flinfinite? x.imp)
-		  (string-append ($number->string x.rep r) (if ($fl> x.imp 0.0)
-							       "+inf.0i"
-							     "-inf.0i")))
-		 (else
-		  (string-append ($number->string x.rep r) (imag x.imp r) "i")))))
-
+	((fixnum?)	(fixnum->string   x radix))
+  	((bignum?)	(bignum->string   x radix))
+	((flonum?)	(%flonum->string  x radix))
+	((ratnum?)	(ratnum->string   x radix))
+	((compnum?)	(%compnum->string x radix))
+	((cflonum?)	(%cflonum->string x radix))
 	(else
-	 (assertion-violation who "expected number as argument" x))))
+	 (%error-not-number x))))
+
+    (define (%flonum->string x radix)
+      (with-arguments-validation (who)
+	  ((radix10	radix))
+	(flonum->string x)))
+
+    (define (%compnum->string x radix)
+      (let ((x.rep ($compnum-real x))
+	    (x.imp ($compnum-imag x)))
+	(if (and (fixnum?  x.rep)
+		 ($fxzero? x.rep))
+	    (string-append (imag x.imp radix) "i")
+	  (string-append ($number->string x.rep radix)
+			 (imag x.imp radix) "i"))))
+
+    (define (%cflonum->string x radix)
+      (with-arguments-validation (who)
+	  ((radix10	radix))
+	(let ((x.rep ($cflonum-real x))
+	      (x.imp ($cflonum-imag x)))
+	  (cond (($flnan? x.imp)
+		 (string-append (flonum->string x.rep) "+nan.0i"))
+		(($flinfinite? x.imp)
+		 (string-append (flonum->string x.rep)
+				(if ($flpositive? x.imp) "+inf.0i" "-inf.0i")))
+		(else
+		 (string-append (flonum->string x.rep) (imag x.imp 10) "i"))))))
 
     (define (imag x.imp radix)
       ;;Compose a string for the imaginary part of a cflonum or compnum.
@@ -5381,6 +5382,10 @@
        ;;
        (else
 	(string-append "+" ($number->string x.imp radix)))))
+
+    (define-argument-validation (radix10 who obj)
+      (eqv? obj 10)
+      (assertion-violation who "invalid radix for inexact number, expected 10" obj))
 
     #| end of module: $number->string |# )
 

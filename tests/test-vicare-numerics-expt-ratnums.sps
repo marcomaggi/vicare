@@ -252,7 +252,7 @@
   (test	-1.0		+1/2	0.0+1.0i)
   (test	+nan.0		+1/2	+nan.0)
   (test	+inf.0		+1/2	+inf.0)
-  (test	-inf.0		+1/2	+0.0+inf.0i)
+  (test	-inf.0		+1/2	+inf.0+inf.0i)
   (test +2.0		+1/2	(sqrt 2.0))
   (test -2.0		+1/2	(+ 0.0 (sqrt -2.0)))
 
@@ -261,8 +261,8 @@
   (test	+1.0		-1/2	+1.0)
   (test	-1.0		-1/2	0.0-1.0i)
   (test	+nan.0		-1/2	+nan.0)
-  (test	+inf.0		-1/2	+inf.0)
-  (test	-inf.0		-1/2	+0.0+inf.0i)
+  (test	+inf.0		-1/2	+0.0)
+  (test	-inf.0		-1/2	+0.0-0.0i)
   (test +2.0		-1/2	(/ (sqrt 2.0)))
   (test -2.0		-1/2	(+ 0.0 (/ (sqrt -2.0))))
 
