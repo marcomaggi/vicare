@@ -3371,7 +3371,7 @@ positive, @code{-1} for negative, @code{0} for zero.
 
 @deffn {Unsafe Operation} $sign-bignum @var{bn}
 Return a fixnum representing the sign of @var{bn}: @code{+1} for
-positive, @code{-1} for negative, @code{0} for zero.
+positive, @code{-1} for negative.  Bignums do not represent zero.
 @end deffn
 
 
@@ -3385,7 +3385,8 @@ not--a--number.
 
 @deffn {Unsafe Operation} $sign-ratnum @var{rt}
 Return a fixnum representing the sign of the numerator of @var{rt}:
-@code{+1} for positive, @code{-1} for negative, @code{0} for zero.
+@code{+1} for positive, @code{-1} for negative.  Ratnums do not
+represent zero.
 @end deffn
 
 @c page

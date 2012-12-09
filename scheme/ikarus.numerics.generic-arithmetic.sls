@@ -5197,11 +5197,6 @@
   (define ($sign-ratnum x)
     (sign ($ratnum-n x)))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-real-number x)
-    (assertion-violation who "not a real number" x))
-
   #| end of module: sign |# )
 
 
