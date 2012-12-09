@@ -6274,7 +6274,8 @@
   (define ($log-flonum x)
     (cond ((nan? x)
 	   +nan.0)
-	  (($fl>= x 0.0)
+	  ((or ($flpositive? x)
+	       ($flzero?/positive x))
 	   (foreign-call "ikrt_fl_log" x))
 	  (else
 	   ($make-cflonum ($fllog ($fl- x))
@@ -6286,12 +6287,10 @@
 	  (if (infinite? v)
 	      (receive (s r)
 		  (exact-integer-sqrt x)
-		;;Could  the  (dropped)   residual  ever  affect  the
-		;;answer?
+		;;Could the (dropped) residual ever affect the answer?
 		(* 2 (log s)))
 	    v))
-      (make-rectangular (log (- x))
-			(acos -1))))
+      ($make-rectangular (log ($neg-bignum x)) (acos -1))))
 
   (define ($log-ratnum x)
     ($sub-number-number (log ($ratnum-n x))
