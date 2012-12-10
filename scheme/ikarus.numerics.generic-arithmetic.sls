@@ -6807,13 +6807,20 @@
     ;;
     ;;  atan x = 1/2 * i * (log (1 - i * x) - log (1 + i * x))
     ;;
+    ;;  i * x = i * (x.rep + i * x.imp) = i * x.rep - x.imp
+    ;;
+    ;;  A = 1 - i * x = 1 - (- x.imp + i * x.rep) = (1 + x.imp) - i * x.rep
+    ;;  B = 1 + i * x = 1 + (- x.imp + i * x.rep) = (1 - x.imp) + i * x.rep
+    ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
       (if ($flzero? x.imp)
 	  ;;FLATAN always returns a flonum.
 	  ($make-cflonum ($flatan x.rep) 0.0)
-	(let ((log1 ($log-cflonum ($sub-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x))))
-	      (log2 ($log-cflonum ($add-flonum-cflonum 1.0 ($mul-cflonum-cflonum +1.0i x)))))
+	(let* ((A    ($make-cflonum ($fl+ 1.0 x.imp) ($fl- x.rep)))
+	       (B    ($make-cflonum ($fl- 1.0 x.imp) x.rep))
+	       (log1 ($log-cflonum A))
+	       (log2 ($log-cflonum B)))
 	  ($mul-cflonum-cflonum +0.5i ($sub-cflonum-cflonum log1 log2))))))
 
   #| end of module |# )
@@ -7201,12 +7208,7 @@
 	     ($fl>= x -1.0))
 	($flatanh x)
       ($mul-flonum-cflonum 0.5 ($log-flonum ($fl/ ($fl+ 1.0 x)
-						  ($fl- 1.0 x))))
-      ;; (- ($atanh-flonum ($fl/ 1.0 x))
-      ;; 	 (if ($flnegative? x)
-      ;; 	     ($fl* -1.0i PI/2)
-      ;; 	   ($fl* +1.0i PI/2)))
-      ))
+						  ($fl- 1.0 x))))))
 
   (define ($atanh-compnum x)
     ($atanh-cflonum (inexact x)))

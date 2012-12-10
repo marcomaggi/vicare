@@ -3749,8 +3749,8 @@ number object.
 
 
 @deffn {Unsafe Operation} $sqrt-flonum @var{fl}
-Compute the principal square root of @var{fl}; return an inexact number
-object.
+Compute the principal square root of @var{fl}; return a flonum, compnum
+or cflonum.
 
 @example
 ($sqrt-flonum +0.0)     @result{} +0.0
