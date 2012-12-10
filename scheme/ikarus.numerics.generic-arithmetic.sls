@@ -6396,12 +6396,13 @@
 	   (x.imp	($compnum-imag x))
 	   (e^x.rep	(exp x.rep)))
       (if (zero? x.imp)
-	  ;;Here we  are dealing  with compnum X.   So if  the imaginary
-	  ;;part is zero,  it is inexact zero; it follows  that the real
-	  ;;part is not a flonum, else  the number X would be a cflonum.
-	  ;;If the real part is not  a flonum: it cannot be infinity, so
-	  ;;we can short circuit here.  See the computation for cflonums
-	  ;;for more details.
+	  ;;Here we are dealing with compnum X; so if the imaginary part
+	  ;;is zero, it is inexact zero.   It follows that the real part
+	  ;;is not a flonum, else the number X would be a cflonum.
+	  ;;
+	  ;;If the real part is not  a flonum: it cannot be infinity nor
+	  ;;NaN, so we can short  circuit here.  See the computation for
+	  ;;cflonums for more details.
 	  (if (flonum? e^x.rep)
 	      ($make-cflonum e^x.rep 0.0)
 	    ($make-rectangular e^x.rep 0.0))
@@ -6445,6 +6446,7 @@
 (module (sin
 	 $sin-fixnum		$sin-bignum		$sin-ratnum
 	 $sin-cflonum		$sin-compnum)
+  (define who 'sin)
 
   (define (sin x)
     (cond-numeric-operand x
@@ -6455,7 +6457,7 @@
       ((ratnum?)	($sin-ratnum  x))
       ((compnum?)	($sin-compnum x))
       (else
-       (assertion-violation 'sin "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($sin-fixnum x)
     (if ($fxzero? x)
@@ -6486,6 +6488,7 @@
 (module (cos
 	 $cos-fixnum		$cos-bignum		$cos-ratnum
 	 $cos-cflonum		$cos-compnum)
+  (define who 'cos)
 
   (define (cos x)
     (cond-numeric-operand x
@@ -6496,7 +6499,7 @@
       ((ratnum?)	($cos-ratnum  x))
       ((compnum?)	($cos-compnum x))
       (else
-       (assertion-violation 'cos "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($cos-fixnum x)
     (if ($fxzero? x)
@@ -6527,6 +6530,7 @@
 (module (tan
 	 $tan-fixnum		$tan-bignum		$tan-ratnum
 	 $tan-compnum		$tan-cflonum)
+  (define who 'tan)
 
   (define (tan x)
     (cond-numeric-operand x
@@ -6537,7 +6541,7 @@
       ((ratnum?)	($tan-ratnum  x))
       ((compnum?)	($tan-compnum x))
       (else
-       (assertion-violation 'tan "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($tan-fixnum x)
     (if ($fxzero? x)
@@ -6565,7 +6569,7 @@
     ;;             cosh (2 * x.imp)
     ;;
     (let ((x.rep ($compnum-real x))
-	   (x.imp ($compnum-imag x)))
+	  (x.imp ($compnum-imag x)))
       (let ((R2 (* 2 x.rep))
 	    (I2 (* 2 x.imp)))
 	(let ((CR2  (cos  R2))
@@ -6602,6 +6606,7 @@
 (module (asin
 	 $asin-fixnum		$asin-bignum		$asin-ratnum
 	 $asin-flonum		$asin-cflonum		$asin-compnum)
+  (define who 'asin)
 
   (define (asin x)
     (cond-numeric-operand x
@@ -6612,7 +6617,7 @@
       ((ratnum?)	($asin-ratnum  x))
       ((compnum?)	($asin-compnum x))
       (else
-       (assertion-violation 'asin "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($asin-fixnum x)
     ($asin-flonum (inexact x)))
@@ -6707,6 +6712,7 @@
 (module (acos
 	 $acos-fixnum		$acos-bignum		$acos-ratnum
 	 $acos-flonum		$acos-cflonum		$acos-compnum)
+  (define who 'acos)
 
   (define (acos x)
     (cond-numeric-operand x
@@ -6717,7 +6723,7 @@
       ((ratnum?)	($acos-ratnum  x))
       ((compnum?)	($acos-compnum x))
       (else
-       (assertion-violation 'acos "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($acos-fixnum x)
     ($acos-flonum (inexact x)))
@@ -6770,7 +6776,7 @@
 	((ratnum?)	($atan-ratnum  x))
 	((compnum?)	($atan-compnum x))
 	(else
-	 (assertion-violation who "expected number as argument" x))))
+	 (%error-not-number x))))
      ((y x)
       (with-arguments-validation (who)
 	  ((real	x)
@@ -6827,7 +6833,7 @@
       ((ratnum?)	($sinh-ratnum  x))
       ((compnum?)	($sinh-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($sinh-fixnum x)
     ($flsinh (inexact x)))
@@ -6867,7 +6873,7 @@
       ((ratnum?)	($cosh-ratnum  x))
       ((compnum?)	($cosh-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($cosh-fixnum x)
     ($flcosh (inexact x)))
@@ -6907,7 +6913,7 @@
       ((ratnum?)	($tanh-ratnum  x))
       ((compnum?)	($tanh-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($tanh-fixnum x)
     ($fltanh (inexact x)))
@@ -6981,7 +6987,7 @@
       ((ratnum?)	($asinh-ratnum x))
       ((compnum?)	($asinh-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($asinh-fixnum x)
     ($flasinh (inexact x)))
@@ -7075,7 +7081,7 @@
       ((ratnum?)	($acosh-ratnum x))
       ((compnum?)	($acosh-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($acosh-fixnum x)
     ($acosh-flonum (inexact x)))
@@ -7176,7 +7182,7 @@
       ((ratnum?)	($atanh-ratnum  x))
       ((compnum?)	($atanh-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
   (define ($atanh-fixnum x)
     ($atanh-flonum (inexact x)))
@@ -7195,7 +7201,7 @@
 	     ($fl>= x -1.0))
 	($flatanh x)
       ($mul-flonum-cflonum 0.5 ($log-flonum ($fl/ ($fl+ 1.0 x)
-					      ($fl- 1.0 x))))
+						  ($fl- 1.0 x))))
       ;; (- ($atanh-flonum ($fl/ 1.0 x))
       ;; 	 (if ($flnegative? x)
       ;; 	     ($fl* -1.0i PI/2)
