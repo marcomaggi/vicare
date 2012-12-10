@@ -6396,6 +6396,12 @@
 	   (x.imp	($compnum-imag x))
 	   (e^x.rep	(exp x.rep)))
       (if (zero? x.imp)
+	  ;;Here we  are dealing  with compnum X.   So if  the imaginary
+	  ;;part is zero,  it is inexact zero; it follows  that the real
+	  ;;part is not a flonum, else  the number X would be a cflonum.
+	  ;;If the real part is not  a flonum: it cannot be infinity, so
+	  ;;we can short circuit here.  See the computation for cflonums
+	  ;;for more details.
 	  (if (flonum? e^x.rep)
 	      ($make-cflonum e^x.rep 0.0)
 	    ($make-rectangular e^x.rep 0.0))
@@ -6419,7 +6425,16 @@
     (let* ((x.rep	($cflonum-real x))
 	   (x.imp	($cflonum-imag x))
 	   (e^x.rep	($exp-flonum x.rep)))
-      (if ($flzero? x.imp)
+      ;;We short circuit  the case of zero imaginary part,  but look out
+      ;;for the infinite  real part; in the latter, case  in the formula
+      ;;below:
+      ;;
+      ;;   e^x.rep * cos (x.imp) = +inf.0 * 1.0 = +inf.0
+      ;;   e^x.rep * sin (x.imp) = +inf.0 * 0.0 = +nan.0
+      ;;
+      (if (and ($flzero? x.imp)
+	       (not ($flinfinite? x.rep))
+	       (not ($flnan?      x.rep)))
 	  ($make-cflonum e^x.rep 0.0)
 	($make-cflonum ($fl* e^x.rep ($flcos x.imp))
 		       ($fl* e^x.rep ($flsin x.imp))))))

@@ -361,9 +361,9 @@
   (test -1.0+1.0i		0.19876611034641298+0.3095598756531122i)
   (test -1.0-1.0i		0.19876611034641298-0.3095598756531122i)
 
-  (test +inf.0+0.0i		+inf.0+0.0i)
+  (test +inf.0+0.0i		+inf.0+nan.0i)
   (test -inf.0+0.0i		0.0+0.0i)
-  (test +inf.0-0.0i		+inf.0-0.0i)
+  (test +inf.0-0.0i		+inf.0+nan.0i)
   (test -inf.0-0.0i		0.0-0.0i)
 
   (test +0.0+inf.0i		+nan.0+nan.0i)
