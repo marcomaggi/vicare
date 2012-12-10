@@ -6811,17 +6811,25 @@
     ;;
     ;;  A = 1 - i * x = 1 - (- x.imp + i * x.rep) = (1 + x.imp) - i * x.rep
     ;;  B = 1 + i * x = 1 + (- x.imp + i * x.rep) = (1 - x.imp) + i * x.rep
+    ;;  C = log A - log B
+    ;;  D = 1/2 * i C = 0.5i * (C.rep + i * C.imp)
+    ;;                = 0.5 * C.rep * i - 0.5 * C.imp
+    ;;                = (-0.5 * C.imp) + i * (0.5 * C.rep)
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      (if ($flzero? x.imp)
+      (if (and ($flzero? x.imp)
+	       (not ($flinfinite? x.rep))
+	       (not ($flnan?      x.rep)))
 	  ;;FLATAN always returns a flonum.
 	  ($make-cflonum ($flatan x.rep) 0.0)
-	(let* ((A    ($make-cflonum ($fl+ 1.0 x.imp) ($fl- x.rep)))
-	       (B    ($make-cflonum ($fl- 1.0 x.imp) x.rep))
-	       (log1 ($log-cflonum A))
-	       (log2 ($log-cflonum B)))
-	  ($mul-cflonum-cflonum +0.5i ($sub-cflonum-cflonum log1 log2))))))
+	(let* ((A ($make-cflonum ($fl+ 1.0 x.imp) ($fl- x.rep)))
+	       (B ($make-cflonum ($fl- 1.0 x.imp) x.rep))
+	       (C ($sub-cflonum-cflonum ($log-cflonum A) ($log-cflonum B))))
+	  (let ((C.rep ($cflonum-real C))
+		(C.imp ($cflonum-imag C)))
+	    ($make-cflonum ($fl* -0.5 C.imp)
+			   ($fl* +0.5 C.rep)))))))
 
   #| end of module |# )
 

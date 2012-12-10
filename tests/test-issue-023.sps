@@ -144,8 +144,8 @@
 (check (atan 0.0+0.0i)		(=> %quasi=?) 0.0+0.0i)
 (check (atan 0.0-0.0i)		(=> %quasi=?) 0.0+0.0i)
 
-(check (atan 0.0+1.0i)		(=> %quasi=?) +nan.0+inf.0i)
-(check (atan 0.0-1.0i)		(=> %quasi=?) +nan.0-inf.0i)
+(check (atan 0.0+1.0i)		(=> %quasi=?) -0.0+inf.0i)
+(check (atan 0.0-1.0i)		(=> %quasi=?) -0.0-inf.0i)
 
 (check (atan +0.0+1.1i)		(=> %quasi=?) +1.5707963267948966+1.5222612188617113i)
 (check (atan +0.0-1.1i)		(=> %quasi=?) +1.5707963267948966-1.5222612188617113i)
