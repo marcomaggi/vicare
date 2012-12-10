@@ -303,7 +303,7 @@
     $log-ratnum			$log-compnum		$log-cflonum
 
     $exp-fixnum			$exp-bignum		$exp-ratnum
-    $exp-compnum		$exp-cflonum
+    $exp-flonum			$exp-compnum		$exp-cflonum
 
     $sin-fixnum			$sin-bignum		$sin-ratnum
     $sin-cflonum		$sin-compnum
@@ -464,6 +464,9 @@
 	$flcosh			$flacosh
 	$fltanh			$flatanh
 	$flatan2)
+  (rename (only (ikarus flonums) #;(ikarus system flonums)
+		$flexp)
+	  ($flexp	$exp-flonum))
   (except (ikarus system $ratnums)
 	  $ratnum->flonum)
   ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -4245,7 +4248,7 @@
 	     ;;N=-0.0.
 	     (if ($flpositive? n)
 		 ;;Positive operands have real logarithms.
-		 ($flexp ($fl* (inexact m) ($fllog n)))
+		 ($exp-flonum ($fl* (inexact m) ($fllog n)))
 	       ;;Negative operands have complex logarithms.
 	       ($exp-cflonum ($mul-flonum-cflonum (inexact m) ($log-flonum n)))))))
 
@@ -6363,27 +6366,27 @@
 
   (define (exp x)
     (cond-numeric-operand x
-      ((flonum?)	($flexp       x))
+      ((flonum?)	($exp-flonum  x))
       ((cflonum?)	($exp-cflonum x))
       ((fixnum?)	($exp-fixnum  x))
       ((bignum?)	($exp-bignum  x))
       ((ratnum?)	($exp-ratnum  x))
       ((compnum?)	($exp-compnum x))
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (%error-not-number x))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($exp-fixnum x)
     (if ($fxzero? x)
 	1
-      ($flexp (fixnum->flonum x))))
+      ($exp-flonum (fixnum->flonum x))))
 
   (define ($exp-bignum x)
-    ($flexp ($bignum->flonum x)))
+    ($exp-flonum ($bignum->flonum x)))
 
   (define ($exp-ratnum x)
-    ($flexp ($ratnum->flonum x)))
+    ($exp-flonum ($ratnum->flonum x)))
 
   (define ($exp-compnum x)
     ;;
@@ -6403,7 +6406,7 @@
     ;;In general:
     ;;
     ;;   e^x = e^(x.rep + i * x.imp)
-    ;;       = e^x.rep cos(x.imp) + i * e^x.rep sin(x.imp)
+    ;;       = e^x.rep * cos(x.imp) + i * e^x.rep * sin(x.imp)
     ;;
     ;;and:
     ;;
@@ -6415,9 +6418,11 @@
     ;;
     (let* ((x.rep	($cflonum-real x))
 	   (x.imp	($cflonum-imag x))
-	   (e^x.rep	($flexp x.rep)))
-      ($make-cflonum ($fl* e^x.rep ($flcos x.imp))
-		     ($fl* e^x.rep ($flsin x.imp)))))
+	   (e^x.rep	($exp-flonum x.rep)))
+      (if ($flzero? x.imp)
+	  ($make-cflonum e^x.rep 0.0)
+	($make-cflonum ($fl* e^x.rep ($flcos x.imp))
+		       ($fl* e^x.rep ($flsin x.imp))))))
 
   #| end of module: exp |# )
 

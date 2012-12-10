@@ -3843,24 +3843,35 @@ Compute the natural logarithm of @var{cfl}; return a cflonum.
 @subsection Exponentials of numbers
 
 
-@deffn {Unsafe Operation} $exp-fixnum
+@deffn {Unsafe Operation} $exp-fixnum @var{fx}
+Compute the base @math{e} exponential of @var{fx}; return a fixnum or
+flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $exp-bignum
+@deffn {Unsafe Operation} $exp-bignum @var{bn}
+Compute the base @math{e} exponential of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $exp-ratnum
+@deffn {Unsafe Operation} $exp-ratnum @var{rt}
+Compute the base @math{e} exponential of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $exp-compnum
+@deffn {Unsafe Operation} $exp-flonum @var{fl}
+Compute the base @math{e} exponential of @var{fl}; return a flonum.
+This is just an alias for @func{$flexp}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $exp-cflonum
+@deffn {Unsafe Operation} $exp-compnum @var{cn}
+Compute the base @math{e} exponential of @var{cn}; return a cflonum.
+@end deffn
 
+
+@deffn {Unsafe Operation} $exp-cflonum @var{cfl}
+Compute the base @math{e} exponential of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page

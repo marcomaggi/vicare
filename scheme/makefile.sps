@@ -2773,6 +2773,7 @@
     ($exp-fixnum				$numerics)
     ($exp-bignum				$numerics)
     ($exp-ratnum				$numerics)
+    ($exp-flonum				$numerics)
     ($exp-compnum				$numerics)
     ($exp-cflonum				$numerics)
 
