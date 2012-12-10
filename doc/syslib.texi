@@ -3390,7 +3390,7 @@ positive, @code{-1} for negative.  Bignums do not represent zero.
 
 @deffn {Unsafe Operation} $sign-flonum @var{fl}
 Return a flonum representing the sign of @var{fx}: @code{+1.0} for
-positive, including @code{+0.0} and @code{+inf.0}; @code{-1} for
+positive, including @code{+0.0} and @code{+inf.0}; @code{-1.0} for
 negative, including @code{-0.0} and @code{-inf.0}; @code{+nan.0} for
 not--a--number.
 @end deffn
@@ -3896,7 +3896,6 @@ Compute the base @math{e} exponential of @var{cfl}; return a cflonum.
 
 
 @deffn {Unsafe Operation} $sin-compnum
-
 @end deffn
 
 @c page

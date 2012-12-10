@@ -7022,8 +7022,8 @@
     ;; C = B^2
     ;; Q = sqrt(C + 4 * D)
     ;;
-    ;; z.rep = 1/2 * sgn(x.rep) * acosh (Q + A)
-    ;; z.imp = 1/2 * sgn(x.imp) * acos  (Q - A)
+    ;; z.rep = 1/2 * sign(x.rep) * acosh (Q + A)
+    ;; z.imp = 1/2 * sign(x.imp) * acos  (Q - A)
     ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
@@ -7040,10 +7040,12 @@
 	       (C (square B B))
 	       ;;Q is a non-negative real number.
 	       (Q (sqrt (+ C (* 4 D)))))
-	  (define (sgn N)
-	    (if (negative? N) -1 1))
-	  ($make-rectangular ($mul-flonum-number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
-			     ($mul-flonum-number ($fl* 0.5 (sgn x.imp)) (acos  (- Q A))))))))
+	  (define (%sgn N)
+	    ;;This is  different from SIGN  because it always  returns a
+	    ;;flonum.
+	    (if (negative? N) -1.0 1.0))
+	  ($make-rectangular ($mul-flonum-number ($fl* 0.5 (%sgn x.rep)) (acosh (+ Q A)))
+			     ($mul-flonum-number ($fl* 0.5 (%sgn x.imp)) (acos  (- Q A))))))))
 
   (define ($asinh-cflonum x)
     ;; asinh (x) = z.rep + i * z.imp
@@ -7054,8 +7056,8 @@
     ;; C = B^2
     ;; Q = sqrt(C + 4 * D)
     ;;
-    ;; z.rep = 1/2 * sgn(x.rep) * acosh (Q + A)
-    ;; z.imp = 1/2 * sgn(x.imp) * acos  (Q - A)
+    ;; z.rep = 1/2 * sign(x.rep) * acosh (Q + A)
+    ;; z.imp = 1/2 * sign(x.imp) * acos  (Q - A)
     ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
@@ -7074,10 +7076,8 @@
 	       (C ($fl* B B))
 	       ;;Q is a non-negative flonum.
 	       (Q ($flsqrt (+ C ($fl* 4.0 D)))))
-	  (define (sgn N)
-	    (if ($flnegative? N) -1.0 1.0))
-	  ($make-cflonum ($fl* ($fl* 0.5 (sgn x.rep)) ($acosh-flonum ($fl+ Q A)))
-			 ($fl* ($fl* 0.5 (sgn x.imp)) ($acos-flonum  ($fl- Q A))))))))
+	  ($make-cflonum ($fl* ($fl* 0.5 ($sign-flonum x.rep)) ($acosh-flonum ($fl+ Q A)))
+			 ($fl* ($fl* 0.5 ($sign-flonum x.imp)) ($acos-flonum  ($fl- Q A))))))))
 
   #| end of module: asinh |# )
 
@@ -7118,8 +7118,8 @@
 
   (define ($acosh-compnum x)
     ;;
-    ;; acosh (x) = 1/2 * sgn(x.rep) * acosh (Q + A) +
-    ;;           + i * 1/2 * sgn(x.imp) * (pi - sgn(x.rep) * acos (Q - A))
+    ;; acosh (x) = 1/2 * sign(x.rep) * acosh (Q + A) +
+    ;;           + i * 1/2 * sign(x.imp) * (pi - sign(x.rep) * acos (Q - A))
     ;;
     ;; D = x.imp^2
     ;; A = x.rep^2 + D
@@ -7141,16 +7141,18 @@
 	       (C (square B))
 	       ;;Q is a non-negative real number.
 	       (Q (sqrt (+ C (* 4 D)))))
-	  (define (sgn x)
+	  (define (%sgn x)
+	    ;;This is  different from SIGN  because it always  returns a
+	    ;;flonum.
 	    (if (negative? x) -1.0 1.0))
-	  (+ ($mul-flonum-number ($fl* 0.5 (sgn x.rep)) (acosh (+ Q A)))
-	     ($mul-cflonum-number ($make-compnum 0 ($fl* 0.5 (sgn x.imp)))
-				  (- PI (* (sgn x.rep) (acos (- Q A))))))))))
+	  (+ ($mul-flonum-number ($fl* 0.5 (%sgn x.rep)) (acosh (+ Q A)))
+	     ($mul-cflonum-number ($make-compnum 0 ($fl* 0.5 (%sgn x.imp)))
+				  (- PI ($mul-flonum-number (%sgn x.rep) (acos (- Q A))))))))))
 
   (define ($acosh-cflonum x)
     ;;
-    ;; acosh (x) = 1/2 * sgn(x.rep) * acosh (Q + A) +
-    ;;           + i * 1/2 * sgn(x.imp) * (pi - sgn(x.rep) * acos (Q - A))
+    ;; acosh (x) = 1/2 * sign(x.rep) * acosh (Q + A) +
+    ;;           + i * 1/2 * sign(x.imp) * (pi - sign(x.rep) * acos (Q - A))
     ;;
     ;; D = x.imp^2
     ;; A = x.rep^2 + D
@@ -7161,7 +7163,7 @@
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
       (if ($flzero? x.rep)
-	  (+ ($flasinh x.imp) ($make-cflonum 0.0 PI/2))
+	  ($add-number-cflonum ($flasinh x.imp) ($make-cflonum 0.0 PI/2))
 	(let* ( ;;D is a non-negative flonum.
 	       (D ($flsquare x.imp))
 	       ;;A is a non-negative flonum.
@@ -7172,13 +7174,12 @@
 	       (C ($flsquare B))
 	       ;;Q is a non-negative flonum
 	       (Q ($flsqrt ($fl+ C ($fl* 4.0 D)))))
-	  (define (sgn N)
-	    (if ($flnegative? N) -1.0 1.0))
-	  (+ ($mul-flonum-number ($fl* 0.5 (sgn x.rep))
-			     ($acosh-flonum ($fl+ Q A)))
-	     ($mul-cflonum-number ($make-cflonum 0.0 ($fl* 0.5 (sgn x.imp)))
-			      (- PI ($mul-flonum-number (sgn x.rep)
-						    ($acos-flonum ($fl- Q A))))))))))
+	  ($add-number-cflonum
+	   ($mul-flonum-number ($fl* 0.5 ($sign-flonum x.rep))
+			       ($acosh-flonum ($fl+ Q A)))
+	   ($mul-cflonum-number ($make-cflonum 0.0 ($fl* 0.5 ($sign-flonum x.imp)))
+				(- PI ($mul-flonum-number ($sign-flonum x.rep)
+							  ($acos-flonum ($fl- Q A))))))))))
 
   #| end of module |# )
 
