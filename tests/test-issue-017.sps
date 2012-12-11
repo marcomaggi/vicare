@@ -54,6 +54,16 @@
 
 (define bignum0 (expt 2 32))
 
+(define-syntax catch-division-by-zero
+  (syntax-rules ()
+    ((_ . ?body)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (condition-message E))
+		   (else E))
+	   (begin . ?body))
+       => "division by zero"))))
+
 
 ;;;; fixnum exponent
 
@@ -66,7 +76,8 @@
 (check (expt -2 -3)		=> -1/8)
 
 (check (expt 0 3)		=> 0)
-(check (expt 0 -3)		=> 0)
+(catch-division-by-zero
+ (expt 0 -3))
 
 (check (expt 3 0)		=> 1)
 (check (expt -3 0)		=> 1)
@@ -275,7 +286,8 @@
 (check (expt -2 -3/4)		(=> eq=?) -0.4204482076268572-0.4204482076268573i)
 
 (check (expt 0 3/4)		=> 0)
-(check (expt 0 -3)		=> 0)
+(catch-division-by-zero
+ (expt 0 -3/4))
 
 ;;; --------------------------------------------------------------------
 ;;; rational base
@@ -725,10 +737,10 @@
 (check (expt -2 -3+4i)		(=> eq=?) 4.0657489351739836e-7-1.5722970312837445e-7i)
 (check (expt -2 -3-4i)		(=> eq=?) 33431.15550354123+12928.419188863143i)
 
-(check (expt 0 +3+4i)		=> 0.0)
-(check (expt 0 +3-4i)		=> 0.0)
-(check (expt 0 -3+4i)		=> +inf.0+0.0i)
-(check (expt 0 -3-4i)		=> +inf.0+0.0i)
+(check (expt 0 +3+4i)		=> 0)
+(check (expt 0 +3-4i)		=> 0)
+(catch-division-by-zero (expt 0 -3+4i))
+(catch-division-by-zero (expt 0 -3-4i))
 
 (check
     (expt 2 (make-rectangular bignum0 bignum0))

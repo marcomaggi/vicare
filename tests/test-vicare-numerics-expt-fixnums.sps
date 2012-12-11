@@ -1011,7 +1011,7 @@
 		      (condition-message E))
 		     (else E))
 	     (begin . ?body))
-	 => "unary division by zero"))))
+	 => "division by zero"))))
 
   (define-syntax test-division-by-zero
     (syntax-rules ()

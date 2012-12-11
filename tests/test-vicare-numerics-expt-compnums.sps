@@ -178,6 +178,16 @@
     (and (inexact=? x.rep y.rep)
 	 (inexact=? x.imp y.imp))))
 
+(define-syntax catch-division-by-zero
+  (syntax-rules ()
+    ((_ . ?body)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (condition-message E))
+		   (else E))
+	   (begin . ?body))
+       => "division by zero"))))
+
 
 ;;;; constants
 
@@ -195,11 +205,21 @@
   (define-syntax test
     (make-inexact-test expt $expt-number-compnum $expt-fixnum-compnum))
 
+  ;; positive real part
   (test 0	+1+2i	0)
   (test +1	+1+2i	1.0)
   (test -1	+1+2i	-0.0018674427317079893+2.286882234649021e-19i)
   (test +2	+1+2i	0.36691394948660344+1.9660554808224875i)
   (test -2	+1+2i	-6.851907881310297e-4-0.0036714960177966108i)
+
+  ;; negative real part
+  (catch-division-by-zero (expt 0 -1+2i))
+  (catch-division-by-zero ($expt-number-compnum 0 -1+2i))
+  (catch-division-by-zero ($expt-fixnum-compnum 0 -1+2i))
+  (test +1	-1+2i	+1)
+  (test -1	-1+2i	-0.0018674427317079893-2.286882234649021e-19i)
+  (test +2	-1+2i	0.09172848737165086+0.4915138702056219i)
+  (test -2	-1+2i	-1.7129769703275736e-4-9.178740044491525e-4i)
 
   #t)
 

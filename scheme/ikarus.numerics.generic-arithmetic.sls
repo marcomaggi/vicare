@@ -526,6 +526,13 @@
        (with-syntax ((WHO (datum->syntax #'?k 'who)))
 	 #'(assertion-violation WHO "expected real number as argument" ?arg))))))
 
+
+(define-syntax %error-division-by-zero
+  (syntax-rules ()
+    ((_ ?who . ?irritants)
+     ;;According to R6RS this must be an assertion.
+     (assertion-violation ?who "division by zero" . ?irritants))))
+
 (module (PI PI/2)
   (import (ikarus))
   (define PI (acos -1))
@@ -698,7 +705,7 @@
   (define ($inv-fixnum x)
     (cond (($fxzero? x)
 	   ;;According to R6RS this must be an assertion.
-	   (assertion-violation who "unary division by zero"))
+	   (%error-division-by-zero who))
 	  (($fx> x 0)
 	   (if ($fx= x 1)
 	       1
@@ -4567,7 +4574,9 @@
 
     (define ($expt-fixnum-ratnum n m)
       (cond (($fxzero? n)
-	     0)
+	     (if (positive? ($ratnum-n m))
+		 0
+	       (%error-division-by-zero who n m)))
 	    (($fx= n 1)
 	     1)
 	    (else
@@ -4613,8 +4622,22 @@
 	 (%error-not-number n))))
 
     (define ($expt-fixnum-compnum n m)
-      ($expt-flonum-cflonum ($fixnum->flonum   n)
-			    ($compnum->cflonum m)))
+      (cond (($fxzero? n)
+	     (let ((m.rep ($compnum-real m)))
+	       (if (or (and (fixnum? m.rep) ($fxnegative?      m.rep))
+		       (and (bignum? m.rep) ($bignum-negative? m.rep)))
+		   (%error-division-by-zero who n m)
+		 0)))
+	    (($fx= n 1)
+	     (let ((m.rep ($compnum-real m))
+		   (m.imp ($compnum-imag m)))
+	       (if (and (exact? m.rep)
+			(exact? m.imp))
+		   1
+		 1.0)))
+	    (else
+	     ($expt-flonum-cflonum ($fixnum->flonum   n)
+				   ($compnum->cflonum m)))))
 
     (define ($expt-bignum-compnum n m)
       ($expt-flonum-cflonum ($bignum->flonum   n)
@@ -6444,7 +6467,7 @@
 	  (else
 	   ;;We must assume that the opposite of X may be a bignum.
 	   ($make-rectangular (log ($neg-fixnum x))
-			      (acos -1)))))
+			      PI))))
 
   (define ($log-bignum x)
     (if ($bignum-positive? x)
@@ -6455,7 +6478,7 @@
 		;;Could the (dropped) residual ever affect the answer?
 		(* 2 (log s)))
 	    v))
-      ($make-rectangular (log ($neg-bignum x)) (acos -1))))
+      ($make-rectangular (log ($neg-bignum x)) PI)))
 
   (define ($log-ratnum x)
     ($sub-number-number (log ($ratnum-n x))
@@ -6468,7 +6491,7 @@
 	       ($flzero?/positive x))
 	   (foreign-call "ikrt_fl_log" x))
 	  (else
-	   ($make-cflonum ($fllog ($fl- x)) (acos -1)))))
+	   ($make-cflonum ($fllog ($fl- x)) PI))))
 
   (define ($log-compnum x)
     ;;

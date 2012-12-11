@@ -178,6 +178,16 @@
     (and (inexact=? x.rep y.rep)
 	 (inexact=? x.imp y.imp))))
 
+(define-syntax catch-division-by-zero
+  (syntax-rules ()
+    ((_ . ?body)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (condition-message E))
+		   (else E))
+	   (begin . ?body))
+       => "division by zero"))))
+
 
 ;;;; constants
 
@@ -199,7 +209,10 @@
   (test +1	+1/2	+1)
   (test -1	+1/2	+0.0+1.0i)
 
-  (test 0	-1/2	0)
+  (catch-division-by-zero (expt 0 -1/2))
+  (catch-division-by-zero ($expt-number-ratnum 0 -1/2))
+  (catch-division-by-zero ($expt-fixnum-ratnum 0 -1/2))
+
   (test +1	-1/2	+1.0)
   (test -1	-1/2	+0.0-1.0i)
 
