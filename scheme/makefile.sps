@@ -2704,6 +2704,7 @@
     ($expt-number-fixnum			$numerics)
 
     ($expt-number-zero-fixnum			$numerics)
+    ($expt-fixnum-zero-fixnum			$numerics)
     ($expt-flonum-zero-fixnum			$numerics)
     ($expt-compnum-zero-fixnum			$numerics)
     ($expt-cflonum-zero-fixnum			$numerics)

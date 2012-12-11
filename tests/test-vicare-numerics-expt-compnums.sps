@@ -109,6 +109,16 @@
 	   (begin . ?body))
        => ?message))))
 
+(define-syntax catch-undefined-operation
+  (syntax-rules ()
+    ((_ . ?body)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (condition-message E))
+		   (else E))
+	   (begin . ?body))
+       => "undefined operation"))))
+
 ;;; --------------------------------------------------------------------
 
 (define (flonum=? x y)
@@ -220,6 +230,15 @@
   (test -1	-1+2i	-0.0018674427317079893-2.286882234649021e-19i)
   (test +2	-1+2i	0.09172848737165086+0.4915138702056219i)
   (test -2	-1+2i	-1.7129769703275736e-4-9.178740044491525e-4i)
+
+  ;; zero real part
+  (catch-undefined-operation
+   (expt 0	+2i))
+
+  (test +1	+2i	1.0)
+  (test -1	+2i	0.0018674427317079893+0.0i)
+  (test +2	+2i	0.18345697474330172+0.9830277404112437i)
+  (test -2	+2i	3.42595394065515e-4+0.0018357480088983052i)
 
   #t)
 

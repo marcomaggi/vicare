@@ -279,7 +279,8 @@
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
 
-    $expt-number-zero-fixnum		$expt-flonum-zero-fixnum
+    $expt-number-zero-fixnum		$expt-fixnum-zero-fixnum
+    $expt-flonum-zero-fixnum
     $expt-compnum-zero-fixnum		$expt-cflonum-zero-fixnum
 
     $expt-number-negative-fixnum
@@ -532,6 +533,11 @@
     ((_ ?who . ?irritants)
      ;;According to R6RS this must be an assertion.
      (assertion-violation ?who "division by zero" . ?irritants))))
+
+(define-syntax %error-undefined-operation
+  (syntax-rules ()
+    ((_ ?who . ?irritants)
+     (assertion-violation ?who "undefined operation" . ?irritants))))
 
 (module (PI PI/2)
   (import (ikarus))
@@ -3899,7 +3905,8 @@
 	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
 	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum
 
-	 $expt-number-zero-fixnum		$expt-flonum-zero-fixnum
+	 $expt-number-zero-fixnum		$expt-fixnum-zero-fixnum
+	 $expt-flonum-zero-fixnum
 	 $expt-compnum-zero-fixnum		$expt-cflonum-zero-fixnum
 
 	 $expt-number-negative-fixnum
@@ -4041,7 +4048,7 @@
       (if ($fx= m 1)
 	  n
 	(cond (($fxzero? m)
-	       +1)
+	       ($expt-fixnum-zero-fixnum n))
 	      (($fxpositive? m)
 	       ($expt-fixnum-positive-fixnum n m))
 	      (else ;M is negative
@@ -4102,6 +4109,7 @@
 ;;; --------------------------------------------------------------------
 
   (module ($expt-number-zero-fixnum
+	   $expt-fixnum-zero-fixnum
 	   $expt-flonum-zero-fixnum
 	   $expt-compnum-zero-fixnum
 	   $expt-cflonum-zero-fixnum)
@@ -4110,7 +4118,7 @@
       ;;N is a number to be raised to the power of 0.
       ;;
       (cond-numeric-operand n
-	((fixnum?)	+1)
+	((fixnum?)	($expt-fixnum-zero-fixnum n))
 	((bignum?)	+1)
 	((flonum?)	($expt-flonum-zero-fixnum n))
 	((ratnum?)	+1)
@@ -4118,6 +4126,11 @@
 	((cflonum?)	($expt-cflonum-zero-fixnum n))
 	(else
 	 (%error-not-number n))))
+
+    (define ($expt-fixnum-zero-fixnum n)
+      (if ($fxzero? n)
+	  (%error-undefined-operation who n 0)
+	+1))
 
     (define ($expt-flonum-zero-fixnum n)
       (if ($flnan? n) +nan.0 +1.0))
@@ -4624,10 +4637,13 @@
     (define ($expt-fixnum-compnum n m)
       (cond (($fxzero? n)
 	     (let ((m.rep ($compnum-real m)))
-	       (if (or (and (fixnum? m.rep) ($fxnegative?      m.rep))
-		       (and (bignum? m.rep) ($bignum-negative? m.rep)))
-		   (%error-division-by-zero who n m)
-		 0)))
+	       (cond ((or (and (fixnum? m.rep) ($fxnegative?      m.rep))
+			  (and (bignum? m.rep) ($bignum-negative? m.rep)))
+		      (%error-division-by-zero who n m))
+		     ((eq? m.rep 0)
+		      (%error-undefined-operation who n m))
+		     (else
+		      0))))
 	    (($fx= n 1)
 	     (let ((m.rep ($compnum-real m))
 		   (m.imp ($compnum-imag m)))

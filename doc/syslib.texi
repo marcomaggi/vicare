@@ -3471,6 +3471,11 @@ unspecified number object.
 @end deffn
 
 
+@deffn {Unsafe Operation} $expt-fixnum-zero-fixnum @var{fx}
+Compute @var{fx} raised to the power of exact zero; return a fixnum.
+@end deffn
+
+
 @deffn {Unsafe Operation} $expt-flonum-zero-fixnum @var{fl}
 Compute @var{fl} raised to the power of exact zero; return a flonum.
 @end deffn

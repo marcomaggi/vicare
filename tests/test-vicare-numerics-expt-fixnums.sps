@@ -97,6 +97,16 @@
 	  (check (?safe-fun   ?op1 ?op2)	(=> inexact=?) (?unsafe-fun ?op1 ?op2))
 	  ))))))
 
+(define-syntax catch-undefined-operation
+  (syntax-rules ()
+    ((_ . ?body)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (condition-message E))
+		   (else E))
+	   (begin . ?body))
+       => "undefined operation"))))
+
 ;;; --------------------------------------------------------------------
 
 (define (flonum=? x y)
@@ -195,7 +205,10 @@
 ;;; --------------------------------------------------------------------
 
   ;; fixnums
-  (test  0	+1)
+  (catch-undefined-operation (expt 0 0))
+  (catch-undefined-operation ($expt-number-fixnum 0 0))
+  (catch-undefined-operation ($expt-fixnum-fixnum 0 0))
+  (catch-undefined-operation ($expt-number-zero-fixnum 0))
   (test +1	+1)
   (test -1	+1)
   (test +21	+1)
@@ -207,7 +220,6 @@
 		 (check ($expt-fixnum-fixnum	?op 0) => ?expected))
 		((_ ?op ?expected ?equal)
 		 (check ($expt-fixnum-fixnum	?op 0) (=> ?equal) ?expected)))))
-    (test2  0	+1)
     (test2 +1	+1)
     (test2 -1	+1)
     (test2 +21	+1)
