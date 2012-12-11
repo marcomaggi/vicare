@@ -2708,8 +2708,15 @@
     ($expt-compnum-zero-fixnum			$numerics)
     ($expt-cflonum-zero-fixnum			$numerics)
 
-    ($expt-number-positive-fixnum		$numerics)
     ($expt-number-negative-fixnum		$numerics)
+    ($expt-fixnum-negative-fixnum		$numerics)
+    ($expt-bignum-negative-fixnum		$numerics)
+    ($expt-ratnum-negative-fixnum		$numerics)
+    ($expt-flonum-negative-fixnum		$numerics)
+    ($expt-compnum-negative-fixnum		$numerics)
+    ($expt-cflonum-negative-fixnum		$numerics)
+
+    ($expt-number-positive-fixnum		$numerics)
     ($expt-fixnum-positive-fixnum		$numerics)
     ($expt-bignum-positive-fixnum		$numerics)
     ($expt-flonum-positive-fixnum		$numerics)

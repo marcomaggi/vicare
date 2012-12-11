@@ -283,6 +283,9 @@
     $expt-compnum-zero-fixnum		$expt-cflonum-zero-fixnum
 
     $expt-number-negative-fixnum
+    $expt-fixnum-negative-fixnum	$expt-bignum-negative-fixnum
+    $expt-ratnum-negative-fixnum	$expt-flonum-negative-fixnum
+    $expt-compnum-negative-fixnum	$expt-cflonum-negative-fixnum
 
     $expt-number-positive-fixnum
     $expt-fixnum-positive-fixnum	$expt-bignum-positive-fixnum
@@ -694,7 +697,8 @@
 
   (define ($inv-fixnum x)
     (cond (($fxzero? x)
-	   (assertion-violation who "unary division by 0"))
+	   ;;According to R6RS this must be an assertion.
+	   (assertion-violation who "unary division by zero"))
 	  (($fx> x 0)
 	   (if ($fx= x 1)
 	       1
@@ -3892,6 +3896,9 @@
 	 $expt-compnum-zero-fixnum		$expt-cflonum-zero-fixnum
 
 	 $expt-number-negative-fixnum
+	 $expt-fixnum-negative-fixnum		$expt-bignum-negative-fixnum
+	 $expt-ratnum-negative-fixnum		$expt-flonum-negative-fixnum
+	 $expt-compnum-negative-fixnum		$expt-cflonum-negative-fixnum
 
 	 $expt-number-positive-fixnum
 	 $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
@@ -4031,7 +4038,7 @@
 	      (($fxpositive? m)
 	       ($expt-fixnum-positive-fixnum n m))
 	      (else ;M is negative
-	       ($expt-number-negative-fixnum n m)))))
+	       ($expt-fixnum-negative-fixnum n m)))))
 
     (define ($expt-bignum-fixnum n m)
       (if ($fx= m 1)
@@ -4041,7 +4048,7 @@
 	      (($fxpositive? m)
 	       ($expt-bignum-positive-fixnum n m))
 	      (else ;M is negative
-	       ($expt-number-negative-fixnum n m)))))
+	       ($expt-bignum-negative-fixnum n m)))))
 
     (define ($expt-ratnum-fixnum n m)
       (if ($fx= m 1)
@@ -4051,7 +4058,7 @@
 	      (($fxpositive? m)
 	       ($expt-ratnum-positive-fixnum n m))
 	      (else ;M is negative
-	       ($expt-number-negative-fixnum n m)))))
+	       ($expt-ratnum-negative-fixnum n m)))))
 
     (define ($expt-flonum-fixnum n m)
       (if ($fx= m 1)
@@ -4061,7 +4068,7 @@
 	      (($fxpositive? m)
 	       ($expt-flonum-positive-fixnum n m))
 	      (else ;M is negative
-	       ($expt-number-negative-fixnum n m)))))
+	       ($expt-flonum-negative-fixnum n m)))))
 
     (define ($expt-compnum-fixnum n m)
       (if ($fx= m 1)
@@ -4071,7 +4078,7 @@
 	      (($fxpositive? m)
 	       ($expt-compnum-positive-fixnum n m))
 	      (else ;M is negative
-	       ($expt-number-negative-fixnum n m)))))
+	       ($expt-compnum-negative-fixnum n m)))))
 
     (define ($expt-cflonum-fixnum n m)
       (if ($fx= m 1)
@@ -4081,7 +4088,7 @@
 	      (($fxpositive? m)
 	       ($expt-cflonum-positive-fixnum n m))
 	      (else ;M is negative
-	       ($expt-number-negative-fixnum n m)))))
+	       ($expt-cflonum-negative-fixnum n m)))))
 
     #| end of module |# )
 
@@ -4133,18 +4140,70 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ($expt-number-negative-fixnum)
+  (module ($expt-number-negative-fixnum
+	   $expt-fixnum-negative-fixnum		$expt-bignum-negative-fixnum
+	   $expt-ratnum-negative-fixnum		$expt-flonum-negative-fixnum
+	   $expt-compnum-negative-fixnum	$expt-cflonum-negative-fixnum)
 
     (define ($expt-number-negative-fixnum n m)
       ;;N is a number, M is a negative fixnum.
       ;;
       (let ((m.neg ($fx- m)))
 	(if (fixnum? m.neg)
-	    (let ((v ($expt-number-positive-fixnum n m.neg)))
-	      (if (eq? v 0)
-		  0
-		($inv-number v)))
+	    ($inv-number ($expt-number-positive-fixnum n m.neg))
 	  ($expt-number-bignum n m.neg))))
+
+    (define ($expt-fixnum-negative-fixnum n m)
+      ;;N is a fixnum, M is a negative fixnum.
+      ;;
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    (let ((v ($expt-fixnum-positive-fixnum n m.neg)))
+	      (if (fixnum? v)
+		  ($inv-fixnum v)
+		($inv-bignum v)))
+	  ($expt-fixnum-bignum n m.neg))))
+
+    (define ($expt-bignum-negative-fixnum n m)
+      ;;N is a bignum, M is a negative fixnum.
+      ;;
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    ($inv-bignum ($expt-bignum-positive-fixnum n m.neg))
+	  ($expt-bignum-bignum n m.neg))))
+
+    (define ($expt-ratnum-negative-fixnum n m)
+      ;;N is a ratnum, M is a negative fixnum.
+      ;;
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    ($inv-ratnum ($expt-ratnum-positive-fixnum n m.neg))
+	  ($expt-ratnum-bignum n m.neg))))
+
+    (define ($expt-flonum-negative-fixnum n m)
+      ;;N is a flonum, M is a negative fixnum.
+      ;;
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    ($inv-flonum ($expt-flonum-positive-fixnum n m.neg))
+	  ($expt-flonum-bignum n m.neg))))
+
+    (define ($expt-compnum-negative-fixnum n m)
+      ;;N is a compnum, M is a negative fixnum.
+      ;;
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    ;;The result of expt can be a compnum or a cflonum.
+	    ($inv-number ($expt-compnum-positive-fixnum n m.neg))
+	  ($expt-compnum-bignum n m.neg))))
+
+    (define ($expt-cflonum-negative-fixnum n m)
+      ;;N is a cflonum, M is a negative fixnum.
+      ;;
+      (let ((m.neg ($fx- m)))
+	(if (fixnum? m.neg)
+	    ($inv-cflonum ($expt-cflonum-positive-fixnum n m.neg))
+	  ($expt-cflonum-bignum n m.neg))))
 
     #| end of module: $expt-number-negative-fixnum |# )
 

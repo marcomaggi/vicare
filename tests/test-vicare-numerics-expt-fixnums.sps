@@ -1003,22 +1003,42 @@
 	 (check (expt			?op1 ?op2) (=> ?equal) ?expected)))
       ))
 
+  (define-syntax catch-division-by-zero
+    (syntax-rules ()
+      ((_ . ?body)
+       (check
+	   (guard (E ((assertion-violation? E)
+		      (condition-message E))
+		     (else E))
+	     (begin . ?body))
+	 => "unary division by zero"))))
+
+  (define-syntax test-division-by-zero
+    (syntax-rules ()
+      ((_ ?exponent)
+       (begin
+	 (catch-division-by-zero (expt 0 ?exponent))
+	 (catch-division-by-zero ($expt-number-fixnum 0 ?exponent))
+	 (catch-division-by-zero ($expt-number-negative-fixnum 0 ?exponent))
+	 (catch-division-by-zero ($expt-fixnum-fixnum 0 ?exponent))
+	 (catch-division-by-zero ($expt-fixnum-negative-fixnum 0 ?exponent))))))
+
 ;;; --------------------------------------------------------------------
 ;;; fixnums
 
-  (test		0	-1	0)
+  (test-division-by-zero -1)
   (test		+1	-1	1)
   (test		-1	-1	-1)
 
   ;; even exponent
-  (test		0	-10	0)
+  (test-division-by-zero -10)
   (test		+1	-10	1)
   (test		-1	-10	1)
   (test		+12	-2	+1/144)
   (test		-12	-2	+1/144)
 
   ;; odd exponent
-  (test		0	-11	0)
+  (test-division-by-zero -11)
   (test		+1	-11	+1)
   (test		-1	-11	-1)
   (test		+12	-3	+1/1728)
@@ -1040,19 +1060,16 @@
 		 (check ($expt-fixnum-fixnum	?op1 ?op2) => ?expected))
 		((_ ?op1 ?op2 ?expected ?equal)
 		 (check ($expt-fixnum-fixnum	?op1 ?op2) (=> ?equal) ?expected)))))
-    (test2	0	-1	0)
     (test2	+1	-1	1)
     (test2	-1	-1	-1)
 
     ;; even exponent
-    (test2	0	-10	0)
     (test2	+1	-10	1)
     (test2	-1	-10	1)
     (test2	+12	-2	+1/144)
     (test2	-12	-2	+1/144)
 
     ;; odd exponent
-    (test2	0	-11	0)
     (test2	+1	-11	+1)
     (test2	-1	-11	-1)
     (test2	+12	-3	+1/1728)
