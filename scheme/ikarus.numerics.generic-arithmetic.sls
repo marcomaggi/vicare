@@ -275,14 +275,22 @@
 
     $sign-fixnum		$sign-bignum
     $sign-flonum		$sign-ratnum
-
+;;;
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
-    $expt-number-zero-fixnum
-    $expt-number-positive-fixnum	$expt-number-negative-fixnum
+
+    $expt-number-zero-fixnum		$expt-flonum-zero-fixnum
+    $expt-compnum-zero-fixnum		$expt-cflonum-zero-fixnum
+
+    $expt-number-negative-fixnum
+
+    $expt-number-positive-fixnum
     $expt-fixnum-positive-fixnum	$expt-bignum-positive-fixnum
     $expt-flonum-positive-fixnum	$expt-ratnum-positive-fixnum
     $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum
+
+    $expt-fixnum-fixnum		$expt-bignum-fixnum	$expt-ratnum-fixnum
+    $expt-flonum-fixnum		$expt-compnum-fixnum	$expt-cflonum-fixnum
     $expt-fixnum-bignum		$expt-bignum-bignum	$expt-ratnum-bignum
     $expt-flonum-bignum		$expt-compnum-bignum	$expt-cflonum-bignum
     $expt-fixnum-flonum		$expt-bignum-flonum	$expt-ratnum-flonum
@@ -293,7 +301,7 @@
     $expt-flonum-cflonum	$expt-compnum-cflonum	$expt-cflonum-cflonum
     $expt-fixnum-compnum	$expt-bignum-compnum	$expt-ratnum-compnum
     $expt-flonum-compnum	$expt-compnum-compnum	$expt-cflonum-compnum
-
+;;;
     $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
     $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum
 
@@ -3880,11 +3888,18 @@
 	 $expt-number-fixnum	$expt-number-bignum	$expt-number-flonum
 	 $expt-number-ratnum	$expt-number-compnum	$expt-number-cflonum
 
-	 $expt-number-zero-fixnum
-	 $expt-number-positive-fixnum		$expt-number-negative-fixnum
+	 $expt-number-zero-fixnum		$expt-flonum-zero-fixnum
+	 $expt-compnum-zero-fixnum		$expt-cflonum-zero-fixnum
+
+	 $expt-number-negative-fixnum
+
+	 $expt-number-positive-fixnum
 	 $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
 	 $expt-flonum-positive-fixnum		$expt-ratnum-positive-fixnum
 	 $expt-compnum-positive-fixnum		$expt-cflonum-positive-fixnum
+
+	 $expt-fixnum-fixnum	$expt-bignum-fixnum	$expt-ratnum-fixnum
+	 $expt-flonum-fixnum	$expt-compnum-fixnum	$expt-cflonum-fixnum
 
 	 $expt-fixnum-bignum	$expt-bignum-bignum	$expt-ratnum-bignum
 	 $expt-flonum-bignum	$expt-compnum-bignum	$expt-cflonum-bignum
@@ -3989,18 +4004,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ($expt-number-fixnum			$expt-number-zero-fixnum
-	   $expt-number-positive-fixnum		$expt-number-negative-fixnum
+  (module ($expt-number-fixnum
+	   $expt-fixnum-fixnum	$expt-bignum-fixnum	$expt-ratnum-fixnum
+	   $expt-flonum-fixnum	$expt-compnum-fixnum	$expt-cflonum-fixnum)
 
-	   $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
-	   $expt-flonum-positive-fixnum		$expt-ratnum-positive-fixnum
-	   $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum)
-    ;;We  partition the  computation  in the  cases: positive  exponent,
-    ;;negative exponent, zero exponent.  The  case with zero exponent is
-    ;;computed by  itself; the case  of negative exponent is  reduced to
-    ;;the case of positive exponent.
-    ;;
     (define ($expt-number-fixnum n m)
+      ;;We partition  the computation  in the cases:  positive exponent,
+      ;;negative exponent,  zero exponent.  The case  with zero exponent
+      ;;is computed by itself; the  case of negative exponent is reduced
+      ;;to the case of positive exponent.
+      ;;
       (if ($fx= m 1)
 	  n
 	(cond (($fxzero? m)
@@ -4010,35 +4023,117 @@
 	      (else ;M is negative
 	       ($expt-number-negative-fixnum n m)))))
 
+    (define ($expt-fixnum-fixnum n m)
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       +1)
+	      (($fxpositive? m)
+	       ($expt-fixnum-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
+
+    (define ($expt-bignum-fixnum n m)
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       +1)
+	      (($fxpositive? m)
+	       ($expt-bignum-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
+
+    (define ($expt-ratnum-fixnum n m)
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       +1)
+	      (($fxpositive? m)
+	       ($expt-ratnum-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
+
+    (define ($expt-flonum-fixnum n m)
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       ($expt-flonum-zero-fixnum n))
+	      (($fxpositive? m)
+	       ($expt-flonum-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
+
+    (define ($expt-compnum-fixnum n m)
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       ($expt-compnum-zero-fixnum n))
+	      (($fxpositive? m)
+	       ($expt-compnum-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
+
+    (define ($expt-cflonum-fixnum n m)
+      (if ($fx= m 1)
+	  n
+	(cond (($fxzero? m)
+	       ($expt-cflonum-zero-fixnum n))
+	      (($fxpositive? m)
+	       ($expt-cflonum-positive-fixnum n m))
+	      (else ;M is negative
+	       ($expt-number-negative-fixnum n m)))))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module ($expt-number-zero-fixnum
+	   $expt-flonum-zero-fixnum
+	   $expt-compnum-zero-fixnum
+	   $expt-cflonum-zero-fixnum)
+
     (define ($expt-number-zero-fixnum n)
       ;;N is a number to be raised to the power of 0.
       ;;
       (cond-numeric-operand n
 	((fixnum?)	+1)
 	((bignum?)	+1)
-	((flonum?)	(if ($flnan? n) +nan.0 +1.0))
+	((flonum?)	($expt-flonum-zero-fixnum n))
 	((ratnum?)	+1)
-	((compnum?)
-	 (let ((n.rep ($compnum-real n))
-	       (n.imp ($compnum-imag n)))
-	   (cond ((or (and (flonum? n.rep) ($flnan? n.rep))
-		      (and (flonum? n.imp) ($flnan? n.imp)))
-		  +nan.0+nan.0i)
-		 ;;Return exact 1 if the operand is exact.
-		 ((and (or (fixnum? n.rep) (bignum? n.rep) (ratnum? n.rep))
-		       (or (fixnum? n.imp) (bignum? n.imp) (ratnum? n.imp)))
-		  +1)
-		 (else
-		  1.0+0.0i))))
-	((cflonum?)
-	 (let ((n.rep ($cflonum-real n))
-	       (n.imp ($cflonum-imag n)))
-	   (if (or ($flnan? n.rep)
-		   ($flnan? n.imp))
-	       +nan.0+nan.0i
-	     1.0+0.0i)))
+	((compnum?)	($expt-compnum-zero-fixnum n))
+	((cflonum?)	($expt-cflonum-zero-fixnum n))
 	(else
 	 (%error-not-number n))))
+
+    (define ($expt-flonum-zero-fixnum n)
+      (if ($flnan? n) +nan.0 +1.0))
+
+    (define ($expt-compnum-zero-fixnum n)
+      (let ((n.rep ($compnum-real n))
+	    (n.imp ($compnum-imag n)))
+	(cond ((or (and (flonum? n.rep) ($flnan? n.rep))
+		   (and (flonum? n.imp) ($flnan? n.imp)))
+	       +nan.0+nan.0i)
+	      ;;Return exact 1 if the operand is exact.
+	      ((and (or (fixnum? n.rep) (bignum? n.rep) (ratnum? n.rep))
+		    (or (fixnum? n.imp) (bignum? n.imp) (ratnum? n.imp)))
+	       +1)
+	      (else
+	       1.0+0.0i))))
+
+    (define ($expt-cflonum-zero-fixnum n)
+      (let ((n.rep ($cflonum-real n))
+	    (n.imp ($cflonum-imag n)))
+	(if (or ($flnan? n.rep)
+		($flnan? n.imp))
+	    +nan.0+nan.0i
+	  1.0+0.0i)))
+
+    #| end of module: $expt-number-zero-fixnum |# )
+
+;;; --------------------------------------------------------------------
+
+  (module ($expt-number-negative-fixnum)
 
     (define ($expt-number-negative-fixnum n m)
       ;;N is a number, M is a negative fixnum.
@@ -4051,10 +4146,18 @@
 		($inv-number v)))
 	  ($expt-number-bignum n m.neg))))
 
-    ;;The case with positive exponent  is computed by recursing a number
-    ;;of times equal to the bits  in the representation of the exponent;
-    ;;given the operation R =  N^M and considering the representation of
-    ;;the exponent:
+    #| end of module: $expt-number-negative-fixnum |# )
+
+;;; --------------------------------------------------------------------
+
+  (module ($expt-number-positive-fixnum
+	   $expt-fixnum-positive-fixnum		$expt-bignum-positive-fixnum
+	   $expt-flonum-positive-fixnum		$expt-ratnum-positive-fixnum
+	   $expt-compnum-positive-fixnum	$expt-cflonum-positive-fixnum)
+    ;;The case with positive fixnum  exponent is computed by recursing a
+    ;;number of  times equal to  the bits  in the representation  of the
+    ;;exponent;  given  the  operation  R  =  N^M  and  considering  the
+    ;;representation of the exponent:
     ;;
     ;;   M = b_0 * 2^0 + b_1 * 2^1 + b_2 * 2^2 + b_3 * 2^3 + ...
     ;;
@@ -4190,7 +4293,7 @@
 		(else
 		 ($expt-cflonum-positive-fixnum/sub n m))))))
 
-    #| end of module: $expt-number-fixnum |# )
+    #| end of module: $expt-number-positive-fixnum |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -6465,16 +6568,16 @@
       (foreign-call "ikrt_fx_sin" x)))
 
   (define ($sin-bignum x)
-    ($flsin (inexact x)))
+    ($flsin ($bignum->flonum x)))
 
   (define ($sin-ratnum x)
-    ($flsin (inexact x)))
+    ($flsin ($ratnum->flonum x)))
 
   (define ($sin-compnum x)
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      ($make-rectangular (* (sin x.rep) (cosh x.imp))
-			 (* (cos x.rep) (sinh x.imp)))))
+    (let ((x.rep (real->flonum ($compnum-real x)))
+	  (x.imp (real->flonum ($compnum-imag x))))
+      ($make-cflonum ($fl* ($flsin x.rep) ($flcosh x.imp))
+		     ($fl* ($flcos x.rep) ($flsinh x.imp)))))
 
   (define ($sin-cflonum x)
     (let ((x.rep ($cflonum-real x))

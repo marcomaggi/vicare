@@ -2702,7 +2702,12 @@
     ($sign-ratnum				$numerics)
 ;;;
     ($expt-number-fixnum			$numerics)
+
     ($expt-number-zero-fixnum			$numerics)
+    ($expt-flonum-zero-fixnum			$numerics)
+    ($expt-compnum-zero-fixnum			$numerics)
+    ($expt-cflonum-zero-fixnum			$numerics)
+
     ($expt-number-positive-fixnum		$numerics)
     ($expt-number-negative-fixnum		$numerics)
     ($expt-fixnum-positive-fixnum		$numerics)
@@ -2711,6 +2716,13 @@
     ($expt-ratnum-positive-fixnum		$numerics)
     ($expt-compnum-positive-fixnum		$numerics)
     ($expt-cflonum-positive-fixnum		$numerics)
+
+    ($expt-fixnum-fixnum			$numerics)
+    ($expt-bignum-fixnum			$numerics)
+    ($expt-ratnum-fixnum			$numerics)
+    ($expt-flonum-fixnum			$numerics)
+    ($expt-compnum-fixnum			$numerics)
+    ($expt-cflonum-fixnum			$numerics)
 
     ($expt-number-bignum			$numerics)
     ($expt-fixnum-bignum			$numerics)
