@@ -4067,24 +4067,35 @@ Compute the trigonometric cosine of @var{cn}; return a cflonum.
 @subsection Trigonometric tangent
 
 
-@deffn {Unsafe Operation} $tan-fixnum
+@deffn {Unsafe Operation} $tan-fixnum @var{fx}
+Compute the trigonometric tangent of @var{fx}; return a fixnum or
+flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tan-bignum
+@deffn {Unsafe Operation} $tan-bignum @var{bn}
+Compute the trigonometric tangent of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tan-ratnum
+@deffn {Unsafe Operation} $tan-ratnum @var{rt}
+Compute the trigonometric tangent of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tan-compnum
+@deffn {Unsafe Operation} $tan-flonum @var{fl}
+Compute the trigonometric tangent of @var{fl}; return a flonum.  This is
+an alias for @func{$fltan}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tan-cflonum
+@deffn {Unsafe Operation} $tan-cflonum @var{cfl}
+Compute the trigonometric tangent of @var{cfl}; return a cflonum.
+@end deffn
 
+
+@deffn {Unsafe Operation} $tan-compnum @var{cn}
+Compute the trigonometric tangent of @var{cn}; return a cflonum.
 @end deffn
 
 @c page

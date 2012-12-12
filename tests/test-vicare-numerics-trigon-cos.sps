@@ -33,7 +33,7 @@
 	case-word-size))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare numerics functions: trigonometric cose\n")
+(check-display "*** testing Vicare numerics functions: trigonometric cosine\n")
 
 
 ;;;; helpers

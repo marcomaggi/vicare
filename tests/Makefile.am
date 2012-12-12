@@ -188,6 +188,7 @@ TESTS			=	\
 	test-vicare-numerics-exponential.sps		\
 	test-vicare-numerics-trigon-sin.sps		\
 	test-vicare-numerics-trigon-cos.sps		\
+	test-vicare-numerics-trigon-tan.sps		\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
@@ -428,6 +429,7 @@ EXTRA_DIST = \
 	test-vicare-numerics-exponential.sps		\
 	test-vicare-numerics-trigon-sin.sps		\
 	test-vicare-numerics-trigon-cos.sps		\
+	test-vicare-numerics-trigon-tan.sps		\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
