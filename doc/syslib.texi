@@ -3997,23 +3997,34 @@ Compute the base @math{e} exponential of @var{cfl}; return a cflonum.
 @subsection Trigonometric sine
 
 
-@deffn {Unsafe Operation} $sin-fixnum
+@deffn {Unsafe Operation} $sin-fixnum @var{fx}
+Compute the trigonometric sine of @var{fx}; return a fixnum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sin-bignum
+@deffn {Unsafe Operation} $sin-bignum @var{bn}
+Compute the trigonometric sine of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sin-ratnum
+@deffn {Unsafe Operation} $sin-ratnum @var{rt}
+Compute the trigonometric sine of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sin-cflonum
+@deffn {Unsafe Operation} $sin-flonum @var{fl}
+Compute the trigonometric sine of @var{fl}; return a flonum.  This is an
+alias for @func{$flsin}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sin-compnum
+@deffn {Unsafe Operation} $sin-cflonum @var{cfl}
+Compute the trigonometric sine of @var{cfl}; return a cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $sin-compnum @var{cn}
+Compute the trigonometric sine of @var{cn}; return a cflonum.
 @end deffn
 
 @c page
@@ -4021,24 +4032,34 @@ Compute the base @math{e} exponential of @var{cfl}; return a cflonum.
 @subsection Trigonometric cosine
 
 
-@deffn {Unsafe Operation} $cos-fixnum
+@deffn {Unsafe Operation} $cos-fixnum @var{fx}
+Compute the trigonometric cosine of @var{fx}; return a fixnum or flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cos-bignum
+@deffn {Unsafe Operation} $cos-bignum @var{bn}
+Compute the trigonometric cosine of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cos-ratnum
+@deffn {Unsafe Operation} $cos-ratnum @var{rt}
+Compute the trigonometric cosine of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cos-cflonum
+@deffn {Unsafe Operation} $cos-flonum @var{fl}
+Compute the trigonometric cosine of @var{fl}; return a flonum.  This is
+an alias for @func{$flcos}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cos-compnum
+@deffn {Unsafe Operation} $cos-cflonum @var{cfl}
+Compute the trigonometric cosine of @var{cfl}; return a cflonum.
+@end deffn
 
+
+@deffn {Unsafe Operation} $cos-compnum @var{cn}
+Compute the trigonometric cosine of @var{cn}; return a cflonum.
 @end deffn
 
 @c page

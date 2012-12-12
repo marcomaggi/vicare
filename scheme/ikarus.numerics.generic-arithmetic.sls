@@ -318,13 +318,13 @@
     $exp-flonum			$exp-compnum		$exp-cflonum
 
     $sin-fixnum			$sin-bignum		$sin-ratnum
-    $sin-cflonum		$sin-compnum
+    $sin-flonum			$sin-cflonum		$sin-compnum
 
     $cos-fixnum			$cos-bignum		$cos-ratnum
-    $cos-cflonum		$cos-compnum
+    $cos-flonum			$cos-cflonum		$cos-compnum
 
     $tan-fixnum			$tan-bignum		$tan-ratnum
-    $tan-compnum		$tan-cflonum
+    $tan-flonum			$tan-compnum		$tan-cflonum
 
     $asin-fixnum		$asin-bignum		$asin-ratnum
     $asin-flonum		$asin-cflonum		$asin-compnum
@@ -477,8 +477,14 @@
 	$fltanh			$flatanh
 	$flatan2)
   (rename (only (ikarus flonums) #;(ikarus system flonums)
-		$flexp)
-	  ($flexp	$exp-flonum))
+		$flexp
+		$flsin
+		$flcos
+		$fltan)
+	  ($flexp	$exp-flonum)
+	  ($flsin	$sin-flonum)
+	  ($flcos	$cos-flonum)
+	  ($fltan	$tan-flonum))
   (except (ikarus system $ratnums)
 	  $ratnum->flonum)
   ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -6638,8 +6644,8 @@
 	       (not ($flinfinite? x.rep))
 	       (not ($flnan?      x.rep)))
 	  ($make-cflonum e^x.rep 0.0)
-	($make-cflonum ($fl* e^x.rep ($flcos x.imp))
-		       ($fl* e^x.rep ($flsin x.imp))))))
+	($make-cflonum ($fl* e^x.rep ($cos-flonum x.imp))
+		       ($fl* e^x.rep ($sin-flonum x.imp))))))
 
   #| end of module: exp |# )
 
@@ -6651,7 +6657,7 @@
 
   (define (sin x)
     (cond-numeric-operand x
-      ((flonum?)	($flsin x))
+      ((flonum?)	($sin-flonum x))
       ((cflonum?)	($sin-cflonum x))
       ((fixnum?)	($sin-fixnum  x))
       ((bignum?)	($sin-bignum  x))
@@ -6666,22 +6672,116 @@
       (foreign-call "ikrt_fx_sin" x)))
 
   (define ($sin-bignum x)
-    ($flsin ($bignum->flonum x)))
+    ($sin-flonum ($bignum->flonum x)))
 
   (define ($sin-ratnum x)
-    ($flsin ($ratnum->flonum x)))
+    ($sin-flonum ($ratnum->flonum x)))
+
+;;; --------------------------------------------------------------------
+;;; Complex arguments
+
+  ;;For the real part of a complex number Z we notice that:
+  ;;
+  ;;   Z + conj(Z) = (A+iB) + (A-iB) = (A+A) + i (B-B) = 2A
+  ;;
+  ;;and:
+  ;;
+  ;;   conj(sin(X+iY)) = sin(conj(X+iY)) = sin(X-iY)
+  ;;
+  ;;so:
+  ;;
+  ;;   2 Rep{sin(X+iY)} = sin(X+iY) + sin(X-iY)
+  ;;
+  ;;by definition:
+  ;;
+  ;;               exp[i(X+iY)] - exp[-i(X+iY)]   exp(iX)exp(-Y) - exp(-iX)exp(+Y)
+  ;;   sin(X+iY) = ---------------------------- = --------------------------------
+  ;;                           2i                               2i
+  ;;
+  ;;               exp[i(X-iY)] - exp[-i(X-iY)]   exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;   sin(X-iY) = ---------------------------- = --------------------------------
+  ;;                           2i                               2i
+  ;;
+  ;;so:
+  ;;
+  ;;   4i Rep{sin(X+iY)} =
+  ;;     = exp(iX)exp(-Y) - exp(-iX)exp(+Y) + exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;
+  ;;We notice also that:
+  ;;
+  ;;             exp(iX) - exp(-iX)                exp(Y) + exp(-Y)
+  ;;   sin(X)  = ------------------      cosh(Y) = ----------------
+  ;;                    2i                                2
+  ;;
+  ;;so:
+  ;;
+  ;;   4i sin(X) cosh(Y) = [exp(iX) - exp(-iX)] [exp(+Y) + exp(-Y)]
+  ;;     = exp(iX)exp(+Y) - exp(-iX)exp(+Y) + exp(iX)exp(-Y) - exp(-iX)exp(-Y)
+  ;;     = exp(iX)exp(-Y) - exp(-iX)exp(+Y) + exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;
+  ;;and finally:
+  ;;
+  ;;   4i Rep{sin(X+iY)} = 4i sin(X) cosh(Y)  =>  Rep{sin(X+iY)} = sin(X) cosh(Y)
+  ;;
+
+  ;;For the imaginary part of a complex number Z we notice that:
+  ;;
+  ;;   Z - conj(Z) = (A+iB) - (A-iB) = (A-A) + iB - (-iB) = iB + iB = 2iB
+  ;;
+  ;;and:
+  ;;
+  ;;   conj(sin(X+iY)) = sin(conj(X+iY)) = sin(X-iY)
+  ;;
+  ;;so:
+  ;;
+  ;;   2i Imp{sin(X+iY)} = sin(X+iY) - sin(X-iY)
+  ;;
+  ;;by definition:
+  ;;
+  ;;               exp[i(X+iY)] - exp[-i(X+iY)]   exp(iX)exp(-Y) - exp(-iX)exp(+Y)
+  ;;   sin(X+iY) = ---------------------------- = --------------------------------
+  ;;                           2i                               2i
+  ;;
+  ;;               exp[i(X-iY)] - exp[-i(X-iY)]   exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;   sin(X-iY) = ---------------------------- = --------------------------------
+  ;;                           2i                               2i
+  ;;
+  ;;so, given that 2i * 2i = -4:
+  ;;
+  ;;   -4 Imp{sin(X+iY)} =
+  ;;     = exp(iX)exp(-Y) - exp(-iX)exp(+Y) - exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;
+  ;;We notice also that:
+  ;;
+  ;;            exp(iX) + exp(-iX)                exp(Y) - exp(-Y)
+  ;;   cos(X) = ------------------      sinh(Y) = ----------------
+  ;;                    2                                2
+  ;;
+  ;;so:
+  ;;
+  ;;   4 cos(X) sinh(Y) = [exp(iX) + exp(-iX)] [exp(Y) - exp(-Y)]
+  ;;     =   exp(iX)exp(+Y) + exp(-iX)exp(+Y) - exp(iX)exp(-Y) - exp(-iX)exp(-Y)
+  ;;     = - exp(iX)exp(-Y) + exp(-iX)exp(+Y) + exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;
+  ;;   -4 cos(X) sinh(Y) =
+  ;;     =   exp(iX)exp(-Y) - exp(-iX)exp(+Y) - exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;
+  ;;and finally:
+  ;;
+  ;;   -4 Imp{sin(X+iY)} = -4 cos(X) sinh(Y)  =>  Imp{sin(X+iY)} = cos(X) sinh(Y)
+  ;;
 
   (define ($sin-compnum x)
-    (let ((x.rep (real->flonum ($compnum-real x)))
-	  (x.imp (real->flonum ($compnum-imag x))))
-      ($make-cflonum ($fl* ($flsin x.rep) ($flcosh x.imp))
-		     ($fl* ($flcos x.rep) ($flsinh x.imp)))))
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      ($make-rectangular (* (sin x.rep) (cosh x.imp))
+			 (* (cos x.rep) (sinh x.imp)))))
 
-  (define ($sin-cflonum x)
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl* ($flsin x.rep) ($flcosh x.imp))
-		     ($fl* ($flcos x.rep) ($flsinh x.imp)))))
+  (define ($sin-cflonum X)
+    (let ((X.rep ($cflonum-real X))
+	  (X.imp ($cflonum-imag X)))
+      ($make-cflonum ($fl* ($sin-flonum X.rep) ($flcosh X.imp))
+		     ($fl* ($cos-flonum X.rep) ($flsinh X.imp)))))
 
   #| end of module: sin |# )
 
@@ -6693,7 +6793,7 @@
 
   (define (cos x)
     (cond-numeric-operand x
-      ((flonum?)	($flcos x))
+      ((flonum?)	($cos-flonum x))
       ((cflonum?)	($cos-cflonum x))
       ((fixnum?)	($cos-fixnum  x))
       ((bignum?)	($cos-bignum  x))
@@ -6708,22 +6808,115 @@
       (foreign-call "ikrt_fx_cos" x)))
 
   (define ($cos-bignum x)
-    ($flcos (inexact x)))
+    ($cos-flonum (inexact x)))
 
   (define ($cos-ratnum x)
-    ($flcos (inexact x)))
+    ($cos-flonum (inexact x)))
 
+;;; --------------------------------------------------------------------
+;;; Complex arguments
+
+  ;;For the real part of a complex number Z we notice that:
+  ;;
+  ;;   Z + conj(Z) = (A+iB) + (A-iB) = (A+A) + i (B-B) = 2A
+  ;;
+  ;;and:
+  ;;
+  ;;   conj(cos(X+iY)) = cos(conj(X+iY)) = cos(X-iY)
+  ;;
+  ;;so:
+  ;;
+  ;;   2 Rep{cos(X+iY)} = cos(X+iY) + cos(X-iY)
+  ;;
+  ;;by definition:
+  ;;
+  ;;               exp[i(X+iY)] + exp[-i(X+iY)]   exp(iX)exp(-Y) + exp(-iX)exp(+Y)
+  ;;   cos(X+iY) = ---------------------------- = --------------------------------
+  ;;                            2                                2
+  ;;
+  ;;               exp[i(X-iY)] + exp[-i(X-iY)]   exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;   cos(X-iY) = ---------------------------- = --------------------------------
+  ;;                            2                                2
+  ;;
+  ;;so:
+  ;;
+  ;;   2 Rep{cos(X+iY)} =
+  ;;     = exp(iX)exp(-Y) + exp(-iX)exp(+Y) + exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;
+  ;;We notice also that:
+  ;;
+  ;;             exp(iX) + exp(-iX)                exp(Y) + exp(-Y)
+  ;;   cos(X)  = ------------------      cosh(Y) = ----------------
+  ;;                     2                                2
+  ;;
+  ;;so:
+  ;;
+  ;;   4 cos(X) cosh(Y) = [exp(iX) + exp(-iX)] [exp(Y) + exp(-Y)]
+  ;;     = exp(iX)exp(+Y) + exp(-iX)exp(+Y) + exp(iX)exp(-Y) + exp(-iX)exp(-Y)
+  ;;     = exp(iX)exp(-Y) + exp(-iX)exp(+Y) + exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;
+  ;;and finally:
+  ;;
+  ;;   4 Rep{cos(X+iY)} = 4 cos(X) cosh(Y)  =>  Rep{cos(X+iY)} = cos(X) cosh(Y)
+  ;;
+
+  ;;For the imaginary part of a complex number Z we notice that:
+  ;;
+  ;;   Z - conj(Z) = (A+iB) - (A-iB) = (A-A) + iB - (-iB) = iB + iB = 2iB
+  ;;
+  ;;and:
+  ;;
+  ;;   conj(cos(X+iY)) = cos(conj(X+iY)) = cos(X-iY)
+  ;;
+  ;;so:
+  ;;
+  ;;   2i Imp{cos(X+iY)} = cos(X+iY) - cos(X-iY)
+  ;;
+  ;;by definition:
+  ;;
+  ;;               exp[i(X+iY)] + exp[-i(X+iY)]   exp(iX)exp(-Y) + exp(-iX)exp(+Y)
+  ;;   cos(X+iY) = ---------------------------- = --------------------------------
+  ;;                            2                                2
+  ;;
+  ;;               exp[i(X-iY)] + exp[-i(X-iY)]   exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;   cos(X-iY) = ---------------------------- = --------------------------------
+  ;;                            2                                2
+  ;;
+  ;;so:
+  ;;
+  ;;   4i Imp{cos(X+iY)} =
+  ;;     = exp(iX)exp(-Y) + exp(-iX)exp(+Y) - exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;
+  ;;We notice also that:
+  ;;
+  ;;            exp(iX) - exp(-iX)                exp(Y) - exp(-Y)
+  ;;   sin(X) = ------------------      sinh(Y) = ----------------
+  ;;                   2i                                2
+  ;;
+  ;;so:
+  ;;
+  ;;   4i sin(X) sinh(Y) = [exp(iX) - exp(-iX)] [exp(+Y) - exp(-Y)]
+  ;;     =   exp(iX)exp(+Y) - exp(-iX)exp(+Y) - exp(iX)exp(-Y) + exp(-iX)exp(-Y)
+  ;;     = - exp(iX)exp(-Y) - exp(-iX)exp(+Y) + exp(iX)exp(+Y) + exp(-iX)exp(-Y)
+  ;;
+  ;;   -4i sin(X) sinh(Y) =
+  ;;     =   exp(iX)exp(-Y) + exp(-iX)exp(+Y) - exp(iX)exp(+Y) - exp(-iX)exp(-Y)
+  ;;
+  ;;and finally:
+  ;;
+  ;;   4i Imp{cos(X+iY)} = -4i sin(X) sinh(Y)  =>  Imp{cos(X+iY)} = - sin(X) sinh(Y)
+  ;;
   (define ($cos-compnum x)
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
-      ($make-rectangular (* (cos x.rep) (cosh x.imp))
-			 (* (sin x.rep) (sinh x.imp)))))
+      ($make-rectangular    (* (cos x.rep) (cosh x.imp))
+			 (- (* (sin x.rep) (sinh x.imp))))))
 
   (define ($cos-cflonum x)
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl* ($flcos x.rep) ($flcosh x.imp))
-		     ($fl* ($flsin x.rep) ($flsinh x.imp)))))
+      ($make-cflonum       ($fl* ($cos-flonum x.rep) ($flcosh x.imp))
+		     ($fl- ($fl* ($sin-flonum x.rep) ($flsinh x.imp))))))
 
   #| end of module: cos |# )
 
@@ -6796,9 +6989,9 @@
 	  (x.imp ($cflonum-imag x)))
       (let ((R2	($fl* 2.0 x.rep))
 	    (I2	($fl* 2.0 x.imp)))
-	(let ((COSR2	($flcos R2))
+	(let ((COSR2	($cos-flonum R2))
 	      (COSHI2	($flcosh I2)))
-	  ($make-cflonum ($fl/ ($flsin  R2) ($fl+ COSR2 COSHI2))
+	  ($make-cflonum ($fl/ ($sin-flonum  R2) ($fl+ COSR2 COSHI2))
 			 ($fl/ ($fltanh I2) ($fl+ 1.0 ($fl/ COSR2 COSHI2))))))))
 
   #| end of module: tan |# )
@@ -7069,8 +7262,8 @@
   (define ($sinh-cflonum x)
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl* ($flsinh x.rep) ($flcos x.imp))
-		     ($fl* ($flcosh x.rep) ($flsin x.imp)))))
+      ($make-cflonum ($fl* ($flsinh x.rep) ($cos-flonum x.imp))
+		     ($fl* ($flcosh x.rep) ($sin-flonum x.imp)))))
 
   #| end of module |# )
 
@@ -7109,8 +7302,8 @@
   (define ($cosh-cflonum x)
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl* ($flcosh x.rep) ($flcos x.imp))
-		     ($fl* ($flsinh x.rep) ($flsin x.imp)))))
+      ($make-cflonum ($fl* ($flcosh x.rep) ($cos-flonum x.imp))
+		     ($fl* ($flsinh x.rep) ($sin-flonum x.imp)))))
 
   #| end of module: cosh |# )
 
@@ -7181,10 +7374,10 @@
 	  (x.imp ($cflonum-imag x)))
       (let ((R2 ($fl* 2.0 x.rep))
 	    (I2 ($fl* 2.0 x.imp)))
-	(let ((cos2i  ($flcos  I2))
+	(let ((cos2i  ($cos-flonum I2))
 	      (cosh2r ($flcosh R2)))
 	  ($make-cflonum ($fl/ ($fltanh R2) ($fl+ 1.0 ($fl/ cos2i cosh2r)))
-			 ($fl/ ($flsin I2)  ($fl+ cosh2r cos2i)))))))
+			 ($fl/ ($sin-flonum I2)  ($fl+ cosh2r cos2i)))))))
 
   #| end of module: tanh |# )
 

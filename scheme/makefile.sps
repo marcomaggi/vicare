@@ -2800,18 +2800,21 @@
     ($sin-fixnum				$numerics)
     ($sin-bignum				$numerics)
     ($sin-ratnum				$numerics)
+    ($sin-flonum				$numerics)
     ($sin-cflonum				$numerics)
     ($sin-compnum				$numerics)
 
     ($cos-fixnum				$numerics)
     ($cos-bignum				$numerics)
     ($cos-ratnum				$numerics)
+    ($cos-flonum				$numerics)
     ($cos-cflonum				$numerics)
     ($cos-compnum				$numerics)
 
     ($tan-fixnum				$numerics)
     ($tan-bignum				$numerics)
     ($tan-ratnum				$numerics)
+    ($tan-flonum				$numerics)
     ($tan-compnum				$numerics)
     ($tan-cflonum				$numerics)
 
