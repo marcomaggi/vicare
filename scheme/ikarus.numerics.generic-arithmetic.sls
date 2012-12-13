@@ -7306,13 +7306,13 @@
        (%error-not-number x))))
 
   (define ($sinh-fixnum x)
-    ($flsinh (inexact x)))
+    ($flsinh ($fixnum->flonum x)))
 
   (define ($sinh-bignum x)
-    ($flsinh (inexact x)))
+    ($flsinh ($bignum->flonum x)))
 
   (define ($sinh-ratnum x)
-    ($flsinh (inexact x)))
+    ($flsinh ($ratnum->flonum x)))
 
   (define ($sinh-compnum x)
     (let ((x.rep ($compnum-real x))
@@ -7346,13 +7346,13 @@
        (%error-not-number x))))
 
   (define ($cosh-fixnum x)
-    ($flcosh (inexact x)))
+    ($flcosh ($fixnum->flonum x)))
 
   (define ($cosh-bignum x)
-    ($flcosh (inexact x)))
+    ($flcosh ($bignum->flonum x)))
 
   (define ($cosh-ratnum x)
-    ($flcosh (inexact x)))
+    ($flcosh ($ratnum->flonum x)))
 
   (define ($cosh-compnum x)
     (let ((x.rep ($compnum-real x))
@@ -7386,13 +7386,13 @@
        (%error-not-number x))))
 
   (define ($tanh-fixnum x)
-    ($fltanh (inexact x)))
+    ($fltanh ($fixnum->flonum x)))
 
   (define ($tanh-bignum x)
-    ($fltanh (inexact x)))
+    ($fltanh ($bignum->flonum x)))
 
   (define ($tanh-ratnum x)
-    ($fltanh (inexact x)))
+    ($fltanh ($ratnum->flonum x)))
 
   (define ($tanh-compnum x)
     ;;
@@ -7460,13 +7460,13 @@
        (%error-not-number x))))
 
   (define ($asinh-fixnum x)
-    ($flasinh (inexact x)))
+    ($flasinh ($fixnum->flonum x)))
 
   (define ($asinh-bignum x)
-    ($flasinh (inexact x)))
+    ($flasinh ($bignum->flonum x)))
 
   (define ($asinh-ratnum x)
-    ($flasinh (inexact x)))
+    ($flasinh ($ratnum->flonum x)))
 
   (define ($asinh-compnum x)
     ;; asinh (x) = z.rep + i * z.imp
@@ -7554,13 +7554,13 @@
        (%error-not-number x))))
 
   (define ($acosh-fixnum x)
-    ($acosh-flonum (inexact x)))
+    ($acosh-flonum ($fixnum->flonum x)))
 
   (define ($acosh-bignum x)
-    ($acosh-flonum (inexact x)))
+    ($acosh-flonum ($bignum->flonum x)))
 
   (define ($acosh-ratnum x)
-    ($acosh-flonum (inexact x)))
+    ($acosh-flonum ($ratnum->flonum x)))
 
   (define ($acosh-flonum x)
     (cond (($fl>= x +1.0) ; +1 <= X < +inf
@@ -7656,13 +7656,13 @@
        (%error-not-number x))))
 
   (define ($atanh-fixnum x)
-    ($atanh-flonum (inexact x)))
+    ($atanh-flonum ($fixnum->flonum x)))
 
   (define ($atanh-bignum x)
-    ($atanh-flonum (inexact x)))
+    ($atanh-flonum ($bignum->flonum x)))
 
   (define ($atanh-ratnum x)
-    ($atanh-flonum (inexact x)))
+    ($atanh-flonum ($ratnum->flonum x)))
 
   (define ($atanh-flonum x)
     ;;This is different from $flatanh: it accepts any flonum as argument
@@ -7675,7 +7675,7 @@
 						  ($fl- 1.0 x))))))
 
   (define ($atanh-compnum x)
-    ($atanh-cflonum (inexact x)))
+    ($atanh-cflonum ($compnum->cflonum x)))
 
   (define ($atanh-cflonum x)
     ($mul-flonum-cflonum 0.5 ($log-cflonum
