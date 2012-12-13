@@ -4103,28 +4103,37 @@ Compute the trigonometric tangent of @var{cn}; return a cflonum.
 @subsection Trigonometric arc sine
 
 
-@deffn {Unsafe Operation} $asin-fixnum
+@deffn {Unsafe Operation} $asin-fixnum @var{fx}
+Compute the trigonometric arc sine of @var{fx}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asin-bignum
+@deffn {Unsafe Operation} $asin-bignum @var{bn}
+Compute the trigonometric arc sine of @var{bn}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asin-ratnum
+@deffn {Unsafe Operation} $asin-ratnum @var{rt}
+Compute the trigonometric arc sine of @var{rt}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asin-flonum
+@deffn {Unsafe Operation} $asin-flonum @var{fl}
+Compute the trigonometric arc sine of @var{fl}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asin-cflonum
+@deffn {Unsafe Operation} $asin-cflonum @var{cfl}
+Compute the trigonometric arc sine of @var{fl}; return a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asin-compnum
-
+@deffn {Unsafe Operation} $asin-compnum @var{cn}
+Compute the trigonometric arc sine of @var{fl}; return a number object.
 @end deffn
 
 @c page
@@ -4132,28 +4141,38 @@ Compute the trigonometric tangent of @var{cn}; return a cflonum.
 @subsection Trigonometric arc cosine
 
 
-@deffn {Unsafe Operation} $acos-fixnum
+@deffn {Unsafe Operation} $acos-fixnum @var{fx}
+Compute the trigonometric arc cosine of @var{fx}; return a flonum or
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acos-bignum
+@deffn {Unsafe Operation} $acos-bignum @var{bn}
+Compute the trigonometric arc cosine of @var{bn}; return a flonum or
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acos-ratnum
+@deffn {Unsafe Operation} $acos-ratnum @var{rt}
+Compute the trigonometric arc cosine of @var{rt}; return a flonum or
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acos-flonum
+@deffn {Unsafe Operation} $acos-flonum @var{fl}
+Compute the trigonometric arc cosine of @var{fl}; return a flonum or
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acos-cflonum
+@deffn {Unsafe Operation} $acos-cflonum @var{cfl}
+Compute the trigonometric arc cosine of @var{fl}; return a cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acos-compnum
-
+@deffn {Unsafe Operation} $acos-compnum @var{cn}
+Compute the trigonometric arc cosine of @var{fl}; return a number
+object.
 @end deffn
 
 @c page
@@ -4161,29 +4180,41 @@ Compute the trigonometric tangent of @var{cn}; return a cflonum.
 @subsection Trigonometric arc tangent
 
 
-@deffn {Unsafe Operation} $atan2-real-real
-
+@deffn {Unsafe Operation} $atan2-real-real @vari{x} @varii{x}
+Compute the trigonometric arc tangent of the angle of the complex number
+having @varii{x} as real part and @vari{x} as imaginary part; return a
+flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atan-fixnum
+@deffn {Unsafe Operation} $atan-fixnum @var{fx}
+Compute the trigonometric arc tangent of @var{fx}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atan-ratnum
+@deffn {Unsafe Operation} $atan-bignum @var{bn}
+Compute the trigonometric arc tangent of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atan-bignum
+@deffn {Unsafe Operation} $atan-ratnum @var{rt}
+Compute the trigonometric arc tangent of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atan-cflonum
+@deffn {Unsafe Operation} $atan-flonum @var{fl}
+Compute the trigonometric arc tangent of @var{fl}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atan-compnum
+@deffn {Unsafe Operation} $atan-cflonum @var{cfl}
+Compute the trigonometric arc tangent of @var{fl}; return a cflonum.
+@end deffn
 
+
+@deffn {Unsafe Operation} $atan-compnum @var{cn}
+Compute the trigonometric arc tangent of @var{fl}; return a number
+object.
 @end deffn
 
 @c page

@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Implementation of BITWISE-REVERSE-BIT-FIELD from:
 ;;;
@@ -334,7 +334,7 @@
 
     $atan2-real-real
     $atan-fixnum		$atan-ratnum		$atan-bignum
-    $atan-cflonum		$atan-compnum
+    $atan-flonum		$atan-cflonum		$atan-compnum
 
     $sinh-fixnum		$sinh-bignum		$sinh-ratnum
     $sinh-compnum		$sinh-cflonum
@@ -480,11 +480,13 @@
 		$flexp
 		$flsin
 		$flcos
-		$fltan)
+		$fltan
+		$flatan)
 	  ($flexp	$exp-flonum)
 	  ($flsin	$sin-flonum)
 	  ($flcos	$cos-flonum)
-	  ($fltan	$tan-flonum))
+	  ($fltan	$tan-flonum)
+	  ($flatan	$atan-flonum))
   (except (ikarus system $ratnums)
 	  $ratnum->flonum)
   ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -545,10 +547,13 @@
     ((_ ?who . ?irritants)
      (assertion-violation ?who "undefined operation" . ?irritants))))
 
-(module (PI PI/2)
+
+(module (π π/2)
   (import (ikarus))
-  (define PI (acos -1))
-  (define PI/2 (/ PI 2)))
+  #;(define π (acos -1))
+  ;;From Wikipedia.
+  (define π 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679)
+  (define π/2 (/ π 2.0)))
 
 
 (module (real->flonum)
@@ -6489,7 +6494,7 @@
 	  (else
 	   ;;We must assume that the opposite of X may be a bignum.
 	   ($make-rectangular (log ($neg-fixnum x))
-			      PI))))
+			      π))))
 
   (define ($log-bignum x)
     (if ($bignum-positive? x)
@@ -6500,7 +6505,7 @@
 		;;Could the (dropped) residual ever affect the answer?
 		(* 2 (log s)))
 	    v))
-      ($make-rectangular (log ($neg-bignum x)) PI)))
+      ($make-rectangular (log ($neg-bignum x)) π)))
 
   (define ($log-ratnum x)
     ($sub-number-number (log ($ratnum-n x))
@@ -6513,7 +6518,7 @@
 	       ($flzero?/positive x))
 	   (foreign-call "ikrt_fl_log" x))
 	  (else
-	   ($make-cflonum ($fllog ($fl- x)) PI))))
+	   ($make-cflonum ($fllog ($fl- x)) π))))
 
   (define ($log-compnum x)
     ;;
@@ -7056,13 +7061,13 @@
        (%error-not-number x))))
 
   (define ($asin-fixnum x)
-    ($asin-flonum (inexact x)))
+    ($asin-flonum ($fixnum->flonum x)))
 
   (define ($asin-bignum x)
-    ($asin-flonum (inexact x)))
+    ($asin-flonum ($bignum->flonum x)))
 
   (define ($asin-ratnum x)
-    ($asin-flonum (inexact x)))
+    ($asin-flonum ($ratnum->flonum x)))
 
   (define ($asin-flonum x)
     ;;This is  different from $FLASIN:  $FLASIN returns a  flonum, while
@@ -7071,16 +7076,16 @@
     ;;
     (cond (($fl> x 1.0)
 	   ;;          pi
-	   ;; asin x = -- + i * acosh x
+	   ;; asin x = -- - i * acosh x
 	   ;;          2
-	   ($make-cflonum PI/2 ($acosh-flonum x)))
+	   ($make-cflonum π/2 ($fl- ($acosh-flonum x))))
 	  (($fl< x -1.0)
 	   ;;            pi
-	   ;; asin x = - -- - i * acosh (- x)
+	   ;; asin x = - -- + i * acosh (- x)
 	   ;;            2
-	   ($make-cflonum ($fl- PI/2) ($fl- ($acosh-flonum ($fl- x)))))
+	   ($make-cflonum ($fl- π/2) ($acosh-flonum ($fl- x))))
 	  (else
-	   ($asin-flonum x))))
+	   ($flasin x))))
 
   (define ($asin-compnum x)
     ;; asin(x) = z.rep + i * z.imp
@@ -7160,35 +7165,50 @@
        (%error-not-number x))))
 
   (define ($acos-fixnum x)
-    ($acos-flonum (inexact x)))
+    ($acos-flonum ($fixnum->flonum x)))
 
   (define ($acos-bignum x)
-    ($acos-flonum (inexact x)))
+    ($acos-flonum ($bignum->flonum x)))
 
   (define ($acos-ratnum x)
-    ($acos-flonum (inexact x)))
+    ($acos-flonum ($ratnum->flonum x)))
 
   (define ($acos-flonum x)
     ;;This is  different from $FLACOS:  $FLACOS returns a  flonum, while
-    ;;$ACOS-FLONUM accepts any  flonum as argument and  returns a flonum
-    ;;or cflonum.
+    ;;$ACOS-FLONUM accepts any flonum as  argument and returns a flonum,
+    ;;compnum or cflonum.
     ;;
     (cond (($fl> x 1.0)
 	   ($make-compnum 0 ($acosh-flonum x)))
 	  (($fl< x -1.0)
-	   ($make-cflonum PI ($fl- ($acosh-flonum ($fl- x)))))
+	   ($make-cflonum π ($fl- ($acosh-flonum ($fl- x)))))
 	  (else
 	   ($flacos x))))
 
   (define ($acos-compnum x)
-    ($sub-flonum-number  PI/2 ($asin-compnum x)))
+    (let* ((y     ($asin-compnum x))
+	   (y.rep (real-part y))
+	   (y.imp (imag-part y)))
+      ($make-rectangular ($sub-flonum-number π/2 y.rep)
+			 ($neg-number y.imp))))
 
   (define ($acos-cflonum x)
-    (let ((x.imp ($cflonum-imag x)))
-      (if ($flzero? x.imp)
-	  (let ((x.rep ($cflonum-real x)))
-	    ($make-cflonum ($acos-flonum x.rep) x.imp))
-	($sub-flonum-cflonum PI/2 ($asin-cflonum x)))))
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (if (and ($flzero?     x.imp)
+	       ($flinfinite? x.rep))
+	  ;;We want to avoid generating a NaN in this case.
+	  (if ($flpositive? x.rep)
+	      (if ($flzero?/positive x.imp)
+		  +0.0-inf.0i
+		+0.0+inf.0i)
+	    (if ($flzero?/positive x.imp)
+		($make-cflonum π -inf.0)
+	      ($make-cflonum π +inf.0)))
+	(let* ((y     ($asin-cflonum x))
+	       (y.rep ($cflonum-real y))
+	       (y.imp ($cflonum-imag y)))
+	  ($make-cflonum ($fl- π/2 y.rep) ($fl- y.imp))))))
 
   #| end of module: acos |# )
 
@@ -7203,7 +7223,7 @@
     (case-lambda
      ((x)
       (cond-numeric-operand x
-	((flonum?)	($flatan       x))
+	((flonum?)	($atan-flonum  x))
 	((cflonum?)	($atan-cflonum x))
 	((fixnum?)	($atan-fixnum  x))
 	((bignum?)	($atan-bignum  x))
@@ -7226,44 +7246,45 @@
     (foreign-call "ikrt_fx_atan" x))
 
   (define ($atan-bignum x)
-    ($flatan (inexact x)))
+    ($atan-flonum ($bignum->flonum x)))
 
   (define ($atan-ratnum x)
-    ($flatan (inexact x)))
+    ($atan-flonum ($ratnum->flonum x)))
+
+;;; --------------------------------------------------------------------
+;;; complex argument
+
+  ;;Formula from Wikipedia section "Logarithmic forms":
+  ;;
+  ;;	<http://en.wikipedia.org/wiki/Arc_tangent>
+  ;;
+  ;;and also from the R6RS document:
+  ;;
+  ;;  atan x = 1/2 * i * (log (1 - i * x) - log (1 + i * x))
+  ;;
+  ;;  i * x = i * (x.rep + i * x.imp) = i * x.rep - x.imp
+  ;;
+  ;;  A = 1 - i * x = 1 - (- x.imp + i * x.rep) = (1 + x.imp) - i * x.rep
+  ;;  B = 1 + i * x = 1 + (- x.imp + i * x.rep) = (1 - x.imp) + i * x.rep
+  ;;  C = log A - log B
+  ;;  D = 1/2 * i C = 0.5i * (C.rep + i * C.imp)
+  ;;                = 0.5 * C.rep * i - 0.5 * C.imp
+  ;;                = (-0.5 * C.imp) + i * (0.5 * C.rep)
+  ;;
 
   (define ($atan-compnum x)
-    ($atan-cflonum (inexact x)))
+    ($atan-cflonum ($compnum->cflonum x)))
 
   (define ($atan-cflonum x)
-    ;;Formula from Wikipedia section "Logarithmic forms":
-    ;;
-    ;;	<http://en.wikipedia.org/wiki/Arc_tangent>
-    ;;
-    ;;  atan x = 1/2 * i * (log (1 - i * x) - log (1 + i * x))
-    ;;
-    ;;  i * x = i * (x.rep + i * x.imp) = i * x.rep - x.imp
-    ;;
-    ;;  A = 1 - i * x = 1 - (- x.imp + i * x.rep) = (1 + x.imp) - i * x.rep
-    ;;  B = 1 + i * x = 1 + (- x.imp + i * x.rep) = (1 - x.imp) + i * x.rep
-    ;;  C = log A - log B
-    ;;  D = 1/2 * i C = 0.5i * (C.rep + i * C.imp)
-    ;;                = 0.5 * C.rep * i - 0.5 * C.imp
-    ;;                = (-0.5 * C.imp) + i * (0.5 * C.rep)
-    ;;
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      (if (and ($flzero? x.imp)
-	       (not ($flinfinite? x.rep))
-	       (not ($flnan?      x.rep)))
-	  ;;FLATAN always returns a flonum.
-	  ($make-cflonum ($flatan x.rep) 0.0)
-	(let* ((A ($make-cflonum ($fl+ 1.0 x.imp) ($fl- x.rep)))
-	       (B ($make-cflonum ($fl- 1.0 x.imp) x.rep))
-	       (C ($sub-cflonum-cflonum ($log-cflonum A) ($log-cflonum B))))
-	  (let ((C.rep ($cflonum-real C))
-		(C.imp ($cflonum-imag C)))
-	    ($make-cflonum ($fl* -0.5 C.imp)
-			   ($fl* +0.5 C.rep)))))))
+      (let* ((A ($make-cflonum ($fl+ 1.0 x.imp) ($fl- x.rep)))
+	     (B ($make-cflonum ($fl- 1.0 x.imp) x.rep))
+	     (C ($sub-cflonum-cflonum ($log-cflonum A) ($log-cflonum B))))
+	(let ((C.rep ($cflonum-real C))
+	      (C.imp ($cflonum-imag C)))
+	  ($make-cflonum ($fl* -0.5 C.imp)
+			 ($fl* +0.5 C.rep))))))
 
   #| end of module |# )
 
@@ -7546,8 +7567,8 @@
 	   ($flacosh x))
 	  (($fl>= x -1.0) ; -1 <= X < +1
 	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x x))) x)))
-	  (($fl< x -1.0)  ; -inf < X < -1
-	   ($make-cflonum ($flacosh ($fl- x)) PI))
+	  (($fl< x -1.0) ; -inf < X < -1
+	   ($make-cflonum ($flacosh ($fl- x)) π))
 	  (else +nan.0)))
 
   (define ($acosh-compnum x)
@@ -7564,7 +7585,7 @@
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
       (if (zero? x.rep)
-	  ($add-number-compnum (asinh x.imp) ($make-compnum 0 PI/2))
+	  ($add-number-compnum (asinh x.imp) ($make-compnum 0 π/2))
 	(let* (	;;D is a non-negative real number.
 	       (D (square x.imp))
 	       ;;A is a non-negative real number.
@@ -7581,7 +7602,7 @@
 	    (if (negative? x) -1.0 1.0))
 	  (+ ($mul-flonum-number ($fl* 0.5 (%sgn x.rep)) (acosh (+ Q A)))
 	     ($mul-cflonum-number ($make-compnum 0 ($fl* 0.5 (%sgn x.imp)))
-				  (- PI ($mul-flonum-number (%sgn x.rep) (acos (- Q A))))))))))
+				  (- π ($mul-flonum-number (%sgn x.rep) (acos (- Q A))))))))))
 
   (define ($acosh-cflonum x)
     ;;
@@ -7597,7 +7618,7 @@
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
       (if ($flzero? x.rep)
-	  ($add-number-cflonum ($flasinh x.imp) ($make-cflonum 0.0 PI/2))
+	  ($add-number-cflonum ($flasinh x.imp) ($make-cflonum 0.0 π/2))
 	(let* ( ;;D is a non-negative flonum.
 	       (D ($flsquare x.imp))
 	       ;;A is a non-negative flonum.
@@ -7612,8 +7633,8 @@
 	   ($mul-flonum-number ($fl* 0.5 ($sign-flonum x.rep))
 			       ($acosh-flonum ($fl+ Q A)))
 	   ($mul-cflonum-number ($make-cflonum 0.0 ($fl* 0.5 ($sign-flonum x.imp)))
-				(- PI ($mul-flonum-number ($sign-flonum x.rep)
-							  ($acos-flonum ($fl- Q A))))))))))
+				(- π ($mul-flonum-number ($sign-flonum x.rep)
+							 ($acos-flonum ($fl- Q A))))))))))
 
   #| end of module |# )
 
@@ -8370,6 +8391,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; coding: utf-8-unix
 ;; eval: (put 'cond-numeric-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-exact-integer-operand 'scheme-indent-function 1)
 ;; eval: (put 'cond-inexact-integer-operand 'scheme-indent-function 1)

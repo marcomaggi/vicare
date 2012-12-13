@@ -2837,6 +2837,7 @@
     ($atan-fixnum				$numerics)
     ($atan-ratnum				$numerics)
     ($atan-bignum				$numerics)
+    ($atan-flonum				$numerics)
     ($atan-cflonum				$numerics)
     ($atan-compnum				$numerics)
 
