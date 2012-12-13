@@ -6928,7 +6928,7 @@
 
   (define (tan x)
     (cond-numeric-operand x
-      ((flonum?)	($fltan       x))
+      ((flonum?)	($tan-flonum  x))
       ((cflonum?)	($tan-cflonum x))
       ((fixnum?)	($tan-fixnum  x))
       ((bignum?)	($tan-bignum  x))
@@ -6943,56 +6943,98 @@
       (foreign-call "ikrt_fx_tan" x)))
 
   (define ($tan-bignum x)
-    ($fltan (inexact x)))
+    ($tan-flonum ($bignum->flonum x)))
 
   (define ($tan-ratnum x)
-    ($fltan (inexact x)))
+    ($tan-flonum ($ratnum->flonum x)))
+
+;;; --------------------------------------------------------------------
+;;; complex argument
+
+  ;;Verified with WolframAlpha:
+  ;;
+  ;;   tan (x.rep + i * x.imp) = z.rep + i * z.imp
+  ;;
+  ;;                    sin (2 * x.rep)
+  ;;   z.rep = ----------------------------------
+  ;;           cos (2 * x.rep) + cosh (2 * x.imp)
+  ;;
+  ;;                   sinh (2 * x.imp)
+  ;;   z.imp = ----------------------------------
+  ;;           cos (2 * x.rep) + cosh (2 * x.imp)
+  ;;
+  ;;alternatively the following formula avoids  generating a NaN in some
+  ;;cases:
+  ;;
+  ;;             tanh (2 * x.imp)
+  ;;   z.imp = --------------------
+  ;;                cos (2 * x.rep)
+  ;;           1 + ----------------
+  ;;               cosh (2 * x.imp)
+  ;;
+  ;;Using the alternative formula for  Z.IMP is slower because we cannot
+  ;;share the denominator with Z.REP.
+  ;;
 
   (define ($tan-compnum x)
-    ;;
-    ;; tan (x) = z.rep + i * z.imp
-    ;;
-    ;;                  sin (2 * x.rep)
-    ;; z.rep = ----------------------------------
-    ;;         cos (2 * x.rep) + cosh (2 * x.imp)
-    ;;
-    ;;           tanh (2 * x.imp)
-    ;; z.imp = --------------------
-    ;;              cos (2 * x.rep)
-    ;;         1 + ----------------
-    ;;             cosh (2 * x.imp)
-    ;;
     (let ((x.rep ($compnum-real x))
 	  (x.imp ($compnum-imag x)))
-      (let ((R2 (* 2 x.rep))
-	    (I2 (* 2 x.imp)))
-	(let ((CR2  (cos  R2))
-	      (CHI2 (cosh I2)))
-	  ($make-rectangular (/ (sin R2)  (+ CR2 CHI2))
-			     (/ (tanh I2) (+ 1 (/ CR2 CHI2))))))))
+      (let ((R2  ($mul-fixnum-number 2 x.rep))
+	    (I2  ($mul-fixnum-number 2 x.imp)))
+	(if (and (zero?     x.rep)
+		 (infinite? x.imp))
+	    ;;Avoid  generating  a  NaN  in   this  case  by  using  the
+	    ;;alternative formula for the imaginary part.
+	    (let ((A (cos  R2))
+		  (B (cosh I2)))
+	      ($make-rectangular (/ (sin R2)  (+ A B))
+				 (/ (tanh I2) (+ 1 (/ A B)))))
+	  ;;This is faster.
+	  (let ((den (+ (cos R2) (cosh I2))))
+	    ($make-rectangular (/ (sin  R2) den)
+			       (/ (sinh I2) den)))))))
+
+  ;;Below is an alternative version.
+  ;;
+  ;;(define ($tan-compnum x)
+  ;;  (let ((x.rep ($compnum-real x))
+  ;;        (x.imp ($compnum-imag x)))
+  ;;    (let ((R2 (* 2 x.rep))
+  ;;          (I2 (* 2 x.imp)))
+  ;;      (let ((CR2  (cos  R2))
+  ;;            (CHI2 (cosh I2)))
+  ;;        ($make-rectangular (/ (sin R2)  (+ CR2 CHI2))
+  ;;                           (/ (tanh I2) (+ 1 (/ CR2 CHI2))))))))
 
   (define ($tan-cflonum x)
-    ;;
-    ;; tan (x) = z.rep + i * z.imp
-    ;;
-    ;;                  sin (2 * x.rep)
-    ;; z.rep = ----------------------------------
-    ;;         cos (2 * x.rep) + cosh (2 * x.imp)
-    ;;
-    ;;           tanh (2 * x.imp)
-    ;; z.imp = --------------------
-    ;;              cos (2 * x.rep)
-    ;;         1 + ----------------
-    ;;             cosh (2 * x.imp)
-    ;;
     (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      (let ((R2	($fl* 2.0 x.rep))
-	    (I2	($fl* 2.0 x.imp)))
-	(let ((COSR2	($cos-flonum R2))
-	      (COSHI2	($flcosh I2)))
-	  ($make-cflonum ($fl/ ($sin-flonum  R2) ($fl+ COSR2 COSHI2))
-			 ($fl/ ($fltanh I2) ($fl+ 1.0 ($fl/ COSR2 COSHI2))))))))
+  	  (x.imp ($cflonum-imag x)))
+      (let ((R2  ($fl* 2.0 x.rep))
+	    (I2  ($fl* 2.0 x.imp)))
+	(if (and ($flzero?     x.rep)
+		 ($flinfinite? x.imp))
+	    ;;Avoid  generating  a  NaN  in   this  case  by  using  the
+	    ;;alternative formula for the imaginary part.
+	    (let ((A ($cos-flonum R2))
+		  (B ($flcosh I2)))
+	      ($make-cflonum ($fl/ ($sin-flonum  R2) ($fl+ A B))
+			     ($fl/ ($fltanh I2) ($fl+ 1.0 ($fl/ A B)))))
+	  ;;This is faster.
+	  (let ((den ($fl+ ($cos-flonum R2) ($flcosh I2))))
+	    ($make-cflonum ($fl/ ($sin-flonum  R2) den)
+			   ($fl/ ($flsinh      I2) den)))))))
+
+  ;;Below is an alternative version.
+  ;;
+  ;; (define ($tan-cflonum x)
+  ;;   (let ((x.rep ($cflonum-real x))
+  ;;         (x.imp ($cflonum-imag x)))
+  ;;     (let ((R2 ($fl* 2.0 x.rep))
+  ;;           (I2 ($fl* 2.0 x.imp)))
+  ;;       (let ((COSR2    ($cos-flonum R2))
+  ;;             (COSHI2   ($flcosh I2)))
+  ;;         ($make-cflonum ($fl/ ($sin-flonum  R2) ($fl+ COSR2 COSHI2))
+  ;;                        ($fl/ ($fltanh I2) ($fl+ 1.0 ($fl/ COSR2 COSHI2))))))))
 
   #| end of module: tan |# )
 
@@ -7095,10 +7137,8 @@
 	       (D	($flsquare x.imp))
 	       ;;Q is a non-negative flonum.
 	       (Q	($sqrt-flonum ($fl+ C ($fl* 4.0 D)))))
-	  (define (sgn N)
-	    (if ($flnegative? N) -1.0 1.0))
-	  ($make-cflonum ($fl* ($fl* 0.5 (sgn x.rep)) ($acos-flonum  ($fl- Q A)))
-			 ($fl* ($fl* 0.5 (sgn x.imp)) ($acosh-flonum ($fl+ Q A))))))))
+	  ($make-cflonum ($fl* ($fl* 0.5 ($sign-flonum x.rep)) ($acos-flonum  ($fl- Q A)))
+			 ($fl* ($fl* 0.5 ($sign-flonum x.imp)) ($acosh-flonum ($fl+ Q A))))))))
 
   #| end of module: asin |# )
 
