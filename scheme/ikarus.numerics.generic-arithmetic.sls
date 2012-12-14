@@ -337,16 +337,16 @@
     $atan-flonum		$atan-cflonum		$atan-compnum
 
     $sinh-fixnum		$sinh-bignum		$sinh-ratnum
-    $sinh-compnum		$sinh-cflonum
+    $sinh-flonum		$sinh-compnum		$sinh-cflonum
 
     $cosh-fixnum		$cosh-bignum		$cosh-ratnum
-    $cosh-compnum		$cosh-cflonum
+    $cosh-flonum		$cosh-compnum		$cosh-cflonum
 
     $tanh-fixnum		$tanh-bignum		$tanh-ratnum
-    $tanh-compnum		$tanh-cflonum
+    $tanh-flonum		$tanh-compnum		$tanh-cflonum
 
     $asinh-fixnum		$asinh-bignum		$asinh-ratnum
-    $asinh-cflonum		$asinh-compnum
+    $asinh-flonum		$asinh-cflonum		$asinh-compnum
 
     $acosh-fixnum		$acosh-bignum		$acosh-ratnum
     $acosh-flonum		$acosh-cflonum		$acosh-compnum
@@ -481,12 +481,19 @@
 		$flsin
 		$flcos
 		$fltan
-		$flatan)
+		$flatan
+		$flsinh		$flasinh
+		$flcosh
+		$fltanh)
 	  ($flexp	$exp-flonum)
 	  ($flsin	$sin-flonum)
 	  ($flcos	$cos-flonum)
 	  ($fltan	$tan-flonum)
-	  ($flatan	$atan-flonum))
+	  ($flatan	$atan-flonum)
+	  ($flsinh	$sinh-flonum)
+	  ($flcosh	$cosh-flonum)
+	  ($fltanh	$tanh-flonum)
+	  ($flasinh	$asinh-flonum))
   (except (ikarus system $ratnums)
 	  $ratnum->flonum)
   ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -511,6 +518,8 @@
 
 
 ;;;; helpers
+
+(define dummy #f)
 
 (define (err who x)
   (assertion-violation who
@@ -7323,8 +7332,10 @@
   (define ($sinh-cflonum x)
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl* ($flsinh x.rep) ($cos-flonum x.imp))
-		     ($fl* ($flcosh x.rep) ($sin-flonum x.imp)))))
+      (if ($flzero? x.imp)
+	  ($make-cflonum ($flsinh x.rep) x.imp)
+	($make-cflonum ($fl* ($flsinh x.rep) ($cos-flonum x.imp))
+		       ($fl* ($flcosh x.rep) ($sin-flonum x.imp))))))
 
   #| end of module |# )
 
@@ -7363,8 +7374,10 @@
   (define ($cosh-cflonum x)
     (let ((x.rep ($cflonum-real x))
 	  (x.imp ($cflonum-imag x)))
-      ($make-cflonum ($fl* ($flcosh x.rep) ($cos-flonum x.imp))
-		     ($fl* ($flsinh x.rep) ($sin-flonum x.imp)))))
+      (if ($flzero? x.imp)
+	  ($make-cflonum ($flcosh x.rep) x.imp)
+	($make-cflonum ($fl* ($flcosh x.rep) ($cos-flonum x.imp))
+		       ($fl* ($flsinh x.rep) ($sin-flonum x.imp))))))
 
   #| end of module: cosh |# )
 
@@ -7468,71 +7481,41 @@
   (define ($asinh-ratnum x)
     ($flasinh ($ratnum->flonum x)))
 
-  (define ($asinh-compnum x)
-    ;; asinh (x) = z.rep + i * z.imp
-    ;;
-    ;; D = x.imp^2
-    ;; A = x.rep^2 + D
-    ;; B = A - 1
-    ;; C = B^2
-    ;; Q = sqrt(C + 4 * D)
-    ;;
-    ;; z.rep = 1/2 * sign(x.rep) * acosh (Q + A)
-    ;; z.imp = 1/2 * sign(x.imp) * acos  (Q - A)
-    ;;
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      (if (zero? x.rep)
-	  (let ((v (asin x.imp)))
-	    ($make-rectangular (imag-part v) (real-part v)))
-	(let* (	;;D is a non-negative real number.
-	       (D (square x.imp))
-	       ;;A is a non-negative real number.
-	       (A (+ (square x.rep) D))
-	       ;;B is a real number.
-	       (B (- A 1))
-	       ;;C is a non-negative real number.
-	       (C (square B B))
-	       ;;Q is a non-negative real number.
-	       (Q (sqrt (+ C (* 4 D)))))
-	  (define (%sgn N)
-	    ;;This is  different from SIGN  because it always  returns a
-	    ;;flonum.
-	    (if (negative? N) -1.0 1.0))
-	  ($make-rectangular ($mul-flonum-number ($fl* 0.5 (%sgn x.rep)) (acosh (+ Q A)))
-			     ($mul-flonum-number ($fl* 0.5 (%sgn x.imp)) (acos  (- Q A))))))))
+;;; --------------------------------------------------------------------
+;;; complex argument
 
-  (define ($asinh-cflonum x)
-    ;; asinh (x) = z.rep + i * z.imp
-    ;;
-    ;; D = x.imp^2
-    ;; A = x.rep^2 + D
-    ;; B = A - 1
-    ;; C = B^2
-    ;; Q = sqrt(C + 4 * D)
-    ;;
-    ;; z.rep = 1/2 * sign(x.rep) * acosh (Q + A)
-    ;; z.imp = 1/2 * sign(x.imp) * acos  (Q - A)
-    ;;
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      (if ($flzero? x)
-	  (let* ((v     ($asin-flonum x.imp))
-		 (real? (flonum? v)))
-	    ($make-cflonum (if real? 0.0 ($cflonum-imag v))
-			   (if real? v   ($cflonum-real v))))
-	(let* (	;;D is a non-negative flonum.
-	       (D ($flsquare x.imp))
-	       ;;A is a non-negative flonum.
-	       (A ($fl+ ($flsquare x.rep) D))
-	       ;;B is a flonum.
-	       (B ($fl- A 1.0))
-	       ;;C is a non-negative flonum.
-	       (C ($fl* B B))
-	       ;;Q is a non-negative flonum.
-	       (Q ($flsqrt (+ C ($fl* 4.0 D)))))
-	  ($make-cflonum ($fl* ($fl* 0.5 ($sign-flonum x.rep)) ($acosh-flonum ($fl+ Q A)))
-			 ($fl* ($fl* 0.5 ($sign-flonum x.imp)) ($acos-flonum  ($fl- Q A))))))))
+  ;;Everybody (including the GNU C Library) makes use of this formula:
+  ;;
+  ;;   (log (+ z (sqrt (+ 1 (square z)))))
+  ;;
+  ;;so:
+  ;;
+  ;;   S     = Z^2 = (X+iY)^2 = (X+iY) (X+iY) = X^2 - Y^2 + 2iXY
+  ;;   S.rep = X^2 - Y^2
+  ;;   S.imp = 2iXY
+  ;;
+
+  (define ($asinh-compnum z)
+    (let ((z.rep ($compnum-real z))
+	  (z.imp ($compnum-imag z)))
+      (if (zero? z.imp)
+	  ($make-rectangular (asinh z.rep) z.imp)
+	(let* ((S.rep (- (square z.rep) (square z.imp)))
+	       (S.imp (let ((t (* z.rep z.imp)))
+			(+ t t)))
+	       (Q     (sqrt ($make-rectangular (+ 1 S.rep) S.imp))))
+	  (log ($add-compnum-number z Q))))))
+
+  (define ($asinh-cflonum z)
+    (let ((z.rep ($cflonum-real z))
+	  (z.imp ($cflonum-imag z)))
+      (if ($flzero? z.imp)
+	  ($make-cflonum ($flasinh z.rep) z.imp)
+	(let* ((S.rep ($fl- ($flsquare z.rep) ($flsquare z.imp)))
+	       (S.imp (let ((t ($fl* z.rep z.imp)))
+			($fl+ t t)))
+	       (Q     ($sqrt-cflonum ($make-cflonum ($fl+ 1.0 S.rep) S.imp))))
+	  ($log-cflonum ($add-cflonum-cflonum z Q))))))
 
   #| end of module: asinh |# )
 
@@ -7566,75 +7549,48 @@
     (cond (($fl>= x +1.0) ; +1 <= X < +inf
 	   ($flacosh x))
 	  (($fl>= x -1.0) ; -1 <= X < +1
-	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x x))) x)))
+	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x))) x)))
 	  (($fl< x -1.0) ; -inf < X < -1
 	   ($make-cflonum ($flacosh ($fl- x)) π))
 	  (else +nan.0)))
 
-  (define ($acosh-compnum x)
-    ;;
-    ;; acosh (x) = 1/2 * sign(x.rep) * acosh (Q + A) +
-    ;;           + i * 1/2 * sign(x.imp) * (pi - sign(x.rep) * acos (Q - A))
-    ;;
-    ;; D = x.imp^2
-    ;; A = x.rep^2 + D
-    ;; B = A - 1
-    ;; C = B ^2
-    ;; Q = sqrt (C + 4 * D)
-    ;;
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      (if (zero? x.rep)
-	  ($add-number-compnum (asinh x.imp) ($make-compnum 0 π/2))
-	(let* (	;;D is a non-negative real number.
-	       (D (square x.imp))
-	       ;;A is a non-negative real number.
-	       (A (+ (square x.rep) D))
-	       ;;B is a real number.
-	       (B (- A 1))
-	       ;;C is a non-negative real number.
-	       (C (square B))
-	       ;;Q is a non-negative real number.
-	       (Q (sqrt (+ C (* 4 D)))))
-	  (define (%sgn x)
-	    ;;This is  different from SIGN  because it always  returns a
-	    ;;flonum.
-	    (if (negative? x) -1.0 1.0))
-	  (+ ($mul-flonum-number ($fl* 0.5 (%sgn x.rep)) (acosh (+ Q A)))
-	     ($mul-cflonum-number ($make-compnum 0 ($fl* 0.5 (%sgn x.imp)))
-				  (- π ($mul-flonum-number (%sgn x.rep) (acos (- Q A))))))))))
+;;; --------------------------------------------------------------------
+;;; complex arguments
 
-  (define ($acosh-cflonum x)
-    ;;
-    ;; acosh (x) = 1/2 * sign(x.rep) * acosh (Q + A) +
-    ;;           + i * 1/2 * sign(x.imp) * (pi - sign(x.rep) * acos (Q - A))
-    ;;
-    ;; D = x.imp^2
-    ;; A = x.rep^2 + D
-    ;; B = A - 1
-    ;; C = B ^2
-    ;; Q = sqrt (C + 4 * D)
-    ;;
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      (if ($flzero? x.rep)
-	  ($add-number-cflonum ($flasinh x.imp) ($make-cflonum 0.0 π/2))
-	(let* ( ;;D is a non-negative flonum.
-	       (D ($flsquare x.imp))
-	       ;;A is a non-negative flonum.
-	       (A ($fl+ ($flsquare x.rep) D))
-	       ;;B is a flonum.
-	       (B ($fl- A 1.0))
-	       ;;C is a non-negative flonum.
-	       (C ($flsquare B))
-	       ;;Q is a non-negative flonum
-	       (Q ($flsqrt ($fl+ C ($fl* 4.0 D)))))
-	  ($add-number-cflonum
-	   ($mul-flonum-number ($fl* 0.5 ($sign-flonum x.rep))
-			       ($acosh-flonum ($fl+ Q A)))
-	   ($mul-cflonum-number ($make-cflonum 0.0 ($fl* 0.5 ($sign-flonum x.imp)))
-				(- π ($mul-flonum-number ($sign-flonum x.rep)
-							 ($acos-flonum ($fl- Q A))))))))))
+  ;;From Wikipedia
+  ;;
+  ;;   (log (+ z (* (sqrt (+ z 1)) (sqrt (- z 1)))))
+  ;;
+
+  (define ($acosh-compnum z)
+    (log (+ z (* (sqrt (+ z 1))
+		 (sqrt (- z 1))))))
+
+  (module ($acosh-cflonum)
+
+    (define ($acosh-cflonum z)
+      (let ((z.rep ($cflonum-real z))
+	    (z.imp ($cflonum-imag z)))
+	(if ($flzero? z.imp)
+	    (%flacosh z.rep ($flzero?/positive z.imp))
+	  (let ((A ($fl+ z.rep 1.0))
+		(B ($fl- z.rep 1.0)))
+	    (let ((C ($mul-cflonum-cflonum ($sqrt-cflonum ($make-cflonum A z.imp))
+					   ($sqrt-cflonum ($make-cflonum B z.imp)))))
+	      ($log-cflonum ($add-cflonum-cflonum z C)))))))
+
+    (define (%flacosh x pos?)
+      (cond (($fl>= x +1.0) ; +1 <= X < +inf
+	     ($make-cflonum ($flacosh x) (if pos? +0.0 -0.0)))
+	    (($fl>= x -1.0) ; -1 <= X < +1
+	     (let ((t ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x))) x)))
+	       ($make-cflonum 0.0 (if pos? t ($fl- t)))))
+	    (($fl< x -1.0) ; -inf < X < -1
+	     ($make-cflonum ($flacosh ($fl- x)) (if pos? π ($fl- π))))
+	    (else
+	     +nan.0+nan.0)))
+
+    #| end of module: $acosh-cflonum |# )
 
   #| end of module |# )
 
@@ -7671,16 +7627,31 @@
     (if (and ($fl<= x +1.0)
 	     ($fl>= x -1.0))
 	($flatanh x)
-      ($mul-flonum-cflonum 0.5 ($log-flonum ($fl/ ($fl+ 1.0 x)
-						  ($fl- 1.0 x))))))
+      (let ((t ($log-flonum ($fl/ ($fl+ 1.0 x) ($fl- 1.0 x)))))
+	(if (flonum? t)
+	    ($mul-flonum-flonum 0.5 t)
+	  ($mul-flonum-cflonum 0.5 t)))))
 
   (define ($atanh-compnum x)
     ($atanh-cflonum ($compnum->cflonum x)))
 
   (define ($atanh-cflonum x)
-    ($mul-flonum-cflonum 0.5 ($log-cflonum
-			      ($div-cflonum-cflonum ($add-flonum-cflonum 1.0 x)
-						    ($sub-flonum-cflonum 1.0 x)))))
+    ;;From Wikipedia:
+    ;;
+    ;;                    1 + Z
+    ;;  atanh Z = 1/2 log -----
+    ;;                    1 - Z
+    ;;
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      (if ($flzero? x.imp)
+	  (let ((t ($atanh-flonum x.rep)))
+	    (if (flonum? t)
+		($make-cflonum t x.imp)
+	      t))
+	($mul-flonum-cflonum 0.5 ($log-cflonum
+				  ($div-cflonum-cflonum ($add-flonum-cflonum 1.0 x)
+							($sub-flonum-cflonum 1.0 x)))))))
 
   #| end of module: atanh |# )
 

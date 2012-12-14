@@ -1,8 +1,8 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for the numerics functions: sin
-;;;Date: Wed Dec 12, 2012
+;;;Contents: tests for the numerics functions: cosh
+;;;Date: Fri Dec 14, 2012
 ;;;
 ;;;Abstract
 ;;;
@@ -33,7 +33,7 @@
 	case-word-size))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare numerics functions: trigonometric sine\n")
+(check-display "*** testing Vicare numerics functions: hyperbolic cosine\n")
 
 
 ;;;; helpers
@@ -243,19 +243,19 @@
     (syntax-rules ()
       ((_ ?op ?expected)
        (begin
-	 (check (sin ?op)		(=> inexact=?) ?expected)
-	 (check ($sin-fixnum ?op)	(=> inexact=?) ?expected)))))
+	 (check (cosh ?op)		(=> inexact=?) ?expected)
+	 (check ($cosh-fixnum ?op)	(=> inexact=?) ?expected)))))
 
-  (test 0	0)
-  (test +1	0.8414709848078965)
-  (test -1	-0.8414709848078965)
-  (test +2	0.9092974268256817)
-  (test -2	-0.9092974268256817)
+  (test 0	1)
+  (test +1	1.5430806348152437)
+  (test -1	1.5430806348152437)
+  (test +2	3.7621956910836314)
+  (test -2	3.7621956910836314)
 
   (case-word-size
    ((32)
-    (test (greatest-fixnum)	0.9717816115808465)
-    (test (least-fixnum)	-0.32656766301791007))
+    (test (greatest-fixnum) +inf.0)
+    (test (least-fixnum) +inf.0))
    ((64)
     (void)))
 
@@ -268,17 +268,16 @@
     (syntax-rules ()
       ((_ ?op ?expected)
        (begin
-	 (check (sin ?op)		(=> inexact=?) ?expected)
-	 (check ($sin-bignum ?op)	(=> inexact=?) ?expected)))))
+	 (check (cosh ?op)		(=> inexact=?) ?expected)
+	 (check ($cosh-bignum ?op)	(=> inexact=?) ?expected)))))
 
 
   (case-word-size
    ((32)
-    (test BN1 -0.6188910888797536)
-    (test BN2 0.24018088648196634)
-    (test BN3 0.9953442278238595)
-    (test BN4 -0.9466098593983612))
-
+    (test BN1 +inf.0)
+    (test BN2 +inf.0)
+    (test BN3 +inf.0)
+    (test BN4 +inf.0))
    ((64)
     (void)))
 
@@ -291,49 +290,49 @@
     (syntax-rules ()
       ((_ ?op ?expected)
        (begin
-	 (check (sin ?op)		(=> inexact=?) ?expected)
-	 (check ($sin-ratnum ?op)	(=> inexact=?) ?expected)))))
+	 (check (cosh ?op)		(=> inexact=?) ?expected)
+	 (check ($cosh-ratnum ?op)	(=> inexact=?) ?expected)))))
 
-  (test 1/2 0.479425538604203)
-  (test -1/2 -0.479425538604203)
+  (test 1/2 1.1276259652063807)
+  (test -1/2 1.1276259652063807)
 
-  (test RN01 0.008129991737122616)
-  (test RN02 -0.008129991737122616)
-  (test RN03 -0.008129991737122616)
-  (test RN04 -0.8378922074826136)
-  (test RN05 1.862645149230957e-9)
-  (test RN06 -1.862645149230957e-9)
-  (test RN07 0.8414709838015051)
-  (test RN09 1.862644805755772e-9)
-  (test RN10 -1.862644805755772e-9)
-  (test RN11 0.8414708841687535)
-  (test RN12 -0.8414708851751451)
-  (test RN13 -1.86264514576151e-9)
-  (test RN14 1.86264514576151e-9)
-  (test RN15 -0.8414709827951136)
-  (test RN16 0.8414709838015051)
-  (test RN17 -1.8626448022863264e-9)
-  (test RN18 1.8626448022863264e-9)
-  (test RN19 -0.8414708831623622)
-  (test RN20 0.8414708841687537)
-  (test RN29 0.8414709858142879)
-  (test RN30 0.8414710854470291)
-  (test RN31 -0.8414709868206794)
-  (test RN32 -0.8414710864534203)
-  (test RN34 -0.8414710844406377)
-  (test RN35 0.8414709858142879)
-  (test RN36 0.8414710854470289)
+  (test RN01 1.0000330492930198)
+  (test RN02 1.0000330492930198)
+  (test RN03 1.0000330492930198)
+  (test RN04 +inf.0)
+  (test RN05 1.0)
+  (test RN06 1.0)
+  (test RN07 1.543080632626261)
+  (test RN09 1.0)
+  (test RN10 1.0)
+  (test RN11 1.5430804159170306)
+  (test RN12 1.5430804181060125)
+  (test RN13 1.0)
+  (test RN14 1.0)
+  (test RN15 1.5430806304372782)
+  (test RN16 1.543080632626261)
+  (test RN17 1.0)
+  (test RN18 1.0)
+  (test RN19 1.5430804137280492)
+  (test RN20 1.543080415917031)
+  (test RN29 1.5430806370042265)
+  (test RN30 1.5430808537135514)
+  (test RN31 1.5430806391932095)
+  (test RN32 1.5430808559025346)
+  (test RN34 1.5430808515245675)
+  (test RN35 1.5430806370042265)
+  (test RN36 1.5430808537135507)
 
   (case-word-size
    ((32)
-    (test (/ BN1 123) 0.842302155887546)
-    (test (/ BN2 123) 0.8794525909663617)
-    (test (/ BN3 123) -0.8466564299284367)
-    (test (/ BN4 123) -0.8832932921023623)
-    (test (/ 123 BN1) 2.2910535292866373e-7)
-    (test (/ 123 BN2) 2.2910534908798603e-7)
-    (test (/ 123 BN3) -2.2910535250192175e-7)
-    (test (/ 123 BN4) -2.2910534866124408e-7))
+    (test (/ BN1 123) +inf.0)
+    (test (/ BN2 123) +inf.0)
+    (test (/ BN3 123) +inf.0)
+    (test (/ BN4 123) +inf.0)
+    (test (/ 123 BN1) 1.0000000000000262)
+    (test (/ 123 BN2) 1.0000000000000262)
+    (test (/ 123 BN3) 1.0000000000000262)
+    (test (/ 123 BN4) 1.0000000000000262))
    ((64)
     (void)))
 
@@ -346,20 +345,21 @@
     (syntax-rules ()
       ((_ ?op ?expected)
        (begin
-	 (check (sin ?op)		(=> inexact=?) ?expected)
-	 (check ($sin-flonum ?op)	(=> inexact=?) ?expected)))))
+	 (check (cosh ?op)		(=> inexact=?) ?expected)
+	 (check ($cosh-flonum ?op)	(=> inexact=?) ?expected)))))
 
-  (test 0.0 0.0)
-  (test -0.0 -0.0)
+  (test +0.0 1.0)
+  (test -0.0 1.0)
 
-  (test 1.0 0.8414709848078965)
-  (test -1.0 -0.8414709848078965)
+  (test +1.0 1.5430806348152437)
+  (test -1.0 1.5430806348152437)
 
-  (test 2.0 0.9092974268256817)
-  (test -2.0 -0.9092974268256817)
+  (test +2.0 3.7621956910836314)
+  (test -2.0 3.7621956910836314)
 
-  (test +inf.0 +nan.0)
-  (test -inf.0 +nan.0)
+  (test +inf.0 +inf.0)
+  (test -inf.0 +inf.0)
+
   (test +nan.0 +nan.0)
 
   #t)
@@ -371,35 +371,35 @@
     (syntax-rules ()
       ((_ ?op ?expected)
        (begin
-	 (check (sin ?op)		(=> inexact=?) ?expected)
-	 (check ($sin-compnum ?op)	(=> inexact=?) ?expected)))))
+	 (check (cosh ?op)		(=> inexact=?) ?expected)
+	 (check ($cosh-compnum ?op)	(=> inexact=?) ?expected)))))
 
-  (test +1+0.0i		0.8414709848078965+0.0i)
-  (test -1+0.0i		-0.8414709848078965+0.0i)
-  (test +1-0.0i		0.8414709848078965-0.0i)
-  (test -1-0.0i		-0.8414709848078965-0.0i)
+  (test +1+0.0i		1.5430806348152437+0.0i)
+  (test -1+0.0i		1.5430806348152437-0.0i)
+  (test +1-0.0i		1.5430806348152437-0.0i)
+  (test -1-0.0i		1.5430806348152437+0.0i)
 
-  (test +0.0+1i		0.0+1.1752011936438014i)
-  (test +0.0-1i		0.0-1.1752011936438014i)
-  (test -0.0+1i		-0.0+1.1752011936438014i)
-  (test -0.0-1i		-0.0-1.1752011936438014i)
+  (test +0.0+1i		0.5403023058681398+0.0i)
+  (test +0.0-1i		0.5403023058681398-0.0i)
+  (test -0.0+1i		0.5403023058681398-0.0i)
+  (test -0.0-1i		0.5403023058681398+0.0i)
 
-  (test +1+1.0i		1.2984575814159773+0.6349639147847361i)
-  (test +1-1.0i		1.2984575814159773-0.6349639147847361i)
-  (test -1.0+1i		-1.2984575814159773+0.6349639147847361i)
-  (test -1.0-1i		-1.2984575814159773-0.6349639147847361i)
+  (test +1+1.0i		0.8337300251311491+0.9888977057628651i)
+  (test +1-1.0i		0.8337300251311491-0.9888977057628651i)
+  (test -1.0+1i		0.8337300251311491-0.9888977057628651i)
+  (test -1.0-1i		0.8337300251311491+0.9888977057628651i)
 
-  (test 0+inf.0i	+nan.0+inf.0i)
-  (test 0-inf.0i	+nan.0-inf.0i)
+  (test 0+inf.0i	+nan.0+nan.0i)
+  (test 0-inf.0i	+nan.0+nan.0i)
 
   (test 1+nan.0i	+nan.0+nan.0i)
   (test +nan.0+1i	+nan.0+nan.0i)
 
-  (test 1+3i 8.471645454300148+5.412680923178193i)
-  (test 1-3i 8.471645454300148-5.412680923178193i)
+  (test 1+3i		-1.5276382501165433+0.1658444019189788i)
+  (test 1-3i		-1.5276382501165433-0.1658444019189788i)
 
-  (test -1+3i -8.471645454300148+5.412680923178193i)
-  (test -1-3i -8.471645454300148-5.412680923178193i)
+  (test -1+3i		-1.5276382501165433-0.1658444019189788i)
+  (test -1-3i		-1.5276382501165433+0.1658444019189788i)
 
   #t)
 
@@ -410,57 +410,59 @@
     (syntax-rules ()
       ((_ ?op ?expected)
        (begin
-	 (check (sin ?op)		(=> inexact=?) ?expected)
-	 (check ($sin-cflonum ?op)	(=> inexact=?) ?expected)))))
+	 (check (cosh ?op)		(=> inexact=?) ?expected)
+	 (check ($cosh-cflonum ?op)	(=> inexact=?) ?expected)))))
 
-  (test +0.0+0.0i		+0.0+0.0i)
-  (test -0.0+0.0i		-0.0+0.0i)
-  (test +0.0-0.0i		+0.0-0.0i)
-  (test -0.0-0.0i		-0.0-0.0i)
+  (test +0.0+0.0i	1.0+0.0i)
+  (test -0.0+0.0i	1.0-0.0i)
+  (test +0.0-0.0i	1.0-0.0i)
+  (test -0.0-0.0i	1.0+0.0i)
 
-  (test +1.0+0.0i		+0.8414709848078965+0.0i)
-  (test -1.0+0.0i		-0.8414709848078965+0.0i)
-  (test +1.0-0.0i		+0.8414709848078965-0.0i)
-  (test -1.0-0.0i		-0.8414709848078965-0.0i)
+  (test +1.0+0.0i	1.5430806348152437+0.0i)
+  (test -1.0+0.0i	1.5430806348152437-0.0i)
+  (test +1.0-0.0i	1.5430806348152437-0.0i)
+  (test -1.0-0.0i	1.5430806348152437+0.0i)
 
-  (test +0.0+1.0i		+0.0+1.1752011936438014i)
-  (test +0.0-1.0i		+0.0-1.1752011936438014i)
-  (test -0.0+1.0i		-0.0+1.1752011936438014i)
-  (test -0.0-1.0i		-0.0-1.1752011936438014i)
+  (test +0.0+1.0i	0.5403023058681398+0.0i)
+  (test +0.0-1.0i	0.5403023058681398-0.0i)
+  (test -0.0+1.0i	0.5403023058681398-0.0i)
+  (test -0.0-1.0i	0.5403023058681398+0.0i)
 
-  (test +1.0+1.0i		+1.2984575814159773+0.6349639147847361i)
-  (test +1.0-1.0i		+1.2984575814159773-0.6349639147847361i)
-  (test -1.0+1.0i		-1.2984575814159773+0.6349639147847361i)
-  (test -1.0-1.0i		-1.2984575814159773-0.6349639147847361i)
+  (test +1.0+1.0i	0.8337300251311491+0.9888977057628651i)
+  (test +1.0-1.0i	0.8337300251311491-0.9888977057628651i)
+  (test -1.0+1.0i	0.8337300251311491-0.9888977057628651i)
+  (test -1.0-1.0i	0.8337300251311491+0.9888977057628651i)
 
-  (test +inf.0+0.0i		+nan.0+nan.0i)
-  (test -inf.0+0.0i		+nan.0+nan.0i)
-  (test +inf.0-0.0i		+nan.0+nan.0i)
-  (test -inf.0-0.0i		+nan.0+nan.0i)
+  (test +inf.0+0.0i	+inf.0+0.0i)
+  (test -inf.0+0.0i	+inf.0+0.0i)
+  (test +inf.0-0.0i	+inf.0-0.0i)
+  (test -inf.0-0.0i	+inf.0-0.0i)
 
-  (test +0.0+inf.0i		+nan.0+inf.0i)
-  (test +0.0-inf.0i		+nan.0-inf.0i)
-  (test -0.0+inf.0i		+nan.0+inf.0i)
-  (test -0.0-inf.0i		+nan.0-inf.0i)
+  (test +0.0+inf.0i	+nan.0+nan.0i)
+  (test +0.0-inf.0i	+nan.0+nan.0i)
+  (test -0.0+inf.0i	+nan.0+nan.0i)
+  (test -0.0-inf.0i	+nan.0+nan.0i)
 
-  (test +inf.0+inf.0i		+nan.0+nan.0i)
-  (test +inf.0-inf.0i		+nan.0+nan.0i)
-  (test -inf.0+inf.0i		+nan.0+nan.0i)
-  (test -inf.0-inf.0i		+nan.0+nan.0i)
+  (test +inf.0+inf.0i	+nan.0+nan.0i)
+  (test +inf.0-inf.0i	+nan.0+nan.0i)
+  (test -inf.0+inf.0i	+nan.0+nan.0i)
+  (test -inf.0-inf.0i	+nan.0+nan.0i)
 
-  (test +1.0+nan.0i		+nan.0+nan.0i)
-  (test +nan.0+1.0i		+nan.0+nan.0i)
-  (test +nan.0+nan.0i		+nan.0+nan.0i)
+  (test 1.0+nan.0i	+nan.0+nan.0i)
+  (test +nan.0+1.0i	+nan.0+nan.0i)
+  (test +nan.0+nan.0i	+nan.0+nan.0i)
 
-  (test +1.2+3.4i		+13.979408806017995+5.422815472463402i)
-  (test +1.2-3.4i		+13.979408806017995-5.422815472463402i)
-  (test -1.2+3.4i		-13.979408806017995+5.422815472463402i)
-  (test -1.2-3.4i		-13.979408806017995-5.422815472463402i)
+  (test +1.2+3.4i	-1.7505385298731442-0.3857294182289409i)
+  (test +1.2-3.4i	-1.7505385298731442+0.3857294182289409i)
 
-  (test +1.0+3.0i		+8.471645454300148+5.412680923178193i)
-  (test +1.0-3.0i		+8.471645454300148-5.412680923178193i)
-  (test -1.0+3.0i		-8.471645454300148+5.412680923178193i)
-  (test -1.0-3.0i		-8.471645454300148-5.412680923178193i)
+  (test -1.2+3.4i	-1.7505385298731442+0.3857294182289409i)
+  (test -1.2-3.4i	-1.7505385298731442-0.3857294182289409i)
+
+  (test +1.0+3.0i	-1.5276382501165433+0.1658444019189788i)
+  (test +1.0-3.0i	-1.5276382501165433-0.1658444019189788i)
+
+  (test -1.0+3.0i	-1.5276382501165433-0.1658444019189788i)
+  (test -1.0-3.0i	-1.5276382501165433+0.1658444019189788i)
 
   #t)
 

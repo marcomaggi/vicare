@@ -4222,24 +4222,34 @@ object.
 @subsection Hyperbolic sine
 
 
-@deffn {Unsafe Operation} $sinh-fixnum
+@deffn {Unsafe Operation} $sinh-fixnum @var{fx}
+Compute the hyperbolic sine of @var{fx}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sinh-bignum
+@deffn {Unsafe Operation} $sinh-bignum @var{bn}
+Compute the hyperbolic sine of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sinh-ratnum
+@deffn {Unsafe Operation} $sinh-ratnum @var{rt}
+Compute the hyperbolic sine of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sinh-compnum
+@deffn {Unsafe Operation} $sinh-flonum @var{fl}
+Compute the hyperbolic sine of @var{fl}; return a flonum.  This is an
+alias for @func{$flsinh}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $sinh-cflonum
+@deffn {Unsafe Operation} $sinh-compnum @var{cn}
+Compute the hyperbolic sine of @var{cn}; return a number object.
+@end deffn
 
+
+@deffn {Unsafe Operation} $sinh-cflonum @var{cfl}
+Compute the hyperbolic sine of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page
@@ -4247,24 +4257,34 @@ object.
 @subsection Hyperbolic cosine
 
 
-@deffn {Unsafe Operation} $cosh-fixnum
+@deffn {Unsafe Operation} $cosh-fixnum @var{fx}
+Compute the hyperbolic cosine of @var{fx}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cosh-bignum
+@deffn {Unsafe Operation} $cosh-bignum @var{bn}
+Compute the hyperbolic cosine of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cosh-ratnum
+@deffn {Unsafe Operation} $cosh-ratnum @var{rt}
+Compute the hyperbolic cosine of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cosh-compnum
+@deffn {Unsafe Operation} $cosh-flonum @var{fl}
+Compute the hyperbolic cosine of @var{fl}; return a flonum.  This is an
+alias for @func{$flcosh}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $cosh-cflonum
+@deffn {Unsafe Operation} $cosh-compnum @var{cn}
+Compute the hyperbolic cosine of @var{cn}; return a number object.
+@end deffn
 
+
+@deffn {Unsafe Operation} $cosh-cflonum @var{cfl}
+Compute the hyperbolic cosine of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page
@@ -4272,24 +4292,34 @@ object.
 @subsection Hyperbolic tangent
 
 
-@deffn {Unsafe Operation} $tanh-fixnum
+@deffn {Unsafe Operation} $tanh-fixnum @var{fx}
+Compute the hyperbolic tangent of @var{fx}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tanh-bignum
+@deffn {Unsafe Operation} $tanh-bignum @var{bn}
+Compute the hyperbolic tangent of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tanh-ratnum
+@deffn {Unsafe Operation} $tanh-ratnum @var{rt}
+Compute the hyperbolic tangent of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tanh-compnum
+@deffn {Unsafe Operation} $tanh-flonum @var{fl}
+Compute the hyperbolic tangent of @var{fl}; return a flonum.  This is an
+alias for @func{$fltanh}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $tanh-cflonum
+@deffn {Unsafe Operation} $tanh-compnum @var{cn}
+Compute the hyperbolic tangent of @var{cn}; return a number object.
+@end deffn
 
+
+@deffn {Unsafe Operation} $tanh-cflonum @var{cfl}
+Compute the hyperbolic tangent of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page
@@ -4297,24 +4327,33 @@ object.
 @subsection Hyperbolic arc sine
 
 
-@deffn {Unsafe Operation} $asinh-fixnum
+@deffn {Unsafe Operation} $asinh-fixnum @var{fx}
+Compute the inverse hyperbolic sine of @var{fx}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asinh-bignum
+@deffn {Unsafe Operation} $asinh-bignum @var{bn}
+Compute the inverse hyperbolic sine of @var{bn}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asinh-ratnum
+@deffn {Unsafe Operation} $asinh-ratnum @var{rt}
+Compute the inverse hyperbolic sine of @var{rt}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asinh-cflonum
+@deffn {Unsafe Operation} $asinh-flonum @var{fl}
+Compute the inverse hyperbolic sine of @var{fl}; return a flonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $asinh-compnum
+@deffn {Unsafe Operation} $asinh-compnum @var{cn}
+Compute the inverse hyperbolic sine of @var{cn}; return a number object.
+@end deffn
 
+
+@deffn {Unsafe Operation} $asinh-cflonum @var{cfl}
+Compute the inverse hyperbolic sine of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page

@@ -2844,24 +2844,28 @@
     ($sinh-fixnum				$numerics)
     ($sinh-bignum				$numerics)
     ($sinh-ratnum				$numerics)
+    ($sinh-flonum				$numerics)
     ($sinh-compnum				$numerics)
     ($sinh-cflonum				$numerics)
 
     ($cosh-fixnum				$numerics)
     ($cosh-bignum				$numerics)
     ($cosh-ratnum				$numerics)
+    ($cosh-flonum				$numerics)
     ($cosh-compnum				$numerics)
     ($cosh-cflonum				$numerics)
 
     ($tanh-fixnum				$numerics)
     ($tanh-bignum				$numerics)
     ($tanh-ratnum				$numerics)
+    ($tanh-flonum				$numerics)
     ($tanh-compnum				$numerics)
     ($tanh-cflonum				$numerics)
 
     ($asinh-fixnum				$numerics)
     ($asinh-bignum				$numerics)
     ($asinh-ratnum				$numerics)
+    ($asinh-flonum				$numerics)
     ($asinh-cflonum				$numerics)
     ($asinh-compnum				$numerics)
 
