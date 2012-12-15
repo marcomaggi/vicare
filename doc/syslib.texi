@@ -4343,7 +4343,8 @@ Compute the inverse hyperbolic sine of @var{rt}; return a flonum.
 
 
 @deffn {Unsafe Operation} $asinh-flonum @var{fl}
-Compute the inverse hyperbolic sine of @var{fl}; return a flonum.
+Compute the inverse hyperbolic sine of @var{fl}; return a flonum.  This
+is an alias for @func{$flsinh}.
 @end deffn
 
 
@@ -4361,28 +4362,40 @@ Compute the inverse hyperbolic sine of @var{cfl}; return a cflonum.
 @subsection Hyperbolic arc cosine
 
 
-@deffn {Unsafe Operation} $acosh-fixnum
+@deffn {Unsafe Operation} $acosh-fixnum @var{fx}
+Compute the inverse hyperbolic cosine of @var{fx}; return a flonum,
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acosh-bignum
+@deffn {Unsafe Operation} $acosh-bignum @var{bn}
+Compute the inverse hyperbolic cosine of @var{bn}; return a flonum,
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acosh-ratnum
+@deffn {Unsafe Operation} $acosh-ratnum @var{rt}
+Compute the inverse hyperbolic cosine of @var{rt}; return a flonum,
+compnum or cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acosh-flonum
+@deffn {Unsafe Operation} $acosh-flonum @var{fl}
+Compute the inverse hyperbolic cosine of @var{fl}; return a flonum,
+compnum or cflonum.  This is different from @func{$flacosh} whose return
+value is a flonum begin @code{+nan.0} when the operand is out of the
+domain for real numbers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acosh-cflonum
+@deffn {Unsafe Operation} $acosh-compnum @var{cn}
+Compute the inverse hyperbolic cosine of @var{cn}; return a number
+object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $acosh-compnum
-
+@deffn {Unsafe Operation} $acosh-cflonum @var{cfl}
+Compute the inverse hyperbolic cosine of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page
@@ -4390,28 +4403,40 @@ Compute the inverse hyperbolic sine of @var{cfl}; return a cflonum.
 @subsection Hyperbolic arc tangent
 
 
-@deffn {Unsafe Operation} $atanh-fixnum
+@deffn {Unsafe Operation} $atanh-fixnum @var{fx}
+Compute the inverse hyperbolic tangent of @var{fx}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atanh-bignum
+@deffn {Unsafe Operation} $atanh-bignum @var{bn}
+Compute the inverse hyperbolic tangent of @var{bn}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atanh-ratnum
+@deffn {Unsafe Operation} $atanh-ratnum @var{rt}
+Compute the inverse hyperbolic tangent of @var{rt}; return a flonum or
+cflonum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atanh-flonum
+@deffn {Unsafe Operation} $atanh-flonum @var{fl}
+Compute the inverse hyperbolic tangent of @var{fl}; return a flonum or
+cflonum.  This is different from @func{$flatanh} whose return value is a
+flonum begin @code{+nan.0} when the operand is out of the domain for
+real numbers.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atanh-cflonum
+@deffn {Unsafe Operation} $atanh-compnum @var{cn}
+Compute the inverse hyperbolic tangent of @var{cn}; return a number
+object.
 @end deffn
 
 
-@deffn {Unsafe Operation} $atanh-compnum
-
+@deffn {Unsafe Operation} $atanh-cflonum @var{cfl}
+Compute the inverse hyperbolic tangent of @var{cfl}; return a cflonum.
 @end deffn
 
 @c page
