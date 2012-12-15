@@ -519,7 +519,7 @@
 
 ;;;; helpers
 
-;;;(define dummy #f)
+(define dummy #f)
 
 (define (err who x)
   (assertion-violation who
@@ -5094,10 +5094,7 @@
       x))
 
   (define ($max-fixnum-flonum x y)
-    (let ((x ($fixnum->flonum x)))
-      (if ($fl>= y x)
-	  y
-	x)))
+    ($max-flonum-flonum ($fixnum->flonum x) y))
 
   (define ($max-fixnum-ratnum x y)
     (if (fxrt< x y)
@@ -5117,10 +5114,7 @@
       y))
 
   (define ($max-bignum-flonum x y)
-    (let ((x ($bignum->flonum x)))
-      (if ($fl>= y x)
-	  y
-	x)))
+    ($max-flonum-flonum ($bignum->flonum x) y))
 
   (define ($max-bignum-ratnum x y)
     (if (bnrt> x y)
@@ -5130,28 +5124,20 @@
 ;;; --------------------------------------------------------------------
 
   (define ($max-flonum-flonum x y)
-    (if ($fl>= x y)
-	x
-      y))
+    (cond (($flnan? x)		x)
+	  (($flnan? y)		y)
+	  (($fl>= x y)		x)
+	  (else			y)))
 
   (define ($max-flonum-fixnum x y)
-    (let ((y ($fixnum->flonum y)))
-      (if ($fl>= y x)
-	  y
-	x)))
+    ($max-flonum-flonum x ($fixnum->flonum y)))
 
   (define ($max-flonum-bignum x y)
-    (let ((y ($bignum->flonum y)))
-      (if ($fl>= y x)
-	  y
-	x)))
+    ($max-flonum-flonum x ($bignum->flonum y)))
 
   (define ($max-flonum-ratnum x y)
     ;;FIXME May be incorrect.  (Abdulaziz Ghuloum)
-    (let ((y ($ratnum->flonum y)))
-      (if ($fl>= y x)
-	  y
-	x)))
+    ($max-flonum-flonum x ($ratnum->flonum y)))
 
 ;;; --------------------------------------------------------------------
 
@@ -5171,10 +5157,7 @@
       y))
 
   (define ($max-ratnum-flonum x y)
-    (let ((x ($ratnum->flonum x)))
-      (if ($fl>= x y)
-	  x
-	y)))
+    ($max-flonum-flonum ($ratnum->flonum x) y))
 
   #| end of module: max |# )
 
@@ -5310,10 +5293,7 @@
       x))
 
   (define ($min-fixnum-flonum x y)
-    (let ((x ($fixnum->flonum x)))
-      (if ($fl<= y x)
-	  y
-	x)))
+    ($min-flonum-flonum ($fixnum->flonum x) y))
 
   (define ($min-fixnum-ratnum x y)
     (if (fxrt< x y)
@@ -5333,10 +5313,7 @@
       y))
 
   (define ($min-bignum-flonum x y)
-    (let ((x ($bignum->flonum x)))
-      (if ($fl<= y x)
-	  y
-	x)))
+    ($min-flonum-flonum ($bignum->flonum x) y))
 
   (define ($min-bignum-ratnum x y)
     (if (bnrt< x y)
@@ -5346,28 +5323,20 @@
 ;;; --------------------------------------------------------------------
 
   (define ($min-flonum-flonum x y)
-    (if ($fl<= x y)
-	x
-      y))
+    (cond (($flnan? x)		x)
+	  (($flnan? y)		y)
+	  (($fl<= x y)		x)
+	  (else			y)))
 
   (define ($min-flonum-fixnum x y)
-    (let ((y ($fixnum->flonum y)))
-      (if ($fl<= y x)
-	  y
-	x)))
+    ($min-flonum-flonum x ($fixnum->flonum y)))
 
   (define ($min-flonum-bignum x y)
-    (let ((y ($bignum->flonum y)))
-      (if ($fl<= y x)
-	  y
-	x)))
+    ($min-flonum-flonum x ($bignum->flonum y)))
 
   (define ($min-flonum-ratnum x y)
     ;;FIXME May be incorrect.  (Abdulaziz Ghuloum)
-    (let ((y ($ratnum->flonum y)))
-      (if ($fl<= y x)
-	  y
-	x)))
+    ($min-flonum-flonum x ($ratnum->flonum y)))
 
 ;;; --------------------------------------------------------------------
 
@@ -5387,10 +5356,7 @@
       y))
 
   (define ($min-ratnum-flonum x y)
-    (let ((x ($ratnum->flonum x)))
-      (if ($fl<= x y)
-	  x
-	y)))
+    ($min-flonum-flonum ($ratnum->flonum x) y))
 
   #| end of module: min |# )
 

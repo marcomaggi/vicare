@@ -68,6 +68,10 @@
   (check (min 3 1/2 2.)		=> 0.5)
   (check (min 3 13/3 2.)	=> 2.0)
 
+  (check
+      (min +nan.0 3 13/3 2.)
+    => +nan.0)
+
   #t)
 
 

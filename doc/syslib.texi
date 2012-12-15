@@ -3058,6 +3058,10 @@ flonums.
 @subsection Maximum between numbers
 
 
+Notice that if one of the operands is @code{+nan.0} the result is
+@code{+nan.0}.
+
+
 @subsubheading Any number as first argument
 
 
@@ -3203,6 +3207,10 @@ Return the maximum between the arguments.
 @c page
 @node syslib numerics min
 @subsection Minimum between numbers
+
+
+Notice that if one of the operands is @code{+nan.0} the result is
+@code{+nan.0}.
 
 
 @subsubheading Any number as first argument
