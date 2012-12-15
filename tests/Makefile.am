@@ -192,12 +192,12 @@ TESTS			=	\
 	test-vicare-numerics-trigon-asin.sps		\
 	test-vicare-numerics-trigon-acos.sps		\
 	test-vicare-numerics-trigon-atan.sps		\
-	test-vicare-numerics-hyper-sin.sps		\
-	test-vicare-numerics-hyper-cos.sps		\
-	test-vicare-numerics-hyper-tan.sps		\
-	test-vicare-numerics-hyper-asin.sps		\
-	test-vicare-numerics-hyper-acos.sps		\
-	test-vicare-numerics-hyper-atan.sps		\
+	test-vicare-numerics-hyper-sinh.sps		\
+	test-vicare-numerics-hyper-cosh.sps		\
+	test-vicare-numerics-hyper-tanh.sps		\
+	test-vicare-numerics-hyper-asinh.sps		\
+	test-vicare-numerics-hyper-acosh.sps		\
+	test-vicare-numerics-hyper-atanh.sps		\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
@@ -442,12 +442,12 @@ EXTRA_DIST = \
 	test-vicare-numerics-trigon-asin.sps		\
 	test-vicare-numerics-trigon-acos.sps		\
 	test-vicare-numerics-trigon-atan.sps		\
-	test-vicare-numerics-hyper-sin.sps		\
-	test-vicare-numerics-hyper-cos.sps		\
-	test-vicare-numerics-hyper-tan.sps		\
-	test-vicare-numerics-hyper-asin.sps		\
-	test-vicare-numerics-hyper-acos.sps		\
-	test-vicare-numerics-hyper-atan.sps		\
+	test-vicare-numerics-hyper-sinh.sps		\
+	test-vicare-numerics-hyper-cosh.sps		\
+	test-vicare-numerics-hyper-tanh.sps		\
+	test-vicare-numerics-hyper-asinh.sps		\
+	test-vicare-numerics-hyper-acosh.sps		\
+	test-vicare-numerics-hyper-atanh.sps		\
 	test-vicare-numerics-complex-numbers.sps	\
 	test-vicare-numerics-sqrt.sps			\
 	test-vicare-parameters.sps			\
