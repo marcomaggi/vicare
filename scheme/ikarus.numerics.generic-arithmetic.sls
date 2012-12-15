@@ -4148,9 +4148,14 @@
 	 (%error-not-number n))))
 
     (define ($expt-fixnum-zero-fixnum n)
-      (if ($fxzero? n)
-	  (%error-undefined-operation who n 0)
-	+1))
+      +1)
+
+    ;;Even when N is exact zero N^0 = 1.
+    ;;
+    ;; (define ($expt-fixnum-zero-fixnum n)
+    ;;   (if ($fxzero? n)
+    ;;       (%error-undefined-operation who n 0)
+    ;;     +1))
 
     (define ($expt-flonum-zero-fixnum n)
       (if ($flnan? n) +nan.0 +1.0))
