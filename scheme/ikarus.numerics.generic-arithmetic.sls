@@ -519,7 +519,7 @@
 
 ;;;; helpers
 
-(define dummy #f)
+;;;(define dummy #f)
 
 (define (err who x)
   (assertion-violation who
@@ -544,6 +544,8 @@
        (with-syntax ((WHO (datum->syntax #'?k 'who)))
 	 #'(assertion-violation WHO "expected real number as argument" ?arg))))))
 
+(define (%error-not-integer who obj)
+  (assertion-violation who "expected exact or inexact integer as argument" obj))
 
 (define-syntax %error-division-by-zero
   (syntax-rules ()
@@ -7668,7 +7670,7 @@
     ((ratnum?)		($ratnum-n x))
     ((flonum?)		($flnumerator x))
     (else
-     (assertion-violation 'numerator "expected exact integer as argument" x))))
+     (%error-not-integer 'numerator x))))
 
 (define (denominator x)
   (cond-real-numeric-operand x
@@ -7677,23 +7679,23 @@
     ((ratnum?)		($ratnum-d x))
     ((flonum?)		($fldenominator x))
     (else
-     (assertion-violation 'denominator "expected exact integer as argument" x))))
+     (%error-not-integer 'denominator x))))
 
 
 (module (floor)
+  ;;Return the largest  integer object not larger than  X.  Return exact
+  ;;objects for exact operands and inexact objects for inexact operands.
+  ;;
+  (define who 'floor)
 
   (define (floor x)
-    ;;Return the largest integer object not larger than X.  Return exact
-    ;;objects  for  exact  operands  and  inexact  objects  for  inexact
-    ;;operands.
-    ;;
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
       ((flonum?)	($floor-flonum x))
       ((ratnum?)	($floor-ratnum x))
       (else
-       (assertion-violation 'floor "expected number as argument" x))))
+       (%error-not-real-number x))))
 
   (define ($floor-ratnum x)
     (let ((x.num ($ratnum-n x))
@@ -7713,19 +7715,19 @@
 
 
 (module (ceiling)
+  ;;Return the smallest integer object not smaller than X.  Return exact
+  ;;objects for exact operands and inexact objects for inexact operands.
+  ;;
+  (define who 'ceiling)
 
   (define (ceiling x)
-    ;;Return the  smallest integer  object not  smaller than  X.  Return
-    ;;exact objects for  exact operands and inexact  objects for inexact
-    ;;operands.
-    ;;
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
       ((flonum?)	($ceiling-flonum x))
       ((ratnum?)	($ceiling-ratnum x))
       (else
-       (assertion-violation 'ceiling "expected number as argument" x))))
+       (%error-not-real-number x))))
 
   (define ($ceiling-ratnum x)
     (let* ((x.num ($ratnum-n x))
@@ -7745,19 +7747,20 @@
 
 
 (module (round)
+  ;;Return the  integer object  closest to  X; round to  even when  X is
+  ;;halfway.   Return  exact  objects  for exact  operands  and  inexact
+  ;;objects for inexact operands.
+  ;;
+  (define who 'round)
 
   (define (round x)
-    ;;Return the  integer object closest to  X; round to even  when X is
-    ;;halfway.   Return exact  objects  for exact  operands and  inexact
-    ;;objects for inexact operands.
-    ;;
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
       ((flonum?)	($flround x))
       ((ratnum?)	($round-ratnum x))
       (else
-       (assertion-violation 'round "expected number as argument" x))))
+       (%error-not-real-number x))))
 
   (define ($round-ratnum x)
     (let ((x.num ($ratnum-n x))
@@ -7778,6 +7781,10 @@
 
 
 (module (truncate)
+  ;;Return the integer  object closest to X whose absolute  value is not
+  ;;larger than the absolute value of X.
+  ;;
+  (define who 'truncate)
 
   (define (truncate x)
     (cond-real-numeric-operand x
@@ -7786,7 +7793,7 @@
       ((flonum?)	($truncate-flonum x))
       ((ratnum?)	($truncate-ratnum x))
       (else
-       (assertion-violation 'truncate "expected number as argument" x))))
+       (%error-not-real-number x))))
 
   (define ($truncate-ratnum x)
     (let ((x.num ($ratnum-n x))
