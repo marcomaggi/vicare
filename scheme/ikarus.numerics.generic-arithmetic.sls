@@ -7561,7 +7561,7 @@
 	    (($fl< x -1.0) ; -inf < X < -1
 	     ($make-cflonum ($flacosh ($fl- x)) (if pos? π ($fl- π))))
 	    (else
-	     +nan.0+nan.0)))
+	     +nan.0+nan.0i)))
 
     #| end of module: $acosh-cflonum |# )
 
