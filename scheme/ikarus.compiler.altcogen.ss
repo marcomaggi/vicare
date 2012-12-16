@@ -1361,7 +1361,7 @@
 		      (make-asm-instr op d ecx)))))))
 
          (else
-	  (error who "invalid value op" op))))
+	  (error who "invalid value op" op rands))))
 
       ((funcall rator rands)
        (handle-nontail-call rator rands d #f))

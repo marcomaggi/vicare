@@ -426,16 +426,7 @@
 		error@add1			error@sub1
 		bytevector->bignum		bignum->bytevector)
   (ikarus system $pairs)
-  (except (ikarus system $fx)
-	  $fxpositive?		$fxnegative?
-	  $fxeven?		$fxodd?
-	  $fxmodulo		$fxremainder)
-  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-  ;;Maggi; Nov 18, 2012)
-  (only (ikarus fixnums)
-	$fxpositive?		$fxnegative?
-	$fxeven?		$fxodd?
-	$fxmodulo		$fxremainder)
+  (ikarus system $fx)
   (except (ikarus system $flonums)
 	  $flonum->exact	$flzero?
 	  $flzero?/positive	$flzero?/negative
