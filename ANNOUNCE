@@ -53,10 +53,13 @@ Notes for revision 0.2d20
 
 * Added functions to (vicare):
 
-    printer-integer-radix
-    neq?
-    flonum->bytevector		bytevector->flonum
-    bignum->bytevector		bytevector->bignum
+     printer-integer-radix
+     neq?
+     flonum->bytevector		bytevector->flonum
+     bignum->bytevector		bytevector->bignum
+     flzero?/positive		flzero?/negative
+     complex-conjugate
+     square			cube
 
 * Modified DEFINE-INLINE-CONSTANT from  (vicare syntactic-extensions) to
   allow the  constant value to be  computed at expand time  by a generic
@@ -112,13 +115,6 @@ Notes for revision 0.2d20
 * Added documentation for the functions: WARNING and DIE.
 
 * Added convenience function TCP-CONNECT to (vicare posix).
-
-* Added functions to (vicare):
-
-     flzero?/positive
-     flzero?/negative
-     square
-     cube
 
 * BACKWARDS INCOMPATIBILITY The functions from (vicare glibc):
 

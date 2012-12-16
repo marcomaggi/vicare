@@ -978,6 +978,7 @@ level operations on numbers.
 * syslib numerics asinh::       Hyperbolic arc sine.
 * syslib numerics acosh::       Hyperbolic arc cosine.
 * syslib numerics atanh::       Hyperbolic arc tangent.
+* syslib numerics conjugate::   Complex conjugate.
 * syslib numerics bitnot::      Bitwise logic not.
 * syslib numerics bitand::      Bitwise logic and.
 * syslib numerics bitior::      Bitwise logic inclusive or.
@@ -4445,6 +4446,21 @@ object.
 
 @deffn {Unsafe Operation} $atanh-cflonum @var{cfl}
 Compute the inverse hyperbolic tangent of @var{cfl}; return a cflonum.
+@end deffn
+
+
+@c page
+@node syslib numerics conjugate
+@subsection Complex conjugate
+
+
+@deffn {Unsafe Operation} $complex-conjugate-compnum @var{cn}
+Return a number object representing the complex conjugate of @var{cn}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $complex-conjugate-cflonum @var{cfl}
+Return a cflonum representing the complex conjugate of @var{cfl}.
 @end deffn
 
 @c page

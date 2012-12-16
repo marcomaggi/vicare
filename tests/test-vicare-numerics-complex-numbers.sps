@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (ikarus system $compnums)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -411,6 +412,80 @@
   (catch #f
       (make-polar 3 1+2i)
     => '(1+2i))
+
+  #t)
+
+
+(parametrise ((check-test-name	'conjugate))
+
+;;; fixnums
+
+  (check (complex-conjugate 0)			=> 0)
+  (check (complex-conjugate +1)			=> +1)
+  (check (complex-conjugate -1)			=> -1)
+  (check (complex-conjugate (greatest-fixnum))	=> (greatest-fixnum))
+  (check (complex-conjugate (least-fixnum))	=> (least-fixnum))
+
+;;; bignums
+
+  (check (complex-conjugate (+ +1 (greatest-fixnum)))	=> (+ +1 (greatest-fixnum)))
+  (check (complex-conjugate (+ -1 (least-fixnum)))	=> (+ -1 (least-fixnum)))
+
+;;; ratnums
+
+  (check (complex-conjugate +1/2)		=> +1/2)
+  (check (complex-conjugate -1/2)		=> -1/2)
+
+;;; flonums
+
+  (check (complex-conjugate +0.0)		=> +0.0)
+  (check (complex-conjugate -0.0)		=> -0.0)
+  (check (complex-conjugate +1.0)		=> +1.0)
+  (check (complex-conjugate -1.0)		=> -1.0)
+  (check (complex-conjugate +inf.0)		=> +inf.0)
+  (check (complex-conjugate -inf.0)		=> -inf.0)
+  (check (complex-conjugate +nan.0)		=> +nan.0)
+
+;;; compnums
+
+  (let-syntax
+      ((cc (syntax-rules ()
+	     ((_ ?op ?expected)
+	      (begin
+		(check (complex-conjugate ?op)		=> ?expected)
+		(check ($complex-conjugate-compnum ?op)	=> ?expected))))))
+    (cc +1+1i		+1-1i)
+    (cc +1-1i		+1+1i)
+    (cc -1+1i		-1-1i)
+    (cc -1-1i		-1+1i)
+
+    (cc +1.+1i		+1.-1i)
+    (cc +1.-1i		+1.+1i)
+    (cc -1.+1i		-1.-1i)
+    (cc -1.-1i		-1.+1i)
+
+    (cc +1+1.i		+1-1.i)
+    (cc +1-1.i		+1+1.i)
+    (cc -1+1.i		-1-1.i)
+    (cc -1-1.i		-1+1.i)
+
+    #f)
+
+;;; cflonums
+
+  (let-syntax
+      ((cc (syntax-rules ()
+	     ((_ ?op ?expected)
+	      (begin
+		(check (complex-conjugate ?op)		=> ?expected)
+		(check ($complex-conjugate-cflonum ?op)	=> ?expected))))))
+
+   (cc +1.0+1.0i	 +1.0-1.0i)
+   (cc +1.0-1.0i	 +1.0+1.0i)
+   (cc -1.0+1.0i	 -1.0-1.0i)
+   (cc -1.0-1.0i	 -1.0+1.0i)
+
+   #f)
 
   #t)
 

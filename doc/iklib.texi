@@ -2223,6 +2223,15 @@ Hyperbolic functions.
 Inverse hyperbolic functions.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Complex number functions
+
+
+@defun complex-conjugate @var{num}
+Return the complex conjugate of the number object @var{num}.
+@end defun
+
 @c page
 @node iklib numerics bitwise
 @subsection Additional bitwise functions

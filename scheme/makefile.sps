@@ -849,6 +849,9 @@
     ($make-cflonum				$comp)
     ($cflonum-real				$comp)
     ($cflonum-imag				$comp)
+    (complex-conjugate				i v $language)
+    ($complex-conjugate-compnum			$comp)
+    ($complex-conjugate-cflonum			$comp)
 ;;;
     ($make-vector				$vectors)
     ($vector-length				$vectors)

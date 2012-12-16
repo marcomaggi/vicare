@@ -20,6 +20,10 @@
     make-rectangular		make-polar
     real-part			imag-part
     angle			magnitude
+
+    complex-conjugate
+    $complex-conjugate-compnum	$complex-conjugate-cflonum
+
     $make-rectangular)
   (import (except (ikarus)
 		  make-rectangular	make-polar
@@ -34,6 +38,12 @@
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
 	  cond-numeric-operand))
+
+
+;;;; helpers
+
+(define (%error-not-number who Z)
+  (assertion-violation who "expected number object as argument" Z))
 
 
 (define ($make-rectangular rep imp)
@@ -101,8 +111,9 @@
 	   (x.imp ($cflonum-imag x)))
        ($flsqrt ($fl+ ($flsquare x.rep) ($flsquare x.imp)))))
     (else
-     (assertion-violation who "expected number as argument" x))))
+     (%error-not-number who x))))
 
+
 (define (angle x)
   (define who 'angle)
   (define PI  (acos -1))
@@ -128,8 +139,9 @@
     ((flonum?)
      (atan 0.0 x))
     (else
-     (assertion-violation who "expected number as argument" x))))
+     (%error-not-number who x))))
 
+
 (define (real-part x)
   (define who 'real-part)
   (cond-numeric-operand x
@@ -140,7 +152,7 @@
     ((ratnum?)	x)
     ((flonum?)	x)
     (else
-     (assertion-violation who "expected number as argument" x))))
+     (%error-not-number who x))))
 
 (define (imag-part x)
   (define who 'imag-part)
@@ -152,7 +164,35 @@
     ((compnum?)	($compnum-imag x))
     ((cflonum?)	($cflonum-imag x))
     (else
-     (assertion-violation who "expected number as argument" x))))
+     (%error-not-number who x))))
+
+
+(module (complex-conjugate
+	 $complex-conjugate-compnum	$complex-conjugate-cflonum)
+  (define who 'complex-conjugate)
+
+  (define (complex-conjugate Z)
+    (cond-numeric-operand Z
+      ((compnum?)	($complex-conjugate-compnum Z))
+      ((cflonum?)	($complex-conjugate-cflonum Z))
+      ((fixnum?)	Z)
+      ((bignum?)	Z)
+      ((ratnum?)	Z)
+      ((flonum?)	Z)
+      (else
+       (%error-not-number who Z))))
+
+  (define ($complex-conjugate-compnum Z)
+    (let ((Z.rep ($compnum-real Z))
+	  (Z.imp ($compnum-imag Z)))
+      ($make-rectangular Z.rep (- Z.imp))))
+
+  (define ($complex-conjugate-cflonum Z)
+    (let ((Z.rep ($cflonum-real Z))
+	  (Z.imp ($cflonum-imag Z)))
+      ($make-cflonum Z.rep ($fl- Z.imp))))
+
+  #| end of module: complex-conjugate |# )
 
 
 ;;;; done
