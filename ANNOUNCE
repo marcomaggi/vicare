@@ -131,6 +131,10 @@ Notes for revision 0.2d20
      $ratnum-num
      $ratnum-den
 
+* Bindings  for  unsafe numerics  operations  are  exported by  the  new
+  library (ikarus system $numerics).  See the documentation node "syslib
+  numerics".
+
 
 Notes for revision 0.2d19
 -------------------------
