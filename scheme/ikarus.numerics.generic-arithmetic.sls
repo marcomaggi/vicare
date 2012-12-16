@@ -427,46 +427,7 @@
 		bytevector->bignum		bignum->bytevector)
   (ikarus system $pairs)
   (ikarus system $fx)
-  (except (ikarus system $flonums)
-	  $flonum->exact	$flzero?
-	  $flzero?/positive	$flzero?/negative
-	  $flpositive?		$flnegative?
-	  $fleven?		$flodd?
-	  $flnan?		$flonum-integer?
-	  $flfinite?		$flinfinite?
-	  $flsquare		$flcube
-	  $flsqrt
-	  $flnumerator		$fldenominator
-	  $flround
-	  $fllog		$flexp
-	  $flsin		$flasin
-	  $flcos		$flacos
-	  $fltan		$flatan
-	  $flsinh		$flasinh
-	  $flcosh		$flacosh
-	  $fltanh		$flatanh
-	  $flatan2)
-  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-  ;;Maggi; Nov 17, 2012)
-  (only (ikarus flonums)
-	$flonum->exact		$flzero?
-	$flzero?/positive	$flzero?/negative
-	$flpositive?		$flnegative?
-	$fleven?		$flodd?
-	$flnan?			$flonum-integer?
-	$flfinite?		$flinfinite?
-	$flsquare		$flcube
-	$flsqrt
-	$flnumerator		$fldenominator
-	$flround
-	$fllog			$flexp
-	$flsin			$flasin
-	$flcos			$flacos
-	$fltan			$flatan
-	$flsinh			$flasinh
-	$flcosh			$flacosh
-	$fltanh			$flatanh
-	$flatan2)
+  (ikarus system $flonums)
   (rename (only (ikarus flonums) #;(ikarus system flonums)
 		$flexp
 		$flsin
@@ -510,7 +471,7 @@
 
 ;;;; helpers
 
-(define dummy #f)
+;;;(define dummy #f)
 
 (define (err who x)
   (assertion-violation who
