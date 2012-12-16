@@ -4452,12 +4452,13 @@ Compute the inverse hyperbolic tangent of @var{cfl}; return a cflonum.
 @subsection Bitwise logic not
 
 
-@deffn {Unsafe Operation} $bitwise-not-fixnum
+@deffn {Unsafe Operation} $bitwise-not-fixnum @var{fx}
+Apply the bitwise NOT operation to @var{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-not-bignum
-
+@deffn {Unsafe Operation} $bitwise-not-bignum @var{bn}
+Apply the bitwise NOT operation to @var{bn}.
 @end deffn
 
 @c page
@@ -4465,28 +4466,39 @@ Compute the inverse hyperbolic tangent of @var{cfl}; return a cflonum.
 @subsection Bitwise logic and
 
 
-@deffn {Unsafe Operation} $bitwise-and-fixnum-number
+@deffn {Unsafe Operation} $bitwise-and-fixnum-number @var{fx} @var{num}
+Apply the bitwise AND operation to the fixnum @var{fx} and the exact
+integer object @var{num}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-and-bignum-number
+@deffn {Unsafe Operation} $bitwise-and-bignum-number @var{bn} @var{num}
+Apply the bitwise AND operation to the bignum @var{bn} and the exact
+integer @var{num}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-and-fixnum-fixnum
+@deffn {Unsafe Operation} $bitwise-and-fixnum-fixnum @vari{fx} @varii{fx}
+Apply the bitwise AND operation to the fixnum @vari{fx} and the fixnum
+@varii{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-and-fixnum-bignum
+@deffn {Unsafe Operation} $bitwise-and-fixnum-bignum @var{fx} @var{bn}
+Apply the bitwise AND operation to the fixnum @var{fx} and the bignum
+@var{bn}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-and-bignum-fixnum
+@deffn {Unsafe Operation} $bitwise-and-bignum-fixnum @var{bn} @var{fx}
+Apply the bitwise AND operation to the bignum @var{bn} and the fixnum
+@var{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-and-bignum-bignum
-
+@deffn {Unsafe Operation} $bitwise-and-bignum-bignum @vari{bn} @varii{bn}
+Apply the bitwise AND operation to the bignum @vari{bn} and the bignum
+@varii{bn}.
 @end deffn
 
 @c page
@@ -4494,28 +4506,39 @@ Compute the inverse hyperbolic tangent of @var{cfl}; return a cflonum.
 @subsection Bitwise logic inclusive or
 
 
-@deffn {Unsafe Operation} $bitwise-ior-fixnum-number
+@deffn {Unsafe Operation} $bitwise-ior-fixnum-number @var{fx} @var{num}
+Apply the bitwise inclusive OR operation to the fixnum @var{fx} and the
+exact integer object @var{num}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-ior-bignum-number
+@deffn {Unsafe Operation} $bitwise-ior-bignum-number @var{bn} @var{num}
+Apply the bitwise inclusive OR operation to the bignum @var{bn} and the
+exact integer @var{num}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-ior-fixnum-fixnum
+@deffn {Unsafe Operation} $bitwise-ior-fixnum-fixnum @vari{fx} @varii{fx}
+Apply the bitwise inclusive OR operation to the fixnum @vari{fx} and the
+fixnum @varii{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-ior-fixnum-bignum
+@deffn {Unsafe Operation} $bitwise-ior-fixnum-bignum @var{fx} @var{bn}
+Apply the bitwise inclusive OR operation to the fixnum @var{fx} and the
+bignum @var{bn}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-ior-bignum-fixnum
+@deffn {Unsafe Operation} $bitwise-ior-bignum-fixnum @var{bn} @var{fx}
+Apply the bitwise inclusive OR operation to the bignum @var{bn} and the
+fixnum @var{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-ior-bignum-bignum
-
+@deffn {Unsafe Operation} $bitwise-ior-bignum-bignum @vari{bn} @varii{bn}
+Apply the bitwise inclusive OR operation to the bignum @vari{bn} and the
+bignum @varii{bn}.
 @end deffn
 
 @c page
@@ -4523,27 +4546,39 @@ Compute the inverse hyperbolic tangent of @var{cfl}; return a cflonum.
 @subsection Bitwise logic exclusive or
 
 
-@deffn {Unsafe Operation} $bitwise-xor-fixnum-number
+@deffn {Unsafe Operation} $bitwise-xor-fixnum-number @var{fx} @var{num}
+Apply the bitwise exclusive OR operation to the fixnum @var{fx} and the
+exact integer object @var{num}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-xor-bignum-number
+@deffn {Unsafe Operation} $bitwise-xor-bignum-number @var{bn} @var{num}
+Apply the bitwise exclusive OR operation to the bignum @var{bn} and the
+exact integer @var{num}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-xor-fixnum-fixnum
+@deffn {Unsafe Operation} $bitwise-xor-fixnum-fixnum @vari{fx} @varii{fx}
+Apply the bitwise exclusive OR operation to the fixnum @vari{fx} and the
+fixnum @varii{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-xor-fixnum-bignum
+@deffn {Unsafe Operation} $bitwise-xor-fixnum-bignum @var{fx} @var{bn}
+Apply the bitwise exclusive OR operation to the fixnum @var{fx} and the
+bignum @var{bn}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-xor-bignum-fixnum
+@deffn {Unsafe Operation} $bitwise-xor-bignum-fixnum @var{bn} @var{fx}
+Apply the bitwise exclusive OR operation to the bignum @var{bn} and the
+fixnum @var{fx}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bitwise-xor-bignum-bignum
+@deffn {Unsafe Operation} $bitwise-xor-bignum-bignum @vari{bn} @varii{bn}
+Apply the bitwise exclusive OR operation to the bignum @vari{bn} and the
+bignum @varii{bn}.
 @end deffn
 
 @c page
