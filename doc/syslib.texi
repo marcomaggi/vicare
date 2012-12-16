@@ -979,6 +979,8 @@ level operations on numbers.
 * syslib numerics acosh::       Hyperbolic arc cosine.
 * syslib numerics atanh::       Hyperbolic arc tangent.
 * syslib numerics conjugate::   Complex conjugate.
+* syslib numerics magnitude::   Magnitude of complex numbers.
+* syslib numerics angle::       Angle of complex numbers.
 * syslib numerics bitnot::      Bitwise logic not.
 * syslib numerics bitand::      Bitwise logic and.
 * syslib numerics bitior::      Bitwise logic inclusive or.
@@ -4461,6 +4463,74 @@ Return a number object representing the complex conjugate of @var{cn}.
 
 @deffn {Unsafe Operation} $complex-conjugate-cflonum @var{cfl}
 Return a cflonum representing the complex conjugate of @var{cfl}.
+@end deffn
+
+@c page
+@node syslib numerics magnitude
+@subsection Magnitude of complex numbers
+
+
+@deffn {Unsafe Operation} $magnitude-fixnum @var{fx}
+Compute the magnitude of @var{fx}; return a fixnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $magnitude-bignum @var{bn}
+Compute the magnitude of @var{bn}; return a bignum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $magnitude-ratnum @var{rt}
+Compute the magnitude of @var{rt}; return a ratnum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $magnitude-flonum @var{fl}
+Compute the magnitude of @var{fl}; return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $magnitude-compnum @var{cn}
+Compute the magnitude of @var{cn}; return a number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $magnitude-cflonum @var{cfl}
+Compute the magnitude of @var{cfl}; return a flonum.
+@end deffn
+
+@c page
+@node syslib numerics angle
+@subsection Angle of complex numbers
+
+
+@deffn {Unsafe Operation} $angle-fixnum @var{fx}
+Compute the angle of @var{fx}; return a fixnum or flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $angle-bignum @var{bn}
+Compute the angle of @var{bn}; return a fixnum or flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $angle-ratnum @var{rt}
+Compute the angle of @var{rt}; return a fixnum or flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $angle-flonum @var{fl}
+Compute the angle of @var{fl}; return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $angle-compnum @var{cn}
+Compute the angle of @var{cn}; return a number object.
+@end deffn
+
+
+@deffn {Unsafe Operation} $angle-cflonum @var{cfl}
+Compute the angle of @var{cfl}; return a flonum.
 @end deffn
 
 @c page

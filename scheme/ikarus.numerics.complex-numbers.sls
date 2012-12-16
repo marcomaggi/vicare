@@ -19,9 +19,17 @@
   (export
     make-rectangular		make-polar
     real-part			imag-part
-    angle			magnitude
-
+    magnitude			angle
     complex-conjugate
+
+;;; --------------------------------------------------------------------
+
+    $magnitude-fixnum		$magnitude-bignum	$magnitude-ratnum
+    $magnitude-flonum		$magnitude-compnum	$magnitude-cflonum
+
+    $angle-fixnum		$angle-bignum		$angle-ratnum
+    $angle-flonum		$angle-compnum		$angle-cflonum
+
     $complex-conjugate-compnum	$complex-conjugate-cflonum
 
     $make-rectangular)
@@ -35,12 +43,24 @@
     (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $flonums)
+    (rename (only (ikarus generic-arithmetic) #;(ikarus system $numerics)
+		  $abs-fixnum
+		  $abs-bignum
+		  $abs-ratnum
+		  $abs-flonum
+		  $atan2-real-real)
+	    ($abs-fixnum		$magnitude-fixnum)
+	    ($abs-bignum		$magnitude-bignum)
+	    ($abs-ratnum		$magnitude-ratnum)
+	    ($abs-flonum		$magnitude-flonum))
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
 	  cond-numeric-operand))
 
 
 ;;;; helpers
+
+(define dummy #f)
 
 (define (%error-not-number who Z)
   (assertion-violation who "expected number object as argument" Z))
@@ -97,49 +117,82 @@
     ($make-rectangular (* mag (cos angle))
 		       (* mag (sin angle)))))
 
-(define (magnitude x)
+
+(module (magnitude
+	 $magnitude-compnum
+	 $magnitude-cflonum)
   (define who 'magnitude)
-  (cond-numeric-operand x
-    ((real?)
-     (abs x))
-    ((compnum?)
-     (let ((x.rep ($compnum-real x))
-	   (x.imp ($compnum-imag x)))
-       (sqrt (+ (square x.rep) (square x.imp)))))
-    ((cflonum?)
-     (let ((x.rep ($cflonum-real x))
-	   (x.imp ($cflonum-imag x)))
-       ($flsqrt ($fl+ ($flsquare x.rep) ($flsquare x.imp)))))
-    (else
-     (%error-not-number who x))))
+
+  (define (magnitude x)
+    (cond-numeric-operand x
+      ((compnum?)	($magnitude-compnum x))
+      ((cflonum?)	($magnitude-cflonum x))
+      ((fixnum?)	($magnitude-fixnum  x))
+      ((bignum?)	($magnitude-bignum  x))
+      ((ratnum?)	($magnitude-ratnum  x))
+      ((flonum?)	($magnitude-flonum  x))
+      (else
+       (%error-not-number who x))))
+
+  (define ($magnitude-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (sqrt (+ (square x.rep) (square x.imp)))))
+
+  (define ($magnitude-cflonum x)
+    ($flsqrt ($fl+ ($flsquare ($cflonum-real x))
+		   ($flsquare ($cflonum-imag x)))))
+
+  #| end of module: magnitude |# )
 
 
-(define (angle x)
+(module (angle
+	 $angle-fixnum		$angle-bignum		$angle-ratnum
+	 $angle-flonum		$angle-compnum		$angle-cflonum)
   (define who 'angle)
   (define PI  (acos -1))
-  (cond-numeric-operand x
-    ((compnum?)
-     (let ((r ($compnum-real x))
-	   (i ($compnum-imag x)))
-       (atan i r)))
-    ((cflonum?)
-     (let ((r ($cflonum-real x))
-	   (i ($cflonum-imag x)))
-       (atan i r)))
-    ((fixnum?)
-     (cond (($fxpositive? x)	0)
-	   (($fxnegative? x)	PI)
-	   (else
-	    (assertion-violation who "undefined for 0"))))
-    ((bignum?)
-     (if ($bignum-positive? x) 0 PI))
-    ((ratnum?)
-     (let ((n ($ratnum-n x)))
-       (if (> n 0) 0 PI)))
-    ((flonum?)
-     (atan 0.0 x))
-    (else
-     (%error-not-number who x))))
+
+  (define (angle x)
+    (cond-numeric-operand x
+      ((compnum?)	($angle-compnum x))
+      ((cflonum?)	($angle-cflonum x))
+      ((fixnum?)	($angle-fixnum  x))
+      ((bignum?)	($angle-bignum  x))
+      ((ratnum?)	($angle-ratnum  x))
+      ((flonum?)	($angle-flonum  x))
+      (else
+       (%error-not-number who x))))
+
+  (define ($angle-fixnum x)
+    (cond (($fxpositive? x)	0)
+	  (($fxnegative? x)	PI)
+	  (else
+	   (assertion-violation who "undefined for 0"))))
+
+  (define ($angle-bignum x)
+    (if ($bignum-positive? x) 0 PI))
+
+  (define ($angle-ratnum x)
+    (let ((n ($ratnum-n x)))
+      (if (> n 0) 0 PI)))
+
+  (define ($angle-flonum x)
+    (if (or ($flpositive?      x)
+	    ($flzero?/positive x))
+	0.0
+      PI))
+
+  (define ($angle-compnum x)
+    (let ((x.rep ($compnum-real x))
+	  (x.imp ($compnum-imag x)))
+      (atan x.imp x.rep)))
+
+  (define ($angle-cflonum x)
+    (let ((x.rep ($cflonum-real x))
+	  (x.imp ($cflonum-imag x)))
+      ($atan2-real-real x.rep x.imp)))
+
+  #| end of module: angle |# )
 
 
 (define (real-part x)

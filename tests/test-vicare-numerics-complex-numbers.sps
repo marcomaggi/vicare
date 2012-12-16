@@ -245,163 +245,163 @@
 
 (parametrise ((check-test-name	'make-polar))
 
-  (let ((rep 1)
-	(imp 2))
+  (let ((mag 1)
+	(ang 2))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1/2)
-	(imp 2))
+  (let ((mag 1/2)
+	(ang 2))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1)
-	(imp 1/2))
+  (let ((mag 1)
+	(ang 1/2))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1/2)
-	(imp 2/4))
+  (let ((mag 1/2)
+	(ang 2/4))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep bigN0)
-	(imp 2))
+  (let ((mag bigN0)
+	(ang 2))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1)
-	(imp bigN0))
+  (let ((mag 1)
+	(ang bigN0))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> magarg?) (list rep imp)))
+      (=> magarg?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep bigN0)
-	(imp bigN1))
+  (let ((mag bigN0)
+	(ang bigN1))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> magarg?) (list rep imp)))
+      (=> magarg?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1.2)
-	(imp 2))
+  (let ((mag 1.2)
+	(ang 2))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1)
-	(imp 2.4))
+  (let ((mag 1)
+	(ang 2.4))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
-  (let ((rep 1.2)
-	(imp 2.4))
+  (let ((mag 1.2)
+	(ang 2.4))
     (check
-	(complex? (make-polar rep imp))
+	(complex? (make-polar mag ang))
       => #t)
     (check
-	(cflonum? (make-polar rep imp))
+	(cflonum? (make-polar mag ang))
       => #t)
     (check
-	(let ((Z (make-polar rep imp)))
+	(let ((Z (make-polar mag ang)))
 	  (list (magnitude Z)
 		(angle Z)))
-      (=> flequal?) (list rep imp)))
+      (=> flequal?) (list mag ang)))
 
 ;;; --------------------------------------------------------------------
 
