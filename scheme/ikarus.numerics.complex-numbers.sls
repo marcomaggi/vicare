@@ -27,6 +27,9 @@
 		  angle			magnitude)
     (except (ikarus system $compnums)
 	    $make-rectangular)
+    (ikarus system $fx)
+    (ikarus system $bignums)
+    (ikarus system $ratnums)
     (ikarus system $flonums)
     (vicare arguments validation)
     (only (vicare syntactic-extensions)
@@ -101,16 +104,6 @@
      (assertion-violation who "expected number as argument" x))))
 
 (define (angle x)
-  (import (except (ikarus system $fx)
-		  $fxpositive?
-		  $fxnegative?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Wed Nov 28, 2012)
-    (only (ikarus fixnums)
-	  $fxpositive?
-	  $fxnegative?)
-    (ikarus system $bignums)
-    (ikarus system $ratnums))
   (define who 'angle)
   (define PI  (acos -1))
   (cond-numeric-operand x
