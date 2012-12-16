@@ -32,12 +32,13 @@
     ;;Maggi; Thu Nov 29, 2012)
     (only (ikarus generic-arithmetic)
 	  square)
-    (except (ikarus system $flonums)
+    (ikarus system $flonums)
+    #;(except (ikarus system $flonums)
 	    $flsquare
 	    $flsqrt)
     ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
     ;;Maggi; Thu Nov 29, 2012)
-    (only (ikarus flonums)
+    #;(only (ikarus flonums)
 	  $flsquare
 	  $flsqrt)
     (vicare arguments validation)
