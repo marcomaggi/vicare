@@ -1360,10 +1360,8 @@
     (nop)))
 
  ;; (define-primop $fxeven? unsafe
- ;;   ((V x)
- ;;    (prm '= (prm 'logand (T x) (K 1)) (K 0)))
  ;;   ((P x)
- ;;    (K #t))
+ ;;    (prm '= (prm 'logand (T x) (K 1)) (K 0)))
  ;;   ((E x)
  ;;    (nop)))
 
