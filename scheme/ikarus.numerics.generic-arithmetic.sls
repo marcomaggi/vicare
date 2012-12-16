@@ -428,7 +428,7 @@
   (ikarus system $pairs)
   (ikarus system $fx)
   (ikarus system $flonums)
-  (rename (only (ikarus flonums) #;(ikarus system flonums)
+  (rename (only (ikarus flonums) #;(ikarus system $flonums)
 		$flexp
 		$flsin
 		$flcos
@@ -446,22 +446,8 @@
 	  ($flcosh	$cosh-flonum)
 	  ($fltanh	$tanh-flonum)
 	  ($flasinh	$asinh-flonum))
-  (except (ikarus system $ratnums)
-	  $ratnum->flonum)
-  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-  ;;Maggi; Nov 21, 2012)
-  (only (ikarus ratnums)
-	$ratnum->flonum)
-  (except (ikarus system $bignums)
-	  $bignum-positive?	$bignum-negative?
-	  $bignum-even?		$bignum-odd?
-	  $bignum->flonum)
-  ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-  ;;Maggi; Nov 21, 2012)
-  (only (ikarus bignums)
-	$bignum-positive?	$bignum-negative?
-	$bignum-even?		$bignum-odd?
-	$bignum->flonum)
+  (ikarus system $ratnums)
+  (ikarus system $bignums)
   (ikarus system $compnums)
   (ikarus system $chars)
   (ikarus system $strings)
