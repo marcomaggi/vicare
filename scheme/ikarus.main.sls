@@ -364,7 +364,7 @@
   (define cfg
     (make-run-time-config #f		;exec-mode
 			  #f		;script
-			  #f		;rcfiles
+			  #t		;rcfiles
 			  '()		;load-libraries
 			  #f		;print-libraries
 			  '()		;eval-codes
