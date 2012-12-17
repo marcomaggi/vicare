@@ -25,12 +25,13 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (ikarus system $numerics)
   (vicare checks)
   (only (vicare syntactic-extensions)
-	case-word-size))
+	case-word-size)
+  (vicare numerics constants))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare numerics functions: trigonometric arc tangent\n")
@@ -252,19 +253,19 @@
   (test -0.0 0		0.0)
 
   (test 0 +0.0		0.0)
-  (test 0 -0.0		+3.14159265358979323846264)
+  (test 0 -0.0		greek-pi)
 
-  (test -0.0 -0.0	-3.14159265358979323846264)
+  (test -0.0 -0.0	-greek-pi)
 
-  (test +inf.0 +0.0	+1.5707963249322514)
-  (test +inf.0 -0.0	+1.5707963249322514)
-  (test -inf.0 +0.0	-1.5707963249322514)
-  (test -inf.0 -0.0	-1.5707963249322514)
+  (test +inf.0 +0.0	greek-pi/2)
+  (test +inf.0 -0.0	greek-pi/2)
+  (test -inf.0 +0.0	-greek-pi/2)
+  (test -inf.0 -0.0	-greek-pi/2)
 
   (test +0.0 +inf.0	+0.0)
   (test -0.0 +inf.0	+0.0)
-  (test +0.0 -inf.0	+3.14159265358979323846264)
-  (test -0.0 -inf.0	-3.14159265358979323846264)
+  (test +0.0 -inf.0	+greek-pi)
+  (test -0.0 -inf.0	-greek-pi)
 
   #t)
 
@@ -286,8 +287,8 @@
 
   (case-word-size
    ((32)
-    (test (greatest-fixnum)	1.5707963249322514)
-    (test (least-fixnum)	-1.5707963249322514))
+    (test (greatest-fixnum)	+greek-pi/2)
+    (test (least-fixnum)	-greek-pi/2))
    ((64)
     (void)))
 
@@ -504,3 +505,6 @@
 (check-report)
 
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; End:

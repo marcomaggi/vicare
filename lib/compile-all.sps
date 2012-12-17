@@ -32,6 +32,7 @@
   (only (vicare platform constants))
   (only (vicare platform features))
   (only (vicare platform utilities))
+  (only (vicare numerics constants))
   (only (vicare unsafe-operations))
   (only (vicare arguments validation))
   (only (vicare syntactic-extensions))

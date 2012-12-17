@@ -65,6 +65,10 @@
 (define (%error-not-number who Z)
   (assertion-violation who "expected number object as argument" Z))
 
+;;From Wikipedia.
+(define greek-pi	3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679)
+(define greek-pi/2	(/ greek-pi 2.0))
+
 
 (define ($make-rectangular rep imp)
   ;;REP and IMP can be any combination of real numbers.  If IMP is exact
@@ -150,7 +154,6 @@
 	 $angle-fixnum		$angle-bignum		$angle-ratnum
 	 $angle-flonum		$angle-compnum		$angle-cflonum)
   (define who 'angle)
-  (define PI  (acos -1))
 
   (define (angle Z)
     (cond-numeric-operand Z
@@ -165,22 +168,22 @@
 
   (define ($angle-fixnum Z)
     (cond (($fxpositive? Z)	0)
-	  (($fxnegative? Z)	PI)
+	  (($fxnegative? Z)	greek-pi)
 	  (else
 	   (assertion-violation who "undefined for 0"))))
 
   (define ($angle-bignum Z)
-    (if ($bignum-positive? Z) 0 PI))
+    (if ($bignum-positive? Z) 0 greek-pi))
 
   (define ($angle-ratnum Z)
     (let ((n ($ratnum-n Z)))
-      (if (> n 0) 0 PI)))
+      (if (> n 0) 0 greek-pi)))
 
   (define ($angle-flonum Z)
     (if (or ($flpositive?      Z)
 	    ($flzero?/positive Z))
 	0.0
-      PI))
+      greek-pi))
 
   (define ($angle-compnum Z)
     (let ((Z.rep ($compnum-real Z))

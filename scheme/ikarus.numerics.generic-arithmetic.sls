@@ -497,12 +497,11 @@
      (assertion-violation ?who "undefined operation" . ?irritants))))
 
 
-(module (π π/2)
-  (import (ikarus))
-  #;(define π (acos -1))
-  ;;From Wikipedia.
-  (define π 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679)
-  (define π/2 (/ π 2.0)))
+;;;; constants
+
+;;From Wikipedia.
+(define greek-pi	3.141592653589793)
+(define greek-pi/2	1.5707963267948966)
 
 
 (module (real->flonum)
@@ -6414,7 +6413,7 @@
 	  (else
 	   ;;We must assume that the opposite of X may be a bignum.
 	   ($make-rectangular (log ($neg-fixnum x))
-			      π))))
+			      greek-pi))))
 
   (define ($log-bignum x)
     (if ($bignum-positive? x)
@@ -6425,7 +6424,7 @@
 		;;Could the (dropped) residual ever affect the answer?
 		(* 2 (log s)))
 	    v))
-      ($make-rectangular (log ($neg-bignum x)) π)))
+      ($make-rectangular (log ($neg-bignum x)) greek-pi)))
 
   (define ($log-ratnum x)
     ($sub-number-number (log ($ratnum-n x))
@@ -6438,7 +6437,7 @@
 	       ($flzero?/positive x))
 	   (foreign-call "ikrt_fl_log" x))
 	  (else
-	   ($make-cflonum ($fllog ($fl- x)) π))))
+	   ($make-cflonum ($fllog ($fl- x)) greek-pi))))
 
   (define ($log-compnum x)
     ;;
@@ -6998,12 +6997,12 @@
 	   ;;          pi
 	   ;; asin x = -- - i * acosh x
 	   ;;          2
-	   ($make-cflonum π/2 ($fl- ($acosh-flonum x))))
+	   ($make-cflonum greek-pi/2 ($fl- ($acosh-flonum x))))
 	  (($fl< x -1.0)
 	   ;;            pi
 	   ;; asin x = - -- + i * acosh (- x)
 	   ;;            2
-	   ($make-cflonum ($fl- π/2) ($acosh-flonum ($fl- x))))
+	   ($make-cflonum ($fl- greek-pi/2) ($acosh-flonum ($fl- x))))
 	  (else
 	   ($flasin x))))
 
@@ -7101,7 +7100,7 @@
     (cond (($fl> x 1.0)
 	   ($make-compnum 0 ($acosh-flonum x)))
 	  (($fl< x -1.0)
-	   ($make-cflonum π ($fl- ($acosh-flonum ($fl- x)))))
+	   ($make-cflonum greek-pi ($fl- ($acosh-flonum ($fl- x)))))
 	  (else
 	   ($flacos x))))
 
@@ -7109,7 +7108,7 @@
     (let* ((y     ($asin-compnum x))
 	   (y.rep (real-part y))
 	   (y.imp (imag-part y)))
-      ($make-rectangular ($sub-flonum-number π/2 y.rep)
+      ($make-rectangular ($sub-flonum-number greek-pi/2 y.rep)
 			 ($neg-number y.imp))))
 
   (define ($acos-cflonum x)
@@ -7123,12 +7122,12 @@
 		  +0.0-inf.0i
 		+0.0+inf.0i)
 	    (if ($flzero?/positive x.imp)
-		($make-cflonum π -inf.0)
-	      ($make-cflonum π +inf.0)))
+		($make-cflonum greek-pi -inf.0)
+	      ($make-cflonum greek-pi +inf.0)))
 	(let* ((y     ($asin-cflonum x))
 	       (y.rep ($cflonum-real y))
 	       (y.imp ($cflonum-imag y)))
-	  ($make-cflonum ($fl- π/2 y.rep) ($fl- y.imp))))))
+	  ($make-cflonum ($fl- greek-pi/2 y.rep) ($fl- y.imp))))))
 
   #| end of module: acos |# )
 
@@ -7462,7 +7461,7 @@
 	  (($fl>= x -1.0) ; -1 <= X < +1
 	   ($make-compnum 0 ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x))) x)))
 	  (($fl< x -1.0) ; -inf < X < -1
-	   ($make-cflonum ($flacosh ($fl- x)) π))
+	   ($make-cflonum ($flacosh ($fl- x)) greek-pi))
 	  (else +nan.0)))
 
 ;;; --------------------------------------------------------------------
@@ -7497,7 +7496,7 @@
 	     (let ((t ($flatan2 ($flsqrt ($fl- 1.0 ($flsquare x))) x)))
 	       ($make-cflonum 0.0 (if pos? t ($fl- t)))))
 	    (($fl< x -1.0) ; -inf < X < -1
-	     ($make-cflonum ($flacosh ($fl- x)) (if pos? π ($fl- π))))
+	     ($make-cflonum ($flacosh ($fl- x)) (if pos? greek-pi ($fl- greek-pi))))
 	    (else
 	     +nan.0+nan.0i)))
 

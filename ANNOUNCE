@@ -135,6 +135,15 @@ Notes for revision 0.2d20
   library (ikarus system $numerics).  See the documentation node "syslib
   numerics".
 
+* Added  library  (vicare  numerics constants)  exporting  bindings  for
+  constants related to the greek pi.
+
+* The reader in #!vicare mode now accepts symbols starting with "+g" and
+  "-g",  to  allow   reading  "+greek-pi",  "+greek-pi/2",  "-greek-pi",
+  "-greek-pi/2",  etc.   See  the  documentation  node  "iklib  numerics
+  constants" for how  to display such symbols with  Unicode glyphs under
+  GNU Emacs.
+
 
 Notes for revision 0.2d19
 -------------------------

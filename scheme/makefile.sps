@@ -945,7 +945,6 @@
 ;;; (ikarus system $pointers)
     ($pointer?					$pointers)
     ($pointer=					$pointers)
-
 ;;;
     ($closure-code				$codes)
     ($code->closure				$codes)
@@ -3239,7 +3238,8 @@
 (fprintf (console-error-port) "Happy Happy Joy Joy\n")
 
 ;;; end of file
-;;; Local Variables:
-;;; eval: (put 'time-it 'scheme-indent-function 1)
-;;; eval: (put 'each-for 'scheme-indent-function 1)
-;;; End:
+;; Local Variables:
+;; coding: utf-8-unix
+;; eval: (put 'time-it 'scheme-indent-function 1)
+;; eval: (put 'each-for 'scheme-indent-function 1)
+;; End:

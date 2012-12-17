@@ -212,6 +212,10 @@ Shared structures graph notation: @code{#nn=}, @code{#nn#}.
 
 @item
 Special symbols: @code{++}, @code{--}.
+
+@item
+Special symbols beginning with @code{+g} and @code{-g}, to allow reading
+symbols starting with @code{+greek-pi} and @code{-greek-pi}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
@@ -2074,10 +2078,101 @@ representing the mantissa's @math{53} bits.
 
 
 @menu
+* iklib numerics constants::    Numeric constants.
 * iklib numerics preds::        Additional numeric predicates.
 * iklib numerics math::         Additional math functions.
 * iklib numerics bitwise::      Additional bitwise functions.
 @end menu
+
+@c page
+@node iklib numerics constants
+@subsection Numeric constants
+
+
+@cindex Library @library{vicare numerics constants}
+@cindex @library{vicare numerics constants}, library
+
+
+The following bindings are exported by the library @library{vicare
+numerics constants}.  Notice that under @gnu{} Emacs it is easy to
+display the symbol @code{greek-pi} with the Unicode glyph for the greek
+letter adding the following to the Scheme hook:
+
+@example
+(defun my-pretty-chars-scheme-pi ()
+  (interactive)
+  (font-lock-add-keywords
+   nil '(("\\(\\<[-+]?\\(greek-pi\\)\\)"
+          (0 (progn
+               (compose-region (match-beginning 2)
+                               (match-end 2)
+                               ?\u03C0)
+               nil))))))
+@end example
+
+
+@deffn Constant greek-pi
+@deffnx Constant +greek-pi
+@deffnx Constant -greek-pi
+Evaluate to a constant flonum object representing plus or minus pi.
+@end deffn
+
+
+@deffn Constant greek-pi/2
+@deffnx Constant +greek-pi/2
+@deffnx Constant -greek-pi/2
+Evaluate to a constant flonum object representing plus or minus pi
+divided by @math{2}.
+@end deffn
+
+
+@deffn Constant greek-pi/3
+@deffnx Constant +greek-pi/3
+@deffnx Constant -greek-pi/3
+Evaluate to a constant flonum object representing plus or minus pi
+divided by @math{3}.
+@end deffn
+
+
+@deffn Constant greek-pi/4
+@deffnx Constant +greek-pi/4
+@deffnx Constant -greek-pi/4
+Evaluate to a constant flonum object representing plus or minus pi
+divided by @math{4}.
+@end deffn
+
+
+@deffn Constant greek-pi/6
+@deffnx Constant +greek-pi/6
+@deffnx Constant -greek-pi/6
+Evaluate to a constant flonum object representing plus or minus pi
+divided by @math{6}.
+@end deffn
+
+
+@deffn Constant greek-pi*2
+@deffnx Constant +greek-pi*2
+@deffnx Constant -greek-pi*2
+Evaluate to a constant flonum object representing plus or minus pi
+multiplied by @math{2}.
+@end deffn
+
+
+@deffn Constant greek-pi*2/3
+@deffnx Constant +greek-pi*2/3
+@deffnx Constant -greek-pi*2/3
+Evaluate to a constant flonum object representing plus or minus pi
+multiplied by @math{2/3}.
+@end deffn
+
+
+@deffn Constant greek-pi*3/4
+@deffnx Constant +greek-pi*3/4
+@deffnx Constant -greek-pi*3/4
+Evaluate to a constant flonum object representing plus or minus pi
+multiplied by @math{3/4}.
+@end deffn
+
 
 @c page
 @node iklib numerics preds
