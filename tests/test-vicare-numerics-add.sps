@@ -399,6 +399,19 @@
 (define CN112		(make-rectangular FL4 RN04))
 
 
+(parametrise ((check-test-name	'specials))
+
+  (check (+ 1 -1.1-0.0i)       => -0.10000000000000009+0.0i)
+  (check (- 1 +1.1+0.0i)       => -0.10000000000000009+0.0i)
+
+  (check (+  0.0 -0.0)           =>  0.0)
+  (check (+ -0.0  0.0)           =>  0.0)
+  (check (+  0.0  0.0)           =>  0.0)
+  (check (+ -0.0 -0.0)           => -0.0)
+
+  #t)
+
+
 (parametrise ((check-test-name	'fixnums))
 
   (let-syntax ((test (make-test + $add-fixnum-fixnum)))
