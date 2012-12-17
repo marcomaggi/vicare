@@ -78,7 +78,8 @@
     check-reset!
     check-passed?)
   (import (rnrs)
-    (srfi :78 lightweight-testing compat)
+    (only (vicare)
+	  pretty-print)
     (srfi :39 parameters)
     (srfi :42 eager-comprehensions))
 
@@ -99,6 +100,10 @@
 (define (%newline)
   (newline (current-output-port))
   (flush-output-port (current-output-port)))
+
+(define (check:write obj port)
+  (pretty-print obj port)
+  (flush-output-port port))
 
 
 (define (print/header/padded x header padding)

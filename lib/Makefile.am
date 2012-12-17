@@ -149,9 +149,8 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a69/basic-hash-tables.sls		\
 	srfi/%3a69.sls					\
 	\
-	srfi/%3a78/lightweight-testing/compat.vicare.sls	\
-	srfi/%3a78/lightweight-testing.sls			\
 	srfi/%3a78.sls					\
+	srfi/%3a78/lightweight-testing.sls		\
 	\
 	srfi/%3a98.sls					\
 	srfi/%3a98/os-environment-variables.vicare.sls	\
