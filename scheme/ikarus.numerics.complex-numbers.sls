@@ -36,9 +36,12 @@
   (import (except (ikarus)
 		  make-rectangular	make-polar
 		  real-part		imag-part
-		  angle			magnitude)
-    (except (ikarus system $compnums)
-	    $make-rectangular)
+		  angle			magnitude
+		  complex-conjugate)
+    (only (ikarus system $compnums)
+	  $make-compnum		$make-cflonum
+	  $compnum-real		$compnum-imag
+	  $cflonum-real		$cflonum-imag)
     (ikarus system $fx)
     (ikarus system $bignums)
     (ikarus system $ratnums)
