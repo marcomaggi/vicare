@@ -152,45 +152,45 @@
   (define who 'angle)
   (define PI  (acos -1))
 
-  (define (angle x)
-    (cond-numeric-operand x
-      ((compnum?)	($angle-compnum x))
-      ((cflonum?)	($angle-cflonum x))
-      ((fixnum?)	($angle-fixnum  x))
-      ((bignum?)	($angle-bignum  x))
-      ((ratnum?)	($angle-ratnum  x))
-      ((flonum?)	($angle-flonum  x))
+  (define (angle Z)
+    (cond-numeric-operand Z
+      ((compnum?)	($angle-compnum Z))
+      ((cflonum?)	($angle-cflonum Z))
+      ((fixnum?)	($angle-fixnum  Z))
+      ((bignum?)	($angle-bignum  Z))
+      ((ratnum?)	($angle-ratnum  Z))
+      ((flonum?)	($angle-flonum  Z))
       (else
-       (%error-not-number who x))))
+       (%error-not-number who Z))))
 
-  (define ($angle-fixnum x)
-    (cond (($fxpositive? x)	0)
-	  (($fxnegative? x)	PI)
+  (define ($angle-fixnum Z)
+    (cond (($fxpositive? Z)	0)
+	  (($fxnegative? Z)	PI)
 	  (else
 	   (assertion-violation who "undefined for 0"))))
 
-  (define ($angle-bignum x)
-    (if ($bignum-positive? x) 0 PI))
+  (define ($angle-bignum Z)
+    (if ($bignum-positive? Z) 0 PI))
 
-  (define ($angle-ratnum x)
-    (let ((n ($ratnum-n x)))
+  (define ($angle-ratnum Z)
+    (let ((n ($ratnum-n Z)))
       (if (> n 0) 0 PI)))
 
-  (define ($angle-flonum x)
-    (if (or ($flpositive?      x)
-	    ($flzero?/positive x))
+  (define ($angle-flonum Z)
+    (if (or ($flpositive?      Z)
+	    ($flzero?/positive Z))
 	0.0
       PI))
 
-  (define ($angle-compnum x)
-    (let ((x.rep ($compnum-real x))
-	  (x.imp ($compnum-imag x)))
-      (atan x.imp x.rep)))
+  (define ($angle-compnum Z)
+    (let ((Z.rep ($compnum-real Z))
+	  (Z.imp ($compnum-imag Z)))
+      (atan Z.imp Z.rep)))
 
-  (define ($angle-cflonum x)
-    (let ((x.rep ($cflonum-real x))
-	  (x.imp ($cflonum-imag x)))
-      ($atan2-real-real x.rep x.imp)))
+  (define ($angle-cflonum Z)
+    (let ((Z.rep ($cflonum-real Z))
+	  (Z.imp ($cflonum-imag Z)))
+      ($atan2-real-real Z.imp Z.rep)))
 
   #| end of module: angle |# )
 

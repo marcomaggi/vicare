@@ -4191,10 +4191,36 @@ object.
 @subsection Trigonometric arc tangent
 
 
-@deffn {Unsafe Operation} $atan2-real-real @vari{x} @varii{x}
-Compute the trigonometric arc tangent of the angle of the complex number
-having @varii{x} as real part and @vari{x} as imaginary part; return a
-flonum.
+@deffn {Unsafe Operation} $atan2-real-real @var{imp} @var{rep}
+Compute the principal value of the trigonometric arc tangent of flonum
+@var{imp} over flonum @var{rep} using the signs of the arguments to
+determine the quadrant of the result:
+
+@example
+\alpha = \atan (@var{imp}/@var{rep})
+@end example
+
+@noindent
+in other words compute the angle @math{\alpha} such that:
+
+@example
+               \sin(\alpha)   @var{imp}
+\tan(\alpha) = ------------ = ---
+               \cos(\alpha)   @var{rep}
+@end example
+
+@noindent
+in yet other words compute the angle of the complex number having the
+flonum @var{rep} as real part and the flonum @var{imp} as imaginary
+part:
+
+@example
+(angle (make-rectangular @var{rep} @var{imp}))
+@end example
+
+@noindent
+return a flonum.  This operation is implemented using the @posix{}
+function @cfunc{atan2}.
 @end deffn
 
 

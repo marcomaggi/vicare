@@ -237,6 +237,38 @@
 (define RN36		134217753/134217728	#;(/ BN4 FX4))
 
 
+(parametrise ((check-test-name	'atan2))
+
+  (define-syntax test
+    (syntax-rules ()
+      ((_ ?imp ?rep ?expected)
+       (begin
+	 (check (atan ?imp ?rep)		(=> inexact=?) ?expected)
+	 (check ($atan2-real-real ?imp ?rep)	(=> inexact=?) ?expected)))))
+
+  (test 0 0		0.0)
+
+  (test +0.0 0		0.0)
+  (test -0.0 0		0.0)
+
+  (test 0 +0.0		0.0)
+  (test 0 -0.0		+3.14159265358979323846264)
+
+  (test -0.0 -0.0	-3.14159265358979323846264)
+
+  (test +inf.0 +0.0	+1.5707963249322514)
+  (test +inf.0 -0.0	+1.5707963249322514)
+  (test -inf.0 +0.0	-1.5707963249322514)
+  (test -inf.0 -0.0	-1.5707963249322514)
+
+  (test +0.0 +inf.0	+0.0)
+  (test -0.0 +inf.0	+0.0)
+  (test +0.0 -inf.0	+3.14159265358979323846264)
+  (test -0.0 -inf.0	-3.14159265358979323846264)
+
+  #t)
+
+
 (parametrise ((check-test-name	'fixnums))
 
   (define-syntax test

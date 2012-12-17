@@ -191,10 +191,28 @@ ikrt_fl_atan (ikptr x, ikpcb* pcb)
   return r;
 }
 ikptr
-ikrt_atan2 (ikptr y, ikptr x, ikpcb* pcb)
+ikrt_atan2 (ikptr s_imp, ikptr s_rep, ikpcb* pcb)
+/* Compute  the principal  value  of the  trigonometric  arc tangent  of
+   flonum S_IMP  over flonum S_REP using  the signs of the  arguments to
+   determine the quadrant of the result:
+
+      \alpha = \atan (S_IMP/s_REP)
+
+   in other words compute the angle \alpha such that:
+
+                     \sin(\alpha)   S_IMP
+      \tan(\alpha) = ------------ = -----
+                     \cos(\alpha)   S_REP
+
+   in yet other words compute the angle of the complex number having the
+   flonum S_REP as real part and the flonum S_IMP as imaginary part:
+
+      (angle (make-rectangular S_REP S_IMP))
+
+   return a flonum. */
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(r);
-  IK_FLONUM_DATA(r) = atan2(IK_FLONUM_DATA(y), IK_FLONUM_DATA(x));
+  IK_FLONUM_DATA(r) = atan2(IK_FLONUM_DATA(s_imp), IK_FLONUM_DATA(s_rep));
   return r;
 }
 ikptr

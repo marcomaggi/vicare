@@ -7151,14 +7151,14 @@
 	((compnum?)	($atan-compnum x))
 	(else
 	 (%error-not-number x))))
-     ((y x)
+     ((imp rep)
       (with-arguments-validation (who)
-	  ((real	x)
-	   (real	y))
-	($atan2-real-real x y)))))
+	  ((real	imp)
+	   (real	rep))
+	($atan2-real-real imp rep)))))
 
-  (define ($atan2-real-real x y)
-    (foreign-call "ikrt_atan2" (inexact y) (inexact x)))
+  (define ($atan2-real-real imp rep)
+    (foreign-call "ikrt_atan2" (inexact imp) (inexact rep)))
 
 ;;; --------------------------------------------------------------------
 
