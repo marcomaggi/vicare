@@ -117,8 +117,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a6/basic-string-ports/compat.vicare.sls		\
 	srfi/%3a6/basic-string-ports.sls			\
 	srfi/%3a6.sls					\
-	srfi/%3a78/check.scm				\
-	srfi/%3a78/examples.scm				\
 	srfi/%3a78/lightweight-testing/compat.vicare.sls	\
 	srfi/%3a78/lightweight-testing.sls			\
 	srfi/%3a78.sls					\
