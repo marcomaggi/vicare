@@ -86,6 +86,70 @@
   The flonum getters  and setters in the bytevector  library should have
   tests in "test-vicare-bytevectors.sps".
 
+* Review and integration of SRFIs
+
+** SRFI 0
+
+** SRFI 1
+
+** SRFI 2
+
+** SRFI 6
+
+** SRFI 8
+
+** SRFI 9
+
+** SRFI 11
+
+** SRFI 13
+
+** SRFI 14
+
+** SRFI 16
+
+** SRFI 19 time
+
+** SRFI 23 error
+
+** SRFI 25 multidimensional arrays
+
+** SRFI 26 cut
+
+** SRFI 27 random-bits
+
+** SRFI 31 rec
+
+** SRFI 37 args-fold
+
+** SRFI 38 shared structures
+
+** SRFI 39 parameters
+
+** SRFI 41 streams
+
+** SRFI 42 eager comprehensions
+
+** SRFI 43 vectors
+
+** SRFI 45 lazy
+
+** SRFI 48 intermediate format strings
+
+** SRFI 61 cond
+
+** SRFI 64 testing
+
+** SRFI 67 comparison procedures
+
+** SRFI 69 basic hash tables
+
+** DONE SRFI 78 lightweight testing
+
+** SRFI 98 OS environment variables
+
+** SRFI 99 records
+
 * Stuff to think about for the future
 
 ** Introduce immutable datums
