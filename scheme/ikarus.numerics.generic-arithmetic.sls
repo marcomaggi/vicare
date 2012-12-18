@@ -457,8 +457,6 @@
 
 ;;;; helpers
 
-(define dummy #f)
-
 (define (err who x)
   (assertion-violation who
     (if (number? x)

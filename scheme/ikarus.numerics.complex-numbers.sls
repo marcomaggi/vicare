@@ -63,8 +63,6 @@
 
 ;;;; helpers
 
-(define dummy #f)
-
 (define (%error-not-number who Z)
   (assertion-violation who "expected number object as argument" Z))
 
