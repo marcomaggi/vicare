@@ -131,11 +131,6 @@ License (@gpl{}) and can be downloaded from:
 @center @url{http://code.google.com/p/vicare-scheme/}
 
 @noindent
-or:
-
-@center @url{http://github.com/marcomaggi/vicare/downloads}
-
-@noindent
 the home page of the project is at:
 
 @center @url{http://marcomaggi.github.com/vicare.html}
