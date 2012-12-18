@@ -19,12 +19,14 @@
 (library (ikarus control)
   (export
     call/cf		call/cc
-    dynamic-wind	exit
-    (rename (call/cc call-with-current-continuation)))
+    dynamic-wind
+    (rename (call/cc call-with-current-continuation))
+    exit		exit-hooks)
   (import (except (ikarus)
 		  call/cf		call/cc
 		  call-with-current-continuation
-		  dynamic-wind		exit
+		  dynamic-wind
+		  exit			exit-hooks
 		  list-tail)
     (ikarus system $stack)
     (ikarus system $pairs)
@@ -350,7 +352,20 @@
    (()
     (exit 0))
    ((status)
+    (for-each (lambda (f)
+		;;Catch and discard any  exception: exit hooks must take
+		;;care of themselves.
+		(guard (E (else (void)))
+		  (f)))
+      (exit-hooks))
     (foreign-call "ikrt_exit" status))))
+
+(define exit-hooks
+  (make-parameter '()
+    (lambda (obj)
+      (assert (and (list? obj)
+		   (for-all procedure? obj)))
+      obj)))
 
 
 ;;;; done

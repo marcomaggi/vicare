@@ -1627,6 +1627,7 @@
     (string-fill!				i v ms se)
     (command-line				i v r pr)
     (exit					i v r pr)
+    (exit-hooks					i v $language)
     (delay					i v r5 se ne)
     (exact->inexact				i v r5 se)
     (force					i v r5 se)

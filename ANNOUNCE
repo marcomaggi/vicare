@@ -59,6 +59,7 @@ Notes for revision 0.2d20
      complex-conjugate
      square			cube
      port-uid			port-hash
+     exit-hooks
 
 * Modified DEFINE-INLINE-CONSTANT from  (vicare syntactic-extensions) to
   allow the  constant value to be  computed at expand time  by a generic

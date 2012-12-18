@@ -6337,4 +6337,19 @@ Return a random fixnum object between zero (included) and @var{fx}
 (excluded).  @var{fx} must be a strictly positive fixnum.
 @end defun
 
+
+@deffn Parameter exit-hooks
+Contains null or a list of thunks to be evaluated by @func{exit}
+whenever the process is normally terminated.  Any exception raised by
+the thunks is catched and discarded.  To add an exit hook:
+
+@example
+(define (do-something-at-exit)
+  ---)
+
+(exit-hooks (cons do-something-at-exit
+                  (exit-hooks)))
+@end example
+@end deffn
+
 @c end of file
