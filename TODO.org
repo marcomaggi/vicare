@@ -118,7 +118,7 @@
 
 ** SRFI 27 random-bits
 
-** SRFI 31 rec
+** DONE SRFI 31 rec
 
 ** SRFI 37 args-fold
 
