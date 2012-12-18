@@ -4667,6 +4667,19 @@ Return a Scheme string representing the identifier of @var{port}.
 @end defun
 
 
+@defun port-uid @var{port}
+Return a gensym uniquely associated to @var{port}.  The gensym is
+generated the first time this function is applied to @var{port}.
+@end defun
+
+
+@defun port-hash @var{port}
+Return a fixnum associated to @var{port} to be used as hash key.  The
+gensym is generated the first time this function is applied to
+@var{port}.
+@end defun
+
+
 @defun set-port-buffer-mode! @var{port} @var{buffer-mode}
 Reset the port buffer mode to @var{buffer-mode}, which must be one of
 the arguments accepted by @func{buffer-mode}.  It is an error to select

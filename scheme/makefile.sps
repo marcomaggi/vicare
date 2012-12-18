@@ -1934,6 +1934,8 @@
     (make-file-options				i v $language)
 ;;;
     (port-id					i v $language)
+    (port-uid					i v $language)
+    (port-hash					i v $language)
     (port-fd					i v $language)
     (string->filename-func			i v $language)
     (filename->string-func			i v $language)
