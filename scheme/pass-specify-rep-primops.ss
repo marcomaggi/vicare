@@ -135,8 +135,8 @@
      ;;
      ;;V must be a struct instance representing recordized code.
      ;;
-     ;;X must be a struct instance representing a (possibly tagged) base
-     ;;address.
+     ;;BASE must be  a struct instance representing  a (possibly tagged)
+     ;;base address.
      ;;
      ;;OFFSET must be an exact integer representing an offset in bytes.
      ;;
@@ -4154,6 +4154,9 @@
 			     ((_ ?who ?offset)
 			      (define-primop ?who unsafe
 				((E port val)
+				 ;;We do  not need  to update  the dirty
+				 ;;vector because VAL is always a fixnum
+				 ;;here.
 				 (prm 'mset (T port) (K ?offset) (T val))))
 			      ))))
    (define-port-mutator $set-port-index!	off-port-index)
