@@ -220,6 +220,8 @@ TESTS			=	\
 	test-vicare-weak-tables.sps			\
 	test-vicare-words.sps				\
 	\
+	test-srfi-39-parameters.sps			\
+	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\
 	test-issue-006-fxreverse-bit-field.sps		\
@@ -483,6 +485,8 @@ EXTRA_DIST = \
 	test-vicare-vectors.sps				\
 	test-vicare-weak-tables.sps			\
 	test-vicare-words.sps				\
+	\
+	test-srfi-39-parameters.sps			\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\

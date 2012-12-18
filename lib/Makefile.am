@@ -110,7 +110,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a39.sls					\
 	srfi/%3a39/parameters.sls			\
-	srfi/%3a39/parameters.vicare.sls		\
 	\
 	srfi/%3a41.sls					\
 	srfi/%3a41/streams.sls				\

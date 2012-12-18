@@ -124,7 +124,7 @@
 
 ** SRFI 38 shared structures
 
-** SRFI 39 parameters
+** DONE SRFI 39 parameters
 
 ** SRFI 41 streams
 
