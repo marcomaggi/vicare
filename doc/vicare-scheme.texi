@@ -193,7 +193,7 @@ Trademarks used herein are the property of their respective owners.
 @ifinfo
 @dircategory Development
 @direntry
-* vicare: (vicare).             @value{TITLE}.
+* vicare-scheme: (vicare-scheme).  @value{TITLE}.
 @end direntry
 @end ifinfo
 
