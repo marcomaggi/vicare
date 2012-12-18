@@ -221,6 +221,7 @@ TESTS			=	\
 	test-vicare-words.sps				\
 	\
 	test-srfi-39-parameters.sps			\
+	test-srfi-61-general-cond.sps			\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\
@@ -487,6 +488,7 @@ EXTRA_DIST = \
 	test-vicare-words.sps				\
 	\
 	test-srfi-39-parameters.sps			\
+	test-srfi-61-general-cond.sps			\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\

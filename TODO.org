@@ -136,7 +136,7 @@
 
 ** SRFI 48 intermediate format strings
 
-** SRFI 61 cond
+** DONE SRFI 61 cond
 
 ** SRFI 64 testing
 

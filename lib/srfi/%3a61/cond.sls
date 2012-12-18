@@ -1,13 +1,11 @@
-#!r6rs
-;; Copyright 2009 Derick Eddington.  My MIT-style license is in the file named
-;; LICENSE from the original collection this file is distributed with.
+;;;Copyright 2009 Derick Eddington.  My MIT-style license is in the file
+;;;named  LICENSE.srfi  from  the   original  collection  this  file  is
+;;;distributed with.
 
+#!r6rs
 (library (srfi :61 cond)
-  (export
-    (rename (general-cond cond)))
-  (import
-    (rnrs))
-  
+  (export (rename (general-cond cond)))
+  (import (rnrs))
   (define-syntax general-cond
     (lambda (stx)
       (syntax-case stx ()
@@ -22,6 +20,7 @@
                                      => (lambda (vals)
                                           (apply receiver vals))))
                                  (_ c)))
-                             #'(clauses ...))))
-           #'(cond ours ...))))))
-)
+			  #'(clauses ...))))
+           #'(cond ours ...)))))))
+
+;;; end of file
