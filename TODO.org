@@ -120,7 +120,7 @@
 
 ** DONE SRFI 31 rec
 
-** SRFI 37 args-fold
+** DONE SRFI 37 args-fold
 
 ** SRFI 38 shared structures
 
