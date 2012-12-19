@@ -101,7 +101,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a37.sls					\
 	srfi/%3a37/args-fold.sls			\
-	srfi/%3a37/srfi-37-reference.scm		\
 	\
 	srfi/%3a38.sls					\
 	srfi/%3a38/with-shared-structure.vicare.sls	\

@@ -19,6 +19,7 @@ for more details.
 * srfi args-fold abstract::     Abstract.
 * srfi args-fold rationale::    Rationale.
 * srfi args-fold spec::         Specification.
+* srfi args-fold examples::     Some usage examples.
 @end menu
 
 @c page
@@ -172,7 +173,7 @@ functional implementation if desired.
 @deffn {Procedure Prototype} option-processor @var{option} @var{name} @var{arg} @var{seeds} ...
 Prototype for an option--processor.  It should return the next seeds as
 values.  @var{option} will be the option.  @var{name} will be one of the
-@var{OPTION}'s option--names as encountered by @func{args-fold}.
+@var{option}'s option--names as encountered by @func{args-fold}.
 @var{arg} will be a string, or @false{} if @func{args-fold} didn't
 encounter an option--argument.
 @end deffn
@@ -189,7 +190,7 @@ Return an option.  @var{names} is a list of short (character) and long
 (string) option names.  @var{required-arg?} specifies if this options
 requires an option--argument (boolean).  @var{optional-arg?} specifies
 if this option can accept an option--argument (boolean).
-@var{option-proc} is a procedure (following the option--processor
+@var{option-proc} is a procedure (following the @code{option-processor}
 prototype) used to process this option.
 @end defun
 
@@ -211,11 +212,262 @@ returning the final seeds values as results.
 @var{args} is a list of strings.  @var{options} is a list of options.
 @var{unrecognized-option-proc} is a procedure (following the
 @code{option-processor} prototype) for unrecognized options.
-@func{operand-proc} is a procedure (following the
+@var{operand-proc} is a procedure (following the
 @code{operand-processor} prototype) for operands.
 
-@emph{Note:} @func{args-fold} will create temporary options as necessary
-for the @func{unrecognized-option-proc}.
+@quotation
+@strong{NOTE} @func{args-fold} will create temporary options as
+necessary for the @func{unrecognized-option-proc}.
+@end quotation
 @end defun
+
+@c page
+@node srfi args-fold examples
+@subsection Some usage examples
+
+
+Short options without arguments:
+
+@example
+(import (rnrs) (srfi :37))
+
+(define (unrecognised-option-proc option name arg seed)
+  (error 'test "unknown option" option name arg))
+
+(define (make-seed)
+  (make-vector 3 '()))
+
+(define (make-option-processor index)
+  (lambda (option name arg seed)
+    (vector-set! seed index (cons name (vector-ref seed index)))
+    seed))
+
+(define (make-operand-processor index)
+  (lambda (operand seed)
+    (vector-set! seed index (cons operand (vector-ref seed index)))
+    seed))
+
+(args-fold '("-a" "-b" "ciao")
+   (list (option '(#\a) #f #f (make-option-processor 1))
+         (option '(#\b) #f #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(("ciao") (#\a) (#\b))
+
+(args-fold '("salut" "-a" "hello" "-b" "ciao")
+   (list (option '(#\a) #f #f (make-option-processor 1))
+         (option '(#\b) #f #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(("ciao" "hello" "salut") (#\a) (#\b))
+
+(args-fold '("-ab")
+   (list (option '(#\a) #f #f (make-option-processor 1))
+         (option '(#\b) #f #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} '#(() (#\a) (#\b))
+@end example
+
+Short options with required arguments:
+
+@example
+(import (rnrs) (srfi :37))
+
+(define (unrecognised-option-proc option name arg seed)
+  (error 'test "unknown option" option name arg))
+
+(define (make-seed)
+  (make-vector 3 '()))
+
+(define (make-option-processor index)
+  (lambda (option name arg seed)
+    (vector-set! seed index (cons arg (vector-ref seed index)))
+    seed))
+
+(define (make-operand-processor index)
+  (lambda (operand seed)
+    (vector-set! seed index (cons operand (vector-ref seed index)))
+    seed))
+
+(args-fold '("-a" "hello" "-b" "ciao")
+   (list (option '(#\a) #t #f (make-option-processor 1))
+         (option '(#\b) #t #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") ("ciao"))
+
+(args-fold '("-ahello" "-bciao")
+   (list (option '(#\a) #t #f (make-option-processor 1))
+         (option '(#\b) #t #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") ("ciao"))
+
+(args-fold '("salut" "-a" "hello" "-b" "ciao")
+   (list (option '(#\a) #t #f (make-option-processor 1))
+         (option '(#\b) #t #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(("salut") ("hello") ("ciao"))
+
+(args-fold '("-ahello" "-bciao")
+   (list (option '(#\a) #t #f (make-option-processor 1))
+         (option '(#\b) #t #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") ("ciao"))
+@end example
+
+Short options with optional arguments:
+
+@example
+(import (rnrs) (srfi :37))
+
+(define (unrecognised-option-proc option name arg seed)
+  (error 'test "unknown option" option name arg))
+
+(define (make-seed)
+  (make-vector 3 '()))
+
+(define (make-option-processor index)
+  (lambda (option name arg seed)
+    (vector-set! seed index (cons arg (vector-ref seed index)))
+    seed))
+
+(define (make-operand-processor index)
+  (lambda (operand seed)
+    (vector-set! seed index (cons operand (vector-ref seed index)))
+    seed))
+
+(args-fold '("-ahello" "-b")
+   (list (option '(#\a) #f #t (make-option-processor 1))
+         (option '(#\b) #f #t (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") (#f))
+@end example
+
+Long options without arguments:
+
+@example
+(import (rnrs) (srfi :37))
+
+(define (unrecognised-option-proc option name arg seed)
+  (error 'test "unknown option" option name arg))
+
+(define (make-seed)
+  (make-vector 3 '()))
+
+(define (make-option-processor index)
+  (lambda (option name arg seed)
+    (vector-set! seed index (cons name (vector-ref seed index)))
+    seed))
+
+(define (make-operand-processor index)
+  (lambda (operand seed)
+    (vector-set! seed index (cons operand (vector-ref seed index)))
+    seed))
+
+(args-fold '("--alpha" "--beta" "ciao")
+   (list (option '("alpha") #f #f (make-option-processor 1))
+         (option '("beta")  #f #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(("ciao") ("alpha") ("beta"))
+
+(args-fold '("salut" "--alpha" "hello" "--beta" "ciao")
+   (list (option '("alpha") #f #f (make-option-processor 1))
+         (option '("beta")  #f #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(("ciao" "hello" "salut") ("alpha") ("beta"))
+@end example
+
+Long options with required arguments:
+
+@example
+(import (rnrs) (srfi :37))
+
+(define (unrecognised-option-proc option name arg seed)
+  (error 'test "unknown option" option name arg))
+
+(define (make-seed)
+  (make-vector 3 '()))
+
+(define (make-option-processor index)
+  (lambda (option name arg seed)
+    (vector-set! seed index (cons arg (vector-ref seed index)))
+    seed))
+
+(define (make-operand-processor index)
+  (lambda (operand seed)
+    (vector-set! seed index (cons operand (vector-ref seed index)))
+    seed))
+
+(args-fold '("--alpha" "hello" "--beta" "ciao")
+   (list (option '("alpha") #t #f (make-option-processor 1))
+         (option '("beta")  #t #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") ("ciao"))
+
+(args-fold '("salut" "--alpha" "hello" "--beta" "ciao")
+   (list (option '("alpha") #t #f (make-option-processor 1))
+         (option '("beta")  #t #f (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(("salut") ("hello") ("ciao"))
+@end example
+
+Long options with optional arguments:
+
+@example
+(import (rnrs) (srfi :37))
+
+(define (unrecognised-option-proc option name arg seed)
+  (error 'test "unknown option" option name arg))
+
+(define (make-seed)
+  (make-vector 3 '()))
+
+(define (make-option-processor index)
+  (lambda (option name arg seed)
+    (vector-set! seed index (cons arg (vector-ref seed index)))
+    seed))
+
+(define (make-operand-processor index)
+  (lambda (operand seed)
+    (vector-set! seed index (cons operand (vector-ref seed index)))
+    seed))
+
+(args-fold '("--alpha=hello" "--beta")
+   (list (option '("alpha") #f #t (make-option-processor 1))
+         (option '("beta")  #f #t (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") (#f))
+
+(args-fold '("--alpha=hello" "--beta=ciao")
+   (list (option '("alpha") #f #t (make-option-processor 1))
+         (option '("beta")  #f #t (make-option-processor 2)))
+   unrecognised-option-proc
+   (make-operand-processor 0)
+   (make-seed))
+@result{} #(() ("hello") ("ciao"))
+@end example
 
 @c end of file

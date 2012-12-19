@@ -222,6 +222,7 @@ TESTS			=	\
 	\
 	test-srfi-26-cut.sps				\
 	test-srfi-31-rec.sps				\
+	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
 	test-srfi-61-general-cond.sps			\
 	\
@@ -491,6 +492,7 @@ EXTRA_DIST = \
 	\
 	test-srfi-26-cut.sps				\
 	test-srfi-31-rec.sps				\
+	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
 	test-srfi-61-general-cond.sps			\
 	\
