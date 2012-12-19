@@ -89,8 +89,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a26.sls					\
 	srfi/%3a26/cut.sls				\
-	srfi/%3a26/check.scm				\
-	srfi/%3a26/cut.scm				\
 	\
 	srfi/%3a27.sls					\
 	srfi/%3a27/random-bits.sls			\

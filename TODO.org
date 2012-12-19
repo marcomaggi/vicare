@@ -114,7 +114,7 @@
 
 ** SRFI 25 multidimensional arrays
 
-** SRFI 26 cut
+** DONE SRFI 26 cut
 
 ** SRFI 27 random-bits
 
