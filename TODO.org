@@ -146,7 +146,7 @@
 
 ** DONE SRFI 78 lightweight testing
 
-** SRFI 98 OS environment variables
+** DONE SRFI 98 OS environment variables
 
 ** SRFI 99 records
 

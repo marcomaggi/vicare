@@ -149,7 +149,7 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a78/lightweight-testing.sls		\
 	\
 	srfi/%3a98.sls					\
-	srfi/%3a98/os-environment-variables.vicare.sls	\
+	srfi/%3a98/os-environment-variables.sls		\
 	\
 	srfi/%3a99.sls					\
 	srfi/%3a99/records.sls				\
