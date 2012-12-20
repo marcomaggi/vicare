@@ -148,7 +148,9 @@
 
 ** DONE SRFI 98 OS environment variables
 
-** SRFI 99 records
+** TODO SRFI 99 records
+
+   Tests are missing.
 
 * Stuff to think about for the future
 
