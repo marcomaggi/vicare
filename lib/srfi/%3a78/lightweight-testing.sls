@@ -101,9 +101,13 @@
   (newline (current-output-port))
   (flush-output-port (current-output-port)))
 
-(define (check:write obj port)
-  (pretty-print obj port)
-  (flush-output-port port))
+(define check:write
+  (case-lambda
+   ((obj)
+    (check:write obj (current-output-port)))
+   ((obj port)
+    (pretty-print obj port)
+    (flush-output-port port))))
 
 
 (define (print/header/padded x header padding)
