@@ -38,6 +38,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-cond-expand.texi		\
 	srfi-eager-comp.texi		\
 	srfi-environment-variables.texi	\
+	srfi-err5rs-records.texi	\
 	srfi-error-reporting.texi	\
 	srfi-general-cond.texi		\
 	srfi-let-values.texi		\

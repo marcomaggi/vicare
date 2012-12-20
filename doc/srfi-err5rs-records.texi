@@ -1,0 +1,1073 @@
+@node srfi err5rs records
+@section @ansrfi{99} @acronym{ERR5RS} records
+
+
+@cindex @srfi{} @acronym{ERR5RS} records
+
+
+The library @library{srfi :99} is by y Taro Minowa (Higepon) as the
+reference implementation for @ansrfi{99}; see:
+
+@center @url{http://srfi.schemers.org/srfi-99/srfi-99.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi err5rs records abstract::        Abstract.
+* srfi err5rs records rationale::       Rationale.
+* srfi err5rs records spec::            Specification.
+* srfi err5rs records examples::        Examples.
+* srfi err5rs records ack::             Acknowledgements.
+* srfi err5rs records copyright::       Copyright.
+@end menu
+
+@c page
+@node srfi err5rs records abstract
+@subsection Abstract
+
+
+Many Scheme programmers have considered records to be one of the most
+important features missing from the @rnrs{5}.  The @rnrs{6} proposed a
+record system, but its design has been widely criticized and it was not
+intended for use in @rnrs{5} programs anyway.
+
+This @srfi{} proposes a better record system for use in @rnrs{5},
+@acronym{ERR5RS}, and @rnrs{6} programs.  The syntactic layer of this
+@srfi{}'s record system is an extension of @srfi{} 9.  The procedural
+and inspection layers of this @srfi{}'s record system are perfectly
+compatible with its syntactic layer.  This entire @srfi{} is compatible
+with the procedural and inspection layers of the @rnrs{6} record system,
+but offers several worthwhile improvements over the @rnrs{6} system.
+
+@c page
+@node srfi err5rs records rationale
+@subsection Rationale
+
+
+In most programming languages, records (aka structures or classes) are
+important because they can package component values of different types
+into a single object.
+
+Scheme's vectors and procedures provided that capability already, but
+records remained important for two reasons:
+
+@itemize
+@item
+Records make it easier to index components by their names.
+
+@item
+Records can introduce new types in the sense that all previous type
+predicates return false for instances of the new record type, while the
+new predicate associated with the new record type returns true only for
+instances of the new record type.
+@end itemize
+
+For many programmers, records were the most important new feature of the
+@rnrs{6}, but the specific record systems that were proposed by the
+@rnrs{6} have been widely criticized.  Over 30% of those who voted
+against ratification mentioned the record systems as one of their
+reasons.
+
+The @acronym{ERR5RS} record system described by this @srfi{} provides a
+simpler and fully portable alternative to the @rnrs{6} record system.
+The @acronym{ERR5RS} record system consists of:
+
+@itemize
+@item
+a syntactic layer, which is fully compatible with @srfi{} 9 but extends
+@srfi{} 9 with inheritance and with more succinct syntax for common use
+cases;
+
+@item
+a procedural layer, which is simpler and easier to use than the
+procedural layer of @rnrs{6} records but remains fully compatible with
+the @rnrs{6} procedural layer;
+
+@item
+an inspection layer, which is simpler and easier to use than the
+inspection layer of @rnrs{6} records but remains fully compatible with
+the @rnrs{6} inspection layer.
+@end itemize
+
+The @acronym{ERR5RS} record system does not mandate support for the
+non--generative, sealed, and/or opaque features of the @rnrs{6} record
+system.  Implementations of this @srfi{} may extend the @acronym{ERR5RS}
+record system to support those features, however, and this @srfi{}
+recommends an @api{} to implementations that support those features.
+With those extensions, the @acronym{ERR5RS} record system has the same
+expressive power as the @rnrs{6} record system.  Hence the record system
+described by this @srfi{} can serve as either or both of the following:
+
+@itemize
+@item
+an efficient and relatively simple foundation for implementing the
+@rnrs{6} record system;
+
+@item
+a simpler and fully portable alternative to the @rnrs{6} record system.
+@end itemize
+
+The following subsections develop the rationale for this @srfi{} by
+considering:
+
+@itemize
+@item
+the history of records in Scheme before the @rnrs{6};
+
+@item
+@rnrs{6} records;
+
+@item
+the design rationale for @acronym{ERR5RS} records.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubsection Records before @rnrs{6}
+
+The importance of adding records to Scheme has been recognized for more
+than twenty years. The basic idea behind the @srfi{} 9 and @rnrs{6}
+record systems was outlined by Norman Adams on 8 July 1987, following
+similar ideas that had been implemented in T and MIT CScheme.  Jonathan
+Rees posted a revision of Adams's proposal on 26 May 1988.  Pavel Curtis
+proposed an extension of Rees's proposal on 18 August 1989, noting that
+it had been approved by consensus at the first meeting of BASH (Bay Area
+Scheme Hackers?).  The @code{rrrs-authors} archive includes several
+responses to these proposals that are worth reading.
+
+The Rees/Curtis proposal was revived in 1992.  When the @rnrs{n} authors
+met on 25 June 1992 in Palo Alto, they felt that this proposal needed
+more discussion.  Kent Dybvig objected to the proposal on several
+grounds, including the provision of inspection facilities, the inability
+to define immutable records, and the use of procedures instead of
+special forms.  Although 9 authors favored adoption of the records
+proposal, 11 opposed it.
+
+The topic of records was revived again on 23 April 1996 by Bruce Duba,
+Matthew Flatt, and Shriram Krishnamurthi.  Alan Bawden and Richard
+Kelsey observed that the Duba/Flatt/Krishnamurthi proposal was
+essentially the same as Pavel Curtis's, which Kelsey reposted.  Kent
+Dybvig objected once again, on the same three grounds.  He also argued
+that procedural interfaces are difficult to compile efficiently, and
+that this inefficiency would create portability problems.
+
+In reality, however, procedural interfaces add no inefficiency.  It is
+now agreed that syntactic interfaces offer no advantages for generative
+records.  Even for non--generative records, the claimed inefficiency
+consists of a single load instruction, which optimizing compilers can
+eliminate --- along with the entire runtime check that includes the load
+instruction --- for all but the first of a sequence of operations that
+access the same record.  (That optimization is a straightforward
+extension of the optimization that eliminates the pair check when
+computing the cdr of a list whose car has already been computed.)
+Furthermore, it turns out that even the occasional load instruction is
+no harder to remove using a procedural interface than when using a
+syntactic interface.  In @rnrs{6} library chapter 6, therefore, both of
+the statements that claim an advantage in efficiency for the syntactic
+layer have no basis in fact.  (These two statements appear in the
+next--to--last paragraph before section 6.1, and in the note that
+follows the specification of @func{parent-rtd}.)
+
+On 24 April 1996, Bill Rozas suggested the idea of having two separate
+@api{}s, one procedural and one syntactic, for the same record facility.
+Two days later, Dybvig proposed a compromise along those lines that
+incorporated several artificial restrictions, which were apparently
+motivated by concerns about the alleged extra load instruction.  Dybvig
+and Rozas continued to develop this proposal, and presented a summary of
+it following the 1998 Scheme Workshop.  I have been unable to locate a
+written or online copy of this proposal.
+
+@srfi{} 9, submitted by Richard Kelsey in July 1999, is a syntactic
+@api{} in the tradition of the Rees, Curtis, and
+Duba/Flatt/Krishnamurthi proposals.
+
+Single inheritance was added by Larceny in 1998, and by Chez Scheme in
+1999.
+
+@srfi{} 57, submitted by Andre van Tonder in September 2004, features
+label polymorphism, which can be considered a form of structural
+subtyping and multiple inheritance.
+
+@c ------------------------------------------------------------
+
+@subsubsection @rnrs{6} Records
+
+
+The @rnrs{6} proposes a three--layer single inheritance system, with
+syntactic, procedural, and inspection layers.
+
+@c ------------------------------------------------------------
+
+@subsubheading @rnrs{6} Records: procedural layer
+
+
+The @rnrs{6} procedural layer generally requires at least three separate
+definitions for each level of inheritance: the record--type descriptor,
+at least one record--constructor descriptor, and an actual constructor
+(if instances of the record--type are to be created).
+
+The (unratified) @rnrs{6} rationale describes the
+constructor--descriptor mechanism as ``an infrastructure for creating
+specialized constructors, rather than just creating default constructors
+that accept the initial values of all the fields as arguments. This
+infrastructure achieves full generality while leaving each level of an
+inheritance hierarchy in control over its own fields and allowing child
+record definitions to be abstracted away from the actual number and
+contents of parent fields.''  Neither the (ratified) @rnrs{6} library
+document nor the (unratified) @rnrs{6} rationale consider the fact that
+the constructor--descriptor mechanism adds unnecessary complexity to
+what is by far the most common case: record definitions that do not
+require specialized constructors.  Neither document considers the fact
+that the benefits of the constructor--descriptor mechanism are small
+even when specialized constructors are needed, as in the first example
+below.
+
+The @rnrs{6} library specification of records says that a record type is
+``specified by a record--type descriptor, which is an object that
+specifies the fields of the record and various other properties that all
+records of that type share.''  Since the record--type descriptor is an
+object, it can be the value of a variable that is exported by a library.
+As discussed below, however, the @rnrs{6} syntactic layer uses a
+different notion of record type that may be neither object nor syntax.
+
+@c ------------------------------------------------------------
+
+@subsubheading @rnrs{6} records: syntactic layer
+
+
+The @rnrs{6} syntactic layer consists of a @func{define-record-type}
+syntax that is incompatible with the syntaxes of the same name defined
+by @srfi{} 9 and @srfi{} 99 (this @srfi{}).
+
+According to @rnrs{6} library section 6.2, an @rnrs{6}
+@func{define-record-type} form binds the record name ``to an
+expand--time or run--time representation of the record type [that] can
+be used as parent name in syntactic record--type definitions that extend
+this definition.  It can also be used as a handle to gain access to the
+underlying record--type descriptor and constructor descriptor''.
+
+Note that portable code cannot assume the record name is bound to a
+record--type descriptor.  Portable code can only assume that the record
+name is bound to ``an expand--time or run--time representation'', whose
+semantics is not otherwise explained by the @rnrs{6} and @rnrs{6}
+library documents.  In particular, it is far from obvious that portable
+code can export the record name from a library; libraries can export
+names that are bound to objects or to syntax, but the @rnrs{6} does not
+require the denotation of a record name to be either of those things.
+
+The mysterious entity to which a record name is bound can be used as a
+handle to recover a record--type descriptor or constructor descriptor by
+using the @func{record-type-descriptor} or
+@func{record-constructor-descriptor} syntaxes, respectively.  The
+recovered record--type descriptor and constructor descriptor may be
+exported from a library, and that is apparently the only portable way
+for a library to export an @rnrs{6} record type that was defined using
+the @rnrs{6} syntactic layer.
+
+The recovered record--type descriptor and constructor descriptor also
+provide a way for the procedural layer to define new record types that
+inherit from record types defined by the syntactic layer.  Similarly, it
+is possible for the syntactic layer to use a @code{parent-rtd} clause to
+define new record types that inherit from record types defined by the
+procedural layer.
+
+The two notions of record type that are used by the procedural and
+syntactic layers are not interchangeable, however.  In either direction,
+defining a new record type that inherits from some previously defined
+record type requires the programmer to know whether the previously
+defined record type was defined using the procedural or the syntactic
+layer.  If the procedural and syntactic layers of the @rnrs{6} were
+fully compatible, then changing a record type definition from procedural
+to syntactic (or vice versa) would be transparent to clients.  As the
+@rnrs{6} record facility is defined, however, that minor change will
+break all code that inherits from the record type.
+
+@rnrs{6} library chapter 6 attempts to excuse that incompatibility, and
+the interoperability and maintenance problems that result from it, on
+the basis of efficiency.  Recall, however, that the claimed efficiency
+of the @rnrs{6} syntactic layer is illusory.  In reality, the @rnrs{6}
+design offers no advantages over a simpler and more orthogonal design
+(such as the one specified by this @srfi{}) in which the syntactic and
+procedural layers both use the same notion of record type.
+
+The problems described above were known and had been documented before
+the @rnrs{6} documents were put to a vote, but the @rnrs{6} documents
+were ratified anyway.  At this point, the best that can be done is to
+use the @srfi{} process to specify a better record facility, and to warn
+programmers of the problems they will encounter if they use the record
+facilities described within the @rnrs{6} library document.
+
+@c ------------------------------------------------------------
+
+@subsubsection Design Rationale for @acronym{ERR5RS} Records
+
+
+The @acronym{ERR5RS} syntactic layer described by this @srfi{} is based
+upon the Rees/Curtis/Duba/Flatt/Krishnamurthi/Kelsey/@srfi{}-9
+tradition, changing only a few details to improve interoperability with
+records defined by the @acronym{ERR5RS} and @rnrs{6} procedural layers.
+
+The @func{define-record-type} syntax specified by this @srfi{} is
+compatible with and extends @srfi{} 9, which is one of the more widely
+accepted @srfi{}s.  The extensions include single inheritance and
+(optional) implicit naming, along with succinct abbreviations for
+specifying whether a field is immutable or mutable.
+
+The procedural layer specified by this @srfi{} is fully compatible with
+its @func{define-record-type} syntax.  Both the procedural and syntactic
+layers can define new record types that inherit from previously defined
+record types without requiring programmers to know which layer was used
+to define the parent type.
+
+In implementations of the @rnrs{6}, a @srfi{} 99 record type coincides
+with the @rnrs{6} notion of a record--type descriptor.  Portable
+libraries can safely export @srfi{} 99 record types even if they were
+defined using the syntactic layer of @srfi{} 99.
+
+In procedure names, @srfi{} 99 uses @code{rtd} as an abbreviation for
+record--type descriptor.  This naming convention prevents name clashes
+between @srfi{} 99 and the @rnrs{6} procedural and inspection layers,
+which makes it easier for @rnrs{6} programs to import @srfi{} 99
+libraries.  @rnrs{6} programs must take care when importing the @rnrs{6}
+syntactic layer, however, because that library's exports conflict with
+both @srfi{} 9 and with @srfi{} 99.
+
+When implemented properly, @srfi{} 99 records will be just as efficient
+as @rnrs{6} records.  @srfi{} 99 is simpler than @rnrs{6} records, both
+in specification and in implementation.  @srfi{} 99 is strictly less
+powerful than the @rnrs{6} records facility because @srfi{} 99 does not
+require implementations to provide sealed, opaque, or non--generative
+records.  On the other hand, @srfi{} 99 describes three optional
+extensions (the @var{sealed}, @var{opaque}, and @var{uid} arguments to
+@func{make-rtd}) that would give @srfi{} 99 the same power as @rnrs{6}
+records.  With those three extensions, @srfi{} 99 would become a simple
+and efficient foundation for implementing @rnrs{6} records.
+
+The record system described by this @srfi{} has been implemented in
+Larceny.  It is the primary record system used by Larceny's
+implementation of the @rnrs{6}, including the @rsixlibrary{records
+syntactic} library.  Larceny demonstrates both the efficiency of
+@acronym{ERR5RS} records and the ease of interoperability between
+@srfi{} 9, @acronym{ERR5RS}, and the procedural and inspection layers of
+@rnrs{6} records.
+
+@c ------------------------------------------------------------
+
+@subsubsection Issues
+
+@itemize
+@item
+@acronym{ERR5RS} records support single inheritance.
+
+@item
+@acronym{ERR5RS} records do not support the non--generative feature of
+@rnrs{6} records.  (To show how @srfi{} 99 could be extended to provide
+all useful features of @rnrs{6} records, @srfi{} 99 describes an
+optional extension for non--generativity, and the reference
+implementation shows how that extension is implemented in Larceny, but
+that extension is not part of @srfi{} 99's @api{}.)
+
+@item
+@acronym{ERR5RS} records do not support the optional ``sealed'' feature
+of @rnrs{6} records.  (To show how @srfi{} 99 could be extended to
+provide all useful features of @rnrs{6} records, @srfi{} 99 describes an
+optional extension for sealed records, and the reference implementation
+shows how that extension is implemented in Larceny, but that extension
+is not part of @srfi{} 99's @api{}.)
+
+@item
+@acronym{ERR5RS} records do not support the optional ``opaque'' feature
+of @rnrs{6} records.  (To show how @srfi{} 99 could be extended to
+provide all useful features of @rnrs{6} records, @srfi{} 99 describes an
+optional extension for opaque records, and the reference implementation
+shows how that extension is implemented in Larceny, but that extension
+is not part of @srfi{} 99's @api{}.)
+
+@item
+@acronym{ERR5RS} records do not support the record--constructor
+descriptors of @rnrs{6} records.  (Even so, @acronym{ERR5RS} records are
+compatible with the @func{make-record-constructor-descriptor} procedure
+of the @rnrs{6}.  Larceny, for example, allows that procedure to be used
+with @acronym{ERR5RS} record type descriptors.)
+
+@item
+@acronym{ERR5RS} records support the per--field mutable/immutable
+feature of @rnrs{6} records.
+
+@item
+The @func{define-record-type} syntax provides succinct defaults for both
+immutable and mutable fields.  An identifier--only field spec implies
+immutability.  When enclosed within parentheses, a single identifier
+implies mutability.
+
+@item
+@acronym{ERR5RS} records are partitioned into a procedural layer, an
+inspection layer, and a syntactic layer.  (The primary reason for
+separating the procedural layer from the inspection layer is to simplify
+comparisons with @rnrs{6} records.)
+
+@item
+The @func{make-rtd} procedure accepts a vector of field specifiers
+instead of a list of field specifiers.  (This is carried over from the
+corresponding procedure of the @rnrs{6} procedural layer.)
+@end itemize
+
+@c page
+@node srfi err5rs records spec
+@subsection Specification
+
+
+All implementations of @srfi{} 99 must provide the following libraries:
+
+@table @library
+@item srfi :99
+Alias for @library{srfi :99 records}.
+
+@item srfi :99 records
+Composite of the next three.
+
+@item srfi :99 records procedural
+@itemx srfi :99 records inspection
+@itemx srfi :99 records syntactic
+One library for each layer.
+@end table
+
+Implementations of @acronym{ERR5RS} should provide the following aliases
+as well:
+
+@table @library
+@item err5rs records
+Alias for @library{srfi :99 records}.
+
+@item err5rs records procedural
+Alias for @library{srfi :99 records procedural}.
+
+@item err5rs records inspection
+Alias for @library{srfi :99 records inspection}.
+
+@item err5rs records syntactic
+Alias for @library{srfi :99 records syntactic}.
+@end table
+
+The specification also describes how Scheme's standard equivalence
+predicates behave with respect to records, and shows how some @rnrs{6}
+examples can be translated to use the @acronym{ERR5RS} libraries
+instead.
+
+When the following specification says that a procedure is said to be
+equivalent to some @rnrs{6} procedure, the equivalence holds only when
+all arguments have the properties required of them by the @rnrs{6}
+specification.  Neither @acronym{ERR5RS} nor this @srfi{} mandate the
+@rnrs{6} exception semantics for programs that violate the
+specification.
+
+@menu
+* srfi err5rs records spec proc::       Procedural layer.
+* srfi err5rs records spec insp::       Inspection Layer.
+* srfi err5rs records spec synt::       Syntactic Layer.
+* srfi err5rs records spec iden::       Record Identity.
+@end menu
+
+@c page
+@node srfi err5rs records spec proc
+@subsubsection Procedural layer
+
+
+The @library{srfi :99 records procedural} library exports the following
+procedures.
+
+@defun make-rtd @var{name} @var{fieldspecs}
+@defunx make-rtd @var{name} @var{fieldspecs} @var{parent}
+@var{name} is a symbol, which matters only to the @func{rtd-name}
+procedure of the inspection layer.  @var{fieldspecs} is a vector of
+field specifiers, where each field specifier is one of:
+
+@itemize
+@item
+a symbol naming the (mutable) field;
+
+@item
+a list of the form @code{(mutable @var{name})}, where @var{name} is a
+symbol naming the mutable field;
+
+@item
+a list of the form @code{(immutable @var{name})}, where name is a symbol
+naming the immutable field.
+@end itemize
+
+The optional @var{parent} is an rtd or @false{}.  It is an error for any
+of the symbols in @var{fieldspecs} to name more than one of the fields
+specified by @var{fieldspecs}, but the field names in @var{fieldspecs}
+may shadow field names in the parent record--type.
+
+Implementations may wish to extend this procedure to support the
+non--generative, sealed, and/or opaque features of the @rnrs{6}.  The
+recommended way to support those features is to allow any combination of
+the following arguments to follow the optional parent argument:
+
+@itemize
+@item
+The symbol @code{sealed} means the new rtd cannot be used as the parent
+of other rtds.
+
+@item
+The symbol @code{opaque} means the @func{record?} predicate will not
+recognize instances of the new rtd.
+
+@item
+The symbol @code{uid}, following by another symbol @var{id}, means the
+new rtd is non--generative with uid @var{id}.  The semantics of this
+extension is the same as described by the @rnrs{6}.
+@end itemize
+
+The recommendation above is not binding on implementations of @srfi{}
+99.  There are other ways to realize sealed, opaque, or non-generative
+rtds.
+
+Returns an @rnrs{6}--compatible record--type descriptor.  Could be
+defined (without the recommended error checking, and without the
+extensions described above) in terms of the @rnrs{6} procedural layer
+by:
+
+@example
+(define (make-rtd name fieldspecs . rest)
+  (make-record-type-descriptor
+   name
+   (if (null? rest) #f (car rest))
+   #f #f #f
+   (vector-map (lambda (fieldspec)
+                 (if (symbol? fieldspec)
+                     (list 'mutable fieldspec)
+                     fieldspec))
+               fieldspecs)))
+@end example
+@end defun
+
+
+@defun rtd? @var{obj}
+Equivalent to the @func{record-type-descriptor?} procedure of the
+@rnrs{6}.
+@end defun
+
+
+@defun rtd-constructor @var{rtd}
+@defunx rtd-constructor @var{rtd} @var{fieldspecs}
+@var{rtd} is a record--type descriptor, and @var{fieldspecs} is an
+optional vector of symbols.
+
+If no @var{fieldspecs} argument is supplied, then @func{rtd-constructor}
+returns a procedure that expects one argument for each field of the
+record--type described by @var{rtd} and returns an instance of that
+record--type with its fields initialized to the corresponding arguments.
+Arguments that correspond to the fields of the record--type's parent (if
+any) come first.
+
+If @var{fieldspecs} is supplied, then @func{rtd-constructor} returns a
+procedure that expects one argument for each element of @var{fieldspecs}
+and returns an instance of the record--type described by @var{rtd} with
+the named fields initialized to the corresponding arguments.
+
+It is an error if some symbol occurs more than once in @var{fieldspecs}.
+Fields of a derived record--type shadow fields of the same name in its
+parent; the @var{fieldspecs} argument cannot be used to initialize a
+shadowed field.
+
+@quotation
+@strong{NOTE} The optional second argument was proposed by Pavel Curtis,
+and interoperates well with @srfi{} 9.
+@end quotation
+
+Could be defined in terms of the @rnrs{6} procedural layer and
+@acronym{ERR5RS} inspection layer by:
+
+@example
+(define (rtd-constructor rtd . rest)
+  ; Computes permutation and allocates permutation buffer
+  ; when the constructor is created, not when the constructor
+  ; is called.  More error checking is recommended.
+  (define (make-constructor fieldspecs allnames maker)
+    (let* ((k (length fieldspecs))
+           (n (length allnames))
+           (buffer (make-vector n (unspecified)))
+           (reverse-all-names (reverse allnames)))
+
+      (define (position fieldname)
+        (let ((names (memq fieldname reverse-all-names)))
+          (assert names)
+          (- (length names) 1)))
+
+      (let ((indexes (map position fieldspecs)))
+        ; The following can be made quite efficient by
+        ; hand-coding it in some lower-level language,
+        ; e.g. Larceny's mal.  Even case-lambda would
+        ; be good enough in most systems.
+        (lambda args
+          (assert (= (length args) k))
+          (for-each (lambda (arg posn)
+                      (vector-set! buffer posn arg))
+                    args indexes)
+          (apply maker (vector->list buffer))))))
+  (if (null? rest)
+      (record-constructor
+       (make-record-constructor-descriptor rtd #f #f))
+      (begin (assert (null? (cdr rest)))
+             (make-constructor
+              (vector->list (car rest))
+              (vector->list (rtd-all-field-names rtd))
+              (record-constructor
+               (make-record-constructor-descriptor rtd #f #f))))))
+@end example
+@end defun
+
+
+@defun rtd-predicate @var{rtd}
+Equivalent to the record--predicate procedure of the @rnrs{6}.
+@end defun
+
+
+@defun rtd-accessor @var{rtd} @var{field}
+@var{field} is a symbol that names a field of the record--type described
+by the record--type descriptor @var{rtd}.  Return a unary procedure that
+accepts instances of @var{rtd} (or any record--type that inherits from
+@var{rtd}) and returns the current value of the named field.
+
+Fields in derived record--types shadow fields of the same name in a
+parent record--type.
+@end defun
+
+
+@defun rtd-mutator @var{rtd} @var{field}
+@var{field} is a symbol that names a field of the record--type described
+by the record--type descriptor @var{rtd}.  Return a binary procedure
+that accepts instances of @var{rtd} (or any record--type that inherits
+from @var{rtd}) and a new value to be stored into the named field,
+performs that side effect, and returns an unspecified value.
+
+Fields in derived record--types shadow fields of the same name in a
+parent record--type.
+@end defun
+
+@c page
+@node srfi err5rs records spec insp
+@subsubsection Inspection Layer
+
+
+The @library{srfi :99 records inspection} library exports the following
+procedures.
+
+
+@defun record? @var{obj}
+Equivalent to its @rnrs{6} namesake.
+@end defun
+
+
+@defun record-rtd @var{record}
+Equivalent to its @rnrs{6} namesake.
+@end defun
+
+
+@defun rtd-name @var{rtd}
+Equivalent to the @func{record-type-name} procedure of the @rnrs{6}.
+@end defun
+
+
+@defun rtd-parent @var{rtd}
+Equivalent to the @func{record-type-parent} procedure of the @rnrs{6}.
+@end defun
+
+
+@defun rtd-field-names @var{rtd}
+Equivalent to the @func{record-type-field-names} procedure of the
+@rnrs{6}.  (That is, it returns a vector of the symbols that name the
+fields of the record--type represented by @var{rtd}, excluding the
+fields of parent record--types.)
+@end defun
+
+
+@defun rtd-all-field-names @var{rtd}
+Return a vector of the symbols that name the fields of the record--type
+represented by @var{rtd}, including the fields of its parent
+record--types, if any.  The fields of parent record--types come before
+the fields of its children, with each subsequence in the same order as
+in the vectors that would be returned by calling @func{rtd-field-names}
+on @var{rtd} and on all its ancestral record--type descriptors.
+
+Could be defined by:
+
+@example
+(define (rtd-all-field-names rtd)
+  (define (loop rtd othernames)
+    (let ((parent (rtd-parent rtd))
+          (names (append (vector->list
+                          (rtd-field-names rtd))
+                         othernames)))
+      (if parent
+          (loop parent names)
+          (list->vector names))))
+  (loop rtd '()))
+@end example
+@end defun
+
+
+@defun rtd-field-mutable? @var{rtd} @var{field}
+@var{rtd} is a record--type descriptor, and field is a symbol naming a
+field of the record--type described by @var{rtd}.  Return @true{} if the
+named field is mutable; otherwise returns @false{}.
+@end defun
+
+@c page
+@node srfi err5rs records spec synt
+@subsubsection Syntactic Layer
+
+
+The syntactic layer consists of @srfi{} 9 extended with single
+inheritance and (optional) implicit naming.
+
+All @acronym{ERR5RS} record--type definitions are generative, but
+@acronym{ERR5RS} drops the @srfi{} 9 restriction to top level, mainly
+because the @rnrs{6} allows generative definitions wherever a definition
+may appear.
+
+The @library{srfi :99 records syntactic} library exports the
+@func{define-record-type} syntax specified below.
+
+The syntax of an @acronym{ERR5RS} record--type definition is:
+
+@example
+<definition>
+  -> <record type definition>     ; addition to 7.1.6 in R5RS
+
+<record type definition>
+  -> (define-record-type <type spec>
+       <constructor spec>
+       <predicate spec>
+       <field spec> ...)
+
+<type spec>  -> <type name>
+             -> (<type name> <parent>)
+
+<constructor spec>
+             -> #f
+             -> #t
+             -> <constructor name>
+             -> (<constructor name> <field name> ...)
+
+<predicate spec>
+             -> #f
+             -> #t
+             -> <predicate name>
+
+<field spec> -> <field name>
+             -> (<field name>)
+             -> (<field name> <accessor name>)
+             -> (<field name> <accessor name> <mutator name>)
+
+<parent>           -> <expression>
+
+<type name>        -> <identifier>
+<constructor name> -> <identifier>
+<predicate name>   -> <identifier>
+<accessor name>    -> <identifier>
+<mutator name>     -> <identifier>
+<field name>       -> <identifier>
+@end example
+
+The semantics of a record type definition is the same as in @srfi{} 9:
+the record type definition macro--expands into a cluster of definitions
+that:
+
+@itemize
+@item
+define the @code{<type name>} as the record--type descriptor for the new
+record--type;
+
+@item
+defines a constructor for instances of the new record--type (unless the
+constructor spec is @false{});
+
+@item
+defines a predicate that recognizes instances of the new record--type
+and its subtypes (unless the predicate spec is @false{});
+
+@item
+defines an accessor for each field name;
+
+@item
+defines a mutator for each mutable field name.
+@end itemize
+
+An @acronym{ERR5RS} record type definition extends @srfi{} 9 with the
+following additional options:
+
+@itemize
+@item
+If a @code{<parent>} expression is specified, then it must evaluate to
+an rtd that serves as the parent record--type for the record--type being
+defined.
+
+@item
+If @false{} is specified for the constructor or predicate, then no
+constructor or predicate procedure is defined.  (This is useful when the
+record--type being defined will be used as an abstract base class.)
+
+@item
+If @true{} is specified for the constructor or predicate, then the name
+of the constructor is the type name prefixed by @code{make-}, and the
+name of the predicate is the type name followed by a question mark
+(@code{?}).
+
+@item
+If the constructor name is specified as #t or as an identifier, then the
+constructor's arguments correspond to the fields of the parent (if any)
+followed by the new fields added by this record--type definition.
+
+@item
+If a field spec consists of a single identifier, then:
+
+@itemize -
+@item
+the field is immutable;
+
+@item
+the name of its accessor is the type name followed by a hyphen
+(@code{-}) followed by the field name.
+@end itemize
+
+@item
+If a field spec consists of a list of one identifier, then:
+
+@itemize -
+@item
+the field is mutable;
+
+@item
+the name of its accessor is the type name followed by a hyphen
+(@code{-}) followed by the field name;
+
+@item
+the name of its mutator is the type name followed by a hyphen (@code{-})
+followed by the field name followed by @code{-set!}.
+@end itemize
+@end itemize
+
+@c page
+@node srfi err5rs records spec iden
+@subsubsection Record Identity
+
+
+Two @acronym{ERR5RS} records with fields are @func{eqv?} if and only if
+they were created by the same (dynamic) call to some record constructor.
+Two @acronym{ERR5RS} records are @func{eq?} if and only if they are
+@func{eqv?}.
+
+Two @acronym{ERR5RS} records for which the @func{record?} predicate
+returns true are @func{equal?} if and only if they are @func{eqv?}.
+This @srfi{} does not specify the semantics of @func{equal?} on opaque
+records, which are not required by this @srfi{}.  (The @rnrs{6} requires
+@func{equal?}  and @func{eqv?}  to behave the same on all records,
+unless the records happen to be opaque records that represent pairs,
+vectors, strings, or bytevectors.)
+
+@quotation
+Historical note: Pavel Curtis proposed that @func{equal?} behave the
+same as @func{eqv?}.
+@end quotation
+
+A @func{define-record-type} form macro--expands into code that calls
+@func{make-rtd each} time the expanded record--type definition is
+executed.  Two @acronym{ERR5RS} record--type descriptors are @func{eqv?}
+if and only if they were created by the same (dynamic) call to
+@func{make-rtd}.
+
+@c page
+@node srfi err5rs records examples
+@subsection Examples
+
+
+@rnrs{6} library section 6.3 includes two extended examples that provide
+a nice comparison of the @rnrs{6} and @acronym{ERR5RS} record systems,
+especially since these two examples were designed to highlight the use
+of @rnrs{6} record--constructor descriptors in combination with
+inheritance.
+
+@c ------------------------------------------------------------
+
+@subsubheading Example 1
+
+Using @acronym{ERR5RS} records, the first example becomes:
+
+@example
+(define rtd1
+  (make-rtd 'rtd1 '#((immutable x1) (immutable x2))))
+
+(define rtd2
+  (make-rtd 'rtd2 '#((immutable x3) (immutable x4)) rtd1))
+
+(define rtd3
+  (make-rtd 'rtd3 '#((immutable x5) (immutable x6)) rtd2))
+
+(define protocol1
+  (lambda (p)
+    (lambda (a b c)
+      (p (+ a b) (+ b c)))))
+
+(define protocol2
+  (lambda (n)
+    (lambda (a b c d e f)
+      (let ((p (n a b c)))
+        (p (+ d e) (+ e f))))))
+
+(define protocol3
+  (lambda (n)
+    (lambda (a b c d e f g h i)
+      (let ((p (n a b c d e f)))
+        (p (+ g h) (+ h i))))))
+
+(define make-rtd1
+  (protocol1 (rtd-constructor rtd1)))
+
+(define make-rtd2
+  (let ((maker2 (rtd-constructor rtd2)))
+    (protocol2
+     (protocol1
+      (lambda (x1 x2)
+        (lambda (x3 x4)
+          (maker2 x1 x2 x3 x4)))))))
+
+(define make-rtd3
+  (let ((maker3 (rtd-constructor rtd3)))
+    (protocol3
+     (protocol2
+      (protocol1
+       (lambda (x1 x2)
+         (lambda (x3 x4)
+           (lambda (x5 x6)
+             (maker3 x1 x2 x3 x4 x5 x6)))))))))
+
+(make-rtd3 1 2 3 4 5 6 7 8 9)
+
+; evaluates to a record whose fields contain
+; 3 5 9 11 15 17
+@end example
+
+The purpose of the @rnrs{6} record--constructor descriptors is to
+automate the idiom shown in the definitions of @func{make-rtd1},
+@func{make-rtd2}, and @func{make-rtd3} above, and to provide an
+alternative to procedural abstraction when eliminating the duplication
+of code seen in @func{make-point/abs} and @func{make-cpoint/abs} below.
+
+@c ------------------------------------------------------------
+
+@subsubheading Example 2
+
+
+The second example illustrates the shadowing of fields in a parent
+record--type by fields in a derived record--type.  Using
+@acronym{ERR5RS} records, the second example becomes:
+
+@example
+(define :point
+  (make-rtd 'point '#((mutable x) (mutable y))))
+
+(define make-point (rtd-constructor :point))
+
+(define point? (rtd-predicate :point))
+(define point-x (rtd-accessor :point 'x))
+(define point-y (rtd-accessor :point 'y))
+(define point-x-set! (rtd-mutator :point 'x))
+(define point-y-set! (rtd-mutator :point 'y))
+
+(define p1 (make-point 1 2))
+(point? p1)                     @result{} #t
+(point-x p1)                    @result{} 1
+(point-y p1)                    @result{} 2
+(point-x-set! p1 5)
+(point-x p1)                    @result{} 5
+
+(define :point2
+  (make-rtd 'point2 '#((mutable x) (mutable y)) :point))
+
+(define make-point2
+  (rtd-constructor :point2))
+(define point2? (rtd-predicate :point2))
+(define point2-xx (rtd-accessor :point2 'x))
+(define point2-yy (rtd-accessor :point2 'y))
+
+(define p2 (make-point2 1 2 3 4))
+(point? p2)                     @result{} #t
+(point-x p2)                    @result{} 1
+(point-y p2)                    @result{} 2
+(point2-xx p2)                  @result{} 3
+(point2-yy p2)                  @result{} 4
+
+(define make-point/abs
+  (let ((maker (rtd-constructor :point)))
+    (lambda (x y)
+      (maker (abs x) (abs y)))))
+
+(point-x (make-point/abs -1 -2)) @result{} 1
+(point-y (make-point/abs -1 -2)) @result{} 2
+
+(define :cpoint
+  (make-rtd 'cpoint '#((mutable rgb)) :point))
+
+(define make-cpoint
+  (let ((maker (rtd-constructor :cpoint)))
+    (lambda (x y c)
+      (maker x y (color->rgb c)))))
+
+(define make-cpoint/abs
+  (let ((maker (rtd-constructor :cpoint)))
+    (lambda (x y c)
+      (maker (abs x) (abs y) (color->rgb c)))))
+
+(define cpoint-rgb
+  (rtd-accessor :cpoint 'rgb))
+
+(define (color->rgb c)
+  (cons 'rgb c))
+
+(cpoint-rgb (make-cpoint -1 -3 'red))   @result{} (rgb . red)
+(point-x (make-cpoint -1 -3 'red))      @result{} -1
+(point-x (make-cpoint/abs -1 -3 'red))  @result{} 1
+@end example
+
+@c page
+@node srfi err5rs records ack
+@subsection Acknowledgements
+
+
+I am grateful to David Rush and Andre van Tonder for their comments and
+criticisms, to all those mentioned by name in the Rationale, and to all
+who participated in the archived discussion of this @srfi{}.  The
+reference implementation is adapted from Larceny v0.97.
+
+@c page
+@node srfi err5rs records copyright
+@subsection Copyright
+
+
+Copyright @copyright{} William D Clinger 2008.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. REMEMBER, THERE IS NO SCHEME UNDERGROUND. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+@c end of file
