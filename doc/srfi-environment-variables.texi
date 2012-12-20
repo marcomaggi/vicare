@@ -5,7 +5,7 @@
 @cindex @srfi{} environment-variables
 
 
-The library @library{srfi :98} is by by Taro Minowa (Higepon) as the
+The library @library{srfi :98} is by Taro Minowa (Higepon) as the
 reference implementation for @ansrfi{98}; see:
 
 @center @url{http://srfi.schemers.org/srfi-98/srfi-98.html}
