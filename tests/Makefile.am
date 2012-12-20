@@ -225,6 +225,7 @@ TESTS			=	\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-98-os-environment-variables.sps	\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\
@@ -495,6 +496,7 @@ EXTRA_DIST = \
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-98-os-environment-variables.sps	\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\
