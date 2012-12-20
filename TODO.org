@@ -88,7 +88,11 @@
 
 * Review and integration of SRFIs
 
-** SRFI 0
+** TODO SRFI 0
+
+   Decide if loading a library should  add features to the registry only
+   in the  scope of  the loading code.   This would  require substantial
+   changes in SRFI-0.
 
 ** SRFI 1
 
@@ -137,17 +141,11 @@
 ** SRFI 48 intermediate format strings
 
 ** DONE SRFI 61 cond
-
 ** SRFI 64 testing
-
 ** SRFI 67 comparison procedures
-
 ** SRFI 69 basic hash tables
-
 ** DONE SRFI 78 lightweight testing
-
 ** DONE SRFI 98 OS environment variables
-
 ** TODO SRFI 99 records
 
    Tests are missing.

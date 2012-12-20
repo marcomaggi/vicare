@@ -220,6 +220,7 @@ TESTS			=	\
 	test-vicare-weak-tables.sps			\
 	test-vicare-words.sps				\
 	\
+	test-srfi-0-cond-expand.sps			\
 	test-srfi-26-cut.sps				\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
@@ -492,6 +493,7 @@ EXTRA_DIST = \
 	test-vicare-weak-tables.sps			\
 	test-vicare-words.sps				\
 	\
+	test-srfi-0-cond-expand.sps			\
 	test-srfi-26-cut.sps				\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\

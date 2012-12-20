@@ -34,7 +34,7 @@ intended for use in @rnrs{5} programs anyway.
 
 This @srfi{} proposes a better record system for use in @rnrs{5},
 @acronym{ERR5RS}, and @rnrs{6} programs.  The syntactic layer of this
-@srfi{}'s record system is an extension of @srfi{} 9.  The procedural
+@srfi{}'s record system is an extension of @ansrfi{9}.  The procedural
 and inspection layers of this @srfi{}'s record system are perfectly
 compatible with its syntactic layer.  This entire @srfi{} is compatible
 with the procedural and inspection layers of the @rnrs{6} record system,
@@ -75,8 +75,8 @@ The @acronym{ERR5RS} record system consists of:
 
 @itemize
 @item
-a syntactic layer, which is fully compatible with @srfi{} 9 but extends
-@srfi{} 9 with inheritance and with more succinct syntax for common use
+a syntactic layer, which is fully compatible with @ansrfi{9} but extends
+@ansrfi{9} with inheritance and with more succinct syntax for common use
 cases;
 
 @item
@@ -127,7 +127,7 @@ the design rationale for @acronym{ERR5RS} records.
 @subsubsection Records before @rnrs{6}
 
 The importance of adding records to Scheme has been recognized for more
-than twenty years. The basic idea behind the @srfi{} 9 and @rnrs{6}
+than twenty years. The basic idea behind the @ansrfi{9} and @rnrs{6}
 record systems was outlined by Norman Adams on 8 July 1987, following
 similar ideas that had been implemented in T and MIT CScheme.  Jonathan
 Rees posted a revision of Adams's proposal on 26 May 1988.  Pavel Curtis
@@ -178,7 +178,7 @@ and Rozas continued to develop this proposal, and presented a summary of
 it following the 1998 Scheme Workshop.  I have been unable to locate a
 written or online copy of this proposal.
 
-@srfi{} 9, submitted by Richard Kelsey in July 1999, is a syntactic
+@ansrfi{9}, submitted by Richard Kelsey in July 1999, is a syntactic
 @api{} in the tradition of the Rees, Curtis, and
 Duba/Flatt/Krishnamurthi proposals.
 
@@ -238,7 +238,7 @@ different notion of record type that may be neither object nor syntax.
 
 The @rnrs{6} syntactic layer consists of a @func{define-record-type}
 syntax that is incompatible with the syntaxes of the same name defined
-by @srfi{} 9 and @srfi{} 99 (this @srfi{}).
+by @ansrfi{9} and @ansrfi{99} (this @srfi{}).
 
 According to @rnrs{6} library section 6.2, an @rnrs{6}
 @func{define-record-type} form binds the record name ``to an
@@ -309,7 +309,7 @@ tradition, changing only a few details to improve interoperability with
 records defined by the @acronym{ERR5RS} and @rnrs{6} procedural layers.
 
 The @func{define-record-type} syntax specified by this @srfi{} is
-compatible with and extends @srfi{} 9, which is one of the more widely
+compatible with and extends @ansrfi{9}, which is one of the more widely
 accepted @srfi{}s.  The extensions include single inheritance and
 (optional) implicit naming, along with succinct abbreviations for
 specifying whether a field is immutable or mutable.
@@ -320,28 +320,28 @@ layers can define new record types that inherit from previously defined
 record types without requiring programmers to know which layer was used
 to define the parent type.
 
-In implementations of the @rnrs{6}, a @srfi{} 99 record type coincides
+In implementations of the @rnrs{6}, a @ansrfi{99} record type coincides
 with the @rnrs{6} notion of a record--type descriptor.  Portable
-libraries can safely export @srfi{} 99 record types even if they were
-defined using the syntactic layer of @srfi{} 99.
+libraries can safely export @ansrfi{99} record types even if they were
+defined using the syntactic layer of @ansrfi{99}.
 
-In procedure names, @srfi{} 99 uses @code{rtd} as an abbreviation for
+In procedure names, @ansrfi{99} uses @code{rtd} as an abbreviation for
 record--type descriptor.  This naming convention prevents name clashes
-between @srfi{} 99 and the @rnrs{6} procedural and inspection layers,
-which makes it easier for @rnrs{6} programs to import @srfi{} 99
+between @ansrfi{99} and the @rnrs{6} procedural and inspection layers,
+which makes it easier for @rnrs{6} programs to import @ansrfi{99}
 libraries.  @rnrs{6} programs must take care when importing the @rnrs{6}
 syntactic layer, however, because that library's exports conflict with
-both @srfi{} 9 and with @srfi{} 99.
+both @ansrfi{9} and with @ansrfi{99}.
 
-When implemented properly, @srfi{} 99 records will be just as efficient
-as @rnrs{6} records.  @srfi{} 99 is simpler than @rnrs{6} records, both
-in specification and in implementation.  @srfi{} 99 is strictly less
-powerful than the @rnrs{6} records facility because @srfi{} 99 does not
+When implemented properly, @ansrfi{99} records will be just as efficient
+as @rnrs{6} records.  @ansrfi{99} is simpler than @rnrs{6} records, both
+in specification and in implementation.  @ansrfi{99} is strictly less
+powerful than the @rnrs{6} records facility because @ansrfi{99} does not
 require implementations to provide sealed, opaque, or non--generative
-records.  On the other hand, @srfi{} 99 describes three optional
+records.  On the other hand, @ansrfi{99} describes three optional
 extensions (the @var{sealed}, @var{opaque}, and @var{uid} arguments to
-@func{make-rtd}) that would give @srfi{} 99 the same power as @rnrs{6}
-records.  With those three extensions, @srfi{} 99 would become a simple
+@func{make-rtd}) that would give @ansrfi{99} the same power as @rnrs{6}
+records.  With those three extensions, @ansrfi{99} would become a simple
 and efficient foundation for implementing @rnrs{6} records.
 
 The record system described by this @srfi{} has been implemented in
@@ -349,7 +349,7 @@ Larceny.  It is the primary record system used by Larceny's
 implementation of the @rnrs{6}, including the @rsixlibrary{records
 syntactic} library.  Larceny demonstrates both the efficiency of
 @acronym{ERR5RS} records and the ease of interoperability between
-@srfi{} 9, @acronym{ERR5RS}, and the procedural and inspection layers of
+@ansrfi{9}, @acronym{ERR5RS}, and the procedural and inspection layers of
 @rnrs{6} records.
 
 @c ------------------------------------------------------------
@@ -362,27 +362,27 @@ syntactic} library.  Larceny demonstrates both the efficiency of
 
 @item
 @acronym{ERR5RS} records do not support the non--generative feature of
-@rnrs{6} records.  (To show how @srfi{} 99 could be extended to provide
-all useful features of @rnrs{6} records, @srfi{} 99 describes an
+@rnrs{6} records.  (To show how @ansrfi{99} could be extended to provide
+all useful features of @rnrs{6} records, @ansrfi{99} describes an
 optional extension for non--generativity, and the reference
 implementation shows how that extension is implemented in Larceny, but
-that extension is not part of @srfi{} 99's @api{}.)
+that extension is not part of @ansrfi{99}'s @api{}.)
 
 @item
 @acronym{ERR5RS} records do not support the optional ``sealed'' feature
-of @rnrs{6} records.  (To show how @srfi{} 99 could be extended to
-provide all useful features of @rnrs{6} records, @srfi{} 99 describes an
+of @rnrs{6} records.  (To show how @ansrfi{99} could be extended to
+provide all useful features of @rnrs{6} records, @ansrfi{99} describes an
 optional extension for sealed records, and the reference implementation
 shows how that extension is implemented in Larceny, but that extension
-is not part of @srfi{} 99's @api{}.)
+is not part of @ansrfi{99}'s @api{}.)
 
 @item
 @acronym{ERR5RS} records do not support the optional ``opaque'' feature
-of @rnrs{6} records.  (To show how @srfi{} 99 could be extended to
-provide all useful features of @rnrs{6} records, @srfi{} 99 describes an
+of @rnrs{6} records.  (To show how @ansrfi{99} could be extended to
+provide all useful features of @rnrs{6} records, @ansrfi{99} describes an
 optional extension for opaque records, and the reference implementation
 shows how that extension is implemented in Larceny, but that extension
-is not part of @srfi{} 99's @api{}.)
+is not part of @ansrfi{99}'s @api{}.)
 
 @item
 @acronym{ERR5RS} records do not support the record--constructor
@@ -418,7 +418,7 @@ corresponding procedure of the @rnrs{6} procedural layer.)
 @subsection Specification
 
 
-All implementations of @srfi{} 99 must provide the following libraries:
+All implementations of @ansrfi{99} must provide the following libraries:
 
 @table @library
 @item srfi :99
@@ -575,7 +575,7 @@ shadowed field.
 
 @quotation
 @strong{NOTE} The optional second argument was proposed by Pavel Curtis,
-and interoperates well with @srfi{} 9.
+and interoperates well with @ansrfi{9}.
 @end quotation
 
 Could be defined in terms of the @rnrs{6} procedural layer and
@@ -721,11 +721,11 @@ named field is mutable; otherwise returns @false{}.
 @subsubsection Syntactic Layer
 
 
-The syntactic layer consists of @srfi{} 9 extended with single
+The syntactic layer consists of @ansrfi{9} extended with single
 inheritance and (optional) implicit naming.
 
 All @acronym{ERR5RS} record--type definitions are generative, but
-@acronym{ERR5RS} drops the @srfi{} 9 restriction to top level, mainly
+@acronym{ERR5RS} drops the @ansrfi{9} restriction to top level, mainly
 because the @rnrs{6} allows generative definitions wherever a definition
 may appear.
 
@@ -773,7 +773,7 @@ The syntax of an @acronym{ERR5RS} record--type definition is:
 <field name>       -> <identifier>
 @end example
 
-The semantics of a record type definition is the same as in @srfi{} 9:
+The semantics of a record type definition is the same as in @ansrfi{9}:
 the record type definition macro--expands into a cluster of definitions
 that:
 
@@ -797,7 +797,7 @@ defines an accessor for each field name;
 defines a mutator for each mutable field name.
 @end itemize
 
-An @acronym{ERR5RS} record type definition extends @srfi{} 9 with the
+An @acronym{ERR5RS} record type definition extends @ansrfi{9} with the
 following additional options:
 
 @itemize

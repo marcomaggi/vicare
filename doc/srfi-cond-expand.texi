@@ -2,7 +2,7 @@
 @section @ansrfi{0} feature based conditional expansion construct
 
 
-The library @library{srfi :0} is by Marc Feeley as the reference
+The library @library{srfi :0} is by Marc Feeley as reference
 implementation for @ansrfi{0}; see:
 
 @center @url{http://srfi.schemers.org/srfi-0/srfi-0.html}
@@ -15,6 +15,7 @@ for more details.
 * srfi cond-expand abstract::   Abstract.
 * srfi cond-expand rationale::  Rationale.
 * srfi cond-expand spec::       Specifications.
+* srfi cond-expand vicare::     Features supported by @value{PRJNAME}.
 @end menu
 
 @c page
@@ -90,12 +91,12 @@ general it is thus possible that a feature is in effect in some parts of
 the program and not in others.  This allows conflicting @srfi{}s to be
 present in a given program as long as their scope do not intersect.
 
-@ansrfi{0} does not prescribe a particular mechanism for controling the
+@ansrfi{0} does not prescribe a particular mechanism for controlling the
 presence of a feature as it is our opinion that this should be the role
 of a module system.  We expect that future module system @srfi{}s will
-need to extend the semantics of @ansrfi{0} for their purposes, for example
-by defining feature scoping rules or by generalizing the feature testing
-construct.
+need to extend the semantics of @ansrfi{0} for their purposes, for
+example by defining feature scoping rules or by generalizing the feature
+testing construct.
 
 @c page
 @node srfi cond-expand rationale
@@ -172,7 +173,8 @@ Syntax:
       | <conditional expansion form>
 <conditional expansion form>
     --> (cond-expand <cond-expand clause>+)
-      | (cond-expand <cond-expand clause>* (else <command or definition>*))
+      | (cond-expand <cond-expand clause>*
+                     (else <command or definition>*))
 <cond-expand clause>
     --> (<feature requirement> <command or definition>*)
 <feature requirement>
@@ -202,11 +204,11 @@ Examples:
 
 @example
 (cond-expand
-  [(and srfi-1 srfi-10)
-   (write 1)]
-  [(or srfi-1 srfi-10)
-   (write 2)]
-  [else])
+  ((and srfi-1 srfi-10)
+   (write 1))
+  ((or srfi-1 srfi-10)
+   (write 2))
+  (else))
 
 (cond-expand
   (command-line
@@ -217,5 +219,343 @@ The second example assumes that @func{command-line} is an alias for some
 feature which gives access to command line arguments.  Note that an
 error will be signaled at macro--expansion time if this feature is not
 present.
+
+@c page
+@node srfi cond-expand vicare
+@subsection Features supported by @value{PRJNAME}
+
+
+The following symbolic expressions are recognised by @func{cond-expand}
+as @value{PRJNAME} available features:
+
+@table @code
+@item (srfi :0)
+@itemx (srfi :0 cond-expand)
+@itemx srfi-0
+@itemx srfi-0-cond-expand
+@ansrfi{0} is available.
+
+@item (srfi :1)
+@itemx (srfi :1 lists)
+@itemx srfi-1
+@itemx srfi-1-lists
+@ansrfi{1} is available.
+
+@item (srfi :2)
+@itemx (srfi :2 and-let*)
+@itemx srfi-2
+@itemx srfi-2-and-let*
+@ansrfi{2} is available.
+
+@c @item (srfi :5)
+@c @itemx (srfi :5 let)
+@c @itemx srfi-5
+@c @itemx srfi-5-let
+@c @ansrfi{5} is available.
+
+@item (srfi :6)
+@itemx (srfi :6 basic-string-ports)
+@itemx srfi-6
+@itemx srfi-6-basic-string-ports
+@ansrfi{6} is available.
+
+@item (srfi :8)
+@itemx (srfi :8 receive)
+@itemx srfi-8
+@itemx srfi-8-receive
+@ansrfi{8} is available.
+
+@item (srfi :9)
+@itemx (srfi :9 records)
+@itemx srfi-9
+@itemx srfi-9-records
+@ansrfi{9} is available.
+
+@item (srfi :11)
+@itemx (srfi :11 let-values)
+@itemx srfi-11
+@itemx srfi-11-let-values
+@ansrfi{11} is available.
+
+@item (srfi :13)
+@itemx (srfi :13 strings)
+@itemx srfi-13
+@itemx srfi-13-strings
+@ansrfi{13} is available.
+
+@item (srfi :14)
+@itemx (srfi :14 char-sets)
+@itemx srfi-14
+@itemx srfi-14-char-sets
+@ansrfi{14} is available.
+
+@item (srfi :16)
+@itemx (srfi :16 case-lambda)
+@itemx srfi-16
+@itemx srfi-16-case-lambda
+@ansrfi{16} is available.
+
+@c @item (srfi :17)
+@c @itemx (srfi :17 generalized-set!)
+@c @itemx srfi-17
+@c @itemx srfi-17-generalized-set!
+@c @ansrfi{17} is available.
+
+@c @item (srfi :18)
+@c @itemx (srfi :18 multithreading)
+@c @itemx srfi-18
+@c @itemx srfi-18-multithreading
+@c @ansrfi{18} is available.
+
+@item (srfi :19)
+@itemx (srfi :19 time)
+@itemx srfi-19
+@itemx srfi-19-time
+@ansrfi{19} is available.
+
+@c @item (srfi :21)
+@c @itemx (srfi :21 real-time-multithreading)
+@c @itemx srfi-21
+@c @itemx srfi-21-real-time-multithreading
+@c @ansrfi{21} is available.
+
+@item (srfi :23)
+@itemx (srfi :23 error)
+@itemx srfi-23
+@itemx srfi-23-error
+@ansrfi{23} is available.
+
+@item (srfi :25)
+@itemx (srfi :25 multi-dimensional-arrays)
+@itemx srfi-25
+@itemx srfi-25-multi-dimensional-arrays
+@ansrfi{25} is available.
+
+@item (srfi :26)
+@itemx (srfi :26 cut)
+@itemx srfi-26
+@itemx srfi-26-cut
+@ansrfi{26} is available.
+
+@item (srfi :27)
+@itemx (srfi :27 random-bits)
+@itemx srfi-27
+@itemx srfi-27-random-bits
+@ansrfi{27} is available.
+
+@c @item (srfi :28)
+@c @itemx (srfi :28 basic-format-strings)
+@c @itemx srfi-28
+@c @itemx srfi-28-basic-format-strings
+@c @ansrfi{28} is available.
+
+@c @item (srfi :29)
+@c @itemx (srfi :29 localization)
+@c @itemx srfi-29
+@c @itemx srfi-29-localization
+@ansrfi{29} is available.
+
+@item (srfi :31)
+@itemx (srfi :31 rec)
+@itemx srfi-31
+@itemx srfi-31-rec
+@ansrfi{31} is available.
+
+@item (srfi :37)
+@itemx (srfi :37 args-fold)
+@itemx srfi-37
+@itemx srfi-37-args-fold
+@ansrfi{37} is available.
+
+@item (srfi :38)
+@itemx (srfi :38 with-shared-structure)
+@itemx srfi-38
+@itemx srfi-38-with-shared-structure
+@ansrfi{38} is available.
+
+@item (srfi :39)
+@itemx (srfi :39 parameters)
+@itemx srfi-39
+@itemx srfi-39-parameters
+@ansrfi{39} is available.
+
+@item (srfi :41)
+@itemx (srfi :41 streams)
+@itemx srfi-41
+@itemx srfi-41-streams
+@ansrfi{41} is available.
+
+@item (srfi :42)
+@itemx (srfi :42 eager-comprehensions)
+@itemx srfi-42
+@itemx srfi-42-eager-comprehensions
+@ansrfi{42} is available.
+
+@item (srfi :43)
+@itemx (srfi :43 vectors)
+@itemx srfi-43
+@itemx srfi-43-vectors
+@ansrfi{43} is available.
+
+@c @item (srfi :44)
+@c @itemx (srfi :44 collections)
+@c @itemx srfi-44
+@c @itemx srfi-44-collections
+@c @ansrfi{44} is available.
+
+@item (srfi :45)
+@itemx (srfi :45 lazy)
+@itemx srfi-45
+@itemx srfi-45-lazy
+@ansrfi{45} is available.
+
+@c @item (srfi :46)
+@c @itemx (srfi :46 syntax-rules)
+@c @itemx srfi-46
+@c @itemx srfi-46-syntax-rules
+@c @ansrfi{46} is available.
+
+@c @item (srfi :47)
+@c @itemx (srfi :47 arrays)
+@c @itemx srfi-47
+@c @itemx srfi-47-arrays
+@c @ansrfi{47} is available.
+
+@item (srfi :48)
+@itemx (srfi :48 intermediate-format-strings)
+@itemx srfi-48
+@itemx srfi-48-intermediate-format-strings
+@ansrfi{48} is available.
+
+@c @item (srfi :51)
+@c @itemx (srfi :51 rest-values)
+@c @itemx srfi-51
+@c @itemx srfi-51-rest-values
+@c @ansrfi{51} is available.
+
+@c @item (srfi :54)
+@c @itemx (srfi :54 cat)
+@c @itemx srfi-54
+@c @itemx srfi-54-cat
+@c @ansrfi{54} is available.
+
+@c @item (srfi :57)
+@c @itemx (srfi :57 records)
+@c @itemx srfi-57
+@c @itemx srfi-57-records
+@c @ansrfi{57} is available.
+
+@c @item (srfi :59)
+@c @itemx (srfi :59 vicinities)
+@c @itemx srfi-59
+@c @itemx srfi-59-vicinities
+@c @ansrfi{59} is available.
+
+@c @item (srfi :60)
+@c @itemx (srfi :60 integer-bits)
+@c @itemx srfi-60
+@c @itemx srfi-60-integer-bits
+@c @ansrfi{60} is available.
+
+@item (srfi :61)
+@itemx (srfi :61 cond)
+@itemx srfi-61
+@itemx srfi-61-cond
+@ansrfi{61} is available.
+
+@c @item (srfi :63)
+@c @itemx (srfi :63 arrays)
+@c @itemx srfi-63
+@c @itemx srfi-63-arrays
+@c @ansrfi{63} is available.
+
+@item (srfi :64)
+@itemx (srfi :64 testing)
+@itemx srfi-64
+@itemx srfi-64-testing
+@ansrfi{64} is available.
+
+@c @item (srfi :66)
+@c @itemx (srfi :66 octet-vectors)
+@c @itemx srfi-66
+@c @itemx srfi-66-octet-vectors
+@c @ansrfi{66} is available.
+
+@item (srfi :67)
+@itemx (srfi :67 compare-procedures)
+@itemx srfi-67
+@itemx srfi-67-compare-procedures
+@ansrfi{67} is available.
+
+@item (srfi :69)
+@itemx (srfi :69 basic-hash-tables)
+@itemx srfi-69
+@itemx srfi-69-basic-hash-tables
+@ansrfi{69} is available.
+
+@c @item (srfi :71)
+@c @itemx (srfi :71 let)
+@c @itemx srfi-71
+@c @itemx srfi-71-let
+@c @ansrfi{71} is available.
+
+@c @item (srfi :74)
+@c @itemx (srfi :74 blobs)
+@c @itemx srfi-74
+@c @itemx srfi-74-blobs
+@c @ansrfi{74} is available.
+
+@item (srfi :78)
+@itemx (srfi :78 lightweight-testing)
+@itemx srfi-78
+@itemx srfi-78-lightweight-testing
+@ansrfi{78} is available.
+
+@c @item (srfi :86)
+@c @itemx (srfi :86 mu-and-nu)
+@c @itemx srfi-86
+@c @itemx srfi-86-mu-and-nu
+@c @ansrfi{86} is available.
+
+@c @item (srfi :87)
+@c @itemx (srfi :87 case)
+@c @itemx srfi-87
+@c @itemx srfi-87-case
+@c @ansrfi{87} is available.
+
+@c @item (srfi :95)
+@c @itemx (srfi :95 sorting-and-merging)
+@c @itemx srfi-95
+@c @itemx srfi-95-sorting-and-merging
+@c @ansrfi{95} is available.
+
+@item (srfi :98)
+@itemx (srfi :98 os-environment-variables)
+@itemx srfi-98
+@itemx srfi-98-os-environment-variables
+@ansrfi{98} is available.
+
+@item (srfi :99)
+@itemx (srfi :99 records)
+@itemx srfi-99
+@itemx srfi-99-records
+@ansrfi{99} is available.
+
+@item vicare
+The Scheme implementation is @value{PRJNAME}.
+
+@item posix
+The program is running under a @posix{} system.
+
+@itemx linux
+@itemx solaris
+@itemx darwin
+@itemx bsd
+@itemx freebsd
+@itemx openbsd
+@itemx cygwin
+@itemx gnu
+The program is running under the named @acronym{OS}.
+@end table
 
 @c end of file
