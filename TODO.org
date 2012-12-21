@@ -101,7 +101,6 @@
 ** DONE SRFI 9
 ** DONE SRFI 11
 ** SRFI 13
-
 ** SRFI 14
 
 ** SRFI 16

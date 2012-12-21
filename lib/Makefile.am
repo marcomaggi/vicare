@@ -53,7 +53,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a11/let-values.sls			\
 	\
 	srfi/%3a13.sls					\
-	srfi/%3a13/srfi-13.scm				\
 	srfi/%3a13/strings.sls				\
 	\
 	srfi/%3a14.sls					\
