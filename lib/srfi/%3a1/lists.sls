@@ -397,19 +397,23 @@
 	(cons (car lis) (recur (cdr lis)))
 	lis)))
 
-(define (iota count . maybe-start+step)
-  ;; IOTA count [start step]	(start start+step ... start+(count-1)*step)
-  (define who 'iota)
-  (with-arguments-validation (who)
-      ((non-negative-exact-integer	count))
-    (let-optionals maybe-start+step ((start 0) (step 1))
-		   (check-arg number? start iota)
-		   (check-arg number? step iota)
-		   (let loop ((n 0) (r '()))
-		     (if (= n count)
-			 (reverse r)
-		       (loop (+ 1 n)
-			     (cons (+ start (* n step)) r)))))))
+(define iota
+  (case-lambda
+   ((count)
+    (iota count 0 1))
+   ((count start)
+    (iota count start 1))
+   ((count start step)
+    (define who 'iota)
+    (with-arguments-validation (who)
+	((non-negative-exact-integer	count)
+	 (non-negative-exact-integer	start)
+	 (non-negative-exact-integer	step))
+      (let loop ((n 0) (r '()))
+	(if (= n count)
+	    (reverse r)
+	  (loop (+ 1 n)
+		(cons (+ start (* n step)) r))))))))
 
 (define (circular-list val1 . vals)
   (let ((ans (cons val1 vals)))
@@ -840,36 +844,48 @@
 	  (lp (cdr lis) (if (pred (car lis)) (+ i 1) i)))))))
 
 
-(define (unfold-right p f g seed . maybe-tail)
-  (define who 'unfold-right)
-  (with-arguments-validation (who)
-      ((procedure	p)
-       (procedure	f)
-       (procedure	g))
-    (let lp ((seed seed) (ans (:optional maybe-tail '())))
-      (if (p seed) ans
-	(lp (g seed)
-	    (cons (f seed) ans))))))
+(define unfold-right
+  (case-lambda
+   ((p f g seed)
+    (unfold-right p f g seed '()))
+   ((p f g seed tail)
+    (define who 'unfold-right)
+    (with-arguments-validation (who)
+	((procedure	p)
+	 (procedure	f)
+	 (procedure	g))
+      (let lp ((seed seed)
+	       (ans  tail))
+	(if (p seed) ans
+	  (lp (g seed)
+	      (cons (f seed) ans))))))))
 
-(define (unfold p f g seed . maybe-tail-gen)
-  (define who 'unfold)
-  (with-arguments-validation (who)
-      ((procedure	p)
-       (procedure	f)
-       (procedure	g))
-    (if (pair? maybe-tail-gen) ;;; so much for :optional (aghuloum)
+(define unfold
+  (case-lambda
 
-	(let ((tail-gen (car maybe-tail-gen)))
-	  (if (pair? (cdr maybe-tail-gen))
-	      (apply error "Too many arguments" unfold p f g seed maybe-tail-gen)
+   ((stop? map-to-knil seed-step seed)
+    (define who 'unfold)
+    (with-arguments-validation (who)
+	((procedure	stop?)
+	 (procedure	map-to-knil)
+	 (procedure	seed-step))
+      (let loop ((seed seed))
+	(if (stop? seed)
+	    '()
+	  (cons (map-to-knil seed)
+		(loop (seed-step seed)))))))
 
-	    (let recur ((seed seed))
-	      (if (p seed) (tail-gen seed)
-		(cons (f seed) (recur (g seed)))))))
-
-      (let recur ((seed seed))
-	(if (p seed) '()
-	  (cons (f seed) (recur (g seed))))))))
+   ((stop? map-to-knil seed-step seed tail-gen)
+    (define who 'unfold)
+    (with-arguments-validation (who)
+	((procedure	stop?)
+	 (procedure	map-to-knil)
+	 (procedure	seed-step))
+      (let loop ((seed seed))
+	(if (stop? seed)
+	    (tail-gen seed)
+	  (cons (map-to-knil seed)
+		(loop (seed-step seed)))))))))
 
 (define (fold kons knil lis1 . lists)
   (define who 'fold)
@@ -1255,19 +1271,28 @@
 ;; assoc key lis [=]		Search alist by key comparison
 ;; alist-delete key alist [=]	Alist-delete by key comparison
 
-(define (delete x lis . maybe-=)
-  (let ((= (:optional maybe-= equal?)))
-    (filter (lambda (y) (not (= x y))) lis)))
+(define delete
+  (case-lambda
+   ((x lis)
+    (delete x lis equal?))
+   ((x lis =)
+    (filter (lambda (y) (not (= x y))) lis))))
 
-(define (delete! x lis . maybe-=)
-  (let ((= (:optional maybe-= equal?)))
-    (filter! (lambda (y) (not (= x y))) lis)))
+(define delete!
+  (case-lambda
+   ((x lis)
+    (delete! x lis equal?))
+   ((x lis =)
+    (filter! (lambda (y) (not (= x y))) lis))))
 
-(define (member x lis . maybe-=)
+(define member
   ;;Extended from R4RS to take an optional comparison argument.
   ;;
-  (let ((= (:optional maybe-= equal?)))
-    (find-tail (lambda (y) (= x y)) lis)))
+  (case-lambda
+   ((x lis)
+    (member x lis equal?))
+   ((x lis =)
+    (find-tail (lambda (y) (= x y)) lis))))
 
 
 ;;;; right-duplicate deletion
@@ -1277,9 +1302,12 @@
 ;;linear-time algorithm to  kill the dups. Or use an  algorithm based on
 ;;element-marking. The former gives you O(n lg n), the latter is linear.
 
-(define (delete-duplicates lis . maybe-=)
-  (define who 'delete-duplicates)
-  (let ((elt= (:optional maybe-= equal?)))
+(define delete-duplicates
+  (case-lambda
+   ((lis)
+    (delete-duplicates lis equal?))
+   ((lis elt=)
+    (define who 'delete-duplicates)
     (with-arguments-validation (who)
 	((procedure	elt=))
       (let recur ((lis lis))
@@ -1287,11 +1315,14 @@
 	  (let* ((x (car lis))
 		 (tail (cdr lis))
 		 (new-tail (recur (delete x tail elt=))))
-	    (if (eq? tail new-tail) lis (cons x new-tail))))))))
+	    (if (eq? tail new-tail) lis (cons x new-tail)))))))))
 
-(define (delete-duplicates! lis . maybe-=)
-  (define who 'fold-right)
-  (let ((elt= (:optional maybe-= equal?)))
+(define delete-duplicates!
+  (case-lambda
+   ((lis)
+    (delete-duplicates! lis equal?))
+   ((lis elt=)
+    (define who 'fold-right)
     (with-arguments-validation (who)
 	((procedure	elt=))
       (let recur ((lis lis))
@@ -1301,36 +1332,53 @@
 		 (new-tail (recur (delete! x tail elt=))))
 	    (if (not (eq? tail new-tail))
 		(set-cdr! lis new-tail))
-	    lis))))))
+	    lis)))))))
 
 
-;;; alist stuff
-;;;;;;;;;;;;;;;
+;;;; alist stuff
 
-;;; Extended from R4RS to take an optional comparison argument.
-(define (assoc x lis . maybe-=)
-  (let ((= (:optional maybe-= equal?)))
-    (find (lambda (entry) (= x (car entry))) lis)))
+(define assoc
+  ;;Extended from R4RS to take an optional comparison argument.
+  ;;
+  (case-lambda
+   ((x lis)
+    (assoc x lis equal?))
+   ((x lis =)
+    (find (lambda (entry)
+	    (= x (car entry)))
+      lis))))
 
-(define (alist-cons key datum alist) (cons (cons key datum) alist))
+(define (alist-cons key datum alist)
+  (cons (cons key datum) alist))
 
 (define (alist-copy alist)
   (map (lambda (elt) (cons (car elt) (cdr elt)))
        alist))
 
-(define (alist-delete key alist . maybe-=)
-  (let ((= (:optional maybe-= equal?)))
-    (filter (lambda (elt) (not (= key (car elt)))) alist)))
+(define alist-delete
+  (case-lambda
+   ((key alist)
+    (alist-delete key alist equal?))
+   ((key alist =)
+    (filter (lambda (elt)
+	      (not (= key (car elt))))
+      alist))))
 
-(define (alist-delete! key alist . maybe-=)
-  (let ((= (:optional maybe-= equal?)))
-    (filter! (lambda (elt) (not (= key (car elt)))) alist)))
+(define alist-delete!
+  (case-lambda
+   ((key alist)
+    (alist-delete! key alist equal?))
+   ((key alist =)
+    (filter! (lambda (elt)
+	       (not (= key (car elt))))
+	     alist))))
 
 
 ;;;; find find-tail take-while drop-while span break any every list-index
 
 (define (find pred list)
-  (cond ((find-tail pred list) => car)
+  (cond ((find-tail pred list)
+	 => car)
 	(else #f)))
 
 (define (find-tail pred list)
