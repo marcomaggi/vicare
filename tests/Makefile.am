@@ -225,6 +225,7 @@ TESTS			=	\
 	test-srfi-2-and-let-star.sps			\
 	test-srfi-6-basic-string-ports.sps		\
 	test-srfi-8-receive.sps				\
+	test-srfi-9-records.sps				\
 	test-srfi-26-cut.sps				\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
@@ -502,6 +503,7 @@ EXTRA_DIST = \
 	test-srfi-2-and-let-star.sps			\
 	test-srfi-6-basic-string-ports.sps		\
 	test-srfi-8-receive.sps				\
+	test-srfi-9-records.sps				\
 	test-srfi-26-cut.sps				\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
