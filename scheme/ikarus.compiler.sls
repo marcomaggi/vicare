@@ -107,11 +107,7 @@
     (ikarus.intel-assembler)
     (except (vicare syntactic-extensions)
 	    begin0)
-    (vicare arguments validation)
-    (for (prefix (only (vicare installation-configuration)
-		       wordsize)
-		 config.)
-	 run expand))
+    (vicare arguments validation))
 
 
 ;;;; configuration parameters

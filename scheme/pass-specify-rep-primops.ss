@@ -65,8 +65,8 @@
 
 (section
 
- (define-inline-constant NUM-OF-BITS-IN-WORD
-   (* config.wordsize 8))
+ (define-constant NUM-OF-BITS-IN-WORD
+   (* wordsize 8))
 
  (define (prm op . args)
    ;;Perform  the primitive operation  OP applying  it to  the arguments

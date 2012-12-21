@@ -167,8 +167,11 @@
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare words) words.)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations) unsafe.)
-    (prefix (vicare installation-configuration) config.))
+    (prefix (vicare unsafe-operations) unsafe.))
+
+  (module (platform-endianness)
+    (import (vicare include))
+    (include/verbose "ikarus.config.ss"))
 
 
 ;;;; helpers
@@ -493,7 +496,7 @@
   ;;underlying  machine  architecture).   This  may  be  any  endianness
   ;;symbol, including a symbol other than "big" and "little".
   ;;
-  config.platform-endianness)
+  platform-endianness)
 
 (define make-bytevector
   ;;Defined  by R6RS.   Return a  newly allocated  bytevector  of BV.LEN
