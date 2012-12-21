@@ -89,7 +89,8 @@
 		  cp0-effort-limit		cp0-size-limit
 		  current-letrec-pass		generate-debug-calls
 		  optimize-cp			optimize-level
-		  perform-tag-analysis		strip-source-info)
+		  perform-tag-analysis		strip-source-info
+		  fasl-write)
     ;;Remember that this file defines the primitive operations.
     (ikarus system $fx)
     (ikarus system $pairs)
@@ -98,6 +99,11 @@
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
     (vicare include)
+    ;;This needs to be loaded here so that it evaluates with the freshly
+    ;;loaded  "ikarus.config.ss",   including  the  correct   value  for
+    ;;WORDSIZE.
+    (only (ikarus.fasl.write)
+	  fasl-write)
     (ikarus.intel-assembler)
     (except (vicare syntactic-extensions)
 	    begin0)
