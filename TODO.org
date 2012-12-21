@@ -94,10 +94,8 @@
    in the  scope of  the loading code.   This would  require substantial
    changes in SRFI-0.
 
-** SRFI 1
-
-** SRFI 2
-
+** DONE SRFI 1
+** DONE SRFI 2
 ** SRFI 6
 
 ** SRFI 8

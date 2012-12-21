@@ -1,12 +1,11 @@
-#!r6rs
-;; Copyright 2010 Derick Eddington.  My MIT-style license is in the file named
-;; LICENSE from the original collection this file is distributed with.
+;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
+;;;named LICENSE from  the original collection this  file is distributed
+;;;with.
 
+#!r6rs
 (library (srfi :2 and-let*)
-  (export
-    and-let*)
-  (import
-    (rnrs))
+  (export and-let*)
+  (import (rnrs))
 
   (define-syntax and-let*
     (syntax-rules ()
@@ -30,4 +29,6 @@
          #'last)
         ((_ _ () . b)
          #'(let () . b)))))
-)
+  )
+
+;;; end of file
