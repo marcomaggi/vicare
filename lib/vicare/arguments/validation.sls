@@ -33,6 +33,10 @@
     with-dangerous-arguments-validation
     arguments-validation-forms
 
+    ;; pairs
+    pair.vicare-arguments-validation
+    list.vicare-arguments-validation
+
     ;; booleans
     boolean.vicare-arguments-validation
 
@@ -435,6 +439,17 @@
 	msg (syntax->datum stx) (syntax->datum subform)))
 
     (main stx)))
+
+
+;;;; pairs
+
+(define-argument-validation (pair who obj)
+  (pair? obj)
+  (assertion-violation who "expected pair as argument" obj))
+
+(define-argument-validation (list who obj)
+  (list? obj)
+  (assertion-violation who "expected list as argument" obj))
 
 
 ;;;; booleans

@@ -224,6 +224,7 @@ When used without arguments or arguments validation disabled: expand to
 
 
 @menu
+* args predefined pairs::          Validating pairs and lists.
 * args predefined booleans::       Validating booleans.
 * args predefined numbers::        Validating numbers.
 * args predefined fixnums::        Validating fixnums.
@@ -255,6 +256,24 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined genbuffers::     Validating generalised C buffer
                                    arguments.
 @end menu
+
+@c page
+@node args predefined pairs
+@subsubsection Validating pairs and lists
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} pair @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{pair?}.
+@end deffn
+
+
+@deffn {Validation Clause} list @var{obj}
+Succeed if @var{obj} satisfies the predicate @func{list?}.
+@end deffn
 
 @c page
 @node args predefined booleans
