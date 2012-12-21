@@ -3174,6 +3174,58 @@
 (parametrise ((check-test-name 'sets))
 
   (check
+      (srfi.lset<= =)
+    => #t)
+
+  (check
+      (srfi.lset<= = '())
+    => #t)
+
+  (check
+      (srfi.lset<= = '() '())
+    => #t)
+
+  (check
+      (srfi.lset<= = '() '() '())
+    => #t)
+
+  (check
+      (srfi.lset<= =
+		   '(1)
+		   '(1))
+    => #t)
+
+  (check
+      (srfi.lset<= =
+		   '(1)
+		   '(1)
+		   '(1))
+    => #t)
+
+  (check
+      (srfi.lset<= =
+		   '(1)
+		   '(1 2)
+		   '(1 2 3))
+    => #t)
+
+  (check
+      (srfi.lset<= =
+		   '(1)
+		   '(1 2)
+		   '(1 2))
+    => #t)
+
+  (check
+      (srfi.lset<= =
+		   '(1)
+		   '(1 2)
+		   '(1))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
       (srfi.lset= =)
     => #t)
 
