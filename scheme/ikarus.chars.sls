@@ -27,7 +27,7 @@
 		  char>?		char>=?)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
-	    unsafe.)
+	    $)
     (vicare arguments validation))
 
 
@@ -35,9 +35,12 @@
 
 (define-argument-validation (fixnum-in-range who obj)
   (and (fixnum? obj)
-       (unsafe.fx>= obj 0)
-       (unsafe.fx<= obj #x10FFFF))
-  (assertion-violation who "expected fixnum in range [0, #x10FFFF] as argument" obj))
+       (or (and ($fx>= obj 0)
+		($fx<  obj #xD800))
+	   (and ($fx>  obj #xDFFF)
+		($fx<= obj #x10FFFF))))
+  (assertion-violation who
+    "expected fixnum in range [0, #xD800) or (#xDFFF, #x10FFFF] as argument" obj))
 
 (define-argument-validation (list-of-chars who obj)
   (for-all char? obj)
@@ -56,12 +59,13 @@
   (define who 'integer->char)
   (with-arguments-validation (who)
       ((fixnum-in-range	N))
-    (cond ((unsafe.fx<= N #xD7FF)
-	   (unsafe.fixnum->char N))
-	  ((unsafe.fx< N #xE000)
+    ($fixnum->char N)
+    #;(cond (($fx<= N #xD7FF)
+	   ($fixnum->char N))
+	  (($fx< N #xE000)
 	   (assertion-violation who "integer does not have a unicode representation" N))
-	  (else ;(assert (unsafe.fx<= N #x10FFFF))
-	   (unsafe.fixnum->char N)))))
+	  (else ;(assert ($fx<= N #x10FFFF))
+	   ($fixnum->char N)))))
 
 (define (char->integer ch)
   ;;Defined  by  R6RS.  Given  a  character,  CHAR->INTEGER returns  its
@@ -70,7 +74,7 @@
   (define who 'char->integer)
   (with-arguments-validation (who)
       ((char  ch))
-    (unsafe.char->fixnum ch)))
+    ($char->fixnum ch)))
 
 
 (define-syntax define-comparison
@@ -102,22 +106,22 @@
 			   (chars  chars))
 	     (if (null? chars)
 		 #t
-	       (let ((ch2 (unsafe.car chars)))
+	       (let ((ch2 ($car chars)))
 		 (with-arguments-validation (who)
 		     ((char  ch2))
 		   (if (?unsafe-op ch1 ch2)
-		       (next-char ch2 (unsafe.cdr chars))
+		       (next-char ch2 ($cdr chars))
 		     (with-arguments-validation (who)
-			 ((list-of-chars (unsafe.cdr chars)))
+			 ((list-of-chars ($cdr chars)))
 		       #f))))))))
 	))
      )))
 
-(define-comparison char=?	unsafe.char=)
-(define-comparison char<?	unsafe.char<)
-(define-comparison char<=?	unsafe.char<=)
-(define-comparison char>?	unsafe.char>)
-(define-comparison char>=?	unsafe.char>=)
+(define-comparison char=?	$char=)
+(define-comparison char<?	$char<)
+(define-comparison char<=?	$char<=)
+(define-comparison char>?	$char>)
+(define-comparison char>=?	$char>=)
 
 
 ;;;; done

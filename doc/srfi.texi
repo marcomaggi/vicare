@@ -25,6 +25,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi let-values::             @ansrfi{11} syntax for receiving
                                 multiple values.
 * srfi strings::                @ansrfi{13} string library.
+* srfi char-sets::              @ansrfi{14} character sets.
 * srfi case-lambda::            @ansrfi{16} syntax for procedures of
                                 variable arity.
 * srfi time::                   @ansrfi{19} time data types and procedures.
@@ -57,6 +58,7 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-records.texi
 @include srfi-let-values.texi
 @include srfi-strings.texi
+@include srfi-char-sets.texi
 @include srfi-case-lambda.texi
 @include srfi-time.texi
 @include srfi-error-reporting.texi

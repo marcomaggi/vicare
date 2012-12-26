@@ -59,10 +59,13 @@
     (ikarus system $vectors)
     (only (ikarus system $compnums)
 	  $cflonum-real
-	  $cflonum-imag)
+	  $cflonum-imag
+	  $compnum-imag)
     (only (ikarus system $pointers)
 	  $pointer=)
     (ikarus system $foreign)
+    (only (vicare syntactic-extensions)
+	  cond-numeric-operand)
     ;;These are the ones implemented as primitive operations.
     (rename (only (ikarus)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
@@ -123,12 +126,13 @@
       (sys:ratnum? x)))
 
 (define (real-valued? x)
-  (cond ((real? x)
-	 #t)
-	((cflonum? x)
-	 ($fl= ($cflonum-imag x) 0.0))
-	(else
-	 #f)))
+  (cond ((sys:fixnum? x)	#t)
+	((sys:bignum? x)	#t)
+	((sys:ratnum? x)	#t)
+	((sys:flonum? x)	#t)
+	((sys:compnum? x)	(zero? ($compnum-imag x)))
+	((sys:cflonum? x)	($flzero? ($cflonum-imag x)))
+	(else			#f)))
 
 (define (rational? x)
   (cond ((sys:fixnum? x) #t)

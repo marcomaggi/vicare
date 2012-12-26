@@ -57,7 +57,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a14.sls					\
 	srfi/%3a14/char-sets.sls			\
-	srfi/%3a14/srfi-14.scm				\
 	\
 	srfi/%3a16.sls					\
 	srfi/%3a16/case-lambda.sls			\
