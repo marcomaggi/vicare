@@ -18,6 +18,10 @@
 #!r6rs
 (import (rnrs) (rnrs eval) (r6rs test))
 
+(display "*** testing full R6RS test suite via eval\n"
+	 (current-error-port))
+(flush-output-port (current-error-port))
+
 (define-syntax test-library
    (syntax-rules ()
      [(_ test-proc library-name)

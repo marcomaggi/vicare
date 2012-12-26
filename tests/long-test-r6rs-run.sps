@@ -44,6 +44,10 @@
         (r6rs r5rs)
         (r6rs contrib))
 
+(display "*** testing full R6RS test suite\n"
+	 (current-error-port))
+(flush-output-port (current-error-port))
+
 (run-base-tests)
 
 (run-reader-tests)
