@@ -42,6 +42,13 @@ Notes for revision 0.2d20
 
 * The boot image has been rotated.
 
+* The library search path has been fixed; it is now initialised to:
+
+     $(libdir)/scheme/r6rs
+     $(libdir)/vicare-scheme
+
+  sorry for the trouble.
+
 * BACKWARDS INCOMPATIBILITY  Starting with  this revision  the libraries
   installed  by the  package are  under "$prefix/vicare-scheme",  rather
   than under "$prefix/scheme".
