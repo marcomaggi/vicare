@@ -93,7 +93,8 @@
     (rnrs r5rs)
     (srfi :9 records)
     (srfi private check-arg)
-    (srfi private let-opt))
+    (srfi private let-opt)
+    (vicare arguments validation))
 
 
 ;;;; helpers
@@ -231,7 +232,10 @@
 
 (define (char-set-contains? cs char)
   (si=1? (%char-set:s/check cs char-set-contains?)
-	 (%char->latin1 (check-arg char? char char-set-contains?))))
+	 (%char->latin1 (if (char? char)
+			    char
+			  (assertion-violation 'char-set-contains?
+			    "expected character as argument" char)))))
 
 (define (char-set-size cs)
   (let ((s (%char-set:s/check cs char-set-size)))
@@ -240,14 +244,16 @@
 	  (lp (- i 1) (+ size (si s i)))))))
 
 (define (char-set-count pred cset)
-  (check-arg procedure? pred char-set-count)
-  (let ((s (%char-set:s/check cset char-set-count)))
-    (let lp ((i 255) (count 0))
-      (if (< i 0) count
+  (define who 'char-set-count)
+  (with-arguments-validation (who)
+      ((procedure	pred))
+    (let ((s (%char-set:s/check cset char-set-count)))
+      (let lp ((i 255) (count 0))
+	(if (< i 0) count
 	  (lp (- i 1)
 	      (if (and (si=1? s i) (pred (%latin1->char i)))
 		  (+ count 1)
-		  count))))))
+		count)))))))
 
 
 ;;;; adjoin & delete
@@ -296,9 +302,14 @@
   (%latin1->char cursor))
 
 (define (char-set-cursor-next cset cursor)
-  (check-arg (lambda (i) (and (integer? i) (exact? i) (<= 0 i 255))) cursor
-	     char-set-cursor-next)
-  (%char-set-cursor-next cset cursor char-set-cursor-next))
+  (define who 'char-set-cursor-next)
+  (define-argument-validation (cursor who obj)
+    (and (fixnum? obj)
+	 (fx<=? 0 obj 255))
+    (assertion-violation who "invalid cursor value" obj))
+  (with-arguments-validation (who)
+      ((cursor	cursor))
+    (%char-set-cursor-next cset cursor char-set-cursor-next)))
 
 (define (%char-set-cursor-next cset cursor proc)	; Internal
   (let ((s (%char-set:s/check cset proc)))
@@ -311,58 +322,69 @@
 ;;;; for-each map fold unfold every any
 
 (define (char-set-for-each proc cs)
-  (check-arg procedure? proc char-set-for-each)
-  (let ((s (%char-set:s/check cs char-set-for-each)))
-    (let lp ((i 255))
-      (cond ((>= i 0)
-	     (if (si=1? s i) (proc (%latin1->char i)))
-	     (lp (- i 1)))))))
+  (define who 'char-set-for-each)
+  (with-arguments-validation (who)
+      ((procedure	proc))
+    (let ((s (%char-set:s/check cs char-set-for-each)))
+      (let lp ((i 255))
+	(cond ((>= i 0)
+	       (if (si=1? s i) (proc (%latin1->char i)))
+	       (lp (- i 1))))))))
 
 (define (char-set-map proc cs)
-  (check-arg procedure? proc char-set-map)
-  (let ((s (%char-set:s/check cs char-set-map))
-	(ans (make-string 256 c0)))
-    (let lp ((i 255))
-      (cond ((>= i 0)
-	     (if (si=1? s i)
-		 (%set1! ans (%char->latin1 (proc (%latin1->char i)))))
-	     (lp (- i 1)))))
-    (make-char-set ans)))
+  (define who 'char-set-map)
+  (with-arguments-validation (who)
+      ((procedure	proc))
+    (let ((s (%char-set:s/check cs char-set-map))
+	  (ans (make-string 256 c0)))
+      (let lp ((i 255))
+	(cond ((>= i 0)
+	       (if (si=1? s i)
+		   (%set1! ans (%char->latin1 (proc (%latin1->char i)))))
+	       (lp (- i 1)))))
+      (make-char-set ans))))
 
 (define (char-set-fold kons knil cs)
-  (check-arg procedure? kons char-set-fold)
-  (let ((s (%char-set:s/check cs char-set-fold)))
-    (let lp ((i 255) (ans knil))
-      (if (< i 0) ans
+  (define who 'char-set-fold)
+  (with-arguments-validation (who)
+      ((procedure	kons))
+    (let ((s (%char-set:s/check cs char-set-fold)))
+      (let lp ((i 255) (ans knil))
+	(if (< i 0) ans
 	  (lp (- i 1)
 	      (if (si=0? s i) ans
-		  (kons (%latin1->char i) ans)))))))
+		(kons (%latin1->char i) ans))))))))
 
 (define (char-set-every pred cs)
-  (check-arg procedure? pred char-set-every)
-  (let ((s (%char-set:s/check cs char-set-every)))
-    (let lp ((i 255))
-      (or (< i 0)
-	  (and (or (si=0? s i) (pred (%latin1->char i)))
-	       (lp (- i 1)))))))
+  (define who 'char-set-every)
+  (with-arguments-validation (who)
+      ((procedure	pred))
+    (let ((s (%char-set:s/check cs char-set-every)))
+      (let lp ((i 255))
+	(or (< i 0)
+	    (and (or (si=0? s i) (pred (%latin1->char i)))
+		 (lp (- i 1))))))))
 
 (define (char-set-any pred cs)
-  (check-arg procedure? pred char-set-any)
-  (let ((s (%char-set:s/check cs char-set-any)))
-    (let lp ((i 255))
-      (and (>= i 0)
-	   (or (and (si=1? s i) (pred (%latin1->char i)))
-	       (lp (- i 1)))))))
-
+  (define who 'char-set-any)
+  (with-arguments-validation (who)
+      ((procedure	pred))
+    (let ((s (%char-set:s/check cs char-set-any)))
+      (let lp ((i 255))
+	(and (>= i 0)
+	     (or (and (si=1? s i) (pred (%latin1->char i)))
+		 (lp (- i 1))))))))
 
 (define (%char-set-unfold! proc p f g s seed)
-  (check-arg procedure? p proc)
-  (check-arg procedure? f proc)
-  (check-arg procedure? g proc)
-  (let lp ((seed seed))
-    (cond ((not (p seed))			; P says we are done.
-	   (%set1! s (%char->latin1 (f seed)))	; Add (F SEED) to set.
-	   (lp (g seed))))))			; Loop on (G SEED).
+  (define who 'char-set-unfold!)
+  (with-arguments-validation (who)
+      ((procedure	p)
+       (procedure	f)
+       (procedure	g))
+    (let lp ((seed seed))
+      (cond ((not (p seed))			 ; P says we are done.
+	     (%set1! s (%char->latin1 (f seed))) ; Add (F SEED) to set.
+	     (lp (g seed)))))))			 ; Loop on (G SEED).
 
 (define (char-set-unfold p f g seed . maybe-base)
   (let ((bs (%default-base maybe-base char-set-unfold)))
@@ -408,11 +430,12 @@
 
 ;;;; string <--> char-set
 
-(define (%string->char-set! str bs proc)
-  (check-arg string? str proc)
-  (do ((i (- (string-length str) 1) (- i 1)))
-      ((< i 0))
-    (%set1! bs (%char->latin1 (string-ref str i)))))
+(define (%string->char-set! str bs who)
+  (with-arguments-validation (who)
+      ((string	str))
+    (do ((i (- (string-length str) 1) (- i 1)))
+	((< i 0))
+      (%set1! bs (%char->latin1 (string-ref str i))))))
 
 (define (string->char-set str . maybe-base)
   (let ((bs (%default-base maybe-base string->char-set)))
