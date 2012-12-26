@@ -26,7 +26,7 @@
 
 #!r6rs
 (import (vicare)
-  (srfi :14 char-sets)
+  (srfi :14)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
