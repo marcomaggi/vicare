@@ -101,38 +101,23 @@
 ** DONE SRFI 9
 ** DONE SRFI 11
 ** SRFI 13
-** SRFI 14
-
+** DONE SRFI 14
 ** SRFI 16
-
 ** SRFI 19 time
-
 ** SRFI 23 error
-
 ** SRFI 25 multidimensional arrays
-
 ** DONE SRFI 26 cut
-
 ** SRFI 27 random-bits
-
 ** DONE SRFI 31 rec
-
 ** DONE SRFI 37 args-fold
-
 ** SRFI 38 shared structures
-
 ** DONE SRFI 39 parameters
 
 ** SRFI 41 streams
-
 ** SRFI 42 eager comprehensions
-
 ** SRFI 43 vectors
-
 ** SRFI 45 lazy
-
 ** SRFI 48 intermediate format strings
-
 ** DONE SRFI 61 cond
 ** SRFI 64 testing
 ** SRFI 67 comparison procedures
