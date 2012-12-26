@@ -117,8 +117,7 @@
 ;;; The default is the empty set. The PROC argument is to help us
 ;;; generate informative error exceptions.
 
-(define (%default-base maybe-base proc)
-  (define who '%default-base)
+(define (%default-base maybe-base who)
   (if (pair? maybe-base)
       (let ((bcs  (car maybe-base))
 	    (tail (cdr maybe-base)))
@@ -410,197 +409,267 @@
 (define (char-set-map proc cs)
   (define who 'char-set-map)
   (with-arguments-validation (who)
-      ((procedure	proc))
-    (let ((s (%char-set:s/check cs char-set-map))
+      ((procedure	proc)
+       (char-set	cs))
+    (let ((s   ($:char-set-str cs))
 	  (ans (make-string 256 c0)))
       (let lp ((i 255))
-	(cond ((>= i 0)
-	       (if (si=1? s i)
-		   (%set1! ans (%char->latin1 (proc (%latin1->char i)))))
-	       (lp (- i 1)))))
+	(when (>= i 0)
+	  (when (si=1? s i)
+	    (%set1! ans (%char->latin1 (proc (%latin1->char i)))))
+	  (lp (- i 1))))
       (make-char-set ans))))
 
 (define (char-set-fold kons knil cs)
   (define who 'char-set-fold)
   (with-arguments-validation (who)
-      ((procedure	kons))
-    (let ((s (%char-set:s/check cs char-set-fold)))
-      (let lp ((i 255) (ans knil))
+      ((procedure	kons)
+       (char-set	cs))
+    (let ((s ($:char-set-str cs)))
+      (let lp ((i   255)
+	       (ans knil))
 	(if (< i 0) ans
 	  (lp (- i 1)
-	      (if (si=0? s i) ans
+	      (if (si=0? s i)
+		  ans
 		(kons (%latin1->char i) ans))))))))
 
 (define (char-set-every pred cs)
   (define who 'char-set-every)
   (with-arguments-validation (who)
-      ((procedure	pred))
-    (let ((s (%char-set:s/check cs char-set-every)))
+      ((procedure	pred)
+       (char-set	cs))
+    (let ((s ($:char-set-str cs)))
       (let lp ((i 255))
 	(or (< i 0)
-	    (and (or (si=0? s i) (pred (%latin1->char i)))
+	    (and (or (si=0? s i)
+		     (pred (%latin1->char i)))
 		 (lp (- i 1))))))))
 
 (define (char-set-any pred cs)
   (define who 'char-set-any)
   (with-arguments-validation (who)
-      ((procedure	pred))
-    (let ((s (%char-set:s/check cs char-set-any)))
+      ((procedure	pred)
+       (char-set	cs))
+    (let ((s ($:char-set-str cs)))
       (let lp ((i 255))
 	(and (>= i 0)
-	     (or (and (si=1? s i) (pred (%latin1->char i)))
+	     (or (and (si=1? s i)
+		      (pred (%latin1->char i)))
 		 (lp (- i 1))))))))
 
-(define (%char-set-unfold! proc p f g s seed)
-  (define who 'char-set-unfold!)
-  (with-arguments-validation (who)
-      ((procedure	p)
-       (procedure	f)
-       (procedure	g))
-    (let lp ((seed seed))
-      (cond ((not (p seed))			 ; P says we are done.
-	     (%set1! s (%char->latin1 (f seed))) ; Add (F SEED) to set.
-	     (lp (g seed)))))))			 ; Loop on (G SEED).
+(module (char-set-unfold
+	 char-set-unfold!)
 
-(define (char-set-unfold p f g seed . maybe-base)
-  (let ((bs (%default-base maybe-base char-set-unfold)))
-    (%char-set-unfold! char-set-unfold p f g bs seed)
-    (make-char-set bs)))
+  (define (char-set-unfold p f g seed . maybe-base)
+    (define who 'char-set-unfold)
+    (let ((bs (%default-base maybe-base who)))
+      (%char-set-unfold! who p f g bs seed)
+      (make-char-set bs)))
 
-(define (char-set-unfold! p f g seed base-cset)
-  (%char-set-unfold! char-set-unfold! p f g
-		     (%char-set:s/check base-cset char-set-unfold!)
-		     seed)
-  base-cset)
+  (define (char-set-unfold! p f g seed base-cs)
+    (define who 'char-set-unfold!)
+    (with-arguments-validation (who)
+	((char-set	base-cs))
+      (%char-set-unfold! who p f g
+			 ($:char-set-str base-cs)
+			 seed)
+      base-cs))
+
+  (define (%char-set-unfold! who p f g s seed)
+    (with-arguments-validation (who)
+	((procedure	p)
+	 (procedure	f)
+	 (procedure	g))
+      (let lp ((seed seed))
+	(when (not (p seed))		    ; P says we are done.
+	  (%set1! s (%char->latin1 (f seed))) ; Add (F SEED) to set.
+	  (lp (g seed))))))		      ; Loop on (G SEED).
+
+  #| end of module |# )
 
 
 ;;;; list <--> char-set
 
-(define (%list->char-set! chars s)
-  (for-each (lambda (char) (%set1! s (%char->latin1 char)))
-	    chars))
+(module (char-set
+	 list->char-set
+	 list->char-set!)
 
-(define (char-set . chars)
-  (let ((s (make-string 256 c0)))
-    (%list->char-set! chars s)
-    (make-char-set s)))
+  (define (char-set . chars)
+    (let ((s (make-string 256 c0)))
+      (%list->char-set! chars s)
+      (make-char-set s)))
 
-(define (list->char-set chars . maybe-base)
-  (let ((bs (%default-base maybe-base list->char-set)))
-    (%list->char-set! chars bs)
-    (make-char-set bs)))
+  (define (list->char-set chars . maybe-base)
+    (let ((bs (%default-base maybe-base list->char-set)))
+      (%list->char-set! chars bs)
+      (make-char-set bs)))
 
-(define (list->char-set! chars base-cs)
-  (%list->char-set! chars (%char-set:s/check base-cs list->char-set!))
-  base-cs)
+  (define (list->char-set! chars base-cs)
+    (define who 'list->char-set!)
+    (with-arguments-validation (who)
+	((list-of-chars	chars)
+	 (char-set	base-cs))
+      (%list->char-set! chars ($:char-set-str base-cs))
+      base-cs))
 
+  (define-argument-validation (list-of-chars who obj)
+    (or (null? obj)
+	(and (list? obj)
+	     (for-all char? obj)))
+    (assertion-violation who "expected list of chars" obj))
+
+  (define (%list->char-set! chars s)
+    (for-each (lambda (char)
+		(%set1! s (%char->latin1 char)))
+      chars))
+
+  #| end of module |# )
 
 (define (char-set->list cs)
-  (let ((s (%char-set:s/check cs char-set->list)))
-    (let lp ((i 255) (ans '()))
-      (if (< i 0) ans
+  (define who 'char-set->list)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (let ((s ($:char-set-str cs)))
+      (let lp ((i   255)
+	       (ans '()))
+	(if (< i 0)
+	    ans
 	  (lp (- i 1)
-	      (if (si=0? s i) ans
-		  (cons (%latin1->char i) ans)))))))
+	      (if (si=0? s i)
+		  ans
+		(cons (%latin1->char i) ans))))))))
 
 
 ;;;; string <--> char-set
 
-(define (%string->char-set! str bs who)
-  (with-arguments-validation (who)
-      ((string	str))
-    (do ((i (- (string-length str) 1) (- i 1)))
-	((< i 0))
-      (%set1! bs (%char->latin1 (string-ref str i))))))
+(module (string->char-set
+	 string->char-set!)
 
-(define (string->char-set str . maybe-base)
-  (let ((bs (%default-base maybe-base string->char-set)))
-    (%string->char-set! str bs string->char-set)
-    (make-char-set bs)))
+  (define (string->char-set str . maybe-base)
+    (define who 'string->char-set)
+    (let ((bs (%default-base maybe-base string->char-set)))
+      (%string->char-set! str bs who)
+      (make-char-set bs)))
 
-(define (string->char-set! str base-cs)
-  (%string->char-set! str (%char-set:s/check base-cs string->char-set!)
-		      string->char-set!)
-  base-cs)
+  (define (string->char-set! str base-cs)
+    (define who 'string->char-set!)
+    (with-arguments-validation (who)
+	((char-set	base-cs))
+      (%string->char-set! str ($:char-set-str base-cs) who)
+      base-cs))
 
+  (define (%string->char-set! str bs who)
+    (with-arguments-validation (who)
+	((string	str))
+      (do ((i (- (string-length str) 1) (- i 1)))
+	  ((< i 0))
+	(%set1! bs (%char->latin1 (string-ref str i))))))
+
+  #| end of module |# )
 
 (define (char-set->string cs)
-  (let* ((s (%char-set:s/check cs char-set->string))
-	 (ans (make-string (char-set-size cs))))
-    (let lp ((i 255) (j 0))
-      (if (< i 0) ans
+  (define who 'char-set->string)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (let* ((s   ($:char-set-str cs))
+	   (ans (make-string (char-set-size cs))))
+      (let lp ((i 255) (j 0))
+	(if (< i 0) ans
 	  (let ((j (if (si=0? s i) j
-		       (begin (string-set! ans j (%latin1->char i))
-			      (+ j 1)))))
-	    (lp (- i 1) j))))))
+		     (begin
+		       (string-set! ans j (%latin1->char i))
+		       (+ j 1)))))
+	    (lp (- i 1) j)))))))
 
 
 ;;;; -- UCS-range -> char-set
 
-(define (%ucs-range->char-set! lower upper error? bs proc)
-  (define who '%ucs-range->char-set!)
-  (define-argument-validation (lower who obj)
-    (and (fixnum? obj)
-	 (fx<=? 0 obj))
-    (assertion-violation who "invalid lower bound" obj))
-  (define-argument-validation (upper who obj)
-    (and (fixnum? obj)
-	 (fx<=? lower obj))
-    (assertion-violation who "invalid upper bound" obj))
-  (with-arguments-validation (who)
-      ((lower	lower)
-       (upper	upper))
-    (when (and (< lower upper)
-	       (< 256   upper)
-	       error?)
-      (error who
-	"requested UCS range contains unavailable characters, \
+(module (ucs-range->char-set
+	 ucs-range->char-set!)
+
+  (define (ucs-range->char-set lower upper . rest)
+    (define who 'ucs-range->char-set)
+    (let-optionals* rest ((error? #f) rest)
+		    (let ((bs (%default-base rest who)))
+		      (%ucs-range->char-set! lower upper error? bs who)
+		      (make-char-set bs))))
+
+  (define (ucs-range->char-set! lower upper error? base-cs)
+    (define who 'ucs-range->char-set!)
+    (with-arguments-validation (who)
+	((char-set	base-cs))
+      (%ucs-range->char-set! lower upper error?
+			     ($:char-set-str base-cs)
+			     ucs-range->char-set)
+      base-cs))
+
+  (define (%ucs-range->char-set! lower upper error? bs proc)
+    (define who '%ucs-range->char-set!)
+    (define-argument-validation (lower who obj)
+      (and (fixnum? obj)
+	   (fx<=? 0 obj))
+      (assertion-violation who "invalid lower bound" obj))
+    (define-argument-validation (upper who obj)
+      (and (fixnum? obj)
+	   (fx<=? lower obj))
+      (assertion-violation who "invalid upper bound" obj))
+    (with-arguments-validation (who)
+	((lower	lower)
+	 (upper	upper))
+      (when (and (< lower upper)
+		 (< 256   upper)
+		 error?)
+	(error who
+	  "requested UCS range contains unavailable characters, \
          this implementation only supports Latin-1"
-	proc lower upper))
-    (let lp ((i (- (min upper 256) 1)))
-      (when (<= lower i)
-	(%set1! bs i)
-	(lp (- i 1))))))
+	  proc lower upper))
+      (let lp ((i (- (min upper 256) 1)))
+	(when (<= lower i)
+	  (%set1! bs i)
+	  (lp (- i 1))))))
 
-(define (ucs-range->char-set lower upper . rest)
-  (let-optionals* rest ((error? #f) rest)
-    (let ((bs (%default-base rest ucs-range->char-set)))
-      (%ucs-range->char-set! lower upper error? bs ucs-range->char-set)
-      (make-char-set bs))))
-
-(define (ucs-range->char-set! lower upper error? base-cs)
-  (%ucs-range->char-set! lower upper error?
-			 (%char-set:s/check base-cs ucs-range->char-set!)
-			 ucs-range->char-set)
-  base-cs)
+  #| end of module |# )
 
 
 ;;;; predicate -> char-set
 
-(define (%char-set-filter! pred ds bs who)
-  (with-arguments-validation (who)
-      ((procedure	pred))
-    (let lp ((i 255))
-      (cond ((>= i 0)
-	     (if (and (si=1? ds i)
-		      (pred (%latin1->char i)))
-		 (%set1! bs i))
-	     (lp (- i 1)))))))
+(module (char-set-filter
+	 char-set-filter!)
 
-(define (char-set-filter predicate domain . maybe-base)
-  (let ((bs (%default-base maybe-base char-set-filter)))
-    (%char-set-filter! predicate
-		       (%char-set:s/check domain char-set-filter!)
-		       bs
-		       char-set-filter)
-    (make-char-set bs)))
+  (define (char-set-filter predicate domain . maybe-base)
+    (define who 'char-set-filter)
+    (with-arguments-validation (who)
+	((char-set	domain))
+      (let ((bs (%default-base maybe-base who)))
+	(%char-set-filter! predicate
+			   ($:char-set-str domain)
+			   bs
+			   who)
+	(make-char-set bs))))
 
-(define (char-set-filter! predicate domain base-cs)
-  (%char-set-filter! predicate
-		     (%char-set:s/check domain char-set-filter!)
-		     (%char-set:s/check base-cs char-set-filter!)
-		     char-set-filter!)
-  base-cs)
+  (define (char-set-filter! predicate domain base-cs)
+    (define who 'char-set-filter!)
+    (with-arguments-validation (who)
+	((char-set	domain)
+	 (char-set	base-cs))
+      (%char-set-filter! predicate
+			 ($:char-set-str domain)
+			 ($:char-set-str base-cs)
+			 who)
+      base-cs))
+
+  (define (%char-set-filter! pred ds bs who)
+    (with-arguments-validation (who)
+	((procedure	pred))
+      (let lp ((i 255))
+	(when (>= i 0)
+	  (when (and (si=1? ds i)
+		     (pred (%latin1->char i)))
+	    (%set1! bs i))
+	  (lp (- i 1))))))
+
+  #| end of module |# )
 
 
 ;;;; {string, char, char-set, char predicate} -> char-set
@@ -642,13 +711,15 @@
 ;;; for all the char-sets in the list CSETS. The n-ary set-algebra ops
 ;;; all use this internal proc.
 
-(define (%char-set-algebra s csets op proc)
-  (for-each (lambda (cset)
-	      (let ((s2 (%char-set:s/check cset proc)))
-		(let lp ((i 255))
-		  (cond ((>= i 0)
-			 (op s i (si s2 i))
-			 (lp (- i 1)))))))
+(define (%char-set-algebra s csets op who)
+  (for-each (lambda (cs)
+	      (with-arguments-validation (who)
+		  ((char-set	cs))
+		(let ((s2 ($:char-set-str cs)))
+		  (let lp ((i 255))
+		    (when (>= i 0)
+		      (op s i (si s2 i))
+		      (lp (- i 1)))))))
 	    csets))
 
 
