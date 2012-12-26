@@ -828,31 +828,45 @@
 
 ;;;; difference & intersection
 
-(define (%char-set-diff+intersection! diff int csets proc)
-  (for-each (lambda (cs)
-	      (%string-iter (lambda (i v)
-			      (if (not (zero? v))
-				  (cond ((si=1? diff i)
-					 (%set0! diff i)
-					 (%set1! int  i)))))
-			    (%char-set:s/check cs proc)))
-    csets))
+(module (char-set-diff+intersection
+	 char-set-diff+intersection!)
 
-(define (char-set-diff+intersection! cs1 cs2 . csets)
-  (let ((s1 (%char-set:s/check cs1 char-set-diff+intersection!))
-	(s2 (%char-set:s/check cs2 char-set-diff+intersection!)))
-    (%string-iter (lambda (i v) (if (zero? v)
-			       (%set0! s2 i)
-			     (if (si=1? s2 i) (%set0! s1 i))))
-		  s1)
-    (%char-set-diff+intersection! s1 s2 csets char-set-diff+intersection!))
-  (values cs1 cs2))
+  (define (char-set-diff+intersection! cs1 cs2 . csets)
+    (define who 'char-set-diff+intersection!)
+    (with-arguments-validation (who)
+	((char-set	cs1)
+	 (char-set	cs2))
+      (let ((s1 ($:char-set-str cs1))
+	    (s2 ($:char-set-str cs2)))
+	(%string-iter (lambda (i v)
+			(if (zero? v)
+			    (%set0! s2 i)
+			  (if (si=1? s2 i)
+			      (%set0! s1 i))))
+		      s1)
+	(%char-set-diff+intersection! s1 s2 csets who))
+      (values cs1 cs2)))
 
-(define (char-set-diff+intersection cs1 . csets)
-  (let ((diff (string-copy (%char-set:s/check cs1 char-set-diff+intersection)))
-	(int  (make-string 256 c0)))
-    (%char-set-diff+intersection! diff int csets char-set-diff+intersection)
-    (values (make-char-set diff) (make-char-set int))))
+  (define (char-set-diff+intersection cs1 . csets)
+    (define who 'char-set-diff+intersection)
+    (with-arguments-validation (who)
+	((char-set	cs1))
+      (let ((diff (string-copy ($:char-set-str cs1)))
+	    (int  (make-string 256 c0)))
+	(%char-set-diff+intersection! diff int csets who)
+	(values (make-char-set diff) (make-char-set int)))))
+
+  (define (%char-set-diff+intersection! diff int csets proc)
+    (for-each (lambda (cs)
+		(%string-iter (lambda (i v)
+				(if (not (zero? v))
+				    (when (si=1? diff i)
+				      (%set0! diff i)
+				      (%set1! int  i))))
+			      (%char-set:s/check cs proc)))
+      csets))
+
+  #| end of module |# )
 
 
 ;;;; System character sets
@@ -863,11 +877,14 @@
 ;;strings as immutable, you  should do so -- it would  be very, very bad
 ;;if a client's buggy code corrupted these constants.
 
-(define char-set:empty (char-set))
-(define char-set:full (char-set-complement char-set:empty))
+(define char-set:empty
+  (char-set))
+
+(define char-set:full
+  (char-set-complement char-set:empty))
 
 (define char-set:lower-case
-  (let* ((a-z (ucs-range->char-set #x61 #x7B))
+  (let* ((a-z    (ucs-range->char-set #x61 #x7B))
 	 (latin1 (ucs-range->char-set! #xdf #xf7  #t a-z))
 	 (latin2 (ucs-range->char-set! #xf8 #x100 #t latin1)))
     (char-set-adjoin! latin2 (%latin1->char #xb5))))
@@ -878,7 +895,8 @@
     (ucs-range->char-set! #xd8 #xdf #t
 			  (ucs-range->char-set! #xc0 #xd7 #t A-Z))))
 
-(define char-set:title-case char-set:empty)
+(define char-set:title-case
+  char-set:empty)
 
 (define char-set:letter
   (let ((u/l (char-set-union char-set:upper-case char-set:lower-case)))
@@ -886,8 +904,11 @@
 		      (%latin1->char #xaa)	; FEMININE ORDINAL INDICATOR
 		      (%latin1->char #xba))))	; MASCULINE ORDINAL INDICATOR
 
-(define char-set:digit     (string->char-set "0123456789"))
-(define char-set:hex-digit (string->char-set "0123456789abcdefABCDEF"))
+(define char-set:digit
+  (string->char-set "0123456789"))
+
+(define char-set:hex-digit
+  (string->char-set "0123456789abcdefABCDEF"))
 
 (define char-set:letter+digit
   (char-set-union char-set:letter char-set:digit))
