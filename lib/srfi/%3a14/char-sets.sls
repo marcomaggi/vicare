@@ -85,14 +85,12 @@
     char-set:graphic     char-set:printing    char-set:whitespace
     char-set:iso-control char-set:punctuation char-set:symbol
     char-set:hex-digit   char-set:blank       char-set:ascii
-    char-set:empty       char-set:full
-    )
+    char-set:empty       char-set:full)
   (import (rnrs)
     (only (vicare)
 	  module)
     (rnrs mutable-strings)
     (rnrs r5rs)
-    (srfi private let-opt)
     (vicare arguments validation))
 
 
@@ -112,21 +110,8 @@
 (define-record-type (:char-set make-char-set char-set?)
   (fields (immutable str char-set-str)))
 
-;;; Parse, type-check & default a final optional BASE-CS parameter from
-;;; a rest argument. Return a *fresh copy* of the underlying string.
-;;; The default is the empty set. The PROC argument is to help us
-;;; generate informative error exceptions.
-
-(define (%default-base maybe-base who)
-  (if (pair? maybe-base)
-      (let ((bcs  (car maybe-base))
-	    (tail (cdr maybe-base)))
-	(if (null? tail)
-	    (if (char-set? bcs)
-		(string-copy ($:char-set-str bcs))
-	      (error who "BASE-CS parameter not a char-set" bcs))
-	  (error who "expected final base char set, too many parameters" maybe-base)))
-    (make-string 256 (%latin1->char 0))))
+(define (%make-default-base-cs)
+  (make-char-set (make-string 256 (%latin1->char 0))))
 
 ;;; These internal functions hide a lot of the dependency on the
 ;;; underlying string representation of char sets. They should be
@@ -451,11 +436,17 @@
 (module (char-set-unfold
 	 char-set-unfold!)
 
-  (define (char-set-unfold p f g seed . maybe-base)
-    (define who 'char-set-unfold)
-    (let ((bs (%default-base maybe-base who)))
-      (%char-set-unfold! who p f g bs seed)
-      (make-char-set bs)))
+  (define char-set-unfold
+    (case-lambda
+     ((p f g seed)
+      (char-set-unfold p f g seed (%make-default-base-cs)))
+     ((p f g seed base-cs)
+      (define who 'char-set-unfold)
+      (with-arguments-validation (who)
+	  ((char-set	base-cs))
+	(let ((bs ($:char-set-str base-cs)))
+	  (%char-set-unfold! who p f g bs seed)
+	  (make-char-set bs))))))
 
   (define (char-set-unfold! p f g seed base-cs)
     (define who 'char-set-unfold!)
@@ -490,10 +481,17 @@
       (%list->char-set! chars s)
       (make-char-set s)))
 
-  (define (list->char-set chars . maybe-base)
-    (let ((bs (%default-base maybe-base list->char-set)))
-      (%list->char-set! chars bs)
-      (make-char-set bs)))
+  (define list->char-set
+    (case-lambda
+     ((chars)
+      (list->char-set chars (%make-default-base-cs)))
+     ((chars base-cs)
+      (define who 'list->char-set)
+      (with-arguments-validation (who)
+	  ((char-set	base-cs))
+	(let ((bs ($:char-set-str base-cs)))
+	  (%list->char-set! chars bs)
+	  (make-char-set bs))))))
 
   (define (list->char-set! chars base-cs)
     (define who 'list->char-set!)
@@ -536,11 +534,17 @@
 (module (string->char-set
 	 string->char-set!)
 
-  (define (string->char-set str . maybe-base)
-    (define who 'string->char-set)
-    (let ((bs (%default-base maybe-base string->char-set)))
-      (%string->char-set! str bs who)
-      (make-char-set bs)))
+  (define string->char-set
+    (case-lambda
+     ((str)
+      (string->char-set str (%make-default-base-cs)))
+     ((str base-cs)
+      (define who 'string->char-set)
+      (with-arguments-validation (who)
+	  ((char-set	base-cs))
+	(let ((bs ($:char-set-str base-cs)))
+	  (%string->char-set! str bs who)
+	  (make-char-set bs))))))
 
   (define (string->char-set! str base-cs)
     (define who 'string->char-set!)
@@ -578,12 +582,19 @@
 (module (ucs-range->char-set
 	 ucs-range->char-set!)
 
-  (define (ucs-range->char-set lower upper . rest)
-    (define who 'ucs-range->char-set)
-    (let-optionals* rest ((error? #f) rest)
-		    (let ((bs (%default-base rest who)))
-		      (%ucs-range->char-set! lower upper error? bs who)
-		      (make-char-set bs))))
+  (define ucs-range->char-set
+    (case-lambda
+     ((lower upper)
+      (ucs-range->char-set lower upper #f (%make-default-base-cs)))
+     ((lower upper error?)
+      (ucs-range->char-set lower upper error? (%make-default-base-cs)))
+     ((lower upper error? base-cs)
+      (define who 'ucs-range->char-set)
+      (with-arguments-validation (who)
+	  ((char-set	base-cs))
+	(let ((bs ($:char-set-str base-cs)))
+	  (%ucs-range->char-set! lower upper error? bs who)
+	  (make-char-set bs))))))
 
   (define (ucs-range->char-set! lower upper error? base-cs)
     (define who 'ucs-range->char-set!)
@@ -627,26 +638,25 @@
 (module (char-set-filter
 	 char-set-filter!)
 
-  (define (char-set-filter predicate domain . maybe-base)
-    (define who 'char-set-filter)
-    (with-arguments-validation (who)
-	((char-set	domain))
-      (let ((bs (%default-base maybe-base who)))
-	(%char-set-filter! predicate
-			   ($:char-set-str domain)
-			   bs
-			   who)
-	(make-char-set bs))))
+  (define char-set-filter
+    (case-lambda
+     ((predicate domain)
+      (char-set-filter predicate domain (%make-default-base-cs)))
+     ((predicate domain base-cs)
+      (define who 'char-set-filter)
+      (with-arguments-validation (who)
+	  ((char-set	domain)
+	   (char-set	base-cs))
+	(let ((bs ($:char-set-str base-cs)))
+	  (%char-set-filter! predicate ($:char-set-str domain) bs who)
+	  (make-char-set bs))))))
 
   (define (char-set-filter! predicate domain base-cs)
     (define who 'char-set-filter!)
     (with-arguments-validation (who)
 	((char-set	domain)
 	 (char-set	base-cs))
-      (%char-set-filter! predicate
-			 ($:char-set-str domain)
-			 ($:char-set-str base-cs)
-			 who)
+      (%char-set-filter! predicate ($:char-set-str domain) ($:char-set-str base-cs) who)
       base-cs))
 
   (define (%char-set-filter! pred ds bs who)
