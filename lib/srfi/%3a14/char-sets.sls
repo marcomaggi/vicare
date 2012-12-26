@@ -93,8 +93,7 @@
     (rnrs r5rs)
     (srfi :9 records)
     (srfi private check-arg)
-    (srfi private let-opt)
-    (srfi private include))
+    (srfi private let-opt))
 
 
 ;;;; helpers

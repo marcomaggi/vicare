@@ -101,7 +101,13 @@
 ** DONE SRFI 9
 ** DONE SRFI 11
 ** SRFI 13
-** DONE SRFI 14
+** TODO SRFI 14
+
+   Remove dependencies from libraries:
+
+      (srfi private check-arg)
+      (srfi private let-opt)
+
 ** SRFI 16
 ** SRFI 19 time
 ** SRFI 23 error
