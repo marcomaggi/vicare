@@ -242,6 +242,188 @@
 
 (parametrise ((check-test-name 'creating))
 
+  (check
+      (char-set-copy (char-set))
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-copy (char-set #\a))
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-copy (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (list->char-set '())
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (list->char-set '(#\a))
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (list->char-set '(#\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (list->char-set '() (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\c #\d))
+
+  (check
+      (list->char-set '(#\a) (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\c #\d))
+
+  (check
+      (list->char-set '(#\a #\b #\c) (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\b #\c #\d))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (list->char-set! '() (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\c #\d))
+
+  (check
+      (list->char-set! '(#\a) (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\c #\d))
+
+  (check
+      (list->char-set! '(#\a #\b #\c) (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\b #\c #\d))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string->char-set "")
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (string->char-set "a")
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (string->char-set "abc")
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (string->char-set "" (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\c #\d))
+
+  (check
+      (string->char-set "a" (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\c #\d))
+
+  (check
+      (string->char-set "abc" (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\b #\c #\d))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string->char-set! "" (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\c #\d))
+
+  (check
+      (string->char-set! "a" (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\c #\d))
+
+  (check
+      (string->char-set! "abc" (char-set #\c #\d))
+    (=> char-set=)
+    (char-set #\a #\b #\c #\d))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-filter (lambda (ch)
+			 #f)
+		       (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-filter (lambda (ch)
+			 (char<=? #\b ch #\c))
+		       (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\b #\c))
+
+  (check
+      (char-set-filter (lambda (ch)
+			 #f)
+		       (char-set #\a #\b #\c)
+		       (char-set #\d #\e))
+    (=> char-set=)
+    (char-set #\d #\e))
+
+  (check
+      (char-set-filter (lambda (ch)
+			 (char<=? #\b ch #\c))
+		       (char-set #\a #\b #\c)
+		       (char-set #\d #\e))
+    (=> char-set=)
+    (char-set #\b #\c #\d #\e))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ucs-range->char-set (char->integer #\a)
+			   (char->integer #\d))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (ucs-range->char-set (char->integer #\a)
+			   (char->integer #\d)
+			   #f
+			   (char-set #\d #\e))
+    (=> char-set=)
+    (char-set #\a #\b #\c #\d #\e))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (->char-set "")
+    (=> char-set=) (char-set))
+
+  (check
+      (->char-set "abc")
+    (=> char-set=) (char-set #\a #\b #\c))
+
+  (check
+      (->char-set #\a)
+    (=> char-set=) (char-set #\a))
+
+  (check
+      (->char-set (char-set))
+    (=> char-set=) (char-set))
+
+  (check
+      (->char-set (char-set #\a #\b #\c))
+    (=> char-set=) (char-set #\a #\b #\c))
 
   #t)
 

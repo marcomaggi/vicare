@@ -444,8 +444,8 @@ have external dependencies on mutable data or have other side--effects.
 @defunx ucs-range->char-set @var{lower} @var{upper} @var{error?}
 @defunx ucs-range->char-set @var{lower} @var{upper} @var{error?} @var{base-cs}
 @defunx ucs-range->char-set! @var{lower} @var{upper} @var{error?} @var{base-cs}
-Lower and upper are exact non--negative integers such that
-@code{@var{lower} <= @var{upper}}.
+The arguments @var{lower} and @var{upper} are exact non--negative
+integers such that @code{@var{lower} <= @var{upper}}.
 
 Return a character set containing every character whose ISO/IEC 10646
 UCS-4 code lies in the half-open range @code{[@var{lower}, @var{upper})}.

@@ -495,9 +495,12 @@
 
 (define (->char-set x)
   (define who '->char-set)
-  (cond ((char-set? x) x)
-	((string? x) (string->char-set x))
-	((char? x) (char-set x))
+  (cond ((char-set? x)
+	 x)
+	((string? x)
+	 (string->char-set x))
+	((char? x)
+	 (char-set x))
 	(else
 	 (error who "not a charset, string or char" x))))
 
