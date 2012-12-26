@@ -575,6 +575,257 @@
   #t)
 
 
+(parametrise ((check-test-name 'algebra))
+
+  (check
+      (char-set-adjoin (char-set) #\a)
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-adjoin (char-set #\a) #\a)
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-adjoin (char-set #\a) #\b)
+    (=> char-set=)
+    (char-set #\a #\b))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-adjoin! (char-set) #\a)
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-adjoin! (char-set #\a) #\a)
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-adjoin! (char-set #\a) #\b)
+    (=> char-set=)
+    (char-set #\a #\b))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-delete (char-set) #\a)
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-delete (char-set #\a) #\a)
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-delete (char-set #\a) #\b)
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-delete (char-set #\a #\b) #\b)
+    (=> char-set=)
+    (char-set #\a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-delete! (char-set) #\a)
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-delete! (char-set #\a) #\a)
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-delete! (char-set #\a) #\b)
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-delete! (char-set #\a #\b) #\b)
+    (=> char-set=)
+    (char-set #\a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-union)
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-union (char-set #\a)
+		      (char-set #\b))
+    (=> char-set=)
+    (char-set #\a #\b))
+
+  (check
+      (char-set-union (char-set #\a #\b)
+		      (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-union! (char-set #\a)
+		       (char-set #\b))
+    (=> char-set=)
+    (char-set #\a #\b))
+
+  (check
+      (char-set-union! (char-set #\a #\b)
+		       (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-intersection)
+    (=> char-set=)
+    char-set:full)
+
+  (check
+      (char-set-intersection (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (char-set-intersection (char-set #\a)
+			     (char-set #\b))
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-intersection (char-set #\a #\b)
+			     (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\b))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-intersection! (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (char-set-intersection! (char-set #\a)
+			      (char-set #\b))
+    (=> char-set=)
+    (char-set))
+
+  (check
+      (char-set-intersection! (char-set #\a #\b)
+			      (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\b))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-difference (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (char-set-difference (char-set #\a)
+			   (char-set #\b))
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-difference (char-set #\a #\b)
+			   (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-difference! (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (char-set-difference! (char-set #\a)
+			    (char-set #\b))
+    (=> char-set=)
+    (char-set #\a))
+
+  (check
+      (char-set-difference! (char-set #\a #\b)
+			    (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-xor (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (char-set-xor (char-set #\a)
+		    (char-set #\b))
+    (=> char-set=)
+    (char-set #\a #\b))
+
+  (check
+      (char-set-xor (char-set #\a #\b)
+		    (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-xor! (char-set #\a #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\b #\c))
+
+  (check
+      (char-set-xor! (char-set #\a)
+		     (char-set #\b))
+    (=> char-set=)
+    (char-set #\a #\b))
+
+  (check
+      (char-set-xor! (char-set #\a #\b)
+		     (char-set #\b #\c))
+    (=> char-set=)
+    (char-set #\a #\c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let-values (((D I)
+		    (char-set-diff+intersection! (char-set #\a #\b #\c)
+						 (char-set #\a))))
+	(list (char-set= D (char-set #\b #\c))
+	      (char-set= I (char-set #\a))))
+    => '(#t #t))
+
+  (check
+      (let-values (((D I)
+		    (char-set-diff+intersection! (char-set #\a #\b #\c)
+						 (char-set #\a #\b #\c))))
+	(list (char-set= D (char-set))
+	      (char-set= I (char-set #\a #\b #\c))))
+    => '(#t #t))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

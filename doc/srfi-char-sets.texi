@@ -571,6 +571,12 @@ also n--ary, associates to the left (that is, it computes the difference
 between its first argument and the union of all the other arguments),
 and requires at least one argument.
 
+@example
+(char-set-difference (char-set #\a)
+                     (char-set #\b))
+@result{} (char-set #\a)
+@end example
+
 Boundary cases:
 
 @example
@@ -582,7 +588,7 @@ Boundary cases:
 
 @func{char-set-diff+intersection} returns two values: the difference and
 the intersection of the arguments; it partitions its first argument.  It
-is equivalent to
+is almost equivalent to:
 
 @example
 (values (char-set-difference cs1 cs2 ...)
@@ -590,7 +596,9 @@ is equivalent to
 @end example
 
 @noindent
-but can be implemented more efficiently.
+but can be implemented more efficiently; when called with one argument:
+the first return value is a copy of the argument itself, the second
+return value is the empty set.
 @end defun
 
 
