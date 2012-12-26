@@ -428,6 +428,153 @@
   #t)
 
 
+(parametrise ((check-test-name 'query))
+
+  (check
+      (char-set-size (char-set))
+    => 0)
+
+  (check
+      (char-set-size (char-set #\a))
+    => 1)
+
+  (check
+      (char-set-size (char-set #\a #\b #\c))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-count (lambda (ch)
+			#t)
+		      (char-set))
+    => 0)
+
+  (check
+      (char-set-count (lambda (ch)
+			(char>? ch #\A))
+		      (char-set #\a))
+    => 1)
+
+  (check
+      (char-set-count (lambda (ch)
+			(char>? ch #\A))
+		      (char-set #\a #\b #\c))
+    => 3)
+
+  (check
+      (char-set-count (lambda (ch)
+			(char<? ch #\A))
+		      (char-set #\a))
+    => 0)
+
+  (check
+      (char-set-count (lambda (ch)
+			(char<? ch #\b))
+		      (char-set #\a #\b #\c))
+    => 1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set->list (char-set))
+    => '())
+
+  (check
+      (char-set->list (char-set #\a))
+    => '(#\a))
+
+  (check
+      (char-set->list (char-set #\a #\b #\c))
+    => '(#\a #\b #\c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set->string (char-set))
+    => "")
+
+  (check
+      (char-set->string (char-set #\a))
+    => "a")
+
+  (check
+      (char-set->string (char-set #\a #\b #\c))
+    => "cba")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-contains? (char-set) #\a)
+    => #f)
+
+  (check
+      (char-set-contains? (char-set #\a) #\a)
+    => #t)
+
+  (check
+      (char-set-contains? (char-set #\a) #\A)
+    => #f)
+
+  (check
+      (char-set-contains? (char-set #\a #\b #\c) #\b)
+    => #t)
+
+  (check
+      (char-set-contains? (char-set #\a #\b #\c) #\B)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-every (lambda (ch) #f) (char-set))
+    => #t)
+
+  (check
+      (char-set-every (lambda (ch)
+			(char<? ch #\b))
+		      (char-set #\a))
+    => #t)
+
+  (check
+      (char-set-every (lambda (ch)
+			(char<? ch #\z))
+		      (char-set #\a #\b #\c))
+    => #t)
+
+  (check
+      (char-set-every (lambda (ch)
+			(char>? ch #\z))
+		      (char-set #\a #\b #\c))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-any (lambda (ch) #f) (char-set))
+    => #f)
+
+  (check
+      (char-set-any (lambda (ch)
+			(char<? ch #\b))
+		      (char-set #\a))
+    => #t)
+
+  (check
+      (char-set-any (lambda (ch)
+			(char<? ch #\z))
+		      (char-set #\a #\b #\c))
+    => #t)
+
+  (check
+      (char-set-any (lambda (ch)
+			(char>? ch #\z))
+		      (char-set #\a #\b #\c))
+    => #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
