@@ -222,6 +222,27 @@
     (=> char-set=)
     (char-set #\a #\b #\c))
 
+;;; --------------------------------------------------------------------
+;;; for-each
+
+  (check
+      (with-result
+       (char-set-for-each add-result (char-set #\a #\b #\c)))
+    => (list (void) '(#\c #\b #\a)))
+
+;;; --------------------------------------------------------------------
+;;; map
+
+  (check
+      (char-set-map char-upcase (char-set #\a #\b #\c))
+    (=> char-set=) (char-set #\A #\B #\C))
+
+  #t)
+
+
+(parametrise ((check-test-name 'creating))
+
+
   #t)
 
 
