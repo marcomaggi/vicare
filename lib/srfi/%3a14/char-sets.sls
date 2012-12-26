@@ -726,75 +726,104 @@
 ;;;; complement
 
 (define (char-set-complement cs)
-  (let ((s (%char-set:s/check cs char-set-complement))
-	(ans (make-string 256)))
-    (%string-iter (lambda (i v) (%not! ans i v)) s)
-    (make-char-set ans)))
+  (define who 'char-set-complement)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (let ((s ($:char-set-str cs))
+	  (ans (make-string 256)))
+      (%string-iter (lambda (i v) (%not! ans i v)) s)
+      (make-char-set ans))))
 
-(define (char-set-complement! cset)
-  (let ((s (%char-set:s/check cset char-set-complement!)))
-    (%string-iter (lambda (i v) (%not! s i v)) s))
-  cset)
+(define (char-set-complement! cs)
+  (define who 'char-set-complement!)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (let ((s ($:char-set-str cs)))
+      (%string-iter (lambda (i v) (%not! s i v)) s))
+    cs))
 
 
 ;;;; union
 
-(define (char-set-union! cset1 . csets)
-  (%char-set-algebra (%char-set:s/check cset1 char-set-union!)
-		     csets %or! char-set-union!)
-  cset1)
+(define (char-set-union! cs . csets)
+  (define who 'char-set-union!)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (%char-set-algebra ($:char-set-str cs) csets %or! who)
+    cs))
 
 (define (char-set-union . csets)
+  (define who 'char-set-union)
   (if (pair? csets)
-      (let ((s (string-copy (%char-set:s/check (car csets) char-set-union))))
-	(%char-set-algebra s (cdr csets) %or! char-set-union)
-	(make-char-set s))
-      (char-set-copy char-set:empty)))
+      (let ((cs (car csets)))
+	(with-arguments-validation (who)
+	    ((char-set	cs))
+	  (let ((s (string-copy ($:char-set-str cs))))
+	    (%char-set-algebra s (cdr csets) %or! who)
+	    (make-char-set s))))
+    (char-set-copy char-set:empty)))
 
 
 ;;;; intersection
 
-(define (char-set-intersection! cset1 . csets)
-  (%char-set-algebra (%char-set:s/check cset1 char-set-intersection!)
-		     csets %and! char-set-intersection!)
-  cset1)
+(define (char-set-intersection! cs . csets)
+  (define who 'char-set-intersection!)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (%char-set-algebra ($:char-set-str cs) csets %and! who)
+    cs))
 
 (define (char-set-intersection . csets)
+  (define who 'char-set-intersection)
   (if (pair? csets)
-      (let ((s (string-copy (%char-set:s/check (car csets) char-set-intersection))))
-	(%char-set-algebra s (cdr csets) %and! char-set-intersection)
-	(make-char-set s))
-      (char-set-copy char-set:full)))
+      (let ((cs (car csets)))
+	(with-arguments-validation (who)
+	    ((char-set	cs))
+	  (let ((s (string-copy ($:char-set-str cs))))
+	    (%char-set-algebra s (cdr csets) %and! who)
+	    (make-char-set s))))
+    (char-set-copy char-set:full)))
 
 
 ;;;; difference
 
-(define (char-set-difference! cset1 . csets)
-  (%char-set-algebra (%char-set:s/check cset1 char-set-difference!)
-		     csets %minus! char-set-difference!)
-  cset1)
+(define (char-set-difference! cs . csets)
+  (define who 'char-set-difference!)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (%char-set-algebra ($:char-set-str cs) csets %minus! who)
+    cs))
 
 (define (char-set-difference cs1 . csets)
-  (if (pair? csets)
-      (let ((s (string-copy (%char-set:s/check cs1 char-set-difference))))
-	(%char-set-algebra s csets %minus! char-set-difference)
-	(make-char-set s))
-      (char-set-copy cs1)))
+  (define who 'char-set-difference)
+  (with-arguments-validation (who)
+      ((char-set	cs1))
+    (if (pair? csets)
+	(let ((s (string-copy ($:char-set-str cs1))))
+	  (%char-set-algebra s csets %minus! who)
+	  (make-char-set s))
+      (char-set-copy cs1))))
 
 
 ;;;; xor
 
-(define (char-set-xor! cset1 . csets)
-  (%char-set-algebra (%char-set:s/check cset1 char-set-xor!)
-		      csets %xor! char-set-xor!)
-  cset1)
+(define (char-set-xor! cs . csets)
+  (define who 'char-set-xor!)
+  (with-arguments-validation (who)
+      ((char-set	cs))
+    (%char-set-algebra ($:char-set-str cs) csets %xor! who)
+    cs))
 
 (define (char-set-xor . csets)
+  (define who 'char-set-xor)
   (if (pair? csets)
-      (let ((s (string-copy (%char-set:s/check (car csets) char-set-xor))))
-	(%char-set-algebra s (cdr csets) %xor! char-set-xor)
-	(make-char-set s))
-      (char-set-copy char-set:empty)))
+      (let ((cs (car csets)))
+	(with-arguments-validation (who)
+	    ((char-set	cs))
+	  (let ((s (string-copy ($:char-set-str cs))))
+	    (%char-set-algebra s (cdr csets) %xor! who)
+	    (make-char-set s))))
+    (char-set-copy char-set:empty)))
 
 
 ;;;; difference & intersection
@@ -807,14 +836,14 @@
 					 (%set0! diff i)
 					 (%set1! int  i)))))
 			    (%char-set:s/check cs proc)))
-	    csets))
+    csets))
 
 (define (char-set-diff+intersection! cs1 cs2 . csets)
   (let ((s1 (%char-set:s/check cs1 char-set-diff+intersection!))
 	(s2 (%char-set:s/check cs2 char-set-diff+intersection!)))
     (%string-iter (lambda (i v) (if (zero? v)
-				    (%set0! s2 i)
-				    (if (si=1? s2 i) (%set0! s1 i))))
+			       (%set0! s2 i)
+			     (if (si=1? s2 i) (%set0! s1 i))))
 		  s1)
     (%char-set-diff+intersection! s1 s2 csets char-set-diff+intersection!))
   (values cs1 cs2))
