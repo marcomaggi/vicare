@@ -128,16 +128,6 @@
 	  (error who "expected final base char set, too many parameters" maybe-base)))
     (make-string 256 (%latin1->char 0))))
 
-;;; If CS is really a char-set, do CHAR-SET-STR, otw report an error msg on
-;;; behalf of our caller, PROC. This procedure exists basically to provide
-;;; explicit error-checking & reporting.
-
-(define (%char-set:s/check cs who)
-  (let lp ((cs cs))
-    (if (char-set? cs)
-	($:char-set-str cs)
-      (lp (error who "not a char-set" cs who)))))
-
 ;;; These internal functions hide a lot of the dependency on the
 ;;; underlying string representation of char sets. They should be
 ;;; inlined if possible.
@@ -856,14 +846,16 @@
 	(%char-set-diff+intersection! diff int csets who)
 	(values (make-char-set diff) (make-char-set int)))))
 
-  (define (%char-set-diff+intersection! diff int csets proc)
+  (define (%char-set-diff+intersection! diff int csets who)
     (for-each (lambda (cs)
-		(%string-iter (lambda (i v)
-				(if (not (zero? v))
-				    (when (si=1? diff i)
-				      (%set0! diff i)
-				      (%set1! int  i))))
-			      (%char-set:s/check cs proc)))
+		(with-arguments-validation (who)
+		    ((char-set	cs))
+		  (%string-iter (lambda (i v)
+				  (if (not (zero? v))
+				      (when (si=1? diff i)
+					(%set0! diff i)
+					(%set1! int  i))))
+				($:char-set-str cs))))
       csets))
 
   #| end of module |# )
