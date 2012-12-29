@@ -148,6 +148,7 @@
     non-empty-string.vicare-arguments-validation
     non-empty-string/false.vicare-arguments-validation
     index-for-string.vicare-arguments-validation
+    one-off-index-for-string.vicare-arguments-validation
     index-and-count-for-string.vicare-arguments-validation
     start-and-end-for-string.vicare-arguments-validation
     start-and-past-for-string.vicare-arguments-validation
@@ -1016,6 +1017,11 @@
 (define-argument-validation (index-for-string who str idx)
   ;;We assume that STR has already been validated as string.
   (index-for-string? str idx)
+  (assertion-violation who "expected valid fixnum as index for string argument" idx str))
+
+(define-argument-validation (one-off-index-for-string who str idx)
+  ;;We assume that STR has already been validated as string.
+  (one-off-index-for-string? str idx)
   (assertion-violation who "expected valid fixnum as index for string argument" idx str))
 
 (define-argument-validation (index-and-count-for-string who str idx count)

@@ -715,6 +715,22 @@ than zero.
 @deffn {Validation Clause} index-for-string @var{str} @var{idx}
 Succeed if @var{idx} is a fixnum usable as index (not out of range) for
 @var{str}, which is expected to be an already validated string.
+@var{idx} must satisfy the constraints:
+
+@example
+0 <= @var{idx} < (string-length @var{str})
+@end example
+@end deffn
+
+
+@deffn {Validation Clause} one-off-index-for-string @var{str} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index for @var{str}, which is
+expected to be an already validated string, or it is equal to the string
+length.  @var{idx} must satisfy the constraints:
+
+@example
+0 <= @var{idx} <= (string-length @var{str})
+@end example
 @end deffn
 
 
