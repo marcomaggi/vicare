@@ -15,8 +15,7 @@ for more details.
 
 @menu
 * srfi strings license::        Strings document license.
-* srfi strings abstract::       Abstract.
-* srfi strings rationale::      Rationale.
+* srfi strings ratio::          Rationale.
 * srfi strings spec::           Specification.
 * srfi strings ack::            Acknowledgments.
 * srfi strings references::     References.
@@ -54,30 +53,16 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 @c page
-@node srfi strings abstract
-@subsection Abstract
-
-
-@rnrs{5} Scheme has an impoverished set of string--processing utilities,
-which is a problem for authors of portable code.  This @srfi{} proposes
-a coherent and comprehensive set of string--processing procedures; it is
-accompanied by a reference implementation of the specification.  The
-reference implementation is: portable, efficient, open source .
-
-The routines in this @srfi{} are backwards--compatible with the
-string--processing routines of @rnrs{5}.
-
-@c page
-@node srfi strings rationale
+@node srfi strings ratio
 @subsection Rationale
 
 
-This @srfi{} defines two libraries that provide a rich set of
-operations for manipulating strings.  These are frequently useful for
-scripting and other text--manipulation applications.  The library's
-design was influenced by the string libraries found in @acronym{MIT}
-Scheme, Gambit, RScheme, MzScheme, slib, Common Lisp, Bigloo, guile,
-Chez, @acronym{APL}, Java, and the @acronym{SML} standard basis.
+This @srfi{} defines a rich set of operations for manipulating strings;
+these are frequently useful for scripting and other text--manipulation
+applications.  The library's design was influenced by the string
+libraries found in @acronym{MIT} Scheme, Gambit, RScheme, MzScheme,
+slib, Common Lisp, Bigloo, guile, Chez, @acronym{APL}, Java, and the
+@acronym{SML} standard basis.
 
 All procedures involving character comparison are available in both
 case--sensitive and case--insensitive forms.
@@ -88,6 +73,10 @@ All functionality is available in substring and full--string forms.
 * srfi strings ratio code-point::  Strings are code-point sequences.
 * srfi strings ratio i18n::        Internationalisation and
                                    super-@ascii{} character types.
+* srfi strings ratio naming::      Naming conventions.
+* srfi strings ratio shared::      Shared storage.
+* srfi strings ratio r5rs::        @rnrs{4}/@rnrs{5} procedures.
+* srfi strings ratio extra::       Extra--@srfi{} recommendations.
 @end menu
 
 @c page
@@ -139,8 +128,6 @@ complex; there are no easy answers for many of these issues.
 
 @subsubheading Case mapping and case--folding
 
-
-@noindent
 Upper--casing and lower--casing characters is complex in super--@ascii{}
 encodings.
 
@@ -218,8 +205,6 @@ b--trees, symbol tables, etc.
 
 @subsubheading String equality and string normalisation
 
-
-@noindent
 Comparing strings for equality is complicated because in some cases
 Unicode actually provides multiple encodings for the ``same'' character,
 and because what we usually think of as a ``character'' can be
@@ -247,7 +232,7 @@ would compare equal;
 we might want an even more--permissive normalisation, where
 visually--distinct properties of ``the same'' character would be
 ignored; for example, we might want narrow/full--width versions of the
-same Asian character to compare equal;a
+same Asian character to compare equal;
 
 @item
 we might want comparisons that are insensitive to accents and
@@ -281,8 +266,6 @@ to manipulate program identifiers and operating--system filenames).
 
 @subsubheading String inequality
 
-
-@noindent
 Above and beyond the issues arising in string--equality, when we attempt
 to order strings there are even further considerations.
 
@@ -313,12 +296,11 @@ issues.  @ansrfi{13} string ordering is strictly based upon a
 character--by--character comparison of the values used for representing
 the string.
 
-@c ------------------------------------------------------------
+@c page
+@node srfi strings ratio naming
+@subsubsection Naming conventions
 
-@subsubheading Naming conventions
 
-
-@noindent
 This library contains a large number of procedures, but they follow a
 consistent naming scheme, and are consistent with the conventions
 developed in @ansrfi{1}.  The names are composed of smaller lexemes in a
@@ -340,26 +322,25 @@ The order of common parameters is consistent across the different
 procedures.
 
 @item
-Left/right/both directionality: Procedures that have left/right
+Left/right/both directionality: procedures that have left/right
 directional variants use the following convention:
 
 @multitable {right--to--left} {Suffix}
 @headitem Direction @tab Suffix
-@item left-to-right @tab none
-@item right-to-left @tab --right
-@item both @tab --both
+@item left-to-right @tab @code{none}
+@item right-to-left @tab @code{-right}
+@item both @tab @code{-both}
 @end multitable
 
 This is a general convention that was established in @ansrfi{1}.  The
 value of a convention is proportional to the extent of its use.
 @end itemize
 
-@c ------------------------------------------------------------
+@c page
+@node srfi strings ratio shared
+@subsubsection Shared storage
 
-@subsubheading Shared storage
 
-
-@noindent
 Some Scheme implementations, e.g. Guile and T, provide ways to construct
 substrings that share storage with other strings.  This facility is
 called ``shared--text substrings''.  Shared--text substrings can be used
@@ -385,7 +366,8 @@ the requested substring is the entire string, the procedure is permitted
 simply to return the original value.  That is:
 
 @example
-(eq? s (substring/shared s 0 (string-length s))) => true or false
+(eq? s (substring/shared s 0 (string-length s)))
+@result{} #t or #f
 @end example
 
 @noindent
@@ -393,7 +375,8 @@ whereas the @rnrs{5} @func{substring} function is required to allocate a
 fresh copy:
 
 @example
-(eq? s (substring s 0 (string-length s))) => false.
+(eq? s (substring s 0 (string-length s)))
+@result{} #f
 @end example
 
 In keeping with @ansrfi{13}'s general approach to sharing, compliant
@@ -428,12 +411,11 @@ shared--text substrings, all the start/end index parameters would
 vanish.  However, since @ansrfi{13} does not require implementations to
 provide shared--text substrings, the extended @api{} is provided.
 
-@c ------------------------------------------------------------
+@c page
+@node srfi strings ratio r5rs
+@subsubsection @rnrs{4}/@rnrs{5} procedures
 
-@subsubheading @rnrs{4}/@rnrs{5} procedures
 
-
-@noindent
 The @rnrs{4} and @rnrs{5} reports define 22 string procedures.  The
 @ansrfi{13} package includes 8 of these exactly as defined, 3 in an
 extended, backwards--compatible way, and drops the remaining 11 (whose
@@ -456,7 +438,8 @@ string<=?       string-ci<=?    string>=?
 string-ci>=?    substring
 @end example
 
-The @ansrfi{13} package provides alternate bindings and extended
+@noindent
+the @ansrfi{13} package provides alternate bindings and extended
 functionality.
 
 Additionally, the three extended procedures are:
@@ -467,15 +450,15 @@ string->list s [start end] -> char-list
 string-copy  s [start end] -> string
 @end example
 
-They are uniformly extended to take optional start/end parameters
+@noindent
+they are uniformly extended to take optional start/end parameters
 specifying substring ranges.
 
-@c ------------------------------------------------------------
+@c page
+@node srfi strings ratio extra
+@subsubsection Extra--@srfi{} recommendations
 
-@subsubheading Extra--@srfi{} recommendations
 
-
-@noindent
 This @srfi{} recommends the following:
 
 @itemize
@@ -513,7 +496,7 @@ need to order strings, e.g.
 A @srfi{} be defined for manipulating characters that is portable
 across at least @ascii{}, Latin--1 and Unicode.
 
-@itemize
+@itemize -
 @item
 For backwards--compatibility, @func{char-upcase} and
 @func{char-downcase} should be defined to use the one--to--one
@@ -582,72 +565,67 @@ Low level procedures
 @subsubsection Introduction
 
 
-In the following procedure specifications:
+In the procedure specifications of this @srfi{} the following
+conventions for arguments requirement are used:
 
-@itemize
-@item
-An @var{s} parameter is a string.
+@table @var
+@item str
+The argument is a string.
 
-@item
-A @var{char} parameter is a character.
+@item char
+The argument is a character.
 
-@item
-@var{start} and @var{end} parameters are half--open string indices
-specifying a substring within a string parameter; when optional, they
-default to @code{0} and the length of the string, respectively.  When
-specified, it must be the case that:
+@item start
+@itemx end
+Half--open string indices specifying a substring within a string
+argumen; when optional, they default to @code{0} and the length of the
+string, respectively.  When specified, it must be the case that:
 
 @example
-0 <= start <= end <= (string-length s)
+0 <= @var{start} <= @var{end} <= (string-length @var{str})
 @end example
 
 @noindent
-for the corresponding parameter @var{s}.  They typically restrict a
+for the corresponding parameter @var{str}.  They typically restrict a
 procedure's action to the indicated substring.
 
+@item pred
+A unary character predicate procedure, returning a true/false value when
+applied to a character.
+
+@item char/char-set/pred
+A value used to select/search for a character in a string:
+
+@itemize
 @item
-A @var{pred} parameter is a unary character predicate procedure,
-returning a true/false value when applied to a character.
+If it is a character: it is used in an equality test.
 
 @item
-A @var{char}/@var{char-set}/@var{pred} parameter is a value used to
-select/search for a character in a string.  If it is a character, it is
-used in an equality test; if it is a character set, it is used as a
-membership test; if it is a procedure, it is applied to the characters
-as a test predicate.
+If it is a character set: it is used as a membership test.
 
 @item
-An @var{i} parameter is an exact non--negative integer specifying an
-index into a string.
-
-@item
-@var{len} and @var{nchars} parameters are exact non--negative integers
-specifying a length of a string or some number of characters.
-
-@item
-An @var{obj} parameter may be any value at all.
+If it is a procedure: it is applied to the characters as a test
+predicate.
 @end itemize
+
+@item i
+The argument is an exact non--negative integer specifying an index into
+a string.
+
+@item len
+@itemx nchars
+Exact non--negative integers specifying a length of a string or some
+number of characters.
+
+@item obj
+The argument may be any value at all.
+@end table
 
 Passing values to procedures with these parameters that do not satisfy
 these types is an error.
 
-Parameters given in square brackets are optional.  Unless otherwise
-noted in the text describing the procedure, any prefix of these optional
-parameters may be supplied, from zero arguments to the full list.  When
-a procedure returns multiple values, this is shown by listing the return
-values in square brackets, as well.  So, for example, the procedure with
-signature:
-
-@example
-halts? f [x init-store]
-@end example
-
-@noindent
-would take one (@var{f}), two (@var{f}, @var{x}) or three (@var{f},
-@var{x}, @var{init-store}) input parameters.
-
-A parameter followed by @code{...} means zero--or--more elements.  So
-the procedure with the signature:
+An argument followed by @code{...} means zero--or--more elements; so the
+procedure with the signature:
 
 @example
 sum-squares x ...
@@ -674,8 +652,7 @@ non--terminal subform of a begin expression.  Note that in @rnrs{5},
 this restricts such a procedure to returning a single value;
 non--@rnrs{5} systems may not even provide this restriction.
 
-
-Unless explicitly stated, for all the functions: Case--insensitive
+Unless explicitly stated, for all the functions: case--insensitive
 comparison is done by case--folding characters with the operation
 
 @example
