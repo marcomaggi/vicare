@@ -27,6 +27,7 @@
 #!r6rs
 (import (vicare)
   (prefix (srfi :13) srfi.)
+  (srfi :14)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -44,14 +45,21 @@
     => #t)
 
 ;;; --------------------------------------------------------------------
+;;; string-every with wrong argument
 
   (check
       (guard (exc ((assertion-violation? exc)
 		   (condition-who exc)))
 	(srfi.string-every 123 "abc" 0 2))
-    => '%string-every)
+    => 'string-every)
 
 ;;; --------------------------------------------------------------------
+;;; string-every with characters
+
+  (check
+      (let ((str "aaaa"))
+	(srfi.string-every #\a str))
+    => #t)
 
   (check
       (let* ((str "aaaa")
@@ -75,29 +83,31 @@
     => #f)
 
 ;;; --------------------------------------------------------------------
+;;; string-every with char-sets
 
-  ;; (check
-  ;;     (let* ((str "aaaa")
-  ;; 	     (beg 0)
-  ;; 	     (end (string-length str)))
-  ;; 	(srfi.string-every (char-set #\a) str beg end))
-  ;;   => #t)
+  (check
+      (let* ((str "aaaa")
+  	     (beg 0)
+  	     (end (string-length str)))
+  	(srfi.string-every (char-set #\a) str beg end))
+    => #t)
 
-  ;; (check
-  ;;     (let* ((str "aaaab")
-  ;; 	     (beg 0)
-  ;; 	     (end (string-length str)))
-  ;; 	(srfi.string-every (char-set #\a) str beg end))
-  ;;   => #f)
+  (check
+      (let* ((str "aaaab")
+  	     (beg 0)
+  	     (end (string-length str)))
+  	(srfi.string-every (char-set #\a) str beg end))
+    => #f)
 
-  ;; (check
-  ;;     (let* ((str "aabaa")
-  ;; 	     (beg 0)
-  ;; 	     (end (string-length str)))
-  ;; 	(srfi.string-every (char-set #\a) str beg end))
-  ;;   => #f)
+  (check
+      (let* ((str "aabaa")
+  	     (beg 0)
+  	     (end (string-length str)))
+  	(srfi.string-every (char-set #\a) str beg end))
+    => #f)
 
 ;;; --------------------------------------------------------------------
+;;; string-every with predicates
 
   (check
       (let* ((str "aaaa")
@@ -121,14 +131,16 @@
     => #f)
 
 ;;; --------------------------------------------------------------------
+;;; string-any with wrong argument
 
   (check
       (guard (exc ((assertion-violation? exc)
 		   (condition-who exc)))
 	(srfi.string-any 123 "abc" 0 2))
-    => '%string-any)
+    => 'string-any)
 
 ;;; --------------------------------------------------------------------
+;;; string-any with characters
 
   (check
       (let* ((str "ddadd")
@@ -151,31 +163,32 @@
 	(srfi.string-any #\a str beg end))
     => #f)
 
+;;; --------------------------------------------------------------------
+;;; string-any with char-sets
+
+  (check
+      (let* ((str "dddaddd")
+  	     (beg 0)
+  	     (end (string-length str)))
+  	(srfi.string-any (char-set #\a) str beg end))
+    => #t)
+
+  (check
+      (let* ((str "ddda")
+  	     (beg 0)
+  	     (end (string-length str)))
+  	(srfi.string-any (char-set #\a) str beg end))
+    => #t)
+
+  (check
+      (let* ((str "dddd")
+  	     (beg 0)
+  	     (end (string-length str)))
+  	(srfi.string-any (char-set #\a) str beg end))
+    => #f)
 
 ;;; --------------------------------------------------------------------
-
-  ;; (check
-  ;;     (let* ((str "dddaddd")
-  ;; 	     (beg 0)
-  ;; 	     (end (string-length str)))
-  ;; 	(srfi.string-any (char-set #\a) str beg end))
-  ;;   => #t)
-
-  ;; (check
-  ;;     (let* ((str "ddda")
-  ;; 	     (beg 0)
-  ;; 	     (end (string-length str)))
-  ;; 	(srfi.string-any (char-set #\a) str beg end))
-  ;;   => #t)
-
-  ;; (check
-  ;;     (let* ((str "dddd")
-  ;; 	     (beg 0)
-  ;; 	     (end (string-length str)))
-  ;; 	(srfi.string-any (char-set #\a) str beg end))
-  ;;   => #f)
-
-;;; --------------------------------------------------------------------
+;;; string-any with predicates
 
   (check
       (let* ((str "11a11")
@@ -198,7 +211,7 @@
 	(srfi.string-any char-alphabetic? str beg end))
     => #f)
 
-  )
+  #f)
 
 
 (parametrise ((check-test-name 'comparison-lexicographic-case-sensitive))
@@ -685,1282 +698,20 @@
   #t)
 
 
-(parametrise ((check-test-name 'comparison-dictionary-case-sensitive))
-
-  (check (srfi.string-dictionary=? "" "")				=> #t)
-  (check (srfi.string-dictionary=? "a" "")				=> #f)
-  (check (srfi.string-dictionary=? "" "a")				=> #f)
-  (check (srfi.string-dictionary=? "ab" "a")			=> #f)
-  (check (srfi.string-dictionary=? "a" "ab")			=> #f)
-  (check (srfi.string-dictionary=? "ciao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao1" "ciao")			=> #f)
-  (check (srfi.string-dictionary=? "ciao" "ciao1")			=> #f)
-
-  (check (srfi.string-dictionary=? "ci ao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao" "ci ao")			=> #t)
-  (check (srfi.string-dictionary=? "ci\tao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao" "ci\tao")			=> #t)
-  (check (srfi.string-dictionary=? "ci\nao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao" "ci\nao")			=> #t)
-  (check (srfi.string-dictionary=? "ci\vao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao" "ci\tao")			=> #t)
-  (check (srfi.string-dictionary=? "ci\fao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao" "ci\fao")			=> #t)
-  (check (srfi.string-dictionary=? "ci\rao" "ciao")			=> #t)
-  (check (srfi.string-dictionary=? "ciao" "ci\rao")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary<? "" "")				=> #f)
-  (check (srfi.string-dictionary<? "a" "")				=> #f)
-  (check (srfi.string-dictionary<? "" "a")				=> #t)
-  (check (srfi.string-dictionary<? "ab" "a")			=> #f)
-  (check (srfi.string-dictionary<? "a" "ab")			=> #t)
-  (check (srfi.string-dictionary<? "ciao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao1" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ciao1")			=> #t)
-
-  (check (srfi.string-dictionary<? "ci ao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ci ao")			=> #f)
-  (check (srfi.string-dictionary<? "ci\tao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ci\tao")			=> #f)
-  (check (srfi.string-dictionary<? "ci\nao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ci\nao")			=> #f)
-  (check (srfi.string-dictionary<? "ci\vao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ci\tao")			=> #f)
-  (check (srfi.string-dictionary<? "ci\fao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ci\fao")			=> #f)
-  (check (srfi.string-dictionary<? "ci\rao" "ciao")			=> #f)
-  (check (srfi.string-dictionary<? "ciao" "ci\rao")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary<=? "" "")				=> #t)
-  (check (srfi.string-dictionary<=? "a" "")				=> #f)
-  (check (srfi.string-dictionary<=? "" "a")				=> #t)
-  (check (srfi.string-dictionary<=? "ab" "a")			=> #f)
-  (check (srfi.string-dictionary<=? "a" "ab")			=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ciao")			=> #t)
-  (check (srfi.string-dictionary<=? "ciao1" "ciao")			=> #f)
-  (check (srfi.string-dictionary<=? "ciao" "ciao1")			=> #t)
-
-  (check (srfi.string-dictionary<=? "ci ao" "ciao")			=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ci ao")			=> #t)
-  (check (srfi.string-dictionary<=? "ci\tao" "ciao")		=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary<=? "ci\nao" "ciao")		=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ci\nao")		=> #t)
-  (check (srfi.string-dictionary<=? "ci\vao" "ciao")		=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary<=? "ci\fao" "ciao")		=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ci\fao")		=> #t)
-  (check (srfi.string-dictionary<=? "ci\rao" "ciao")		=> #t)
-  (check (srfi.string-dictionary<=? "ciao" "ci\rao")		=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary>? "" "")				=> #f)
-  (check (srfi.string-dictionary>? "a" "")				=> #t)
-  (check (srfi.string-dictionary>? "" "a")				=> #f)
-  (check (srfi.string-dictionary>? "ab" "a")			=> #t)
-  (check (srfi.string-dictionary>? "a" "ab")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao1" "ciao")			=> #t)
-  (check (srfi.string-dictionary>? "ciao" "ciao1")			=> #f)
-
-  (check (srfi.string-dictionary>? "ci ao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ci ao")			=> #f)
-  (check (srfi.string-dictionary>? "ci\tao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ci\tao")			=> #f)
-  (check (srfi.string-dictionary>? "ci\nao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ci\nao")			=> #f)
-  (check (srfi.string-dictionary>? "ci\vao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ci\tao")			=> #f)
-  (check (srfi.string-dictionary>? "ci\fao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ci\fao")			=> #f)
-  (check (srfi.string-dictionary>? "ci\rao" "ciao")			=> #f)
-  (check (srfi.string-dictionary>? "ciao" "ci\rao")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary>=? "" "")				=> #t)
-  (check (srfi.string-dictionary>=? "a" "")				=> #t)
-  (check (srfi.string-dictionary>=? "" "a")				=> #f)
-  (check (srfi.string-dictionary>=? "ab" "a")			=> #t)
-  (check (srfi.string-dictionary>=? "a" "ab")			=> #f)
-  (check (srfi.string-dictionary>=? "ciao" "ciao")			=> #t)
-  (check (srfi.string-dictionary>=? "ciao1" "ciao")			=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ciao1")			=> #f)
-
-  (check (srfi.string-dictionary>=? "ci ao" "ciao")			=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ci ao")			=> #t)
-  (check (srfi.string-dictionary>=? "ci\tao" "ciao")		=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary>=? "ci\nao" "ciao")		=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ci\nao")		=> #t)
-  (check (srfi.string-dictionary>=? "ci\vao" "ciao")		=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary>=? "ci\fao" "ciao")		=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ci\fao")		=> #t)
-  (check (srfi.string-dictionary>=? "ci\rao" "ciao")		=> #t)
-  (check (srfi.string-dictionary>=? "ciao" "ci\rao")		=> #t)
-
-  #t)
-
-
-(parametrise ((check-test-name 'comparison-dictionary-case-insensitive))
-
-  (check (srfi.string-dictionary-compare-ci "" "")			=> 0)
-  (check (srfi.string-dictionary-compare-ci "a" "")			=> +1)
-  (check (srfi.string-dictionary-compare-ci "" "a")			=> -1)
-  (check (srfi.string-dictionary-compare-ci "ab" "a")		=> +1)
-  (check (srfi.string-dictionary-compare-ci "a" "ab")		=> -1)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ciao")		=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao1" "ciao")		=> +1)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ciao1")		=> -1)
-  (check (srfi.string-dictionary-compare-ci "CIAO" "ciao")		=> 0)
-  (check (srfi.string-dictionary-compare-ci "CIAO1" "ciao")		=> +1)
-  (check (srfi.string-dictionary-compare-ci "CIAO" "ciao1")		=> -1)
-
-  (check (srfi.string-dictionary-compare-ci "ci ao" "ciao")		=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ci ao")		=> 0)
-  (check (srfi.string-dictionary-compare-ci "ci\tao" "ciao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ci\tao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ci\nao" "ciao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ci\nao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ci\vao" "ciao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ci\tao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ci\fao" "ciao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ci\fao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ci\rao" "ciao")	=> 0)
-  (check (srfi.string-dictionary-compare-ci "ciao" "ci\rao")	=> 0)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary-ci=? "" "")			=> #t)
-  (check (srfi.string-dictionary-ci=? "a" "")			=> #f)
-  (check (srfi.string-dictionary-ci=? "" "a")			=> #f)
-  (check (srfi.string-dictionary-ci=? "ab" "a")			=> #f)
-  (check (srfi.string-dictionary-ci=? "a" "ab")			=> #f)
-  (check (srfi.string-dictionary-ci=? "ciao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao1" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci=? "ciao" "ciao1")		=> #f)
-  (check (srfi.string-dictionary-ci=? "CIAO" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "CIAO1" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci=? "CIAO" "ciao1")		=> #f)
-
-  (check (srfi.string-dictionary-ci=? "ci ao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao" "ci ao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ci\tao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ci\nao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao" "ci\nao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ci\vao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ci\fao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao" "ci\fao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ci\rao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci=? "ciao" "ci\rao")		=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary-ci<? "" "")			=> #f)
-  (check (srfi.string-dictionary-ci<? "a" "")			=> #f)
-  (check (srfi.string-dictionary-ci<? "" "a")			=> #t)
-  (check (srfi.string-dictionary-ci<? "ab" "a")			=> #f)
-  (check (srfi.string-dictionary-ci<? "a" "ab")			=> #t)
-  (check (srfi.string-dictionary-ci<? "ciao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao1" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ciao1")		=> #t)
-  (check (srfi.string-dictionary-ci<? "CIAO" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "CIAO1" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "CIAO" "ciao1")		=> #t)
-
-  (check (srfi.string-dictionary-ci<? "ci ao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ci ao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ci\tao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ci\tao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ci\nao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ci\nao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ci\vao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ci\tao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ci\fao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ci\fao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ci\rao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<? "ciao" "ci\rao")		=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary-ci<=? "" "")			=> #t)
-  (check (srfi.string-dictionary-ci<=? "a" "")			=> #f)
-  (check (srfi.string-dictionary-ci<=? "" "a")			=> #t)
-  (check (srfi.string-dictionary-ci<=? "ab" "a")			=> #f)
-  (check (srfi.string-dictionary-ci<=? "a" "ab")			=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao1" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ciao1")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "CIAO" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "CIAO1" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci<=? "CIAO" "ciao1")		=> #t)
-
-  (check (srfi.string-dictionary-ci<=? "ci ao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ci ao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ci\tao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ci\nao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ci\nao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ci\vao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ci\fao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ci\fao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ci\rao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci<=? "ciao" "ci\rao")		=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary-ci>? "" "")			=> #f)
-  (check (srfi.string-dictionary-ci>? "a" "")			=> #t)
-  (check (srfi.string-dictionary-ci>? "" "a")			=> #f)
-  (check (srfi.string-dictionary-ci>? "ab" "a")			=> #t)
-  (check (srfi.string-dictionary-ci>? "a" "ab")			=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao1" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>? "ciao" "ciao1")		=> #f)
-  (check (srfi.string-dictionary-ci>? "CIAO" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "CIAO1" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>? "CIAO" "ciao1")		=> #f)
-
-  (check (srfi.string-dictionary-ci>? "ci ao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ci ao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ci\tao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ci\tao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ci\nao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ci\nao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ci\vao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ci\tao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ci\fao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ci\fao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ci\rao" "ciao")		=> #f)
-  (check (srfi.string-dictionary-ci>? "ciao" "ci\rao")		=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string-dictionary-ci>=? "" "")			=> #t)
-  (check (srfi.string-dictionary-ci>=? "a" "")			=> #t)
-  (check (srfi.string-dictionary-ci>=? "" "a")			=> #f)
-  (check (srfi.string-dictionary-ci>=? "ab" "a")			=> #t)
-  (check (srfi.string-dictionary-ci>=? "a" "ab")			=> #f)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao1" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ciao1")		=> #f)
-  (check (srfi.string-dictionary-ci>=? "CIAO" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "CIAO1" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "CIAO" "ciao1")		=> #f)
-
-  (check (srfi.string-dictionary-ci>=? "ci ao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ci ao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ci\tao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ci\nao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ci\nao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ci\vao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ci\tao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ci\fao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ci\fao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ci\rao" "ciao")		=> #t)
-  (check (srfi.string-dictionary-ci>=? "ciao" "ci\rao")		=> #t)
-
-  #t)
-
-
-(parametrise ((check-test-name 'comparison-lexicographic-string/number-case-sensitive))
-
-  (check (srfi.string/numbers=? "" "")				=> #t)
-  (check (srfi.string/numbers=? "a" "")				=> #f)
-  (check (srfi.string/numbers=? "" "a")				=> #f)
-  (check (srfi.string/numbers=? "a" "a")				=> #t)
-  (check (srfi.string/numbers=? "1" "")				=> #f)
-  (check (srfi.string/numbers=? "" "1")				=> #f)
-  (check (srfi.string/numbers=? "1" "1")				=> #t)
-  (check (srfi.string/numbers=? "1" "2")				=> #f)
-  (check (srfi.string/numbers=? "2" "1")				=> #f)
-  (check (srfi.string/numbers=? "a" "ab")				=> #f)
-  (check (srfi.string/numbers=? "ab" "a")				=> #f)
-  (check (srfi.string/numbers=? "a" "a1")				=> #f)
-  (check (srfi.string/numbers=? "a1" "a")				=> #f)
-  (check (srfi.string/numbers=? "1" "1a")				=> #f)
-  (check (srfi.string/numbers=? "1a" "1")				=> #f)
-
-  (check (srfi.string/numbers=? "123" "45")				=> #f)
-  (check (srfi.string/numbers=? "45" "123")				=> #f)
-  (check (srfi.string/numbers=? "ciao3" "ciao10")			=> #f)
-  (check (srfi.string/numbers=? "ciao10" "ciao3")			=> #f)
-  (check (srfi.string/numbers=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers=? "foo4bar3zab" "foo4bar10")		=> #f)
-  (check (srfi.string/numbers=? "foo4bar10" "foo4bar3zab")		=> #f)
-  (check (srfi.string/numbers=? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers=? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers=? "12bar" "foobar")			=> #f)
-  (check (srfi.string/numbers=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers=? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers<>? "" "")				=> #f)
-  (check (srfi.string/numbers<>? "a" "")				=> #t)
-  (check (srfi.string/numbers<>? "" "a")				=> #t)
-  (check (srfi.string/numbers<>? "a" "a")				=> #f)
-  (check (srfi.string/numbers<>? "1" "")				=> #t)
-  (check (srfi.string/numbers<>? "" "1")				=> #t)
-  (check (srfi.string/numbers<>? "1" "1")				=> #f)
-  (check (srfi.string/numbers<>? "1" "2")				=> #t)
-  (check (srfi.string/numbers<>? "2" "1")				=> #t)
-  (check (srfi.string/numbers<>? "a" "ab")				=> #t)
-  (check (srfi.string/numbers<>? "ab" "a")				=> #t)
-  (check (srfi.string/numbers<>? "a" "a1")				=> #t)
-  (check (srfi.string/numbers<>? "a1" "a")				=> #t)
-  (check (srfi.string/numbers<>? "1" "1a")				=> #t)
-  (check (srfi.string/numbers<>? "1a" "1")				=> #t)
-
-  (check (srfi.string/numbers<>? "123" "45")			=> #t)
-  (check (srfi.string/numbers<>? "45" "123")			=> #t)
-  (check (srfi.string/numbers<>? "ciao3" "ciao10")			=> #t)
-  (check (srfi.string/numbers<>? "ciao10" "ciao3")			=> #t)
-  (check (srfi.string/numbers<>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers<>? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers<>? "foo4bar3zab" "foo4bar10")		=> #t)
-  (check (srfi.string/numbers<>? "foo4bar10" "foo4bar3zab")		=> #t)
-  (check (srfi.string/numbers<>? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers<>? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers<>? "12bar" "foobar")			=> #t)
-  (check (srfi.string/numbers<>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers<>? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers<>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers<>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers<>? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers<? "" "")				=> #f)
-  (check (srfi.string/numbers<? "a" "")				=> #f)
-  (check (srfi.string/numbers<? "" "a")				=> #t)
-  (check (srfi.string/numbers<? "a" "a")				=> #f)
-  (check (srfi.string/numbers<? "1" "")				=> #f)
-  (check (srfi.string/numbers<? "" "1")				=> #t)
-  (check (srfi.string/numbers<? "1" "1")				=> #f)
-  (check (srfi.string/numbers<? "1" "2")				=> #t)
-  (check (srfi.string/numbers<? "2" "1")				=> #f)
-  (check (srfi.string/numbers<? "a" "ab")				=> #t)
-  (check (srfi.string/numbers<? "ab" "a")				=> #f)
-  (check (srfi.string/numbers<? "a" "a1")				=> #t)
-  (check (srfi.string/numbers<? "a1" "a")				=> #f)
-  (check (srfi.string/numbers<? "1" "1a")				=> #t)
-  (check (srfi.string/numbers<? "1a" "1")				=> #f)
-
-  (check (srfi.string/numbers<? "123" "45")				=> #f)
-  (check (srfi.string/numbers<? "45" "123")				=> #t)
-  (check (srfi.string/numbers<? "ciao3" "ciao10")			=> #t)
-  (check (srfi.string/numbers<? "ciao10" "ciao3")			=> #f)
-  (check (srfi.string/numbers<? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers<? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers<? "foo4bar3zab" "foo4bar10")		=> #t)
-  (check (srfi.string/numbers<? "foo4bar10" "foo4bar3zab")		=> #f)
-  (check (srfi.string/numbers<? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers<? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers<? "12bar" "foobar")			=> #t)
-  (check (srfi.string/numbers<? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers<? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers<? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers<? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers<? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers<=? "" "")				=> #t)
-  (check (srfi.string/numbers<=? "a" "")				=> #f)
-  (check (srfi.string/numbers<=? "" "a")				=> #t)
-  (check (srfi.string/numbers<=? "a" "a")				=> #t)
-  (check (srfi.string/numbers<=? "1" "")				=> #f)
-  (check (srfi.string/numbers<=? "" "1")				=> #t)
-  (check (srfi.string/numbers<=? "1" "1")				=> #t)
-  (check (srfi.string/numbers<=? "1" "2")				=> #t)
-  (check (srfi.string/numbers<=? "2" "1")				=> #f)
-  (check (srfi.string/numbers<=? "a" "ab")				=> #t)
-  (check (srfi.string/numbers<=? "ab" "a")				=> #f)
-  (check (srfi.string/numbers<=? "a" "a1")				=> #t)
-  (check (srfi.string/numbers<=? "a1" "a")				=> #f)
-  (check (srfi.string/numbers<=? "1" "1a")				=> #t)
-  (check (srfi.string/numbers<=? "1a" "1")				=> #f)
-
-  (check (srfi.string/numbers<=? "123" "45")			=> #f)
-  (check (srfi.string/numbers<=? "45" "123")			=> #t)
-  (check (srfi.string/numbers<=? "ciao3" "ciao10")			=> #t)
-  (check (srfi.string/numbers<=? "ciao10" "ciao3")			=> #f)
-  (check (srfi.string/numbers<=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers<=? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers<=? "foo4bar3zab" "foo4bar10")		=> #t)
-  (check (srfi.string/numbers<=? "foo4bar10" "foo4bar3zab")		=> #f)
-  (check (srfi.string/numbers<=? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers<=? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers<=? "12bar" "foobar")			=> #t)
-  (check (srfi.string/numbers<=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers<=? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers<=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers<=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers<=? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers>? "" "")				=> #f)
-  (check (srfi.string/numbers>? "a" "")				=> #t)
-  (check (srfi.string/numbers>? "" "a")				=> #f)
-  (check (srfi.string/numbers>? "a" "a")				=> #f)
-  (check (srfi.string/numbers>? "1" "")				=> #t)
-  (check (srfi.string/numbers>? "" "1")				=> #f)
-  (check (srfi.string/numbers>? "1" "1")				=> #f)
-  (check (srfi.string/numbers>? "1" "2")				=> #f)
-  (check (srfi.string/numbers>? "2" "1")				=> #t)
-  (check (srfi.string/numbers>? "a" "ab")				=> #f)
-  (check (srfi.string/numbers>? "ab" "a")				=> #t)
-  (check (srfi.string/numbers>? "a" "a1")				=> #f)
-  (check (srfi.string/numbers>? "a1" "a")				=> #t)
-  (check (srfi.string/numbers>? "1" "1a")				=> #f)
-  (check (srfi.string/numbers>? "1a" "1")				=> #t)
-
-  (check (srfi.string/numbers>? "123" "45")				=> #t)
-  (check (srfi.string/numbers>? "45" "123")				=> #f)
-  (check (srfi.string/numbers>? "ciao3" "ciao10")			=> #f)
-  (check (srfi.string/numbers>? "ciao10" "ciao3")			=> #t)
-  (check (srfi.string/numbers>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers>? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers>? "foo4bar3zab" "foo4bar10")		=> #f)
-  (check (srfi.string/numbers>? "foo4bar10" "foo4bar3zab")		=> #t)
-  (check (srfi.string/numbers>? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers>? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers>? "12bar" "foobar")			=> #f)
-  (check (srfi.string/numbers>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers>? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers>? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers>=? "" "")				=> #t)
-  (check (srfi.string/numbers>=? "a" "")				=> #t)
-  (check (srfi.string/numbers>=? "" "a")				=> #f)
-  (check (srfi.string/numbers>=? "a" "a")				=> #t)
-  (check (srfi.string/numbers>=? "1" "")				=> #t)
-  (check (srfi.string/numbers>=? "" "1")				=> #f)
-  (check (srfi.string/numbers>=? "1" "1")				=> #t)
-  (check (srfi.string/numbers>=? "1" "2")				=> #f)
-  (check (srfi.string/numbers>=? "2" "1")				=> #t)
-  (check (srfi.string/numbers>=? "a" "ab")				=> #f)
-  (check (srfi.string/numbers>=? "ab" "a")				=> #t)
-  (check (srfi.string/numbers>=? "a" "a1")				=> #f)
-  (check (srfi.string/numbers>=? "a1" "a")				=> #t)
-  (check (srfi.string/numbers>=? "1" "1a")				=> #f)
-  (check (srfi.string/numbers>=? "1a" "1")				=> #t)
-
-  (check (srfi.string/numbers>=? "123" "45")			=> #t)
-  (check (srfi.string/numbers>=? "45" "123")			=> #f)
-  (check (srfi.string/numbers>=? "ciao3" "ciao10")			=> #f)
-  (check (srfi.string/numbers>=? "ciao10" "ciao3")			=> #t)
-  (check (srfi.string/numbers>=? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers>=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers>=? "foo4bar3zab" "foo4bar10")		=> #f)
-  (check (srfi.string/numbers>=? "foo4bar10" "foo4bar3zab")		=> #t)
-  (check (srfi.string/numbers>=? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers>=? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers>=? "12bar" "foobar")			=> #f)
-  (check (srfi.string/numbers>=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers>=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers>=? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers>=? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers>=? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (list-sort %string/numbers<? (quote ("foo123" "foo42" "foo7")))
-    => '("foo7" "foo42" "foo123"))
-
-  #t)
-
-
-(parametrise ((check-test-name 'comparison-lexicographic-string/number-case-insensitive))
-
-  (check (srfi.string/numbers-compare-ci "" "")			=> 0)
-  (check (srfi.string/numbers-compare-ci "a" "")			=> +1)
-  (check (srfi.string/numbers-compare-ci "" "a")			=> -1)
-  (check (srfi.string/numbers-compare-ci "a" "a")			=> 0)
-  (check (srfi.string/numbers-compare-ci "1" "")			=> +1)
-  (check (srfi.string/numbers-compare-ci "" "1")			=> -1)
-  (check (srfi.string/numbers-compare-ci "1" "1")			=> 0)
-  (check (srfi.string/numbers-compare-ci "1" "2")			=> -1)
-  (check (srfi.string/numbers-compare-ci "2" "1")			=> +1)
-  (check (srfi.string/numbers-compare-ci "a" "ab")			=> -1)
-  (check (srfi.string/numbers-compare-ci "ab" "a")			=> +1)
-  (check (srfi.string/numbers-compare-ci "a" "a1")			=> -1)
-  (check (srfi.string/numbers-compare-ci "a1" "a")			=> +1)
-  (check (srfi.string/numbers-compare-ci "1" "1a")			=> -1)
-  (check (srfi.string/numbers-compare-ci "1a" "1")			=> +1)
-  (check (srfi.string/numbers-compare-ci "a" "A")			=> 0)
-  (check (srfi.string/numbers-compare-ci "A" "a")			=> 0)
-
-  (check (srfi.string/numbers-compare-ci "123" "45")		=> +1)
-  (check (srfi.string/numbers-compare-ci "45" "123")		=> -1)
-  (check (srfi.string/numbers-compare-ci "ciao3" "ciao10")		=> -1)
-  (check (srfi.string/numbers-compare-ci "ciao10" "ciao3")		=> +1)
-  (check (srfi.string/numbers-compare-ci "foo4bar3zab10" "foo4bar3zab2")	=> +1)
-  (check (srfi.string/numbers-compare-ci "foo4bar3zab2" "foo4bar3zab10")	=> -1)
-  (check (srfi.string/numbers-compare-ci "foo4bar3zab" "foo4bar10")	=> -1)
-  (check (srfi.string/numbers-compare-ci "foo4bar10" "foo4bar3zab")	=> +1)
-  (check (srfi.string/numbers-compare-ci "foo12" "12foo")		=> +1)
-  (check (srfi.string/numbers-compare-ci "12foo" "foo12")		=> -1)
-  (check (srfi.string/numbers-compare-ci "12bar" "foobar")		=> -1)
-  (check (srfi.string/numbers-compare-ci "12.3" "12.3")		=> 0)
-  (check (srfi.string/numbers-compare-ci "12.3" "12.10")		=> -1)
-  (check (srfi.string/numbers-compare-ci "12.10" "12.3")		=> +1)
-  (check (srfi.string/numbers-compare-ci "12.3" "12,10")		=> +1)
-  (check (srfi.string/numbers-compare-ci "12,10" "12.3")		=> -1)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-ci=? "" "")				=> #t)
-  (check (srfi.string/numbers-ci=? "a" "")				=> #f)
-  (check (srfi.string/numbers-ci=? "" "a")				=> #f)
-  (check (srfi.string/numbers-ci=? "a" "a")				=> #t)
-  (check (srfi.string/numbers-ci=? "1" "")				=> #f)
-  (check (srfi.string/numbers-ci=? "" "1")				=> #f)
-  (check (srfi.string/numbers-ci=? "1" "1")				=> #t)
-  (check (srfi.string/numbers-ci=? "1" "2")				=> #f)
-  (check (srfi.string/numbers-ci=? "2" "1")				=> #f)
-  (check (srfi.string/numbers-ci=? "a" "ab")			=> #f)
-  (check (srfi.string/numbers-ci=? "ab" "a")			=> #f)
-  (check (srfi.string/numbers-ci=? "a" "a1")			=> #f)
-  (check (srfi.string/numbers-ci=? "a1" "a")			=> #f)
-  (check (srfi.string/numbers-ci=? "1" "1a")			=> #f)
-  (check (srfi.string/numbers-ci=? "1a" "1")			=> #f)
-  (check (srfi.string/numbers-ci=? "a" "A")				=> #t)
-  (check (srfi.string/numbers-ci=? "A" "a")				=> #t)
-
-  (check (srfi.string/numbers-ci=? "123" "45")			=> #f)
-  (check (srfi.string/numbers-ci=? "45" "123")			=> #f)
-  (check (srfi.string/numbers-ci=? "ciao3" "ciao10")		=> #f)
-  (check (srfi.string/numbers-ci=? "ciao10" "ciao3")		=> #f)
-  (check (srfi.string/numbers-ci=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-ci=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-ci=? "foo4bar3zab" "foo4bar10")	=> #f)
-  (check (srfi.string/numbers-ci=? "foo4bar10" "foo4bar3zab")	=> #f)
-  (check (srfi.string/numbers-ci=? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-ci=? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-ci=? "12bar" "foobar")		=> #f)
-  (check (srfi.string/numbers-ci=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-ci=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-ci=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-ci=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-ci=? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-ci<>? "" "")				=> #f)
-  (check (srfi.string/numbers-ci<>? "a" "")				=> #t)
-  (check (srfi.string/numbers-ci<>? "" "a")				=> #t)
-  (check (srfi.string/numbers-ci<>? "a" "a")			=> #f)
-  (check (srfi.string/numbers-ci<>? "1" "")				=> #t)
-  (check (srfi.string/numbers-ci<>? "" "1")				=> #t)
-  (check (srfi.string/numbers-ci<>? "1" "1")			=> #f)
-  (check (srfi.string/numbers-ci<>? "1" "2")			=> #t)
-  (check (srfi.string/numbers-ci<>? "2" "1")			=> #t)
-  (check (srfi.string/numbers-ci<>? "a" "ab")			=> #t)
-  (check (srfi.string/numbers-ci<>? "ab" "a")			=> #t)
-  (check (srfi.string/numbers-ci<>? "a" "a1")			=> #t)
-  (check (srfi.string/numbers-ci<>? "a1" "a")			=> #t)
-  (check (srfi.string/numbers-ci<>? "1" "1a")			=> #t)
-  (check (srfi.string/numbers-ci<>? "1a" "1")			=> #t)
-  (check (srfi.string/numbers-ci<>? "A" "a")			=> #f)
-  (check (srfi.string/numbers-ci<>? "a" "A")			=> #f)
-
-  (check (srfi.string/numbers-ci<>? "123" "45")			=> #t)
-  (check (srfi.string/numbers-ci<>? "45" "123")			=> #t)
-  (check (srfi.string/numbers-ci<>? "ciao3" "ciao10")		=> #t)
-  (check (srfi.string/numbers-ci<>? "ciao10" "ciao3")		=> #t)
-  (check (srfi.string/numbers-ci<>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-ci<>? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-ci<>? "foo4bar3zab" "foo4bar10")	=> #t)
-  (check (srfi.string/numbers-ci<>? "foo4bar10" "foo4bar3zab")	=> #t)
-  (check (srfi.string/numbers-ci<>? "foo12" "12foo")		=> #t)
-  (check (srfi.string/numbers-ci<>? "12foo" "foo12")		=> #t)
-  (check (srfi.string/numbers-ci<>? "12bar" "foobar")		=> #t)
-  (check (srfi.string/numbers-ci<>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-ci<>? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-ci<>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-ci<>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-ci<>? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-ci<? "" "")				=> #f)
-  (check (srfi.string/numbers-ci<? "a" "")				=> #f)
-  (check (srfi.string/numbers-ci<? "" "a")				=> #t)
-  (check (srfi.string/numbers-ci<? "a" "a")				=> #f)
-  (check (srfi.string/numbers-ci<? "1" "")				=> #f)
-  (check (srfi.string/numbers-ci<? "" "1")				=> #t)
-  (check (srfi.string/numbers-ci<? "1" "1")				=> #f)
-  (check (srfi.string/numbers-ci<? "1" "2")				=> #t)
-  (check (srfi.string/numbers-ci<? "2" "1")				=> #f)
-  (check (srfi.string/numbers-ci<? "a" "ab")			=> #t)
-  (check (srfi.string/numbers-ci<? "ab" "a")			=> #f)
-  (check (srfi.string/numbers-ci<? "a" "a1")			=> #t)
-  (check (srfi.string/numbers-ci<? "a1" "a")			=> #f)
-  (check (srfi.string/numbers-ci<? "1" "1a")			=> #t)
-  (check (srfi.string/numbers-ci<? "1a" "1")			=> #f)
-  (check (srfi.string/numbers-ci<? "a" "A")				=> #f)
-  (check (srfi.string/numbers-ci<? "A" "a")				=> #f)
-
-  (check (srfi.string/numbers-ci<? "123" "45")			=> #f)
-  (check (srfi.string/numbers-ci<? "45" "123")			=> #t)
-  (check (srfi.string/numbers-ci<? "ciao3" "ciao10")		=> #t)
-  (check (srfi.string/numbers-ci<? "ciao10" "ciao3")		=> #f)
-  (check (srfi.string/numbers-ci<? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-ci<? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-ci<? "foo4bar3zab" "foo4bar10")	=> #t)
-  (check (srfi.string/numbers-ci<? "foo4bar10" "foo4bar3zab")	=> #f)
-  (check (srfi.string/numbers-ci<? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-ci<? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers-ci<? "12bar" "foobar")		=> #t)
-  (check (srfi.string/numbers-ci<? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-ci<? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-ci<? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-ci<? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-ci<? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-ci<=? "" "")				=> #t)
-  (check (srfi.string/numbers-ci<=? "a" "")				=> #f)
-  (check (srfi.string/numbers-ci<=? "" "a")				=> #t)
-  (check (srfi.string/numbers-ci<=? "a" "a")			=> #t)
-  (check (srfi.string/numbers-ci<=? "1" "")				=> #f)
-  (check (srfi.string/numbers-ci<=? "" "1")				=> #t)
-  (check (srfi.string/numbers-ci<=? "1" "1")			=> #t)
-  (check (srfi.string/numbers-ci<=? "1" "2")			=> #t)
-  (check (srfi.string/numbers-ci<=? "2" "1")			=> #f)
-  (check (srfi.string/numbers-ci<=? "a" "ab")			=> #t)
-  (check (srfi.string/numbers-ci<=? "ab" "a")			=> #f)
-  (check (srfi.string/numbers-ci<=? "a" "a1")			=> #t)
-  (check (srfi.string/numbers-ci<=? "a1" "a")			=> #f)
-  (check (srfi.string/numbers-ci<=? "1" "1a")			=> #t)
-  (check (srfi.string/numbers-ci<=? "1a" "1")			=> #f)
-  (check (srfi.string/numbers-ci<=? "a" "A")			=> #t)
-  (check (srfi.string/numbers-ci<=? "A" "a")			=> #t)
-
-  (check (srfi.string/numbers-ci<=? "123" "45")			=> #f)
-  (check (srfi.string/numbers-ci<=? "45" "123")			=> #t)
-  (check (srfi.string/numbers-ci<=? "ciao3" "ciao10")		=> #t)
-  (check (srfi.string/numbers-ci<=? "ciao10" "ciao3")		=> #f)
-  (check (srfi.string/numbers-ci<=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-ci<=? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-ci<=? "foo4bar3zab" "foo4bar10")	=> #t)
-  (check (srfi.string/numbers-ci<=? "foo4bar10" "foo4bar3zab")	=> #f)
-  (check (srfi.string/numbers-ci<=? "foo12" "12foo")		=> #f)
-  (check (srfi.string/numbers-ci<=? "12foo" "foo12")		=> #t)
-  (check (srfi.string/numbers-ci<=? "12bar" "foobar")		=> #t)
-  (check (srfi.string/numbers-ci<=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-ci<=? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-ci<=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-ci<=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-ci<=? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-ci>? "" "")				=> #f)
-  (check (srfi.string/numbers-ci>? "a" "")				=> #t)
-  (check (srfi.string/numbers-ci>? "" "a")				=> #f)
-  (check (srfi.string/numbers-ci>? "a" "a")				=> #f)
-  (check (srfi.string/numbers-ci>? "1" "")				=> #t)
-  (check (srfi.string/numbers-ci>? "" "1")				=> #f)
-  (check (srfi.string/numbers-ci>? "1" "1")				=> #f)
-  (check (srfi.string/numbers-ci>? "1" "2")				=> #f)
-  (check (srfi.string/numbers-ci>? "2" "1")				=> #t)
-  (check (srfi.string/numbers-ci>? "a" "ab")			=> #f)
-  (check (srfi.string/numbers-ci>? "ab" "a")			=> #t)
-  (check (srfi.string/numbers-ci>? "a" "a1")			=> #f)
-  (check (srfi.string/numbers-ci>? "a1" "a")			=> #t)
-  (check (srfi.string/numbers-ci>? "1" "1a")			=> #f)
-  (check (srfi.string/numbers-ci>? "1a" "1")			=> #t)
-  (check (srfi.string/numbers-ci>? "a" "A")				=> #f)
-  (check (srfi.string/numbers-ci>? "A" "a")				=> #f)
-
-  (check (srfi.string/numbers-ci>? "123" "45")			=> #t)
-  (check (srfi.string/numbers-ci>? "45" "123")			=> #f)
-  (check (srfi.string/numbers-ci>? "ciao3" "ciao10")		=> #f)
-  (check (srfi.string/numbers-ci>? "ciao10" "ciao3")		=> #t)
-  (check (srfi.string/numbers-ci>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-ci>? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-ci>? "foo4bar3zab" "foo4bar10")	=> #f)
-  (check (srfi.string/numbers-ci>? "foo4bar10" "foo4bar3zab")	=> #t)
-  (check (srfi.string/numbers-ci>? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers-ci>? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-ci>? "12bar" "foobar")		=> #f)
-  (check (srfi.string/numbers-ci>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-ci>? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-ci>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-ci>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-ci>? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-ci>=? "" "")				=> #t)
-  (check (srfi.string/numbers-ci>=? "a" "")				=> #t)
-  (check (srfi.string/numbers-ci>=? "" "a")				=> #f)
-  (check (srfi.string/numbers-ci>=? "a" "a")			=> #t)
-  (check (srfi.string/numbers-ci>=? "1" "")				=> #t)
-  (check (srfi.string/numbers-ci>=? "" "1")				=> #f)
-  (check (srfi.string/numbers-ci>=? "1" "1")			=> #t)
-  (check (srfi.string/numbers-ci>=? "1" "2")			=> #f)
-  (check (srfi.string/numbers-ci>=? "2" "1")			=> #t)
-  (check (srfi.string/numbers-ci>=? "a" "ab")			=> #f)
-  (check (srfi.string/numbers-ci>=? "ab" "a")			=> #t)
-  (check (srfi.string/numbers-ci>=? "a" "a1")			=> #f)
-  (check (srfi.string/numbers-ci>=? "a1" "a")			=> #t)
-  (check (srfi.string/numbers-ci>=? "1" "1a")			=> #f)
-  (check (srfi.string/numbers-ci>=? "1a" "1")			=> #t)
-  (check (srfi.string/numbers-ci>=? "a" "A")			=> #t)
-  (check (srfi.string/numbers-ci>=? "A" "a")			=> #t)
-
-  (check (srfi.string/numbers-ci>=? "123" "45")			=> #t)
-  (check (srfi.string/numbers-ci>=? "45" "123")			=> #f)
-  (check (srfi.string/numbers-ci>=? "ciao3" "ciao10")		=> #f)
-  (check (srfi.string/numbers-ci>=? "ciao10" "ciao3")		=> #t)
-  (check (srfi.string/numbers-ci>=? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-ci>=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-ci>=? "foo4bar3zab" "foo4bar10")	=> #f)
-  (check (srfi.string/numbers-ci>=? "foo4bar10" "foo4bar3zab")	=> #t)
-  (check (srfi.string/numbers-ci>=? "foo12" "12foo")		=> #t)
-  (check (srfi.string/numbers-ci>=? "12foo" "foo12")		=> #f)
-  (check (srfi.string/numbers-ci>=? "12bar" "foobar")		=> #f)
-  (check (srfi.string/numbers-ci>=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-ci>=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-ci>=? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-ci>=? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-ci>=? "12,10" "12.3")			=> #f)
-
-  #t)
-
-
-(parametrise ((check-test-name 'comparison-dictionary-string/number-case-sensitive))
-
-  (check (srfi.string/numbers-dictionary=? "" "")				=> #t)
-  (check (srfi.string/numbers-dictionary=? "a" "")				=> #f)
-  (check (srfi.string/numbers-dictionary=? "" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary=? "a" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary=? "1" "")				=> #f)
-  (check (srfi.string/numbers-dictionary=? "" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary=? "1" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary=? "1" "2")				=> #f)
-  (check (srfi.string/numbers-dictionary=? "2" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary=? "a" "ab")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "ab" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "a" "a1")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "a1" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "1" "1a")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "1a" "1")			=> #f)
-
-  (check (srfi.string/numbers-dictionary=? "123" "45")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "45" "123")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "ciao3" "ciao10")		=> #f)
-  (check (srfi.string/numbers-dictionary=? "ciao10" "ciao3")		=> #f)
-  (check (srfi.string/numbers-dictionary=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-dictionary=? "foo4bar3zab" "foo4bar10")	=> #f)
-  (check (srfi.string/numbers-dictionary=? "foo4bar10" "foo4bar3zab")	=> #f)
-  (check (srfi.string/numbers-dictionary=? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "12bar" "foobar")		=> #f)
-  (check (srfi.string/numbers-dictionary=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-dictionary=? "12,10" "12.3")			=> #f)
-
-  (check (srfi.string/numbers-dictionary=? "fo o4b\tar3\nza\rb10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary=? "foo4bar3zab2" "fo o4b\tar3\nza\rb10")	=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary<>? "" "")				=> #f)
-  (check (srfi.string/numbers-dictionary<>? "a" "")				=> #t)
-  (check (srfi.string/numbers-dictionary<>? "" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary<>? "a" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary<>? "1" "")				=> #t)
-  (check (srfi.string/numbers-dictionary<>? "" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary<>? "1" "1")			=> #f)
-  (check (srfi.string/numbers-dictionary<>? "1" "2")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "2" "1")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "a" "ab")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "ab" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "a" "a1")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "a1" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "1" "1a")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "1a" "1")			=> #t)
-
-  (check (srfi.string/numbers-dictionary<>? "123" "45")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "45" "123")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "ciao3" "ciao10")		=> #t)
-  (check (srfi.string/numbers-dictionary<>? "ciao10" "ciao3")		=> #t)
-  (check (srfi.string/numbers-dictionary<>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary<>? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-dictionary<>? "foo4bar3zab" "foo4bar10")	=> #t)
-  (check (srfi.string/numbers-dictionary<>? "foo4bar10" "foo4bar3zab")	=> #t)
-  (check (srfi.string/numbers-dictionary<>? "foo12" "12foo")		=> #t)
-  (check (srfi.string/numbers-dictionary<>? "12foo" "foo12")		=> #t)
-  (check (srfi.string/numbers-dictionary<>? "12bar" "foobar")		=> #t)
-  (check (srfi.string/numbers-dictionary<>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary<>? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-dictionary<>? "12,10" "12.3")			=> #t)
-
-  (check (srfi.string/numbers-dictionary<>? "fo o4b\tar3\nza\rb10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary<>? "foo4bar3zab2" "fo o4b\tar3\nza\rb10")	=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary<? "" "")				=> #f)
-  (check (srfi.string/numbers-dictionary<? "a" "")				=> #f)
-  (check (srfi.string/numbers-dictionary<? "" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary<? "a" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary<? "1" "")				=> #f)
-  (check (srfi.string/numbers-dictionary<? "" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary<? "1" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary<? "1" "2")				=> #t)
-  (check (srfi.string/numbers-dictionary<? "2" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary<? "a" "ab")			=> #t)
-  (check (srfi.string/numbers-dictionary<? "ab" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "a" "a1")			=> #t)
-  (check (srfi.string/numbers-dictionary<? "a1" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "1" "1a")			=> #t)
-  (check (srfi.string/numbers-dictionary<? "1a" "1")			=> #f)
-
-  (check (srfi.string/numbers-dictionary<? "123" "45")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "45" "123")			=> #t)
-  (check (srfi.string/numbers-dictionary<? "ciao3" "ciao10")		=> #t)
-  (check (srfi.string/numbers-dictionary<? "ciao10" "ciao3")		=> #f)
-  (check (srfi.string/numbers-dictionary<? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary<? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-dictionary<? "foo4bar3zab" "foo4bar10")	=> #t)
-  (check (srfi.string/numbers-dictionary<? "foo4bar10" "foo4bar3zab")	=> #f)
-  (check (srfi.string/numbers-dictionary<? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers-dictionary<? "12bar" "foobar")		=> #t)
-  (check (srfi.string/numbers-dictionary<? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-dictionary<? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-dictionary<? "12,10" "12.3")			=> #t)
-
-  (check (srfi.string/numbers-dictionary<? "fo o4b\tar3\nza\rb10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary<? "foo4bar3zab2" "fo o4b\tar3\nza\rb10")	=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary<=? "" "")				=> #t)
-  (check (srfi.string/numbers-dictionary<=? "a" "")				=> #f)
-  (check (srfi.string/numbers-dictionary<=? "" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary<=? "a" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "1" "")				=> #f)
-  (check (srfi.string/numbers-dictionary<=? "" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary<=? "1" "1")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "1" "2")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "2" "1")			=> #f)
-  (check (srfi.string/numbers-dictionary<=? "a" "ab")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "ab" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary<=? "a" "a1")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "a1" "a")			=> #f)
-  (check (srfi.string/numbers-dictionary<=? "1" "1a")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "1a" "1")			=> #f)
-
-  (check (srfi.string/numbers-dictionary<=? "123" "45")			=> #f)
-  (check (srfi.string/numbers-dictionary<=? "45" "123")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "ciao3" "ciao10")		=> #t)
-  (check (srfi.string/numbers-dictionary<=? "ciao10" "ciao3")		=> #f)
-  (check (srfi.string/numbers-dictionary<=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary<=? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-dictionary<=? "foo4bar3zab" "foo4bar10")	=> #t)
-  (check (srfi.string/numbers-dictionary<=? "foo4bar10" "foo4bar3zab")	=> #f)
-  (check (srfi.string/numbers-dictionary<=? "foo12" "12foo")		=> #f)
-  (check (srfi.string/numbers-dictionary<=? "12foo" "foo12")		=> #t)
-  (check (srfi.string/numbers-dictionary<=? "12bar" "foobar")		=> #t)
-  (check (srfi.string/numbers-dictionary<=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-dictionary<=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary<=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-dictionary<=? "12,10" "12.3")			=> #t)
-
-  (check (srfi.string/numbers-dictionary<=? "fo o4b\tar3\nza\rb10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary<=? "foo4bar3zab2" "fo o4b\tar3\nza\rb10")	=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary>? "" "")				=> #f)
-  (check (srfi.string/numbers-dictionary>? "a" "")				=> #t)
-  (check (srfi.string/numbers-dictionary>? "" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary>? "a" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary>? "1" "")				=> #t)
-  (check (srfi.string/numbers-dictionary>? "" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary>? "1" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary>? "1" "2")				=> #f)
-  (check (srfi.string/numbers-dictionary>? "2" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary>? "a" "ab")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "ab" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary>? "a" "a1")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "a1" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary>? "1" "1a")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "1a" "1")			=> #t)
-
-  (check (srfi.string/numbers-dictionary>? "123" "45")			=> #t)
-  (check (srfi.string/numbers-dictionary>? "45" "123")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "ciao3" "ciao10")		=> #f)
-  (check (srfi.string/numbers-dictionary>? "ciao10" "ciao3")		=> #t)
-  (check (srfi.string/numbers-dictionary>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary>? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-dictionary>? "foo4bar3zab" "foo4bar10")	=> #f)
-  (check (srfi.string/numbers-dictionary>? "foo4bar10" "foo4bar3zab")	=> #t)
-  (check (srfi.string/numbers-dictionary>? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers-dictionary>? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "12bar" "foobar")		=> #f)
-  (check (srfi.string/numbers-dictionary>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-dictionary>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-dictionary>? "12,10" "12.3")			=> #f)
-
-  (check (srfi.string/numbers-dictionary>? "fo o4b\tar3\nza\rb10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary>? "foo4bar3zab2" "fo o4b\tar3\nza\rb10")	=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary>=? "" "")				=> #t)
-  (check (srfi.string/numbers-dictionary>=? "a" "")				=> #t)
-  (check (srfi.string/numbers-dictionary>=? "" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary>=? "a" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "1" "")				=> #t)
-  (check (srfi.string/numbers-dictionary>=? "" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary>=? "1" "1")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "1" "2")			=> #f)
-  (check (srfi.string/numbers-dictionary>=? "2" "1")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "a" "ab")			=> #f)
-  (check (srfi.string/numbers-dictionary>=? "ab" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "a" "a1")			=> #f)
-  (check (srfi.string/numbers-dictionary>=? "a1" "a")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "1" "1a")			=> #f)
-  (check (srfi.string/numbers-dictionary>=? "1a" "1")			=> #t)
-
-  (check (srfi.string/numbers-dictionary>=? "123" "45")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "45" "123")			=> #f)
-  (check (srfi.string/numbers-dictionary>=? "ciao3" "ciao10")		=> #f)
-  (check (srfi.string/numbers-dictionary>=? "ciao10" "ciao3")		=> #t)
-  (check (srfi.string/numbers-dictionary>=? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary>=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-dictionary>=? "foo4bar3zab" "foo4bar10")	=> #f)
-  (check (srfi.string/numbers-dictionary>=? "foo4bar10" "foo4bar3zab")	=> #t)
-  (check (srfi.string/numbers-dictionary>=? "foo12" "12foo")		=> #t)
-  (check (srfi.string/numbers-dictionary>=? "12foo" "foo12")		=> #f)
-  (check (srfi.string/numbers-dictionary>=? "12bar" "foobar")		=> #f)
-  (check (srfi.string/numbers-dictionary>=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-dictionary>=? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-dictionary>=? "12,10" "12.3")			=> #f)
-
-  (check (srfi.string/numbers-dictionary>=? "fo o4b\tar3\nza\rb10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary>=? "foo4bar3zab2" "fo o4b\tar3\nza\rb10")	=> #f)
-
-  #t)
-
-
-(parametrise ((check-test-name 'comparison-dictionary-string/number-case-insensitive))
-
-  (check (srfi.string/numbers-dictionary-compare-ci "" "")				=> 0)
-  (check (srfi.string/numbers-dictionary-compare-ci "a" "")				=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "" "a")				=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "a" "a")			=> 0)
-  (check (srfi.string/numbers-dictionary-compare-ci "1" "")				=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "" "1")				=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "1" "1")			=> 0)
-  (check (srfi.string/numbers-dictionary-compare-ci "1" "2")			=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "2" "1")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "a" "ab")			=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "ab" "a")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "a" "a1")			=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "a1" "a")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "1" "1a")			=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "1a" "1")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "a" "A")			=> 0)
-  (check (srfi.string/numbers-dictionary-compare-ci "A" "a")			=> 0)
-
-  (check (srfi.string/numbers-dictionary-compare-ci "123" "45")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "45" "123")			=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "ciao3" "ciao10")		=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "ciao10" "ciao3")		=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "foo4bar3zab10" "foo4bar3zab2")	=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "foo4bar3zab2" "foo4bar3zab10")	=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "foo4bar3zab" "foo4bar10")	=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "foo4bar10" "foo4bar3zab")	=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "foo12" "12foo")		=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "12foo" "foo12")		=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "12bar" "foobar")		=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "12.3" "12.3")			=> 0)
-  (check (srfi.string/numbers-dictionary-compare-ci "12.3" "12.10")			=> -1)
-  (check (srfi.string/numbers-dictionary-compare-ci "12.10" "12.3")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "12.3" "12,10")			=> +1)
-  (check (srfi.string/numbers-dictionary-compare-ci "12,10" "12.3")			=> -1)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary-ci=? "" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci=? "a" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "a" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci=? "1" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "1" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci=? "1" "2")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "2" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "a" "ab")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "ab" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "a" "a1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "a1" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "1" "1a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "1a" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "a" "A")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci=? "A" "a")				=> #t)
-
-  (check (srfi.string/numbers-dictionary-ci=? "123" "45")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "45" "123")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "ciao3" "ciao10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "ciao10" "ciao3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "foo4bar3zab" "foo4bar10")		=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "foo4bar10" "foo4bar3zab")		=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "12bar" "foobar")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci=? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary-ci<>? "" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<>? "a" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "a" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<>? "1" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "1" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<>? "1" "2")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "2" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "a" "ab")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "ab" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "a" "a1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "a1" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "1" "1a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "1a" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "A" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<>? "a" "A")				=> #f)
-
-  (check (srfi.string/numbers-dictionary-ci<>? "123" "45")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "45" "123")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "ciao3" "ciao10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "ciao10" "ciao3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "foo4bar3zab" "foo4bar10")		=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "foo4bar10" "foo4bar3zab")		=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "12bar" "foobar")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<>? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<>? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary-ci<? "" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "a" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "a" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "1" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "1" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "1" "2")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "2" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "a" "ab")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "ab" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "a" "a1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "a1" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "1" "1a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "1a" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "a" "A")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "A" "a")				=> #f)
-
-  (check (srfi.string/numbers-dictionary-ci<? "123" "45")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "45" "123")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "ciao3" "ciao10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "ciao10" "ciao3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "foo4bar3zab" "foo4bar10")		=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "foo4bar10" "foo4bar3zab")		=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "12bar" "foobar")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary-ci<=? "" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "a" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "a" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "1" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "1" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "1" "2")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "2" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "a" "ab")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "ab" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "a" "a1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "a1" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "1" "1a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "1a" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "a" "A")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "A" "a")				=> #t)
-
-  (check (srfi.string/numbers-dictionary-ci<=? "123" "45")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "45" "123")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "ciao3" "ciao10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "ciao10" "ciao3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "foo4bar3zab10" "foo4bar3zab2")	=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "foo4bar3zab2" "foo4bar3zab10")	=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "foo4bar3zab" "foo4bar10")		=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "foo4bar10" "foo4bar3zab")		=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "foo12" "12foo")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "12foo" "foo12")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "12bar" "foobar")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "12.3" "12.10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci<=? "12.10" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "12.3" "12,10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci<=? "12,10" "12.3")			=> #t)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary-ci>? "" "")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "a" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "a" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "1" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "1" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "1" "2")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "2" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "a" "ab")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "ab" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "a" "a1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "a1" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "1" "1a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "1a" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "a" "A")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "A" "a")				=> #f)
-
-  (check (srfi.string/numbers-dictionary-ci>? "123" "45")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "45" "123")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "ciao3" "ciao10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "ciao10" "ciao3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "foo4bar3zab" "foo4bar10")		=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "foo4bar10" "foo4bar3zab")		=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "12bar" "foobar")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "12.3" "12.3")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>? "12,10" "12.3")			=> #f)
-
-;;; --------------------------------------------------------------------
-
-  (check (srfi.string/numbers-dictionary-ci>=? "" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "a" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "" "a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "a" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "1" "")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "" "1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "1" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "1" "2")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "2" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "a" "ab")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "ab" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "a" "a1")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "a1" "a")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "1" "1a")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "1a" "1")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "a" "A")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "A" "a")				=> #t)
-
-  (check (srfi.string/numbers-dictionary-ci>=? "123" "45")				=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "45" "123")				=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "ciao3" "ciao10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "ciao10" "ciao3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "foo4bar3zab10" "foo4bar3zab2")	=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "foo4bar3zab2" "foo4bar3zab10")	=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "foo4bar3zab" "foo4bar10")		=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "foo4bar10" "foo4bar3zab")		=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "foo12" "12foo")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "12foo" "foo12")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "12bar" "foobar")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "12.3" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "12.3" "12.10")			=> #f)
-  (check (srfi.string/numbers-dictionary-ci>=? "12.10" "12.3")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "12.3" "12,10")			=> #t)
-  (check (srfi.string/numbers-dictionary-ci>=? "12,10" "12.3")			=> #f)
-
-  #t)
-
-
 (parametrise ((check-test-name 'mapping))
 
   (check
       (let* ((str "aaaa")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-map char-upcase str beg end))
+	(srfi.string-map char-upcase str beg end))
     => "AAAA")
 
   (check
       (let* ((str "")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-map char-upcase str beg end))
+	(srfi.string-map char-upcase str beg end))
     => "")
 
 ;;; --------------------------------------------------------------------
@@ -1969,7 +720,7 @@
       (let* ((str "aaaa")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-map! char-upcase str beg end)
+	(srfi.string-map! char-upcase str beg end)
 	str)
     => "AAAA")
 
@@ -1977,7 +728,7 @@
       (let* ((str "")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-map! char-upcase str beg end)
+	(srfi.string-map! char-upcase str beg end)
 	str)
     => "")
 
@@ -1988,7 +739,7 @@
 	     (beg 0)
 	     (end (string-length str))
 	     (result ""))
-	(%substring-for-each
+	(srfi.string-for-each
 	 (lambda (ch)
 	   (set! result
 		 (string-append result
@@ -2002,7 +753,7 @@
 	     (beg 0)
 	     (end (string-length str))
 	     (result ""))
-	(%substring-for-each
+	(srfi.string-for-each
 	 (lambda (ch)
 	   (set! result
 		 (string-append result
@@ -2018,7 +769,7 @@
 	     (beg 0)
 	     (end (string-length str))
 	     (result '()))
-	(%substring-for-each-index
+	(srfi.string-for-each-index
 	 (lambda (idx)
 	   (set! result (cons idx result)))
 	 str beg end)
@@ -2030,7 +781,7 @@
 	     (beg 0)
 	     (end (string-length str))
 	     (result '()))
-	(%substring-for-each-index
+	(srfi.string-for-each-index
 	 (lambda (idx)
 	   (set! result (cons idx result)))
 	 str beg end)
@@ -2044,25 +795,25 @@
 
   (check
       (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase*! str beg end)
+	(srfi.string-titlecase! str beg end)
 	str)
     => "Abcd")
 
   (check
       (let* ((str (string-copy "123abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase*! str beg end)
+	(srfi.string-titlecase! str beg end)
 	str)
     => "123Abcd")
 
   (check
       (let* ((str (string-copy "---abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase*! str beg end)
+	(srfi.string-titlecase! str beg end)
 	str)
     => "---Abcd")
 
   (check
       (let* ((str (string-copy "abcd efgh")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase*! str beg end)
+	(srfi.string-titlecase! str beg end)
 	str)
     => "Abcd Efgh")
 
@@ -2075,14 +826,14 @@
       (let* ((str "abcd")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-fold-left cons '() str beg end))
+	(srfi.string-fold cons '() str beg end))
     => '(#\d #\c #\b #\a))
 
   (check
       (let* ((str "")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-fold-left cons '() str beg end))
+	(srfi.string-fold cons '() str beg end))
     => '())
 
 ;;; --------------------------------------------------------------------
@@ -2091,44 +842,44 @@
       (let* ((str "abcd")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-fold-right cons '() str beg end))
+	(srfi.string-fold-right cons '() str beg end))
     => '(#\a #\b #\c #\d))
 
   (check
       (let* ((str "")
 	     (beg 0)
 	     (end (string-length str)))
-	(%substring-fold-right cons '() str beg end))
+	(srfi.string-fold-right cons '() str beg end))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (string-unfold null? car cdr '(#\a #\b #\c #\d))
+      (srfi.string-unfold null? car cdr '(#\a #\b #\c #\d))
     => "abcd")
 
   (check
-      (string-unfold null? car cdr '())
+      (srfi.string-unfold null? car cdr '())
     => "")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (string-unfold-right null? car cdr '(#\a #\b #\c #\d))
+      (srfi.string-unfold-right null? car cdr '(#\a #\b #\c #\d))
     => "dcba")
 
   (check
-      (string-unfold-right null? car cdr '())
+      (srfi.string-unfold-right null? car cdr '())
     => "")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (string-tabulate (lambda (idx) (integer->char (+ 65 idx))) 4)
+      (srfi.string-tabulate (lambda (idx) (integer->char (+ 65 idx))) 4)
     => "ABCD")
 
   (check
-      (string-tabulate integer->char 0)
+      (srfi.string-tabulate integer->char 0)
     => "")
 
   )
@@ -2395,13 +1146,13 @@
 
   (check
       (let* ((str1 "abcd") (beg1 0) (str2 (string-copy "12")))
-	(srfi.string-copy*! str2 0 str1 beg1 (+ 2 beg1))
+	(srfi.string-copy! str2 0 str1 beg1 (+ 2 beg1))
 	str2)
     => "ab")
 
   (check
       (let* ((str1 "abcd") (beg1 0) (str2 ""))
-	(srfi.string-copy*! str2 0 str1 beg1 beg1)
+	(srfi.string-copy! str2 0 str1 beg1 beg1)
 	str2)
     => "")
 
@@ -2409,7 +1160,7 @@
       (guard (exc ((assertion-violation? exc)
 		   #t))
 	(let* ((str1 "abcd") (beg1 0) (str2 (string-copy "12")))
-	  (srfi.string-copy*! str2 3 str1 beg1 (+ 2 beg1))
+	  (srfi.string-copy! str2 3 str1 beg1 (+ 2 beg1))
 	  str2))
     => #t)
 
@@ -3132,115 +1883,6 @@
   #t)
 
 
-(parametrise ((check-test-name 'searching-and-replacing))
-
-  (check	;no replacing because of no match
-      (let ((src "abcdabcdabc")
-	    (ptn "A")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 1
-				    rep 0 5
-				    +inf.0))
-    => "abcdabcdabc")
-
-  (check	;replacing 3 chars
-      (let ((src "AbcdAbcdAbc")
-	    (ptn "A")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 1
-				    rep 0 5
-				    +inf.0))
-    => "12345bcd12345bcd12345bc")
-
-  (check	;replacing 3 substrings
-      (let ((src "bcABCbcABCbcdpqstABCbc")
-	    (ptn "ABC")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 3
-				    rep 0 5
-				    +inf.0))
-    => "bc12345bc12345bcdpqst12345bc")
-
-;;; --------------------------------------------------------------------
-
-  (check	;source string range
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "ABC")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 2 (- (string-length src) 2)
-				    ptn 0 3
-				    rep 0 5
-				    +inf.0))
-    => "12345bcd12345bcd12345")
-
-  (check	;pattern range
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "pqABCst")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 2 5
-				    rep 0 5
-				    +inf.0))
-    => "bc12345bcd12345bcd12345bc")
-
-  (check	;replacement range
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "ABC")
-	    (rep "pq12345st"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 3
-				    rep 2 7
-				    +inf.0))
-    => "bc12345bcd12345bcd12345bc")
-
-;;; --------------------------------------------------------------------
-
-  (check	;zero replacements count
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "ABC")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 3
-				    rep 0 5
-				    0))
-    => "bcABCbcdABCbcdABCbc")
-
-  (check	;one replacement count
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "ABC")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 3
-				    rep 0 5
-				    1))
-    => "bc12345bcdABCbcdABCbc")
-
-  (check	;two replacements count
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "ABC")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 3
-				    rep 0 5
-				    2))
-    => "bc12345bcd12345bcdABCbc")
-
-  (check	;three replacements count
-      (let ((src "bcABCbcdABCbcdABCbc")
-	    (ptn "ABC")
-	    (rep "12345"))
-	(srfi.string-search-and-replace src 0 (string-length src)
-				    ptn 0 3
-				    rep 0 5
-				    3))
-    => "bc12345bcd12345bcd12345bc")
-
-  #t)
-
-
 (parametrise ((check-test-name 'filtering))
 
   (check
@@ -3262,7 +1904,7 @@
 
   (check
       (let* ((str "abcbd") (beg 0) (end (string-length str)))
-	(%string-delete (char-set #\b #\B) str beg end))
+	(srfi.string-delete (char-set #\b #\B) str beg end))
     => "acd")
 
   (check
@@ -3350,22 +1992,22 @@
 
   (check
       (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string->list* str beg end))
+	(srfi.string->list str beg end))
     => '(#\a #\b #\c #\d))
 
   (check
       (let* ((str (string-copy "")) (beg 0) (end (string-length str)))
-	(srfi.string->list* str beg end))
+	(srfi.string->list str beg end))
     => '())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (reverse-list->string '(#\a #\b #\c #\d))
+      (srfi.reverse-list->string '(#\a #\b #\c #\d))
     => "dcba")
 
   (check
-      (reverse-list->string '())
+      (srfi.reverse-list->string '())
     => "")
 
   #f)
@@ -3494,40 +2136,40 @@
 
   (check
       (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(%xsubstring 0 5 str beg end))
+	(srfi.xsubstring 0 5 str beg end))
     => "ciao ")
 
   (check
       (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(%xsubstring 0 9 str beg end))
+	(srfi.xsubstring 0 9 str beg end))
     => "ciao ciao")
 
   (check
       (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(%xsubstring -5 5 str beg end))
+	(srfi.xsubstring -5 5 str beg end))
     => "ciao ciao ")
 
   (check
       (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(%xsubstring 2 4 str beg end))
+	(srfi.xsubstring 2 4 str beg end))
     => "ao")
 
   (check
       (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(%xsubstring -3 7 str beg end))
+	(srfi.xsubstring -3 7 str beg end))
     => "ao ciao ci")
 
   (check
       (guard (exc ((assertion-violation? exc) #t))
 	(let ((str "ciao "))
-	  (%xsubstring -3 7 str 3 3)))
+	  (srfi.xsubstring -3 7 str 3 3)))
     => #t)
 
   (check
       (guard (exc ((assertion-violation? exc)
 		   #t))
 	(let* ((str "") (beg 0) (end (string-length str)))
-	  (%xsubstring 0 5 str beg end)))
+	  (srfi.xsubstring 0 5 str beg end)))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -3582,19 +2224,19 @@
 
   (check
       (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-fill*! #\b str beg end)
+	(srfi.string-fill! #\b str beg end)
 	str)
     => "bbbb")
 
   (check
       (let* ((str (string-copy "accd")))
-	(srfi.string-fill*! #\b str 1 3)
+	(srfi.string-fill! #\b str 1 3)
 	str)
     => "abbd")
 
   (check
       (let* ((str (string-copy "")))
-	(srfi.string-fill*! #\b str 0 0)
+	(srfi.string-fill! #\b str 0 0)
 	str)
     => "")
 
@@ -3633,11 +2275,11 @@
 (parametrise ((check-test-name 'concatenate))
 
   (check
-      (string-concatenate '("ciao" " " "hello" " " "salut"))
+      (srfi.string-concatenate '("ciao" " " "hello" " " "salut"))
     => "ciao hello salut")
 
   (check
-      (string-concatenate '())
+      (srfi.string-concatenate '())
     => "")
 
 ;;; --------------------------------------------------------------------

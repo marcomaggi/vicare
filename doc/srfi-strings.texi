@@ -675,49 +675,69 @@ Comparison is simply done on individual code--points of the string.
 
 
 @defun string? @var{obj}
-@rnrs{5} Return @true{} if @var{obj} is a string, otherwise return
+Return @true{} if @var{obj} is a string, otherwise return @false{}.
+@end defun
+
+
+@defun string-null? @var{str}
+Return @true{} if @var{str} is the empty string, otherwise return
 @false{}.
 @end defun
 
 
-@defun string-null? @var{s}
-Return @true{} if @var{obj} is the empty string, otherwise return
-@false{}.
-@end defun
-
-
-@defun string-every @var{char/char-set/pred} @var{s} [@var{start} @var{end}]
-@defunx string-any @var{char/char-set/pred} @var{s} [@var{start} @var{end}]
-Check to see if the given criteria is true of every/any character in
-@var{s}, proceeding from left (index @var{start}) to right (index
+@defun string-every @var{char/char-set/pred} @var{str}
+@defunx string-every @var{char/char-set/pred} @var{str} @var{start}
+@defunx string-every @var{char/char-set/pred} @var{str} @var{start} @var{end}
+Check to see if the given criteria is true of every character in
+@var{str}, proceeding from left (index @var{start}) to right (index
 @var{end}).
 
 If @var{char/char-set/pred} is a character, it is tested for equality
-with the elements of @var{s}.
+with the elements of @var{str}.
 
-If @var{char/char-set/pred} is a character set, the elements of @var{s}
-are tested for membership in the set.
+If @var{char/char-set/pred} is a character set, the elements of
+@var{str} are tested for membership in the set.
 
 If @var{char/char-set/pred} is a predicate procedure, it is applied to
-the elements of @var{s}.  The predicate is ``witness--generating'':
+the elements of @var{str}.  The predicate is ``witness--generating'': if
+@func{string-every} returns true, the returned true value is the one
+produced by the final application of the predicate to @code{str[end]}.
+If @func{string-every} is applied to an empty sequence of characters, it
+simply returns @true{}.
 
-@itemize
-@item
-If @func{string-any} returns true, the returned true value is the one
+If @func{string-every} applies the predicate to the final element of the
+selected sequence (i.e. @code{s[end-1]}), that final application is a
+tail call.
+
+The names of this procedure does not end with a question mark; this is
+to indicate that, in the predicate case, they do not return a simple
+boolean (@true{} or @false{}), but a general value.
+@end defun
+
+
+@defun string-any @var{char/char-set/pred} @var{str}
+@defunx string-any @var{char/char-set/pred} @var{str} @var{start}
+@defunx string-any @var{char/char-set/pred} @var{str} @var{start} @var{end}
+Check to see if the given criteria is true of every/any character in
+@var{str}, proceeding from left (index @var{start}) to right (index
+@var{end}).
+
+If @var{char/char-set/pred} is a character, it is tested for equality
+with the elements of @var{str}.
+
+If @var{char/char-set/pred} is a character set, the elements of
+@var{str} are tested for membership in the set.
+
+If @var{char/char-set/pred} is a predicate procedure, it is applied to
+the elements of @var{str}.  The predicate is ``witness--generating'': if
+@func{string-any} returns true, the returned true value is the one
 produced by the application of the predicate.
 
-@item
-If @func{string-every} returns true, the returned true value is the one
-produced by the final application of the predicate to @code{s[end]}.  If
-@func{string-every} is applied to an empty sequence of characters, it
-simply returns @true{}.
-@end itemize
+If @func{string-any} applies the predicate to the final element of the
+selected sequence (i.e. @code{s[end-1]}), that final application is a
+tail call.
 
-If @func{string-every} or @func{string-any} apply the predicate to the
-final element of the selected sequence (i.e. @code{s[end-1]}), that
-final application is a tail call.
-
-The names of these procedures do not end with a question mark; this is
+The name of this procedures does not end with a question mark; this is
 to indicate that, in the predicate case, they do not return a simple
 boolean (@true{} or @false{}), but a general value.
 @end defun
