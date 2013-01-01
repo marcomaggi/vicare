@@ -761,7 +761,7 @@ Assuming that @var{str} is an already validated string: succeed if both
 @var{start} and @var{past} are fixnums satisfying the constraints:
 
 @example
-0 <= @var{start} < (string-length @var{str})
+0 <= @var{start} <= (string-length @var{str})
 @var{start} <= @var{past} <= (string-length @var{str})
 @end example
 
@@ -832,7 +832,7 @@ Assuming that @var{vec} is an already validated vector: succeed if both
 @var{start} and @var{past} are fixnums satisfying the constraints:
 
 @example
-0 <= @var{start} < (vector-length @var{vec})
+0 <= @var{start} <= (vector-length @var{vec})
 @var{start} <= @var{past} <= (vector-length @var{vec})
 @end example
 
@@ -904,7 +904,7 @@ Assuming that @var{bv} is an already validated bytevector: succeed if
 both @var{start} and @var{past} are fixnums satisfying the constraints:
 
 @example
-0 <= @var{start} < (bytevector-length @var{bv})
+0 <= @var{start} <= (bytevector-length @var{bv})
 @var{start} <= @var{past} <= (bytevector-length @var{bv})
 @end example
 

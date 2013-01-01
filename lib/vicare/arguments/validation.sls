@@ -1045,7 +1045,7 @@
 
 (define-argument-validation (start-and-past-for-string who str start past)
   ;;We assume that STR has already been validated as string.
-  (and (index-for-string? str start)
+  (and (one-off-index-for-string? str start)
        (one-off-index-for-string? str past)
        ($fx<= start past))
   (assertion-violation who
@@ -1112,7 +1112,7 @@
 
 (define-argument-validation (start-and-past-for-vector who vec start past)
   ;;We assume that VEC has already been validated as vector.
-  (and (index-for-vector? vec start)
+  (and (one-off-index-for-vector? vec start)
        (one-off-index-for-vector? vec past)
        ($fx<= start past))
   (assertion-violation who
@@ -1179,7 +1179,7 @@
 
 (define-argument-validation (start-and-past-for-bytevector who vec start past)
   ;;We assume that VEC has already been validated as bytevector.
-  (and (index-for-bytevector? vec start)
+  (and (one-off-index-for-bytevector? vec start)
        (one-off-index-for-bytevector? vec past)
        ($fx<= start past))
   (assertion-violation who
