@@ -74,34 +74,36 @@
 	    ($cdddr		cdddr)
 	    ($caddr		caddr))
 
-    (rename ($fxzero?	fxzero?)
-	    ($fxadd1	fxadd1)		;increment
-	    ($fxsub1	fxsub1)		;decrement
-	    ($fxneg	fxneg)		;negation
-	    ($fxsra	fxsra)		;shift right
-	    ($fxsll	fxsll)		;shift left
-	    ($fxlogor	fxlogor)	;inclusive logic OR
-	    ($fxlogxor	fxlogxor)	;exlusive logic OR
-	    ($fxlogand	fxlogand)	;logic AND
-	    ($fxlognot	fxlognot)	;logic not
-	    ($fxlognot	fxnot)		;logic not
-	    ($fx+	fx+)
-	    ($fx-	fx-)
-	    ($fx*	fx*)
-	    ($fx<	fx<)
-	    ($fx>	fx>)
-	    ($fx>=	fx>=)
-	    ($fx<=	fx<=)
-	    ($fx=	fx=))
+    (rename ($fxzero?		fxzero?)
+	    ($fxnegative?	fxnegative?)
+	    ($fxpositive?	fxpositive?)
+	    ($fxadd1		fxadd1)		;increment
+	    ($fxsub1		fxsub1)		;decrement
+	    ($fxneg		fxneg)		;negation
+	    ($fxsra		fxsra)		;shift right
+	    ($fxsll		fxsll)		;shift left
+	    ($fxlogor		fxlogor)	;inclusive logic OR
+	    ($fxlogxor		fxlogxor)	;exlusive logic OR
+	    ($fxlogand		fxlogand)	;logic AND
+	    ($fxlognot		fxlognot)	;logic not
+	    ($fxlognot		fxnot)		;logic not
+	    ($fx+		fx+)
+	    ($fx-		fx-)
+	    ($fx*		fx*)
+	    ($fx<		fx<)
+	    ($fx>		fx>)
+	    ($fx>=		fx>=)
+	    ($fx<=		fx<=)
+	    ($fx=		fx=))
 
-    (rename ($fxand	fxand)		;multiple arguments AND
-	    ($fxior	fxior)		;multiple arguments inclusive OR
-	    ($fxxor	fxxor)		;multiple arguments exclusive OR
-	    ($fxmax	fxmax)		;multiple arguments max
-	    ($fxadd2	fxadd2)
-	    ($fxadd3	fxadd3)
-	    ($fxadd4	fxadd4)
-	    ($fxincr!	fxincr!))
+    (rename ($fxand		fxand)		;multiple arguments AND
+	    ($fxior		fxior)		;multiple arguments inclusive OR
+	    ($fxxor		fxxor)		;multiple arguments exclusive OR
+	    ($fxmax		fxmax)		;multiple arguments max
+	    ($fxadd2		fxadd2)
+	    ($fxadd3		fxadd3)
+	    ($fxadd4		fxadd4)
+	    ($fxincr!		fxincr!))
 
 ;;; --------------------------------------------------------------------
 
