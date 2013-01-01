@@ -253,6 +253,141 @@
   #f)
 
 
+(parametrise ((check-test-name 'lists))
+
+  (check
+      (let* ((str (string-copy "abcd"))
+	     (beg 0)
+	     (end (string-length str)))
+	(srfi.string->list str beg end))
+    => '(#\a #\b #\c #\d))
+
+  (check
+      (let* ((str (string-copy ""))
+	     (beg 0)
+	     (end (string-length str)))
+	(srfi.string->list str beg end))
+    => '())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.list->string '(#\a #\b #\c #\d))
+    => "abcd")
+
+  (check
+      (srfi.list->string '())
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.reverse-list->string '(#\a #\b #\c #\d))
+    => "dcba")
+
+  (check
+      (srfi.reverse-list->string '())
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "," 'infix)
+    => "c,i,a,o")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "," 'strict-infix)
+    => "c,i,a,o")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "," 'suffix)
+    => "c,i,a,o,")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "," 'prefix)
+    => ",c,i,a,o")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-join '() "," 'infix)
+    => "")
+
+  (check
+      (guard (exc ((assertion-violation? exc)
+		   #t))
+	(srfi.string-join '() "," 'strict-infix))
+    => #t)
+
+  (check
+      (srfi.string-join '() "," 'suffix)
+    => "")
+
+  (check
+      (srfi.string-join '() "," 'prefix)
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-join '("c") "," 'infix)
+    => "c")
+
+  (check
+      (srfi.string-join '("c") "," 'strict-infix)
+    => "c")
+
+  (check
+      (srfi.string-join '("c") "," 'suffix)
+    => "c,")
+
+  (check
+      (srfi.string-join '("c") "," 'prefix)
+    => ",c")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o"))
+    => "c i a o")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "" 'infix)
+    => "ciao")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "" 'strict-infix)
+    => "ciao")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "" 'suffix)
+    => "ciao")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") "" 'prefix)
+    => "ciao")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") ",;;" 'infix)
+    => "c,;;i,;;a,;;o")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") ",;;" 'strict-infix)
+    => "c,;;i,;;a,;;o")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") ",;;" 'suffix)
+    => "c,;;i,;;a,;;o,;;")
+
+  (check
+      (srfi.string-join '("c" "i" "a" "o") ",;;" 'prefix)
+    => ",;;c,;;i,;;a,;;o")
+
+  #f)
+
+
 (parametrise ((check-test-name 'comparison-lexicographic-case-sensitive))
 
   (check
@@ -2017,32 +2152,6 @@
   )
 
 
-(parametrise ((check-test-name 'lists))
-
-  (check
-      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string->list str beg end))
-    => '(#\a #\b #\c #\d))
-
-  (check
-      (let* ((str (string-copy "")) (beg 0) (end (string-length str)))
-	(srfi.string->list str beg end))
-    => '())
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.reverse-list->string '(#\a #\b #\c #\d))
-    => "dcba")
-
-  (check
-      (srfi.reverse-list->string '())
-    => "")
-
-  #f)
-
-;;; --------------------------------------------------------------------
-
 (parametrise ((check-test-name 'tokenize))
 
   (check
@@ -2065,100 +2174,6 @@
   #f)
 
 ;;; --------------------------------------------------------------------
-
-(parametrise ((check-test-name 'join))
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "," 'infix)
-    => "c,i,a,o")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "," 'strict-infix)
-    => "c,i,a,o")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "," 'suffix)
-    => "c,i,a,o,")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "," 'prefix)
-    => ",c,i,a,o")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.string-join '() "," 'infix)
-    => "")
-
-  (check
-      (guard (exc ((assertion-violation? exc)
-		   #t))
-	(srfi.string-join '() "," 'strict-infix))
-    => #t)
-
-  (check
-      (srfi.string-join '() "," 'suffix)
-    => "")
-
-  (check
-      (srfi.string-join '() "," 'prefix)
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.string-join '("c") "," 'infix)
-    => "c")
-
-  (check
-      (srfi.string-join '("c") "," 'strict-infix)
-    => "c")
-
-  (check
-      (srfi.string-join '("c") "," 'suffix)
-    => "c,")
-
-  (check
-      (srfi.string-join '("c") "," 'prefix)
-    => ",c")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "" 'infix)
-    => "ciao")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "" 'strict-infix)
-    => "ciao")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "" 'suffix)
-    => "ciao")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") "" 'prefix)
-    => "ciao")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") ",;;" 'infix)
-    => "c,;;i,;;a,;;o")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") ",;;" 'strict-infix)
-    => "c,;;i,;;a,;;o")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") ",;;" 'suffix)
-    => "c,;;i,;;a,;;o,;;")
-
-  (check
-      (srfi.string-join '("c" "i" "a" "o") ",;;" 'prefix)
-    => ",;;c,;;i,;;a,;;o")
-
-  )
 
 
 (parametrise ((check-test-name 'replicating))

@@ -772,17 +772,15 @@ to the indices is not specified.
 @subsubsection List and string conversion
 
 
-@defun string->list @var{s} [@var{start} @var{end}]
+@defun string->list @var{str}
+@defunx string->list @var{str} @var{start}
+@defunx string->list @var{str} @var{start} @var{end}
 @defunx list->string @var{char-list}
-@rnrs{5}+ @func{string->list} returns a newly allocated list of the
-characters that make up the given string.  @func{list->string} returns a
-newly allocated string formed from the characters in the list
-@var{char-list}, which must be a list of characters.
-@func{string->list} and @func{list->string} are inverses so far as
-@func{equal?} is concerned.
-
-@func{string->list} is extended from the @rnrs{5} definition to take
-optional @var{start}/@var{end} arguments.
+@func{string->list} returns a newly allocated list of the characters
+that make up the given string.  @func{list->string} returns a newly
+allocated string formed from the characters in the list @var{char-list},
+which must be a list of characters.  @func{string->list} and
+@func{list->string} are inverses so far as @func{equal?} is concerned.
 @end defun
 
 
@@ -800,7 +798,9 @@ accumulate an answer in a reverse--order list.  See also
 @end defun
 
 
-@defun string-join @var{string-list} [@var{delimiter} @var{grammar}]
+@defun string-join @var{string-list}
+@defunx string-join @var{string-list} @var{delimiter}
+@defunx string-join @var{string-list} @var{delimiter} @var{grammar}
 This procedure is a simple unparser: it pastes strings together using
 the @var{delimiter} string.
 
@@ -813,7 +813,7 @@ is used, and defaults to @code{infix}.  Supported values for
 Means an infix or separator grammar: insert the delimiter between list
 elements.  An empty list will produce an empty string; note, however,
 that parsing an empty string with an infix or separator grammar is
-ambiguous: Is it an empty list, or a list of one element, the empty
+ambiguous: is it an empty list, or a list of one element, the empty
 string?
 
 @item strict-infix
@@ -836,18 +836,18 @@ Examples:
 
 @example
 (string-join '("foo" "bar" "baz") ":")
-=> "foo:bar:baz"
+@result{} "foo:bar:baz"
 
 (string-join '("foo" "bar" "baz") ":" 'suffix)
-=> "foo:bar:baz:"
+@result{} "foo:bar:baz:"
 
 ;; Infix grammar is ambiguous wrt empty list vs. empty string,
-(string-join '()   ":") => ""
-(string-join '("") ":") => ""
+(string-join '()   ":") @result{} ""
+(string-join '("") ":") @result{} ""
 
 ;; but suffix & prefix grammars are not.
-(string-join '()   ":" 'suffix) => ""
-(string-join '("") ":" 'suffix) => ":"
+(string-join '()   ":" 'suffix) @result{} ""
+(string-join '("") ":" 'suffix) @result{} ":"
 @end example
 @end defun
 

@@ -212,19 +212,10 @@
 	   ((procedure? ?criterion)	?pr-body0 ?pr-body ...)
 	   (else			?el-body0 ?el-body ...)))))
 
-
-;;;; constructors
-
-(define (string-tabulate proc len)
-  (define who 'string-tabulate)
-  (with-arguments-validation (who)
-      ((procedure		proc)
-       (non-negative-fixnum	len))
-    (let ((str (make-string len)))
-      (do ((i ($fxsub1 len) ($fxsub1 i)))
-	  (($fxnegative? i)
-	   str)
-	($string-set! str i (proc i))))))
+(define-argument-validation (list-of-strings who obj)
+  (and (list? obj)
+       (for-all string? obj))
+  (assertion-violation who "expected list of strings as argument" obj))
 
 
 ;;;; predicates
@@ -356,6 +347,131 @@
   #| end of module: string-any |# )
 
 
+;;;; constructors
+
+(define (string-tabulate proc len)
+  (define who 'string-tabulate)
+  (with-arguments-validation (who)
+      ((procedure		proc)
+       (non-negative-fixnum	len))
+    (let ((str (make-string len)))
+      (do ((i ($fxsub1 len) ($fxsub1 i)))
+	  (($fxnegative? i)
+	   str)
+	($string-set! str i (proc i))))))
+
+
+;;;; strings and lists
+
+(module (string->list)
+  (define who 'string->list)
+
+  (define string->list
+    (case-lambda
+     ((str)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(%string->list str 0 ($string-length str))))
+     ((str start)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (index-for-string	str start))
+	(%string->list str start ($string-length str))))
+     ((str start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (start-and-past-for-string	str start past))
+	(%string->list str start past)))))
+
+  (define (%string->list str start past)
+    (do ((i ($fxsub1 past) ($fxsub1 i))
+	 (result '() (cons ($string-ref str i) result)))
+	(($fx< i start)
+	 result)))
+
+  #| end of module: string->list |# )
+
+(define (reverse-list->string clist)
+  (let* ((len (length clist))
+	 (s (make-string len)))
+    (do ((i (- len 1) (- i 1))   (clist clist (cdr clist)))
+	((not (pair? clist)))
+      (string-set! s i (car clist)))
+    s))
+
+(module (string-join)
+  (define who 'string-join)
+  (define default-delimiter " ")
+  (define default-grammar   'infix)
+
+  (define string-join
+    (case-lambda
+     ((strings)
+      (with-arguments-validation (who)
+	  ((list-of-strings	strings))
+	(%string-join strings default-delimiter default-grammar)))
+
+     ((strings delim)
+      (with-arguments-validation (who)
+	  ((list-of-strings	strings)
+	   (delimiter		delim))
+	(%string-join strings delim default-grammar)))
+
+     ((strings delim grammar)
+      (with-arguments-validation (who)
+	  ((list-of-strings	strings)
+	   (delimiter		delim)
+	   (grammar		grammar))
+	(%string-join strings delim grammar)))))
+
+  (define (%string-join strings delim grammar)
+    (cond ((pair? strings)
+	   (string-concatenate
+	    (case grammar
+	      ((infix strict-infix)
+	       (cons (car strings)
+		     (%join-with-delim delim (cdr strings) '())))
+	      ((prefix)
+	       (%join-with-delim delim strings '()))
+	      ((suffix)
+	       (cons (car strings)
+		     (%join-with-delim delim (cdr strings) (list delim))))
+	      (else
+	       (assertion-violation 'string-join
+		 "illegal join grammar" grammar)))))
+
+	  ((not (null? strings))
+	   (assertion-violation 'string-join
+	     "STRINGS parameter is not a list" strings))
+
+	  ;; here we know that STRINGS is the empty list
+	  ((eq? grammar 'strict-infix)
+	   (assertion-violation who
+	     "empty list cannot be joined with STRICT-INFIX grammar."))
+
+	  ;;Special-cased for infix grammar.
+	  (else "")))
+
+  (define (%join-with-delim delim ell final)
+    (let loop ((ell ell))
+      (if (pair? ell)
+	  (cons delim
+		(cons (car ell)
+		      (loop (cdr ell))))
+	final)))
+
+  (define-argument-validation (grammar who obj)
+    (and (symbol? obj)
+	 (memq obj '(infix strict-infix suffix prefix)))
+    (assertion-violation who "invalid grammar argument" obj))
+
+  (define-argument-validation (delimiter who obj)
+    (string? obj)
+    (assertion-violation who "expected string as delimiter argument" obj))
+
+  #| end of module: string-join |# )
+
+
 ;;;; lexicographic comparison
 
 (define (%true-string-compare string-prefix-length-proc char-less-proc
@@ -484,18 +600,6 @@
 
 
 ;;;; mapping
-
-(define (=* . args)
-  ;;This exists because some implementations (Mosh) do not allow = to be
-  ;;called with less than 2 arguments.
-  (if (null? args)
-      #t
-    (let loop ((val  (car args))
-	       (args (cdr args)))
-      (or (null? args)
-	  (let ((new-val (car args)))
-	    (and (= val new-val)
-		 (loop new-val (cdr args))))))))
 
 (module (string-map)
   (define who 'string-map)
@@ -698,7 +802,7 @@
 
 (define (string-fold kons knil vec0 . strings)
   (let ((strings (cons vec0 strings)))
-    (if (apply =* (map string-length strings))
+    (if (apply = (map string-length strings))
 	(let ((len (string-length vec0)))
 	  (let loop ((i     0)
 		     (knil  knil))
@@ -713,7 +817,7 @@
 
 (define (string-fold-right kons knil vec0 . strings)
   (let* ((strings  (cons vec0 strings)))
-    (if (apply =* (map string-length strings))
+    (if (apply = (map string-length strings))
 	(let ((len (%strings-list-min-length strings)))
 	  (let loop ((i     (- len 1))
 		     (knil  knil))
@@ -1178,54 +1282,7 @@
       ans)))
 
 
-;;;; strings and lists
-
-(define (reverse-list->string clist)
-  (let* ((len (length clist))
-	 (s (make-string len)))
-    (do ((i (- len 1) (- i 1))   (clist clist (cdr clist)))
-	((not (pair? clist)))
-      (string-set! s i (car clist)))
-    s))
-
-(define (string->list str start past)
-  (do ((i (- past 1) (- i 1))
-       (result '() (cons (string-ref str i) result)))
-      ((< i start) result)))
-
-(define (string-join strings delim grammar)
-  (define (join-with-delim ell final)
-    (let loop ((ell ell))
-      (if (pair? ell)
-	  (cons delim
-		(cons (car ell)
-		      (loop (cdr ell))))
-	final)))
-  (cond ((pair? strings)
-	 (string-concatenate
-	  (case grammar
-	    ((infix strict-infix)
-	     (cons (car strings)
-		   (join-with-delim (cdr strings) '())))
-	    ((prefix)
-	     (join-with-delim strings '()))
-	    ((suffix)
-	     (cons (car strings)
-		   (join-with-delim (cdr strings) (list delim))))
-	    (else
-	     (assertion-violation 'string-join
-	       "illegal join grammar" grammar)))))
-
-	((not (null? strings))
-	 (assertion-violation 'string-join
-	   "STRINGS parameter is not a list" strings))
-
-	;; here we know that STRINGS is the empty list
-	((eq? grammar 'strict-infix)
-	 (assertion-violation 'string-join
-	   "empty list cannot be joined with STRICT-INFIX grammar."))
-
-	(else ""))) ; Special-cased for infix grammar.
+;;;; misc
 
 (define (string-tokenize token-set str start past)
   (let loop ((i		past)
