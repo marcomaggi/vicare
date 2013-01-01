@@ -215,43 +215,16 @@
 
 ;;;; constructors
 
-(define (string-concatenate strings)
-  (let* ((total (do ((strings strings (cdr strings))
-		     (i 0 (+ i (string-length (car strings)))))
-		    ((not (pair? strings))
-		     i)))
-	 (result (make-string total)))
-    (let lp ((i 0) (strings strings))
-      (if (pair? strings)
-	  (let* ((s (car strings))
-		 (slen (string-length s)))
-	    (string-copy! result i s 0 slen)
-	    (lp (+ i slen) (cdr strings)))))
-    result))
-
-(define (string-concatenate-reverse string-list final past)
-  (let* ((len (let loop ((sum 0) (lis string-list))
-		(if (pair? lis)
-		    (loop (+ sum (string-length (car lis))) (cdr lis))
-		  sum)))
-	 (result (make-string (+ past len))))
-    (string-copy! result len final 0 past)
-    (let loop ((i len) (lis string-list))
-      (if (pair? lis)
-	  (let* ((s   (car lis))
-		 (lis (cdr lis))
-		 (slen (string-length s))
-		 (i (- i slen)))
-	    (string-copy! result i s 0 slen)
-	    (loop i lis))))
-    result))
-
 (define (string-tabulate proc len)
-  (let ((s (make-string len)))
-    (do ((i (- len 1) (- i 1)))
-	((< i 0))
-      (string-set! s i (proc i)))
-    s))
+  (define who 'string-tabulate)
+  (with-arguments-validation (who)
+      ((procedure		proc)
+       (non-negative-fixnum	len))
+    (let ((str (make-string len)))
+      (do ((i ($fxsub1 len) ($fxsub1 i)))
+	  (($fxnegative? i)
+	   str)
+	($string-set! str i (proc i))))))
 
 
 ;;;; predicates
@@ -1352,6 +1325,40 @@
 	   (string-copy! dst-str i src-str src-start (+ src-start (- total-chars (- i dst-start)))))
 
 	(string-copy! dst-str i src-str src-start src-past))))) ; Copy a whole span.
+
+
+;;;; concatenating
+
+(define (string-concatenate strings)
+  (let* ((total (do ((strings strings (cdr strings))
+		     (i 0 (+ i (string-length (car strings)))))
+		    ((not (pair? strings))
+		     i)))
+	 (result (make-string total)))
+    (let lp ((i 0) (strings strings))
+      (if (pair? strings)
+	  (let* ((s (car strings))
+		 (slen (string-length s)))
+	    (string-copy! result i s 0 slen)
+	    (lp (+ i slen) (cdr strings)))))
+    result))
+
+(define (string-concatenate-reverse string-list final past)
+  (let* ((len (let loop ((sum 0) (lis string-list))
+		(if (pair? lis)
+		    (loop (+ sum (string-length (car lis))) (cdr lis))
+		  sum)))
+	 (result (make-string (+ past len))))
+    (string-copy! result len final 0 past)
+    (let loop ((i len) (lis string-list))
+      (if (pair? lis)
+	  (let* ((s   (car lis))
+		 (lis (cdr lis))
+		 (slen (string-length s))
+		 (i (- i slen)))
+	    (string-copy! result i s 0 slen)
+	    (loop i lis))))
+    result))
 
 
 ;;;; reverse, replace

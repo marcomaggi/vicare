@@ -747,21 +747,21 @@ boolean (@true{} or @false{}), but a general value.
 @subsubsection Constructors
 
 
-@defun make-string @var{len} [@var{char}]
-@rnrs{5} Return a newly allocated string of length @var{len}.  If
-@var{char} is given, then all elements of the string are initialized to
-@var{char}, otherwise the contents of the string are unspecified.
+@defun make-string @var{len}
+@defunx make-string @var{len} @var{char}
+Return a newly allocated string of length @var{len}.  If @var{char} is
+given, then all elements of the string are initialized to @var{char},
+otherwise the contents of the string are unspecified.
 @end defun
 
 
-@defun string @var{char1} ...
-@rnrs{5} Return a newly allocated string composed of the argument
-characters.
+@defun string @var{char} ...
+Return a newly allocated string composed of the argument characters.
 @end defun
 
 
 @defun string-tabulate @var{proc} @var{len}
-@var{proc} is an @func{integer->char} procedure.  Construct a string of
+@var{proc} is an integer--to--char procedure.  Construct a string of
 size @var{len} by applying @var{proc} to each index to produce the
 corresponding string element. The order in which @var{proc} is applied
 to the indices is not specified.

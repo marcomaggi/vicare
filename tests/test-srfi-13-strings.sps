@@ -214,6 +214,45 @@
   #f)
 
 
+(parametrise ((check-test-name	'constructors))
+
+  (check
+      (let ((S (srfi.make-string 4)))
+	(and (string? S)
+	     (= 4 (string-length S))))
+    => #t)
+
+  (check
+      (srfi.make-string 4 #\a)
+    => "aaaa")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string)
+    => "")
+
+  (check
+      (srfi.string #\a)
+    => "a")
+
+  (check
+      (srfi.string #\a #\a #\a #\a)
+    => "aaaa")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-tabulate (lambda (idx) (integer->char (+ 65 idx))) 4)
+    => "ABCD")
+
+  (check
+      (srfi.string-tabulate integer->char 0)
+    => "")
+
+  #f)
+
+
 (parametrise ((check-test-name 'comparison-lexicographic-case-sensitive))
 
   (check
@@ -872,17 +911,7 @@
       (srfi.string-unfold-right null? car cdr '())
     => "")
 
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.string-tabulate (lambda (idx) (integer->char (+ 65 idx))) 4)
-    => "ABCD")
-
-  (check
-      (srfi.string-tabulate integer->char 0)
-    => "")
-
-  )
+  #f)
 
 
 (parametrise ((check-test-name 'selecting))
