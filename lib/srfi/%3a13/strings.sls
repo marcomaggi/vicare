@@ -142,6 +142,9 @@
     string-take			string-take-right
     string-drop			string-drop-right
 
+    ;; modification
+    string-fill!		string-set!
+
     ;; padding and trimming
     string-trim			string-trim-right	string-trim-both
     string-pad			string-pad-right
@@ -167,9 +170,6 @@
 
     ;; replicating
     xsubstring			string-xcopy!
-
-    ;; mutating
-    string-fill!		string-swap!		string-set!
 
     ;; reverse and replace
     string-reverse		string-reverse!		string-replace)
@@ -861,6 +861,41 @@
       (%string-trim-right/pred str pred start ($string-length str))))
 
   #| end of module: string-trim-both |# )
+
+
+;;;; modification
+
+(module (string-fill! %string-fill!)
+  (define who 'string-fill!)
+
+  (define string-fill!
+    (case-lambda
+     ((fill-char str)
+      (with-arguments-validation (who)
+	  ((char	fill-char)
+	   (string	str))
+	(%string-fill! fill-char str 0 ($string-length str))))
+
+     ((fill-char str start)
+      (with-arguments-validation (who)
+	  ((char			fill-char)
+	   (string			str)
+	   (one-off-index-for-string	str start))
+	(%string-fill! fill-char str start ($string-length str))))
+
+     ((fill-char str start past)
+      (with-arguments-validation (who)
+	  ((char			fill-char)
+	   (string			str)
+	   (start-and-past-for-string	str start past))
+	(%string-fill! fill-char str start past)))))
+
+  (define (%string-fill! fill-char str start past)
+    (do ((i ($fxsub1 past) ($fxsub1 i)))
+	(($fx< i start))
+      ($string-set! str i fill-char)))
+
+  #| end of module: string-fill! |# )
 
 
 ;;;; lexicographic comparison
@@ -1846,29 +1881,6 @@
     (let ((ci (string-ref str i)))
       (string-set! str i (string-ref str j))
       (string-set! str j ci))))
-
-
-;;;; mutating
-
-(define string-fill!
-  (case-lambda
-   ((fill-char str)
-    (string-fill! fill-char str 0     (string-length str)))
-   ((fill-char str start)
-    (string-fill! fill-char str start (string-length str)))
-   ((fill-char str start past)
-    (do ((i (- past 1) (- i 1)))
-	((< i start))
-      (string-set! str i fill-char)))))
-
-(define (string-swap! str i j)
-  (when (zero? (string-length str))
-    (assertion-violation 'string-swap!
-      "attempt to swap elements in an empty string"))
-  (when (not (= i j))
-    (let ((x (string-ref str i)))
-      (string-set! str i (string-ref str j))
-      (string-set! str j x))))
 
 
 ;;;; knuth-morris-pratt search algorithm

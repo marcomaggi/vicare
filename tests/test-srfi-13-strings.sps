@@ -794,6 +794,85 @@
   #f)
 
 
+(parametrise ((check-test-name 'modification))
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-set! str 0 #\A)
+	str)
+    => "Abcd")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-set! str 3 #\D)
+	str)
+    => "abcD")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str)
+	str)
+    => "BBBB")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 0 4)
+	str)
+    => "BBBB")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 1 4)
+	str)
+    => "aBBB")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 2 4)
+	str)
+    => "abBB")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 3 4)
+	str)
+    => "abcB")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 4 4)
+	str)
+    => "abcd")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 0 3)
+	str)
+    => "BBBd")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 0 2)
+	str)
+    => "BBcd")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 2 2)
+	str)
+    => "abcd")
+
+  (check
+      (let ((str (string-copy "abcd")))
+	(srfi.string-fill! #\B str 2 3)
+	str)
+    => "abBd")
+
+  #f)
+
+
 (parametrise ((check-test-name 'comparison-lexicographic-case-sensitive))
 
   (check
@@ -2384,29 +2463,6 @@
 	     (result (string-copy "")))
 	  (srfi.string-xcopy! 0 5 result 0 (string-length result) str beg end)))
     => #t)
-
-  )
-
-
-(parametrise ((check-test-name 'filling))
-
-  (check
-      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-fill! #\b str beg end)
-	str)
-    => "bbbb")
-
-  (check
-      (let* ((str (string-copy "accd")))
-	(srfi.string-fill! #\b str 1 3)
-	str)
-    => "abbd")
-
-  (check
-      (let* ((str (string-copy "")))
-	(srfi.string-fill! #\b str 0 0)
-	str)
-    => "")
 
   )
 

@@ -1044,31 +1044,21 @@ Example:
 @subsubsection Modification
 
 
-@defun string-set! @var{s} @var{i} @var{char}
-@rnrs{5} @var{i} must be a valid index of @var{s}.  @func{string-set!}
-stores @var{char} in element @var{i} of @var{s}.  Constant string
-literals appearing in code are immutable; it is an error to use them in
-a @func{string-set!}.
+@defun string-set! @var{str} @var{i} @var{char}
+@var{i} must be a valid index of @var{str}.  Store @var{char} in element
+@var{i} of @var{str}.
 
-Example:
-
-@example
-(define (f) (make-string 3 #\*))
-(define (g) "***")
-(string-set! (f) 0 #\?)                ==>  unspecified
-(string-set! (g) 0 #\?)                ==>  error
-(string-set! (symbol->string 'immutable)
-             3
-             #\?)                      ==>  error
-@end example
+@quotation
+@strong{NOTE} Constant string literals appearing in code are to be
+considered immutable; mutating them leads to undefined results.
+@end quotation
 @end defun
 
 
-@defun string-fill! @var{s} @var{char} [@var{start} @var{end}]
-@rnrs{5} Store @var{char} in every element of @var{s}.
-
-@func{string-fill} is extended from the @rnrs{5} definition to take
-optional @var{start}/@var{end} arguments.
+@defun string-fill! @var{str} @var{char}
+@defunx string-fill! @var{str} @var{char} @var{start}
+@defunx string-fill! @var{str} @var{char} @var{start} @var{end}
+Store @var{char} in every selected element of @var{str}.
 @end defun
 
 @c page
