@@ -388,6 +388,412 @@
   #f)
 
 
+(parametrise ((check-test-name 'selecting))
+
+  (check
+      (srfi.string-length "")
+    => 0)
+
+  (check
+      (srfi.string-length "a")
+    => 1)
+
+  (check
+      (srfi.string-length "abc")
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-ref "a" 0)
+    => #\a)
+
+  (check
+      (srfi.string-ref "abc" 2)
+    => #\c)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-copy "")
+    => "")
+
+  (check
+      (srfi.string-copy "a")
+    => "a")
+
+  (check
+      (srfi.string-copy "abc")
+    => "abc")
+
+  (check
+      (srfi.string-copy "" 0 0)
+    => "")
+
+  (check
+      (srfi.string-copy "abc" 0)
+    => "abc")
+
+  (check
+      (srfi.string-copy "abc" 1)
+    => "bc")
+
+  (check
+      (srfi.string-copy "abc" 2)
+    => "c")
+
+  (check
+      (srfi.string-copy "abc" 0 2)
+    => "ab")
+
+  (check
+      (srfi.string-copy "abc" 1 2)
+    => "b")
+
+  (check
+      (srfi.string-copy "abc" 0 1)
+    => "a")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.substring/shared "" 0)
+    => "")
+
+  (check
+      (srfi.substring/shared "abc" 0)
+    => "abc")
+
+  (check
+      (srfi.substring/shared "abc" 1)
+    => "bc")
+
+  (check
+      (srfi.substring/shared "abc" 2)
+    => "c")
+
+  (check
+      (srfi.substring/shared "abc" 0 2)
+    => "ab")
+
+  (check
+      (srfi.substring/shared "abc" 1 2)
+    => "b")
+
+  (check
+      (srfi.substring/shared "abc" 0 1)
+    => "a")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str1 "abcd")
+	     (beg1 0)
+	     (str2 (string-copy "12")))
+	(srfi.string-copy! str2 0 str1 beg1 (+ 2 beg1))
+	str2)
+    => "ab")
+
+  (check
+      (let* ((str1 "abcd")
+	     (beg1 0)
+	     (str2 ""))
+	(srfi.string-copy! str2 0 str1 beg1 beg1)
+	str2)
+    => "")
+
+  (check
+      (guard (exc ((assertion-violation? exc)
+		   #t))
+	(let* ((str1 "abcd") (beg1 0) (str2 (string-copy "12")))
+	  (srfi.string-copy! str2 3 str1 beg1 (+ 2 beg1))
+	  str2))
+    => #t)
+
+  (check
+      (let ((str1 "abcd")
+	    (str2 (string-copy "1234")))
+	(srfi.string-copy! str2 0 str1)
+	str2)
+    => "abcd")
+
+  (check
+      (let ((str1 "ab")
+	    (str2 (string-copy "1234")))
+	(srfi.string-copy! str2 2 str1)
+	str2)
+    => "12ab")
+
+  (check
+      (let ((str1 "")
+	    (str2 (string-copy "1234")))
+	(srfi.string-copy! str2 4 str1)
+	str2)
+    => "1234")
+
+;;; --------------------------------------------------------------------
+;;; string-take
+
+  (check
+      (srfi.string-take "" 0)
+    => "")
+
+  (check
+      (srfi.string-take "a" 1)
+    => "a")
+
+  (check
+      (srfi.string-take "abc" 1)
+    => "a")
+
+  (check
+      (srfi.string-take "abcd" 2)
+    => "ab")
+
+  (check
+      (srfi.string-take "abcd" 4)
+    => "abcd")
+
+;;; --------------------------------------------------------------------
+;;; string-take-right
+
+  (check
+      (srfi.string-take-right "" 0)
+    => "")
+
+  (check
+      (srfi.string-take-right "a" 1)
+    => "a")
+
+  (check
+      (srfi.string-take-right "abc" 1)
+    => "c")
+
+  (check
+      (srfi.string-take-right "abcd" 2)
+    => "cd")
+
+  (check
+      (srfi.string-take-right "abcd" 4)
+    => "abcd")
+
+;;; --------------------------------------------------------------------
+;;; string-drop
+
+  (check
+      (srfi.string-drop "" 0)
+    => "")
+
+  (check
+      (srfi.string-drop "abc" 0)
+    => "abc")
+
+  (check
+      (srfi.string-drop "a" 1)
+    => "")
+
+  (check
+      (srfi.string-drop "abc" 1)
+    => "bc")
+
+  (check
+      (srfi.string-drop "abcd" 2)
+    => "cd")
+
+  (check
+      (srfi.string-drop "abcd" 4)
+    => "")
+
+;;; --------------------------------------------------------------------
+;;; string-drop-right
+
+  (check
+      (srfi.string-drop-right "" 0)
+    => "")
+
+  (check
+      (srfi.string-drop-right "abc" 0)
+    => "abc")
+
+  (check
+      (srfi.string-drop-right "a" 1)
+    => "")
+
+  (check
+      (srfi.string-drop-right "abc" 1)
+    => "ab")
+
+  (check
+      (srfi.string-drop-right "abcd" 2)
+    => "ab")
+
+  (check
+      (srfi.string-drop "abcd" 4)
+    => "")
+
+;;; --------------------------------------------------------------------
+;;; string-pad
+
+  (check (srfi.string-pad "ciao" 4)		=> "ciao")
+  (check (srfi.string-pad "ciao" 5)		=> " ciao")
+  (check (srfi.string-pad "ciao" 6)		=> "  ciao")
+
+  (check (srfi.string-pad "ciao" 4 #\,)		=> "ciao")
+  (check (srfi.string-pad "ciao" 5 #\,)		=> ",ciao")
+  (check (srfi.string-pad "ciao" 6 #\,)		=> ",,ciao")
+
+  (check (srfi.string-pad "ciao" 3)		=> "iao")
+  (check (srfi.string-pad "ciao" 2)		=> "ao")
+  (check (srfi.string-pad "ciao" 1)		=> "o")
+  (check (srfi.string-pad "ciao" 0)		=> "")
+
+  (check (srfi.string-pad "ciao" 3 #\,)		=> "iao")
+  (check (srfi.string-pad "ciao" 2 #\,)		=> "ao")
+  (check (srfi.string-pad "ciao" 1 #\,)		=> "o")
+  (check (srfi.string-pad "ciao" 0 #\,)		=> "")
+
+  (check (srfi.string-pad "ciao" 4 #\, 0)	=> "ciao")
+  (check (srfi.string-pad "ciao" 4 #\, 1)	=> ",iao")
+  (check (srfi.string-pad "ciao" 4 #\, 2)	=> ",,ao")
+  (check (srfi.string-pad "ciao" 4 #\, 3)	=> ",,,o")
+  (check (srfi.string-pad "ciao" 4 #\, 4)	=> ",,,,")
+
+  (check (srfi.string-pad "ciao" 6 #\, 0)	=> ",,ciao")
+  (check (srfi.string-pad "ciao" 6 #\, 1)	=> ",,,iao")
+  (check (srfi.string-pad "ciao" 6 #\, 2)	=> ",,,,ao")
+  (check (srfi.string-pad "ciao" 6 #\, 3)	=> ",,,,,o")
+  (check (srfi.string-pad "ciao" 6 #\, 4)	=> ",,,,,,")
+
+  (check (srfi.string-pad "ciao" 4 #\, 0 4)	=> "ciao")
+  (check (srfi.string-pad "ciao" 4 #\, 0 3)	=> ",cia")
+  (check (srfi.string-pad "ciao" 4 #\, 0 2)	=> ",,ci")
+  (check (srfi.string-pad "ciao" 4 #\, 0 1)	=> ",,,c")
+  (check (srfi.string-pad "ciao" 4 #\, 0 0)	=> ",,,,")
+  (check (srfi.string-pad "ciao" 4 #\, 1 3)	=> ",,ia")
+  (check (srfi.string-pad "ciao" 4 #\, 2 2)	=> ",,,,")
+
+  (check (srfi.string-pad "ciao" 6 #\, 0 4)	=> ",,ciao")
+  (check (srfi.string-pad "ciao" 6 #\, 0 3)	=> ",,,cia")
+  (check (srfi.string-pad "ciao" 6 #\, 0 2)	=> ",,,,ci")
+  (check (srfi.string-pad "ciao" 6 #\, 0 1)	=> ",,,,,c")
+  (check (srfi.string-pad "ciao" 6 #\, 0 0)	=> ",,,,,,")
+  (check (srfi.string-pad "ciao" 6 #\, 1 3)	=> ",,,,ia")
+  (check (srfi.string-pad "ciao" 6 #\, 2 2)	=> ",,,,,,")
+
+;;; --------------------------------------------------------------------
+;;; string-pad-right
+
+  (check (srfi.string-pad-right "ciao" 4)		=> "ciao")
+  (check (srfi.string-pad-right "ciao" 5)		=> "ciao ")
+  (check (srfi.string-pad-right "ciao" 6)		=> "ciao  ")
+
+  (check (srfi.string-pad-right "ciao" 4 #\,)		=> "ciao")
+  (check (srfi.string-pad-right "ciao" 5 #\,)		=> "ciao,")
+  (check (srfi.string-pad-right "ciao" 6 #\,)		=> "ciao,,")
+
+  (check (srfi.string-pad-right "ciao" 3)		=> "cia")
+  (check (srfi.string-pad-right "ciao" 2)		=> "ci")
+  (check (srfi.string-pad-right "ciao" 1)		=> "c")
+  (check (srfi.string-pad-right "ciao" 0)		=> "")
+
+  (check (srfi.string-pad-right "ciao" 3 #\,)		=> "cia")
+  (check (srfi.string-pad-right "ciao" 2 #\,)		=> "ci")
+  (check (srfi.string-pad-right "ciao" 1 #\,)		=> "c")
+  (check (srfi.string-pad-right "ciao" 0 #\,)		=> "")
+
+  (check (srfi.string-pad-right "ciao" 4 #\, 0)		=> "ciao")
+  (check (srfi.string-pad-right "ciao" 4 #\, 1)		=> "iao,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 2)		=> "ao,,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 3)		=> "o,,,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 4)		=> ",,,,")
+
+  (check (srfi.string-pad-right "ciao" 6 #\, 0)		=> "ciao,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 1)		=> "iao,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 2)		=> "ao,,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 3)		=> "o,,,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 4)		=> ",,,,,,")
+
+  (check (srfi.string-pad-right "ciao" 4 #\, 0 4)	=> "ciao")
+  (check (srfi.string-pad-right "ciao" 4 #\, 0 3)	=> "cia,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 0 2)	=> "ci,,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 0 1)	=> "c,,,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 0 0)	=> ",,,,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 1 3)	=> "ia,,")
+  (check (srfi.string-pad-right "ciao" 4 #\, 2 2)	=> ",,,,")
+
+  (check (srfi.string-pad-right "ciao" 6 #\, 0 4)	=> "ciao,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 0 3)	=> "cia,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 0 2)	=> "ci,,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 0 1)	=> "c,,,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 0 0)	=> ",,,,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 1 3)	=> "ia,,,,")
+  (check (srfi.string-pad-right "ciao" 6 #\, 2 2)	=> ",,,,,,")
+
+;;; --------------------------------------------------------------------
+;;; string-trim
+
+  (check (srfi.string-trim "  abcd")			=> "abcd")
+
+  (check (srfi.string-trim "aaabcd" #\a)		=> "bcd")
+  (check (srfi.string-trim "aaaaad" #\a)		=> "d")
+  (check (srfi.string-trim "aaaaaa" #\a)		=> "")
+
+  (check (srfi.string-trim "aaabcd" (char-set #\a))	=> "bcd")
+  (check (srfi.string-trim "aaaaad" (char-set #\a))	=> "d")
+  (check (srfi.string-trim "aaaaaa" (char-set #\a))	=> "")
+
+  (check (srfi.string-trim "AAAbcd" char-upper-case?)	=> "bcd")
+  (check (srfi.string-trim "AAAAAd" char-upper-case?)	=> "d")
+  (check (srfi.string-trim "AAAAAA" char-upper-case?)	=> "")
+
+  (check (srfi.string-trim "0aabcd" #\a 1)		=> "bcd")
+  (check (srfi.string-trim "00aaad" #\a 2)		=> "d")
+  (check (srfi.string-trim "000aaa" #\a 3)		=> "")
+
+;;; --------------------------------------------------------------------
+;;; string-trim-right
+
+  (check (srfi.string-trim-right "abcd  ")		=> "abcd")
+
+  (check (srfi.string-trim-right "abcddd" #\d)		=> "abc")
+  (check (srfi.string-trim-right "abdddd" #\d)		=> "ab")
+  (check (srfi.string-trim-right "addddd" #\d)		=> "a")
+  (check (srfi.string-trim-right "dddddd" #\d)		=> "")
+
+  (check (srfi.string-trim-right "abcddd" (char-set #\d))	=> "abc")
+  (check (srfi.string-trim-right "abdddd" (char-set #\d))	=> "ab")
+  (check (srfi.string-trim-right "addddd" (char-set #\d))	=> "a")
+  (check (srfi.string-trim-right "dddddd" (char-set #\d))	=> "")
+
+  (check (srfi.string-trim-right "abcDDD" char-upper-case?)	=> "abc")
+  (check (srfi.string-trim-right "abDDDD" char-upper-case?)	=> "ab")
+  (check (srfi.string-trim-right "aDDDDD" char-upper-case?)	=> "a")
+  (check (srfi.string-trim-right "DDDDDD" char-upper-case?)	=> "")
+
+  (check (srfi.string-trim-right "abcddd" #\d 0)		=> "abc")
+  (check (srfi.string-trim-right "abcddd" #\d 1)		=> "bc")
+  (check (srfi.string-trim-right "abcddd" #\d 2)		=> "c")
+  (check (srfi.string-trim-right "abcddd" #\d 3)		=> "")
+
+  (check (srfi.string-trim-right "abcddD" #\d 0 5)		=> "abc")
+  (check (srfi.string-trim-right "abcdDD" #\d 1 4)		=> "bc")
+  (check (srfi.string-trim-right "abcDDD" #\d 2 3)		=> "c")
+  (check (srfi.string-trim-right "abcDDD" #\d 2 2)		=> "")
+
+;;; --------------------------------------------------------------------
+;;; string-trim-both
+
+  (check (srfi.string-trim-both "  abcd  ")			=> "abcd")
+
+  (check (srfi.string-trim-both ",,abcd,," #\,)			=> "abcd")
+
+  (check (srfi.string-trim-both ",,abcd,," (char-set #\,))	=> "abcd")
+
+  (check (srfi.string-trim-both "UUabcdUU" char-upper-case?)	=> "abcd")
+
+  #f)
+
+
 (parametrise ((check-test-name 'comparison-lexicographic-case-sensitive))
 
   (check
@@ -1047,288 +1453,6 @@
     => "")
 
   #f)
-
-
-(parametrise ((check-test-name 'selecting))
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-take 2 str beg end))
-    => "ab")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-take 0 str beg end))
-    => "")
-
-  (check
-      (guard (exc ((assertion-violation? exc) #t))
-	(let* ((str "abcd") (beg 0) (end (string-length str)))
-	  (srfi.string-take 5 str beg end)))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-take-right 2 str beg end))
-    => "cd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-take-right 0 str beg end))
-    => "")
-
-  (check
-      (guard (exc ((assertion-violation? exc) #t))
-	(let* ((str "abcd") (beg 0) (end (string-length str)))
-	  (srfi.string-take-right 5 str beg end)))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-drop 2 str beg end))
-    => "cd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-drop 0 str beg end))
-    => "")
-
-  (check
-      (guard (exc ((assertion-violation? exc) #t))
-	(let* ((str "abcd") (beg 0) (end (string-length str)))
-	  (srfi.string-drop 5 str beg end)))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-drop-right 2 str beg end))
-    => "ab")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-drop-right 0 str beg end))
-    => "")
-
-  (check
-      (guard (exc ((assertion-violation? exc) #t))
-	(let* ((str "abcd") (beg 0) (end (string-length str)))
-	  (srfi.string-drop-right 5 str beg end)))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "aaabcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim #\a str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "bcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim #\a str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-trim #\a str beg end))
-    => "")
-
-  ;; (check
-  ;;     (let* ((str "aaabcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim (char-set #\a #\b) str beg end))
-  ;;   => "cd")
-
-  ;; (check
-  ;;     (let* ((str "bcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim (char-set #\a #\b) str beg end))
-  ;;   => "cd")
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim (char-set #\a #\b) str beg end))
-  ;;   => "")
-
-  (check
-      (let* ((str "AAAbcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim char-upper-case? str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "bcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim char-upper-case? str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-trim char-upper-case? str beg end))
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "bcdaaa") (beg 0) (end (string-length str)))
-	(srfi.string-trim-right #\a str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "bcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim-right #\a str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-trim-right #\a str beg end))
-    => "")
-
-  ;; (check
-  ;;     (let* ((str "cdbaaa") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim-right (char-set #\a #\b) str beg end))
-  ;;   => "cd")
-
-  ;; (check
-  ;;     (let* ((str "cdb") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim-right (char-set #\a #\b) str beg end))
-  ;;   => "cd")
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim-right (char-set #\a #\b) str beg end))
-  ;;   => "")
-
-  (check
-      (let* ((str "bcdAAA") (beg 0) (end (string-length str)))
-	(srfi.string-trim-right char-upper-case? str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "bcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim-right char-upper-case? str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-trim-right char-upper-case? str beg end))
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "aaabcdaaa") (beg 0) (end (string-length str)))
-	(srfi.string-trim-both #\a str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "bcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim-both #\a str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-trim-both #\a str beg end))
-    => "")
-
-  ;; (check
-  ;;     (let* ((str "aaabcdaa") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim-both (char-set #\a #\b) str beg end))
-  ;;   => "cd")
-
-  ;; (check
-  ;;     (let* ((str "bcdb") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim-both (char-set #\a #\b) str beg end))
-  ;;   => "cd")
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-trim-both (char-set #\a #\b) str beg end))
-  ;;   => "")
-
-  (check
-      (let* ((str "AAAbcdAAA") (beg 0) (end (string-length str)))
-	(srfi.string-trim-both char-upper-case? str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "bcd") (beg 0) (end (string-length str)))
-	(srfi.string-trim-both char-upper-case? str beg end))
-    => "bcd")
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-trim-both char-upper-case? str beg end))
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad 3 #\0 str beg end))
-    => "abc")
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad 5 #\0 str beg end))
-    => "00abc")
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad 2 #\0 str beg end))
-    => "bc")
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad 0 #\0 str beg end))
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad-right 3 #\0 str beg end))
-    => "abc")
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad-right 5 #\0 str beg end))
-    => "abc00")
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad-right 2 #\0 str beg end))
-    => "ab")
-
-  (check
-      (let* ((str "abc") (beg 0) (end (string-length str)))
-	(srfi.string-pad-right 0 #\0 str beg end))
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (str2 (string-copy "12")))
-	(srfi.string-copy! str2 0 str1 beg1 (+ 2 beg1))
-	str2)
-    => "ab")
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (str2 ""))
-	(srfi.string-copy! str2 0 str1 beg1 beg1)
-	str2)
-    => "")
-
-  (check
-      (guard (exc ((assertion-violation? exc)
-		   #t))
-	(let* ((str1 "abcd") (beg1 0) (str2 (string-copy "12")))
-	  (srfi.string-copy! str2 3 str1 beg1 (+ 2 beg1))
-	  str2))
-    => #t)
-
-  )
 
 
 (parametrise ((check-test-name 'prefix))

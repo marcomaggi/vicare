@@ -188,7 +188,8 @@
     (only (rnrs mutable-strings)
 	  string-set!)
     (only (vicare)
-	  module)
+	  module
+	  pretty-print)
     (srfi :14 char-sets)
     (vicare arguments validation)
     (prefix (vicare unsafe-operations)
@@ -237,7 +238,7 @@
 	(cond-criterion criterion
 	  ((char?)	(%string-every/char criterion str 0 ($string-length str)))
 	  ((char-set?)	(%string-every/cset criterion str 0 ($string-length str)))
-	  ((procedure?)	(%string-every/proc criterion str 0 ($string-length str)))
+	  ((procedure?)	(%string-every/pred criterion str 0 ($string-length str)))
 	  (else
 	   (%error-invalid-criterion criterion)))))
      ((criterion str start)
@@ -247,7 +248,7 @@
 	(cond-criterion criterion
 	  ((char?)	(%string-every/char criterion str start ($string-length str)))
 	  ((char-set?)	(%string-every/cset criterion str start ($string-length str)))
-	  ((procedure?)	(%string-every/proc criterion str start ($string-length str)))
+	  ((procedure?)	(%string-every/pred criterion str start ($string-length str)))
 	  (else
 	   (%error-invalid-criterion criterion)))))
      ((criterion str start past)
@@ -257,7 +258,7 @@
 	(cond-criterion criterion
 	  ((char?)	(%string-every/char criterion str start past))
 	  ((char-set?)	(%string-every/cset criterion str start past))
-	  ((procedure?)	(%string-every/proc criterion str start past))
+	  ((procedure?)	(%string-every/pred criterion str start past))
 	  (else
 	   (%error-invalid-criterion criterion)))))))
 
@@ -275,14 +276,14 @@
 	(and (char-set-contains? cset ($string-ref str start))
 	     (%string-every/cset cset str ($fxadd1 start) past))))
 
-  (define (%string-every/proc pred str start past)
+  (define (%string-every/pred pred str start past)
     (let ((ch     ($string-ref str start))
 	  (start1 ($fxadd1 start)))
       (if ($fx= start1 past)
 	  ;;This has to be a tail call.
 	  (pred ch)
 	(and (pred ch)
-	     (%string-every/proc pred str start1 past)))))
+	     (%string-every/pred pred str start1 past)))))
 
   #| end of module: string-every |# )
 
@@ -297,7 +298,7 @@
 	(cond-criterion criterion
 	  ((char?)	(%string-any/char criterion str 0 ($string-length str)))
 	  ((char-set?)	(%string-any/cset criterion str 0 ($string-length str)))
-	  ((procedure?)	(%string-any/proc criterion str 0 ($string-length str)))
+	  ((procedure?)	(%string-any/pred criterion str 0 ($string-length str)))
 	  (else
 	   (%error-invalid-criterion criterion)))))
      ((criterion str start)
@@ -307,7 +308,7 @@
 	(cond-criterion criterion
 	  ((char?)	(%string-any/char criterion str start ($string-length str)))
 	  ((char-set?)	(%string-any/cset criterion str start ($string-length str)))
-	  ((procedure?)	(%string-any/proc criterion str start ($string-length str)))
+	  ((procedure?)	(%string-any/pred criterion str start ($string-length str)))
 	  (else
 	   (%error-invalid-criterion criterion)))))
      ((criterion str start past)
@@ -317,7 +318,7 @@
 	(cond-criterion criterion
 	  ((char?)	(%string-any/char criterion str start past))
 	  ((char-set?)	(%string-any/cset criterion str start past))
-	  ((procedure?)	(%string-any/proc criterion str start past))
+	  ((procedure?)	(%string-any/pred criterion str start past))
 	  (else
 	   (%error-invalid-criterion criterion)))))))
 
@@ -335,14 +336,14 @@
 	 (or (char-set-contains? cset ($string-ref str start))
 	     (%string-any/cset cset str ($fxadd1 start) past))))
 
-  (define (%string-any/proc pred str start past)
+  (define (%string-any/pred pred str start past)
     (let ((ch     ($string-ref str start))
 	  (start1 ($fxadd1 start)))
       (if ($fx= start1 past)
 	  ;;This has to be a tail call.
 	  (pred ch)
 	(or (pred ch)
-	    (%string-any/proc pred str start1 past)))))
+	    (%string-any/pred pred str start1 past)))))
 
   #| end of module: string-any |# )
 
@@ -470,6 +471,396 @@
     (assertion-violation who "expected string as delimiter argument" obj))
 
   #| end of module: string-join |# )
+
+
+;;;; selecting
+
+(define substring/shared
+  (case-lambda
+   ((str start)
+    (substring str start (string-length str)))
+   ((str start end)
+    (substring str start end))))
+
+(define string-copy
+  (case-lambda
+   ((str)
+    (rnrs.string-copy str))
+   ((str start)
+    (substring str start (string-length str)))
+   ((str start end)
+    (substring str start end))))
+
+;;; --------------------------------------------------------------------
+
+(module (string-copy! %string-copy!)
+  (define who 'string-copy!)
+
+  (define string-copy!
+    (case-lambda
+     ((dst.str dst.start src.str)
+      (with-arguments-validation (who)
+	  ((string			dst.str)
+	   (string			src.str)
+	   (one-off-index-for-string	dst.str dst.start))
+	(%string-copy! dst.str dst.start src.str 0 ($string-length src.str))))
+     ((dst.str dst.start src.str src.start)
+      (with-arguments-validation (who)
+	  ((string			dst.str)
+	   (string			src.str)
+	   (one-off-index-for-string	dst.str dst.start)
+	   (one-off-index-for-string	src.str src.start))
+	(%string-copy! dst.str dst.start src.str src.start ($string-length src.str))))
+     ((dst.str dst.start src.str src.start src.past)
+      (with-arguments-validation (who)
+	  ((string			dst.str)
+	   (string			src.str)
+	   (one-off-index-for-string	dst.str dst.start)
+	   (start-and-past-for-string	src.str src.start src.past))
+	(%string-copy! dst.str dst.start src.str src.start src.past)))))
+
+  (define (%string-copy! dst.str dst.start src.str src.start src.past)
+    (with-arguments-validation (who)
+	((indices-for-copy	dst.str dst.start src.start src.past))
+      (if ($fx> src.start dst.start)
+	  (do ((i src.start ($fxadd1 i))
+	       (j dst.start ($fxadd1 j)))
+	      (($fx>= i src.past))
+	    ($string-set! dst.str j ($string-ref src.str i)))
+	(let* ((src.count ($fx- src.past src.start))
+	       (dst.past  ($fx+ dst.start src.count)))
+	  (do ((i ($fxsub1 src.past) ($fxsub1 i))
+	       (j ($fxsub1 dst.past) ($fxsub1 j)))
+	      (($fx< i src.start))
+	    ($string-set! dst.str j ($string-ref src.str i)))))))
+
+  (define-argument-validation (indices-for-copy who dst.str dst.start src.start src.past)
+    ($fx>= ($fx- ($string-length dst.str) dst.start)
+	   ($fx- src.past src.start))
+    (assertion-violation who "not enough room in destination string"))
+
+  #| end of module: string-copy! |# )
+
+;;; --------------------------------------------------------------------
+
+(define (string-take str nchars)
+  (define who 'string-take)
+  (with-arguments-validation (who)
+      ((string				str)
+       (one-off-index-for-string	str nchars))
+    ($substring str 0 nchars)))
+
+(define (string-take-right str nchars)
+  (define who 'string-take-right)
+  (with-arguments-validation (who)
+      ((string				str)
+       (one-off-index-for-string	str nchars))
+    (let* ((past  ($string-length str))
+	   (start ($fx- past nchars)))
+      ($substring str start past))))
+
+(define (string-drop str nchars)
+  (define who 'string-drop)
+  (with-arguments-validation (who)
+      ((string				str)
+       (one-off-index-for-string	str nchars))
+    ($substring str nchars ($string-length str))))
+
+(define (string-drop-right str nchars)
+  (define who 'string-drop-right)
+  (with-arguments-validation (who)
+      ((string				str)
+       (one-off-index-for-string	str nchars))
+    ($substring str 0 ($fx- ($string-length str) nchars))))
+
+;;; --------------------------------------------------------------------
+
+(module (string-pad)
+  (define who 'string-pad)
+
+  (define string-pad
+    (case-lambda
+     ((str len)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (non-negative-fixnum	len))
+	(%string-pad str len #\space 0 ($string-length str))))
+     ((str len ch)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (non-negative-fixnum	len)
+	   (char		ch))
+	(%string-pad str len ch 0 ($string-length str))))
+     ((str len ch start)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (non-negative-fixnum		len)
+	   (char			ch)
+	   (one-off-index-for-string	str start))
+	(%string-pad str len ch start ($string-length str))))
+     ((str len ch start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (non-negative-fixnum		len)
+	   (char			ch)
+	   (start-and-past-for-string	str start past))
+	(%string-pad str len ch start past)))))
+
+  (define (%string-pad src.str requested-len pad-char src.start src.past)
+    (let ((substr.len ($fx- src.past src.start)))
+      (if ($fx<= requested-len substr.len)
+	  ($substring src.str ($fx- src.past requested-len) src.past)
+	(let ((dst.str (make-string requested-len pad-char)))
+	  (%string-copy! dst.str ($fx- requested-len substr.len)
+			 src.str src.start src.past)
+	  dst.str))))
+
+  #| end of module: string-pad |# )
+
+(module (string-pad-right)
+  (define who 'string-pad-right)
+
+  (define string-pad-right
+    (case-lambda
+     ((str len)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (non-negative-fixnum	len))
+	(%string-pad-right str len #\space 0 ($string-length str))))
+     ((str len ch)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (non-negative-fixnum	len)
+	   (char		ch))
+	(%string-pad-right str len ch 0 ($string-length str))))
+     ((str len ch start)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (non-negative-fixnum		len)
+	   (char			ch)
+	   (one-off-index-for-string	str start))
+	(%string-pad-right str len ch start ($string-length str))))
+     ((str len ch start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (non-negative-fixnum		len)
+	   (char			ch)
+	   (start-and-past-for-string	str start past))
+	(%string-pad-right str len ch start past)))))
+
+  (define (%string-pad-right src.str requested-len pad-char src.start src.past)
+    (let ((substr.len ($fx- src.past src.start)))
+      (if ($fx<= requested-len substr.len)
+	  ($substring src.str src.start ($fx- requested-len src.start))
+	(let ((dst.str (make-string requested-len pad-char)))
+	  (%string-copy! dst.str 0
+			 src.str src.start src.past)
+	  dst.str))))
+
+  #| end of module: string-pad-right |# )
+
+;;; --------------------------------------------------------------------
+
+(module (string-trim
+	 %string-trim/char
+	 %string-trim/cset
+	 %string-trim/pred)
+  (define who 'string-trim)
+
+  (define string-trim
+    (case-lambda
+     ((str)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(%string-trim/cset str char-set:whitespace 0 ($string-length str))))
+
+     ((str criterion)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim/char str criterion 0 ($string-length str)))
+	  ((char-set?)	(%string-trim/cset str criterion 0 ($string-length str)))
+	  ((procedure?)	(%string-trim/pred str criterion 0 ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+
+     ((str criterion start)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (index-for-string	str start))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim/char str criterion start ($string-length str)))
+	  ((char-set?)	(%string-trim/cset str criterion start ($string-length str)))
+	  ((procedure?)	(%string-trim/pred str criterion start ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+
+     ((str criterion start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (start-and-past-for-string	str start past))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim/char str criterion start past))
+	  ((char-set?)	(%string-trim/cset str criterion start past))
+	  ((procedure?)	(%string-trim/pred str criterion start past))
+	  (else
+	   (%error-invalid-criterion criterion)))))))
+
+  (define (%error-invalid-criterion criterion)
+    (assertion-violation who
+      "expected char, char-set or predicate as criterion argument" criterion))
+
+  (define (%string-trim/char str char start past)
+    (cond ((%string-skip/char str char start past)
+	   => (lambda (idx)
+		($substring str idx past)))
+	  (else "")))
+
+  (define (%string-trim/cset str cset start past)
+    (cond ((%string-skip/cset str cset start past)
+	   => (lambda (idx)
+		($substring str idx past)))
+	  (else "")))
+
+  (define (%string-trim/pred str pred start past)
+    (cond ((%string-skip/pred str pred start past)
+	   => (lambda (idx)
+		($substring str idx past)))
+	  (else "")))
+
+  #| end of module: string-trim |# )
+
+(module (string-trim-right
+	 %string-trim-right/char
+	 %string-trim-right/cset
+	 %string-trim-right/pred)
+  (define who 'string-trim-right)
+
+  (define string-trim-right
+    (case-lambda
+     ((str)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(%string-trim-right/cset str char-set:whitespace 0 ($string-length str))))
+
+     ((str criterion)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim-right/char str criterion 0 ($string-length str)))
+	  ((char-set?)	(%string-trim-right/cset str criterion 0 ($string-length str)))
+	  ((procedure?)	(%string-trim-right/pred str criterion 0 ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+
+     ((str criterion start)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (index-for-string	str start))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim-right/char str criterion start ($string-length str)))
+	  ((char-set?)	(%string-trim-right/cset str criterion start ($string-length str)))
+	  ((procedure?)	(%string-trim-right/pred str criterion start ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+
+     ((str criterion start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (start-and-past-for-string	str start past))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim-right/char str criterion start past))
+	  ((char-set?)	(%string-trim-right/cset str criterion start past))
+	  ((procedure?)	(%string-trim-right/pred str criterion start past))
+	  (else
+	   (%error-invalid-criterion criterion)))))))
+
+  (define (%error-invalid-criterion criterion)
+    (assertion-violation who
+      "expected char, char-set or predicate as criterion argument" criterion))
+
+  (define (%string-trim-right/char str char start past)
+    (cond ((%string-skip-right/char str char start past)
+	   => (lambda (idx)
+		($substring str start ($fxadd1 idx))))
+	  (else "")))
+
+  (define (%string-trim-right/cset str cset start past)
+    (cond ((%string-skip-right/cset str cset start past)
+	   => (lambda (idx)
+		($substring str start ($fxadd1 idx))))
+	  (else "")))
+
+  (define (%string-trim-right/pred str pred start past)
+    (cond ((%string-skip-right/pred str pred start past)
+	   => (lambda (idx)
+		($substring str start ($fxadd1 idx))))
+	  (else "")))
+
+  #| end of module: string-trim-right |# )
+
+(module (string-trim-both
+	 %string-trim-both/char
+	 %string-trim-both/cset
+	 %string-trim-both/pred)
+  (define who 'string-trim-both)
+
+  (define string-trim-both
+    (case-lambda
+     ((str)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(%string-trim-both/cset str char-set:whitespace 0 ($string-length str))))
+
+     ((str criterion)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim-both/char str criterion 0 ($string-length str)))
+	  ((char-set?)	(%string-trim-both/cset str criterion 0 ($string-length str)))
+	  ((procedure?)	(%string-trim-both/pred str criterion 0 ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+
+     ((str criterion start)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (index-for-string	str start))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim-both/char str criterion start ($string-length str)))
+	  ((char-set?)	(%string-trim-both/cset str criterion start ($string-length str)))
+	  ((procedure?)	(%string-trim-both/pred str criterion start ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+
+     ((str criterion start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (start-and-past-for-string	str start past))
+	(cond-criterion criterion
+	  ((char?)	(%string-trim-both/char str criterion start past))
+	  ((char-set?)	(%string-trim-both/cset str criterion start past))
+	  ((procedure?)	(%string-trim-both/pred str criterion start past))
+	  (else
+	   (%error-invalid-criterion criterion)))))))
+
+  (define (%error-invalid-criterion criterion)
+    (assertion-violation who
+      "expected char, char-set or predicate as criterion argument" criterion))
+
+  (define (%string-trim-both/char str char start past)
+    (let ((str (%string-trim/char str char start past)))
+      (%string-trim-right/char str char start ($string-length str))))
+
+  (define (%string-trim-both/cset str cset start past)
+    (let ((str (%string-trim/cset str cset start past)))
+      (%string-trim-right/cset str cset start ($string-length str))))
+
+  (define (%string-trim-both/pred str pred start past)
+    (let ((str (%string-trim/pred str pred start past)))
+      (%string-trim-right/pred str pred start ($string-length str))))
+
+  #| end of module: string-trim-both |# )
 
 
 ;;;; lexicographic comparison
@@ -976,63 +1367,6 @@
 	    ans)))))))
 
 
-;;;; selecting
-
-(define (string-take nchars str start past)
-  (if (<= nchars (- past start))
-      (substring str start (+ start nchars))
-    (assertion-violation 'string-take
-      "requested number of chars greater than length of substring" nchars)))
-
-(define (string-take-right nchars str start past)
-  (if (<= nchars (- past start))
-      (substring str (- past nchars) past)
-    (assertion-violation 'string-take-right
-      "requested number of chars greater than length of substring" nchars)))
-
-(define (string-drop nchars str start past)
-  (if (<= nchars (- past start))
-      (substring str nchars past)
-    (assertion-violation 'string-take
-      "requested number of chars greater than length of substring" nchars)))
-
-(define (string-drop-right nchars str start past)
-  (if (<= nchars (- past start))
-      (substring str start (+ start nchars))
-    (assertion-violation 'string-take
-      "requested number of chars greater than length of substring" nchars)))
-
-(define (string-trim criterion str start past)
-  (cond ((string-skip criterion str start past)
-	 => (lambda (i) (substring str i past)))
-	(else "")))
-
-(define (string-trim-right criterion str start past)
-  (cond ((string-skip-right criterion str start past)
-	 => (lambda (i) (substring str start (+ 1 i))))
-	(else "")))
-
-(define (string-trim-both criterion str start past)
-  (let ((str (string-trim-right criterion str start past)))
-    (string-trim criterion str start (string-length str))))
-
-(define (string-pad requested-len fill-char str start past)
-  (let ((len (- past start)))
-    (if (<= requested-len len)
-	(substring str (- past requested-len) past)
-      (let ((result (make-string requested-len fill-char)))
-	(string-copy! result (- requested-len len) str start past)
-	result))))
-
-(define (string-pad-right requested-len fill-char str start past)
-  (let ((len (- past start)))
-    (if (<= requested-len len)
-	(substring str start (+ start requested-len))
-      (let ((result (make-string requested-len fill-char)))
-	(string-copy! result 0 str start past)
-	result))))
-
-
 ;;;; prefix and suffix
 
 (define (%true-string-prefix-length char-cmp? str1 start1 past1 str2 start2 past2)
@@ -1144,49 +1478,132 @@
 		"expected char-set, char or predicate as criterion"
 		criterion))))
 
-(define (string-skip criterion str start past)
-  (cond ((char? criterion)
-	 (let loop ((i start))
-	   (and (< i past)
-		(if (char=? criterion (string-ref str i))
-		    (loop (+ i 1))
-		  i))))
-	((char-set? criterion)
-	 (let loop ((i start))
-	   (and (< i past)
-		(if (char-set-contains? criterion (string-ref str i))
-		    (loop (+ i 1))
-		  i))))
-	((procedure? criterion)
-	 (let loop ((i start))
-	   (and (< i past)
-		(if (criterion (string-ref str i)) (loop (+ i 1))
-		  i))))
-	(else (assertion-violation 'string-skip
-		"expected char-set, char or predicate as criterion"
-		criterion))))
+(module (string-skip
+	 %string-skip/char
+	 %string-skip/cset
+	 %string-skip/pred)
+  (define who 'string-skip)
 
-(define (string-skip-right criterion str start past)
-  (cond ((char? criterion)
-	 (let loop ((i (- past 1)))
-	   (and (>= i start)
-		(if (char=? criterion (string-ref str i))
-		    (loop (- i 1))
-		  i))))
-	((char-set? criterion)
-	 (let loop ((i (- past 1)))
-	   (and (>= i start)
-		(if (char-set-contains? criterion (string-ref str i))
-		    (loop (- i 1))
-		  i))))
-	((procedure? criterion)
-	 (let loop ((i (- past 1)))
-	   (and (>= i start)
-		(if (criterion (string-ref str i)) (loop (- i 1))
-		  i))))
-	(else (assertion-violation 'string-skip-right
-		"expected char-set, char or predicate as criterion"
-		criterion))))
+  (define string-skip
+    (case-lambda
+     ((str criterion)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(cond-criterion criterion
+	  ((char?)	(%string-skip/char str criterion 0 ($string-length str)))
+	  ((char-set?)	(%string-skip/cset str criterion 0 ($string-length str)))
+	  ((procedure?)	(%string-skip/pred str criterion 0 ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+     ((str criterion start)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (index-for-string	str start))
+	(cond-criterion criterion
+	  ((char?)	(%string-skip/char str criterion start ($string-length str)))
+	  ((char-set?)	(%string-skip/cset str criterion start ($string-length str)))
+	  ((procedure?)	(%string-skip/pred str criterion start ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+     ((str criterion start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (start-and-past-for-string	str start past))
+	(cond-criterion criterion
+	  ((char?)	(%string-skip/char str criterion start past))
+	  ((char-set?)	(%string-skip/cset str criterion start past))
+	  ((procedure?)	(%string-skip/pred str criterion start past))
+	  (else
+	   (%error-invalid-criterion criterion)))))))
+
+  (define (%error-invalid-criterion criterion)
+    (assertion-violation who
+      "expected char, char-set or predicate as criterion argument" criterion))
+
+  (define (%string-skip/char str char start past)
+    (and ($fx< start past)
+	 (if ($char= char ($string-ref str start))
+	     (%string-skip/char str char ($fxadd1 start) past)
+	   start)))
+
+  (define (%string-skip/cset str cset start past)
+    (and ($fx< start past)
+	 (if (char-set-contains? cset ($string-ref str start))
+	     (%string-skip/cset str cset ($fxadd1 start) past)
+	   start)))
+
+  (define (%string-skip/pred str pred start past)
+    (and ($fx< start past)
+	 (if (pred ($string-ref str start))
+	     (%string-skip/pred str pred ($fxadd1 start) past)
+	   start)))
+
+  #| end of module: string-skip |# )
+
+(module (string-skip-right
+	 %string-skip-right/char
+	 %string-skip-right/cset
+	 %string-skip-right/pred)
+  (define who 'string-skip-right)
+
+  (define string-skip-right
+    (case-lambda
+     ((str criterion)
+      (with-arguments-validation (who)
+	  ((string	str))
+	(cond-criterion criterion
+	  ((char?)	(%string-skip-right/char str criterion 0 ($string-length str)))
+	  ((char-set?)	(%string-skip-right/cset str criterion 0 ($string-length str)))
+	  ((procedure?)	(%string-skip-right/pred str criterion 0 ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+     ((str criterion start)
+      (with-arguments-validation (who)
+	  ((string		str)
+	   (index-for-string	str start))
+	(cond-criterion criterion
+	  ((char?)	(%string-skip-right/char str criterion start ($string-length str)))
+	  ((char-set?)	(%string-skip-right/cset str criterion start ($string-length str)))
+	  ((procedure?)	(%string-skip-right/pred str criterion start ($string-length str)))
+	  (else
+	   (%error-invalid-criterion criterion)))))
+     ((str criterion start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (start-and-past-for-string	str start past))
+	(cond-criterion criterion
+	  ((char?)	(%string-skip-right/char str criterion start past))
+	  ((char-set?)	(%string-skip-right/cset str criterion start past))
+	  ((procedure?)	(%string-skip-right/pred str criterion start past))
+	  (else
+	   (%error-invalid-criterion criterion)))))))
+
+  (define (%error-invalid-criterion criterion)
+    (assertion-violation who
+      "expected char, char-set or predicate as criterion argument" criterion))
+
+  (define (%string-skip-right/char str char start past)
+    (let loop ((i ($fxsub1 past)))
+      (and ($fx>= i start)
+	   (if ($char= char ($string-ref str i))
+	       (loop ($fxsub1 i))
+	     i))))
+
+  (define (%string-skip-right/cset str cset start past)
+    (let loop ((i ($fxsub1 past)))
+      (and ($fx>= i start)
+	   (if (char-set-contains? cset ($string-ref str i))
+	       (loop ($fxsub1 i))
+	     i))))
+
+  (define (%string-skip-right/pred str pred start past)
+    (let loop ((i ($fxsub1 past)))
+      (and ($fx>= i start)
+	   (if (pred ($string-ref str i))
+	       (loop ($fxsub1 i))
+	     i))))
+
+  #| end of module: string-skip-right |# )
 
 (define (string-count criterion str start past)
   (cond ((char? criterion)
@@ -1322,22 +1739,6 @@
 	     (%multispan-repcopy! from to result 0 str start past)
 	     result)))))
 
-(define substring/shared
-  (case-lambda
-   ((str start)
-    (substring str start (string-length str)))
-   ((str start end)
-    (substring str start end))))
-
-(define string-copy
-  (case-lambda
-   ((str)
-    (rnrs.string-copy str))
-   ((str start)
-    (substring str start (string-length str)))
-   ((str start end)
-    (substring str start end))))
-
 (define (string-xcopy! from to
 			dst-str dst-start dst-past
 			src-str src-start src-past)
@@ -1448,21 +1849,6 @@
 
 
 ;;;; mutating
-
-(define (string-copy! dst-str dst-start src-str src-start src-past)
-  (when (< (- (string-length dst-str) dst-start)
-	   (- src-past src-start))
-    (assertion-violation 'string-copy!
-      "not enough room in destination string"))
-  (if (> src-start dst-start)
-      (do ((i src-start (+ i 1))
-	   (j dst-start (+ j 1)))
-	  ((>= i src-past))
-	(string-set! dst-str j (string-ref src-str i)))
-    (do ((i (- src-past 1)                    (- i 1))
-	 (j (+ -1 dst-start (- src-past src-start)) (- j 1)))
-	((< i src-start))
-      (string-set! dst-str j (string-ref src-str i)))))
 
 (define string-fill!
   (case-lambda

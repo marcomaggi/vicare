@@ -856,23 +856,26 @@ Examples:
 @subsubsection Selection
 
 
-@defun string-length @var{s}
-@rnrs{5} Return the number of characters in the string @var{s}.
+@defun string-length @var{str}
+Return the number of characters in the string @var{str}.
 @end defun
 
 
-@defun string-ref @var{s} @var{i}
-@rnrs{5} Return character @code{s[i]} using zero--origin indexing.
-@var{i} must be a valid index of @var{s}.
+@defun string-ref @var{str} @var{i}
+Return character @code{s[i]} using zero--origin indexing.  @var{i} must
+be a valid index of @var{str}.
 @end defun
 
 
-@defun string-copy @var{s} [@var{start} @var{end}]
-@defunx substring/shared @var{s} @var{start} [@var{end}]
-@rnrs{5}+ @func{substring/shared} returns a string whose contents are
-the characters of @var{s} beginning with index @var{start} (inclusive)
-and ending with index @var{end} (exclusive).  It differs from the
-@rnrs{5} @func{substring} in two ways:
+@defun string-copy @var{str}
+@defunx string-copy @var{str} @var{start}
+@defunx string-copy @var{str} @var{start} @var{end}
+@defunx substring/shared @var{str} @var{start}
+@defunx substring/shared @var{str} @var{start} @var{end}
+@func{substring/shared} returns a string whose contents are the
+characters of @var{str} beginning with index @var{start} (inclusive) and
+ending with index @var{end} (exclusive).  It differs from the @rnrs{5}
+@func{substring} in two ways:
 
 @itemize
 @item
@@ -880,7 +883,7 @@ The @var{end} parameter is optional, not required.
 
 @item
 @func{substring/shared} may return a value that shares memory with
-@var{s} or is @func{eq?} to @var{s}.
+@var{str} or is @func{eq?} to @var{str}.
 @end itemize
 
 @func{string-copy} is extended from its @rnrs{5} definition by the
@@ -897,23 +900,26 @@ Examples:
 
 @example
 (string-copy "Beta substitution")
-=> "Beta substitution"
+@result{} "Beta substitution"
 
 (string-copy "Beta substitution" 1 10)
-=> "eta subst"
+@result{} "eta subst"
 
 (string-copy "Beta substitution" 5)
-=> "substitution"
+@result{} "substitution"
 @end example
 @end defun
 
 
-@defun string-copy! @var{target} @var{tstart} @var{s} [@var{start} @var{end}]
-Copy the sequence of characters from index range @code{[start,end)} in
-the string @var{s} to the string @var{target}, beginning at index
-@var{tstart}.  The characters are copied left--to--right or
-right--to--left as needed; the copy is guaranteed to work, even if
-@var{target} and @var{s} are the same string.
+@defun string-copy! @var{dst.str} @var{dst.start} @var{src.str}
+@defunx string-copy! @var{dst.str} @var{dst.start} @var{src.str} @var{src.start}
+@defunx string-copy! @var{dst.str} @var{dst.start} @var{src.str} @var{src.start} @var{src.end}
+Copy the sequence of characters from index range from @var{src.start}
+included and @var{src.end} excluded in the string @var{src.str} to the
+string @var{dst.str}, beginning at index @var{dst.start}.  The
+characters are copied left--to--right or right--to--left as needed; the
+copy is guaranteed to work, even if @var{dst.str} and @var{src.str} are
+the same string.
 
 It is an error if the copy operation runs off the end of the target
 string, e.g.
@@ -921,71 +927,86 @@ string, e.g.
 @example
 (string-copy! (string-copy "Microsoft") 0
               "Regional Microsoft Operating Companies")
-=> error
+@error{} not enough room in destination string
 @end example
 @end defun
 
 
-@defun string-take @var{s} @var{nchars}
-@defunx string-drop @var{s} @var{nchars}
-@defunx string-take-right @var{s} @var{nchars}
-@defunx string-drop-right @var{s} @var{nchars}
-@func{string-take} returns the first @var{nchars} of @var{s}.
+@defun string-take @var{str} @var{nchars}
+@defunx string-drop @var{str} @var{nchars}
+@defunx string-take-right @var{str} @var{nchars}
+@defunx string-drop-right @var{str} @var{nchars}
+@func{string-take} returns the first @var{nchars} of @var{str}.
 
-@func{string-drop} returns all but the first @var{nchars} of @var{s}.
+@func{string-drop} returns all but the first @var{nchars} of @var{str}.
 
-@func{string-take-right} returns the last @var{nchars} of @var{s}.
+@func{string-take-right} returns the last @var{nchars} of @var{str}.
 
 @func{string-drop-right} returns all but the last @var{nchars} of
-@var{s}.
+@var{str}.
 
 If these procedures produce the entire string, they may return either
-@var{s} or a copy of @var{s}; in some implementations, proper substrings
-may share memory with @var{s}.
+@var{str} or a copy of @var{str}; in some implementations, proper substrings
+may share memory with @var{str}.
 
 Examples:
 
 @example
-(string-take "Pete Szilagyi" 6) => "Pete S"
-(string-drop "Pete Szilagyi" 6) => "zilagyi"
+(string-take "Pete Szilagyi" 6) @result{} "Pete S"
+(string-drop "Pete Szilagyi" 6) @result{} "zilagyi"
 
-(string-take-right "Beta rules" 5) => "rules"
-(string-drop-right "Beta rules" 5) => "Beta "
+(string-take-right "Beta rules" 5) @result{} "rules"
+(string-drop-right "Beta rules" 5) @result{} "Beta "
 @end example
 
 It is an error to take or drop more characters than are in the string:
 
 @example
-(string-take "foo" 37) => error
+(string-take "foo" 37) @result{} error
 @end example
 @end defun
 
 
-@defun string-pad @var{s} @var{len} [@var{char} @var{start} @var{end}]
-@defunx string-pad-right @var{s} @var{len} [@var{char} @var{start} @var{end}]
-Build a string of length @var{len} comprised of @var{s} padded on the
+@defun string-pad @var{str} @var{len}
+@defunx string-pad @var{str} @var{len} @var{char}
+@defunx string-pad @var{str} @var{len} @var{char} @var{start}
+@defunx string-pad @var{str} @var{len} @var{char} @var{start} @var{end}
+@defunx string-pad-right @var{str} @var{len}
+@defunx string-pad-right @var{str} @var{len} @var{char}
+@defunx string-pad-right @var{str} @var{len} @var{char} @var{start}
+@defunx string-pad-right @var{str} @var{len} @var{char} @var{start} @var{end}
+Build a string of length @var{len} comprised of @var{str} padded on the
 left (right) by as many occurrences of the character @var{char} as
-needed.  If @var{s} has more than len chars, it is truncated on the left
+needed.  If @var{str} has more than len chars, it is truncated on the left
 (right) to length @var{len}.  @var{char} defaults to @code{#\space}.
 
-If @code{len <= (end - start)}, the returned value is allowed to share
-storage with @var{s}, or be exactly @var{s} (if @code{len = (end -
-start)}).
+If @code{@var{len} <= (@var{end} - @var{start})}, the returned value is
+allowed to share storage with @var{str}, or be exactly @var{str} if
+@code{@var{len} = (@var{end} - @var{start})}.
 
 Examples:
 
 @example
-(string-pad     "325" 5) => "  325"
-(string-pad   "71325" 5) => "71325"
-(string-pad "8871325" 5) => "71325"
+(string-pad     "325" 5) @result{} "  325"
+(string-pad   "71325" 5) @result{} "71325"
+(string-pad "8871325" 5) @result{} "71325"
 @end example
 @end defun
 
 
-@defun string-trim @var{s} [@var{char/char-set/pred} @var{start} @var{end}]
-@defunx string-trim-right @var{s} [@var{char/char-set/pred} @var{start} @var{end}]
-@defunx string-trim-both @var{s} [@var{char/char-set/pred} @var{start} @var{end}]
-Trim @var{s} by skipping over all characters on the left/on the right/on
+@defun string-trim @var{str}
+@defunx string-trim @var{str} @var{char/char-set/pred}
+@defunx string-trim @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-trim @var{str} @var{char/char-set/pred} @var{start} @var{end}
+@defunx string-trim-right @var{str}
+@defunx string-trim-right @var{str} @var{char/char-set/pred}
+@defunx string-trim-right @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-trim-right @var{str} @var{char/char-set/pred} @var{start} @var{end}
+@defunx string-trim-both @var{str}
+@defunx string-trim-both @var{str} @var{char/char-set/pred}
+@defunx string-trim-both @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-trim-both @var{str} @var{char/char-set/pred} @var{start} @var{end}
+Trim @var{str} by skipping over all characters on the left/on the right/on
 both sides that satisfy the second parameter @var{char/char-set/pred}:
 
 @itemize
@@ -999,22 +1020,22 @@ if it is a char set @var{char-set}, characters contained in
 
 @item
 if it is a predicate @var{pred}, it is a test predicate that is applied
-to the characters in @var{s}; a character causing it to return true is
+to the characters in @var{str}; a character causing it to return true is
 skipped.
 @end itemize
 
 @var{char/char-set/pred} defaults to the character set
 @code{char-set:whitespace} defined in @ansrfi{14}.
 
-If no trimming occurs, these functions may return either @var{s} or a
-copy of @var{s}; in some implementations, proper substrings may share
-memory with @var{s}.
+If no trimming occurs, these functions may return either @var{str} or a
+copy of @var{str}; in some implementations, proper substrings may share
+memory with @var{str}.
 
 Example:
 
 @example
 (string-trim-both "  The outlook wasn't brilliant,  \n\r")
-=> "The outlook wasn't brilliant,"
+@result{} "The outlook wasn't brilliant,"
 @end example
 @end defun
 
