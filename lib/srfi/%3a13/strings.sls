@@ -1,4 +1,4 @@
-;;;Copyright (c) 2009, 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2009 Derick Eddington
 ;;;
 ;;;Derived from the SRFI 13 reference implementation.
@@ -192,8 +192,11 @@
 	  pretty-print)
     (srfi :14 char-sets)
     (vicare arguments validation)
+    (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
-	    $))
+	    $)
+    (only (ikarus system $numerics)
+	  $min-fixnum-fixnum))
 
 
 ;;;; helpers
@@ -217,6 +220,75 @@
   (and (list? obj)
        (for-all string? obj))
   (assertion-violation who "expected list of strings as argument" obj))
+
+(define-auxiliary-syntaxes
+  arguments
+  validators)
+
+(define-syntax define-string-func
+  (syntax-rules (arguments validators)
+    ((define-string-func ?who
+       (?proc ?val ...))
+     (define-string-func ?who
+       (?proc ?val ...)
+       (arguments)
+       (validators)))
+    ((define-string-func ?who
+       (?proc ?val ...)
+       (arguments ?arg ...)
+       (validators ?valid ...))
+     (module (?who)
+       (define who '?who)
+
+       (define ?who
+	 (case-lambda
+	  ((str1 str2 ?arg ...)
+	   (with-arguments-validation (who)
+	       ((string			str1)
+		(string			str2)
+		?valid ...)
+	     (?proc ?val ... str1 str2 ?arg ...
+		    0 ($string-length str1) 0 ($string-length str2))))
+
+	  ((str1 str2 ?arg ... start1)
+	   (with-arguments-validation (who)
+	       ((string				str1)
+		(string				str2)
+		?valid ...
+		(one-off-index-for-string	str1 start1))
+	     (?proc ?val ... str1 str2 ?arg ...
+		    start1 ($string-length str1) 0 ($string-length str2))))
+
+	  ((str1 str2 ?arg ... start1 past1)
+	   (with-arguments-validation (who)
+	       ((string				str1)
+		(string				str2)
+		?valid ...
+		(start-and-past-for-string	str1 start1 past1))
+	     (?proc ?val ... str1 str2 ?arg ...
+		    start1 past1 0 ($string-length str2))))
+
+	  ((str1 str2 ?arg ... start1 past1 start2)
+	   (with-arguments-validation (who)
+	       ((string				str1)
+		(string				str2)
+		?valid ...
+		(start-and-past-for-string	str1 start1 past1)
+		(one-off-index-for-string	str2 start2))
+	     (?proc ?val ... str1 str2 ?arg ...
+		    start1 past1 start2 ($string-length str2))))
+
+	  ((str1 str2 ?arg ... start1 past1 start2 past2)
+	   (with-arguments-validation (who)
+	       ((string				str1)
+		(string				str2)
+		?valid ...
+		(start-and-past-for-string	str1 start1 past1)
+		(start-and-past-for-string	str2 start2 past2))
+	     (?proc ?val ... str1 str2 ?arg ...
+		    start1 past1 start2 past2)))))
+
+       #| end of module: ?who |# ))))
 
 
 ;;;; predicates
@@ -900,129 +972,169 @@
 
 ;;;; lexicographic comparison
 
+(define-string-func string-compare
+  (%string-compare)
+  (arguments proc< proc= proc>)
+  (validators (procedure proc<)
+	      (procedure proc=)
+	      (procedure proc>)))
+
+(define-string-func string-compare-ci
+  (%string-compare-ci)
+  (arguments proc< proc= proc>)
+  (validators (procedure proc<)
+	      (procedure proc=)
+	      (procedure proc>)))
+
+(define (%string-compare str1 str2 proc< proc= proc> start1 past1 start2 past2)
+  (%true-string-compare %string-prefix-length char<?
+			str1 str2 proc< proc= proc> start1 past1 start2 past2))
+
+(define (%string-compare-ci str1 str2 proc< proc= proc> start1 past1 start2 past2)
+  (%true-string-compare %string-prefix-length-ci char-ci<?
+			str1 str2 proc< proc= proc> start1 past1 start2 past2))
+
 (define (%true-string-compare string-prefix-length-proc char-less-proc
-			      str1 start1 past1 str2 start2 past2 proc< proc= proc>)
-  (let ((size1 (- past1 start1))
-	(size2 (- past2 start2)))
-    (let ((match (string-prefix-length-proc str1 start1 past1 str2 start2 past2)))
-      (if (= match size1)
-	  ((if (= match size2) proc= proc<) past1)
-	((if (= match size2)
+			      str1 str2 proc< proc= proc> start1 past1 start2 past2)
+  (let ((size1 ($fx- past1 start1))
+	(size2 ($fx- past2 start2)))
+    (let ((match (string-prefix-length-proc str1 str2 start1 past1 start2 past2)))
+      (if ($fx= match size1)
+	  ((if ($fx= match size2) proc= proc<) past1)
+	((if ($fx= match size2)
 	     proc>
-	   (if (char-less-proc (string-ref str1 (+ start1 match))
-			       (string-ref str2 (+ start2 match)))
+	   (if (char-less-proc ($string-ref str1 ($fx+ start1 match))
+			       ($string-ref str2 ($fx+ start2 match)))
 	       proc< proc>))
-	 (+ match start1))))))
-
-(define (string-compare str1 start1 past1 str2 start2 past2 proc< proc= proc>)
-  (%true-string-compare string-prefix-length char<?
-			str1 start1 past1 str2 start2 past2 proc< proc= proc>))
-
-(define (string-compare-ci str1 start1 past1 str2 start2 past2 proc< proc= proc>)
-  (%true-string-compare string-prefix-length-ci char-ci<?
-			str1 start1 past1 str2 start2 past2 proc< proc= proc>))
+	 ($fx+ match start1))))))
 
 ;;; --------------------------------------------------------------------
 
-(define (%true-string= string-compare-proc str1 start1 past1 str2 start2 past2)
-  (and (= (- past1 start1) (- past2 start2))       ; Quick filter
-       (or (and (eq? str1 str2) (= start1 start2)) ; Fast path
-	   (string-compare-proc str1 start1 past1 str2 start2 past2 ; Real test
-				(lambda (i) #f) values (lambda (i) #f)))))
+(define-string-func string=
+  (%true-string= %string-compare))
 
-(define (string= str1 start1 past1 str2 start2 past2)
-  (%true-string= string-compare str1 start1 past1 str2 start2 past2))
+(define-string-func string-ci=
+  (%true-string= %string-compare-ci))
 
-(define (string-ci= str1 start1 past1 str2 start2 past2)
-  (%true-string= string-compare-ci str1 start1 past1 str2 start2 past2))
-
-;;; --------------------------------------------------------------------
-
-(define (%true-string<> string-compare-proc str1 start1 past1 str2 start2 past2)
-  (or (not (= (- past1 start1) (- past2 start2)))	     ; Fast path
-      (and (not (and (eq? str1 str2) (= start1 start2))) ; Quick filter
-	   (string-compare-proc str1 start1 past1 str2 start2 past2	; Real test
-				values (lambda (i) #f) values))))
-
-(define (string<> str1 start1 past1 str2 start2 past2)
-  (%true-string<> string-compare str1 start1 past1 str2 start2 past2))
-
-(define (string-ci<> str1 start1 past1 str2 start2 past2)
-  (%true-string<> string-compare-ci str1 start1 past1 str2 start2 past2))
+(define (%true-string= string-compare-proc str1 str2 start1 past1 start2 past2)
+  (and ($fx= ($fx- past1 start1) ($fx- past2 start2))
+       (or (and (eq? str1 str2) ($fx= start1 start2))
+	   (string-compare-proc str1 str2
+				(lambda (i) #f) values (lambda (i) #f)
+				start1 past1 start2 past2))))
 
 ;;; --------------------------------------------------------------------
 
-(define (%true-string< string-prefix-proc char-pred
-		       str1 start1 past1 str2 start2 past2)
-  (if (and (eq? str1 str2) (= start1 start2)) ; Fast path
-      (< past1 past2)
+(define-string-func string<>
+  (%true-string<> %string-compare))
+
+(define-string-func string-ci<>
+  (%true-string<> %string-compare-ci))
+
+(define (%true-string<> string-compare-proc str1 str2 start1 past1 start2 past2)
+  (or (not ($fx= ($fx- past1 start1) ($fx- past2 start2)))
+      (and (not (and (eq? str1 str2) ($fx= start1 start2)))
+	   (string-compare-proc str1 str2
+				values (lambda (i) #f) values
+				start1 past1 start2 past2))))
+
+;;; --------------------------------------------------------------------
+
+(define-string-func string<
+  (%true-string< %string-prefix-length char<?))
+
+(define-string-func string-ci<
+  (%true-string< %string-prefix-length-ci char-ci<?))
+
+(define (%true-string< string-prefix-proc char-pred str1 str2 start1 past1 start2 past2)
+  (if (and (eq? str1 str2) ($fx= start1 start2))
+      ($fx< past1 past2)
     ;;Notice that CHAR-PRED is always the less-than one.
-    (%true-string-compare string-prefix-proc char-pred ; Real test
-			  str1 start1 past1 str2 start2 past2
-			  values (lambda (i) #f) (lambda (i) #f))))
-
-(define (string< str1 start1 past1 str2 start2 past2)
-  (%true-string< string-prefix-length char<?
-		 str1 start1 past1 str2 start2 past2))
-
-(define (string-ci< str1 start1 past1 str2 start2 past2)
-  (%true-string< string-prefix-length-ci char-ci<?
-		 str1 start1 past1 str2 start2 past2))
+    (%true-string-compare string-prefix-proc char-pred
+			  str1 str2
+			  values (lambda (i) #f) (lambda (i) #f)
+			  start1 past1 start2 past2)))
 
 ;;; --------------------------------------------------------------------
 
-(define (%true-string<= string-prefix-proc char-pred
-			str1 start1 past1 str2 start2 past2)
-  (if (and (eq? str1 str2) (= start1 start2)) ; Fast path
-      (<= past1 past2)
+(define-string-func string<=
+  (%true-string<= %string-prefix-length char<=?))
+
+(define-string-func string-ci<=
+  (%true-string<= %string-prefix-length-ci char-ci<=?))
+
+(define (%true-string<= string-prefix-proc char-pred str1 str2 start1 past1 start2 past2)
+  (if (and (eq? str1 str2) ($fx= start1 start2))
+      ($fx<= past1 past2)
     ;;Notice that CHAR-PRED is always the less-than one.
-    (%true-string-compare string-prefix-proc char-pred ; Real test
-			  str1 start1 past1 str2 start2 past2
-			  values values (lambda (i) #f))))
-
-(define (string<= str1 start1 past1 str2 start2 past2)
-  (%true-string<= string-prefix-length char<=?
-		  str1 start1 past1 str2 start2 past2))
-
-(define (string-ci<= str1 start1 past1 str2 start2 past2)
-  (%true-string<= string-prefix-length-ci char-ci<=?
-		  str1 start1 past1 str2 start2 past2))
+    (%true-string-compare string-prefix-proc char-pred
+			  str1 str2
+			  values values (lambda (i) #f)
+			  start1 past1 start2 past2)))
 
 ;;; --------------------------------------------------------------------
 
-(define (%true-string> string-prefix-proc char-pred str1 start1 past1 str2 start2 past2)
-  (if (and (eq? str1 str2) (= start1 start2)) ; Fast path
-      (> past1 past2)
+(define-string-func string>
+  (%true-string> %string-prefix-length char<?))
+
+(define-string-func string-ci>
+  (%true-string> %string-prefix-length-ci char-ci<?))
+
+(define (%true-string> string-prefix-proc char-pred str1 str2 start1 past1 start2 past2)
+  (if (and (eq? str1 str2) ($fx= start1 start2))
+      ($fx> past1 past2)
     ;;Notice that CHAR-PRED is always the less-than one.
-    (%true-string-compare string-prefix-proc char-pred ; Real test
-			  str1 start1 past1 str2 start2 past2
-			  (lambda (i) #f) (lambda (i) #f) values)))
-
-(define (string> str1 start1 past1 str2 start2 past2)
-  (%true-string> string-prefix-length char<?
-		 str1 start1 past1 str2 start2 past2))
-
-(define (string-ci> str1 start1 past1 str2 start2 past2)
-  (%true-string> string-prefix-length-ci char-ci<?
-		 str1 start1 past1 str2 start2 past2))
+    (%true-string-compare string-prefix-proc char-pred
+			  str1 str2
+			  (lambda (i) #f) (lambda (i) #f) values
+			  start1 past1 start2 past2)))
 
 ;;; --------------------------------------------------------------------
 
-(define (%true-string>= string-prefix-proc char-pred str1 start1 past1 str2 start2 past2)
-  (if (and (eq? str1 str2) (= start1 start2)) ; Fast path
-      (>= past1 past2)
+(define-string-func string>=
+  (%true-string>= %string-prefix-length char<=?))
+
+(define-string-func string-ci>=
+  (%true-string>= %string-prefix-length-ci char-ci<=?))
+
+(define (%true-string>= string-prefix-proc char-pred str1 str2 start1 past1 start2 past2)
+  (if (and (eq? str1 str2) ($fx= start1 start2))
+      ($fx>= past1 past2)
     ;;Notice that CHAR-PRED is always the less-than one.
-    (%true-string-compare string-prefix-proc char-pred ; Real test
-			  str1 start1 past1 str2 start2 past2
-			  (lambda (i) #f) values values)))
+    (%true-string-compare string-prefix-proc char-pred
+			  str1 str2
+			  (lambda (i) #f) values values
+			  start1 past1 start2 past2)))
 
-(define (string>= str1 start1 past1 str2 start2 past2)
-  (%true-string>= string-prefix-length char<=?
-		 str1 start1 past1 str2 start2 past2))
+
+;;;; hashing
 
-(define (string-ci>= str1 start1 past1 str2 start2 past2)
-  (%true-string>= string-prefix-length-ci char-ci<=?
-		 str1 start1 past1 str2 start2 past2))
+(define string-hash
+  (case-lambda
+   ((str)
+    ;;We know that RNRS.STRING-HASH returns a fixnum.
+    (rnrs.string-hash str))
+   ((str bound)
+    (let ((bound (if (zero? bound)
+		     (greatest-fixnum)
+		   bound)))
+      ;;We know that RNRS.STRING-HASH returns a fixnum.
+      (mod (rnrs.string-hash str) bound)))
+   ((str bound start)
+    (string-hash (substring str start (string-length str)) bound))
+   ((str bound start end)
+    (string-hash (substring str start end) bound))))
+
+(define string-hash-ci
+  (case-lambda
+   ((str)
+    (string-hash (string-downcase str)))
+   ((str bound)
+    (string-hash (string-downcase str) bound))
+   ((str bound start)
+    (string-hash (string-downcase str) bound start))
+   ((str bound start end)
+    (string-hash (string-downcase str) bound start end))))
 
 
 ;;;; mapping
@@ -1123,33 +1235,6 @@
     (when (< i past)
       (proc i)
       (loop (+ i 1)))))
-
-;;; --------------------------------------------------------------------
-
-(define string-hash
-  (case-lambda
-   ((str)
-    (rnrs.string-hash str))
-   ((str bound)
-    (let ((bound (if (zero? bound)
-		     (greatest-fixnum)
-		   bound)))
-      (mod (rnrs.string-hash str) bound)))
-   ((str bound start)
-    (string-hash (substring str start (string-length str)) bound))
-   ((str bound start end)
-    (string-hash (substring str start end) bound))))
-
-(define string-hash-ci
-  (case-lambda
-   ((str)
-    (string-hash (string-downcase str)))
-   ((str bound)
-    (string-hash (string-downcase str) bound))
-   ((str bound start)
-    (string-hash (string-downcase str) bound start))
-   ((str bound start end)
-    (string-hash (string-downcase str) bound start end))))
 
 
 ;;;; case hacking
@@ -1404,37 +1489,94 @@
 
 ;;;; prefix and suffix
 
-(define (%true-string-prefix-length char-cmp? str1 start1 past1 str2 start2 past2)
-  ;;Find the length  of the common prefix.  It is  not required that the
-  ;;two substrings passed be of equal length.
-  (let* ((delta (min (- past1 start1) (- past2 start2)))
-	 (past1 (+ start1 delta)))
-    (if (and (eq? str1 str2) (= start1 start2)) ; EQ fast path
-	delta
-      (let lp ((i start1) (j start2)) ; Regular path
-	(if (or (>= i past1)
-		(not (char-cmp? (string-ref str1 i)
-				(string-ref str2 j))))
-	    (- i start1)
-	  (lp (+ i 1) (+ j 1)))))))
+(module (string-prefix-length
+	 string-prefix-length-ci
+	 %string-prefix-length
+	 %string-prefix-length-ci)
 
-(define (string-prefix-length str1 start1 past1 str2 start2 past2)
-  (%true-string-prefix-length char=? str1 start1 past1 str2 start2 past2))
+  (define-syntax define-prefix-func
+    (syntax-rules ()
+      ((_ ?who ?unsafe-proc)
+       (module (?who)
+	 (define who '?who)
 
-(define (string-prefix-length-ci str1 start1 past1 str2 start2 past2)
-  (%true-string-prefix-length char-ci=? str1 start1 past1 str2 start2 past2))
+	 (define ?who
+	   (case-lambda
+	    ((str1 str2)
+	     (with-arguments-validation (who)
+		 ((string			str1)
+		  (string			str2))
+	       (?unsafe-proc str1 str2 0 ($string-length str1) 0 ($string-length str2))))
+
+	    ((str1 str2 start1)
+	     (with-arguments-validation (who)
+		 ((string			str1)
+		  (string			str2)
+		  (one-off-index-for-string	str1 start1))
+	       (?unsafe-proc str1 str2 start1 ($string-length str1) 0 ($string-length str2))))
+
+	    ((str1 str2 start1 past1)
+	     (with-arguments-validation (who)
+		 ((string			str1)
+		  (string			str2)
+		  (start-and-past-for-string	str1 start1 past1))
+	       (?unsafe-proc str1 str2 start1 past1 0 ($string-length str2))))
+
+	    ((str1 str2 start1 past1 start2)
+	     (with-arguments-validation (who)
+		 ((string			str1)
+		  (string			str2)
+		  (start-and-past-for-string	str1 start1 past1)
+		  (one-off-index-for-string	str2 start2))
+	       (?unsafe-proc str1 str2 start1 past1 start2 ($string-length str2))))
+
+	    ((str1 str2 start1 past1 start2 past2)
+	     (with-arguments-validation (who)
+		 ((string			str1)
+		  (string			str2)
+		  (start-and-past-for-string	str1 start1 past1)
+		  (start-and-past-for-string	str2 start2 past2))
+	       (?unsafe-proc str1 str2 start1 past1 start2 past2)))))
+
+	 #| end of module: ?who |# ))))
+
+  (define-prefix-func string-prefix-length	%string-prefix-length)
+  (define-prefix-func string-prefix-length-ci	%string-prefix-length-ci)
+
+  (define (%string-prefix-length str1 str2 start1 past1 start2 past2)
+    (%true-string-prefix-length char=? str1 str2 start1 past1 start2 past2))
+
+  (define (%string-prefix-length-ci str1 str2 start1 past1 start2 past2)
+    (%true-string-prefix-length char-ci=? str1 str2 start1 past1 start2 past2))
+
+  (define (%true-string-prefix-length char-cmp? str1 str2 start1 past1 start2 past2)
+    ;;Find the length of the common prefix.  It is not required that the
+    ;;two substrings passed be of equal length.
+    (let* ((delta ($min-fixnum-fixnum ($fx- past1 start1)
+				      ($fx- past2 start2)))
+	   (past1 ($fx+ start1 delta)))
+      (if (and (eq? str1 str2)
+	       ($fx= start1 start2))
+	  delta
+	(let lp ((i start1)
+		 (j start2))
+	  (if (or ($fx>= i past1)
+		  (not (char-cmp? ($string-ref str1 i)
+				  ($string-ref str2 j))))
+	      ($fx- i start1)
+	    (lp ($fxadd1 i) ($fxadd1 j)))))))
+
+  #| end of module |# )
 
 (define (string-prefix? str1 start1 past1 str2 start2 past2)
   (let ((len1 (- past1 start1)))
     (and (<= len1 (- past2 start2)) ; Quick check
-	 (= len1 (string-prefix-length str1 start1 past1
-					str2 start2 past2)))))
+	 (= len1 (string-prefix-length str1 str2 start1 past1 start2 past2)))))
 
 (define (string-prefix-ci? str1 start1 past1 str2 start2 past2)
   (let ((len1 (- past1 start1)))
     (and (<= len1 (- past2 start2)) ; Quick check
-	 (= len1 (string-prefix-length-ci str1 start1 past1
-					   str2 start2 past2)))))
+	 (= len1 (string-prefix-length-ci str1 str2 start1 past1 start2 past2)))))
 
 ;;; --------------------------------------------------------------------
 

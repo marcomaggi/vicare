@@ -1066,20 +1066,21 @@ Store @var{char} in every selected element of @var{str}.
 @subsubsection Comparison
 
 
-@defun string-compare @var{s1} @var{s2} @var{proc<} @var{proc=} @var{proc>} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-compare-ci @var{s1} @var{s2} @var{proc<} @var{proc=} @var{proc>} [@var{start1} @var{end1} @var{start2} @var{end2}]
+@defun string-compare @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>}
+@defunx string-compare @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start}
+@defunx string-compare @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start} @vari{end}
+@defunx string-compare @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start} @vari{end} @varii{start}
+@defunx string-compare @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start} @vari{end} @varii{start} @varii{end}
 Apply @var{proc<}, @var{proc=}, or @var{proc>} to the mismatch index,
-depending upon whether @var{s1} is less than, equal to, or greater than
-@var{s2}.  The ``mismatch index'' is the largest index @var{i} such that
-for every @code{0 <= j < i}, @code{s1[j] = s2[j]}; that is, @var{i} is
-the first position that doesn't match.
-
-@func{string-compare-ci} is the case--insensitive variant.
+depending upon whether @vari{str} is less than, equal to, or greater
+than @varii{str}.  The ``mismatch index'' is the largest index @var{i}
+such that for every @code{0 <= j < i}, @code{s1[j] = s2[j]}; that is,
+@var{i} is the first position that doesn't match.
 
 The optional @var{start}/@var{end} indices restrict the comparison to
-the indicated substrings of @var{s1} and @var{s2}.  The mismatch index
-is always an index into @var{s1}; in the case of @var{proc=}, it is
-always @var{end1}; we observe the protocol in this redundant case for
+the indicated substrings of @vari{str} and @varii{str}.  The mismatch index
+is always an index into @vari{str}; in the case of @var{proc=}, it is
+always @vari{end}; we observe the protocol in this redundant case for
 uniformity.
 
 @example
@@ -1094,51 +1095,161 @@ True text collation is not handled by this @srfi{}.
 @end defun
 
 
-@defun string= @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string<> @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string< @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string> @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string<= @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string>= @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-These procedures are the lexicographic extensions to strings of the
-corresponding orderings on characters.  For example, @func{string<} is
-the lexicographic ordering on strings induced by the ordering
+@defun string-compare-ci @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>}
+@defunx string-compare-ci @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start}
+@defunx string-compare-ci @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start} @vari{end}
+@defunx string-compare-ci @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start} @vari{end} @varii{start}
+@defunx string-compare-ci @vari{str} @varii{str} @var{proc<} @var{proc=} @var{proc>} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string-compare}.
+@end defun
+
+@c ------------------------------------------------------------
+
+The following procedures are the lexicographic extensions to strings of
+the corresponding orderings on characters.  For example, @func{string<}
+is the lexicographic ordering on strings induced by the ordering
 @func{char<?} on characters.  If two strings differ in length but are
 the same up to the length of the shorter string, the shorter string is
 considered to be lexicographically less than the longer string.
 
 The optional @var{start}/@var{end} indices restrict the comparison to
-the indicated substrings of @var{s1} and @var{s2}.
+the indicated substrings of @vari{str} and @varii{str}.
 
 True text collation is not handled by this @srfi{}.
+
+
+@defun string= @vari{str} @varii{str}
+@defunx string= @vari{str} @varii{str} @vari{start}
+@defunx string= @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Lexicographic ordering on strings induced by the ordering @func{char=?}
+on characters.
 @end defun
 
 
-@defun string-ci= @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-ci<> @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-ci< @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-ci> @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-ci<= @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-ci>= @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-Case--insensitive variants.
+@defun string<> @vari{str} @varii{str}
+@defunx string<> @vari{str} @varii{str} @vari{start}
+@defunx string<> @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string<> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string<> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Lexicographic ordering on strings induced by the negation of the
+ordering @func{char=?} on characters.
 @end defun
 
 
-@defun string-hash @var{s} [@var{bound} @var{start} @var{end}]
-@defunx string-hash-ci @var{s} [@var{bound} @var{start} @var{end}]
-Compute a hash value for the string @var{s}.  @var{bound} is a
-non--negative exact integer specifying the range of the hash function.
-A positive value restricts the return value to the range @code{[0,
-bound)}.
+@defun string< @vari{str} @varii{str}
+@defunx string< @vari{str} @varii{str} @vari{start}
+@defunx string< @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string< @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string< @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Lexicographic ordering on strings induced by the ordering @func{char<?}
+on characters.
+@end defun
 
-If @var{bound} is either zero or not given, the implementation may use
-an implementation--specific default value, chosen to be as large as is
-efficiently practical.  For instance, the default range might be chosen
-for a given implementation to map all strings into the range of integers
-that can be represented with a single machine word.
+
+@defun string> @vari{str} @varii{str}
+@defunx string> @vari{str} @varii{str} @vari{start}
+@defunx string> @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Lexicographic ordering on strings induced by the ordering @func{char>?}
+on characters.
+@end defun
+
+
+@defun string<= @vari{str} @varii{str}
+@defunx string<= @vari{str} @varii{str} @vari{start}
+@defunx string<= @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string<= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string<= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Lexicographic ordering on strings induced by the ordering @func{char<=?}
+on characters.
+@end defun
+
+
+@defun string>= @vari{str} @varii{str}
+@defunx string>= @vari{str} @varii{str} @vari{start}
+@defunx string>= @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string>= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string>= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Lexicographic ordering on strings induced by the ordering @func{char>=?}
+on characters.
+@end defun
+
+
+@defun string-ci= @vari{str} @varii{str}
+@defunx string-ci= @vari{str} @varii{str} @vari{start}
+@defunx string-ci= @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-ci= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-ci= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string=}.
+@end defun
+
+
+@defun string-ci<> @vari{str} @varii{str}
+@defunx string-ci<> @vari{str} @varii{str} @vari{start}
+@defunx string-ci<> @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-ci<> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-ci<> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string<>}.
+@end defun
+
+
+@defun string-ci< @vari{str} @varii{str}
+@defunx string-ci< @vari{str} @varii{str} @vari{start}
+@defunx string-ci< @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-ci< @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-ci< @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string<}.
+@end defun
+
+
+@defun string-ci> @vari{str} @varii{str}
+@defunx string-ci> @vari{str} @varii{str} @vari{start}
+@defunx string-ci> @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-ci> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-ci> @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string>}.
+@end defun
+
+
+@defun string-ci<= @vari{str} @varii{str}
+@defunx string-ci<= @vari{str} @varii{str} @vari{start}
+@defunx string-ci<= @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-ci<= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-ci<= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string<=}.
+@end defun
+
+
+@defun string-ci>= @vari{str} @varii{str}
+@defunx string-ci>= @vari{str} @varii{str} @vari{start}
+@defunx string-ci>= @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-ci>= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-ci>= @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant of @func{string>=}.
+@end defun
+
+
+@defun string-hash @var{str}
+@defunx string-hash @var{str} @var{bound}
+@defunx string-hash @var{str} @var{bound} @var{start}
+@defunx string-hash @var{str} @var{bound} @var{start} @var{end}
+@defunx string-hash-ci @var{str}
+@defunx string-hash-ci @var{str} @var{bound}
+@defunx string-hash-ci @var{str} @var{bound} @var{start}
+@defunx string-hash-ci @var{str} @var{bound} @var{start} @var{end}
+Compute a hash value for the string @var{str} and return it as a fixnum.
+@var{bound} is a non--negative exact integer specifying the range of the
+hash function.  A positive value restricts the return value to the range
+between @code{0} included and @var{bound} excluded.
+
+If @var{bound} is either zero or not given, it defaults to
+@code{(greatest-fixnum)}.
 
 The optional @var{start}/@var{end} indices restrict the hash operation
-to the indicated substring of @var{s}.
+to the indicated substring of @var{str}.
 
 @func{string-hash-ci} is the case--insensitive variant.
 
@@ -1146,25 +1257,13 @@ Invariants:
 
 @example
 (<= 0 (string-hash s b) (- b 1)) ; When B > 0.
-(string=    s1 s2)  =>  (= (string-hash s1 b)    (string-hash s2 b))
-(string-ci= s1 s2)  =>  (= (string-hash-ci s1 b) (string-hash-ci s2 b))
+
+(string=    s1 s2)
+@result{} (= (string-hash s1 b)    (string-hash s2 b))
+
+(string-ci= s1 s2)
+@result{} (= (string-hash-ci s1 b) (string-hash-ci s2 b))
 @end example
-
-A legal but nonetheless discouraged implementation:
-
-@example
-(define (string-hash    s . other-args) 1)
-(define (string-hash-ci s . other-args) 1)
-@end example
-
-Rationale: allowing the user to specify an explicit bound simplifies
-user code by removing the mod operation that typically accompanies every
-hash computation, and also may allow the implementation of the hash
-function to exploit a reduced range to efficiently compute the hash
-value.  E.g., for small bounds, the hash function may be computed in a
-fashion such that intermediate values never overflow into bignum
-integers, allowing the implementor to provide a fixnum--specific ``fast
-path'' for computing the common cases very rapidly.
 @end defun
 
 @c page

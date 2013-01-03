@@ -878,52 +878,55 @@
   (check
       (let* ((str1 "abcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare str1 str2 values values values beg1 end1 beg2 end2))
     => 4)
 
   (check
       (let* ((str1 "abcdef") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare str1 str2 values values values beg1 end1 beg2 end2))
     => 4)
 
   (check
       (let* ((str1 "efg") (beg1 0) (end1 (string-length str1))
 	     (str2 "123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare str1 str2 values values values beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare str1 str2 values values values beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare str1 str2 values values values beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "abcdA") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcdA") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2
-			 (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)))
+	(srfi.string-compare str1 str2
+			     (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)
+			     beg1 end1 beg2 end2))
     => 'equal)
 
   (check
       (let* ((str1 "abcdA") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcdB") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2
-			 (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)))
+	(srfi.string-compare str1 str2
+			     (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)
+			     beg1 end1 beg2 end2))
     => 'less)
 
   (check
       (let* ((str1 "abcdB") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcdA") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare str1 beg1 end1 str2 beg2 end2
-			 (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)))
+	(srfi.string-compare str1 str2
+			     (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)
+			     beg1 end1 beg2 end2))
     => 'greater)
 
 ;;; --------------------------------------------------------------------
@@ -932,59 +935,59 @@
    (let* ((str "abcd")
 	  (beg1 0) (end1 (string-length str))
 	  (beg2 0) (end2 (string-length str)))
-     (srfi.string= str beg1 end1 str beg2 end2)))
+     (srfi.string= str str beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "12abcd") (beg1 2) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string= str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<> str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -998,32 +1001,32 @@
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abc")  (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "ABCD") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "ABCD") (beg1 0) (end1 (string-length str1))
 	  (str2 "A2CD") (beg2 0) (end2 (string-length str2)))
-     (srfi.string< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string< str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1039,27 +1042,27 @@
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc")  (beg2 0) (end2 (string-length str2)))
-     (srfi.string<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string<= str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1073,27 +1076,27 @@
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "ABcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "a2cd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string> str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1109,32 +1112,32 @@
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "ABcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "ABCD") (beg2 0) (end2 (string-length str2)))
-     (srfi.string>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "a2cd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string>= str1 str2 beg1 end1 beg2 end2)))
 
   #t)
 
@@ -1144,46 +1147,49 @@
   (check
       (let* ((str1 "aBcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare-ci str1 str2 values values values beg1 end1 beg2 end2))
     => 4)
 
   (check
       (let* ((str1 "efg") (beg1 0) (end1 (string-length str1))
 	     (str2 "123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare-ci str1 str2 values values values beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare-ci str1 str2 values values values beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2 values values values))
+	(srfi.string-compare-ci str1 str2 values values values beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "abcdA") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcda") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2
-			    (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)))
+	(srfi.string-compare-ci str1 str2
+				(lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)
+				beg1 end1 beg2 end2))
     => 'equal)
 
   (check
       (let* ((str1 "abcdA") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcdb") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2
-			    (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)))
+	(srfi.string-compare-ci str1 str2
+				(lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)
+				beg1 end1 beg2 end2))
     => 'less)
 
   (check
       (let* ((str1 "abcdb") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcdA") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-compare-ci str1 beg1 end1 str2 beg2 end2
-			    (lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)))
+	(srfi.string-compare-ci str1 str2
+				(lambda (idx) 'less) (lambda (idx) 'equal) (lambda (idx) 'greater)
+				beg1 end1 beg2 end2))
     => 'greater)
 
 ;;; --------------------------------------------------------------------
@@ -1192,167 +1198,196 @@
    (let* ((str "abcd")
 	  (beg1 0) (end1 (string-length str))
 	  (beg2 0) (end2 (string-length str)))
-     (srfi.string-ci= str beg1 end1 str beg2 end2)))
+     (srfi.string-ci= str str beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "12abcd") (beg1 2) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci= str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<> str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci< str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci< str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci< str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "ABcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "a2cd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci<= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci<= str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "ABcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci> str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "a2cd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci> str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci> str1 str2 beg1 end1 beg2 end2)))
 
 ;;; --------------------------------------------------------------------
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abc") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "abc") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-true
    (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
 	  (str2 "ABcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci>= str1 str2 beg1 end1 beg2 end2)))
 
   (check-for-false
    (let* ((str1 "a2cd") (beg1 0) (end1 (string-length str1))
 	  (str2 "abcd") (beg2 0) (end2 (string-length str2)))
-     (srfi.string-ci>= str1 beg1 end1 str2 beg2 end2)))
+     (srfi.string-ci>= str1 str2 beg1 end1 beg2 end2)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'hash))
+
+  (check
+      (fixnum? (srfi.string-hash "ciao"))
+    => #t)
+
+  (check
+      (fx<? (srfi.string-hash "ciao" 10) 10)
+    => #t)
+
+  (check
+      (fixnum? (srfi.string-hash "ciao" 10 0))
+    => #t)
+
+  (check
+      (fixnum? (srfi.string-hash "ciao" 10 0 4))
+    => #t)
+
+  (check
+      (fixnum? (srfi.string-hash "ciao" 10 2 3))
+    => #t)
+
+  (check
+      (fixnum? (srfi.string-hash "ciao" 10 2 2))
+    => #t)
 
   #t)
 
@@ -1539,43 +1574,43 @@
   (check
       (let* ((str1 "abcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 4)
 
   (check
       (let* ((str1 "aBcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 1)
 
   (check
       (let* ((str1 "efg") (beg1 0) (end1 (string-length str1))
 	     (str2 "123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "a") (beg1 0) (end1 (string-length str1))
 	     (str2 "a") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 1)
 
   (check
       (let* ((str1 "1") (beg1 0) (end1 (string-length str1))
 	     (str2 "2") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "abcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length str1 str2 beg1 end1 beg2 end2))
     => 0)
 
 ;;; --------------------------------------------------------------------
@@ -1627,43 +1662,43 @@
   (check
       (let* ((str1 "aBcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "aBcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 4)
 
   (check
       (let* ((str1 "aBcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 4)
 
   (check
       (let* ((str1 "efg") (beg1 0) (end1 (string-length str1))
 	     (str2 "123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "a") (beg1 0) (end1 (string-length str1))
 	     (str2 "a") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 1)
 
   (check
       (let* ((str1 "1") (beg1 0) (end1 (string-length str1))
 	     (str2 "2") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "") (beg1 0) (end1 (string-length str1))
 	     (str2 "abcd123") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 0)
 
   (check
       (let* ((str1 "abcdefg") (beg1 0) (end1 (string-length str1))
 	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-prefix-length-ci str1 beg1 end1 str2 beg2 end2))
+	(srfi.string-prefix-length-ci str1 str2 beg1 end1 beg2 end2))
     => 0)
 
 ;;; --------------------------------------------------------------------
