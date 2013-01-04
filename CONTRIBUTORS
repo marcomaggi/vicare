@@ -18,6 +18,11 @@ mixture of module names and library specs.
 https://github.com/sunderroy: contributed  a fix  for EXPORT  allowing a
 module to export its bindings to the enclosing region.
 
+The included SRFI libraries were ported to R6RS by Derick Eddington; see
+the  files README.srfi  and LICENSE.srfi  for details.   See the  source
+files for the list of original SRFI authors.
+
+
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
 
