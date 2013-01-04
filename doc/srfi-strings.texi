@@ -1271,32 +1271,80 @@ Invariants:
 @subsubsection Prefixes and suffixes
 
 
-@defun string-prefix-length @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-suffix-length @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-prefix-length-ci @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-suffix-length-ci @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-Return the length of the longest common prefix/suffix of the two
-strings.  For prefixes, this is equivalent to the ``mismatch index'' for
-the strings (modulo the @var{starti} index offsets).
-
-The optional @var{start}/@var{end} indices restrict the comparison to
-the indicated substrings of @var{s1} and @var{s2}.
-
-@func{string-prefix-length-ci} and @func{string-suffix-length-ci} are
-the case--insensitive variants.
+@defun string-prefix-length @vari{str} @varii{str}
+@defunx string-prefix-length @vari{str} @varii{str} @vari{start}
+@defunx string-prefix-length @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-prefix-length @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-prefix-length @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Return the length of the longest common prefix of the two selected
+substrings strings.  This is equivalent to the ``mismatch index'' for
+the strings (modulo the @var{start} index offsets).
 @end defun
 
 
-@defun string-prefix? @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-suffix? @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-prefix-ci? @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-suffix-ci? @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-Return @true{} if @var{s1} is a prefix/suffix of @var{s2}; otherwise
-return @false{}.  The optional @var{start}/@var{end} indices restrict
-the comparison to the indicated substrings of @var{s1} and @var{s2}.
+@defun string-prefix-length-ci @vari{str} @varii{str}
+@defunx string-prefix-length-ci @vari{str} @varii{str} @vari{start}
+@defunx string-prefix-length-ci @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-prefix-length-ci @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-prefix-length-ci @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant.
+@end defun
 
-@func{string-prefix-ci?} and @func{string-suffix-ci?} are the
-case--insensitive variants.
+
+@defun string-suffix-length @vari{str} @varii{str}
+@defunx string-suffix-length @vari{str} @varii{str} @vari{start}
+@defunx string-suffix-length @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-suffix-length @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-suffix-length @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Return the length of the longest common suffix of the two selected
+substrings strings.
+@end defun
+
+
+@defun string-suffix-length-ci @vari{str} @varii{str}
+@defunx string-suffix-length-ci @vari{str} @varii{str} @vari{start}
+@defunx string-suffix-length-ci @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-suffix-length-ci @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-suffix-length-ci @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant.
+@end defun
+
+
+@defun string-prefix? @vari{str} @varii{str}
+@defunx string-prefix? @vari{str} @varii{str} @vari{start}
+@defunx string-prefix? @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-prefix? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-prefix? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Return @true{} if the selected substring of @vari{str} is a prefix of
+the selected substring of @varii{str}; otherwise return @false{}.
+@end defun
+
+
+@defun string-prefix-ci? @vari{str} @varii{str}
+@defunx string-prefix-ci? @vari{str} @varii{str} @vari{start}
+@defunx string-prefix-ci? @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-prefix-ci? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-prefix-ci? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant.
+@end defun
+
+
+@defun string-suffix? @vari{str} @varii{str}
+@defunx string-suffix? @vari{str} @varii{str} @vari{start}
+@defunx string-suffix? @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-suffix? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-suffix? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Return @true{} if the selected substring of @vari{str} is a suffix of
+the selected substring of @varii{str}; otherwise return @false{}.
+@end defun
+
+
+@defun string-suffix-ci? @vari{str} @varii{str}
+@defunx string-suffix-ci? @vari{str} @varii{str} @vari{start}
+@defunx string-suffix-ci? @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-suffix-ci? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-suffix-ci? @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant.
 @end defun
 
 @c page
