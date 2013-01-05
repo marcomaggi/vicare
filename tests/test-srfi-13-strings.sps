@@ -2108,6 +2108,53 @@
   #t)
 
 
+(parametrise ((check-test-name 'case))
+
+  (check (srfi.string-upcase "abcd")		=> "ABCD")
+  (check (srfi.string-upcase "aBcD")		=> "ABCD")
+  (check (srfi.string-upcase "1234")		=> "1234")
+
+  (check (srfi.string-downcase "ABCD")		=> "abcd")
+  (check (srfi.string-downcase "aBcD")		=> "abcd")
+  (check (srfi.string-downcase "1234")		=> "1234")
+
+  (check (srfi.string-upcase! (string-copy "abcd"))	=> "ABCD")
+  (check (srfi.string-upcase! (string-copy "aBcD"))	=> "ABCD")
+  (check (srfi.string-upcase! (string-copy "1234"))	=> "1234")
+
+  (check (srfi.string-downcase! (string-copy "ABCD"))	=> "abcd")
+  (check (srfi.string-downcase! (string-copy "aBcD"))	=> "abcd")
+  (check (srfi.string-downcase! (string-copy "1234"))	=> "1234")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
+	(srfi.string-titlecase! str beg end)
+	str)
+    => "Abcd")
+
+  (check
+      (let* ((str (string-copy "123abcd")) (beg 0) (end (string-length str)))
+	(srfi.string-titlecase! str beg end)
+	str)
+    => "123Abcd")
+
+  (check
+      (let* ((str (string-copy "---abcd")) (beg 0) (end (string-length str)))
+	(srfi.string-titlecase! str beg end)
+	str)
+    => "---Abcd")
+
+  (check
+      (let* ((str (string-copy "abcd efgh")) (beg 0) (end (string-length str)))
+	(srfi.string-titlecase! str beg end)
+	str)
+    => "Abcd Efgh")
+
+  #f)
+
+
 (parametrise ((check-test-name 'mapping))
 
   (check
@@ -2197,35 +2244,6 @@
 	 str beg end)
 	result)
     => '())
-
-  )
-
-
-(parametrise ((check-test-name 'case))
-
-  (check
-      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase! str beg end)
-	str)
-    => "Abcd")
-
-  (check
-      (let* ((str (string-copy "123abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase! str beg end)
-	str)
-    => "123Abcd")
-
-  (check
-      (let* ((str (string-copy "---abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase! str beg end)
-	str)
-    => "---Abcd")
-
-  (check
-      (let* ((str (string-copy "abcd efgh")) (beg 0) (end (string-length str)))
-	(srfi.string-titlecase! str beg end)
-	str)
-    => "Abcd Efgh")
 
   )
 

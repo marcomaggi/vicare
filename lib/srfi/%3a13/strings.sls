@@ -1472,29 +1472,78 @@
   #| end of module |# )
 
 
+;;;; case hacking
+
+(define-string-func string-upcase
+  ($string-upcase))
+
+(define ($string-upcase str start end)
+  ($string-map char-upcase str start end))
+
+(define-string-func string-upcase!
+  ($string-upcase!))
+
+(define ($string-upcase! str start end)
+  ($string-map! char-upcase str start end))
+
+;;; --------------------------------------------------------------------
+
+(define-string-func string-downcase
+  ($string-downcase))
+
+(define ($string-downcase str start end)
+  ($string-map char-downcase str start end))
+
+(define-string-func string-downcase!
+  ($string-downcase!))
+
+(define ($string-downcase! str start end)
+  ($string-map! char-downcase str start end))
+
+;;; --------------------------------------------------------------------
+
+(module (string-titlecase
+	 string-titlecase!)
+
+  (define-string-func string-titlecase
+    ($string-titlecase))
+
+  (define ($string-titlecase str start end)
+    ($string-titlecase! ($substring str start end) start end))
+
+  (define-string-func string-titlecase!
+    ($string-titlecase!))
+
+  (define ($string-titlecase! str start end)
+    (cond (($string-index/pred str %char-cased? start end)
+	   => (lambda (i)
+		($string-set! str i (char-titlecase ($string-ref str i)))
+		(let ((i^ ($fxadd1 i)))
+		  (cond (($string-skip/pred str %char-cased? i^ end)
+			 => (lambda (j)
+			      ($substring-map! char-downcase str i^ j)
+			      ($string-titlecase! str ($fxadd1 j) end)))
+			(else
+			 ($substring-map! char-downcase str i^ end))))))))
+
+  (define (%char-cased? c)
+    ;;This works because CHAR-UPCASE returns  #f if the character has no
+    ;;upcase version.
+    (char-upper-case? (char-upcase c)))
+
+  #| end of module |# )
+
+
 ;;;; mapping
 
-(module (string-map)
-  (define who 'string-map)
+(module (string-map $string-map)
 
-  (define string-map
-    (case-lambda
-     ((proc str)
-      (with-arguments-validation (who)
-	  ((string	str))
-	(%string-map proc str 0     ($string-length str))))
-     ((proc str start)
-      (with-arguments-validation (who)
-	  ((string			str)
-	   (one-off-index-for-string	str start))
-	(%string-map proc str start ($string-length str))))
-     ((proc str start end)
-      (with-arguments-validation (who)
-	  ((string			str)
-	   (start-and-past-for-string	str start end))
-	(%string-map proc str start (end))))))
+  (define-string-func string-map
+    ($string-map)
+    (pre-arguments proc)
+    (validators (procedure proc)))
 
-  (define (%string-map proc str start end)
+  (define ($string-map proc str start end)
     (let ((S (make-string ($fx- end start))))
       (do ((i 0 ($fxadd1 i))
 	   (j 0 ($fxadd1 j)))
@@ -1504,20 +1553,36 @@
 
   #| end of module |# )
 
-(define string-map!
+(module (string-map! $string-map!)
+
+  (define-string-func string-map!
+    ($string-map!)
+    (pre-arguments proc)
+    (validators (procedure proc)))
+
+  (define ($string-map! proc str start end)
+    (do ((i 0 ($fxadd1 i))
+	 (j 0 ($fxadd1 j)))
+	(($fx= i end)
+	 str)
+      ($string-set! str j (proc ($string-ref str i)))))
+
+  #;(define string-map!
   (case-lambda
-   ((proc str)
-    (string-map proc str 0     (string-length str)))
-   ((proc str start)
-    (string-map proc str start (string-length str)))
-   ((proc str start end)
-    (define who 'string-map)
-    (with-arguments-validation (who)
-	((string	str))
-      (do ((i 0 ($fxadd1 i)))
-	  (($fx= i end)
-	   str)
-	($string-set! str i (proc ($string-ref str i))))))))
+  ((proc str)
+  (string-map proc str 0     (string-length str)))
+  ((proc str start)
+  (string-map proc str start (string-length str)))
+  ((proc str start end)
+  (define who 'string-map)
+  (with-arguments-validation (who)
+  ((string	str))
+  (do ((i 0 ($fxadd1 i)))
+  (($fx= i end)
+  str)
+  ($string-set! str i (proc ($string-ref str i))))))))
+
+  #| end of module |# )
 
 (define string-for-each
   (case-lambda
@@ -1545,7 +1610,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%substring-map proc str start past)
+(define ($substring-map proc str start past)
   (do ((i start (+ 1 i))
        (j 0 (+ 1 j))
        (result (make-string (- past start))))
@@ -1553,95 +1618,23 @@
        result)
     (string-set! result j (proc (string-ref str i)))))
 
-(define (%substring-map! proc str start past)
-  (do ((i start (+ 1 i)))
-      ((>= i past)
+(define ($substring-map! proc str start past)
+  (do ((i start ($fxadd1 i)))
+      (($fx>= i past)
        str)
-    (string-set! str i (proc (string-ref str i)))))
+    ($string-set! str i (proc ($string-ref str i)))))
 
-(define (%substring-for-each proc str start past)
+(define ($substring-for-each proc str start past)
   (let loop ((i start))
     (when (< i past)
       (proc (string-ref str i))
       (loop (+ i 1)))))
 
-(define (%substring-for-each-index proc str start past)
+(define ($substring-for-each-index proc str start past)
   (let loop ((i start))
     (when (< i past)
       (proc i)
       (loop (+ i 1)))))
-
-
-;;;; case hacking
-
-(define (%char-cased? c)
-  ;; This works  because CHAR-UPCASE returns #f if  the character has no
-  ;; upcase version.
-  (char-upper-case? (char-upcase c)))
-
-(define string-upcase
-  (case-lambda
-   ((str)
-    (string-map char-upcase str))
-   ((str start)
-    (string-map char-upcase str start))
-   ((str start end)
-    (string-map char-upcase str start end))))
-
-(define string-upcase!
-  (case-lambda
-   ((str)
-    (string-map! char-upcase str))
-   ((str start)
-    (string-map! char-upcase str start))
-   ((str start end)
-    (string-map! char-upcase str start end))))
-
-(define string-downcase
-  (case-lambda
-   ((str)
-    (string-map char-downcase str))
-   ((str start)
-    (string-map char-downcase str start))
-   ((str start end)
-    (string-map char-downcase str start end))))
-
-(define string-downcase!
-  (case-lambda
-   ((str)
-    (string-map! char-downcase str))
-   ((str start)
-    (string-map! char-downcase str start))
-   ((str start end)
-    (string-map! char-downcase str start end))))
-
-(define string-titlecase
-  (case-lambda
-   ((str)
-    (string-titlecase! (string-copy str) 0     (string-length str)))
-   ((str start)
-    (string-titlecase! (string-copy str) start (string-length str)))
-   ((str start past)
-    (string-titlecase! (string-copy str) start (string-length str)))))
-
-(define string-titlecase!
-  (case-lambda
-   ((str)
-    (string-titlecase! str 0     (string-length str)))
-   ((str start)
-    (string-titlecase! str start (string-length str)))
-   ((str start past)
-    (let loop ((i start))
-      (cond ((string-index %char-cased? str i past)
-	     => (lambda (i)
-		  (string-set! str i (char-titlecase (string-ref str i)))
-		  (let ((i1 (+ i 1)))
-		    (cond ((string-skip %char-cased? str i1 past)
-			   => (lambda (j)
-				(%substring-map! char-downcase str i1 j)
-				(loop (+ j 1))))
-			  (else
-			   (%substring-map! char-downcase str i1 past)))))))))))
 
 
 ;;;; folding

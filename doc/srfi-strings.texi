@@ -1470,36 +1470,34 @@ Case--insensitive variant.
 @subsubsection Alphabetic case mapping
 
 
-@defun string-titlecase @var{s} [@var{start} @var{end}]
-@defunx string-titlecase! @var{s} [@var{start} @var{end}]
-For every character @var{c} in the selected range of @var{s}, if @var{c}
-is preceded by a cased character, it is downcased; otherwise it is
-titlecased.
-
-@func{string-titlecase} returns the result string and does not alter its
-s parameter.  @func{string-titlecase!} is the in--place side--effecting
-variant.
+@defun string-titlecase @var{str}
+@defunx string-titlecase @var{str} @var{start}
+@defunx string-titlecase @var{str} @var{start} @var{end}
+For every character @code{ch} in the selected range of @var{str}, if
+@code{ch} is preceded by a cased character, it is downcased; otherwise
+it is titlecased.  Return the result string and does @strong{not} alter
+the @var{str} argument.
 
 Examples:
 
 @example
 (string-titlecase "--capitalize tHIS sentence.")
-=> "--Capitalize This Sentence."
+@result{} "--Capitalize This Sentence."
 
 (string-titlecase "see Spot run. see Nix run.")
-=> "See Spot Run. See Nix Run."
+@result{} "See Spot Run. See Nix Run."
 
 (string-titlecase "3com makes routers.")
-=> "3Com Makes Routers."
+@result{} "3Com Makes Routers."
 @end example
 
 Note that if a @var{start} index is specified, then the character
-preceding @code{s[start]} has no effect on the titlecase decision for
-character @code{s[start]}:
+preceding @code{@var{str}[@var{start}]} has no effect on the titlecase
+decision for character @code{@var{str}[@var{start}]}:
 
 @example
 (string-titlecase "greasy fried chicken" 2)
-=> "Easy Fried Chicken"
+@result{} "Easy Fried Chicken"
 @end example
 
 Titlecase and cased information must be compatible with the Unicode
@@ -1507,15 +1505,42 @@ specification.
 @end defun
 
 
-@defun string-upcase @var{s} [@var{start} @var{end}]
-@defunx string-upcase! @var{s} [@var{start} @var{end}]
-@defunx string-downcase @var{s} [@var{start} @var{end}]
-@defunx string-downcase! @var{s} [@var{start} @var{end}]
-Raise or lower the case of the alphabetic characters in the string.
+@defun string-titlecase! @var{str}
+@defunx string-titlecase! @var{str} @var{start}
+@defunx string-titlecase! @var{str} @var{start} @var{end}
+In--place side--effecting variant.
+@end defun
 
-@func{string-upcase} and @func{string-downcase} return the result string
-and do not alter their s parameter.  @func{string-upcase!} and
-@func{string-downcase!} are the in--place side--effecting variants.
+
+@defun string-upcase @var{str}
+@defunx string-upcase @var{str} @var{start}
+@defunx string-upcase @var{str} @var{start} @var{end}
+Raise the case of the selected alphabetic characters in the string.
+Return the result string and does @strong{not} alter the @var{str}
+argument.
+@end defun
+
+
+@defun string-upcase! @var{str}
+@defunx string-upcase! @var{str} @var{start}
+@defunx string-upcase! @var{str} @var{start} @var{end}
+In--place side--effecting variant.
+@end defun
+
+
+@defun string-downcase @var{str}
+@defunx string-downcase @var{str} @var{start}
+@defunx string-downcase @var{str} @var{start} @var{end}
+Lower the case of the selected alphabetic characters in the string.
+Return the result string and does @strong{not} alter the @var{str}
+argument.
+@end defun
+
+
+@defun string-downcase! @var{str}
+@defunx string-downcase! @var{str} @var{start}
+@defunx string-downcase! @var{str} @var{start} @var{end}
+In--place side--effecting variant.
 @end defun
 
 @c page
