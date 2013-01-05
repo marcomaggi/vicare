@@ -1352,52 +1352,80 @@ Case--insensitive variant.
 @subsubsection Searching
 
 
-@defun string-index @var{s} @var{char/char-set/pred} [@var{start} @var{end}]
-@defunx string-index-right @var{s} @var{char/char-set/pred} [@var{start} @var{end}]
-@defunx string-skip @var{s} @var{char/char-set/pred} [@var{start} @var{end}]
-@defunx string-skip-right @var{s} @var{char/char-set/pred} [@var{start} @var{end}]
-@func{string-index} (@func{string-index-right}) searches through the
-string from the left (right), returning the index of the first
-occurrence of a character which
+The following functions scan a string for the first character which:
 
 @itemize
 @item
-equals @var{char/char-set/pred} if it is a character;
+Equals the argument @var{char/char-set/pred} if it is a character.
 
 @item
-is in @var{char/char-set/pred} if it is a character set;
+Is in the argument @var{char/char-set/pred} if it is a character set.
 
 @item
-satisfies the predicate @var{char/char-set/pred} if it is a procedure.
+Satisfies the argument @var{char/char-set/pred} if it is a predicate
+procedure.
 @end itemize
 
-If no match is found, the functions return @false{}.
-
-The @var{start} and @var{end} parameters specify the beginning and end
+The @var{start} and @var{end} arguments specify the beginning and end
 indices of the search; the search includes the @var{start} index, but
 not the @var{end} index.  Be careful of ``fencepost'' considerations:
 when searching right--to--left, the first index considered is
 @var{end-1}, whereas when searching left--to--right, the first index
-considered is @var{start}
+considered is @var{start}.
 
 That is, the @var{start}/@var{end} indices describe a same half--open
-interval @code{[start,end)} in these procedures that they do in all the
-other @ansrfi{13} procedures.
+interval @code{[@var{start}, @var{end})} in these procedures that they
+do in all the other @ansrfi{13} procedures.
 
-The skip functions are similar, but use the complement of the criteria:
-they search for the first char that does @strong{nor} satisfy the test.
+
+@defun string-index @var{str} @var{char/char-set/pred}
+@defunx string-index @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-index @var{str} @var{char/char-set/pred} @var{start} @var{end}
+Search through the string from the left, returning the index of the
+first occurrence of a character matching the criterion; if no match is
+found: return @false{}.
+@end defun
+
+
+@defun string-index-right @var{str} @var{char/char-set/pred}
+@defunx string-index-right @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-index-right @var{str} @var{char/char-set/pred} @var{start} @var{end}
+Search through the string from the right, returning the index of the
+first occurrence of a character matching the criterion; if no match is
+found: return @false{}.
+@end defun
+
+
+@defun string-skip @var{str} @var{char/char-set/pred}
+@defunx string-skip @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-skip @var{str} @var{char/char-set/pred} @var{start} @var{end}
+Search the string from the left, returning the index of the first char
+that does @strong{not} satisfy the criterion; if no match is found:
+return @false{}.
+
 E.g., to skip over initial whitespace, say:
 
 @example
-(cond [(string-skip s char-set:whitespace) =>
-       (lambda (i) ...)] ; s[i] is not whitespace.
+(cond ((string-skip s char-set:whitespace) =>
+       (lambda (i) ...)) ;s[i] is not whitespace
       ...)
 @end example
 @end defun
 
 
-@defun string-count @var{s} @var{char/char-set/pred} [@var{start} @var{end}]
-Return a count of the number of characters in @var{s} that satisfy the
+@defun string-skip-right @var{str} @var{char/char-set/pred}
+@defunx string-skip-right @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-skip-right @var{str} @var{char/char-set/pred} @var{start} @var{end}
+Search the string from the right, returning the index of the first char
+that does @strong{not} satisfy the criterion; if no match is found:
+return @false{}.
+@end defun
+
+
+@defun string-count @var{str} @var{char/char-set/pred}
+@defunx string-count @var{str} @var{char/char-set/pred} @var{start}
+@defunx string-count @var{str} @var{char/char-set/pred} @var{start} @var{end}
+Return a count of the number of characters in @var{str} that satisfy the
 @var{char/char-set/pred} argument.  If this argument is a procedure, it
 is applied to the character as a predicate; if it is a character set,
 the character is tested for membership; if it is a character, it is used
@@ -1405,25 +1433,36 @@ in an equality test.
 @end defun
 
 
-@defun string-contains @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-@defunx string-contains-ci @var{s1} @var{s2} [@var{start1} @var{end1} @var{start2} @var{end2}]
-Return true if the string @var{s1} contains string @var{s2}; otherwise
-return @false{}.  Return the index in @var{s1} where @var{s2} occurs as
-a substring.  The optional @var{start}/@var{end} indices restrict the
-operation to the indicated substrings.
+@defun string-contains @vari{str} @varii{str}
+@defunx string-contains @vari{str} @varii{str} @vari{start}
+@defunx string-contains @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-contains @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-contains @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Return true if the string @vari{str} contains string @varii{str};
+otherwise return @false{}.  Return the index in @vari{str} where
+@varii{str} occurs as a substring.  The optional @var{start}/@var{end}
+indices restrict the operation to the indicated substrings.
 
-The returned index is in the range @code{[start1,end1)}.  A successful
-match must lie entirely in the @code{[start1,end1)} range of @var{s1}.
+The returned index is in the range @code{[@vari{start}, @vari{end})}.  A
+successful match must lie entirely in the @code{[@vari{start},
+@vari{end})} range of @vari{str}.
 
 Example:
 
 @example
 ;; Searches "a geek"
 (string-contains "eek -- what a geek." "ee" 12 18)
-=> 15
+@result{} 15
 @end example
+@end defun
 
-@func{string-contains-ci} is the case--insensitive variant.
+
+@defun string-contains-ci @vari{str} @varii{str}
+@defunx string-contains-ci @vari{str} @varii{str} @vari{start}
+@defunx string-contains-ci @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-contains-ci @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-contains-ci @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
+Case--insensitive variant.
 @end defun
 
 @c page

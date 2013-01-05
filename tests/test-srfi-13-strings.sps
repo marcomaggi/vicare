@@ -1723,6 +1723,391 @@
   #f)
 
 
+(parametrise ((check-test-name 'searching))
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-index str #\b beg end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (end (string-length str)))
+	(srfi.string-index str #\b 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-index str #\1 beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-index str #\1 beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+  	(srfi.string-index str (char-set #\b #\B) beg end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (end (string-length str)))
+  	(srfi.string-index str (char-set #\b #\B) 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+  	(srfi.string-index str (char-set #\0 #\1) beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+  	(srfi.string-index str (char-set #\0 #\1) beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "aBcd") (beg 0) (end (string-length str)))
+	(srfi.string-index str char-upper-case? beg end))
+    => 1)
+
+  (check
+      (let* ((str "aBcd") (end (string-length str)))
+	(srfi.string-index str char-upper-case? 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-index str char-upper-case? beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-index str char-upper-case? beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-index-right str #\b beg end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (end (string-length str)))
+	(srfi.string-index-right str #\b 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-index-right str #\1 beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-index-right str #\1 beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+  	(srfi.string-index-right str (char-set #\b #\B) beg end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (end (string-length str)))
+  	(srfi.string-index-right str (char-set #\b #\B) 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+  	(srfi.string-index-right str (char-set #\0 #\1) beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+  	(srfi.string-index-right str (char-set #\0 #\1) beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "aBcd") (beg 0) (end (string-length str)))
+	(srfi.string-index-right str char-upper-case? beg end))
+    => 1)
+
+  (check
+      (let* ((str "aBcd") (end (string-length str)))
+	(srfi.string-index-right str char-upper-case? 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-index-right str char-upper-case? beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-index-right str char-upper-case? beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "bacd") (beg 0) (end (string-length str)))
+	(srfi.string-skip str #\b beg end))
+    => 1)
+
+  (check
+      (let* ((str "bacd") (end (string-length str)))
+	(srfi.string-skip str #\b 1 end))
+    => 1)
+
+  (check
+      (let* ((str "1111") (beg 0) (end (string-length str)))
+	(srfi.string-skip str #\1 beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-skip str #\1 beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "bacd") (beg 0) (end (string-length str)))
+  	(srfi.string-skip str (char-set #\b #\B) beg end))
+    => 1)
+
+  (check
+      (let* ((str "bacd") (end (string-length str)))
+  	(srfi.string-skip str (char-set #\b #\B) 1 end))
+    => 1)
+
+  (check
+      (let* ((str "1010") (beg 0) (end (string-length str)))
+  	(srfi.string-skip str (char-set #\0 #\1) beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+  	(srfi.string-skip str (char-set #\0 #\1) beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "Bacd") (beg 0) (end (string-length str)))
+	(srfi.string-skip str char-upper-case? beg end))
+    => 1)
+
+  (check
+      (let* ((str "Bacd") (end (string-length str)))
+	(srfi.string-skip str char-upper-case? 1 end))
+    => 1)
+
+  (check
+      (let* ((str "ABCD") (beg 0) (end (string-length str)))
+	(srfi.string-skip str char-upper-case? beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-skip str char-upper-case? beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "acdb") (beg 0) (end (string-length str)))
+	(srfi.string-skip-right str #\b beg end))
+    => 2)
+
+  (check
+      (let* ((str "acdb") (end (string-length str)))
+	(srfi.string-skip-right str #\b 1 end))
+    => 2)
+
+  (check
+      (let* ((str "1111") (beg 0) (end (string-length str)))
+	(srfi.string-skip-right str #\1 beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-skip-right str #\1 beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "acdb") (beg 0) (end (string-length str)))
+  	(srfi.string-skip-right str (char-set #\b #\B) beg end))
+    => 2)
+
+  (check
+      (let* ((str "acdb") (end (string-length str)))
+  	(srfi.string-skip-right str (char-set #\b #\B) 1 end))
+    => 2)
+
+  (check
+      (let* ((str "0101") (beg 0) (end (string-length str)))
+  	(srfi.string-skip-right str (char-set #\0 #\1) beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+  	(srfi.string-skip-right str (char-set #\0 #\1) beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "acdB") (beg 0) (end (string-length str)))
+	(srfi.string-skip-right str char-upper-case? beg end))
+    => 2)
+
+  (check
+      (let* ((str "acdB") (end (string-length str)))
+	(srfi.string-skip-right str char-upper-case? 1 end))
+    => 2)
+
+  (check
+      (let* ((str "ABCD") (beg 0) (end (string-length str)))
+	(srfi.string-skip-right str char-upper-case? beg end))
+    => #f)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-skip-right str char-upper-case? beg end))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "abcbd") (beg 0) (end (string-length str)))
+	(srfi.string-count str #\b beg end))
+    => 2)
+
+  (check
+      (let* ((str "abcd") (end (string-length str)))
+	(srfi.string-count str #\b 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-count str #\1 beg end))
+    => 0)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-count str #\1 beg end))
+    => 0)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "abcBd") (beg 0) (end (string-length str)))
+  	(srfi.string-count str (char-set #\b #\B) beg end))
+    => 2)
+
+  (check
+      (let* ((str "abcd") (end (string-length str)))
+  	(srfi.string-count str (char-set #\b #\B) 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+  	(srfi.string-count str (char-set #\0 #\1) beg end))
+    => 0)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+  	(srfi.string-count str (char-set #\0 #\1) beg end))
+    => 0)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str "aBcAd") (beg 0) (end (string-length str)))
+	(srfi.string-count str char-upper-case? beg end))
+    => 2)
+
+  (check
+      (let* ((str "aBcd") (end (string-length str)))
+	(srfi.string-count str char-upper-case? 1 end))
+    => 1)
+
+  (check
+      (let* ((str "abcd") (beg 0) (end (string-length str)))
+	(srfi.string-count str char-upper-case? beg end))
+    => 0)
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-count str char-upper-case? beg end))
+    => 0)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
+	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains str1 str2 beg1 end1 beg2 end2))
+    => 5)
+
+  (check
+      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
+	     (str2 "hola") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains str1 str2 beg1 end1 beg2 end2))
+    => #f)
+
+  (check
+      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
+	     (str2 "") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains str1 str2 beg1 end1 beg2 end2))
+    => 0)
+
+  (check
+      (let* ((str1 "") (beg1 0) (end1 (string-length str1))
+	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains str1 str2 beg1 end1 beg2 end2))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str1 "ciAO HELLO saLUT") (beg1 0) (end1 (string-length str1))
+	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains-ci str1 str2 beg1 end1 beg2 end2))
+    => 5)
+
+  (check
+      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
+	     (str2 "HOLA") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains-ci str1 str2 beg1 end1 beg2 end2))
+    => #f)
+
+  (check
+      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
+	     (str2 "") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains-ci str1 str2 beg1 end1 beg2 end2))
+    => 0)
+
+  (check
+      (let* ((str1 "") (beg1 0) (end1 (string-length str1))
+	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-contains-ci str1 str2 beg1 end1 beg2 end2))
+    => #f)
+
+  #t)
+
+
 (parametrise ((check-test-name 'mapping))
 
   (check
@@ -1898,391 +2283,6 @@
     => "")
 
   #f)
-
-
-(parametrise ((check-test-name 'searching))
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-index #\b str beg end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (end (string-length str)))
-	(srfi.string-index #\b str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-index #\1 str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-index #\1 str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  ;; (check
-  ;;     (let* ((str "abcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-index (char-set #\b #\B) str beg end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "abcd") (end (string-length str)))
-  ;; 	(srfi.string-index (char-set #\b #\B) str 1 end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "abcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-index (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-index (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "aBcd") (beg 0) (end (string-length str)))
-	(srfi.string-index char-upper-case? str beg end))
-    => 1)
-
-  (check
-      (let* ((str "aBcd") (end (string-length str)))
-	(srfi.string-index char-upper-case? str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-index char-upper-case? str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-index char-upper-case? str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-index-right #\b str beg end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (end (string-length str)))
-	(srfi.string-index-right #\b str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-index-right #\1 str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-index-right #\1 str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  ;; (check
-  ;;     (let* ((str "abcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-index-right (char-set #\b #\B) str beg end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "abcd") (end (string-length str)))
-  ;; 	(srfi.string-index-right (char-set #\b #\B) str 1 end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "abcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-index-right (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-index-right (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "aBcd") (beg 0) (end (string-length str)))
-	(srfi.string-index-right char-upper-case? str beg end))
-    => 1)
-
-  (check
-      (let* ((str "aBcd") (end (string-length str)))
-	(srfi.string-index-right char-upper-case? str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-index-right char-upper-case? str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-index-right char-upper-case? str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "bacd") (beg 0) (end (string-length str)))
-	(srfi.string-skip #\b str beg end))
-    => 1)
-
-  (check
-      (let* ((str "bacd") (end (string-length str)))
-	(srfi.string-skip #\b str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "1111") (beg 0) (end (string-length str)))
-	(srfi.string-skip #\1 str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-skip #\1 str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  ;; (check
-  ;;     (let* ((str "bacd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-skip (char-set #\b #\B) str beg end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "bacd") (end (string-length str)))
-  ;; 	(srfi.string-skip (char-set #\b #\B) str 1 end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "1010") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-skip (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-skip (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "Bacd") (beg 0) (end (string-length str)))
-	(srfi.string-skip char-upper-case? str beg end))
-    => 1)
-
-  (check
-      (let* ((str "Bacd") (end (string-length str)))
-	(srfi.string-skip char-upper-case? str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "ABCD") (beg 0) (end (string-length str)))
-	(srfi.string-skip char-upper-case? str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-skip char-upper-case? str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "acdb") (beg 0) (end (string-length str)))
-	(srfi.string-skip-right #\b str beg end))
-    => 2)
-
-  (check
-      (let* ((str "acdb") (end (string-length str)))
-	(srfi.string-skip-right #\b str 1 end))
-    => 2)
-
-  (check
-      (let* ((str "1111") (beg 0) (end (string-length str)))
-	(srfi.string-skip-right #\1 str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-skip-right #\1 str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  ;; (check
-  ;;     (let* ((str "acdb") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-skip-right (char-set #\b #\B) str beg end))
-  ;;   => 2)
-
-  ;; (check
-  ;;     (let* ((str "acdb") (end (string-length str)))
-  ;; 	(srfi.string-skip-right (char-set #\b #\B) str 1 end))
-  ;;   => 2)
-
-  ;; (check
-  ;;     (let* ((str "0101") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-skip-right (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-skip-right (char-set #\0 #\1) str beg end))
-  ;;   => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "acdB") (beg 0) (end (string-length str)))
-	(srfi.string-skip-right char-upper-case? str beg end))
-    => 2)
-
-  (check
-      (let* ((str "acdB") (end (string-length str)))
-	(srfi.string-skip-right char-upper-case? str 1 end))
-    => 2)
-
-  (check
-      (let* ((str "ABCD") (beg 0) (end (string-length str)))
-	(srfi.string-skip-right char-upper-case? str beg end))
-    => #f)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-skip-right char-upper-case? str beg end))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "abcbd") (beg 0) (end (string-length str)))
-	(srfi.string-count #\b str beg end))
-    => 2)
-
-  (check
-      (let* ((str "abcd") (end (string-length str)))
-	(srfi.string-count #\b str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-count #\1 str beg end))
-    => 0)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-count #\1 str beg end))
-    => 0)
-
-;;; --------------------------------------------------------------------
-
-  ;; (check
-  ;;     (let* ((str "abcBd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-count (char-set #\b #\B) str beg end))
-  ;;   => 2)
-
-  ;; (check
-  ;;     (let* ((str "abcd") (end (string-length str)))
-  ;; 	(srfi.string-count (char-set #\b #\B) str 1 end))
-  ;;   => 1)
-
-  ;; (check
-  ;;     (let* ((str "abcd") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-count (char-set #\0 #\1) str beg end))
-  ;;   => 0)
-
-  ;; (check
-  ;;     (let* ((str "") (beg 0) (end (string-length str)))
-  ;; 	(srfi.string-count (char-set #\0 #\1) str beg end))
-  ;;   => 0)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "aBcAd") (beg 0) (end (string-length str)))
-	(srfi.string-count char-upper-case? str beg end))
-    => 2)
-
-  (check
-      (let* ((str "aBcd") (end (string-length str)))
-	(srfi.string-count char-upper-case? str 1 end))
-    => 1)
-
-  (check
-      (let* ((str "abcd") (beg 0) (end (string-length str)))
-	(srfi.string-count char-upper-case? str beg end))
-    => 0)
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-count char-upper-case? str beg end))
-    => 0)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
-	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains str1 beg1 end1 str2 beg2 end2))
-    => 5)
-
-  (check
-      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
-	     (str2 "hola") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains str1 beg1 end1 str2 beg2 end2))
-    => #f)
-
-  (check
-      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
-	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains str1 beg1 end1 str2 beg2 end2))
-    => 0)
-
-  (check
-      (let* ((str1 "") (beg1 0) (end1 (string-length str1))
-	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains str1 beg1 end1 str2 beg2 end2))
-    => #f)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str1 "ciAO HELLO saLUT") (beg1 0) (end1 (string-length str1))
-	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains-ci str1 beg1 end1 str2 beg2 end2))
-    => 5)
-
-  (check
-      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
-	     (str2 "HOLA") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains-ci str1 beg1 end1 str2 beg2 end2))
-    => #f)
-
-  (check
-      (let* ((str1 "ciao hello salut") (beg1 0) (end1 (string-length str1))
-	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains-ci str1 beg1 end1 str2 beg2 end2))
-    => 0)
-
-  (check
-      (let* ((str1 "") (beg1 0) (end1 (string-length str1))
-	     (str2 "hello") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-contains-ci str1 beg1 end1 str2 beg2 end2))
-    => #f)
-
-  #t)
 
 
 (parametrise ((check-test-name 'filtering))
