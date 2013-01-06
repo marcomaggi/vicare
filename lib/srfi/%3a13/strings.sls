@@ -198,7 +198,8 @@
 		    string-fill!)
 	    $)
     (only (ikarus system $numerics)
-	  $min-fixnum-fixnum))
+	  $min-fixnum-fixnum
+	  $add-number-fixnum))
 
 
 ;;;; helpers
@@ -1534,6 +1535,106 @@
   #| end of module |# )
 
 
+;;;; reverse and append
+
+(define-string-func string-reverse
+  ($string-reverse))
+
+(define ($string-reverse str start past)
+  (let* ((len    ($fx- past start))
+	 (result (make-string len)))
+    (do ((i start         ($fxadd1 i))
+	 (j ($fxsub1 len) ($fxsub1 j)))
+	(($fxnegative? j)
+	 result)
+      ($string-set! result j ($string-ref str i)))))
+
+(define-string-func string-reverse!
+  ($string-reverse!))
+
+(define ($string-reverse! str start past)
+  (do ((i ($fxsub1 past) ($fxsub1 i))
+       (j start          ($fxadd1 j)))
+      (($fx<= i j)
+       str)
+    (let ((ci ($string-ref str i)))
+      ($string-set! str i ($string-ref str j))
+      ($string-set! str j ci))))
+
+;;; --------------------------------------------------------------------
+
+(module (string-concatenate
+	 string-concatenate-reverse)
+
+  (define (string-concatenate strings)
+    (define who 'string-concatenate)
+    (let ((total (%compute-total-length who 0 strings)))
+      (with-arguments-validation (who)
+	  ((string-length	total))
+	(let loop ((result  (make-string total))
+		   (i       0)
+		   (strings strings))
+	  (if (null? strings)
+	      result
+	    (let* ((s    ($car strings))
+		   (slen ($string-length s)))
+	      ($string-copy! result i s 0 slen)
+	      (loop result ($fx+ i slen) ($cdr strings))))))))
+
+  (module (string-concatenate-reverse)
+    (define who 'string-concatenate-reverse)
+
+    (define string-concatenate-reverse
+      (case-lambda
+       ((strings)
+	(string-concatenate-reverse "" 0))
+
+       ((strings final)
+	(with-arguments-validation (who)
+	    ((string	final))
+	  (string-concatenate-reverse final ($string-length final))))
+
+       ((strings final final.len)
+	(with-arguments-validation (who)
+	    ((string	final))
+	  (let* ((strings.len (%compute-total-length who 0 strings))
+		 (total.len   (+ final.len strings.len)))
+	    (with-arguments-validation (who)
+		((string-length	total.len))
+	      (let ((result (make-string total.len)))
+		($string-copy! result strings.len final 0 final.len)
+		(let loop ((i       strings.len)
+			   (strings strings))
+		  (if (null? strings)
+		      result
+		    (let* ((S       ($car strings))
+			   (S.len   ($string-length S))
+			   (i       ($fx- i S.len)))
+		      ($string-copy! result i S 0 S.len)
+		      (loop i ($cdr strings))))))))))
+       ))
+
+    #| end of module |# )
+
+  (define (%compute-total-length who accum strings)
+    (if (null? strings)
+	accum
+      (with-arguments-validation (who)
+	  ((pair	strings))
+	(let ((S ($car strings)))
+	  (with-arguments-validation (who)
+	      ((string	S))
+	    (%compute-total-length who
+				   ($add-number-fixnum accum ($string-length S))
+				   ($cdr strings)))))))
+
+  (define-argument-validation (string-length who obj)
+    (fixnum? obj)
+    (assertion-violation who "total string length too big, it must be a fixnum" obj))
+
+  #| end of module |# )
+
+
 ;;;; mapping
 
 (module (string-map $string-map)
@@ -1566,21 +1667,6 @@
 	(($fx= i end)
 	 str)
       ($string-set! str j (proc ($string-ref str i)))))
-
-  #;(define string-map!
-  (case-lambda
-  ((proc str)
-  (string-map proc str 0     (string-length str)))
-  ((proc str start)
-  (string-map proc str start (string-length str)))
-  ((proc str start end)
-  (define who 'string-map)
-  (with-arguments-validation (who)
-  ((string	str))
-  (do ((i 0 ($fxadd1 i)))
-  (($fx= i end)
-  str)
-  ($string-set! str i (proc ($string-ref str i))))))))
 
   #| end of module |# )
 
@@ -1963,50 +2049,7 @@
 	(string-copy! dst-str i src-str src-start src-past))))) ; Copy a whole span.
 
 
-;;;; concatenating
-
-(define (string-concatenate strings)
-  (let* ((total (do ((strings strings (cdr strings))
-		     (i 0 (+ i (string-length (car strings)))))
-		    ((not (pair? strings))
-		     i)))
-	 (result (make-string total)))
-    (let lp ((i 0) (strings strings))
-      (if (pair? strings)
-	  (let* ((s (car strings))
-		 (slen (string-length s)))
-	    (string-copy! result i s 0 slen)
-	    (lp (+ i slen) (cdr strings)))))
-    result))
-
-(define (string-concatenate-reverse string-list final past)
-  (let* ((len (let loop ((sum 0) (lis string-list))
-		(if (pair? lis)
-		    (loop (+ sum (string-length (car lis))) (cdr lis))
-		  sum)))
-	 (result (make-string (+ past len))))
-    (string-copy! result len final 0 past)
-    (let loop ((i len) (lis string-list))
-      (if (pair? lis)
-	  (let* ((s   (car lis))
-		 (lis (cdr lis))
-		 (slen (string-length s))
-		 (i (- i slen)))
-	    (string-copy! result i s 0 slen)
-	    (loop i lis))))
-    result))
-
-
-;;;; reverse, replace
-
-(define (string-reverse str start past)
-  (let* ((len (- past start))
-	 (result (make-string len)))
-    (do ((i start (+ i 1))
-	 (j (- len 1) (- j 1)))
-	((< j 0))
-      (string-set! result j (string-ref str i)))
-    result))
+;;;; replace
 
 (define (string-replace str1 start1 past1 str2 start2 past2)
   (let* ((len1		(string-length str1))
@@ -2016,14 +2059,6 @@
     (string-copy! result start1 str2 start2 past2)
     (string-copy! result (+ start1 len2) str1 past1 len1)
     result))
-
-(define (string-reverse! str start past)
-  (do ((i (- past 1) (- i 1))
-       (j start (+ j 1)))
-      ((<= i j))
-    (let ((ci (string-ref str i)))
-      (string-set! str i (string-ref str j))
-      (string-set! str j ci))))
 
 
 ;;;; knuth-morris-pratt search algorithm

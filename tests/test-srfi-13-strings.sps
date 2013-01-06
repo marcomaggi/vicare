@@ -2155,6 +2155,61 @@
   #f)
 
 
+(parametrise ((check-test-name 'reverse))
+
+  (check
+      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
+	(srfi.string-reverse str beg end))
+    => "dcba")
+
+  (check
+      (let* ((str (string-copy "")) (beg 0) (end (string-length str)))
+	(srfi.string-reverse str beg end))
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
+	(srfi.string-reverse! str beg end)
+	str)
+    => "dcba")
+
+  (check
+      (let* ((str (string-copy "")) (beg 0) (end (string-length str)))
+	(srfi.string-reverse! str beg end)
+	str)
+    => "")
+
+  #f)
+
+(parametrise ((check-test-name 'concatenate))
+
+  (check
+      (srfi.string-concatenate '("ciao" " " "hello" " " "salut"))
+    => "ciao hello salut")
+
+  (check
+      (srfi.string-concatenate '())
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (srfi.string-concatenate-reverse '("ciao" " " "hello" " " "salut") " hola" (string-length " hola"))
+    => "salut hello ciao hola")
+
+  (check
+      (srfi.string-concatenate-reverse '("ciao" " " "hello" " " "salut") " hola" 3)
+    => "salut hello ciao ho")
+
+  (check
+      (srfi.string-concatenate-reverse '() "" 0)
+    => "")
+
+  #f)
+
+
 (parametrise ((check-test-name 'mapping))
 
   (check
@@ -2516,63 +2571,6 @@
 	     (result (string-copy "")))
 	  (srfi.string-xcopy! 0 5 result 0 (string-length result) str beg end)))
     => #t)
-
-  )
-
-
-(parametrise ((check-test-name 'reverse))
-
-  (check
-      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-reverse str beg end))
-    => "dcba")
-
-  (check
-      (let* ((str (string-copy "")) (beg 0) (end (string-length str)))
-	(srfi.string-reverse str beg end))
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str (string-copy "abcd")) (beg 0) (end (string-length str)))
-	(srfi.string-reverse! str beg end)
-	str)
-    => "dcba")
-
-  (check
-      (let* ((str (string-copy "")) (beg 0) (end (string-length str)))
-	(srfi.string-reverse! str beg end)
-	str)
-    => "")
-
-  )
-
-
-(parametrise ((check-test-name 'concatenate))
-
-  (check
-      (srfi.string-concatenate '("ciao" " " "hello" " " "salut"))
-    => "ciao hello salut")
-
-  (check
-      (srfi.string-concatenate '())
-    => "")
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (srfi.string-concatenate-reverse '("ciao" " " "hello" " " "salut") " hola" (string-length " hola"))
-    => "salut hello ciao hola")
-
-  (check
-      (srfi.string-concatenate-reverse '("ciao" " " "hello" " " "salut") " hola" 3)
-    => "salut hello ciao ho")
-
-  (check
-      (srfi.string-concatenate-reverse '() "" 0)
-    => "")
-
 
   )
 

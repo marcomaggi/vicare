@@ -1548,17 +1548,17 @@ In--place side--effecting variant.
 @subsubsection Reverse and append
 
 
-@defun string-reverse @var{s} [@var{start} @var{end}]
-@defunx string-reverse! @var{s} [@var{start} @var{end}]
-Reverse the string.  @func{string-reverse} returns the result string and
-does not alter its s parameter.  @func{string-reverse!} is the in--place
-side--effecting variant.
+@defun string-reverse @var{str}
+@defunx string-reverse @var{str} @var{start}
+@defunx string-reverse @var{str} @var{start} @var{end}
+Reverse the string; return the result string and does @strong{not} alter
+its @var{str} argument.
 
 Examples:
 
 @example
 (string-reverse "Able was I ere I saw elba.")
-=> ".able was I ere I saw elbA"
+@result{} ".able was I ere I saw elbA"
 
 ;;; In-place rotate-left, the Bell Labs way:
 (lambda (s i)
@@ -1568,16 +1568,25 @@ Examples:
     (string-reverse! s)))
 @end example
 
-Unicode note: Reversing a string simply reverses the sequence of
+@quotation
+@strong{Unicode note} Reversing a string simply reverses the sequence of
 code--points it contains.  So a zero--width accent character a coming
-after a base character @var{b} in string @var{s} would come out before
+after a base character @var{b} in string @var{str} would come out before
 @var{b} in the reversed result.
+@end quotation
 @end defun
 
 
-@defun string-append @var{s1} ...
-@rnrs{5} Return a newly allocated string whose characters form the
-concatenation of the given strings.
+@defun string-reverse! @var{str}
+@defunx string-reverse! @var{str} @var{start}
+@defunx string-reverse! @var{str} @var{start} @var{end}
+In--place side--effecting variant.
+@end defun
+
+
+@defun string-append @var{str} ...
+Return a newly allocated string whose characters form the concatenation
+of the given strings.
 @end defun
 
 
@@ -1592,7 +1601,7 @@ the number of arguments that may be passed to an n--ary procedure.
 
 
 @defun string-concatenate/shared @var{string-list}
-@defunx string-append/shared @var{s1} ...
+@defunx string-append/shared @var{str} ...
 These two procedures are variants of @func{string-concatenate} and
 @func{string-append} that are permitted to return results that share
 storage with their parameters.  In particular, if
@@ -1602,25 +1611,16 @@ to allocate a fresh string.
 @end defun
 
 
-@defun string-concatenate-reverse @var{string-list} [@var{final-string} @var{end}]
-@defunx string-concatenate-reverse/shared @var{string-list} [@var{final-string} @var{end}]
-With no optional arguments, these functions are equivalent to:
+@defun string-concatenate-reverse @var{string-list}
+@defunx string-concatenate-reverse @var{string-list} @var{final-string}
+@defunx string-concatenate-reverse @var{string-list} @var{final-string} @var{end}
+With no optional arguments, this function is equivalent to:
 
 @example
-(string-concatenate (reverse string-list))
+(string-concatenate (reverse @var{string-list}))
 @end example
 
-@noindent
-and:
-
-@example
-(string-concatenate/shared (reverse string-list))
-@end example
-
-@noindent
-respectively.
-
-If the optional argument @func{final-string} is specified, it is consed
+If the optional argument @var{final-string} is specified, it is consed
 onto the beginning of @var{string-list} before performing the
 @func{list-reverse} and @func{string-concatenate} operations.
 
@@ -1630,25 +1630,37 @@ producing:
 
 @example
 (string-concatenate
-  (reverse (cons (substring/shared final-string 0 end)
-                 string-list)))
+  (reverse (cons (substring/shared @var{final-string} 0 @var{end})
+                 @var{string-list})))
 @end example
 
 Example:
 
 @example
-(string-concatenate-reverse '(" must be" "Hello, I") " going.XXXX" 7)
-=> "Hello, I must be going."
+(string-concatenate-reverse '(" must be" "Hello, I")
+                            " going.XXXX"
+                            7)
+@result{} "Hello, I must be going."
 @end example
 
 This procedure is useful in the construction of procedures that
 accumulate character data into lists of string buffers, and wish to
 convert the accumulated data into a single string when done.
 
-Unicode note: Reversing a string simply reverses the sequence of
-code--points it contains.  So a zero--width accent character @var{ac}
-coming after a base character @var{bc} in string @var{s} would come out
-before @var{bc} in the reversed result.
+@quotation
+@strong{Unicode note} Reversing a string simply reverses the sequence of
+code--points it contains.  So a zero--width accent character @code{ac}
+coming after a base character @code{bc} in string @var{str} would come
+out before @code{bc} in the reversed result.
+@end quotation
+@end defun
+
+
+@defun string-concatenate-reverse/shared @var{string-list}
+@defunx string-concatenate-reverse/shared @var{string-list} @var{final-string}
+@defunx string-concatenate-reverse/shared @var{string-list} @var{final-string} @var{end}
+Variant which is permitted to return results that share storage with its
+arguments.
 @end defun
 
 @c page
