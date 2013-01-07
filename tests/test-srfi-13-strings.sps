@@ -2212,95 +2212,95 @@
 
 (parametrise ((check-test-name 'mapping))
 
-  (check
-      (let* ((str "aaaa")
-	     (beg 0)
-	     (end (string-length str)))
-	(srfi.string-map char-upcase str beg end))
-    => "AAAA")
+  (check (srfi.string-map char-upcase "")		=> "")
+  (check (srfi.string-map char-upcase "a")		=> "A")
+  (check (srfi.string-map char-upcase "abcd")		=> "ABCD")
 
-  (check
-      (let* ((str "")
-	     (beg 0)
-	     (end (string-length str)))
-	(srfi.string-map char-upcase str beg end))
-    => "")
+  (check (srfi.string-map char-upcase "abcd" 0)		=> "ABCD")
+  (check (srfi.string-map char-upcase "abcd" 4)		=> "")
+  (check (srfi.string-map char-upcase "abcd" 1)		=> "BCD")
+  (check (srfi.string-map char-upcase "abcd" 2)		=> "CD")
+  (check (srfi.string-map char-upcase "abcd" 3)		=> "D")
 
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "aaaa")
-	     (beg 0)
-	     (end (string-length str)))
-	(srfi.string-map! char-upcase str beg end)
-	str)
-    => "AAAA")
-
-  (check
-      (let* ((str "")
-	     (beg 0)
-	     (end (string-length str)))
-	(srfi.string-map! char-upcase str beg end)
-	str)
-    => "")
+  (check (srfi.string-map char-upcase "abcd" 0 0)	=> "")
+  (check (srfi.string-map char-upcase "abcd" 4 4)	=> "")
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (let* ((str "aaaa")
-	     (beg 0)
-	     (end (string-length str))
-	     (result ""))
-	(srfi.string-for-each
-	 (lambda (ch)
-	   (set! result
-		 (string-append result
-				(number->string (char->integer (char-upcase ch))))))
-	 str beg end)
-	result)
-    => "65656565")
+  (let-syntax
+      ((doit (syntax-rules ()
+	       ((_ ?input ?output)
+		(check
+		    (let ((str (string-copy ?input)))
+		      (srfi.string-map! char-upcase str)
+		      str)
+		  => ?output))
+	       ((_ ?input ?start ?end ?output)
+		(check
+		    (let ((str (string-copy ?input)))
+		      (srfi.string-map! char-upcase str ?start ?end)
+		      str)
+		  => ?output))
+	       )))
 
-  (check
-      (let* ((str "")
-	     (beg 0)
-	     (end (string-length str))
-	     (result ""))
-	(srfi.string-for-each
-	 (lambda (ch)
-	   (set! result
-		 (string-append result
-				(number->string (char->integer (char-upcase ch))))))
-	 str beg end)
-	result)
-    => "")
+    (doit ""		"")
+    (doit "ciao"	"CIAO")
+
+    (doit "" 0 0	"")
+    (doit "ciao" 0 4	"CIAO")
+    (doit "ciao" 2 3	"ciAo")
+
+    #f)
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (let* ((str "aaaa")
-	     (beg 0)
-	     (end (string-length str))
-	     (result '()))
-	(srfi.string-for-each-index
-	 (lambda (idx)
-	   (set! result (cons idx result)))
-	 str beg end)
-	result)
-    => '(3 2 1 0))
+  (let-syntax
+      ((doit (syntax-rules ()
+	       ((_ ?input ?output)
+		(check
+		    (with-result
+		     (srfi.string-for-each add-result ?input))
+		  => '(?input ?output)))
+	       ((_ ?input ?start ?end ?output)
+		(check
+		    (with-result
+		     (srfi.string-for-each add-result ?input ?start ?end))
+		  => '(?input ?output)))
+	       )))
 
-  (check
-      (let* ((str "")
-	     (beg 0)
-	     (end (string-length str))
-	     (result '()))
-	(srfi.string-for-each-index
-	 (lambda (idx)
-	   (set! result (cons idx result)))
-	 str beg end)
-	result)
-    => '())
+    (doit "abcd"		(#\a #\b #\c #\d))
+    (doit "abcd" 0 4		(#\a #\b #\c #\d))
+    (doit "abcd" 1 4		(#\b #\c #\d))
+    (doit "abcd" 2 4		(#\c #\d))
+    (doit "abcd" 3 4		(#\d))
+    (doit "abcd" 4 4		())
+    #f)
 
-  )
+;;; --------------------------------------------------------------------
+
+  (let-syntax
+      ((doit (syntax-rules ()
+	       ((_ ?input ?output)
+		(check
+		    (with-result
+		     (srfi.string-for-each-index add-result ?input))
+		  => '(?input ?output)))
+	       ((_ ?input ?start ?end ?output)
+		(check
+		    (with-result
+		     (srfi.string-for-each-index add-result ?input ?start ?end))
+		  => '(?input ?output)))
+	       )))
+
+    (doit "abcd"		(0 1 2 3))
+    (doit "abcd" 0 4		(0 1 2 3))
+    (doit "abcd" 1 4		(1 2 3))
+    (doit "abcd" 2 4		(2 3))
+    (doit "abcd" 3 4		(3))
+    (doit "abcd" 4 4		())
+    #f)
+
+  #t)
 
 
 (parametrise ((check-test-name 'folding))

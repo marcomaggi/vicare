@@ -1522,10 +1522,10 @@
 		(let ((i^ ($fxadd1 i)))
 		  (cond (($string-skip/pred str %char-cased? i^ end)
 			 => (lambda (j)
-			      ($substring-map! char-downcase str i^ j)
+			      ($string-map! char-downcase str i^ j)
 			      ($string-titlecase! str ($fxadd1 j) end)))
 			(else
-			 ($substring-map! char-downcase str i^ end))))))))
+			 ($string-map! char-downcase str i^ end))))))))
 
   (define (%char-cased? c)
     ;;This works because CHAR-UPCASE returns  #f if the character has no
@@ -1535,7 +1535,7 @@
   #| end of module |# )
 
 
-;;;; reverse and append
+;;;; reverse and concatenate
 
 (define-string-func string-reverse
   ($string-reverse))
@@ -1637,268 +1637,140 @@
 
 ;;;; mapping
 
-(module (string-map $string-map)
+(define-string-func string-map
+  ($string-map)
+  (pre-arguments proc)
+  (validators (procedure proc)))
 
-  (define-string-func string-map
-    ($string-map)
-    (pre-arguments proc)
-    (validators (procedure proc)))
-
-  (define ($string-map proc str start end)
-    (let ((S (make-string ($fx- end start))))
-      (do ((i 0 ($fxadd1 i))
-	   (j 0 ($fxadd1 j)))
-	  (($fx= i end)
-	   S)
-	($string-set! S j (proc ($string-ref str i))))))
-
-  #| end of module |# )
-
-(module (string-map! $string-map!)
-
-  (define-string-func string-map!
-    ($string-map!)
-    (pre-arguments proc)
-    (validators (procedure proc)))
-
-  (define ($string-map! proc str start end)
-    (do ((i 0 ($fxadd1 i))
-	 (j 0 ($fxadd1 j)))
+(define ($string-map proc str start end)
+  (let ((S (make-string ($fx- end start))))
+    (do ((i start ($fxadd1 i))
+	 (j 0     ($fxadd1 j)))
 	(($fx= i end)
-	 str)
-      ($string-set! str j (proc ($string-ref str i)))))
-
-  #| end of module |# )
-
-(define string-for-each
-  (case-lambda
-   ((proc str)
-    (string-for-each proc str 0     (string-length str)))
-   ((proc str start)
-    (string-for-each proc str start (string-length str)))
-   ((proc str start end)
-    (let loop ((i start))
-      (unless (= i end)
-	(proc (string-ref str i))
-	(loop (+ 1 i)))))))
-
-(define string-for-each-index
-  (case-lambda
-   ((proc str)
-    (string-for-each-index proc str 0     (string-length str)))
-   ((proc str start)
-    (string-for-each-index proc str start (string-length str)))
-   ((proc str start end)
-    (let loop ((i start))
-      (unless (= i end)
-	(proc i)
-	(loop (+ 1 i)))))))
+	 S)
+      ($string-set! S j (proc ($string-ref str i))))))
 
 ;;; --------------------------------------------------------------------
 
-(define ($substring-map proc str start past)
-  (do ((i start (+ 1 i))
-       (j 0 (+ 1 j))
-       (result (make-string (- past start))))
-      ((>= i past)
-       result)
-    (string-set! result j (proc (string-ref str i)))))
+(define-string-func string-map!
+  ($string-map!)
+  (pre-arguments proc)
+  (validators (procedure proc)))
 
-(define ($substring-map! proc str start past)
-  (do ((i start ($fxadd1 i)))
-      (($fx>= i past)
-       str)
-    ($string-set! str i (proc ($string-ref str i)))))
+(define ($string-map! proc str start end)
+  (if ($fx= start end)
+      str
+    (begin
+      ($string-set! str start (proc ($string-ref str start)))
+      ($string-map! proc str ($fxadd1 start) end))))
 
-(define ($substring-for-each proc str start past)
-  (let loop ((i start))
-    (when (< i past)
-      (proc (string-ref str i))
-      (loop (+ i 1)))))
+;;; --------------------------------------------------------------------
 
-(define ($substring-for-each-index proc str start past)
-  (let loop ((i start))
-    (when (< i past)
-      (proc i)
-      (loop (+ i 1)))))
+(define-string-func string-for-each
+  ($string-for-each)
+  (pre-arguments proc)
+  (validators (procedure proc)))
+
+(define ($string-for-each proc str start end)
+  (if ($fx= start end)
+      ;;This return  value is not  required by this  SRFI, but we  do it
+      ;;because it makes some sense with little cost.
+      str
+    (begin
+      (proc ($string-ref str start))
+      ($string-for-each proc str ($fxadd1 start) end))))
+
+;;; --------------------------------------------------------------------
+
+(define-string-func string-for-each-index
+  ($string-for-each-index)
+  (pre-arguments proc)
+  (validators (procedure proc)))
+
+(define ($string-for-each-index proc str start end)
+  (if ($fx= start end)
+      ;;This return  value is not  required by this  SRFI, but we  do it
+      ;;because it makes some sense with little cost.
+      str
+    (begin
+      (proc start)
+      ($string-for-each-index proc str ($fxadd1 start) end))))
 
 
 ;;;; folding
 
-(define (string-fold kons knil vec0 . strings)
-  (let ((strings (cons vec0 strings)))
-    (if (apply = (map string-length strings))
-	(let ((len (string-length vec0)))
-	  (let loop ((i     0)
-		     (knil  knil))
-	    (if (= len i)
-		knil
-	      (loop (+ 1 i) (apply kons i knil
-				   (map (lambda (vec)
-					  (string-ref vec i))
-				     strings))))))
-      (assertion-violation 'string-fold
-	"expected strings of the same length"))))
+(define-string-func string-fold
+  ($string-fold)
+  (pre-arguments kons knil)
+  (validators (procedure kons)))
 
-(define (string-fold-right kons knil vec0 . strings)
-  (let* ((strings  (cons vec0 strings)))
-    (if (apply = (map string-length strings))
-	(let ((len (%strings-list-min-length strings)))
-	  (let loop ((i     (- len 1))
-		     (knil  knil))
-	    (if (< i 0)
-		knil
-	      (loop (- i 1) (apply kons i knil
-				   (map (lambda (vec)
-					  (string-ref vec i))
-				     strings))))))
-      (assertion-violation 'string-fold-right
-	"expected strings of the same length"))))
-
-(define (string-fold-left* kons knil vec0 . strings)
-  (let* ((strings  (cons vec0 strings))
-	 (len      (%strings-list-min-length strings)))
-    (let loop ((i     0)
-	       (knil  knil))
-      (if (= len i)
-	  knil
-	(loop (+ 1 i) (apply kons i knil
-			     (map (lambda (vec)
-				    (string-ref vec i))
-			       strings)))))))
-
-(define (string-fold-right* kons knil vec0 . strings)
-  (let* ((strings  (cons vec0 strings))
-	 (len      (%strings-list-min-length strings)))
-    (let loop ((i     (- len 1))
-	       (knil  knil))
-      (if (< i 0)
-	  knil
-	(loop (- i 1) (apply kons i knil
-			     (map (lambda (vec)
-				    (string-ref vec i))
-			       strings)))))))
-
-(define (%substring-fold-left kons knil str start past)
+(define ($string-fold kons knil str start end)
   (let loop ((v knil)
 	     (i start))
-    (if (< i past)
-	(loop (kons (string-ref str i) v) (+ i 1))
+    (if ($fx< i end)
+	(loop (kons ($string-ref str i) v)
+	      ($fxadd1 i))
       v)))
 
-(define (%substring-fold-right kons knil str start past)
+;;; --------------------------------------------------------------------
+
+(define-string-func string-fold-right
+  ($string-fold-right)
+  (pre-arguments kons knil)
+  (validators (procedure kons)))
+
+(define ($string-fold-right kons knil str start end)
   (let loop ((v knil)
-	     (i (- past 1)))
-    (if (>= i start)
-	(loop (kons (string-ref str i) v) (- i 1))
+	     (i ($fxsub1 end)))
+    (if ($fx>= i start)
+	(loop (kons ($string-ref str i) v)
+	      ($fxsub1 i))
       v)))
+
+;;; --------------------------------------------------------------------
 
 (define string-unfold
   (case-lambda
-   ((p f g seed)
-    (string-unfold p f g seed "" (lambda (x) "")))
-   ((p f g seed base)
-    (string-unfold p f g seed base (lambda (x) "")))
-   ((p f g seed base make-final)
-    ;;The strategy is  to allocate a series of chunks  into which we stash
-    ;;the chars as  we generate them. Chunk size goes up  in powers of two
-    ;;beging with 40 and levelling out at 4k, i.e.
-    ;;
-    ;;	40 40 80 160 320 640 1280 2560 4096 4096 4096 4096 4096...
-    ;;
-    ;;This should  work pretty  well for short  strings, 1-line  (80 char)
-    ;;strings, and  longer ones. When  done, we allocate an  answer string
-    ;;and copy the chars over from the chunk buffers.
-    (let lp ((chunks '())	      ; Previously filled chunks
-	     (nchars 0)		      ; Number of chars in CHUNKS
-	     (chunk (make-string 40)) ; Current chunk into which we write
-	     (chunk-len 40)
-	     (i 0) ; Number of chars written into CHUNK
-	     (seed seed))
-      (let lp2 ((i i) (seed seed))
-	(if (not (p seed))
-	    (let ((c (f seed))
-		  (seed (g seed)))
-	      (if (< i chunk-len)
-		  (begin (string-set! chunk i c)
-			 (lp2 (+ i 1) seed))
+   ((stop? seed->char make-seed first-seed)
+    (string-unfold stop? seed->char make-seed first-seed ""       (lambda (x) "")))
 
-		(let* ((nchars2 (+ chunk-len nchars))
-		       (chunk-len2 (min 4096 nchars2))
-		       (new-chunk (make-string chunk-len2)))
-		  (string-set! new-chunk 0 c)
-		  (lp (cons chunk chunks) (+ nchars chunk-len)
-		      new-chunk chunk-len2 1 seed))))
+   ((stop? seed->char make-seed first-seed base-str)
+    (string-unfold stop? seed->char make-seed first-seed base-str (lambda (x) "")))
 
-	  ;; We're done. Make the answer string & install the bits.
-	  (let* ((final (make-final seed))
-		 (flen (string-length final))
-		 (base-len (string-length base))
-		 (j (+ base-len nchars i))
-		 (ans (make-string (+ j flen))))
-	    (string-copy! ans j final 0 flen) ; Install FINAL.
-	    (let ((j (- j i)))
-	      (string-copy! ans j chunk 0 i) ; Install CHUNK[0,I).
-	      (let lp ((j j) (chunks chunks)) ; Install CHUNKS.
-		(if (pair? chunks)
-		    (let* ((chunk  (car chunks))
-			   (chunks (cdr chunks))
-			   (chunk-len (string-length chunk))
-			   (j (- j chunk-len)))
-		      (string-copy! ans j chunk 0 chunk-len)
-		      (lp j chunks)))))
-	    (string-copy! ans 0 base 0 base-len) ; Install BASE.
-	    ans)))))))
+   ((stop? seed->char make-seed first-seed base-str make-final)
+    (let-values (((port getter)
+		  (open-string-output-port)))
+      (display base-str port)
+      (let loop ((seed first-seed))
+	(if (stop? seed)
+	    (begin
+	      (display (make-final seed) port)
+	      (getter))
+	  (begin
+	    (display (seed->char seed) port)
+	    (loop (make-seed seed)))))))))
 
 (define string-unfold-right
   (case-lambda
-   ((p f g seed)
-    (string-unfold-right p f g seed "" (lambda (x) "")))
-   ((p f g seed base)
-    (string-unfold-right p f g seed base (lambda (x) "")))
-   ((p f g seed base make-final)
-    (let lp ((chunks '())	      ; Previously filled chunks
-	     (nchars 0)		      ; Number of chars in CHUNKS
-	     (chunk (make-string 40)) ; Current chunk into which we write
-	     (chunk-len 40)
-	     (i 40) ; Number of chars available in CHUNK
-	     (seed seed))
-      (let lp2 ((i i) (seed seed)) ; Fill up CHUNK from right
-	(if (not (p seed))	   ; to left.
-	    (let ((c (f seed))
-		  (seed (g seed)))
-	      (if (> i 0)
-		  (let ((i (- i 1)))
-		    (string-set! chunk i c)
-		    (lp2 i seed))
+   ((stop? seed->char make-seed first-seed)
+    (string-unfold-right stop? seed->char make-seed first-seed ""       (lambda (x) "")))
 
-		(let* ((nchars2 (+ chunk-len nchars))
-		       (chunk-len2 (min 4096 nchars2))
-		       (new-chunk (make-string chunk-len2))
-		       (i (- chunk-len2 1)))
-		  (string-set! new-chunk i c)
-		  (lp (cons chunk chunks) (+ nchars chunk-len)
-		      new-chunk chunk-len2 i seed))))
+   ((stop? seed->char make-seed first-seed base-str)
+    (string-unfold-right stop? seed->char make-seed first-seed base-str (lambda (x) "")))
 
-	  ;; We're done. Make the answer string & install the bits.
-	  (let* ((final (make-final seed))
-		 (flen (string-length final))
-		 (base-len (string-length base))
-		 (chunk-used (- chunk-len i))
-		 (j (+ base-len nchars chunk-used))
-		 (ans (make-string (+ j flen))))
-	    (string-copy! ans 0 final 0 flen)	       ; Install FINAL.
-	    (string-copy! ans flen chunk i chunk-len) ; Install CHUNK[I,).
-	    (let lp ((j (+ flen chunk-used))	       ; Install CHUNKS.
-		     (chunks chunks))
-	      (if (pair? chunks)
-		  (let* ((chunk  (car chunks))
-			 (chunks (cdr chunks))
-			 (chunk-len (string-length chunk)))
-		    (string-copy! ans j chunk 0 chunk-len)
-		    (lp (+ j chunk-len) chunks))
-		(string-copy! ans j base 0 base-len)))	; Install BASE.
-	    ans)))))))
+   ((stop? seed->char make-seed first-seed base-str make-final)
+    (let-values (((port getter)
+		  (open-string-output-port)))
+      (display base-str port)
+      (let loop ((seed first-seed))
+	(if (stop? seed)
+	    (begin
+	      (display (make-final seed) port)
+	      (begin0-let ((retval (getter)))
+		($string-reverse! retval 0 ($string-length retval))))
+	  (begin
+	    (display (seed->char seed) port)
+	    (loop (make-seed seed)))))))))
 
 
 ;;;; filtering
@@ -1907,7 +1779,7 @@
   (if (procedure? criterion)
       (let* ((slen (- past start))
 	     (temp (make-string slen))
-	     (ans-len (%substring-fold-left (lambda (c i)
+	     (ans-len ($string-fold (lambda (c i)
 					      (if (criterion c) i
 						(begin (string-set! temp i c)
 						       (+ i 1))))
@@ -1920,12 +1792,12 @@
 			(assertion-violation 'string-delete
 			  "expected predicate, char or char-set as criterion"
 			  criterion))))
-	   (len (%substring-fold-left (lambda (c i) (if (char-set-contains? cset c)
+	   (len ($string-fold (lambda (c i) (if (char-set-contains? cset c)
 							i
 						      (+ i 1)))
 				      0 str start past))
 	   (ans (make-string len)))
-      (%substring-fold-left (lambda (c i) (if (char-set-contains? cset c)
+      ($string-fold (lambda (c i) (if (char-set-contains? cset c)
 					      i
 					    (begin (string-set! ans i c)
 						   (+ i 1))))
@@ -1936,7 +1808,7 @@
   (if (procedure? criterion)
       (let* ((slen (- past start))
 	     (temp (make-string slen))
-	     (ans-len (%substring-fold-left (lambda (c i)
+	     (ans-len ($string-fold (lambda (c i)
 					      (if (criterion c)
 						  (begin (string-set! temp i c)
 							 (+ i 1))
@@ -1950,12 +1822,12 @@
 			(assertion-violation 'string-filter
 			  "expected predicate, char or char-set as criterion"
 			  criterion))))
-	   (len (%substring-fold-left (lambda (c i) (if (char-set-contains? cset c)
+	   (len ($string-fold (lambda (c i) (if (char-set-contains? cset c)
 							(+ i 1)
 						      i))
 				      0 str start past))
 	   (ans (make-string len)))
-      (%substring-fold-left (lambda (c i) (if (char-set-contains? cset c)
+      ($string-fold (lambda (c i) (if (char-set-contains? cset c)
 					      (begin (string-set! ans i c)
 						     (+ i 1))
 					    i))

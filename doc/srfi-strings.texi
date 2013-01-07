@@ -1668,20 +1668,61 @@ arguments.
 @subsubsection Fold, unfold and map
 
 
-@defun string-map @var{proc} @var{s} [@var{start} @var{end}]
-@defunx string-map! @var{proc} @var{s} [@var{start} @var{end}]
-@var{proc} is a @code{char->char} procedure; it is mapped over @var{s}.
-@func{string-map} returns the result string and does not alter its
-@var{s} parameter.  @func{string-map!} is the in--place side--effecting
-variant.
+@defun string-map @var{proc} @var{str}
+@defunx string-map @var{proc} @var{str} @var{start}
+@defunx string-map @var{proc} @var{str} @var{start} @var{end}
+@var{proc} is a char--to--char procedure and it is mapped over the
+selected substring of @var{str}; return the result string and does not
+alter its @var{str} parameter.
 
-Note: The order in which @var{proc} is applied to the elements of
-@var{s} is not specified.
+@quotation
+@strong{NOTE} The order in which @var{proc} is applied to the elements
+of @var{str} is not specified.
+@end quotation
 @end defun
 
 
-@defun string-fold @var{kons} @var{knil} @var{s} [@var{start} @var{end}]
-@defunx string-fold-right @var{kons} @var{knil} @var{s} [@var{start} @var{end}]
+@defun string-map! @var{proc} @var{str}
+@defunx string-map! @var{proc} @var{str} @var{start}
+@defunx string-map! @var{proc} @var{str} @var{start} @var{end}
+In--place side--effecting variant.
+@end defun
+
+
+@defun string-for-each @var{proc} @var{str}
+@defunx string-for-each @var{proc} @var{str} @var{start}
+@defunx string-for-each @var{proc} @var{str} @var{start} @var{end}
+Apply @var{proc} to each character in @var{str} from start to end in
+increasing order.  Return unspecified values.
+@end defun
+
+
+@defun string-for-each-index @var{proc} @var{str}
+@defunx string-for-each-index @var{proc} @var{str} @var{start}
+@defunx string-for-each-index @var{proc} @var{str} @var{start} @var{end}
+Apply @var{proc} to each index of the selected substring of @var{str},
+in increasing order from start to end.  This is simply a method of
+looping over a string that is guaranteed to be safe and correct.
+Example:
+
+@example
+(let* ((len (string-length s))
+       (ans (make-string len)))
+  (string-for-each-index
+    (lambda (i)
+      (string-set! ans (- len i) (string-ref s i)))
+    s)
+  ans)
+@end example
+@end defun
+
+
+@defun string-fold @var{kons} @var{knil} @var{str}
+@defunx string-fold @var{kons} @var{knil} @var{str} @var{start}
+@defunx string-fold @var{kons} @var{knil} @var{str} @var{start} @var{end}
+@defunx string-fold-right @var{kons} @var{knil} @var{str}
+@defunx string-fold-right @var{kons} @var{knil} @var{str} @var{start}
+@defunx string-fold-right @var{kons} @var{knil} @var{str} @var{start} @var{end}
 These are the fundamental iterators for strings.
 
 The left--fold operator maps the @var{kons} procedure across the string
@@ -1695,23 +1736,26 @@ from left to right:
 in other words, @func{string-fold} obeys the (tail) recursion:
 
 @example
-(string-fold kons knil s start end) =
-   (string-fold kons (kons s[start] knil) start+1 end)
+(string-fold kons knil s start end)
+@equiv{} (string-fold kons (kons s[start] knil) start+1 end)
 @end example
 
 The right--fold operator maps the @var{kons} procedure across the string
 from right to left:
 
 @example
-(kons s[0] (... (kons s[end-3] (kons s[end-2] (kons s[end-1] knil)))))
+(kons s[0]
+      (... (kons s[end-3]
+                 (kons s[end-2]
+                       (kons s[end-1] knil)))))
 @end example
 
 @noindent
 obeying the (tail) recursion:
 
 @example
-(string-fold-right kons knil s start end) =
-   (string-fold-right kons (kons s[end-1] knil) start end-1)
+(string-fold-right kons knil s start end)
+@equiv{} (string-fold-right kons (kons s[end-1] knil) start end-1)
 @end example
 
 Examples:
@@ -1729,14 +1773,18 @@ Examples:
               s)
 
 ;;; Double every backslash character in S.
-(let* ([ans-len (string-fold (lambda (c sum)
-                               (+ sum (if (char=? c #\\) 2 1)))
-                             0 s)]
-       [ans (make-string ans-len)])
+(let* ((ans-len (string-fold (lambda (c sum)
+                               (+ sum (if (char=? c #\\)
+                                          2
+                                        1)))
+                             0 s))
+       (ans     (make-string ans-len)))
   (string-fold (lambda (c i)
-                 (let ([i (if (char=? c #\\)
-                              (begin (string-set! ans i #\\) (+ i 1))
-                            i)])
+                 (let ((i (if (char=? c #\\)
+                              (begin
+                                (string-set! ans i #\\)
+                                (+ i 1))
+                            i)))
                     (string-set! ans i c)
                     (+ i 1)))
                0 s)
@@ -1746,56 +1794,71 @@ Examples:
 The right--fold combinator is sometimes called a ``catamorphism''.
 @end defun
 
+@c ------------------------------------------------------------
 
-@defun string-unfold @var{p} @var{f} @var{g} @var{seed} [@var{base} @var{make-final}]
+@defun string-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed}
+@defunx string-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-str}
+@defunx string-unfold @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-str} @var{make-final}
 This is a fundamental constructor for strings.
 
 @table @var
-@item g
+@item make-seed
 Is used to generate a series of ``seed'' values from the initial seed:
 
 @example
-seed, (g seed), (g2 seed), (g3 seed), ...
+@var{first-seed}
+(@var{make-seed} @var{first-seed})      @result{} seed2
+(@var{make-seed} seed2)           @result{} seed3
+(@var{make-seed} seed3)           @result{} seed4
+...
 @end example
 
-@item p
+@item stop?
 Tells us when to stop; when it returns true when applied to one of the
 seed values.
 
-@item f
+@item seed->char
 Maps each seed value to the corresponding character in the result
 string.  These chars are assembled into the string in a left--to--right
 order.
 
-@item base
+@item base-string
 Is the optional initial/leftmost portion of the constructed string; it
 defaults to the empty string.
 
 @item make-final
-Is applied to the terminal seed value (on which @var{p} returns true) to
-produce the final/rightmost portion of the constructed string.  It
-defaults to @code{(lambda (x) "")}.
+Is applied to the terminal seed value (on which @var{stop?} returns
+true) to produce the final/rightmost portion of the constructed string.
+It defaults to:
+
+@example
+(lambda (x) "")
+@end example
 @end table
 
 More precisely, the following (simple, inefficient) definitions hold:
 
 @example
 ;;; Iterative
-(define (string-unfold p f g seed base make-final)
-  (let lp ([seed seed]
-           [ans base])
-    (if (p seed)
+(define (string-unfold stop? seed->char make-seed
+                       first-seed base-str make-final)
+  (let loop ((seed first-seed)
+             (ans  base-str))
+    (if (stop? seed)
         (string-append ans (make-final seed))
-      (lp (g seed) (string-append ans (string (f seed)))))))
+      (loop (make-seed seed)
+            (string-append ans (string (seed->char seed)))))))
 
 ;;; Recursive
-(define (string-unfold p f g seed base make-final)
-  (string-append base
-                 (let recur ([seed seed])
-                   (if (p seed)
-                       (make-final seed)
-                     (string-append (string (f seed))
-                                    (recur (g seed)))))))
+(define (string-unfold stop? seed->char make-seed
+                       first-seed base-str make-final)
+  (string-append
+     base-str
+     (let recur ((seed first-seed))
+       (if (stop? seed)
+           (make-final seed)
+         (string-append (string (seed->char seed))
+                        (recur  (make-seed  seed)))))))
 @end example
 
 @func{string-unfold} is a fairly powerful string constructor; we can use
@@ -1803,19 +1866,22 @@ it to convert a list to a string, read a port into a string, reverse a
 string, copy a string, and so forth.  Examples:
 
 @example
-(port->string p) = (string-unfold eof-object? values
-                                  (lambda (x) (read-char p))
-                                    (read-char p))
+(port->string p)
+@equiv{} (string-unfold eof-object? values
+             (lambda (x) (read-char p))
+             (read-char p))
 
-(list->string lis) = (string-unfold null? car cdr lis)
+(list->string lis)
+@equiv{} (string-unfold null? car cdr lis)
 
-(string-tabulate f size) = (string-unfold (lambda (i)
-                                            (= i size))
-                                          f add1 0)
+(string-tabulate f size)
+@equiv{} (string-unfold
+             (lambda (i) (= i size))
+             f add1 0)
 @end example
 
 @noindent
-to map @var{f} over a list @var{lis}, producing a string:
+to map @var{seed->char} over a list @var{lis}, producing a string:
 
 @example
 (string-unfold null? (compose f car) cdr lis)
@@ -1827,137 +1893,132 @@ inverses.  That is, given operations @var{knull?}, @var{kar}, @var{kdr},
 @var{kons}, and @var{knil} satisfying:
 
 @example
-(kons (kar x) (kdr x)) = x  and (knull? knil) = #t
+(kons (kar x) (kdr x))  @equiv{} x
+(knull? knil)           @equiv{} #t
 @end example
 
 @noindent
 then:
 
 @example
-(string-fold-right kons knil (string-unfold knull? kar kdr x)) = x
+(string-fold-right kons knil
+   (string-unfold knull? kar kdr x))
+@equiv{} x
 @end example
 
 @noindent
 and:
 
 @example
-(string-unfold knull? kar kdr (string-fold-right kons knil s)) = s.
+(string-unfold knull? kar kdr
+   (string-fold-right kons knil s))
+@equiv{} s
 @end example
 
 The final string constructed does not share storage with either
-@var{base} or the value produced by @var{make-final}.
+@var{base-str} or the value produced by @var{make-final}.
 
 This combinator sometimes is called an ``anamorphism''.
-
-Note: implementations should take care that runtime stack limits do not
-cause overflow when constructing large (e.g., megabyte) strings with
-@func{string-unfold}.
 @end defun
 
+@c ------------------------------------------------------------
 
-@defun string-unfold-right @var{p} @var{f} @var{g} @var{seed} [@var{base} @var{make-final}]
+@defun string-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed}
+@defunx string-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-str}
+@defunx string-unfold-right @var{stop?} @var{seed->char} @var{make-seed} @var{first-seed} @var{base-str} @var{make-final}
 This is a fundamental constructor for strings.
 
 @table @var
-@item g
-Is used to generate a series of ``seed'' values from the initial seed:
+@item make-seed
+Is used to generate a series of ``seed'' values from the initial
+@var{first-seed}:
 
 @example
-seed, (g seed), (g2 seed), (g3 seed), ...
+@var{first-seed}
+(@var{make-seed} @var{first-seed})      @result{} seed2
+(@var{make-seed} seed2)           @result{} seed3
+(@var{make-seed} seed3)           @result{} seed4
+...
 @end example
 
-@item p
+@item stop?
 Tells us when to stop; when it returns true when applied to one of these
 seed values.
 
-@item f
+@item seed->char
 Maps each seed value to the corresponding character in the result
 string.  These chars are assembled into the string in a right--to--left
 order.
 
-@item base
+@item base-str
 Is the optional initial/rightmost portion of the constructed string; it
 defaults to the empty string.
 
 @item make-final
-Is applied to the terminal seed value (on which @var{p} returns true) to
-produce the final/leftmost portion of the constructed string.  It
-defaults to @code{(lambda (x) "")}.
+Is applied to the terminal seed value (on which @var{stop?} returns
+true) to produce the final/leftmost portion of the constructed string.
+It defaults to:
+
+@example
+(lambda (x) "")
+@end example
 @end table
 
 More precisely, the following (simple, inefficient) definitions hold:
 
 @example
 ;;; Iterative
-(define (string-unfold-right p f g seed base make-final)
-  (let lp ([seed seed]
-           [ans base])
-    (if (p seed)
+(define (string-unfold-right stop? seed->char make-seed
+                             first-seed base-str make-final)
+  (let loop ((seed first-seed)
+             (ans  base-str))
+    (if (stop? seed)
         (string-append (make-final seed) ans)
-      (lp (g seed) (string-append (string (f seed)) ans)))))
+      (loop (make-seed seed)
+            (string-append (string (seed->char seed)) ans)))))
 
 ;;; Recursive
-(define (string-unfold-right p f g seed base make-final)
-  (string-append (let recur ([seed seed])
-                   (if (p seed)
-                       (make-final seed)
-                     (string-append (recur (g seed))
-                                    (string (f seed)))))
-                 base))
+(define (string-unfold-right stop? seed->char make-seed
+                             first-seed base-str make-final)
+  (string-append
+     (let recur ((seed first-seed))
+       (if (stop? seed)
+           (make-final seed)
+         (string-append (recur  (make-seed  seed))
+                        (string (seed->char seed)))))
+     base-str))
 @end example
 
 Interested functional programmers may enjoy noting that
 @func{string-fold} and @func{string-unfold-right} are in some sense
-inverses. That is, given operations @var{knull?}, @var{kar}, @var{kdr},
+inverses.  That is, given operations @var{knull?}, @var{kar}, @var{kdr},
 @var{kons}, and @var{knil} satisfying:
 
 @example
-(kons (kar x) (kdr x)) = x and (knull? knil) = #t
+(kons (kar x) (kdr x))  @equiv{} x
+(knull? knil)           @equiv{} #t
 @end example
 
 @noindent
 then:
 
 @example
-(string-fold kons knil (string-unfold-right knull? kar kdr x)) = x
+(string-fold kons knil
+  (string-unfold-right knull? kar kdr x))
+@equiv{} x
 @end example
 
 @noindent
 and:
 
 @example
-(string-unfold-right knull? kar kdr (string-fold kons knil s)) = s.
+(string-unfold-right knull? kar kdr
+  (string-fold kons knil s))
+@equiv{} s
 @end example
 
 The final string constructed does not share storage with either
-@var{base} or the value produced by @func{make-final}.
-
-Note: implementations should take care that runtime stack limits do not
-cause overflow when constructing large (e.g., megabyte) strings with
-@func{string-unfold-right}.
-@end defun
-
-
-@defun string-for-each @var{proc} @var{s} [@var{start} @var{end}]
-Apply @var{proc} to each character in @var{s}.  @func{string-for-each}
-is required to iterate from start to end in increasing order.
-@end defun
-
-
-@defun string-for-each-index @var{proc} @var{s} [@var{start} @var{end}]
-Apply @var{proc} to each index of @var{s}, in order.  The optional
-@var{start}/@var{end} pairs restrict the endpoints of the loop.  This is
-simply a method of looping over a string that is guaranteed to be safe
-and correct.  Example:
-
-@example
-(let* ([len (string-length s)]
-       [ans (make-string len)])
-  (string-for-each-index
-      (lambda (i) (string-set! ans (- len i) (string-ref s i)))
-      s)
-  ans)
-@end example
+@var{base-str} or the value produced by @func{make-final}.
 @end defun
 
 @c page
