@@ -50,7 +50,7 @@
 		  string->ascii		ascii->string)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    $))
 
 
 ;;;; arguments validation
@@ -74,51 +74,51 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (length who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string length argument" obj))
 
 (define-argument-validation (has-length who str len)
-  (unsafe.fx= len (unsafe.string-length str))
+  ($fx= len ($string-length str))
   (assertion-violation who "length mismatch in argument strings" len str))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as string index argument" obj))
 
 (define-argument-validation (index-for-string who idx str)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx< idx (unsafe.string-length str))
+  ($fx< idx ($string-length str))
   (assertion-violation who "index is out of range for string" idx str))
 
 (define-argument-validation (start-index-and-length who start len)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= start len)
+  ($fx<= start len)
   (assertion-violation who "start index argument out of range for string" start len))
 
 (define-argument-validation (end-index-and-length who end len)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= end len)
+  ($fx<= end len)
   (assertion-violation who "end index argument out of range for string" end len))
 
 (define-argument-validation (start-and-end-indices who start end)
   ;;To be used after INDEX validation.
   ;;
-  (unsafe.fx<= start end)
+  ($fx<= start end)
   (assertion-violation who "start and end index arguments are in decreasing order" start end))
 
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (count who obj)
-  (and (fixnum? obj) (unsafe.fx<= 0 obj))
+  (and (fixnum? obj) ($fx<= 0 obj))
   (assertion-violation who "expected non-negative fixnum as characters count argument" obj))
 
 (define-argument-validation (start-index-and-count-and-length who start count len)
-  (unsafe.fx<= (unsafe.fx+ start count) len)
+  ($fx<= ($fx+ start count) len)
   (assertion-violation who
     (string-append "count argument out of range for string of length " (number->string len)
 		   " and start index " (number->string start))
@@ -127,18 +127,18 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (latin1 who code-point str)
-  (and (unsafe.fx>= code-point 0)
-       (unsafe.fx< code-point 256))
+  (and ($fx>= code-point 0)
+       ($fx< code-point 256))
   (assertion-violation who
     "expected only Latin-1 characters in string argument"
-    (unsafe.fixnum->char code-point) str))
+    ($fixnum->char code-point) str))
 
 (define-argument-validation (ascii who code-point str)
-  (and (unsafe.fx>= code-point 0)
-       (unsafe.fx<  code-point 128))
+  (and ($fx>= code-point 0)
+       ($fx<  code-point 128))
   (assertion-violation who
     "expected only ASCII characters in string argument"
-    (unsafe.fixnum->char code-point) str))
+    ($fixnum->char code-point) str))
 
 
 ;;;; constants
@@ -152,9 +152,9 @@
 (define (%unsafe.string-copy! src.str src.start
 			      dst.str dst.start
 			      src.end)
-  (unsafe.string-copy! src.str src.start
-		       dst.str dst.start
-		       src.end))
+  ($string-copy! src.str src.start
+		 dst.str dst.start
+		 src.end))
 
 
 (define (string-length str)
@@ -164,7 +164,7 @@
   (define who 'string-length)
   (with-arguments-validation (who)
       ((string str))
-    (unsafe.string-length str)))
+    ($string-length str)))
 
 (define (string-ref str idx)
   ;;Defined by  R6RS.  IDX  must be  a valid index  of STR.   Return the
@@ -177,7 +177,7 @@
       ((string			str)
        (index			idx)
        (index-for-string	idx str))
-    (unsafe.string-ref str idx)))
+    ($string-ref str idx)))
 
 (define (string-set! str idx ch)
   ;;Defined by  R6RS.  IDX must  be a valid  index of STR.  Store  CH in
@@ -194,7 +194,7 @@
        (index			idx)
        (index-for-string	idx str)
        (char			ch))
-    (unsafe.string-set! str idx ch)))
+    ($string-set! str idx ch)))
 
 
 (define make-string
@@ -210,14 +210,14 @@
     (with-arguments-validation (who)
 	((length len)
 	 (char   fill))
-      (let loop ((str (unsafe.make-string len))
+      (let loop ((str ($make-string len))
 		 (idx 0)
 		 (len len))
-	(if (unsafe.fx= idx len)
+	(if ($fx= idx len)
 	    str
 	  (begin
-	    (unsafe.string-set! str idx fill)
-	    (loop str (unsafe.fxadd1 idx) len))))))))
+	    ($string-set! str idx fill)
+	    (loop str ($fxadd1 idx) len))))))))
 
 (define string
   ;;Defined by  R6RS.  Return a  newly allocated string composed  of the
@@ -225,13 +225,13 @@
   ;;
   (case-lambda
    (()
-    (unsafe.make-string 0))
+    ($make-string 0))
    ((one)
     (define who 'string)
     (with-arguments-validation (who)
 	((char one))
-      (let ((str (unsafe.make-string 1)))
-	(unsafe.string-set! str 0 one)
+      (let ((str ($make-string 1)))
+	($string-set! str 0 one)
 	str)))
 
    ((one two)
@@ -239,9 +239,9 @@
     (with-arguments-validation (who)
 	((char one)
 	 (char two))
-      (let ((str (unsafe.make-string 2)))
-	(unsafe.string-set! str 0 one)
-	(unsafe.string-set! str 1 two)
+      (let ((str ($make-string 2)))
+	($string-set! str 0 one)
+	($string-set! str 1 two)
 	str)))
 
    ((one two three)
@@ -250,10 +250,10 @@
 	((char one)
 	 (char two)
 	 (char three))
-      (let ((str (unsafe.make-string 3)))
-	(unsafe.string-set! str 0 one)
-	(unsafe.string-set! str 1 two)
-	(unsafe.string-set! str 2 three)
+      (let ((str ($make-string 3)))
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)
 	str)))
 
    ((one two three four)
@@ -263,11 +263,11 @@
 	 (char two)
 	 (char three)
 	 (char four))
-      (let ((str (unsafe.make-string 4)))
-	(unsafe.string-set! str 0 one)
-	(unsafe.string-set! str 1 two)
-	(unsafe.string-set! str 2 three)
-	(unsafe.string-set! str 3 four)
+      (let ((str ($make-string 4)))
+	($string-set! str 0 one)
+	($string-set! str 1 two)
+	($string-set! str 2 three)
+	($string-set! str 3 four)
 	str)))
 
    ((one . chars)
@@ -275,22 +275,22 @@
     (define (%length-and-validation chars len)
       (if (null? chars)
 	  len
-	(let ((ch (unsafe.car chars)))
+	(let ((ch ($car chars)))
 	  (with-arguments-validation (who)
 	      ((char ch))
-	    (%length-and-validation (unsafe.cdr chars) (unsafe.fxadd1 len))))))
+	    (%length-and-validation ($cdr chars) ($fxadd1 len))))))
     (let* ((chars (cons one chars))
 	   (len   (%length-and-validation chars 0)))
       (with-arguments-validation (who)
 	  ((length len))
-	(let loop ((str   (unsafe.make-string len))
+	(let loop ((str   ($make-string len))
 		   (idx   0)
 		   (chars chars))
 	  (if (null? chars)
 	      str
 	    (begin
-	      (unsafe.string-set! str idx (unsafe.car chars))
-	      (loop str (unsafe.fxadd1 idx) (unsafe.cdr chars))))))))))
+	      ($string-set! str idx ($car chars))
+	      (loop str ($fxadd1 idx) ($cdr chars))))))))))
 
 
 (define (substring str start end)
@@ -308,12 +308,12 @@
       ((string	str)
        (index	start)
        (index	end))
-    (let ((len (unsafe.string-length str)))
+    (let ((len ($string-length str)))
       (with-arguments-validation (who)
 	  ((start-index-and-length	start len)
 	   (end-index-and-length	end   len)
 	   (start-and-end-indices	start end))
-	(unsafe.substring str start end)))))
+	($substring str start end)))))
 
 (define (string-copy str)
   ;;Defined  by  R6RS.  Return  a  newly  allocated  copy of  the  given
@@ -322,8 +322,8 @@
   (define who 'string-copy)
   (with-arguments-validation (who)
       ((string str))
-    (let ((end (unsafe.string-length str)))
-      (unsafe.substring str 0 end))))
+    (let ((end ($string-length str)))
+      ($substring str 0 end))))
 
 
 (define string=?
@@ -337,38 +337,38 @@
     (with-arguments-validation (who)
 	((string  str1)
 	 (string  str2))
-      (let ((len (unsafe.string-length str1)))
-	(and (unsafe.fx= len (unsafe.string-length str2))
+      (let ((len ($string-length str1)))
+	(and ($fx= len ($string-length str2))
 	     (%unsafe.two-strings=? str1 str2 0 len)))))
    ((str1 str2 . strs)
     (define who 'string=?)
     (with-arguments-validation (who)
 	((string  str1)
 	 (string  str2))
-      (let ((str1.len (unsafe.string-length str1)))
-	(and (unsafe.fx= str1.len (unsafe.string-length str2))
+      (let ((str1.len ($string-length str1)))
+	(and ($fx= str1.len ($string-length str2))
 	     (%unsafe.two-strings=? str1 str2 0 str1.len)
 	     (let next-string ((str1 str1)
 			       (strs strs)
 			       (len  str1.len))
 	       (or (null? strs)
-		   (let ((strN (unsafe.car strs)))
+		   (let ((strN ($car strs)))
 		     (with-arguments-validation (who)
 			 ((string strN))
-		       (if (unsafe.fx= len (unsafe.string-length strN))
-			   (and (next-string str1 (unsafe.cdr strs) len)
+		       (if ($fx= len ($string-length strN))
+			   (and (next-string str1 ($cdr strs) len)
 				(%unsafe.two-strings=? str1 strN 0 len))
-			 (%check-strings-and-return-false who (unsafe.cdr strs)))))))))))
+			 (%check-strings-and-return-false who ($cdr strs)))))))))))
    ))
 
 (define (%unsafe.two-strings=? str1 str2 index end)
   ;;Unsafely compare  two strings from  INDEX included to  END excluded;
   ;;return #t or #f.
   ;;
-  (or (unsafe.fx= index end)
-      (and (unsafe.char= (unsafe.string-ref str1 index)
-			 (unsafe.string-ref str2 index))
-	   (%unsafe.two-strings=? str1 str2 (unsafe.fxadd1 index) end))))
+  (or ($fx= index end)
+      (and ($char= ($string-ref str1 index)
+			 ($string-ref str2 index))
+	   (%unsafe.two-strings=? str1 str2 ($fxadd1 index) end))))
 
 (define (%check-strings-and-return-false who strs)
   ;;Verify that the list (already validated) STRS contains only strings;
@@ -376,10 +376,10 @@
   ;;
   (if (null? strs)
       #f
-    (let ((str (unsafe.car strs)))
+    (let ((str ($car strs)))
       (with-arguments-validation (who)
 	  ((string str))
-	(%check-strings-and-return-false who (unsafe.cdr strs))))))
+	(%check-strings-and-return-false who ($cdr strs))))))
 
 
 ;;;; string comparison
@@ -401,11 +401,11 @@
     (let next-string ((str1 str1)
 		      (strs strs))
       (or (null? strs)
-	  (let ((str2 (unsafe.car strs)))
+	  (let ((str2 ($car strs)))
 	    (with-arguments-validation (who)
 		((string str2))
 	      (if (cmp str1 str2)
-		  (next-string str2 (unsafe.cdr strs))
+		  (next-string str2 ($cdr strs))
 		(%check-strings-and-return-false who strs))))))))
 
 (define string<?
@@ -454,59 +454,59 @@
 
 
 (define (%unsafe.string<? str1 str2)
-  (let ((len1 (unsafe.string-length str1))
-	(len2 (unsafe.string-length str2)))
-    (if (unsafe.fx< len1 len2)
+  (let ((len1 ($string-length str1))
+	(len2 ($string-length str2)))
+    (if ($fx< len1 len2)
 	(let next-char ((idx  0)
 			(len1 len1)
 			(str1 str1)
 			(str2 str2))
-	  (or (unsafe.fx= idx len1)
-	      (let ((ch1 (unsafe.string-ref str1 idx))
-		    (ch2 (unsafe.string-ref str2 idx)))
-		(or (unsafe.char< ch1 ch2)
-		    (if (unsafe.char= ch1 ch2)
-			(next-char (unsafe.fxadd1 idx) len1 str1 str2)
+	  (or ($fx= idx len1)
+	      (let ((ch1 ($string-ref str1 idx))
+		    (ch2 ($string-ref str2 idx)))
+		(or ($char< ch1 ch2)
+		    (if ($char= ch1 ch2)
+			(next-char ($fxadd1 idx) len1 str1 str2)
 		      #f)))))
       (let next-char ((idx  0)
 		      (len2 len2)
 		      (str1 str1)
 		      (str2 str2))
-	(if (unsafe.fx= idx len2)
+	(if ($fx= idx len2)
 	    #f
-	  (let ((ch1 (unsafe.string-ref str1 idx))
-		(ch2 (unsafe.string-ref str2 idx)))
-	    (or (unsafe.char< ch1 ch2)
-		(if (unsafe.char= ch1 ch2)
-		    (next-char (unsafe.fxadd1 idx) len2 str1 str2)
+	  (let ((ch1 ($string-ref str1 idx))
+		(ch2 ($string-ref str2 idx)))
+	    (or ($char< ch1 ch2)
+		(if ($char= ch1 ch2)
+		    (next-char ($fxadd1 idx) len2 str1 str2)
 		  #f))))))))
 
 (define (%unsafe.string<=? str1 str2)
-  (let ((len1 (unsafe.string-length str1))
-	(len2 (unsafe.string-length str2)))
-    (if (unsafe.fx<= len1 len2)
+  (let ((len1 ($string-length str1))
+	(len2 ($string-length str2)))
+    (if ($fx<= len1 len2)
 	(let next-char ((idx  0)
 			(len1 len1)
 			(str1 str1)
 			(str2 str2))
-	  (or (unsafe.fx= idx len1)
-	      (let ((ch1 (unsafe.string-ref str1 idx))
-		    (ch2 (unsafe.string-ref str2 idx)))
-		(or (unsafe.char< ch1 ch2)
-		    (if (unsafe.char= ch1 ch2)
-			(next-char (unsafe.fxadd1 idx) len1 str1 str2)
+	  (or ($fx= idx len1)
+	      (let ((ch1 ($string-ref str1 idx))
+		    (ch2 ($string-ref str2 idx)))
+		(or ($char< ch1 ch2)
+		    (if ($char= ch1 ch2)
+			(next-char ($fxadd1 idx) len1 str1 str2)
 		      #f)))))
       (let next-char ((idx  0)
 		      (len2 len2)
 		      (str1 str1)
 		      (str2 str2))
-	(if (unsafe.fx= idx len2)
+	(if ($fx= idx len2)
 	    #f
-	  (let ((ch1 (unsafe.string-ref str1 idx))
-		(ch2 (unsafe.string-ref str2 idx)))
-	    (or (unsafe.char< ch1 ch2)
-		(if (unsafe.char= ch1 ch2)
-		    (next-char (unsafe.fxadd1 idx) len2 str1 str2)
+	  (let ((ch1 ($string-ref str1 idx))
+		(ch2 ($string-ref str2 idx)))
+	    (or ($char< ch1 ch2)
+		(if ($char= ch1 ch2)
+		    (next-char ($fxadd1 idx) len2 str1 str2)
 		  #f))))))))
 
 (define (%unsafe.string>? str1 str2)
@@ -524,12 +524,12 @@
   (with-arguments-validation (who)
       ((string str))
     (let next-char ((str   str)
-		    (i   (unsafe.string-length str))
+		    (i   ($string-length str))
 		    (ac  '()))
-      (if (unsafe.fxzero? i)
+      (if ($fxzero? i)
 	  ac
-	(let ((i (unsafe.fxsub1 i)))
-	  (next-char str i (cons (unsafe.string-ref str i) ac)))))))
+	(let ((i ($fxsub1 i)))
+	  (next-char str i (cons ($string-ref str i) ac)))))))
 
 
 (define (list->string ls)
@@ -539,13 +539,13 @@
   (define who 'list->string)
   (define (race h t ls n)
     (cond ((pair? h)
-	   (let ((h (unsafe.cdr h)))
+	   (let ((h ($cdr h)))
 	     (if (pair? h)
 		 (if (not (eq? h t))
-		     (race (unsafe.cdr h) (unsafe.cdr t) ls (unsafe.fx+ n 2))
+		     (race ($cdr h) ($cdr t) ls ($fx+ n 2))
 		   (assertion-violation who "circular list is invalid as argument" ls))
 	       (if (null? h)
-		   (unsafe.fx+ n 1)
+		   ($fx+ n 1)
 		 (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
@@ -555,16 +555,16 @@
   (define (fill s i ls)
     (if (null? ls)
 	s
-      (let ((c (unsafe.car ls)))
+      (let ((c ($car ls)))
 	(with-arguments-validation (who)
 	    ((char c))
-	  (unsafe.string-set! s i c)
-	  (fill s (unsafe.fxadd1 i) (unsafe.cdr ls))))))
+	  ($string-set! s i c)
+	  (fill s ($fxadd1 i) ($cdr ls))))))
 
   (let ((len (race ls ls ls 0)))
     (with-arguments-validation (who)
 	((length len))
-      (fill (unsafe.make-string len) 0 ls))))
+      (fill ($make-string len) 0 ls))))
 
 
 (define string-append
@@ -585,12 +585,12 @@
     (with-arguments-validation (who)
 	((string str1)
 	 (string str2))
-      (let* ((len1	(unsafe.string-length str1))
-	     (len2	(unsafe.string-length str2))
+      (let* ((len1	($string-length str1))
+	     (len2	($string-length str2))
 	     (dst.len	(+ len1 len2)))
 	(with-arguments-validation (who)
 	    ((length dst.len))
-	  (let ((dst.str (unsafe.make-string dst.len)))
+	  (let ((dst.str ($make-string dst.len)))
 	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
 	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
 	    dst.str)))))
@@ -601,16 +601,16 @@
 	((string str1)
 	 (string str2)
 	 (string str3))
-      (let* ((len1	(unsafe.string-length str1))
-	     (len2	(unsafe.string-length str2))
-	     (len3	(unsafe.string-length str3))
+      (let* ((len1	($string-length str1))
+	     (len2	($string-length str2))
+	     (len3	($string-length str3))
 	     (dst.len	(+ len1 len2 len3)))
 	(with-arguments-validation (who)
 	    ((length  dst.len))
-	  (let ((dst.str (unsafe.make-string dst.len)))
+	  (let ((dst.str ($make-string dst.len)))
 	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
 	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
-	    (%unsafe.string-copy! str3 0 dst.str (unsafe.fx+ len1 len2) len3)
+	    (%unsafe.string-copy! str3 0 dst.str ($fx+ len1 len2) len3)
 	    dst.str)))))
 
    ((str1 str2 str3 str4)
@@ -620,19 +620,19 @@
 	 (string  str2)
 	 (string  str3)
 	 (string  str4))
-      (let* ((len1	(unsafe.string-length str1))
-	     (len2	(unsafe.string-length str2))
-	     (len3	(unsafe.string-length str3))
-	     (len4	(unsafe.string-length str4))
+      (let* ((len1	($string-length str1))
+	     (len2	($string-length str2))
+	     (len3	($string-length str3))
+	     (len4	($string-length str4))
 	     (dst.len	(+ len1 len2 len3 len4)))
 	(with-arguments-validation (who)
 	    ((length  dst.len))
-	  (let ((dst.str (unsafe.make-string dst.len)))
+	  (let ((dst.str ($make-string dst.len)))
 	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
 	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
-	    (let ((dst.start (unsafe.fx+ len1 len2)))
+	    (let ((dst.start ($fx+ len1 len2)))
 	      (%unsafe.string-copy! str3 0 dst.str dst.start len3)
-	      (let ((dst.start (unsafe.fx+ dst.start len3)))
+	      (let ((dst.start ($fx+ dst.start len3)))
 		(%unsafe.string-copy! str4 0 dst.str dst.start len4)))
 	    dst.str)))))
 
@@ -641,25 +641,25 @@
     (define (%length-and-validation strs len)
       (if (null? strs)
 	  len
-	(let ((str (unsafe.car strs)))
+	(let ((str ($car strs)))
 	  (with-arguments-validation (who)
 	      ((string str))
-	    (%length-and-validation (unsafe.cdr strs) (+ len (unsafe.string-length str)))))))
+	    (%length-and-validation ($cdr strs) (+ len ($string-length str)))))))
 
     (define (%fill-strings dst.str strs dst.start)
       (if (null? strs)
 	  dst.str
-	(let* ((src.str (unsafe.car strs))
-	       (src.len (unsafe.string-length src.str)))
+	(let* ((src.str ($car strs))
+	       (src.len ($string-length src.str)))
 	  (begin
-	    (unsafe.string-copy! src.str 0 dst.str dst.start src.len)
-	    (%fill-strings dst.str (unsafe.cdr strs) (unsafe.fx+ dst.start src.len))))))
+	    ($string-copy! src.str 0 dst.str dst.start src.len)
+	    (%fill-strings dst.str ($cdr strs) ($fx+ dst.start src.len))))))
 
     (let* ((strs    (cons str1 strs))
            (dst.len (%length-and-validation strs 0)))
       (with-arguments-validation (who)
 	  ((length dst.len))
-	(%fill-strings (unsafe.make-string dst.len) strs 0))))))
+	(%fill-strings ($make-string dst.len) strs 0))))))
 
 
 (define string-for-each
@@ -688,10 +688,10 @@
       (let next-char ((proc		proc)
 		      (str		str)
 		      (str.index	0)
-		      (str.len		(unsafe.string-length str)))
-	(unless (unsafe.fx= str.index str.len)
-	  (proc (unsafe.string-ref str str.index))
-	  (next-char proc str (unsafe.fxadd1 str.index) str.len)))))
+		      (str.len		($string-length str)))
+	(unless ($fx= str.index str.len)
+	  (proc ($string-ref str str.index))
+	  (next-char proc str ($fxadd1 str.index) str.len)))))
 
    ((proc str0 str1)
     (define who 'string-for-each)
@@ -699,7 +699,7 @@
 	((procedure	proc)
 	 (string	str0)
 	 (string	str1))
-      (let ((str.len (unsafe.string-length str0)))
+      (let ((str.len ($string-length str0)))
 	(with-arguments-validation (who)
 	    ((has-length str1 str.len))
 	  (let next-char ((proc		proc)
@@ -707,10 +707,10 @@
 			  (str1		str1)
 			  (str.index	0)
 			  (str.len	str.len))
-	    (unless (unsafe.fx= str.index str.len)
-	      (proc (unsafe.string-ref str0 str.index)
-		    (unsafe.string-ref str1 str.index))
-	      (next-char proc str0 str1 (unsafe.fxadd1 str.index) str.len)))))))
+	    (unless ($fx= str.index str.len)
+	      (proc ($string-ref str0 str.index)
+		    ($string-ref str1 str.index))
+	      (next-char proc str0 str1 ($fxadd1 str.index) str.len)))))))
 
    ((proc str0 str1 . strs)
     (define who 'string-for-each)
@@ -718,7 +718,7 @@
 	((procedure	proc)
 	 (string	str0)
 	 (string	str1))
-      (let ((str.len (unsafe.string-length str0)))
+      (let ((str.len ($string-length str0)))
 	(with-arguments-validation (who)
 	    ((has-length str1 str.len))
 
@@ -726,11 +726,11 @@
 	  (let next-string ((strs	strs)
 			    (str.len	str.len))
 	    (unless (null? strs)
-	      (let ((str (unsafe.car strs)))
+	      (let ((str ($car strs)))
 		(with-arguments-validation (who)
 		    ((string      str)
 		     (has-length  str str.len))
-		  (next-string (unsafe.cdr strs) str.len)))))
+		  (next-string ($cdr strs) str.len)))))
 
 	  ;; do the application
 	  (let next-char ((proc		proc)
@@ -739,17 +739,17 @@
 			  (strs		strs)
 			  (str.index	0)
 			  (str.len	str.len))
-	    (unless (unsafe.fx= str.index str.len)
+	    (unless ($fx= str.index str.len)
 	      (apply proc
-		     (unsafe.string-ref str0 str.index)
-		     (unsafe.string-ref str1 str.index)
+		     ($string-ref str0 str.index)
+		     ($string-ref str1 str.index)
 		     (let next-string ((str.index str.index)
 				       (strs      strs))
 		       (if (null? strs)
 			   '()
-			 (cons (unsafe.string-ref (unsafe.car strs) str.index)
-			       (next-string str.index (unsafe.cdr strs))))))
-	      (next-char proc str0 str1 strs (unsafe.fxadd1 str.index) str.len)))
+			 (cons ($string-ref ($car strs) str.index)
+			       (next-string str.index ($cdr strs))))))
+	      (next-char proc str0 str1 strs ($fxadd1 str.index) str.len)))
 	  ))))
    ))
 
@@ -762,8 +762,8 @@
   (with-arguments-validation (who)
       ((string	str)
        (char	fill))
-    (let ((len (unsafe.string-length str)))
-      (unsafe.string-fill! str 0 len fill))))
+    (let ((len ($string-length str)))
+      ($string-fill! str 0 len fill))))
 
 
 (define (string-copy! src.str src.start dst.str dst.start count)
@@ -778,31 +778,31 @@
        (index		src.start)
        (index		dst.start)
        (count		count))
-    (let ((src.len (unsafe.string-length src.str))
-	  (dst.len (unsafe.string-length dst.str)))
+    (let ((src.len ($string-length src.str))
+	  (dst.len ($string-length dst.str)))
       (with-arguments-validation (who)
 	  ((start-index-and-length		src.start src.len)
 	   (start-index-and-length		dst.start dst.len)
 	   (start-index-and-count-and-length	src.start count src.len)
 	   (start-index-and-count-and-length	dst.start count dst.len))
-	(cond ((unsafe.fxzero? count)
+	(cond (($fxzero? count)
 	       (void))
 	      ((eq? src.str dst.str)
-	       (cond ((unsafe.fx< dst.start src.start)
-		      (unsafe.string-self-copy-forwards!  src.str src.start dst.start count))
-		     ((unsafe.fx> dst.start src.start)
-		      (unsafe.string-self-copy-backwards! src.str src.start dst.start count))
+	       (cond (($fx< dst.start src.start)
+		      ($string-self-copy-forwards!  src.str src.start dst.start count))
+		     (($fx> dst.start src.start)
+		      ($string-self-copy-backwards! src.str src.start dst.start count))
 		     (else (void))))
 	      (else
-	       (let ((src.end (unsafe.fx+ src.start count)))
-		 (unsafe.string-copy! src.str src.start dst.str dst.start src.end))))))))
+	       (let ((src.end ($fx+ src.start count)))
+		 ($string-copy! src.str src.start dst.str dst.start src.end))))))))
 
 
 (define (uuid)
   ;;Defined by Ikarus.  Attempt the generation of a unique string.
   ;;
   (define who 'uuid)
-  (let* ((s (unsafe.make-bytevector 16))
+  (let* ((s ($make-bytevector 16))
 	 (r (foreign-call "ik_uuid" s)))
     (if (bytevector? r)
 	(utf8->string r)
@@ -819,15 +819,15 @@
   (with-arguments-validation (who)
       ((string str))
     ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((bv.len (unsafe.string-length str))
-	   (bv	 (unsafe.make-bytevector bv.len)))
-      (do ((i 0 (unsafe.fxadd1 i)))
-	  ((unsafe.fx= i bv.len)
+    (let* ((bv.len ($string-length str))
+	   (bv	 ($make-bytevector bv.len)))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i bv.len)
 	   bv)
-	(let ((code-point (unsafe.char->fixnum (unsafe.string-ref str i))))
+	(let ((code-point ($char->fixnum ($string-ref str i))))
 	  (with-arguments-validation (who)
 	      ((latin1 code-point str))
-	    (unsafe.bytevector-u8-set! bv i code-point)))))))
+	    ($bytevector-u8-set! bv i code-point)))))))
 
 (define (latin1->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
@@ -837,15 +837,15 @@
   (with-arguments-validation (who)
       ((bytevector bv))
     ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((str.len (unsafe.bytevector-length bv))
-	   (str     (unsafe.make-string str.len)))
-      (do ((i 0 (unsafe.fxadd1 i)))
-	  ((unsafe.fx= i str.len)
+    (let* ((str.len ($bytevector-length bv))
+	   (str     ($make-string str.len)))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i str.len)
 	   str)
-	(let ((code-point (unsafe.bytevector-u8-ref bv i)))
+	(let ((code-point ($bytevector-u8-ref bv i)))
 	  (with-arguments-validation (who)
 	      ((latin1 code-point str))
-	    (unsafe.string-set! str i (unsafe.fixnum->char code-point))))))))
+	    ($string-set! str i ($fixnum->char code-point))))))))
 
 
 ;;;; ASCII bytevectors to/from strings
@@ -858,15 +858,15 @@
   (with-arguments-validation (who)
       ((string	str))
     ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((bv.len	(unsafe.string-length str))
-	   (bv		(unsafe.make-bytevector bv.len)))
-      (do ((i 0 (unsafe.fxadd1 i)))
-	  ((unsafe.fx= i bv.len)
+    (let* ((bv.len	($string-length str))
+	   (bv		($make-bytevector bv.len)))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i bv.len)
 	   bv)
-	(let ((code-point (unsafe.char->fixnum (unsafe.string-ref str i))))
+	(let ((code-point ($char->fixnum ($string-ref str i))))
 	  (with-arguments-validation (who)
 	      ((ascii	code-point str))
-	    (unsafe.bytevector-u8-set! bv i code-point)))))))
+	    ($bytevector-u8-set! bv i code-point)))))))
 
 (define (ascii->string bv)
   ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
@@ -876,15 +876,15 @@
   (with-arguments-validation (who)
       ((bytevector	bv))
     ;;Both strings and bytevectors have length representable as fixnum.
-    (let* ((str.len	(unsafe.bytevector-length bv))
-	   (str		(unsafe.make-string str.len)))
-      (do ((i 0 (unsafe.fxadd1 i)))
-	  ((unsafe.fx= i str.len)
+    (let* ((str.len	($bytevector-length bv))
+	   (str		($make-string str.len)))
+      (do ((i 0 ($fxadd1 i)))
+	  (($fx= i str.len)
 	   str)
-	(let ((code-point (unsafe.bytevector-u8-ref bv i)))
+	(let ((code-point ($bytevector-u8-ref bv i)))
 	  (with-arguments-validation (who)
 	      ((ascii	code-point bv))
-	    (unsafe.string-set! str i (unsafe.fixnum->char code-point))))))))
+	    ($string-set! str i ($fixnum->char code-point))))))))
 
 
 ;;;; done
