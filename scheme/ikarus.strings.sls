@@ -224,7 +224,8 @@
   ;;arguments.
   ;;
   (case-lambda
-   (() "")
+   (()
+    (unsafe.make-string 0))
    ((one)
     (define who 'string)
     (with-arguments-validation (who)
