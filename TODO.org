@@ -88,18 +88,18 @@
 
 * Review and integration of SRFIs
 
-** TODO SRFI 0
+** TODO SRFI 0 cond-expand
 
    Decide if loading a library should  add features to the registry only
    in the  scope of  the loading code.   This would  require substantial
    changes in SRFI-0.
 
-** DONE SRFI 1
-** DONE SRFI 2
-** DONE SRFI 6
-** DONE SRFI 8
-** DONE SRFI 9
-** DONE SRFI 11
+** DONE SRFI 1 lists
+** DONE SRFI 2 and let star
+** DONE SRFI 6 input and output string ports
+** DONE SRFI 8 receive
+** DONE SRFI 9 record types
+** DONE SRFI 11 let-values
 ** DONE SRFI 13 strings
 ** DONE SRFI 14 char-sets
 ** DONE SRFI 16 case-lambda
