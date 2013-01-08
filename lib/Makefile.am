@@ -63,10 +63,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a19.sls					\
 	srfi/%3a19/time.sls				\
-	srfi/%3a19/srfi-19.scm				\
-	srfi/%3a19/srfi-19-test-suite.scm		\
-	srfi/%3a19/time/compat.vicare.sls		\
-	srfi/%3a19/time/not-implemented.sls		\
 	\
 	srfi/%3a23.sls					\
 	srfi/%3a23/error.sls				\

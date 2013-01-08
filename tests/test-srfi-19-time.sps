@@ -1,5 +1,44 @@
-;;; simple test procedures
+;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
+;;;named LICENSE from  the original collection this  file is distributed
+;;;with.
 
+;;SRFI-19: Time Data Types and Procedures.
+;;
+;;Copyright (C) I/NET, Inc. (2000, 2002, 2003). All Rights Reserved.
+;;
+;;This document  and translations of it  may be copied and  furnished to
+;;others, and derivative  works that comment on or  otherwise explain it
+;;or assist in its implementation may be prepared, copied, published and
+;;distributed, in  whole or  in part, without  restriction of  any kind,
+;;provided  that  the above  copyright  notice  and this  paragraph  are
+;;included  on all  such  copies and  derivative  works.  However,  this
+;;document itself  may not be modified  in any way, such  as by removing
+;;the  copyright  notice  or  references   to  the  Scheme  Request  For
+;;Implementation process or editors, except as needed for the purpose of
+;;developing SRFIs in  which case the procedures  for copyrights defined
+;;in the SRFI  process must be followed, or as  required to translate it
+;;into languages other than English.
+;;
+;;The limited  permissions granted above  are perpetual and will  not be
+;;revoked by the authors or their successors or assigns.
+;;
+;;This document and  the information contained herein is  provided on an
+;;"AS  IS" basis  and  THE  AUTHOR AND  THE  SRFI  EDITORS DISCLAIM  ALL
+;;WARRANTIES,  EXPRESS OR  IMPLIED,  INCLUDING BUT  NOT  LIMITED TO  ANY
+;;WARRANTY THAT THE USE OF THE  INFORMATION HEREIN WILL NOT INFRINGE ANY
+;;RIGHTS OR ANY  IMPLIED WARRANTIES OF MERCHANTABILITY OR  FITNESS FOR A
+;;PARTICULAR PURPOSE.
+
+#!r6rs
+(import (vicare)
+  (prefix (srfi :19) srfi.)
+  (vicare checks))
+
+(check-set-mode! 'report-failed)
+(check-display "*** testing SRFI libraries: SRFI 19, time\n")
+
+
+;;; simple test procedures
 
 (define s19-tests (list))
 
@@ -136,7 +175,7 @@
 	 (time=? utc-basic+1 tai->utc-basic+1)
 	 (time=? tai-basic+1 utc->tai-basic+1)
 	 (time=? utc-basic+2 tai->utc-basic+2)
-	 (time=? tai-basic+2 utc->tai-basic+2) 
+	 (time=? tai-basic+2 utc->tai-basic+2)
 	 )))
 
 (define-s19-test! "TAI-UTC Conversions"
@@ -217,4 +256,9 @@
 
 (begin (newline) (run-s19-tests #t))
 
+
+;;;; done
 
+(check-report)
+
+;;; end of file
