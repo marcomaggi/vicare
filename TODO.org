@@ -100,9 +100,9 @@
 ** DONE SRFI 8
 ** DONE SRFI 9
 ** DONE SRFI 11
-** DONE SRFI 13
-** DONE SRFI 14
-** SRFI 16
+** DONE SRFI 13 strings
+** DONE SRFI 14 char-sets
+** DONE SRFI 16 case-lambda
 ** SRFI 19 time
 ** SRFI 23 error
 ** SRFI 25 multidimensional arrays
