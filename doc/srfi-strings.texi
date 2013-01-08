@@ -550,14 +550,14 @@ High level procedures
 * srfi strings spec append::    Reverse and append.
 * srfi strings spec fold::      Fold, unfold and map.
 * srfi strings spec replicate:: Replicate and rotate.
-* srfi strings spec misc::      Miscellaneous: intertion, parsing.
-* srfi strings spec filter::    Filtering and deleting.
+* srfi strings spec misc::      Intertion, parsing, filtering
+                                and deleting.
 
+@ignore
 Low level procedures
 
-* srfi strings spec parsing::   Start/end optional-argument parsing
-                                and checking utilities.
 * srfi strings spec knuth::     Knuth-Morris-Pratt searching.
+@end ignore
 @end menu
 
 @c page
@@ -2117,10 +2117,12 @@ itself.
 
 @c page
 @node srfi strings spec misc
-@subsubsection Miscellaneous: intertion, parsing
+@subsubsection Intertion, parsing, filtering and deleting
 
 
-@defun string-replace @var{s1} @var{s2} @var{start1} @var{end1} [@var{start2} @var{end2}]
+@defun string-replace @vari{str} @varii{str} @vari{start} @vari{end}
+@defunx string-replace @vari{str} @varii{str} @vari{start} @vari{end} @varii{start}
+@defunx string-replace @vari{str} @varii{str} @vari{start} @vari{end} @varii{start} @varii{end}
 Return:
 
 @example
@@ -2129,33 +2131,39 @@ Return:
                (substring/shared s1 end1 (string-length s1)))
 @end example
 
-That is, the segment of characters in @var{s1} from @var{start1} to
-@var{end1} is replaced by the segment of characters in @var{s2} from
-@var{start2} to @var{end2}.  If @code{start1 = end1}, this simply
-splices the @var{s2} characters into @var{s1} at the specified index.
+That is, the segment of characters in @vari{str} from @vari{start} to
+@vari{end} is replaced by the segment of characters in @varii{str} from
+@varii{start} to @varii{end}.  If @code{@vari{start} = @vari{end}}, this
+simply splices the @varii{str} characters into @vari{str} at the
+specified index.
 
 Examples:
 
 @example
 (string-replace "The TCL programmer endured daily ridicule."
-                "another miserable perl drone" 4 7 8 22 )
-=> "The miserable perl programmer endured daily ridicule."
+                "another miserable perl drone" 4 7 8 22)
+@result{} "The miserable perl programmer endured daily ridicule."
 
-(string-replace "It's easy to code it up in Scheme." "lots of fun" 5 9)
-=> "It's lots of fun to code it up in Scheme."
+(string-replace "It's easy to code it up in Scheme."
+                "lots of fun" 5 9)
+@result{} "It's lots of fun to code it up in Scheme."
 
-(define (string-insert s i t) (string-replace s t i i))
+(define (string-insert s i t)
+  (string-replace s t i i))
 
 (string-insert "It's easy to code it up in Scheme." 5 "really ")
-=> "It's really easy to code it up in Scheme."
+@result{} "It's really easy to code it up in Scheme."
 @end example
 @end defun
 
 
-@defun string-tokenize @var{s} [@var{token-set} @var{start} @var{end}]
-Split the string @var{s} into a list of substrings, where each substring
-is a maximal non--empty contiguous sequence of characters from the
-character set @var{token-set}.
+@defun string-tokenize @var{str}
+@defunx string-tokenize @var{str} @var{token-set}
+@defunx string-tokenize @var{str} @var{token-set} @var{start}
+@defunx string-tokenize @var{str} @var{token-set} @var{start} @var{end}
+Split the string @var{str} into a list of substrings, where each
+substring is a maximal non--empty contiguous sequence of characters from
+the character set @var{token-set}.
 
 @itemize
 @item
@@ -2165,7 +2173,7 @@ more on character sets and @code{char-set:graphic}).
 @item
 If @var{start} or @var{end} indices are provided, they restrict
 @func{string-tokenize} to operating on the indicated substring of
-@var{s}.
+@var{str}.
 @end itemize
 
 This function provides a minimal parsing facility for simple
@@ -2176,123 +2184,29 @@ more serious parsing is needed.
 
 @example
 (string-tokenize "Help make programs run, run, RUN!")
-=> ("Help" "make" "programs" "run," "run," "RUN!")
+@result{} ("Help" "make" "programs" "run," "run," "RUN!")
 @end example
 @end defun
 
-@c page
-@node srfi strings spec filter
-@subsubsection Filtering and deleting
 
-
-@defun string-filter @var{char/char-set/pred} @var{s} [@var{start} @var{end}]
-@defunx string-delete @var{char/char-set/pred} @var{s} [@var{start} @var{end}]
-Filter the string @var{s}, retaining only those characters that
+@defun string-filter @var{char/char-set/pred} @var{str}
+@defunx string-filter @var{char/char-set/pred} @var{str} @var{start}
+@defunx string-filter @var{char/char-set/pred} @var{str} @var{start} @var{end}
+@defunx string-delete @var{char/char-set/pred} @var{str}
+@defunx string-delete @var{char/char-set/pred} @var{str} @var{start}
+@defunx string-delete @var{char/char-set/pred} @var{str} @var{start} @var{end}
+Filter the string @var{str}, retaining only those characters that
 satisfy/do not satisfy the @var{char/char-set/pred} argument.  If this
 argument is a procedure, it is applied to the character as a predicate;
 if it is a char--set, the character is tested for membership; if it is a
 character, it is used in an equality test.
 
 If the string is unaltered by the filtering operation, these functions
-may return either @var{s} or a copy of @var{s}.
+may return either @var{str} or a copy of @var{str}.
 @end defun
 
 @c page
-@node srfi strings spec parsing
-@subsubsection Start/end optional--argument parsing and checking utilities
-
-
-@defun {string-parse-start+end} @var{proc} @var{s} @var{args}
-@defunx {string-parse-final-start+end} @var{proc} @var{s} @var{args}
-@func{string-parse-start+end} may be used to parse a pair of optional
-start/end arguments from an argument list, defaulting them to 0 and the
-length of some string @var{s}, respectively.
-
-Let the length of string @var{s} be @var{slen}.
-
-@itemize
-@item
-If @code{args = ()}, the function returns @code{(values '() 0 slen)}.
-
-@item
-If @code{args = (i)}, @var{i} is checked to ensure it is an exact
-integer, and that @code{0 <= i <= slen}.  The function returns
-@code{(values (cdr args) i slen)}.
-
-@item
-If @code{args = (i j ...)}, @var{i} and @var{j} are checked to ensure
-they are exact integers, and that @code{0 <= i <= j <= slen}.  The
-function returns @code{(values (cddr args) i j)}.
-@end itemize
-
-If any of the checks fail, an error condition is raised, and @var{proc}
-is used as part of the error condition; it should be the client
-procedure whose argument list @func{string-parse-start+end} is parsing.
-
-@func{string-parse-final-start+end} is exactly the same, except that the
-@var{args} list passed to it is required to be of length two or less; if
-it is longer, an error condition is raised.  It may be used when the
-optional start/end parameters are final arguments to the procedure.
-
-Note that in all cases, these functions ensure that @var{s} is a string
-(by necessity, since all cases apply @func{string-length} to @var{s}
-either to default end or to bounds-check it).
-@end defun
-
-
-@deffn Syntax let-string-start+end (@var{start} @var{end} [@var{rest}]) @var{proc-exp} @var{s-exp} @var{args-exp} @var{body} ...
-Syntactic sugar for an application of @func{string-parse-start+end} or
-@func{string-parse-final-start+end}.  If a @var{rest} variable is given,
-the form is equivalent to:
-
-@example
-(call-with-values
-    (lambda ()
-      (string-parse-start+end proc-exp s-exp args-exp))
-  (lambda (rest start end)
-    body ...))
-@end example
-
-If no @var{rest} variable is given, the form is equivalent to:
-
-@example
-(call-with-values
-    (lambda ()
-      (string-parse-final-start+end proc-exp s-exp args-exp))
-  (lambda (start end)
-    body ...))
-@end example
-@end deffn
-
-
-@defun check-substring-spec @var{proc} @var{s} @var{start} @var{end}
-@defunx substring-spec-ok? @var{s} @var{start} @var{end}
-Check values @var{s}, @var{start} and @var{end} to ensure they specify a
-valid substring.  This means that @var{s} is a string, @var{start} and
-@var{end} are exact integers, and:
-
-@example
-0 <= start <= end <= (string-length s)
-@end example
-
-If the values are not proper:
-
-@itemize
-@item
-@func{check-substring-spec} raises an error condition.  @var{proc} is
-used as part of the error condition, and should be the procedure whose
-parameters we are checking.
-
-@item
-@func{substring-spec-ok?} returns @false{}.
-@end itemize
-
-Otherwise, @func{substring-spec-ok?} returns @true{}, and
-@func{check-substring-spec} simply returns (what it returns is not
-specified).
-@end defun
-
-@c page
+@ignore
 @node srfi strings spec knuth
 @subsubsection Knuth-Morris-Pratt searching
 
@@ -2529,6 +2443,8 @@ could be defined as follows:
                                 vi c= p-start))]))))
 @end example
 @end defun
+
+@end ignore
 
 @c page
 @node srfi strings ack

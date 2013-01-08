@@ -240,6 +240,10 @@
   (assertion-violation who
     "list of characters too long, at most greatest-fixnum characters are accepted" obj))
 
+(define-argument-validation (char-set who obj)
+  (char-set? obj)
+  (assertion-violation who "expected char-set as argument" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-auxiliary-syntaxes
@@ -1272,7 +1276,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (string-index-right)
+(module (string-index-right
+	 $string-index-right
+	 $string-index-right/char
+	 $string-index-right/cset
+	 $string-index-right/pred)
   (define who 'string-index-right)
 
   (define-string-func string-index-right
@@ -1942,87 +1950,207 @@
 
 ;;;; insertion, parsing, filtering, deleting
 
-(define (string-replace str1 start1 past1 str2 start2 past2)
-  (let* ((len1		(string-length str1))
-	 (len2		(- past2 start2))
-	 (result	(make-string (+ len2 (- len1 (- past1 start1))))))
-    (string-copy! result 0 str1 0 start1)
-    (string-copy! result start1 str2 start2 past2)
-    (string-copy! result (+ start1 len2) str1 past1 len1)
-    result))
+(module (string-replace $string-replace)
+  (define who 'string-replace)
 
-(define (string-tokenize token-set str start past)
-  (let loop ((i		past)
-	     (result	'()))
-    (cond ((and (< start i) (string-index-right token-set str start i))
-	   => (lambda (tpast-1)
-		(let ((tpast (+ 1 tpast-1)))
-		  (cond ((string-skip-right token-set str start tpast-1)
-			 => (lambda (tstart-1)
-			      (loop tstart-1
-				    (cons (substring str (+ 1 tstart-1) tpast)
-					  result))))
-			(else (cons (substring str start tpast) result))))))
-	  (else result))))
+  (define string-replace
+    (case-lambda
+     ((str1 str2 start1 past1)
+      (with-arguments-validation (who)
+	  ((string			str1)
+	   (string			str2)
+	   (start-and-past-for-string	str1 start1 past1))
+	(let ((start2	0)
+	      (past2	($string-length str2)))
+	  ($string-replace str1 str2 start1 past1 start2 past2))))
 
-(define (string-filter criterion str start past)
-  (if (procedure? criterion)
-      (let* ((slen (- past start))
-	     (temp (make-string slen))
-	     (ans-len ($string-fold (lambda (c i)
-					      (if (criterion c)
-						  (begin (string-set! temp i c)
-							 (+ i 1))
-						i))
-					    0 str start past)))
-	(if (= ans-len slen) temp (substring temp 0 ans-len)))
+     ((str1 str2 start1 past1 start2)
+      (with-arguments-validation (who)
+	  ((string			str1)
+	   (string			str2)
+	   (start-and-past-for-string	str1 start1 past1)
+	   (one-off-index-for-string	str2 start2))
+	(let ((past2	($string-length str2)))
+	  ($string-replace str1 str2 start1 past1 start2 past2))))
 
-    (let* ((cset (cond ((char-set? criterion) criterion)
-		       ((char? criterion) (char-set criterion))
-		       (else
-			(assertion-violation 'string-filter
-			  "expected predicate, char or char-set as criterion"
-			  criterion))))
-	   (len ($string-fold (lambda (c i) (if (char-set-contains? cset c)
-							(+ i 1)
-						      i))
-				      0 str start past))
-	   (ans (make-string len)))
-      ($string-fold (lambda (c i) (if (char-set-contains? cset c)
-					      (begin (string-set! ans i c)
-						     (+ i 1))
-					    i))
-			    0 str start past)
-      ans)))
+     ((str1 str2 start1 past1 start2 past2)
+      (with-arguments-validation (who)
+	  ((string			str1)
+	   (string			str2)
+	   (start-and-past-for-string	str1 start1 past1)
+	   (start-and-past-for-string	str2 start2 past2))
+	($string-replace str1 str2 start1 past1 start2 past2)))
+     ))
 
-(define (string-delete criterion str start past)
-  (if (procedure? criterion)
-      (let* ((slen (- past start))
-	     (temp (make-string slen))
-	     (ans-len ($string-fold (lambda (c i)
-					      (if (criterion c) i
-						(begin (string-set! temp i c)
-						       (+ i 1))))
-					    0 str start past)))
-	(if (= ans-len slen) temp (substring temp 0 ans-len)))
+  (define ($string-replace str1 str2 start1 past1 start2 past2)
+    (let* ((len1	($string-length str1))
+	   (len2	($fx- past2 start2))
+	   (result	($make-string ($fx+ len2 ($fx- len1 ($fx- past1 start1))))))
+      ($string-copy! result 0                  str1 0      start1)
+      ($string-copy! result start1             str2 start2 past2)
+      ($string-copy! result ($fx+ start1 len2) str1 past1  len1)
+      result))
 
-    (let* ((cset (cond ((char-set? criterion) criterion)
-		       ((char? criterion) (char-set criterion))
-		       (else
-			(assertion-violation 'string-delete
-			  "expected predicate, char or char-set as criterion"
-			  criterion))))
-	   (len ($string-fold (lambda (c i) (if (char-set-contains? cset c)
-							i
-						      (+ i 1)))
-				      0 str start past))
-	   (ans (make-string len)))
-      ($string-fold (lambda (c i) (if (char-set-contains? cset c)
-					      i
-					    (begin (string-set! ans i c)
-						   (+ i 1))))
-			    0 str start past)
-      ans)))
+  #| end of module |# )
+
+(module (string-tokenize $string-tokenize)
+  (define who 'string-tokenize)
+
+  (define string-tokenize
+    (case-lambda
+     ((str)
+      (with-arguments-validation (who)
+	  ((string	str))
+	($string-tokenize str char-set:graphic 0 ($string-length str))))
+
+     ((str token-set)
+      (with-arguments-validation (who)
+	  ((string	str)
+	   (char-set	token-set))
+	($string-tokenize str token-set 0 ($string-length str))))
+
+     ((str token-set start)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (char-set			token-set)
+	   (one-off-index-for-string	str start))
+	($string-tokenize str token-set start ($string-length str))))
+
+     ((str token-set start past)
+      (with-arguments-validation (who)
+	  ((string			str)
+	   (char-set			token-set)
+	   (start-and-past-for-string	str start past))
+	($string-tokenize str token-set start past)))
+     ))
+
+  (define ($string-tokenize str token-set start past)
+    (let loop ((i	past)
+	       (result	'()))
+      (cond ((and ($fx< start i)
+		  ($string-index-right/cset str token-set start i))
+	     => (lambda (tpast-1)
+		  (let ((tpast ($fxadd1 tpast-1)))
+		    (cond (($string-skip-right/cset str token-set start tpast-1)
+			   => (lambda (tstart-1)
+				(loop tstart-1
+				      (cons ($substring str ($fxadd1 tstart-1) tpast)
+					    result))))
+			  (else
+			   (cons ($substring str start tpast) result))))))
+	    (else result))))
+
+  #| end of module |# )
+
+(module (string-filter
+	 $string-filter
+	 $string-filter/char
+	 $string-filter/cset
+	 $string-filter/pred)
+  (define who 'string-filter)
+
+  (define-string-func string-filter
+    ($string-filter)
+    (pre-arguments criterion)
+    (validators))
+
+  (define ($string-filter criterion str start past)
+    (cond-criterion criterion
+      ((char?)		($string-filter/char criterion str start past))
+      ((char-set?)	($string-filter/cset criterion str start past))
+      ((procedure?)	($string-filter/pred criterion str start past))
+      (else
+       (%error-wrong-criterion who criterion))))
+
+  (define ($string-filter/char criterion str start past)
+    ($string-filter/cset (char-set criterion) str start past))
+
+  (define ($string-filter/cset criterion str start past)
+    (let* ((len ($string-fold (lambda (c i)
+				(if (char-set-contains? criterion c)
+				    ($fxadd1 i)
+				  i))
+			      0 str start past))
+	   (ans ($make-string len)))
+      ($string-fold (lambda (c i)
+		      (if (char-set-contains? criterion c)
+			  (begin
+			    ($string-set! ans i c)
+			    ($fxadd1 i))
+			i))
+		    0 str start past)
+      ans))
+
+  (define ($string-filter/pred criterion str start past)
+    (let* ((slen	($fx- past start))
+	   (temp	($make-string slen))
+	   (ans-len	($string-fold (lambda (c i)
+					(if (criterion c)
+					    (begin
+					      ($string-set! temp i c)
+					      ($fxadd1 i))
+					  i))
+				      0 str start past)))
+      (if ($fx= ans-len slen)
+	  temp
+	($substring temp 0 ans-len))))
+
+  #| end of module |# )
+
+(module (string-delete
+	 $string-delete
+	 $string-delete/char
+	 $string-delete/cset
+	 $string-delete/pred)
+  (define who 'string-delete)
+
+  (define-string-func string-delete
+    ($string-delete)
+    (pre-arguments criterion)
+    (validators))
+
+  (define ($string-delete criterion str start past)
+    (cond-criterion criterion
+      ((char?)		($string-delete/char criterion str start past))
+      ((char-set?)	($string-delete/cset criterion str start past))
+      ((procedure?)	($string-delete/pred criterion str start past))
+      (else
+       (%error-wrong-criterion who criterion))))
+
+  (define ($string-delete/char criterion str start past)
+    ($string-delete/cset (char-set criterion) str start past))
+
+  (define ($string-delete/cset criterion str start past)
+    (let* ((len ($string-fold (lambda (c i)
+				(if (char-set-contains? criterion c)
+				    i
+				  ($fxadd1 i)))
+			      0 str start past))
+	   (ans ($make-string len)))
+      ($string-fold (lambda (c i)
+		      (if (char-set-contains? criterion c)
+			  i
+			(begin
+			  ($string-set! ans i c)
+			  ($fxadd1 i))))
+		    0 str start past)
+      ans))
+
+  (define ($string-delete/pred criterion str start past)
+    (let* ((slen	($fx- past start))
+	   (temp	($make-string slen))
+	   (ans-len	($string-fold (lambda (c i)
+					(if (criterion c)
+					    i
+					  (begin
+					    ($string-set! temp i c)
+					    ($fxadd1 i))))
+				      0 str start past)))
+      (if ($fx= ans-len slen)
+	  temp
+	($substring temp 0 ans-len))))
+
+  #| end of module |# )
 
 
 ;;;; knuth-morris-pratt search algorithm

@@ -2463,6 +2463,69 @@
   #f)
 
 
+(parametrise ((check-test-name 'replace))
+
+  (check
+      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
+	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-replace str1 str2 beg1 end1 beg2 end2))
+    => "1234")
+
+  (check
+      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
+	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-replace str1 str2 2 2 beg2 end2))
+    => "ab1234cd")
+
+  (check
+      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
+	     (str2 "") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-replace str1 str2 2 2 beg2 end2))
+    => "abcd")
+
+  (check
+      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
+	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-replace str1 str2 1 3 beg2 end2))
+    => "a1234d")
+
+  (check
+      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
+	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-replace str1 str2 0 3 beg2 end2))
+    => "1234d")
+
+  (check
+      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
+	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
+	(srfi.string-replace str1 str2 1 4 beg2 end2))
+    => "a1234")
+
+  #t)
+
+
+(parametrise ((check-test-name 'tokenize))
+
+  (check
+      (let* ((str "ciao hello salut") (beg 0) (end (string-length str)))
+	(srfi.string-tokenize str (char-set #\a #\c #\e #\i #\h #\l #\o #\s #\t #\u)
+			      beg end))
+    => '("ciao" "hello" "salut"))
+
+  (check
+      (let* ((str "") (beg 0) (end (string-length str)))
+	(srfi.string-tokenize str (char-set #\a #\c #\e #\i #\h #\l #\o #\s #\t #\u)
+			      beg end))
+    => '())
+
+  (check
+      (let* ((str "ciao hello salut") (beg 0) (end (string-length str)))
+	(srfi.string-tokenize str (char-set) beg end))
+    => '())
+
+  #f)
+
+
 (parametrise ((check-test-name 'filtering))
 
   (check
@@ -2565,71 +2628,7 @@
 	(srfi.string-filter char-upper-case? str beg end))
     => "")
 
-  )
-
-
-(parametrise ((check-test-name 'tokenize))
-
-  (check
-      (let* ((str "ciao hello salut") (beg 0) (end (string-length str)))
-	(srfi.string-tokenize (char-set #\a #\c #\e #\i #\h #\l #\o #\s #\t #\u)
-			  str beg end))
-    => '("ciao" "hello" "salut"))
-
-  (check
-      (let* ((str "") (beg 0) (end (string-length str)))
-	(srfi.string-tokenize (char-set #\a #\c #\e #\i #\h #\l #\o #\s #\t #\u)
-			  str beg end))
-    => '())
-
-  (check
-      (let* ((str "ciao hello salut") (beg 0) (end (string-length str)))
-	(srfi.string-tokenize (char-set) str beg end))
-    => '())
-
-  #f)
-
-
-(parametrise ((check-test-name 'replace))
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
-	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-replace str1 beg1 end1 str2 beg2 end2))
-    => "1234")
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
-	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-replace str1 2 2 str2 beg2 end2))
-    => "ab1234cd")
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
-	     (str2 "") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-replace str1 2 2 str2 beg2 end2))
-    => "abcd")
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
-	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-replace str1 1 3 str2 beg2 end2))
-    => "a1234d")
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
-	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-replace str1 0 3 str2 beg2 end2))
-    => "1234d")
-
-  (check
-      (let* ((str1 "abcd") (beg1 0) (end1 (string-length str1))
-	     (str2 "1234") (beg2 0) (end2 (string-length str2)))
-	(srfi.string-replace str1 1 4 str2 beg2 end2))
-    => "a1234")
-
-
-  )
+  #t)
 
 
 ;;;; done
