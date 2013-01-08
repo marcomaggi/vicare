@@ -104,7 +104,7 @@
 ** DONE SRFI 14 char-sets
 ** DONE SRFI 16 case-lambda
 ** SRFI 19 time
-** SRFI 23 error
+** DONE SRFI 23 error
 ** SRFI 25 multidimensional arrays
 ** DONE SRFI 26 cut
 ** SRFI 27 random-bits
