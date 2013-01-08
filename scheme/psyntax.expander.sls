@@ -553,15 +553,18 @@
 ;;EQ?-comparable, so we use a string of one char (we assume that strings
 ;;are mutable in the underlying Scheme implementation).
 
-(define (gen-mark)
+(define gen-mark
   ;;Generate a new unique mark.  We want a new string for every function
   ;;call.
-  (string #\m))
-;;;(define gen-mark ; useful for debugging
-;;;  (let ((i 0))
-;;;    (lambda ()
-;;;      (set! i (+ i 1))
-;;;      (string-append "m." (number->string i)))))
+  string
+
+  ;;The version below is useful for debugging.
+  ;;
+  ;; (let ((i 0))
+  ;;   (lambda ()
+  ;;     (set! i (+ i 1))
+  ;;     (string-append "m." (number->string i))))
+  )
 
 ;;We use #f as the anti-mark.
 (define anti-mark #f)
