@@ -235,6 +235,11 @@
        (for-all char? obj))
   (assertion-violation who "expected list of characters as argument" obj))
 
+(define-argument-validation (string-length who obj)
+  (fixnum? obj)
+  (assertion-violation who
+    "list of characters too long, at most greatest-fixnum characters are accepted" obj))
+
 ;;; --------------------------------------------------------------------
 
 (define-auxiliary-syntaxes
@@ -535,28 +540,19 @@
 
   #| end of module: string->list |# )
 
-(module (reverse-list->string)
+(define (reverse-list->string clist)
   (define who 'reverse-list->string)
-
-  (define (reverse-list->string clist)
-    (with-arguments-validation (who)
-	((list-of-chars	clist))
-      (let ((len (length clist)))
-	(with-arguments-validation (who)
-	    ((string-length	len))
-	  (let ((str (make-string len)))
-	    (do ((i ($fxsub1 len) ($fxsub1 i))
-		 (clist clist ($cdr clist)))
-		((not (pair? clist))
-		 str)
-	      ($string-set! str i ($car clist))))))))
-
-  (define-argument-validation (string-length who obj)
-    (fixnum? obj)
-    (assertion-violation who
-      "list of characters too long, at most greatest-fixnum characters are accepted" obj))
-
-  #| end of module |# )
+  (with-arguments-validation (who)
+      ((list-of-chars	clist))
+    (let ((len (length clist)))
+      (with-arguments-validation (who)
+	  ((string-length	len))
+	(let ((str (make-string len)))
+	  (do ((i ($fxsub1 len) ($fxsub1 i))
+	       (clist clist ($cdr clist)))
+	      ((not (pair? clist))
+	       str)
+	    ($string-set! str i ($car clist))))))))
 
 (module (string-join)
   (define who 'string-join)
@@ -1773,36 +1769,201 @@
 	    (loop (make-seed seed)))))))))
 
 
-;;;; filtering
+;;;; replicate and rotate
 
-(define (string-delete criterion str start past)
-  (if (procedure? criterion)
-      (let* ((slen (- past start))
-	     (temp (make-string slen))
-	     (ans-len ($string-fold (lambda (c i)
-					      (if (criterion c) i
-						(begin (string-set! temp i c)
-						       (+ i 1))))
-					    0 str start past)))
-	(if (= ans-len slen) temp (substring temp 0 ans-len)))
+(module (xsubstring
+	 string-xcopy!)
 
-    (let* ((cset (cond ((char-set? criterion) criterion)
-		       ((char? criterion) (char-set criterion))
-		       (else
-			(assertion-violation 'string-delete
-			  "expected predicate, char or char-set as criterion"
-			  criterion))))
-	   (len ($string-fold (lambda (c i) (if (char-set-contains? cset c)
-							i
-						      (+ i 1)))
-				      0 str start past))
-	   (ans (make-string len)))
-      ($string-fold (lambda (c i) (if (char-set-contains? cset c)
-					      i
-					    (begin (string-set! ans i c)
-						   (+ i 1))))
-			    0 str start past)
-      ans)))
+  (module (xsubstring)
+    (define who 'xsubstring)
+
+    (define xsubstring
+      (case-lambda
+       ((str from)
+	(with-arguments-validation (who)
+	    ((string			str)
+	     (fixnum			from))
+	  (let ((str.len ($string-length str)))
+	    ($xsubstring str from str.len 0 str.len))))
+
+       ((str from to)
+	(with-arguments-validation (who)
+	    ((string			str)
+	     (fixnum			from)
+	     (fixnum			to))
+	  ($xsubstring str from to 0 ($string-length str))))
+
+       ((str from to start)
+	(with-arguments-validation (who)
+	    ((string			str)
+	     (fixnum			from)
+	     (fixnum			to)
+	     (one-off-index-for-string	str start))
+	  ($xsubstring str from to start ($string-length str))))
+
+       ((str from to start past)
+	(with-arguments-validation (who)
+	    ((string			str)
+	     (fixnum			from)
+	     (fixnum			to)
+	     (start-and-past-for-string	str start past))
+	  ($xsubstring str from to start past)))))
+
+    #| end of module |# )
+
+  (module (string-xcopy!)
+    (define who 'string-xcopy!)
+
+    (define string-xcopy!
+      (case-lambda
+       ((dst.str dst.start src.str from)
+	(with-arguments-validation (who)
+	    ((string			dst.str)
+	     (one-off-index-for-string	dst.str dst.start)
+	     (string			src.str)
+	     (fixnum			from))
+	  (let ((src.len ($string-length src.str)))
+	    ($string-xcopy! dst.str dst.start src.str from src.len 0 src.len))))
+
+       ((dst.str dst.start src.str from to)
+	(with-arguments-validation (who)
+	    ((string			dst.str)
+	     (one-off-index-for-string	dst.str dst.start)
+	     (string			src.str)
+	     (fixnum			from)
+	     (fixnum			to))
+	  ($string-xcopy! dst.str dst.start src.str from to 0 ($string-length src.str))))
+
+       ((dst.str dst.start src.str from to src.start)
+	(with-arguments-validation (who)
+	    ((string			dst.str)
+	     (one-off-index-for-string	dst.str dst.start)
+	     (string			src.str)
+	     (fixnum			from)
+	     (fixnum			to)
+	     (one-off-index-for-string	src.str src.start))
+	  ($string-xcopy! dst.str dst.start src.str from to src.start ($string-length src.str))))
+
+       ((dst.str dst.start src.str from to src.start src.end)
+	(with-arguments-validation (who)
+	    ((string			dst.str)
+	     (one-off-index-for-string	dst.str dst.start)
+	     (string			src.str)
+	     (fixnum			from)
+	     (fixnum			to)
+	     (start-and-past-for-string	src.str src.start src.end))
+	  ($string-xcopy! dst.str dst.start src.str from to src.start src.end)))
+       ))
+
+    #| end of module |# )
+
+  (define ($xsubstring str from to start past)
+    (define who 'xsubstring)
+    (let ((str.len	($fx- past start)) ;length of the source substring
+	  (result.len	(- to from))) ;length of the result substring
+      (with-arguments-validation (who)
+	  ((string-length	result.len))
+	(cond (($fxzero? result.len)
+	       "")
+
+	      (($fxzero? str.len)
+	       (assertion-violation who "cannot replicate empty (sub)string"))
+
+	      ;;If  the  source  substring   is  composed  of  a  single
+	      ;;character: the  result is  just the replication  of such
+	      ;;character.
+	      (($fx= 1 str.len)
+	       (begin0-let ((retval ($make-string result.len)))
+		 ($string-fill! retval ($string-ref str start))))
+
+	      ;;Selected text falls entirely within one span.
+	      (($fx= ($fxdiv from str.len)
+		     ($fxdiv to   str.len))
+	       ($substring str
+			   ($fx+ start ($fxmod from str.len))
+			   ($fx+ start ($fxmod to   str.len))))
+
+	      ;; Selected text requires multiple spans.
+	      (else
+	       (begin0-let ((result ($make-string result.len)))
+		 (%multispan-repcopy! from to result 0 str start past)))))))
+
+  (define ($string-xcopy! dst.str dst.start src.str from to src.start src.past)
+    (define who 'string-xcopy!)
+    (let ((tocopy	(- to from)))
+      (with-arguments-validation (who)
+	  ((string-length	tocopy))
+	(let ((str.len	($fx- src.past src.start)))
+	  (cond (($fxzero? tocopy))
+
+		(($fxzero? str.len)
+		 (assertion-violation who "cannot replicate empty (sub)string"))
+
+		(($fx= 1 str.len)
+		 ($string-fill! dst.str ($string-ref src.str src.start) dst.start tocopy))
+
+		;; Selected text falls entirely within one span.
+		(($fx= ($fxdiv from str.len)
+		       ($fxdiv to   str.len))
+		 ($string-copy! dst.str dst.start src.str
+				($fx+ src.start ($fxmod from str.len))
+				($fx+ src.start ($fxmod to   str.len))))
+
+		(else
+		 (%multispan-repcopy! from to dst.str dst.start
+				      src.str src.start src.past)))))))
+
+  (define (%multispan-repcopy! from to dst.str dst.start src.str src.start src.past)
+    ;;This is the core copying loop for XSUBSTRING and STRING-XCOPY!
+    ;;
+    (let* ((str.len	(- src.past src.start))
+	   (i0		(+ src.start (mod from str.len)))
+	   (total-chars	(- to from)))
+
+      ;;Copy the partial span @ the beginning
+      ($string-copy! dst.str dst.start src.str i0 src.past)
+
+      (let* ((ncopied (- src.past i0)) ;We've copied this many.
+	     (nleft   (- total-chars ncopied)) ;Number of chars left to copy.
+	     (nspans  (div nleft str.len))) ;Number of whole spans to copy.
+
+	;;Copy the whole spans in the middle.
+	(do ((i (+ dst.start ncopied) (+ i str.len)) ;Current target index.
+	     (nspans nspans (- nspans 1))) ;Number of spans to copy.
+	    ((zero? nspans)
+	     ;;Copy the partial-span at the end and we're done.
+	     ($string-copy! dst.str i
+			    src.str src.start (+ src.start (- total-chars (- i dst.start)))))
+	  ;;Copy a whole span.
+	  ($string-copy! dst.str i src.str src.start src.past)))))
+
+  #| end of module |# )
+
+
+;;;; insertion, parsing, filtering, deleting
+
+(define (string-replace str1 start1 past1 str2 start2 past2)
+  (let* ((len1		(string-length str1))
+	 (len2		(- past2 start2))
+	 (result	(make-string (+ len2 (- len1 (- past1 start1))))))
+    (string-copy! result 0 str1 0 start1)
+    (string-copy! result start1 str2 start2 past2)
+    (string-copy! result (+ start1 len2) str1 past1 len1)
+    result))
+
+(define (string-tokenize token-set str start past)
+  (let loop ((i		past)
+	     (result	'()))
+    (cond ((and (< start i) (string-index-right token-set str start i))
+	   => (lambda (tpast-1)
+		(let ((tpast (+ 1 tpast-1)))
+		  (cond ((string-skip-right token-set str start tpast-1)
+			 => (lambda (tstart-1)
+			      (loop tstart-1
+				    (cons (substring str (+ 1 tstart-1) tpast)
+					  result))))
+			(else (cons (substring str start tpast) result))))))
+	  (else result))))
 
 (define (string-filter criterion str start past)
   (if (procedure? criterion)
@@ -1834,103 +1995,34 @@
 			    0 str start past)
       ans)))
 
-
-;;;; misc
+(define (string-delete criterion str start past)
+  (if (procedure? criterion)
+      (let* ((slen (- past start))
+	     (temp (make-string slen))
+	     (ans-len ($string-fold (lambda (c i)
+					      (if (criterion c) i
+						(begin (string-set! temp i c)
+						       (+ i 1))))
+					    0 str start past)))
+	(if (= ans-len slen) temp (substring temp 0 ans-len)))
 
-(define (string-tokenize token-set str start past)
-  (let loop ((i		past)
-	     (result	'()))
-    (cond ((and (< start i) (string-index-right token-set str start i))
-	   => (lambda (tpast-1)
-		(let ((tpast (+ 1 tpast-1)))
-		  (cond ((string-skip-right token-set str start tpast-1)
-			 => (lambda (tstart-1)
-			      (loop tstart-1
-				    (cons (substring str (+ 1 tstart-1) tpast)
-					  result))))
-			(else (cons (substring str start tpast) result))))))
-	  (else result))))
-
-
-;;;; extended substring
-
-(define (xsubstring from to str start past)
-  (let ((str-len	(- past start))
-	(result-len	(- to from)))
-    (cond ((zero? result-len) "")
-	  ((zero? str-len)
-	   (assertion-violation 'xsubstring "cannot replicate empty (sub)string"))
-	  ((= 1 str-len)
-	   (make-string result-len (string-ref str start)))
-
-	  ;; Selected text falls entirely within one span.
-	  ((= (floor (/ from str-len)) (floor (/ to str-len)))
-	   (substring str
-		      (+ start (mod from str-len))
-		      (+ start (mod to   str-len))))
-
-	  ;; Selected text requires multiple spans.
-	  (else
-	   (let ((result (make-string result-len)))
-	     (%multispan-repcopy! from to result 0 str start past)
-	     result)))))
-
-(define (string-xcopy! from to
-			dst-str dst-start dst-past
-			src-str src-start src-past)
-  (let* ((tocopy	(- to from))
-	 (tend		(+ dst-start tocopy))
-	 (str-len	(- src-past src-start)))
-    (cond ((zero? tocopy))
-	  ((zero? str-len)
-	   (assertion-violation 'string-xcopy! "cannot replicate empty (sub)string"))
-
-	  ((= 1 str-len)
-	   (string-fill! dst-str (string-ref src-str src-start) dst-start dst-past))
-
-	  ;; Selected text falls entirely within one span.
-	  ((= (floor (/ from str-len)) (floor (/ to str-len)))
-	   (string-copy! dst-str dst-start src-str
-			  (+ src-start (mod from str-len))
-			  (+ src-start (mod to   str-len))))
-
-	  (else
-	   (%multispan-repcopy! from to dst-str dst-start src-str src-start src-past)))))
-
-(define (%multispan-repcopy! from to dst-str dst-start src-str src-start src-past)
-  ;;This  is the  core  copying loop  for  XSUBSTRING and  STRING-XCOPY!
-  ;;Internal -- not exported, no careful arg checking.
-  (let* ((str-len	(- src-past src-start))
-	 (i0		(+ src-start (mod from str-len)))
-	 (total-chars	(- to from)))
-
-    ;; Copy the partial span @ the beginning
-    (string-copy! dst-str dst-start src-str i0 src-past)
-
-    (let* ((ncopied (- src-past i0))	   ; We've copied this many.
-	   (nleft (- total-chars ncopied)) ; # chars left to copy.
-	   (nspans (div nleft str-len)))   ; # whole spans to copy
-
-      ;; Copy the whole spans in the middle.
-      (do ((i (+ dst-start ncopied) (+ i str-len)) ; Current target index.
-	   (nspans nspans (- nspans 1)))	   ; # spans to copy
-	  ((zero? nspans)
-	   ;; Copy the partial-span @ the end & we're done.
-	   (string-copy! dst-str i src-str src-start (+ src-start (- total-chars (- i dst-start)))))
-
-	(string-copy! dst-str i src-str src-start src-past))))) ; Copy a whole span.
-
-
-;;;; replace
-
-(define (string-replace str1 start1 past1 str2 start2 past2)
-  (let* ((len1		(string-length str1))
-	 (len2		(- past2 start2))
-	 (result	(make-string (+ len2 (- len1 (- past1 start1))))))
-    (string-copy! result 0 str1 0 start1)
-    (string-copy! result start1 str2 start2 past2)
-    (string-copy! result (+ start1 len2) str1 past1 len1)
-    result))
+    (let* ((cset (cond ((char-set? criterion) criterion)
+		       ((char? criterion) (char-set criterion))
+		       (else
+			(assertion-violation 'string-delete
+			  "expected predicate, char or char-set as criterion"
+			  criterion))))
+	   (len ($string-fold (lambda (c i) (if (char-set-contains? cset c)
+							i
+						      (+ i 1)))
+				      0 str start past))
+	   (ans (make-string len)))
+      ($string-fold (lambda (c i) (if (char-set-contains? cset c)
+					      i
+					    (begin (string-set! ans i c)
+						   (+ i 1))))
+			    0 str start past)
+      ans)))
 
 
 ;;;; knuth-morris-pratt search algorithm

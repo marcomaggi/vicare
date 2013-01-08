@@ -2358,6 +2358,111 @@
   #f)
 
 
+(parametrise ((check-test-name 'replicating))
+
+  (check
+      (let* ((str "ciao ") (beg 0) (end (string-length str)))
+	(srfi.xsubstring str 0 5 beg end))
+    => "ciao ")
+
+  (check
+      (let* ((str "ciao ") (beg 0) (end (string-length str)))
+	(srfi.xsubstring str 0 9 beg end))
+    => "ciao ciao")
+
+  (check
+      (let* ((str "ciao ") (beg 0) (end (string-length str)))
+	(srfi.xsubstring str -5 5 beg end))
+    => "ciao ciao ")
+
+  (check
+      (let* ((str "ciao ") (beg 0) (end (string-length str)))
+	(srfi.xsubstring str 2 4 beg end))
+    => "ao")
+
+  (check
+      (let* ((str "ciao ") (beg 0) (end (string-length str)))
+	(srfi.xsubstring str -3 7 beg end))
+    => "ao ciao ci")
+
+  (check
+      (guard (exc ((assertion-violation? exc) #t))
+	(let ((str "ciao "))
+	  (srfi.xsubstring str -3 7 3 3)))
+    => #t)
+
+  (check
+      (guard (exc ((assertion-violation? exc)
+		   #t))
+	(let* ((str "") (beg 0) (end (string-length str)))
+	  (srfi.xsubstring str 0 5 beg end)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((src.str	"ciao ")
+  	     (dst.str	(string-copy "01234"))
+	     (dst.beg	0)
+	     (from	0)
+	     (to	5))
+  	(srfi.string-xcopy! dst.str dst.beg src.str from to)
+  	dst.str)
+    => "ciao ")
+
+  (check
+      (let* ((src.str	"ciao ")
+  	     (dst.str	(string-copy "012345678"))
+	     (dst.start	0)
+	     (from	0)
+	     (to	9))
+  	(srfi.string-xcopy! dst.str dst.start src.str from to)
+  	dst.str)
+    => "ciao ciao")
+
+  (check
+      (let* ((src.str	"ciao ")
+  	     (dst.str	(string-copy "0123456789"))
+	     (dst.start	0)
+	     (from	-5)
+	     (to	+5))
+  	(srfi.string-xcopy! dst.str dst.start src.str from to)
+  	dst.str)
+    => "ciao ciao ")
+
+  (check
+      (let* ((src.str	"ciao ")
+  	     (dst.str	(string-copy "01"))
+	     (dst.start	0)
+	     (from	2)
+	     (to	4))
+  	(srfi.string-xcopy! dst.str dst.start src.str from to)
+  	dst.str)
+    => "ao")
+
+  (check
+      (let* ((src.str	"ciao ")
+  	     (dst.str	(string-copy "0123456789"))
+	     (dst.start	0)
+	     (from	-3)
+	     (to	+7))
+  	(srfi.string-xcopy! dst.str dst.start src.str from to)
+  	dst.str)
+    => "ao ciao ci")
+
+  (check
+      (guard (exc ((assertion-violation? exc)
+  		   (condition-message exc)))
+  	(let* ((str "")
+	       (beg 0)
+	       (end (string-length str))
+	       (result (string-copy "")))
+  	  (srfi.string-xcopy! result 0 str 0 5 beg end)))
+    => "cannot replicate empty (sub)string")
+
+  #f)
+
+
 (parametrise ((check-test-name 'filtering))
 
   (check
@@ -2483,96 +2588,6 @@
     => '())
 
   #f)
-
-;;; --------------------------------------------------------------------
-
-
-(parametrise ((check-test-name 'replicating))
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(srfi.xsubstring 0 5 str beg end))
-    => "ciao ")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(srfi.xsubstring 0 9 str beg end))
-    => "ciao ciao")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(srfi.xsubstring -5 5 str beg end))
-    => "ciao ciao ")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(srfi.xsubstring 2 4 str beg end))
-    => "ao")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str)))
-	(srfi.xsubstring -3 7 str beg end))
-    => "ao ciao ci")
-
-  (check
-      (guard (exc ((assertion-violation? exc) #t))
-	(let ((str "ciao "))
-	  (srfi.xsubstring -3 7 str 3 3)))
-    => #t)
-
-  (check
-      (guard (exc ((assertion-violation? exc)
-		   #t))
-	(let* ((str "") (beg 0) (end (string-length str)))
-	  (srfi.xsubstring 0 5 str beg end)))
-    => #t)
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str))
-	     (result (string-copy "01234")))
-	(srfi.string-xcopy! 0 5 result 0 (string-length result) str beg end)
-	result)
-    => "ciao ")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str))
-	     (result (string-copy "012345678")))
-	(srfi.string-xcopy! 0 9 result 0 (string-length result) str beg end)
-	result)
-    => "ciao ciao")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str))
-	     (result (string-copy "0123456789")))
-	(srfi.string-xcopy! -5 5 result 0 (string-length result) str beg end)
-	result)
-    => "ciao ciao ")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str))
-	     (result (string-copy "01")))
-	(srfi.string-xcopy! 2 4 result 0 (string-length result) str beg end)
-	result)
-    => "ao")
-
-  (check
-      (let* ((str "ciao ") (beg 0) (end (string-length str))
-	     (result (string-copy "0123456789")))
-	(srfi.string-xcopy! -3 7 result 0 (string-length result) str beg end)
-	result)
-    => "ao ciao ci")
-
-  (check
-      (guard (exc ((assertion-violation? exc)
-		   #t))
-	(let* ((str "") (beg 0) (end (string-length str))
-	     (result (string-copy "")))
-	  (srfi.string-xcopy! 0 5 result 0 (string-length result) str beg end)))
-    => #t)
-
-  )
 
 
 (parametrise ((check-test-name 'replace))

@@ -2026,18 +2026,28 @@ The final string constructed does not share storage with either
 @subsubsection Replicate and rotate
 
 
-@defun xsubstring @var{s} @var{from} [@var{to} @var{start} @var{end}]
+@defun xsubstring @var{str} @var{from}
+@defunx xsubstring @var{str} @var{from} @var{to}
+@defunx xsubstring @var{str} @var{from} @var{to} @var{start}
+@defunx xsubstring @var{str} @var{from} @var{to} @var{start} @var{end}
 This is the ``extended substring'' procedure that implements replicated
 copying of a substring of some string.
 
-@var{s} is a string; @var{start} and @var{end} are optional arguments
-that demarcate a substring of @var{s}, defaulting to 0 and the length of
-@var{s} (i.e. the whole string).
+@var{str} is a string; @var{start} and @var{end} are optional arguments
+that demarcate a substring of @var{str}, defaulting to @code{0} and the
+length of @var{str} (i.e. the whole string).
 
 This function replicates the selected substring ``up and down'' index
-space, in both the positive and negative directions.  For example, if
-@code{s = "abcdefg"}, @code{start=3}, and @code{end=6}, then we have the
-conceptual bidirectionally--infinite string:
+space, in both the positive and negative directions.  For example, if:
+
+@example
+@var{str}   = "abcdefg"
+@var{start} = 3
+@var{end}   = 6
+@end example
+
+@noindent
+then we have the conceptual bidirectionally--infinite string:
 
 @example
 ...  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d  e  f  d  ...
@@ -2048,20 +2058,32 @@ conceptual bidirectionally--infinite string:
 that is @code{defg} repeated in both directions.
 
 @func{xsubstring} returns the substring of this string beginning at
-index @var{from}, and ending at @var{to} which defaults to @code{from +
-(end - start)}.
+index @var{from}, and ending at @var{to} which defaults to
+@code{@var{from} + (@var{end} - @var{start})}.
 
 We can use @func{xsubstring} to perform a variety of tasks:
 
 @itemize
 @item
-To rotate a string left: @code{(xsubstring "abcdef" 2) => "cdefab"}.
+To rotate a string left:
+
+@example
+(xsubstring "abcdef" 2)         @result{} "cdefab"
+@end example
 
 @item
-To rotate a string right: @code{(xsubstring "abcdef" -2) => "efabcd"}.
+To rotate a string right:
+
+@example
+(xsubstring "abcdef" -2)        @result{} "efabcd"
+@end example
 
 @item
-To replicate a string: @code{(xsubstring "abc" 0 7) => "abcabca"}.
+To replicate a string:
+
+@example
+(xsubstring "abc" 0 7)          @result{} "abcabca"
+@end example
 @end itemize
 
 Note that:
@@ -2073,20 +2095,24 @@ from index @var{from} up to, but not including, index @var{to}.
 
 @item
 The @var{from}/@var{to} indices are not in terms of the index space for
-string @var{s}.  They are in terms of the replicated index space of the
-substring defined by @var{s}, @var{start}, and @var{end}.
+string @var{str}.  They are in terms of the replicated index space of the
+substring defined by @var{str}, @var{start}, and @var{end}.
 @end itemize
 
-It is an error if @code{start = end}; although this is allowed by
-special dispensation when @code{from = to}.
+It is an error if @code{@var{start} = @var{end}}; although this is
+allowed by special dispensation when @code{from = to}.
 @end defun
 
 
-@defun string-xcopy! @var{target} @var{tstart} @var{s} @var{sfrom} [@var{sto} @var{start} @var{end}]
+@defun string-xcopy! @var{dst.str} @var{dst.start} @var{src.str} @var{src.from}
+@defunx string-xcopy! @var{dst.str} @var{dst.start} @var{src.str} @var{src.from} @var{src.to}
+@defunx string-xcopy! @var{dst.str} @var{dst.start} @var{src.str} @var{src.from} @var{src.to} @var{src.start}
+@defunx string-xcopy! @var{dst.str} @var{dst.start} @var{src.str} @var{src.from} @var{src.to} @var{src.start} @var{src.end}
 Exactly the same as @func{xsubstring}, but the extracted text is written
-into the string @var{target} starting at index @var{tstart}.  This
-operation is not defined if @code{(eq? target s)} or these two arguments
-share storage; we cannot copy a string on top of itself.
+into the string @var{dst.str} starting at index @var{dst.start}.  This
+operation is not defined if @code{(eq? @var{dst.str} @var{src.str})} or
+these two arguments share storage; we cannot copy a string on top of
+itself.
 @end defun
 
 @c page
