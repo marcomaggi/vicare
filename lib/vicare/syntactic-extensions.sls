@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -77,7 +77,7 @@
     ;; miscellaneous dispatching
     case-word-size		case-endianness
     case-fixnums		case-integers
-    case-symbols
+    case-symbols		case-chars
     define-exact-integer->symbol-function
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
@@ -465,6 +465,38 @@
 		  (eq? (quote ?symbol)  sym)
 		  ...)
 	      ?sym-body0 ?sym-body ...)
+	     ...)))
+    ))
+
+(define-syntax case-chars
+  (syntax-rules (else)
+    ((_ ?expr
+	((?char0 ?char ...)
+	 ?ch-body0 ?ch-body ...)
+	...
+	(else
+	 ?else-body0 ?else-body ...))
+     (let ((ch ?expr))
+       (import (only (ikarus system $chars)
+		     $char=))
+       (cond ((or ($char= ?char0 ch)
+		  ($char= ?char  ch)
+		  ...)
+	      ?ch-body0 ?ch-body ...)
+	     ...
+	     (else
+	      ?else-body0 ?else-body ...))))
+    ((_ ?expr
+	((?char0 ?char ...)
+	 ?ch-body0 ?ch-body ...)
+	...)
+     (let ((ch ?expr))
+       (import (only (ikarus system $chars)
+		     $char=))
+       (cond ((or ($char= ?char0 ch)
+		  ($char= ?char  ch)
+		  ...)
+	      ?ch-body0 ?ch-body ...)
 	     ...)))
     ))
 
