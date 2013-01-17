@@ -4862,13 +4862,13 @@ represent the value.
 
 @defun pointer-set-c-sint32! @var{memory} @var{offset} @var{value}
 @defunx pointer-set-c-uint32! @var{memory} @var{offset} @var{value}
-@bitpoker{two bytes,32}
+@bitpoker{four bytes,32}
 @end defun
 
 
 @defun pointer-set-c-sint64! @var{memory} @var{offset} @var{value}
 @defunx pointer-set-c-uint64! @var{memory} @var{offset} @var{value}
-@bitpoker{two bytes,64}
+@bitpoker{eigth bytes,64}
 @end defun
 
 @c ------------------------------------------------------------
@@ -5166,13 +5166,13 @@ represent the value.
 
 @defun array-set-c-sint32! @var{memory} @var{index} @var{value}
 @defunx array-set-c-uint32! @var{memory} @var{index} @var{value}
-@abitpoker{two bytes,32}
+@abitpoker{four bytes,32}
 @end defun
 
 
 @defun array-set-c-sint64! @var{memory} @var{index} @var{value}
 @defunx array-set-c-uint64! @var{memory} @var{index} @var{value}
-@abitpoker{two bytes,64}
+@abitpoker{eight bytes,64}
 @end defun
 
 @c ------------------------------------------------------------
