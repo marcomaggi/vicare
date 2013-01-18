@@ -160,20 +160,16 @@
 ;;;; common arguments validation
 
 (define-argument-validation (seconds who obj)
-  (or (and (fixnum? obj)
-	   ($fx<= 0 obj))
-      (and (bignum? obj)
-	   ($bignum-positive? obj)))
+  (or (fixnum? obj)
+      (bignum? obj))
   (assertion-violation who
-    "expected non-negative exact integer as number of seconds argument" obj))
+    "expected exact integer as number of seconds argument" obj))
 
 (define-argument-validation (nanoseconds who obj)
-  (or (and (fixnum? obj)
-	   ($fx<= 0 obj))
-      (and (bignum? obj)
-	   ($bignum-positive? obj)))
+  (or (fixnum? obj)
+      (bignum? obj))
   (assertion-violation who
-    "expected non-negative exact integer as number of nanoseconds argument" obj))
+    "expected exact integer as number of nanoseconds argument" obj))
 
 ;;; --------------------------------------------------------------------
 
