@@ -63,6 +63,9 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a19.sls					\
 	srfi/%3a19/time.sls				\
+	srfi/%3a19/read-table.sps			\
+	srfi/%3a19/table.scm				\
+	srfi/%3a19/tai-utc.dat				\
 	\
 	srfi/%3a23.sls					\
 	srfi/%3a23/error.sls				\
