@@ -87,7 +87,7 @@
     add-duration		add-duration!
     subtract-duration		subtract-duration!
 
-    make-date
+    (rename (true-make-date	make-date))
     date?
     date-nanosecond		date-second
     date-minute			date-hour
@@ -170,6 +170,25 @@
       (bignum? obj))
   (assertion-violation who
     "expected exact integer as number of nanoseconds argument" obj))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (date-seconds who year month day hour minute second)
+  (and (fixnum? second)
+       ($fx>= second 0)
+       (or ($fx<= second 58)
+	   ($fx<= second (%max-date-second year month day hour minute))))
+  (assertion-violation who
+    "expected exact integer in range [0, 59] or [0, 60] as number of seconds argument"
+    year month day hour minute second))
+
+(define-argument-validation (date-nanoseconds who obj)
+  (and (or (fixnum? obj)
+	   (bignum? obj))
+       (>= obj 0)
+       (<= obj 999999999))
+  (assertion-violation who
+    "expected exact integer in range [0, 999999999] as number of nanoseconds argument" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -339,6 +358,34 @@
     (78796800 . 11)
     (63072000 . 10)))
 
+(define DATES-HAVING-LEAP-SECONDS
+  ;; year	month		day
+  '((1972	6		30)
+    (1972	12		31)
+    (1973	12		31)
+    (1974	12		31)
+    (1975	12		31)
+    (1976	12		31)
+    (1977	12		31)
+    (1978	12		31)
+    (1979	12		31)
+    (1981	6		30)
+    (1982	6		30)
+    (1983	6		30)
+    (1985	6		30)
+    (1987	12		31)
+    (1989	12		31)
+    (1990	12		31)
+    (1992	6		30)
+    (1993	6		30)
+    (1994	6		30)
+    (1995	12		31)
+    (1997	6		30)
+    (1998	12		31)
+    (2005	12		31)
+    (2008	12		31)
+    (2012	6		30)))
+
 (define (read-leap-second-table filename)
   (set! LEAP-SECOND-TABLE (%read-tai-utc-data filename)))
 
@@ -364,6 +411,17 @@
     (if (< tai-seconds (* (- 1972 1970) 365 NUMBER-OF-SECONDS-IN-A-DAY))
 	0
       (lsd LEAP-SECOND-TABLE))))
+
+;;; --------------------------------------------------------------------
+
+(define (%max-date-second year month day hour minute)
+  ;;Return 60 if the  given date is the one having a  leap second in its
+  ;;last minute; else return 59.
+  (if (and (= 23 hour)
+	   (= 59 minute)
+	   (member (list year month day) DATES-HAVING-LEAP-SECONDS))
+      60
+    59))
 
 
 ;;;; time structure
@@ -843,9 +901,98 @@
 (define-struct date
   (nanosecond second minute hour day month year zone-offset))
 
+(module (true-make-date)
+  (define who 'true-make-date)
+
+  (define (true-make-date nanosecond second minute hour day month year zone-offset)
+    (with-arguments-validation (who)
+	((year			year)
+	 (month			month)
+	 (day			year month day)
+	 (hour			hour)
+	 (minute		minute)
+	 (date-seconds		year month day hour minute second)
+	 (date-nanoseconds	nanosecond)
+	 (time-zone-offset	zone-offset))
+      (make-date nanosecond second
+		 minute hour day
+		 month year
+		 zone-offset)))
+
+  (define-argument-validation (minute who obj)
+    (and (fixnum? obj)
+	 ($fx>= obj 0)
+	 ($fx<= obj 59))
+    (assertion-violation who "invalid minute count" obj))
+
+  (define-argument-validation (hour who obj)
+    (and (fixnum? obj)
+	 ($fx>= obj 0)
+	 ($fx<= obj 23))
+    (assertion-violation who "invalid hour count" obj))
+
+  (define-argument-validation (day who year month day)
+    (and (fixnum? day)
+	 ($fx>= day 0)
+	 ($fx<= day (%max-day-count year month day)))
+    (assertion-violation who "invalid day count" day))
+
+  (define-argument-validation (month who obj)
+    (and (fixnum? obj)
+	 ($fx>= obj 0)
+	 ($fx<= obj 12))
+    (assertion-violation who "invalid month count" obj))
+
+  (define-argument-validation (year who obj)
+    (or (fixnum? obj)
+	(bignum? obj))
+    (assertion-violation who "invalid year count" obj))
+
+  (define NUMBER-OF-DAYS-PER-MONTH/NON-LEAP-YEAR
+    '#(0
+       31	;Jan
+       28	;Feb
+       31	;Mar
+       30	;Apr
+       31	;May
+       30	;Jun
+       31	;Jul
+       31	;Aug
+       30	;Sep
+       31	;Oct
+       30	;Nov
+       31))	;Dec
+
+  (define NUMBER-OF-DAYS-PER-MONTH/LEAP-YEAR
+    '#(0
+       31	;Jan
+       29	;Feb
+       31	;Mar
+       30	;Apr
+       31	;May
+       30	;Jun
+       31	;Jul
+       31	;Aug
+       30	;Sep
+       31	;Oct
+       30	;Nov
+       31))	;Dec
+
+  (define (%max-day-count year month day)
+    ($vector-ref (if (%leap-year? year)
+		     NUMBER-OF-DAYS-PER-MONTH/LEAP-YEAR
+		   NUMBER-OF-DAYS-PER-MONTH/NON-LEAP-YEAR)
+		 month))
+
+  #| end of module: true-make-date |# )
+
+;;; --------------------------------------------------------------------
+
 (define-argument-validation (date who obj)
   (date? obj)
   (assertion-violation who "expected date object as argument" obj))
+
+;;; --------------------------------------------------------------------
 
 (define current-date
   (case-lambda
@@ -933,7 +1080,7 @@
 	   (rem      (remainder secs (* 60 60)))
 	   (minutes  (quotient  rem 60))
 	   (seconds  (remainder rem 60)))
-      (make-date ($time-nanosecond time)
+      (true-make-date ($time-nanosecond time)
 		 seconds
 		 minutes
 		 hours
@@ -978,8 +1125,8 @@
     ($date->time-tai date)))
 
 (define ($date->time-tai date)
-  (if (= (date-second date) 60)
-      (let ((T (time-utc->time-tai! (date->time-utc date))))
+  (if (= ($date-second date) 60)
+      (let ((T (time-utc->time-tai! ($date->time-utc date))))
 	($subtract-duration! T (make-time time-duration 0 1)))
     ($time-utc->time-tai! ($date->time-utc date))))
 
@@ -1054,9 +1201,6 @@
       (and (= (modulo year 4) 0)
 	   (not (= (modulo year 100) 0)))))
 
-(define (leap-year? date)
-  (%leap-year? (date-year date)))
-
 ;;; --------------------------------------------------------------------
 
 (define (date-year-day date)
@@ -1109,29 +1253,14 @@
 	      7)))
 
 (define (%days-before-first-week date day-of-week-starting-week)
-  (let* ((first-day  (make-date 0 0 0 0
+  (let* ((first-day  (true-make-date 0 0 0 0
 				1
 				1
-				(date-year date)
+				($date-year date)
 				#f))
 	 (fdweek-day (date-week-day first-day)))
     (modulo (- day-of-week-starting-week fdweek-day)
             7)))
-
-;;; --------------------------------------------------------------------
-
-(define (%natural-year n)
-  ;;Given a 'two digit' number, find the year within 50 years +/-.
-  (let* ((current-year    ($date-year (current-date)))
-	 (current-century (* (quotient current-year 100) 100)))
-    (cond ((>= n 100)
-	   n)
-	  ((<  n 0)
-	   n)
-	  ((<= (- (+ current-century n) current-year) 50)
-	   (+ current-century n))
-	  (else
-	   (+ (- current-century 100) n)))))
 
 
 ;;;; conversion from time objects to julian day numbers
@@ -1359,49 +1488,6 @@
   (%julian-day->modified-julian-day ($date->julian-day date)))
 
 
-(define (%locale-abbr-weekday n)
-  ($vector-ref LOCALE-ABBR-WEEKDAY-VECTOR n))
-
-(define (%locale-long-weekday n)
-  ($vector-ref LOCALE-LONG-WEEKDAY-VECTOR n))
-
-(define (%locale-abbr-month n)
-  ($vector-ref LOCALE-ABBR-MONTH-VECTOR n))
-
-(define (%locale-long-month n)
-  ($vector-ref LOCALE-LONG-MONTH-VECTOR n))
-
-(module (%locale-abbr-weekday->index
-	 %locale-long-weekday->index
-	 %locale-abbr-month->index
-	 %locale-long-month->index)
-
-  (define (%locale-abbr-weekday->index string)
-    (%vector-find string LOCALE-ABBR-WEEKDAY-VECTOR string=?))
-
-  (define (%locale-long-weekday->index string)
-    (%vector-find string LOCALE-LONG-WEEKDAY-VECTOR string=?))
-
-  (define (%locale-abbr-month->index string)
-    (%vector-find string LOCALE-ABBR-MONTH-VECTOR string=?))
-
-  (define (%locale-long-month->index string)
-    (%vector-find string LOCALE-LONG-MONTH-VECTOR string=?))
-
-  (define (%vector-find needle haystack comparator)
-    (let ((len (vector-length haystack)))
-      (define (%vector-find-int index)
-	(cond ((>= index len)
-	       #f)
-	      ((comparator needle ($vector-ref haystack index))
-	       index)
-	      (else
-	       (%vector-find-int (+ index 1)))))
-      (%vector-find-int 0)))
-
-  #| end of module |# )
-
-
 ;;;; string to date
 
 (module (string->date)
@@ -1411,7 +1497,7 @@
     (with-arguments-validation (who)
 	((string	input-string)
 	 (string	template-string))
-      (let ((newdate (make-date 0 0 0 0 #f #f #f (%local-tz-offset))))
+      (let ((newdate (true-make-date 0 0 0 0 #f #f #f (%local-tz-offset))))
 	(%string->date newdate
 		       0
 		       template-string
@@ -1614,6 +1700,53 @@
 	(or index
 	    (error who "bad date template string")))))
 
+  (define (%natural-year n)
+    ;;Given a 'two digit' number, find the year within 50 years +/-.
+    (let* ((current-year    ($date-year (current-date)))
+	   (current-century (* (quotient current-year 100) 100)))
+      (cond ((>= n 100)
+	     n)
+	    ((<  n 0)
+	     n)
+	    ((<= (- (+ current-century n) current-year) 50)
+	     (+ current-century n))
+	    (else
+	     (+ (- current-century 100) n)))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%locale-abbr-weekday->index
+	   %locale-long-weekday->index
+	   %locale-abbr-month->index
+	   %locale-long-month->index)
+
+    (define (%locale-abbr-weekday->index string)
+      (%vector-find string LOCALE-ABBR-WEEKDAY-VECTOR string=?))
+
+    (define (%locale-long-weekday->index string)
+      (%vector-find string LOCALE-LONG-WEEKDAY-VECTOR string=?))
+
+    (define (%locale-abbr-month->index string)
+      (%vector-find string LOCALE-ABBR-MONTH-VECTOR string=?))
+
+    (define (%locale-long-month->index string)
+      (%vector-find string LOCALE-LONG-MONTH-VECTOR string=?))
+
+    (define (%vector-find needle haystack comparator)
+      (let ((len (vector-length haystack)))
+	(define (%vector-find-int index)
+	  (cond ((>= index len)
+		 #f)
+		((comparator needle ($vector-ref haystack index))
+		 index)
+		(else
+		 (%vector-find-int (+ index 1)))))
+	(%vector-find-int 0)))
+
+    #| end of module |# )
+
+
+;;; --------------------------------------------------------------------
 
   (define (%error-bad-template template-string)
     (error who "bad date format string" template-string))
@@ -1623,6 +1756,8 @@
 
   (define (%error-invalid-time-zone-pm ch)
     (error who "bad date template string, invalid time zone +/-" ch))
+
+;;; --------------------------------------------------------------------
 
   (define %READ-DIRECTIVES
     ;;A List of formatted read directives.  Each entry is a list.
@@ -1694,7 +1829,7 @@
 		       (char=? c #\+)
 		       (char=? c #\-)))
 	     %zone-reader (lambda (val object)
-			      ($set-date-zone-offset! object val)))
+			    ($set-date-zone-offset! object val)))
        )))
 
   #| end of module |# )
@@ -1776,10 +1911,10 @@
 		 (display (%locale-long-weekday (date-week-day date))
 			  port)))
      (cons #\b (lambda (date pad-with port)
-		 (display (%locale-abbr-month (date-month date))
+		 (display (%locale-abbr-month ($date-month date))
 			  port)))
      (cons #\B (lambda (date pad-with port)
-		 (display (%locale-long-month (date-month date))
+		 (display (%locale-long-month ($date-month date))
 			  port)))
      (cons #\c (lambda (date pad-with port)
 		 (display (date->string date LOCALE-DATE-TIME-FORMAT) port)))
@@ -1794,26 +1929,26 @@
 				    #\space 2)
 			  port)))
      (cons #\f (lambda (date pad-with port)
-		 (if (> (date-nanosecond date)
+		 (if (> ($date-nanosecond date)
 			NUMBER-OF-NANOSECONDS-IN-A-SECOND)
-		     (display (%padding (+ (date-second date) 1)
+		     (display (%padding (+ ($date-second date) 1)
 					pad-with 2)
 			      port)
-		   (display (%padding (date-second date)
+		   (display (%padding ($date-second date)
 				      pad-with 2)
 			    port))
 		 (display LOCALE-NUMBER-SEPARATOR port)
-		 (display (%fractional-part (/ (date-nanosecond date)
+		 (display (%fractional-part (/ ($date-nanosecond date)
 						 NUMBER-OF-NANOSECONDS-IN-A-SECOND))
 			  port)))
      (cons #\h (lambda (date pad-with port)
 		 (display (date->string date "~b") port)))
      (cons #\H (lambda (date pad-with port)
-		 (display (%padding (date-hour date)
+		 (display (%padding ($date-hour date)
 				    pad-with 2)
 			  port)))
      (cons #\I (lambda (date pad-with port)
-		 (let ((hr (date-hour date)))
+		 (let ((hr ($date-hour date)))
 		   (if (> hr 12)
 		       (display (%padding (- hr 12)
 					  pad-with 2)
@@ -1826,43 +1961,36 @@
 				    pad-with 3)
 			  port)))
      (cons #\k (lambda (date pad-with port)
-		 (display (%padding (date-hour date)
-				    #\0 2)
-			  port)))
+		 (display (%padding ($date-hour date) #\0 2) port)))
      (cons #\l (lambda (date pad-with port)
-		 (let ((hr (if (> (date-hour date) 12)
-			       (- (date-hour date) 12) (date-hour date))))
+		 (let ((hr (if (> ($date-hour date) 12)
+			       (- ($date-hour date) 12) ($date-hour date))))
 		   (display (%padding hr  #\space 2)
 			    port))))
      (cons #\m (lambda (date pad-with port)
-		 (display (%padding (date-month date)
-				    pad-with 2)
+		 (display (%padding ($date-month date) pad-with 2)
 			  port)))
      (cons #\M (lambda (date pad-with port)
-		 (display (%padding (date-minute date)
+		 (display (%padding ($date-minute date)
 				    pad-with 2)
 			  port)))
      (cons #\n (lambda (date pad-with port)
 		 (newline port)))
      (cons #\N (lambda (date pad-with port)
-		 (display (%padding (date-nanosecond date)
+		 (display (%padding ($date-nanosecond date)
 				    pad-with 9)
 			  port)))
      (cons #\p (lambda (date pad-with port)
-		 (display (%locale-am/pm (date-hour date)) port)))
+		 (display (%locale-am/pm ($date-hour date)) port)))
      (cons #\r (lambda (date pad-with port)
 		 (display (date->string date "~I:~M:~S ~p") port)))
      (cons #\s (lambda (date pad-with port)
 		 (display (time-second (date->time-utc date)) port)))
      (cons #\S (lambda (date pad-with port)
-		 (if (> (date-nanosecond date)
+		 (if (> ($date-nanosecond date)
 			NUMBER-OF-NANOSECONDS-IN-A-SECOND)
-		     (display (%padding (+ (date-second date) 1)
-					pad-with 2)
-			      port)
-                   (display (%padding (date-second date)
-				      pad-with 2)
-                            port))))
+		     (display (%padding (+ ($date-second date) 1) pad-with 2) port)
+                   (display (%padding ($date-second date) pad-with 2) port))))
      (cons #\t (lambda (date pad-with port)
 		 (display (integer->char 9) port)))
      (cons #\T (lambda (date pad-with port)
@@ -1966,8 +2094,24 @@
 	LOCALE-PM
       LOCALE-AM))
 
+;;; --------------------------------------------------------------------
+
   (define (%last-n-digits i n)
     (abs (remainder i (expt 10 n))))
+
+  (define (%locale-abbr-weekday n)
+    ($vector-ref LOCALE-ABBR-WEEKDAY-VECTOR n))
+
+  (define (%locale-long-weekday n)
+    ($vector-ref LOCALE-LONG-WEEKDAY-VECTOR n))
+
+  (define (%locale-abbr-month n)
+    ($vector-ref LOCALE-ABBR-MONTH-VECTOR n))
+
+  (define (%locale-long-month n)
+    ($vector-ref LOCALE-LONG-MONTH-VECTOR n))
+
+;;; --------------------------------------------------------------------
 
   (define (%error-bad-template format-string)
     (error who "bad date format string" format-string))

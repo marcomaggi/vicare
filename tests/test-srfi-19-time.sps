@@ -396,6 +396,55 @@
 	(srfi.date? D))
     => #t)
 
+  (let-syntax
+      ((check-leap-second-date
+	(syntax-rules ()
+	  ((_ ?year ?month ?day)
+	   (check
+	       (let ((D (srfi.make-date 0 60 59 23 ?day ?month ?year 0)))
+		 (srfi.date-second D))
+	     => 60)))))
+    ;;All of these are the leap seconds dates.
+    (check-leap-second-date 1972	6	30)
+    (check-leap-second-date 1972	12	31)
+    (check-leap-second-date 1973	12	31)
+    (check-leap-second-date 1974	12	31)
+    (check-leap-second-date 1975	12	31)
+    (check-leap-second-date 1976	12	31)
+    (check-leap-second-date 1977	12	31)
+    (check-leap-second-date 1978	12	31)
+    (check-leap-second-date 1979	12	31)
+    (check-leap-second-date 1981	6	30)
+    (check-leap-second-date 1982	6	30)
+    (check-leap-second-date 1983	6	30)
+    (check-leap-second-date 1985	6	30)
+    (check-leap-second-date 1987	12	31)
+    (check-leap-second-date 1989	12	31)
+    (check-leap-second-date 1990	12	31)
+    (check-leap-second-date 1992	6	30)
+    (check-leap-second-date 1993	6	30)
+    (check-leap-second-date 1994	6	30)
+    (check-leap-second-date 1995	12	31)
+    (check-leap-second-date 1997	6	30)
+    (check-leap-second-date 1998	12	31)
+    (check-leap-second-date 2005	12	31)
+    (check-leap-second-date 2008	12	31)
+    (check-leap-second-date 2012	6	30)
+    #f)
+
+  (check
+      (let ((D (srfi.make-date 0 59 59 23 18 1 2013 0)))
+	(srfi.date-second D))
+    => 59)
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 (condition-message E))
+		(else E))
+	(let ((D (srfi.make-date 0 60 59 23 18 1 2013 0)))
+	  (srfi.date-second D)))
+    => "expected exact integer in range [0, 59] or [0, 60] as number of seconds argument")
+
   #t)
 
 

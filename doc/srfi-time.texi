@@ -156,7 +156,7 @@ well as by a time zone.  @code{date} objects are immutable.  A
 
 @table @emph
 @item Nanosecond
-An integer between 0 and 9,999,999, inclusive.
+An integer between 0 and 999,999,999, inclusive.
 
 @item Second
 An integer 0 and 60, inclusive, (60 represents a leap second).
