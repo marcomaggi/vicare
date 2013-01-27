@@ -1,9 +1,19 @@
+;;; -*- coding: utf-8-unix -*-
+;;;
+;;;Part of: Vicare Scheme
+;;;Contents: extensions to SRFI 19, time functions
+;;;Date: Wed Jan 23, 2013
+;;;
+;;;Abstract
+;;;
+;;;
+;;;
 ;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
 ;;;named LICENSE from  the original collection this  file is distributed
 ;;;with.
-
+;;;
 ;;;Modified and extended by Marco Maggi <marco.maggi-ipsu@poste.it>
-
+;;;
 ;;;SRFI-19: Time Data Types and Procedures.
 ;;;
 ;;;Copyright (C) I/NET, Inc. (2000, 2002, 2003). All Rights Reserved.
@@ -30,79 +40,30 @@
 ;;;WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL NOT INFRINGE ANY
 ;;;RIGHTS OR ANY IMPLIED WARRANTIES  OF MERCHANTABILITY OR FITNESS FOR A
 ;;;PARTICULAR PURPOSE.
+;;;
 
 
 #!r6rs
-(library (srfi :19 time)
+(library (srfi :19 time extensions)
   (export
-    time-duration		time-monotonic		time-process
-    time-tai			time-thread		time-utc
+    ;; constants
+    NUMBER-OF-NANOSECONDS-IN-A-SECOND
+    NUMBER-OF-SECONDS-IN-A-DAY
+    NUMBER-OF-SECONDS-IN-HALF-A-DAY
+    TAI-EPOCH-IN-JULIAN-DAYS
+    NUMBER-OF-TAI-NANOSECONDS-IN-BIZARRE-UTC-SECOND
+    UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND
+    UTC-SECONDS-AT-END-OF-BIZARRE-SECOND
+    TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND
+    TAI-SECONDS-AT-END-OF-BIZARRE-SECOND
 
-    current-date		current-julian-day	current-modified-julian-day
-    current-time		time-resolution
+    ;; extension functions
+    LEAP-SECONDS-TABLE
+    utc-seconds-in-leap-second?		tai-seconds-in-leap-second?
+    leap-seconds-table.utc-leap-second-end
+    leap-seconds-table.utc-to-tai-increment-after-leap-second
 
-    make-time
-    copy-time			time?
-    time-type			set-time-type!
-    time-second			set-time-second!
-    time-nanosecond		set-time-nanosecond!
-
-    time=?
-    time<=?			time<?
-    time>=?			time>?
-    time-difference		time-difference!
-    add-duration		add-duration!
-    subtract-duration		subtract-duration!
-
-    make-date			date?
-    date-nanosecond		date-second
-    date-minute			date-hour
-    date-day			date-month
-    date-year			date-zone-offset
-    date-year-day		date-week-day
-    date-week-number
-
-    date->julian-day
-    date->modified-julian-day
-    date->time-monotonic
-    date->time-tai
-    date->time-utc
-
-    julian-day->date
-    julian-day->time-monotonic
-    julian-day->time-tai
-    julian-day->time-utc
-
-    modified-julian-day->date
-    modified-julian-day->time-monotonic
-    modified-julian-day->time-tai
-    modified-julian-day->time-utc
-
-    time-monotonic->date
-    time-monotonic->julian-day
-    time-monotonic->modified-julian-day
-    time-monotonic->time-tai
-    time-monotonic->time-tai!
-    time-monotonic->time-utc
-    time-monotonic->time-utc!
-
-    time-tai->date
-    time-tai->julian-day
-    time-tai->modified-julian-day
-    time-tai->time-monotonic
-    time-tai->time-monotonic!
-    time-tai->time-utc
-    time-tai->time-utc!
-
-    time-utc->date
-    time-utc->julian-day
-    time-utc->modified-julian-day
-    time-utc->time-monotonic
-    time-utc->time-monotonic!
-    time-utc->time-tai
-    time-utc->time-tai!
-
-    date->string			string->date)
+    quasi-time=?)
   (import (srfi :19 time core)))
 
 ;;; end of file

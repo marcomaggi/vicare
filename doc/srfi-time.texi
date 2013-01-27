@@ -16,7 +16,6 @@ for more details.
 @menu
 * srfi time license::        Time document license.
 * srfi time abstract::       Abstract.
-* srfi time rationale::      Rationale.
 * srfi time spec::           Specification.
 * srfi time ack::            Acknowledgements.
 @end menu
@@ -70,15 +69,6 @@ a 24 hour clock (with nanosecond precision) and a time zone offset from
 as well as for reading and writing string representations of dates.
 
 @c page
-@node srfi time rationale
-@subsection Rationale
-
-
-@rnrs{5} Scheme does not provide standard data types for time.  This
-@srfi{} addresses this lack by specifying data types for time and
-associated procedures.
-
-@c page
 @node srfi time spec
 @subsection Specification
 
@@ -89,7 +79,7 @@ associated procedures.
 * srfi time spec current::        Current time and clock resolution.
 * srfi time spec time::           Time object.
 * srfi time spec date::           Date object.
-* srfi time spec julian::         Time/Date/Julian Day/Modified
+* srfi time spec conversion::     Time/Date/Julian Day/Modified
                                   Julian Day Converters.
 * srfi time spec string::         Date to string/string to date
                                   converters.
@@ -182,10 +172,10 @@ An integer representing the year.
 A integer the number of seconds east of GMT for this timezone.
 @end table
 
-A @emph{Julian Day} represents a point in time as a real number of days
+A @dfn{Julian Day} represents a point in time as a real number of days
 since -4714-11-24T12:00:00Z (November 24, -4714 at noon, @utc{}).
 
-A @emph{Modified Julian Day} represents a point in time as a real number
+A @dfn{Modified Julian Day} represents a point in time as a real number
 of days since 1858-11-17T00:00:00Z (November 17, 1858 at midnight,
 @utc{}).
 
@@ -505,12 +495,11 @@ day of the week (Sunday=0, Monday=1, etc.).
 @end defun
 
 @c page
-@node srfi time spec julian
+@node srfi time spec conversion
 @subsubsection Time/Date/Julian Day/Modified Julian Day Converters
 
 
-The following conversion procedures are required.
-
+@subsubheading From @code{date} to Julian Day
 
 @defun date->julian-day @var{date}
 Convert date to @emph{Julian Day}.
@@ -521,6 +510,9 @@ Convert date to @emph{Julian Day}.
 Convert date to @emph{Modified Julian Day}.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From @code{date} to @code{time}
 
 @defun date->time-monotonic @var{date}
 Convert date to monotonic time.
@@ -536,6 +528,9 @@ Convert date to @tai{} time.
 Convert date to @utc{} time.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From Julian Day to @code{date}
 
 @defun julian-day->date @var{jd}
 @defunx julian-day->date @var{jd} @var{tz-offset}
@@ -558,6 +553,9 @@ Convert a @emph{Julian Day} to @tai{} time.
 Convert a @emph{Julian Day} to @utc{} time.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From Modified Julian Day to @code{date}
 
 @defun modified-julian-day->date @var{mjd}
 @defunx modified-julian-day->date @var{mjd} @var{tz-offset}
@@ -565,6 +563,9 @@ Convert a @emph{Modified Julian Day} to adate, using a time zone offset,
 which defaults to the local time zone.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From Modified Julian Day to @code{time}
 
 @defun modified-julian-day->time-monotonic @var{mjd}
 Convert @emph{Modified Julian Day} to monotonic time.
@@ -580,6 +581,9 @@ Convert a @emph{Modified Julian Day} to @tai{} time.
 Convert @emph{Modified Julian Day} to @utc{} time.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From monotonic @code{time} to anything
 
 @defun time-monotonic->date @var{time}
 @defunx time-monotonic->date @var{time} @var{tz-offset}
@@ -619,6 +623,9 @@ Convert monotonic time to @utc{} time.  The @var{time} structure may be
 reused.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From @tai{} @code{time} to anything
 
 @defun time-tai->date @var{time}
 @defunx time-tai->date @var{time} @var{tz-offset}
@@ -658,6 +665,9 @@ Convert @tai{} time to monotonic time.  The @var{time} structure may be
 reused.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading From @utc{} @code{time} to anything
 
 @defun time-utc->date @var{time-utc}
 @defunx time-utc->date @var{time-utc} @var{tz-offset}

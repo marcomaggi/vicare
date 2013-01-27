@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -65,6 +65,7 @@
   (only (srfi :14))
   (only (srfi :16))
   (only (srfi :19))
+  (only (srfi :19 time extensions))
   (only (srfi :23))
   (only (srfi :25))
   (only (srfi :26))

@@ -1,4 +1,4 @@
-;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
+;;;Copyright 2010, 2013 Derick Eddington.  My MIT-style license is in the file
 ;;;named LICENSE from  the original collection this  file is distributed
 ;;;with.
 
@@ -33,10 +33,23 @@
 #!r6rs
 (import (vicare)
   (prefix (srfi :19) srfi.)
+  (prefix (srfi :19 time extensions) srfi.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
+#;(check-set-mode! 'summary)
 (check-display "*** testing SRFI libraries: SRFI 19, time\n")
+
+
+;;;; helpers
+
+(define UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND (- 63072000 1))
+(define UTC-SECONDS-AT-END-OF-BIZARRE-SECOND 63072000)
+
+(define TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND (- 63072000 1))
+(define TAI-SECONDS-AT-END-OF-BIZARRE-SECOND (+ 63072000 10))
+
+(define NUMBER-OF-NANOSECONDS-IN-A-SECOND	#e1e9)
 
 
 (parametrise ((check-test-name	'constants))
@@ -377,6 +390,252 @@
 	T1)
     (=> srfi.time=?)
     (srfi.make-time srfi.time-utc 10 20))
+
+  #t)
+
+
+(parametrise ((check-test-name	'leap-second))
+
+  (let loop ((table srfi.LEAP-SECONDS-TABLE))
+    (unless (null? table)
+      (let ((SEC (leap-seconds-table.utc-leap-second-end (car table))))
+	(check (srfi.utc-seconds-in-leap-second? SEC)		=> #f)
+	(check (srfi.utc-seconds-in-leap-second? (+ -1 SEC))	=> #t)
+	(check (srfi.utc-seconds-in-leap-second? (+ -2 SEC))	=> #f))
+      (loop (cdr table))))
+
+  (let ((SEC 63072000))
+    (check (srfi.utc-seconds-in-leap-second? SEC)		=> #f)
+    (check (srfi.utc-seconds-in-leap-second? (+ -1 SEC))	=> #f)
+    (check (srfi.utc-seconds-in-leap-second? (+ -2 SEC))	=> #f))
+
+;;; --------------------------------------------------------------------
+
+  (let loop ((table UTC-SECONDS-AFTER-LEAP-SECONDS))
+    (unless (null? table)
+      (let* ((entry (car table))
+	     (SEC   (srfi.leap-seconds-table.utc-leap-second-end entry))
+	     (DELTA (srfi.leap-seconds-table.utc-to-tai-increment-after-leap-second entry)))
+	(check (srfi.tai-seconds-in-leap-second? SEC)		=> #f)
+	(check (srfi.tai-seconds-in-leap-second? (+ -1 SEC))	=> #t)
+	(check (srfi.tai-seconds-in-leap-second? (+ -2 DELTA SEC))	=> #f))
+      (loop (cdr table))))
+
+  (let ((SEC 63072000))
+    (check (srfi.tai-seconds-in-leap-second? SEC)		=> #f)
+    (check (srfi.tai-seconds-in-leap-second? (+ -1 SEC))	=> #f)
+    (check (srfi.tai-seconds-in-leap-second? (+ -2 SEC))	=> #f))
+
+  #t)
+
+
+(parametrise ((check-test-name	'utc-to-tai))
+
+  (define utc->tai
+    (case-lambda
+     ((utc-seconds tai-seconds nanoseconds)
+      (utc->tai utc-seconds tai-seconds nanoseconds #f))
+     ((utc-seconds tai-seconds nanoseconds print?)
+      (check
+	  (let* ((UTC (srfi.make-time srfi.time-utc nanoseconds utc-seconds))
+		 (TAI (srfi.time-utc->time-tai UTC)))
+	    (when print?
+	      (check-pretty-print UTC)
+	      (check-pretty-print TAI))
+	    TAI)
+	(=> srfi.time=?)
+	(srfi.make-time srfi.time-tai nanoseconds tai-seconds)))))
+
+  (define utc->tai*
+    (case-lambda
+     ((utc-seconds tai-seconds)
+      (utc->tai* utc-seconds tai-seconds #f))
+     ((utc-seconds tai-seconds print?)
+      (utc->tai utc-seconds tai-seconds 0 print?)
+      (utc->tai utc-seconds tai-seconds #e5e8 print?)
+      (utc->tai utc-seconds tai-seconds (- NUMBER-OF-NANOSECONDS-IN-A-SECOND 1) print?))))
+
+;;; --------------------------------------------------------------------
+
+  ;;The Epoch: 0[TAI] = 0[UTC]
+  #;(let* ((TAI-SECONDS	0)
+	 (UTC-SECONDS	TAI-SECONDS))
+    (utc->tai* UTC-SECONDS TAI-SECONDS))
+
+  ;;One second before the bizarre UTC second: 63072000-12[TAI] = 63072000-2[UTC]
+  #;(let* ((UTC-SECONDS	(- UTC-SECONDS-AT-END-OF-BIZARRE-SECOND 12))
+	 (TAI-SECONDS	UTC-SECONDS))
+    (utc->tai* UTC-SECONDS TAI-SECONDS))
+
+  ;;In the bizarre UTC second:
+  ;;
+  ;;   (63072000-1 0)[TAI]	=>	(63072000-1         0)[UTC]
+  ;;
+  ;;   (63072000+1 0)[TAI]	=>	(63072000-1 100000000)[UTC]
+  ;;   (63072000+2 0)[TAI]	=>	(63072000-1 200000000)[UTC]
+  ;;   (63072010+3 0)[TAI]	=>	(63072000-1 300000000)[UTC]
+  ;;   (63072010+4 0)[TAI]	=>	(63072000-1 400000000)[UTC]
+  ;;   (63072010+5 0)[TAI]	=>	(63072000-1 500000000)[UTC]
+  ;;   (63072010+6 0)[TAI]	=>	(63072000-1 600000000)[UTC]
+  ;;   (63072010+7 0)[TAI]	=>	(63072000-1 700000000)[UTC]
+  ;;   (63072010+8 0)[TAI]	=>	(63072000-1 800000000)[UTC]
+  ;;   (63072010-01 0)[TAI]	=>	(63072000-1 900000000)[UTC]
+  ;;   (63072010    0)[TAI]	=>	(63072000           0)[UTC]
+  ;;
+  (let ()
+    (define (utc->tai utc-seconds utc-nanoseconds tai-seconds tai-nanoseconds print?)
+      (check
+	  (let* ((UTC (srfi.make-time srfi.time-utc utc-nanoseconds utc-seconds))
+		 (TAI (srfi.time-utc->time-tai UTC)))
+	    (when print?
+	      (check-pretty-print UTC)
+	      (check-pretty-print TAI))
+	    TAI)
+	(=> (lambda (a b)
+	      (srfi.quasi-time=? a b 10)))
+	(srfi.make-time srfi.time-tai tai-nanoseconds tai-seconds)))
+    (utc->tai UTC-SECONDS-AT-END-OF-BIZARRE-SECOND 0
+	      TAI-SECONDS-AT-END-OF-BIZARRE-SECOND 0
+	      #f)
+    (do ((i 1 (+ 1 i)))
+	((= i 11))
+      (utc->tai UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND
+		(* NUMBER-OF-NANOSECONDS-IN-A-SECOND (/ i 11))
+		(+ TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND i) 0
+		#f))
+    (utc->tai UTC-SECONDS-AT-BEG-OF-BIZARRE-SECOND 0
+	      TAI-SECONDS-AT-BEG-OF-BIZARRE-SECOND 0
+	      #f)
+    )
+
+  ;;At the end of the initial delta: 63072010[TAI] = 63072000[UTC]
+  #;(let* ((UTC-SECONDS	UTC-SECONDS-AT-END-OF-BIZARRE-SECOND)
+	 (TAI-SECONDS	(+ 10 UTC-SECONDS)))
+    (check
+	(srfi.time-utc->time-tai (srfi.make-time srfi.time-utc 0 UTC-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-tai 0 TAI-SECONDS)))
+
+  ;;Right after the initial delta: 63072000+11[TAI] = 63072000+1[UTC]
+  #;(let* ((UTC-SECONDS	(+  1 UTC-SECONDS-AT-END-OF-BIZARRE-SECOND))
+	 (TAI-SECONDS	(+ 11 UTC-SECONDS-AT-END-OF-BIZARRE-SECOND)))
+    (check
+	(srfi.time-utc->time-tai (srfi.make-time srfi.time-utc 0 UTC-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-tai 0 TAI-SECONDS)))
+
+  ;;The full table of leap seconds.
+  #;(let loop ((table '((1341100800 . 35)	(1230768000 . 34)	(1136073600 . 33)
+		      (915148800 . 32)	(867715200 . 31)	(820454400 . 30)
+		      (773020800 . 29)	(741484800 . 28)	(709948800 . 27)
+		      (662688000 . 26)	(631152000 . 25)	(567993600 . 24)
+		      (489024000 . 23)	(425865600 . 22)	(394329600 . 21)
+		      (362793600 . 20)	(315532800 . 19)	(283996800 . 18)
+		      (252460800 . 17)	(220924800 . 16)	(189302400 . 15)
+		      (157766400 . 14)	(126230400 . 13)	(94694400 . 12)
+		      (78796800 . 11)	(63072000 . 10))))
+    (unless (null? table)
+      (check
+	  (let* ((UTC-SECONDS	(caar table))
+		 (TAI-SECONDS	(+ UTC-SECONDS (cdar table)))
+		 (UTC		(srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
+;;;	      (check-pretty-print UTC)
+	    (srfi.time-utc->time-tai UTC))
+	(=> srfi.time=?)
+	(srfi.make-time srfi.time-tai 0 TAI-SECONDS))
+      (loop (cdr table))))
+
+;;; --------------------------------------------------------------------
+
+  ;;A random time.
+  #;(let* ((UTC-SECONDS	(+ 1000 1341100800))
+	 (UTC-NANOS	500000)
+	 (TAI-SECONDS	(+ 35 UTC-SECONDS))
+	 (TAI-NANOS	UTC-NANOS))
+    (check
+	(srfi.time-utc->time-tai (srfi.make-time srfi.time-utc UTC-NANOS UTC-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-tai TAI-NANOS TAI-SECONDS)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'tai-to-utc))
+
+  (define UTC-SECONDS-AFTER-BIZARRE-SECOND 63072000)
+
+;;; --------------------------------------------------------------------
+
+  ;;The Epoch: 0[TAI] = 0[UTC]
+  (let* ((TAI-SECONDS	0)
+	 (UTC-SECONDS	TAI-SECONDS))
+    (check
+	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
+
+  ;;Right before the initial delta: 63072000-1[TAI] = 63072000-1[UTC]
+  (let* ((UTC-SECONDS	(- UTC-SECONDS-AFTER-BIZARRE-SECOND 1))
+	 (TAI-SECONDS	UTC-SECONDS))
+    (check
+	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
+
+  ;;On the initial delta: 63072010[TAI] = 63072000[UTC]
+  (let* ((UTC-SECONDS	UTC-SECONDS-AFTER-BIZARRE-SECOND)
+	 (TAI-SECONDS	(+ 10 UTC-SECONDS)))
+    (check
+	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
+
+  ;;Right after the initial delta: 63072000+11[TAI] = 63072000+1[UTC]
+  (let* ((UTC-SECONDS	(+  1 UTC-SECONDS-AFTER-BIZARRE-SECOND))
+	 (TAI-SECONDS	(+ 11 UTC-SECONDS-AFTER-BIZARRE-SECOND)))
+    (check
+	(srfi.time-tai->time-utc (srfi.make-time srfi.time-tai 0 TAI-SECONDS))
+      (=> srfi.time=?)
+      (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
+
+  ;;The full table.
+  (let loop ((table '((1341100800 . 35)	(1230768000 . 34)	(1136073600 . 33)
+		      (915148800 . 32)	(867715200 . 31)	(820454400 . 30)
+		      (773020800 . 29)	(741484800 . 28)	(709948800 . 27)
+		      (662688000 . 26)	(631152000 . 25)	(567993600 . 24)
+		      (489024000 . 23)	(425865600 . 22)	(394329600 . 21)
+		      (362793600 . 20)	(315532800 . 19)	(283996800 . 18)
+		      (252460800 . 17)	(220924800 . 16)	(189302400 . 15)
+		      (157766400 . 14)	(126230400 . 13)	(94694400 . 12)
+		      (78796800 . 11)	(63072000 . 10))))
+    (unless (null? table)
+      (let* ((UTC-SECONDS	(caar table))
+	     (TAI-SECONDS	(+ UTC-SECONDS (cdar table))))
+	(check
+	    (let ((TAI (srfi.make-time srfi.time-tai 0 TAI-SECONDS)))
+;;;	      (check-pretty-print TAI)
+	      (srfi.time-tai->time-utc TAI))
+	  (=> srfi.time=?)
+	  (srfi.make-time srfi.time-utc 0 UTC-SECONDS)))
+      (loop (cdr table))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Seconds inside the UTC bizarre second.
+  (do ((i 0 (+ 1 i)))
+      ((= i 11))
+    (let* ((TAI-SECONDS	(+ i 63072000))
+	   (TAI-NANOS	0)
+	   (UTC-SECONDS	TAI-SECONDS)
+	   (UTC-NANOS	(* 1e9 (/ i 10))))
+      (check
+	  (let* ((TAI (srfi.make-time srfi.time-tai TAI-NANOS TAI-SECONDS))
+		 (UTC (srfi.time-tai->time-utc TAI)))
+	    (check-pretty-print TAI)
+	    (check-pretty-print UTC)
+	    UTC)
+	(=> srfi.time=?)
+	(srfi.make-time srfi.time-utc (exact (floor UTC-NANOS)) UTC-SECONDS))))
 
   #t)
 
