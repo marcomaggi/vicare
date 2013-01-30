@@ -42,6 +42,10 @@ Notes for revision 0.2d20
 
 * The boot image has been rotated.
 
+* The files  used by  the GNU  Autotools are  now under  the "autotools"
+  subdirectory of the top source directory.   This is to have less files
+  in the top directory.  Sorry for the annoyance.
+
 * The library search path has been fixed; it is now initialised to:
 
      $(libdir)/scheme/r6rs

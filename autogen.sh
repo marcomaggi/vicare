@@ -2,8 +2,10 @@
 #
 # Run this in the top source directory to rebuild the infrastructure.
 
-set -xe
+export PATH=/bin:/usr/local/bin:/usr/bin:$PATH
 
-autoreconf --warnings=all --install --verbose
+set -xe
+test -d autotools || mkdir autotools
+autoreconf --warnings=all --install --verbose "$@"
 
 ### end of file
