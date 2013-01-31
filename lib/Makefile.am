@@ -76,13 +76,8 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a25.sls					\
 	srfi/%3a25/multi-dimensional-arrays.sls		\
 	srfi/%3a25/arlib.scm				\
-	srfi/%3a25/array.scm				\
-	srfi/%3a25/ix-ctor.scm				\
 	srfi/%3a25/list.scm				\
-	srfi/%3a25/multi-dimensional-arrays/all.sls	\
 	srfi/%3a25/multi-dimensional-arrays/arlib.sls	\
-	srfi/%3a25/op-ctor.scm				\
-	srfi/%3a25/test.scm				\
 	\
 	srfi/%3a26.sls					\
 	srfi/%3a26/cut.sls				\

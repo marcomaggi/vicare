@@ -1,6 +1,40 @@
-;;; array test
-;;; 2001 Jussi Piitulainen
+;;; -*- coding: utf-8-unix -*-
+;;;
+;;;Part of: Vicare Scheme
+;;;Contents: tests for SRFI 25
+;;;Date: Thu Jan 31, 2013
+;;;
+;;;Abstract
+;;;
+;;;
+;;;
+;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 1997-2001 Jussi Piitulainen
+;;;
+;;;This program is free software:  you can redistribute it and/or modify
+;;;it under the terms of the  GNU General Public License as published by
+;;;the Free Software Foundation, either version 3 of the License, or (at
+;;;your option) any later version.
+;;;
+;;;This program is  distributed in the hope that it  will be useful, but
+;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
+;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
+;;;General Public License for more details.
+;;;
+;;;You should  have received a  copy of  the GNU General  Public License
+;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
+
+#!r6rs
+(import (vicare)
+  (prefix (srfi :25) srfi.)
+  (vicare checks))
+
+(check-set-mode! 'report-failed)
+(display "*** testing SRFI 25: multidimensional arrays\n")
+
+
 (define past
   (let ((stones '()))
     (lambda stone
@@ -362,7 +396,7 @@
 ;;; Check that shape arrays work even when they share
 ;;;
 ;;; arr             shp       shq       shr       shs
-;;;    1  2  3  4      0  1      0  1      0  1      0  1 
+;;;    1  2  3  4      0  1      0  1      0  1      0  1
 ;;; 1 10 12 16 20   0 10 12   0 12 20   0 10 10   0 12 12
 ;;; 2 10 11 12 13   1 10 11   1 11 13   1 11 12   1 12 12
 ;;;                                     2 12 16
@@ -455,3 +489,10 @@
         (error "sharing with sharing subshape failed"))))
 
 (past "sharing with sharing subshape")
+
+
+;;;; done
+
+(check-report)
+
+;;; end of file

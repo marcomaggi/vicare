@@ -1,0 +1,6 @@
+@node srfi multidim-array
+@section @ansrfi{25} multidimensional array
+
+
+
+@c end of file
