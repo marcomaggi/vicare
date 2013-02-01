@@ -30,7 +30,7 @@ minor modification of the original documents by Marco Maggi.
                                 variable arity.
 * srfi time::                   @ansrfi{19} time data types and procedures.
 * srfi error-reporting::        @ansrfi{23} error reporting mechanism.
-* srfi multidim-array::         @ansrfi{25} multidimensional array.
+* srfi marray::                 @ansrfi{25} multidimensional array.
 * srfi shared structures::      @ansrfi{38} representation for data with
                                 shared structure.
 * srfi specialize-procedures::  @ansrfi{26} notation for specializing
