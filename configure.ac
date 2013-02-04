@@ -120,6 +120,21 @@ AM_CONDITIONAL([WANT_TIME_TESTS],[test x$vicare_time_tests = xyes])
 AM_COND_IF([WANT_TIME_TESTS],
   [AC_CHECK_PROG([TIME_PROGRAM],[time],[time],[:])])
 
+dnl --------------------------------------------------------------------
+dnl Optional linking with pthreads
+
+dnl This  must come before  searching for POSIX functions.   For example
+dnl the POSIX semaphore functions appear to need this library.
+AC_ARG_WITH([pthread],
+  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
+  [true],[with_pthread=no])
+vicare_with_pthread=no
+if test x$with_pthread != xno; then
+   vicare_with_pthread=yes
+   AC_CHECK_LIB([pthread],[main])
+fi
+AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
+
 #page
 #### basic system inspection
 
@@ -1429,19 +1444,6 @@ ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
 ERROR: libgmp can be obtained from <http://gmplib.org>.])])
-
-dnl --------------------------------------------------------------------
-dnl Optional linking with pthreads
-
-AC_ARG_WITH([pthread],
-  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
-  [true],[with_pthread=no])
-vicare_with_pthread=no
-if test x$with_pthread != xno; then
-   vicare_with_pthread=yes
-   AC_CHECK_LIB([pthread],[main])
-fi
-AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding to Libffi
