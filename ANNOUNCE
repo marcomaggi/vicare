@@ -46,6 +46,11 @@ Notes for revision 0.2d20
   subdirectory of the top source directory.   This is to have less files
   in the top directory.  Sorry for the annoyance.
 
+* It may be needed (depending on the platform?) to link with the pthread
+  library (using the appropriate "configure"  option) to make use of the
+  POSIX semaphore functions.  The  configuration script has been changed
+  to make this possible, by including early the pthread linker option.
+
 * The library search path has been fixed; it is now initialised to:
 
      $(libdir)/scheme/r6rs
