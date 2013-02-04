@@ -93,13 +93,13 @@ integer sequences of fixed length.  The length of a valid index sequence
 is the @dfn{rank} or the number of @dfn{dimensions} of an array.  The
 @dfn{shape} of an array consists of bounds for each index.
 
-The lower bound @var{b} and the upper bound @var{e} of a dimension are
-exact integers with @code{(<= @var{b} @var{e})}.
+The lower bound @var{B} and the upper bound @var{E} of a dimension are
+exact integers with @code{(<= @var{B} @var{E})}.
 
-A valid index along the dimension is an exact integer @var{k} that
-satisfies both @code{(<= @var{b} @var{k})} and @code{(< @var{k}
-@var{e})}.  The length of the array along the dimension is the
-difference @code{(- @var{e} @var{b})}.  The @dfn{size} of an array is
+A valid index along the dimension is an exact integer @var{K} that
+satisfies both @code{(<= @var{B} @var{K})} and @code{(< @var{K}
+@var{E})}.  The length of the array along the dimension is the
+difference @code{(- @var{E} @var{B})}.  The @dfn{size} of an array is
 the product of the lengths of its dimensions.
 
 A shape is specified as an even number of exact integers.  These are
@@ -108,14 +108,14 @@ alternately the lower and upper bounds for the dimensions of an array.
 The following ten procedures should be implemented.
 
 
-@defun array? @var{obj})
+@defun array? @var{obj}
 Return @true{} if @var{obj} is an array, otherwise return @false{}.
 @end defun
 
 
 @defun make-array @var{shape}
 @defunx make-array @var{shape} @var{obj}
-Returns a newly allocated array whose shape is given by @var{shape}.  If
+Return a newly allocated array whose shape is given by @var{shape}.  If
 @var{obj} is provided, then each element is initialized to it.
 Otherwise the initial contents of each element is unspecified.  The
 array does not retain a dependence to @var{shape}.
@@ -128,10 +128,10 @@ even number of exact integers that are pairwise not decreasing.  Each
 pair gives the lower and upper bound of a dimension.  If the shape is
 used to specify the dimensions of an array and @var{bound} @dots{} is
 the sequence @varo{b} @varo{e} @dots{} @vark{b} @vark{e} @dots{} of
-@var{n} pairs of bounds, then a valid index to the array is any sequence
-@varo{j} @dots{} @vark{j} @dots{} of @var{n} exact integers where each
-@vark{j} satisfies @code{(<= @vark{b} @vark{j})} and @code{(< @vark{j}
-@vark{e})}.
+@math{N} pairs of bounds, then a valid index to the array is any
+sequence @varo{j} @dots{} @vark{j} @dots{} of @math{N} exact integers
+where each @vark{j} satisfies @code{(<= @vark{b} @vark{j})} and @code{(<
+@vark{j} @vark{e})}.
 
 The shape of a @var{d}-dimensional array is a
 @iftex
@@ -140,10 +140,10 @@ The shape of a @var{d}-dimensional array is a
 @ifnottex
 @math{@var{d} * 2}
 @end ifnottex
-array where the element at @math{@var{k} = 0} contains the lower bound
-for an index along dimension @var{k} and the element at @math{@var{k} =
-1} contains the corresponding upper bound, where @var{k} satisfies
-@code{(<= 0 @var{k})} and @code{(< @var{k} @var{d})}.
+array where the element at @math{@var{K} = 0} contains the lower bound
+for an index along dimension @var{K} and the element at @math{@var{K} =
+1} contains the corresponding upper bound, where @var{K} satisfies
+@code{(<= 0 @var{K})} and @code{(< @var{K} @var{d})}.
 @end defun
 
 
@@ -164,22 +164,22 @@ Return the number of dimensions of @var{array}.
 @end defun
 
 
-@defun array-start @var{array} @var{k}
-Return the lower bound for the index along dimension @var{k}.
+@defun array-start @var{array} @var{K}
+Return the lower bound for the index along dimension @var{K}.
 @end defun
 
 
-@defun array-end @var{array} @var{k}
-Return the upper bound for the index along dimension @var{k}.
+@defun array-end @var{array} @var{K}
+Return the upper bound for the index along dimension @var{K}.
 @end defun
 
 
-@defun array-ref @var{array} @var{k} @dots{}
+@defun array-ref @var{array} @var{K} @dots{}
 @defunx array-ref @var{array} @var{index}
-Return the contents of the element of @var{array} at index @var{k}
-@dots{}.  The sequence @var{k} @dots{} must be a valid index to
+Return the contents of the element of @var{array} at index @var{K}
+@dots{}.  The sequence @var{K} @dots{} must be a valid index to
 @var{array}.  In the second form, @var{index} must be either a vector or
-a @math{0}-based @math{1}-dimensional array containing @var{k} @dots{}.
+a @math{0}-based @math{1}-dimensional array containing @var{K} @dots{}.
 
 @example
 (array-ref (array (shape 0 2 0 3)
@@ -197,13 +197,13 @@ a @math{0}-based @math{1}-dimensional array containing @var{k} @dots{}.
 @end defun
 
 
-@defun array-set! @var{array} @var{k} @dots{} @var{obj}
+@defun array-set! @var{array} @var{K} @dots{} @var{obj}
 @defunx array-set! @var{array} @var{index} @var{obj}
-Store @var{obj} in the element of @var{array} at index @var{k} @dots{}.
-Return an unspecified value.  The sequence @var{k} @dots{} must be a
+Store @var{obj} in the element of @var{array} at index @var{K} @dots{}.
+Return an unspecified value.  The sequence @var{K} @dots{} must be a
 valid index to @var{array}.  In the second form, @var{index} must be
 either a vector or a @math{0}-based @math{1}-dimensional array
-containing @var{k} @dots{}.
+containing @var{K} @dots{}.
 
 @example
 (let ((a (make-array (shape 4 5 4 5 4 5))))
@@ -279,10 +279,11 @@ other. Notes have gone missing.)  @srfi{} feedback led to improved
 wording, hidden shapes, and two kinds of index objects.
 
 The exact title of the proposal comes from a
-@url{http://zurich.ai.mit.edu/pipermail/rrrs-authors/1998-May/002349.html}
-message titled ``a process that might work'' by William D. Clinger to
+@url{http://@/zurich.ai.mit.edu/@/pipermail/@/rrrs-authors/@/1998-May/@/002349.html,
+message} titled ``a process that might work'' by William D. Clinger to
 the @code{rrrs-authors} mailing list in 1998.  That appears to be a part
-of the past of the @url{http://srfi.schemers.org/, @srfi{}} process.
+of the past of the @url{http:/@//@/srfi.schemers.org/@/, @srfi{}}
+process.
 
 @c page
 @node srfi marray copyright

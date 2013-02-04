@@ -182,7 +182,7 @@
 		    ($array-type-index a)
 		    ($array-type-vector x)
 		    ($array-type-index x))
-		 (%error array-ref "bad index object"))))))))))
+		 (error who "bad index object"))))))))))
 
 
 (define (array-set! a x . xs)
@@ -900,50 +900,56 @@
 ;;; non-decreasing integers. Note that any such array can be a shape.
 
 (define (shape . bounds)
+  (define who 'shape)
   (let ((v (list->vector bounds)))
     (or (even? (vector-length v))
-        (%error (string-append "shape: uneven number of bounds: "
-                              (array:list->string bounds))))
+        (error who
+	  (string-append "shape: uneven number of bounds: "
+			 (array:list->string bounds))))
     (let ((shp (%make-array-record
                 v
                 (if (pair? bounds)
                     (array:shape-index)
-                    (array:empty-shape-index))
+		  (array:empty-shape-index))
                 (vector 0 (quotient (vector-length v) 2)
                         0 2))))
       (or (array:good-shape? shp)
-          (%error (string-append "shape: bounds are not pairwise "
-                                "non-decreasing exact integers: "
-                                (array:list->string bounds))))
+          (error who
+	    (string-append "shape: bounds are not pairwise non-decreasing exact integers: "
+			   (array:list->string bounds))))
       shp)))
 
 ;;; (array shape obj ...)
 ;;; is analogous to `vector'.
 
 (define (array shape . elts)
+  (define who 'array)
   (or (array:good-shape? shape)
-      (%error (string-append "array: shape " (array:thing->string shape)
-                            " is not a shape")))
+      (error who
+	(string-append "array: shape "
+		       (array:thing->string shape)
+		       " is not a shape")))
   (let ((size (%shape->number-of-elements shape)))
     (let ((vector (list->vector elts)))
       (or (= (vector-length vector) size)
-          (%error (string-append "array: an array of shape "
-                                (array:shape-vector->string
-                                 ($array-type-vector shape))
-                                " has "
-                                (number->string size)
-                                " elements but got "
-                                (number->string (vector-length vector))
-                                " values: "
-                                (array:list->string elts))))
+          (error who
+	    (string-append "array: an array of shape "
+			   (array:shape-vector->string
+			    ($array-type-vector shape))
+			   " has "
+			   (number->string size)
+			   " elements but got "
+			   (number->string (vector-length vector))
+			   " values: "
+			   (array:list->string elts))))
       (%make-array-record
        vector
        (if (= size 0)
            (array:optimize-empty
             (vector-ref ($array-type-shape shape) 1))
-           (array:optimize
-            (array:make-index shape)
-            (vector-ref ($array-type-shape shape) 1)))
+	 (array:optimize
+	  (array:make-index shape)
+	  (vector-ref ($array-type-shape shape) 1)))
        (array:shape->vector shape)))))
 
 ;;; (array-rank array)
@@ -976,22 +982,23 @@
 ;;; Todo: in the error message, should recognise the mapping and show it.
 
 (define (share-array array subshape f)
+  (define who 'share-array)
   (or (array:good-shape? subshape)
-      (%error (string-append "share-array: shape "
-                            (array:thing->string subshape)
-                            " is not a shape")))
+      (error who (string-append "share-array: shape "
+				(array:thing->string subshape)
+				" is not a shape")))
   (let ((subsize (%shape->number-of-elements subshape)))
     (or (array:good-share? subshape subsize f ($array-type-shape array))
-        (%error (string-append "share-array: subshape "
-                              (array:shape-vector->string
-                               ($array-type-vector subshape))
-                              " does not map into supershape "
-                              (array:shape-vector->string
-                               ($array-type-shape array))
-                              " under mapping "
-                              (array:map->string
-                               f
-                               (vector-ref ($array-type-shape subshape) 1)))))
+        (error who (string-append "share-array: subshape "
+				  (array:shape-vector->string
+				   ($array-type-vector subshape))
+				  " does not map into supershape "
+				  (array:shape-vector->string
+				   ($array-type-shape array))
+				  " under mapping "
+				  (array:map->string
+				   f
+				   (vector-ref ($array-type-shape subshape) 1)))))
     (let ((g ($array-type-index array)))
       (%make-array-record
        ($array-type-vector array)
