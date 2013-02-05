@@ -44,6 +44,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-multidimensional-array.texi	\
 	srfi-general-cond.texi			\
 	srfi-let-values.texi			\
+	srfi-hash-tables.texi			\
 	srfi-lightweight-testing.texi		\
 	srfi-list.texi				\
 	srfi-parameters.texi			\

@@ -251,11 +251,12 @@ Take an ``association list'' @var{alist} and create a hash table
 the cdr of corresponding elements in @var{alist}.
 
 @var{equal?}, @var{hash}, and @var{arg}s are interpreted as in
-@func{make-hash-table}.  If some key occurs multiple times in alist, the
-value in the first association will take precedence over later ones.
-(Note: the choice of using cdr (instead of cadr) for values tries to
-strike balance between the two approaches: using cadr would render this
-procedure unusable for cdr alists, but not vice versa.)
+@func{make-hash-table}.  If some key occurs multiple times in
+@var{alist}, the value in the first association will take precedence
+over later ones.  (Note: the choice of using cdr (instead of cadr) for
+values tries to strike balance between the two approaches: using cadr
+would render this procedure unusable for cdr alists, but not vice
+versa.)
 
 The rest @var{arg}s are passed to @func{make-hash-table} and can thus be
 used for implementation--specific extensions.
@@ -282,10 +283,10 @@ Return the hash function used for keys of @var{hash-table}.
 
 @defun hash-table-ref @var{hash-table} @var{key}
 @defunx hash-table-ref @var{hash-table} @var{key} @var{thunk}
-This procedure returns the value associated to key in @var{hash-table}.
-If no value is associated to key and thunk is given, it is called with
-no arguments and its value is returned; if thunk is not given, an error
-is signalled.
+This procedure returns the value associated to @var{key} in
+@var{hash-table}.  If no value is associated to @var{key} and
+@var{thunk} is given, it is called with no arguments and its value is
+returned; if @var{thunk} is not given, an error is signalled.
 
 Given a good hash function, this operation should have an (amortised)
 complexity of @math{O(1)} with respect to the number of associations in
