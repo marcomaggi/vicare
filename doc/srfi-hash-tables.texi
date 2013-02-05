@@ -1,0 +1,571 @@
+@node srfi hash-tables
+@section @ansrfi{69} basic hash tables
+
+
+@cindex @srfi{} basic hash tables
+
+
+The library @library{srfi :69} is by Andreas Rottmann as the reference
+implementation for @ansrfi{39} by Panu Kalliokoski; see:
+
+@center @url{http://srfi.schemers.org/srfi-69/srfi-69.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi hash-tables abstract::   Abstract.
+* srfi hash-tables issues::     Issues.
+* srfi hash-tables rationale::  Rationale.
+* srfi hash-tables spec::       Specification.
+* srfi hash-tables copyright::  Copyright.
+@end menu
+
+@c page
+@node srfi hash-tables abstract
+@subsection Abstract
+
+
+This @srfi{} defines basic hash tables.  Hash tables are widely
+recognised as a fundamental data structure for a wide variety of
+applications.  A hash table is a data structure that:
+
+@enumerate
+@item
+Provides a mapping from some set of keys to some set of values
+associated to those keys.
+
+@item
+Has no intrinsic order for the (key, value) associations it contains.
+
+@item
+Supports in--place modification as the primary means of setting the
+contents of a hash table.
+
+@item
+Provides key lookup and destructive update in amortised constant time,
+provided that a good hash function is used.
+@end enumerate
+
+This @srfi{} aims to accomplish these goals:
+
+@enumerate
+@item
+To provide a consistent, generic and widely applicable @api{} for hash
+tables.
+
+@item
+To improve code portability by providing a standard hash table facility
+with guaranteed behaviour.
+
+@item
+To help the programmer by defining utility routines that account for the
+most common situations of using hash tables.
+@end enumerate
+
+@c page
+@node srfi hash-tables issues
+@subsection Issues
+
+
+There is no single best way to make hash tables.  The tables presented
+in this @srfi{} aim at being both conceptually simple and usable for a
+wide variety of applications.  Even though a portable implementation is
+provided, Scheme implementations can speed things up considerably by
+e.g. providing an internal hash function for symbols.  Moreover, almost
+every Scheme implementation already has some kind of low--level hash
+table functionality, because that's the natural way to implement the
+global environment, and specifically, to provide support for
+@func{string->symbol}.  There might be some benefit in integration
+between implementation--specific environment data types and the hash
+table @api{} presented here; however, these issues are left open.
+
+This @srfi{} does not conform to the interface of maps presented in
+@ansrfi{44}.  Following @ansrfi{44} would seriously cripple the
+interface of hash tables.  The naming of the operations for maps in
+@ansrfi{44} goes against common use and is unnatural.  However, this
+@srfi{} has been written so that it does not prevent a @ansrfi{44}
+@api{} to hash tables.  An implementation supporting both @ansrfi{44}
+and this @srfi{} is encouraged to provide a @ansrfi{44} interface to
+hash tables in addition to the one presented here.
+
+@c page
+@node srfi hash-tables rationale
+@subsection Rationale
+
+
+Hash tables are widely recognised as a fundamental data structure for
+many kinds of computational tasks.  Thus far, there is no existing
+standard for Scheme hash tables; however, almost every non--minimal
+Scheme implementation provides some kind of hash table functionality.
+
+Alas, although somewhat similar, these hash table @api{}s have many
+differences: some trivial, like the naming of certain functions; some
+complex, like revealing different aspects of the internal implementation
+to the user; some coarse, like requiring keys to be of some specific
+type(s); some subtle, like requiring the user to guess the size of the
+hash table in advance to get optimal performance.  As a result, the
+existing hash table facilities cannot be used to write portable
+programs.
+
+The primary aim of this @srfi{} is to establish a standard @api{} for
+hash tables so that portable programs can be written that make efficient
+use of common hash table functionality.  The @srfi{} resolves
+discrepancies that exist between the various hash table @api{}'s with
+respect to naming and semantics of hash table operations.  A lot of
+effort has been put into making the the API consistent, simple and
+generic.  The @srfi{} also defines some of the most common utility
+routines that would otherwise need to be written and rewritten for
+various applications.
+
+Incorporating this @srfi{} as a standard feature in Scheme
+implementations makes it possible to write efficient and portable
+programs that use hash tables.
+
+@c page
+@node srfi hash-tables spec
+@subsection Specification
+
+
+@menu
+* srfi hash-tables spec names::    Names defined in this @srfi{}.
+* srfi hash-tables spec type::     Type constructors and predicate.
+* srfi hash-tables spec queries::  Reflective queries.
+* srfi hash-tables spec single::   Dealing with single elements.
+* srfi hash-tables spec whole::    Dealing with the whole contents.
+* srfi hash-tables spec hashing::  Hashing.
+@end menu
+
+@c page
+@node srfi hash-tables spec names
+@subsubsection Names defined in this @srfi{}
+
+
+Names defined in this @srfi{}:
+
+@table @strong
+@item Type constructors and predicate
+@example
+make-hash-table         hash-table?
+alist->hash-table
+@end example
+
+@item Reflective queries
+@example
+hash-table-equivalence-function
+hash-table-hash-function
+@end example
+
+@item Dealing with single elements
+@example
+hash-table-ref          hash-table-ref/default
+hash-table-set!         hash-table-delete!
+hash-table-exists?      hash-table-update!
+hash-table-update!/default
+@end example
+
+@item Dealing with the whole contents
+@example
+hash-table-size         hash-table-keys
+hash-table-values       hash-table-walk
+hash-table-fold         hash-table->alist
+hash-table-copy         hash-table-merge!
+@end example
+
+@item Hashing
+@example
+hash                    hash-by-identity
+string-hash             string-ci-hash
+@end example
+@end table
+
+An implementation that does not provide:
+
+@example
+hash-table-ref          hash-table-set!
+hash-table-delete!      hash-table-update!
+hash-table-exists?      hash-table-size
+@end example
+
+@noindent
+in amortised constant time (when a good hash function is used), or fails
+to provide good hash function definitions for:
+
+@example
+hash                    string-hash
+string-ci-hash          hash-by-identity
+@end example
+
+@noindent
+does not conform to this @srfi{}.
+
+Hash table implementations are allowed to rely on the fact that the hash
+value of a key in hash table does not change.  In most cases, modifying
+a key in--place after it has been inserted into the hash table will
+violate this constraint and thus leads to unspecified behaviour.
+
+@c page
+@node srfi hash-tables spec type
+@subsubsection Type constructors and predicate
+
+
+@defun make-hash-table
+@defunx make-hash-table @var{equal?}
+@defunx make-hash-table @var{equal?} @var{hash}
+@defunx make-hash-table @var{equal?} @var{hash} @var{arg} ...
+Create a new hash table with no associations.  @var{equal?} is a
+predicate that should accept two keys and return a boolean telling
+whether they denote the same key value; it defaults to @func{equal?}.
+
+@var{hash} is a hash function, and defaults to an appropriate hash
+function for the given @func{equal?} predicate (@pxref{srfi hash-tables
+spec hashing}).  However, an acceptable default is not guaranteed to be
+given for any equivalence predicate coarser than @func{equal?}, except
+for @func{string-ci=?}.@footnote{An equivalence predicate @vari{C} is
+coarser than a equivalence predicate @varii{C} iff there exist values
+@var{X} and @var{Y} such that @code{(and (@vari{C} @var{X} @var{Y}) (not
+(@varii{C} @var{X} @var{Y})))}.}  The function hash must be acceptable
+for @func{equal?}, so if we use coarser equivalence than @func{equal?}
+other than @func{string-ci=?}, we must always provide the function
+@var{hash} ourself.
+
+Implementations are allowed to use the rest @var{arg}s for
+implementation--specific extensions.  Be warned, though, that using
+these extensions will make our program less portable.
+@end defun
+
+
+@defun hash-table? @var{obj}
+A predicate to test whether a given object @var{obj} is a hash table;
+return a boolean.  The hash table type should be disjoint from all other
+types, if possible.
+@end defun
+
+
+@defun alist->hash-table @var{alist}
+@defunx alist->hash-table @var{alist} @var{equal?}
+@defunx alist->hash-table @var{alist} @var{equal?} @var{hash}
+@defunx alist->hash-table @var{alist} @var{equal?} @var{hash} @var{arg} ...
+Take an ``association list'' @var{alist} and create a hash table
+@var{hash-table} which maps the car of every element in @var{alist} to
+the cdr of corresponding elements in @var{alist}.
+
+@var{equal?}, @var{hash}, and @var{arg}s are interpreted as in
+@func{make-hash-table}.  If some key occurs multiple times in alist, the
+value in the first association will take precedence over later ones.
+(Note: the choice of using cdr (instead of cadr) for values tries to
+strike balance between the two approaches: using cadr would render this
+procedure unusable for cdr alists, but not vice versa.)
+
+The rest @var{arg}s are passed to @func{make-hash-table} and can thus be
+used for implementation--specific extensions.
+@end defun
+
+@c page
+@node srfi hash-tables spec queries
+@subsubsection Reflective queries
+
+
+@defun hash-table-equivalence-function @var{hash-table}
+Return the equivalence predicate used for keys of @var{hash-table}.
+@end defun
+
+
+@defun hash-table-hash-function @var{hash-table}
+Return the hash function used for keys of @var{hash-table}.
+@end defun
+
+@c page
+@node srfi hash-tables spec single
+@subsubsection Dealing with single elements
+
+
+@defun hash-table-ref @var{hash-table} @var{key}
+@defunx hash-table-ref @var{hash-table} @var{key} @var{thunk}
+This procedure returns the value associated to key in @var{hash-table}.
+If no value is associated to key and thunk is given, it is called with
+no arguments and its value is returned; if thunk is not given, an error
+is signalled.
+
+Given a good hash function, this operation should have an (amortised)
+complexity of @math{O(1)} with respect to the number of associations in
+@var{hash-table}.
+
+@quotation
+@strong{NOTE} This rules out implementation by association lists or
+fixed--length hash tables.
+@end quotation
+@end defun
+
+
+@defun hash-table-ref/default @var{hash-table} @var{key} @var{default}
+Evaluate to the same value as:
+
+@example
+(hash-table-ref @var{hash-table} @var{key} (lambda () @var{default}))
+@end example
+
+Given a good hash function, this operation should have an (amortised)
+complexity of @math{O(1)} with respect to the number of associations in
+hash-table.
+
+@quotation
+@strong{NOTE} This rules out implementation by association lists or
+fixed--length hash tables.
+@end quotation
+@end defun
+
+
+@defun hash-table-set! @var{hash-table} @var{key} @var{value}
+Set the value associated to @var{key} in @var{hash-table}.  The previous
+association (if any) is removed.
+
+Given a good hash function, this operation should have an (amortised)
+complexity of @math{O(1)} with respect to the number of associations in
+hash-table.
+
+@quotation
+@strong{NOTE} This rules out implementation by association lists or
+fixed--length hash tables.
+@end quotation
+@end defun
+
+
+@defun hash-table-delete! @var{hash-table} @var{key}
+Remove any association to key in @var{hash-table}.  It is not an error
+if no association for that key exists; in this case, nothing is done.
+
+Given a good hash function, this operation should have an (amortised)
+complexity of @math{O(1)} with respect to the number of associations in
+hash-table.
+
+@quotation
+@strong{NOTE} This rules out implementation by association lists or
+fixed--length hash tables.
+@end quotation
+@end defun
+
+
+@defun hash-table-exists? @var{hash-table} @var{key}
+Tell whether there is any association to @var{key} in @var{hash-table};
+return a boolean.
+
+Given a good hash function, this operation should have an (amortised)
+complexity of @math{O(1)} with respect to the number of associations in
+hash-table.
+
+@quotation
+@strong{NOTE} This rules out implementation by association lists or
+fixed--length hash tables.
+@end quotation
+@end defun
+
+
+@defun hash-table-update! @var{hash-table} @var{key} @var{function}
+@defunx hash-table-update! @var{hash-table} @var{key} @var{function} @var{thunk}
+Semantically equivalent to, but may be implemented more efficiently
+than, the following code:
+
+@example
+(hash-table-set! @var{hash-table} @var{key}
+  (@var{function} (hash-table-ref @var{hash-table} @var{key} @var{thunk})))
+@end example
+@end defun
+
+
+@defun hash-table-update!/default @var{hash-table} @var{key} @var{function} @var{default}
+Behave as if it evaluates to:
+
+@example
+(hash-table-update! @var{hash-table} @var{key} @var{function}
+  (lambda () @var{default}))
+@end example
+@end defun
+
+@c page
+@node srfi hash-tables spec whole
+@subsubsection Dealing with the whole contents
+
+
+@defun hash-table-size @var{hash-table}
+Return an exact integer representing the number of associations in
+@var{hash-table}.  This operation must have a complexity of @math{O(1)}
+with respect to the number of associations in @var{hash-table}.
+@end defun
+
+
+@defun hash-table-keys @var{hash-table}
+Return a list of keys in @var{hash-table}.  The order of the keys is
+unspecified.
+@end defun
+
+
+@defun hash-table-values @var{hash-table}
+Return a list of values in @var{hash-table}.  The order of the values is
+unspecified, and is not guaranteed to match the order of keys in the
+result of @func{hash-table-keys}.
+@end defun
+
+
+@defun hash-table-walk @var{hash-table} @var{proc}
+@var{proc} should be a function taking two arguments, a key and a value.
+This procedure calls proc for each association in @var{hash-table},
+giving the key of the association as key and the value of the
+association as value.  The results of @var{proc} are discarded.  The
+order in which proc is called for the different associations is
+unspecified.
+
+@quotation
+@strong{NOTE} In some implementations, there is a procedure called
+@func{hash-table-map} which does the same as this procedure.  However,
+in other implementations, @func{hash-table-map} does something else.  In
+no implementation that I know of, @func{hash-table-map} does a real
+functorial map that lifts an ordinary function to the domain of hash
+tables.  Because of these reasons, @func{hash-table-map} is left outside
+this @srfi{}.
+@end quotation
+@end defun
+
+
+@defun hash-table-fold @var{hash-table} @var{f} @var{init-value}
+Call @var{f} for every association in @var{hash-table} with three
+arguments:
+
+@enumerate
+@item
+The key of the association key.
+
+@item
+The value of the association value.
+
+@item
+An ``accumulated value'', @var{val}.
+@end enumerate
+
+@var{val} is @var{init-value} for the first invocation of @var{f}, and,
+for subsequent invocations of @var{f}, the return value of the previous
+invocation of @var{f}.  The value @var{final-value} returned by
+@func{hash-table-fold} is the return value of the last invocation of
+@var{f}.  The order in which @var{f} is called for different
+associations is unspecified.
+@end defun
+
+
+@defun hash-table->alist @var{hash-table}
+Return an association list such that the car of each element in alist is
+a key in @var{hash-table} and the corresponding cdr of each element in
+alist is the value associated to the key in @var{hash-table}.  The order
+of the elements is unspecified.
+
+The following should always produce a hash table with the same mappings
+as a hash table @var{H}:
+
+@example
+(alist->hash-table (hash-table->alist @var{h})
+                   (hash-table-equivalence-function @var{h})
+                   (hash-table-hash-function @var{h}))
+@end example
+@end defun
+
+
+@defun hash-table-copy @var{hash-table}
+Return a new hash table with the same equivalence predicate, hash
+function and mappings as in @var{hash-table}.
+@end defun
+
+
+@defun hash-table-merge! @vari{hash-table} @varii{hash-table}
+Add all mappings in @varii{hash-table} into @vari{hash-table} and return
+the resulting hash table.  This function may modify @vari{hash-table}
+destructively.
+@end defun
+
+@c page
+@node srfi hash-tables spec hashing
+@subsubsection Hashing
+
+
+Hashing means the act of taking some value and producing a number from
+the value.  A hash function is a function that does this.  Every
+equivalence predicate @var{E} has a set of acceptable hash functions for
+that predicate; a hash funtion hash is acceptable iff:
+
+@example
+(@var{E} obj1 obj2) @equiv{} (= (hash obj1) (hash obj2))
+@end example
+
+A hash function @var{H} is good for a equivalence predicate @var{E} if
+it distributes the result numbers (hash values) for non--equal objects
+(by @var{E}) as uniformly as possible over the numeric range of hash
+values, especially in the case when some (non--equal) objects resemble
+each other by e.g. having common subsequences.  This definition is vague
+but should be enough to assert that e.g. a constant function is not a
+good hash function.
+
+When the definition of @func{make-hash-table} above talks about an
+``appropriate'' hashing function for @var{E}, it means a hashing
+function that gives decent performance (for the hashing operation) while
+being both acceptable and good for @var{E}.  This definition, too, is
+intentionally vague.
+
+
+@defun hash @var{object}
+@defunx hash @var{object} @var{bound}
+Produce a hash value for object in the range @code{[0, @var{bound})}.
+If @var{bound} is not given, the implementation is free to choose any
+bound, given that the default bound is greater than the size of any
+imaginable hash table in a normal application.  (This is so that the
+implementation may choose some very big value in fixnum range for the
+default bound.)  This hash function is acceptable for @func{equal?}.
+@end defun
+
+
+@defun string-hash @var{string}
+@defunx string-hash @var{string} @var{bound}
+The same as @func{hash}, except that the argument string must be a
+string.
+@end defun
+
+
+@defun string-ci-hash @var{string}
+@defunx string-ci-hash @var{string} @var{bound}
+The same as @func{string-hash}, except that the case of characters in
+string does not affect the hash value produced.
+@end defun
+
+
+@defun hash-by-identity @var{object}
+@defunx hash-by-identity @var{object} @var{bound}
+The same as @func{hash}, except that this function is only guaranteed to
+be acceptable for @func{eq?}.  The reason for providing this function is
+that it might be implemented significantly more efficiently than
+@func{hash}.  Implementations are encouraged to provide this function as
+a builtin.
+@end defun
+
+@c page
+@node srfi hash-tables copyright
+@subsection Copyright
+
+
+Copyright @copyright{} Panu Kalliokoski (2005).  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
