@@ -352,6 +352,74 @@
   #t)
 
 
+(parametrise ((check-test-name	'hashing))
+
+  (check
+      (let ((I (srfi.hash "ciao")))
+        (and (integer? I)
+	     (exact?   I)))
+    => #t)
+
+  (check
+      (let ((I (srfi.hash "ciao" 10)))
+        (and (integer? I)
+	     (exact?   I)
+	     (< I 10)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((I (srfi.string-hash "ciao")))
+        (and (integer? I)
+	     (exact?   I)))
+    => #t)
+
+  (check
+      (let ((I (srfi.string-hash "ciao" 10)))
+        (and (integer? I)
+	     (exact?   I)
+	     (< I 10)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((I (srfi.string-ci-hash "ciao")))
+        (and (integer? I)
+	     (exact?   I)))
+    => #t)
+
+  (check
+      (let ((I (srfi.string-ci-hash "ciao" 10)))
+        (and (integer? I)
+	     (exact?   I)
+	     (< I 10)))
+    => #t)
+
+  (check
+      (= (srfi.string-ci-hash "ciao")
+	 (srfi.string-ci-hash "cIaO"))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((I (srfi.hash-by-identity "ciao")))
+        (and (integer? I)
+	     (exact?   I)))
+    => #t)
+
+  (check
+      (let ((I (srfi.hash-by-identity "ciao" 10)))
+        (and (integer? I)
+	     (exact?   I)
+	     (< I 10)))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -124,7 +124,7 @@
 ** DONE SRFI 61 cond
 ** SRFI 64 testing
 ** SRFI 67 comparison procedures
-** SRFI 69 basic hash tables
+** DONE SRFI 69 basic hash tables
 ** DONE SRFI 78 lightweight testing
 ** DONE SRFI 98 OS environment variables
 ** TODO SRFI 99 records
