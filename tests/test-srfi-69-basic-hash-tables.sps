@@ -190,6 +190,168 @@
   #t)
 
 
+(parametrise ((check-test-name	'whole))
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+        (srfi.hash-table-size H))
+    => 0)
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+        (srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! H "hello" 2)
+        (srfi.hash-table-size H))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+        (srfi.hash-table-keys H))
+    => '())
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+        (srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! H "hello" 2)
+        (list-sort string<? (srfi.hash-table-keys H)))
+    => '("ciao" "hello"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+        (srfi.hash-table-values H))
+    => '())
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+        (srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! H "hello" 2)
+        (list-sort < (srfi.hash-table-values H)))
+    => '(1 2))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (let ((H (srfi.make-hash-table)))
+	 (srfi.hash-table-walk H (lambda (key val)
+				   (add-result (list key val))))))
+    => `(,(void) ()))
+
+  (check
+      (with-result
+       (let ((H (srfi.make-hash-table)))
+	 (srfi.hash-table-set! H "ciao" 1)
+	 (srfi.hash-table-set! H "hello" 2)
+	 (srfi.hash-table-walk H (lambda (key val)
+				   (add-result (list key val))))))
+    => `(,(void) (("ciao" 1)
+		  ("hello" 2))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table-fold H
+					 (lambda (key val knil)
+					   (cons (cons key val)
+						 knil))
+					 '())))
+    => '())
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+	(srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! H "hello" 2)
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table-fold H
+					 (lambda (key val knil)
+					   (cons (cons key val)
+						 knil))
+					 '())))
+    => '(("ciao" . 1)
+	 ("hello" . 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table->alist H)))
+    => '())
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+	(srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! H "hello" 2)
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table->alist H)))
+    => '(("ciao" . 1)
+	 ("hello" . 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((H (srfi.make-hash-table))
+	     (K (srfi.hash-table-copy H)))
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table->alist K)))
+    => '())
+
+  (check
+      (let ((H (srfi.make-hash-table)))
+	(srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! H "hello" 2)
+	(let ((K (srfi.hash-table-copy H)))
+	  (list-sort (lambda (pair1 pair2)
+		       (string<? (car pair1)
+				 (car pair2)))
+		     (srfi.hash-table->alist K))))
+    => '(("ciao" . 1)
+	 ("hello" . 2)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((H (srfi.make-hash-table))
+	     (K (srfi.make-hash-table)))
+	(srfi.hash-table-merge! H K)
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table->alist H)))
+    => '())
+
+  (check
+      (let ((H (srfi.make-hash-table))
+	    (K (srfi.make-hash-table)))
+	(srfi.hash-table-set! H "ciao" 1)
+	(srfi.hash-table-set! K "hello" 2)
+	(srfi.hash-table-merge! H K)
+	(list-sort (lambda (pair1 pair2)
+		     (string<? (car pair1)
+			       (car pair2)))
+		   (srfi.hash-table->alist H)))
+    => '(("ciao" . 1)
+	 ("hello" . 2)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
