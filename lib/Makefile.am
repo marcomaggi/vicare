@@ -115,8 +115,7 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a45/lazy.sls				\
 	\
 	srfi/%3a48.sls					\
-	srfi/%3a48/intermediate-format-strings.sls			\
-	srfi/%3a48/intermediate-format-strings/compat.vicare.sls	\
+	srfi/%3a48/intermediate-format-strings.sls	\
 	\
 	srfi/%3a61/cond.sls				\
 	srfi/%3a61.sls					\

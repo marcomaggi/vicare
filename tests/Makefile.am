@@ -539,6 +539,7 @@ EXTRA_DIST = \
 	test-srfi-42-eager-comprehensions.sps		\
 	test-srfi-43-vectors.sps			\
 	test-srfi-45-lazy.sps				\
+	test-srfi-48-intermediate-format-strings.sps	\
 	test-srfi-61-general-cond.sps			\
 	test-srfi-67-compare-procedures.sps		\
 	test-srfi-69-basic-hash-tables.sps		\
