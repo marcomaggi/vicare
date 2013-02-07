@@ -121,8 +121,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a61.sls					\
 	\
 	srfi/%3a64.sls					\
-	srfi/%3a64/srfi-64-test.scm			\
-	srfi/%3a64/testing.scm				\
 	srfi/%3a64/testing.sls				\
 	\
 	srfi/%3a67/compare-procedures.sls		\
