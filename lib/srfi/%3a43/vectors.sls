@@ -133,34 +133,6 @@
     (srfi :8 receive))
 
 
-
-  ;; I do these let-syntax tricks so the original vector-lib.scm file does
-  ;; not have to be modified at all.
-  #;(let-syntax
-      ((define
-        (let ((vd (vanish-define define
-                   (make-vector vector vector? vector-ref vector-set! vector-length))))
-          (lambda (stx)
-            (define (rename? id)
-              (memp (lambda (x) (free-identifier=? id x))
-                    (list #'vector-fill! #'vector->list #'list->vector)))
-            (define (rename id)
-              (datum->syntax id
-               (string->symbol
-                (string-append "my:" (symbol->string (syntax->datum id))))))
-            (syntax-case stx ()
-              ((_ name . r)
-               (and (identifier? #'name)
-                    (rename? #'name))
-               #`(define #,(rename #'name) . r))
-              (_ (vd stx))))))
-       (define-syntax
-        (vanish-define define-syntax
-         (receive))))
-    (SRFI-23-error->R6RS "(library (srfi :43 vectors))"
-     (include/resolve ("srfi" "%3a43") "vector-lib.scm")))
-
-
 ;;;; utilities
 
 ;;; Not the best LET*-OPTIONALS, but not the worst, either.  Use Olin's
@@ -179,7 +151,7 @@
     ((aux ?orig-args-var ?args-var () ?body1 ?body2 ...)
      (if (null? ?args-var)
          (let () ?body1 ?body2 ...)
-         (error "too many arguments" (length ?orig-args-var)
+         (error #f "too many arguments" (length ?orig-args-var)
                 ?orig-args-var)))
     ((aux ?orig-args-var ?args-var
          ((?var ?default) ?more ...)
@@ -242,7 +214,7 @@
       ;; Recur: when (or if) the user gets a debugger prompt, he can
       ;; proceed where the call to ERROR was with the correct value.
       (check-type pred?
-                  (error "erroneous value"
+                  (error #f "erroneous value"
                          (list pred? value)
                          `(while calling ,callee))
                   callee)))
@@ -256,14 +228,14 @@
   (let ((index (check-type integer? index callee)))
     (cond ((< index 0)
            (check-index vec
-                        (error "vector index too low"
+                        (error #f "vector index too low"
                                index
                                `(into vector ,vec)
                                `(while calling ,callee))
                         callee))
           ((>= index (vector-length vec))
            (check-index vec
-                        (error "vector index too high"
+                        (error #f "vector index too high"
                                index
                                `(into vector ,vec)
                                `(while calling ,callee))
@@ -282,7 +254,7 @@
 ;;;   Returns no useful value.
 (define (check-indices vec start start-name end end-name callee)
   (let ((lose (lambda things
-                (apply error "vector range out of bounds"
+                (apply error #f "vector range out of bounds"
                        (append things
                                `(vector was ,vec)
                                `(,start-name was ,start)
@@ -356,7 +328,7 @@
                           (cadr args) end-name
                           callee))
           (else
-           (error "too many arguments"
+           (error #f "too many arguments"
                   `(extra args were ,(cddr args))
                   `(while calling ,callee))))))
 
@@ -639,7 +611,7 @@
                   (<= start n))
              (values start end fill))
             (else
-             (error "illegal arguments"
+             (error #f "illegal arguments"
                     `(while calling ,vector-copy)
                     `(start was ,start)
                     `(end was ,end)
@@ -654,7 +626,7 @@
           ((null? (cdddr args))
            (parse-args (car args) (cadr args) n (caddr args)))
           (else
-           (error "too many arguments"
+           (error #f "too many arguments"
                   vector-copy
                   (cdddr args))))))
 
@@ -1177,7 +1149,7 @@
                   (<= (+ tstart (- send sstart)) (vector-length target)))
              (%vector-copy! target tstart source sstart send))
             (else
-             (error "illegal arguments"
+             (error 'vector-copy! "illegal arguments"
                     `(while calling ,vector-copy!)
                     `(target was ,target)
                     `(target-length was ,(vector-length target))
@@ -1194,13 +1166,14 @@
           ((null? (cddr maybe-sstart+send))
            (doit! (car maybe-sstart+send) (cadr maybe-sstart+send) n))
           (else
-           (error "too many arguments"
+           (error 'vector-copy! "too many arguments"
                   vector-copy!
                   (cddr maybe-sstart+send))))))
 
 ;;; (VECTOR-REVERSE-COPY! <target> <tstart> <source> [<sstart> <send>])
 ;;; [wdc] Corrected to allow 0 <= sstart <= send <= (vector-length source).
 (define (vector-reverse-copy! target tstart source . maybe-sstart+send)
+  (define who 'vector-reverse-copy!)
   (define (doit! sstart send source-length)
     (let ((tstart (check-type nonneg-int? tstart vector-reverse-copy!))
           (sstart (check-type nonneg-int? sstart vector-reverse-copy!))
@@ -1209,25 +1182,26 @@
                   (or (between? sstart tstart send)
                       (between? tstart sstart
                                 (+ tstart (- send sstart)))))
-               (error "vector range for self-copying overlaps"
-                      vector-reverse-copy!
-                      `(vector was ,target)
-                      `(tstart was ,tstart)
-                      `(sstart was ,sstart)
-                      `(send   was ,send)))
+	     (error who
+	       "vector range for self-copying overlaps"
+	       vector-reverse-copy!
+	       `(vector was ,target)
+	       `(tstart was ,tstart)
+	       `(sstart was ,sstart)
+	       `(send   was ,send)))
             ((and (<= 0 sstart send source-length)
                   (<= (+ tstart (- send sstart)) (vector-length target)))
              (%vector-reverse-copy! target tstart source sstart send))
             (else
-             (error "illegal arguments"
-                    `(while calling ,vector-reverse-copy!)
-                    `(target was ,target)
-                    `(target-length was ,(vector-length target))
-                    `(tstart was ,tstart)
-                    `(source was ,source)
-                    `(source-length was ,source-length)
-                    `(sstart was ,sstart)
-                    `(send   was ,send))))))
+             (error who "illegal arguments"
+	       `(while calling ,vector-reverse-copy!)
+	       `(target was ,target)
+	       `(target-length was ,(vector-length target))
+	       `(tstart was ,tstart)
+	       `(source was ,source)
+	       `(source-length was ,source-length)
+	       `(sstart was ,sstart)
+	       `(send   was ,send))))))
   (let ((n (vector-length source)))
     (cond ((null? maybe-sstart+send)
            (doit! 0 n n))
@@ -1236,9 +1210,9 @@
           ((null? (cddr maybe-sstart+send))
            (doit! (car maybe-sstart+send) (cadr maybe-sstart+send) n))
           (else
-           (error "too many arguments"
-                  vector-reverse-copy!
-                  (cddr maybe-sstart+send))))))
+           (error who "too many arguments"
+	     vector-reverse-copy!
+	     (cddr maybe-sstart+send))))))
 
 ;;; (VECTOR-REVERSE! <vector> [<start> <end>]) -> unspecified
 ;;;   Destructively reverse the contents of the sequence of locations
@@ -1302,6 +1276,7 @@
 (define list->vector
   (let ((%list->vector rnrs.list->vector))
     (lambda (lst . maybe-start+end)
+      (define who 'list->vector)
       ;; Checking the type of a proper list is expensive, so we do it
       ;; amortizedly, or let %LIST->VECTOR or LIST-TAIL do it.
       (if (null? maybe-start+end)       ; Oughta use CASE-LAMBDA.
@@ -1317,7 +1292,7 @@
                  (vector-unfold f (- end start) (list-tail lst start)))
                (lambda (index l)
                  (cond ((null? l)
-                        (error "list was too short"
+                        (error who "list was too short"
                                `(list was ,lst)
                                `(attempted end was ,end)
                                `(while calling ,list->vector)))
@@ -1326,7 +1301,7 @@
                        (else
                         ;; Make this look as much like what CHECK-TYPE
                         ;; would report as possible.
-                        (error "erroneous value"
+                        (error who "erroneous value"
                                ;; We want SRFI 1's PROPER-LIST?, but it
                                ;; would be a waste to link all of SRFI
                                ;; 1 to this module for only the single
@@ -1346,6 +1321,7 @@
 ;;; This also diverges on circular lists unless, again, LENGTH returns
 ;;; something that makes - bork.
 (define (reverse-list->vector lst . maybe-start+end)
+  (define who 'reverse-list->vector)
   (let*-optionals maybe-start+end
       ((start 0)
        (end (length lst)))              ; Ugh -- LENGTH
@@ -1355,14 +1331,14 @@
          (vector-unfold-right f (- end start) (list-tail lst start)))
        (lambda (index l)
          (cond ((null? l)
-                (error "list too short"
+                (error who "list too short"
                        `(list was ,lst)
                        `(attempted end was ,end)
                        `(while calling ,reverse-list->vector)))
                ((pair? l)
                 (values (car l) (cdr l)))
                (else
-                (error "erroneous value"
+                (error who "erroneous value"
                        (list list? lst)
                        `(while calling ,reverse-list->vector)))))))))
 
