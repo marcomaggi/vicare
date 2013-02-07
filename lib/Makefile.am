@@ -110,7 +110,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a43.sls					\
 	srfi/%3a43/vectors.sls				\
-	srfi/%3a43/vector-lib.scm			\
 	\
 	srfi/%3a45.sls					\
 	srfi/%3a45/lazy.sls				\

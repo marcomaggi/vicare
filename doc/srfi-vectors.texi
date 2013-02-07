@@ -1,4 +1,4 @@
-@node srfi vector
+@node srfi vectors
 @section @ansrfi{43} vector library
 
 

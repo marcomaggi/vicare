@@ -42,7 +42,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi args-fold::              @ansrfi{37} a program argument processor.
 * srfi streams::                @ansrfi{41} streams.
 * srfi eager-comp::             @ansrfi{42} eager comprehensions.
-* srfi vector::                 @ansrfi{43} vector library.
+* srfi vectors::                @ansrfi{43} vector library.
 * srfi general-cond::           @ansrfi{61} a more general @func{cond} clause.
 * srfi compare-procedures::     @ansrfi{67} compare procedures.
 * srfi hash-tables::            @ansrfi{69} basic hash tables.
@@ -74,7 +74,7 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-args-fold.texi
 @include srfi-streams.texi
 @include srfi-eager-comp.texi
-@include srfi-vector.texi
+@include srfi-vectors.texi
 @include srfi-general-cond.texi
 @include srfi-compare-procedures.texi
 @include srfi-hash-tables.texi

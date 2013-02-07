@@ -59,6 +59,6 @@ vicare_scheme_TEXINFOS	= \
 	srfi-string-ports.texi			\
 	srfi-strings.texi			\
 	srfi-time.texi				\
-	srfi-vector.texi
+	srfi-vectors.texi
 
 ### end of file
