@@ -116,7 +116,7 @@
 ** DONE SRFI 38 shared structures
 ** DONE SRFI 39 parameters
 
-** SRFI 41 streams
+** DONE SRFI 41 streams
 ** DONE SRFI 42 eager comprehensions
 ** SRFI 43 vectors
 ** SRFI 45 lazy

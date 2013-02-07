@@ -535,6 +535,7 @@ EXTRA_DIST = \
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
+	test-srfi-41-streams.sps			\
 	test-srfi-42-eager-comprehensions.sps		\
 	test-srfi-61-general-cond.sps			\
 	test-srfi-67-compare-procedures.sps		\
