@@ -45,6 +45,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi vectors::                @ansrfi{43} vector library.
 * srfi lazy::                   @ansrfi{45} lazy iterative algorithms.
 * srfi general-cond::           @ansrfi{61} a more general @func{cond} clause.
+* srfi testing::                @ansrfi{64} testing.
 * srfi compare-procedures::     @ansrfi{67} compare procedures.
 * srfi hash-tables::            @ansrfi{69} basic hash tables.
 * srfi lightweight-testing::    @ansrfi{78} lightweight testing.
@@ -78,6 +79,7 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-vectors.texi
 @include srfi-lazy.texi
 @include srfi-general-cond.texi
+@include srfi-testing.texi
 @include srfi-compare-procedures.texi
 @include srfi-hash-tables.texi
 @include srfi-lightweight-testing.texi

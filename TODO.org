@@ -125,7 +125,10 @@
    Add documentation.
 
 ** DONE SRFI 61 cond
-** SRFI 64 testing
+** TODO SRFI 64 testing
+
+   Add documentation.
+
 ** TODO SRFI 67 comparison procedures
 
    Add documentation from the original HTML.

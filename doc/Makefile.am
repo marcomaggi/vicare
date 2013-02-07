@@ -59,6 +59,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-streams.texi			\
 	srfi-string-ports.texi			\
 	srfi-strings.texi			\
+	srfi-testing.texi			\
 	srfi-time.texi				\
 	srfi-vectors.texi
 

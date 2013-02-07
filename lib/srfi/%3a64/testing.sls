@@ -66,6 +66,8 @@
     (rnrs control)
     (rnrs exceptions)
     (rnrs io simple)
+    (only (rnrs io ports)
+	  flush-output-port)
     (rnrs lists)
     (rename (rnrs eval)
 	    (eval rnrs:eval))
@@ -92,6 +94,30 @@
     test-log-to-file)
    ((val)
     (set! test-log-to-file val))))
+
+(define %display
+  (case-lambda
+   ((thing)
+    (%display thing (current-output-port)))
+   ((thing port)
+    (display thing port)
+    (flush-output-port port))))
+
+(define %write
+  (case-lambda
+   ((thing)
+    (%write thing (current-output-port)))
+   ((thing port)
+    (write thing port)
+    (flush-output-port port))))
+
+(define %newline
+  (case-lambda
+   (()
+    (%newline (current-output-port)))
+   ((port)
+    (newline port)
+    (flush-output-port port))))
 
 
 (define-syntax %test-record-define
@@ -259,47 +285,47 @@
 (define (test-on-group-begin-simple runner suite-name count)
   (if (null? (test-runner-group-stack runner))
       (begin
-	(display "%%%% Starting test ")
-	(display suite-name)
+	(%display "%%%% Starting test ")
+	(%display suite-name)
 	(if test-log-to-file
 	    (let* ((log-file-name (if (string? test-log-to-file)
 				      test-log-to-file
 				    (string-append suite-name ".log")))
 		   (log-file (open-output-file log-file-name)))
-	      (display "%%%% Starting test " log-file)
-	      (display suite-name log-file)
-	      (newline log-file)
+	      (%display "%%%% Starting test " log-file)
+	      (%display suite-name log-file)
+	      (%newline log-file)
 	      (test-runner-aux-value! runner log-file)
-	      (display "  (Writing full log to \"")
-	      (display log-file-name)
-	      (display "\")")))
-	(newline)))
+	      (%display "  (Writing full log to \"")
+	      (%display log-file-name)
+	      (%display "\")")))
+	(%newline)))
   (let ((log (test-runner-aux-value runner)))
     (if (output-port? log)
 	(begin
-	  (display "Group begin: " log)
-	  (display suite-name log)
-	  (newline log))))
+	  (%display "Group begin: " log)
+	  (%display suite-name log)
+	  (%newline log))))
   #f)
 
 (define (test-on-group-end-simple runner)
   (let ((log (test-runner-aux-value runner)))
     (if (output-port? log)
 	(begin
-	  (display "Group end: " log)
-	  (display (car (test-runner-group-stack runner)) log)
-	  (newline log))))
+	  (%display "Group end: " log)
+	  (%display (car (test-runner-group-stack runner)) log)
+	  (%newline log))))
   #f)
 
 (define (%test-on-bad-count-write runner count expected-count port)
-  (display "*** Total number of tests was " port)
-  (display count port)
-  (display " but should be " port)
-  (display expected-count port)
-  (display ". ***" port)
-  (newline port)
-  (display "*** Discrepancy indicates testsuite error or exceptions. ***" port)
-  (newline port))
+  (%display "*** Total number of tests was " port)
+  (%display count port)
+  (%display " but should be " port)
+  (%display expected-count port)
+  (%display ". ***" port)
+  (%newline port)
+  (%display "*** Discrepancy indicates testsuite error or exceptions. ***" port)
+  (%newline port))
 
 (define (test-on-bad-count-simple runner count expected-count)
   (%test-on-bad-count-write runner count expected-count (current-output-port))
@@ -315,9 +341,9 @@
 (define (%test-final-report1 value label port)
   (if (> value 0)
       (begin
-	(display label port)
-	(display value port)
-	(newline port))))
+	(%display label port)
+	(%display value port)
+	(%newline port))))
 
 (define (%test-final-report-simple runner port)
   (%test-final-report1 (test-runner-pass-count runner)
@@ -406,8 +432,8 @@
 	       (source-line (assq 'source-line results))
 	       (source-form (assq 'source-form results))
 	       (test-name (assq 'test-name results)))
-	  (display "Test begin:" log)
-	  (newline log)
+	  (%display "Test begin:" log)
+	  (%newline log)
 	  (if test-name (%test-write-result1 test-name log))
 	  (if source-file (%test-write-result1 source-file log))
 	  (if source-line (%test-write-result1 source-line log))
@@ -431,20 +457,20 @@
 	       (test-name (assq 'test-name results)))
 	  (if (or source-file source-line)
 	      (begin
-		(if source-file (display (cdr source-file)))
-		(display ":")
-		(if source-line (display (cdr source-line)))
-		(display ": ")))
-	  (display (if (eq? kind 'xpass) "XPASS" "FAIL"))
+		(if source-file (%display (cdr source-file)))
+		(%display ":")
+		(if source-line (%display (cdr source-line)))
+		(%display ": ")))
+	  (%display (if (eq? kind 'xpass) "XPASS" "FAIL"))
 	  (if test-name
 	      (begin
-		(display " ")
-		(display (cdr test-name))))
-	  (newline)))
+		(%display " ")
+		(%display (cdr test-name))))
+	  (%newline)))
     (if (output-port? log)
 	(begin
-	  (display "Test end:" log)
-	  (newline log)
+	  (%display "Test end:" log)
+	  (%newline log)
 	  (let loop ((list (test-result-alist runner)))
 	    (if (pair? list)
 		(let ((pair (car list)))
@@ -455,11 +481,11 @@
 		  (loop (cdr list)))))))))
 
 (define (%test-write-result1 pair port)
-  (display "  " port)
-  (display (car pair) port)
-  (display ": " port)
-  (write (cdr pair) port)
-  (newline port))
+  (%display "  " port)
+  (%display (car pair) port)
+  (%display ": " port)
+  (%write (cdr pair) port)
+  (%newline port))
 
 (define (test-result-set! runner pname value)
   (let* ((alist (test-result-alist runner))

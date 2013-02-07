@@ -1,0 +1,16 @@
+@node srfi testing
+@section @ansrfi{64} testing
+
+
+@cindex @srfi{} parameters
+
+
+The library @library{srfi :64} is by Per Bothner as the reference
+implementation for @ansrfi{64}; see:
+
+@center @url{http://srfi.schemers.org/srfi-64/srfi-64.html}
+
+@noindent
+for more details.
+
+@c end of file
