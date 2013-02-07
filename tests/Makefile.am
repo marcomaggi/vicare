@@ -240,7 +240,15 @@ TESTS			=	\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
+	test-srfi-41-streams.sps			\
+	test-srfi-42-eager-comprehensions.sps		\
+	test-srfi-43-vectors.sps			\
+	test-srfi-45-lazy.sps				\
+	test-srfi-48-intermediate-format-strings.sps	\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-64-testing.sps			\
+	test-srfi-67-compare-procedures.sps		\
+	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
 	\
