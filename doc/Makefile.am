@@ -36,18 +36,19 @@ vicare_scheme_TEXINFOS	= \
 	srfi-args-fold.texi			\
 	srfi-case-lambda.texi			\
 	srfi-char-sets.texi			\
+	srfi-compare-procedures.texi		\
 	srfi-cond-expand.texi			\
 	srfi-eager-comp.texi			\
 	srfi-environment-variables.texi		\
 	srfi-err5rs-records.texi		\
 	srfi-error-reporting.texi		\
-	srfi-multidimensional-array.texi	\
 	srfi-general-cond.texi			\
-	srfi-let-values.texi			\
-	srfi-compare-procedures.texi		\
 	srfi-hash-tables.texi			\
+	srfi-lazy.texi				\
+	srfi-let-values.texi			\
 	srfi-lightweight-testing.texi		\
 	srfi-list.texi				\
+	srfi-multidimensional-array.texi	\
 	srfi-parameters.texi			\
 	srfi-random.texi			\
 	srfi-rec.texi				\

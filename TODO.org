@@ -119,7 +119,7 @@
 ** DONE SRFI 41 streams
 ** DONE SRFI 42 eager comprehensions
 ** DONE SRFI 43 vectors
-** SRFI 45 lazy
+** DONE SRFI 45 lazy
 ** SRFI 48 intermediate format strings
 ** DONE SRFI 61 cond
 ** SRFI 64 testing

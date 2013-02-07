@@ -34,237 +34,133 @@
 
 
 #!r6rs
-(import (rnrs)
-  (only (rnrs r5rs) modulo)
-  (srfi :64 testing)
-  (srfi :45 lazy))
+(import (vicare)
+  (prefix (srfi :45) srfi.)
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing SRFI 45: lazy\n")
+(check-display "*** testing SRFI 45: lazy\n")
 
 
-(define-syntax test-output
-  (syntax-rules ()
-    ((_ expected proc)
-     (test-equal expected
-       (call-with-string-output-port proc)))))
+(parametrise ((check-test-name	'memoization))
 
-(define-syntax test-leak
-  (syntax-rules ()
-    ((_ expr)
-     (begin
-       (display "Leak test, please watch memory consumption; press C-c when satisfied.\n")
-       (guard (c (#t 'aborted))
-         expr)))))
+  (check
+      (with-result
+       (call-with-string-output-port
+	   (lambda (port)
+	     (let ((s (srfi.delay (begin
+				    (display 'hello port)
+				    1))))
+	       (add-result (srfi.force s))
+	       (add-result (srfi.force s))))))
+    => '("hello" (1 1)))
 
-(test-begin "lazy-tests")
+  (check
+      (with-result
+       (call-with-string-output-port
+	   (lambda (port)
+	     (let ((s (srfi.delay (begin
+				    (display 'bonjour port)
+				    2))))
+	       (add-result (+ (srfi.force s) (srfi.force s)))))))
+    => '("bonjour" (4)))
 
-;=========================================================================
-; TESTS AND BENCHMARKS:
-;=========================================================================
+  ;;Pointed out by Alejandro Forero Cuervo.
+  (check
+      (with-result
+       (call-with-string-output-port
+	   (lambda (port)
+	     (let* ((r (srfi.delay (begin
+				     (display 'hi port)
+				     1)))
+		    (s (srfi.lazy r))
+		    (t (srfi.lazy s)))
+	       (add-result (srfi.force t))
+	       (add-result (srfi.force r))))))
+    => '("hi" (1 1)))
 
-;=========================================================================
-; Memoization test 1:
+;;; --------------------------------------------------------------------
 
-(test-output "hello"
-  (lambda (port)
-    (define s (delay (begin (display 'hello port) 1)))
-    (test-equal 1 (force s))
-    (test-equal 1 (force s))))
+  (let ()
+    (define (stream-drop s index)
+      (srfi.lazy
+       (if (zero? index)
+	   s
+	 (stream-drop (cdr (srfi.force s)) (- index 1)))))
 
-;=========================================================================
-; Memoization test 2:
+    (define (ones port)
+      (srfi.delay (begin
+		    (display 'ho port)
+		    (cons 1 (ones port)))))
 
-(test-output "bonjour"
-  (lambda (port)
-    (let ((s (delay (begin (display 'bonjour port) 2))))
-      (test-equal 4 (+ (force s) (force s))))))
+    (check
+	(with-result
+	 (call-with-string-output-port
+	     (lambda (port)
+	       (define s (ones port))
+	       (add-result (car (srfi.force (stream-drop s 4))))
+	       (add-result (car (srfi.force (stream-drop s 4)))))))
+      => '("hohohohoho" (1 1)))
+    #f)
 
-;=========================================================================
-; Memoization test 3: (pointed out by Alejandro Forero Cuervo)
+  #t)
 
-(test-output "hi"
-  (lambda (port)
-    (define r (delay (begin (display 'hi port) 1)))
-    (define s (lazy r))
-    (define t (lazy s))
-    (test-equal 1 (force t))
-    (test-equal 1 (force r))))
+
+(parametrise ((check-test-name	'reentrancy))
 
-;=========================================================================
-; Memoization test 4: Stream memoization
+  ;;From R5RS.
+  (check
+      (with-result
+       (letrec ((count 0)
+		(p (srfi.delay (begin
+				 (set! count (+ count 1))
+				 (if (> count x)
+				     count
+				   (srfi.force p)))))
+		(x 5))
+	 (add-result (srfi.force p))
+	 (set! x 10)
+	 (add-result (srfi.force p))))
+    => `(,(void) (6 6)))
 
-(define (stream-drop s index)
-  (lazy
-   (if (zero? index)
-       s
-       (stream-drop (cdr (force s)) (- index 1)))))
+  ;;From SRFI 40.
+  (check
+      (with-result
+       (letrec ((f (let ((first? #t))
+		     (srfi.delay
+		      (if first?
+			  (begin
+			    (set! first? #f)
+			    (srfi.force f))
+			'second)))))
+	 (add-result (srfi.force f))))
+    => `(,(void) (second)))
 
-(define (ones port)
-  (delay (begin
-           (display 'ho port)
-           (cons 1 (ones port)))))
+  ;;Due to John Shutt.
+  (check
+      (with-result
+       (let* ((q (let ((count 5))
+		   (define (get-count) count)
+		   (define p (srfi.delay (if (<= count 0)
+					     count
+					   (begin
+					     (set! count (- count 1))
+					     (srfi.force p)
+					     (set! count (+ count 2))
+					     count))))
+		   (list get-count p)))
+	      (get-count (car q))
+	      (p (cadr q)))
+	 (add-result (get-count))
+	 (add-result (srfi.force p))
+	 (add-result (get-count))))
+    => `(,(void) (5 0 10)))
 
-(test-output "hohohohoho"
-  (lambda (port)
-    (define s (ones port))
-    (test-equal 1
-                (car (force (stream-drop s 4))))
-    (test-equal 1
-                (car (force (stream-drop s 4))))))
-
-;=========================================================================
-; Reentrancy test 1: from R5RS
-
-(letrec ((count 0)
-         (p (delay (begin (set! count (+ count 1))
-                          (if (> count x)
-                              count
-                              (force p)))))
-         (x 5))
-  (test-equal 6 (force p))
-  (set! x 10)
-  (test-equal 6 (force p)))
-
-;=========================================================================
-; Reentrancy test 2: from SRFI 40
-
-(letrec ((f (let ((first? #t))
-              (delay
-                (if first?
-                    (begin
-                      (set! first? #f)
-                      (force f))
-                    'second)))))
-  (test-equal 'second (force f)))
-
-;=========================================================================
-; Reentrancy test 3: due to John Shutt
-
-(let* ((q (let ((count 5))
-            (define (get-count) count)
-            (define p (delay (if (<= count 0)
-                                 count
-                                 (begin (set! count (- count 1))
-                                        (force p)
-                                        (set! count (+ count 2))
-                                        count))))
-            (list get-count p)))
-       (get-count (car q))
-       (p (cadr q)))
-
-  (test-equal 5 (get-count))
-  (test-equal 0 (force p))
-  (test-equal 10 (get-count)))
-
-;=========================================================================
-; Test leaks:  All the leak tests should run in bounded space.
-
-;=========================================================================
-; Leak test 1: Infinite loop in bounded space.
-
-(define (loop) (lazy (loop)))
-(test-leak (force (loop)))   ;==> bounded space
-
-;=========================================================================
-; Leak test 2: Pending memos should not accumulate
-;              in shared structures.
-
-(let ()
-  (define s (loop))
-  (test-leak (force s)))     ;==> bounded space
-
-;=========================================================================
-; Leak test 3: Safely traversing infinite stream.
-
-(define (from n)
-  (delay (cons n (from (+ n 1)))))
-
-(define (traverse s)
-  (lazy (traverse (cdr (force s)))))
-
-(test-leak (force (traverse (from 0))))         ;==> bounded space
-
-;=========================================================================
-; Leak test 4: Safely traversing infinite stream
-;              while pointer to head of result exists.
-
-(let ()
-  (define s (traverse (from 0)))
-  (test-leak (force s)))     ;==> bounded space
-
-;=========================================================================
-; Convenient list deconstructor used below.
-
-(define-syntax match
-  (syntax-rules ()
-    ((match exp
-       (()      exp1)
-       ((h . t) exp2))
-     (let ((lst exp))
-       (cond ((null? lst) exp1)
-             ((pair? lst) (let ((h (car lst))
-                                (t (cdr lst)))
-                            exp2))
-             (else 'match-error))))))
-
-;========================================================================
-; Leak test 5: Naive stream-filter should run in bounded space.
-;              Simplest case.
-
-(define (stream-filter p? s)
-  (lazy (match (force s)
-          (()      (delay '()))
-          ((h . t) (if (p? h)
-                       (delay (cons h (stream-filter p? t)))
-                       (stream-filter p? t))))))
-
-(test-leak
- (force (stream-filter (lambda (n) (= n 10000000000))
-                       (from 0))))                     ;==> bounded space
-
-;========================================================================
-; Leak test 6: Another long traversal should run in bounded space.
-
-; The stream-ref procedure below does not strictly need to be lazy.
-; It is defined lazy for the purpose of testing safe compostion of
-; lazy procedures in the times3 benchmark below (previous
-; candidate solutions had failed this).
-
-(define (stream-ref s index)
-  (lazy
-   (match (force s)
-     (()      'error)
-     ((h . t) (if (zero? index)
-                  (delay h)
-                  (stream-ref t (- index 1)))))))
-
-; Check that evenness is correctly implemented - should terminate:
-
-(test-equal 0
-  (force (stream-ref (stream-filter zero? (from 0))
-                     0)))
-
-(let ()
-  (define s (stream-ref (from 0) 100000000))
-  (test-equal 100000000 (force s)))     ;==> bounded space
-
-;======================================================================
-; Leak test 7: Infamous example from SRFI 40.
-
-(define (times3 n)
-  (stream-ref (stream-filter
-               (lambda (x) (zero? (modulo x n)))
-               (from 0))
-              3))
-
-(test-equal 21 (force (times3 7)))
-(test-equal 300000000 (force (times3 100000000)))    ;==> bounded space
+  #t)
 
 
 ;;;; done
 
-(test-end "lazy-tests")
-#;(check-report)
+(check-report)
 
 ;;; end of file
