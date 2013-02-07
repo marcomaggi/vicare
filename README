@@ -13,6 +13,7 @@ Topics
   A. Credits
   B. Bug reports
   C. Resources
+  D. On boot images
 
 
 1. Introduction
@@ -294,6 +295,53 @@ Larceny		<http://www.larcenists.org/>
 Mosh		<http://code.google.com/p/mosh-scheme/>
 Racket		<http://racket-lang.org/>
 Ypsilon		<http://code.google.com/p/ypsilon/>
+
+
+D. On boot images
+-----------------
+
+Vicare comes with 2 prebuilt boot images:
+
+    $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+    $(top_srcdir)/scheme/vicare.boot.8.prebuilt
+
+one for 32-bit systems (4) and one for 64-bit systems (8).  The prebuilt
+images do not contain the latest version of the code.
+
+  When executing "make all" a new boot image is built:
+
+    $(builddir)/scheme/vicare.boot
+
+and this image is then installed  on the system by "make install".  This
+new boot image is the one containing the latest version of the code.
+
+  On a 32-bit system, when the maintainer feels it is time to rotate the
+boot images, he justs replaces by hand:
+
+    $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+
+with:
+
+    $(builddir)/scheme/vicare.boot
+
+then he does:
+
+    $ make boot-image-64-bit
+
+to (blindly) generate:
+
+    $(builddir)/scheme/vicare.boot.8.prebuilt
+
+and make it become the new:
+
+    $(top_srcdir)/scheme/vicare.boot.8.prebuilt
+
+  When building the 64-bit image, the file:
+
+    $(builddir)/scheme/ikarus.config.ss
+
+is filled with values that are invalid on a 32-bit system, so we have to
+remove it to return to building 32-bit images.
 
 
 ### end of file
