@@ -1,0 +1,17 @@
+@node srfi compare-procedures
+@section @ansrfi{67} compare procedures
+
+
+@cindex @srfi{} parameters
+
+
+The library @library{srfi :67} is by Sebastian Egner Jens Axel Soegaard
+as the reference implementation for @ansrfi{67}; see:
+
+@center @url{http://srfi.schemers.org/srfi-67/srfi-67.html}
+
+@noindent
+for more details.
+
+
+@c end of file
