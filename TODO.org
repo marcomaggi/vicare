@@ -110,7 +110,10 @@
    Review and cleanup of code.
 
 ** DONE SRFI 26 cut
-** SRFI 27 random-bits
+** TODO SRFI 27 random-bits
+
+   More tests are needed.
+
 ** DONE SRFI 31 rec
 ** DONE SRFI 37 args-fold
 ** DONE SRFI 38 shared structures
