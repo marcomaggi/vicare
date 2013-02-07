@@ -129,6 +129,9 @@
 
    Add documentation.
 
+   Establish  a  way  to  coordinate  this SRFI  with  the  requests  of
+   Automake's test harness.
+
 ** TODO SRFI 67 comparison procedures
 
    Add documentation from the original HTML.
