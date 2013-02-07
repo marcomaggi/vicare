@@ -237,6 +237,7 @@ TESTS			=	\
 	test-srfi-14-char-sets.sps			\
 	test-srfi-19-time.sps				\
 	test-srfi-26-cut.sps				\
+	test-srfi-27-random-bits.sps			\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
@@ -540,6 +541,7 @@ EXTRA_DIST = \
 	test-srfi-14-char-sets.sps			\
 	test-srfi-19-time.sps				\
 	test-srfi-26-cut.sps				\
+	test-srfi-27-random-bits.sps			\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\

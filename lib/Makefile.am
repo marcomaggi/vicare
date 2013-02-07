@@ -84,9 +84,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a27.sls					\
 	srfi/%3a27/random-bits.sls			\
-	srfi/%3a27/conftest.scm				\
-	srfi/%3a27/mrg32k3a-a.scm			\
-	srfi/%3a27/mrg32k3a.scm				\
 	\
 	srfi/%3a31.sls					\
 	srfi/%3a31/rec.sls				\
