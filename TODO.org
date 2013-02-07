@@ -113,7 +113,7 @@
 ** SRFI 27 random-bits
 ** DONE SRFI 31 rec
 ** DONE SRFI 37 args-fold
-** SRFI 38 shared structures
+** DONE SRFI 38 shared structures
 ** DONE SRFI 39 parameters
 
 ** SRFI 41 streams
