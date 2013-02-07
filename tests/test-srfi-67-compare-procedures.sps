@@ -319,16 +319,16 @@
   (check (complex-compare 1      +inf.0) => -1)
 
   (check (complex-compare -inf.0 -inf.0) => 0)
-  (check (complex-compare -inf.0      1) => +1)
-  (check (complex-compare 1      -inf.0) => -1)
+  (check (complex-compare -inf.0      1) => -1)
+  (check (complex-compare 1      -inf.0) => +1)
 
   (check (number-compare +inf.0 +inf.0) => 0)
   (check (number-compare +inf.0      1) => +1)
   (check (number-compare 1      +inf.0) => -1)
 
   (check (number-compare -inf.0 -inf.0) => 0)
-  (check (number-compare -inf.0      1) => +1)
-  (check (number-compare 1      -inf.0) => -1)
+  (check (number-compare -inf.0      1) => -1)
+  (check (number-compare 1      -inf.0) => +1)
 
   #t)
 

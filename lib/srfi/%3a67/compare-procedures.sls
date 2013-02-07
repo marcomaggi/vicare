@@ -112,8 +112,8 @@
   (for-each (lambda (x) (compare x x)) args)
   result)
 
-
-; 3-sided conditional
+
+;;;; 3-sided conditional
 
 (define-syntax if3
   (syntax-rules ()
@@ -124,8 +124,8 @@
        (( 1) greater)
        (else (error #f "comparison value not in {-1,0,1}"))))))
 
-
-; 2-sided conditionals for comparisons
+
+;;;; 2-sided conditionals for comparisons
 
 (define-syntax compare:if-rel?
   (syntax-rules ()
@@ -167,8 +167,8 @@
     ((if-not=? arg ...)
      (compare:if-rel? (-1 1) (0) arg ...))))
 
-
-; predicates from compare procedures
+
+;;;; predicates from compare procedures
 
 (define-syntax compare:define-rel?
   (syntax-rules ()
@@ -190,8 +190,8 @@
 (compare:define-rel? >=?   if>=?)
 (compare:define-rel? not=? if-not=?)
 
-
-; chains of length 3
+
+;;;; chains of length 3
 
 (define-syntax compare:define-rel1/rel2?
   (syntax-rules ()
@@ -226,8 +226,8 @@
 (compare:define-rel1/rel2? >=/>?  if>=? if>?)
 (compare:define-rel1/rel2? >=/>=? if>=? if>=?)
 
-
-; chains of arbitrary length
+
+;;;; chains of arbitrary length
 
 (define-syntax compare:define-chain-rel?
   (syntax-rules ()
@@ -261,8 +261,8 @@
 (compare:define-chain-rel? chain<=? if<=?)
 (compare:define-chain-rel? chain>=? if>=?)
 
-
-; pairwise inequality
+
+;;;; pairwise inequality
 
 (define pairwise-not=?
   (let ((= =) (<= <=))
@@ -300,8 +300,8 @@
 				  #f)
                               (split (+ i 1) (cdr x) x< (cons (car x) x>)))))))))))))
 
-
-; min/max
+
+;;;; min/max
 
 (define min-compare
   (case-lambda
@@ -353,8 +353,8 @@
            (max (if>=? (compare xmax (car xs)) xmax (car xs))
                 (cdr xs)))))))
 
-
-; kth-largest
+
+;;;; kth-largest
 
 (define kth-largest
   (let ((= =) (< <))
@@ -411,8 +411,8 @@
                         (split (cdr x) x< n< (cons (car x) x=) (+ n= 1) x> n>)
                         (split (cdr x) x< n< x= n= (cons (car x) x>) (+ n> 1))))))))))))
 
-
-; compare functions from predicates
+
+;;;; compare functions from predicates
 
 (define compare-by<
   (case-lambda
@@ -444,7 +444,8 @@
    ((eq gt)     (lambda (x y) (if (eq x y) 0 (if (gt x y) 1 -1))))
    ((eq gt x y)               (if (eq x y) 0 (if (gt x y) 1 -1)))))
 
-; refine and extend construction
+
+;;;; refine and extend construction
 
 (define-syntax refine-compare
   (syntax-rules ()
@@ -484,8 +485,8 @@
            (if ty-val (refine-compare cs ...) -1)
            (if ty-val 1 (cond-compare clause ...)))))))
 
-
-; R5RS atomic types
+
+;;;; R5RS atomic types
 
 (define-syntax compare:type-check
   (syntax-rules ()
@@ -502,13 +503,25 @@
      (define compare
        (let ((= =) (< <))
 	 (lambda (x y)
+	   (define who (quote compare))
 	   (if (type? x)
 	       (if (eq? x y)
-		   0
-		   (if (type? y)
-		       (if (= x y) 0 (if (< x y) -1 1))
-		       (error #f (string-append "not " type-name) y)))
-	       (error #f (string-append "not " type-name) x))))))))
+		   (if (and (number? x)
+			    (nan?    x))
+		       +nan.0
+		     0)
+		 (if (type? y)
+		     (cond ((or (and (number? x) (nan? x))
+				(and (number? y) (nan? y)))
+			    +nan.0)
+			   ((= x y)
+			    0)
+			   ((< x y)
+			    -1)
+			   (else
+			    +1))
+		   (error who (string-append "not " type-name) y)))
+	     (error who (string-append "not " type-name) x))))))))
 
 (define (boolean-compare x y)
   (compare:type-check boolean? "boolean" x y)
@@ -536,15 +549,15 @@
   (compare:type-check complex? "complex" x y)
   (if (and (real? x) (real? y))
       (real-compare x y)
-      (refine-compare (real-compare (real-part x) (real-part y))
-                      (real-compare (imag-part x) (imag-part y)))))
+    (refine-compare (real-compare (real-part x) (real-part y))
+		    (real-compare (imag-part x) (imag-part y)))))
 
 (define (number-compare x y)
   (compare:type-check number? "number" x y)
   (complex-compare x y))
 
-
-; R5RS compound data structures: dotted pair, list, vector
+
+;;;; R5RS compound data structures: dotted pair, list, vector
 
 (define (pair-compare-car compare)
   (lambda (x y)
@@ -649,8 +662,8 @@
       ((        x y           )
        (vector-compare-as-list default-compare x y vector-length vector-ref)))))
 
-
-; default compare
+
+;;;; default compare
 
 (define (default-compare x y)
   (select-compare
@@ -671,8 +684,8 @@
 ; This makes sure recursion proceeds with this default-compare, which
 ; need not be the one in the lexical scope of compare-{pair,vector}.
 
-
-; debug compare
+
+;;;; debug compare
 
 (define (debug-compare c)
 

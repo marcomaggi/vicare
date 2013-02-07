@@ -123,7 +123,10 @@
 ** SRFI 48 intermediate format strings
 ** DONE SRFI 61 cond
 ** SRFI 64 testing
-** SRFI 67 comparison procedures
+** TODO SRFI 67 comparison procedures
+
+   Add documentation from the original HTML.
+
 ** DONE SRFI 69 basic hash tables
 ** DONE SRFI 78 lightweight testing
 ** DONE SRFI 98 OS environment variables
