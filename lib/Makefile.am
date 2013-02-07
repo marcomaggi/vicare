@@ -128,8 +128,6 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a64/testing.sls				\
 	\
 	srfi/%3a67/compare-procedures.sls		\
-	srfi/%3a67/compare.scm				\
-	srfi/%3a67/examples.scm				\
 	srfi/%3a67.sls					\
 	\
 	srfi/%3a69/basic-hash-tables.sls		\

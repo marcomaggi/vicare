@@ -537,6 +537,7 @@ EXTRA_DIST = \
 	test-srfi-39-parameters.sps			\
 	test-srfi-42-eager-comprehensions.sps		\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-67-compare-procedures.sps		\
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
