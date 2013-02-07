@@ -117,7 +117,7 @@
 ** DONE SRFI 39 parameters
 
 ** SRFI 41 streams
-** SRFI 42 eager comprehensions
+** DONE SRFI 42 eager comprehensions
 ** SRFI 43 vectors
 ** SRFI 45 lazy
 ** SRFI 48 intermediate format strings

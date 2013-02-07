@@ -106,9 +106,7 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a41/streams/primitive.sls		\
 	\
 	srfi/%3a42.sls					\
-	srfi/%3a42/ec.scm				\
 	srfi/%3a42/eager-comprehensions.sls		\
-	srfi/%3a42/examples.scm				\
 	\
 	srfi/%3a43.sls					\
 	srfi/%3a43/vectors.sls				\
