@@ -66,10 +66,7 @@
     dispatch-union :generator-proc)
   (import (rnrs)
     (rnrs r5rs)
-    (srfi :39 parameters)
-    (srfi :23 error tricks)
-    (for (srfi private vanish) expand)
-    (srfi private include))
+    (srfi :39 parameters))
 
 
 (define-syntax :-dispatch
