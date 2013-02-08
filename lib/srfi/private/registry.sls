@@ -35,7 +35,7 @@
 	(25   multi-dimensional-arrays)
 	(26   cut)
 	(27   random-bits)
-	#;(28   basic-format-strings)
+	(28   basic-format-strings)
 	#;(29   localization)
 	(31   rec)
 	(37   args-fold)

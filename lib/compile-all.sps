@@ -71,6 +71,7 @@
 ;;;(only (srfi :25 multi-dimensional-arrays arlib))
   (only (srfi :26))
   (only (srfi :27))
+  (only (srfi :28))
   (only (srfi :31))
   (only (srfi :37))
   (only (srfi :38))
