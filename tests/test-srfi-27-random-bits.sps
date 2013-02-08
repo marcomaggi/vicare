@@ -34,10 +34,41 @@
 (check-display "*** testing SRFI 27: random bits\n")
 
 
-(parametrise ((check-test-name	'base))
+(parametrise ((check-test-name	'random-numbers))
 
   (check
       (integer? (srfi.random-integer 10))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (flonum? (srfi.random-real))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'sources))
+
+  (check
+      (srfi.random-source? srfi.default-random-source)
+    => #t)
+
+  (check
+      (let ((S (srfi.make-random-source)))
+	(srfi.random-source? S))
+    => #t)
+
+  (check
+      (let ((S (srfi.make-random-source)))
+	(srfi.random-source-randomize! S)
+	(integer? ((srfi.random-source-make-integers S) 10)))
+    => #t)
+
+  (check
+      (let ((S (srfi.make-random-source)))
+	(flonum? ((srfi.random-source-make-reals S))))
     => #t)
 
   #t)
