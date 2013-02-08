@@ -128,10 +128,7 @@
    Automake's  test  harness.   Add   a  section  in  the  documentation
    explaining how to do it.
 
-** TODO SRFI 67 comparison procedures
-
-   Add documentation from the original HTML.
-
+** DONE SRFI 67 comparison procedures
 ** DONE SRFI 69 basic hash tables
 ** DONE SRFI 78 lightweight testing
 ** DONE SRFI 98 OS environment variables
