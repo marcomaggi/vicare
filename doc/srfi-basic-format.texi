@@ -13,5 +13,114 @@ implementation for @ansrfi{28}; see:
 @noindent
 for more details.
 
+@menu
+* srfi basic-format abstract::  Abstract.
+* srfi basic-format rationale:: Rationale.
+* srfi basic-format spec::      Specification.
+* srfi basic-format examples::  Examples.
+* srfi basic-format copyright:: Copyright.
+@end menu
+
+@c page
+@node srfi basic-format abstract
+@subsection Abstract
+
+
+This document specifies @emph{Format Strings}, a method of interpreting
+a Scheme string which contains a number of escape sequences that are
+replaced with other string data according to the semantics of each
+sequence.
+
+@c page
+@node srfi basic-format rationale
+@subsection Rationale
+
+
+Many Scheme systems provide access to a function called @func{format}.
+This function takes as arguments a format string, an ordinary Scheme
+string containing zero or more escape sequences, followed zero or more
+Scheme values.  The procedure processes the format string and performs
+string replacement on the escape sequences according to the rules for
+each code.  This @srfi{} defines a basic version of format which should
+allow portable code to be written using the function without much (if
+any) effort on the part of Scheme implementors.
+
+@c page
+@node srfi basic-format spec
+@subsection Specification
+
+
+@defun format @var{format-string} @var{obj} ...
+Accept a message template (a Scheme String), and processes it, replacing
+any escape sequences in order with one or more characters, the
+characters themselves dependent on the semantics of the escape sequence
+encountered.
+
+An escape sequence is a two character sequence in the string where the
+first character is a tilde @code{~}.  Each escape code's meaning is as
+follows:
+
+@table @code
+@item ~a
+The corresponding value is inserted into the string as if printed with
+@func{display}.
+
+@item ~s
+The corresponding value is inserted into the string as if printed with
+@func{write}.
+
+@item ~%
+A newline is inserted.
+
+@item ~~
+A tilde @code{~} is inserted.
+@end table
+
+@code{~a} and @code{~s}, when encountered, require a corresponding
+Scheme value to be present after the format string.  The values provided
+as operands are used by the escape sequences in order.  It is an error
+if fewer values are provided than escape sequences that require them.
+
+@code{~%} and @code{~~} require no corresponding value.
+@end defun
+
+@c page
+@node srfi basic-format examples
+@subsection Examples
+
+
+@example
+(format "Hello, ~a" "World!")
+@result{} "Hello, World!"
+
+(format "Error, list is too short: ~s~%" '(one "two" 3))
+@result{} "Error, list is too short: (one \"two\" 3)\n"
+@end example
+
+@c page
+@node srfi basic-format copyright
+@subsection Copyright
+
+
+Copyright @copyright{} 2002 Scott G. Miller.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 @c end of file

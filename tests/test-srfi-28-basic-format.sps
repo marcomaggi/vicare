@@ -37,9 +37,20 @@
 (parametrise ((check-test-name	'base))
 
   (check
-      (let ()
-        )
-    => )
+      (format "")
+    => "")
+
+  (check
+      (format "Hello World!")
+    => "Hello World!")
+
+  (check
+      (format "Hello, ~a" "World!")
+    => "Hello, World!")
+
+  (check
+      (format "Error, list is too short: ~s~%" '(one "two" 3))
+    => "Error, list is too short: (one \"two\" 3)\n")
 
   #t)
 
