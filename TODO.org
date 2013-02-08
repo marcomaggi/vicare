@@ -127,8 +127,6 @@
 ** DONE SRFI 61 cond
 ** TODO SRFI 64 testing
 
-   Add documentation.
-
    Establish  a  way  to  coordinate  this SRFI  with  the  requests  of
    Automake's test harness.
 
