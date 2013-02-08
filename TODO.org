@@ -125,7 +125,8 @@
 ** TODO SRFI 64 testing
 
    Establish  a  way  to  coordinate  this SRFI  with  the  requests  of
-   Automake's test harness.
+   Automake's  test  harness.   Add   a  section  in  the  documentation
+   explaining how to do it.
 
 ** TODO SRFI 67 comparison procedures
 
