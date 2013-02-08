@@ -123,10 +123,7 @@
 ** DONE SRFI 42 eager comprehensions
 ** DONE SRFI 43 vectors
 ** DONE SRFI 45 lazy
-** TODO SRFI 48 intermediate format strings
-
-   Add documentation.
-
+** DONE SRFI 48 intermediate format strings
 ** DONE SRFI 61 cond
 ** TODO SRFI 64 testing
 
