@@ -34,6 +34,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi.texi				\
 	srfi-and-let-star.texi			\
 	srfi-args-fold.texi			\
+	srfi-basic-format.texi			\
 	srfi-case-lambda.texi			\
 	srfi-char-sets.texi			\
 	srfi-compare-procedures.texi		\

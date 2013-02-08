@@ -85,6 +85,9 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a27.sls					\
 	srfi/%3a27/random-bits.sls			\
 	\
+	srfi/%3a28.sls					\
+	srfi/%3a28/basic-format-strings.sls		\
+	\
 	srfi/%3a31.sls					\
 	srfi/%3a31/rec.sls				\
 	\

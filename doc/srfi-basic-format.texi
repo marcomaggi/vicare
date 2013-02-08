@@ -1,0 +1,17 @@
+@node srfi basic-format
+@section @ansrfi{28} basic format strings
+
+
+@cindex @ansrfi{28} basic format strings
+
+
+The library @library{srfi :28} is by Scott G. Miller as the reference
+implementation for @ansrfi{28}; see:
+
+@center @url{http://srfi.schemers.org/srfi-28/srfi-28.html}
+
+@noindent
+for more details.
+
+
+@c end of file
