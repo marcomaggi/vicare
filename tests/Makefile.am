@@ -237,10 +237,20 @@ TESTS			=	\
 	test-srfi-14-char-sets.sps			\
 	test-srfi-19-time.sps				\
 	test-srfi-26-cut.sps				\
+	test-srfi-27-random-bits.sps			\
+	test-srfi-28-basic-format.sps			\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
+	test-srfi-41-streams.sps			\
+	test-srfi-42-eager-comprehensions.sps		\
+	test-srfi-43-vectors.sps			\
+	test-srfi-45-lazy.sps				\
+	test-srfi-48-intermediate-format-strings.sps	\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-64-testing.sps			\
+	test-srfi-67-compare-procedures.sps		\
+	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
 	\
@@ -311,7 +321,7 @@ VICARE_INSTCHECK_RUN	= \
 installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
-#XFAIL_TESTS = test-vicare-log.sps
+XFAIL_TESTS = test-srfi-19-time.sps
 
 #page
 #### extra files to be distributed
@@ -532,10 +542,20 @@ EXTRA_DIST = \
 	test-srfi-14-char-sets.sps			\
 	test-srfi-19-time.sps				\
 	test-srfi-26-cut.sps				\
+	test-srfi-27-random-bits.sps			\
+	test-srfi-28-basic-format.sps			\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
+	test-srfi-41-streams.sps			\
+	test-srfi-42-eager-comprehensions.sps		\
+	test-srfi-43-vectors.sps			\
+	test-srfi-45-lazy.sps				\
+	test-srfi-48-intermediate-format-strings.sps	\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-64-testing.sps			\
+	test-srfi-67-compare-procedures.sps		\
+	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
 	\

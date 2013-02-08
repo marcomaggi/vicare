@@ -2,6 +2,9 @@
 @section @ansrfi{0} feature based conditional expansion construct
 
 
+@cindex @ansrfi{0} feature based conditional expansion construct
+
+
 The library @library{srfi :0} is by Marc Feeley as reference
 implementation for @ansrfi{0}; see:
 

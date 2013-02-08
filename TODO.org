@@ -105,23 +105,32 @@
 ** DONE SRFI 16 case-lambda
 ** SRFI 19 time
 ** DONE SRFI 23 error
-** SRFI 25 multidimensional arrays
+** TODO SRFI 25 multidimensional arrays
+
+   Review and cleanup of code.
+
 ** DONE SRFI 26 cut
-** SRFI 27 random-bits
+** DONE SRFI 27 random-bits
+** DONE SRFI 28 basic format strings
 ** DONE SRFI 31 rec
 ** DONE SRFI 37 args-fold
-** SRFI 38 shared structures
+** DONE SRFI 38 shared structures
 ** DONE SRFI 39 parameters
 
-** SRFI 41 streams
-** SRFI 42 eager comprehensions
-** SRFI 43 vectors
-** SRFI 45 lazy
-** SRFI 48 intermediate format strings
+** DONE SRFI 41 streams
+** DONE SRFI 42 eager comprehensions
+** DONE SRFI 43 vectors
+** DONE SRFI 45 lazy
+** DONE SRFI 48 intermediate format strings
 ** DONE SRFI 61 cond
-** SRFI 64 testing
-** SRFI 67 comparison procedures
-** SRFI 69 basic hash tables
+** TODO SRFI 64 testing
+
+   Establish  a  way  to  coordinate  this SRFI  with  the  requests  of
+   Automake's  test  harness.   Add   a  section  in  the  documentation
+   explaining how to do it.
+
+** DONE SRFI 67 comparison procedures
+** DONE SRFI 69 basic hash tables
 ** DONE SRFI 78 lightweight testing
 ** DONE SRFI 98 OS environment variables
 ** TODO SRFI 99 records

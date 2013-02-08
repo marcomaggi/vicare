@@ -30,19 +30,26 @@ minor modification of the original documents by Marco Maggi.
                                 variable arity.
 * srfi time::                   @ansrfi{19} time data types and procedures.
 * srfi error-reporting::        @ansrfi{23} error reporting mechanism.
+* srfi marray::                 @ansrfi{25} multidimensional array.
 * srfi shared structures::      @ansrfi{38} representation for data with
                                 shared structure.
 * srfi specialize-procedures::  @ansrfi{26} notation for specializing
                                 parameters without currying.
 * srfi random::                 @ansrfi{27} sources of random bits.
+* srfi basic-format::           @ansrfi{28} basic format strings.
 * srfi rec::                    @ansrfi{31} a special form @func{rec}
                                 for recursive evaluation.
 * srfi parameters::             @ansrfi{39} parameter objects.
 * srfi args-fold::              @ansrfi{37} a program argument processor.
 * srfi streams::                @ansrfi{41} streams.
 * srfi eager-comp::             @ansrfi{42} eager comprehensions.
-* srfi vector::                 @ansrfi{43} vector library.
+* srfi vectors::                @ansrfi{43} vector library.
+* srfi lazy::                   @ansrfi{45} lazy iterative algorithms.
+* srfi intermediate-format::    @ansrfi{48} intermediate format strings.
 * srfi general-cond::           @ansrfi{61} a more general @func{cond} clause.
+* srfi testing::                @ansrfi{64} testing.
+* srfi compare-procedures::     @ansrfi{67} compare procedures.
+* srfi hash-tables::            @ansrfi{69} basic hash tables.
 * srfi lightweight-testing::    @ansrfi{78} lightweight testing.
 * srfi environment-variables::  @ansrfi{98} environment variables.
 * srfi err5rs records::         @ansrfi{99} @acronym{ERR5RS} records.
@@ -62,16 +69,23 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-case-lambda.texi
 @include srfi-time.texi
 @include srfi-error-reporting.texi
+@include srfi-multidimensional-array.texi
 @include srfi-shared-structures.texi
 @include srfi-specialize-procedures.texi
 @include srfi-random.texi
+@include srfi-basic-format.texi
 @include srfi-rec.texi
 @include srfi-parameters.texi
 @include srfi-args-fold.texi
 @include srfi-streams.texi
 @include srfi-eager-comp.texi
-@include srfi-vector.texi
+@include srfi-vectors.texi
+@include srfi-lazy.texi
+@include srfi-intermediate-format.texi
 @include srfi-general-cond.texi
+@include srfi-testing.texi
+@include srfi-compare-procedures.texi
+@include srfi-hash-tables.texi
 @include srfi-lightweight-testing.texi
 @include srfi-environment-variables.texi
 @include srfi-err5rs-records.texi

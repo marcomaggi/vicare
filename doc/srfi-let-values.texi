@@ -2,7 +2,7 @@
 @section @ansrfi{11} syntax for receiving multiple values
 
 
-@cindex @srfi{} let-values
+@cindex @ansrfi{11} syntax for receiving multiple values
 
 
 The library @library{srfi :11} is by Lars T Hansen as the reference

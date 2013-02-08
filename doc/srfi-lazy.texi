@@ -1,0 +1,493 @@
+@node srfi lazy
+@section @ansrfi{45} lazy iterative algorithms
+
+
+@cindex @ansrfi{45} lazy iterative algorithms
+
+
+The library @library{srfi :45} is by Andre van Tonder as the reference
+implementation for @ansrfi{45}; see:
+
+@center @url{http://srfi.schemers.org/srfi-45/srfi-45.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi lazy abstract::          Abstract.
+* srfi lazy rationale::         Rationale.
+* srfi lazy spec::              Specification.
+* srfi lazy usage::             Correct usage.
+* srfi lazy refs::              References.
+* srfi lazy copyright::         Copyright.
+@end menu
+
+@c page
+@node srfi lazy abstract
+@subsection Abstract
+
+
+Lazy evaluation is traditionally simulated in Scheme using @func{delay}
+and @func{force}.  However, these primitives are not powerful enough to
+express a large class of lazy algorithms that are iterative.  Indeed, it
+is folklore in the Scheme community that typical iterative lazy
+algorithms written using @func{delay} and @func{force} will often
+require unbounded memory.
+
+Although various modifications of @func{delay} and @func{force} had been
+proposed to resolve this problem (see e.g., the @ansrfi{40} discussion
+list) they all fail some of the benchmarks provided by this @srfi{}.  To
+our knowledge, the current @srfi{} provides the first exhaustive
+solution to this problem.
+
+As motivation, we first explain how the usual laziness encoding using
+only @func{delay} and @func{force} will break the iterative behavior of
+typical algorithms that would have been properly tail--recursive in a
+true lazy language, causing the computation to require unbounded memory.
+
+The problem is then resolved by introducing a set of three operations:
+
+@example
+@{lazy, delay, force@}
+@end example
+
+@noindent
+which allow the programmer to succinctly express lazy algorithms while
+retaining bounded space behavior in cases that are properly
+tail--recursive.  A general recipe for using these primitives is
+provided.  An additional procedure @func{eager} is provided for the
+construction of eager promises in cases where efficiency is a concern.
+
+Although this @srfi{} redefines @func{delay} and @func{force}, the
+extension is conservative in the sense that the semantics of the subset
+@code{@{delay, force@}} in isolation (i.e., as long as the program does
+not use @func{lazy}) agrees with that in @rnrs{5}.  In other words, no
+program that uses the @rnrs{5} definitions of @func{delay} and
+@func{force} will break if those definition are replaced by the
+@ansrfi{45} definitions of @func{delay} and @func{force}.
+
+@c page
+@node srfi lazy rationale
+@subsection Rationale
+
+
+Wadler et al. in the paper @emph{How to add laziness to a strict
+language without even being odd} [Wad98], provide a straightforward
+recipe for transforming arbitrary lazy data structures and algorithms
+into a strict language using @func{delay} and @func{force}.
+
+However, it is known (see e.g. the @ansrfi{40} discussion list) that
+this transformation can lead to programs that suffer from unbounded
+space consumption, even if the original lazy algorithm was properly
+tail--recursive.  Example Consider the following procedure, written in a
+hypothetical lazy language with Scheme syntax:
+
+@example
+(define (stream-filter p? s)
+  (if (null? s) '()
+      (let ((h (car s))
+            (t (cdr s)))
+        (if (p? h)
+            (cons h (stream-filter p? t))
+            (stream-filter p? t)))))
+@end example
+
+According to the tranformation proposed in [Wad98], this algorithm can
+be espressed as follows in Scheme:
+
+@example
+(define (stream-filter p? s)
+  (delay (force
+          (if (null? (force s)) (delay '())
+              (let ((h (car (force s)))
+                    (t (cdr (force s))))
+                (if (p? h)
+                    (delay (cons h (stream-filter p? t)))
+                    (stream-filter p? t)))))))
+@end example
+
+The recipe, which we will modify below, is as follows:
+
+@enumerate
+@item
+Wrap all constructors (e.g., @code{()}, @func{cons}) with @func{delay}.
+
+@item
+Apply @func{force} to arguments of deconstructors (e.g., @func{car},
+@func{cdr} and @func{null?}).
+
+@item
+Wrap procedure bodies with @code{(delay (force @dots{}))}.
+@end enumerate
+
+However, evaluating the following with a sufficiently value for
+large--number will cause a typical Scheme implementation to run out of
+memory, despite the fact that the original (lazy) algorithm was
+iterative, only needing tail calls to evaluate the first element of the
+result stream.
+
+@example
+(define (from n)
+  (delay (cons n (from (+ n 1)))))
+
+(define large-number 1000000000)
+
+(car (force (stream-filter (lambda (n) (= n large-number))
+                           (from 0))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Why the space leak occurs
+
+The problem occurring in the above @func{stream-filter} example can
+already be seen in the following simple infinite loop, expressed in our
+hypothetical lazy language as:
+
+@example
+(define (loop) (loop))
+@end example
+
+@noindent
+which becomes, according to the [Wad98] transformation:
+
+@example
+(define (loop) (delay (force (loop))))
+@end example
+
+Taking the semantics of @code{@{delay, force@}} to be informally:
+
+@example
+(force (delay expr)) = update promise : (delay expr)
+                         with value of expr
+                       return value in promise
+@end example
+
+@noindent
+we get:
+
+@example
+(force (loop)) = update promise1 : (delay (force (loop)))
+                   with value of (force (loop))
+                 return value in promise1
+               = update promise1 : (delay (force (loop)))
+                   with value of
+                     update promise2 : (delay (force (loop)))
+                       with value of (force (loop))
+                     return value in promise2
+                 return value in promise1
+               = update promise1 : (delay (force (loop)))
+                   with value of
+                     update promise2 : (delay (force (loop)))
+                       with value of
+                          update promise3 : (delay (force (loop)))
+                            with value of (force (loop))
+                          return value in promise3
+                     return value in promise2
+                 return value in promise1
+               = @dots{}
+@end example
+
+We see that an ever growing sequence of pending promises builds up until
+the heap is exhausted.
+
+@c ------------------------------------------------------------
+
+@subsubheading Why the above is not call--by--need
+
+Expressing the above algorithm in terms of @code{@{delay, force@}} in
+fact does not correctly capture common notions of call--by--need
+evaluation semantics.  For example, in a call--by--need language with
+naive graph reduction semantics, the above algorithm would run in
+bounded space since naive graph reduction is known to be tail--safe.
+For a good discussion of this issue, see e.g. R. Jones @emph{Tail
+recursion without space leaks} [Jon98].
+
+Our problem may be regarded as analogous to graph reduction, with
+promises corresponding to graph nodes and force corresponding to
+reduction.  As described by Jones, one has to be careful with the order
+in which nodes are evaluated and overwritten to avoid space leaks.  In
+our context this would correspond to the order in which promises are
+evaluated and overwritten when forced.
+
+In the above example, naive graph reduction would correspond to the
+promise at the root being overwritten at each step before the next
+iteration is evaluated, thus avoiding the need for a growing sequence of
+unfulfilled promises representing (unnecessary) future copy operations.
+
+@c ------------------------------------------------------------
+
+@subsubheading The solution
+
+The accumulation of unnecessary promises in the above examples is a
+consequence of suspensions being forced in increasingly nested contexts.
+In order to correctly simulate naive graph reduction we should instead
+find a way of forcing tail suspensions iteratively, each time
+overwriting the previous result.
+
+A solution to this problem exists and is described (in a different
+context) in @emph{Compiling higher order languages into fully
+tail-recursive portable C}, Feely et al. [Fee97].  This reference
+introduces a method widely known as the trampoline technique for
+evaluating tail contexts iteratively.
+
+Adapting the trampoline technique to the situation at hand, we introduce
+a new primitive lazy, which behaves like an ``atomic'' @code{(delay
+(force @dots{}))}, and which will replace the combination @code{(delay
+(force @dots{}))} at procedure entry points.  We also redefine delay and
+force as below:
+
+@smallexample
+; type Promise a = lazy (Promise a) | eager a
+
+(define-syntax lazy
+  (syntax-rules ()
+    ((lazy exp)
+     (box (cons 'lazy (lambda () exp))))))
+
+(define (eager x)
+  (box (cons 'eager x)))
+
+(define-syntax delay
+  (syntax-rules ()
+    ((delay exp) (lazy (eager exp)))))
+
+(define (force promise)
+  (let ((content (unbox promise)))
+    (case (car content)
+      ((eager) (cdr content))
+      ((lazy)  (let* ((promise* ((cdr content)))
+                      (content  (unbox promise)))                      ; *
+                 (if (not (eqv? (car content) 'eager))                 ; *
+                     (begin (set-car! content (car (unbox promise*)))
+                            (set-cdr! content (cdr (unbox promise*)))
+                            (set-box! promise* content)))
+                 (force promise))))))
+
+(*) These two lines re-fetch and check the original promise in case
+    the first line of the let* caused it to be forced.  For an example
+    where this happens, see reentrancy test 3 below.
+
+(define (box x) (list x))
+(define unbox car)
+(define set-box! set-car!)
+@end smallexample
+
+Our example is then coded (see the full recipe below):
+
+@example
+(define (loop) (lazy (loop)))
+@end example
+
+When we now evaluate @code{(force (loop))}, the force procedure will
+execute a top--level loop which will iteratively evaluate and overwrite
+subsequent suspensions.
+
+In the language of [Fee97], the iterative loop in force plays the role
+of ``dispatcher''.  The lazy form marks ``control points'' (procedure
+entry and return points).  This technique is tail--safe because lazy
+procedures, instead of calling other lazy procedures directly, simply
+return a suspension representing a control point to be called upon the
+next iteration of the dispatcher loop in force.  For more details, see
+[FMRW].
+
+@c page
+@node srfi lazy spec
+@subsection Specification
+
+
+The following macros should be provided.  The semantics, which is
+informally described here, should conform to that of the reference
+implementation.
+
+
+@deffn Syntax delay @meta{expression}
+Take an expression of arbitrary type @code{a} and return a promise of
+type @code{(Promise a)} which at some point in the future may be asked
+(by the @func{force} procedure) to evaluate the expression and deliver
+the resulting value.
+@end deffn
+
+
+@deffn Syntax lazy @meta{expression}
+Take an expression of type @code{(Promise a)} and return a promise of
+type @code{(Promise a)} which at some point in the future may be asked
+(by the @func{force} procedure) to evaluate the expression and deliver
+the resulting promise.
+@end deffn
+
+
+The following procedures should be provided.
+
+
+@defun force @var{expression}
+Take an argument of type @code{(Promise a)} and return a value of type a
+as follows: If a value of type @code{a} has been computed for the
+promise, this value is returned.  Otherwise, the promise is first
+evaluated, then overwritten by the obtained promise or value, and then
+@func{force} is again applied (iteratively) to the promise.
+@end defun
+
+
+@defun eager @var{expression}
+Take an argument of type @code{a} and returns a value of type
+@code{(Promise a)}.  As opposed to @func{delay}, the argument is
+evaluated eagerly.  Semantically, writing @code{(eager expression)} is
+equivalent to writing:
+
+@example
+(let ((value expression)) (delay value))
+@end example
+
+However, the former is more efficient since it does not require
+unnecessary creation and evaluation of thunks.  We also have the
+equivalence:
+
+@example
+(delay expression) @equiv{} (lazy (eager expression))
+@end example
+@end defun
+
+
+The following reduction rules may be helpful for reasoning about these
+primitives.  However, they do not express the memoization and memory
+usage semantics specified above:
+
+@example
+(force (delay expression)) -> expression
+(force (lazy  expression)) -> (force expression)
+(force (eager value))      -> value
+@end example
+
+The typing can be succinctly expressed as follows:
+
+@example
+type Promise a = lazy (Promise a) | eager a
+
+       expression  : a
+------------------------------
+(eager expression) : Promise a
+
+       expression  : Promise a
+------------------------------
+(lazy expression)  : Promise a
+
+       expression  : a
+------------------------------
+(delay expression) : Promise a
+
+       expression  : Promise a
+------------------------------
+(force expression) : a
+@end example
+
+Although this @srfi{} specifies an extension to the semantics of
+@func{force}, the extension is conservative in the sense that the
+semantics of the subset @code{@{delay, force@}} in isolation (i.e., as
+long as the program does not use @func{lazy}) agrees with that in
+@rnrs{5}.
+
+@c page
+@node srfi lazy usage
+@subsection Correct usage
+
+
+We now provide a general recipe for using the primitives:
+
+@example
+@{lazy, delay, force@}
+@end example
+
+@noindent
+to express lazy algorithms in Scheme.  The transformation is best
+described by way of an example: Consider again the @func{stream-filter}
+algorithm, expressed in a hypothetical lazy language as:
+
+@example
+(define (stream-filter p? s)
+  (if (null? s) '()
+      (let ((h (car s))
+            (t (cdr s)))
+        (if (p? h)
+            (cons h (stream-filter p? t))
+            (stream-filter p? t)))))
+@end example
+
+This algorithm can be espressed as follows in Scheme:
+
+@example
+(define (stream-filter p? s)
+  (lazy
+     (if (null? (force s)) (delay '())
+         (let ((h (car (force s)))
+               (t (cdr (force s))))
+           (if (p? h)
+               (delay (cons h (stream-filter p? t)))
+               (stream-filter p? t))))))
+@end example
+
+In other words, we:
+
+@enumerate
+@item
+Wrap all constructors (e.g., @code{()}, @func{cons}) with @func{delay}.
+
+@item
+Apply force to arguments of deconstructors (e.g., @func{car}, @func{cdr}
+and @func{null?}).
+
+@item
+Wrap procedure bodies with @code{(lazy @dots{})}.
+@end enumerate
+
+The only difference with the [Wad98] transformation described above is
+in replacing the combination @code{(delay (force @dots{}))} with
+@code{(lazy @dots{})} in the third rule.
+
+@c page
+@node srfi lazy refs
+@subsection References
+
+
+@noindent
+[Wad98] Philip Wadler, Walid Taha, and David MacQueen.  How to add
+laziness to a strict language, without even being odd, Workshop on
+Standard ML, Baltimore, September 1998.
+
+@noindent
+[Jon92] Richard Jones.  Tail recursion without space leaks, Journal of
+Functional Programming, 2(1):73-79, January 1992.
+
+@noindent
+[Fee97] Marc Feeley, James S. Miller, Guillermo J. Rozas, Jason
+A. Wilson.  Compiling Higher--Order Languages into Fully Tail--Recursive
+Portable C, Rapport technique 1078, departement d'informatique et r.o.,
+Universite de Montreal, aoet 1997.
+
+@c page
+@node srfi lazy copyright
+@subsection Copyright
+
+
+Copyright @copyright{} Andre van Tonder (2003).  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c end of file

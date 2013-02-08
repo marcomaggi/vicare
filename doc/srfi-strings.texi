@@ -2,7 +2,7 @@
 @section @ansrfi{13} string library
 
 
-@cindex @srfi{} strings
+@cindex @ansrfi{13} string library
 
 
 The library @library{srfi :13} is by Olin Shivers as the reference

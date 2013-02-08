@@ -2,7 +2,7 @@
 @section @ansrfi{9} defining record types
 
 
-@cindex @srfi{} records
+@cindex @ansrfi{9} defining record types
 
 
 The library @library{srfi :9} is by Richard Kelsey as the reference

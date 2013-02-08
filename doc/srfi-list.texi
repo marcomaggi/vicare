@@ -2,7 +2,7 @@
 @section @ansrfi{1} list library
 
 
-@cindex @srfi{} list library
+@cindex @ansrfi{1} list library
 
 
 The library @library{srfi :1} is by Olin Shivers

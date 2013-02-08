@@ -1,0 +1,987 @@
+@node srfi testing
+@section @ansrfi{64} testing
+
+
+@cindex @ansrfi{64} testing
+
+
+The library @library{srfi :64} is by Per Bothner as the reference
+implementation for @ansrfi{64}; see:
+
+@center @url{http://srfi.schemers.org/srfi-64/srfi-64.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi testing abstract::       Abstract.
+* srfi testing rationale::      Rationale.
+* srfi testing spec::           Specification.
+* srfi testing copyright::      Copyright.
+@end menu
+
+@c page
+@node srfi testing abstract
+@subsection Abstract
+
+
+This @srfi{} defines an @api{} for writing test suites, to make it easy
+to portably test Scheme @api{}s, libraries, applications, and
+implementations.  A test suite is a collection of test cases that
+execute in the context of a test--runner.  This specifications also
+supports writing new test--runners, to allow customization of reporting
+and processing the result of running test suites.
+
+@c page
+@node srfi testing rationale
+@subsection Rationale
+
+
+The Scheme community needs a standard for writing test suites.  Every
+@srfi{} or other library should come with a test suite.  Such a test
+suite must be portable, without requiring any non--standard features,
+such as modules.  The test suite implementation or @dfn{runner} need not
+be portable, but it is desirable that it be possible to write a portable
+basic implementation.
+
+There are other testing frameworks written in Scheme, including
+SchemeUnit.  However SchemeUnit is not portable.  It is also a bit on
+the verbose side.  It would be useful to have a bridge between this
+framework and SchemeUnit so SchemeUnit tests could run under this
+framework and vice versa.  There exists also at least one Scheme wrapper
+providing a Scheme interface to the ``standard'' JUnit @api{} for Java.
+It would be useful to have a bridge so that tests written using this
+framework can run under a JUnit runner.  Neither of these features are
+part of this specification.
+
+This @api{} makes use of implicit dynamic state, including an implicit
+``test runner''.  This makes the @api{} convenient and terse to use, but
+it may be a little less elegant and ``compositional'' than using
+explicit test objects, such as JUnit--style frameworks.  It is not
+claimed to follow either object--oriented or functional design
+principles, but I hope it is useful and convenient to use and extend.
+
+This proposal allows converting a Scheme source file to a test suite by
+just adding a few macros.  You don't have to write the entire file in a
+new form, thus you don't have to reindent it.
+
+All names defined by the @api{} start with the prefix @code{test-}.  All
+function--like forms are defined as syntax.  They may be implemented as
+functions or macros or builtins.  The reason for specifying them as
+syntax is to allow specific tests to be skipped without evaluating
+subexpressions, or for implementations to add features such as printing
+line numbers or catching exceptions.
+
+@c page
+@node srfi testing spec
+@subsection Specification
+
+
+While this is a moderately complex specification, you should be able to
+write simple test suites after just reading the first few sections
+below.  More advanced functionality, such as writing a custom
+test-runner, is at the end of the specification.
+
+@menu
+* srfi testing spec basic::     Writing basic test suites.
+* srfi testing spec advanced::  Conditonal test-suites and
+                                other advanced features.
+* srfi testing spec runner::    Test runner.
+* srfi testing spec results::   Test results.
+* srfi testing spec writing::   Writing a new test-runner.
+@end menu
+
+@c page
+@node srfi testing spec basic
+@subsubsection Writing basic test suites
+
+
+Let's start with a simple example.  This is a complete self--contained
+test suite.
+
+@example
+;; Initialize and give a name to a simple testsuite.
+(test-begin "vec-test")
+(define v (make-vector 5 99))
+
+;; Require that an expression evaluate to true.
+(test-assert (vector? v))
+
+;; Test that an expression is eqv? to some other expression.
+(test-eqv 99 (vector-ref v 2))
+(vector-set! v 2 7)
+(test-eqv 7 (vector-ref v 2))
+
+;; Finish the testsuite, and report results.
+(test-end "vec-test")
+@end example
+
+This test suite could be saved in its own source file.  Nothing else is
+needed: We do not require any top--level forms, so it is easy to wrap an
+existing program or test to this form, without adding indentation.  It
+is also easy to add new tests, without having to name individual tests
+(though that is optional).
+
+Test cases are executed in the context of a test runner, which is a
+object that accumulates and reports test results.  This specification
+defines how to create and use custom test runners, but implementations
+should also provide a default test runner.  It is suggested (but not
+required) that loading the above file in a top--level environment will
+cause the tests to be executed using an implementation--specified
+default test runner, and @func{test-end} will cause a summary to be
+displayed in an implementation--specified manner.
+
+@c ------------------------------------------------------------
+
+@subsubheading Simple test--cases
+
+Primitive test cases test that a given condition is true.  They may have
+a name.  The core test case form is @func{test-assert}.
+
+
+@deffn Syntax test-assert @meta{expression}
+@deffnx Syntax test-assert @meta{test-name} @meta{expression}
+Evaluate the @meta{expression}.  The test passes if the result is true;
+if the result is false, a test failure is reported.  The test also fails
+if an exception is raised, assuming the implementation has a way to
+catch exceptions.
+
+How the failure is reported depends on the test runner environment.  The
+@meta{test-name} is a string that names the test case.  (Though the
+@meta{test-name} is a string literal in the examples, it is an
+expression.  It is evaluated only once.)  It is used when reporting
+errors, and also when skipping tests, as described below.
+
+It is an error to invoke @func{test-assert} if there is no current test
+runner.
+@end deffn
+
+
+The following forms may be more convenient than using test-assert directly:
+
+
+@deffn Syntax test-eqv @meta{expected} @meta{test-expr}
+@deffnx Syntax test-eqv @meta{test-name} @meta{expected} @meta{test-expr}
+This is equivalent to:
+
+@example
+(test-assert @meta{test-name} (eqv? @meta{expected} @meta{test-expr}))
+@end example
+@end deffn
+
+
+@findex test-equal
+@findex test-eq
+Similarly @func{test-equal} and @func{test-eq} are shorthand for
+test-assert combined with equal? or eq?, respectively:
+
+@example
+(test-equal [test-name] expected test-expr)
+(test-eq [test-name] expected test-expr)
+@end example
+
+
+Here is a simple example:
+
+@example
+(define (mean x y) (/ (+ x y) 2.0))
+(test-eqv 4 (mean 3 5))
+@end example
+
+For testing approximate equality of inexact reals we can use
+@func{test-approximate}:
+
+@example
+(test-approximate [test-name] expected test-expr error)
+@end example
+
+This is equivalent to (except that each argument is only evaluated
+once):
+
+@example
+(test-assert [test-name]
+  (and (>= test-expr (- expected error))
+       (<= test-expr (+ expected error))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Tests for catching errors
+
+We need a way to specify that evaluation should fail.  This verifies
+that errors are detected when required.
+
+
+@deffn Syntax test-error @meta{test-expr}
+@deffnx Syntax test-error @meta{error-type} @meta{test-expr}
+@deffnx Syntax test-error @meta{test-name} @meta{error-type} @meta{test-expr}
+Evaluating @meta{test-expr} is expected to signal an error.  The kind of
+error is indicated by @meta{error-type}.
+
+If the @meta{error-type} is left out, or it is @true{}, it means ``some
+kind of unspecified error should be signaled''.  For example:
+
+@example
+(test-error #t (vector-ref '#(1 2) 9))
+@end example
+
+This specification leaves it implementation--defined (or for a future
+specification) what form @meta{test-error} may take, though all
+implementations must allow @true{}.  Some implementations may support
+@ansrfi{35}'s conditions, but these are only standardized for
+@ansrfi{36}'s I/O conditions, which are seldom useful in test suites.
+An implementation may also allow implementation--specific ``exception
+types''.  For example Java--based implementations may allow the names of
+Java exception classes:
+
+@example
+;; Kawa-specific example
+(test-error <java.lang.IndexOutOfBoundsException>
+  (vector-ref '#(1 2) 9))
+@end example
+
+An implementation that cannot catch exceptions should skip
+@meta{test-error} forms.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Testing syntax
+
+Testing syntax is tricky, especially if we want to check that invalid
+syntax is causes an error.  The following utility function can help.
+
+
+@defun test-read-eval-string @var{string}
+Parse @var{string} (using @func{read}) and evaluate the result.  The
+result of evaluation is returned by @func{test-read-eval-string}.  An
+error is signalled if there are unread characters after the read is
+done.  For example:
+
+@table @code
+@item (test-read-eval-string "(+ 3 4)")
+Evaluates to 7.
+
+@item (test-read-eval-string "(+ 3 4")
+Signals an error.
+
+@item (test-read-eval-string "(+ 3 4) ")
+Signals an error, because there is extra ``junk'' (i.e. a space) after
+the list is read.
+@end table
+
+The @func{test-read-eval-string} used in tests:
+
+@example
+(test-equal 7 (test-read-eval-string "(+ 3 4)"))
+(test-error (test-read-eval-string "(+ 3"))
+(test-equal #\newline (test-read-eval-string "#\\newline"))
+(test-error (test-read-eval-string "#\\newlin"))
+
+;; Skip the next 2 tests unless srfi-62 is available.
+(test-skip (cond-expand (srfi-62 0) (else 2)))
+(test-equal 5 (test-read-eval-string "(+ 1 #;(* 2 3) 4)"))
+(test-equal '(x z) (test-read-string "(list 'x #;'y 'z)"))
+@end example
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Test groups and paths
+
+A test group is a named sequence of forms containing test cases,
+expressions, and definitions.  Entering a group sets the test group
+name; leaving a group restores the previous group name.  These are
+dynamic (run time) operations, and a group has no other effect or
+identity.  Test groups are informal groupings: they are neither Scheme
+values, nor are they syntactic forms.
+
+A test group may contain nested inner test groups.  The test group path
+is a list of the currently--active (entered) test group names, oldest
+(outermost) first.
+
+
+@deffn Syntax test-begin @meta{suite-name}
+@deffnx Syntax test-begin @meta{suite-name} @meta{count}
+Enter a new test group.  The @meta{suite-name} becomes the current test
+group name, and is added to the end of the test group path.  Portable
+test suites should use a sting literal for @meta{suite-name}; the effect
+of expressions or other kinds of literals is unspecified.
+
+@quotation
+@strong{RATIONALE} In some ways using symbols would be preferable.
+However, we want human--readable names, and standard Scheme does not
+provide a way to include spaces or mixed--case text in literal symbols.
+@end quotation
+
+The optional @meta{count} must match the number of test cases executed
+by this group.  (Nested test groups count as a single test case for this
+count.)  This extra test may be useful to catch cases where a test
+doesn't get executed because of some unexpected error.
+
+Additionally, if there is no currently executing test runner, one is
+installed in an implementation--defined manner.
+@end deffn
+
+
+@deffn Syntax test-end
+@deffnx Syntax test-end @meta{suite-name}
+Leave the current test group.  An error is reported if the
+@meta{suite-name} does not match the current test group name.
+
+Additionally, if the matching @func{test-begin} installed a new
+test--runner, then the @func{test-end} will deinstall it, after
+reporting the accumulated test results in an implementation--defined
+manner.
+@end deffn
+
+
+@deffn Syntax test-group @meta{suite-name} @meta{decl-or-expr} ...
+Equivalent to:
+
+@example
+(if (not (test-to-skip% @meta{suite-name}))
+  (dynamic-wind
+    (lambda () (test-begin @meta{suite-name}))
+    (lambda () @meta{decl-or-expr} ...)
+    (lambda () (test-end @meta{suite-name}))))
+@end example
+
+This is usually equivalent to executing the @meta{decl-or-exprs} within
+the named test group.  However, the entire group is skipped if it
+matched an active @func{test-skip} (see later).  Also, the
+@func{test-end} is executed in case of an exception.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Handling set--up and cleanup
+
+
+@deffn Syntax test-group-with-cleanup @meta{suite-name} @meta{decl-or-expr} ... @meta{cleanup-form}
+Execute each of the @meta{decl-or-expr} forms in order (as in a
+@code{<body>}), and then execute the @meta{cleanup-form}.  The latter
+should be executed even if one of a @meta{decl-or-expr} forms raises an
+exception (assuming the implementation has a way to catch exceptions).
+
+For example:
+
+@example
+(test-group-with-cleanup "test-file"
+  (define f (open-output-file "log"))
+  (do-a-bunch-of-tests f)
+  (close-output-port f))
+@end example
+@end deffn
+
+@c page
+@node srfi testing spec advanced
+@subsubsection Conditonal test-suites and other advanced features
+
+
+The following describes features for controlling which tests to execute,
+or specifing that some tests are expected to fail.
+
+@c ------------------------------------------------------------
+
+@subsubheading Test specifiers
+
+Sometimes we want to only run certain tests, or we know that certain
+tests are expected to fail.  A test specifier is a one--argument
+function that takes a test--runner and returns a boolean.  The specifier
+may be run before a test is performed, and the result may control
+whether the test is executed.  For convenience, a specifier may also be
+a non--procedure value, which is coerced to a specifier procedure, as
+described below for count and name.
+
+A simple example is:
+
+@example
+(if some-condition
+  (test-skip 2)) ;; skip next 2 tests
+@end example
+
+
+@defun test-match-name @var{name}
+The resulting specifier matches if the current test name (as returned by
+@func{test-runner-test-name}) is @func{equal?} to name.
+@end defun
+
+
+@defun test-match-nth @var{N}
+@defunx test-match-nth @var{N} @var{count}
+Evaluate to a stateful predicate: A counter keeps track of how many
+times it has been called.  The predicate matches the @var{N}'th time it
+is called (where @math{1} is the first time), and the next @code{(-
+@var{count} 1)} times, where count defaults to @math{1}.
+@end defun
+
+
+@defun test-match-any @var{specifier} ...
+The resulting specifier matches if any specifier matches.  Each
+specifier is applied, in order, so side--effects from a later specifier
+happen even if an earlier specifier is true.
+@end defun
+
+
+@defun test-match-all @var{specifier} ...
+The resulting specifier matches if each specifier matches.  Each
+specifier is applied, in order, so side--effects from a later specifier
+happen even if an earlier specifier is false.
+
+@table @var
+@item count
+An integer.  Convenience short--hand for:
+
+@example
+(test-match-nth 1 @var{count})
+@end example
+
+@item name
+A string.  Convenience short--hand for:
+
+@example
+(test-match-name @var{name})
+@end example
+@end table
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Skipping selected tests
+
+In some cases you may want to skip a test.
+
+
+@deffn Syntax test-skip @meta{specifier}
+Evaluating @func{test-skip} adds the resulting specifier to the set of
+currently active skip--specifiers.  Before each test (or test--group)
+the set of active skip--specifiers are applied to the active
+test--runner.  If any specifier matches, then the test is skipped.
+
+For convenience, if the specifier is a string that is syntactic sugar
+for @code{(test-match-name specifier)}.  For example:
+
+@example
+(test-skip "test-b")
+(test-assert "test-a")   ;; executed
+(test-assert "test-b")   ;; skipped
+@end example
+
+Any skip specifiers introduced by a test-skip are removed by a following
+non--nested @func{test-end}.
+
+@example
+(test-begin "group1")
+(test-skip "test-a")
+(test-assert "test-a")   ;; skipped
+(test-end "group1")      ;; Undoes the prior test-skip
+(test-assert "test-a")   ;; executed
+@end example
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Expected failures
+
+Sometimes you know a test case will fail, but you don't have time to or
+can't fix it.  Maybe a certain feature only works on certain platforms.
+However, you want the test--case to be there to remind you to fix it.
+You want to note that such tests are expected to fail.
+
+
+@deffn Syntax test-expect-fail @meta{specifier}
+Matching tests (where matching is defined as in @func{test-skip}) are
+expected to fail.  This only affects test reporting, not test execution.
+For example:
+
+@example
+(test-expect-fail 2)
+(test-eqv ...) ;; expected to fail
+(test-eqv ...) ;; expected to fail
+(test-eqv ...) ;; expected to pass
+@end example
+@end deffn
+
+@c page
+@node srfi testing spec runner
+@subsubsection Test runner
+
+
+A @emph{test-runner} is an object that runs a test-suite, and manages
+the state.  The test group path, and the sets skip and expected--fail
+specifiers are part of the @emph{test-runner}.  A @emph{test-runner}
+will also typically accumulate statistics about executed tests,
+
+
+@defun test-runner? @var{value}
+True iff value is a test-runner object.
+@end defun
+
+
+@defun test-runner-current
+@defunx test-runner-current @var{runner}
+Get or set the current test-runner.  If an implementation supports
+parameter objects (as in @ansrfi{39}), then @func{test-runner-current}
+can be a parameter object.  Alternatively, @func{test-runner-current}
+may be implemented as a macro or function that uses a fluid or
+thread--local variable, or a plain global variable.
+@end defun
+
+
+@defun test-runner-get
+Same as @code{(test-runner-current)}, buth throws an exception if there
+is no current test-runner.
+@end defun
+
+
+@defun test-runner-simple
+Create a new simple test-runner, that prints errors and a summary on the
+standard output port.
+@end defun
+
+
+@defun test-runner-null
+Create a new test-runner, that does nothing with the test results.  This
+is mainly meant for extending when writing a custom runner.
+@end defun
+
+
+Implementations may provide other test-runners, perhaps a
+@code{(test-runner-gui)}.
+
+
+@defun test-runner-create
+Create a new test-runner.  Equivalent to:
+
+@example
+((test-runner-factory))
+@end example
+@end defun
+
+
+@defun test-runner-factory
+@defunx test-runner-factory @var{factory}
+Get or set the current test-runner factory.  A factory is a
+zero--argument function that creates a new test-runner.  The default
+value is @func{test-runner-simple}, but implementations may provide a
+way to override the default.  As with @func{test-runner-current}, this
+may be a parameter object, or use a per--thread, fluid, or global
+variable.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Running specific tests with a specified runner
+
+
+@defun test-apply @var{specifier} ... @var{procedure}
+@defunx test-apply @var{runner} @var{specifier} ... @var{procedure}
+Call @var{procedure} with no arguments using the specified @var{runner}
+as the current test-runner.  If @var{runner} is omitted, then
+@code{(test-runner-current)} is used.  (If there is no current runner,
+one is created as in @func{test-begin}.)
+
+If one or more specifiers are listed then only tests matching the
+specifiers are executed.  A specifier has the same form as one used for
+@func{test-skip}.  A test is executed if it matches any of the
+specifiers in the @func{test-apply} and does not match any active
+@func{test-skip} specifiers.
+@end defun
+
+
+@defun test-with-runner @var{runner} @var{decl-or-expr} ...
+Execute each @var{decl-or-expr} in order in a context where the current
+test-runner is runner.
+@end defun
+
+@c page
+@node srfi testing spec results
+@subsubsection Test results
+
+
+Running a test sets various status properties in the current
+test-runner.  This can be examined by a custom test-runner, or (more
+rarely) in a test-suite.
+
+@c ------------------------------------------------------------
+
+@subsubheading Result kind
+
+Running a test may yield one of the following status symbols:
+
+@table @code
+@item pass
+The passed, as expected.
+
+@item fail
+The test failed (and was not expected to).
+
+@item xfail
+The test failed and was expected to.
+
+@item xpass
+The test passed, but was expected to fail.
+
+@item skip
+The test was skipped.
+@end table
+
+
+@defun test-result-kind
+@defunx test-result-kind @var{runner}
+Return one of the above result codes from the most recent tests.  Return
+@false{} if no tests have been run yet.  If we've started on a new test,
+but don't have a result yet, then the result kind is @code{xfail} is the
+test is expected to fail, @code{skip} is the test is supposed to be
+skipped, or @false{} otherwise.
+@end defun
+
+
+@defun test-passed?
+@defunx test-passed? @var{runner}
+True if the value of:
+
+@example
+(test-result-kind)
+(test-result-kind @var{runner})
+@end example
+
+@noindent
+is one of @code{pass} or @code{xpass}.  This is a convenient shorthand
+that might be useful in a test suite to only run certain tests if the
+previous test passed.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Test result properties
+
+A test runner also maintains a set of more detailed ``result
+properties'' associated with the current or most recent test.  (I.e. the
+properties of the most recent test are available as long as a new test
+hasn't started.)  Each property has a name (a symbol) and a value (any
+value).  Some properties are standard or set by the implementation;
+implementations can add more.
+
+
+@defun test-result-ref @var{runner} @var{pname}
+@defunx test-result-ref @var{runner} @var{pname} @var{default}
+Return the property value associated with the @var{pname} property name.
+If there is no value associated with @var{pname} return @var{default},
+or @false{} if default isn't specified.
+@end defun
+
+
+@defun test-result-set! @var{runner} @var{pname} @var{value}
+Set the property value associated with the @var{pname} property name to
+@var{value}.  Usually implementation code should call this function, but
+it may be useful for a custom test-runner to add extra properties.
+@end defun
+
+
+@defun test-result-remove @var{runner} @var{pname}
+Remove the property with the name @var{pname}.
+@end defun
+
+
+@defun test-result-clear @var{runner}
+Remove all result properties.  The implementation automatically calls
+@func{test-result-clear} at the start of a @func{test-assert} and
+similar procedures.
+@end defun
+
+
+@defun test-result-alist @var{runner}
+Return an association list of the current result properties.  It is
+unspecified if the result shares state with the test-runner.  The result
+should not be modified, on the other hand the result may be implicitly
+modified by future @func{test-result-set!} or @func{test-result-remove}
+calls.  However, a @func{test-result-clear} does not modify the returned
+alist.  Thus you can ``archive'' result objects from previous runs.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Standard result properties
+
+The set of available result properties is implementation--specific.
+However, it is suggested that the following might be provided:
+
+@table @code
+@item result-kind
+The result kind, as defined previously.  This is the only mandatory
+result property.
+
+@example
+(test-result-kind @var{runner})
+@equiv{} (test-result-ref @var{runner} 'result-kind)
+@end example
+
+@item source-file
+@itemx source-line
+If known, the location of test statements (such as @func{test-assert})
+in test suite source code.
+
+@item source-form
+The source form, if meaningful and known.
+
+@item expected-value
+The expected non--error result, if meaningful and known.
+
+@item expected-error
+The error--type specified in a test-error, if it meaningful and known.
+
+@item actual-value
+The actual non--error result value, if meaningful and known.
+
+@item actual-error
+The error value, if an error was signalled and it is known.  The actual
+error value is implementation--defined.
+@end table
+
+@c page
+@node srfi testing spec writing
+@subsubsection Writing a new test-runner
+
+
+This section specifies how to write a test-runner.  It can be ignored if
+you just want to write test cases.
+
+@c ------------------------------------------------------------
+
+@subsubheading Callback functions
+
+These callback functions are ``methods''" (in the object--oriented
+sense) of a test-runner.  A method @func{test-runner-on-event} is called
+by the implementation when event happens.
+
+To define (set) the callback function for event use the following
+expression.  (This is normally done when initializing a test-runner.)
+
+@example
+(test-runner-on-event! @var{runner} @var{event-function})
+@end example
+
+An @var{event-function} takes a test-runner argument, and possibly other
+arguments, depending on the event.
+
+To extract (get) the callback function for event do this:
+
+@example
+(test-runner-on-event @var{runner})
+@end example
+
+To extract call the callback function for event use the following
+expression.  (This is normally done by the implementation core.)
+
+@example
+((test-runner-on-event @var{runner}) @var{runner} @var{other-args} ...)
+@end example
+
+The following callback hooks are available.
+
+
+@defun test-runner-on-test-begin @var{runner}
+@defunx test-runner-on-test-begin! @var{runner} @var{on-test-begin-function}
+@defunx on-test-begin-function @var{runner}
+The @var{on-test-begin-function} is called at the start of an individual
+testcase, before the test expression (and expected value) are evaluated.
+@end defun
+
+
+@defun test-runner-on-test-end @var{runner}
+@defunx test-runner-on-test-end! @var{runner} @var{on-test-end-function}
+@defunx on-test-end-function @var{runner}
+The @var{on-test-end-function} is called at the end of an individual
+testcase, when the result of the test is available.
+@end defun
+
+
+@defun test-runner-on-group-begin @var{runner}
+@defunx test-runner-on-group-begin! @var{runner} @var{on-group-begin-function}
+@defunx on-group-begin-function @var{runner} @var{suite-name} @var{count}
+The @var{on-group-begin-function} is called by a @func{test-begin},
+including at the start of a @func{test-group}.  The @var{suite-name} is
+a Scheme string, and @var{count} is an integer or @false{}.
+@end defun
+
+
+@defun test-runner-on-group-end @var{runner}
+@defunx test-runner-on-group-end! @var{runner} @var{on-group-end-function}
+@defunx on-group-end-function @var{runner}
+The @var{on-group-end-function} is called by a @func{test-end},
+including at the end of a @func{test-group}.
+@end defun
+
+
+@defun test-runner-on-bad-count @var{runner}
+@defunx test-runner-on-bad-count! @var{runner} @var{on-bad-count-function}
+@defunx on-bad-count-function @var{runner} @var{actual-count} @var{expected-count}
+Called from @func{test-end} (before the @var{on-group-end-function} is
+called) if an @var{expected-count} was specified by the matching
+@func{test-begin} and the @var{expected-count} does not match the
+@var{actual-count} of tests actually executed or skipped.
+@end defun
+
+
+@defun test-runner-on-bad-end-name @var{runner}
+@defunx test-runner-on-bad-end-name! @var{runner} @var{on-bad-end-name-function}
+@defunx on-bad-end-name-function @var{runner} @var{begin-name} @var{end-name}
+Called from @func{test-end} (before the @var{on-group-end-function} is
+called) if a @var{suite-name} was specified, and it did not that the
+name in the matching @func{test-begin}.
+@end defun
+
+
+@defun test-runner-on-final @var{runner}
+@defunx test-runner-on-final! @var{runner} @var{on-final-function}
+@defunx on-final-function @var{runner}
+The @var{on-final-function} takes one parameter (a test-runner) and
+typically displays a summary (count) of the tests.  The
+@var{on-final-function} is called after called the
+@var{on-group-end-function} correspondiong to the outermost
+@func{test-end}.  The default value is @func{test-on-final-simple} which
+writes to the standard output port the number of tests of the various
+kinds.
+@end defun
+
+
+The default test-runner returned by @func{test-runner-simple} uses the
+following callback functions:
+
+@smallexample
+(test-on-test-begin-simple @var{runner})
+(test-on-test-end-simple @var{runner})
+(test-on-group-begin-simple @var{runner} @var{suite-name} @var{count})
+(test-on-group-end-simple @var{runner})
+(test-on-bad-count-simple @var{runner} @var{actual-count} @var{expected-count})
+(test-on-bad-end-name-simple @var{runner} @var{begin-name} @var{end-name})
+@end smallexample
+
+You can call those if you want to write your own test-runner.
+
+@c ------------------------------------------------------------
+
+@subsubheading Test-runner components
+
+The following functions are for accessing the other components of a
+test-runner.  They would normally only be used to write a new
+test-runner or a match-predicate.
+
+
+@defun test-runner-pass-count @var{runner}
+Return the number of tests that passed, and were expected to pass.
+@end defun
+
+
+@defun test-runner-fail-count @var{runner}
+Return the number of tests that failed, but were expected to pass.
+@end defun
+
+
+@defun test-runner-xpass-count @var{runner}
+Return the number of tests that passed, but were expected to fail.
+@end defun
+
+
+@defun test-runner-xfail-count @var{runner}
+Returns the number of tests that failed, and were expected to pass.
+@end defun
+
+
+@defun test-runner-skip-count @var{runner}
+Return the number of tests or test groups that were skipped.
+@end defun
+
+
+@defun test-runner-test-name @var{runner}
+Return the name of the current test or test group, as a string.  During
+execution of @func{test-begin} this is the name of the test group;
+during the execution of an actual test, this is the name of the
+test-case.  If no name was specified, the name is the empty string.
+@end defun
+
+
+@defun test-runner-group-path @var{runner}
+A list of names of groups we're nested in, with the outermost group
+first.
+@end defun
+
+
+@defun test-runner-group-stack @var{runner}
+A list of names of groups we're nested in, with the outermost group
+last.  (This is more efficient than @func{test-runner-group-path}, since
+it doesn't require any copying.)
+@end defun
+
+
+@defun test-runner-aux-value @var{runner}
+@defunx test-runner-aux-value! @var{runner} @var{on-test}
+Get or set the @var{aux}-value field of a test-runner.  This field is
+not used by this @api{} or the @func{test-runner-simple} test-runner,
+but may be used by custom test-runners to store extra state.
+@end defun
+
+
+@defun test-runner-reset @var{runner}
+Reset the state of the runner to its initial state.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Example
+
+This is an example of a simple custom test-runner.  Loading this program
+before running a test-suite will install it as the default test runner.
+
+@example
+(define (my-simple-runner filename)
+  (let ((runner (test-runner-null))
+	(port (open-output-file filename))
+        (num-passed 0)
+        (num-failed 0))
+    (test-runner-on-test-end! runner
+      (lambda (runner)
+        (case (test-result-kind runner)
+          ((pass xpass) (set! num-passed (+ num-passed 1)))
+          ((fail xfail) (set! num-failed (+ num-failed 1)))
+          (else #t))))
+    (test-runner-on-final! runner
+       (lambda (runner)
+          (format port "Passing tests: ~d.~%Failing tests: ~d.~%"
+                  num-passed num-failed)
+	  (close-output-port port)))
+    runner))
+
+(test-runner-factory
+ (lambda () (my-simple-runner "/tmp/my-test.log")))
+@end example
+
+@c page
+@node srfi testing copyright
+@subsection Copyright
+
+
+Copyright @copyright{} 2005, 2006 Per Bothner.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c end of file

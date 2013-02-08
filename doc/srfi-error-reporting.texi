@@ -2,7 +2,7 @@
 @section @ansrfi{23} error reporting mechanism
 
 
-@cindex @srfi{} error-reporting
+@cindex @srfi{23} error reporting mechanism
 
 
 The library @library{srfi :23} is by Stephan Houben as the reference

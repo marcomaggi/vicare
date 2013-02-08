@@ -2,7 +2,7 @@
 @section @ansrfi{27} sources of random bits
 
 
-@cindex @srfi{} random
+@cindex @ansrfi{27} sources of random bits
 
 
 The library @library{srfi :27} is by Sebastian Egner as the reference

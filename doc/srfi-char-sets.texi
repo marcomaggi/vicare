@@ -2,7 +2,7 @@
 @section @ansrfi{14} character sets
 
 
-@cindex @srfi{} character sets
+@cindex @ansrfi{14} character sets
 
 
 The library @library{srfi :14} is by Olin Shivers as the reference

@@ -1,8 +1,8 @@
 @node srfi shared structures
-@section @ansrfi{38} representation for data with  shared structure
+@section @ansrfi{38} representation for data with shared structure
 
 
-@cindex @srfi{} shared structures
+@cindex @ansrfi{38} representation for data with shared structure
 
 
 The library @library{srfi :38} was written by Ray Dillinger as the
