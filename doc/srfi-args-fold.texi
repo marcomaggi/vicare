@@ -3,7 +3,7 @@
 @section @ansrfi{37} a program argument processor
 
 
-@cindex @srfi{} args-fold
+@cindex @ansrfi{37} args-fold
 
 
 The library @library{srfi :37} is by Anthony Carrico as the reference

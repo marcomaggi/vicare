@@ -2,7 +2,7 @@
 @section @ansrfi{67} compare procedures
 
 
-@cindex @srfi{} parameters
+@cindex @ansrfi{67} compare procedures
 
 
 The library @library{srfi :67} is by Sebastian Egner Jens Axel Soegaard

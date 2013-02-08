@@ -2,7 +2,7 @@
 @section @ansrfi{31} a special form @func{rec} for recursive evaluation
 
 
-@cindex @srfi{} rec
+@cindex @ansrfi{31} a special form @func{rec} for recursive evaluation
 
 
 The library @library{srfi :31} is by Mirko Luedde

@@ -1,8 +1,8 @@
 @node srfi environment-variables
-@section @ansrfi{98} environment-variables
+@section @ansrfi{98} environment variables
 
 
-@cindex @srfi{} environment-variables
+@cindex @ansrfi{98} environment variables
 
 
 The library @library{srfi :98} is by Taro Minowa (Higepon) as the

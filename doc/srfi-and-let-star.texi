@@ -2,7 +2,7 @@
 @section @ansrfi{2} @func{and-let*}: an @func{and} with local bindings, a guarded @func{let*} special form.
 
 
-@cindex @srfi{} and-let-star
+@cindex @ansrfi{2} and-let-star
 
 
 The library @library{srfi :2} is by Oleg Kiselyov as the reference

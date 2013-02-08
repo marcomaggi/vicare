@@ -2,7 +2,7 @@
 @section @ansrfi{64} testing
 
 
-@cindex @srfi{} parameters
+@cindex @ansrfi{64} testing
 
 
 The library @library{srfi :64} is by Per Bothner as the reference

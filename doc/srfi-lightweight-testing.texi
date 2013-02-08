@@ -2,7 +2,7 @@
 @section @ansrfi{78} lightweight testing
 
 
-@cindex @srfi{} lightweight-testing
+@cindex @ansrfi{78} lightweight testing
 
 
 The library @library{srfi :78} are written by Sebastian Egner as the

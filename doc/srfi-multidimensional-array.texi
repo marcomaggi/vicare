@@ -2,7 +2,7 @@
 @section @ansrfi{25} multidimensional array
 
 
-@cindex @srfi{} Multi--dimensional Array Primitives
+@cindex @ansrfi{25} multi--dimensional array primitives
 
 
 The library @library{srfi :25} is by Jussi Piitulainen as the reference

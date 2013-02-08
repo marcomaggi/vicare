@@ -2,7 +2,7 @@
 @section @ansrfi{99} @acronym{ERR5RS} records
 
 
-@cindex @srfi{} @acronym{ERR5RS} records
+@cindex @ansrfi{99} @acronym{ERR5RS} records
 
 
 The library @library{srfi :99} is by y Taro Minowa (Higepon) as the

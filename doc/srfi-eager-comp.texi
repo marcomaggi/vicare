@@ -2,7 +2,7 @@
 @section @ansrfi{42} eager comprehensions
 
 
-@cindex @srfi{} eager-comp
+@cindex @ansrfi{42} eager comprehensions
 
 
 The library @library{srfi :42} is by Sebastian Egner as the reference

@@ -2,7 +2,7 @@
 @section @ansrfi{45} lazy iterative algorithms
 
 
-@cindex @srfi{} parameters
+@cindex @ansrfi{45} lazy iterative algorithms
 
 
 The library @library{srfi :45} is by Andre van Tonder as the reference

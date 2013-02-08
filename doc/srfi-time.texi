@@ -2,7 +2,7 @@
 @section @ansrfi{19} time data types and procedures
 
 
-@cindex @srfi{} time
+@cindex @ansrfi{19} time data types and procedures
 
 
 The library @library{srfi :19} is by Will Fitzgerald as the reference

@@ -2,7 +2,7 @@
 @section @ansrfi{6} basic string ports
 
 
-@cindex @srfi{} string-ports
+@cindex @ansrfi{6} basic string ports
 
 
 The library @library{srfi :6} is by William D Clinger as the reference

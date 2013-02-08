@@ -2,7 +2,7 @@
 @section @ansrfi{69} basic hash tables
 
 
-@cindex @srfi{} basic hash tables
+@cindex @ansrfi{69} basic hash tables
 
 
 The library @library{srfi :69} is by Andreas Rottmann as the reference

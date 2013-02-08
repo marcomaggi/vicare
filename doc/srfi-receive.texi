@@ -2,7 +2,7 @@
 @section @ansrfi{8} @func{receive}: Binding to multiple values
 
 
-@cindex @srfi{} receive
+@cindex @ansrfi{8} @func{receive}: binding to multiple values
 
 
 The library @library{srfi :8} is by John David Stone (Department of
