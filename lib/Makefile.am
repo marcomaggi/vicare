@@ -139,16 +139,10 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a99/records/procedural.sls		\
 	srfi/%3a99/records/syntactic.sls		\
 	\
-	srfi/private/check-arg.sls			\
 	srfi/private/feature-cond.sls			\
-	srfi/private/include/compat.vicare.sls		\
-	srfi/private/include.sls			\
-	srfi/private/let-opt.sls			\
-	srfi/private/make-aliased-libraries.sps		\
 	srfi/private/OS-id-features.sls			\
 	srfi/private/platform-features.vicare.sls	\
-	srfi/private/registry.sls			\
-	srfi/private/vanish.sls
+	srfi/private/registry.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/errno.sls			\
