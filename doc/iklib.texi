@@ -24,6 +24,21 @@ It exports the same bindings of @library{ikarus}.
 @item vicare language-extensions
 It exports all the bindings exported by @library{vicare} that are
 @strong{not} exported by @library{rnrs (6)}.
+
+@item vicare platform constants
+Exports one syntax identifier binding for each platform constant that
+makes sense to access from Scheme.
+
+@item vicare platform utilities
+Defines helper functions to deal with platform specific issues;
+@ref{platform} for details.
+
+@item vicare platform features
+@cindex Library @library{vicare platform features}
+@cindex @library{vicare platform features}, library
+Exports an identifier syntax for every @code{HAVE_} symbol defined by
+the configuration script @command{configure}; such syntaxes expand to a
+boolean value: @true{} if the feature is available, @false{} otherwise.
 @end table
 
 @menu
