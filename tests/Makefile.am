@@ -320,7 +320,7 @@ VICARE_INSTCHECK_RUN	= \
 installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
-#XFAIL_TESTS = test-vicare-log.sps
+XFAIL_TESTS = test-srfi-19-time.sps
 
 #page
 #### extra files to be distributed
