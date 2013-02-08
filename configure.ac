@@ -126,12 +126,42 @@ dnl Optional linking with pthreads
 dnl This  must come before  searching for POSIX functions.   For example
 dnl the POSIX semaphore functions appear to need this library.
 AC_ARG_WITH([pthread],
-  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
-  [true],[with_pthread=no])
+  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is check)]),
+  [true],[with_pthread=check])
+
 vicare_with_pthread=no
-if test x$with_pthread != xno; then
-   vicare_with_pthread=yes
-   AC_CHECK_LIB([pthread],[main])
+if test x$with_pthread = xyes || test x$with_pthread = xcheck
+then
+  # Check for pthread header and library.
+  AC_CHECK_HEADER([pthread.h],[vicare_have_pthread_h=yes],[vicare_have_pthread_h=no])
+  AC_CHECK_LIB([pthread],[main],[vicare_have_pthread=yes],[vicare_have_pthread=no])
+  if test "$vicare_have_pthread" = yes && test "$vicare_have_pthread_h" = yes
+  then
+    # Both the library and the header were found: success!
+    AC_MSG_NOTICE([pthread support enabled])
+    AC_DEFINE([HAVE_PTHREAD],[1],[define if you have a pthread library])
+    vicare_with_pthread=yes
+    LIBS="$LIBS -lpthread"
+  elif test "$with_pthread" = yes; then
+    # The user requested pthread support or die, but either the header or
+    # the library or both were not found.
+    if test "$vicare_have_pthread_h" = no; then
+      AC_MSG_ERROR([pthread.h cannot be found.
+Please specify the location of the header file using
+  ./configure CPPFLAGS=-I<path/to/pthread.h>   <other-options ...>
+])
+    fi
+    if test "$vicare_have_pthread" = no; then
+      AC_MSG_ERROR([pthread cannot be found.
+Please specify the location of the library file using
+  ./configure LDFLAGS=-L<path/to/pthread.ld|dylib|so|etc.>  <other-options ...>
+])
+    fi
+  else
+    # The user requested a check for optional pthread support, but either
+    # the header or the library or both were not found.
+    AC_MSG_WARN([pthread not found])
+  fi
 fi
 AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 
