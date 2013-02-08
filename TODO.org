@@ -111,6 +111,7 @@
 
 ** DONE SRFI 26 cut
 ** DONE SRFI 27 random-bits
+** DONE SRFI 28 basic format strings
 ** DONE SRFI 31 rec
 ** DONE SRFI 37 args-fold
 ** DONE SRFI 38 shared structures
