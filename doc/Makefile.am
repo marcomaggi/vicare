@@ -43,6 +43,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-err5rs-records.texi		\
 	srfi-error-reporting.texi		\
 	srfi-general-cond.texi			\
+	srfi-intermediate-format.texi		\
 	srfi-hash-tables.texi			\
 	srfi-lazy.texi				\
 	srfi-let-values.texi			\

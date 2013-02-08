@@ -1,0 +1,17 @@
+@node srfi intermediate-format
+@section @ansrfi{48} intermediate format strings
+
+
+@cindex @ansrfi{48} intermediate format strings
+
+
+The library @library{srfi :48} is by Kenneth Dickey as the reference
+implementation for @ansrfi{48}; see:
+
+@center @url{http://srfi.schemers.org/srfi-48/srfi-48.html}
+
+@noindent
+for more details.
+
+
+@c end of file
