@@ -77,20 +77,8 @@
 
      (unparse-recordized-code			$unparse-recordized-code)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
-  (import (except (ikarus)
-		  current-primitive-locations
-		  eval-core			current-core-eval
-		  compile-core-expr-to-port	compile-core-expr
-
-		  assembler-output
-		  optimizer-output
-		  tag-analysis-output
-
-		  cp0-effort-limit		cp0-size-limit
-		  current-letrec-pass		generate-debug-calls
-		  optimize-cp			optimize-level
-		  perform-tag-analysis		strip-source-info
-		  fasl-write)
+  (import
+      (rnrs hashtables)
     ;;Remember that this file defines the primitive operations.
     (ikarus system $fx)
     (ikarus system $pairs)
@@ -98,13 +86,27 @@
 	  $code->closure)
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
-    (vicare include)
+    (except (ikarus)
+	    current-primitive-locations
+	    eval-core			current-core-eval
+	    compile-core-expr-to-port	compile-core-expr
+
+	    assembler-output
+	    optimizer-output
+	    tag-analysis-output
+
+	    cp0-effort-limit		cp0-size-limit
+	    current-letrec-pass		generate-debug-calls
+	    optimize-cp			optimize-level
+	    perform-tag-analysis	strip-source-info
+	    fasl-write)
     ;;This needs to be loaded here so that it evaluates with the freshly
     ;;loaded  "ikarus.config.ss",   including  the  correct   value  for
     ;;WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
+    (vicare include)
     (except (vicare syntactic-extensions)
 	    begin0)
     (vicare arguments validation))
