@@ -39,25 +39,28 @@
     hashtable-hash-function
     string-hash			string-ci-hash
     symbol-hash			equal-hash)
-  (import (except (ikarus)
-		  make-eq-hashtable	make-eqv-hashtable
-		  make-hashtable
-		  hashtable?		hashtable-mutable?
-		  hashtable-ref		hashtable-set!
-		  hashtable-size
-		  hashtable-delete!	hashtable-clear!
-		  hashtable-contains?
-		  hashtable-update!
-		  hashtable-keys	hashtable-entries
-		  hashtable-copy
-		  hashtable-equivalence-function
-		  hashtable-hash-function
-		  string-hash		string-ci-hash
-		  symbol-hash		equal-hash)
-    (ikarus system $pairs)
+  (import
+      (ikarus system $pairs)
     (ikarus system $vectors)
     (ikarus system $tcbuckets)
     (ikarus system $fx)
+    (except (ikarus)
+	    make-eq-hashtable		make-eqv-hashtable
+	    make-hashtable
+	    hashtable?			hashtable-mutable?
+	    hashtable-ref		hashtable-set!
+	    hashtable-size
+	    hashtable-delete!		hashtable-clear!
+	    hashtable-contains?
+	    hashtable-update!
+	    hashtable-keys		hashtable-entries
+	    hashtable-copy
+	    hashtable-equivalence-function
+	    hashtable-hash-function
+	    string-hash			string-ci-hash
+	    symbol-hash			equal-hash)
+    ;;This import spec must be the  last, else rebuilding the boot image
+    ;;may fail.  (Marco Maggi; Sat Feb  9, 2013)
     (vicare arguments validation))
 
 
