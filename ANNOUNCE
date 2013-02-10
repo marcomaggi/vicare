@@ -161,6 +161,8 @@ Notes for revision 0.2d20
   constants" for how  to display such symbols with  Unicode glyphs under
   GNU Emacs.
 
+* Added documentation for the library (vicare platform features).
+
 
 Notes for revision 0.2d19
 -------------------------

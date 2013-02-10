@@ -1330,12 +1330,18 @@ are @strong{not} meant to be binding identifiers.
 @cindex @library{vicare platform constants}, library
 @cindex Library @library{vicare platform utilities}
 @cindex @library{vicare platform utilities}, library
+@cindex Library @library{vicare platform features}
+@cindex @library{vicare platform features}, library
 
 
 The library @library{vicare platform constants} exports one syntax
 identifier binding for each platform constant that makes sense to access
 from Scheme.  The library @library{vicare platform utilities} defines
-helper functions to deal with platform specific issues.
+helper functions to deal with platform specific issues. The library
+@library{vicare platform features} exports an identifier syntax for
+every @code{HAVE_} symbol defined by the configuration script
+@command{configure}; such syntaxes expand to a boolean value: @true{} if
+the feature is available, @false{} otherwise.
 
 The following bindings are exported by the library @library{vicare
 platform utilities}.
