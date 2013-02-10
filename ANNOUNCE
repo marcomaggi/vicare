@@ -63,7 +63,8 @@ Notes for revision 0.2d20
   than under "$prefix/scheme".
 
 * Starting  with this  revision, the  SRFI libraries  ported to  R6RS by
-  Derick Eddington are included in the distribution.
+  Derick Eddington are included in the distribution.  At present SRFI 19
+  (time data types and procedures) is broken.
 
 * Added functions to (vicare):
 
@@ -134,13 +135,13 @@ Notes for revision 0.2d20
 
 * BACKWARDS INCOMPATIBILITY The functions from (vicare glibc):
 
-     glibc-sinh glibc-cosh glibc-tanh
-     glibc-asinh glibc-acosh glibc-atanh
+     glibc-sinh		glibc-cosh	glibc-tanh
+     glibc-asinh	glibc-acosh	glibc-atanh
 
   have been renamed to:
 
-     sinh cosh tanh
-     asinh acosh atanh
+     sinh		cosh		tanh
+     asinh		acosh		atanh
 
 * The following bindings have been added to (ikarus system $ratnums):
 
