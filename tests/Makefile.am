@@ -95,7 +95,6 @@ TEST_EXTENSIONS		= .sps
 SPS_LOG_COMPILER	= $(VICARE)
 AM_SPS_LOG_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
 
-TESTS_ENVIRONMENT	= $(VICARE_CHECK_RUN)
 TESTS			=	\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
