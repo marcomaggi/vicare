@@ -40,7 +40,7 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d21
 -------------------------
 
-*
+* Changed tarball distribution from .bz2 compression to .xz compression.
 
 
 Notes for revision 0.2d20
