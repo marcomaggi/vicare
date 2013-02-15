@@ -4783,6 +4783,12 @@ Return true if @var{obj} is a pointer object and it represents @cnull{}.
 @end defun
 
 
+@defun set-pointer-null! @var{pointer}
+Mutate the pointer object @var{pointer} to represent the @cnull{}
+pointer.
+@end defun
+
+
 @defun pointer-diff @vari{ptr} @varii{ptr}
 Return an exact integer representing the difference between the two
 pointer objects @vari{ptr} and @varii{ptr}.  The returned value is such
