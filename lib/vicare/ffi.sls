@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008, 2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -65,6 +65,7 @@
     pointer=?				pointer<>?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
+    set-pointer-null!
 
     ;; memory blocks
     make-memory-block			make-memory-block/guarded
