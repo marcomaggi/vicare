@@ -42,6 +42,8 @@ Notes for revision 0.2d21
 
 * Changed tarball distribution from .bz2 compression to .xz compression.
 
+* Added $STRING= to (ikarus system $strings).
+
 
 Notes for revision 0.2d20
 -------------------------
