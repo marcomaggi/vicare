@@ -2284,6 +2284,30 @@ Special implementation of @func{case} expecting only symbols as datums.
 behaviour is undefined.
 @end deffn
 
+
+@deffn Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only strings as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a string, else the
+behaviour is undefined.
+@end deffn
+
+
+@deffn Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only characters as
+datums.  @func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a char, else the
+behaviour is undefined.
+@end deffn
+
 @c page
 @node syntaxes args
 @subsection Arguments validation

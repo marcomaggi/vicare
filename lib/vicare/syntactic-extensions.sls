@@ -78,6 +78,7 @@
     case-word-size		case-endianness
     case-fixnums		case-integers
     case-symbols		case-chars
+    case-strings
     define-exact-integer->symbol-function
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
@@ -381,124 +382,225 @@
 	    (assertion-violation ?who "expected endianness symbol as argument" ?endianness)))))))
 
 (define-syntax case-fixnums
-  (syntax-rules (else)
-    ((_ ?expr
-	((?fixnum0 ?fixnum ...)
-	 ?fx-body0 ?fx-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((fx ?expr))
-       (import (only (ikarus system $fx)
-		     $fx=))
-       (cond ((or ($fx= ?fixnum0 fx)
-		  ($fx= ?fixnum  fx)
-		  ...)
-	      ?fx-body0 ?fx-body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?fixnum0 ?fixnum ...)
-	 ?fx-body0 ?fx-body ...)
-	...)
-     (let ((fx ?expr))
-       (import (only (ikarus system $fx)
-		     $fx=))
-       (cond ((or ($fx= ?fixnum0 fx)
-		  ($fx= ?fixnum  fx)
-		  ...)
-	      ?fx-body0 ?fx-body ...)
-	     ...)))
-    ))
+  (lambda (stx)
+    (define who 'case-fixnums)
+    (define (%assert-all-fixnums LL)
+      (for-each (lambda (L)
+		  (for-each (lambda (S)
+			      (unless (fixnum? S)
+				(syntax-violation who "expected fixnum as datum" L S)))
+		    L))
+	(syntax->datum LL)))
+    (syntax-case stx (else)
+      ((_ ?expr
+	  ((?fixnum0 ?fixnum ...)
+	   ?fx-body0 ?fx-body ...)
+	  ...
+	  (else
+	   ?else-body0 ?else-body ...))
+       (begin
+	 (%assert-all-fixnums #'((?fixnum0 ?fixnum ...) ...))
+	 #'(let ((fx ?expr))
+	     (import (only (ikarus system $fx)
+			   $fx=))
+	     (cond ((or ($fx= ?fixnum0 fx)
+			($fx= ?fixnum  fx)
+			...)
+		    ?fx-body0 ?fx-body ...)
+		   ...
+		   (else
+		    ?else-body0 ?else-body ...)))))
+      ((_ ?expr
+	  ((?fixnum0 ?fixnum ...)
+	   ?fx-body0 ?fx-body ...)
+	  ...)
+       (begin
+	 (%assert-all-fixnums #'((?fixnum0 ?fixnum ...) ...))
+	 #'(let ((fx ?expr))
+	     (import (only (ikarus system $fx)
+			   $fx=))
+	     (cond ((or ($fx= ?fixnum0 fx)
+			($fx= ?fixnum  fx)
+			...)
+		    ?fx-body0 ?fx-body ...)
+		   ...))))
+      )))
 
 (define-syntax case-integers
-  (syntax-rules (else)
-    ((_ ?expr
-	((?integer0 ?integer ...)
-	 ?body0 ?body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((int ?expr))
-       (cond ((or (= ?integer0 int)
-		  (= ?integer  int)
-		  ...)
-	      ?body0 ?body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?integer0 ?integer ...)
-	 ?body0 ?body ...)
-	...)
-     (let ((int ?expr))
-       (cond ((or (= ?integer0 int)
-		  (= ?integer  int)
-		  ...)
-	      ?body0 ?body ...)
-	     ...)))
-    ))
+  (lambda (stx)
+    (define who 'case-integers)
+    (define (%assert-all-integers LL)
+      (for-each (lambda (L)
+		  (for-each (lambda (S)
+			      (unless (or (fixnum? S)
+					  (bignum? S))
+				(syntax-violation who
+				  "expected exact integer as datum" L S)))
+		    L))
+	(syntax->datum LL)))
+    (syntax-case stx (else)
+      ((_ ?expr
+	  ((?integer0 ?integer ...)
+	   ?body0 ?body ...)
+	  ...
+	  (else
+	   ?else-body0 ?else-body ...))
+       (begin
+	 (%assert-all-integers #'((?integer0 ?integer ...) ...))
+	 #'(let ((int ?expr))
+	     (cond ((or (= ?integer0 int)
+			(= ?integer  int)
+			...)
+		    ?body0 ?body ...)
+		   ...
+		   (else
+		    ?else-body0 ?else-body ...)))))
+      ((_ ?expr
+	  ((?integer0 ?integer ...)
+	   ?body0 ?body ...)
+	  ...)
+       (begin
+	 (%assert-all-integers #'((?integer0 ?integer ...) ...))
+	 #'(let ((int ?expr))
+	     (cond ((or (= ?integer0 int)
+			(= ?integer  int)
+			...)
+		    ?body0 ?body ...)
+		   ...))))
+      )))
 
 (define-syntax case-symbols
-  (syntax-rules (else)
-    ((_ ?expr
-	((?symbol0 ?symbol ...)
-	 ?sym-body0 ?sym-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((sym ?expr))
-       (cond ((or (eq? (quote ?symbol0) sym)
-		  (eq? (quote ?symbol)  sym)
-		  ...)
-	      ?sym-body0 ?sym-body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?symbol0 ?symbol ...)
-	 ?sym-body0 ?sym-body ...)
-	...)
-     (let ((sym ?expr))
-       (cond ((or (eq? (quote ?symbol0) sym)
-		  (eq? (quote ?symbol)  sym)
-		  ...)
-	      ?sym-body0 ?sym-body ...)
-	     ...)))
-    ))
+  (lambda (stx)
+    (define who 'case-symbols)
+    (define (%assert-all-symbols LL)
+      (for-each (lambda (L)
+		  (for-each (lambda (S)
+			      (unless (symbol? S)
+				(syntax-violation who "expected symbol as datum" L S)))
+		    L))
+	(syntax->datum LL)))
+    (syntax-case stx (else)
+      ((_ ?expr
+	  ((?symbol0 ?symbol ...)
+	   ?sym-body0 ?sym-body ...)
+	  ...
+	  (else
+	   ?else-body0 ?else-body ...))
+       (begin
+	 (%assert-all-symbols #'((?symbol0 ?symbol ...) ...))
+	 #'(let ((sym ?expr))
+	     (cond ((or (eq? (quote ?symbol0) sym)
+			(eq? (quote ?symbol)  sym)
+			...)
+		    ?sym-body0 ?sym-body ...)
+		   ...
+		   (else
+		    ?else-body0 ?else-body ...)))))
+      ((_ ?expr
+	  ((?symbol0 ?symbol ...)
+	   ?sym-body0 ?sym-body ...)
+	  ...)
+       (begin
+	 (%assert-all-symbols #'((?symbol0 ?symbol ...) ...))
+	 #'(let ((sym ?expr))
+	     (cond ((or (eq? (quote ?symbol0) sym)
+			(eq? (quote ?symbol)  sym)
+			...)
+		    ?sym-body0 ?sym-body ...)
+		   ...))))
+      )))
 
 (define-syntax case-chars
-  (syntax-rules (else)
-    ((_ ?expr
-	((?char0 ?char ...)
-	 ?ch-body0 ?ch-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((ch ?expr))
-       (import (only (ikarus system $chars)
-		     $char=))
-       (cond ((or ($char= ?char0 ch)
-		  ($char= ?char  ch)
-		  ...)
-	      ?ch-body0 ?ch-body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?char0 ?char ...)
-	 ?ch-body0 ?ch-body ...)
-	...)
-     (let ((ch ?expr))
-       (import (only (ikarus system $chars)
-		     $char=))
-       (cond ((or ($char= ?char0 ch)
-		  ($char= ?char  ch)
-		  ...)
-	      ?ch-body0 ?ch-body ...)
-	     ...)))
-    ))
+  (lambda (stx)
+    (define who 'case-chars)
+    (define (%assert-all-chars LL)
+      (for-each (lambda (L)
+		  (for-each (lambda (S)
+			      (unless (char? S)
+				(syntax-violation who "expected character as datum" L S)))
+		    L))
+	(syntax->datum LL)))
+    (syntax-case stx (else)
+      ((_ ?expr
+	  ((?char0 ?char ...)
+	   ?ch-body0 ?ch-body ...)
+	  ...
+	  (else
+	   ?else-body0 ?else-body ...))
+       (begin
+	 (%assert-all-chars #'((?char0 ?char ...) ...))
+	 #'(let ((ch ?expr))
+	     (import (only (ikarus system $chars)
+			   $char=))
+	     (cond ((or ($char= ?char0 ch)
+			($char= ?char  ch)
+			...)
+		    ?ch-body0 ?ch-body ...)
+		   ...
+		   (else
+		    ?else-body0 ?else-body ...)))))
+      ((_ ?expr
+	  ((?char0 ?char ...)
+	   ?ch-body0 ?ch-body ...)
+	  ...)
+       (begin
+	 (%assert-all-chars #'((?char0 ?char ...) ...))
+	 #'(let ((ch ?expr))
+	     (import (only (ikarus system $chars)
+			   $char=))
+	     (cond ((or ($char= ?char0 ch)
+			($char= ?char  ch)
+			...)
+		    ?ch-body0 ?ch-body ...)
+		   ...))))
+      )))
+
+(define-syntax case-strings
+  (lambda (stx)
+    (define who 'case-strings)
+    (define (%assert-all-strings LL)
+      (for-each (lambda (L)
+		  (for-each (lambda (S)
+			      (unless (string? S)
+				(syntax-violation who "expected string as datum" L S)))
+		    L))
+	(syntax->datum LL)))
+    (syntax-case stx (else)
+      ((_ ?expr
+	  ((?string0 ?string ...)
+	   ?str-body0 ?str-body ...)
+	  ...
+	  (else
+	   ?else-body0 ?else-body ...))
+       (begin
+	 (%assert-all-strings #'((?string0 ?string ...) ...))
+	 #'(let ((str ?expr))
+	     (import (only (ikarus system $strings)
+			   $string=))
+	     (assert (string? str))
+	     (cond ((or ($string= (quote ?string0) str)
+			($string= (quote ?string)  str)
+			...)
+		    ?str-body0 ?str-body ...)
+		   ...
+		   (else
+		    ?else-body0 ?else-body ...)))))
+      ((_ ?expr
+	  ((?string0 ?string ...)
+	   ?str-body0 ?str-body ...)
+	  ...)
+       (begin
+	 (%assert-all-strings #'((?string0 ?string ...) ...))
+	 #'(let ((str ?expr))
+	     (import (only (ikarus system $strings)
+			   $string=))
+	     (assert (string? str))
+	     (cond ((or ($string= (quote ?string0) str)
+			($string= (quote ?string)  str)
+			...)
+		    ?str-body0 ?str-body ...)
+		   ...))))
+      )))
 
 (define-argument-validation (exact-integer who obj)
   (and (integer? obj) (exact? obj))

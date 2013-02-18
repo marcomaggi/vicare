@@ -7,7 +7,7 @@
 ;;;Abstract
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -140,6 +140,15 @@
   (check
       (case-integers 5
 	((1 2 3)	#t)
+	((4)		#f)
+	(else		0))
+    => 0)
+
+;;; --------------------------------------------------------------------
+
+  #;(check
+      (case-integers 5
+	((1 "2" 3)	#t)
 	((4)		#f)
 	(else		0))
     => 0)
@@ -371,6 +380,121 @@
       (case-symbols 'e
 	((a b c)	#t)
 	((d)		#f)
+	(else		0))
+    => 0)
+
+  #f)
+
+
+(parametrise ((check-test-name	'case-strings))
+
+  (check
+      (case-strings "alpha"
+	(("alpha")	#t)
+	(("beta")	#f))
+    => #t)
+
+  (check
+      (case-strings "beta"
+	(("alpha")	#t)
+	(("beta")	#f))
+    => #f)
+
+  (check
+      (case-strings "delta"
+	(("alpha")	#t)
+	(("beta")	#f))
+    => (void))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-strings "alpha"
+	(("alpha")	1)
+	(("beta")	2)
+	(else		3))
+    => 1)
+
+  (check
+      (case-strings "beta"
+	(("alpha")	1)
+	(("beta")	2)
+	(else		3))
+    => 2)
+
+  (check
+      (case-strings "delta"
+	(("alpha")	1)
+	(("beta")	2)
+	(else		3))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-strings "a"
+	(("a" "b" "c")	#t)
+	(("d")		#f))
+    => #t)
+
+  (check
+      (case-strings "b"
+	(("a" "b" "c")	#t)
+	(("d")		#f))
+    => #t)
+
+  (check
+      (case-strings "c"
+	(("a" "b" "c")	#t)
+	(("d")		#f))
+    => #t)
+
+  (check
+      (case-strings "d"
+	(("a" "b" "c")	#t)
+	(("d")		#f))
+    => #f)
+
+  (check
+      (case-strings "e"
+	(("a" "b" "c")	#t)
+	(("d")		#f))
+    => (void))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (case-strings "a"
+	(("a" "b" "c")	#t)
+	(("d")		#f)
+	(else		0))
+    => #t)
+
+  (check
+      (case-strings "b"
+	(("a" "b" "c")	#t)
+	(("d")		#f)
+	(else		0))
+    => #t)
+
+  (check
+      (case-strings "c"
+	(("a" "b" "c")	#t)
+	(("d")		#f)
+	(else		0))
+    => #t)
+
+  (check
+      (case-strings "d"
+	(("a" "b" "c")	#t)
+	(("d")		#f)
+	(else		0))
+    => #f)
+
+  (check
+      (case-strings "e"
+	(("a" "b" "c")	#t)
+	(("d")		#f)
 	(else		0))
     => 0)
 
