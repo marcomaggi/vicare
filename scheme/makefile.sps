@@ -537,7 +537,7 @@
     ($for		(ikarus system $foreign)		#f	#t)
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
-    ($compiler		(ikarus system $compiler)		#t	#t)
+    ($compiler		(ikarus system $compiler)		#f	#f)
     ($numerics		(ikarus system $numerics)		#f	#f)
 ;;;
     (ne			(psyntax null-environment-5)		#f	#f)
