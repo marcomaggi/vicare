@@ -5008,6 +5008,12 @@ Return the character at offset @var{fx} in @var{str}.
 Store @var{ch} at index @var{fx} of @var{str}.
 @end deffn
 
+
+@deffn {Unsafe Operation} $string= @vari{str} @varii{str}
+Return @true{} if @vari{str} and @varii{str} represent the same string;
+otherwise return @false{}.
+@end deffn
+
 @c page
 @node syslib ports
 @section Low level port structures

@@ -27,6 +27,7 @@
 
 #!vicare
 (import (ikarus)
+  (ikarus system $strings)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -1278,6 +1279,28 @@
   (check
       (utf16->string (string->utf16n test-string) (native-endianness))
     => test-string)
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe))
+
+  (check
+      ($string= "ciao" (string #\c #\i #\a #\o))
+    => #t)
+
+  (check
+      ($string= "ciao" "ciao")
+    => #t)
+
+  (check
+      (let ((S "ciao"))
+	($string= S S))
+    => #t)
+
+  (check
+      ($string= "ciao" "hello")
+    => #f)
 
   #t)
 

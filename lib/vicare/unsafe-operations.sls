@@ -260,7 +260,8 @@
     (rename ($make-string	make-string)
 	    ($string-length	string-length)
 	    ($string-ref	string-ref)
-	    ($string-set!	string-set!))
+	    ($string-set!	string-set!)
+	    #;($string=		string=))
 
     (rename ($string-copy!			string-copy!)
 	    ($string-copy!/count		string-copy!/count)

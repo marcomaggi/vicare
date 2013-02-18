@@ -746,6 +746,7 @@
     ($string-ref				$strings)
     ($string-set!				$strings)
     ($string-length				$strings)
+    ($string=					$strings)
     ($make-bytevector				$bytes)
     ($bytevector-length				$bytes)
     ($bytevector-s8-ref				$bytes)

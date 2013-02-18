@@ -31,7 +31,10 @@
 
     ;; Vicare specific
     string->latin1	latin1->string
-    string->ascii	ascii->string)
+    string->ascii	ascii->string
+
+    ;; unsafe operations
+    $string=)
   (import (except (ikarus)
 		  make-string		string
 		  substring		string-length
@@ -49,7 +52,8 @@
 		  string->latin1	latin1->string
 		  string->ascii		ascii->string)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (except (vicare unsafe-operations)
+		    string=)
 	    $))
 
 
@@ -337,28 +341,30 @@
     (with-arguments-validation (who)
 	((string  str1)
 	 (string  str2))
-      (let ((len ($string-length str1)))
-	(and ($fx= len ($string-length str2))
-	     (%unsafe.two-strings=? str1 str2 0 len)))))
+      (or (eq? str1 str2)
+	  (let ((len ($string-length str1)))
+	    (and ($fx= len ($string-length str2))
+		 (%unsafe.two-strings=? str1 str2 0 len))))))
    ((str1 str2 . strs)
     (define who 'string=?)
     (with-arguments-validation (who)
 	((string  str1)
 	 (string  str2))
-      (let ((str1.len ($string-length str1)))
-	(and ($fx= str1.len ($string-length str2))
-	     (%unsafe.two-strings=? str1 str2 0 str1.len)
-	     (let next-string ((str1 str1)
-			       (strs strs)
-			       (len  str1.len))
-	       (or (null? strs)
-		   (let ((strN ($car strs)))
-		     (with-arguments-validation (who)
-			 ((string strN))
-		       (if ($fx= len ($string-length strN))
-			   (and (next-string str1 ($cdr strs) len)
-				(%unsafe.two-strings=? str1 strN 0 len))
-			 (%check-strings-and-return-false who ($cdr strs)))))))))))
+      (or (eq? str1 str2)
+	  (let ((str1.len ($string-length str1)))
+	    (and ($fx= str1.len ($string-length str2))
+		 (%unsafe.two-strings=? str1 str2 0 str1.len)
+		 (let next-string ((str1 str1)
+				   (strs strs)
+				   (len  str1.len))
+		   (or (null? strs)
+		       (let ((strN ($car strs)))
+			 (with-arguments-validation (who)
+			     ((string strN))
+			   (if ($fx= len ($string-length strN))
+			       (and (next-string str1 ($cdr strs) len)
+				    (%unsafe.two-strings=? str1 strN 0 len))
+			     (%check-strings-and-return-false who ($cdr strs))))))))))))
    ))
 
 (define (%unsafe.two-strings=? str1 str2 index end)
@@ -380,6 +386,14 @@
       (with-arguments-validation (who)
 	  ((string str))
 	(%check-strings-and-return-false who ($cdr strs))))))
+
+;;; --------------------------------------------------------------------
+
+(define ($string= str1 str2)
+  (or (eq? str1 str2)
+      (let ((len ($string-length str1)))
+	(and ($fx= len ($string-length str2))
+	     (%unsafe.two-strings=? str1 str2 0 len)))))
 
 
 ;;;; string comparison
