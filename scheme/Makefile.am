@@ -39,6 +39,7 @@ ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define (host-info) "$(target)")' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
+	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>$@
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>$@
 
 #page

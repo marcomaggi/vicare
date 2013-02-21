@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -313,9 +313,11 @@
     (prefix (vicare unsafe-capi)
 	    capi.)
     (prefix (vicare words)
-	    words.)
-    (prefix (vicare installation-configuration)
-	    config.))
+	    words.))
+
+  (module (arguments-validation)
+    (import (vicare include))
+    (include/verbose "ikarus.config.ss"))
 
 
 ;;;; arguments validation
@@ -2085,7 +2087,7 @@
     (let* ((retval-pred	(cif-retval-checker S))
 	   (retval-type (cif-retval-type    S))
 	   (proc	(if (or (eq? retval-type 'void)
-				(not config.arguments-validation))
+				(not arguments-validation))
 			    proc ;no return value to be validated
 			  ;;This is a wrapper for a Scheme function that
 			  ;;needs validation of the return value.
