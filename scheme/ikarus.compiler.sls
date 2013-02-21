@@ -108,8 +108,15 @@
     (ikarus.intel-assembler)
     (vicare include)
     (except (vicare syntactic-extensions)
-	    begin0)
+	    begin0
+	    case-word-size)
     (vicare arguments validation))
+
+  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
+  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
+  (module (wordsize)
+    (import (vicare include))
+    (include/verbose "ikarus.config.ss"))
 
 
 ;;;; configuration parameters
@@ -145,6 +152,16 @@
 
 
 ;;;; helper syntaxes
+
+(define-syntax case-word-size
+  ;;We really  need to define  this macro so that  it uses the  value of
+  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
+  ;;
+  (syntax-rules ()
+    ((_ ((32) . ?body-32) ((64) . ?body-64))
+     (if (= 4 wordsize)
+	 (begin . ?body-32)
+       (begin . ?body-64)))))
 
 (define-inline (%debug-print ?obj)
   (pretty-print ?obj (current-error-port)))
@@ -3675,10 +3692,6 @@
 ;;definitions  in   the  C  language  header   files  "internals.h"  and
 ;;"vicare.h".
 ;;
-
-(module (wordsize)
-  (import (vicare include))
-  (include/verbose "ikarus.config.ss"))
 
 (define wordshift
   (case-word-size
