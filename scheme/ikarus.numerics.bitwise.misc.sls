@@ -65,9 +65,13 @@
   ;;
   (syntax-rules ()
     ((_ ((32) . ?body-32) ((64) . ?body-64))
-     (if (= 4 wordsize)
-	 (begin . ?body-32)
-       (begin . ?body-64)))))
+     (case wordsize
+       ((4)
+	(begin . ?body-32))
+       ((8)
+	(begin . ?body-64))
+       (else
+	(error 'case-word-size "invalid wordsize" wordsize))))))
 
 
 (module (bitwise-first-bit-set
@@ -133,25 +137,25 @@
   (define (pos-fxbitcount n)
       ;;; nifty parrallel count from:
       ;;; http://infolab.stanford.edu/~manku/bitcount/bitcount.html
-    (case-fixnums (fixnum-width)
-      ((30)
-       (let ((m0 #x15555555)
-	     (m1 #x13333333)
-	     (m2 #x0f0f0f0f))
-	 (let* ((n ($fx+ ($fxlogand n m0) ($fxlogand ($fxsra n 1) m0)))
-		(n ($fx+ ($fxlogand n m1) ($fxlogand ($fxsra n 2) m1)))
-		(n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2))))
-	   (fxmodulo n 255))))
-      (else
-       (let ((m0 #x0555555555555555)
-	     (m1 #x0333333333333333)
-	     (m2 #x0f0f0f0f0f0f0f0f)
-	     (m3 #x00ff00ff00ff00ff))
-	 (let* ((n ($fx+ ($fxlogand n m0) ($fxlogand ($fxsra n 1) m0)))
-		(n ($fx+ ($fxlogand n m1) ($fxlogand ($fxsra n 2) m1)))
-		(n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2)))
-		(n ($fx+ ($fxlogand n m3) ($fxlogand ($fxsra n 8) m3))))
-	   (fxmodulo n 255))))))
+    (case-word-size
+     ((32)
+      (let ((m0 #x15555555)
+	    (m1 #x13333333)
+	    (m2 #x0f0f0f0f))
+	(let* ((n ($fx+ ($fxlogand n m0) ($fxlogand ($fxsra n 1) m0)))
+	       (n ($fx+ ($fxlogand n m1) ($fxlogand ($fxsra n 2) m1)))
+	       (n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2))))
+	  (fxmodulo n 255))))
+     ((64)
+      (let ((m0 #x0555555555555555)
+	    (m1 #x0333333333333333)
+	    (m2 #x0f0f0f0f0f0f0f0f)
+	    (m3 #x00ff00ff00ff00ff))
+	(let* ((n ($fx+ ($fxlogand n m0) ($fxlogand ($fxsra n 1) m0)))
+	       (n ($fx+ ($fxlogand n m1) ($fxlogand ($fxsra n 2) m1)))
+	       (n ($fx+ ($fxlogand n m2) ($fxlogand ($fxsra n 4) m2)))
+	       (n ($fx+ ($fxlogand n m3) ($fxlogand ($fxsra n 8) m3))))
+	  (fxmodulo n 255))))))
 
   (define ($fxbitcount n)
     (if ($fx< n 0)
