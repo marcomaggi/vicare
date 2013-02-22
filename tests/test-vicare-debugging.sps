@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,8 @@
 
 #!r6rs
 (import (vicare)
+  (only (vicare syntactic-extensions)
+	case-word-size)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -35,9 +37,15 @@
 
 (parametrise ((check-test-name	'words))
 
-  (check
-      (integer->machine-word #b11100)
-    => #b111)
+  (case-word-size
+   ((32)
+    (check
+	(integer->machine-word #b11100)
+      => #b111))
+   ((64)
+    (check
+	(integer->machine-word #b111000)
+      => #b111)))
 
   (check
       (integer->machine-word #x3F)
