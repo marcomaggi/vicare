@@ -25,8 +25,32 @@
 	  autoload-filename-foreign-library)
     (prefix (vicare unsafe-operations)
 	    $)
-    (vicare syntactic-extensions)
+    (except (vicare syntactic-extensions)
+	    case-word-size)
     (vicare arguments validation))
+
+  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
+  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
+  (module (wordsize)
+    (import (vicare include))
+    (include/verbose "ikarus.config.ss"))
+
+
+;;;; helpers
+
+(define-syntax case-word-size
+  ;;We really  need to define  this macro so that  it uses the  value of
+  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
+  ;;
+  (syntax-rules ()
+    ((_ ((32) . ?body-32) ((64) . ?body-64))
+     (case wordsize
+       ((4)
+	(begin . ?body-32))
+       ((8)
+	(begin . ?body-64))
+       (else
+	(error 'case-word-size "invalid wordsize" wordsize))))))
 
 
 ;;;; main functions
@@ -48,11 +72,11 @@
     (%assert (read-u8-as-char port) #\I)
     (%assert (read-u8-as-char port) #\K)
     (%assert (read-u8-as-char port) #\0)
-    (case (fixnum-width)
-      ((30)
-       (%assert (read-u8-as-char port) #\1))
-      (else
-       (%assert (read-u8-as-char port) #\2)))
+    (case-word-size
+     ((32)
+      (%assert (read-u8-as-char port) #\1))
+     ((64)
+      (%assert (read-u8-as-char port) #\2)))
     (let ((v (%do-read port)))
       (if (port-eof? port)
 	  v

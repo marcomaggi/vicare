@@ -14,24 +14,23 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus.fasl.write)
   (export fasl-write)
   (import (except (ikarus)
 		  fasl-write)
-    (ikarus system $codes)
-    (ikarus system $pairs)
-    (ikarus system $structs)
-    (ikarus system $bytevectors)
-    (ikarus system $fx)
-    (ikarus system $chars)
-    (ikarus system $strings)
-    (ikarus system $flonums)
-    (ikarus system $bignums)
+    (only (ikarus system $structs)
+	  base-rtd)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (vicare syntactic-extensions)
+    (except (vicare syntactic-extensions)
+	    case-word-size)
     (prefix (vicare unsafe-operations)
-	    unsafe.))
+	    $))
+
+  (module (wordsize)
+    (import (vicare include))
+    (include/verbose "ikarus.config.ss"))
 
 
 ;;;; arguments validation
@@ -47,17 +46,26 @@
 
 ;;;; helpers
 
-(module (wordsize)
-  (import (vicare include))
-  (include/verbose "ikarus.config.ss"))
-
 (define who 'fasl-write)
 
+(define-syntax case-word-size
+  ;;We really  need to define  this macro so that  it uses the  value of
+  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
+  ;;
+  (syntax-rules ()
+    ((_ ((32) . ?body-32) ((64) . ?body-64))
+     (case wordsize
+       ((4)
+	(begin . ?body-32))
+       ((8)
+	(begin . ?body-64))
+       (else
+	(error 'case-word-size "invalid wordsize" wordsize))))))
+
 (define fxshift
-  (case wordsize
-    ((4) 2)
-    ((8) 3)
-    (else (error 'fxshift "invalid wordsize" wordsize))))
+  (case-word-size
+   ((32)	2)
+   ((64)	3)))
 
 (define intbits (* wordsize 8))
 (define fxbits  (- intbits fxshift))
@@ -104,26 +112,29 @@
   ;;endian 32-bit integers.
   ;;
   (assert (int? x))
-  (write-int32 x p)
-  (when (unsafe.fx= wordsize 8)
-    (write-int32 (sra x 32) p)))
+  (case-word-size
+   ((32)
+    (write-int32 x p))
+   ((64)
+    (write-int32 x p)
+    (write-int32 (sra x 32) p))))
 
 (define MAX-ASCII-CHAR
-  (unsafe.fixnum->char 127))
+  ($fixnum->char 127))
 
 (define (ascii-string? s)
   ;;Return true  if S is a  string holding only characters  in the ASCII
   ;;range.
   ;;
   (let next-char ((s s) (i 0) (n (string-length s)))
-    (or (unsafe.fx= i n)
-	(and (unsafe.char<= (unsafe.string-ref s i) MAX-ASCII-CHAR)
-	     (next-char s (unsafe.fxadd1 i) n)))))
+    (or ($fx= i n)
+	(and ($char<= ($string-ref s i) MAX-ASCII-CHAR)
+	     (next-char s ($fxadd1 i) n)))))
 
 (define (write-bytevector bv i bv.len port)
-  (unless (unsafe.fx= i bv.len)
-    (write-byte (unsafe.bytevector-u8-ref bv i) port)
-    (write-bytevector bv (unsafe.fxadd1 i) bv.len port)))
+  (unless ($fx= i bv.len)
+    (write-byte ($bytevector-u8-ref bv i) port)
+    (write-bytevector bv ($fxadd1 i) bv.len port)))
 
 
 (define fasl-write
@@ -147,7 +158,10 @@
 	(put-tag #\I port)
 	(put-tag #\K port)
 	(put-tag #\0 port)
-	(put-tag (if (unsafe.fx= wordsize 4) #\1 #\2) port)
+	(put-tag (case-word-size
+		  ((32)		#\1)
+		  ((64)		#\2))
+		 port)
 	(let ((next-mark (if foreign-libraries
 			     (let loop ((ls        foreign-libraries)
 					(next-mark 1))
@@ -189,18 +203,18 @@
     (cond ((hashtable-ref h x #f)
 	   => (lambda (i)
 		(if (vector? i)
-		    (unsafe.vector-set! i 0 (unsafe.fxadd1 (unsafe.vector-ref i 0)))
-		  (hashtable-set! h x (unsafe.fxadd1 i)))))
+		    ($vector-set! i 0 ($fxadd1 ($vector-ref i 0)))
+		  (hashtable-set! h x ($fxadd1 i)))))
 	  (else
 	   (hashtable-set! h x 0)
 	   (cond ((pair? x)
 		  (make-graph (car x) h)
 		  (make-graph (cdr x) h))
 		 ((vector? x)
-		  (let next-item ((x x) (i 0) (x.len (unsafe.vector-length x)))
-		    (unless (unsafe.fx= i x.len)
-		      (make-graph (unsafe.vector-ref x i) h)
-		      (next-item x (unsafe.fxadd1 i) x.len))))
+		  (let next-item ((x x) (i 0) (x.len ($vector-length x)))
+		    (unless ($fx= i x.len)
+		      (make-graph ($vector-ref x i) h)
+		      (next-item x ($fxadd1 i) x.len))))
 		 ((symbol? x)
 		  (make-graph (symbol->string x) h)
 		  (when (gensym? x)
@@ -284,11 +298,11 @@
 	      (let ((rc/flag (if (fixnum? refcount-entry)
 				 refcount-entry
 			       (vector-ref refcount-entry 0))))
-		(cond ((unsafe.fxzero? rc/flag)
+		(cond (($fxzero? rc/flag)
 		       ;;X is an object appearing only once.  RC/FLAG is
 		       ;;the reference count of X.
 		       (do-write x port refcount-table next-mark))
-		      ((unsafe.fx> rc/flag 0)
+		      (($fx> rc/flag 0)
 		       ;;X is  an object appearing  multiple times; this
 		       ;;is the first time it is serialised.  RC/FLAG is
 		       ;;the reference count of  X.
@@ -296,13 +310,13 @@
 		       ;;Mark  X  in   the  table  as  already  written.
 		       ;;Serialise   a   new   mark   definition   using
 		       ;;NEXT-MARK, then serialise the object itself.
-		       (let ((flag (unsafe.fxneg next-mark)))
+		       (let ((flag ($fxneg next-mark)))
 			 (if (fixnum? refcount-entry)
 			     (hashtable-set! refcount-table x flag)
 			   (vector-set! refcount-entry 0 flag)))
 		       (put-tag #\> port)
 		       (write-int32 next-mark port)
-		       (do-write x port refcount-table (unsafe.fxadd1 next-mark)))
+		       (do-write x port refcount-table ($fxadd1 next-mark)))
 		      (else
 		       ;;X is  an object appearing  multiple times; this
 		       ;;is  NOT  the   first  time  it  is  serialised.
@@ -311,7 +325,7 @@
 		       ;;Serialise  a reference  to the  already defined
 		       ;;mark.
 		       (put-tag #\< port)
-		       (write-int32 (unsafe.fxneg rc/flag) port)
+		       (write-int32 ($fxneg rc/flag) port)
 		       next-mark)))))
 	(else
 	 (assertion-violation who
@@ -327,8 +341,8 @@
 	 (put-tag #\I port)
 	 (write-int (bitwise-arithmetic-shift-left x fxshift) port))
 	((char? x)
-	 (let ((n (unsafe.char->fixnum x)))
-	   (if (unsafe.fx<= n 255)
+	 (let ((n ($char->fixnum x)))
+	   (if ($fx<= n 255)
 	       (begin
 		 (put-tag #\c port)
 		 (write-byte n port))
@@ -349,16 +363,16 @@
   (%count-leading-unshared-cdrs x refcount-table 0))
 (define (%count-leading-unshared-cdrs x refcount-table count)
   (if (and (pair? x) (eq? (hashtable-ref refcount-table x #f) 0))
-      (%count-leading-unshared-cdrs (unsafe.cdr x) refcount-table (unsafe.fxadd1 count))
+      (%count-leading-unshared-cdrs ($cdr x) refcount-table ($fxadd1 count))
     count))
 
 (define (write-pairs x port refcount-table next-mark count)
   ;;Serialise the first COUNT pairs in the list X to PORT.
   ;;
-  (if (unsafe.fxzero? count)
+  (if ($fxzero? count)
       (fasl-write-object x port refcount-table next-mark)
     (let ((next-mark (fasl-write-object (car x) port refcount-table next-mark)))
-      (write-pairs (cdr x) port refcount-table next-mark (unsafe.fxsub1 count)))))
+      (write-pairs (cdr x) port refcount-table next-mark ($fxsub1 count)))))
 
 (define (do-write x port refcount-table next-mark)
   ;;Actually serialise object X to PORT.
@@ -380,17 +394,17 @@
       (fasl-write-immediate (record-type-sealed? x) port)
       (fasl-write-immediate (record-type-opaque? x) port)
       (let* ((field-names (record-type-field-names x))
-	     (field-count (unsafe.vector-length field-names)))
+	     (field-count ($vector-length field-names)))
 	(fasl-write-immediate field-count port)
 	(let next-field ((i           0)
 			 (next-mark   next-mark)
 			 (field-count field-count))
-	  (if (unsafe.fx= i field-count)
+	  (if ($fx= i field-count)
 	      next-mark
 	    (begin
 	      (fasl-write-immediate (record-field-mutable? x i) port)
-	      (let ((next-mark (%write-object (unsafe.vector-ref field-names i) next-mark)))
-		(next-field (unsafe.fxadd1 i) next-mark field-count))))))))
+	      (let ((next-mark (%write-object ($vector-ref field-names i) next-mark)))
+		(next-field ($fxadd1 i) next-mark field-count))))))))
 
   (define (%write-struct-type-descriptor x next-mark)
     (put-tag #\R port)
@@ -413,26 +427,26 @@
 	(let next-field ((i           0)
 			 (next-mark   next-mark)
 			 (field-count field-count))
-	  (if (unsafe.fx= i field-count)
+	  (if ($fx= i field-count)
 	      next-mark
 	    (let ((next-mark (%write-object (struct-ref x i) next-mark)))
-	      (next-field (unsafe.fxadd1 i) next-mark field-count)))))))
+	      (next-field ($fxadd1 i) next-mark field-count)))))))
 
 
   (cond ((pair? x)
 	 ;;We have to distinguish pairs from proper lists.  Also we have
 	 ;;to distinguish between short (<= 255) lists and long lists.
 	 ;;
-	 (let* ((A	(unsafe.car x))
-		(D	(unsafe.cdr x))
+	 (let* ((A	($car x))
+		(D	($cdr x))
 		(count	(count-leading-unshared-cdrs D refcount-table)))
-	   (cond ((unsafe.fxzero? count)
+	   (cond (($fxzero? count)
 		  (put-tag #\P port)
 		  (let* ((next-mark (%write-object A next-mark))
 			 (next-mark (%write-object D next-mark)))
 		    next-mark))
 		 (else
-		  (cond ((unsafe.fx<= count 255)
+		  (cond (($fx<= count 255)
 			 (put-tag #\l port)
 			 (write-byte count port))
 			(else
@@ -446,33 +460,33 @@
 
 	((vector? x)
 	 (put-tag #\V port)
-	 (let ((x.len (unsafe.vector-length x)))
+	 (let ((x.len ($vector-length x)))
 	   (write-int x.len port)
 	   (let next-item ((x x) (i 0) (x.len x.len) (next-mark next-mark))
-	     (if (unsafe.fx= i x.len)
+	     (if ($fx= i x.len)
 		 next-mark
-	       (let ((next-mark (%write-object (unsafe.vector-ref x i) next-mark)))
-		 (next-item x (unsafe.fxadd1 i) x.len next-mark))))))
+	       (let ((next-mark (%write-object ($vector-ref x i) next-mark)))
+		 (next-item x ($fxadd1 i) x.len next-mark))))))
 
 ;;; --------------------------------------------------------------------
 
 	((string? x)
-	 (let ((x.len (unsafe.string-length x)))
+	 (let ((x.len ($string-length x)))
 	   (if (ascii-string? x)
 	       (begin ;ASCII string, will write octets as chars
 		 (put-tag #\s port)
 		 (write-int x.len port)
 		 (let next-char ((x x) (i 0) (x.len x.len))
-		   (unless (unsafe.fx= i x.len)
-		     (write-byte (unsafe.char->fixnum (unsafe.string-ref x i)) port)
-		     (next-char x (unsafe.fxadd1 i) x.len))))
+		   (unless ($fx= i x.len)
+		     (write-byte ($char->fixnum ($string-ref x i)) port)
+		     (next-char x ($fxadd1 i) x.len))))
 	     (begin ;Unicode string, will write int32 as chars
 	       (put-tag #\S port)
 	       (write-int x.len port)
 	       (let next-char ((x x) (i 0) (x.len x.len))
-		 (unless (unsafe.fx= i x.len)
-		   (write-int32 (unsafe.char->fixnum (unsafe.string-ref x i)) port)
-		   (next-char x (unsafe.fxadd1 i) x.len))))))
+		 (unless ($fx= i x.len)
+		   (write-int32 ($char->fixnum ($string-ref x i)) port)
+		   (next-char x ($fxadd1 i) x.len))))))
 	 next-mark)
 
 ;;; --------------------------------------------------------------------
@@ -504,9 +518,9 @@
 	 (let ((next-mark (%write-object ($code-annotation x) next-mark)))
 	   ;;Write an array of bytes being the binary code.
 	   (let next-byte ((i 0) (x.len (code-size x)))
-	     (unless (unsafe.fx= i x.len)
+	     (unless ($fx= i x.len)
 	       (write-byte (code-ref x i) port)
-	       (next-byte (unsafe.fxadd1 i) x.len)))
+	       (next-byte ($fxadd1 i) x.len)))
 	   ;;Write the relocation vector as Scheme vector.
 	   (%write-object ($code-reloc-vector x) next-mark)))
 
@@ -517,8 +531,8 @@
 	     (put-tag #\h port)
 	   (put-tag #\H port))
 	 (let* ((v         (hashtable-ref refcount-table x #f))
-		(next-mark (%write-object (unsafe.vector-ref v 1) next-mark))
-		(next-mark (%write-object (unsafe.vector-ref v 2) next-mark)))
+		(next-mark (%write-object ($vector-ref v 1) next-mark))
+		(next-mark (%write-object ($vector-ref v 2) next-mark)))
 	   next-mark))
 
 ;;; --------------------------------------------------------------------
@@ -541,7 +555,7 @@
 
 	((bytevector? x)
 	 (put-tag #\v port)
-	 (let ((x.len (unsafe.bytevector-length x)))
+	 (let ((x.len ($bytevector-length x)))
 	   (write-int x.len port)
 	   (write-bytevector x 0 x.len port))
 	 next-mark)
@@ -578,9 +592,9 @@
 			(- x.len))
 		      port)
 	   (let next-byte ((i 0))
-	     (unless (unsafe.fx= i x.len)
+	     (unless ($fx= i x.len)
 	       (write-byte ($bignum-byte-ref x i) port)
-	       (next-byte (unsafe.fxadd1 i)))))
+	       (next-byte ($fxadd1 i)))))
 	 next-mark)
 
 ;;; --------------------------------------------------------------------
