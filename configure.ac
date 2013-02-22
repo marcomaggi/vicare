@@ -1,19 +1,24 @@
-# Process this file with autoconf to produce a configure script.
+dnl @configure_input@
+dnl
 
-AC_PREREQ(2.68)
-AC_INIT([Vicare Scheme],[0.2d20],[marco.maggi-ipsu@poste.it],
+AC_PREREQ([2.68])
+AC_INIT([Vicare Scheme],[0.2d21],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
+AC_CONFIG_SRCDIR([src])
+AC_CONFIG_MACRO_DIR([autotools])
+AC_CONFIG_AUX_DIR([autotools])
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AC_CONFIG_SRCDIR([src/])
-AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([foreign dist-bzip2 no-dist-gzip])
+AM_INIT_AUTOMAKE([foreign dist-xz no-dist-gzip])
+AM_MAINTAINER_MODE
 
 AM_PROG_AR
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
-LT_PREREQ([2.2])
+LT_PREREQ([2.4])
 LT_INIT([shared disable-static])
 
 AC_LANG([C])
@@ -116,6 +121,51 @@ AC_MSG_RESULT([$vicare_time_tests])
 AM_CONDITIONAL([WANT_TIME_TESTS],[test x$vicare_time_tests = xyes])
 AM_COND_IF([WANT_TIME_TESTS],
   [AC_CHECK_PROG([TIME_PROGRAM],[time],[time],[:])])
+
+dnl --------------------------------------------------------------------
+dnl Optional linking with pthreads
+
+dnl This  must come before  searching for POSIX functions.   For example
+dnl the POSIX semaphore functions appear to need this library.
+AC_ARG_WITH([pthread],
+  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is check)]),
+  [true],[with_pthread=check])
+
+vicare_with_pthread=no
+if test x$with_pthread = xyes || test x$with_pthread = xcheck
+then
+  # Check for pthread header and library.
+  AC_CHECK_HEADER([pthread.h],[vicare_have_pthread_h=yes],[vicare_have_pthread_h=no])
+  AC_CHECK_LIB([pthread],[main],[vicare_have_pthread=yes],[vicare_have_pthread=no])
+  if test "$vicare_have_pthread" = yes && test "$vicare_have_pthread_h" = yes
+  then
+    # Both the library and the header were found: success!
+    AC_MSG_NOTICE([pthread support enabled])
+    AC_DEFINE([HAVE_PTHREAD],[1],[define if you have a pthread library])
+    vicare_with_pthread=yes
+    LIBS="$LIBS -lpthread"
+  elif test "$with_pthread" = yes; then
+    # The user requested pthread support or die, but either the header or
+    # the library or both were not found.
+    if test "$vicare_have_pthread_h" = no; then
+      AC_MSG_ERROR([pthread.h cannot be found.
+Please specify the location of the header file using
+  ./configure CPPFLAGS=-I<path/to/pthread.h>   <other-options ...>
+])
+    fi
+    if test "$vicare_have_pthread" = no; then
+      AC_MSG_ERROR([pthread cannot be found.
+Please specify the location of the library file using
+  ./configure LDFLAGS=-L<path/to/pthread.ld|dylib|so|etc.>  <other-options ...>
+])
+    fi
+  else
+    # The user requested a check for optional pthread support, but either
+    # the header or the library or both were not found.
+    AC_MSG_WARN([pthread not found])
+  fi
+fi
+AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 
 #page
 #### basic system inspection
@@ -1426,19 +1476,6 @@ ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
 ERROR: libgmp can be obtained from <http://gmplib.org>.])])
-
-dnl --------------------------------------------------------------------
-dnl Optional linking with pthreads
-
-AC_ARG_WITH([pthread],
-  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is no)]),
-  [true],[with_pthread=no])
-vicare_with_pthread=no
-if test x$with_pthread != xno; then
-   vicare_with_pthread=yes
-   AC_CHECK_LIB([pthread],[main])
-fi
-AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding to Libffi

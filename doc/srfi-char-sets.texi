@@ -1,0 +1,765 @@
+@node srfi char-sets
+@section @ansrfi{14} character sets
+
+
+@cindex @ansrfi{14} character sets
+
+
+The library @library{srfi :14} is by Olin Shivers as the reference
+implementation for @ansrfi{14}; see:
+
+@center @url{http://srfi.schemers.org/srfi-14/srfi-14.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi char-sets abstract::     Abstract.
+* srfi char-sets rationale::    Rationale.
+* srfi char-sets spec::         Specification.
+* srfi char-sets ack::          Acknowledgements.
+* srfi char-sets license::      Copyright.
+@end menu
+
+@c page
+@node srfi char-sets abstract
+@subsection Abstract
+
+
+The ability to efficiently represent and manipulate sets of characters
+is an unglamorous but very useful capability for text--processing code;
+one that tends to pop up in the definitions of other libraries.  Hence
+it is useful to specify a general substrate for this functionality
+early.  This @srfi{} defines a general library that provides this
+functionality.
+
+@c page
+@node srfi char-sets rationale
+@subsection Rationale
+
+
+The ability to efficiently manipulate sets of characters is quite useful
+for text--processing code.  Encapsulating this functionality in a
+general, efficiently implemented library can assist all such code.  This
+library defines a new data structure to represent these sets, called a
+@code{char-set}.  The @code{char-set} type is distinct from all other
+types.
+
+The procedures of this @srfi{}, by default, are ``pure functional'',
+they do not alter their parameters.  However, this @srfi{} defines a set
+of ``linear--update'' procedures which have a hybrid
+pure--functional/side--effecting semantics: they are allowed, but not
+required, to side--effect one of their parameters in order to construct
+their result.  An implementation may legally implement these procedures
+as pure, side--effect-free functions, or it may implement them using
+side effects, depending upon the details of what is the most efficient
+or simple to implement in terms of the underlying representation.
+
+The linear--update routines all have names ending with @code{!}.
+
+Clients of these procedures may not rely upon these procedures working
+by side effect.  For example, this is not guaranteed to work:
+
+@example
+(let* ((cs1 (char-set #\a #\b #\c))      ; cs1 = @{a,b,c@}.
+       (cs2 (char-set-adjoin! cs1 #\d))) ; Add d to @{a,b,c@}.
+  cs1) ; Could be either @{a,b,c@} or @{a,b,c,d@}.
+@end example
+
+However, this is well--defined:
+
+@example
+(let ((cs (char-set #\a #\b #\c)))
+  (char-set-adjoin! cs #\d)) ; Add d to @{a,b,c@}.
+@end example
+
+So clients of these procedures write in a functional style, but must
+additionally be sure that, when the procedure is called, there are no
+other live pointers to the potentially--modified character set (hence
+the term ``linear update'').
+
+There are two benefits to this convention:
+
+@itemize
+@item
+Implementations are free to provide the most efficient possible
+implementation, either functional or side--effecting.
+
+@item
+Programmers may nonetheless continue to assume that character sets are
+purely functional data structures: they may be reliably shared without
+needing to be copied, uniquified, and so forth.
+@end itemize
+
+Note that pure functional representations are the right thing for
+@ascii{} or Latin-1 based Scheme implementations, since a
+@code{char-set} can be represented in an @ascii{} Scheme with @math{4}
+32-bit words.  Pure set--algebra operations on such a representation are
+very fast and efficient.  Programmers who code using linear--update
+operations are guaranteed the system will provide the best
+implementation across multiple platforms.
+
+In practice, these procedures are most useful for efficiently
+constructing character sets in a side--effecting manner, in some limited
+local context, before passing the character set outside the local
+construction scope to be used in a functional manner.
+
+Scheme provides no assistance in checking the linearity of the
+potentially side--effected parameters passed to these functions; there's
+no linear type checker or run--time mechanism for detecting violations.
+
+@c page
+@node srfi char-sets spec
+@subsection Specification
+
+
+@menu
+* srfi char-sets spec conv::    Conventions.
+* srfi char-sets spec general:: General procedures.
+* srfi char-sets spec iter::    Iterating over character sets.
+* srfi char-sets spec create::  Creating character sets.
+* srfi char-sets spec query::   Querying character sets.
+* srfi char-sets spec algebra:: Character set algebra.
+* srfi char-sets spec std::     Standard character sets.
+@end menu
+
+@c page
+@node srfi char-sets spec conv
+@subsubsection Conventions
+
+
+In the following procedure specifications a convention to indicate the
+type of arguments is used:
+
+@table @var
+@item cs
+Is a character set.
+
+@item s
+Is a string.
+
+@item char
+Is a character.
+
+@item char-list
+Is a list of characters.
+
+@item pred
+Is a unary character predicate procedure, returning a true/false value
+when applied to a character.
+
+@item obj
+May be any value at all.
+@end table
+
+Passing values to procedures with these parameters that do not satisfy
+these types is an error.
+
+Unless otherwise noted in the specification of a procedure, procedures
+always return character sets that are distinct (from the point of view
+of the linear--update operations) from the parameter character sets.
+For example, @func{char-set-adjoin} is guaranteed to provide a fresh
+character set, even if it is not given any character parameters.
+
+@c page
+@node srfi char-sets spec general
+@subsubsection General procedures
+
+
+@defun char-set? @var{obj}
+Return @true{} if @var{obj} is a character set, else return @false{}.
+@end defun
+
+
+@defun char-set= @var{cs} ...
+Return @true{} if all the arguments are character sets and all are
+equal, else return @false{}.  When called with no arguments: return
+@true{}; when called with one argument: return @true{}.
+@end defun
+
+
+@defun char-set<= @var{cs} ...
+Return @true{} if every character set @var{csi} is a subset of character
+set @var{csi+1}, else return @false{}.  When called with zero or one
+argument: return @true{}.
+@end defun
+
+
+@defun char-set-hash @var{cs}
+@defunx char-set-hash @var{cs} @var{bound}
+Compute a hash value for the character set @var{cs}.  The optional
+argument @var{bound} is a non--negative exact integer specifying the
+range of the hash function; a positive value restricts the return value
+to the range @code{[0, @var{bound})}.
+
+If bound is either zero or not given: the implementation may use an
+implementation--specific default value, chosen to be as large as is
+efficiently practical.  For instance, the default range might be chosen
+for a given implementation to map all strings into the range of integers
+that can be represented with a single machine word.
+
+Invariant:
+
+@example
+(char-set= cs1 cs2) @result{} (= (char-set-hash cs1 b)
+                          (char-set-hash cs2 b))
+@end example
+@end defun
+
+@c page
+@node srfi char-sets spec iter
+@subsubsection Iterating over character sets
+
+
+@defun char-set-cursor @var{cs}
+@defunx char-set-ref @var{cs} @var{cursor}
+@defunx char-set-cursor-next @var{cs} @var{cursor}
+@defunx end-of-char-set? @var{cursor}
+Cursors are a low--level facility for iterating over the characters in a
+set; a cursor is a value that indexes a character in a char set.
+
+@func{char-set-cursor} returns a new cursor object associated to the
+character set @var{cs}.  There can be multiple cursors associated to the
+same character set.
+
+@func{char-set-ref} returns a character object representing the set
+element currently indexed by a cursor.
+
+@func{char-set-cursor-next} increments a cursor index and returns a new
+cursor indexing the next character in the set; in this way, code can
+step through every character in a char set.
+
+Stepping a cursor ``past the end'' of a char set produces a cursor that
+answers true to @func{end-of-char-set?}.  It is an error to pass such a
+cursor to @func{char-set-ref} or to @func{char-set-cursor-next}.
+
+A cursor value may not be used in conjunction with a different character
+set; if it is passed to @func{char-set-ref} or
+@func{char-set-cursor-next} with a character set other than the one used
+to create it, the results and effects are undefined.
+
+Cursor values are not necessarily distinct from other types: they may be
+integers, linked lists, records, procedures or other values.
+
+Note that these primitives are necessary to export an iteration facility
+for char sets to loop macros.
+
+Example:
+
+@example
+(define cs (char-set #\G #\a #\T #\e #\c #\h))
+
+;; Collect elts of CS into a list.
+(let lp ((cur (char-set-cursor cs)) (ans '()))
+  (if (end-of-char-set? cur) ans
+      (lp (char-set-cursor-next cs cur)
+          (cons (char-set-ref cs cur) ans))))
+  @result{} (#\G #\T #\a #\c #\e #\h)
+
+;; Equivalently, using a list unfold (from SRFI 1):
+(unfold-right end-of-char-set?
+             (curry char-set-ref cs)
+      (curry char-set-cursor-next cs)
+      (char-set-cursor cs))
+  @result{} (#\G #\T #\a #\c #\e #\h)
+@end example
+@end defun
+
+
+@defun char-set-fold @var{kons} @var{knil} @var{cs} -> object
+This is the fundamental iterator for character sets.  Apply the function
+@var{kons} across the character set @var{cs} using initial state value
+@var{knil}.
+
+If @var{cs} is the empty set: the return value is @var{knil}.
+
+Otherwise some element @var{c} of @var{cs} is chosen; let @vari{cs} be
+the remaining, unchosen characters, the procedure returns:
+
+@example
+(char-set-fold @var{kons} (@var{kons} @var{c} @var{knil}) @vari{cs})
+@end example
+
+Examples:
+
+@example
+;; CHAR-SET-MEMBERS
+(lambda (cs) (char-set-fold cons '() cs))
+
+;; CHAR-SET-SIZE
+(lambda (cs) (char-set-fold (lambda (c i) (+ i 1)) 0 cs))
+
+;; How many vowels in the char set?
+(lambda (cs)
+  (char-set-fold (lambda (c i) (if (vowel? c) (+ i 1) i))
+                 0 cs))
+@end example
+@end defun
+
+
+@defun char-set-unfold @var{f} @var{p} @var{g} @var{seed}
+@defunx char-set-unfold @var{f} @var{p} @var{g} @var{seed} @var{base-cs}
+@defunx char-set-unfold! @var{f} @var{p} @var{g} @var{seed} @var{base-cs}
+This is a fundamental constructor for character sets.
+
+@var{g} is used to generate a series of ``seed'' values from the initial
+@var{seed}:
+
+@example
+@var{seed}
+(@var{g} @var{seed})
+(@var{g2} @var{seed})
+(@var{g3} @var{seed})
+...
+@end example
+
+@var{p} tells us when to stop: when it returns true when applied to one
+of these seed values.
+
+@var{f} maps each seed value to a character.  These characters are added
+to the base character set @var{base-cs} to form the result;
+@var{base-cs} defaults to the empty set.
+
+@func{char-set-unfold!} adds the characters to @var{base-cs} in a
+linear--update; it is allowed, but not required, to side--effect and use
+@var{base-cs}'s storage to construct the result.
+
+More precisely, the following definitions hold, ignoring the
+optional-argument issues:
+
+@example
+(define (char-set-unfold p f g seed base-cs)
+  (char-set-unfold! p f g seed (char-set-copy base-cs)))
+
+(define (char-set-unfold! p f g seed base-cs)
+  (let lp ((seed seed)
+           (cs   base-cs))
+    (if (p seed)
+        cs
+      (lp (g seed)
+          (char-set-adjoin! cs (f seed))))))
+@end example
+
+@noindent
+note that the actual implementation may be more efficient.
+
+Examples:
+
+@example
+(port->char-set p)
+@equiv{} (char-set-unfold eof-object? values
+                          (lambda (x) (read-char p))
+                          (read-char p))
+
+(list->char-set lis)
+@equiv{} (char-set-unfold null? car cdr lis)
+@end example
+@end defun
+
+
+@defun char-set-for-each @var{proc} @var{cs}
+Apply the procedure @var{proc} to each character in the character set
+@var{cs}; return unspecified values.  The order in which @var{proc} is
+applied to the characters in the set is unspecified, and may even change
+from one procedure application to another.
+@end defun
+
+
+@defun char-set-map @var{proc} @var{cs}
+@var{proc} is a character--to--character procedure; apply it to all the
+characters in @var{cs}, and collect the results into a new character
+set, return such new character set.
+
+Example:
+
+@example
+(char-set-map char-downcase cs)
+@end example
+@end defun
+
+@c page
+@node srfi char-sets spec create
+@subsubsection Creating character sets
+
+
+@defun char-set-copy @var{cs}
+Return a copy of the character set @var{cs}; ``copy'' means that if
+either the input argument or the result value of this procedure is
+passed to one of the linear--update procedures described below, the
+other character set is guaranteed not to be altered.
+@end defun
+
+
+@defun char-set @var{char} ...
+Return a character set containing the given characters.
+@end defun
+
+
+@defun list->char-set @var{char-list}
+@defunx list->char-set @var{char-list} @var{base-cs}
+@defunx list->char-set! @var{char-list} @var{base-cs}
+Return a character set containing the characters in the list of
+characters @var{char-list}.
+
+If the character set @var{base-cs} is provided, the characters from
+@var{char-list} are added to it.  @func{list->char-set!} is allowed, but
+not required, to side--effect and reuse the storage in @var{base-cs};
+@func{list->char-set} produces a fresh character set.
+@end defun
+
+
+@defun string->char-set @var{s}
+@defunx string->char-set @var{s} @var{base-cs}
+@defunx string->char-set! @var{s} @var{base-cs}
+Return a character set containing the characters in the string @var{s}.
+
+If the character set @var{base-cs} is provided, the characters from
+@var{s} are added to it.  @func{string->char-set!} is allowed, but not
+required, to side--effect and reuse the storage in @var{base-cs};
+@func{string->char-set} produces a fresh character set.
+@end defun
+
+
+@defun char-set-filter @var{pred} @var{cs}
+@defunx char-set-filter @var{pred} @var{cs} @var{base-cs}
+@defunx char-set-filter! @var{pred} @var{cs} @var{base-cs}
+Return a character set containing every character @var{c} in @var{cs}
+such that @code{(@var{pred} @var{c})} returns true.
+
+If the character set @var{base-cs} is provided: the characters specified
+by @var{pred} are added to it.  @func{char-set-filter!} is allowed, but
+not required, to side--effect and reuse the storage in @var{base-cs};
+@func{char-set-filter} produces a fresh character set.
+
+@quotation
+An implementation may not save away a reference to @var{pred} and invoke
+it after @func{char-set-filter} or @func{char-set-filter!} returns; that
+is, ``lazy,'' on--demand implementations are not allowed, as pred may
+have external dependencies on mutable data or have other side--effects.
+@end quotation
+@end defun
+
+
+@defun ucs-range->char-set @var{lower} @var{upper}
+@defunx ucs-range->char-set @var{lower} @var{upper} @var{error?}
+@defunx ucs-range->char-set @var{lower} @var{upper} @var{error?} @var{base-cs}
+@defunx ucs-range->char-set! @var{lower} @var{upper} @var{error?} @var{base-cs}
+The arguments @var{lower} and @var{upper} are exact non--negative
+integers such that @code{@var{lower} <= @var{upper}}.
+
+Return a character set containing every character whose ISO/IEC 10646
+UCS-4 code lies in the half-open range @code{[@var{lower}, @var{upper})}.
+
+If the requested range includes unassigned UCS values, these are
+silently ignored (the current UCS specification has ``holes'' in the
+space of assigned codes).
+
+If the requested range includes ``private'' or ``user space'' codes,
+these are handled in an implementation--specific manner; however, a UCS-
+or Unicode-based Scheme implementation should pass them through
+transparently.
+
+If any code from the requested range specifies a valid, assigned UCS
+character that has no corresponding representative in the
+implementation's character type, then (1) an error is raised if
+@var{error?}  is true, and (2) the code is ignored if @var{error?} is
+false (the default).
+
+If character set @var{base-cs} is provided, the characters specified by
+the range are added to it.  @func{ucs-range->char-set!} is allowed, but
+not required, to side--effect and reuse the storage in @var{base-cs};
+@func{ucs-range->char-set} produces a fresh character set.
+@end defun
+
+
+@defun ->char-set @var{x}
+Coerces @var{x} into a @code{char-set}.  @var{x} may be a string,
+character or @code{char-set}.  A string is converted to the set of its
+constituent characters; a character is converted to a singleton set; a
+@code{char-set} is returned as--is.  This procedure is intended for use
+by other procedures that want to provide user--friendly, wide--spectrum
+interfaces to their clients.
+@end defun
+
+@c page
+@node srfi char-sets spec query
+@subsubsection Querying character sets
+
+
+@defun char-set-size @var{cs}
+Return the number of elements in character set @var{cs}.
+@end defun
+
+
+@defun char-set-count @var{pred} @var{cs}
+Apply @var{pred} to the chars of character set @var{cs}, and return the
+number of chars that caused the predicate to return true.
+@end defun
+
+
+@defun char-set->list @var{cs}
+Return a list of the members of character set @var{cs}.  The order in
+which the characters appear in the list is not defined, and may be
+different from one call to another.
+@end defun
+
+
+@defun char-set->string @var{cs}
+Return a string containing the members of character set @var{cs}.  The
+order in which the characters appear in the string is not defined, and
+may be different from one call to another.
+@end defun
+
+
+@defun char-set-contains? @var{cs} @var{char}
+Test @var{char} for membership in character set @var{cs}.  Return a
+boolean.
+@end defun
+
+
+@defun char-set-every @var{pred} @var{cs}
+@defunx char-set-any @var{pred} @var{cs}
+@func{char-set-every} procedure returns true if predicate @var{pred}
+returns true of every character in the @var{cs}.
+
+@func{char-set-any} applies @var{pred} to every character in @var{cs},
+and returns the first true value it finds; if no character produces a
+true value, it returns @false{}.
+
+The order in which these procedures sequence through the elements of
+@var{cs} is not specified.
+
+Note that if we need to determine the actual character on which a
+predicate returns true: we use @func{char-set-any} and arrange for the
+predicate to return the character parameter as its true value:
+
+@example
+(char-set-any (lambda (c)
+                (and (char-upper-case? c) c))
+              cs)
+@end example
+@end defun
+
+@c page
+@node srfi char-sets spec algebra
+@subsubsection Character set algebra
+
+
+@defun char-set-adjoin @var{cs} @var{char} ...
+@defunx char-set-delete @var{cs} @var{char} ...
+Add/delete the @var{char} characters to/from character set @var{cs}.
+@end defun
+
+
+@defun char-set-adjoin! @var{cs} @var{char} ...
+@defunx char-set-delete! @var{cs} @var{char} ...
+Linear--update variants.  These procedures are allowed, but not
+required, to side--effect their first parameter.
+@end defun
+
+
+@defun char-set-complement @var{cs}
+@defunx char-set-union @var{cs} ...
+@defunx char-set-intersection @var{cs} ...
+@defunx char-set-difference @varo{cs} @var{cs} ...
+@defunx char-set-xor @var{cs} ...
+@defunx char-set-diff+intersection @varo{cs} @var{cs} ...
+These procedures implement set complement, union, intersection,
+difference, and exclusive OR for character sets.  The union,
+intersection and xor operations are n--ary.  The difference function is
+also n--ary, associates to the left (that is, it computes the difference
+between its first argument and the union of all the other arguments),
+and requires at least one argument.
+
+@example
+(char-set-difference (char-set #\a)
+                     (char-set #\b))
+@result{} (char-set #\a)
+@end example
+
+Boundary cases:
+
+@example
+(char-set-union)                @result{} char-set:empty
+(char-set-intersection)         @result{} char-set:full
+(char-set-xor)                  @result{} char-set:empty
+(char-set-difference cs)        @result{} cs
+@end example
+
+@func{char-set-diff+intersection} returns two values: the difference and
+the intersection of the arguments; it partitions its first argument.  It
+is almost equivalent to:
+
+@example
+(values (char-set-difference cs1 cs2 ...)
+        (char-set-intersection cs1 (char-set-union cs2 ...)))
+@end example
+
+@noindent
+but can be implemented more efficiently; when called with one argument:
+the first return value is a copy of the argument itself, the second
+return value is the empty set.
+@end defun
+
+
+@defun char-set-complement! @var{cs}
+@defunx char-set-union! @varo{cs} @var{cs} ...
+@defunx char-set-intersection! @varo{cs} @var{cs} ...
+@defunx char-set-difference! @varo{cs} @var{cs} ...
+@defunx char-set-xor! @varo{cs} @var{cs} ...
+@defunx char-set-diff+intersection! @varo{cs} @vari{cs} @var{cs} ...
+These are linear--update variants of the set--algebra functions.  They
+are allowed, but not required, to side--effect their first (required)
+argument.
+
+@func{char-set-diff+intersection!} is allowed to side--effect both of
+its two required arguments.
+@end defun
+
+@c page
+@node srfi char-sets spec std
+@subsubsection Standard character sets
+
+
+Several character sets are predefined for convenience:
+
+@table @code
+@item char-set:lower-case
+Lower--case letters.
+
+@item char-set:upper-case
+Upper--case letters.
+
+@item char-set:title-case
+Title--case letters.
+
+@item char-set:letter
+Letters.
+
+@item char-set:digit
+Digits.
+
+@item char-set:letter+digit
+Letters and digits.
+
+@item char-set:graphic
+Printing characters except spaces.
+
+@item char-set:printing
+Printing characters including spaces.
+
+@item char-set:whitespace
+Whitespace characters.
+
+@item char-set:iso-control
+The @iso{} control characters.
+
+@item char-set:punctuation
+Punctuation characters.
+
+@item char-set:symbol
+Symbol characters.
+
+@item char-set:hex-digit
+A hexadecimal digit: 0-9, A-F, a-f.
+
+@item char-set:blank
+Blank characters, horizontal whitespace.
+
+@item char-set:ascii
+All characters in the @ascii{} set.
+
+@item char-set:empty
+Empty set.
+
+@item char-set:full
+All characters.
+@end table
+
+Note that there may be characters in @code{char-set:letter} that are
+neither upper or lower case.  A ``graphic character'' is one that would
+put ink on your page.
+
+@ignore
+While the exact composition of these sets may vary depending upon the
+character type provided by the underlying Scheme system, here are the
+definitions for some of the sets in an ASCII implementation:
+
+@example
+char-set:lower-case     a-z
+char-set:upper-case     A-Z
+char-set:letter         A-Z and a-z
+char-set:digit  0123456789
+char-set:punctuation    !"#%&'()*,-./:;?@@[\]_@{@}
+char-set:symbol         $+<=>^`|~
+char-set:whitespace     Space, newline, tab, form feed,
+        vertical tab, carriage return
+char-set:blank  Space and tab
+char-set:graphic        letter + digit + punctuation + symbol
+char-set:printing       graphic + whitespace
+char-set:iso-control    ASCII 0-31 and 127
+@end example
+@end ignore
+
+@c page
+@node srfi char-sets ack
+@subsection Acknowledgements
+
+
+The design of this library benefited greatly from the feedback provided
+during the @srfi{} discussion phase.  Among those contributing
+thoughtful commentary and suggestions, both on the mailing list and by
+private discussion, were Paolo Amoroso, Lars Arvestad, Alan Bawden, Jim
+Bender, Dan Bornstein, Per Bothner, Will Clinger, Brian Denheyer, Kent
+Dybvig, Sergei Egorov, Marc Feeley, Matthias Felleisen, Will Fitzgerald,
+Matthew Flatt, Arthur A. Gleckler, Ben Goetter, Sven Hartrumpf, Erik
+Hilsdale, Shiro Kawai, Richard Kelsey, Oleg Kiselyov, Bengt Kleberg,
+Donovan Kolbly, Bruce Korb, Shriram Krishnamurthi, Bruce Lewis, Tom
+Lord, Brad Lucier, Dave Mason, David Rush, Klaus Schilling, Jonathan
+Sobel, Mike Sperber, Mikael Staldal, Vladimir Tsyshevsky, Donald Welsh,
+and Mike Wilson.  I am grateful to them for their assistance.
+
+I am also grateful the authors, implementors and documentors of all the
+systems mentioned in the introduction.  Aubrey Jaffer should be noted
+for his work in producing Web--accessible versions of the @rnrs{5} spec,
+which was a tremendous aid.
+
+This is not to imply that these individuals necessarily endorse the
+final results, of course.
+
+During this document's long development period, great patience was
+exhibited by Mike Sperber, who is the editor for the @srfi{}, and by
+Hillary Sullivan, who is not.
+
+@c page
+@node srfi char-sets license
+@subsection Copyright
+
+
+Certain portions of this document (the specific, marked segments of text
+describing the @rnrs{5} procedures) were adapted with permission from
+the @rnrs{5} report.
+
+All other text is copyright @copyright{} Olin Shivers (1998, 1999,
+2000).  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c end of file

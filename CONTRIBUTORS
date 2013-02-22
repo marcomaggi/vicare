@@ -1,22 +1,68 @@
-Marco  Maggi <marco.maggi-ipsu@poste.it>  is the  initial  maintainer of
-Vicare Scheme fork.
 
-Andreas Rottmann: provided patch to implement getpid.
+		   Contributors to Ikarus and Vicare
+		   =================================
 
-G�ran Weinholt: provided patch to implement FXREVERSE-BIT-FIELD.
 
-Matthew Flatt  distributed the  R6RS test suite  embedded in  the Vicare
-distribution.
+* Abdulaziz Ghuloum is the original author of Ikarus Scheme.
 
-The  implementation of  the function  BITWISE-REVERSE-BIT-FIELD  is from
-original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
-Y. FUJITA / LittleWing  Company Limited.
+* Marco Maggi is the initial maintainer of Vicare Scheme fork.
 
-https://github.com/sunderroy: contributed  a fix  for IMPORT  allowing a
-mixture of module names and library specs.
+* The implementation of EQUAL? comes from:
 
-https://github.com/sunderroy: contributed  a fix  for EXPORT  allowing a
-module to export its bindings to the enclosing region.
+      Michael D.  Adams and  R.  Kent Dybvig.  "Efficient nondestructive
+      equality checking for trees and  graphs."  In ICFP '08: Proceeding
+      of  the 13th  ACM SIGPLAN  international conference  on Functional
+      programming, pages 179-188.   ACM, New York, NY,  USA, 2008.  ISBN
+      978-1-59593-919-7. doi: 10.1145/1411204.1411230.
+
+  and  the  online distribution  which  is  Copyright (c)  2008  Michael
+  D. Adams  and R. Kent Dybvig,  see the file "ikarus.equal.ss"  for the
+  full license notice.
+
+* The implementation of MAKE-GUARDIAN comes from:
+
+      Dybvig, Bruggeman, Eby.  "Guardians  in a Generation-Based Garbage
+      Collector".   In  Proceedings of  the  SIGPLAN  '93 Conference  on
+      Programming  Language  Design  and Implementation,  207-216,  June
+      1993.
+
+* Matthew Flatt distributed  the R6RS test suite embedded  in the Vicare
+  distribution.  The tests are distributed  under the GNU GPL version 2,
+  or any later version.
+
+* The included SRFI  libraries were ported to R6RS  by Derick Eddington;
+  see the files README.srfi and  LICENSE.srfi for details.  See also the
+  source files for the list of original SRFI authors.
+
+* Andreas Rottmann: provided patch to implement getpid.
+
+* Göran Weinholt: provided patch to implement FXREVERSE-BIT-FIELD.
+
+* The implementation  of the function BITWISE-REVERSE-BIT-FIELD  is from
+  original  code  in: Ypsilon  Scheme  System,  Copyright (c)  2004-2009
+  Y.   FUJITA   /   LittleWing    Company   Limited.    See   the   file
+  "COPYING.ypsilon" for terms and conditions of use of this function.
+
+* https://github.com/sunderroy: contributed a fix  for IMPORT allowing a
+  mixture of module names and library specs.
+
+* http://github.com/sunderroy: contributed  a fix for EXPORT  allowing a
+  module to export its bindings to the enclosing region.
+
+* Barak A.  Pearlmutter  provided a number of changes for  better use of
+  the GNU Autotools.
+
+* http://github.com/ChaosEternal: performed  a bisection  search helping
+  to fix issue 29 (broken support for 64-bit architectures).
+
+* Peope  listed  here  contributed  comments,  suggestions,  criticisms,
+  release  testing and  bug reports  which have  helped fix  and improve
+  Vicare Scheme:
+
+    Barak A. Pearlmutter
+    Sven Hartrumpf
+    Soahc Lanrete
+
 
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
@@ -44,7 +90,7 @@ VERSION 0.0.2:
 * Tom  Gordon reported  installation  problems on  64-bit systems  which
   resulted in improving the error report of the configure script.
 
-* Jens Axel  Søgaard(and his brother) provided  solutions for compiling
+* Jens Axel  SÃžgaard(and his brother) provided  solutions for compiling
   Ikarus on 64-bit machines.
 
 * Andre van  Tonder reported expansion problems  for top-level programs.
@@ -91,9 +137,11 @@ VERSION 0.0.1:
 * Roshan James  bugged me to port  Ikarus to Windows.  Only  half of his
   wish came true (cygwin is not windows in his dictionary).
 
+
 ### end of file
 # Local Variables:
 # mode: text
 # fill-column: 72
 # paragraph-start: "*"
+# coding: utf-8-unix
 # End:

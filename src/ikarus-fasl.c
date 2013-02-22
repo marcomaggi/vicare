@@ -292,10 +292,10 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
   }
   if (c == 'x') {	/* code object */
-    long	code_size;
-    ikptr	freevars;
-    ikptr	annotation;
-    ikptr	p_code;
+    long	code_size   = 0;
+    ikptr	freevars    = IK_FIX(0);
+    ikptr	annotation  = IK_FALSE;
+    ikptr	p_code      = 0;
     fasl_read_buf(p, &code_size, sizeof(long));
     fasl_read_buf(p, &freevars,  sizeof(ikptr));
     annotation = do_read(pcb, p);
@@ -332,7 +332,7 @@ do_read (ikpcb* pcb, fasl_port* p)
   }
   else if (c == 's') {
     /* ascii string */
-    long len;
+    long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
     long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
     ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
@@ -354,14 +354,14 @@ do_read (ikpcb* pcb, fasl_port* p)
   }
   else if (c == 'S') {
     /* string */
-    long len;
+    long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
     long size = IK_ALIGN(len*IK_STRING_CHAR_SIZE + disp_string_data);
     ikptr str = ik_unsafe_alloc(pcb, size) | string_tag;
     IK_REF(str, off_string_length) = IK_FIX(len);
     long i;
     for (i=0; i<len; i++) {
-      ikchar c;
+      ikchar c = 0;
       fasl_read_buf(p, &c, sizeof(ikchar));
       IK_CHAR32(str, i) = IK_CHAR32_FROM_INTEGER(c);
     }
@@ -372,7 +372,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     return str;
   }
   else if (c == 'V') {
-    long len;
+    long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
     long size = IK_ALIGN(len * wordsize + disp_vector_data);
     ikptr vec = ik_unsafe_alloc(pcb, size) | vector_tag;
@@ -418,7 +418,7 @@ do_read (ikpcb* pcb, fasl_port* p)
   else if (c == 'R') { /* R is for RTD */
     ikptr name = do_read(pcb, p);
     ikptr symb = do_read(pcb, p);
-    long i, n;
+    long i, n = 0;
     fasl_read_buf(p, &n, sizeof(long));
     ikptr fields;
     if (n == 0) {
@@ -468,7 +468,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     return s_proc;
   }
   else if (c == '<') {
-    int idx;
+    int idx = 0;
     fasl_read_buf(p, &idx, sizeof(int));
     if ((idx <= 0) || (idx >= p->marks_size))
       ik_abort("invalid index for ref %d", idx);
@@ -482,10 +482,10 @@ do_read (ikpcb* pcb, fasl_port* p)
   }
   else if (c == 'v') {
     /* bytevector */
-    long len;
+    long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
-    long size = IK_ALIGN(len + disp_bytevector_data + 1);
-    ikptr x = ik_unsafe_alloc(pcb, size) | bytevector_tag;
+    long  size = IK_ALIGN(len + disp_bytevector_data + 1);
+    ikptr x    = ik_unsafe_alloc(pcb, size) | bytevector_tag;
     IK_REF(x, off_bytevector_length) = IK_FIX(len);
     fasl_read_buf(p, (void*)(long)(x+off_bytevector_data), len);
     ((char*)(long)x)[off_bytevector_data+len] = 0;
@@ -495,12 +495,13 @@ do_read (ikpcb* pcb, fasl_port* p)
     return x;
   }
   else if (c == 'l') {
-    int len = (unsigned char) fasl_read_byte(p);
+    int   len  = (unsigned char) fasl_read_byte(p);
     ikptr pair = ik_unsafe_alloc(pcb, pair_size * (len+1)) | pair_tag;
     if (put_mark_index) {
       p->marks[put_mark_index] = pair;
     }
-    int i; ikptr pt = pair;
+    int i;
+    ikptr pt = pair;
     for (i=0; i<len; i++) {
       IK_REF(pt, off_car) = do_read(pcb, p);
       IK_REF(pt, off_cdr) = pt + pair_size;
@@ -511,7 +512,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     return pair;
   }
   else if (c == 'L') {
-    long len;
+    long len = 0;
     fasl_read_buf(p, &len, sizeof(long));
     if (len < 0)
       ik_abort("invalid len=%ld", len);
@@ -519,7 +520,8 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (put_mark_index) {
       p->marks[put_mark_index] = pair;
     }
-    long i; ikptr pt = pair;
+    long i;
+    ikptr pt = pair;
     for (i=0; i<len; i++) {
       IK_REF(pt, off_car) = do_read(pcb, p);
       IK_REF(pt, off_cdr) = pt + pair_size;
@@ -539,12 +541,12 @@ do_read (ikpcb* pcb, fasl_port* p)
     return x;
   }
   else if (c == 'C') {
-    int n;
+    int n = 0;
     fasl_read_buf(p, &n, sizeof(int));
     return IK_CHAR_FROM_INTEGER(n);
   }
   else if (c == 'b') {
-    long len;
+    long len  = 0;
     long sign = 0;
     fasl_read_buf(p, &len, sizeof(long));
     if (len < 0) {

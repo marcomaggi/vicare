@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d20
+Subject: [announce] Vicare Scheme revision 0.2d21
 
                              Vicare Scheme
                              =============
@@ -37,17 +37,42 @@ collection of R6 Scheme libraries:
 	      <http://marcomaggi.github.com/nausicaa.html>
 
 
+Notes for revision 0.2d21
+-------------------------
+
+* Changed tarball distribution from .bz2 compression to .xz compression.
+
+* Added $STRING= to (ikarus system $strings).
+
+
 Notes for revision 0.2d20
 -------------------------
 
 * The boot image has been rotated.
+
+* The files  used by  the GNU  Autotools are  now under  the "autotools"
+  subdirectory of the top source directory.   This is to have less files
+  in the top directory.  Sorry for the annoyance.
+
+* It may be needed (depending on the platform?) to link with the pthread
+  library (using the appropriate "configure"  option) to make use of the
+  POSIX semaphore functions.  The  configuration script has been changed
+  to make this possible, by including early the pthread linker option.
+
+* The library search path has been fixed; it is now initialised to:
+
+     $(libdir)/scheme/r6rs
+     $(libdir)/vicare-scheme
+
+  sorry for the trouble.
 
 * BACKWARDS INCOMPATIBILITY  Starting with  this revision  the libraries
   installed  by the  package are  under "$prefix/vicare-scheme",  rather
   than under "$prefix/scheme".
 
 * Starting  with this  revision, the  SRFI libraries  ported to  R6RS by
-  Derick Eddington are included in the distribution.
+  Derick Eddington are included in the distribution.  At present SRFI 19
+  (time data types and procedures) is broken.
 
 * Added functions to (vicare):
 
@@ -118,13 +143,13 @@ Notes for revision 0.2d20
 
 * BACKWARDS INCOMPATIBILITY The functions from (vicare glibc):
 
-     glibc-sinh glibc-cosh glibc-tanh
-     glibc-asinh glibc-acosh glibc-atanh
+     glibc-sinh		glibc-cosh	glibc-tanh
+     glibc-asinh	glibc-acosh	glibc-atanh
 
   have been renamed to:
 
-     sinh cosh tanh
-     asinh acosh atanh
+     sinh		cosh		tanh
+     asinh		acosh		atanh
 
 * The following bindings have been added to (ikarus system $ratnums):
 
@@ -143,6 +168,8 @@ Notes for revision 0.2d20
   "-greek-pi/2",  etc.   See  the  documentation  node  "iklib  numerics
   constants" for how  to display such symbols with  Unicode glyphs under
   GNU Emacs.
+
+* Added documentation for the library (vicare platform features).
 
 
 Notes for revision 0.2d19

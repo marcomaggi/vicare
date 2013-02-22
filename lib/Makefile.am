@@ -57,17 +57,17 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a14.sls					\
 	srfi/%3a14/char-sets.sls			\
-	srfi/%3a14/srfi-14.scm				\
 	\
 	srfi/%3a16.sls					\
 	srfi/%3a16/case-lambda.sls			\
 	\
 	srfi/%3a19.sls					\
 	srfi/%3a19/time.sls				\
-	srfi/%3a19/srfi-19.scm				\
-	srfi/%3a19/srfi-19-test-suite.scm		\
-	srfi/%3a19/time/compat.vicare.sls		\
-	srfi/%3a19/time/not-implemented.sls		\
+	srfi/%3a19/read-table.sps			\
+	srfi/%3a19/table.scm				\
+	srfi/%3a19/tai-utc.dat				\
+	srfi/%3a19/time/extensions.sls			\
+	srfi/%3a19/time/core.sls			\
 	\
 	srfi/%3a23.sls					\
 	srfi/%3a23/error.sls				\
@@ -76,22 +76,17 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a25.sls					\
 	srfi/%3a25/multi-dimensional-arrays.sls		\
 	srfi/%3a25/arlib.scm				\
-	srfi/%3a25/array.scm				\
-	srfi/%3a25/ix-ctor.scm				\
 	srfi/%3a25/list.scm				\
-	srfi/%3a25/multi-dimensional-arrays/all.sls	\
 	srfi/%3a25/multi-dimensional-arrays/arlib.sls	\
-	srfi/%3a25/op-ctor.scm				\
-	srfi/%3a25/test.scm				\
 	\
 	srfi/%3a26.sls					\
 	srfi/%3a26/cut.sls				\
 	\
 	srfi/%3a27.sls					\
 	srfi/%3a27/random-bits.sls			\
-	srfi/%3a27/conftest.scm				\
-	srfi/%3a27/mrg32k3a-a.scm			\
-	srfi/%3a27/mrg32k3a.scm				\
+	\
+	srfi/%3a28.sls					\
+	srfi/%3a28/basic-format-strings.sls		\
 	\
 	srfi/%3a31.sls					\
 	srfi/%3a31/rec.sls				\
@@ -111,32 +106,24 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a41/streams/primitive.sls		\
 	\
 	srfi/%3a42.sls					\
-	srfi/%3a42/ec.scm				\
 	srfi/%3a42/eager-comprehensions.sls		\
-	srfi/%3a42/examples.scm				\
 	\
 	srfi/%3a43.sls					\
 	srfi/%3a43/vectors.sls				\
-	srfi/%3a43/vector-lib.scm			\
 	\
 	srfi/%3a45.sls					\
 	srfi/%3a45/lazy.sls				\
 	\
 	srfi/%3a48.sls					\
-	srfi/%3a48/intermediate-format-strings.sls			\
-	srfi/%3a48/intermediate-format-strings/compat.vicare.sls	\
+	srfi/%3a48/intermediate-format-strings.sls	\
 	\
 	srfi/%3a61/cond.sls				\
 	srfi/%3a61.sls					\
 	\
 	srfi/%3a64.sls					\
-	srfi/%3a64/srfi-64-test.scm			\
-	srfi/%3a64/testing.scm				\
 	srfi/%3a64/testing.sls				\
 	\
 	srfi/%3a67/compare-procedures.sls		\
-	srfi/%3a67/compare.scm				\
-	srfi/%3a67/examples.scm				\
 	srfi/%3a67.sls					\
 	\
 	srfi/%3a69/basic-hash-tables.sls		\
@@ -155,16 +142,10 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a99/records/procedural.sls		\
 	srfi/%3a99/records/syntactic.sls		\
 	\
-	srfi/private/check-arg.sls			\
 	srfi/private/feature-cond.sls			\
-	srfi/private/include/compat.vicare.sls		\
-	srfi/private/include.sls			\
-	srfi/private/let-opt.sls			\
-	srfi/private/make-aliased-libraries.sps		\
 	srfi/private/OS-id-features.sls			\
 	srfi/private/platform-features.vicare.sls	\
-	srfi/private/registry.sls			\
-	srfi/private/vanish.sls
+	srfi/private/registry.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/errno.sls			\

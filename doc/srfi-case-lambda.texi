@@ -2,7 +2,7 @@
 @section @ansrfi{16} syntax for procedures of variable arity
 
 
-@cindex @srfi{} case-lambda
+@cindex @ansrfi{16} case-lambda
 
 
 The library @library{srfi :16} is by Lars T Hansen as the reference

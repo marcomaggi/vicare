@@ -2,7 +2,7 @@
 @section @ansrfi{41} streams
 
 
-@cindex @srfi{} streams
+@cindex @ansrfi{41} streams
 
 
 The library @library{srfi :41} is by by Philip L. Bewig as the reference

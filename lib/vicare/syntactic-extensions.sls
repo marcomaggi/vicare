@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -67,6 +67,7 @@
     with-bytevectors		with-bytevectors/or-false
     callet			callet*
     receive
+    define-exact-integer->symbol-function
 
     ;; arguments validation
     define-argument-validation
@@ -74,11 +75,15 @@
     with-dangerous-arguments-validation
     arguments-validation-forms
 
-    ;; miscellaneous dispatching
+    ;; specialised CASE
     case-word-size		case-endianness
-    case-fixnums		case-integers
-    case-symbols
-    define-exact-integer->symbol-function
+    case-fixnums		$case-fixnums
+    case-integers		$case-integers
+    case-symbols		$case-symbols
+    case-chars			$case-chars
+    case-strings		$case-strings
+
+    ;; miscellaneous dispatching
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
     cond-exact-real-numeric-operand
@@ -93,7 +98,9 @@
 	  define-argument-validation
 	  with-arguments-validation
 	  with-dangerous-arguments-validation
-	  arguments-validation-forms))
+	  arguments-validation-forms)
+    (prefix (vicare unsafe-operations)
+	    $))
 
 
 ;;;; some defining syntaxes
@@ -380,109 +387,194 @@
 	   (else
 	    (assertion-violation ?who "expected endianness symbol as argument" ?endianness)))))))
 
-(define-syntax case-fixnums
-  (syntax-rules (else)
-    ((_ ?expr
-	((?fixnum0 ?fixnum ...)
-	 ?fx-body0 ?fx-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((fx ?expr))
-       (import (only (ikarus system $fx)
-		     $fx=))
-       (cond ((or ($fx= ?fixnum0 fx)
-		  ($fx= ?fixnum  fx)
-		  ...)
-	      ?fx-body0 ?fx-body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?fixnum0 ?fixnum ...)
-	 ?fx-body0 ?fx-body ...)
-	...)
-     (let ((fx ?expr))
-       (import (only (ikarus system $fx)
-		     $fx=))
-       (cond ((or ($fx= ?fixnum0 fx)
-		  ($fx= ?fixnum  fx)
-		  ...)
-	      ?fx-body0 ?fx-body ...)
-	     ...)))
-    ))
+
+;;;; specialised CASE
 
-(define-syntax case-integers
-  (syntax-rules (else)
-    ((_ ?expr
-	((?integer0 ?integer ...)
-	 ?body0 ?body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((int ?expr))
-       (cond ((or (= ?integer0 int)
-		  (= ?integer  int)
-		  ...)
-	      ?body0 ?body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?integer0 ?integer ...)
-	 ?body0 ?body ...)
-	...)
-     (let ((int ?expr))
-       (cond ((or (= ?integer0 int)
-		  (= ?integer  int)
-		  ...)
-	      ?body0 ?body ...)
-	     ...)))
-    ))
+;;Here we define  couples of type-specialised CASE  syntaxes.  For every
+;;type two syntaxes are defined.
+;;
+;;The syntaxes with name prefixed by $  do not check that the ?DATUM are
+;;of the expected type and  evaluate them once, allowing for expressions
+;;to be  used.  This is dangerous  but useful to allow  an identifier in
+;;reference position to be used as ?DATUM.
+
+(define-syntax define-typed-case
+  (syntax-rules ()
+    ((_ ?who ?unsafe-who
+	?type-pred ?unsafe-type= ?type-name-string
+	?custom-definition ...)
+     (begin
+       (define-syntax ?who
+	 (lambda (stx)
+	   (define who (quote ?who))
+	   ?custom-definition ...
+	   (define (%assert-all-datums LL)
+	     (for-each
+		 (lambda (L)
+		   (for-each
+		       (lambda (S)
+			 (unless (?type-pred S)
+			   (syntax-violation who
+			     (string-append "expected " ?type-name-string " as datum")
+			     L S)))
+		     L))
+	       (syntax->datum LL)))
+	   (syntax-case stx (else)
+	     ((_ ?expr
+		 ((?datum0 ?datum (... ...))
+		  ?datum-body0 ?datum-body (... ...))
+		 (... ...)
+		 (else
+		  ?else-body0 ?else-body (... ...)))
+	      (begin
+		(%assert-all-datums #'((?datum0 ?datum (... ...)) (... ...)))
+		#'(let ((key ?expr))
+		    (cond ((or (?unsafe-type= ?datum0 key)
+			       (?unsafe-type= ?datum  key)
+			       (... ...))
+			   ?datum-body0 ?datum-body (... ...))
+			  (... ...)
+			  (else
+			   ?else-body0 ?else-body (... ...))))))
+	     ((_ ?expr
+		 ((?datum0 ?datum (... ...))
+		  ?datum-body0 ?datum-body (... ...))
+		 (... ...))
+	      (begin
+		(%assert-all-datums #'((?datum0 ?datum (... ...)) (... ...)))
+		#'(let ((key ?expr))
+		    (cond ((or (?unsafe-type= ?datum0 key)
+			       (?unsafe-type= ?datum  key)
+			       (... ...))
+			   ?datum-body0 ?datum-body (... ...))
+			  (... ...)))))
+	     )))
+       (define-syntax ?unsafe-who
+	 (syntax-rules (else)
+	   ((_ ?expr
+	       ((?datum0 ?datum (... ...))
+		?datum-body0 ?datum-body (... ...))
+	       (... ...)
+	       (else
+		?else-body0 ?else-body (... ...)))
+	    (let ((key ?expr))
+	      (cond ((or (?unsafe-type= ?datum0 key)
+			 (?unsafe-type= ?datum  key)
+			 (... ...))
+		     ?datum-body0 ?datum-body (... ...))
+		    (... ...)
+		    (else
+		     ?else-body0 ?else-body (... ...)))))
+	   ((_ ?expr
+	       ((?datum0 ?datum (... ...))
+		?datum-body0 ?datum-body (... ...))
+	       (... ...))
+	    (let ((key ?expr))
+	      (cond ((or (?unsafe-type= ?datum0 key)
+			 (?unsafe-type= ?datum  key)
+			 (... ...))
+		     ?datum-body0 ?datum-body (... ...))
+		    (... ...))))
+	   )))
+     )))
+
+(define-typed-case case-fixnums $case-fixnums
+  fixnum? $fx= "fixnum")
+
+(define-typed-case case-integers $case-integers
+  %exact-integer? = "exact integer"
+  (define (%exact-integer? obj)
+    (or (fixnum? obj)
+	(bignum? obj))))
+
+(define-typed-case case-chars $case-chars
+  char? $char= "char")
+
+(define-typed-case case-strings $case-strings
+  string? string=? "string")
+;;FIXME The version  below is the one  to use after the  next boot image
+;;rotation, which will  make $STRING= available.  (Marco  Maggi; Mon Feb
+;;18, 2013)
+;;
+;; (define-typed-case case-strings $case-strings
+;;   string? $string= "string")
+
+;;; --------------------------------------------------------------------
+
+;;Symbols are differents because they need to be quoted.
 
 (define-syntax case-symbols
+  (lambda (stx)
+    (define who (quote case-symbols))
+    (define (%assert-all-datums LL)
+      (for-each
+	  (lambda (L)
+	    (for-each
+		(lambda (S)
+		  (unless (symbol? S)
+		    (syntax-violation who
+		      (string-append "expected symbol as datum")
+		      L S)))
+	      L))
+	(syntax->datum LL)))
+    (syntax-case stx (else)
+      ((_ ?expr
+	  ((?datum0 ?datum ...)
+	   ?datum-body0 ?datum-body ...)
+	  ...
+	  (else
+	   ?else-body0 ?else-body ...))
+       (begin
+	 (%assert-all-datums #'((?datum0 ?datum ...) ...))
+	 #'(let ((key ?expr))
+	     (cond ((or (eq? (quote ?datum0) key)
+			(eq? (quote ?datum)  key)
+			...)
+		    ?datum-body0 ?datum-body ...)
+		   ...
+		   (else
+		    ?else-body0 ?else-body ...)))))
+      ((_ ?expr
+	  ((?datum0 ?datum ...)
+	   ?datum-body0 ?datum-body ...)
+	  ...)
+       (begin
+	 (%assert-all-datums #'((?datum0 ?datum ...) ...))
+	 #'(let ((key ?expr))
+	     (cond ((or (eq? (quote ?datum0) key)
+			(eq? (quote ?datum)  key)
+			...)
+		    ?datum-body0 ?datum-body ...)
+		   ...))))
+      )))
+
+(define-syntax $case-symbols
   (syntax-rules (else)
     ((_ ?expr
-	((?symbol0 ?symbol ...)
-	 ?sym-body0 ?sym-body ...)
+	((?datum0 ?datum ...)
+	 ?datum-body0 ?datum-body ...)
 	...
 	(else
 	 ?else-body0 ?else-body ...))
-     (let ((sym ?expr))
-       (cond ((or (eq? (quote ?symbol0) sym)
-		  (eq? (quote ?symbol)  sym)
+     (let ((key ?expr))
+       (cond ((or (eq? (quote ?datum0) key)
+		  (eq? (quote ?datum)  key)
 		  ...)
-	      ?sym-body0 ?sym-body ...)
+	      ?datum-body0 ?datum-body ...)
 	     ...
 	     (else
 	      ?else-body0 ?else-body ...))))
     ((_ ?expr
-	((?symbol0 ?symbol ...)
-	 ?sym-body0 ?sym-body ...)
+	((?datum0 ?datum ...)
+	 ?datum-body0 ?datum-body ...)
 	...)
-     (let ((sym ?expr))
-       (cond ((or (eq? (quote ?symbol0) sym)
-		  (eq? (quote ?symbol)  sym)
+     (let ((key ?expr))
+       (cond ((or (eq? (quote ?datum0) key)
+		  (eq? (quote ?datum)  key)
 		  ...)
-	      ?sym-body0 ?sym-body ...)
+	      ?datum-body0 ?datum-body ...)
 	     ...)))
     ))
-
-(define-argument-validation (exact-integer who obj)
-  (and (integer? obj) (exact? obj))
-  (assertion-violation who "expected exact integer as argument" obj))
-
-(define-syntax define-exact-integer->symbol-function
-  (syntax-rules ()
-    ((_ ?who (?code ...))
-     (define (?who code)
-       (define who '?who)
-       (with-arguments-validation (who)
-	   ((exact-integer	code))
-	 (case-integers code
-	   ((?code)	'?code)
-	   ...
-	   (else #f)))))))
 
 
 ;;;; math functions dispatching
@@ -806,6 +898,47 @@
 ;; 	  ((flonum)	. ?compnum/flonum-body)
 ;; 	  ((cflonum)	. ?compnum/cflonum-body)
 ;; 	  ((compnum)	. ?compnum/compnum-body)))))))
+
+
+;;;; miscellaneous stuff
+
+(define-syntax define-exact-integer->symbol-function
+  ;;This syntax is used  to define a function that maps  an integer to a
+  ;;symbol.  It  is to be  used when  interfacing Vicare with  a foreign
+  ;;library; often  such foreign  libraries define constant  integers to
+  ;;drive the behaviour of functions.
+  ;;
+  ;;Here is an example with symbols everybody knows:
+  ;;
+  ;;   (define SEEK_SET 1)
+  ;;   (define SEEK_CUR 2)
+  ;;   (define SEEK_END 3)
+  ;;
+  ;;   (define-exact-integer->symbol-function whence->symbol
+  ;;     (SEEK_SET SEEK_CUR SEEK_END))
+  ;;
+  ;;the syntax will expand to:
+  ;;
+  ;;   (define (whence->symbol code)
+  ;;     (define who 'whence->symbol)
+  ;;     (with-arguments-validation (who)
+  ;;         ((exact-integer      code))
+  ;;       ($case-integers code
+  ;;         ((SEEK_SET)     'SEEK_SET)
+  ;;         ((SEEK_CUR)     'SEEK_CUR)
+  ;;         ((SEEK_END)     'SEEK_END)
+  ;;         (else #f))))
+  ;;
+  (syntax-rules ()
+    ((_ ?who (?code ...))
+     (define (?who code)
+       (define who '?who)
+       (with-arguments-validation (who)
+	   ((exact-integer	code))
+	 ($case-integers code
+	   ((?code)	'?code)
+	   ...
+	   (else #f)))))))
 
 
 ;;;; done

@@ -1034,7 +1034,7 @@
 	 (else					. ?none-body))
        (and (identifier? #'?eol-bits)
 	    (identifier? #'?who))
-       #'(case-fixnums ?eol-bits
+       #'($case-fixnums ?eol-bits
 	   ((0)					. ?none-body)
 	   ((EOL-LINEFEED-TAG)			. ?linefeed-body)
 	   ((EOL-CARRIAGE-RETURN-TAG)		. ?carriage-return-body)
@@ -1140,7 +1140,7 @@
 	   (%unsafe.reconfigure-output-buffer-to-input-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
-	 (case-fixnums m
+	 ($case-fixnums m
 	   ((FAST-GET-UTF8-TAG)		. ?utf8-tag-body)
 	   ((FAST-GET-CHAR-TAG)		. ?char-tag-body)
 	   ((FAST-GET-LATIN-TAG)	. ?latin-tag-body)
@@ -1155,7 +1155,7 @@
 	   (else
 	    (if (and (port? ?port)
 		     (%unsafe.input-and-output-port? ?port))
-		(case-fixnums m
+		($case-fixnums m
 		  ((FAST-PUT-UTF8-TAG)
 		   (%reconfigure-as-input FAST-GET-UTF8-TAG))
 		  ((FAST-PUT-CHAR-TAG)
@@ -1205,7 +1205,7 @@
 	   (%unsafe.reconfigure-input-buffer-to-output-buffer ?port ?who)
 	   ($set-port-fast-attrs! ?port fast-attrs)
 	   (retry-after-tagging-port fast-attrs))
-	 (case-fixnums m
+	 ($case-fixnums m
 	   ((FAST-PUT-UTF8-TAG)		. ?utf8-tag-body)
 	   ((FAST-PUT-CHAR-TAG)		. ?char-tag-body)
 	   ((FAST-PUT-LATIN-TAG)	. ?latin-tag-body)
@@ -1216,7 +1216,7 @@
 	   (else
 	    (if (and (port? ?port)
 		     (%unsafe.input-and-output-port? ?port))
-		(case-fixnums m
+		($case-fixnums m
 		  ((FAST-GET-UTF8-TAG)
 		   (%reconfigure-as-output FAST-PUT-UTF8-TAG))
 		  ((FAST-GET-CHAR-TAG)

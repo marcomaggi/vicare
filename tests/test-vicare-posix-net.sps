@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -412,8 +412,10 @@
       (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))
 	     (result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
 	(px.shutdown sock SHUT_RDWR)
-	result)
-    => 112640)
+	(and (integer?  result)
+	     (exact?    result)
+	     (positive? result)))
+    => #t)
 
 ;;;This test behaves  like this for no documented  reason; it looks like
 ;;;the  size of  the buffer  set  by SO_SNDBUF  is a  suggestion to  the
@@ -424,8 +426,10 @@
 	(px.setsockopt/size_t sock SOL_SOCKET SO_SNDBUF 3000)
 	(let ((result (px.getsockopt/size_t sock SOL_SOCKET SO_SNDBUF)))
 	  (px.shutdown sock SHUT_RDWR)
-	  result))
-    => 6000)
+	  (and (integer?  result)
+	       (exact?    result)
+	       (positive? result))))
+    => #t)
 
   (check
       (let* ((sock   (px.socket PF_LOCAL SOCK_STREAM 0))

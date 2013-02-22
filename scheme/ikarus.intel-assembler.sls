@@ -21,14 +21,16 @@
     code-entry-adjustment
     assembler-property-key)
   (import (ikarus)
+    #;(rnrs bytevectors)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (vicare arguments validation)
     (prefix (vicare unsafe-operations)
 	    $)
+    (vicare arguments validation)
     (prefix (vicare words)
 	    words.)
-    (vicare syntactic-extensions))
+    (except (vicare syntactic-extensions)
+	    case-word-size))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
@@ -107,6 +109,16 @@
 
 
 ;;;; helpers
+
+(define-syntax case-word-size
+  ;;We really  need to define  this macro so that  it uses the  value of
+  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
+  ;;
+  (syntax-rules ()
+    ((_ ((32) . ?body-32) ((64) . ?body-64))
+     (if (= 4 wordsize)
+	 (begin . ?body-32)
+       (begin . ?body-64)))))
 
 (define (fold func init ls)
   (if (null? ls)
@@ -315,12 +327,11 @@
 	      (cons (byte #x24) ac)
 	    ac)))
 
-  (case-word-size
-   ((32)
-    (define-inline (IMM32 n ac)
-      (IMM n ac)))
-   ((64)
-    (define (IMM32 n ac)
+  (define (IMM32 n ac)
+    (case-word-size
+     ((32)
+      (IMM n ac))
+     ((64)
       (cond ((imm32? n)
 	     ;;Prepend  to the  accumulator AC  a 32-bit  immediate value,
 	     ;;least significant byte first.
@@ -491,12 +502,11 @@
 				    ($fxsll s 6))))
 	  ac))
 
-  (case-word-size
-   ((32)
-    (define-inline (imm32? x)
-      (imm? x)))
-   ((64)
-    (define (imm32? x)
+  (define (imm32? x)
+    (case-word-size
+     ((32)
+      (imm? x))
+     ((64)
       (and (immediate-int? x)
 	   (<= (words.least-s32) x (words.greatest-s32))))))
 
@@ -920,12 +930,11 @@
   ;; 		(cons (car ls) (f (cdr ls))))))
   ;;   ls)
 
-  (case-word-size
-   ((32)
-    (define (jmp-pc-relative code0 code1 dst ac)
-      (error 'intel-assembler "no pc-relative jumps in 32-bit mode")))
-   ((64)
-    (define (jmp-pc-relative code0 code1 dst ac)
+  (define (jmp-pc-relative code0 code1 dst ac)
+    (case-word-size
+     ((32)
+      (error 'intel-assembler "no pc-relative jumps in 32-bit mode"))
+     ((64)
       (let ((G (gensym)))
 	(CODE code0
 	      (CODE code1 (cons* `(local-relative . ,G)

@@ -2,7 +2,7 @@
 @section @ansrfi{39} parameter objects
 
 
-@cindex @srfi{} parameters
+@cindex @ansrfi{39} parameters
 
 
 The library @library{srfi :39} is by Marc Feeley as the reference

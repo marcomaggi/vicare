@@ -77,20 +77,8 @@
 
      (unparse-recordized-code			$unparse-recordized-code)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
-  (import (except (ikarus)
-		  current-primitive-locations
-		  eval-core			current-core-eval
-		  compile-core-expr-to-port	compile-core-expr
-
-		  assembler-output
-		  optimizer-output
-		  tag-analysis-output
-
-		  cp0-effort-limit		cp0-size-limit
-		  current-letrec-pass		generate-debug-calls
-		  optimize-cp			optimize-level
-		  perform-tag-analysis		strip-source-info
-		  fasl-write)
+  (import
+      (rnrs hashtables)
     ;;Remember that this file defines the primitive operations.
     (ikarus system $fx)
     (ikarus system $pairs)
@@ -98,16 +86,37 @@
 	  $code->closure)
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
-    (vicare include)
+    (except (ikarus)
+	    current-primitive-locations
+	    eval-core			current-core-eval
+	    compile-core-expr-to-port	compile-core-expr
+
+	    assembler-output
+	    optimizer-output
+	    tag-analysis-output
+
+	    cp0-effort-limit		cp0-size-limit
+	    current-letrec-pass		generate-debug-calls
+	    optimize-cp			optimize-level
+	    perform-tag-analysis	strip-source-info
+	    fasl-write)
     ;;This needs to be loaded here so that it evaluates with the freshly
     ;;loaded  "ikarus.config.ss",   including  the  correct   value  for
     ;;WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
+    (vicare include)
     (except (vicare syntactic-extensions)
-	    begin0)
+	    begin0
+	    case-word-size)
     (vicare arguments validation))
+
+  ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
+  ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
+  (module (wordsize)
+    (import (vicare include))
+    (include/verbose "ikarus.config.ss"))
 
 
 ;;;; configuration parameters
@@ -143,6 +152,16 @@
 
 
 ;;;; helper syntaxes
+
+(define-syntax case-word-size
+  ;;We really  need to define  this macro so that  it uses the  value of
+  ;;WORDSIZE just defined by the "ikarus.config.ss" file.
+  ;;
+  (syntax-rules ()
+    ((_ ((32) . ?body-32) ((64) . ?body-64))
+     (if (= 4 wordsize)
+	 (begin . ?body-32)
+       (begin . ?body-64)))))
 
 (define-inline (%debug-print ?obj)
   (pretty-print ?obj (current-error-port)))
@@ -3673,10 +3692,6 @@
 ;;definitions  in   the  C  language  header   files  "internals.h"  and
 ;;"vicare.h".
 ;;
-
-(module (wordsize)
-  (import (vicare include))
-  (include/verbose "ikarus.config.ss"))
 
 (define wordshift
   (case-word-size

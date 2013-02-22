@@ -148,6 +148,7 @@
     non-empty-string.vicare-arguments-validation
     non-empty-string/false.vicare-arguments-validation
     index-for-string.vicare-arguments-validation
+    one-off-index-for-string.vicare-arguments-validation
     index-and-count-for-string.vicare-arguments-validation
     start-and-end-for-string.vicare-arguments-validation
     start-and-past-for-string.vicare-arguments-validation
@@ -1018,6 +1019,11 @@
   (index-for-string? str idx)
   (assertion-violation who "expected valid fixnum as index for string argument" idx str))
 
+(define-argument-validation (one-off-index-for-string who str idx)
+  ;;We assume that STR has already been validated as string.
+  (one-off-index-for-string? str idx)
+  (assertion-violation who "expected valid fixnum as index for string argument" idx str))
+
 (define-argument-validation (index-and-count-for-string who str idx count)
   ;;We assume that STR has already been validated as string.
   (and (index-for-string? str idx)
@@ -1039,7 +1045,7 @@
 
 (define-argument-validation (start-and-past-for-string who str start past)
   ;;We assume that STR has already been validated as string.
-  (and (index-for-string? str start)
+  (and (one-off-index-for-string? str start)
        (one-off-index-for-string? str past)
        ($fx<= start past))
   (assertion-violation who
@@ -1106,7 +1112,7 @@
 
 (define-argument-validation (start-and-past-for-vector who vec start past)
   ;;We assume that VEC has already been validated as vector.
-  (and (index-for-vector? vec start)
+  (and (one-off-index-for-vector? vec start)
        (one-off-index-for-vector? vec past)
        ($fx<= start past))
   (assertion-violation who
@@ -1173,7 +1179,7 @@
 
 (define-argument-validation (start-and-past-for-bytevector who vec start past)
   ;;We assume that VEC has already been validated as bytevector.
-  (and (index-for-bytevector? vec start)
+  (and (one-off-index-for-bytevector? vec start)
        (one-off-index-for-bytevector? vec past)
        ($fx<= start past))
   (assertion-violation who

@@ -1,0 +1,392 @@
+@node srfi intermediate-format
+@section @ansrfi{48} intermediate format strings
+
+
+@cindex @ansrfi{48} intermediate format strings
+
+
+The library @library{srfi :48} is by Kenneth Dickey as the reference
+implementation for @ansrfi{48}; see:
+
+@center @url{http://srfi.schemers.org/srfi-48/srfi-48.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi intermediate-format abstract::   Abstract.
+* srfi intermediate-format issue::      Issues.
+* srfi intermediate-format rationale::  Rationale.
+* srfi intermediate-format spec::       Specification.
+* srfi intermediate-format examples::   Examples.
+* srfi intermediate-format copyright::  Copyright.
+@end menu
+
+@c page
+@node srfi intermediate-format abstract
+@subsection Abstract
+
+
+This document specifies @emph{Format Strings}, a method of interpreting
+a Scheme string which contains a number of format directives that are
+replaced with other string data according to the semantics of each
+directive.  This @srfi{} extends @ansrfi{28} in being more generally
+useful but is less general than advanced format strings in that it does
+not allow, aside from @code{~F}, for controlled positioning of text
+within fields.
+
+@c page
+@node srfi intermediate-format issue
+@subsection Issues
+
+
+Some may disagree with specific escape options or return values.  For
+those who desire complex options as implemented by SLIB or Common Lisp's
+@func{format}, an upwards compatible ``Advanced Format'' @srfi{} should
+be proposed.
+
+In particular, the reference implementation given here does not accept
+numeric arguments (aside from @code{~F}).  Hence it does not support
+@ansrfi{29}.
+
+It is highly desireable that baseline library code be small, attempt to
+eliminiate heap allocation and bound stack usage.  This is especially
+important in embedded systems.  This can be accomplished by writing
+directly to a port, rather than a string, by not supporting @code{~W} or
+@code{~F}, and by replacing:
+
+@example
+(display (number->string n r) p)
+@end example
+
+@noindent
+with a carefully written:
+
+@example
+(display:number->string n r p)
+@end example
+
+@noindent
+which does not build intermediate strings.
+
+As this is intermediate format, it was felt that @code{~F} and @code{~W}
+are too highly useful to elide.  The @code{~H} option is helpful to
+users, allows for programattic query, and makes clear which format
+directives are supported.
+
+@c page
+@node srfi intermediate-format rationale
+@subsection Rationale
+
+
+Inheriting from MacLisp, nearly all Lisp and Scheme implementations
+support some form of @func{format} function with support for various
+numbers of format directives.  By agreeing to the options here, we raise
+the bar for portable code.
+
+The reference implementation is @rnrs{5} compliant and easy to port.  In
+not requiring advanced features (aside from @code{~W} and @code{~F})
+small implementations are possible.  E.g. the reference code does not
+use side effects (assignment) and is less than a third the source size
+of the latest SLIB implementation of @func{format} (less than a tenth if
+@code{~F} support is elided).
+
+The optional port argument allows for compatibility with older code
+written for, e.g. scheme48, MIT Scheme, T, et cetera, which required a
+port argument.  It is also useful in cases where a synoptic
+implementation of Scheme and CommonLisp is maintained.
+
+@c page
+@node srfi intermediate-format spec
+@subsection Specification
+
+
+@defun format @var{format-string}
+@defunx format @var{format-string} @var{obj} ...
+@defunx format @var{port} @var{format-string}
+@defunx format @var{port} @var{format-string} @var{obj} ...
+Accept a format template (a Scheme String), and process it, replacing
+any format directives in order with one or more characters, the
+characters themselves dependent on the semantics of the format directive
+encountered.  Each directive may consume one @var{obj}.  It is an error
+if fewer or more @var{obj} values are provided than format directives
+that require them.
+
+When a @var{port} is specified it must be either an output port or a
+boolean.
+
+@itemize
+@item
+If an output port is specified: the formatted output is output into that
+port.
+
+@item
+If the @var{port} argument is @true{}: output is to the
+@func{current-output-port}.
+
+@item
+If the @var{port} is @false{} or no @var{port} is specified: the output
+is returned as a string.
+
+@item
+If the @var{port} is specified and is @true{} or an output port: the
+return value of the @func{format} function is unspecified.
+@end itemize
+
+It is unspecified which encoding is used (e.g. @ascii{},
+@acronym{EBCDIC}, Unicode).  A given implementation must specify which
+encoding is used.  The implementation may or may not allow the encoding
+to be selected or changed.
+
+It is an error if a format directive consumes an @var{obj} argument and
+that argument does not conform to a required type as noted in the table
+below.
+
+It is permissible, but highly discouraged, to implement
+@func{pretty-print} as:
+
+@example
+(define pretty-print write)
+@end example
+
+A format directive is a two character sequence in the string where the
+first character is a tilde @code{~}.  Directive characters are
+case--independent, i.e. upper and lower case characters are interpreted
+the same.  Each directive code's meaning is described in the following
+table:
+
+@multitable @columnfractions .17 .20 .50 .13
+@headitem DIRECTIVE @tab MNEMONIC @tab ACTION @tab CONSUMES?
+@item @code{~a}
+@tab Any
+@tab @code{(display obj)} for humans.
+@tab yes
+@item @code{~s}
+@tab Slashified
+@tab @code{(write obj)} for parsers.
+@tab yes
+@item @code{~w}
+@tab WriteCircular
+@tab @code{(write-with-shared-structure obj)} like @code{~s}, but
+handles recursive structures.
+@tab yes
+@item @code{~d}
+@tab Decimal
+@tab The @var{obj} is a number which is output in decimal radix.
+@tab yes
+@item @code{~x}
+@tab heXadecimal
+@tab The @var{obj} is a number which is output in hexdecimal radix.
+@tab yes
+@item @code{~o}
+@tab Octal
+@tab The @var{obj} is a number which is output in octal radix.
+@tab yes
+@item @code{~b}
+@tab Binary
+@tab The @var{obj} is a number which is output in binary radix.
+@tab yes
+@item @code{~c}
+@tab Character
+@tab The single charater @var{obj} is output by @func{write-char}.
+@tab yes
+@item @code{~y}
+@tab Yuppify
+@tab The list @var{obj} is pretty-printed to the output.
+@tab yes
+@item @code{~?}
+@tab Indirection
+@tab The @var{obj} is another format--string and the following @var{obj} is a
+list of arguments; format is called recursively.
+@tab yes
+@item @code{~K}
+@tab Indirection
+@tab The same as @code{~?} for backward compatability with some existing
+implementations.
+@tab yes
+@item @code{~[w[,d]]F}
+@tab Fixed
+@tab @code{~w,dF} outputs a number with width @code{w} and @code{d}
+digits after the decimal; @code{~wF} outputs a string or number with
+width @code{w}.
+@tab yes
+@item @code{~~}
+@tab Tilde
+@tab Output a tilde.
+@tab no
+@item @code{~t}
+@tab Tab
+@tab Output a tab character.
+@tab no
+@item @code{~%}
+@tab Newline
+@tab Output a newline character.
+@tab no
+@item @code{~&}
+@tab Freshline
+@tab Output a newline character if it is known that the previous output
+was not a newline.
+@tab no
+@item @code{~_}
+@tab Space
+@tab A single space character is output.
+@tab no
+@item @code{~h}
+@tab Help
+@tab Outputs one line of call synopsis, one line of comment, and one
+line of synopsis for each format directive, starting with the directive
+(e.g. @code{"~t"}).
+@tab no
+@end multitable
+
+The @code{~F}, fixed format, directive requires some elucidation.
+
+@code{~wF} is useful for strings or numbers.  Where the string (or
+@func{number->string} of the number) has fewer characters than the
+integer width @code{w}, the string is padded on the left with space
+characters.
+
+@code{~w,dF} is typically used only on numbers.  For strings, the
+@code{d} specifier is ignored.  For numbers, the integer @code{d}
+specifies the number of decimal digits after the decimal place.  Both
+@code{w} and @code{d} must be zero or positive.
+
+If @code{d} is specified, the number is processed as if added to
+@code{0.0}, i.e. it is converted to an inexact value.
+
+@example
+(format "~8,2F" 1/3)    @result{} "    0.33"
+@end example
+
+If no @code{d} is specified, the number is not coerced to inexact.
+
+@example
+(format "~6F" 32)       @result{} "    32"
+@end example
+
+Digits are padded to the right with zeros
+
+@example
+(format "~8,2F" 32)     @result{} "   32.00"
+@end example
+
+If the number it too large to fit in the width specified, a string
+longer than the width is returned:
+
+@example
+(format "~1,2F" 4321)   @result{} "4321.00"
+@end example
+
+If the number is complex, @code{d} is applied to both real and imaginal
+parts:
+
+@example
+(format "~1,2F" (sqrt -3.9)) @result{} "0.00+1.97i"
+@end example
+
+For very large or very small numbers, the point where exponential
+notation is used is implementation defined.
+
+@example
+(format "~8F" 32e5)     @result{} "   3.2e6" or "3200000.0"
+@end example
+@end defun
+
+@c page
+@node srfi intermediate-format examples
+@subsection Examples
+
+
+@example
+(format "Hello, ~a" "World!")
+@result{} "Hello, World!"
+
+(format "Error, list is too short: ~s" '(one "two" 3))
+@result{} "Error, list is too short: (one \"two\" 3))"
+
+(format "test me")
+@result{} "test me"
+
+(format "~a ~s ~a ~s" 'this 'is "a" "test")
+@result{} "this is a \"test\""
+
+(format #t "#d~d #x~x #o~o #b~b~%" 32 32 32 32)
+@print{} #d32 #x20 #o40 #b100000
+@result{} #<unspecified>
+
+(format "~a ~? ~a" 'a "~s" '(new) 'test)
+@result{} "a new test"
+
+(format #f "~&1~&~&2~&~&~&3~%")
+@result{} "
+1
+2
+3
+"
+
+(format #f "~a ~? ~a ~%" 3 " ~s ~s " '(2 2) 3)
+@result{} "3  2 2  3
+"
+
+(format "~w" (let ( (c '(a b c)) ) (set-cdr! (cddr c) c) c))
+@result{} "#1=(a b c . #1#)"
+
+(format "~8,2F" 32)
+@result{} "   32.00"
+
+(format "~8,3F" (sqrt -3.8))
+@result{} "0.000+1.949i"
+
+(format "~8,2F" 3.4567e11)
+@result{} " 3.45e11"
+
+(format "~6,3F" 1/3)
+@result{} " 0.333"
+
+(format "~4F" 12)
+@result{} "  12"
+
+(format "~8,3F" 123.3456)
+@result{} " 123.346"
+
+ (format "~6,3F" 123.3456)
+@result{} "123.346"
+
+ (format "~2,3F" 123.3456)
+@result{} "123.346"
+
+(format "~8,3F" "foo")
+@result{} "     foo"
+
+(format "~a~a~&" (list->string (list #\newline)) "")
+@result{} "
+"
+@end example
+
+@c page
+@node srfi intermediate-format copyright
+@subsection Copyright
+
+
+Copyright @copyright{} Kenneth A. Dickey (2003).  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c end of file

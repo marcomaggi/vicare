@@ -6,6 +6,8 @@ VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
 VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
+VICARE_LIBDIR		= $(libdir)/scheme/r6rs
+
 VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
@@ -22,11 +24,13 @@ endif
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) $(user_flags) --r6rs-script
-VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
-		  VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY)	\
-		  CHECK_TEST_NAME=$(name)				\
-		  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)	\
-		  LD_LIBRARY_PATH=$(builddir)/../src/.libs
+VICARE_ENV	= \
+	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
+	VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY); export VICARE_FASL_DIRECTORY;	\
+	CHECK_TEST_NAME=$(name); export CHECK_TEST_NAME;				\
+	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
+	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
+	LD_LIBRARY_PATH=$(builddir)/../src/.libs; export LD_LIBRARY_PATH;
 VICARE_RUN	= $(VICARE_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE) $(VICARE_FLAGS)
 
 .PHONY: test tests test-r6rs long-test long-tests
@@ -60,10 +64,12 @@ VIE			= $(srcdir)/../scripts/vie
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make".
 VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
-VICARE_TEST_RUN_ENV	= VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH)	\
-			  VICARE_SRC_DIR=$(srcdir) VICARE_BUILDDIR=$(builddir)
-VICARE_TEST_RUN		= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
-VICARE_TEST_VIE		= $(VICARE_TEST_RUN_ENV) $(VIE) $(VICARE) --raw-repl $(VICARE_TEST_RUN_FLAGS)
+VICARE_TEST_RUN_ENV	= \
+	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
+	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
+	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;
+VICARE_TEST_RUN	= $(VICARE_TEST_RUN_ENV) $(VICARE) $(VICARE_TEST_RUN_FLAGS)
+VICARE_TEST_VIE	= $(VICARE_TEST_RUN_ENV) $(VIE) $(VICARE) --raw-repl $(VICARE_TEST_RUN_FLAGS)
 
 
 .PHONY: test-run test-vie test-exec-modes
@@ -80,16 +86,15 @@ test-exec-modes:
 #page
 #### interface to "make check"
 
-VICARE_CHECK_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
-VICARE_CHECK_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_CHECK_FLAGS)
+# Read "Parallel Test Harness" in the documentation of GNU Automake to
+# understand how to use this interface for "make check".
+#
+# We must make sure that this ends with a semicolon!!!
+AM_TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes; export VICARE_CHECK_QUIET; $(VICARE_ENV)
+TEST_EXTENSIONS		= .sps
+SPS_LOG_COMPILER	= $(VICARE)
+AM_SPS_LOG_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
 
-VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(user_flags)
-VICARE_LIBDIR		= $(libdir)/scheme
-VICARE_INSTCHECK_ENV	= VICARE_LIBRARY_PATH=$(DESTDIR)$(VICARE_LIBDIR):$(VICARE_LIBRARY_PATH):$(srcdir):$(srcdir)/../scheme LD_LIBRARY_PATH=$(DESTDIR)$(libdir) VICARE_CHECK_QUIET=yes
-VICARE_INSTCHECK_RUN	= $(VICARE_INSTCHECK_ENV) $(DESTDIR)$(bindir)/vicare $(VICARE_INSTCHECK_FLAGS)
-
-# TESTS and TESTS_ENVIRONMENT are Automake variables.
-TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes $(VICARE_CHECK_RUN)
 TESTS			=	\
 	test-r6rs-arithmetic-bitwise.sps		\
 	test-r6rs-arithmetic-fixnums.sps		\
@@ -227,11 +232,24 @@ TESTS			=	\
 	test-srfi-8-receive.sps				\
 	test-srfi-9-records.sps				\
 	test-srfi-11-let-values.sps			\
+	test-srfi-13-strings.sps			\
+	test-srfi-14-char-sets.sps			\
+	test-srfi-19-time.sps				\
 	test-srfi-26-cut.sps				\
+	test-srfi-27-random-bits.sps			\
+	test-srfi-28-basic-format.sps			\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
+	test-srfi-41-streams.sps			\
+	test-srfi-42-eager-comprehensions.sps		\
+	test-srfi-43-vectors.sps			\
+	test-srfi-45-lazy.sps				\
+	test-srfi-48-intermediate-format-strings.sps	\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-64-testing.sps			\
+	test-srfi-67-compare-procedures.sps		\
+	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
 	\
@@ -286,10 +304,23 @@ if WANT_CRE2
 TESTS	+= foreign-test-vicare-cre2.sps
 endif
 
+#page
+#### interface to "make instcheck"
+
+VICARE_INSTCHECK_LIBRARY_PATH = $(DESTDIR)$(VICARE_LIBDIR):$(VICARE_LIBRARY_PATH):$(srcdir):$(srcdir)/../scheme
+
+VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(user_flags)
+VICARE_INSTCHECK_ENV	= \
+	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH); export VICARE_LIBRARY_PATH; \
+	LD_LIBRARY_PATH=$(DESTDIR)$(libdir); export LD_LIBRARY_PATH; \
+	VICARE_CHECK_QUIET=no; export VICARE_CHECK_QUIET;
+VICARE_INSTCHECK_RUN	= \
+	$(VICARE_INSTCHECK_ENV) $(DESTDIR)$(bindir)/vicare $(VICARE_INSTCHECK_FLAGS)
+
 installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
-#XFAIL_TESTS = test-vicare-log.sps
+XFAIL_TESTS = test-srfi-19-time.sps
 
 #page
 #### extra files to be distributed
@@ -506,11 +537,24 @@ EXTRA_DIST = \
 	test-srfi-8-receive.sps				\
 	test-srfi-9-records.sps				\
 	test-srfi-11-let-values.sps			\
+	test-srfi-13-strings.sps			\
+	test-srfi-14-char-sets.sps			\
+	test-srfi-19-time.sps				\
 	test-srfi-26-cut.sps				\
+	test-srfi-27-random-bits.sps			\
+	test-srfi-28-basic-format.sps			\
 	test-srfi-31-rec.sps				\
 	test-srfi-37-args-fold.sps			\
 	test-srfi-39-parameters.sps			\
+	test-srfi-41-streams.sps			\
+	test-srfi-42-eager-comprehensions.sps		\
+	test-srfi-43-vectors.sps			\
+	test-srfi-45-lazy.sps				\
+	test-srfi-48-intermediate-format-strings.sps	\
 	test-srfi-61-general-cond.sps			\
+	test-srfi-64-testing.sps			\
+	test-srfi-67-compare-procedures.sps		\
+	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
 	\

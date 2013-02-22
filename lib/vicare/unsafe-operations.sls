@@ -32,7 +32,7 @@
 ;;;        decreasing order of significance.
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -74,38 +74,45 @@
 	    ($cdddr		cdddr)
 	    ($caddr		caddr))
 
-    (rename ($fxzero?	fxzero?)
-	    ($fxadd1	fxadd1)		;increment
-	    ($fxsub1	fxsub1)		;decrement
-	    ($fxneg	fxneg)		;negation
-	    ($fxsra	fxsra)		;shift right
-	    ($fxsll	fxsll)		;shift left
-	    ($fxlogor	fxlogor)	;inclusive logic OR
-	    ($fxlogxor	fxlogxor)	;exlusive logic OR
-	    ($fxlogand	fxlogand)	;logic AND
-	    ($fxlognot	fxlognot)	;logic not
-	    ($fxlognot	fxnot)		;logic not
-	    ($fx+	fx+)
-	    ($fx-	fx-)
-	    ($fx*	fx*)
-	    ($fx<	fx<)
-	    ($fx>	fx>)
-	    ($fx>=	fx>=)
-	    ($fx<=	fx<=)
-	    ($fx=	fx=))
+    (rename ($fxzero?		fxzero?)
+	    ($fxnegative?	fxnegative?)
+	    ($fxpositive?	fxpositive?)
+	    ($fxadd1		fxadd1)		;increment
+	    ($fxsub1		fxsub1)		;decrement
+	    ($fxneg		fxneg)		;negation
+	    ($fxsra		fxsra)		;shift right
+	    ($fxsll		fxsll)		;shift left
+	    ($fxlogor		fxlogor)	;inclusive logic OR
+	    ($fxlogxor		fxlogxor)	;exlusive logic OR
+	    ($fxlogand		fxlogand)	;logic AND
+	    ($fxlognot		fxlognot)	;logic not
+	    ($fxlognot		fxnot)		;logic not
+	    ($fx+		fx+)
+	    ($fx-		fx-)
+	    ($fx*		fx*)
+	    ($fxdiv		fxdiv)
+	    ($fxdiv0		fxdiv0)
+	    ($fxmod		fxmod)
+	    ($fxmod0		fxmod0)
+	    ($fx<		fx<)
+	    ($fx>		fx>)
+	    ($fx>=		fx>=)
+	    ($fx<=		fx<=)
+	    ($fx=		fx=))
 
-    (rename ($fxand	fxand)		;multiple arguments AND
-	    ($fxior	fxior)		;multiple arguments inclusive OR
-	    ($fxxor	fxxor)		;multiple arguments exclusive OR
-	    ($fxmax	fxmax)		;multiple arguments max
-	    ($fxadd2	fxadd2)
-	    ($fxadd3	fxadd3)
-	    ($fxadd4	fxadd4)
-	    ($fxincr!	fxincr!))
+    (rename ($fxand		fxand)		;multiple arguments AND
+	    ($fxior		fxior)		;multiple arguments inclusive OR
+	    ($fxxor		fxxor)		;multiple arguments exclusive OR
+	    ($fxmax		fxmax)		;multiple arguments max
+	    ($fxadd2		fxadd2)
+	    ($fxadd3		fxadd3)
+	    ($fxadd4		fxadd4)
+	    ($fxincr!		fxincr!))
 
 ;;; --------------------------------------------------------------------
 
     (rename ($bignum-positive?		bignum-positive?)
+	    ($bignum-negative?		bignum-negative?)
 	    ($bignum-byte-ref		bignum-byte-ref)
 	    ($bignum-size		bignum-size))
 
@@ -253,7 +260,8 @@
     (rename ($make-string	make-string)
 	    ($string-length	string-length)
 	    ($string-ref	string-ref)
-	    ($string-set!	string-set!))
+	    ($string-set!	string-set!)
+	    #;($string=		string=))
 
     (rename ($string-copy!			string-copy!)
 	    ($string-copy!/count		string-copy!/count)

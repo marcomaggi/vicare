@@ -88,55 +88,49 @@
 
 * Review and integration of SRFIs
 
-** TODO SRFI 0
+** TODO SRFI 0 cond-expand
 
    Decide if loading a library should  add features to the registry only
    in the  scope of  the loading code.   This would  require substantial
    changes in SRFI-0.
 
-** DONE SRFI 1
-** DONE SRFI 2
-** DONE SRFI 6
-** DONE SRFI 8
-** DONE SRFI 9
-** DONE SRFI 11
-** SRFI 13
-** SRFI 14
-
-** SRFI 16
-
+** DONE SRFI 1 lists
+** DONE SRFI 2 and let star
+** DONE SRFI 6 input and output string ports
+** DONE SRFI 8 receive
+** DONE SRFI 9 record types
+** DONE SRFI 11 let-values
+** DONE SRFI 13 strings
+** DONE SRFI 14 char-sets
+** DONE SRFI 16 case-lambda
 ** SRFI 19 time
+** DONE SRFI 23 error
+** TODO SRFI 25 multidimensional arrays
 
-** SRFI 23 error
-
-** SRFI 25 multidimensional arrays
+   Review and cleanup of code.
 
 ** DONE SRFI 26 cut
-
-** SRFI 27 random-bits
-
+** DONE SRFI 27 random-bits
+** DONE SRFI 28 basic format strings
 ** DONE SRFI 31 rec
-
 ** DONE SRFI 37 args-fold
-
-** SRFI 38 shared structures
-
+** DONE SRFI 38 shared structures
 ** DONE SRFI 39 parameters
 
-** SRFI 41 streams
-
-** SRFI 42 eager comprehensions
-
-** SRFI 43 vectors
-
-** SRFI 45 lazy
-
-** SRFI 48 intermediate format strings
-
+** DONE SRFI 41 streams
+** DONE SRFI 42 eager comprehensions
+** DONE SRFI 43 vectors
+** DONE SRFI 45 lazy
+** DONE SRFI 48 intermediate format strings
 ** DONE SRFI 61 cond
-** SRFI 64 testing
-** SRFI 67 comparison procedures
-** SRFI 69 basic hash tables
+** TODO SRFI 64 testing
+
+   Establish  a  way  to  coordinate  this SRFI  with  the  requests  of
+   Automake's  test  harness.   Add   a  section  in  the  documentation
+   explaining how to do it.
+
+** DONE SRFI 67 comparison procedures
+** DONE SRFI 69 basic hash tables
 ** DONE SRFI 78 lightweight testing
 ** DONE SRFI 98 OS environment variables
 ** TODO SRFI 99 records

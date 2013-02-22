@@ -1,5 +1,40 @@
+;;;Copyright 2010 Derick Eddington.  My MIT-style license is in the file
+;;;named LICENSE from  the original collection this  file is distributed
+;;;with.
+
+;;;Copyright (c) 2005, 2006 Per Bothner
 ;;;
-;;;  This is a test suite written in the notation of 
+;;;Permission is hereby granted, free of charge, to any person obtaining
+;;;a  copy of  this  software and  associated  documentation files  (the
+;;;"Software"), to  deal in the Software  without restriction, including
+;;;without limitation the  rights to use, copy,  modify, merge, publish,
+;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
+;;;permit persons to whom the Software is furnished to do so, subject to
+;;;the following conditions:
+;;;
+;;;The  above  copyright notice  and  this  permission notice  shall  be
+;;;included in all copies or substantial portions of the Software.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
+;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
+;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
+;;;NONINFRINGEMENT. IN NO  EVENT SHALL THE AUTHORS  OR COPYRIGHT HOLDERS
+;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY, WHETHER  IN AN
+;;;ACTION OF  CONTRACT, TORT OR  OTHERWISE, ARISING  FROM, OUT OF  OR IN
+;;;CONNECTION WITH  THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
+;;;SOFTWARE.
+
+
+#!r6rs
+(import (except (rnrs base)
+		error)
+  (rnrs lists)
+  (srfi :23 error)
+  (srfi :64 testing))
+
+
+;;;
+;;;  This is a test suite written in the notation of
 ;;;  SRFI-64, A Scheme API for test suites
 ;;;
 
@@ -12,7 +47,7 @@
 ;;;
 
 ;;;  The `prop-runner' invokes `thunk' in the context of a new
-;;;  test runner, and returns the indicated properties of the 
+;;;  test runner, and returns the indicated properties of the
 ;;;  last-executed test result.
 
 (define (prop-runner props thunk)
@@ -76,8 +111,8 @@
      (lambda (runner begin end)
        (error (string-append "bad end grojup name " end
 			     " but expected " begin))))
-    (test-runner-on-test-end! 
-     r 
+    (test-runner-on-test-end!
+     r
      (lambda (runner)
        (let ((n (test-runner-test-name runner)))
          (case (test-result-kind runner)
@@ -103,8 +138,8 @@
   (let ((r (test-runner-null))
         (seq '()))
     ;;
-    (test-runner-on-test-end! 
-     r 
+    (test-runner-on-test-end!
+     r
      (lambda (runner)
        (set! seq (cons (list (test-runner-group-path runner)
                              (test-runner-test-name runner))
@@ -310,7 +345,7 @@
                    (do 2)
                    (do 'out))))
                (reverse ex)))
-               
+
 (test-equal "4.2. Exception exit path"
              '(in 1 out)
              (let ((ex '()))
@@ -522,8 +557,8 @@
     ;; let's label the substructure forms so we can
     ;; see which one `test-match-nth' is going to skip
     ;;                        ; #   "y"  2   result
-    (test-assert "x" #t)      ; 1 - #f   #f  PASS   
-    (test-assert "y" #f)      ; 2 - #t   #t  SKIP 
+    (test-assert "x" #t)      ; 1 - #f   #f  PASS
+    (test-assert "y" #f)      ; 2 - #t   #t  SKIP
     (test-assert "y" #f)      ; 3 - #t   #f  FAIL
     (test-assert "x" #f)      ; 4 - #f   #f  FAIL
     (test-assert "z" #f)      ; 5 - #f   #f  FAIL
@@ -540,8 +575,8 @@
     ;; let's label the substructure forms so we can
     ;; see which one `test-match-nth' is going to skip
     ;;                        ; #   "y"  2   result
-    (test-assert "x" #t)      ; 1 - #f   #f  PASS   
-    (test-assert "y" #f)      ; 2 - #t   #t  SKIP 
+    (test-assert "x" #t)      ; 1 - #f   #f  PASS
+    (test-assert "y" #f)      ; 2 - #t   #t  SKIP
     (test-assert "y" #f)      ; 3 - #t   #f  SKIP
     (test-assert "x" #f)      ; 4 - #f   #f  FAIL
     (test-assert "z" #f)      ; 5 - #f   #f  FAIL
@@ -569,7 +604,7 @@
   (lambda ()
     (test-begin "a")
     (test-skip "b")
-    (test-group 
+    (test-group
      "b"            ; skipped
      (test-assert "x" #t))
     (test-end "a"))))
@@ -585,7 +620,7 @@
     (test-end "a"))))
 
 (test-end) ; 6.4.3
- 
+
 (test-end);6.4
 
 (test-end "6. Skipping selected tests")
@@ -620,7 +655,7 @@
                (test-expect-fail "y")
                (test-assert "x" #t)
                (test-assert "y" #f))))
-               
+
 
 
 (test-end "7. Expected failures")
@@ -662,7 +697,7 @@
                ;;
                (and (eq? a c)
                     (not (eq? a b)))))
-              
+
 (test-end)
 
 (test-begin "8.2. test-runner-simple")
@@ -695,7 +730,7 @@
                    (test-assert (vector-ref '#(3) 10))  ; fail with error
                    (test-end "a")))
                 (eq? (test-runner-factory) test-runner-null))))
-                
+
 (test-end)
 
 ;;; This got tested about as well as it could in 8.3.2
@@ -703,7 +738,7 @@
 (test-begin "8.4. test-runner-create")
 (test-end)
 
-;;; This got tested about as well as it could in 8.3.2 
+;;; This got tested about as well as it could in 8.3.2
 
 (test-begin "8.5. test-runner-factory")
 (test-end)
@@ -851,7 +886,7 @@
                (test-assert #t)))
 	    )
 
-(test-equal 
+(test-equal
             '((result-kind . fail)
               (expected-value . 2)
               (actual-value . 3))
@@ -929,6 +964,9 @@
 (test-end)
  |#
 
+
+;;;; done
+
 (test-end "SRFI 64 - Meta-Test Suite")
 
-;;;
+;;; end of file

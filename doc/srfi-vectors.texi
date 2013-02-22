@@ -1,8 +1,8 @@
-@node srfi vector
+@node srfi vectors
 @section @ansrfi{43} vector library
 
 
-@cindex @srfi{} vector
+@cindex @ansrfi{43} vector library
 
 
 The library @library{srfi :43} is by Taylor Campbell as the reference

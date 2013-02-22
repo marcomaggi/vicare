@@ -13,15 +13,16 @@ Topics
   A. Credits
   B. Bug reports
   C. Resources
+  D. On boot images
 
 
 1. Introduction
 ---------------
 
-Scheme is  a statically scoped  and properly tail--recursive  dialect of
-the  Lisp programming  language invented  by  Guy Lewis  Steele Jr.  and
-Gerald Jay Sussman.  It was  designed to have an exceptionally clear and
-simple semantics and few different ways to form expressions.
+Scheme is a statically scoped and properly tail-recursive dialect of the
+Lisp programming language  invented by Guy Lewis Steele  Jr.  and Gerald
+Jay Sussman.  It was designed to  have an exceptionally clear and simple
+semantics and few different ways to form expressions.
 
   The  "Revised^6 Report  on the  Algorithmic Language  Scheme"  gives a
 defining description of the  programming language Scheme.  The report is
@@ -41,7 +42,7 @@ only on GNU+Linux,  no official support for other  platforms is present.
   Vicare offers arbitrary precision integers through GMP.  It implements
 an optionally included foreign-functions interface based on Libffi.  The
 last time  the maintainer updated  this paragraph, it had  tested Libffi
-version 3.0.10.
+version 3.0.11.
 
   A port to R6RS of the SRFI libraries is included in the distribution.
 
@@ -53,7 +54,7 @@ Marco Maggi <marco.maggi-ipsu@poste.it>
 2. License
 ----------
 
-Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by the Vicare contributors.
 
@@ -86,28 +87,44 @@ the infrastructure running a script from the top source directory:
 after  that, or  if we  have downloaded  a proper  distribution tarball,
 basically we should do:
 
-   $ mkdir "=build"
-   $ cd "=build"
+   $ mkdir build
+   $ cd build
    $ ../configure
    $ make
    $ make install
 
 notice  that  the  "configure"  script  is  prepared  to  enable  shared
-libraries  and  disable static  libraries:  this  must  not be  changed,
+libraries  and  disable static  libraries:  this  must not  be  changed,
 because  the package  is  meant to  install  a C  shared  library to  be
 dynamically loaded.
 
+  To make use  of the POSIX semaphore functions, we  need to include the
+pthread library using the option:
+
+   $ ../configure --with-pthread [... other options ...]
+
+by default pthread is linked to the executable if found on the host.
+
   To test what a rule will do use the "-n" option; example:
 
-    $ make install -n
+   $ make install -n
 
   The "Makefile" supports the  "DESTDIR" environment variable to install
 the files under a temporary location; example:
 
-    $ make install DESTDIR=/tmp/marco/vicare
+   $ make install DESTDIR=/tmp/vicare
 
   After   installation,  the   makefile   rule  "vfasl-installed"   will
-precompile the libraries installed in the hierarchy (vicare ---).
+precompile the libraries  installed in the hierarchies  (vicare ---) and
+(srfi  ---).   By  default,  the Vicare-specific  Scheme  libraries  are
+installed under the directory:
+
+			$(libdir)/vicare-scheme
+
+and portable  R6RS Scheme libraries are  expected to be found  under the
+directory:
+
+			 $(libdir)/scheme/r6rs
 
 
 4.2 Install CRE2
@@ -119,15 +136,13 @@ backtracking regular  expression engines from Google like  those used in
 PCRE, Perl, and Python.
 
   Vicare  implements an  optional  built  in interface  to  CRE2; it  is
-disabled by default, to enable  it we must give the "--with-cre2" option
-to the "configure" script.  When using  this option we must use also the
---enable-shared  and  --disable-static  options  to avoid  installing  a
-useless static library.
+disabled by default, to enable it  we must give the "--with-cre2" option
+to the "configure" script.
 
-  At present (Jan 6, 2012), to  install RE2 we must check out a revision
-from  the  repository  (see   Resources);  then  we  should  follow  the
+  At present (Jan 6, 2012), to install  RE2 we must check out a revision
+from  the  repository  (see  Resources);   then  we  should  follow  the
 installation instructions in the README file.  To install CRE2: download
-the  latest  tarball, build  and  install it;  CRE2  relies  on the  GNU
+the  latest tarball,  build  and  install it;  CRE2  relies  on the  GNU
 Autotools.
 
 
@@ -142,12 +157,13 @@ be executed  by a  powerless computer; the  files whose name  start with
 name contains "r6rs" are R6RS compliance tests by Matthew Flatt.
 
   The  "make  vfasl"  command  will  precompile  the  libraries  in  the
-hierarchy (vicare ---) to be used by the test suite.
+hierarchies (vicare ---) and (srfi ---) to be used by the test suite.
 
-  The "make check",  "make test" and "make tests"  commands run the same
-set of  "quick" tests; the "check"  makefile rule uses  the GNU Automake
-infrastructure.  After  the installation: we  can run these  tests using
-the "make installcheck" rule.
+  The "make check",  "make test" and "make tests" commands  run the same
+set of  "quick" tests; the "check"  makefile rule uses the  GNU Automake
+infrastructure (parallel test harness,  see Automake's documentation for
+details).   After the  installation: we  can run  these tests  using the
+"make installcheck" rule.
 
   The "make long-test"  and "make long-tests" commands run  the same set
 of time-consuming tests.
@@ -174,7 +190,7 @@ environment variable.
   The file  "test-vicare-posix.sps" contains  tests for  network sockets
 which are  normally disabled because  the firewall rules on  the hosting
 machine  must  allow  TCP  and UDP  connections  on  127.0.0.1:8080  and
-127.0.0.1:8081;  to enable  these tests  run make  with the  environment
+127.0.0.1:8081; to  enable these tests  run "make" with  the environment
 variable RUN_INET_TESTS set to something:
 
    $ make test file=vicare-posix RUN_INET_TESTS=1
@@ -189,40 +205,8 @@ A. Credits
 ----------
 
 The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
-Vicare Scheme  is a  fork driven by  Marco Maggi.  See  the CONTRIBUTORS
-file for the list of contributors to Vicare Scheme.
-
-  The R6RS compatibility tests are  by Matthew Flatt and are distributed
-under the GNU GPL version 2, or any later version.
-
-  Barak A.  Pearlmutter provided a number  of changes for  better use of
-the GNU Autotools.
-
-  The implementation  of the function  BITWISE-REVERSE-BIT-FIELD is from
-original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
-Y. FUJITA / LittleWing  Company Limited.  See the file "COPYING.ypsilon"
-for terms and conditions of use of this function.
-
-  The implementation of EQUAL? comes from:
-
-    Michael D.   Adams and  R.  Kent Dybvig.   "Efficient nondestructive
-    equality checking for trees and graphs."  In ICFP '08: Proceeding of
-    the  13th   ACM  SIGPLAN  international   conference  on  Functional
-    programming,  pages 179-188.  ACM,  New York,  NY, USA,  2008.  ISBN
-    978-1-59593-919-7. doi: 10.1145/1411204.1411230.
-
-and the online distribution which is Copyright (c) 2008 Michael D. Adams
-and R. Kent Dybvig, see  the file "ikarus.equal.ss" for the full license
-notice.
-
-  The implementation of MAKE-GUARDIAN comes from:
-
-    Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
-    Collector".   In  Proceedings  of  the  SIGPLAN  '93  Conference  on
-    Programming Language Design and Implementation, 207-216, June 1993.
-
-  The included SRFI  libraries were ported to R6RS  by Derick Eddington;
-see the files README.srfi and LICENSE.srfi for details.
+Vicare Scheme  is a fork  driven by  Marco Maggi.  See  the CONTRIBUTORS
+file for the list of contributors to Ikarus Scheme and Vicare Scheme.
 
 
 B. Bug reports
@@ -285,10 +269,59 @@ the library CRE2 is available from:
   Other known implementations of R6 Scheme:
 
 Chez Scheme	<http://www.scheme.com/>
+Guile		<http://www.gnu.org/software/guile/guile.html>
 Larceny		<http://www.larcenists.org/>
 Mosh		<http://code.google.com/p/mosh-scheme/>
 Racket		<http://racket-lang.org/>
+Sagittarius	<http://code.google.com/p/sagittarius-scheme/>
 Ypsilon		<http://code.google.com/p/ypsilon/>
+
+
+D. On boot images
+-----------------
+
+Vicare comes with 2 prebuilt boot images:
+
+    $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+    $(top_srcdir)/scheme/vicare.boot.8.prebuilt
+
+one for 32-bit systems (4) and one for 64-bit systems (8).  The prebuilt
+images do not contain the latest version of the code.
+
+  When executing "make all" a new boot image is built:
+
+    $(builddir)/scheme/vicare.boot
+
+and this image is then installed  on the system by "make install".  This
+new boot image is the one containing the latest version of the code.
+
+  On a 32-bit system, when the maintainer feels it is time to rotate the
+boot images, he just replaces by hand:
+
+    $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+
+with:
+
+    $(builddir)/scheme/vicare.boot
+
+then he does:
+
+    $ make boot-image-64-bit
+
+to (blindly) generate:
+
+    $(builddir)/scheme/vicare.boot.8.prebuilt
+
+and make it become the new:
+
+    $(top_srcdir)/scheme/vicare.boot.8.prebuilt
+
+  When building the 64-bit image, the file:
+
+    $(builddir)/scheme/ikarus.config.ss
+
+is filled with values that are invalid on a 32-bit system, so we have to
+remove it to return to building 32-bit images.
 
 
 ### end of file

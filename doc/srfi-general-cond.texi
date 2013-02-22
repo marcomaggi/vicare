@@ -2,7 +2,7 @@
 @section @ansrfi{61} a more general @func{cond} clause
 
 
-@cindex @srfi{} general-cond
+@cindex @ansrfi{61} a more general @func{cond} clause
 
 
 The library @library{srfi :61} are written by Taylor Campbell as the

@@ -35,10 +35,11 @@ ikarus.config.ss: Makefile last-revision ../config.h
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
 	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
-	echo '(define scheme-lib-dir "$(libdir)/vicare-scheme")' >>$@
+	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>$@
 	echo '(define (host-info) "$(target)")' >>$@
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
+	echo '(define arguments-validation (positive? $(VICARE_ARGUMENTS_VALIDATION)))' >>$@
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>$@
 
 #page
@@ -74,7 +75,7 @@ boot-image-64-bit: last-revision
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >ikarus.config.ss
 	echo "(define vicare-revision \"$$(cat $(srcdir)/last-revision)\")" >>ikarus.config.ss
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>ikarus.config.ss
-	echo '(define scheme-lib-dir "$(libdir)/scheme")' >>ikarus.config.ss
+	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>ikarus.config.ss
 	echo '(define (host-info) "$(target)")' >>ikarus.config.ss
 	echo '(define wordsize 8)' >>ikarus.config.ss
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>ikarus.config.ss

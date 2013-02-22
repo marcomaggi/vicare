@@ -1389,7 +1389,7 @@
   (check (doit #f start-and-past-for-string "123" 1 1)	=> #t)
   (check (doit #f start-and-past-for-string "123" 2 2)	=> #t)
   (check (doit #f start-and-past-for-string "123" 2 3)	=> #t)
-  (check (doit #f start-and-past-for-string "123" 3 3)	=> '(3 3 "123"))
+  (check (doit #f start-and-past-for-string "123" 3 3)	=> #t)
 
   (check (doit #f start-and-past-for-string "123" 2 1)	=> '(2 1 "123"))
 
@@ -1515,7 +1515,7 @@
   (check (doit #f start-and-past-for-vector '#(1 2 3) 1 1)	=> #t)
   (check (doit #f start-and-past-for-vector '#(1 2 3) 2 2)	=> #t)
   (check (doit #f start-and-past-for-vector '#(1 2 3) 2 3)	=> #t)
-  (check (doit #f start-and-past-for-vector '#(1 2 3) 3 3)	=> '(3 3 #(1 2 3)))
+  (check (doit #f start-and-past-for-vector '#(1 2 3) 3 3)	=> #t)
 
   (check (doit #f start-and-past-for-vector '#(1 2 3) 2 1)	=> '(2 1 #(1 2 3)))
 
@@ -1641,7 +1641,7 @@
   (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 1 1)	=> #t)
   (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 2)	=> #t)
   (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 3)	=> #t)
-  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 3 3)	=> '(3 3 #vu8(1 2 3)))
+  (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 3 3)	=> #t)
 
   (check (doit #f start-and-past-for-bytevector '#vu8(1 2 3) 2 1)	=> '(2 1 #vu8(1 2 3)))
 

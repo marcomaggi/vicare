@@ -24,6 +24,21 @@ It exports the same bindings of @library{ikarus}.
 @item vicare language-extensions
 It exports all the bindings exported by @library{vicare} that are
 @strong{not} exported by @library{rnrs (6)}.
+
+@item vicare platform constants
+Exports one syntax identifier binding for each platform constant that
+makes sense to access from Scheme.
+
+@item vicare platform utilities
+Defines helper functions to deal with platform specific issues;
+@ref{platform} for details.
+
+@item vicare platform features
+@cindex Library @library{vicare platform features}
+@cindex @library{vicare platform features}, library
+Exports an identifier syntax for every @code{HAVE_} symbol defined by
+the configuration script @command{configure}; such syntaxes expand to a
+boolean value: @true{} if the feature is available, @false{} otherwise.
 @end table
 
 @menu
@@ -4768,6 +4783,12 @@ Return true if @var{obj} is a pointer object and it represents @cnull{}.
 @end defun
 
 
+@defun set-pointer-null! @var{pointer}
+Mutate the pointer object @var{pointer} to represent the @cnull{}
+pointer.
+@end defun
+
+
 @defun pointer-diff @vari{ptr} @varii{ptr}
 Return an exact integer representing the difference between the two
 pointer objects @vari{ptr} and @varii{ptr}.  The returned value is such
@@ -4862,13 +4883,13 @@ represent the value.
 
 @defun pointer-set-c-sint32! @var{memory} @var{offset} @var{value}
 @defunx pointer-set-c-uint32! @var{memory} @var{offset} @var{value}
-@bitpoker{two bytes,32}
+@bitpoker{four bytes,32}
 @end defun
 
 
 @defun pointer-set-c-sint64! @var{memory} @var{offset} @var{value}
 @defunx pointer-set-c-uint64! @var{memory} @var{offset} @var{value}
-@bitpoker{two bytes,64}
+@bitpoker{eigth bytes,64}
 @end defun
 
 @c ------------------------------------------------------------
@@ -5166,13 +5187,13 @@ represent the value.
 
 @defun array-set-c-sint32! @var{memory} @var{index} @var{value}
 @defunx array-set-c-uint32! @var{memory} @var{index} @var{value}
-@abitpoker{two bytes,32}
+@abitpoker{four bytes,32}
 @end defun
 
 
 @defun array-set-c-sint64! @var{memory} @var{index} @var{value}
 @defunx array-set-c-uint64! @var{memory} @var{index} @var{value}
-@abitpoker{two bytes,64}
+@abitpoker{eight bytes,64}
 @end defun
 
 @c ------------------------------------------------------------

@@ -152,8 +152,8 @@
 		current-letrec-pass
 		current-core-eval
 		assembler-output optimize-cp optimize-level
-		cp0-size-limit cp0-effort-limit expand/optimize
-		expand/scc-letrec expand
+		cp0-size-limit cp0-effort-limit
+		expand
 		optimizer-output tag-analysis-output perform-tag-analysis))
 (import (ikarus.compiler))
 (import (except (psyntax system $bootstrap)
@@ -537,7 +537,7 @@
     ($for		(ikarus system $foreign)		#f	#t)
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
-    ($compiler		(ikarus system $compiler)		#t	#t)
+    ($compiler		(ikarus system $compiler)		#f	#f)
     ($numerics		(ikarus system $numerics)		#f	#f)
 ;;;
     (ne			(psyntax null-environment-5)		#f	#f)
@@ -746,6 +746,7 @@
     ($string-ref				$strings)
     ($string-set!				$strings)
     ($string-length				$strings)
+    ($string=					$strings)
     ($make-bytevector				$bytes)
     ($bytevector-length				$bytes)
     ($bytevector-s8-ref				$bytes)

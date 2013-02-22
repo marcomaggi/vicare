@@ -715,6 +715,22 @@ than zero.
 @deffn {Validation Clause} index-for-string @var{str} @var{idx}
 Succeed if @var{idx} is a fixnum usable as index (not out of range) for
 @var{str}, which is expected to be an already validated string.
+@var{idx} must satisfy the constraints:
+
+@example
+0 <= @var{idx} < (string-length @var{str})
+@end example
+@end deffn
+
+
+@deffn {Validation Clause} one-off-index-for-string @var{str} @var{idx}
+Succeed if @var{idx} is a fixnum usable as index for @var{str}, which is
+expected to be an already validated string, or it is equal to the string
+length.  @var{idx} must satisfy the constraints:
+
+@example
+0 <= @var{idx} <= (string-length @var{str})
+@end example
 @end deffn
 
 
@@ -745,7 +761,7 @@ Assuming that @var{str} is an already validated string: succeed if both
 @var{start} and @var{past} are fixnums satisfying the constraints:
 
 @example
-0 <= @var{start} < (string-length @var{str})
+0 <= @var{start} <= (string-length @var{str})
 @var{start} <= @var{past} <= (string-length @var{str})
 @end example
 
@@ -816,7 +832,7 @@ Assuming that @var{vec} is an already validated vector: succeed if both
 @var{start} and @var{past} are fixnums satisfying the constraints:
 
 @example
-0 <= @var{start} < (vector-length @var{vec})
+0 <= @var{start} <= (vector-length @var{vec})
 @var{start} <= @var{past} <= (vector-length @var{vec})
 @end example
 
@@ -888,7 +904,7 @@ Assuming that @var{bv} is an already validated bytevector: succeed if
 both @var{start} and @var{past} are fixnums satisfying the constraints:
 
 @example
-0 <= @var{start} < (bytevector-length @var{bv})
+0 <= @var{start} <= (bytevector-length @var{bv})
 @var{start} <= @var{past} <= (bytevector-length @var{bv})
 @end example
 
@@ -1314,12 +1330,18 @@ are @strong{not} meant to be binding identifiers.
 @cindex @library{vicare platform constants}, library
 @cindex Library @library{vicare platform utilities}
 @cindex @library{vicare platform utilities}, library
+@cindex Library @library{vicare platform features}
+@cindex @library{vicare platform features}, library
 
 
 The library @library{vicare platform constants} exports one syntax
 identifier binding for each platform constant that makes sense to access
 from Scheme.  The library @library{vicare platform utilities} defines
-helper functions to deal with platform specific issues.
+helper functions to deal with platform specific issues. The library
+@library{vicare platform features} exports an identifier syntax for
+every @code{HAVE_} symbol defined by the configuration script
+@command{configure}; such syntaxes expand to a boolean value: @true{} if
+the feature is available, @false{} otherwise.
 
 The following bindings are exported by the library @library{vicare
 platform utilities}.
@@ -2259,6 +2281,30 @@ Special implementation of @func{case} expecting only symbols as datums.
 @library{vicare}.
 
 @meta{expr} must be an expression evaluating to a symbol, else the
+behaviour is undefined.
+@end deffn
+
+
+@deffn Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only strings as datums.
+@func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a string, else the
+behaviour is undefined.
+@end deffn
+
+
+@deffn Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ...
+@deffnx Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffnx {Auxiliary Syntax} else
+Special implementation of @func{case} expecting only characters as
+datums.  @func{else} must be the binding exported by @library{rnrs} and
+@library{vicare}.
+
+@meta{expr} must be an expression evaluating to a char, else the
 behaviour is undefined.
 @end deffn
 
