@@ -1,0 +1,750 @@
+*** testing Ikarus bitwise operations
+
+r0
+ => 1152921504606846976
+ ; *** failed ***
+ ; expected result: 1152921505143717888
+
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &error
+   2. &who: test-bitwise-op
+   3. &message: "mismatch/op/a0/a1/got/expected"
+   4. &irritants: (#<procedure bitwise-xor> 536870912 1152921504606846976
+  1152921504606846976 1152921505143717888)
+
+
+## ------------------------------------------------------------
+
+*** testing div and mod
+
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: assert
+   3. &message: "assertion failed"
+   4. &irritants: ((= d (div x1 x2)))
+   5. &source-position:
+       port-id: "./test-ikarus-div-and-mod.sps"
+       byte: 1420
+       character: 1401
+       line: 47
+       column: 7
+
+
+
+## ------------------------------------------------------------
+## * Small review of code.
+
+*** testing fasl
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: fasl-read
+   3. &message: "while reading fasl header expected #\\1, got #\\2\n"
+   4. &irritants: ()
+
+
+
+## ------------------------------------------------------------
+## * Added verbosity to tests.
+
+*** testing Ikarus fixnums
+
+(fx= s1 s3)
+ => #f
+ ; *** failed ***
+ ; expected result: #t
+
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &error
+   2. &who: fx-/carry
+   3. &message: "failed (value2) on ~s ~s ~s, got ~s, should be ~s"
+
+
+## ------------------------------------------------------------
+
+*** testing issue 17
+GNU MP: Cannot allocate memory (size=142639120)
+/bin/bash: line 1: 15701 Aborted                 ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+## * Have I changed code from the original?
+
+*** Flatt's R6RS tests for (rnrs arithmetic bitwise)
+
+2 tests failed:
+
+Expression:
+ (bitwise-bit-count (greatest-fixnum))
+Result:
+ 28
+Expected:
+ 60
+
+Expression:
+ (bitwise-bit-count (least-fixnum))
+Result:
+ -29
+Expected:
+ -61
+
+; *** checks *** : 230 correct, 2 failed.
+
+
+## ------------------------------------------------------------
+## * This is issue 35.
+
+*** Flatt's R6RS tests for (rnrs arithmetic fixnums)
+
+*** Vicare error: ik_exec_code: internal error while resuming continuation:
+        pcb->heap_base     = 0x00002b7ef963f000
+        pcb->heap_size     = 8388608 bytes, 1048576 words
+        pcb->stack_base    = 0x00002b7ef9e3f000
+        pcb->stack_size    = 4194304 bytes, 524288 words
+        pcb->frame_redline = 0x00002b7ef9e41000, delta 523264 words
+        pcb->frame_pointer = 0x00002b7efa2357c0
+        pcb->frame_base    = 0x00002b7efa2357c0
+        ik_underflow_handler = 0x0000000000412225
+        s_kont        = 0x00002b7ef963f285
+        p_kont        = 0x00002b7ef963f280
+        p_kont->top   = 0x00002b7efa2357c0
+        p_kont->size  = 0
+        s_kont return point           = 0x0000000000412225
+        s_kont return point offset    = 0
+        s_kont return point framesize = 8
+        invalid return_point_framesize=8, expected p_kont->size=0 or less
+
+
+## ------------------------------------------------------------
+
+*** Flatt's R6RS tests for (rnrs base)
+
+9 tests failed:
+
+Expression:
+ (div-and-mod (least-fixnum) -1)
+Result:
+ -1152921504606846975
+ -2305843009213693951
+Expected:
+ 1152921504606846976
+ 0
+
+Expression:
+ (<= (- (abs (/ -1 2))) (mod0 (least-fixnum) -1))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod 0 (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod 1 (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod -1 (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod 2 (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod -2 (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod (least-fixnum) (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+Expression:
+ (< (mod (greatest-fixnum) (least-fixnum)) (abs (least-fixnum)))
+Result:
+ #f
+Expected:
+ #t
+
+; *** checks *** : 2032 correct, 9 failed.
+
+
+## ------------------------------------------------------------
+
+*** Flatt's R6RS tests for (rnrs r5rs)
+
+/bin/bash: line 1: 15729 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+## * More informations asked
+
+*** testing Vicare bytevector functions
+
+(catch #f
+  (bytevector-u64-set! the-bv 1 (words.greatest-u64*)
+    (endianness little)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (18446744073709551616)
+
+
+(catch #f
+  (bytevector-u64-native-set! the-bv 0 (words.greatest-u64*)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (18446744073709551616)
+
+
+(catch #f
+  (bytevector-s64-set! the-bv-le 1 (words.least-s64*)
+    (endianness little)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (-9223372036854775809)
+
+
+(catch #f
+  (bytevector-s64-set! the-bv-le 1 (words.greatest-s64*)
+    (endianness little)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (9223372036854775808)
+
+
+(catch #f
+  (bytevector-s64-native-set! the-bv-le 0 (words.least-s64*)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (-9223372036854775809)
+
+
+(catch #f
+  (bytevector-s64-native-set! the-bv-le 0
+    (words.greatest-s64*)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (9223372036854775808)
+
+
+; *** checks *** : 576 correct, 6 failed. First failed example:
+
+(catch #f
+  (bytevector-u64-set! the-bv 1 (words.greatest-u64*)
+    (endianness little)))
+ => #<void>
+ ; *** failed ***
+ ; expected result: (18446744073709551616)
+
+
+## ------------------------------------------------------------
+## * It should be fixed.
+
+*** testing Vicare debugging utilities
+
+(integer->machine-word 28)
+ => #<unknown>
+ ; *** failed ***
+ ; expected result: 7
+
+
+; *** checks *** : 4 correct, 1 failed. First failed example:
+
+(integer->machine-word 28)
+ => #<unknown>
+ ; *** failed ***
+ ; expected result: 7
+
+
+## ------------------------------------------------------------
+## * More infos needed.
+
+*** testing Vicare FFI
+
+(catch #f
+  (ffi.integer->pointer (+ 10 (words.greatest-machine-word))))
+ => #<pointer #x00000009>
+ ; *** failed ***
+ ; expected result: (18446744073709551625)
+
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: pointer-add
+   3. &message: "requested pointer arithmetic operation would cause machine word overflow or underflow"
+   4. &irritants: (#<pointer #x00000000> 18446744073709551615)
+
+; *** checks *** : 112 correct, 0 failed.
+
+
+## ------------------------------------------------------------
+## * Partly fixed.
+
+*** testing Vicare GNU C Library functions
+(alist-of-ifaces ((1 . "lo") (2 . "eth0") (3 . "wlan0")))
+
+(glibc.glob/string "Makefile*" 0 #f)
+ => ("Makefile" "Makefile.am" "Makefile.in")
+ ; *** failed ***
+ ; expected result: ("Makefile")
+
+#("/bin/chacl" "/bin/chgrp" "/bin/chmod" "/bin/chown"
+  "/bin/chvt")
+*** Vicare error: called GNU C Library specific function, ikrt_glibc_iconv_open
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: abs
+
+(abs (least-fixnum))
+ => *** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: string-set!
+   3. &message: "expected character as argument"
+   4. &irritants: (0)
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: addition
+/bin/bash: line 1: 15823 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: cube
+/bin/bash: line 1: 15826 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: division
+/bin/bash: line 1: 15827 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: expt, bignum exponent
+
+(expt 1.00000000000001 BN1)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644324274
+
+
+($expt-number-bignum 1.00000000000001 BN1)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644324274
+
+
+($expt-flonum-bignum 1.00000000000001 BN1)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644324274
+
+
+(expt 1.00000000000001 BN2)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644325173
+
+
+($expt-number-bignum 1.00000000000001 BN2)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644325173
+
+
+($expt-flonum-bignum 1.00000000000001 BN2)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644325173
+
+
+(expt 1.00000000000001 BN3)
+ => 0.0
+ ; *** failed ***
+ ; expected result: 0.9999946355963379
+
+
+($expt-number-bignum 1.00000000000001 BN3)
+ => 0.0
+ ; *** failed ***
+ ; expected result: 0.9999946355963379
+
+
+($expt-flonum-bignum 1.00000000000001 BN3)
+ => 0.0
+ ; *** failed ***
+ ; expected result: 0.9999946355963379
+
+
+(expt 1.00000000000001 BN4)
+ => 0.0
+ ; *** failed ***
+ ; expected result: 0.999994635596248
+
+
+($expt-number-bignum 1.00000000000001 BN4)
+ => 0.0
+ ; *** failed ***
+ ; expected result: 0.999994635596248
+
+
+($expt-flonum-bignum 1.00000000000001 BN4)
+ => 0.0
+ ; *** failed ***
+ ; expected result: 0.999994635596248
+
+
+; *** checks *** : 152 correct, 12 failed. First failed example:
+
+(expt 1.00000000000001 BN1)
+ => +inf.0
+ ; *** failed ***
+ ; expected result: 1.0000053644324274
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: expt, cflonum exponent
+
+(expt BN1 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+($expt-number-cflonum BN1 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+($expt-bignum-cflonum BN1 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+(expt BN2 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208540.38597894+319827424.6954508i
+
+
+($expt-number-cflonum BN2 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208540.38597894+319827424.6954508i
+
+
+($expt-bignum-cflonum BN2 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208540.38597894+319827424.6954508i
+
+
+(expt BN3 1.0+2.0i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.2247952196-597259.414747084i
+
+
+($expt-number-cflonum BN3 1.0+2.0i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.2247952196-597259.414747084i
+
+
+($expt-bignum-cflonum BN3 1.0+2.0i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.2247952196-597259.414747084i
+
+
+(expt BN4 1.0+2.0i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.258319078-597259.397761072i
+
+
+($expt-number-cflonum BN4 1.0+2.0i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.258319078-597259.397761072i
+
+
+($expt-bignum-cflonum BN4 1.0+2.0i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.258319078-597259.397761072i
+
+
+; *** checks *** : 94 correct, 12 failed. First failed example:
+
+(expt BN1 1.0+2.0i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: expt, compnum exponent
+
+(expt BN1 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+($expt-number-compnum BN1 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+($expt-bignum-compnum BN1 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+(expt BN2 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208540.38597894+319827424.6954508i
+
+
+($expt-number-compnum BN2 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208540.38597894+319827424.6954508i
+
+
+($expt-bignum-compnum BN2 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208540.38597894+319827424.6954508i
+
+
+(expt BN3 1+2i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.2247952196-597259.414747084i
+
+
+($expt-number-compnum BN3 1+2i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.2247952196-597259.414747084i
+
+
+($expt-bignum-compnum BN3 1+2i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.2247952196-597259.414747084i
+
+
+(expt BN4 1+2i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.258319078-597259.397761072i
+
+
+($expt-number-compnum BN4 1+2i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.258319078-597259.397761072i
+
+
+($expt-bignum-compnum BN4 1+2i)
+ => -1.603449982756447e14-2.14703576409139e15i
+ ; *** failed ***
+ ; expected result: 805257.258319078-597259.397761072i
+
+
+; *** checks *** : 122 correct, 12 failed. First failed example:
+
+(expt BN1 1+2i)
+ => 8.586340858174443e16+1.1497197357841759e18i
+ ; *** failed ***
+ ; expected result: -431208522.4342323+319827433.79131836i
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: gcd, greatest common divisor
+/bin/bash: line 1: 15840 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: inv, unary division
+/bin/bash: line 1: 15859 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: lcm, least common multiple
+/bin/bash: line 1: 15863 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: modulo, integer division
+/bin/bash: line 1: 16020 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: multiplication
+/bin/bash: line 1: 16021 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: neg, unary minus
+/bin/bash: line 1: 16022 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: quotient, integer division
+/bin/bash: line 1: 16023 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: remainder, integer division
+/bin/bash: line 1: 16024 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: sign
+/bin/bash: line 1: 16025 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6r
+s-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: square
+/bin/bash: line 1: 16042 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare numerics functions: subtraction
+/bin/bash: line 1: 16043 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare pointer functions
+
+(catch #f
+  (integer->pointer (+ 10 (words.greatest-machine-word))))
+ => #<pointer #x00000009>
+ ; *** failed ***
+ ; expected result: (18446744073709551625)
+
+
+(pointer-and-offset?
+  (integer->pointer (words.greatest-c-pointer)) 1)
+ => #t
+ ; *** failed ***
+ ; expected result: #f
+
+
+(pointer-and-offset? (integer->pointer 1)
+  (words.greatest-c-pointer))
+ => #t
+ ; *** failed ***
+ ; expected result: #f
+
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: pointer-add
+   3. &message: "requested pointer arithmetic operation would cause machine word overflow or underflow"
+   4. &irritants: (#<pointer #x00000000> 18446744073709551615)
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare POSIX functions
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: getpwnam
+   3. &message: "expected string or bytevector as argument"
+   4. &irritants: (#f)
+
+
+## ------------------------------------------------------------
+
+*** testing POSIX library, mmap functions
+/bin/bash: line 1: 16076 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing POSIX library, network and sockets
+*** Vicare: unhandled exception:
+ Condition components:
+   1. &assertion
+   2. &who: string-append
+   3. &message: "expected string as argument"
+   4. &irritants: (#f)
+
+
+## ------------------------------------------------------------
+
+*** testing POSIX library, semaphores
+/bin/bash: line 1: 16078 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing POSIX library, shared memory
+/bin/bash: line 1: 16080 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+## ------------------------------------------------------------
+
+*** testing Vicare mmapped shared memory
+/bin/bash: line 1: 16105 Segmentation fault      ./../src/vicare -b ./../scheme/vicare.boot --r6rs-script $f
+
+
+### end of file
+# Local Variables:
+# page-separator: "^"
+# End:
