@@ -1410,8 +1410,7 @@ AM_COND_IF([WANT_GLIBC],[
   AC_CHECK_FUNCS([rand srand])
   AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
   AC_CHECK_FUNCS([wordexp wordfree])
-  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])
-  AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
+  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])])
 
 AC_CACHE_SAVE
 
@@ -1556,6 +1555,9 @@ then
   fi
 fi
 AM_CONDITIONAL([WANT_LIBICONV],[test x$vicare_with_iconv = xyes])
+
+AM_COND_IF([WANT_LIBICONV],
+  [AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-#MAKEINFOFLAGS	= --no-split
+#AM_MAKEINFOFLAGS	= --no-split
 
 info_TEXINFOS		= vicare-scheme.texi
 vicare_scheme_TEXINFOS	= \
@@ -13,6 +13,7 @@ vicare_scheme_TEXINFOS	= \
 	ffi.texi			\
 	posix.texi			\
 	glibc.texi			\
+	iconv.texi			\
 	linux.texi			\
 	syslib.texi			\
 	capi.texi			\

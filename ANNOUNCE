@@ -44,6 +44,11 @@ Notes for revision 0.2d21
 
 * Added $STRING= to (ikarus system $strings).
 
+* BACKWARDS INCOMPATIBILITY The iconv functions have been moved from the
+  library (vicare glibc) into the library (vicare iconv).  Documentation
+  and tests also have been moved into modules independent from the Glibc
+  ones.
+
 
 Notes for revision 0.2d20
 -------------------------

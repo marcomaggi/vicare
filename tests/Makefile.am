@@ -296,6 +296,10 @@ if WANT_GLIBC
 TESTS	+= test-vicare-glibc.sps
 endif
 
+if WANT_LIBICONV
+TESTS	+= test-vicare-iconv.sps
+endif
+
 if WANT_LINUX
 TESTS	+= test-vicare-linux.sps
 endif
