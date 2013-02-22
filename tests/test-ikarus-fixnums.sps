@@ -31,8 +31,8 @@
 
 
 (define (%printf . args)
-  (when #f
-    (apply printf args)))
+  (when #t
+    (apply fprintf (current-error-port) args)))
 
 (define (run-tests)
   (test-fxdiv-and-mod)
@@ -62,12 +62,14 @@
 		 ((s2 s3) (fxop/carry-reference fx1 fx2 fx3)))
       (check (fx= s0 s2) => #t)
       (unless (fx= s0 s2)
-	(error name "failed (value1) on ~s ~s ~s, got ~s, should be ~s"
-	       fx1 fx2 fx3 s0 s2))
+	(error name
+	  (printf "failed (value1) on ~s ~s ~s, got ~s, should be ~s"
+		  fx1 fx2 fx3 s0 s2)))
       (check (fx= s1 s3) => #t)
       (unless (fx= s1 s3)
-	(error name "failed (value2) on ~s ~s ~s, got ~s, should be ~s"
-	       fx1 fx2 fx3 s1 s3))))
+	(error name
+	  (printf "failed (value2) on ~s ~s ~s, got ~s, should be ~s"
+		  fx1 fx2 fx3 s1 s3)))))
   (define ls
     (list 0 1 2 -1 -2 38734 -3843 2484598 -348732487 (greatest-fixnum) (least-fixnum)))
   (%printf "(~s: test-fxcarry) " (expt (length ls) 3))
