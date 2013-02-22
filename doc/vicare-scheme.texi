@@ -220,6 +220,7 @@ Trademarks used herein are the property of their respective owners.
 * ffi::                         Foreign functions interface.
 * posix::                       The @posix{} interface.
 * glibc::                       The @gnu{} C Library interface.
+* iconv::                       The Libiconv interface.
 * linux::                       The @gnu{}+Linux interface.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
@@ -267,6 +268,7 @@ External documents
 @include ffi.texi
 @include posix.texi
 @include glibc.texi
+@include iconv.texi
 @include linux.texi
 @include syslib.texi
 @include capi.texi

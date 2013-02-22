@@ -491,13 +491,7 @@
   char? $char= "char")
 
 (define-typed-case case-strings $case-strings
-  string? string=? "string")
-;;FIXME The version  below is the one  to use after the  next boot image
-;;rotation, which will  make $STRING= available.  (Marco  Maggi; Mon Feb
-;;18, 2013)
-;;
-;; (define-typed-case case-strings $case-strings
-;;   string? $string= "string")
+  string? $string= "string")
 
 ;;; --------------------------------------------------------------------
 

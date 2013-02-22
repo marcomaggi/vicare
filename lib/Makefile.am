@@ -171,6 +171,11 @@ nobase_dist_libvicare_DATA	+= vicare/glibc.sls
 dist_pkglibexec_SCRIPTS		+= compile-glibc.sps
 endif
 
+if WANT_LIBICONV
+nobase_dist_libvicare_DATA	+= vicare/iconv.sls
+dist_pkglibexec_SCRIPTS		+= compile-iconv.sps
+endif
+
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
