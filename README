@@ -87,14 +87,14 @@ the infrastructure running a script from the top source directory:
 after  that, or  if we  have downloaded  a proper  distribution tarball,
 basically we should do:
 
-   $ mkdir "=build"
-   $ cd "=build"
+   $ mkdir build
+   $ cd build
    $ ../configure
    $ make
    $ make install
 
 notice  that  the  "configure"  script  is  prepared  to  enable  shared
-libraries  and  disable static  libraries:  this  must  not be  changed,
+libraries  and  disable static  libraries:  this  must not  be  changed,
 because  the package  is  meant to  install  a C  shared  library to  be
 dynamically loaded.
 
@@ -190,7 +190,7 @@ environment variable.
   The file  "test-vicare-posix.sps" contains  tests for  network sockets
 which are  normally disabled because  the firewall rules on  the hosting
 machine  must  allow  TCP  and UDP  connections  on  127.0.0.1:8080  and
-127.0.0.1:8081;  to enable  these tests  run make  with the  environment
+127.0.0.1:8081; to  enable these tests  run "make" with  the environment
 variable RUN_INET_TESTS set to something:
 
    $ make test file=vicare-posix RUN_INET_TESTS=1
@@ -205,41 +205,8 @@ A. Credits
 ----------
 
 The  original Ikarus  Scheme  code  is the  work  of Abdulaziz  Ghuloum.
-Vicare Scheme  is a  fork driven by  Marco Maggi.  See  the CONTRIBUTORS
-file for the list of contributors to Vicare Scheme.
-
-  The R6RS compatibility tests are  by Matthew Flatt and are distributed
-under the GNU GPL version 2, or any later version.
-
-  Barak A.  Pearlmutter provided a number  of changes for  better use of
-the GNU Autotools.
-
-  The implementation  of the function  BITWISE-REVERSE-BIT-FIELD is from
-original  code  in:  Ypsilon  Scheme  System,  Copyright  (c)  2004-2009
-Y. FUJITA / LittleWing  Company Limited.  See the file "COPYING.ypsilon"
-for terms and conditions of use of this function.
-
-  The implementation of EQUAL? comes from:
-
-    Michael D.   Adams and  R.  Kent Dybvig.   "Efficient nondestructive
-    equality checking for trees and graphs."  In ICFP '08: Proceeding of
-    the  13th   ACM  SIGPLAN  international   conference  on  Functional
-    programming,  pages 179-188.  ACM,  New York,  NY, USA,  2008.  ISBN
-    978-1-59593-919-7. doi: 10.1145/1411204.1411230.
-
-and the online distribution which is Copyright (c) 2008 Michael D. Adams
-and R. Kent Dybvig, see  the file "ikarus.equal.ss" for the full license
-notice.
-
-  The implementation of MAKE-GUARDIAN comes from:
-
-    Dybvig,  Bruggeman, Eby.  "Guardians  in a  Generation-Based Garbage
-    Collector".   In  Proceedings  of  the  SIGPLAN  '93  Conference  on
-    Programming Language Design and Implementation, 207-216, June 1993.
-
-  The included SRFI  libraries were ported to R6RS  by Derick Eddington;
-see the  files README.srfi and  LICENSE.srfi for details.  See  also the
-individual SRFI libraries for the list of original authors.
+Vicare Scheme  is a fork  driven by  Marco Maggi.  See  the CONTRIBUTORS
+file for the list of contributors to Ikarus Scheme and Vicare Scheme.
 
 
 B. Bug reports
@@ -302,6 +269,7 @@ the library CRE2 is available from:
   Other known implementations of R6 Scheme:
 
 Chez Scheme	<http://www.scheme.com/>
+Guile		<http://www.gnu.org/software/guile/guile.html>
 Larceny		<http://www.larcenists.org/>
 Mosh		<http://code.google.com/p/mosh-scheme/>
 Racket		<http://racket-lang.org/>
