@@ -1,4 +1,5 @@
-# Process this file with autoconf to produce a configure script.
+dnl @configure_input@
+dnl
 
 AC_PREREQ([2.68])
 AC_INIT([Vicare Scheme],[0.2d21],[marco.maggi-ipsu@poste.it],
@@ -10,7 +11,7 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([foreign dist-xz no-dist-gzip])
-dnl AM_INIT_AUTOMAKE([foreign dist-bzip2 no-dist-gzip])
+AM_MAINTAINER_MODE
 
 AM_PROG_AR
 AC_PROG_INSTALL
