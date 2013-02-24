@@ -156,7 +156,9 @@ nobase_nodist_libvicare_DATA	= \
 	vicare/words.sls
 
 if WANT_LIBFFI
-nobase_dist_libvicare_DATA	+= vicare/ffi.sls
+nobase_dist_libvicare_DATA	+= \
+	vicare/ffi.sls				\
+	vicare/ffi/foreign-pointer-wrapper.sls
 dist_pkglibexec_SCRIPTS		+= compile-ffi.sps
 endif
 

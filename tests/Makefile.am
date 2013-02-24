@@ -272,7 +272,9 @@ TESTS			=	\
 	test-issue-025-sign-in-exact-rationals.sps
 
 if WANT_LIBFFI
-TESTS	+= test-vicare-ffi.sps
+TESTS	+= \
+	test-vicare-ffi-core.sps			\
+	test-vicare-ffi-foreign-pointer-wrapper.sps
 endif
 
 if WANT_POSIX
