@@ -1,5 +1,6 @@
 ;;;SRFI 101: Purely Functional Random-Access Pairs and Lists
 ;;;Copyright (c) David Van Horn 2009.  All Rights Reserved.
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
 ;;;a  copy of  this  software and  associated  documentation files  (the
@@ -47,6 +48,7 @@
   (prefix (rnrs base) r6:)
   (rnrs exceptions)
   (srfi :101)
+  (prefix (srfi :101 random-access-lists equal) srfi.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -394,6 +396,21 @@
     (linear-access-list->random-access-list (r6:list 1 2 3))
   (=> check-expect)
   (list 1 2 3))
+
+
+;;;; equal?
+
+(check
+    (let ((A (list (list 'a 'b) (list 'd 'e) (list 'g 'h)))
+	  (B (list (list 'a 'b) (list 'd 'e) (list 'g 'h))))
+      (srfi.equal? A B))
+  => #t)
+
+(check
+    (let ((A (list (list 'a 'B) (list 'd 'e) (list 'g 'h)))
+	  (B (list (list 'a 'b) (list 'd 'e) (list 'g 'h))))
+      (srfi.equal? A B))
+  => #f)
 
 
 ;;;; done
