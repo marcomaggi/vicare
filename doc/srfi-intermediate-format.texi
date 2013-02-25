@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{48} intermediate format strings
+@cindex @library{srfi :48}, library
+@cindex @library{srfi :48 intermediate-format-string}, library
+@cindex Library @library{srfi :48}
+@cindex Library @library{srfi :48 intermediate-format-string}
 
 
 The library @library{srfi :48} is by Kenneth Dickey as the reference

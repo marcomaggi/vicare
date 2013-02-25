@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{6} basic string ports
+@cindex @library{srfi :6}, library
+@cindex @library{srfi :6 basic-string-ports}, library
+@cindex Library @library{srfi :6}
+@cindex Library @library{srfi :6 basic-string-ports}
 
 
 The library @library{srfi :6} is by William D Clinger as the reference

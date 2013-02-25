@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{64} testing
+@cindex @library{srfi :64}, library
+@cindex @library{srfi :64 testing}, library
+@cindex Library @library{srfi :64}
+@cindex Library @library{srfi :64 testing}
 
 
 The library @library{srfi :64} is by Per Bothner as the reference

@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{42} eager comprehensions
+@cindex @library{srfi :42}, library
+@cindex @library{srfi :42 eager-comprehensions}, library
+@cindex Library @library{srfi :42}
+@cindex Library @library{srfi :42 eager-comprehensions}
 
 
 The library @library{srfi :42} is by Sebastian Egner as the reference

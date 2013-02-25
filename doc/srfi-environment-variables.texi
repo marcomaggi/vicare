@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{98} environment variables
+@cindex @library{srfi :98}, library
+@cindex @library{srfi :98 os-environment-variables}, library
+@cindex Library @library{srfi :98}
+@cindex Library @library{srfi :98 args-fold}
 
 
 The library @library{srfi :98} is by Taro Minowa (Higepon) as the

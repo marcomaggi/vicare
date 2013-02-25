@@ -3,6 +3,16 @@
 
 
 @cindex @ansrfi{101} purely functional random--access pairs and lists
+@cindex @library{srfi :101}, library
+@cindex @library{srfi :101 random-access-lists}, library
+@cindex @library{srfi :101 random-access-lists procedures}, library
+@cindex @library{srfi :101 random-access-lists syntax}, library
+@cindex @library{srfi :101 random-access-lists equal}, library
+@cindex Library @library{srfi :101}
+@cindex Library @library{srfi :101 random-access-lists}
+@cindex Library @library{srfi :101 random-access-lists procedures}
+@cindex Library @library{srfi :101 random-access-lists syntax}
+@cindex Library @library{srfi :101 random-access-lists equal}
 
 
 The library @library{srfi :101} is by David Van Horn as the reference

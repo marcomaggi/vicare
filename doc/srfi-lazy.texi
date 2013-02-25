@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{45} lazy iterative algorithms
+@cindex @library{srfi :45}, library
+@cindex @library{srfi :45 lazy}, library
+@cindex Library @library{srfi :45}
+@cindex Library @library{srfi :45 lazy}
 
 
 The library @library{srfi :45} is by Andre van Tonder as the reference

@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{28} basic format strings
+@cindex @library{srfi :28}, library
+@cindex @library{srfi :28 basic-format-strings}, library
+@cindex Library @library{srfi :28}
+@cindex Library @library{srfi :28 basic-format-strings}
 
 
 The library @library{srfi :28} is by Scott G. Miller as the reference

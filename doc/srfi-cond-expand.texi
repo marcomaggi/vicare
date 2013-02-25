@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{0} feature based conditional expansion construct
+@cindex @library{srfi :0}, library
+@cindex @library{srfi :0 cond-expand}, library
+@cindex Library @library{srfi :0}
+@cindex Library @library{srfi :0 cond-expand}
 
 
 The library @library{srfi :0} is by Marc Feeley as reference

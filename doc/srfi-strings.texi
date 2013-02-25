@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{13} string library
+@cindex @library{srfi :13}, library
+@cindex @library{srfi :13 strings}, library
+@cindex Library @library{srfi :13}
+@cindex Library @library{srfi :13 strings}
 
 
 The library @library{srfi :13} is by Olin Shivers as the reference

@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{16} case-lambda
+@cindex @library{srfi :16}, library
+@cindex @library{srfi :16 case-lambda}, library
+@cindex Library @library{srfi :16}
+@cindex Library @library{srfi :16 case-lambda}
 
 
 The library @library{srfi :16} is by Lars T Hansen as the reference

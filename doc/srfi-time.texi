@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{19} time data types and procedures
+@cindex @library{srfi :19}, library
+@cindex @library{srfi :19 time}, library
+@cindex Library @library{srfi :19}
+@cindex Library @library{srfi :19 time}
 
 
 The library @library{srfi :19} is by Will Fitzgerald as the reference

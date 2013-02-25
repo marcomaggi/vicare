@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{39} parameters
+@cindex @library{srfi :39}, library
+@cindex @library{srfi :39 parameters}, library
+@cindex Library @library{srfi :39}
+@cindex Library @library{srfi :39 parameters}
 
 
 The library @library{srfi :39} is by Marc Feeley as the reference

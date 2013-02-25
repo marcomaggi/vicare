@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{69} basic hash tables
+@cindex @library{srfi :69}, library
+@cindex @library{srfi :69 basic-hash-tables}, library
+@cindex Library @library{srfi :69}
+@cindex Library @library{srfi :69 basic-hash-tables}
 
 
 The library @library{srfi :69} is by Andreas Rottmann as the reference

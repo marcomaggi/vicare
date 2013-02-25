@@ -4,6 +4,10 @@
 
 
 @cindex @ansrfi{37} args-fold
+@cindex @library{srfi :37}, library
+@cindex @library{srfi :37 args-fold}, library
+@cindex Library @library{srfi :37}
+@cindex Library @library{srfi :37 args-fold}
 
 
 The library @library{srfi :37} is by Anthony Carrico as the reference

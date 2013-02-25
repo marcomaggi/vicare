@@ -3,6 +3,10 @@
 
 
 @cindex @ansrfi{11} syntax for receiving multiple values
+@cindex @library{srfi :11}, library
+@cindex @library{srfi :11 let-values}, library
+@cindex Library @library{srfi :11}
+@cindex Library @library{srfi :11 let-values}
 
 
 The library @library{srfi :11} is by Lars T Hansen as the reference
