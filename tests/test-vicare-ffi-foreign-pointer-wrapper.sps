@@ -37,7 +37,8 @@
 (check-display "*** testing Vicare FFI: foreign pointer wrapper data structure\n")
 
 
-(parametrise ((check-test-name	'basic))
+(parametrise ((check-test-name		'basic)
+	      (struct-guardian-logger	#f))
 
   ;;Basic type definition:
   ;;
@@ -171,6 +172,21 @@
 	 ($destroy-alpha S)
 	 ($destroy-alpha S)))
     => `(,(void) (123)))
+
+;;; --------------------------------------------------------------------
+;;; UID gensym
+
+  (check	;safe getter
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(symbol? (alpha-uid S)))
+    => #t)
+
+  (check	;unsafe getter
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P)))
+	(symbol? ($alpha-uid S)))
+    => #t)
 
   (collect))
 
