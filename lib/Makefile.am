@@ -95,7 +95,7 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a37/args-fold.sls			\
 	\
 	srfi/%3a38.sls					\
-	srfi/%3a38/with-shared-structure.vicare.sls	\
+	srfi/%3a38/with-shared-structure.sls		\
 	\
 	srfi/%3a39.sls					\
 	srfi/%3a39/parameters.sls			\
@@ -150,7 +150,7 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/private/feature-cond.sls			\
 	srfi/private/OS-id-features.sls			\
-	srfi/private/platform-features.vicare.sls	\
+	srfi/private/platform-features.sls		\
 	srfi/private/registry.sls
 
 nobase_nodist_libvicare_DATA	= \
