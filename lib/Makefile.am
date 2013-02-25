@@ -71,7 +71,6 @@ nobase_dist_libvicare_DATA	= \
 	\
 	srfi/%3a23.sls					\
 	srfi/%3a23/error.sls				\
-	srfi/%3a23/error/tricks.sls			\
 	\
 	srfi/%3a25.sls					\
 	srfi/%3a25/multi-dimensional-arrays.sls		\
