@@ -11,7 +11,10 @@ implementation for @ansrfi{101}; see:
 @center @url{http://srfi.schemers.org/srfi-101/srfi-101.html}
 
 @noindent
-for more details.
+for more details.  Notice that the library @library{srfi :101} does
+@strong{not} export the @func{equal?} function described in this
+specification; rather such function is exported by @library{srfi :101
+random-access-lists equal}, along with a version of @func{eqv?}.
 
 @menu
 * srfi functional pairs abstract::      Abstract.

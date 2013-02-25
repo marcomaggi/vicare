@@ -95,6 +95,7 @@
   (only (srfi :101 random-access-lists))
   (only (srfi :101 random-access-lists procedures))
   (only (srfi :101 random-access-lists syntax))
+  (only (srfi :101 random-access-lists equal))
   )
 
 ;;; end of file

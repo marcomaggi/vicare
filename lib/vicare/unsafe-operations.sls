@@ -272,6 +272,11 @@
 
 ;;; --------------------------------------------------------------------
 
+    (rename ($pointer?				pointer?)
+	    ($pointer=				pointer=))
+
+;;; --------------------------------------------------------------------
+
     (rename ($memory-block-pointer		memory-block-pointer)
 	    ($memory-block-size			memory-block-size))
 
@@ -306,6 +311,7 @@
     (ikarus system $chars)
     (ikarus system $strings)
     (ikarus system $codes)
+    (ikarus system $pointers)
     (for (prefix (only (vicare installation-configuration)
 		       platform-endianness)
 		 config.)
