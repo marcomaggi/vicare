@@ -44,159 +44,360 @@
                 null? list? list length
                 append reverse list-tail
                 list-ref map for-each)
-        (prefix (rnrs base) r6:)
-        (rnrs exceptions)
-        (srfi :101))
+  (prefix (rnrs base) r6:)
+  (rnrs exceptions)
+  (srfi :101)
+  (vicare checks))
+
+(check-set-mode! 'report-failed)
+(check-display "*** testing SRFI libraries: SRFI 101, functional pairs\n")
 
 
+;;;; helpers
+
 (define (check-expect c e)
   (if (pair? c)
-      (begin (assert (pair? e))
-             (check-expect (car c)
-                           (car e))
-             (check-expect (cdr c)
-                           (cdr e)))
-      (assert (equal? c e))))
+      (and (pair? e)
+	   (check-expect (car c) (car e))
+	   (check-expect (cdr c) (cdr e)))
+    (equal? c e)))
 
 (define-syntax check-error
   (syntax-rules ()
     ((_ e)
-     (let ((f (cons 0 0)))
-       (guard (g ((eq? f g) (assert #f))
-                 (else 'OK))
-              (begin e
-                     (raise f)))))))
+     (check
+	 (let ((f (cons 0 0)))
+	   (guard (g ((eq? f g)
+		      #f)
+		     (else 'OK))
+	     (begin
+	       e
+	       (raise f))))
+       => 'OK))))
 
-; quote
+
+;;;; quote
 
-; Bug in Larceny prevents this from working
-; https://trac.ccs.neu.edu/trac/larceny/ticket/656
-;(check-expect (quote 5) (r6:quote 5))
-;(check-expect (quote x) (r6:quote x))
+(check
+    (let ((f (lambda () '(x))))
+      (eq? (f) (f)))
+  (=> check-expect)
+  #t)
 
-(check-expect (let ((f (lambda () '(x))))
-                (eq? (f) (f)))
-              #t)
+(check
+    '(1 2 3)
+  (=> check-expect)
+  (list 1 2 3))
 
-(check-expect '(1 2 3) (list 1 2 3))
+
+;;;; pair?
 
-; pair?
-(check-expect (pair? (cons 'a 'b)) #t)
-(check-expect (pair? (list 'a 'b 'c)) #t)
-(check-expect (pair? '()) #f)
-(check-expect (pair? '#(a b)) #f)
+(check
+    (pair? (cons 'a 'b))
+  (=> check-expect)
+  #t)
 
-; cons
-(check-expect (cons 'a '()) (list 'a))
-(check-expect (cons (list 'a) (list 'b 'c 'd))
-              (list (list 'a) 'b 'c 'd))
-(check-expect (cons "a" (list 'b 'c))
-              (list "a" 'b 'c))
-(check-expect (cons 'a 3)
-              (cons 'a 3))
-(check-expect (cons (list 'a 'b) 'c)
-              (cons (list 'a 'b) 'c))
+(check
+    (pair? (list 'a 'b 'c))
+  (=> check-expect)
+  #t)
 
-; car
-(check-expect (car (list 'a 'b 'c))
-              'a)
-(check-expect (car (list (list 'a) 'b 'c 'd))
-              (list 'a))
-(check-expect (car (cons 1 2)) 1)
-(check-error (car '()))
+(check
+    (pair? '())
+  (=> check-expect)
+  #f)
 
-; cdr
-(check-expect (cdr (list (list 'a) 'b 'c 'd))
-              (list 'b 'c 'd))
-(check-expect (cdr (cons 1 2))
-              2)
+(check
+    (pair? '#(a b))
+  (=> check-expect)
+  #f)
+
+
+;;;; cons
+
+(check
+    (cons 'a '())
+  (=> check-expect)
+  (list 'a))
+
+(check
+    (cons (list 'a) (list 'b 'c 'd))
+  (=> check-expect)
+  (list (list 'a) 'b 'c 'd))
+
+(check
+    (cons "a" (list 'b 'c))
+  (=> check-expect)
+  (list "a" 'b 'c))
+
+(check
+    (cons 'a 3)
+  (=> check-expect)
+  (cons 'a 3))
+
+(check
+    (cons (list 'a 'b) 'c)
+  (=> check-expect)
+  (cons (list 'a 'b) 'c))
+
+
+;;;; car
+
+(check
+    (car (list 'a 'b 'c))
+  (=> check-expect)
+  'a)
+
+(check
+    (car (list (list 'a) 'b 'c 'd))
+  (=> check-expect)
+  (list 'a))
+
+(check
+    (car (cons 1 2))
+  (=> check-expect)
+  1)
+
+(check-error
+ (car '()))
+
+
+;;;; cdr
+
+(check
+    (cdr (list (list 'a) 'b 'c 'd))
+  (=> check-expect)
+  (list 'b 'c 'd))
+
+(check
+    (cdr (cons 1 2))
+  (=> check-expect)
+  2)
+
 (check-error (cdr '()))
 
-; null?
-(check-expect (eq? null? r6:null?) #t)
-(check-expect (null? '()) #t)
-(check-expect (null? (cons 1 2)) #f)
-(check-expect (null? 4) #f)
+
+;;;; null?
 
-; list?
-(check-expect (list? (list 'a 'b 'c)) #t)
-(check-expect (list? '()) #t)
-(check-expect (list? (cons 'a 'b)) #f)
+(check
+    (eq? null? r6:null?)
+  (=> check-expect)
+  #t)
 
-; list
-(check-expect (list 'a (+ 3 4) 'c)
-              (list 'a 7 'c))
-(check-expect (list) '())
+(check
+    (null? '())
+  (=> check-expect)
+  #t)
 
-; make-list
-(check-expect (length (make-list 5)) 5)
-(check-expect (make-list 5 0)
-              (list 0 0 0 0 0))
+(check
+    (null? (cons 1 2))
+  (=> check-expect)
+  #f)
 
-; length
-(check-expect (length (list 'a 'b 'c)) 3)
-(check-expect (length (list 'a (list 'b) (list 'c))) 3)
-(check-expect (length '()) 0)
+(check
+    (null? 4)
+  (=> check-expect)
+  #f)
 
-; append
-(check-expect (append (list 'x) (list 'y)) (list 'x 'y))
-(check-expect (append (list 'a) (list 'b 'c 'd)) (list 'a 'b 'c 'd))
-(check-expect (append (list 'a (list 'b)) (list (list 'c)))
-              (list 'a (list 'b) (list 'c)))
-(check-expect (append (list 'a 'b) (cons 'c 'd))
-              (cons 'a (cons 'b (cons 'c 'd))))
-(check-expect (append '() 'a) 'a)
+
+;;;; list?
 
-; reverse
-(check-expect (reverse (list 'a 'b 'c))
-              (list 'c 'b 'a))
-(check-expect (reverse (list 'a (list 'b 'c) 'd (list 'e (list 'f))))
-              (list (list 'e (list 'f)) 'd (list 'b 'c) 'a))
+(check
+    (list? (list 'a 'b 'c))
+  (=> check-expect)
+  #t)
 
-; list-tail
-(check-expect (list-tail (list 'a 'b 'c 'd) 2)
-              (list 'c 'd))
+(check
+    (list? '())
+  (=> check-expect)
+  #t)
 
-; list-ref
-(check-expect (list-ref (list 'a 'b 'c 'd) 2) 'c)
+(check
+    (list? (cons 'a 'b))
+  (=> check-expect)
+  #f)
 
-; list-set
-(check-expect (list-set (list 'a 'b 'c 'd) 2 'x)
-              (list 'a 'b 'x 'd))
+
+;;;; list
 
-; list-ref/update
+(check
+    (list 'a (+ 3 4) 'c)
+  (=> check-expect)
+  (list 'a 7 'c))
+
+(check
+    (list)
+  (=> check-expect)
+  '())
+
+
+;;;; make-list
+
+(check
+    (length (make-list 5))
+  (=> check-expect)
+  5)
+
+(check
+    (make-list 5 0)
+  (=> check-expect)
+  (list 0 0 0 0 0))
+
+
+;;;; length
+
+(check
+    (length (list 'a 'b 'c))
+  (=> check-expect)
+  3)
+
+(check
+    (length (list 'a (list 'b) (list 'c)))
+  (=> check-expect)
+  3)
+
+(check
+    (length '())
+  (=> check-expect)
+  0)
+
+
+;;;; append
+
+(check
+    (append (list 'x) (list 'y))
+  (=> check-expect)
+  (list 'x 'y))
+
+(check
+    (append (list 'a) (list 'b 'c 'd))
+  (=> check-expect)
+  (list 'a 'b 'c 'd))
+
+(check
+    (append (list 'a (list 'b)) (list (list 'c)))
+  (=> check-expect)
+  (list 'a (list 'b) (list 'c)))
+
+(check
+    (append (list 'a 'b) (cons 'c 'd))
+  (=> check-expect)
+  (cons 'a (cons 'b (cons 'c 'd))))
+
+(check
+    (append '() 'a)
+  (=> check-expect)
+  'a)
+
+
+;;;; reverse
+
+(check
+    (reverse (list 'a 'b 'c))
+  (=> check-expect)
+  (list 'c 'b 'a))
+
+(check
+    (reverse (list 'a (list 'b 'c) 'd (list 'e (list 'f))))
+  (=> check-expect)
+  (list (list 'e (list 'f)) 'd (list 'b 'c) 'a))
+
+
+;;;; list-tail
+
+(check
+    (list-tail (list 'a 'b 'c 'd) 2)
+  (=> check-expect)
+  (list 'c 'd))
+
+
+;;;; list-ref
+
+(check
+    (list-ref (list 'a 'b 'c 'd) 2)
+  (=> check-expect)
+  'c)
+
+
+;;;; list-set
+
+(check
+    (list-set (list 'a 'b 'c 'd) 2 'x)
+  (=> check-expect)
+  (list 'a 'b 'x 'd))
+
+
+;;;; list-ref/update
+
 (let-values (((a b)
               (list-ref/update (list 7 8 9 10) 2 -)))
-  (check-expect a 9)
-  (check-expect b (list 7 8 -9 10)))
+  (check
+      a
+    (=> check-expect)
+    9)
+  (check
+      b
+    (=> check-expect)
+    (list 7 8 -9 10)))
 
-; map
-(check-expect (map cadr (list (list 'a 'b) (list 'd 'e) (list 'g 'h)))
-              (list 'b 'e 'h))
-(check-expect (map (lambda (n) (expt n n))
-                   (list 1 2 3 4 5))
-              (list 1 4 27 256 3125))
-(check-expect (map + (list 1 2 3) (list 4 5 6))
-              (list 5 7 9))
+
+;;;; map
 
-; for-each
-(check-expect (let ((v (make-vector 5)))
-                (for-each (lambda (i)
-                            (vector-set! v i (* i i)))
-                          (list 0 1 2 3 4))
-                v)
-              '#(0 1 4 9 16))
+(check
+    (map cadr (list (list 'a 'b) (list 'd 'e) (list 'g 'h)))
+  (=> check-expect)
+  (list 'b 'e 'h))
 
-; random-access-list->linear-access-list
-; linear-access-list->random-access-list
-(check-expect (random-access-list->linear-access-list '()) '())
-(check-expect (linear-access-list->random-access-list '()) '())
+(check
+    (map (lambda (n) (expt n n))
+      (list 1 2 3 4 5))
+  (=> check-expect)
+  (list 1 4 27 256 3125))
 
-(check-expect (random-access-list->linear-access-list (list 1 2 3))
-              (r6:list 1 2 3))
+(check
+    (map + (list 1 2 3) (list 4 5 6))
+  (=> check-expect)
+  (list 5 7 9))
 
-(check-expect (linear-access-list->random-access-list (r6:list 1 2 3))
-              (list 1 2 3))
+
+;;;; for-each
 
+(check
+    (let ((v (make-vector 5)))
+      (for-each (lambda (i)
+		  (vector-set! v i (* i i)))
+	(list 0 1 2 3 4))
+      v)
+  (=> check-expect)
+  '#(0 1 4 9 16))
+
+
+;;;; random-access-list->linear-access-list
+;;;; linear-access-list->random-access-list
+
+(check
+    (random-access-list->linear-access-list '())
+  (=> check-expect)
+  '())
+
+(check
+    (linear-access-list->random-access-list '())
+  (=> check-expect)
+  '())
+
+(check
+    (random-access-list->linear-access-list (list 1 2 3))
+  (=> check-expect)
+  (r6:list 1 2 3))
+
+(check
+    (linear-access-list->random-access-list (r6:list 1 2 3))
+  (=> check-expect)
+  (list 1 2 3))
+
+
+;;;; done
+
+(check-report)
 
 ;;; end of file
