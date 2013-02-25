@@ -64,6 +64,7 @@ vicare_scheme_TEXINFOS	= \
 	srfi-strings.texi			\
 	srfi-testing.texi			\
 	srfi-time.texi				\
-	srfi-vectors.texi
+	srfi-vectors.texi			\
+	srfi-functional-pairs.texi
 
 ### end of file

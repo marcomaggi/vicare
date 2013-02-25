@@ -89,6 +89,12 @@
   (only (srfi :98))
   (only (srfi :99))
 
+  ;;We  really   need  all   of  these  for   this  SRFI,   because  the
+  ;;implementation is in (srfi :101).
+  (only (srfi :101))
+  (only (srfi :101 random-access-lists))
+  (only (srfi :101 random-access-lists procedures))
+  (only (srfi :101 random-access-lists syntax))
   )
 
 ;;; end of file

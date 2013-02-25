@@ -252,6 +252,7 @@ TESTS			=	\
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
+	test-srfi-101-functional-pairs.sps		\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\
@@ -563,6 +564,7 @@ EXTRA_DIST = \
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
+	test-srfi-101-functional-pairs.sps		\
 	\
 	test-issue-001-equal-hash.sps			\
 	test-issue-003.sps				\

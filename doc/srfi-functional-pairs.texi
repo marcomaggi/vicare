@@ -1,0 +1,746 @@
+@node srfi functional pairs
+@section @ansrfi{101} purely functional random--access pairs and lists
+
+
+@cindex @ansrfi{101} purely functional random--access pairs and lists
+
+
+The library @library{srfi :101} is by David Van Horn as the reference
+implementation for @ansrfi{101}; see:
+
+@center @url{http://srfi.schemers.org/srfi-101/srfi-101.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi functional pairs abstract::      Abstract.
+* srfi functional pairs issues::        Issues.
+* srfi functional pairs rationale::     Rationale.
+* srfi functional pairs spec::          Specification.
+* srfi functional pairs refs::          References.
+* srfi functional pairs ack::           Acknowledgements.
+* srfi functional pairs copyright::     Copyright.
+@end menu
+
+@c page
+@node srfi functional pairs abstract
+@subsection Abstract
+
+
+
+Random--access lists [1] are a purely functional data structure for
+representing lists of values.  A random--access list may act as a drop
+in replacement for the usual linear--access pair and list data
+structures (@func{pair?}, @func{cons}, @func{car}, @func{cdr}), which
+additionally supports fast index--based addressing and updating
+(@func{list-ref}, @func{list-set}).  The impact is a whole class of
+purely--functional algorithms expressed in terms of index--based list
+addressing become feasible compared with their linear--access list
+counterparts.
+
+This document proposes a library @api{} for purely functional
+random--access lists consistent with the @rnrs{6} [2] base library and
+list utility standard library [3].
+
+@c page
+@node srfi functional pairs issues
+@subsection Issues
+
+
+Procedure names have been chosen to be consistent with @rnrs{6}, even
+though in some cases such as @func{list-ref} and @func{list-tail} the
+choice seems poor since they include the prefix @code{list-} even though
+they do not operate on lists, but chains of pairs, i.e. lists and
+improper lists, and arbitrary objects, respectively.  Although the names
+have remained the same, the descriptions have been corrected (e.g. using
+@var{pair} or @var{obj} instead of @var{list} for parameter names).
+Should the names be changed as well?
+
+To what extent should standard Scheme procedures and syntax that consume
+or construct lists be included in this proposal?  For example, should
+all of the @library{rnrs base} library that deals with lists be
+included?  By my count this would mean adding: @func{lambda},
+@func{apply}, @func{vector->list}, @func{list->vector},
+@func{string->list}, and @func{list->string}.  I am inclined to add
+these.  Should all of the @library{rnrs lists} library be included?
+These procedures are easily defined in terms of what's given here, and
+no performance advantage is gained by implementing them ``under the hood''
+using the data structures in the reference implementation.  I am
+inclined not to include them.
+
+Should a @func{car+cdr} procedure be added?
+
+Should the current syntax and procedures sub--libraries be included?
+
+@c page
+@node srfi functional pairs rationale
+@subsection Rationale
+
+
+Functional programming and list hacking go together like peanut butter
+and jelly, eval and apply, syntax and semantics, or cursing and
+recursing.  But the traditional approach to implementing pairs and lists
+results in index--based access (@func{list-ref}) requiring time
+proportional the index being accessed.  Moreover, indexed--based
+functional update (@func{list-set}) becomes so inefficient as to be
+nearly unspeakable.  Instead, programmers revert the imperatives of the
+state; they use a stateful data structure and imperative algorithms.
+
+This @srfi{} intends to improve the situation by offering an alternative
+implementation strategy based on Okasaki's purely functional
+random--access lists [1].  Random--access pairs and lists can be used as
+a replacement for traditional, linear--access pairs and lists with no
+asymptotic loss of efficiency.  In other words, the typical list and
+pair operations such as @func{cons}, @func{car}, and @func{cdr}, all
+operate in @math{O(1)} time as usual.  However, random--access lists
+additionally support index--based access and functional update
+operations that are asymptotically cheaper; @math{O(\log(n))} for
+random--access lists versus @math{O(n)} for linear--access lists, where
+@math{n} is the length of the list being access or updated.  As such,
+many purely functional index--based list algorithms become feasible by
+using a random--access list representation for pairs and lists.
+
+The requirements of this @srfi{} have been designed in such a way as to
+admit portable library implementations of this feature, such as the
+reference implementation, while at the same time admit more radical
+implementations that embrace random--access pairs as the fundamental
+pair representation.
+
+@c page
+@node srfi functional pairs spec
+@subsection Specification
+
+
+@menu
+* srfi functional pairs spec random::   Random--access pairs and lists.
+* srfi functional pairs spec repre::    Representation conversion.
+* srfi functional pairs spec requir::   Implementation requirements.
+@end menu
+
+@c page
+@node srfi functional pairs spec random
+@subsubsection Random--access pairs and lists
+
+
+A random--access pair (or just pair) is a compound structure with two
+fields called the car and the cdr fields (consistent with the historical
+naming of pair fields in Scheme).  Pairs are created by the procedure
+@func{cons}.  The car and cdr fields are accessed by the procedures
+@func{car} and @func{cdr}.
+
+Pairs are used primarily to represents lists.  A list can be defined
+recursively as either the empty list or a pair whose cdr is a
+list.  More precisely, the set of lists is defined as the smallest set
+@math{X} such that
+
+@itemize
+@item
+The empty list is in @math{X}.
+
+@item
+If @var{list} is in @math{X}, then any pair whose cdr field contains
+@var{list} is also in @math{X}.
+@end itemize
+
+The objects in the car fields of successive pairs of a list are the
+elements of the list.  For example, a two--element list is a pair whose
+car is the first element and whose cdr is a pair whose car is the second
+element and whose cdr is the empty list.  The length of a list is the
+number of elements, which is the same as the number of pairs.
+
+The empty list is a special object of its own type.  It is not a pair.
+It has no elements and its length is zero.
+
+@quotation
+@strong{NOTE} The above definitions imply that all lists have finite
+length and are terminated by the empty list.
+@end quotation
+
+A chain of pairs is defined recursively as either a non--pair object or
+a pair whose cdr is a chain of pairs (Note: @emph{every value} is a
+chain of pairs).  A chain of pairs ending in the empty list is a list.
+A chain of pairs not ending in the empty list is called an improper
+list.  Note that an improper list is not a list.  Whether a given pair
+is a list depends upon what is stored in the cdr field.
+
+The external representation of pairs is not specified by this @srfi{},
+however the examples below do use the typical notation for writing pair
+and list values.
+
+Random--access pairs and lists are specified to be fully functional, or,
+to use the term from the academic literature, fully persistent [1].
+Full persistence means that all operations on random--access lists,
+notably including @func{cons}, @func{list-ref}, @func{list-set}, and
+@func{list-ref/update}, are specified
+
+@enumerate
+@item
+not to mutate any of their arguments; perforce
+
+@item
+to be safe to execute concurrently on shared arguments; and
+
+@item
+to suffer no degradation of performance as a consequence of the history
+of operations carried out to produce their arguments (except as it is
+reflected in the lengths of those arguments); but permitted
+
+@item
+to produce results that share structure with their arguments.
+@end enumerate
+
+It is usually taken for granted that standard Scheme lists have these
+properties.  This @srfi{} explicitly specifies that random--access lists
+share them.
+
+
+@deffn Syntax quote @meta{datum}
+Syntax: @meta{datum} should be a syntactic datum.
+
+Semantics: @code{(quote @meta{datum})} evaluates to the datum value
+represented by @meta{datum} (see section 4.3 of @rnrs{6}).  This
+notation is used to include constants.
+
+When the datum value represented by @meta{datum} contains pair
+structure, quote produces random--access pairs.
+
+@example
+(quote a)               @result{} a
+(quote #(a b c))        @result{} #(a b c)
+(quote (+ 1 2))         @result{} (+ 1 2)
+@end example
+
+As noted in section 4.3.5 of @rnrs{6}, @code{(quote @meta{datum})} may
+be abbreviated as @code{'@meta{datum}}:
+
+@example
+'"abc"                  @result{} "abc"
+'145932                 @result{} 145932
+'a                      @result{} a
+'#(a b c)               @result{} #(a b c)
+'()                     @result{} ()
+'(+ 1 2)                @result{} (+ 1 2)
+'(quote a)              @result{} (quote a)
+''a                     @result{} (quote a)
+@end example
+
+As noted in section 5.10 of @rnrs{6}, constants are immutable.
+
+@quotation
+@strong{NOTE} Different constants that are the value of quote expression
+may share the same locations.
+@end quotation
+@end deffn
+
+
+@defun equal? @vari{obj} @varii{obj}
+The @func{equal?} predicate returns @true{} if and only if the (possibly
+infinite) unfoldings of its arguments into regular trees are equal as
+ordered trees.
+
+The @func{equal?} predicate treats pairs and vectors as nodes with
+outgoing edges, uses @func{string=?} to compare strings, uses
+@func{bytevector=?} to compare bytevectors, and uses @func{eqv?} to
+compare other nodes.
+
+@example
+(equal? 'a 'a)                  @result{} #t
+
+(equal? '(a) '(a))              @result{} #t
+
+(equal? '(a (b) c)
+        '(a (b) c))             @result{} #t
+
+(equal? "abc" "abc")            @result{} #t
+
+(equal? 2 2)                    @result{} #t
+
+(equal? (make-vector 5 'a)
+        (make-vector 5 'a))     @result{} #t
+
+(equal? '#vu8(1 2 3 4 5)
+        (u8-list->bytevector
+         '(1 2 3 4 5))          @result{} #t
+
+(equal? (lambda (x) x)
+        (lambda (y) y))         @result{} unspecified
+
+(let* ((x (list 'a))
+       (y (list 'a))
+       (z (list x y)))
+  (list (equal? z (list y x))
+        (equal? z (list x x)))) @result{} (#t #t)
+@end example
+@end defun
+
+
+@defun pair? @var{obj}
+Return @true{} if @var{obj} is a pair, and otherwise returns @false{}.
+This operation must take @math{O(1)} time.
+
+@example
+(pair? '(a . b))                @result{} #t
+(pair? '(a b c))                @result{} #t
+(pair? '())                     @result{} #f
+(pair? '#(a b))                 @result{} #f
+@end example
+@end defun
+
+
+@defun cons @vari{obj} @varii{obj}
+Return a newly allocated pair whose car is @vari{obj} and whose cdr is
+@varii{obj}.  The pair is guaranteed to be different (in the sense of
+@func{eqv?}) from every existing object.  This operation must take
+@math{O(1)} time.
+
+@example
+(cons 'a '())                   @result{}  (a)
+(cons '(a) '(b c d))            @result{}  ((a) b c d)
+(cons "a" '(b c))               @result{}  ("a" b c)
+(cons 'a 3)                     @result{}  (a . 3)
+(cons '(a b) 'c)                @result{}  ((a b) . c)
+@end example
+@end defun
+
+
+@defun car @var{pair}
+Return the contents of the car field of @var{pair}.  This operation must
+take @math{O(1)} time.
+
+@example
+(car '(a b c))                  @result{}  a
+(car '((a) b c d))              @result{}  (a)
+(car '(1 . 2))                  @result{}  1
+(car '())                       @error{} &assertion exception
+@end example
+@end defun
+
+
+@defun cdr @var{pair}
+Return the contents of the cdr field of pair.  This operation must take
+@math{O(1)} time.
+
+@example
+(cdr '((a) b c d))              @result{}  (b c d)
+(cdr '(1 . 2))                  @result{}  2
+(cdr '())                       @error{} &assertion exception
+@end example
+@end defun
+
+
+@defun caar @var{pair}
+@defunx cadr @var{pair}
+@defunx @dots{}
+@defunx cdddar @var{pair}
+@defunx cddddr @var{pair}
+These procedures are compositions of car and cdr, where for example
+@func{caddr} could be defined by:
+
+@example
+(define caddr
+  (lambda (x)
+    (car (cdr (cdr x)))))
+@end example
+
+Arbitrary compositions, up to four deep, are provided.  There are
+twenty--eight of these procedures in all.  These operations must take
+@math{O(1)} time.
+@end defun
+
+
+@defun null? @var{obj}
+Return @true{} if @var{obj} is the empty list, @false{} otherwise.  This
+procedure is equivalent to the @func{null?} procedure of the @rnrs{6}
+base library.
+@end defun
+
+
+@defun list? @var{obj}
+Return @true{} if @var{obj} is a list, @false{} otherwise.  By
+definition, all lists are chains of pairs that have finite length and
+are terminated by the empty list.  This operation must take time bounded
+by @math{O(\log(n))}, where @math{n} is the number of pairs in the chain
+forming the potential list.
+
+@example
+(list? '(a b c))                @result{}  #t
+(list? '())                     @result{}  #t
+(list? '(a . b))                @result{}  #f
+@end example
+@end defun
+
+
+@defun list @var{obj} @dots{}
+Return a newly allocated list of its arguments.  This operation must
+take time bounded by @math{O(n)}, where @math{n} is the number of
+arguments to list.
+
+@example
+(list 'a (+ 3 4) 'c)            @result{}  (a 7 c)
+(list)                          @result{}  ()
+@end example
+@end defun
+
+
+@defun make-list @var{k}
+@defunx make-list @var{k} @var{obj}
+Return a newly allocated list of @var{k} elements.  If a second argument
+is given, then each element is initialized to @var{obj}.  Otherwise the
+initial contents of each element is unspecified.  This operation must
+take time and space bounded by @math{O(\log(k))}.
+
+@example
+(make-list 5 0)                 @result{}  (0 0 0 0 0)
+@end example
+@end defun
+
+
+@defun length @var{list}
+Return the length of @var{list}.  This operation must take time bounded
+by @math{O(\log(n))}, where @math{n} is the length of the list.
+
+@example
+(length '(a b c))               @result{}  3
+(length '(a (b) (c)))           @result{}  3
+(length '())                    @result{}  0
+@end example
+@end defun
+
+
+@defun length<=? @var{obj} @var{k}
+Return true if @var{obj} is a chain of at least @var{k} pairs and
+@false{} otherwise.  This operation must take time bounded by
+@math{O(\log(\min(k,n)))}, where @math{n} is the length of the chain of
+pairs.
+
+@example
+(length<=? 'not-a-list 0)       @result{}  #t
+(length<=? '(a . b) 0)          @result{}  #t
+(length<=? '(a . b) 1)          @result{}  #t
+(length<=? '(a . b) 2)          @result{}  #f
+@end example
+@end defun
+
+
+@defun append @var{list} @dots{} @var{obj}
+Return a chain of pairs consisting of the elements of the first
+@var{list} followed by the elements of the other lists, with @var{obj}
+as the cdr of the final pair.  An improper list results if @var{obj} is
+not a list.  This operation must take time bounded by @math{O(\log(n))},
+where @math{n} is the total number of elements in the given lists.
+
+@example
+(append '(x) '(y))              @result{}  (x y)
+(append '(a) '(b c d))          @result{}  (a b c d)
+(append '(a (b)) '((c)))        @result{}  (a (b) (c))
+(append '(a b) '(c . d))        @result{}  (a b c . d)
+(append '() 'a)                 @result{}  a
+@end example
+@end defun
+
+
+@defun reverse @var{list}
+Return a newly allocated list consisting of the element of @var{list} in
+reverse order.  This operation must take time bounded by @math{O(n)}
+where @math{n} is the length of the list.
+
+@example
+(reverse '(a b c))               @result{}  (c b a)
+(reverse '(a (b c) 'd '(e (f)))) @result{}  ((e (f)) d (b c) a)
+@end example
+@end defun
+
+
+@defun list-tail @var{obj} @var{k}
+@var{obj} should be a chain of pairs with a count of at least @var{k}.
+The @func{list-tail} procedure returns the object obtained by omitting
+the first @var{k} elements in @var{obj}.  This operation must take time
+bounded by @math{O(\log(\min(k,n)))}, where @math{n} is the length of
+the chain of pairs.
+
+@example
+(list-tail '(a b c d) 0)        @result{}  (a b c d)
+(list-tail '(a b c d) 2)        @result{}  (c d)
+(list-tail 'not-a-list 0)       @result{}  not-a-list
+@end example
+
+@quotation
+@strong{Implementation responsibilities:} The implementation must check
+that @var{obj} is a chain of pairs whose count is at least @var{k}.
+@end quotation
+@end defun
+
+
+@defun list-ref @var{pair} @var{k}
+@var{pair} must be a chain of pairs whose count is at least @math{k +
+1}.  The @func{list-ref} procedure returns the @var{k}-th element of
+@var{pair}.  This operation must take time bounded by
+@math{O(\min(k,\log(n)))}, where @math{n} is the length of the chain of
+pairs.
+
+@example
+(list-ref '(a b c d) 2)         @result{}  c
+@end example
+
+@quotation
+@strong{Implementation responsibilities:} The implementation must check
+that @var{pair} is a chain of pairs whose count is at least @math{k +
+1}.
+@end quotation
+@end defun
+
+
+@defun list-set @var{pair} @var{k} @var{obj}
+@var{pair} must be a chain of pairs whose count is at least @math{k +
+1}.  The @func{list-set} procedure returns the chain of pairs obtained
+by replacing the @var{k}-th element with @var{obj}.  This operation must
+take time bounded by @math{O(\min(k,\log(n)))}, where @math{n} is the
+length of the chain of pairs.
+
+@example
+(list-set '(a b c d) 2 'x)      @result{}  (a b x d)
+@end example
+
+@quotation
+@strong{Implementation responsibilities:} The implementation must check
+that @var{pair} is a chain of pairs whose count is at least @math{k +
+1}.
+@end quotation
+@end defun
+
+
+@defun list-ref/update @var{pair} @var{k} @var{proc}
+Return the same results as:
+
+@example
+(values (list-ref @var{pair} @var{k})
+        (list-set @var{pair} @var{k} (@var{proc} (list-ref @var{pair} @var{k}))))
+@end example
+
+@noindent
+but it may be implemented more efficiently.
+
+@example
+(list-ref/update '(7 8 9 10) 2 -)
+@result{}  9 (7 8 -9 10)
+@end example
+@end defun
+
+
+@defun map @var{proc} @vari{list} @varii{list} @dots{}
+The lists should all have the same length.  @var{proc} should accept as
+many arguments as there are lists and return a single value.
+
+The @func{map} procedure applies @var{proc} element--wise to the
+elements of the lists and returns a list of the results, in order.
+@var{proc} is always called in the same dynamic environment as
+@func{map} itself.  The order in which @var{proc} is applied to the
+elements of the lists is unspecified.
+
+@example
+(map cadr '((a b) (d e) (g h)))
+@result{}  (b e h)
+
+(map (lambda (n)
+       (expt n n))
+  '(1 2 3 4 5))
+@result{}  (1 4 27 256 3125)
+
+(map + '(1 2 3) (4 5 6))
+@result{}  (5 7 9)
+
+(let ((count 0))
+  (map (lambda (ignored)
+         (set! count (+ count 1))
+         count)
+    '(a b)))
+@result{}  (1 2) or (2 1)
+@end example
+
+@quotation
+@strong{Implementation responsibilities:} The implementation should
+check that the lists all have the same length.  The implementation must
+check the restrictions on @var{proc} to the extent performed by applying
+it as described.  An implementation may check whether @var{proc} is an
+appropriate argument before applying it.
+@end quotation
+@end defun
+
+
+@defun for-each @var{proc} @vari{list} @varii{list} @dots{}
+The lists should all have the same length.  @var{proc} should accept as
+many arguments as there are lists.
+
+The @func{for-each} procedure applies @var{proc} element--wise to the
+elements of the lists for its side effects, in order from the first
+element to the last.  @var{proc} is always called in the same dynamic
+environment as @func{for-each} itself.  The return values of
+@func{for-each} are unspecified.
+
+@example
+(let ((v (make-vector 5)))
+  (for-each (lambda (i)
+              (vector-set! v i (* i i)))
+    '(0 1 2 3 4))
+  v)
+@result{}  #(0 1 4 9 16)
+
+(for-each (lambda (x) x) '(1 2 3 4))
+@result{}  unspecified
+
+(for-each even? '())
+@result{}  unspecified
+@end example
+
+@quotation
+@strong{Implementation responsibilities:} The implementation should
+check that the lists all have the same length.  The implementation must
+check the restrictions on @var{proc} to the extent performed by applying
+it as described.  An implementation may check whether @var{proc} is an
+appropriate argument before applying it.
+@end quotation
+
+@quotation
+@strong{NOTE} Implementations of @func{for-each} may or may not
+tail--call @var{proc} on the last element.
+@end quotation
+@end defun
+
+@c page
+@node srfi functional pairs spec repre
+@subsubsection Representation conversion
+
+
+@defun random-access-list->linear-access-list @var{ra-list}
+@defunx linear-access-list->random-access-list @var{la-list}
+These procedures convert between (potentially) distinct representations
+of lists.  To avoid confusion, parameters named @var{ra-list} range over
+lists represented with random--access lists, i.e. objects satisfying the
+@func{list?}  predicate described above, while parameters named
+@var{la-list} range over lists represented with the more traditional
+linear--access lists, i.e. objects satisfying the @func{list?} predicate
+of @rnrs{6}.  In systems that represent all lists as random--access
+lists, these conversions may simply be list identity procedures.
+@end defun
+
+@c page
+@node srfi functional pairs spec requir
+@subsubsection Implementation requirements
+
+
+Random--access pairs must be disjoint from all other base types with the
+possible exception of (linear--access) pairs.
+
+The external representation of random--access pairs is unspecified.  The
+behavior of @func{equal?} when given a random--access pair and a
+sequential--access pair is unspecified in implementations with disjoint
+representations.
+
+The behavior of @func{eq?} and @func{eqv?} on random--access pairs must
+be the same as that for pairs, vectors, or records.  Namely, two
+random--access pair objects are @func{eq?} if and only if they are
+@func{eqv?}, and they are @func{eqv?} if and only if they refer to the
+same location in the store.
+
+All argument checking for each operation must be done within the time
+bounds given for that operation.
+
+Implementations are encouraged, but not required, to support
+random--access pairs and lists as their primary pair and list
+representation.  In such an implementation, the external representation
+of random--access pairs and list should be as described in section 4.3.2
+(Pairs and lists) of @rnrs{6}, the behavior of equivalence predicates on
+random--access pairs should be as described in section 11.5 (Equivalence
+predicates) of @rnrs{6}, and so on.  In short, all pairs should be
+random--access pairs.
+
+Implementations supporting @srfi{} Libraries [4] and @ansrfi{101} must
+provide the following libraries:
+
+@example
+(srfi :101)                                 ; Composite libraries
+(srfi :101 random-access-lists)
+
+(srfi :101 random-access-lists procedures)  ; Procedures only
+(srfi :101 random-access-lists syntax)      ; Syntax only
+@end example
+
+@c page
+@node srfi functional pairs refs
+@subsection References
+
+
+@enumerate
+@item
+``Purely Functional Random--Access Lists''.  Chris Okasaki, Functional
+Programming Languages and Computer Architecture, June 1995, pages 86-95.
+@url{http:/@//@/www.eecs.usma.edu/@/webs/@/people/@/okasaki/@/pubs.html#fpca95}.
+
+@item
+``Revised^6 Report on the Algorithmic Language Scheme''.  Michael
+Sperber, et al. (Editors).  @url{http:/@//@/www.r6rs.org/@/}
+
+@item
+``Revised^6 Report on the Algorithmic Language Scheme, Standard
+Libraries''.  Michael Sperber, et al. (Editors).
+@url{http:/@//@/www.r6rs.org/@/}
+
+@item
+``@ansrfi{97}: @srfi{} Libraries''.  David Van Horn.
+@url{http:/@//@/srfi.schemers.org/@/srfi-97/@/}
+
+@item
+``PLaneT: Purely Functional Random--Access Lists''.  David Van Horn.
+@url{http:/@//@/planet.plt-scheme.org/@/display.ss?package=ralist.plt&owner=dvanhorn}
+@end enumerate
+
+@c page
+@node srfi functional pairs ack
+@subsection Acknowledgements
+
+
+I am grateful to the members of the Northeastern University Programming
+Research Laboratory and PLT (and their intersection) for discussions
+during the pre--draft development of this @srfi{} and the library that
+preceded it.  We are all indebted to Okasaki for his elegant solution to
+this problem.  Much of the specification is adapted from text intended
+to belong to the Scheme community; I thank the editors and authors of
+the @rnrs{n} series collectively for their efforts.  I am grateful to
+Donovan Kolbly for serving as @srfi{} editor and to Taylor R Campbell,
+Robert Bruce Findler, Aubrey Jaffer, Shiro Kawai, and Alexey Radul for
+discussion during the draft period.  I thank William D Clinger, Robert
+Bruce Findler, and Abdulaziz Ghuloum for help writing the
+implementations of quote specific to Larceny, Ikarus, and PLT,
+respectively.  Support was provided by the National Science Foundation
+under Grant #0937060 to the Computing Research Association for the
+CIFellow Project.
+
+@c page
+@node srfi functional pairs copyright
+@subsection Copyright
+
+
+Copyright @copyright{} David Van Horn 2009.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+REMEMBER, THERE IS NO SCHEME UNDERGROUND. IN NO EVENT SHALL THE AUTHORS
+OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+@c end of file

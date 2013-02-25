@@ -142,6 +142,11 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a99/records/procedural.sls		\
 	srfi/%3a99/records/syntactic.sls		\
 	\
+	srfi/%3a101.sls					\
+	srfi/%3a101/random-access-lists.sls		\
+	srfi/%3a101/random-access-lists/procedures.sls	\
+	srfi/%3a101/random-access-lists/syntax.sls	\
+	\
 	srfi/private/feature-cond.sls			\
 	srfi/private/OS-id-features.sls			\
 	srfi/private/platform-features.vicare.sls	\

@@ -53,6 +53,8 @@ minor modification of the original documents by Marco Maggi.
 * srfi lightweight-testing::    @ansrfi{78} lightweight testing.
 * srfi environment-variables::  @ansrfi{98} environment variables.
 * srfi err5rs records::         @ansrfi{99} @acronym{ERR5RS} records.
+* srfi functional pairs::       @ansrfi{101} purely functional
+                                random--access pairs and lists.
 @end menu
 
 @c ------------------------------------------------------------
@@ -89,5 +91,6 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-lightweight-testing.texi
 @include srfi-environment-variables.texi
 @include srfi-err5rs-records.texi
+@include srfi-functional-pairs.texi
 
 @c end of file
