@@ -548,6 +548,12 @@ as @value{PRJNAME} available features:
 @itemx srfi-99-records
 @ansrfi{99} is available.
 
+@item (srfi :101)
+@itemx (srfi :101 random-access-lists)
+@itemx srfi-101
+@itemx srfi-101-random-access-lists
+@ansrfi{101} is available.
+
 @item vicare
 The Scheme implementation is @value{PRJNAME}.
 
