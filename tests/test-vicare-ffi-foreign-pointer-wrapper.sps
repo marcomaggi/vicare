@@ -31,6 +31,7 @@
 	  ffi.)
   (prefix (vicare ffi foreign-pointer-wrapper)
 	  ffi.)
+  (vicare arguments validation)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -70,7 +71,7 @@
   (check	;unsafe alive predicate
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
-	($live-alpha? S))
+	($alpha-alive? S))
     => #t)
 
   (check	;owner constructor, getter
@@ -103,7 +104,7 @@
   (check	;unsafe alive predicate
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/not-owner P)))
-	($live-alpha? S))
+	($alpha-alive? S))
     => #t)
 
   (check	;not-owner constructor, getter
@@ -124,28 +125,28 @@
   (check	;unsafe destructor invocation
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
-	($destroy-alpha S))
+	($alpha-finalise S))
     => (void))
 
   (check	;unsafe destructor invocation, twice
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
-	($destroy-alpha S)
-	($destroy-alpha S))
+	($alpha-finalise S)
+	($alpha-finalise S))
     => (void))
 
   (check	;unsafe destructor invocation, dead struct safe pred
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
-	($destroy-alpha S)
+	($alpha-finalise S)
 	(alpha?/alive S))
     => #f)
 
   (check	;unsafe destructor invocation, dead struct unsafe pred
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
-	($destroy-alpha S)
-	($live-alpha? S))
+	($alpha-finalise S)
+	($alpha-alive? S))
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -158,7 +159,7 @@
 	      (D (lambda (S)
 		   (add-result (pointer->integer (alpha-pointer S))))))
 	 (set-alpha-custom-destructor! S D)
-	 ($destroy-alpha S)))
+	 ($alpha-finalise S)))
     => `(,(void) (123)))
 
   (check	;custom  destructor   invocation,  invoking   twice  the
@@ -169,8 +170,8 @@
 	      (D (lambda (S)
 		   (add-result (pointer->integer (alpha-pointer S))))))
 	 (set-alpha-custom-destructor! S D)
-	 ($destroy-alpha S)
-	 ($destroy-alpha S)))
+	 ($alpha-finalise S)
+	 ($alpha-finalise S)))
     => `(,(void) (123)))
 
 ;;; --------------------------------------------------------------------
@@ -186,6 +187,62 @@
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
 	(symbol? ($alpha-uid S)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; argument validators
+
+  (check	;struct validator, success
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P))
+	     (who 'test))
+	(with-arguments-validation (who)
+	    ((alpha		S))
+	  #t))
+    => #t)
+
+  (check	;struct validator, failure
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(let ((S 123)
+	      (who 'test))
+	  (with-arguments-validation (who)
+	      ((alpha		S))
+	    #t)))
+    => #t)
+
+  (check	;alive struct validator
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P))
+	     (who 'test))
+	(with-arguments-validation (who)
+	    ((alpha/alive	S))
+	  #t))
+    => #t)
+
+  (check	;alive struct validator, failure
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(let ((S 123)
+	      (who 'test))
+	  (with-arguments-validation (who)
+	      ((alpha/alive	S))
+	    #f)))
+    => #t)
+
+  (check	;alive struct validator, not alive failure
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(let* ((P (integer->pointer 123))
+	       (S (make-alpha/owner P))
+	       (who 'test))
+	  ($alpha-finalise S)
+	  (with-arguments-validation (who)
+	      ((alpha/alive	S))
+	    #t)))
     => #t)
 
   (collect))

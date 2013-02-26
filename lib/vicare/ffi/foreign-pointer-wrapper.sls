@@ -156,9 +156,8 @@
     ;;
     (let ((type-string (symbol->string (syntax->datum type-id))))
       (with-syntax
-	  ((PRED-VALIDATOR	type-id)
-	   (ALIVE_VALIDATOR	(%id->id type-id (lambda (type-string)
-						   (string-append type-string "/alive"))))
+	  ((PRED-VALIDATOR	(%make-argument-validator-pred-id type-id))
+	   (ALIVE-VALIDATOR	(%make-argument-validator-alive-id type-id))
 	   (PRED-MSG		(string-append "expected \""
 					       type-string
 					       "\" struct as argument"))
@@ -242,11 +241,8 @@
     (let-values
 	(((pred pred/alive unsafe-alive-pred)
 	  (%make-pred-ids  type-id))
-	 ((unsafe-getter-pointer
-	   unsafe-getter-pointer-owner?
-	   unsafe-getter-custom-destructor
-	   unsafe-getter-uid)
-	  (%make-unsafe-Getter-ids type-id)))
+	 ((unsafe-getter-pointer)
+	  (%make-unsafe-Getter-id/pointer type-id)))
       #`(begin
 	  (define (#,pred/alive obj)
 	    ;;Return true if OBJ is an instance of the data struct and
@@ -274,16 +270,15 @@
 	  (((unsafe-scheme-destructor)
 	    (%make-unsafe-scheme-destructor-id type-id))
 	   ((pred pred/alive unsafe-alive-pred)
-	    (%make-pred-ids type-id))
-	   ((unsafe-getter-pointer
-	     unsafe-getter-pointer-owner?
-	     unsafe-getter-custom-destructor
-	     unsafe-getter-uid)
-	    (%make-unsafe-Getter-ids type-id))
-	   ((unsafe-pointer-setter
-	     unsafe-owner-setter
-	     unsafe-custom-destructor-setter)
-	    (%make-unsafe-Setter-ids type-id)))
+	    (%make-pred-ids type-id)))
+	(define unsafe-getter-pointer
+	  (%make-unsafe-Getter-id/pointer type-id))
+	(define unsafe-getter-pointer-owner?
+	  (%make-unsafe-Getter-id/pointer-owner? type-id))
+	(define unsafe-getter-custom-destructor
+	  (%make-unsafe-Getter-id/custom-destructor type-id))
+	(define unsafe-pointer-setter
+	  (%make-unsafe-Setter-id/pointer type-id))
 	(with-syntax
 	    ((STRUCT #'struct))
 	  (with-syntax
@@ -333,7 +328,7 @@
     (define (%make-table-destruction struct-id type-id table-field-id)
       (with-syntax
 	  ((TABLE-GETTER
-	    (%make-table-getter-id type-id table-field-id))
+	    (%make-unsafe-Getter-id/collected-thing type-id table-field-id))
 	   (TABLE-FIELD-VECTOR-GETTER
 	    (%make-table-field-vector-getter-id type-id table-field-id))
 	   (SUB-DESTRUCTOR
@@ -358,12 +353,9 @@
     ;;Return  a   syntax  object   representing  the   definition  and
     ;;registration of the printer function for the data struct type.
     ;;
-    (let-values
-	(((unsafe-getter-pointer
-	   unsafe-getter-pointer-owner?
-	   unsafe-getter-custom-destructor
-	   unsafe-getter-uid)
-	  (%make-unsafe-Getter-ids type-id)))
+    (let ((unsafe-getter-pointer	(%make-unsafe-Getter-id/pointer type-id))
+	  (unsafe-getter-pointer-owner?	(%make-unsafe-Getter-id/pointer-owner? type-id))
+	  (unsafe-getter-uid		(%make-unsafe-Getter-id/uid type-id)))
       (with-syntax
 	  ((TYPE-STRING (symbol->string (syntax->datum type-id))))
 	#`(begin
@@ -392,7 +384,7 @@
     ;;
     (with-syntax
 	((TABLE-GETTER
-	  (%make-table-getter-id type-id table-field-id))
+	  (%make-unsafe-Getter-id/collected-thing type-id table-field-id))
 	 (TABLE-FIELD-VECTOR-GETTER
 	  (%make-table-field-vector-getter-id type-id table-field-id)))
       #'(define (TABLE-FIELD-VECTOR-GETTER struct)
@@ -412,17 +404,12 @@
     ;;
     (with-syntax
 	((TABLE-GETTER
-	  (%make-table-getter-id type-id table-field-id))
+	  (%make-unsafe-Getter-id/collected-thing type-id table-field-id))
 	 (REGISTER-SUB-STRUCT
 	  (%make-register-sub-struct-id type-id table-field-id))
 	 (FORGET-SUB-STRUCT
 	  (%make-forget-sub-struct-id type-id table-field-id)))
-      (let-values
-	  (((unsafe-getter-pointer
-	     unsafe-getter-pointer-owner?
-	     unsafe-getter-custom-destructor
-	     unsafe-getter-uid)
-	    (%make-unsafe-Getter-ids table-field-id)))
+      (let ((unsafe-getter-uid (%make-unsafe-Getter-id/uid table-field-id)))
 	#`(begin
 	    (define (REGISTER-SUB-STRUCT struct sub-struct)
 	      (hashtable-set! (TABLE-GETTER struct)
@@ -469,7 +456,23 @@
 	    (%id->id type-id (lambda (type-string)
 			       (string-append type-string "?/alive")))
 	    (%id->id type-id (lambda (type-string)
-			       (string-append "$live-" type-string "?")))))
+			       (string-append "$" type-string "-alive?")))))
+
+  (define (%make-argument-validator-pred-id type-id)
+    ;;Given an identifier  representing the struct type  name: return an
+    ;;identifier representing  the argument validation clause  using the
+    ;;type predicate.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       type-string)))
+
+  (define (%make-argument-validator-alive-id type-id)
+    ;;Given an identifier  representing the struct type  name: return an
+    ;;identifier representing  the argument validation clause  using the
+    ;;alive type predicate.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append type-string "/alive"))))
 
   (define (%make-unsafe-scheme-destructor-id type-id)
     ;;Given an identifier representing the struct type name return 1
@@ -478,54 +481,80 @@
     ;;1. The name of the unsafe destructor function.
     ;;
     (%id->id type-id (lambda (type-string)
-		       (string-append "$destroy-" type-string))))
+		       (string-append "$" type-string "-finalise"))))
 
-  (define (%make-unsafe-Getter-ids type-id)
-    ;;Given an identifier  representing the struct type  name return 3
-    ;;identifiers in the same context of TYPE-ID:
-    ;;
-    ;;1. The name of the unsafe getter for the field POINTER.
-    ;;
-    ;;2. The name of the unsafe getter for the field POINTER-OWNER?.
-    ;;
-    ;;3. The name of the unsafe getter for the field DESTRUCTOR.
-    ;;
-    (values (%id->id type-id (lambda (type-string)
-			       (string-append "$" type-string "-pointer")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "$" type-string "-pointer-owner?")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "$" type-string "-custom-destructor")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "$" type-string "-uid")))
-	    ))
+;;; --------------------------------------------------------------------
+;;; getter ids
 
-  (define (%make-unsafe-Setter-ids type-id)
-    ;;Given an identifier representing the struct type name return 3
-    ;;identifiers in the same context of TYPE-ID:
-    ;;
-    ;;1. The name of the unsafe setter for the field POINTER.
-    ;;
-    ;;2. The name of the unsafe setter for the field POINTER-OWNER?.
-    ;;
-    ;;3. The name of the unsafe setter for the field DESTRUCTOR.
-    ;;
-    (values (%id->id type-id (lambda (type-string)
-			       (string-append "$set-" type-string "-pointer!")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "$set-" type-string "-pointer-owner?!")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "$set-" type-string "-custom-destructor!")))
-	    ))
-
-  (define (%make-table-getter-id type-id table-field-id)
-    ;;Given an identifier representing the  struct type name return an
-    ;;identifier,  in the  same context  of TYPE-ID,  representing the
-    ;;name of the table getter for the field TABLE-FIELD-ID.
+  (define (%make-unsafe-Getter-id/pointer type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe getter for the field POINTER.
     ;;
     (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-table-of-"
-				      (symbol->string (syntax->datum table-field-id))))))
+		       (string-append "$" type-string "-pointer"))))
+
+  (define (%make-unsafe-Getter-id/pointer-owner? type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe getter for the field POINTER-OWNER?.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-pointer-owner?"))))
+
+  (define (%make-unsafe-Getter-id/custom-destructor type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe getter for the field CUSTOM-DESTRUCTOR.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-custom-destructor"))))
+
+  (define (%make-unsafe-Getter-id/uid type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe getter for the field UID.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-uid"))))
+
+  (define (%make-unsafe-Getter-id/collected-thing type-id collected-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the collection getter for the field COLLECTED-ID.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-collected-"
+				      (%id->string collected-id)))))
+
+;;; --------------------------------------------------------------------
+;;; setter ids
+
+  (define (%make-unsafe-Setter-id/pointer type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe setter for the field POINTER.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$set-" type-string "-pointer!"))))
+
+  (define (%make-unsafe-Setter-id/pointer-owner? type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe setter for the field POINTER-OWNER?.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$set-" type-string "-pointer-owner?!"))))
+
+  (define (%make-unsafe-Setter-id/custom-destructor type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe setter for the field CUSTOM-DESTRUCTOR.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$set-" type-string "-custom-destructor!"))))
+
+;;; --------------------------------------------------------------------
 
   (define (%make-table-field-id table-field)
     ;;Given  an identifier  representing  the name  of  a struct  type
@@ -533,7 +562,7 @@
     ;;field referencing the collecting hash table.
     ;;
     (%id->id table-field (lambda (field-string)
-			   (string-append "table-of-" field-string))))
+			   (string-append "collected-" field-string))))
 
   (define (%make-table-field-vector-getter-id type-id table-field-id)
     ;;Given an  identifier representing  the struct  type name  and an
@@ -586,6 +615,9 @@
     (datum->syntax src-id (string->symbol
 			   (string-maker
 			    (symbol->string (syntax->datum src-id))))))
+
+  (define (%id->string id)
+    (symbol->string (syntax->datum id)))
 
   (define (syntax->list stx)
     ;;Given a syntax  object STX holding a list, return  a proper list
