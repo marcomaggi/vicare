@@ -164,9 +164,8 @@
 	   (ALIVE-MSG		(string-append "expected alive \""
 					       type-string
 					       "\" struct as argument")))
-	(let-values
-	    (((pred pred/alive unsafe-alive-pred)
-	      (%make-pred-ids  type-id)))
+	(let ((pred		(%make-pred-id/type? type-id))
+	      (pred/alive	(%make-pred-id/alive-type? type-id)))
 	  #`(begin
 	      (define-argument-validation (PRED-VALIDATOR who obj)
 		(#,pred obj)
@@ -183,40 +182,43 @@
     ;;
     ;;2. The one that initialises the struct not to own the pointer.
     ;;
-    (let-values
-	(((maker maker/owner maker/not-owner)
-	  (%make-maker-ids type-id)))
-      (with-syntax
-	  (((TABLE-MAKER ...)
-	    (map (lambda (table-id)
-		   #'(make-eq-hashtable))
-	      table-field-ids))
-	   ((ARG ...)
-	    (if collecting-type
-		#'(collector-struct)
-	      '()))
-	   ((REGISTER-LAMBDA ...)
-	    (if collecting-type
-		#`(lambda (struct collector-struct)
-		    (#,(%make-register-sub-struct-id collecting-type type-id)
-		     collector-struct struct))
-	      '())))
-	#`(begin
-	    (define (#,maker/owner pointer ARG ...)
-	      ;;Build and return  a new data struct  instance owning the
-	      ;;POINTER.
-	      ;;
-	      (%simplified-maker pointer #t ARG ...))
-	    (define (#,maker/not-owner pointer ARG ...)
-	      ;;Build and return  a new data struct  instance not owning
-	      ;;the POINTER.
-	      ;;
-	      (%simplified-maker pointer #f ARG ...))
-	    (define (%simplified-maker pointer owner? ARG ...)
-	      (let ((struct (#,maker pointer owner? #f (gensym) ARG ... TABLE-MAKER ...)))
-		(REGISTER-LAMBDA struct collector-struct)
-		...
-		struct))))))
+    (define maker
+      (%make-maker-id/default type-id))
+    (define maker/owner
+      (%make-maker-id/owner type-id))
+    (define maker/not-owner
+      (%make-maker-id/not-owner type-id))
+    (define register-sub-struct
+      (if collecting-type
+	  (%make-register-sub-struct-id collecting-type type-id)
+	#f))
+    (with-syntax
+	(((TABLE-MAKER ...)	(map (lambda (table-id)
+				       #'(make-eq-hashtable))
+				  table-field-ids))
+	 ((ARG ...)		(if collecting-type
+				    #'(collector-struct)
+				  '()))
+	 ((REGISTER-LAMBDA ...)	(if collecting-type
+				    #`(lambda (struct collector-struct)
+					(#,register-sub-struct collector-struct struct))
+				  '())))
+      #`(begin
+	  (define (#,maker/owner pointer ARG ...)
+	    ;;Build and return  a new data struct  instance owning the
+	    ;;POINTER.
+	    ;;
+	    (%simplified-maker pointer #t ARG ...))
+	  (define (#,maker/not-owner pointer ARG ...)
+	    ;;Build and return  a new data struct  instance not owning
+	    ;;the POINTER.
+	    ;;
+	    (%simplified-maker pointer #f ARG ...))
+	  (define (%simplified-maker pointer owner? ARG ...)
+	    (let ((struct (#,maker pointer owner? #f (gensym) ARG ... TABLE-MAKER ...)))
+	      (REGISTER-LAMBDA struct collector-struct)
+	      ...
+	      struct)))))
 
   (define (%make-alive-pred-definitions type-id)
     ;;Return  a  syntax  object  representing the  definition  of  the
@@ -238,11 +240,10 @@
     ;;     (define ($live-gsasl? struct)
     ;;       (not (pointer-null? ($gsasl-pointer struct)))))
     ;;
-    (let-values
-	(((pred pred/alive unsafe-alive-pred)
-	  (%make-pred-ids  type-id))
-	 ((unsafe-getter-pointer)
-	  (%make-unsafe-Getter-id/pointer type-id)))
+    (let ((pred				(%make-pred-id/type? type-id))
+	  (pred/alive			(%make-pred-id/alive-type? type-id))
+	  (unsafe-alive-pred		(%make-pred-id/unsafe-alive? type-id))
+	  (unsafe-getter-pointer	(%make-unsafe-Getter-id/pointer type-id)))
       #`(begin
 	  (define (#,pred/alive obj)
 	    ;;Return true if OBJ is an instance of the data struct and
@@ -266,64 +267,67 @@
       ;;the referenced  foreign data  struct does  not have  a foreign
       ;;destructor function.
       ;;
-      (let-values
-	  (((unsafe-scheme-destructor)
-	    (%make-unsafe-scheme-destructor-id type-id))
-	   ((pred pred/alive unsafe-alive-pred)
-	    (%make-pred-ids type-id)))
-	(define unsafe-getter-pointer
-	  (%make-unsafe-Getter-id/pointer type-id))
-	(define unsafe-getter-pointer-owner?
-	  (%make-unsafe-Getter-id/pointer-owner? type-id))
-	(define unsafe-getter-custom-destructor
-	  (%make-unsafe-Getter-id/custom-destructor type-id))
-	(define unsafe-pointer-setter
-	  (%make-unsafe-Setter-id/pointer type-id))
+      (define unsafe-scheme-destructor
+	(%make-unsafe-finaliser-id type-id))
+      (define pred
+	(%make-pred-id/type? type-id))
+      (define pred/alive
+	(%make-pred-id/alive-type? type-id))
+      (define unsafe-alive-pred
+	(%make-pred-id/unsafe-alive? type-id))
+      (define unsafe-getter-pointer
+	(%make-unsafe-Getter-id/pointer type-id))
+      (define unsafe-getter-pointer-owner?
+	(%make-unsafe-Getter-id/pointer-owner? type-id))
+      (define unsafe-getter-custom-destructor
+	(%make-unsafe-Getter-id/custom-destructor type-id))
+      (define unsafe-pointer-setter
+	(%make-unsafe-Setter-id/pointer type-id))
+      (with-syntax
+	  ((STRUCT #'struct))
 	(with-syntax
-	    ((STRUCT #'struct))
-	  (with-syntax
-	      (((TABLE-DESTRUCTION-FORM ...)
-		(map (lambda (table-field-id)
-		       (%make-table-destruction #'STRUCT type-id table-field-id))
-		  table-field-ids))
-	       ((FOREIGN-DESTRUCTOR-CALL ...)
-		(%make-foreign-destructor-call #'STRUCT foreign-destructor
-					       unsafe-getter-pointer-owner?)))
-	    #`(begin
-		(define (#,unsafe-scheme-destructor STRUCT)
-		  ;;This  function  is  called by  the  proper  struct
-		  ;;destructor  function (if  any) or  by the  garbage
-		  ;;collector to finalise a  data struct instance.  It
-		  ;;is safe  to apply this function  multiple times to
-		  ;;the same STRUCT argument.
-		  ;;
-		  ;;The   referenced   foreign   data   structure   is
-		  ;;finalised, too, if STRUCT owns it.
-		  ;;
-		  ;;Notes:
-		  ;;
-		  ;;*  We  ignore  the  return value  of  the  foreign
-		  ;;  destructor function.
-		  ;;
-		  (when (#,unsafe-alive-pred STRUCT)
-		    ;;Apply the custom destructor to STRUCT.
-		    (cond ((#,unsafe-getter-custom-destructor STRUCT)
-			   => (lambda (custom-destructor)
-				(guard (E (else (void)))
-				  (custom-destructor STRUCT)))))
-		    ;;Finalise the  tables of subordinate  structs, if
-		    ;;any.
-		    TABLE-DESTRUCTION-FORM ...
-		    ;;Finalise the foreign data structure, if there is
-		    ;;a foreign destructor.
-		    FOREIGN-DESTRUCTOR-CALL ...
-		    ;;Nullify the pointer.
-		    (#,unsafe-pointer-setter STRUCT #f))
-		  ;;Always return #<void>.
-		  (void))
-		(module ()
-		  (set-rtd-destructor! (type-descriptor #,type-id)
-				       #,unsafe-scheme-destructor)))))))
+	    (((TABLE-DESTRUCTION-FORM ...)
+	      (map (lambda (table-field-id)
+		     (%make-table-destruction #'STRUCT type-id table-field-id))
+		table-field-ids))
+	     ((FOREIGN-DESTRUCTOR-CALL ...)
+	      (%make-foreign-destructor-call #'STRUCT foreign-destructor
+					     unsafe-getter-pointer-owner?)))
+	  #`(begin
+	      (define (#,unsafe-scheme-destructor STRUCT)
+		;;This  function  is  called by  the  proper  struct
+		;;destructor  function (if  any) or  by the  garbage
+		;;collector to finalise a  data struct instance.  It
+		;;is safe  to apply this function  multiple times to
+		;;the same STRUCT argument.
+		;;
+		;;The   referenced   foreign   data   structure   is
+		;;finalised, too, if STRUCT owns it.
+		;;
+		;;Notes:
+		;;
+		;;*  We  ignore  the  return value  of  the  foreign
+		;;  destructor function.
+		;;
+		(when (#,unsafe-alive-pred STRUCT)
+		  ;;Apply the custom destructor to STRUCT.
+		  (cond ((#,unsafe-getter-custom-destructor STRUCT)
+			 => (lambda (custom-destructor)
+			      (guard (E (else (void)))
+				(custom-destructor STRUCT)))))
+		  ;;Finalise the  tables of subordinate  structs, if
+		  ;;any.
+		  TABLE-DESTRUCTION-FORM ...
+		  ;;Finalise the foreign data structure, if there is
+		  ;;a foreign destructor.
+		  FOREIGN-DESTRUCTOR-CALL ...
+		  ;;Nullify the pointer.
+		  (#,unsafe-pointer-setter STRUCT #f))
+		;;Always return #<void>.
+		(void))
+	      (module ()
+		(set-rtd-destructor! (type-descriptor #,type-id)
+				     #,unsafe-scheme-destructor))))))
 
     (define (%make-table-destruction struct-id type-id table-field-id)
       (with-syntax
@@ -332,7 +336,7 @@
 	   (TABLE-FIELD-VECTOR-GETTER
 	    (%make-table-field-vector-getter-id type-id table-field-id))
 	   (SUB-DESTRUCTOR
-	    (%make-unsafe-scheme-destructor-id table-field-id)))
+	    (%make-unsafe-finaliser-id table-field-id)))
 	#`(let* ((sub-structs	(TABLE-FIELD-VECTOR-GETTER #,struct-id))
 		 (len		($vector-length sub-structs)))
 	    (do ((i 0 (+ 1 i)))
@@ -419,44 +423,72 @@
 	      (hashtable-delete! (TABLE-GETTER struct)
 				 (#,unsafe-getter-uid sub-struct)))))))
 
-  ;; ------------------------------------------------------------
+;;; --------------------------------------------------------------------
+;;; maker and finaliser ids
 
-  (define (%make-maker-ids type-id)
-    ;;Given an identifier  representing the struct type  name return 3
-    ;;identifiers in the same context of TYPE-ID:
+  (define (%make-maker-id/default type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the default maker function.
     ;;
-    ;;1. The name of the default struct maker.
-    ;;
-    ;;2. The name of the struct maker for structs owning the pointer.
-    ;;
-    ;;3.  The name  of the  struct maker  for structs  not owning  the
-    ;;pointer.
-    ;;
-    (values (%id->id type-id (lambda (type-string)
-			       (string-append "make-" type-string)))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "make-" type-string "/owner")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "make-" type-string "/not-owner")))))
+    (%id->id type-id (lambda (type-string)
+		       (string-append "make-" type-string))))
 
-  (define (%make-pred-ids type-id)
-    ;;Given an identifier  representing the struct type  name return 3
-    ;;identifiers in the same context of TYPE-ID:
+  (define (%make-maker-id/owner type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the maker function specialised to build structures "owning" the
+    ;;referenced foreign structure.
     ;;
-    ;;1. The name of the default struct predicate.
+    (%id->id type-id (lambda (type-string)
+		       (string-append "make-" type-string "/owner"))))
+
+  (define (%make-maker-id/not-owner type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the maker function specialised to build structures "not owning"
+    ;;the referenced foreign structure.
     ;;
-    ;;2. The name  of the struct predicate cheking that  the struct is
-    ;;   also alive.
+    (%id->id type-id (lambda (type-string)
+		       (string-append "make-" type-string "/not-owner"))))
+
+  (define (%make-unsafe-finaliser-id type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe Scheme finaliser function.
     ;;
-    ;;3. The name of the  unsafe predicate expecting a struct instance
-    ;;   and checking if the pointer field contains a NULL pointer.
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-finalise"))))
+
+;;; --------------------------------------------------------------------
+;;; type predicate ids
+
+  (define (%make-pred-id/type? type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the default type predicate.
     ;;
-    (values (%id->id type-id (lambda (type-string)
-			       (string-append type-string "?")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append type-string "?/alive")))
-	    (%id->id type-id (lambda (type-string)
-			       (string-append "$" type-string "-alive?")))))
+    (%id->id type-id (lambda (type-string)
+		       (string-append type-string "?"))))
+
+  (define (%make-pred-id/alive-type? type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the type and alive predicate.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append type-string "?/alive"))))
+
+  (define (%make-pred-id/unsafe-alive? type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe alive predicate.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-alive?"))))
+
+;;; --------------------------------------------------------------------
+;;; argument validation ids
 
   (define (%make-argument-validator-pred-id type-id)
     ;;Given an identifier  representing the struct type  name: return an
@@ -473,15 +505,6 @@
     ;;
     (%id->id type-id (lambda (type-string)
 		       (string-append type-string "/alive"))))
-
-  (define (%make-unsafe-scheme-destructor-id type-id)
-    ;;Given an identifier representing the struct type name return 1
-    ;;identifier in the same context of TYPE-ID:
-    ;;
-    ;;1. The name of the unsafe destructor function.
-    ;;
-    (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-finalise"))))
 
 ;;; --------------------------------------------------------------------
 ;;; getter ids
