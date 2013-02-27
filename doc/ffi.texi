@@ -2,6 +2,10 @@
 @chapter Foreign functions interface
 
 
+@cindex Library @library{vicare ffi}
+@cindex @library{vicare ffi}, library
+
+
 The library @library{vicare ffi} interfaces with the host operating
 system and other external libraries exposing a C language interface; it
 is suggested to import the @ffi{} library with the prefix @code{ffi.},
@@ -27,6 +31,7 @@ library @library{ikarus system $foreign}.
 * ffi dl::                      Accessing shared libraries.
 * ffi shared::                  System-agnostic shared libraries @api{}.
 * ffi call::                    Callouts and callbacks.
+* ffi foreign wrapper::         Wrapper for foreign pointers.
 @end menu
 
 @c page
@@ -700,5 +705,80 @@ Exact integers in the range for @code{off_t}.
 @item ptrdiff_t
 Exact integers in the range for @code{ptrdiff_t}.
 @end table
+
+@c page
+@node ffi foreign wrapper
+@section Wrapper for foreign pointers
+
+
+@cindex Library @library{vicare ffi foreign-pointer-wrapper}
+@cindex @library{vicare ffi foreign-pointer-wrapper}, library
+
+
+The library @library{vicare ffi foreign-pointer-wrapper} proposes a
+Scheme data struct definition, and related facilities, to be used to
+wrap Scheme pointer objects referencing data structures defined by
+foreign libraries.
+
+The following bindings are exported by the library @library{vicare ffi
+foreign-pointer-wrapper}.
+
+
+@deffn Syntax define-struct-wrapping-foreign-pointer @meta{type-id} @meta{destructor-clause} @meta{collecting-clause} @meta{collected-clause} @dots{}
+@deffnx {Auxiliary Syntax} foreign-destructor
+@deffnx {Auxiliary Syntax} collecting-struct
+@deffnx {Auxiliary Syntax} collected-struct-type
+Wrapper for @func{define-struct} from @library{vicare} defining a struct
+type with some opaque fields.  @meta{type-id} must be an identifier
+representing the name of the struct type.
+
+All the defined bindings are prefixed by the identifier @meta{type-id}
+or by @code{$} followed by the identifier @meta{type-id}.
+
+Two categories of struct instances exist: those who @strong{own} the
+foreign data structure referenced by the pointer object; those who
+@strong{do not} own the foreign data structure referenced by the pointer
+object.  There are situations where the latter data structures are
+unsafe to use; @value{PRJNAME} discharges on the application the
+responsibility of using or not using such structures.
+
+@table @meta
+@item destructor-clause
+It must have one of the forms:
+
+@example
+(foreign-destructor #f)
+(foreign-destructor @meta{destructor-id})
+@end example
+
+@noindent
+where @meta{destructor-id} must be an identifier bound to the foreign
+data structure destructor Scheme function; when the value in the clause
+is @false{}: the data struct has no destructor function.
+
+Whenever a struct instance owning the pointer object is finalised: the
+referenced destructor function is applied to the Scheme data struct; its
+responsibility is to extract the pointer object and apply to it whatever
+finalisation procedure the foreign library provides.
+
+@item collecting-clause
+It must have the form:
+
+@example
+(foreign-destructor #f)
+(foreign-destructor @meta{destructor-id})
+@end example
+
+@noindent
+where @meta{destructor-id} must be an identifier bound to the foreign
+data structure destructor Scheme function; when the value in the clause
+is @false{}: the data struct has no destructor function.
+
+@item collected-clause
+@end table
+@end deffn
+
+
+
 
 @c end of file

@@ -53,6 +53,10 @@
     (ffi.foreign-destructor #f)
     (ffi.collecting-type #f))
 
+  ;; Printer check.
+  (when #f
+    (check-pretty-print (make-alpha/owner (integer->pointer 123))))
+
 ;;; --------------------------------------------------------------------
 ;;; owner constructor
 
@@ -237,6 +241,255 @@
 		 #t)
 		(else E))
 	(let* ((P (integer->pointer 123))
+	       (S (make-alpha/owner P))
+	       (who 'test))
+	  ($alpha-finalise S)
+	  (with-arguments-validation (who)
+	      ((alpha/alive	S))
+	    #t)))
+    => #t)
+
+  (collect))
+
+
+(parametrise ((check-test-name		'destructor)
+	      (struct-guardian-logger	#f))
+
+  ;;Type definition:
+  ;;
+  ;;* With foreign destructor.
+  ;;
+  ;;* No collector struct.
+  ;;
+  ;;* No collected structs.
+  ;;
+  (ffi.define-struct-wrapping-foreign-pointer alpha
+    (ffi.foreign-destructor foreign-alpha-destructor)
+    (ffi.collecting-type #f))
+
+  (define verbose? #f)
+
+  (define (foreign-alpha-destructor S)
+    (when (or #f verbose?)
+      (check-pretty-print (list 'enter-foreign-destructor S)))
+    (ffi.free ($alpha-pointer S))
+    (when (or #f verbose?)
+      (check-pretty-print (list 'leave-foreign-destructor S))))
+
+  ;; Printer check.
+  (when (or #f verbose?)
+    (check-pretty-print (make-alpha/owner (ffi.malloc* 1024))))
+
+;;; --------------------------------------------------------------------
+;;; owner constructor
+
+  (check	;owner constructor
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	(alpha? S))
+    => #t)
+
+  (check	;alive predicate
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	(alpha?/alive S))
+    => #t)
+
+  (check	;unsafe alive predicate
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	($alpha-alive? S))
+    => #t)
+
+  (check	;owner constructor, getter
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	(alpha-pointer-owner? S))
+    => #t)
+
+  (check	;owner constructor, unsafe getter
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	($alpha-pointer-owner? S))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; not-owner constructor
+
+  (check	;not owner constructor
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/not-owner P)))
+	(alpha? S))
+    => #t)
+
+  (check	;alive predicate
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/not-owner P)))
+	(alpha?/alive S))
+    => #t)
+
+  (check	;unsafe alive predicate
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/not-owner P)))
+	($alpha-alive? S))
+    => #t)
+
+  (check	;not-owner constructor, getter
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/not-owner P)))
+	(alpha-pointer-owner? S))
+    => #f)
+
+  (check	;not-owner constructor, unsafe getter
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/not-owner P)))
+	($alpha-pointer-owner? S))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; unsafe destructor, owner struct
+
+  (check	;unsafe destructor invocation
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	($alpha-finalise S))
+    => (void))
+
+  (check	;unsafe destructor invocation, twice
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	($alpha-finalise S)
+	($alpha-finalise S))
+    => (void))
+
+  (check	;unsafe destructor invocation, dead struct safe pred
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	($alpha-finalise S)
+	(alpha?/alive S))
+    => #f)
+
+  (check	;unsafe destructor invocation, dead struct unsafe pred
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	($alpha-finalise S)
+	($alpha-alive? S))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; unsafe destructor, not owner struct
+
+  (check	;unsafe destructor invocation
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/not-owner P)))
+	($alpha-finalise S)
+	(list (alpha?/alive S)
+	      ($alpha-alive? S)
+	      (ffi.pointer-null? P)))
+    => '(#f #f #f))
+
+  (check	;owner struct finalised before not owner struct
+      (let* ((P (ffi.malloc* 1024))
+	     (Q (ffi.pointer-clone P))
+	     (S (make-alpha/owner P))
+	     (R (make-alpha/not-owner Q)))
+	($alpha-finalise S)
+	(list (alpha?/alive S)
+	      ($alpha-alive? S)
+	      (ffi.pointer-null? P)
+	      (alpha?/alive R)
+	      ($alpha-alive? R)
+	      (ffi.pointer-null? Q)))
+    => '(#f #f #t #t #t #f))
+
+;;; --------------------------------------------------------------------
+;;; custom destructor
+
+  (check	;custom destructor invocation
+      (with-result
+       (let* ((P (ffi.malloc* 1024))
+	      (S (make-alpha/owner P))
+	      (D (lambda (S)
+		   (add-result (pointer? (alpha-pointer S))))))
+	 (set-alpha-custom-destructor! S D)
+	 ($alpha-finalise S)))
+    => `(,(void) (#t)))
+
+  (check	;custom  destructor   invocation,  invoking   twice  the
+		;destructor
+      (with-result
+       (let* ((P (ffi.malloc* 1024))
+	      (S (make-alpha/owner P))
+	      (D (lambda (S)
+		   (add-result (pointer? (alpha-pointer S))))))
+	 (set-alpha-custom-destructor! S D)
+	 ($alpha-finalise S)
+	 ($alpha-finalise S)))
+    => `(,(void) (#t)))
+
+;;; --------------------------------------------------------------------
+;;; UID gensym
+
+  (check	;safe getter
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	(symbol? (alpha-uid S)))
+    => #t)
+
+  (check	;unsafe getter
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P)))
+	(symbol? ($alpha-uid S)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; argument validators
+
+  (check	;struct validator, success
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P))
+	     (who 'test))
+	(with-arguments-validation (who)
+	    ((alpha		S))
+	  #t))
+    => #t)
+
+  (check	;struct validator, failure
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(let ((S 123)
+	      (who 'test))
+	  (with-arguments-validation (who)
+	      ((alpha		S))
+	    #t)))
+    => #t)
+
+  (check	;alive struct validator
+      (let* ((P (ffi.malloc* 1024))
+	     (S (make-alpha/owner P))
+	     (who 'test))
+	(with-arguments-validation (who)
+	    ((alpha/alive	S))
+	  #t))
+    => #t)
+
+  (check	;alive struct validator, failure
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(let ((S 123)
+	      (who 'test))
+	  (with-arguments-validation (who)
+	      ((alpha/alive	S))
+	    #f)))
+    => #t)
+
+  (check	;alive struct validator, not alive failure
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else E))
+	(let* ((P (ffi.malloc* 1024))
 	       (S (make-alpha/owner P))
 	       (who 'test))
 	  ($alpha-finalise S)
