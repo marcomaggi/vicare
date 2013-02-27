@@ -872,33 +872,6 @@ If the definition of @meta{type-id} included a clause
 value: this maker function accepts two arguments, the second being the
 instance of type @meta{collecting-id}.
 
-@item (@meta{type-id}? @var{obj})
-Type predicate function; it returns @true{} if @var{obj} is an instance
-of type @meta{type-id}, otherwise it returns @false{}.
-
-@item (@meta{type-id}?/alive @var{obj})
-Type and liveness predicate function; it returns @true{} if @var{obj} is
-an instance of type @meta{type-id} and its @var{pointer} object has not
-yet been finalised, otherwise it returns @false{}.
-
-@quotation
-@strong{NOTE} The returned information really represents the status of
-the foreign data structure, only for struct instances that @strong{do
-own} the foreign pointer.
-@end quotation
-
-@item ($@meta{type-id}-alive? @var{struct})
-Unsafe liveness predicate function; it returns @true{} if @var{struct}
-has a @var{pointer} object not yet finalised, otherwise it returns
-@false{}.  The argument to this function @strong{must} be an instance of
-@meta{type-id}, else the behaviour is undefined.
-
-@quotation
-@strong{NOTE} The returned information really represents the status of
-the foreign data structure, only for struct instances that @strong{do
-own} the foreign pointer.
-@end quotation
-
 @item ($@meta{type-id}-finalise @var{struct})
 Perform the finalisation procedure for this struct instance; it is safe
 to apply this finalisation function multiple times to the same
@@ -935,6 +908,43 @@ and discarded.
 The internal field holding the @var{pointer} object is reset to
 @false{}, to mark this struct instance as already finalised.
 @end enumerate
+
+@item (@meta{type-id}? @var{obj})
+Type predicate function; it returns @true{} if @var{obj} is an instance
+of type @meta{type-id}, otherwise it returns @false{}.
+
+@item (@meta{type-id}?/alive @var{obj})
+Type and liveness predicate function; it returns @true{} if @var{obj} is
+an instance of type @meta{type-id} and its @var{pointer} object has not
+yet been finalised, otherwise it returns @false{}.
+
+@quotation
+@strong{NOTE} The returned information really represents the status of
+the foreign data structure, only for struct instances that @strong{do
+own} the foreign pointer.
+@end quotation
+
+@item ($@meta{type-id}-alive? @var{struct})
+Unsafe liveness predicate function; it returns @true{} if @var{struct}
+has a @var{pointer} object not yet finalised, otherwise it returns
+@false{}.  The argument to this function @strong{must} be an instance of
+@meta{type-id}, else the behaviour is undefined.
+
+@quotation
+@strong{NOTE} The returned information really represents the status of
+the foreign data structure, only for struct instances that @strong{do
+own} the foreign pointer.
+@end quotation
+
+@item (@meta{type-id} @var{obj})
+Validation form to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} satisfies
+the predicate @code{@meta{type-id}?}.
+
+@item (@meta{type-id}/alive @var{obj})
+Validation form to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} satisfies
+the predicate @code{@meta{type-id}?/alive}.
 @end table
 
 

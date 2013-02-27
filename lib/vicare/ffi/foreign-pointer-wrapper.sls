@@ -85,7 +85,8 @@
 	      (ALIVE-PRED-DEFINITIONS
 	       (%make-alive-pred-definitions type-id))
 	      (DESTRUCTOR-DEFINITION
-	       (%make-struct-destructor type-id foreign-destructor collected-field-ids))
+	       (%make-struct-finaliser type-id foreign-destructor
+				       collecting-type collected-field-ids))
 	      (PRINTER-DEFINITION
 	       (%make-struct-printer type-id))
 	      ((TABLE-FIELD-VECTOR-GETTER ...)
@@ -269,9 +270,10 @@
 	    (and (#,unsafe-getter-pointer struct)
 		 #t)))))
 
-  (module (%make-struct-destructor)
+  (module (%make-struct-finaliser)
 
-    (define (%make-struct-destructor type-id foreign-destructor collected-field-ids)
+    (define (%make-struct-finaliser type-id foreign-destructor
+				    collecting-type collected-field-ids)
       ;;Return  a  syntax  object   representing  the  definition  and
       ;;registration of the Scheme  destructor function for the Scheme
       ;;data struct.  The Scheme  destructor function exists even when
@@ -301,6 +303,8 @@
 	      (map (lambda (collected-field-id)
 		     (%make-table-destruction #'STRUCT type-id collected-field-id))
 		collected-field-ids))
+	     ((UNREGISTER-FROM-COLLECTOR ...)
+	      (%make-unregistration-from-collector #'STRUCT type-id collecting-type))
 	     ((FOREIGN-DESTRUCTOR-CALL ...)
 	      (%make-foreign-destructor-call #'STRUCT foreign-destructor
 					     unsafe-getter-pointer-owner?)))
@@ -326,6 +330,9 @@
 			 => (lambda (custom-destructor)
 			      (guard (E (else (void)))
 				(custom-destructor STRUCT)))))
+		  ;;Unregister this struct  instance from its collector,
+		  ;;if any.
+		  UNREGISTER-FROM-COLLECTOR ...
 		  ;;Finalise the  tables of subordinate  structs, if
 		  ;;any.
 		  TABLE-DESTRUCTION-FORM ...
@@ -356,6 +363,18 @@
 	      (guard (E (else (void)))
 		(SUB-DESTRUCTOR ($vector-ref sub-structs i)))))))
 
+    (define (%make-unregistration-from-collector struct-id type-id collecting-type)
+      (if (identifier? collecting-type)
+	  (with-syntax
+	      ((COLLECTOR-GETTER
+		(%make-unsafe-Getter-id/collector type-id))
+	       (FORGET-SUB-STRUCT
+		(%make-forget-sub-struct-id collecting-type type-id)))
+	    #`(cond ((COLLECTOR-GETTER #,struct-id)
+		     => (lambda (collector)
+			  (FORGET-SUB-STRUCT collector #,struct-id)))))
+	'()))
+
     (define (%make-foreign-destructor-call struct-id foreign-destructor-id
 					   unsafe-getter-pointer-owner?)
       ;;Return  a  syntax object  representing  the  application of  the
@@ -369,7 +388,7 @@
 		 (#,foreign-destructor-id #,struct-id))))
 	'()))
 
-    #| end of module: %make-struct-destructor |# )
+    #| end of module: %make-struct-finaliser |# )
 
   (define (%make-struct-printer type-id)
     ;;Return  a   syntax  object   representing  the   definition  and
@@ -568,6 +587,15 @@
 		       (string-append "$" type-string "-collected-"
 				      (%id->string collected-id)))))
 
+  (define (%make-unsafe-Getter-id/collector type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe getter for the field COLLECTOR.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "$" type-string "-collector"))))
+
+
 ;;; --------------------------------------------------------------------
 ;;; setter ids
 
@@ -596,6 +624,11 @@
 		       (string-append "$set-" type-string "-custom-destructor!"))))
 
 ;;; --------------------------------------------------------------------
+;;; collector struct ids
+
+
+;;; --------------------------------------------------------------------
+;;; collected struct ids
 
   (define (%make-collected-field-id table-field)
     ;;Given  an identifier  representing  the name  of  a struct  type
