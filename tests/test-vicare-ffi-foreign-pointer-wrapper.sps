@@ -49,9 +49,9 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-struct-wrapping-foreign-pointer alpha
+  (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor #f)
-    (ffi.collecting-type #f))
+    (ffi.collecting-struct-type #f))
 
   ;; Printer check.
   (when #f
@@ -263,9 +263,9 @@
   ;;
   ;;* No collected structs.
   ;;
-  (ffi.define-struct-wrapping-foreign-pointer alpha
+  (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor foreign-alpha-destructor)
-    (ffi.collecting-type #f))
+    (ffi.collecting-struct-type #f))
 
   (define verbose? #f)
 
@@ -507,5 +507,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'ffi.define-struct-wrapping-foreign-pointer 'scheme-indent-function 1)
+;; eval: (put 'ffi.define-foreign-pointer-wrapper 'scheme-indent-function 1)
 ;; End:

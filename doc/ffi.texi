@@ -720,20 +720,27 @@ Scheme data struct definition, and related facilities, to be used to
 wrap Scheme pointer objects referencing data structures defined by
 foreign libraries.
 
+@menu
+* ffi foreign wrapper syntax::  Defining wrapper structures.
+* ffi foreign wrapper binds::   Defined bindings.
+@end menu
+
+@c page
+@node ffi foreign wrapper syntax
+@subsection Defining wrapper structures
+
+
 The following bindings are exported by the library @library{vicare ffi
 foreign-pointer-wrapper}.
 
 
-@deffn Syntax define-struct-wrapping-foreign-pointer @meta{type-id} @meta{destructor-clause} @meta{collecting-clause} @meta{collected-clause} @dots{}
+@deffn Syntax define-foreign-pointer-wrapper @meta{type-id} @meta{destructor-clause} @meta{collecting-clause} @meta{collected-clause} @dots{}
 @deffnx {Auxiliary Syntax} foreign-destructor
-@deffnx {Auxiliary Syntax} collecting-struct
+@deffnx {Auxiliary Syntax} collecting-struct-type
 @deffnx {Auxiliary Syntax} collected-struct-type
 Wrapper for @func{define-struct} from @library{vicare} defining a struct
 type with some opaque fields.  @meta{type-id} must be an identifier
 representing the name of the struct type.
-
-All the defined bindings are prefixed by the identifier @meta{type-id}
-or by @code{$} followed by the identifier @meta{type-id}.
 
 Two categories of struct instances exist: those who @strong{own} the
 foreign data structure referenced by the pointer object; those who
@@ -765,20 +772,170 @@ finalisation procedure the foreign library provides.
 It must have the form:
 
 @example
-(foreign-destructor #f)
-(foreign-destructor @meta{destructor-id})
+(collecting-struct-type #f)
+(collecting-struct-type @meta{collecting-id})
 @end example
 
 @noindent
-where @meta{destructor-id} must be an identifier bound to the foreign
-data structure destructor Scheme function; when the value in the clause
-is @false{}: the data struct has no destructor function.
+where @meta{collecting-id} must be an identifier representing the name
+of another data struct type defined with this syntax; when the value of
+the clause is @false{}: @meta{type-id} has no collecting struct type.
+
+Instances of @meta{type-id} are meant to be, in some way, subordinate to
+@meta{collecting-id}; when building a new instance of type
+@meta{type-id}, it is possible to specify an instance of type
+@meta{collecting-id} that ``collects'' it:
+
+@itemize
+@item
+Whenever the instance of type @meta{collecting-id} is finalised: the
+collected instances of type @meta{type-id} are finalised too.
+
+@item
+Whenever the instance of type @meta{type-id} is finalised: it
+unregisters itself from the collection in the instance of type
+@meta{collecting-id}.
+@end itemize
 
 @item collected-clause
+These clauses are optional and can be present in any number.  When used,
+they must have the form:
+
+@example
+(collected-struct-type @meta{collected-id})
+@end example
+
+@noindent
+where @meta{collected-id} must be an identifier representing the name of
+another data struct type defined with this syntax.
+
+Instances of @meta{collected-id} are meant to be, in some way,
+subordinate to @meta{type-id}; when building a new insance of type
+@meta{collected-id}, it is possible to specify an instance of
+@meta{type-id} that ``collects'' it:
+
+@itemize
+@item
+Whenever the instance of type @meta{type-id} is finalised: the collected
+instances of type @meta{collected-id} are finalised too.
+
+@item
+Whenever the instance of type @meta{collected-id} is finalised: it
+unregisters itself from the collection in the instance of type
+@meta{type-id}.
+@end itemize
 @end table
 @end deffn
 
+@c page
+@node ffi foreign wrapper binds
+@subsection Defined bindings
 
+
+The syntax @func{define-foreign-pointer-wrapper} defines a number of
+bindings associated to the struc type; all the defined bindings are
+prefixed by the identifier @meta{type-id} or by @code{$} followed by the
+identifier @meta{type-id}.
+
+
+@table @code
+@item (make-@meta{type-id} @meta{arg} ...)
+The default maker of struct instances.  This should never be used.
+
+@item (make-@meta{type-id}/owner @var{pointer})
+@itemx (make-@meta{type-id}/owner @var{pointer} @var{collector})
+Build and return a new struct instance of type @meta{type-id} wrapping
+the pointer object @var{pointer}; the returned instance @strong{owns}
+the @var{pointer} object.
+
+If the definition of @meta{type-id} included a clause
+@code{collecting-struct-type} with value @false{}: this maker function
+accepts a single argument.
+
+If the definition of @meta{type-id} included a clause
+@code{collecting-struct-type} with an identifier @meta{collecting-id} as
+value: this maker function accepts two arguments, the second being the
+instance of type @meta{collecting-id}.
+
+@item (make-@meta{type-id}/not-owner @var{pointer})
+@itemx (make-@meta{type-id}/not-owner @var{pointer} @var{collector})
+Build and return a new struct instance of type @meta{type-id} wrapping
+the pointer object @var{pointer}; the returned instance @strong{does not
+own} the @var{pointer} object.
+
+If the definition of @meta{type-id} included a clause
+@code{collecting-struct-type} with value @false{}: this maker function
+accepts a single argument.
+
+If the definition of @meta{type-id} included a clause
+@code{collecting-struct-type} with an identifier @meta{collecting-id} as
+value: this maker function accepts two arguments, the second being the
+instance of type @meta{collecting-id}.
+
+@item (@meta{type-id}? @var{obj})
+Type predicate function; it returns @true{} if @var{obj} is an instance
+of type @meta{type-id}, otherwise it returns @false{}.
+
+@item (@meta{type-id}?/alive @var{obj})
+Type and liveness predicate function; it returns @true{} if @var{obj} is
+an instance of type @meta{type-id} and its @var{pointer} object has not
+yet been finalised, otherwise it returns @false{}.
+
+@quotation
+@strong{NOTE} The returned information really represents the status of
+the foreign data structure, only for struct instances that @strong{do
+own} the foreign pointer.
+@end quotation
+
+@item ($@meta{type-id}-alive? @var{struct})
+Unsafe liveness predicate function; it returns @true{} if @var{struct}
+has a @var{pointer} object not yet finalised, otherwise it returns
+@false{}.  The argument to this function @strong{must} be an instance of
+@meta{type-id}, else the behaviour is undefined.
+
+@quotation
+@strong{NOTE} The returned information really represents the status of
+the foreign data structure, only for struct instances that @strong{do
+own} the foreign pointer.
+@end quotation
+
+@item ($@meta{type-id}-finalise @var{struct})
+Perform the finalisation procedure for this struct instance; it is safe
+to apply this finalisation function multiple times to the same
+@var{struct} instance: the first time the finalisation takes place,
+subsequent times nothing happens.  The argument to this function
+@strong{must} be an instance of @meta{type-id}, else the behaviour is
+undefined.
+
+The finalisation procedures involves the following:
+
+@enumerate
+@item
+If a custom destructor function has been registered: it is applied to
+@var{struct} before any finalisation takes place.
+
+@item
+If @var{struct} has a collecting struct @var{collector}: @var{struct} is
+unregistered from @var{collector}.
+
+@item
+If @var{struct} collects instances of another type: all the collected
+instances are finalised by invoking their unsafe finalisation functions;
+any exception raised by these finalisation functions is catched by
+@func{guard} and discarded.
+
+@item
+If a foreign destructor function @meta{destructor-id} was specified in
+the definition of @meta{type-id} and this struct instance owns the
+pointer object: the foreign destructor is applied to @var{struct}; any
+exception raised by the destructor function is catched by @func{guard}
+and discarded.
+
+@item
+The internal field holding the @var{pointer} object is reset to
+@false{}, to mark this struct instance as already finalised.
+@end enumerate
+@end table
 
 
 @c end of file

@@ -28,12 +28,12 @@
 (library (vicare ffi foreign-pointer-wrapper)
   (export
 
-    define-struct-wrapping-foreign-pointer
+    define-foreign-pointer-wrapper
 
     ;; auxiliary syntaxes
     foreign-destructor
-    collecting-type
-    table-field)
+    collecting-struct-type
+    collected-struct-type)
   (import (vicare)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
@@ -42,29 +42,38 @@
 
   (define-auxiliary-syntaxes
     foreign-destructor
-    collecting-type
-    table-field)
+    collecting-struct-type
+    collected-struct-type)
 
 
-(define-syntax* (define-struct-wrapping-foreign-pointer stx)
+(define-syntax* (define-foreign-pointer-wrapper stx)
   (define (main stx)
     (syntax-case stx (foreign-destructor
 		      collecting-struct-type
-		      collected-structs-type)
+		      collected-struct-type)
       ((_ ?type-id
 	  (foreign-destructor ?foreign-destructor)
 	  (collecting-type ?collecting-type)
 	  (table-field ?collected-field-id)
 	  ...)
-       (let ((type-id		#'?type-id)
-	     ;;Normalisation:  either #f  or a  syntax object  holding a
-	     ;;non-#f expression.
-	     (collecting-type	(let ((ct #'?collecting-type))
-				  (if (syntax->datum ct)
-				      ct
-				    #f)))
-	     (collected-field-ids	(syntax->list #'(?collected-field-id ...))))
-	 (%validate-input type-id collecting-type collected-field-ids)
+       (let ((type-id #'?type-id))
+	 ;;Normalisation: either #f or a  syntax object holding a non-#f
+	 ;;expression.
+	 (define foreign-destructor
+	   (let ((ct #'?foreign-destructor))
+	     (if (syntax->datum ct)
+		 ct
+	       #f)))
+	 ;;Normalisation: either #f or a  syntax object holding a non-#f
+	 ;;expression.
+	 (define collecting-type
+	   (let ((ct #'?collecting-type))
+	     (if (syntax->datum ct)
+		 ct
+	       #f)))
+	 (define collected-field-ids
+	   (syntax->list #'(?collected-field-id ...)))
+	 (%validate-input type-id foreign-destructor collecting-type collected-field-ids)
 	 (with-syntax
 	     ((STRUCT-DEFINITION
 	       (%make-struct-definition type-id collecting-type collected-field-ids))
@@ -76,7 +85,7 @@
 	      (ALIVE-PRED-DEFINITIONS
 	       (%make-alive-pred-definitions type-id))
 	      (DESTRUCTOR-DEFINITION
-	       (%make-struct-destructor type-id #'?foreign-destructor collected-field-ids))
+	       (%make-struct-destructor type-id foreign-destructor collected-field-ids))
 	      (PRINTER-DEFINITION
 	       (%make-struct-printer type-id))
 	      ((TABLE-FIELD-VECTOR-GETTER ...)
@@ -344,7 +353,8 @@
 	    (do ((i 0 (+ 1 i)))
 		((= i len)
 		 (hashtable-clear! (TABLE-GETTER #,struct-id)))
-	      (SUB-DESTRUCTOR ($vector-ref sub-structs i))))))
+	      (guard (E (else (void)))
+		(SUB-DESTRUCTOR ($vector-ref sub-structs i)))))))
 
     (define (%make-foreign-destructor-call struct-id foreign-destructor-id
 					   unsafe-getter-pointer-owner?)
@@ -355,7 +365,8 @@
       ;;
       (if (identifier? foreign-destructor-id)
 	  #`((when (#,unsafe-getter-pointer-owner? #,struct-id)
-	       (#,foreign-destructor-id #,struct-id)))
+	       (guard (E (else (void)))
+		 (#,foreign-destructor-id #,struct-id))))
 	'()))
 
     #| end of module: %make-struct-destructor |# )
@@ -631,7 +642,7 @@
 
   ;; ------------------------------------------------------------
 
-  (define (%validate-input type-id collecting-type collected-field-ids)
+  (define (%validate-input type-id foreign-destructor collecting-type collected-field-ids)
     (unless (identifier? type-id)
       (%synner "expected identifier as struct type name" type-id))
     (unless (or (not collecting-type)
@@ -663,7 +674,7 @@
   (define (%synner message subform)
     (syntax-violation who message stx subform))
 
-  (define who 'define-struct-wrapping-foreign-pointer)
+  (define who 'define-foreign-pointer-wrapper)
 
   (main stx))
 
