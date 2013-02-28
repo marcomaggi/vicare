@@ -777,14 +777,14 @@ It must have one of the forms:
 @end example
 
 @noindent
-where @meta{collector-id} must be an identifier representing the name
-of another data struct type defined with this syntax; when the value of
-the clause is @false{}: @meta{type-id} has no collecting struct type.
+where @meta{collector-id} must be an identifier representing the name of
+another data struct type defined with this syntax; when the value of the
+clause is @false{}: @meta{type-id} has no collector struct type.
 
 Instances of @meta{type-id} are meant to be, in some way, subordinate to
 @meta{collector-id}; when building a new instance of type
-@meta{type-id}, it is possible to specify an instance of type
-@meta{collector-id} that ``collects'' it:
+@meta{type-id}, it is possible, but not mandatory, to specify an
+instance of type @meta{collector-id} that ``collects'' it:
 
 @itemize
 @item
@@ -798,7 +798,7 @@ unregisters itself from the collection in the instance of type
 @end itemize
 
 @item collected-clause
-These clauses are optional and can be present in any number.  When used,
+These clauses are optional and can be present in any number; when used,
 they must have the form:
 
 @example
@@ -811,8 +811,8 @@ another data struct type defined with this syntax.
 
 Instances of @meta{collected-id} are meant to be, in some way,
 subordinate to @meta{type-id}; when building a new insance of type
-@meta{collected-id}, it is possible to specify an instance of
-@meta{type-id} that ``collects'' it:
+@meta{collected-id}, it is possible, but not mandatory, to specify an
+instance of @meta{type-id} that ``collects'' it:
 
 @itemize
 @item
@@ -833,27 +833,25 @@ unregisters itself from the collection in the instance of type
 
 
 The syntax @func{define-foreign-pointer-wrapper} defines a number of
-bindings associated to the struc type; all the defined bindings are
+bindings associated to the struct type; all the defined bindings are
 prefixed by the identifier @meta{type-id} or by @code{$} followed by the
 identifier @meta{type-id}.
 
+Here only the bindings in the public @api{} are documented:
 
 @table @code
-@item (make-@meta{type-id} @meta{arg} ...)
-The default maker of struct instances.  This should never be used.
-
 @item (make-@meta{type-id}/owner @var{pointer})
 @itemx (make-@meta{type-id}/owner @var{pointer} @var{collector})
 Build and return a new struct instance of type @meta{type-id} wrapping
 the pointer object @var{pointer}; the returned instance @strong{owns}
 the @var{pointer} object.
 
-If the definition of @meta{type-id} included a clause
-@code{collecting-struct-type} with value @false{}: this maker function
+If the definition of @meta{type-id} includes a clause
+@code{collector-struct-type} with value @false{}: this maker function
 accepts a single argument.
 
-If the definition of @meta{type-id} included a clause
-@code{collecting-struct-type} with an identifier @meta{collector-id} as
+If the definition of @meta{type-id} includes a clause
+@code{collector-struct-type} with an identifier @meta{collector-id} as
 value: this maker function accepts two arguments, the second being the
 instance of type @meta{collector-id}.
 
@@ -863,24 +861,24 @@ Build and return a new struct instance of type @meta{type-id} wrapping
 the pointer object @var{pointer}; the returned instance @strong{does not
 own} the @var{pointer} object.
 
-If the definition of @meta{type-id} included a clause
-@code{collecting-struct-type} with value @false{}: this maker function
+If the definition of @meta{type-id} includes a clause
+@code{collector-struct-type} with value @false{}: this maker function
 accepts a single argument.
 
-If the definition of @meta{type-id} included a clause
-@code{collecting-struct-type} with an identifier @meta{collector-id} as
+If the definition of @meta{type-id} includes a clause
+@code{collector-struct-type} with an identifier @meta{collector-id} as
 value: this maker function accepts two arguments, the second being the
 instance of type @meta{collector-id}.
 
 @item ($@meta{type-id}-finalise @var{struct})
-Perform the finalisation procedure for this struct instance; it is safe
-to apply this finalisation function multiple times to the same
+Perform the finalisation procedure for this @var{struct} instance; it is
+safe to apply this finalisation function multiple times to the same
 @var{struct} instance: the first time the finalisation takes place,
 subsequent times nothing happens.  The argument to this function
 @strong{must} be an instance of @meta{type-id}, else the behaviour is
 undefined.
 
-The finalisation procedures involves the following:
+The finalisation procedure involves the following:
 
 @enumerate
 @item
@@ -920,7 +918,7 @@ yet been finalised, otherwise it returns @false{}.
 
 @quotation
 @strong{NOTE} The returned information really represents the status of
-the foreign data structure, only for struct instances that @strong{do
+the foreign data structure only for struct instances that @strong{do
 own} the foreign pointer.
 @end quotation
 
@@ -932,7 +930,7 @@ has a @var{pointer} object not yet finalised, otherwise it returns
 
 @quotation
 @strong{NOTE} The returned information really represents the status of
-the foreign data structure, only for struct instances that @strong{do
+the foreign data structure only for struct instances that @strong{do
 own} the foreign pointer.
 @end quotation
 
@@ -945,6 +943,32 @@ the predicate @code{@meta{type-id}?}.
 Validation form to be used with the facilities of the library
 @library{vicare arguments validation}.  Succeed if @var{obj} satisfies
 the predicate @code{@meta{type-id}?/alive}.
+
+@item (@meta{type-id}-custom-destructor @var{struct})
+@itemx (set-@meta{type-id}-custom-destructor! @var{struct} @var{destructor})
+Retrieve or set a custom destructor function associated to @var{struct}.
+Whenever the @var{struct} is finalised: @var{destructor} is applied to
+@var{struct} before the internal state of @var{struct} is finalised.
+
+Notice that @var{destructor} can do anything, not only destroy some
+state associated to @var{struct}; if we do:
+
+@example
+(define @var{struct} ...)
+(set-@meta{type-id}-custom-destructor! @var{struct}
+  (let ((state (make-some-data-struct)))
+    (case-lambda
+      ((stru)
+       (destroy stru))
+      (()
+       state))))
+
+(let ((state ((@meta{type-id}-custom-destructor @var{struct}))))
+  (do-something-with @var{struct} state))
+@end example
+
+@noindent
+we can easily associate values to @var{struct}.
 @end table
 
 
