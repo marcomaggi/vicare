@@ -734,9 +734,9 @@ The following bindings are exported by the library @library{vicare ffi
 foreign-pointer-wrapper}.
 
 
-@deffn Syntax define-foreign-pointer-wrapper @meta{type-id} @meta{destructor-clause} @meta{collecting-clause} @meta{collected-clause} @dots{}
+@deffn Syntax define-foreign-pointer-wrapper @meta{type-id} @meta{destructor-clause} @meta{collector-clause} @meta{collected-clause} @dots{}
 @deffnx {Auxiliary Syntax} foreign-destructor
-@deffnx {Auxiliary Syntax} collecting-struct-type
+@deffnx {Auxiliary Syntax} collector-struct-type
 @deffnx {Auxiliary Syntax} collected-struct-type
 Wrapper for @func{define-struct} from @library{vicare} defining a struct
 type with some opaque fields.  @meta{type-id} must be an identifier
@@ -768,33 +768,33 @@ referenced destructor function is applied to the Scheme data struct; its
 responsibility is to extract the pointer object and apply to it whatever
 finalisation procedure the foreign library provides.
 
-@item collecting-clause
-It must have the form:
+@item collector-clause
+It must have one of the forms:
 
 @example
-(collecting-struct-type #f)
-(collecting-struct-type @meta{collecting-id})
+(collector-struct-type #f)
+(collector-struct-type @meta{collector-id})
 @end example
 
 @noindent
-where @meta{collecting-id} must be an identifier representing the name
+where @meta{collector-id} must be an identifier representing the name
 of another data struct type defined with this syntax; when the value of
 the clause is @false{}: @meta{type-id} has no collecting struct type.
 
 Instances of @meta{type-id} are meant to be, in some way, subordinate to
-@meta{collecting-id}; when building a new instance of type
+@meta{collector-id}; when building a new instance of type
 @meta{type-id}, it is possible to specify an instance of type
-@meta{collecting-id} that ``collects'' it:
+@meta{collector-id} that ``collects'' it:
 
 @itemize
 @item
-Whenever the instance of type @meta{collecting-id} is finalised: the
+Whenever the instance of type @meta{collector-id} is finalised: the
 collected instances of type @meta{type-id} are finalised too.
 
 @item
 Whenever the instance of type @meta{type-id} is finalised: it
 unregisters itself from the collection in the instance of type
-@meta{collecting-id}.
+@meta{collector-id}.
 @end itemize
 
 @item collected-clause
@@ -853,9 +853,9 @@ If the definition of @meta{type-id} included a clause
 accepts a single argument.
 
 If the definition of @meta{type-id} included a clause
-@code{collecting-struct-type} with an identifier @meta{collecting-id} as
+@code{collecting-struct-type} with an identifier @meta{collector-id} as
 value: this maker function accepts two arguments, the second being the
-instance of type @meta{collecting-id}.
+instance of type @meta{collector-id}.
 
 @item (make-@meta{type-id}/not-owner @var{pointer})
 @itemx (make-@meta{type-id}/not-owner @var{pointer} @var{collector})
@@ -868,9 +868,9 @@ If the definition of @meta{type-id} included a clause
 accepts a single argument.
 
 If the definition of @meta{type-id} included a clause
-@code{collecting-struct-type} with an identifier @meta{collecting-id} as
+@code{collecting-struct-type} with an identifier @meta{collector-id} as
 value: this maker function accepts two arguments, the second being the
-instance of type @meta{collecting-id}.
+instance of type @meta{collector-id}.
 
 @item ($@meta{type-id}-finalise @var{struct})
 Perform the finalisation procedure for this struct instance; it is safe

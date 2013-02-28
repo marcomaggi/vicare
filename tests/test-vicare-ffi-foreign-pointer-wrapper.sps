@@ -51,7 +51,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor #f)
-    (ffi.collecting-struct-type #f))
+    (ffi.collector-struct-type #f))
 
   ;; Printer check.
   (when #f
@@ -265,7 +265,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor foreign-alpha-destructor)
-    (ffi.collecting-struct-type #f))
+    (ffi.collector-struct-type #f))
 
   (define verbose? #f)
 
@@ -514,7 +514,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor #f)
-    (ffi.collecting-struct-type #f)
+    (ffi.collector-struct-type #f)
     (ffi.collected-struct-type beta))
 
   ;;Type definition:
@@ -527,7 +527,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper beta
     (ffi.foreign-destructor #f)
-    (ffi.collecting-struct-type alpha))
+    (ffi.collector-struct-type alpha))
 
   (define verbose? #f)
 
@@ -583,7 +583,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor #f)
-    (ffi.collecting-struct-type #f)
+    (ffi.collector-struct-type #f)
     (ffi.collected-struct-type beta)
     (ffi.collected-struct-type gamma))
 
@@ -597,7 +597,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper beta
     (ffi.foreign-destructor #f)
-    (ffi.collecting-struct-type alpha))
+    (ffi.collector-struct-type alpha))
 
   ;;Type definition:
   ;;
@@ -609,7 +609,7 @@
   ;;
   (ffi.define-foreign-pointer-wrapper gamma
     (ffi.foreign-destructor #f)
-    (ffi.collecting-struct-type alpha))
+    (ffi.collector-struct-type alpha))
 
   (define verbose? #f)
 

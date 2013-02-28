@@ -32,7 +32,7 @@
 
     ;; auxiliary syntaxes
     foreign-destructor
-    collecting-struct-type
+    collector-struct-type
     collected-struct-type)
   (import (vicare)
     (vicare syntactic-extensions)
@@ -42,14 +42,14 @@
 
   (define-auxiliary-syntaxes
     foreign-destructor
-    collecting-struct-type
+    collector-struct-type
     collected-struct-type)
 
 
 (define-syntax* (define-foreign-pointer-wrapper stx)
   (define (main stx)
     (syntax-case stx (foreign-destructor
-		      collecting-struct-type
+		      collector-struct-type
 		      collected-struct-type)
       ((_ ?type-id
 	  (foreign-destructor ?foreign-destructor)
