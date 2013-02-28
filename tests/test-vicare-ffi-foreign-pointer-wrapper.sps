@@ -508,15 +508,23 @@
   ;;
   ;;* No foreign destructor.
   ;;
-  ;;* With collector struct.
+  ;;* No collector struct.
   ;;
-  ;;* No collected structs.
+  ;;* With collected structs.
   ;;
   (ffi.define-foreign-pointer-wrapper alpha
     (ffi.foreign-destructor #f)
     (ffi.collecting-struct-type #f)
     (ffi.collected-struct-type beta))
 
+  ;;Type definition:
+  ;;
+  ;;* No foreign destructor.
+  ;;
+  ;;* With collector struct.
+  ;;
+  ;;* No collected structs.
+  ;;
   (ffi.define-foreign-pointer-wrapper beta
     (ffi.foreign-destructor #f)
     (ffi.collecting-struct-type alpha))
@@ -555,11 +563,138 @@
 	     (B (make-beta/owner Q A)))
 	($alpha-finalise A)
 	(list ($alpha-vector-of-collected-beta A)
+	      (alpha?/alive A)
 	      (beta?/alive B)))
-    => '(#() #f))
+    => '(#() #f #f))
 
+  (collect))
 
-  #t)
+
+(parametrise ((check-test-name		'double-collector)
+	      (struct-guardian-logger	#f))
+
+  ;;Type definition:
+  ;;
+  ;;* No foreign destructor.
+  ;;
+  ;;* No collector struct.
+  ;;
+  ;;* With collected structs.
+  ;;
+  (ffi.define-foreign-pointer-wrapper alpha
+    (ffi.foreign-destructor #f)
+    (ffi.collecting-struct-type #f)
+    (ffi.collected-struct-type beta)
+    (ffi.collected-struct-type gamma))
+
+  ;;Type definition:
+  ;;
+  ;;* No foreign destructor.
+  ;;
+  ;;* With collector struct.
+  ;;
+  ;;* No collected structs.
+  ;;
+  (ffi.define-foreign-pointer-wrapper beta
+    (ffi.foreign-destructor #f)
+    (ffi.collecting-struct-type alpha))
+
+  ;;Type definition:
+  ;;
+  ;;* No foreign destructor.
+  ;;
+  ;;* With collector struct.
+  ;;
+  ;;* No collected structs.
+  ;;
+  (ffi.define-foreign-pointer-wrapper gamma
+    (ffi.foreign-destructor #f)
+    (ffi.collecting-struct-type alpha))
+
+  (define verbose? #f)
+
+;;; --------------------------------------------------------------------
+
+  (check	;check that collector and collected reference each other
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (R (integer->pointer 789))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner  Q A))
+	     (G (make-gamma/owner R A)))
+	(list (eq? A ($beta-collector-alpha B))
+	      (eq? A ($beta-collector-alpha G))
+	      (let ((VB ($alpha-vector-of-collected-beta  A))
+		    (TB ($alpha-table-of-collected-beta   A)))
+		(and (vector? VB)
+		     (= 1 (vector-length VB))
+		     (eq? B (vector-ref VB 0))
+		     (eq? B (hashtable-ref TB (beta-uid B) #f))))
+	      (let ((VG ($alpha-vector-of-collected-gamma A))
+		    (TG ($alpha-table-of-collected-gamma  A)))
+		(and (vector? VG)
+		     (= 1 (vector-length VG))
+		     (eq? G (vector-ref VG 0))
+		     (eq? G (hashtable-ref TG (gamma-uid G) #f))))))
+    => '(#t #t #t #t))
+
+  (check	;after  the finalisation  of one  of the  collected, the
+		;collector is collecting only the other collected
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (R (integer->pointer 789))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner  Q A))
+	     (G (make-gamma/owner R A)))
+	($beta-finalise B)
+	(list ($alpha-vector-of-collected-beta A)
+	      (eq? G (vector-ref ($alpha-vector-of-collected-gamma A) 0))))
+    => '(#() #t))
+
+  (check	;after  the finalisation  of one  of the  collected, the
+		;collector is collecting only the other collected
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (R (integer->pointer 789))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner  Q A))
+	     (G (make-gamma/owner R A)))
+	($gamma-finalise G)
+	(list ($alpha-vector-of-collected-gamma A)
+	      (eq? B (vector-ref ($alpha-vector-of-collected-beta A) 0))))
+    => '(#() #t))
+
+  (check	;after  the  finalisation  of both  the  collected,  the
+		;collector is collecting nothing
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (R (integer->pointer 789))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner  Q A))
+	     (G (make-gamma/owner R A)))
+	($beta-finalise  B)
+	($gamma-finalise G)
+	(list ($alpha-vector-of-collected-gamma A)
+	      ($alpha-vector-of-collected-beta  A)))
+    => '(#() #()))
+
+  (check	;after the finalisation of  the collector, the collected
+ 		;are finalised too
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (R (integer->pointer 789))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner  Q A))
+	     (G (make-gamma/owner R A)))
+	($alpha-finalise A)
+	(list ($alpha-vector-of-collected-gamma A)
+	      ($alpha-vector-of-collected-beta  A)
+	      (alpha?/alive A)
+	      (beta?/alive  B)
+	      (gamma?/alive G)))
+    => '(#() #() #f #f #f))
+
+  (collect))
 
 
 ;;;; done
