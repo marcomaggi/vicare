@@ -53,8 +53,8 @@
 		      collected-struct-type)
       ((_ ?type-id
 	  (foreign-destructor ?foreign-destructor)
-	  (collecting-type ?collecting-type)
-	  (table-field ?collected-field-id)
+	  (collector-struct-type ?collector-type-id)
+	  (collected-struct-type ?collected-type-id)
 	  ...)
        (let ((type-id #'?type-id))
 	 ;;Normalisation: either #f or a  syntax object holding a non-#f
@@ -66,59 +66,54 @@
 	       #f)))
 	 ;;Normalisation: either #f or a  syntax object holding a non-#f
 	 ;;expression.
-	 (define collecting-type
-	   (let ((ct #'?collecting-type))
+	 (define collector-type-id
+	   (let ((ct #'?collector-type-id))
 	     (if (syntax->datum ct)
 		 ct
 	       #f)))
-	 (define collected-field-ids
-	   (syntax->list #'(?collected-field-id ...)))
-	 (%validate-input type-id foreign-destructor collecting-type collected-field-ids)
+	 (define collected-type-ids
+	   (syntax->list #'(?collected-type-id ...)))
+	 (%validate-input type-id foreign-destructor collector-type-id collected-type-ids)
 	 (with-syntax
 	     ((STRUCT-DEFINITION
-	       (%make-struct-definition type-id collecting-type collected-field-ids))
+	       (%make-struct-definition type-id collector-type-id collected-type-ids))
 	      (ARGUMENT-VALIDATIONS
-	       (%make-argument-validations type-id))
+	       (%make-argument-validation-definitions type-id))
 	      (MAKER-DEFINITIONS
-	       (%make-makers-definitions type-id collected-field-ids
-					 collecting-type))
-	      (ALIVE-PRED-DEFINITIONS
-	       (%make-alive-pred-definitions type-id))
+	       (%make-makers-definitions type-id collector-type-id collected-type-ids))
+	      (PREDICATE-DEFINITIONS
+	       (%make-predicate-definitions type-id))
 	      (DESTRUCTOR-DEFINITION
-	       (%make-struct-finaliser type-id foreign-destructor
-				       collecting-type collected-field-ids))
+	       (%make-finaliser-definitions type-id foreign-destructor
+						   collector-type-id collected-type-ids))
 	      (PRINTER-DEFINITION
-	       (%make-struct-printer type-id))
-	      ((TABLE-FIELD-VECTOR-GETTER ...)
-	       (map (lambda (table-field)
-		      (%make-table-field-vector-getter type-id table-field))
-		 collected-field-ids))
-	      ((REGISTRATION-DEFINITION ...)
-	       (map (lambda (table-field)
-		      (%make-table-field-registration-definitions type-id table-field))
-		 collected-field-ids)))
-	   #'(begin
-	       STRUCT-DEFINITION
-	       ARGUMENT-VALIDATIONS
-	       MAKER-DEFINITIONS
-	       ALIVE-PRED-DEFINITIONS
-	       DESTRUCTOR-DEFINITION
-	       PRINTER-DEFINITION
-	       TABLE-FIELD-VECTOR-GETTER ...
-	       REGISTRATION-DEFINITION ...)
-	   )))))
+	       (%make-struct-printer-definition type-id))
+	      ((COLLECTED-STRUCTS-DEFINITIONS ...)
+	       (map (lambda (collected-type-id)
+		      (%make-collected-structs-definitions type-id collected-type-id))
+		 collected-type-ids)))
+	   (let ((output-form #'(begin
+				  STRUCT-DEFINITION
+				  ARGUMENT-VALIDATIONS
+				  MAKER-DEFINITIONS
+				  PREDICATE-DEFINITIONS
+				  DESTRUCTOR-DEFINITION
+				  PRINTER-DEFINITION
+				  COLLECTED-STRUCTS-DEFINITIONS ...)))
+	     #;(pretty-print (syntax->datum output-form) (current-error-port))
+	     output-form))))))
 
-  (define (%make-struct-definition type-id collecting-type collected-field-ids)
+  (define (%make-struct-definition type-id collector-type-id collected-type-ids)
     ;;Return a syntax object representing the definition of the Scheme
     ;;data structure.
     ;;
     (with-syntax
-	(((COLLECTOR ...)
-	  (if collecting-type
-	      #'(collector)
+	(((COLLECTOR-FIELD ...)
+	  (if collector-type-id
+	      (list (%make-collector-field-id collector-type-id))
 	    '()))
-	 ((COLLECTED-FIELD-ID ...)
-	  (map %make-collected-field-id collected-field-ids)))
+	 ((TABLE-OF-COLLECTED-STRUCTS-FIELD ...)
+	  (map %make-table-of-collected-structs-field-id collected-type-ids)))
       #`(define-struct #,type-id
 	  (pointer
 		;False or  a pointer  object referencing a  foreign data
@@ -134,23 +129,24 @@
 		;least one argument being the data structure itself.
 	   uid
 		;A gensym to be used as hash table key.
-	   COLLECTOR ...
+	   COLLECTOR-FIELD ...
 		;False or a Scheme data struct that collects this one.
-	   COLLECTED-FIELD-ID
+	   TABLE-OF-COLLECTED-STRUCTS-FIELD
 		;Hashtable holding  Scheme data  structures of  the same
 		;type.  Each  data structure hold wraps  pointer objects
 		;to foreign data structures owned by this structure.
 	   ...
 	   ))))
 
-  (define (%make-argument-validations type-id)
+  (define (%make-argument-validation-definitions type-id)
     ;;Return a  syntax object representing the  definition of argument
     ;;validators to be used with the facilities of the library (vicare
     ;;argument validation).
     ;;
     ;;The function call:
     ;;
-    ;;   (%make-argument-validations #'gsasl #'gsasl? #'gsasl?/alive)
+    ;;   (%make-argument-validation-definitions
+    ;;       #'gsasl #'gsasl? #'gsasl?/alive)
     ;;
     ;;returns a syntax object representing:
     ;;
@@ -164,7 +160,7 @@
     ;;       (assertion-violation who
     ;;         "expected alive \"gsasl\" struct as argument" obj)))
     ;;
-    (let ((type-string (symbol->string (syntax->datum type-id))))
+    (let ((type-string (%id->string type-id)))
       (with-syntax
 	  ((PRED-VALIDATOR	(%make-argument-validator-pred-id type-id))
 	   (ALIVE-VALIDATOR	(%make-argument-validator-alive-id type-id))
@@ -184,64 +180,82 @@
 		(#,pred/alive obj)
 		(assertion-violation who ALIVE-MSG obj)))))))
 
-  (define (%make-makers-definitions type-id collected-field-ids collecting-type)
-    ;;Return  a  syntax object  representing  the  definitions of  the
+  (define (%make-makers-definitions type-id collector-type-id collected-type-ids)
+    ;;Return  a  syntax  object  representing  the  definitions  of  the
     ;;simplified data struct makers:
     ;;
     ;;1. The one that initialises the struct to own the pointer.
     ;;
     ;;2. The one that initialises the struct not to own the pointer.
     ;;
-    (define maker
-      (%make-maker-id/default type-id))
-    (define maker/owner
-      (%make-maker-id/owner type-id))
-    (define maker/not-owner
-      (%make-maker-id/not-owner type-id))
-    (define register-sub-struct
-      (if collecting-type
-	  (%make-register-sub-struct-id collecting-type type-id)
-	#f))
+    (define has-collector?
+      (identifier? collector-type-id))
+    (define collector-struct
+      (and has-collector?
+	   (%id->id collector-type-id
+		    (lambda (collector-type-string)
+		      (string-append "collector-" collector-type-string "-instance")))))
     (with-syntax
-	(((TABLE-MAKER ...)	(map (lambda (table-id)
-				       #'(make-eq-hashtable))
-				  collected-field-ids))
-	 ((ARG ...)		(if collecting-type
-				    #'(collector-struct)
-				  '()))
-	 ((REGISTER-LAMBDA ...)	(if collecting-type
-				    #`(lambda (struct collector-struct)
-					(#,register-sub-struct collector-struct struct))
-				  '())))
+	((MAKER
+	  (%make-maker-id/default type-id))
+	 (MAKER/OWNER
+	  (%make-maker-id/owner type-id))
+	 (MAKER/NOT-OWNER
+	  (%make-maker-id/not-owner type-id))
+	 (INSTANCE
+	  (%id->id type-id (lambda (type-string)
+			     (string-append type-string "-instance"))))
+	 ((TABLE-MAKER ...)
+	  (map (lambda (table-id)
+		 #'(make-eq-hashtable))
+	    collected-type-ids))
+	 ((COLLECTOR-STRUCT ...)
+	  (if has-collector?
+	      (list collector-struct)
+	    '()))
+	 ((VALIDATOR-CLAUSE ...)
+	  (if has-collector?
+	      `((,(%id->id collector-type-id
+			   (lambda (collector-type-string)
+			     (string-append collector-type-string "/alive")))
+		 ,collector-struct))
+	    '()))
+	 ((REGISTER-COLLECTED-IN-COLLECTOR ...)
+	  (if has-collector?
+	      (list (%make-register-collected-in-collector-id collector-type-id type-id))
+	    '())))
       #`(begin
-	  (define (#,maker/owner pointer ARG ...)
+	  (define (MAKER/OWNER pointer COLLECTOR-STRUCT ...)
 	    ;;Build and return  a new data struct  instance owning the
 	    ;;POINTER.
 	    ;;
-	    (%simplified-maker (quote #,maker/owner) pointer #t ARG ...))
-	  (define (#,maker/not-owner pointer ARG ...)
+	    (%simplified-maker 'MAKER/OWNER pointer #t COLLECTOR-STRUCT ...))
+	  (define (MAKER/NOT-OWNER pointer COLLECTOR-STRUCT ...)
 	    ;;Build and return  a new data struct  instance not owning
 	    ;;the POINTER.
 	    ;;
-	    (%simplified-maker (quote #,maker/not-owner) pointer #f ARG ...))
-	  (define (%simplified-maker who pointer owner? ARG ...)
+	    (%simplified-maker 'MAKER/NOT-OWNER pointer #f COLLECTOR-STRUCT ...))
+	  (define (%simplified-maker who pointer owner? COLLECTOR-STRUCT ...)
 	    (with-arguments-validation (who)
-		((pointer	pointer))
-	      (let ((struct (#,maker pointer owner? #f (gensym) ARG ... TABLE-MAKER ...)))
-		(REGISTER-LAMBDA struct collector-struct)
-		...
-		struct))))))
+		((pointer	pointer)
+		 VALIDATOR-CLAUSE
+		 ...)
+	      (let ((INSTANCE (MAKER pointer owner? #f (gensym)
+				     COLLECTOR-STRUCT ...
+				     TABLE-MAKER ...)))
+		(REGISTER-COLLECTED-IN-COLLECTOR COLLECTOR-STRUCT INSTANCE) ...
+		INSTANCE))))))
 
-  (define (%make-alive-pred-definitions type-id)
+  (define (%make-predicate-definitions type-id)
     ;;Return  a  syntax  object  representing the  definition  of  the
     ;;predicates used to check if the data struct is still alive.
     ;;
     ;;The function call:
     ;;
-    ;;   (%make-alive-pred-definitions #'gsasl
-    ;;                                 #'gsasl? #'gsasl?/alive
-    ;;                                 #'$live-gsasl?
-    ;;                                 #'$gsasl-pointer)
+    ;;   (%make-predicate-definitions #'gsasl
+    ;;                                #'gsasl? #'gsasl?/alive
+    ;;                                #'$live-gsasl?
+    ;;                                #'$gsasl-pointer)
     ;;
     ;;returns a syntax object representing:
     ;;
@@ -270,10 +284,10 @@
 	    (and (#,unsafe-getter-pointer struct)
 		 #t)))))
 
-  (module (%make-struct-finaliser)
+  (module (%make-finaliser-definitions)
 
-    (define (%make-struct-finaliser type-id foreign-destructor
-				    collecting-type collected-field-ids)
+    (define (%make-finaliser-definitions type-id foreign-destructor
+					 collector-type collected-type-ids)
       ;;Return  a  syntax  object   representing  the  definition  and
       ;;registration of the Scheme  destructor function for the Scheme
       ;;data struct.  The Scheme  destructor function exists even when
@@ -297,14 +311,15 @@
       (define unsafe-pointer-setter
 	(%make-unsafe-Setter-id/pointer type-id))
       (with-syntax
-	  ((STRUCT #'struct))
+	  ((STRUCT (%id->id type-id (lambda (type-string)
+				      (string-append type-string "-instance")))))
 	(with-syntax
 	    (((TABLE-DESTRUCTION-FORM ...)
-	      (map (lambda (collected-field-id)
-		     (%make-table-destruction #'STRUCT type-id collected-field-id))
-		collected-field-ids))
+	      (map (lambda (collected-type-id)
+		     (%make-table-destruction #'STRUCT type-id collected-type-id))
+		collected-type-ids))
 	     ((UNREGISTER-FROM-COLLECTOR ...)
-	      (%make-unregistration-from-collector #'STRUCT type-id collecting-type))
+	      (%make-unregistration-from-collector #'STRUCT type-id collector-type))
 	     ((FOREIGN-DESTRUCTOR-CALL ...)
 	      (%make-foreign-destructor-call #'STRUCT foreign-destructor
 					     unsafe-getter-pointer-owner?)))
@@ -347,32 +362,43 @@
 		(set-rtd-destructor! (type-descriptor #,type-id)
 				     #,unsafe-scheme-destructor))))))
 
-    (define (%make-table-destruction struct-id type-id collected-field-id)
+    (define (%make-table-destruction struct-id type-id collected-type-id)
       (with-syntax
 	  ((TABLE-GETTER
-	    (%make-unsafe-Getter-id/collected-thing type-id collected-field-id))
+	    (%make-unsafe-Getter-id/table-of-collected type-id collected-type-id))
 	   (TABLE-FIELD-VECTOR-GETTER
-	    (%make-table-field-vector-getter-id type-id collected-field-id))
-	   (SUB-DESTRUCTOR
-	    (%make-unsafe-finaliser-id collected-field-id)))
-	#`(let* ((sub-structs	(TABLE-FIELD-VECTOR-GETTER #,struct-id))
-		 (len		($vector-length sub-structs)))
-	    (do ((i 0 (+ 1 i)))
-		((= i len)
+	    (%make-vector-of-collected-structs-getter-id type-id collected-type-id))
+	   (COLLECTED-DESTRUCTOR
+	    (%make-unsafe-finaliser-id collected-type-id)))
+	#`(let ((collected-structs (TABLE-FIELD-VECTOR-GETTER #,struct-id)))
+	    (do ((i 0 ($fxadd1 i)))
+		(($fx= i ($vector-length collected-structs))
 		 (hashtable-clear! (TABLE-GETTER #,struct-id)))
 	      (guard (E (else (void)))
-		(SUB-DESTRUCTOR ($vector-ref sub-structs i)))))))
+		(COLLECTED-DESTRUCTOR ($vector-ref collected-structs i)))))))
 
-    (define (%make-unregistration-from-collector struct-id type-id collecting-type)
-      (if (identifier? collecting-type)
+    (define (%make-unregistration-from-collector struct-id type-id collector-type-id)
+      ;;When the  struct definition  includes a collecting  struct type:
+      ;;return  a  syntax  object  representing  code  that  unregisters
+      ;;instances   of   TYPE-ID   from   the   selected   instance   of
+      ;;COLLECTOR-TYPE, if any.
+      ;;
+      ;;When the struct definition does  not include a collecting struct
+      ;;type: return a null syntax object.
+      ;;
+      (if (identifier? collector-type-id)
 	  (with-syntax
 	      ((COLLECTOR-GETTER
-		(%make-unsafe-Getter-id/collector type-id))
-	       (FORGET-SUB-STRUCT
-		(%make-forget-sub-struct-id collecting-type type-id)))
-	    #`(cond ((COLLECTOR-GETTER #,struct-id)
-		     => (lambda (collector)
-			  (FORGET-SUB-STRUCT collector #,struct-id)))))
+		(%make-unsafe-Getter-id/collector type-id collector-type-id))
+	       (FORGET-COLLECTED-STRUCT
+		(%make-forget-collected-struct-id collector-type-id type-id))
+	       (COLLECTOR-INSTANCE
+		(%id->id collector-type-id
+			 (lambda (collector-type-string)
+			   (string-append "collector-" collector-type-string "-instance")))))
+	    #`((cond ((COLLECTOR-GETTER #,struct-id)
+		      => (lambda (COLLECTOR-INSTANCE)
+			   (FORGET-COLLECTED-STRUCT COLLECTOR-INSTANCE #,struct-id))))))
 	'()))
 
     (define (%make-foreign-destructor-call struct-id foreign-destructor-id
@@ -388,77 +414,78 @@
 		 (#,foreign-destructor-id #,struct-id))))
 	'()))
 
-    #| end of module: %make-struct-finaliser |# )
+    #| end of module: %make-finaliser-definitions |# )
 
-  (define (%make-struct-printer type-id)
-    ;;Return  a   syntax  object   representing  the   definition  and
+  (define (%make-struct-printer-definition type-id)
+    ;;Return   a  syntax   object   representing   the  definition   and
     ;;registration of the printer function for the data struct type.
     ;;
-    (let ((unsafe-getter-pointer	(%make-unsafe-Getter-id/pointer type-id))
-	  (unsafe-getter-pointer-owner?	(%make-unsafe-Getter-id/pointer-owner? type-id))
-	  (unsafe-getter-uid		(%make-unsafe-Getter-id/uid type-id)))
-      (with-syntax
-	  ((TYPE-STRING (symbol->string (syntax->datum type-id))))
-	#`(begin
-	    (define (the-printer S port sub-printer)
-	      (define (%display thing)
-		(display thing port))
-	      (define (%write thing)
-		(write thing port))
-	      (%display "#[")
-	      (%display TYPE-STRING)
-	      (%display " pointer=")
-	      (%display (#,unsafe-getter-pointer S))
-	      (%display " pointer-owner?=")
-	      (%display (#,unsafe-getter-pointer-owner? S))
-	      (%display " uid=")
-	      (%display (#,unsafe-getter-uid S))
-	      (%display "]"))
-	    (module ()
-	      (set-rtd-printer! (type-descriptor #,type-id) the-printer))))))
+    (with-syntax
+	((UNSAFE-GETTER-POINTER		(%make-unsafe-Getter-id/pointer        type-id))
+	 (UNSAFE-GETTER-POINTER-OWNER?	(%make-unsafe-Getter-id/pointer-owner? type-id))
+	 (UNSAFE-GETTER-UID		(%make-unsafe-Getter-id/uid            type-id))
+	 (TYPE-STRING			(%id->string                           type-id)))
+      #`(begin
+	  (define (the-printer S port sub-printer)
+	    (define (%display thing)
+	      (display thing port))
+	    (define (%write thing)
+	      (write thing port))
+	    (%display "#[")
+	    (%display TYPE-STRING)
+	    (%display " pointer=")
+	    (%display (UNSAFE-GETTER-POINTER S))
+	    (%display " pointer-owner?=")
+	    (%display (UNSAFE-GETTER-POINTER-OWNER? S))
+	    (%display " uid=")
+	    (%display (UNSAFE-GETTER-UID S))
+	    (%display "]"))
+	  (module ()
+	    (set-rtd-printer! (type-descriptor #,type-id) the-printer)))))
 
-  (define (%make-table-field-vector-getter type-id collected-field-id)
-    ;;Return  a  syntax  object representing  a  function  definition;
-    ;;applying  the  function to  a  data  struct instance  returns  a
-    ;;(possibly  empty)  vector of  structs  registered  in the  field
-    ;;COLLECTED-FIELD-ID.
+  (define (%make-collected-structs-definitions collector-type-id collected-type-id)
+    ;;Return a syntax object representing the definition of 3 functions:
+    ;;
+    ;;1. A function that registers a sub-struct of type TYPE-FIELD-ID in
+    ;;   the appropriate table of structs of type TYPE-ID.
+    ;;
+    ;;2. A function that removes a sub-struct of type TYPE-FIELD-ID from
+    ;;   the appropriate table of structs of type TYPE-ID.
+    ;;
+    ;;3. A  function that returns  a (possibly empty) vector  of structs
+    ;;   registered in the field COLLECTED-TYPE-ID.
     ;;
     (with-syntax
-	((TABLE-GETTER
-	  (%make-unsafe-Getter-id/collected-thing type-id collected-field-id))
-	 (TABLE-FIELD-VECTOR-GETTER
-	  (%make-table-field-vector-getter-id type-id collected-field-id)))
-      #'(define (TABLE-FIELD-VECTOR-GETTER struct)
-	  (receive (keys vals)
-	      (hashtable-entries (TABLE-GETTER struct))
-	    vals))))
-
-  (define (%make-table-field-registration-definitions type-id collected-field-id)
-    ;;Return  a  syntax  object   representing  the  definition  of  2
-    ;;functions:
-    ;;
-    ;;1. A function that registers  a sub-struct of type TYPE-FIELD-ID
-    ;;   in the appropriate table of structs of type TYPE-ID.
-    ;;
-    ;;2. A  function that removes  a sub-struct of  type TYPE-FIELD-ID
-    ;;   from the appropriate table of structs of type TYPE-ID.
-    ;;
-    (with-syntax
-	((TABLE-GETTER
-	  (%make-unsafe-Getter-id/collected-thing type-id collected-field-id))
-	 (REGISTER-SUB-STRUCT
-	  (%make-register-sub-struct-id type-id collected-field-id))
-	 (FORGET-SUB-STRUCT
-	  (%make-forget-sub-struct-id type-id collected-field-id)))
-      (let ((unsafe-getter-uid (%make-unsafe-Getter-id/uid collected-field-id)))
-	#`(begin
-	    (define (REGISTER-SUB-STRUCT struct sub-struct)
-	      (hashtable-set! (TABLE-GETTER struct)
-			      (#,unsafe-getter-uid sub-struct)
-			      sub-struct))
-	    (define (FORGET-SUB-STRUCT struct sub-struct)
-	      (hashtable-delete! (TABLE-GETTER struct)
-				 (#,unsafe-getter-uid sub-struct)))))))
+	((COLLECTOR-STRUCT
+	  (%id->id collector-type-id
+		   (lambda (collector-type-string)
+		     (string-append "collector-" collector-type-string "-instance"))))
+	 (COLLECTED-STRUCT
+	  (%id->id collected-type-id
+		   (lambda (collected-type-string)
+		     (string-append "collected-" collected-type-string "-instance"))))
+	 (TABLE-GETTER
+	  (%make-unsafe-Getter-id/table-of-collected collector-type-id collected-type-id))
+	 (REGISTER-COLLECTED-IN-COLLECTOR
+	  (%make-register-collected-in-collector-id collector-type-id collected-type-id))
+	 (FORGET-COLLECTED-STRUCT
+	  (%make-forget-collected-struct-id collector-type-id collected-type-id))
+	 (UNSAFE-GETTER-UID
+	  (%make-unsafe-Getter-id/uid collected-type-id))
+	 (VECTOR-OF-COLLECTED-STRUCTS-GETTER
+	  (%make-vector-of-collected-structs-getter-id collector-type-id collected-type-id)))
+      #`(begin
+	  (define (REGISTER-COLLECTED-IN-COLLECTOR COLLECTOR-STRUCT COLLECTED-STRUCT)
+	    (hashtable-set! (TABLE-GETTER COLLECTOR-STRUCT)
+			    (UNSAFE-GETTER-UID COLLECTED-STRUCT)
+			    COLLECTED-STRUCT))
+	  (define (FORGET-COLLECTED-STRUCT COLLECTOR-STRUCT COLLECTED-STRUCT)
+	    (hashtable-delete! (TABLE-GETTER COLLECTOR-STRUCT)
+			       (UNSAFE-GETTER-UID COLLECTED-STRUCT)))
+	  (define (VECTOR-OF-COLLECTED-STRUCTS-GETTER COLLECTOR-STRUCT)
+	    (receive (keys vector-of-collected-structs)
+		(hashtable-entries (TABLE-GETTER COLLECTOR-STRUCT))
+	      vector-of-collected-structs)))))
 
 ;;; --------------------------------------------------------------------
 ;;; maker and finaliser ids
@@ -578,23 +605,24 @@
     (%id->id type-id (lambda (type-string)
 		       (string-append "$" type-string "-uid"))))
 
-  (define (%make-unsafe-Getter-id/collected-thing type-id collected-id)
+  (define (%make-unsafe-Getter-id/table-of-collected type-id collected-id)
     ;;Given an  identifier representing the  struct type name  return an
     ;;identifier, in the same context  of TYPE-ID, representing the name
     ;;of the collection getter for the field COLLECTED-ID.
     ;;
     (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-collected-"
+		       (string-append "$" type-string "-table-of-collected-"
 				      (%id->string collected-id)))))
 
-  (define (%make-unsafe-Getter-id/collector type-id)
+  (define (%make-unsafe-Getter-id/collector type-id collector-type-id)
     ;;Given an  identifier representing the  struct type name  return an
     ;;identifier, in the same context  of TYPE-ID, representing the name
     ;;of the unsafe getter for the field COLLECTOR.
     ;;
-    (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-collector"))))
-
+    (%id->id type-id
+	     (lambda (type-string)
+	       (string-append "$" type-string "-"
+			      (%id->string (%make-collector-field-id collector-type-id))))))
 
 ;;; --------------------------------------------------------------------
 ;;; setter ids
@@ -623,72 +651,93 @@
     (%id->id type-id (lambda (type-string)
 		       (string-append "$set-" type-string "-custom-destructor!"))))
 
+  (define (%make-unsafe-Setter-id/collector type-id collector-type-id)
+    ;;Given an  identifier representing the  struct type name  return an
+    ;;identifier, in the same context  of TYPE-ID, representing the name
+    ;;of the unsafe setter for the field COLLECTOR.
+    ;;
+    (%id->id type-id
+	     (lambda (type-string)
+	       (string-append "$set-" type-string "-"
+			      (%id->string (%make-collector-field-id collector-type-id))))))
+
 ;;; --------------------------------------------------------------------
-;;; collector struct ids
+;;; collector and collected struct ids
 
-
-;;; --------------------------------------------------------------------
-;;; collected struct ids
-
-  (define (%make-collected-field-id table-field)
-    ;;Given  an identifier  representing  the name  of  a struct  type
-    ;;collected  by this  struct type:  return the  identifier of  the
-    ;;field referencing the collecting hash table.
+  (define (%make-collector-field-id collector-type-id)
+    ;;Given  an  identifier  representing  the name  of  a  struct  type
+    ;;collector of this struct type:  return the identifier of the field
+    ;;referencing the collector struct instance.
     ;;
-    (%id->id table-field (lambda (field-string)
-			   (string-append "collected-" field-string))))
+    (%id->id collector-type-id
+	     (lambda (collector-type-string)
+	       (string-append "collector-" collector-type-string))))
 
-  (define (%make-table-field-vector-getter-id type-id collected-field-id)
-    ;;Given an  identifier representing  the struct  type name  and an
-    ;;identifier  representing a  sub-structs table  field: return  an
-    ;;identifier,  in the  same context  of TYPE-ID,  representing the
-    ;;name  of   a  function  returning  the   vector  of  sub-structs
-    ;;registered in COLLECTED-FIELD-ID.
+  (define (%make-table-of-collected-structs-field-id collected-type-id)
+    ;;Given  an  identifier  representing  the name  of  a  struct  type
+    ;;collected by this struct type:  return the identifier of the field
+    ;;referencing the collecting table.
     ;;
-    (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-vector-of-"
-				      (symbol->string (syntax->datum collected-field-id))))))
+    (%id->id collected-type-id
+	     (lambda (collected-type-string)
+	       (string-append "table-of-collected-" collected-type-string))))
 
-  (define (%make-register-sub-struct-id type-id collected-field-id)
-    ;;Given an  identifier representing  the struct  type name  and an
-    ;;identifier  representing a  sub-structs table  field: return  an
-    ;;identifier,  in the  same context  of TYPE-ID,  representing the
-    ;;name of a function that registers a sub-struct in the table of a
-    ;;struct.
+  (define (%make-vector-of-collected-structs-getter-id collector-type-id collected-type-id)
+    ;;Given  an identifier  representing  the struct  type  name and  an
+    ;;identifier representing a collected-structs table field: return an
+    ;;identifier, in the same context of COLLECTOR-TYPE-ID, representing
+    ;;the name of  a function returning the  vector of collected-structs
+    ;;registered in COLLECTED-TYPE-ID.
     ;;
-    (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-register-"
-				      (symbol->string (syntax->datum collected-field-id))
-				      "!"))))
+    (%id->id collector-type-id
+	     (lambda (collector-type-string)
+	       (string-append "$" collector-type-string "-vector-of-collected-"
+			      (%id->string collected-type-id)))))
 
-  (define (%make-forget-sub-struct-id type-id collected-field-id)
-    ;;Given an  identifier representing  the struct  type name  and an
-    ;;identifier  representing a  sub-structs table  field: return  an
-    ;;identifier,  in the  same context  of TYPE-ID,  representing the
-    ;;name of a function that removes a sub-struct from the table of a
-    ;;struct.
+  (define (%make-register-collected-in-collector-id collector-type-id collected-type-id)
+    ;;Given  an identifier  representing  the struct  type  name and  an
+    ;;identifier representing a collected-structs table field: return an
+    ;;identifier, in the same context of COLLECTOR-TYPE-ID, representing
+    ;;the name of a function that registers a sub-struct in the table of
+    ;;a struct.
     ;;
-    (%id->id type-id (lambda (type-string)
-		       (string-append "$" type-string "-forget-"
-				      (symbol->string (syntax->datum collected-field-id))
-				      "!"))))
+    (%id->id collector-type-id
+	     (lambda (collector-type-string)
+	       (string-append "$" collector-type-string "-register-"
+			      (%id->string collected-type-id)
+			      "!"))))
+
+  (define (%make-forget-collected-struct-id collector-type-id collected-type-id)
+    ;;Given  an identifier  representing  the struct  type  name and  an
+    ;;identifier representing a collected-structs table field: return an
+    ;;identifier, in the same context of COLLECTOR-TYPE-ID, representing
+    ;;the name of a function that removes a sub-struct from the table of
+    ;;a struct.
+    ;;
+    (%id->id collector-type-id
+	     (lambda (collector-type-string)
+	       (string-append "$" collector-type-string "-forget-"
+			      (%id->string collected-type-id)
+			      "!"))))
 
   ;; ------------------------------------------------------------
 
-  (define (%validate-input type-id foreign-destructor collecting-type collected-field-ids)
+  (define (%validate-input type-id foreign-destructor-id collector-type-id collected-type-ids)
     (unless (identifier? type-id)
       (%synner "expected identifier as struct type name" type-id))
-    (unless (or (not collecting-type)
-		(identifier? collecting-type))
+    (unless (or (not foreign-destructor-id)
+		(identifier? foreign-destructor-id))
+      (%synner "expected #f or identifier as foreign destructor specification"
+	       foreign-destructor-id))
+    (unless (or (not collector-type-id)
+		(identifier? collector-type-id))
       (%synner "expected #f or identifier as collecting struct type"
-	       collecting-type))
-    (unless (for-all identifier? collected-field-ids)
-      (%synner "expected identifiers as table field names" collected-field-ids)))
+	       collector-type-id))
+    (unless (for-all identifier? collected-type-ids)
+      (%synner "expected identifiers as table field names" collected-type-ids)))
 
   (define (%id->id src-id string-maker)
-    (datum->syntax src-id (string->symbol
-			   (string-maker
-			    (symbol->string (syntax->datum src-id))))))
+    (datum->syntax src-id (string->symbol (string-maker (%id->string src-id)))))
 
   (define (%id->string id)
     (symbol->string (syntax->datum id)))

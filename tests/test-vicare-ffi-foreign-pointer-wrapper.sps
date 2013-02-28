@@ -501,6 +501,67 @@
   (collect))
 
 
+(parametrise ((check-test-name		'collector)
+	      (struct-guardian-logger	#f))
+
+  ;;Type definition:
+  ;;
+  ;;* No foreign destructor.
+  ;;
+  ;;* With collector struct.
+  ;;
+  ;;* No collected structs.
+  ;;
+  (ffi.define-foreign-pointer-wrapper alpha
+    (ffi.foreign-destructor #f)
+    (ffi.collecting-struct-type #f)
+    (ffi.collected-struct-type beta))
+
+  (ffi.define-foreign-pointer-wrapper beta
+    (ffi.foreign-destructor #f)
+    (ffi.collecting-struct-type alpha))
+
+  (define verbose? #f)
+
+;;; --------------------------------------------------------------------
+
+  (check	;check that collector and collected reference each other
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q A)))
+	(list (eq? A ($beta-collector-alpha B))
+	      (let ((V ($alpha-vector-of-collected-beta A)))
+		(and (vector? V)
+		     (= 1 (vector-length V))
+		     (eq? B (vector-ref V 0))))))
+    => '(#t #t))
+
+  (check	;after the finalisation of  the collected, the collector
+		;is collecting nothing
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q A)))
+	($beta-finalise B)
+	($alpha-vector-of-collected-beta A))
+    => '#())
+
+  (check	;after the finalisation of  the collector, the collected
+		;is finalised too
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q A)))
+	($alpha-finalise A)
+	(list ($alpha-vector-of-collected-beta A)
+	      (beta?/alive B)))
+    => '(#() #f))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
