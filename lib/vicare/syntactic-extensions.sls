@@ -98,7 +98,8 @@
 	  define-argument-validation
 	  with-arguments-validation
 	  with-dangerous-arguments-validation
-	  arguments-validation-forms)
+	  arguments-validation-forms
+	  exact-integer.vicare-arguments-validation)
     (prefix (vicare unsafe-operations)
 	    $))
 
