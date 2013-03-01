@@ -567,6 +567,15 @@
 	      (beta?/alive B)))
     => '(#() #f #f))
 
+;;; --------------------------------------------------------------------
+
+  (check	;collected without collector
+      (let* ((Q (integer->pointer 456))
+	     (B (make-beta/owner Q #f)))
+	($beta-finalise B)
+	(beta?/alive B))
+    => #f)
+
   (collect))
 
 

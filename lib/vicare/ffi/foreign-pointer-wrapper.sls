@@ -162,14 +162,22 @@
     ;;
     (let ((type-string (%id->string type-id)))
       (with-syntax
-	  ((PRED-VALIDATOR	(%make-argument-validator-pred-id type-id))
-	   (ALIVE-VALIDATOR	(%make-argument-validator-alive-id type-id))
-	   (PRED-MSG		(string-append "expected \""
-					       type-string
-					       "\" struct as argument"))
-	   (ALIVE-MSG		(string-append "expected alive \""
-					       type-string
-					       "\" struct as argument")))
+	  ((PRED-VALIDATOR
+	    (%make-argument-validator-pred-id type-id))
+	   (ALIVE-VALIDATOR
+	    (%make-argument-validator-alive-id type-id))
+	   (FALSE-OR-PRED-VALIDATOR
+	    (%make-argument-validator-false-or-pred-id type-id))
+	   (FALSE-OR-ALIVE-VALIDATOR
+	    (%make-argument-validator-false-or-alive-id type-id))
+	   (PRED-MSG
+	    (string-append "expected \"" type-string "\" struct as argument"))
+	   (ALIVE-MSG
+	    (string-append "expected alive \"" type-string "\" struct as argument"))
+	   (FALSE-OR-PRED-MSG
+	    (string-append "expected #f or \"" type-string "\" struct as argument"))
+	   (FALSE-OR-ALIVE-MSG
+	    (string-append "expected #f or alive \"" type-string "\" struct as argument")))
 	(let ((pred		(%make-pred-id/type? type-id))
 	      (pred/alive	(%make-pred-id/alive-type? type-id)))
 	  #`(begin
@@ -178,7 +186,13 @@
 		(assertion-violation who PRED-MSG obj))
 	      (define-argument-validation (ALIVE-VALIDATOR who obj)
 		(#,pred/alive obj)
-		(assertion-violation who ALIVE-MSG obj)))))))
+		(assertion-violation who ALIVE-MSG obj))
+	      (define-argument-validation (FALSE-OR-PRED-VALIDATOR who obj)
+		(or (not obj) (#,pred obj))
+		(assertion-violation who FALSE-OR-PRED-MSG obj))
+	      (define-argument-validation (FALSE-OR-ALIVE-VALIDATOR who obj)
+		(or (not obj) (#,pred/alive obj))
+		(assertion-violation who FALSE-OR-ALIVE-MSG obj)))))))
 
   (define (%make-makers-definitions type-id collector-type-id collected-type-ids)
     ;;Return  a  syntax  object  representing  the  definitions  of  the
@@ -215,9 +229,7 @@
 	    '()))
 	 ((VALIDATOR-CLAUSE ...)
 	  (if has-collector?
-	      `((,(%id->id collector-type-id
-			   (lambda (collector-type-string)
-			     (string-append collector-type-string "/alive")))
+	      `((,(%make-argument-validator-false-or-alive-id collector-type-id)
 		 ,collector-struct))
 	    '()))
 	 ((REGISTER-COLLECTED-IN-COLLECTOR ...)
@@ -243,7 +255,9 @@
 	      (let ((INSTANCE (MAKER pointer owner? #f (gensym)
 				     COLLECTOR-STRUCT ...
 				     TABLE-MAKER ...)))
-		(REGISTER-COLLECTED-IN-COLLECTOR COLLECTOR-STRUCT INSTANCE) ...
+		(when COLLECTOR-STRUCT
+		  (REGISTER-COLLECTED-IN-COLLECTOR COLLECTOR-STRUCT INSTANCE))
+		...
 		INSTANCE))))))
 
   (define (%make-predicate-definitions type-id)
@@ -562,6 +576,14 @@
     (%id->id type-id (lambda (type-string)
 		       type-string)))
 
+  (define (%make-argument-validator-false-or-pred-id type-id)
+    ;;Given an identifier  representing the struct type  name: return an
+    ;;identifier representing  the argument validation clause  using the
+    ;;type predicate but also accepting false.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "false-or-" type-string))))
+
   (define (%make-argument-validator-alive-id type-id)
     ;;Given an identifier  representing the struct type  name: return an
     ;;identifier representing  the argument validation clause  using the
@@ -569,6 +591,14 @@
     ;;
     (%id->id type-id (lambda (type-string)
 		       (string-append type-string "/alive"))))
+
+  (define (%make-argument-validator-false-or-alive-id type-id)
+    ;;Given an identifier  representing the struct type  name: return an
+    ;;identifier representing  the argument validation clause  using the
+    ;;alive type predicate but also accepting false.
+    ;;
+    (%id->id type-id (lambda (type-string)
+		       (string-append "false-or-" type-string "/alive"))))
 
 ;;; --------------------------------------------------------------------
 ;;; getter ids

@@ -853,7 +853,8 @@ accepts a single argument.
 If the definition of @meta{type-id} includes a clause
 @code{collector-struct-type} with an identifier @meta{collector-id} as
 value: this maker function accepts two arguments, the second being the
-instance of type @meta{collector-id}.
+instance of type @meta{collector-id} or @false{} if there is no
+collector instance.
 
 @item (make-@meta{type-id}/not-owner @var{pointer})
 @itemx (make-@meta{type-id}/not-owner @var{pointer} @var{collector})
@@ -868,7 +869,8 @@ accepts a single argument.
 If the definition of @meta{type-id} includes a clause
 @code{collector-struct-type} with an identifier @meta{collector-id} as
 value: this maker function accepts two arguments, the second being the
-instance of type @meta{collector-id}.
+instance of type @meta{collector-id} or @false{} if there is no
+collector instance.
 
 @item ($@meta{type-id}-finalise @var{struct})
 Perform the finalisation procedure for this @var{struct} instance; it is
@@ -943,6 +945,16 @@ the predicate @code{@meta{type-id}?}.
 Validation form to be used with the facilities of the library
 @library{vicare arguments validation}.  Succeed if @var{obj} satisfies
 the predicate @code{@meta{type-id}?/alive}.
+
+@item (false-or-@meta{type-id} @var{obj})
+Validation form to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is @false{}
+or satisfies the predicate @code{@meta{type-id}?}.
+
+@item (false-or-@meta{type-id}/alive @var{obj})
+Validation form to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is @false{}
+or satisfies the predicate @code{@meta{type-id}?/alive}.
 
 @item (@meta{type-id}-custom-destructor @var{struct})
 @itemx (set-@meta{type-id}-custom-destructor! @var{struct} @var{destructor})
