@@ -981,7 +981,35 @@ state associated to @var{struct}; if we do:
 
 @noindent
 we can easily associate values to @var{struct}.
+
+@item (@meta{type-id}-pointer @var{struct})
+Return the pointer object referencing the foreign data structure; if
+@var{struct} has already been finalised: the returned value is @false{}.
+
+@item (@meta{type-id}-pointer-owner? @var{struct})
+Return @true{} if @var{struct} owns the pointer object, otherwise return
+@false{}.
 @end table
 
+If the definition of @meta{type-id} includes a clause
+@code{collector-struct-type} with an identifier @meta{collector-id} as
+value, the following bindings are available:
+
+@table @code
+@item (@meta{type-id}-collector-@meta{collector-id} @var{struct})
+Return the instance of type @meta{collector-id} that was registered as
+collector for @var{struct}; if no collector was registered: return
+@false{}.
+@end table
+
+If the definition of @meta{type-id} includes a clause
+@code{collected-struct-type} with an identifier @meta{collected-id} as
+value, the following bindings are available:
+
+@table @code
+@item ($@meta{type-id}-vector-of-collected-@meta{collected-id} @var{struct})
+Return a Scheme vector containing the instances of type
+@meta{collected-id} collected by @var{struct}.
+@end table
 
 @c end of file
