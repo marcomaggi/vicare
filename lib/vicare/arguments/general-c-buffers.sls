@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -46,11 +46,6 @@
 
 (define-syntax* (with-general-c-strings stx)
   (syntax-case stx (string-to-bytevector)
-    ((_ ((?str^ ?str) ...) ?string->bytevector ?body0 . ?body)
-     (identifier? #'?string->bytevector)
-     #'(with-general-c-strings ((?str^ ?str) ...)
-	   (string-to-bytevector ?string->bytevector)
-	 ?body0 . ?body))
     ((_ ((?str^ ?str) ...)
 	(string-to-bytevector ?string->bytevector)
 	?body0 . ?body)
@@ -65,15 +60,15 @@
 			    (else
 			     (assertion-violation #f "invalid general C string" str)))))
 	     ...)
-	 ?body0 . ?body))))
+	 ?body0 . ?body))
+    ((_ ((?str^ ?str) ...) ?body0 . ?body)
+     #'(with-general-c-strings ((?str^ ?str) ...)
+	   (string-to-bytevector string->ascii)
+	 ?body0 . ?body))
+    ))
 
 (define-syntax* (with-general-c-strings/false stx)
   (syntax-case stx (string-to-bytevector)
-    ((?key ((?str^ ?str) ...) ?string->bytevector ?body0 . ?body)
-     (identifier? #'?string->bytevector)
-     #'(with-general-c-strings/false ((?str^ ?str) ...)
-	   (string-to-bytevector ?string->bytevector)
-	 ?body0 . ?body))
     ((_ ((?str^ ?str) ...)
 	(string-to-bytevector ?string->bytevector)
 	?body0 . ?body)
@@ -90,7 +85,12 @@
 			    (else
 			     (assertion-violation #f "invalid general C string" str)))))
 	     ...)
-	 ?body0 . ?body))))
+	 ?body0 . ?body))
+    ((?key ((?str^ ?str) ...) ?body0 . ?body)
+     #'(with-general-c-strings/false ((?str^ ?str) ...)
+	   (string-to-bytevector string->ascii)
+	 ?body0 . ?body))
+    ))
 
 
 ;;;; general C pathnames
@@ -133,9 +133,3 @@
 )
 
 ;;; end of file
-;;Local Variables:
-;;eval: (put 'with-general-c-strings 'scheme-indent-function 2)
-;;eval: (put 'with-general-c-strings/false 'scheme-indent-function 2)
-;;eval: (put 'with-general-c-pathnames 'scheme-indent-function 1)
-;;eval: (put 'with-general-c-pathnames/false 'scheme-indent-function 1)
-;;End:

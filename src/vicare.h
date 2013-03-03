@@ -10,7 +10,7 @@
 	"internals.h", which defines  the internal API; some definitions
 	are modified to keep them opaque to external code.
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -897,6 +897,26 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 #define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
 
+/* ------------------------------------------------------------------ */
+
+/* generalised C buffer */
+#define IK_GENERALISED_C_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C buffer or false */
+#define IK_GENERALISED_C_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
+/* ------------------------------------------------------------------ */
+
+/* generalised sticky C buffer */
+#define IK_GENERALISED_C_STICKY_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised sticky C buffer or false */
+#define IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
 
 /** --------------------------------------------------------------------
  ** Special macros extracting "char *" pointers from objects.
@@ -947,6 +967,16 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 /* bytevector, pointer, mblock, false */
 #define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
+
+/* ------------------------------------------------------------------ */
+
+/* generalised C string */
+#define IK_GENERALISED_C_STRING(OBJ)	\
+  IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C string or false */
+#define IK_GENERALISED_C_STRING_OR_FALSE(OBJ)	\
+  IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
 
 
 /** --------------------------------------------------------------------

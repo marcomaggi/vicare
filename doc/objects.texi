@@ -4684,64 +4684,89 @@ referencing the data; when @var{obj} is @false{}: the returned value is
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_FALSE (ikptr @var{obj})
 Given @false{} or a bytevector object return a @code{char *} pointer
 referencing the data; when @var{obj} is @false{}: the returned value is
 @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {charp *} IK_CHARP_FROM_MBLOCK_OR_FALSE (ikptr @var{obj})
 Given @false{} or a @code{memory-block} object return a @code{char *}
 pointer referencing the data; when @var{obj} is @false{}: the returned
 value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER (ikptr @var{obj})
 Given a bytevector object or a pointer object return a @code{char *}
 pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_FALSE (ikptr @var{obj})
 Given @false{} or a bytevector object or a pointer object return a
 @code{char *} pointer referencing the data; when @var{obj} is @false{}:
 the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK (ikptr @var{obj})
 Given a pointer object or @code{memory-block} object return a @code{void
 *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
 Given @false{} or a pointer object or a @code{memory-block} object
 return a @code{char *} pointer referencing the data; when @var{obj} is
 @false{}: the returned value is @cnull{}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK (ikptr @var{obj})
 Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{char *} pointer referencing the data.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
-@deftypefnx {Preprocessor Macro} ikptr IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefn {Preprocessor Macro} {void *} IK_POINTER_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE (ikptr @var{obj})
 Given @false{} or a bytevector object or a pointer object or a
 @code{memory-block} object return a @code{char *} pointer referencing
 the data; when @var{obj} is @false{}: the returned value is @cnull{}.
+@end deftypefn
+
+@c ------------------------------------------------------------
+
+@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER_OR_FALSE (ikptr @var{obj})
+Given a bytevector object or a pointer object or a @code{memory-block}
+object return a @code{void *} pointer referencing the data.  The second
+macro accepts also @false{} as value and returns @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {void *} IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE (ikptr @var{obj})
+Given a pointer object or a @code{memory-block} object return a
+@code{void *} pointer referencing the data.  The second macro accepts
+also @false{} as value and returns @cnull{}.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING (ikptr @var{obj})
+@deftypefnx {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING_OR_FALSE (ikptr @var{obj})
+Given a bytevector object or a pointer object or a @code{memory-block}
+object return a @code{char *} pointer referencing the data.  The second
+macro accepts also @false{} as value and returns @cnull{}.
 @end deftypefn
 
 @c page

@@ -11,7 +11,7 @@
 * platform::                    Hosting platform utilities.
 * words::                       Exact integer predicates and constants.
 * syntaxes::                    Language syntactic extensions.
-* cbuffers::                    Generalised C buffers.
+* cbuffers::                    Generalised C buffers and strings.
 * keywords::                    More facilities for keyword objects.
 * readline::                    Extended interface to @gnu{} Readline.
 * parser logic::                Defining parsers logic.
@@ -242,7 +242,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined symbols::        Validating symbols.
 * args predefined enum-sets::      Validating enum-sets.
 * args predefined pointers::       Validating pointers.
-* args predefined memory-blocks::  Validating @code{meory-block} values.
+* args predefined memory-blocks::  Validating @code{memory-block} values.
 * args predefined flonums::        Validating flonums.
 * args predefined bignums::        Validating bignums.
 * args predefined ratnums::        Validating ratnums.
@@ -974,7 +974,7 @@ Succeed if @var{obj} is a pointer and it does @strong{not} represent
 
 @c page
 @node args predefined memory-blocks
-@subsubsection Validating @code{meory-block} values
+@subsubsection Validating @code{memory-block} values
 
 
 The following bindings are exported by the library @library{vicare
@@ -1137,35 +1137,8 @@ Succeed if @var{obj} is @false{} or an textual or binary port.
 @subsubsection Validating generalised C string arguments
 
 
-Generalised C strings are meant to be used in interfaces to foreign C
-language libraries, when a pointer to C string or input buffer is
-required as argument.
-
-A @dfn{generalised C string} is an object capable of holding the
-representation of a C language string; such Scheme objects are: strings,
-bytevectors, pointer objects, instances of @code{memory-block}.
-
-When a Scheme string is used as generalised C string: the application
-must take care of converting the Scheme string into a C string
-representation, for example using @func{string->ascii}.
-
-When using generalised C strings we have to remember that:
-
-@itemize
-@item
-A run of the garbage collector may move the data area of Scheme
-bytevectors; for this reason Scheme bytevectors and Scheme strings
-converted to bytevectors are not suitable as arguments to Scheme
-functions interfacing to C functions that call back to Scheme.
-
-@item
-If a Scheme string is used as argument: the C function cannot modify it
-by using it as output buffer.
-@end itemize
-
-@noindent
-in these cases we should use generalised C buffers, @ref{args predefined
-genbuffers} for details.
+@ref{cbuffers strings, Introduction to generalised C strings}, for
+details on generalised C strings.
 
 The following bindings are exported by the library @library{vicare
 arguments validation}.
@@ -1191,18 +1164,8 @@ Succeed if @var{obj} is @false{} or a generalised C string.
 @subsubsection Validating generalised C buffer arguments
 
 
-Generalised C buffers are meant to be used in interfaces to foreign C
-language libraries, when a pointer to raw data is required as argument.
-
-A @dfn{generalised C buffer} is an object capable of holding an array of
-mutable bytes referenced by a pointer; such Scheme objects are:
-bytevectors, pointer objects, instances of @code{memory-block}.
-
-A @dfn{generalised C sticky buffer} is an object capable of holding an
-array of mutable bytes referenced by a pointer, whose data area is never
-moved around by the garbage collector; such Scheme objects are: pointer
-objects, instances of @code{memory-block}.  Sticky buffers are meant to
-be used when calling out to C functions that call back to Scheme.
+@ref{cbuffers buffers, Introduction to generalised C buffers}, for
+details on generalised C buffers.
 
 The following bindings are exported by the library @library{vicare
 arguments validation}.
@@ -2394,24 +2357,104 @@ use continuations to escape from the body.  Expand to:
 
 @c page
 @node cbuffers
-@section Generalised C buffers
+@section Generalised C buffers and strings
+
+
+When interfacing a C language foreign library with @value{PRJNAME}, it
+is often needed to convert Scheme objects to raw memory blocks, possibly
+containing @asciiz{} strings.
+
+@menu
+* cbuffers buffers::            Introduction to generalised C buffers.
+* cbuffers strings::            Introduction to generalised C strings.
+* cbuffers api::                Programming interface to generalised
+                                C buffers and strings.
+@end menu
+
+@c page
+@node cbuffers buffers
+@subsection Introduction to generalised C buffers
+
+
+Generalised C buffers are meant to be used in interfaces to foreign C
+language libraries, when a pointer to raw data is required as argument.
+
+A @dfn{generalised C buffer} is an object capable of holding an array of
+mutable bytes referenced by a pointer; such Scheme objects are:
+bytevectors, pointer objects, instances of @code{memory-block}.
+
+A @dfn{generalised C sticky buffer} is an object capable of holding an
+array of mutable bytes referenced by a pointer, whose data area is never
+moved around by the garbage collector; such Scheme objects are: pointer
+objects, instances of @code{memory-block}.  Sticky buffers are meant to
+be used when calling out to C functions that call back to Scheme.
+
+@ref{iklib memory blocks} for details on memory blocks.
+
+@c page
+@node cbuffers strings
+@subsection Introduction to generalised C strings
+
+
+Generalised C strings are meant to be used in interfaces to foreign C
+language libraries, when a pointer to C string or input buffer is
+required as argument.
+
+A @dfn{generalised C string} is an object capable of holding the
+representation of a C language string; such Scheme objects are: strings,
+bytevectors, pointer objects, instances of @code{memory-block}.
+@ref{iklib memory blocks} for details on memory blocks.
+
+When a Scheme string is used as generalised C string: the application
+must take care of converting the Scheme string into a C string
+representation, for example using @func{string->ascii}.
+
+When using generalised C strings we have to remember that:
+
+@itemize
+@item
+A run of the garbage collector may move the data area of Scheme
+bytevectors; for this reason Scheme bytevectors and Scheme strings
+converted to bytevectors are not suitable as arguments to Scheme
+functions interfacing to C functions that call back to Scheme.
+
+@item
+If a Scheme string is used as argument: the C function cannot modify it
+by using it as output buffer.
+@end itemize
+
+@noindent
+in these cases we should use generalised C buffers, @ref{cbuffers
+buffers, Introduction to generalised C buffers}.
+
+@c page
+@node cbuffers api
+@subsection Programming interface to generalised C buffers and strings
 
 
 @cindex Library @library{vicare arguments general-c-buffers}
 @cindex @library{vicare arguments general-c-buffers}, library
 
 
-Generalised C strings and buffers are meant to be used in interfaces to
-foreign C language libraries, when a pointer to C string or input and
-output buffer is required as argument.  @ref{args predefined genstrings}
-for details on generalised C strings.  @ref{args predefined genbuffers}
-for details on generalised C buffers.
+The @api{} dealing with generalised C buffers and strings, is composed
+of syntaxes used to validate and normalise the arguments before handing
+them to the foreign function.
+
+@ref{args predefined genbuffers, Validating generalised C buffer
+arguments} for details on how to validation generalised C buffer
+arguments.
+
+@ref{args predefined genstrings, Validating generalised C string
+arguments} for details on how to validation generalised C string
+arguments.
+
 
 The following bindings are exported by the library @library{vicare
 arguments general-c-buffers}.
 
 
-@deffn Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) ((string-to-bytevector @meta{string->bytevector})) @metao{body} . @meta{body}
+@deffn Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) (string-to-bytevector @meta{string->bytevector}) @metao{body} . @meta{body}
+@deffnx Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
 @deffnx {Auxiliary Syntax} string-to-bytevector
 Prepare some generalised C strings to be used by a chunk of code
 expecting access to raw memory holding a C language string or input
@@ -2425,7 +2468,8 @@ evaluated only once.
 
 The value @meta{string->bytevector} must be an expression evaluating to
 a procedure which converts a string to a bytevector, for example
-@func{string->ascii}.
+@func{string->ascii}.  In the second form of the syntax use:
+@meta{string->bytevector} defaults to @func{string->ascii}.
 
 For each couple @meta{str} and @meta{expr} do the following:
 
@@ -2445,15 +2489,15 @@ effective.  Return the return value of the last @meta{body} form.
 @end deffn
 
 
-@deffn Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) ((string-to-bytevector @meta{string->bytevector})) @metao{body} . @meta{body}
+@deffn Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) (string-to-bytevector @meta{string->bytevector}) @metao{body} . @meta{body}
+@deffnx Syntax with-general-c-strings/false ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
 @deffnx {Auxiliary Syntax} string-to-bytevector
 Like @func{with-general-c-strings} but if a @meta{expr} evaluates
 to @false{} accept the value.
 @end deffn
 
 
-@deffn Syntax with-general-c-pathnames ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
-@deffnx {Auxiliary Syntax} string-to-bytevector
+@deffn Syntax with-general-c-pathnames ((@meta{ptn} @meta{expr}) ...) @metao{body} . @meta{body}
 Prepare some generalised C strings to be used by a chunk of code
 expecting access to raw memory holding a C language string representing
 a file system pathname.
@@ -2482,8 +2526,7 @@ effective.  Return the return value of the last @meta{body} form.
 @end deffn
 
 
-@deffn Syntax with-general-c-pathnames/false ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
-@deffnx {Auxiliary Syntax} string-to-bytevector
+@deffn Syntax with-general-c-pathnames/false ((@meta{ptn} @meta{expr}) ...) @metao{body} . @meta{body}
 Like @func{with-general-c-pathnames} but if a @meta{expr} evaluates to
 @false{} accept the value.
 @end deffn
