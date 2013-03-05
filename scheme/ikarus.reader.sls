@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012  Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -103,7 +103,9 @@
   (eq? (port-mode port) 'vicare))
 
 (define-inline (source-code-port? port)
-  (and (input-port? port) (textual-port? port)))
+  (and (or (input-port? port)
+	   (input/output-port? port))
+       (textual-port? port)))
 
 ;;; --------------------------------------------------------------------
 
