@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1279,6 +1279,19 @@
   (check
       (utf16->string (string->utf16n test-string) (native-endianness))
     => test-string)
+
+  #t)
+
+
+(parametrise ((check-test-name	'hex))
+
+  (check
+      (bytevector->string-hex (string->ascii "ciao mamma"))
+    => "6369616F206D616D6D61")
+
+  (check
+      (string-hex->bytevector "6369616F206D616D6D61")
+    => (string->ascii "ciao mamma"))
 
   #t)
 

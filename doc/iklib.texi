@@ -1728,6 +1728,13 @@ endianness respectively.
 @end defun
 
 
+@defun string-hex->bytevector @var{string}
+@defunx bytevector->string-hex @var{bytevevctor}
+Convert to and from a Scheme string and a Scheme bytevector; the string
+contains the (uppercase) hexadecimal representation of the bytevector.
+@end defun
+
+
 @defun uuid
 Attempt to build a unique string and return it.  If an internal error
 occurs because of impossible generation: raise an error.

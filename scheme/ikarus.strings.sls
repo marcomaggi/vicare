@@ -32,6 +32,7 @@
     ;; Vicare specific
     string->latin1	latin1->string
     string->ascii	ascii->string
+    string-hex->bytevector	bytevector->string-hex
 
     ;; unsafe operations
     $string=)
@@ -50,7 +51,9 @@
 
 		  ;; Vicare specific
 		  string->latin1	latin1->string
-		  string->ascii		ascii->string)
+		  string->ascii		ascii->string
+		  string-hex->bytevector
+		  bytevector->string-hex)
     (vicare syntactic-extensions)
     (prefix (except (vicare unsafe-operations)
 		    string=)
@@ -899,6 +902,58 @@
 	  (with-arguments-validation (who)
 	      ((ascii	code-point bv))
 	    ($string-set! str i ($fixnum->char code-point))))))))
+
+
+;;;; bytevectors to/from HEX strings
+
+(define (bytevector->string-hex bv)
+  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
+  ;;the HEX representation of the bytes.
+  ;;
+  ;;FIXME This implementation sucks plenty, rewrite it!!!  (Marco Maggi;
+  ;;Thu Mar 7, 2013)
+  ;;
+  (define who 'bytevector->hex)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    ;;Both strings and bytevectors have length representable as fixnum.
+    (let ((S.len (* 2 ($bytevector-length bv))))
+      (assert (fixnum? S.len))
+      (let ((S (make-string S.len #\0)))
+	(do ((i 0 ($fxadd1 i))
+	     (j 0 ($fx+ 2 j)))
+	    (($fx= i ($bytevector-length bv))
+	     S)
+	  (let ((H (fixnum->string ($bytevector-u8-ref bv i) 16)))
+	    (if (= 2 ($string-length H))
+		(begin
+		  ($string-set! S j           ($string-ref H 0))
+		  ($string-set! S ($fxadd1 j) ($string-ref H 1)))
+	      ($string-set! S ($fxadd1 j) ($string-ref H 0)))))))))
+
+(define (string-hex->bytevector S)
+  ;;Defined by Vicare.   Convert the string S into  a bytevector holding
+  ;;the byte representation of the HEX sequences.
+  ;;
+  ;;FIXME This implementation sucks plenty, rewrite it!!!  (Marco Maggi;
+  ;;Thu Mar 7, 2013)
+  ;;
+  (define who 'hex->bytevector)
+  (with-arguments-validation (who)
+      ((string	S))
+    ;;Both strings and bytevectors have length representable as fixnum.
+    ;;Both strings and bytevectors have length representable as fixnum.
+    (let ((S.len ($string-length S)))
+      (assert (fxeven? S.len))
+      (let* ((B.len (fxdiv S.len 2))
+	     (B     (make-bytevector B.len)))
+	(do ((i 0 ($fx+ 2 i))
+	     (j 0 ($fxadd1 j)))
+	    (($fx= i S.len)
+	     B)
+	  (let* ((H (substring S i ($fx+ 2 i)))
+		 (N (string->number H 16)))
+	    ($bytevector-u8-set! B j N)))))))
 
 
 ;;;; done
