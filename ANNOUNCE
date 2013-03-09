@@ -40,6 +40,8 @@ collection of R6 Scheme libraries:
 Notes for revision 0.2d21
 -------------------------
 
+* The boot images have been rotated.
+
 * Changed tarball distribution from .bz2 compression to .xz compression.
 
 * Added $STRING= to (ikarus system $strings).
