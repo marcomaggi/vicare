@@ -252,7 +252,6 @@
 	 (V (void)))
     (let loop ((i 0))
       (if (unsafe.fx= i N)
-	  #;S
 	  (cond ((<rtd>-destructor rtd)
 	  	 => (lambda (destructor)
 	  	      ($record-guardian S)))

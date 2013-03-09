@@ -1163,11 +1163,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (module ($record-guardian record-guardian-logger record-guardian-log)
 
-  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
-  ;;Sat Mar 9, 2013)
-  #;(define (record-reset x)
-    (void))
-
   ;;Whenever a  record instance, with destructor  function registered in
   ;;its descriptor, is created: it is  registered in this guardian to be
   ;;destroyed appropriately.

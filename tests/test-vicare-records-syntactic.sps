@@ -304,21 +304,18 @@
   (check
       (parametrise ((record-guardian-logger #t))
 	(let ((S (make-<alpha> 1 2 3)))
-	  #;($record-guardian S)
 	  (check-pretty-print S)
 	  (collect)))
     => (void))
 
   (check
       (let ((S (make-<alpha> 1 2 3)))
-  	#;($record-guardian S)
   	(check-pretty-print S)
   	(collect))
     => (void))
 
   (check
       (let ((S (make-<alpha> 1 2 3)))
-  	#;($record-guardian S)
   	(check-pretty-print S)
   	(collect))
     => (void))
