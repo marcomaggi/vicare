@@ -1412,6 +1412,28 @@ Reset to void all the fields of a structure.
 @subsection Automatic finalisation of records
 
 
+It is possible to automatically apply a destructor function whenever an
+@rnrs{6} record reclaimed by the garbage collector.
+
+@example
+#!r6rs
+(import (vicare))
+
+(define-record-type <alpha>
+  (fields a b c))
+
+(record-destructor-set! (record-type-descriptor <alpha>)
+                        (lambda (S)
+                          (pretty-print (list 'finalising S)
+                                        (current-error-port))))
+
+(pretty-print (make-<alpha> 1 2 3) (current-error-port))
+@print{} #[r6rs-record: <alpha> a=1 b=2 c=3]
+
+(collect)
+@print{} (finalising #[r6rs-record: <alpha> a=1 b=2 c=3])
+@end example
+
 The following bindings are exported by the library @library{vicare}.
 
 

@@ -290,6 +290,22 @@
 	      (record-guardian-logger	(lambda (S E action)
 					  (check-pretty-print (list S E action)))))
 
+  (module ()	;example for the documentation
+
+    (define-record-type <alpha>
+      (fields a b c))
+
+    (record-destructor-set! (record-type-descriptor <alpha>)
+			    (lambda (S)
+			      (pretty-print (list 'finalising S)
+					    (current-error-port))))
+
+    (parametrise ((record-guardian-logger #f))
+      (pretty-print (make-<alpha> 1 2 3) (current-error-port))
+      (collect))
+
+    #f)
+
   (define-record-type <alpha>
     (fields a b c))
 

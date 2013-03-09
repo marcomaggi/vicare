@@ -42,6 +42,10 @@ Notes for revision 0.2d21
 
 * The boot images have been rotated.
 
+* Added  automatic  finalisation of  R6RS  records  through the  garbage
+  collector  facilities,  see  the  documentation  node  "iklib  records
+  final".
+
 * Changed tarball distribution from .bz2 compression to .xz compression.
 
 * Added $STRING= to (ikarus system $strings).
