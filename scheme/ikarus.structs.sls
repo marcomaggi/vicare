@@ -296,6 +296,8 @@
       (let* ((n (rtd-length rtd))
 	     (r ($make-struct rtd n)))
 	(if (%set-fields r args 0 n)
+	    ;;Notice that  the expander also  has this operation  in its
+	    ;;implementation of DEFINE-STRUCT.
 	    (if (rtd-destructor rtd)
 		($struct-guardian r)
 	      r)

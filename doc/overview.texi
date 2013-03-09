@@ -730,6 +730,15 @@ the definition; for example:
       ($color-blue  Y)))
 @result{} (10 20 30)
 @end example
+
+@item
+@rnrs{6} records can be automatically finalised whenever the garbage
+collector reclaims them.  It is possible to register a destructor
+function in the @rnrs{6} record--type descriptor; whenever a record is
+instantiated and its record--type descriptor has a destructor function:
+the record is registered in an internal guardian.  The guardian has an
+associated post garbage collection hook which applies the destructor to
+the record.
 @end enumerate
 
 @c page

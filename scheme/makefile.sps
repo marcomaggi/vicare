@@ -713,7 +713,6 @@
     (struct-reset				i v $language)
     (struct-guardian-logger			i v $language)
     (struct-guardian-log			i v $language)
-    ($struct-guardian				$structs)
     (code?					i v $language)
     (immediate?					i v $language)
     (pointer-value				i v $language)
@@ -941,6 +940,8 @@
     ($make-struct				$structs)
     ($struct?					$structs)
     ($struct/rtd?				$structs)
+    ($struct-guardian				$structs)
+    ($record-guardian				$structs)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
@@ -1864,6 +1865,11 @@
     (record-mutator				i v r rp)
     (record-predicate				i v r rp)
     (record-type-descriptor?			i v r rp)
+    (record-destructor-set!			i v $language)
+    (record-destructor				i v $language)
+    (record-guardian-logger			i v $language)
+    (record-guardian-log			i v $language)
+    (record-reset				i v $language)
     (syntax-violation				i v r sc)
     (bound-identifier=?				i v r sc)
     (datum->syntax				i v r sc)

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare syntactic-extensions)
+  (ikarus system $structs)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -260,6 +261,69 @@
     => '(10 2 30 40 5 60 70 8 90))
 
   #t)
+
+
+(parametrise ((check-test-name	'reset))
+
+  (define-record-type <alpha>
+    (fields a b c))
+
+  (check
+      (let ((R (make-<alpha> 1 2 3)))
+	(record-reset R)
+	(list (<alpha>-a R)
+	      (<alpha>-b R)
+	      (<alpha>-c R)))
+    => (list (void) (void) (void)))
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 (condition-who E))
+		(else E))
+	(record-reset 123))
+    => 'record-reset)
+
+  #t)
+
+
+(parametrise ((check-test-name		'destructor)
+	      (record-guardian-logger	(lambda (S E action)
+					  (check-pretty-print (list S E action)))))
+
+  (define-record-type <alpha>
+    (fields a b c))
+
+  (record-destructor-set! (record-type-descriptor <alpha>)
+			  (lambda (S)
+			    (void)))
+
+  (check
+      (procedure? (record-destructor (record-type-descriptor <alpha>)))
+    => #t)
+
+  (check
+      (parametrise ((record-guardian-logger #t))
+	(let ((S (make-<alpha> 1 2 3)))
+	  ($record-guardian S)
+	  (check-pretty-print S)
+	  (collect)))
+    => (void))
+
+  (check
+      (let ((S (make-<alpha> 1 2 3)))
+  	($record-guardian S)
+  	(check-pretty-print S)
+  	(collect))
+    => (void))
+
+  (check
+      (let ((S (make-<alpha> 1 2 3)))
+  	($record-guardian S)
+  	(check-pretty-print S)
+  	(collect))
+    => (void))
+
+  (collect))
 
 
 (parametrise ((check-test-name	'misc))

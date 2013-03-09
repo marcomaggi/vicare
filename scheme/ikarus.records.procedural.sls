@@ -32,7 +32,9 @@
     record-type-field-names
 
     ;; extension utility functions, non-R6RS
-    rtd-subtype?			print-r6rs-record-instance)
+    rtd-subtype?			print-r6rs-record-instance
+    record-reset
+    record-destructor-set!		record-destructor)
   (import (except (ikarus)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
@@ -49,9 +51,12 @@
 		  record-type-field-names
 
 		  ;; extension utility functions, non-R6RS
-		  rtd-subtype?				print-r6rs-record-instance)
+		  rtd-subtype?				print-r6rs-record-instance
+		  record-reset
+		  record-destructor-set!		record-destructor)
     (ikarus system $structs)
     (vicare syntactic-extensions)
+    (vicare arguments validation)
     (prefix (vicare unsafe-operations)
 	    unsafe.))
 
@@ -93,7 +98,7 @@
 ;;
 ;;An R6RS record-type descriptor is a struct instance of type <RTD>.  An
 ;;R6RS record instance is a  struct instance whose first word references
-;;its type descriptor, that is a struct instance of type <RTD>.
+;;its type descriptor: a struct instance of type <RTD>.
 ;;
 ;;       RTD ref
 ;;      |-------|---------------| R6RS record instance
@@ -174,6 +179,10 @@
 		;False or an instance of <RCD>.  When an RCD: it is used
 		;whenever  an  RCD  for   a  subtype  is  built  without
 		;specifying a specific RCD.
+   destructor
+		;False  or a  function,  accepting one  argument, to  be
+		;invoked  whenever   the  record  instance   is  garbage
+		;collected.
    ))
 
 (define (%rtd-printer S port sub-printer)
@@ -244,6 +253,10 @@
     (let loop ((i 0))
       (if (unsafe.fx= i N)
 	  S
+	  ;; (cond ((<rtd>-destructor rtd)
+	  ;; 	 => (lambda (destructor)
+	  ;; 	      ($record-guardian S)))
+	  ;; 	(else S))
 	(begin
 	  ($struct-set! S i V)
 	  (loop (unsafe.fxadd1 i)))))))
@@ -655,7 +668,8 @@
 		      parent sealed? opaque? uid normalised-fields
 		      (void) #;initialiser
 		      #f #;default-protocol
-		      #f #;default-rcd)
+		      #f #;default-rcd
+		      #f #;destructor )
 	(make-<rtd> name
 		    (fx+ fields-number (<rtd>-total-fields-number parent))
 		    fields-number
@@ -663,7 +677,8 @@
 		    parent sealed? (or opaque? (<rtd>-opaque? parent)) uid normalised-fields
 		    (void) #;initialiser
 		    #f #;default-protocol
-		    #f #;default-rcd))))
+		    #f #;default-rcd
+		    #f #;destructor ))))
 
   (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
@@ -1041,7 +1056,42 @@
 				     (%print-fields prtd (upper-rtd prtd))
 				     (<rtd>-total-fields-number prtd))
 				 0))))
-	(%display "]\n"))))))
+	(%display "]"))))))
+
+(define (record-reset x)
+  ;;Reset to #f all the fields of a structure.
+  ;;
+  (define who 'record-reset)
+  (with-arguments-validation (who)
+      ((record x))
+    ;;Remember that the first 2 fields of an R6RS record type descriptor
+    ;;have the  same meaning of  the first 2  fields of a  Vicare struct
+    ;;type descriptor.
+    (let ((len ($struct-ref ($struct-rtd x) 1)))
+      (do ((i 0 (+ 1 i)))
+	  ((= i len))
+	($struct-set! x i (void))))))
+
+
+;;;; non-R6RS extensions: record destructor
+
+(define (record-destructor-set! rtd func)
+  ;;Store a  function as  destructor in  a R6RS  record-type descriptor.
+  ;;Return unspecified values.
+  ;;
+  (define who 'record-destructor-set!)
+  (with-arguments-validation (who)
+      ((rtd		rtd)
+       (procedure	func))
+    ($set-<rtd>-destructor! rtd func)))
+
+(define (record-destructor rtd)
+  ;;Return the value of the destructor field in RTD: #f or a function.
+  ;;
+  (define who 'record-destructor)
+  (with-arguments-validation (who)
+      ((rtd		rtd))
+    ($<rtd>-destructor rtd)))
 
 
 ;;;; done

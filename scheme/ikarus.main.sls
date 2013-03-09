@@ -33,9 +33,14 @@
 
 (library (ikarus main)
   (export
+
+    ;; automatic structs finalisation
     $struct-guardian
-    struct-guardian-logger
-    struct-guardian-log)
+    struct-guardian-logger		struct-guardian-log
+
+    ;; automatic R6RS records finalisation
+    $record-guardian
+    record-guardian-logger		record-guardian-log)
   (import (except (ikarus)
 		  load-r6rs-script
 		  load
@@ -43,6 +48,9 @@
 		  $struct-guardian
 		  struct-guardian-logger
 		  struct-guardian-log
+		  $record-guardian
+		  record-guardian-logger
+		  record-guardian-log
 		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
@@ -1058,6 +1066,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;must be executed before the initialisation of the symbol table.
   ($initialize-symbol-table!))
 
+
+;;;; automatic struct finalisation
+
 (module ($struct-guardian struct-guardian-logger struct-guardian-log)
   (define %struct-guardian
     (make-guardian))
@@ -1107,6 +1118,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (assertion-violation 'struct-guardian-log
 	 "invalid action in struct destruction process" S action))))
 
+  (define FIELD-INDEX-OF-DESTRUCTOR-IN-STD 5)
+
   (define (%struct-guardian-destructor)
     (guard (E (else (void)))
       (define-inline (%execute ?S ?body0 . ?body)
@@ -1114,7 +1127,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	    ((not ?S))
 	  ?body0 . ?body))
       (define-inline (%extract-destructor S)
-	($struct-ref ($struct-rtd S) 5))
+	($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-STD))
       (define-inline (%call-logger ?logger ?struct ?exception ?action)
 	(guard (E (else (void)))
 	  (?logger ?struct ?exception ?action)))
@@ -1142,6 +1155,119 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		   (struct-reset S))))))))
 
   (post-gc-hooks (cons %struct-guardian-destructor (post-gc-hooks)))
+
+  #| end of module |# )
+
+
+;;;; automatic R6RS records finalisation
+
+(module ($record-guardian record-guardian-logger record-guardian-log)
+
+  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
+  ;;Sat Mar 9, 2013)
+  (define (record-reset x)
+    (void))
+
+  ;;Whenever a  record instance, with destructor  function registered in
+  ;;its descriptor, is created: it is  registered in this guardian to be
+  ;;destroyed appropriately.
+  (define %record-guardian
+    (make-guardian))
+
+  (define ($record-guardian S)
+    ;;Wrapper for  %RECORD-GUARDIAN that  handles the invocation  of the
+    ;;logger function at record instantiation time.
+    ;;
+    (let ((logger (record-guardian-logger)))
+      (cond ((procedure? logger)
+	     (guard (E (else (void)))
+	       (logger S #f 'registration))
+	     (%record-guardian S))
+	    (logger
+	     (guard (E (else (void)))
+	       (record-guardian-log S #f 'registration))
+	     (%record-guardian S))
+	    (else
+	     (%record-guardian S)))))
+
+  ;;Parameter to select the current logger function.
+  (define record-guardian-logger
+    (make-parameter #f
+      (lambda (obj)
+	(cond ((or (boolean? obj)
+		   (procedure? obj))
+	       obj)
+	      (obj	#t)
+	      (else	#f)))))
+
+  (define (record-guardian-log S E action)
+    ;;Default logger function.   S must be the record  instance.  E must
+    ;;be #f  or a condition object  raised because an error  occurred in
+    ;;the destructor.  ACTION  must be a symbol selecting  the action to
+    ;;perform.
+    ;;
+    (case action
+      ((registration)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: registered record:\n\
+                 ***\t~s\n" S))
+      ((before-destruction)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: before destruction:\n\
+                 ***\t~s\n" S))
+      ((after-destruction)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: after destruction:\n\
+                 ***\t~s\n" S))
+      ((exception)
+       (fprintf (current-error-port)
+		"*** Vicare debug: record guardian: exception:\n\
+                 ***\t~s\n\
+                 ***\t~s\n" S E))
+      (else
+       (assertion-violation 'record-guardian-log
+	 "invalid action in record destruction process" S action))))
+
+  (define FIELD-INDEX-OF-DESTRUCTOR-IN-RTD 12)
+
+  (define (%record-guardian-destructor)
+    ;;The finalisation  function called  to handle the  record instances
+    ;;collected by the guardian.
+    ;;
+    (guard (E (else (void)))
+      (define-inline (%execute ?S ?body0 . ?body)
+	(do ((?S (%record-guardian) (%record-guardian)))
+	    ((not ?S))
+	  ?body0 . ?body))
+      (define (%extract-destructor S)
+	($struct-ref ($struct-rtd S) FIELD-INDEX-OF-DESTRUCTOR-IN-RTD))
+      (define (%call-logger logger record exception action)
+	(guard (E (else (void)))
+	  (logger record exception action)))
+      (let ((logger (record-guardian-logger)))
+	(cond ((procedure? logger)
+	       (%execute S
+		 (guard (E (else
+			    (%call-logger logger S E 'exception)))
+		   (%call-logger logger S #f 'before-destruction)
+		   ((%extract-destructor S) S)
+		   (%call-logger logger S #f 'after-destruction)
+		   (record-reset S))))
+	      (logger
+	       (%execute S
+		 (guard (E (else
+			    (%call-logger record-guardian-log S E 'exception)))
+		   (%call-logger record-guardian-log S #f 'before-destruction)
+		   ((%extract-destructor S) S)
+		   (%call-logger record-guardian-log S #f 'after-destruction)
+		   (record-reset S))))
+	      (else
+	       (%execute S
+		 (guard (E (else (void)))
+		   ((%extract-destructor S) S)
+		   (record-reset S))))))))
+
+  (post-gc-hooks (cons %record-guardian-destructor (post-gc-hooks)))
 
   #| end of module |# )
 

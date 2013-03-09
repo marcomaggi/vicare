@@ -50,6 +50,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib environment::           Environments.
 * iklib cafe::                  Cafe.
 * iklib structs::               Structures and type descriptors.
+* iklib records::               Extensions to @rnrs{6} records.
 * iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
@@ -1251,18 +1252,18 @@ When this function is used as value for the parameter
 
 @itemize
 @item
-The function is called whenever a data structure is registered in for
+The function is called whenever a data structure is registered for
 destruction with @var{action} set to the symbol @code{registration} and
 @var{exception} set to @false{}.
 
 @item
-The function is called just before the structucture is finalised with
+The function is called just before the structure is finalised with
 @var{action} set to the symbol @code{before-destruction} and
 @var{exception} set to @false{}.
 
 @item
-The function is called right after the structucture has been finalised
-with @var{action} set to the symbol @code{after-destruction} and
+The function is called right after the structure has been finalised with
+@var{action} set to the symbol @code{after-destruction} and
 @var{exception} set to @false{}.
 
 @item
@@ -1394,6 +1395,143 @@ same @rtd{} and equal field values according to @func{eqv?}.
 
 @defun struct-reset @var{stru}
 Reset to void all the fields of a structure.
+@end defun
+
+@c page
+@node iklib records
+@section Extensions to @rnrs{6} records
+
+
+@menu
+* iklib records final::         Automatic finalisation of records.
+* iklib records misc::          Miscellaneous functions.
+@end menu
+
+@c page
+@node iklib records final
+@subsection Automatic finalisation of records
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun record-destructor-set! @var{rtd} @var{destructor}
+Select the procedure @var{destructor} as destructor for @rnrs{6} record
+instances of type @var{rtd}; return unspecified values.  The destructor
+accepts a single argument being the record instance to finalise; the
+destructor can return unspecified values.
+
+After a destructor is registered in @var{rtd}: new instances of this
+record type are registered, upon creation, into an internal guardian,
+@ref{iklib guardians} for details; whenever such structures are garbage
+collected: the guardian applies @var{destructor} to them.
+
+Exceptions raised by @var{destructor} are catched with @func{guard} and
+discarded: destructor functions should take care of exceptions by
+themselves.
+@end defun
+
+
+@defun record-destructor @var{rtd}
+Return the current destructor for @var{rtd}: @false{} or a function.
+@end defun
+
+
+@deffn Parameter record-guardian-logger
+Select record instance destruction logging mode for debugging purposes.
+When a record is finalised by the garbage collector, using the
+destructor registered in the @rtd{}:
+
+@itemize
+@item
+If this parameter is set to @false{}: no additional actions are
+performed.
+
+@item
+If this parameter is set to @true{}: the function
+@func{record-guardian-log} is used to log the operations to the textual
+output port returned by @code{current-error-port}.
+
+@item
+If this parameter is set to a procedure: such procedure is used to log
+the operations in a user selected way.
+@end itemize
+
+See the documentation of @func{record-guardian-log} for the calling
+protocol of the logger functions.
+@end deffn
+
+
+@defun record-guardian-log @var{record} @var{exception} @var{action}
+Built in logger function to be used to log record instance finalisation
+operations by the garbage collector.  @var{record} is the structure to
+be finalised; @var{exception} is @false{} or an object raised by the
+structure destructor; @var{action} is one of the symbols:
+@code{before-destruction}, @code{after-destruction}, @code{exception}.
+
+When this function is used as value for the parameter
+@func{record-guardian-logger}:
+
+@itemize
+@item
+The function is called whenever a record is registered for destruction
+with @var{action} set to the symbol @code{registration} and
+@var{exception} set to @false{}.
+
+@item
+The function is called just before the record is finalised with
+@var{action} set to the symbol @code{before-destruction} and
+@var{exception} set to @false{}.
+
+@item
+The function is called right after the record has been finalised with
+@var{action} set to the symbol @code{after-destruction} and
+@var{exception} set to @false{}.
+
+@item
+If an exception is raised by the destructor: such exception is catched
+and this function is called with @var{action} set to @code{exception}
+and @var{exception} set to the raised object.
+@end itemize
+
+The current implementation is the following:
+
+@smallexample
+(define (record-guardian-log S E action)
+  (case action
+    ((registration)
+     (fprintf (current-error-port)
+       "*** Vicare debug: record guardian: registered record:\n\
+        ***\t~s\n" S))
+    ((before-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: record guardian: before destruction:\n\
+        ***\t~s\n" S))
+    ((after-destruction)
+     (fprintf (current-error-port)
+       "*** Vicare debug: record guardian: after destruction:\n\
+        ***\t~s\n" S))
+    ((exception)
+     (fprintf (current-error-port)
+       "*** Vicare debug: record guardian: exception:\n\
+        ***\t~s\n\
+        ***\t~s\n" S E))
+    (else
+     (assertion-violation 'record-guardian-log
+       "invalid action in record destruction process" S action))))
+@end smallexample
+@end defun
+
+@c page
+@node iklib records misc
+@subsection Miscellaneous functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun record-reset @var{record}
+Reset to void all the fields of a record, whatever its type.
 @end defun
 
 @c page
