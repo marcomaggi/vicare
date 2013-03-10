@@ -1269,6 +1269,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 ;;;; main expressions
 
+#;(define dummy #f)
+
 (let-values (((cfg execution-state-initialisation-according-to-command-line-options)
 	      (parse-command-line-arguments)))
   (with-run-time-config (cfg)

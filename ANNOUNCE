@@ -55,6 +55,13 @@ Notes for revision 0.2d21
   and tests also have been moved into modules independent from the Glibc
   ones.
 
+* Added  functions to  (vicare) to  convert between  bytevectors holding
+  octets  and  strings  or  bytevectors holding  the  ASCII  hexadecimal
+  encoding of octets:
+
+      hex->bytevector		bytevector->hex
+      string-hex->bytevector	bytevector->string-hex
+
 
 Notes for revision 0.2d20
 -------------------------

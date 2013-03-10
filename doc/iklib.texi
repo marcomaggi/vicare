@@ -1834,6 +1834,20 @@ which the flonums are stored in little, big or native endianness, real
 part first.
 @end defun
 
+
+@defun hex->bytevector @var{bytevector}
+@defunx bytevector->hex @var{bytevevctor}
+Convert to and from a Scheme bytevector containing octets and Scheme
+bytevector containing the @ascii{} hexadecimal representation of the
+octets.
+
+The input hex bytevector contains the uppercase or lowercase hexadecimal
+representation of the octets.  The output hex bytevector contains the
+uppercase hexadecimal representation of octets.
+
+If an error occurs in the conversion: the return value is @false{}.
+@end defun
+
 @c page
 @node iklib bytevectors generic
 @subsection Generic bytevectors operations
@@ -1890,8 +1904,13 @@ endianness respectively.
 
 @defun string-hex->bytevector @var{string}
 @defunx bytevector->string-hex @var{bytevevctor}
-Convert to and from a Scheme string and a Scheme bytevector; the string
-contains the (uppercase) hexadecimal representation of the bytevector.
+Convert to and from a Scheme string and a Scheme bytevector.
+
+The input string contains the uppercase or lowercase hexadecimal
+representation of the octets.  The output string contains the uppercase
+hexadecimal representation of octets.
+
+If an error occurs in the conversion: the return value is @false{}.
 @end defun
 
 

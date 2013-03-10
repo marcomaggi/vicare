@@ -1286,12 +1286,95 @@
 (parametrise ((check-test-name	'hex))
 
   (check
+      (ascii->string (bytevector->hex (string->ascii "ciao mamma")))
+    => "6369616F206D616D6D61")
+
+  (check
+      (bytevector->hex '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+    => (string->ascii "000102030405060708090A0B0C0D0E0F"))
+
+  (check
+      (bytevector->hex '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+    => (string->ascii "101112131415161718191A1B1C1D1E1F"))
+
+;;; --------------------------------------------------------------------
+;;; hex->bytevector
+
+  (check	;upper case
+      (ascii->string (hex->bytevector (string->ascii "6369616F206D616D6D61")))
+    => "ciao mamma")
+
+  (check	;lower case
+      (ascii->string (hex->bytevector (string->ascii "6369616f206d616d6d61")))
+    => "ciao mamma")
+
+  (check	;upper case
+      (hex->bytevector (string->ascii "000102030405060708090A0B0C0D0E0F"))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;lower case
+      (hex->bytevector (string->ascii "000102030405060708090a0b0c0d0e0f"))
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;upper case
+      (hex->bytevector (string->ascii "101112131415161718191A1B1C1D1E1F"))
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;lower case
+      (hex->bytevector (string->ascii "101112131415161718191a1b1c1d1e1f"))
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;invalid input
+      (hex->bytevector (string->ascii "101112131415161718191a1Z1c1d1e1f"))
+;;;                                                           ^
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; bytevector->string-hex
+
+  (check
       (bytevector->string-hex (string->ascii "ciao mamma"))
     => "6369616F206D616D6D61")
 
   (check
+      (bytevector->string-hex '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+    => "000102030405060708090A0B0C0D0E0F")
+
+  (check
+      (bytevector->string-hex '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+    => "101112131415161718191A1B1C1D1E1F")
+
+;;; --------------------------------------------------------------------
+;;; string-hex->bytevector
+
+  (check	;upper case
       (string-hex->bytevector "6369616F206D616D6D61")
     => (string->ascii "ciao mamma"))
+
+  (check	;lower case
+      (string-hex->bytevector "6369616f206d616d6d61")
+    => (string->ascii "ciao mamma"))
+
+  (check	;upper case
+      (string-hex->bytevector "000102030405060708090A0B0C0D0E0F")
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;lower case
+      (string-hex->bytevector "000102030405060708090a0b0c0d0e0f")
+    => '#vu8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15))
+
+  (check	;upper case
+      (string-hex->bytevector "101112131415161718191A1B1C1D1E1F")
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;lower case
+      (string-hex->bytevector "101112131415161718191a1b1c1d1e1f")
+    => '#vu8(16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31))
+
+  (check	;invalid input
+      (string-hex->bytevector "101112131415161718191a1Z1c1d1e1f")
+;;;                                                   ^
+    => #f)
 
   #t)
 

@@ -1230,6 +1230,8 @@
     (latin1->string				i v $language)
     (string->ascii				i v $language)
     (ascii->string				i v $language)
+    (bytevector->hex				i v $language)
+    (hex->bytevector				i v $language)
     (string-hex->bytevector			i v $language)
     (bytevector->string-hex			i v $language)
     (symbol->string				i v symbols r ba se)

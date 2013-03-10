@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute	it and/or modify
   it under the	terms of the GNU General Public	 License as published by
@@ -30,6 +30,7 @@
 
 #include "internals.h"
 #include <gmp.h>
+#include <ctype.h>	/* for "isxdigit()" */
 
 
 /** --------------------------------------------------------------------
@@ -245,6 +246,76 @@ ik_bytevector_from_utf16z (ikpcb * pcb, const void * _data)
       return IK_FALSE_OBJECT;
   return (most_positive_fixnum <= i)? IK_FALSE_OBJECT : \
     ika_bytevector_from_memory_block(pcb, data, i);
+}
+
+/* ------------------------------------------------------------------ */
+
+ikptr
+ikrt_bytevector_to_hex (ikptr s_in, ikpcb * pcb)
+{
+  static const char table[] = "0123456789ABCDEF";
+  uint8_t *	in	= IK_BYTEVECTOR_DATA_UINT8P(s_in);
+  long		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
+  ikptr		s_ou;
+  char *	ou;
+  long		ou_len;
+  uint8_t	byte;
+  long		i;
+  if ((IK_GREATEST_FIXNUM / 2) > in_len) {
+    pcb->root0 = &s_in;
+    {
+      ou_len = in_len * 2;
+      s_ou   = ika_bytevector_alloc(pcb, ou_len);
+      ou     = IK_BYTEVECTOR_DATA_CHARP(s_ou);
+      for (byte=in[i = 0]; i<in_len; byte=in[++i]) {
+	*ou++ = table[byte >> 4];
+	*ou++ = table[byte & 15];
+      }
+    }
+    pcb->root0 = NULL;
+    return s_ou;
+  } else
+    return IK_FALSE;
+}
+ikptr
+ikrt_bytevector_from_hex (ikptr s_in, ikpcb * pcb)
+{
+  char *	in	= IK_BYTEVECTOR_DATA_CHARP(s_in);
+  long		in_len	= IK_BYTEVECTOR_LENGTH(s_in);
+  ikptr		s_ou;
+  uint8_t *	ou;
+  long		ou_len;
+  long		i;
+  pcb->root0 = &s_in;
+  {
+    ou_len = in_len / 2;
+    s_ou   = ika_bytevector_alloc(pcb, ou_len);
+    ou     = IK_BYTEVECTOR_DATA_UINT8P(s_ou);
+    for (i=0; i<in_len; ++i) {
+      char	value;
+      if (isxdigit(in[i])) {
+	char	ch = in[i] - '0';
+	if (ch > 9)  { ch += ('0' - 'A') + 10; }
+	if (ch > 16) { ch += ('A' - 'a');      }
+	value = (ch & 0xf) << 4;
+      } else {
+	s_ou = IK_FALSE;
+	goto error;
+      }
+      if (isxdigit(in[++i])) {
+	char	ch = in[i] - '0';
+	if (ch > 9)  { ch += ('0' - 'A') + 10; }
+	if (ch > 16) { ch += ('A' - 'a');      }
+	*ou++ = value | (ch & 0xf);
+      } else {
+	s_ou = IK_FALSE;
+	goto error;
+      }
+    }
+  }
+  error:
+  pcb->root0 = NULL;
+  return s_ou;
 }
 
 
