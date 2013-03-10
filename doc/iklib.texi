@@ -407,6 +407,14 @@ Convert the Scheme string @var{data} to a bytevector using the function
 @item utf16n
 Convert the Scheme string @var{data} to a bytevector using the function
 @func{string->utf16n}.
+
+@item hex
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string-hex->bytevector}.
+
+@item base64
+Convert the Scheme string @var{data} to a bytevector using the function
+@func{string-base64->bytevector}.
 @end table
 @end deffn
 

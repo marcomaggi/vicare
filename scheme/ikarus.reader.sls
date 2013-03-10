@@ -46,6 +46,10 @@
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 10, 2013)
+    (only (ikarus strings)
+	  string-base64->bytevector)
     (vicare syntactic-extensions)
     (prefix (vicare words) words.)
     (prefix (vicare unsafe-operations)
@@ -3150,7 +3154,8 @@
 	       (((encoding encoding^ locs1 kont1)
 		 (finalise-tokenisation port locs kont token pos)))
 	     (unless (and (symbol? encoding)
-			  (memq encoding '(ascii latin1 utf8 utf16be utf16le utf16n)))
+			  (memq encoding '(ascii latin1 utf8 utf16be utf16le utf16n
+						 hex base64)))
 	       (die/ann encoding^ 'vicare-reader
 			"expected encoding symbol for this bytevector type" encoding))
 	     (let-values (((token pos) (start-tokenising/pos port)))
@@ -3180,6 +3185,8 @@
 					    ((utf16be)	(string->utf16be	string))
 					    ((utf16le)	(string->utf16le	string))
 					    ((utf16n)	(string->utf16n		string))
+					    ((hex)	(string-hex->bytevector	string))
+					    ((base64)	(string-base64->bytevector string))
 					    (else
 					     (%error "invalid bytevector encoding" encoding)))))
 				   (values v v locs kont)))

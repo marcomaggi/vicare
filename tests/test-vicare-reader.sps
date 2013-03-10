@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1009,6 +1009,10 @@
   (read-bv-and-eof "#ve(utf16le \"ciao\")"	,(string->utf16le "ciao"))
   (read-bv-and-eof "#ve(utf16be \"ciao\")"	,(string->utf16be "ciao"))
   (read-bv-and-eof "#ve(utf16n  \"ciao\")"	,(string->utf16n  "ciao"))
+  (read-bv-and-eof "#ve(hex     \"000102030405060708090A0B0C0D0E0F\")"
+		   ,(string-hex->bytevector "000102030405060708090A0B0C0D0E0F"))
+  (read-bv-and-eof "#ve(base64  \"VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkg\")"
+		   ,(string-base64->bytevector "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkg"))
 
   #t)
 
