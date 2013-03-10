@@ -1836,14 +1836,23 @@ part first.
 
 
 @defun hex->bytevector @var{bytevector}
-@defunx bytevector->hex @var{bytevevctor}
-Convert to and from a Scheme bytevector containing octets and Scheme
+@defunx bytevector->hex @var{bytevector}
+Convert to and from a Scheme bytevector containing octets and a Scheme
 bytevector containing the @ascii{} hexadecimal representation of the
 octets.
 
 The input hex bytevector contains the uppercase or lowercase hexadecimal
 representation of the octets.  The output hex bytevector contains the
 uppercase hexadecimal representation of octets.
+
+If an error occurs in the conversion: the return value is @false{}.
+@end defun
+
+
+@defun base64->bytevector @var{bytevector}
+@defunx bytevector->base64 @var{bytevector}
+Convert to and from a Scheme bytevector containing octets and a Scheme
+bytevector containing the @ascii{} Base64 representation of the octets.
 
 If an error occurs in the conversion: the return value is @false{}.
 @end defun
@@ -1903,12 +1912,24 @@ endianness respectively.
 
 
 @defun string-hex->bytevector @var{string}
-@defunx bytevector->string-hex @var{bytevevctor}
+@defunx bytevector->string-hex @var{bytevector}
 Convert to and from a Scheme string and a Scheme bytevector.
 
 The input string contains the uppercase or lowercase hexadecimal
 representation of the octets.  The output string contains the uppercase
 hexadecimal representation of octets.
+
+If an error occurs in the conversion: the return value is @false{}.
+@end defun
+
+
+@defun string-base64->bytevector @var{string}
+@defunx bytevector->string-base64 @var{bytevector}
+Convert to and from a Scheme string and a Scheme bytevector.
+
+The input string contains the @ascii{} Base64 representation of the
+octets.  The output string contains the @ascii{} Base64 representation
+of octets.
 
 If an error occurs in the conversion: the return value is @false{}.
 @end defun

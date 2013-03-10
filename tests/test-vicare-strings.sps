@@ -1379,6 +1379,58 @@
   #t)
 
 
+(parametrise ((check-test-name	'base64))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?ascii ?base64)
+       (begin
+	 (check
+	     (ascii->string (bytevector->base64 (string->ascii ?ascii)))
+	   => ?base64)
+	 (check
+	     (ascii->string (base64->bytevector (string->ascii ?base64)))
+	   => ?ascii)
+	 ))))
+
+;;; --------------------------------------------------------------------
+
+  (doit ""		"")
+  (doit "ABC"		"QUJD")
+  (doit "H"		"SA==")
+  (doit "He"		"SGU=")
+  (doit "Hel"		"SGVs")
+  (doit "Hell"		"SGVsbA==")
+  (doit "Hello"		"SGVsbG8=")
+  (doit "this is a test\n"
+	"dGhpcyBpcyBhIHRlc3QK")
+  (doit "y"		"eQ==")
+  (doit "yy"		"eXk=")
+  (doit "y "		"eSA=")
+  (doit "quickly "	"cXVpY2tseSA=")
+  (doit "and"		"YW5k")
+  (doit "an"		"YW4=")
+  (doit "an "		"YW4g")
+
+  (doit
+   "The short red fox ran quickly"
+   "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHk=")
+
+  (doit
+   "The short red fox ran quickly "
+   "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkg")
+
+  (doit
+   "The short red fox ran quickly through the green field and jumped over the tall brown bear\n"
+   "VGhlIHNob3J0IHJlZCBmb3ggcmFuIHF1aWNrbHkgdGhyb3VnaCB0aGUgZ3JlZW4gZmllbGQgYW5kIGp1bXBlZCBvdmVyIHRoZSB0YWxsIGJyb3duIGJlYXIK")
+
+  (doit
+   "Le Poete est semblable au prince des nuees Qui hante la tempete e se rit de l'archer; Exile sul le sol au milieu des huees, Ses ailes de geant l'empechent de marcher."
+   "TGUgUG9ldGUgZXN0IHNlbWJsYWJsZSBhdSBwcmluY2UgZGVzIG51ZWVzIFF1aSBoYW50ZSBsYSB0ZW1wZXRlIGUgc2Ugcml0IGRlIGwnYXJjaGVyOyBFeGlsZSBzdWwgbGUgc29sIGF1IG1pbGlldSBkZXMgaHVlZXMsIFNlcyBhaWxlcyBkZSBnZWFudCBsJ2VtcGVjaGVudCBkZSBtYXJjaGVyLg==")
+
+  #t)
+
+
 (parametrise ((check-test-name	'unsafe))
 
   (check

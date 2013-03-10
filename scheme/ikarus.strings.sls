@@ -34,6 +34,8 @@
     string->ascii		ascii->string
     string-hex->bytevector	bytevector->string-hex
     bytevector->hex		hex->bytevector
+    string-base64->bytevector	bytevector->string-base64
+    bytevector->base64		base64->bytevector
 
     ;; unsafe operations
     $string=)
@@ -54,7 +56,9 @@
 		  string->latin1		latin1->string
 		  string->ascii			ascii->string
 		  bytevector->hex		hex->bytevector
-		  string-hex->bytevector	bytevector->string-hex)
+		  string-hex->bytevector	bytevector->string-hex
+		  string-base64->bytevector	bytevector->string-base64
+		  bytevector->base64		base64->bytevector)
     (vicare syntactic-extensions)
     (prefix (except (vicare unsafe-operations)
 		    string=)
@@ -961,6 +965,55 @@
   (with-arguments-validation (who)
       ((string	S))
     (foreign-call "ikrt_bytevector_from_hex" ($string->ascii who S))))
+
+
+;;;; bytevectors to/from BASE64 strings
+
+(define (bytevector->base64 bv)
+  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector
+  ;;representing the ASCII Base64 encoding of the octets.  If successful
+  ;;return the encoded bytevector, else return #f.
+  ;;
+  ;;An error  occurs if  the output bytevector  length would  exceed the
+  ;;maximum bytevector length (which is the greatest fixnum).
+  ;;
+  (define who 'bytevector->base64)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_bytevector_to_base64" bv)))
+
+(define (base64->bytevector bv)
+  ;;Defined  by Vicare.   Convert  a bytevector  representing the  ASCII
+  ;;Base64  encoding  of  octets  into   a  bytevector  of  octets.   If
+  ;;successful return the encoded bytevector, else return #f.
+  ;;
+  ;; An error occurs if the input bytevector holds invalid data.
+  ;;
+  (define who 'base64->bytevector)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (foreign-call "ikrt_bytevector_from_base64" bv)))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector->string-base64 bv)
+  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
+  ;;the Base64 representation of the bytes.
+  ;;
+  (define who 'bytevector->string-base64)
+  (with-arguments-validation (who)
+      ((bytevector	bv))
+    (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
+      (and rv ($ascii->string who rv)))))
+
+(define (string-base64->bytevector S)
+  ;;Defined by Vicare.   Convert the string S into  a bytevector holding
+  ;;the byte representation of the Base64 sequences.
+  ;;
+  (define who 'string-base64->bytevector)
+  (with-arguments-validation (who)
+      ((string	S))
+    (foreign-call "ikrt_bytevector_from_base64" ($string->ascii who S))))
 
 
 ;;;; done

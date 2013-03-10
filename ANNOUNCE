@@ -56,11 +56,13 @@ Notes for revision 0.2d21
   ones.
 
 * Added  functions to  (vicare) to  convert between  bytevectors holding
-  octets  and  strings  or  bytevectors holding  the  ASCII  hexadecimal
-  encoding of octets:
+  octets and  strings or bytevectors  holding the ASCII  hexadecimal and
+  base64 encoding of octets:
 
       hex->bytevector		bytevector->hex
       string-hex->bytevector	bytevector->string-hex
+      base64->bytevector	bytevector->base64
+      string-base64->bytevector	bytevector->string-base64
 
 
 Notes for revision 0.2d20
