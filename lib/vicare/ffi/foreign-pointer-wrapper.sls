@@ -427,7 +427,7 @@
 	  #`((when (#,unsafe-getter-pointer-owner? #,struct-id)
 	       (guard (E (else (void)))
 		 (#,foreign-destructor-id #,struct-id))))
-	'((void))))
+	#'((void))))
 
     #| end of module: %make-finaliser-definitions |# )
 
