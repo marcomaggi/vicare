@@ -902,7 +902,8 @@ If a foreign destructor function @meta{destructor-id} was specified in
 the definition of @meta{type-id} and this struct instance owns the
 pointer object: the foreign destructor is applied to @var{struct}; any
 exception raised by the destructor function is catched by @func{guard}
-and discarded.
+and discarded.  The return value of the foreign destructor becomes the
+return value of this function.
 
 @item
 The internal field holding the @var{pointer} object is reset to

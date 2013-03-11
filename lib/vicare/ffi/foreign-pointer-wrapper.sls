@@ -353,25 +353,26 @@
 		;;*  We  ignore  the  return value  of  the  foreign
 		;;  destructor function.
 		;;
-		(when (#,unsafe-alive-pred STRUCT)
-		  ;;Apply the custom destructor to STRUCT.
-		  (cond ((#,unsafe-getter-custom-destructor STRUCT)
-			 => (lambda (custom-destructor)
-			      (guard (E (else (void)))
-				(custom-destructor STRUCT)))))
-		  ;;Unregister this struct  instance from its collector,
-		  ;;if any.
-		  UNREGISTER-FROM-COLLECTOR ...
-		  ;;Finalise the  tables of subordinate  structs, if
-		  ;;any.
-		  TABLE-DESTRUCTION-FORM ...
-		  ;;Finalise the foreign data structure, if there is
-		  ;;a foreign destructor.
-		  FOREIGN-DESTRUCTOR-CALL ...
-		  ;;Nullify the pointer.
-		  (#,unsafe-pointer-setter STRUCT #f))
-		;;Always return #<void>.
-		(void))
+		(if (#,unsafe-alive-pred STRUCT)
+		    (begin
+		      ;;Apply the custom destructor to STRUCT.
+		      (cond ((#,unsafe-getter-custom-destructor STRUCT)
+			     => (lambda (custom-destructor)
+				  (guard (E (else (void)))
+				    (custom-destructor STRUCT)))))
+		      ;;Unregister this struct  instance from its collector,
+		      ;;if any.
+		      UNREGISTER-FROM-COLLECTOR ...
+		      ;;Finalise the  tables of subordinate  structs, if
+		      ;;any.
+		      TABLE-DESTRUCTION-FORM ...
+		      ;;Finalise the foreign data structure, if there is
+		      ;;a foreign destructor.
+		      (let ((rv FOREIGN-DESTRUCTOR-CALL ...))
+			;;Nullify the pointer.
+			(#,unsafe-pointer-setter STRUCT #f)
+			rv))
+		  (void)))
 	      (module ()
 		(set-rtd-destructor! (type-descriptor #,type-id)
 				     #,unsafe-scheme-destructor))))))
@@ -426,7 +427,7 @@
 	  #`((when (#,unsafe-getter-pointer-owner? #,struct-id)
 	       (guard (E (else (void)))
 		 (#,foreign-destructor-id #,struct-id))))
-	'()))
+	'((void))))
 
     #| end of module: %make-finaliser-definitions |# )
 
