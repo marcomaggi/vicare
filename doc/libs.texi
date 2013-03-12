@@ -2453,6 +2453,19 @@ The following bindings are exported by the library @library{vicare
 arguments general-c-buffers}.
 
 
+@defun general-c-buffer-len @var{buf} @var{buf.len}
+Return the number of bytes in a generalised C buffer object.
+
+@var{buf} must be a bytevector, pointer object or @code{memory-block}
+struct instance.
+
+When @var{buf} is a pointer object: @var{buf.len} must be an exact
+integer (in the range of the C language type @code{size_t}) representing
+the number of bytes available in the referenced memory block.  Otherwise
+@var{buf.len} is ignored.
+@end defun
+
+
 @deffn Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) (string-to-bytevector @meta{string->bytevector}) @metao{body} . @meta{body}
 @deffnx Syntax with-general-c-strings ((@meta{str} @meta{expr}) ...) @metao{body} . @meta{body}
 @deffnx {Auxiliary Syntax} string-to-bytevector

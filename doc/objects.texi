@@ -4749,8 +4749,9 @@ Return the number of bytes in a generalised C buffer object.
 struct instance.
 
 When @var{buffer} is a pointer object: @var{buffer_len} must be an exact
-integer representing the number of bytes available in the referenced
-memory block.  Otherwise @var{buffer_len} is ignored.
+integer (in the range of the C language type @code{size_t}) representing
+the number of bytes available in the referenced memory block.  Otherwise
+@var{buffer_len} is ignored.
 @end deftypefun
 
 @c ------------------------------------------------------------

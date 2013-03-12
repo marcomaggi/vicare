@@ -28,18 +28,40 @@
 #!r6rs
 (library (vicare arguments general-c-buffers)
   (export
+    general-c-buffer-len
     with-general-c-strings
     with-general-c-strings/false
     with-general-c-pathnames
     with-general-c-pathnames/false
     string-to-bytevector)
   (import (vicare)
-    (vicare syntactic-extensions))
+    (vicare syntactic-extensions)
+    (vicare arguments validation)
+    (prefix (only (vicare unsafe-operations)
+		  bytevector-length)
+	    $))
 
 
 ;;;; helpers
 
 (define-auxiliary-syntaxes string-to-bytevector)
+
+
+;;;; helper functions
+
+(define (general-c-buffer-len buf buf.len)
+  (define who 'general-c-buffer-len)
+  (with-arguments-validation (who)
+      ((general-c-buffer	buf)
+       (size_t/false		buf.len))
+    (cond ((bytevector? buf)
+	   ($bytevector-length buf))
+	  ((memory-block? buf)
+	   (memory-block-size buf))
+	  ((pointer? buf)
+	   buf.len)
+	  (else
+	   (assertion-violation who "internal error" buf buf.len)))))
 
 
 ;;;; general C strings
