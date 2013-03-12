@@ -4539,29 +4539,12 @@ pcb->next_k = s_kont;
 
 
 @menu
-* objects misc func::           Miscellaneous functions.
 * objects misc mblock::         Macros handling @code{memory-block}.
 * objects misc voidp::          Macros extracting @code{void *}.
 * objects misc charp::          Macros extracting @code{char *}.
+* objects misc cbuffers::       Generalised C buffers.
+* objects misc func::           Miscellaneous functions.
 @end menu
-
-@c page
-@node objects misc func
-@subsection Miscellaneous functions
-
-
-@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
-Copy @var{count} items from @var{src} starting at offset
-@var{src_start}, to @var{dst} starting at offset @var{dst_start};
-@var{src_start}, @var{dst_start} and @var{count} must be non--negative
-fixnums.  Return unspecified values.
-
-Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
-a string.  For bytevectors and pointers: bytes are moved and
-@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
-strings: 32-bit values representing Unicode code points are moved and
-@var{src_start}, @var{dst_start} and @var{count} are in character units.
-@end deftypefun
 
 @c page
 @node objects misc mblock
@@ -4744,6 +4727,32 @@ Given @false{} or a bytevector object or a pointer object or a
 the data; when @var{obj} is @false{}: the returned value is @cnull{}.
 @end deftypefn
 
+@c page
+@node objects misc cbuffers
+@subsection Generalised C buffers
+
+
+When interfacing a C language foreign library with @value{PRJNAME}, it
+is often needed to convert Scheme objects to raw memory blocks, possibly
+containing @asciiz{} strings.  Generalised C buffers are meant to be
+used in interfaces to foreign C language libraries, when a pointer to
+raw data is required as argument.  @ref{cbuffers buffers} for details.
+
+Notice that at the C language level only general C buffers exist: Scheme
+strings should be converted to bytevectors at the Scheme level.
+
+
+@deftypefun size_t ik_generalised_c_buffer_len (ikptr @var{buffer}, ikptr @var{buffer_len})
+Return the number of bytes in a generalised C buffer object.
+
+@var{buffer} must be a bytevector, pointer object or @code{memory-block}
+struct instance.
+
+When @var{buffer} is a pointer object: @var{buffer_len} must be an exact
+integer representing the number of bytes available in the referenced
+memory block.  Otherwise @var{buffer_len} is ignored.
+@end deftypefun
+
 @c ------------------------------------------------------------
 
 @deftypefn {Preprocessor Macro} {void *} IK_GENERALISED_C_BUFFER (ikptr @var{obj})
@@ -4761,6 +4770,7 @@ Given a pointer object or a @code{memory-block} object return a
 also @false{} as value and returns @cnull{}.
 @end deftypefn
 
+@c ------------------------------------------------------------
 
 @deftypefn {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING (ikptr @var{obj})
 @deftypefnx {Preprocessor Macro} {char *} IK_GENERALISED_C_STRING_OR_FALSE (ikptr @var{obj})
@@ -4768,6 +4778,24 @@ Given a bytevector object or a pointer object or a @code{memory-block}
 object return a @code{char *} pointer referencing the data.  The second
 macro accepts also @false{} as value and returns @cnull{}.
 @end deftypefn
+
+@c page
+@node objects misc func
+@subsection Miscellaneous functions
+
+
+@deftypefun ikptr ikrt_general_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count})
+Copy @var{count} items from @var{src} starting at offset
+@var{src_start}, to @var{dst} starting at offset @var{dst_start};
+@var{src_start}, @var{dst_start} and @var{count} must be non--negative
+fixnums.  Return unspecified values.
+
+Both @var{dst} and @var{src} can be one among: a bytevector, a pointer,
+a string.  For bytevectors and pointers: bytes are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in byte units.  For
+strings: 32-bit values representing Unicode code points are moved and
+@var{src_start}, @var{dst_start} and @var{count} are in character units.
+@end deftypefun
 
 @c page
 @node objects callbacks

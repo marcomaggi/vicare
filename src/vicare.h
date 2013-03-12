@@ -899,26 +899,6 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 #define   IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
 
-/* ------------------------------------------------------------------ */
-
-/* generalised C buffer */
-#define IK_GENERALISED_C_BUFFER(OBJ)	\
-  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
-
-/* generalised C buffer or false */
-#define IK_GENERALISED_C_BUFFER_OR_FALSE(OBJ)	\
-  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
-
-/* ------------------------------------------------------------------ */
-
-/* generalised sticky C buffer */
-#define IK_GENERALISED_C_STICKY_BUFFER(OBJ)	\
-  IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
-
-/* generalised sticky C buffer or false */
-#define IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE(OBJ)	\
-  IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
-
 
 /** --------------------------------------------------------------------
  ** Special macros extracting "char *" pointers from objects.
@@ -969,6 +949,33 @@ ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
 /* bytevector, pointer, mblock, false */
 #define IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ) \
   ((IK_FALSE == (OBJ))? NULL : IK_CHARP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ))
+
+
+/** --------------------------------------------------------------------
+ ** Generalised C buffer stuff.
+ ** ----------------------------------------------------------------- */
+
+ik_decl size_t ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len);
+
+/* ------------------------------------------------------------------ */
+
+/* generalised C buffer */
+#define IK_GENERALISED_C_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised C buffer or false */
+#define IK_GENERALISED_C_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
+
+/* ------------------------------------------------------------------ */
+
+/* generalised sticky C buffer */
+#define IK_GENERALISED_C_STICKY_BUFFER(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK(OBJ)
+
+/* generalised sticky C buffer or false */
+#define IK_GENERALISED_C_STICKY_BUFFER_OR_FALSE(OBJ)	\
+  IK_VOIDP_FROM_POINTER_OR_MBLOCK_OR_FALSE(OBJ)
 
 /* ------------------------------------------------------------------ */
 

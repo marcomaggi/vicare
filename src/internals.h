@@ -1378,6 +1378,8 @@ ikptr	ik_normalize_bignum	(long limbs, int sign, ikptr r);
 
 #define max_digits_per_limb	((wordsize==4)?10:20)
 
+ik_decl size_t ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len);
+
 
 /** --------------------------------------------------------------------
  ** Other prototypes and external definitions.

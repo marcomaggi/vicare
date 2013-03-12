@@ -1307,6 +1307,31 @@ ika_compnum_alloc_and_init (ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** General C buffers.
+ ** ----------------------------------------------------------------- */
+
+size_t
+ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len)
+/* Return the number of bytes in a generalised C buffer object.
+
+   S_BUFFER must  be a  bytevector, pointer object,  memory-block struct
+   instance.
+
+   When  S_BUFFER is  a pointer  object: S_BUFFER_LEN  must be  an exact
+   integer representing the number of  bytes available in the referenced
+   memory block.  Otherwise S_BUFFER_LEN is ignored.  */
+{
+  if (IK_IS_POINTER(s_buffer)) {
+    return ik_integer_to_size_t(s_buffer_len);
+  } else if (IK_IS_BYTEVECTOR(s_buffer)) {
+    return IK_BYTEVECTOR_LENGTH(s_buffer);
+  } else { /* it is a memory-block */
+    return IK_MBLOCK_SIZE(s_buffer);
+  }
+}
+
+
+/** --------------------------------------------------------------------
  ** Miscellanous functions.
  ** ----------------------------------------------------------------- */
 
