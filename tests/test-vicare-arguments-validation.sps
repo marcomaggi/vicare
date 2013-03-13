@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -2020,6 +2020,44 @@
       (doit #f general-c-string/false 'ciao)
     => '(ciao))
 
+;;; --------------------------------------------------------------------
+;;; string length
+
+  (check
+      (doit #t general-c-string.len "ciao" #f)
+    => #t)
+
+  (check
+      (doit #t general-c-string.len (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-string.len (null-pointer) #f)
+    => '(#f))
+
+;;; --------------------------------------------------------------------
+;;; general-c-string*
+
+  (check
+      (doit #f general-c-string* "ciao" #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string* '#vu8(1 2 3) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string* (null-memory-block) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-string* (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-string* (null-pointer) #f)
+    => (list (null-pointer) #f))
+
   #t)
 
 
@@ -2074,6 +2112,40 @@
       (doit #f general-c-buffer/false 'ciao)
     => '(ciao))
 
+;;; --------------------------------------------------------------------
+;;; buffer length
+
+  (check
+      (doit #t general-c-buffer.len "ciao" #f)
+    => #t)
+
+  (check
+      (doit #t general-c-buffer.len (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer.len (null-pointer) #f)
+    => '(#f))
+
+;;; --------------------------------------------------------------------
+;;; general-c-buffer*
+
+  (check
+      (doit #f general-c-buffer* '#vu8(1 2 3) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer* (null-memory-block) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer* (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-buffer* (null-pointer) #f)
+    => (list (null-pointer) #f))
+
   #t)
 
 
@@ -2127,6 +2199,21 @@
   (check
       (doit #f general-c-sticky-buffer/false 'ciao)
     => '(ciao))
+
+;;; --------------------------------------------------------------------
+;;; general-c-sticky-buffer*
+
+  (check
+      (doit #f general-c-sticky-buffer* (null-memory-block) #f)
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer* (null-pointer) 123)
+    => #t)
+
+  (check
+      (doit #f general-c-sticky-buffer* (null-pointer) #f)
+    => (list (null-pointer) #f))
 
   #t)
 

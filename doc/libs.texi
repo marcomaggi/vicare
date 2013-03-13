@@ -1159,6 +1159,19 @@ Succeed if @var{obj} is a generalised C string.
 Succeed if @var{obj} is @false{} or a generalised C string.
 @end deffn
 
+
+@deffn {Validation Clause} general-c-string.len @var{str} @var{str.len}
+If @var{str} is a pointer object: succeed if @var{str.len} an exact
+integer in the range of the C language type @code{size_t}.  Otherwise
+succeed if @var{str.len} is @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string* @var{obj} @var{obj.len}
+Succeed if @var{obj} is a generalised C string and @var{obj.len} its
+optional length.
+@end deffn
+
 @c page
 @node args predefined genbuffers
 @subsubsection Validating generalised C buffer arguments
@@ -1200,6 +1213,25 @@ Succeed if @var{obj} is a generalised C sticky buffer.
 
 @deffn {Validation Clause} general-c-sticky-buffer/false @var{obj}
 Succeed if @var{obj} is @false{} or a generalised C sticky buffer.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-string.len @var{buf} @var{buf.len}
+If @var{buf} is a pointer object: succeed if @var{buf.len} an exact
+integer in the range of the C language type @code{size_t}.  Otherwise
+succeed if @var{buf.len} is @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer* @var{obj} @var{obj.len}
+Succeed if @var{obj} is a generalised C buffer and @var{obj.len} its
+optional length.
+@end deffn
+
+
+@deffn {Validation Clause} general-c-buffer* @var{obj} @var{obj.len}
+Succeed if @var{obj} is a generalised C buffer and @var{obj.len} its
+optional length.
 @end deffn
 
 @c page
@@ -2391,6 +2423,38 @@ be used when calling out to C functions that call back to Scheme.
 
 @ref{iklib memory blocks} for details on memory blocks.
 
+Two arguments to function are usually needed to represent a generalised
+C buffer: the buffer value itself and an optional length.
+
+@enumerate
+@item
+The buffer argument is meant to be either bytevector, or
+@code{memory-block} instance, or pointer object.
+
+@item
+The length argument is meant to be @false{} or an exact integer in the
+range of the C language type @code{size_t}.  When the buffer argument is
+a pointer object: the length argument must represent the number of bytes
+available in the referenced memory block; otherwise the length argument
+is ignored.
+@end enumerate
+
+Here is an example function accepting a generalised C buffer argument
+@var{buf} and its optional length argument @var{buf.len}:
+
+@example
+(define fun
+  (case-lambda
+    ((buf)
+     (fun buf #f))
+    ((buf buf.len)
+     (define who 'fun)
+     (with-arguments-validation (who)
+         ((general-c-buffer     buf)
+          (general-c-buffer.len buf buf.len))
+       (do-something-with buf buf.len)))))
+@end example
+
 @c page
 @node cbuffers strings
 @subsection Introduction to generalised C strings
@@ -2426,6 +2490,41 @@ by using it as output buffer.
 @noindent
 in these cases we should use generalised C buffers, @ref{cbuffers
 buffers, Introduction to generalised C buffers}.
+
+Two arguments to function are usually needed to represent a generalised
+C string: the string value itself and an optional length.
+
+@enumerate
+@item
+The string argument is meant to be either a string, or bytevector, or
+@code{memory-block} instance, or pointer object.
+
+@item
+The length argument is meant to be @false{} or an exact integer in the
+range of the C language type @code{size_t}.  When the string argument is
+a pointer object: the length argument must represent the number of bytes
+available in the referenced memory block; otherwise the length argument
+is ignored.
+@end enumerate
+
+Here is an example function accepting a generalised C string argument
+@var{str} and its optional length argument @var{str.len}, the string is
+converted to bytevector with @func{string->ascii}:
+
+@example
+(define fun
+  (case-lambda
+    ((str)
+     (fun str #f))
+    ((str str.len)
+     (define who 'fun)
+     (with-arguments-validation (who)
+         ((general-c-string     str)
+          (general-c-string.len str str.len))
+       (with-general-c-strings
+           ((str^         str))
+         (do-something-with str^ str.len))))))
+@end example
 
 @c page
 @node cbuffers api

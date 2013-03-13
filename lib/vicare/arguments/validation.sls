@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -237,14 +237,20 @@
     general-c-string?
     general-c-string.vicare-arguments-validation
     general-c-string/false.vicare-arguments-validation
+    general-c-string*.vicare-arguments-validation
 
     general-c-buffer?
     general-c-buffer.vicare-arguments-validation
     general-c-buffer/false.vicare-arguments-validation
+    general-c-buffer*.vicare-arguments-validation
 
     general-c-sticky-buffer?
     general-c-sticky-buffer.vicare-arguments-validation
     general-c-sticky-buffer/false.vicare-arguments-validation
+    general-c-sticky-buffer*.vicare-arguments-validation
+
+    general-c-string.len.vicare-arguments-validation
+    general-c-buffer.len.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1385,6 +1391,17 @@
       (memory-block? obj))
   (assertion-violation who "expected false or general C string as argument" obj))
 
+(define-argument-validation (general-c-string* who str str.len)
+  (cond ((or (string?       str)
+	     (bytevector?   str)
+	     (memory-block? str))
+	 (not str.len))
+	((pointer? str)
+	 (words.size_t? str.len))
+	(else #f))
+  (assertion-violation who
+    "expected general C string and optional length as arguments" str str.len))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (general-c-buffer? ?obj)
@@ -1401,6 +1418,16 @@
   (or (not obj) (general-c-buffer? obj))
   (assertion-violation who "expected false or general C buffer as argument" obj))
 
+(define-argument-validation (general-c-buffer* who buf buf.len)
+  (cond ((or (bytevector?   buf)
+	     (memory-block? buf))
+	 (not buf.len))
+	((pointer? buf)
+	 (words.size_t? buf.len))
+	(else #f))
+  (assertion-violation who
+    "expected general C buffer and optional length as arguments" buf buf.len))
+
 ;;; --------------------------------------------------------------------
 
 (define-inline (general-c-sticky-buffer? ?obj)
@@ -1415,6 +1442,35 @@
 (define-argument-validation (general-c-sticky-buffer/false who obj)
   (or (not obj) (general-c-sticky-buffer? obj))
   (assertion-violation who "expected general C sticky buffer as argument" obj))
+
+(define-argument-validation (general-c-sticky-buffer* who buf buf.len)
+  (cond ((memory-block? buf)
+	 (not buf.len))
+	((pointer? buf)
+	 (words.size_t? buf.len))
+	(else #f))
+  (assertion-violation who
+    "expected general C sticky buffer and optional length as arguments" buf buf.len))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (general-c-buffer.len who buf buf.len)
+  (if (pointer? buf)
+      (words.size_t? buf.len)
+    (not buf.len))
+  (assertion-violation who
+    "expected false or exact integer in the range of the C language type \"size_t\" \
+     as general C buffer length"
+    buf.len))
+
+(define-argument-validation (general-c-string.len who buf buf.len)
+  (if (pointer? buf)
+      (words.size_t? buf.len)
+    (not buf.len))
+  (assertion-violation who
+    "expected false or exact integer in the range of the C language type \"size_t\" \
+     as general C string length"
+    buf.len))
 
 
 ;;;; done
