@@ -854,8 +854,8 @@ identifier @meta{type-id}.
 Here only the bindings in the public @api{} are documented:
 
 @table @code
-@item (make-@meta{type-id}/owner @var{pointer})
-@itemx (make-@meta{type-id}/owner @var{pointer} @var{collector})
+@item (make-@meta{type-id}/owner @var{pointer} @var{field} ...)
+@itemx (make-@meta{type-id}/owner @var{pointer} @var{collector} @var{field} ...)
 Build and return a new struct instance of type @meta{type-id} wrapping
 the pointer object @var{pointer}; the returned instance @strong{owns}
 the @var{pointer} object.
@@ -869,6 +869,10 @@ If the definition of @meta{type-id} includes a clause
 value: this maker function accepts two arguments, the second being the
 instance of type @meta{collector-id} or @false{} if there is no
 collector instance.
+
+If the definition of @meta{type-id} includes a clause @code{fields}: the
+constructor function accepts as many arguments as specified custom
+fields.
 
 @item (make-@meta{type-id}/not-owner @var{pointer})
 @itemx (make-@meta{type-id}/not-owner @var{pointer} @var{collector})
