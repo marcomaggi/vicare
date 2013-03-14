@@ -33,7 +33,8 @@
     ;; auxiliary syntaxes
     foreign-destructor
     collector-struct-type
-    collected-struct-type)
+    collected-struct-type
+    fields)
   (import (vicare)
     (vicare syntactic-extensions)
     (prefix (vicare unsafe-operations)
@@ -50,13 +51,28 @@
   (define (main stx)
     (syntax-case stx (foreign-destructor
 		      collector-struct-type
-		      collected-struct-type)
+		      collected-struct-type
+		      fields)
+      ((?kwd ?type-id
+	     (foreign-destructor ?foreign-destructor)
+	     (collector-struct-type ?collector-type-id)
+	     (collected-struct-type ?collected-type-id)
+	     ...)
+       #'(?kwd ?type-id
+	       (fields)
+	       (foreign-destructor ?foreign-destructor)
+	       (collector-struct-type ?collector-type-id)
+	       (collected-struct-type ?collected-type-id)
+	       ...))
       ((_ ?type-id
+	  (fields ?field-id ...)
 	  (foreign-destructor ?foreign-destructor)
 	  (collector-struct-type ?collector-type-id)
 	  (collected-struct-type ?collected-type-id)
 	  ...)
        (let ((type-id #'?type-id))
+	 (define field-ids
+	   (syntax->list #'(?field-id ...)))
 	 ;;Normalisation: either #f or a  syntax object holding a non-#f
 	 ;;expression.
 	 (define foreign-destructor
@@ -73,14 +89,17 @@
 	       #f)))
 	 (define collected-type-ids
 	   (syntax->list #'(?collected-type-id ...)))
-	 (%validate-input type-id foreign-destructor collector-type-id collected-type-ids)
+	 (%validate-input type-id field-ids
+			  foreign-destructor collector-type-id collected-type-ids)
 	 (with-syntax
 	     ((STRUCT-DEFINITION
-	       (%make-struct-definition type-id collector-type-id collected-type-ids))
+	       (%make-struct-definition type-id field-ids
+					collector-type-id collected-type-ids))
 	      (ARGUMENT-VALIDATIONS
 	       (%make-argument-validation-definitions type-id))
 	      (MAKER-DEFINITIONS
-	       (%make-makers-definitions type-id collector-type-id collected-type-ids))
+	       (%make-makers-definitions type-id field-ids
+					 collector-type-id collected-type-ids))
 	      (PREDICATE-DEFINITIONS
 	       (%make-predicate-definitions type-id))
 	      (DESTRUCTOR-DEFINITION
@@ -103,7 +122,7 @@
 	     #;(pretty-print (syntax->datum output-form) (current-error-port))
 	     output-form))))))
 
-  (define (%make-struct-definition type-id collector-type-id collected-type-ids)
+  (define (%make-struct-definition type-id field-ids collector-type-id collected-type-ids)
     ;;Return a syntax object representing the definition of the Scheme
     ;;data structure.
     ;;
@@ -113,7 +132,9 @@
 	      (list (%make-collector-field-id collector-type-id))
 	    '()))
 	 ((TABLE-OF-COLLECTED-STRUCTS-FIELD ...)
-	  (map %make-table-of-collected-structs-field-id collected-type-ids)))
+	  (map %make-table-of-collected-structs-field-id collected-type-ids))
+	 ((FIELD ...)
+	  field-ids))
       #`(define-struct #,type-id
 	  (pointer
 		;False or  a pointer  object referencing a  foreign data
@@ -136,7 +157,9 @@
 		;type.  Each  data structure hold wraps  pointer objects
 		;to foreign data structures owned by this structure.
 	   ...
-	   ))))
+	   FIELD
+		;Custom field.
+	   ...))))
 
   (define (%make-argument-validation-definitions type-id)
     ;;Return a  syntax object representing the  definition of argument
@@ -194,7 +217,8 @@
 		(or (not obj) (#,pred/alive obj))
 		(assertion-violation who FALSE-OR-ALIVE-MSG obj)))))))
 
-  (define (%make-makers-definitions type-id collector-type-id collected-type-ids)
+  (define (%make-makers-definitions type-id field-ids
+				    collector-type-id collected-type-ids)
     ;;Return  a  syntax  object  representing  the  definitions  of  the
     ;;simplified data struct makers:
     ;;
@@ -235,26 +259,29 @@
 	 ((REGISTER-COLLECTED-IN-COLLECTOR ...)
 	  (if has-collector?
 	      (list (%make-register-collected-in-collector-id collector-type-id type-id))
-	    '())))
+	    '()))
+	 ((FIELD ...)
+	  field-ids))
       #`(begin
-	  (define (MAKER/OWNER pointer COLLECTOR-STRUCT ...)
+	  (define (MAKER/OWNER pointer COLLECTOR-STRUCT ... FIELD ...)
 	    ;;Build and return  a new data struct  instance owning the
 	    ;;POINTER.
 	    ;;
-	    (%simplified-maker 'MAKER/OWNER pointer #t COLLECTOR-STRUCT ...))
-	  (define (MAKER/NOT-OWNER pointer COLLECTOR-STRUCT ...)
+	    (%simplified-maker 'MAKER/OWNER pointer #t COLLECTOR-STRUCT ... FIELD ...))
+	  (define (MAKER/NOT-OWNER pointer COLLECTOR-STRUCT ... FIELD ...)
 	    ;;Build and return  a new data struct  instance not owning
 	    ;;the POINTER.
 	    ;;
-	    (%simplified-maker 'MAKER/NOT-OWNER pointer #f COLLECTOR-STRUCT ...))
-	  (define (%simplified-maker who pointer owner? COLLECTOR-STRUCT ...)
+	    (%simplified-maker 'MAKER/NOT-OWNER pointer #f COLLECTOR-STRUCT ... FIELD ...))
+	  (define (%simplified-maker who pointer owner? COLLECTOR-STRUCT ... FIELD ...)
 	    (with-arguments-validation (who)
 		((pointer	pointer)
 		 VALIDATOR-CLAUSE
 		 ...)
 	      (let ((INSTANCE (MAKER pointer owner? #f (gensym)
 				     COLLECTOR-STRUCT ...
-				     TABLE-MAKER ...)))
+				     TABLE-MAKER ...
+				     FIELD ...)))
 		(when COLLECTOR-STRUCT
 		  (REGISTER-COLLECTED-IN-COLLECTOR COLLECTOR-STRUCT INSTANCE))
 		...
@@ -753,9 +780,12 @@
 
   ;; ------------------------------------------------------------
 
-  (define (%validate-input type-id foreign-destructor-id collector-type-id collected-type-ids)
+  (define (%validate-input type-id field-ids
+			   foreign-destructor-id collector-type-id collected-type-ids)
     (unless (identifier? type-id)
       (%synner "expected identifier as struct type name" type-id))
+    (unless (for-all identifier? field-ids)
+      (%synner "expected identifiers as field names" field-ids))
     (unless (or (not foreign-destructor-id)
 		(identifier? foreign-destructor-id))
       (%synner "expected #f or identifier as foreign destructor specification"

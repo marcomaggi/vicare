@@ -734,7 +734,8 @@ The following bindings are exported by the library @library{vicare ffi
 foreign-pointer-wrapper}.
 
 
-@deffn Syntax define-foreign-pointer-wrapper @meta{type-id} @meta{destructor-clause} @meta{collector-clause} @meta{collected-clause} @dots{}
+@deffn Syntax define-foreign-pointer-wrapper @meta{type-id} @meta{fields-clause} @meta{destructor-clause} @meta{collector-clause} @meta{collected-clause} @dots{}
+@deffnx {Auxiliary Syntax} fields
 @deffnx {Auxiliary Syntax} foreign-destructor
 @deffnx {Auxiliary Syntax} collector-struct-type
 @deffnx {Auxiliary Syntax} collected-struct-type
@@ -750,6 +751,19 @@ unsafe to use; @value{PRJNAME} discharges on the application the
 responsibility of using or not using such structures.
 
 @table @meta
+@item fields-clause
+This clause is @strong{optional}.  It must have one of the forms:
+
+@example
+(fields)
+(fields @var{field-id} ...)
+@end example
+
+@noindent
+where @code{fields} is the auxiliary keyword exported by
+@rsixlibrary{rnrs} and the @var{field-id} are field name identifiers.
+The listed fields become normal fields of the defined structure.
+
 @item destructor-clause
 It must have one of the forms:
 

@@ -706,6 +706,44 @@
   (collect))
 
 
+(parametrise ((check-test-name		'fields)
+	      (struct-guardian-logger	#f))
+
+  ;;Basic type definition:
+  ;;
+  ;;* No foreign destructor.
+  ;;
+  ;;* No collector struct.
+  ;;
+  ;;* No collected structs.
+  ;;
+  ;;* With custom fields.
+  ;;
+  (ffi.define-foreign-pointer-wrapper alpha
+    (ffi.fields a b c)
+    (ffi.foreign-destructor #f)
+    (ffi.collector-struct-type #f))
+
+  ;; Printer check.
+  (when #f
+    (check-pretty-print (make-alpha/owner (integer->pointer 123)
+					  1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; owner constructor
+
+  (check	;owner constructor
+      (let* ((P (integer->pointer 123))
+	     (S (make-alpha/owner P 1 2 3)))
+	(list (alpha? S)
+	      (alpha-a S)
+	      (alpha-b S)
+	      (alpha-c S)))
+    => '(#t 1 2 3))
+
+  (collect))
+
+
 ;;;; done
 
 (check-report)
