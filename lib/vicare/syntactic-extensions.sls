@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -58,7 +58,7 @@
   (export
     ;; miscellaneous extensions
     define-inline		define-inline-constant
-    define-constant
+    define-constant		define-struct-extended
     define-syntax*		define-auxiliary-syntaxes
     let-inline			let*-inline
     debug-assert		unwind-protect
@@ -244,6 +244,78 @@
 		  (cons (car (generate-temporaries '(#f))) keys)
 		  (cons #'?arg exprs)))
 	   ))))))
+
+(define-syntax define-struct-extended
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((?kwd ?type-id (?field-id ...))
+	 #'(?kwd ?type-id (?field-id ...) #f #f))
+	((_ ?type-id (?field-id ...) ?printer ?destructor)
+	 (and (identifier? #'?type-id)
+	      (for-all identifier? (syntax->list #'(?field-id ...))))
+	 (let* ((type-id	#'?type-id)
+		(type-str	(%id->string type-id)))
+	   (with-syntax
+	       ((TYPE-PRED
+		 (%id->id type-id (lambda (type-str)
+				    (string-append type-str "?"))))
+		(TYPE-VALIDATOR
+		 type-id)
+		(TYPE-VALIDATOR-MESSAGE
+		 (string-append "expected struct instance of type \""
+				type-str
+				"\" as argument"))
+		(FALSE-OR-TYPE-VALIDATOR
+		 (%id->id type-id (lambda (type-str)
+				    (string-append "false-or-" type-str))))
+		(FALSE-OR-TYPE-VALIDATOR-MESSAGE
+		 (string-append "expected false or struct instance of type \""
+				type-str
+				"\" as argument"))
+		((PRINTER-REGISTRATION ...)
+		 (if (identifier? #'?printer)
+		     #'((module ()
+			  (set-rtd-printer! (type-descriptor ?type-id)
+					    ?printer)))
+		   #'()))
+		((DESTRUCTOR-REGISTRATION ...)
+		 (if (identifier? #'?destructor)
+		     #'((module ()
+			  (set-rtd-destructor! (type-descriptor ?type-id)
+					       ?destructor)))
+		   #'())))
+	     #'(begin
+		 (define-struct ?type-id
+		   (?field-id ...))
+
+		 (define-argument-validation (TYPE-VALIDATOR who obj)
+		   (TYPE-PRED obj)
+		   (assertion-violation who TYPE-VALIDATOR-MESSAGE obj))
+
+		 (define-argument-validation (FALSE-OR-TYPE-VALIDATOR who obj)
+		   (or (not obj) (TYPE-PRED obj))
+		   (assertion-violation who FALSE-OR-TYPE-VALIDATOR-MESSAGE obj))
+		 PRINTER-REGISTRATION ...
+		 DESTRUCTOR-REGISTRATION ...
+		 ))))
+	))
+
+    (define (%id->id src-id string-maker)
+      (datum->syntax src-id (string->symbol (string-maker (%id->string src-id)))))
+
+    (define (%id->string id)
+      (symbol->string (syntax->datum id)))
+
+    (define (syntax->list stx)
+      (syntax-case stx ()
+	((?car . ?cdr)
+	 (cons #'?car (syntax->list #'?cdr)))
+	(() '())))
+
+    (let ((out (main stx)))
+      #;(pretty-print (syntax->datum out) (current-error-port))
+      out)))
 
 
 ;;;; other syntaxes
