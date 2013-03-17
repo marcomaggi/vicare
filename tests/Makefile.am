@@ -149,6 +149,7 @@ TESTS			=	\
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-cond-expand.sps			\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-errno.sps				\
@@ -444,6 +445,7 @@ EXTRA_DIST = \
 	test-vicare-bytevectors.sps			\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-cond-expand.sps			\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-errno.sps				\

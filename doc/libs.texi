@@ -7,6 +7,7 @@
 @menu
 * args::                        Optional function arguments validation.
 * include::                     Including source files at expand time.
+* cond-expand::                 Feature based conditional expansion.
 * errno::                       More features for @code{errno}.
 * platform::                    Hosting platform utilities.
 * words::                       Exact integer predicates and constants.
@@ -1260,6 +1261,131 @@ the pathname @var{filename}, which must be a string.  @var{identifier}
 must be a Scheme identifier and it is used to assign a lexical context
 to the sourced code.
 @end deffn
+
+@c page
+@node cond-expand
+@section Feature based conditional expansion
+
+
+@cindex Library @library{vicare cond-expand}
+@cindex @library{vicare cond-expand}, library
+@cindex Library @library{vicare cond-expand helpers}
+@cindex @library{vicare cond-expand helpers}, library
+
+
+The following bindings are exported by the library @library{vicare
+cond-expand}.
+
+
+@deffn Syntax define-cond-expand @meta{cond-expand} @meta{feature-func} ...
+Expand to the definition of a syntax like @func{cond-expand} supporting
+all the features of the @func{cond-expand} from @ansrfi{0} and in
+addition supporting the features specified by a set of functions.
+@ref{srfi cond-expand vicare, Features supported by @value{PRJNAME}}
+
+@meta{cond-expand} must be an identifier representing the name of the
+new syntax.
+
+The optional @meta{feature-func} arguments must be expressions which,
+evaluated only once at expand time, must return functions; each of such
+functions must accept as single argument an identifier representing a
+feature and must return as single argument: @true{} if the feature is
+supported, @false{} otherwise.
+@end deffn
+
+In the following example we define a @func{cond-expand} syntax just like
+the one exported by @ansrfi{0}:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare cond-expand))
+
+(define-cond-expand cond-expand)
+
+(cond-expand
+  ((and srfi-0 srfi-1)  #t)
+  (else                 #f))
+@expansion{} #t
+@end example
+
+@noindent
+in the following example we define a @func{cond-expand} that
+additionally recognises the features @func{write} and @func{display}:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare cond-expand))
+
+(define-cond-expand cond-expand
+  (lambda (id)
+    (free-identifier=? id #'display))
+  (lambda (id)
+    (free-identifier=? id #'write)))
+
+(cond-expand
+  ((or display write)   #t)
+  (else                 #f))
+@expansion{} #t
+@end example
+
+The following bindings are exported by the library @library{vicare
+cond-expand helpers}.
+
+
+@deffn Syntax define-cond-expand-identifiers-helper @meta{who} @meta{feature-clause} ...
+Expand to the definition of a function bound to @meta{who} which can be
+used as feature function in uses of the macro @func{define-cond-expand}.
+
+Each of the optional @meta{feature-clause} must have the following
+format:
+
+@example
+(@meta{feature-id} @meta{expr})
+@end example
+
+@noindent
+where @meta{feature-id} must be the feature identifier and @meta{expr}
+must be an expression.  The generated function compares the given
+identifier with each of @meta{feature-id}, using
+@func{free-identifier=?}:
+
+@itemize
+@item
+If the result is @true{}: evaluate @meta{expr} and return the result.
+
+@item
+If the result is @false{}: move on to the next @meta{feature-id}.
+
+@item
+If no more @meta{feature-id} are left: return @false{}.
+@end itemize
+@end deffn
+
+
+In the following example we define a @func{cond-expand} that
+additionally recognises the features @func{write} and @func{display}:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare cond-expand)
+  (for (vicare cond-expand)
+       expand))
+
+(define-cond-expand cond-expand
+  (let ()
+    (define-cond-expand-identifiers-helper help
+      (display        #t)
+      (write          #t))
+    help))
+
+(cond-expand
+  ((or display write)   #t)
+  (else                 #f))
+@expansion{} #t
+@end example
 
 @c page
 @node errno

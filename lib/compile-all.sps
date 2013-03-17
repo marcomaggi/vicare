@@ -37,6 +37,8 @@
   (only (vicare arguments validation))
   (only (vicare syntactic-extensions))
   (only (vicare arguments general-c-buffers))
+  (only (vicare cond-expand))
+  (only (vicare cond-expand helpers))
 
   (only (vicare unsafe-capi))
   (only (vicare include))

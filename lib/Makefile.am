@@ -15,6 +15,8 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/validation.sls		\
 	vicare/arguments/general-c-buffers.sls	\
 	vicare/assembler/inspection.sls		\
+	vicare/cond-expand.sls			\
+	vicare/cond-expand/helpers.sls		\
 	vicare/debugging/compiler.sls		\
 	vicare/flonum-formatter.sls		\
 	vicare/flonum-parser.sls		\
