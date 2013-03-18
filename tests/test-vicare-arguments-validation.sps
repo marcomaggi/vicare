@@ -31,7 +31,7 @@
   (vicare arguments validation)
   (prefix (vicare arguments validation)
 	  args.)
-  (prefix (vicare posix) px.)
+  #;(prefix (vicare posix) px.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -68,39 +68,44 @@
 				  config.)))
     => #t)
 
-  (check
-      (begin
-	(px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
-	(eval 'config.arguments-validation
-	      (environment '(prefix (vicare installation-configuration)
-				    config.))))
-    => #t)
+  ;;These  tests can  be run  only when  the library  (vicare posix)  is
+  ;;available.
+  #;(begin
+    (check
+	(begin
+	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
+	  (eval 'config.arguments-validation
+		(environment '(prefix (vicare installation-configuration)
+				      config.))))
+      => #t)
 
-  (check
-      (begin
-	(px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
-	(eval 'config.arguments-validation
-	      (environment '(prefix (vicare installation-configuration)
-				    config.))))
-    => #f)
+    (check
+	(begin
+	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
+	  (eval 'config.arguments-validation
+		(environment '(prefix (vicare installation-configuration)
+				      config.))))
+      => #f)
 
-  (check
-      (begin
-	(px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
-	(eval 'config.arguments-validation
-	      (environment '(prefix (vicare installation-configuration)
-				    config.))))
-    => #t)
+    (check
+	(begin
+	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
+	  (eval 'config.arguments-validation
+		(environment '(prefix (vicare installation-configuration)
+				      config.))))
+      => #t)
 
-  (check
-      (begin
-	(px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
-	(eval 'config.arguments-validation
-	      (environment '(prefix (vicare installation-configuration)
-				    config.))))
-    => #f)
+    (check
+	(begin
+	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
+	  (eval 'config.arguments-validation
+		(environment '(prefix (vicare installation-configuration)
+				      config.))))
+      => #f)
 
-  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
+    (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
+
+  #f)
 
 
 (parametrise ((check-test-name	'validate-booleans))
