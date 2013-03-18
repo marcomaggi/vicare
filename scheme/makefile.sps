@@ -2052,6 +2052,7 @@
     (strerror					i v $language)
     (errno->string				posix)
     (getenv					i v $language posix)
+    (environ					i v $language posix)
     (mkdir					posix)
     (mkdir/parents				posix)
     (real-pathname				posix)

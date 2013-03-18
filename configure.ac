@@ -271,6 +271,7 @@ AC_CHECK_FUNCS([stat lstat realpath unlink mkdir])
 AC_CHECK_FUNCS([gettimeofday time localtime_r mktime gmtime_r strftime])
 AC_CHECK_TYPES([struct tm],,,[VICARE_INCLUDES])
 AC_CHECK_FUNCS([getenv])
+AC_CHECK_DECLS([environ])
 AC_CHECK_FUNCS([sigaltstack sigemptyset sigaddset sigfillset sigprocmask sigaction])
 AC_CHECK_TYPES([struct timespec])
 
@@ -379,7 +380,6 @@ dnl --------------------------------------------------------------------
 
 AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([setenv unsetenv])
-  AC_CHECK_DECLS([environ])
   AC_CHECK_FUNCS([getpid getppid])
   AC_CHECK_FUNCS([system fork execv execve execvp])
   AC_CHECK_FUNCS([waitpid wait])

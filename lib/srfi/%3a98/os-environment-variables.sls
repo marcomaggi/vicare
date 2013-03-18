@@ -7,8 +7,7 @@
   (export (rename (getenv  get-environment-variable)
 		  (environ get-environment-variables)))
   (import (only (vicare)
-		getenv)
-    (only (vicare posix)
-	  environ)))
+		getenv
+		environ)))
 
 ;;; end of file

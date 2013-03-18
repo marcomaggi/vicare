@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -384,7 +384,7 @@
     file-descriptor/false.vicare-arguments-validation
     )
   (import (except (vicare)
-		  strerror		getenv
+		  strerror
 		  remove		time
 		  read			write
 		  truncate)
@@ -875,13 +875,6 @@
 
 ;;;; operating system environment variables
 
-(define (getenv key)
-  (define who 'getenv)
-  (with-arguments-validation (who)
-      ((string  key))
-    (let ((rv (capi.posix-getenv (string->utf8 key))))
-      (and rv (utf8->string rv)))))
-
 (define setenv
   (case-lambda
    ((key val)
@@ -901,28 +894,6 @@
   (with-arguments-validation (who)
       ((string  key))
     (capi.posix-unsetenv (string->utf8 key))))
-
-(define (%find-index-of-= str idx str.len)
-  ;;Scan STR starint at index IDX  and up to STR.LEN for the position of
-  ;;the character #\=.  Return the index or STR.LEN.
-  ;;
-  (cond ((unsafe.fx= idx str.len)
-	 idx)
-	((unsafe.char= #\= (unsafe.string-ref str idx))
-	 idx)
-	(else
-	 (%find-index-of-= str (unsafe.fxadd1 idx) str.len))))
-
-(define (environ)
-  (map (lambda (bv)
-	 (let* ((str     (utf8->string bv))
-		(str.len (unsafe.string-length str))
-		(idx     (%find-index-of-= str 0 str.len)))
-	   (cons (substring str 0 idx)
-		 (if (unsafe.fx< (unsafe.fxadd1 idx) str.len)
-		     (substring str (unsafe.fxadd1 idx) str.len)
-		   ""))))
-    (capi.posix-environ)))
 
 (define (environ-table)
   (environ->table (environ)))

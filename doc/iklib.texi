@@ -6545,6 +6545,14 @@ internally converted to bytevectors using @func{string->utf8}.
 @end defun
 
 
+@defun environ
+Interface to the global C variable @code{environ}, @glibcref{Environment
+Access, unsetenv}.  Retrieve the full environment.  Return a list of
+strings representing the contents of the @code{environ} array; if the
+environment is empty (no environment variables set) return nil.
+@end defun
+
+
 @defun strerror @var{errno}
 Return a string describing the @code{errno} code @var{errno}.  Makes use
 of the system function @cfunc{strerror}.  If @var{errno} is not a valid
