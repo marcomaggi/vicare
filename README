@@ -114,7 +114,7 @@ libraries) can be obtained with:
 	 --disable-linux	\
          --without-pthread	\
          --without-libffi	\
-         --without-iconv	\
+         --without-libiconv	\
          --without-readline	\
          --without-cre2
 

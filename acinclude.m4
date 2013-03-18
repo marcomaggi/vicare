@@ -2,8 +2,71 @@
 
 m4_include([m4/ax_lib_readline.m4])
 
-dnl --------------------------------------------------------------------
+dnl $1 - upper case option name
+dnl $2 - command line option name "--enable-$2"
+dnl $3 - default (yes, no)
+dnl $4 - text for the "checking option... " message
+dnl $5 - text for the "enable option... " message
+AC_DEFUN([VICARE_ENABLE_OPTION],
+  [vicare_enable_$1=$3
+   AC_MSG_CHECKING([$4])
+   AC_ARG_ENABLE([$2],
+     [AS_HELP_STRING([--enable-$2],
+        [$5 (default is $3)])],
+     [AS_CASE([$enableval],
+        [yes],[vicare_enable_$1=yes],
+        [no], [vicare_enable_$1=no],
+        [AC_MSG_ERROR([bad value $enableval for --enable-$2])])],
+     [vicare_enable_$1=$3])
+   AC_MSG_RESULT([$vicare_enable_$1])])
 
+dnl $1 - upper case option name
+dnl $2 - command line option name "--with-$2"
+dnl $3 - default (yes, no, check)
+dnl $4 - text for the "checking option... " message
+dnl $5 - text for the "enable option... " message
+dnl $6 - header file
+dnl $7 - library identifier (as in the linker option -l$7)
+dnl $8 - function to search in the library (use "main" when unsure)
+AC_DEFUN([VICARE_WITH_LIBRARY],
+  [with_$1=$3
+   AC_MSG_CHECKING([$4])
+   AC_ARG_WITH([$2],
+     [AS_HELP_STRING([--with-$2],[$5 (default is $3)])],
+     [AS_CASE([$withval],
+        [yes],  [with_$1=yes],
+        [no],   [with_$1=no],
+        [check],[with_$1=check],
+        [AC_MSG_ERROR([bad value $withval for --with-$2])])],
+     [with_$1=$3])
+     AC_MSG_RESULT([$with_$1])
+dnl
+   vicare_with_$1=no
+   AS_IF([test "x$with_$2" != xno],
+     [# Check for header file and shared (or static) library.
+      AC_CHECK_HEADER([$6],[vicare_have_$2_h=yes],[vicare_have_$2_h=no])
+      AC_CHECK_LIB([$7],[$8],[vicare_have_$2=yes],[vicare_have_$2=no])
+      AS_IF([test "$vicare_have_$2" = yes && test "$vicare_have_$2_h" = yes],
+        [# Both the library and the header were found: success!
+         AC_MSG_NOTICE([$2 support enabled])
+         AC_DEFINE([HAVE_$1],[1],[define if you have a $2 library])
+         vicare_with_$1=yes
+         LIBS="$LIBS -l$7"],
+
+        [test "$with_$2" = yes],
+        [# The user requested support for library or die, but either
+         # the header or the library or both were not found.
+         AS_IF([test "$vicare_have_$2_h" = no],
+               [AC_MSG_ERROR([$2.h cannot be found.])],
+               [test "$vicare_have_$2" = no],
+               [AC_MSG_ERROR([$2 cannot be found])])],
+
+        [# The user requested a check for optional $2 support, but
+         # either the header or the library or both were not found.
+         AC_MSG_WARN([$2 not found])])],
+     [AC_MSG_NOTICE([$2 was not requested])])])
+
+dnl page
 m4_define([VICARE_INCLUDES],[
 AC_INCLUDES_DEFAULT
 #ifdef HAVE_ERRNO_H
