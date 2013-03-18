@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -707,8 +707,9 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
    operation  fails with  EWOULDBLOCK: the  return value  is zero;  else
    return an encoded "errno" value. */
 {
-#undef IK_INOTIFY_EVENT_BUFFER_SIZE
-#define IK_INOTIFY_EVENT_BUFFER_SIZE	IK_CHUNK_SIZE
+#ifdef HAVE_INOTIFY_INIT
+#  undef IK_INOTIFY_EVENT_BUFFER_SIZE
+#  define IK_INOTIFY_EVENT_BUFFER_SIZE	IK_CHUNK_SIZE
   uint8_t	buffer[IK_INOTIFY_EVENT_BUFFER_SIZE];
   int		rv;
   errno = 0;
@@ -734,6 +735,9 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
     return IK_FIX(0);
   } else
     return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
 }
 
 /* end of file */
