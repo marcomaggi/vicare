@@ -420,6 +420,7 @@ AM_COND_IF([WANT_POSIX],[
   AC_CHECK_FUNCS([clock times timelocal timegm nanosleep])
   AC_CHECK_FUNCS([setitimer getitimer alarm])
   AC_CHECK_FUNCS([getrusage getrlimit setrlimit])
+  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])
 
   dnl These require linking with -lrt.
   AC_CHECK_FUNCS([mq_open mq_close mq_unlink mq_send mq_receive mq_setattr mq_getattr mq_timedsend mq_timedreceive])
@@ -1401,8 +1402,7 @@ AM_COND_IF([WANT_GLIBC],[
   AC_CHECK_FUNCS([erf erfc lgamma_r tgamma j0 j1 jn y0 y1 yn])
   AC_CHECK_FUNCS([rand srand])
   AC_CHECK_FUNCS([fnmatch glob regcomp regexec regfree regerror])
-  AC_CHECK_FUNCS([wordexp wordfree])
-  AC_CHECK_FUNCS([sysconf pathconf fpathconf confstr])])
+  AC_CHECK_FUNCS([wordexp wordfree])])
 
 AC_CACHE_SAVE
 
