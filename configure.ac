@@ -128,43 +128,35 @@ dnl Optional linking with pthreads
 dnl This  must come before  searching for POSIX functions.   For example
 dnl the POSIX semaphore functions appear to need this library.
 AC_ARG_WITH([pthread],
-  AS_HELP_STRING([--with-pthread],[link executable with pthread (default is check)]),
-  [true],[with_pthread=check])
+  AS_HELP_STRING([--with-pthread],
+    [link executable with pthread (default is check)]),
+  [],
+  [with_pthread=check])
 
 vicare_with_pthread=no
-if test x$with_pthread = xyes || test x$with_pthread = xcheck
-then
-  # Check for pthread header and library.
-  AC_CHECK_HEADER([pthread.h],[vicare_have_pthread_h=yes],[vicare_have_pthread_h=no])
-  AC_CHECK_LIB([pthread],[main],[vicare_have_pthread=yes],[vicare_have_pthread=no])
-  if test "$vicare_have_pthread" = yes && test "$vicare_have_pthread_h" = yes
-  then
-    # Both the library and the header were found: success!
-    AC_MSG_NOTICE([pthread support enabled])
-    AC_DEFINE([HAVE_PTHREAD],[1],[define if you have a pthread library])
-    vicare_with_pthread=yes
-    LIBS="$LIBS -lpthread"
-  elif test "$with_pthread" = yes; then
-    # The user requested pthread support or die, but either the header or
-    # the library or both were not found.
-    if test "$vicare_have_pthread_h" = no; then
-      AC_MSG_ERROR([pthread.h cannot be found.
-Please specify the location of the header file using
-  ./configure CPPFLAGS=-I<path/to/pthread.h>   <other-options ...>
-])
-    fi
-    if test "$vicare_have_pthread" = no; then
-      AC_MSG_ERROR([pthread cannot be found.
-Please specify the location of the library file using
-  ./configure LDFLAGS=-L<path/to/pthread.ld|dylib|so|etc.>  <other-options ...>
-])
-    fi
-  else
-    # The user requested a check for optional pthread support, but either
-    # the header or the library or both were not found.
-    AC_MSG_WARN([pthread not found])
-  fi
-fi
+AS_IF([test "x$with_pthread" != xno],
+  [# Check for pthread header and library.
+   AC_CHECK_HEADER([pthread.h],[vicare_have_pthread_h=yes],[vicare_have_pthread_h=no])
+   AC_CHECK_LIB([pthread],[main],[vicare_have_pthread=yes],[vicare_have_pthread=no])
+   AS_IF([test "$vicare_have_pthread" = yes && test "$vicare_have_pthread_h" = yes],
+     [# Both the library and the header were found: success!
+      AC_MSG_NOTICE([pthread support enabled])
+      AC_DEFINE([HAVE_PTHREAD],[1],[define if you have a pthread library])
+      vicare_with_pthread=yes
+      LIBS="$LIBS -lpthread"],
+
+     [test "$with_pthread" = yes],
+     [# The user requested pthread support or die, but either
+      # the header or the library or both were not found.
+      AS_IF([test "$vicare_have_pthread_h" = no],
+            [AC_MSG_ERROR([pthread.h cannot be found.])],
+            [test "$vicare_have_pthread" = no],
+            [AC_MSG_ERROR([pthread cannot be found])])],
+
+     [# The user requested a check for optional pthread support, but
+      # either the header or the library or both were not found.
+      AC_MSG_WARN([pthread not found])])],
+  [AC_MSG_NOTICE([pthreadwas not requested])])
 AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_pthread = xyes])
 
 #page
@@ -1516,6 +1508,8 @@ Please specify the location of the library file using
     # the header or the library or both were not found.
     AC_MSG_WARN([libffi not found -- FFI disabled])
   fi
+else
+  AC_MSG_NOTICE([Libffi was not requested])
 fi
 AM_CONDITIONAL([WANT_LIBFFI],[test x$vicare_with_libffi = xyes])
 
@@ -1553,6 +1547,8 @@ then
     # the header or the library or both were not found.
     AC_MSG_WARN([iconv not found -- support disabled])
   fi
+else
+  AC_MSG_NOTICE([iconv was not requested])
 fi
 AM_CONDITIONAL([WANT_LIBICONV],[test x$vicare_with_iconv = xyes])
 
@@ -1585,6 +1581,8 @@ then
       AC_MSG_WARN([GNU Readline or compatible not found])
     fi
   fi
+else
+  AC_MSG_NOTICE([Readline support was not requested])
 fi
 AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_readline = xyes])
 

@@ -105,6 +105,19 @@ pthread library using the option:
 
 by default pthread is linked to the executable if found on the host.
 
+  A  bare build  (without  support for  optional  features and  external
+libraries) can be obtained with:
+
+   $ ../configure \
+         --disable-posix	\
+	 --disable-glibc	\
+	 --disable-linux	\
+         --without-pthread	\
+         --without-libffi	\
+         --without-iconv	\
+         --without-readline	\
+         --without-cre2
+
   To test what a rule will do use the "-n" option; example:
 
    $ make install -n
