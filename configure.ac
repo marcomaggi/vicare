@@ -1593,11 +1593,11 @@ dnl Check for CRE2 (optional)
 
 AC_ARG_WITH([cre2],
   AS_HELP_STRING([--with-cre2],[enable support for CRE2 (default is no)]),
-  [true],[enable_cre2=no])
+  [true],[with_cre2=no])
 
 cre2_val=0
 CRE2_LIBS=
-if test "x$enable_cre2" != xno; then
+if test "x$with_cre2" != xno; then
    dnl No need to check for "re2.h" header file.
    AC_CHECK_LIB([re2],[main],
      [have_re2=yes],
@@ -1608,7 +1608,7 @@ if test "x$enable_cre2" != xno; then
     cre2_val=1
     CRE2_LIBS="-lcre2 -lre2"
     AC_MSG_NOTICE([CRE2 successfully enabled])
-  elif test "$enable_cre2" = yes; then
+  elif test "$with_cre2" = yes; then
     if test "$have_cre2_h" = no; then
       AC_MSG_ERROR([cre2.h cannot be found.
 Please specify the location of the header file using
@@ -1626,7 +1626,7 @@ Please specify the location of the library file using
   fi
 else
   AC_MSG_NOTICE([CRE2 was not requested])
-fi # "$enable_cre2" != no
+fi # "$with_cre2" != no
 
 AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
 AM_CONDITIONAL([WANT_CRE2],[test x$cre2_val = x1])
