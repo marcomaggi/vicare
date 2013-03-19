@@ -40,6 +40,7 @@
     (guard (E (else
 	       (%pretty-print E)))
       (define options (make-<options> argv))
+      (document-root (<options>-document-root options))
       (%log "starting HTTP server")
       (sel.initialise)
       (%initialise-signal-handlers)
@@ -77,6 +78,9 @@
 (define (network-port? obj)
   (and (fixnum? obj)
        (<= 1 obj 64000)))
+
+(define document-root
+  (make-parameter (px.getcwd)))
 
 
 ;;;; command line arguments parsing
@@ -133,7 +137,8 @@
 ;;;; socket event handlers
 
 (define (make-http-master-server-accept-handler master-sock)
-  (define (handler)
+  (import (srfi :31))
+  (rec (handler)
     ;;Whenever the master server socket  becomes readable the event loop
     ;;applies this function to it.
     ;;
@@ -146,18 +151,82 @@
     (let-values (((server-sock client-address)
 		  (px.accept master-sock)))
       (guard (E (else
-		 (%log "exception in ~a: ~s\n" who E)
+		 (%log "exception in ~a: ~a\n" who E)
 		 (px.close server-sock)
 		 (exit 1)))
 	(%log "accepting connection from ~a\n" client-address)
 	(sel.readable server-sock
-		      (make-http-server-readable-socket server-sock)))))
-  handler)
+		      (make-http-server-readable-socket server-sock))))))
 
 (define (make-http-server-readable-socket server-sock)
-  (let ((state #f))
-    (lambda ()
-      (px.close server-sock))))
+  (import INPUT/OUTPUT
+    (srfi :31))
+  (let ((state 'start)
+	(port	 (make-socket-port server-sock)))
+    (rec (handler)
+      (define who 'readable-socket-handler)
+      (guard (E (else
+		 (%log "exception in ~a: ~a\n" who E)
+		 (close-port port)))
+	(case state
+	  ((start)
+;;;FIXME Do not read  all the lines, just one chunk at  a time using the
+;;;event loop.
+	   (let ((lines (read-until-empty-line port)))
+;;;FIXME Extract the requested pathname.
+	     (display (call-with-input-file
+			  (string-append (document-root) "/index.html")
+			get-string-all)
+		      port)
+	     (flush-output-port port)
+	     (close-port port)
+	     #;(sel.readable server-sock handler)
+	     #;(set! state 'done)))
+	  (else
+	   (close-port port)))))))
+
+
+;;;; input/output handling
+
+(module INPUT/OUTPUT
+  (make-socket-port
+   read-until-empty-line)
+
+  (define-constant SOCKET-TRANSCODER
+    (make-transcoder (utf-8-codec)
+		     (eol-style crlf)
+		     (error-handling-mode replace)))
+
+  (define-constant MAX-NUMBER-OF-ACCUMULATED-LINES
+    64)
+
+  (define (make-socket-port server-sock)
+    (make-textual-socket-input/output-port server-sock "server port" SOCKET-TRANSCODER))
+
+  (define read-until-empty-line
+    (case-lambda
+     ((port)
+      (read-until-empty-line port 0))
+     ((port number-of-accumulated-lines)
+      ;;Recursively read  lines from PORT  until an empty line  is read.
+      ;;If an  empty line is read:  return the (possibly empty)  list of
+      ;;lines.  If EOF is read: return  #f.  If the number of read lines
+      ;;exceeds the configured maximum: raise an "&error" exception.
+      ;;
+      (define who 'read-until-empty-line)
+      (unless (fx< number-of-accumulated-lines MAX-NUMBER-OF-ACCUMULATED-LINES)
+	(error who "too many lines read from client" number-of-accumulated-lines))
+      (let ((line (read-line port)))
+	(cond ((eof-object? line)
+	       #f)
+	      ((zero? (string-length line))
+	       '())
+	      (else
+	       (cons line
+		     (read-until-empty-line port (fxadd1 number-of-accumulated-lines))))
+	      )))))
+
+  #| end of module: INPUT/OUTPUT |# )
 
 
 ;;;; interprocess signal handlers
