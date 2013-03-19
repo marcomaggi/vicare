@@ -30,12 +30,14 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
   [whether debugging features are included in compiled Scheme libraries],
   [enable compilation of Scheme libraries with debugging features])
-AM_CONDITIONAL([WANT_DEBUG],[test x$vicare_enable_DEBUG = xyes])
+AM_CONDITIONAL([WANT_DEBUG],
+  [test "x$vicare_enable_DEBUG" = xyes])
 
 VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
   [whether arguments validation is enabled],
   [enable arguments validation in the boot image])
-AM_CONDITIONAL([WANT_ARGUMENTS_VALIDATION],[test x$vicare_enable_ARGUMENTS_VALIDATION = xyes])
+AM_CONDITIONAL([WANT_ARGUMENTS_VALIDATION],
+  [test "x$vicare_enable_ARGUMENTS_VALIDATION" = xyes])
 
 vicare_subst_ARGUMENTS_VALIDATION=1
 AM_COND_IF([WANT_ARGUMENTS_VALIDATION],
@@ -49,34 +51,34 @@ dnl --------------------------------------------------------------------
 VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],
   [whether to install the SRFI libraries],
   [enable installation of SRFI libraries])
-AM_CONDITIONAL([WANT_SRFI],[test x$vicare_enable_SRFI = xyes])
+AM_CONDITIONAL([WANT_SRFI],[test "x$vicare_enable_SRFI" = xyes])
 
 VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [whether POSIX features are enabled],
   [enable POSIX features])
-AM_CONDITIONAL([WANT_POSIX],[test x$vicare_enable_POSIX = xyes])
+AM_CONDITIONAL([WANT_POSIX],[test "x$vicare_enable_POSIX" = xyes])
 
 VICARE_ENABLE_OPTION([GLIBC],[glibc],[yes],
   [whether GNU C Library features are enabled],
   [enable GNU C Library features])
-AM_CONDITIONAL([WANT_GLIBC],[test x$vicare_enable_GLIBC = xyes])
+AM_CONDITIONAL([WANT_GLIBC],[test "x$vicare_enable_GLIBC" = xyes])
 
 VICARE_ENABLE_OPTION([LINUX],[linux],[yes],
   [whether Linux features are enabled],
   [enable Linux features])
-AM_CONDITIONAL([WANT_LINUX],[test x$vicare_enable_LINUX = xyes])
+AM_CONDITIONAL([WANT_LINUX],[test "x$vicare_enable_LINUX" = xyes])
 
 dnl --------------------------------------------------------------------
 
 VICARE_ENABLE_OPTION([BINFMT],[binfmt],[no],
   [whether usage of the binfmt_misc Linux kernel module is enabled],
   [enable usage of the binfmt_misc linux kernel module])
-AM_CONDITIONAL([WANT_BINFMT],[test x$vicare_enable_BINFMT = xyes])
+AM_CONDITIONAL([WANT_BINFMT],[test "x$vicare_enable_BINFMT" = xyes])
 
 VICARE_ENABLE_OPTION([TIME_TESTS],[time-tests],[no],
   [whether to enable timing of tests],
   [enable timing of tests])
-AM_CONDITIONAL([WANT_TIME_TESTS],[test x$vicare_enable_TIME_TESTS = xyes])
+AM_CONDITIONAL([WANT_TIME_TESTS],[test "x$vicare_enable_TIME_TESTS" = xyes])
 
 AM_COND_IF([WANT_TIME_TESTS],
   [AC_CHECK_PROG([TIME_PROGRAM],[time],[time],[:])])
@@ -89,7 +91,7 @@ VICARE_WITH_LIBRARY([PTHREAD],[pthread],[check],
   [whether to link with pthread],
   [link executable with pthread],
   [pthread.h],[pthread],[main])
-AM_CONDITIONAL([WANT_PTHREAD],[test x$vicare_with_PTHREAD = xyes])
+AM_CONDITIONAL([WANT_PTHREAD],[test "x$vicare_with_PTHREAD" = xyes])
 
 #page
 #### basic system inspection
@@ -1407,7 +1409,7 @@ VICARE_WITH_LIBRARY([LIBFFI],[libffi],[check],
   [whether to link with Libffi],
   [link executable with Libffi],
   [ffi.h],[ffi],[ffi_call])
-AM_CONDITIONAL([WANT_LIBFFI],[test x$vicare_with_LIBFFI = xyes])
+AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
@@ -1416,7 +1418,7 @@ VICARE_WITH_LIBRARY([LIBICONV],[libiconv],[check],
   [whether to link with Libiconv],
   [link executable with Libiconv],
   [iconv.h],[iconv],[iconv_open])
-AM_CONDITIONAL([WANT_LIBICONV],[test x$vicare_with_LIBICONV = xyes])
+AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
 
 AM_COND_IF([WANT_LIBICONV],
   [AC_CHECK_FUNCS([iconv_open iconv_close iconv])])
@@ -1428,20 +1430,20 @@ AC_MSG_CHECKING([whether to link with GNU Readline or compatible library])
 AC_ARG_WITH([readline],
   [AS_HELP_STRING([--with-readline],
      [enable support for GNU readline or compatible (default is check)])],
-  [AC_MSG_RESULT([$withval])
-   AS_CASE([$withval],
+  [AS_CASE([$withval],
      [yes],  [with_READLINE=yes],
      [no],   [with_READLINE=no],
      [check],[with_READLINE=check],
      [AC_MSG_ERROR([bad value $withval for --with-readline])])],
   [with_READLINE=check])
+AC_MSG_RESULT([$with_READLINE])
 
 vicare_with_READLINE=no
-AS_IF([test x$with_READLINE != xno],
+AS_IF([test "x$with_READLINE" != "xno"],
   [AX_LIB_READLINE
-   AS_IF([test x$ax_cv_lib_readline != xno],
+   AS_IF([test "x$ax_cv_lib_readline" != "xno"],
      [vicare_with_READLINE=yes],
-     [AS_IF([test x$with_READLINE = xyes],
+     [AS_IF([test "x$with_READLINE" = xyes],
         [# The user requested support readline or die, but
          # readline was not found.
          AC_MSG_ERROR([GNU Readline or compatible not found])],
@@ -1449,7 +1451,7 @@ AS_IF([test x$with_READLINE != xno],
          # but readline was not found.
          AC_MSG_WARN([GNU Readline or compatible not found])])])],
    [AC_MSG_NOTICE([Readline support was not requested])])
-AM_CONDITIONAL([WANT_READLINE],[test x$vicare_with_READLINE = xyes])
+AM_CONDITIONAL([WANT_READLINE],[test "x$vicare_with_READLINE" = xyes])
 
 dnl --------------------------------------------------------------------
 dnl Check for CRE2 (optional)
@@ -1479,26 +1481,26 @@ AS_IF([test "x$with_CRE2" != xno],
    AC_CHECK_LIB([cre2],[cre2_version_string],
      [vicare_have_cre2=yes],[vicare_have_cre2=no],[-lre2])
    AC_CHECK_HEADERS([cre2.h],[vicare_have_cre2_h=yes],[vicare_have_cre2_h=no])
-   AS_IF([test "$vicare_have_cre2" = yes && test "$vicare_have_cre2_h" = yes],
+   AS_IF([test "x$vicare_have_cre2" = xyes && test "x$vicare_have_cre2_h" = xyes],
      [# Both the library and the header were found: success!
       AC_MSG_NOTICE([cre2 support enabled])
       AC_DEFINE([HAVE_CRE2],[1],[define if you have a cre2 library])
       vicare_with_CRE2=yes
       CRE2_LIBS="-lcre2 -lre2"],
 
-     [test "$with_CRE2" = yes],
+     [test "x$with_CRE2" = xyes],
      [# The user requested support for library or die, but either
       # the header or the library or both were not found.
-      AS_IF([test "$vicare_have_cre2_h" = no],
+      AS_IF([test "x$vicare_have_cre2_h" = xno],
             [AC_MSG_ERROR([cre2.h cannot be found.])],
-            [test "$vicare_have_cre2" = no],
+            [test "x$vicare_have_cre2" = xno],
             [AC_MSG_ERROR([cre2 cannot be found])])],
 
      [# The user requested a check for optional cre2 support, but
       # either the header or the library or both were not found.
       AC_MSG_WARN([cre2 not found])])],
   [AC_MSG_NOTICE([cre2 was not requested])])
-AM_CONDITIONAL([WANT_CRE2],[test x$vicare_with_CRE2 = xyes])
+AM_CONDITIONAL([WANT_CRE2],[test "x$vicare_with_CRE2" = xyes])
 
 AM_COND_IF([WANT_CRE2],[cre2_val=1],[cre2_val=0])
 AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
