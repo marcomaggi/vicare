@@ -306,18 +306,18 @@ implementation.
 
 
 @deffn Syntax delay @meta{expression}
-Take an expression of arbitrary type @code{a} and return a promise of
-type @code{(Promise a)} which at some point in the future may be asked
-(by the @func{force} procedure) to evaluate the expression and deliver
-the resulting value.
+Take an expression of arbitrary type @code{@varo{a} @var{a} ...} and
+return a promise of type @code{(Promise @varo{a} @var{a} ...)} which at
+some point in the future may be asked (by the @func{force} procedure) to
+evaluate the expression and deliver the resulting values.
 @end deffn
 
 
 @deffn Syntax lazy @meta{expression}
-Take an expression of type @code{(Promise a)} and return a promise of
-type @code{(Promise a)} which at some point in the future may be asked
-(by the @func{force} procedure) to evaluate the expression and deliver
-the resulting promise.
+Take an expression of type @code{(Promise @varo{a} @var{a} ...)} and
+return a promise of type @code{(Promise @varo{a} @var{a} ...)} which at
+some point in the future may be asked (by the @func{force} procedure) to
+evaluate the expression and deliver the resulting promise.
 @end deffn
 
 
@@ -325,19 +325,20 @@ The following procedures should be provided.
 
 
 @defun force @var{expression}
-Take an argument of type @code{(Promise a)} and return a value of type a
-as follows: If a value of type @code{a} has been computed for the
-promise, this value is returned.  Otherwise, the promise is first
-evaluated, then overwritten by the obtained promise or value, and then
-@func{force} is again applied (iteratively) to the promise.
+Take an argument of type @code{(Promise @varo{a} @var{a} ...)} and
+return a value of type @code{@varo{a} @var{a} ...} as follows: if values
+of type @code{@varo{a} @var{a} ...} have been computed for the promise,
+these values are returned.  Otherwise, the promise is first evaluated,
+then overwritten by the obtained promise or value, and then @func{force}
+is again applied (iteratively) to the promise.
 @end defun
 
 
-@defun eager @var{expression}
-Take an argument of type @code{a} and returns a value of type
-@code{(Promise a)}.  As opposed to @func{delay}, the argument is
-evaluated eagerly.  Semantically, writing @code{(eager expression)} is
-equivalent to writing:
+@defun eager @varo{expression} @var{expression} ...
+Take an argument of type @code{@varo{a} @var{a} ...} and return a value
+of type @code{(Promise @varo{a} @var{a} ...)}.  As opposed to
+@func{delay}, the argument is evaluated eagerly.  Semantically, writing
+@code{(eager expression)} is equivalent to writing:
 
 @example
 (let ((value expression)) (delay value))

@@ -55,6 +55,42 @@
 	       (add-result (srfi.force s))))))
     => '("hello" (1 1)))
 
+  (check	;multiple values with DELAY
+      (with-result
+       (call-with-string-output-port
+	   (lambda (port)
+	     (let ((s (srfi.delay (begin
+				    (display 'hello port)
+				    (values 1 2)))))
+	       (add-result (call-with-values
+			       (lambda ()
+				 (srfi.force s))
+			     list))
+	       (add-result (call-with-values
+			       (lambda ()
+				 (srfi.force s))
+			     list))))))
+    => '("hello" ((1 2) (1 2))))
+
+  (check	;multiple values with EAGER
+      (with-result
+       (call-with-string-output-port
+	   (lambda (port)
+	     (let ((s (call-with-values
+			  (lambda ()
+			    (display 'hello port)
+			    (values 1 2))
+			srfi.eager)))
+	       (add-result (call-with-values
+			       (lambda ()
+				 (srfi.force s))
+			     list))
+	       (add-result (call-with-values
+			       (lambda ()
+				 (srfi.force s))
+			     list))))))
+    => '("hello" ((1 2) (1 2))))
+
   (check
       (with-result
        (call-with-string-output-port

@@ -63,6 +63,9 @@
     Sven Hartrumpf
     Soahc Lanrete
 
+* Mark H Weaver posted on the  guile-devel mailing list a patch to allow
+  SRFI 45 to handle multiple values.
+
 
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
