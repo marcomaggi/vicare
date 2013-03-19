@@ -12,31 +12,30 @@ dist_pkglibexec_SCRIPTS	= compile-all.sps
 libvicaredir		= $(libdir)/vicare-scheme
 
 nobase_dist_libvicare_DATA	= \
-	vicare/arguments/validation.sls		\
-	vicare/arguments/general-c-buffers.sls	\
-	vicare/assembler/inspection.sls		\
-	vicare/cond-expand.sls			\
-	vicare/cond-expand/helpers.sls		\
-	vicare/debugging/compiler.sls		\
-	vicare/flonum-formatter.sls		\
-	vicare/flonum-parser.sls		\
-	vicare/include.sls			\
-	vicare/infix.sls			\
-	vicare/numerics/constants.sls		\
-	vicare/keywords.sls			\
-	vicare/parser-logic.sls			\
-	vicare/syntactic-extensions.sls		\
-	vicare/unsafe-capi.sls			\
-	vicare/unsafe-operations.sls		\
-	vicare/unsafe-unicode.sls		\
-	vicare/platform/utilities.sls		\
-	vicare/weak-hashtables.sls		\
-	vicare/checks.sls			\
-	\
-	srfi/private/feature-cond.sls		\
-	srfi/private/OS-id-features.sls		\
-	srfi/private/platform-features.sls	\
-	srfi/private/registry.sls
+	vicare/arguments/validation.sls			\
+	vicare/arguments/general-c-buffers.sls		\
+	vicare/assembler/inspection.sls			\
+	vicare/cond-expand.sls				\
+	vicare/cond-expand/helpers.sls			\
+	vicare/cond-expand/feature-cond.sls		\
+	vicare/cond-expand/OS-id-features.sls		\
+	vicare/cond-expand/platform-features.sls	\
+	vicare/cond-expand/registry.sls			\
+	vicare/debugging/compiler.sls			\
+	vicare/flonum-formatter.sls			\
+	vicare/flonum-parser.sls			\
+	vicare/include.sls				\
+	vicare/infix.sls				\
+	vicare/numerics/constants.sls			\
+	vicare/keywords.sls				\
+	vicare/parser-logic.sls				\
+	vicare/syntactic-extensions.sls			\
+	vicare/unsafe-capi.sls				\
+	vicare/unsafe-operations.sls			\
+	vicare/unsafe-unicode.sls			\
+	vicare/platform/utilities.sls			\
+	vicare/weak-hashtables.sls			\
+	vicare/checks.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/errno.sls			\

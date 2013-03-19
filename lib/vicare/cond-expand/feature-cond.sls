@@ -2,12 +2,12 @@
 ;; Copyright 2010 Derick Eddington.  My MIT-style license is in the file named
 ;; LICENSE from the original collection this file is distributed with.
 
-(library (srfi private feature-cond)
+(library (vicare cond-expand feature-cond)
   (export
     feature-cond)
   (import
     (rnrs)
-    (only (srfi private registry) available-features))
+    (only (vicare cond-expand registry) available-features))
 
   (define-syntax feature-cond
     (lambda (stx)

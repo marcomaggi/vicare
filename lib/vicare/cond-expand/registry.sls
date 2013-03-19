@@ -3,13 +3,13 @@
 ;;;with.
 
 #!r6rs
-(library (srfi private registry)
+(library (vicare cond-expand registry)
   (export
     expand-time-features
     run-time-features
     available-features)
   (import (rnrs)
-    (for (prefix (srfi private platform-features) platform.)
+    (for (prefix (vicare cond-expand platform-features) platform.)
          run expand))
 
 

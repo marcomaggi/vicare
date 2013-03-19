@@ -3,11 +3,11 @@
 ;;;with.
 
 #!r6rs
-(library (srfi private platform-features)
+(library (vicare cond-expand platform-features)
   (export expand-time-features run-time-features)
   (import (rnrs)
     (only (ikarus) host-info)
-    (srfi private OS-id-features))
+    (vicare cond-expand OS-id-features))
   (define (expand-time-features)
     '(vicare))
   (define (run-time-features)

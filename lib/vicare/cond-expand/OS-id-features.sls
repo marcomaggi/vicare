@@ -3,7 +3,7 @@
 ;;;with.
 
 #!r6rs
-(library (srfi private OS-id-features)
+(library (vicare cond-expand OS-id-features)
   (export OS-id-features)
   (import (rnrs))
   (define (OS-id-features OS-id features-alist)

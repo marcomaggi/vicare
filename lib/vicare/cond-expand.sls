@@ -33,7 +33,7 @@
 (library (vicare cond-expand)
   (export define-cond-expand)
   (import (rnrs)
-    (for (only (srfi private registry)
+    (for (only (vicare cond-expand registry)
 	       available-features)
 	 expand))
 
