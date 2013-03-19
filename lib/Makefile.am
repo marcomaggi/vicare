@@ -33,6 +33,21 @@ nobase_dist_libvicare_DATA	= \
 	vicare/weak-hashtables.sls		\
 	vicare/checks.sls			\
 	\
+	srfi/private/feature-cond.sls		\
+	srfi/private/OS-id-features.sls		\
+	srfi/private/platform-features.sls	\
+	srfi/private/registry.sls
+
+nobase_nodist_libvicare_DATA	= \
+	vicare/errno.sls			\
+	vicare/installation-configuration.sls	\
+	vicare/platform-constants.sls		\
+	vicare/platform/constants.sls		\
+	vicare/platform/features.sls		\
+	vicare/words.sls
+
+if WANT_SRFI
+nobase_dist_libvicare_DATA	+= \
 	srfi/%3a0.sls					\
 	srfi/%3a0/cond-expand.sls			\
 	\
@@ -147,20 +162,9 @@ nobase_dist_libvicare_DATA	= \
 	srfi/%3a101/random-access-lists.sls		\
 	srfi/%3a101/random-access-lists/procedures.sls	\
 	srfi/%3a101/random-access-lists/syntax.sls	\
-	srfi/%3a101/random-access-lists/equal.sls	\
-	\
-	srfi/private/feature-cond.sls			\
-	srfi/private/OS-id-features.sls			\
-	srfi/private/platform-features.sls		\
-	srfi/private/registry.sls
-
-nobase_nodist_libvicare_DATA	= \
-	vicare/errno.sls			\
-	vicare/installation-configuration.sls	\
-	vicare/platform-constants.sls		\
-	vicare/platform/constants.sls		\
-	vicare/platform/features.sls		\
-	vicare/words.sls
+	srfi/%3a101/random-access-lists/equal.sls
+dist_pkglibexec_SCRIPTS		+= compile-srfi.sps
+endif
 
 if WANT_LIBFFI
 nobase_dist_libvicare_DATA	+= \
@@ -239,6 +243,9 @@ VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 vfasl:
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_SRFI
+	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
+endif
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif
@@ -267,6 +274,9 @@ endif
 
 vfasl-installed:
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-all.sps
+if WANT_SRFI
+	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
+endif
 if WANT_LIBFFI
 	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif

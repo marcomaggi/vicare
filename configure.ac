@@ -46,6 +46,11 @@ AC_SUBST([VICARE_ARGUMENTS_VALIDATION],
 
 dnl --------------------------------------------------------------------
 
+VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],
+  [whether to install the SRFI libraries],
+  [enable installation of SRFI libraries])
+AM_CONDITIONAL([WANT_SRFI],[test x$vicare_enable_SRFI = xyes])
+
 VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [whether POSIX features are enabled],
   [enable POSIX features])

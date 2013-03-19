@@ -226,6 +226,26 @@ TESTS			=	\
 	test-vicare-weak-tables.sps			\
 	test-vicare-words.sps				\
 	\
+	test-issue-001-equal-hash.sps			\
+	test-issue-003.sps				\
+	test-issue-006-fxreverse-bit-field.sps		\
+	test-issue-007.sps				\
+	test-issue-008.sps				\
+	test-issue-009.sps				\
+	test-issue-010.sps				\
+	test-issue-012.sps				\
+	test-issue-013.sps				\
+	test-issue-015.sps				\
+	test-issue-017.sps				\
+	test-issue-020.sps				\
+	test-issue-021.sps				\
+	test-issue-022.sps				\
+	test-issue-023.sps				\
+	test-issue-024.sps				\
+	test-issue-025-sign-in-exact-rationals.sps
+
+if WANT_SRFI
+TESTS	+= \
 	test-srfi-0-cond-expand.sps			\
 	test-srfi-1-lists.sps				\
 	test-srfi-2-and-let-star.sps			\
@@ -253,25 +273,8 @@ TESTS			=	\
 	test-srfi-69-basic-hash-tables.sps		\
 	test-srfi-78-lightweight-testing.sps		\
 	test-srfi-98-os-environment-variables.sps	\
-	test-srfi-101-functional-pairs.sps		\
-	\
-	test-issue-001-equal-hash.sps			\
-	test-issue-003.sps				\
-	test-issue-006-fxreverse-bit-field.sps		\
-	test-issue-007.sps				\
-	test-issue-008.sps				\
-	test-issue-009.sps				\
-	test-issue-010.sps				\
-	test-issue-012.sps				\
-	test-issue-013.sps				\
-	test-issue-015.sps				\
-	test-issue-017.sps				\
-	test-issue-020.sps				\
-	test-issue-021.sps				\
-	test-issue-022.sps				\
-	test-issue-023.sps				\
-	test-issue-024.sps				\
-	test-issue-025-sign-in-exact-rationals.sps
+	test-srfi-101-functional-pairs.sps
+endif
 
 if WANT_LIBFFI
 TESTS	+= \
