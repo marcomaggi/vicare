@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 ACLOCAL_AMFLAGS		= -I autotools
-SUBDIRS			= src scheme doc lib tests
+SUBDIRS			= src scheme doc lib tests demos
 EXTRA_DIST		= configure.sh			\
 			  scripts/make-last-revision	\
 			  scripts/vie

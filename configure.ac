@@ -1513,7 +1513,8 @@ AC_CACHE_SAVE
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES(Makefile
-                src/Makefile scheme/Makefile doc/Makefile lib/Makefile tests/Makefile
+                src/Makefile scheme/Makefile doc/Makefile lib/Makefile
+                tests/Makefile demos/Makefile
                 lib/vicare/installation-configuration.sls
                 lib/vicare/errno.sls
                 lib/vicare/platform-constants.sls

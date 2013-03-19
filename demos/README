@@ -1,0 +1,30 @@
+
+			  Demo scripts
+			  ============
+
+
+This directory  contains scripts  and data files  showing program
+examples with Vicare Scheme.
+
+
+HTTP server
+-----------
+
+The script "httpd.sps"  is a *toy* web server  capable of serving
+pages  from a  customisable  document root  directory.  Start  it
+with:
+
+   $ vicare demos/httpd.sps -- \
+	--document-root demos \
+	--port 8080
+
+and terminate it by sending it a SIGINT signal (Ctrl-c).
+
+
+### end of file
+# Local Variables:
+# mode: text
+# coding: utf-8-unix
+# fill-column: 65
+# paragraph-start: "*"
+# End:
