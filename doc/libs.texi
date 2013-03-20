@@ -1217,7 +1217,7 @@ Succeed if @var{obj} is @false{} or a generalised C sticky buffer.
 @end deffn
 
 
-@deffn {Validation Clause} general-c-string.len @var{buf} @var{buf.len}
+@deffn {Validation Clause} general-c-buffer.len @var{buf} @var{buf.len}
 If @var{buf} is a pointer object: succeed if @var{buf.len} an exact
 integer in the range of the C language type @code{size_t}.  Otherwise
 succeed if @var{buf.len} is @false{}.
@@ -1230,7 +1230,7 @@ optional length.
 @end deffn
 
 
-@deffn {Validation Clause} general-c-buffer* @var{obj} @var{obj.len}
+@deffn {Validation Clause} general-c-sticky-buffer* @var{obj} @var{obj.len}
 Succeed if @var{obj} is a generalised C buffer and @var{obj.len} its
 optional length.
 @end deffn
