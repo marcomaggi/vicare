@@ -4635,6 +4635,8 @@
     ;;Notice that  by inspecting the  call frame of "return  address" we
     ;;can obtain the uplevel framesize.
     ;;
+    ;;The PCR address references the PCB structure.
+    ;;
     ;;It goes like this:
     ;;
     ;;1..Save the used  portion of the current Scheme  stack segment, as
