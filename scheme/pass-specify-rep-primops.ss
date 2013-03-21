@@ -4641,7 +4641,7 @@
     ;;   described by the PCB  structure, into a new continuation object
     ;;   KONT (yes, the whole Scheme stack).
     ;;
-    ;;2..Puse the  new continuation object  to the PCB's stack  of "next
+    ;;2..Push the  new continuation object  to the PCB's stack  of "next
     ;;   continuations".
     ;;
     ;;3..Call the closure object X.
