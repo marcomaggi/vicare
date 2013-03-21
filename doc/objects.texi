@@ -4344,7 +4344,7 @@ tagged as vectors, whose first word is tagged as continuation:
   heap pointer    vector tag
 
 |----------------|----------| first word of continuation
- all set to zero  vector tag
+ all set to zero  continuation tag
 @end example
 
 @noindent
