@@ -819,7 +819,7 @@ ik_stack_overflow (ikpcb* pcb)
     IK_REF(s_kont, off_continuation_size) = pcb->frame_base - pcb->frame_pointer - wordsize;
     IK_REF(s_kont, off_continuation_next) = pcb->next_k;
     pcb->next_k = s_kont;
-#if STACK_DEBUG
+#if (0 || STACK_DEBUG)
     ik_debug_message("%s: saved stack continuation:\n\
 \tpcb->stack_base    = 0x%016lx\n\
 \tpcb->stack_size    = %ld bytes, %ld words\n\

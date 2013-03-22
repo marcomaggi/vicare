@@ -1445,6 +1445,7 @@ add_object_proc (gc_t* gc, ikptr X)
       return new_entry - off_code_data;
     }
     else if (continuation_tag == first_word) {
+      /* ik_debug_message("gc compacted continuation %p", (void*)X); */
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
