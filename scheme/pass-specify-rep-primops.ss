@@ -4646,7 +4646,7 @@
     ;;2..Push the  new continuation object  to the PCB's stack  of "next
     ;;   continuations".
     ;;
-    ;;3..Call the closure object X.
+    ;;3..Call the closure object FUNC.
     ;;
     (with-tmp* ((kont			(prm 'alloc
 					     (K continuation-size)
