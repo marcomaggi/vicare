@@ -4611,17 +4611,17 @@
     ;;   |                      | <-- pcb->frame_base
     ;;   |----------------------|
     ;;   | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
-    ;;   |----------------------|
-    ;;             ...
-    ;;   |----------------------| --
-    ;;   | uplevel return addr  | .
-    ;;   |----------------------| .
-    ;;   |   uplevel argument   | . uplevel framesize
-    ;;   |----------------------| .
-    ;;             ...            .
-    ;;   |----------------------| --
-    ;;   |    return address    | <-- frame pointer register (FPR)
-    ;;   |----------------------|
+    ;;   |----------------------|                                  --
+    ;;             ...                                             .
+    ;;   |----------------------| --                               .
+    ;;   | uplevel return addr  | .                                . stack
+    ;;   |----------------------| .                                . portion
+    ;;   |   uplevel argument   | . uplevel framesize              . referenced
+    ;;   |----------------------| .                                . by the
+    ;;             ...            .                                . continuation
+    ;;   |----------------------| --                               . object
+    ;;   |    return address    | <-- frame pointer register (FPR) .
+    ;;   |----------------------|                                  --
     ;;   |  closure ref = FUNC  | --> closure object
     ;;   |----------------------|
     ;;   |                      |
