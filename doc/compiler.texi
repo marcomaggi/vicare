@@ -5,7 +5,7 @@
 This chapter is a collection of notes on the internals of the compiler.
 
 @menu
-* compiler intro::              Introduction to the compiler.
+* compiler machinery::          Introduction to execution machinery.
 * compiler conventions::        Coding conventions in compiler's code.
 * compiler stack::              Scheme stack management.
 @end menu
@@ -15,12 +15,438 @@ This chapter is a collection of notes on the internals of the compiler.
 @end macro
 
 @c page
-@node compiler intro
-@section Introduction to the compiler
+@node compiler machinery
+@section Introduction to execution machinery
 
 
-At present, @value{PRJNAME}'s compiler supports only the Intel
-architecture.
+The execution machinery of compiled Scheme code is a bit intricated when
+compared with the execution of, say, ``normal'' compiled C code; this is
+because the following features must be implemented:
+
+@table @strong
+@item Closures
+Scheme functions are not just blocks of machine code: they are allowed
+to reference variable values captured at run time.  Multiple closures
+(referencing different instances of the same semantic variables) can
+share the same block of machine code.  Multiple closures (referencing
+different blocks of machine code) can share the same variable values.
+
+@item Continuations
+Scheme code is allowed to save the current continuation and resume it
+later any number of times.
+
+@item Tail calls
+Whenever a Scheme function call happens in tail position: it must be
+implemented in such a way that @strong{no} new stack frame is created
+for the callee function; rather the stack frame of the caller is
+destroyed and reused as callee's frame.  This allows the use of tail
+calls as proper idiom to implement all the execution loops, even when
+such loops have an ``infinite'' number of iterations, without the risk
+of overflowing the Scheme stack.
+@end table
+
+@menu
+* compiler machinery closures::         Closures implementation.
+* compiler machinery continuations::    Continuations implementation.
+* compiler machinery tail calls::       Tail calls implementation.
+@end menu
+
+@c page
+@node compiler machinery closures
+@subsection Closures implementation
+
+@c page
+@node compiler machinery continuations
+@subsection Continuations implementation
+
+
+Let's think of a process in execution as having: a table of descriptors,
+a code memory segment, a heap memory segment and a stack memory segment,
+@ref{fig:process_segments, compiler machinery continuations}.  The
+Instruction Pointer @cpu{} register (@acronym{IP}) keeps track of the
+next instruction to execute in the code segment; the Stack Pointer
+@cpu{} register (@acronym{SP}) keeps track of the current location on
+the stack; dynamically allocated data goes in the heap segment.
+
+@float Figure,fig:process_segments
+@example
+|---|---|---| descriptors table
+  |   |   |
+  |   |   |      IP
+  |   |   v      v
+  |   |   |------+---------------| code segment
+  |   v
+  |   |----------------------| heap segment
+  v
+  |----------+-----------| stack segment
+             ^
+             SP
+@end example
+@caption{Memory segments of a process in execution.}
+@end float
+
+One way to implement continuations is to push the current @acronym{IP}
+on the stack segment, duplicate the stack segment itself, finally save
+somewhere the @acronym{SP}; later we can reinstall the saved stack
+segment, reset the @acronym{SP} and perform a @code{ret} assembly
+instruction that will pop the saved @acronym{IP} and resume the
+execution; @ref{fig:duplicated_stack_segment, compiler machinery
+continuations}.  Of course we must make sure that the resources
+referenced by the saved stack segment are not released while the
+continuation still exists.
+
+@float Figure,fig:duplicated_stack_segment
+@example
+|---|---|---| descriptors table
+  |   |   |
+  |   |   |     IP IP1
+  |   |   v      v v
+  |   |   |------+-+--------------| code segment
+  |   v
+  |   |----------------------| heap segment
+  |
+  v           IP1
+  |----------+--+---------| stack segment
+             ^
+             SP
+
+              IP1
+  |----------+--+---------| duplicated stack segment
+             ^
+             SP
+@end example
+@caption{Duplicated stack segment as continuation implementation
+mechanism.}
+@end float
+
+Stack segment duplication is @strong{not} the way @value{PRJNAME}
+implements continuations; but the actual implementation is not
+conceptually different.  Let's look at this simple program that does not
+create explicit continuations:
+
+@example
+(import (rnrs))
+(define (alpha) (beta))
+(define (beta)  (delta))
+(define (delta) 123)
+(alpha)
+@end example
+
+@noindent
+let's assume that no function integration is performed by the compiler
+(no function inlining).
+
+@value{PRJNAME} allocates a memory segment to be used as stack, the
+executes the call to @func{alpha} pushing its stack frame on the stack;
+as nested function calls are performed: new stack frames are pushed on
+the stack, @ref{fig:continuation_stack_grow, compiler machinery
+continuations}.
+
+@float Figure,fig:continuation_stack_grow
+@example
+        <-- growing direction --
+
+|-----------------------------|--------|
+                               frame of
+                                alpha
+
+
+|--------------------|--------|--------|
+                      frame of frame of
+                        beta    alpha
+
+
+|-----------|--------|--------|--------|
+             frame of frame of frame of
+              delta     beta    alpha
+@end example
+@caption{Scheme stack segment after calling @func{alpha}, @func{beta},
+@func{delta}.}
+@end float
+
+When the functions return the stack rewinds; when there are no more
+stack frames: there is nowhere to return to, so the program terminates,
+@ref{fig:continuation_stack_rewind, compiler machinery continuations}.
+
+@float Figure,fig:continuation_stack_rewind
+@example
+       <-- growing direction --
+
+|--------------------|--------|--------|
+                      frame of frame of
+                        beta    alpha
+
+|-----------------------------|--------|
+                               frame of
+                                alpha
+
+|--------------------------------------|
+@end example
+@caption{Scheme stack segment after returning from @func{delta},
+@func{beta}, @func{alpha}.}
+@end float
+
+Under @value{PRJNAME} machine words on the stack are immutable by
+definition; let's see why.  Scheme has two kinds of values: immediate
+and compound.
+
+@itemize
+@item
+Each instance of an immediate value (boolean, fixnum, character,
+@dots{}) is fully contained in a single machine word; immediate values
+are moved around in @cpu{} registers and memory locations and they are
+immutable; immediate values are put on the stack if it is needed for the
+execution of a program.
+
+@item
+Each instance of a compound value (pair, vector, record, @dots{}) is
+composed of a memory block, actually holding the data, and a reference
+to it: a machine word being the tagged address of the first byte in the
+memory block.
+
+If we mutate a vector with @func{vector-set!}: we mutate the memory
+block, the reference to such vector is untouched.  References to
+compound values are immutable.
+
+@value{PRJNAME} always allocates compound values' memory blocks on the
+heap, while references are moved around in @cpu{} registers and memory
+locations; references are put on the stack if it is needed for the
+execution of a program.
+@end itemize
+
+Let's consider the following program making use of a continuation:
+
+@example
+(import (rnrs))
+(define (alpha)  ((beta) values))
+(define (beta)   (delta))
+(define (delta)  (call/cc proc))
+(define (proc k) k)
+(alpha)
+@end example
+
+@noindent
+this is what happens: @func{alpha} is called, @func{alpha} calls
+@func{beta}, @func{beta} calls @func{delta}, @func{delta} call
+@func{call/cc}, @func{call/cc} creates a continuation object and applies
+@func{proc} to its escape function; @func{proc} returns the escape
+function to @func{beta}, @func{beta} returns the escape function to
+@func{alpha}, @func{alpha} applies the escape function to @func{values},
+the escape function makes the execution flow go back to the body of
+@func{delta} and returns @func{values}, @func{delta} returns
+@func{values} to @func{beta}, @func{beta} returns @func{values} to
+@func{alpha}, @func{alpha} applies @func{values} to @func{values},
+@func{values} returns and the program terminates.
+
+Now let's see what this program execution means for the stack segment.
+When functions are called the stack grows as before, with the addition
+of a call to @func{call/cc}, @ref{fig:continuation_stack_grow, compiler
+machinery continuations}.  Then @func{call/cc} creates a continuation
+object @var{D} (which is a ``normal'' Scheme compound object)
+representing the current Scheme stack,
+@ref{fig:continuation_cont_object, compiler machinery continuations}.
+
+@float Figure,fig:continuation_cont_object
+@example
+       <-- growing direction --
+
+|--|--------|--------|--------|--------|
+    frame of frame of frame of frame of
+    call/cc   delta     beta    alpha
+
+            |..........................|
+              stack portion referenced
+            by the continuation object D
+@end example
+@caption{Scheme stack segment ``freezed'' by the continuation object.}
+@end float
+
+From now on the portion of the Scheme stack referenced by the
+continuation object is no more used to execute code, it is ``freezed'';
+for all the practical purposes it is no more part of the stack segment,
+the deepest frame on the Scheme stack is now the frame of
+@func{call/cc}.  The continuation object @var{D} is registered in the
+process status as ``process next continuation''.
+
+@func{call/cc} calls @func{proc} in tail position, which means that
+@func{proc} reuses the stack frame of @func{call/cc},
+@ref{fig:continuation_frame_reuse, compiler machinery continuations}.
+
+@float Figure,fig:continuation_frame_reuse
+@example
+       <-- growing direction --
+
+|--|--------|--------|--------|--------|
+    frame of freezed  freezed  freezed
+    proc     frame of frame of frame of
+              delta     beta    alpha
+
+            |..........................|
+              stack portion referenced
+            by the continuation object D
+@end example
+@caption{Calling @func{proc} in tail position reuses the top stack
+frame.}
+@end float
+
+Now @func{proc} must return the continuation escape function @var{k} to
+the caller @func{delta}; notice that there are no more stack frames up
+from the one of @func{proc}, but there is a ``next continuation'' object
+in the process status, @ref{fig:continuation_return_delta, compiler
+machinery continuations}.  Here are the steps:
+
+@enumerate
+@item
+The continuation object @var{D} is mutated to reference only the frame
+of @func{delta}.  A new continuation object @var{B} is created to
+reference the rest of the freezed frames; @var{B} becomes the new
+``process next continuation'' object and also the ``next continuation''
+of @var{D}.
+
+@item
+The frame of @func{proc} is moved down the stack segment by an amount of
+bytes equal to the size of the frame of @func{delta}.
+
+@item
+The freezed frame of @func{delta} is copied into the space just created
+and the copy becomes the deepest stack frame.
+
+@item
+The execution flow returns to @func{delta}, right after the instructions
+that called @func{call/cc}.
+@end enumerate
+
+@float Figure,fig:continuation_return_delta
+@example
+          <-- growing direction --
+
+|--------|--------|--------|--------|--------|
+ frame of frame of freezed  freezed  freezed
+ proc     delta    frame of frame of frame of
+                    delta     beta    alpha
+                  |........|
+         freezed frame of D
+
+                           |..................|
+                           freezed frames of B
+@end example
+@caption{Returning to @func{delta}.}
+@end float
+
+Returning from @func{delta} to @func{beta} is similar; notice that there
+are no more stack frames up from the one of @func{delta}, but there is a
+``next continuation'' object in the process status,
+@ref{fig:continuation_return_beta, compiler machinery continuations}.
+Here are the steps:
+
+@enumerate
+@item
+The continuation object @var{B} is mutated to reference only the frame
+of @func{beta}.  A new continuation object @var{A} is created to
+reference the rest of the freezed frames; @var{A} becomes the new
+``process next continuation'' object and also the ``next continuation''
+of @var{B}.
+
+@item
+The frame of @func{delta} is moved down the stack segment by an amount
+of bytes equal to the size of the frame of @func{beta}.
+
+@item
+The freezed frame of @func{beta} is copied into the space just created
+and the copy becomes the deepest stack frame.
+
+@item
+The execution flow returns to @func{beta}, right after the instructions
+that called @func{delta}.
+@end enumerate
+
+@float Figure,fig:continuation_return_beta
+@example
+          <-- growing direction --
+
+|--------|--------|--------|--------|--------|
+ frame of frame of freezed  freezed  freezed
+ delta    beta     frame of frame of frame of
+                    delta     beta    alpha
+                  |........|
+         freezed frame of D
+
+                           |........|
+                  freezed frame of B
+
+                                    |.........|
+                            freezed frame of A
+@end example
+@caption{Returning to @func{beta}.}
+@end float
+
+Finally @func{beta} must return to @func{alpha}; notice that there are
+no more stack frames up from the one of @func{alpha}, but there is a
+``next continuation'' object in the process status,
+@ref{fig:continuation_return_alpha, compiler machinery continuations}.
+Here are the steps:
+
+@enumerate
+@item
+The continuation object @var{A} references a single freezed frame: the
+last one.  The process status is updated to ``no more continuation
+objects''.
+
+@item
+The frame of @func{beta} is moved down the stack segment by an amount of
+bytes equal to the size of the frame of @func{alpha}.
+
+@item
+The freezed frame of @func{alpha} is copied into the space just created
+and the copy becomes the deepest stack frame.
+
+@item
+The execution flow returns to @func{alpha}, right after the instructions
+that called @func{beta}.
+@end enumerate
+
+@float Figure,fig:continuation_return_alpha
+@example
+          <-- growing direction --
+
+|--------|--------|--------|--------|--------|
+ frame of frame of freezed  freezed  freezed
+ beta     alpha    frame of frame of frame of
+                    delta     beta    alpha
+                  |........|
+         freezed frame of D
+
+                           |........|
+                 freezed frames of B
+
+                                    |.........|
+                           freezed frames of A
+@end example
+@caption{Returning to @func{alpha}.}
+@end float
+
+@func{alpha} applies the escape function @var{K} to @func{values}; this
+call happens in tail position, so the frame of @func{alpha} is reused by
+the escape function, @ref{fig:continuation_apply_escape, compiler
+machinery continuations}.  The escape function reinstalls the
+continuation object @var{D} as ``process next continuation''.
+
+@float Figure,fig:continuation_apply_escape
+@example
+          <-- growing direction --
+
+|--------|--------|--------|--------|--------|
+          frame of freezed  freezed  freezed
+          K        frame of frame of frame of
+                    delta     beta    alpha
+@end example
+@caption{Applying the continuation escape function.}
+@end float
+
+@c page
+@node compiler machinery tail calls
+@subsection Tail calls implementation
+
 
 @c page
 @node compiler conventions
@@ -64,13 +490,13 @@ In this section we want to explain how the Scheme stack in managed by
 @value{PRJNAME}.
 
 @menu
-* compiler stack intro::        Stack allocation and basic management.
+* compiler stack alloc::        Stack allocation and basic management.
 * compiler stack args::         Function arguments on the stack.
 * compiler stack call::         Executing a @code{call} instruction.
 @end menu
 
 @c page
-@node compiler stack intro
+@node compiler stack alloc
 @subsection Stack allocation and basic management
 
 
