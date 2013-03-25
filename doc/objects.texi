@@ -4335,6 +4335,34 @@ Evaluate to true if @var{X} is a reference to closure object.
 @section Continuation objects
 
 
+There are two kinds of continuation objects:
+
+@table @strong
+@item Scheme continuations
+Represent a Scheme continuation as defined by @rnrs{6}, a portion of
+Scheme stack whose frames are freezed.  Scheme continuations are
+expliticly created by @func{call/cc}, but also used to represent a
+Scheme stack segment that has run out of space making the frames
+overflow into anothe stack segment.
+
+@item System continuations
+Represent a C language continuation, a portion of the C language stack.
+They are used by the @ffi{} to save the C execution context just before
+calling back to Scheme from C code, @ref{ffi, Foreign functions
+interface}.
+@end table
+
+@menu
+* objects continuations intro::   Introduction to continuations.
+* objects continuations scheme::  Scheme continuation objects.
+* objects continuations system::  System continuation objects.
+@end menu
+
+@c page
+@node objects continuations intro
+@subsection Introduction to continuations
+
+
 Continuation objects are memory blocks referenced by machine words
 tagged as vectors, whose first word is tagged as continuation:
 
@@ -4354,113 +4382,81 @@ the layout of a continuation memory block is:
   tag   top  size  next
 @end example
 
-To understand the contents of a continuation object, we have to recall
-how the Scheme stack is used:
-
-@example
- high memory
-|            |
-|------------|
-|            | <-- pcb->frame_base
-|------------|
-| used word  | <-- pcb->frame_base - wordsize
-|------------|
-|     .      |
-|     .      |
-|     .      |
-|------------|
-| free word  | <-- pcb->frame_pointer
-|------------|
-|     .      |
-|     .      |
-|     .      |
-|------------|
-| free word  | <-- pcb->stack_base
-|------------|
-|            |
-  low memory
-@end example
-
-@noindent
-and remember that @code{pcb->frame_base} references a word that is
-one--off the end of the stack segment; so the first word in the stack
+Continuation objects are collected in linked lists handled as stacks;
+all such linked lists share a common tail.  The meaning of the fields
 is:
 
-@example
-pcb->frame_base - wordsize
-@end example
-
-@noindent
-A continuation references the portion of the Scheme stack memory segment
-between @code{frame_base} and @code{frame_pointer}.
-
-There are two kinds of continuation objects:
-
-@table @dfn
-@item Scheme continuations
-Represent a Scheme continuation.  They are expliticly created by
-@func{call/cc}, but also used to represent a previous Scheme code
-execution when the allocated Scheme stack runs out of space.
-
-@item system continuations
-Represent a C continuation.  They are used by the @ffi{} to save the C
-execution context just before calling back to Scheme from C code.
-@end table
-
-The fields of a Scheme continuation are:
-
 @table @code
+@item tag
+A machine word containing only the secondary tag for continuation
+objects and all the other bits set to zero.
+
 @item top
-Untagged pointer referencing the first free word on the Scheme stack.
+A machine word representing the memory address of the machine word at
+the top (lowest address) of the stack portion referenced by the
+continuation.
 
 @item size
-Number of bytes used on the Scheme stack, @strong{not} counting the free
-word referenced by the frame pointer.
+The size of the stack portion expressed in number of bytes.
 
 @item next
-Tagged pointer referencing a continuation object; it represents the
-continuation to go back to after the execution of tthis continuation is
-finished.  This ``going back'' is performed by the C function
-@cfunc{ik_exec_code}.
+A machine word being @cnull{} or a reference (tagged pointer) to the
+next continuation object in the linked list.
 @end table
-
-The fields of a Scheme continuation are:
-
-@table @code
-@item top
-Untagged memory pointer referencing the C language stack last saved by
-Scheme code; it is the content of the field @code{pcb->system_stack} at
-the time this system continuation object was created.
-
-@item size
-Unused.
-
-@item next
-Tagged memory pointer referencing the next continuation; it is the
-content of the field @code{pcb->next_k} at the time this system
-continuation object was created.
-@end table
-
-Whatever the kind, usually a continuation is created and then saved in
-the field @code{pcb->next_k} in such a way that continuation objects
-create a linked list:
-
-@example
-        next_k
-|------|------|-----| PCB
-          |
-          v     next
-       |-------|----| continuation
-                  |
-                  v     next
-               |-------|----| continuation
-                          |
-                           --> NULL
-@end example
 
 @c ------------------------------------------------------------
 
 @subsubheading Basic operations
+
+To test if a value of type @code{ikptr} is a reference to a continuation
+object, we should do:
+
+@example
+ikptr   X;
+
+if (continuation_primary_tag == (continuation_primary_mask & X))
+  @{
+    if (continuation_tag == IK_REF(X, 0))
+      it_is_a_scheme_continuation();
+    else if (system_continuation_tag == IK_REF(X, 0))
+      it_is_a_system_continuation();
+    it_is_not();
+  @}
+else
+  it_is_not();
+@end example
+
+A Scheme continuation object is usually allocated as follows:
+
+@example
+ikpcb *     pcb = ...;
+ikptr       s_kont;
+ikcont *    kont;
+
+kont   = (ikcont*)ik_unsafe_alloc(pcb,
+                     IK_ALIGN(continuation_size));
+s_rest = (ikptr)((long)kont) | continuation_primary_tag;
+
+IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
+IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
+IK_REF(s_kont, off_continuation_size) = \
+   pcb->frame_base - pcb->frame_pointer - wordsize;
+IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+pcb->next_k = s_kont;
+@end example
+
+
+@defvr {Preprocessor Symbol} continuation_primary_tag
+The tag of an @code{ikptr} machine words referencing the memory block of
+a Scheme or system continuation object.
+@end defvr
+
+
+@defvr {Preprocessor Symbol} continuation_primary_mask
+A bit pattern used to isolate the tag bits in an @code{ikptr} machine
+words referencing the memory block of a Scheme or system continuation
+object.
+@end defvr
 
 
 @defvr {Preprocessor Symbol} continuation_tag
@@ -4481,7 +4477,7 @@ The number of bytes needed to hold a continuation memory block.
 @defvrx {Preprocessor Symbol} disp_continuation_size
 @defvrx {Preprocessor Symbol} disp_continuation_next
 Scheme continuation field displacements.  The number of bytes to add to
-an untagged pointer to Scheme continuations to get the pointer to the
+an untagged pointer to Scheme continuation to get the pointer to the
 first byte in the word holding the specified field.
 @end defvr
 
@@ -4491,7 +4487,7 @@ first byte in the word holding the specified field.
 @defvrx {Preprocessor Symbol} disp_system_continuation_size
 @defvrx {Preprocessor Symbol} disp_system_continuation_next
 System continuation field displacements.  The number of bytes to add to
-an untagged pointer to system continuations to get the pointer to the
+an untagged pointer to system continuation to get the pointer to the
 first byte in the word holding the specified field.
 @end defvr
 
@@ -4515,22 +4511,194 @@ tagged pointer to system continuation to get the pointer to the first
 byte in the word holding the specified field.
 @end defvr
 
+@c page
+@node objects continuations scheme
+@subsection Scheme continuation objects
 
-A Scheme continuation object is usually allocated as follows:
 
+To understand the contents of a continuation object, we have to recall
+how the Scheme stack is used, @ref{compiler machinery continuations,
+Continuations implementation}.  We also need to remember that stack
+segments are consumed starting from the highest memory addresses,
+growing towards the lowest memory addresses.
+
+Whenever a Scheme stack segment is allocated, the fields of the @pcb{}
+structure are initialised such that: @code{stack_base} references the
+lowest machine word in the segment, @code{frame_base} references the
+highest word right after the end of the segment, @code{frame_pointer}
+references the highest word of the segment which is initialised to the
+memory address of the assembly routine @code{ik_underflow_handler};
+@ref{fig:kont_empty_stack, objects continuations scheme}.
+
+@float Figure,fig:kont_empty_stack
 @example
-ikpcb *     pcb = ...;
-ikptr       s_kont;
-
-s_kont = ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size)) \
-   | vector_tag;
-IK_REF(s_kont, off_continuation_tag)  = continuation_tag;
-IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
-IK_REF(s_kont, off_continuation_size) = \
-   pcb->frame_base - pcb->frame_pointer - wordsize;
-IK_REF(s_kont, off_continuation_next) = pcb->next_k;
-pcb->next_k = s_kont;
+      high memory
+|                      |
+|----------------------|
+|                      | <-- pcb->frame_base
+|----------------------|                         --
+| ik_underflow_handler | <-- pcb->frame_pointer  .
+|----------------------|                         .
+          ...                                    .
+|----------------------|                         . stack
+|                      | <-- pcb->frame_redline  . segement
+|----------------------|                         .
+          ...                                    .
+|----------------------|                         .
+|                      | <-- pcb->stack_base     .
+|----------------------|                         --
+|                      |
+      low memory
 @end example
+@caption{Empty Scheme stack segment.}
+@end float
+
+Whenever Scheme functions are executed, performing nested calls: stack
+frames are created, starting from the highest machine words; let's say
+there are 2 of them, @ref{fig:kont_two_frames, objects continuations
+scheme}.  The @cpu{}'s Frame Pointer Register (@acronym{FPR}) references
+the return address in the topmost stack frame.
+
+@float Figure,fig:kont_two_frames
+@example
+      high memory
+|                        |
+|------------------------|
+|                        | <-- pcb->frame_base
+|------------------------|                       --
+|  ik_underflow_handler  |                       .
+|------------------------|        --             .
+|   local value frame 1  |        .              .
+|------------------------|        .              .
+|   local value frame 1  |        . framesize 1  .
+|------------------------|        .              .
+| return address frame 1 |        .              .
+|------------------------|        --             .
+|   local value frame 0  |        .              .
+|------------------------|        .              . stack
+|   local value frame 0  |        . framesize 0  . segment
+|------------------------|        .              .
+| return address frame 0 | <- FPR .              .
+|------------------------|        --             .
+           ...                                   .
+|------------------------|                       .
+|                        | <-- pcb->stack_base   .
+|------------------------|                        --
+|                        |
+      low memory
+@end example
+@caption{2 frames on the Scheme stack.}
+@end float
+
+If a continuation object is created now: it freezes all the stack frames
+in the stack segment, so that they will never be mutated again; in
+practice the portion of the Scheme stack referenced by the continuation
+is no more part of the Scheme stack itself, rather the stack segment is
+resized to reference only the portion of memory still unused,
+@ref{fig:kont_freezed_frames, objects continuations scheme}.
+
+@float Figure,fig:kont_freezed_frames
+@example
+      high memory
+|                        |
+|------------------------|
+|  ik_underflow_handler  |
+|------------------------|                       --
+|   local value frame 1  |                       .
+|------------------------|                       .
+|   local value frame 1  |                       .
+|------------------------|                       .
+| return address frame 1 |                       . continuation
+|------------------------|                       . size
+|   local value frame 0  |                       .
+|------------------------|                       .
+|   local value frame 0  |                       .
+|------------------------|                       .
+| return address frame 0 | <- pcb->frame_base    .
+|------------------------|                       --
+|  ik_underflow_handler  | <- FPR                .
+|------------------------|                       . stack
+           ...                                   . segment
+|------------------------|                       .
+|                        | <-- pcb->stack_base   .
+|------------------------|                       --
+|                        |
+      low memory
+@end example
+@caption{freezed stack frames and resized stack segment.}
+@end float
+
+The field @code{top} of the continuation object is an untagged memory
+pointer referencing the return address in the topmost freezed frame;
+such machine word is the address of the code execution return point of
+this continuation, in other words: the address of the next assembly
+instruction to execute when returning to this continuation.
+
+The field @code{size} of the continuation object is the number of bytes
+in all the freezed stack frames this continuation references: the sum
+between the all frame sizes.
+
+Notice that the single continuation object referencing all the freezed
+frames is equivalent to two continuation objects each referencing a
+single freezed frame, provided that the continuation object of frame
+@math{0} has the continuation object of frame @math{1} as @code{next},
+@ref{fig:kont_split_frames, objects continuations scheme}.
+
+@float Figure,fig:kont_split_frames
+@example
+      high memory
+|                        |
+|------------------------|
+|  ik_underflow_handler  |
+|------------------------|           --
+|   local value frame 1  |           .
+|------------------------|           . continuation
+|   local value frame 1  |           . size 1
+|------------------------|           .
+| return address frame 1 | <- top 1  .
+|------------------------|           --
+|   local value frame 0  |           .
+|------------------------|           . continuation
+|   local value frame 0  |           . size 0
+|------------------------|           .
+| return address frame 0 | <- top 0  .
+|------------------------|           --
+|                        |
+      low memory
+
+     next_k
+|...|------|...| PCB structure
+       |
+       v
+      tag  top  size next
+     |----|----|----|----| continuation object 0
+                      |
+               -------
+              v
+             tag  top  size next
+            |----|----|----|----| continuation object 1
+                            NULL
+@end example
+@caption{2 chained continuation objects equivalent to the single
+continuation object.}
+@end float
+
+@c page
+@node objects continuations system
+@subsection System continuation objects
+
+
+Whenever C language prepares to enter Scheme code execution...
+
+The field @code{top} of a system continuation is an untagged memory
+pointer referencing the C language stack last saved by Scheme code; it
+is the content of the field @code{pcb->system_stack} at the time this
+system continuation object was created.
+
+The field @code{size} of a system continuatio object is unused.
+
+Upon creation, system continuation objects are prepended to the linked
+list referenced by the field @code{next_k} of the @pcb{} structure.
 
 @c page
 @node objects misc
