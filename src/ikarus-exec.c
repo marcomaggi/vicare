@@ -58,15 +58,14 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   }
   code_object_entry_point = s_code+off_code_data;
   s_retval_count = ik_asm_enter(pcb, code_object_entry_point, s_argcount, s_closure);
-  if (1 || DEBUG_EXEC) {
-    ikptr	underflow_handler = *(ikptr *)(pcb->frame_pointer - wordsize);
-    assert(IK_UNDERFLOW_HANDLER == underflow_handler);
-  }
-  s_kont = pcb->next_k;
-  while (s_kont) {
-    assert(continuation_primary_tag == (continuation_primary_mask & s_kont));
+  for (s_kont = pcb->next_k; s_kont; s_kont = pcb->next_k) {
     /* We  are  here because  the  Scheme  code  wants  to return  to  a
        previously saved Scheme continuation object.  */
+    if (1 || DEBUG_EXEC) {
+      ikptr	underflow_handler = *(ikptr *)(pcb->frame_pointer - wordsize);
+      assert(IK_UNDERFLOW_HANDLER == underflow_handler);
+    }
+    assert(continuation_primary_tag == (continuation_primary_mask & s_kont));
     if (0 || DEBUG_EXEC) {
       ik_debug_message("%s: resuming process continuation s_kont=0x%016lx",
 		       __func__, (long)s_kont);
@@ -96,10 +95,10 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        issue #35.  This block of code is *not* a fix for the bug, just a
        temporary work around that partially mitigates the problem.
 
-       The Scheme  code returned to  the stack underflow handler,  so if
-       the "next  process continuation" has the  stack underflow handler
-       as  return  point: this  is  a  bogus continuation.   Let's  just
-       discard  it  and  go  on  with the  next  continuation  from  the
+       The Scheme code  has returned to the stack  underflow handler, so
+       if  the  "next  process  continuation" has  the  stack  underflow
+       handler as  return point:  this is  a bogus  continuation.  Let's
+       just discard  it and go  on with  the next continuation  from the
        continuation stack.
 
        The  bug  consists in  the  fact  that  a continuation  with  the
@@ -118,7 +117,6 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 \tuplevel continuation is 0x%016lx",
 			 __func__, s_kont, kont->next);
       }
-      s_kont = kont->next;
       continue;
     }
     /* Zero  framesize means  that we  are returning  to a  continuation
@@ -276,8 +274,9 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       }
       s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
     }
-    s_kont =  pcb->next_k;
-  }  /* end of while() */
+    /* If we  are here: the Scheme  code we have reentered  has returned
+       again; we need to reinstate the next process continuation. */
+  }  /* end of for() */
 
   /* Retrieve  the return  value from  the stack  and return  it to  the
    * caller.
