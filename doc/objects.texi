@@ -410,8 +410,7 @@ can do:
 ikptr  X;
 
 if ((vector_tag    == (X & vector_tag)) &&
-    (secondary_tag == (secondary_mask
-                       & IK_REF(X, -vector_tag))))
+    (secondary_tag == (secondary_mask & IK_REF(X, -vector_tag))))
   it_is();
 else
   it_is_not();
