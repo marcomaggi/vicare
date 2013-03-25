@@ -21,6 +21,9 @@
 .globl _ik_foreign_call
 .globl  ik_asm_reenter
 .globl _ik_asm_reenter
+.globl ik_underflow_handler
+.globl _ik_underflow_handler
+
 
 
 ## ------------------------------------------------------------

@@ -1027,7 +1027,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      * integer.
      */
     ikptr	rp	  = IK_REF(top, 0);
-    long	rp_offset = IK_UNFIX(IK_REF(rp, disp_frame_offset));
+    long	rp_offset = IK_UNFIX(IK_CALLFRAME_OFFSET(rp));
     if (DEBUG_STACK) {
       ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, rp_offset=%ld",
 		       (long) top, rp, rp_offset);
@@ -1078,7 +1078,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   there is no live mask in this case, instead all values in the
      *   frame are live.
      */
-    long framesize =  IK_REF(rp, disp_frame_size);
+    long framesize =  IK_CALLFRAME_FRAMESIZE(rp);
     if (DEBUG_STACK) {
       ik_debug_message("fs=%ld", (long)framesize);
     }
