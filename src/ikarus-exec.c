@@ -92,22 +92,26 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       ik_debug_message("%s: framesize=%ld kont->size=%ld return_address=0x%016lx",
 		       __func__, framesize, kont->size, return_address);
     }
-    /* NOTE  This note  and the  operation it  describes are  the humble
-       understanding  of the  maintainer; there  may be  something wrong
-       with it, but it was verified that it appears to solve a bug.
+    /* NOTE  This note  and the  operation it  describes are  related to
+       issue #35.  This block of code is *not* a fix for the bug, just a
+       temporary work around that partially mitigates the problem.
 
        The Scheme  code returned to  the stack underflow handler,  so if
-       this  continuation  has the  stack  underflow  handler as  return
-       point: this is  a bogus continuation.  Let's just  discard it and
-       go on with the next continuation from the continuation stack.
+       the "next  process continuation" has the  stack underflow handler
+       as  return  point: this  is  a  bogus continuation.   Let's  just
+       discard  it  and  go  on  with the  next  continuation  from  the
+       continuation stack.
 
-       Ideally this bogus  continuation should never be  created, but it
-       appears that the code  execution machinery has this imperfection.
-       Anyway, such bogus continuations are rarely created.
+       The  bug  consists in  the  fact  that  a continuation  with  the
+       underflow handler as return point should never be created.  Also,
+       such  continuation has  size equal  to zero:  another thing  that
+       should never happen.
 
-       Such  imperfection is  the origin  of  Issue #35  and this  bogus
-       continuation dropping may  fix the issue.  (Marco  Maggi; Fri Mar
-       22, 2013) */
+       This bug causes (in rare  cases) some continuations to be created
+       with zero  size, but  return point  different from  the underflow
+       handler; such continuations will cause the process to abort.
+
+       (Marco Maggi; Fri Mar 22, 2013) */
     if (IK_UNDERFLOW_HANDLER == return_address) {
       if (1 || DEBUG_EXEC) {
 	ik_debug_message("%s: continuation 0x%016lx has ik_underflow_handler as return point,\n\
