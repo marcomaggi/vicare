@@ -424,7 +424,7 @@ The secondary tags and the associated masks are:
    object           |  tag bits   | tag hex | tag mask
                     |    76543210 |         |    76543210
 --------------------+-------------+---------+-------------
-vector              |  #b??????00 | fixnum  | #b00000111
+vector              |  #b??????00 | fixnum  |    --
 bignum              |  #b????s011 |   #x03  | #b00000111
 structure           |  #b?????101 |   #x05  | #b00000111
 flonum              |  #b00010111 |   #x17  |    --
