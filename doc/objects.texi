@@ -385,7 +385,7 @@ continuations.  The first word in the memory block of these types has
 the least significant bits set to a secondary tag.
 
 All the possible values for @math{3}-bit tags in reference values are
-already allocated; new object types can be added only defining a new
+already allocated; new object types can be added only by defining a new
 secondary tag with references tagged as vector.
 
 While the @api{} defines predicates to recognise values, to identify a
