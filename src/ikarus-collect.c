@@ -1103,11 +1103,10 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
        *   |----------------|                                --
        *      low memory
        */
-      ikptr base = top + framesize - wordsize;
-      while (base > top) {
+      ikptr base;
+      for (base=top+framesize-wordsize; base > top; base-=wordsize) {
         ikptr new_obj = add_object(gc,IK_REF(base,0), "frame");
         IK_REF(base,0) = new_obj;
-        base -= wordsize;
       }
     } else {
       /* Keep alive only the objects selected by the livemask. */
