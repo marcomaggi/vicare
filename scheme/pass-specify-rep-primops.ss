@@ -4556,7 +4556,7 @@
 ;;   |           .          |
 ;;   |           .          |
 ;;   |----------------------|
-;;   |     return address   | <-- pcb->frame_pointer
+;;   |     return address   | <-- Frame Pointer Register
 ;;   |----------------------|
 ;;   |           .          |
 ;;   |           .          |
@@ -4580,12 +4580,28 @@
 
  (define-primop $fp-at-base unsafe
    ;;Evaluate to true if the Frame Pointer Register (FPR) references the
-   ;;highest  machine  word  in  the  stack  as  described  by  the  PCB
-   ;;structure; the highest machine word  is the one holding the address
-   ;;of the assembly label  "ik_underflow_handler".
+   ;;highest machine  word in the  Scheme stack segment as  described by
+   ;;the PCB structure, the highest machine  word is the one holding the
+   ;;address of the assembly label "ik_underflow_handler".
+   ;;
+   ;;          high memory
+   ;;   |                      | <-- pcb->frame_base
+   ;;   |----------------------|
+   ;;   | ik_underflow_handler | <-- FPR
+   ;;   |----------------------|
+   ;;   |                      |
+   ;;          low memory
    ;;
    ;;The Process Control  Register (PCR) contains the  memory address of
    ;;the PCB structure.
+   ;;
+   ;;FPR is at the frame base:
+   ;;
+   ;;1..Right after  a new Scheme  stack segment has been  allocated and
+   ;;   initialised.
+   ;;
+   ;;2..After the  execution flow  has returned  from a  Scheme function
+   ;;   call whose stack frame is the last on the stack segment.
    ;;
    ((P)
     (prm '= (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
@@ -4593,60 +4609,79 @@
 	 fpr)))
 
  (define-primop $current-frame unsafe
-   ;;Extract from the  PCB structure a pointer to  the next continuation
-   ;;and return it.  In C the returned value is "pcb->next_k".
+   ;;Extract from  the PCB  structure a reference  to the  "next process
+   ;;continuation" and  return it.   In C  language terms:  the returned
+   ;;value is "pcb->next_k".
    ;;
    ((V)
     (prm 'mref pcr (K pcb-next-continuation))))
 
  (define-primop $seal-frame-and-call unsafe
-   ;;This primitive  operation is  used to  implement CALL/CC;  only the
-   ;;function  %PRIMITIVE-CALL/CF (file  "ikarus.control.sls") calls  it
-   ;;when the Scheme stack is not empty.
+   ;;This primitive  operation is used  to implement CALL/CC  (call with
+   ;;current continuation)  and CALL/CF (call with  current frame), file
+   ;;"ikarus.control.sls".  Let's  super simplify  and comment  the code
+   ;;assuming we are in CALL/CF; such function is used as:
+   ;;
+   ;;  (define (the-func escape-function)
+   ;;    ---)
+   ;;
+   ;;  (call/cf the-func)
+   ;;
+   ;;Remember that:
+   ;;
+   ;;* FPR  stands for  Frame Pointer Register;
+   ;;
+   ;;* PCR  stands for  Process Control Register  and it  references the
+   ;;  structure PCB defined at the C language level;
+   ;;
+   ;;* ARGC-REGISTER stands for Argument Count Register.
+   ;;
+   ;;The argument FUNC  to this primitive operation is  a data structure
+   ;;representing the memory  location on the Scheme  stack containing a
+   ;;reference to the closure object THE-FUNC, argument of CALL/CF.
+   ;;
    ((V func)
     ;;When arriving  here the situation of  the Scheme stack is  the one
-    ;;right after the entering %PRIMITIVE-CALL/CF:
+    ;;right after entering CALL/CF, let's  assume that there are 2 stack
+    ;;frames: the topmost (frame 0) is the one of CALL/CF, the one below
+    ;;it (frame 1) is that of the caller of CALL/CF.
     ;;
     ;;          high memory
     ;;   |                      | <-- pcb->frame_base
     ;;   |----------------------|
     ;;   | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
-    ;;   |----------------------|                                  --
-    ;;             ...                                             .
-    ;;   |----------------------| --                               .
-    ;;   | uplevel return addr  | .                                . stack
-    ;;   |----------------------| .                                . portion
-    ;;   |   uplevel argument   | . uplevel framesize              . referenced
-    ;;   |----------------------| .                                . by the
-    ;;             ...            .                                . continuation
-    ;;   |----------------------| --                               . object
-    ;;   |    return address    | <-- frame pointer register (FPR) .
-    ;;   |----------------------|                                  --
-    ;;   |  closure ref = FUNC  | --> closure object
-    ;;   |----------------------|
+    ;;   |----------------------|        --             --
+    ;;   |    local value 1     |        .              .
+    ;;   |----------------------|        .              .
+    ;;   |    local value 1     |        . framesize 1  .
+    ;;   |----------------------|        .              . size of the
+    ;;   |   return address 1   |        .              . continuation
+    ;;   |----------------------|        --             . to be created
+    ;;   |       THE-FUNC       | FUNC   .              .
+    ;;   |----------------------|        . framesize 0  .
+    ;;   |   return address 0   | <- FPR .              .
+    ;;   |----------------------|        --             --
     ;;   |                      |
     ;;         low memory
     ;;
-    ;;where "return  address" leads to the  caller of %PRIMITIVE-CALL/CF
-    ;;and  the reference  to  closure  object FUNC  is  the argument  to
-    ;;%PRIMITIVE-CALL/CF.  ARGC-REGISTER contains  the encoded number of
-    ;;arguments, counting the single argument FUNC.
+    ;;The  value "return  address 0"  leads  to the  caller of  CALL/CF.
+    ;;ARGC-REGISTER contains  the encoded number of  arguments, counting
+    ;;the single argument THE-FUNC.
     ;;
-    ;;Notice that  by inspecting the  call frame of "return  address" we
-    ;;can obtain the uplevel framesize.
-    ;;
-    ;;The PCR address references the PCB structure.
+    ;;Notice that by inspecting the call  frame of "return address 0" we
+    ;;can obtain the "framesize 0".
     ;;
     ;;It goes like this:
     ;;
-    ;;1..Save the used  portion of the current Scheme  stack segment, as
+    ;;1..Freeze the used portion of the current Scheme stack segment, as
     ;;   described by the PCB  structure, into a new continuation object
-    ;;   KONT (yes, the whole Scheme stack).
+    ;;   KONT.
     ;;
     ;;2..Push the  new continuation object  to the PCB's stack  of "next
-    ;;   continuations".
+    ;;   process continuations".
     ;;
-    ;;3..Call the closure object FUNC.
+    ;;3..Apply the  closure object  THE-FUNC to  the object  KONT.  This
+    ;;   step is actually performed by $CALL-WITH-UNDERFLOW-HANDLER.
     ;;
     (with-tmp* ((kont			(prm 'alloc
 					     (K continuation-size)
@@ -4657,52 +4692,44 @@
 		(underflow-handler	(prm 'mref base (K 0))))
       ;;Store the continuation tag in the first word.
       (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
-      ;;Save the current Frame Pointer Register.
+      ;;Set the current Frame Pointer Register  as address to go back to
+      ;;when resuming the continuation.
       (prm 'mset kont (K off-continuation-top)  fpr)
-      ;;Save the next continuation.
-      (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
-      ;;Save  the number  of bytes  representing  the size  of the  used
-      ;;Scheme stack.   Notice that we  do not  include in the  size the
-      ;;word containing the address of the underflow handler.
+      ;;Set  the number  of bytes  representing  the total  size of  the
+      ;;freezed stack frames.
       (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
-      ;;Set the new continuation object  as the next continuation in the
-      ;;PCB.
-      (prm 'mset pcr (K pcb-next-continuation) kont)
-      ;;The machine word at the top  of the stack (the one referenced by
-      ;;the  Frame Pointer  Register, FPR)  is  the new  stack base  for
-      ;;subsequent code  execution.  Store the current  frame pointer in
-      ;;the PCB as frame base.
+      ;;Prepend the new continuation object  to the linked list of "next
+      ;;process continuations" in the PCB.
+      (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
+      (prm 'mset pcr  (K pcb-next-continuation) kont)
+      ;;The  machine  word  containing   "return  address  0"  (the  one
+      ;;referenced by the FPR) is the new frame base for subsequent code
+      ;;execution; store the FPR in the PCB as frame base.
       (prm 'mset pcr (K pcb-frame-base) fpr)
       ;;When arriving here the situation of the Scheme stack is:
       ;;
       ;;          high memory
       ;;   |                      |
       ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- BASE
+      ;;   | ik_underflow_handler |
       ;;   |----------------------|                           --
-      ;;             ...                                      .
-      ;;   |----------------------| --                        .
-      ;;   | uplevel return addr  | .                         . full stack
-      ;;   |----------------------| . uplevel                 . continuation
-      ;;   |   uplevel argument   | . framesize               . size
-      ;;   |----------------------| .                         .
-      ;;             ...            .                         .
-      ;;   |----------------------| --                        .
-      ;;   |    return address    | <-- FPR = pcb->frame_base .
+      ;;   |    local value 1     |                           .
+      ;;   |----------------------|                           .
+      ;;   |    local value 1     |                           .
+      ;;   |----------------------|                           . freezed
+      ;;   |   return address 1   |                           . stack frames
+      ;;   |----------------------|                           .
+      ;;   |       THE-FUNC       | FUNC                      .
+      ;;   |----------------------|                           .
+      ;;   |   return address 0   | <- FPR = pcb->frame_base  .
       ;;   |----------------------|                           --
-      ;;   |  closure ref = FUNC  | --> closure object
-      ;;   |----------------------|
       ;;   |                      |
-      ;;          low memory
+      ;;         low memory
       ;;
       ;;ARGC-REGISTER still  contains the  encoded number  of arguments,
-      ;;counting the single argument FUNC; the reference to continuation
-      ;;object KONT is in some variable location; the raw memory pointer
-      ;;UNDERFLOW-HANDLER is in some variable location.
-      ;;
-      ;;Notice that: by inspecting the call frame of "return address" we
-      ;;can obtain the  uplevel framesize; such uplevel  framesize is <=
-      ;;continuation size.
+      ;;counting  the   single  argument  THE-FUNC;  the   reference  to
+      ;;continuation object KONT  is in some variable  location; the raw
+      ;;memory pointer UNDERFLOW-HANDLER is in some variable location.
       ;;
       (prm '$call-with-underflow-handler underflow-handler (T func) kont)))
    ((E . args)
@@ -4732,101 +4759,13 @@
     (nop)))
 
  (define-primop $stack-overflow-check unsafe
-   ;;This shortcut is inserted right  after entering a function body, to
-   ;;check  if we  have crossed  the red  line of  stack usage.   In the
-   ;;following stack situation *no* stack overflow occurred:
+   ;;This  operation is  inserted  in *every*  compiled Scheme  function
+   ;;body, right after the entry point.  It checks if the topmost Scheme
+   ;;stack  frame has  crossed the  red line  of stack  usage that  must
+   ;;trigger a new stack segment allocation.
    ;;
-   ;;       high memory
-   ;;   |                 |
-   ;;   |-----------------|
-   ;;   |                 | <-- Frame Pointer Register   |
-   ;;   |-----------------|                              | growing
-   ;;           ...                                      | stack
-   ;;   |-----------------|                              | use
-   ;;   |                 | <-- pcb->frame_redline       v
-   ;;   |-----------------|
-   ;;   |                 |
-   ;;        low memory
-   ;;
-   ;;in the follow stack situation a overflow *has* occurred:
-   ;;
-   ;;       high memory
-   ;;   |                 |
-   ;;   |-----------------|
-   ;;   |                 | <-- pcb->frame_redline       |
-   ;;   |-----------------|                              | growing
-   ;;           ...                                      | stack
-   ;;   |-----------------|                              | use
-   ;;   |                 | <-- Frame Pointer Register   v
-   ;;   |-----------------|
-   ;;   |                 |
-   ;;        low memory
-   ;;
-   ;;The  pseudo-assembly  implementation   of  a  function  "the-func",
-   ;;accepting 2 arguments, goes like this:
-   ;;
-   ;;   the-func_entry_point:
-   ;;     cmp FPR, pcb->frame_redline
-   ;;     jl overflow
-   ;;   go_on:
-   ;;     ... instructions ...
-   ;;     ret
-   ;;
-   ;;   overflow:
-   ;;     subl 2*wordsize, FPR
-   ;;     jmp L0:
-   ;;     .long 4		;framesize
-   ;;     .long OFFSET		;offset from beginning of code object
-   ;;     .long SL_multiple_values_ignore_rp
-   ;;   L0:
-   ;;     call "ik_stack_overflow"
-   ;;   overflow_rp:
-   ;;     addl 2*wordsize, FPR
-   ;;     jmp go_on
-   ;;
-   ;;right  after entering  the function,  the situation  on the  Scheme
-   ;;stack is as follows:
-   ;;
-   ;;       high memory
-   ;; |                      | <-- pcb->frame_base
-   ;; |----------------------|
-   ;; | ik_underflow_handler |
-   ;; |----------------------|
-   ;;           ...
-   ;; |----------------------|
-   ;; |    return address    | <-- Frame Pointer Register
-   ;; |----------------------|
-   ;; |      argument 0      |
-   ;; |----------------------|
-   ;; |      argument 1      |
-   ;; |----------------------|
-   ;; |                      |
-   ;;       low memory
-   ;;
-   ;;and  when  a  stack  overflow   happens,  right  after  the  "call"
-   ;;instruction to "ik_stack_overflow", the stack is as follows:
-   ;;
-   ;;       high memory
-   ;; |                      | <-- pcb->frame_base
-   ;; |----------------------|
-   ;; | ik_underflow_handler |
-   ;; |----------------------|                            --
-   ;;           ...                                       .
-   ;; |----------------------|                            .
-   ;; |                      | <-- pcb->frame-redline     .
-   ;; |----------------------|                            .
-   ;;           ...                                       . saved stack
-   ;; |----------------------|                            . segment
-   ;; |    return address    |                            . portion
-   ;; |----------------------|                            . continuation
-   ;; |      argument 0      |                            . size
-   ;; |----------------------|                            .
-   ;; |      argument 1      |                            .
-   ;; |----------------------|                            .
-   ;; |     overflow_rp      | <-- Frame Pointer Register .
-   ;; |----------------------|                            --
-   ;; |                      |
-   ;;       low memory
+   ;;See  the  comments  in  the C  function  "ik_stack_overflow()"  for
+   ;;details of what happens in case of stack overflow.
    ;;
    ((E)
     (make-shortcut
