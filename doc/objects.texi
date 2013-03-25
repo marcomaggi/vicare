@@ -409,7 +409,7 @@ can do:
 @example
 ikptr  X;
 
-if ((vector_tag    == (X & vector_tag)) &&
+if ((vector_tag    == (X & vector_mask)) &&
     (secondary_tag == (secondary_mask & IK_REF(X, -vector_tag))))
   it_is();
 else
