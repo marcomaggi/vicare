@@ -922,9 +922,9 @@ static void
 collect_stack (gc_t* gc, ikptr top, ikptr end)
 /* Remember how the Scheme stack looks:
  *
- *    stack_base     frame_pointer=top     end   frame_base
- *         v                   v             v   v
- *  lo mem |-------------------+-------------+---| hi mem
+ *    stack_base     frame_pointer=top       end  frame_base
+ *         v                   v               v   v
+ *  lo mem |-------------------+-------------+---|---| hi mem
  *                       Scheme stack        |...| ik_underflow_handler
  *
  *         |.....................................|
@@ -939,13 +939,13 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
  * low memory addresses to high memory addresses until END is reached.
  *
  *            frame   frame   frame   frame   frame
- *   lo mem |-----+-|-----+-|-----+-|-----+-|-----+-|-| hi mem
- *                 ^       ^       ^       ^       ^  ^
- *                top     top1    top2    top3     |  frame_base
- *                                               top4 = end
+ *   lo mem |-+-----|-+-----|-+-----|-+-----|-+-----|-|-| hi mem
+ *           ^       ^       ^       ^       ^       ^ ^
+ *          top     top1    top2    top3     |       | frame_base
+ *                                         top4     end
  *
- *  Upon entering this  function TOP must reference the  highest word in
- *  the lowest frame.
+ *  Upon entering  this function TOP  must reference the lowest  word in
+ *  the topmost stack frame.
  */
 {
   if (DEBUG_STACK) {
@@ -959,15 +959,15 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   |                      | <-- pcb->frame_base
      *   |----------------------|
      *   | ik_underflow_handler |
-     *   |----------------------|
-     *             ...
-     *   |----------------------|             ---
-     *   |   return address 1   | <-- top 1    .
-     *   |----------------------|              . framesize
-     *             ...                         .
-     *   |----------------------|             ---
-     *   | return address = rp  | <-- top = frame pointer register (FPR)
-     *   |----------------------|
+     *   |----------------------|             --
+     *             ...                        .
+     *   |----------------------|             . framesize 1
+     *   |   return address 1   | <-- top 1   .
+     *   |----------------------|             --
+     *             ...                        .
+     *   |----------------------|             . framesize 0
+     *   | return address = rp  | <-- top     .
+     *   |----------------------|             --
      *   |                      |
      *         low memory
      *
@@ -1092,15 +1092,15 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
       }
       /*
        *       high memory
-       *   |----------------|                                --
-       *   | return address | <-- uplevel top                .
-       *   |----------------|                                . uplevel
-       *   | Scheme object  | <-- top + framesize - wordsize . frame
-       *   |----------------|                                .
-       *   | Scheme object  |                                .
-       *   |----------------|                                --
-       *   | return address | <-- top
        *   |----------------|
+       *   | return address | <-- uplevel top
+       *   |----------------|                                --
+       *   | Scheme object  | <-- top + framesize - wordsize .
+       *   |----------------|                                .
+       *   | Scheme object  |                                . framesize
+       *   |----------------|                                .
+       *   | return address | <-- top                        .
+       *   |----------------|                                --
        *      low memory
        */
       ikptr base = top + framesize - wordsize;
