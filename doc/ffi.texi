@@ -4,6 +4,8 @@
 
 @cindex Library @library{vicare ffi}
 @cindex @library{vicare ffi}, library
+@cindex Foreign functions interface, @ffi{}
+@cindex @ffi{}, foreign functions interface
 
 
 The library @library{vicare ffi} interfaces with the host operating
