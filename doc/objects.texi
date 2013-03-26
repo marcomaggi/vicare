@@ -4343,7 +4343,7 @@ Represent a Scheme continuation as defined by @rnrs{6}, a portion of
 Scheme stack whose frames are freezed.  Scheme continuations are
 expliticly created by @func{call/cc}, but also used to represent a
 Scheme stack segment that has run out of space making the frames
-overflow into anothe stack segment.
+overflow into another stack segment.
 
 @item System continuations
 Represent a C language continuation, a portion of the C language stack.
