@@ -4055,10 +4055,10 @@
 ;;truth, generates this sequence:
 ;;
 ;;     jmp L0
-;;     livemask-bytes		;array of bytes
-;;     framesize		;data word, a "long"
-;;     rp_offset		;data word, a fixnum
-;;     multi-value-rp		;data word, assembly label
+;;     livemask-bytes		;array of bytes             |
+;;     framesize		;data word, a "long"        | call
+;;     rp_offset		;data word, a fixnum        | table
+;;     multi-value-rp		;data word, assembly label  |
 ;;     pad-bytes
 ;;   L0:
 ;;     call function-address
@@ -4989,7 +4989,7 @@
       ;;          low memory
       ;;
       (movl (int (argc-convention 0)) eax)
-      (compile-call-frame
+      (compile-call-table
        3	;The  frame-words-count is  3  because on  the stack  of
 		;CALL-WITH-VALUES  there  are  3 machine  words:  return
 		;address, producer closure, consumer closure.

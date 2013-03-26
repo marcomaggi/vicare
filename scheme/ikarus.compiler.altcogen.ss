@@ -39,7 +39,7 @@
 
 
 (module (alt-cogen
-	 compile-call-frame
+	 compile-call-table
 	 alt-cogen.introduce-primcalls
 	 alt-cogen.eliminate-fix
 	 alt-cogen.insert-engine-checks
@@ -3869,7 +3869,7 @@
   #| end of module: chaitin module |# )
 
 
-(define (compile-call-frame frame-words-count livemask-vec multiarg-rp call-sequence)
+(define (compile-call-table frame-words-count livemask-vec multiarg-rp call-sequence)
   ;;To generate a call to a Scheme  function, we need to follow both the
   ;;protocol for  handling multiple return  values, and the  protocol to
   ;;expose  informations  about the  caller's  stack  frame for  garbage
@@ -3881,7 +3881,7 @@
   ;;     jmp L0
   ;;     livemask-bytes		;array of bytes            --
   ;;     framesize		;data word, a "long"       .
-  ;;     rp_offset		;data word, a fixnum       . call frame
+  ;;     rp_offset		;data word, a fixnum       . call table
   ;;     multi-value-rp		;data word, assembly label .
   ;;     pad-bytes                                         --
   ;;   L0:
@@ -3949,7 +3949,7 @@
   ;;   |---------------------------|         --
   ;;   | uplevel Scheme argument 0 |         .
   ;;   |---------------------------|         . stack frame described
-  ;;   | uplevel Scheme argument 1 |         . by the call frame
+  ;;   | uplevel Scheme argument 1 |         . by the call table
   ;;   |---------------------------|         .
   ;;   |        empty word         |         .
   ;;   |---------------------------|         --
@@ -3976,7 +3976,7 @@
   ;;   | uplevel Scheme argument 0 |         .
   ;;   |---------------------------|         .
   ;;   | uplevel Scheme argument 1 | <- FPR  . stack frame described
-  ;;   |---------------------------|         . by the call frame
+  ;;   |---------------------------|         . by the call table
   ;;   |        empty word         |         .
   ;;   |---------------------------|         --
   ;;   |      Scheme argument 0    |
@@ -3997,7 +3997,7 @@
   ;;   | uplevel Scheme argument 0 |         .
   ;;   |---------------------------|         .
   ;;   | uplevel Scheme argument 1 |         . stack frame described
-  ;;   |---------------------------|         . by the call frame
+  ;;   |---------------------------|         . by the call table
   ;;   |       return address      | <- FPR  .
   ;;   |---------------------------|         --
   ;;   |      Scheme argument 0    |
@@ -4020,7 +4020,7 @@
   ;;   | uplevel return address    | <- FPR  .
   ;;   |---------------------------|         --
   ;;   |        empty word         |         .  stack frame described
-  ;;   |---------------------------|         -- by the call frame
+  ;;   |---------------------------|         -- by the call table
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -4039,7 +4039,7 @@
   ;;   | uplevel return address    |         .
   ;;   |---------------------------|         --
   ;;   |        empty word         | <- FPR  .  stack frame described
-  ;;   |---------------------------|         -- by the call frame
+  ;;   |---------------------------|         -- by the call table
   ;;   |      Scheme argument 0    |
   ;;   |---------------------------|
   ;;   |      Scheme argument 1    |
@@ -4059,7 +4059,7 @@
   ;;   |---------------------------|         .
   ;;                ...                      .
   ;;   |---------------------------|         . stack frame described
-  ;;   |   uplevel Scheme object   |         . by the call frame
+  ;;   |   uplevel Scheme object   |         . by the call table
   ;;   |---------------------------|         .
   ;;   |    runtime frame size     | <- FPR  .
   ;;   |---------------------------|         .
@@ -4089,7 +4089,7 @@
   ;;   |---------------------------|         .
   ;;                ...                      .
   ;;   |---------------------------|         . stack frame described
-  ;;   |   uplevel Scheme object   |         . by the call frame
+  ;;   |   uplevel Scheme object   |         . by the call table
   ;;   |---------------------------|         .
   ;;   |    runtime frame size     | <- FPR  .
   ;;   |---------------------------|         .
@@ -4488,7 +4488,7 @@
        ;;the empty  machine word is the  one in which "call"  will store
        ;;the return address.
        ;;
-       (compile-call-frame 0	;frame words count
+       (compile-call-table 0	;frame words count
 			   '#()	;livemask
 			   '(int 0) ;multivalue return point, NULL because unused
 			   (indirect-cpr-call))
@@ -4679,7 +4679,7 @@
       ;;"call" assembly instruction.
       ;;
       (define (%call-chunk call-sequence)
-	(compile-call-frame frame-words-count mask
+	(compile-call-table frame-words-count mask
 			    ;;Select the multivalue return point label.
 			    (if value
 				(label-address (sl-mv-error-rp-label))
