@@ -608,7 +608,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
    through "IK_ALIGN()".
 
    If not enough memory is available  on the current heap segment: a new
-   heap segment is  allocated; is such allocation fails:  the process is
+   heap segment is  allocated; if such allocation fails:  the process is
    terminated with exit status EXIT_FAILURE.
 
    This  function  is  meant  to  be used  to  allocate  "small"  memory
