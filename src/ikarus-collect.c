@@ -1463,15 +1463,16 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_continuation_tag)  = continuation_tag;
       IK_REF(Y, off_continuation_top)  = new_top;
       IK_REF(Y, off_continuation_size) = (ikptr) size;
-      IK_REF(Y, off_continuation_next) = add_object(gc, next, "next_k");
-      /* NOTE The original Ikarus code is the following:
+      /* NOTE  Here  the  "next"  continuation object  is  not  filtered
+       * through "add_object()".   Right now  I do not  know why,  but I
+       * have verified that if we do:
        *
-       *   IK_REF(Y, off_continuation_next) = next;
+       *   IK_REF(Y, off_continuation_next) = \
+       *     (next)? add_object(gc, next, "next_k") : next;
        *
-       * the next continuation is not handed to "add_object()"; I do not
-       * understand why,  so for the time  being I have added  a call to
-       * "add_object()".  (Marco Maggi; Tue Mar 26, 2013)
+       * a segfault happens.  (Marco Maggi; Wed Mar 27, 2013)
        */
+      IK_REF(Y, off_continuation_next) = next;
 #if ACCOUNTING
       continuation_count++;
 #endif
