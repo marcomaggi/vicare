@@ -304,11 +304,11 @@ _ik_asm_enter:
   jmp L_call
   # Notice that there is no livemask bytevector here.
   .long 4			# We can access this data word
-				# by summing "disp_frame_size"
+				# by summing "disp_call_table_size"
 				# to "ik_underflow_handler".
 
   .long 0			# We can access this data word
-				# by summing "disp_frame_offset"
+				# by summing "disp_call_table_offset"
 				# to "ik_underflow_handler".
 
   .long L_multivalue_underflow	# We can access this data word by

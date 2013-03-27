@@ -1023,11 +1023,11 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *                  |        |
      *                   --------
      *
-     * NOTE The  preprocessor symbol  "disp_frame_offset" is  a negative
+     * NOTE The  preprocessor symbol  "disp_call_table_offset" is  a negative
      * integer.
      */
     ikptr	rp	  = IK_REF(top, 0);
-    long	rp_offset = IK_UNFIX(IK_CALLFRAME_OFFSET(rp));
+    long	rp_offset = IK_UNFIX(IK_CALLTABLE_OFFSET(rp));
     if (DEBUG_STACK) {
       ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, rp_offset=%ld",
 		       (long) top, rp, rp_offset);
@@ -1038,7 +1038,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
     /* Since the return point is alive,  we need to find the code object
        containing it  and mark it  live as well.   The RP is  updated to
        reflect the new code object. */
-    long	code_offset	= rp_offset - disp_frame_offset;
+    long	code_offset	= rp_offset - disp_call_table_offset;
     ikptr	code_entry	= rp - code_offset;
     ikptr	new_code_entry	= add_code_entry(gc, code_entry);
     ikptr	new_rp		= new_code_entry + code_offset;
@@ -1078,7 +1078,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   there is no live mask in this case, instead all values in the
      *   frame are live.
      */
-    long framesize =  IK_CALLFRAME_FRAMESIZE(rp);
+    long framesize =  IK_CALLTABLE_FRAMESIZE(rp);
     if (DEBUG_STACK) {
       ik_debug_message("fs=%ld", (long)framesize);
     }
@@ -1118,7 +1118,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
 	 contain a single byte. */
       long	bytes_in_mask	= (frame_cells+7) >> 3;
       /* Pointer to the livemask bytevector */
-      char *	mask		= (char*)(long)(rp + disp_frame_size - bytes_in_mask);
+      char *	mask		= (char*)(long)(rp + disp_call_table_size - bytes_in_mask);
       /* Pointer to the Scheme objects on the stack. */
       ikptr *	fp		= (ikptr*)(long)(top + framesize);
       long	i;

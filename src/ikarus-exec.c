@@ -47,17 +47,17 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   /* Reference to the  continuation object representing the  C or Scheme
      continuation we want to go back to. */
   ikptr		s_kont;
-  /* Pointer to  the machine code instruction  we want to jump  to, in a
-     Scheme code object. */
-  ikptr		code_object_entry_point;
   if (0 || DEBUG_EXEC) {
     ik_debug_message_start("%s: enter closure 0x%016lx",
 			   __func__, (long)s_closure);
     ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
     fprintf(stderr, "\n");
   }
-  code_object_entry_point = s_code+off_code_data;
-  s_retval_count = ik_asm_enter(pcb, code_object_entry_point, s_argcount, s_closure);
+  /* Run the compiled code in the Scheme code object. */
+  {
+    ikptr	code_object_entry_point = s_code + off_code_data;
+    s_retval_count = ik_asm_enter(pcb, code_object_entry_point, s_argcount, s_closure);
+  }
   for (s_kont = pcb->next_k; s_kont; s_kont = pcb->next_k) {
     /* We  are  here because  the  Scheme  code  wants  to return  to  a
        previously saved Scheme continuation object.  */
@@ -86,7 +86,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     /* FRAMESIZE is stack  frame size of the function we  have to return
        to.  This value was computed at compile time and stored in binary
        code just before the "call" instruction. */
-    long	framesize = IK_CALLFRAME_FRAMESIZE(return_address);
+    long	framesize = IK_CALLTABLE_FRAMESIZE(return_address);
     if (0 || DEBUG_EXEC) {
       ik_debug_message("%s: framesize=%ld kont->size=%ld return_address=0x%016lx",
 		       __func__, framesize, kont->size, return_address);
@@ -112,18 +112,19 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 
        (Marco Maggi; Fri Mar 22, 2013) */
     if (IK_UNDERFLOW_HANDLER == return_address) {
-      if (1 || DEBUG_EXEC) {
+      if (0 || DEBUG_EXEC) {
 	ik_debug_message("%s: continuation 0x%016lx has ik_underflow_handler as return point,\n\
-\tuplevel continuation is 0x%016lx",
-			 __func__, s_kont, kont->next);
+\tsize=%ld, uplevel continuation is 0x%016lx",
+			 __func__, s_kont, (long)kont->size, kont->next);
       }
       continue;
     }
     /* Zero  framesize means  that we  are returning  to a  continuation
-       having as top  stack frame a call to a  variadic Scheme function.
-       In such  cases the framesize  field in the  call frame is  set to
-       zero and the actual stack frame size is pushed on the stack frame
-       itself before performing a "call" assembly instruction. */
+       having as  topmost stack frame  a frame  whose size could  not be
+       computed at  compile time. In  such cases the framesize  field in
+       the call table is set to zero  and the actual stack frame size is
+       pushed  on the  stack  frame itself  before  performing a  "call"
+       assembly instruction. */
     if (0 == framesize) {
       framesize = IK_REF(kont->top, wordsize);
       if (0 || DEBUG_EXEC) {
@@ -308,10 +309,10 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
   ikcont * kont			= IK_CONTINUATION_STRUCT(s_kont);
   ikptr	top			= IK_CONTINUATION_TOP(s_kont);
   ikptr	return_address		= IK_REF(top, 0);
-  ikptr	return_address_framesize= IK_CALLFRAME_FRAMESIZE(return_address);
-  long	framesize		= (long) return_address_framesize;
-  if (0 == framesize) framesize = IK_REF(top, wordsize);
-  ikptr	return_address_offset	= IK_CALLFRAME_OFFSET(return_address);
+  ikptr	call_table_framesize	= IK_CALLTABLE_FRAMESIZE(return_address);
+  long	framesize		= (call_table_framesize)? \
+    (long) call_table_framesize : IK_REF(top, wordsize);
+  ikptr	return_address_offset	= IK_CALLTABLE_OFFSET(return_address);
   ik_abort("%s: internal error while resuming continuation:\n\
 \tpcb->heap_base     = 0x%016lx\n\
 \tpcb->heap_size     = %ld bytes, %ld words\n\
@@ -338,14 +339,14 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
 	   (long)s_kont, (long)kont,
 	   top,
 	   IK_CONTINUATION_SIZE(s_kont),
-	   return_address, return_address_framesize,
+	   return_address, call_table_framesize,
 	   framesize, kont->size);
   /* Here  we would  like to  print the  annotation object  of the  code
      object. */
   {
     /* Offset  from the  beginning  of  the code  object  of the  return
        address. */
-    ikptr	code_offset	= return_address_offset - disp_frame_offset;
+    ikptr	code_offset	= return_address_offset - disp_call_table_offset;
     /* Pointer to the first byte of  executable machine code in the code
        object memory block. */
     ikptr	code_entry	= return_address - code_offset;

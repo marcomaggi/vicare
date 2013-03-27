@@ -199,11 +199,11 @@
  * This means generating the following chunk of pseudo-assembly:
  *
  *     jmp L0
- *     livemask-bytes		;array of bytes
- *     framesize		;data word, a "long"
- *     rp_offset		;data word, a fixnum
- *     multi-value-rp		;data word, assembly label
- *     pad-bytes
+ *     livemask-bytes		;array of bytes             |
+ *     framesize		;data word, a "long"        | call
+ *     rp_offset		;data word, a fixnum        | table
+ *     multi-value-rp		;data word, assembly label  |
+ *     pad-bytes                                            |
  *   L0:
  *     call scheme-function-address
  *   single-value-rp:		;single value return point
@@ -214,29 +214,31 @@
  * and  remember that  "call" pushes  on the  stack the  return address,
  * which is the label SINGLE-VALUE-RP.
  *
- * If the  callee function  returns a  single value:  it puts  the value
- * itself in  the CPU's  ARGC-REGISTER and performs  a "ret";  this will
- * make the execution flow jump back to the entry point SINGLE-VALUE-RP.
+ * If the  callee function returns a  single value: it puts  such in the
+ * CPU's  ARGC-REGISTER  and  performs  a  "ret";  this  will  make  the
+ * execution flow jump back to the entry point SINGLE-VALUE-RP.
  *
  * If the callee  function wants to return zero or  2 or more arguments:
  * it retrieves the address SINGLE-VALUE-RP  from the Scheme stack, adds
  * to  it   the  constant   DISP_MULTIVALUE_RP  obtaining   the  address
- * MULTI-VALUE-RP, then it performs a "jmp" directly to MULTI-VALUE-RP.
+ * MULTI-VALUE-RP, then  it performs a "jmp"  directly to MULTI-VALUE-RP
+ * (without popping the return address from the stack).
  *
- * The constant data values right before the "call" assembly instruction
- * are  the "call  frame":  a data  structure representing  informations
- * about the  function call.  Given  the address SINGLE-VALUE-RP  we can
- * access the fields of the call frame using the following offsets.
+ * The constant data values (computed  at compile time) right before the
+ * "call" assembly  instruction are the  "call table": a  data structure
+ * representing  informations  about  this  function  call.   Given  the
+ * address SINGLE-VALUE-RP  we can access  the fields of the  call table
+ * using the following offsets.
  */
 #define IK_CALL_INSTRUCTION_SIZE	((wordsize == 4) ? 5 : 10)
-#define disp_frame_size			(- (IK_CALL_INSTRUCTION_SIZE + 3 * wordsize))
-#define disp_frame_offset		(- (IK_CALL_INSTRUCTION_SIZE + 2 * wordsize))
+#define disp_call_table_size		(- (IK_CALL_INSTRUCTION_SIZE + 3 * wordsize))
+#define disp_call_table_offset		(- (IK_CALL_INSTRUCTION_SIZE + 2 * wordsize))
 #define disp_multivalue_rp		(- (IK_CALL_INSTRUCTION_SIZE + 1 * wordsize))
 
-#define IK_CALLFRAME_FRAMESIZE(RETURN_ADDRESS)	\
-		((long)IK_REF((RETURN_ADDRESS),disp_frame_size))
-#define IK_CALLFRAME_OFFSET(RETURN_ADDRESS)	\
-		IK_REF((RETURN_ADDRESS),disp_frame_offset)
+#define IK_CALLTABLE_FRAMESIZE(RETURN_ADDRESS)	\
+		((long)IK_REF((RETURN_ADDRESS),disp_call_table_size))
+#define IK_CALLTABLE_OFFSET(RETURN_ADDRESS)	\
+		IK_REF((RETURN_ADDRESS),disp_call_table_offset)
 
 /* ------------------------------------------------------------------ */
 
