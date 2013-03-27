@@ -411,7 +411,7 @@ L_multivalue_underflow:
   #         high memory
   #   |                       |
   #   |-----------------------|
-  #   |                       | <-- pcb->frame_base
+  #   |                       | <-- pcb->frame_base = pcb->frame_pointer
   #   |-----------------------|
   #   | ik_underflow_handler  | <-- %esp
   #   |-----------------------|
@@ -431,7 +431,7 @@ L_multivalue_underflow:
   #         high memory
   #   |                       |
   #   |-----------------------|
-  #   |                       | <-- %esp = pcb->frame_base
+  #   |                       | <-- %esp = pcb->frame_base = pcb->frame_pointer
   #   |-----------------------|
   #   | ik_underflow_handler  | <-- %esp - 1 * wordsize
   #   |-----------------------|
