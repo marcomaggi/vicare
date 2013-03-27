@@ -800,8 +800,8 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 				 ikptr s_src, ikptr s_src_start,
 				 ikptr s_count);
 
-ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
-ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+ik_decl void ik_enter_c_function (ikpcb* pcb);
+ik_decl void ik_leave_c_function (ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------

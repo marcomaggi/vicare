@@ -1182,6 +1182,10 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_code_data		(disp_code_data		- code_pri_tag)
 #define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
 
+/* Given a reference  to code object: return a raw  pointer to the entry
+   point in the code, as "ikptr". */
+#define IK_CODE_ENTRY_POINT(CODE)	((CODE)+off_code_data)
+
 /* Accessors for the words of relocation vector's records. */
 #undef  IK_RELOC_RECORD_REF
 #define IK_RELOC_RECORD_REF(VEC,IDX)	IK_REF((VEC),(IDX)*wordsize)
@@ -1289,8 +1293,8 @@ ik_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
 				 ikptr s_src, ikptr s_src_start,
 				 ikptr s_count);
 
-ik_decl ikptr ik_enter_c_function (ikpcb* pcb);
-ik_decl void  ik_leave_c_function (ikpcb* pcb, ikptr system_continuation);
+ik_decl void ik_enter_c_function (ikpcb* pcb);
+ik_decl void ik_leave_c_function (ikpcb* pcb);
 
 
 /** --------------------------------------------------------------------
