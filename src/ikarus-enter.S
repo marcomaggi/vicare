@@ -663,10 +663,10 @@ _ik_foreign_call:
   # Store in %esp the C stack from "pcb->system_stack".
   movl 24(%esi), %esp    # (movl (pcb-ref 'system-stack) esp)
 
-  # We want that: after pushing the C arguments on the C stack,
-  # %esp is 16-byte aligned.  Every argument will occupy a wordsize
-  # on the Stack, here we want to pad the C stack with zeros as
-  # needed.
+  # We want that: after pushing the C arguments on the C stack, %esp is
+  # 16-byte aligned (a calling convention requirement established by
+  # C compilers).  Every argument will occupy a wordsize on the Stack,
+  # here we want to pad the C stack with zeros as needed.
   #
   # %eax is the index to the last arg,
   # 0 args require 6 (2) pushes => argc=   0 (0000): %esp +=  -8
