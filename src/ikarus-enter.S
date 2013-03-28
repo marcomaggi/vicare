@@ -290,16 +290,58 @@ _ik_asm_enter:
   #    in %esp.  The frame pointer is the 3rd word in the PCB
   #    structure (32-bit offset = 8).
   #
-  movl 12(%esp), %eax    # %eax = fixnum being the negated num of args
-  movl 16(%esp), %edi    # %edi = pointer to closure object
+
+  # Preserve registers not preserved by the C call.  According to stuff on
+  # the Net: it is responsibility of the C code caller to preserve EAX, ECX
+  # and EDX; it is responsibility of the assembly callee to preserve ESI, EBP,
+  # EDI, EBX.
   movl %esi, -4(%esp)    # preserve
   movl %ebp, -8(%esp)    # preserve
   movl %edi, -12(%esp)   # preserve
+  movl %ebx, -16(%esp)   # preserve
+  #
+  # When arriving here the situation on the C stack is as follows:
+  #
+  #        high memory
+  #    |                  |
+  #    |------------------|
+  #    |  C argument 3    | <-- %esp + 4 * wordsize =  16(%esp)
+  #    |------------------|
+  #    |  C argument 2    | <-- %esp + 3 * wordsize =  12(%esp)
+  #    |------------------|
+  #    |  C argument 1    | <-- %esp + 2 * wordsize =   8(%esp)
+  #    |------------------|
+  #    |  C argument 0    | <-- %esp + 1 * wordsize =   4(%esp)
+  #    |------------------|
+  #    | C return address | <-- %esp                =   0(%esp)
+  #    |------------------|
+  #    |    saved ESI     | <-- %esp - 1 * wordsize =  -4(%esp)
+  #    |------------------|
+  #    |    saved EBP     | <-- %esp - 2 * wordsize =  -8(%esp)
+  #    |------------------|
+  #    |    saved EDI     | <-- %esp - 3 * wordsize = -12(%esp)
+  #    |------------------|
+  #    |    saved EBX     | <-- %esp - 4 * wordsize = -16(%esp)
+  #    |------------------|
+  #         low memory
+  #
+
+  movl 12(%esp), %eax    # %eax = fixnum being the negated num of args
+  movl 16(%esp), %edi    # %edi = pointer to closure object
   movl 4(%esp), %esi     # %esi = pointer to PCB
-  movl 0(%esi), %ebp     # %ebp = allocation pointer is at 0(pcb)
-  movl %esp, %ecx        # save the C stack, to be used later
-  subl $16, %esp         # 16 for alignment
-  movl %esp, 24(%esi)    # save %esp in "pcb->system_stack"
+  movl 0(%esi), %ebp     # %ebp = allocation pointer, it is at 0(pcb)
+
+  # Save the C stack in ECX.  To be used later to retrieve the Scheme
+  # code entry point address and actually perform the call.
+  movl %esp, %ecx
+
+  # Decrement ESP so that it references the topmost used word on the C stack,
+  # then store it in "pcb->system_stack" as top of the C stack.  Having ESP
+  # decremented by 16 (4 wordsizes) is also fine for alignment constraints,
+  # required by the C compiler.
+  subl $16, %esp
+  movl %esp, 24(%esi)
+
   movl 8(%esi), %esp     # load scheme stack from "pcb->frame_pointer"
   jmp L_call
   # Notice that there is no livemask bytevector here.
@@ -395,12 +437,20 @@ L_do_underflow:
   # leaving alone "pcb->frame_base".  (Marco Maggi; Mar 28, 2013)
   movl %esp, 8(%esi)    # save top of scheme stack in "pcb->frame_pointer"
   movl %ebp, 0(%esi)    # save allocation pointer in "pcb->allocation_pointer"
-  movl 24(%esi), %esp   # restore C stack from "pcb->system_stack"
-  addl $16, %esp        # 24 for alignment (>= 16)
-  movl -4(%esp), %esi   # restore callee-save registers
-  movl -8(%esp), %ebp   #
-  movl -12(%esp), %edi  #
-  ret                   # back to the C function "ik_exec_code()"
+
+  # Restore the C stack from "pcb->system_stack" and increment it to reference
+  # the return address to the C caller.
+  movl 24(%esi), %esp
+  addl $16, %esp
+
+  # Restore callee-save registers.
+  movl -4(%esp), %esi
+  movl -8(%esp), %ebp
+  movl -12(%esp), %edi
+  movl -16(%esp), %ebx
+
+  # Back to the C caller: the function "ik_exec_code()".
+  ret
 
 L_multivalue_underflow:
   # Here we are back from the Scheme code, but there may be a
@@ -507,16 +557,44 @@ _ik_asm_reenter:
   #          low memory
   #
 
+  # Preserve registers not preserved by the C call.  According to stuff on
+  # the Net: it is responsibility of the C code caller to preserve EAX, ECX
+  # and EDX; it is responsibility of the assembly callee to preserve ESI, EDI,
+  # EBP, EBX.
+  movl %esi,  -4(%esp)   #  preserve
+  movl %ebp,  -8(%esp)   #  preserve
+  movl %edi, -12(%esp)   #  preserve
+  movl %ebx, -16(%esp)   #  preserve
+  #
+  # When arriving here the situation on the C stack is as follows:
+  #
+  #        high memory
+  #    |                  |
+  #    |------------------|
+  #    |  C argument 2    | <-- %esp + 3 * wordsize =  12(%esp)
+  #    |------------------|
+  #    |  C argument 1    | <-- %esp + 2 * wordsize =   8(%esp)
+  #    |------------------|
+  #    |  C argument 0    | <-- %esp + 1 * wordsize =   4(%esp)
+  #    |------------------|
+  #    | C return address | <-- %esp                =   0(%esp)
+  #    |------------------|
+  #    |    saved ESI     | <-- %esp - 1 * wordsize =  -4(%esp)
+  #    |------------------|
+  #    |    saved EBP     | <-- %esp - 2 * wordsize =  -8(%esp)
+  #    |------------------|
+  #    |    saved EDI     | <-- %esp - 3 * wordsize = -12(%esp)
+  #    |------------------|
+  #    |    saved EBX     | <-- %esp - 4 * wordsize = -16(%esp)
+  #    |------------------|
+  #         low memory
+  #
+
   # Make %eax hold a fixnum representing the negated number of args.
   movl 12(%esp), %eax
 
   # Make %ebx reference the top of the Scheme stack.
   movl  8(%esp), %ebx
-
-  # Preserve registers not preserved by the C call.
-  movl %esi, -4(%esp)    #  preserve
-  movl %ebp, -8(%esp)    #  preserve
-  movl %edi, -12(%esp)   #  preserve
 
   # Make %esi reference the PCB.
   movl 4(%esp), %esi
@@ -524,9 +602,11 @@ _ik_asm_reenter:
   # Make %ebp reference the alloc pointer "pcb->allocation_pointer".
   movl 0(%esi), %ebp
 
-  subl $16, %esp         # 24 for alignment
-
-  # Save the C language stack in "pcb->system_stack".
+  # Decrement ESP so that it references the latest used word on the stack,
+  # then store it in "pcb->system_stack" as top of the C stack.  Having ESP
+  # decremented by 16 (4 wordsizes) is also fine for alignment constraints,
+  # required by the C compiler.
+  subl $16, %esp
   movl %esp, 24(%esi)
 
   # Make %esp reference the Scheme stack.
