@@ -4261,7 +4261,7 @@
 (define (argc-convention n)
   ;;At  run  time:  the  number  of arguments  in  a  function  call  is
   ;;represented by  a negative fixnum  which is the number  of arguments
-  ;;negated.  Example: -2 = 2 arguments.
+  ;;negated.  Example: -2 <-> 2 arguments.
   ;;
   ($fx- 0 ($fxsll n fx-shift)))
 
