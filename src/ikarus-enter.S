@@ -387,8 +387,8 @@ ik_underflow_handler:
   				# representing the negated number of
   				# Scheme return values.
 L_do_underflow:
-  movl %esp, 8(%esi)    # store scheme stack in "pcb->frame_pointer"
-  movl %ebp, 0(%esi)    # store allocation pointer in "pcb->allocation_pointer"
+  movl %esp, 8(%esi)    # save top of scheme stack in "pcb->frame_pointer"
+  movl %ebp, 0(%esi)    # save allocation pointer in "pcb->allocation_pointer"
   movl 24(%esi), %esp   # restore C stack from "pcb->system_stack"
   addl $16, %esp        # 24 for alignment (>= 16)
   movl -4(%esp), %esi   # restore callee-save registers
@@ -424,9 +424,10 @@ L_multivalue_underflow:
   #   |                       |
   #          low memory
   #
-  # the word referenced by %esp is unused here: it may be one-off the
-  # end of the stack segment or it may be part of an uplevel Scheme
-  # continuation.  We want to set the Scheme stack as follows:
+  # the word referenced by %esp+wordsize is unused here: it may
+  # be one-off the end of the stack segment or it may be part of
+  # an uplevel Scheme continuation.  We want to set the Scheme stack
+  # as follows:
   #
   #         high memory
   #   |                       |
@@ -526,7 +527,7 @@ _ik_asm_reenter:
   movl %ebx, %esp
 
   # The machine word -4 is the fixnum -1, which represents
-  # a single argument.  If %eax = -4, then there is a single
+  # a single argument.  If %eax == -4, then there is a single
   # argument to the Scheme continuation.
   cmpl $-4, %eax
   jne L_multi_value_reentry
@@ -541,6 +542,9 @@ L_single_value_reentry:
   # "Scheme return address" we jump directly to the entry point at
   # offset "disp_multivalue_rp" from "Scheme return address",
   # with %eax holding the fixnum being the negated number of args.
+  #
+  #  -9 = - (32-bit call instruction size) - (32-bit wordsize)
+  #
 L_multi_value_reentry:
   movl 0(%esp), %ebx
   jmp *-9(%ebx)
