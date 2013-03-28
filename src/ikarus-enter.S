@@ -387,9 +387,12 @@ ik_underflow_handler:
   				# representing the negated number of
   				# Scheme return values.
 L_do_underflow:
-  # FIXME Do we really need to save %esp in "pcb->frame_pointer"
-  # and not save the same pointer in "pcb->frame_base"?
-  # (Marco Maggi; Mar 28, 2013)
+  # NOTE When coming back here from Scheme code evaluation, it is possible
+  # that "pcb->frame_base" and "pcb->frame_pointer" do not have the same
+  # values as before entering Scheme code.  In particular: the Scheme routines
+  # handling continuations update only "pcb->frame_base", leaving alone
+  # "pcb->frame_pointer".  For this reason here we update "pcb->frame_pointer"
+  # leaving alone "pcb->frame_base".  (Marco Maggi; Mar 28, 2013)
   movl %esp, 8(%esi)    # save top of scheme stack in "pcb->frame_pointer"
   movl %ebp, 0(%esi)    # save allocation pointer in "pcb->allocation_pointer"
   movl 24(%esi), %esp   # restore C stack from "pcb->system_stack"
