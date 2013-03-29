@@ -61,32 +61,32 @@ static void
 print (FILE* fh, ikptr x)
 {
   if (IK_IS_FIXNUM(x)) {
-    fprintf(fh, "%ld", IK_UNFIX(x));
+    fprintf(fh, "fixnum=%ld", IK_UNFIX(x));
   }
   else if (x == IK_FALSE_OBJECT) {
-    fprintf(fh, "#f");
+    fprintf(fh, "bool=#f");
   }
   else if (x == IK_TRUE_OBJECT) {
-    fprintf(fh, "#t");
+    fprintf(fh, "bool=#t");
   }
   else if (x == IK_NULL_OBJECT) {
-    fprintf(fh, "()");
+    fprintf(fh, "null=()");
   }
   else if (IK_IS_CHAR(x)) {
     unsigned long i = ((long)x) >> char_shift;
     if (i < 128)
-      fprintf(fh, "%s", char_string[i]);
+      fprintf(fh, "char=%s", char_string[i]);
     else
-      fprintf(fh, "#\\x%lx", i);
+      fprintf(fh, "char=#\\x%lx", i);
   }
   else if (IK_TAGOF(x) == vector_tag) {
     ikptr first_word = IK_REF(x, off_vector_length);
     if (IK_IS_FIXNUM(first_word)) {
       ikptr len = first_word;
       if (len == 0) {
-        fprintf(fh, "#()");
+        fprintf(fh, "vector=#()");
       } else {
-        fprintf(fh, "#(");
+        fprintf(fh, "vector=#(");
         ikptr data = x + off_vector_data;
         print(fh, IK_REF(data, 0));
         ikptr i = (ikptr)wordsize;
@@ -103,6 +103,7 @@ print (FILE* fh, ikptr x)
       int   len   = IK_UNFIX(fxlen);
       int * data  = (int*)(str + off_string_data);
       int   i;
+      fprintf(fh, "symbol=");
       for (i=0; i<len; i++) {
         char c = (data[i]) >> char_shift;
         fprintf(fh, "%c", c);
@@ -130,7 +131,7 @@ print (FILE* fh, ikptr x)
     fprintf(fh, "#<procedure>");
   }
   else if (IK_IS_PAIR(x)) {
-    fprintf(fh, "(");
+    fprintf(fh, "pair=(");
     print(fh, IK_CAR(x));
     ikptr d = IK_CDR(x);
     /* fprintf(stderr, "d=0x%016lx\n", (long int)d); */
@@ -157,7 +158,7 @@ print (FILE* fh, ikptr x)
     int   len   = IK_UNFIX(fxlen);
     int * data  = (int*)(x + off_string_data);
     int   i;
-    fprintf(fh, "\"");
+    fprintf(fh, "string=\"");
     for(i=0; i<len; i++) {
       char c = (data[i]) >> char_shift;
       if ((c == '\\') || (c == '"')) {
@@ -171,7 +172,7 @@ print (FILE* fh, ikptr x)
     ikptr          fxlen = IK_REF(x, off_bytevector_length);
     int            len   = IK_UNFIX(fxlen);
     unsigned char* data  = (unsigned char*)(x + off_bytevector_data);
-    fprintf(fh, "#vu8(");
+    fprintf(fh, "bytevector=#vu8(");
     int i;
     for(i=0; i<(len-1); i++) {
       fprintf(fh, "%d ", data[i]);
