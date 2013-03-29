@@ -46,25 +46,52 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   ikptr		s_retval_count;
   /* Reference to the  continuation object representing the  C or Scheme
      continuation we want to go back to. */
-  ikptr		s_kont;
+  ikptr	s_kont;
   if (0 || DEBUG_EXEC) {
     ik_debug_message_start("%s: enter closure 0x%016lx",
 			   __func__, (long)s_closure);
     ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
     fprintf(stderr, "\n");
   }
-  /* Run the compiled code in the Scheme code object. */
+  /* Enter compiled Scheme code.
+
+     Before and after we assert that  the frame pointer equals the frame
+     base; this constraint on the Scheme stack is needed by the assembly
+     routine  "ik_asm_enter".  It  is  responsibility of  the caller  of
+     "ik_exec_code()" to set the Scheme stack appropriately. */
   {
-    ikptr	code_object_entry_point = s_code + off_code_data;
-    s_retval_count = ik_asm_enter(pcb, code_object_entry_point, s_argcount, s_closure);
+    assert(pcb->frame_base == pcb->frame_pointer);
+    s_retval_count = ik_asm_enter(pcb, IK_CODE_ENTRY_POINT(s_code), s_argcount, s_closure);
+    assert(pcb->frame_base == pcb->frame_pointer);
   }
+  /* Loop until there are continuations to be reinstated. */
   for (s_kont = pcb->next_k; s_kont; s_kont = pcb->next_k) {
-    /* We  are  here because  the  Scheme  code  wants  to return  to  a
-       previously saved Scheme continuation object.  */
-    if (1 || DEBUG_EXEC) {
-      ikptr	underflow_handler = *(ikptr *)(pcb->frame_pointer - wordsize);
+#ifndef NDEBUG
+    {
+      /* Assert that the situation on the Scheme stack is:
+       *
+       *        high memory
+       *  |                      | <- pcb->frame_pointer = pcb->frame_base
+       *  |----------------------|
+       *  | ik_underflow_handler | <- pcb->frame_pointer - wordsize
+       *  |----------------------|
+       *  |    return value 0    |
+       *  |----------------------|
+       *  |    return value 1    |
+       *  |----------------------|
+       *  |    return value 2    |
+       *  |----------------------|
+       *  |                      |
+       *        low memory
+       *
+       * Of course we cannot check for the presence of return values.
+       */
+      ikptr	underflow_handler;
+      assert(pcb->frame_base == pcb->frame_pointer);
+      underflow_handler = *(ikptr *)(pcb->frame_pointer - wordsize);
       assert(IK_UNDERFLOW_HANDLER == underflow_handler);
     }
+#endif
     assert(continuation_primary_tag == (continuation_primary_mask & s_kont));
     if (0 || DEBUG_EXEC) {
       ik_debug_message("%s: resuming process continuation s_kont=0x%016lx",
@@ -112,12 +139,22 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 
        (Marco Maggi; Fri Mar 22, 2013) */
     if (IK_UNDERFLOW_HANDLER == return_address) {
-      if (0 || DEBUG_EXEC) {
+      if (1 || DEBUG_EXEC) {
+	int	retc = -IK_UNFIX(s_retval_count);
+	int	i;
 	ik_debug_message("%s: continuation 0x%016lx has ik_underflow_handler as return point,\n\
-\tsize=%ld, uplevel continuation is 0x%016lx",
-			 __func__, s_kont, (long)kont->size, kont->next);
+\tsize=%ld, uplevel continuation is 0x%016lx, return values count %d",
+			 __func__, s_kont, (long)kont->size, kont->next, retc);
+	for (i=0; i<retc; ++i) {
+	  ik_fprint(stderr, *((ikptr *)(pcb->frame_pointer - i * wordsize)));
+	  fprintf(stderr, "\n");
+	}
       }
-      continue;
+      if (1) {
+	ik_exec_code_log_and_abort(pcb, s_kont);
+      } else {
+	continue;
+      }
     }
     /* Zero  framesize means  that we  are returning  to a  continuation
        having as  topmost stack frame  a frame  whose size could  not be
@@ -156,11 +193,22 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       rest_kont->size	= kont->size - framesize;
       kont->size	= framesize;
       kont->next	= s_rest_kont;
+      /* FIXME Is it required to signal dirt for both the fields?  Or it
+	 always  happens that  a continuation  object's memory  block is
+	 fully in a  single page?  In the original Ikarus  code only the
+	 "kont->next" dirt was registered, but debugging of Issue #35 is
+	 making me paranoid.  (Marco Maggi; Wed Mar 27, 2013) */
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, &(kont->size));
       IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, &(kont->next));
+      if (0 == kont->size) {
+	ik_debug_message("%s: next continuation with zero size 0x%016lx,\n\
+\tframe return address=0x%016lx",
+			 __func__, s_kont, IK_REF(kont->top, 0));
+      }
       if (0 == rest_kont->size) {
 	ik_debug_message("%s: rest continuation with zero size 0x%016lx,\n\
 \ttop frame return address=0x%016lx",
-			 __func__, s_rest_kont, IK_REF((rest_kont->top), 0));
+			 __func__, s_rest_kont, IK_REF(rest_kont->top, 0));
       }
       pcb->next_k = kont->next;
     } else {
@@ -215,7 +263,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       /* Move the return values down a framesize:
        *
        *         high memory
-       *  |                      | <-- pcb->frame_base
+       *  |                      | <-- pcb->frame_pointer = pcb->frame_base
        *  |----------------------|
        *  | ik_underflow_handler | <-- fbase
        *  |----------------------|                --
@@ -245,7 +293,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        * continuation object S_KONT.
        *
        *       high memory
-       *  |                      | <-- pcb->frame_base
+       *  |                      | <-- pcb->frame_pointer = pcb->frame_base
        *  |----------------------|
        *  | ik_underflow_handler | <-- fbase
        *  |----------------------|                --
@@ -273,7 +321,9 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	ik_debug_message("%s: reenter assembly, return values count %lu",
 			 __func__, IK_UNFIX(-s_retval_count));
       }
+      assert(pcb->frame_pointer == pcb->frame_base);
       s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
+      assert(pcb->frame_pointer == pcb->frame_base);
     }
     /* If we  are here: the Scheme  code we have reentered  has returned
        again; we need to reinstate the next process continuation. */
@@ -285,7 +335,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
    *      high memory
    *   |              |
    *   |--------------|
-   *   |              | <-- pcb->frame_base
+   *   |              | <-- pcb->frame_base = pcb->frame_pointer
    *   |--------------|                                     --
    *   |              | <-- pcb->frame_base - wordsize      .
    *   |--------------|                                     .
@@ -298,6 +348,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
    *      low memory
    */
   ikptr rv = IK_REF(pcb->frame_base, -2*wordsize);
+  assert(pcb->frame_pointer == pcb->frame_base);
   return rv;
 }
 
@@ -329,7 +380,7 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
 \tkont->size    = %ld\n\
 \ts_kont return address           = 0x%016lx\n\
 \ts_kont return address framesize = %ld\n\
-\tinvalid framesize=%ld, expected kont->size=%ld or less",
+\tinvalid framesize=%ld, expected %ld(=kont->size) or less",
 	   __func__,
 	   pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
 	   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
