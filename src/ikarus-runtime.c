@@ -1,6 +1,6 @@
 /*
  * Ikarus Scheme -- A compiler for R6RS Scheme.
- * Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+ * Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
  * Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
  *
  * This program is free software:  you can redistribute it and/or modify
@@ -823,6 +823,7 @@ ik_stack_overflow (ikpcb* pcb)
     kont->next = pcb->next_k;
     pcb->next_k = s_kont;
     set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
+    assert(0 != kont->size);
   }
   /* Allocate a  new memory segment to  be used as Scheme  stack and set
      the PCB accordingly. */
