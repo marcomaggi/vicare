@@ -92,7 +92,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       assert(IK_UNDERFLOW_HANDLER == underflow_handler);
     }
 #endif
-    assert(continuation_primary_tag == (continuation_primary_mask & s_kont));
+    assert(IK_IS_ANY_CONTINUATION(s_kont));
     if (0 || DEBUG_EXEC) {
       ik_debug_message("%s: resuming process continuation s_kont=0x%016lx",
 		       __func__, (long)s_kont);
@@ -149,6 +149,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	  ik_fprint(stderr, *((ikptr *)(pcb->frame_pointer - i * wordsize)));
 	  fprintf(stderr, "\n");
 	}
+	assert(IK_IS_ANY_CONTINUATION(kont->next));
       }
       if (1) {
 	ik_exec_code_log_and_abort(pcb, s_kont);
@@ -363,13 +364,14 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
   ikptr	call_table_framesize	= IK_CALLTABLE_FRAMESIZE(return_address);
   long	framesize		= (call_table_framesize)? \
     (long) call_table_framesize : IK_REF(top, wordsize);
-  ikptr	return_address_offset	= IK_CALLTABLE_OFFSET(return_address);
-  ik_abort("%s: internal error while resuming continuation:\n\
+  long	redline_delta_words	= \
+    (pcb->stack_base + pcb->stack_size - pcb->frame_redline)/wordsize;
+  ik_debug_message("%s: internal error while resuming continuation:\n\
 \tpcb->heap_base     = 0x%016lx\n\
 \tpcb->heap_size     = %ld bytes, %ld words\n\
 \tpcb->stack_base    = 0x%016lx\n\
 \tpcb->stack_size    = %ld bytes, %ld words\n\
-\tpcb->frame_redline = 0x%016lx, delta %ld words\n\
+\tpcb->frame_redline = 0x%016lx, segment words before overflow %ld\n\
 \tpcb->frame_pointer = 0x%016lx\n\
 \tpcb->frame_base    = 0x%016lx\n\
 \tik_underflow_handler = 0x%016x\n\
@@ -378,35 +380,27 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
 \tkont          = 0x%016lx\n\
 \tkont->top     = 0x%016lx\n\
 \tkont->size    = %ld\n\
-\ts_kont return address           = 0x%016lx\n\
+\ts_kont return address           = 0x%016lx (== underflow handler? %s)\n\
 \ts_kont return address framesize = %ld\n\
 \tinvalid framesize=%ld, expected %ld(=kont->size) or less",
-	   __func__,
-	   pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
-	   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
-	   pcb->frame_redline, (pcb->stack_base+pcb->stack_size-pcb->frame_redline)/wordsize,
-	   pcb->frame_pointer, pcb->frame_base,
-	   (ikptr)ik_underflow_handler, underflow_handler,
-	   (long)s_kont, (long)kont,
-	   top,
-	   IK_CONTINUATION_SIZE(s_kont),
-	   return_address, call_table_framesize,
-	   framesize, kont->size);
-  /* Here  we would  like to  print the  annotation object  of the  code
-     object. */
+		   __func__,
+		   pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
+		   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
+		   pcb->frame_redline, redline_delta_words,
+		   pcb->frame_pointer, pcb->frame_base,
+		   (ikptr)ik_underflow_handler, underflow_handler,
+		   (long)s_kont, (long)kont,
+		   top,
+		   IK_CONTINUATION_SIZE(s_kont),
+		   return_address, ((IK_UNDERFLOW_HANDLER == return_address)? "yes" : "no"),
+		   call_table_framesize,
+		   framesize, kont->size);
   {
-    /* Offset  from the  beginning  of  the code  object  of the  return
-       address. */
-    ikptr	code_offset	= return_address_offset - disp_call_table_offset;
-    /* Pointer to the first byte of  executable machine code in the code
-       object memory block. */
-    ikptr	code_entry	= return_address - code_offset;
-    /* Pointer to the first byte of the code object memory block. */
-    IK_UNUSED ikptr p_code	= code_entry - disp_code_data;
-    ik_debug_message("annotation 0x%016lx", IK_REF(p_code, disp_code_annotation));
-    /* ik_fprint(stderr, IK_REF(p_return_address_code, disp_code_annotation)); */
-    /* fprintf(stderr, "\n"); */
+    ik_debug_message("%s: next continuation object: ", __func__);
+    ik_print(kont->next);
+    ik_print_stack_frame(stderr, IK_REF(kont->next, off_continuation_top));
   }
+  ik_abort("%s: aborting", __func__);
 }
 
 /* end of file */
