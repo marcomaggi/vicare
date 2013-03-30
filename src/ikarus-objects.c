@@ -1307,6 +1307,95 @@ ika_compnum_alloc_and_init (ikpcb * pcb)
 
 
 /** --------------------------------------------------------------------
+ ** Code objects.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ik_stack_frame_top_to_code_object (ikptr top)
+/* Given a pointer  to the top of  a stack frame: return  a reference to
+   the code object containing the return point. */
+{
+  /* A Scheme stack frame looks like this:
+   *
+   *
+   *       high memory
+   *   |                |
+   *   |----------------|
+   *   | return address | <- uplevel top
+   *   |----------------|         --
+   *   | Scheme object  |         .
+   *   |----------------|         .
+   *   | Scheme object  |         . framesize
+   *   |----------------|         .
+   *   | return address | <- top  .
+   *   |----------------|         --
+   *   |                |
+   *      low memory
+   *
+   * through TOP we  retrieve the return address, which is  a pointer to
+   * the label SINGLE-VALUE-RP in the following assembly code:
+   *
+   *     ;; low memory
+   *
+   *     jmp L0
+   *     livemask-bytes	;array of bytes			|
+   *     framesize	;data word, a "long"		| call
+   *     rp_offset	;data word, a fixnum		| table
+   *     multi-value-rp	;data word, assembly label	|
+   *     pad-bytes
+   *   L0:
+   *     call function-address
+   *   single-value-rp:		;single value return point
+   *     ... instructions...
+   *   multi-value-rp:		;multi value return point
+   *     ... instructions...
+   *
+   *     ;; high memory
+   */
+  ikptr	single_value_rp	= IK_REF(top, 0);
+  /* Through the return  address we retrieve the field  RP_OFFSET in the
+   * call table, which  contains the offset of that very  field from the
+   * beginning of the code.
+   *
+   *    metadata              binary code
+   *   |........|.......................................|
+   *
+   *                          call table  single-value-rp
+   *                          |........|  v
+   *   |--------|-------------+-+-+----+--+-------------| code object
+   *            |...............|^
+   *              field_offset   |
+   *                    |        |
+   *                     --------
+   */
+  long	field_offset	= IK_UNFIX(IK_CALLTABLE_OFFSET(single_value_rp));
+  /* Then we  compute the offset  of the label SINGLE-VALUE-RP  from the
+   * beginning of the code object's entry point.
+   *
+   *    metadata              binary code
+   *   |........|.......................................|
+   *
+   *                          call table  single-value-rp
+   *                          |........|  v
+   *   |--------|-------------+--------+--+-------------| code object
+   *            |.........................|
+   *                     rp_offset
+   *
+   *
+   * NOTE The preprocessor symbol "disp_call_table_offset" is a negative
+   * integer.
+   */
+  long	rp_offset	= field_offset - disp_call_table_offset;
+  /* Then we compute the address of  the entry point in the code object:
+     the address of the first byte of executable code. */
+  ikptr	code_entry	= single_value_rp - rp_offset;
+  /* Finally we compute the tagged pointer to the code object. */
+  ikptr s_code		= code_entry - off_code_data;
+  return s_code;
+}
+
+
+/** --------------------------------------------------------------------
  ** General C buffers.
  ** ----------------------------------------------------------------- */
 

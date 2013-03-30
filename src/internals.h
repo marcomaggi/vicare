@@ -591,6 +591,8 @@ ik_decl void	ik_print		(ikptr x);
 ik_decl void	ik_print_no_newline	(ikptr x);
 ik_decl void	ik_fprint		(FILE*, ikptr x);
 
+ik_private_decl void ik_print_stack_frame (FILE * fh, ikptr top);
+
 
 /** --------------------------------------------------------------------
  ** Basic object related macros.
@@ -1194,6 +1196,8 @@ ik_decl int   ik_is_struct	(ikptr R);
 /* Given a reference  to code object: return a raw  pointer to the entry
    point in the code, as "ikptr". */
 #define IK_CODE_ENTRY_POINT(CODE)	((CODE)+off_code_data)
+
+ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
 
 /* ------------------------------------------------------------------ */
 
