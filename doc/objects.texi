@@ -4172,9 +4172,9 @@ fragmentation.
 Closure objects are actual procedures: closure objects are the ones for
 which the @func{procedure?} predicate returns @true{}.  A closure object
 is a fixed length memory block referenced by machine words tagged as
-closures; each closure object is associated to a code object that
-implements the procedure.  The memory layout of a closure object is as
-follows:
+closures; each closure object is associated to either a code object that
+implements the procedure or a routine directly coded in assembly.  The
+memory layout of a closure object is as follows:
 
 @example
 |------------------------|-------------| reference to closure
@@ -4275,7 +4275,7 @@ referenced by the slots of the closures:
 @subsubheading Basic operations
 
 Closure objects are allocated on the heap; to perform the allocation and
-initialisation we do:
+initialisation for a closure object without free variables we do:
 
 @example
 ikptr   p_closure;
@@ -4307,27 +4307,28 @@ logic AND) the tag from @ikptr{} references to closure objects.
 
 @defvr {Preprocessor Symbol} disp_closure_code
 Displacement of code pointer.  The number of bytes to add to an
-@strong{untagged} pointer to closure to get the pointer to the first
-byte in the word of the closure's data area.
+@strong{untagged} pointer to closure to get a pointer to the word in the
+memory block holding the binary code entry point.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} disp_closure_data
-Number of bytes needed to hold a closure's memory block.  An integer to
-add to an @strong{untagged} pointer to closure to obtain a pointer to
-the first byte after the closure's memory block.
+Displacement of free variables.  The number of bytes to add to an
+@strong{untagged} pointer to closure to get a pointer to the first word
+in the data area of the memory block.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} off_closure_code
-An integer to add to a tagged @ikptr{} reference to retrieve the pointer
-to the first byte of the word in the closure's data area.
+An integer to add to a tagged @ikptr{} closure reference to get a
+pointer to the word in the memory block holding the binary code entry
+point.
 @end defvr
 
 
 @defvr {Preprocessor Symbol} off_closure_data
-An integer to add to a tagged @ikptr{} vector reference to obtain a
-pointer to the first byte after the closure's memory block.
+An integer to add to a tagged @ikptr{} closure reference to get a
+pointer to the first word in the data area of the memory block.
 @end defvr
 
 @c ------------------------------------------------------------
@@ -4337,6 +4338,32 @@ pointer to the first byte after the closure's memory block.
 
 @deftypefn {Preprocessor Macro} int IK_IS_CLOSURE (ikptr @var{X})
 Evaluate to true if @var{X} is a reference to closure object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_ENTRY_POINT (@var{X})
+Given a reference to closure object: return the address of the binary
+code entry point.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_CODE_OBJECT (@var{X})
+Given a reference to closure object: return a reference to the
+associated code object.  @strong{Only works for closures associated to
+code objects.}
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_CLOSURE_NUMBER_OF_FREE_VARS (@var{X})
+Given a reference to closure object: return the number of free
+variables.  @strong{Only works for closures associated to code objects.}
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} ikptr IK_CLOSURE_FREE_VAR (@var{X}, @var{idx})
+Given a reference to closure object: return a reference to value of the
+free variable at index @var{idx} in the data area.  @var{idx} must be
+less than the number of free variables in this closure object.
 @end deftypefn
 
 @c page
