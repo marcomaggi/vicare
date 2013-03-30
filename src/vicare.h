@@ -755,6 +755,12 @@ ik_decl int   ik_is_struct	(ikptr R);
 
 #define IK_IS_CLOSURE(X)	((((long)(X)) & closure_mask) == closure_tag)
 
+#define IK_CLOSURE_ENTRY_POINT(X)	IK_REF((X),off_closure_code)
+#define IK_CLOSURE_CODE_OBJECT(X)	(IK_CLOSURE_ENTRY_POINT(X)-off_code_data)
+#define IK_CLOSURE_NUMBER_OF_FREE_VARS(X)	\
+  IK_UNFIX(IK_REF(IK_CLOSURE_CODE_OBJECT(X), off_code_freevars))
+#define IK_CLOSURE_FREE_VAR(X,IDX)	IK_REF((X),off_closure_data+wordsize*(IDX))
+
 
 /** --------------------------------------------------------------------
  ** Continuation objects.

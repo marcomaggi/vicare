@@ -1185,6 +1185,7 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define disp_code_unused	(5 * wordsize)
 #define disp_code_data		(6 * wordsize)
 #define off_code_tag		(disp_code_tag		- code_primary_tag)
+#define off_code_freevars	(disp_code_freevars	- code_primary_tag)
 #define off_code_annotation	(disp_code_annotation	- code_primary_tag)
 #define off_code_data		(disp_code_data		- code_primary_tag)
 #define off_code_reloc_vector	(disp_code_reloc_vector - code_primary_tag)
@@ -1240,6 +1241,12 @@ ik_private_decl ikptr ik_stack_frame_top_to_code_object (ikptr top);
 #define off_closure_data	(disp_closure_data - closure_tag)
 
 #define IK_IS_CLOSURE(X)	((((long)(X)) & closure_mask) == closure_tag)
+
+#define IK_CLOSURE_ENTRY_POINT(X)	IK_REF((X),off_closure_code)
+#define IK_CLOSURE_CODE_OBJECT(X)	(IK_CLOSURE_ENTRY_POINT(X)-off_code_data)
+#define IK_CLOSURE_NUMBER_OF_FREE_VARS(X)	\
+  IK_UNFIX(IK_REF(IK_CLOSURE_CODE_OBJECT(X), off_code_freevars))
+#define IK_CLOSURE_FREE_VAR(X,IDX)	IK_REF((X),off_closure_data+wordsize*(IDX))
 
 
 /** --------------------------------------------------------------------
