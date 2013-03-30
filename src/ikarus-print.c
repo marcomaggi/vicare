@@ -79,6 +79,19 @@ print (FILE* fh, ikptr x)
     else
       fprintf(fh, "char=#\\x%lx", i);
   }
+  else if (IK_IS_CODE(x)) {
+    fprintf(fh, "code={x=0x%016lx, annotation=", x);
+    print(fh, IK_REF(x, off_code_annotation));
+    fprintf(fh, "}");
+  }
+  else if (IK_IS_CONTINUATION(x)) {
+    ikcont *	kont = IK_CONTINUATION_STRUCT(x);
+    fprintf(fh, "continuation={x=0x%016lx, size=%ld}", x, kont->size);
+  }
+  else if (IK_IS_SYSTEM_CONTINUATION(x)) {
+    ikcont *	kont = IK_CONTINUATION_STRUCT(x);
+    fprintf(fh, "system-continuation={x=0x%016lx, size=%ld}", x, kont->size);
+  }
   else if (IK_TAGOF(x) == vector_tag) {
     ikptr first_word = IK_REF(x, off_vector_length);
     if (IK_IS_FIXNUM(first_word)) {

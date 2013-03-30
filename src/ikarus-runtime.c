@@ -973,7 +973,7 @@ ikrt_make_code (ikptr s_code_size, ikptr s_freevars, ikptr s_relocation_vector, 
      allocated with "mmap()" with execution protection. */
   ikptr  mem       = ik_mmap_code(memreq, 0, pcb);
   bzero((char*)(long)mem, memreq);
-  IK_REF(mem, disp_code_code_tag)	= code_tag;
+  IK_REF(mem, disp_code_tag)		= code_tag;
   IK_REF(mem, disp_code_code_size)	= s_code_size;
   IK_REF(mem, disp_code_freevars)	= s_freevars;
   IK_REF(mem, disp_code_reloc_vector)	= s_relocation_vector;

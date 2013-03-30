@@ -3986,6 +3986,15 @@ zero.
 the subsequent words in the memory block are the code object's data
 area.
 
+@c ------------------------------------------------------------
+
+@subsubheading Operations
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CODE (@var{X})
+Evaluate to true if @var{X} is a reference to code object.
+@end deftypefn
+
 @c page
 @node objects codes reloc
 @subsection The relocation vector
@@ -4510,6 +4519,24 @@ System continuation field offsets.  The number of bytes to add to a
 tagged pointer to system continuation to get the pointer to the first
 byte in the word holding the specified field.
 @end defvr
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_CONTINUATION (@var{X})
+Evaluate to true if @var{X} is a reference to Scheme continuation
+object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_SYSTEM_CONTINUATION (@var{X})
+Evaluate to true if @var{X} is a reference to system continuation
+object.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} int IK_IS_ANY_CONTINUATION (@var{X})
+Evaluate to true if @var{X} is a reference to Scheme or system
+continuation object.
+@end deftypefn
 
 @c page
 @node objects continuations scheme

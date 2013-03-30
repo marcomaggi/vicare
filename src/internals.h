@@ -1165,26 +1165,37 @@ ik_decl int   ik_is_struct	(ikptr R);
  ** Code objects.
  ** ----------------------------------------------------------------- */
 
-/* This	 is the	 primary tag,  in the  machine word  referencing  a code
-   object. */
-#define code_pri_tag		vector_tag
-/* This is the	secondary tag, in the first word  of the referenced heap
-   vector. */
+/* To assert that a machine word X references a code object we do:
+
+     ikptr	X;
+     assert(code_primary_tag == (code_primary_mask & X));
+     assert(code_tag         == IK_REF(X, off_code_tag));
+*/
+#define code_primary_mask	vector_mask
+#define code_primary_tag	vector_tag
 #define code_tag		((ikptr)0x2F)
-#define disp_code_code_tag	0
+
+#define disp_code_tag		0
 #define disp_code_code_size	(1 * wordsize)
 #define disp_code_reloc_vector	(2 * wordsize)
 #define disp_code_freevars	(3 * wordsize)
 #define disp_code_annotation	(4 * wordsize)
 #define disp_code_unused	(5 * wordsize)
 #define disp_code_data		(6 * wordsize)
-#define off_code_annotation	(disp_code_annotation	- code_pri_tag)
-#define off_code_data		(disp_code_data		- code_pri_tag)
-#define off_code_reloc_vector	(disp_code_reloc_vector - code_pri_tag)
+#define off_code_tag		(disp_code_tag		- code_primary_tag)
+#define off_code_annotation	(disp_code_annotation	- code_primary_tag)
+#define off_code_data		(disp_code_data		- code_primary_tag)
+#define off_code_reloc_vector	(disp_code_reloc_vector - code_primary_tag)
+
+#define IK_IS_CODE(X)		\
+     ((code_primary_tag == (code_primary_mask & X)) && \
+      (code_tag         == IK_REF(X, off_code_tag)))
 
 /* Given a reference  to code object: return a raw  pointer to the entry
    point in the code, as "ikptr". */
 #define IK_CODE_ENTRY_POINT(CODE)	((CODE)+off_code_data)
+
+/* ------------------------------------------------------------------ */
 
 /* Accessors for the words of relocation vector's records. */
 #undef  IK_RELOC_RECORD_REF
@@ -1254,6 +1265,10 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define IK_CONTINUATION_SIZE(KONT)	IK_REF((KONT),off_continuation_size)
 #define IK_CONTINUATION_NEXT(KONT)	IK_REF((KONT),off_continuation_next)
 
+#define IK_IS_CONTINUATION(X)		\
+   ((continuation_primary_tag == (continuation_primary_mask & (X))) &&	\
+    (continuation_tag         == IK_REF((X), off_continuation_tag)))
+
 /* ------------------------------------------------------------------ */
 
 #define system_continuation_tag		((ikptr) 0x11F)
@@ -1267,6 +1282,15 @@ ik_decl int   ik_is_struct	(ikptr R);
 #define off_system_continuation_top	(disp_system_continuation_top	 - vector_tag)
 #define off_system_continuation_next	(disp_system_continuation_next	 - vector_tag)
 #define off_system_continuation_unused	(disp_system_continuation_unused - vector_tag)
+
+#define IK_IS_SYSTEM_CONTINUATION(X)	\
+   ((continuation_primary_tag == (continuation_primary_mask & (X))) &&	\
+    (system_continuation_tag  == IK_REF((X), off_system_continuation_tag)))
+
+/* ------------------------------------------------------------------ */
+
+#define IK_IS_ANY_CONTINUATION(X)	\
+   (IK_IS_CONTINUATION(X) || IK_IS_SYSTEM_CONTINUATION(X))
 
 
 /** --------------------------------------------------------------------
