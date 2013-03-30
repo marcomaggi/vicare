@@ -154,7 +154,18 @@ print_object (FILE* fh, ikptr x)
       fprintf(fh, "#<unknown first_word=%p>", (void*)first_word);
   }
   else if (IK_IS_CLOSURE(x)) {
-    fprintf(fh, "#<closure>");
+    long	freec = IK_CLOSURE_NUMBER_OF_FREE_VARS(x);
+    long	i;
+    fprintf(fh, "#<closure num_of_free_vars=%ld,\n",
+	    freec);
+    for (i=0; i<freec; ++i) {
+      fprintf(fh, "\tfree[%ld]=", i);
+      print_object(fh, IK_CLOSURE_FREE_VAR(x, i));
+      fprintf(fh, "\n");
+    }
+    fprintf(fh, "\t");
+    print_object(fh, IK_CLOSURE_CODE_OBJECT(x));
+    fprintf(fh, ">");
   }
   else if (IK_IS_PAIR(x)) {
     fprintf(fh, "pair=(");
