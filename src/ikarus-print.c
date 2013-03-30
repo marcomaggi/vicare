@@ -23,7 +23,7 @@
 
 #include "internals.h"
 
-static void print_object(FILE* fh, ikptr x);
+static void print_object (FILE* fh, ikptr x, int nested_level);
 
 const static char* char_string[128] = {
   "#\\nul","#\\soh","#\\stx","#\\etx","#\\eot","#\\enq","#\\ack","#\\bel",
@@ -52,24 +52,35 @@ const static char* char_string[128] = {
 void
 ik_fprint (FILE* fh, ikptr x)
 {
-  print_object(fh, x);
+  print_object(fh, x, 0);
 }
 void
 ik_print (ikptr x)
 {
-  print_object(stderr, x);
+  print_object(stderr, x, 0);
   fprintf(stderr, "\n");
 }
 void
 ik_print_no_newline (ikptr x)
 {
-  print_object(stderr, x);
+  print_object(stderr, x, 0);
 }
 
 
 static void
-print_object (FILE* fh, ikptr x)
+print_indentation (FILE* fh, int nested_level)
 {
+  if (nested_level) {
+    fprintf(fh, "\t");
+  }
+  for (; nested_level; --nested_level)
+    fprintf(fh, "   ");
+}
+static void
+print_object (FILE* fh, ikptr x, int nested_level)
+{
+#define PRINT_OBJECT(F,X)	print_object((F),(X),1+nested_level)
+#define PRINT_INDENTATION()	print_indentation(fh, 1+nested_level)
   if (IK_IS_FIXNUM(x)) {
     fprintf(fh, "fixnum=%ld", IK_UNFIX(x));
   }
@@ -91,7 +102,7 @@ print_object (FILE* fh, ikptr x)
   }
   else if (IK_IS_CODE(x)) {
     fprintf(fh, "code={x=0x%016lx, annotation=", x);
-    print_object(fh, IK_REF(x, off_code_annotation));
+    PRINT_OBJECT(fh, IK_REF(x, off_code_annotation));
     fprintf(fh, "}");
   }
   else if (IK_IS_CONTINUATION(x)) {
@@ -114,11 +125,11 @@ print_object (FILE* fh, ikptr x)
       } else {
         fprintf(fh, "vector=#(");
         ikptr data = x + off_vector_data;
-        print_object(fh, IK_REF(data, 0));
+        PRINT_OBJECT(fh, IK_REF(data, 0));
         ikptr i = (ikptr)wordsize;
         while (i<len) {
           fprintf(fh, " ");
-          print_object(fh, IK_REF(data,i));
+          PRINT_OBJECT(fh, IK_REF(data,i));
           i += wordsize;
         }
         fprintf(fh, ")");
@@ -142,12 +153,12 @@ print_object (FILE* fh, ikptr x)
 	fprintf(fh, "#[rtd: ");
       } else {
 	fprintf(fh, "#[struct nfields=%ld rtd=", number_of_fields);
-	print_object(fh, IK_REF(s_rtd, off_rtd_name));
+	PRINT_OBJECT(fh, IK_REF(s_rtd, off_rtd_name));
 	fprintf(fh, ": ");
       }
       for (i=0; i<number_of_fields; ++i) {
 	if (i) fprintf(fh, ", ");
-	print_object(fh, IK_FIELD(x, i));
+	PRINT_OBJECT(fh, IK_FIELD(x, i));
       }
       fprintf(fh, "]");
     } else
@@ -159,36 +170,21 @@ print_object (FILE* fh, ikptr x)
     fprintf(fh, "#<closure num_of_free_vars=%ld,\n",
 	    freec);
     for (i=0; i<freec; ++i) {
-      fprintf(fh, "\tfree[%ld]=", i);
-      print_object(fh, IK_CLOSURE_FREE_VAR(x, i));
+      PRINT_INDENTATION();
+      fprintf(fh, "free[%ld]=", i);
+      PRINT_OBJECT(fh, IK_CLOSURE_FREE_VAR(x, i));
       fprintf(fh, "\n");
     }
-    fprintf(fh, "\t");
-    print_object(fh, IK_CLOSURE_CODE_OBJECT(x));
+    PRINT_INDENTATION();
+    PRINT_OBJECT(fh, IK_CLOSURE_CODE_OBJECT(x));
     fprintf(fh, ">");
   }
   else if (IK_IS_PAIR(x)) {
     fprintf(fh, "pair=(");
-    print_object(fh, IK_CAR(x));
-    ikptr d = IK_CDR(x);
-    /* fprintf(stderr, "d=0x%016lx\n", (long int)d); */
-    while (1) {
-      if (IK_IS_PAIR(d)) {
-        fprintf(fh, " ");
-        print_object(fh, IK_CAR(d));
-        d = IK_CDR(d);
-      }
-      else if (d == IK_NULL_OBJECT) {
-        fprintf(fh, ")");
-        return;
-      }
-      else {
-        fprintf(fh, " . ");
-        print_object(fh, d);
-        fprintf(fh, ")");
-        return;
-      }
-    }
+    print_object(fh, IK_CAR(x), 0);
+    fprintf(fh, " . ");
+    PRINT_OBJECT(fh, IK_CDR(x));
+    fprintf(fh, ")");
   }
   else if (IK_TAGOF(x) == string_tag) {
     ikptr fxlen = IK_REF(x, off_string_length);
@@ -229,10 +225,18 @@ ik_print_stack_frame (FILE * fh, ikptr top)
 {
   ikptr		single_value_rp	= IK_REF(top, 0);
   ikptr		framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
-  ikptr		args_size	= framesize - wordsize;
-  ikptr		argc		= args_size / wordsize;
-  ikptr		s_code		= ik_stack_frame_top_to_code_object(top);
+  ikptr		args_size;
+  ikptr		argc;
+  ikptr		s_code;
   int		i;
+  if (framesize) {
+    args_size	= framesize - wordsize;
+  } else {
+    framesize	= IK_REF(top, wordsize);
+    args_size	= framesize - wordsize - wordsize;
+  }
+  argc		= args_size / wordsize;
+  s_code	= ik_stack_frame_top_to_code_object(top);
   fprintf(fh, "\tcall frame: top=0x%016lx, framesize=%ld, args count=%ld\n",
 	  top, framesize, argc);
   fprintf(fh, "\tcode object: ");
