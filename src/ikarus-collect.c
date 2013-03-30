@@ -966,28 +966,28 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   |----------------------|             --
      *             ...                        .
      *   |----------------------|             . framesize 0
-     *   | return address = rp  | <-- top     .
+     *   |    single_value_rp   | <-- top     .
      *   |----------------------|             --
      *   |                      |
      *         low memory
      *
-     * and the  return address RP  is an assembly  label SINGLE-VALUE-RP
-     * (for  single return  values) right  after the  "call" instruction
-     * that created this stack frame:
+     * and the return address SINGLE_VALUE_RP  is an assembly label (for
+     * single  return values)  right after  the "call"  instruction that
+     * created this stack frame:
      *
      *     ;; low memory
      *
      *     jmp L0
      *     livemask-bytes		;array of bytes
      *     framesize			;data word, a "long"
-     *     rp_offset			;data word, a fixnum
-     *     multi-value-rp		;data word, assembly label
+     *     offset_field			;data word, a fixnum
+     *     multi_value_rp		;data word, assembly label
      *     pad-bytes
      *   L0:
      *     call function-address
-     *   single-value-rp:		;single value return point
+     *   single_value_rp:		;single value return point
      *     ... instructions...
-     *   multi-value-rp:		;multi value return point
+     *   multi_value_rp:		;multi value return point
      *     ... instructions...
      *
      *     ;; high memory
@@ -1004,7 +1004,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   |----------------------|
      *   |      framesize       | <-- top + wordsize
      *   |----------------------|
-     *   | return address = rp  | <-- top
+     *   |   single_value_rp    | <-- top
      *   |----------------------|
      *   |                      |
      *         low memory
@@ -1012,37 +1012,37 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      * also in this case all the words  on this frame are live, the live
      * mask in the code object is unused.
      *
-     * The fixnum "rp_offset"  is the number of bytes  between the first
+     * The fixnum "offset_field"  is the number of bytes  between the first
      * byte of binary code in this code object and the location in which
-     * "rp_offset" itself is stored:
+     * "offset_field" itself is stored:
      *
      *    metadata                    binary code
      *   |--------|-------------+-+----------------------| code object
      *            |.............|^
-     *               rp_offset   |
+     *             offset_field  |
      *                  |        |
      *                   --------
      *
      * NOTE The  preprocessor symbol  "disp_call_table_offset" is  a negative
      * integer.
      */
-    ikptr	rp	  = IK_REF(top, 0);
-    long	rp_offset = IK_UNFIX(IK_CALLTABLE_OFFSET(rp));
+    ikptr	single_value_rp	= IK_REF(top, 0);
+    long	offset_field	= IK_UNFIX(IK_CALLTABLE_OFFSET(single_value_rp));
     if (DEBUG_STACK) {
-      ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, rp_offset=%ld",
-		       (long) top, rp, rp_offset);
+      ik_debug_message("collecting frame at 0x%016lx: rp=0x%016lx, offset_field=%ld",
+		       (long) top, single_value_rp, offset_field);
     }
-    if (rp_offset <= 0) {
-      ik_abort("invalid rp_offset %ld\n", rp_offset);
+    if (offset_field <= 0) {
+      ik_abort("invalid offset_field %ld\n", offset_field);
     }
     /* Since the return point is alive,  we need to find the code object
-       containing it  and mark it  live as well.   The RP is  updated to
-       reflect the new code object. */
-    long	code_offset	= rp_offset - disp_call_table_offset;
-    ikptr	code_entry	= rp - code_offset;
+       containing it and  mark it live as well.   The SINGLE_VALUE_RP in
+       the stack frame is updated to reflect the new code object. */
+    long	code_offset	= offset_field - disp_call_table_offset;
+    ikptr	code_entry	= single_value_rp - code_offset;
     ikptr	new_code_entry	= add_code_entry(gc, code_entry);
-    ikptr	new_rp		= new_code_entry + code_offset;
-    IK_REF(top, 0) = new_rp;
+    ikptr	new_sv_rp	= new_code_entry + code_offset;
+    IK_REF(top, 0) = new_sv_rp;
 
     /* now for some livemask action.
      * every return point has a live mark above it.  the live mask
@@ -1078,7 +1078,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *   there is no live mask in this case, instead all values in the
      *   frame are live.
      */
-    long framesize =  IK_CALLTABLE_FRAMESIZE(rp);
+    long framesize =  IK_CALLTABLE_FRAMESIZE(single_value_rp);
     if (DEBUG_STACK) {
       ik_debug_message("fs=%ld", (long)framesize);
     }
@@ -1118,9 +1118,9 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
 	 contain a single byte. */
       long	bytes_in_mask	= (frame_cells+7) >> 3;
       /* Pointer to the livemask bytevector */
-      char *	mask		= (char*)(long)(rp + disp_call_table_size - bytes_in_mask);
+      char *	mask = (char*)(long)(single_value_rp + disp_call_table_size - bytes_in_mask);
       /* Pointer to the Scheme objects on the stack. */
-      ikptr *	fp		= (ikptr*)(long)(top + framesize);
+      ikptr *	fp   = (ikptr*)(long)(top + framesize);
       long	i;
       for (i=0; i<bytes_in_mask; i++, fp-=8) {
         unsigned char m = mask[i];
