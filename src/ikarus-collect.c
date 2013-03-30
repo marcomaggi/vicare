@@ -1043,6 +1043,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
     ikptr	new_code_entry	= add_code_entry(gc, code_entry);
     ikptr	new_sv_rp	= new_code_entry + code_offset;
     IK_REF(top, 0) = new_sv_rp;
+    single_value_rp = new_sv_rp;
 
     /* now for some livemask action.
      * every return point has a live mark above it.  the live mask
