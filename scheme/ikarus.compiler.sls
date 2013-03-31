@@ -4501,7 +4501,7 @@
 		   L_cont_mult_copy_loop)
      (assembly
       ;;Move in EBX  the reference to the  continuation object contained
-      ;;in the closure object.
+      ;;in the first data slot in the closure object.
       (movl (mem off-closure-data cpr) ebx)
       ;;Move  the   reference  to  continuation  object   in  the  field
       ;;"pcb->next_k" (overwriting the old value!!!).
@@ -4527,7 +4527,7 @@
       ;;   |----------------------|
       ;;   |  old return address  | <-- Frame Pointer Register (FPR)
       ;;   |----------------------|
-      ;;   |     return value     |
+      ;;   |     return value     | <-- FPR - wordisze
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
@@ -4538,7 +4538,7 @@
       ;;
       (label L_cont_one_arg)
       ;;Load in EAX the the return value.
-      (movl (mem (fx- 0 wordsize) fpr) eax)
+      (movl (mem (fx- wordsize) fpr) eax)
       ;;Load   in   the   Frame    Pointer   Register   the   value   of
       ;;"pcb->frame_base".
       (movl ebx fpr)
@@ -4552,7 +4552,7 @@
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base
       ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- Frame Pointer Register (%esp)
+      ;;   | ik_underflow_handler | <-- Frame Pointer Register
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
@@ -4577,7 +4577,7 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  contains  the   encoded  0  as  number   of  arguments  and
+      ;;EAX  contains   the  fixnum  0   as  number  of   arguments  and
       ;;"pcb->next_k" references the continuation object we must go back
       ;;to.
       ;;
@@ -4604,7 +4604,7 @@
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base
       ;;   |----------------------|
-      ;;   | ik_underflow_handler | <-- Frame Pointer Register (%esp)
+      ;;   | ik_underflow_handler | <-- Frame Pointer Register
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
@@ -4624,7 +4624,7 @@
       ;;   |----------------------|
       ;;   |         ...          |
       ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register (%esp)
+      ;;   |  old return address  | <-- Frame Pointer Register
       ;;   |----------------------|
       ;;   |    return value 0    |
       ;;   |----------------------|
@@ -4759,7 +4759,7 @@
     ;;         high memory
     ;;   |                      |
     ;;   |----------------------|
-    ;;   |     return address   | <-- Frame Pointer Register (%esp)
+    ;;   |     return address   | <-- Frame Pointer Register
     ;;   |----------------------|
     ;;   |      argument 0      |
     ;;   |----------------------|
@@ -4787,13 +4787,13 @@
       ;;Store on the  stack a reference to the closure  object (from the
       ;;Closure  Pointer Register)  as  first argument  to  the call  to
       ;;$INCORRECT-ARGS-ERROR-HANDLER.
-      (movl cpr (mem ($fx- 0 wordsize) fpr))
+      (movl cpr (mem (fx- wordsize) fpr))
       ;;Decode  the incorrect  number  of  arguments, so  that  it is  a
       ;;non-negative fixnum.
       (negl eax)
       ;;Store on the  stack the incorrect number of  arguments as second
       ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
-      (movl eax (mem ($fx- 0 ($fx* 2 wordsize)) fpr))
+      (movl eax (mem (fx- (fx* 2 wordsize)) fpr))
       ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
       ;;symbol  object  containing a  reference  to  the closure  object
       ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
@@ -4811,10 +4811,10 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;SL-MV-ERROR-RP-LABEL This subroutine is called whenever an attempt
-    ;;to return zero  or 2 or more  values to a single  value context is
-    ;;performed, and  the receiving  function just  wants to  ignore the
-    ;;error.
+    ;;SL-MV-IGNORE-RP-LABEL  This  subroutine   is  called  whenever  an
+    ;;attempt  to return  zero or  2 or  more values  to a  single value
+    ;;context is  performed, and  the receiving  function just  wants to
+    ;;ignore the error.
     ;;
     ((public-function		sl-mv-ignore-rp-label)
      (entry-point-label		SL_multiple_values_ignore_rp)
@@ -4870,11 +4870,11 @@
 ;;; --------------------------------------------------------------------
 
     ;;Implementation of  the function  VALUES.  The arguments  to VALUES
-    ;;are the return values of VALUES.  When arriving from a call:
+    ;;are the return values of VALUES.  When arriving here from a call:
     ;;
     ;;   (values ret-val-0 ret-val-1 ret-val-2)
     ;;
-    ;;here the situation on the Scheme stack is:
+    ;;the situation on the Scheme stack is:
     ;;
     ;;         high memory
     ;;   |                      |
