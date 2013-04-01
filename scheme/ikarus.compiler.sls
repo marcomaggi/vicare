@@ -4466,28 +4466,65 @@
     ;;
     ;;Upon entering this subroutine:
     ;;
-    ;;**The  Process  Control  Register  (PCR) must  reference  the  PCB
+    ;;*  The  Process Control  Register  (PCR)  must reference  the  PCB
     ;;  structure.
     ;;
-    ;;**The Frame Pointer  Register (FPR) must reference the  top of the
+    ;;* The Frame  Pointer Register (FPR) must reference the  top of the
     ;;  Scheme stack.
     ;;
-    ;;**The Closure  Pointer Register (CPR)  must hold a reference  to a
-    ;;  closure object,  whose first slot for free  variables contains a
-    ;;  reference to the continuation object to resume.  Such closure is
-    ;;  an  internal component of  the continuation function  created by
-    ;;  CALL/CC.
+    ;;* The Closure Pointer Register (CPR)  must hold a reference to the
+    ;;   actual  escape  closure  object,  whose  first  slot  for  free
+    ;;  variables  contains a  reference to  the continuation  object to
+    ;;   resume.
     ;;
-    ;;**The ARGC-REGISTER must contain a fixnum representing the negated
-    ;;   number  of  arguments  handed to  this  escape  function;  such
-    ;;   arguments  are the  values  returned  to the  topmost  function
-    ;;  in the continuation.
+    ;;* The ARGC-REGISTER must contain a fixnum representing the negated
+    ;;   number  of  arguments  handed  to  the  escape  function;  such
+    ;;  arguments are the values returned to the topmost function in the
+    ;;  continuation.
     ;;
     ;;Before  resuming  execution: we  want  to  set the  Frame  Pointer
     ;;Register to the address of the  topmost machine word on the Scheme
     ;;stack; such memory location contains  the address of the underflow
     ;;handler: the assembly label  "ik_underflow_handler" defined in the
     ;;file "ikarus-enter.S".
+    ;;
+    ;;Calling the  escape closure throws  away the stack  frames between
+    ;;"pcb->frame_base"  and the  FPR.  Before  rewinding the  stack the
+    ;;scenario is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |                      | <-- pcb->frame_base
+    ;;   |----------------------|
+    ;;   | ik_underflow_handler |
+    ;;   |----------------------|         --
+    ;;             ...                    .
+    ;;   |----------------------|         . frames that will be thrown away
+    ;;   |  old return address  | <- FPR  .
+    ;;   |----------------------|         --
+    ;;   |      argument 0      |         .
+    ;;   |----------------------|         . frame of the escape function
+    ;;   |      argument 1      |         .
+    ;;   |----------------------|         --
+    ;;   |                      |
+    ;;          low memory
+    ;;
+    ;;after rewinding the stack the scenario is:
+    ;;
+    ;;         high memory
+    ;;   |                      |
+    ;;   |----------------------|
+    ;;   |                      | <-- pcb->frame_base
+    ;;   |----------------------|
+    ;;   | ik_underflow_handler | <- FPR
+    ;;   |----------------------|         --
+    ;;   |      argument 0      |         .
+    ;;   |----------------------|         . frame of the escape function
+    ;;   |      argument 1      |         .
+    ;;   |----------------------|         --
+    ;;   |                      |
+    ;;          low memory
     ;;
     ((public-function		sl-continuation-code-label)
      (entry-point-label		SL_continuation_code)
@@ -4522,11 +4559,11 @@
       ;;   |                      | <-- pcb->frame_base = EBX
       ;;   |----------------------|
       ;;   | ik_underflow_handler | = highest machine word on the stack
-      ;;   |----------------------|
-      ;;   |         ...          |
-      ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register (FPR)
-      ;;   |----------------------|
+      ;;   |----------------------|          --
+      ;;             ...                     .
+      ;;   |----------------------|          . frames that will be thrown away
+      ;;   |  old return address  | <-- FPR  .
+      ;;   |----------------------|          --
       ;;   |     return value     | <-- FPR - wordisze
       ;;   |----------------------|
       ;;   |                      |
@@ -4569,11 +4606,11 @@
       ;;   |                      | <-- pcb->frame_base = EBX
       ;;   |----------------------|
       ;;   | ik_underflow_handler | = highest machine word on the stack
-      ;;   |----------------------|
-      ;;   |         ...          |
-      ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register (FPR)
-      ;;   |----------------------|
+      ;;   |----------------------|          --
+      ;;             ...                     .
+      ;;   |----------------------|          . frames that will be thrown away
+      ;;   |  old return address  | <-- FPR  .
+      ;;   |----------------------|          --
       ;;   |                      |
       ;;          low memory
       ;;
@@ -4621,11 +4658,11 @@
       ;;   |                      | <-- pcb->frame_base = EBX
       ;;   |----------------------|
       ;;   | ik_underflow_handler | = highest machine word on the stack
-      ;;   |----------------------|
-      ;;   |         ...          |
-      ;;   |----------------------|
-      ;;   |  old return address  | <-- Frame Pointer Register
-      ;;   |----------------------|
+      ;;   |----------------------|          --
+      ;;             ...                     .
+      ;;   |----------------------|          . frames that will be thrown away
+      ;;   |  old return address  | <-- FPR  .
+      ;;   |----------------------|          --
       ;;   |    return value 0    |
       ;;   |----------------------|
       ;;   |    return value 1    |
@@ -4901,6 +4938,9 @@
     ;;  and  EAX untouched  and jumps to  the multivalue  assembly label
     ;;  associated to "return address".
     ;;
+    ;;Notice that if the return address is ik_underflow_handler: nothing
+    ;;special needs to be done.
+    ;;
     ((public-function sl-values-label)
      (entry-point-label		SL_values)
      (number-of-free-variables	0)
@@ -4916,8 +4956,9 @@
       (cmpl (int (argc-convention 1)) eax)
       (je (label L_values_one_value))
 
-      ;;Return  many values.   Retrieve  the address  of the  multivalue
-      ;;assembly label by adding DISP-MULTIVALUE-RP to "return address".
+      ;;Return  0,  2 or  more  values.   Retrieve  the address  of  the
+      ;;multivalue  assembly  label   by  adding  DISP-MULTIVALUE-RP  to
+      ;;"return address".
       (label L_values_many_values)
       (movl (mem 0 fpr) ebx)
       (jmp (mem disp-multivalue-rp ebx))
@@ -4925,7 +4966,7 @@
       ;;Return a  single value.  Store  in EAX the single  return value,
       ;;then "ret".
       (label L_values_one_value)
-      (movl (mem (fx- 0 wordsize) fpr) eax)
+      (movl (mem (fx- wordsize) fpr) eax)
       (ret)
       ))
 
@@ -4981,7 +5022,7 @@
       ;;3..Check that EBX actually contains a reference to object tagged
       ;;   as closure; else jump to the appropriate error handler.
       ;;
-      (movl (mem (fx- 0 wordsize) fpr) ebx)
+      (movl (mem (fx- wordsize) fpr) ebx)
       (movl ebx cpr)
       (andl (int closure-mask) ebx)
       (cmpl (int closure-tag) ebx)
@@ -4991,8 +5032,26 @@
       ;;   fixnum zero.
       ;;
       ;;5..Call the producer closure in  CPR executing a "call" assembly
-      ;;   instruction.   The situation  on the  stack right  before the
-      ;;   "call" instruction is:
+      ;;   instruction.
+      ;;
+      ;;The situation  on the stack  right before entering  the assembly
+      ;;chunk generated by COMPILE-CALL-TABLE is:
+      ;;
+      ;;         high memory
+      ;;   |                      |
+      ;;   |----------------------|
+      ;;   |  CWV return address  | <-- Frame Pointer Register (FPR)
+      ;;   |----------------------|
+      ;;   |  producer reference  |
+      ;;   |----------------------|
+      ;;   |  consumer reference  |
+      ;;   |----------------------|
+      ;;   |     empty word       |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
+      ;;
+      ;;and such chunk adjusts the FPR to:
       ;;
       ;;         high memory
       ;;   |                      |
@@ -5007,6 +5066,10 @@
       ;;   |----------------------|
       ;;   |                      |
       ;;          low memory
+      ;;
+      ;;before performing the "call"  instruction.  After returning from
+      ;;the call: the  assembly chunk adjusts back the  FPR to reference
+      ;;the CWV return address.
       ;;
       (movl (int (argc-convention 0)) eax)
       (compile-call-table
@@ -5059,7 +5122,8 @@
       ;;
       ;;Store in EBX a reference to the consumer closure object.
       (movl (mem (fx* -2 wordsize) fpr) ebx)
-      ;;Store in EBX a reference to the consumer closure object.
+      ;;Store in the Continuation Pointer  Register (CPR) a reference to
+      ;;the consumer closure object.
       (movl ebx cpr)
       ;;Check that EBX actually contains  a reference to closure object;
       ;;else jump to the appropriate error handler.
@@ -5068,7 +5132,7 @@
       (jne (label SL_nonprocedure))
       ;;Store the  returned value on  the stack, right below  the return
       ;;address.
-      (movl eax (mem (fx- 0 wordsize) fpr))
+      (movl eax (mem (fx- wordsize) fpr))
       ;;We will call the consumer closure with one argument.
       (movl (int (argc-convention 1)) eax)
       ;;Fetch a binary  code address from the  closure object referenced
@@ -5195,7 +5259,7 @@
       ;;
       (label SL_nonprocedure)
       ;;Put on the stack the offending object.
-      (movl cpr (mem (fx- 0 wordsize) fpr))
+      (movl cpr (mem (fx- wordsize) fpr))
       ;;Retrieve the reference  of the error handler closure  and put it
       ;;into CPR.
       (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
@@ -5246,7 +5310,7 @@
       ;;Put on the stack a  reference to the closure object implementing
       ;;CALL-WITH-VALUES,        as       first        argument       to
       ;;$INCORRECT-ARGS-ERROR-HANDLER.
-      (movl cpr (mem (fx- 0 wordsize) fpr))
+      (movl cpr (mem (fx- wordsize) fpr))
       ;;Decode the  number of  arguments, so that  it is  a non-negative
       ;;fixnum.
       (negl eax)
