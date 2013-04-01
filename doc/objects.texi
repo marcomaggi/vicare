@@ -4595,7 +4595,7 @@ memory address of the assembly routine @code{ik_underflow_handler};
 |----------------------|                         .
           ...                                    .
 |----------------------|                         . stack
-|                      | <-- pcb->frame_redline  . segement
+|                      | <-- pcb->frame_redline  . segment
 |----------------------|                         .
           ...                                    .
 |----------------------|                         .
