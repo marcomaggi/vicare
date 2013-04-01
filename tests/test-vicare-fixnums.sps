@@ -31,7 +31,7 @@
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare fixnum functions and operations\n")
+(check-display "*** testing Vicare fixnum functions and operations")
 
 
 (parametrise ((check-test-name	'mod))
