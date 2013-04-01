@@ -23,6 +23,7 @@
 * sel::                         Simple event loop.
 * infix::                       Infix to prefix transformer.
 * debugging::                   Debugging facilities.
+* coroutines::                  Running coroutines.
 @end menu
 
 @c page
@@ -4671,5 +4672,31 @@ fxarithmetic-shift-right          -> fx>>
 
 The following bindings are exported by the library @library{vicare
 debugging compiler}.
+
+@c page
+@node coroutines
+@section Running coroutines
+
+
+The following bindings are exported by the library @library{vicare
+coroutines}.
+
+
+@defun coroutine @var{thunk}
+Create a new coroutine having @var{thunk} as function and enter it;
+return unspecified values.
+@end defun
+
+
+@defun yield
+Register the current continuation as coroutine, then run the next
+coroutine; return unspecified values.
+@end defun
+
+
+@defun finish-coroutines
+Loop running the next coroutine until there are no more.  Return
+unspecified values.
+@end defun
 
 @c end of file

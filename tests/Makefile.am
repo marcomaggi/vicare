@@ -150,6 +150,7 @@ TESTS			=	\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
 	test-vicare-cond-expand.sps			\
+	test-vicare-coroutines.sps			\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-errno.sps				\
@@ -449,6 +450,7 @@ EXTRA_DIST = \
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
 	test-vicare-cond-expand.sps			\
+	test-vicare-coroutines.sps			\
 	test-vicare-enumerations.sps			\
 	test-vicare-equality.sps			\
 	test-vicare-errno.sps				\
