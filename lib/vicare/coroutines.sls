@@ -35,7 +35,7 @@
 	  begin0))
 
 
-(module (empty-queue? queue-append! queue-pop!)
+(module (empty-queue? enqueue! dequeue!)
 
   ;;The value of this parameter is #f  or a pair representing a queue of
   ;;escape functions.
@@ -54,7 +54,7 @@
   (define (empty-queue?)
     (not (queue)))
 
-  (define (queue-append! escape-func)
+  (define (enqueue! escape-func)
     (if (queue)
 	(let ((old-last-pair ($cdr (queue)))
 	      (new-last-pair (list escape-func)))
@@ -63,7 +63,7 @@
       (let ((Q (list escape-func)))
 	(queue (cons Q Q)))))
 
-  (define (queue-pop!)
+  (define (dequeue!)
     (let ((Q (queue)))
       (if Q
 	  (let ((head ($car Q)))
@@ -73,7 +73,7 @@
 		(if (null? head)
 		    (queue #f)
 		  ($set-car! Q head)))))
-	(error 'queue-pop! "no more coroutines"))))
+	(error 'dequeue! "no more coroutines"))))
 
   #| end of module |# )
 
@@ -84,9 +84,9 @@
   ;;
   (call/cc
       (lambda (reenter)
-	(queue-append! reenter)
+	(enqueue! reenter)
 	(thunk)
-	((queue-pop!)))))
+	((dequeue!)))))
 
 (define (yield)
   ;;Register the  current continuation as  coroutine, then run  the next
