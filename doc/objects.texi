@@ -4604,14 +4604,16 @@ memory address of the assembly routine @code{ik_underflow_handler};
 |                      |
       low memory
 @end example
-@caption{Empty Scheme stack segment.}
+@caption{Empty Scheme stack segment as it appears right after allocation
+and initialisation.}
 @end float
 
-Whenever Scheme functions are executed, performing nested calls: stack
-frames are created, starting from the highest machine words; let's say
-there are 2 of them, @ref{fig:kont_two_frames, objects continuations
+Whenever Scheme functions are called, and they perform nested calls:
+stack frames are created, starting from the highest machine words; let's
+say there are 2 of them, @ref{fig:kont_two_frames, objects continuations
 scheme}.  The @cpu{}'s Frame Pointer Register (@acronym{FPR}) references
-the return address in the topmost stack frame.
+the return address in the topmost stack frame (while executing Scheme
+code @acronym{FPR} gets out of sync with @code{pcb->frame_pointer}).
 
 @float Figure,fig:kont_two_frames
 @example
@@ -4634,6 +4636,10 @@ the return address in the topmost stack frame.
 |------------------------|        .              .
 | return address frame 0 | <- FPR .              .
 |------------------------|        --             .
+|     call argument      |                       .
+|------------------------|                       .
+|     call argument      |                       .
+|------------------------|                       .
            ...                                   .
 |------------------------|                       .
 |                        | <-- pcb->stack_base   .
@@ -4644,12 +4650,12 @@ the return address in the topmost stack frame.
 @caption{2 frames on the Scheme stack.}
 @end float
 
-If a continuation object is created now: it freezes all the stack frames
-in the stack segment, so that they will never be mutated again; in
-practice the portion of the Scheme stack referenced by the continuation
-is no more part of the Scheme stack itself, rather the stack segment is
-resized to reference only the portion of memory still unused,
-@ref{fig:kont_freezed_frames, objects continuations scheme}.
+If a continuation object is created now: it ``freezes'' (or ``seals'')
+all the stack frames in the stack segment, so that they will never be
+mutated again; in practice the portion of the Scheme stack referenced by
+the continuation is no more part of the Scheme stack itself, rather the
+stack segment is resized to reference only the portion of memory still
+unused, @ref{fig:kont_freezed_frames, objects continuations scheme}.
 
 @float Figure,fig:kont_freezed_frames
 @example
@@ -4671,8 +4677,12 @@ resized to reference only the portion of memory still unused,
 | return address frame 0 | <- pcb->frame_base    .
 |------------------------|                       --
 |  ik_underflow_handler  | <- FPR                .
+|------------------------|                       .
+|     call argument      |                       .
 |------------------------|                       . stack
-           ...                                   . segment
+|     call argument      |                       . segment
+|------------------------|                       .
+           ...                                   .
 |------------------------|                       .
 |                        | <-- pcb->stack_base   .
 |------------------------|                       --
@@ -4683,10 +4693,11 @@ resized to reference only the portion of memory still unused,
 @end float
 
 The field @code{top} of the continuation object is an untagged memory
-pointer referencing the return address in the topmost freezed frame;
-such machine word is the address of the code execution return point of
-this continuation, in other words: the address of the next assembly
-instruction to execute when returning to this continuation.
+pointer referencing the return address in the topmost freezed frame
+(@code{frame 0} in the pictures); such machine word is the address of
+the code execution return point of this continuation, in other words:
+the address of the next assembly instruction to execute when returning
+to this continuation.
 
 The field @code{size} of the continuation object is the number of bytes
 in all the freezed stack frames this continuation references: the sum
@@ -4694,9 +4705,9 @@ between the all frame sizes.
 
 Notice that the single continuation object referencing all the freezed
 frames is equivalent to two continuation objects each referencing a
-single freezed frame, provided that the continuation object of frame
-@math{0} has the continuation object of frame @math{1} as @code{next},
-@ref{fig:kont_split_frames, objects continuations scheme}.
+single freezed frame, provided that the continuation object of
+@code{frame 0} has the continuation object of @code{frame 1} as
+@code{next}, @ref{fig:kont_split_frames, objects continuations scheme}.
 
 @float Figure,fig:kont_split_frames
 @example
