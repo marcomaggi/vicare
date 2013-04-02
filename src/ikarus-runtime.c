@@ -622,6 +622,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
      return the offset. */
   if (new_alloc_ptr < end_ptr) {
     pcb->allocation_pointer = new_alloc_ptr;
+/* write(2, "_", 1); */
     return alloc_ptr;
   } else {
     /* No room in the current heap block: enlarge the heap by allocating
@@ -668,6 +669,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong requested_size)
       pcb->heap_size		= new_size;
       pcb->allocation_redline	= heap_ptr + new_size - 2 * IK_CHUNK_SIZE;
       pcb->allocation_pointer	= heap_ptr + requested_size;
+/* write(2, " H ", 3); */
       return heap_ptr;
     }
   }

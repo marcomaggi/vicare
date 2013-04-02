@@ -474,6 +474,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "entry");
 #endif
+/* write(2, " C ", 3); */
   { /* accounting */
     long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
     add_to_collect_count(pcb, bytes);

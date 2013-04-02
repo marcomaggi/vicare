@@ -66,6 +66,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
   }
   /* Loop until there are continuations to be reinstated. */
   for (s_kont = pcb->next_k; s_kont; s_kont = pcb->next_k) {
+    /* write(2, "R", 1); */
 #ifndef NDEBUG
     {
       /* Assert that the situation on the Scheme stack is:
@@ -206,17 +207,28 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 \tframe return address=0x%016lx",
 			 __func__, s_kont, IK_REF(kont->top, 0));
       }
+/*       if (IK_UNDERFLOW_HANDLER == IK_REF(kont->top, 0)) { */
+/* 	ik_debug_message("%s: next continuation with underflow handler as return address 0x%016lx,\n\ */
+/* \tframe return address=0x%016lx", */
+/* 			 __func__, s_kont, IK_REF(kont->top, 0)); */
+/*       } */
       if (0 == rest_kont->size) {
 	ik_debug_message("%s: rest continuation with zero size 0x%016lx,\n\
 \ttop frame return address=0x%016lx",
 			 __func__, s_rest_kont, IK_REF(rest_kont->top, 0));
       }
+/*       if (IK_UNDERFLOW_HANDLER == IK_REF(rest_kont->size, 0)) { */
+/* 	ik_debug_message("%s: rest continuation with underflow handler as return address 0x%016lx,\n\ */
+/* \ttop frame return address=0x%016lx", */
+/* 			 __func__, s_rest_kont, IK_REF(rest_kont->top, 0)); */
+/*       } */
       pcb->next_k = kont->next;
     } else {
       /* The process continuation we have to reinstate references only 1
 	 freezed  frame.   Just  pop   S_KONT  from  the  "next  process
 	 continuations" list. */
       assert(framesize == kont->size);
+/* write(2, "2", 1); */
       pcb->next_k = kont->next;
     }
     /* When  we arrive  here the  situation on  the Scheme  stack is  as
@@ -323,6 +335,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 			 __func__, IK_UNFIX(-s_retval_count));
       }
       assert(pcb->frame_pointer == pcb->frame_base);
+/* write(2, "E", 1); */
       s_retval_count = ik_asm_reenter(pcb, new_fbase, s_retval_count);
       assert(pcb->frame_pointer == pcb->frame_base);
     }
