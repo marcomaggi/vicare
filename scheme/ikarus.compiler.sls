@@ -393,6 +393,9 @@
 
 ;;;; helper functions
 
+(define (dummy)
+  (display "here\n"))
+
 (define (remq1 x ls)
   ;;Scan the  list LS and  remove only the  first instance of  object X,
   ;;using EQ?  as  comparison function; return the  resulting list which
@@ -4483,10 +4486,10 @@
     ;;  continuation.
     ;;
     ;;Before  resuming  execution: we  want  to  set the  Frame  Pointer
-    ;;Register to the address of the  topmost machine word on the Scheme
-    ;;stack; such memory location contains  the address of the underflow
-    ;;handler: the assembly label  "ik_underflow_handler" defined in the
-    ;;file "ikarus-enter.S".
+    ;;Register to the address of the  highest machine word on the Scheme
+    ;;segment,  right  below  the  "frame_base";  such  memory  location
+    ;;contains the address of the  underflow handler: the assembly label
+    ;;"ik_underflow_handler" defined in the file "ikarus-enter.S".
     ;;
     ;;Calling the  escape closure throws  away the stack  frames between
     ;;"pcb->frame_base"  and the  FPR.  Before  rewinding the  stack the
@@ -4552,8 +4555,8 @@
       (jg (label L_cont_zero_args)) ;jump if -1 > EAX: less than one arg
       (jl (label L_cont_mult_args)) ;jump if -1 < EAX: more than one arg
 
-      ;;We give one argument to  the continuation.  The situation on the
-      ;;stack when arriving here is:
+      ;;We give one argument to the continuation.  The typical situation
+      ;;on the stack when arriving here is:
       ;;
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base = EBX
@@ -4569,9 +4572,21 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;and "pcb->next_k" references the  continuation object we must go
-      ;;back to.  The  value "old return address" is  the return address
-      ;;to the caller of the escape function.
+      ;;where "old return  address" is the return address  to the caller
+      ;;of the  escape function and EAX  contains the fixnum -1;  but we
+      ;;can already be  at the base of the stack  if the escape function
+      ;;was called in tail position while reinstating previously freezed
+      ;;frames:
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base = EBX
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- FPR
+      ;;   |----------------------|
+      ;;   |     return value     | <-- FPR - wordisze
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
       ;;
       (label L_cont_one_arg)
       ;;Load in EAX the the return value.
@@ -4599,8 +4614,8 @@
       ;;
       (ret)
 
-      ;;We give  zero arguments to  the continuation.  The  situation on
-      ;;the stack when arriving here is:
+      ;;We  give  zero  arguments  to  the  continuation.   The  typical
+      ;;situation on the stack when arriving here is:
       ;;
       ;;         high memory
       ;;   |                      | <-- pcb->frame_base = EBX
@@ -4614,9 +4629,20 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;EAX  contains   the  fixnum  0   as  number  of   arguments  and
-      ;;"pcb->next_k" references the continuation object we must go back
-      ;;to.
+      ;;where "old return  address" is the return address  to the caller
+      ;;of the escape  function and EAX contains the fixnum  0 as number
+      ;;of arguments; but we can already be  at the base of the stack if
+      ;;the  escape   function  was   called  in  tail   position  while
+      ;;reinstating previously freezed frames:
+      ;;
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base = EBX
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- FPR
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
       ;;
       (label L_cont_zero_args)
       ;;Decrement EBX by a wordsize, so  that it contains the address of
@@ -4651,7 +4677,7 @@
       ;;
       (jmp (mem disp-multivalue-rp ebx))
 
-      ;;We  give  more  than  one argument  to  the  continuation.   The
+      ;;We give more than one argument to the continuation.  The typical
       ;;situation on the stack when arriving here is:
       ;;
       ;;         high memory
@@ -4672,7 +4698,26 @@
       ;;   |                      |
       ;;          low memory
       ;;
-      ;;and EAX contains the encoded number of arguments.
+      ;;where "old return  address" is the return address  to the caller
+      ;;of the  escape function and  EAX contains the encoded  number of
+      ;;arguments; but we can already be at the base of the stack if the
+      ;;escape function  was called  in tail position  while reinstating
+      ;;previously freezed frames:
+      ;;
+      ;;
+      ;;         high memory
+      ;;   |                      | <-- pcb->frame_base = EBX
+      ;;   |----------------------|
+      ;;   | ik_underflow_handler | <-- FPR
+      ;;   |----------------------|
+      ;;   |    return value 0    |
+      ;;   |----------------------|
+      ;;   |    return value 1    |
+      ;;   |----------------------|
+      ;;   |    return value 2    |
+      ;;   |----------------------|
+      ;;   |                      |
+      ;;          low memory
       ;;
       (label L_cont_mult_args)
       ;;Decrement EBX by a wordsize, so  that it contains the address of
