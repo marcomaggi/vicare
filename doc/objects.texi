@@ -4753,17 +4753,135 @@ continuation object.}
 @subsection System continuation objects
 
 
-Whenever C language prepares to enter Scheme code execution...
+@value{PRJNAME} is written in both the C language and the Scheme
+language; the runtime system performing heap and stack memory allocation
+and garbage collection is written in the C language.  @value{PRJNAME}
+starts with C code and enters Scheme code when running a Scheme program:
 
-The field @code{top} of a system continuation is an untagged memory
-pointer referencing the C language stack last saved by Scheme code; it
-is the content of the field @code{pcb->system_stack} at the time this
+@example
+C code --> Scheme code
+@end example
+
+@noindent
+when the last Scheme function returns: @value{PRJNAME} knowns that it
+has to return to C code because the Scheme stack is initialised with a
+return address to a special routine (the underflow handler) that does
+it.
+
+It is clear that, while running a Scheme program, every now and then
+@value{PRJNAME} must switch between portions of code written in C and
+portions of code written in Scheme; such portions make different use of
+the @cpu{}.
+
+Whenever @value{PRJNAME} leaves C code execution to enter Scheme code
+execution: it saves the current state of the C stack; in practice it
+saves the pointer to the top of the stack in the @pcb{} structure.
+Whenever @value{PRJNAME} leaves Scheme code execution to return to C
+code execution: it saves the current state of the Scheme stack in the
+@pcb{} and restores the state of the C stack from the @pcb{}.
+
+While running Scheme code we can call a C function through the
+primitive, low--level operation @func{foreign-call} (when using the
+@ffi{} callout mechanism we are still using @func{foreign-call}):
+
+@example
+C code --> Scheme code (--> foreign-call) --> C code
+@end example
+
+@noindent
+when leaving Scheme code: the status of the Scheme stack is saved in the
+@pcb{}; the C stack creates no problems: we just retrieve the top of the
+C stack from the @pcb{} and use the stack region below it,
+@ref{fig:kont_cstack_reenter, objects continuations system}.
+
+@float Figure,fig:kont_cstack_reenter
+@example
+
+    --------- stack growing direction ------->
+
+ C stack   C stack  C stack   C stack    C stack
+ frame     frame    frame     frame      frame
+|---------|--------|--------|----------|----------|
+                            ^                     ^
+                       saved top            current top
+
+|...........................|.....................|
+   C stack before entering     C stack after
+   Scheme code                 reentering C code
+@end example
+@caption{The C stack portions used before entering Scheme code and after
+reentering C code with @func{foreign-call}.}
+@end float
+
+Now let's say that, after entering nested C code, we enter nested Scheme
+code:
+
+@example
+C code 1 --> Scheme code 1 --> C code 2 --> Scheme code 2
+@end example
+
+@noindent
+at the transition from @code{C code 2} to @code{Scheme code 2} we must
+save the state of the C stack, but the dedicated fields in the @pcb{}
+are already busy with the status of @code{C code 1}.  @value{PRJNAME}
+solves this problem with continuation objects; at the transition from
+@code{C code 2} to @code{Scheme code 2}:
+
+@enumerate
+@item
+A Scheme continuation object is created to hold the status of
+@code{Scheme code 1} previously saved in the @pcb{}.
+
+@item
+A system continuation object is created to hold the status of @code{C
+code 1} previously saved in the @pcb{}.
+
+@item
+The status of @code{C code 2} is saved in the @pcb{}.
+
+@item
+Execution of @code{Scheme code 2} is entered in a clean Scheme stack
+segment.
+@end enumerate
+
+@noindent
+whenever @code{Scheme code 2} goes back to @code{C code 2}:
+
+@enumerate
+@item
+The Scheme stack segment used by @code{Scheme code 2} is abandoned.
+
+@item
+The status of @code{C code 2} is restored from the system continuation
+object.
+
+@item
+The execution enters @code{C code 2}.
+
+@item
+The status of @code{Scheme code 1} is restored from the Scheme
+continuation object.
+
+@item
+The execution enters @code{Scheme code 1}.
+@end enumerate
+
+In a system continuation object:
+
+@itemize
+@item
+The field @code{top} is an untagged memory pointer referencing the C
+language stack last saved upon exiting C code and entering Scheme code;
+it is the content of the field @code{pcb->system_stack} at the time this
 system continuation object was created.
 
-The field @code{size} of a system continuatio object is unused.
+@item
+The field @code{size} of a system continuation object is unused.
+@end itemize
 
-Upon creation, system continuation objects are prepended to the linked
-list referenced by the field @code{next_k} of the @pcb{} structure.
+Upon creation, both Scheme and system continuation objects are prepended
+to the linked list referenced by the field @code{next_k} of the @pcb{}
+structure.
 
 @c page
 @node objects misc
