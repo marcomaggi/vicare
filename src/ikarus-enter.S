@@ -398,7 +398,7 @@ ik_underflow_handler:
   #         high memory
   #   |                      |
   #   |----------------------|
-  #   |                      | <-- %esp = pcb->frame_base = pcb->frame_pointer
+  #   |                      | <-- %esp = pcb->frame_base
   #   |----------------------|
   #   | ik_underflow_handler | <-- %esp - wordsize
   #   |----------------------|
@@ -438,8 +438,9 @@ L_do_underflow:
   movl %esp, 8(%esi)    # save top of scheme stack in "pcb->frame_pointer"
   movl %ebp, 0(%esi)    # save allocation pointer in "pcb->allocation_pointer"
 
-  # Restore the C stack from "pcb->system_stack" and increment it to reference
-  # the return address to the C caller.
+  # Restore from "pcb->system_stack" the address of the topmost used word
+  # on the C stack and increment it to reference the return address to the
+  # C caller.
   movl 24(%esi), %esp
   addl $16, %esp
 
@@ -467,7 +468,7 @@ L_multivalue_underflow:
   #         high memory
   #   |                       |
   #   |-----------------------|
-  #   |                       | <-- pcb->frame_base = pcb->frame_pointer
+  #   |                       | <-- pcb->frame_base
   #   |-----------------------|
   #   | ik_underflow_handler  | <-- %esp
   #   |-----------------------|
@@ -480,10 +481,9 @@ L_multivalue_underflow:
   #   |                       |
   #          low memory
   #
-  # the word referenced by %esp+wordsize is unused here: it may
-  # be one-off the end of the stack segment or it may be part of
-  # an uplevel Scheme continuation.  We want to set the Scheme stack
-  # as follows:
+  # the word referenced by %esp+wordsize is unused here: it may be one-off
+  # the end of the stack segment or it may be part of an uplevel Scheme
+  # continuation.  We want to set the Scheme stack as follows:
   #
   #         high memory
   #   |                       |
