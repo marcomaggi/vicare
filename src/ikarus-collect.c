@@ -1151,9 +1151,12 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
 
 static void
 add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
-/* Move the live list object X,  and all its component objects, to a new
-   location and store in LOC a new machine word which must replace every
-   occurrence of X.
+/* Move the spine of the proper of improper list object X (whose head is
+   a pair) to a new location and store in LOC a new tagged pointer which
+   must replace every occurrence of X.
+
+   This function  processes only the  spine of  the list: it  does *not*
+   apply "add_object()" to the cars of the pairs.
 
    SEGMENT_BITS are  the bits describing  the segment in which  the pair
    referenced by X is allocated. */
@@ -1171,43 +1174,64 @@ add_list (gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc)
     *loc = Y;
     IK_CAR(X) = IK_FORWARD_PTR;
     IK_CDR(X) = Y;
+    /* X is gone.  From now on we care about Y. */
     IK_CAR(Y) = first_word;
     if (pair_tag == second_word_tag) {
-      /* X is a list */
-      if (IK_FORWARD_PTR == IK_REF(second_word, -pair_tag)) { /* the cdr has been already collected */
-        IK_CDR(Y) = IK_REF(second_word, wordsize - pair_tag);
+      /* The cdr of Y is a pair, too. */
+      if (IK_FORWARD_PTR == IK_CAR(second_word)) {
+	/* The cdr of Y has been already collected. */
+        IK_CDR(Y) = IK_CDR(second_word);
         return;
       } else {
         segment_bits = gc->segment_vector[IK_PAGE_INDEX(second_word)];
         int gen = segment_bits & gen_mask;
+	/* If the cdr  of Y does not belong to  a generation examined in
+	   this GC run: leave it alone. */
         if (gen > collect_gen) {
-          IK_REF(Y, off_cdr) = second_word;
+          IK_CDR(Y) = second_word;
           return;
         } else {
+	  /* Prepare  for  the next  for(;;)  loop  iteration.  We  will
+	     process the cdr  of Y (a pair) and update  the reference to
+	     it in  the cdr slot of  Y.  Notice that the  next iteration
+	     will use the value of SEGMENT_BITS we have set above. */
           X   = second_word;
           loc = (ikptr*)(long)(Y + off_cdr);
-          /* don't return */
         }
       }
     }
     else if ((second_word_tag == immediate_tag) ||
+	     /* If the 3 least significant bits of SECOND_WORD are zero:
+		SECOND_WORD  is  a  fixnum  on both  32-bit  and  64-bit
+		platforms. */
 	     (second_word_tag == 0) ||
+	     /* If the 3 least significant bits of SECOND_WORD are:
+	      *
+	      *    #b100 == (1 << fx_shift)
+	      *
+	      * then SECOND_WORD is a fixnum on a 32-bit platform.  This
+	      * case never happens on a  64-bit platform because the tag
+	      * values have been chosen appropriately.
+	      */
 	     (second_word_tag == (1<<fx_shift))) {
-      /* X is a pair not starting a list */
+      /* Y is a pair not starting a  list: its cdr is an immediate value
+	 (boolean, character, fixnum, transcoder, ...). */
       IK_CDR(Y) = second_word;
       return;
     }
     else if (IK_REF(second_word, -second_word_tag) == IK_FORWARD_PTR) {
-      /* the cdr X of X has already been collected */
+      /* The cdr of Y has already been collected.  Store in the cdr slot
+	 the reference to the moved object. */
       IK_CDR(Y) = IK_REF(second_word, wordsize - second_word_tag);
       return;
     }
     else {
-      /* X is a pair not starting a list */
+      /* X is  a pair not  starting a list:  its cdr is  a non-immediate
+	 value (vector, record, port, ...). */
       IK_CDR(Y) = add_object(gc, second_word, "add_list");
       return;
     }
-  }
+  } /* end of for(;;) */
 }
 
 
@@ -1446,7 +1470,6 @@ add_object_proc (gc_t* gc, ikptr X)
       return new_entry - off_code_data;
     }
     else if (continuation_tag == first_word) {
-      /* ik_debug_message("gc compacted continuation %p", (void*)X); */
       ikptr	top  = IK_REF(X, off_continuation_top);
       ikptr	size = IK_REF(X, off_continuation_size);
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
@@ -1454,6 +1477,7 @@ add_object_proc (gc_t* gc, ikptr X)
         ik_debug_message("large cont size=0x%016lx", size);
 #endif
       ikptr	next = IK_REF(X, off_continuation_next);
+      /* We move the Scheme continuation object in the "ptrs" area. */
       ikptr	Y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
@@ -1465,22 +1489,20 @@ add_object_proc (gc_t* gc, ikptr X)
       IK_REF(Y, off_continuation_tag)  = continuation_tag;
       IK_REF(Y, off_continuation_top)  = new_top;
       IK_REF(Y, off_continuation_size) = (ikptr) size;
-      /* NOTE  Here  the  "next"  continuation object  is  not  filtered
-       * through "add_object()".   Right now  I do not  know why,  but I
-       * have verified that if we do:
-       *
-       *   IK_REF(Y, off_continuation_next) = \
-       *     (next)? add_object(gc, next, "next_k") : next;
-       *
-       * a segfault happens.  (Marco Maggi; Wed Mar 27, 2013)
-       */
+      /* The  "next"   continuation  object  is  not   filtered  through
+	 "add_object()". */
       IK_REF(Y, off_continuation_next) = next;
+      if (0) {
+	ik_debug_message("gc compacted continuation 0x%016lx to 0x%016lx, next 0x%016lx",
+			 X, Y, gc->pcb->next_k);
+      }
 #if ACCOUNTING
       continuation_count++;
 #endif
       return Y;
     }
     else if (system_continuation_tag == first_word) {
+      /* We move the system continuation object in the "data" area. */
       ikptr	Y    = gc_alloc_new_data(system_continuation_size, gc) | vector_tag;
       ikptr	top  = IK_REF(X, off_system_continuation_top);
       ikptr	next = IK_REF(X, off_system_continuation_next);
