@@ -430,11 +430,13 @@ static void gc_add_tconcs(gc_t*);
  * 6. ik_collect should not move the stack.
  */
 
+/* Commented out because unused.  (Marco Maggi; Wed Apr  3, 2013)
 ikpcb*
 ik_collect_vararg(int req, ikpcb* pcb)
 {
   return ik_collect(req, pcb);
 }
+*/
 
 static void scan_dirty_pages(gc_t*);
 
@@ -474,7 +476,6 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "entry");
 #endif
-/* write(2, " C ", 3); */
   { /* accounting */
     long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
     add_to_collect_count(pcb, bytes);
@@ -505,6 +506,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
   /* scan GC roots */
   scan_dirty_pages(&gc);
   collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
+  /* ik_print_stack_frame_code_objects(stderr, 3, pcb); */
   collect_locatives(&gc, pcb->callbacks);
   { /* Scan the collection of words not to be collected because they are
        referenced somewhere outside the Scheme heap and stack. */
@@ -921,54 +923,120 @@ collect_locatives(gc_t* gc, ik_callback_locative* loc) {
 
 static void
 collect_stack (gc_t* gc, ikptr top, ikptr end)
-/* Remember how the Scheme stack looks:
+/* This function is used to scan for live objects both the current stack
+ * segment and  the array of  freezed stack frames referenced  by Scheme
+ * continuation objects.
  *
- *    stack_base     frame_pointer=top       end  frame_base
- *         v                   v               v   v
- *  lo mem |-------------------+-------------+---|---| hi mem
- *                       Scheme stack        |...| ik_underflow_handler
+ * Let's remember  how the current Scheme  stack looks when it  has some
+ * frames in it:
  *
- *         |.....................................|
- *                        stack_size
+ *    high memory addresses
+ *  |                      |
+ *  |----------------------|
+ *  |                      | <- pcb->frame_base
+ *  |----------------------|
+ *  | ik_underflow_handler | <- end
+ *  |----------------------|
+ *    ... other frames ...
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . upper frame
+ *  |----------------------|         .
+ *  |    return address    |         .
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . topmost frame
+ *  |----------------------|         .
+ *  |    return address    | <- top  .
+ *  |----------------------|         --
+ *     ... free words ...
+ *  |----------------------|
+ *  |                      | <- pcb->stack_base
+ *  |----------------------|
+ *  |                      |
+ *    low memory addresses
  *
- * The  argument  END is  "pcb->frame_base  -  wordsize", a  raw  memory
- * pointer referencing  the highest  machine word  on the  stack segment
- * (the one containing "ik_underflow_handler").
+ * now let's  remember how  the current  Scheme stack  looks when  it is
+ * empty (no frames):
  *
- * The argument TOP is "pcb->frame_pointer", a raw memory pointer.  This
- * argument is used as iterator to climb the stack, frame by frame, from
- * low memory addresses to high memory addresses until END is reached.
+ *    high memory addresses
+ *  |                      |
+ *  |----------------------|
+ *  |                      | <- pcb->frame_base
+ *  |----------------------|
+ *  | ik_underflow_handler | <- top = end
+ *  |----------------------|
+ *     ... free words ...
+ *  |----------------------|
+ *  |                      | <- pcb->stack_base
+ *  |----------------------|
+ *  |                      |
+ *    low memory addresses
+ *
+ * now let's  remember how the  freezed frames in a  continuation object
+ * look:
+ *
+ *    high memory addresses
+ *  |                      |
+ *  |----------------------|
+ *  |                      | <- end
+ *  |----------------------|
+ *    ... other frames ...
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . upper freezed frame
+ *  |----------------------|         .
+ *  |    return address    |         .
+ *  |----------------------|         --
+ *  |     local value      |         .
+ *  |----------------------|         .
+ *  |     local value      |         . topmost freezed frame
+ *  |----------------------|         .
+ *  |    return address    | <- top  .
+ *  |----------------------|         --
+ *  |                      |
+ *    low memory addresses
+ *
+ * a continuation  object is  never empty:  it always  has at  least one
+ * freezed frame.
+ *
+ * The argument END  is a raw memory pointer referencing  a machine word
+ * past the lowest frame on the region to scan.
+ *
+ * When the region to scan is the current Scheme stack: the argument TOP
+ * is "pcb->frame_pointer",  a raw memory  pointer.  When the  region to
+ * scan  the array  of  freezed  frames in  a  continuation object:  the
+ * argument TOP is the value of the field TOP in the continuation object
+ * data structure.
+ *
+ * TOP is used as iterator to climb  the stack, frame by frame, from low
+ * memory addresses to high memory addresses until END is reached.
  *
  *            frame   frame   frame   frame   frame
- *   lo mem |-+-----|-+-----|-+-----|-+-----|-+-----|-|-| hi mem
- *           ^       ^       ^       ^       ^       ^ ^
- *          top     top1    top2    top3     |       | frame_base
+ *   lo mem |-+-----|-+-----|-+-----|-+-----|-+-----|-| hi mem
+ *           ^       ^       ^       ^       ^       ^
+ *          top     top1    top2    top3     |       |
  *                                         top4     end
- *
- *  Upon entering  this function TOP  must reference the lowest  word in
- *  the topmost stack frame.
  */
 {
-  if (DEBUG_STACK) {
-    ik_debug_message_start("%s: enter (size=%ld) from 0x%016lx .. 0x%016lx",
+  if (0 || DEBUG_STACK) {
+    ik_debug_message_start("%s: enter (size=%ld) from 0x%016lx to 0x%016lx",
 			   __func__, (long)end - (long)top, (long) top, (long) end);
   }
   while (top < end) {
-    /* A Scheme stack with frames looks like this:
+    /* A Scheme stack frame looks like this:
      *
      *          high memory
-     *   |                      | <-- pcb->frame_base
-     *   |----------------------|
-     *   | ik_underflow_handler |
-     *   |----------------------|             --
-     *             ...                        .
-     *   |----------------------|             . framesize 1
-     *   |   return address 1   | <-- top 1   .
-     *   |----------------------|             --
-     *             ...                        .
-     *   |----------------------|             . framesize 0
-     *   |    single_value_rp   | <-- top     .
-     *   |----------------------|             --
+     *   |----------------------|         --
+     *   |      local value     |         .
+     *   |----------------------|         .
+     *   |      local value     |         . framesize = 3 machine words
+     *   |----------------------|         .
+     *   |    single_value_rp   | <- top  .
+     *   |----------------------|         --
      *   |                      |
      *         low memory
      *
@@ -978,6 +1046,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *
      *     ;; low memory
      *
+     *     subl framesize, FPR		;adjust FPR
      *     jmp L0
      *     livemask-bytes		;array of bytes
      *     framesize			;data word, a "long"
@@ -986,6 +1055,7 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *     pad-bytes
      *   L0:
      *     call function-address
+     *     addl framesize, FPR		;restore FPR
      *   single_value_rp:		;single value return point
      *     ... instructions...
      *   multi_value_rp:		;multi value return point
@@ -993,10 +1063,13 @@ collect_stack (gc_t* gc, ikptr top, ikptr end)
      *
      *     ;; high memory
      *
-     * The  "long" word  "framesize" is  an offset  to add  to "top"  to
-     * obtain  the  top of  the  uplevel  frame;  it  is also  a  fixnum
-     * representing the  number of Scheme  objects on this  stack frame.
-     * Exception: if  the data word  "framesize" is zero, then  the true
+     * The "long"  word FRAMESIZE is an  offset to add to  TOP to obtain
+     * the  top  of  the  uplevel   frame;  interpreted  as  fixnum:  it
+     * represents  the number  of  machine words  on  this stack  frame;
+     * interpreted as an  integer: it represents the number  of bytes on
+     * this stack frame.
+     *
+     * Exception:  if the  data word  FRAMESIZE is  zero, then  the true
      * frame size  could not be computed  at compile time, and  so it is
      * stored on the stack itself:
      *
@@ -1481,6 +1554,7 @@ add_object_proc (gc_t* gc, ikptr X)
       ikptr	Y    = gc_alloc_new_ptr(continuation_size, gc) | vector_tag;
       IK_REF(X,          - vector_tag) = IK_FORWARD_PTR;
       IK_REF(X, wordsize - vector_tag) = Y;
+      /* We move the freezed stack frames in the "data" area. */
       ikptr	new_top = gc_alloc_new_data(IK_ALIGN(size), gc);
       memcpy((char*)(long)new_top,
              (char*)(long)top,
