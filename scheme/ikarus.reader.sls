@@ -46,10 +46,6 @@
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sun Mar 10, 2013)
-    (only (ikarus strings)
-	  string-base64->bytevector)
     (vicare syntactic-extensions)
     (prefix (vicare words) words.)
     (prefix (vicare unsafe-operations)

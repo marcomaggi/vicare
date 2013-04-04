@@ -98,22 +98,8 @@
 		  flonum-parts		flonum-bytes
 		  bytevector->flonum	flonum->bytevector)
     (ikarus system $pairs)
-    (except (ikarus system $fx)
-	    $fxeven?
-	    $fxodd?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Wed Nov 21, 2012)
-    (only (ikarus fixnums)
-	  $fxeven?
-	  $fxodd?)
-    (except (ikarus system $bignums)
-	    $bignum-even?
-	    $bignum-odd?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Wed Nov 21, 2012)
-    (only (ikarus bignums)
-	  $bignum-even?
-	  $bignum-odd?)
+    (ikarus system $fx)
+    (ikarus system $bignums)
     (ikarus system $ratnums)
     (ikarus system $bytevectors)
     (except (ikarus system $flonums)

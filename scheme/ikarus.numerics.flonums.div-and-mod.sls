@@ -30,14 +30,9 @@
 		  fldiv-and-mod		fldiv0-and-mod0)
     (ikarus system $fx)
     (except (ikarus system $flonums)
-	    $fltruncate
 	    $fldiv		$flmod
 	    $fldiv0		$flmod0
 	    $fldiv-and-mod	$fldiv0-and-mod0)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Nov 19, 2012)
-    (only (ikarus flonums)
-	  $fltruncate)
     (vicare arguments validation))
 
 
