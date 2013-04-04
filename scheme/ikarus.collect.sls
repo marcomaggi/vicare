@@ -57,41 +57,29 @@
 	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
 (define (do-post-gc ls n)
-  #;(emergency-write "do-post-gc enter")
   (let ((k0 (collect-key)))
     ;;Run the hook functions.
     (parameterize ((post-gc-hooks '()))
-      ;;FIXME  As a  temporary work  around for  issue #35:  comment out
-      ;;running the  post GC  hooks.  To  be restored  after the  bug is
-      ;;fixed.  (Marco Maggi; Nov 1, 2012)
-      #;(void)
+      ;;Run the post-gc hooks.
       (for-each (lambda (x) (x)) ls))
-    #;(emergency-write "do-post-gc check for redoing gc")
     (if (eq? k0 (collect-key))
         (let ((was-enough? (foreign-call "ik_collect_check" n)))
           ;;Handlers ran  without GC but  there was not enough  space in
           ;;the nursery for the pending allocation.
           (unless was-enough?
-	    #;(emergency-write "do-post-gc again after run without GC")
-	    (do-post-gc ls n))
-	  #;(emergency-write "do-post-gc leaving"))
-      (let ()
-	;;Handlers did cause a GC, so, do the handlers again.
-	#;(emergency-write "do-post-gc again after run with GC")
-	(do-post-gc ls n)))))
+	    (do-post-gc ls n)))
+      ;;Handlers did cause a GC, so, do the handlers again.
+      (do-post-gc ls n))))
 
 (define (do-overflow n)
   (foreign-call "ik_collect" n)
   (let ((ls (post-gc-hooks)))
     (unless (null? ls)
-      (do-post-gc ls n))))
+      (do-post-gc ls n)))
+  #t)
 
 (define (do-overflow-words n)
-  (let ((n ($fxsll n 2)))
-    (foreign-call "ik_collect" n)
-    (let ((ls (post-gc-hooks)))
-      (unless (null? ls)
-	(do-post-gc ls n)))))
+  (do-overflow ($fxsll n 2)))
 
 (define do-vararg-overflow do-overflow)
 
@@ -99,8 +87,6 @@
   (do-overflow 4096))
 
 (define (do-stack-overflow)
-  ;;FIXME This is unused.  (Marco Maggi; Nov  7, 2012)
-  ;;
   (foreign-call "ik_stack_overflow"))
 
 (define (dump-metatable)
