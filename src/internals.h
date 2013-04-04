@@ -583,6 +583,7 @@ ik_decl int	ik_abort		(const char * error_message, ...);
 ik_decl void	ik_error		(ikptr args);
 ik_decl void	ik_debug_message	(const char * error_message, ...);
 ik_decl void	ik_debug_message_start	(const char * error_message, ...);
+ik_decl void	ik_debug_message_no_newline (const char * error_message, ...);
 
 ik_decl ikptr	ik_unsafe_alloc		(ikpcb* pcb, ik_ulong size);
 ik_decl ikptr	ik_safe_alloc		(ikpcb* pcb, ik_ulong size);

@@ -687,6 +687,15 @@ ik_debug_message (const char * error_message, ...)
   va_end(ap);
 }
 void
+ik_debug_message_no_newline (const char * error_message, ...)
+{
+  va_list        ap;
+  va_start(ap, error_message);
+  fprintf(stderr, "*** Vicare debug: ");
+  vfprintf(stderr, error_message, ap);
+  va_end(ap);
+}
+void
 ik_debug_message_start (const char * error_message, ...)
 {
   va_list        ap;
