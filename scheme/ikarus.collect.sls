@@ -72,19 +72,36 @@
       (do-post-gc ls n))))
 
 (define (do-overflow n)
+  ;;This function is called whenever a Scheme function tries to allocate
+  ;;an object  on the heap and  the heap has  no enough room for  it.  A
+  ;;garbage collection is  run to reclaim some heap space  and we expect
+  ;;that, at return time, the heap has enough room to allocate N bytes.
+  ;;
   (foreign-call "ik_collect" n)
   (let ((ls (post-gc-hooks)))
     (unless (null? ls)
       (do-post-gc ls n)))
+  ;;NOTE  Do *not*  remove this.   This  code calling  this function  to
+  ;;reclaim heap space expects DO-OVERFLOW  to return a single value; if
+  ;;it returns 0,  2 or more values very bad  assembly-level errors will
+  ;;happen.  (Marco Maggi; Thu Apr 4, 2013)
   #t)
 
 (define (do-overflow-words n)
+  ;;Like DO-OVERFLOW but make room for N words (rather thatn N bytes).
+  ;;
   (do-overflow ($fxsll n 2)))
 
 (define do-vararg-overflow do-overflow)
 
 (define (collect)
-  (do-overflow 4096))
+  ;;Force a  garbage collection and make  room on the heap  for at least
+  ;;4096 bytes.  4096 is an  arbitrary value.  It is arbitrarily decided
+  ;;that this  function must  return a  single value  and such  value is
+  ;;void.
+  ;;
+  (do-overflow 4096)
+  (void))
 
 (define (do-stack-overflow)
   (foreign-call "ik_stack_overflow"))
