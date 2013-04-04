@@ -949,13 +949,9 @@
 	      ;;$SEAL-FRAME-AND-CALL to  implement the heart  of CALL/CC
 	      ;;(call with current continuation)  and CALL/CF (call with
 	      ;;current frame), file  "ikarus.control.sls".  Let's super
-	      ;;simplify  and  comment  the  code  assuming  we  are  in
-	      ;;CALL/CF; such function is used as:
-	      ;;
-	      ;;  (define (the-func escape-function)
-	      ;;    ---)
-	      ;;
-	      ;;  (call/cf the-func)
+	      ;;simplify and comment the code  starting with the call to
+	      ;;%PRIMITIVE-CALL/CF which  is the  heart of  both CALL/CC
+	      ;;and CALL/CF.
 	      ;;
 	      ;;Remember that:
 	      ;;
@@ -971,46 +967,51 @@
 	      ;;
 	      ;;* ARGC-REGISTER stands for Argument Count Register.
 	      ;;
-	      ;;When arriving here the situation  of the Scheme stack is
-	      ;;the  following;  let's assume  that  there  are 2  stack
-	      ;;frames: the topmost (frame 0) is the one of CALL/CF, the
-	      ;;one below it (frame 1) is that of the caller of CALL/CF.
+	      ;;When arriving here  the scenario of the  Scheme stack is
+	      ;;the one left by $SEAL-FRAME-AND-CALL:
 	      ;;
-	      ;;          high memory
+	      ;;         high memory
 	      ;;   |                      |
 	      ;;   |----------------------|
 	      ;;   | ik_underflow_handler |
 	      ;;   |----------------------|                           --
-	      ;;   |    local value 1     |                           .
+	      ;;     ... other frames ...                             .
 	      ;;   |----------------------|                           .
-	      ;;   |    local value 1     |                           .
-	      ;;   |----------------------|                           . freezed
-	      ;;   |   return address 1   |                           . stack frames
+	      ;;   |      local value     |                           . freezed
+	      ;;   |----------------------|                           . frames
+	      ;;   |      local value     |                           .
 	      ;;   |----------------------|                           .
-	      ;;   |       THE-FUNC       | FUNC                      .
-	      ;;   |----------------------|                           .
-	      ;;   |   return address 0   | <- FPR = pcb->frame_base  .
+	      ;;   |     return address   | <- FPR = pcb->frame_base  .
 	      ;;   |----------------------|                           --
+	      ;;   |         func         | -> closure object
+	      ;;   |----------------------|
+	      ;;             ...
+	      ;;   |----------------------|
+	      ;;   |      free word       | <- pcb->stack_base
+	      ;;   |----------------------|
 	      ;;   |                      |
-	      ;;         low memory
+	      ;;          low memory
 	      ;;
 	      ;;ARGC-REGISTER contains the  encoded number of arguments,
-	      ;;counting the single argument THE-FUNC.
+	      ;;counting the single argument FUNC to %PRIMITIVE-CALL/CF.
+	      ;;The reference to the just created continuation object is
+	      ;;in   some  CPU   register.   The   raw  memory   pointer
+	      ;;UNDERFLOW-HANDLER is in some CPU register.
 	      ;;
 	      ;;There are 3 operands in RANDS:
 	      ;;
-	      ;;**A representation  of the variable  location containing
-	      ;;  the underflow  handler: a raw memory  address equal to
-	      ;;  the assembly label "ik_underflow_handler".
+	      ;;**A representation  of the  CPU register  containing the
+	      ;;  underflow handler:  a raw memory address  equal to the
+	      ;;  assembly label "ik_underflow_handler".
 	      ;;
 	      ;;**A  representation  of  the stack  location  containing
-	      ;;  THE-FUNC.
+	      ;;  FUNC.
 	      ;;
-	      ;;**A representation of the variable location containing a
+	      ;;**A  representation of  the  CPU  register containing  a
 	      ;;  reference  to the continuation object  referencing the
-	      ;;  freezed frames  0 and 1.  Such  continuation object is
-	      ;;  also the "next process  continuation" in the PCB, that
-	      ;;  is: it is the value of the field "pcb->next_k".
+	      ;;  freezed frames.  Such  continuation object is also the
+	      ;;  "next process continuation" in the PCB, that is: it is
+	      ;;  the value of the field "pcb->next_k".
 	      ;;
 	      (let ((t0			(unique-var 't))
 		    (t1			(unique-var 't))
@@ -1020,42 +1021,45 @@
 		    (kont-object	($caddr rands)))
 		(%locals-cons* t0 t1 t2)
 		(multiple-forms-sequence
-		 ;;Copy the arguments in variable locations.
+		 ;;Copy the arguments in CPU registers.
 		 (V t0 underflow-handler)
 		 (V t1 kont-object)
 		 (V t2 func)
-		 ;;Push the underflow handler on the Scheme stack.
+		 ;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on
+		 ;;the Scheme stack.
 		 (%move-dst<-src (mkfvar 1) t0)
-		 ;;Push  the reference  to  continuation  object on  the
-		 ;;Scheme stack, as argument to THE-FUNC.
+		 ;;Move the the reference  to continuation object in its
+		 ;;reserved  slog on  the Scheme  stack, as  argument to
+		 ;;THE-FUNC.
 		 (%move-dst<-src (mkfvar 2) t1)
 		 ;;When we arrive here the situation on the Scheme stack
 		 ;;is:
 		 ;;
-		 ;;          high memory
+		 ;;         high memory
 		 ;;   |                      |
 		 ;;   |----------------------|
 		 ;;   | ik_underflow_handler |
 		 ;;   |----------------------|                           --
-		 ;;   |    local value 1     |                           .
+		 ;;     ... other frames ...                             .
 		 ;;   |----------------------|                           .
-		 ;;   |    local value 1     |                           .
-		 ;;   |----------------------|                           . freezed
-		 ;;   |   return address 1   |                           . stack frames
+		 ;;   |      local value     |                           . freezed
+		 ;;   |----------------------|                           . frames
+		 ;;   |      local value     |                           .
 		 ;;   |----------------------|                           .
-		 ;;   |       THE-FUNC       | FUNC                      .
-		 ;;   |----------------------|                           .
-		 ;;   |   return address 0   | <- FPR = pcb->frame_base  .
+		 ;;   |     return address   | <- FPR = pcb->frame_base  .
 		 ;;   |----------------------|                           --
 		 ;;   | ik_underflow_handler |
 		 ;;   |----------------------|
 		 ;;   |         kont         | -> continuation object
 		 ;;   |----------------------|
+		 ;;             ...
+		 ;;   |----------------------|
+		 ;;   |      free word       | <- pcb->stack_base
+		 ;;   |----------------------|
 		 ;;   |                      |
-		 ;;         low memory
+		 ;;          low memory
 		 ;;
-		 ;;Load the reference to  closure object THE-FUNC in the
-		 ;;CPR.
+		 ;;Load the reference to closure object FUNC in the CPR.
 		 (%move-dst<-src cpr t2)
 		 ;;Load   in  ARGC-REGISTER   the   encoded  number   of
 		 ;;arguments, counting the continuation object.
@@ -1066,47 +1070,46 @@
 		 ;;When we arrive here the situation on the Scheme stack
 		 ;;is:
 		 ;;
-		 ;;          high memory
+		 ;;         high memory
 		 ;;   |                      |
 		 ;;   |----------------------|
 		 ;;   | ik_underflow_handler |
 		 ;;   |----------------------|                     --
-		 ;;   |    local value 1     |                     .
+		 ;;     ... other frames ...                       .
 		 ;;   |----------------------|                     .
-		 ;;   |    local value 1     |                     .
-		 ;;   |----------------------|                     . freezed
-		 ;;   |   return address 1   |                     . stack frames
+		 ;;   |      local value     |                     . freezed
+		 ;;   |----------------------|                     . frames
+		 ;;   |      local value     |                     .
 		 ;;   |----------------------|                     .
-		 ;;   |       THE-FUNC       | FUNC                .
-		 ;;   |----------------------|                     .
-		 ;;   |   return address 0   | <- pcb->frame_base  .
+		 ;;   |     return address   | <- pcb->frame_base  .
 		 ;;   |----------------------|                     --
 		 ;;   | ik_underflow_handler | <- FPR
-		 ;;   |----------------------|         --
-		 ;;   |         kont         |         . frame of
-		 ;;   |----------------------|         . THE-FUNC
-		 ;;             ...                    .
+		 ;;   |----------------------|
+		 ;;   |         kont         | -> continuation object
+		 ;;   |----------------------|
+		 ;;             ...
+		 ;;   |----------------------|
+		 ;;   |      free word       | <- pcb->stack_base
+		 ;;   |----------------------|
 		 ;;   |                      |
-		 ;;         low memory
+		 ;;          low memory
 		 ;;
 		 ;;The  following  INDIRECT-JUMP  compiles to  a  single
 		 ;;"jmp"  instruction that  jumps  to  the machine  code
 		 ;;entry  point in  the closure  referenced by  the CPR,
-		 ;;which is THE-FUNC.   By doing a "jmp",  rather than a
+		 ;;which  is FUNC.   By  doing a  "jmp",  rather than  a
 		 ;;"call",  we avoid  pushing  a return  address on  the
 		 ;;Scheme stack.
 		 ;;
-		 ;;Notice how  the stack  frame of THE-FUNC  starts with
-		 ;;the  argument KONT.   The underflow  handler we  have
-		 ;;pushed  on the  stack does  not belong  to any  stack
-		 ;;frame.
+		 ;;Notice that the  stack frame of FUNC  starts with the
+		 ;;argument KONT.  The  IK_UNDERFLOW_HANDLER we have put
+		 ;;on the stack does *not* belong to any stack frame.
 		 ;;
-		 ;;If  the closure  THE-FUNC returns  without calling  a
+		 ;;If  the  closure  FUNC   returns  without  calling  a
 		 ;;continuation escape  function: it will return  to the
-		 ;;underflow handler whose address we have pushed on the
-		 ;;stack.    Such  underflow   handler   must  pop   the
-		 ;;continuation object from "pcb->next_k" and process it
-		 ;;as explained in the documentation.
+		 ;;underflow  handler; such  underflow handler  must pop
+		 ;;the  continuation   object  from   "pcb->next_k"  and
+		 ;;process it as explained in the documentation.
 		 ;;
 		 (make-primcall 'indirect-jump
 		   (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
@@ -1249,7 +1252,7 @@
 
     #| end of module: handle-nontail-call |# )
 
-  (module (alloc-check)
+  (module (alloc-check alloc-check/no-hooks)
 
     (define (alloc-check size)
       (E (make-shortcut
@@ -1260,6 +1263,13 @@
 			  (list (make-constant (make-object (primref->symbol 'do-overflow)))
 				(make-constant off-symbol-record-proc)))
 			(list size)))))
+
+    (define (alloc-check/no-hooks size)
+      (E (make-shortcut
+	  (make-conditional (%test size)
+	      (make-primcall 'nop '())
+	    (make-primcall 'interrupt '()))
+	  (make-forcall "ik_collect" (list size)))))
 
     (define (%test size)
       (if (struct-case size
@@ -1277,21 +1287,6 @@
 			  (list pcr (make-constant pcb-allocation-redline)))
 			apr))
 		size))))
-
-    ;;Commented out by Abdulaziz Ghuloum.
-    ;;
-    ;; (define (alloc-check size)
-    ;;   (E (make-conditional ;;; PCB ALLOC-REDLINE
-    ;; 	   (make-primcall '<=
-    ;; 			  (list (make-primcall 'int+ (list apr size))
-    ;; 				(make-primcall 'mref (list pcr (make-constant 4)))))
-    ;; 	   (make-primcall 'nop '())
-    ;; 	 (make-funcall
-    ;;         (make-primcall 'mref
-    ;; 			 (list
-    ;; 			  (make-constant (make-object (primref->symbol 'do-overflow)))
-    ;; 			  (make-constant off-symbol-record-proc)))
-    ;;         (list size)))))
 
     #| end of module: alloc-check |# )
 
@@ -1322,10 +1317,43 @@
 
       ((primcall op rands)
        (case-symbols op
+
          ((alloc)
+	  ;;Allocate a Scheme object on  the heap.  First check if there
+	  ;;is  enough room  on  the  heap segment:
+	  ;;
+	  ;;*  If  there  is:  just  increment  the  Allocation  Pointer
+	  ;;  Register (APR) and return the old APR value.
+	  ;;
+	  ;;* If there  is not: run a garbage  collection (complete with
+	  ;;   execution  of  post-GC  hooks) by  calling  the  function
+	  ;;  DO-OVERFLOW, then increment the APR and return the old APR
+	  ;;  after the GC.
+	  ;;
           (S ($car rands)
              (lambda (size)
                (make-seq (alloc-check size)
+			 (S ($cadr rands)
+			    (lambda (tag)
+			      (make-seq (make-seq (%move-dst<-src d apr)
+						  (make-asm-instr 'logor d tag))
+					(make-asm-instr 'int+ apr size))))))))
+
+         ((alloc-no-hooks)
+	  ;;This is like ALLOC, but, if there is the need, run a garbage
+	  ;;collection without executing the post-GC hooks.
+	  ;;
+	  ;;This  simpler  GC  run  does not  touch  the  Scheme  stack,
+	  ;;avoiding the  generation of corrupt continuation  objects by
+	  ;;the  primitive operation  $SEAL-FRAME-AND-CALL (which  was a
+	  ;;cause of issue #35).
+	  ;;
+	  ;;$SEAL-FRAME-AND-CALL should be the only operation making use
+	  ;;of this heap allocation method.
+	  ;;
+          (S ($car rands)
+             (lambda (size)
+               (make-seq (alloc-check/no-hooks size)
 			 (S ($cadr rands)
 			    (lambda (tag)
 			      (make-seq (make-seq (%move-dst<-src d apr)

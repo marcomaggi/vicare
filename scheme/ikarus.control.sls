@@ -32,7 +32,7 @@
     (ikarus system $pairs)
     (ikarus system $fx)
     (vicare arguments validation)
-    (ikarus.emergency))
+    #;(ikarus.emergency))
 
 
 ;;;; helpers
@@ -135,15 +135,19 @@
 (define (%primitive-call/cf func)
   ;;In tail  position: apply FUNC  to a continuation  object referencing
   ;;the  current  Scheme stack.   Remember  that  this function  can  be
-  ;;inlined.
+  ;;inlined, but if it is not it can be called in tail position.
   ;;
-  ;;If the  situation of the  Scheme stack after entering  this function
-  ;;is:
+  ;;Remember that FPR stands for Frame Pointer Register.
+  ;;
+  ;;CASE OF FRAME  POINTER AT BASE.  If the Scheme  stack scenario after
+  ;;entering this function is:
   ;;
   ;;          high memory
   ;;   |                      | <-- pcb->frame_base
   ;;   |----------------------|
   ;;   | ik_underflow_handler | <-- FPR
+  ;;   |----------------------|
+  ;;   |         func         | --> closure object
   ;;   |----------------------|
   ;;             ...
   ;;   |----------------------|
@@ -152,16 +156,17 @@
   ;;   |                      |
   ;;          low memory
   ;;
-  ;;so there is no continuation to be created, because we already are at
+  ;;there is  no continuation to be  created, because we already  are at
   ;;the  base of  the stack.   We just  apply FUNC  to the  next process
   ;;continuation "pcb->next_k"; notice that "pcb->next_k" is not removed
-  ;;from the  PCB structure.
+  ;;from the PCB structure.
   ;;
   ;;NOTE Believe it or not: it has  been verified that this case (FPR at
   ;;the  frame  base) actually  happens,  especially  when running  with
   ;;debugging mode enabled.  (Marco Maggi; Mar 26, 2013)
   ;;
-  ;;Otherwise the situation of the Scheme stack is:
+  ;;CASE OF  SOME FRAMES  ON THE  STACK.  If  the Scheme  stack scenario
+  ;;after entering this function is:
   ;;
   ;;         high memory
   ;;   |                      | <-- pcb->frame_base
@@ -169,19 +174,21 @@
   ;;   | ik_underflow_handler |
   ;;   |----------------------|
   ;;     ... other frames ...
-  ;;   |----------------------| --
-  ;;   |     local value 1    | .
-  ;;   |----------------------| .
-  ;;   |     local value 1    | . frame 1
-  ;;   |----------------------| .
-  ;;   |   return address 1   | .
-  ;;   |----------------------| --
-  ;;   |     local value 0    | .
-  ;;   |----------------------| .
-  ;;   |     local value 0    | . frame 0
-  ;;   |----------------------| .
-  ;;   |   return address 0   | .<-- frame pointer register (FPR)
-  ;;   |----------------------| --
+  ;;   |----------------------|          --
+  ;;   |     local value 1    |          .
+  ;;   |----------------------|          .
+  ;;   |     local value 1    |          . frame 1
+  ;;   |----------------------|          .
+  ;;   |   return address 1   |          .
+  ;;   |----------------------|          --
+  ;;   |     local value 0    |          .
+  ;;   |----------------------|          .
+  ;;   |     local value 0    |          . frame 0
+  ;;   |----------------------|          .
+  ;;   |   return address 0   | <-- FPR  .
+  ;;   |----------------------|          --
+  ;;   |         func         | --> closure object
+  ;;   |----------------------|
   ;;             ...
   ;;   |----------------------|
   ;;   |      free word       | <-- pcb->stack_base
@@ -189,13 +196,13 @@
   ;;   |                      |
   ;;          low memory
   ;;
-  ;;so we need to save the  current stack into a continuation object
-  ;;and then call FUNC.
+  ;;we need to  freeze the current stack into a  continuation object and
+  ;;then apply FUNC to such object.
   ;;
   ;;
   (if ($fp-at-base)
       (begin
-	#;(emergency-write "primitive-call/cf: frame pointer register (FPR) at stack base")
+	#;(emergency-write "primitive-call/cf: stack at base")
 	(func ($current-frame)))
     (begin
       #;(emergency-write "primitive-call/cf: freezing the stack")
