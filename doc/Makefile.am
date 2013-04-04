@@ -2,6 +2,8 @@
 
 #AM_MAKEINFOFLAGS	= --no-split
 
+EXTRA_DIST		= QUEST-FOR-ISSUE-35
+
 info_TEXINFOS		= vicare-scheme.texi
 vicare_scheme_TEXINFOS	= \
 	gpl-3.0.texi			\
