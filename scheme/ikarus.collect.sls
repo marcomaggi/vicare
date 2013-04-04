@@ -81,7 +81,7 @@
   (let ((ls (post-gc-hooks)))
     (unless (null? ls)
       (do-post-gc ls n)))
-  ;;NOTE  Do *not*  remove this.   This  code calling  this function  to
+  ;;NOTE  Do *not*  remove  this.   The code  calling  this function  to
   ;;reclaim heap space expects DO-OVERFLOW  to return a single value; if
   ;;it returns 0,  2 or more values very bad  assembly-level errors will
   ;;happen.  (Marco Maggi; Thu Apr 4, 2013)
