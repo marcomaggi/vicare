@@ -247,5 +247,27 @@ ik_print_stack_frame (FILE * fh, ikptr top)
   }
   fprintf(fh, "\n");
 }
+
+void
+ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames, ikpcb * pcb)
+/* Visit  the current  Scheme  stack  printing to  FH  the code  objects
+   referenced  by the  stack  frames.  At  most visit  MAX_NUM_OF_FRAMES
+   frames (to avoid printing too much output). */
+{
+  int		i;
+  ikptr		top = pcb->frame_pointer;
+  ikptr		end = pcb->frame_base - wordsize;
+  for (i=0; (i <= max_num_of_frames) && (top < end); ++i) {
+    ikptr	single_value_rp	= IK_REF(top, 0);
+    ikptr	framesize	= IK_CALLTABLE_FRAMESIZE(single_value_rp);
+    if (0 == framesize) {
+      framesize = IK_REF(top, wordsize);
+    }
+    fprintf(fh, "stack code object %d: ", i);
+    ik_fprint(fh, ik_stack_frame_top_to_code_object(top));
+    fprintf(fh, "\n");
+    top += framesize;
+  }
+}
 
 /* end of file*/

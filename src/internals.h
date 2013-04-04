@@ -592,6 +592,8 @@ ik_decl void	ik_print_no_newline	(ikptr x);
 ik_decl void	ik_fprint		(FILE*, ikptr x);
 
 ik_private_decl void ik_print_stack_frame (FILE * fh, ikptr top);
+ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames,
+							ikpcb * pcb);
 
 
 /** --------------------------------------------------------------------
