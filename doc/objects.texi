@@ -5155,17 +5155,16 @@ strings: 32-bit values representing Unicode code points are moved and
 
 While writing C language code interfacing with Scheme, if we call a C
 language function which calls back a Scheme function we have to save and
-restore the continuation:
+restore the current system continuation:
 
 @example
 ikpcb * pcb = the_pcb;
-ikptr   sk;
 
-sk = ik_enter_c_function(pcb);
+ik_enter_c_function(pcb);
 @{
   /* place here C code that calls Scheme code */
 @}
-ik_leave_c_function(pcb, sk);
+ik_leave_c_function(pcb);
 @end example
 
 @noindent
@@ -5173,13 +5172,24 @@ else, upon returning from the Scheme code, the execution flow will go to
 the wrong continuation and undefined behaviour ensues.
 
 
-@deftypefun ikptr ik_enter_c_function (ikpcb * @var{pcb})
-Save the current Scheme continuation and return a reference to it.
+@deftypefun void ik_enter_c_function (ikpcb * @var{pcb})
+Save the current Scheme continuation and followed by the current system
+continuation.  A call to this function must be matched by a call to
+@cfunc{ik_leave_c_function}.
 @end deftypefun
 
 
-@deftypefun ikptr ik_leave_c_function (ikpcb * @var{pcb}, ikptr @var{sk})
-Restore the previously saved Scheme continuation @var{sk}.
+@deftypefun void ik_leave_c_function (ikpcb * @var{pcb})
+Restore the previously saved Scheme continuation.  A call to this
+function must be matched by a call to @cfunc{ik_enter_c_function}.
 @end deftypefun
+
+
+Notice that when Scheme calls C then C calls a Scheme: garbage
+collections can happen in the nested Scheme code, so the C code cannot
+rely on the Scheme value to keep their location.  Also, nested C code
+invocations can happen, so the C code calling out to Scheme
+@strong{cannot} use the @code{pcb->root} fields to preserve Scheme
+values.
 
 @c end of file
