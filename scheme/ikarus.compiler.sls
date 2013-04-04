@@ -393,7 +393,7 @@
 
 ;;;; helper functions
 
-(define (dummy)
+#;(define (dummy)
   (display "here\n"))
 
 (define (remq1 x ls)
