@@ -5041,6 +5041,9 @@ representing the inclusive maximum message size; if the size of the
 message exceeds this value: message delivery will fail.
 
 When not configured: the maximum message size defaults to @math{4096}.
+
+The maximum message size is @strong{not} reset when a message delivery
+is completed.
 @end defun
 
 
@@ -5056,7 +5059,10 @@ delivery will fail.  Typically we build such time objects using
 
 If @var{expiration-time} is @false{}: there is not time limit.
 
-When not configured: the expiration time defaults to infinite.
+When not configured: the expiration time defaults to no time limit.
+
+The expiration time @strong{is} reset to no time limit when a message
+delivery is completed.
 @end defun
 
 @c page

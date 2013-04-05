@@ -75,12 +75,9 @@
 		;messages to and from a remote process.
    action
 		;False or the symbol "recv" or the symbol "send".
-   buffer-port
-		;False or  a bytevector  output port used  to accumulate
-		;input for a message.
-   buffer-extract
-		;False or a  thunk to be called to  retrieve the message
-		;accumulated in the buffer output port.
+   message-buffer
+		;Null  or a  list of  bytevectors representing  the data
+		;accumulated so far; last input first.
    expiration-time
 		;A time object representing the  limit of time since the
 		;Epoch  to complete  message delivery;  if the  allotted
@@ -93,12 +90,19 @@
 		;A non-negative exact integer representing the inclusive
 		;maximum  message  size;  if  the size  of  the  message
 		;exceeds this value: message delivery will fail.
+   message-terminator
+		;A   non-empty  bytevector   representing  the   message
+		;terminator.
    ))
 
 
 ;;;; unsafe operations
 
-(define ($increment-channel-message-size! chan delta-size)
+(define ($channel-message-buffer-enqueue! chan bv)
+  ($set-channel-message-buffer! chan (cons bv ($channel-message-buffer chan)))
+  ($channel-message-increment-size! chan ($bytevector-length bv)))
+
+(define ($channel-message-increment-size! chan delta-size)
   ($set-channel-message-size! chan (+ delta-size ($channel-message-size chan))))
 
 (define ($time-expired? chan)
@@ -114,17 +118,20 @@
 
 ;;;; initialisation and finalisation
 
+(define-constant DEFAULT-TERMINATOR
+  (string->ascii "\r\n\r\n"))
+
 (define (open-channel port)
   (define who 'open-channel)
   (with-arguments-validation (who)
       ((binary-port	port))
     (make-channel port
 		  #f #;action
-		  #f #;buffer-port
-		  #f #;buffer-extract
+		  '() #;message-buffer
 		  #f #;expiration-time
 		  0 #;message-size
-		  4096 #;maximum-message-size)))
+		  4096 #;maximum-message-size
+		  DEFAULT-TERMINATOR #;message-terminator)))
 
 (define (close-channel chan)
   ;;Finalise a  channel closing its connection  port; return unspecified
@@ -337,13 +344,10 @@
     (let ((in-port ($channel-connect-port chan)))
       (with-arguments-validation (who)
 	  ((input-port	in-port))
-	(receive (port extract)
-	    (open-bytevector-output-port)
-	  ($set-channel-action!          chan 'recv)
-	  ($set-channel-buffer-port!     chan port)
-	  ($set-channel-buffer-extract!  chan extract)
-	  ($set-channel-message-size!    chan 0)
-	  (void))))))
+	($set-channel-action!          chan 'recv)
+	($set-channel-message-buffer!  chan '())
+	($set-channel-message-size!    chan 0)
+	(void)))))
 
 (define (channel-reception-end! chan)
   ;;Finish receiving  a message and  return the accumulated octets  in a
@@ -358,44 +362,101 @@
   (with-arguments-validation (who)
       ((receiving-channel	chan))
     (begin0
-	(($channel-buffer-extract chan))
+	($bytevector-reverse-and-concatenate ($channel-message-buffer chan)
+					     ($channel-message-size   chan))
       ($set-channel-action!          chan #f)
-      ($set-channel-buffer-port!     chan #f)
-      ($set-channel-buffer-extract!  chan #f)
-      ($set-channel-message-size!    chan 0))))
+      ($set-channel-message-buffer!  chan '())
+      ($set-channel-message-size!    chan 0)
+      ($set-channel-expiration-time! chan #f))))
 
-(define (channel-get-message-portion! chan)
-  ;;Receive a  portion of input  message from the given  channel; return
-  ;;true  if the  configured message  terminator was  read, else  return
-  ;;false.   It is  an error  if the  channel is  not in  the course  of
-  ;;receiving a message.
-  ;;
+(module (channel-get-message-portion!)
+
   (define who 'channel-get-message-portion)
-  (with-arguments-validation (who)
-      ((receiving-channel	chan))
-    (when ($time-expired? chan)
-      (%error-message-expiration-time-expired who chan))
-    (let ((in-port  ($channel-connect-port chan))
-	  (buf-port ($channel-buffer-port chan)))
 
-      (define (%read)
-	(get-bytevector-n in-port 4096))
+  (define (channel-get-message-portion! chan)
+    ;;Receive a portion of input  message from the given channel; return
+    ;;true if  the configured message  terminator was read,  else return
+    ;;false.  It  is an  error if the  channel is not  in the  course of
+    ;;receiving a message.
+    ;;
+    (with-arguments-validation (who)
+	((receiving-channel	chan))
+      (if ($time-expired? chan)
+	  (%error-message-expiration-time-expired who chan)
+	(%loop chan))))
 
-      (define (%end-of-message? chan)
-	#f)
+  (define (%loop chan)
+    (let ((bv (%read chan)))
+      (if (eof-object? bv)
+	  #f
+	(begin
+	  ($channel-message-buffer-enqueue! chan bv)
+	  (cond (($maximum-size-exceeded? chan)
+		 (%error-maximum-message-size-exceeded who chan))
+		((%end-of-message? chan)
+		 #t)
+		(else
+		 (%loop chan)))))))
 
-      (let loop ((buffer (%read)))
-	(if (eof-object? buffer)
-	    #f
-	  (begin
-	    (put-bytevector buf-port buffer)
-	    ($increment-channel-message-size! chan ($bytevector-length buffer))
-	    (cond (($maximum-size-exceeded? chan)
-		   (%error-maximum-message-size-exceeded who chan))
-		  ((%end-of-message? chan)
-		   #t)
-		  (else
-		   (loop (%read))))))))))
+  (define (%read chan)
+    (get-bytevector-n ($channel-connect-port chan) 4096))
+
+  (define (%end-of-message? chan)
+    ;;Compare the message terminator with the bytevectors accumulated in
+    ;;the  buffer  of CHAN.   If  the  tail  of  the buffer  equals  the
+    ;;terminator return true, else return false.
+    ;;
+    (let ((T ($channel-message-terminator chan)))
+      (let loop ((T.idx ($fxsub1 ($bytevector-length T)))
+		 (bufs  ($channel-message-buffer chan)))
+	(cond (($fxzero? T.idx)
+	       #t)
+	      ((null? bufs)
+	       #f)
+	      (($bv= T T.idx ($car bufs) ($fxsub1 ($bytevector-length ($car bufs))))
+	       => (lambda (T.idx)
+		    (loop T.idx ($cdr bufs))))))))
+
+  (define ($bv= A A.idx B B.idx)
+    ;;Recurse  comparing the  bytevector  A, starting  from index  A.idx
+    ;;inclusive,  to  the  bytevector   B,  starting  from  index  B.idx
+    ;;inclusive;  if:
+    ;;
+    ;;* All the octets are equal up to (zero? A.idx): return 0.
+    ;;
+    ;;* All the octets are equal  up to (zero?  B.idx): return the value
+    ;;  of A.idx.
+    ;;
+    (and ($fx= ($bytevector-u8-ref A A.idx)
+	       ($bytevector-u8-ref B B.idx))
+	 (cond (($fxzero? A.idx)
+		0)
+	       (($fxzero? B.idx)
+		A.idx)
+	       (else
+		($bv= A ($fxsub1 A.idx) B ($fxsub1 B.idx))))))
+
+  #| end of module |# )
+
+
+(define ($bytevector-reverse-and-concatenate list-of-bytevectors full-length)
+  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
+  ;;return  the  result.   The  resulting bytevector  must  have  length
+  ;;FULL-LENGTH.  Assume the arguments have been already validated.
+  ;;
+  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
+  ;;and the whole bytevector must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.bv	($make-bytevector full-length))
+	     (dst.start	full-length)
+	     (bvs	list-of-bytevectors))
+    (if (null? bvs)
+	dst.bv
+      (let* ((src.bv    ($car bvs))
+	     (src.len   ($bytevector-length src.bv))
+	     (dst.start ($fx- dst.start src.len)))
+	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
+	(loop dst.bv dst.start (cdr bvs))))))
 
 
 ;;;; done
