@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -3290,79 +3290,72 @@
     (define who 'open-bytevector-output-port)
     (with-arguments-validation (who)
 	((maybe-transcoder maybe-transcoder))
-      (let ((cookie (default-cookie '(0 . ()))))
-	;;The most common  use of this port type is  to append bytes and
-	;;finally extract the whole output bytevector:
-	;;
-	;;  (call-with-values
-	;;      open-bytevector-output-port
-	;;    (lambda (port extract)
-	;;      (put-bytevector port '#vu8(1 2 3))
-	;;      ...
-	;;      (extract)))
-	;;
-	;;for  this reason we  implement the  device of  the port  to be
-	;;somewhat efficient for such use.
-	;;
-	;;The device  is a  pair stored in  the cookie; the  cdr, called
-	;;OUTPUT.BVS in  the code, holds  null or a list  of accumulated
-	;;bytevectors; the car, called OUTPUT.LEN in the code, holds the
-	;;total number of bytes accumulated so far.
-	;;
-	;;Whenever data is flushed from  the buffer to the device: a new
-	;;bytevector  is  prepended  to  OUTPUT.BVS  and  OUTPUT.LEN  is
-	;;incremented  accordingly.    When  the  extract   function  is
-	;;invoked: OUTPUT.BVS  is reversed and  concatenated obtaining a
-	;;single bytevector of length OUTPUT.LEN.
-	;;
-	;;This situation  is violated if  SET-PORT-POSITION!  is applied
-	;;to the port  to move the position before the  end of the data.
-	;;If this happens: SET-POSITION!   converts OUTPUT.BVS to a list
-	;;holding   a  single  full   bytevector  (OUTPUT.LEN   is  left
-	;;unchanged).
-	;;
-	;;Whenever OUTPUT.BVS holds a single bytevector and the position
-	;;is   less  than   such  bytevector   length:  it   means  that
-	;;SET-PORT-POSITION!  was used.
-	;;
-	;;Remember that bytevectors hold at most a number of bytes equal
-	;;to the return value of GREATEST-FIXNUM.
-	;;
+      ;;The most  common use of  this port type  is to append  bytes and
+      ;;finally extract the whole output bytevector:
+      ;;
+      ;;  (call-with-values
+      ;;      open-bytevector-output-port
+      ;;    (lambda (port extract)
+      ;;      (put-bytevector port '#vu8(1 2 3))
+      ;;      ...
+      ;;      (extract)))
+      ;;
+      ;;for  this reason  we  implement the  device of  the  port to  be
+      ;;somewhat efficient for such use.
+      ;;
+      ;;The device is a struct instance  stored in the cookie; the field
+      ;;BVS holds null  or a list of accumulated  bytevectors; the field
+      ;;LEN holds the total number of bytes accumulated so far.
+      ;;
+      ;;Whenever data  is flushed from the  buffer to the device:  a new
+      ;;bytevector  is   prepended  to  BVS,  and   LEN  is  incremented
+      ;;accordingly.   When  the extract  function  is  invoked: BVS  is
+      ;;reversed  and  concatenated  obtaining a  single  bytevector  of
+      ;;length LEN.
+      ;;
+      ;;This situation is violated  if SET-PORT-POSITION!  is applied to
+      ;;the port  to move the position  before the end of  the data.  If
+      ;;this happens:  SET-POSITION!  converts BVS  to a list  holding a
+      ;;single full bytevector (LEN is left unchanged).
+      ;;
+      ;;Whenever BVS holds a single  bytevector and the position is less
+      ;;than such  bytevector length:  it means  that SET-PORT-POSITION!
+      ;;was used.
+      ;;
+      ;;Remember that bytevectors  hold at most a number  of bytes equal
+      ;;to the return value of GREATEST-FIXNUM.
+      ;;
+      (define-struct device
+	(len bvs))
+      (let ((cookie (default-cookie (make-device 0 '()))))
 	;;Notice  how  the  internal  functions are  closures  upon  the
 	;;cookie, not the port.
 	;;
-	(define (%%serialise-device! who reset?)
-	  (let* ((dev		(cookie-dest cookie))
-		 (output.len	(car dev))
-		 (output.bvs	(cdr dev)))
-	    (cond ((unsafe.fxzero? output.len)
+	(define (%serialise-device! who reset?)
+	  (let ((D (cookie-dest cookie)))
+	    (cond ((unsafe.fxzero? ($device-len D))
 		   ;;No bytes accumulated, the device is empty.
 		   '#vu8())
-		  ((null? (cdr output.bvs))
+		  ((null? (cdr ($device-bvs D)))
 		   ;;The device has already been serialised.
 		   (when reset?
-		     (set-cookie-dest! cookie '(0 . ())))
-		   (car output.bvs))
+		     (set-cookie-dest! cookie (make-device 0 '())))
+		   (car ($device-bvs D)))
 		  (else
 		   ;;The device needs to be serialised.
-		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len)))
+		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate
+			      who ($device-bvs D) ($device-len D))))
 		     (set-cookie-dest! cookie (if reset?
-						  '(0 . ())
-						`(,output.len . (,bv))))
+						  (make-device 0 '())
+						(make-device ($device-len D) (list bv))))
 		     bv)))))
-	(define-inline (%serialise-device! who)
-	  (%%serialise-device! who #f))
-	(define-inline (%serialise-device-and-reset! who)
-	  (%%serialise-device! who #t))
 
 	(define (write! src.bv src.start count)
 	  ;;Write data to the device.
 	  ;;
 	  (define who 'open-bytevector-output-port/write!)
 	  (debug-assert (and (fixnum? count) (<= 0 count)))
-	  (let* ((dev		(cookie-dest cookie))
-		 (output.len	(car dev))
-		 (output.bvs	(cdr dev))
+	  (let* ((D		(cookie-dest cookie))
 		 (dev-position	(cookie-pos cookie))
 		 (new-dev-position (+ count dev-position)))
 	    ;;DANGER  This  check must  not  be  removed when  compiling
@@ -3371,22 +3364,22 @@
 	      (%implementation-violation who
 		"request to write data to port would exceed maximum size of bytevectors"
 		new-dev-position))
-	    (if (unsafe.fx< dev-position output.len)
+	    (if (unsafe.fx< dev-position ($device-len D))
 		;;The  current  position  was  set  inside  the  already
 		;;accumulated data.
 		(write!/overwrite src.bv src.start count
-				  output.len output.bvs
+				  ($device-len D) ($device-bvs D)
 				  dev-position new-dev-position)
 	      ;;The  current  position is  at  the  end  of the  already
 	      ;;accumulated data.
-	      (write!/append src.bv src.start count output.bvs new-dev-position))
+	      (write!/append src.bv src.start count ($device-bvs D) new-dev-position))
 	    count))
 
 	(define-inline (write!/overwrite src.bv src.start count
 					 output.len output.bvs
 					 dev-position new-dev-position)
 	  ;;Write data  to the device,  overwriting some of  the already
-	  ;;existing data.   The device is already composed  of a single
+	  ;;existing data.  The  device is already composed  of a single
 	  ;;bytevector of length OUTPUT.LEN in the car of OUTPUT.BVS.
 	  ;;
 	  (let* ((dst.bv   (car output.bvs))
@@ -3426,7 +3419,7 @@
 	  (unless (and (fixnum? new-position)
 		       (or (unsafe.fx=  new-position (cookie-pos cookie))
 			   (unsafe.fx<= new-position
-					(unsafe.bytevector-length (%serialise-device! who)))))
+					(unsafe.bytevector-length (%serialise-device! who #f)))))
 	    (raise (condition
 		    (make-who-condition who)
 		    (make-message-condition "attempt to set bytevector output port position beyond limit")
@@ -3437,7 +3430,7 @@
 				 (%select-eol-style-from-transcoder who maybe-transcoder)
 				 DEFAULT-OTHER-ATTRS))
 	       (buffer.index	0)
-	       (buffer.used-size	0)
+	       (buffer.used-size 0)
 	       (buffer		(unsafe.make-bytevector (bytevector-port-buffer-size)))
 	       (identifier	"*bytevector-output-port*")
 	       (read!		#f)
@@ -3461,7 +3454,7 @@
 	    (define who 'open-bytevector-output-port/extract)
 	    (with-port (port)
 	      (%unsafe.flush-output-port port who)
-	      (let ((bv (%serialise-device-and-reset! who)))
+	      (let ((bv (%serialise-device! who #t)))
 		(port.buffer.reset-to-empty!)
 		(set! port.device.position 0)
 		bv)))
