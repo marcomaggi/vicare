@@ -3313,9 +3313,10 @@
       ;;reversed  and  concatenated  obtaining a  single  bytevector  of
       ;;length LEN.
       ;;
-      ;;This situation is violated  if SET-PORT-POSITION!  is applied to
-      ;;the port  to move the position  before the end of  the data.  If
-      ;;this happens:  SET-POSITION!  converts BVS  to a list  holding a
+      ;;There is only  one function that can be applied  to the port and
+      ;;causes  the   device  to   be  handled   in  a   different  way:
+      ;;SET-PORT-POSITION!.  When  the new  port position is  before the
+      ;;end of the data: SET-POSITION!  converts BVS to a list holding a
       ;;single full bytevector (LEN is left unchanged).
       ;;
       ;;Whenever BVS holds a single  bytevector and the position is less
@@ -3337,17 +3338,23 @@
 		   ;;No bytes accumulated, the device is empty.
 		   '#vu8())
 		  ((null? (cdr ($device-bvs D)))
-		   ;;The device has already been serialised.
+		   ;;The device  contains some bytes and  it has already
+		   ;;been serialised: the list of bytevectors contains a
+		   ;;single item.
 		   (when reset?
 		     (set-cookie-dest! cookie (make-device 0 '())))
+		   ;;Return the single bytevector in the list.
 		   (car ($device-bvs D)))
 		  (else
-		   ;;The device needs to be serialised.
+		   ;;The device contains some bytes and the device needs
+		   ;;to be serialised: the  list of bytevectors contains
+		   ;;2 or more items.
 		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate
 			      who ($device-bvs D) ($device-len D))))
-		     (set-cookie-dest! cookie (if reset?
-						  (make-device 0 '())
-						(make-device ($device-len D) (list bv))))
+		     ($set-cookie-dest! cookie
+					(if reset?
+					    (make-device 0 '())
+					  (make-device ($device-len D) (list bv))))
 		     bv)))))
 
 	(define (write! src.bv src.start count)
