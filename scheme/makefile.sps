@@ -682,6 +682,7 @@
     (verbose-timer				i v $language)
 ;;;
     (current-time				i v $language)
+    (time-from-now				i v $language)
     (time?					i v $language)
     (time-second				i v $language)
     (time-nanosecond				i v $language)

@@ -17,7 +17,8 @@
 
 (library (ikarus system time-and-date)
   (export
-    current-time	time?
+    current-time	time-from-now
+    time?
     time-second		time-nanosecond
     time-gmt-offset	date-string
 
@@ -30,7 +31,8 @@
 		  ;;This is the function TIME!!!
 		  time
 
-		  current-time		time?
+		  current-time		time-from-now
+		  time?
 		  time-second		time-nanosecond
 		  time-gmt-offset	date-string
 
@@ -57,6 +59,14 @@
 
 (define (current-time)
   (foreign-call "ikrt_current_time" (make-time 0 0 0)))
+
+(define (time-from-now delta)
+  (define who 'time-from-now)
+  (with-arguments-validation (who)
+      ((time-struct	delta))
+    ($time-addition (current-time) delta)))
+
+;;; --------------------------------------------------------------------
 
 (define (time-second x)
   (define who 'time-second)

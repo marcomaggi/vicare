@@ -6350,6 +6350,12 @@ Epoch.
 @end defun
 
 
+@defun time-from-now @var{delta}
+Return a time object representing the current time plus the time object
+@var{delta}.
+@end defun
+
+
 @defun make-time @var{seconds} @var{nanoseconds}
 Build and return a new time object with microseconds resolution.  If
 @var{nanoseconds} exceeds @math{1000000} its value is normalised and the

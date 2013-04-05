@@ -36,15 +36,22 @@
 (parametrise ((check-test-name	'base))
 
   (when #f
-    (let ((T (current-time)))
+    (let ((T (current-time))
+	  (N (time-from-now (make-time 123 123000))))
       (check-pretty-print (list T
 				(time-second     T)
 				(time-nanosecond T)
 				(time-gmt-offset T)
-				(date-string)))))
+				(date-string)))
+      (check-pretty-print T)
+      (check-pretty-print N)))
 
   (check
       (time? (current-time))
+    => #t)
+
+  (check
+      (time? (time-from-now (make-time 123 123000)))
     => #t)
 
   (check
