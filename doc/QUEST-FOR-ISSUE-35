@@ -351,11 +351,11 @@ the   values  collected   into   guardians.    This  includes   creating
 continuation objects that seal the frames on the stack.
 
   It can happen that: after entering the execution of %PRIMITIVE-CALL/CF
-and having determined that the frame pointer is *not* at the base of the
-stack, a  post-GC hook creates  some continuation objects;  whenever the
-execution flow goes  back to $SEAL-FRAME-AND-CALL, because  of tail call
-optimisation, the  stack pointer  *is* at  the base of  the stack  and a
-corrupted continuation object is created.
+and having determined that the frame  pointer is *not* at the frame base
+of the stack, a post-GC hook creates some continuation objects; whenever
+the  execution   flow  goes  back  to   $SEAL-FRAME-AND-CALL  the  stack
+pointer  *is* at  the base  of the  stack and  a corrupted  continuation
+object is created.
 
   The original Ikarus  Scheme code allocates the  continuation object in
 %PRIMITIVE-CALL/CF with:
