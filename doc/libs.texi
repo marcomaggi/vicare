@@ -24,6 +24,7 @@
 * infix::                       Infix to prefix transformer.
 * debugging::                   Debugging facilities.
 * coroutines::                  Running coroutines.
+* channels::                    Interprocess connection channels.
 @end menu
 
 @c page
@@ -4946,6 +4947,292 @@ coroutine; return unspecified values.
 @defun finish-coroutines
 Loop running the next coroutine until there are no more; return
 unspecified values.
+@end defun
+
+@c page
+@node channels
+@section Interprocess connection channels
+
+
+@cindex Library @library{vicare channels}
+@cindex @library{vicare channels}, library
+
+The library @library{vicare channels} implements utilities to transfer
+data through Scheme binary ports, typically between processes.
+
+@menu
+* channels structs::            Data structures.
+* channels preds::              Predicates and arguments validation.
+* channels recv::               Receiving a message.
+* channels send::               Sending a message.
+* channels conditions::         Condition object types.
+@end menu
+
+@c page
+@node channels structs
+@subsection Data structures
+
+
+The following bindings are exported by the library @library{vicare
+channels}.
+
+
+@deftp {Struct Type} channel
+Opaque object representing an interprocess connection channel.
+@end deftp
+
+
+@defun channel? @var{obj}
+Return @true{} if @var{obj} is an instance of @code{channel}, else
+return @false{}.
+@end defun
+
+
+@deffn {Validation Clause} channel @var{obj}
+Validation clause to be used with the facilities of the library
+@library{vicare arguments validation}.  Succeed if @var{obj} is an
+instance of @code{channel}.
+@end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Constructors and destructors
+
+
+@defun open-channel @var{connection-port}
+Build and return a new instance of @code{channel} wrapping the binary
+port @var{connection-port}.  The returned channel is inactive.
+@end defun
+
+
+@defun close-channel @var{chan}
+Finalise a channel closing its connection port; return unspecified
+values.  A pending message delivery, if any, is aborted.
+@end defun
+
+@c page
+@node channels preds
+@subsection Predicates and arguments validation
+
+
+The following bindings are exported by the library @library{vicare
+channels}.
+
+
+@defun receiving-channel? @var{chan}
+Return @true{} if @var{chan} is in the course of receiving a message,
+else return @false{}.  It is an error if @var{chan} is not an instance
+of @code{channel}.
+@end defun
+
+
+@defun sending-channel? @var{chan}
+Return @true{} if @var{chan} is in the course of sending a message, else
+return @false{}.  It is an error if @var{chan} is not an instance of
+@code{channel}.
+@end defun
+
+
+@defun inactive-channel? @var{chan}
+Return @true{} if @var{chan} is @strong{neither} in the course of
+sending @strong{nor} receiving a message, else return @false{}.  It is
+an error if @var{chan} is not an instance of @code{channel}.
+@end defun
+
+@c ------------------------------------------------------------
+
+The following bindings are validation clauses to be used with the
+facilities of the library @library{vicare arguments validation}.
+
+
+@deffn {Validation Clause} receiving-channel @var{obj}
+Succeed if @var{obj} is an instance of @code{channel} and it is in the
+course of receiving a message.
+@end deffn
+
+
+@deffn {Validation Clause} not-receiving-channel @var{obj}
+Succeed if @var{obj} is an instance of @code{channel} and it is
+@strong{not} in the course of receiving a message.
+@end deffn
+
+
+@deffn {Validation Clause} sending-channel @var{obj}
+Succeed if @var{obj} is an instance of @code{channel} and it is in the
+course of sending a message.
+@end deffn
+
+
+@deffn {Validation Clause} not-sending-channel @var{obj}
+Succeed if @var{obj} is an instance of @code{channel} and it is
+@strong{not} in the course of sending a message.
+@end deffn
+
+
+@deffn {Validation Clause} inactive-channel @var{obj}
+Succeed if @var{obj} is an instance of @code{channel} and it is
+@strong{neither} in the course of sending @strong{nor} receiving a
+message.
+@end deffn
+
+
+@deffn {Validation Clause} not-inactive-channel @var{obj}
+Succeed if @var{obj} is an instance of @code{channel} and it is
+@strong{either} in the course of sending @strong{or} receiving a
+message.
+@end deffn
+
+@c page
+@node channels recv
+@subsection Receiving a message
+
+
+The following bindings are exported by the library @library{vicare
+channels}.
+
+
+@defun channel-reception-begin! @var{chan} @var{maximum-message-size} @var{expiration-time}
+Configure a channel to start receiving a message; return unspecified
+values.  It is an error if the connection port registered in the channel
+is neither input nor input/output.  It is an error if the channel is not
+inactive.
+
+@var{maximum-message-size} must be a non--negative exact integer
+representing the inclusive maximum message size; if the size of the
+message exceeds this value: message delivery will fail.
+
+@var{expiration-time} must be a time object representing the limit of
+time since the Epoch to complete message delivery; if the allotted time
+expires: message delivery will fail.
+@end defun
+
+
+@defun channel-reception-end! @var{chan}
+Finish receiving a message and return the accumulated octets in a
+bytevector.  It is an error if the channel is not in the course of
+receiving a message.
+
+After this function is applied to a channel: the channel itself is
+configured as inactive; so it is available to start receiving another
+message or to send a message.
+@end defun
+
+
+@defun channel-get-message-portion! @var{chan}
+Receive a portion of input message from the given channel and accumulate
+it in the internal state; return @true{} if the configured message
+terminator was read in the tail of the data, else return @false{}.  It
+is an error if the channel is not in the course of receiving a message.
+
+This function performs multiple read operations from the registered
+connection port, until the end--of--file is read or until the configured
+message terminator is found in the tail of read data.
+
+If at the time of this function call the timeout configured for this
+message is expired: a non--continuable exception is raised with compound
+condition object of types: @condition{who}, @condition{message},
+@condition{channel}, @condition{delivery-timeout-expired}.
+
+If reading data cause the accumulated message to exceed the maximum size
+configured for this message: a non--continuable exception is raised with
+compound condition object of types: @condition{who},
+@condition{message}, @condition{channel},
+@condition{maximum-message-size-exceeded}.
+@end defun
+
+@c page
+@node channels send
+@subsection Sending a message
+
+
+The following bindings are exported by the library @library{vicare
+channels}.
+
+
+@c page
+@node channels conditions
+@subsection Condition object types
+
+
+Whenever an error condition happens: the functions of the library
+@library{vicare channels} react by raising non--continuable exceptions
+whose raised objects are compound conditions of the following types.
+
+The following bindings are exported by the library @library{vicare
+channels}.
+
+@c ------------------------------------------------------------
+
+@subsubheading Channel condition type
+
+
+@deftp {Condition Type} &channel
+Condition object containing an instance of @code{channel}; it is derived
+from @condition{condition}.
+@end deftp
+
+
+@defun make-channel-condition @var{chan}
+Build and return an instance of @condition{channel} wrapping the channel
+@var{chan}.
+@end defun
+
+
+@defun condition-channel? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{channel} or a compound condition object with a component of
+type @condition{channel}.
+@end defun
+
+
+@defun condition-channel @var{cond}
+Given an instance of @condition{channel}: return the @code{channel}
+instance it contains.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Delivery timeout error
+
+
+@deftp {Condition Type} &delivery-timeout-expired
+Condition object used to tag exceptions as of type ``message delivery
+timeout expired''; it is derived from @condition{error}.
+@end deftp
+
+
+@defun make-delivery-timeout-expired-condition
+Build and return an instance of @condition{delivery-timeout-expired}.
+@end defun
+
+
+@defun condition-delivery-timeout-expired? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{delivery-timeout-expired} or a compound condition object with
+a component of type @condition{delivery-timeout-expired}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Message size error
+
+
+@deftp {Condition Type} &maximum-message-size-exceeded
+Condition object used to tag exceptions as of type ``maximum message
+size exceeded; it is derived from @condition{error}.
+@end deftp
+
+
+@defun make-maximum-message-size-exceeded-condition
+Build and return an instance of
+@condition{maximum-message-size-exceeded}.
+@end defun
+
+
+@defun condition-maximum-message-size-exceeded? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{maximum-message-size-exceeded} or a compound condition object
+with a component of type @condition{maximum-message-size-exceeded}.
 @end defun
 
 @c end of file
