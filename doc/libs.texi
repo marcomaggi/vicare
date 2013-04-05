@@ -4678,6 +4678,211 @@ debugging compiler}.
 @section Running coroutines
 
 
+@cindex Library @library{vicare coroutines}
+@cindex @library{vicare coroutines}, library
+
+The library @library{vicare coroutines} implements coroutines on top of
+Scheme continuations.  The implementation is a simple queue of escape
+functions: whenever coroutine @var{A} yields control to the ``next''
+coroutine, it enqueues an escape function to its current continuation
+and causes the next escape function to be invoked.
+
+For a more complex discussion of coroutines and continuations see:
+
+@quotation
+Haynes, Friedman, Wand.  ``Continuations and Coroutines''.  Computer
+Science Department, Indiana University.  Technical Report No. 158.
+June, 1984.
+@end quotation
+
+@menu
+* coroutines examples::         Usage examples for coroutines.
+* coroutines api::              Programming interface to coroutines.
+@end menu
+
+@c page
+@node coroutines examples
+@subsection Usage examples for coroutines
+
+
+Coroutines are created by the function @func{coroutine}; a coroutine in
+execution can yield control to the next coroutine with the function
+@func{yield}.  It is possible to enter a loop that runs all the
+coroutines until all of them are finished with the function
+@func{finish-coroutines}.
+
+All the examples in this section are to be considered as Scheme programs
+after the prelude:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare coroutines))
+
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode line))
+@end example
+
+@noindent
+which allows the intertwining of coroutines to be seen by displaying
+strings on the current output port.
+
+@c ------------------------------------------------------------
+
+@subsubheading Two coroutines
+
+The following example runs two coroutines and waits for them to finish:
+
+@example
+(coroutine
+    (lambda ()
+      (display "one 1\n")
+      (yield)
+      (display "one 2\n")
+      (yield)
+      (display "one 3\n")))
+
+(coroutine
+    (lambda ()
+      (display "two 1\n")
+      (yield)
+      (display "two 2\n")
+      (yield)
+      (display "two 3\n")))
+
+(finish-coroutines)
+@end example
+
+@noindent
+the output is:
+
+@example
+one 1
+two 1
+one 2
+two 2
+one 3
+two 3
+@end example
+
+We see that to exit a coroutine we just return from its start function.
+
+@c ------------------------------------------------------------
+
+@subsubheading The main routine and a subroutine
+
+We can always consider the ordinary control flow of a program as a
+coroutine, the @dfn{main routine}; so the following program produces
+output similar to the one above:
+
+@example
+(coroutine
+    (lambda ()
+      (display "sub 1\n")
+      (yield)
+      (display "sub 2\n")
+      (yield)
+      (display "sub 3\n")))
+
+;;This runs in the main routine.
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+
+(finish-coroutines)
+@end example
+
+@noindent
+the output is:
+
+@example
+sub 1
+main 1
+sub 2
+main 2
+sub 3
+main 3
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Main routine alone
+
+It is perfectly all right to call @func{yield} and
+@func{finish-coroutines} from the main routine even when there are no
+subroutines:
+
+@example
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+(finish-coroutines)
+@end example
+
+@noindent
+the output of this program is just:
+
+@example
+main 1
+main 2
+main 3
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Finishing coroutines
+
+It is possible to call @func{finish-coroutines} from any coroutine, but
+we must be careful because if we let the main routine exit before all
+the routines are finished some computation will not take place.  In the
+following program the subroutine has more steps than the main routine:
+
+@example
+(coroutine
+    (lambda ()
+      (display "sub 1\n")
+      (yield)
+      (display "sub 2\n")
+      (yield)
+      (display "sub 3\n")
+      (yield)
+      (display "sub 4\n")
+      (yield)
+      (display "sub 5\n")
+      (finish-coroutines)))
+
+;; This runs in the main routine.
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+@end example
+
+@noindent
+and its output is:
+
+@example
+sub 1
+main 1
+sub 2
+main 2
+sub 3
+main 3
+@end example
+
+@noindent
+we see that @samp{sub 4} and @samp{sub 5} are not displayed.
+
+@c page
+@node coroutines api
+@subsection Programming interface to coroutines
+
+
 The following bindings are exported by the library @library{vicare
 coroutines}.
 
@@ -4695,7 +4900,7 @@ coroutine; return unspecified values.
 
 
 @defun finish-coroutines
-Loop running the next coroutine until there are no more.  Return
+Loop running the next coroutine until there are no more; return
 unspecified values.
 @end defun
 
