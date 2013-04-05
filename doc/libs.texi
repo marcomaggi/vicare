@@ -4960,11 +4960,11 @@ unspecified values.
 @section Interprocess connection channels
 
 
-@cindex Library @library{vicare channels}
-@cindex @library{vicare channels}, library
+@cindex Library @library{vicare net channels}
+@cindex @library{vicare net channels}, library
 
-The library @library{vicare channels} implements utilities to transfer
-data through Scheme binary ports, typically between processes.
+The library @library{vicare net channels} implements utilities to
+transfer data through Scheme binary ports, typically between processes.
 
 @menu
 * channels structs::            Data structures.
@@ -4981,7 +4981,7 @@ data through Scheme binary ports, typically between processes.
 @subsection Data structures
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 
@@ -5009,7 +5009,7 @@ instance of @code{channel}.
 @subsection Constructors and destructors
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 
@@ -5029,7 +5029,7 @@ values.  A pending message delivery, if any, is aborted.
 @subsection Configuration parameters
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 
@@ -5064,7 +5064,7 @@ When not configured: the expiration time defaults to infinite.
 @subsection Predicates and arguments validation
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 
@@ -5136,7 +5136,7 @@ message.
 @subsection Receiving a message
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 
@@ -5186,7 +5186,7 @@ compound condition object of types: @condition{who},
 @subsection Sending a message
 
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 
@@ -5196,10 +5196,10 @@ channels}.
 
 
 Whenever an error condition happens: the functions of the library
-@library{vicare channels} react by raising non--continuable exceptions
+@library{vicare net channels} react by raising non--continuable exceptions
 whose raised objects are compound conditions of the following types.
 
-The following bindings are exported by the library @library{vicare
+The following bindings are exported by the library @library{vicare net
 channels}.
 
 @c ------------------------------------------------------------

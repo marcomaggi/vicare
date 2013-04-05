@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (prefix (vicare channels)
+  (prefix (vicare net channels)
 	  chan.)
   (vicare checks))
 

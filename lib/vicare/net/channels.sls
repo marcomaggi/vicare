@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare channels)
+(library (vicare net channels)
   (export
     ;; initialisation and finalisation
     open-channel		close-channel
