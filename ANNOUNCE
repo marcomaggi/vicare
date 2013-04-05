@@ -64,7 +64,13 @@ Notes for revision 0.2d21
       base64->bytevector	bytevector->base64
       string-base64->bytevector	bytevector->string-base64
 
-* Added library (vicare cond-expand).
+* Added  library  (vicare  cond-expand),   see  the  documentation  node
+  "cond-expand".
+
+* Added  library   (vicare  coroutines),  see  the   documentation  node
+  "coroutines".
+
+* Some changes to attempt a fix for Issue #35 have been implemented.
 
 
 Notes for revision 0.2d20
