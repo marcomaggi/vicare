@@ -254,6 +254,7 @@
 
     ;; time objects
     time.vicare-arguments-validation
+    time/false.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1481,6 +1482,11 @@
 (define-argument-validation (time who obj)
   (time? obj)
   (assertion-violation who "expected time object as argument" obj))
+
+(define-argument-validation (time/false who obj)
+  (or (not obj)
+      (time? obj))
+  (assertion-violation who "expected false or time object as argument" obj))
 
 
 ;;;; done

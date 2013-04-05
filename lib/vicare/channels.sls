@@ -31,6 +31,10 @@
     ;; initialisation and finalisation
     open-channel		close-channel
 
+    ;; configuration
+    channel-set-maximum-message-size!
+    channel-set-expiration-time!
+
     ;; predicates and arguments validation
     channel?			channel.vicare-arguments-validation
     receiving-channel?		receiving-channel.vicare-arguments-validation
@@ -98,8 +102,10 @@
   ($set-channel-message-size! chan (+ delta-size ($channel-message-size chan))))
 
 (define ($time-expired? chan)
-  (time<=? (current-time)
-	   ($channel-expiration-time chan)))
+  (cond (($channel-expiration-time chan)
+	 => (lambda (expiration-time)
+	      (time<=? (current-time) expiration-time)))
+	(else #f)))
 
 (define ($maximum-size-exceeded? chan)
   (> ($channel-message-size chan)
@@ -118,7 +124,7 @@
 		  #f #;buffer-extract
 		  #f #;expiration-time
 		  0 #;message-size
-		  0 #;maximum-message-size)))
+		  4096 #;maximum-message-size)))
 
 (define (close-channel chan)
   ;;Finalise a  channel closing its connection  port; return unspecified
@@ -130,6 +136,32 @@
     (close-port ($channel-connect-port chan))
     (struct-reset chan)
     (void)))
+
+
+;;;; configuration
+
+(define (channel-set-maximum-message-size! chan maximum-message-size)
+  ;;MAXIMUM-MESSAGE-SIZE   must   be   a  non-negative   exact   integer
+  ;;representing the inclusive maximum message  size; if the size of the
+  ;;message exceeds this value: message delivery will fail.
+  ;;
+  (define who 'channel-set-maximum-message-size!)
+  (with-arguments-validation (who)
+      ((channel			chan)
+       (positive-exact-integer	maximum-message-size))
+    ($set-channel-maximum-message-size! chan maximum-message-size)
+    (void)))
+
+(define (channel-set-expiration-time! chan expiration-time)
+  ;;EXPIRATION-TIME  must be  false or  a time  object representing  the
+  ;;limit of time  since the Epoch to complete message  delivery; if the
+  ;;allotted time expires: message delivery will fail.
+  ;;
+  (define who 'channel-set-expiration-time!)
+  (with-arguments-validation (who)
+      ((channel		chan)
+       (time/false	expiration-time))
+    ($set-channel-expiration-time! chan expiration-time)))
 
 
 ;;;; predicates and arguments validation: receiving messages
@@ -293,25 +325,15 @@
 
 ;;;; receiving messages
 
-(define (channel-reception-begin! chan maximum-message-size expiration-time)
+(define (channel-reception-begin! chan expiration-time)
   ;;Configure a channel to start receiving a message; return unspecified
   ;;values.  It  is an error  if the  connection port registered  in the
   ;;channel is  neither input nor input/output.   It is an error  if the
   ;;channel is not inactive.
   ;;
-  ;;MAXIMUM-MESSAGE-SIZE   must   be   a  non-negative   exact   integer
-  ;;representing the inclusive maximum message  size; if the size of the
-  ;;message exceeds this value: message delivery will fail.
-  ;;
-  ;;EXPIRATION-TIME must be a time object representing the limit of time
-  ;;since the Epoch  to complete message delivery; if  the allotted time
-  ;;expires: message delivery will fail.
-  ;;
   (define who 'channel-start-get-message)
   (with-arguments-validation (who)
-      ((inactive-channel	chan)
-       (positive-exact-integer	maximum-message-size)
-       (time			expiration-time))
+      ((inactive-channel	chan))
     (let ((in-port ($channel-connect-port chan)))
       (with-arguments-validation (who)
 	  ((input-port	in-port))
@@ -320,9 +342,7 @@
 	  ($set-channel-action!          chan 'recv)
 	  ($set-channel-buffer-port!     chan port)
 	  ($set-channel-buffer-extract!  chan extract)
-	  ($set-channel-expiration-time! chan expiration-time)
-	  ($set-channel-message-size!         chan 0)
-	  ($set-channel-maximum-message-size! chan maximum-message-size)
+	  ($set-channel-message-size!    chan 0)
 	  (void))))))
 
 (define (channel-reception-end! chan)
@@ -342,9 +362,7 @@
       ($set-channel-action!          chan #f)
       ($set-channel-buffer-port!     chan #f)
       ($set-channel-buffer-extract!  chan #f)
-      ($set-channel-expiration-time! chan #f)
-      ($set-channel-message-size!         chan 0)
-      ($set-channel-maximum-message-size! chan 0))))
+      ($set-channel-message-size!    chan 0))))
 
 (define (channel-get-message-portion! chan)
   ;;Receive a  portion of input  message from the given  channel; return
