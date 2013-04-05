@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -64,6 +64,238 @@
   (check
       (string? (date-string))
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'operations))
+
+;;; addition
+
+  (check
+      (time-addition (make-time 100 200)
+		     (make-time  20  40))
+    (=> time=?)
+    (make-time 120 240))
+
+  (check
+      (time-addition (make-time 100100100 200)
+		     (make-time  20020020 40))
+    (=> time=?)
+    (make-time 120120120 240))
+
+;;; --------------------------------------------------------------------
+;;; difference
+
+  (check
+      (time-difference (make-time 100 200)
+		       (make-time  20  40))
+    (=> time=?)
+    (make-time 80 160))
+
+  #t)
+
+
+(parametrise ((check-test-name	'comparison))
+
+;;; equal
+
+  (check
+      (time=? (make-time 100 200000)
+	      (make-time 100 200000))
+    => #t)
+
+  (check
+      (time=? (make-time 100 201000)
+	      (make-time 100 200000))
+    => #f)
+
+  (check
+      (time=? (make-time 100100100 200000)
+	      (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time=? (make-time 100100109 200000)
+	      (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time=? (make-time 190100100 200000)
+	      (make-time 100100100 200000))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; less than
+
+  (check
+      (time<? (make-time 100 200000)
+	      (make-time 100 200000))
+    => #f)
+
+  (check
+      (time<? (make-time 100 201000)
+	      (make-time 100 200000))
+    => #f)
+
+  (check
+      (time<? (make-time 100 200000)
+	      (make-time 100 201000))
+    => #t)
+
+  (check
+      (time<? (make-time 100100100 200000)
+	      (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time<? (make-time 100100109 200000)
+	      (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time<? (make-time 100100100 200000)
+	      (make-time 100100109 200000))
+    => #t)
+
+  (check
+      (time<? (make-time 190100100 200000)
+	      (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time<? (make-time 100100100 200000)
+	      (make-time 190100100 200000))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; greater than
+
+  (check
+      (time>? (make-time 100 200000)
+	      (make-time 100 200000))
+    => #f)
+
+  (check
+      (time>? (make-time 100 209000)
+	      (make-time 100 200000))
+    => #t)
+
+  (check
+      (time>? (make-time 100 200000)
+	      (make-time 100 209000))
+    => #f)
+
+  (check
+      (time>? (make-time 100100100 200000)
+	      (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time>? (make-time 100100109 200000)
+	      (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time>? (make-time 100100100 200000)
+	      (make-time 100100109 200000))
+    => #f)
+
+  (check
+      (time>? (make-time 190100100 200000)
+	      (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time>? (make-time 100100100 200000)
+	      (make-time 190100100 200000))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; less than or equal to
+
+  (check
+      (time<=? (make-time 100 200000)
+	       (make-time 100 200000))
+    => #t)
+
+  (check
+      (time<=? (make-time 100 201000)
+	       (make-time 100 200000))
+    => #f)
+
+  (check
+      (time<=? (make-time 100 200000)
+	       (make-time 100 201000))
+    => #t)
+
+  (check
+      (time<=? (make-time 100100100 200000)
+	       (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time<=? (make-time 100100109 200000)
+	       (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time<=? (make-time 100100100 200000)
+	       (make-time 100100109 200000))
+    => #t)
+
+  (check
+      (time<=? (make-time 190100100 200000)
+	       (make-time 100100100 200000))
+    => #f)
+
+  (check
+      (time<=? (make-time 100100100 200000)
+	       (make-time 190100100 200000))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; greater than or equal to
+
+  (check
+      (time>=? (make-time 100 200000)
+	       (make-time 100 200000))
+    => #t)
+
+  (check
+      (time>=? (make-time 100 209000)
+	       (make-time 100 200000))
+    => #t)
+
+  (check
+      (time>=? (make-time 100 200000)
+	       (make-time 100 209000))
+    => #f)
+
+  (check
+      (time>=? (make-time 100100100 200000)
+	       (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time>=? (make-time 100100109 200000)
+	       (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time>=? (make-time 100100100 200000)
+	       (make-time 100100109 200000))
+    => #f)
+
+  (check
+      (time>=? (make-time 190100100 200000)
+	       (make-time 100100100 200000))
+    => #t)
+
+  (check
+      (time>=? (make-time 100100100 200000)
+	       (make-time 190100100 200000))
+    => #f)
 
   #t)
 

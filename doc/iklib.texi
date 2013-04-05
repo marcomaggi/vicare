@@ -6350,6 +6350,13 @@ Epoch.
 @end defun
 
 
+@defun make-time @var{seconds} @var{nanoseconds}
+Build and return a new time object with microseconds resolution.  If
+@var{nanoseconds} exceeds @math{1000000} its value is normalised and the
+excess added to @var{seconds}.
+@end defun
+
+
 @defun time? @var{obj}
 Return @true{} if @var{obj} is a time object returned by
 @func{current-time}.
@@ -6372,6 +6379,55 @@ returned by @func{current-time}, as determined ty @cfunc{gmtime_r}.
 @defun date-string
 Return a string representing the current date in the simple format:
 year, month, day.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Time operations
+
+
+@defun time-addition @vari{time} @varii{time}
+Compute the addition between two times: @code{@vari{time} +
+@varii{time}} and return a time struct representing it.
+@end defun
+
+
+@defun time-difference @vari{time} @varii{time}
+Compute the difference between two times: @code{@vari{time} -
+@varii{time}} and return a time struct representing it.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Time comparison
+
+
+@defun time=? @vari{time} @varii{time}
+Return @true{} if the time objects are equal, else return @false{}.
+@end defun
+
+
+@defun time<? @vari{time} @varii{time}
+Return @true{} if the @vari{time} is less than @varii{time}, else return
+@false{}.
+@end defun
+
+
+@defun time<=? @vari{time} @varii{time}
+Return @true{} if the @vari{time} is less than or equal to @varii{time},
+else return @false{}.
+@end defun
+
+
+@defun time>? @vari{time} @varii{time}
+Return @true{} if the @vari{time} is greater than @varii{time}, else
+return @false{}.
+@end defun
+
+
+@defun time>=? @vari{time} @varii{time}
+Return @true{} if the @vari{time} is greater than or equal to
+@varii{time}, else return @false{}.
 @end defun
 
 @c page

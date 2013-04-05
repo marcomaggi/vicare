@@ -257,6 +257,7 @@ When used without arguments or arguments validation disabled: expand to
                                    arguments.
 * args predefined genbuffers::     Validating generalised C buffer
                                    arguments.
+* args predefined time::           Time objects.
 @end menu
 
 @c page
@@ -1234,6 +1235,20 @@ optional length.
 @deffn {Validation Clause} general-c-sticky-buffer* @var{obj} @var{obj.len}
 Succeed if @var{obj} is a generalised C buffer and @var{obj.len} its
 optional length.
+@end deffn
+
+@c page
+@node args predefined time
+@subsubsection Validating time objects
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} time @var{obj}
+Succeed if @var{obj} is a time object: it satisfies the predicate
+@func{time?} exported by @library{vicare}.
 @end deffn
 
 @c page

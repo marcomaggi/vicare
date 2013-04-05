@@ -1506,12 +1506,14 @@
 
     quasi-time=?)
   (import (except (vicare)
-		  current-time
-		  time-nanosecond
-		  time-second
+		  current-time		make-time
+		  time-nanosecond	time-second
 		  time-gmt-offset
-		  time
-		  time?)
+		  time			time?
+		  time-addition	time-difference
+		  time=?
+		  time<?		time<=?
+		  time>?		time>=?)
     (prefix (only (vicare)
 		  current-time
 		  time-nanosecond
@@ -1521,7 +1523,8 @@
     (prefix (vicare unsafe-operations)
 	    $)
     (vicare syntactic-extensions)
-    (vicare arguments validation)
+    (except (vicare arguments validation)
+	    time.vicare-arguments-validation)
     (srfi :6 basic-string-ports))
 
 

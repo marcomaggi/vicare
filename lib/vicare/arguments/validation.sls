@@ -251,6 +251,9 @@
 
     general-c-string.len.vicare-arguments-validation
     general-c-buffer.len.vicare-arguments-validation
+
+    ;; time objects
+    time.vicare-arguments-validation
     )
   (import (ikarus)
     (for (prefix (vicare installation-configuration)
@@ -1471,6 +1474,13 @@
     "expected false or exact integer in the range of the C language type \"size_t\" \
      as general C string length"
     buf.len))
+
+
+;;;; time objects
+
+(define-argument-validation (time who obj)
+  (time? obj)
+  (assertion-violation who "expected time object as argument" obj))
 
 
 ;;;; done

@@ -1,6 +1,6 @@
 #!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Abstract
@@ -687,6 +687,14 @@
     (time-nanosecond				i v $language)
     (time-gmt-offset				i v $language)
     (date-string				i v $language)
+    (make-time					i v $language)
+    (time-addition				i v $language)
+    (time-difference				i v $language)
+    (time=?					i v $language)
+    (time<?					i v $language)
+    (time<=?					i v $language)
+    (time>?					i v $language)
+    (time>=?					i v $language)
 ;;;
     (command-line-arguments			i v $language)
     (set-rtd-printer!				i v $language)
