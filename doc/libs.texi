@@ -4878,6 +4878,35 @@ main 3
 @noindent
 we see that @samp{sub 4} and @samp{sub 5} are not displayed.
 
+@c ------------------------------------------------------------
+
+@subsubheading Finish coroutines as exit hook
+
+It can be useful to register @func{finish-coroutines} as exit hook, so
+that upon exiting the process all the pending coroutines are correctly
+terminated.
+
+@example
+(coroutine
+    (lambda ()
+      (display "one 1\n")
+      (yield)
+      (display "one 2\n")
+      (yield)
+      (display "one 3\n")))
+
+(coroutine
+    (lambda ()
+      (display "two 1\n")
+      (yield)
+      (display "two 2\n")
+      (yield)
+      (display "two 3\n")))
+
+(exit-hooks (cons finish-coroutines (exit-hooks)))
+(exit)
+@end example
+
 @c page
 @node coroutines api
 @subsection Programming interface to coroutines
