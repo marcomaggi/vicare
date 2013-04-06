@@ -1614,6 +1614,7 @@ Return an exact integer suitable to be used as hash value for
 
 @menu
 * iklib lists weak::            Weak pairs.
+* iklib lists queue::           Queues of items.
 @end menu
 
 @c page
@@ -1654,6 +1655,70 @@ vicare> x
  (#!bwp . #f)
 vicare> (bwp-object? (car x))
 #t
+@end example
+@end defun
+
+@c page
+@node iklib lists queue
+@subsection Queues of items
+
+
+Queues are object containers that allow constructing a first-in
+first-out sequence.  The following bindings are exported by the library
+@library{vicare}.
+
+
+@defun make-queue
+Build a queue of items and return @math{3} values:
+
+@enumerate
+@item
+A predicate thunk returning @true{} if the queue is empty.
+
+@item
+A function which, applied to a single argument, enqueues it as last
+item.
+
+@item
+A thunk extracting and returning the first item from the queue.  If the
+queue is empty an error is raised.
+@end enumerate
+
+Usage examples:
+
+@example
+#!r6rs
+(import (vicare))
+
+(let-values (((empty? enqueue! dequeue!)
+              (make-queue)))
+  (empty?))
+@result{} #t
+
+(let-values (((empty? enqueue! dequeue!)
+              (make-queue)))
+  (enqueue! 1)
+  (empty?))
+@result{} #f
+
+(let-values (((empty? enqueue! dequeue!)
+              (make-queue)))
+  (enqueue! 1)
+  (empty?)      @result{} #f
+  (dequeue!)    @result{} 1
+  (empty?))
+@result{} #t
+
+(let-values (((empty? enqueue! dequeue!)
+              (make-queue)))
+  (enqueue! 1)
+  (enqueue! 2)
+  (enqueue! 3)
+  (dequeue!)    @result{} 1
+  (dequeue!)    @result{} 2
+  (dequeue!)    @result{} 3
+  (empty?))
+@result{} #t
 @end example
 @end defun
 

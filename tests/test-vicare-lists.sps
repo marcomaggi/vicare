@@ -8,7 +8,7 @@
 ;;;
 ;;;	This test file was originally in Nausicaa.
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -4810,6 +4810,47 @@ called with at least two arguments.
     => #f)
 
   #f)
+
+
+(parametrise ((check-test-name	'queues))
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue)))
+	(empty?))
+    => #t)
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue)))
+	(enqueue! 1)
+	(empty?))
+    => #f)
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue)))
+	(enqueue! 1)
+	(let ((rv0 (empty?))
+	      (rv1 (dequeue!))
+	      (rv2 (empty?)))
+	  (six.list rv0 rv1 rv2)))
+    => '(#f 1 #t))
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue)))
+	(enqueue! 1)
+	(enqueue! 2)
+	(enqueue! 3)
+	(let ((rv0 (dequeue!))
+	      (rv1 (dequeue!))
+	      (rv2 (dequeue!))
+	      (rv3 (empty?)))
+	  (six.list rv0 rv1 rv2 rv3)))
+    => '(1 2 3 #t))
+
+  #t)
 
 
 ;;;; done
