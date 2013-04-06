@@ -51,6 +51,8 @@
     channel-get-message-portion!
 
     ;; message sending
+    channel-sending-begin!	channel-sending-end!
+    channel-set-message-portion!
 
     ;; condition objects
     &channel
@@ -83,14 +85,14 @@
 		;messages to a remote process.
    action
 		;False or the symbol "recv" or the symbol "send".
-   message-buffer
-		;Null  or a  list of  bytevectors representing  the data
-		;accumulated so far; last input first.
    expiration-time
 		;A time object representing the  limit of time since the
 		;Epoch  to complete  message delivery;  if the  allotted
 		;time expires:  sending or  receiving this  message will
 		;fail.
+   message-buffer
+		;Null  or a  list of  bytevectors representing  the data
+		;accumulated so far; last input first.
    message-size
 		;A non-negative  exact integer representing  the current
 		;message size.
@@ -136,8 +138,8 @@
        (input-port	port))
     (make-channel port #f
 		  #f #;action
-		  '() #;message-buffer
 		  #f #;expiration-time
+		  '() #;message-buffer
 		  0 #;message-size
 		  4096 #;maximum-message-size
 		  DEFAULT-TERMINATOR #;message-terminator)))
@@ -149,8 +151,8 @@
        (output-port	port))
     (make-channel #f port
 		  #f #;action
-		  '() #;message-buffer
 		  #f #;expiration-time
+		  '() #;message-buffer
 		  0 #;message-size
 		  4096 #;maximum-message-size
 		  DEFAULT-TERMINATOR #;message-terminator)))
@@ -168,8 +170,8 @@
 	 (output-port	ou-port))
       (make-channel in-port ou-port
 		    #f #;action
-		    '() #;message-buffer
 		    #f #;expiration-time
+		    '() #;message-buffer
 		    0 #;message-size
 		    4096 #;maximum-message-size
 		    DEFAULT-TERMINATOR #;message-terminator)))))
@@ -319,8 +321,7 @@
   ;;Unsafe function  returning #t if  CHAN is  neither in the  course of
   ;;sending nor receiving a message, else return #f.
   ;;
-  (and ($channel-action chan)
-       #t))
+  (not ($channel-action chan)))
 
 ;;; --------------------------------------------------------------------
 

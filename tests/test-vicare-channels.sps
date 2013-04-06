@@ -29,6 +29,7 @@
 (import (vicare)
   (prefix (vicare net channels)
 	  chan.)
+  (vicare custom-ports)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -42,10 +43,16 @@
   (check
       (let* ((port (open-bytevector-input-port '#vu8(1 2 3)))
 	     (chan (chan.open-input-channel port)))
-        (chan.channel? chan))
-    => #t)
+        (list (chan.channel? chan)
+	      (chan.input-channel? chan)
+	      (chan.output-channel? chan)
+	      (chan.input/output-channel? chan)
+	      (chan.inactive-channel? chan)
+	      (chan.sending-channel? chan)
+	      (chan.receiving-channel? chan)))
+    => '(#t #t #f #f #t #f #f))
 
-  (check
+   (check
       (let* ((port (open-bytevector-input-port '#vu8(1 2 3)))
 	     (chan (chan.open-input-channel port)))
         (chan.close-channel chan))
@@ -57,12 +64,39 @@
   (check
       (let-values (((port extract) (open-bytevector-output-port)))
 	(let ((chan (chan.open-output-channel port)))
-	  (chan.channel? chan)))
-    => #t)
+	  (list (chan.channel? chan)
+		(chan.input-channel? chan)
+		(chan.output-channel? chan)
+		(chan.input/output-channel? chan)
+		(chan.inactive-channel? chan)
+		(chan.sending-channel? chan)
+		(chan.receiving-channel? chan))))
+    => '(#t #f #t #f #t #f #f))
 
   (check
       (let-values (((port extract) (open-bytevector-output-port)))
 	(let ((chan (chan.open-output-channel port)))
+	  (chan.close-channel chan)))
+    => (void))
+
+;;; --------------------------------------------------------------------
+;;; input/output channel
+
+  (check
+      (let-values (((port1 port2) (open-binary-input/output-port-pair)))
+	(let ((chan (chan.open-input/output-channel port1)))
+	  (list (chan.channel? chan)
+		(chan.input-channel? chan)
+		(chan.output-channel? chan)
+		(chan.input/output-channel? chan)
+		(chan.inactive-channel? chan)
+		(chan.sending-channel? chan)
+		(chan.receiving-channel? chan))))
+    => '(#t #t #t #t #t #f #f))
+
+  (check
+      (let-values (((port1 port2) (open-binary-input/output-port-pair)))
+	(let ((chan (chan.open-input/output-channel port1)))
 	  (chan.close-channel chan)))
     => (void))
 
