@@ -5013,9 +5013,32 @@ The following bindings are exported by the library @library{vicare net
 channels}.
 
 
-@defun open-channel @var{connection-port}
-Build and return a new instance of @code{channel} wrapping the binary
-port @var{connection-port}.  The returned channel is inactive.
+@defun open-input-channel @var{in-port}
+Build and return a new instance of @code{channel} to be used to receive
+messages; the returned channel is inactive.  The channel wraps the
+binary input or input/output port @var{in-port}.
+@end defun
+
+
+@defun open-output-channel @var{ou-port}
+Build and return a new instance of @code{channel} to be used to send
+messages; the returned channel is inactive.  The channel wraps the
+binary output or input/output port @var{ou-port}.
+@end defun
+
+
+@defun open-input/output-channel @var{port}
+@defunx open-input/output-channel @var{in-port} @var{ou-port}
+Build and return a new instance of @code{channel} to be used to both
+receive and send messages; the returned channel is inactive.
+
+The channel wraps the binary input or input/output port @var{in-port},
+used to receive messages, and the binary output or input/output port
+@var{ou-port}, used to send messages.  @var{in-port} and @var{ou-port}
+can be the same port.
+
+When a single argument is given: @var{port} is used for both input and
+output.
 @end defun
 
 
@@ -5065,6 +5088,20 @@ The expiration time @strong{is} reset to no time limit when a message
 delivery is completed.
 @end defun
 
+
+@defun channel-set-message-terminator! @var{chan} @var{terminator}
+Configure the message terminator; return unspecified values.
+@var{terminator} must be a non--empty bytevector representing the
+message terminator.
+
+When not configured: the terminator defaults to @code{#vu8(13 10 13
+10)}, which is the double sequence of @ascii{} characters: carriage
+return, line feed.
+
+The terminator is @strong{not} reset when a message delivery is
+completed.
+@end defun
+
 @c page
 @node channels preds
 @subsection Predicates and arguments validation
@@ -5092,6 +5129,27 @@ return @false{}.  It is an error if @var{chan} is not an instance of
 Return @true{} if @var{chan} is @strong{neither} in the course of
 sending @strong{nor} receiving a message, else return @false{}.  It is
 an error if @var{chan} is not an instance of @code{channel}.
+@end defun
+
+
+@defun input-channel? @var{chan}
+Return @true{} if @var{chan} is an input or input/output channel, else
+return @false{}.  It is an error if @var{chan} is not an instance of
+@code{channel}.
+@end defun
+
+
+@defun output-channel? @var{chan}
+Return @true{} if @var{chan} is an output or input/output channel, else
+return @false{}.  It is an error if @var{chan} is not an instance of
+@code{channel}.
+@end defun
+
+
+@defun input/output-channel? @var{chan}
+Return @true{} if @var{chan} is an input/output channel, else return
+@false{}.  It is an error if @var{chan} is not an instance of
+@code{channel}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -5148,9 +5206,8 @@ channels}.
 
 @defun channel-reception-begin! @var{chan}
 Configure a channel to start receiving a message; return unspecified
-values.  It is an error if the connection port registered in the channel
-is neither input nor input/output.  It is an error if the channel is not
-inactive.
+values.  @var{chan} must be an input or input/output channel; it is an
+error if the channel is not inactive.
 @end defun
 
 
@@ -5195,6 +5252,45 @@ compound condition object of types: @condition{who},
 The following bindings are exported by the library @library{vicare net
 channels}.
 
+
+@defun channel-sending-begin! @var{chan}
+Configure a channel to start sending a message; return unspecified
+values.  @var{chan} must be an output or input/output channel; it is an
+error if the channel is not inactive.
+@end defun
+
+
+@defun channel-sending-end! @var{chan}
+Finish sending a message by flushing the connect port and return the
+total number of octets sent.  It is an error if the channel is not in
+the course of sending a message.
+
+After this function is applied to a channel: the channel itself is
+configured as inactive; so it is available to start receiving another
+message or to send a message.
+@end defun
+
+
+@defun channel-set-message-portion! @var{chan} @var{portion}
+Send a portion of output message through the given channel; return
+unspecified values.  It is an error if the channel is not in the course
+of sending a message.
+
+@var{portion} must be a bytevector representing the message portion.
+
+This function does not flush the connection port.
+
+If at the time of this function call the timeout configured for this
+message is expired: a non--continuable exception is raised with compound
+condition object of types: @condition{who}, @condition{message},
+@condition{channel}, @condition{delivery-timeout-expired}.
+
+If writing @var{portion} would cause the total message size to exceed
+the maximum size configured for this message: a non--continuable
+exception is raised with compound condition object of types:
+@condition{who}, @condition{message}, @condition{channel},
+@condition{maximum-message-size-exceeded}.
+@end defun
 
 @c page
 @node channels conditions

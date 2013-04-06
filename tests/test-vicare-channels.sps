@@ -37,16 +37,33 @@
 
 (parametrise ((check-test-name	'struct))
 
+;;; input channel
+
   (check
       (let* ((port (open-bytevector-input-port '#vu8(1 2 3)))
-	     (chan (chan.open-channel port)))
+	     (chan (chan.open-input-channel port)))
         (chan.channel? chan))
     => #t)
 
   (check
       (let* ((port (open-bytevector-input-port '#vu8(1 2 3)))
-	     (chan (chan.open-channel port)))
+	     (chan (chan.open-input-channel port)))
         (chan.close-channel chan))
+    => (void))
+
+;;; --------------------------------------------------------------------
+;;; output channel
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(let ((chan (chan.open-output-channel port)))
+	  (chan.channel? chan)))
+    => #t)
+
+  (check
+      (let-values (((port extract) (open-bytevector-output-port)))
+	(let ((chan (chan.open-output-channel port)))
+	  (chan.close-channel chan)))
     => (void))
 
   #t)

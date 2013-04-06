@@ -29,17 +29,22 @@
 (library (vicare net channels)
   (export
     ;; initialisation and finalisation
-    open-channel		close-channel
+    open-input-channel		open-output-channel
+    open-input/output-channel	close-channel
 
     ;; configuration
     channel-set-maximum-message-size!
     channel-set-expiration-time!
+    channel-set-message-terminator!
 
     ;; predicates and arguments validation
     channel?			channel.vicare-arguments-validation
     receiving-channel?		receiving-channel.vicare-arguments-validation
     sending-channel?		sending-channel.vicare-arguments-validation
     inactive-channel?		inactive-channel.vicare-arguments-validation
+    input-channel?		input-channel.vicare-arguments-validation
+    output-channel?		output-channel.vicare-arguments-validation
+    input/output-channel?	input/output-channel.vicare-arguments-validation
 
     ;; message reception
     channel-reception-begin!	channel-reception-end!
@@ -70,9 +75,12 @@
 ;;;; data structures
 
 (define-struct-extended channel
-  (connect-port
-		;An input/output  binary port  used to send  and receive
-		;messages to and from a remote process.
+  (connect-in-port
+		;An input  or input/output  binary port used  to receive
+		;messages from a remote process.
+   connect-ou-port
+		;An  output or  input/output  binary port  used to  send
+		;messages to a remote process.
    action
 		;False or the symbol "recv" or the symbol "send".
    message-buffer
@@ -121,11 +129,12 @@
 (define-constant DEFAULT-TERMINATOR
   (string->ascii "\r\n\r\n"))
 
-(define (open-channel port)
-  (define who 'open-channel)
+(define (open-input-channel port)
+  (define who 'open-input-channel)
   (with-arguments-validation (who)
-      ((binary-port	port))
-    (make-channel port
+      ((binary-port	port)
+       (input-port	port))
+    (make-channel port #f
 		  #f #;action
 		  '() #;message-buffer
 		  #f #;expiration-time
@@ -133,14 +142,49 @@
 		  4096 #;maximum-message-size
 		  DEFAULT-TERMINATOR #;message-terminator)))
 
+(define (open-output-channel port)
+  (define who 'open-output-channel)
+  (with-arguments-validation (who)
+      ((binary-port	port)
+       (output-port	port))
+    (make-channel #f port
+		  #f #;action
+		  '() #;message-buffer
+		  #f #;expiration-time
+		  0 #;message-size
+		  4096 #;maximum-message-size
+		  DEFAULT-TERMINATOR #;message-terminator)))
+
+(define open-input/output-channel
+  (case-lambda
+   ((port)
+    (open-input/output-channel port port))
+   ((in-port ou-port)
+    (define who 'open-input/output-channel)
+    (with-arguments-validation (who)
+	((binary-port	in-port)
+	 (binary-port	ou-port)
+	 (input-port	in-port)
+	 (output-port	ou-port))
+      (make-channel in-port ou-port
+		    #f #;action
+		    '() #;message-buffer
+		    #f #;expiration-time
+		    0 #;message-size
+		    4096 #;maximum-message-size
+		    DEFAULT-TERMINATOR #;message-terminator)))))
+
 (define (close-channel chan)
   ;;Finalise a  channel closing its connection  port; return unspecified
   ;;values.  A pending message delivery is aborted.
   ;;
   (define who 'close-channel)
+  (define (%close port)
+    (and port (close-port port)))
   (with-arguments-validation (who)
       ((channel		chan))
-    (close-port ($channel-connect-port chan))
+    (%close ($channel-connect-in-port chan))
+    (%close ($channel-connect-ou-port chan))
     (struct-reset chan)
     (void)))
 
@@ -168,7 +212,19 @@
   (with-arguments-validation (who)
       ((channel		chan)
        (time/false	expiration-time))
-    ($set-channel-expiration-time! chan expiration-time)))
+    ($set-channel-expiration-time! chan expiration-time)
+    (void)))
+
+(define (channel-set-message-terminator! chan terminator)
+  ;;TERMINATOR must  be a non-empty bytevector  representing the message
+  ;;terminator.
+  ;;
+  (define who 'channel-set-expiration-time!)
+  (with-arguments-validation (who)
+      ((channel			chan)
+       (non-empty-bytevector	terminator))
+    ($set-channel-expiration-time! chan terminator)
+    (void)))
 
 
 ;;;; predicates and arguments validation: receiving messages
@@ -287,6 +343,94 @@
     "expected channel not in the course of inactive a message" chan))
 
 
+;;;; predicates and arguments validation: input channel
+
+(define (input-channel? chan)
+  ;;Return #t if  CHAN is an input or input/output  channel, else return
+  ;;#f.  It is an error if CHAN is not an instance of CHANNEL.
+  ;;
+  (define who 'input-channel?)
+  (with-arguments-validation (who)
+      ((channel	chan))
+    ($input-channel? chan)))
+
+(define ($input-channel? chan)
+  ;;Unsafe function  returning #t  if CHAN is  an input  or input/output
+  ;;channel, else return #f.
+  ;;
+  (and ($channel-connect-in-port chan) #t))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (input-channel who obj)
+  ;;Succeed if  OBJ is  an instance  of CHANNEL  and it  is an  input or
+  ;;input/output channel.
+  ;;
+  (and (channel? obj)
+       ($input-channel? obj))
+  (assertion-violation who
+    "expected input or input/output channel as argument" obj))
+
+
+;;;; predicates and arguments validation: output channel
+
+(define (output-channel? chan)
+  ;;Return #t if CHAN is an  output or input/output channel, else return
+  ;;#f.  It is an error if CHAN is not an instance of CHANNEL.
+  ;;
+  (define who 'output-channel?)
+  (with-arguments-validation (who)
+      ((channel	chan))
+    ($output-channel? chan)))
+
+(define ($output-channel? chan)
+  ;;Unsafe function  returning #t if  CHAN is an output  or input/output
+  ;;channel, else return #f.
+  ;;
+  (and ($channel-connect-ou-port chan) #t))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (output-channel who obj)
+  ;;Succeed if  OBJ is  an instance of  CHANNEL and it  is an  output or
+  ;;input/output channel.
+  ;;
+  (and (channel? obj)
+       ($output-channel? obj))
+  (assertion-violation who
+    "expected output or input/output channel as argument" obj))
+
+
+;;;; predicates and arguments validation: input/output channel
+
+(define (input/output-channel? chan)
+  ;;Return #t if CHAN is an input/output channel, else return #f.  It is
+  ;;an error if CHAN is not an instance of CHANNEL.
+  ;;
+  (define who 'input/output-channel?)
+  (with-arguments-validation (who)
+      ((channel	chan))
+    ($input/output-channel? chan)))
+
+(define ($input/output-channel? chan)
+  ;;Unsafe function  returning #t  if CHAN  is an  input/output channel,
+  ;;else return #f.
+  ;;
+  (and ($channel-connect-in-port chan)
+       ($channel-connect-ou-port chan)
+       #t))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (input/output-channel who obj)
+  ;;Succeed if OBJ  is an instance of CHANNEL and  it is an input/output
+  ;;channel.
+  ;;
+  (and (channel? obj)
+       ($input/output-channel? obj))
+  (assertion-violation who "expected input/output channel as argument" obj))
+
+
 ;;;; condition objects and exception raising
 
 (define-condition-type &channel
@@ -332,22 +476,19 @@
 
 ;;;; receiving messages
 
-(define (channel-reception-begin! chan expiration-time)
+(define (channel-reception-begin! chan)
   ;;Configure a channel to start receiving a message; return unspecified
-  ;;values.  It  is an error  if the  connection port registered  in the
-  ;;channel is  neither input nor input/output.   It is an error  if the
-  ;;channel is not inactive.
+  ;;values.  CHAN  must be an  input or  input/output channel; it  is an
+  ;;error if the channel is not inactive.
   ;;
-  (define who 'channel-start-get-message)
+  (define who 'channel-reception-begin!)
   (with-arguments-validation (who)
-      ((inactive-channel	chan))
-    (let ((in-port ($channel-connect-port chan)))
-      (with-arguments-validation (who)
-	  ((input-port	in-port))
-	($set-channel-action!          chan 'recv)
-	($set-channel-message-buffer!  chan '())
-	($set-channel-message-size!    chan 0)
-	(void)))))
+      ((inactive-channel	chan)
+       (input-channel		chan))
+    ($set-channel-action!          chan 'recv)
+    ($set-channel-message-buffer!  chan '())
+    ($set-channel-message-size!    chan 0)
+    (void)))
 
 (define (channel-reception-end! chan)
   ;;Finish receiving  a message and  return the accumulated octets  in a
@@ -358,7 +499,7 @@
   ;;configured  as  inactive; so  it  is  available to  start  receiving
   ;;another message or to send a message.
   ;;
-  (define who 'channel-finish-receiving)
+  (define who 'channel-reception-end!)
   (with-arguments-validation (who)
       ((receiving-channel	chan))
     (begin0
@@ -371,7 +512,7 @@
 
 (module (channel-get-message-portion!)
 
-  (define who 'channel-get-message-portion)
+  (define who 'channel-get-message-portion!)
 
   (define (channel-get-message-portion! chan)
     ;;Receive a portion of input  message from the given channel; return
@@ -399,7 +540,7 @@
 		 (%loop chan)))))))
 
   (define (%read chan)
-    (get-bytevector-n ($channel-connect-port chan) 4096))
+    (get-bytevector-n ($channel-connect-in-port chan) 4096))
 
   (define (%end-of-message? chan)
     ;;Compare the message terminator with the bytevectors accumulated in
@@ -413,19 +554,24 @@
 	       #t)
 	      ((null? bufs)
 	       #f)
-	      (($bv= T T.idx ($car bufs) ($fxsub1 ($bytevector-length ($car bufs))))
+	      ((let* ((next-bv     ($car bufs))
+		      (next-bv.end ($fxsub1 ($bytevector-length next-bv))))
+		 ($compare-bytevector-tails T T.idx next-bv next-bv.end))
 	       => (lambda (T.idx)
 		    (loop T.idx ($cdr bufs))))))))
 
-  (define ($bv= A A.idx B B.idx)
+  (define ($compare-bytevector-tails A A.idx B B.idx)
     ;;Recurse  comparing the  bytevector  A, starting  from index  A.idx
     ;;inclusive,  to  the  bytevector   B,  starting  from  index  B.idx
-    ;;inclusive;  if:
+    ;;inclusive.  If:
     ;;
-    ;;* All the octets are equal up to (zero? A.idx): return 0.
+    ;;* All the octets are equal up to (zero? A.idx) included: return 0.
     ;;
-    ;;* All the octets are equal  up to (zero?  B.idx): return the value
-    ;;  of A.idx.
+    ;;* All the  octets are equal up to (zero?   B.idx) included: return
+    ;;  the value of A.idx.
+    ;;
+    ;;* Octets  before the first index  in A or B  are different: return
+    ;;  false.
     ;;
     (and ($fx= ($bytevector-u8-ref A A.idx)
 	       ($bytevector-u8-ref B B.idx))
@@ -434,9 +580,68 @@
 	       (($fxzero? B.idx)
 		A.idx)
 	       (else
-		($bv= A ($fxsub1 A.idx) B ($fxsub1 B.idx))))))
+		($compare-bytevector-tails A ($fxsub1 A.idx)
+					   B ($fxsub1 B.idx))))))
 
   #| end of module |# )
+
+
+;;;; sending messages
+
+(define (channel-sending-begin! chan)
+  ;;Configure a channel  to start sending a  message; return unspecified
+  ;;values.  CHAN  must be an output  or input/output channel; it  is an
+  ;;error if the channel is not inactive.
+  ;;
+  (define who 'channel-sending-begin!)
+  (with-arguments-validation (who)
+      ((inactive-channel	chan)
+       (output-channel		chan))
+    ($set-channel-action!          chan 'send)
+    ($set-channel-message-buffer!  chan '())
+    ($set-channel-message-size!    chan 0)
+    (void)))
+
+(define (channel-sending-end! chan)
+  ;;Finish sending a message by flushing the connect port and return the
+  ;;total number of octets  sent.  It is an error if  the channel is not
+  ;;in the course of sending a message.
+  ;;
+  ;;After this function  is applied to a channel: the  channel itself is
+  ;;configured  as  inactive; so  it  is  available to  start  receiving
+  ;;another message or to send a message.
+  ;;
+  (define who 'channel-sending-end!)
+  (with-arguments-validation (who)
+      ((sending-channel	chan))
+    (begin0
+	($channel-message-size chan)
+      (flush-output-port ($channel-connect-ou-port chan))
+      ($set-channel-action!          chan #f)
+      ($set-channel-message-buffer!  chan '())
+      ($set-channel-message-size!    chan 0)
+      ($set-channel-expiration-time! chan #f))))
+
+(define (channel-set-message-portion! chan portion)
+  ;;Send a portion  of output message through the  given channel; return
+  ;;unspecified values.   It is an  error if the  channel is not  in the
+  ;;course of sending a message.
+  ;;
+  ;;PORTION must be a bytevector representing the message portion.
+  ;;
+  ;;This function does not flush the connection port.
+  ;;
+  (define who 'channel-set-message-portion!)
+  (with-arguments-validation (who)
+      ((sending-channel	chan)
+       (bytevector	portion))
+    ($channel-message-increment-size! chan ($bytevector-length portion))
+    (cond (($time-expired? chan)
+	   (%error-message-expiration-time-expired who chan))
+	  (($maximum-size-exceeded? chan)
+	   (%error-maximum-message-size-exceeded who chan))
+	  (else
+	   (put-bytevector ($channel-connect-ou-port chan) portion)))))
 
 
 (define ($bytevector-reverse-and-concatenate list-of-bytevectors full-length)
