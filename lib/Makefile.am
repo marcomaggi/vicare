@@ -23,6 +23,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/cond-expand/platform-features.sls	\
 	vicare/cond-expand/registry.sls			\
 	vicare/coroutines.sls				\
+	vicare/custom-ports.sls				\
 	vicare/debugging/compiler.sls			\
 	vicare/flonum-formatter.sls			\
 	vicare/flonum-parser.sls			\

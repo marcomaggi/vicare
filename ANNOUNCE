@@ -77,6 +77,9 @@ Notes for revision 0.2d21
 * Added  library  (vicare  cond-expand),   see  the  documentation  node
   "cond-expand".
 
+* Added  library  (vicare  custom-ports),  see  the  documentation  node
+  "custom-ports".
+
 * Added  library   (vicare  coroutines),  see  the   documentation  node
   "coroutines".
 

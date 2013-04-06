@@ -24,6 +24,7 @@
 * infix::                       Infix to prefix transformer.
 * debugging::                   Debugging facilities.
 * coroutines::                  Running coroutines.
+* custom-ports::                Custom ports.
 * channels::                    Interprocess connection channels.
 @end menu
 
@@ -4953,6 +4954,81 @@ coroutine; return unspecified values.
 @defun finish-coroutines
 Loop running the next coroutine until there are no more; return
 unspecified values.
+@end defun
+
+@c page
+@node custom-ports
+@section Custom ports.
+
+
+@cindex Library @library{vicare custom-ports}
+@cindex @library{vicare custom-ports}, library
+
+The library @library{vicare custom-ports} implements special custom
+Scheme input and output ports.
+
+@menu
+* custom-ports pairs::          Port pairs.
+@end menu
+
+@c page
+@node custom-ports pairs
+@subsection Port pairs
+
+
+Port pairs are Scheme ports connected together so that data written to
+one port is read from the other port.
+
+Forking a @value{PRJNAME} process does @strong{not} allow the use of
+port pairs to communicate between processes; it is rather possible to
+use port pairs to communicate among coroutines, @ref{coroutines, Running
+coroutines}.  To communicate between processes we have to use the
+@posix{} library and create pipes (@pxref{posix fd pipe, pipe}) or
+socket pairs (@pxref{posix socket socket, socketpair}).
+
+The following bindings are exported by the library @library{vicare
+custom-ports}.
+
+
+@defun open-binary-input-port-pair
+Return two values being binary ports: input the first, output the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-binary-output-port-pair
+Return two values being binary ports: output the first, input the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-binary-input/output-port-pair
+Return two values being binary ports: input/output the first,
+input/output the second.  Such ports are connected together so that data
+written to one port is read from the other port.
+@end defun
+
+
+@defun open-textual-input-port-pair
+Return two values being textual ports: input the first, output the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-textual-output-port-pair
+Return two values being textual ports: output the first, input the
+second.  Such ports are connected together so that data written to the
+output port is read from the input port.
+@end defun
+
+
+@defun open-textual-input/output-port-pair
+Return two values being textual ports: input/output the first,
+input/output the second.  Such ports are connected together so that data
+written to one port is read from the other port.
 @end defun
 
 @c page

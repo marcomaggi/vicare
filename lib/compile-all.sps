@@ -50,6 +50,7 @@
   (only (vicare weak-hashtables))
   (only (vicare keywords))
   (only (vicare checks))
+  (only (vicare custom-ports))
   (only (vicare net channels))
 
   (only (vicare assembler inspection))
