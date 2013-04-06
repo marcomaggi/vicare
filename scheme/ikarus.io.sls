@@ -2220,11 +2220,15 @@
   ;;Defined by R6RS.  Return #t if X is a binary port.
   (define-predicate binary-port? BINARY-PORT-TAG)
 
-  ;;Defined  by R6RS.   Return #t  if  X is  an input  port or  a
-  ;;combined input and output port.
-  (define-predicate input-port? INPUT-PORT-TAG)
-
   (define-predicate input/output-port? INPUT/OUTPUT-PORT-TAG))
+
+(define (input-port? x)
+  ;;Defined by  R6RS.  Return  #t if X  is an input  port or  a combined
+  ;;input and output port.
+  (and (port? x)
+       (let ((flags ($port-tag x)))
+	 (or (unsafe.fx= (unsafe.fxand flags INPUT-PORT-TAG) INPUT-PORT-TAG)
+	     (unsafe.fx= (unsafe.fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG)))))
 
 (define (output-port? x)
   ;;Defined by  R6RS.  Return #t  if X is  an output port or  a combined
