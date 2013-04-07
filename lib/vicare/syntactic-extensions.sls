@@ -58,7 +58,8 @@
   (export
     ;; miscellaneous extensions
     define-inline		define-inline-constant
-    define-constant		define-struct-extended
+    define-constant
+    define-struct-extended	define-record-type-extended
     define-syntax*		define-auxiliary-syntaxes
     let-inline			let*-inline
     debug-assert		unwind-protect
@@ -245,7 +246,13 @@
 		  (cons #'?arg exprs)))
 	   ))))))
 
+
+;;;; extended struct definition
+
 (define-syntax define-struct-extended
+  ;;Like DEFINE-STRUCT but define  also argument validators, an optional
+  ;;printer and an optional destructor.
+  ;;
   (lambda (stx)
     (define (main stx)
       (syntax-case stx ()
@@ -300,6 +307,72 @@
 		 DESTRUCTOR-REGISTRATION ...
 		 ))))
 	))
+
+    (define (%id->id src-id string-maker)
+      (datum->syntax src-id (string->symbol (string-maker (%id->string src-id)))))
+
+    (define (%id->string id)
+      (symbol->string (syntax->datum id)))
+
+    (define (syntax->list stx)
+      (syntax-case stx ()
+	((?car . ?cdr)
+	 (cons #'?car (syntax->list #'?cdr)))
+	(() '())))
+
+    (let ((out (main stx)))
+      #;(pretty-print (syntax->datum out) (current-error-port))
+      out)))
+
+
+;;;; extended R6RS record type definition
+
+(define-syntax define-record-type-extended
+  ;;Like DEFINE-RECORD-TYPE but define also argument validators.
+  ;;
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((_ ?type-id . ?body)
+	 (identifier? #'?type-id)
+	 (output #'?type-id #'?type-id #'?body))
+
+	((_ (?name ?constructor ?predicate) . ?body)
+	 (and (identifier? #'?name)
+	      (identifier? #'?constructor)
+	      (identifier? #'?predicate))
+	 (output #'?name #'(?name ?constructor ?predicate) #'?body))))
+
+    (define (output type-id type-spec-stx body-stx)
+      (let ((type-str (%id->string type-id)))
+	(with-syntax
+	    ((TYPE-PRED
+	      (%id->id type-id (lambda (type-str)
+				 (string-append type-str "?"))))
+	     (TYPE-VALIDATOR
+	      type-id)
+	     (TYPE-VALIDATOR-MESSAGE
+	      (string-append "expected struct instance of type \""
+			     type-str
+			     "\" as argument"))
+	     (FALSE-OR-TYPE-VALIDATOR
+	      (%id->id type-id (lambda (type-str)
+				 (string-append "false-or-" type-str))))
+	     (FALSE-OR-TYPE-VALIDATOR-MESSAGE
+	      (string-append "expected false or struct instance of type \""
+			     type-str
+			     "\" as argument")))
+	  #`(begin
+	      (define-record-type #,type-spec-stx
+		. #,body-stx)
+	      (define-argument-validation (TYPE-VALIDATOR who obj)
+		(TYPE-PRED obj)
+		(assertion-violation who TYPE-VALIDATOR-MESSAGE obj))
+	      (define-argument-validation (FALSE-OR-TYPE-VALIDATOR who obj)
+		(or (not obj) (TYPE-PRED obj))
+		(assertion-violation who FALSE-OR-TYPE-VALIDATOR-MESSAGE obj))
+	      ))))
+
 
     (define (%id->id src-id string-maker)
       (datum->syntax src-id (string->symbol (string-maker (%id->string src-id)))))
