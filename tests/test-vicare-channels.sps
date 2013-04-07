@@ -36,13 +36,25 @@
 (check-display "*** testing Vicare channels library\n")
 
 
+;;;; helpers
+
+(define in-port (open-bytevector-input-port '#vu8(1 2 3)))
+
+(define ou-port
+  (let-values (((port extract) (open-bytevector-output-port)))
+    port))
+
+(define io-port
+  (let-values (((port1 port2) (open-binary-input/output-port-pair)))
+    port1))
+
+
 (parametrise ((check-test-name	'struct))
 
 ;;; input channel
 
   (check
-      (let* ((port (open-bytevector-input-port '#vu8(1 2 3)))
-	     (chan (chan.open-input-channel port)))
+      (let ((chan (chan.open-input-channel in-port)))
         (list (chan.channel? chan)
 	      (chan.input-channel? chan)
 	      (chan.output-channel? chan)
@@ -53,10 +65,26 @@
     => '(#t #t #f #f #t #f #f))
 
    (check
-      (let* ((port (open-bytevector-input-port '#vu8(1 2 3)))
-	     (chan (chan.open-input-channel port)))
+      (let ((chan (chan.open-input-channel in-port)))
         (chan.close-channel chan))
     => (void))
+
+   (check
+       (let ((chan (chan.open-input-channel in-port)))
+	 (chan.channel-reception-begin! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#f #f #t))
+
+   (check
+       (let ((chan (chan.open-input-channel in-port)))
+	 (chan.channel-reception-begin! chan)
+	 (chan.channel-reception-end! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#t #f #f))
 
 ;;; --------------------------------------------------------------------
 ;;; output channel
@@ -79,6 +107,23 @@
 	  (chan.close-channel chan)))
     => (void))
 
+   (check
+       (let ((chan (chan.open-output-channel ou-port)))
+	 (chan.channel-sending-begin! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#f #t #f))
+
+   (check
+       (let ((chan (chan.open-output-channel ou-port)))
+	 (chan.channel-sending-begin! chan)
+	 (chan.channel-sending-end! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#t #f #f))
+
 ;;; --------------------------------------------------------------------
 ;;; input/output channel
 
@@ -98,6 +143,60 @@
       (let-values (((port1 port2) (open-binary-input/output-port-pair)))
 	(let ((chan (chan.open-input/output-channel port1)))
 	  (chan.close-channel chan)))
+    => (void))
+
+   (check
+       (let ((chan (chan.open-input/output-channel io-port)))
+	 (chan.channel-sending-begin! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#f #t #f))
+
+   (check
+       (let ((chan (chan.open-input/output-channel io-port)))
+	 (chan.channel-sending-begin! chan)
+	 (chan.channel-sending-end! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#t #f #f))
+
+   (check
+       (let ((chan (chan.open-input/output-channel io-port)))
+	 (chan.channel-reception-begin! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#f #f #t))
+
+   (check
+       (let ((chan (chan.open-input/output-channel io-port)))
+	 (chan.channel-reception-begin! chan)
+	 (chan.channel-reception-end! chan)
+	 (list (chan.inactive-channel? chan)
+	       (chan.sending-channel? chan)
+	       (chan.receiving-channel? chan)))
+     => '(#t #f #f))
+
+  #t)
+
+
+(parametrise ((check-test-name	'config))
+
+  (check
+      (let ((chan (chan.open-input-channel in-port)))
+	(chan.channel-set-maximum-message-size! chan 1000))
+    => (void))
+
+  (check
+      (let ((chan (chan.open-input-channel in-port)))
+	(chan.channel-set-expiration-time! chan (time-from-now (make-time 10 0))))
+    => (void))
+
+  (check
+      (let ((chan (chan.open-input-channel in-port)))
+	(chan.channel-set-message-terminator! chan '#vu8(1 2 3)))
     => (void))
 
   #t)
