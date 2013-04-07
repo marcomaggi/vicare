@@ -5280,14 +5280,14 @@ The following bindings are exported by the library @library{vicare net
 channels}.
 
 
-@defun channel-reception-begin! @var{chan}
+@defun channel-recv-begin! @var{chan}
 Configure a channel to start receiving a message; return unspecified
 values.  @var{chan} must be an input or input/output channel; it is an
 error if the channel is not inactive.
 @end defun
 
 
-@defun channel-reception-end! @var{chan}
+@defun channel-recv-end! @var{chan}
 Finish receiving a message and return the accumulated octets in a
 bytevector.  It is an error if the channel is not in the course of
 receiving a message.
@@ -5298,7 +5298,7 @@ message or to send a message.
 @end defun
 
 
-@defun channel-get-message-portion! @var{chan}
+@defun channel-recv-message-portion! @var{chan}
 Receive a portion of input message from the given channel and accumulate
 it in the internal state; return @true{} if the configured message
 terminator was read in the tail of the data, else return @false{}.  It
@@ -5329,14 +5329,14 @@ The following bindings are exported by the library @library{vicare net
 channels}.
 
 
-@defun channel-sending-begin! @var{chan}
+@defun channel-send-begin! @var{chan}
 Configure a channel to start sending a message; return unspecified
 values.  @var{chan} must be an output or input/output channel; it is an
 error if the channel is not inactive.
 @end defun
 
 
-@defun channel-sending-end! @var{chan}
+@defun channel-send-end! @var{chan}
 Finish sending a message by flushing the connect port and return the
 total number of octets sent.  It is an error if the channel is not in
 the course of sending a message.
@@ -5347,7 +5347,7 @@ message or to send a message.
 @end defun
 
 
-@defun channel-set-message-portion! @var{chan} @var{portion}
+@defun channel-send-message-portion! @var{chan} @var{portion}
 Send a portion of output message through the given channel; return
 unspecified values.  It is an error if the channel is not in the course
 of sending a message.

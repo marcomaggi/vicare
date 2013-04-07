@@ -30,6 +30,7 @@
   (prefix (vicare net channels)
 	  chan.)
   (vicare custom-ports)
+  (vicare coroutines)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -71,7 +72,7 @@
 
    (check
        (let ((chan (chan.open-input-channel in-port)))
-	 (chan.channel-reception-begin! chan)
+	 (chan.channel-recv-begin! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -79,8 +80,8 @@
 
    (check
        (let ((chan (chan.open-input-channel in-port)))
-	 (chan.channel-reception-begin! chan)
-	 (chan.channel-reception-end! chan)
+	 (chan.channel-recv-begin! chan)
+	 (chan.channel-recv-end! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -109,7 +110,7 @@
 
    (check
        (let ((chan (chan.open-output-channel ou-port)))
-	 (chan.channel-sending-begin! chan)
+	 (chan.channel-send-begin! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -117,8 +118,8 @@
 
    (check
        (let ((chan (chan.open-output-channel ou-port)))
-	 (chan.channel-sending-begin! chan)
-	 (chan.channel-sending-end! chan)
+	 (chan.channel-send-begin! chan)
+	 (chan.channel-send-end! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -147,7 +148,7 @@
 
    (check
        (let ((chan (chan.open-input/output-channel io-port)))
-	 (chan.channel-sending-begin! chan)
+	 (chan.channel-send-begin! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -155,8 +156,8 @@
 
    (check
        (let ((chan (chan.open-input/output-channel io-port)))
-	 (chan.channel-sending-begin! chan)
-	 (chan.channel-sending-end! chan)
+	 (chan.channel-send-begin! chan)
+	 (chan.channel-send-end! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -164,7 +165,7 @@
 
    (check
        (let ((chan (chan.open-input/output-channel io-port)))
-	 (chan.channel-reception-begin! chan)
+	 (chan.channel-recv-begin! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -172,8 +173,8 @@
 
    (check
        (let ((chan (chan.open-input/output-channel io-port)))
-	 (chan.channel-reception-begin! chan)
-	 (chan.channel-reception-end! chan)
+	 (chan.channel-recv-begin! chan)
+	 (chan.channel-recv-end! chan)
 	 (list (chan.inactive-channel? chan)
 	       (chan.sending-channel? chan)
 	       (chan.receiving-channel? chan)))
@@ -198,6 +199,74 @@
       (let ((chan (chan.open-input-channel in-port)))
 	(chan.channel-set-message-terminator! chan '#vu8(1 2 3)))
     => (void))
+
+  #t)
+
+
+(parametrise ((check-test-name	'messages))
+
+  (define (ascii-chunks str-chunks)
+    (map string->ascii str-chunks))
+
+  (define (send chan chunks)
+    (chan.channel-send-begin! chan)
+    (for-each (lambda (portion)
+		(chan.channel-send-message-portion! chan portion))
+      chunks)
+    (chan.channel-send-end! chan))
+
+  (define (recv chan)
+    (define (doit)
+      (chan.channel-recv-message-portion! chan))
+    (chan.channel-recv-begin! chan)
+    (let loop ((rv (doit)))
+      (unless rv
+	(loop (doit))))
+    (ascii->string (chan.channel-recv-end! chan)))
+
+  (define (master-log obj)
+    (add-result (list 'master-recv obj)))
+
+  (define (slave-log obj)
+    (add-result (list 'slave-recv obj)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (let-values (((P1 P2) (open-binary-input/output-port-pair)))
+	 (coroutine	;master
+	     (lambda ()
+	       (let ((chan (chan.open-input/output-channel P1))
+		     (log  master-log))
+		 (send chan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
+		 (yield)
+		 (log (recv chan))
+		 (send chan (ascii-chunks '("som" "e dat" "a\r" "\n" "\r" "\n")))
+		 (yield)
+		 (log (recv chan))
+		 (send chan (ascii-chunks '("quit\r\n\r\n")))
+		 (chan.close-channel chan))))
+	 (coroutine	;slave
+	     (lambda ()
+	       (let ((chan (chan.open-input/output-channel P2))
+		     (log  slave-log))
+		 (log (recv chan))
+		 (send chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
+		 (yield)
+		 (log (recv chan))
+		 (send chan (ascii-chunks '("OK" "\r\n" "\r\n")))
+		 (yield)
+		 (log (recv chan))
+		 (chan.close-channel chan))))
+	 (finish-coroutines)))
+    => `(,(void)
+	 ((slave-recv "hello slave\r\n\r\n")
+	  (master-recv "hello master\r\n\r\n")
+	  (slave-recv "some data\r\n\r\n")
+	  (master-recv "OK\r\n\r\n")
+	  (slave-recv "quit\r\n\r\n")
+	  )))
 
   #t)
 

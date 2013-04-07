@@ -47,12 +47,12 @@
     input/output-channel?	input/output-channel.vicare-arguments-validation
 
     ;; message reception
-    channel-reception-begin!	channel-reception-end!
-    channel-get-message-portion!
+    channel-recv-begin!		channel-recv-end!
+    channel-recv-message-portion!
 
     ;; message sending
-    channel-sending-begin!	channel-sending-end!
-    channel-set-message-portion!
+    channel-send-begin!		channel-send-end!
+    channel-send-message-portion!
 
     ;; condition objects
     &channel
@@ -477,12 +477,12 @@
 
 ;;;; receiving messages
 
-(define (channel-reception-begin! chan)
+(define (channel-recv-begin! chan)
   ;;Configure a channel to start receiving a message; return unspecified
   ;;values.  CHAN  must be an  input or  input/output channel; it  is an
   ;;error if the channel is not inactive.
   ;;
-  (define who 'channel-reception-begin!)
+  (define who 'channel-recv-begin!)
   (with-arguments-validation (who)
       ((inactive-channel	chan)
        (input-channel		chan))
@@ -491,7 +491,7 @@
     ($set-channel-message-size!    chan 0)
     (void)))
 
-(define (channel-reception-end! chan)
+(define (channel-recv-end! chan)
   ;;Finish receiving  a message and  return the accumulated octets  in a
   ;;bytevector.  It is an  error if the channel is not  in the course of
   ;;receiving a message.
@@ -500,7 +500,7 @@
   ;;configured  as  inactive; so  it  is  available to  start  receiving
   ;;another message or to send a message.
   ;;
-  (define who 'channel-reception-end!)
+  (define who 'channel-recv-end!)
   (with-arguments-validation (who)
       ((receiving-channel	chan))
     (begin0
@@ -511,11 +511,11 @@
       ($set-channel-message-size!    chan 0)
       ($set-channel-expiration-time! chan #f))))
 
-(module (channel-get-message-portion!)
+(module (channel-recv-message-portion!)
 
-  (define who 'channel-get-message-portion!)
+  (define who 'channel-recv-message-portion!)
 
-  (define (channel-get-message-portion! chan)
+  (define (channel-recv-message-portion! chan)
     ;;Receive a portion of input  message from the given channel; return
     ;;true if  the configured message  terminator was read,  else return
     ;;false.  It  is an  error if the  channel is not  in the  course of
@@ -589,12 +589,12 @@
 
 ;;;; sending messages
 
-(define (channel-sending-begin! chan)
+(define (channel-send-begin! chan)
   ;;Configure a channel  to start sending a  message; return unspecified
   ;;values.  CHAN  must be an output  or input/output channel; it  is an
   ;;error if the channel is not inactive.
   ;;
-  (define who 'channel-sending-begin!)
+  (define who 'channel-send-begin!)
   (with-arguments-validation (who)
       ((inactive-channel	chan)
        (output-channel		chan))
@@ -603,7 +603,7 @@
     ($set-channel-message-size!    chan 0)
     (void)))
 
-(define (channel-sending-end! chan)
+(define (channel-send-end! chan)
   ;;Finish sending a message by flushing the connect port and return the
   ;;total number of octets  sent.  It is an error if  the channel is not
   ;;in the course of sending a message.
@@ -612,7 +612,7 @@
   ;;configured  as  inactive; so  it  is  available to  start  receiving
   ;;another message or to send a message.
   ;;
-  (define who 'channel-sending-end!)
+  (define who 'channel-send-end!)
   (with-arguments-validation (who)
       ((sending-channel	chan))
     (begin0
@@ -623,7 +623,7 @@
       ($set-channel-message-size!    chan 0)
       ($set-channel-expiration-time! chan #f))))
 
-(define (channel-set-message-portion! chan portion)
+(define (channel-send-message-portion! chan portion)
   ;;Send a portion  of output message through the  given channel; return
   ;;unspecified values.   It is an  error if the  channel is not  in the
   ;;course of sending a message.
@@ -632,7 +632,7 @@
   ;;
   ;;This function does not flush the connection port.
   ;;
-  (define who 'channel-set-message-portion!)
+  (define who 'channel-send-message-portion!)
   (with-arguments-validation (who)
       ((sending-channel	chan)
        (bytevector	portion))
