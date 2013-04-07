@@ -210,8 +210,9 @@
 
   (define (send chan chunks)
     (chan.channel-send-begin! chan)
-    (for-each (lambda (portion)
-		(chan.channel-send-message-portion! chan portion))
+    (for-each-in-order
+	(lambda (portion)
+	  (chan.channel-send-message-portion! chan portion))
       chunks)
     (chan.channel-send-end! chan))
 
