@@ -42,18 +42,32 @@ Notes for revision 0.2d21
 
 * The boot images have been rotated.
 
-* Added  automatic  finalisation of  R6RS  records  through the  garbage
-  collector  facilities,  see  the  documentation  node  "iklib  records
-  final".
+* Some changes to attempt a fix  for Issue #35 have been implemented see
+  "doc/QUEST-FOR-ISSUE-35".
+
+* SRFI 19, time and date functions, is still broken.
 
 * Changed tarball distribution from .bz2 compression to .xz compression.
-
-* Added $STRING= to (ikarus system $strings).
 
 * BACKWARDS INCOMPATIBILITY The iconv functions have been moved from the
   library (vicare glibc) into the library (vicare iconv).  Documentation
   and tests also have been moved into modules independent from the Glibc
   ones.
+
+* BACKWARDS  INCOMPATIBILITY  The  following C  functions  have  changed
+  signature:
+
+      void ik_enter_c_function (ikpcb* pcb);
+      void ik_leave_c_function (ikpcb* pcb);
+
+  which means the  extensions of Vicare binding it  to foreign libraries
+  have to be fixed.
+
+* Added  automatic  finalisation of  R6RS  records  through the  garbage
+  collector  facilities,  see  the  documentation  node  "iklib  records
+  final".
+
+* Added $STRING= to (ikarus system $strings).
 
 * Added  functions to  (vicare) to  convert between  bytevectors holding
   octets and  strings or bytevectors  holding the ASCII  hexadecimal and
@@ -85,8 +99,6 @@ Notes for revision 0.2d21
 
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
-
-* Some changes to attempt a fix for Issue #35 have been implemented.
 
 
 Notes for revision 0.2d20
