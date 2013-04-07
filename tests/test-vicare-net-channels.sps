@@ -190,10 +190,19 @@
 	(chan.channel-set-maximum-message-size! chan 1000))
     => (void))
 
+;;; --------------------------------------------------------------------
+
   (check
       (let ((chan (chan.open-input-channel in-port)))
 	(chan.channel-set-expiration-time! chan (time-from-now (make-time 10 0))))
     => (void))
+
+  (check
+      (let ((chan (chan.open-input-channel in-port)))
+	(chan.channel-set-expiration-time! chan #f))
+    => (void))
+
+;;; --------------------------------------------------------------------
 
   (check
       (let ((chan (chan.open-input-channel in-port)))

@@ -28,6 +28,9 @@
 #!r6rs
 (library (vicare net channels)
   (export
+    ;; record type
+    channel
+
     ;; initialisation and finalisation
     open-input-channel		open-output-channel
     open-input/output-channel	close-channel
@@ -38,7 +41,9 @@
     channel-set-message-terminator!
 
     ;; predicates and arguments validation
-    channel?			channel.vicare-arguments-validation
+    channel?
+    channel.vicare-arguments-validation
+    false-or-channel.vicare-arguments-validation
     receiving-channel?		receiving-channel.vicare-arguments-validation
     sending-channel?		sending-channel.vicare-arguments-validation
     inactive-channel?		inactive-channel.vicare-arguments-validation
@@ -76,47 +81,66 @@
 
 ;;;; data structures
 
-(define-struct-extended channel
-  (connect-in-port
+(define-record-type-extended channel
+  (nongenerative vicare:net:channels:channel)
+  (fields (immutable connect-in-port)
 		;An input  or input/output  binary port used  to receive
 		;messages from a remote process.
-   connect-ou-port
+	  (immutable connect-ou-port)
 		;An  output or  input/output  binary port  used to  send
 		;messages to a remote process.
-   action
+	  (mutable action)
 		;False or the symbol "recv" or the symbol "send".
-   expiration-time
+	  (mutable expiration-time)
 		;A time object representing the  limit of time since the
 		;Epoch  to complete  message delivery;  if the  allotted
 		;time expires:  sending or  receiving this  message will
 		;fail.
-   message-buffer
+	  (mutable message-buffer)
 		;Null  or a  list of  bytevectors representing  the data
 		;accumulated so far; last input first.
-   message-size
+	  (mutable message-size)
 		;A non-negative  exact integer representing  the current
 		;message size.
-   maximum-message-size
+	  (mutable maximum-message-size)
 		;A non-negative exact integer representing the inclusive
 		;maximum  message  size;  if  the size  of  the  message
 		;exceeds this value: message delivery will fail.
-   message-terminator
+	  (mutable message-terminator)
 		;A   non-empty  bytevector   representing  the   message
 		;terminator.
-   message-terminated?
+	  (mutable message-terminated?)
 		;A  boolean,  true  if  while receiving  a  message  the
 		;terminator has already been read.
-   ))
+	  )
+  (protocol
+   (lambda (maker)
+     (lambda (in-port ou-port)
+       (define who 'channel-constructor)
+       (define-argument-validation (one-port who in-port ou-port)
+	 (or in-port ou-port)
+	 (assertion-violation who "both port arguments are false" in-port ou-port))
+       (with-arguments-validation (who)
+	   ((binary-port/false	in-port)
+	    (binary-port/false	ou-port)
+	    (input-port/false	in-port)
+	    (output-port/false	ou-port)
+	    (one-port		in-port ou-port))
+	 (maker in-port ou-port
+		#f #;action #f #;expiration-time
+		'() #;message-buffer 0 #;message-size 4096 #;maximum-message-size
+		DEFAULT-TERMINATOR #;message-terminator #f #;message-terminated?
+		))))))
 
 
 ;;;; unsafe operations
 
 (define ($channel-message-buffer-enqueue! chan bv)
-  ($set-channel-message-buffer! chan (cons bv ($channel-message-buffer chan)))
+  ($channel-message-buffer-set! chan (cons bv ($channel-message-buffer chan)))
   ($channel-message-increment-size! chan ($bytevector-length bv)))
 
 (define ($channel-message-increment-size! chan delta-size)
-  ($set-channel-message-size! chan (+ delta-size ($channel-message-size chan))))
+  ($channel-message-size-set! chan (+ delta-size ($channel-message-size chan))))
 
 (define ($time-expired? chan)
   (cond (($channel-expiration-time chan)
@@ -139,28 +163,14 @@
   (with-arguments-validation (who)
       ((binary-port	port)
        (input-port	port))
-    (make-channel port #f
-		  #f #;action
-		  #f #;expiration-time
-		  '() #;message-buffer
-		  0 #;message-size
-		  4096 #;maximum-message-size
-		  DEFAULT-TERMINATOR #;message-terminator
-		  #f)))
+    (make-channel port #f)))
 
 (define (open-output-channel port)
   (define who 'open-output-channel)
   (with-arguments-validation (who)
       ((binary-port	port)
        (output-port	port))
-    (make-channel #f port
-		  #f #;action
-		  #f #;expiration-time
-		  '() #;message-buffer
-		  0 #;message-size
-		  4096 #;maximum-message-size
-		  DEFAULT-TERMINATOR #;message-terminator
-		  #f)))
+    (make-channel #f port)))
 
 (define open-input/output-channel
   (case-lambda
@@ -173,14 +183,7 @@
 	 (binary-port	ou-port)
 	 (input-port	in-port)
 	 (output-port	ou-port))
-      (make-channel in-port ou-port
-		    #f #;action
-		    #f #;expiration-time
-		    '() #;message-buffer
-		    0 #;message-size
-		    4096 #;maximum-message-size
-		    DEFAULT-TERMINATOR #;message-terminator
-		    #f)))))
+      (make-channel in-port ou-port)))))
 
 (define (close-channel chan)
   ;;Finalise a  channel closing its connection  port; return unspecified
@@ -208,7 +211,7 @@
   (with-arguments-validation (who)
       ((channel			chan)
        (positive-exact-integer	maximum-message-size))
-    ($set-channel-maximum-message-size! chan maximum-message-size)
+    ($channel-maximum-message-size-set! chan maximum-message-size)
     (void)))
 
 (define (channel-set-expiration-time! chan expiration-time)
@@ -220,7 +223,7 @@
   (with-arguments-validation (who)
       ((channel		chan)
        (time/false	expiration-time))
-    ($set-channel-expiration-time! chan expiration-time)
+    ($channel-expiration-time-set! chan expiration-time)
     (void)))
 
 (define (channel-set-message-terminator! chan terminator)
@@ -231,7 +234,7 @@
   (with-arguments-validation (who)
       ((channel			chan)
        (non-empty-bytevector	terminator))
-    ($set-channel-expiration-time! chan terminator)
+    ($channel-expiration-time-set! chan terminator)
     (void)))
 
 
@@ -492,10 +495,10 @@
   (with-arguments-validation (who)
       ((inactive-channel	chan)
        (input-channel		chan))
-    ($set-channel-action!              chan 'recv)
-    ($set-channel-message-buffer!      chan '())
-    ($set-channel-message-size!        chan 0)
-    ($set-channel-message-terminated?! chan #f)
+    ($channel-action-set!              chan 'recv)
+    ($channel-message-buffer-set!      chan '())
+    ($channel-message-size-set!        chan 0)
+    ($channel-message-terminated?-set! chan #f)
     (void)))
 
 (define (channel-recv-end! chan)
@@ -513,11 +516,10 @@
     (begin0
 	($bytevector-reverse-and-concatenate ($channel-message-buffer chan)
 					     ($channel-message-size   chan))
-      ($set-channel-action!          chan #f)
-      ($set-channel-message-buffer!  chan '())
-      ($set-channel-message-size!    chan 0)
-      ($set-channel-expiration-time! chan #f)
-      ($set-channel-message-terminated?! chan #f))))
+      ($channel-action-set!          chan #f)
+      ($channel-message-buffer-set!  chan '())
+      ($channel-message-size-set!    chan 0)
+      ($channel-message-terminated?-set! chan #f))))
 
 (module (channel-recv-message-portion!)
 
@@ -546,7 +548,7 @@
 	  (cond (($maximum-size-exceeded? chan)
 		 (%error-maximum-message-size-exceeded who chan))
 		((%end-of-message? chan)
-		 ($set-channel-message-terminated?! chan #t)
+		 ($channel-message-terminated?-set! chan #t)
 		 #t)
 		(else
 		 (%loop chan)))))))
@@ -610,9 +612,9 @@
   (with-arguments-validation (who)
       ((inactive-channel	chan)
        (output-channel		chan))
-    ($set-channel-action!          chan 'send)
-    ($set-channel-message-buffer!  chan '())
-    ($set-channel-message-size!    chan 0)
+    ($channel-action-set!          chan 'send)
+    ($channel-message-buffer-set!  chan '())
+    ($channel-message-size-set!    chan 0)
     (void)))
 
 (define (channel-send-end! chan)
@@ -630,10 +632,9 @@
     (begin0
 	($channel-message-size chan)
       (flush-output-port ($channel-connect-ou-port chan))
-      ($set-channel-action!          chan #f)
-      ($set-channel-message-buffer!  chan '())
-      ($set-channel-message-size!    chan 0)
-      ($set-channel-expiration-time! chan #f))))
+      ($channel-action-set!          chan #f)
+      ($channel-message-buffer-set!  chan '())
+      ($channel-message-size-set!    chan 0))))
 
 (define (channel-send-message-portion! chan portion)
   ;;Send a portion  of output message through the  given channel; return

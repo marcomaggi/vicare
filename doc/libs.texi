@@ -5043,7 +5043,7 @@ The library @library{vicare net channels} implements utilities to
 transfer data through Scheme binary ports, typically between processes.
 
 @menu
-* channels structs::            Data structures.
+* channels types::              Data type definitions.
 * channels init::               Constructors and destructors.
 * channels config::             Configuration parameters.
 * channels preds::              Predicates and arguments validation.
@@ -5053,18 +5053,18 @@ transfer data through Scheme binary ports, typically between processes.
 @end menu
 
 @c page
-@node channels structs
-@subsection Data structures
+@node channels types
+@subsection Data type definitions
 
 
 The following bindings are exported by the library @library{vicare net
 channels}.
 
 
-@deftp {Struct Type} channel
-Opaque object representing an interprocess connection channel.  Whenever
-this documentation refers to instances of this type arguments, it uses
-the string @var{chan}.
+@deftp {@rnrs{6} Record Type} channel
+Record type representing an interprocess connection channel.  Whenever
+this documentation refers to arguments being instances of this type: it
+uses the identifier @var{chan}.
 @end deftp
 
 
@@ -5075,9 +5075,11 @@ return @false{}.
 
 
 @deffn {Validation Clause} channel @var{obj}
+@deffnx {Validation Clause} false-or-channel @var{obj}
 Validation clause to be used with the facilities of the library
-@library{vicare arguments validation}.  Succeed if @var{obj} is an
-instance of @code{channel}.
+@library{vicare arguments validation}.  The first form succeeds if
+@var{obj} is an instance of @code{channel}; the second also accepts
+@false{}.
 @end deffn
 
 @c page
@@ -5141,7 +5143,7 @@ message exceeds this value: message delivery will fail.
 
 When not configured: the maximum message size defaults to @math{4096}.
 
-The maximum message size is @strong{not} reset when a message delivery
+The maximum message size @strong{is not} reset when a message delivery
 is completed.
 @end defun
 
@@ -5160,8 +5162,8 @@ If @var{expiration-time} is @false{}: there is not time limit.
 
 When not configured: the expiration time defaults to no time limit.
 
-The expiration time @strong{is} reset to no time limit when a message
-delivery is completed.
+The expiration time @strong{is not} reset when a message delivery is
+completed.
 @end defun
 
 
@@ -5174,7 +5176,7 @@ When not configured: the terminator defaults to @code{#vu8(13 10 13
 10)}, which is the double sequence of @ascii{} characters: carriage
 return, line feed.
 
-The terminator is @strong{not} reset when a message delivery is
+The terminator @strong{is not} reset when a message delivery is
 completed.
 @end defun
 
