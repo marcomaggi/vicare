@@ -1615,6 +1615,7 @@ Return an exact integer suitable to be used as hash value for
 @menu
 * iklib lists weak::            Weak pairs.
 * iklib lists queue::           Queues of items.
+* iklib lists misc::            Miscellaneous functions.
 @end menu
 
 @c page
@@ -1720,6 +1721,19 @@ Usage examples:
   (empty?))
 @result{} #t
 @end example
+@end defun
+
+@c page
+@node iklib lists misc
+@subsection Miscellaneous functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun for-each-in-order @var{proc} @varo{list} @var{list} ...
+Like @func{for-each} from @rsixlibrary{base} but guarantees that
+@var{proc} is applied starting from the head of the lists.
 @end defun
 
 @c page

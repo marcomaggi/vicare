@@ -17,14 +17,15 @@
 (library (ikarus lists)
   (export list? list cons* make-list append length list-ref reverse
           last-pair memq memp memv member find assq assp assv assoc
-          remq remv remove remp filter map for-each andmap ormap list-tail
+          remq remv remove remp filter map for-each
+	  (rename (for-each for-each-in-order)) andmap ormap list-tail
           partition for-all exists fold-left fold-right
 	  make-queue)
   (import (except (ikarus)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
-		  map for-each andmap ormap list-tail partition
+		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
 		  make-queue)
     (vicare syntactic-extensions)

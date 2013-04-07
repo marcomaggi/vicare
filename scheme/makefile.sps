@@ -1170,6 +1170,7 @@
     (finite?					i v r ba)
     (floor					i v r ba se)
     (for-each					i v r ba se)
+    (for-each-in-order				i v $language)
     (gcd					i v r ba se)
     (imag-part					i v r ba se)
     (inexact					i v r ba)

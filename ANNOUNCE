@@ -72,7 +72,7 @@ Notes for revision 0.2d21
       time<?			time<=?
       time>?			time>=?
 
-* Added function MAKE-QUEUE to (vicare).
+* Added functions FOR-EACH-IN-ORDER and MAKE-QUEUE to (vicare).
 
 * Added  library  (vicare  cond-expand),   see  the  documentation  node
   "cond-expand".

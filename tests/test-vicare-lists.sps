@@ -2033,6 +2033,64 @@
 ;;; --------------------------------------------------------------------
 
   (check
+      (let ((r 0))
+	(six.for-each-in-order
+	 (lambda (e)
+	   (set! r (+ e r)))
+	 '())
+	r)
+    => 0)
+
+  (check
+      (let ((r 0))
+	(six.for-each-in-order
+	 (lambda (e1 e2)
+	   (set! r (+ e1 e2 r)))
+	 '() '())
+	r)
+    => 0)
+
+  (check
+      (let ((r 0))
+	(six.for-each-in-order
+	 (lambda (e1 e2 e3)
+	   (set! r (+ e1 e2 e3 r)))
+	 '() '() '())
+	r)
+    => 0)
+
+  (check
+      (let ((r '(0 0)))
+	(six.for-each-in-order
+	 (lambda (e1 e2)
+	   (set! r (six.list (+ e1 (six.car r))
+			     (+ e2 (six.cadr r)))))
+	 '(1 10 100)
+	 '(2 20 200))
+	r)
+    => '(111 222))
+
+  (check
+      (let ((r '(0 0 0)))
+	(six.for-each-in-order
+	 (lambda (e1 e2 e3)
+	   (set! r (six.list (+ e1 (six.car r))
+			     (+ e2 (six.cadr r))
+			     (+ e3 (six.caddr r)))))
+	 '(1 10 100)
+	 '(2 20 200)
+	 '(3 30 300))
+	r)
+    => '(111 222 333))
+
+  (check
+      (with-result
+       (six.for-each-in-order add-result '(1 2 3 4)))
+    => `(,(void) (1 2 3 4)))
+
+;;; --------------------------------------------------------------------
+
+  (check
       (map* - '())
     => '())
 
