@@ -222,7 +222,9 @@
     (let loop ((rv (doit)))
       (unless rv
 	(loop (doit))))
-    (ascii->string (chan.channel-recv-end! chan)))
+    (let ((bv (chan.channel-recv-end! chan)))
+      ;;(check-pretty-print bv)
+      (ascii->string bv)))
 
   (define (master-log obj)
     (add-result (list 'master-recv obj)))
@@ -234,22 +236,23 @@
 
   (check
       (with-result
-       (let-values (((P1 P2) (open-binary-input/output-port-pair)))
+       (let-values (((master.port slave.port) (open-binary-input/output-port-pair)))
 	 (coroutine	;master
 	     (lambda ()
-	       (let ((chan (chan.open-input/output-channel P1))
+	       (let ((chan (chan.open-input/output-channel master.port))
 		     (log  master-log))
 		 (send chan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
 		 (yield)
 		 (log (recv chan))
-		 (send chan (ascii-chunks '("som" "e dat" "a\r" "\n" "\r" "\n")))
+		 (send chan (ascii-chunks '("som" "e dat" "a\r" "\n"
+					    "som" "e other dat" "a\r" "\n" "\r" "\n")))
 		 (yield)
 		 (log (recv chan))
 		 (send chan (ascii-chunks '("quit\r\n\r\n")))
 		 (chan.close-channel chan))))
 	 (coroutine	;slave
 	     (lambda ()
-	       (let ((chan (chan.open-input/output-channel P2))
+	       (let ((chan (chan.open-input/output-channel slave.port))
 		     (log  slave-log))
 		 (log (recv chan))
 		 (send chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
@@ -263,7 +266,7 @@
     => `(,(void)
 	 ((slave-recv "hello slave\r\n\r\n")
 	  (master-recv "hello master\r\n\r\n")
-	  (slave-recv "some data\r\n\r\n")
+	  (slave-recv "some data\r\nsome other data\r\n\r\n")
 	  (master-recv "OK\r\n\r\n")
 	  (slave-recv "quit\r\n\r\n")
 	  )))

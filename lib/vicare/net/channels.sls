@@ -559,7 +559,8 @@
 		      (next-bv.end ($fxsub1 ($bytevector-length next-bv))))
 		 ($compare-bytevector-tails T T.idx next-bv next-bv.end))
 	       => (lambda (T.idx)
-		    (loop T.idx ($cdr bufs))))))))
+		    (loop T.idx ($cdr bufs))))
+	      (else #f)))))
 
   (define ($compare-bytevector-tails A A.idx B B.idx)
     ;;Recurse  comparing the  bytevector  A, starting  from index  A.idx
