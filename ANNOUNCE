@@ -83,6 +83,9 @@ Notes for revision 0.2d21
 * Added  library   (vicare  coroutines),  see  the   documentation  node
   "coroutines".
 
+* Added library (vicare  net channels), see the  documentation node "net
+  channels".
+
 * Some changes to attempt a fix for Issue #35 have been implemented.
 
 

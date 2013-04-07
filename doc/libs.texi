@@ -25,7 +25,7 @@
 * debugging::                   Debugging facilities.
 * coroutines::                  Running coroutines.
 * custom-ports::                Custom ports.
-* channels::                    Interprocess connection channels.
+* net channels::                Interprocess connection channels.
 @end menu
 
 @c page
@@ -5032,7 +5032,7 @@ written to one port is read from the other port.
 @end defun
 
 @c page
-@node channels
+@node net channels
 @section Interprocess connection channels
 
 
@@ -5043,17 +5043,17 @@ The library @library{vicare net channels} implements utilities to
 transfer data through Scheme binary ports, typically between processes.
 
 @menu
-* channels types::              Data type definitions.
-* channels init::               Constructors and destructors.
-* channels config::             Configuration parameters.
-* channels preds::              Predicates and arguments validation.
-* channels recv::               Receiving a message.
-* channels send::               Sending a message.
-* channels conditions::         Condition object types.
+* net channels types::          Data type definitions.
+* net channels init::           Constructors and destructors.
+* net channels config::         Configuration parameters.
+* net channels preds::          Predicates and arguments validation.
+* net channels recv::           Receiving a message.
+* net channels send::           Sending a message.
+* net channels conditions::     Condition object types.
 @end menu
 
 @c page
-@node channels types
+@node net channels types
 @subsection Data type definitions
 
 
@@ -5083,7 +5083,7 @@ Validation clause to be used with the facilities of the library
 @end deffn
 
 @c page
-@node channels init
+@node net channels init
 @subsection Constructors and destructors
 
 
@@ -5126,7 +5126,7 @@ values.  A pending message delivery, if any, is aborted.
 @end defun
 
 @c page
-@node channels config
+@node net channels config
 @subsection Configuration parameters
 
 
@@ -5181,7 +5181,7 @@ completed.
 @end defun
 
 @c page
-@node channels preds
+@node net channels preds
 @subsection Predicates and arguments validation
 
 
@@ -5274,7 +5274,7 @@ message.
 @end deffn
 
 @c page
-@node channels recv
+@node net channels recv
 @subsection Receiving a message
 
 
@@ -5326,7 +5326,7 @@ compound condition object of types: @condition{who},
 @end defun
 
 @c page
-@node channels send
+@node net channels send
 @subsection Sending a message
 
 
@@ -5374,7 +5374,7 @@ exception is raised with compound condition object of types:
 @end defun
 
 @c page
-@node channels conditions
+@node net channels conditions
 @subsection Condition object types
 
 
