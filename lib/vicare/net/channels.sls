@@ -62,16 +62,16 @@
     ;; condition objects
     &channel
     make-channel-condition
-    condition-channel?
+    channel-condition?
     condition-channel
 
     &delivery-timeout-expired
     make-delivery-timeout-expired-condition
-    condition-delivery-timeout-expired?
+    delivery-timeout-expired-condition?
 
     &maximum-message-size-exceeded
     make-maximum-message-size-exceeded-condition
-    condition-maximum-message-size-exceeded?)
+    maximum-message-size-exceeded-condition?)
   (import (vicare)
     (vicare arguments validation)
     (vicare syntactic-extensions)
@@ -145,7 +145,7 @@
 (define ($time-expired? chan)
   (cond (($channel-expiration-time chan)
 	 => (lambda (expiration-time)
-	      (time<=? (current-time) expiration-time)))
+	      (time<=? expiration-time (current-time))))
 	(else #f)))
 
 (define ($maximum-size-exceeded? chan)
@@ -446,18 +446,18 @@
 (define-condition-type &channel
     &condition
   make-channel-condition
-  condition-channel?
+  channel-condition?
   (channel	condition-channel))
 
 (define-condition-type &delivery-timeout-expired
     &error
   make-delivery-timeout-expired-condition
-  condition-delivery-timeout-expired?)
+  delivery-timeout-expired-condition?)
 
 (define-condition-type &maximum-message-size-exceeded
     &error
   make-maximum-message-size-exceeded-condition
-  condition-maximum-message-size-exceeded?)
+  maximum-message-size-exceeded-condition?)
 
 ;;; --------------------------------------------------------------------
 

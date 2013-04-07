@@ -5402,7 +5402,7 @@ Build and return an instance of @condition{channel} wrapping the channel
 @end defun
 
 
-@defun condition-channel? @var{obj}
+@defun channel-condition? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{channel} or a compound condition object with a component of
 type @condition{channel}.
@@ -5430,7 +5430,7 @@ Build and return an instance of @condition{delivery-timeout-expired}.
 @end defun
 
 
-@defun condition-delivery-timeout-expired? @var{obj}
+@defun delivery-timeout-expired-condition? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{delivery-timeout-expired} or a compound condition object with
 a component of type @condition{delivery-timeout-expired}.
@@ -5453,7 +5453,7 @@ Build and return an instance of
 @end defun
 
 
-@defun condition-maximum-message-size-exceeded? @var{obj}
+@defun maximum-message-size-exceeded-condition? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{maximum-message-size-exceeded} or a compound condition object
 with a component of type @condition{maximum-message-size-exceeded}.

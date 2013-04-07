@@ -284,6 +284,72 @@
   #t)
 
 
+(parametrise ((check-test-name	'sending))
+
+  (check	;max message size error
+      (let ((chan (chan.open-output-channel ou-port)))
+	(chan.channel-set-maximum-message-size! chan 2)
+	(chan.channel-send-begin! chan)
+	(guard (E (else
+		   (list (who-condition? E)
+			 (message-condition? E)
+			 (chan.channel-condition? E)
+			 (chan.maximum-message-size-exceeded-condition? E)
+			 )))
+	  (chan.channel-send-message-portion! chan '#vu8(1 2 3))))
+    => '(#t #t #t #t))
+
+;;; --------------------------------------------------------------------
+
+  (check	;timeout expired error
+      (let ((chan (chan.open-output-channel ou-port)))
+	(chan.channel-set-expiration-time! chan (current-time))
+	(chan.channel-send-begin! chan)
+	(guard (E (else
+		   (list (who-condition? E)
+			 (message-condition? E)
+			 (chan.channel-condition? E)
+			 (chan.delivery-timeout-expired-condition? E)
+			 )))
+	  (chan.channel-send-message-portion! chan '#vu8(1 2 3))))
+    => '(#t #t #t #t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'receiving))
+
+  (check	;max message size error
+      (let ((chan (chan.open-input-channel (open-bytevector-input-port '#vu8(1 2 3)))))
+	(chan.channel-set-maximum-message-size! chan 2)
+	(chan.channel-recv-begin! chan)
+	(guard (E (else
+		   (list (who-condition? E)
+			 (message-condition? E)
+			 (chan.channel-condition? E)
+			 (chan.maximum-message-size-exceeded-condition? E)
+			 )))
+	  (chan.channel-recv-message-portion! chan)))
+    => '(#t #t #t #t))
+
+;;; --------------------------------------------------------------------
+
+  (check	;timeout expired error
+      (let ((chan (chan.open-input-channel in-port)))
+	(chan.channel-set-expiration-time! chan (current-time))
+	(chan.channel-recv-begin! chan)
+	(guard (E (else
+		   (list (who-condition? E)
+			 (message-condition? E)
+			 (chan.channel-condition? E)
+			 (chan.delivery-timeout-expired-condition? E)
+			 )))
+	  (chan.channel-recv-message-portion! chan)))
+    => '(#t #t #t #t))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
