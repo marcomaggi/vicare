@@ -5304,6 +5304,9 @@ it in the internal state; return @true{} if the configured message
 terminator was read in the tail of the data, else return @false{}.  It
 is an error if the channel is not in the course of receiving a message.
 
+After the message terminator has been read: further calls to this
+function always return @true{} without taking any action.
+
 This function performs multiple read operations from the registered
 connection port, until the end--of--file is read or until the configured
 message terminator is found in the tail of read data.

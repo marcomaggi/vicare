@@ -103,6 +103,9 @@
    message-terminator
 		;A   non-empty  bytevector   representing  the   message
 		;terminator.
+   message-terminated?
+		;A  boolean,  true  if  while receiving  a  message  the
+		;terminator has already been read.
    ))
 
 
@@ -142,7 +145,8 @@
 		  '() #;message-buffer
 		  0 #;message-size
 		  4096 #;maximum-message-size
-		  DEFAULT-TERMINATOR #;message-terminator)))
+		  DEFAULT-TERMINATOR #;message-terminator
+		  #f)))
 
 (define (open-output-channel port)
   (define who 'open-output-channel)
@@ -155,7 +159,8 @@
 		  '() #;message-buffer
 		  0 #;message-size
 		  4096 #;maximum-message-size
-		  DEFAULT-TERMINATOR #;message-terminator)))
+		  DEFAULT-TERMINATOR #;message-terminator
+		  #f)))
 
 (define open-input/output-channel
   (case-lambda
@@ -174,7 +179,8 @@
 		    '() #;message-buffer
 		    0 #;message-size
 		    4096 #;maximum-message-size
-		    DEFAULT-TERMINATOR #;message-terminator)))))
+		    DEFAULT-TERMINATOR #;message-terminator
+		    #f)))))
 
 (define (close-channel chan)
   ;;Finalise a  channel closing its connection  port; return unspecified
@@ -486,9 +492,10 @@
   (with-arguments-validation (who)
       ((inactive-channel	chan)
        (input-channel		chan))
-    ($set-channel-action!          chan 'recv)
-    ($set-channel-message-buffer!  chan '())
-    ($set-channel-message-size!    chan 0)
+    ($set-channel-action!              chan 'recv)
+    ($set-channel-message-buffer!      chan '())
+    ($set-channel-message-size!        chan 0)
+    ($set-channel-message-terminated?! chan #f)
     (void)))
 
 (define (channel-recv-end! chan)
@@ -509,7 +516,8 @@
       ($set-channel-action!          chan #f)
       ($set-channel-message-buffer!  chan '())
       ($set-channel-message-size!    chan 0)
-      ($set-channel-expiration-time! chan #f))))
+      ($set-channel-expiration-time! chan #f)
+      ($set-channel-message-terminated?! chan #f))))
 
 (module (channel-recv-message-portion!)
 
@@ -525,7 +533,9 @@
 	((receiving-channel	chan))
       (if ($time-expired? chan)
 	  (%error-message-expiration-time-expired who chan)
-	(%loop chan))))
+	(if ($channel-message-terminated? chan)
+	    #t
+	  (%loop chan)))))
 
   (define (%loop chan)
     (let ((bv (%read chan)))
@@ -536,6 +546,7 @@
 	  (cond (($maximum-size-exceeded? chan)
 		 (%error-maximum-message-size-exceeded who chan))
 		((%end-of-message? chan)
+		 ($set-channel-message-terminated?! chan #t)
 		 #t)
 		(else
 		 (%loop chan)))))))
