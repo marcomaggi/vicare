@@ -2869,6 +2869,26 @@ case of an option with value represented by a C language @code{size_t}.
 language @code{size_t}.
 @end defun
 
+
+@defun setsockopt/linger @var{sock} @var{onoff} @var{linger}
+Similar to @func{setsockopt}, but set the @code{SO_LINGER} option by
+directly specifying the values for the fields of the @code{struct
+linger} type.  @glibcref{Socket-Level Options, struct linger}.
+
+@var{onoff} must be a boolean.  @var{linger} must be a fixnum.
+@end defun
+
+
+@defun getsockopt/linger @var{sock}
+Similar to @func{getsockopt}, but inspect directly the option
+@code{SO_LINGER} by returning the current values of the fields of the
+@code{struct linger} type.  @glibcref{Socket-Level Options, struct
+linger}.
+
+Return @math{2} values: a boolean representing the @code{onoff} field,
+an exact integer representing the @var{linger} field.
+@end defun
+
 @c ------------------------------------------------------------
 
 @defun tcp-connect @var{hostname} @var{service}
