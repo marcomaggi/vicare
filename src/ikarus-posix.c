@@ -9,7 +9,7 @@
 	functions in this module,  see the official Vicare documentation
 	in Texinfo format.
 
-  Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -3699,7 +3699,7 @@ ikrt_posix_setsockopt_linger (ikptr s_sock, ikptr onoff, ikptr linger)
   struct linger optval;
   socklen_t	optlen = sizeof(struct linger);
   int		rv;
-  optval.l_onoff  = (IK_TRUE_OBJECT == onoff)? 1 : 0;
+  optval.l_onoff  = IK_BOOLEAN_TO_INT(onoff);
   optval.l_linger = IK_UNFIX(linger);
   errno = 0;
   rv	= setsockopt(IK_NUM_TO_FD(s_sock), SOL_SOCKET, SO_LINGER, &optval, optlen);
@@ -3718,11 +3718,14 @@ ikrt_posix_getsockopt_linger (ikptr s_sock, ikpcb * pcb)
   errno = 0;
   rv	= getsockopt(IK_NUM_TO_FD(s_sock), SOL_SOCKET, SO_LINGER, &optval, &optlen);
   if (0 == rv) {
-    /* Return  a pair  to distinguish  the value  from an  encoded errno
-       value. */
+    /* Return two values in a pair. */
     ikptr	s_pair = ika_pair_alloc(pcb);
-    IK_CAR(s_pair) = optval.l_onoff? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
-    IK_CDR(s_pair) = IK_FIX(optval.l_linger);
+    pcb->root0 = &s_pair;
+    {
+      IK_ASS(IK_CAR(s_pair), IK_BOOLEAN_FROM_INT(optval.l_onoff));
+      IK_ASS(IK_CDR(s_pair), ika_integer_from_int(pcb, optval.l_linger));
+    }
+    pcb->root0 = NULL;
     return s_pair;
   } else
     return ik_errno_to_code();
