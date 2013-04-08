@@ -4301,8 +4301,11 @@ errors appropriately in the handlers.
 
 
 @deffn Parameter logging
-When set to true cause debugging messages to be displayed on the current
-error port; when set to @false{} nothing happens.
+When set to @true{} causes debugging messages to be displayed on the
+current error port.  When set to a procedure: such procedure is called
+with a single argument whenever a log message must be reported; such
+single argument is a string representing a log line (@strong{without}
+terminating newline).  When set to @false{} nothing happens.
 @end deffn
 
 
