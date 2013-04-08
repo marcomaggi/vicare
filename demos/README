@@ -15,10 +15,10 @@ pages  from a  customisable  document root  directory.  Start  it
 with:
 
    $ vicare demos/httpd.sps -- \
-	--document-root demos \
-	--port 8080
+	--document-root /path/to/root
 
-and terminate it by sending it a SIGINT signal (Ctrl-c).
+and  terminate it  by sending  it a  SIGINT signal  (Ctrl-c).  By
+default the server binds itself to localhost:8080.
 
 
 ### end of file
