@@ -8,7 +8,8 @@ exec ./httpd.sps \
     --verbose                                           \
     --document-root ~/share/public-html                 \
     --pid-file ~/var/run/vicare-httpd.pid               \
-    --log-file ~/var/log/vicare-httpd.log               \
-    --daemon
+    --log-file ~/var/log/vicare-httpd.log
+
+#    --daemon
 
 ### end of file

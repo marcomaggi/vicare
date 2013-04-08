@@ -33,6 +33,7 @@
 	  px.)
   (prefix (vicare simple-event-loop)
 	  sel.)
+  (vicare coroutines)
   (vicare net channels)
   (vicare platform constants)
   (vicare syntactic-extensions))
@@ -66,59 +67,171 @@
 
 ;;;; main function
 
-(module (main)
+(define (main argv)
+  (import PID-FILE LOG-FILE DAEMONISATION NETWORKING)
+  (parametrise
+      ((logging	#t)
+       (sel.logging	log)
+       (options	(make-<options> argv)))
+    (when (options.daemonise?)
+      (daemonise))
+    (open-log-file options.log-file)
+    (unwind-protect
+	(begin
+	  (log "starting HTTP server, pid=~a" (px.getpid))
+	  (log "document root: ~a" (options.document-root))
+	  (log "listening to: ~a:~a" (options.server-interface) (options.server-port))
+	  (create-pid-file options.pid-file log)
+	  (unwind-protect
+	      (begin
+		(sel.initialise)
+		(unwind-protect
+		    (begin
+		      (%initialise-signal-handlers)
+		      (server-loop (options.server-interface)
+				   (options.server-port)))
+		  (sel.finalise)
+		  (log "exiting HTTP server")))
+	    (when (root-server?)
+	      (remove-pid-file))))
+      (when (root-server?)
+	(close-log-file)))
+    (exit 0)))
 
-  (define (main argv)
-    (import PID-FILE LOG-FILE DAEMONISATION)
-    (parametrise
-	((logging	#t)
-	 (sel.logging	log)
-	 (options	(make-<options> argv)))
-      (when (options.daemonise?)
-	(daemonise))
-      (open-log-file options.log-file)
-      (unwind-protect
-	  (begin
-	    (log "starting HTTP server, pid=~a" (px.getpid))
-	    (create-pid-file options.pid-file log)
-	    (log "document root: ~a"
-		 (options.document-root))
-	    (log "listening to: ~a:~a"
-		 (options.server-interface)
-		 (options.server-port))
-	    (unwind-protect
-		(begin
-		  (sel.initialise)
-		  (unwind-protect
-		      (begin
-			(%initialise-signal-handlers)
-			)
-		    (sel.finalise)
-		    (log "exiting HTTP server")))
-	      (when (root-server?)
-		(remove-pid-file))))
-	(when (root-server?)
-	  (close-log-file)))
-      (exit 0)))
+
+;;;; type definitions
 
-  #| end of module: main |# )
+;;Hold global server options configured from the command line.
+;;
+(define-record-type <options>
+  (fields (mutable server-interface)
+		;A string representing the  server interface to bind to.
+		;Defaults to "localhost".
+	  (mutable server-port)
+		;An exact integer representing the server port to listen
+		;to.  Defaults to 8080.
+	  (mutable document-root)
+		;A string representing the absolute pathname of the root
+		;directory for  documents to  serve.  If  not explicitly
+		;configured: an error occurs.
+	  (mutable pid-file)
+		;False or a string representing  the pathname of the PID
+		;file.
+	  (mutable log-file)
+		;False or a string representing  the pathname of the log
+		;file.
+	  (mutable daemonise?)
+		;Boolean, true if the server must be daemonised.
+	  (mutable verbosity)
+		;An exact integer.  When zero: run the program silently;
+		;this is the default.  When  a positive integer: run the
+		;program  with  verbose   messages  at  the  appropriate
+		;verbosity level.
+	  )
+  (protocol
+   (lambda (maker)
+     (lambda (argv)
+       (import COMMAND-LINE-ARGS)
+       (define (%err template . args)
+	 (apply error-message-and-exit BAD-OPTION-EXIT-STATUS template args))
+       (let ((self (maker "localhost" 8080 #f #;document-root
+			  #f #;pid-file #f #;log-file #f #;daemonise?
+			  0 #;verbosity )))
+	 (parse-command-line-arguments self argv)
 
-			;; #;(let ((sockaddr
-			;;        (px.make-sockaddr_in '#vu8(127 0 0 1)
-			;; 			    (<options>-server-port (options))))
-			;;       (master-sock (px.socket PF_INET SOCK_STREAM 0)))
-			;;   (unwind-protect
-			;;       (begin
-			;; 	(let ((x (px.fcntl master-sock F_GETFL 0)))
-			;; 	  (px.fcntl master-sock F_SETFL (bitwise-ior x O_NONBLOCK)))
-			;; 	(px.bind   master-sock sockaddr)
-			;; 	(px.listen master-sock 10)
-			;; 	(sel.readable master-sock
-			;; 		      (make-http-master-server-accept-handler master-sock))
-			;; 	(sel.enter))
-			;;     (px.close master-sock)))
+	 ;; validate document root
+	 (let ((dirname ($<options>-document-root self)))
+	   (cond ((not dirname)
+		  (%err "missing selection of document root"))
+		 ((not (string? dirname))
+		  (%err "internal error selecting document root pathname: ~a" dirname))
+		 ((zero? (string-length dirname))
+		  (%err "selected empty document root pathname"))
+		 (else
+		  (let ((dirname (absolutise-pathname dirname)))
+		    (if (and (px.file-is-directory? dirname)
+			     (px.file-readable? dirname))
+			(<options>-document-root-set! self dirname)
+		      (%err "selected document root unexistent or not readable: ~a"
+			    dirname))))))
 
+	 ;; validate server interface, more validation later
+	 (let ((interface ($<options>-server-interface self)))
+	   (unless (and (string? interface)
+			(not (zero? (string-length interface))))
+	     (%err "invalid server interface: \"~a\"" interface)))
 
+	 ;; validate server port
+	 (let ((port ($<options>-server-port self)))
+	   (import NETWORKING)
+	   (cond ((not (network-port? port))
+		  (%err "invalid server port: \"~a\"" port))))
+
+	 ;; validate pid file
+	 (let ((filename ($<options>-pid-file self)))
+	   (cond ((not filename)
+		  (void))
+		 ((not (string? filename))
+		  (%err "internal error selecting PID file pathname: ~a" filename))
+		 ((zero? (string-length filename))
+		  (%err "selected empty PID file pathname"))
+		 (else
+		  (let ((filename (absolutise-pathname filename)))
+		    (if (file-exists? filename)
+			(%err "selected PID file pathname already exists: ~a" filename)
+		      (<options>-pid-file-set! self filename))))))
+
+	 ;; validate log file
+	 (let ((filename ($<options>-log-file self)))
+	   (cond ((not filename)
+		  (void))
+		 ((not (string? filename))
+		  (%err "internal error selecting log file pathname: ~a" filename))
+		 ((string=? "-" filename)
+		  ;;Log to the current error port.
+		  (void))
+		 ((zero? (string-length filename))
+		  (%err "selected empty log file pathname"))
+		 (else
+		  (let ((filename (absolutise-pathname filename)))
+		    (when (and (file-exists? filename)
+			       (not (and (px.file-is-regular-file? filename)
+					 (px.file-writable? filename))))
+		      (%err "selected log file pathname not writable" filename))
+		    (<options>-log-file-set! self filename)))))
+
+	 self)))))
+
+;;; --------------------------------------------------------------------
+
+(define (<options>-increment-verbosity! opts)
+  (<options>-verbosity-set! opts (+ +1 (<options>-verbosity opts))))
+
+(define (<options>-decrement-verbosity! opts)
+  (<options>-verbosity-set! opts (+ -1 (<options>-verbosity opts))))
+
+;;; --------------------------------------------------------------------
+
+(define (options.document-root)
+  ($<options>-document-root (options)))
+
+(define (options.server-interface)
+  ($<options>-server-interface (options)))
+
+(define (options.server-port)
+  ($<options>-server-port (options)))
+
+(define (options.pid-file)
+  ($<options>-pid-file (options)))
+
+(define (options.log-file)
+  ($<options>-log-file (options)))
+
+(define (options.verbosity)
+  ($<options>-verbosity (options)))
+
+(define (options.daemonise?)
+  ($<options>-daemonise? (options)))
 
 
 ;;;; log file handling
@@ -324,140 +437,6 @@
   #| end of module: DAMONISATION |# )
 
 
-;;;; type definitions
-
-;;Hold global server options configured from the command line.
-;;
-(define-record-type <options>
-  (fields (mutable server-interface)
-		;A string representing the  server interface to bind to.
-		;Defaults to "localhost".
-	  (mutable server-port)
-		;An exact integer representing the server port to listen
-		;to.  Defaults to 8080.
-	  (mutable document-root)
-		;A string representing the absolute pathname of the root
-		;directory for  documents to  serve.  If  not explicitly
-		;configured: an error occurs.
-	  (mutable pid-file)
-		;False or a string representing  the pathname of the PID
-		;file.
-	  (mutable log-file)
-		;False or a string representing  the pathname of the log
-		;file.
-	  (mutable daemonise?)
-		;Boolean, true if the server must be daemonised.
-	  (mutable verbosity)
-		;An exact integer.  When zero: run the program silently;
-		;this is the default.  When  a positive integer: run the
-		;program  with  verbose   messages  at  the  appropriate
-		;verbosity level.
-	  )
-  (protocol
-   (lambda (maker)
-     (lambda (argv)
-       (import COMMAND-LINE-ARGS)
-       (define (%err template . args)
-	 (apply error-message-and-exit BAD-OPTION-EXIT-STATUS template args))
-       (let ((self (maker "localhost" 8080 #f #;document-root
-			  #f #;pid-file #f #;log-file #f #;daemonise?
-			  0 #;verbosity )))
-	 (parse-command-line-arguments self argv)
-
-	 ;; validate document root
-	 (let ((dirname ($<options>-document-root self)))
-	   (cond ((not dirname)
-		  (%err "missing selection of document root"))
-		 ((not (string? dirname))
-		  (%err "internal error selecting document root pathname: ~a" dirname))
-		 ((zero? (string-length dirname))
-		  (%err "selected empty document root pathname"))
-		 (else
-		  (let ((dirname (absolutise-pathname dirname)))
-		    (if (and (px.file-is-directory? dirname)
-			     (px.file-readable? dirname))
-			(<options>-document-root-set! self dirname)
-		      (%err "selected document root unexistent or not readable: ~a"
-			    dirname))))))
-
-	 ;; validate server interface, more validation later
-	 (let ((interface ($<options>-server-interface self)))
-	   (unless (and (string? interface)
-			(not (zero? (string-length interface))))
-	     (%err "invalid server interface: \"~a\"" interface)))
-
-	 ;; validate server port
-	 (let ((port ($<options>-server-port self)))
-	   (cond ((not (network-port? port))
-		  (%err "invalid server port: \"~a\"" port))))
-
-	 ;; validate pid file
-	 (let ((filename ($<options>-pid-file self)))
-	   (cond ((not filename)
-		  (void))
-		 ((not (string? filename))
-		  (%err "internal error selecting PID file pathname: ~a" filename))
-		 ((zero? (string-length filename))
-		  (%err "selected empty PID file pathname"))
-		 (else
-		  (let ((filename (absolutise-pathname filename)))
-		    (if (file-exists? filename)
-			(%err "selected PID file pathname already exists: ~a" filename)
-		      (<options>-pid-file-set! self filename))))))
-
-	 ;; validate log file
-	 (let ((filename ($<options>-log-file self)))
-	   (cond ((not filename)
-		  (void))
-		 ((not (string? filename))
-		  (%err "internal error selecting log file pathname: ~a" filename))
-		 ((string=? "-" filename)
-		  ;;Log to the current error port.
-		  (void))
-		 ((zero? (string-length filename))
-		  (%err "selected empty log file pathname"))
-		 (else
-		  (let ((filename (absolutise-pathname filename)))
-		    (when (and (file-exists? filename)
-			       (not (and (px.file-is-regular-file? filename)
-					 (px.file-writable? filename))))
-		      (%err "selected log file pathname not writable" filename))
-		    (<options>-log-file-set! self filename)))))
-
-	 self)))))
-
-;;; --------------------------------------------------------------------
-
-(define (<options>-increment-verbosity! opts)
-  (<options>-verbosity-set! opts (+ +1 (<options>-verbosity opts))))
-
-(define (<options>-decrement-verbosity! opts)
-  (<options>-verbosity-set! opts (+ -1 (<options>-verbosity opts))))
-
-;;; --------------------------------------------------------------------
-
-(define (options.document-root)
-  (<options>-document-root (options)))
-
-(define (options.server-interface)
-  ($<options>-server-interface (options)))
-
-(define (options.server-port)
-  ($<options>-server-port (options)))
-
-(define (options.pid-file)
-  (<options>-pid-file (options)))
-
-(define (options.log-file)
-  (<options>-log-file (options)))
-
-(define (options.verbosity)
-  (<options>-verbosity (options)))
-
-(define (options.daemonise?)
-  (<options>-daemonise? (options)))
-
-
 ;;;; command line arguments parsing
 
 (module COMMAND-LINE-ARGS
@@ -591,111 +570,68 @@ Options:
   #| end of module: COMMAND-LINE-ARGS |#)
 
 
-;;;; sockets handling
+;;;; networking
 
-(define (network-port? obj)
-  ;;Return  true if  OBJ is  an exact  integer in  the range  of network
-  ;;ports.
-  ;;
-  (and (fixnum? obj)
-       (<= 1 obj 65535)))
+(module NETWORKING
+  (network-port?
+   server-loop)
+  (import HTTP-SERVER LOG-FILE)
+
+  (define (server-loop interface port)
+    (let ((sockaddr    (make-sockaddr interface (number->string port)))
+	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
+      (unwind-protect
+	  (begin
+	    (socket-set-non-blocking master-sock)
+	    (px.setsockopt/linger master-sock #t 3)
+	    (px.bind   master-sock sockaddr)
+	    (px.listen master-sock 10)
+	    (sel.readable master-sock (lambda ()
+					(accept-connection master-sock)))
+	    (sel.enter))
+	(px.close master-sock))))
+
+  (define (make-sockaddr interface port)
+    (let* ((hints (px.make-struct-addrinfo 0 AF_INET SOCK_STREAM 0 0 #f #f))
+	   (infos (px.getaddrinfo interface port hints)))
+      (%pretty-print infos)
+      (if (null? infos)
+	  (error 'make-sockaddr "unable to acquire master socket address")
+	(px.struct-addrinfo-ai_addr (car infos)))))
+
+  (define (socket-set-non-blocking sock)
+    (let ((x (px.fcntl sock F_GETFL 0)))
+      (px.fcntl sock F_SETFL (bitwise-ior x O_NONBLOCK))))
+
+  (define (accept-connection master-sock)
+    (receive (server-sock client-address)
+	(px.accept master-sock)
+      (log "accepted connection from ~a\n" client-address)
+      (http-server-session server-sock
+			   (make-binary-socket-input/output-port server-sock "socket")
+			   client-address)))
+
+  (define (network-port? obj)
+    ;;Return true  if OBJ is  an exact integer  in the range  of network
+    ;;ports.
+    ;;
+    (and (fixnum? obj)
+	 (<= 1 obj 65535)))
+
+  #| end of module: NETWORKING |# )
 
 
-;;;; socket event handlers
+;;;; HTTP server
 
-(define (make-http-master-server-accept-handler master-sock)
-  (import (srfi :31)
-    LOG-FILE)
-  (rec (handler)
-    ;;Whenever the master server socket  becomes readable the event loop
-    ;;applies this function to it.
-    ;;
-    ;;Accept a  connection creating a  server socket and  scheduling the
-    ;;readable event  for it;  reschedule accepting readable  events for
-    ;;MASTER-SOCKET; return unspecified values.
-    ;;
-    (define who 'http-master-server-accept-handler)
-    (sel.readable master-sock handler)
-    (let-values (((server-sock client-address)
-		  (px.accept master-sock)))
-      (guard (E (else
-		 (log "exception in ~a: ~a\n" who E)
-		 (px.close server-sock)
-		 (exit 1)))
-	(log "accepting connection from ~a\n" client-address)
-	(sel.readable server-sock
-		      (make-http-server-readable-socket server-sock))))))
+(module HTTP-SERVER
+  (http-server-session)
 
-(define (make-http-server-readable-socket server-sock)
-  (import INPUT/OUTPUT
-    (srfi :31)
-    LOG-FILE)
-  (let ((state 'start)
-	(port	 (make-socket-port server-sock)))
-    (rec (handler)
-      (define who 'readable-socket-handler)
-      (guard (E (else
-		 (log "exception in ~a: ~a\n" who E)
-		 (close-port port)))
-	(case state
-	  ((start)
-;;;FIXME Do not read  all the lines, just one chunk at  a time using the
-;;;event loop.
-	   (let ((lines (read-until-empty-line port)))
-;;;FIXME Extract the requested pathname.
-	     (display (call-with-input-file
-			  (string-append (options.document-root) "/index.html")
-			get-string-all)
-		      port)
-	     (flush-output-port port)
-	     (close-port port)
-	     #;(sel.readable server-sock handler)
-	     #;(set! state 'done)))
-	  (else
-	   (close-port port)))))))
+  (define (http-server-session sock port address)
+    (coroutine
+	(lambda ()
+	  (close-port port))))
 
-
-;;;; input/output handling
-
-(module INPUT/OUTPUT
-  (make-socket-port
-   read-until-empty-line)
-
-  (define-constant SOCKET-TRANSCODER
-    (make-transcoder (utf-8-codec)
-		     (eol-style crlf)
-		     (error-handling-mode replace)))
-
-  (define-constant MAX-NUMBER-OF-ACCUMULATED-LINES
-    64)
-
-  (define (make-socket-port server-sock)
-    (make-textual-socket-input/output-port server-sock "server port" SOCKET-TRANSCODER))
-
-  (define read-until-empty-line
-    (case-lambda
-     ((port)
-      (read-until-empty-line port 0))
-     ((port number-of-accumulated-lines)
-      ;;Recursively read  lines from PORT  until an empty line  is read.
-      ;;If an  empty line is read:  return the (possibly empty)  list of
-      ;;lines.  If EOF is read: return  #f.  If the number of read lines
-      ;;exceeds the configured maximum: raise an "&error" exception.
-      ;;
-      (define who 'read-until-empty-line)
-      (unless (fx< number-of-accumulated-lines MAX-NUMBER-OF-ACCUMULATED-LINES)
-	(error who "too many lines read from client" number-of-accumulated-lines))
-      (let ((line (read-line port)))
-	(cond ((eof-object? line)
-	       #f)
-	      ((zero? (string-length line))
-	       '())
-	      (else
-	       (cons line
-		     (read-until-empty-line port (fxadd1 number-of-accumulated-lines))))
-	      )))))
-
-  #| end of module: INPUT/OUTPUT |# )
+  #| end of module: HTTP-SERVER |# )
 
 
 ;;;; interprocess signal handlers
