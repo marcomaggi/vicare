@@ -53,11 +53,6 @@
 (define options
   (make-parameter #f))
 
-;;False or a textual output port to which log messages must be written.
-;;
-(define log-port
-  (make-parameter #f))
-
 ;;; --------------------------------------------------------------------
 
 (define-constant VERSION-NUMBER
@@ -74,79 +69,259 @@
 (module (main)
 
   (define (main argv)
+    (import PID-FILE LOG-FILE DAEMONISATION)
     (parametrise
 	((logging	#t)
-	 (sel.logging	#t)
+	 (sel.logging	log)
 	 (options	(make-<options> argv)))
-      (create-pid-file)
+      (when (options.daemonise?)
+	(daemonise))
+      (open-log-file options.log-file)
       (unwind-protect
 	  (begin
-	    (open-log-file)
-	    (log "starting HTTP server")
+	    (log "starting HTTP server, pid=~a" (px.getpid))
+	    (create-pid-file options.pid-file log)
+	    (log "document root: ~a"
+		 (options.document-root))
+	    (log "listening to: ~a:~a"
+		 (options.server-interface)
+		 (options.server-port))
 	    (unwind-protect
 		(begin
 		  (sel.initialise)
 		  (unwind-protect
 		      (begin
 			(%initialise-signal-handlers)
-			#;(let ((sockaddr
-			       (px.make-sockaddr_in '#vu8(127 0 0 1)
-						    (<options>-server-port (options))))
-			      (master-sock (px.socket PF_INET SOCK_STREAM 0)))
-			  (unwind-protect
-			      (begin
-				(let ((x (px.fcntl master-sock F_GETFL 0)))
-				  (px.fcntl master-sock F_SETFL (bitwise-ior x O_NONBLOCK)))
-				(px.bind   master-sock sockaddr)
-				(px.listen master-sock 10)
-				(sel.readable master-sock
-					      (make-http-master-server-accept-handler master-sock))
-				(sel.enter))
-			    (px.close master-sock))))
+			)
 		    (sel.finalise)
 		    (log "exiting HTTP server")))
-	      (close-log-file)))
-	(remove-pid-file))
+	      (when (root-server?)
+		(remove-pid-file))))
+	(when (root-server?)
+	  (close-log-file)))
       (exit 0)))
+
+  #| end of module: main |# )
+
+			;; #;(let ((sockaddr
+			;;        (px.make-sockaddr_in '#vu8(127 0 0 1)
+			;; 			    (<options>-server-port (options))))
+			;;       (master-sock (px.socket PF_INET SOCK_STREAM 0)))
+			;;   (unwind-protect
+			;;       (begin
+			;; 	(let ((x (px.fcntl master-sock F_GETFL 0)))
+			;; 	  (px.fcntl master-sock F_SETFL (bitwise-ior x O_NONBLOCK)))
+			;; 	(px.bind   master-sock sockaddr)
+			;; 	(px.listen master-sock 10)
+			;; 	(sel.readable master-sock
+			;; 		      (make-http-master-server-accept-handler master-sock))
+			;; 	(sel.enter))
+			;;     (px.close master-sock)))
+
+
+
+
+;;;; log file handling
+
+(module LOG-FILE
+  (logging
+   log-port
+   open-log-file
+   close-log-file
+   log)
+
+  ;;False or a textual output port to which log messages must be written.
+  ;;
+  (define log-port
+    (make-parameter #f))
+
+  (define pathname-thunk
+    ;;It must be  set to a thunk returning a  Scheme string representing
+    ;;the log  file pathname, or false  if no PID file  must be created.
+    ;;The special string "-" means: log to the current error port.
+    ;;
+    (make-parameter #f
+      (lambda (obj)
+	(assert (procedure? obj))
+	obj)))
 
 ;;; --------------------------------------------------------------------
 
-  (define (create-pid-file)
-    (define pid-file (<options>-pid-file (options)))
-    (when pid-file
-      (with-output-to-file pid-file
-	  (lambda ()
-	    (display (px.getpid))
-	    (newline)))))
+  (define (open-log-file ptn-thunk)
+    ;;If logging  is enabled: configure  the log port.  If  the selected
+    ;;pathname is  "-" assume the  log messages  must go to  the current
+    ;;error port.  Otherwise open a log file.
+    ;;
+    (when (logging)
+      (pathname-thunk ptn-thunk)
+      (let ((log-file ((pathname-thunk))))
+	(if (string=? "-" log-file)
+	    (log-port (current-error-port))
+	  (let ((size (if (file-exists? log-file)
+			  (px.file-size log-file)
+			0)))
+	    (when log-file
+	      (log-port (open-file-output-port log-file
+					       (file-options no-fail no-truncate)
+					       (buffer-mode line)
+					       (native-transcoder)))
+	      (set-port-position! (log-port) size))))))
+    (void))
+
+  (define (close-log-file)
+    ;;Close the  log port unless it  is the current error  port.  Notice
+    ;;that the LOGGING parameter is ignored.
+    ;;
+    (when (and (log-port)
+	       (not (equal? (log-port)
+			    (current-error-port))))
+      (close-port (log-port)))
+    (void))
+
+;;; --------------------------------------------------------------------
+
+  ;;Boolean; true if logging is enabled, false otherwise.
+  ;;
+  (define logging
+    (make-parameter #f
+      (lambda (obj)
+	(if obj #t #f))))
+
+  (define (log template . args)
+    ;;If  logging is  enabled: format  a log  line and  write it  to the
+    ;;current log port.  Return unspecified values.
+    ;;
+    (when (and (logging)
+	       (log-port))
+      (let* ((date	(px.strftime/string "%F-T%T%Z" (px.localtime (px.time))))
+	     (template	(string-append (format "~a: " date) template)))
+	(%format-and-print (log-port) template args)))
+    (void))
+
+  (define (%format-and-print port template args)
+    ;;Format a  line of text and  display it to the  given textual port.
+    ;;We expect the port to have buffer mode set to "line".
+    ;;
+    (fprintf port "vicare httpd: ")
+    (apply fprintf port template args)
+    (newline port))
+
+  #| end of module: LOG-FILE |# )
+
+
+;;;; PID file handling
+
+(module PID-FILE
+  (create-pid-file
+   remove-pid-file)
+
+  (define pathname-thunk
+    ;;It must be  set to a thunk returning a  Scheme string representing
+    ;;the PID file pathname, or false if no PID file must be created.
+    ;;
+    (make-parameter #f
+      (lambda (obj)
+	(assert (procedure? obj))
+	obj)))
+
+  (define log-proc
+    ;;It must be  set to a function accepting  FORMAT-like arguments and
+    ;;logging the result.
+    ;;
+    (make-parameter #f
+      (lambda (obj)
+	(assert (procedure? obj))
+	obj)))
+
+  (define (log template . args)
+    (apply (log-proc) template args))
+
+;;; --------------------------------------------------------------------
+
+  (define (create-pid-file ptn-thunk log-func)
+    ;;Create the  PID file and  write the PID  number in it,  followed a
+    ;;newline.  Fail if the file already exists.
+    ;;
+    (pathname-thunk ptn-thunk)
+    (log-proc log-func)
+    (let ((pid-file ((pathname-thunk))))
+      (when pid-file
+	(if (file-exists? pid-file)
+	    (log "selected PID file pathname already exists: ~a" pid-file)
+	  (begin
+	    (log "creating PID file: ~a" ((pathname-thunk)))
+	    (with-output-to-file pid-file
+	      (lambda ()
+		(display (px.getpid))
+		(newline))))))))
 
   (define (remove-pid-file)
-    (define pid-file (<options>-pid-file (options)))
-    (when pid-file
+    ;;Remove  the PID  file.  Fail  if  the selected  pathname does  not
+    ;;contain this process' PID followed by  a newline.  If the PID file
+    ;;does not exists: do nothing.
+    ;;
+    (define pid-file ((pathname-thunk)))
+    (when (and pid-file (file-exists? pid-file))
+      (log "removing PID file")
       (guard (E (else
 		 (log "error removing pid file: ~a"
 		      (if (message-condition? E)
 			  (condition-message E)
 			"unknown error"))))
-	(when (and (root-server?)
-		   (file-exists? pid-file))
-	  (delete-file pid-file)))))
+	(with-input-from-file pid-file
+	  (lambda ()
+	    (unless (string=? (string-append (number->string (px.getpid)) "\n")
+			      ;;A valid PID file  does not contain a lot
+			      ;;of characters; let's say 16 at most.
+			      (get-string-n (current-input-port) 16))
+	      (error #f "corrupted PID file contents, avoiding removal"))))
+	(delete-file pid-file))))
 
-;;; --------------------------------------------------------------------
+  #| end of module: PID-FILE |# )
 
-  (define (open-log-file)
-    (define log-file (<options>-log-file (options)))
-    (when log-file
-      (log-port (open-file-output-port log-file
-				       (file-options no-fail no-truncate)
-				       (buffer-mode line)
-				       (native-transcoder)))
-      (set-port-position! (log-port) 0)))
+
+;;;; process daemonisation
 
-  (define (close-log-file)
-    (when log-port
-      (close-port (log-port))))
+(module DAEMONISATION
+  (daemonise)
 
-  #| end of module: main |# )
+  (define (daemonise)
+    ;;Daemonise the current process.
+    ;;
+    (px.signal-bub-init)
+    (unwind-protect
+	(begin
+	  (exit-parent-keep-children)
+	  (replace-standard-ports)
+	  (detach-from-terminal-and-become-session-leader))
+      (px.signal-bub-final)))
+
+  (define (exit-parent-keep-children)
+    (let ((pid (px.fork)))
+      (unless (zero? pid)
+	;;We are in the parent.
+	(exit 0))
+      ;;We are in the children.
+      (void)))
+
+  (define (replace-standard-ports)
+    (let ((port (open-file-input/output-port "/dev/null"
+					     (file-options no-create
+							   no-fail
+							   no-truncate)
+					     (buffer-mode none)
+					     (native-transcoder))))
+      (close-port (current-input-port))
+      (current-input-port port)
+      (close-port (current-output-port))
+      (current-output-port port)
+      (close-port (current-error-port))
+      (current-error-port port)))
+
+  (define (detach-from-terminal-and-become-session-leader)
+    (px.setsid))
+
+  #| end of module: DAMONISATION |# )
 
 
 ;;;; type definitions
@@ -170,6 +345,8 @@
 	  (mutable log-file)
 		;False or a string representing  the pathname of the log
 		;file.
+	  (mutable daemonise?)
+		;Boolean, true if the server must be daemonised.
 	  (mutable verbosity)
 		;An exact integer.  When zero: run the program silently;
 		;this is the default.  When  a positive integer: run the
@@ -182,8 +359,9 @@
        (import COMMAND-LINE-ARGS)
        (define (%err template . args)
 	 (apply error-message-and-exit BAD-OPTION-EXIT-STATUS template args))
-       (let ((self (maker "localhost" 8080 #f #;document-root #f
-			  #;pid-file #f #;log-file 0 #;verbosity )))
+       (let ((self (maker "localhost" 8080 #f #;document-root
+			  #f #;pid-file #f #;log-file #f #;daemonise?
+			  0 #;verbosity )))
 	 (parse-command-line-arguments self argv)
 
 	 ;; validate document root
@@ -233,6 +411,9 @@
 		  (void))
 		 ((not (string? filename))
 		  (%err "internal error selecting log file pathname: ~a" filename))
+		 ((string=? "-" filename)
+		  ;;Log to the current error port.
+		  (void))
 		 ((zero? (string-length filename))
 		  (%err "selected empty log file pathname"))
 		 (else
@@ -242,12 +423,6 @@
 					 (px.file-writable? filename))))
 		      (%err "selected log file pathname not writable" filename))
 		    (<options>-log-file-set! self filename)))))
-
-	 (log "document root: ~a"
-	      ($<options>-document-root self))
-	 (log "listening to: ~a:~a"
-	      ($<options>-server-interface self)
-	      ($<options>-server-port self))
 
 	 self)))))
 
@@ -261,11 +436,26 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (document-root)
+(define (options.document-root)
   (<options>-document-root (options)))
 
-(define (verbosity)
+(define (options.server-interface)
+  ($<options>-server-interface (options)))
+
+(define (options.server-port)
+  ($<options>-server-port (options)))
+
+(define (options.pid-file)
+  (<options>-pid-file (options)))
+
+(define (options.log-file)
+  (<options>-log-file (options)))
+
+(define (options.verbosity)
   (<options>-verbosity (options)))
+
+(define (options.daemonise?)
+  (<options>-daemonise? (options)))
 
 
 ;;;; command line arguments parsing
@@ -294,7 +484,10 @@ Options:
    --pid-file /path/to/pid-file
 \tSelect the pathname for the PID file.
    --log-file /path/to/log-file
-\tSelect the pathname for the log file.
+\tSelect the pathname for the log file.  Use \"-\" to log
+\ton the error port.
+   --daemon
+\tTurn the server process into a daemon.
    -V, --version
 \tPrint version informations and exit.
    --version-only
@@ -337,6 +530,10 @@ Options:
     (<options>-log-file-set! seed operand)
     seed)
 
+  (define (daemon-option-processor option name operand seed)
+    (<options>-daemonise?-set! seed #t)
+    seed)
+
 ;;; --------------------------------------------------------------------
 ;;; auxiliary options
 
@@ -368,6 +565,7 @@ Options:
      (option '("document-root")	#t #f document-root-option-processor)
      (option '("pid-file")	#t #f pid-file-option-processor)
      (option '("log-file")	#t #f log-file-option-processor)
+     (option '("daemon")	#f #f daemon-option-processor)
 
      (option '("version-only")	#f #f version-only-option-processor)
      (option '(#\V "version")	#f #f version-option-processor)
@@ -406,7 +604,8 @@ Options:
 ;;;; socket event handlers
 
 (define (make-http-master-server-accept-handler master-sock)
-  (import (srfi :31))
+  (import (srfi :31)
+    LOG-FILE)
   (rec (handler)
     ;;Whenever the master server socket  becomes readable the event loop
     ;;applies this function to it.
@@ -429,7 +628,8 @@ Options:
 
 (define (make-http-server-readable-socket server-sock)
   (import INPUT/OUTPUT
-    (srfi :31))
+    (srfi :31)
+    LOG-FILE)
   (let ((state 'start)
 	(port	 (make-socket-port server-sock)))
     (rec (handler)
@@ -444,7 +644,7 @@ Options:
 	   (let ((lines (read-until-empty-line port)))
 ;;;FIXME Extract the requested pathname.
 	     (display (call-with-input-file
-			  (string-append (document-root) "/index.html")
+			  (string-append (options.document-root) "/index.html")
 			get-string-all)
 		      port)
 	     (flush-output-port port)
@@ -508,18 +708,21 @@ Options:
   (sel.receive-signal SIGCONT %sigcont-handler))
 
 (define (%sigterm-handler)
+  (import LOG-FILE)
   (sel.receive-signal SIGTERM %sigterm-handler)
   (log "received SIGTERM")
   (sel.leave-asap))
 
 (define (%sigquit-handler)
-  ;;SIGINT comes from Ctrl-\.
+  ;;SIGQUIT comes from Ctrl-\.
+  (import LOG-FILE)
   (sel.receive-signal SIGQUIT %sigquit-handler)
   (log "received SIGQUIT")
   (sel.leave-asap))
 
 (define (%sigint-handler)
   ;;SIGINT comes from Ctrl-C.
+  (import LOG-FILE)
   (sel.receive-signal SIGINT %sigint-handler)
   (log "received SIGINT")
   (sel.leave-asap))
@@ -528,6 +731,7 @@ Options:
   ;;SIGTSTP comes from Ctrl-Z.  We should put some program state cleanup
   ;;in this handler.  Finally we send ourselves a SIGSTOP to suspend the
   ;;process.
+  (import LOG-FILE)
   (guard (E (else
 	     (log "error in SIGTSTP handler: ~s\n" E)
 	     (exit 1)))
@@ -539,6 +743,7 @@ Options:
   ;;SIGCONT comes from  the controlling process and allows  us to resume
   ;;the  program.  We  should put  some state  reinitialisation in  this
   ;;handler.
+  (import LOG-FILE)
   (guard (E (else
 	     (log "error in SIGCONT handler: ~s\n" E)
 	     (exit 1)))
@@ -553,22 +758,10 @@ Options:
   ;;
   (pretty-print args (current-error-port)))
 
-(module (logging log verbose-message error-message-and-exit)
-
-  (define logging
-    (make-parameter #f
-      (lambda (obj)
-	(if obj #t #f))))
-
-  (define (log template . args)
-    (when (and (logging)
-	       (log-port))
-      (let* ((date	(px.strftime/string "%F-T%T%Z" (px.localtime (px.time))))
-	     (template	(string-append (format "~a: " date) template)))
-	(%format-and-print (log-port) template args))))
+(module (verbose-message error-message-and-exit)
 
   (define (verbose-message requested-level template . args)
-    (when (<= (verbosity) requested-level)
+    (when (<= (options.verbosity) requested-level)
       (%format-and-print (current-error-port) template args)))
 
   (define (error-message-and-exit exit-status template . args)
