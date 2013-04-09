@@ -33,8 +33,6 @@
 	  px.)
   (prefix (vicare simple-event-loop)
 	  sel.)
-  (vicare coroutines)
-  (vicare net channels)
   (vicare platform constants)
   (vicare syntactic-extensions))
 
@@ -68,7 +66,7 @@
 ;;;; main function
 
 (define (main argv)
-  (import PID-FILE LOG-FILE DAEMONISATION NETWORKING)
+  (import PID-FILE LOGGING DAEMONISATION SERVER-EVENTS-LOOP)
   (parametrise
       ((logging	#t)
        (sel.logging	log)
@@ -86,10 +84,7 @@
 	      (begin
 		(sel.initialise)
 		(unwind-protect
-		    (begin
-		      (%initialise-signal-handlers)
-		      (server-loop (options.server-interface)
-				   (options.server-port)))
+		    (server-loop (options.server-interface) (options.server-port))
 		  (sel.finalise)
 		  (log "exiting HTTP server")))
 	    (when (root-server?)
@@ -236,12 +231,13 @@
 
 ;;;; log file handling
 
-(module LOG-FILE
+(module LOGGING
   (logging
    log-port
    open-log-file
    close-log-file
-   log)
+   log
+   log-condition-message)
 
   ;;False or a textual output port to which log messages must be written.
   ;;
@@ -311,6 +307,13 @@
 	(%format-and-print (log-port) template args)))
     (void))
 
+  (define (log-condition-message template cnd)
+    (log template (if (message-condition? E)
+		      (condition-message E)
+		    "unknown error")))
+
+;;; --------------------------------------------------------------------
+
   (define (%format-and-print port template args)
     ;;Format a  line of text and  display it to the  given textual port.
     ;;We expect the port to have buffer mode set to "line".
@@ -319,7 +322,7 @@
     (apply fprintf port template args)
     (newline port))
 
-  #| end of module: LOG-FILE |# )
+  #| end of module: LOGGING |# )
 
 
 ;;;; PID file handling
@@ -377,10 +380,7 @@
     (when (and pid-file (file-exists? pid-file))
       (log "removing PID file")
       (guard (E (else
-		 (log "error removing pid file: ~a"
-		      (if (message-condition? E)
-			  (condition-message E)
-			"unknown error"))))
+		 (log-condition-message "error removing pid file: ~a" E)))
 	(with-input-from-file pid-file
 	  (lambda ()
 	    (unless (string=? (string-append (number->string (px.getpid)) "\n")
@@ -572,26 +572,128 @@ Options:
 
 ;;;; networking
 
-(module NETWORKING
-  (network-port?
-   server-loop)
-  (import HTTP-SERVER LOG-FILE)
+(module SERVER-EVENTS-LOOP
+  (server-loop)
+  (import NETWORKING HTTP-SERVER INTERPROCESS-SIGNALS LOGGING)
 
   (define (server-loop interface port)
-    (let ((sockaddr    (make-sockaddr interface (number->string port)))
-	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
-      (unwind-protect
-	  (begin
-	    (socket-set-non-blocking master-sock)
-	    (px.setsockopt/linger master-sock #t 3)
-	    (px.bind   master-sock sockaddr)
-	    (px.listen master-sock 10)
-	    (sel.readable master-sock (lambda ()
-					(accept-connection master-sock)))
-	    (sel.enter))
-	(px.close master-sock))))
+    ;;Given  a  string INTERFACE  representing  a  network interface  to
+    ;;listen to and network PORT number: create the master server socket
+    ;;bound to  the given  interface and  enter the  SEL loop  to accept
+    ;;incoming connections.  Return unspecified values.
+    ;;
+    (define master-sock
+      (make-master-sock interface port))
+    (define (schedule-incoming-connection-event)
+      (sel.readable master-sock (lambda ()
+				  (schedule-incoming-connection-event)
+				  (accept-connection master-sock))))
+    (unwind-protect
+	(begin
+	  (initialise-signal-handlers)
+	  (sel.readable master-sock schedule-incoming-connection-event)
+	  (sel.enter))
+      (close-master-sock master-sock))
+    (void))
 
-  (define (make-sockaddr interface port)
+  (define (accept-connection master-sock)
+    ;;Given  the  socket  descriptor MASTER-SOCK  representing  a  bound
+    ;;socket with a pending connection:  accept the connection, create a
+    ;;server  socket, enter  the  coroutine that  will  handle the  HTTP
+    ;;requests.
+    ;;
+    ;;This function  returns unspecified  values whenever  the coroutine
+    ;;finishes.
+    ;;
+    (receive (server-sock server-port)
+	(make-server-sock master-sock)
+      (define (suspend-until-readable)
+	;;The server  coroutine can  call this  thunk multiple  times to
+	;;suspend  itself until  the SEL  detects data  incoming on  the
+	;;server socket.
+	;;
+	(call/cc (lambda (resume)
+		   (sel.readable server-sock resume))))
+      (unwind-protect
+	  (coroutine
+	      (lambda ()
+		(http-server-coroutine server-port suspend-until-readable)))
+	(close-server-port server-port)))
+    (void))
+
+  #| end of module: NETWORKING |# )
+
+
+;;;; sockets handling
+
+(module NETWORKING
+  (network-port?
+   make-master-sock	make-server-sock
+   close-master-sock	close-server-port)
+  (import LOGGING)
+
+  (define (make-master-sock interface port)
+    ;;Given  a  string INTERFACE  representing  a  network interface  to
+    ;;listen to and network PORT number: open a master server socket and
+    ;;bind  it to  the interface  and  port.  Return  the master  socket
+    ;;descriptor.
+    ;;
+    (let ((sockaddr    (%make-sockaddr interface (number->string port)))
+	  (master-sock (px.socket PF_INET SOCK_STREAM 0)))
+      (socket-set-non-blocking master-sock)
+      (px.setsockopt/linger master-sock #t 3)
+      (px.bind   master-sock sockaddr)
+      (px.listen master-sock 10)
+      master-sock))
+
+  (define (make-server-sock master-sock)
+    ;;Given  the  socket  descriptor MASTER-SOCK  representing  a  bound
+    ;;socket  with  a  pending  connection: accept  the  connection  and
+    ;;configure the resulting server socket descriptor.
+    ;;
+    ;;Return  2   values:  the   server  socket  descriptor,   a  Scheme
+    ;;input/output  binary port  wrapping the  descriptor.  Closing  the
+    ;;Scheme port will also close the server socket.
+    ;;
+    (receive (server-sock client-address)
+	(px.accept master-sock)
+      (let ((id (string-append
+		 (px.inet-ntop AF_INET (px.sockaddr.in_addr client-address))
+		 ":"
+		 (number->string (px.sockaddr.in_port client-address)))))
+	(log "accepted connection from: ~a\n" id)
+	(socket-set-non-blocking server-sock)
+	(let ((server-port (make-binary-socket-input/output-port server-sock id)))
+	  (values server-sock server-port)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (close-master-sock sock)
+    ;;Close the master socket descriptor, shutting down listening to the
+    ;;bound interface.  SOCK must be the return value of a previous call
+    ;;to MAKE-MASTER-SOCK.
+    ;;
+    (px.close sock))
+
+  (define (close-server-port port)
+    ;;Close  the  Scheme  port  wrapping a  server  connection's  socket
+    ;;descriptor;  closing the  port will  alsot shut  down the  socket.
+    ;;PORT   must  be   the  return   value  of   a  previous   call  to
+    ;;MAKE-SERVER-SOCK.
+    ;;
+    (close-port port))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-sockaddr interface port)
+    ;;Given  a  string INTERFACE  representing  a  network interface  to
+    ;;listen to and  network PORT number: query the  system for sockaddr
+    ;;structures  representing such  interface and  port and  supporting
+    ;;IPv4.
+    ;;
+    ;;Return  a Scheme  bytevector  holding the  first matching  "struct
+    ;;sockaddr"; if no address can be determined: raise an exception.
+    ;;
     (let* ((hints (px.make-struct-addrinfo 0 AF_INET SOCK_STREAM 0 0 #f #f))
 	   (infos (px.getaddrinfo interface port hints)))
       (%pretty-print infos)
@@ -599,17 +701,13 @@ Options:
 	  (error 'make-sockaddr "unable to acquire master socket address")
 	(px.struct-addrinfo-ai_addr (car infos)))))
 
+;;; --------------------------------------------------------------------
+
   (define (socket-set-non-blocking sock)
+    ;;Configure the given socket descriptor for non-blocking mode.
+    ;;
     (let ((x (px.fcntl sock F_GETFL 0)))
       (px.fcntl sock F_SETFL (bitwise-ior x O_NONBLOCK))))
-
-  (define (accept-connection master-sock)
-    (receive (server-sock client-address)
-	(px.accept master-sock)
-      (log "accepted connection from ~a\n" client-address)
-      (http-server-session server-sock
-			   (make-binary-socket-input/output-port server-sock "socket")
-			   client-address)))
 
   (define (network-port? obj)
     ;;Return true  if OBJ is  an exact integer  in the range  of network
@@ -618,73 +716,254 @@ Options:
     (and (fixnum? obj)
 	 (<= 1 obj 65535)))
 
-  #| end of module: NETWORKING |# )
+  #| end of module: SOCKETS |# )
 
 
 ;;;; HTTP server
 
 (module HTTP-SERVER
   (http-server-session)
+  (import (vicare coroutines)
+    (vicare net channels)
+    LOGGING)
 
-  (define (http-server-session sock port address)
-    (coroutine
-	(lambda ()
-	  (close-port port))))
+  (define (http-server-session port suspend-until-readable)
+    ;;
+    ;;
+    (define (main port suspend-until-readable)
+      (receive (error? http-version-1.1? requested-document)
+	  (%parse-first-request (%recv-request))
+	(if error?
+	    (begin
+	      (log "invalid HTTP request")
+	      (%close-connection))
+	  (begin
+	    (when http-version-1.1?
+	      (%send-message chan OPEN-CONTINUE-RESPONSE))
+	    (%send-document-response requested-document)
+	    (if http-version-1.1?
+		(let next-request ()
+		  (receive (error? close-http-1.1-continue? requested-document)
+		      (%parse-request (%recv-request))
+		    (cond (error?
+			   (log "invalid HTTP request")
+			   (%close-connection))
+			  (close-http-1.1-continue?
+			   (%close-connection))
+			  (else
+			   (%send-document-response requested-document)
+			   (next-request)))))
+	      (%close-connection)))))
+      (void))
+
+    (define chan
+      (chan.open-input/output-channel port))
+
+    (define (%send-document-response requested-document)
+      (let ((pathname (%requested-document->local-pathname requested-document)))
+	(receive (contents contents.type)
+	    (%local-pathname->contents pathname)
+	  (%send-message chan (if contents
+				  (begin
+				    (log "serving document: ~a" pathname)
+				    (%prepare-document-response contents contents.type))
+				(begin
+				  (log "error serving document: ~a" pathname)
+				  (%prepare-error-response)))))))
+
+    (define (%recv-request)
+      (%recv-message chan suspend-until-readable))
+
+    (define (%close-connection)
+      (chan.close-channel chan))
+
+    (guard (E (else
+	       (log-condition-message "server error: ~a" E)
+	       (%send-message chan SERVER-ERROR-RESPONSE)
+	       (%close-connection)))
+      (main port suspend-until-readable)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%parse-first-request request)
+    ;;Given the bytevector REQUEST holding  the opening request from the
+    ;;client,  parse it  and return  3 values:
+    ;;
+    ;;1. A boolean, true if the request is invalid.
+    ;;
+    ;;2. A boolean, true if the HTTP protocol version is 1.1.
+    ;;
+    ;;3. A  bytevector representing the requested  document pathname, or
+    ;;   false if no pathname is available.
+    ;;
+    (values #f #f '#vu8()))
+
+  (define (%parse-request request)
+    ;;Given  the  bytevector REQUEST  holding  the  a request  from  the
+    ;;client, parse it and return 3 values:
+    ;;
+    ;;1. A boolean, true if the request is invalid.
+    ;;
+    ;;2.   A  boolean, true  if  the  request  closes an  "HTTP/1.1  100
+    ;;   Continue" connection.
+    ;;
+    ;;3. A  bytevector representing the requested  document pathname, or
+    ;;   false if no pathname is available.
+    ;;
+    (values #f #t '#vu8()))
+
+  (define (%prepare-document-response contents contents.type)
+    (let ((contents.len (bytevector-length contents)))
+      (bytevector-append
+       SUCCESS-DOCUMENT-RESPONSE
+       '#ve(ascii "Content-Type: ") contents.type END-OF-LINE
+       '#ve(ascii "Content-Length: ") (number->string contents.len) END-OF-LINE
+       END-OF-LINE
+       contents
+       MESSAGE-TERMINATOR)))
+
+  (define (%prepare-error-response)
+    DOCUMENT-ERROR-RESPONSE)
+
+;;; --------------------------------------------------------------------
+
+  (define (%requested-document->local-pathname doc.bv)
+    ;;Given  a bytevector  representing  the  requested local  document:
+    ;;return  a  Scheme  string   representing  the  correspoding  local
+    ;;pathname.  This function does not  check for the existence of such
+    ;;pathname.
+    ;;
+    (let ((doc.str (ascii->string doc.bv)))
+      (case-strings doc.str
+	(("/")
+	 (string-append (options.document-root) "index.html"))
+	(else
+	 (string-append (options.document-root) doc.str)))))
+
+  (define (%local-pathname->contents pathname)
+    ;;Given  a  Scheme  string  representing the  local  pathname  of  a
+    ;;requested document:  open the file,  load its contents,  close the
+    ;;file,  return 2  values: the  contents in  a single  bytevector, a
+    ;;bytevector representing the contents type.
+    ;;
+    ;;If an error occurs: log a message and return false and false.
+    ;;
+    (guard (E ((i/o-file-does-not-exist-error? E)
+	       (log-condition-message "requested unexistent document: ~a, ~a"
+				      cnd pathname)
+	       (values #f #f))
+	      (else
+	       (log-condition-message "error loading document: ~a, ~a"
+				      cnd pathname)
+	       (values #f #f)))
+      (values (%read-file pathname)
+	      (%file-type pathname))))
+
+  (define (%read-file pathname)
+    (let ((P (open-file-input-port pathname
+	       (file-options no-create no-truncate)
+	       (buffer-mode block))))
+      (unwind-protect
+	  (get-bytevector-all P)
+	(close-port P))))
+
+  (define (%file-type pathname)
+    '#ve(ascii "text/html"))
+
+;;; --------------------------------------------------------------------
+
+  (define (%send-message chan data)
+    (chan.channel-send-begin! chan)
+    (chan.channel-send-message-portion! chan data)
+    (chan.channel-send-end! chan))
+
+  (define (%recv-message chan suspend-until-readable)
+    (chan.channel-recv-begin! chan)
+    (let wait-for-message-terminator ()
+      (suspend-until-readable)
+      (unless (chan.channel-recv-message-portion! chan data)
+	(wait-for-message-terminator)))
+    (chan.channel-send-end! chan))
+
+;;; --------------------------------------------------------------------
+
+  (define-constant OPEN-CONTINUE-RESPONSE
+    '#ve(ascii "HTTP/1.1 100 Continue\r\n\r\n"))
+
+  (define-constant SUCCESS-DOCUMENT-RESPONSE
+    '#ve(ascii "HTTP/1.1 200 OK\r\n\r\n"))
+
+  (define-constant DOCUMENT-ERROR-RESPONSE
+    '#ve(ascii "HTTP/1.1 404 Not Found\r\n\r\n"))
+
+  (define-constant SERVER-ERROR-RESPONSE
+    '#ve(ascii "HTTP/1.1 500 Server Error\r\n\r\n"))
+
+  (define-constant MESSAGE-TERMINATOR
+    '#ve(ascii "\r\n\r\n"))
+
+  (define-constant END-OF-LINE
+    '#ve(ascii "\r\n"))
 
   #| end of module: HTTP-SERVER |# )
 
 
 ;;;; interprocess signal handlers
 
-(define (%initialise-signal-handlers)
-  (sel.receive-signal SIGTERM %sigterm-handler)
-  (sel.receive-signal SIGQUIT %sigquit-handler)
-  (sel.receive-signal SIGINT  %sigint-handler)
-  (sel.receive-signal SIGTSTP %sigtstp-handler)
-  (sel.receive-signal SIGCONT %sigcont-handler))
+(module INTERPROCESS-SIGNALS
+  (initialise-signal-handlers)
 
-(define (%sigterm-handler)
-  (import LOG-FILE)
-  (sel.receive-signal SIGTERM %sigterm-handler)
-  (log "received SIGTERM")
-  (sel.leave-asap))
-
-(define (%sigquit-handler)
-  ;;SIGQUIT comes from Ctrl-\.
-  (import LOG-FILE)
-  (sel.receive-signal SIGQUIT %sigquit-handler)
-  (log "received SIGQUIT")
-  (sel.leave-asap))
-
-(define (%sigint-handler)
-  ;;SIGINT comes from Ctrl-C.
-  (import LOG-FILE)
-  (sel.receive-signal SIGINT %sigint-handler)
-  (log "received SIGINT")
-  (sel.leave-asap))
-
-(define (%sigtstp-handler)
-  ;;SIGTSTP comes from Ctrl-Z.  We should put some program state cleanup
-  ;;in this handler.  Finally we send ourselves a SIGSTOP to suspend the
-  ;;process.
-  (import LOG-FILE)
-  (guard (E (else
-	     (log "error in SIGTSTP handler: ~s\n" E)
-	     (exit 1)))
+  (define (initialise-signal-handlers)
+    (sel.receive-signal SIGTERM %sigterm-handler)
+    (sel.receive-signal SIGQUIT %sigquit-handler)
+    (sel.receive-signal SIGINT  %sigint-handler)
     (sel.receive-signal SIGTSTP %sigtstp-handler)
-    (log "received SIGTSTP")
-    (px.kill (px.getpid) SIGSTOP)))
+    (sel.receive-signal SIGCONT %sigcont-handler))
 
-(define (%sigcont-handler)
-  ;;SIGCONT comes from  the controlling process and allows  us to resume
-  ;;the  program.  We  should put  some state  reinitialisation in  this
-  ;;handler.
-  (import LOG-FILE)
-  (guard (E (else
-	     (log "error in SIGCONT handler: ~s\n" E)
-	     (exit 1)))
-    (sel.receive-signal SIGCONT %sigcont-handler)
-    (log "received SIGCONT")))
+  (define (%sigterm-handler)
+    (import LOGGING)
+    (sel.receive-signal SIGTERM %sigterm-handler)
+    (log "received SIGTERM")
+    (sel.leave-asap))
+
+  (define (%sigquit-handler)
+    ;;SIGQUIT comes from Ctrl-\.
+    (import LOGGING)
+    (sel.receive-signal SIGQUIT %sigquit-handler)
+    (log "received SIGQUIT")
+    (sel.leave-asap))
+
+  (define (%sigint-handler)
+    ;;SIGINT comes from Ctrl-C.
+    (import LOGGING)
+    (sel.receive-signal SIGINT %sigint-handler)
+    (log "received SIGINT")
+    (sel.leave-asap))
+
+  (define (%sigtstp-handler)
+    ;;SIGTSTP  comes from  Ctrl-Z.   We should  put  some program  state
+    ;;cleanup in this  handler.  Finally we send ourselves  a SIGSTOP to
+    ;;suspend the process.
+    (import LOGGING)
+    (guard (E (else
+	       (log "error in SIGTSTP handler: ~s\n" E)
+	       (exit 1)))
+      (sel.receive-signal SIGTSTP %sigtstp-handler)
+      (log "received SIGTSTP")
+      (px.kill (px.getpid) SIGSTOP)))
+
+  (define (%sigcont-handler)
+    ;;SIGCONT comes from the controlling process and allows us to resume
+    ;;the program.   We should put  some state reinitialisation  in this
+    ;;handler.
+    (import LOGGING)
+    (guard (E (else
+	       (log "error in SIGCONT handler: ~s\n" E)
+	       (exit 1)))
+      (sel.receive-signal SIGCONT %sigcont-handler)
+      (log "received SIGCONT")))
+
+  #| end of module: INTERPROCESS-SIGNALS |# )
 
 
 ;;;; printing helpers
