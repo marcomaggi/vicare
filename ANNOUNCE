@@ -78,6 +78,13 @@ Notes for revision 0.2d21
       base64->bytevector	bytevector->base64
       string-base64->bytevector	bytevector->string-base64
 
+* Added  functions to  (vicare) to  convert between  bytevectors holding
+  octets and bytevectors holding the corresponding URI percent encoding.
+
+    string->uri-encoding	uri-encoding->string
+    uri-encode			uri-decode
+    uri-normalise-encoding
+
 * Added function to (vicare) to manipulate time objects:
 
       make-time

@@ -1944,6 +1944,20 @@ bytevector containing the @ascii{} Base64 representation of the octets.
 If an error occurs in the conversion: the return value is @false{}.
 @end defun
 
+
+@defun uri-encode @var{bytevector}
+@defunx uri-decode @var{bytevector}
+Encode or decode a bytevector according to @rfc{} 3986 @acronym{URI}
+percent encoding; return a bytevector.
+@end defun
+
+
+@defun uri-normalise-encoding @var{bytevector}
+Given a bytevector encoded according to to @rfc{} 3986 @acronym{URI}
+percent encoding: return an encoded and normalised bytevector, octets
+that are encoded but should not are decoded.
+@end defun
+
 @c page
 @node iklib bytevectors generic
 @subsection Generic bytevectors operations
@@ -2025,6 +2039,14 @@ If an error occurs in the conversion: the return value is @false{}.
 @defun uuid
 Attempt to build a unique string and return it.  If an internal error
 occurs because of impossible generation: raise an error.
+@end defun
+
+
+@defun string->uri-encoding @var{str}
+@defunx uri-encoding->string @var{bytevector}
+Convert between a string and a bytevector holding octets encoded
+according to to @rfc{} 3986 @acronym{URI} percent encoding; the string
+must contain only @ascii{} characters.
 @end defun
 
 @c page
