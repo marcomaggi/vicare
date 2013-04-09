@@ -102,10 +102,20 @@ ikarus_main (int argc, char** argv, char* boot_file)
 }
 
 
+/** --------------------------------------------------------------------
+ ** Special functions.
+ ** ----------------------------------------------------------------- */
+
 ikptr
 ikrt_get_argv0_string (ikpcb * pcb)
 {
   return ika_bytevector_from_cstring(pcb, pcb->argv0);
+}
+ikptr
+ikrt_get_last_revision (ikpcb * pcb)
+{
+#include "last-revision.h"
+  return ika_bytevector_from_cstring(pcb, LAST_REVISION);
 }
 
 

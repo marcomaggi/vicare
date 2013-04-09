@@ -26,9 +26,15 @@ SRCS	= \
 	ikarus-glibc.c			\
 	ikarus-linux.c			\
 	ikarus-readline.c		\
+	last-revision.h			\
 	internals.h
 
 include_HEADERS		= vicare.h
+
+MAINTAINERCLEANFILES	= last-revision.h
+
+$(srcdir)/last-revision.h: Makefile
+	echo '#define LAST_REVISION "no-branch/no-commit"' >$@
 
 bin_PROGRAMS		= vicare
 vicare_SOURCES		= $(SRCS) ikarus.c

@@ -22,7 +22,6 @@
     vicare-lib-dir
     scheme-lib-dir
     vicare-version
-    vicare-revision
     bootfile
     host-info)
   (import (except (ikarus)
@@ -647,10 +646,12 @@
   (unless (= 30 (fixnum-width))
     (%display ", 64-bit"))
   (%newline)
-  (unless (zero? (string-length config.vicare-revision))
-    (%display "Revision ")
-    (%display config.vicare-revision)
-    (%newline))
+  ;;Print the git branch and HEAD commit checksum.
+  (let ((rev (foreign-call "ikrt_get_last_revision")))
+    (unless (zero? (bytevector-length rev))
+      (%display "Revision ")
+      (%display (ascii->string rev))
+      (%newline)))
   (%display "Build ")
   ;;This  LET-SYNTAX looks  weird, but  it  is to  take the  DATE-STRING
   ;;result at expansion-time rather than run-time.
