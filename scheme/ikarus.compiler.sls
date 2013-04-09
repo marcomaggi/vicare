@@ -3390,7 +3390,7 @@
   (define (Rator x)
     ;;Invoked only when the parameter OPTIMIZE-CP is set to true.
     ;;
-    ;;FIXME Does this look as  an optimization to anyone?  (Marco Maggi;
+    ;;FIXME Does this  look like optimization to  anyone?  (Marco Maggi;
     ;;Oct 13, 2012)
     ;;
     (struct-case x
