@@ -206,7 +206,7 @@
 
   (check
       (let ((chan (chan.open-input-channel in-port)))
-	(chan.channel-set-message-terminator! chan '#vu8(1 2 3)))
+	(chan.channel-set-message-terminators! chan '(#vu8(1 2 3))))
     => (void))
 
   #t)
@@ -217,11 +217,16 @@
   (define (ascii-chunks str-chunks)
     (map string->ascii str-chunks))
 
-  (define (send chan chunks)
+  (define (send port chan chunks)
+    ;;For  debugging purposes  we want  to flush  the output  port after
+    ;;every portion is sent.
+    ;;
     (chan.channel-send-begin! chan)
     (for-each-in-order
 	(lambda (portion)
-	  (chan.channel-send-message-portion! chan portion))
+	  (chan.channel-send-message-portion! chan portion)
+	  (flush-output-port port)
+	  (yield))
       chunks)
     (chan.channel-send-end! chan))
 
@@ -231,6 +236,7 @@
     (chan.channel-recv-begin! chan)
     (let loop ((rv (doit)))
       (unless rv
+	(yield)
 	(loop (doit))))
     (let ((bv (chan.channel-recv-end! chan)))
       ;;(check-pretty-print bv)
@@ -251,25 +257,23 @@
 	     (lambda ()
 	       (let ((chan (chan.open-input/output-channel master.port))
 		     (log  master-log))
-		 (send chan (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
-		 (yield)
+		 (send master.port chan
+		       (ascii-chunks '("hel" "lo sla" "ve\r\n\r\n")))
 		 (log (recv chan))
-		 (send chan (ascii-chunks '("som" "e dat" "a\r" "\n"
-					    "som" "e other dat" "a\r" "\n" "\r" "\n")))
-		 (yield)
+		 (send master.port chan
+		       (ascii-chunks '("som" "e dat" "a\r" "\n"
+				       "som" "e other dat" "a\r" "\n" "\r" "\n")))
 		 (log (recv chan))
-		 (send chan (ascii-chunks '("quit\r\n\r\n")))
+		 (send master.port chan (ascii-chunks '("quit\r\n\r\n")))
 		 (chan.close-channel chan))))
 	 (coroutine	;slave
 	     (lambda ()
 	       (let ((chan (chan.open-input/output-channel slave.port))
 		     (log  slave-log))
 		 (log (recv chan))
-		 (send chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
-		 (yield)
+		 (send slave.port chan (ascii-chunks '("hel" "lo mas" "ter\r\n\r\n")))
 		 (log (recv chan))
-		 (send chan (ascii-chunks '("OK" "\r\n" "\r\n")))
-		 (yield)
+		 (send slave.port chan (ascii-chunks '("OK" "\r\n" "\r\n")))
 		 (log (recv chan))
 		 (chan.close-channel chan))))
 	 (finish-coroutines)))

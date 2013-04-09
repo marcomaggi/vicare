@@ -5170,16 +5170,18 @@ completed.
 @end defun
 
 
-@defun channel-set-message-terminator! @var{chan} @var{terminator}
-Configure the message terminator; return unspecified values.
-@var{terminator} must be a non--empty bytevector representing the
-message terminator.
+@defun channel-set-message-terminators! @var{chan} @var{terminators}
+Configure the message terminators; return unspecified values.
+@var{terminators} must be a non--empty list of non--empty bytevectors
+representing possible message terminators.
 
-When not configured: the terminator defaults to @code{#vu8(13 10 13
-10)}, which is the double sequence of @ascii{} characters: carriage
-return, line feed.
+When not configured: the list of terminators defaults to:
 
-The terminator @strong{is not} reset when a message delivery is
+@example
+(#ve(ascii "\r\n\r\n") #ve(ascii "\n\n"))
+@end example
+
+The terminators @strong{are not} reset when a message delivery is
 completed.
 @end defun
 
@@ -5303,9 +5305,24 @@ message or to send a message.
 @end defun
 
 
+@defun channel-recv-end!/rbl @var{chan}
+Like @func{channel-recv-end!}, but return @math{2} values:
+
+@enumerate
+@item
+Null or a list of non--empty bytevectors representing the accumulated
+message data in bytevector--reverse order.
+
+@item
+An exact integer representing the total number of octets in the
+bytevectors.
+@end enumerate
+@end defun
+
+
 @defun channel-recv-message-portion! @var{chan}
 Receive a portion of input message from the given channel and accumulate
-it in the internal state; return @true{} if the configured message
+it in the internal state; return @true{} if a configured message
 terminator was read in the tail of the data, else return @false{}.  It
 is an error if the channel is not in the course of receiving a message.
 
@@ -5313,7 +5330,7 @@ After the message terminator has been read: further calls to this
 function always return @true{} without taking any action.
 
 This function performs multiple read operations from the registered
-connection port, until the end--of--file is read or until the configured
+connection port, until the end--of--file is read or until a configured
 message terminator is found in the tail of read data.
 
 If at the time of this function call the timeout configured for this
