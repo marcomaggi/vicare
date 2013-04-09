@@ -1948,7 +1948,15 @@ If an error occurs in the conversion: the return value is @false{}.
 @defun uri-encode @var{bytevector}
 @defunx uri-decode @var{bytevector}
 Encode or decode a bytevector according to @rfc{} 3986 @acronym{URI}
-percent encoding; return a bytevector.
+percent encoding; return a bytevector.  All the octets are encoded
+except the ones having the following @ascii{} representation:
+
+@example
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+-._~
+@end example
 @end defun
 
 
@@ -2043,10 +2051,16 @@ occurs because of impossible generation: raise an error.
 
 
 @defun string->uri-encoding @var{str}
-@defunx uri-encoding->string @var{bytevector}
-Convert between a string and a bytevector holding octets encoded
-according to to @rfc{} 3986 @acronym{URI} percent encoding; the string
-must contain only @ascii{} characters.
+Convert the string @var{str} to its @utf{}-8 representation, then encode
+such representation according to @rfc{} 3986, @acronym{URI} percent
+encoding.
+@end defun
+
+
+@defun uri-encoding->string @var{bytevector}
+Interpret the bytevector as encoded according to @rfc{} 3986,
+@acronym{URI} percent encoding, decode it and interpret the result as
+the @utf{}-8 representation of a string; return the string.
 @end defun
 
 @c page

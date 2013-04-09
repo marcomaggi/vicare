@@ -1025,10 +1025,10 @@
 ;;;; bytevectors to/from RFC 3986 URI percent encoding
 
 (define (string->uri-encoding str)
-  (uri-encode (string->ascii str)))
+  (uri-encode (string->utf8 str)))
 
 (define (uri-encoding->string bv)
-  (ascii->string (uri-decode bv)))
+  (utf8->string (uri-decode bv)))
 
 (module (uri-encode uri-decode uri-normalise-encoding)
 
