@@ -2440,8 +2440,8 @@
 	    (values (cons x lhs*) a-lhs* a-rhs*))))))
 
   (define (%bind-assigned lhs* rhs* body)
-    ;;LHS* must be a list of struct instances of type PRELEX represening
-    ;;read-write bindings.
+    ;;LHS*  must  be   a  list  of  struct  instances   of  type  PRELEX
+    ;;representing read-write bindings.
     ;;
     ;;RHS* must be a list  of struct instance representing references to
     ;;temporary bindings holding the binding's values.
