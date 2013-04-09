@@ -2789,7 +2789,7 @@
   ;;clause that matches the number of arguments.
   ;;
   ;;This optimisation is possible only  when: a preliminary iteration of
-  ;;the recordized  code let's  us find  bindings whose  right-hand size
+  ;;the  recordized code  let  us find  bindings  whose right-hand  size
   ;;evaluates to  a CASE-LAMBDA,  that is to  a closure  definition with
   ;;known clauses.
   ;;
