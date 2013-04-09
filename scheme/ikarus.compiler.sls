@@ -2278,7 +2278,7 @@
   ;;       ($vector-set! x 0 456)
   ;;       ($vector-ref x 0)))
   ;;
-  ;;Code representing usage of multiple a bindings like:
+  ;;Code representing usage of multiple bindings like:
   ;;
   ;;   (let ((x 1)
   ;;         (y 2))
