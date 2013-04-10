@@ -27,7 +27,7 @@
 #!r6rs
 (import (vicare)
   (srfi :0)
-  (prefix (srfi private registry)
+  (prefix (vicare cond-expand registry)
 	  private.)
   (vicare checks))
 
