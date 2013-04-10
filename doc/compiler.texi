@@ -6,7 +6,7 @@ This chapter is a collection of notes on the internals of the compiler.
 
 @menu
 * compiler machinery::          Introduction to execution machinery.
-* compiler conventions::        Coding conventions in compiler's code.
+* compiler code::               Introduction to compiler's code.
 * compiler stack::              Scheme stack management.
 @end menu
 
@@ -30,10 +30,7 @@ to reference variable values captured at run time.  Multiple closures
 (referencing different instances of the same semantic variables) can
 share the same block of machine code.  Multiple closures (referencing
 different blocks of machine code) can share the same variable values.
-
-@item Continuations
-Scheme code is allowed to save the current continuation and resume it
-later any number of times.
+@ref{objects closures, Closure objects}.
 
 @item Tail calls
 Whenever a Scheme function call happens in tail position: it must be
@@ -43,22 +40,86 @@ destroyed and reused as callee's frame.  This allows the use of tail
 calls as proper idiom to implement all the execution loops, even when
 such loops have an ``infinite'' number of iterations, without the risk
 of overflowing the Scheme stack.
+
+@item Continuations
+Scheme code is allowed to save the current continuation and resume it
+later any number of times.
 @end table
 
 @menu
-* compiler machinery closures::         Closures implementation.
-* compiler machinery continuations::    Continuations implementation.
-* compiler machinery tail calls::       Tail calls implementation.
+* compiler machinery simplifications::  Simplification assumptions.
+* compiler machinery call frames::      Basics of function call frames.
+* compiler machinery continuations::    The current continuation.
+* compiler machinery stack overflow::   Scheme stack overflow.
+* compiler machinery call arguments::   Function call arguments.
+* compiler machinery call retvals::     Function call return values.
+* compiler machinery tail calls::       Tail calls optimisation.
+* compiler machinery locals::           Local variables.
 @end menu
 
 @c page
-@node compiler machinery closures
-@subsection Closures implementation
+@node compiler machinery simplifications
+@subsection Simplification assumptions
+
+
+To make it easy to explain the run time behaviour of @value{PRJNAME}, we
+will assume the validity of the following simplifications:
+
+@enumerate
+@item
+At the start of a user program execution: the Scheme stack is empty.
+This is false because, at @value{PRJNAME} launch time, the boot image is
+loaded and initialised, executing a lot of compiled Scheme code.  But
+starting with an empty stack makes reasoning simpler.
+
+@item
+No expressions and function calls are inlined.  This is false because
+the compiler precomputes some expressions, inlines some function calls
+and removes bindings whenever possible; this makes the executed code
+different from the original Scheme code.  But we want to show sample
+Scheme code as close as possible to the one that gets executed.
+
+@item
+Unless otherwise specified: no tail call optimisation (@acronym{TCO}) is
+performed.  This is false because, whenever it recognises a function
+call in tail position, @value{PRJNAME} always performs the call in such
+a way that the new stack frame overwrites the old one.  But we want to
+show simple functions that create new stack frames.
+
+@item
+The function @func{call/cc} is implemented without nested function
+calls.  This is depends upon the function call integration optimisations
+performed by the compiler.  But reasoning about simple function call is
+simpler.
+
+@item
+There is no dynamic environment to be captured by continuations.  This
+is false because whenever @func{dynamic-wind} is used stacks of
+in--guard and out--guard functions are created and captured by
+continuations; the continuation escape function, created by
+@func{call/cc}, does invoke such guard functions to keep the dynamic
+environment synchronised with the execution flow.  But learning about
+continuations alone already introduces enough complications.
+@end enumerate
+
+@c page
+@node compiler machinery call frames
+@subsection Basics of function call frames
+
+
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour,
+@ref{compiler machinery simplifications, Simplification assumptions}.
+
 
 @c page
 @node compiler machinery continuations
-@subsection Continuations implementation
+@subsection The current continuation
 
+
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour,
+@ref{compiler machinery simplifications, Simplification assumptions}.
 
 Let's think of a process in execution as having: a table of descriptors,
 a code memory segment, a heap memory segment and a stack memory segment,
@@ -444,13 +505,66 @@ continuation object @var{D} as ``process next continuation''.
 @end float
 
 @c page
+@node compiler machinery stack overflow
+@subsection Scheme stack overflow
+
+
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour,
+@ref{compiler machinery simplifications, Simplification assumptions}.
+
+@c page
+@node compiler machinery call arguments
+@subsection Function call arguments
+
+
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour,
+@ref{compiler machinery simplifications, Simplification assumptions}.
+
+
+@c page
+@node compiler machinery call retvals
+@subsection Function call return values
+
+
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour,
+@ref{compiler machinery simplifications, Simplification assumptions}.
+
+@c page
 @node compiler machinery tail calls
 @subsection Tail calls implementation
 
 
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour, with
+the exception that we allow the compiler to perform tail calls
+optimisation (@acronym{TCO}), @ref{compiler machinery simplifications,
+Simplification assumptions}.
+
 @c page
-@node compiler conventions
-@section Coding conventions in compiler's code
+@node compiler machinery locals
+@subsection Local variables
+
+
+In the following discussion we assume the validity of machinery
+simplifications to focus on some aspect of the runtime behaviour,
+@ref{compiler machinery simplifications, Simplification assumptions}.
+
+
+@c page
+@node compiler code
+@section Introduction to compiler's code
+
+
+@menu
+* compiler code conventions::   Compiler coding conventions.
+@end menu
+
+@c page
+@node compiler code conventions
+@subsection Compiler coding conventions
 
 
 Throughout the compiler code variables with the following names appear:
