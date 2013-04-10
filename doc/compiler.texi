@@ -527,7 +527,7 @@ result is stored in the @aar{} register.
 Return from @func{+}: execute the Assembly instruction @code{ret} which:
 loads the machine word from the stack location referenced by @fpr{} into
 the @cpu{}'s Instruction Pointer Register, increments the @fpr{} by a
-machine words, jumps to the code address in the Instruction Pointer
+machine word, jumps to the code address in the Instruction Pointer
 Register, @ref{fig:CMCF_plus_ret, compiler machinery call frames}.
 
 @float Figure,fig:CMCF_plus_ret
@@ -553,7 +553,7 @@ Register, @ref{fig:CMCF_plus_ret, compiler machinery call frames}.
 @end float
 
 @item
-Adjust back the @fpr{} to reference return address of the caller
+Adjust back the @fpr{} to reference the return address of the caller
 @ref{fig:CMCF_caller_adjust, compiler machinery call frames}.
 
 @float Figure,fig:CMCF_caller_adjust
@@ -579,7 +579,7 @@ Adjust back the @fpr{} to reference return address of the caller
 Return from @func{one}: execute the Assembly instruction @code{ret}
 which: loads the machine word from the stack location referenced by
 @fpr{} into the @cpu{}'s Instruction Pointer Register, increments the
-@fpr{} by a machine words, jumps to the code address in the Instruction
+@fpr{} by a machine word, jumps to the code address in the Instruction
 Pointer Register, @ref{fig:CMCF_one_ret, compiler machinery call
 frames}.  The return value is still in the @aar{} register.
 
@@ -596,7 +596,7 @@ frames}.  The return value is still in the @aar{} register.
        low memory
 @end example
 @caption{Stack right after the @code{ret} instruction that returns from
-@func{+}.}
+@func{one}.}
 @end float
 
 @item
@@ -616,7 +616,7 @@ C code that started the program; we can imagine the Assembly code:
 where @code{(ret)} jumps to the underflow handler.
 @end enumerate
 
-After the program execution the stack is left empty at it was at the
+After the program execution: the stack is left empty as it was at the
 beginning; this is because no continuation objects have been created.
 
 @c page
