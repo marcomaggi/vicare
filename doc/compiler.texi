@@ -48,6 +48,7 @@ later any number of times.
 
 @menu
 * compiler machinery simplifications::  Simplification assumptions.
+* compiler machinery scheme stack::     Basics of the Scheme stack.
 * compiler machinery call frames::      Basics of function call frames.
 * compiler machinery continuations::    The current continuation.
 * compiler machinery stack overflow::   Scheme stack overflow.
@@ -103,23 +104,125 @@ continuations alone already introduces enough complications.
 @end enumerate
 
 @c page
+@node compiler machinery scheme stack
+@subsection Basics of the Scheme stack
+
+
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
+
+When running C code: the state of the Scheme stack is represented by the
+fields of the @pcb{} data structure.  When running Scheme code: the
+state of the Scheme stack is represented by the Frame Pointer Register
+(@fpr{}) and some fields of the @pcb{} data structure.
+
+When the execution flow moves from C language code to Scheme language
+code or from Scheme code to C code: Assembly language routines are
+executed to perform some low--level operations.  Such Assembly code
+takes care of synchronising the @pcb{} fields with the @cpu{} registers.
+
+Let's start by taking a look at an empty Scheme stack segment,
+@ref{fig:CMCF_stack_size, compiler machinery call frames}.  The stack
+memory segment begins at the machine word referenced by the @pcb{} field
+@code{stack_base} (included) and ends at the machine word referenced by
+the @pcb{} field @code{frame_base} (excluded).  @code{stack_base}
+changes only when the stack overflows, @code{frame_base} changes when
+the stack overflows and every time a continuation object is created.
+
+@float Figure,fig:CMCF_stack_size
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|                     --
+           .                                 .
+           .                                 . stack
+           .                                 . segment
+|----------------------|                     . size
+|                      | <- pcb->stack_base  .
+|----------------------|                     --
+|                      |
+       low memory
+@end example
+@caption{Size of the Scheme stack segment.}
+@end float
+
+The stack space is consumed starting from the high memory addresses
+towards the low memory addresses; the first used word on the Scheme
+stack is right below the machine word referenced by @code{frame_base}.
+
+Upon creation: the first machine word on the stack is initialised to the
+address of the Assembly routine @code{ik_underflow_handler}; when the
+execution flow of Scheme code returns to such address: the routine takes
+care of switching from Scheme code to C code and itself returns to a C
+function.
+
+When running C code: the machine word holding the address of the
+underflow handler is referenced by the @pcb{} field
+@code{frame_pointer}, @ref{fig:CMCF_empty_stack_C, compiler machinery
+call frames}.  When running Scheme code: the machine word holding the
+address of the underflow handler is referenced by the @fpr{} register,
+@ref{fig:CMCF_empty_stack_Scheme, compiler machinery call frames}.
+
+@float Figure,fig:CMCF_empty_stack_C
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- pcb->frame_pointer
+|----------------------|
+         ...
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Empty Scheme stack as represented in the @pcb{} structure while
+running C code.}
+@end float
+
+@float Figure,fig:CMCF_empty_stack_Scheme
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler | <- Frame Pointer Register (FPR)
+|----------------------|
+         ...
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+       low memory
+@end example
+@caption{Empty Scheme stack as represented in the @cpu{} registers and
+the @pcb{} structure while running Scheme code.}
+@end float
+
+@c page
 @node compiler machinery call frames
 @subsection Basics of function call frames
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour,
-@ref{compiler machinery simplifications, Simplification assumptions}.
-
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
 
 @c page
 @node compiler machinery continuations
 @subsection The current continuation
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour,
-@ref{compiler machinery simplifications, Simplification assumptions}.
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
 
 Let's think of a process in execution as having: a table of descriptors,
 a code memory segment, a heap memory segment and a stack memory segment,
@@ -509,18 +612,18 @@ continuation object @var{D} as ``process next continuation''.
 @subsection Scheme stack overflow
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour,
-@ref{compiler machinery simplifications, Simplification assumptions}.
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
 
 @c page
 @node compiler machinery call arguments
 @subsection Function call arguments
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour,
-@ref{compiler machinery simplifications, Simplification assumptions}.
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
 
 
 @c page
@@ -528,29 +631,28 @@ simplifications to focus on some aspect of the runtime behaviour,
 @subsection Function call return values
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour,
-@ref{compiler machinery simplifications, Simplification assumptions}.
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
 
 @c page
 @node compiler machinery tail calls
 @subsection Tail calls implementation
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour, with
-the exception that we allow the compiler to perform tail calls
-optimisation (@acronym{TCO}), @ref{compiler machinery simplifications,
-Simplification assumptions}.
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, with the exception that we allow the
+compiler to perform tail calls optimisation (@acronym{TCO}),
+@ref{compiler machinery simplifications, Simplification assumptions}.
 
 @c page
 @node compiler machinery locals
 @subsection Local variables
 
 
-In the following discussion we assume the validity of machinery
-simplifications to focus on some aspect of the runtime behaviour,
-@ref{compiler machinery simplifications, Simplification assumptions}.
+We assume the validity of machinery simplifications to focus on some
+aspect of the runtime behaviour, @ref{compiler machinery
+simplifications, Simplification assumptions}.
 
 
 @c page
