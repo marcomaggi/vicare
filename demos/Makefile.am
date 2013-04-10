@@ -2,6 +2,6 @@
 
 EXTRA_DIST	= README \
 	httpd.sps		\
-	index.html
+	run-httpd.sh
 
 ### end of file

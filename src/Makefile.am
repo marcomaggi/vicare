@@ -1,6 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 AM_CFLAGS = -Wall
+EXTRA_DIST		= last-revision.h
 
 SRCS	= \
 	cpu_has_sse2.S			\
@@ -33,7 +34,7 @@ include_HEADERS		= vicare.h
 
 MAINTAINERCLEANFILES	= last-revision.h
 
-$(srcdir)/last-revision.h: Makefile
+$(srcdir)/last-revision.h:
 	echo '#define LAST_REVISION "no-branch/no-commit"' >$@
 
 bin_PROGRAMS		= vicare

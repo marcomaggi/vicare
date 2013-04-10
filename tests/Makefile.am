@@ -459,7 +459,8 @@ EXTRA_DIST = \
 	test-vicare-errno.sps				\
 	test-vicare-expander.sps			\
 	test-vicare-debugging.sps			\
-	test-vicare-ffi.sps				\
+	test-vicare-ffi-core.sps			\
+	test-vicare-ffi-foreign-pointer-wrapper.sps	\
 	test-vicare-fixnums.sps				\
 	test-vicare-flonum-base.sps			\
 	test-vicare-flonum-formatter.sps		\
@@ -467,6 +468,7 @@ EXTRA_DIST = \
 	test-vicare-general-c-buffers.sps		\
 	test-vicare-glibc.sps				\
 	test-vicare-keywords.sps			\
+	test-vicare-iconv.sps				\
 	test-vicare-infix.sps				\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
