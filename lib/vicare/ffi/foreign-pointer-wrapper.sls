@@ -258,7 +258,7 @@
 	    '()))
 	 ((REGISTER-COLLECTED-IN-COLLECTOR ...)
 	  (if has-collector?
-	      (list (%make-register-collected-in-collector-id collector-type-id type-id))
+	      (list (%make-register-collected-in-collector!-id collector-type-id type-id))
 	    '()))
 	 ((FIELD ...)
 	  field-ids))
@@ -361,7 +361,7 @@
 		collected-type-ids))
 	     ((UNREGISTER-FROM-COLLECTOR ...)
 	      (%make-unregistration-from-collector #'STRUCT type-id collector-type))
-	     ((FOREIGN-DESTRUCTOR-CALL ...)
+	     (FOREIGN-DESTRUCTOR-CALL
 	      (%make-foreign-destructor-call #'STRUCT foreign-destructor
 					     unsafe-getter-pointer-owner?)))
 	  #`(begin
@@ -395,11 +395,11 @@
 		      TABLE-DESTRUCTION-FORM ...
 		      ;;Finalise the foreign data structure, if there is
 		      ;;a foreign destructor.
-		      (let ((rv FOREIGN-DESTRUCTOR-CALL ...))
+		      (let ((rv FOREIGN-DESTRUCTOR-CALL))
 			;;Nullify the pointer.
 			(#,unsafe-pointer-setter STRUCT #f)
 			rv))
-		  (void)))
+		  #f))
 	      (module ()
 		(set-rtd-destructor! (type-descriptor #,type-id)
 				     #,unsafe-scheme-destructor))))))
@@ -433,7 +433,7 @@
 	      ((COLLECTOR-GETTER
 		(%make-unsafe-Getter-id/collector type-id collector-type-id))
 	       (FORGET-COLLECTED-STRUCT
-		(%make-forget-collected-struct-id collector-type-id type-id))
+		(%make-forget-collected-struct!-id collector-type-id type-id))
 	       (COLLECTOR-INSTANCE
 		(%id->id collector-type-id
 			 (lambda (collector-type-string)
@@ -451,10 +451,10 @@
       ;;pointer object.
       ;;
       (if (identifier? foreign-destructor-id)
-	  #`((when (#,unsafe-getter-pointer-owner? #,struct-id)
-	       (guard (E (else (void)))
-		 (#,foreign-destructor-id #,struct-id))))
-	#'((void))))
+	  #`(when (#,unsafe-getter-pointer-owner? #,struct-id)
+	      (guard (E (else #f))
+		(#,foreign-destructor-id #,struct-id)))
+	#f))
 
     #| end of module: %make-finaliser-definitions |# )
 
@@ -509,14 +509,19 @@
 	 (TABLE-GETTER
 	  (%make-unsafe-Getter-id/table-of-collected collector-type-id collected-type-id))
 	 (REGISTER-COLLECTED-IN-COLLECTOR
-	  (%make-register-collected-in-collector-id collector-type-id collected-type-id))
+	  (%make-register-collected-in-collector!-id collector-type-id collected-type-id))
 	 (FORGET-COLLECTED-STRUCT
-	  (%make-forget-collected-struct-id collector-type-id collected-type-id))
+	  (%make-forget-collected-struct!-id collector-type-id collected-type-id))
+	 (COLLECTOR-CONTAINS-STRUCT?
+	  (%make-contains-collected-struct?-id collector-type-id collected-type-id))
 	 (UNSAFE-GETTER-UID
 	  (%make-unsafe-Getter-id/uid collected-type-id))
 	 (VECTOR-OF-COLLECTED-STRUCTS-GETTER
 	  (%make-vector-of-collected-structs-getter-id collector-type-id collected-type-id)))
       #`(begin
+	  (define (COLLECTOR-CONTAINS-STRUCT? COLLECTOR-STRUCT INSTANCE-STRUCT)
+	    (hashtable-contains? (TABLE-GETTER COLLECTOR-STRUCT)
+				 (UNSAFE-GETTER-UID INSTANCE-STRUCT)))
 	  (define (REGISTER-COLLECTED-IN-COLLECTOR COLLECTOR-STRUCT COLLECTED-STRUCT)
 	    (hashtable-set! (TABLE-GETTER COLLECTOR-STRUCT)
 			    (UNSAFE-GETTER-UID COLLECTED-STRUCT)
@@ -527,7 +532,8 @@
 	  (define (VECTOR-OF-COLLECTED-STRUCTS-GETTER COLLECTOR-STRUCT)
 	    (receive (keys vector-of-collected-structs)
 		(hashtable-entries (TABLE-GETTER COLLECTOR-STRUCT))
-	      vector-of-collected-structs)))))
+	      vector-of-collected-structs))
+	  )))
 
 ;;; --------------------------------------------------------------------
 ;;; maker and finaliser ids
@@ -752,7 +758,7 @@
 	       (string-append "$" collector-type-string "-vector-of-collected-"
 			      (%id->string collected-type-id)))))
 
-  (define (%make-register-collected-in-collector-id collector-type-id collected-type-id)
+  (define (%make-register-collected-in-collector!-id collector-type-id collected-type-id)
     ;;Given  an identifier  representing  the struct  type  name and  an
     ;;identifier representing a collected-structs table field: return an
     ;;identifier, in the same context of COLLECTOR-TYPE-ID, representing
@@ -765,7 +771,7 @@
 			      (%id->string collected-type-id)
 			      "!"))))
 
-  (define (%make-forget-collected-struct-id collector-type-id collected-type-id)
+  (define (%make-forget-collected-struct!-id collector-type-id collected-type-id)
     ;;Given  an identifier  representing  the struct  type  name and  an
     ;;identifier representing a collected-structs table field: return an
     ;;identifier, in the same context of COLLECTOR-TYPE-ID, representing
@@ -777,6 +783,19 @@
 	       (string-append "$" collector-type-string "-forget-"
 			      (%id->string collected-type-id)
 			      "!"))))
+
+  (define (%make-contains-collected-struct?-id collector-type-id collected-type-id)
+    ;;Given  an identifier  representing  the struct  type  name and  an
+    ;;identifier representing a collected-structs table field: return an
+    ;;identifier, in the same context of COLLECTOR-TYPE-ID, representing
+    ;;the name of a function that queries the internal table and returns
+    ;;true if an object is already collected.
+    ;;
+    (%id->id collector-type-id
+	     (lambda (collector-type-string)
+	       (string-append "$" collector-type-string "-contains-"
+			      (%id->string collected-type-id)
+			      "?"))))
 
   ;; ------------------------------------------------------------
 

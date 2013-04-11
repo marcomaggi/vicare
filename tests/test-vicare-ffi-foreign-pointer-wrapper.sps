@@ -130,14 +130,14 @@
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S))
-    => (void))
+    => #f)
 
   (check	;unsafe destructor invocation, twice
       (let* ((P (integer->pointer 123))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	($alpha-finalise S))
-    => (void))
+    => #f)
 
   (check	;unsafe destructor invocation, dead struct safe pred
       (let* ((P (integer->pointer 123))
@@ -164,7 +164,7 @@
 		   (add-result (pointer->integer (alpha-pointer S))))))
 	 (set-alpha-custom-destructor! S D)
 	 ($alpha-finalise S)))
-    => `(,(void) (123)))
+    => '(#f (123)))
 
   (check	;custom  destructor   invocation,  invoking   twice  the
 		;destructor
@@ -176,7 +176,7 @@
 	 (set-alpha-custom-destructor! S D)
 	 ($alpha-finalise S)
 	 ($alpha-finalise S)))
-    => `(,(void) (123)))
+    => '(#f (123)))
 
 ;;; --------------------------------------------------------------------
 ;;; UID gensym
@@ -274,7 +274,8 @@
       (check-pretty-print (list 'enter-foreign-destructor S)))
     (ffi.free ($alpha-pointer S))
     (when (or #f verbose?)
-      (check-pretty-print (list 'leave-foreign-destructor S))))
+      (check-pretty-print (list 'leave-foreign-destructor S)))
+    #t)
 
   ;; Printer check.
   (when (or #f verbose?)
@@ -353,14 +354,14 @@
       (let* ((P (ffi.malloc* 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S))
-    => (void))
+    => #t)
 
   (check	;unsafe destructor invocation, twice
       (let* ((P (ffi.malloc* 1024))
 	     (S (make-alpha/owner P)))
 	($alpha-finalise S)
 	($alpha-finalise S))
-    => (void))
+    => #f)
 
   (check	;unsafe destructor invocation, dead struct safe pred
       (let* ((P (ffi.malloc* 1024))
@@ -413,7 +414,7 @@
 		   (add-result (pointer? (alpha-pointer S))))))
 	 (set-alpha-custom-destructor! S D)
 	 ($alpha-finalise S)))
-    => `(,(void) (#t)))
+    => '(#t (#t)))
 
   (check	;custom  destructor   invocation,  invoking   twice  the
 		;destructor
@@ -425,7 +426,7 @@
 	 (set-alpha-custom-destructor! S D)
 	 ($alpha-finalise S)
 	 ($alpha-finalise S)))
-    => `(,(void) (#t)))
+    => '(#f (#t)))
 
 ;;; --------------------------------------------------------------------
 ;;; UID gensym
@@ -575,6 +576,61 @@
 	($beta-finalise B)
 	(beta?/alive B))
     => #f)
+
+;;; --------------------------------------------------------------------
+;;; collected created without collector, registered later
+
+  (check	;contains predicate, true
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q #f)))
+        ($alpha-register-beta! A B)
+	($alpha-contains-beta? A B))
+    => #t)
+
+  (check	;contains predicate, false after forget
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q #f)))
+        ($alpha-register-beta! A B)
+        ($alpha-forget-beta! A B)
+	($alpha-contains-beta? A B))
+    => #f)
+
+  (check	;contains predicate, false because not registered
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q #f)))
+	($alpha-contains-beta? A B))
+    => #f)
+
+  (check	;after the finalisation of  the collector, the collected
+		;is finalised too
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q #f)))
+        ($alpha-register-beta! A B)
+	($alpha-finalise A)
+	(list ($alpha-vector-of-collected-beta A)
+	      (alpha?/alive A)
+	      (beta?/alive B)))
+    => '(#() #f #f))
+
+  (check	;register and forget
+      (let* ((P (integer->pointer 123))
+	     (Q (integer->pointer 456))
+	     (A (make-alpha/owner P))
+	     (B (make-beta/owner Q #f)))
+        ($alpha-register-beta! A B)
+        ($alpha-forget-beta! A B)
+	($alpha-finalise A)
+	(list (alpha?/alive A)
+	      (beta?/alive B)))
+    => '(#f #t))
 
   (collect))
 

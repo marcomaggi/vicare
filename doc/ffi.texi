@@ -930,6 +930,24 @@ The internal field holding the @var{pointer} object is reset to
 @false{}, to mark this struct instance as already finalised.
 @end enumerate
 
+About the returned value:
+
+@itemize
+@item
+If this is the first time the finalisation function is applied, there is
+a foreign destructor and its application is successful: the returned
+value is the return value from the foreign destructor.
+
+@item
+If this is the first time the finalisation function is applied, there is
+a foreign destructor and its application raises an exception: the
+returned value is @false{}.
+
+@item
+If this is @strong{not} the first time the finalisation function is
+applied: the returned value is @false{}.
+@end itemize
+
 @item (@meta{type-id}? @var{obj})
 Type predicate function; it returns @true{} if @var{obj} is an instance
 of type @meta{type-id}, otherwise it returns @false{}.
@@ -1028,6 +1046,21 @@ If the definition of @meta{type-id} includes a clause
 value, the following bindings are available:
 
 @table @code
+@item ($@meta{type-id}-register-@meta{collected-id}! @var{collector} @var{struct})
+Register @var{struct} in the internal table of @var{collector}.  No
+arguments validation is peformed: @var{collector} must be of type
+@meta{type-id}; @var{struct} must be of type @meta{collected-id}.
+
+@item ($@meta{type-id}-forget-@meta{collected-id}! @var{collector} @var{collected})
+Remove @var{collected} from the internal table of @var{collector}.  No
+arguments validation is peformed: @var{collector} must be of type
+@meta{type-id}; @var{collected} must be of type @meta{collected-id}.
+
+@item ($@meta{type-id}-contains-@meta{collected-id}? @var{collector} @var{struct})
+Query the internal table of @var{collected} and return true if
+@var{struct} is present, otherwise return false.  No arguments
+validation is peformed: @var{collector} must be of type @meta{type-id}.
+
 @item ($@meta{type-id}-vector-of-collected-@meta{collected-id} @var{struct})
 Return a Scheme vector containing the instances of type
 @meta{collected-id} collected by @var{struct}.
