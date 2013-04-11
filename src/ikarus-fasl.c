@@ -95,8 +95,11 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       close(fd);
     }
     ikptr val = ik_exec_code(pcb, v, 0, 0);
-    if (val != IK_VOID_OBJECT)
+    if (val != IK_VOID_OBJECT) {
+      ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
+				  __func__, fasl_file);
       ik_print(val);
+    }
   }
   if (p.memp != p.memq)
     ik_abort("fasl-read did not reach EOF");
