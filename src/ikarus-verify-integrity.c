@@ -75,10 +75,19 @@ verify_code_small (char* p, int s, unsigned d,
   char* q = p + IK_PAGESIZE;
   s=s; d=d; /* no warning */
   while (p < q) {
-    ikptr fst = ref(p, 0);
-    if(fst == code_tag){
-      assert(IK_IS_FIXNUM(ref(p, disp_code_code_size)));
-      int code_size = IK_UNFIX(ref(p, disp_code_code_size));
+    ikptr	fst = IK_REF(p, 0);
+    if (code_tag == fst) {
+      ikptr	s_code_size = IK_REF(p, disp_code_code_size);
+      int	code_size;
+      if (!IK_IS_FIXNUM(s_code_size)) {
+	ik_debug_message_no_newline("%s: expected fixnum as code object size, got: ",
+				    __func__);
+	ik_print(s_code_size);
+	ik_debug_message_no_newline("%s: code object: ", __func__);
+	ik_print(((ikptr)p) | code_primary_tag);
+	ik_abort("integrity check failed");
+      }
+      code_size = IK_UNFIX(IK_REF(p, disp_code_code_size));
       assert(code_size >= 0);
       verify_code(p, base, svec, dvec);
       p+=IK_ALIGN(code_size + disp_code_data);
@@ -186,7 +195,10 @@ verify_page (char* p, char* base, unsigned* svec, unsigned* dvec)
 void
 ik_verify_integrity (ikpcb* pcb, char* where)
 {
-  fprintf(stderr, "verifying in %s...\n", where);
+#define LOG_VERIFY	0
+  if (LOG_VERIFY) {
+    ik_debug_message("%s: verifying in %s...", __func__, where);
+  }
   char* mem_base = (char*)(long)pcb->memory_base;
   char* mem_end = (char*)(long)pcb->memory_end;
   unsigned* seg_vec = pcb->segment_vector_base;
@@ -195,7 +207,9 @@ ik_verify_integrity (ikpcb* pcb, char* where)
   while (mem < mem_end) {
     mem = verify_page(mem, mem_base, seg_vec, dir_vec);
   }
-  fprintf(stderr, "verify_ok in %s\n", where);
+  if (LOG_VERIFY) {
+    ik_debug_message("%s: verify_ok in %s", __func__, where);
+  }
 }
 
 /* end of file */

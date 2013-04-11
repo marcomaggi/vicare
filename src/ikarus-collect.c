@@ -473,7 +473,8 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
 
  */
 {
-#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+  /* fprintf(stderr, "%s: enter\n", __func__); */
+#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "entry");
 #endif
   { /* accounting */
@@ -622,7 +623,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
       ref(x, 0) = (ikptr)(0x1234FFFF);
   }
 #endif
-#if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "exit");
 #endif
   { /* for GC statistics */
@@ -656,6 +657,7 @@ ik_collect (unsigned long mem_req, ikpcb* pcb)
       pcb->collect_rtime.tv_sec  -= 1;
     }
   }
+  /* fprintf(stderr, "%s: leave\n", __func__); */
   return pcb;
 }
 static int

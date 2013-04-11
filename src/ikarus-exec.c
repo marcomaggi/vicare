@@ -332,7 +332,10 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
     (long) call_table_framesize : IK_REF(top, wordsize);
   long	redline_delta_words	= \
     (pcb->stack_base + pcb->stack_size - pcb->frame_redline)/wordsize;
-  ik_debug_message("%s: internal error while resuming continuation:\n\
+  /* Make sure to output a message before accessing data structures that
+     may be corrupted.  For this reason we use two function calls. */
+  ik_debug_message("%s: internal error while resuming continuation", __func__);
+  ik_debug_message("%s: status log:\n\
 \tpcb->heap_base     = 0x%016lx\n\
 \tpcb->heap_size     = %ld bytes, %ld words\n\
 \tpcb->stack_base    = 0x%016lx\n\
@@ -349,7 +352,6 @@ ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
 \ts_kont return address           = 0x%016lx (== underflow handler? %s)\n\
 \ts_kont return address framesize = %ld\n\
 \tinvalid framesize=%ld, expected %ld(=kont->size) or less",
-		   __func__,
 		   pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
 		   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
 		   pcb->frame_redline, redline_delta_words,
