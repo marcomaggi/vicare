@@ -40,6 +40,10 @@ collection of R6 Scheme libraries:
 Notes for revision 0.3d0
 ------------------------
 
+* The version  number has been  bumped to 0.3: this  revision introduces
+  backwards INcompatible changes that will force upgrading of almost all
+  the packages binding Vicare to foreign libraries.
+
 * The boot images have been rotated.
 
 * Added command line option -g as alias for --debug.
