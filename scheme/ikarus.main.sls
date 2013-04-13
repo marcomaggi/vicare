@@ -480,7 +480,7 @@
 ;;; --------------------------------------------------------------------
 ;;; Vicare options without argument
 
-	  ((%option= "-d" "--debug")
+	  ((%option= "-d" "-g" "--debug")
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #t))))
 
 	  ((%option= "-nd" "--no-debug")
@@ -817,6 +817,7 @@ Other options:
 	interface is available.
 
    -d
+   -g
    --debug
         Turn  on debugging  mode.  Unhandled  exceptions in  the program
 	will result  in starting the debugger, which  allows stack trace
