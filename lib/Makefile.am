@@ -224,7 +224,7 @@ VICARE_COMPILE_LD_PATH		= $(builddir)/../src/.libs
 
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make", for example "user_flags=--print-loaded-libraries".
-VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY) $(user_flags)
+VICARE_FLAGS	= -b $(VICARE_BOOT) -O2 --fasl-directory $(VICARE_FASL_DIRECTORY) $(user_flags)
 if WANT_DEBUG
 VICARE_FLAGS	+= --debug
 endif
