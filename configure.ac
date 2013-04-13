@@ -27,11 +27,16 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 #page
 #### additional configuration command line options
 
+AS_VAR_SET(VFLAGS,["-O2"])
+
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
   [whether debugging features are included in compiled Scheme libraries],
   [enable compilation of Scheme libraries with debugging features])
 AM_CONDITIONAL([WANT_DEBUG],
   [test "x$vicare_enable_DEBUG" = xyes])
+
+AM_COND_IF([WANT_DEBUG],
+  [AS_VAR_SET(VFLAGS,"$VFLAGS -g")])
 
 VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
   [whether arguments validation is enabled],
@@ -1510,6 +1515,8 @@ AC_CACHE_SAVE
 
 #page
 #### finish
+
+AC_SUBST([VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES(Makefile

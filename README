@@ -139,6 +139,12 @@ directory:
 
 			 $(libdir)/scheme/r6rs
 
+  The variable VFLAGS is available  to the user when running "configure"
+and "make" to add command line options to the execution of "vicare" when
+compiling libraries and running tests; for example:
+
+   $ make VFLAGS="-g -O2 --print-loaded-libraries"
+
 
 4.2 Install CRE2
 ----------------

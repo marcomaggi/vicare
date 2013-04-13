@@ -42,6 +42,13 @@ Notes for revision 0.3d0
 
 * The boot images have been rotated.
 
+* Added command line option -g as alias for --debug.
+
+* The  script "configure"  and the  makefiles accept  the user  variable
+  VFLAGS  to  set  command  line options  for  "vicare"  when  compiling
+  libraries and  running the test  suite.  VFLAGS is  to be used  in the
+  same way of CFLAGS for the C compiler.
+
 * Some changes to attempt a fix  for Issue #35 have been implemented see
   "doc/QUEST-FOR-ISSUE-35".
 

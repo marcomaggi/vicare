@@ -19,11 +19,16 @@ if WANT_TIME_TESTS
 VICARE_TIME_TESTS	= $(TIME_PROGRAM) -p
 endif
 
-# The variable "user_flags"  is for the user to be  set on the command
-# line of "make".
+# The variable "VFLAGS" is for the user  to be set on the command line
+# of "make" or "configure", for example:
+#
+#   make VFLAGS="-g -O2 --print-loaded-libraries"
+#
+VFLAGS		= @VFLAGS@
+
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_FLAGS	= -b $(VICARE_BOOT) -O2 $(user_flags) --r6rs-script
+VICARE_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) --r6rs-script
 VICARE_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY); export VICARE_FASL_DIRECTORY;	\
