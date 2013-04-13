@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.2d21
+Subject: [announce] Vicare Scheme revision 0.3d0
 
                              Vicare Scheme
                              =============
@@ -37,8 +37,8 @@ collection of R6 Scheme libraries:
 	      <http://marcomaggi.github.com/nausicaa.html>
 
 
-Notes for revision 0.2d21
--------------------------
+Notes for revision 0.3d0
+------------------------
 
 * The boot images have been rotated.
 
