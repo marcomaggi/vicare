@@ -218,8 +218,9 @@ Disables the effect of @option{--print-loaded-libraries}.
 @item -O0
 Turn off use of the source optimizer.
 
-@itemx -O1
+@item -O1
 @itemx -O2
+@itemx -O3
 Turn on various levels of compile optimisations.
 
 @item --optimizer-passes-count @var{COUNT}

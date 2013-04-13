@@ -599,6 +599,9 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler options without argument
 
+	  ((%option= "-O3")
+	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 3))))
+
 	  ((%option= "-O2")
 	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 2))))
 
@@ -611,7 +614,7 @@
 	  ((%option= "--enable-open-mvcalls")
 	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #t))))
 
-	  ((%option= "--disable-open-mvcalls-open")
+	  ((%option= "--disable-open-mvcalls")
 	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #f))))
 
 ;;; --------------------------------------------------------------------
@@ -839,6 +842,7 @@ Other options:
 
    -O1
    -O2
+   -O3
         Turn on various levels of compiler optimisations.
 
    --optimizer-passes-count COUNT
