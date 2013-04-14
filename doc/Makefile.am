@@ -22,6 +22,7 @@ vicare_scheme_TEXINFOS	= \
 	libs.texi			\
 	objects.texi			\
 	debug.texi			\
+	machinery.texi			\
 	compiler.texi			\
 	\
 	missing.texi			\

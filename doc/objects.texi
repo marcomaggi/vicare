@@ -4571,7 +4571,7 @@ continuation object.
 
 
 To understand the contents of a continuation object, we have to recall
-how the Scheme stack is used, @ref{compiler machinery continuations,
+how the Scheme stack is used, @ref{machinery continuations,
 Continuations implementation}.  We also need to remember that stack
 segments are consumed starting from the highest memory addresses,
 growing towards the lowest memory addresses.
