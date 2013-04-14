@@ -56,7 +56,8 @@ Notes for revision 0.3d0
 * Some changes to attempt a fix  for Issue #35 have been implemented see
   "doc/QUEST-FOR-ISSUE-35".
 
-* SRFI 19, time and date functions, is still broken.
+* SRFI 19,  time and date functions,  has been reverted to  the original
+  Eddington's port.
 
 * Changed tarball distribution from .bz2 compression to .xz compression.
 

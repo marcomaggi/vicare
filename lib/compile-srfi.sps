@@ -37,7 +37,6 @@
   (only (srfi :14))
   (only (srfi :16))
   (only (srfi :19))
-  (only (srfi :19 time extensions))
   (only (srfi :23))
   (only (srfi :25))
 ;;;(only (srfi :25 multi-dimensional-arrays arlib))
