@@ -27,6 +27,13 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 #page
 #### additional configuration command line options
 
+# This must always be defined.  When true: the bottom page of the Scheme
+# stack segment  is protected  from read/write operation,  so that  if a
+# stack  overflow happens  it results  in a  SIGSEGV rather  than memory
+# corruption.
+AC_DEFINE([IK_PROTECT_FROM_STACK_OVERFLOW],[1],
+  [Define to true to protect the Scheme stack from overflow.])
+
 AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS,["-O2"])])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
