@@ -4,7 +4,7 @@
 set -xe
 
 prefix=/usr/local
-LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.11/include
+LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
 
 ../configure \
     --enable-maintainer-mode                    \
