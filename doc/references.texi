@@ -73,14 +73,17 @@ Construct''.
 Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
 Workshop on Scheme and Functional Programming '09.
 
-@c ------------------------------------------------------------
-
-@subsubheading Also of interest
-
 @noindent
-J. Michael Ashley, R. Kent Dybvig. ``An Efficient Implementation of
+J. Michael Ashley, R. Kent Dybvig.  ``An Efficient Implementation of
 Multiple Return Values in Scheme''.  Proceedings of the 1994 ACM
 Conference on LISP and Functional Programming, 140--149, 1994.
 Copyright @copyright{} 1994 ACM.
+
+@noindent
+@anchor{bib:HDBControl}[HDBControl] Robert Hieb, R. Kent Dybvig, Carl
+Bruggeman.  ``Representing Control in the Presence of First--Class
+Continuations''.  Proceedings of the SIGPLAN '90 Conference on
+Programming Language Design and Implementation, 66--77, June 1990.
+Copyright @copyright{} 1990 ACM.
 
 @c end of file
