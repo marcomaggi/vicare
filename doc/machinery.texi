@@ -92,7 +92,7 @@ a way that the new stack frame overwrites the old one.  But we want to
 show simple functions that create new stack frames.
 
 @item
-The function @func{call/cc} is implemented without nested function
+The function @func{call/cc} is implemented without subordinate function
 calls.  This is depends upon the function call integration optimisations
 performed by the compiler.  But reasoning about simple function call is
 simpler.
@@ -615,12 +615,12 @@ see @ref{bib:HDBControl, references}.
 @menu
 * machinery continuations general::  General concept of process
                                      continuation.
-* machinery continuations without::  Nested function calls without
+* machinery continuations without::  Subordinate function calls without
                                      continuations.
 * machinery continuations immut::    Immutability of the Scheme stack.
-* machinery continuations non::      Nested function calls with
+* machinery continuations non::      Subordinate function calls with
                                      non--invoked continuation.
-* machinery continuations escape::   Nested function calls with
+* machinery continuations escape::   Subordinate function calls with
                                      invoked continuation.
 @end menu
 
@@ -694,7 +694,7 @@ conceptually different.
 
 @c page
 @node machinery continuations without
-@subsection Nested function calls without continuations
+@subsection Subordinate function calls without continuations
 
 
 We assume the validity of machinery simplifications to focus on some
@@ -712,8 +712,8 @@ does not create explicit continuations:
 
 @value{PRJNAME} allocates a memory segment to be used as stack, then
 executes the call to @func{alpha} pushing its stack frame on the stack;
-as nested function calls are performed: new stack frames are pushed on
-the stack, @ref{fig:MCW_continuation_stack_grow, machinery
+as subordinate function calls are performed: new stack frames are pushed
+on the stack, @ref{fig:MCW_continuation_stack_grow, machinery
 continuations without}.
 
 @float Figure,fig:MCW_continuation_stack_grow
@@ -803,7 +803,7 @@ Local variables can be mutated, special care is taken to implement them;
 
 @c page
 @node machinery continuations non
-@subsection Nested function calls with non--invoked continuation
+@subsection Subordinate function calls with non--invoked continuation
 
 
 We assume the validity of machinery simplifications to focus on some
@@ -1374,7 +1374,7 @@ handler does what is needed.
 
 @c page
 @node machinery continuations escape
-@subsection Nested function calls with invoked continuation
+@subsection Subordinate function calls with invoked continuation
 
 
 We assume the validity of machinery simplifications to focus on some
