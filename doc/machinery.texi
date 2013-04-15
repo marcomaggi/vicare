@@ -1851,9 +1851,155 @@ back to a saved continuation any number of times.
 @section Scheme stack overflow
 
 
-We assume the validity of machinery simplifications to focus on some
-aspect of the runtime behaviour, @ref{machinery
-simplifications, Simplification assumptions}.
+Let's recall how the Scheme stack segment looks,
+@ref{fig:MSO_stack_boundary, machinery stack overflow}.  Function call
+frames are put on the stack starting from high memory addresses, stack
+usage grows towards low memory addresses; at some point the stack runs
+out of space.
+
+@float Figure,fig:MSO_stack_boundary
+@example
+      high memory
+|                      |
+|----------------------|
+|                      | <- pcb->frame_base
+|----------------------|                        --
+| ik_underflow_handler |                        .
+|----------------------|                        .
+           .                                    .
+           .                                    .
+           .                                    .
+|----------------------|                        .
+|                      | <- pcb->frame_redline  . stack
+|----------------------|                        . segment
+           .                                    . size
+           .                                    .
+           .                                    .
+|----------------------|                        .
+|                      | <- pcb->stack_base     .
+|----------------------|                        --
+|                      |
+       low memory
+@end example
+@caption{Stack boundaries as represented by the @pcb{}.}
+@end float
+
+To detect stack usage approaching the end of available stack space: the
+@pcb{} contains a field referencing a machine word @math{2} memory
+chunks (@math{4096} bytes each) above the lower boundary; whenever stack
+usage crosses this ``red line'': a new stack segment needs to be
+allocated and call frames must be put on the new stack;
+@ref{fig:MSO_redline_crossed, machinery stack overflow}.
+
+@float Figure,fig:MSO_redline_crossed
+@example
+      high memory
+|                      | <- pcb->frame_base
+|----------------------|
+| ik_underflow_handler |
+|----------------------|
+           .
+           .
+           .
+|----------------------|                        --
+|     local value      |                        .
+|----------------------|                        .
+|     local value      | <- pcb->frame_redline  .
+|----------------------|                        . framesize
+|     local value      |                        .
+|----------------------|                        .
+|    return address    | <- FPR                 .
+|----------------------|                        --
+|   function argument  |
+|----------------------|
+|   function argument  |
+|----------------------|
+           .
+           .
+           .
+|----------------------|
+|                      | <- pcb->stack_base
+|----------------------|
+|                      |
+      low memory
+@end example
+@caption{Scenario on the Scheme stack that triggers the stack overflow;
+we see that: @fpr{} < @code{pcb->frame_redline}.}
+@end float
+
+Scheme functions can be partitioned in: those that may use more stack
+space, those that do not; @value{PRJNAME} recognises this partition and
+inserts a stack overflow check at the beginning of each of the former.
+The pseudo--Assembly performing the check is as follows:
+
+@example
+(label function_entry_point)
+  (cmpl FPR pcb->frame_redline)
+  (jb L0)
+
+(label L1)
+  ... the function body ...
+  (ret)
+
+(label L0)
+  (forcall "ik_stack_overflow")
+  (jmp L1)
+@end example
+
+When stack overflow happens the C function @cfunc{ik_stack_overflow} is
+called through the @code{forcall} primitive instruction and the Assembly
+subroutine @code{ik_foreign_call}; @code{forcall} creates a new stack
+frame and then calls @code{ik_foreign_call} which in turn calls the C
+function, @ref{fig:MSO_forcall_frame, machinery stack overflow}.
+
+@float Figure,fig:MSO_forcall_frame
+@example
+      high memory
+|                      |
+|----------------------|                        --
+|     local value      |                        .
+|----------------------|                        .
+|     local value      | <- pcb->frame_redline  .
+|----------------------|                        . framesize
+|     local value      |                        .
+|----------------------|                        .
+|    return address    |                        .
+|----------------------|                        --
+|   function argument  |                        .
+|----------------------|                        . frame of
+|   function argument  |                        . forcall
+|----------------------|                        .
+|    return address    | <- FPR                 .
+|----------------------|                        --
+|                      |
+      low memory
+@end example
+@caption{Call frame of @code{forcall} on top of the call frame that
+caused the stack underflow.}
+@end float
+
+@cfunc{ik_stack_overflow} does the following:
+
+@enumerate
+@item
+Freeze all the call frames on the stack in a continuation object;
+prepend such object to the list of continuations in the @pcb{}, so that
+it becomes the ``next @pcb{} continuation''.
+
+@item
+Allocate and initialise a new stack segment and register it in the
+@pcb{}.  The frame pointer is set to reference the first machine word on
+the stack, which contains the address of the underflow handler.
+
+@item
+For garbage collection purposes: reconfigure old stack segment's memory
+block as data segment.
+@end enumerate
+
+Upon returning to the caller @code{ik_foreign_call} performs a
+@code{ret} Assembly instruction with the @fpr{} referencing the
+underflow handler; so returning from a stack reallocation is exactly
+like returning to the next @pcb{} continuation.
 
 @c page
 @node machinery call arguments
