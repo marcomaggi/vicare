@@ -609,8 +609,9 @@ beginning; this is because no continuation objects have been created.
 @section The current continuation
 
 
-For the original explanation of the way continuations are implemented
-see @ref{bib:HDBControl, references}.
+For the original paper presenting an implementation of continuations
+quite similar (but not equal) to the one used by @value{PRJNAME} see
+@ref{bib:HDBControl, references}.
 
 @menu
 * machinery continuations general::  General concept of process
