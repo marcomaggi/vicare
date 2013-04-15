@@ -853,10 +853,12 @@ we can understand how the stack grows until right after the call to
 @end float
 
 For convenience we give a name to the closure @code{(lambda (escape) (+
-B 2))}, let's call it @dfn{middle closure}.  @func{call/cc} creates a
-continuation object by freezing the call frames currently on the stack
-between @fpr{} and @math{2} words below @code{pcb->frame_base},
-@ref{fig:MCN_callcc_freezing, machinery continuations non}.
+B 2))}, let's call it @dfn{receiver}@footnote{Springer and Friedman call
+it ``receiver'' in their ``Scheme and the Art of Programming'', The MIT
+Press, 1989.}.  @func{call/cc} creates a continuation object by freezing
+the call frames currently on the stack between @fpr{} and @math{2} words
+below @code{pcb->frame_base}, @ref{fig:MCN_callcc_freezing, machinery
+continuations non}.
 
 @float Figure,fig:MCN_callcc_freezing
 @example
@@ -877,7 +879,7 @@ between @fpr{} and @math{2} words below @code{pcb->frame_base},
 |----------------------|         .
 | return addr to beta  | <- FPR  .
 |----------------------|         --
-|    middle reference  |         . locals of
+|       receiver       |         . locals of
 |----------------------|         . call/cc
 |                      |
        low memory
@@ -931,14 +933,14 @@ single slot for free variables references the continuation object.
 @end float
 
 @item
-Prepare the application of the middle closure to the escape function:
-move the reference to middle closure in the @cpr{}; move the address of
-the underflow handler on the stack and set the @fpr{} to reference it;
-set the value of @code{pcb->frame_base} to exclude the freezed frames
-from the stack segment; @ref{fig:MCN_callcc_before_middle, machinery
-continuations non}.
+Prepare the application of the receiver closure to the escape function:
+move the reference to the receiver closure in the @cpr{}; move the
+address of the underflow handler on the stack and set the @fpr{} to
+reference it; set the value of @code{pcb->frame_base} to exclude the
+freezed frames from the stack segment;
+@ref{fig:MCN_callcc_before_receiver, machinery continuations non}.
 
-@float Figure,fig:MCN_callcc_before_middle
+@float Figure,fig:MCN_callcc_before_receiver
 @example
       high memory
 |                      |
@@ -957,29 +959,30 @@ continuations non}.
 |----------------------|                     --
 | ik_underflow_handler | <- FPR              .
 |----------------------|                     . locals of
-|    escape closure    |                     . middle
+|    escape closure    |                     . receiver
 |----------------------|                     . closure
 |                      |
        low memory
 
 @end example
-@caption{Stack right before the call to the middle closure.}
+@caption{Stack right before the call to the receiver closure.}
 @end float
 
 @item
-Perform a direct jump to the entry point of the middle closure without
+Perform a direct jump to the entry point of the receiver closure without
 pushing a return address on the stack.  The @fpr{} is left referencing
 the entry point of the stack underflow handler.
 @end enumerate
 
-In this example, the middle closure executes @code{(+ B 2)} and returns;
-there is only a single return value: it is put in @aar{} and the return
-from the closure is performed with a @code{ret} Assembly instruction.
-We skip the details of performing the addition and consider the stack
-right before the @code{ret} Assembly instruction is executed by the
-@cpu{}, @ref{fig:MCN_callcc_after_middle, machinery continuations non}.
+In this example, the receiver closure executes @code{(+ B 2)} and
+returns; there is only a single return value: it is put in @aar{} and
+the return from the closure is performed with a @code{ret} Assembly
+instruction.  We skip the details of performing the addition and
+consider the stack right before the @code{ret} Assembly instruction is
+executed by the @cpu{}, @ref{fig:MCN_callcc_after_receiver, machinery
+continuations non}.
 
-@float Figure,fig:MCN_callcc_after_middle
+@float Figure,fig:MCN_callcc_after_receiver
 @example
       high memory
 |                      |
@@ -1001,7 +1004,7 @@ right before the @code{ret} Assembly instruction is executed by the
 |                      |
        low memory
 @end example
-@caption{Stack right before the middle closure executes the @code{ret}
+@caption{Stack right before the receiver closure executes the @code{ret}
 Assembly instruction; the single return value is in @aar{}.}
 @end float
 
@@ -1407,7 +1410,7 @@ we can understand how the stack grows until right after the call to
 |----------------------|         . frame of alpha
 | return addr to alpha |         .
 |----------------------|         --
-|    middle closure    |         . locals of call/cc
+|      receiver        |         . locals of call/cc
 |----------------------|         .
 |                      |
        low memory
@@ -1436,7 +1439,7 @@ continuations escape}.
 |----------------------|         .
 | return addr to alpha | <- FPR  .
 |----------------------|         --
-|    middle reference  |         . locals of
+|       receiver       |         . locals of
 |----------------------|         . call/cc
 |                      |
        low memory
@@ -1489,14 +1492,14 @@ single slot for free variables references the continuation object.
 @end float
 
 @item
-Prepare the application of the middle closure to the escape function:
-the reference to middle closure is moved in the @cpr{}; the address of
-the underflow handler is moved on the stack and the @fpr{} is set to
-reference it; the value of @code{pcb->frame_base} is set to exclude the
-freezed frames from the stack segment;
-@ref{fig:MCE_callcc_before_middle, machinery continuations escape}.
+Prepare the application of the receiver closure to the escape function:
+the reference to the receiver closure is moved in the @cpr{}; the
+address of the underflow handler is moved on the stack and the @fpr{} is
+set to reference it; the value of @code{pcb->frame_base} is set to
+exclude the freezed frames from the stack segment;
+@ref{fig:MCE_callcc_before_receiver, machinery continuations escape}.
 
-@float Figure,fig:MCE_callcc_before_middle
+@float Figure,fig:MCE_callcc_before_receiver
 @example
       high memory
 |                      |
@@ -1511,22 +1514,22 @@ freezed frames from the stack segment;
 |----------------------|                     --
 | ik_underflow_handler | <- FPR
 |----------------------|                     -- locals of
-|    escape closure    |                     .  middle
+|    escape closure    |                     .  receiver
 |----------------------|                     .  closure
 |                      |
        low memory
 
 @end example
-@caption{Stack right before the call to the middle closure.}
+@caption{Stack right before the call to the receiver closure.}
 @end float
 
 @item
-Perform a direct jump to the entry point of the middle closure without
+Perform a direct jump to the entry point of the receiver closure without
 pushing a return address on the stack.  The @fpr{} is left referencing
 the entry point of the stack underflow handler.
 @end enumerate
 
-In this example, the middle closure calls @func{beta} with @math{2}
+In this example, the receiver closure calls @func{beta} with @math{2}
 arguments, @ref{fig:MCE_callcc_enter_beta, machinery continuations
 escape}.
 
@@ -1545,7 +1548,7 @@ escape}.
 |----------------------|                     --
 | ik_underflow_handler |
 |----------------------|                     -- frame of
-| return addr to middle| <- FPR              .  middle
+| return addr to receiv| <- FPR              .  receiver
 |----------------------|                     --
 |    escape closure    |                     . locals
 |----------------------|                     . in beta
@@ -1580,7 +1583,7 @@ empty word, finally a @code{call} Assembly instruction is executed,
 |----------------------|                     --
 | ik_underflow_handler |
 |----------------------|                     -- frame of
-| return addr to middle| <- FPR              .  middle
+| return addr to receiv| <- FPR              .  receiver
 |----------------------|                     --
 |    escape closure    |                     .
 |----------------------|                     .  frame
