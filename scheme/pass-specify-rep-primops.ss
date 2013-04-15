@@ -4789,13 +4789,62 @@
     (nop)))
 
  (define-primop $stack-overflow-check unsafe
-   ;;This  operation is  inserted  in *every*  compiled Scheme  function
-   ;;body, right after the entry point.  It checks if the topmost Scheme
-   ;;stack  frame has  crossed the  red line  of stack  usage that  must
-   ;;trigger a new stack segment allocation.
+   ;;Check if  the topmost Scheme stack  call frame has crossed  the red
+   ;;line of  stack usage; this  condition triggers a new  stack segment
+   ;;allocation.   The   scenario  on   the  stack  that   triggers  the
+   ;;reallocation is:
+   ;;
+   ;;         high memory
+   ;;   |                      | <- pcb->frame_base
+   ;;   |----------------------|
+   ;;   | ik_underflow_handler |
+   ;;   |----------------------|
+   ;;            ...
+   ;;   |----------------------|                        --
+   ;;   |     local value      |                        .
+   ;;   |----------------------|                        .
+   ;;   |     local value      | <- pcb->frame_redline  .
+   ;;   |----------------------|                        . framesize
+   ;;   |     local value      |                        .
+   ;;   |----------------------|                        .
+   ;;   |    return address    | <- FPR                 .
+   ;;   |----------------------|                        --
+   ;;   |   function argument  |
+   ;;   |----------------------|
+   ;;   |   function argument  |
+   ;;   |----------------------|
+   ;;             ...
+   ;;   |----------------------|
+   ;;   |                      | <- pcb->stack_base
+   ;;   |----------------------|
+   ;;   |                      |
+   ;;         low memory
+   ;;
+   ;;we see that: FPR < pcb->frame_redline.
+   ;;
+   ;;This operation is inserted right after  the entry point of the body
+   ;;of *every* Scheme function that does enlarge the stack; it is *not*
+   ;;inserted in the body of functions that only perform tail calls.
    ;;
    ;;See  the  comments  in  the C  function  "ik_stack_overflow()"  for
    ;;details of what happens in case of stack overflow.
+   ;;
+   ;;The generated code looks somewhat like this i686 pseudo-Assembly:
+   ;;
+   ;;   (label function_entry_point)
+   ;;     (cmpl FPR pcb->frame_redline)
+   ;;     (jb L0)
+   ;;
+   ;;   (label L1)
+   ;;     ;; ... the function body ...
+   ;;     (ret)
+   ;;
+   ;;   (label L0)
+   ;;     (forcall "ik_stack_overflow")
+   ;;     (jmp L1)
+   ;;
+   ;;NOTE The Assembly instruction JB is for comparison between UNsigned
+   ;;integers, while JL is for comparison between signed integers.
    ;;
    ((E)
     (make-shortcut
