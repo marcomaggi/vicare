@@ -306,11 +306,16 @@ ik_make_pcb (void)
    * code execution.
    */
   {
-    pcb->stack_base    = ik_mmap(IK_STACKSIZE);
-    pcb->stack_size    = IK_STACKSIZE;
-    pcb->frame_pointer = pcb->stack_base + pcb->stack_size;
-    pcb->frame_base    = pcb->frame_pointer;
-    pcb->frame_redline = pcb->stack_base + 2 * IK_CHUNK_SIZE;
+    /* Forbid  reading and  writing  in  the bottom  page  of the  stack
+       segment; this should trigger a SIGSEGV if a Scheme stack overflow
+       happens.  Not a solution against stack overflows, but at least it
+       should avoid memory corruption. */
+    pcb->stack_base	= ik_mmap(IK_STACKSIZE);
+    mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+    pcb->stack_size	= IK_STACKSIZE;
+    pcb->frame_pointer	= pcb->stack_base + pcb->stack_size;
+    pcb->frame_base	= pcb->frame_pointer;
+    pcb->frame_redline	= pcb->stack_base + 2 * IK_CHUNK_SIZE + IK_PAGESIZE;
   }
 
   /* Allocate  and initialise  the page  cache.  The  PCB references  an
@@ -835,15 +840,23 @@ ik_stack_overflow (ikpcb* pcb)
     pcb->next_k = s_kont;
     set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
     assert(0 != kont->size);
+    /* Release the  protection on the  bottom stack segment  page, which
+       avoids memory corruption in case of stack overflow. */
+    mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_READ|PROT_WRITE);
   }
   /* Allocate a  new memory segment to  be used as Scheme  stack and set
      the PCB accordingly. */
   {
-    pcb->stack_base    = (ikptr)(long)ik_mmap_typed(IK_STACKSIZE, mainstack_mt, pcb);
-    pcb->stack_size    = IK_STACKSIZE;
-    pcb->frame_base    = pcb->stack_base + IK_STACKSIZE;
-    pcb->frame_pointer = pcb->frame_base - wordsize;
-    pcb->frame_redline = pcb->stack_base + 2 * IK_CHUNK_SIZE;
+    /* Forbid  reading and  writing  in  the bottom  page  of the  stack
+       segment; this should trigger a SIGSEGV if a Scheme stack overflow
+       happens.  Not a solution against stack overflows, but at least it
+       should avoid memory corruption. */
+    pcb->stack_base	= ik_mmap_typed(IK_STACKSIZE, mainstack_mt, pcb);
+    mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+    pcb->stack_size	= IK_STACKSIZE;
+    pcb->frame_base	= pcb->stack_base + IK_STACKSIZE;
+    pcb->frame_pointer	= pcb->frame_base - wordsize;
+    pcb->frame_redline	= pcb->stack_base + 2 * IK_CHUNK_SIZE + IK_PAGESIZE;
     IK_REF(pcb->frame_pointer, 0) = IK_UNDERFLOW_HANDLER;
   }
   if (0 || STACK_DEBUG) {
@@ -1127,9 +1140,11 @@ ikrt_make_vector2 (ikptr len, ikptr obj, ikpcb* pcb)
 
 ikptr
 ikrt_exit (ikptr status, ikpcb* pcb)
-/* This is nor for the public API. */
+/* This is not for the public API. */
 {
   ik_delete_pcb(pcb);
+  if (total_allocated_pages)
+    ik_debug_message("allocated pages: %d", total_allocated_pages);
   assert(0 == total_allocated_pages);
   exit(IK_IS_FIXNUM(status)? IK_UNFIX(status) : EXIT_FAILURE);
 }
