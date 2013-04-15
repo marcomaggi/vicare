@@ -97,7 +97,7 @@ Notes for revision 0.3d0
     uri-encode			uri-decode
     uri-normalise-encoding
 
-* Added function to (vicare) to manipulate time objects:
+* Added functions to (vicare) to manipulate time objects:
 
       make-time
       time-addition		time-difference
