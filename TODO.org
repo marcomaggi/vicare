@@ -103,7 +103,7 @@
 ** DONE SRFI 13 strings
 ** DONE SRFI 14 char-sets
 ** DONE SRFI 16 case-lambda
-** SRFI 19 time
+** DONE SRFI 19 time
 ** DONE SRFI 23 error
 ** TODO SRFI 25 multidimensional arrays
 
