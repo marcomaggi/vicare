@@ -27,7 +27,7 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 #page
 #### additional configuration command line options
 
-AS_VAR_SET(VFLAGS,["-O2"])
+AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS,["-O2"])])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
   [whether debugging features are included in compiled Scheme libraries],
