@@ -311,10 +311,22 @@ ik_make_pcb (void)
     pcb->frame_pointer	= pcb->stack_base + pcb->stack_size;
     pcb->frame_base	= pcb->frame_pointer;
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {
-      /* Forbid  reading and  writing in  the bottom  page of  the stack
-	 segment;  this  should trigger  a  SIGSEGV  if a  Scheme  stack
-	 overflow happens.  Not a  solution against stack overflows, but
-	 at least it should avoid memory corruption. */
+      /* Forbid reading  and writing in  the low-address memory  page of
+       * the  stack  segment;  this  should  trigger  a  SIGSEGV  if  an
+       * undetected  Scheme  stack  overflow happens.   Not  a  solution
+       * against stack  overflows, but at  least it should  avoid memory
+       * corruption.
+       *
+       *    stack_base                             frame_base
+       *         v                                     v
+       *  lo mem |-------------------------------------| hi mem
+       *
+       *         |.....|...............................|
+       *       1st page         usable region
+       *
+       * This  configuration  must  be  repeated whenever  a  new  stack
+       * segment is allocated because of detected stack overflow.
+       */
       mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
       pcb->frame_redline= pcb->stack_base + 2 * IK_CHUNK_SIZE + IK_PAGESIZE;
     } else {
@@ -845,8 +857,9 @@ ik_stack_overflow (ikpcb* pcb)
     set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
     assert(0 != kont->size);
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {
-      /* Release the protection on the  bottom stack segment page, which
-	 avoids memory corruption in case of stack overflow. */
+      /* Release the protection on the  first low-address memory page in
+	 the stack  segment, which avoids  memory corruption in  case of
+	 undetected Scheme stack overflow. */
       mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_READ|PROT_WRITE);
     }
   }
@@ -859,10 +872,22 @@ ik_stack_overflow (ikpcb* pcb)
     pcb->frame_pointer	= pcb->frame_base - wordsize;
     IK_REF(pcb->frame_pointer, 0) = IK_UNDERFLOW_HANDLER;
     if (IK_PROTECT_FROM_STACK_OVERFLOW) {
-      /* Forbid  reading and  writing in  the bottom  page of  the stack
-	 segment;  this  should trigger  a  SIGSEGV  if a  Scheme  stack
-	 overflow happens.  Not a  solution against stack overflows, but
-	 at least it should avoid memory corruption. */
+      /* Forbid reading  and writing in  the low-address memory  page of
+       * the  stack  segment;  this  should  trigger  a  SIGSEGV  if  an
+       * undetected  Scheme  stack  overflow happens.   Not  a  solution
+       * against stack  overflows, but at  least it should  avoid memory
+       * corruption.
+       *
+       *    stack_base                             frame_base
+       *         v                                     v
+       *  lo mem |-------------------------------------| hi mem
+       *
+       *         |.....|...............................|
+       *       1st page         usable region
+       *
+       * This configuration must be performed also when first allocating
+       * the stack segment.
+       */
       mprotect((void*)(long)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
       pcb->frame_redline= pcb->stack_base + 2 * IK_CHUNK_SIZE + IK_PAGESIZE;
     } else {
