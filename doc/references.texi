@@ -86,4 +86,9 @@ Continuations''.  Proceedings of the SIGPLAN '90 Conference on
 Programming Language Design and Implementation, 66--77, June 1990.
 Copyright @copyright{} 1990 ACM.
 
+@noindent
+@anchor{HFWCoro}[HFWCoro] Haynes, Friedman, Wand.  ``Continuations and
+Coroutines''.  Computer Science Department, Indiana University.
+Technical Report No. 158.  June, 1984.
+
 @c end of file

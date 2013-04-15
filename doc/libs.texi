@@ -4732,13 +4732,8 @@ functions: whenever coroutine @var{A} yields control to the ``next''
 coroutine, it enqueues an escape function to its current continuation
 and causes the next escape function to be invoked.
 
-For a more complex discussion of coroutines and continuations see:
-
-@quotation
-Haynes, Friedman, Wand.  ``Continuations and Coroutines''.  Computer
-Science Department, Indiana University.  Technical Report No. 158.
-June, 1984.
-@end quotation
+For discussions about other implementations of coroutines and
+continuations see @ref{HFWCoro, references}.
 
 @menu
 * coroutines examples::         Usage examples for coroutines.
