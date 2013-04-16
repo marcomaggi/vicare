@@ -5148,6 +5148,12 @@ in @var{bvcom}, including the ones in the bytevectors that have been
 already dequeued.
 @end defun
 
+
+@defun bytevector-compound-data @var{bvcom}
+Return the list of bytevectors in @var{bvcom}.  Mutating the return
+value results in undefined behaviour.
+@end defun
+
 @c page
 @node bytevector compounds queue
 @subsection Queue programming interface

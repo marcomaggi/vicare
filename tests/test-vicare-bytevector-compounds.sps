@@ -58,6 +58,66 @@
   #t)
 
 
+(parametrise ((check-test-name	'base))
+
+  (define (doit bvcom)
+    (list (bytevector-compound-length bvcom)
+	  (bytevector-compound-total-length bvcom)
+	  (bytevector-compound-empty? bvcom)
+	  (bytevector-compound-filled? bvcom)))
+
+;;; --------------------------------------------------------------------
+
+  (check	;enqueueing
+      (let ((bvcom (make-bytevector-compound)))
+	(bytevector-compound-enqueue! bvcom '#vu8(1 2 3))
+	(bytevector-compound-enqueue! bvcom '#vu8(4 5 6))
+	(bytevector-compound-enqueue! bvcom '#vu8(7 8))
+	(list (bytevector-compound-data bvcom)
+	      (doit bvcom)))
+    => '((#vu8(1 2 3) #vu8(4 5 6) #vu8(7 8))
+	 (8 8 #f #t)))
+
+  (check	;enqueueing and dequeueing
+      (let ((bvcom (make-bytevector-compound)))
+	(bytevector-compound-enqueue! bvcom '#vu8(1 2 3))
+	(bytevector-compound-enqueue! bvcom '#vu8(4 5 6))
+	(bytevector-compound-enqueue! bvcom '#vu8(7 8))
+	(let ((rv (bytevector-compound-dequeue! bvcom)))
+	  (list rv (doit bvcom))))
+    => '(#vu8(1 2 3) (5 8 #f #t)))
+
+  (check	;enqueueing and dequeueing
+      (let ((bvcom (make-bytevector-compound)))
+	(bytevector-compound-enqueue! bvcom '#vu8(1 2 3))
+	(let ((rv (bytevector-compound-dequeue! bvcom)))
+	  (list rv (doit bvcom))))
+    => '(#vu8(1 2 3) (0 3 #t #f)))
+
+  (check	;enqueueing and dequeueing
+      (let ((bvcom (make-bytevector-compound)))
+	(bytevector-compound-enqueue! bvcom '#vu8(1 2 3))
+	(let* ((rv0 (bytevector-compound-dequeue! bvcom))
+	       (rv1 (bytevector-compound-dequeue! bvcom)))
+	  (list rv0 rv1 (doit bvcom))))
+    => '(#vu8(1 2 3) #f (0 3 #t #f)))
+
+  (check	;enqueueing and dequeueing till empty
+      (let ((bvcom (make-bytevector-compound)))
+	(bytevector-compound-enqueue! bvcom '#vu8(1 2 3))
+	(bytevector-compound-enqueue! bvcom '#vu8(4 5 6))
+	(bytevector-compound-enqueue! bvcom '#vu8(7 8))
+	(let* ((rv0 (bytevector-compound-dequeue! bvcom))
+	       (rv1 (bytevector-compound-dequeue! bvcom))
+	       (rv2 (bytevector-compound-dequeue! bvcom))
+	       (rv3 (bytevector-compound-dequeue! bvcom)))
+	  (list rv0 rv1 rv2 rv3 (doit bvcom))))
+    => '(#vu8(1 2 3) #vu8(4 5 6) #vu8(7 8) #f (0 8 #t #f)))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
