@@ -29,6 +29,8 @@ nobase_dist_libvicare_DATA	= \
 	\
 	vicare/assembler/inspection.sls			\
 	vicare/bytevector-compounds.sls			\
+	vicare/bytevector-compounds/core.sls		\
+	vicare/bytevector-compounds/unsafe.sls		\
 	vicare/checks.sls				\
 	vicare/coroutines.sls				\
 	vicare/custom-ports.sls				\

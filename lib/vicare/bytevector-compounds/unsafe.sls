@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: safe bindings for bytevector-compound objects
+;;;Contents: unsafe bindings for bytevector-compound objects
 ;;;Date: Tue Apr 16, 2013
 ;;;
 ;;;Abstract
@@ -26,25 +26,16 @@
 
 
 #!r6rs
-(library (vicare bytevector-compounds)
+(library (vicare bytevector-compounds unsafe)
   (export
-    ;; data type
-    bytevector-compound
-    make-bytevector-compound		bytevector-compound?
-
-    ;; validation clauses
-    bytevector-compound.vicare-arguments-validation
-    false-or-bytevector-compound.vicare-arguments-validation
-    bytevector-compound/filled.vicare-arguments-validation
 
     ;; inspection
-    bytevector-compound-empty?		bytevector-compound-filled?
-    bytevector-compound-length		bytevector-compound-total-length
-    bytevector-compound-data
+    $bytevector-compound-empty?		$bytevector-compound-filled?
+    $bytevector-compound-length		$bytevector-compound-total-length
+    $bytevector-compound-data
 
     ;; queue operations
-    bytevector-compound-enqueue!	bytevector-compound-dequeue!
-
+    $bytevector-compound-enqueue!	$bytevector-compound-dequeue!
     )
   (import (vicare bytevector-compounds core)))
 
