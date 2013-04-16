@@ -76,7 +76,7 @@
     (vicare arguments validation)
     (vicare syntactic-extensions)
     (vicare arguments validation)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $))
 
 

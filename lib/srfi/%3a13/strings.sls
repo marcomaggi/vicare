@@ -193,7 +193,7 @@
     (srfi :14 char-sets)
     (vicare arguments validation)
     (vicare syntactic-extensions)
-    (prefix (except (vicare unsafe-operations)
+    (prefix (except (vicare unsafe operations)
 		    string-copy!
 		    string-fill!)
 	    $)

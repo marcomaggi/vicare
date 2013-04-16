@@ -50,7 +50,7 @@
     task-fragment		do-one-task-event)
   (import (vicare)
     (prefix (vicare posix) px.)
-    (prefix (vicare unsafe-operations) unsafe.)
+    (prefix (vicare unsafe operations) unsafe.)
     (vicare syntactic-extensions)
     (vicare platform constants))
 

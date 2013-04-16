@@ -57,7 +57,7 @@
     (ikarus system $structs)
     (vicare syntactic-extensions)
     (vicare arguments validation)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

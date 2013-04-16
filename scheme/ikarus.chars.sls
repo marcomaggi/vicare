@@ -26,7 +26,7 @@
 		  char<?		char<=?
 		  char>?		char>=?)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $)
     (vicare arguments validation))
 

@@ -33,8 +33,9 @@
   (only (vicare platform features))
   (only (vicare platform utilities))
 
+  (only (vicare unsafe operations))
+
   (only (vicare numerics constants))
-  (only (vicare unsafe-operations))
   (only (vicare arguments validation))
   (only (vicare syntactic-extensions))
   (only (vicare arguments general-c-buffers))

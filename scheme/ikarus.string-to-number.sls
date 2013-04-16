@@ -29,7 +29,7 @@
 		  sign)
     (vicare syntactic-extensions)
     (vicare parser-logic)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $)
     (vicare arguments validation))
 

@@ -28,7 +28,7 @@
 	    $symbol-table-size
 	    $log-symbol-table-status)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

@@ -29,7 +29,7 @@
 		  for-all exists fold-left fold-right
 		  make-queue)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $))
 
 

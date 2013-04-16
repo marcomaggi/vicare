@@ -20,7 +20,7 @@
 		  apropos)
     (only (psyntax library-manager)
 	  library-subst library-name)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

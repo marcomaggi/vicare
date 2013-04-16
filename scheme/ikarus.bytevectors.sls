@@ -167,7 +167,8 @@
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations) unsafe.))
+    (prefix (vicare unsafe operations)
+	    unsafe.))
 
   (module (platform-endianness)
     (import (vicare include))

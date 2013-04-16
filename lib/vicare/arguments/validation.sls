@@ -264,7 +264,7 @@
 	  FD_SETSIZE)
     (prefix (vicare platform words)
 	    words.)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $))
 
 

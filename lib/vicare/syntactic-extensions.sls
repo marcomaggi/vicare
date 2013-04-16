@@ -101,7 +101,7 @@
 	  with-dangerous-arguments-validation
 	  arguments-validation-forms
 	  exact-integer.vicare-arguments-validation)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $))
 
 

@@ -396,7 +396,7 @@
     (vicare arguments validation)
     (prefix (vicare unsafe-capi)
 	    capi.)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (prefix (vicare platform words)
 	    words.))

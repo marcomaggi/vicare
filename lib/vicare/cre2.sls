@@ -62,7 +62,7 @@
 	  define-argument-validation
 	  with-arguments-validation
 	  define-inline)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (prefix (only (vicare ffi)
 		  dlopen

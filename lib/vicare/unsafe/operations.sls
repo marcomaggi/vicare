@@ -50,7 +50,7 @@
 
 
 #!r6rs
-(library (vicare unsafe-operations)
+(library (vicare unsafe operations)
   (export
     (rename ($make-struct	make-struct)
 	    ($struct		struct)

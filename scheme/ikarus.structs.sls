@@ -66,7 +66,7 @@
 		  struct-destructor		struct-length)
     (ikarus.emergency)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (ikarus system $structs))
 

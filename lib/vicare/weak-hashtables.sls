@@ -37,7 +37,7 @@
     weak-hashtable-keys		weak-hashtable-entries
     weak-hashtable-update!)
   (import (vicare)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (vicare syntactic-extensions))
 

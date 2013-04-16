@@ -38,7 +38,7 @@
     (vicare platform constants)
     (prefix (vicare unsafe-capi)
 	    capi.)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

@@ -30,7 +30,7 @@
 		  cons)
 	    (cons sys:cons))
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (ikarus system $pairs))
 

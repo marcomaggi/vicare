@@ -29,7 +29,7 @@
 (library (vicare coroutines)
   (export coroutine yield finish-coroutines)
   (import (vicare)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $)
     (only (vicare syntactic-extensions)
 	  begin0))

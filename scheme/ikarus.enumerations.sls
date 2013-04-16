@@ -80,7 +80,7 @@
 		  enum-set?
 		  make-file-options)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

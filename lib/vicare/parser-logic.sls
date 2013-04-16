@@ -48,7 +48,7 @@
     :invalid-input-char
     :end-of-input)
   (import (rnrs)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (only (vicare syntactic-extensions)
 	  define-auxiliary-syntaxes))

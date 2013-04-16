@@ -24,7 +24,7 @@
     #;(rnrs bytevectors)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $)
     (vicare arguments validation)
     (prefix (vicare platform words)

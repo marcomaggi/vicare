@@ -11,6 +11,10 @@ dist_pkglibexec_SCRIPTS	= compile-all.sps
 libvicaredir		= $(libdir)/vicare-scheme
 
 nobase_dist_libvicare_DATA	= \
+	vicare/unsafe-capi.sls				\
+	vicare/unsafe/operations.sls			\
+	vicare/unsafe-unicode.sls			\
+	\
 	vicare/arguments/validation.sls			\
 	vicare/arguments/general-c-buffers.sls		\
 	vicare/assembler/inspection.sls			\
@@ -32,9 +36,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/keywords.sls				\
 	vicare/parser-logic.sls				\
 	vicare/syntactic-extensions.sls			\
-	vicare/unsafe-capi.sls				\
-	vicare/unsafe-operations.sls			\
-	vicare/unsafe-unicode.sls			\
 	vicare/platform/utilities.sls			\
 	vicare/weak-hashtables.sls			\
 	vicare/checks.sls

@@ -48,7 +48,7 @@
 	  autoload-filename-foreign-library)
     (vicare syntactic-extensions)
     (prefix (vicare platform words) words.)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

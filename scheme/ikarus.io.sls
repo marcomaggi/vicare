@@ -604,7 +604,7 @@
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (prefix (vicare unsafe-capi)
 	    capi.)

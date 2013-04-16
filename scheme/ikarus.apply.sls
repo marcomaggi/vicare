@@ -18,7 +18,7 @@
   (export apply)
   (import (except (ikarus) apply)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.)
     (ikarus system $stack))
 

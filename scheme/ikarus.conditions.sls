@@ -151,7 +151,7 @@
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 

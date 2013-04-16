@@ -37,7 +37,7 @@
   (import (vicare)
     (vicare syntactic-extensions)
     (vicare arguments validation)
-    (prefix (only (vicare unsafe-operations)
+    (prefix (only (vicare unsafe operations)
 		  bytevector-length)
 	    $))
 

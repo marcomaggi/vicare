@@ -23,7 +23,7 @@
 	    procedure-annotation)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    $)
     (vicare syntactic-extensions)
     (vicare arguments validation))

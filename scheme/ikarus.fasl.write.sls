@@ -30,7 +30,7 @@
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (vicare syntactic-extensions)
-    (prefix (vicare unsafe-operations)
+    (prefix (vicare unsafe operations)
 	    unsafe.))
 
 
