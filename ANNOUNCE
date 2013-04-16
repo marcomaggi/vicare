@@ -59,8 +59,6 @@ Notes for revision 0.3d0
 * SRFI 19,  time and date functions,  has been reverted to  the original
   Eddington's port.
 
-* Changed tarball distribution from .bz2 compression to .xz compression.
-
 * BACKWARDS INCOMPATIBILITY The iconv functions have been moved from the
   library (vicare glibc) into the library (vicare iconv).  Documentation
   and tests also have been moved into modules independent from the Glibc
@@ -74,6 +72,9 @@ Notes for revision 0.3d0
 
   which means the  extensions of Vicare binding it  to foreign libraries
   have to be fixed.
+
+* BACKWARDS INCOMPATIBILITY The  library (vicare platform-constants) has
+  been remove.  Use (vicare platform constants) instead.
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records
@@ -118,6 +119,8 @@ Notes for revision 0.3d0
 
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
+
+* Changed tarball distribution from .bz2 compression to .xz compression.
 
 
 Notes for revision 0.2d20

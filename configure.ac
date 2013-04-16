@@ -1531,7 +1531,6 @@ AC_CONFIG_FILES(Makefile
                 tests/Makefile demos/Makefile
                 lib/vicare/installation-configuration.sls
                 lib/vicare/errno.sls
-                lib/vicare/platform-constants.sls
                 lib/vicare/platform/constants.sls
                 lib/vicare/words.sls
                 meta/slackware/doinst.sh)
