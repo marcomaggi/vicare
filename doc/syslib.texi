@@ -940,6 +940,10 @@ Return the reference to the imaginary part.
 @section Low level numerics operations
 
 
+@cindex @library{ikarus system $numerics}, library
+@cindex Library @library{ikarus system $numerics}
+
+
 The library @library{ikarus syslib $numerics} exports bindings for low
 level operations on numbers.
 
