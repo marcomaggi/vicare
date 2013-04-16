@@ -76,14 +76,13 @@
 
     (define (source-optimize expr)
       (case (optimize-level)
-	#;((3)
-	 ;;These values for the CP0 counters are an experimental setting
-	 ;;with the purpose "fuck'em all!!!".
+	((3)
+	 ;;This optimisation level is meant to do the most possible.
 	 (parameterize ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
 			(cp0-size-limit		O3-CP0-SIZE-LIMIT)
 			(open-mvcalls		#t))
 	   (%do-one-pass expr (source-optimizer-passes-count))))
-	((2 3)
+	((2)
 	 (%do-one-pass expr (source-optimizer-passes-count)))
 	((1)
 	 (parameterize ((cp0-size-limit 0))
