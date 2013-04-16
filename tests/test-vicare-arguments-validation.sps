@@ -64,7 +64,7 @@
 
   (check
       (eval 'config.arguments-validation
-	    (environment '(prefix (vicare installation-configuration)
+	    (environment '(prefix (vicare platform configuration)
 				  config.)))
     => #t)
 
@@ -75,7 +75,7 @@
 	(begin
 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
 	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare installation-configuration)
+		(environment '(prefix (vicare platform configuration)
 				      config.))))
       => #t)
 
@@ -83,7 +83,7 @@
 	(begin
 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
 	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare installation-configuration)
+		(environment '(prefix (vicare platform configuration)
 				      config.))))
       => #f)
 
@@ -91,7 +91,7 @@
 	(begin
 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
 	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare installation-configuration)
+		(environment '(prefix (vicare platform configuration)
 				      config.))))
       => #t)
 
@@ -99,7 +99,7 @@
 	(begin
 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
 	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare installation-configuration)
+		(environment '(prefix (vicare platform configuration)
 				      config.))))
       => #f)
 

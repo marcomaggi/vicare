@@ -73,8 +73,19 @@ Notes for revision 0.3d0
   which means the  extensions of Vicare binding it  to foreign libraries
   have to be fixed.
 
-* BACKWARDS INCOMPATIBILITY The  library (vicare platform-constants) has
-  been remove.  Use (vicare platform constants) instead.
+* BACKWARDS INCOMPATIBILITY The  library:
+
+     (vicare platform-constants)
+
+  has been removed; use (vicare platform constants) instead.
+
+* BACKWARDS INCOMPATIBILITY The following libraries:
+
+     (vicare installation-configuration)
+
+  have been renamed to:
+
+     (vicare platform configuration)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

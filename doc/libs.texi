@@ -62,8 +62,8 @@ and @library{rnrs}.
 
 Global arguments validation is enabled or disabled by setting to @true{}
 or @false{} the @code{arguments-validation} identifier syntax exported
-by @library{vicare installation-configuration}, the default is @true{};
-such value can be configured as follows:
+by @library{vicare platform configuration}, the default is @true{}; such
+value can be configured as follows:
 
 @enumerate
 @item

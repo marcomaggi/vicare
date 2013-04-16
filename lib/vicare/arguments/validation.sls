@@ -257,7 +257,7 @@
     time/false.vicare-arguments-validation
     )
   (import (ikarus)
-    (for (prefix (vicare installation-configuration)
+    (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
     (only (vicare platform constants)

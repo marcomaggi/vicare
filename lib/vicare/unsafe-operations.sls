@@ -312,7 +312,7 @@
     (ikarus system $strings)
     (ikarus system $codes)
     (ikarus system $pointers)
-    (for (prefix (only (vicare installation-configuration)
+    (for (prefix (only (vicare platform configuration)
 		       platform-endianness)
 		 config.)
 	 expand))

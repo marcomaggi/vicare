@@ -92,7 +92,7 @@
     ;; auxiliary syntaxes
     big				little)
   (import (ikarus)
-    (for (prefix (vicare installation-configuration)
+    (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
     (only (vicare arguments validation)

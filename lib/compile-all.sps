@@ -26,7 +26,7 @@
 
 #!r6rs
 (import
-  (only (vicare installation-configuration))
+  (only (vicare platform configuration))
   (only (vicare errno))
   (only (vicare platform constants))
   (only (vicare platform features))

@@ -4,7 +4,7 @@ EXTRA_DIST = \
 	vicare/errno.sls.in			\
 	vicare/platform/constants.sls.in	\
 	vicare/words.sls.in			\
-	vicare/installation-configuration.sls.in
+	vicare/platform/configuration.sls.in
 
 dist_pkglibexec_SCRIPTS	= compile-all.sps
 
@@ -41,7 +41,7 @@ nobase_dist_libvicare_DATA	= \
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/errno.sls			\
-	vicare/installation-configuration.sls	\
+	vicare/platform/configuration.sls	\
 	vicare/platform/constants.sls		\
 	vicare/platform/features.sls		\
 	vicare/words.sls
