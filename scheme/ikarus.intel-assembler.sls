@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008,2012  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi.
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -27,7 +27,7 @@
     (prefix (vicare unsafe-operations)
 	    $)
     (vicare arguments validation)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
     (except (vicare syntactic-extensions)
 	    case-word-size))

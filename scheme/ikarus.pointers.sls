@@ -309,7 +309,7 @@
 	    unsafe.)
     (prefix (vicare unsafe-capi)
 	    capi.)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.))
 
   (module (arguments-validation)

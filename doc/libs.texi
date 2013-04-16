@@ -519,7 +519,7 @@ machine word is @math{32}-bit or @math{64}-bit integer.
 
 Exact integers in the range of the C language type @code{int} are used
 often when interfacing with a foreign C language library; the library
-@library{vicare words} provides the predicate @func{signed-int?} to
+@library{vicare platform words} provides the predicate @func{signed-int?} to
 validated such values; @ref{words predicates} for details.
 
 The following bindings are exported by the library @library{vicare
@@ -570,7 +570,7 @@ predicate @func{even?} or @func{odd?}.
 @subsubsection Validating C language values
 
 
-The library @library{vicare words} provides the predicates to validate
+The library @library{vicare platform words} provides the predicates to validate
 typical values used when interfacing with foreign C language libraries;
 @ref{words predicates} for details.
 
@@ -1547,13 +1547,13 @@ corresponding symbol; if @var{code} is not recognised as encoded
 @section Exact integer predicates and constants
 
 
-@cindex Library @library{vicare words}
-@cindex @library{vicare words}, library
+@cindex Library @library{vicare platform words}
+@cindex @library{vicare platform words}, library
 
 
 It is often needed to validate exact integers agains fixed range bounds,
 for example for 32-bit and 64-bit representations or some platform
-specific C language type.  The library @library{vicare words} implements
+specific C language type.  The library @library{vicare platform words} implements
 such predicates and minimum/maximum range constants.
 
 @menu
@@ -1567,7 +1567,7 @@ such predicates and minimum/maximum range constants.
 @subsection Knowing the size of C language types
 
 
-The following bindings are exported by the @library{vicare words}
+The following bindings are exported by the @library{vicare platform words}
 library.
 
 
@@ -1635,7 +1635,7 @@ Number of bytes in the C language type @code{void *}.
 @subsection Verifying the range of integers
 
 
-The following bindings are exported by the @library{vicare words}
+The following bindings are exported by the @library{vicare platform words}
 library.
 
 
@@ -1794,8 +1794,8 @@ else evaluate to @false{}.
 @subsection Exact integer range limits
 
 
-The following bindings are exported by the @library{vicare words}
-library.
+The following bindings are exported by the @library{vicare platform
+words} library.
 
 @c ------------------------------------------------------------
 

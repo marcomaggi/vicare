@@ -3,7 +3,7 @@
 EXTRA_DIST = \
 	vicare/errno.sls.in			\
 	vicare/platform/constants.sls.in	\
-	vicare/words.sls.in			\
+	vicare/platform/words.sls.in		\
 	vicare/platform/configuration.sls.in
 
 dist_pkglibexec_SCRIPTS	= compile-all.sps
@@ -44,7 +44,7 @@ nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls	\
 	vicare/platform/constants.sls		\
 	vicare/platform/features.sls		\
-	vicare/words.sls
+	vicare/platform/words.sls
 
 if WANT_SRFI
 nobase_dist_libvicare_DATA	+= \

@@ -1,14 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for (vicare words)
+;;;Contents: tests for (vicare platform words)
 ;;;Date: Wed Feb 15, 2012
 ;;;
 ;;;Abstract
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,12 +27,12 @@
 
 #!r6rs
 (import (vicare)
-  (prefix (vicare words) words.)
+  (prefix (vicare platform words) words.)
   (vicare platform constants)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing (vicare words) library\n")
+(check-display "*** testing (vicare platform words) library\n")
 
 
 (parametrise ((check-test-name	'clang))

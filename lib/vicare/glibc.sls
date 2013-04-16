@@ -80,7 +80,7 @@
     (vicare platform constants)
     (prefix (vicare unsafe-capi)
 	    capi.)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe-operations)
 	    unsafe.))

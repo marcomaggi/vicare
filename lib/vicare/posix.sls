@@ -398,7 +398,7 @@
 	    capi.)
     (prefix (vicare unsafe-operations)
 	    unsafe.)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.))
 
 

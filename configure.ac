@@ -1532,7 +1532,7 @@ AC_CONFIG_FILES(Makefile
                 lib/vicare/platform/configuration.sls
                 lib/vicare/errno.sls
                 lib/vicare/platform/constants.sls
-                lib/vicare/words.sls
+                lib/vicare/platform/words.sls
                 meta/slackware/doinst.sh)
 AC_OUTPUT
 

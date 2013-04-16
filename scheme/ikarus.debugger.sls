@@ -41,7 +41,7 @@
 		  print-condition)
 	    ikarus.)
     (vicare syntactic-extensions)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe-capi)
 	    capi.))

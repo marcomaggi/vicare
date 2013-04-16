@@ -262,7 +262,7 @@
 	 expand)
     (only (vicare platform constants)
 	  FD_SETSIZE)
-    (prefix (vicare words)
+    (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe-operations)
 	    $))

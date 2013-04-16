@@ -27,10 +27,12 @@
 #!r6rs
 (import
   (only (vicare platform configuration))
+  (only (vicare platform words))
   (only (vicare errno))
   (only (vicare platform constants))
   (only (vicare platform features))
   (only (vicare platform utilities))
+
   (only (vicare numerics constants))
   (only (vicare unsafe-operations))
   (only (vicare arguments validation))
@@ -43,7 +45,6 @@
   (only (vicare include))
   (only (vicare infix))
   (only (vicare unsafe-unicode))
-  (only (vicare words))
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))

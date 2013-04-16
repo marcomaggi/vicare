@@ -82,10 +82,12 @@ Notes for revision 0.3d0
 * BACKWARDS INCOMPATIBILITY The following libraries:
 
      (vicare installation-configuration)
+     (vicare words)
 
   have been renamed to:
 
      (vicare platform configuration)
+     (vicare platform words)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records
