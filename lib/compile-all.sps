@@ -52,6 +52,7 @@
   (only (vicare keywords))
   (only (vicare checks))
   (only (vicare custom-ports))
+  (only (vicare bytevector-compounds))
   (only (vicare net channels))
 
   (only (vicare assembler inspection))

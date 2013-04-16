@@ -158,6 +158,7 @@
 
     (rename ($make-bytevector		make-bytevector)
 	    ($bytevector-length		bytevector-length)
+	    ($bytevector-empty?		bytevector-empty?)
 	    ($bytevector-u8-ref		bytevector-u8-ref)
 	    ($bytevector-s8-ref		bytevector-s8-ref)
 	    ($bytevector-u8-set!	bytevector-u8-set!)
@@ -900,6 +901,9 @@
 
 
 ;;;; miscellaneous bytevector operations
+
+(define-inline ($bytevector-empty? ?bv)
+  ($fxzero? ($bytevector-length ?bv)))
 
 (define-inline ($bytevector-fill! ?bv ?index ?end ?fill)
   ;;Fill the  positions in ?BV  from ?INDEX inclusive to  ?END exclusive

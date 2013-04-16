@@ -15,16 +15,21 @@ nobase_dist_libvicare_DATA	= \
 	vicare/unsafe/operations.sls			\
 	vicare/unsafe/unicode.sls			\
 	\
-	vicare/arguments/validation.sls			\
-	vicare/arguments/general-c-buffers.sls		\
-	vicare/assembler/inspection.sls			\
-	vicare/net/channels.sls				\
+	vicare/platform/utilities.sls			\
+	\
 	vicare/cond-expand.sls				\
-	vicare/cond-expand/helpers.sls			\
-	vicare/cond-expand/feature-cond.sls		\
 	vicare/cond-expand/OS-id-features.sls		\
+	vicare/cond-expand/feature-cond.sls		\
+	vicare/cond-expand/helpers.sls			\
 	vicare/cond-expand/platform-features.sls	\
 	vicare/cond-expand/registry.sls			\
+	\
+	vicare/arguments/general-c-buffers.sls		\
+	vicare/arguments/validation.sls			\
+	\
+	vicare/assembler/inspection.sls			\
+	vicare/bytevector-compounds.sls			\
+	vicare/checks.sls				\
 	vicare/coroutines.sls				\
 	vicare/custom-ports.sls				\
 	vicare/debugging/compiler.sls			\
@@ -32,13 +37,13 @@ nobase_dist_libvicare_DATA	= \
 	vicare/flonum-parser.sls			\
 	vicare/include.sls				\
 	vicare/infix.sls				\
-	vicare/numerics/constants.sls			\
 	vicare/keywords.sls				\
+	vicare/numerics/constants.sls			\
 	vicare/parser-logic.sls				\
 	vicare/syntactic-extensions.sls			\
-	vicare/platform/utilities.sls			\
 	vicare/weak-hashtables.sls			\
-	vicare/checks.sls
+	\
+	vicare/net/channels.sls
 
 nobase_nodist_libvicare_DATA	= \
 	vicare/platform/configuration.sls	\
