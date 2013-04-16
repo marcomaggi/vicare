@@ -608,7 +608,7 @@
 	    unsafe.)
     (prefix (vicare unsafe-capi)
 	    capi.)
-    (vicare unsafe-unicode)
+    (vicare unsafe unicode)
     (vicare platform constants))
 
 

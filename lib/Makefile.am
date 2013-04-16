@@ -13,7 +13,7 @@ libvicaredir		= $(libdir)/vicare-scheme
 nobase_dist_libvicare_DATA	= \
 	vicare/unsafe-capi.sls				\
 	vicare/unsafe/operations.sls			\
-	vicare/unsafe-unicode.sls			\
+	vicare/unsafe/unicode.sls			\
 	\
 	vicare/arguments/validation.sls			\
 	vicare/arguments/general-c-buffers.sls		\

@@ -34,6 +34,7 @@
   (only (vicare platform utilities))
 
   (only (vicare unsafe operations))
+  (only (vicare unsafe unicode))
 
   (only (vicare numerics constants))
   (only (vicare arguments validation))
@@ -45,7 +46,6 @@
   (only (vicare unsafe-capi))
   (only (vicare include))
   (only (vicare infix))
-  (only (vicare unsafe-unicode))
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))

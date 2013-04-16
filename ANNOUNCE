@@ -85,6 +85,7 @@ Notes for revision 0.3d0
      (vicare words)
      (vicare errno)
      (vicare unsafe-operations)
+     (vicare unsafe-unicode)
 
   have been renamed to:
 
@@ -92,6 +93,7 @@ Notes for revision 0.3d0
      (vicare platform words)
      (vicare platform errno)
      (vicare unsafe operations)
+     (vicare unsafe unicode)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

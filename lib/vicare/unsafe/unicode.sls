@@ -89,7 +89,7 @@
 
 
 #!r6rs
-(library (vicare unsafe-unicode)
+(library (vicare unsafe unicode)
   (export
 
 ;;; UTF-8
