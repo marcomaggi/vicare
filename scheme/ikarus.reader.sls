@@ -75,6 +75,13 @@
 
 ;;;; miscellaneous helpers
 
+;;If set to  true enables loading shared libraries  specified by comment
+;;lists.  This  must be enabled only  when reading a program  or library
+;;source file.
+;;
+(define shared-library-loading-enabled?
+  (make-parameter #f))
+
 ;;Used to make the reader functions aware of the library file name being
 ;;read.
 (define current-library-file
@@ -548,24 +555,29 @@
   ;;
   (define who 'get-datum)
   (%assert-argument-is-source-code-port who port)
-  (let-values (((expr expr/ann locations kont)
-		(parametrise ((custom-named-chars (make-eq-hashtable)))
-		  (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
-    (if (null? locations)
-	expr
-      (begin
-	(for-each (reduce-loc! port)
-	  locations)
-	(kont)
-	(if (loc? expr)
-	    (loc-value expr)
-	  expr)))))
+  (parametrise ((shared-library-loading-enabled? #f))
+    (let-values (((expr expr/ann locations kont)
+		  (parametrise ((custom-named-chars (make-eq-hashtable)))
+		    (read-expr port EMPTY-LOCATIONS-COLLECTION void))))
+      (if (null? locations)
+	  expr
+	(begin
+	  (for-each (reduce-loc! port)
+	    locations)
+	  (kont)
+	  (if (loc? expr)
+	      (loc-value expr)
+	    expr))))))
 
 (define (get-annotated-datum port)
   ;;Defined  by Ikarus.   Like GET-DATUM,  but rather  than  returning a
   ;;datum  return a  hierarchy of  ANNOTATION structures  with  the same
   ;;hierarchy of the datum and embedding the datum itself.
   ;;
+  (parametrise ((shared-library-loading-enabled? #f))
+    ($get-annotated-datum port)))
+
+(define ($get-annotated-datum port)
   (define who 'get-annotated-datum)
   (define (%return-annotated x)
     (if (and (annotation? x)
@@ -598,7 +610,7 @@
 ;;   read-script-source-file
 ;;   read-library-source-file
 ;;
-;;but all of them call GET-ANNOTATED-DATUM.
+;;but all of them call $GET-ANNOTATED-DATUM.
 ;;
 
 (define (read-library-source-file filename)
@@ -606,24 +618,26 @@
   ;;and return the first datum; close the port.
   ;;
   (let ((port (open-input-file filename)))
-    (parameterize ((current-library-file filename))
+    (parameterize ((current-library-file		filename)
+		   (shared-library-loading-enabled?	#t))
       (unwind-protect
-	  (get-annotated-datum port)
+	  ($get-annotated-datum port)
 	(close-input-port port)))))
 
 (define (read-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read
   ;;and return all the datums in a list; close the port.
   ;;
-  (let ((port (open-input-file filename)))
-    (define-inline (%next-datum)
-      (get-annotated-datum port))
-    (unwind-protect
-	(let read-next-datum ((obj (%next-datum)))
-	  (if (eof-object? obj)
-	      '()
-	    (cons obj (read-next-datum (%next-datum)))))
-      (close-input-port port))))
+  (parameterize ((shared-library-loading-enabled? #t))
+    (let ((port (open-input-file filename)))
+      (define-inline (%next-datum)
+	($get-annotated-datum port))
+      (unwind-protect
+	  (let read-next-datum ((obj (%next-datum)))
+	    (if (eof-object? obj)
+		'()
+	      (cons obj (read-next-datum (%next-datum)))))
+	(close-input-port port)))))
 
 (define (read-script-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read
@@ -637,26 +651,27 @@
   ;;Notice that this  will discard valid sharp-bang comments  if the are
   ;;at the very beginning of a file.
   ;;
-  (let* ((port		(open-file-input-port filename))
-	 (sharp-bang?	(let-values (((octet1 octet2)
+  (parameterize ((shared-library-loading-enabled? #t))
+    (let* ((port	(open-file-input-port filename))
+	   (sharp-bang?	(let-values (((octet1 octet2)
 				      ;;If  an error  happens  here PORT
 				      ;;will  be   closed  by  the  port
 				      ;;guardian.
 				      (lookahead-two-u8 port)))
 			  (and (= octet1 CHAR-FIXNUM-SHARP)
 			       (= octet2 CHAR-FIXNUM-BANG))))
-	 (port		(transcoded-port port (native-transcoder))))
-    (define-inline (%next-datum)
-      (get-annotated-datum port))
-    (unwind-protect
-	(begin
-	  (when sharp-bang?
-	    (read-and-discard-up-to-and-including-line-ending port))
-	  (let read-next-datum ((obj (%next-datum)))
-	    (if (eof-object? obj)
-		'()
-	      (cons obj (read-next-datum (%next-datum))))))
-      (close-input-port port))))
+	   (port	(transcoded-port port (native-transcoder))))
+      (define-inline (%next-datum)
+	($get-annotated-datum port))
+      (unwind-protect
+	  (begin
+	    (when sharp-bang?
+	      (read-and-discard-up-to-and-including-line-ending port))
+	    (let read-next-datum ((obj (%next-datum)))
+	      (if (eof-object? obj)
+		  '()
+		(cons obj (read-next-datum (%next-datum))))))
+	(close-input-port port)))))
 
 
 ;;;; helpers for public functions
@@ -3212,7 +3227,11 @@
 	      (let ((libid (cadr ls)))
 		(if (string? libid)
 		    (begin
-		      (register-filename-foreign-library (current-library-file) libid)
+		      (unless (shared-library-loading-enabled?)
+			(%error
+			 "comment list processing is disabled for this reading operation"))
+		      (when (current-library-file)
+			(register-filename-foreign-library (current-library-file) libid))
 		      (autoload-filename-foreign-library libid))
 		  (%error "expected string argument to load-shared-library"))))))
       ((char-names)

@@ -352,7 +352,7 @@ implementation which may change in the future.
 @end quotation
 
 Whenever @value{PRJNAME}'s source code reader, in @code{#!vicare} mode,
-finds a form like:
+while reading a program, script or library finds a form like:
 
 @example
 #!(load-shared-library "vicarecre2")
@@ -360,7 +360,7 @@ finds a form like:
 
 @noindent
 it handles it as a special comment which causes no code to be expanded
-nor compiled.  Rather a foreign shared library whose identifier is
+nor compiled: a foreign shared library whose identifier is
 @code{vicarecre2} is immediately loaded.
 
 If the library file containing such special comment is compiled to a
