@@ -86,6 +86,7 @@ Notes for revision 0.3d0
      (vicare errno)
      (vicare unsafe-operations)
      (vicare unsafe-unicode)
+     (vicare unsafe-capi)
 
   have been renamed to:
 
@@ -94,6 +95,7 @@ Notes for revision 0.3d0
      (vicare platform errno)
      (vicare unsafe operations)
      (vicare unsafe unicode)
+     (vicare unsafe capi)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

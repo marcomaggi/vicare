@@ -42,7 +42,7 @@
 		  vicare-argv0-string)
     (vicare syntactic-extensions)
     (vicare platform constants)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
     (prefix (vicare unsafe operations)
 	    unsafe.))

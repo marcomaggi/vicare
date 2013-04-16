@@ -43,7 +43,7 @@
     (vicare syntactic-extensions)
     (prefix (vicare platform words)
 	    words.)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.))
 
 

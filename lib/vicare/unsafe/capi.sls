@@ -28,7 +28,7 @@
 
 
 #!r6rs
-(library (vicare unsafe-capi)
+(library (vicare unsafe capi)
   (export
 
     ;; foreign functions interface

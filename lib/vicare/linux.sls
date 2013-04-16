@@ -115,7 +115,7 @@
 	    words.)
     (prefix (vicare posix)
 	    px.)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
     (prefix (vicare unsafe operations)
 	    unsafe.))

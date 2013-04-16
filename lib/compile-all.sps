@@ -33,6 +33,7 @@
   (only (vicare platform features))
   (only (vicare platform utilities))
 
+  (only (vicare unsafe capi))
   (only (vicare unsafe operations))
   (only (vicare unsafe unicode))
 
@@ -43,7 +44,6 @@
   (only (vicare cond-expand))
   (only (vicare cond-expand helpers))
 
-  (only (vicare unsafe-capi))
   (only (vicare include))
   (only (vicare infix))
   (only (vicare flonum-parser))

@@ -11,7 +11,7 @@ dist_pkglibexec_SCRIPTS	= compile-all.sps
 libvicaredir		= $(libdir)/vicare-scheme
 
 nobase_dist_libvicare_DATA	= \
-	vicare/unsafe-capi.sls				\
+	vicare/unsafe/capi.sls				\
 	vicare/unsafe/operations.sls			\
 	vicare/unsafe/unicode.sls			\
 	\

@@ -606,7 +606,7 @@
     (vicare syntactic-extensions)
     (prefix (vicare unsafe operations)
 	    unsafe.)
-    (prefix (vicare unsafe-capi)
+    (prefix (vicare unsafe capi)
 	    capi.)
     (vicare unsafe unicode)
     (vicare platform constants))
