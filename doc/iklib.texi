@@ -691,6 +691,7 @@ the character.
 * iklib expander syntax::       Inspecting syntax objects.
 * iklib expander transformers:: Syntax transformers facilities.
 * iklib expander expand::       Expander facilities.
+* iklib expander import specs:: Additional import specifications.
 @end menu
 
 @c page
@@ -886,6 +887,32 @@ Example:
                  #@{x |O3I3z7rSrwZ9/X2O|@}))))))
 @end example
 @end defun
+
+@c page
+@node iklib expander import specs
+@subsection Additional import specifications
+
+
+@deffn {Import Spec} deprefix @meta{import-spec} @meta{prefix}
+Similar to the import specification @code{prefix}, but removes a prefix
+rather than add it.  This clause is always enabled: there is no way to
+disable it to enforce @rnrs{6} compatibility.
+
+@example
+(import (rnrs)
+  (rnrs eval))
+
+(eval '(str.length "ciao")
+      (environment
+       '(prefix
+         (deprefix (only (rnrs)
+                         string-length
+                         string-append)
+                   string-)
+         str.)))
+@result{} 4
+@end example
+@end deffn
 
 @c page
 @node iklib shared

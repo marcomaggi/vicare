@@ -129,6 +129,19 @@ Notes for revision 0.3d0
 
 * Added functions FOR-EACH-IN-ORDER and MAKE-QUEUE to (vicare).
 
+* Added DEPREFIX import specification clause:
+
+     (import (rnrs)
+       (rnrs eval))
+     (eval '(str.length "ciao")
+           (environment
+            '(prefix (deprefix (only (rnrs)
+                                     string-length
+                                     string-append)
+                               string-)
+                     str.)))
+     => 4
+
 * Added  library  (vicare  cond-expand),   see  the  documentation  node
   "cond-expand".
 

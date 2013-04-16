@@ -4027,7 +4027,7 @@
   (define (get-import spec)
     (syntax-match spec ()
       ((x x* ...)
-       (not (memq (syntax->datum x) '(for rename except only prefix library)))
+       (not (memq (syntax->datum x) '(for rename except only prefix deprefix library)))
        (import-library (cons x x*)))
       ((rename isp (old* new*) ...)
        (and (eq? (syntax->datum rename) 'rename)
@@ -4064,6 +4064,33 @@
 				(symbol->string (car x))))
 		(cdr x)))
 	   subst)))
+      ((deprefix isp p)
+       (and (eq? (syntax->datum deprefix) 'deprefix) (idsyn? p))
+       (if #f
+	   ;;FIXME At  present there  is no way  to disable  DEPREFIX to
+	   ;;enforce  strict R6RS  compatibility; in  future it  may be.
+	   ;;(Marco Maggi; Tue Apr 16, 2013)
+	   (assertion-violation 'expander
+	     "deprefix import specification forbidden in R6RS mode")
+	 (let* ((subst       (get-import isp))
+		(prefix      (symbol->string (syntax->datum p)))
+		(prefix.len  (string-length prefix)))
+	   ;;This should never happen.
+	   (when (zero? prefix.len)
+	     (assertion-violation 'deprefix "null deprefix prefix"))
+	   (map
+	       (lambda (x)
+		 (let* ((orig      (symbol->string (car x)))
+			(orig.len  (string-length orig)))
+		   (if (and (< prefix.len orig.len)
+			    (string=? prefix (substring orig 0 prefix.len)))
+		       (cons (string->symbol (substring orig prefix.len orig.len))
+			     (cdr x))
+		     (error 'deprefix
+		       (string-append "binding name cannot be deprefixed of \""
+				      prefix "\"")
+		       orig))))
+	     subst))))
       ((library (spec* ...)) (eq? (syntax->datum library) 'library)
        (import-library spec*))
       ((for isp . rest)

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -105,6 +105,22 @@
 	  (export yellow))
 	(list (green) (yellow)))
     => '(green yellow))
+
+  #t)
+
+
+(parametrise ((check-test-name	'deprefix))
+
+  (check
+      (eval '(str.length "ciao")
+	    (environment
+	     '(prefix
+	       (deprefix (only (rnrs)
+			       string-length
+			       string-append)
+			 string-)
+	       str.)))
+    => 4)
 
   #t)
 
