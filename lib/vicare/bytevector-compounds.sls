@@ -33,11 +33,17 @@
     bytevector-compound
     (rename (true-make-bytevector-compound	make-bytevector-compound))
     bytevector-compound?
+
+    ;; validation clauses
     bytevector-compound.vicare-arguments-validation
     false-or-bytevector-compound.vicare-arguments-validation
+    bytevector-compound/filled.vicare-arguments-validation
+
+    ;; inspection
+    bytevector-compound-empty?		bytevector-compound-filled?
+    bytevector-compound-length		bytevector-compound-total-length
 
     ;; queue operations
-    bytevector-compound-empty?
     bytevector-compound-enqueue!	bytevector-compound-dequeue!
     )
   (import (vicare)
@@ -69,17 +75,26 @@
 		;this compound.
    last-pair
 		;Last pair in the list of referenced by FIRST-PAIR.
+   length
+		;Exact integer.  Represents the current number of octets
+		;in all the bytevectors.
    total-length
 		;Exact  integer.  Represents  the total  length of  this
 		;compound,  taking into  account  bytevectors that  have
 		;already been dequeued.
    ))
 
-(define ($bytevector-compound-empty? bc)
-  (not ($bytevector-compound-first-pair bc)))
+(define ($bytevector-compound-empty? bvcom)
+  (not ($bytevector-compound-first-pair bvcom)))
 
-(define ($bytevector-compound-filled? bc)
-  (and ($bytevector-compound-first-pair bc) #t))
+(define ($bytevector-compound-filled? bvcom)
+  (and ($bytevector-compound-first-pair bvcom) #t))
+
+(define ($bytevector-compound-incr-length! bvcom delta)
+  ($set-bytevector-compound-length! bvcom (+ ($bytevector-compound-length bvcom) delta)))
+
+(define ($bytevector-compound-decr-length! bvcom delta)
+  ($set-bytevector-compound-length! bvcom (- ($bytevector-compound-length bvcom) delta)))
 
 
 ;;;; constructors
@@ -103,65 +118,80 @@
 		(receive (first-pair last-pair total-length)
 		    (recur (cdr bvs) (+ idx ($bytevector-length ($car bvs))))
 		  (values (cons ($car bvs) idx) last-pair total-length)))))
-	(make-bytevector-compound first-pair last-pair total-length)))))
+	(make-bytevector-compound first-pair last-pair
+				  total-length total-length)))))
+
+
+;;;; inspection
+
+(define (bytevector-compound-empty? bvcom)
+  (define who 'bytevector-compound-empty?)
+  (with-arguments-validation (who)
+      ((bytevector-compound	bvcom))
+    ($bytevector-compound-empty? bvcom)))
+
+(define (bytevector-compound-filled? bvcom)
+  (define who 'bytevector-compound-filled?)
+  (with-arguments-validation (who)
+      ((bytevector-compound	bvcom))
+    ($bytevector-compound-filled? bvcom)))
+
+;;; --------------------------------------------------------------------
+
+(define-argument-validation (bytevector-compound/filled who obj)
+  (and (bytevector-compound? obj)
+       ($bytevector-compound-filled? obj))
+  (assertion-violation who
+    "expected non-empty bytevector-compound as argument" obj))
 
 
 ;;;; bytevector queue
 
-(define (bytevector-compound-empty? bc)
-  (define who 'bytevector-compound-empty?)
-  (with-arguments-validation (who)
-      ((bytevector-compound	bc))
-    ($bytevector-compound-empty? bc)))
-
-(define-argument-validation (bytevector-compound/filled who obj)
-  (and (bytevector-compound? obj)
-       ($bytevector-compound-filled? bc))
-  (assertion-violation who
-    "expected non-empty bytevector compound as argument" obj))
-
-;;; --------------------------------------------------------------------
-
-(define (bytevector-compound-enqueue! bc item)
-  ;;Enqueue the bytevector ITEM into BC.  Return unspecified values.
+(define (bytevector-compound-enqueue! bvcom item)
+  ;;Enqueue the bytevector ITEM into BVCOM.  Return unspecified values.
   ;;
   (define who 'bytevector-compound-enqueue!)
   (with-arguments-validation (who)
-      ((bytevector-compound	bc)
+      ((bytevector-compound	bvcom)
        (bytevector		item))
-    (if ($bytevector-compound-filled? bc)
-	(let* ((old-total-length	($bytevector-compound-total-length bc))
+    (if ($bytevector-compound-filled? bvcom)
+	(let* ((old-length		($bytevector-compound-length bvcom))
+	       (new-length		(+ old-length ($bytevector-length item)))
+	       (old-total-length	($bytevector-compound-total-length bvcom))
 	       (new-total-length	(+ old-total-length ($bytevector-length item)))
-	       (old-last-pair		($bytevector-compound-last-pair bc))
+	       (old-last-pair		($bytevector-compound-last-pair bvcom))
 	       (new-last-pair		(cons item old-total-length)))
 	  ($set-cdr! old-last-pair new-last-pair)
-	  ($set-bytevector-compound-last-pair!    bc new-last-pair)
-	  ($set-bytevector-compound-total-length! bc new-total-length))
+	  ($set-bytevector-compound-last-pair!    bvcom new-last-pair)
+	  ($set-bytevector-compound-length!       bvcom new-length)
+	  ($set-bytevector-compound-total-length! bvcom new-total-length))
       (let ((P (cons item 0)))
-	($set-bytevector-compound-first-pair!   bc P)
-	($set-bytevector-compound-last-pair!    bc P)
-	($set-bytevector-compound-total-length! bc ($bytevector-length item))))))
+	($set-bytevector-compound-first-pair!   bvcom P)
+	($set-bytevector-compound-last-pair!    bvcom P)
+	($set-bytevector-compound-length!       bvcom ($bytevector-length item))
+	($set-bytevector-compound-total-length! bvcom ($bytevector-length item))))))
 
-(define (bytevector-compound-dequeue! bc)
-  ;;Dequeue the next  bytevector from BC and return it;  return false if
-  ;;BC is empty.
+(define (bytevector-compound-dequeue! bvcom)
+  ;;Dequeue the next  bytevector from BVCOM and return  it; return false
+  ;;if BVCOM is empty.
   ;;
   (define who 'bytevector-compound-dequeue!)
   (with-arguments-validation (who)
-      ((bytevector-compound	bc))
-    (cond (($bytevector-compound-empty? bc)
+      ((bytevector-compound	bvcom))
+    (cond (($bytevector-compound-empty? bvcom)
 	   #f)
 	  (else
-	   (let ((head ($bytevector-compound-first-pair bc))
-		 (tail ($bytevector-compound-last-pair  bc)))
+	   (let ((head ($bytevector-compound-first-pair bvcom))
+		 (tail ($bytevector-compound-last-pair  bvcom)))
 	     (begin0
 		 ($car head)
+	       ($bytevector-compound-incr-length! bvcom ($bytevector-length ($car head)))
 	       (let ((new-head ($cdr head)))
 		 (if (null? new-head)
 		     (begin
-		       ($set-bytevector-compound-first-pair! bc #f)
-		       ($set-bytevector-compound-last-pair!  bc #f))
-		   ($set-bytevector-compound-first-pair! bc new-head)))))))))
+		       ($set-bytevector-compound-first-pair! bvcom #f)
+		       ($set-bytevector-compound-last-pair!  bvcom #f))
+		   ($set-bytevector-compound-first-pair! bvcom new-head)))))))))
 
 
 ;;;; done

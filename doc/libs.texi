@@ -25,6 +25,7 @@
 * debugging::                   Debugging facilities.
 * coroutines::                  Running coroutines.
 * custom-ports::                Custom ports.
+* bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
 @end menu
 
@@ -5047,6 +5048,124 @@ output port is read from the input port.
 Return two values being textual ports: input/output the first,
 input/output the second.  Such ports are connected together so that data
 written to one port is read from the other port.
+@end defun
+
+@c page
+@node bytevector compounds
+@section Bytevector compounds
+
+
+@cindex Library @library{vicare bytevector-compounds}
+@cindex @library{vicare bytevector-compounds}, library
+
+
+A @dfn{bytevector compound} is a sequence of octets split into a
+sequence of bytevectors.  Bytevector compounds have a special @api{} to
+handle the sequence of octets as a First--in First--out queue.
+Bytevector compounds are defined by the library @library{vicare
+bytevector-compounds}.
+
+@menu
+* bytevector compounds types::    Data type definitions.
+* bytevector compounds inspect::  Inspecting bytevector compounds.
+* bytevector compounds queue::    Queue programming interface.
+@end menu
+
+@c page
+@node bytevector compounds types
+@subsection Data type definitions
+
+
+The following bindings are exported by the library @library{vicare
+bytevector-compounds}.
+
+
+@deftp {@rnrs{6} Record Type} bytevector-compound
+@cindex Argument @var{bvcom}
+@cindex Function argument @var{bvcom}
+@cindex @var{bvcom}, function argument
+Opaque data structure representing a bytevector compound.  When
+instances of this type are used as arguments to functions: this
+documentation identifies them as @var{bvcom}.
+@end deftp
+
+
+@defun bytevector-compound? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@code{bytevector-compound}, else return @false{}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Validation clauses
+
+The following bindings are to be used with the facilities of the library
+@library{vicare arguments validation}, @ref{args, Optional function
+arguments validation}.
+
+
+@deffn {Validation Clause} bytevector-compound @var{obj}
+@deffnx {Validation Clause} false-or-bytevector-compound @var{obj}
+Succeed if @var{obj} is an instance of @code{bytevector-compound}.  The
+second clause accepts also @false{}.
+@end deffn
+
+
+@deffn {Validation Clause} bytevector-compound/filled @var{obj}
+Succeed if @var{obj} is an instance of @code{bytevector-compound} and it
+contains at least one octet.
+@end deffn
+
+@c page
+@node bytevector compounds inspect
+@subsection Inspecting bytevector compounds
+
+
+The following bindings are exported by the library @library{vicare
+bytevector-compounds}.
+
+
+@defun bytevector-compound-empty? @var{bvcom}
+Return @true{} if @var{bvcom} has no octets in it, else return @false{}.
+@end defun
+
+
+@defun bytevector-compound-filled? @var{bvcom}
+Return @true{} if @var{bvcom} has at least one octet in it, else return
+@false{}.
+@end defun
+
+
+@defun bytevector-compound-length @var{bvcom}
+Return a non--negative exact integer representing the number of octets
+currently in @var{bvcom}.
+@end defun
+
+
+@defun bytevector-compound-total-length @var{bvcom}
+Return a non--negative exact integer representing the number of octets
+in @var{bvcom}, including the ones in the bytevectors that have been
+already dequeued.
+@end defun
+
+@c page
+@node bytevector compounds queue
+@subsection Queue programming interface
+
+
+The following bindings are exported by the library @library{vicare
+bytevector-compounds}.
+
+
+@defun bytevector-compound-enqueue! @var{bvcom} @var{item}
+Enqueue the bytevector @var{item} into @var{bvcom}.  Return unspecified
+values.
+@end defun
+
+
+@defun bytevector-compound-dequeue! @var{bvcom}
+Dequeue the next bytevector from @var{bvcom} and return it; return
+@false{} if @var{bvcom} is empty.
 @end defun
 
 @c page

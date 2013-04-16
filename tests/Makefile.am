@@ -152,6 +152,7 @@ TESTS			=	\
 	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
+	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
 	test-vicare-cond-expand.sps			\
@@ -452,6 +453,7 @@ EXTRA_DIST = \
 	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
+	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
 	test-vicare-cond-expand.sps			\
