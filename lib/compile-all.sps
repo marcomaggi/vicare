@@ -28,7 +28,7 @@
 (import
   (only (vicare platform configuration))
   (only (vicare platform words))
-  (only (vicare errno))
+  (only (vicare platform errno))
   (only (vicare platform constants))
   (only (vicare platform features))
   (only (vicare platform utilities))

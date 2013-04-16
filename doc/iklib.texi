@@ -6397,15 +6397,16 @@ variable @code{errno} to some predefined integer constant,
 @glibcref{Checking for Errors, errno}.  The Scheme code accessing
 @code{errno} values should be agnostic with respect to the actual error
 codes; for this to happen we should use the following facilities along
-with bindings from @library{vicare errno}, @ref{errno} for details.
+with bindings from @library{vicare platform errno}, @ref{errno} for
+details.
 
 Values for the C language variable @code{errno} are encoded as negated
 fixnum values: if @code{EPERM} is defined to @code{1} at the C language
 level, @value{PRJNAME} defines it as the fixnum @code{-1}; at present
 all the known error codes fit into fixnums range.  One syntax identifier
 binding for each known @code{errno} value is exported by the library
-@library{vicare errno} and reexported by the library @library{vicare
-platform constants}.
+@library{vicare platform errno} and reexported by the library
+@library{vicare platform constants}.
 
 If some error codes are not defined on a platform: the corresponding
 binding evaluates to @true{}.  Notice that if no error occurred

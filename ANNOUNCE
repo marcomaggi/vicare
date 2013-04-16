@@ -83,11 +83,13 @@ Notes for revision 0.3d0
 
      (vicare installation-configuration)
      (vicare words)
+     (vicare errno)
 
   have been renamed to:
 
      (vicare platform configuration)
      (vicare platform words)
+     (vicare platform errno)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

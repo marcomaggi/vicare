@@ -1435,15 +1435,16 @@ additionally recognises the features @func{write} and @func{display}:
 @section More features for @code{errno}
 
 
-@cindex Library @library{vicare errno}
-@cindex @library{vicare errno}, library
+@cindex Library @library{vicare platform errno}
+@cindex @library{vicare platform errno}, library
 
 
 One syntax identifier binding for each known @code{errno} value is
-exported by the library @library{vicare errno} and reexported by the
-library @library{vicare platform constants}; @ref{iklib errno} for
-details on @value{PRJNAME} internal encoding of @code{errno} codes.  The
-following bindings are exported by the library @library{vicare errno}.
+exported by the library @library{vicare platform errno} and reexported
+by the library @library{vicare platform constants}; @ref{iklib errno}
+for details on @value{PRJNAME} internal encoding of @code{errno} codes.
+The following bindings are exported by the library @library{vicare
+platform errno}.
 
 
 @deffn Syntax errno-code @meta{symbol}
@@ -1462,7 +1463,7 @@ the auxiliary keyword exported by @library{rnrs}.  Example:
 @example
 #!r6rs
 (import (rnrs)
-  (vicare errno))
+  (vicare platform errno))
 
 (define identifier "some-port")
 

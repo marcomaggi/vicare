@@ -1530,8 +1530,8 @@ AC_CONFIG_FILES(Makefile
                 src/Makefile scheme/Makefile doc/Makefile lib/Makefile
                 tests/Makefile demos/Makefile
                 lib/vicare/platform/configuration.sls
-                lib/vicare/errno.sls
                 lib/vicare/platform/constants.sls
+                lib/vicare/platform/errno.sls
                 lib/vicare/platform/words.sls
                 meta/slackware/doinst.sh)
 AC_OUTPUT

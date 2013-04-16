@@ -1,10 +1,10 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST = \
-	vicare/errno.sls.in			\
+	vicare/platform/configuration.sls.in	\
 	vicare/platform/constants.sls.in	\
-	vicare/platform/words.sls.in		\
-	vicare/platform/configuration.sls.in
+	vicare/platform/errno.sls.in		\
+	vicare/platform/words.sls.in
 
 dist_pkglibexec_SCRIPTS	= compile-all.sps
 
@@ -40,9 +40,9 @@ nobase_dist_libvicare_DATA	= \
 	vicare/checks.sls
 
 nobase_nodist_libvicare_DATA	= \
-	vicare/errno.sls			\
 	vicare/platform/configuration.sls	\
 	vicare/platform/constants.sls		\
+	vicare/platform/errno.sls		\
 	vicare/platform/features.sls		\
 	vicare/platform/words.sls
 
