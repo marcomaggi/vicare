@@ -36,6 +36,10 @@
 
     ;; queue operations
     $bytevector-compound-enqueue!	$bytevector-compound-dequeue!
+
+    ;; accessors and mutators
+    $bytevector-compound-u8-set!	$bytevector-compound-u8-ref
+    $bytevector-compound-s8-set!	$bytevector-compound-s8-ref
     )
   (import (vicare bytevector-compounds core)))
 

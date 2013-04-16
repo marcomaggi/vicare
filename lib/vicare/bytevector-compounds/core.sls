@@ -31,7 +31,7 @@
 
     ;; data type
     bytevector-compound
-    (rename (true-make-bytevector-compound	make-bytevector-compound))
+    make-bytevector-compound
     bytevector-compound?
 
     ;; validation clauses
@@ -47,6 +47,10 @@
     ;; queue operations
     bytevector-compound-enqueue!	bytevector-compound-dequeue!
 
+    ;; accessors and mutators
+    bytevector-compound-u8-set!		bytevector-compound-u8-ref
+    bytevector-compound-s8-set!		bytevector-compound-s8-ref
+
 ;;; --------------------------------------------------------------------
 
     ;; inspection
@@ -56,12 +60,19 @@
 
     ;; queue operations
     $bytevector-compound-enqueue!	$bytevector-compound-dequeue!
+
+    ;; accessors and mutators
+    $bytevector-compound-u8-set!	$bytevector-compound-u8-ref
+    $bytevector-compound-s8-set!	$bytevector-compound-s8-ref
+
     )
   (import (vicare)
     (vicare syntactic-extensions)
     (vicare arguments validation)
     (prefix (vicare unsafe operations)
-	    $))
+	    $)
+    (only (ikarus system $numerics)
+	  $add-number-fixnum))
 
 
 ;;;; helpers
@@ -74,8 +85,9 @@
 
 ;;;; type definitions
 
-(define-struct-extended bytevector-compound
-  (first-pair
+(define-record-type-extended bytevector-compound
+  (nongenerative vicare:bytevector-compounds:bytevector-compound)
+  (fields (mutable first-pair)
 		;List  representing the  queue  of  bytevectors in  this
 		;compound; false if the compound is empty.
 		;
@@ -84,15 +96,40 @@
 		;exact integer  is the index  of the first octet  in the
 		;bytevector the total sequence  of octets represented by
 		;this compound.
-   last-pair
+	  (mutable last-pair)
 		;Last pair in the list of referenced by FIRST-PAIR.
-   length
+	  (mutable length)
 		;Exact integer.  Represents the current number of octets
 		;in all the bytevectors.
-   total-length
+	  (mutable total-length)
 		;Exact  integer.  Represents  the total  length of  this
 		;compound,  taking into  account  bytevectors that  have
 		;already been dequeued.
+	  )
+  (protocol
+   (lambda (maker)
+     (lambda bvs
+       (define who 'make-bytevector-compound)
+       (with-arguments-validation (who)
+	   ((list-of-bytevectors	bvs))
+	 (let ((bvs (filter (lambda (bv)
+			      (not ($bytevector-empty? bv)))
+		      bvs)))
+	   (receive (first-pair last-pair total-length)
+	       (if (null? bvs)
+		   (values #f #f 0)
+		 (let recur ((bvs bvs)
+			     (idx 0))
+		   (if (null? ($cdr bvs))
+		       (let* ((last-pair	(list (cons ($car bvs) idx)))
+			      (total-length	(+ idx ($bytevector-length ($car bvs)))))
+			 (values last-pair last-pair total-length))
+		     (receive (first-pair last-pair total-length)
+			 (recur (cdr bvs) (+ idx ($bytevector-length ($car bvs))))
+		       (values (cons (cons ($car bvs) idx) first-pair)
+			       last-pair total-length)))))
+	     (maker first-pair last-pair
+		    total-length total-length))))))
    ))
 
 (define ($bytevector-compound-empty? bvcom)
@@ -102,35 +139,10 @@
   (and ($bytevector-compound-first-pair bvcom) #t))
 
 (define ($bytevector-compound-incr-length! bvcom delta)
-  ($set-bytevector-compound-length! bvcom (+ ($bytevector-compound-length bvcom) delta)))
+  ($bytevector-compound-length-set! bvcom (+ ($bytevector-compound-length bvcom) delta)))
 
 (define ($bytevector-compound-decr-length! bvcom delta)
-  ($set-bytevector-compound-length! bvcom (- ($bytevector-compound-length bvcom) delta)))
-
-
-;;;; constructors
-
-(define (true-make-bytevector-compound . bvs)
-  (define who 'make-bytevector-compound)
-  (with-arguments-validation (who)
-      ((list-of-bytevectors	bvs))
-    (let ((bvs (filter (lambda (bv)
-			 (not ($bytevector-empty? bv)))
-		 bvs)))
-      (receive (first-pair last-pair total-length)
-	  (if (null? bvs)
-	      (values #f #f 0)
-	    (let recur ((bvs bvs)
-			(idx 0))
-	      (if (null? ($cdr bvs))
-		  (let* ((last-pair	(cons ($car bvs) idx))
-			 (total-length	(+ idx ($bytevector-length ($car bvs)))))
-		    (values last-pair last-pair total-length))
-		(receive (first-pair last-pair total-length)
-		    (recur (cdr bvs) (+ idx ($bytevector-length ($car bvs))))
-		  (values (cons ($car bvs) idx) last-pair total-length)))))
-	(make-bytevector-compound first-pair last-pair
-				  total-length total-length)))))
+  ($bytevector-compound-length-set! bvcom (- ($bytevector-compound-length bvcom) delta)))
 
 
 ;;;; inspection
@@ -192,14 +204,14 @@
 	     (old-last-pair	($bytevector-compound-last-pair bvcom))
 	     (new-last-pair	(list (cons item old-total-length))))
 	($set-cdr! old-last-pair new-last-pair)
-	($set-bytevector-compound-last-pair!    bvcom new-last-pair)
-	($set-bytevector-compound-length!       bvcom new-length)
-	($set-bytevector-compound-total-length! bvcom new-total-length))
+	($bytevector-compound-last-pair-set!    bvcom new-last-pair)
+	($bytevector-compound-length-set!       bvcom new-length)
+	($bytevector-compound-total-length-set! bvcom new-total-length))
     (let ((Q (list (cons item 0))))
-      ($set-bytevector-compound-first-pair!   bvcom Q)
-      ($set-bytevector-compound-last-pair!    bvcom Q)
-      ($set-bytevector-compound-length!       bvcom ($bytevector-length item))
-      ($set-bytevector-compound-total-length! bvcom ($bytevector-length item)))))
+      ($bytevector-compound-first-pair-set!   bvcom Q)
+      ($bytevector-compound-last-pair-set!    bvcom Q)
+      ($bytevector-compound-length-set!       bvcom ($bytevector-length item))
+      ($bytevector-compound-total-length-set! bvcom ($bytevector-length item)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -224,9 +236,101 @@
 	     (let ((new-head ($cdr head)))
 	       (if (null? new-head)
 		   (begin
-		     ($set-bytevector-compound-first-pair! bvcom #f)
-		     ($set-bytevector-compound-last-pair!  bvcom #f))
-		 ($set-bytevector-compound-first-pair! bvcom new-head))))))))
+		     ($bytevector-compound-first-pair-set! bvcom #f)
+		     ($bytevector-compound-last-pair-set!  bvcom #f))
+		 ($bytevector-compound-first-pair-set! bvcom new-head))))))))
+
+
+;;;; accessors and mutators, u8
+
+(define (bytevector-compound-u8-set! bvcom idx val)
+  (define who 'bytevector-compound-u8-set!)
+  (with-arguments-validation (who)
+      ((bytevector-compound		bvcom)
+       (non-negative-exact-integer	idx)
+       (word-u8				val))
+    ($bytevector-compound-u8-set! bvcom idx val)))
+
+(define ($bytevector-compound-u8-set! bvcom idx val)
+  (define who 'bytevector-compound-u8-set!)
+  (if (>= idx ($bytevector-compound-total-length bvcom))
+      (assertion-violation who
+	(string-append "index out of range for bytevector-compound of length "
+		       (number->string ($bytevector-compound-total-length bvcom)))
+	idx)
+    (let loop ((pairs ($bytevector-compound-first-pair bvcom)))
+      (if (< idx (+ ($cdar pairs)
+		    ($bytevector-length ($caar pairs))))
+	  ($bytevector-u8-set! ($caar pairs) (- idx ($cdar pairs)) val)
+	(loop (cdr pairs))))))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector-compound-u8-ref bvcom idx)
+  (define who 'bytevector-compound-u8-ref)
+  (with-arguments-validation (who)
+      ((bytevector-compound		bvcom)
+       (non-negative-exact-integer	idx))
+    ($bytevector-compound-u8-ref bvcom idx)))
+
+(define ($bytevector-compound-u8-ref bvcom idx)
+  (define who 'bytevector-compound-u8-ref)
+  (if (>= idx ($bytevector-compound-total-length bvcom))
+      (assertion-violation who
+	(string-append "index out of range for bytevector-compound of length "
+		       (number->string ($bytevector-compound-total-length bvcom)))
+	idx)
+    (let loop ((pairs ($bytevector-compound-first-pair bvcom)))
+      (if (< idx ($add-number-fixnum ($cdar pairs)
+				     ($bytevector-length ($caar pairs))))
+	  ($bytevector-u8-ref ($caar pairs) (- idx ($cdar pairs)))
+	(loop ($cdr pairs))))))
+
+
+;;;; accessors and mutators, s8
+
+(define (bytevector-compound-s8-set! bvcom idx val)
+  (define who 'bytevector-compound-s8-set!)
+  (with-arguments-validation (who)
+      ((bytevector-compound		bvcom)
+       (non-negative-exact-integer	idx)
+       (word-s8				val))
+    ($bytevector-compound-s8-set! bvcom idx val)))
+
+(define ($bytevector-compound-s8-set! bvcom idx val)
+  (define who 'bytevector-compound-s8-set!)
+  (if (>= idx ($bytevector-compound-total-length bvcom))
+      (assertion-violation who
+	(string-append "index out of range for bytevector-compound of length "
+		       (number->string ($bytevector-compound-total-length bvcom)))
+	idx)
+    (let loop ((pairs ($bytevector-compound-first-pair bvcom)))
+      (if (< idx (+ ($cdar pairs)
+		    ($bytevector-length ($caar pairs))))
+	  (bytevector-s8-set! ($caar pairs) (- idx ($cdar pairs)) val)
+	(loop (cdr pairs))))))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector-compound-s8-ref bvcom idx)
+  (define who 'bytevector-compound-s8-ref)
+  (with-arguments-validation (who)
+      ((bytevector-compound		bvcom)
+       (non-negative-exact-integer	idx))
+    ($bytevector-compound-s8-ref bvcom idx)))
+
+(define ($bytevector-compound-s8-ref bvcom idx)
+  (define who 'bytevector-compound-s8-ref)
+  (if (>= idx ($bytevector-compound-total-length bvcom))
+      (assertion-violation who
+	(string-append "index out of range for bytevector-compound of length "
+		       (number->string ($bytevector-compound-total-length bvcom)))
+	idx)
+    (let loop ((pairs ($bytevector-compound-first-pair bvcom)))
+      (if (< idx (+ ($cdar pairs)
+		    ($bytevector-length ($caar pairs))))
+	  ($bytevector-s8-ref ($caar pairs) (- idx ($cdar pairs)))
+	(loop (cdr pairs))))))
 
 
 ;;;; done

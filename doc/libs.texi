@@ -5069,6 +5069,7 @@ bytevector-compounds}.
 * bytevector compounds types::    Data type definitions.
 * bytevector compounds inspect::  Inspecting bytevector compounds.
 * bytevector compounds queue::    Queue programming interface.
+* bytevector compounds access::   Accessors and mutators.
 @end menu
 
 @c page
@@ -5084,9 +5085,9 @@ bytevector-compounds}.
 @cindex Argument @var{bvcom}
 @cindex Function argument @var{bvcom}
 @cindex @var{bvcom}, function argument
-Opaque data structure representing a bytevector compound.  When
-instances of this type are used as arguments to functions: this
-documentation identifies them as @var{bvcom}.
+Record type representing a bytevector compound.  When instances of this
+type are used as arguments to functions: this documentation identifies
+them as @var{bvcom}.
 @end deftp
 
 
@@ -5173,6 +5174,29 @@ values.
 Dequeue the next bytevector from @var{bvcom} and return it; return
 @false{} if @var{bvcom} is empty.
 @end defun
+
+@c page
+@node bytevector compounds access
+@subsection Accessors and mutators
+
+
+The following bindings are exported by the library @library{vicare
+bytevector-compounds}.
+
+
+@defun bytevector-compound-u8-set! @var{bvcom} @var{idx} @var{octet}
+@defunx bytevector-compound-u8-ref @var{bvcom} @var{idx}
+Accessor and mutator for non-negative exact integers in the range
+@math{[0, 255]}.
+@end defun
+
+
+@defun bytevector-compound-s8-set! @var{bvcom} @var{idx} @var{byte}
+@defunx bytevector-compound-s8-ref @var{bvcom} @var{idx}
+Accessor and mutator for non-negative exact integers in the range
+@math{[-128, 127]}.
+@end defun
+
 
 @c page
 @node net channels

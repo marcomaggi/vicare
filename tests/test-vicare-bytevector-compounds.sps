@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare bytevector-compounds)
   (vicare checks))
@@ -58,7 +58,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'base))
+(parametrise ((check-test-name	'queue))
 
   (define (doit bvcom)
     (list (bytevector-compound-length bvcom)
@@ -114,6 +114,81 @@
 	  (list rv0 rv1 rv2 rv3 (doit bvcom))))
     => '(#vu8(1 2 3) #vu8(4 5 6) #vu8(7 8) #f (0 8 #t #f)))
 
+  #t)
+
+
+(parametrise ((check-test-name	'access-u8))
+
+  (check
+      (with-result
+       (let ((bvcom (make-bytevector-compound '#vu8(0 1 2 3) '#vu8(4) '#vu8(5 6))))
+	 (add-result (bytevector-compound-u8-ref bvcom 0))
+	 (add-result (bytevector-compound-u8-ref bvcom 1))
+	 (add-result (bytevector-compound-u8-ref bvcom 2))
+	 (add-result (bytevector-compound-u8-ref bvcom 3))
+	 (add-result (bytevector-compound-u8-ref bvcom 4))
+	 (add-result (bytevector-compound-u8-ref bvcom 5))
+	 (add-result (bytevector-compound-u8-ref bvcom 6))
+	 #t))
+    => '(#t (0 1 2 3 4 5 6)))
+
+  (check
+      (with-result
+       (let ((bvcom (make-bytevector-compound '#vu8(0 1 2 3) '#vu8(4) '#vu8(5 6))))
+	 (bytevector-compound-u8-set! bvcom 0 10)
+	 (bytevector-compound-u8-set! bvcom 1 20)
+	 (bytevector-compound-u8-set! bvcom 2 30)
+	 (bytevector-compound-u8-set! bvcom 3 40)
+	 (bytevector-compound-u8-set! bvcom 4 50)
+	 (bytevector-compound-u8-set! bvcom 5 60)
+	 (bytevector-compound-u8-set! bvcom 6 70)
+	 (add-result (bytevector-compound-u8-ref bvcom 0))
+	 (add-result (bytevector-compound-u8-ref bvcom 1))
+	 (add-result (bytevector-compound-u8-ref bvcom 2))
+	 (add-result (bytevector-compound-u8-ref bvcom 3))
+	 (add-result (bytevector-compound-u8-ref bvcom 4))
+	 (add-result (bytevector-compound-u8-ref bvcom 5))
+	 (add-result (bytevector-compound-u8-ref bvcom 6))
+	 #t))
+    => '(#t (10 20 30 40 50 60 70)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'access-s8))
+
+  (check
+      (with-result
+       (let ((bvcom (make-bytevector-compound '#vs8(0 1 -2 -3) '#vs8(4) '#vs8(5 -6))))
+	 (add-result (bytevector-compound-s8-ref bvcom 0))
+	 (add-result (bytevector-compound-s8-ref bvcom 1))
+	 (add-result (bytevector-compound-s8-ref bvcom 2))
+	 (add-result (bytevector-compound-s8-ref bvcom 3))
+	 (add-result (bytevector-compound-s8-ref bvcom 4))
+	 (add-result (bytevector-compound-s8-ref bvcom 5))
+	 (add-result (bytevector-compound-s8-ref bvcom 6))
+	 #t))
+    => '(#t (0 1 -2 -3 4 5 -6)))
+
+  (check
+      (with-result
+       (let ((bvcom (make-bytevector-compound '#vs8(0 1 -2 -3) '#vs8(4) '#vs8(5 -6))))
+	 (bytevector-compound-s8-set! bvcom 0 -10)
+	 (bytevector-compound-s8-set! bvcom 1 -20)
+	 (bytevector-compound-s8-set! bvcom 2 30)
+	 (bytevector-compound-s8-set! bvcom 3 40)
+	 (bytevector-compound-s8-set! bvcom 4 -50)
+	 (bytevector-compound-s8-set! bvcom 5 60)
+	 (bytevector-compound-s8-set! bvcom 6 -70)
+	 (add-result (bytevector-compound-s8-ref bvcom 0))
+	 (add-result (bytevector-compound-s8-ref bvcom 1))
+	 (add-result (bytevector-compound-s8-ref bvcom 2))
+	 (add-result (bytevector-compound-s8-ref bvcom 3))
+	 (add-result (bytevector-compound-s8-ref bvcom 4))
+	 (add-result (bytevector-compound-s8-ref bvcom 5))
+	 (add-result (bytevector-compound-s8-ref bvcom 6))
+	 #t))
+    => '(#t (-10 -20 30 40 -50 60 -70)))
 
   #t)
 
