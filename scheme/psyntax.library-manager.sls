@@ -107,7 +107,14 @@
    guard-code
    guard-req*
    visible?
-		;A boolean determining if the library is visible.
+		;A boolean determining if  the library is visible.  This
+		;attribute  is  used  by INSTALLED-LIBRARIES  to  select
+		;libraries to report as installed.
+		;
+		;A library should be marked as visible if it is meant to
+		;be  imported by  client  code in  "normal" use;  unsafe
+		;libraries  like (ikarus  system  ---)  should *not*  be
+		;visible.
    source-file-name
 		;False or a string representing the pathname of the file
 		;from which the source code of the library was read.
@@ -119,11 +126,12 @@
       (display thing port))
     (define-inline (%write thing)
       (write thing port))
-    (%display "#<library")
+    (%display "#<library ")
     (%display (if (null? ($library-version S))
 		  ($library-name S)
 		(append ($library-name S)
 			(list ($library-version S)))))
+    (%display " filename=")	(%write ($library-source-file-name S))
     (%display ">")))
 
 (define-argument-validation (library who obj)
