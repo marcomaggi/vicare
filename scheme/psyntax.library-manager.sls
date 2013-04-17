@@ -155,101 +155,112 @@
 	  ((list-of-strings	obj))
 	obj))))
 
-(define (library-name->file-name ls)
-  ;;Convert a library name  into a string representing the corresponding
-  ;;relative file  pathname, without  extension but including  a leading
-  ;;#\/ character.  Examples:
-  ;;
-  ;;	(library-name->file-name '(alpha beta gamma))
-  ;;	=> "/alpha/beta/gamma"
-  ;;
-  ;;	(library-name->file-name '(alpha beta main))
-  ;;	=> "/alpha/beta/main_"
-  ;;
-  ;;notice how the component "main", when appearing last, is "quoted" by
-  ;;appending an underscore.
-  ;;
-  ;;For this function, a "library name" is a list of symbols without the
-  ;;version specification.
-  ;;
-  (let-values (((port extract) (open-string-output-port)))
-    (define (display-hex n)
-      (if (<= 0 n 9)
-	  (display n port)
-	(write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
-    (define (main*? component-name)
-      (and (>= (string-length component-name) 4)
-	   (string=? (substring component-name 0 4) "main")
-	   (for-all (lambda (ch)
-		      (char=? ch #\_))
-	     (string->list (substring component-name 4 (string-length component-name))))))
-    (let next-component ((component		(car ls))
-			 (ls			(cdr ls))
-			 (first-component?	#t))
-      (write-char #\/ port)
-      (let ((component-name (symbol->string component)))
-	(for-each (lambda (n)
-		    (let ((c (integer->char n)))
-		      (if (or (char<=? #\a c #\z)
-			      (char<=? #\A c #\Z)
-			      (char<=? #\0 c #\9)
-			      (memv c '(#\. #\- #\+ #\_)))
-			  (write-char c port)
-			(let-values (((D M) (div-and-mod n 16)))
-			  (write-char #\% port)
-			  (display-hex D)
-			  (display-hex M)))))
-	  (bytevector->u8-list (string->utf8 component-name)))
-	(if (null? ls)
-	    (when (and (not first-component?)
-		       (main*? component-name))
-	      (write-char #\_ port))
-	  (next-component (car ls) (cdr ls) #f))))
-    (extract)))
+(module (library-file-locator)
+  ;;The library file locator is a  function that converts a library name
+  ;;specification into the corresponding file pathname.
 
-(define (default-library-file-locator libname)
-  ;;Default  value  for  the LIBRARY-FILE-LOCATOR  parameter.   Given  a
-  ;;library name,  scan the  library search  path for  the corresponding
-  ;;file;  return a  string representing  the file  pathname having  the
-  ;;directory  part  equal   to  one  of  the   directory  pathnames  in
-  ;;LIBRARY-PATH.
-  ;;
-  ;;For this function, a "library name" is a list of symbols without the
-  ;;version specification.
-  ;;
-  ;;If a  matching file  is not  found call a  function from  the compat
-  ;;library: FILE-LOCATOR-RESOLUTION-ERROR .
-  ;;
-  (let ((str (library-name->file-name libname)))
-    (let loop ((search-path	(library-path))
-	       (file-extensions	(library-extensions))
-	       (failed-list	'()))
-      (cond ((null? search-path)
-	     (file-locator-resolution-error
-	      libname (reverse failed-list)
-	      (let ((ls (%external-pending-libraries)))
-		(if (null? ls)
-		    (error 'library-manager "BUG")
-		  (cdr ls)))))
+  (define (%default-library-file-locator libname)
+    ;;Default  value for  the LIBRARY-FILE-LOCATOR  parameter.  Given  a
+    ;;library name, scan  the library search path  for the corresponding
+    ;;file; return  a string representing  the file pathname  having the
+    ;;directory  part  equal  to  one  of  the  directory  pathnames  in
+    ;;LIBRARY-PATH.
+    ;;
+    ;;For this function,  a "library name" is a list  of symbols without
+    ;;the version specification.
+    ;;
+    ;;If a  matching file is not  found call a function  from the compat
+    ;;library: FILE-LOCATOR-RESOLUTION-ERROR.
+    ;;
+    (let loop ((rootname-str     (%library-identifiers->file-name libname))
+	       (directories      (library-path))
+	       (file-extensions  (library-extensions))
+	       (failed-list      '()))
+      (cond ((null? directories)
+	     ;;No suitable library was found.
+	     (file-locator-resolution-error libname (reverse failed-list)
+					    (let ((ls (%external-pending-libraries)))
+					      (if (null? ls)
+						  (error 'library-manager "BUG")
+						(cdr ls)))))
 	    ((null? file-extensions)
-	     (loop (cdr search-path) (library-extensions) failed-list))
+	     ;;No more extensions: try the  next directory in the search
+	     ;;path.
+	     (loop rootname-str (cdr directories) (library-extensions) failed-list))
 	    (else
-	     (let ((name (string-append (car search-path) str (car file-extensions))))
+	     ;;Check the  file existence  in the current  directory with
+	     ;;the current  file extension;  if not  found try  the next
+	     ;;file extension.
+	     (let ((name (string-append (car directories) rootname-str (car file-extensions))))
 	       (if (file-exists? name)
 		   name
-		 (loop search-path (cdr file-extensions) (cons name failed-list)))))))))
+		 (loop rootname-str directories
+		       (cdr file-extensions) (cons name failed-list))))))))
 
-(define library-file-locator
-  ;;Hold a  function used to  convert a library name  specification into
-  ;;the corresponding file pathname.
-  ;;
-  (make-parameter
-      default-library-file-locator
-    (lambda (obj)
-      (define who 'library-file-locator)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
+  (define (%library-identifiers->file-name library-name.ids)
+    ;;Convert the non-empty list of identifiers from a library name into
+    ;;a string  representing the  corresponding relative  file pathname,
+    ;;without  extension   but  including   a  leading   #\/  character.
+    ;;Examples:
+    ;;
+    ;;	(%library-identifiers->file-name '(alpha beta gamma))
+    ;;	=> "/alpha/beta/gamma"
+    ;;
+    ;;	(%library-identifiers->file-name '(alpha beta main))
+    ;;	=> "/alpha/beta/main_"
+    ;;
+    ;;notice how the component "main",  when appearing last, is "quoted"
+    ;;by appending an underscore.
+    ;;
+    (assert (not (null? library-name.ids)))
+    (let-values (((port extract) (open-string-output-port)))
+      (define (display-hex n)
+	(if (<= 0 n 9)
+	    (display n port)
+	  (write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
+      (define (main*? component-name)
+	(and (>= (string-length component-name) 4)
+	     (string=? (substring component-name 0 4) "main")
+	     (for-all (lambda (ch)
+			(char=? ch #\_))
+	       (string->list (substring component-name 4 (string-length component-name))))))
+      (let next-component ((component		(car library-name.ids))
+			   (ls			(cdr library-name.ids))
+			   (first-component?	#t))
+	(write-char #\/ port)
+	(let ((component-name (symbol->string component)))
+	  (for-each (lambda (n)
+		      (let ((c (integer->char n)))
+			(if (or (char<=? #\a c #\z)
+				(char<=? #\A c #\Z)
+				(char<=? #\0 c #\9)
+				(memv c '(#\. #\- #\+ #\_)))
+			    (write-char c port)
+			  (let-values (((D M) (div-and-mod n 16)))
+			    (write-char #\% port)
+			    (display-hex D)
+			    (display-hex M)))))
+	    (bytevector->u8-list (string->utf8 component-name)))
+	  (if (null? ls)
+	      (when (and (not first-component?)
+			 (main*? component-name))
+		(write-char #\_ port))
+	    (next-component (car ls) (cdr ls) #f))))
+      (extract)))
+
+  (define library-file-locator
+    ;;Hold a  function used to  convert a library name  specification into
+    ;;the corresponding file pathname.
+    ;;
+    (make-parameter
+	%default-library-file-locator
+      (lambda (obj)
+	(define who 'library-file-locator)
+	(with-arguments-validation (who)
+	    ((procedure	obj))
+	  obj))))
+
+  #| end of module: LIBRARY-FILE-LOCATOR |# )
 
 
 ;;;; loading precompiled libraries from files
@@ -309,51 +320,72 @@
 
 ;;;; loading libraries from files
 
-(define (default-library-loader libname)
-  ;;Default  value for  the parameter  LIBRARY-LOADER.  Given  a library
-  ;;name specification: search the  associated file pathname and attempt
-  ;;to load  the file.  Try  first to load  a precompiled file,  if any,
-  ;;then try to load the source file.
-  ;;
-  ;;For this function, a "library name" is a list of symbols without the
-  ;;version specification.
-  ;;
-  (let ((filename ((library-file-locator) libname)))
-    (cond ((not filename)
-	   (assertion-violation 'default-library-loader "cannot find library" libname))
-	  ;;If the precompiled library loader returns false: try to load
-	  ;;the source file.
-	  (((current-precompiled-library-loader) filename precompiled-file-success-continuation))
-	  (else
-	   ((current-library-expander) (read-library-source-file filename) filename
-	    (lambda (library-ids library-version)
-	      ;;LIBRARY-IDS  is the  list  of symbols  from the  library
-	      ;;name.   LIBRARY-VERSION is  null  or the  list of  exact
-	      ;;integers representing the library version.
-	      ;;
-	      (unless (equal? library-ids libname)
-		(assertion-violation 'import
-		  (let-values (((port extract) (open-string-output-port)))
-		    (display "expected to find library " port)
-		    (write libname port)
-		    (display " in file " port)
-		    (display filename port)
-		    (display ", found " port)
-		    (write library-ids port)
-		    (display " instead" port)
-		    (extract))))))))))
+(module (library-loader)
+  ;;The  library loader  is  a  function that  loads  a library,  either
+  ;;precompiled or from source.
 
-(define library-loader
-  ;;Hold a function  used to load a library,  either precompiled or from
-  ;;source.
-  ;;
-  (make-parameter
-      default-library-loader
-    (lambda (f)
-      (define who 'library-loader)
-      (with-arguments-validation (who)
-	  ((procedure	f))
-	f))))
+  (define (%default-library-loader requested-libname)
+    ;;Default value  for the parameter LIBRARY-LOADER.   Given a library
+    ;;name  specification:  search  the  associated  file  pathname  and
+    ;;attempt to load  the file.  Try first to load  a precompiled file,
+    ;;if any, then try to load the source file.
+    ;;
+    ;;For this function,  a "library name" is a list  of symbols without
+    ;;the version specification.
+    ;;
+    (define who '%default-library-loader)
+    (let ((filename ((library-file-locator) requested-libname)))
+      (cond ((not filename)
+	     (assertion-violation who "cannot find library" requested-libname))
+	    ;;If the  precompiled library  loader returns false:  try to
+	    ;;load the source file.
+	    (((current-precompiled-library-loader)
+	      filename precompiled-file-success-continuation))
+	    (else
+	     ((current-library-expander)
+	      ;;Return  a symbolic  expression representing  the LIBRARY
+	      ;;form, or raise an exception.
+	      (read-library-source-file filename)
+	      filename
+	      (lambda (library-name.ids library-name.version)
+		(%verify-library requested-libname filename
+				 library-name.ids library-name.version)))))))
+
+  (define (%verify-library requested-libname filename
+			   found-library-name.ids found-library-name.version)
+    ;;Verify  the  name  of  loaded  library against  the  name  of  the
+    ;;requested library.
+    ;;
+    ;;FOUND-LIBRARY-NAME.IDS  is the  list of  symbols from  the library
+    ;;name.   FOUND-LIBRARY-NAME.VERSION is  null or  the list  of exact
+    ;;integers representing the library version.
+    ;;
+    (define who '%default-library-loader)
+    (unless (equal? found-library-name.ids requested-libname)
+      (assertion-violation who
+	(let-values (((port extract) (open-string-output-port)))
+	  (display "expected to find library " port)
+	  (write requested-libname port)
+	  (display " in file " port)
+	  (display filename port)
+	  (display ", found " port)
+	  (write found-library-name.ids port)
+	  (display " instead" port)
+	  (extract)))))
+
+  (define library-loader
+    ;;Hold a function used to load a library, either precompiled or from
+    ;;source.
+    ;;
+    (make-parameter
+	%default-library-loader
+      (lambda (f)
+	(define who 'library-loader)
+	(with-arguments-validation (who)
+	    ((procedure	f))
+	  f))))
+
+  #| end of module: LIBRARY-LOADER |# )
 
 
 ;;;; finding libraries, already loaded or not
