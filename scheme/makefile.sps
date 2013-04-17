@@ -475,7 +475,8 @@
   ;;LIBRARY   is  created   and  included   in  the   starting   set  of
   ;;BOOTSTRAP-COLLECTION.
   ;;
-  ;;The libraries marked as VISIBLE? are installed in the boot image.
+  ;;The  libraries marked  as  VISIBLE?  are listed  by  default by  the
+  ;;function INSTALLED-LIBRARIES.
   ;;
   ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this
   ;;list.
@@ -2986,10 +2987,10 @@
   ;;installed in the boot image running this program.
   ;;
   ;;To add a REQUIRED? library to a  boot image: first we have to add an
-  ;;entry to  LIBRARY-LEGEND marked as  VISIBLE?  and build  a temporary
-  ;;boot image, then mark the entry as REQUIRED? and using the temporary
-  ;;boot image build another boot  image which will have the new library
-  ;;as REQUIRED?.
+  ;;entry  to  LIBRARY-LEGEND  marked  as  non-REQUIRED?   and  build  a
+  ;;temporary boot image, then mark the entry as REQUIRED? and using the
+  ;;temporary boot  image build another  boot image which will  have the
+  ;;new library as REQUIRED?.
   ;;
   (let ((list-of-library-records
 	 (let next-library-entry ((entries library-legend))
