@@ -88,6 +88,7 @@
 
 (define-record library
   (id
+		;A gensym uniquely identifying this library.
    name
 		;Non-empty list of  symbols representing the identifiers
 		;from the library name.
@@ -106,6 +107,7 @@
    guard-code
    guard-req*
    visible?
+		;A boolean determining if the library is visible.
    source-file-name
 		;False or a string representing the pathname of the file
 		;from which the source code of the library was read.
@@ -142,25 +144,26 @@
     ;;* When called  with one argument: add the argument  to the list if
     ;;  it is not already there according to EQ?.
     ;;
-    ;;* When called with two arguments:  if the second argument is true,
-    ;;  remove  the first  argument from  the list,  if present;  if the
-    ;;  second argument is false, add the first argument to the list, if
-    ;;  not already there according to EQ?.
+    ;;* When called with two arguments:
     ;;
-    (define (set-cons x ls)
-      (if (memq x ls)
-	  ls
-	(cons x ls)))
+    ;;  - If the second argument is true: remove the first argument from
+    ;;    the list, if present according to EQ?.
+    ;;
+    ;;  - If the second argument is false: add the first argument to the
+    ;;    list, if not already there according to EQ?.
+    ;;
     (let ((set '()))
       (case-lambda
        (()
 	set)
        ((x)
-	(set! set (set-cons x set)))
+	(unless (memq x set)
+	  (set! set (cons x set))))
        ((x del?)
 	(if del?
 	    (set! set (remq x set))
-	  (set! set (set-cons x set)))))))
+	  (unless (memq x set)
+	    (set! set (cons x set))))))))
 
   (define current-library-collection
     ;;Hold a collection of LIBRARY structs.
@@ -293,6 +296,14 @@
   ;;is    initialised   in    "ikarus.load.sls"   with    the   function
   ;;LOAD-SERIALIZED-LIBRARY.
   ;;
+  ;;The  referenced   function  must   accept  2  arguments:   a  string
+  ;;representing the  pathname of the  file from which a  library source
+  ;;can  be  read;  a  function   to  be  called  whenever  loading  the
+  ;;precompiled file succeeds.
+  ;;
+  ;;For   details    on   the   success   continuation    function   see
+  ;;%INSTALL-LIBRARY-AND-DEPS.
+  ;;
   (make-parameter
       (lambda (file-name success-kont)
 	#f)
@@ -302,15 +313,14 @@
 	  ((procedure	obj))
 	obj))))
 
-(define (precompiled-file-success-continuation filename id name ver imp* vis* inv*
-					       exp-subst exp-env
-					       visit-proc invoke-proc guard-proc
-					       guard-req* visible?)
-  ;;Called whenever  the precompiled file  loader succeeds in  loading a
-  ;;precompiled library.
-  ;;
-  ;;Make sure  all dependencies  are met, then  install the  library and
-  ;;return true; otherwise return #f.
+(define (%install-library-and-deps filename id name ver imp* vis* inv*
+				   exp-subst exp-env
+				   visit-proc invoke-proc guard-proc
+				   guard-req* visible?)
+  ;;Used  as  success  continuation  function by  the  function  in  the
+  ;;parameter   CURRENT-PRECOMPILED-LIBRARY-LOADER.    Make   sure   all
+  ;;dependencies  are met,  then install  the library  and return  true;
+  ;;otherwise return #f.
   ;;
   (let f ((deps (append imp* vis* inv* guard-req*)))
     (cond ((null? deps)
@@ -364,7 +374,7 @@
 	    ;;If the  precompiled library  loader returns false:  try to
 	    ;;load the source file.
 	    (((current-precompiled-library-loader)
-	      filename precompiled-file-success-continuation))
+	      filename %install-library-and-deps))
 	    (else
 	     ((current-library-expander)
 	      ;;Return  a symbolic  expression representing  the LIBRARY
@@ -497,29 +507,52 @@
 	  ((procedure	obj))
 	obj))))
 
-(define (serialize-all serialize compile)
-  (define (library-desc x)
-    (list (library-id x) (library-name x)))
-  (for-each
-      (lambda (x)
-        (when (library-source-file-name x)
-          (serialize
-	   (library-source-file-name x)
-	   (list (library-id x)
-		 (library-name x)
-		 (library-version x)
-		 (map library-desc (library-imp* x))
-		 (map library-desc (library-vis* x))
-		 (map library-desc (library-inv* x))
-		 (library-subst x)
-		 (library-env x)
-		 (compile (library-visit-code x))
-		 (compile (library-invoke-code x))
-		 (compile (library-guard-code x))
-		 (map library-desc (library-guard-req* x))
-		 (library-visible? x)))))
-    ((current-library-collection))))
+(module (serialize-all)
 
+  (define (serialize-all serialize compile)
+    ;;Traverse  the current  collection of  libraries and  serialize the
+    ;;contents  of all  the LIBRARY  records having  a source  file (the
+    ;;records that  do not  have a source  file represent  the libraries
+    ;;built in the boot image).
+    ;;
+    ;;"Serializing" means to write in a FASL file.
+    ;;
+    ;;The   argument   SERIALIZE   should    be   a   closure   wrapping
+    ;;DO-SERIALIZE-LIBRARY.
+    ;;
+    ;;The argument  COMPILE should  be a  closure wrapping  the function
+    ;;COMPILE-CORE-EXPR.
+    ;;
+    (for-each (lambda (lib)
+		(%serialize-library lib serialize compile))
+      ((current-library-collection))))
+
+  (define (%serialize-library lib serialize compile)
+    ;;Serialize the contents of a LIBRARY record.
+    ;;
+    (when ($library-source-file-name lib)
+      (serialize ($library-source-file-name lib)
+		 (list ($library-id lib)
+		       ($library-name lib)
+		       ($library-version lib)
+		       (map library-desc ($library-imp* lib))
+		       (map library-desc ($library-vis* lib))
+		       (map library-desc ($library-inv* lib))
+		       ($library-subst lib)
+		       ($library-env lib)
+		       (compile ($library-visit-code lib))
+		       (compile ($library-invoke-code lib))
+		       (compile ($library-guard-code lib))
+		       (map library-desc ($library-guard-req* lib))
+		       ($library-visible? lib)))))
+
+  (define (library-desc lib)
+    (list ($library-id   lib)
+	  ($library-name lib)))
+
+  #| end of module: SERIALIZE-ALL |# )
+
+
 (define uninstall-library
   ;;Uninstall a library.
   ;;
@@ -548,6 +581,26 @@
 		      (remove-location (cdr binding)))))
 	(library-env lib)))
     (values))))
+
+
+;;;; installing libraries
+
+(define installed-libraries
+  ;;Return a list  of LIBRARY structs being already  installed.  If ALL?
+  ;;is true:  return all the  installed libraries, else return  only the
+  ;;visible ones.
+  ;;
+  (case-lambda
+   ((all?)
+    (let next-library-struct ((ls ((current-library-collection))))
+      (cond ((null? ls)
+	     '())
+	    ((or all? (library-visible? (car ls)))
+	     (cons (car ls) (next-library-struct (cdr ls))))
+	    (else
+	     (next-library-struct (cdr ls))))))
+   (()
+    (installed-libraries #f))))
 
 (module (install-library)
 
@@ -588,6 +641,7 @@
 
   #| end of module: INSTALL-LIBRARY |# )
 
+
 (define (imported-label->binding lab)
   (label-binding lab))
 
@@ -621,35 +675,17 @@
       (visit)
       (set-library-visit-state! lib #t))))
 
-;;Commented out because unused.  (Marco Maggi; Wed Apr 17, 2013)
-;;
-;; (define (invoke-library-by-spec spec)
-;;   (invoke-library (%find-library-in-collection-by-spec/die spec)))
-
-(define installed-libraries
-  ;;Return a list  of LIBRARY structs being already  installed.  If ALL?
-  ;;is true:  return all the  installed libraries, else return  only the
-  ;;visible ones.
-  ;;
-  (case-lambda
-   ((all?)
-    (let next-library-struct ((ls ((current-library-collection))))
-      (cond ((null? ls)
-	     '())
-	    ((or all? (library-visible? (car ls)))
-	     (cons (car ls) (next-library-struct (cdr ls))))
-	    (else
-	     (next-library-struct (cdr ls))))))
-   (()
-    (installed-libraries #f))))
-
 (define (library-spec lib)
+  ;;Given a library record return a list holding: the unique library id,
+  ;;the  list of  symbols from  the library  name, null  or the  list of
+  ;;version numbers from the library name.
+  ;;
   (define who 'library-spec)
   (with-arguments-validation (who)
       ((library		lib))
-    (list (library-id      lib)
-	  (library-name    lib)
-	  (library-version lib))))
+    (list ($library-id      lib)
+	  ($library-name    lib)
+	  ($library-version lib))))
 
 
 ;;;; done

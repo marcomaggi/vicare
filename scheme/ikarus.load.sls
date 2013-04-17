@@ -127,7 +127,12 @@
 ;;;; loading and serialising libraries
 
 (define-struct serialized-library
-  (contents))
+  (contents
+		;A list of values  representing a LIBRARY record holding
+		;precompiled code.  See  the function %SERIALIZE-LIBRARY
+		;in  "psyntax.library-manager.sls"  for details  on  the
+		;format.
+   ))
 
 (define (load-serialized-library filename success-kont)
   ;;Given a  source file  name load the  associated FASL file  and apply
@@ -178,6 +183,10 @@
 (define (do-serialize-library filename contents)
   ;;Given the source file name of  a library file and the contents of an
   ;;already compiled library write a FASL file in the repository.
+  ;;
+  ;;CONTENTS  must be  a list  of values  representing a  LIBRARY record
+  ;;holding precompiled  code.  See  the function  %SERIALIZE-LIBRARY in
+  ;;"psyntax.library-manager.sls" for details on the format.
   ;;
   (let ((ikfasl (fasl-path filename)))
     (when ikfasl
@@ -249,11 +258,10 @@
   (let* ((prog  (read-script-source-file filename))
 	 (thunk (compile-r6rs-top-level prog)))
     (when serialize?
-      (serialize-all
-       (lambda (file-name contents)
-	 (do-serialize-library file-name contents))
-       (lambda (core-expr)
-	 (compile-core-expr core-expr))))
+      (serialize-all (lambda (file-name contents)
+		       (do-serialize-library file-name contents))
+		     (lambda (core-expr)
+		       (compile-core-expr core-expr))))
     (when run?
       (thunk))))
 
