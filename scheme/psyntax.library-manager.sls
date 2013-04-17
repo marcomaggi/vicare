@@ -52,84 +52,12 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (library who obj)
-  (library? obj)
-  (assertion-violation who "expected instance of library struct as argument" obj))
-
 (define-argument-validation (list-of-strings who obj)
   (and (list? obj) (for-all string? obj))
   (assertion-violation who "expected list of strings as argument" obj))
 
 
-;;;; type definitions
-
-(define-record library
-  (id
-   name
-   version
-   imp*
-   vis*
-   inv*
-   subst
-   env
-   visit-state
-   invoke-state
-   visit-code
-   invoke-code
-   guard-code
-   guard-req*
-   visible?
-   source-file-name)
-  (lambda (lib port sub-printer)
-    (display (format "#<library ~s>"
-			    (if (null? (library-version lib))
-				(library-name lib)
-			      (append (library-name lib) (list (library-version lib)))))
-	     port)))
-
-
-;;;; collection of already loaded libraries
-
-(define (make-collection)
-  ;;Build  and return  a  "collection":  a lambda  closed  upon a  list.
-  ;;Interface:
-  ;;
-  ;;* When called with no arguments: return the list.
-  ;;
-  ;;* When called with one argument:  add the argument to the list if it
-  ;;is  not  already there  according  to  EQ?.
-  ;;
-  ;;* When  called with two arguments:  if the second  argument is true,
-  ;;remove the first  argument from the list, if  present; if the second
-  ;;argument  is false,  add  the first  argument  to the  list, if  not
-  ;;already there according to EQ?.
-  ;;
-  (define-inline (set-cons x ls)
-    (if (memq x ls)
-	ls
-      (cons x ls)))
-  (let ((set '()))
-    (case-lambda
-     (() set)
-     ((x)
-      (set! set (set-cons x set)))
-     ((x del?)
-      (if del?
-	  (set! set (remq x set))
-	(set! set (set-cons x set)))))))
-
-(define current-library-collection
-  ;;Hold a collection of LIBRARY structs.
-  ;;
-  (make-parameter (make-collection)
-    (lambda (x)
-      (define who 'current-library-collection)
-      (with-arguments-validation (who)
-	  ((procedure	x))
-	x))))
-
-
-;;;; finding source libraries on the file system
+;;;; public configuration parameters
 
 (define library-path
   ;;Hold a  list of strings  representing directory pathnames  being the
@@ -155,9 +83,104 @@
 	  ((list-of-strings	obj))
 	obj))))
 
+
+;;;; type definitions
+
+(define-record library
+  (id
+   name
+		;Non-empty list of  symbols representing the identifiers
+		;from the library name.
+   version
+		;Null  or  a list  of  exact  integers representing  the
+		;version number from the library name.
+   imp*
+   vis*
+   inv*
+   subst
+   env
+   visit-state
+   invoke-state
+   visit-code
+   invoke-code
+   guard-code
+   guard-req*
+   visible?
+   source-file-name
+		;False or a string representing the pathname of the file
+		;from which the source code of the library was read.
+   )
+  (lambda (S port sub-printer)
+    ;;Printer function.
+    ;;
+    (define-inline (%display thing)
+      (display thing port))
+    (define-inline (%write thing)
+      (write thing port))
+    (%display "#<library")
+    (%display (if (null? ($library-version S))
+		  ($library-name S)
+		(append ($library-name S)
+			(list ($library-version S)))))
+    (%display ">")))
+
+(define-argument-validation (library who obj)
+  (library? obj)
+  (assertion-violation who "expected instance of library struct as argument" obj))
+
+
+;;;; collection of already loaded libraries
+
+(module (current-library-collection)
+
+  (define (make-collection)
+    ;;Build  and return  a "collection":  a lambda  closed upon  a list.
+    ;;Interface:
+    ;;
+    ;;* When called with no arguments: return the list.
+    ;;
+    ;;* When called  with one argument: add the argument  to the list if
+    ;;  it is not already there according to EQ?.
+    ;;
+    ;;* When called with two arguments:  if the second argument is true,
+    ;;  remove  the first  argument from  the list,  if present;  if the
+    ;;  second argument is false, add the first argument to the list, if
+    ;;  not already there according to EQ?.
+    ;;
+    (define (set-cons x ls)
+      (if (memq x ls)
+	  ls
+	(cons x ls)))
+    (let ((set '()))
+      (case-lambda
+       (()
+	set)
+       ((x)
+	(set! set (set-cons x set)))
+       ((x del?)
+	(if del?
+	    (set! set (remq x set))
+	  (set! set (set-cons x set)))))))
+
+  (define current-library-collection
+    ;;Hold a collection of LIBRARY structs.
+    ;;
+    (make-parameter (make-collection)
+      (lambda (x)
+	(define who 'current-library-collection)
+	(with-arguments-validation (who)
+	    ((procedure	x))
+	  x))))
+
+  #| end of module: CURRENT-LIBRARY-COLLECTION |# )
+
+
+;;;; finding source libraries on the file system
+;;
+;;The library  file locator is a  function that converts a  library name
+;;specification into the corresponding file pathname.
+;;
 (module (library-file-locator)
-  ;;The library file locator is a  function that converts a library name
-  ;;specification into the corresponding file pathname.
 
   (define (%default-library-file-locator libname)
     ;;Default  value for  the LIBRARY-FILE-LOCATOR  parameter.  Given  a
@@ -319,10 +342,11 @@
 
 
 ;;;; loading libraries from files
-
+;;
+;;The  library  loader  is  a  function that  loads  a  library,  either
+;;precompiled or from source.
+;;
 (module (library-loader)
-  ;;The  library loader  is  a  function that  loads  a library,  either
-  ;;precompiled or from source.
 
   (define (%default-library-loader requested-libname)
     ;;Default value  for the parameter LIBRARY-LOADER.   Given a library
@@ -447,11 +471,6 @@
 	  (else
 	   (next-library-struct (cdr ls))))))
 
-(define %external-pending-libraries
-  ;;Used to detect circular dependencies between libraries.
-  ;;
-  (make-parameter '()))
-
 (define (%find-library-in-collection-by-spec/die spec)
   ;;Given a  library specification, being a  list whose car  is a unique
   ;;symbol associated  to the library, return  the corresponding LIBRARY
@@ -461,6 +480,11 @@
     (or (%find-library-in-collection-by (lambda (x)
 					 (eq? id (library-id x))))
 	(assertion-violation #f "cannot find library with required spec" spec))))
+
+(define %external-pending-libraries
+  ;;Used to detect circular dependencies between libraries.
+  ;;
+  (make-parameter '()))
 
 
 (define current-library-expander
@@ -627,7 +651,6 @@
 	  (library-name    lib)
 	  (library-version lib))))
 
-;;; end of file
 
 ;;;; done
 
