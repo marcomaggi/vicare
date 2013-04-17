@@ -4443,35 +4443,46 @@
   (case-lambda
    ((library-sexp filename verify-name)
     (define (build-visit-code macro*)
+      ;;Return a symbolic expression  representing MACRO* definitions in
+      ;;the core language.
+      ;;
       (if (null? macro*)
 	  (build-void)
 	(build-sequence no-source
 			(map (lambda (x)
-			       (let ((loc (car x)) (src (cddr x)))
+			       (let ((loc (car x))
+				     (src (cddr x)))
 				 (build-global-assignment no-source loc src)))
 			  macro*))))
     (let-values (((name ver imp* inv* vis*
 			invoke-code macro* export-subst export-env
 			guard-code guard-req*)
 		  (core-library-expander library-sexp verify-name)))
-      (let ((id (gensym))
-	    (name name)
-	    (ver ver)
-	    (imp* (map library-spec imp*))
-	    (vis* (map library-spec vis*))
-	    (inv* (map library-spec inv*))
-	    (guard-req* (map library-spec guard-req*))
-	    (visit-proc (lambda () (initial-visit! macro*)))
-	    (invoke-proc
-	     (lambda () (eval-core (expanded->core invoke-code))))
-	    (visit-code (build-visit-code macro*))
-	    (invoke-code invoke-code))
+      (let ((id            (gensym)) ;library UID
+	    (name          name)     ;list of name symbols
+	    (ver           ver)	     ;null or list of version numbers
+
+	    ;;From list  of LIBRARY  records to  list of  lists: library
+	    ;;UID, list of name symbols, list of version numbers.
+	    (imp*          (map library-spec imp*))
+	    (vis*          (map library-spec vis*))
+	    (inv*          (map library-spec inv*))
+	    (guard-req*    (map library-spec guard-req*))
+
+	    ;;Thunk to eval to visit the library.
+	    (visit-proc    (lambda ()
+			     (initial-visit! macro*)))
+	    ;;Thunk to eval to invoke the library.
+	    (invoke-proc   (lambda ()
+			     (eval-core (expanded->core invoke-code))))
+	    (visit-code    (build-visit-code macro*))
+	    (invoke-code   invoke-code))
 	(install-library id name ver
 			 imp* vis* inv* export-subst export-env
 			 visit-proc invoke-proc
 			 visit-code invoke-code
 			 guard-code guard-req*
-			 #t filename)
+			 #t #;visible? filename)
 	(values id name ver imp* vis* inv*
 		invoke-code visit-code
 		export-subst export-env
