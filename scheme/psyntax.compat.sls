@@ -24,6 +24,7 @@
     symbol-value			set-symbol-value!
     keyword?				pretty-print
     pretty-print*
+    module
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file

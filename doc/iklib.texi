@@ -752,9 +752,27 @@ Undocumented.
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun expand-library
-Given a @code{(library . ---)} symbolic expression, expand it and
-register it with the library manager; return @math{12} values:
+@defun expand-library @var{sexp}
+@defunx expand-library @var{sexp} @var{filename}
+@defunx expand-library @var{sexp} @var{filename} @var{verify-name}
+Expand the symbolic expression representing a library and register the
+result in the internal library manager.
+
+@var{sexp} must be a symbolic expression @code{(library . ---)}.
+
+The optional @var{filename} must be @false{} or a string representing
+the source file from which the library was loaded; it is used for
+information purposes.  When not given defaults to @false{}.
+
+The optional @var{verify-name} must be a procedure accepting @math{2}
+arguments and returning unspecified values: the first argument is a list
+of symbols from a library name; the second argument is null or a list of
+exact integers representing the library version.  @var{verify-name} is
+meant to perform some validation upon the library name components and
+raise an exception if something is wrong; otherwise it should just
+return.
+
+Return @math{12} values:
 
 @enumerate
 @item

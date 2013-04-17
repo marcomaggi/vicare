@@ -263,7 +263,7 @@
 ;;   ((current-library-expander)
 ;;    (read-library-source-file filename)
 ;;    filename
-;;    (lambda (name) (void)))
+;;    (lambda (library-ids library-version) (void)))
 ;;   (serialize-all
 ;;    (lambda (file-name contents)
 ;;      (do-serialize-library file-name contents))

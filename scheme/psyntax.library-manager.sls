@@ -46,14 +46,11 @@
     current-precompiled-library-loader)
   (import (rnrs)
     (psyntax compat)
-    (vicare syntactic-extensions))
+    (vicare syntactic-extensions)
+    (vicare arguments validation))
 
 
 ;;;; arguments validation
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
 
 (define-argument-validation (library who obj)
   (library? obj)
@@ -210,17 +207,18 @@
 	  (next-component (car ls) (cdr ls) #f))))
     (extract)))
 
-(define (default-file-locator libname)
-  ;;Default value for the FILE-LOCATOR parameter.  Given a library name,
-  ;;scan the  library search path  for the corresponding file;  return a
-  ;;string  representing the  file  pathname having  the directory  part
-  ;;equal to one of the directory pathnames in LIBRARY-PATH.
+(define (default-library-file-locator libname)
+  ;;Default  value  for  the LIBRARY-FILE-LOCATOR  parameter.   Given  a
+  ;;library name,  scan the  library search  path for  the corresponding
+  ;;file;  return a  string representing  the file  pathname having  the
+  ;;directory  part  equal   to  one  of  the   directory  pathnames  in
+  ;;LIBRARY-PATH.
   ;;
   ;;For this function, a "library name" is a list of symbols without the
   ;;version specification.
   ;;
-  ;;If a  matching file is not  found call FILE-LOCATOR-RESOLUTION-ERROR
-  ;;from the compat library.
+  ;;If a  matching file  is not  found call a  function from  the compat
+  ;;library: FILE-LOCATOR-RESOLUTION-ERROR .
   ;;
   (let ((str (library-name->file-name libname)))
     (let loop ((search-path	(library-path))
@@ -229,7 +227,7 @@
       (cond ((null? search-path)
 	     (file-locator-resolution-error
 	      libname (reverse failed-list)
-	      (let ((ls (external-pending-libraries)))
+	      (let ((ls (%external-pending-libraries)))
 		(if (null? ls)
 		    (error 'library-manager "BUG")
 		  (cdr ls)))))
@@ -241,14 +239,14 @@
 		   name
 		 (loop search-path (cdr file-extensions) (cons name failed-list)))))))))
 
-(define file-locator
+(define library-file-locator
   ;;Hold a  function used to  convert a library name  specification into
   ;;the corresponding file pathname.
   ;;
   (make-parameter
-      default-file-locator
+      default-library-file-locator
     (lambda (obj)
-      (define who 'file-locator)
+      (define who 'library-file-locator)
       (with-arguments-validation (who)
 	  ((procedure	obj))
 	obj))))
@@ -320,7 +318,7 @@
   ;;For this function, a "library name" is a list of symbols without the
   ;;version specification.
   ;;
-  (let ((filename ((file-locator) libname)))
+  (let ((filename ((library-file-locator) libname)))
     (cond ((not filename)
 	   (assertion-violation 'default-library-loader "cannot find library" libname))
 	  ;;If the precompiled library loader returns false: try to load
@@ -328,8 +326,12 @@
 	  (((current-precompiled-library-loader) filename precompiled-file-success-continuation))
 	  (else
 	   ((current-library-expander) (read-library-source-file filename) filename
-	    (lambda (name)
-	      (unless (equal? name libname)
+	    (lambda (library-ids library-version)
+	      ;;LIBRARY-IDS  is the  list  of symbols  from the  library
+	      ;;name.   LIBRARY-VERSION is  null  or the  list of  exact
+	      ;;integers representing the library version.
+	      ;;
+	      (unless (equal? library-ids libname)
 		(assertion-violation 'import
 		  (let-values (((port extract) (open-string-output-port)))
 		    (display "expected to find library " port)
@@ -337,7 +339,7 @@
 		    (display " in file " port)
 		    (display filename port)
 		    (display ", found " port)
-		    (write name port)
+		    (write library-ids port)
 		    (display " instead" port)
 		    (extract))))))))))
 
@@ -356,19 +358,51 @@
 
 ;;;; finding libraries, already loaded or not
 
-(define (find-library-by-name libname)
-  ;;Given  a  library  name  return the  corresponding  LIBRARY  record.
-  ;;Search for the library in  the internal collection or, if not found,
-  ;;in the external source (for example the file system).
+(define (library-exists? libname)
+  ;;Given a library name search  the corresponding LIBRARY record in the
+  ;;collection of already loaded libraries: return true or false.
   ;;
   ;;For this function, a "library name" is a list of symbols without the
   ;;version specification.
   ;;
-  (or (find-library-by (lambda (x)
-			 (equal? (library-name x) libname)))
-      (find-external-library libname)))
+  (and (%find-library-in-collection-by (lambda (x)
+					 (equal? (library-name x) libname)))
+       #t))
 
-(define (find-library-by pred)
+(module (find-library-by-name)
+
+  (define (find-library-by-name libname)
+    ;;Given  a library  name  return the  corresponding LIBRARY  record.
+    ;;Search  for the  library in  the  internal collection  or, if  not
+    ;;found, in the external source (for example the file system).
+    ;;
+    ;;For this function,  a "library name" is a list  of symbols without
+    ;;the version specification.
+    ;;
+    (or (%find-library-in-collection-by (lambda (x)
+					  (equal? (library-name x) libname)))
+	(%find-external-library libname)))
+
+  (define (%find-external-library libname)
+    ;;Given a  library name  try to  load it  using the  current library
+    ;;loader.
+    ;;
+    ;;For this function,  a "library name" is a list  of symbols without
+    ;;the version specification.
+    ;;
+    (define who '%find-external-library)
+    (when (member libname (%external-pending-libraries))
+      (assertion-violation who "circular attempt to import library was detected" libname))
+    (parametrise ((%external-pending-libraries (cons libname (%external-pending-libraries))))
+      ((library-loader) libname)
+      (or (%find-library-in-collection-by (lambda (x)
+					    (equal? (library-name x) libname)))
+	  (assertion-violation who
+	    "handling external library did not yield the correct library" libname))))
+
+  #| end of module: FIND-LIBRARY-BY-NAME |# )
+
+(define (%find-library-in-collection-by pred)
   ;;Visit the current library collection  and return the first for which
   ;;PRED returns true.  If PRED returns false for all the entries in the
   ;;collection: return false.
@@ -381,47 +415,19 @@
 	  (else
 	   (next-library-struct (cdr ls))))))
 
-(define external-pending-libraries
+(define %external-pending-libraries
   ;;Used to detect circular dependencies between libraries.
   ;;
   (make-parameter '()))
 
-(define (find-external-library libname)
-  ;;Given  a library  name  try to  load  it using  the current  library
-  ;;loader.
-  ;;
-  ;;For this function, a "library name" is a list of symbols without the
-  ;;version specification.
-  ;;
-  (define who 'find-external-library)
-  (when (member libname (external-pending-libraries))
-    (assertion-violation who "circular attempt to import library was detected" libname))
-  (parametrise ((external-pending-libraries (cons libname (external-pending-libraries))))
-    ((library-loader) libname)
-    (or (find-library-by (lambda (x)
-			   (equal? (library-name x) libname)))
-	(assertion-violation who
-	  "handling external library did not yield the correct library" libname))))
-
-(define (library-exists? libname)
-  ;;Given a library name search  the corresponding LIBRARY record in the
-  ;;collection of already loaded libraries: return true or false.
-  ;;
-  ;;For this function, a "library name" is a list of symbols without the
-  ;;version specification.
-  ;;
-  (and (find-library-by (lambda (x)
-			  (equal? (library-name x) libname)))
-       #t))
-
-(define (find-library-by-spec/die spec)
+(define (%find-library-in-collection-by-spec/die spec)
   ;;Given a  library specification, being a  list whose car  is a unique
   ;;symbol associated  to the library, return  the corresponding LIBRARY
   ;;record or raise an assertion.
   ;;
   (let ((id (car spec)))
-    (or (find-library-by (lambda (x)
-			   (eq? id (library-id x))))
+    (or (%find-library-in-collection-by (lambda (x)
+					 (eq? id (library-id x))))
 	(assertion-violation #f "cannot find library with required spec" spec))))
 
 
@@ -459,7 +465,7 @@
     ((current-library-collection))))
 
 (define uninstall-library
-  ;;Uninstall  a  library.
+  ;;Uninstall a library.
   ;;
   ;;THE IMPLEMENTATION OF THIS FUNCTION IS INCOMPLETE.
   ;;
@@ -471,8 +477,8 @@
        ;;; FIXME: check that no other import is in progress
        ;;; FIXME: need to unintern labels and locations of
        ;;;        library bindings
-    (let ((lib (find-library-by (lambda (x)
-				  (equal? (library-name x) name)))))
+    (let ((lib (%find-library-in-collection-by (lambda (x)
+						 (equal? (library-name x) name)))))
       (when (and err? (not lib))
 	(assertion-violation who "library not installed" name))
       ;;Remove LIB from the current collection.
@@ -487,41 +493,44 @@
 	(library-env lib)))
     (values))))
 
-(define (install-library-record lib)
-  ;;Subroutine of INSTALL-LIBRARY.
-  ;;
-  (for-each (lambda (x)
-	      (let* ((label    (car x))
-		     (binding  (cdr x))
-		     (binding1 (case (car binding)
-				 ((global)        (cons* 'global        lib (cdr binding)))
-				 ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
-				 ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
-				 ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
-				 (else            binding))))
-		(set-label-binding! label binding1)))
-    (library-env lib))
-  ((current-library-collection) lib))
+(module (install-library)
 
-(define (install-library id libname ver imp* vis* inv* exp-subst exp-env
-			 visit-proc invoke-proc visit-code invoke-code
-			 guard-code guard-req*
-			 visible? source-file-name)
-  (let ((imp-lib*	(map find-library-by-spec/die imp*))
-	(vis-lib*	(map find-library-by-spec/die vis*))
-	(inv-lib*	(map find-library-by-spec/die inv*))
-	(guard-lib*	(map find-library-by-spec/die guard-req*)))
-    (unless (and (symbol? id) (list? libname) (list? ver))
-      (assertion-violation 'install-library
-	"invalid spec with id/name/ver" id libname ver))
-    (when (library-exists? libname)
-      (assertion-violation 'install-library
-	"library is already installed" libname))
-    (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
-			     exp-subst exp-env visit-proc invoke-proc
-			     visit-code invoke-code guard-code guard-lib*
-			     visible? source-file-name)))
-      (install-library-record lib))))
+  (define (install-library id libname ver imp* vis* inv* exp-subst exp-env
+			   visit-proc invoke-proc visit-code invoke-code
+			   guard-code guard-req*
+			   visible? source-file-name)
+    (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))
+	  (vis-lib*	(map %find-library-in-collection-by-spec/die vis*))
+	  (inv-lib*	(map %find-library-in-collection-by-spec/die inv*))
+	  (guard-lib*	(map %find-library-in-collection-by-spec/die guard-req*)))
+      (unless (and (symbol? id) (list? libname) (list? ver))
+	(assertion-violation 'install-library
+	  "invalid spec with id/name/ver" id libname ver))
+      (when (library-exists? libname)
+	(assertion-violation 'install-library
+	  "library is already installed" libname))
+      (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
+			       exp-subst exp-env visit-proc invoke-proc
+			       visit-code invoke-code guard-code guard-lib*
+			       visible? source-file-name)))
+	(%install-library-record lib))))
+
+  (define (%install-library-record lib)
+    (for-each
+	(lambda (x)
+	  (let* ((label    (car x))
+		 (binding  (cdr x))
+		 (binding1 (case (car binding)
+			     ((global)        (cons* 'global        lib (cdr binding)))
+			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
+			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
+			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
+			     (else            binding))))
+	    (set-label-binding! label binding1)))
+      (library-env lib))
+    ((current-library-collection) lib))
+
+  #| end of module: INSTALL-LIBRARY |# )
 
 (define (imported-label->binding lab)
   (label-binding lab))
@@ -530,30 +539,36 @@
   (let ((invoke (library-invoke-state lib)))
     (when (procedure? invoke)
       (set-library-invoke-state! lib
-				 (lambda () (assertion-violation 'invoke "circularity detected" lib)))
+				 (lambda ()
+				   (assertion-violation 'invoke
+				     "circularity detected" lib)))
       (for-each invoke-library (library-inv* lib))
       (set-library-invoke-state! lib
 				 (lambda ()
-				   (assertion-violation 'invoke "first invoke did not return" lib)))
+				   (assertion-violation 'invoke
+				     "first invoke did not return" lib)))
       (invoke)
       (set-library-invoke-state! lib #t))))
-
 
 (define (visit-library lib)
   (let ((visit (library-visit-state lib)))
     (when (procedure? visit)
       (set-library-visit-state! lib
-				(lambda () (assertion-violation 'visit "circularity detected" lib)))
+				(lambda ()
+				  (assertion-violation 'visit
+				    "circularity detected" lib)))
       (for-each invoke-library (library-vis* lib))
       (set-library-visit-state! lib
 				(lambda ()
-				  (assertion-violation 'invoke "first visit did not return" lib)))
+				  (assertion-violation 'invoke
+				    "first visit did not return" lib)))
       (visit)
       (set-library-visit-state! lib #t))))
 
-
-(define (invoke-library-by-spec spec)
-  (invoke-library (find-library-by-spec/die spec)))
+;;Commented out because unused.  (Marco Maggi; Wed Apr 17, 2013)
+;;
+;; (define (invoke-library-by-spec spec)
+;;   (invoke-library (%find-library-in-collection-by-spec/die spec)))
 
 (define installed-libraries
   ;;Return a list  of LIBRARY structs being already  installed.  If ALL?

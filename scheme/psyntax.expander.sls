@@ -3873,29 +3873,45 @@
     (when (null? name*) (stx-error spec "empty library name"))
     (values name* ver*)))
 
-  ;;; given a library form, returns the name part, the export
-  ;;; specs, import specs and the body of the library.
-(define parse-library
-  (lambda (e)
-    (syntax-match e ()
-      ((library (name* ...)
-	 (export exp* ...)
-	 (import imp* ...)
-	 b* ...)
-       (and (eq? (syntax->datum export) 'export)
-	    (eq? (syntax->datum import) 'import)
-	    (eq? (syntax->datum library) 'library))
-       (values name* exp* imp* b*))
-      (_ (stx-error e "malformed library")))))
-
-  ;;; given a list of import-specs, return a subst and the list of
-  ;;; libraries that were imported.
-  ;;; Example: given ((rename (only (foo) x z) (x y)) (only (bar) q))
-  ;;; returns: ((z . z$label) (y . x$label) (q . q$label))
-  ;;;     and  (#<library (foo)> #<library (bar)>)
+(define (parse-library library-sexp)
+  ;;Given a symbolic expression representing  a LIBRARY form: return the
+  ;;name  part, the  export  specs, import  specs and  the  body of  the
+  ;;library.
+  ;;
+  (syntax-match library-sexp ()
+    ((library (name* ...)
+       (export exp* ...)
+       (import imp* ...)
+       b* ...)
+     (and (eq? (syntax->datum export) 'export)
+	  (eq? (syntax->datum import) 'import)
+	  (eq? (syntax->datum library) 'library))
+     (values name* exp* imp* b*))
+    (_
+     (stx-error library-sexp "malformed library"))))
 
 (define (parse-import-spec* imp*)
-  (define (idsyn? x) (symbol? (syntax->datum x)))
+  ;;Given  a list  of  import-specs,  return a  subst  and  the list  of
+  ;;libraries that were imported.  Example, given:
+  ;;
+  ;;  ((rename (only (foo)
+  ;;                 x z)
+  ;;           (x y))
+  ;;   (only (bar)
+  ;;         q))
+  ;;
+  ;;return:
+  ;;
+  ;;   ((z . z$label)
+  ;;    (y . x$label)
+  ;;    (q . q$label))
+  ;;
+  ;;and:
+  ;;
+  ;;   (#<library (foo)> #<library (bar)>)
+  ;;
+  (define (idsyn? x)
+    (symbol? (syntax->datum x)))
   (define (dup-error name)
     (syntax-violation 'import "two imports with different bindings" name))
   (define (merge-substs s subst)
@@ -4036,10 +4052,10 @@
        (let ((subst (get-import isp))
 	     (old* (map syntax->datum old*))
 	     (new* (map syntax->datum new*)))
-           ;;; rewrite this to eliminate find* and rem* and merge
+;;; rewrite this to eliminate find* and rem* and merge
 	 (let ((old-label* (find* old* subst)))
 	   (let ((subst (rem* old* subst)))
-               ;;; FIXME: make sure map is valid
+;;; FIXME: make sure map is valid
 	     (merge-substs (map cons new* old-label*) subst)))))
       ((except isp sym* ...)
        (and (eq? (syntax->datum except) 'except) (for-all idsyn? sym*))
@@ -4265,11 +4281,23 @@
 	(lambda (c) (c core-expr (stc))))))))
 
 (define core-library-expander
+  ;;
+  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
+  ;;
+  ;;   (library . _)
+  ;;
+  ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
+  ;;unspecified values: the  first argument is a list of  symbols from a
+  ;;library  name; the  second  argument  is null  or  a  list of  exact
+  ;;integers representing the library  version.  VERIFY-NAME is meant to
+  ;;perform some validation  upon the library name  components and raise
+  ;;an exception if something is wrong; otherwise it should just return.
+  ;;
   (case-lambda
-   ((e verify-name)
-    (let-values (((name* exp* imp* b*) (parse-library e)))
+   ((library-sexp verify-name)
+    (let-values (((name* exp* imp* b*) (parse-library library-sexp)))
       (let-values (((name ver) (parse-library-name name*)))
-	(verify-name name)
+	(verify-name name ver)
 	(let ((c (make-stale-collector)))
 	  (let-values (((imp* invoke-req* visit-req* invoke-code
 			      visit-code export-subst export-env)
@@ -4392,12 +4420,28 @@
     macro*))
 
 (define expand-library
-  ;;Given a  (library .   _) S-expression, this  function expands  it to
-  ;;core-form, registers  it with the  library manager, and  returns its
+  ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
+  ;;core-form;  register  it  with   the  library  manager;  return  its
   ;;invoke-code, visit-code, subst and env.
   ;;
+  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
+  ;;
+  ;;   (library . _)
+  ;;
+  ;;The optional FILENAME must be #f or a string representing the source
+  ;;file from which  the library was loaded; it is  used for information
+  ;;purposes.
+  ;;
+  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
+  ;;and returning  unspecified values: the  first argument is a  list of
+  ;;symbols from a  library name; the second argument is  null or a list
+  ;;of exact integers representing  the library version.  VERIFY-NAME is
+  ;;meant to  perform some validation  upon the library  name components
+  ;;and raise  an exception if  something is wrong; otherwise  it should
+  ;;just return.
+  ;;
   (case-lambda
-   ((x filename verify-name)
+   ((library-sexp filename verify-name)
     (define (build-visit-code macro*)
       (if (null? macro*)
 	  (build-void)
@@ -4409,7 +4453,7 @@
     (let-values (((name ver imp* inv* vis*
 			invoke-code macro* export-subst export-env
 			guard-code guard-req*)
-		  (core-library-expander x verify-name)))
+		  (core-library-expander library-sexp verify-name)))
       (let ((id (gensym))
 	    (name name)
 	    (ver ver)
@@ -4432,14 +4476,14 @@
 		invoke-code visit-code
 		export-subst export-env
 		guard-code guard-req*))))
-   ((x filename)
-    (expand-library x filename (lambda (x) (values))))
-   ((x)
-    (expand-library x #f (lambda (x) (values))))))
+   ((library-sexp filename)
+    (expand-library library-sexp filename (lambda (ids ver) (values))))
+   ((library-sexp)
+    (expand-library library-sexp #f       (lambda (ids ver) (values))))))
 
-  ;;; when bootstrapping the system, visit-code is not (and cannot
-  ;;; be) be used in the "next" system.  So, we drop it.
 (define (boot-library-expand x)
+  ;;When bootstrapping the system, visit-code  is not (and cannot be) be
+  ;;used in the "next" system.  So, we drop it.
   (let-values (((id name ver imp* vis* inv*
 		    invoke-code visit-code export-subst export-env
 		    guard-code guard-dep*)
