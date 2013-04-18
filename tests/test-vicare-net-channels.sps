@@ -29,7 +29,7 @@
 (import (vicare)
   (prefix (vicare net channels)
 	  chan.)
-  (vicare custom-ports)
+  (vicare language-extensions custom-ports)
   (vicare language-extensions coroutines)
   (vicare checks))
 

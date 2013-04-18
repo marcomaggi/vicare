@@ -95,7 +95,6 @@ Notes for revision 0.3d0
      (vicare syntactic-extensions)
      (vicare flonum-formatter)
      (vicare flonum-parser)
-     (vicare cond-expand ---)
      (vicare weak-hashtables)
 
   have been renamed to:
@@ -110,7 +109,6 @@ Notes for revision 0.3d0
      (vicare language-extensions include)
      (vicare language-extensions keywords)
      (vicare language-extensions syntaxes)
-     (vicare language-extensions cond-expand ---)
      (vicare numerics flonum-formatter)
      (vicare numerics flonum-parser)
      (vicare containers weak-hashtables)
@@ -160,11 +158,11 @@ Notes for revision 0.3d0
                      str.)))
      => 4
 
-* Added  library  (vicare  cond-expand),   see  the  documentation  node
-  "cond-expand".
+* Added  library  (vicare   language-extensions  cond-expand),  see  the
+  documentation node "cond-expand".
 
-* Added  library  (vicare  custom-ports),  see  the  documentation  node
-  "custom-ports".
+* Added  library  (vicare  language-extensions  custom-ports),  see  the
+  documentation node "custom-ports".
 
 * Added  library   (vicare  language-extensions  coroutines),   see  the
   documentation node "coroutines".

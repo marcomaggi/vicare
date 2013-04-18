@@ -5100,11 +5100,11 @@ unspecified values.
 @section Custom ports.
 
 
-@cindex Library @library{vicare custom-ports}
-@cindex @library{vicare custom-ports}, library
+@cindex Library @library{vicare language-extensions custom-ports}
+@cindex @library{vicare language-extensions custom-ports}, library
 
-The library @library{vicare custom-ports} implements special custom
-Scheme input and output ports.
+The library @library{vicare language-extensions custom-ports} implements
+special custom Scheme input and output ports.
 
 @menu
 * custom-ports pairs::          Port pairs.
@@ -5126,7 +5126,7 @@ coroutines}.  To communicate between processes we have to use the
 socket pairs (@pxref{posix socket socket, socketpair}).
 
 The following bindings are exported by the library @library{vicare
-custom-ports}.
+language-extensions custom-ports}.
 
 
 @defun open-binary-input-port-pair
