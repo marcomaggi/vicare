@@ -55,7 +55,7 @@
 		  record-reset
 		  record-destructor-set!		record-destructor)
     (ikarus system $structs)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (prefix (vicare unsafe operations)
 	    unsafe.))

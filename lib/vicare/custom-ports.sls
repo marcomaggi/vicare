@@ -38,7 +38,7 @@
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  begin0))
 
 

@@ -42,7 +42,7 @@
     letrec-keywords	letrec*-keywords
     with-argument	without-argument)
   (import (vicare)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
 

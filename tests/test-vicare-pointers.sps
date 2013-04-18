@@ -33,7 +33,7 @@
   (prefix (vicare platform constants)
 	  plat.)
   (prefix (vicare unsafe operations) $)
-  (vicare syntactic-extensions)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

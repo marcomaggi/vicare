@@ -58,7 +58,7 @@
     match
     )
   (import (vicare)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  define-argument-validation
 	  with-arguments-validation
 	  define-inline)

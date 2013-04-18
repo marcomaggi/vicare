@@ -27,7 +27,7 @@
   (import (except (ikarus)
 		  string->number
 		  sign)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare parser-logic)
     (prefix (vicare unsafe operations)
 	    $)

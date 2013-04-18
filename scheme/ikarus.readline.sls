@@ -35,7 +35,7 @@
 		  readline-enabled?
 		  readline
 		  make-readline-input-port)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.))
 

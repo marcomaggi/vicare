@@ -19,7 +19,7 @@
   (export rationalize)
   (import (except (ikarus)
 		  rationalize)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 (define who 'rationalize)

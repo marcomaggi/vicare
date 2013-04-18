@@ -28,6 +28,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/validation.sls			\
 	\
 	vicare/language-extensions/amb.sls		\
+	vicare/language-extensions/syntaxes.sls		\
 	vicare/language-extensions/coroutines.sls	\
 	vicare/language-extensions/infix.sls		\
 	vicare/language-extensions/include.sls		\
@@ -44,7 +45,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/flonum-parser.sls			\
 	vicare/numerics/constants.sls			\
 	vicare/parser-logic.sls				\
-	vicare/syntactic-extensions.sls			\
 	vicare/weak-hashtables.sls			\
 	\
 	vicare/net/channels.sls

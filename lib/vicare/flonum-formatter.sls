@@ -25,7 +25,7 @@
 (library (vicare flonum-formatter)
   (export format-flonum)
   (import (rnrs)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validators

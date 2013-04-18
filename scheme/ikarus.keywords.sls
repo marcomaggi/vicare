@@ -39,7 +39,7 @@
 		  keyword?
 		  keyword=?
 		  keyword-hash)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 (define-struct keyword

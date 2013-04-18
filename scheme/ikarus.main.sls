@@ -94,7 +94,7 @@
 		  readline-enabled?
 		  make-readline-input-port)
 	    readline.)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  define-inline))
 
 

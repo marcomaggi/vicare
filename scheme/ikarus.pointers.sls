@@ -304,7 +304,7 @@
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (ikarus system $pointers)
 	  $pointer=)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.)
     (prefix (vicare unsafe capi)

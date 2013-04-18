@@ -40,7 +40,7 @@
 
 		  vicare-argv0
 		  vicare-argv0-string)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
     (prefix (vicare unsafe capi)
 	    capi.)

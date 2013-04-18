@@ -30,7 +30,7 @@
 		  mod			mod0
 		  div-and-mod		div0-and-mod0)
     (vicare arguments validation)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 (module (div-and-mod*)

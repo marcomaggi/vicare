@@ -37,18 +37,18 @@
   (only (vicare unsafe operations))
   (only (vicare unsafe unicode))
 
-  (only (vicare numerics constants))
-  (only (vicare arguments validation))
-  (only (vicare syntactic-extensions))
-  (only (vicare arguments general-c-buffers))
-  (only (vicare cond-expand))
-  (only (vicare cond-expand helpers))
-
+  (only (vicare language-extensions syntaxes))
   (only (vicare language-extensions include))
   (only (vicare language-extensions amb))
   (only (vicare language-extensions coroutines))
   (only (vicare language-extensions infix))
   (only (vicare language-extensions keywords))
+
+  (only (vicare numerics constants))
+  (only (vicare arguments validation))
+  (only (vicare arguments general-c-buffers))
+  (only (vicare cond-expand))
+  (only (vicare cond-expand helpers))
 
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))

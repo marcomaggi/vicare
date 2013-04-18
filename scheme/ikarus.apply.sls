@@ -17,7 +17,7 @@
 (library (ikarus apply)
   (export apply)
   (import (except (ikarus) apply)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.)
     (ikarus system $stack))

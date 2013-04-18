@@ -25,7 +25,7 @@
 	  autoload-filename-foreign-library)
     (prefix (vicare unsafe operations)
 	    $)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
 

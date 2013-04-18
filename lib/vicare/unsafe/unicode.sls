@@ -156,7 +156,7 @@
     latin-1-code-point?
     latin-1-encode)
   (import (rnrs)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  define-inline)
     (prefix (vicare unsafe operations)
 	    unsafe.))

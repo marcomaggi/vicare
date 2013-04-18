@@ -46,7 +46,7 @@
 	    $fxbit-field)
     (ikarus system $bignums)
     (ikarus system $flonums)
-    (except (vicare syntactic-extensions)
+    (except (vicare language-extensions syntaxes)
 	    case-word-size)
     (vicare arguments validation))
 

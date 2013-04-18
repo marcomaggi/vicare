@@ -67,7 +67,7 @@
 
     )
   (import (vicare)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (prefix (vicare unsafe operations)
 	    $)

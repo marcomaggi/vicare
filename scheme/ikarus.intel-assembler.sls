@@ -29,7 +29,7 @@
     (vicare arguments validation)
     (prefix (vicare platform words)
 	    words.)
-    (except (vicare syntactic-extensions)
+    (except (vicare language-extensions syntaxes)
 	    case-word-size))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's

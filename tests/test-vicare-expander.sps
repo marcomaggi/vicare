@@ -43,7 +43,7 @@
 	  (hello salut)
 	  (define (hello) 'hello)
 	  (define (salut) 'salut))
-	(import (vicare syntactic-extensions))
+	(import (vicare language-extensions syntaxes))
 	(import ciao)
 	(list (hello) (salut)))
     => '(hello salut))
@@ -56,7 +56,7 @@
 	  (define (hello) 'hello)
 	  (define (salut) 'salut))
 	(import ciao)
-	(import (vicare syntactic-extensions))
+	(import (vicare language-extensions syntaxes))
 	(list (hello) (salut)))
     => '(hello salut))
 
@@ -66,7 +66,7 @@
 	  (hello salut)
 	  (define (hello) 'hello)
 	  (define (salut) 'salut))
-	(import (vicare syntactic-extensions)
+	(import (vicare language-extensions syntaxes)
 	  ciao)
 	(list (hello) (salut)))
     => '(hello salut))
@@ -78,7 +78,7 @@
 	  (define (hello) 'hello)
 	  (define (salut) 'salut))
 	(import ciao
-	  (vicare syntactic-extensions))
+	  (vicare language-extensions syntaxes))
 	(list (hello) (salut)))
     => '(hello salut))
 

@@ -107,7 +107,7 @@
 	  fasl-write)
     (ikarus.intel-assembler)
     (vicare language-extensions include)
-    (except (vicare syntactic-extensions)
+    (except (vicare language-extensions syntaxes)
 	    begin0
 	    case-word-size)
     (vicare arguments validation))

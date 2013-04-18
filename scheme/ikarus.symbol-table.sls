@@ -27,7 +27,7 @@
     (except (ikarus system $symbols)
 	    $symbol-table-size
 	    $log-symbol-table-status)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.))
 

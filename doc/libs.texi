@@ -2116,13 +2116,13 @@ the C language @code{ptrdiff_t} range.
 @section Language syntactic extensions
 
 
-@cindex Library @library{vicare syntactic-extensions}
-@cindex @library{vicare syntactic-extensions}, library
+@cindex Library @library{vicare language-extensions syntaxes}
+@cindex @library{vicare language-extensions syntaxes}, library
 
 
-The library @library{vicare syntactic-extensions} provides bindings to
-macros that extend the Scheme language implemented by @library{vicare}
-and @library{rnrs}.
+The library @library{vicare language-extensions syntaxes} provides
+bindings to macros that extend the Scheme language implemented by
+@library{vicare} and @library{rnrs}.
 
 @menu
 * syntaxes defines::            Special definitions.
@@ -2140,7 +2140,7 @@ and @library{rnrs}.
 
 
 The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
+language-extensions syntaxes}.
 
 
 @defmac Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{form} @meta{form} ...
@@ -2244,7 +2244,7 @@ symbolic name.  Expand to:
 
 
 The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
+language-extensions syntaxes}.
 
 
 @defmac let-inline ((@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
@@ -2316,7 +2316,7 @@ body are the values of the @var{receive}--expression.
 
 
 The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
+language-extensions syntaxes}.
 
 
 @defmac begin0 @metao{expr} @meta{expr} ...
@@ -2353,7 +2353,7 @@ Expand to:
 
 
 The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
+language-extensions syntaxes}.
 
 
 @defmac with-pathnames ((@meta{pathname.bv} @meta{pathname}) ...) . @meta{body}
@@ -2412,7 +2412,7 @@ that the arguments have already been validated.  Expand to:
 
 
 The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
+language-extensions syntaxes}.
 
 
 @defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
@@ -2496,7 +2496,7 @@ behaviour is undefined.
 
 
 The following bindings are imported and reexported by @library{vicare
-syntactic-extension} from the library @library{vicare arguments
+language-extension syntaxes} from the library @library{vicare arguments
 validation}:
 
 @example
@@ -2512,7 +2512,7 @@ arguments-validation-forms
 
 
 The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
+language-extensions syntaxes}.
 
 
 @defmac callet @meta{func} @meta{arg} ...
@@ -3995,7 +3995,7 @@ the given initialisation directory, then load it and access the symbol
 (vicare posix)
 (vicare glibc)
 (vicare platform constants)
-(vicare syntactic-extensions)
+(vicare language-extensions syntaxes)
 @end example
 
 

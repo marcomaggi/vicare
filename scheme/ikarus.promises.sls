@@ -18,7 +18,7 @@
   (export force make-promise)
   (import (except (ikarus)
 		  force make-promise)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
   (define-argument-validation (procedure who obj)
     (procedure? obj)

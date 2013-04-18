@@ -28,7 +28,7 @@
 		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
 		  make-queue)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    $))
 

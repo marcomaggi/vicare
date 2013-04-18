@@ -192,7 +192,7 @@
 	  pretty-print)
     (srfi :14 char-sets)
     (vicare arguments validation)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (except (vicare unsafe operations)
 		    string-copy!
 		    string-fill!)

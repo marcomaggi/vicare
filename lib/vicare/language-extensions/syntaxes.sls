@@ -54,7 +54,7 @@
 
 
 #!r6rs
-(library (vicare syntactic-extensions)
+(library (vicare language-extensions syntaxes)
   (export
     ;; miscellaneous extensions
     define-inline		define-inline-constant

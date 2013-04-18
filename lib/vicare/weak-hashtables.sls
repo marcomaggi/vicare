@@ -39,7 +39,7 @@
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    unsafe.)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation

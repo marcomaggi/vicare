@@ -34,7 +34,7 @@
 (library (vicare flonum-parser)
   (export parse-flonum)
   (import (rnrs)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation

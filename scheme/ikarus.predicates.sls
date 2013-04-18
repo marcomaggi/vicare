@@ -64,7 +64,7 @@
     (only (ikarus system $pointers)
 	  $pointer=)
     (ikarus system $foreign)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand)
     ;;These are the ones implemented as primitive operations.
     (rename (only (ikarus)

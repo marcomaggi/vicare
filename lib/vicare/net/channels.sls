@@ -74,7 +74,7 @@
     maximum-message-size-exceeded-condition?)
   (import (vicare)
     (vicare arguments validation)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (prefix (vicare unsafe operations)
 	    $))

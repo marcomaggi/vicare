@@ -146,7 +146,7 @@
 	    $flmax
 	    $flmin)
     (vicare arguments validation)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand
 	  cond-exact-integer-operand
 	  receive))

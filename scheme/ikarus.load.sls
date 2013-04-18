@@ -44,7 +44,7 @@
     (prefix (only (vicare options)
 		  print-loaded-libraries)
 	    config.)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  unwind-protect
 	  define-inline
 	  define-argument-validation

@@ -29,7 +29,7 @@
     (ikarus system $bignums)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.))
 

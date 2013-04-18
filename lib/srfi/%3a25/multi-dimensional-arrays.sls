@@ -99,7 +99,7 @@
     share-array)
   (import (vicare)
     (vicare arguments validation)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations) $))
 
 

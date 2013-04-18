@@ -39,7 +39,7 @@
     (prefix (vicare posix) px.)
     (prefix (vicare glibc) glibc.)
     (prefix (vicare platform constants) plat.)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation
