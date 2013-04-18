@@ -544,7 +544,7 @@
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
     (posix		(vicare $posix)				#t	#t)
-    ($language		(vicare language-extensions)		#f	#f)
+    ($language		(vicare language-extensions)		#t	#f)
     ))
 
 
