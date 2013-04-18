@@ -171,7 +171,7 @@
 	    unsafe.))
 
   (module (platform-endianness)
-    (import (vicare include))
+    (import (vicare language-extensions include))
     (include/verbose "ikarus.config.ss"))
 
 

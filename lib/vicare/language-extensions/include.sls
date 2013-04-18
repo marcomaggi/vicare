@@ -16,7 +16,7 @@
 
 
 #!r6rs
-(library (vicare include)
+(library (vicare language-extensions include)
   (export
     include include/lexical-context
     include/verbose)

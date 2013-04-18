@@ -26,7 +26,7 @@
     host-info)
   (import (except (ikarus)
 		  host-info)
-    (vicare include))
+    (vicare language-extensions include))
   (include/verbose "ikarus.config.ss"))
 
 

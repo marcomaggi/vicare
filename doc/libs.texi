@@ -1285,12 +1285,12 @@ predicate @func{time?} exported by @library{vicare}.
 @section Including source files at expand time
 
 
-@cindex Library @library{vicare include}
-@cindex @library{vicare include}, library
+@cindex Library @library{vicare language-extensions include}
+@cindex @library{vicare language-extensions include}, library
 
 
 The following bindings are exported by the library @library{vicare
-include}.
+language-extensions include}.
 
 
 @deffn Syntax include @var{filename}

@@ -32,7 +32,7 @@
     string-ci=? string-ci>? string-ci>=? string-normalize-nfd
     string-normalize-nfkd string-normalize-nfc string-normalize-nfkc )
   (import
-      (vicare include)
+      (vicare language-extensions include)
     (except (ikarus)
 	    unicode-printable-char?
 	    char-upcase char-downcase char-titlecase char-foldcase
