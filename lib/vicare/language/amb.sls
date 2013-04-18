@@ -28,26 +28,25 @@
 #!r6rs
 (library (vicare language amb)
   (export
+    &amb-exhaustion
+    make-amb-exhaustion			amb-exhaustion?
     amb
     amb-assert
-    amb-random
-    amb-random-fixnum-maker)
+    amb-random				amb-random-fixnum-maker)
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $))
 
 
+;;;; type definitions
+
+(define-condition-type &amb-exhaustion
+    &error
+  make-amb-exhaustion
+  amb-exhaustion?)
+
+
 ;;;; core syntax
-
-(define %current-fail-escape
-  (make-parameter
-      (lambda ()
-	(error 'amb "search tree tree exhausted"))))
-
-(define %previous-fail-escape
-  (make-parameter
-      (lambda ()
-	(assertion-violation 'amb "no saved continuation"))))
 
 (define-syntax amb
   (syntax-rules ()
@@ -55,7 +54,7 @@
      ((%current-fail-escape)))
     ((_ ?expr0 ?expr ...)
      (call/cc
-    	 (lambda (return)
+	 (lambda (return)
 	   (parametrise ((%previous-fail-escape (%current-fail-escape)))
 	     (call/cc
 		 (lambda (escape)
@@ -64,6 +63,20 @@
 	     (%current-fail-escape (%previous-fail-escape))
 	     (amb ?expr ...)))))
     ))
+
+(define %current-fail-escape
+  (make-parameter
+      (let ((E (condition (make-amb-exhaustion)
+			  (make-who-condition 'amb)
+			  (make-message-condition "search tree exhausted"))))
+	(lambda ()
+	  (raise-continuable E)))))
+
+(define %previous-fail-escape
+  (make-parameter
+      (lambda ()
+	(assertion-violation 'amb
+	  "internal error, attempt to escape to next choice with no choice"))))
 
 
 ;;;; extensions

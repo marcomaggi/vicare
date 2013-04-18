@@ -67,6 +67,40 @@
   #t)
 
 
+(parametrise ((check-test-name	'failures))
+
+  (check
+      (guard (E ((error? E)
+		 #t)
+		(else #f))
+	(raise (make-amb-exhaustion)))
+    => #t)
+
+  (check
+      (guard (E ((amb-exhaustion? E)
+		 #t)
+		(else #f))
+	(raise (make-amb-exhaustion)))
+    => #t)
+
+  #;(check
+      (with-result
+       (guard (E ((amb-exhaustion? E)
+		  (check-pretty-print E)
+		  #t)
+		 (else
+		  (check-pretty-print E)
+		  #f))
+	 (let ((N (amb 1 3 5 7)))
+	   (check-pretty-print N)
+	   (add-result N)
+	   (amb-assert (even? N))
+	   N)))
+    => '(#t (1 3 5 7)))
+
+    #t)
+
+
 (parametrise ((check-test-name	'random))
 
   (check

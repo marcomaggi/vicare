@@ -151,6 +151,8 @@ Notes for revision 0.3d0
 * Added  library   (vicare  coroutines),  see  the   documentation  node
   "coroutines".
 
+* Added library (vicare language amb), see the documentation node "amb".
+
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
 

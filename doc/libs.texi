@@ -4715,6 +4715,7 @@ Scheme program; it is built upon continuations.
 
 @menu
 * amb syntaxes::                Programming interface for @func{amb}.
+* amb examples::                Usage example for @func{amb}.
 @end menu
 
 @c page
@@ -4729,12 +4730,16 @@ language amb}.
 @deffn Syntax amb @meta{expr} ...
 Evaluate one of the @meta{expr} expressions and return its result;
 create a continuation that can be reinstated to reject the result of
-this @meta{expr} and try with the next @meta{expr}.
+this @meta{expr} and try with the next @meta{expr}.  The given
+@var{expr} arguments are tried in the given order: left to right.
 
 When used with no arguments: reject the result of the most recent
-@var{expr} and reinstate the continuation to try the next @var{expr}.
+@var{expr} and reinstate the previous continuation to try the next
+@var{expr}.
 
-The given @var{expr} are tried in the given order: left to right.
+When all the choices have been tried: raise a continuable exception with
+condition object components @condition{who}, @condition{message},
+@condition{amb-exhaustion}.
 @end deffn
 
 
@@ -4761,6 +4766,42 @@ is false reject the latest @func{amb} choice.
 (amb-assert @meta{expr}) @expansion{} (or @meta{expr} (amb))
 @end example
 @end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Condition objects
+
+
+@deftp {Condition Type} &amb-exhaustion
+Condition type used to signal the exhaustion of a search tree visited by
+@func{amb}; it is derived from @condition{error}.
+@end deftp
+
+
+@defun make-amb-exhaustion
+Build and return a new instance of @condition{amb-exhaustion}.
+@end defun
+
+
+@defun amb-exhaustion? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{amb-exhaustion}, else return @false{}.
+@end defun
+
+@c page
+@node amb examples
+@subsection Usage example for @func{amb}
+
+
+@menu
+* amb examples simple::         Simple examples.
+@end menu
+
+@c page
+@node amb examples simple
+@subsubsection Simple examples
+
+
 
 
 @c page
