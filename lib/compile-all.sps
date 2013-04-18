@@ -44,6 +44,8 @@
   (only (vicare cond-expand))
   (only (vicare cond-expand helpers))
 
+  (only (vicare language amb))
+
   (only (vicare include))
   (only (vicare infix))
   (only (vicare flonum-parser))

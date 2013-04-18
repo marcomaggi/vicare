@@ -27,6 +27,8 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/general-c-buffers.sls		\
 	vicare/arguments/validation.sls			\
 	\
+	vicare/language/amb.sls				\
+	\
 	vicare/assembler/inspection.sls			\
 	vicare/bytevector-compounds.sls			\
 	vicare/bytevector-compounds/core.sls		\

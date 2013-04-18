@@ -22,6 +22,7 @@
 * flonum parse::                Parsing flonums.
 * sel::                         Simple event loop.
 * infix::                       Infix to prefix transformer.
+* amb::                         McCarthy's @func{amb} operator.
 * debugging::                   Debugging facilities.
 * coroutines::                  Running coroutines.
 * custom-ports::                Custom ports.
@@ -4698,6 +4699,69 @@ fxarithmetic-shift-left           -> fx<<
 fxarithmetic-shift-right          -> fx>>
 @end example
 @end itemize
+
+@c page
+@node amb
+@section McCarthy's @func{amb} operator
+
+
+@cindex Library @library{vicare language amb}
+@cindex @library{vicare language amb}, library
+
+
+The @dfn{ambiguous operator} allows the execution of a depth first
+search in a tree of choices integrated in the normal control flow of a
+Scheme program; it is built upon continuations.
+
+@menu
+* amb syntaxes::                Programming interface for @func{amb}.
+@end menu
+
+@c page
+@node amb syntaxes
+@subsection Programming interface for @func{amb}
+
+
+The following bindings are exported by the library @library{vicare
+language amb}.
+
+
+@deffn Syntax amb @meta{expr} ...
+Evaluate one of the @meta{expr} expressions and return its result;
+create a continuation that can be reinstated to reject the result of
+this @meta{expr} and try with the next @meta{expr}.
+
+When used with no arguments: reject the result of the most recent
+@var{expr} and reinstate the continuation to try the next @var{expr}.
+
+The given @var{expr} are tried in the given order: left to right.
+@end deffn
+
+
+@deffn Syntax amb-random @meta{expr} ...
+Like @func{amb} but randomly select the order in which the given
+expressions are tried.  The order is determined at every first execution
+of the expanded code, using the random fixnum generator referenced by
+@func{amb-random-fixnum-maker}.
+@end deffn
+
+
+@deffn Parameter amb-random-fixnum-maker
+Hold a procedure accepting a fixnum as single argument: when applied to
+the fixnum @math{N} it must returns a fixnum in the range @math{[0, N)}.
+It is initialised with @func{random} from the library @library{vicare}.
+@end deffn
+
+
+@deffn Syntax amb-assert @meta{expr}
+Evaluate @meta{expr} and if the result is true return it; if the result
+is false reject the latest @func{amb} choice.
+
+@example
+(amb-assert @meta{expr}) @expansion{} (or @meta{expr} (amb))
+@end example
+@end deffn
+
 
 @c page
 @node debugging
