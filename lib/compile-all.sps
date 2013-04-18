@@ -54,10 +54,10 @@
   (only (vicare numerics flonum-parser))
   (only (vicare numerics flonum-formatter))
 
-  (only (vicare weak-hashtables))
   (only (vicare checks))
   (only (vicare custom-ports))
 
+  (only (vicare containers weak-hashtables))
   (only (vicare containers bytevector-compounds core))
   (only (vicare containers bytevector-compounds))
   (only (vicare containers bytevector-compounds unsafe))

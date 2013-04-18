@@ -96,6 +96,7 @@ Notes for revision 0.3d0
      (vicare flonum-formatter)
      (vicare flonum-parser)
      (vicare cond-expand ---)
+     (vicare weak-hashtables)
 
   have been renamed to:
 
@@ -112,6 +113,7 @@ Notes for revision 0.3d0
      (vicare language-extensions cond-expand ---)
      (vicare numerics flonum-formatter)
      (vicare numerics flonum-parser)
+     (vicare containers weak-hashtables)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

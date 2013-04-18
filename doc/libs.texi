@@ -4053,8 +4053,8 @@ initialised to nil.
 @section Weak hashtables
 
 
-@cindex Library @library{vicare weak-hashtables}
-@cindex @library{vicare weak-hashtables}, library
+@cindex Library @library{vicare containers weak-hashtables}
+@cindex @library{vicare containers weak-hashtables}, library
 
 
 Weak hashtables are associative containers whose keys are held by weak
@@ -4112,7 +4112,7 @@ The maximum number of entries is the value of @code{(greatest-fixnum)}.
 
 The @api{} of weak hashtables is similar to the @api{} of @rnrs{6}
 hashtables.  The following bindings are exported by the @library{vicare
-weak-hashtables} library.
+containers weak-hashtables} library.
 
 
 @defun make-weak-hashtable @var{hash-function} @var{equiv-function}

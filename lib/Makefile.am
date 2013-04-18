@@ -41,13 +41,13 @@ nobase_dist_libvicare_DATA	= \
 	vicare/containers/bytevector-compounds.sls			\
 	vicare/containers/bytevector-compounds/core.sls			\
 	vicare/containers/bytevector-compounds/unsafe.sls		\
+	vicare/containers/weak-hashtables.sls				\
 	\
 	vicare/assembler/inspection.sls					\
 	vicare/checks.sls						\
 	vicare/custom-ports.sls						\
 	vicare/debugging/compiler.sls					\
 	vicare/parser-logic.sls						\
-	vicare/weak-hashtables.sls					\
 	\
 	vicare/net/channels.sls
 
