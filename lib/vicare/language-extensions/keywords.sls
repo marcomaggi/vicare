@@ -25,7 +25,7 @@
 
 
 #!vicare
-(library (vicare keywords)
+(library (vicare language-extensions keywords)
   (export
     ;; reexported from (vicare)
     symbol->keyword

@@ -48,11 +48,11 @@
   (only (vicare language-extensions amb))
   (only (vicare language-extensions coroutines))
   (only (vicare language-extensions infix))
+  (only (vicare language-extensions keywords))
 
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))
-  (only (vicare keywords))
   (only (vicare checks))
   (only (vicare custom-ports))
   (only (vicare bytevector-compounds core))

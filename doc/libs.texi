@@ -2853,8 +2853,8 @@ size; we can interface it as follows:
 @section More facilities for keyword objects
 
 
-@cindex Library @library{vicare keywords}
-@cindex @library{vicare keywords}, library
+@cindex Library @library{vicare language-extensions keywords}
+@cindex @library{vicare language-extensions keywords}, library
 
 
 Keywords are disjoint objects which can be read by @value{PRJNAME}'s
@@ -2864,8 +2864,8 @@ boot image, but additional facilities are required to make use of
 keywords.
 
 The following bindings are exported by the library @library{vicare
-keywords}.  Additionally the following bindings are reexported from
-@library{vicare}:
+language-extensions keywords}.  Additionally the following bindings are
+reexported from @library{vicare}:
 
 @example
 symbol->keyword         keyword->symbol
@@ -2989,7 +2989,7 @@ Examples:
 @example
 #!vicare
 (import (vicare)
-  (vicare keywords))
+  (vicare language-extensions keywords))
 
 ;; options with arguments
 (let-keywords '(#:a 1 #:b 2 #:d 4) args #f

@@ -91,6 +91,7 @@ Notes for revision 0.3d0
      (vicare unsafe-capi)
      (vicare infix)
      (vicare include)
+     (vicare keywords)
 
   have been renamed to:
 
@@ -102,6 +103,7 @@ Notes for revision 0.3d0
      (vicare unsafe capi)
      (vicare language-extensions infix)
      (vicare language-extensions include)
+     (vicare language-extensions keywords)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records
