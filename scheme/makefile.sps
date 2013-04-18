@@ -527,7 +527,7 @@
     ($comp		(ikarus system $compnums)		#f	#t)
     ($symbols		(ikarus system $symbols)		#f	#t)
     ($structs		(ikarus system $structs)		#f	#t)
-    ($pointers		(ikarus system $pointers)		#t	#t)
+    ($pointers		(ikarus system $pointers)		#f	#t)
     ($codes		(ikarus system $codes)			#f	#t)
     ($tcbuckets		(ikarus system $tcbuckets)		#f	#t)
     ($arg-list		(ikarus system $arg-list)		#f	#t)
@@ -543,7 +543,7 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
-    (posix		(vicare $posix)				#t	#t)
+    (posix		(vicare $posix)				#f	#t)
     ($language		(vicare language-extensions)		#t	#f)
     ))
 
