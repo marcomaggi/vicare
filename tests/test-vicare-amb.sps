@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare language amb)
+  (vicare language-extensions amb)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare language amb)
+(library (vicare language-extensions amb)
   (export
     &amb-exhaustion
     make-amb-exhaustion			amb-exhaustion?

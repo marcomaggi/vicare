@@ -4705,8 +4705,8 @@ fxarithmetic-shift-right          -> fx>>
 @section McCarthy's @func{amb} operator
 
 
-@cindex Library @library{vicare language amb}
-@cindex @library{vicare language amb}, library
+@cindex Library @library{vicare language-extensions amb}
+@cindex @library{vicare language-extensions amb}, library
 
 
 The @dfn{ambiguous operator} allows the execution of a depth first
@@ -4724,7 +4724,7 @@ Scheme program; it is built upon continuations.
 
 
 The following bindings are exported by the library @library{vicare
-language amb}.
+language-extensions amb}.
 
 
 @deffn Syntax amb @meta{expr} ...
