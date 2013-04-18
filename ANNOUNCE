@@ -89,6 +89,7 @@ Notes for revision 0.3d0
      (vicare unsafe-operations)
      (vicare unsafe-unicode)
      (vicare unsafe-capi)
+     (vicare infix)
 
   have been renamed to:
 
@@ -98,6 +99,7 @@ Notes for revision 0.3d0
      (vicare unsafe operations)
      (vicare unsafe unicode)
      (vicare unsafe capi)
+     (vicare language-extensions infix)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

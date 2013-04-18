@@ -4439,13 +4439,13 @@ was run.
 @section Infix to prefix transformer
 
 
-@cindex Library @library{vicare infix}
-@cindex @library{vicare infix}, library
+@cindex Library @library{vicare language-extensions infix}
+@cindex @library{vicare language-extensions infix}, library
 
 
-The library @library{vicare infix} provides the @func{infix} macro which
-converts the traditional infix notation for expressions to the
-equivalent Scheme's prefix notation.
+The library @library{vicare language-extensions infix} provides the
+@func{infix} macro which converts the traditional infix notation for
+expressions to the equivalent Scheme's prefix notation.
 
 To use the library just import @library{vicare infix} and use the
 @func{infix} macro: it expands to a prefix expression to be evaluated at

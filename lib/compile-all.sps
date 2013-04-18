@@ -46,9 +46,9 @@
 
   (only (vicare language-extensions amb))
   (only (vicare language-extensions coroutines))
+  (only (vicare language-extensions infix))
 
   (only (vicare include))
-  (only (vicare infix))
   (only (vicare flonum-parser))
   (only (vicare flonum-formatter))
   (only (vicare weak-hashtables))
