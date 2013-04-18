@@ -4192,12 +4192,12 @@ with the result of applying @var{proc} to the old value.
 @section Formatting flonums
 
 
-@cindex Library @library{vicare flonum-formatter}
-@cindex @library{vicare flonum-formatter}, library
+@cindex Library @library{vicare numerics flonum-formatter}
+@cindex @library{vicare numerics flonum-formatter}, library
 
 
 The following bindings are exported by the library @library{vicare
-flonum-formatter}.
+numerics flonum-formatter}.
 
 
 @defun format-flonum @var{positive?} @var{digits} @var{exponent}
@@ -4208,7 +4208,7 @@ determines the sign.
 @example
 #!r6rs
 (import (vicare)
-  (vicare flonum-formatter))
+  (vicare numerics flonum-formatter))
 
 (define digits
   '(#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
@@ -4245,12 +4245,12 @@ determines the sign.
 @section Parsing flonums
 
 
-@cindex Library @library{vicare flonum-parser}
-@cindex @library{vicare flonum-parser}, library
+@cindex Library @library{vicare numerics flonum-parser}
+@cindex @library{vicare numerics flonum-parser}, library
 
 
 The following bindings are exported by the library @library{vicare
-flonum-parser}.
+numerics flonum-parser}.
 
 
 @defun parse-flonum @var{flonum} @var{real-func} @var{unreal-func}
@@ -4272,7 +4272,7 @@ Notice how the arguments handed to @var{real-func} match the argument of
 @example
 #!r6rs
 (import (vicare)
-  (vicare flonum-parser))
+  (vicare numerics flonum-parser))
 
 (parse-flonum 1.23456789
               (lambda args (cons 'real args))

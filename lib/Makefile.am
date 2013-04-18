@@ -34,6 +34,10 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/include.sls		\
 	vicare/language-extensions/keywords.sls		\
 	\
+	vicare/numerics/constants.sls			\
+	vicare/numerics/flonum-formatter.sls		\
+	vicare/numerics/flonum-parser.sls		\
+	\
 	vicare/assembler/inspection.sls			\
 	vicare/bytevector-compounds.sls			\
 	vicare/bytevector-compounds/core.sls		\
@@ -41,9 +45,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/checks.sls				\
 	vicare/custom-ports.sls				\
 	vicare/debugging/compiler.sls			\
-	vicare/flonum-formatter.sls			\
-	vicare/flonum-parser.sls			\
-	vicare/numerics/constants.sls			\
 	vicare/parser-logic.sls				\
 	vicare/weak-hashtables.sls			\
 	\

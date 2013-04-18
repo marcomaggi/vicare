@@ -22,7 +22,7 @@
 ;;;SOFTWARE.
 
 #!r6rs
-(library (vicare flonum-formatter)
+(library (vicare numerics flonum-formatter)
   (export format-flonum)
   (import (rnrs)
     (vicare language-extensions syntaxes))

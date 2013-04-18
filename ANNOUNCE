@@ -93,6 +93,8 @@ Notes for revision 0.3d0
      (vicare include)
      (vicare keywords)
      (vicare syntactic-extensions)
+     (vicare flonum-formatter)
+     (vicare flonum-parser)
 
   have been renamed to:
 
@@ -106,6 +108,8 @@ Notes for revision 0.3d0
      (vicare language-extensions include)
      (vicare language-extensions keywords)
      (vicare language-extensions syntaxes)
+     (vicare numerics flonum-formatter)
+     (vicare numerics flonum-parser)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records

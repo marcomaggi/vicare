@@ -31,7 +31,7 @@
 
 
 #!r6rs
-(library (vicare flonum-parser)
+(library (vicare numerics flonum-parser)
   (export parse-flonum)
   (import (rnrs)
     (vicare language-extensions syntaxes))
