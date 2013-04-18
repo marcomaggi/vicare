@@ -7,7 +7,7 @@
 ;;;
 ;;;	This library is derived from old code in Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2009, 2010, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -42,18 +42,8 @@
     letrec-keywords	letrec*-keywords
     with-argument	without-argument)
   (import (vicare)
-    (vicare syntactic-extensions))
-
-
-;;;; arguments validation
-
-(define-argument-validation (string who obj)
-  (string? obj)
-  (assertion-violation who "expected string as argument" obj))
-
-(define-argument-validation (keyword who obj)
-  (keyword? obj)
-  (assertion-violation who "expected keyword as argument" obj))
+    (vicare syntactic-extensions)
+    (vicare arguments validation))
 
 
 ;;;; string utilities

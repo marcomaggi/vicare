@@ -235,6 +235,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined numbers::        Validating numbers.
 * args predefined fixnums::        Validating fixnums.
 * args predefined exact integers:: Validating exact integers.
+* args predefined keywords::       Validating keywords.
 * args predefined bits::           Validating bit--sized integers.
 * args predefined signed int::     Validating C language @code{int} values.
 * args predefined clang::          Validating C language values.
@@ -412,6 +413,20 @@ must be exact integers.
 @deffnx {Validation Clause} odd-exact-integer @var{obj}
 Succeed if @var{obj} satisfies the predicates @func{integer?} and
 @func{exact?} and the predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args predefined keywords
+@subsubsection Validating keywords
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} keyword @var{obj}
+Succeed if @var{obj} is a keyword object: it satisfies the predicate
+@func{keyword?} exported by @library{vicare}.
 @end deffn
 
 @c page
