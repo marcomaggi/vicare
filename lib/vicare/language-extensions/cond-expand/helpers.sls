@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare cond-expand helpers)
+(library (vicare language-extensions cond-expand helpers)
   (export define-cond-expand-identifiers-helper)
   (import (vicare))
 

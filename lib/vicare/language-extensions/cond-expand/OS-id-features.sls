@@ -3,7 +3,7 @@
 ;;;with.
 
 #!r6rs
-(library (vicare cond-expand OS-id-features)
+(library (vicare language-extensions cond-expand OS-id-features)
   (export OS-id-features)
   (import (rnrs))
   (define (OS-id-features OS-id features-alist)

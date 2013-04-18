@@ -3,11 +3,11 @@
 ;;;with.
 
 #!r6rs
-(library (vicare cond-expand platform-features)
+(library (vicare language-extensions cond-expand platform-features)
   (export expand-time-features run-time-features)
   (import (rnrs)
     (only (ikarus) host-info)
-    (vicare cond-expand OS-id-features))
+    (vicare language-extensions cond-expand OS-id-features))
   (define (expand-time-features)
     '(vicare))
   (define (run-time-features)

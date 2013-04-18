@@ -6,7 +6,7 @@
 (library (srfi :0 cond-expand)
   (export cond-expand)
   (import (rnrs)
-    (for (only (vicare cond-expand registry)
+    (for (only (vicare language-extensions cond-expand registry)
 	       available-features
 	       expand-time-features)
 	 expand))

@@ -1327,14 +1327,14 @@ to the sourced code.
 @section Feature based conditional expansion
 
 
-@cindex Library @library{vicare cond-expand}
-@cindex @library{vicare cond-expand}, library
-@cindex Library @library{vicare cond-expand helpers}
-@cindex @library{vicare cond-expand helpers}, library
+@cindex Library @library{vicare language-extensions cond-expand}
+@cindex @library{vicare language-extensions cond-expand}, library
+@cindex Library @library{vicare language-extensions cond-expand helpers}
+@cindex @library{vicare language-extensions cond-expand helpers}, library
 
 
 The following bindings are exported by the library @library{vicare
-cond-expand}.
+language-extensions cond-expand}.
 
 
 @deffn Syntax define-cond-expand @meta{cond-expand} @meta{feature-func} ...
@@ -1359,7 +1359,7 @@ the one exported by @ansrfi{0}:
 @example
 #!r6rs
 (import (rnrs)
-  (vicare cond-expand))
+  (vicare language-extensions cond-expand))
 
 (define-cond-expand cond-expand)
 
@@ -1376,7 +1376,7 @@ additionally recognises the features @func{write} and @func{display}:
 @example
 #!r6rs
 (import (rnrs)
-  (vicare cond-expand))
+  (vicare language-extensions cond-expand))
 
 (define-cond-expand cond-expand
   (lambda (id)
@@ -1430,8 +1430,8 @@ additionally recognises the features @func{write} and @func{display}:
 @example
 #!r6rs
 (import (rnrs)
-  (vicare cond-expand)
-  (for (vicare cond-expand)
+  (vicare language-extensions cond-expand)
+  (for (vicare language-extensions cond-expand)
        expand))
 
 (define-cond-expand cond-expand
