@@ -150,8 +150,8 @@ Notes for revision 0.3d0
 * Added  library  (vicare  custom-ports),  see  the  documentation  node
   "custom-ports".
 
-* Added  library   (vicare  coroutines),  see  the   documentation  node
-  "coroutines".
+* Added  library   (vicare  language-extensions  coroutines),   see  the
+  documentation node "coroutines".
 
 * Added library (vicare language-extensions  amb), see the documentation
   node "amb".

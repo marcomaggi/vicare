@@ -28,13 +28,13 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/validation.sls			\
 	\
 	vicare/language-extensions/amb.sls		\
+	vicare/language-extensions/coroutines.sls	\
 	\
 	vicare/assembler/inspection.sls			\
 	vicare/bytevector-compounds.sls			\
 	vicare/bytevector-compounds/core.sls		\
 	vicare/bytevector-compounds/unsafe.sls		\
 	vicare/checks.sls				\
-	vicare/coroutines.sls				\
 	vicare/custom-ports.sls				\
 	vicare/debugging/compiler.sls			\
 	vicare/flonum-formatter.sls			\

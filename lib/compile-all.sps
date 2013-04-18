@@ -45,6 +45,7 @@
   (only (vicare cond-expand helpers))
 
   (only (vicare language-extensions amb))
+  (only (vicare language-extensions coroutines))
 
   (only (vicare include))
   (only (vicare infix))

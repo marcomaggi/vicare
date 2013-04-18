@@ -4830,14 +4830,14 @@ debugging compiler}.
 @section Running coroutines
 
 
-@cindex Library @library{vicare coroutines}
-@cindex @library{vicare coroutines}, library
+@cindex Library @library{vicare language-extensions coroutines}
+@cindex @library{vicare language-extensions coroutines}, library
 
-The library @library{vicare coroutines} implements coroutines on top of
-Scheme continuations.  The implementation is a simple queue of escape
-functions: whenever coroutine @var{A} yields control to the ``next''
-coroutine, it enqueues an escape function to its current continuation
-and causes the next escape function to be invoked.
+The library @library{vicare language-extensions coroutines} implements
+coroutines on top of Scheme continuations.  The implementation is a
+simple queue of escape functions: whenever coroutine @var{A} yields
+control to the ``next'' coroutine, it enqueues an escape function to its
+current continuation and causes the next escape function to be invoked.
 
 For discussions about other implementations of coroutines and
 continuations see @ref{HFWCoro, references}.
@@ -4864,7 +4864,7 @@ after the prelude:
 @example
 #!r6rs
 (import (vicare)
-  (vicare coroutines))
+  (vicare language-extensions coroutines))
 
 (set-port-buffer-mode! (current-output-port)
                        (buffer-mode line))
@@ -5060,7 +5060,7 @@ terminated.
 
 
 The following bindings are exported by the library @library{vicare
-coroutines}.
+language-extensions coroutines}.
 
 
 @defun coroutine @var{thunk}

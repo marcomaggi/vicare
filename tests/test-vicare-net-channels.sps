@@ -30,7 +30,7 @@
   (prefix (vicare net channels)
 	  chan.)
   (vicare custom-ports)
-  (vicare coroutines)
+  (vicare language-extensions coroutines)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
