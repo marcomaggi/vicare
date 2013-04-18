@@ -167,7 +167,8 @@ multiple times.
 Add @var{DIRECTORY} to the library search path.  This option can be used
 multiple times.
 
-@item --fasl-path @var{DIRECTORY}
+@item -F @var{DIRECTORY}
+@itemx --fasl-path @var{DIRECTORY}
 Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
 multiple times.
 

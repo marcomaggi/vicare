@@ -48,6 +48,8 @@ Notes for revision 0.3d0
 
 * Added command line option -g as alias for --debug.
 
+* Added command line option -F as alias for --fasl-path.
+
 * The  script "configure"  and the  makefiles accept  the user  variable
   VFLAGS  to  set  command  line options  for  "vicare"  when  compiling
   libraries and  running the test  suite.  VFLAGS is  to be used  in the
