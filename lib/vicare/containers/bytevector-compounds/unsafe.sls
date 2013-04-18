@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare bytevector-compounds unsafe)
+(library (vicare containers bytevector-compounds unsafe)
   (export
 
     ;; inspection
@@ -41,6 +41,6 @@
     $bytevector-compound-u8-set!	$bytevector-compound-u8-ref
     $bytevector-compound-s8-set!	$bytevector-compound-s8-ref
     )
-  (import (vicare bytevector-compounds core)))
+  (import (vicare containers bytevector-compounds core)))
 
 ;;; end of file

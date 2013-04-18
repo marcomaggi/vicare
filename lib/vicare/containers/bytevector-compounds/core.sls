@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare bytevector-compounds core)
+(library (vicare containers bytevector-compounds core)
   (export
 
     ;; data type

@@ -57,9 +57,11 @@
   (only (vicare weak-hashtables))
   (only (vicare checks))
   (only (vicare custom-ports))
-  (only (vicare bytevector-compounds core))
-  (only (vicare bytevector-compounds))
-  (only (vicare bytevector-compounds unsafe))
+
+  (only (vicare containers bytevector-compounds core))
+  (only (vicare containers bytevector-compounds))
+  (only (vicare containers bytevector-compounds unsafe))
+
   (only (vicare net channels))
 
   (only (vicare assembler inspection))

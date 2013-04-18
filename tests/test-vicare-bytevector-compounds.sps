@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (vicare bytevector-compounds)
+  (vicare containers bytevector-compounds)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

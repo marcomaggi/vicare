@@ -5175,15 +5175,15 @@ written to one port is read from the other port.
 @section Bytevector compounds
 
 
-@cindex Library @library{vicare bytevector-compounds}
-@cindex @library{vicare bytevector-compounds}, library
+@cindex Library @library{vicare containers bytevector-compounds}
+@cindex @library{vicare containers bytevector-compounds}, library
 
 
 A @dfn{bytevector compound} is a sequence of octets split into a
 sequence of bytevectors.  Bytevector compounds have a special @api{} to
 handle the sequence of octets as a First--in First--out queue.
 Bytevector compounds are defined by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 @menu
 * bytevector compounds types::    Data type definitions.
@@ -5198,7 +5198,7 @@ bytevector-compounds}.
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @deftp {@rnrs{6} Record Type} bytevector-compound
@@ -5243,7 +5243,7 @@ contains at least one octet.
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @defun bytevector-compound-empty? @var{bvcom}
@@ -5281,7 +5281,7 @@ value results in undefined behaviour.
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @defun bytevector-compound-enqueue! @var{bvcom} @var{item}
@@ -5301,7 +5301,7 @@ Dequeue the next bytevector from @var{bvcom} and return it; return
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @defun bytevector-compound-u8-set! @var{bvcom} @var{idx} @var{octet}
@@ -5316,7 +5316,6 @@ Accessor and mutator for non-negative exact integers in the range
 Accessor and mutator for non-negative exact integers in the range
 @math{[-128, 127]}.
 @end defun
-
 
 @c page
 @node net channels

@@ -11,11 +11,11 @@ dist_pkglibexec_SCRIPTS	= compile-all.sps
 libvicaredir		= $(libdir)/vicare-scheme
 
 nobase_dist_libvicare_DATA	= \
-	vicare/unsafe/capi.sls				\
-	vicare/unsafe/operations.sls			\
-	vicare/unsafe/unicode.sls			\
+	vicare/unsafe/capi.sls						\
+	vicare/unsafe/operations.sls					\
+	vicare/unsafe/unicode.sls					\
 	\
-	vicare/platform/utilities.sls			\
+	vicare/platform/utilities.sls					\
 	\
 	vicare/language-extensions/cond-expand.sls			\
 	vicare/language-extensions/cond-expand/OS-id-features.sls	\
@@ -24,29 +24,30 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/cond-expand/platform-features.sls	\
 	vicare/language-extensions/cond-expand/registry.sls		\
 	\
-	vicare/arguments/general-c-buffers.sls		\
-	vicare/arguments/validation.sls			\
+	vicare/arguments/general-c-buffers.sls				\
+	vicare/arguments/validation.sls					\
 	\
-	vicare/language-extensions/amb.sls		\
-	vicare/language-extensions/syntaxes.sls		\
-	vicare/language-extensions/coroutines.sls	\
-	vicare/language-extensions/infix.sls		\
-	vicare/language-extensions/include.sls		\
-	vicare/language-extensions/keywords.sls		\
+	vicare/language-extensions/amb.sls				\
+	vicare/language-extensions/syntaxes.sls				\
+	vicare/language-extensions/coroutines.sls			\
+	vicare/language-extensions/infix.sls				\
+	vicare/language-extensions/include.sls				\
+	vicare/language-extensions/keywords.sls				\
 	\
-	vicare/numerics/constants.sls			\
-	vicare/numerics/flonum-formatter.sls		\
-	vicare/numerics/flonum-parser.sls		\
+	vicare/numerics/constants.sls					\
+	vicare/numerics/flonum-formatter.sls				\
+	vicare/numerics/flonum-parser.sls				\
 	\
-	vicare/assembler/inspection.sls			\
-	vicare/bytevector-compounds.sls			\
-	vicare/bytevector-compounds/core.sls		\
-	vicare/bytevector-compounds/unsafe.sls		\
-	vicare/checks.sls				\
-	vicare/custom-ports.sls				\
-	vicare/debugging/compiler.sls			\
-	vicare/parser-logic.sls				\
-	vicare/weak-hashtables.sls			\
+	vicare/containers/bytevector-compounds.sls			\
+	vicare/containers/bytevector-compounds/core.sls			\
+	vicare/containers/bytevector-compounds/unsafe.sls		\
+	\
+	vicare/assembler/inspection.sls					\
+	vicare/checks.sls						\
+	vicare/custom-ports.sls						\
+	vicare/debugging/compiler.sls					\
+	vicare/parser-logic.sls						\
+	vicare/weak-hashtables.sls					\
 	\
 	vicare/net/channels.sls
 
