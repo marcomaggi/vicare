@@ -37,32 +37,49 @@
 (parametrise ((check-test-name	'core))
 
   (check
-      (amb (amb) 1)
+      (with-ambiguous-choices
+       (amb (amb) 1))
     => 1)
 
   (check
-      (amb 1 (amb))
+      (with-ambiguous-choices
+       (amb 1 (amb)))
     => 1)
 
-  (check
+  (check	;successfully find value
       (with-result
-       (let ((N (amb 1 2 3 4)))
-	 (add-result N)
-	 (unless (< 2 N)
-	   (amb))
-	 (unless (even? N)
-	   (amb))
-	 N))
+       (with-ambiguous-choices
+	(let ((N (amb 1 2 3 4)))
+	  (add-result N)
+	  (unless (< 2 N)
+	    (amb))
+	  (unless (even? N)
+	    (amb))
+	  N)))
     => '(4 (1 2 3 4)))
 
-  (check
+  (check	;successfully find value, test AMB-ASSERT
       (with-result
-       (let ((N (amb 1 2 3 4)))
-	 (add-result N)
-	 (amb-assert (< 2 N))
-	 (amb-assert (even? N))
-	 N))
+       (with-ambiguous-choices
+	(let ((N (amb 1 2 3 4)))
+	  (add-result N)
+	  (amb-assert (< 2 N))
+	  (amb-assert (even? N))
+	  N)))
     => '(4 (1 2 3 4)))
+
+  (check	;successfully find sequence
+      (with-result
+       (with-ambiguous-choices
+	(guard (E ((amb-exhaustion? E)
+		   #t)
+		  (else
+		   #f))
+	  (let ((N (amb 1 2 3 4 5 6 7 8 9 10)))
+	    (amb-assert (odd? N))
+	    (add-result N)
+	    (amb)))))
+    => '(#t (1 3 5 7 9)))
 
   #t)
 
@@ -70,11 +87,21 @@
 (parametrise ((check-test-name	'failures))
 
   (check
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else #f))
+	(eval '(amb (amb) 1)
+	      (environment '(vicare language-extensions amb))))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
       (guard (E ((error? E)
 		 #t)
 		(else #f))
 	(raise (make-amb-exhaustion)))
-    => #t)
+    => #f)
 
   (check
       (guard (E ((amb-exhaustion? E)
@@ -83,56 +110,62 @@
 	(raise (make-amb-exhaustion)))
     => #t)
 
-  #;(check
+  (check
       (with-result
-       (guard (E ((amb-exhaustion? E)
-		  (check-pretty-print E)
-		  #t)
-		 (else
-		  (check-pretty-print E)
-		  #f))
-	 (let ((N (amb 1 3 5 7)))
-	   (check-pretty-print N)
-	   (add-result N)
-	   (amb-assert (even? N))
-	   N)))
+       (with-ambiguous-choices
+	(guard (E ((amb-exhaustion? E)
+;;;(check-pretty-print E)
+		   #t)
+		  (else
+;;;(check-pretty-print E)
+		   #f))
+	  (let ((N (amb 1 3 5 7)))
+;;;(check-pretty-print N)
+	    (add-result N)
+	    (amb-assert (even? N))
+	    N))))
     => '(#t (1 3 5 7)))
 
-    #t)
+  #t)
 
 
 (parametrise ((check-test-name	'random))
 
   (check
-      (amb-random (amb-random) 1)
+      (with-ambiguous-choices
+       (amb-random (amb-random) 1))
     => 1)
 
   (check
-      (amb-random 1 (amb-random))
+      (with-ambiguous-choices
+       (amb-random 1 (amb-random)))
     => 1)
 
   (check
-      (let ((N (amb-random 1 2 3 4)))
-	(unless (< 2 N)
-	  (amb))
-	(unless (even? N)
-	  (amb))
-	N)
+      (with-ambiguous-choices
+       (let ((N (amb-random 1 2 3 4)))
+	 (unless (< 2 N)
+	   (amb))
+	 (unless (even? N)
+	   (amb))
+	 N))
     => 4)
 
   (check
-      (let ((N (amb-random 1 2 3 4)))
-	(amb-assert (< 2 N))
-	(amb-assert (even? N))
-	N)
+      (with-ambiguous-choices
+       (let ((N (amb-random 1 2 3 4)))
+	 (amb-assert (< 2 N))
+	 (amb-assert (even? N))
+	 N))
     => 4)
 
   (check
-      (parametrise ((amb-random-fixnum-maker random))
-	(let ((N (amb-random 1 2 3 4)))
-	  (amb-assert (< 2 N))
-	  (amb-assert (even? N))
-	  N))
+      (with-ambiguous-choices
+       (parametrise ((amb-random-fixnum-maker random))
+	 (let ((N (amb-random 1 2 3 4)))
+	   (amb-assert (< 2 N))
+	   (amb-assert (even? N))
+	   N)))
     => 4)
 
   #t)

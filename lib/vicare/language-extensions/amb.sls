@@ -30,7 +30,7 @@
   (export
     &amb-exhaustion
     make-amb-exhaustion			amb-exhaustion?
-    amb
+    with-ambiguous-choices		amb
     amb-assert
     amb-random				amb-random-fixnum-maker)
   (import (vicare)
@@ -40,43 +40,86 @@
 
 ;;;; type definitions
 
+;;Tag the compound condition object  raised whenever the search three is
+;;exhausted.
+;;
 (define-condition-type &amb-exhaustion
-    &error
+    &condition
   make-amb-exhaustion
   amb-exhaustion?)
 
+;;Tag the compound condition object  raised whenever AMB is used outside
+;;the dynamic environment prepared by WITH-AMBIGUOUS-CHOICES.
+;;
+(define-condition-type &amb-not-initialised
+    &assertion
+  make-amb-not-initialised
+  amb-not-initialised?)
+
 
-;;;; core syntax
+;;;; error handling
+
+(define (%amb-correctly-initialised?)
+  ;;Invoked  whenever  AMB  is  used  outside  the  dynamic  environment
+  ;;prepared by WITH-AMBIGUOUS-CHOICES.
+  ;;
+  (unless (procedure? (%current-fail-escape))
+    (raise
+     (condition
+      (make-amb-not-initialised)
+      (make-who-condition 'amb)
+      (make-message-condition "missing initialisation of ambiguous choices")))))
+
+(define %raise-exhausted-search-tree
+  ;;Invoked whenever the search three is exhausted.
+  ;;
+  (let ((E (condition (make-amb-exhaustion)
+		      (make-who-condition 'amb)
+		      (make-message-condition "search tree exhausted"))))
+    (lambda ()
+      (raise-continuable E))))
+
+(define (%raise-internal-error)
+  ;;Raised in case of internal error.
+  ;;
+  (assertion-violation 'amb
+    "internal error while , attempt to escape to next choice with no choice"))
+
+
+;;;; core syntaxes
+
+(define-syntax with-ambiguous-choices
+  ;;Initialised the dynamic environment for a new AMB search.
+  ;;
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (parametrise ((%current-fail-escape  %raise-exhausted-search-tree)
+		   (%previous-fail-escape %raise-internal-error))
+       ?body0 ?body ...))))
 
 (define-syntax amb
   (syntax-rules ()
     ((_)
      ((%current-fail-escape)))
     ((_ ?expr0 ?expr ...)
-     (call/cc
-	 (lambda (return)
-	   (parametrise ((%previous-fail-escape (%current-fail-escape)))
-	     (call/cc
-		 (lambda (escape)
-		   (%current-fail-escape escape)
-		   (return ?expr0)))
-	     (%current-fail-escape (%previous-fail-escape))
-	     (amb ?expr ...)))))
+     (begin
+       (%amb-correctly-initialised?)
+       (call/cc
+	   (lambda (return)
+	     (parametrise ((%previous-fail-escape (%current-fail-escape)))
+	       (call/cc
+		   (lambda (escape)
+		     (%current-fail-escape escape)
+		     (return ?expr0)))
+	       (%current-fail-escape (%previous-fail-escape))
+	       (amb ?expr ...))))))
     ))
 
 (define %current-fail-escape
-  (make-parameter
-      (let ((E (condition (make-amb-exhaustion)
-			  (make-who-condition 'amb)
-			  (make-message-condition "search tree exhausted"))))
-	(lambda ()
-	  (raise-continuable E)))))
+  (make-parameter #f))
 
 (define %previous-fail-escape
-  (make-parameter
-      (lambda ()
-	(assertion-violation 'amb
-	  "internal error, attempt to escape to next choice with no choice"))))
+  (make-parameter #f))
 
 
 ;;;; extensions
@@ -110,6 +153,7 @@
 	obj)))
 
   (define (%amb-random thunks)
+    (%amb-correctly-initialised?)
     (let* ((thunks.len  ($vector-length thunks))
 	   (order       (%make-order-vector thunks.len)))
       (call/cc

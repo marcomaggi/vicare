@@ -4729,12 +4729,12 @@ search in a tree of choices integrated in the normal control flow of a
 Scheme program; it is built upon continuations.
 
 @menu
-* amb syntaxes::                Programming interface for @func{amb}.
-* amb examples::                Usage example for @func{amb}.
+* amb api::                     Programming interface for @func{amb}.
+* amb examples::                Usage examples for @func{amb}.
 @end menu
 
 @c page
-@node amb syntaxes
+@node amb api
 @subsection Programming interface for @func{amb}
 
 
@@ -4742,11 +4742,18 @@ The following bindings are exported by the library @library{vicare
 language-extensions amb}.
 
 
+@deffn Syntax with-ambiguous-choices @metao{body} @meta{body} ...
+Initialise the dynamic environment for a new @func{amb} search and in
+such environment evaluates the @meta{body} forms.  Return the result of
+the last form.
+@end deffn
+
+
 @deffn Syntax amb @meta{expr} ...
-Evaluate one of the @meta{expr} expressions and return its result;
-create a continuation that can be reinstated to reject the result of
-this @meta{expr} and try with the next @meta{expr}.  The given
-@var{expr} arguments are tried in the given order: left to right.
+Evaluate one of the @meta{expr} expressions and return its result; save
+in the dynamic environment a continuation that can be reinstated to
+reject the result of this @meta{expr} and try with the next @meta{expr}.
+The @var{expr} arguments are tried in the given order: left to right.
 
 When used with no arguments: reject the result of the most recent
 @var{expr} and reinstate the previous continuation to try the next
@@ -4755,6 +4762,9 @@ When used with no arguments: reject the result of the most recent
 When all the choices have been tried: raise a continuable exception with
 condition object components @condition{who}, @condition{message},
 @condition{amb-exhaustion}.
+
+It is an error if @func{amb} is used outside the dynamic environment
+prepared by @func{with-ambiguous-choices}.
 @end deffn
 
 
@@ -4768,8 +4778,9 @@ of the expanded code, using the random fixnum generator referenced by
 
 @deffn Parameter amb-random-fixnum-maker
 Hold a procedure accepting a fixnum as single argument: when applied to
-the fixnum @math{N} it must returns a fixnum in the range @math{[0, N)}.
-It is initialised with @func{random} from the library @library{vicare}.
+the fixnum @math{N} it must return a fixnum in the range @math{[0, N)}.
+It is initialised with @func{random} from the library @library{vicare},
+@ref{iklib misc, random}.
 @end deffn
 
 
@@ -4789,7 +4800,7 @@ is false reject the latest @func{amb} choice.
 
 @deftp {Condition Type} &amb-exhaustion
 Condition type used to signal the exhaustion of a search tree visited by
-@func{amb}; it is derived from @condition{error}.
+@func{amb}; it is derived from @condition{condition}.
 @end deftp
 
 
@@ -4801,6 +4812,24 @@ Build and return a new instance of @condition{amb-exhaustion}.
 @defun amb-exhaustion? @var{obj}
 Return @true{} if @var{obj} is an instance of
 @condition{amb-exhaustion}, else return @false{}.
+@end defun
+
+
+@deftp {Condition Type} &amb-not-initialised
+Condition type used to tag the compound condition object raised whenever
+@func{amb} is used outside the dynamic environment prepared by
+@func{with-ambiguous-choices}; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-amb-not-initialised
+Build and return a new instance of @condition{amb-not-initialised}.
+@end defun
+
+
+@defun amb-not-initialised? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@condition{amb-not-initialised}, else return @false{}.
 @end defun
 
 @c page
