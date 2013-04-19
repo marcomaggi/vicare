@@ -58,7 +58,7 @@
   (export
     ;; miscellaneous extensions
     define-inline		define-inline-constant
-    define-constant
+    define-constant		define-values
     define-struct-extended	define-record-type-extended
     define-syntax*		define-auxiliary-syntaxes
     let-inline			let*-inline
@@ -245,6 +245,24 @@
 		  (cons (car (generate-temporaries '(#f))) keys)
 		  (cons #'?arg exprs)))
 	   ))))))
+
+(define-syntax define-values
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ (?var ... ?var0) ?form0 ?form ...)
+       (with-syntax (((VAR ... VAR0) (generate-temporaries #'(?var ... ?var0))))
+	 #'(begin
+	     ;;We  must make  sure that  the ?FORMs  do not  capture the
+	     ;;?VARs.
+	     (define (dummy)
+	       ?form0 ?form ...)
+	     (define ?var  #f)
+	     ...
+	     (define ?var0
+	       (let-values (((VAR ... VAR0) (dummy)))
+		 (set! ?var  VAR)
+		 ...
+		 VAR0))))))))
 
 
 ;;;; extended struct definition
