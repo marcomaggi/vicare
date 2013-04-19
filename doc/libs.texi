@@ -4845,10 +4845,10 @@ language-extensions amb}.
 
 
 @deffn Syntax amb-permute @meta{expr} ...
-Like @func{amb} but randomly select the order in which the given
-expressions are tried.  The permutation determining the order is
-generated at every first execution of the expanded code, using the
-random fixnum generator referenced by @func{amb-random-fixnum-maker}.
+Like @func{amb} but permute the order of the given expressions.  The
+permutation determining the selection order is generated at every first
+execution of the expanded code, using the random fixnum generator
+referenced by @func{amb-random-fixnum-maker}.
 
 If we define the following function:
 
@@ -4859,6 +4859,14 @@ If we define the following function:
 
 @noindent
 a new permutation is generated at every function invocation.
+@end deffn
+
+
+@deffn Syntax amb-permute @meta{expr} ...
+Like @func{amb} but randomly select an expression to evaluate; the same
+expression can be selected multiple times.  This syntax never finishes
+choices.  The next expression to evaluate is selected using the random
+fixnum generator referenced by @func{amb-random-fixnum-maker}.
 @end deffn
 
 

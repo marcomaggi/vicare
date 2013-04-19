@@ -42,7 +42,7 @@
 
     ;; utilities
     amb-assert				amb-permute
-    amb-random-fixnum-maker)
+    amb-random				amb-random-fixnum-maker)
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $))
@@ -189,8 +189,8 @@
       obj)))
 
 (module (amb-permute)
-  ;;Like  AMB  but  randomly  select   the  order  in  which  the  given
-  ;;expressions are tried.
+  ;;Like  AMB but  permute  the given  expressions  before starting  the
+  ;;selection.
   ;;
   (define-syntax amb-permute
     (syntax-rules ()
@@ -243,6 +243,38 @@
 	  ($vector-set! vec j xi)))))
 
   #| end of module: AMB-PERMUTE |# )
+
+(module (amb-random)
+  ;;Like AMB but randomly select among the given expressions.
+  ;;
+  (define-syntax amb-random
+    (syntax-rules ()
+      ((_)
+       ((%current-fail-escape)))
+      ((_ ?expr0 ?expr ...)
+       (%amb-random `#(,(lambda () ?expr0) ,(lambda () ?expr) ...)))
+      ))
+
+  (define (%amb-random thunks)
+    (%amb-correctly-initialised?)
+    (let ((thunks.len ($vector-length thunks)))
+      (call/cc
+	  (lambda (return)
+	    (let next-choice ()
+	      (parametrise ((%previous-fail-escape (%current-fail-escape)))
+		(call/cc
+		    (lambda (escape)
+		      (%current-fail-escape escape)
+		      (return
+		       (let* ((idx    ((amb-random-fixnum-maker) thunks.len))
+			      (result (($vector-ref thunks idx))))
+			 (if (promise? result)
+			     (force result)
+			   result)))))
+		(%current-fail-escape (%previous-fail-escape))
+		(next-choice)))))))
+
+  #| end of module: AMB-RANDOM |# )
 
 
 ;;;; done

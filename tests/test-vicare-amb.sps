@@ -132,7 +132,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'random))
+(parametrise ((check-test-name	'permute))
 
   (check
       (with-ambiguous-choices
@@ -170,6 +170,30 @@
 	   (amb-assert (even? N))
 	   N)))
     => 4)
+
+  #t)
+
+
+(parametrise ((check-test-name	'permute))
+
+  (check
+      (with-ambiguous-choices
+       (let ((R (amb-random 1 2)))
+	 (amb-assert (even? R))
+	 R))
+    => 2)
+
+  (check
+      (let ((counter 10))
+	(with-ambiguous-choices
+	 (let ((R (amb-random 1 3 5 7)))
+	   (if (zero? counter)
+	       #t
+	     (begin
+	       (set! counter (+ -1 counter))
+	       (amb-assert (even? R))
+	       R)))))
+    => #t)
 
   #t)
 
