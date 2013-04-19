@@ -81,50 +81,17 @@
 	    (amb)))))
     => '(#t (1 3 5 7 9)))
 
-  #t)
-
-
-(parametrise ((check-test-name	'failures))
-
-  (check
-      (guard (E ((assertion-violation? E)
-		 #t)
-		(else #f))
-	(eval '(amb (amb) 1)
-	      (environment '(vicare language-extensions amb))))
-    => #t)
-
 ;;; --------------------------------------------------------------------
 
-  (check
-      (guard (E ((error? E)
-		 #t)
-		(else #f))
-	(raise (make-amb-exhaustion)))
-    => #f)
-
-  (check
-      (guard (E ((amb-exhaustion? E)
-		 #t)
-		(else #f))
-	(raise (make-amb-exhaustion)))
-    => #t)
-
-  (check
-      (with-result
-       (with-ambiguous-choices
-	(guard (E ((amb-exhaustion? E)
-;;;(check-pretty-print E)
-		   #t)
-		  (else
-;;;(check-pretty-print E)
-		   #f))
-	  (let ((N (amb 1 3 5 7)))
-;;;(check-pretty-print N)
-	    (add-result N)
-	    (amb-assert (even? N))
-	    N))))
-    => '(#t (1 3 5 7)))
+  (check	;seed, square, cube
+      (with-ambiguous-choices
+       (let* ((A (amb 1 2 3))
+	      (B (amb 5 9 11)))
+	 (amb-assert (= (square A) B))
+	 (let ((C (amb 21 24 27 33)))
+	   (amb-assert (= (cube A) C))
+	   (list A B C))))
+    => '(3 9 27))
 
   #t)
 
@@ -167,6 +134,62 @@
 	   (amb-assert (even? N))
 	   N)))
     => 4)
+
+  #t)
+
+
+(parametrise ((check-test-name	'failures))
+
+  (check
+      (guard (E ((assertion-violation? E)
+		 #t)
+		(else #f))
+	(eval '(amb (amb) 1)
+	      (environment '(vicare language-extensions amb))))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((error? E)
+		 #t)
+		(else #f))
+	(raise (make-amb-exhaustion)))
+    => #f)
+
+  (check
+      (guard (E ((amb-exhaustion? E)
+		 #t)
+		(else #f))
+	(raise (make-amb-exhaustion)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check	;AMB failure
+      (with-result
+       (with-ambiguous-choices
+	(guard (E ((amb-exhaustion? E)
+		   #t)
+		  (else
+		   #f))
+	  (let ((N (amb 1 3 5 7)))
+	    (add-result N)
+	    (amb-assert (even? N))
+	    N))))
+    => '(#t (1 3 5 7)))
+
+  (check	;AMB-RANDOM failure
+      (with-ambiguous-choices
+       (guard (E ((amb-exhaustion? E)
+		  #t)
+		 (else
+		  #f))
+	 (let ((N (amb-random 1 3 5 7)))
+	   (add-result N)
+	   (amb-assert (even? N))
+	   N)))
+    => #t)
 
   #t)
 
