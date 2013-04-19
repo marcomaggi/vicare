@@ -4844,11 +4844,21 @@ The following bindings are exported by the library @library{vicare
 language-extensions amb}.
 
 
-@deffn Syntax amb-random @meta{expr} ...
+@deffn Syntax amb-permute @meta{expr} ...
 Like @func{amb} but randomly select the order in which the given
-expressions are tried.  The order is determined at every first execution
-of the expanded code, using the random fixnum generator referenced by
-@func{amb-random-fixnum-maker}.
+expressions are tried.  The permutation determining the order is
+generated at every first execution of the expanded code, using the
+random fixnum generator referenced by @func{amb-random-fixnum-maker}.
+
+If we define the following function:
+
+@example
+(define (choose)
+  (amb 1 2 3))
+@end example
+
+@noindent
+a new permutation is generated at every function invocation.
 @end deffn
 
 

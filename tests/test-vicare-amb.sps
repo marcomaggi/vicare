@@ -136,17 +136,17 @@
 
   (check
       (with-ambiguous-choices
-       (amb-random (amb-random) 1))
+       (amb-permute (amb-permute) 1))
     => 1)
 
   (check
       (with-ambiguous-choices
-       (amb-random 1 (amb-random)))
+       (amb-permute 1 (amb-permute)))
     => 1)
 
   (check
       (with-ambiguous-choices
-       (let ((N (amb-random 1 2 3 4)))
+       (let ((N (amb-permute 1 2 3 4)))
 	 (unless (< 2 N)
 	   (amb))
 	 (unless (even? N)
@@ -156,7 +156,7 @@
 
   (check
       (with-ambiguous-choices
-       (let ((N (amb-random 1 2 3 4)))
+       (let ((N (amb-permute 1 2 3 4)))
 	 (amb-assert (< 2 N))
 	 (amb-assert (even? N))
 	 N))
@@ -165,7 +165,7 @@
   (check
       (with-ambiguous-choices
        (parametrise ((amb-random-fixnum-maker random))
-	 (let ((N (amb-random 1 2 3 4)))
+	 (let ((N (amb-permute 1 2 3 4)))
 	   (amb-assert (< 2 N))
 	   (amb-assert (even? N))
 	   N)))
@@ -215,13 +215,13 @@
 	    N))))
     => '(#t (1 3 5 7)))
 
-  (check	;AMB-RANDOM failure
+  (check	;AMB-PERMUTE failure
       (with-ambiguous-choices
        (guard (E ((amb-exhaustion? E)
 		  #t)
 		 (else
 		  #f))
-	 (let ((N (amb-random 1 3 5 7)))
+	 (let ((N (amb-permute 1 3 5 7)))
 	   (add-result N)
 	   (amb-assert (even? N))
 	   N)))

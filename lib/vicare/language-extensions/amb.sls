@@ -28,12 +28,21 @@
 #!r6rs
 (library (vicare language-extensions amb)
   (export
+
+    ;; core syntaxes
+    with-ambiguous-choices		with-amb-exhaustion-handler
+    amb
+
+    ;; condition types
     &amb-exhaustion
     make-amb-exhaustion			amb-exhaustion?
-    with-ambiguous-choices		amb
-    with-amb-exhaustion-handler
-    amb-assert
-    amb-random				amb-random-fixnum-maker)
+
+    &amb-not-initialised
+    make-amb-not-initialised		amb-not-initialised?
+
+    ;; utilities
+    amb-assert				amb-permute
+    amb-random-fixnum-maker)
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $))
@@ -169,30 +178,29 @@
     ((_ ?expr)
      (or ?expr (amb)))))
 
-(module (amb-random amb-random-fixnum-maker)
+(define amb-random-fixnum-maker
+  ;;Hold a procedure accepting a fixnum as single argument: when applied
+  ;;to the fixnum N it must returns a fixnum in the range [0, N).
+  ;;
+  (make-parameter
+      random
+    (lambda (obj)
+      (assert (procedure? obj))
+      obj)))
+
+(module (amb-permute)
   ;;Like  AMB  but  randomly  select   the  order  in  which  the  given
   ;;expressions are tried.
   ;;
-  (define-syntax amb-random
+  (define-syntax amb-permute
     (syntax-rules ()
       ((_)
        ((%current-fail-escape)))
       ((_ ?expr0 ?expr ...)
-       (%amb-random `#(,(lambda () ?expr0) ,(lambda () ?expr) ...)))
+       (%amb-permute `#(,(lambda () ?expr0) ,(lambda () ?expr) ...)))
       ))
 
-  (define amb-random-fixnum-maker
-    ;;Hold  a procedure  accepting  a fixnum  as  single argument:  when
-    ;;applied to the fixnum N it must  returns a fixnum in the range [0,
-    ;;N).
-    ;;
-    (make-parameter
-	random
-      (lambda (obj)
-	(assert (procedure? obj))
-	obj)))
-
-  (define (%amb-random thunks)
+  (define (%amb-permute thunks)
     (%amb-correctly-initialised?)
     (let* ((thunks.len  ($vector-length thunks))
 	   (order       (%make-order-vector thunks.len)))
@@ -234,7 +242,7 @@
 	  ($vector-set! vec i xj)
 	  ($vector-set! vec j xi)))))
 
-  #| end of module: AMB-RANDOM |# )
+  #| end of module: AMB-PERMUTE |# )
 
 
 ;;;; done
