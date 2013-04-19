@@ -4802,6 +4802,18 @@ the last form.
 @end deffn
 
 
+@deffn Syntax with-amb-exhaustion-handler @meta{handler} @meta{thunk}
+Install in the dynamic environment a custom handler for search tree
+exhaustion.  This syntax should be used in the body of
+@func{with-ambiguous-choices}, but before the first use of @func{amb}.
+
+@meta{handler} must be an expression evaluating to a thunk: such thunk
+is called by @func{amb} whenever no more choices are available.
+@meta{thunk} must be an expression evaluating to a thunk: it is
+evaluated while the custom handler is installed.
+@end deffn
+
+
 @deffn Syntax amb @meta{expr} ...
 Evaluate one of the @meta{expr} expressions and return its result; save
 in the dynamic environment a continuation that can be reinstated to
@@ -4917,8 +4929,108 @@ Return @true{} if @var{obj} is an instance of
 
 
 @menu
+* amb examples simple::         Introductory examples.
 * amb examples ssc::            Seed, square, cube.
 @end menu
+
+@c page
+@node amb examples simple
+@subsubsection Introductory examples
+
+
+In all the examples of this section we will assume that the following
+prelude opens the program:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb))
+@end example
+
+The @func{amb} operator requires appropriate initialisation of the
+dynamic environment, so if we just evaluate the following form we will
+get an error:
+
+@example
+(amb)
+@error{} &amb-not-initialised
+@end example
+
+If we initialise the environment and then just call @func{amb}, we get
+an ``exhausted search tree'' error:
+
+@example
+(with-ambiguous-choices
+ (amb))
+@error{} &amb-exhaustion
+@end example
+
+@noindent
+because there are no choices, so the search terminates immediately.
+
+If we apply @func{amb} to some choices, it will return the first one:
+
+@example
+(with-ambiguous-choices
+ (amb 1 2 3))
+@result{} 1
+@end example
+
+If we want to see an actual use of @func{amb}, we have to reject some
+choices.  Let's look at this program:
+
+@example
+(with-ambiguous-choices
+ (let ((X (amb 1 2 3)))
+   (amb-assert (even? X))
+   X))
+@result{} 2
+@end example
+
+@noindent
+this is what happens:
+
+@enumerate
+@item
+@func{amb} returns the result of the first expression: @code{1}.
+
+@item
+@func{amb-assert} rejects @code{1} because it is odd; the execution flow
+jumps back to the form @code{(amb 1 2 3)}.
+
+@item
+@func{amb} returns the result of the next expression: @code{2}.
+
+@item
+@func{amb-assert} accepts @code{2} because it is even.
+
+@item
+The result is @code{2}.
+@end enumerate
+
+@c ------------------------------------------------------------
+
+@subsubheading The custom failure handler
+
+The syntax @func{with-amb-exhaustion-handler} allows us to install a
+custom handler for the event ``exhausted search tree''; the installed
+handler is called by @func{amb} whenever no more choices are available.
+As example, if we want a non--local exit at the end of a failed search,
+we can do:
+
+@example
+(call/cc
+    (lambda (escape)
+      (with-ambiguous-choices
+       (with-amb-exhaustion-handler
+           (lambda ()
+             (escape #t))
+         (lambda ()
+           (amb)
+           #f)))))
+@result{} #t
+@end example
+
 
 @c page
 @node amb examples ssc

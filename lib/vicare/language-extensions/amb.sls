@@ -31,6 +31,7 @@
     &amb-exhaustion
     make-amb-exhaustion			amb-exhaustion?
     with-ambiguous-choices		amb
+    with-amb-exhaustion-handler
     amb-assert
     amb-random				amb-random-fixnum-maker)
   (import (vicare)
@@ -96,6 +97,14 @@
      (parametrise ((%current-fail-escape  %raise-exhausted-search-tree)
 		   (%previous-fail-escape %raise-internal-error))
        ?body0 ?body ...))))
+
+(define-syntax with-amb-exhaustion-handler
+  ;;Install a special handler for search tree exhaustion.
+  ;;
+  (syntax-rules ()
+    ((_ ?handler ?thunk)
+     (parametrise ((%current-fail-escape ?handler))
+       (?thunk)))))
 
 (module (amb)
 

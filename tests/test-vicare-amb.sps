@@ -115,6 +115,23 @@
   #t)
 
 
+(parametrise ((check-test-name	'handler))
+
+  (check
+      (call/cc
+	  (lambda (escape)
+	    (with-ambiguous-choices
+	     (with-amb-exhaustion-handler
+		 (lambda ()
+		   (escape #t))
+	       (lambda ()
+		 (amb)
+		 #f)))))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'random))
 
   (check
