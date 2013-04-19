@@ -1869,6 +1869,7 @@ first-out sequence.  The following bindings are exported by the library
 
 
 @defun make-queue
+@defunx make-queue @var{init-values}
 Build a queue of items and return @math{3} values:
 
 @enumerate
@@ -1883,6 +1884,9 @@ item.
 A thunk extracting and returning the first item from the queue.  If the
 queue is empty an error is raised.
 @end enumerate
+
+The optional @var{init-values} must be null or the list of initial
+values.
 
 Usage examples:
 
