@@ -51,6 +51,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib cafe::                  Cafe.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
+* iklib promises::              Delay, force and promises.
 * iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
@@ -1761,6 +1762,19 @@ The following bindings are exported by the library @library{vicare}.
 
 @defun record-reset @var{record}
 Reset to void all the fields of a record, whatever its type.
+@end defun
+
+@c page
+@node iklib promises
+@section Delay, force and promises
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun promise? @var{obj}
+Return @true{} if @var{obj} is a promise object returned by
+@func{delay}, else return @false{}.
 @end defun
 
 @c page

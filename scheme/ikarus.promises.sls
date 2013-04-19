@@ -14,38 +14,50 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus promises)
-  (export force make-promise)
+  (export
+    force
+    (rename (public-make-promise make-promise))
+    promise?)
   (import (except (ikarus)
-		  force make-promise)
-    (vicare language-extensions syntaxes))
+		  force
+		  make-promise
+		  promise?)
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation))
 
-  (define-argument-validation (procedure who obj)
-    (procedure? obj)
-    (assertion-violation who "expected procedure as argument" obj))
+
+(define-struct promise
+  (proc results))
 
-  (define (force x)
-    (define who 'force)
-    (with-arguments-validation (who)
-	((procedure  x))
-      (x)))
+(define-argument-validation (promise-struct who obj)
+  (promise? obj)
+  (assertion-violation who "expected promise as argument" obj))
 
-  (define (make-promise proc)
-    (define who 'make-promise)
-    (with-arguments-validation (who)
-	((procedure  proc))
-      (let ((results #f))
-	(lambda ()
-	  (if results
-	      (apply values results)
-            (call-with-values proc
-              (lambda x*
-                (if results
-                    (apply values results)
-		  (begin
-		    (set! results x*)
-		    (apply values x*))))))))))
+(define (force P)
+  (define who 'force)
+  (with-arguments-validation (who)
+      ((promise-struct	P))
+    (if ($promise-results P)
+	(apply values ($promise-results P))
+      (call-with-values ($promise-proc P)
+	(lambda x*
+	  (if ($promise-results P)
+	      (apply values ($promise-results P))
+	    (begin
+	      ($set-promise-results! P x*)
+	      (apply values x*))))))))
 
-  #| end of library |# )
+(define (public-make-promise proc)
+  (define who 'make-promise)
+  (with-arguments-validation (who)
+      ((procedure  proc))
+    (make-promise proc #f)))
+
+
+;;;; done
+
+)
 
 ;;; end of file
