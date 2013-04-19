@@ -235,17 +235,15 @@
   (check
       (let ()
 	(define-record-type node
-	  (fields (immutable id)
-		;Unique identifier for this node; compared with EQ?.
+	  (fields (immutable name)
+		  ;;List of NODE records representing the adjacency list
+		  ;;of this node.
 		  (mutable neighbors)
-		;List of NODE records representing the adjacency list of
-		;this node.
+		  ;;Symbol representing this node's color.
 		  (mutable color))
-		;Symbol representing this node's color.
-	  (protocol
-	   (lambda (maker)
-	     (lambda (id)
-	       (maker id '() #f)))))
+	  (protocol (lambda (maker)
+		      (lambda (name)
+			(maker name '() #f)))))
 
 	(define-syntax define-nodes
 	  (syntax-rules ()
@@ -260,30 +258,30 @@
 		 (list ?node ...))))))
 
 	;;We are interested  in nations that face each  other, even when
-	;;there is sea between them.
+	;;there is a sea between them.
 	;;
 	(define-nodes europe-facing-nations
 	  (portugal		(spain))
 	  (spain		(portugal andorra france))
 	  (andorra		(spain france))
-	  (france		(spain andorra italy switzerland belgium
-				       germany luxembourg monaco
+	  (france		(spain andorra monaco italy switzerland
+				       germany luxembourg belgium
 				       united-kingdom))
 	  (united-kingdom	(france belgium netherlands denmark norway
-					ireland iceland))
+					iceland ireland))
 	  (ireland		(united-kingdom iceland))
 	  (monaco		(france))
 	  (italy		(france greece albania montenegro croatia slovenia
 					austria switzerland san-marino))
 	  (san-marino		(italy))
-	  (switzerland	(france italy austria germany liechtenstein))
+	  (switzerland		(france italy austria germany liechtenstein))
 	  (liechtenstein	(switzerland austria))
 	  (germany		(france switzerland austria czech-republic
 					poland sweden denmark netherlands
 					belgium luxembourg))
 	  (belgium		(france luxembourg germany netherlands
 					united-kingdom))
-	  (netherlands	(belgium germany united-kingdom))
+	  (netherlands		(belgium germany united-kingdom))
 	  (luxembourg		(france germany belgium))
 	  (austria		(italy slovenia hungary slovakia czech-republic
 				       germany switzerland liechtenstein))
@@ -312,6 +310,9 @@
 	  (iceland		(ireland united-kingdom norway)))
 
 	(define (assert-graph-consistency nodes)
+	  ;;Verify that every  node is present in the  adjacency list of
+	  ;;all its neighbors.
+	  ;;
 	  (define who 'assert-graph-consistency)
 	  (for-each
 	      (lambda (node)
@@ -320,13 +321,15 @@
 		      (unless (memq node (node-neighbors neighbor))
 			(assertion-violation who
 			  "incorrect node links"
-			  (node-id node)
-			  (node-id neighbor))))
+			  (node-name node)
+			  (node-name neighbor))))
 		  (node-neighbors node)))
 	    nodes))
 
 	(define (choose-color)
-	  (amb-random 'red 'yellow 'blue 'green 'violet))
+	  ;;Every time we call this function: we start a new choice.
+	  ;;
+	  (amb 'red 'yellow 'blue 'green))
 
 	(define (validate-single-node-color node)
 	  ;;Test the color of NODE  against the colors of its neighbors:
@@ -336,7 +339,8 @@
 	  ;;solution and build a "better" first choice.
 	  ;;
 	  (amb-assert (not (memq (node-color node)
-				 (map node-color (node-neighbors node))))))
+				 (map node-color
+				   (node-neighbors node))))))
 
 	(define (validate-all-nodes-color all-nodes)
 	  ;;Validate  a possible  solution: every  node must  have color
@@ -356,24 +360,27 @@
 	   (validate-all-nodes-color nations)))
 
 	(define (print-colors nations)
-	  (define (print . args)
-	    (apply fprintf (current-error-port) args))
 	  (for-each
 	      (lambda (nation)
 		(print "~a: ~a\n"
-		       (node-id nation)
+		       (node-name nation)
 		       (node-color nation))
 		(for-each
 		    (lambda (neighbor)
 		      (print "\t~a: ~a\n"
-			     (node-id neighbor)
+			     (node-name neighbor)
 			     (node-color neighbor)))
 		  (node-neighbors nation)))
 	    europe-facing-nations))
 
+	(define (print . args)
+	  (apply fprintf (current-error-port) args))
+
+	#;(print "number of nations: ~a\n"
+	       (length europe-facing-nations))
 	(assert-graph-consistency europe-facing-nations)
 	(color-nations europe-facing-nations)
-	(print-colors  europe-facing-nations)
+	#;(print-colors  europe-facing-nations)
 	#t)
     => #t)
 
