@@ -93,6 +93,22 @@
 	   (list A B C))))
     => '(3 9 27))
 
+  (check 	;seed, square, cube
+      (let ()
+	(define (print . args)
+	  (apply fprintf (current-error-port) args))
+	(with-ambiguous-choices
+	 (let ((A (amb 1 3)))
+	   (print "A=~a\n" A)
+	   (let ((B (amb 5 9 11)))
+	     (print "\tB=~a\n" B)
+	     (amb-assert (= (square A) B))
+	     (let ((C (amb 13 27 31)))
+	       (print "\t\tC=~a\n" C)
+	       (amb-assert (= (cube A) C))
+	       (list A B C))))))
+    => '(3 9 27))
+
   #t)
 
 

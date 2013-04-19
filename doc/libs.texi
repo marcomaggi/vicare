@@ -4724,9 +4724,29 @@ fxarithmetic-shift-right          -> fx>>
 @cindex @library{vicare language-extensions amb}, library
 
 
-The @dfn{ambiguous operator} allows the execution of a depth first
-search in a tree of choices integrated in the normal control flow of a
-Scheme program; it is built upon continuations.
+The library @library{vicare language-extensions amb} defines McCarthy's
+@func{amb} operator and a set of related utilities.  The @dfn{ambiguous
+operator} allows the execution of depth--first search in a tree of
+choices integrated in the normal control flow of a Scheme program; it is
+built upon continuations.
+
+The @func{amb} operator was briefly defined in:
+
+@quotation
+John McCarthy.  ``A Basis for a Mathematical Theory of Computation''.
+In Computer Programming And Formal Systems by P. Braffort and
+D. Hirschberg (Ed.), 1963.
+@end quotation
+
+@noindent
+and further discussed in:
+
+@quotation
+Ramin Zabih, David McAllester, and David Chapman.  ``Non--deterministic
+Lisp with dependency--directed backtracking''.  In Proc. Proceedings of
+the Sixth National Conference on Artificial Intelligence, pp. 59-64,
+1987.
+@end quotation
 
 @menu
 * amb api::                     Programming interface for @func{amb}.
@@ -4881,8 +4901,7 @@ Return @true{} if @var{obj} is an instance of
 @subsubsection Seed, square, cube
 
 
-The @func{amb} operator allows the search for a tuple of values
-satisfying a set of constraints.  As example, given the seed numbers:
+Given the seed numbers:
 
 @example
 1 3
@@ -4904,10 +4923,6 @@ and the cube among:
 
 @noindent
 we can imagine a search tree, @ref{fig:amb_ssc_tree, amb examples ssc}.
-If we assign a selected seed to the variable @math{A}, a selected square
-to the variable @math{B} and a selected cube to the variable @math{C},
-we want search for a tuple @math{(A, B, C)} satisfying the constraints:
-@math{A^2 = B}, @math{A^3 = C}.
 
 @float Figure,fig:amb_ssc_tree
 @example
@@ -4939,6 +4954,11 @@ o----- 1 -----  5 ----- 13
 @end example
 @caption{Search tree for the seed, square, cube problem.}
 @end float
+
+If we assign a selected seed to the variable @math{A}, a selected
+possible square to the variable @math{B} and a selected possible cube to
+the variable @math{C}, we want search for a tuple @math{(A, B, C)}
+satisfying the constraints: @math{A^2 = B}, @math{A^3 = C}.
 
 To select among the seeds we use the syntax:
 
@@ -4984,6 +5004,38 @@ the resulting program follows:
       (amb-assert (= (cube A) C))
       (list A B C))))
 @result{} (3 9 27)
+@end example
+
+We can modify the program to show the search path:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare language-extensions amb))
+
+(define (print . args)
+  (apply fprintf (current-error-port) args))
+
+(with-ambiguous-choices
+ (let ((A (amb 1 3)))
+   (print "A=~a\n" A)
+   (let ((B (amb 5 9 11)))
+     (print "\tB=~a\n" B)
+     (amb-assert (= (square A) B))
+     (let ((C (amb 13 27 31)))
+       (print "\t\tC=~a\n" C)
+       (amb-assert (= (cube A) C))
+       (list A B C)))))
+@result{} (3 9 27)
+@print{} A=1
+@print{}         B=5
+@print{}         B=9
+@print{}         B=11
+@print{} A=3
+@print{}         B=5
+@print{}         B=9
+@print{}                 C=13
+@print{}                 C=27
 @end example
 
 @c page
