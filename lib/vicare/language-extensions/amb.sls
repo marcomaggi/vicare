@@ -97,23 +97,54 @@
 		   (%previous-fail-escape %raise-internal-error))
        ?body0 ?body ...))))
 
-(define-syntax amb
-  (syntax-rules ()
-    ((_)
-     ((%current-fail-escape)))
-    ((_ ?expr0 ?expr ...)
-     (begin
-       (%amb-correctly-initialised?)
-       (call/cc
-	   (lambda (return)
-	     (parametrise ((%previous-fail-escape (%current-fail-escape)))
-	       (call/cc
-		   (lambda (escape)
-		     (%current-fail-escape escape)
-		     (return ?expr0)))
-	       (%current-fail-escape (%previous-fail-escape))
-	       (amb ?expr ...))))))
-    ))
+(module (amb)
+
+  (define-syntax amb
+    (syntax-rules ()
+      ((_)
+       ((%current-fail-escape)))
+      ((_ ?expr0 ?expr ...)
+       (%amb (lambda () ?expr0) (lambda () ?expr) ...))
+
+      ;;NOTE The following implementation  of the multiexpression branch
+      ;;is quite  small and beautiful;  but it recursively  expands AMB,
+      ;;which  may  result  in  a  lot   of  code.   So  we  prefer  the
+      ;;implementation with thunks and the %AMB function.  (Marco Maggi;
+      ;;Fri Apr 19, 2013)
+      ;;
+      ;; ((_ ?expr0 ?expr ...)
+      ;;  (begin
+      ;;    (%amb-correctly-initialised?)
+      ;;    (call/cc
+      ;;        (lambda (return)
+      ;;          (parametrise ((%previous-fail-escape (%current-fail-escape)))
+      ;;            (call/cc
+      ;;                (lambda (escape)
+      ;;                  (%current-fail-escape escape)
+      ;;                  (return ?expr0)))
+      ;;            (%current-fail-escape (%previous-fail-escape))
+      ;;            (amb ?expr ...))))))
+      ))
+
+  (define (%amb . thunks)
+    (%amb-correctly-initialised?)
+    (call/cc
+	(lambda (return)
+	  (let next-choice ((thunks thunks))
+	    (if (null? thunks)
+		(amb)
+	      (parametrise ((%previous-fail-escape (%current-fail-escape)))
+		(call/cc
+		    (lambda (escape)
+		      (%current-fail-escape escape)
+		      (return (let ((result (($car thunks))))
+				(if (promise? result)
+				    (force result)
+				  result)))))
+		(%current-fail-escape (%previous-fail-escape))
+		(next-choice ($cdr thunks))))))))
+
+  #| end of module: AMB |# )
 
 (define %current-fail-escape
   (make-parameter #f))
@@ -165,7 +196,10 @@
 		  (call/cc
 		      (lambda (escape)
 			(%current-fail-escape escape)
-			(return (($vector-ref thunks ($vector-ref order idx))))))
+			(return (let ((result (($vector-ref thunks ($vector-ref order idx)))))
+				  (if (promise? result)
+				      (force result)
+				    result)))))
 		  (%current-fail-escape (%previous-fail-escape))
 		  (next-choice ($fxadd1 idx)))))))))
 

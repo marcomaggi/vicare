@@ -4806,7 +4806,10 @@ the last form.
 Evaluate one of the @meta{expr} expressions and return its result; save
 in the dynamic environment a continuation that can be reinstated to
 reject the result of this @meta{expr} and try with the next @meta{expr}.
-The @var{expr} arguments are tried in the given order: left to right.
+The @meta{expr} arguments are tried in the given order: left to right.
+
+If the result of evaluating an @meta{expr} is a promise (produced by
+@func{delay}): the promise is forced to produce the result.
 
 When used with no arguments: reject the result of the most recent
 @var{expr} and reinstate the previous continuation to try the next
