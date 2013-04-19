@@ -174,7 +174,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'permute))
+(parametrise ((check-test-name	'random))
 
   (check
       (with-ambiguous-choices
@@ -193,6 +193,50 @@
 	       (set! counter (+ -1 counter))
 	       (amb-assert (even? R))
 	       R)))))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'generator))
+
+  (check	;success
+      (let ()
+	(define-values (empty? enqueue! dequeue!)
+	  (make-queue '(1 2 3 4)))
+
+	(define (generator)
+	  (if (empty?)
+	      (amb)
+	    (dequeue!)))
+
+	(with-ambiguous-choices
+	 (let ((R (amb-thunk generator)))
+	   (amb-assert (<= 3 R))
+	   R)))
+    => 3)
+
+  (check	;failure
+      (let ()
+	(define-values (empty? enqueue! dequeue!)
+	  (make-queue '(1 2 3 4)))
+
+	(define (generator)
+	  (if (empty?)
+	      (amb)
+	    (dequeue!)))
+
+	(call/cc
+	    (lambda (escape)
+	      (with-ambiguous-choices
+	       (with-amb-exhaustion-handler
+		   (lambda ()
+		     (escape #t))
+		 (lambda ()
+		   (let ((R (amb-thunk generator)))
+;;;(check-pretty-print R)
+		     (amb-assert (< 10 R))
+		     R)))))))
     => #t)
 
   #t)

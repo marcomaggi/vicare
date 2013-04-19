@@ -41,8 +41,9 @@
     make-amb-not-initialised		amb-not-initialised?
 
     ;; utilities
-    amb-assert				amb-permute
-    amb-random				amb-random-fixnum-maker)
+    amb-assert				amb-thunk
+    amb-permute				amb-random
+    amb-random-fixnum-maker)
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $))
@@ -171,7 +172,7 @@
   (make-parameter #f))
 
 
-;;;; extensions
+;;;; utilities
 
 (define-syntax amb-assert
   (syntax-rules ()
@@ -187,6 +188,9 @@
     (lambda (obj)
       (assert (procedure? obj))
       obj)))
+
+
+;;;; permuting choices
 
 (module (amb-permute)
   ;;Like  AMB but  permute  the given  expressions  before starting  the
@@ -244,6 +248,9 @@
 
   #| end of module: AMB-PERMUTE |# )
 
+
+;;;; random selection of  choices
+
 (module (amb-random)
   ;;Like AMB but randomly select among the given expressions.
   ;;
@@ -275,6 +282,27 @@
 		(next-choice)))))))
 
   #| end of module: AMB-RANDOM |# )
+
+
+;;;; generating choices
+
+(define (amb-thunk generator-thunk)
+  (define (generate-result)
+    (let ((result (generator-thunk)))
+      (if (promise? result)
+	  (force result)
+	result)))
+  (%amb-correctly-initialised?)
+  (call/cc
+      (lambda (return)
+	(let next-choice ((result (generate-result)))
+	  (parametrise ((%previous-fail-escape (%current-fail-escape)))
+	    (call/cc
+		(lambda (escape)
+		  (%current-fail-escape escape)
+		  (return result)))
+	    (%current-fail-escape (%previous-fail-escape))
+	    (next-choice (generate-result)))))))
 
 
 ;;;; done
