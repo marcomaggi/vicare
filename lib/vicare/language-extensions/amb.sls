@@ -25,6 +25,11 @@
 ;;;
 
 
+;;;The   function  %MAKE-ORDER-VECTOR   is  derived   from  code   in...
+;;;somewhere, I cannot  remember!!!  I will add a  proper license notice
+;;;whenever I find out.  (Marco Maggi; Fri Apr 19, 2013)
+
+
 #!r6rs
 (library (vicare language-extensions amb)
   (export
