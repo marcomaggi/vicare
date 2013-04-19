@@ -4791,8 +4791,8 @@ When used with no arguments: reject the result of the most recent
 @var{expr} and reinstate the previous continuation to try the next
 @var{expr}.
 
-When all the choices have been tried: raise a continuable exception with
-condition object components @condition{who}, @condition{message},
+When all the choices have been tried: raise a non--continuable exception
+with condition object components @condition{who}, @condition{message},
 @condition{amb-exhaustion}.
 
 It is an error if @func{amb} is used outside the dynamic environment

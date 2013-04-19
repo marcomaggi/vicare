@@ -77,7 +77,7 @@
 		      (make-who-condition 'amb)
 		      (make-message-condition "search tree exhausted"))))
     (lambda ()
-      (raise-continuable E))))
+      (raise E))))
 
 (define (%raise-internal-error)
   ;;Raised in case of internal error.

@@ -1661,6 +1661,7 @@
     (modulo					i v r5 se)
     (remainder					i v r5 se)
     (null-environment				i v r5 se)
+    (promise?					i v $language)
     (quotient					i v r5 se)
     (scheme-report-environment			i v r5 se)
     (interaction-environment			i v $language)

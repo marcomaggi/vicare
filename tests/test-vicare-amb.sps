@@ -28,6 +28,8 @@
 #!r6rs
 (import (vicare)
   (vicare language-extensions amb)
+  (only (vicare language-extensions syntaxes)
+	define-values)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -96,7 +98,8 @@
   (check 	;seed, square, cube
       (let ()
 	(define (print . args)
-	  (apply fprintf (current-error-port) args))
+	  (when #f
+	    (apply fprintf (current-error-port) args)))
 	(with-ambiguous-choices
 	 (let ((A (amb 1 3)))
 	   (print "A=~a\n" A)
@@ -206,6 +209,197 @@
 	   (amb-assert (even? N))
 	   N)))
     => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'coloring))
+
+  (check
+      (let ()
+	(define-record-type node
+	  (fields (immutable id)
+		;Unique identifier for this node; compared with EQ?.
+		  (mutable neighbors)
+		;List of NODE records representing the adjacency list of
+		;this node.
+		  (mutable color))
+		;Symbol representing this node's color.
+	  (protocol
+	   (lambda (maker)
+	     (lambda (id)
+	       (maker id '() #f)))))
+
+	(define-syntax define-nodes
+	  (syntax-rules ()
+	    ((_ ?nodes-var (?node (?neighbor ...)) ...)
+	     (begin
+	       (define ?node (make-node (quote ?node)))
+	       ...
+	       (module ()
+		 (node-neighbors-set! ?node (list ?neighbor ...))
+		 ...)
+	       (define ?nodes-var
+		 (list ?node ...))))))
+
+	;;We are interested  in nations that face each  other, even when
+	;;there is sea between them.
+	;;
+	(define-nodes europe-facing-nations
+	  (portugal		(spain))
+	  (spain		(portugal andorra france))
+	  (andorra		(spain france))
+	  (france		(spain andorra italy switzerland belgium
+				       germany luxembourg monaco
+				       united-kingdom))
+	  (united-kingdom	(france belgium netherlands denmark norway
+					ireland iceland))
+	  (ireland		(united-kingdom iceland))
+	  (monaco		(france))
+	  (italy		(france greece albania montenegro croatia slovenia
+					austria switzerland san-marino))
+	  (san-marino		(italy))
+	  (switzerland	(france italy austria germany liechtenstein))
+	  (liechtenstein	(switzerland austria))
+	  (germany		(france switzerland austria czech-republic
+					poland sweden denmark netherlands
+					belgium luxembourg))
+	  (belgium		(france luxembourg germany netherlands
+					united-kingdom))
+	  (netherlands	(belgium germany united-kingdom))
+	  (luxembourg		(france germany belgium))
+	  (austria		(italy slovenia hungary slovakia czech-republic
+				       germany switzerland liechtenstein))
+	  (slovenia		(italy croatia hungary austria))
+	  (croatia		(italy montenegro bosnia serbia hungary
+				       slovenia))
+	  (bosnia		(croatia montenegro serbia))
+	  (montenegro		(croatia italy albania serbia bosnia))
+	  (albania		(italy greece macedonia serbia montenegro))
+	  (greece		(italy cyprus bulgaria macedonia albania))
+	  (cyprus		(greece))
+	  (macedonia		(albania greece bulgaria serbia))
+	  (bulgaria		(macedonia greece romania serbia))
+	  (serbia		(montenegro albania macedonia bulgaria
+					    romania hungary croatia bosnia))
+	  (romania		(serbia bulgaria hungary))
+	  (hungary		(slovenia croatia serbia romania slovakia
+					  austria))
+	  (slovakia		(austria hungary poland czech-republic))
+	  (czech-republic	(germany austria slovakia poland))
+	  (poland		(germany czech-republic slovakia sweden))
+	  (denmark		(united-kingdom germany sweden norway))
+	  (sweden		(norway denmark germany poland finland))
+	  (norway		(united-kingdom denmark sweden finland iceland))
+	  (finland		(sweden norway))
+	  (iceland		(ireland united-kingdom norway)))
+
+	(define (assert-graph-consistency nodes)
+	  (define who 'assert-graph-consistency)
+	  (for-each
+	      (lambda (node)
+		(for-each
+		    (lambda (neighbor)
+		      (unless (memq node (node-neighbors neighbor))
+			(assertion-violation who
+			  "incorrect node links"
+			  (node-id node)
+			  (node-id neighbor))))
+		  (node-neighbors node)))
+	    nodes))
+
+	(define (choose-color)
+	  (amb-random 'red 'yellow 'blue 'green 'violet))
+
+	(define (validate-single-node-color node)
+	  ;;Test the color of NODE  against the colors of its neighbors:
+	  ;;NODE  must have  color  different from  its neighbors.   The
+	  ;;neighbors may not have a color yet: their COLOR field can be
+	  ;;set  to  #f.  This  is  used  to  both validate  a  possible
+	  ;;solution and build a "better" first choice.
+	  ;;
+	  (amb-assert (not (memq (node-color node)
+				 (map node-color (node-neighbors node))))))
+
+	(define (validate-all-nodes-color all-nodes)
+	  ;;Validate  a possible  solution: every  node must  have color
+	  ;;different from its neighbors.
+	  ;;
+	  (for-all validate-single-node-color all-nodes))
+
+	(define (color-nations nations)
+	  (with-ambiguous-choices
+	   ;;Build an initial choice.
+	   (for-each
+	       (lambda (nation)
+		 (node-color-set! nation (choose-color))
+		 (validate-single-node-color nation))
+	     nations)
+	   ;;Validate the choice and backtrack if needed.
+	   (validate-all-nodes-color nations)))
+
+	(define (print-colors nations)
+	  (define (print . args)
+	    (apply fprintf (current-error-port) args))
+	  (for-each
+	      (lambda (nation)
+		(print "~a: ~a\n"
+		       (node-id nation)
+		       (node-color nation))
+		(for-each
+		    (lambda (neighbor)
+		      (print "\t~a: ~a\n"
+			     (node-id neighbor)
+			     (node-color neighbor)))
+		  (node-neighbors nation)))
+	    europe-facing-nations))
+
+	(assert-graph-consistency europe-facing-nations)
+	(color-nations europe-facing-nations)
+	(print-colors  europe-facing-nations)
+	#t)
+    => #t)
+
+  #t)
+
+
+#;(parametrise ((check-test-name	'tasks))
+
+  (define (print . args)
+    (apply fprintf (current-error-port) args))
+
+  (define-record-type task
+    (fields (immutable id)
+		;Symbol, uniquely identifies a task.
+	    (immutable time)
+		;Positive exact integer, time needed to complete.
+	    (immutable effort)))
+		;Positive exact integer, effort needed to complete.
+
+  (define tasks
+    (let more ((num    25)
+	       (tasks  '()))
+      (if (zero? num)
+	  tasks
+	(more (- num 1)
+	      (cons (make-task (gensym)
+			       (random 24)
+			       (random 80))
+		    tasks)))))
+
+  #;(print "tasks: ~a\n" tasks)
+
+  (define-values (empty? enqueue! dequeue!)
+    (apply make-queue tasks))
+
+  (define scheduling
+    (let loop ((available-time    24)
+	       (available-effort  100)
+	       (days              '()))
+      (if (empty?)
+	  days
+	(let ((task (dequeue!)))
+	  ))))
 
   #t)
 
