@@ -236,6 +236,7 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined fixnums::        Validating fixnums.
 * args predefined exact integers:: Validating exact integers.
 * args predefined keywords::       Validating keywords.
+* args predefined promises::       Validating promises.
 * args predefined bits::           Validating bit--sized integers.
 * args predefined signed int::     Validating C language @code{int} values.
 * args predefined clang::          Validating C language values.
@@ -427,6 +428,26 @@ arguments validation}.
 @deffn {Validation Clause} keyword @var{obj}
 Succeed if @var{obj} is a keyword object: it satisfies the predicate
 @func{keyword?} exported by @library{vicare}.
+@end deffn
+
+@c page
+@node args predefined promises
+@subsubsection Validating promises
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} promise @var{obj}
+Succeed if @var{obj} is a promise object: it satisfies the predicate
+@func{promise?} exported by @library{vicare}.
+@end deffn
+
+
+@deffn {Validation Clause} false-or-promise @var{obj}
+Succeed if @var{obj} is @false{} or a promise object: it satisfies the
+predicate @func{promise?} exported by @library{vicare}.
 @end deffn
 
 @c page
