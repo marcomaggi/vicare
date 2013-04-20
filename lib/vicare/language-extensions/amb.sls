@@ -48,7 +48,7 @@
     ;; utilities
     amb-assert				amb-thunk
     amb-permute				amb-random
-    amb-random-fixnum-maker)
+    amb-random-fixnum-maker		amb-backtrack-log)
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $))
@@ -102,6 +102,18 @@
     "internal error while , attempt to escape to next choice with no choice"))
 
 
+;;;; dynamic environment
+
+(define %current-fail-escape
+  (make-parameter #f))
+
+(define %previous-fail-escape
+  (make-parameter #f))
+
+(define amb-backtrack-log
+  (make-parameter void))
+
+
 ;;;; core syntaxes
 
 (define-syntax with-ambiguous-choices
@@ -121,12 +133,19 @@
      (parametrise ((%current-fail-escape ?handler))
        (?thunk)))))
 
+(define-syntax %do-backtrack
+  (syntax-rules ()
+    ((_)
+     (begin
+       ((amb-backtrack-log))
+       ((%current-fail-escape))))))
+
 (module (amb)
 
   (define-syntax amb
     (syntax-rules ()
       ((_)
-       ((%current-fail-escape)))
+       (%do-backtrack))
       ((_ ?expr0 ?expr ...)
        (%amb (lambda () ?expr0) (lambda () ?expr) ...))
 
@@ -170,12 +189,6 @@
 
   #| end of module: AMB |# )
 
-(define %current-fail-escape
-  (make-parameter #f))
-
-(define %previous-fail-escape
-  (make-parameter #f))
-
 
 ;;;; utilities
 
@@ -204,7 +217,7 @@
   (define-syntax amb-permute
     (syntax-rules ()
       ((_)
-       ((%current-fail-escape)))
+       (%do-backtrack))
       ((_ ?expr0 ?expr ...)
        (%amb-permute `#(,(lambda () ?expr0) ,(lambda () ?expr) ...)))
       ))
@@ -262,7 +275,7 @@
   (define-syntax amb-random
     (syntax-rules ()
       ((_)
-       ((%current-fail-escape)))
+       (%do-backtrack))
       ((_ ?expr0 ?expr ...)
        (%amb-random `#(,(lambda () ?expr0) ,(lambda () ?expr) ...)))
       ))

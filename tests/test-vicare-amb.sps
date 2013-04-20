@@ -400,7 +400,7 @@
 	(define (choose-color)
 	  ;;Every time we call this function: we start a new choice.
 	  ;;
-	  (amb 'red 'yellow 'blue 'green))
+	  (amb-permute 'red 'yellow 'blue 'green))
 
 	(define (validate-single-node-color node)
 	  ;;Test the color of NODE  against the colors of its neighbors:
@@ -447,6 +447,8 @@
 	(define (print . args)
 	  (apply fprintf (current-error-port) args))
 
+	#;(amb-backtrack-log (lambda ()
+			     (check-pretty-print 'backtrack)))
 	#;(print "number of nations: ~a\n"
 	       (length europe-facing-nations))
 	(color-nations europe-facing-nations)

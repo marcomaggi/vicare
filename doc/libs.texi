@@ -4932,6 +4932,13 @@ is false reject the latest @func{amb} choice.
 @end example
 @end deffn
 
+
+@deffn Parameter amb-backtrack-log
+Hold a thunk to be called every time @func{amb}, or any of its
+derivatives, backtracks to reject a previous choice.  It is initialised
+to @func{void}.
+@end deffn
+
 @c page
 @node amb api condition
 @subsubsection Condition object types
@@ -5365,13 +5372,15 @@ France and the United Kingdom are painted in different colors.
 @end example
 
 The only use of @func{amb} is in the function that selects a color for a
-nation.
+nation.  We use @func{amb-permute}, rather than the plain @func{amb}, to
+try assigning a different first color to the nations (statistically
+speaking).
 
 @example
 (define (choose-color)
   ;;Every time we call this function: we start a new choice.
   ;;
-  (amb 'red 'yellow 'blue 'green))
+  (amb-permute 'red 'yellow 'blue 'green))
 @end example
 
 We validate a possible solution with @func{amb-assert}, checking that a
