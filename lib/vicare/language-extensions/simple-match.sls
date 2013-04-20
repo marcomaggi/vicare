@@ -34,6 +34,37 @@
 	    $))
 
 
+#|
+The macro use:
+
+   (match 3
+     (1
+      (display 1))
+     (2
+      (display 2)))
+
+is expanded to:
+
+   (letrec ((clause0 (lambda (expr)
+		       (if (and (fixnum? expr)
+				(fx=? expr 1))
+			   (display 1)
+			 (clause1 expr))))
+            (clause1 (lambda (expr)
+		       (if (and (fixnum? expr)
+				(fx=? expr 2))
+			   (display 2)
+			 (failed-match-error expr))))
+            (failed-match-error
+             (lambda (expr)
+	       (assertion-violation 'match
+		 "failed destructuring match: no matching clause"
+		 expr))))
+     (clause0 expr clause2))
+
+|#
+
+
 (define-syntax match
   (lambda (stx)
     (define (main stx)
@@ -81,52 +112,11 @@
 	(with-syntax
 	    (((CLAUSE-THUNK0 CLAUSE-THUNK ...)
 	      funcs-stx))
-	  #`(let ()
-	      (define CLAUSE-ID0 CLAUSE-THUNK0)
-	      (define CLAUSE-ID  CLAUSE-THUNK)
-	      ...
-              (define failed-match-error #,fail-thunk-stx)
+	  #`(letrec ((CLAUSE-ID0 CLAUSE-THUNK0)
+		     (CLAUSE-ID  CLAUSE-THUNK)
+		     ...
+		     (failed-match-error #,fail-thunk-stx))
 	      (CLAUSE-ID0 #,expr-stx)))))
-
-#|
-
-   (match 3
-     (1
-      (display 1))
-     (2
-      (display 2)))
-
-   (let ((expr 3))
-     (let ((next-thunk (let ((next-thunk (lambda ()
-			                   (assertion-violation 'match
-					     "failed destructuring match"))))
-                         ((lambda ()
-			    (if (and (fixnum? expr)
-				     (fx=? expr 2))
-				(display 2)
-			      (next-thunk)))))))
-       ((lambda ()
-	  (if (and (fixnum? expr)
-		   (fx=? expr 1))
-	      (display 1)
-	    (next-thunk))))))
-
-   (define (clause0 expr next-thunk)
-     (if (and (fixnum? expr)
-	      (fx=? expr 1))
-	 (display 1)
-       (next-thunk)))
-
-   (define (clause1 expr next-thunk)
-     (if (and (fixnum? expr)
-	      (fx=? expr 2))
-	 (display 2)
-       (next-thunk)))
-
-   (clause0 expr (lambda ()
-                   (clause1 expr clause2)))
-
-|#
 
 
 ;;;; clause parsing
@@ -154,10 +144,11 @@
 
 ;;;; pattern parsing
 
-(define (parse-pattern pattern-stx expr-stx success-form-stx fail-form-stx)
-  (define (recurse pattern-stx expr-stx)
-    (parse-pattern pattern-stx expr-stx success-form-stx fail-form-stx))
-  (with-syntax ((EXPR          expr-stx)
+(define (parse-pattern pattern-stx in-expr-stx success-form-stx fail-form-stx)
+  (define (recurse pattern-stx in-expr-stx)
+    (parse-pattern pattern-stx in-expr-stx success-form-stx fail-form-stx))
+  (with-syntax (((expr)        (generate-temporaries #'(#f)))
+		(IN-EXPR       in-expr-stx)
 		(SUCCESS-FORM  success-form-stx)
 		(FAIL-FORM     fail-form-stx))
     (syntax-case pattern-stx (let quote quasiquote)
@@ -172,29 +163,29 @@
       ;;
       ((let ?id)
        (identifier? #'?id)
-       #`(let ((?id EXPR))
+       #`(let ((?id IN-EXPR))
 	   SUCCESS-FORM))
 
       ;;Match a quoted datum.
       ;;
       ((quote ?datum)
-       #`(let ((expr EXPR))
-	   (if (equal? (car expr) (quote ?datum))
+       #`(let ((expr IN-EXPR))
+	   (if (equal? expr (quote ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
       ;;Match a quasiquoted datum.
       ;;
       ((quasiquote ?datum)
-       #`(let ((expr EXPR))
-	   (if (equal? (car expr) (quasiquote ?datum))
+       #`(let ((expr IN-EXPR))
+	   (if (equal? expr (quasiquote ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
       ;;Match a pair.
       ;;
       ((?car . ?cdr)
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (pair? expr)
 	       #,(parse-pattern #'?car #'(car expr)
 				(recurse #'?cdr #'(cdr expr))
@@ -204,7 +195,7 @@
       ;;Match an empty vector.
       ;;
       (#()
-       #'(let ((expr EXPR))
+       #'(let ((expr IN-EXPR))
 	   (if (and (vector? expr) ($fxzero? ($vector-length expr)))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -212,7 +203,7 @@
       ;;Match a non-empty vector.
       ;;
       (#(?item0 ?item ...)
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (vector? expr)
 	       #,(recurse #'?item0 #'(?item ...))
 	     FAIL-FORM)))
@@ -228,7 +219,7 @@
       ;;
       (?id
        (identifier? #'?id)
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (equal? expr ?id)
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -236,18 +227,18 @@
       ;;Match the boolean true.
       ;;
       (#t
-       #`(if EXPR SUCCESS-FORM FAIL-FORM))
+       #`(if IN-EXPR SUCCESS-FORM FAIL-FORM))
 
       ;;Match the boolean true.
       ;;
       (#f
-       #`(if EXPR FAIL-FORM SUCCESS-FORM))
+       #`(if IN-EXPR FAIL-FORM SUCCESS-FORM))
 
       ;;Match a character datum.
       ;;
       (?datum
        (char? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (char? expr) ($char= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -256,7 +247,7 @@
       ;;
       (?datum
        (fixnum? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (fixnum? expr) ($fx= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -265,7 +256,7 @@
       ;;
       (?datum
        (bignum? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (bignum? expr) (= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -274,7 +265,7 @@
       ;;
       (?datum
        (flonum? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (flonum? expr) ($fl= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -283,7 +274,7 @@
       ;;
       (?datum
        (ratnum? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (ratnum? expr) (= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -292,7 +283,7 @@
       ;;
       (?datum
        (cflonum? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (cflonum? expr) (= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -301,7 +292,7 @@
       ;;
       (?datum
        (compnum? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (compnum? expr) (= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -310,7 +301,7 @@
       ;;
       (?datum
        (nan? (syntax->datum #'?datum))
-       #`(if (nan? EXPR)
+       #`(if (nan? IN-EXPR)
 	     SUCCESS-FORM
 	   FAIL-FORM))
 
@@ -318,7 +309,7 @@
       ;;
       (?datum
        (infinite? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (infinite? expr) (= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -327,7 +318,7 @@
       ;;
       (?datum
        (number? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (number? expr) (= expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -336,7 +327,7 @@
       ;;
       (?datum
        (string? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (string? expr) (string=? expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -345,7 +336,7 @@
       ;;
       (?datum
        (bytevector? (syntax->datum #'?datum))
-       #`(let ((expr EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (bytevector? expr) (bytevector=? expr ?datum))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
@@ -374,7 +365,7 @@
 ;;;; end of transformer
 
 (let ((out (main stx)))
-  (pretty-print (syntax->datum out) (current-error-port))
+  #;(pretty-print (syntax->datum out) (current-error-port))
   out)))
 
 

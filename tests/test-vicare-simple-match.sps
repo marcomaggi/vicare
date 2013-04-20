@@ -34,7 +34,7 @@
 (check-display "*** testing Vicare: destructuring match syntax\n")
 
 
-(parametrise ((check-test-name	'base))
+(parametrise ((check-test-name	'fixnums-and-pairs))
 
   (check
       (match 123
@@ -43,6 +43,149 @@
         (789	#\3)
 	(else	#f))
     => #\1)
+
+  (check
+      (match 456
+        (123	#\1)
+        (456	#\2)
+        (789	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 789
+        (123	#\1)
+        (456	#\2)
+        (789	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match 0
+        (123	#\1)
+        (456	#\2)
+        (789	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'pairs))
+
+  (check
+      (match '(1)
+        ((1)	#\1)
+        ((4)	#\2)
+        ((7)	#\3)
+  	(else	#f))
+    => #\1)
+
+  (check
+      (match '(4)
+        ((1)	#\1)
+        ((4)	#\2)
+        ((7)	#\3)
+  	(else	#f))
+    => #\2)
+
+  (check
+      (match '(7)
+        ((1)	#\1)
+        ((4)	#\2)
+        ((7)	#\3)
+  	(else	#f))
+    => #\3)
+
+  (check
+      (match '(0)
+        ((1)	#\1)
+        ((4)	#\2)
+        ((7)	#\3)
+  	(else	#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(1 2 3)
+        ((1 2 3)	#\1)
+        ((4 5 6)	#\2)
+        ((7 8 9)	#\3)
+  	(else		#f))
+    => #\1)
+
+  (check
+      (match '(1 2)
+        ((1 2 3)	#\1)
+        ((4 5 6)	#\2)
+        ((7 8 9)	#\3)
+  	(else		#f))
+    => #f)
+
+  (check
+      (match '(1)
+        ((1 2 3)	#\1)
+        ((4 5 6)	#\2)
+        ((7 8 9)	#\3)
+  	(else		#f))
+    => #f)
+
+  (check
+      (match 1
+        ((1 2 3)	#\1)
+        ((4 5 6)	#\2)
+        ((7 8 9)	#\3)
+  	(else		#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(4 5 6)
+        ((1 2 3)	#\1)
+        ((4 5 6)	#\2)
+        ((7 8 9)	#\3)
+	(else		#f))
+    => #\2)
+
+  (check
+      (match '(7 8 9)
+        ((1 2 3)	#\1)
+        ((4 5 6)	#\2)
+        ((7 8 9)	#\3)
+	(else		#f))
+    => #\3)
+
+  #t)
+
+
+(parametrise ((check-test-name	'misc))
+
+  (check	;check that  EXPR is not  erroneously bound in  the ELSE
+		;clause
+      (guard (E ((undefined-violation? E)
+		 #t)
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 (1	#f)
+		 (else	expr))
+	      (environment '(vicare language-extensions simple-match))))
+    => #t)
+
+  (check	;check that EXPR is not erroneously bound in a clause
+      (guard (E ((undefined-violation? E)
+		 #t)
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 (1	expr)
+		 (else	#f))
+	      (environment '(vicare language-extensions simple-match))))
+    => #t)
 
   #t)
 
