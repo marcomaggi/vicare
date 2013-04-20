@@ -5236,7 +5236,8 @@ We can modify the program to show the search path:
 
 
 The following program shows how to select colors to paint European
-nations on map:
+nations on map.  The code is derived from an example in ``Teach Yourself
+Scheme in Fixnum Days'' by Dorai Sitaram.
 
 @smallexample
 #!r6rs
