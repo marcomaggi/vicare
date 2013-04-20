@@ -323,7 +323,27 @@
 		 (node-neighbors-set! ?node (list ?neighbor ...))
 		 ...)
 	       (define ?nodes-var
-		 (list ?node ...))))))
+		 (list ?node ...))
+	       (module ()
+		 (assert-graph-consistency ?nodes-var))))
+	    ))
+
+	(define (assert-graph-consistency nodes)
+	  ;;Verify that every  node is present in the  adjacency list of
+	  ;;all its neighbors.
+	  ;;
+	  (define who 'assert-graph-consistency)
+	  (for-each
+	      (lambda (node)
+		(for-each
+		    (lambda (neighbor)
+		      (unless (memq node (node-neighbors neighbor))
+			(assertion-violation who
+			  "incorrect node links"
+			  (node-name node)
+			  (node-name neighbor))))
+		  (node-neighbors node)))
+	    nodes))
 
 	;;We are interested  in nations that face each  other, even when
 	;;there is a sea between them.
@@ -377,23 +397,6 @@
 	  (finland		(sweden norway))
 	  (iceland		(ireland united-kingdom norway)))
 
-	(define (assert-graph-consistency nodes)
-	  ;;Verify that every  node is present in the  adjacency list of
-	  ;;all its neighbors.
-	  ;;
-	  (define who 'assert-graph-consistency)
-	  (for-each
-	      (lambda (node)
-		(for-each
-		    (lambda (neighbor)
-		      (unless (memq node (node-neighbors neighbor))
-			(assertion-violation who
-			  "incorrect node links"
-			  (node-name node)
-			  (node-name neighbor))))
-		  (node-neighbors node)))
-	    nodes))
-
 	(define (choose-color)
 	  ;;Every time we call this function: we start a new choice.
 	  ;;
@@ -446,7 +449,6 @@
 
 	#;(print "number of nations: ~a\n"
 	       (length europe-facing-nations))
-	(assert-graph-consistency europe-facing-nations)
 	(color-nations europe-facing-nations)
 	#;(print-colors  europe-facing-nations)
 	#t)

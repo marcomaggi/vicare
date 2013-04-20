@@ -5236,16 +5236,30 @@ We can modify the program to show the search path:
 
 
 The following program shows how to select colors to paint European
-nations on map.  The code is derived from an example in ``Teach Yourself
-Scheme in Fixnum Days'' by Dorai Sitaram.
+nations on map: given a map of nations we want to paint each nation with
+a color different from the one of its neighbors; it is known that 4
+colors are always enough (even though more than 4 colors are
+aesthetically better).  The code is derived from an example in ``Teach
+Yourself Scheme in Fixnum Days'' by Dorai Sitaram.
 
-@smallexample
+We start with the prelude:
+
+@example
 #!r6rs
 (import (vicare)
   (vicare language-extensions amb)
   (only (vicare language-extensions syntaxes)
         define-values))
+@end example
 
+We represent the map with a graph: one node for each nation; nations
+that face each other are connected by a link.  We select the adjacency
+list representation.  We want to make sure that we have correctly
+defined the graph: two nodes connected by a link must be present in the
+adjacency list of each other.  A better graph definition syntax would
+have integrated this check.
+
+@example
 (define-record-type node
   (fields (immutable name)
           ;;List of NODE  records representing the adjacency
@@ -5267,11 +5281,34 @@ Scheme in Fixnum Days'' by Dorai Sitaram.
          (node-neighbors-set! ?node (list ?neighbor ...))
          ...)
        (define ?nodes-var
-         (list ?node ...))))))
+         (list ?node ...))
+       (module ()
+         (assert-graph-consistency ?nodes-var))))
+    ))
 
-;;We are  interested in nations  that face each  other, even
-;;when there is a sea between them.
-;;
+(define (assert-graph-consistency nodes)
+  ;;Verify that every node is  present in the adjacency list
+  ;;of all its neighbors.
+  ;;
+  (define who 'assert-graph-consistency)
+  (for-each
+      (lambda (node)
+        (for-each
+            (lambda (neighbor)
+              (unless (memq node (node-neighbors neighbor))
+                (assertion-violation who
+                  "incorrect node links"
+                  (node-name node)
+                  (node-name neighbor))))
+          (node-neighbors node)))
+    nodes))
+@end example
+
+We are interested in nations that face each other, even when there is a
+sea between them; for example: it is aesthetically more pleasant if
+France and the United Kingdom are painted in different colors.
+
+@example
 (define-nodes europe-facing-nations
   (portugal        (spain))
   (spain           (portugal andorra france))
@@ -5325,47 +5362,42 @@ Scheme in Fixnum Days'' by Dorai Sitaram.
                     iceland))
   (finland         (sweden norway))
   (iceland         (ireland united-kingdom norway)))
+@end example
 
-(define (assert-graph-consistency nodes)
-  ;;Verify that every node is  present in the adjacency list
-  ;;of all its neighbors.
-  ;;
-  (define who 'assert-graph-consistency)
-  (for-each
-      (lambda (node)
-        (for-each
-            (lambda (neighbor)
-              (unless (memq node (node-neighbors neighbor))
-                (assertion-violation who
-                  "incorrect node links"
-                  (node-name node)
-                  (node-name neighbor))))
-          (node-neighbors node)))
-    nodes))
+The only use of @func{amb} is in the function that selects a color for a
+nation.
 
+@example
 (define (choose-color)
   ;;Every time we call this function: we start a new choice.
   ;;
   (amb 'red 'yellow 'blue 'green))
+@end example
 
+We validate a possible solution with @func{amb-assert}, checking that a
+node/nation has color different from the one of its neighbors:
+
+@example
+(define (validate-all-nodes-color all-nodes)
+  (for-all validate-single-node-color all-nodes))
+@end example
+
+To build a ``better'' starting point, we also want to test the color of
+a single node against the colors of its neighbors while we are building
+the initial choice.  When calling this function: the neighbors may not
+have a color yet: their @code{color} field can be set to @false{}.
+
+@example
 (define (validate-single-node-color node)
-  ;;Test  the  color  of  NODE against  the  colors  of  its
-  ;;neighbors:  NODE  must  have color  different  from  its
-  ;;neighbors.   The neighbors  may  not have  a color  yet:
-  ;;their COLOR  field can be  set to  #f.  This is  used to
-  ;;both validate  a possible solution and  build a "better"
-  ;;first choice.
-  ;;
   (amb-assert (not (memq (node-color node)
                          (map node-color
                            (node-neighbors node))))))
+@end example
 
-(define (validate-all-nodes-color all-nodes)
-  ;;Validate a possible solution: every node must have color
-  ;;different from its neighbors.
-  ;;
-  (for-all validate-single-node-color all-nodes))
+The actual coloring function that selects a color for each nation and
+validates the solution until all the constraints are satisfied:
 
+@example
 (define (color-nations nations)
   (with-ambiguous-choices
    ;;Build an initial choice.
@@ -5376,7 +5408,11 @@ Scheme in Fixnum Days'' by Dorai Sitaram.
      nations)
    ;;Validate the choice and backtrack if needed.
    (validate-all-nodes-color nations)))
+@end example
 
+We also need to display the result:
+
+@example
 (define (print-colors nations)
   (for-each
       (lambda (nation)
@@ -5393,11 +5429,14 @@ Scheme in Fixnum Days'' by Dorai Sitaram.
 
 (define (print . args)
   (apply fprintf (current-error-port) args))
+@end example
 
-(assert-graph-consistency europe-facing-nations)
+Run it:
+
+@example
 (color-nations europe-facing-nations)
 (print-colors  europe-facing-nations)
-@end smallexample
+@end example
 
 @c page
 @node debugging
