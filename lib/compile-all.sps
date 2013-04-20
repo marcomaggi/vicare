@@ -46,6 +46,7 @@
   (only (vicare language-extensions syntaxes))
   (only (vicare language-extensions include))
   (only (vicare language-extensions amb))
+  (only (vicare language-extensions simple-match))
   (only (vicare language-extensions coroutines))
   (only (vicare language-extensions infix))
   (only (vicare language-extensions keywords))

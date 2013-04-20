@@ -28,6 +28,7 @@ nobase_dist_libvicare_DATA	= \
 	vicare/arguments/validation.sls					\
 	\
 	vicare/language-extensions/amb.sls				\
+	vicare/language-extensions/simple-match.sls			\
 	vicare/language-extensions/syntaxes.sls				\
 	vicare/language-extensions/coroutines.sls			\
 	vicare/language-extensions/infix.sls				\
