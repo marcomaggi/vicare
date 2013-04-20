@@ -29,7 +29,8 @@
 (import (vicare)
   (vicare language-extensions amb)
   (only (vicare language-extensions syntaxes)
-	define-values)
+	define-values
+	receive)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -459,6 +460,8 @@
   #t)
 
 
+;;; COMMENTED OUT BECAUSE NOT FINISHED!!!
+
 #;(parametrise ((check-test-name	'tasks))
 
   (define (print . args)
@@ -472,6 +475,90 @@
 	    (immutable effort)))
 		;Positive exact integer, effort needed to complete.
 
+  (define (fill-day day.time day.effort
+		    tasks.empty? tasks.dequeue!)
+    (define-values (refused-tasks.empty?
+		    refused-tasks.enqueue!
+		    refused-tasks.dequeue!)
+      (make-queue))
+    (let loop ((available.time    day.time)
+	       (available.effort  day.effort)
+	       (day.tasks         '()))
+      (if (tasks.empty?)
+	  (values refused-tasks.empty?
+		  refused-tasks.dequeue!
+		  day.tasks)
+	(let* ((task   (tasks.dequeue!))
+	       (time   (- available.time   (task-time   task)))
+	       (effort (- available.effort (task-effort task))))
+	  (if (and (<= 0 time)
+		   (<= 0 effort))
+	      (loop time effort (cons task day.tasks))
+	    (begin
+	      (refused-tasks.enqueue! task)
+	      (loop time effort day.tasks)))))))
+
+  (define (amb-fill-day day.time day.effort
+			tasks.empty? tasks.dequeue!)
+    (define-values (refused-tasks.empty?
+		    refused-tasks.enqueue!
+		    refused-tasks.dequeue!)
+      (make-queue))
+    (define (generator)
+      (if (tasks.empty?)
+	  (amb)
+	(tasks.dequeue!)))
+    (let loop ((available.time    day.time)
+	       (available.effort  day.effort)
+	       (day.tasks         '()))
+      (if (tasks.empty?)
+	  (values refused-tasks.empty?
+		  refused-tasks.dequeue!
+		  day.tasks)
+	(let* ((task   (amb-thunk generator))
+	       (time   (- available.time   (task-time   task)))
+	       (effort (- available.effort (task-effort task))))
+	  (if (and (<= 0 time)
+		   (<= 0 effort))
+	      (loop time effort (cons task day.tasks))
+	    (begin
+	      (refused-tasks.enqueue! task)
+	      (loop time effort day.tasks)))))))
+
+  (define (schedule filler tasks.empty? tasks.dequeue!)
+    (let loop ((empty?    tasks.empty?)
+	       (dequeue!  tasks.dequeue!)
+	       (days      '()))
+      (if (empty?)
+	  days
+	(receive (empty? dequeue! day.tasks)
+	    (filler 24 100 empty? dequeue!)
+	  (loop empty? dequeue! (cons day.tasks days))))))
+
+  (define (print-scheduling days)
+    (let next-day ((day.idx 1)
+		   (days    days))
+      (unless (null? days)
+	(let ((tasks (car days)))
+	  (print "day ~a: total time=~a, total effort=~a\n"
+		 day.idx
+		 (fold-left (lambda (time task)
+			      (+ time (task-time task)))
+		   0 tasks)
+		 (fold-left (lambda (effort task)
+			      (+ effort (task-effort task)))
+		   0 tasks))
+	  (let next-task ((tasks tasks))
+	    (unless (null? tasks)
+	      (let ((T (car tasks)))
+		(print "   task ~a: time=~a, effort=~a\n"
+		       (task-id T)
+		       (task-time T)
+		       (task-effort T)))
+	      (next-task (cdr tasks))))
+	  (print "\n"))
+	(next-day (+ 1 day.idx) (cdr days)))))
+
   (define tasks
     (let more ((num    25)
 	       (tasks  '()))
@@ -479,23 +566,36 @@
 	  tasks
 	(more (- num 1)
 	      (cons (make-task (gensym)
-			       (random 24)
-			       (random 80))
+			       (random 12)
+			       (random 50))
 		    tasks)))))
 
-  #;(print "tasks: ~a\n" tasks)
+  (let ()
+    (define-values (empty? enqueue! dequeue!)
+      (make-queue tasks))
 
-  (define-values (empty? enqueue! dequeue!)
-    (apply make-queue tasks))
+    (print "*** sequenced choices\n")
+    (let ((days (schedule fill-day empty? dequeue!)))
+      (print-scheduling days)))
 
-  (define scheduling
-    (let loop ((available-time    24)
-	       (available-effort  100)
-	       (days              '()))
-      (if (empty?)
-	  days
-	(let ((task (dequeue!)))
-	  ))))
+  (let ((best-days '())
+	(best-days.len +inf.0))
+    (print "*** ambiguous choices\n")
+    (with-ambiguous-choices
+     (let loop ((count 3))
+       (define-values (empty? enqueue! dequeue!)
+	 (make-queue tasks))
+       (let* ((days     (schedule amb-fill-day empty? dequeue!))
+	      (days.len (length days)))
+	 (print "solution of length: ~a\n" days.len)
+	 (when (< days.len best-days.len)
+	   (set! best-days days)
+	   (set! best-days.len days.len)))
+       (set! count (+ -1 count))
+       (unless (zero? count)
+	 (amb)
+	 (loop count))))
+    (print-scheduling best-days))
 
   #t)
 
