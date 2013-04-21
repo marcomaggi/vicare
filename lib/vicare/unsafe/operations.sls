@@ -126,7 +126,9 @@
 
     (rename ($make-ratnum		make-ratnum)
 	    ($ratnum-n			ratnum-n)
-	    ($ratnum-d			ratnum-d))
+	    ($ratnum-d			ratnum-d)
+	    ($ratnum-num		ratnum-num)
+	    ($ratnum-den		ratnum-den))
 
 ;;; --------------------------------------------------------------------
 
