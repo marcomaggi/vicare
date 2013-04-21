@@ -28,7 +28,7 @@
 
 #!r6rs
 (library (vicare language-extensions simple-match)
-  (export match else)
+  (export match match-debug else)
   (import (vicare)
     (prefix (except (vicare unsafe operations)
 		    bytevector=)
@@ -68,10 +68,46 @@ is expanded to:
 |#
 
 
+(define-syntax debugging
+  (syntax-rules ()))
+
+(define-syntax match-debug
+  (syntax-rules ()
+    ((_)
+     (match))
+
+    ((_ ?expr)
+     (match debugging ?expr))
+
+    ((_ ?expr ?clause0 ?clause ...)
+     (match debugging ?expr ?clause0 ?clause ...))
+    ))
+
+
 (define-syntax match
   (lambda (stx)
+    (define debug? #f)
+
     (define (main stx)
-      (syntax-case stx (else)
+      (syntax-case stx (else debugging)
+	((_ debugging ?expr)
+	 (begin
+	   (set! debug? #t)
+	   #'(begin ?expr)))
+
+	((_ debugging ?expr ?clause0 ?clause ... (else ?else-body0 ?else-body ...))
+	 (begin
+	   (set! debug? #t)
+	   (parse-clauses-with-else #'?expr
+				    (syntax->list #'(?clause0 ?clause ...))
+				    #'(?else-body0 ?else-body ...))))
+
+	((_ debugging ?expr ?clause0 ?clause ...)
+	 (begin
+	   (set! debug? #t)
+	   (parse-clauses-without-else #'?expr
+				       (syntax->list #'(?clause0 ?clause ...)))))
+
 	((_)
 	 #'(values))
 
@@ -194,6 +230,50 @@ is expanded to:
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
+      ;;Match the ellipsis  in list.  The ellipsis can appear  in a list
+      ;;only as last item.
+      ;;
+      ;;We first  match all the  items in IN-EXPR against  the ?PATTERN,
+      ;;and build a list of  thunks holding the SUCCESS-FORM closed upon
+      ;;the  correct  bindings; then  we  evaluate  the thunks,  in  the
+      ;;correct order, and return the list of results.
+      ;;
+      ;;We do not evaluate any SUCCESS-FORM  before we are sure that all
+      ;;the items from IN-EXPR match the  ?PATTERN.  If an item does not
+      ;;match  the pattern:  we evaluate  the FAIL-FORM  and return  its
+      ;;return value;  to do this we  create a continuation and  use its
+      ;;escape function.
+      ;;
+      ((?pattern ?ellipsis)
+       (and (identifier? #'?ellipsis)
+	    (free-identifier=? #'(... ...) #'?ellipsis))
+       (with-syntax
+	   (((RETURN NEXT-ITEM THUNKS RECUR THUNK)
+	     (generate-temporaries #'(1 2 3 4 5))))
+	 #`(call/cc
+	       (lambda (RETURN)
+		 (let NEXT-ITEM ((expr   IN-EXPR)
+				 (THUNKS '()))
+		   (cond ((null? expr)
+			  ;;Evaluate the  thunks, if  any, in  the order
+			  ;;they were created.  Return  null or the list
+			  ;;of results.
+			  (let RECUR ((THUNKS (reverse THUNKS)))
+			    (if (null? THUNKS)
+				'()
+			      (cons ((car THUNKS))
+				    (RECUR (cdr THUNKS))))))
+			 ((pair? expr)
+			  ;;Build a thunk for every matching input item.
+			  (let ((THUNK #,(parse-pattern #'?pattern #'(car expr)
+							#'(lambda () SUCCESS-FORM)
+							#'(RETURN FAIL-FORM))))
+			    (NEXT-ITEM (cdr expr) (cons THUNK THUNKS))))
+			 (else
+			  ;;Fail  if the  input  is neither  null nor  a
+			  ;;proper list.
+			  FAIL-FORM)))))))
+
       ;;Match a pair.
       ;;
       ((?car . ?cdr)
@@ -228,7 +308,7 @@ is expanded to:
       ;;
       (?id
        (and (identifier? #'?id)
-	    (eq? '_ (syntax->datum #'?id)))
+	    (free-identifier=? #'_ #'?id))
        success-form-stx)
 
       ;;Match a variable reference.
@@ -398,7 +478,8 @@ is expanded to:
 ;;;; end of transformer
 
 (let ((out (main stx)))
-  #;(pretty-print (syntax->datum out) (current-error-port))
+  (when (or #f debug?)
+    (pretty-print (syntax->datum out) (current-error-port)))
   out)))
 
 
