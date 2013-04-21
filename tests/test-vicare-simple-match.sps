@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare language-extensions simple-match)
   (vicare checks))
@@ -34,7 +34,59 @@
 (check-display "*** testing Vicare: destructuring match syntax\n")
 
 
-(parametrise ((check-test-name	'fixnums-and-pairs))
+(parametrise ((check-test-name	'booleans))
+
+  (check
+      (match #t
+        (#t	#\1)
+        (#f	#\2)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match #f
+        (#t	#\1)
+        (#f	#\2)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 1
+        (#t	#\1)
+        (#f	#\2)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'chars))
+
+  (check
+      (match #\A
+        (#\A	#\1)
+        (#\B	#\2)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match #\B
+        (#\A	#\1)
+        (#\B	#\2)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 1
+        (#\A	#\1)
+        (#\B	#\2)
+	(else	#f))
+    => #f)
+
+  #\A)
+
+
+(parametrise ((check-test-name	'fixnums))
 
   (check
       (match 123
@@ -66,6 +118,339 @@
         (456	#\2)
         (789	#\3)
 	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'bignums))
+
+  (check
+      (match #e123e10
+        (#e123e10	#\1)
+        (#e456e10	#\2)
+        (#e789e10	#\3)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match #e456e10
+        (#e123e10	#\1)
+        (#e456e10	#\2)
+        (#e789e10	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match #e789e10
+        (#e123e10	#\1)
+        (#e456e10	#\2)
+        (#e789e10	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match #e1000e10
+        (#e123e10	#\1)
+        (#e456e10	#\2)
+        (#e789e10	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'flonums))
+
+  (check
+      (match 1.23
+        (1.23	#\1)
+        (4.56	#\2)
+        (7.89	#\3)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match 4.56
+        (1.23	#\1)
+        (4.56	#\2)
+        (7.89	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 7.89
+        (1.23	#\1)
+        (4.56	#\2)
+        (7.89	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match 0.0
+        (1.23	#\1)
+        (4.56	#\2)
+        (7.89	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'ratnums))
+
+  (check
+      (match 1/23
+        (1/23	#\1)
+        (4/56	#\2)
+        (7/89	#\3)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match 4/56
+        (1/23	#\1)
+        (4/56	#\2)
+        (7/89	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 7/89
+        (1/23	#\1)
+        (4/56	#\2)
+        (7/89	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match 8/9
+        (1/23	#\1)
+        (4/56	#\2)
+        (7/89	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'cflonums))
+
+  (check
+      (match 1.23+1.24i
+        (1.23+1.24i	#\1)
+        (4.56+4.57i	#\2)
+        (7.89+7.88i	#\3)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match 4.56+4.57i
+        (1.23+1.24i	#\1)
+        (4.56+4.57i	#\2)
+        (7.89+7.88i	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 7.89+7.88i
+        (1.23+1.24i	#\1)
+        (4.56+4.57i	#\2)
+        (7.89+7.88i	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match 0.0+0.0i
+        (1.23+1.24i	#\1)
+        (4.56+4.57i	#\2)
+        (7.89+7.88i	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'compnums))
+
+  (check
+      (match 123+124i
+        (123+124i	#\1)
+        (456+457i	#\2)
+        (789+788i	#\3)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match 456+457i
+        (123+124i	#\1)
+        (456+457i	#\2)
+        (789+788i	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match 789+788i
+        (123+124i	#\1)
+        (456+457i	#\2)
+        (789+788i	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match 1+2i
+        (123+124i	#\1)
+        (456+457i	#\2)
+        (789+788i	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'numbers))
+
+  (check
+      (match +nan.0
+        (+nan.0	#\1)
+        (+inf.0	#\2)
+        (-inf.0	#\3)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match +inf.0
+        (+nan.0	#\1)
+        (+inf.0	#\2)
+        (-inf.0	#\3)
+	(else	#f))
+    => #\2)
+
+  (check
+      (match -inf.0
+        (+nan.0	#\1)
+        (+inf.0	#\2)
+        (-inf.0	#\3)
+	(else	#f))
+    => #\3)
+
+  (check
+      (match 0
+        (+nan.0	#\1)
+        (+inf.0	#\2)
+        (-inf.0	#\3)
+	(else	#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'quoted-symbols))
+
+  (check
+      (match 'ciao
+        ('ciao		#\1)
+        ('hello		#\2)
+        ('salut		#\2)
+	(else		#f))
+    => #\1)
+
+  (check
+      (match 'hello
+        ('ciao		#\1)
+        ('hello		#\2)
+        ('salut		#\3)
+	(else		#f))
+    => #\2)
+
+  (check
+      (match 'salut
+        ('ciao		#\1)
+        ('hello		#\2)
+        ('salut		#\3)
+	(else		#f))
+    => #\3)
+
+  (check
+      (match 'hey
+        ('ciao		#\1)
+        ('hello		#\2)
+        ('salut		#\3)
+	(else		#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'strings))
+
+  (check
+      (match "ciao"
+        ("ciao"		#\1)
+        ("hello"	#\2)
+        (""		#\3)
+	(else		#f))
+    => #\1)
+
+  (check
+      (match "hello"
+        ("ciao"		#\1)
+        ("hello"	#\2)
+        (""		#\3)
+	(else		#f))
+    => #\2)
+
+  (check
+      (match ""
+        ("ciao"		#\1)
+        ("hello"	#\2)
+        (""		#\3)
+	(else		#f))
+    => #\3)
+
+  (check
+      (match "salut"
+        ("ciao"		#\1)
+        ("hello"	#\2)
+        (""		#\3)
+	(else		#f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevectors))
+
+  (check
+      (match '#ve(ascii "ciao")
+        (#ve(ascii "ciao")	#\1)
+        (#ve(ascii "hello")	#\2)
+        (#ve(ascii "")		#\3)
+	(else			#f))
+    => #\1)
+
+  (check
+      (match '#ve(ascii "hello")
+        (#ve(ascii "ciao")	#\1)
+        (#ve(ascii "hello")	#\2)
+        (#ve(ascii "")		#\3)
+	(else			#f))
+    => #\2)
+
+  (check
+      (match '#ve(ascii "")
+        (#ve(ascii "ciao")	#\1)
+        (#ve(ascii "hello")	#\2)
+        (#ve(ascii "")		#\3)
+	(else			#f))
+    => #\3)
+
+  (check
+      (match "salut"
+        (#ve(ascii "ciao")	#\1)
+        (#ve(ascii "hello")	#\2)
+        (#ve(ascii "")		#\3)
+	(else			#f))
     => #f)
 
   #t)

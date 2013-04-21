@@ -30,8 +30,11 @@
 (library (vicare language-extensions simple-match)
   (export match else)
   (import (vicare)
-    (prefix (vicare unsafe operations)
-	    $))
+    (prefix (except (vicare unsafe operations)
+		    bytevector=)
+	    $)
+    (only (ikarus system $bytevectors)
+	  $bytevector=))
 
 
 #|
@@ -169,10 +172,16 @@ is expanded to:
       ;;Match a quoted datum.
       ;;
       ((quote ?datum)
-       #`(let ((expr IN-EXPR))
-	   (if (equal? expr (quote ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+       (cond ((symbol? (syntax->datum #'?datum))
+	      #`(let ((expr IN-EXPR))
+		  (if (eq? expr (quote ?datum))
+		      SUCCESS-FORM
+		    FAIL-FORM)))
+	     (else
+	      #`(let ((expr IN-EXPR))
+		  (if (equal? expr (quote ?datum))
+		      SUCCESS-FORM
+		    FAIL-FORM)))))
 
       ;;Match a quasiquoted datum.
       ;;
@@ -227,12 +236,14 @@ is expanded to:
       ;;Match the boolean true.
       ;;
       (#t
-       #`(if IN-EXPR SUCCESS-FORM FAIL-FORM))
+       #`(let ((expr IN-EXPR))
+	   (if (and (boolean? expr) expr) SUCCESS-FORM FAIL-FORM)))
 
-      ;;Match the boolean true.
+      ;;Match the boolean false.
       ;;
       (#f
-       #`(if IN-EXPR FAIL-FORM SUCCESS-FORM))
+       #`(let ((expr IN-EXPR))
+	   (if (and (boolean? expr) (not expr)) SUCCESS-FORM FAIL-FORM)))
 
       ;;Match a character datum.
       ;;
@@ -261,6 +272,29 @@ is expanded to:
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
+      ;;Match a  NaN datum.  This  clause must  come before the  one for
+      ;;flonums.
+      ;;
+      (?datum
+       (let ((D (syntax->datum #'?datum)))
+	 (and (number? D)
+	      (nan?    D)))
+       #`(if (nan? IN-EXPR)
+	     SUCCESS-FORM
+	   FAIL-FORM))
+
+      ;;Match an infinite  datum.  This clause must come  before the one
+      ;;for flonums.
+      ;;
+      (?datum
+       (let ((D (syntax->datum #'?datum)))
+	 (and (number?   D)
+	      (infinite? D)))
+       #`(let ((expr IN-EXPR))
+	   (if (and (infinite? expr) (= expr ?datum))
+	       SUCCESS-FORM
+	     FAIL-FORM)))
+
       ;;Match a flonum datum.
       ;;
       (?datum
@@ -275,7 +309,9 @@ is expanded to:
       (?datum
        (ratnum? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
-	   (if (and (ratnum? expr) (= expr ?datum))
+	   (if (and (ratnum? expr)
+		    (= ($ratnum-num expr) ($ratnum-num ?datum))
+		    (= ($ratnum-den expr) ($ratnum-den ?datum)))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
@@ -284,7 +320,9 @@ is expanded to:
       (?datum
        (cflonum? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
-	   (if (and (cflonum? expr) (= expr ?datum))
+	   (if (and (cflonum? expr)
+		    ($fl= ($cflonum-real expr) ($cflonum-real ?datum))
+		    ($fl= ($cflonum-imag expr) ($cflonum-imag ?datum)))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
@@ -293,28 +331,15 @@ is expanded to:
       (?datum
        (compnum? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
-	   (if (and (compnum? expr) (= expr ?datum))
+	   (if (and (compnum? expr)
+		    (= ($compnum-real expr) ($compnum-real ?datum))
+		    (= ($compnum-imag expr) ($compnum-imag ?datum)))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
-      ;;Match a NaN datum.
-      ;;
-      (?datum
-       (nan? (syntax->datum #'?datum))
-       #`(if (nan? IN-EXPR)
-	     SUCCESS-FORM
-	   FAIL-FORM))
-
-      ;;Match a infinite datum.
-      ;;
-      (?datum
-       (infinite? (syntax->datum #'?datum))
-       #`(let ((expr IN-EXPR))
-	   (if (and (infinite? expr) (= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
-
-      ;;Match a number datum.
+      ;;Match  a number  datum.  This  clause should  never be  included
+      ;;because the clauses  above should have matches all  the kinds of
+      ;;numbers.
       ;;
       (?datum
        (number? (syntax->datum #'?datum))
@@ -337,7 +362,8 @@ is expanded to:
       (?datum
        (bytevector? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
-	   (if (and (bytevector? expr) (bytevector=? expr ?datum))
+	   (if (and (bytevector? expr)
+		    ($bytevector= expr (quote ?datum)))
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
