@@ -212,13 +212,17 @@ is expanded to:
 	       SUCCESS-FORM
 	     FAIL-FORM)))
 
-      ;;Match a non-empty vector.
+      ;;Match a non-empty  vector.  Let's keep it simple  and accept the
+      ;;cost of VECTOR->LIST.
       ;;
       (#(?item0 ?item ...)
-       #`(let ((expr IN-EXPR))
-	   (if (vector? expr)
-	       #,(recurse #'?item0 #'(?item ...))
-	     FAIL-FORM)))
+       (with-syntax
+	   ((DATUM.len ($vector-length (syntax->datum #'#(?item0 ?item ...)))))
+	 #`(let ((expr IN-EXPR))
+	     (if (and (vector? expr)
+		      ($fx= DATUM.len ($vector-length expr)))
+		 #,(recurse #'(?item0 ?item ...) #'(vector->list expr))
+	       FAIL-FORM))))
 
       ;;Match anything and ignore.
       ;;
