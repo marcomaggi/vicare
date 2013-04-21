@@ -143,11 +143,11 @@ is expanded to:
 		      (clause-ids  (syntax->list #'(CLAUSE-ID ... failed-match-error))))
 	    (if (null? clauses)
 		'()
-	      (let ((fail-form-stx #`(#,(car clause-ids) expr)))
+	      (let ((fail-form-stx #`(#,($car clause-ids) expr)))
 		(cons #`(lambda (expr)
-			  #,(parse-single-clause (car clauses) #'expr fail-form-stx))
-		      (recur (cdr clauses)
-			     (cdr clause-ids)))))))
+			  #,(parse-single-clause ($car clauses) #'expr fail-form-stx))
+		      (recur ($cdr clauses)
+			     ($cdr clause-ids)))))))
 	(with-syntax
 	    (((CLAUSE-THUNK0 CLAUSE-THUNK ...)
 	      funcs-stx))
@@ -261,14 +261,14 @@ is expanded to:
 			  (let RECUR ((THUNKS (reverse THUNKS)))
 			    (if (null? THUNKS)
 				'()
-			      (cons ((car THUNKS))
-				    (RECUR (cdr THUNKS))))))
+			      (cons (($car THUNKS))
+				    (RECUR ($cdr THUNKS))))))
 			 ((pair? expr)
 			  ;;Build a thunk for every matching input item.
-			  (let ((THUNK #,(parse-pattern #'?pattern #'(car expr)
+			  (let ((THUNK #,(parse-pattern #'?pattern #'($car expr)
 							#'(lambda () SUCCESS-FORM)
 							#'(RETURN FAIL-FORM))))
-			    (NEXT-ITEM (cdr expr) (cons THUNK THUNKS))))
+			    (NEXT-ITEM ($cdr expr) (cons THUNK THUNKS))))
 			 (else
 			  ;;Fail  if the  input  is neither  null nor  a
 			  ;;proper list.
@@ -279,8 +279,8 @@ is expanded to:
       ((?car . ?cdr)
        #`(let ((expr IN-EXPR))
 	   (if (pair? expr)
-	       #,(parse-pattern #'?car #'(car expr)
-				(recurse #'?cdr #'(cdr expr))
+	       #,(parse-pattern #'?car #'($car expr)
+				(recurse #'?cdr #'($cdr expr))
 				fail-form-stx)
 	     FAIL-FORM)))
 
