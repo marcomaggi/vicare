@@ -32,7 +32,7 @@
     match match-debug
 
     ;; auxiliary keywords
-    else let quote quasiquote and or not apply)
+    else let quote quasiquote and or not apply ... _)
   (import (vicare)
     (prefix (except (vicare unsafe operations)
 		    bytevector=)
@@ -177,11 +177,13 @@ is expanded to:
   (syntax-case clause ()
     ;;Pattern without body.
     ((?pattern)
-     (parse-pattern #'pattern expr-id #'(values) fail-form-stx))
+     (build-pattern-matching-code #'?pattern expr-id
+				  #'(values) fail-form-stx #f))
 
     ;;Pattern with body.
     ((?pattern ?body0 ?body ...)
-     (parse-pattern #'?pattern expr-id #'(begin ?body0 ?body ...) fail-form-stx))
+     (build-pattern-matching-code #'?pattern expr-id
+				  #'(begin ?body0 ?body ...) fail-form-stx #f))
 
     ;;Syntax error.
     (_
@@ -190,61 +192,79 @@ is expanded to:
 
 ;;;; pattern parsing
 
-(define (parse-pattern pattern-stx in-expr-stx success-form-stx fail-form-stx)
+(define (build-pattern-matching-code pattern-stx in-expr-stx
+				     success-stx failure-stx
+				     wrapped-body?)
+  ;;Recursive  function.   Parse  the  syntax  object  representing  the
+  ;;pattern  and build  the expression  needed to  match it  against the
+  ;;input expression.
+  ;;
+  ;;SUCCESS-STX is a syntax object representing the form to be evaluated
+  ;;whenever the pattern fully matches the input expression.
+  ;;
+  ;;FAILURE-STX is a syntax object representing the form to be evaluated
+  ;;whenever matching fails.
+  ;;
+  ;;WRAPPED-BODY? is  used only  when constructing the  code to  match a
+  ;;pattern with associated  ellipsis; it must be #f at  the first call.
+  ;;It is set to true whenever the success form is wrapped in a lambda:
+  ;;
+  ;;  #`(lambda () #,success-stx)
+  ;;
   (define (recurse pattern-stx in-expr-stx)
-    (parse-pattern pattern-stx in-expr-stx success-form-stx fail-form-stx))
+    (build-pattern-matching-code pattern-stx in-expr-stx
+				 success-stx failure-stx
+				 wrapped-body?))
   (with-syntax (((expr)        (generate-temporaries #'(#f)))
-		(IN-EXPR       in-expr-stx)
-		(SUCCESS-FORM  success-form-stx)
-		(FAIL-FORM     fail-form-stx))
+		(IN-EXPR       in-expr-stx))
     (syntax-case pattern-stx (let quote quasiquote and or not apply)
 
       ;;This matches  the end of  a clause when  the clause is  a proper
       ;;list.
       ;;
       (()
-       #'(let ((expr IN-EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (null? expr)
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a variable assignment.
       ;;
       ((let ?id)
        (identifier? #'?id)
        #`(let ((?id IN-EXPR))
-	   SUCCESS-FORM))
+	   #,success-stx))
 
       ;;Empty APPLY pattern.
       ;;
       ((apply)
-       fail-form-stx)
+       failure-stx)
 
       ;;Match with a predicate function.
       ;;
       ((apply ?pred)
        #`(let ((expr IN-EXPR))
 	   (if (?pred expr)
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Empty AND pattern.
       ;;
       ((and)
-       success-form-stx)
+       success-stx)
 
       ;;Non-empty AND pattern.  Match multiple patterns.
       ;;
       ((and ?pattern0 ?pattern ...)
        #`(let ((expr IN-EXPR))
-	   #,(parse-pattern #'?pattern0 #'expr
-			    (recurse #'(and ?pattern ...) #'expr)
-			    fail-form-stx)))
+	   #,(build-pattern-matching-code #'?pattern0 #'expr
+					  (recurse #'(and ?pattern ...) #'expr)
+					  failure-stx wrapped-body?)))
 
       ;;Empty OR pattern.
       ;;
       ((or)
-       fail-form-stx)
+       failure-stx)
 
       ;;OR with single pattern.
       ((or ?pattern)
@@ -272,21 +292,21 @@ is expanded to:
       ((or ?pattern0 ?pattern1 ?pattern ...)
        (or-patterns-with-same-bindings? #'?pattern0 #'?pattern1)
        #`(let ((expr IN-EXPR))
-	   #,(parse-pattern #'?pattern0 #'expr
-			    success-form-stx
-			    (recurse #'(or ?pattern1 ?pattern ...) #'expr))))
+	   #,(build-pattern-matching-code #'?pattern0 #'expr
+					  success-stx
+					  (recurse #'(or ?pattern1 ?pattern ...) #'expr)
+					  wrapped-body?)))
 
       ;;Empty NOT pattern.  Always fail.
       ;;
       ((not)
-       fail-form-stx)
+       failure-stx)
 
       ;;Non-empty NOT pattern.  Matches if the pattern does not match.
       ;;
       ((not ?pattern)
-       (parse-pattern #'?pattern #'IN-EXPR
-		      fail-form-stx
-		      success-form-stx))
+       (build-pattern-matching-code #'?pattern #'IN-EXPR
+				    failure-stx success-stx wrapped-body?))
 
       ;;Match a quoted datum.
       ;;
@@ -294,39 +314,45 @@ is expanded to:
        (cond ((symbol? (syntax->datum #'?datum))
 	      #`(let ((expr IN-EXPR))
 		  (if (eq? expr (quote ?datum))
-		      SUCCESS-FORM
-		    FAIL-FORM)))
+		      #,success-stx
+		    #,failure-stx)))
 	     (else
 	      #`(let ((expr IN-EXPR))
 		  (if (equal? expr (quote ?datum))
-		      SUCCESS-FORM
-		    FAIL-FORM)))))
+		      #,success-stx
+		    #,failure-stx)))))
 
       ;;Match a quasiquoted datum.
       ;;
       ((quasiquote ?datum)
        #`(let ((expr IN-EXPR))
 	   (if (equal? expr (quasiquote ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
+
+      ;;The ellipsis can appear only as last item.
+      ;;
+      ((?ellipsis . ?pattern)
+       (ellipsis? #'?ellipsis)
+       (synner "the ellipsis can appear only as last item"
+	       #'(?ellipsis . ?pattern)))
 
       ;;Match the ellipsis  in list.  The ellipsis can appear  in a list
       ;;only as last item.
       ;;
       ;;We first  match all the  items in IN-EXPR against  the ?PATTERN,
-      ;;and build a list of  thunks holding the SUCCESS-FORM closed upon
+      ;;and build a  list of thunks holding the  SUCCESS-STX closed upon
       ;;the  correct  bindings; then  we  evaluate  the thunks,  in  the
       ;;correct order, and return the list of results.
       ;;
-      ;;We do not evaluate any SUCCESS-FORM  before we are sure that all
+      ;;We do not  evaluate any SUCCESS-STX before we are  sure that all
       ;;the items from IN-EXPR match the  ?PATTERN.  If an item does not
-      ;;match  the pattern:  we evaluate  the FAIL-FORM  and return  its
+      ;;match the  pattern: we evaluate  the FAILURE-STX and  return its
       ;;return value;  to do this we  create a continuation and  use its
       ;;escape function.
       ;;
       ((?pattern ?ellipsis)
-       (and (identifier? #'?ellipsis)
-	    (free-identifier=? #'(... ...) #'?ellipsis))
+       (ellipsis? #'?ellipsis)
        (with-syntax
 	   (((RETURN NEXT-ITEM THUNKS RECUR THUNK)
 	     (generate-temporaries #'(1 2 3 4 5))))
@@ -334,43 +360,52 @@ is expanded to:
 	       (lambda (RETURN)
 		 (let NEXT-ITEM ((expr   IN-EXPR)
 				 (THUNKS '()))
-		   (cond ((null? expr)
-			  ;;Evaluate the  thunks, if  any, in  the order
-			  ;;they were created.  Return  null or the list
-			  ;;of results.
-			  (let RECUR ((THUNKS (reverse THUNKS)))
-			    (if (null? THUNKS)
-				'()
-			      (cons (($car THUNKS))
-				    (RECUR ($cdr THUNKS))))))
-			 ((pair? expr)
-			  ;;Build a thunk for every matching input item.
-			  (let ((THUNK #,(parse-pattern #'?pattern #'($car expr)
-							#'(lambda () SUCCESS-FORM)
-							#'(RETURN FAIL-FORM))))
-			    (NEXT-ITEM ($cdr expr) (cons THUNK THUNKS))))
-			 (else
-			  ;;Fail  if the  input  is neither  null nor  a
-			  ;;proper list.
-			  FAIL-FORM)))))))
+		   (cond
+		    ((null? expr)
+		     ;;Evaluate the  thunks, if  any, in the  order they
+		     ;;were  created.   Return  null   or  the  list  of
+		     ;;results.
+		     (let ((results (let RECUR ((THUNKS (reverse THUNKS)))
+				      (if (null? THUNKS)
+					  '()
+					(cons (($car THUNKS))
+					      (RECUR ($cdr THUNKS)))))))
+		       #,(if wrapped-body?
+			     #'(lambda () results)
+			   #'results)))
+		    ((pair? expr)
+		     ;;Build a thunk for every matching input item.
+		     (NEXT-ITEM ($cdr expr)
+				(cons #,(build-pattern-matching-code
+					 #'?pattern #'($car expr)
+					 (if wrapped-body?
+					     success-stx
+					   #`(lambda () #,success-stx))
+					 #`(RETURN #,failure-stx)
+					 #t)
+				      THUNKS)))
+		    (else
+		     ;;Fail  if the  input  is neither  null nor  a
+		     ;;proper list.
+		     #,failure-stx)))))))
 
       ;;Match a pair.
       ;;
       ((?car . ?cdr)
        #`(let ((expr IN-EXPR))
 	   (if (pair? expr)
-	       #,(parse-pattern #'?car #'($car expr)
-				(recurse #'?cdr #'($cdr expr))
-				fail-form-stx)
-	     FAIL-FORM)))
+	       #,(build-pattern-matching-code #'?car #'($car expr)
+					      (recurse #'?cdr #'($cdr expr))
+					      failure-stx wrapped-body?)
+	     #,failure-stx)))
 
       ;;Match an empty vector.
       ;;
       (#()
-       #'(let ((expr IN-EXPR))
+       #`(let ((expr IN-EXPR))
 	   (if (and (vector? expr) ($fxzero? ($vector-length expr)))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a non-empty  vector.  Let's keep it simple  and accept the
       ;;cost of VECTOR->LIST.
@@ -382,14 +417,14 @@ is expanded to:
 	     (if (and (vector? expr)
 		      ($fx= DATUM.len ($vector-length expr)))
 		 #,(recurse #'(?item ...) #'(vector->list expr))
-	       FAIL-FORM))))
+	       #,failure-stx))))
 
       ;;Match anything and ignore.
       ;;
       (?id
        (and (identifier? #'?id)
 	    (free-identifier=? #'_ #'?id))
-       success-form-stx)
+       success-stx)
 
       ;;Match a variable reference.
       ;;
@@ -397,20 +432,20 @@ is expanded to:
        (identifier? #'?id)
        #`(let ((expr IN-EXPR))
 	   (if (equal? expr ?id)
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match the boolean true.
       ;;
       (#t
        #`(let ((expr IN-EXPR))
-	   (if (and (boolean? expr) expr) SUCCESS-FORM FAIL-FORM)))
+	   (if (and (boolean? expr) expr) #,success-stx #,failure-stx)))
 
       ;;Match the boolean false.
       ;;
       (#f
        #`(let ((expr IN-EXPR))
-	   (if (and (boolean? expr) (not expr)) SUCCESS-FORM FAIL-FORM)))
+	   (if (and (boolean? expr) (not expr)) #,success-stx #,failure-stx)))
 
       ;;Match a character datum.
       ;;
@@ -418,8 +453,8 @@ is expanded to:
        (char? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
 	   (if (and (char? expr) ($char= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a fixnum datum.
       ;;
@@ -427,8 +462,8 @@ is expanded to:
        (fixnum? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
 	   (if (and (fixnum? expr) ($fx= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a bignum datum.
       ;;
@@ -436,8 +471,8 @@ is expanded to:
        (bignum? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
 	   (if (and (bignum? expr) (= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a  NaN datum.  This  clause must  come before the  one for
       ;;flonums.
@@ -447,8 +482,8 @@ is expanded to:
 	 (and (number? D)
 	      (nan?    D)))
        #`(if (nan? IN-EXPR)
-	     SUCCESS-FORM
-	   FAIL-FORM))
+	     #,success-stx
+	   #,failure-stx))
 
       ;;Match an infinite  datum.  This clause must come  before the one
       ;;for flonums.
@@ -459,8 +494,8 @@ is expanded to:
 	      (infinite? D)))
        #`(let ((expr IN-EXPR))
 	   (if (and (infinite? expr) (= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a flonum datum.
       ;;
@@ -468,8 +503,8 @@ is expanded to:
        (flonum? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
 	   (if (and (flonum? expr) ($fl= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a ratnum datum.
       ;;
@@ -479,8 +514,8 @@ is expanded to:
 	   (if (and (ratnum? expr)
 		    (= ($ratnum-num expr) ($ratnum-num ?datum))
 		    (= ($ratnum-den expr) ($ratnum-den ?datum)))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a cflonum datum.
       ;;
@@ -490,8 +525,8 @@ is expanded to:
 	   (if (and (cflonum? expr)
 		    ($fl= ($cflonum-real expr) ($cflonum-real ?datum))
 		    ($fl= ($cflonum-imag expr) ($cflonum-imag ?datum)))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a compnum datum.
       ;;
@@ -501,8 +536,8 @@ is expanded to:
 	   (if (and (compnum? expr)
 		    (= ($compnum-real expr) ($compnum-real ?datum))
 		    (= ($compnum-imag expr) ($compnum-imag ?datum)))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match  a number  datum.  This  clause should  never be  included
       ;;because the clauses  above should have matches all  the kinds of
@@ -512,8 +547,8 @@ is expanded to:
        (number? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
 	   (if (and (number? expr) (= expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a string datum.
       ;;
@@ -521,8 +556,8 @@ is expanded to:
        (string? (syntax->datum #'?datum))
        #`(let ((expr IN-EXPR))
 	   (if (and (string? expr) (string=? expr ?datum))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       ;;Match a bytevector datum.
       ;;
@@ -531,8 +566,8 @@ is expanded to:
        #`(let ((expr IN-EXPR))
 	   (if (and (bytevector? expr)
 		    ($bytevector= expr (quote ?datum)))
-	       SUCCESS-FORM
-	     FAIL-FORM)))
+	       #,success-stx
+	     #,failure-stx)))
 
       (_
        (synner "invalid syntax in match pattern" pattern-stx))
@@ -585,6 +620,10 @@ is expanded to:
 
 
 ;;;; helpers
+
+(define (ellipsis? stx)
+  (and (identifier? stx)
+       (free-identifier=? stx #'(... ...))))
 
 (define (syntax->list stx)
   (syntax-case stx ()

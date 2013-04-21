@@ -1367,7 +1367,6 @@
 	      (environment '(vicare language-extensions simple-match))))
     => '((let X) (let Y)))
 
-
   #t)
 
 
@@ -1458,17 +1457,42 @@
 	(else #f))
     => '((1 2 3) (4 5 6) (7 8 9)))
 
-  #;(check
+  (check
       (match '((1 2 3)
 	       (4 5 6)
 	       (7 8 9))
-	((((let X) (let Y) ...)
-	  ...)
-	 (list X Y))
+	( (((let X) (let Y) ...) ...)
+	 (vector X Y))
 	(else #f))
-    => '((1 2) (1 3)
-	 (4 5) (4 6)
-	 (7 8) (7 9)))
+    => '((#(1 2) #(1 3))
+	 (#(4 5) #(4 6))
+	 (#(7 8) #(7 9))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 (check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((... 1)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(... 1))
+
+  (check
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 (check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((2 ... 1)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(... 1))
 
   #t)
 
@@ -1483,7 +1507,7 @@
 		 #;(check-pretty-print E)
 		 #f))
 	(eval '(match 1
-		 (1	#f)
+		 (1	#\A)
 		 (else	expr))
 	      (environment '(vicare language-extensions simple-match))))
     => #t)
@@ -1496,7 +1520,7 @@
 		 #f))
 	(eval '(match 1
 		 (1	expr)
-		 (else	#f))
+		 (else	#\B))
 	      (environment '(vicare language-extensions simple-match))))
     => #t)
 
