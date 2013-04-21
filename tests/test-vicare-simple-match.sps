@@ -1134,6 +1134,136 @@
   #t)
 
 
+(parametrise ((check-test-name	'apply))
+
+  (check
+      (match 1
+	((apply)	#t)
+	(else		#f))
+    => #f)
+
+  (check
+      (match +1
+	((apply positive?)	#\A)
+	((apply negative?)	#\B)
+	(else #f))
+    => #\A)
+
+  (check
+      (match -1
+	((apply positive?)	#\A)
+	((apply negative?)	#\B)
+	(else #f))
+    => #\B)
+
+  (check
+      (match 0
+	((apply positive?)	#\A)
+	((apply negative?)	#\B)
+	(else #f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match 0
+	((apply (lambda (x)
+		  (or (positive? x)
+		      (zero? x))))
+	 #\A)
+	((apply negative?)
+	 #\B)
+	(else #f))
+    => #\A)
+
+  (check
+      (match 0
+	((apply negative?)
+	 #\B)
+	((apply (lambda (x)
+		  (or (positive? x)
+		      (zero? x))))
+	 #\A)
+	(else #f))
+    => #\A)
+
+  #t)
+
+
+(parametrise ((check-test-name	'and))
+
+  (check
+      (match 1
+	((and)	#t)
+	(else	#f))
+    => #t)
+
+  (check
+      (match 1
+	((and 1 (let X))	(+ 10 X))
+	(else			#f))
+    => 11)
+
+  (check
+      (match 1
+	((and (let X) X)	(+ 10 X))
+	(else			#f))
+    => 11)
+
+  (check
+      (match 1
+	((and 1 (let X))	(+ 10 X))
+	(else			#f))
+    => 11)
+
+  (check
+      (match 0
+	((and 1 (let X))	(+ 10 X))
+	(else			#f))
+    => #f)
+
+  (check
+      (match 0
+	((and (let X) 1)	(+ 10 X))
+	(else			#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match 123
+	((and (let X) (let Y))	(vector X Y))
+	(else			#f))
+    => '#(123 123))
+
+  (check
+      (match 123
+	((and (let X) (let Y) (let Z))
+	 (vector X Y Z))
+	(else #f))
+    => '#(123 123 123))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(1 2 3)
+	((and ((let X) (let Y) (let Z))
+	      (1 2 3))
+	 (vector X Y Z))
+	(else #f))
+    => '#(1 2 3))
+
+  (check
+      (match '(1 2 3)
+	((and ((apply fixnum?) (apply fixnum?) (apply fixnum?))
+	      ((let X) (let Y) (let Z)))
+	 (vector X Y Z))
+	(else #f))
+    => '#(1 2 3))
+
+  #t)
+
+
 (parametrise ((check-test-name	'ellipsis))
 
   (check
@@ -1176,12 +1306,39 @@
 
 ;;; --------------------------------------------------------------------
 
-
   (check
       (match '(1 2 3)
 	(((let X) ...)	(+ 10 X))
 	(else		#f))
     => '(11 12 13))
+
+  (check
+      (match '(1 2 3)
+	(((let X) (let Y) ...)
+	 (vector X Y))
+	(else
+	 #f))
+    => '(#(1 2) #(1 3)))
+
+  (check
+      (match '((1 2 3) (4 5 6) (7 8 9))
+	((((let X) (let Y) (let Z))
+	  ...)
+	 (list X Y Z))
+	(else #f))
+    => '((1 2 3) (4 5 6) (7 8 9)))
+
+  #;(check
+      (match '((1 2 3)
+	       (4 5 6)
+	       (7 8 9))
+	((((let X) (let Y) ...)
+	  ...)
+	 (list X Y))
+	(else #f))
+    => '((1 2) (1 3)
+	 (4 5) (4 6)
+	 (7 8) (7 9)))
 
   #t)
 

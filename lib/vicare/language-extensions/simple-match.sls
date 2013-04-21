@@ -28,7 +28,11 @@
 
 #!r6rs
 (library (vicare language-extensions simple-match)
-  (export match match-debug else)
+  (export
+    match match-debug
+
+    ;; auxiliary keywords
+    else let quote quasiquote and apply)
   (import (vicare)
     (prefix (except (vicare unsafe operations)
 		    bytevector=)
@@ -190,7 +194,7 @@ is expanded to:
 		(IN-EXPR       in-expr-stx)
 		(SUCCESS-FORM  success-form-stx)
 		(FAIL-FORM     fail-form-stx))
-    (syntax-case pattern-stx (let quote quasiquote)
+    (syntax-case pattern-stx (let quote quasiquote and apply)
 
       ;;This matches  the end of  a clause when  the clause is  a proper
       ;;list.
@@ -207,6 +211,32 @@ is expanded to:
        (identifier? #'?id)
        #`(let ((?id IN-EXPR))
 	   SUCCESS-FORM))
+
+      ;;Empty APPLY pattern.
+      ;;
+      ((apply)
+       fail-form-stx)
+
+      ;;Match with a predicate function.
+      ;;
+      ((apply ?pred)
+       #`(let ((expr IN-EXPR))
+	   (if (?pred expr)
+	       SUCCESS-FORM
+	     FAIL-FORM)))
+
+      ;;Empty AND pattern.
+      ;;
+      ((and)
+       success-form-stx)
+
+      ;;Non-empty AND pattern.  Match multiple patterns.
+      ;;
+      ((and ?pattern0 ?pattern ...)
+       #`(let ((expr IN-EXPR))
+	   #,(parse-pattern #'?pattern0 #'expr
+			    (recurse #'(and ?pattern ...) #'expr)
+			    fail-form-stx)))
 
       ;;Match a quoted datum.
       ;;
@@ -295,13 +325,13 @@ is expanded to:
       ;;Match a non-empty  vector.  Let's keep it simple  and accept the
       ;;cost of VECTOR->LIST.
       ;;
-      (#(?item0 ?item ...)
+      (#(?item ...)
        (with-syntax
-	   ((DATUM.len ($vector-length (syntax->datum #'#(?item0 ?item ...)))))
+	   ((DATUM.len ($vector-length (syntax->datum #'#(?item ...)))))
 	 #`(let ((expr IN-EXPR))
 	     (if (and (vector? expr)
 		      ($fx= DATUM.len ($vector-length expr)))
-		 #,(recurse #'(?item0 ?item ...) #'(vector->list expr))
+		 #,(recurse #'(?item ...) #'(vector->list expr))
 	       FAIL-FORM))))
 
       ;;Match anything and ignore.
