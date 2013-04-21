@@ -34,6 +34,76 @@
 (check-display "*** testing Vicare: destructuring match syntax\n")
 
 
+(parametrise ((check-test-name	'wildcard))
+
+  (check
+      (match #t
+        (_	#\1)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match '(1 2 3)
+        (_	#\1)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match "ciao"
+        (_	#\1)
+	(else	#f))
+    => #\1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match 1
+        (2	#\A)
+        (_	#\B)
+	(else	#f))
+    => #\B)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(#t)
+        ((_)	#\1)
+	(else	#f))
+    => #\1)
+
+  (check
+      (match #t
+        ((_)	#\1)
+	(else	#f))
+    => #f)
+
+  (check
+      (match '(1 2 3)
+        ((_ _ _)	#\1)
+	(else		#f))
+    => #\1)
+
+  (check
+      (match '(1 2 3)
+        ((_ 2 _)	#\1)
+	(else		#f))
+    => #\1)
+
+  (check
+      (match '(1 99 3)
+        ((_ 2 _)	#\1)
+	(else		#f))
+    => #f)
+
+  (check
+      (match '((((1))))
+        (((((_))))	#\1)
+	(else		#f))
+    => #\1)
+
+  #t)
+
+
 (parametrise ((check-test-name	'booleans))
 
   (check
@@ -459,9 +529,29 @@
 (parametrise ((check-test-name	'pairs))
 
   (check
+      (match '()
+        ((1)	#\1)
+        (()	#\0)
+        ((4)	#\2)
+        ((7)	#\3)
+  	(else	#f))
+    => #\0)
+
+  (check
+      (match '()
+        ((1)	#\1)
+        ((4)	#\2)
+        ((7)	#\3)
+  	(else	#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
       (match '(1)
         ((1)	#\1)
         ((4)	#\2)
+	(()	#\0)
         ((7)	#\3)
   	(else	#f))
     => #\1)
@@ -469,6 +559,7 @@
   (check
       (match '(4)
         ((1)	#\1)
+	(()	#\0)
         ((4)	#\2)
         ((7)	#\3)
   	(else	#f))
@@ -486,6 +577,7 @@
       (match '(0)
         ((1)	#\1)
         ((4)	#\2)
+	(()	#\0)
         ((7)	#\3)
   	(else	#f))
     => #f)
@@ -541,6 +633,272 @@
         ((7 8 9)	#\3)
 	(else		#f))
     => #\3)
+
+  #t)
+
+
+(parametrise ((check-test-name	'variable-binding))
+
+  (check
+      (match 1
+        ((let X)	X)
+  	(else		#f))
+    => 1)
+
+  (check
+      (match 1
+        ((let X)	#\A)
+  	(else		#f))
+    => #\A)
+
+  (check
+      (match '(1)
+        ((let X)	X)
+  	(else		#f))
+    => '(1))
+
+  (check
+      (match '(1)
+        (((let X))	X)
+  	(else		#f))
+    => 1)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(1 2 3)
+        (((let X) (let Y) (let Z))
+	 (vector X Y Z))
+  	(else
+	 #f))
+    => '#(1 2 3))
+
+  (check
+      (match '(1 2)
+        (((let X) (let Y) (let Z))
+	 (vector X Y Z))
+  	(else
+	 #f))
+    => #f)
+
+  (check
+      (match '(1)
+        (((let X) (let Y) (let Z))
+	 (vector X Y Z))
+  	(else
+	 #f))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'variable-reference))
+
+  (check
+      (let ((X 1))
+	(match 1
+	  (X		X)
+	  (else		#f)))
+    => 1)
+
+  (check
+      (let ((X 1))
+	(match 1
+	  (X		#\A)
+	  (else		#f)))
+    => #\A)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match 1
+	  (X		#\A)
+	  (Y		#\B)
+	  (Z		#\C)
+	  (else		#f)))
+    => #\A)
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match 2
+	  (X		#\A)
+	  (Y		#\B)
+	  (Z		#\C)
+	  (else		#f)))
+    => #\B)
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match 3
+	  (X		#\A)
+	  (Y		#\B)
+	  (Z		#\C)
+	  (else		#f)))
+    => #\C)
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match 0
+	  (X		#\A)
+	  (Y		#\B)
+	  (Z		#\C)
+	  (else		#f)))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match '(1 2)
+	  ((X Y)	#\A)
+	  ((Y Z)	#\B)
+	  ((Z X)	#\C)
+	  (else		#f)))
+    => #\A)
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match '(2 3)
+	  ((X Y)	#\A)
+	  ((Y Z)	#\B)
+	  ((Z X)	#\C)
+	  (else		#f)))
+    => #\B)
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match '(3 1)
+	  ((X Y)	#\A)
+	  ((Y Z)	#\B)
+	  ((Z X)	#\C)
+	  (else		#f)))
+    => #\C)
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match '(1 9)
+	  ((X Y)	#\A)
+	  ((Y Z)	#\B)
+	  ((Z X)	#\C)
+	  (else		#f)))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((X 1) (Y 2) (Z 3))
+	(match '(1 2)
+	  ('(X Y)	#\A)
+	  ((Y Z)	#\B)
+	  ((Z X)	#\C)
+	  (else		#f)))
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'quoted-data))
+
+  (check
+      (match '(1)
+	('(1)		#\A)
+	('(2)		#\B)
+	('(3)		#\C)
+	(else		#f))
+    => #\A)
+
+  (check
+      (match '(2)
+	('(1)		#\A)
+	('(2)		#\B)
+	('(3)		#\C)
+	(else		#f))
+    => #\B)
+
+  (check
+      (match '(3)
+	('(1)		#\A)
+	('(2)		#\B)
+	('(3)		#\C)
+	(else		#f))
+    => #\C)
+
+  (check
+      (match '(0)
+	('(1)		#\A)
+	('(2)		#\B)
+	('(3)		#\C)
+	(else		#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(1 2 3)
+	('(1 2 3)	#\A)
+	('(2 3 4)	#\B)
+	('(3 4 5)	#\C)
+	(else		#f))
+    => #\A)
+
+  (check
+      (match '(2 3 4)
+	('(1 2 3)	#\A)
+	('(2 3 4)	#\B)
+	('(3 4 5)	#\C)
+	(else		#f))
+    => #\B)
+
+  (check
+      (match '(3 4 5)
+	('(1 2 3)	#\A)
+	('(2 3 4)	#\B)
+	('(3 4 5)	#\C)
+	(else		#f))
+    => #\C)
+
+  (check
+      (match '(0)
+	('(1 2 3)	#\A)
+	('(2 3 4)	#\B)
+	('(3 4 5)	#\C)
+	(else		#f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(1 (2) 3)
+	('(1 (2) 3)	#\A)
+	('(2 (3 4))	#\B)
+	('((3 4) 5)	#\C)
+	(else		#f))
+    => #\A)
+
+  (check
+      (match '(2 (3 4))
+	('(1 (2) 3)	#\A)
+	('(2 (3 4))	#\B)
+	('((3 4) 5)	#\C)
+	(else		#f))
+    => #\B)
+
+  (check
+      (match '((3 4) 5)
+	('(1 (2) 3)	#\A)
+	('(2 (3 4))	#\B)
+	('((3 4) 5)	#\C)
+	(else		#f))
+    => #\C)
+
+  (check
+      (match '(0)
+	('(1 (2) 3)	#\A)
+	('(2 (3 4))	#\B)
+	('((3 4) 5)	#\C)
+	(else		#f))
+    => #f)
 
   #t)
 

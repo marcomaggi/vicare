@@ -160,7 +160,10 @@ is expanded to:
       ;;list.
       ;;
       (()
-       success-form-stx)
+       #'(let ((expr IN-EXPR))
+	   (if (null? expr)
+	       SUCCESS-FORM
+	     FAIL-FORM)))
 
       ;;Match a variable assignment.
       ;;
