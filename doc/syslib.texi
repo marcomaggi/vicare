@@ -4977,6 +4977,15 @@ Return a flonum representing the value at index @var{fx} of @var{bv}.
 Store @var{fl} at index @var{fx} of @var{bv}.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Other unsafe operations
+
+
+@defun $bytevector= @vari{bv} @varii{bv}
+Return @true{} if the two arguments are equal.
+@end defun
+
 @c page
 @node syslib strings
 @section Low level string operations

@@ -768,6 +768,7 @@
     ($bytevector-ieee-single-native-set!	$bytes)
     ($bytevector-ieee-single-nonnative-ref	$bytes)
     ($bytevector-ieee-single-nonnative-set!	$bytes)
+    ($bytevector=				$bytes)
 ;;;
     ($flonum-u8-ref				$flonums)
     ($make-flonum				$flonums)

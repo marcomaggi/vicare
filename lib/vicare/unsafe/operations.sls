@@ -216,6 +216,10 @@
 	    ($bytevector-s64n-ref	bytevector-s64n-ref)
 	    ($bytevector-s64n-set!	bytevector-s64n-set!)
 
+	    ;;FIXME  To  be  uncommented   after  the  next  boot  image
+	    ;;rotation.  (Marco Maggi; Sun Apr 21, 2013)
+	    #;($bytevector=			bytevector=)
+
 	    ($bytevector-fill!			bytevector-fill!)
 	    ($bytevector-copy!			bytevector-copy!)
 	    ($bytevector-copy!/count		bytevector-copy!/count)
