@@ -19,6 +19,7 @@ vicare_scheme_TEXINFOS	= \
 	linux.texi			\
 	syslib.texi			\
 	capi.texi			\
+	lang.texi			\
 	libs.texi			\
 	objects.texi			\
 	debug.texi			\
