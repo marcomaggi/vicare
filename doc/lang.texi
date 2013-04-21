@@ -9,6 +9,7 @@
 * coroutines::                  Running coroutines.
 * amb::                         McCarthy's @func{amb} operator.
 * infix::                       Infix to prefix transformer.
+* simple-match::                Simple destructuring match syntax.
 * syntaxes::                    Language syntactic extensions.
 * custom-ports::                Custom ports.
 @end menu
@@ -1596,6 +1597,28 @@ fxarithmetic-shift-left           -> fx<<
 fxarithmetic-shift-right          -> fx>>
 @end example
 @end itemize
+
+@c page
+@node simple-match
+@section Simple destructuring match syntax
+
+
+@cindex Library @library{vicare language-extensions simple-match}
+@cindex @library{vicare language-extensions simple-match}, library
+
+
+The library @library{vicare language-extensions simple-match} provides a
+simple implementation of the destructuring--bind @func{match} syntax; it
+is @strong{not} a fully featured @func{match} syntax.
+
+It has two purposes: being a single macro transformer, without
+dependencies on external libraries, it can be used in the code of
+@value{PRJNAME}'s boot image; being simple, its code can be used as
+starting point to implement more complex destructuring syntaxes.
+
+The supported syntax is @strong{different} from the one of the popular
+@file{match.scm} library by Alex Shinn.
+
 
 @c page
 @node syntaxes
