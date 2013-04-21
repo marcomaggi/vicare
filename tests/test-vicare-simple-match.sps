@@ -1192,7 +1192,7 @@
 
 (parametrise ((check-test-name	'and))
 
-  (check
+  (check	;empty AND succeeds
       (match 1
 	((and)	#t)
 	(else	#f))
@@ -1260,6 +1260,105 @@
 	 (vector X Y Z))
 	(else #f))
     => '#(1 2 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'or))
+
+  (check	;empty OR fails
+      (match 1
+	((or)	#t)
+	(else	#f))
+    => #f)
+
+  (check
+      (match 1
+	((or (apply positive?)
+	     (apply zero?))
+	 #t)
+	(else	#f))
+    => #t)
+
+  (check
+      (match 0
+	((or (apply positive?)
+	     (apply zero?))
+	 #t)
+	(else	#f))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match '(1 2 3)
+	((or (1 2 5)
+	     (1 2 6)
+	     (1 2 3))
+	 #t)
+	(else #f))
+    => #t)
+
+  (check
+      (match '(1 2 3)
+	((or (1 2 5)
+	     (1 2 6))
+	 #\A)
+	((or (1 2 3))
+	 #\B)
+	(else #f))
+    => #\B)
+
+  (check
+      (match '(1 2 0)
+	((or (1 2 5)
+	     (1 2 6))
+	 #\A)
+	((or (1 2 3))
+	 #\B)
+	(else #f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (match 1
+	((or (and (apply fixnum?) (let X))
+	     (and (apply bignum?) (let X)))
+	 (+ 10 X))
+	(else	#f))
+    => 11)
+
+  (check
+      (match (+ 10 (greatest-fixnum))
+	((or (and (apply fixnum?) (let X))
+	     (and (apply bignum?) (let X)))
+	 (- X))
+	(else	#f))
+    => (- (+ 10 (greatest-fixnum))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'not))
+
+  (check	;empty not fails
+      (match 1
+	((not)	#t)
+	(else	#f))
+    => #f)
+
+  (check
+      (match 1
+	((not 1)	#t)
+	(else		#f))
+    => #f)
+
+  (check
+      (match 2
+	((not 1)	#t)
+	(else		#f))
+    => #t)
 
   #t)
 

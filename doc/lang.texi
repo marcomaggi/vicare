@@ -1617,7 +1617,7 @@ dependencies on external libraries, it can be used in the code of
 starting point to implement more complex destructuring syntaxes.
 
 The supported syntax is @strong{different} from the one of the popular
-@file{match.scm} library by Alex Shinn.
+matching libraries by Alex Shinn and Andrew Wright.
 
 
 @c page

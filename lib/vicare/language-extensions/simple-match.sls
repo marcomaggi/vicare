@@ -32,7 +32,7 @@
     match match-debug
 
     ;; auxiliary keywords
-    else let quote quasiquote and apply)
+    else let quote quasiquote and or not apply)
   (import (vicare)
     (prefix (except (vicare unsafe operations)
 		    bytevector=)
@@ -102,15 +102,15 @@ is expanded to:
 	((_ debugging ?expr ?clause0 ?clause ... (else ?else-body0 ?else-body ...))
 	 (begin
 	   (set! debug? #t)
-	   (parse-clauses-with-else #'?expr
-				    (syntax->list #'(?clause0 ?clause ...))
-				    #'(?else-body0 ?else-body ...))))
+	   (clauses-with-else #'?expr
+			      (syntax->list #'(?clause0 ?clause ...))
+			      #'(?else-body0 ?else-body ...))))
 
 	((_ debugging ?expr ?clause0 ?clause ...)
 	 (begin
 	   (set! debug? #t)
-	   (parse-clauses-without-else #'?expr
-				       (syntax->list #'(?clause0 ?clause ...)))))
+	   (clauses-without-else #'?expr
+				 (syntax->list #'(?clause0 ?clause ...)))))
 
 	((_)
 	 #'(values))
@@ -119,47 +119,50 @@ is expanded to:
 	 #'(begin ?expr))
 
 	((_ ?expr ?clause0 ?clause ... (else ?else-body0 ?else-body ...))
-	 (parse-clauses-with-else #'?expr
-				  (syntax->list #'(?clause0 ?clause ...))
-				  #'(?else-body0 ?else-body ...)))
+	 (clauses-with-else #'?expr
+			    (syntax->list #'(?clause0 ?clause ...))
+			    #'(?else-body0 ?else-body ...)))
 
 	((_ ?expr ?clause0 ?clause ...)
-	 (parse-clauses-without-else #'?expr
-				     (syntax->list #'(?clause0 ?clause ...))))
+	 (clauses-without-else #'?expr
+			       (syntax->list #'(?clause0 ?clause ...))))
 
 	))
 
-    (define (parse-clauses-without-else expr-stx clauses)
-      (parse-clauses expr-stx clauses
-		     #'(lambda (expr)
-			 (assertion-violation 'match
-			   "failed destructuring match: no matching clause"
-			   expr))))
+
+;;;; parsing clauses
 
-    (define (parse-clauses-with-else expr-stx clauses else-body)
-      (parse-clauses expr-stx clauses
-		     #`(lambda (expr) . #,else-body)))
+(define (clauses-without-else expr-stx clauses)
+  (compose-output-form expr-stx clauses
+		       #'(lambda (expr)
+			   (assertion-violation 'match
+			     "failed destructuring match: no matching clause"
+			     expr))))
 
-    (define (parse-clauses expr-stx clauses fail-thunk-stx)
-      (with-syntax (((CLAUSE-ID0 CLAUSE-ID ...) (generate-temporaries clauses)))
-	(define funcs-stx
-	  (let recur ((clauses     clauses)
-		      (clause-ids  (syntax->list #'(CLAUSE-ID ... failed-match-error))))
-	    (if (null? clauses)
-		'()
-	      (let ((fail-form-stx #`(#,($car clause-ids) expr)))
-		(cons #`(lambda (expr)
-			  #,(parse-single-clause ($car clauses) #'expr fail-form-stx))
-		      (recur ($cdr clauses)
-			     ($cdr clause-ids)))))))
-	(with-syntax
-	    (((CLAUSE-THUNK0 CLAUSE-THUNK ...)
-	      funcs-stx))
-	  #`(letrec ((CLAUSE-ID0 CLAUSE-THUNK0)
-		     (CLAUSE-ID  CLAUSE-THUNK)
-		     ...
-		     (failed-match-error #,fail-thunk-stx))
-	      (CLAUSE-ID0 #,expr-stx)))))
+(define (clauses-with-else expr-stx clauses else-body)
+  (compose-output-form expr-stx clauses
+		       #`(lambda (expr) . #,else-body)))
+
+(define (compose-output-form expr-stx clauses fail-thunk-stx)
+  (with-syntax (((CLAUSE-ID0 CLAUSE-ID ...) (generate-temporaries clauses)))
+    (define funcs-stx
+      (let recur ((clauses     clauses)
+		  (clause-ids  (syntax->list #'(CLAUSE-ID ... failed-match-error))))
+	(if (null? clauses)
+	    '()
+	  (let ((fail-form-stx #`(#,($car clause-ids) expr)))
+	    (cons #`(lambda (expr)
+		      #,(parse-single-clause ($car clauses) #'expr fail-form-stx))
+		  (recur ($cdr clauses)
+			 ($cdr clause-ids)))))))
+    (with-syntax
+	(((CLAUSE-THUNK0 CLAUSE-THUNK ...)
+	  funcs-stx))
+      #`(letrec ((CLAUSE-ID0 CLAUSE-THUNK0)
+		 (CLAUSE-ID  CLAUSE-THUNK)
+		 ...
+		 (failed-match-error #,fail-thunk-stx))
+	  (CLAUSE-ID0 #,expr-stx)))))
 
 
 ;;;; clause parsing
@@ -194,7 +197,7 @@ is expanded to:
 		(IN-EXPR       in-expr-stx)
 		(SUCCESS-FORM  success-form-stx)
 		(FAIL-FORM     fail-form-stx))
-    (syntax-case pattern-stx (let quote quasiquote and apply)
+    (syntax-case pattern-stx (let quote quasiquote and or not apply)
 
       ;;This matches  the end of  a clause when  the clause is  a proper
       ;;list.
@@ -237,6 +240,45 @@ is expanded to:
 	   #,(parse-pattern #'?pattern0 #'expr
 			    (recurse #'(and ?pattern ...) #'expr)
 			    fail-form-stx)))
+
+      ;;Empty OR pattern.
+      ;;
+      ((or)
+       fail-form-stx)
+
+      ;;Non-empty OR pattern.  Match one among multiple patterns.
+      ;;
+      ;;The code  in the  body is  duplicated: we  accept it  because OR
+      ;;clauses are rare  and we can always put big  bodies in functions
+      ;;to be called.
+      ;;
+      ;;Notice how we *do not* explicitly check here for the alternative
+      ;;OR  patterns  to  bind  the  variables  with  BOUND-IDENTIFIER=?
+      ;;identifiers.  If the OR patterns bind different variables:
+      ;;
+      ;;* If the variables are referenced  in the body: an error will be
+      ;;  raised by the compiler.
+      ;;
+      ;;* If  the variables are *not*  referenced in the body:  no error
+      ;;  will be raised.
+      ;;
+      ((or ?pattern0 ?pattern ...)
+       #`(let ((expr IN-EXPR))
+	   #,(parse-pattern #'?pattern0 #'expr
+			    success-form-stx
+			    (recurse #'(or ?pattern ...) #'expr))))
+
+      ;;Empty NOT pattern.  Always fail.
+      ;;
+      ((not)
+       fail-form-stx)
+
+      ;;Non-empty NOT pattern.  Matches if the pattern does not match.
+      ;;
+      ((not ?pattern)
+       (parse-pattern #'?pattern #'IN-EXPR
+		      fail-form-stx
+		      success-form-stx))
 
       ;;Match a quoted datum.
       ;;
