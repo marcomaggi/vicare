@@ -246,15 +246,20 @@ is expanded to:
       ((or)
        fail-form-stx)
 
-      ;;Non-empty OR pattern.  Match one among multiple patterns.
+      ;;OR with single pattern.
+      ((or ?pattern)
+       (recurse #'?pattern in-expr-stx))
+
+      ;;Multi-pattern OR pattern.  Match one among multiple patterns.
       ;;
       ;;The code  in the  body is  duplicated: we  accept it  because OR
       ;;clauses are rare  and we can always put big  bodies in functions
       ;;to be called.
       ;;
-      ;;Notice how we *do not* explicitly check here for the alternative
-      ;;OR  patterns  to  bind  the  variables  with  BOUND-IDENTIFIER=?
-      ;;identifiers.  If the OR patterns bind different variables:
+      ;;Notice  how we  explicitly  check here  for  the alternative  OR
+      ;;patterns to bind variables with BOUND-IDENTIFIER=?  identifiers.
+      ;;Without this explicit  check, if the OR  patterns bind different
+      ;;variables:
       ;;
       ;;* If the variables are referenced  in the body: an error will be
       ;;  raised by the compiler.
@@ -262,11 +267,14 @@ is expanded to:
       ;;* If  the variables are *not*  referenced in the body:  no error
       ;;  will be raised.
       ;;
-      ((or ?pattern0 ?pattern ...)
+      ;;We make sure to raise an error in whatever the body.
+      ;;
+      ((or ?pattern0 ?pattern1 ?pattern ...)
+       (or-patterns-with-same-bindings? #'?pattern0 #'?pattern1)
        #`(let ((expr IN-EXPR))
 	   #,(parse-pattern #'?pattern0 #'expr
 			    success-form-stx
-			    (recurse #'(or ?pattern ...) #'expr))))
+			    (recurse #'(or ?pattern1 ?pattern ...) #'expr))))
 
       ;;Empty NOT pattern.  Always fail.
       ;;
@@ -530,6 +538,50 @@ is expanded to:
        (synner "invalid syntax in match pattern" pattern-stx))
 
       )))
+
+
+;;;; bindings stuff
+
+(module (or-patterns-with-same-bindings?)
+
+  (define (or-patterns-with-same-bindings? pattern1 pattern2)
+    (if (same-bindings-lists? (get-pattern-bindings pattern1)
+			      (get-pattern-bindings pattern2))
+	#t
+      (synner "OR patterns defining different bindings"
+	      (list pattern1 pattern2))))
+
+  (define get-pattern-bindings
+    (case-lambda
+     ((pattern)
+      (get-pattern-bindings pattern '()))
+     ((pattern ids)
+      ;;Given a pattern  extract the list of identifiers  that are bound
+      ;;in case of match.
+      ;;
+      (syntax-case pattern (let)
+	((let ?var)
+	 (identifier? #'?var)
+	 (cons #'?var ids))
+	(((let ?var) . ?patterns)
+	 (identifier? #'?var)
+	 (get-pattern-bindings #'?patterns (cons #'?var ids)))
+	((?pattern0 . ?patterns)
+	 (get-pattern-bindings #'?patterns ids))
+	(()
+	 ids)))))
+
+  (define (same-bindings-lists? ids1 ids2)
+    ;;Check that the list IDS1 contains the same identifiers of the list
+    ;;IDS2 in undefined order.
+    ;;
+    (for-all (lambda (id1)
+	       (find (lambda (id2)
+		       (bound-identifier=? id1 id2))
+		 ids2))
+      ids1))
+
+  #| end of module: OR-PATTERNS-WITH-SAME-BINDINGS |# )
 
 
 ;;;; helpers

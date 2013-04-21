@@ -1274,6 +1274,18 @@
 
   (check
       (match 1
+	((or 1)	#t)
+	(else	#f))
+    => #t)
+
+  (check
+      (match 2
+	((or 1)	#t)
+	(else	#f))
+    => #f)
+
+  (check
+      (match 1
 	((or (apply positive?)
 	     (apply zero?))
 	 #t)
@@ -1336,6 +1348,25 @@
 	 (- X))
 	(else	#f))
     => (- (+ 10 (greatest-fixnum))))
+
+;;; --------------------------------------------------------------------
+
+  (check	;check  that  OR  patterns defining  different  bindings
+		;raise an error
+      (guard (E ((syntax-violation? E)
+		 #;(check-pretty-print E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((or (let X)
+		      (let Y))
+		  #\A)
+		 (else	#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '((let X) (let Y)))
+
 
   #t)
 
