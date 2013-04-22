@@ -228,12 +228,29 @@ is expanded to:
 	       #,success-stx
 	     #,failure-stx)))
 
-      ;;Match a variable assignment.
+;;; --------------------------------------------------------------------
+;;; variable bindings
+
+      ;;Match a variable bindng.
       ;;
-      ((let ?id)
-       (identifier? #'?id)
-       #`(let ((?id IN-EXPR))
+      ((let ?var)
+       (identifier? #'?var)
+       #`(let ((?var IN-EXPR))
 	   #,success-stx))
+
+      ;;Match a  variable binding with embedded  ellipsis.  This pattern
+      ;;can  appear only  in tail  position of  a list  or vector.   The
+      ;;expression must be null or a proper list.
+      ;;
+      (((let ?var ?ellipsis))
+       (and (identifier? #'?var)
+	    (ellipsis?   #'?ellipsis))
+       #`(let ((?var IN-EXPR))
+	   (if (list? ?var) ;includes nil
+	       #,success-stx
+	     #,failure-stx)))
+
+;;; --------------------------------------------------------------------
 
       ;;Empty APPLY pattern.
       ;;
@@ -371,6 +388,17 @@ is expanded to:
 		 (let NEXT-ITEM ((expr   IN-EXPR)
 				 (THUNKS '()))
 		   (cond
+		    ((pair? expr)
+		     ;;Build a thunk for every matching input item.
+		     (NEXT-ITEM ($cdr expr)
+				(cons #,(build-pattern-matching-code
+					 #'?pattern #'($car expr)
+					 (if wrapped-body?
+					     success-stx
+					   #`(lambda () #,success-stx))
+					 #`(RETURN #,failure-stx)
+					 #t)
+				      THUNKS)))
 		    ((null? expr)
 		     ;;Evaluate the  thunks, if  any, in the  order they
 		     ;;were  created.   Return  null   or  the  list  of
@@ -383,17 +411,6 @@ is expanded to:
 		       #,(if wrapped-body?
 			     #'(lambda () results)
 			   #'results)))
-		    ((pair? expr)
-		     ;;Build a thunk for every matching input item.
-		     (NEXT-ITEM ($cdr expr)
-				(cons #,(build-pattern-matching-code
-					 #'?pattern #'($car expr)
-					 (if wrapped-body?
-					     success-stx
-					   #`(lambda () #,success-stx))
-					 #`(RETURN #,failure-stx)
-					 #t)
-				      THUNKS)))
 		    (else
 		     ;;Fail  if the  input  is neither  null nor  a
 		     ;;proper list.
@@ -423,8 +440,11 @@ is expanded to:
 	     #,failure-stx)))
 
       ;;Match a non-empty  vector.  Let's keep it simple  and accept the
-      ;;cost of  VECTOR->LIST.  We  test for vector  length only  if the
-      ;;last item in the pattern vector is not an ellipsis.
+      ;;cost of VECTOR->LIST.
+      ;;
+      ;;We include a test for vector length only if the last item in the
+      ;;pattern vector  is neither  an ellipsis  nor a  variable binding
+      ;;with nested ellipsis.
       ;;
       (#(?item ...)
        (let ((stx #'#(?item ...)))
@@ -452,10 +472,10 @@ is expanded to:
 
       ;;Match a variable reference.
       ;;
-      (?id
-       (identifier? #'?id)
+      (?var
+       (identifier? #'?var)
        #`(let ((expr IN-EXPR))
-	   (if (equal? expr ?id)
+	   (if (equal? expr ?var)
 	       #,success-stx
 	     #,failure-stx)))
 
@@ -660,9 +680,12 @@ is expanded to:
 
 (define (vector-with-ellipsis-as-tail? stx)
   ;;Return true if STX is a syntax  object representing a vector of 2 or
-  ;;more items, and the last item is an ellipsis; else return false.
+  ;;more items,  and the last  item is  an ellipsis or  variable binding
+  ;;with ellipsis; else return false.
   ;;
-  (syntax-case stx ()
+  (syntax-case stx (let)
+    (#(?item0 ?item ... (let ?var ?ellipsis))
+     (ellipsis? #'?ellipsis))
     (#(?item0 ?item ... ?ellipsis)
      (ellipsis? #'?ellipsis))
     (_

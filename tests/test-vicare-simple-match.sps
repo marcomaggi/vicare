@@ -811,6 +811,54 @@
 	 #f))
     => 3)
 
+;;; --------------------------------------------------------------------
+;;; ellipsis in list
+
+  (check
+      (match '(1 2 3 4 5)
+	(((let X) (let Y) (let Z ...))
+	 (vector X Y Z))
+	(else #f))
+    => '#(1 2 (3 4 5)))
+
+  (check
+      (match '(1 2)
+	(((let X) (let Y) (let Z ...))
+	 (vector X Y Z))
+	(else #f))
+    => '#(1 2 ()))
+
+  (check	;improper list
+      (match '(1 2 . 3)
+	(((let X) (let Y) (let Z ...))
+	 (vector X Y Z))
+	(else #f))
+    => #f)
+
+  (check	;improper list
+      (match '(1 2 3 4 . 5)
+	(((let X) (let Y) (let Z ...))
+	 (vector X Y Z))
+	(else #f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; ellipsis in vector
+
+  (check
+      (match '#(1 2 3 4 5)
+	(#((let X) (let Y) (let Z ...))
+	 (vector X Y Z))
+	(else #f))
+    => '#(1 2 (3 4 5)))
+
+  (check
+      (match '#(1 2)
+	(#((let X) (let Y) (let Z ...))
+	 (vector X Y Z))
+	(else #f))
+    => '#(1 2 ()))
+
   #t)
 
 
