@@ -108,7 +108,7 @@
     struct-inotify-event-name		set-struct-inotify-event-name!
     )
   (import (vicare)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)
     (prefix (vicare platform words)

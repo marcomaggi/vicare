@@ -528,7 +528,7 @@
     ($comp		(ikarus system $compnums)		#f	#t)
     ($symbols		(ikarus system $symbols)		#f	#t)
     ($structs		(ikarus system $structs)		#f	#t)
-    ($pointers		(ikarus system $pointers)		#t	#t)
+    ($pointers		(ikarus system $pointers)		#f	#t)
     ($codes		(ikarus system $codes)			#f	#t)
     ($tcbuckets		(ikarus system $tcbuckets)		#f	#t)
     ($arg-list		(ikarus system $arg-list)		#f	#t)
@@ -544,8 +544,8 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
-    (posix		(vicare $posix)				#t	#t)
-    ($language		(vicare language-extensions)		#f	#f)
+    (posix		(vicare $posix)				#f	#t)
+    ($language		(vicare language-extensions)		#t	#f)
     ))
 
 
@@ -769,6 +769,7 @@
     ($bytevector-ieee-single-native-set!	$bytes)
     ($bytevector-ieee-single-nonnative-ref	$bytes)
     ($bytevector-ieee-single-nonnative-set!	$bytes)
+    ($bytevector=				$bytes)
 ;;;
     ($flonum-u8-ref				$flonums)
     ($make-flonum				$flonums)
@@ -1662,6 +1663,7 @@
     (modulo					i v r5 se)
     (remainder					i v r5 se)
     (null-environment				i v r5 se)
+    (promise?					i v $language)
     (quotient					i v r5 se)
     (scheme-report-environment			i v r5 se)
     (interaction-environment			i v $language)

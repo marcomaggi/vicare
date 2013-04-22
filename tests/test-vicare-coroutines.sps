@@ -26,11 +26,11 @@
 
 #!r6rs
 (import (vicare)
-  (vicare coroutines)
+  (vicare language-extensions coroutines)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare coroutines library\n")
+(check-display "*** testing Vicare: coroutines library\n")
 
 
 (parametrise ((check-test-name	'basic))

@@ -8,8 +8,8 @@ Topics
 
   1. Introduction
   2. License
-  4. Install
-  5. Testing
+  3. Install
+  4. Testing
   A. Credits
   B. Bug reports
   C. Resources
@@ -72,10 +72,10 @@ You should have received a copy  of the GNU General Public License along
 with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-4. Install
+3. Install
 ----------
 
-4.1 Install Vicare
+3.1 Install Vicare
 ------------------
 
 After checking out a revision from the repository, we will have to build
@@ -146,7 +146,7 @@ compiling libraries and running tests; for example:
    $ make VFLAGS="-g -O2 --print-loaded-libraries"
 
 
-4.2 Install CRE2
+3.2 Install CRE2
 ----------------
 
 CRE2 is a  C language wrapper for the RE2  library, which is implemented
@@ -165,7 +165,7 @@ the  latest tarball,  build  and  install it;  CRE2  relies  on the  GNU
 Autotools.
 
 
-5. Testing
+4. Testing
 ----------
 
 Test  files  are  located  in  the "tests"  directory;  the  files  with

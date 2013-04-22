@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare custom-ports)
+  (vicare language-extensions custom-ports)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

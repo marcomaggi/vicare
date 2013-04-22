@@ -603,7 +603,7 @@
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
     (prefix (only (ikarus) port?) primop.)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.)
     (prefix (vicare unsafe capi)

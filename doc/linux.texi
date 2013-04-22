@@ -262,7 +262,7 @@ Here is a meaningless example showing the mechanics of the epoll @api{}:
   (prefix (vicare posix)
           px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (let-values (((in ou) (px.pipe)))
   (unwind-protect
@@ -586,7 +586,7 @@ The following program watches a timer as time goes by:
 #!r6rs
 (import (vicare)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect)
   (prefix (vicare posix) px.)
   (prefix (vicare linux) lx.))
@@ -635,7 +635,7 @@ The following example prints the number of timer expirations:
 #!r6rs
 (import (vicare)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect)
   (prefix (vicare posix) px.)
   (prefix (vicare linux) lx.))
@@ -803,7 +803,7 @@ event on a file:
   (prefix (vicare linux) lx.)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (let* ((infd     (lx.inotify-init))
        (pathname "inotify.test")

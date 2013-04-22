@@ -6,14 +6,10 @@
 
 @menu
 * args::                        Optional function arguments validation.
-* include::                     Including source files at expand time.
-* cond-expand::                 Feature based conditional expansion.
 * errno::                       More features for @code{errno}.
 * platform::                    Hosting platform utilities.
 * words::                       Exact integer predicates and constants.
-* syntaxes::                    Language syntactic extensions.
 * cbuffers::                    Generalised C buffers and strings.
-* keywords::                    More facilities for keyword objects.
 * readline::                    Extended interface to @gnu{} Readline.
 * parser logic::                Defining parsers logic.
 * gcc::                         A toy library interface to @gcc{}.
@@ -21,10 +17,7 @@
 * flonum format::               Formatting flonums.
 * flonum parse::                Parsing flonums.
 * sel::                         Simple event loop.
-* infix::                       Infix to prefix transformer.
 * debugging::                   Debugging facilities.
-* coroutines::                  Running coroutines.
-* custom-ports::                Custom ports.
 * bytevector compounds::        Bytevector compounds.
 * net channels::                Interprocess connection channels.
 @end menu
@@ -234,6 +227,8 @@ When used without arguments or arguments validation disabled: expand to
 * args predefined numbers::        Validating numbers.
 * args predefined fixnums::        Validating fixnums.
 * args predefined exact integers:: Validating exact integers.
+* args predefined keywords::       Validating keywords.
+* args predefined promises::       Validating promises.
 * args predefined bits::           Validating bit--sized integers.
 * args predefined signed int::     Validating C language @code{int} values.
 * args predefined clang::          Validating C language values.
@@ -411,6 +406,40 @@ must be exact integers.
 @deffnx {Validation Clause} odd-exact-integer @var{obj}
 Succeed if @var{obj} satisfies the predicates @func{integer?} and
 @func{exact?} and the predicate @func{even?} or @func{odd?}.
+@end deffn
+
+@c page
+@node args predefined keywords
+@subsubsection Validating keywords
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} keyword @var{obj}
+Succeed if @var{obj} is a keyword object: it satisfies the predicate
+@func{keyword?} exported by @library{vicare}.
+@end deffn
+
+@c page
+@node args predefined promises
+@subsubsection Validating promises
+
+
+The following bindings are exported by the library @library{vicare
+arguments validation}.
+
+
+@deffn {Validation Clause} promise @var{obj}
+Succeed if @var{obj} is a promise object: it satisfies the predicate
+@func{promise?} exported by @library{vicare}.
+@end deffn
+
+
+@deffn {Validation Clause} false-or-promise @var{obj}
+Succeed if @var{obj} is @false{} or a promise object: it satisfies the
+predicate @func{promise?} exported by @library{vicare}.
 @end deffn
 
 @c page
@@ -1280,158 +1309,6 @@ predicate @func{time?} exported by @library{vicare}.
 @end deffn
 
 @c page
-@node include
-@section Including source files at expand time
-
-
-@cindex Library @library{vicare include}
-@cindex @library{vicare include}, library
-
-
-The following bindings are exported by the library @library{vicare
-include}.
-
-
-@deffn Syntax include @var{filename}
-Include in the current source file the contents of the file selected by
-the pathname @var{filename}, which must be a string.  Everything happens
-as if the code was present in place of the @func{include} form.
-@end deffn
-
-
-@deffn Syntax include/lexical-context @var{filename} @var{identifier}
-Include in the current source file the contents of the file selected by
-the pathname @var{filename}, which must be a string.  @var{identifier}
-must be a Scheme identifier and it is used to assign a lexical context
-to the sourced code.
-@end deffn
-
-@c page
-@node cond-expand
-@section Feature based conditional expansion
-
-
-@cindex Library @library{vicare cond-expand}
-@cindex @library{vicare cond-expand}, library
-@cindex Library @library{vicare cond-expand helpers}
-@cindex @library{vicare cond-expand helpers}, library
-
-
-The following bindings are exported by the library @library{vicare
-cond-expand}.
-
-
-@deffn Syntax define-cond-expand @meta{cond-expand} @meta{feature-func} ...
-Expand to the definition of a syntax like @func{cond-expand} supporting
-all the features of the @func{cond-expand} from @ansrfi{0} and in
-addition supporting the features specified by a set of functions.
-@ref{srfi cond-expand vicare, Features supported by @value{PRJNAME}}
-
-@meta{cond-expand} must be an identifier representing the name of the
-new syntax.
-
-The optional @meta{feature-func} arguments must be expressions which,
-evaluated only once at expand time, must return functions; each of such
-functions must accept as single argument an identifier representing a
-feature and must return as single argument: @true{} if the feature is
-supported, @false{} otherwise.
-@end deffn
-
-In the following example we define a @func{cond-expand} syntax just like
-the one exported by @ansrfi{0}:
-
-@example
-#!r6rs
-(import (rnrs)
-  (vicare cond-expand))
-
-(define-cond-expand cond-expand)
-
-(cond-expand
-  ((and srfi-0 srfi-1)  #t)
-  (else                 #f))
-@expansion{} #t
-@end example
-
-@noindent
-in the following example we define a @func{cond-expand} that
-additionally recognises the features @func{write} and @func{display}:
-
-@example
-#!r6rs
-(import (rnrs)
-  (vicare cond-expand))
-
-(define-cond-expand cond-expand
-  (lambda (id)
-    (free-identifier=? id #'display))
-  (lambda (id)
-    (free-identifier=? id #'write)))
-
-(cond-expand
-  ((or display write)   #t)
-  (else                 #f))
-@expansion{} #t
-@end example
-
-The following bindings are exported by the library @library{vicare
-cond-expand helpers}.
-
-
-@deffn Syntax define-cond-expand-identifiers-helper @meta{who} @meta{feature-clause} ...
-Expand to the definition of a function bound to @meta{who} which can be
-used as feature function in uses of the macro @func{define-cond-expand}.
-
-Each of the optional @meta{feature-clause} must have the following
-format:
-
-@example
-(@meta{feature-id} @meta{expr})
-@end example
-
-@noindent
-where @meta{feature-id} must be the feature identifier and @meta{expr}
-must be an expression.  The generated function compares the given
-identifier with each of @meta{feature-id}, using
-@func{free-identifier=?}:
-
-@itemize
-@item
-If the result is @true{}: evaluate @meta{expr} and return the result.
-
-@item
-If the result is @false{}: move on to the next @meta{feature-id}.
-
-@item
-If no more @meta{feature-id} are left: return @false{}.
-@end itemize
-@end deffn
-
-
-In the following example we define a @func{cond-expand} that
-additionally recognises the features @func{write} and @func{display}:
-
-@example
-#!r6rs
-(import (rnrs)
-  (vicare cond-expand)
-  (for (vicare cond-expand)
-       expand))
-
-(define-cond-expand cond-expand
-  (let ()
-    (define-cond-expand-identifiers-helper help
-      (display        #t)
-      (write          #t))
-    help))
-
-(cond-expand
-  ((or display write)   #t)
-  (else                 #f))
-@expansion{} #t
-@end example
-
-@c page
 @node errno
 @section More features for @code{errno}
 
@@ -2096,469 +1973,6 @@ the C language @code{ptrdiff_t} range.
 @end deffn
 
 @c page
-@node syntaxes
-@section Language syntactic extensions
-
-
-@cindex Library @library{vicare syntactic-extensions}
-@cindex @library{vicare syntactic-extensions}, library
-
-
-The library @library{vicare syntactic-extensions} provides bindings to
-macros that extend the Scheme language implemented by @library{vicare}
-and @library{rnrs}.
-
-@menu
-* syntaxes defines::            Special definitions.
-* syntaxes bindings::           Special local bindings.
-* syntaxes sequencing::         Sequencing execution.
-* syntaxes conversion::         Converting common arguments.
-* syntaxes cases::              Special cases.
-* syntaxes args::               Arguments validation.
-* syntaxes misc::               Miscellaneous syntaxes.
-@end menu
-
-@c page
-@node syntaxes defines
-@subsection Special definitions
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{form} @meta{form} ...
-Wrapper for @func{syntax-rules}, expand to:
-
-@example
-(define-syntax @meta{name}
-  (syntax-rules ()
-    ((_ @meta{arg} ... . @meta{rest})
-     (begin @metao{form} @meta{form} ...))))
-@end example
-@end defmac
-
-
-@defmac define-constant @meta{name} @meta{expr}
-Wrapper for @func{identifier-syntax}, expand to:
-
-@example
-(begin
-  (define ghost @meta{expr})
-  (define-syntax @meta{name}
-    (identifier-syntax ghost)))
-@end example
-
-@noindent
-@meta{expr} is evaluated once and the identifier syntax @meta{name} can
-be used to access the result; it is impossible to modify the value by
-acting upon @meta{name}.
-@end defmac
-
-
-@defmac define-inline-constant @meta{name} @meta{expr}
-Expand to:
-
-@example
-(define-syntax @meta{name}
-  (let ((const @meta{expr}))
-    (lambda (stx)
-      (syntax-case stx ()
-        (?id
-         (identifier? #'?id)
-         (with-syntax ((VALUE const))
-           #'(quote VALUE)))))))
-@end example
-
-@noindent
-@meta{expr} is evaluated only once at expand time; it is impossible to
-modify the result of the expansion of @meta{name} by acting upon
-@meta{name}.
-
-This syntax is also useful to defined constants resulting from @gnu{}
-Autoconf expansion:
-
-@example
-(define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
-@end example
-@end defmac
-
-
-@defmac define-syntax* (@meta{who} @meta{stx}) . @meta{body}
-Wrapper for @func{define-syntax}, expand to:
-
-@example
-(define-syntax @meta{who}
-  (lambda (@meta{stx}) . @meta{body}))
-@end example
-@end defmac
-
-
-@defmac define-auxiliary-syntaxes @metao{name} @meta{name} ...
-Define auxiliary syntaxes to be used as literal identifiers by
-@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
-
-@example
-(define-syntax @metao{name} (syntax-rules ()))
-(define-syntax @meta{name}  (syntax-rules ()))
-...
-@end example
-@end defmac
-
-
-@defmac define-exact-integer->symbol-function @meta{who} (@meta{code} ...)
-Define a function used to convert exact intgers to the corresponding
-symbolic name.  Expand to:
-
-@example
-(define (@meta{who} code)
-  (define who '@meta{who})
-  (with-arguments-validation (who)
-      ((exact-integer      code))
-    (case-integers code
-      ((@meta{code})     '@meta{code})
-      ...
-      (else #f))))
-@end example
-@end defmac
-
-@c page
-@node syntaxes bindings
-@subsection Special local bindings
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac let-inline ((@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
-Wrapper for @func{let-syntax}, expand to:
-
-@example
-(let-syntax ((@meta{var} (identifier-syntax @meta{expr}))
-             ...)
-  @metao{body} . @meta{body})
-@end example
-@end defmac
-
-
-@defmac {let*-inline} () @metao{body} . @meta{body}
-@defmacx {let*-inline} ((@metao{var} @metao{expr}) (@meta{var} @meta{expr}) ...) @metao{body} . @meta{body}
-Wrapper for @func{let-syntax}, expand to:
-
-@example
-(let-syntax ((@metao{var} (identifier-syntax @meta{expr})))
-  (let*-inline ((@meta{var} @meta{expr})
-                ...)
-    @metao{body} . @meta{body}))
-@end example
-@end defmac
-
-
-@deffn Syntax receive @var{formals} @var{expression} . @var{body}
-The mechanism provided for binding identifiers to the values of a
-multiple--valued expression are @func{call-with-values},
-@func{let-values}, @func{let*-values}.  @func{receive} is another
-concise and readable syntax for creating such bindings.
-
-@var{formals} can have any of 3 forms:
-
-@table @code
-@item (@vari{variable} ... @varn{variable})
-The environment in which the @func{receive}--expression is evaluated is
-extended by binding @vari{variable}, ..., @varn{variable} to fresh
-locations.  The @var{expression} is evaluated, and its values are
-stored into those locations (it is an error if @var{expression} does
-not have exactly @math{N} values).
-
-@item @var{variable}
-The environment in which the @func{receive}--expression is evaluated is
-extended by binding @var{variable} to a fresh location.  The
-@var{expression} is evaluated, its values are converted into a newly
-allocated list, and the list is stored in the location bound to
-@var{variable}.
-
-@item (@vari{variable} ... @varn{variable} . @varni{variable})
-The environment in which the @func{receive}--expression is evaluated is
-extended by binding @vari{variable}, ..., @varni{variable} to fresh
-locations.  The @var{expression} is evaluated.  Its first @math{N}
-values are stored into the locations bound to @vari{variable}, ...,
-@varn{variable}.  Any remaining values are converted into a newly
-allocated list, which is stored into the location bound to
-@varni{variable} (it is an error if @var{expression} does not have at
-least @math{N} values.
-@end table
-
-In any case, the expressions in @var{body} are evaluated sequentially in
-the extended environment.  The results of the last expression in the
-body are the values of the @var{receive}--expression.
-@end deffn
-
-@c page
-@node syntaxes sequencing
-@subsection Sequencing execution
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac begin0 @metao{expr} @meta{expr} ...
-Expand to:
-
-@example
-(call-with-values
-     (lambda () @metao{expr})
-  (lambda args
-    @meta{expr} ...
-    (apply values args)))
-@end example
-
-This syntax comes from the @rnrs{6} original document, Appendix A
-``Formal semantics''.
-@end defmac
-
-
-@defmac begin0-let ((@metao{var} @metao{init}) (@meta{var} @meta{init}) ...) @metao{form} @meta{form} ...
-Expand to:
-
-@example
-(let ((@metao{var} @metao{init})
-      (@meta{var}  @meta{init})
-      ...)
-  @metao{form} @meta{form} ...
-  @metao{var})
-@end example
-@end defmac
-
-@c page
-@node syntaxes conversion
-@subsection Converting common arguments
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac with-pathnames ((@meta{pathname.bv} @meta{pathname}) ...) . @meta{body}
-Used to preprocess function arguments which must be bytevectors or
-strings representing pathnames; the strings are converted to
-bytevectors.  This macro assumes that the arguments have already been
-validated.  Expand to:
-
-@example
-(let ((@meta{pathname.bv} (let ((pathname @meta{pathname}))
-                      (if (bytevector? pathname)
-                          pathname
-                        ((string->filename-func) pathname))))
-      ...)
-  . @meta{body})
-@end example
-@end defmac
-
-
-@defmac with-bytevectors ((@meta{value.bv} @meta{value}) ...) . @meta{body}
-Used to preprocess function arguments which must be bytevectors or
-strings; the strings are converted to bytevectors.  This macro assumes
-that the arguments have already been validated.  Expand to:
-
-@example
-(let ((@meta{value.bv} (let ((V @meta{value}))
-                   (if (bytevector? V)
-                       V
-                     (string->latin1 V))))
-      ...)
-  . @meta{body})
-@end example
-@end defmac
-
-
-@defmac with-bytevectors/or-false ((@meta{value.bv} @meta{value}) ...) . @meta{body}
-Used to preprocess function arguments which must be bytevectors, strings
-or false; the strings are converted to bytevectors.  This macro assumes
-that the arguments have already been validated.  Expand to:
-
-@example
-(let ((?value.bv (let ((V ?value))
-                   (cond ((bytevector? V)
-                          V)
-                         ((string? V)
-                          (string->latin1 V))
-                         (else V))))
-      ...)
-  . ?body)
-@end example
-@end defmac
-
-@c page
-@node syntaxes cases
-@subsection Special cases
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac case-word-size ((32) . @meta{body-32}) ((64) . @meta{body-64})
-If the platform word size is 32-bit expand to @meta{body-32}, else
-expand to @meta{body-64}.
-@end defmac
-
-
-@deffn Macro case-endianness (@meta{who} @meta{endianness}) ((little) . @meta{lit-body}) ((big) . @meta{big-body})
-@deffnx Macro case-endianness (@meta{who} @meta{endianness}) ((big) . @meta{big-body}) ((little) . @meta{lit-body})
-@deffnx {Auxiliary Syntax} big
-@deffnx {Auxiliary Syntax} little
-If the platform endianness is little expand to @meta{lit-body}, else
-expand to @meta{big-body}.
-@end deffn
-
-
-@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
-@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only fixnums as datums;
-for maximum speed, it makes use of unsafe operations on fixnums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a fixnum, else the
-behaviour is undefined (and you do not want it).
-@end deffn
-
-
-@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
-@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only exact integers as
-datums.  @func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to an exact integer, else
-the behaviour is undefined (and you do not want it).
-@end deffn
-
-
-@deffn Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only symbols as datums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a symbol, else the
-behaviour is undefined.
-@end deffn
-
-
-@deffn Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only strings as datums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a string, else the
-behaviour is undefined.
-@end deffn
-
-
-@deffn Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only characters as
-datums.  @func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a char, else the
-behaviour is undefined.
-@end deffn
-
-@c page
-@node syntaxes args
-@subsection Arguments validation
-
-
-The following bindings are imported and reexported by @library{vicare
-syntactic-extension} from the library @library{vicare arguments
-validation}:
-
-@example
-define-argument-validation
-with-arguments-validation
-with-dangerous-arguments-validation
-arguments-validation-forms
-@end example
-
-@c page
-@node syntaxes misc
-@subsection Miscellaneous syntaxes
-
-
-The following bindings are exported by the library @library{vicare
-syntactic-extensions}.
-
-
-@defmac callet @meta{func} @meta{arg} ...
-Expand to a call to @meta{func}, which must evaluate to a function,
-applied to the arguments resulting from processing the @var{arg}
-syntaxes; @var{arg} can be one among:
-
-@example
-@meta{expr}
-(@meta{name} @meta{expr})
-@end example
-
-@noindent
-where @meta{expr} is an expression that will become the actual argument
-and @meta{name} must be an identifier used to comment the meaning of the
-arguments.  Examples:
-
-@example
-(callet printf
-        (string "ciao ~a")
-        (arg    123))
-@expansion{} (printf "ciao ~a" 123)
-@end example
-@end defmac
-
-
-@defmac callet* @meta{func} @meta{arg} ...
-Like @func{callet}, but define local @func{let*} bindings for the
-@var{arg} with name.  Example:
-
-@example
-(callet printf
-        (string "ciao ~a")
-        (arg    123))
-@expansion{} (let* ((string "ciao ~a")
-           (arg    123))
-      (printf string arg))
-@end example
-@end defmac
-
-
-@defmac unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
-Not a general @func{unwind-protect} for Scheme, but fine where we do not
-use continuations to escape from the body.  Expand to:
-
-@example
-(let ((cleanup (lambda ()
-                 @metao{cleanup}
-                 @meta{cleanup}
-                 ...)))
-  (with-exception-handler
-      (lambda (E)
-        (cleanup)
-        (raise E))
-    (lambda ()
-      (begin0
-          @meta{body}
-        (cleanup)))))
-@end example
-@end defmac
-
-@c page
 @node cbuffers
 @section Generalised C buffers and strings
 
@@ -2830,206 +2244,6 @@ size; we can interface it as follows:
       ((general-c-string pathname))
     (with-general-c-pathnames ((pathname^ pathname))
       (foreign-call "ikptr_posix_file_size" pathname^))))
-@end example
-
-@c page
-@node keywords
-@section More facilities for keyword objects
-
-
-@cindex Library @library{vicare keywords}
-@cindex @library{vicare keywords}, library
-
-
-Keywords are disjoint objects which can be read by @value{PRJNAME}'s
-reader in @code{#!vicare} mode, @ref{iklib reader stx}.  The core
-bindings and keyword objects handling is embedded in @value{PRJNAME}'s
-boot image, but additional facilities are required to make use of
-keywords.
-
-The following bindings are exported by the library @library{vicare
-keywords}.  Additionally the following bindings are reexported from
-@library{vicare}:
-
-@example
-symbol->keyword         keyword->symbol
-keyword?                keyword=?
-keyword-hash
-@end example
-
-
-@defun keyword->string @var{keyword}
-@defunx string->keyword @var{string}
-Convert a keyword object to and from a string object.  The string is the
-name of the symbol embedded in the keyword.
-@end defun
-
-
-@deffn Syntax let-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
-@deffnx Syntax let*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
-@deffnx Syntax letrec-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
-@deffnx Syntax letrec*-keywords @meta{input} @meta{args} @meta{allow} @meta{options-spec} @metao{form} @meta{form} ...
-@deffnx {Auxiliary Syntax} with-argument @meta{name} @meta{default} @meta{keyword}
-@deffnx {Auxiliary Syntax} without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given}
-Expand into a @func{let} like form whose bindings are configured from a
-list of arguments and options.
-
-@func{let-keywords} expands into a @func{let} syntax,
-@func{let*-keywords} expands into a @func{let*} syntax,
-@func{letrec-keywords} expands into a @func{letrec} syntax,
-@func{let-keywords} expands into a @func{let} syntax.
-
-@meta{input} must be an expression evaluating to a list of values and
-keywords; keywords must be compliant to the specification in
-@meta{options-spec}.  The same keyword can be present multiple times in
-@meta{input}.
-
-@meta{args} must be an identifier which will be bound to a list of
-values from @meta{input} not matching any of the options specified in
-@meta{options-spec}.
-
-@meta{allow} must be an expression meant to evaluate to @false{} or
-true; when @false{}: keyword values in @meta{input} not matched by
-specifications in @meta{options-spec} will cause an assertion violation;
-when true: keyword values in @meta{input} not matched by specifications
-in @meta{options-spec} will be collected in @meta{args}.
-
-@meta{options-spec} must be null or a list of lists, each with the
-following formats:
-
-@example
-(with-argument @meta{name} @meta{default} @meta{keyword})
-(without-argument @meta{name} @meta{default} @meta{keyword} @meta{when-given})
-@end example
-
-@noindent
-such specifications are interpreted as follows:
-
-@itemize
-@item
-The @func{with-argument} specification describes an optional keyword
-argument with mandatory value, which must @strong{not} be a keyword
-itself.
-
-@item
-The @func{without-argument} specification describes an optional keyword
-argument with mandatory value, which must @strong{not} be a keyword
-itself.
-
-@item
-@meta{name} must be an identifier which will become the name of a
-binding in the output @func{let} like syntax.
-
-@item
-@meta{default} must be an expression which will become a the value of
-binding in the output @func{let} like syntax.
-
-@item
-@meta{keyword} must be a keyword object which can be present in
-@meta{input} to mutate the associated @meta{name} binding.
-
-@item
-For keywords with argument: when the @meta{keyword} is present in
-@meta{input}, it must be followed by a value which will become the new
-value of the corresponding @meta{name} binding.
-
-
-@item
-For keywords without argument: when the @meta{keyword} is present in
-@meta{input}, the value resulting from the evaluation of
-@meta{when-given} will become the new value of the corresponding
-@meta{name} binding.
-@end itemize
-
-We can imagine the following macro use:
-
-@example
-(let-keywords @meta{input} args #f
-    ((with-argument a 1 #:a)
-     (with-argument b 2 #:b))
-  (alpha)
-  (beta))
-@end example
-
-@noindent
-to expand to something like:
-
-@example
-(let ((a 1)
-      (b 2))
-  (let ((args @meta{options-parser}))
-    (alpha)
-    (beta)))
-@end example
-
-@noindent
-where @meta{options-parser} is a form which takes care of parsing the
-@meta{input}.
-@end deffn
-
-
-Examples:
-
-@example
-#!vicare
-(import (vicare)
-  (vicare keywords))
-
-;; options with arguments
-(let-keywords '(#:a 1 #:b 2 #:d 4) args #f
-    ((with-argument a #\a #:a)
-     (with-argument b #\b #:b)
-     (with-argument c #\c #:c)
-     (with-argument d #\d #:d))
-  (list a b c d args))
-@result{} (1 2 #\c 4 ())
-
-;; options without arguments
-(let-keywords '(#:a #:b #:d 4) args #f
-    ((without-argument a #\a #:a #\A)
-     (without-argument b #\b #:b #\B)
-     (without-argument c #\c #:c #\C)
-     (with-argument d #\d #:d))
-  (list a b c d args))
-@result{} (#\A #\B #\c 4 ())
-
-;; options with arguments, leftover arguments
-(let-keywords '(#:a 1 ciao #:b 2 hello #:d 4) args #f
-    ((with-argument a #\a #:a)
-     (with-argument b #\b #:b)
-     (with-argument c #\c #:c)
-     (with-argument d #\d #:d))
-  (list a b c d args))
-@result{} (1 2 #\c 4 (ciao hello))
-
-;; no options, allow unknown
-(let-keywords '(#:a 1 #:b 2 #:d 4) args #t
-    ()
-  args)
-@result{} (#:a 1 #:b 2 #:d 4)
-
-(let-keywords '(#:a) args #f
-    ()
-  args)
-@error{} unknown option #:a
-
-(let-keywords '(#:a #:b 123) args #t
-    ((with-argument a 1 #:a)
-     (with-argument b 2 #:b))
-  args)
-@error{} option value for #:a cannot be a keyword
-
-(let-keywords '(#:a) args #t
-    ((with-argument a 1 #:a)
-     (with-argument b 2 #:b))
-  args)
-@error{} option #:a requires argument
-
-;; keywords used multiple times
-(let-keywords '(#:verbose #:verbose #:verbose) args #f
-  ((without-argument verbosity 0 #:verbose (+ 1 verbosity)))
-  verbosity)
-@result{} 3
 @end example
 
 @c page
@@ -3979,7 +3193,7 @@ the given initialisation directory, then load it and access the symbol
 (vicare posix)
 (vicare glibc)
 (vicare platform constants)
-(vicare syntactic-extensions)
+(vicare language-extensions syntaxes)
 @end example
 
 
@@ -4037,8 +3251,8 @@ initialised to nil.
 @section Weak hashtables
 
 
-@cindex Library @library{vicare weak-hashtables}
-@cindex @library{vicare weak-hashtables}, library
+@cindex Library @library{vicare containers weak-hashtables}
+@cindex @library{vicare containers weak-hashtables}, library
 
 
 Weak hashtables are associative containers whose keys are held by weak
@@ -4096,7 +3310,7 @@ The maximum number of entries is the value of @code{(greatest-fixnum)}.
 
 The @api{} of weak hashtables is similar to the @api{} of @rnrs{6}
 hashtables.  The following bindings are exported by the @library{vicare
-weak-hashtables} library.
+containers weak-hashtables} library.
 
 
 @defun make-weak-hashtable @var{hash-function} @var{equiv-function}
@@ -4176,12 +3390,12 @@ with the result of applying @var{proc} to the old value.
 @section Formatting flonums
 
 
-@cindex Library @library{vicare flonum-formatter}
-@cindex @library{vicare flonum-formatter}, library
+@cindex Library @library{vicare numerics flonum-formatter}
+@cindex @library{vicare numerics flonum-formatter}, library
 
 
 The following bindings are exported by the library @library{vicare
-flonum-formatter}.
+numerics flonum-formatter}.
 
 
 @defun format-flonum @var{positive?} @var{digits} @var{exponent}
@@ -4192,7 +3406,7 @@ determines the sign.
 @example
 #!r6rs
 (import (vicare)
-  (vicare flonum-formatter))
+  (vicare numerics flonum-formatter))
 
 (define digits
   '(#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
@@ -4229,12 +3443,12 @@ determines the sign.
 @section Parsing flonums
 
 
-@cindex Library @library{vicare flonum-parser}
-@cindex @library{vicare flonum-parser}, library
+@cindex Library @library{vicare numerics flonum-parser}
+@cindex @library{vicare numerics flonum-parser}, library
 
 
 The following bindings are exported by the library @library{vicare
-flonum-parser}.
+numerics flonum-parser}.
 
 
 @defun parse-flonum @var{flonum} @var{real-func} @var{unreal-func}
@@ -4256,7 +3470,7 @@ Notice how the arguments handed to @var{real-func} match the argument of
 @example
 #!r6rs
 (import (vicare)
-  (vicare flonum-parser))
+  (vicare numerics flonum-parser))
 
 (parse-flonum 1.23456789
               (lambda args (cons 'real args))
@@ -4434,272 +3648,6 @@ was run.
 @end defun
 
 @c page
-@node infix
-@section Infix to prefix transformer
-
-
-@cindex Library @library{vicare infix}
-@cindex @library{vicare infix}, library
-
-
-The library @library{vicare infix} provides the @func{infix} macro which
-converts the traditional infix notation for expressions to the
-equivalent Scheme's prefix notation.
-
-To use the library just import @library{vicare infix} and use the
-@func{infix} macro: it expands to a prefix expression to be evaluated at
-runtime, in the lexical context of the macro use; as a special case
-@code{(infix)} is equivalent to @code{(values)}.
-
-The macro allows us to evaluate forms like:
-
-@example
-(let ((a 1) (b 2) (c 3))
-
-  (infix cos (a) * tan (b) / c)
-  @expansion{} (/ (* (cos a) (tan b)) c)
-
-  (infix (cos (a) * tan (b) / c))
-  @expansion{} (/ (* (cos a) (tan b)) c)
-
-  (infix a ? b : c)
-  @expansion{} (if a b c)
-
- #f)
-@end example
-
-Some interpretation rules:
-
-@itemize
-@item
-Any Scheme value can be element of the input form.
-
-@item
-The following infix operators are supported; in order of descending
-precedence from top to bottom, operators on the same line have equal
-precedence:
-
-@example
-bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-bitwise-not
-bitwise-and bitwise-ior bitwise-xor
-incr! decr!
-(unary +) (unary -)
-expt
-mod mod0
-* / div div0
-+ -
-< > <= >= = eq? eqv? equal?
-not
-and or xor
-@end example
-
-@noindent
-remember that the Scheme comparison operators are meant to return a
-boolean value, rather than a number object.
-
-@item
-All the operators are left--associative with the exception of
-@func{expt} which is right--associative and of the unary @func{+},
-@func{-}, @func{incr!}, @func{decr!}, @func{not} and @func{bitwise-not}
-which are non--associative:
-
-@example
-;; left-associative
-(infix 10 - 5 - 3) @expansion{} (- (- 10 5) 3)
-(infix 10 - 5 - 3) @expansion{} (- 10 5 3)
-(infix 10 / 5 / 3) @expansion{} (/ (/ 10 5) 3)
-(infix 10 / 5 / 3) @expansion{} (/ 10 5 3)
-
-;; right-associative
-(infix 10 expt 5 expt 3) @expansion{} (expt 10 (expt 5 3))
-@end example
-
-@item
-The following operators for fixnums are supported with the same
-precedence of the corresponding generic operators:
-
-@example
-fx+               fx-
-fx*
-fxdiv             fxdiv0
-fxmod             fxmod0
-fx<?              fx>?
-fx<=?             fx>=?
-fx=?
-
-fxand             fxior
-fxxor             fxnot
-fxarithmetic-shift-left
-fxarithmetic-shift-right
-@end example
-
-All the operators are left-associative with the exception of FXNOT which
-is non-associative:
-
-@example
-(infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
-(infix 10 fxdiv 5 fxdiv 3) @expansion{} (fxdiv (fxdiv 10 5) 3)
-@end example
-
-@item
-The following operators for flonums are supported with the same
-precedence of the corresponding generic operators:
-
-@example
-fl+               fl-
-fl*               fl/
-flexpt
-fl<?              fl>?
-fl<=?             fl>=?
-fl=?
-@end example
-
-All the operators are left--associative with the exception of
-@func{flexpt} which is right--associative:
-
-@example
-;; left-associative
-(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- (fl- 10. 5.) 3.))
-(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- 10. 5. 3.))
-(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ (fl/ 10. 5.) 3.))
-(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ 10. 5. 3.))
-
-;; right-associative
-(infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
-(infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
-@end example
-
-@item
-@func{incr!} and @func{decr!} are unary operators that can be applied to
-expressions both in prefix and suffix positions.  @library{vicare infix}
-exports the identifiers @func{++} and @func{--} as aliases for
-@func{incr!} and @func{decr!}; such aliases are invalid in @code{#!r6rs}
-mode, but are allowed by the reader when in @code{#!vicare} mode.
-
-When applied in prefix position to an identifier, @func{incr!} expands
-to:
-
-@example
-(infix incr! ?id) @expansion{} (begin (set! ?id (+ ?id 1)) ?id)
-@end example
-
-@noindent
-and @func{decr!} expands to:
-
-@example
-(infix decr! ?id) @expansion{} (begin (set! ?id (- ?id 1)) ?id)
-@end example
-
-When applied in suffix position to an identifier, @func{incr!} expands
-to:
-
-@example
-(infix ?id incr!) @expansion{} (let ((v ?id)) (set! ?id (+ ?id 1)) v)
-@end example
-
-@noindent
-and @func{decr!} expands to:
-
-@example
-(infix ?id decr!) @expansion{} (let ((v ?id)) (set! ?id (- ?id 1)) v)
-@end example
-
-When applied to a non--identifier expression, both in prefix and suffix
-position, @func{incr!} expands to:
-
-@example
-(infix incr! ?expr) @expansion{} (+ ?expr 1)
-(infix ?expr incr!) @expansion{} (+ ?expr 1)
-@end example
-
-@noindent
-and @func{decr!} expands to:
-
-@example
-(infix decr! ?expr) @expansion{} (- ?expr 1)
-(infix ?expr decr!) @expansion{} (- ?expr 1)
-@end example
-
-@item
-The if-then-else statement involves the identifiers @func{?}  and
-@func{:}.  This statement has the least precedence of all.
-
-@item
-Identifiers which are not operators are interpreted as variable
-references; if an identifier is followed by a list, it is a function
-call.
-
-@item
-Function calls with one or more arguments require the arguments to be
-grouped in a list; there is no special separator in the list of
-arguments.
-
-@example
-(define (fun a b c)
-  (+ a b c))
-
-(infix fun (1 2 3)) @expansion{} (fun 1 2 3)
-@end example
-
-Notice that grouping the function arguments in a list is a requirement
-of the infix expression grammar.
-
-@item
-Numbers and all the other values are just put there as operands.
-
-@item
-As a special exception: the binding @func{begin} from @library{vicare}
-is recognised in the input form and allows us to nest prefix--notation
-expressions.
-
-@example
-(infix (begin (+ 1 2))) @result{} 3
-
-(infix (begin
-         (let ((a 3))
-           (/ a 4))))
-@result{} 3/4
-
-(let ((a 3))
-  (infix (begin (/ a 4))))
-@result{} 3/4
-
-(let ((a 1) (b 2) (c 3))
-  (infix (1 + a ? (begin
-                    (+ 2 b))
-                : 3 + c - 4))
-  @expansion{} (if (+ 1 a)
-          (begin (+ 2 b))
-        (- (+ 3 c) 4))
-  #f)
-@end example
-
-@item
-The following binding aliases are exported by the library:
-
-@example
-and                               -> &&
-or                                -> !!
-xor                               -> ^^
-not                               -> ~~
-mod                               -> %
-bitwise-and                       -> &
-bitwise-ior                       -> !
-bitwise-xor                       -> ^
-bitwise-not                       -> ~
-bitwise-arithmetic-shift-left     -> <<
-bitwise-arithmetic-shift-right    -> >>
-fxand                             -> fx&
-fxior                             -> fx!
-fxxor                             -> fx^
-fxnot                             -> fx~
-fxarithmetic-shift-left           -> fx<<
-fxarithmetic-shift-right          -> fx>>
-@end example
-@end itemize
-
-@c page
 @node debugging
 @section Debugging facilities
 
@@ -4721,349 +3669,19 @@ The following bindings are exported by the library @library{vicare
 debugging compiler}.
 
 @c page
-@node coroutines
-@section Running coroutines
-
-
-@cindex Library @library{vicare coroutines}
-@cindex @library{vicare coroutines}, library
-
-The library @library{vicare coroutines} implements coroutines on top of
-Scheme continuations.  The implementation is a simple queue of escape
-functions: whenever coroutine @var{A} yields control to the ``next''
-coroutine, it enqueues an escape function to its current continuation
-and causes the next escape function to be invoked.
-
-For discussions about other implementations of coroutines and
-continuations see @ref{HFWCoro, references}.
-
-@menu
-* coroutines examples::         Usage examples for coroutines.
-* coroutines api::              Programming interface to coroutines.
-@end menu
-
-@c page
-@node coroutines examples
-@subsection Usage examples for coroutines
-
-
-Coroutines are created by the function @func{coroutine}; a coroutine in
-execution can yield control to the next coroutine with the function
-@func{yield}.  It is possible to enter a loop that runs all the
-coroutines until all of them are finished with the function
-@func{finish-coroutines}.
-
-All the examples in this section are to be considered as Scheme programs
-after the prelude:
-
-@example
-#!r6rs
-(import (vicare)
-  (vicare coroutines))
-
-(set-port-buffer-mode! (current-output-port)
-                       (buffer-mode line))
-@end example
-
-@noindent
-which allows the intertwining of coroutines to be seen by displaying
-strings on the current output port.
-
-@c ------------------------------------------------------------
-
-@subsubheading Two coroutines
-
-The following example runs two coroutines and waits for them to finish:
-
-@example
-(coroutine
-    (lambda ()
-      (display "one 1\n")
-      (yield)
-      (display "one 2\n")
-      (yield)
-      (display "one 3\n")))
-
-(coroutine
-    (lambda ()
-      (display "two 1\n")
-      (yield)
-      (display "two 2\n")
-      (yield)
-      (display "two 3\n")))
-
-(finish-coroutines)
-@end example
-
-@noindent
-the output is:
-
-@example
-one 1
-two 1
-one 2
-two 2
-one 3
-two 3
-@end example
-
-We see that to exit a coroutine we just return from its start function.
-
-@c ------------------------------------------------------------
-
-@subsubheading The main routine and a subroutine
-
-We can always consider the ordinary control flow of a program as a
-coroutine, the @dfn{main routine}; so the following program produces
-output similar to the one above:
-
-@example
-(coroutine
-    (lambda ()
-      (display "sub 1\n")
-      (yield)
-      (display "sub 2\n")
-      (yield)
-      (display "sub 3\n")))
-
-;;This runs in the main routine.
-(display "main 1\n")
-(yield)
-(display "main 2\n")
-(yield)
-(display "main 3\n")
-
-(finish-coroutines)
-@end example
-
-@noindent
-the output is:
-
-@example
-sub 1
-main 1
-sub 2
-main 2
-sub 3
-main 3
-@end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Main routine alone
-
-It is perfectly all right to call @func{yield} and
-@func{finish-coroutines} from the main routine even when there are no
-subroutines:
-
-@example
-(display "main 1\n")
-(yield)
-(display "main 2\n")
-(yield)
-(display "main 3\n")
-(finish-coroutines)
-@end example
-
-@noindent
-the output of this program is just:
-
-@example
-main 1
-main 2
-main 3
-@end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Finishing coroutines
-
-It is possible to call @func{finish-coroutines} from any coroutine, but
-we must be careful because if we let the main routine exit before all
-the routines are finished some computation will not take place.  In the
-following program the subroutine has more steps than the main routine:
-
-@example
-(coroutine
-    (lambda ()
-      (display "sub 1\n")
-      (yield)
-      (display "sub 2\n")
-      (yield)
-      (display "sub 3\n")
-      (yield)
-      (display "sub 4\n")
-      (yield)
-      (display "sub 5\n")
-      (finish-coroutines)))
-
-;; This runs in the main routine.
-(display "main 1\n")
-(yield)
-(display "main 2\n")
-(yield)
-(display "main 3\n")
-@end example
-
-@noindent
-and its output is:
-
-@example
-sub 1
-main 1
-sub 2
-main 2
-sub 3
-main 3
-@end example
-
-@noindent
-we see that @samp{sub 4} and @samp{sub 5} are not displayed.
-
-@c ------------------------------------------------------------
-
-@subsubheading Finish coroutines as exit hook
-
-It can be useful to register @func{finish-coroutines} as exit hook, so
-that upon exiting the process all the pending coroutines are correctly
-terminated.
-
-@example
-(coroutine
-    (lambda ()
-      (display "one 1\n")
-      (yield)
-      (display "one 2\n")
-      (yield)
-      (display "one 3\n")))
-
-(coroutine
-    (lambda ()
-      (display "two 1\n")
-      (yield)
-      (display "two 2\n")
-      (yield)
-      (display "two 3\n")))
-
-(exit-hooks (cons finish-coroutines (exit-hooks)))
-(exit)
-@end example
-
-@c page
-@node coroutines api
-@subsection Programming interface to coroutines
-
-
-The following bindings are exported by the library @library{vicare
-coroutines}.
-
-
-@defun coroutine @var{thunk}
-Create a new coroutine having @var{thunk} as function and enter it;
-return unspecified values.
-@end defun
-
-
-@defun yield
-Register the current continuation as coroutine, then run the next
-coroutine; return unspecified values.
-@end defun
-
-
-@defun finish-coroutines
-Loop running the next coroutine until there are no more; return
-unspecified values.
-@end defun
-
-@c page
-@node custom-ports
-@section Custom ports.
-
-
-@cindex Library @library{vicare custom-ports}
-@cindex @library{vicare custom-ports}, library
-
-The library @library{vicare custom-ports} implements special custom
-Scheme input and output ports.
-
-@menu
-* custom-ports pairs::          Port pairs.
-@end menu
-
-@c page
-@node custom-ports pairs
-@subsection Port pairs
-
-
-Port pairs are Scheme ports connected together so that data written to
-one port is read from the other port.
-
-Forking a @value{PRJNAME} process does @strong{not} allow the use of
-port pairs to communicate between processes; it is rather possible to
-use port pairs to communicate among coroutines, @ref{coroutines, Running
-coroutines}.  To communicate between processes we have to use the
-@posix{} library and create pipes (@pxref{posix fd pipe, pipe}) or
-socket pairs (@pxref{posix socket socket, socketpair}).
-
-The following bindings are exported by the library @library{vicare
-custom-ports}.
-
-
-@defun open-binary-input-port-pair
-Return two values being binary ports: input the first, output the
-second.  Such ports are connected together so that data written to the
-output port is read from the input port.
-@end defun
-
-
-@defun open-binary-output-port-pair
-Return two values being binary ports: output the first, input the
-second.  Such ports are connected together so that data written to the
-output port is read from the input port.
-@end defun
-
-
-@defun open-binary-input/output-port-pair
-Return two values being binary ports: input/output the first,
-input/output the second.  Such ports are connected together so that data
-written to one port is read from the other port.
-@end defun
-
-
-@defun open-textual-input-port-pair
-Return two values being textual ports: input the first, output the
-second.  Such ports are connected together so that data written to the
-output port is read from the input port.
-@end defun
-
-
-@defun open-textual-output-port-pair
-Return two values being textual ports: output the first, input the
-second.  Such ports are connected together so that data written to the
-output port is read from the input port.
-@end defun
-
-
-@defun open-textual-input/output-port-pair
-Return two values being textual ports: input/output the first,
-input/output the second.  Such ports are connected together so that data
-written to one port is read from the other port.
-@end defun
-
-@c page
 @node bytevector compounds
 @section Bytevector compounds
 
 
-@cindex Library @library{vicare bytevector-compounds}
-@cindex @library{vicare bytevector-compounds}, library
+@cindex Library @library{vicare containers bytevector-compounds}
+@cindex @library{vicare containers bytevector-compounds}, library
 
 
 A @dfn{bytevector compound} is a sequence of octets split into a
 sequence of bytevectors.  Bytevector compounds have a special @api{} to
 handle the sequence of octets as a First--in First--out queue.
 Bytevector compounds are defined by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 @menu
 * bytevector compounds types::    Data type definitions.
@@ -5078,7 +3696,7 @@ bytevector-compounds}.
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @deftp {@rnrs{6} Record Type} bytevector-compound
@@ -5123,7 +3741,7 @@ contains at least one octet.
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @defun bytevector-compound-empty? @var{bvcom}
@@ -5161,7 +3779,7 @@ value results in undefined behaviour.
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @defun bytevector-compound-enqueue! @var{bvcom} @var{item}
@@ -5181,7 +3799,7 @@ Dequeue the next bytevector from @var{bvcom} and return it; return
 
 
 The following bindings are exported by the library @library{vicare
-bytevector-compounds}.
+containers bytevector-compounds}.
 
 
 @defun bytevector-compound-u8-set! @var{bvcom} @var{idx} @var{octet}
@@ -5196,7 +3814,6 @@ Accessor and mutator for non-negative exact integers in the range
 Accessor and mutator for non-negative exact integers in the range
 @math{[-128, 127]}.
 @end defun
-
 
 @c page
 @node net channels

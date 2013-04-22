@@ -26,12 +26,12 @@
 
 
 #!r6rs
-(library (vicare coroutines)
+(library (vicare language-extensions coroutines)
   (export coroutine yield finish-coroutines)
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  begin0))
 
 

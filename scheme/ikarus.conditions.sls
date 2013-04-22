@@ -150,7 +150,7 @@
 		  source-position-line source-position-column)
     (only (ikarus records procedural)
 	  rtd-subtype?)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.))
 

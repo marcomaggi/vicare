@@ -29,7 +29,7 @@
 (import (vicare)
   (ikarus system $numerics)
   (vicare checks)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
 	case-word-size))
 
 (check-set-mode! 'report-failed)

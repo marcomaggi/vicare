@@ -30,10 +30,10 @@
 
 
 #!r6rs
-(library (vicare cond-expand)
+(library (vicare language-extensions cond-expand)
   (export define-cond-expand)
   (import (rnrs)
-    (for (only (vicare cond-expand registry)
+    (for (only (vicare language-extensions cond-expand registry)
 	       available-features)
 	 expand))
 

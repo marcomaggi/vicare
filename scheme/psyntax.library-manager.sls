@@ -46,8 +46,8 @@
     current-precompiled-library-loader)
   (import (rnrs)
     (psyntax compat)
-    (vicare syntactic-extensions)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation

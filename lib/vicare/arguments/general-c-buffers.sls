@@ -35,7 +35,7 @@
     with-general-c-pathnames/false
     string-to-bytevector)
   (import (vicare)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (prefix (only (vicare unsafe operations)
 		  bytevector-length)

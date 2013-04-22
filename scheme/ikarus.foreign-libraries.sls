@@ -36,7 +36,7 @@
     autoload-filename-foreign-library)
   (import (ikarus)
     (prefix (ikarus system $foreign) ffi.)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  define-inline))
 
 

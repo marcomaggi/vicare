@@ -225,6 +225,7 @@ Trademarks used herein are the property of their respective owners.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
 * srfi::                        Scheme Requests For Implementation.
+* lang::                        Language extension libraries.
 * libs::                        Other libraries.
 
 Internals
@@ -274,6 +275,7 @@ External documents
 @include syslib.texi
 @include capi.texi
 @include srfi.texi
+@include lang.texi
 @include libs.texi
 @include objects.texi
 @include debug.texi

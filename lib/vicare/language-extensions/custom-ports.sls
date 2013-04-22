@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (vicare custom-ports)
+(library (vicare language-extensions custom-ports)
   (export
     open-binary-input-port-pair
     open-binary-output-port-pair
@@ -38,7 +38,7 @@
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    $)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  begin0))
 
 

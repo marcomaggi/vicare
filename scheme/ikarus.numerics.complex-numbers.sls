@@ -57,7 +57,7 @@
 	    ($abs-ratnum		$magnitude-ratnum)
 	    ($abs-flonum		$magnitude-flonum))
     (vicare arguments validation)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand))
 
 

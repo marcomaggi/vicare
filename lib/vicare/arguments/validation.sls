@@ -71,6 +71,13 @@
     even-exact-integer.vicare-arguments-validation
     odd-exact-integer.vicare-arguments-validation
 
+    ;; keywords
+    keyword.vicare-arguments-validation
+
+    ;; promises
+    promise.vicare-arguments-validation
+    false-or-promise.vicare-arguments-validation
+
     ;; bit sized integers
     word-u8.vicare-arguments-validation
     word-u8/false.vicare-arguments-validation
@@ -608,6 +615,25 @@
   (and (exact-integer? obj)
        (odd? obj))
   (assertion-violation who "expected odd exact integer as argument" obj))
+
+
+;;;; keywords
+
+(define-argument-validation (keyword who obj)
+  (keyword? obj)
+  (assertion-violation who "expected keyword as argument" obj))
+
+
+;;;; promises
+
+(define-argument-validation (promise who obj)
+  (promise? obj)
+  (assertion-violation who "expected promise as argument" obj))
+
+(define-argument-validation (false-or-promise who obj)
+  (or (not obj)
+      (promise? obj))
+  (assertion-violation who "expected false or promise as argument" obj))
 
 
 ;;;; C language "int" type

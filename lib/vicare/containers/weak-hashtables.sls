@@ -28,7 +28,7 @@
 
 
 #!r6rs
-(library (vicare weak-hashtables)
+(library (vicare containers weak-hashtables)
   (export
     make-weak-hashtable		weak-hashtable?
     weak-hashtable-set!		weak-hashtable-ref
@@ -39,7 +39,7 @@
   (import (vicare)
     (prefix (vicare unsafe operations)
 	    unsafe.)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation

@@ -29,13 +29,13 @@
     (vicare arguments validation)
     (prefix (vicare platform words)
 	    words.)
-    (except (vicare syntactic-extensions)
+    (except (vicare language-extensions syntaxes)
 	    case-word-size))
 
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (import (vicare include))
+    (import (vicare language-extensions include))
     (include/verbose "ikarus.config.ss"))
 
 

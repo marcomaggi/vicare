@@ -32,7 +32,7 @@
 	  get-fmt)
     (only (ikarus records procedural)
 	  print-r6rs-record-instance)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation

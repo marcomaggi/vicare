@@ -724,7 +724,7 @@ to the signal; when not given a new instance is allocated internally.
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (px.signal-bub-init)
 (px.raise SIGALRM)
@@ -758,7 +758,7 @@ represents the maximum interval of time to wait for the signal;
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (px.signal-bub-init)
 (px.raise SIGUSR1)
@@ -4212,7 +4212,7 @@ delivered by the expiration of the timer, we have to check the
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (px.signal-bub-init)
 
@@ -4838,7 +4838,7 @@ how to send and receive a message:
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (define name "/vicare-test")
 
@@ -4884,7 +4884,7 @@ how to send and receive a message with timeout:
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (vicare syntactic-extensions))
+  (vicare language-extensions syntaxes))
 
 (define name "/vicare-test")
 
@@ -4992,7 +4992,7 @@ for details.
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect
         callet)
 
@@ -5241,7 +5241,7 @@ semaphore structure in the shared memory.
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect
         callet))
 
@@ -5344,7 +5344,7 @@ the shared memory.
 (import (vicare)
   (prefix (vicare posix) px.)
   (vicare platform constants)
-  (only (vicare syntactic-extensions)
+  (only (vicare language-extensions syntaxes)
         unwind-protect
         callet))
 

@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for (vicare syntactic-extensions)
+;;;Contents: tests for (vicare language-extensions syntaxes)
 ;;;Date: Thu Sep 13, 2012
 ;;;
 ;;;Abstract
@@ -25,7 +25,7 @@
 
 
 (import (vicare)
-  (vicare syntactic-extensions)
+  (vicare language-extensions syntaxes)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

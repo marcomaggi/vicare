@@ -40,7 +40,7 @@
 		  purge-collection-avoidance-list)
     (ikarus system $fx)
     (ikarus system $arg-list)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (ikarus.emergency))
 

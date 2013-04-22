@@ -14,6 +14,8 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!r6rs
 (library (ikarus lists)
   (export list? list cons* make-list append length list-ref reverse
           last-pair memq memp memv member find assq assp assv assoc
@@ -28,18 +30,15 @@
 		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
 		  make-queue)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation)
     (prefix (vicare unsafe operations)
 	    $))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (pair who obj)
-  (pair? obj)
-  (assertion-violation who "argument does not have required pair structure" obj))
-
-(define-argument-validation (list who obj)
+(define-argument-validation (proper-list who obj)
   (list? obj)
   (assertion-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT obj))
 
@@ -50,10 +49,6 @@
 (define-argument-validation (index who obj)
   (and (fixnum? obj) ($fx>= obj 0))
   (assertion-violation who "expected non-negative fixnum list index argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
 
 
 ;;;; constants
@@ -788,7 +783,7 @@
      ((f ls . ls*)
       (with-arguments-validation (who)
 	  ((procedure	f)
-	   (list	ls))
+	   (proper-list	ls))
 	(let ((n (length ls)))
 	  (for-each (lambda (x)
 		      (unless (and (list? x) (= (length x) n))
@@ -1253,46 +1248,57 @@
 
 ;;;; queue of items
 
-(define (make-queue)
-  ;;The value of this variable is #f or a pair representing a queue of
-  ;;items.
-  ;;
-  ;;The car of the queue-pair is the  first pair of the list of items.
-  ;;The cdr of the queue-pair is the last pair of the list of items.
-  ;;
-  (define queue-pair #f)
+(define make-queue
+  (case-lambda
+   (()
+    (make-queue '()))
+   ((init-values)
+    ;;The value of this variable is #f or a pair representing a queue of
+    ;;items.
+    ;;
+    ;;The car of the queue-pair is the  first pair of the list of items.
+    ;;The cdr of the queue-pair is the last pair of the list of items.
+    ;;
+    (define queue-pair
+      (if (null? init-values)
+	  #f
+	(cons init-values
+	      (let find-last-pair ((L init-values))
+		(if (null? ($cdr L))
+		    L
+		  (find-last-pair ($cdr L)))))))
 
-  (define-syntax queue
-    (syntax-rules ()
-      ((_)
-       queue-pair)
-      ((_ ?item)
-       (set! queue-pair ?item))))
+    (define-syntax queue
+      (syntax-rules ()
+	((_)
+	 queue-pair)
+	((_ ?item)
+	 (set! queue-pair ?item))))
 
-  (define (empty-queue?)
-    (not (queue)))
+    (define (empty-queue?)
+      (not (queue)))
 
-  (define (enqueue! item)
-    (if (queue)
-	(let ((old-last-pair ($cdr (queue)))
-	      (new-last-pair (list item)))
-	  ($set-cdr! old-last-pair new-last-pair)
-	  ($set-cdr! (queue) new-last-pair))
-      (let ((Q (list item)))
-	(queue (cons Q Q)))))
+    (define (enqueue! item)
+      (if (queue)
+	  (let ((old-last-pair ($cdr (queue)))
+		(new-last-pair (list item)))
+	    ($set-cdr! old-last-pair new-last-pair)
+	    ($set-cdr! (queue) new-last-pair))
+	(let ((Q (list item)))
+	  (queue (cons Q Q)))))
 
-  (define (dequeue!)
-    (if (queue)
-	(let ((head ($car (queue))))
-	  (begin0
-	      ($car head)
-	    (let ((head ($cdr head)))
-	      (if (null? head)
-		  (queue #f)
-		($set-car! (queue) head)))))
-      (error 'dequeue! "no more items in queue")))
+    (define (dequeue!)
+      (if (queue)
+	  (let ((head ($car (queue))))
+	    (begin0
+		($car head)
+	      (let ((head ($cdr head)))
+		(if (null? head)
+		    (queue #f)
+		  ($set-car! (queue) head)))))
+	(error 'dequeue! "no more items in queue")))
 
-  (values empty-queue? enqueue! dequeue!))
+    (values empty-queue? enqueue! dequeue!))))
 
 
 ;;;; done

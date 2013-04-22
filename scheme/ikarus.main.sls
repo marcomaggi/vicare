@@ -26,7 +26,7 @@
     host-info)
   (import (except (ikarus)
 		  host-info)
-    (vicare include))
+    (vicare language-extensions include))
   (include/verbose "ikarus.config.ss"))
 
 
@@ -94,7 +94,7 @@
 		  readline-enabled?
 		  make-readline-input-port)
 	    readline.)
-    (only (vicare syntactic-extensions)
+    (only (vicare language-extensions syntaxes)
 	  define-inline))
 
 
@@ -555,7 +555,7 @@
 	       (run-time-config-search-path-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "--fasl-path")
+	  ((%option= "-F" "--fasl-path")
 	   (if (null? (cdr args))
 	       (%error-and-exit "--fasl-path requires a directory name")
 	     (begin
@@ -793,6 +793,7 @@ Other options:
         Add DIRECTORY  to the library  search path.  This option  can be
         used multiple times.
 
+   -F DIRECTORY
    --fasl-path DIRECTORY
         Add DIRECTORY to the FASL search path.  This option can  be used
         multiple times.

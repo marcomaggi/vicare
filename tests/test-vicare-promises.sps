@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -33,14 +33,37 @@
 (check-display "*** testing Vicare promises functions\n")
 
 
-(check
-    (with-result
-     (let ((p (delay (let ((r (+ 1 2)))
-		       (add-result r)
-		       r))))
-       (let ((a (force p)))
-	 (list a (force p)))))
-  => '((3 3) (3)))
+(parametrise ((check-test-name	'core))
+
+  (check
+      (force (delay 123))
+    => 123)
+
+  (check
+      (force (delay (+ 1 2)))
+    => 3)
+
+  (check
+      (with-result
+       (force (delay (let ((R (+ 1 2)))
+		       (add-result R)
+		       R))))
+    => '(3 (3)))
+
+  (check
+      (promise? (delay 123))
+    => #t)
+
+  (check
+      (with-result
+       (let ((p (delay (let ((r (+ 1 2)))
+			 (add-result r)
+			 r))))
+	 (let ((a (force p)))
+	   (list a (force p)))))
+    => '((3 3) (3)))
+
+  #t)
 
 
 ;;;; done

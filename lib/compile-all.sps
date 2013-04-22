@@ -37,24 +37,32 @@
   (only (vicare unsafe operations))
   (only (vicare unsafe unicode))
 
-  (only (vicare numerics constants))
-  (only (vicare arguments validation))
-  (only (vicare syntactic-extensions))
-  (only (vicare arguments general-c-buffers))
-  (only (vicare cond-expand))
-  (only (vicare cond-expand helpers))
+  (only (vicare language-extensions cond-expand))
+  (only (vicare language-extensions cond-expand helpers))
 
-  (only (vicare include))
-  (only (vicare infix))
-  (only (vicare flonum-parser))
-  (only (vicare flonum-formatter))
-  (only (vicare weak-hashtables))
-  (only (vicare keywords))
+  (only (vicare arguments validation))
+  (only (vicare arguments general-c-buffers))
+
+  (only (vicare language-extensions syntaxes))
+  (only (vicare language-extensions include))
+  (only (vicare language-extensions amb))
+  (only (vicare language-extensions simple-match))
+  (only (vicare language-extensions coroutines))
+  (only (vicare language-extensions infix))
+  (only (vicare language-extensions keywords))
+  (only (vicare language-extensions custom-ports))
+
+  (only (vicare numerics constants))
+  (only (vicare numerics flonum-parser))
+  (only (vicare numerics flonum-formatter))
+
   (only (vicare checks))
-  (only (vicare custom-ports))
-  (only (vicare bytevector-compounds core))
-  (only (vicare bytevector-compounds))
-  (only (vicare bytevector-compounds unsafe))
+
+  (only (vicare containers weak-hashtables))
+  (only (vicare containers bytevector-compounds core))
+  (only (vicare containers bytevector-compounds))
+  (only (vicare containers bytevector-compounds unsafe))
+
   (only (vicare net channels))
 
   (only (vicare assembler inspection))

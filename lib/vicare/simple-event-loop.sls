@@ -51,7 +51,7 @@
   (import (vicare)
     (prefix (vicare posix) px.)
     (prefix (vicare unsafe operations) unsafe.)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants))
 
 

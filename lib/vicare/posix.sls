@@ -391,7 +391,7 @@
     (prefix (only (vicare $posix)
 		  errno->string)
 	    posix.)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (vicare platform constants)
     (vicare arguments validation)
     (prefix (vicare unsafe capi)

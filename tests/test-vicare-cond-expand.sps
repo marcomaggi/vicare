@@ -27,13 +27,13 @@
 
 #!r6rs
 (import (vicare)
-  (vicare cond-expand)
-  (for (vicare cond-expand helpers)
+  (vicare language-extensions cond-expand)
+  (for (vicare language-extensions cond-expand helpers)
        expand)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(display "*** testing Vicare customisable cond-expand\n")
+(check-display "*** testing Vicare customisable cond-expand\n")
 
 
 (parametrise ((check-test-name	'srfi))

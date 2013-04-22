@@ -106,8 +106,8 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
-    (vicare include)
-    (except (vicare syntactic-extensions)
+    (vicare language-extensions include)
+    (except (vicare language-extensions syntaxes)
 	    begin0
 	    case-word-size)
     (vicare arguments validation))
@@ -115,7 +115,7 @@
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (import (vicare include))
+    (import (vicare language-extensions include))
     (include/verbose "ikarus.config.ss"))
 
 

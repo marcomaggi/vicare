@@ -40,7 +40,7 @@
 		  pretty-print pretty-print* write-char
 		  print-condition)
 	    ikarus.)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe capi)

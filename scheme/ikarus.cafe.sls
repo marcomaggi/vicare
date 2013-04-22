@@ -20,7 +20,7 @@
 		  new-cafe
 		  waiter-prompt-string
 		  cafe-input-port)
-    (vicare syntactic-extensions))
+    (vicare language-extensions syntaxes))
 
 
 ;;;; arguments validation

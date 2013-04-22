@@ -65,7 +65,7 @@
 		  string->uri-encoding		uri-encoding->string
 		  uri-encode			uri-decode
 		  uri-normalise-encoding)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (except (vicare unsafe operations)
 		    string=)
 	    $))

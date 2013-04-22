@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare syntactic-extensions)
+  (vicare language-extensions syntaxes)
   (ikarus system $structs)
   (vicare checks))
 

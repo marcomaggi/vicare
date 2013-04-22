@@ -4908,6 +4908,44 @@ called with at least two arguments.
 	  (six.list rv0 rv1 rv2 rv3)))
     => '(1 2 3 #t))
 
+;;; --------------------------------------------------------------------
+;;; with init values
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue '())))
+	(empty?))
+    => #t)
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue '(1))))
+	(empty?))
+    => #f)
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue '(1 2 3))))
+	(let ((rv0 (dequeue!))
+	      (rv1 (dequeue!))
+	      (rv2 (dequeue!))
+	      (rv3 (empty?)))
+	  (six.list rv0 rv1 rv2 rv3)))
+    => '(1 2 3 #t))
+
+  (check
+      (let-values (((empty? enqueue! dequeue!)
+		    (make-queue '(1 2))))
+	(enqueue! 3)
+	(enqueue! 4)
+	(let ((rv0 (dequeue!))
+	      (rv1 (dequeue!))
+	      (rv2 (dequeue!))
+	      (rv3 (dequeue!))
+	      (rv4 (empty?)))
+	  (six.list rv0 rv1 rv2 rv3 rv4)))
+    => '(1 2 3 4 #t))
+
   #t)
 
 

@@ -1,8 +1,8 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: helpers for cond-expand
-;;;Date: Sun Mar 17, 2013
+;;;Contents: unsafe bindings for bytevector-compound objects
+;;;Date: Tue Apr 16, 2013
 ;;;
 ;;;Abstract
 ;;;
@@ -26,31 +26,21 @@
 
 
 #!r6rs
-(library (vicare cond-expand helpers)
-  (export define-cond-expand-identifiers-helper)
-  (import (vicare))
+(library (vicare containers bytevector-compounds unsafe)
+  (export
 
-
-(define-syntax define-cond-expand-identifiers-helper
-  (lambda (stx)
-    (define (syntax->list stx)
-      (syntax-case stx ()
-	((?car . ?cdr)
-	 (cons #'?car (syntax->list #'?cdr)))
-	(() '())))
-    (syntax-case stx ()
-      ((_ ?who (?feature-id ?expr) ...)
-       (and (identifier? #'?who)
-	    (syntax->list #'(?feature-id ...)))
-       #'(define (?who id)
-	   (cond ((free-identifier=? id #'?feature-id)
-		  ?expr)
-		 ...
-		 (else #f)))))))
+    ;; inspection
+    $bytevector-compound-empty?		$bytevector-compound-filled?
+    $bytevector-compound-length		$bytevector-compound-total-length
+    $bytevector-compound-data
 
-
-;;;; done
+    ;; queue operations
+    $bytevector-compound-enqueue!	$bytevector-compound-dequeue!
 
-)
+    ;; accessors and mutators
+    $bytevector-compound-u8-set!	$bytevector-compound-u8-ref
+    $bytevector-compound-s8-set!	$bytevector-compound-s8-ref
+    )
+  (import (vicare containers bytevector-compounds core)))
 
 ;;; end of file

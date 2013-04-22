@@ -52,7 +52,7 @@
 
 		  ;; internal functions
 		  $unintern-gensym)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.)
     (except (ikarus system $symbols)

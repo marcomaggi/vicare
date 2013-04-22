@@ -33,7 +33,7 @@
 		  vector-for-all	vector-exists
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!)
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.))
 

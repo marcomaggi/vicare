@@ -149,6 +149,7 @@ TESTS			=	\
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-amb.sps				\
 	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
@@ -225,6 +226,7 @@ TESTS			=	\
 	test-vicare-records-procedural.sps		\
 	test-vicare-records-syntactic.sps		\
 	test-vicare-round.sps				\
+	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\
@@ -450,6 +452,7 @@ EXTRA_DIST = \
 	test-ikarus-symbol-table.sps			\
 	test-ikarus-unicode.sps				\
 	\
+	test-vicare-amb.sps				\
 	test-vicare-arguments-validation.sps		\
 	test-vicare-bignums.sps				\
 	test-vicare-bytevectors.sps			\
@@ -545,6 +548,7 @@ EXTRA_DIST = \
 	test-vicare-round.sps				\
 	test-vicare-sel.sps				\
 	test-vicare-shared-memory.sps			\
+	test-vicare-simple-match.sps			\
 	test-vicare-string-to-number.sps		\
 	test-vicare-strings.sps				\
 	test-vicare-structs.sps				\

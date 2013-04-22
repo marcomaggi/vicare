@@ -3,13 +3,13 @@
 ;;;with.
 
 #!r6rs
-(library (vicare cond-expand registry)
+(library (vicare language-extensions cond-expand registry)
   (export
     expand-time-features
     run-time-features
     available-features)
   (import (rnrs)
-    (for (prefix (vicare cond-expand platform-features) platform.)
+    (for (prefix (vicare language-extensions cond-expand platform-features) platform.)
          run expand))
 
 

@@ -46,7 +46,11 @@ Notes for revision 0.3d0
 
 * The boot images have been rotated.
 
+* Changed tarball distribution from .bz2 compression to .xz compression.
+
 * Added command line option -g as alias for --debug.
+
+* Added command line option -F as alias for --fasl-path.
 
 * The  script "configure"  and the  makefiles accept  the user  variable
   VFLAGS  to  set  command  line options  for  "vicare"  when  compiling
@@ -87,6 +91,13 @@ Notes for revision 0.3d0
      (vicare unsafe-operations)
      (vicare unsafe-unicode)
      (vicare unsafe-capi)
+     (vicare infix)
+     (vicare include)
+     (vicare keywords)
+     (vicare syntactic-extensions)
+     (vicare flonum-formatter)
+     (vicare flonum-parser)
+     (vicare weak-hashtables)
 
   have been renamed to:
 
@@ -96,6 +107,13 @@ Notes for revision 0.3d0
      (vicare unsafe operations)
      (vicare unsafe unicode)
      (vicare unsafe capi)
+     (vicare language-extensions infix)
+     (vicare language-extensions include)
+     (vicare language-extensions keywords)
+     (vicare language-extensions syntaxes)
+     (vicare numerics flonum-formatter)
+     (vicare numerics flonum-parser)
+     (vicare containers weak-hashtables)
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records
@@ -127,7 +145,8 @@ Notes for revision 0.3d0
       time<?			time<=?
       time>?			time>=?
 
-* Added functions FOR-EACH-IN-ORDER and MAKE-QUEUE to (vicare).
+* Added   functions  PROMISE?,   FOR-EACH-IN-ORDER  and   MAKE-QUEUE  to
+  (vicare).
 
 * Added DEPREFIX import specification clause:
 
@@ -142,19 +161,23 @@ Notes for revision 0.3d0
                      str.)))
      => 4
 
-* Added  library  (vicare  cond-expand),   see  the  documentation  node
-  "cond-expand".
+* Added  library  (vicare   language-extensions  cond-expand),  see  the
+  documentation node "cond-expand".
 
-* Added  library  (vicare  custom-ports),  see  the  documentation  node
-  "custom-ports".
+* Added  library  (vicare  language-extensions  custom-ports),  see  the
+  documentation node "custom-ports".
 
-* Added  library   (vicare  coroutines),  see  the   documentation  node
-  "coroutines".
+* Added  library   (vicare  language-extensions  coroutines),   see  the
+  documentation node "coroutines".
+
+* Added library (vicare language-extensions  amb), see the documentation
+  node "amb".
+
+* Added  library  (vicare  language-extensions  simple-match),  see  the
+  documentation node "simple-match".
 
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
-
-* Changed tarball distribution from .bz2 compression to .xz compression.
 
 
 Notes for revision 0.2d20

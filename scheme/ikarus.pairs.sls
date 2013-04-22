@@ -29,7 +29,7 @@
     (rename (only (ikarus)
 		  cons)
 	    (cons sys:cons))
-    (vicare syntactic-extensions)
+    (vicare language-extensions syntaxes)
     (prefix (vicare unsafe operations)
 	    unsafe.)
     (ikarus system $pairs))
