@@ -2107,6 +2107,49 @@ multiple subpatterns is a syntax error.
 @end example
 @end table
 
+When the escape identifier is present, it is bound to a thunk to be
+evaluated to jump to matching the next pattern or to the ``no match''
+error.
+
+@example
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 0)
+  ((1 2 3)
+   (=> escape)
+   #t)
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape))
+  (else #f))
+@result{} #f
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape))
+  ((1 2 3)
+   #t)
+  (else #f))
+@result{} #t
+
+(match '(1 2 3)
+  ((1 2 3)
+   (=> escape)
+   (escape)))
+@error{} &error
+@end example
+
+
 @c page
 @node syntaxes
 @section Language syntactic extensions

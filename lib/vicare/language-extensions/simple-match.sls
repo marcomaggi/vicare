@@ -135,7 +135,7 @@ is expanded to:
 (define (clauses-without-else expr-stx clauses)
   (compose-output-form expr-stx clauses
 		       #'(lambda (expr)
-			   (assertion-violation 'match
+			   (error 'match
 			     "failed destructuring match: no matching clause"
 			     expr))))
 
@@ -174,11 +174,21 @@ is expanded to:
   ;;the generated code will evaluate  the result of expanding the syntax
   ;;object FAIL-FORM-STX.
   ;;
-  (syntax-case clause ()
+  (syntax-case clause (=>)
     ;;Pattern without body.
     ((?pattern)
      (build-pattern-matching-code #'?pattern expr-id
 				  #'(values) fail-form-stx #f))
+
+    ;;Pattern with body.
+    ((?pattern (=> ?escape) ?body0 ?body ...)
+     (begin
+       (unless (identifier? #'?escape)
+	 (synner "expected identifier as escape name" clause))
+       (build-pattern-matching-code #'?pattern expr-id
+				    #`(let ((?escape (lambda () #,fail-form-stx)))
+					?body0 ?body ...)
+				    fail-form-stx #f)))
 
     ;;Pattern with body.
     ((?pattern ?body0 ?body ...)

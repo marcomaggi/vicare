@@ -1770,7 +1770,73 @@
   #t)
 
 
+(parametrise ((check-test-name	'escape))
+
+  (check
+      (match '(1 2 3)
+	((1 2 3)
+	 (=> escape)
+	 #t)
+	(else #f))
+    => #t)
+
+  (check
+      (match '(1 2 0)
+	((1 2 3)
+	 (=> escape)
+	 #t)
+	(else #f))
+    => #f)
+
+  (check
+      (match '(1 2 3)
+	((1 2 3)
+	 (=> escape)
+	 (escape))
+	(else #f))
+    => #f)
+
+  (check
+      (match '(1 2 3)
+	((1 2 3)
+	 (=> escape)
+	 (escape))
+	((1 2 3)
+	 #t)
+	(else #f))
+    => #t)
+
+  (check	;no match
+      (guard (E ((error? E)
+		 (condition-who E))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match '(1 2 3)
+		 ((1 2 3)
+		  (=> escape)
+		  (escape)))
+	      (environment '(vicare language-extensions simple-match))))
+    => 'match)
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
+
+  (check	;no match
+      (guard (E ((error? E)
+		 (condition-who E))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 (2	#\A)
+		 (3	#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => 'match)
+
+;;; --------------------------------------------------------------------
 
   (check	;check that  EXPR is not  erroneously bound in  the ELSE
 		;clause
