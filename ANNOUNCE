@@ -46,6 +46,8 @@ Notes for revision 0.3d0
 
 * The boot images have been rotated.
 
+* Changed tarball distribution from .bz2 compression to .xz compression.
+
 * Added command line option -g as alias for --debug.
 
 * Added command line option -F as alias for --fasl-path.
@@ -171,10 +173,11 @@ Notes for revision 0.3d0
 * Added library (vicare language-extensions  amb), see the documentation
   node "amb".
 
+* Added  library  (vicare  language-extensions  simple-match),  see  the
+  documentation node "simple-match".
+
 * Added library (vicare  net channels), see the  documentation node "net
   channels".
-
-* Changed tarball distribution from .bz2 compression to .xz compression.
 
 
 Notes for revision 0.2d20
