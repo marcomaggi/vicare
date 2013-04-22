@@ -800,6 +800,13 @@
 	 #f))
     => #f)
 
+  (check
+      (match 123
+	((and (let X) (eval (positive? X)))
+	 X)
+	(else #f))
+    => 123)
+
 ;;; --------------------------------------------------------------------
 ;;; nested bindings
 
@@ -858,6 +865,58 @@
 	 (vector X Y Z))
 	(else #f))
     => '#(1 2 ()))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;LET alone
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 (let		#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => 'let)
+
+  (check	;empty LET
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((let)		#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(let))
+
+  (check	;LET with multiple subpatterns
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((let id 2)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(let id 2))
+
+  (check	;LET with ellipsis not in list
+      (guard (E ((syntax-violation? E)
+		 #;(check-pretty-print (condition-message E))
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 (check-pretty-print E)
+		 #f))
+	(eval '(match '(1 2 3)
+		 ((let id ...)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(let id ...))
 
   #t)
 
@@ -1185,12 +1244,6 @@
 (parametrise ((check-test-name	'apply))
 
   (check
-      (match 1
-	((apply)	#t)
-	(else		#f))
-    => #f)
-
-  (check
       (match +1
 	((apply positive?)	#\A)
 	((apply negative?)	#\B)
@@ -1234,6 +1287,94 @@
 	 #\A)
 	(else #f))
     => #\A)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;empty APPLY
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((apply)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(apply))
+
+  #t)
+
+
+(parametrise ((check-test-name	'eval))
+
+  (check
+      (match 1
+	((eval #t)
+	 #t)
+	(else #f))
+    => #t)
+
+  (check
+      (match 1
+	((eval #f)	#\A)
+	(else		#f))
+    => #f)
+
+  (check
+      (match 123
+	((and (let X) (eval X))
+	 X)
+	(else #f))
+    => 123)
+
+  (check
+      (match #f
+	((and (let X) (eval X))
+	 #t)
+	(else #f))
+    => #f)
+
+  (check
+      (match '(1 2)
+	(((let X) (eval X))
+	 X)
+	(else #f))
+    => 1)
+
+  (check
+      (match '(1 2 3)
+	(((let X) (eval X) (let Y))
+	 (vector X Y))
+	(else #f))
+    => '#(1 3))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;empty EVAL
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((eval)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(eval))
+
+  (check	;EVAL with multiple subpatterns
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((eval 1 2)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(eval 1 2))
 
   #t)
 
@@ -1420,12 +1561,6 @@
 
 (parametrise ((check-test-name	'not))
 
-  (check	;empty not fails
-      (match 1
-	((not)	#t)
-	(else	#f))
-    => #f)
-
   (check
       (match 1
 	((not 1)	#t)
@@ -1437,6 +1572,33 @@
 	((not 1)	#t)
 	(else		#f))
     => #t)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;empty NOT
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((not)		#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(not))
+
+  (check	;multiple values
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 ((not 1 2)	#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '(not 1 2))
 
   #t)
 

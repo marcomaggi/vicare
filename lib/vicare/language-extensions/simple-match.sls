@@ -32,7 +32,7 @@
     match match-debug
 
     ;; auxiliary keywords
-    else let quote quasiquote and or not apply ... _)
+    else let quote quasiquote and or not apply eval ... _ =>)
   (import (vicare)
     (prefix (except (vicare unsafe operations)
 		    bytevector=)
@@ -217,7 +217,7 @@ is expanded to:
 				 wrapped-body?))
   (with-syntax (((expr)        (generate-temporaries #'(#f)))
 		(IN-EXPR       in-expr-stx))
-    (syntax-case pattern-stx (let quote quasiquote and or not apply)
+    (syntax-case pattern-stx (let quote quasiquote and or not apply eval)
 
       ;;This matches  the end of  a clause when  the clause is  a proper
       ;;list.
@@ -231,7 +231,28 @@ is expanded to:
 ;;; --------------------------------------------------------------------
 ;;; variable bindings
 
-      ;;Match a variable bindng.
+      ;;LET alone is forbidden.
+      ;;
+      (let
+       (synner "invalid standalone LET pattern" pattern-stx))
+
+      ;;Empty LET pattern.
+      ;;
+      ((let)
+       (synner "invalid empty LET pattern" pattern-stx))
+
+      ((let ?var ?ellipsis)
+       (and (identifier? #'?var)
+	    (ellipsis?   #'?ellipsis))
+       (synner "invalid LET-with-ellipsis pattern outside of list or vector pattern"
+	       pattern-stx))
+
+      ;;Two or more patterns in LET.  Syntax error.
+      ;;
+      ((let ?pattern0 ?pattern1 ?pattern ...)
+       (synner "invalid multiple subpatterns in LET clause" pattern-stx))
+
+      ;;Bind the input expression to a variable.
       ;;
       ((let ?var)
        (identifier? #'?var)
@@ -251,19 +272,59 @@ is expanded to:
 	     #,failure-stx)))
 
 ;;; --------------------------------------------------------------------
+;;; predicate application
+
+      ;;APPLY alone is forbidden.
+      ;;
+      (apply
+       (synner "invalid standalone APPLY pattern" pattern-stx))
 
       ;;Empty APPLY pattern.
       ;;
       ((apply)
-       failure-stx)
+       (synner "invalid empty APPLY pattern" pattern-stx))
 
       ;;Match with a predicate function.
       ;;
-      ((apply ?pred)
+      ((apply ?pred ...)
        #`(let ((expr IN-EXPR))
-	   (if (?pred expr)
+	   (if (and (?pred expr) ...)
 	       #,success-stx
 	     #,failure-stx)))
+
+;;; --------------------------------------------------------------------
+;;; expression evaluation
+
+      ;;EVAL alone is forbidden.
+      ;;
+      (eval
+       (synner "invalid standalone EVAL pattern" pattern-stx))
+
+      ;;Empty EVAL pattern.
+      ;;
+      ((eval)
+       (synner "invalid empty EVAL pattern" pattern-stx))
+
+      ;;Two or more patterns in EVAL.  Syntax error.
+      ;;
+      ((eval ?pattern0 ?pattern1 ?pattern ...)
+       (synner "invalid multiple subpatterns in EVAL clause" pattern-stx))
+
+      ;;Match with a predicate function.
+      ;;
+      ((eval ?expr)
+       #`(let ((expr IN-EXPR))
+	   (if ?expr
+	       #,success-stx
+	     #,failure-stx)))
+
+;;; --------------------------------------------------------------------
+;;; logic AND multiple pattern mathing
+
+      ;;AND alone is forbidden.
+      ;;
+      (and
+       (synner "invalid standalone AND pattern" pattern-stx))
 
       ;;Empty AND pattern.
       ;;
@@ -277,6 +338,14 @@ is expanded to:
 	   #,(build-pattern-matching-code #'?pattern0 #'expr
 					  (recurse #'(and ?pattern ...) #'expr)
 					  failure-stx wrapped-body?)))
+
+;;; --------------------------------------------------------------------
+;;; logic OR multiple pattern matching
+
+      ;;OR alone is forbidden.
+      ;;
+      (or
+       (synner "invalid standalone OR pattern" pattern-stx))
 
       ;;Empty OR pattern.
       ;;
@@ -314,16 +383,32 @@ is expanded to:
 					  (recurse #'(or ?pattern1 ?pattern ...) #'expr)
 					  wrapped-body?)))
 
-      ;;Empty NOT pattern.  Always fail.
+;;; --------------------------------------------------------------------
+;;; logic NOT
+
+      ;;NOT alone is forbidden.
+      ;;
+      (not
+       (synner "invalid standalone NOT pattern" pattern-stx))
+
+      ;;Empty NOT pattern.  Syntax error
       ;;
       ((not)
-       failure-stx)
+       (synner "invalid empty NOT clause" pattern-stx))
 
-      ;;Non-empty NOT pattern.  Matches if the pattern does not match.
+      ;;Two or more patterns in NOT.  Syntax error.
+      ;;
+      ((not ?pattern0 ?pattern1 ?pattern ...)
+       (synner "invalid multiple subpatterns in NOT clause" pattern-stx))
+
+      ;;NOT pattern.  Matches if the pattern does not match.
       ;;
       ((not ?pattern)
        (build-pattern-matching-code #'?pattern #'IN-EXPR
 				    failure-stx success-stx wrapped-body?))
+
+;;; --------------------------------------------------------------------
+;;; quotation and quasiquotation
 
       ;;Match a quoted datum.
       ;;
@@ -354,15 +439,13 @@ is expanded to:
       ;;
       (?ellipsis
        (ellipsis? #'?ellipsis)
-       (synner "the ellipsis can appear only after another pattern"
-	       #'?ellipsis))
+       (synner "the ellipsis can appear only after another pattern" pattern-stx))
 
       ;;The ellipsis can appear only as last item.
       ;;
       ((?ellipsis . ?pattern)
        (ellipsis? #'?ellipsis)
-       (synner "the ellipsis can appear only as last item"
-	       #'(?ellipsis . ?pattern)))
+       (synner "the ellipsis can appear only as last item" pattern-stx))
 
       ;;Match the ellipsis  in list.  The ellipsis can appear  in a list
       ;;only as last item.
@@ -417,6 +500,7 @@ is expanded to:
 		     #,failure-stx)))))))
 
 ;;; --------------------------------------------------------------------
+;;; pairs, proper lists, improper lists
 
       ;;Match a pair.
       ;;
