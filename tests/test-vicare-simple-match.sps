@@ -1415,6 +1415,26 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check
+      (match '#(1)
+	(#(1 ...)	#t)
+	(else		#f))
+    => '(#t))
+
+  (check
+      (match '#(1 1)
+	(#(1 ...)	#t)
+	(else		#f))
+    => '(#t #t))
+
+  (check
+      (match '#(1 1 1)
+	(#(1 ...)	#t)
+	(else		#f))
+    => '(#t #t #t))
+
+;;; --------------------------------------------------------------------
+
   (check	;no match
       (match '(1 2)
 	((0 1 ...)	#t)
@@ -1469,12 +1489,25 @@
 	 (#(7 8) #(7 9))))
 
 ;;; --------------------------------------------------------------------
+;;; errors
 
-  (check
+  (check	;ellipsis alone
       (guard (E ((syntax-violation? E)
 		 (syntax->datum (syntax-violation-subform E)))
 		(else
-		 (check-pretty-print E)
+		 #;(check-pretty-print E)
+		 #f))
+	(eval '(match 1
+		 (...		#\A)
+		 (else		#\B))
+	      (environment '(vicare language-extensions simple-match))))
+    => '...)
+
+  (check	;ellipsis in non-tail position
+      (guard (E ((syntax-violation? E)
+		 (syntax->datum (syntax-violation-subform E)))
+		(else
+		 #;(check-pretty-print E)
 		 #f))
 	(eval '(match 1
 		 ((... 1)	#\A)
@@ -1482,11 +1515,11 @@
 	      (environment '(vicare language-extensions simple-match))))
     => '(... 1))
 
-  (check
+  (check	;ellipsis in non-tail position
       (guard (E ((syntax-violation? E)
 		 (syntax->datum (syntax-violation-subform E)))
 		(else
-		 (check-pretty-print E)
+		 #;(check-pretty-print E)
 		 #f))
 	(eval '(match 1
 		 ((2 ... 1)	#\A)

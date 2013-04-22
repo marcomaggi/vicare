@@ -330,6 +330,16 @@ is expanded to:
 	       #,success-stx
 	     #,failure-stx)))
 
+;;; --------------------------------------------------------------------
+;;; ellipsis
+
+      ;;Ellipsis alone is forbidden.
+      ;;
+      (?ellipsis
+       (ellipsis? #'?ellipsis)
+       (synner "the ellipsis can appear only after another pattern"
+	       #'?ellipsis))
+
       ;;The ellipsis can appear only as last item.
       ;;
       ((?ellipsis . ?pattern)
@@ -389,6 +399,8 @@ is expanded to:
 		     ;;proper list.
 		     #,failure-stx)))))))
 
+;;; --------------------------------------------------------------------
+
       ;;Match a pair.
       ;;
       ((?car . ?cdr)
@@ -399,6 +411,9 @@ is expanded to:
 					      failure-stx wrapped-body?)
 	     #,failure-stx)))
 
+;;; --------------------------------------------------------------------
+;;; vectors
+
       ;;Match an empty vector.
       ;;
       (#()
@@ -408,22 +423,31 @@ is expanded to:
 	     #,failure-stx)))
 
       ;;Match a non-empty  vector.  Let's keep it simple  and accept the
-      ;;cost of VECTOR->LIST.
+      ;;cost of  VECTOR->LIST.  We  test for vector  length only  if the
+      ;;last item in the pattern vector is not an ellipsis.
       ;;
       (#(?item ...)
-       (with-syntax
-	   ((DATUM.len ($vector-length (syntax->datum #'#(?item ...)))))
-	 #`(let ((expr IN-EXPR))
-	     (if (and (vector? expr)
-		      ($fx= DATUM.len ($vector-length expr)))
-		 #,(recurse #'(?item ...) #'(vector->list expr))
-	       #,failure-stx))))
+       (let ((stx #'#(?item ...)))
+	 (if (vector-with-ellipsis-as-tail? stx)
+	     #`(let ((expr IN-EXPR))
+		 (if (vector? expr)
+		     #,(recurse #'(?item ...) #'(vector->list expr))
+		   #,failure-stx))
+	   (with-syntax
+	       ((DATUM.len ($vector-length (syntax->datum stx))))
+	     #`(let ((expr IN-EXPR))
+		 (if (and (vector? expr)
+			  ($fx= DATUM.len ($vector-length expr)))
+		     #,(recurse #'(?item ...) #'(vector->list expr))
+		   #,failure-stx))))))
+
+;;; --------------------------------------------------------------------
+;;; standalone identifiers
 
       ;;Match anything and ignore.
       ;;
-      (?id
-       (and (identifier? #'?id)
-	    (free-identifier=? #'_ #'?id))
+      (?underscore
+       (underscore? #'?underscore)
        success-stx)
 
       ;;Match a variable reference.
@@ -434,6 +458,9 @@ is expanded to:
 	   (if (equal? expr ?id)
 	       #,success-stx
 	     #,failure-stx)))
+
+;;; --------------------------------------------------------------------
+;;; syntactic data
 
       ;;Match the boolean true.
       ;;
@@ -569,6 +596,8 @@ is expanded to:
 	       #,success-stx
 	     #,failure-stx)))
 
+;;; --------------------------------------------------------------------
+
       (_
        (synner "invalid syntax in match pattern" pattern-stx))
 
@@ -624,6 +653,20 @@ is expanded to:
 (define (ellipsis? stx)
   (and (identifier? stx)
        (free-identifier=? stx #'(... ...))))
+
+(define (underscore? stx)
+  (and (identifier? stx)
+       (free-identifier=? stx #'_)))
+
+(define (vector-with-ellipsis-as-tail? stx)
+  ;;Return true if STX is a syntax  object representing a vector of 2 or
+  ;;more items, and the last item is an ellipsis; else return false.
+  ;;
+  (syntax-case stx ()
+    (#(?item0 ?item ... ?ellipsis)
+     (ellipsis? #'?ellipsis))
+    (_
+     #f)))
 
 (define (syntax->list stx)
   (syntax-case stx ()
