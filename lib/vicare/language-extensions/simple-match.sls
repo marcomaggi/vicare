@@ -29,7 +29,7 @@
 #!r6rs
 (library (vicare language-extensions simple-match)
   (export
-    match match-debug
+    match #;match-debug
 
     ;; auxiliary keywords
     else let quote quasiquote and or not apply eval ... _ =>)
