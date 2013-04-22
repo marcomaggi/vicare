@@ -148,6 +148,32 @@ Notes for revision 0.3d0
 * Added   functions  PROMISE?,   FOR-EACH-IN-ORDER  and   MAKE-QUEUE  to
   (vicare).
 
+* Added functions to  (vicare) to handle R6RS library  names and version
+  numbers:
+
+    library-name?
+    version-numbers?			version-number?
+    library-name-decompose
+    library-name->identifiers		library-name->version
+    library-name-identifiers=?		library-name=?
+    library-name<?			library-name<=?
+    library-version=?
+    library-version<?			library-version<=?
+
+* Added  functions to  (vicare) to  handle R6RS  library references  and
+  conformity with library names:
+
+    library-reference?
+    library-version-reference?
+    library-sub-version-reference?
+    library-reference-decompose
+    library-reference->identifiers
+    library-reference->version-reference
+    library-reference-identifiers=?
+    conforming-sub-version-and-sub-version-reference?
+    conforming-version-and-version-reference?
+    conforming-library-name-and-library-reference?
+
 * Added DEPREFIX import specification clause:
 
      (import (rnrs)

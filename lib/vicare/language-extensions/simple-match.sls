@@ -33,12 +33,16 @@
 
     ;; auxiliary keywords
     else let quote quasiquote and or not apply eval ... _ =>)
-  (import (vicare)
+  (import (ikarus)
     (prefix (except (vicare unsafe operations)
 		    bytevector=)
 	    $)
-    (only (ikarus system $bytevectors)
+    #;(only (ikarus system $bytevectors)
 	  $bytevector=))
+
+  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
+  ;;Mon Apr 22, 2013)
+  (define $bytevector= bytevector=?)
 
 
 #|

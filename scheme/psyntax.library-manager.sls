@@ -1,10 +1,10 @@
+;;;Copyright (c) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
 ;;;a  copy of  this  software and  associated  documentation files  (the
 ;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
+;;;without limitation the  rights to use, copy,  modify, merge, publish,
 ;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
 ;;;permit persons to whom the Software is furnished to do so, subject to
 ;;;the following conditions:
@@ -43,11 +43,34 @@
 
     current-library-expander
     current-library-collection
-    current-precompiled-library-loader)
+    current-precompiled-library-loader
+
+    ;; library names and version numbers
+    library-name?
+    version-numbers?			version-number?
+    library-name-decompose
+    library-name->identifiers		library-name->version
+    library-name-identifiers=?		library-name=?
+    library-name<?			library-name<=?
+    library-version=?
+    library-version<?			library-version<=?
+
+    ;; library references and conformity
+    library-reference?
+    library-version-reference?
+    library-sub-version-reference?
+    library-reference-decompose
+    library-reference->identifiers
+    library-reference->version-reference
+    library-reference-identifiers=?
+    conforming-sub-version-and-sub-version-reference?
+    conforming-version-and-version-reference?
+    conforming-library-name-and-library-reference?)
   (import (rnrs)
     (psyntax compat)
     (vicare arguments validation)
-    (vicare language-extensions syntaxes))
+    (vicare language-extensions syntaxes)
+    (vicare language-extensions simple-match))
 
 
 ;;;; arguments validation
@@ -55,6 +78,14 @@
 (define-argument-validation (list-of-strings who obj)
   (and (list? obj) (for-all string? obj))
   (assertion-violation who "expected list of strings as argument" obj))
+
+
+;;;; helpers
+
+(define (non-negative? obj)
+  (and (number? obj)
+       (or (positive? obj)
+	   (zero?     obj))))
 
 
 ;;;; public configuration parameters
@@ -694,6 +725,449 @@
     (list ($library-id      lib)
 	  ($library-name    lib)
 	  ($library-version lib))))
+
+
+;;;; R6RS library name and version utilities
+
+(define (version-numbers? obj)
+  ;;Return #t if  OBJ is a list of library  version numbers according to
+  ;;R6RS, this includes OBJ being null.
+  ;;
+  (or (null? obj)
+      (and (list? obj)
+	   (for-all integer?      obj)
+	   (for-all exact?        obj)
+	   (for-all non-negative? obj))))
+
+(define (version-number? obj)
+  ;;Return #t if OBJ is a version number according to R6RS.
+  ;;
+  (and (integer?      obj)
+       (exact?        obj)
+       (non-negative? obj)))
+
+(define (library-name? sexp)
+  ;;Return  #t if  SEXP is  a  symbolic expressions  compliant with  the
+  ;;definition of <LIBRARY NAME> according to R6RS.
+  ;;
+  (receive (identifiers version)
+      (library-name-decompose sexp)
+    (if identifiers #t #f)))
+
+;;; --------------------------------------------------------------------
+
+(define (library-name-decompose obj)
+  ;;Scan OBJ  validating it as  a <LIBRARY  NAME> as specified  by R6RS.
+  ;;Return   two  values:   the   list  of   identifiers,  the   version
+  ;;specification.  The  version can  be null.   If OBJ  is not  a valid
+  ;;<LIBRARY NAME>:  return #f  and #f.  The  returned values  may share
+  ;;structure with OBJ.
+  ;;
+  (if (or (null? obj) (not (list? obj)))
+      (values #f #f)
+    (let next-identifier ((next (car obj))
+			  (tail (cdr obj))
+			  (ids  '()))
+      (cond ((symbol? next) ;identifier
+	     (if (null? tail)
+		 ;;There is  no version number, so we  return OBJ itself
+		 ;;as list of identifiers.
+		 (values obj '())
+	       (next-identifier (car tail) (cdr tail) (cons next ids))))
+	    ((and (list? next) (null? tail)) ;version spec
+	     (if (version-numbers? next)
+		 (values (reverse ids) next)
+	       (values #f #f)))
+	    (else
+	     (values #f #f))))))
+
+(define (library-name->identifiers sexp)
+  ;;Given  a  symbolic  expressions  compliant with  the  definition  of
+  ;;<LIBRARY NAME>  according to R6RS:  return the list  of identifiers.
+  ;;If SEXP is not compliant return #f.
+  ;;
+  (receive (identifiers version)
+      (library-name-decompose sexp)
+    identifiers))
+
+(define (library-name->version sexp)
+  ;;Given  a  symbolic  expressions  compliant with  the  definition  of
+  ;;<LIBRARY  NAME>  according  to  R6RS:  return the  list  of  version
+  ;;numbers.  If SEXP is not compliant return #f.
+  ;;
+  (receive (identifiers version)
+      (library-name-decompose sexp)
+    version))
+
+;;; --------------------------------------------------------------------
+
+(define (library-name-identifiers=? sexp1 sexp2)
+  ;;Given  two symbolic  expressions  compliant with  the definition  of
+  ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
+  ;;list of identifiers.
+  ;;
+  (assert (library-name? sexp1))
+  (assert (library-name? sexp2))
+  (for-all eq?
+	   (library-name->identifiers sexp1)
+	   (library-name->identifiers sexp2)))
+
+(module (library-name=?
+	 library-name<?
+	 library-name<=?)
+
+  (define (%library-name-comparison version-predicate sexp1 sexp2)
+    (assert (library-name? sexp1))
+    (assert (library-name? sexp2))
+    (let-values (((ids1 vrs1) (library-name-decompose sexp1))
+		 ((ids2 vrs2) (library-name-decompose sexp2)))
+      (and (= (length ids1) (length ids2))
+	   (for-all eq? ids1 ids2)
+	   (version-predicate vrs1 vrs2))))
+
+  (define (library-name=? sexp1 sexp2)
+    ;;Given two  symbolic expressions  compliant with the  definition of
+    ;;<LIBRARY NAME> according to R6RS: return  #t if they have the same
+    ;;list of identifiers and the same version numbers.
+    ;;
+    (%library-name-comparison library-version=? sexp1 sexp2))
+
+  (define (library-name<? sexp1 sexp2)
+    ;;Given two  symbolic expressions  compliant with the  definition of
+    ;;<LIBRARY NAME> according to R6RS: return  #t if they have the same
+    ;;list of  identifiers and  the version  of SEXP1  is less  than the
+    ;;version of SEXP2.
+    ;;
+    (%library-name-comparison library-version<? sexp1 sexp2))
+
+  (define (library-name<=? sexp1 sexp2)
+    ;;Given two  symbolic expressions  compliant with the  definition of
+    ;;<LIBRARY NAME> according to R6RS: return  #t if they have the same
+    ;;list of identifiers and the version of SEXP1 is less than or equal
+    ;;to the version of SEXP2.
+    ;;
+    (%library-name-comparison library-version<=? sexp1 sexp2))
+
+  #|end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define (library-version=? vrs1 vrs2)
+  ;;Given two lists of version  numbers compliant with the definition of
+  ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
+  ;;numbers.
+  ;;
+  ;;If one of the lists is longer  and the elements up to the end of the
+  ;;shortest are equal: the lists are "equal" if the tail of the longest
+  ;;is made of zeros.
+  ;;
+  ;;Examples:
+  ;;
+  ;;	(1 2 3) == (1 2 3)
+  ;;	(1 2 3) != (1 2 3 4)
+  ;;	(1 2 3) == (1 2 3 0 0 0)
+  ;;
+  (assert (version-numbers? vrs1))
+  (assert (version-numbers? vrs2))
+  (let next ((vrs1 vrs1)
+	     (vrs2 vrs2))
+    (cond ((null? vrs1)
+	   (or (null? vrs2) (for-all zero? vrs2)))
+	  ((null? vrs2)
+	   (for-all zero? vrs1)) ;it cannot be (null? vrs1) here
+	  (else
+	   (and (= (car vrs1) (car vrs2))
+		(next (cdr vrs1) (cdr vrs2)))))))
+
+(define (library-version<? vrs1 vrs2)
+  ;;Given two lists of version  numbers compliant with the definition of
+  ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
+  ;;represented by VRS1  is less than the version  number represented by
+  ;;VRS2.
+  ;;
+  ;;Comparison  of digits  stops at  the first  digit for  which <  or >
+  ;;return true.
+  ;;
+  ;;If one of the lists is longer  and the elements up to the end of the
+  ;;shortest are equal: the lists are "equal" if the tail of the longest
+  ;;is made of zeros.
+  ;;
+  ;;Examples:
+  ;;
+  ;;	(1 2 3) <  (4 2 3)
+  ;;	(1 2 3) <  (1 4 3)
+  ;;	(1 2 3) <  (1 2 4)
+  ;;	(1 2 3) <  (1 2 3 4)
+  ;;	(1 2 3) !< (1 2 3 0 0 0)
+  ;;
+  (assert (version-numbers? vrs1))
+  (assert (version-numbers? vrs2))
+  (let next ((vrs1 vrs1)
+	     (vrs2 vrs2))
+    (cond ((null? vrs1)
+	   (cond ((null? vrs2)		#f)
+		 ((find positive? vrs2)	#t)
+		 (else			#f)))
+	  ((null? vrs2)
+	   #f)
+	  ((< (car vrs1) (car vrs2))
+	   #t)
+	  ((> (car vrs1) (car vrs2))
+	   #f)
+	  (else ;;(= (car vrs1) (car vrs2))
+	   (next (cdr vrs1) (cdr vrs2))))))
+
+(define (library-version<=? vrs1 vrs2)
+  ;;Given two lists of version  numbers compliant with the definition of
+  ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
+  ;;represented  by VRS1 is  less than  or equal  to the  version number
+  ;;represented by VRS2.
+  ;;
+  ;;Comparison of digits  stops at the first digit  for which <= returns
+  ;;false.
+  ;;
+  ;;If one of the lists is longer  and the elements up to the end of the
+  ;;shortest are equal: the lists are "equal" if the tail of the longest
+  ;;is made of zeros.
+  ;;
+  ;;Examples:
+  ;;
+  ;;	(1 2 3) <= (1 2 3)
+  ;;	(1 2 3) <= (4 2 3)
+  ;;	(1 2 3) <= (1 4 3)
+  ;;	(1 2 3) <= (1 2 4)
+  ;;	(1 2 3) <= (1 2 3 4)
+  ;;	(1 2 3 0) <= (1 2 3)
+  ;;
+  (assert (version-numbers? vrs1))
+  (assert (version-numbers? vrs2))
+  (let next ((vrs1 vrs1)
+	     (vrs2 vrs2))
+    (cond ((null? vrs1)
+	   #t)
+	  ((null? vrs2)
+	   (for-all zero? vrs1))
+	  (else
+	   (and (<= (car vrs1) (car vrs2))
+		(next (cdr vrs1) (cdr vrs2)))))))
+
+
+;;;; R6RS library references and conformity
+
+(define-syntax %normalise-to-boolean
+  (syntax-rules ()
+    ((_ ?expr)
+     (if ?expr #t #f))))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(define (library-reference? sexp)
+  ;;Return true  if SEXP is  a valid  library reference as  specified by
+  ;;R6RS.
+  ;;
+  (receive (identifiers version)
+      (library-reference-decompose sexp)
+    (%normalise-to-boolean identifiers)))
+
+(define (library-version-reference? obj)
+  ;;Return true if OBJ is a valid library version reference as specified
+  ;;by R6RS.
+  ;;
+  (match obj
+    ;;We decide to  accept empty AND clauses, which  will always match a
+    ;;version specification.
+    (('and (let ?version-reference ...))
+     (for-all library-version-reference? ?version-reference))
+
+    ;;We decide  to accept  empty OR clauses,  which will never  match a
+    ;;version specification.
+    (('or  (let ?version-reference ...))
+     (for-all library-version-reference? ?version-reference))
+
+    (('not (let ?version-reference))
+     (library-version-reference? ?version-reference))
+
+    ;;Notice that null is a valid version reference as specified by R6RS
+    ;;(see  the table  at  the  end of  the  documentation node  "scheme
+    ;;library form version" in Nausicaa).  Null always matches.
+    (((let ?sub-version-reference ...))
+     (for-all library-sub-version-reference? ?sub-version-reference))))
+
+(define (library-sub-version-reference? sub-version)
+  ;;Return  true if  OBJ is  a  valid library  sub-version reference  as
+  ;;specified by R6RS.
+  ;;
+  (define (%version-number? obj)
+    (and (or (fixnum? obj)
+	     (bignum? obj))
+	 (or (positive? obj)
+	     (zero?     obj))))
+  (match sub-version
+    (('and (let ?sub-version ...))
+     (for-all library-sub-version-reference? ?sub-version))
+    (('or  (let ?sub-version ...))
+     (for-all library-sub-version-reference? ?sub-version))
+    (('not (let ?sub-version))
+     (library-sub-version-reference? ?sub-version))
+    (('<= (let ?sub-version))
+     (library-sub-version-reference? ?sub-version))
+    (('>= (let ?sub-version))
+     (library-sub-version-reference? ?sub-version))
+    ((apply %version-number?)
+     #t)
+    (_ #f)))
+
+;;; --------------------------------------------------------------------
+;;; decomposition
+
+(define (library-reference-decompose obj)
+  ;;Scan  OBJ validating  it as  a <library  reference> as  specified by
+  ;;R6RS.   Return two  values:  the list  of  identifiers, the  version
+  ;;reference.  The version can be null.  If OBJ is not a valid <library
+  ;;reference>: return #f and #f.
+  ;;
+  (if (or (null? obj) (not (list? obj)))
+      (values #f #f)
+    (let next-identifier ((next (car obj))
+			  (rest (cdr obj))
+			  (ids  '()))
+      (cond ((symbol? next) ;identifier
+	     (if (null? rest)
+		 ;;No  version   reference,  so  OBJ  is   the  list  of
+		 ;;identifiers.
+		 (values obj '()) ; == (values (reverse (cons next ids)) '())
+	       (next-identifier (car rest) (cdr rest) (cons next ids))))
+	    ((and (list? next) (null? rest)) ;version spec
+	     (if (library-version-reference? next)
+		 (values (reverse ids) next)
+	       (values #f #f)))
+	    (else
+	     (values #f #f))))))
+
+;;; --------------------------------------------------------------------
+
+(define (library-reference->identifiers sexp)
+  (receive (identifiers version)
+      (library-reference-decompose sexp)
+    identifiers))
+
+(define (library-reference->version-reference sexp)
+  (receive (identifiers version)
+      (library-reference-decompose sexp)
+    version))
+
+;;; --------------------------------------------------------------------
+
+(define (library-reference-identifiers=? ref1 ref2)
+  (assert (library-reference? ref1))
+  (assert (library-reference? ref2))
+  (let ((ids1 (library-reference->identifiers ref1))
+	(ids2 (library-reference->identifiers ref2)))
+    (and (= (length ids1) (length ids2))
+	 (for-all eq? ids1 ids2))))
+
+;;; --------------------------------------------------------------------
+
+(define (conforming-sub-version-and-sub-version-reference? sub-version sub-version-reference)
+  (define who 'conforming-sub-version-and-sub-version-reference?)
+  (define (%error-invalid-sub-version-reference)
+    (assertion-violation who
+      "invalid library sub-version reference" sub-version-reference))
+  (assert (version-number? sub-version))
+  (assert (library-sub-version-reference? sub-version-reference))
+  (unless (and (integer?  sub-version)
+	       (exact?    sub-version)
+	       (or (zero? sub-version)
+		   (positive? sub-version)))
+    (assertion-violation who
+      "invalid library sub-version number" sub-version))
+  (%normalise-to-boolean
+   (cond ((list? sub-version-reference)
+	  (when (zero? (length (cdr sub-version-reference)))
+	    (%error-invalid-sub-version-reference))
+	  (case (car sub-version-reference)
+	    ((>=)
+	     (>= sub-version (cadr sub-version-reference)))
+	    ((<=)
+	     (<= sub-version (cadr sub-version-reference)))
+	    ((and)
+	     (for-all (lambda (sub-version-reference)
+			(conforming-sub-version-and-sub-version-reference?
+			 sub-version
+			 sub-version-reference))
+		      (cdr sub-version-reference)))
+	    ((or)
+	     (find (lambda (sub-version-reference)
+		     (conforming-sub-version-and-sub-version-reference?
+		      sub-version
+		      sub-version-reference))
+		   (cdr sub-version-reference)))
+
+	    ((not)
+	     (if (= 1 (length (cdr sub-version-reference)))
+		 (not (conforming-sub-version-and-sub-version-reference?
+		       sub-version
+		       (cadr sub-version-reference)))
+	       (%error-invalid-sub-version-reference)))
+
+	    (else
+	     (%error-invalid-sub-version-reference))))
+	 ((and (integer?  sub-version-reference)
+	       (exact?    sub-version-reference)
+	       (or (zero? sub-version-reference)
+		   (positive? sub-version-reference)))
+	  (= sub-version sub-version-reference))
+	 (else
+	  (%error-invalid-sub-version-reference)))))
+
+;;; --------------------------------------------------------------------
+
+(define (conforming-version-and-version-reference? version version-reference)
+  (define who 'conforming-version-and-version-reference?)
+  (define (%error-invalid-version-reference)
+    (assertion-violation who
+      "invalid library version reference" version-reference))
+  (assert (version-numbers? version))
+  (assert (library-version-reference? version-reference))
+  (or (and (null? version) (null? version-reference))
+      (null? version-reference)
+      (%normalise-to-boolean
+       (case (car version-reference)
+	 ((and)
+	  (for-all (lambda (reference)
+		     (conforming-version-and-version-reference? version reference))
+		   (cdr version-reference)))
+	 ((or)
+	  (find (lambda (reference)
+		  (conforming-version-and-version-reference? version reference))
+		(cdr version-reference)))
+	 ((not)
+	  (if (= 2 (length version-reference))
+	      (not (conforming-version-and-version-reference? version (cadr version-reference)))
+	    (%error-invalid-version-reference)))
+	 (else
+	  (let next-sub-version ((version		version)
+				 (version-reference	version-reference))
+	    (cond ((null? version-reference)
+		   (for-all zero? version))
+		  ((null? version)
+		   (null? version-reference))
+		  ((conforming-sub-version-and-sub-version-reference? (car version)
+								      (car version-reference))
+		   (next-sub-version (cdr version) (cdr version-reference)))
+		  (else
+		   #f))))))))
+
+;;; --------------------------------------------------------------------
+
+(define (conforming-library-name-and-library-reference? name reference)
+  (assert (library-name? name))
+  (assert (library-reference? reference))
+  (let-values (((identifiers version)		(library-name-decompose name))
+	       ((identifiers-ref version-ref)	(library-reference-decompose reference)))
+    (and (for-all eq? identifiers identifiers-ref)
+	 (conforming-version-and-version-reference? version version-ref))))
 
 
 ;;;; done

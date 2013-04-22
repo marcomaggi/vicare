@@ -174,6 +174,7 @@ TESTS			=	\
 	test-vicare-io.sps				\
 	test-vicare-language-extensions.sps		\
 	test-vicare-letrec-syntax.sps			\
+	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-net-channels.sps			\
@@ -482,6 +483,7 @@ EXTRA_DIST = \
 	test-vicare-language-extensions.sps		\
 	test-vicare-linux.sps				\
 	test-vicare-letrec-syntax.sps			\
+	test-vicare-library-utils.sps			\
 	test-vicare-lists.sps				\
 	test-vicare-log.sps				\
 	test-vicare-net-channels.sps			\

@@ -2323,6 +2323,37 @@
     (keyword-hash				i v $language)
 
 ;;; --------------------------------------------------------------------
+;;; library names
+
+    (library-name?				i v $language)
+    (version-numbers?				i v $language)
+    (version-number?				i v $language)
+    (library-name-decompose			i v $language)
+    (library-name->identifiers			i v $language)
+    (library-name->version			i v $language)
+    (library-name-identifiers=?			i v $language)
+    (library-name=?				i v $language)
+    (library-name<?				i v $language)
+    (library-name<=?				i v $language)
+    (library-version=?				i v $language)
+    (library-version<?				i v $language)
+    (library-version<=?				i v $language)
+
+;;; --------------------------------------------------------------------
+;;; library references and conformity
+
+    (library-reference?					i v $language)
+    (library-version-reference?				i v $language)
+    (library-sub-version-reference?			i v $language)
+    (library-reference-decompose			i v $language)
+    (library-reference->identifiers			i v $language)
+    (library-reference->version-reference		i v $language)
+    (library-reference-identifiers=?			i v $language)
+    (conforming-sub-version-and-sub-version-reference?	i v $language)
+    (conforming-version-and-version-reference?		i v $language)
+    (conforming-library-name-and-library-reference?	i v $language)
+
+;;; --------------------------------------------------------------------
 
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
