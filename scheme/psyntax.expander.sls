@@ -3963,26 +3963,18 @@
   ;;
   ;;   (#<library (foo)> #<library (bar)>)
   ;;
+  ;;A "subst"  is an alist whose  keys are "names" and  whose values are
+  ;;"labels".
+  ;;
+  ;;* A "name" is a symbol representing the name of an imported binding,
+  ;;   the one  we use  to reference  it in  the code  of a  library.
+  ;;
+  ;;*  A "label"  is a  unique  symbol associated  to the  entry in  the
+  ;;  lexical environment describing the imported binding.
+  ;;
   (define who 'import)
 
   (define (parse-import-spec* imp*)
-    (define (exclude* sym* subst)
-      (define (exclude sym subst)
-	(cond
-	 ((null? subst)
-	  (%synner "cannot rename unbound identifier" sym))
-	 ((eq? sym (caar subst))
-	  (values (cdar subst) (cdr subst)))
-	 (else
-	  (let ((a (car subst)))
-	    (let-values (((old subst) (exclude sym (cdr subst))))
-	      (values old (cons a subst)))))))
-      (cond
-       ((null? sym*) (values '() subst))
-       (else
-	(let-values (((old subst) (exclude (car sym*) subst)))
-	  (let-values (((old* subst) (exclude* (cdr sym*) subst)))
-	    (values (cons old old*) subst))))))
     (define (find* sym* subst)
       (map (lambda (x)
 	     (cond
@@ -4169,6 +4161,8 @@
        (else
 	(add-imports! (car imp*) h)
 	(f (cdr imp*) h)))))
+
+;;; --------------------------------------------------------------------
 
   (module (merge-substs)
 
