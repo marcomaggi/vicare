@@ -7045,7 +7045,95 @@ of identifiers; else return @false{}.
 Interpret @var{sub-version} as a sub--version number as specified by
 @rnrs{6} and @var{sub-version-reference} as a sub--version reference as
 specified by @rnrs{6}.  Return @true{} if the sub--version conforms to
-the sub--version reference; else return @false{}.
+the sub--version reference; else return @false{}; if the arguments are
+invalid: raise an assertion violation.
+
+@example
+(conforming-sub-version-and-sub-version-reference?
+    1 1)
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 0)
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(<= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    2 '(<= 1))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    0 '(<= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(>= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    2 '(>= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    0 '(>= 1))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(not 1))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(not 0))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 1 2))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 2 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 2 3))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 2 3 4))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    4 '(or 2 3 4))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(and (>= 0) (<= 2)))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    0 '(and (>= 0) (<= 2)))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(and (>= 0) (<= 2) (not 3)))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(and (>= 0) (<= 2) (not 1)))
+@result{} #f
+
+
+(conforming-sub-version-and-sub-version-reference?
+    4 '(or (and (>= 0) (<= 2)) 4))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    3 '(or (and (>= 0) (<= 2)) 4))
+@result{} #f
+@end example
 @end defun
 
 
@@ -7053,7 +7141,187 @@ the sub--version reference; else return @false{}.
 Interpret @var{version} as a version symbolic expression as specified by
 @rnrs{6} and @var{version-reference} as a version reference symbolic
 expression as specified by @rnrs{6}.  Return @true{} if the version
-conforms to the version reference; else return @false{}.
+conforms to the version reference; else return @false{}; if the
+arguments are invalid: raise an assertion violation.
+
+@example
+(conforming-version-and-version-reference?
+    '() '())
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '())
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '() '(1))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '(1))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '(0))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((<= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(2) '((<= 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(0) '((<= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((>= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(2) '((>= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(0) '((>= 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((not 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((not 0)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((or 1 2)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((or 2 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((or 2 3)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((or 2 3 4)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(4) '((or 2 3 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(5) '((or 2 (or 3 (or 4 (or 5))))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1 1 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1 (and 1 (and 1 (and 1))))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and (>= 0) (<= 2))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(0) '((and (>= 0) (<= 2))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(2) '((and (>= 0) (<= 2))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and (>= 0) (<= 2) (not 3))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and (>= 0) (<= 2) (not 1))))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((or (and (>= 0) (<= 2)) 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(4) '((or (and (>= 0) (<= 2)) 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(3) '((or (and (>= 0) (<= 2)) 4)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(1 2 3))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(1 2 4))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 0) '(1 2))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 1) '(1 2))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(1 (>= 1) (not 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(1 (<= 1) (not 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(or (1 (<= 1) (not 1)) (1 (>= 1) (not 1))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(or (1 2 5) (1 2 10)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(and (1 (>= 1) (not 1)) (1 2 (not 5))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(and (1 (<= 1) (not 1)) (1 2 (not 5))))
+@result{} #f)
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(not (1 5 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(not (1 2 3)))
+@result{} #f
+@end example
 @end defun
 
 
@@ -7061,7 +7329,30 @@ conforms to the version reference; else return @false{}.
 Interpret @var{name} as a library name symbolic expression as specified
 by @rnrs{6} and @var{reference} as a library reference symbolic
 expression as specified by @rnrs{6}.  Return @true{} if the name
-conforms to the reference; else return @false{}.
+conforms to the reference; else return @false{}; if the arguments are
+invalid: raise an assertion violation.
+
+@example
+(conforming-library-name-and-library-reference?
+    '(a (1)) '(a (1)))
+@result{} #t
+
+(conforming-library-name-and-library-reference?
+    '(a (1)) '(a (0)))
+@result{} #f
+
+(conforming-library-name-and-library-reference?
+    '(a b c (1)) '(a b c (1)))
+@result{} #t
+
+(conforming-library-name-and-library-reference?
+    '(a b c (1)) '(a b c (0)))
+@result{} #f
+
+(conforming-library-name-and-library-reference?
+    '(a b c (1)) '(a z c (1)))
+@result{} #f
+@end example
 @end defun
 
 @c page
