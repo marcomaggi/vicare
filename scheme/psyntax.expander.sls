@@ -349,23 +349,16 @@
     (define-inline (%write thing)
       (write thing port))
     (define-inline (%pretty-print thing)
-      (pretty-print thing port)
-      #;(pretty-print* thing port 0 #f))
+      (pretty-print* thing port 0 #f))
     (%display "#<syntax expr=")
-    #;(%write (syntax->datum S))
     (%pretty-print (syntax->datum S))
     (let ((expr (<stx>-expr S)))
       (when (annotation? expr)
 	(let ((pos (annotation-textual-position expr)))
 	  (when (source-position-condition? pos)
-	    ;; (%display " (line ")  (%display (source-position-line    pos))
-	    ;; (%display " column ") (%display (source-position-column  pos))
-	    ;; (%display " of ")     (%display (source-position-port-id pos))
-	    ;; (%display ")")
 	    (%display " line=")		(%display (source-position-line    pos))
 	    (%display " column=")	(%display (source-position-column  pos))
-	    (%display " source=")	(%display (source-position-port-id pos))
-	    ))))
+	    (%display " source=")	(%display (source-position-port-id pos))))))
     (%display ">")))
 
 
@@ -3839,8 +3832,8 @@
 ;;;; parsing the LIBRARY form
 
 (define (parse-library library-sexp)
-  ;;Given a  symbolic expression representing  a LIBRARY form,  return 4
-  ;;values:
+  ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
+  ;;expression, return 4 values:
   ;;
   ;;1. The name part.
   ;;
@@ -4318,6 +4311,8 @@
   ;;
   ;;   (library . _)
   ;;
+  ;;or an ANNOTATION struct representing such expression.
+  ;;
   ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
   ;;unspecified values: the  first argument is a list of  symbols from a
   ;;library  name; the  second  argument  is null  or  a  list of  exact
@@ -4459,6 +4454,8 @@
   ;;The argument LIBRARY-SEXP must  be the symbolic expression:
   ;;
   ;;   (library . _)
+  ;;
+  ;;or an ANNOTATION struct representing such expression.
   ;;
   ;;The optional FILENAME must be #f or a string representing the source
   ;;file from which  the library was loaded; it is  used for information

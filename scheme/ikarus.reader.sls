@@ -228,14 +228,16 @@
     (display thing port))
   (define-inline (%write thing)
     (write thing port))
+    (define-inline (%pretty-print thing)
+      (pretty-print* thing port 0 #f))
   (%display "#[annotation")
-;;;Writing the annotation expression makes the output really unreadable
-;;;
+  ;;Writing   the  annotation   expression  makes   the  output   really
+  ;;unreadable.
   (%display " expression=#<omitted>")
-  (%display " stripped=")		(%write (annotation-stripped S))
-;;;Avoid  printing the SOURCE  field because  it may  be removed  in the
-;;;future  and all  its informations  are also  in  the TEXTUAL-POSITION
-;;;field.
+  (%display " stripped=")		(%pretty-print (annotation-stripped S))
+  ;;Avoid printing  the SOURCE field  because it  may be removed  in the
+  ;;future and  all its  informations are  also in  the TEXTUAL-POSITION
+  ;;field.
   (%display " textual-position=")	(%write (annotation-textual-position S))
   (%display "]"))
 
