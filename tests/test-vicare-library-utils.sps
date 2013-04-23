@@ -169,19 +169,19 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (version-numbers? '(1))
+      (library-version-numbers? '(1))
     => #t)
 
   (check
-      (version-numbers? '(1 2 3))
+      (library-version-numbers? '(1 2 3))
     => #t)
 
   (check
-      (version-numbers? '(1 -2 3))
+      (library-version-numbers? '(1 -2 3))
     => #f)
 
   (check
-      (version-numbers? '(1 A 3))
+      (library-version-numbers? '(1 A 3))
     => #f)
 
   #t)
@@ -968,9 +968,6 @@
     => #f)
 
   #f)
-
-
-
 
 
 ;;;; done

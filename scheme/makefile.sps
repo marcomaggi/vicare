@@ -2326,8 +2326,8 @@
 ;;; library names
 
     (library-name?				i v $language)
-    (version-numbers?				i v $language)
-    (version-number?				i v $language)
+    (library-version-numbers?			i v $language)
+    (library-version-number?			i v $language)
     (library-name-decompose			i v $language)
     (library-name->identifiers			i v $language)
     (library-name->version			i v $language)

@@ -83,6 +83,13 @@
 	 ((_ ?arg ... . ?rest)
 	  (begin ?form0 ?form ...)))))))
 
+(define-syntax receive
+  (syntax-rules ()
+    ((_ ?formals ?expression ?form0 ?form ...)
+     (call-with-values
+	 (lambda () ?expression)
+       (lambda ?formals ?form0 ?form ...)))))
+
 (define (%set-cons x ls)
   ;;Prepend X to the list LS if it is not already contained according to
   ;;EQ?.
@@ -3828,67 +3835,93 @@
 	(rtc))
       expanded-rhs)))
 
-(define (parse-exports exp*)
-  (let f ((exp* exp*) (int* '()) (ext* '()))
-    (cond
-     ((null? exp*)
-      (unless (valid-bound-ids? ext*)
-	(syntax-violation 'export "invalid exports"
-			  (find-dups ext*)))
-      (values (map syntax->datum ext*) int*))
-     (else
-      (syntax-match (car exp*) ()
-	((rename (i* e*) ...)
-	 (begin
-	   (unless (and (eq? (syntax->datum rename) 'rename)
-			(for-all id? i*)
-			(for-all id? e*))
-	     (syntax-violation 'export "invalid export specifier" (car exp*)))
-	   (f (cdr exp*) (append i* int*) (append e* ext*))))
-	(ie
-	 (begin
-	   (unless (id? ie)
-	     (syntax-violation 'export "invalid export" ie))
-	   (f (cdr exp*) (cons ie int*) (cons ie ext*)))))))))
-
-  ;;; given a library name, like (foo bar (1 2 3)),
-  ;;; returns the identifiers and the version of the library
-  ;;; as (foo bar) (1 2 3).
-(define (parse-library-name spec)
-  (define (parse x)
-    (syntax-match x ()
-      (((v* ...))
-       (for-all
-           (lambda (x)
-             (let ((x (syntax->datum x)))
-               (and (integer? x) (exact? x))))
-	 v*)
-       (values '() (map syntax->datum v*)))
-      ((x . rest) (symbol? (syntax->datum x))
-       (let-values (((x* v*) (parse rest)))
-	 (values (cons (syntax->datum x) x*) v*)))
-      (() (values '() '()))
-      (_ (stx-error spec "invalid library name"))))
-  (let-values (((name* ver*) (parse spec)))
-    (when (null? name*) (stx-error spec "empty library name"))
-    (values name* ver*)))
+
+;;;; parsing the LIBRARY form
 
 (define (parse-library library-sexp)
-  ;;Given a symbolic expression representing  a LIBRARY form: return the
-  ;;name  part, the  export  specs, import  specs and  the  body of  the
-  ;;library.
+  ;;Given a  symbolic expression representing  a LIBRARY form,  return 4
+  ;;values:
+  ;;
+  ;;1. The name part.
+  ;;
+  ;;2. The export specs.
+  ;;
+  ;;3. The import specs.
+  ;;
+  ;;4. The body of the library.
+  ;;
+  ;;This function performs no validation of the returned values, it just
+  ;;validates the structure of the LIBRARY form.
   ;;
   (syntax-match library-sexp ()
-    ((library (name* ...)
-       (export exp* ...)
-       (import imp* ...)
-       b* ...)
-     (and (eq? (syntax->datum export) 'export)
-	  (eq? (syntax->datum import) 'import)
-	  (eq? (syntax->datum library) 'library))
-     (values name* exp* imp* b*))
+    ((library (?name* ...)
+       (export ?exp* ...)
+       (import ?imp* ...)
+       ?body* ...)
+     (and (eq? (syntax->datum library) 'library)
+	  (eq? (syntax->datum export)  'export)
+	  (eq? (syntax->datum import)  'import))
+     (values ?name* ?exp* ?imp* ?body*))
     (_
      (stx-error library-sexp "malformed library"))))
+
+(define (parse-library-name libname)
+  ;;Given a symbolic  expression LIBNAME representing a  library name as
+  ;;defined by R6RS, return 2 values: the identifiers and the version of
+  ;;the library.
+  ;;
+  ;;   (parse-library-name (foo bar (1 2 3)))
+  ;;   => (foo bar) (1 2 3)
+  ;;
+  ;;FIXME A function with this same  purpose is defined also in the file
+  ;;"psyntax.library-manager.sls"; decide what to do.  (Marco Maggi; Tue
+  ;;Apr 23, 2013)
+  ;;
+  (receive (name* ver*)
+      (let recur ((sexp libname))
+	(syntax-match sexp ()
+	  (((?vers* ...))
+	   (for-all library-version-number? ?vers*) ;this is the fender
+	   (values '() (map syntax->datum ?vers*)))
+
+	  ((?id . ?rest)
+	   (symbol? (syntax->datum ?id)) ;this is the fender
+	   (receive (name* vers*)
+	       (recur ?rest)
+	     (values (cons (syntax->datum ?id) name*) vers*)))
+
+	  (()
+	   (values '() '()))
+
+	  (_
+	   (stx-error libname "invalid library name"))))
+    (when (null? name*)
+      (stx-error libname "empty library name"))
+    (values name* ver*)))
+
+(define (parse-exports exp*)
+  (define who 'export)
+  (let loop ((exp* exp*)
+	     (int* '())
+	     (ext* '()))
+    (cond ((null? exp*)
+	   (unless (valid-bound-ids? ext*)
+	     (syntax-violation who "invalid exports" (find-dups ext*)))
+	   (values (map syntax->datum ext*) int*))
+	  (else
+	   (syntax-match (car exp*) ()
+	     ((rename (i* e*) ...)
+	      (begin
+		(unless (and (eq? (syntax->datum rename) 'rename)
+			     (for-all id? i*)
+			     (for-all id? e*))
+		  (syntax-violation who "invalid export specifier" (car exp*)))
+		(loop (cdr exp*) (append i* int*) (append e* ext*))))
+	     (ie
+	      (begin
+		(unless (id? ie)
+		  (syntax-violation who "invalid export" ie))
+		(loop (cdr exp*) (cons ie int*) (cons ie ext*)))))))))
 
 (define (parse-import-spec* imp*)
   ;;Given  a list  of  import-specs,  return a  subst  and  the list  of
@@ -3966,8 +3999,7 @@
      (else (cons (car ls) (remove-dups (cdr ls))))))
   (define (parse-library-name spec)
     (define (subversion? x)
-      (let ((x (syntax->datum x)))
-	(and (integer? x) (exact? x) (>= x 0))))
+      (library-version-number? (syntax->datum x)))
     (define (subversion-pred x*)
       (syntax-match x* ()
 	(n (subversion? n)

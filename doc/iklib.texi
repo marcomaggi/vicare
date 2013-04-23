@@ -6681,20 +6681,27 @@ will be displayed.
 @subsubsection Library name predicates
 
 
-@defun version-numbers? @var{obj}
+@defun library-version-numbers? @var{obj}
 Return @true{} if @var{obj} is a list of library version numbers
 according to @rnrs{6}, this includes @var{obj} being null.
 
 @example
-(version-numbers? '(1))         @result{} #t
-(version-numbers? '(1 2 3))     @result{} #t
-(version-numbers? '(1 -2 3))    @result{} #f
-(version-numbers? '(1 A 3))     @result{} #f
+(library-version-numbers? '(1))         @result{} #t
+(library-version-numbers? '(1 2 3))     @result{} #t
+(library-version-numbers? '(1 -2 3))    @result{} #f
+(library-version-numbers? '(1 A 3))     @result{} #f
 @end example
+
+@quotation
+@strong{NOTE} According to @rnrs{6}: @var{obj} should be an exact
+integer, which means a finxum or bignum for @value{PRJNAME}.  This
+predicate accepts only fixnums because they are faster to handle and
+``big enough''.
+@end quotation
 @end defun
 
 
-@defun version-number? @var{obj}
+@defun library-version-number? @var{obj}
 Return @true{} if @var{obj} is a single version number according to
 @rnrs{6}.
 @end defun

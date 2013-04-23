@@ -47,7 +47,7 @@
 
     ;; library names and version numbers
     library-name?
-    version-numbers?			version-number?
+    library-version-numbers?		library-version-number?
     library-name-decompose
     library-name->identifiers		library-name->version
     library-name-identifiers=?		library-name=?
@@ -70,7 +70,9 @@
     (psyntax compat)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)
-    (vicare language-extensions simple-match))
+    (vicare language-extensions simple-match)
+    (prefix (vicare unsafe operations)
+	    $))
 
 
 ;;;; arguments validation
@@ -82,10 +84,9 @@
 
 ;;;; helpers
 
-(define (non-negative? obj)
-  (and (number? obj)
-       (or (positive? obj)
-	   (zero?     obj))))
+(define ($fx-non-negative? fx)
+  (or ($fxpositive? fx)
+      ($fxzero?     fx)))
 
 
 ;;;; public configuration parameters
@@ -124,7 +125,7 @@
 		;Non-empty list of  symbols representing the identifiers
 		;from the library name.
    version
-		;Null  or  a list  of  exact  integers representing  the
+		;Null or a list of non-negative fixnums representing the
 		;version number from the library name.
    imp*
    vis*
@@ -729,22 +730,24 @@
 
 ;;;; R6RS library name and version utilities
 
-(define (version-numbers? obj)
+(define (library-version-numbers? obj)
   ;;Return #t if  OBJ is a list of library  version numbers according to
   ;;R6RS, this includes OBJ being null.
   ;;
+  ;;NOTE According to R6RS: OBJ should  be an exact integer, which means
+  ;;a finxum or bignum for Vicare.   We accept only fixnums because they
+  ;;are faster  to handle and "big  enough".  (Marco Maggi; Tue  Apr 23,
+  ;;2013)
+  ;;
   (or (null? obj)
       (and (list? obj)
-	   (for-all integer?      obj)
-	   (for-all exact?        obj)
-	   (for-all non-negative? obj))))
+	   (for-all library-version-number? obj))))
 
-(define (version-number? obj)
+(define (library-version-number? obj)
   ;;Return #t if OBJ is a version number according to R6RS.
   ;;
-  (and (integer?      obj)
-       (exact?        obj)
-       (non-negative? obj)))
+  (and (fixnum? obj)
+       ($fx-non-negative? obj)))
 
 (define (library-name? sexp)
   ;;Return  #t if  SEXP is  a  symbolic expressions  compliant with  the
@@ -775,7 +778,7 @@
 		 (values obj '())
 	       (next-identifier (car tail) (cdr tail) (cons next ids))))
 	    ((and (list? next) (null? tail)) ;version spec
-	     (if (version-numbers? next)
+	     (if (library-version-numbers? next)
 		 (values (reverse ids) next)
 	       (values #f #f)))
 	    (else
@@ -867,17 +870,22 @@
   ;;	(1 2 3) != (1 2 3 4)
   ;;	(1 2 3) == (1 2 3 0 0 0)
   ;;
-  (assert (version-numbers? vrs1))
-  (assert (version-numbers? vrs2))
-  (let next ((vrs1 vrs1)
+  (assert (library-version-numbers? vrs1))
+  (assert (library-version-numbers? vrs2))
+  (let loop ((vrs1 vrs1)
 	     (vrs2 vrs2))
     (cond ((null? vrs1)
-	   (or (null? vrs2) (for-all zero? vrs2)))
+	   (or (null? vrs2)
+	       (for-all (lambda (fx)
+			  ($fxzero? fx))
+		 vrs2)))
 	  ((null? vrs2)
-	   (for-all zero? vrs1)) ;it cannot be (null? vrs1) here
+	   (for-all (lambda (fx)
+		      ($fxzero? fx))
+	     vrs1)) ;it cannot be (null? vrs1) here
 	  (else
-	   (and (= (car vrs1) (car vrs2))
-		(next (cdr vrs1) (cdr vrs2)))))))
+	   (and ($fx= ($car vrs1) ($car vrs2))
+		(loop ($cdr vrs1) ($cdr vrs2)))))))
 
 (define (library-version<? vrs1 vrs2)
   ;;Given two lists of version  numbers compliant with the definition of
@@ -900,22 +908,24 @@
   ;;	(1 2 3) <  (1 2 3 4)
   ;;	(1 2 3) !< (1 2 3 0 0 0)
   ;;
-  (assert (version-numbers? vrs1))
-  (assert (version-numbers? vrs2))
-  (let next ((vrs1 vrs1)
+  (assert (library-version-numbers? vrs1))
+  (assert (library-version-numbers? vrs2))
+  (let loop ((vrs1 vrs1)
 	     (vrs2 vrs2))
     (cond ((null? vrs1)
 	   (cond ((null? vrs2)		#f)
-		 ((find positive? vrs2)	#t)
+		 ((find (lambda (fx)
+			  ($fxpositive? fx))
+		    vrs2)		#t)
 		 (else			#f)))
 	  ((null? vrs2)
 	   #f)
-	  ((< (car vrs1) (car vrs2))
+	  (($fx< ($car vrs1) ($car vrs2))
 	   #t)
-	  ((> (car vrs1) (car vrs2))
+	  (($fx> ($car vrs1) ($car vrs2))
 	   #f)
 	  (else ;;(= (car vrs1) (car vrs2))
-	   (next (cdr vrs1) (cdr vrs2))))))
+	   (loop ($cdr vrs1) ($cdr vrs2))))))
 
 (define (library-version<=? vrs1 vrs2)
   ;;Given two lists of version  numbers compliant with the definition of
@@ -939,17 +949,19 @@
   ;;	(1 2 3) <= (1 2 3 4)
   ;;	(1 2 3 0) <= (1 2 3)
   ;;
-  (assert (version-numbers? vrs1))
-  (assert (version-numbers? vrs2))
-  (let next ((vrs1 vrs1)
+  (assert (library-version-numbers? vrs1))
+  (assert (library-version-numbers? vrs2))
+  (let loop ((vrs1 vrs1)
 	     (vrs2 vrs2))
     (cond ((null? vrs1)
 	   #t)
 	  ((null? vrs2)
-	   (for-all zero? vrs1))
+	   (for-all (lambda (fx)
+		      ($fxzero? fx))
+	     vrs1))
 	  (else
-	   (and (<= (car vrs1) (car vrs2))
-		(next (cdr vrs1) (cdr vrs2)))))))
+	   (and ($fx<= ($car vrs1) ($car vrs2))
+		(loop  ($cdr vrs1) ($cdr vrs2)))))))
 
 
 ;;;; R6RS library references and conformity
@@ -998,11 +1010,6 @@
   ;;Return  true if  OBJ is  a  valid library  sub-version reference  as
   ;;specified by R6RS.
   ;;
-  (define (%version-number? obj)
-    (and (or (fixnum? obj)
-	     (bignum? obj))
-	 (or (positive? obj)
-	     (zero?     obj))))
   (match sub-version
     (('and (let ?sub-version ...))
      (for-all library-sub-version-reference? ?sub-version))
@@ -1014,7 +1021,7 @@
      (library-sub-version-reference? ?sub-version))
     (('>= (let ?sub-version))
      (library-sub-version-reference? ?sub-version))
-    ((apply %version-number?)
+    ((apply library-version-number?)
      #t)
     (_ #f)))
 
@@ -1027,17 +1034,18 @@
   ;;reference.  The version can be null.  If OBJ is not a valid <library
   ;;reference>: return #f and #f.
   ;;
-  (if (or (null? obj) (not (list? obj)))
+  (if (or (null? obj)
+	  (not (list? obj)))
       (values #f #f)
-    (let next-identifier ((next (car obj))
-			  (rest (cdr obj))
+    (let next-identifier ((next ($car obj))
+			  (rest ($cdr obj))
 			  (ids  '()))
       (cond ((symbol? next) ;identifier
 	     (if (null? rest)
 		 ;;No  version   reference,  so  OBJ  is   the  list  of
 		 ;;identifiers.
 		 (values obj '()) ; == (values (reverse (cons next ids)) '())
-	       (next-identifier (car rest) (cdr rest) (cons next ids))))
+	       (next-identifier ($car rest) ($cdr rest) (cons next ids))))
 	    ((and (list? next) (null? rest)) ;version spec
 	     (if (library-version-reference? next)
 		 (values (reverse ids) next)
@@ -1074,49 +1082,37 @@
   (define (%error-invalid-sub-version-reference)
     (assertion-violation who
       "invalid library sub-version reference" sub-version-reference))
-  (assert (version-number? sub-version))
+  (assert (library-version-number? sub-version))
   (assert (library-sub-version-reference? sub-version-reference))
-  (unless (and (integer?  sub-version)
-	       (exact?    sub-version)
-	       (or (zero? sub-version)
-		   (positive? sub-version)))
-    (assertion-violation who
-      "invalid library sub-version number" sub-version))
   (%normalise-to-boolean
    (cond ((list? sub-version-reference)
 	  (when (zero? (length (cdr sub-version-reference)))
 	    (%error-invalid-sub-version-reference))
 	  (case (car sub-version-reference)
 	    ((>=)
-	     (>= sub-version (cadr sub-version-reference)))
+	     ($fx>= sub-version (cadr sub-version-reference)))
 	    ((<=)
-	     (<= sub-version (cadr sub-version-reference)))
+	     ($fx<= sub-version (cadr sub-version-reference)))
 	    ((and)
 	     (for-all (lambda (sub-version-reference)
 			(conforming-sub-version-and-sub-version-reference?
-			 sub-version
-			 sub-version-reference))
-		      (cdr sub-version-reference)))
+			 sub-version sub-version-reference))
+	       ($cdr sub-version-reference)))
 	    ((or)
 	     (find (lambda (sub-version-reference)
 		     (conforming-sub-version-and-sub-version-reference?
-		      sub-version
-		      sub-version-reference))
-		   (cdr sub-version-reference)))
+		      sub-version sub-version-reference))
+	       ($cdr sub-version-reference)))
 
 	    ((not)
-	     (if (= 1 (length (cdr sub-version-reference)))
+	     (if (= 1 (length ($cdr sub-version-reference)))
 		 (not (conforming-sub-version-and-sub-version-reference?
-		       sub-version
-		       (cadr sub-version-reference)))
+		       sub-version (cadr sub-version-reference)))
 	       (%error-invalid-sub-version-reference)))
 
 	    (else
 	     (%error-invalid-sub-version-reference))))
-	 ((and (integer?  sub-version-reference)
-	       (exact?    sub-version-reference)
-	       (or (zero? sub-version-reference)
-		   (positive? sub-version-reference)))
+	 ((library-version-number? sub-version-reference)
 	  (= sub-version sub-version-reference))
 	 (else
 	  (%error-invalid-sub-version-reference)))))
@@ -1128,9 +1124,10 @@
   (define (%error-invalid-version-reference)
     (assertion-violation who
       "invalid library version reference" version-reference))
-  (assert (version-numbers? version))
+  (assert (library-version-numbers? version))
   (assert (library-version-reference? version-reference))
-  (or (and (null? version) (null? version-reference))
+  (or (and (null? version)
+	   (null? version-reference))
       (null? version-reference)
       (%normalise-to-boolean
        (case (car version-reference)
@@ -1150,12 +1147,14 @@
 	  (let next-sub-version ((version		version)
 				 (version-reference	version-reference))
 	    (cond ((null? version-reference)
-		   (for-all zero? version))
+		   (for-all (lambda (fx)
+			      ($fxzero? fx))
+		     version))
 		  ((null? version)
 		   (null? version-reference))
-		  ((conforming-sub-version-and-sub-version-reference? (car version)
-								      (car version-reference))
-		   (next-sub-version (cdr version) (cdr version-reference)))
+		  ((conforming-sub-version-and-sub-version-reference?
+		    ($car version) ($car version-reference))
+		   (next-sub-version ($cdr version) ($cdr version-reference)))
 		  (else
 		   #f))))))))
 

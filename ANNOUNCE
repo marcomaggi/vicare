@@ -152,7 +152,7 @@ Notes for revision 0.3d0
   numbers:
 
     library-name?
-    version-numbers?			version-number?
+    library-version-numbers?		library-version-number?
     library-name-decompose
     library-name->identifiers		library-name->version
     library-name-identifiers=?		library-name=?
