@@ -849,24 +849,28 @@
 	  (eq? t0 t1)
 	(eq? (identifier->symbol i) (identifier->symbol j))))))
 
-  ;;; valid-bound-ids? takes checks if a list is made of identifers
-  ;;; none of which is bound-id=? to another.
-(define valid-bound-ids?
-  (lambda (id*)
-    (and (for-all id? id*)
-	 (distinct-bound-ids? id*))))
+(define (valid-bound-ids? id*)
+  ;;Given a list return #t if it  is made of identifers none of which is
+  ;;BOUND-ID=? to another; else return #f.
+  ;;
+  (and (for-all id? id*)
+       (distinct-bound-ids? id*)))
 
-(define distinct-bound-ids?
-  (lambda (id*)
-    (or (null? id*)
-	(and (not (bound-id-member? (car id*) (cdr id*)))
-	     (distinct-bound-ids? (cdr id*))))))
+(define (distinct-bound-ids? id*)
+  ;;Given a list of identifiers: return #t if none of the identifiers is
+  ;;BOUND-ID=? to another; else return #f.
+  ;;
+  (or (null? id*)
+      (and (not (bound-id-member? (car id*) (cdr id*)))
+	   (distinct-bound-ids? (cdr id*)))))
 
-(define bound-id-member?
-  (lambda (id id*)
-    (and (pair? id*)
-	 (or (bound-id=? id (car id*))
-	     (bound-id-member? id (cdr id*))))))
+(define (bound-id-member? id id*)
+  ;;Given an identifier  ID and a list of identifiers  ID*: return #t if
+  ;;ID is BOUND-ID=? to one of the identifiers in ID*; else return #f.
+  ;;
+  (and (pair? id*)
+       (or (bound-id=? id (car id*))
+	   (bound-id-member? id (cdr id*)))))
 
 (define self-evaluating?
   (lambda (x) ;;; am I missing something here?
@@ -3835,13 +3839,17 @@
   ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
   ;;expression, return 4 values:
   ;;
-  ;;1. The name part.
+  ;;1. The  name part.  A  list/tree of ANNOTATION  structs representing
+  ;;   parts of the library name.
   ;;
-  ;;2. The export specs.
+  ;;2. The export specs.  A list/tree of ANNOTATION structs representing
+  ;;   the exports specification.
   ;;
-  ;;3. The import specs.
+  ;;3. The import specs.  A list/tree of ANNOTATION structs representing
+  ;;   the imports specification.
   ;;
-  ;;4. The body of the library.
+  ;;4.  The body  of the  library.   A list/tree  of ANNOTATION  structs
+  ;;   representing the body of the library.
   ;;
   ;;This function performs no validation of the returned values, it just
   ;;validates the structure of the LIBRARY form.
@@ -3859,16 +3867,18 @@
      (stx-error library-sexp "malformed library"))))
 
 (define (parse-library-name libname)
-  ;;Given a symbolic  expression LIBNAME representing a  library name as
-  ;;defined by R6RS, return 2 values: the identifiers and the version of
-  ;;the library.
+  ;;Given  a symbolic  expression, or  list/tree of  ANNOTATION structs,
+  ;;LIBNAME representing  a library  name as defined  by R6RS,  return 2
+  ;;values:
+  ;;
+  ;;1. A list of symbols representing the name identifiers.
+  ;;
+  ;;2. A list of fixnums representing the version of the library.
+  ;;
+  ;;Example:
   ;;
   ;;   (parse-library-name (foo bar (1 2 3)))
   ;;   => (foo bar) (1 2 3)
-  ;;
-  ;;FIXME A function with this same  purpose is defined also in the file
-  ;;"psyntax.library-manager.sls"; decide what to do.  (Marco Maggi; Tue
-  ;;Apr 23, 2013)
   ;;
   (receive (name* ver*)
       (let recur ((sexp libname))
@@ -3893,32 +3903,48 @@
     (values name* ver*)))
 
 (define (parse-exports exp*)
+  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
+  ;;representing the exports specification from a LIBRARY form, return 2
+  ;;values:
+  ;;
+  ;;1. A list of symbols representing the external names of the exported
+  ;;   bindings.
+  ;;
+  ;;2.  A  list of  identifiers  (syntax  objects  holding a  symbol  as
+  ;;    expression)  representing the  internal  names  of the  exported
+  ;;   bindings.
+  ;;
+  ;;This  function checks  none  of the  identifiers  is BOUND-ID=?   to
+  ;;another: the library  does not export the same *name*  twice.  It is
+  ;;instead possible to export the  same identifier multiple times if we
+  ;;give it different names.
+  ;;
   (define who 'export)
   (let loop ((exp* exp*)
 	     (int* '())
 	     (ext* '()))
-    (cond ((null? exp*)
-	   (unless (valid-bound-ids? ext*)
-	     (syntax-violation who "invalid exports" (find-dups ext*)))
-	   (values (map syntax->datum ext*) int*))
-	  (else
-	   (syntax-match (car exp*) ()
-	     ((rename (i* e*) ...)
-	      (begin
-		(unless (and (eq? (syntax->datum rename) 'rename)
-			     (for-all id? i*)
-			     (for-all id? e*))
-		  (syntax-violation who "invalid export specifier" (car exp*)))
-		(loop (cdr exp*) (append i* int*) (append e* ext*))))
-	     (ie
-	      (begin
-		(unless (id? ie)
-		  (syntax-violation who "invalid export" ie))
-		(loop (cdr exp*) (cons ie int*) (cons ie ext*)))))))))
+    (if (null? exp*)
+	(if (valid-bound-ids? ext*)
+	    (values (map syntax->datum ext*) int*)
+	  (syntax-violation who "invalid exports" (find-dups ext*)))
+      (syntax-match (car exp*) ()
+	((rename (i* e*) ...)
+	 (if (and (eq? (syntax->datum rename) 'rename)
+		  (for-all id? i*)
+		  (for-all id? e*))
+	     (loop (cdr exp*) (append i* int*) (append e* ext*))
+	   (syntax-violation who "invalid export specifier" (car exp*))))
+	(ie
+	 (if (id? ie)
+	     (loop (cdr exp*) (cons ie int*) (cons ie ext*))
+	   (syntax-violation who "invalid export" ie)))))))
 
 (define (parse-import-spec* imp*)
-  ;;Given  a list  of  import-specs,  return a  subst  and  the list  of
-  ;;libraries that were imported.  Example, given:
+  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
+  ;;representing  imports specification  from a  LIBRARY form,  return a
+  ;;subst and the list of libraries that were imported.
+  ;;
+  ;;Example, given:
   ;;
   ;;  ((rename (only (foo)
   ;;                 x z)
@@ -4077,10 +4103,11 @@
        (let ((subst (get-import isp))
 	     (old* (map syntax->datum old*))
 	     (new* (map syntax->datum new*)))
-;;; rewrite this to eliminate find* and rem* and merge
+	 ;;FIXME Rewrite  this to  eliminate find*  and rem*  and merge.
+	 ;;(Abdulaziz Ghuloum)
 	 (let ((old-label* (find* old* subst)))
 	   (let ((subst (rem* old* subst)))
-;;; FIXME: make sure map is valid
+	     ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
 	     (merge-substs (map cons new* old-label*) subst)))))
       ((except isp sym* ...)
        (and (eq? (syntax->datum except) 'except) (for-all idsyn? sym*))
@@ -4158,6 +4185,8 @@
      (else
       (add-imports! (car imp*) h)
       (f (cdr imp*) h)))))
+
+
 
 (define (make-collector)
   (let ((ls '()))
