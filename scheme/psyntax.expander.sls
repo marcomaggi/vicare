@@ -3975,123 +3975,6 @@
   (define who 'import)
 
   (define (parse-import-spec* imp*)
-    (define (import-library spec*)
-      (receive (name pred)
-	  (parse-library-reference spec*)
-	(when (null? name)
-	  (%synner "empty library name" spec*))
-	(let ((lib (find-library-by-name name)))
-	  (unless lib
-	    (%synner
-	      "cannot find library with required name"
-	      name))
-	  (unless (pred (library-version lib))
-	    (%synner
-	      "library does not satisfy version specification"
-	      spec* lib))
-	  ((imp-collector) lib)
-	  (library-subst lib))))
-
-    (define (get-import spec)
-      (syntax-match spec ()
-	((x x* ...)
-	 ;;Remember that, according  to R6RS, the symbol  LIBRARY can be
-	 ;;used to quote  a library reference whose  first identifier is
-	 ;;"for", "rename", etc.
-	 (not (memq (syntax->datum x)
-		    '(for rename except only prefix deprefix library)))
-	 (import-library (cons x x*)))
-
-	((rename ?import-set (?old-name* ?new-name*) ...)
-	 (and (eq? (syntax->datum rename) 'rename)
-	      (for-all id-stx? ?old-name*)
-	      (for-all id-stx? ?new-name*))
-	 (let ((subst       (get-import ?import-set))
-	       (?old-name*  (map syntax->datum ?old-name*))
-	       (?new-name*  (map syntax->datum ?new-name*)))
-	   ;;FIXME Rewrite  this to  eliminate find*  and rem*  and merge.
-	   ;;(Abdulaziz Ghuloum)
-	   (let ((old-label* (find* ?old-name* subst ?import-set)))
-	     (let ((subst (rem* ?old-name* subst)))
-	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
-	       (merge-substs (map cons ?new-name* old-label*) subst)))))
-
-	((except isp sym* ...)
-	 (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
-	 (let ((subst (get-import isp)))
-	   (rem* (map syntax->datum sym*) subst)))
-
-	((only ?import-set ?name* ...)
-	 (and (eq? (syntax->datum only) 'only)
-	      (for-all id-stx? ?name*))
-	 (let* ((subst  (get-import ?import-set))
-		(name*  (map syntax->datum ?name*))
-		(name*  (remove-dups name*))
-		(lab*   (find* name* subst ?import-set)))
-	   (map cons name* lab*)))
-
-	((prefix ?import-set p)
-	 (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
-	 (let ((subst (get-import ?import-set))
-	       (prefix (symbol->string (syntax->datum p))))
-	   (map
-	       (lambda (x)
-		 (cons (string->symbol (string-append prefix (symbol->string (car x))))
-		       (cdr x)))
-	     subst)))
-
-	((deprefix ?import-set ?prefix)
-	 (and (eq? (syntax->datum deprefix) 'deprefix) (id-stx? ?prefix))
-	 (if #f
-	     ;;FIXME At  present there  is no way  to disable  DEPREFIX to
-	     ;;enforce  strict R6RS  compatibility; in  future it  may be.
-	     ;;(Marco Maggi; Tue Apr 16, 2013)
-	     (assertion-violation 'expander
-	       "deprefix import specification forbidden in R6RS mode")
-	   (let* ((subst       (get-import ?import-set))
-		  (prefix      (symbol->string (syntax->datum ?prefix)))
-		  (prefix.len  (string-length prefix)))
-	     ;;This should never happen.
-	     (when (zero? prefix.len)
-	       (assertion-violation 'deprefix "null deprefix prefix"))
-	     (map
-		 (lambda (x)
-		   (let* ((orig      (symbol->string (car x)))
-			  (orig.len  (string-length orig)))
-		     (if (and (< prefix.len orig.len)
-			      (string=? prefix (substring orig 0 prefix.len)))
-			 (cons (string->symbol (substring orig prefix.len orig.len))
-			       (cdr x))
-		       (error 'deprefix
-			 (string-append "binding name cannot be deprefixed of \""
-					prefix "\"")
-			 orig))))
-	       subst))))
-
-	((library (spec* ...))
-	 (eq? (syntax->datum library) 'library)
-	 (import-library spec*))
-
-	((for ?import-set . ?import-level)
-	 (eq? (syntax->datum for) 'for)
-	 (get-import ?import-set))
-
-	(spec
-	 (%synner "invalid import set" spec))))
-
-    (define (add-imports! imp h)
-      (let ((subst (get-import imp)))
-	(for-each
-	    (lambda (x)
-	      (let ((name (car x)) (label (cdr x)))
-		(cond
-		 ((hashtable-ref h name #f) =>
-		  (lambda (l)
-		    (unless (eq? l label)
-		      (%error-two-import-with-different-bindings name))))
-		 (else
-		  (hashtable-set! h name label)))))
-	  subst)))
     (let f ((imp* imp*) (h (make-eq-hashtable)))
       (cond
        ((null? imp*)
@@ -4099,6 +3982,128 @@
        (else
 	(add-imports! (car imp*) h)
 	(f (cdr imp*) h)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (import-library spec*)
+    (receive (name pred)
+	(parse-library-reference spec*)
+      (when (null? name)
+	(%synner "empty library name" spec*))
+      (let ((lib (find-library-by-name name)))
+	(unless lib
+	  (%synner
+	   "cannot find library with required name"
+	   name))
+	(unless (pred (library-version lib))
+	  (%synner
+	   "library does not satisfy version specification"
+	   spec* lib))
+	((imp-collector) lib)
+	(library-subst lib))))
+
+  (define (get-import spec)
+    (syntax-match spec ()
+      ((x x* ...)
+       ;;Remember that, according  to R6RS, the symbol  LIBRARY can be
+       ;;used to quote  a library reference whose  first identifier is
+       ;;"for", "rename", etc.
+       (not (memq (syntax->datum x)
+		  '(for rename except only prefix deprefix library)))
+       (import-library (cons x x*)))
+
+      ((rename ?import-set (?old-name* ?new-name*) ...)
+       (and (eq? (syntax->datum rename) 'rename)
+	    (for-all id-stx? ?old-name*)
+	    (for-all id-stx? ?new-name*))
+       (let ((subst       (get-import ?import-set))
+	     (?old-name*  (map syntax->datum ?old-name*))
+	     (?new-name*  (map syntax->datum ?new-name*)))
+	 ;;FIXME Rewrite  this to  eliminate find*  and rem*  and merge.
+	 ;;(Abdulaziz Ghuloum)
+	 (let ((old-label* (find* ?old-name* subst ?import-set)))
+	   (let ((subst (rem* ?old-name* subst)))
+	     ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
+	     (merge-substs (map cons ?new-name* old-label*) subst)))))
+
+      ((except isp sym* ...)
+       (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
+       (let ((subst (get-import isp)))
+	 (rem* (map syntax->datum sym*) subst)))
+
+      ((only ?import-set ?name* ...)
+       (and (eq? (syntax->datum only) 'only)
+	    (for-all id-stx? ?name*))
+       (let* ((subst  (get-import ?import-set))
+	      (name*  (map syntax->datum ?name*))
+	      (name*  (remove-dups name*))
+	      (lab*   (find* name* subst ?import-set)))
+	 (map cons name* lab*)))
+
+      ((prefix ?import-set p)
+       (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
+       (let ((subst (get-import ?import-set))
+	     (prefix (symbol->string (syntax->datum p))))
+	 (map
+	     (lambda (x)
+	       (cons (string->symbol (string-append prefix (symbol->string (car x))))
+		     (cdr x)))
+	   subst)))
+
+      ((deprefix ?import-set ?prefix)
+       (and (eq? (syntax->datum deprefix) 'deprefix) (id-stx? ?prefix))
+       (if #f
+	   ;;FIXME At  present there  is no way  to disable  DEPREFIX to
+	   ;;enforce  strict R6RS  compatibility; in  future it  may be.
+	   ;;(Marco Maggi; Tue Apr 16, 2013)
+	   (assertion-violation 'expander
+	     "deprefix import specification forbidden in R6RS mode")
+	 (let* ((subst       (get-import ?import-set))
+		(prefix      (symbol->string (syntax->datum ?prefix)))
+		(prefix.len  (string-length prefix)))
+	   ;;This should never happen.
+	   (when (zero? prefix.len)
+	     (assertion-violation 'deprefix "null deprefix prefix"))
+	   (map
+	       (lambda (x)
+		 (let* ((orig      (symbol->string (car x)))
+			(orig.len  (string-length orig)))
+		   (if (and (< prefix.len orig.len)
+			    (string=? prefix (substring orig 0 prefix.len)))
+		       (cons (string->symbol (substring orig prefix.len orig.len))
+			     (cdr x))
+		     (error 'deprefix
+		       (string-append "binding name cannot be deprefixed of \""
+				      prefix "\"")
+		       orig))))
+	     subst))))
+
+      ((library (spec* ...))
+       (eq? (syntax->datum library) 'library)
+       (import-library spec*))
+
+      ((for ?import-set . ?import-level)
+       ;;FIXME Here we should validate  ?IMPORT-LEVEL even if it is no
+       ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
+       (eq? (syntax->datum for) 'for)
+       (get-import ?import-set))
+
+      (spec
+       (%synner "invalid import set" spec))))
+
+  (define (add-imports! imp h)
+    (let ((subst (get-import imp)))
+      (for-each
+	  (lambda (x)
+	    (let ((name (car x)) (label (cdr x)))
+	      (cond
+	       ((hashtable-ref h name #f) =>
+		(lambda (l)
+		  (unless (eq? l label)
+		    (%error-two-import-with-different-bindings name))))
+	       (else
+		(hashtable-set! h name label)))))
+	subst)))
 
 ;;; --------------------------------------------------------------------
 
@@ -4134,9 +4139,9 @@
 	   (stx-error spec "invalid library specification in import set")))))
 
     (define (%build-version-pred version-reference libref)
-      ;;Recursive function.  Given a  version reference build and return
-      ;;a  predicate  function that  can  be  used to  validate  library
-      ;;versions.
+      ;;Recursive function.  Given a  version reference: validate it and
+      ;;build and return a predicate function that can be used to verify
+      ;;if library versions do conform.
       ;;
       ;;LIBREF must be  the enclosing library reference, it  is used for
       ;;descriptive error reporting.
@@ -4147,90 +4152,105 @@
 	(()
 	 (lambda (x) #t))
 
-	((c ver* ...)
-	 (eq? (syntax->datum c) 'and)
-	 (let ((p* (map %recurse ver*)))
+	((?and ?version* ...)
+	 (eq? (syntax->datum ?and) 'and)
+	 (let ((predicate* (map %recurse ?version*)))
 	   (lambda (x)
-	     (for-all (lambda (p) (p x)) p*))))
+	     (for-all (lambda (pred)
+			(pred x))
+	       predicate*))))
 
-	((c ver* ...)
-	 (eq? (syntax->datum c) 'or)
-	 (let ((p* (map %recurse ver*)))
+	((?or ?version* ...)
+	 (eq? (syntax->datum ?or) 'or)
+	 (let ((predicate* (map %recurse ?version*)))
 	   (lambda (x)
-	     (exists (lambda (p) (p x)) p*))))
+	     (exists (lambda (pred)
+		       (pred x))
+	       predicate*))))
 
-	((c ver)
-	 (eq? (syntax->datum c) 'not)
-	 (let ((p (%recurse ver)))
+	((?not ?version)
+	 (eq? (syntax->datum ?not) 'not)
+	 (let ((pred (%recurse ?version)))
 	   (lambda (x)
-	     (not (p x)))))
+	     (not (pred x)))))
 
-	((sub* ...)
-	 (let ((p* (map (lambda (x*)
-			  (%build-subversion-pred x* libref))
-		     sub*)))
+	((?subversion* ...)
+	 (let ((predicate* (map (lambda (subversion)
+				  (%build-subversion-pred subversion libref))
+			     ?subversion*)))
 	   (lambda (x)
-	     (let f ((p* p*) (x x))
-	       (cond ((null? p*) #t)
-		     ((null? x) #f)
+	     (let loop ((predicate* predicate*)
+			(x          x))
+	       (cond ((null? predicate*)
+		      #t)
+		     ((null? x)
+		      #f)
 		     (else
-		      (and ((car p*) (car x))
-			   (f (cdr p*) (cdr x)))))))))
+		      (and ((car predicate*) (car x))
+			   (loop (cdr predicate*) (cdr x)))))))))
 
 	(_
 	 (%synner "invalid version reference" libref version-reference))))
 
-    (define (%build-subversion-pred x* libref)
-      ;;Recursive function.
+    (define (%build-subversion-pred subversion* libref)
+      ;;Recursive function.   Given a subversion reference:  validate it
+      ;;and build  and return a predicate  function that can be  used to
+      ;;verify if library versions do conform.
+      ;;
+      ;;LIBREF must be  the enclosing library reference, it  is used for
+      ;;descriptive error reporting.
       ;;
       (define (%recurse X)
 	(%build-subversion-pred X libref))
-      (syntax-match x* ()
-	(n
-	 (subversion? n)
-	 (lambda (x)
-	   (= x (syntax->datum n))))
-
-	((p? sub* ...)
-	 (eq? (syntax->datum p?) 'and)
-	 (let ((p* (map %recurse sub*)))
+      (syntax-match subversion* ()
+	(?subversion-number
+	 (%subversion? ?subversion-number)
+	 (let ((N (syntax->datum ?subversion-number)))
 	   (lambda (x)
-	     (for-all (lambda (p)
-			(p x))
-	       p*))))
+	     (= x N))))
 
-	((p? sub* ...)
-	 (eq? (syntax->datum p?) 'or)
-	 (let ((p* (map %recurse sub*)))
+	((?and ?subversion* ...)
+	 (eq? (syntax->datum ?and) 'and)
+	 (let ((predicate* (map %recurse ?subversion*)))
 	   (lambda (x)
-	     (exists (lambda (p)
-		       (p x))
-	       p*))))
+	     (for-all (lambda (pred)
+			(pred x))
+	       predicate*))))
 
-	((p? sub)
-	 (eq? (syntax->datum p?) 'not)
-	 (let ((p (%recurse sub)))
+	((?or ?subversion* ...)
+	 (eq? (syntax->datum ?or) 'or)
+	 (let ((predicate* (map %recurse ?subversion*)))
 	   (lambda (x)
-	     (not (p x)))))
+	     (exists (lambda (pred)
+		       (pred x))
+	       predicate*))))
 
-	((p? n)
-	 (and (eq? (syntax->datum p?) '<=)
-	      (subversion? n))
-	 (lambda (x)
-	   (<= x (syntax->datum n))))
+	((?not ?subversion)
+	 (eq? (syntax->datum ?not) 'not)
+	 (let ((pred (%recurse ?subversion)))
+	   (lambda (x)
+	     (not (pred x)))))
 
-	((p? n)
-	 (and (eq? (syntax->datum p?) '>=)
-	      (subversion? n))
-	 (lambda (x)
-	   (>= x (syntax->datum n))))
+        ((?<= ?subversion-number)
+	 (and (eq? (syntax->datum ?<=) '<=)
+	      (%subversion? ?subversion-number))
+	 (let ((N (syntax->datum ?subversion-number)))
+	   (lambda (x)
+	     (<= x N))))
+
+	((?>= ?subversion-number)
+	 (and (eq? (syntax->datum ?>=) '>=)
+	      (%subversion? ?subversion-number))
+	 (let ((N (syntax->datum ?subversion-number)))
+	   (lambda (x)
+	     (>= x N))))
 
 	(_
 	 (%synner "invalid sub-version specification in library reference"
-		  libref x*))))
+		  libref subversion*))))
 
-    (define (subversion? x)
-      (library-version-number? (syntax->datum x)))
+    (define (%subversion? stx)
+      (library-version-number? (syntax->datum stx)))
 
     #| end of module: PARSE-LIBRARY-REFERENCE |# )
 
