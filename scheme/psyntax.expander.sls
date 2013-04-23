@@ -3975,23 +3975,6 @@
   (define who 'import)
 
   (define (parse-import-spec* imp*)
-    (define (find* sym* subst)
-      (map (lambda (x)
-	     (cond
-	      ((assq x subst) => cdr)
-	      (else (%synner "cannot find identifier" x))))
-	sym*))
-    (define (rem* sym* subst)
-      (let f ((subst subst))
-	(cond
-	 ((null? subst) '())
-	 ((memq (caar subst) sym*) (f (cdr subst)))
-	 (else (cons (car subst) (f (cdr subst)))))))
-    (define (remove-dups ls)
-      (cond
-       ((null? ls) '())
-       ((memq (car ls) (cdr ls)) (remove-dups (cdr ls)))
-       (else (cons (car ls) (remove-dups (cdr ls))))))
     (define (parse-library-name spec)
       (define (subversion? x)
 	(library-version-number? (syntax->datum x)))
@@ -4047,7 +4030,7 @@
 	(syntax-match x ()
 	  (((version-spec* ...))
 	   (values '() (version-pred version-spec*)))
-	  ((x . x*) (idsyn? x)
+	  ((x . x*) (id-stx? x)
 	   (let-values (((name pred) (f x*)))
 	     (values (cons (syntax->datum x) name) pred)))
 	  (() (values '() (lambda (x) #t)))
@@ -4067,37 +4050,43 @@
 	      spec* lib))
 	  ((imp-collector) lib)
 	  (library-subst lib))))
+
     (define (get-import spec)
       (syntax-match spec ()
 	((x x* ...)
 	 (not (memq (syntax->datum x) '(for rename except only prefix deprefix library)))
 	 (import-library (cons x x*)))
-	((rename isp (old* new*) ...)
+
+	((rename ?import-spec (?old-name* ?new-name*) ...)
 	 (and (eq? (syntax->datum rename) 'rename)
-	      (for-all idsyn? old*)
-	      (for-all idsyn? new*))
-	 (let ((subst (get-import isp))
-	       (old* (map syntax->datum old*))
-	       (new* (map syntax->datum new*)))
+	      (for-all id-stx? ?old-name*)
+	      (for-all id-stx? ?new-name*))
+	 (let ((subst       (get-import ?import-spec))
+	       (?old-name*  (map syntax->datum ?old-name*))
+	       (?new-name*  (map syntax->datum ?new-name*)))
 	   ;;FIXME Rewrite  this to  eliminate find*  and rem*  and merge.
 	   ;;(Abdulaziz Ghuloum)
-	   (let ((old-label* (find* old* subst)))
-	     (let ((subst (rem* old* subst)))
+	   (let ((old-label* (find* ?old-name* subst ?import-spec)))
+	     (let ((subst (rem* ?old-name* subst)))
 	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
-	       (merge-substs (map cons new* old-label*) subst)))))
+	       (merge-substs (map cons ?new-name* old-label*) subst)))))
+
 	((except isp sym* ...)
-	 (and (eq? (syntax->datum except) 'except) (for-all idsyn? sym*))
+	 (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
 	 (let ((subst (get-import isp)))
 	   (rem* (map syntax->datum sym*) subst)))
-	((only isp sym* ...)
-	 (and (eq? (syntax->datum only) 'only) (for-all idsyn? sym*))
-	 (let ((subst (get-import isp))
-	       (sym* (map syntax->datum sym*)))
-	   (let ((sym* (remove-dups sym*)))
-	     (let ((lab* (find* sym* subst)))
-	       (map cons sym* lab*)))))
+
+	((only ?import-spec ?name* ...)
+	 (and (eq? (syntax->datum only) 'only)
+	      (for-all id-stx? ?name*))
+	 (let* ((subst  (get-import ?import-spec))
+		(name*  (map syntax->datum ?name*))
+		(name*  (remove-dups name*))
+		(lab*   (find* name* subst ?import-spec)))
+	   (map cons name* lab*)))
+
 	((prefix isp p)
-	 (and (eq? (syntax->datum prefix) 'prefix) (idsyn? p))
+	 (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
 	 (let ((subst (get-import isp))
 	       (prefix (symbol->string (syntax->datum p))))
 	   (map
@@ -4108,8 +4097,9 @@
 				  (symbol->string (car x))))
 		  (cdr x)))
 	     subst)))
+
 	((deprefix isp p)
-	 (and (eq? (syntax->datum deprefix) 'deprefix) (idsyn? p))
+	 (and (eq? (syntax->datum deprefix) 'deprefix) (id-stx? p))
 	 (if #f
 	     ;;FIXME At  present there  is no way  to disable  DEPREFIX to
 	     ;;enforce  strict R6RS  compatibility; in  future it  may be.
@@ -4135,12 +4125,16 @@
 					prefix "\"")
 			 orig))))
 	       subst))))
+
 	((library (spec* ...)) (eq? (syntax->datum library) 'library)
 	 (import-library spec*))
+
 	((for isp . rest)
 	 (eq? (syntax->datum for) 'for)
 	 (get-import isp))
-	(spec (%synner "invalid import spec" spec))))
+
+	(spec
+	 (%synner "invalid import spec" spec))))
     (define (add-imports! imp h)
       (let ((subst (get-import imp)))
 	(for-each
@@ -4201,7 +4195,44 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (idsyn? x)
+  (define (find* sym* subst import-spec-stx)
+    ;;Find all the entries in SUBST  having as name the symbols in SYM*;
+    ;;return the  list of labels  from the  selected entries.  It  is an
+    ;;error if a name in SYM* is not present in the SUBST.
+    ;;
+    ;;IMPORT-SPEC-STX must  be a  syntax object representing  the import
+    ;;spec in which  we search for the SYM*; it  is used for descriptive
+    ;;error reporting.
+    ;;
+    ;;This function is the one that raises  an error if we try to import
+    ;;an unexistent binding, as in:
+    ;;
+    ;;   (import (only (vicare) this-does-not-exist))
+    ;;
+    (map (lambda (sym)
+	   (cond ((assq sym subst)
+		  => cdr)
+		 (else
+		  (%synner "cannot find identifier in export list of import spec"
+			   import-spec-stx sym))))
+      sym*))
+
+  (define (rem* sym* subst)
+    (let f ((subst subst))
+      (cond
+       ((null? subst) '())
+       ((memq (caar subst) sym*) (f (cdr subst)))
+       (else (cons (car subst) (f (cdr subst)))))))
+
+  (define (remove-dups ls)
+    (cond
+     ((null? ls) '())
+     ((memq (car ls) (cdr ls)) (remove-dups (cdr ls)))
+     (else (cons (car ls) (remove-dups (cdr ls))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (id-stx? x)
     (symbol? (syntax->datum x)))
 
 ;;; --------------------------------------------------------------------
@@ -4209,8 +4240,12 @@
   (define (%error-two-import-with-different-bindings name)
     (%synner "two imports with different bindings" name))
 
-  (define (%synner message form)
-    (syntax-violation who message form))
+  (define %synner
+    (case-lambda
+     ((message form)
+      (syntax-violation who message form))
+     ((message form subform)
+      (syntax-violation who message form subform))))
 
   #| end of module: PARSE-IMPORT-SPEC* |# )
 
