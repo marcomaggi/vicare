@@ -3966,22 +3966,6 @@
   (define who 'import)
 
   (define (parse-import-spec* imp*)
-    (define (merge-substs s subst)
-      (define (insert-to-subst a subst)
-	(let ((name (car a)) (label (cdr a)))
-	  (cond
-	   ((assq name subst) =>
-	    (lambda (x)
-	      (cond
-	       ((eq? (cdr x) label) subst)
-	       (else (%error-two-import-with-different-bindings name)))))
-	   (else
-	    (cons a subst)))))
-      (cond
-       ((null? s) subst)
-       (else
-	(insert-to-subst (car s)
-			 (merge-substs (cdr s) subst)))))
     (define (exclude* sym* subst)
       (define (exclude sym subst)
 	(cond
@@ -4186,16 +4170,53 @@
 	(add-imports! (car imp*) h)
 	(f (cdr imp*) h)))))
 
+  (module (merge-substs)
+
+    (define (merge-substs subst1 subst2)
+      ;;Recursive function.  Given two substs: merge them and return the
+      ;;result.
+      ;;
+      ;;Assume that SUBST1  has unique entries in itself  and SUBST2 has
+      ;;unique entrie in  itself.  If an entry from SUBST1  has the name
+      ;;name but different label from an entry in SUBST2: raise a syntax
+      ;;error.
+      ;;
+      (if (null? subst1)
+	  subst2
+	(%insert-to-subst (car subst1)
+			  (merge-substs (cdr subst1) subst2))))
+
+    (define (%insert-to-subst entry subst)
+      ;;Given a subst  ENTRY and a SUBST: insert the  entry in the subst
+      ;;if it is not already present  and return the result; else return
+      ;;SUBST.
+      ;;
+      (let ((name  (car entry))
+	    (label (cdr entry)))
+	(cond ((assq name subst)
+	       => (lambda (x)
+		    (if (eq? (cdr x) label)
+			;;Same name and same label: OK.
+			subst
+		      ;;Same name but different label: ERROR.
+		      (%error-two-import-with-different-bindings name))))
+	      (else
+	       (cons entry subst)))))
+
+    #| end of module: MERGE-SUBSTS |# )
+
 ;;; --------------------------------------------------------------------
 
   (define (idsyn? x)
     (symbol? (syntax->datum x)))
 
+;;; --------------------------------------------------------------------
+
   (define (%error-two-import-with-different-bindings name)
     (%synner "two imports with different bindings" name))
 
   (define (%synner message form)
-    (%synner message form))
+    (syntax-violation who message form))
 
   #| end of module: PARSE-IMPORT-SPEC* |# )
 
