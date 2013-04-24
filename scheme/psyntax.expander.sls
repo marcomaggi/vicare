@@ -187,6 +187,24 @@
       name* label*)
     rib))
 
+(define (subst->rib subst)
+  ;;Build and return a new <RIB> structure initialised with SUBST.
+  ;;
+  ;;A "subst"  is an alist whose  keys are "names" and  whose values are
+  ;;"labels":
+  ;;
+  ;;* "Name"  is a symbol  representing the  public name of  an imported
+  ;;  binding, the one we use to reference it in the code of a library.
+  ;;
+  ;;* "Label"  is a unique symbol  associated to the binding's  entry in
+  ;;  the lexical environment.
+  ;;
+  (let ((rib (make-empty-rib)))
+    (set-<rib>-sym*!   rib (map car subst))
+    (set-<rib>-mark**! rib (map (lambda (x) top-mark*) subst))
+    (set-<rib>-label*! rib (map cdr subst))
+    rib))
+
 
 ;;;; extending ribs
 ;;
@@ -426,6 +444,9 @@
 ;;  outer a |  G1
 ;;  inner a |  G2
 ;;
+
+(define top-level-context
+  (make-parameter #f))
 
 (define (gen-lexical sym)
   ;;Generate  a fresh  lexical name  for  renaming.  It's  also used  to
@@ -1441,6 +1462,7 @@
 					(cons b b*) r mr)))
 	 (build-lambda (syntax-annotation e) fmls body))))))
 
+
 (define bless
   (lambda (x)
     (mkstx
@@ -3821,6 +3843,40 @@
       expanded-rhs)))
 
 
+(define (core-library-expander library-sexp verify-name)
+  ;;Given an list/tree of ANNOTATION structs representing a LIBRARY form
+  ;;symbolic expression:
+  ;;
+  ;;   (library . _)
+  ;;
+  ;;parse  it  and  return  multiple  values  representing  the  library
+  ;;contents.
+  ;;
+  ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
+  ;;unspecified values: the  first argument is a list of  symbols from a
+  ;;library  name; the  second  argument  is null  or  a  list of  exact
+  ;;integers representing the library  version.  VERIFY-NAME is meant to
+  ;;perform some validation  upon the library name  components and raise
+  ;;an exception if something is wrong; otherwise it should just return.
+  ;;
+  (receive (library-name* export-spec* import-spec* body*)
+      (parse-library library-sexp)
+    (receive (libname.ids libname.version)
+	(parse-library-name library-name*)
+      (verify-name libname.ids libname.version)
+      (let ((stale-c (make-stale-collector)))
+	(receive (import-spec* invoke-req* visit-req*
+			       invoke-code visit-code export-subst export-env)
+	    (parametrise ((stale-when-collector stale-c))
+	      (library-body-expander export-spec* import-spec* body* #f))
+	  (receive (guard-code guard-req*)
+	      (stale-c)
+	    (values libname.ids libname.version
+		    import-spec* invoke-req* visit-req*
+		    invoke-code visit-code export-subst
+		    export-env guard-code guard-req*)))))))
+
+
 (define (parse-library library-sexp)
   ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
   ;;expression, return 4 values:
@@ -4686,50 +4742,6 @@
 		  (c core-expr (stc))))))))
 
 
-(define core-library-expander
-  ;;
-  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
-  ;;
-  ;;   (library . _)
-  ;;
-  ;;or an ANNOTATION struct representing such expression.
-  ;;
-  ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
-  ;;unspecified values: the  first argument is a list of  symbols from a
-  ;;library  name; the  second  argument  is null  or  a  list of  exact
-  ;;integers representing the library  version.  VERIFY-NAME is meant to
-  ;;perform some validation  upon the library name  components and raise
-  ;;an exception if something is wrong; otherwise it should just return.
-  ;;
-  (case-lambda
-   ((library-sexp verify-name)
-    (let-values (((name* exp* imp* b*) (parse-library library-sexp)))
-      (let-values (((name ver) (parse-library-name name*)))
-	(verify-name name ver)
-	(let ((c (make-stale-collector)))
-	  (let-values (((imp* invoke-req* visit-req* invoke-code
-			      visit-code export-subst export-env)
-			(parametrise ((stale-when-collector c))
-			  (library-body-expander exp* imp* b* #f))))
-	    (let-values (((guard-code guard-req*) (c)))
-	      (values name ver imp* invoke-req* visit-req*
-		      invoke-code visit-code export-subst
-		      export-env guard-code guard-req*)))))))))
-
-(define (parse-top-level-program e*)
-  (syntax-match e* ()
-    (((import imp* ...) b* ...)
-     (eq? (syntax->datum import) 'import)
-     (values imp* b*))
-    (((import . x) . y)
-     (eq? (syntax->datum import) 'import)
-     (syntax-violation 'expander
-       "invalid syntax of top-level program" (syntax-car e*)))
-    (_
-     (assertion-violation 'expander
-       "top-level program is missing an (import ---) clause"))))
-
-
 ;;;; environments
 
 ;;An env record encapsulates a substitution and a set of libraries.
@@ -5245,44 +5257,60 @@
       (datum->stx id datum)
     (assertion-violation 'datum->syntax "not an identifier" id)))
 
-(define expand-top-level
-  (lambda (e*)
-    (let-values (((imp* b*) (parse-top-level-program e*)))
-      (let-values (((imp* invoke-req* visit-req* invoke-code
-			  macro* export-subst export-env)
-		    (library-body-expander 'all imp* b* #t)))
-	(values invoke-req* invoke-code macro*
-		export-subst export-env)))))
-
-(define compile-r6rs-top-level
-  (lambda (x*)
-    (let-values (((lib* invoke-code macro* export-subst export-env)
-		  (expand-top-level x*)))
-      (lambda ()
-	(for-each invoke-library lib*)
-	(initial-visit! macro*)
-	(eval-core (expanded->core invoke-code))
-	(make-interaction-env
-	 (subst->rib export-subst)
-	 (map
-	     (lambda (x)
-	       (let ((label (car x)) (binding (cdr x)))
-		 (let ((type (car binding)) (val (cdr binding)))
-                   (cons* label type '*interaction* val))))
-	   export-env)
-	 '())))))
-
-(define (subst->rib subst)
-  ;;Build and return a new <RIB> structure initialised with SUBST.
+
+(define (compile-r6rs-top-level expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, expand  it and return a thunk  which, when evaluated,
+  ;;compiles   the  program   and  returns   an  INTERACTIN-ENV   struct
+  ;;representing the environment after the program execution.
   ;;
-  (let ((rib (make-empty-rib)))
-    (set-<rib>-sym*!   rib (map car subst))
-    (set-<rib>-mark**! rib (map (lambda (x) top-mark*) subst))
-    (set-<rib>-label*! rib (map cdr subst))
-    rib))
+  (receive (lib* invoke-code macro* export-subst export-env)
+      (expand-top-level expr*)
+    (lambda ()
+      (for-each invoke-library lib*)
+      (initial-visit! macro*)
+      (eval-core (expanded->core invoke-code))
+      (make-interaction-env (subst->rib export-subst)
+			    (map (lambda (x)
+				   (let* ((label    (car x))
+					  (binding  (cdr x))
+					  (type     (car binding))
+					  (val      (cdr binding)))
+				     (cons* label type '*interaction* val)))
+			      export-env)
+			    '()))))
 
-(define top-level-context
-  (make-parameter #f))
+(define (expand-top-level expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, expand it.
+  ;;
+  (receive (import-spec* body*)
+      (parse-top-level-program expr*)
+    (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
+	(library-body-expander 'all import-spec* body* #t)
+      (values invoke-req* invoke-code macro* export-subst export-env))))
+
+(define (parse-top-level-program expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, parse it and return 2 values:
+  ;;
+  ;;1. A list of export specifications.
+  ;;
+  ;;2. A list of body forms.
+  ;;
+  (syntax-match expr* ()
+    (((?import ?import-spec* ...) body* ...)
+     (eq? (syntax->datum ?import) 'import)
+     (values ?import-spec* body*))
+
+    (((?import . x) . y)
+     (eq? (syntax->datum ?import) 'import)
+     (syntax-violation 'expander
+       "invalid syntax of top-level program" (syntax-car expr*)))
+
+    (_
+     (assertion-violation 'expander
+       "top-level program is missing an (import ---) clause"))))
 
 
 ;;;; done
