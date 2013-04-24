@@ -68,7 +68,7 @@ VIE			= $(srcdir)/../scripts/vie
 
 # The variable "user_flags"  is for the user to be  set on the command
 # line of "make".
-VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) $(user_flags)
 VICARE_TEST_RUN_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
