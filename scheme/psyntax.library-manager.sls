@@ -1088,6 +1088,20 @@
 ;;; --------------------------------------------------------------------
 
 (define (conforming-sub-version-and-sub-version-reference? sub-version sub-version-reference)
+  ;;SUB-VERSION must  be a fixnum  representing a single  version number
+  ;;from a library name, as defined by R6RS.
+  ;;
+  ;;SUB-VERSION-REFERENCE  must be  a  single  sub-version reference  as
+  ;;specified by R6RS:
+  ;;
+  ;;   ?sub-version-reference
+  ;;     == ?sub-version ...
+  ;;     == (>=  ?sub-version)
+  ;;     == (<=  ?sub-version)
+  ;;     == (and ?sub-version-reference ...)
+  ;;     == (or  ?sub-version-reference ...)
+  ;;     == (not ?sub-version-reference)
+  ;;
   (define who 'conforming-sub-version-and-sub-version-reference?)
   (define (%error-invalid-sub-version-reference)
     (assertion-violation who
@@ -1122,14 +1136,37 @@
 
 	    (else
 	     (%error-invalid-sub-version-reference))))
+
 	 ((library-sub-version? sub-version-reference)
-	  (= sub-version sub-version-reference))
+	  ($fx= sub-version sub-version-reference))
+
 	 (else
 	  (%error-invalid-sub-version-reference)))))
 
 ;;; --------------------------------------------------------------------
 
 (define (conforming-version-and-version-reference? version version-reference)
+  ;;VERSION must be a list of version numbers as specified by R6RS.
+  ;;
+  ;;VERSION-REFERENCE must be a version reference as specified by R6RS:
+  ;;
+  ;;  ?version-reference
+  ;;     == (?sub-version-reference ...)
+  ;;     == (and ?version-reference ...)
+  ;;     == (or  ?version-reference ...)
+  ;;     == (not ?version-reference)
+  ;;
+  ;;  ?sub-version-reference
+  ;;     == ?sub-version ...
+  ;;     == (>=  ?sub-version)
+  ;;     == (<=  ?sub-version)
+  ;;     == (and ?sub-version-reference ...)
+  ;;     == (or  ?sub-version-reference ...)
+  ;;     == (not ?sub-version-reference)
+  ;;
+  ;;  ?sub-version
+  ;;     == #<non-negative fixnum>
+  ;;
   (define who 'conforming-version-and-version-reference?)
   (define (%error-invalid-version-reference)
     (assertion-violation who
@@ -1144,11 +1181,11 @@
 	 ((and)
 	  (for-all (lambda (reference)
 		     (conforming-version-and-version-reference? version reference))
-		   (cdr version-reference)))
+	    (cdr version-reference)))
 	 ((or)
 	  (find (lambda (reference)
 		  (conforming-version-and-version-reference? version reference))
-		(cdr version-reference)))
+	    (cdr version-reference)))
 	 ((not)
 	  (if (= 2 (length version-reference))
 	      (not (conforming-version-and-version-reference? version (cadr version-reference)))
@@ -1157,16 +1194,19 @@
 	  (let next-sub-version ((version		version)
 				 (version-reference	version-reference))
 	    (cond ((null? version-reference)
-		   (for-all (lambda (fx)
-			      ($fxzero? fx))
-		     version))
-		  ((null? version)
-		   (null? version-reference))
-		  ((conforming-sub-version-and-sub-version-reference?
-		    ($car version) ($car version-reference))
-		   (next-sub-version ($cdr version) ($cdr version-reference)))
-		  (else
-		   #f))))))))
+		   ;;According  to R6RS:  if  the  version reference  is
+		   ;;shorter than the version, it is a match.
+		   #t
+		   #;(for-all (lambda (fx)
+		   ($fxzero? fx))
+		   version))
+	    ((null? version)
+	     (null? version-reference))
+	    ((conforming-sub-version-and-sub-version-reference?
+	      ($car version) ($car version-reference))
+	     (next-sub-version ($cdr version) ($cdr version-reference)))
+	    (else
+	     #f))))))))
 
 ;;; --------------------------------------------------------------------
 

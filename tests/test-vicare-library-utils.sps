@@ -899,7 +899,7 @@
 
   (check
       (conforming-version-and-version-reference? '(1 2 1) '(1 2))
-    => #f)
+    => #t)
 
   (check
       (conforming-version-and-version-reference? '(1 2 3) '(1 (>= 1) (not 1)))
