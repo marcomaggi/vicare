@@ -691,6 +691,7 @@ the character.
 * iklib expander syntax::           Inspecting syntax objects.
 * iklib expander transformers::     Syntax transformers facilities.
 * iklib expander expand::           Expander facilities.
+* iklib expander export specs::     Additional export specifications.
 * iklib expander import specs::     Additional import specifications.
 * iklib expander local import::     Local library imports.
 * iklib expander extended export::  Extended library exports.
@@ -907,6 +908,42 @@ Example:
                  #@{x |O3I3z7rSrwZ9/X2O|@}))))))
 @end example
 @end defun
+
+@c page
+@node iklib expander export specs
+@subsection Additional export specifications
+
+
+@deffn {Export Spec} prefix (@meta{internal} ...) @meta{prefix}
+Prepend the specified prefix to the selected internal symbols and add
+the result to the export list.  This clause is always enabled: there is
+no way to disable it to enforce @rnrs{6} compatibility.
+
+@example
+(library (demo)
+  (export
+    (prefix (these those) yeah.))
+  (import (rnrs))
+  (define (these) "these")
+  (define (those) "those"))
+@end example
+@end deffn
+
+
+@deffn {Export Spec} deprefix (@meta{internal} ...) @meta{prefix}
+Remove the specified prefix from the selected internal symbols and add
+the result to the export list.  This clause is always enabled: there is
+no way to disable it to enforce @rnrs{6} compatibility.
+
+@example
+(library (demo)
+  (export
+    (deprefix (yeah.this yeah.that) yeah.))
+  (import (rnrs))
+  (define (yeah.this) "this")
+  (define (yeah.that) "that"))
+@end example
+@end deffn
 
 @c page
 @node iklib expander import specs

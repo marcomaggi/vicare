@@ -3507,21 +3507,6 @@
 	(let ((a (chi-rhs (car ls) r mr)))
 	  (cons a (f (cdr ls)))))))))
 
-(define find-bound=?
-  (lambda (x lhs* rhs*)
-    (cond
-     ((null? lhs*) #f)
-     ((bound-id=? x (car lhs*)) (car rhs*))
-     (else (find-bound=? x (cdr lhs*) (cdr rhs*))))))
-
-(define (find-dups ls)
-  (let f ((ls ls) (dups '()))
-    (cond
-     ((null? ls) dups)
-     ((find-bound=? (car ls) (cdr ls) (cdr ls)) =>
-      (lambda (x) (f (cdr ls) (cons (list (car ls) x) dups))))
-     (else (f (cdr ls) dups)))))
-
 (define chi-internal
   (lambda (e* r mr)
     (let ((rib (make-empty-rib)))
@@ -3836,8 +3821,6 @@
       expanded-rhs)))
 
 
-;;;; parsing the LIBRARY form
-
 (define (parse-library library-sexp)
   ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
   ;;expression, return 4 values:
@@ -3869,6 +3852,7 @@
     (_
      (stx-error library-sexp "malformed library"))))
 
+
 (define (parse-library-name libname)
   ;;Given  a symbolic  expression, or  list/tree of  ANNOTATION structs,
   ;;LIBNAME representing  a library  name as defined  by R6RS,  return 2
@@ -3906,9 +3890,7 @@
     (values name* ver*)))
 
 
-;;;; parsing export specifications
-
-(define (parse-exports export-spec*)
+(module (parse-export-spec*)
   ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
   ;;representing the exports specification from a LIBRARY form, return 2
   ;;values:
@@ -3934,33 +3916,116 @@
   ;;     == (rename (?internal-identifier ?external-identifier) ...)
   ;;
   (define who 'export)
-  (define (%synner message subform)
-    (syntax-violation who message export-spec* subform))
-  (let loop ((export-spec*          export-spec*)
-	     (internal-identifier*  '())
-	     (external-identifier*  '()))
-    (if (null? export-spec*)
-	(if (valid-bound-ids? external-identifier*)
-	    (values (map syntax->datum external-identifier*) internal-identifier*)
-	    ;; (let ((external-symbol* (map syntax->datum external-identifier*)))
-	    ;;   (debug-print external-symbol* internal-identifier*)
-	    ;;   (values external-symbol* internal-identifier*))
-	  (%synner "invalid exports" (find-dups external-identifier*)))
-      (syntax-match (car export-spec*) ()
-	((rename (i* e*) ...)
-	 (if (and (eq? (syntax->datum rename) 'rename)
-		  (for-all id? i*)
-		  (for-all id? e*))
-	     (loop (cdr export-spec*)
-		   (append i* internal-identifier*)
-		   (append e* external-identifier*))
-	   (%synner "invalid export specification" (car export-spec*))))
-	(ie
-	 (if (id? ie)
-	     (loop (cdr export-spec*)
-		   (cons ie internal-identifier*)
-		   (cons ie external-identifier*))
-	   (%synner "invalid export specification" ie)))))))
+
+  (define (parse-export-spec* export-spec*)
+    (define %synner
+      (case-lambda
+       ((message)
+	(syntax-violation who message export-spec*))
+       ((message subform)
+	(syntax-violation who message export-spec* subform))))
+    (let loop ((export-spec*          export-spec*)
+	       (internal-identifier*  '())
+	       (external-identifier*  '()))
+      (if (null? export-spec*)
+	  (if (valid-bound-ids? external-identifier*)
+	      (values (map syntax->datum external-identifier*)
+		      internal-identifier*)
+	    (%synner "invalid exports" (%find-dups external-identifier*)))
+	(syntax-match (car export-spec*) ()
+	  (?identifier
+	   (id? ?identifier)
+	   (loop (cdr export-spec*)
+		 (cons ?identifier internal-identifier*)
+		 (cons ?identifier external-identifier*)))
+
+	  ((?rename (?internal* ?external*) ...)
+	   (and (eq? (syntax->datum ?rename) 'rename)
+		(for-all id? ?internal*)
+		(for-all id? ?external*))
+	   (loop (cdr export-spec*)
+		 (append ?internal* internal-identifier*)
+		 (append ?external* external-identifier*)))
+
+	  ((?prefix (?internal* ...) ?the-prefix)
+	   (and (eq? (syntax->datum ?prefix) 'prefix)
+		(for-all id? ?internal*)
+		(id? ?the-prefix))
+	   (if #f
+	       ;;FIXME At present  there is no way to  disable PREFIX to
+	       ;;enforce strict R6RS compatibility; in future it may be.
+	       ;;(Marco Maggi; Tue Apr 16, 2013)
+	       (%synner "prefix export specification forbidden in R6RS mode")
+	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
+		    (external*  (map (lambda (id)
+				       (datum->syntax
+					id (string->symbol
+					    (string-append
+					     prefix.str
+					     (symbol->string (syntax->datum id))))))
+				  ?internal*)))
+	       (loop (cdr export-spec*)
+		     (append ?internal* internal-identifier*)
+		     (append  external* external-identifier*)))))
+
+	  ((?deprefix (?internal* ...) ?the-prefix)
+	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
+		(for-all id? ?internal*)
+		(id? ?the-prefix))
+	   (if #f
+	       ;;FIXME At present there is no way to disable DEPREFIX to
+	       ;;enforce strict R6RS compatibility; in future it may be.
+	       ;;(Marco Maggi; Tue Apr 16, 2013)
+	       (%synner "deprefix export specification forbidden in R6RS mode")
+	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
+		    (prefix.len (string-length prefix.str))
+		    (external*  (map (lambda (id)
+				       (let* ((id.str  (symbol->string (syntax->datum id)))
+					      (id.len  (string-length id.str)))
+					 (if (and (< prefix.len id.len)
+						  (string=? prefix.str
+							    (substring id.str 0 prefix.len)))
+					     (datum->syntax
+					      id (string->symbol
+						  (substring id.str prefix.len id.len)))
+					   (%synner
+					    (string-append "binding name \"" id.str
+							   "\" cannot be deprefixed of \""
+							   prefix.str "\"")))))
+				  ?internal*)))
+	       (loop (cdr export-spec*)
+		     (append ?internal* internal-identifier*)
+		     (append  external* external-identifier*)))))
+
+	  (_
+	   (%synner "invalid export specification" (car export-spec*)))))))
+
+  (module (%find-dups)
+
+    (define (%find-dups ls)
+      (let loop ((ls    ls)
+		 (dups  '()))
+	(cond ((null? ls)
+	       dups)
+	      ((%find-bound=? (car ls) (cdr ls) (cdr ls))
+	       => (lambda (x)
+		    (loop (cdr ls)
+			  (cons (list (car ls) x)
+				dups))))
+	      (else
+	       (loop (cdr ls) dups)))))
+
+    (define (%find-bound=? x lhs* rhs*)
+      (cond ((null? lhs*)
+	     #f)
+	    ((bound-id=? x (car lhs*))
+	     (car rhs*))
+	    (else
+	     (%find-bound=? x (cdr lhs*) (cdr rhs*)))))
+
+    #| end of module: %FIND-DUPS |# )
+
+  #| end of module: PARSE-EXPORT-SPEC* |# )
 
 
 (module (parse-import-spec*)
@@ -4544,10 +4609,10 @@
 	      (receive (init* r mr lex* rhs* internal-exp*)
 		  (%chi-library-internal b* rib mix?)
 		(receive (exp-name* exp-id*)
-		    (parse-exports (if (eq? main-exp* 'all)
-				       (map wrap (top-marked-symbols rib))
-				     (append (map wrap main-exp*)
-					     internal-exp*)))
+		    (parse-export-spec* (if (eq? main-exp* 'all)
+					    (map wrap (top-marked-symbols rib))
+					  (append (map wrap main-exp*)
+						  internal-exp*)))
 		  (seal-rib! rib)
 		  (let* ((init*  (chi-expr* init* r mr))
 			 (rhs*   (chi-rhs* rhs* r mr)))
@@ -5175,11 +5240,10 @@
 
 (define identifier? (lambda (x) (id? x)))
 
-(define datum->syntax
-  (lambda (id datum)
-    (if (id? id)
-	(datum->stx id datum)
-      (assertion-violation 'datum->syntax "not an identifier" id))))
+(define (datum->syntax id datum)
+  (if (id? id)
+      (datum->stx id datum)
+    (assertion-violation 'datum->syntax "not an identifier" id)))
 
 (define expand-top-level
   (lambda (e*)

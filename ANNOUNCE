@@ -186,6 +186,18 @@ Notes for revision 0.3d0
                      str.)))
      => 4
 
+* Added PREFIX and DEPREFIX export specification clauses:
+
+     (library (demo)
+       (export
+         (deprefix (yeah.this yeah.that) yeah.)
+         (prefix (these those) yeah.))
+       (import (rnrs))
+       (define (yeah.this) "this")
+       (define (yeah.that) "that")
+       (define (these) "these")
+       (define (those) "those"))
+
 * Added  library  (vicare   language-extensions  cond-expand),  see  the
   documentation node "cond-expand".
 
