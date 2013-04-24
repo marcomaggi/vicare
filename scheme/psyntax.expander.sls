@@ -3951,14 +3951,15 @@
   ;;1. Parse and validate the import specs.
   ;;
   ;;2. For libraries not yet loaded: load the selected library files and
-  ;;   add them to the internal collection of loaded libraries.
+  ;;    add  them  to  the  current  collector  function  referenced  by
+  ;;   IMP-COLLECTOR.
   ;;
   ;;3. Apply to  visible binding names the  transformations described by
   ;;   the import spec.
   ;;
   ;;4. Check for name conflicts between imported bindings.
   ;;
-  ;;Return 2 values:
+  ;;Return 2 values which can be used to build a new environment object:
   ;;
   ;;1.   A vector  of  symbols  representing the  visible  names of  the
   ;;   imported  bindings.
@@ -3966,8 +3967,6 @@
   ;;2. A  list of "labels":  unique symbols associated to  the binding's
   ;;   entry in the lexical environment.
   ;;
-  ;;The portion of lexical  environment describing the imported bindings
-  ;;is stored in the LIBRARY structs representing the loaded libraries.
   ;;
   ;;A  quick  summary  of  R6RS syntax  definitions  along  with  Vicare
   ;;extensions:
@@ -4463,11 +4462,13 @@
   #| end of module: PARSE-IMPORT-SPEC* |# )
 
 
+;;;; miscellaneous collectors
 
 (define (make-collector)
   (let ((ls '()))
     (case-lambda
-     (() ls)
+     (()
+      ls)
      ((x)
       (unless (eq? x '*interaction*)
 	(set! ls (%set-cons x ls)))))))
@@ -4491,6 +4492,10 @@
       x)))
 
 (define imp-collector
+  ;;Imported  libraries  collector.   Holds a  collector  function  (see
+  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  structs representing  the
+  ;;libraries from an R6RS import specification.
+  ;;
   (make-parameter
       (lambda args
         (assertion-violation 'imp-collector "BUG: not initialized"))
@@ -4499,74 +4504,51 @@
 	(assertion-violation 'imp-collector "BUG: not a procedure" x))
       x)))
 
+
+(module (library-body-expander)
 
-(define chi-library-internal
-  (lambda (e* rib mix?)
-    (let-values (((e* r mr lex* rhs* mod** _kwd* exp*)
-		  (chi-body* e* '() '() '() '() '() '() '() rib mix? #t)))
-      (values (append (apply append (reverse mod**)) e*)
-	      r mr (reverse lex*) (reverse rhs*) exp*))))
-
-
-(define chi-interaction-expr
-  (lambda (e rib r)
-    (let-values (((e* r mr lex* rhs* mod** _kwd* _exp*)
-		  (chi-body* (list e) r r '() '() '() '() '() rib
-			     #t #f)))
-      (let ((e* (expand-interaction-rhs*/init*
-		 (reverse lex*) (reverse rhs*)
-		 (append (apply append (reverse mod**)) e*)
-		 r mr)))
-	(let ((e (cond
-		  ((null? e*) (build-void))
-		  ((null? (cdr e*)) (car e*))
-		  (else (build-sequence no-source e*)))))
-	  (values e r))))))
-
-(define library-body-expander
-  (lambda (main-exp* imp* b* mix?)
+  (define (library-body-expander main-exp* imp* b* mix?)
     (define itc (make-collector))
-    (parametrise ((imp-collector itc)
-		  (top-level-context #f))
-      (let-values (((subst-names subst-labels)
-		    (parse-import-spec* imp*)))
+    (parametrise ((imp-collector      itc)
+		  (top-level-context  #f))
+      (receive (subst-names subst-labels)
+	  (parse-import-spec* imp*)
 	(let ((rib (make-top-rib subst-names subst-labels)))
-	  (define (wrap x) (make-<stx> x top-mark* (list rib) '()))
-	  (let ((b* (map wrap b*))
-		(rtc (make-collector))
-		(vtc (make-collector)))
-	    (parametrise ((inv-collector rtc)
-			  (vis-collector vtc))
-	      (let-values (((init* r mr lex* rhs* internal-exp*)
-			    (chi-library-internal b* rib mix?)))
-		(let-values (((exp-name* exp-id*)
-			      (parse-exports
-			       (if (eq? main-exp* 'all)
-				   (map wrap (top-marked-symbols rib))
-				 (append
-				  (map wrap main-exp*)
-				  internal-exp*)))))
+	  (define (wrap x)
+	    (make-<stx> x top-mark* (list rib) '()))
+	  (let ((b*   (map wrap b*))
+		(rtc  (make-collector))
+		(vtc  (make-collector)))
+	    (parametrise ((inv-collector  rtc)
+			  (vis-collector  vtc))
+	      (receive (init* r mr lex* rhs* internal-exp*)
+		  (%chi-library-internal b* rib mix?)
+		(receive (exp-name* exp-id*)
+		    (parse-exports (if (eq? main-exp* 'all)
+				       (map wrap (top-marked-symbols rib))
+				     (append (map wrap main-exp*)
+					     internal-exp*)))
 		  (seal-rib! rib)
-		  (let* ((init* (chi-expr* init* r mr))
-			 (rhs* (chi-rhs* rhs* r mr)))
+		  (let* ((init*  (chi-expr* init* r mr))
+			 (rhs*   (chi-rhs* rhs* r mr)))
 		    (unseal-rib! rib)
-		    (let ((loc* (map gen-global lex*))
-			  (export-subst (make-export-subst exp-name* exp-id*)))
+		    (let ((loc*          (map gen-global lex*))
+			  (export-subst  (make-export-subst exp-name* exp-id*)))
 		      (define errstr
 			"attempt to export mutated variable")
-		      (let-values (((export-env global* macro*)
-				    (make-export-env/macros lex* loc* r)))
+		      (receive (export-env global* macro*)
+			  (make-export-env/macros lex* loc* r)
 			(unless (eq? main-exp* 'all)
 			  (for-each
-                              (lambda (s)
-                                (let ((name (car s)) (label (cdr s)))
-                                  (let ((p (assq label export-env)))
-                                    (when p
-                                      (let ((b (cdr p)))
-                                        (let ((type (car b)))
-                                          (when (eq? type 'mutable)
-                                            (syntax-violation 'export
-                                              errstr name))))))))
+			      (lambda (s)
+				(let ((name  (car s))
+				      (label (cdr s)))
+				  (let ((p (assq label export-env)))
+				    (when p
+				      (let ((b (cdr p)))
+					(let ((type (car b)))
+					  (when (eq? type 'mutable)
+					    (syntax-violation 'export errstr name))))))))
 			    export-subst))
 			(let ((invoke-body
 			       (build-library-letrec* no-source
@@ -4575,41 +4557,50 @@
 						      (if (null? init*)
 							  (build-void)
 							(build-sequence no-source init*))))
-		;(invoke-body
-		; (build-letrec* no-source lex* rhs*
-		;    (build-exports global* init*)))
+			      ;;(invoke-body
+			      ;; (build-letrec* no-source lex* rhs*
+			      ;;    (build-exports global* init*)))
 			      (invoke-definitions
 			       (map build-global-define (map cdr global*))))
-			  (values
-			   (itc) (rtc) (vtc)
-			   (build-sequence no-source
-					   (append invoke-definitions
-						   (list invoke-body)))
-			   macro* export-subst export-env))))))))))))))
+			  (values (itc) (rtc) (vtc)
+				  (build-sequence no-source
+						  (append invoke-definitions
+							  (list invoke-body)))
+				  macro* export-subst export-env)))))))))))))
 
-(define stale-when-collector (make-parameter #f))
+  (define (%chi-library-internal e* rib mix?)
+    (receive (e* r mr lex* rhs* mod** _kwd* exp*)
+	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
+      (values (append (apply append (reverse mod**)) e*)
+	      r mr (reverse lex*) (reverse rhs*) exp*)))
+
+  #| end of module: LIBRARY-BODY-EXPANDER |# )
+
+
+;;;; stale stuff
+
+(define stale-when-collector
+  (make-parameter #f))
 
 (define (make-stale-collector)
   (let ((code (build-data no-source #f))
 	(req* '()))
     (case-lambda
-     (() (values code req*))
+     (()
+      (values code req*))
      ((c r*)
-      (set! code
-	    (build-conditional no-source
-			       code
-			       (build-data no-source #t)
-			       c))
+      (set! code (build-conditional no-source code (build-data no-source #t) c))
       (set! req* (%set-union r* req*))))))
 
 (define (handle-stale-when guard-expr mr)
   (let ((stc (make-collector)))
     (let ((core-expr (parametrise ((inv-collector stc))
 		       (chi-expr guard-expr mr mr))))
-      (cond
-       ((stale-when-collector) =>
-	(lambda (c) (c core-expr (stc))))))))
+      (cond ((stale-when-collector)
+	     => (lambda (c)
+		  (c core-expr (stc))))))))
 
+
 (define core-library-expander
   ;;
   ;;The argument LIBRARY-SEXP must  be the symbolic expression:
@@ -4653,96 +4644,179 @@
      (assertion-violation 'expander
        "top-level program is missing an (import ---) clause"))))
 
+
+;;;; environments
 
-  ;;; An env record encapsulates a substitution and a set of
-  ;;; libraries.
-(define-record env (names labels itc)
-  (lambda (x p wr)
-    (display "#<environment>" p)))
+;;An env record encapsulates a substitution and a set of libraries.
+(define-record env
+  (names
+		;A  list of  symbols  representing the  public names  of
+		;bindings from a set of import specifications as defined
+		;by  R6RS.   These  names  are from  the  subst  of  the
+		;libraries, already processed with the directives in the
+		;import sets (prefix, deprefix, only, except, rename).
+   labels
+		;A list  of symbols representing the  labels of bindings
+		;from a set of import specifications as defined by R6RS.
+		;These labels are from the subst of the libraries.
+   itc
+		;A collector  function (see MAKE-COLLECTOR)  holding the
+		;LIBRARY structs representing  the libraries selected by
+		;the original import specifications.
+   )
+  (lambda (S port sub-printer)
+    (display "#<environment>" port)))
 
-(define-record interaction-env (rib r locs)
-  (lambda (x p wr)
-    (display "#<environment>" p)))
+(define-record interaction-env
+  (rib
+   r
+   locs)
+  (lambda (S port sub-printer)
+    (display "#<environment>" port)))
 
-(define environment?
-  (lambda (x) (or (env? x) (interaction-env? x))))
+(define (environment? obj)
+  (or (env? obj)
+      (interaction-env? obj)))
 
 (define (environment-symbols x)
-  (cond
-   ((env? x) (vector->list (env-names x)))
-   ((interaction-env? x)
-    (map values (<rib>-sym* (interaction-env-rib x))))
-   (else
-    (assertion-violation 'environment-symbols "not an environment" x))))
+  ;;Return a list of symbols representing the names of the bindings from
+  ;;the given environment.
+  ;;
+  (define who 'environment-symbols)
+  (cond ((env? x)
+	 (vector->list (env-names x)))
+	((interaction-env? x)
+	 (map values (<rib>-sym* (interaction-env-rib x))))
+	(else
+	 (assertion-violation who "not an environment" x))))
 
-  ;;; This is R6RS's environment.  It parses the import specs
-  ;;; and constructs an env record that can be used later by
-  ;;; eval and/or expand.
-(define environment
-  (lambda imp*
-    (let ((itc (make-collector)))
-      (parametrise ((imp-collector itc))
-	(let-values (((subst-names subst-labels)
-		      (parse-import-spec* imp*)))
-	  (make-env subst-names subst-labels itc))))))
+(define (environment . import-spec*)
+  ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
+  ;;constructs  an env  record that  can be  used later  by eval  and/or
+  ;;expand.
+  ;;
+  ;;IMPORT-SPEC* must be a list  of symbolic expressions, or lists/trees
+  ;;of ANNOTATION structs, representing import specifications as defined
+  ;;by R6RS plus Vicare extensions.
+  ;;
+  (let ((itc (make-collector)))
+    (parametrise ((imp-collector itc))
+      (receive (subst.names subst.labels)
+	  (parse-import-spec* import-spec*)
+	(make-env subst.names subst.labels itc)))))
 
-  ;;; R6RS's null-environment and scheme-report-environment are
-  ;;; constructed simply using the corresponding libraries.
 (define (null-environment n)
+  ;;Defined  by R6RS.   The null  environment is  constructed using  the
+  ;;corresponding library.
+  ;;
   (unless (eqv? n 5)
-    (assertion-violation 'null-environment "not 5" n))
+    (assertion-violation 'null-environment
+      "only report version 5 is supported" n))
   (environment '(psyntax null-environment-5)))
+
 (define (scheme-report-environment n)
+  ;;Defined  by R6RS.   The R5RS  environment is  constructed using  the
+  ;;corresponding library.
+  ;;
   (unless (eqv? n 5)
-    (assertion-violation 'scheme-report-environment "not 5" n))
+    (assertion-violation 'scheme-report-environment
+      "only report version 5 is supported" n))
   (environment '(psyntax scheme-report-environment-5)))
 
-(define (expand-form-to-core-language x env)
-  ;;Interface to  the internal expression expander  (chi-expr).  Take an
-  ;;expression  and an  environment.  Return  two values:  the resulting
-  ;;core-expression, a  list of  libraries that  must be  invoked before
-  ;;evaluating the core expr.
-  (define who 'expand-form-to-core-language)
-  (cond ((env? env)
-	 (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	   (let ((x (make-<stx> x top-mark* (list rib) '()))
-		 (itc (env-itc env))
-		 (rtc (make-collector))
-		 (vtc (make-collector)))
-	     (let ((x (parametrise ((top-level-context #f)
-				    (inv-collector rtc)
-				    (vis-collector vtc)
-				    (imp-collector itc))
-			(chi-expr x '() '()))))
-	       (seal-rib! rib)
-	       (values x (rtc))))))
-	((interaction-env? env)
-	 (let ((rib (interaction-env-rib env))
-	       (r (interaction-env-r env))
-	       (rtc (make-collector)))
-	   (let ((x (make-<stx> x top-mark* (list rib) '())))
-	     (let-values (((e r^)
-			   (parametrise ((top-level-context env)
-					 (inv-collector rtc)
-					 (vis-collector (make-collector))
-					 (imp-collector (make-collector)))
-			     (chi-interaction-expr x rib r))))
-	       (set-interaction-env-r! env r^)
-	       (values e (rtc))))))
-	(else
-	 (assertion-violation who "not an environment" env))))
+(define (new-interaction-environment)
+  ;;Build and return a new interaction environment.
+  ;;
+  (let* ((lib (find-library-by-name (base-of-interaction-library)))
+	 (rib (subst->rib (library-subst lib))))
+    (make-interaction-env rib '() '())))
 
+(define interaction-environment
+  ;;When  called  with  no   arguments:  return  an  environment  object
+  ;;representing  the environment  active at  the  REPL; to  be used  as
+  ;;argument for EVAL.
+  ;;
+  ;;When  called with  the argument  ENV, which  must be  an environment
+  ;;object: set ENV as interaction environment.
+  ;;
+  (let ((current-env #f))
+    (case-lambda
+     (()
+      (or current-env
+	  (begin
+	    (set! current-env (new-interaction-environment))
+	    current-env)))
+     ((env)
+      (unless (environment? env)
+	(assertion-violation 'interaction-environment
+	  "expected environment object as argument" env))
+      (set! current-env env)))))
 
-  ;;; This is R6RS's eval.  It takes an expression and an environment,
-  ;;; expands the expression, invokes its invoke-required libraries and
-  ;;; evaluates its expanded core form.
-(define eval
-  (lambda (x env)
-    (unless (environment? env)
-      (error 'eval "not an environment" env))
-    (let-values (((x invoke-req*) (expand-form-to-core-language x env)))
-      (for-each invoke-library invoke-req*)
-      (eval-core (expanded->core x)))))
+
+(module (expand-form-to-core-language)
+
+  (define (expand-form-to-core-language x env)
+    ;;Interface to the internal expression expander (chi-expr).  Take an
+    ;;expression and  an environment.  Return two  values: the resulting
+    ;;core-expression, a list  of libraries that must  be invoked before
+    ;;evaluating the core expr.
+    (define who 'expand-form-to-core-language)
+    (cond ((env? env)
+	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
+	     (let ((x (make-<stx> x top-mark* (list rib) '()))
+		   (itc (env-itc env))
+		   (rtc (make-collector))
+		   (vtc (make-collector)))
+	       (let ((x (parametrise ((top-level-context #f)
+				      (inv-collector rtc)
+				      (vis-collector vtc)
+				      (imp-collector itc))
+			  (chi-expr x '() '()))))
+		 (seal-rib! rib)
+		 (values x (rtc))))))
+	  ((interaction-env? env)
+	   (let ((rib (interaction-env-rib env))
+		 (r (interaction-env-r env))
+		 (rtc (make-collector)))
+	     (let ((x (make-<stx> x top-mark* (list rib) '())))
+	       (let-values (((e r^)
+			     (parametrise ((top-level-context env)
+					   (inv-collector rtc)
+					   (vis-collector (make-collector))
+					   (imp-collector (make-collector)))
+			       (%chi-interaction-expr x rib r))))
+		 (set-interaction-env-r! env r^)
+		 (values e (rtc))))))
+	  (else
+	   (assertion-violation who "not an environment" env))))
+
+  (define (%chi-interaction-expr e rib r)
+    (receive (e* r mr lex* rhs* mod** _kwd* _exp*)
+	(chi-body* (list e) r r '() '() '() '() '() rib #t #f)
+      (let ((e* (expand-interaction-rhs*/init*
+		 (reverse lex*) (reverse rhs*)
+		 (append (apply append (reverse mod**)) e*)
+		 r mr)))
+	(let ((e (cond ((null? e*)
+			(build-void))
+		       ((null? (cdr e*))
+			(car e*))
+		       (else
+			(build-sequence no-source e*)))))
+	  (values e r)))))
+
+  #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
+
+(define (eval x env)
+  ;;This is  R6RS's eval.   It takes an  expression and  an environment,
+  ;;expands the  expression, invokes  its invoke-required  libraries and
+  ;;evaluates its expanded core form.
+  (define who 'eval)
+  (unless (environment? env)
+    (error who "not an environment" env))
+  (receive (x invoke-req*)
+      (expand-form-to-core-language x env)
+    (for-each invoke-library invoke-req*)
+    (eval-core (expanded->core x))))
 
 
 (define (initial-visit! macro*)
@@ -5115,31 +5189,16 @@
 	 '())))))
 
 (define (subst->rib subst)
+  ;;Build and return a new <RIB> structure initialised with SUBST.
+  ;;
   (let ((rib (make-empty-rib)))
-    (set-<rib>-sym*! rib (map car subst))
-    (set-<rib>-mark**! rib
-		     (map (lambda (x) top-mark*) subst))
+    (set-<rib>-sym*!   rib (map car subst))
+    (set-<rib>-mark**! rib (map (lambda (x) top-mark*) subst))
     (set-<rib>-label*! rib (map cdr subst))
     rib))
 
-(define (new-interaction-environment)
-  (let ((lib (find-library-by-name
-	      (base-of-interaction-library))))
-    (let ((rib (subst->rib (library-subst lib))))
-      (make-interaction-env rib '() '()))))
-
-(define interaction-environment
-  (let ((e #f))
-    (case-lambda
-     (()
-      (or e (begin (set! e (new-interaction-environment)) e)))
-     ((x)
-      (unless (environment? x)
-	(assertion-violation 'interaction-environment
-	  "not an environment" x))
-      (set! e x)))))
-
-(define top-level-context (make-parameter #f))
+(define top-level-context
+  (make-parameter #f))
 
 
 ;;;; done
