@@ -7009,6 +7009,19 @@ Return @true{} if @var{obj} is a valid library sub--version reference as
 specified by @rnrs{6}.
 @end defun
 
+
+@defun library-sub-version? @var{obj}
+Return @true{} if @var{obj} is a @meta{sub-version} number according to
+@rnrs{6}.
+
+@quotation
+@strong{NOTE} According to @rnrs{6}: @var{obj} should be an exact
+non--negative integer, which means a non--negative finxum or bignum.
+@value{PRJNAME} accepts only fixnums because they are faster to handle
+and ``big enough''.
+@end quotation
+@end defun
+
 @c page
 @node iklib libs refs split
 @subsubsection Decomposing library references

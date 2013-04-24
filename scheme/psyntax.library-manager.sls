@@ -56,9 +56,8 @@
     library-version<?			library-version<=?
 
     ;; library references and conformity
-    library-reference?
-    library-version-reference?
-    library-sub-version-reference?
+    library-reference?			library-version-reference?
+    library-sub-version-reference?	library-sub-version?
     library-reference-decompose
     library-reference->identifiers
     library-reference->version-reference
@@ -1021,9 +1020,20 @@
      (library-sub-version-reference? ?sub-version))
     (('>= (let ?sub-version))
      (library-sub-version-reference? ?sub-version))
-    ((apply library-version-number?)
+    ((apply library-sub-version?)
      #t)
     (_ #f)))
+
+(define (library-sub-version? obj)
+  ;;Return #t if OBJ is a sub-version number.
+  ;;
+  ;;NOTE According to R6RS: OBJ should be an exact non-negative integer,
+  ;;which means a  non-negative finxum or bignum for  Vicare.  We accept
+  ;;only fixnums  because they  are faster to  handle and  "big enough".
+  ;;(Marco Maggi; Tue Apr 23, 2013)
+  ;;
+  (and (fixnum? obj)
+       ($fx-non-negative? obj)))
 
 ;;; --------------------------------------------------------------------
 ;;; decomposition
@@ -1082,7 +1092,7 @@
   (define (%error-invalid-sub-version-reference)
     (assertion-violation who
       "invalid library sub-version reference" sub-version-reference))
-  (assert (library-version-number? sub-version))
+  (assert (library-sub-version? sub-version))
   (assert (library-sub-version-reference? sub-version-reference))
   (%normalise-to-boolean
    (cond ((list? sub-version-reference)
@@ -1112,7 +1122,7 @@
 
 	    (else
 	     (%error-invalid-sub-version-reference))))
-	 ((library-version-number? sub-version-reference)
+	 ((library-sub-version? sub-version-reference)
 	  (= sub-version sub-version-reference))
 	 (else
 	  (%error-invalid-sub-version-reference)))))

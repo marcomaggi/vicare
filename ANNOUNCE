@@ -163,9 +163,8 @@ Notes for revision 0.3d0
 * Added  functions to  (vicare) to  handle R6RS  library references  and
   conformity with library names:
 
-    library-reference?
-    library-version-reference?
-    library-sub-version-reference?
+    library-reference?			library-version-reference?
+    library-sub-version-reference?	library-sub-version?
     library-reference-decompose
     library-reference->identifiers
     library-reference->version-reference

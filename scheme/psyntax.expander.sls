@@ -113,6 +113,11 @@
 (define-syntax no-source
   (lambda (x) #f))
 
+(define (debug-print . args)
+  (pretty-print args (current-error-port))
+  (newline (current-error-port))
+  (newline (current-error-port)))
+
 
 ;;;; <RIB> type definition
 
@@ -3942,8 +3947,68 @@
 
 (module (parse-import-spec*)
   ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
-  ;;representing  imports specification  from a  LIBRARY form,  return a
-  ;;subst and the list of libraries that were imported.
+  ;;representing import  specifications from a LIBRARY  form, as defined
+  ;;by R6RS plus Vicare extensions:
+  ;;
+  ;;1. Parse and validate the import specs.
+  ;;
+  ;;2. For libraries not yet loaded: load the selected library files and
+  ;;   add them to the internal collection of loaded libraries.
+  ;;
+  ;;3. Apply to  visible binding names the  transformations described by
+  ;;   the import spec.
+  ;;
+  ;;4. Check for name conflicts between imported bindings.
+  ;;
+  ;;Return 2 values:
+  ;;
+  ;;1.   A vector  of  symbols  representing the  visible  names of  the
+  ;;   imported  bindings.
+  ;;
+  ;;2. A  list of "labels":  unique symbols associated to  the binding's
+  ;;   entry in the lexical environment.
+  ;;
+  ;;The portion of lexical  environment describing the imported bindings
+  ;;is stored in the LIBRARY structs representing the loaded libraries.
+  ;;
+  ;;A  quick  summary  of  R6RS syntax  definitions  along  with  Vicare
+  ;;extensions:
+  ;;
+  ;;  (import ?import-spec ...)
+  ;;
+  ;;  ?import-spec
+  ;;     == ?import-set
+  ;;     == (for ?import-set ?import-level)
+  ;;
+  ;;  ?import-set
+  ;;     == ?library-reference
+  ;;     == (library ?library-reference)
+  ;;     == (only ?import-set ?identifier ...)
+  ;;     == (exept ?import-set ?identifier)
+  ;;     == (prefix ?import-set ?identifier)
+  ;;     == (deprefix ?import-set ?identifier)
+  ;;     == (rename ?import-set (?identifier1 ?identifier2) ...)
+  ;;
+  ;;  ?library-reference
+  ;;     == (?identifier0 ?identifier ...)
+  ;;     == (?identifier0 ?identifier ... ?version-reference)
+  ;;
+  ;;  ?version-reference
+  ;;     == (?sub-version-reference ...)
+  ;;     == (and ?version-reference ...)
+  ;;     == (or  ?version-reference ...)
+  ;;     == (not ?version-reference)
+  ;;
+  ;;  ?sub-version-reference
+  ;;     == (?sub-version ...)
+  ;;     == (>=  ?sub-version)
+  ;;     == (<=  ?sub-version)
+  ;;     == (and ?sub-version-reference ...)
+  ;;     == (or  ?sub-version-reference ...)
+  ;;     == (not ?sub-version-reference)
+  ;;
+  ;;  ?sub-version
+  ;;     == #<non-negative fixnum>
   ;;
   ;;Example, given:
   ;;
@@ -3953,56 +4018,62 @@
   ;;   (only (bar)
   ;;         q))
   ;;
-  ;;return:
+  ;;this function returns the names and labels:
   ;;
-  ;;   ((z . z$label)
-  ;;    (y . x$label)
-  ;;    (q . q$label))
+  ;;   #(z y q)		#(z$label x$label q$label)
   ;;
-  ;;and:
+  ;;Imported bindings are referenced by "substs".  A "subst" is an alist
+  ;;whose keys are "names" and whose values are "labels":
   ;;
-  ;;   (#<library (foo)> #<library (bar)>)
+  ;;* "Name"  is a symbol  representing the  public name of  an imported
+  ;;  binding, the one we use to reference it in the code of a library.
   ;;
-  ;;A "subst"  is an alist whose  keys are "names" and  whose values are
-  ;;"labels".
-  ;;
-  ;;* A "name" is a symbol representing the name of an imported binding,
-  ;;   the one  we use  to reference  it in  the code  of a  library.
-  ;;
-  ;;*  A "label"  is a  unique  symbol associated  to the  entry in  the
-  ;;  lexical environment describing the imported binding.
+  ;;* "Label"  is a unique symbol  associated to the binding's  entry in
+  ;;  the lexical environment.
   ;;
   (define who 'import)
 
-  (define (parse-import-spec* imp*)
-    (let f ((imp* imp*) (h (make-eq-hashtable)))
-      (cond
-       ((null? imp*)
-	(hashtable-entries h))
-       (else
-	(add-imports! (car imp*) h)
-	(f (cdr imp*) h)))))
+  (define (parse-import-spec* import-spec*)
+    (let loop ((import-spec*  import-spec*)
+	       (subst.table   (make-eq-hashtable)))
+      ;;SUBST.TABLE has subst names as  keys and subst labels as values.
+      ;;It is used  to check for duplicate names  with different labels,
+      ;;which is an error.  Example:
+      ;;
+      ;;   (import (rename (french)
+      ;;                   (salut	ciao))	;ERROR!
+      ;;           (rename (british)
+      ;;                   (hello	ciao)))	;ERROR!
+      ;;
+      (if (null? import-spec*)
+	  (hashtable-entries subst.table)
+	  ;; (receive (names labels)
+	  ;;     (hashtable-entries subst.table)
+	  ;;   (debug-print who names labels)
+	  ;;   (values names labels))
+	(begin
+	  (for-each (lambda (subst.entry)
+		      (%add-subst-entry! subst.table subst.entry))
+	    (%import-set->subst (car import-spec*)))
+	  (loop (cdr import-spec*) subst.table)))))
+
+  (define (%add-subst-entry! subst.table subst.entry)
+    ;;Add  the  given  SUBST.ENTRY to  SUBST.TABLE;  return  unspecified
+    ;;values.  Raise a syntax violation if SUBST.ENTRY has the same name
+    ;;but different label than an entry in SUBST.TABLE.
+    ;;
+    (let ((entry.name  (car subst.entry))
+	  (entry.label (cdr subst.entry)))
+      (cond ((hashtable-ref subst.table entry.name #f)
+	     => (lambda (label)
+		  (unless (eq? label entry.label)
+		    (%error-two-import-with-different-bindings entry.name))))
+	    (else
+	     (hashtable-set! subst.table entry.name entry.label)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (import-library spec*)
-    (receive (name pred)
-	(parse-library-reference spec*)
-      (when (null? name)
-	(%synner "empty library name" spec*))
-      (let ((lib (find-library-by-name name)))
-	(unless lib
-	  (%synner
-	   "cannot find library with required name"
-	   name))
-	(unless (pred (library-version lib))
-	  (%synner
-	   "library does not satisfy version specification"
-	   spec* lib))
-	((imp-collector) lib)
-	(library-subst lib))))
-
-  (define (get-import spec)
+  (define (%import-set->subst spec)
     (syntax-match spec ()
       ((x x* ...)
        ;;Remember that, according  to R6RS, the symbol  LIBRARY can be
@@ -4016,7 +4087,7 @@
        (and (eq? (syntax->datum rename) 'rename)
 	    (for-all id-stx? ?old-name*)
 	    (for-all id-stx? ?new-name*))
-       (let ((subst       (get-import ?import-set))
+       (let ((subst       (%import-set->subst ?import-set))
 	     (?old-name*  (map syntax->datum ?old-name*))
 	     (?new-name*  (map syntax->datum ?new-name*)))
 	 ;;FIXME Rewrite  this to  eliminate find*  and rem*  and merge.
@@ -4028,13 +4099,13 @@
 
       ((except isp sym* ...)
        (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
-       (let ((subst (get-import isp)))
+       (let ((subst (%import-set->subst isp)))
 	 (rem* (map syntax->datum sym*) subst)))
 
       ((only ?import-set ?name* ...)
        (and (eq? (syntax->datum only) 'only)
 	    (for-all id-stx? ?name*))
-       (let* ((subst  (get-import ?import-set))
+       (let* ((subst  (%import-set->subst ?import-set))
 	      (name*  (map syntax->datum ?name*))
 	      (name*  (remove-dups name*))
 	      (lab*   (find* name* subst ?import-set)))
@@ -4042,7 +4113,7 @@
 
       ((prefix ?import-set p)
        (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
-       (let ((subst (get-import ?import-set))
+       (let ((subst (%import-set->subst ?import-set))
 	     (prefix (symbol->string (syntax->datum p))))
 	 (map
 	     (lambda (x)
@@ -4058,7 +4129,7 @@
 	   ;;(Marco Maggi; Tue Apr 16, 2013)
 	   (assertion-violation 'expander
 	     "deprefix import specification forbidden in R6RS mode")
-	 (let* ((subst       (get-import ?import-set))
+	 (let* ((subst       (%import-set->subst ?import-set))
 		(prefix      (symbol->string (syntax->datum ?prefix)))
 		(prefix.len  (string-length prefix)))
 	   ;;This should never happen.
@@ -4086,24 +4157,24 @@
        ;;FIXME Here we should validate  ?IMPORT-LEVEL even if it is no
        ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
        (eq? (syntax->datum for) 'for)
-       (get-import ?import-set))
+       (%import-set->subst ?import-set))
 
       (spec
        (%synner "invalid import set" spec))))
 
-  (define (add-imports! imp h)
-    (let ((subst (get-import imp)))
-      (for-each
-	  (lambda (x)
-	    (let ((name (car x)) (label (cdr x)))
-	      (cond
-	       ((hashtable-ref h name #f) =>
-		(lambda (l)
-		  (unless (eq? l label)
-		    (%error-two-import-with-different-bindings name))))
-	       (else
-		(hashtable-set! h name label)))))
-	subst)))
+  (define (import-library spec*)
+    (receive (name pred)
+	(parse-library-reference spec*)
+      (when (null? name)
+	(%synner "empty library name" spec*))
+      (let ((lib (find-library-by-name name)))
+	;;If successful: LIB is an instance of LIBRARY struct.
+	(unless lib
+	  (%synner "cannot find library with required name" name))
+	(unless (pred (library-version lib))
+	  (%synner "library does not satisfy version specification" spec* lib))
+	((imp-collector) lib)
+	(library-subst lib))))
 
 ;;; --------------------------------------------------------------------
 
