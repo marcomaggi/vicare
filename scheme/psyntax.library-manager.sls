@@ -1157,7 +1157,7 @@
   ;;     == (not ?version-reference)
   ;;
   ;;  ?sub-version-reference
-  ;;     == ?sub-version ...
+  ;;     == ?sub-version
   ;;     == (>=  ?sub-version)
   ;;     == (<=  ?sub-version)
   ;;     == (and ?sub-version-reference ...)
@@ -1173,40 +1173,34 @@
       "invalid library version reference" version-reference))
   (assert (library-version-numbers? version))
   (assert (library-version-reference? version-reference))
-  (or (and (null? version)
-	   (null? version-reference))
-      (null? version-reference)
-      (%normalise-to-boolean
-       (case (car version-reference)
-	 ((and)
-	  (for-all (lambda (reference)
-		     (conforming-version-and-version-reference? version reference))
-	    (cdr version-reference)))
-	 ((or)
-	  (find (lambda (reference)
-		  (conforming-version-and-version-reference? version reference))
-	    (cdr version-reference)))
-	 ((not)
-	  (if (= 2 (length version-reference))
-	      (not (conforming-version-and-version-reference? version (cadr version-reference)))
-	    (%error-invalid-version-reference)))
-	 (else
-	  (let next-sub-version ((version		version)
-				 (version-reference	version-reference))
-	    (cond ((null? version-reference)
-		   ;;According  to R6RS:  if  the  version reference  is
-		   ;;shorter than the version, it is a match.
-		   #t
-		   #;(for-all (lambda (fx)
-		   ($fxzero? fx))
-		   version))
-	    ((null? version)
-	     (null? version-reference))
-	    ((conforming-sub-version-and-sub-version-reference?
-	      ($car version) ($car version-reference))
-	     (next-sub-version ($cdr version) ($cdr version-reference)))
-	    (else
-	     #f))))))))
+  (%normalise-to-boolean
+   (match version-reference
+     (()
+      #t)
+     (('and (let ?version-reference ...))
+      (for-all (lambda (reference)
+		 (conforming-version-and-version-reference? version reference))
+	?version-reference))
+     (('or (let ?version-reference ...))
+      (find (lambda (reference)
+	      (conforming-version-and-version-reference? version reference))
+	?version-reference))
+     (('not (let ?version-reference))
+      (not (conforming-version-and-version-reference? version ?version-reference)))
+     (_
+      (let next-sub-version ((version		version)
+			     (version-reference	version-reference))
+	(cond ((null? version-reference)
+	       ;;According  to R6RS:  if  the  version reference  is
+	       ;;shorter than the version, it is a match.
+	       #t)
+	      ((null? version)
+	       (null? version-reference))
+	      ((conforming-sub-version-and-sub-version-reference?
+		($car version) ($car version-reference))
+	       (next-sub-version ($cdr version) ($cdr version-reference)))
+	      (else
+	       #f)))))))
 
 ;;; --------------------------------------------------------------------
 

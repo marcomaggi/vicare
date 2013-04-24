@@ -3998,7 +3998,7 @@
   ;;     == (not ?version-reference)
   ;;
   ;;  ?sub-version-reference
-  ;;     == ?sub-version ...
+  ;;     == ?sub-version
   ;;     == (>=  ?sub-version)
   ;;     == (<=  ?sub-version)
   ;;     == (and ?sub-version-reference ...)
