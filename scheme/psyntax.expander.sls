@@ -4052,13 +4052,13 @@
 	(begin
 	  (for-each (lambda (subst.entry)
 		      (%add-subst-entry! subst.table subst.entry))
-	    (%import-set->subst (car import-spec*)))
+	    (%import-spec->subst (car import-spec*)))
 	  (loop (cdr import-spec*) subst.table)))))
 
   (define (%add-subst-entry! subst.table subst.entry)
     ;;Add  the  given  SUBST.ENTRY to  SUBST.TABLE;  return  unspecified
     ;;values.  Raise a syntax violation if SUBST.ENTRY has the same name
-    ;;but different label than an entry in SUBST.TABLE.
+    ;;of an entry in SUBST.TABLE, but different label.
     ;;
     (let ((entry.name  (car subst.entry))
 	  (entry.label (cdr subst.entry)))
@@ -4071,110 +4071,139 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%import-set->subst spec)
-    (syntax-match spec ()
-      ((x x* ...)
-       ;;Remember that, according  to R6RS, the symbol  LIBRARY can be
-       ;;used to quote  a library reference whose  first identifier is
-       ;;"for", "rename", etc.
-       (not (memq (syntax->datum x)
-		  '(for rename except only prefix deprefix library)))
-       (import-library (cons x x*)))
+  (module (%import-spec->subst)
 
-      ((rename ?import-set (?old-name* ?new-name*) ...)
-       (and (eq? (syntax->datum rename) 'rename)
-	    (for-all id-stx? ?old-name*)
-	    (for-all id-stx? ?new-name*))
-       (let ((subst       (%import-set->subst ?import-set))
-	     (?old-name*  (map syntax->datum ?old-name*))
-	     (?new-name*  (map syntax->datum ?new-name*)))
-	 ;;FIXME Rewrite  this to  eliminate find*  and rem*  and merge.
-	 ;;(Abdulaziz Ghuloum)
-	 (let ((old-label* (find* ?old-name* subst ?import-set)))
-	   (let ((subst (rem* ?old-name* subst)))
-	     ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
-	     (merge-substs (map cons ?new-name* old-label*) subst)))))
+    (define (%import-spec->subst import-spec)
+      ;;Process the IMPORT-SPEC and return the corresponding subst.
+      ;;
+      ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
+      ;;installed, if  not already  in the  library collection;  the raw
+      ;;subst from the library definition  is processed according to the
+      ;;rules in IMPORT-SPEC.
+      ;;
+      ;;If an  error is found, including  library version non-conforming
+      ;;to the library reference, an exception is raised.
+      ;;
+      (syntax-match import-spec ()
+	((?for ?import-set . ?import-levels)
+	 ;;FIXME Here we should validate ?IMPORT-LEVELS even if it is no
+	 ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
+	 (eq? (syntax->datum ?for) 'for)
+	 (%import-set->subst ?import-set import-spec))
 
-      ((except isp sym* ...)
-       (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
-       (let ((subst (%import-set->subst isp)))
-	 (rem* (map syntax->datum sym*) subst)))
+	(?import-set
+	 (%import-set->subst ?import-set import-spec))))
 
-      ((only ?import-set ?name* ...)
-       (and (eq? (syntax->datum only) 'only)
-	    (for-all id-stx? ?name*))
-       (let* ((subst  (%import-set->subst ?import-set))
-	      (name*  (map syntax->datum ?name*))
-	      (name*  (remove-dups name*))
-	      (lab*   (find* name* subst ?import-set)))
-	 (map cons name* lab*)))
+    (define (%import-set->subst import-set import-spec)
+      ;;Recursive  function.   Process  the IMPORT-SET  and  return  the
+      ;;corresponding   subst.    IMPORT-SPEC   is   the   full   import
+      ;;specification from the IMPORT clause: it is used for descriptive
+      ;;error reporting.
+      ;;
+      (define (%recurse import-set)
+	(%import-set->subst import-set import-spec))
+      (syntax-match import-set ()
+	((x x* ...)
+	 ;;According to R6RS, the symbol LIBRARY  can be used to quote a
+	 ;;library reference whose first  identifier is "for", "rename",
+	 ;;etc.
+	 (not (memq (syntax->datum x)
+		    '(rename except only prefix deprefix library)))
+	 (%import-library (cons x x*)))
 
-      ((prefix ?import-set p)
-       (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
-       (let ((subst (%import-set->subst ?import-set))
-	     (prefix (symbol->string (syntax->datum p))))
-	 (map
-	     (lambda (x)
-	       (cons (string->symbol (string-append prefix (symbol->string (car x))))
-		     (cdr x)))
-	   subst)))
+	((rename ?import-set (?old-name* ?new-name*) ...)
+	 (and (eq? (syntax->datum rename) 'rename)
+	      (for-all id-stx? ?old-name*)
+	      (for-all id-stx? ?new-name*))
+	 (let ((subst       (%recurse ?import-set))
+	       (?old-name*  (map syntax->datum ?old-name*))
+	       (?new-name*  (map syntax->datum ?new-name*)))
+	   ;;FIXME Rewrite this  to eliminate find* and  rem* and merge.
+	   ;;(Abdulaziz Ghuloum)
+	   (let ((old-label* (find* ?old-name* subst ?import-set)))
+	     (let ((subst (rem* ?old-name* subst)))
+	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
+	       (merge-substs (map cons ?new-name* old-label*) subst)))))
 
-      ((deprefix ?import-set ?prefix)
-       (and (eq? (syntax->datum deprefix) 'deprefix) (id-stx? ?prefix))
-       (if #f
-	   ;;FIXME At  present there  is no way  to disable  DEPREFIX to
-	   ;;enforce  strict R6RS  compatibility; in  future it  may be.
-	   ;;(Marco Maggi; Tue Apr 16, 2013)
-	   (assertion-violation 'expander
-	     "deprefix import specification forbidden in R6RS mode")
-	 (let* ((subst       (%import-set->subst ?import-set))
-		(prefix      (symbol->string (syntax->datum ?prefix)))
-		(prefix.len  (string-length prefix)))
-	   ;;This should never happen.
-	   (when (zero? prefix.len)
-	     (assertion-violation 'deprefix "null deprefix prefix"))
+	((except isp sym* ...)
+	 (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
+	 (let ((subst (%recurse isp)))
+	   (rem* (map syntax->datum sym*) subst)))
+
+	((only ?import-set ?name* ...)
+	 (and (eq? (syntax->datum only) 'only)
+	      (for-all id-stx? ?name*))
+	 (let* ((subst  (%recurse ?import-set))
+		(name*  (map syntax->datum ?name*))
+		(name*  (remove-dups name*))
+		(lab*   (find* name* subst ?import-set)))
+	   (map cons name* lab*)))
+
+	((prefix ?import-set p)
+	 (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
+	 (let ((subst (%recurse ?import-set))
+	       (prefix (symbol->string (syntax->datum p))))
 	   (map
 	       (lambda (x)
-		 (let* ((orig      (symbol->string (car x)))
-			(orig.len  (string-length orig)))
-		   (if (and (< prefix.len orig.len)
-			    (string=? prefix (substring orig 0 prefix.len)))
-		       (cons (string->symbol (substring orig prefix.len orig.len))
-			     (cdr x))
-		     (error 'deprefix
-		       (string-append "binding name cannot be deprefixed of \""
-				      prefix "\"")
-		       orig))))
-	     subst))))
+		 (cons (string->symbol (string-append prefix (symbol->string (car x))))
+		       (cdr x)))
+	     subst)))
 
-      ((library (spec* ...))
-       (eq? (syntax->datum library) 'library)
-       (import-library spec*))
+	((deprefix ?import-set ?prefix)
+	 (and (eq? (syntax->datum deprefix) 'deprefix) (id-stx? ?prefix))
+	 (if #f
+	     ;;FIXME At present  there is no way to  disable DEPREFIX to
+	     ;;enforce strict  R6RS compatibility; in future  it may be.
+	     ;;(Marco Maggi; Tue Apr 16, 2013)
+	     (assertion-violation who
+	       "deprefix import specification forbidden in R6RS mode")
+	   (let* ((subst       (%recurse ?import-set))
+		  (prefix      (symbol->string (syntax->datum ?prefix)))
+		  (prefix.len  (string-length prefix)))
+	     ;;This should never happen.
+	     (when (zero? prefix.len)
+	       (assertion-violation 'deprefix "null deprefix prefix"))
+	     (map
+		 (lambda (x)
+		   (let* ((orig      (symbol->string (car x)))
+			  (orig.len  (string-length orig)))
+		     (if (and (< prefix.len orig.len)
+			      (string=? prefix (substring orig 0 prefix.len)))
+			 (cons (string->symbol (substring orig prefix.len orig.len))
+			       (cdr x))
+		       (error 'deprefix
+			 (string-append "binding name cannot be deprefixed of \""
+					prefix "\"")
+			 orig))))
+	       subst))))
 
-      ((for ?import-set . ?import-level)
-       ;;FIXME Here we should validate  ?IMPORT-LEVEL even if it is no
-       ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
-       (eq? (syntax->datum for) 'for)
-       (%import-set->subst ?import-set))
+	;;According to R6RS:  the symbol LIBRARY can be used  to quote a
+	;;library reference  whose first identifier is  "for", "rename",
+	;;etc.
+	((library (spec* ...))
+	 (eq? (syntax->datum library) 'library)
+	 (%import-library spec*))
 
-      (spec
-       (%synner "invalid import set" spec))))
+	(_
+	 (%synner "invalid import set" import-spec import-set))))
 
-  (define (import-library spec*)
-    (receive (name version-conforms-to-reference?)
-	(parse-library-reference spec*)
-      (when (null? name)
-	(%synner "empty library name" spec*))
-      ;;Search  for  the library  first  in  the collection  of  already
-      ;;installed libraires,  then on  the file system.   If successful:
-      ;;LIB is an instance of LIBRARY struct.
-      (let ((lib (find-library-by-name name)))
-	(unless lib
-	  (%synner "cannot find library with required name" name))
-	(unless (version-conforms-to-reference? (library-version lib))
-	  (%synner "library does not satisfy version specification" spec* lib))
-	((imp-collector) lib)
-	(library-subst lib))))
+    (define (%import-library spec*)
+      (receive (name version-conforms-to-reference?)
+	  (parse-library-reference spec*)
+	(when (null? name)
+	  (%synner "empty library name" spec*))
+	;;Search  for the  library first  in the  collection of  already
+	;;installed libraires, then on  the file system.  If successful:
+	;;LIB is an instance of LIBRARY struct.
+	(let ((lib (find-library-by-name name)))
+	  (unless lib
+	    (%synner "cannot find library with required name" name))
+	  (unless (version-conforms-to-reference? (library-version lib))
+	    (%synner "library does not satisfy version specification" spec* lib))
+	  ((imp-collector) lib)
+	  (library-subst lib))))
+
+    #| end of module: %IMPORT-SPEC->SUBST |# )
 
 ;;; --------------------------------------------------------------------
 
