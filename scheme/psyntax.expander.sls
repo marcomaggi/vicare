@@ -3843,6 +3843,751 @@
       expanded-rhs)))
 
 
+(define (rev-map-append f ls ac)
+  (cond
+   ((null? ls) ac)
+   (else
+    (rev-map-append f (cdr ls)
+		    (cons (f (car ls)) ac)))))
+
+(define build-exports
+  (lambda (lex*+loc* init*)
+    (build-sequence no-source
+		    (cons (build-void)
+			  (rev-map-append
+			   (lambda (x)
+			     (build-global-assignment no-source (cdr x) (car x)))
+			   lex*+loc*
+			   init*)))))
+
+(define (make-export-subst name* id*)
+  (map
+      (lambda (name id)
+        (let ((label (id->label id)))
+          (unless label
+            (stx-error id "cannot export unbound identifier"))
+          (cons name label)))
+    name* id*))
+
+(define (make-export-env/macros lex* loc* r)
+  (define (lookup x)
+    (let f ((x x) (lex* lex*) (loc* loc*))
+      (cond
+       ((pair? lex*)
+	(if (eq? x (car lex*))
+	    (car loc*)
+	  (f x (cdr lex*) (cdr loc*))))
+       (else (assertion-violation 'lookup-make-export "BUG")))))
+  (let f ((r r) (env '()) (global* '()) (macro* '()))
+    (cond
+     ((null? r) (values env global* macro*))
+     (else
+      (let ((x (car r)))
+	(let ((label (car x)) (b (cdr x)))
+	  (case (binding-type b)
+	    ((lexical)
+	     (let ((v (binding-value b)))
+	       (let ((loc (lookup (lexical-var v)))
+		     (type (if (lexical-mutable? v)
+			       'mutable
+			     'global)))
+		 (f (cdr r)
+		    (cons (cons* label type loc) env)
+		    (cons (cons (lexical-var v) loc) global*)
+		    macro*))))
+	    ((local-macro)
+	     (let ((loc (gensym)))
+	       (f (cdr r)
+		  (cons (cons* label 'global-macro loc) env)
+		  global*
+		  (cons (cons loc (binding-value b)) macro*))))
+	    ((local-macro!)
+	     (let ((loc (gensym)))
+	       (f (cdr r)
+		  (cons (cons* label 'global-macro! loc) env)
+		  global*
+		  (cons (cons loc (binding-value b)) macro*))))
+	    ((local-ctv)
+	     (let ((loc (gensym)))
+	       (f (cdr r)
+		  (cons (cons* label 'global-ctv loc) env)
+		  global*
+		  (cons (cons loc (binding-value b)) macro*))))
+	    (($rtd $module $fluid)
+	     (f (cdr r) (cons x env) global* macro*))
+	    (else
+	     (assertion-violation 'expander "BUG: do not know how to export"
+				  (binding-type b) (binding-value b))))))))))
+
+(define generate-temporaries
+  (lambda (ls)
+    (syntax-match ls ()
+      ((ls ...)
+       (map (lambda (x)
+	      (make-<stx>
+	       (let ((x (syntax->datum x)))
+		 (cond
+		  ((or (symbol? x) (string? x))
+		   (gensym x))
+		  (else (gensym 't))))
+	       top-mark* '() '()))
+	 ls))
+      (_
+       (assertion-violation 'generate-temporaries "not a list")))))
+
+(define free-identifier=?
+  (lambda (x y)
+    (if (id? x)
+	(if (id? y)
+	    (free-id=? x y)
+	  (assertion-violation 'free-identifier=? "not an identifier" y))
+      (assertion-violation 'free-identifier=? "not an identifier" x))))
+
+(define bound-identifier=?
+  (lambda (x y)
+    (if (id? x)
+	(if (id? y)
+	    (bound-id=? x y)
+	  (assertion-violation 'bound-identifier=? "not an identifier" y))
+      (assertion-violation 'bound-identifier=? "not an identifier" x))))
+
+(define (expression->source-position-condition x)
+  (expression-position x))
+
+(define (expression-position x)
+  (if (<stx>? x)
+      (let ((x (<stx>-expr x)))
+	(if (annotation? x)
+	    (annotation-textual-position x)
+	  (condition)))
+    (condition)))
+
+(define (syntax-annotation x)
+  (if (<stx>? x) (<stx>-expr x) x))
+
+		;  (define (syntax-annotation x)
+		;    (if (<stx>? x)
+		;        (let ((expr (<stx>-expr x)))
+		;          (if (annotation? x)
+		;              x
+		;              (syntax->datum x)))
+		;        (syntax->datum x)))
+
+(define (assertion-error expr source-identifier
+			 byte-offset character-offset
+			 line-number column-number)
+  ;;Invoked by the expansion of the ASSERT macro to raise an assertion
+  ;;violation.
+  ;;
+  (raise
+   (condition (make-assertion-violation)
+	      (make-who-condition 'assert)
+	      (make-message-condition "assertion failed")
+	      (make-irritants-condition (list expr))
+	      (make-source-position-condition source-identifier
+					      byte-offset character-offset
+					      line-number column-number))))
+
+(define syntax-error
+  (lambda (x . args)
+    (unless (for-all string? args)
+      (assertion-violation 'syntax-error "invalid argument" args))
+    (raise
+     (condition
+      (make-message-condition
+       (if (null? args)
+	   "invalid syntax"
+	 (apply string-append args)))
+      (make-syntax-violation
+       (syntax->datum x)
+       #f)
+      (expression->source-position-condition x)
+      (extract-trace x)))))
+
+(define (extract-trace x)
+  (define-condition-type &trace &condition
+    make-trace trace?
+    (form trace-form))
+  (let f ((x x))
+    (cond ((<stx>? x)
+	   (apply condition
+		  (make-trace x)
+		  (map f (<stx>-ae* x))))
+	  ((annotation? x)
+	   (make-trace (make-<stx> x '() '() '())))
+	  (else (condition)))))
+
+(define syntax-violation
+  ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
+  ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
+  ;;value.  SUBFORM must be a syntax object or a datum value.
+  ;;
+  ;;The  SYNTAX-VIOLATION procedure raises  an exception,  reporting a
+  ;;syntax violation.  WHO should  describe the macro transformer that
+  ;;detected the exception.  The  MESSAGE argument should describe the
+  ;;violation.  FORM should be the erroneous source syntax object or a
+  ;;datum value  representing a  form.  The optional  SUBFORM argument
+  ;;should be a syntax object  or datum value representing a form that
+  ;;more precisely locates the violation.
+  ;;
+  ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
+  ;;value for the  condition object (see below) as  follows: when FORM
+  ;;is  either  an  identifier  or  a  list-structured  syntax  object
+  ;;containing an  identifier as its first element,  then the inferred
+  ;;value is the identifier's symbol.   Otherwise, no value for WHO is
+  ;;provided as part of the condition object.
+  ;;
+  ;;The condition object provided with the exception has the following
+  ;;condition types:
+  ;;
+  ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
+  ;;condition type  "&who", with  WHO as the  value of its  field.  In
+  ;;that  case,  WHO should  identify  the  procedure  or entity  that
+  ;;detected the  exception.  If it  is false, the condition  does not
+  ;;have condition type "&who".
+  ;;
+  ;;* The condition has condition type "&message", with MESSAGE as the
+  ;;value of its field.
+  ;;
+  ;;* The condition has condition type "&syntax" with FORM and SUBFORM
+  ;;as the value of its fields.  If SUBFORM is not provided, the value
+  ;;of the subform field is false.
+  ;;
+  (case-lambda
+   ((who msg form)
+    (syntax-violation who msg form #f))
+   ((who msg form subform)
+    (%syntax-violation who msg form
+		       (make-syntax-violation form subform)))))
+
+(define (%syntax-violation who msg form condition-object)
+  (define who 'syntax-violation)
+  (unless (string? msg)
+    (assertion-violation who "message is not a string" msg))
+  (let ((who (cond ((or (string? who)
+			(symbol? who))
+		    who)
+		   ((not who)
+		    (syntax-match form ()
+		      (id
+		       (id? id)
+		       (syntax->datum id))
+		      ((id . rest)
+		       (id? id)
+		       (syntax->datum id))
+		      (_  #f)))
+		   (else
+		    (assertion-violation who "invalid who argument" who)))))
+    (raise
+     (condition (if who
+		    (make-who-condition who)
+		  (condition))
+		(make-message-condition msg)
+		condition-object
+		(expression->source-position-condition form)
+		(extract-trace form)))))
+
+(define identifier? (lambda (x) (id? x)))
+
+(define (datum->syntax id datum)
+  (if (id? id)
+      (datum->stx id datum)
+    (assertion-violation 'datum->syntax "not an identifier" id)))
+
+
+;;;; miscellaneous collectors
+
+(define (make-collector)
+  (let ((ls '()))
+    (case-lambda
+     (()
+      ls)
+     ((x)
+      (unless (eq? x '*interaction*)
+	(set! ls (%set-cons x ls)))))))
+
+(define inv-collector
+  (make-parameter
+      (lambda args
+        (assertion-violation 'inv-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'inv-collector "BUG: not a procedure" x))
+      x)))
+
+(define vis-collector
+  (make-parameter
+      (lambda args
+        (assertion-violation 'vis-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'vis-collector "BUG: not a procedure" x))
+      x)))
+
+(define imp-collector
+  ;;Imported  libraries  collector.   Holds a  collector  function  (see
+  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  structs representing  the
+  ;;libraries from an R6RS import specification.
+  ;;
+  (make-parameter
+      (lambda args
+        (assertion-violation 'imp-collector "BUG: not initialized"))
+    (lambda (x)
+      (unless (procedure? x)
+	(assertion-violation 'imp-collector "BUG: not a procedure" x))
+      x)))
+
+
+;;;; stale stuff
+
+(define stale-when-collector
+  (make-parameter #f))
+
+(define (make-stale-collector)
+  (let ((code (build-data no-source #f))
+	(req* '()))
+    (case-lambda
+     (()
+      (values code req*))
+     ((c r*)
+      (set! code (build-conditional no-source code (build-data no-source #t) c))
+      (set! req* (%set-union r* req*))))))
+
+(define (handle-stale-when guard-expr mr)
+  (let ((stc (make-collector)))
+    (let ((core-expr (parametrise ((inv-collector stc))
+		       (chi-expr guard-expr mr mr))))
+      (cond ((stale-when-collector)
+	     => (lambda (c)
+		  (c core-expr (stc))))))))
+
+
+(module (library-body-expander)
+  ;;Both the R6RS  programs expander and the R6RS  library expander make
+  ;;use of this module to expand the body forms.
+  ;;
+  ;;When  expanding  the  body  of a  library:  MAIN/EXPORT-SPEC*  is  a
+  ;;SYNTAX-MATCH  input argument  representing a  set of  library export
+  ;;specifications.    When   expanding   the   body   of   a   program:
+  ;;MAIN/EXPORT-SPEC* is the symbol "main".
+  ;;
+  ;;IMPORT-SPEC* is a SYNTAX-MATCH input  argument representing a set of
+  ;;library import specifications.
+  ;;
+  ;;BODY* is a SYNTAX-MATCH input argument representing the body forms.
+  ;;
+  ;;MIX? is  true when expanding  a program  and false when  expanding a
+  ;;library; when  true mixing top-level definitions  and expressions is
+  ;;fine.
+  ;;
+  ;;Return multiple values:
+  ;;
+  ;;1.  A  collector function  (see MAKE-COLLECTOR) holding  the LIBRARY
+  ;;   structs representing the import specifications.
+  ;;
+  ;;2.   A collector  function (see  MAKE-COLLECTOR) holding...   invoke
+  ;;   code...
+  ;;
+  ;;3.   A collector  function  (see  MAKE-COLLECTOR) holding...   visit
+  ;;   code...
+  ;;
+  ;;4. ...
+  ;;
+  ;;5. ...
+  ;;
+  ;;6. ...
+  ;;
+  ;;7. ...
+  ;;
+  (define (library-body-expander main/export-spec* import-spec* body* mix?)
+    (define itc (make-collector))
+    (parametrise ((imp-collector      itc)
+		  (top-level-context  #f))
+      (receive (subst-names subst-labels)
+	  (parse-import-spec* import-spec*)
+	(let ((rib (make-top-rib subst-names subst-labels)))
+	  (define (wrap x)
+	    (make-<stx> x top-mark* (list rib) '()))
+	  (let ((body*  (map wrap body*))
+		(rtc    (make-collector))
+		(vtc    (make-collector)))
+	    (parametrise ((inv-collector  rtc)
+			  (vis-collector  vtc))
+	      (receive (init* r mr lex* rhs* internal-exp*)
+		  (%chi-library-internal body* rib mix?)
+		(receive (exp-name* exp-id*)
+		    (parse-export-spec* (if (eq? main/export-spec* 'all)
+					    (map wrap (top-marked-symbols rib))
+					  (append (map wrap main/export-spec*)
+						  internal-exp*)))
+		  (seal-rib! rib)
+		  (let* ((init*  (chi-expr* init* r mr))
+			 (rhs*   (chi-rhs* rhs* r mr)))
+		    (unseal-rib! rib)
+		    (let ((loc*          (map gen-global lex*))
+			  (export-subst  (make-export-subst exp-name* exp-id*)))
+		      (define errstr
+			"attempt to export mutated variable")
+		      (receive (export-env global* macro*)
+			  (make-export-env/macros lex* loc* r)
+			(unless (eq? main/export-spec* 'all)
+			  (for-each
+			      (lambda (s)
+				(let ((name  (car s))
+				      (label (cdr s)))
+				  (let ((p (assq label export-env)))
+				    (when p
+				      (let ((b (cdr p)))
+					(let ((type (car b)))
+					  (when (eq? type 'mutable)
+					    (syntax-violation 'export errstr name))))))))
+			    export-subst))
+			(let ((invoke-body
+			       (build-library-letrec* no-source
+						      mix?
+						      lex* loc* rhs*
+						      (if (null? init*)
+							  (build-void)
+							(build-sequence no-source init*))))
+			      ;;(invoke-body
+			      ;; (build-letrec* no-source lex* rhs*
+			      ;;    (build-exports global* init*)))
+			      (invoke-definitions
+			       (map build-global-define (map cdr global*))))
+			  (values (itc) (rtc) (vtc)
+				  (build-sequence no-source
+						  (append invoke-definitions
+							  (list invoke-body)))
+				  macro* export-subst export-env)))))))))))))
+
+  (define (%chi-library-internal e* rib mix?)
+    (receive (e* r mr lex* rhs* mod** _kwd* exp*)
+	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
+      (values (append (apply append (reverse mod**)) e*)
+	      r mr (reverse lex*) (reverse rhs*) exp*)))
+
+  #| end of module: LIBRARY-BODY-EXPANDER |# )
+
+
+;;;; environments
+
+;;An env record encapsulates a substitution and a set of libraries.
+(define-record env
+  (names
+		;A  list of  symbols  representing the  public names  of
+		;bindings from a set of import specifications as defined
+		;by  R6RS.   These  names  are from  the  subst  of  the
+		;libraries, already processed with the directives in the
+		;import sets (prefix, deprefix, only, except, rename).
+   labels
+		;A list  of symbols representing the  labels of bindings
+		;from a set of import specifications as defined by R6RS.
+		;These labels are from the subst of the libraries.
+   itc
+		;A collector  function (see MAKE-COLLECTOR)  holding the
+		;LIBRARY structs representing  the libraries selected by
+		;the original import specifications.
+   )
+  (lambda (S port sub-printer)
+    (display "#<environment>" port)))
+
+(define-record interaction-env
+  (rib
+   r
+   locs)
+  (lambda (S port sub-printer)
+    (display "#<environment>" port)))
+
+(define (environment? obj)
+  (or (env? obj)
+      (interaction-env? obj)))
+
+(define (environment-symbols x)
+  ;;Return a list of symbols representing the names of the bindings from
+  ;;the given environment.
+  ;;
+  (define who 'environment-symbols)
+  (cond ((env? x)
+	 (vector->list (env-names x)))
+	((interaction-env? x)
+	 (map values (<rib>-sym* (interaction-env-rib x))))
+	(else
+	 (assertion-violation who "not an environment" x))))
+
+(define (environment . import-spec*)
+  ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
+  ;;constructs  an env  record that  can be  used later  by eval  and/or
+  ;;expand.
+  ;;
+  ;;IMPORT-SPEC* must be a list  of symbolic expressions, or lists/trees
+  ;;of ANNOTATION structs, representing import specifications as defined
+  ;;by R6RS plus Vicare extensions.
+  ;;
+  (let ((itc (make-collector)))
+    (parametrise ((imp-collector itc))
+      (receive (subst.names subst.labels)
+	  (parse-import-spec* import-spec*)
+	(make-env subst.names subst.labels itc)))))
+
+(define (null-environment n)
+  ;;Defined  by R6RS.   The null  environment is  constructed using  the
+  ;;corresponding library.
+  ;;
+  (unless (eqv? n 5)
+    (assertion-violation 'null-environment
+      "only report version 5 is supported" n))
+  (environment '(psyntax null-environment-5)))
+
+(define (scheme-report-environment n)
+  ;;Defined  by R6RS.   The R5RS  environment is  constructed using  the
+  ;;corresponding library.
+  ;;
+  (unless (eqv? n 5)
+    (assertion-violation 'scheme-report-environment
+      "only report version 5 is supported" n))
+  (environment '(psyntax scheme-report-environment-5)))
+
+(define (new-interaction-environment)
+  ;;Build and return a new interaction environment.
+  ;;
+  (let* ((lib (find-library-by-name (base-of-interaction-library)))
+	 (rib (subst->rib (library-subst lib))))
+    (make-interaction-env rib '() '())))
+
+(define interaction-environment
+  ;;When  called  with  no   arguments:  return  an  environment  object
+  ;;representing  the environment  active at  the  REPL; to  be used  as
+  ;;argument for EVAL.
+  ;;
+  ;;When  called with  the argument  ENV, which  must be  an environment
+  ;;object: set ENV as interaction environment.
+  ;;
+  (let ((current-env #f))
+    (case-lambda
+     (()
+      (or current-env
+	  (begin
+	    (set! current-env (new-interaction-environment))
+	    current-env)))
+     ((env)
+      (unless (environment? env)
+	(assertion-violation 'interaction-environment
+	  "expected environment object as argument" env))
+      (set! current-env env)))))
+
+
+(module (eval expand-form-to-core-language)
+
+  (define (eval x env)
+    ;;This is  R6RS's eval.   It takes an  expression and  an environment,
+    ;;expands the  expression, invokes  its invoke-required  libraries and
+    ;;evaluates its expanded core form.
+    (define who 'eval)
+    (unless (environment? env)
+      (error who "not an environment" env))
+    (receive (x invoke-req*)
+	(expand-form-to-core-language x env)
+      (for-each invoke-library invoke-req*)
+      (eval-core (expanded->core x))))
+
+  (define (expand-form-to-core-language x env)
+    ;;Interface to the internal expression expander (chi-expr).  Take an
+    ;;expression and  an environment.  Return two  values: the resulting
+    ;;core-expression, a list  of libraries that must  be invoked before
+    ;;evaluating the core expr.
+    (define who 'expand-form-to-core-language)
+    (cond ((env? env)
+	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
+	     (let ((x (make-<stx> x top-mark* (list rib) '()))
+		   (itc (env-itc env))
+		   (rtc (make-collector))
+		   (vtc (make-collector)))
+	       (let ((x (parametrise ((top-level-context #f)
+				      (inv-collector rtc)
+				      (vis-collector vtc)
+				      (imp-collector itc))
+			  (chi-expr x '() '()))))
+		 (seal-rib! rib)
+		 (values x (rtc))))))
+	  ((interaction-env? env)
+	   (let ((rib (interaction-env-rib env))
+		 (r (interaction-env-r env))
+		 (rtc (make-collector)))
+	     (let ((x (make-<stx> x top-mark* (list rib) '())))
+	       (let-values (((e r^)
+			     (parametrise ((top-level-context env)
+					   (inv-collector rtc)
+					   (vis-collector (make-collector))
+					   (imp-collector (make-collector)))
+			       (%chi-interaction-expr x rib r))))
+		 (set-interaction-env-r! env r^)
+		 (values e (rtc))))))
+	  (else
+	   (assertion-violation who "not an environment" env))))
+
+  (define (%chi-interaction-expr e rib r)
+    (receive (e* r mr lex* rhs* mod** _kwd* _exp*)
+	(chi-body* (list e) r r '() '() '() '() '() rib #t #f)
+      (let ((e* (expand-interaction-rhs*/init*
+		 (reverse lex*) (reverse rhs*)
+		 (append (apply append (reverse mod**)) e*)
+		 r mr)))
+	(let ((e (cond ((null? e*)
+			(build-void))
+		       ((null? (cdr e*))
+			(car e*))
+		       (else
+			(build-sequence no-source e*)))))
+	  (values e r)))))
+
+  #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
+
+
+;;;; R6RS top level programs
+
+(define (compile-r6rs-top-level expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, expand  it and return a thunk  which, when evaluated,
+  ;;compiles   the  program   and  returns   an  INTERACTIN-ENV   struct
+  ;;representing the environment after the program execution.
+  ;;
+  (receive (lib* invoke-code macro* export-subst export-env)
+      (expand-top-level expr*)
+    (lambda ()
+      (for-each invoke-library lib*)
+      (initial-visit! macro*)
+      (eval-core (expanded->core invoke-code))
+      (make-interaction-env (subst->rib export-subst)
+			    (map (lambda (x)
+				   (let* ((label    (car x))
+					  (binding  (cdr x))
+					  (type     (car binding))
+					  (val      (cdr binding)))
+				     (cons* label type '*interaction* val)))
+			      export-env)
+			    '()))))
+
+(define (expand-top-level expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, expand it.
+  ;;
+  (receive (import-spec* body*)
+      (parse-top-level-program expr*)
+    (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
+	(library-body-expander 'all import-spec* body* #t)
+      (values invoke-req* invoke-code macro* export-subst export-env))))
+
+(define (parse-top-level-program expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, parse it and return 2 values:
+  ;;
+  ;;1. A list of export specifications.
+  ;;
+  ;;2. A list of body forms.
+  ;;
+  (syntax-match expr* ()
+    (((?import ?import-spec* ...) body* ...)
+     (eq? (syntax->datum ?import) 'import)
+     (values ?import-spec* body*))
+
+    (((?import . x) . y)
+     (eq? (syntax->datum ?import) 'import)
+     (syntax-violation 'expander
+       "invalid syntax of top-level program" (syntax-car expr*)))
+
+    (_
+     (assertion-violation 'expander
+       "top-level program is missing an (import ---) clause"))))
+
+
+(define (boot-library-expand x)
+  ;;When bootstrapping  the system,  visit-code is  not (and  cannot be)
+  ;;used in the "next" system.  So, we drop it.
+  ;;
+  (receive (id
+	    name ver
+	    imp* vis* inv*
+	    invoke-code visit-code export-subst export-env
+	    guard-code guard-dep*)
+      (expand-library x)
+    (values name invoke-code export-subst export-env)))
+
+(define expand-library
+  ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
+  ;;core-form;  register  it  with   the  library  manager;  return  its
+  ;;invoke-code, visit-code, subst and env.
+  ;;
+  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
+  ;;
+  ;;   (library . _)
+  ;;
+  ;;or an ANNOTATION struct representing such expression.
+  ;;
+  ;;The optional FILENAME must be #f or a string representing the source
+  ;;file from which  the library was loaded; it is  used for information
+  ;;purposes.
+  ;;
+  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
+  ;;and returning  unspecified values: the  first argument is a  list of
+  ;;symbols from a  library name; the second argument is  null or a list
+  ;;of exact integers representing  the library version.  VERIFY-NAME is
+  ;;meant to  perform some validation  upon the library  name components
+  ;;and raise  an exception if  something is wrong; otherwise  it should
+  ;;just return.
+  ;;
+  (case-lambda
+   ((library-sexp filename verify-name)
+    (define (build-visit-code macro*)
+      ;;Return a symbolic expression  representing MACRO* definitions in
+      ;;the core language.
+      ;;
+      (if (null? macro*)
+	  (build-void)
+	(build-sequence no-source
+			(map (lambda (x)
+			       (let ((loc (car x))
+				     (src (cddr x)))
+				 (build-global-assignment no-source loc src)))
+			  macro*))))
+    (let-values (((name ver imp* inv* vis*
+			invoke-code macro* export-subst export-env
+			guard-code guard-req*)
+		  (core-library-expander library-sexp verify-name)))
+      (let ((id            (gensym)) ;library UID
+	    (name          name)     ;list of name symbols
+	    (ver           ver)	     ;null or list of version numbers
+
+	    ;;From list  of LIBRARY  records to  list of  lists: library
+	    ;;UID, list of name symbols, list of version numbers.
+	    (imp*          (map library-spec imp*))
+	    (vis*          (map library-spec vis*))
+	    (inv*          (map library-spec inv*))
+	    (guard-req*    (map library-spec guard-req*))
+
+	    ;;Thunk to eval to visit the library.
+	    (visit-proc    (lambda ()
+			     (initial-visit! macro*)))
+	    ;;Thunk to eval to invoke the library.
+	    (invoke-proc   (lambda ()
+			     (eval-core (expanded->core invoke-code))))
+	    (visit-code    (build-visit-code macro*))
+	    (invoke-code   invoke-code))
+	(install-library id name ver
+			 imp* vis* inv* export-subst export-env
+			 visit-proc invoke-proc
+			 visit-code invoke-code
+			 guard-code guard-req*
+			 #t #;visible? filename)
+	(values id name ver imp* vis* inv*
+		invoke-code visit-code
+		export-subst export-env
+		guard-code guard-req*))))
+   ((library-sexp filename)
+    (expand-library library-sexp filename (lambda (ids ver) (values))))
+   ((library-sexp)
+    (expand-library library-sexp #f       (lambda (ids ver) (values))))))
+
+
 (define (core-library-expander library-sexp verify-name)
   ;;Given an list/tree of ANNOTATION structs representing a LIBRARY form
   ;;symbolic expression:
@@ -3970,6 +4715,11 @@
   ;;   ?export-spec
   ;;     == ?identifier
   ;;     == (rename (?internal-identifier ?external-identifier) ...)
+  ;;
+  ;;Vicare adds the following:
+  ;;
+  ;;     == (prefix   (?internal-identifier ...) the-prefix)
+  ;;     == (deprefix (?internal-identifier ...) the-prefix)
   ;;
   (define who 'export)
 
@@ -4603,714 +5353,14 @@
   #| end of module: PARSE-IMPORT-SPEC* |# )
 
 
-;;;; miscellaneous collectors
-
-(define (make-collector)
-  (let ((ls '()))
-    (case-lambda
-     (()
-      ls)
-     ((x)
-      (unless (eq? x '*interaction*)
-	(set! ls (%set-cons x ls)))))))
-
-(define inv-collector
-  (make-parameter
-      (lambda args
-        (assertion-violation 'inv-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'inv-collector "BUG: not a procedure" x))
-      x)))
-
-(define vis-collector
-  (make-parameter
-      (lambda args
-        (assertion-violation 'vis-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'vis-collector "BUG: not a procedure" x))
-      x)))
-
-(define imp-collector
-  ;;Imported  libraries  collector.   Holds a  collector  function  (see
-  ;;MAKE-COLLECTOR)  filled with  the LIBRARY  structs representing  the
-  ;;libraries from an R6RS import specification.
-  ;;
-  (make-parameter
-      (lambda args
-        (assertion-violation 'imp-collector "BUG: not initialized"))
-    (lambda (x)
-      (unless (procedure? x)
-	(assertion-violation 'imp-collector "BUG: not a procedure" x))
-      x)))
-
-
-(module (library-body-expander)
-
-  (define (library-body-expander main-exp* imp* b* mix?)
-    (define itc (make-collector))
-    (parametrise ((imp-collector      itc)
-		  (top-level-context  #f))
-      (receive (subst-names subst-labels)
-	  (parse-import-spec* imp*)
-	(let ((rib (make-top-rib subst-names subst-labels)))
-	  (define (wrap x)
-	    (make-<stx> x top-mark* (list rib) '()))
-	  (let ((b*   (map wrap b*))
-		(rtc  (make-collector))
-		(vtc  (make-collector)))
-	    (parametrise ((inv-collector  rtc)
-			  (vis-collector  vtc))
-	      (receive (init* r mr lex* rhs* internal-exp*)
-		  (%chi-library-internal b* rib mix?)
-		(receive (exp-name* exp-id*)
-		    (parse-export-spec* (if (eq? main-exp* 'all)
-					    (map wrap (top-marked-symbols rib))
-					  (append (map wrap main-exp*)
-						  internal-exp*)))
-		  (seal-rib! rib)
-		  (let* ((init*  (chi-expr* init* r mr))
-			 (rhs*   (chi-rhs* rhs* r mr)))
-		    (unseal-rib! rib)
-		    (let ((loc*          (map gen-global lex*))
-			  (export-subst  (make-export-subst exp-name* exp-id*)))
-		      (define errstr
-			"attempt to export mutated variable")
-		      (receive (export-env global* macro*)
-			  (make-export-env/macros lex* loc* r)
-			(unless (eq? main-exp* 'all)
-			  (for-each
-			      (lambda (s)
-				(let ((name  (car s))
-				      (label (cdr s)))
-				  (let ((p (assq label export-env)))
-				    (when p
-				      (let ((b (cdr p)))
-					(let ((type (car b)))
-					  (when (eq? type 'mutable)
-					    (syntax-violation 'export errstr name))))))))
-			    export-subst))
-			(let ((invoke-body
-			       (build-library-letrec* no-source
-						      mix?
-						      lex* loc* rhs*
-						      (if (null? init*)
-							  (build-void)
-							(build-sequence no-source init*))))
-			      ;;(invoke-body
-			      ;; (build-letrec* no-source lex* rhs*
-			      ;;    (build-exports global* init*)))
-			      (invoke-definitions
-			       (map build-global-define (map cdr global*))))
-			  (values (itc) (rtc) (vtc)
-				  (build-sequence no-source
-						  (append invoke-definitions
-							  (list invoke-body)))
-				  macro* export-subst export-env)))))))))))))
-
-  (define (%chi-library-internal e* rib mix?)
-    (receive (e* r mr lex* rhs* mod** _kwd* exp*)
-	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
-      (values (append (apply append (reverse mod**)) e*)
-	      r mr (reverse lex*) (reverse rhs*) exp*)))
-
-  #| end of module: LIBRARY-BODY-EXPANDER |# )
-
-
-;;;; stale stuff
-
-(define stale-when-collector
-  (make-parameter #f))
-
-(define (make-stale-collector)
-  (let ((code (build-data no-source #f))
-	(req* '()))
-    (case-lambda
-     (()
-      (values code req*))
-     ((c r*)
-      (set! code (build-conditional no-source code (build-data no-source #t) c))
-      (set! req* (%set-union r* req*))))))
-
-(define (handle-stale-when guard-expr mr)
-  (let ((stc (make-collector)))
-    (let ((core-expr (parametrise ((inv-collector stc))
-		       (chi-expr guard-expr mr mr))))
-      (cond ((stale-when-collector)
-	     => (lambda (c)
-		  (c core-expr (stc))))))))
-
-
-;;;; environments
-
-;;An env record encapsulates a substitution and a set of libraries.
-(define-record env
-  (names
-		;A  list of  symbols  representing the  public names  of
-		;bindings from a set of import specifications as defined
-		;by  R6RS.   These  names  are from  the  subst  of  the
-		;libraries, already processed with the directives in the
-		;import sets (prefix, deprefix, only, except, rename).
-   labels
-		;A list  of symbols representing the  labels of bindings
-		;from a set of import specifications as defined by R6RS.
-		;These labels are from the subst of the libraries.
-   itc
-		;A collector  function (see MAKE-COLLECTOR)  holding the
-		;LIBRARY structs representing  the libraries selected by
-		;the original import specifications.
-   )
-  (lambda (S port sub-printer)
-    (display "#<environment>" port)))
-
-(define-record interaction-env
-  (rib
-   r
-   locs)
-  (lambda (S port sub-printer)
-    (display "#<environment>" port)))
-
-(define (environment? obj)
-  (or (env? obj)
-      (interaction-env? obj)))
-
-(define (environment-symbols x)
-  ;;Return a list of symbols representing the names of the bindings from
-  ;;the given environment.
-  ;;
-  (define who 'environment-symbols)
-  (cond ((env? x)
-	 (vector->list (env-names x)))
-	((interaction-env? x)
-	 (map values (<rib>-sym* (interaction-env-rib x))))
-	(else
-	 (assertion-violation who "not an environment" x))))
-
-(define (environment . import-spec*)
-  ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
-  ;;constructs  an env  record that  can be  used later  by eval  and/or
-  ;;expand.
-  ;;
-  ;;IMPORT-SPEC* must be a list  of symbolic expressions, or lists/trees
-  ;;of ANNOTATION structs, representing import specifications as defined
-  ;;by R6RS plus Vicare extensions.
-  ;;
-  (let ((itc (make-collector)))
-    (parametrise ((imp-collector itc))
-      (receive (subst.names subst.labels)
-	  (parse-import-spec* import-spec*)
-	(make-env subst.names subst.labels itc)))))
-
-(define (null-environment n)
-  ;;Defined  by R6RS.   The null  environment is  constructed using  the
-  ;;corresponding library.
-  ;;
-  (unless (eqv? n 5)
-    (assertion-violation 'null-environment
-      "only report version 5 is supported" n))
-  (environment '(psyntax null-environment-5)))
-
-(define (scheme-report-environment n)
-  ;;Defined  by R6RS.   The R5RS  environment is  constructed using  the
-  ;;corresponding library.
-  ;;
-  (unless (eqv? n 5)
-    (assertion-violation 'scheme-report-environment
-      "only report version 5 is supported" n))
-  (environment '(psyntax scheme-report-environment-5)))
-
-(define (new-interaction-environment)
-  ;;Build and return a new interaction environment.
-  ;;
-  (let* ((lib (find-library-by-name (base-of-interaction-library)))
-	 (rib (subst->rib (library-subst lib))))
-    (make-interaction-env rib '() '())))
-
-(define interaction-environment
-  ;;When  called  with  no   arguments:  return  an  environment  object
-  ;;representing  the environment  active at  the  REPL; to  be used  as
-  ;;argument for EVAL.
-  ;;
-  ;;When  called with  the argument  ENV, which  must be  an environment
-  ;;object: set ENV as interaction environment.
-  ;;
-  (let ((current-env #f))
-    (case-lambda
-     (()
-      (or current-env
-	  (begin
-	    (set! current-env (new-interaction-environment))
-	    current-env)))
-     ((env)
-      (unless (environment? env)
-	(assertion-violation 'interaction-environment
-	  "expected environment object as argument" env))
-      (set! current-env env)))))
-
-
-(module (expand-form-to-core-language)
-
-  (define (expand-form-to-core-language x env)
-    ;;Interface to the internal expression expander (chi-expr).  Take an
-    ;;expression and  an environment.  Return two  values: the resulting
-    ;;core-expression, a list  of libraries that must  be invoked before
-    ;;evaluating the core expr.
-    (define who 'expand-form-to-core-language)
-    (cond ((env? env)
-	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	     (let ((x (make-<stx> x top-mark* (list rib) '()))
-		   (itc (env-itc env))
-		   (rtc (make-collector))
-		   (vtc (make-collector)))
-	       (let ((x (parametrise ((top-level-context #f)
-				      (inv-collector rtc)
-				      (vis-collector vtc)
-				      (imp-collector itc))
-			  (chi-expr x '() '()))))
-		 (seal-rib! rib)
-		 (values x (rtc))))))
-	  ((interaction-env? env)
-	   (let ((rib (interaction-env-rib env))
-		 (r (interaction-env-r env))
-		 (rtc (make-collector)))
-	     (let ((x (make-<stx> x top-mark* (list rib) '())))
-	       (let-values (((e r^)
-			     (parametrise ((top-level-context env)
-					   (inv-collector rtc)
-					   (vis-collector (make-collector))
-					   (imp-collector (make-collector)))
-			       (%chi-interaction-expr x rib r))))
-		 (set-interaction-env-r! env r^)
-		 (values e (rtc))))))
-	  (else
-	   (assertion-violation who "not an environment" env))))
-
-  (define (%chi-interaction-expr e rib r)
-    (receive (e* r mr lex* rhs* mod** _kwd* _exp*)
-	(chi-body* (list e) r r '() '() '() '() '() rib #t #f)
-      (let ((e* (expand-interaction-rhs*/init*
-		 (reverse lex*) (reverse rhs*)
-		 (append (apply append (reverse mod**)) e*)
-		 r mr)))
-	(let ((e (cond ((null? e*)
-			(build-void))
-		       ((null? (cdr e*))
-			(car e*))
-		       (else
-			(build-sequence no-source e*)))))
-	  (values e r)))))
-
-  #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
-
-(define (eval x env)
-  ;;This is  R6RS's eval.   It takes an  expression and  an environment,
-  ;;expands the  expression, invokes  its invoke-required  libraries and
-  ;;evaluates its expanded core form.
-  (define who 'eval)
-  (unless (environment? env)
-    (error who "not an environment" env))
-  (receive (x invoke-req*)
-      (expand-form-to-core-language x env)
-    (for-each invoke-library invoke-req*)
-    (eval-core (expanded->core x))))
-
+;;;; R6RS programs and libraries helpers
 
 (define (initial-visit! macro*)
   (for-each (lambda (x)
-	      (let ((loc (car x)) (proc (cadr x)))
+	      (let ((loc  (car  x))
+		    (proc (cadr x)))
 		(set-symbol-value! loc proc)))
     macro*))
-
-(define expand-library
-  ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
-  ;;core-form;  register  it  with   the  library  manager;  return  its
-  ;;invoke-code, visit-code, subst and env.
-  ;;
-  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
-  ;;
-  ;;   (library . _)
-  ;;
-  ;;or an ANNOTATION struct representing such expression.
-  ;;
-  ;;The optional FILENAME must be #f or a string representing the source
-  ;;file from which  the library was loaded; it is  used for information
-  ;;purposes.
-  ;;
-  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
-  ;;and returning  unspecified values: the  first argument is a  list of
-  ;;symbols from a  library name; the second argument is  null or a list
-  ;;of exact integers representing  the library version.  VERIFY-NAME is
-  ;;meant to  perform some validation  upon the library  name components
-  ;;and raise  an exception if  something is wrong; otherwise  it should
-  ;;just return.
-  ;;
-  (case-lambda
-   ((library-sexp filename verify-name)
-    (define (build-visit-code macro*)
-      ;;Return a symbolic expression  representing MACRO* definitions in
-      ;;the core language.
-      ;;
-      (if (null? macro*)
-	  (build-void)
-	(build-sequence no-source
-			(map (lambda (x)
-			       (let ((loc (car x))
-				     (src (cddr x)))
-				 (build-global-assignment no-source loc src)))
-			  macro*))))
-    (let-values (((name ver imp* inv* vis*
-			invoke-code macro* export-subst export-env
-			guard-code guard-req*)
-		  (core-library-expander library-sexp verify-name)))
-      (let ((id            (gensym)) ;library UID
-	    (name          name)     ;list of name symbols
-	    (ver           ver)	     ;null or list of version numbers
-
-	    ;;From list  of LIBRARY  records to  list of  lists: library
-	    ;;UID, list of name symbols, list of version numbers.
-	    (imp*          (map library-spec imp*))
-	    (vis*          (map library-spec vis*))
-	    (inv*          (map library-spec inv*))
-	    (guard-req*    (map library-spec guard-req*))
-
-	    ;;Thunk to eval to visit the library.
-	    (visit-proc    (lambda ()
-			     (initial-visit! macro*)))
-	    ;;Thunk to eval to invoke the library.
-	    (invoke-proc   (lambda ()
-			     (eval-core (expanded->core invoke-code))))
-	    (visit-code    (build-visit-code macro*))
-	    (invoke-code   invoke-code))
-	(install-library id name ver
-			 imp* vis* inv* export-subst export-env
-			 visit-proc invoke-proc
-			 visit-code invoke-code
-			 guard-code guard-req*
-			 #t #;visible? filename)
-	(values id name ver imp* vis* inv*
-		invoke-code visit-code
-		export-subst export-env
-		guard-code guard-req*))))
-   ((library-sexp filename)
-    (expand-library library-sexp filename (lambda (ids ver) (values))))
-   ((library-sexp)
-    (expand-library library-sexp #f       (lambda (ids ver) (values))))))
-
-(define (boot-library-expand x)
-  ;;When bootstrapping the system, visit-code  is not (and cannot be) be
-  ;;used in the "next" system.  So, we drop it.
-  (let-values (((id name ver imp* vis* inv*
-		    invoke-code visit-code export-subst export-env
-		    guard-code guard-dep*)
-		(expand-library x)))
-    (values name invoke-code export-subst export-env)))
-
-(define (rev-map-append f ls ac)
-  (cond
-   ((null? ls) ac)
-   (else
-    (rev-map-append f (cdr ls)
-		    (cons (f (car ls)) ac)))))
-
-(define build-exports
-  (lambda (lex*+loc* init*)
-    (build-sequence no-source
-		    (cons (build-void)
-			  (rev-map-append
-			   (lambda (x)
-			     (build-global-assignment no-source (cdr x) (car x)))
-			   lex*+loc*
-			   init*)))))
-
-(define (make-export-subst name* id*)
-  (map
-      (lambda (name id)
-        (let ((label (id->label id)))
-          (unless label
-            (stx-error id "cannot export unbound identifier"))
-          (cons name label)))
-    name* id*))
-
-(define (make-export-env/macros lex* loc* r)
-  (define (lookup x)
-    (let f ((x x) (lex* lex*) (loc* loc*))
-      (cond
-       ((pair? lex*)
-	(if (eq? x (car lex*))
-	    (car loc*)
-	  (f x (cdr lex*) (cdr loc*))))
-       (else (assertion-violation 'lookup-make-export "BUG")))))
-  (let f ((r r) (env '()) (global* '()) (macro* '()))
-    (cond
-     ((null? r) (values env global* macro*))
-     (else
-      (let ((x (car r)))
-	(let ((label (car x)) (b (cdr x)))
-	  (case (binding-type b)
-	    ((lexical)
-	     (let ((v (binding-value b)))
-	       (let ((loc (lookup (lexical-var v)))
-		     (type (if (lexical-mutable? v)
-			       'mutable
-			     'global)))
-		 (f (cdr r)
-		    (cons (cons* label type loc) env)
-		    (cons (cons (lexical-var v) loc) global*)
-		    macro*))))
-	    ((local-macro)
-	     (let ((loc (gensym)))
-	       (f (cdr r)
-		  (cons (cons* label 'global-macro loc) env)
-		  global*
-		  (cons (cons loc (binding-value b)) macro*))))
-	    ((local-macro!)
-	     (let ((loc (gensym)))
-	       (f (cdr r)
-		  (cons (cons* label 'global-macro! loc) env)
-		  global*
-		  (cons (cons loc (binding-value b)) macro*))))
-	    ((local-ctv)
-	     (let ((loc (gensym)))
-	       (f (cdr r)
-		  (cons (cons* label 'global-ctv loc) env)
-		  global*
-		  (cons (cons loc (binding-value b)) macro*))))
-	    (($rtd $module $fluid)
-	     (f (cdr r) (cons x env) global* macro*))
-	    (else
-	     (assertion-violation 'expander "BUG: do not know how to export"
-				  (binding-type b) (binding-value b))))))))))
-
-(define generate-temporaries
-  (lambda (ls)
-    (syntax-match ls ()
-      ((ls ...)
-       (map (lambda (x)
-	      (make-<stx>
-	       (let ((x (syntax->datum x)))
-		 (cond
-		  ((or (symbol? x) (string? x))
-		   (gensym x))
-		  (else (gensym 't))))
-	       top-mark* '() '()))
-	 ls))
-      (_
-       (assertion-violation 'generate-temporaries "not a list")))))
-
-(define free-identifier=?
-  (lambda (x y)
-    (if (id? x)
-	(if (id? y)
-	    (free-id=? x y)
-	  (assertion-violation 'free-identifier=? "not an identifier" y))
-      (assertion-violation 'free-identifier=? "not an identifier" x))))
-
-(define bound-identifier=?
-  (lambda (x y)
-    (if (id? x)
-	(if (id? y)
-	    (bound-id=? x y)
-	  (assertion-violation 'bound-identifier=? "not an identifier" y))
-      (assertion-violation 'bound-identifier=? "not an identifier" x))))
-
-(define (expression->source-position-condition x)
-  (expression-position x))
-
-(define (expression-position x)
-  (if (<stx>? x)
-      (let ((x (<stx>-expr x)))
-	(if (annotation? x)
-	    (annotation-textual-position x)
-	  (condition)))
-    (condition)))
-
-(define (syntax-annotation x)
-  (if (<stx>? x) (<stx>-expr x) x))
-
-		;  (define (syntax-annotation x)
-		;    (if (<stx>? x)
-		;        (let ((expr (<stx>-expr x)))
-		;          (if (annotation? x)
-		;              x
-		;              (syntax->datum x)))
-		;        (syntax->datum x)))
-
-(define (assertion-error expr source-identifier
-			 byte-offset character-offset
-			 line-number column-number)
-  ;;Invoked by the expansion of the ASSERT macro to raise an assertion
-  ;;violation.
-  ;;
-  (raise
-   (condition (make-assertion-violation)
-	      (make-who-condition 'assert)
-	      (make-message-condition "assertion failed")
-	      (make-irritants-condition (list expr))
-	      (make-source-position-condition source-identifier
-					      byte-offset character-offset
-					      line-number column-number))))
-
-(define syntax-error
-  (lambda (x . args)
-    (unless (for-all string? args)
-      (assertion-violation 'syntax-error "invalid argument" args))
-    (raise
-     (condition
-      (make-message-condition
-       (if (null? args)
-	   "invalid syntax"
-	 (apply string-append args)))
-      (make-syntax-violation
-       (syntax->datum x)
-       #f)
-      (expression->source-position-condition x)
-      (extract-trace x)))))
-
-(define (extract-trace x)
-  (define-condition-type &trace &condition
-    make-trace trace?
-    (form trace-form))
-  (let f ((x x))
-    (cond ((<stx>? x)
-	   (apply condition
-		  (make-trace x)
-		  (map f (<stx>-ae* x))))
-	  ((annotation? x)
-	   (make-trace (make-<stx> x '() '() '())))
-	  (else (condition)))))
-
-(define syntax-violation
-  ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
-  ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
-  ;;value.  SUBFORM must be a syntax object or a datum value.
-  ;;
-  ;;The  SYNTAX-VIOLATION procedure raises  an exception,  reporting a
-  ;;syntax violation.  WHO should  describe the macro transformer that
-  ;;detected the exception.  The  MESSAGE argument should describe the
-  ;;violation.  FORM should be the erroneous source syntax object or a
-  ;;datum value  representing a  form.  The optional  SUBFORM argument
-  ;;should be a syntax object  or datum value representing a form that
-  ;;more precisely locates the violation.
-  ;;
-  ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
-  ;;value for the  condition object (see below) as  follows: when FORM
-  ;;is  either  an  identifier  or  a  list-structured  syntax  object
-  ;;containing an  identifier as its first element,  then the inferred
-  ;;value is the identifier's symbol.   Otherwise, no value for WHO is
-  ;;provided as part of the condition object.
-  ;;
-  ;;The condition object provided with the exception has the following
-  ;;condition types:
-  ;;
-  ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
-  ;;condition type  "&who", with  WHO as the  value of its  field.  In
-  ;;that  case,  WHO should  identify  the  procedure  or entity  that
-  ;;detected the  exception.  If it  is false, the condition  does not
-  ;;have condition type "&who".
-  ;;
-  ;;* The condition has condition type "&message", with MESSAGE as the
-  ;;value of its field.
-  ;;
-  ;;* The condition has condition type "&syntax" with FORM and SUBFORM
-  ;;as the value of its fields.  If SUBFORM is not provided, the value
-  ;;of the subform field is false.
-  ;;
-  (case-lambda
-   ((who msg form)
-    (syntax-violation who msg form #f))
-   ((who msg form subform)
-    (%syntax-violation who msg form
-		       (make-syntax-violation form subform)))))
-
-(define (%syntax-violation who msg form condition-object)
-  (define who 'syntax-violation)
-  (unless (string? msg)
-    (assertion-violation who "message is not a string" msg))
-  (let ((who (cond ((or (string? who)
-			(symbol? who))
-		    who)
-		   ((not who)
-		    (syntax-match form ()
-		      (id
-		       (id? id)
-		       (syntax->datum id))
-		      ((id . rest)
-		       (id? id)
-		       (syntax->datum id))
-		      (_  #f)))
-		   (else
-		    (assertion-violation who "invalid who argument" who)))))
-    (raise
-     (condition (if who
-		    (make-who-condition who)
-		  (condition))
-		(make-message-condition msg)
-		condition-object
-		(expression->source-position-condition form)
-		(extract-trace form)))))
-
-(define identifier? (lambda (x) (id? x)))
-
-(define (datum->syntax id datum)
-  (if (id? id)
-      (datum->stx id datum)
-    (assertion-violation 'datum->syntax "not an identifier" id)))
-
-
-(define (compile-r6rs-top-level expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, expand  it and return a thunk  which, when evaluated,
-  ;;compiles   the  program   and  returns   an  INTERACTIN-ENV   struct
-  ;;representing the environment after the program execution.
-  ;;
-  (receive (lib* invoke-code macro* export-subst export-env)
-      (expand-top-level expr*)
-    (lambda ()
-      (for-each invoke-library lib*)
-      (initial-visit! macro*)
-      (eval-core (expanded->core invoke-code))
-      (make-interaction-env (subst->rib export-subst)
-			    (map (lambda (x)
-				   (let* ((label    (car x))
-					  (binding  (cdr x))
-					  (type     (car binding))
-					  (val      (cdr binding)))
-				     (cons* label type '*interaction* val)))
-			      export-env)
-			    '()))))
-
-(define (expand-top-level expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, expand it.
-  ;;
-  (receive (import-spec* body*)
-      (parse-top-level-program expr*)
-    (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
-	(library-body-expander 'all import-spec* body* #t)
-      (values invoke-req* invoke-code macro* export-subst export-env))))
-
-(define (parse-top-level-program expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, parse it and return 2 values:
-  ;;
-  ;;1. A list of export specifications.
-  ;;
-  ;;2. A list of body forms.
-  ;;
-  (syntax-match expr* ()
-    (((?import ?import-spec* ...) body* ...)
-     (eq? (syntax->datum ?import) 'import)
-     (values ?import-spec* body*))
-
-    (((?import . x) . y)
-     (eq? (syntax->datum ?import) 'import)
-     (syntax-violation 'expander
-       "invalid syntax of top-level program" (syntax-car expr*)))
-
-    (_
-     (assertion-violation 'expander
-       "top-level program is missing an (import ---) clause"))))
 
 
 ;;;; done
