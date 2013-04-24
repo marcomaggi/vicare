@@ -4102,17 +4102,19 @@
       ;;
       (define (%recurse import-set)
 	(%import-set->subst import-set import-spec))
+      (define (%local-synner message)
+	(%synner message import-spec import-set))
       (syntax-match import-set ()
-	((x x* ...)
+	((?spec ?spec* ...)
 	 ;;According to R6RS, the symbol LIBRARY  can be used to quote a
 	 ;;library reference whose first  identifier is "for", "rename",
 	 ;;etc.
-	 (not (memq (syntax->datum x)
+	 (not (memq (syntax->datum ?spec)
 		    '(rename except only prefix deprefix library)))
-	 (%import-library (cons x x*)))
+	 (%import-library (cons ?spec ?spec*)))
 
-	((rename ?import-set (?old-name* ?new-name*) ...)
-	 (and (eq? (syntax->datum rename) 'rename)
+	((?rename ?import-set (?old-name* ?new-name*) ...)
+	 (and (eq? (syntax->datum ?rename) 'rename)
 	      (for-all id-stx? ?old-name*)
 	      (for-all id-stx? ?new-name*))
 	 (let ((subst       (%recurse ?import-set))
@@ -4125,13 +4127,14 @@
 	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
 	       (merge-substs (map cons ?new-name* old-label*) subst)))))
 
-	((except isp sym* ...)
-	 (and (eq? (syntax->datum except) 'except) (for-all id-stx? sym*))
-	 (let ((subst (%recurse isp)))
-	   (rem* (map syntax->datum sym*) subst)))
+	((?except ?import-set ?sym* ...)
+	 (and (eq? (syntax->datum ?except) 'except)
+	      (for-all id-stx? ?sym*))
+	 (let ((subst (%recurse ?import-set)))
+	   (rem* (map syntax->datum ?sym*) subst)))
 
-	((only ?import-set ?name* ...)
-	 (and (eq? (syntax->datum only) 'only)
+	((?only ?import-set ?name* ...)
+	 (and (eq? (syntax->datum ?only) 'only)
 	      (for-all id-stx? ?name*))
 	 (let* ((subst  (%recurse ?import-set))
 		(name*  (map syntax->datum ?name*))
@@ -4139,50 +4142,49 @@
 		(lab*   (find* name* subst ?import-set)))
 	   (map cons name* lab*)))
 
-	((prefix ?import-set p)
-	 (and (eq? (syntax->datum prefix) 'prefix) (id-stx? p))
-	 (let ((subst (%recurse ?import-set))
-	       (prefix (symbol->string (syntax->datum p))))
-	   (map
-	       (lambda (x)
-		 (cons (string->symbol (string-append prefix (symbol->string (car x))))
-		       (cdr x)))
+	((?prefix ?import-set ?the-prefix)
+	 (and (eq? (syntax->datum ?prefix) 'prefix)
+	      (id-stx? ?prefix))
+	 (let ((subst   (%recurse ?import-set))
+	       (prefix  (symbol->string (syntax->datum ?the-prefix))))
+	   (map (lambda (x)
+		  (cons (string->symbol
+			 (string-append prefix (symbol->string (car x))))
+			(cdr x)))
 	     subst)))
 
-	((deprefix ?import-set ?prefix)
-	 (and (eq? (syntax->datum deprefix) 'deprefix) (id-stx? ?prefix))
+	((?deprefix ?import-set ?the-prefix)
+	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
+	      (id-stx? ?the-prefix))
 	 (if #f
 	     ;;FIXME At present  there is no way to  disable DEPREFIX to
 	     ;;enforce strict  R6RS compatibility; in future  it may be.
 	     ;;(Marco Maggi; Tue Apr 16, 2013)
-	     (assertion-violation who
-	       "deprefix import specification forbidden in R6RS mode")
+	     (%local-synner "deprefix import specification forbidden in R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
-		  (prefix      (symbol->string (syntax->datum ?prefix)))
-		  (prefix.len  (string-length prefix)))
+		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
+		  (prefix.len  (string-length prefix.str)))
 	     ;;This should never happen.
 	     (when (zero? prefix.len)
-	       (assertion-violation 'deprefix "null deprefix prefix"))
-	     (map
-		 (lambda (x)
-		   (let* ((orig      (symbol->string (car x)))
-			  (orig.len  (string-length orig)))
-		     (if (and (< prefix.len orig.len)
-			      (string=? prefix (substring orig 0 prefix.len)))
-			 (cons (string->symbol (substring orig prefix.len orig.len))
-			       (cdr x))
-		       (error 'deprefix
-			 (string-append "binding name cannot be deprefixed of \""
-					prefix "\"")
-			 orig))))
+	       (%local-synner "null deprefix prefix"))
+	     (map (lambda (subst.entry)
+		    (let* ((orig.str  (symbol->string (car subst.entry)))
+			   (orig.len  (string-length orig.str)))
+		      (if (and (< prefix.len orig.len)
+			       (string=? prefix.str (substring orig.str 0 prefix.len)))
+			  (cons (string->symbol (substring orig.str prefix.len orig.len))
+				(cdr subst.entry))
+			(%local-synner
+			 (string-append "binding name \"" orig.str
+					"\" cannot be deprefixed of \"" prefix.str "\"")))))
 	       subst))))
 
 	;;According to R6RS:  the symbol LIBRARY can be used  to quote a
 	;;library reference  whose first identifier is  "for", "rename",
 	;;etc.
-	((library (spec* ...))
-	 (eq? (syntax->datum library) 'library)
-	 (%import-library spec*))
+	((?library (?spec* ...))
+	 (eq? (syntax->datum ?library) 'library)
+	 (%import-library ?spec*))
 
 	(_
 	 (%synner "invalid import set" import-spec import-set))))
@@ -5051,8 +5053,9 @@
 		       (make-syntax-violation form subform)))))
 
 (define (%syntax-violation who msg form condition-object)
+  (define who 'syntax-violation)
   (unless (string? msg)
-    (assertion-violation 'syntax-violation "message is not a string" msg))
+    (assertion-violation who "message is not a string" msg))
   (let ((who (cond ((or (string? who)
 			(symbol? who))
 		    who)
@@ -5066,7 +5069,7 @@
 		       (syntax->datum id))
 		      (_  #f)))
 		   (else
-		    (assertion-violation 'syntax-violation "invalid who argument" who)))))
+		    (assertion-violation who "invalid who argument" who)))))
     (raise
      (condition (if who
 		    (make-who-condition who)
