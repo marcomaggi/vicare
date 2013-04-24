@@ -603,6 +603,10 @@
 ;;; --------------------------------------------------------------------
 
   (check
+      (conforming-sub-version-and-sub-version-reference? 3 '(or))
+    => #f)
+
+  (check
       (conforming-sub-version-and-sub-version-reference? 1 '(or 1 2))
     => #t)
 
@@ -627,6 +631,10 @@
     => #t)
 
 ;;; --------------------------------------------------------------------
+
+  (check
+      (conforming-sub-version-and-sub-version-reference? 3 '(and))
+    => #t)
 
   (check
       (conforming-sub-version-and-sub-version-reference? 1 '(and 1))
@@ -701,13 +709,6 @@
       (guard (E ((assertion-violation? E)
 		 #t)
 		(else #f))
-	(conforming-sub-version-and-sub-version-reference? 3 '(and)))
-    => #t)
-
-  (check
-      (guard (E ((assertion-violation? E)
-		 #t)
-		(else #f))
 	(conforming-sub-version-and-sub-version-reference? 3 '(not)))
     => #t)
 
@@ -723,13 +724,6 @@
 		 #t)
 		(else #f))
 	(conforming-sub-version-and-sub-version-reference? 3 '(not)))
-    => #t)
-
-  (check
-      (guard (E ((assertion-violation? E)
-		 #t)
-		(else #f))
-	(conforming-sub-version-and-sub-version-reference? 3 '(or)))
     => #t)
 
   (check

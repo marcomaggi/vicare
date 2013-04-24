@@ -1103,45 +1103,39 @@
   ;;     == (not ?sub-version-reference)
   ;;
   (define who 'conforming-sub-version-and-sub-version-reference?)
-  (define (%error-invalid-sub-version-reference)
-    (assertion-violation who
-      "invalid library sub-version reference" sub-version-reference))
+  (define (%recurse sub-ver-ref)
+    (conforming-sub-version-and-sub-version-reference? sub-version sub-ver-ref))
   (assert (library-sub-version? sub-version))
   (assert (library-sub-version-reference? sub-version-reference))
-  (%normalise-to-boolean
-   (cond ((list? sub-version-reference)
-	  (when (zero? (length (cdr sub-version-reference)))
-	    (%error-invalid-sub-version-reference))
-	  (case (car sub-version-reference)
-	    ((>=)
-	     ($fx>= sub-version (cadr sub-version-reference)))
-	    ((<=)
-	     ($fx<= sub-version (cadr sub-version-reference)))
-	    ((and)
-	     (for-all (lambda (sub-version-reference)
-			(conforming-sub-version-and-sub-version-reference?
-			 sub-version sub-version-reference))
-	       ($cdr sub-version-reference)))
-	    ((or)
-	     (find (lambda (sub-version-reference)
-		     (conforming-sub-version-and-sub-version-reference?
-		      sub-version sub-version-reference))
-	       ($cdr sub-version-reference)))
+  (match sub-version-reference
+    ((apply library-sub-version?)
+     ($fx= sub-version sub-version-reference))
 
-	    ((not)
-	     (if (= 1 (length ($cdr sub-version-reference)))
-		 (not (conforming-sub-version-and-sub-version-reference?
-		       sub-version (cadr sub-version-reference)))
-	       (%error-invalid-sub-version-reference)))
+    (('>= (let ?sub-version-ref))
+     ($fx>= sub-version ?sub-version-ref))
 
-	    (else
-	     (%error-invalid-sub-version-reference))))
+    (('<= (let ?sub-version-ref))
+     ($fx<= sub-version ?sub-version-ref))
 
-	 ((library-sub-version? sub-version-reference)
-	  ($fx= sub-version sub-version-reference))
+    (('and)
+     #t)
 
-	 (else
-	  (%error-invalid-sub-version-reference)))))
+    (('and (let ?sub-version-ref ...))
+     (%normalise-to-boolean
+      (for-all %recurse ?sub-version-ref)))
+
+    (('or)
+     #f)
+
+    (('or (let ?sub-version-reference ...))
+     (%normalise-to-boolean
+      (find %recurse ?sub-version-reference)))
+
+    (('not (let ?sub-version-ref))
+     (not (%recurse ?sub-version-ref)))
+
+    (else
+     (assertion-violation who "invalid library sub-version reference" sub-version-reference))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1168,49 +1162,52 @@
   ;;     == #<non-negative fixnum>
   ;;
   (define who 'conforming-version-and-version-reference?)
-  (define (%error-invalid-version-reference)
-    (assertion-violation who
-      "invalid library version reference" version-reference))
   (assert (library-version-numbers? version))
   (assert (library-version-reference? version-reference))
-  (%normalise-to-boolean
-   (match version-reference
-     (()
-      #t)
-     (('and (let ?version-reference ...))
+  (match version-reference
+    (()
+     #t)
+
+    (('and (let ?version-reference ...))
+     (%normalise-to-boolean
       (for-all (lambda (reference)
 		 (conforming-version-and-version-reference? version reference))
-	?version-reference))
-     (('or (let ?version-reference ...))
+	?version-reference)))
+
+    (('or (let ?version-reference ...))
+     (%normalise-to-boolean
       (find (lambda (reference)
 	      (conforming-version-and-version-reference? version reference))
-	?version-reference))
-     (('not (let ?version-reference))
-      (not (conforming-version-and-version-reference? version ?version-reference)))
-     (_
-      (let next-sub-version ((version		version)
-			     (version-reference	version-reference))
-	(cond ((null? version-reference)
-	       ;;According  to R6RS:  if  the  version reference  is
-	       ;;shorter than the version, it is a match.
-	       #t)
-	      ((null? version)
-	       (null? version-reference))
-	      ((conforming-sub-version-and-sub-version-reference?
-		($car version) ($car version-reference))
-	       (next-sub-version ($cdr version) ($cdr version-reference)))
-	      (else
-	       #f)))))))
+	?version-reference)))
+
+    (('not (let ?version-reference))
+     (not (conforming-version-and-version-reference? version ?version-reference)))
+
+    (_
+     (let next-sub-version ((version		version)
+			    (version-reference	version-reference))
+       (cond ((null? version-reference)
+	      ;;According  to R6RS:  if  the  version reference  is
+	      ;;shorter than the version, it is a match.
+	      #t)
+	     ((null? version)
+	      (null? version-reference))
+	     ((conforming-sub-version-and-sub-version-reference?
+	       ($car version) ($car version-reference))
+	      (next-sub-version ($cdr version) ($cdr version-reference)))
+	     (else
+	      #f))))))
 
 ;;; --------------------------------------------------------------------
 
 (define (conforming-library-name-and-library-reference? name reference)
   (assert (library-name? name))
   (assert (library-reference? reference))
-  (let-values (((identifiers version)		(library-name-decompose name))
-	       ((identifiers-ref version-ref)	(library-reference-decompose reference)))
-    (and (for-all eq? identifiers identifiers-ref)
-	 (conforming-version-and-version-reference? version version-ref))))
+  (let-values
+      (((libnam.ids libnam.version)  (library-name-decompose name))
+       ((libref.ids libref.version)  (library-reference-decompose reference)))
+    (and (for-all eq? libnam.ids libref.ids)
+	 (conforming-version-and-version-reference? libnam.version libref.version))))
 
 
 ;;;; done
