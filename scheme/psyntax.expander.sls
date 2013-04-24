@@ -3780,16 +3780,14 @@
 		 (define (library-import e)
 		   (syntax-match e ()
 		     ((ctxt imp* ...)
-		      (let-values (((subst-names subst-labels)
-				    (parse-import-spec*
-				     (syntax->datum imp*))))
-			(values
-			 (vector-map
-			     (lambda (name)
-			       (datum->stx ctxt name))
-			   subst-names)
-			 subst-labels)))
-		     (_ (stx-error e "invalid import form"))))
+		      (receive (subst-names subst-labels)
+			  (parse-import-spec* (syntax->datum imp*))
+			(values (vector-map (lambda (name)
+					      (datum->stx ctxt name))
+				  subst-names)
+				subst-labels)))
+		     (_
+		      (stx-error e "invalid import form"))))
 		 (define (any-import ctxt e r)
                    (if (id? e)
 		       (module-import (list ctxt e) r)
@@ -4163,15 +4161,17 @@
        (%synner "invalid import set" spec))))
 
   (define (import-library spec*)
-    (receive (name pred)
+    (receive (name version-conforms-to-reference?)
 	(parse-library-reference spec*)
       (when (null? name)
 	(%synner "empty library name" spec*))
+      ;;Search  for  the library  first  in  the collection  of  already
+      ;;installed libraires,  then on  the file system.   If successful:
+      ;;LIB is an instance of LIBRARY struct.
       (let ((lib (find-library-by-name name)))
-	;;If successful: LIB is an instance of LIBRARY struct.
 	(unless lib
 	  (%synner "cannot find library with required name" name))
-	(unless (pred (library-version lib))
+	(unless (version-conforms-to-reference? (library-version lib))
 	  (%synner "library does not satisfy version specification" spec* lib))
 	((imp-collector) lib)
 	(library-subst lib))))
@@ -4207,7 +4207,7 @@
 	   (values '() (lambda (x) #t)))
 
 	  (_
-	   (stx-error spec "invalid library specification in import set")))))
+	   (%synner "invalid library specification in import set" libref spec)))))
 
     (define (%build-version-pred version-reference libref)
       ;;Recursive function.  Given a  version reference: validate it and
