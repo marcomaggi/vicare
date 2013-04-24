@@ -3905,7 +3905,10 @@
       (stx-error libname "empty library name"))
     (values name* ver*)))
 
-(define (parse-exports exp*)
+
+;;;; parsing export specifications
+
+(define (parse-exports export-spec*)
   ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
   ;;representing the exports specification from a LIBRARY form, return 2
   ;;values:
@@ -3917,30 +3920,47 @@
   ;;    expression)  representing the  internal  names  of the  exported
   ;;   bindings.
   ;;
-  ;;This  function checks  none  of the  identifiers  is BOUND-ID=?   to
-  ;;another: the library  does not export the same *name*  twice.  It is
-  ;;instead possible to export the  same identifier multiple times if we
-  ;;give it different names.
+  ;;This function checks that none  of the identifiers is BOUND-ID=?  to
+  ;;another: the library does not export the same external *name* twice.
+  ;;It is instead possible to  export the same identifier multiple times
+  ;;if we give it different external names.
+  ;;
+  ;;According to R6RS, an export specification has the following syntax:
+  ;;
+  ;;   (export ?export-spec ...)
+  ;;
+  ;;   ?export-spec
+  ;;     == ?identifier
+  ;;     == (rename (?internal-identifier ?external-identifier) ...)
   ;;
   (define who 'export)
-  (let loop ((exp* exp*)
-	     (int* '())
-	     (ext* '()))
-    (if (null? exp*)
-	(if (valid-bound-ids? ext*)
-	    (values (map syntax->datum ext*) int*)
-	  (syntax-violation who "invalid exports" (find-dups ext*)))
-      (syntax-match (car exp*) ()
+  (define (%synner message subform)
+    (syntax-violation who message export-spec* subform))
+  (let loop ((export-spec*          export-spec*)
+	     (internal-identifier*  '())
+	     (external-identifier*  '()))
+    (if (null? export-spec*)
+	(if (valid-bound-ids? external-identifier*)
+	    (values (map syntax->datum external-identifier*) internal-identifier*)
+	    ;; (let ((external-symbol* (map syntax->datum external-identifier*)))
+	    ;;   (debug-print external-symbol* internal-identifier*)
+	    ;;   (values external-symbol* internal-identifier*))
+	  (%synner "invalid exports" (find-dups external-identifier*)))
+      (syntax-match (car export-spec*) ()
 	((rename (i* e*) ...)
 	 (if (and (eq? (syntax->datum rename) 'rename)
 		  (for-all id? i*)
 		  (for-all id? e*))
-	     (loop (cdr exp*) (append i* int*) (append e* ext*))
-	   (syntax-violation who "invalid export specifier" (car exp*))))
+	     (loop (cdr export-spec*)
+		   (append i* internal-identifier*)
+		   (append e* external-identifier*))
+	   (%synner "invalid export specification" (car export-spec*))))
 	(ie
 	 (if (id? ie)
-	     (loop (cdr exp*) (cons ie int*) (cons ie ext*))
-	   (syntax-violation who "invalid export" ie)))))))
+	     (loop (cdr export-spec*)
+		   (cons ie internal-identifier*)
+		   (cons ie external-identifier*))
+	   (%synner "invalid export specification" ie)))))))
 
 
 (module (parse-import-spec*)
