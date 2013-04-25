@@ -1534,39 +1534,52 @@
 (define lexical-var car)
 (define lexical-mutable? cdr)
 (define set-lexical-mutable! set-cdr!)
-(define add-lexical
-  (lambda (lab lex r)
-    (cons (cons* lab 'lexical lex #f) r)))
-  ;;;
-(define add-lexicals
-  (lambda (lab* lex* r)
-    (cond
-     ((null? lab*) r)
-     (else
-      (add-lexicals (cdr lab*) (cdr lex*)
-		    (add-lexical (car lab*) (car lex*) r))))))
-  ;;;
-(define letrec-helper
-  (lambda (e r mr build)
-    (syntax-match e ()
-      ((_ ((lhs* rhs*) ...) b b* ...)
-       (if (not (valid-bound-ids? lhs*))
-	   (invalid-fmls-error e lhs*)
-	 (let ((lex* (map gen-lexical lhs*))
-	       (lab* (map gen-label lhs*)))
-	   (let ((rib (make-full-rib lhs* lab*))
-		 (r (add-lexicals lab* lex* r)))
-	     (let ((body (chi-internal
-			  (add-subst rib (cons b b*)) r mr))
-		   (rhs* (chi-expr* (map (lambda (x) (add-subst rib x))
-				      rhs*) r mr)))
-	       (build no-source lex* rhs* body)))))))))
 
-(define letrec-transformer
-  (lambda (e r mr) (letrec-helper e r mr build-letrec)))
+(define (add-lexical lab lex r)
+  (cons (cons* lab 'lexical lex #f)
+	r))
 
-(define letrec*-transformer
-  (lambda (e r mr) (letrec-helper e r mr build-letrec*)))
+(define (add-lexicals lab* lex* r)
+  (if (null? lab*)
+      r
+    (add-lexicals (cdr lab*) (cdr lex*)
+		  (add-lexical (car lab*) (car lex*) r))))
+
+;;; --------------------------------------------------------------------
+
+(module (letrec-transformer letrec*-transformer)
+
+  (define (letrec-transformer expr-stx env env.macros)
+    (%letrec-helper expr-stx env env.macros build-letrec))
+
+  (define (letrec*-transformer expr-stx env env.macros)
+    (%letrec-helper expr-stx env env.macros build-letrec*))
+
+  (define (%letrec-helper expr-stx env env.macros core-lang-builder)
+    (syntax-match expr-stx ()
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       ;;Check  that  the  binding  names are  identifiers  and  without
+       ;;duplicates.
+       (if (not (valid-bound-ids? ?lhs*))
+	   (invalid-fmls-error expr-stx ?lhs*)
+	 ;;Generate what is needed to create a lexical contour.
+	 (let ((lex* (map gen-lexical ?lhs*))
+	       (lab* (map gen-label   ?lhs*)))
+	   ;;Add a lexical contour.
+	   (let ((rib (make-full-rib ?lhs* lab*))
+		 (env (add-lexicals lab* lex* env)))
+	     ;;Process body and right-hand sides of bindings.
+	     (let ((body (chi-internal (add-subst rib (cons ?body ?body*))
+				       env env.macros))
+		   (rhs* (chi-expr*    (map (lambda (x)
+					      (add-subst rib x))
+					 ?rhs*)
+				       env env.macros)))
+	       ;;Build  the LETREC  or  LETREC* expression  in the  core
+	       ;;language.
+	       (core-lang-builder no-source lex* rhs* body))))))))
+
+  #| end of module |# )
 
 (define fluid-let-syntax-transformer
   (lambda (e r mr)
