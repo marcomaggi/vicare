@@ -1188,11 +1188,11 @@
 	;;The next clause has a fender.
 	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
-	 (receive (pattern ids/levels)
+	 (receive (pattern ptnvars/levels)
 	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
 	   (with-syntax
-	       ((PATTERN               (sys.datum->syntax (syntax here) pattern))
-		(((IDS . LEVELS) ...)  ids/levels))
+	       ((PATTERN                   (sys.datum->syntax (syntax here) pattern))
+		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
 	     (syntax
 	      (let ((T ?expr))
 		;;If   the  input   expression   matches  the   symbolic
@@ -1201,21 +1201,21 @@
 		  (if (and ls/false
 			   ;;...and  the pattern  variables satisfy  the
 			   ;;fender...
-			   (apply (lambda (IDS ...) ?fender) ls/false))
+			   (apply (lambda (PTNVARS ...) ?fender) ls/false))
 		      ;;...evaluate the body  with the pattern variables
 		      ;;assigned.
-		      (apply (lambda (IDS ...) ?body) ls/false)
+		      (apply (lambda (PTNVARS ...) ?body) ls/false)
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) ?clause* ...))))))))
 
 	;;The next clause has NO fender.
 	((_ ?expr (?literals ...) (?pattern ?body) clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
-	 (receive (pattern ids/levels)
+	 (receive (pattern ptnvars/levels)
 	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
 	   (with-syntax
-	       ((PATTERN               (sys.datum->syntax (syntax here) pattern))
-		(((IDS . LEVELS) ...)  ids/levels))
+	       ((PATTERN                   (sys.datum->syntax (syntax here) pattern))
+		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
 	     (syntax
 	      (let ((T ?expr))
 		;;If   the  input   expression   matches  the   symbolic
@@ -1224,7 +1224,7 @@
 		  (if ls/false
 		      ;;...evaluate the body  with the pattern variables
 		      ;;assigned.
-		      (apply (lambda (IDS ...) ?body) ls/false)
+		      (apply (lambda (PTNVARS ...) ?body) ls/false)
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) clause* ...))))))))
 
@@ -1253,8 +1253,10 @@
 	(case-lambda
 	 ((pattern-stx literals)
 	  (%convert-single-pattern pattern-stx literals 0 '()))
-	 ((pattern-stx literals n pattern-vars)
+
+	 ((pattern-stx literals nesting-level pattern-vars)
 	  (syntax-case pattern-stx ()
+
 	    (?identifier
 	     (sys.identifier? (syntax ?identifier))
 	     (cond ((%bound-identifier-member? pattern-stx literals)
@@ -1262,12 +1264,14 @@
 		   ((sys.free-identifier=? pattern-stx (syntax _))
 		    (values '_ pattern-vars))
 		   (else
-		    (values 'any (cons (cons pattern-stx n) pattern-vars)))))
+		    (values 'any (cons (cons pattern-stx nesting-level)
+				       pattern-vars)))))
 
 	    ((?pattern ?dots)
 	     (%ellipsis? (syntax ?dots))
 	     (receive (pattern^ pattern-vars^)
-		 (%convert-single-pattern (syntax ?pattern) literals (+ n 1) pattern-vars)
+		 (%convert-single-pattern (syntax ?pattern) literals
+					  (+ nesting-level 1) pattern-vars)
 	       (values (if (eq? pattern^ 'any)
 			   'each-any
 			 `#(each ,pattern^))
@@ -1278,15 +1282,15 @@
 	     (let*-values
 		 (((pattern-z pattern-vars)
 		   (%convert-single-pattern (syntax ?pattern-z) literals
-					    n pattern-vars))
+					    nesting-level pattern-vars))
 
 		  ((pattern-y* pattern-vars)
 		   (%convert-multi-pattern  (syntax (?pattern-y ...)) literals
-					    n pattern-vars))
+					    nesting-level pattern-vars))
 
 		  ((pattern-x pattern-vars)
 		   (%convert-single-pattern (syntax ?pattern-x) literals
-					    (+ n 1) pattern-vars)))
+					    (+ nesting-level 1) pattern-vars)))
 	       (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
 		       pattern-vars)))
 
@@ -1294,11 +1298,11 @@
 	     (let*-values
 		 (((pattern-cdr pattern-vars)
 		   (%convert-single-pattern (syntax ?cdr) literals
-					    n pattern-vars))
+					    nesting-level pattern-vars))
 
 		  ((pattern-car pattern-vars)
 		   (%convert-single-pattern (syntax ?car) literals
-					    n pattern-vars)))
+					    nesting-level pattern-vars)))
 	       (values (cons pattern-car pattern-cdr) pattern-vars)))
 
 	    (()
@@ -1307,24 +1311,24 @@
 	    (#(?item ...)
 	     (receive (pattern-item* pattern-vars)
 		 (%convert-single-pattern (syntax (?item ...)) literals
-					  n pattern-vars)
+					  nesting-level pattern-vars)
 	       (values `#(vector ,pattern-item*) pattern-vars)))
 
 	    (?datum
 	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))
 	    ))))
 
-      (define (%convert-multi-pattern pattern* literals n pattern-vars)
+      (define (%convert-multi-pattern pattern* literals nesting-level pattern-vars)
 	;;Recursive function.
 	;;
 	(if (null? pattern*)
 	    (values '() pattern-vars)
 	  (let*-values
-	      (((y pattern-vars)
-		(%convert-multi-pattern  (cdr pattern*) literals n pattern-vars))
-	       ((x pattern-vars)
-		(%convert-single-pattern (car pattern*) literals n pattern-vars)))
-	    (values (cons x y) pattern-vars))))
+	      (((y pattern-vars^)
+		(%convert-multi-pattern  (cdr pattern*) literals nesting-level pattern-vars))
+	       ((x pattern-vars^^)
+		(%convert-single-pattern (car pattern*) literals nesting-level pattern-vars^)))
+	    (values (cons x y) pattern-vars^^))))
 
       (define (%bound-identifier-member? id list-of-ids)
 	;;Return #t if  the identifier ID is  BOUND-IDENTIFIER=?  to one
