@@ -1246,9 +1246,12 @@
 	;;
 	;;1. The pattern as symbolic expression.
 	;;
-	;;2.  An  ordered  list  of  symbols  representing  the  pattern
-	;;   variables that  must be bound whenever  the body associated
-	;;   to the pattern is evaluated.
+	;;2.   An ordered  list of  pairs, each  representing a  pattern
+	;;   variable that must be bound whenever the body associated to
+	;;   the  pattern is  evaluated.  The  car of  each pair  is the
+	;;   symbol  being the pattern  variable name.  The cdr  of each
+	;;   pair is an exact  integer representing the nesting level of
+	;;   the pattern variable.
 	;;
 	(case-lambda
 	 ((pattern-stx literals)
