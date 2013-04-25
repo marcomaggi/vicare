@@ -567,6 +567,15 @@
 	      (<stx>-subst* id)
 	      (<stx>-ae*    id)))
 
+(define (datum->syntax id datum)
+  (if (id? id)
+      (datum->stx id datum)
+    (assertion-violation 'datum->syntax
+      "expected identifier as context syntax object" id)))
+
+(define (syntax->datum S)
+  (strip S '()))
+
 ;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
 ;;exactly?
 ;;
@@ -721,6 +730,15 @@
 	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
     (make-<stx> stx/expr mark* subst* ae*)))
 
+(define (same-marks? x y)
+  ;;Two lists  of marks are  considered the same  if they have  the same
+  ;;length and the corresponding marks on each are EQ?.
+  ;;
+  (or (and (null? x) (null? y)) ;(eq? x y)
+      (and (pair? x) (pair? y)
+	   (eq? ($car x) ($car y))
+	   (same-marks? ($cdr x) ($cdr y)))))
+
 
 (define (add-subst subst stx/expr)
   (mkstx stx/expr '() #;mark* (list subst) '() #;ae* ))
@@ -808,13 +826,13 @@
 
 ;;;; deconstructors and predicates for syntax objects
 
-(define (syntax-kind? x p?)
+(define (syntax-kind? x pred?)
   (cond ((<stx>? x)
-	 (syntax-kind? (<stx>-expr x) p?))
+	 (syntax-kind? (<stx>-expr x) pred?))
 	((annotation? x)
-	 (syntax-kind? (annotation-expression x) p?))
+	 (syntax-kind? (annotation-expression x) pred?))
 	(else
-	 (p? x))))
+	 (pred? x))))
 
 (define (syntax-vector->list x)
   (cond ((<stx>? x)
@@ -832,63 +850,77 @@
 	(else
 	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
 
-(define syntax-pair?
-  (lambda (x) (syntax-kind? x pair?)))
-(define syntax-vector?
-  (lambda (x) (syntax-kind? x vector?)))
-(define syntax-null?
-  (lambda (x) (syntax-kind? x null?)))
-(define syntax-list? ;;; FIXME: should terminate on cyclic input.
-  (lambda (x)
-    (or (syntax-null? x)
-	(and (syntax-pair? x) (syntax-list? (syntax-cdr x))))))
-(define syntax-car
-  (lambda (x)
-    (cond
-     ((<stx>? x)
-      (mkstx (syntax-car (<stx>-expr x))
-	     (<stx>-mark* x)
-	     (<stx>-subst* x)
-	     (<stx>-ae* x)))
-     ((annotation? x)
-      (syntax-car (annotation-expression x)))
-     ((pair? x) (car x))
-     (else (assertion-violation 'syntax-car "BUG: not a pair" x)))))
-(define syntax-cdr
-  (lambda (x)
-    (cond
-     ((<stx>? x)
-      (mkstx (syntax-cdr (<stx>-expr x))
-	     (<stx>-mark* x)
-	     (<stx>-subst* x)
-	     (<stx>-ae* x)))
-     ((annotation? x)
-      (syntax-cdr (annotation-expression x)))
-     ((pair? x) (cdr x))
-     (else (assertion-violation 'syntax-cdr "BUG: not a pair" x)))))
-(define syntax->list
-  (lambda (x)
-    (if (syntax-pair? x)
-	(cons (syntax-car x) (syntax->list (syntax-cdr x)))
-      (if (syntax-null? x)
-	  '()
-	(assertion-violation 'syntax->list "BUG: invalid argument" x)))))
+(define (syntax-pair? x)
+  (syntax-kind? x pair?))
 
-(define id?
-  (lambda (x)
-    (and (<stx>? x)
-	 (let ((expr (<stx>-expr x)))
-	   (symbol? (if (annotation? expr)
-			(annotation-stripped expr)
-		      expr))))))
+(define (syntax-vector? x)
+  (syntax-kind? x vector?))
+
+(define (syntax-null? x)
+  (syntax-kind? x null?))
+
+(define (syntax-list? x)
+  ;;FIXME Should terminate on cyclic input.  (Abdulaziz Ghuloum)
+  (or (syntax-null? x)
+      (and (syntax-pair? x)
+	   (syntax-list? (syntax-cdr x)))))
+
+(define (syntax-car x)
+  (cond ((<stx>? x)
+	 (mkstx (syntax-car ($<stx>-expr x))
+		($<stx>-mark*  x)
+		($<stx>-subst* x)
+		($<stx>-ae*    x)))
+	((annotation? x)
+	 (syntax-car (annotation-expression x)))
+	((pair? x)
+	 ($car x))
+	(else
+	 (assertion-violation 'syntax-car "BUG: not a pair" x))))
+
+(define (syntax-cdr x)
+  (cond ((<stx>? x)
+	 (mkstx (syntax-cdr ($<stx>-expr x))
+		($<stx>-mark*  x)
+		($<stx>-subst* x)
+		($<stx>-ae*    x)))
+	((annotation? x)
+	 (syntax-cdr (annotation-expression x)))
+	((pair? x)
+	 ($cdr x))
+	(else
+	 (assertion-violation 'syntax-cdr "BUG: not a pair" x))))
+
+(define (syntax->list x)
+  (cond ((syntax-pair? x)
+	 (cons (syntax-car x)
+	       (syntax->list (syntax-cdr x))))
+	((syntax-null? x)
+	 '())
+	(else
+	 (assertion-violation 'syntax->list "BUG: invalid argument" x))))
+
+;;; --------------------------------------------------------------------
+
+(define (id? x)
+  ;;Return true if X is an  identifier: a syntax object whose expression
+  ;;is a symbol.
+  ;;
+  (and (<stx>? x)
+       (let ((expr ($<stx>-expr x)))
+	 (symbol? (if (annotation? expr)
+		      (annotation-stripped expr)
+		    expr)))))
 
 (define (identifier->symbol x)
+  ;;Given an identifier return its symbol expression.
+  ;;
   (define who 'identifier->symbol)
   (define (%error)
     (assertion-violation who "Vicare bug: expected identifier as argument" x))
   (unless (<stx>? x)
     (%error))
-  (let* ((expr (<stx>-expr x))
+  (let* ((expr ($<stx>-expr x))
 	 (sym  (if (annotation? expr)
 		   (annotation-stripped expr)
 		 expr)))
@@ -896,30 +928,25 @@
 	sym
       (%error))))
 
-  ;;; Two lists of marks are considered the same if they have the
-  ;;; same length and the corresponding marks on each are eq?.
-(define same-marks?
-  (lambda (x y)
-    (or (and (null? x) (null? y)) ;(eq? x y)
-	(and (pair? x) (pair? y)
-	     (eq? (car x) (car y))
-	     (same-marks? (cdr x) (cdr y))))))
+
+;;;; utilities for identifiers
 
-  ;;; Two identifiers are bound-id=? if they have the same name and
-  ;;; the same set of marks.
-(define bound-id=?
-  (lambda (x y)
-    (and (eq? (identifier->symbol x) (identifier->symbol y))
-	 (same-marks? (<stx>-mark* x) (<stx>-mark* y)))))
+(define (bound-id=? id1 id2)
+  ;;Two identifiers  are BOUND-ID=? if they  have the same name  and the
+  ;;same set of marks.
+  ;;
+  (and (eq? (identifier->symbol id1) (identifier->symbol id2))
+       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
 
-  ;;; Two identifiers are free-id=? if either both are bound to the
-  ;;; same label or if both are unbound and they have the same name.
-(define free-id=?
-  (lambda (i j)
-    (let ((t0 (id->label i)) (t1 (id->label j)))
-      (if (or t0 t1)
-	  (eq? t0 t1)
-	(eq? (identifier->symbol i) (identifier->symbol j))))))
+(define (free-id=? id1 id2)
+  ;;Two identifiers are  FREE-ID=? if either both are bound  to the same
+  ;;label or if both are unbound and they have the same name.
+  ;;
+  (let ((t1 (id->label id1))
+	(t2 (id->label id2)))
+    (if (or t1 t2)
+	(eq? t1 t2)
+      (eq? (identifier->symbol id1) (identifier->symbol id2)))))
 
 (define (valid-bound-ids? id*)
   ;;Given a list return #t if it  is made of identifers none of which is
@@ -943,6 +970,8 @@
   (and (pair? id*)
        (or (bound-id=? id (car id*))
 	   (bound-id-member? id (cdr id*)))))
+
+
 
 (define self-evaluating?
   (lambda (x) ;;; am I missing something here?
@@ -989,9 +1018,6 @@
 		  x
 		(list->vector new)))))
 	 (else x))))))
-
-(define (syntax->datum S)
-  (strip S '()))
 
   ;;; id->label takes an id (that's a sym x marks x substs) and
   ;;; searches the substs for a label associated with the same sym
@@ -4282,11 +4308,6 @@
 		(extract-trace form)))))
 
 (define identifier? (lambda (x) (id? x)))
-
-(define (datum->syntax id datum)
-  (if (id? id)
-      (datum->stx id datum)
-    (assertion-violation 'datum->syntax "not an identifier" id)))
 
 
 ;;;; miscellaneous collectors
