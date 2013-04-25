@@ -130,6 +130,11 @@
   (newline (current-error-port))
   (newline (current-error-port)))
 
+;;; --------------------------------------------------------------------
+
+(define (raise-unbound-error id)
+  (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
+
 
 ;;;; <RIB> type definition
 
@@ -960,116 +965,128 @@
   ;;BOUND-ID=? to another; else return #f.
   ;;
   (or (null? id*)
-      (and (not (bound-id-member? (car id*) (cdr id*)))
-	   (distinct-bound-ids? (cdr id*)))))
+      (and (not (bound-id-member? ($car id*) ($cdr id*)))
+	   (distinct-bound-ids? ($cdr id*)))))
 
 (define (bound-id-member? id id*)
   ;;Given an identifier  ID and a list of identifiers  ID*: return #t if
   ;;ID is BOUND-ID=? to one of the identifiers in ID*; else return #f.
   ;;
   (and (pair? id*)
-       (or (bound-id=? id (car id*))
-	   (bound-id-member? id (cdr id*)))))
+       (or (bound-id=? id ($car id*))
+	   (bound-id-member? id ($cdr id*)))))
 
 
+(define (self-evaluating? x)
+  (or (number?		x)
+      (string?		x)
+      (char?		x)
+      (boolean?		x)
+      (bytevector?	x)
+      (keyword?		x)))
 
-(define self-evaluating?
-  (lambda (x) ;;; am I missing something here?
-    (or (number? x) (string? x) (char? x) (boolean? x)
-	(bytevector? x) (keyword? x))))
-
-  ;;; strip is used to remove the wrap of a syntax object.
-  ;;; It takes an stx's expr and marks.  If the marks contain
-  ;;; a top-mark, then the expr is returned.
-
-(define (strip-annotations x)
-  (cond
-   ((pair? x)
-    (cons (strip-annotations (car x))
-	  (strip-annotations (cdr x))))
-   ((vector? x) (vector-map strip-annotations x))
-   ((annotation? x) (annotation-stripped x))
-   (else x)))
-
-(define strip
-  (lambda (x m*)
+(module (strip)
+  ;;STRIP is used  to remove the wrap  of a syntax object.   It takes an
+  ;;stx's expr  and marks.  If  the marks  contain a top-mark,  then the
+  ;;expr is returned.
+  ;;
+  (define (strip x m*)
     (if (top-marked? m*)
 	(if (or (annotation? x)
 		(and (pair? x)
-		     (annotation? (car x)))
-		(and (vector? x) (> (vector-length x) 0)
-		     (annotation? (vector-ref x 0))))
-              ;;; TODO: Ask Kent why this is a sufficient test
+		     (annotation? ($car x)))
+		(and (vector? x)
+		     (> ($vector-length x) 0)
+		     (annotation? ($vector-ref x 0))))
+	    ;;TODO Ask Kent  why this is a  sufficient test.  (Abdulaziz
+	    ;;Ghuloum)
 	    (strip-annotations x)
 	  x)
       (let f ((x x))
-	(cond
-	 ((<stx>? x) (strip (<stx>-expr x) (<stx>-mark* x)))
-	 ((annotation? x) (annotation-stripped x))
-	 ((pair? x)
-	  (let ((a (f (car x))) (d (f (cdr x))))
-	    (if (and (eq? a (car x)) (eq? d (cdr x)))
-		x
-	      (cons a d))))
-	 ((vector? x)
-	  (let ((old (vector->list x)))
-	    (let ((new (map f old)))
-	      (if (for-all eq? old new)
-		  x
-		(list->vector new)))))
-	 (else x))))))
+	(cond ((<stx>? x)
+	       (strip ($<stx>-expr x) ($<stx>-mark* x)))
+	      ((annotation? x)
+	       (annotation-stripped x))
+	      ((pair? x)
+	       (let ((a (f ($car x)))
+		     (d (f ($cdr x))))
+		 (if (and (eq? a ($car x))
+			  (eq? d ($cdr x)))
+		     x
+		   (cons a d))))
+	      ((vector? x)
+	       (let* ((old (vector->list x))
+		      (new (map f old)))
+		 (if (for-all eq? old new)
+		     x
+		   (list->vector new))))
+	      (else x)))))
 
-  ;;; id->label takes an id (that's a sym x marks x substs) and
-  ;;; searches the substs for a label associated with the same sym
-  ;;; and marks.
+  (define (strip-annotations x)
+    (cond ((pair? x)
+	   (cons (strip-annotations ($car x))
+		 (strip-annotations ($cdr x))))
+	  ((vector? x)
+	   (vector-map strip-annotations x))
+	  ((annotation? x)
+	   (annotation-stripped x))
+	  (else x)))
+
+  #| end of module: STRIP |# )
+
+
+;;;; identifiers and labels
+
 (define (id->label/intern id)
   (or (id->label id)
-      (cond
-       ((top-level-context) =>
-	(lambda (env)
-             ;;; fabricate binding
-	  (let ((rib (interaction-env-rib env)))
-	    (let-values (((lab _loc) (gen-define-label+loc id rib #f)))
-	      (extend-rib! rib id lab #t) ;;; FIXME
-	      lab))))
-       (else #f))))
+      (cond ((top-level-context)
+	     => (lambda (env)
+		  ;;Fabricate binding.
+		  (let ((rib (interaction-env-rib env)))
+		    (receive (lab _loc)
+			(gen-define-label+loc id rib #f)
+		      ;;FIXME (Abdulaziz Ghuloum)
+		      (extend-rib! rib id lab #t)
+		      lab))))
+	    (else #f))))
 
-(define id->label
-  (lambda (id)
-    (let ((sym (identifier->symbol id)))
-      (let search ((subst* (<stx>-subst* id)) (mark* (<stx>-mark* id)))
-	(cond
-	 ((null? subst*) #f)
-	 ((eq? (car subst*) 'shift)
-             ;;; a shift is inserted when a mark is added.
-             ;;; so, we search the rest of the substitution
-             ;;; without the mark.
-	  (search (cdr subst*) (cdr mark*)))
-	 (else
-	  (let ((rib (car subst*)))
-	    (cond
-	     ((<rib>-sealed/freq rib)
-	      (let ((sym* (<rib>-sym* rib)))
-		(let f ((i 0) (j (vector-length sym*)))
-		  (cond
-		   ((= i j) (search (cdr subst*) mark*))
-		   ((and (eq? (vector-ref sym* i) sym)
-			 (same-marks? mark*
-				      (vector-ref (<rib>-mark** rib) i)))
-		    (let ((label (vector-ref (<rib>-label* rib) i)))
-		      (increment-rib-frequency! rib i)
-		      label))
-		   (else (f (+ i 1) j))))))
-	     (else
-	      (let f ((sym* (<rib>-sym* rib))
-		      (mark** (<rib>-mark** rib))
-		      (label* (<rib>-label* rib)))
-		(cond
-		 ((null? sym*) (search (cdr subst*) mark*))
-		 ((and (eq? (car sym*) sym)
-		       (same-marks? (car mark**) mark*))
-		  (car label*))
-		 (else (f (cdr sym*) (cdr mark**) (cdr label*))))))))))))))
+(define (id->label id)
+  ;;Take an id (that's a sym x marks x substs) and search the substs for
+  ;;a label associated with the same sym and marks.
+  ;;
+  (let ((sym (identifier->symbol id)))
+    (let search ((subst* (<stx>-subst* id))
+		 (mark*  (<stx>-mark* id)))
+      (cond ((null? subst*)
+	     #f)
+	    ((eq? (car subst*) 'shift)
+	     ;;A shift is inserted when a  mark is added.  So, we search
+	     ;;the rest of the substitution without the mark.
+	     (search (cdr subst*) (cdr mark*)))
+	    (else
+	     (let ((rib (car subst*)))
+	       (cond ((<rib>-sealed/freq rib)
+		      (let ((sym* (<rib>-sym* rib)))
+			(let f ((i 0) (j (vector-length sym*)))
+			  (cond ((= i j) (search (cdr subst*) mark*))
+				((and (eq? (vector-ref sym* i) sym)
+				      (same-marks? mark*
+						   (vector-ref (<rib>-mark** rib) i)))
+				 (let ((label (vector-ref (<rib>-label* rib) i)))
+				   (increment-rib-frequency! rib i)
+				   label))
+				(else
+				 (f (+ i 1) j))))))
+		     (else
+		      (let f ((sym* (<rib>-sym* rib))
+			      (mark** (<rib>-mark** rib))
+			      (label* (<rib>-label* rib)))
+			(cond
+			 ((null? sym*) (search (cdr subst*) mark*))
+			 ((and (eq? (car sym*) sym)
+			       (same-marks? (car mark**) mark*))
+			  (car label*))
+			 (else (f (cdr sym*) (cdr mark**) (cdr label*)))))))))))))
 
   ;;; label->binding looks up the label in the environment r as
   ;;; well as in the global environment.  Since all labels are
@@ -1118,18 +1135,11 @@
 (define binding-type car)
 (define binding-value cdr)
 
+
   ;;; the type of an expression is determined by two things:
   ;;; - the shape of the expression (identifier, pair, or datum)
   ;;; - the binding of the identifier (for id-stx) or the type of
   ;;;   car of the pair.
-(define (raise-unbound-error id)
-  (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
-#;
-(define (syntax-type e r)
-  (let-values (((t0 t1 t2) (syntax-type^ e r)))
-    (printf "T ~s ~s => ~s ~s ~s\n" e r t0 t1 t2)
-    (values t0 t1 t2)))
-
 (define syntax-type
   (lambda (e r)
     (cond
