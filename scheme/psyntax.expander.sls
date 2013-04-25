@@ -1649,27 +1649,41 @@
 
   #| end of module |# )
 
-(define (fluid-let-syntax-transformer e r mr)
-  (define (lookup x)
-    (let ((label
-	   (or (id->label x)
-	       (syntax-violation #f "unbound identifier" e x))))
-      (let ((b (label->binding-no-fluids label r)))
-	(cond
-	 ((and (pair? b) (eq? (car b) '$fluid)) (cdr b))
-	 (else (syntax-violation #f "not a fluid identifier" e x))))))
-  (syntax-match e ()
-    ((_ ((lhs* rhs*) ...) b b* ...)
-     (if (not (valid-bound-ids? lhs*))
-	 (invalid-fmls-error e lhs*)
-       (let ((lab* (map lookup lhs*))
-	     (rhs* (map (lambda (x)
-			  (make-eval-transformer
-			   (expand-transformer x mr)))
-		     rhs*)))
-	 (chi-internal (cons b b*)
-		       (append (map cons lab* rhs*) r)
-		       (append (map cons lab* rhs*) mr)))))))
+(define (fluid-let-syntax-transformer expr-stx lexenv.run lexenv.expand)
+  (define who 'expander)
+
+  (define (transformer expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       ;;Check that the ?LHS* are all identifiers with no duplicates.
+       (if (not (valid-bound-ids? ?lhs*))
+	   (invalid-fmls-error expr-stx ?lhs*)
+	 (let ((label*       (map lookup ?lhs*))
+	       (rhs-binding* (map (lambda (rhs)
+				    (make-eval-transformer
+				     (expand-transformer rhs lexenv.expand)))
+			       ?rhs*)))
+	   (chi-internal (cons ?body ?body*)
+			 (append (map cons label* rhs-binding*) lexenv.run)
+			 (append (map cons label* rhs-binding*) lexenv.expand)))))))
+
+  (define (lookup lhs)
+    ;;Search the  binding of the  identifier LHS in the  environment for
+    ;;run; if present return the associated label.
+    ;;
+    (let* ((label    (or (id->label lhs)
+			 (%synner "unbound identifier" lhs)))
+	   (binding  (label->binding-no-fluids label lexenv.run)))
+      (cond ((and (pair? binding)
+		  (eq? (car binding) '$fluid))
+	     (cdr binding))
+	    (else
+	     (%synner "not a fluid identifier" lhs)))))
+
+  (define (%synner message subform)
+    (syntax-violation who message expr-stx subform))
+
+  (transformer expr-stx))
 
 (define type-descriptor-transformer
   (lambda (e r mr)
@@ -4172,20 +4186,18 @@
 
   #| end of module: CHI-BODY* |# )
 
-
-(define (expand-transformer expr r)
-  (let ((rtc (make-collector)))
-    (let ((expanded-rhs
-	   (parametrise ((inv-collector rtc)
-			 (vis-collector (lambda (x) (values))))
-	     (chi-expr expr r r))))
-      (for-each
-          (let ((mark-visit (vis-collector)))
-            (lambda (x)
-              (invoke-library x)
-              (mark-visit x)))
-	(rtc))
-      expanded-rhs)))
+(define (expand-transformer expr lexenv.expand)
+  (let* ((rtc           (make-collector))
+	 (expanded-rhs  (parametrise ((inv-collector rtc)
+				      (vis-collector (lambda (x) (values))))
+			  (chi-expr expr lexenv.expand lexenv.expand))))
+    (for-each
+	(let ((mark-visit (vis-collector)))
+	  (lambda (x)
+	    (invoke-library x)
+	    (mark-visit x)))
+      (rtc))
+    expanded-rhs))
 
 
 (define (rev-map-append f ls ac)
