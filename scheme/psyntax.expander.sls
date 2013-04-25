@@ -73,6 +73,18 @@
     (psyntax internal))
 
 
+;;;; unsafe operations
+
+(module UNSAFE
+  ($car $cdr $vector-ref $vector-set! $vector-length)
+  (import
+      (ikarus system $pairs)
+    (ikarus system $vectors))
+  #| end of module |# )
+
+(import UNSAFE)
+
+
 ;;; helpers
 
 (define-syntax define-inline
@@ -585,15 +597,14 @@
 (define gen-mark
   ;;Generate a new unique mark.  We want a new string for every function
   ;;call.
-  string
-
-  ;;The version below is useful for debugging.
-  ;;
-  ;; (let ((i 0))
-  ;;   (lambda ()
-  ;;     (set! i (+ i 1))
-  ;;     (string-append "m." (number->string i))))
-  )
+  string)
+;;The version below is useful for debugging.
+;;
+;; (define gen-mark
+;;   (let ((i 0))
+;;     (lambda ()
+;;       (set! i (+ i 1))
+;;       (string-append "m." (number->string i)))))
 
 ;;We use #f as the anti-mark.
 (define anti-mark #f)
@@ -649,13 +660,13 @@
 (module (join-wraps)
 
   (define (join-wraps mark1* subst1* ae1* stx2)
-    (let ((mark2*   (<stx>-mark*  stx2))
-	  (subst2*  (<stx>-subst* stx2))
-	  (ae2*     (<stx>-ae*    stx2)))
+    (let ((mark2*   ($<stx>-mark*  stx2))
+	  (subst2*  ($<stx>-subst* stx2))
+	  (ae2*     ($<stx>-ae*    stx2)))
       ;;If the first item in mark2* is an anti-mark...
       (if (and (not (null? mark1*))
 	       (not (null? mark2*))
-	       (anti-mark? (car mark2*)))
+	       (anti-mark? ($car mark2*)))
 	  ;;...cancel mark, anti-mark, and corresponding shifts.
 	  (values (%append-cancel-facing mark1*  mark2*)
 		  (%append-cancel-facing subst1* subst2*)
@@ -668,7 +679,7 @@
   (define (%merge-ae* ls1 ls2)
     (if (and (pair? ls1)
 	     (pair? ls2)
-	     (not (car ls2)))
+	     (not ($car ls2)))
 	(%append-cancel-facing ls1 ls2)
       (append ls1 ls2)))
 
@@ -680,11 +691,11 @@
     ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
     ;;   (%append-cancel-facing '(1)     '(2))		=> ()
     ;;
-    (let recur ((x   (car ls1))
-		(ls1 (cdr ls1)))
+    (let recur ((x   ($car ls1))
+		(ls1 ($cdr ls1)))
       (if (null? ls1)
-	  (cdr ls2)
-	(cons x (recur (car ls1) (cdr ls1))))))
+	  ($cdr ls2)
+	(cons x (recur ($car ls1) ($cdr ls1))))))
 
   #| end of module: JOIN-WRAPS |# )
 
@@ -795,28 +806,32 @@
   (mkstx (f expr mark '() '()) '() '() (list ae)))
 
 
-  ;;; now are some deconstructors and predicates for syntax objects.
-(define syntax-kind?
-  (lambda (x p?)
-    (cond
-     ((<stx>? x) (syntax-kind? (<stx>-expr x) p?))
-     ((annotation? x)
-      (syntax-kind? (annotation-expression x) p?))
-     (else (p? x)))))
+;;;; deconstructors and predicates for syntax objects
 
-(define syntax-vector->list
-  (lambda (x)
-    (cond
-     ((<stx>? x)
-      (let ((ls (syntax-vector->list (<stx>-expr x)))
-	    (m* (<stx>-mark* x))
-	    (s* (<stx>-subst* x))
-	    (ae* (<stx>-ae* x)))
-	(map (lambda (x) (mkstx x m* s* ae*)) ls)))
-     ((annotation? x)
-      (syntax-vector->list (annotation-expression x)))
-     ((vector? x) (vector->list x))
-     (else (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x)))))
+(define (syntax-kind? x p?)
+  (cond ((<stx>? x)
+	 (syntax-kind? (<stx>-expr x) p?))
+	((annotation? x)
+	 (syntax-kind? (annotation-expression x) p?))
+	(else
+	 (p? x))))
+
+(define (syntax-vector->list x)
+  (cond ((<stx>? x)
+	 (let ((ls (syntax-vector->list (<stx>-expr x)))
+	       (m* (<stx>-mark* x))
+	       (s* (<stx>-subst* x))
+	       (ae* (<stx>-ae* x)))
+	   (map (lambda (x)
+		  (mkstx x m* s* ae*))
+	     ls)))
+	((annotation? x)
+	 (syntax-vector->list (annotation-expression x)))
+	((vector? x)
+	 (vector->list x))
+	(else
+	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
+
 (define syntax-pair?
   (lambda (x) (syntax-kind? x pair?)))
 (define syntax-vector?

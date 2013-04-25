@@ -23,8 +23,8 @@
     eval-core
     symbol-value			set-symbol-value!
     keyword?				pretty-print
-    pretty-print*
-    module				bignum?
+    pretty-print*			bignum?
+    module				import
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
