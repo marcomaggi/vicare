@@ -1189,7 +1189,7 @@
 	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
 	 (receive (pattern ids/levels)
-	     (%convert-pattern (syntax ?pattern) (syntax (?literals ...)))
+	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
 	   (with-syntax
 	       ((PATTERN               (sys.datum->syntax (syntax here) pattern))
 		(((IDS . LEVELS) ...)  ids/levels))
@@ -1212,7 +1212,7 @@
 	((_ ?expr (?literals ...) (?pattern ?body) clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
 	 (receive (pattern ids/levels)
-	     (%convert-pattern (syntax ?pattern) (syntax (?literals ...)))
+	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
 	   (with-syntax
 	       ((PATTERN               (sys.datum->syntax (syntax here) pattern))
 		(((IDS . LEVELS) ...)  ids/levels))
@@ -1233,14 +1233,14 @@
 	  (syntax-violation 'syntax-match "invalid syntax" (quote ?stuff))))
 	))
 
-    (module (%convert-pattern)
+    (module (%convert-single-pattern)
 
-      (define (%convert-pattern pattern literals)
-	;;Transform the PATTERN into a  symbolic expression to be handed
-	;;to SYNTAX-DISPATCH.   PATTERN must be a  syntax object holding
-	;;the SYNTAX-MATCH  pattern to convert.   KEYS must be  a syntax
-	;;object holding a list of identifiers being the literals in the
-	;;PATTERN.
+      (define %convert-single-pattern
+	;;Recursive function.  Transform the PATTERN-STX into a symbolic
+	;;expression to be handed  to SYNTAX-DISPATCH.  PATTERN-STX must
+	;;be  a  syntax  object  holding  the  SYNTAX-MATCH  pattern  to
+	;;convert.  LITERALS must  be a syntax object holding  a list of
+	;;identifiers being the literals in the PATTERN-STX.
 	;;
 	;;Return 2 values:
 	;;
@@ -1250,30 +1250,24 @@
 	;;   variables that  must be bound whenever  the body associated
 	;;   to the pattern is evaluated.
 	;;
-	(define (%convert-multi-pattern pattern* n pattern-vars literals)
-	  (if (null? pattern*)
-	      (values '() pattern-vars)
-	    (receive (y pattern-vars)
-		(%convert-multi-pattern (cdr pattern*) n pattern-vars literals)
-	      (receive (x pattern-vars)
-		  (%convert-single-pattern (car pattern*) n pattern-vars literals)
-		(values (cons x y) pattern-vars)))))
-
-	(define (%convert-single-pattern p n pattern-vars literals)
-	  (syntax-case p ()
+	(case-lambda
+	 ((pattern-stx literals)
+	  (%convert-single-pattern pattern-stx literals 0 '()))
+	 ((pattern-stx literals n pattern-vars)
+	  (syntax-case pattern-stx ()
 	    (?identifier
 	     (sys.identifier? (syntax ?identifier))
-	     (cond ((%bound-identifier-member? p literals)
-		    (values `#(scheme-id ,(sys.syntax->datum p)) pattern-vars))
-		   ((sys.free-identifier=? p (syntax _))
+	     (cond ((%bound-identifier-member? pattern-stx literals)
+		    (values `#(scheme-id ,(sys.syntax->datum pattern-stx)) pattern-vars))
+		   ((sys.free-identifier=? pattern-stx (syntax _))
 		    (values '_ pattern-vars))
 		   (else
-		    (values 'any (cons (cons p n) pattern-vars)))))
+		    (values 'any (cons (cons pattern-stx n) pattern-vars)))))
 
 	    ((?pattern ?dots)
 	     (%ellipsis? (syntax ?dots))
 	     (receive (pattern^ pattern-vars^)
-		 (%convert-single-pattern (syntax ?pattern) (+ n 1) pattern-vars literals)
+		 (%convert-single-pattern (syntax ?pattern) literals (+ n 1) pattern-vars)
 	       (values (if (eq? pattern^ 'any)
 			   'each-any
 			 `#(each ,pattern^))
@@ -1283,20 +1277,28 @@
 	     (%ellipsis? (syntax ?dots))
 	     (let*-values
 		 (((pattern-z pattern-vars)
-		   (%convert-single-pattern (syntax ?pattern-z) n pattern-vars literals))
+		   (%convert-single-pattern (syntax ?pattern-z) literals
+					    n pattern-vars))
+
 		  ((pattern-y* pattern-vars)
-		   (%convert-multi-pattern  (syntax (?pattern-y ...)) n pattern-vars literals))
+		   (%convert-multi-pattern  (syntax (?pattern-y ...)) literals
+					    n pattern-vars))
+
 		  ((pattern-x pattern-vars)
-		   (%convert-single-pattern (syntax ?pattern-x) (+ n 1) pattern-vars literals)))
+		   (%convert-single-pattern (syntax ?pattern-x) literals
+					    (+ n 1) pattern-vars)))
 	       (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
 		       pattern-vars)))
 
 	    ((?car . ?cdr)
 	     (let*-values
 		 (((pattern-cdr pattern-vars)
-		   (%convert-single-pattern (syntax ?cdr) n pattern-vars literals))
+		   (%convert-single-pattern (syntax ?cdr) literals
+					    n pattern-vars))
+
 		  ((pattern-car pattern-vars)
-		   (%convert-single-pattern (syntax ?car) n pattern-vars literals)))
+		   (%convert-single-pattern (syntax ?car) literals
+					    n pattern-vars)))
 	       (values (cons pattern-car pattern-cdr) pattern-vars)))
 
 	    (()
@@ -1304,24 +1306,25 @@
 
 	    (#(?item ...)
 	     (receive (pattern-item* pattern-vars)
-		 (%convert-single-pattern (syntax (?item ...)) n pattern-vars literals)
+		 (%convert-single-pattern (syntax (?item ...)) literals
+					  n pattern-vars)
 	       (values `#(vector ,pattern-item*) pattern-vars)))
 
 	    (?datum
-	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))))
+	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))
+	    ))))
 
-	(%convert-single-pattern pattern 0 '() literals))
-
-      ;;Commented out because unused.  (Marco Maggi; Thu Apr 25, 2013)
-      ;;
-      ;; (define (%free-identifier-member? id1 list-of-ids)
-      ;;   ;;Return #t if  the identifier ID1 is  FREE-IDENTIFIER=?  to one
-      ;;   ;;of the identifiers in LIST-OF-IDS.
-      ;;   ;;
-      ;;   (and (exists (lambda (id2)
-      ;; 		     (sys.free-identifier=? id1 id2))
-      ;; 	     list-of-ids)
-      ;; 	   #t))
+      (define (%convert-multi-pattern pattern* literals n pattern-vars)
+	;;Recursive function.
+	;;
+	(if (null? pattern*)
+	    (values '() pattern-vars)
+	  (let*-values
+	      (((y pattern-vars)
+		(%convert-multi-pattern  (cdr pattern*) literals n pattern-vars))
+	       ((x pattern-vars)
+		(%convert-single-pattern (car pattern*) literals n pattern-vars)))
+	    (values (cons x y) pattern-vars))))
 
       (define (%bound-identifier-member? id list-of-ids)
 	;;Return #t if  the identifier ID is  BOUND-IDENTIFIER=?  to one
@@ -1335,7 +1338,18 @@
 	(and (sys.identifier? x)
 	     (sys.free-identifier=? x (syntax (... ...)))))
 
-      #| end of module: %CONVERT-PATTERN |# )
+      ;;Commented out because unused.  (Marco Maggi; Thu Apr 25, 2013)
+      ;;
+      ;; (define (%free-identifier-member? id1 list-of-ids)
+      ;;   ;;Return #t if  the identifier ID1 is  FREE-IDENTIFIER=?  to one
+      ;;   ;;of the identifiers in LIST-OF-IDS.
+      ;;   ;;
+      ;;   (and (exists (lambda (id2)
+      ;; 		     (sys.free-identifier=? id1 id2))
+      ;; 	     list-of-ids)
+      ;; 	   #t))
+
+      #| end of module: %CONVERT-SINGLE-PATTERN |# )
 
     transformer))
 
