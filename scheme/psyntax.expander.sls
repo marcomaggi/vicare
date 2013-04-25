@@ -1502,35 +1502,6 @@
     transformer))
 
 
-;;;; form parsers
-
-(define (parse-define x)
-  ;;Syntax parser for R6RS's DEFINE.
-  ;;
-  (syntax-match x ()
-    ((_ (id . fmls) b b* ...)
-     (id? id)
-     (begin
-       (verify-formals fmls x)
-       (values id (cons 'defun x))))
-
-    ((_ id val) (id? id)
-     (values id (cons 'expr val)))
-
-    ((_ id)
-     (id? id)
-     (values id (cons 'expr (bless '(void)))))
-    ))
-
-(define (parse-define-syntax x)
-  ;;Syntax parser for R6RS's DEFINE-SYNTAX.
-  ;;
-  (syntax-match x ()
-    ((_ id val)
-     (id? id)
-     (values id val))))
-
-
 (define scheme-stx
   ;;Take a symbol  and if it's in the library:
   ;;
@@ -1557,7 +1528,9 @@
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
 
-  ;;; macros
+
+;;;; macros
+
 (define lexical-var car)
 (define lexical-mutable? cdr)
 (define set-lexical-mutable! set-cdr!)
@@ -1700,7 +1673,6 @@
 	      (if (null? cls*)
 		  (build-last cls)
 		(build-one cls (f (car cls*) (cdr cls*)))))))))))
-
 
 (define quote-transformer
   (lambda (e r mr)
@@ -3918,11 +3890,12 @@
 		      (cons (cons lab (cons '$module iface)) mr)
 		      mod** kwd*))))))))
 
-(define chi-body*
-  (lambda (e* r mr lex* rhs* mod** kwd* exp* rib mix? sd?)
-    (cond
-     ((null? e*) (values e* r mr lex* rhs* mod** kwd* exp*))
-     (else
+
+(module (chi-body*)
+
+  (define (chi-body* e* r mr lex* rhs* mod** kwd* exp* rib mix? sd?)
+    (if (null? e*)
+	(values e* r mr lex* rhs* mod** kwd* exp*)
       (let ((e (car e*)))
 	(let-values (((type value kwd) (syntax-type e r)))
 	  (let ((kwd* (if (id? kwd) (cons kwd kwd*) kwd*)))
@@ -4059,7 +4032,7 @@
 		     (_
 		      (stx-error e "invalid import form"))))
 		 (define (any-import ctxt e r)
-                   (if (id? e)
+		   (if (id? e)
 		       (module-import (list ctxt e) r)
 		     (library-import (list ctxt e))))
 		 (define (any-import* ctxt e* r)
@@ -4074,9 +4047,9 @@
 		     ((ctxt e* ...) (any-import* ctxt e* r))
 		     (_ (stx-error e "invalid import form"))))
 		 (let-values (((id* lab*)
-			       #;(if (module-import? e)
-				   (module-import e r)
-				 (library-import e))
+			       ;;(if (module-import? e)
+			       ;;    (module-import e r)
+			       ;;  (library-import e))
 			       (any-import*-checked e r)))
 		   (vector-for-each
 		       (lambda (id lab) (extend-rib! rib id lab sd?))
@@ -4089,7 +4062,36 @@
 			      (cons (gen-lexical 'dummy) lex*)
 			      (cons (cons 'top-expr e) rhs*)
 			      mod** kwd* exp* rib #t sd?)
-		 (values e* r mr lex* rhs* mod** kwd* exp*)))))))))))
+		 (values e* r mr lex* rhs* mod** kwd* exp*)))))))))
+
+  (define (parse-define x)
+    ;;Syntax parser for R6RS's DEFINE.
+    ;;
+    (syntax-match x ()
+      ((_ (id . fmls) b b* ...)
+       (id? id)
+       (begin
+	 (verify-formals fmls x)
+	 (values id (cons 'defun x))))
+
+      ((_ id val) (id? id)
+       (values id (cons 'expr val)))
+
+      ((_ id)
+       (id? id)
+       (values id (cons 'expr (bless '(void)))))
+      ))
+
+  (define (parse-define-syntax x)
+    ;;Syntax parser for R6RS's DEFINE-SYNTAX.
+    ;;
+    (syntax-match x ()
+      ((_ id val)
+       (id? id)
+       (values id val))))
+
+  #| end of module: CHI-BODY* |# )
+
 
 (define (expand-transformer expr r)
   (let ((rtc (make-collector)))
