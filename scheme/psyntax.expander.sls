@@ -1235,7 +1235,7 @@
 
     (module (%convert-pattern)
 
-      (define (%convert-pattern pattern keys)
+      (define (%convert-pattern pattern literals)
 	;;Transform the PATTERN into a  symbolic expression to be handed
 	;;to SYNTAX-DISPATCH.   PATTERN must be a  syntax object holding
 	;;the SYNTAX-MATCH  pattern to convert.   KEYS must be  a syntax
@@ -1250,20 +1250,20 @@
 	;;   variables that  must be bound whenever  the body associated
 	;;   to the pattern is evaluated.
 	;;
-	(define (%convert* pattern* n pattern-vars)
+	(define (%convert-multi-pattern pattern* n pattern-vars literals)
 	  (if (null? pattern*)
 	      (values '() pattern-vars)
 	    (receive (y pattern-vars)
-		(%convert* (cdr pattern*) n pattern-vars)
+		(%convert-multi-pattern (cdr pattern*) n pattern-vars literals)
 	      (receive (x pattern-vars)
-		  (%convert-single-pattern (car pattern*) n pattern-vars)
+		  (%convert-single-pattern (car pattern*) n pattern-vars literals)
 		(values (cons x y) pattern-vars)))))
 
-	(define (%convert-single-pattern p n pattern-vars)
+	(define (%convert-single-pattern p n pattern-vars literals)
 	  (syntax-case p ()
 	    (?identifier
 	     (sys.identifier? (syntax ?identifier))
-	     (cond ((%bound-identifier-member? p keys)
+	     (cond ((%bound-identifier-member? p literals)
 		    (values `#(scheme-id ,(sys.syntax->datum p)) pattern-vars))
 		   ((sys.free-identifier=? p (syntax _))
 		    (values '_ pattern-vars))
@@ -1273,41 +1273,44 @@
 	    ((?pattern ?dots)
 	     (%ellipsis? (syntax ?dots))
 	     (receive (pattern^ pattern-vars^)
-		 (%convert-single-pattern (syntax ?pattern) (+ n 1) pattern-vars)
+		 (%convert-single-pattern (syntax ?pattern) (+ n 1) pattern-vars literals)
 	       (values (if (eq? pattern^ 'any)
 			   'each-any
 			 `#(each ,pattern^))
 		       pattern-vars^)))
 
-	    ((x ?dots ys ... . z)
+	    ((?pattern-x ?dots ?pattern-y ... . ?pattern-z)
 	     (%ellipsis? (syntax ?dots))
-	     (receive (z pattern-vars)
-		 (%convert-single-pattern (syntax z) n pattern-vars)
-	       (receive (ys pattern-vars)
-		   (%convert* (syntax (ys ...)) n pattern-vars)
-		 (receive (x pattern-vars)
-		     (%convert-single-pattern (syntax x) (+ n 1) pattern-vars)
-		   (values `#(each+ ,x ,(reverse ys) ,z) pattern-vars)))))
+	     (let*-values
+		 (((pattern-z pattern-vars)
+		   (%convert-single-pattern (syntax ?pattern-z) n pattern-vars literals))
+		  ((pattern-y* pattern-vars)
+		   (%convert-multi-pattern  (syntax (?pattern-y ...)) n pattern-vars literals))
+		  ((pattern-x pattern-vars)
+		   (%convert-single-pattern (syntax ?pattern-x) (+ n 1) pattern-vars literals)))
+	       (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
+		       pattern-vars)))
 
-	    ((x . y)
-	     (receive (y pattern-vars)
-		 (%convert-single-pattern (syntax y) n pattern-vars)
-	       (receive (x pattern-vars)
-		   (%convert-single-pattern (syntax x) n pattern-vars)
-		 (values (cons x y) pattern-vars))))
+	    ((?car . ?cdr)
+	     (let*-values
+		 (((pattern-cdr pattern-vars)
+		   (%convert-single-pattern (syntax ?cdr) n pattern-vars literals))
+		  ((pattern-car pattern-vars)
+		   (%convert-single-pattern (syntax ?car) n pattern-vars literals)))
+	       (values (cons pattern-car pattern-cdr) pattern-vars)))
 
 	    (()
 	     (values '() pattern-vars))
 
-	    (#(p ...)
-	     (receive (p pattern-vars)
-		 (%convert-single-pattern (syntax (p ...)) n pattern-vars)
-	       (values `#(vector ,p) pattern-vars)))
+	    (#(?item ...)
+	     (receive (pattern-item* pattern-vars)
+		 (%convert-single-pattern (syntax (?item ...)) n pattern-vars literals)
+	       (values `#(vector ,pattern-item*) pattern-vars)))
 
 	    (?datum
 	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))))
 
-	(%convert-single-pattern pattern 0 '()))
+	(%convert-single-pattern pattern 0 '() literals))
 
       ;;Commented out because unused.  (Marco Maggi; Thu Apr 25, 2013)
       ;;
