@@ -125,6 +125,18 @@
 (define-syntax no-source
   (lambda (x) #f))
 
+(define (%generate-unique-symbol seed)
+  ;;Generate and  return a fresh unique  symbol using.  SEED is  used to
+  ;;seed the generation: it must be a symbol or a syntax object.
+  ;;
+  (define who '%generate-unique-symbol)
+  (cond ((symbol? seed)
+	 (gensym seed))
+	((<stx>? seed)
+	 (%generate-unique-symbol (identifier->symbol seed)))
+	(else
+	 (assertion-violation who "*** Vicare bug: invalid arg" seed))))
+
 (define (debug-print . args)
   (pretty-print args (current-error-port))
   (newline (current-error-port))
@@ -476,22 +488,9 @@
 (define top-level-context
   (make-parameter #f))
 
-(define (gen-lexical sym)
-  ;;Generate  a fresh  lexical name  for  renaming.  It's  also used  to
-  ;;generate temporaries.
-  ;;
-  (cond ((symbol? sym)
-	 (gensym sym))
-	((<stx>? sym)
-	 (gen-lexical (identifier->symbol sym)))
-	(else
-	 (assertion-violation 'gen-lexical
-	   "*** Vicare bug: invalid arg" sym))))
-
-;;Used to  generate global names  (e.g. locations for  library exports).
-;;We use GEN-LEXICAL since it works just fine.
+;;Used to generate global names (e.g. locations for library exports).
 ;;
-(define gen-global gen-lexical)
+(define gen-global %generate-unique-symbol)
 
 (define (gen-label _)
   ;;Every identifier in the program will have a label associated with it
@@ -1531,6 +1530,7 @@
 
 ;;;; macros
 
+(define gen-lexical %generate-unique-symbol)
 (define lexical-var car)
 (define lexical-mutable? cdr)
 (define set-lexical-mutable! set-cdr!)
