@@ -1260,6 +1260,19 @@
 	 ((pattern-stx literals nesting-level pattern-vars)
 	  (syntax-case pattern-stx ()
 
+	    ;;A literal identifier is encoded as:
+	    ;;
+	    ;;   #(scheme-id ?identifier)
+	    ;;
+	    ;;the wildcard underscore identifier is encoded as:
+	    ;;
+	    ;;   _
+	    ;;
+	    ;;any  other  identifier will  bind  a  variable and  it  is
+	    ;;encoded as:
+	    ;;
+	    ;;   any
+	    ;;
 	    (?identifier
 	     (sys.identifier? (syntax ?identifier))
 	     (cond ((%bound-identifier-member? pattern-stx literals)
@@ -1270,6 +1283,16 @@
 		    (values 'any (cons (cons pattern-stx nesting-level)
 				       pattern-vars)))))
 
+	    ;;A  tail  pattern  with  ellipsis which  does  not  bind  a
+	    ;;variable is encoded as:
+	    ;;
+	    ;;   #(each ?pattern)
+	    ;;
+	    ;;a tail pattern with ellipsis which does bind a variable is
+	    ;;encoded as:
+	    ;;
+	    ;;   each-any
+	    ;;
 	    ((?pattern ?dots)
 	     (%ellipsis? (syntax ?dots))
 	     (receive (pattern^ pattern-vars^)
@@ -1280,6 +1303,10 @@
 			 `#(each ,pattern^))
 		       pattern-vars^)))
 
+	    ;;A non-tail pattern with ellipsis is encoded as:
+	    ;;
+	    ;;  #(each+ ?pattern-ellipsis (?pattern-following ...) . ?tail-pattern)
+	    ;;
 	    ((?pattern-x ?dots ?pattern-y ... . ?pattern-z)
 	     (%ellipsis? (syntax ?dots))
 	     (let*-values
@@ -1297,6 +1324,8 @@
 	       (values `#(each+ ,pattern-x ,(reverse pattern-y*) ,pattern-z)
 		       pattern-vars)))
 
+	    ;;A pair is encoded as pair.
+	    ;;
 	    ((?car . ?cdr)
 	     (let*-values
 		 (((pattern-cdr pattern-vars)
@@ -1308,15 +1337,25 @@
 					    nesting-level pattern-vars)))
 	       (values (cons pattern-car pattern-cdr) pattern-vars)))
 
+	    ;;Null is encoded as null.
+	    ;;
 	    (()
 	     (values '() pattern-vars))
 
+	    ;;A vector is encoded as:
+	    ;;
+	    ;;   #(vector ?datum)
+	    ;;
 	    (#(?item ...)
 	     (receive (pattern-item* pattern-vars)
 		 (%convert-single-pattern (syntax (?item ...)) literals
 					  nesting-level pattern-vars)
 	       (values `#(vector ,pattern-item*) pattern-vars)))
 
+	    ;;A datum is encoded as:
+	    ;;
+	    ;;   #(atom ?datum)
+	    ;;
 	    (?datum
 	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))
 	    ))))
