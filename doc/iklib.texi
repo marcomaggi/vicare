@@ -695,6 +695,7 @@ the character.
 * iklib expander import specs::     Additional import specifications.
 * iklib expander local import::     Local library imports.
 * iklib expander extended export::  Extended library exports.
+* iklib expander fluids::           Fluid syntaxes.
 @end menu
 
 @c page
@@ -1142,6 +1143,26 @@ Here is an example of module exporting a binding with @func{export}:
 
 (list (green) (yellow)) @result{} (green yellow)
 @end example
+
+@c page
+@node iklib expander fluids
+@subsection Fluid syntaxes
+
+
+@deffn Syntax define-fluid-syntax @meta{keyword} @meta{expr}
+Like @func{define-syntax} define a new syntax binding the transformer to
+@meta{keyword}, but mark @meta{keyword} as fluid so that later it can be
+rebound by @func{fluid-let-syntax}.
+@end deffn
+
+
+@deffn Syntax fluid-let-syntax ((@meta{keyword} @meta{expr}) ...) @metao{body} @meta{body}
+Similar to @func{let-syntax}, but rather than defining new
+@meta{keyword} bindings, rebind temporarily rebind the keywords to new
+transformers while expanding the body forms.  The given @meta{keyword}
+must be already bound to fluid syntaxes defined by
+@func{define-fluid-syntax}.
+@end deffn
 
 @c page
 @node iklib shared
