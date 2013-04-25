@@ -125,6 +125,74 @@
   #t)
 
 
+(parametrise ((check-test-name	'fluid-let-syntax))
+
+  (define-syntax define-integrable
+    ;;Posted  by "leppie"  on the  Ikarus mailing  list; subject  "Macro
+    ;;Challenge of Last Year [Difficulty: *****]", 20 Oct 2009.
+    ;;
+    (lambda (x)
+      (define (make-residual-name name)
+	(datum->syntax name
+		       (string->symbol
+			(string-append "residual-"
+				       (symbol->string (syntax->datum name))))))
+      (syntax-case x (lambda)
+        ((_ (?name . ?formals) ?form1 ?form2 ...)
+	 (identifier? #'?name)
+	 #'(define-integrable ?name (lambda ?formals ?form1 ?form2 ...)))
+
+        ((_ ?name (lambda ?formals ?form1 ?form2 ...))
+         (identifier? #'?name)
+         (with-syntax ((XNAME (make-residual-name #'?name)))
+           #'(begin
+               (define-fluid-syntax ?name
+                 (lambda (x)
+                   (syntax-case x ()
+                     (_
+		      (identifier? x)
+		      #'XNAME)
+
+                     ((_ arg (... ...))
+                      #'((fluid-let-syntax
+			     ((?name (identifier-syntax XNAME)))
+                           (lambda ?formals ?form1 ?form2 ...))
+                         arg (... ...))))))
+
+               (define XNAME
+                 (fluid-let-syntax ((?name (identifier-syntax XNAME)))
+                   (lambda ?formals ?form1 ?form2 ...))))))
+	)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ()
+	(define-integrable (fact n)
+	  (let ((residual-fact (lambda (x)
+				 (error 'fact "captured residual-fact"))))
+	    (if (< n 2)
+		1
+	      (* n (fact (- n 1))))))
+	(fact 5))
+    => 120)
+
+  (check
+      (let ()
+	(define-integrable (f x) (+ x 1))
+	(eq? f f))
+    => #t)
+
+  (check
+      (let ()
+	(define-integrable (even? n) (or (zero? n) (odd? (- n 1))))
+	(define-integrable (odd? n) (not (even? n)))
+	(even? 5))
+    => #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
