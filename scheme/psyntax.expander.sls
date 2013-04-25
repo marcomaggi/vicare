@@ -1160,7 +1160,7 @@
 
 
 (define-syntax syntax-match
-  ;;The syntax-match macro is almost like syntax-case macro.  Except that:
+  ;;The SYNTAX-MATCH macro is almost like SYNTAX-CASE macro.  Except that:
   ;;
   ;;*  The syntax  objects matched  are OUR  stx objects,  not the  host
   ;;  systems syntax objects (whatever they may be we don't care).
@@ -1170,6 +1170,11 @@
   ;;
   ;;* The variables  in the patters are bound to  ordinary variables not
   ;;  to special pattern variables.
+  ;;
+  ;;The actual matching between the input expression and the patterns is
+  ;;performed  by   the  function   SYNTAX-DISPATCH;  the   patterns  in
+  ;;SYNTAX-MATCH are converted  to a symbolic expressions  and handed to
+  ;;SYNTAX-DISPATCH along with the input expression.
   ;;
   (let ()
     (define (transformer ctx)
@@ -1228,83 +1233,108 @@
 	  (syntax-violation 'syntax-match "invalid syntax" (quote ?stuff))))
 	))
 
-    (define (%convert-pattern pattern keys)
-      ;;Returns syntax-dispatch pattern & ids
+    (module (%convert-pattern)
+
+      (define (%convert-pattern pattern keys)
+	;;Transform the PATTERN into a  symbolic expression to be handed
+	;;to SYNTAX-DISPATCH.   PATTERN must be a  syntax object holding
+	;;the SYNTAX-MATCH  pattern to convert.   KEYS must be  a syntax
+	;;object holding a list of identifiers being the literals in the
+	;;PATTERN.
+	;;
+	;;Return 2 values:
+	;;
+	;;1. The pattern as symbolic expression.
+	;;
+	;;2.  An  ordered  list  of  symbols  representing  the  pattern
+	;;   variables that  must be bound whenever  the body associated
+	;;   to the pattern is evaluated.
+	;;
+	(define (%convert* pattern* n pattern-vars)
+	  (if (null? pattern*)
+	      (values '() pattern-vars)
+	    (receive (y pattern-vars)
+		(%convert* (cdr pattern*) n pattern-vars)
+	      (receive (x pattern-vars)
+		  (%convert-single-pattern (car pattern*) n pattern-vars)
+		(values (cons x y) pattern-vars)))))
+
+	(define (%convert-single-pattern p n pattern-vars)
+	  (syntax-case p ()
+	    (?identifier
+	     (sys.identifier? (syntax ?identifier))
+	     (cond ((%bound-identifier-member? p keys)
+		    (values `#(scheme-id ,(sys.syntax->datum p)) pattern-vars))
+		   ((sys.free-identifier=? p (syntax _))
+		    (values '_ pattern-vars))
+		   (else
+		    (values 'any (cons (cons p n) pattern-vars)))))
+
+	    ((?pattern ?dots)
+	     (%ellipsis? (syntax ?dots))
+	     (receive (pattern^ pattern-vars^)
+		 (%convert-single-pattern (syntax ?pattern) (+ n 1) pattern-vars)
+	       (values (if (eq? pattern^ 'any)
+			   'each-any
+			 `#(each ,pattern^))
+		       pattern-vars^)))
+
+	    ((x ?dots ys ... . z)
+	     (%ellipsis? (syntax ?dots))
+	     (receive (z pattern-vars)
+		 (%convert-single-pattern (syntax z) n pattern-vars)
+	       (receive (ys pattern-vars)
+		   (%convert* (syntax (ys ...)) n pattern-vars)
+		 (receive (x pattern-vars)
+		     (%convert-single-pattern (syntax x) (+ n 1) pattern-vars)
+		   (values `#(each+ ,x ,(reverse ys) ,z) pattern-vars)))))
+
+	    ((x . y)
+	     (receive (y pattern-vars)
+		 (%convert-single-pattern (syntax y) n pattern-vars)
+	       (receive (x pattern-vars)
+		   (%convert-single-pattern (syntax x) n pattern-vars)
+		 (values (cons x y) pattern-vars))))
+
+	    (()
+	     (values '() pattern-vars))
+
+	    (#(p ...)
+	     (receive (p pattern-vars)
+		 (%convert-single-pattern (syntax (p ...)) n pattern-vars)
+	       (values `#(vector ,p) pattern-vars)))
+
+	    (?datum
+	     (values `#(atom ,(sys.syntax->datum (syntax ?datum))) pattern-vars))))
+
+	(%convert-single-pattern pattern 0 '()))
+
+      ;;Commented out because unused.  (Marco Maggi; Thu Apr 25, 2013)
       ;;
-      (define (cvt* p* n ids)
-	(if (null? p*)
-	    (values '() ids)
-	  (receive (y ids)
-	      (cvt* (cdr p*) n ids)
-	    (receive (x ids)
-		(cvt (car p*) n ids)
-	      (values (cons x y) ids)))))
+      ;; (define (%free-identifier-member? id1 list-of-ids)
+      ;;   ;;Return #t if  the identifier ID1 is  FREE-IDENTIFIER=?  to one
+      ;;   ;;of the identifiers in LIST-OF-IDS.
+      ;;   ;;
+      ;;   (and (exists (lambda (id2)
+      ;; 		     (sys.free-identifier=? id1 id2))
+      ;; 	     list-of-ids)
+      ;; 	   #t))
 
-      (define (free-identifier-member? x ls)
-	(and (exists (lambda (y)
-		       (sys.free-identifier=? x y))
-	       ls)
-	     #t))
+      (define (%bound-identifier-member? id list-of-ids)
+	;;Return #t if  the identifier ID is  BOUND-IDENTIFIER=?  to one
+	;;of the identifiers in LIST-OF-IDS.
+	;;
+	(and (pair? list-of-ids)
+	     (or (sys.bound-identifier=? id (car list-of-ids))
+		 (%bound-identifier-member? id (cdr list-of-ids)))))
 
-      (define (bound-id-member? x ls)
-	(and (pair? ls)
-	     (or (sys.bound-identifier=? x (car ls))
-		 (bound-id-member? x (cdr ls)))))
-
-      (define (ellipsis? x)
+      (define (%ellipsis? x)
 	(and (sys.identifier? x)
 	     (sys.free-identifier=? x (syntax (... ...)))))
 
-      (define (cvt p n ids)
-	(syntax-case p ()
-	  (id
-	   (sys.identifier? (syntax id))
-	   (cond
-	    ((bound-id-member? p keys)
-	     (values `#(scheme-id ,(sys.syntax->datum p)) ids))
-	    ((sys.free-identifier=? p (syntax _))
-	     (values '_ ids))
-	    (else (values 'any (cons (cons p n) ids)))))
+      #| end of module: %CONVERT-PATTERN |# )
 
-	  ((p dots)
-	   (ellipsis? (syntax dots))
-	   (receive (p ids)
-	       (cvt (syntax p) (+ n 1) ids)
-	     (values (if (eq? p 'any)
-			 'each-any
-		       `#(each ,p))
-		     ids)))
-
-	  ((x dots ys ... . z)
-	   (ellipsis? (syntax dots))
-	   (receive (z ids)
-	       (cvt (syntax z) n ids)
-	     (receive (ys ids)
-		 (cvt* (syntax (ys ...)) n ids)
-	       (receive (x ids)
-		   (cvt (syntax x) (+ n 1) ids)
-		 (values `#(each+ ,x ,(reverse ys) ,z) ids)))))
-
-	  ((x . y)
-	   (receive (y ids)
-	       (cvt (syntax y) n ids)
-	     (receive (x ids)
-		 (cvt (syntax x) n ids)
-	       (values (cons x y) ids))))
-
-	  (()
-	   (values '() ids))
-
-	  (#(p ...)
-	   (let-values (((p ids) (cvt (syntax (p ...)) n ids)))
-	     (values `#(vector ,p) ids)))
-
-	  (?datum
-	   (values `#(atom ,(sys.syntax->datum (syntax ?datum))) ids))))
-
-      (cvt pattern 0 '()))
-
-  transformer))
+    transformer))
 
 
 (define parse-define
