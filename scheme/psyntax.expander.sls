@@ -539,14 +539,14 @@
 
 (define (gen-define-label+loc id rib sd?)
   (if sd?
-      (values (gensym) (gen-lexical id))
+      (values (gensym) (gen-lexical-var id))
     (let* ((env   (top-level-context))
 	   (label (gen-top-level-label id rib))
 	   (locs  (interaction-env-locs env)))
       (values label
 	      (cond ((assq label locs) => cdr)
 		    (else
-		     (let ((loc (gen-lexical id)))
+		     (let ((loc (gen-lexical-var id)))
 		       (set-interaction-env-locs! env (cons (cons label loc) locs))
 		       loc)))))))
 
@@ -1100,10 +1100,6 @@
 
 ;;;; labels and bindings
 
-(define make-binding cons)
-(define binding-type car)
-(define binding-value cdr)
-
 (define (label->binding x r)
   ;;label->binding looks up the label in the environment r as well as in
   ;;the global  environment.  Since  all labels  are unique,  it doesn't
@@ -1529,21 +1525,93 @@
 
 
 ;;;; macros
+;;
+;;A "lexical  environment" is  an alist managed  somewhat like  a stack.
+;;Each  entry is  an improper  list and  represents a  binding in  fully
+;;expanded code expressed in the core language.
+;;
+;;While  the  expansion proceeds,  visiting  the  code in  breadth-first
+;;order:  the lexical  environment  is updated  by  pushing new  binding
+;;entries on the stack.
+;;
+;;The  typical entry  representing  a  binding, as  created  by LET  and
+;;similar syntaxes, has the format:
+;;
+;;   (?label lexical ?lexvar . #f)
+;;
+;;where "?label" a  unique symbol identifying the  binding; "lexical" is
+;;the symbol "lexical";  "?lexvar" is a symbol representing  the name of
+;;the binding in the core language forms.
+;;
+;;It is better to look at an entry as follows:
+;;
+;;   (?label . (lexical . (?lexvar . #f)))
+;;
+;;where "?label" is  the key and "(lexical ?lexvar .  #f)" is the value;
+;;under this interpretation: the value of the entry is a "binding".
+;;
+;;The format of the binding is:
+;;
+;;   (?type . (?lexvar . ?mutable))
+;;
+;;where "?type" is a symbol (for  example: "lexical") and the value is a
+;;pair; "?lexvar"  is a symbol representing  the name of the  binding in
+;;the core language forms; "?mutable" is a boolean, true if this binding
+;;is mutable.
+;;
 
-(define gen-lexical %generate-unique-symbol)
+;;Build and return a new binding.
+;;
+(define make-binding cons)
+
+;;Given  a binding  return its  type: a  symbol.  Possible  symbols are:
+;;"lexical".
+;;
+(define binding-type car)
+
+;;Given a binding return  is value: a pair.  The car of  the pair is the
+;;lexical  variable; the  cdr  is  a boolean,  true  if  the binding  is
+;;mutable.
+;;
+(define binding-value cdr)
+
+;;Generate a  unique symbol to  represent the name  of a binding  in the
+;;core language forms.
+;;
+(define gen-lexical-var %generate-unique-symbol)
+
+;;Accessors for the pair value in a binding list.
+;;
 (define lexical-var car)
 (define lexical-mutable? cdr)
+
+;;Mutator for the mutable boolean in a pair value of a binding list.
+;;
 (define set-lexical-mutable! set-cdr!)
 
-(define (add-lexical lab lex r)
-  (cons (cons* lab 'lexical lex #f)
-	r))
+(define (add-lexical label lexvar lexenv)
+  ;;Push a  new entry on the  lexical environment LEXENV and  return the
+  ;;resulting lexical environment.
+  ;;
+  ;;LABEL must be a unique symbol identifying a binding.  LEXVAR must be
+  ;;a symbol representing  the name of the binding in  the core language
+  ;;forms.
+  ;;
+  (cons (cons* label 'lexical lexvar #f)
+	lexenv))
 
-(define (add-lexicals lab* lex* r)
-  (if (null? lab*)
-      r
-    (add-lexicals (cdr lab*) (cdr lex*)
-		  (add-lexical (car lab*) (car lex*) r))))
+(define (add-lexicals label* lexvar* lexenv)
+  ;;Push multiple entries  to the lexical environment  LEXENV and return
+  ;;the resulting lexical environment.
+  ;;
+  ;;LABEL*  must  be a  list  of  unique symbols  identifying  bindings.
+  ;;LEXVAR* must  be a  list of  symbols representing  the names  of the
+  ;;binding in the core language forms.
+  ;;
+  (if (null? label*)
+      lexenv
+    (add-lexicals ($cdr label*) ($cdr lexvar*)
+		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1563,8 +1631,8 @@
        (if (not (valid-bound-ids? ?lhs*))
 	   (invalid-fmls-error expr-stx ?lhs*)
 	 ;;Generate what is needed to create a lexical contour.
-	 (let ((lex* (map gen-lexical ?lhs*))
-	       (lab* (map gen-label   ?lhs*)))
+	 (let ((lex* (map gen-lexical-var ?lhs*))
+	       (lab* (map gen-label       ?lhs*)))
 	   ;;Add a lexical contour.
 	   (let ((rib (make-full-rib ?lhs* lab*))
 		 (env (add-lexicals lab* lex* env)))
@@ -1581,28 +1649,27 @@
 
   #| end of module |# )
 
-(define fluid-let-syntax-transformer
-  (lambda (e r mr)
-    (define (lookup x)
-      (let ((label
-	     (or (id->label x)
-		 (syntax-violation #f "unbound identifier" e x))))
-	(let ((b (label->binding-no-fluids label r)))
-	  (cond
-	   ((and (pair? b) (eq? (car b) '$fluid)) (cdr b))
-	   (else (syntax-violation #f "not a fluid identifier" e x))))))
-    (syntax-match e ()
-      ((_ ((lhs* rhs*) ...) b b* ...)
-       (if (not (valid-bound-ids? lhs*))
-	   (invalid-fmls-error e lhs*)
-	 (let ((lab* (map lookup lhs*))
-	       (rhs* (map (lambda (x)
-			    (make-eval-transformer
-			     (expand-transformer x mr)))
-		       rhs*)))
-	   (chi-internal (cons b b*)
-			 (append (map cons lab* rhs*) r)
-			 (append (map cons lab* rhs*) mr))))))))
+(define (fluid-let-syntax-transformer e r mr)
+  (define (lookup x)
+    (let ((label
+	   (or (id->label x)
+	       (syntax-violation #f "unbound identifier" e x))))
+      (let ((b (label->binding-no-fluids label r)))
+	(cond
+	 ((and (pair? b) (eq? (car b) '$fluid)) (cdr b))
+	 (else (syntax-violation #f "not a fluid identifier" e x))))))
+  (syntax-match e ()
+    ((_ ((lhs* rhs*) ...) b b* ...)
+     (if (not (valid-bound-ids? lhs*))
+	 (invalid-fmls-error e lhs*)
+       (let ((lab* (map lookup lhs*))
+	     (rhs* (map (lambda (x)
+			  (make-eval-transformer
+			   (expand-transformer x mr)))
+		     rhs*)))
+	 (chi-internal (cons b b*)
+		       (append (map cons lab* rhs*) r)
+		       (append (map cons lab* rhs*) mr)))))))
 
 (define type-descriptor-transformer
   (lambda (e r mr)
@@ -3134,7 +3201,7 @@
 	(let ((ids (map car pvars))
 	      (levels (map cdr pvars)))
 	  (let ((labels (map gen-label ids))
-		(new-vars (map gen-lexical ids)))
+		(new-vars (map gen-lexical-var ids)))
 	    (let ((body
 		   (chi-expr
 		    (add-subst (make-full-rib ids labels) expr)
@@ -3166,7 +3233,7 @@
 	   ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
 	    (stx-error pat "misplaced ellipsis in syntax-case pattern"))
 	   (else
-	    (let ((y (gen-lexical 'tmp)))
+	    (let ((y (gen-lexical-var 'tmp)))
 	      (let ((test
 		     (cond
 		      ((eq? fender #t) y)
@@ -3207,7 +3274,7 @@
 		 (if (free-id=? pat (scheme-stx '_))
 		     (chi-expr expr r mr)
 		   (let ((lab (gen-label pat))
-			 (lex (gen-lexical pat)))
+			 (lex (gen-lexical-var pat)))
 		     (let ((body
 			    (chi-expr
 			     (add-subst (make-full-rib (list pat) (list lab)) expr)
@@ -3224,7 +3291,7 @@
 	((_ expr (keys ...) clauses ...)
 	 (begin
 	   (verify-literals keys e)
-	   (let ((x (gen-lexical 'tmp)))
+	   (let ((x (gen-lexical-var 'tmp)))
 	     (let ((body (gen-syntax-case x keys clauses r mr)))
 	       (build-application no-source
 				  (build-lambda no-source (list x) body)
@@ -3312,7 +3379,7 @@
 	       ((assq outer-var (car maps)) =>
 		(lambda (b) (values (cdr b) maps)))
 	       (else
-		(let ((inner-var (gen-lexical 'tmp)))
+		(let ((inner-var (gen-lexical-var 'tmp)))
 		  (values
 		   inner-var
 		   (cons
@@ -3690,7 +3757,7 @@
       ((x* ...)
        (begin
 	 (verify-formals fmls stx)
-	 (let ((lex* (map gen-lexical x*))
+	 (let ((lex* (map gen-lexical-var x*))
 	       (lab* (map gen-label x*)))
 	   (values
 	    lex*
@@ -3701,8 +3768,8 @@
       ((x* ... . x)
        (begin
 	 (verify-formals fmls stx)
-	 (let ((lex* (map gen-lexical x*)) (lab* (map gen-label x*))
-	       (lex (gen-lexical x)) (lab (gen-label x)))
+	 (let ((lex* (map gen-lexical-var x*)) (lab* (map gen-label x*))
+	       (lex (gen-lexical-var x)) (lab (gen-label x)))
 	   (values
 	    (append lex* lex)
 	    (chi-internal
@@ -4072,7 +4139,7 @@
 	      (else
 	       (if mix?
 		   (chi-body* (cdr e*) r mr
-			      (cons (gen-lexical 'dummy) lex*)
+			      (cons (gen-lexical-var 'dummy) lex*)
 			      (cons (cons 'top-expr e) rhs*)
 			      mod** kwd* exp* rib #t sd?)
 		 (values e* r mr lex* rhs* mod** kwd* exp*)))))))))
