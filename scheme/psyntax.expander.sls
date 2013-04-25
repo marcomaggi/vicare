@@ -1158,100 +1158,155 @@
   (lambda (x)
     (sanitize-binding (eval-core (expanded->core x)) x)))
 
-  ;;; The syntax-match macro is almost like syntax-case macro.
-  ;;; Except that:
-  ;;;   The syntax objects matched are OUR stx objects, not
-  ;;;     the host systems syntax objects (whatever they may be
-  ;;;     we don't care).
-  ;;;   The literals are matched against those in the system
-  ;;;     library (psyntax system $all).   -- see scheme-stx
-  ;;;   The variables in the patters are bound to ordinary variables
-  ;;;     not to special pattern variables.
+
 (define-syntax syntax-match
-  (lambda (ctx)
-    (define convert-pattern
-		; returns syntax-dispatch pattern & ids
-      (lambda (pattern keys)
-	(define cvt*
-	  (lambda (p* n ids)
-	    (if (null? p*)
-		(values '() ids)
-	      (let-values (((y ids) (cvt* (cdr p*) n ids)))
-		(let-values (((x ids) (cvt (car p*) n ids)))
-		  (values (cons x y) ids))))))
-	(define free-identifier-member?
-	  (lambda (x ls)
-	    (and (exists (lambda (y) (sys.free-identifier=? x y)) ls) #t)))
-	(define (bound-id-member? x ls)
-	  (and (pair? ls)
-	       (or (sys.bound-identifier=? x (car ls))
-		   (bound-id-member? x (cdr ls)))))
-	(define ellipsis?
-	  (lambda (x)
-	    (and (sys.identifier? x)
-		 (sys.free-identifier=? x (syntax (... ...))))))
-	(define cvt
-	  (lambda (p n ids)
-	    (syntax-case p ()
-	      (id (sys.identifier? (syntax id))
-		  (cond
-		   ((bound-id-member? p keys)
-		    (values `#(scheme-id ,(sys.syntax->datum p)) ids))
-		   ((sys.free-identifier=? p (syntax _))
-		    (values '_ ids))
-		   (else (values 'any (cons (cons p n) ids)))))
-	      ((p dots) (ellipsis? (syntax dots))
-	       (let-values (((p ids) (cvt (syntax p) (+ n 1) ids)))
-		 (values
-		  (if (eq? p 'any) 'each-any `#(each ,p))
-		  ids)))
-	      ((x dots ys ... . z) (ellipsis? (syntax dots))
-	       (let-values (((z ids) (cvt (syntax z) n ids)))
-		 (let-values (((ys ids) (cvt* (syntax (ys ...)) n ids)))
-		   (let-values (((x ids) (cvt (syntax x) (+ n 1) ids)))
-		     (values `#(each+ ,x ,(reverse ys) ,z) ids)))))
-	      ((x . y)
-	       (let-values (((y ids) (cvt (syntax y) n ids)))
-		 (let-values (((x ids) (cvt (syntax x) n ids)))
-		   (values (cons x y) ids))))
-	      (() (values '() ids))
-	      (#(p ...)
-	       (let-values (((p ids) (cvt (syntax (p ...)) n ids)))
-		 (values `#(vector ,p) ids)))
-	      (datum
-	       (values `#(atom ,(sys.syntax->datum (syntax datum))) ids)))))
-	(cvt pattern 0 '())))
-    (syntax-case ctx ()
-      ((_ expr (lits ...)) (for-all sys.identifier? (syntax (lits ...)))
-       (syntax (stx-error expr "invalid syntax")))
-      ((_ expr (lits ...) (pat fender body) cls* ...)
-       (for-all sys.identifier? (syntax (lits ...)))
-       (let-values (((pattern ids/levels)
-		     (convert-pattern (syntax pat) (syntax (lits ...)))))
-	 (with-syntax ((pattern (sys.datum->syntax (syntax here) pattern))
-		       (((ids . levels) ...) ids/levels))
-	   (syntax
-	    (let ((t expr))
-	      (let ((ls/false (syntax-dispatch t 'pattern)))
-		(if (and ls/false (apply (lambda (ids ...) fender) ls/false))
-		    (apply (lambda (ids ...) body) ls/false)
-		  (syntax-match t (lits ...) cls* ...))))))))
-      ((_ expr (lits ...) (pat body) cls* ...)
-       (for-all sys.identifier? (syntax (lits ...)))
-       (let-values (((pattern ids/levels)
-		     (convert-pattern (syntax pat) (syntax (lits ...)))))
-	 (with-syntax ((pattern (sys.datum->syntax (syntax here) pattern))
-		       (((ids . levels) ...) ids/levels))
-	   (syntax
-	    (let ((t expr))
-	      (let ((ls/false (syntax-dispatch t 'pattern)))
-		(if ls/false
-		    (apply (lambda (ids ...) body) ls/false)
-		  (syntax-match t (lits ...) cls* ...))))))))
-      ((_ expr (lits ...) (pat body) cls* ...)
-       (syntax (syntax-match expr (lits ...) (pat #t body) cls* ...))))))
+  ;;The syntax-match macro is almost like syntax-case macro.  Except that:
+  ;;
+  ;;*  The syntax  objects matched  are OUR  stx objects,  not the  host
+  ;;  systems syntax objects (whatever they may be we don't care).
+  ;;
+  ;;*  The literals  are matched  against  those in  the system  library
+  ;;(psyntax system $all).  -- see scheme-stx
+  ;;
+  ;;* The variables  in the patters are bound to  ordinary variables not
+  ;;  to special pattern variables.
+  ;;
+  (let ()
+    (define (transformer ctx)
+      (syntax-case ctx ()
 
+	;;No clauses.
+	((_ ?expr (?literals ...))
+	 (for-all sys.identifier? (syntax (?literals ...)))
+	 (syntax (stx-error ?expr "invalid syntax")))
 
+	;;The next clause has a fender.
+	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
+	 (for-all sys.identifier? (syntax (?literals ...)))
+	 (receive (pattern ids/levels)
+	     (%convert-pattern (syntax ?pattern) (syntax (?literals ...)))
+	   (with-syntax
+	       ((PATTERN               (sys.datum->syntax (syntax here) pattern))
+		(((IDS . LEVELS) ...)  ids/levels))
+	     (syntax
+	      (let ((T ?expr))
+		;;If   the  input   expression   matches  the   symbolic
+		;;expression PATTERN...
+		(let ((ls/false (syntax-dispatch T 'PATTERN)))
+		  (if (and ls/false
+			   ;;...and  the pattern  variables satisfy  the
+			   ;;fender...
+			   (apply (lambda (IDS ...) ?fender) ls/false))
+		      ;;...evaluate the body  with the pattern variables
+		      ;;assigned.
+		      (apply (lambda (IDS ...) ?body) ls/false)
+		    ;;...else try to match the next clause.
+		    (syntax-match T (?literals ...) ?clause* ...))))))))
+
+	;;The next clause has NO fender.
+	((_ ?expr (?literals ...) (?pattern ?body) clause* ...)
+	 (for-all sys.identifier? (syntax (?literals ...)))
+	 (receive (pattern ids/levels)
+	     (%convert-pattern (syntax ?pattern) (syntax (?literals ...)))
+	   (with-syntax
+	       ((PATTERN               (sys.datum->syntax (syntax here) pattern))
+		(((IDS . LEVELS) ...)  ids/levels))
+	     (syntax
+	      (let ((T ?expr))
+		;;If   the  input   expression   matches  the   symbolic
+		;;expression PATTERN...
+		(let ((ls/false (syntax-dispatch T 'PATTERN)))
+		  (if ls/false
+		      ;;...evaluate the body  with the pattern variables
+		      ;;assigned.
+		      (apply (lambda (IDS ...) ?body) ls/false)
+		    ;;...else try to match the next clause.
+		    (syntax-match T (?literals ...) clause* ...))))))))
+
+	(?stuff
+	 (syntax
+	  (syntax-violation 'syntax-match "invalid syntax" (quote ?stuff))))
+	))
+
+    (define (%convert-pattern pattern keys)
+      ;;Returns syntax-dispatch pattern & ids
+      ;;
+      (define (cvt* p* n ids)
+	(if (null? p*)
+	    (values '() ids)
+	  (receive (y ids)
+	      (cvt* (cdr p*) n ids)
+	    (receive (x ids)
+		(cvt (car p*) n ids)
+	      (values (cons x y) ids)))))
+
+      (define (free-identifier-member? x ls)
+	(and (exists (lambda (y)
+		       (sys.free-identifier=? x y))
+	       ls)
+	     #t))
+
+      (define (bound-id-member? x ls)
+	(and (pair? ls)
+	     (or (sys.bound-identifier=? x (car ls))
+		 (bound-id-member? x (cdr ls)))))
+
+      (define (ellipsis? x)
+	(and (sys.identifier? x)
+	     (sys.free-identifier=? x (syntax (... ...)))))
+
+      (define (cvt p n ids)
+	(syntax-case p ()
+	  (id
+	   (sys.identifier? (syntax id))
+	   (cond
+	    ((bound-id-member? p keys)
+	     (values `#(scheme-id ,(sys.syntax->datum p)) ids))
+	    ((sys.free-identifier=? p (syntax _))
+	     (values '_ ids))
+	    (else (values 'any (cons (cons p n) ids)))))
+
+	  ((p dots)
+	   (ellipsis? (syntax dots))
+	   (receive (p ids)
+	       (cvt (syntax p) (+ n 1) ids)
+	     (values (if (eq? p 'any)
+			 'each-any
+		       `#(each ,p))
+		     ids)))
+
+	  ((x dots ys ... . z)
+	   (ellipsis? (syntax dots))
+	   (receive (z ids)
+	       (cvt (syntax z) n ids)
+	     (receive (ys ids)
+		 (cvt* (syntax (ys ...)) n ids)
+	       (receive (x ids)
+		   (cvt (syntax x) (+ n 1) ids)
+		 (values `#(each+ ,x ,(reverse ys) ,z) ids)))))
+
+	  ((x . y)
+	   (receive (y ids)
+	       (cvt (syntax y) n ids)
+	     (receive (x ids)
+		 (cvt (syntax x) n ids)
+	       (values (cons x y) ids))))
+
+	  (()
+	   (values '() ids))
+
+	  (#(p ...)
+	   (let-values (((p ids) (cvt (syntax (p ...)) n ids)))
+	     (values `#(vector ,p) ids)))
+
+	  (?datum
+	   (values `#(atom ,(sys.syntax->datum (syntax ?datum))) ids))))
+
+      (cvt pattern 0 '()))
+
+  transformer))
+
+
 (define parse-define
   (lambda (x)
     (syntax-match x ()
