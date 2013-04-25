@@ -135,6 +135,14 @@
 (define (raise-unbound-error id)
   (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
 
+(define-syntax stx-error
+  (lambda (x)
+    (syntax-case x ()
+      ((_ stx)
+       (syntax (syntax-violation #f "invalid syntax" stx)))
+      ((_ stx msg)
+       (syntax (syntax-violation #f msg stx))))))
+
 
 ;;;; <RIB> type definition
 
@@ -1067,178 +1075,190 @@
 	     (let ((rib (car subst*)))
 	       (cond ((<rib>-sealed/freq rib)
 		      (let ((sym* (<rib>-sym* rib)))
-			(let f ((i 0) (j (vector-length sym*)))
-			  (cond ((= i j) (search (cdr subst*) mark*))
-				((and (eq? (vector-ref sym* i) sym)
-				      (same-marks? mark*
-						   (vector-ref (<rib>-mark** rib) i)))
-				 (let ((label (vector-ref (<rib>-label* rib) i)))
+			(let loop ((i 0)
+				   (j ($vector-length sym*)))
+			  (cond ((= i j)
+				 (search (cdr subst*) mark*))
+				((and (eq? ($vector-ref sym* i) sym)
+				      (same-marks? mark* ($vector-ref (<rib>-mark** rib) i)))
+				 (let ((label ($vector-ref (<rib>-label* rib) i)))
 				   (increment-rib-frequency! rib i)
 				   label))
 				(else
-				 (f (+ i 1) j))))))
+				 (loop (+ i 1) j))))))
 		     (else
-		      (let f ((sym* (<rib>-sym* rib))
-			      (mark** (<rib>-mark** rib))
-			      (label* (<rib>-label* rib)))
-			(cond
-			 ((null? sym*) (search (cdr subst*) mark*))
-			 ((and (eq? (car sym*) sym)
-			       (same-marks? (car mark**) mark*))
-			  (car label*))
-			 (else (f (cdr sym*) (cdr mark**) (cdr label*)))))))))))))
+		      (let loop ((sym*    (<rib>-sym* rib))
+				 (mark**  (<rib>-mark** rib))
+				 (label*  (<rib>-label* rib)))
+			(cond ((null? sym*)
+			       (search (cdr subst*) mark*))
+			      ((and (eq? (car sym*) sym)
+				    (same-marks? (car mark**) mark*))
+			       (car label*))
+			      (else
+			       (loop (cdr sym*) (cdr mark**) (cdr label*)))))))))))))
 
-  ;;; label->binding looks up the label in the environment r as
-  ;;; well as in the global environment.  Since all labels are
-  ;;; unique, it doesn't matter which environment we consult first.
-  ;;; we lookup the global environment first because it's faster
-  ;;; (uses a hash table) while the lexical environment is an alist.
-  ;;; If we don't find the binding of a label, we return the binding
-  ;;; (displaced-lexical . #f) to indicate such.
-
-(define label->binding-no-fluids
-  (lambda (x r)
-    (cond
-     ((not x) '(displaced-lexical))
-     ((imported-label->binding x) =>
-      (lambda (b)
-	(cond
-	 ((and (pair? b) (eq? (car b) '$core-rtd))
-	  (cons '$rtd (map bless (cdr b))))
-	 ((and (pair? b) (eq? (car b) 'global-rtd))
-	  (let ((lib (cadr b)) (loc (cddr b)))
-	    (cons '$rtd (symbol-value loc))))
-	 (else b))))
-     ((assq x r) => cdr)
-     ((top-level-context) =>
-      (lambda (env)
-	(cond
-	 ((assq x (interaction-env-locs env)) =>
-	  (lambda (p)  ;;; fabricate
-	    (cons* 'lexical (cdr p) #f)))
-	 (else '(displaced-lexical . #f)))))
-     (else '(displaced-lexical . #f)))))
-
-(define label->binding
-  (lambda (x r)
-    (let ((b (label->binding-no-fluids x r)))
-      (if (and (pair? b) (eq? (car b) '$fluid))
-            ;;; fluids require reversed logic.  We have to look them
-            ;;; up in the local environment first before the global.
-	  (let ((x (cdr b)))
-	    (cond
-	     ((assq x r) => cdr)
-	     (else (label->binding-no-fluids x '()))))
-	b))))
+
+;;;; labels and bindings
 
 (define make-binding cons)
 (define binding-type car)
 (define binding-value cdr)
 
-
-  ;;; the type of an expression is determined by two things:
-  ;;; - the shape of the expression (identifier, pair, or datum)
-  ;;; - the binding of the identifier (for id-stx) or the type of
-  ;;;   car of the pair.
-(define syntax-type
-  (lambda (e r)
-    (cond
-     ((id? e)
-      (let ((id e))
-	(let* ((label (id->label/intern id))
-	       (b (label->binding label r))
-	       (type (binding-type b)))
-	  (unless label ;;; fail early.
-	    (raise-unbound-error id))
-	  (case type
-	    ((lexical core-prim macro macro! global local-macro
-		      local-macro! global-macro global-macro!
-		      displaced-lexical syntax import export $module
-		      $core-rtd library mutable ctv local-ctv global-ctv)
-	     (values type (binding-value b) id))
-	    (else (values 'other #f #f))))))
-     ((syntax-pair? e)
-      (let ((id (syntax-car e)))
-	(if (id? id)
-	    (let* ((label (id->label/intern id))
-		   (b (label->binding label r))
-		   (type (binding-type b)))
-	      (unless label ;;; fail early.
-		(raise-unbound-error id))
-	      (case type
-		((define define-syntax core-macro begin macro
-		   macro! local-macro local-macro! global-macro
-		   global-macro! module library set! let-syntax
-		   letrec-syntax import export $core-rtd
-		   ctv local-ctv global-ctv stale-when
-		   define-fluid-syntax)
-		 (values type (binding-value b) id))
+(define (label->binding x r)
+  ;;label->binding looks up the label in the environment r as well as in
+  ;;the global  environment.  Since  all labels  are unique,  it doesn't
+  ;;matter which  environment we  consult first.   we lookup  the global
+  ;;environment first because it's faster  (uses a hash table) while the
+  ;;lexical environment is an alist.  If  we don't find the binding of a
+  ;;label, we  return the binding  (displaced-lexical . #f)  to indicate
+  ;;such.
+  ;;
+  (let ((b (label->binding-no-fluids x r)))
+    (if (and (pair? b)
+	     (eq? (car b) '$fluid))
+	;;Fluids require reversed logic.  We have to look them up in the
+	;;local environment first before the global.
+	(let ((x (cdr b)))
+	  (cond ((assq x r)
+		 => cdr)
 		(else
-		 (values 'call #f #f))))
-	  (values 'call #f #f))))
-     (else (let ((d (syntax->datum e)))
-	     (if (self-evaluating? d)
-		 (values 'constant d #f)
-	       (values 'other #f #f)))))))
+		 (label->binding-no-fluids x '()))))
+      b)))
 
-(define-syntax stx-error
-  (lambda (x)
-    (syntax-case x ()
-      ((_ stx)
-       (syntax (syntax-violation #f "invalid syntax" stx)))
-      ((_ stx msg)
-       (syntax (syntax-violation #f msg stx))))))
+(define (label->binding-no-fluids x r)
+  (cond ((not x)
+	 '(displaced-lexical))
+	((imported-label->binding x)
+	 => (lambda (b)
+	      (cond ((and (pair? b)
+			  (eq? (car b) '$core-rtd))
+		     (cons '$rtd (map bless (cdr b))))
+		    ((and (pair? b)
+			  (eq? (car b) 'global-rtd))
+		     (let ((lib (cadr b))
+			   (loc (cddr b)))
+		       (cons '$rtd (symbol-value loc))))
+		    (else b))))
+	((assq x r)
+	 => cdr)
+	((top-level-context)
+	 => (lambda (env)
+	      (cond ((assq x (interaction-env-locs env))
+		     => (lambda (p) ;;; fabricate
+			  (cons* 'lexical (cdr p) #f)))
+		    (else
+		     '(displaced-lexical . #f)))))
+	(else
+	 '(displaced-lexical . #f))))
 
-  ;;; when the rhs of a syntax definition is evaluated, it should be
-  ;;; either a procedure, an identifier-syntax transformer or an
-  ;;; ($rtd . #<rtd>) form (ikarus/chez).  sanitize-binding converts
-  ;;; the output to one of:
-  ;;;   (lacal-macro . procedure)
-  ;;;   (local-macro! . procedure)
-  ;;;   (local-ctv . compile-time-value)
-  ;;;   ($rtd . $rtd)
-  ;;; and signals an assertion-violation otherwise.
-(define sanitize-binding
-  (lambda (x src)
-    (cond
-     ((procedure? x)
-      (cons* 'local-macro x src))
-     ((and (pair? x) (eq? (car x) 'macro!) (procedure? (cdr x)))
-      (cons* 'local-macro! (cdr x) src))
-     ((and (pair? x) (eq? (car x) '$rtd)) x)
-     ((and (pair? x) (eq? (car x) 'ctv))
-      (cons* 'local-ctv (cdr x) src))
-     (else (assertion-violation 'expand "invalid transformer" x)))))
+
+(define (syntax-type e r)
+  ;;The type of an expression is determined by two things:
+  ;;
+  ;;- The shape of the expression (identifier, pair, or datum).
+  ;;
+  ;;- The binding of  the identifier (for id-stx) or the  type of car of
+  ;;  the pair.
+  ;;
+  (cond ((id? e)
+	 (let ((id e))
+	   (let* ((label  (id->label/intern id))
+		  (b      (label->binding label r))
+		  (type   (binding-type b)))
+	     (unless label ;;fail early
+	       (raise-unbound-error id))
+	     (case type
+	       ((lexical core-prim macro macro! global local-macro
+			 local-macro! global-macro global-macro!
+			 displaced-lexical syntax import export $module
+			 $core-rtd library mutable ctv local-ctv global-ctv)
+		(values type (binding-value b) id))
+	       (else
+		(values 'other #f #f))))))
+	((syntax-pair? e)
+	 (let ((id (syntax-car e)))
+	   (if (id? id)
+	       (let* ((label  (id->label/intern id))
+		      (b      (label->binding label r))
+		      (type   (binding-type b)))
+		 (unless label ;;fail early
+		   (raise-unbound-error id))
+		 (case type
+		   ((define define-syntax core-macro begin macro
+		      macro! local-macro local-macro! global-macro
+		      global-macro! module library set! let-syntax
+		      letrec-syntax import export $core-rtd
+		      ctv local-ctv global-ctv stale-when
+		      define-fluid-syntax)
+		    (values type (binding-value b) id))
+		   (else
+		    (values 'call #f #f))))
+	     (values 'call #f #f))))
+	(else
+	 (let ((d (syntax->datum e)))
+	   (if (self-evaluating? d)
+	       (values 'constant d #f)
+	     (values 'other #f #f))))))
 
-  ;;; r6rs's make-variable-transformer:
-(define make-variable-transformer
-  (lambda (x)
-    (if (procedure? x)
-	(cons 'macro! x)
-      (assertion-violation 'make-variable-transformer
-	"not a procedure" x))))
+(define (sanitize-binding x src)
+  ;;When  the rhs  of a  syntax definition  is evaluated,  it should  be
+  ;;either  a procedure,  an identifier-syntax  transformer or  an:
+  ;;
+  ;;   ($rtd . #<rtd>)
+  ;;
+  ;;form (ikarus/chez).  SANITIZE-BINDING converts the output to one of:
+  ;;
+  ;;   (lacal-macro . procedure)
+  ;;   (local-macro! . procedure)
+  ;;   (local-ctv . compile-time-value)
+  ;;   ($rtd . $rtd)
+  ;;
+  ;;and signals an assertion-violation otherwise.
+  ;;
+  (cond ((procedure? x)
+	 (cons* 'local-macro x src))
+	((and (pair? x)
+	      (eq? (car x) 'macro!)
+	      (procedure? (cdr x)))
+	 (cons* 'local-macro! (cdr x) src))
+	((and (pair? x)
+	      (eq? (car x) '$rtd))
+	 x)
+	((and (pair? x)
+	      (eq? (car x) 'ctv))
+	 (cons* 'local-ctv (cdr x) src))
+	(else
+	 (assertion-violation 'expand "invalid transformer" x))))
 
-(define make-compile-time-value
-  (lambda (x)
-    (cons 'ctv x)))
+
+(define (make-variable-transformer x)
+  ;;R6RS's make-variable-transformer.
+  ;;
+  (define who 'make-variable-transformer)
+  (if (procedure? x)
+      (cons 'macro! x)
+    (assertion-violation who "not a procedure" x)))
+
+(define (make-compile-time-value x)
+  (cons 'ctv x))
 
 (define (variable-transformer? x)
-  (and (pair? x) (eq? (car x) 'macro!) (procedure? (cdr x))))
+  (and (pair? x)
+       (eq? (car x) 'macro!)
+       (procedure? (cdr x))))
 
 (define (variable-transformer-procedure x)
+  (define who 'variable-transformer-procedure)
   (if (variable-transformer? x)
       (cdr x)
-    (assertion-violation
-	'variable-transformer-procedure
-      "not a variable transformer"
-      x)))
+    (assertion-violation who "not a variable transformer" x)))
 
-  ;;; make-eval-transformer takes an expanded expression,
-  ;;; evaluates it and returns a proper syntactic binding
-  ;;; for the resulting object.
-(define make-eval-transformer
-  (lambda (x)
-    (sanitize-binding (eval-core (expanded->core x)) x)))
+(define (make-eval-transformer x)
+  ;;Take  an  expanded  expression,  evaluate it  and  return  a  proper
+  ;;syntactic binding for the resulting object.
+  ;;
+  (sanitize-binding (eval-core (expanded->core x)) x))
 
 
 (define-syntax syntax-match
@@ -1248,7 +1268,7 @@
   ;;  systems syntax objects (whatever they may be we don't care).
   ;;
   ;;*  The literals  are matched  against  those in  the system  library
-  ;;(psyntax system $all).  -- see scheme-stx
+  ;;  (psyntax system $all).  -- see scheme-stx
   ;;
   ;;* The variables  in the patters are bound to  ordinary variables not
   ;;  to special pattern variables.
@@ -1482,47 +1502,60 @@
     transformer))
 
 
-(define parse-define
-  (lambda (x)
-    (syntax-match x ()
-      ((_ (id . fmls) b b* ...) (id? id)
-       (begin
-	 (verify-formals fmls x)
-	 (values id (cons 'defun x))))
-      ((_ id val) (id? id)
-       (values id (cons 'expr val)))
-      ((_ id) (id? id)
-       (values id (cons 'expr (bless '(void))))))))
+;;;; form parsers
 
-(define parse-define-syntax
-  (lambda (x)
-    (syntax-match x ()
-      ((_ id val) (id? id) (values id val)))))
+(define (parse-define x)
+  ;;Syntax parser for R6RS's DEFINE.
+  ;;
+  (syntax-match x ()
+    ((_ (id . fmls) b b* ...)
+     (id? id)
+     (begin
+       (verify-formals fmls x)
+       (values id (cons 'defun x))))
 
-  ;;; scheme-stx takes a symbol and if it's in the
-  ;;; (psyntax system $all) library, it creates a fresh identifier
-  ;;; that maps only the symbol to its label in that library.
-  ;;; Symbols not in that library become fresh.
-(define scheme-stx-hashtable (make-eq-hashtable))
+    ((_ id val) (id? id)
+     (values id (cons 'expr val)))
+
+    ((_ id)
+     (id? id)
+     (values id (cons 'expr (bless '(void)))))
+    ))
+
+(define (parse-define-syntax x)
+  ;;Syntax parser for R6RS's DEFINE-SYNTAX.
+  ;;
+  (syntax-match x ()
+    ((_ id val)
+     (id? id)
+     (values id val))))
+
+
 (define scheme-stx
-  (lambda (sym)
-    (or (hashtable-ref scheme-stx-hashtable sym #f)
-	(let* ((subst
-		(library-subst
-		 (find-library-by-name '(psyntax system $all))))
-	       (stx (make-<stx> sym top-mark* '() '()))
-	       (stx
-		(cond
-		 ((assq sym subst) =>
-		  (lambda (x)
-		    (let ((name (car x)) (label (cdr x)))
-		      (add-subst
-		       (make-<rib> (list name)
-				 (list top-mark*) (list label) #f)
-		       stx))))
-		 (else stx))))
-	  (hashtable-set! scheme-stx-hashtable sym stx)
-	  stx))))
+  ;;Take a symbol  and if it's in the library:
+  ;;
+  ;;   (psyntax system $all)
+  ;;
+  ;;create a fresh identifier that maps  only the symbol to its label in
+  ;;that library.  Symbols not in that library become fresh.
+  ;;
+  (let ((scheme-stx-hashtable (make-eq-hashtable)))
+    (lambda (sym)
+      (or (hashtable-ref scheme-stx-hashtable sym #f)
+	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
+		 (stx    (make-<stx> sym top-mark* '() '()))
+		 (stx    (cond ((assq sym subst)
+				=> (lambda (subst.entry)
+				     (let ((name  (car subst.entry))
+					   (label (cdr subst.entry)))
+				       (add-subst (make-<rib> (list name)
+							      (list top-mark*)
+							      (list label)
+							      #f)
+						  stx))))
+			       (else stx))))
+	    (hashtable-set! scheme-stx-hashtable sym stx)
+	    stx)))))
 
   ;;; macros
 (define lexical-var car)
