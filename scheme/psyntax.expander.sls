@@ -492,7 +492,7 @@
 ;;
 (define gen-global %generate-unique-symbol)
 
-(define (gen-label _)
+(define (gensym-for-label _)
   ;;Every identifier in the program will have a label associated with it
   ;;in its substitution; this function generates such labels.
   ;;
@@ -539,14 +539,14 @@
 
 (define (gen-define-label+loc id rib sd?)
   (if sd?
-      (values (gensym) (gen-lexical-var id))
+      (values (gensym) (gensym-for-lexical-var id))
     (let* ((env   (top-level-context))
 	   (label (gen-top-level-label id rib))
 	   (locs  (interaction-env-locs env)))
       (values label
 	      (cond ((assq label locs) => cdr)
 		    (else
-		     (let ((loc (gen-lexical-var id)))
+		     (let ((loc (gensym-for-lexical-var id)))
 		       (set-interaction-env-locs! env (cons (cons label loc) locs))
 		       loc)))))))
 
@@ -1578,7 +1578,7 @@
 ;;Generate a  unique symbol to  represent the name  of a binding  in the
 ;;core language forms.
 ;;
-(define gen-lexical-var %generate-unique-symbol)
+(define gensym-for-lexical-var %generate-unique-symbol)
 
 ;;Accessors for the pair value in a binding list.
 ;;
@@ -1631,8 +1631,8 @@
        (if (not (valid-bound-ids? ?lhs*))
 	   (invalid-fmls-error expr-stx ?lhs*)
 	 ;;Generate what is needed to create a lexical contour.
-	 (let ((lex* (map gen-lexical-var ?lhs*))
-	       (lab* (map gen-label       ?lhs*)))
+	 (let ((lex* (map gensym-for-lexical-var ?lhs*))
+	       (lab* (map gensym-for-label       ?lhs*)))
 	   ;;Add a lexical contour.
 	   (let ((rib (make-full-rib ?lhs* lab*))
 		 (env (add-lexicals lab* lex* env)))
@@ -3200,8 +3200,8 @@
       (lambda (pvars expr y r mr)
 	(let ((ids (map car pvars))
 	      (levels (map cdr pvars)))
-	  (let ((labels (map gen-label ids))
-		(new-vars (map gen-lexical-var ids)))
+	  (let ((labels (map gensym-for-label ids))
+		(new-vars (map gensym-for-lexical-var ids)))
 	    (let ((body
 		   (chi-expr
 		    (add-subst (make-full-rib ids labels) expr)
@@ -3233,7 +3233,7 @@
 	   ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
 	    (stx-error pat "misplaced ellipsis in syntax-case pattern"))
 	   (else
-	    (let ((y (gen-lexical-var 'tmp)))
+	    (let ((y (gensym-for-lexical-var 'tmp)))
 	      (let ((test
 		     (cond
 		      ((eq? fender #t) y)
@@ -3273,8 +3273,8 @@
 		      (not (ellipsis? pat)))
 		 (if (free-id=? pat (scheme-stx '_))
 		     (chi-expr expr r mr)
-		   (let ((lab (gen-label pat))
-			 (lex (gen-lexical-var pat)))
+		   (let ((lab (gensym-for-label pat))
+			 (lex (gensym-for-lexical-var pat)))
 		     (let ((body
 			    (chi-expr
 			     (add-subst (make-full-rib (list pat) (list lab)) expr)
@@ -3291,7 +3291,7 @@
 	((_ expr (keys ...) clauses ...)
 	 (begin
 	   (verify-literals keys e)
-	   (let ((x (gen-lexical-var 'tmp)))
+	   (let ((x (gensym-for-lexical-var 'tmp)))
 	     (let ((body (gen-syntax-case x keys clauses r mr)))
 	       (build-application no-source
 				  (build-lambda no-source (list x) body)
@@ -3379,7 +3379,7 @@
 	       ((assq outer-var (car maps)) =>
 		(lambda (b) (values (cdr b) maps)))
 	       (else
-		(let ((inner-var (gen-lexical-var 'tmp)))
+		(let ((inner-var (gensym-for-lexical-var 'tmp)))
 		  (values
 		   inner-var
 		   (cons
@@ -3675,7 +3675,7 @@
 	   ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
 	    (unless (valid-bound-ids? xlhs*)
 	      (stx-error e "invalid identifiers"))
-	    (let* ((xlab* (map gen-label xlhs*))
+	    (let* ((xlab* (map gensym-for-label xlhs*))
 		   (xrib (make-full-rib xlhs* xlab*))
 		   (xb* (map (lambda (x)
 			       (make-eval-transformer
@@ -3757,8 +3757,8 @@
       ((x* ...)
        (begin
 	 (verify-formals fmls stx)
-	 (let ((lex* (map gen-lexical-var x*))
-	       (lab* (map gen-label x*)))
+	 (let ((lex* (map gensym-for-lexical-var x*))
+	       (lab* (map gensym-for-label x*)))
 	   (values
 	    lex*
 	    (chi-internal
@@ -3768,8 +3768,8 @@
       ((x* ... . x)
        (begin
 	 (verify-formals fmls stx)
-	 (let ((lex* (map gen-lexical-var x*)) (lab* (map gen-label x*))
-	       (lex (gen-lexical-var x)) (lab (gen-label x)))
+	 (let ((lex* (map gensym-for-lexical-var x*)) (lab* (map gensym-for-label x*))
+	       (lex (gensym-for-lexical-var x)) (lab (gensym-for-label x)))
 	   (values
 	    (append lex* lex)
 	    (chi-internal
@@ -3954,7 +3954,7 @@
 	       (mod** (cons e* mod**)))
 	  (if (not name) ;;; explicit export
 	      (values lex* rhs* exp-id* exp-lab* r mr mod** kwd*)
-	    (let ((lab (gen-label 'module))
+	    (let ((lab (gensym-for-label 'module))
 		  (iface
 		   (make-module-interface
 		    (car (<stx>-mark* name))
@@ -4022,7 +4022,7 @@
 		 ((_ ((xlhs* xrhs*) ...) xbody* ...)
 		  (unless (valid-bound-ids? xlhs*)
 		    (stx-error e "invalid identifiers"))
-		  (let* ((xlab* (map gen-label xlhs*))
+		  (let* ((xlab* (map gensym-for-label xlhs*))
 			 (xrib (make-full-rib xlhs* xlab*))
 			 (xb* (map (lambda (x)
 				     (make-eval-transformer
@@ -4139,7 +4139,7 @@
 	      (else
 	       (if mix?
 		   (chi-body* (cdr e*) r mr
-			      (cons (gen-lexical-var 'dummy) lex*)
+			      (cons (gensym-for-lexical-var 'dummy) lex*)
 			      (cons (cons 'top-expr e) rhs*)
 			      mod** kwd* exp* rib #t sd?)
 		 (values e* r mr lex* rhs* mod** kwd* exp*)))))))))
