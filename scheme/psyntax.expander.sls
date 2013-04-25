@@ -182,7 +182,9 @@
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
-	      (extend-rib! rib (make-<stx> name top-mark* '() '()) label #t)
+	      (extend-rib! rib
+			   (make-<stx> name top-mark* '() #;subst* '() #;ae* )
+			   label #t)
             (assertion-violation 'make-top-rib "Vicare bug: expected symbol as binding name" name)))
       name* label*)
     rib))
@@ -365,7 +367,8 @@
   (expr
    mark*
    subst*
-   ae*)
+   ae*
+   )
   (lambda (S port subwriter) ;record printer function
     (define-inline (%display thing)
       (display thing port))
@@ -608,17 +611,17 @@
 ;;(e.g. inserted by the macro  transformer) would have no anti-mark and,
 ;;therefore, the mark would stick to them.
 ;;
-;;Every  time a mark  is pushed  to an  <stx>-mark* list,  a corresponding
-;;'shift  is  pushed to  the  <stx>-subst* list.   Every  time  a mark  is
+;;Every time  a mark is pushed  to an <stx>-mark* list,  a corresponding
+;;'shift  is pushed  to the  <stx>-subst* list.   Every time  a mark  is
 ;;cancelled  by   an  anti-mark,  the  corresponding   shifts  are  also
 ;;cancelled.
 
-;;The procedure join-wraps, here, is used to compute the new
-;;mark* and subst* that would result when the m1* and s1* are
-;;added to an stx's mark* and subst*.
-;;The only tricky part here is that e may have an anti-mark
-;;that should cancel with the last mark in m1*.
-;;So, if:
+;;The procedure join-wraps,  here, is used to compute the  new mark* and
+;;subst* that would  result when the m1*  and s1* are added  to an stx's
+;;mark* and subst*.
+;;
+;;The only tricky part here is that  e may have an anti-mark that should
+;;cancel with the last mark in m1*.  So, if:
 ;;
 ;;  m1* = (mx* ... mx)
 ;;  m2* = (#f my* ...)
@@ -627,7 +630,7 @@
 ;;
 ;;  (mx* ... my* ...)
 ;;
-;;since mx  would cancel with the  anti-mark.  The substs  would have to
+;;since mx  would cancel with the  anti-mark.  The substs would  have to
 ;;also cancel since:
 ;;
 ;;    s1* = (sx* ... sx)
@@ -639,49 +642,77 @@
 ;;
 ;;Notice that both SX and SY would be shift marks.
 ;;
-;;All   this  work   is  performed   by  the   functions   ADD-MARK  and
+;;All   this  work   is  performed   by  the   functions  ADD-MARK   and
 ;;DO-MACRO-CALL.
 ;;
 
-(define join-wraps
-  (lambda (m1* s1* ae1* e)
-    (define merge-ae*
-      (lambda (ls1 ls2)
-	(if (and (pair? ls1) (pair? ls2) (not (car ls2)))
-	    (cancel ls1 ls2)
-	  (append ls1 ls2))))
-    (define cancel
-      (lambda (ls1 ls2)
-	(let f ((x (car ls1)) (ls1 (cdr ls1)))
-	  (if (null? ls1)
-	      (cdr ls2)
-	    (cons x (f (car ls1) (cdr ls1)))))))
-    (let ((m2* (<stx>-mark* e))
-	  (s2* (<stx>-subst* e))
-	  (ae2* (<stx>-ae* e)))
-      (if (and (not (null? m1*))
-	       (not (null? m2*))
-	       (anti-mark? (car m2*)))
-		; cancel mark, anti-mark, and corresponding shifts
-	  (values (cancel m1* m2*) (cancel s1* s2*) (merge-ae* ae1* ae2*))
-	(values (append m1* m2*) (append s1* s2*) (merge-ae* ae1* ae2*))))))
+(module (join-wraps)
 
-;;The procedure mkstx is then the proper constructor for
-;;wrapped syntax objects.  It takes a syntax object, a list
-;;of marks, and a list of substs.  It joins the two wraps
-;;making sure that marks and anti-marks and corresponding
-;;shifts cancel properly.
-(define mkstx
-  (lambda (e m* s* ae*)
-    (if (and (<stx>? e) (not (top-marked? m*)))
-	(let-values (((m* s* ae*) (join-wraps m* s* ae* e)))
-	  (make-<stx> (<stx>-expr e) m* s* ae*))
-      (make-<stx> e m* s* ae*))))
+  (define (join-wraps mark1* subst1* ae1* stx2)
+    (let ((mark2*   (<stx>-mark*  stx2))
+	  (subst2*  (<stx>-subst* stx2))
+	  (ae2*     (<stx>-ae*    stx2)))
+      ;;If the first item in mark2* is an anti-mark...
+      (if (and (not (null? mark1*))
+	       (not (null? mark2*))
+	       (anti-mark? (car mark2*)))
+	  ;;...cancel mark, anti-mark, and corresponding shifts.
+	  (values (%append-cancel-facing mark1*  mark2*)
+		  (%append-cancel-facing subst1* subst2*)
+		  (%merge-ae* ae1* ae2*))
+	;;..else no cancellation takes place.
+	(values (append mark1*  mark2*)
+		(append subst1* subst2*)
+		(%merge-ae* ae1* ae2*)))))
+
+  (define (%merge-ae* ls1 ls2)
+    (if (and (pair? ls1)
+	     (pair? ls2)
+	     (not (car ls2)))
+	(%append-cancel-facing ls1 ls2)
+      (append ls1 ls2)))
+
+  (define (%append-cancel-facing ls1 ls2)
+    ;;Given two non-empty lists: append them discarding the last item in
+    ;;LS1 and the first item in LS2.  Examples:
+    ;;
+    ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
+    ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
+    ;;   (%append-cancel-facing '(1)     '(2))		=> ()
+    ;;
+    (let recur ((x   (car ls1))
+		(ls1 (cdr ls1)))
+      (if (null? ls1)
+	  (cdr ls2)
+	(cons x (recur (car ls1) (cdr ls1))))))
+
+  #| end of module: JOIN-WRAPS |# )
+
+(define (mkstx stx/expr mark* subst* ae*)
+  ;;This is the proper constructor for wrapped syntax objects.
+  ;;
+  ;;STX/EXPR is  a source  syntax object or  a raw  symbolic expression.
+  ;;MARK* is a list of marks.  SUBST* is a list of substs.
+  ;;
+  ;;AE*
+  ;;
+  ;;When STX/EXPR is a raw symbolic  expression: just build a new syntax
+  ;;object and return it.
+  ;;
+  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
+  ;;given wraps, making sure that marks and anti-marks and corresponding
+  ;;shifts cancel properly.
+  ;;
+  (if (and (<stx>? stx/expr)
+	   (not (top-marked? mark*)))
+      (receive (mark* subst* ae*)
+	  (join-wraps mark* subst* ae* stx/expr)
+	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
+    (make-<stx> stx/expr mark* subst* ae*)))
 
 
-(define add-subst
-  (lambda (subst e)
-    (mkstx e '() (list subst) '())))
+(define (add-subst subst stx/expr)
+  (mkstx stx/expr '() #;mark* (list subst) '() #;ae* ))
 
 (define (add-mark mark subst expr ae)
   ;;Build and return  a new syntax object wrapping  EXPR and having MARK
