@@ -161,12 +161,13 @@
   (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
 
 (define-syntax stx-error
-  (lambda (x)
-    (syntax-case x ()
-      ((_ stx)
-       (syntax (syntax-violation #f "invalid syntax" stx)))
-      ((_ stx msg)
-       (syntax (syntax-violation #f msg stx))))))
+  (lambda (stx)
+    (syntax-case stx (quote)
+      ((_ ?expr-stx)
+       (syntax (syntax-violation #f "invalid syntax" ?expr-stx)))
+      ((_ ?expr-stx ?mst)
+       (syntax (syntax-violation #f ?mst ?expr-stx)))
+      )))
 
 
 ;;;; <RIB> type definition
@@ -1238,7 +1239,7 @@
 
 (define (sanitize-binding x src)
   ;;When  the rhs  of a  syntax definition  is evaluated,  it should  be
-  ;;either  a procedure,  an identifier-syntax  transformer or  an:
+  ;;either a procedure, an identifier-syntax transformer or an:
   ;;
   ;;   ($rtd . #<rtd>)
   ;;
@@ -1758,6 +1759,20 @@
   (transformer expr-stx))
 
 (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function   used  to  expand   Vicare's  TYPE-DESCRIPTOR
+  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
+  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
+  ;;LEXENV.RUN and LEXENV.EXPAND, the result must be a single identifier
+  ;;representing  a Vicare  struct type.   Return a  symbolic expression
+  ;;evaluating to the struct type descriptor.
+  ;;
+  ;;The entry  in the lexical  environment representing the  struct type
+  ;;descriptor looks as follows:
+  ;;
+  ;;   ($rtd . #<type-descriptor-struct>)
+  ;;
+  ;;where "$rtd" is the symbol "$rtd".
+  ;;
   (define who 'type-descriptor)
   (syntax-match expr-stx ()
     ((_ ?identifier)
@@ -1768,20 +1783,39 @@
        (let ((binding (label->binding label lexenv.run)))
 	 (unless (and (eq? '$rtd (binding-type binding))
 		      (not (list? (binding-value binding))))
-	   (syntax-violation who "not a record type" expr-stx ?identifier))
+	   (syntax-violation who "not a struct type" expr-stx ?identifier))
 	 (build-data no-source (binding-value binding)))))))
 
-(define record-type-descriptor-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ id) (id? id)
-       (let* ((lab (id->label id))
-	      (b (label->binding lab r))
-	      (type (binding-type b)))
-	 (unless lab (raise-unbound-error id))
-	 (unless (and (eq? type '$rtd) (list? (binding-value b)))
-	   (stx-error e "not a record type"))
-	 (chi-expr (car (binding-value b)) r mr))))))
+(define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  R6RS's RECORD-TYPE-DESCRIPTOR
+  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
+  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
+  ;;LEXENV.RUN and LEXENV.EXPAND, the result must be a single identifier
+  ;;representing  a  R6RS record  type.   Return  a symbolic  expression
+  ;;evaluating to the record type descriptor.
+  ;;
+  ;;The entry  in the lexical  environment representing the  record type
+  ;;descriptor looks as follows:
+  ;;
+  ;;   ($rtd ?rtd-id ?rcd-id)
+  ;;
+  ;;where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
+  ;;which the record type descriptor is bound, ?RCD-ID is the identifier
+  ;;to which the default record constructor descriptor is bound.
+  ;;
+  (define who 'record-type-descriptor-transformer)
+  (syntax-match expr-stx ()
+    ((_ ?identifier)
+     (id? ?identifier)
+     (let ((label (id->label ?identifier)))
+       (unless label
+	 (raise-unbound-error ?identifier))
+       (let ((binding (label->binding label lexenv.run)))
+	 (unless (and (eq? '$rtd (binding-type binding))
+		      (list? (binding-value binding)))
+	   (syntax-violation who "not a record type" expr-stx ?identifier))
+	 (chi-expr (car (binding-value binding))
+		   lexenv.run lexenv.expand))))))
 
 (define record-constructor-descriptor-transformer
   (lambda (e r mr)
