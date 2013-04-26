@@ -1618,6 +1618,12 @@
 (module (letrec-transformer letrec*-transformer)
 
   (define (letrec-transformer expr-stx env env.macros)
+    ;;Transformer  function  used to  expand  LETREC  syntaxes from  the
+    ;;top-level built  in environment.  Expand the  contents of EXPR-STX
+    ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
+    ;;LEXENV.EXPAND; return a  symbolic expression representing EXPR-STX
+    ;;fully expanded to the core language.
+    ;;
     (%letrec-helper expr-stx env env.macros build-letrec))
 
   (define (letrec*-transformer expr-stx env env.macros)
@@ -1650,6 +1656,12 @@
   #| end of module |# )
 
 (define (fluid-let-syntax-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand FLUID-LET-SYNTAX  syntaxes from
+  ;;the top-level built in environment.  Expand the contents of EXPR-STX
+  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
+  ;;LEXENV.EXPAND;  return a  symbolic expression  representing EXPR-STX
+  ;;fully expanded to the core language.
+  ;;
   (define who 'expander)
 
   (define (transformer expr-stx)
@@ -1658,7 +1670,7 @@
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (if (not (valid-bound-ids? ?lhs*))
 	   (invalid-fmls-error expr-stx ?lhs*)
-	 (let ((label*       (map lookup ?lhs*))
+	 (let ((label*       (map %lookup-binding-in-run-lexenv ?lhs*))
 	       (rhs-binding* (map (lambda (rhs)
 				    (make-eval-transformer
 				     (expand-transformer rhs lexenv.expand)))
@@ -1667,9 +1679,10 @@
 			 (append (map cons label* rhs-binding*) lexenv.run)
 			 (append (map cons label* rhs-binding*) lexenv.expand)))))))
 
-  (define (lookup lhs)
-    ;;Search the  binding of the  identifier LHS in the  environment for
-    ;;run; if present return the associated label.
+  (define (%lookup-binding-in-run-lexenv lhs)
+    ;;Search  the  binding of  the  identifier  LHS in  LEXENV.RUN,  the
+    ;;environment for run;  if present and of type  fluid syntax: return
+    ;;the associated label.
     ;;
     (let* ((label    (or (id->label lhs)
 			 (%synner "unbound identifier" lhs)))
@@ -4565,7 +4578,7 @@
 		(vtc    (make-collector)))
 	    (parametrise ((inv-collector  rtc)
 			  (vis-collector  vtc))
-	      (receive (init* r mr lex* rhs* internal-exp*)
+	      (receive (init* lexenv.run lexenv.expand lex* rhs* internal-exp*)
 		  (%chi-library-internal body* rib mix?)
 		(receive (exp-name* exp-id*)
 		    (parse-export-spec* (if (eq? main/export-spec* 'all)
@@ -4573,15 +4586,15 @@
 					  (append (map wrap main/export-spec*)
 						  internal-exp*)))
 		  (seal-rib! rib)
-		  (let* ((init*  (chi-expr* init* r mr))
-			 (rhs*   (chi-rhs* rhs* r mr)))
+		  (let* ((init*  (chi-expr* init* lexenv.run lexenv.expand))
+			 (rhs*   (chi-rhs*  rhs*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
 		    (let ((loc*          (map gen-global lex*))
 			  (export-subst  (make-export-subst exp-name* exp-id*)))
 		      (define errstr
 			"attempt to export mutated variable")
 		      (receive (export-env global* macro*)
-			  (make-export-env/macros lex* loc* r)
+			  (make-export-env/macros lex* loc* lexenv.run)
 			(unless (eq? main/export-spec* 'all)
 			  (for-each
 			      (lambda (s)
@@ -4613,10 +4626,10 @@
 				  macro* export-subst export-env)))))))))))))
 
   (define (%chi-library-internal e* rib mix?)
-    (receive (e* r mr lex* rhs* mod** _kwd* exp*)
+    (receive (e* lexenv.run lexenv.expand lex* rhs* mod** _kwd* exp*)
 	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
       (values (append (apply append (reverse mod**)) e*)
-	      r mr (reverse lex*) (reverse rhs*) exp*)))
+	      lexenv.run lexenv.expand (reverse lex*) (reverse rhs*) exp*)))
 
   #| end of module: LIBRARY-BODY-EXPANDER |# )
 
