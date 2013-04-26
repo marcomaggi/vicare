@@ -75,35 +75,27 @@
 
 ;;;; unsafe operations
 
-(begin
-  (module UNSAFE
-    ($car $cdr
-	  $vector-ref $vector-set! $vector-length
-	  $fx= $fxadd1)
-    (import (ikarus system $pairs)
-      (ikarus system $vectors)
-      (ikarus system $fx))
-    #| end of module |# )
-
-  (import UNSAFE))
-
-#;(begin
-  (module SAFE
-    ($car $cdr
-	  $vector-ref $vector-set! $vector-length
-	  $fx= $fxadd1)
-    (import (ikarus))
+(module UNSAFE
+  ($car $cdr
+   $vector-ref $vector-set! $vector-length
+   $fx= $fxadd1)
+  #;(import (ikarus system $pairs))
+  (begin
     (define $car car)
-    (define $cdr cdr)
+    (define $cdr cdr))
+  #;(import (ikarus system $vectors))
+  (begin
     (define $vector-ref vector-ref)
     (define $vector-set! vector-set!)
-    (define $vector-length vector-length)
+    (define $vector-length vector-length))
+  #;(import (ikarus system $fx))
+  (begin
     (define $fx= =)
     (define ($fxadd1 N)
-      (+ 1 N))
-    #| end of module |# )
+      (+ 1 N)))
+  #| end of module |# )
 
-  (import SAFE))
+(import UNSAFE)
 
 
 ;;; helpers
@@ -744,13 +736,15 @@
 (define (mkstx stx/expr mark* subst* ae*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
-  ;;STX/EXPR is  a source  syntax object or  a raw  symbolic expression.
-  ;;MARK* is a list of marks.  SUBST* is a list of substs.
+  ;;STX/EXPR can be a raw symbolic expression, an instance of <STX> or a
+  ;;wrapped syntax object.  MARK* is a  list of marks.  SUBST* is a list
+  ;;of substs.
   ;;
-  ;;AE*
+  ;;AE* == annotated expressions???
   ;;
-  ;;When STX/EXPR is a raw symbolic  expression: just build a new syntax
-  ;;object and return it.
+  ;;When STX/EXPR is a raw symbolic  expression: just build and return a
+  ;;new syntax  object with the  lexical context described by  the given
+  ;;arguments.
   ;;
   ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
   ;;given wraps, making sure that marks and anti-marks and corresponding
@@ -773,8 +767,21 @@
 	   (same-marks? ($cdr x) ($cdr y)))))
 
 
-(define (add-subst subst stx/expr)
-  (mkstx stx/expr '() #;mark* (list subst) '() #;ae* ))
+(define (push-lexical-contour rib stx/expr)
+  ;;Add a rib to a syntax  object or expression and return the resulting
+  ;;syntax object.  This  procedure introduces a lexical  contour in the
+  ;;context of the given syntax object or expression.
+  ;;
+  ;;RIB must be an instance of <RIB>.
+  ;;
+  ;;STX/EXPR can be a raw symbolic expression, an instance of <STX> or a
+  ;;wrapped syntax object.
+  ;;
+  ;;This function prepares  a computation that will  be lazily performed
+  ;;later; the RIB will be pushed on the stack of substitutions in every
+  ;;identifier in the fully unwrapped returned syntax object.
+  ;;
+  (mkstx stx/expr '() #;mark* (list rib) '() #;ae* ))
 
 (define (add-mark mark subst expr ae)
   ;;Build and return  a new syntax object wrapping  EXPR and having MARK
@@ -1547,17 +1554,18 @@
 				=> (lambda (subst.entry)
 				     (let ((name  (car subst.entry))
 					   (label (cdr subst.entry)))
-				       (add-subst (make-<rib> (list name)
-							      (list top-mark*)
-							      (list label)
-							      #f)
-						  stx))))
+				       (push-lexical-contour
+					(make-<rib> (list name)
+						    (list top-mark*)
+						    (list label)
+						    #f)
+					stx))))
 			       (else stx))))
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
 
 
-;;;; macros
+;;;; lexical environments
 ;;
 ;;A "lexical  environment" is  an alist managed  somewhat like  a stack.
 ;;Each  entry is  an improper  list and  represents a  binding in  fully
@@ -1646,42 +1654,60 @@
     (add-lexicals ($cdr label*) ($cdr lexvar*)
 		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
 
-;;; --------------------------------------------------------------------
+
+;;;; core syntax transformers
+;;
+;;The core  syntaxes are the  ones exported  by the boot  image: LETREC,
+;;LETREC*, LET-SYNTAX, ...
+;;
 
 (module (letrec-transformer letrec*-transformer)
 
-  (define (letrec-transformer expr-stx env env.macros)
+  (define (letrec-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer  function  used to  expand  LETREC  syntaxes from  the
     ;;top-level built  in environment.  Expand the  contents of EXPR-STX
     ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
     ;;LEXENV.EXPAND; return a  symbolic expression representing EXPR-STX
     ;;fully expanded to the core language.
     ;;
-    (%letrec-helper expr-stx env env.macros build-letrec))
+    (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
 
-  (define (letrec*-transformer expr-stx env env.macros)
-    (%letrec-helper expr-stx env env.macros build-letrec*))
+  (define (letrec*-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer  function used  to  expand LETREC*  syntaxes from  the
+    ;;top-level built  in environment.  Expand the  contents of EXPR-STX
+    ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
+    ;;LEXENV.EXPAND; return a  symbolic expression representing EXPR-STX
+    ;;fully expanded to the core language.
+    ;;
+    (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
 
-  (define (%letrec-helper expr-stx env env.macros core-lang-builder)
+  (define (%letrec-helper expr-stx lexenv.run lexenv.expand core-lang-builder)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
        (if (not (valid-bound-ids? ?lhs*))
 	   (invalid-fmls-error expr-stx ?lhs*)
-	 ;;Generate what is needed to create a lexical contour.
+	 ;;Generate  unique variable  names  and labels  for the  LETREC
+	 ;;bindings.
 	 (let ((lex* (map gensym-for-lexical-var ?lhs*))
 	       (lab* (map gensym-for-label       ?lhs*)))
-	   ;;Add a lexical contour.
-	   (let ((rib (make-full-rib ?lhs* lab*))
-		 (env (add-lexicals lab* lex* env)))
-	     ;;Process body and right-hand sides of bindings.
-	     (let ((body (chi-internal (add-subst rib (cons ?body ?body*))
-				       env env.macros))
-		   (rhs* (chi-expr*    (map (lambda (x)
-					      (add-subst rib x))
+	   ;;Generate  what is  needed to  create a  lexical contour:  a
+	   ;;<RIB>  and  an extended  lexical  environment  in which  to
+	   ;;evaluate both the right-hand sides and the body.
+	   ;;
+	   ;;Notice that the region of  all the LETREC bindings includes
+	   ;;all the right-hand sides.
+	   (let ((rib        (make-full-rib ?lhs* lab*))
+		 (lexenv.run (add-lexicals lab* lex* lexenv.run)))
+	     ;;Create  the   lexical  contour  then  process   body  and
+	     ;;right-hand sides of bindings.
+	     (let ((body (chi-internal (push-lexical-contour rib (cons ?body ?body*))
+				       lexenv.run lexenv.expand))
+		   (rhs* (chi-expr*    (map (lambda (rhs)
+					      (push-lexical-contour rib rhs))
 					 ?rhs*)
-				       env env.macros)))
+				       lexenv.run lexenv.expand)))
 	       ;;Build  the LETREC  or  LETREC* expression  in the  core
 	       ;;language.
 	       (core-lang-builder no-source lex* rhs* body))))))))
@@ -1731,17 +1757,19 @@
 
   (transformer expr-stx))
 
-(define type-descriptor-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ id) (id? id)
-       (let* ((lab (id->label id))
-	      (b (label->binding lab r))
-	      (type (binding-type b)))
-	 (unless lab (raise-unbound-error id))
-	 (unless (and (eq? type '$rtd) (not (list? (binding-value b))))
-	   (stx-error e "not a record type"))
-	 (build-data no-source (binding-value b)))))))
+(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  (define who 'type-descriptor)
+  (syntax-match expr-stx ()
+    ((_ ?identifier)
+     (id? ?identifier)
+     (let ((label (id->label ?identifier)))
+       (unless label
+	 (raise-unbound-error ?identifier))
+       (let ((binding (label->binding label lexenv.run)))
+	 (unless (and (eq? '$rtd (binding-type binding))
+		      (not (list? (binding-value binding))))
+	   (syntax-violation who "not a record type" expr-stx ?identifier))
+	 (build-data no-source (binding-value binding)))))))
 
 (define record-type-descriptor-transformer
   (lambda (e r mr)
@@ -3262,15 +3290,13 @@
 	      (levels (map cdr pvars)))
 	  (let ((labels (map gensym-for-label ids))
 		(new-vars (map gensym-for-lexical-var ids)))
-	    (let ((body
-		   (chi-expr
-		    (add-subst (make-full-rib ids labels) expr)
-		    (append
-		     (map (lambda (label var level)
-			    (cons label (make-binding 'syntax (cons var level))))
-		       labels new-vars (map cdr pvars))
-		     r)
-		    mr)))
+	    (let ((body (chi-expr (push-lexical-contour (make-full-rib ids labels) expr)
+				  (append
+				   (map (lambda (label var level)
+					  (cons label (make-binding 'syntax (cons var level))))
+				     labels new-vars (map cdr pvars))
+				   r)
+				  mr)))
 	      (build-application no-source
 				 (build-primref no-source 'apply)
 				 (list (build-lambda no-source new-vars body) y)))))))
@@ -3337,7 +3363,7 @@
 			 (lex (gensym-for-lexical-var pat)))
 		     (let ((body
 			    (chi-expr
-			     (add-subst (make-full-rib (list pat) (list lab)) expr)
+			     (push-lexical-contour (make-full-rib (list pat) (list lab)) expr)
 			     (cons (cons lab (make-binding 'syntax (cons lex 0))) r)
 			     mr)))
 		       (build-application no-source
@@ -3742,12 +3768,12 @@
 				(expand-transformer
 				 (if (eq? type 'let-syntax)
 				     x
-				   (add-subst xrib x))
+				   (push-lexical-contour xrib x))
 				 mr)))
 			  xrhs*)))
 	      (build-sequence no-source
 			      (chi-expr*
-			       (map (lambda (x) (add-subst xrib x)) (cons xbody xbody*))
+			       (map (lambda (x) (push-lexical-contour xrib x)) (cons xbody xbody*))
 			       (append (map cons xlab* xb*) r)
 			       (append (map cons xlab* xb*) mr)))))))
 	((displaced-lexical)
@@ -3822,7 +3848,7 @@
 	   (values
 	    lex*
 	    (chi-internal
-	     (add-subst (make-full-rib x* lab*) body*)
+	     (push-lexical-contour (make-full-rib x* lab*) body*)
 	     (add-lexicals lab* lex* r)
 	     mr)))))
       ((x* ... . x)
@@ -3833,7 +3859,7 @@
 	   (values
 	    (append lex* lex)
 	    (chi-internal
-	     (add-subst
+	     (push-lexical-contour
 	      (make-full-rib (cons x x*) (cons lab lab*))
 	      body*)
 	     (add-lexicals (cons lab lab*) (cons lex lex*) r)
@@ -3909,7 +3935,7 @@
     (let ((rib (make-empty-rib)))
       (let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
 		    (chi-body*
-		     (map (lambda (x) (add-subst rib x)) (syntax->list e*))
+		     (map (lambda (x) (push-lexical-contour rib x)) (syntax->list e*))
 		     r mr '() '() '() '() '() rib #f #t)))
 	(when (null? e*)
 	  (stx-error e* "no expression in body"))
@@ -3998,7 +4024,7 @@
   (let-values (((name exp-id* e*) (parse-module e)))
     (let* ((rib (make-empty-rib))
 	   (e*  (map (lambda (x)
-		       (add-subst rib x))
+		       (push-lexical-contour rib x))
 		  (syntax->list e*))))
       (let-values (((e* r mr lex* rhs* mod** kwd* _exp*)
 		    (chi-body* e* r mr lex* rhs* mod** kwd* '() rib #f #t)))
@@ -4089,11 +4115,11 @@
 				      (expand-transformer
 				       (if (eq? type 'let-syntax)
 					   x
-					 (add-subst xrib x))
+					 (push-lexical-contour xrib x))
 				       mr)))
 				xrhs*)))
 		    (chi-body*
-		     (append (map (lambda (x) (add-subst xrib x)) xbody*) (cdr e*))
+		     (append (map (lambda (x) (push-lexical-contour xrib x)) xbody*) (cdr e*))
 		     (append (map cons xlab* xb*) r)
 		     (append (map cons xlab* xb*) mr)
 		     lex* rhs* mod** kwd* exp* rib
