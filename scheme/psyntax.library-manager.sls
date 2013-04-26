@@ -665,9 +665,11 @@
 
   (define (%install-library-record lib)
     (for-each
-	(lambda (x)
-	  (let* ((label    (car x))
-		 (binding  (cdr x))
+	(lambda (lexical-environment-entry)
+	  ;;See the comments in the expander  code for the format of the
+	  ;;lexical environment.
+	  (let* ((label    (car lexical-environment-entry))
+		 (binding  (cdr lexical-environment-entry))
 		 (binding1 (case (car binding)
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))

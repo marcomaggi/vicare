@@ -1662,6 +1662,15 @@
   ;;
   (cond ((not (symbol? label))
 	 '(displaced-lexical))
+
+	;;Each label in the boot  image environment and in every library
+	;;environment  is a  gensym in  which the  "value" field  of the
+	;;symbol object memory blcok contains the associated binding.
+	;;
+	;;So  if we  have  a label  we  can check  if  it references  an
+	;;imported binding  simply by checking its  "value" field.  This
+	;;is what IMPORTED-LABEL->BINDING does.
+	;;
 	((imported-label->binding label)
 	 => (lambda (b)
 	      (cond ((and (pair? b)
@@ -1673,15 +1682,26 @@
 			   (loc (cddr b)))
 		       (cons '$rtd (symbol-value loc))))
 		    (else b))))
+
+	;;Search the given lexical environment.
+	;;
 	((assq label lexenv)
 	 => cdr)
+
+	;;Search the interaction top-level environment, if any.
+	;;
 	((top-level-context)
 	 => (lambda (env)
 	      (cond ((assq label (interaction-env-locs env))
-		     => (lambda (p) ;;; fabricate
+		     => (lambda (p)
+			  ;;Build and  return a binding  representing an
+			  ;;immutable lexical variable.
 			  (cons* 'lexical (cdr p) #f)))
 		    (else
 		     '(displaced-lexical . #f)))))
+
+	;;Unbound label.
+	;;
 	(else
 	 '(displaced-lexical . #f))))
 
