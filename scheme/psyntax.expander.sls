@@ -1549,14 +1549,20 @@
 ;;
 ;;  where "$rtd" is the symbol "$rtd".
 ;;
-;;*  A  binding  environment  representing an  R6RS's  record  type  and
-;;  constructor descriptors looks as follows:
+;;*  A binding  representing an  R6RS's record  type descriptor  and the
+;;  default record constructor descriptor has the format:
 ;;
 ;;     ($rtd . (?rtd-id ?rcd-id))
 ;;
 ;;  where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
 ;;  which the record type descriptor is bound, ?RCD-ID is the identifier
 ;;  to which the default record constructor descriptor is bound.
+;;
+;;* A binding representing a fluid syntax has the format:
+;;
+;;     ($fluid . ?label)
+;;
+;;  where ?LABEL is the gensym associated to the fluid syntax.
 ;;
 ;;* The following special binding represents an unbound label:
 ;;
@@ -1654,8 +1660,7 @@
 (define (label->binding/no-fluids label lexenv)
   ;;Like LABEL->BINDING, but actually does the job.
   ;;
-  (cond ((or (not label)
-	     (not (symbol? label)))
+  (cond ((not (symbol? label))
 	 '(displaced-lexical))
 	((imported-label->binding label)
 	 => (lambda (b)
@@ -1805,6 +1810,9 @@
   ;;where "$rtd" is the symbol "$rtd".
   ;;
   (define who 'type-descriptor)
+  (define (%struct-type-descriptor-binding? binding)
+    (and (eq? '$rtd (binding-type binding))
+	 (not (list? (binding-value binding)))))
   (syntax-match expr-stx ()
     ((_ ?identifier)
      (id? ?identifier)
@@ -1812,19 +1820,12 @@
        (unless label
 	 (raise-unbound-error ?identifier))
        (let ((binding (label->binding label lexenv.run)))
-	 (unless (and (eq? '$rtd (binding-type binding))
-		      (not (list? (binding-value binding))))
+	 (unless (%struct-type-descriptor-binding? binding)
 	   (syntax-violation who "not a struct type" expr-stx ?identifier))
 	 (build-data no-source (binding-value binding)))))))
 
-(define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  R6RS's RECORD-TYPE-DESCRIPTOR
-  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
-  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
-  ;;LEXENV.RUN and LEXENV.EXPAND, the result must be a single identifier
-  ;;representing  a  R6RS record  type.   Return  a symbolic  expression
-  ;;evaluating to the record type descriptor.
-  ;;
+(module (record-type-descriptor-transformer
+	 record-constructor-descriptor-transformer)
   ;;The entry  in the lexical  environment representing the  record type
   ;;and constructor descriptors looks as follows:
   ;;
@@ -1837,53 +1838,54 @@
   ;;which the record type descriptor is bound, ?RCD-ID is the identifier
   ;;to which the default record constructor descriptor is bound.
   ;;
-  (define who 'record-type-descriptor-transformer)
-  (syntax-match expr-stx ()
-    ((_ ?identifier)
-     (id? ?identifier)
-     (let ((label (id->label ?identifier)))
-       (unless label
-	 (raise-unbound-error ?identifier))
-       (let ((binding (label->binding label lexenv.run)))
-	 (unless (and (eq? '$rtd (binding-type binding))
-		      (list? (binding-value binding)))
-	   (syntax-violation who "not a record type" expr-stx ?identifier))
-	 (chi-expr (car (binding-value binding))
-		   lexenv.run lexenv.expand))))))
+  (define (%record-type-descriptor-binding? binding)
+    (and (eq? '$rtd (binding-type binding))
+	 (list? (binding-value binding))))
 
-(define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer      function      used       to      expand      R6RS's
-  ;;RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes  from the top-level  built in
-  ;;environment.  Expand the contents of  EXPR-STX in the context of the
-  ;;lexical environments  LEXENV.RUN and LEXENV.EXPAND, the  result must
-  ;;be a  single identifier representing  a R6RS record type.   Return a
-  ;;symbolic expression evaluating to the record destructor descriptor.
-  ;;
-  ;;The entry  in the lexical  environment representing the  record type
-  ;;and constructor descriptors looks as follows:
-  ;;
-  ;;   ($rtd . (?rtd-id ?rcd-id))
-  ;;    |..| binding-type
-  ;;           |...............| binding-value
-  ;;   |.......................| binding
-  ;;
-  ;;where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
-  ;;which the record type descriptor is bound, ?RCD-ID is the identifier
-  ;;to which the default record constructor descriptor is bound.
-  ;;
-  (define who 'record-constructor-descriptor-transformer)
-  (syntax-match expr-stx ()
-    ((_ ?identifier)
-     (id? ?identifier)
-     (let ((label (id->label ?identifier)))
-       (unless label
-	 (raise-unbound-error ?identifier))
-       (let ((binding (label->binding label lexenv.run)))
-	 (unless (and (eq? '$rtd (binding-type binding))
-		      (list? (binding-value binding)))
-	   (syntax-error who "invalid type" expr-stx ?identifier))
-	 (chi-expr (cadr (binding-value binding))
-		   lexenv.run lexenv.expand))))))
+  (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer function used  to expand R6RS's RECORD-TYPE-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;contents of  EXPR-STX in the  context of the  lexical environments
+    ;;LEXENV.RUN  and  LEXENV.EXPAND,  the   result  must  be  a  single
+    ;;identifier  representing a  R6RS record  type.  Return  a symbolic
+    ;;expression evaluating to the record type descriptor.
+    ;;
+    (define who 'record-type-descriptor-transformer)
+    (syntax-match expr-stx ()
+      ((_ ?identifier)
+       (id? ?identifier)
+       (let ((label (id->label ?identifier)))
+	 (unless label
+	   (raise-unbound-error ?identifier))
+	 (let ((binding (label->binding label lexenv.run)))
+	   (unless (%record-type-descriptor-binding? binding)
+	     (syntax-violation who "not a record type" expr-stx ?identifier))
+	   (chi-expr (car (binding-value binding))
+		     lexenv.run lexenv.expand))))))
+
+  (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer      function      used     to      expand      R6RS's
+    ;;RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from the top-level built in
+    ;;environment.  Expand  the contents of  EXPR-STX in the  context of
+    ;;the lexical environments LEXENV.RUN  and LEXENV.EXPAND, the result
+    ;;must  be a  single  identifier representing  a  R6RS record  type.
+    ;;Return a  symbolic expression evaluating to  the record destructor
+    ;;descriptor.
+    ;;
+    (define who 'record-constructor-descriptor-transformer)
+    (syntax-match expr-stx ()
+      ((_ ?identifier)
+       (id? ?identifier)
+       (let ((label (id->label ?identifier)))
+	 (unless label
+	   (raise-unbound-error ?identifier))
+	 (let ((binding (label->binding label lexenv.run)))
+	   (unless (%record-type-descriptor-binding? binding)
+	     (syntax-error who "invalid type" expr-stx ?identifier))
+	   (chi-expr (cadr (binding-value binding))
+		     lexenv.run lexenv.expand))))))
+
+  #| end of module |# )
 
 (define when-macro
   (lambda (e)
