@@ -75,14 +75,35 @@
 
 ;;;; unsafe operations
 
-(module UNSAFE
-  ($car $cdr $vector-ref $vector-set! $vector-length)
-  (import
-      (ikarus system $pairs)
-    (ikarus system $vectors))
-  #| end of module |# )
+(begin
+  (module UNSAFE
+    ($car $cdr
+	  $vector-ref $vector-set! $vector-length
+	  $fx= $fxadd1)
+    (import (ikarus system $pairs)
+      (ikarus system $vectors)
+      (ikarus system $fx))
+    #| end of module |# )
 
-(import UNSAFE)
+  (import UNSAFE))
+
+#;(begin
+  (module SAFE
+    ($car $cdr
+	  $vector-ref $vector-set! $vector-length
+	  $fx= $fxadd1)
+    (import (ikarus))
+    (define $car car)
+    (define $cdr cdr)
+    (define $vector-ref vector-ref)
+    (define $vector-set! vector-set!)
+    (define $vector-length vector-length)
+    (define $fx= =)
+    (define ($fxadd1 N)
+      (+ 1 N))
+    #| end of module |# )
+
+  (import SAFE))
 
 
 ;;; helpers
@@ -1044,6 +1065,58 @@
 
 ;;;; identifiers and labels
 
+(module (id->label)
+
+  (define (id->label id)
+    ;;Given the identifier  ID search its substs for  a label associated
+    ;;with the same sym and marks.  If found return the symbol being the
+    ;;label, else return false.
+    ;;
+    (let ((sym (identifier->symbol id)))
+      (let search ((subst* ($<stx>-subst* id))
+		   (mark*  ($<stx>-mark*  id)))
+	(cond ((null? subst*)
+	       #f)
+	      ((eq? ($car subst*) 'shift)
+	       ;;A shift is inserted when a  mark is added.  So, we search
+	       ;;the rest of the substitution without the mark.
+	       (search ($cdr subst*) ($cdr mark*)))
+	      (else
+	       (let ((rib ($car subst*)))
+		 (define (next-search)
+		   (search ($cdr subst*) mark*))
+		 (if ($<rib>-sealed/freq rib)
+		     (%search-in-sealed-rib rib sym mark* next-search)
+		   (%search-in-rib rib sym mark* next-search))))))))
+
+  (define (%search-in-sealed-rib rib sym mark* next-search)
+    (define sym* ($<rib>-sym* rib))
+    (let loop ((i       0)
+	       (rib.len ($vector-length sym*)))
+      (cond (($fx= i rib.len)
+	     (next-search))
+	    ((and (eq? ($vector-ref sym* i) sym)
+		  (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
+	     (let ((label ($vector-ref ($<rib>-label* rib) i)))
+	       (increment-rib-frequency! rib i)
+	       label))
+	    (else
+	     (loop ($fxadd1 i) rib.len)))))
+
+  (define (%search-in-rib rib sym mark* next-search)
+    (let loop ((sym*    ($<rib>-sym*   rib))
+	       (mark**  ($<rib>-mark** rib))
+	       (label*  ($<rib>-label* rib)))
+      (cond ((null? sym*)
+	     (next-search))
+	    ((and (eq? ($car sym*) sym)
+		  (same-marks? ($car mark**) mark*))
+	     ($car label*))
+	    (else
+	     (loop ($cdr sym*) ($cdr mark**) ($cdr label*))))))
+
+  #| end of module: ID->LABEL |# )
+
 (define (id->label/intern id)
   (or (id->label id)
       (cond ((top-level-context)
@@ -1056,46 +1129,6 @@
 		      (extend-rib! rib id lab #t)
 		      lab))))
 	    (else #f))))
-
-(define (id->label id)
-  ;;Take an id (that's a sym x marks x substs) and search the substs for
-  ;;a label associated with the same sym and marks.
-  ;;
-  (let ((sym (identifier->symbol id)))
-    (let search ((subst* (<stx>-subst* id))
-		 (mark*  (<stx>-mark* id)))
-      (cond ((null? subst*)
-	     #f)
-	    ((eq? (car subst*) 'shift)
-	     ;;A shift is inserted when a  mark is added.  So, we search
-	     ;;the rest of the substitution without the mark.
-	     (search (cdr subst*) (cdr mark*)))
-	    (else
-	     (let ((rib (car subst*)))
-	       (cond ((<rib>-sealed/freq rib)
-		      (let ((sym* (<rib>-sym* rib)))
-			(let loop ((i 0)
-				   (j ($vector-length sym*)))
-			  (cond ((= i j)
-				 (search (cdr subst*) mark*))
-				((and (eq? ($vector-ref sym* i) sym)
-				      (same-marks? mark* ($vector-ref (<rib>-mark** rib) i)))
-				 (let ((label ($vector-ref (<rib>-label* rib) i)))
-				   (increment-rib-frequency! rib i)
-				   label))
-				(else
-				 (loop (+ i 1) j))))))
-		     (else
-		      (let loop ((sym*    (<rib>-sym* rib))
-				 (mark**  (<rib>-mark** rib))
-				 (label*  (<rib>-label* rib)))
-			(cond ((null? sym*)
-			       (search (cdr subst*) mark*))
-			      ((and (eq? (car sym*) sym)
-				    (same-marks? (car mark**) mark*))
-			       (car label*))
-			      (else
-			       (loop (cdr sym*) (cdr mark**) (cdr label*)))))))))))))
 
 
 ;;;; labels and bindings
