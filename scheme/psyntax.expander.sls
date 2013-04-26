@@ -1139,56 +1139,6 @@
 	    (else #f))))
 
 
-;;;; labels and bindings
-
-(define (label->binding x r)
-  ;;label->binding looks up the label in the environment r as well as in
-  ;;the global  environment.  Since  all labels  are unique,  it doesn't
-  ;;matter which  environment we  consult first.   we lookup  the global
-  ;;environment first because it's faster  (uses a hash table) while the
-  ;;lexical environment is an alist.  If  we don't find the binding of a
-  ;;label, we  return the binding  (displaced-lexical . #f)  to indicate
-  ;;such.
-  ;;
-  (let ((b (label->binding-no-fluids x r)))
-    (if (and (pair? b)
-	     (eq? (car b) '$fluid))
-	;;Fluids require reversed logic.  We have to look them up in the
-	;;local environment first before the global.
-	(let ((x (cdr b)))
-	  (cond ((assq x r)
-		 => cdr)
-		(else
-		 (label->binding-no-fluids x '()))))
-      b)))
-
-(define (label->binding-no-fluids x r)
-  (cond ((not x)
-	 '(displaced-lexical))
-	((imported-label->binding x)
-	 => (lambda (b)
-	      (cond ((and (pair? b)
-			  (eq? (car b) '$core-rtd))
-		     (cons '$rtd (map bless (cdr b))))
-		    ((and (pair? b)
-			  (eq? (car b) 'global-rtd))
-		     (let ((lib (cadr b))
-			   (loc (cddr b)))
-		       (cons '$rtd (symbol-value loc))))
-		    (else b))))
-	((assq x r)
-	 => cdr)
-	((top-level-context)
-	 => (lambda (env)
-	      (cond ((assq x (interaction-env-locs env))
-		     => (lambda (p) ;;; fabricate
-			  (cons* 'lexical (cdr p) #f)))
-		    (else
-		     '(displaced-lexical . #f)))))
-	(else
-	 '(displaced-lexical . #f))))
-
-
 (define (syntax-type e r)
   ;;The type of an expression is determined by two things:
   ;;
@@ -1568,38 +1518,54 @@
 
 ;;;; lexical environments
 ;;
-;;A "lexical  environment" is  an alist managed  somewhat like  a stack.
-;;Each  entry is  an improper  list and  represents a  binding in  fully
-;;expanded code expressed in the core language.
+;;A "lexical  environment" is  an alist managed  somewhat like  a stack;
+;;each entry is a pair, list or improper list and represents a binding.
 ;;
 ;;While  the  expansion proceeds,  visiting  the  code in  breadth-first
 ;;order:  the lexical  environment  is updated  by  pushing new  binding
 ;;entries on the stack.
 ;;
-;;The  typical entry  representing  a  binding, as  created  by LET  and
-;;similar syntaxes, has the format:
+;;An entry in the lexical environment alist has the following format:
 ;;
-;;   (?label lexical ?lexvar . #f)
+;;   (?label . (?binding-type . ?binding-value))
+;;             |..............................| binding
 ;;
-;;where "?label" a  unique symbol identifying the  binding; "lexical" is
-;;the symbol "lexical";  "?lexvar" is a symbol representing  the name of
-;;the binding in the core language forms.
+;;where ?LABEL is a gensym, ?BINDING-TYPE is a symbol, ?BINDING-VALUE is
+;;a value whose format depends on the binding type.
 ;;
-;;It is better to look at an entry as follows:
+;;* A  binding representing a  lexical variable,  as created by  LET and
+;;  similar syntaxes, has the format:
 ;;
-;;   (?label . (lexical . (?lexvar . #f)))
+;;     (lexical . (?lexvar . ?mutable))
 ;;
-;;where "?label" is  the key and "(lexical ?lexvar .  #f)" is the value;
-;;under this interpretation: the value of the entry is a "binding".
+;;  where  "lexical"  is  the  symbol "lexical";  ?LEXVAR  is  a  symbol
+;;  representing the  name of  the binding in  the core  language forms;
+;;  ?MUTABLE is a boolean, true if this binding is mutable.
 ;;
-;;The format of the binding is:
+;;* A  binding representing  a Vicare's struct  type descriptor  has the
+;;  format:
 ;;
-;;   (?type . (?lexvar . ?mutable))
+;;     ($rtd . #<type-descriptor-struct>)
 ;;
-;;where "?type" is a symbol (for  example: "lexical") and the value is a
-;;pair; "?lexvar"  is a symbol representing  the name of the  binding in
-;;the core language forms; "?mutable" is a boolean, true if this binding
-;;is mutable.
+;;  where "$rtd" is the symbol "$rtd".
+;;
+;;*  A  binding  environment  representing an  R6RS's  record  type  and
+;;  constructor descriptors looks as follows:
+;;
+;;     ($rtd . (?rtd-id ?rcd-id))
+;;
+;;  where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
+;;  which the record type descriptor is bound, ?RCD-ID is the identifier
+;;  to which the default record constructor descriptor is bound.
+;;
+;;* The following special binding represents an unbound label:
+;;
+;;     (displaced-lexical . #f)
+;;
+;;* The  following special  binding represents the  result of  a lexical
+;;  environment query with invalid label value (not a symbol):
+;;
+;;     (displaced-lexical . ())
 ;;
 
 ;;Build and return a new binding.
@@ -1654,6 +1620,65 @@
       lexenv
     (add-lexicals ($cdr label*) ($cdr lexvar*)
 		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
+
+;;; --------------------------------------------------------------------
+
+(define (label->binding label lexenv)
+  ;;Look  up the  symbol LABEL  in  the lexical  environment LEXENV  (an
+  ;;alist) as well  as in the global environment.  If  an entry with key
+  ;;LABEL is found:  return the value of the entry  which is the binding
+  ;;value; if no matching entry is found, return the special binding:
+  ;;
+  ;;   (displaced-lexical . #f)
+  ;;
+  ;;Since all labels are unique,  it doesn't matter which environment we
+  ;;consult first.  we lookup the  global environment first because it's
+  ;;faster  (uses a  hash table)  while  the lexical  environment is  an
+  ;;alist.
+  ;;
+  (define (%fluid-syntax-binding? binding)
+    (and (pair? binding)
+	 (eq? (binding-type binding) '$fluid)))
+  (let ((binding (label->binding/no-fluids label lexenv)))
+    (if (%fluid-syntax-binding? binding)
+	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
+	;;reversed  logic.   We  have  to  look them  up  in  the  local
+	;;environment first, and then in the global.
+	(let ((label (binding-value binding)))
+	  (cond ((assq label lexenv)
+		 => cdr)
+		(else
+		 (label->binding/no-fluids label '()))))
+      binding)))
+
+(define (label->binding/no-fluids label lexenv)
+  ;;Like LABEL->BINDING, but actually does the job.
+  ;;
+  (cond ((or (not label)
+	     (not (symbol? label)))
+	 '(displaced-lexical))
+	((imported-label->binding label)
+	 => (lambda (b)
+	      (cond ((and (pair? b)
+			  (eq? (car b) '$core-rtd))
+		     (cons '$rtd (map bless (cdr b))))
+		    ((and (pair? b)
+			  (eq? (car b) 'global-rtd))
+		     (let ((lib (cadr b))
+			   (loc (cddr b)))
+		       (cons '$rtd (symbol-value loc))))
+		    (else b))))
+	((assq label lexenv)
+	 => cdr)
+	((top-level-context)
+	 => (lambda (env)
+	      (cond ((assq label (interaction-env-locs env))
+		     => (lambda (p) ;;; fabricate
+			  (cons* 'lexical (cdr p) #f)))
+		    (else
+		     '(displaced-lexical . #f)))))
+	(else
+	 '(displaced-lexical . #f))))
 
 
 ;;;; core syntax transformers
@@ -1746,12 +1771,15 @@
     ;;
     (let* ((label    (or (id->label lhs)
 			 (%synner "unbound identifier" lhs)))
-	   (binding  (label->binding-no-fluids label lexenv.run)))
-      (cond ((and (pair? binding)
-		  (eq? (car binding) '$fluid))
-	     (cdr binding))
+	   (binding  (label->binding/no-fluids label lexenv.run)))
+      (cond ((%fluid-syntax-binding? binding)
+	     (binding-value binding))
 	    (else
 	     (%synner "not a fluid identifier" lhs)))))
+
+  (define (%fluid-syntax-binding? binding)
+    (and (pair? binding)
+	 (eq? (binding-type binding) '$fluid)))
 
   (define (%synner message subform)
     (syntax-violation who message expr-stx subform))
@@ -1766,10 +1794,13 @@
   ;;representing  a Vicare  struct type.   Return a  symbolic expression
   ;;evaluating to the struct type descriptor.
   ;;
-  ;;The entry  in the lexical  environment representing the  struct type
+  ;;The binding in the lexical  environment representing the struct type
   ;;descriptor looks as follows:
   ;;
   ;;   ($rtd . #<type-descriptor-struct>)
+  ;;    |..| binding-type
+  ;;           |.......................|  binding-value
+  ;;   |................................| binding
   ;;
   ;;where "$rtd" is the symbol "$rtd".
   ;;
@@ -1795,9 +1826,12 @@
   ;;evaluating to the record type descriptor.
   ;;
   ;;The entry  in the lexical  environment representing the  record type
-  ;;descriptor looks as follows:
+  ;;and constructor descriptors looks as follows:
   ;;
-  ;;   ($rtd ?rtd-id ?rcd-id)
+  ;;   ($rtd . (?rtd-id ?rcd-id))
+  ;;    |..| binding-type
+  ;;           |...............| binding-value
+  ;;   |.......................| binding
   ;;
   ;;where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
   ;;which the record type descriptor is bound, ?RCD-ID is the identifier
@@ -1817,17 +1851,39 @@
 	 (chi-expr (car (binding-value binding))
 		   lexenv.run lexenv.expand))))))
 
-(define record-constructor-descriptor-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ id) (id? id)
-       (let* ((lab (id->label id))
-	      (b (label->binding lab r))
-	      (type (binding-type b)))
-	 (unless lab (raise-unbound-error id))
-	 (unless (and (eq? type '$rtd) (list? (binding-value b)))
-	   (stx-error e "invalid type"))
-	 (chi-expr (cadr (binding-value b)) r mr))))))
+(define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer      function      used       to      expand      R6RS's
+  ;;RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes  from the top-level  built in
+  ;;environment.  Expand the contents of  EXPR-STX in the context of the
+  ;;lexical environments  LEXENV.RUN and LEXENV.EXPAND, the  result must
+  ;;be a  single identifier representing  a R6RS record type.   Return a
+  ;;symbolic expression evaluating to the record destructor descriptor.
+  ;;
+  ;;The entry  in the lexical  environment representing the  record type
+  ;;and constructor descriptors looks as follows:
+  ;;
+  ;;   ($rtd . (?rtd-id ?rcd-id))
+  ;;    |..| binding-type
+  ;;           |...............| binding-value
+  ;;   |.......................| binding
+  ;;
+  ;;where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
+  ;;which the record type descriptor is bound, ?RCD-ID is the identifier
+  ;;to which the default record constructor descriptor is bound.
+  ;;
+  (define who 'record-constructor-descriptor-transformer)
+  (syntax-match expr-stx ()
+    ((_ ?identifier)
+     (id? ?identifier)
+     (let ((label (id->label ?identifier)))
+       (unless label
+	 (raise-unbound-error ?identifier))
+       (let ((binding (label->binding label lexenv.run)))
+	 (unless (and (eq? '$rtd (binding-type binding))
+		      (list? (binding-value binding)))
+	   (syntax-error who "invalid type" expr-stx ?identifier))
+	 (chi-expr (cadr (binding-value binding))
+		   lexenv.run lexenv.expand))))))
 
 (define when-macro
   (lambda (e)
@@ -4727,7 +4783,7 @@
   #| end of module: LIBRARY-BODY-EXPANDER |# )
 
 
-;;;; environments
+;;;; top-level environments
 
 ;;An env record encapsulates a substitution and a set of libraries.
 (define-record env
