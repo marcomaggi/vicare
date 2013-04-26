@@ -2475,8 +2475,8 @@ Return the value in the @func{$symbol-value} field of the symbol
 
 @defun symbol-bound? @var{sym}
 Return true if @var{sym} is a symbol and its @func{$symbol-value} field
-is set to the special ``unbound'' machine word value.  @ref{objects
-symbols} for details.
+is @strong{not} set to the special ``unbound'' machine word value.
+@ref{objects symbols} for details.
 @end defun
 
 @c page
