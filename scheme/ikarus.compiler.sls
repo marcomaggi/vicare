@@ -79,9 +79,6 @@
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import
       (rnrs hashtables)
-    ;;Remember that this file defines the primitive operations.
-    (ikarus system $fx)
-    (ikarus system $pairs)
     (only (ikarus system $codes)
 	  $code->closure)
     (only (ikarus system $structs)
@@ -117,6 +114,62 @@
   (module (wordsize)
     (import (vicare language-extensions include))
     (include/verbose "ikarus.config.ss"))
+
+  (module UNSAFE
+    ;;Remember that this file defines the primitive operations.
+    ($car $cdr $set-car! $set-cdr!
+	  $fx= $fx< $fx> $fx<= $fx>=
+	  $fxadd1 $fxsub1 $fx+ $fx- $fx* $fxdiv
+	  $fxlogand $fxlogor $fxlognot $fxsra $fxsll
+	  $fxzero?)
+
+    #;(ikarus system $pairs)
+    (begin
+      (define $car car)
+      (define $cdr cdr)
+      (define-syntax $set-car!
+	(syntax-rules ()
+	  ((_ ?var ?val)
+	   (set-car! ?var ?val))))
+      (define-syntax $set-cdr!
+	(syntax-rules ()
+	  ((_ ?var ?val)
+	   (set-cdr! ?var ?val))))
+      #| end of begin |# )
+
+    #;(ikarus system $fx)
+    (begin
+      (define $fxzero?	 fxzero?)
+      (define $fx=	fx=?)
+      (define $fx<	fx<?)
+      (define $fx>	fx>?)
+      (define $fx<=	fx<=?)
+      (define $fx>=	fx>=?)
+      (define $fx+	fx+)
+      (define $fx-	fx-)
+      (define $fx*	fx*)
+      (define $fxdiv	fxdiv)
+      (define $fxlogand	fxand)
+      (define $fxlogor	fxior)
+      (define $fxlognot	fxnot)
+      (define ($fxadd1 x)
+	(fx+ x 1))
+      (define ($fxsub1 x)
+	(fx- x 1))
+      (define ($fxsra x count)
+	(import (prefix (ikarus system $fx) unsafe.))
+	(assert (fixnum? x))
+	(assert (fixnum? count))
+	(unsafe.$fxsra x count))
+      (define ($fxsll x count)
+	(import (prefix (ikarus system $fx) unsafe.))
+	(assert (fixnum? x))
+	(assert (fixnum? count))
+	(unsafe.$fxsll x count))
+      #| end of begin |# )
+    #| end of module |# )
+
+  (import UNSAFE)
 
 
 ;;;; configuration parameters
