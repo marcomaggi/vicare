@@ -1907,52 +1907,67 @@
 
   #| end of module |# )
 
-(define when-macro
-  (lambda (e)
-    (syntax-match e ()
-      ((_ test e e* ...)
-       (bless `(if ,test (begin ,e . ,e*)))))))
+(define (when-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?test ?expr ?expr* ...)
+     (bless `(if ,?test (begin ,?expr . ,?expr*))))))
 
-(define unless-macro
-  (lambda (e)
-    (syntax-match e ()
-      ((_ test e e* ...)
-       (bless `(if (not ,test) (begin ,e . ,e*)))))))
+(define (unless-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?test ?expr ?expr* ...)
+     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
-(define if-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ e0 e1 e2)
-       (build-conditional no-source
-			  (chi-expr e0 r mr)
-			  (chi-expr e1 r mr)
-			  (chi-expr e2 r mr)))
-      ((_ e0 e1)
-       (build-conditional no-source
-			  (chi-expr e0 r mr)
-			  (chi-expr e1 r mr)
-			  (build-void))))))
+(define (if-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  R6RS's IF  syntaxes from  the
+  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
+  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
+  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?test ?consequent ?alternate)
+     (build-conditional no-source
+			(chi-expr ?test       lexenv.run lexenv.expand)
+			(chi-expr ?consequent lexenv.run lexenv.expand)
+			(chi-expr ?alternate  lexenv.run lexenv.expand)))
+    ((_ ?test ?consequent)
+     (build-conditional no-source
+			(chi-expr ?test       lexenv.run lexenv.expand)
+			(chi-expr ?consequent lexenv.run lexenv.expand)
+			(build-void)))))
 
-(define case-macro
-  (lambda (e)
-    (define (build-last cls)
-      (syntax-match cls (else)
-	((else e e* ...) `(let () #f ,e . ,e*))
-	(_ (build-one cls '(if #f #f)))))
-    (define (build-one cls k)
-      (syntax-match cls ()
-	(((d* ...) e e* ...)
-	 `(if (memv t ',d*) (begin ,e . ,e*) ,k))))
-    (syntax-match e ()
-      ((_ expr)
-       (bless `(let ((t ,expr)) (if #f #f))))
-      ((_ expr cls cls* ...)
+(module (case-macro)
+  ;;Transformer function  used to expand  R6RS's CASE syntaxes  from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
+  ;;Return a symbolic expression in the core language.
+  ;;
+  (define (case-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?expr)
+       (bless `(let ((t ,?expr))
+		 (if #f #f))))
+      ((_ ?expr ?clause ?clause* ...)
        (bless
-	`(let ((t ,expr))
-	   ,(let f ((cls cls) (cls* cls*))
-	      (if (null? cls*)
-		  (build-last cls)
-		(build-one cls (f (car cls*) (cdr cls*)))))))))))
+	`(let ((t ,?expr))
+	   ,(let recur ((clause  ?clause)
+			(clause* ?clause*))
+	      (if (null? clause*)
+		  (%build-last clause)
+		(%build-one clause (recur (car clause*) (cdr clause*))))))))))
+
+  (define (%build-one clause-stx k)
+    (syntax-match clause-stx ()
+      (((?datum* ...) ?expr ?expr* ...)
+       `(if (memv t ',?datum*)
+	    (begin ,?expr . ,?expr*) ,k))))
+
+  (define (%build-last clause)
+    (syntax-match clause (else)
+      ((else ?expr ?expr* ...)
+       `(let () #f ,?expr . ,?expr*))
+      (_
+       (%build-one clause '(if #f #f)))))
+
+  #| end of module: CASE-MACRO |# )
 
 (define quote-transformer
   (lambda (e r mr)
@@ -3785,7 +3800,9 @@
 		    (else #f)))))))
       (return x))))
 
-  ;;; chi procedures
+
+;;;; chi procedures
+
 (define (chi-macro p e r rib)
   (do-macro-call (macro-transformer p) e r rib))
 
