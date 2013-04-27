@@ -5010,13 +5010,13 @@
 ;;An env record encapsulates a substitution and a set of libraries.
 (define-record env
   (names
-		;A  list of  symbols  representing the  public names  of
+		;A vector  of symbols  representing the public  names of
 		;bindings from a set of import specifications as defined
 		;by  R6RS.   These  names  are from  the  subst  of  the
 		;libraries, already processed with the directives in the
 		;import sets (prefix, deprefix, only, except, rename).
    labels
-		;A list  of symbols representing the  labels of bindings
+		;A vector of symbols representing the labels of bindings
 		;from a set of import specifications as defined by R6RS.
 		;These labels are from the subst of the libraries.
    itc
