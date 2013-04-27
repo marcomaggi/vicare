@@ -602,6 +602,57 @@
 (define (syntax->datum S)
   (strip S '()))
 
+(define (mkstx stx/expr mark* subst* ae*)
+  ;;This is the proper constructor for wrapped syntax objects.
+  ;;
+  ;;STX/EXPR can be a raw symbolic expression, an instance of <STX> or a
+  ;;wrapped syntax object.  MARK* is a  list of marks.  SUBST* is a list
+  ;;of substs.
+  ;;
+  ;;AE* == annotated expressions???
+  ;;
+  ;;When STX/EXPR is a raw symbolic  expression: just build and return a
+  ;;new syntax  object with the  lexical context described by  the given
+  ;;arguments.
+  ;;
+  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
+  ;;given wraps, making sure that marks and anti-marks and corresponding
+  ;;shifts cancel properly.
+  ;;
+  (if (and (<stx>? stx/expr)
+	   (not (top-marked? mark*)))
+      (receive (mark* subst* ae*)
+	  (join-wraps mark* subst* ae* stx/expr)
+	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
+    (make-<stx> stx/expr mark* subst* ae*)))
+
+(define (bless x)
+  ;;Given a raw  symbolic expression, a single syntax  object, a wrapped
+  ;;syntax  object, an  unwrapped syntax  object or  a partly  unwrapped
+  ;;syntax  object X:  build and  return a  corresponding single  syntax
+  ;;object,  wrapped syntax  object, unwrapped  syntax object  or partly
+  ;;unwrapped syntax object.
+  ;;
+  ;;Raw symbols  in the input  are considered references to  bindings in
+  ;;the core  language: they are  converted to identifiers  having empty
+  ;;lexical contexts.
+  ;;
+  (mkstx (let recur ((x x))
+	   (cond ((<stx>? x)
+		  x)
+		 ((pair? x)
+		  (cons (recur (car x)) (recur (cdr x))))
+		 ((symbol? x)
+		  (scheme-stx x))
+		 ((vector? x)
+		  (list->vector (map recur (vector->list x))))
+		 ;;If we are here X is a self-evaluating datum.
+		 (else x)))
+	 '() #;mark* '() #;subst* '() #;ae* ))
+
+
+;;;; syntax objects and marks
+
 ;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
 ;;exactly?
 ;;
@@ -733,30 +784,6 @@
 	(cons x (recur ($car ls1) ($cdr ls1))))))
 
   #| end of module: JOIN-WRAPS |# )
-
-(define (mkstx stx/expr mark* subst* ae*)
-  ;;This is the proper constructor for wrapped syntax objects.
-  ;;
-  ;;STX/EXPR can be a raw symbolic expression, an instance of <STX> or a
-  ;;wrapped syntax object.  MARK* is a  list of marks.  SUBST* is a list
-  ;;of substs.
-  ;;
-  ;;AE* == annotated expressions???
-  ;;
-  ;;When STX/EXPR is a raw symbolic  expression: just build and return a
-  ;;new syntax  object with the  lexical context described by  the given
-  ;;arguments.
-  ;;
-  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
-  ;;given wraps, making sure that marks and anti-marks and corresponding
-  ;;shifts cancel properly.
-  ;;
-  (if (and (<stx>? stx/expr)
-	   (not (top-marked? mark*)))
-      (receive (mark* subst* ae*)
-	  (join-wraps mark* subst* ae* stx/expr)
-	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
-    (make-<stx> stx/expr mark* subst* ae*)))
 
 (define (same-marks? x y)
   ;;Two lists  of marks are  considered the same  if they have  the same
@@ -1720,7 +1747,9 @@
   ;;lexical environments as arguments.
   ;;
   ;;The  function MACRO-TRANSFORMER  maps symbols  representing non-core
-  ;;macros to their macro transformers.
+  ;;macros to  their macro transformers.   The expression returned  by a
+  ;;non-core transformer is  further visited to process  the core macros
+  ;;and introduce bindings.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -1754,7 +1783,6 @@
 	     ((time)                  time-macro)
 	     ((delay)                 delay-macro)
 	     ((assert)                assert-macro)
-	     ((endianness)            endianness-macro)
 	     ((guard)                 guard-macro)
 	     ((define-enumeration)    define-enumeration-macro)
 	     ((trace-lambda)          trace-lambda-macro)
@@ -1778,6 +1806,10 @@
 	     ((buffer-mode)
 	      (lambda (x)
 		(%allowed-symbol-macro x '(none line block))))
+
+	     ((endianness)
+	      (lambda (x)
+		(%allowed-symbol-macro x '(big little))))
 
 	     ((file-options)
 	      file-options-macro)
@@ -3053,17 +3085,6 @@
 	  `(or ,expr
 	       (assertion-error ',expr "unknown source" #f #f #f #f))))))))
 
-(define (endianness-macro expr-stx)
-  ;;Transformer for the ENDIANNESS macro.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?sym)
-     (case (syntax->datum ?sym)
-       ((little big)
-	(bless `(quote ,?sym)))
-       (else
-	(stx-error expr-stx "endianness must be big or little"))))))
-
 (define (file-options-macro expr-stx)
   ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
   ;;implemented   as   an   enumeration  type   whose   constructor   is
@@ -3079,8 +3100,8 @@
 
 (define (%allowed-symbol-macro expr-stx allowed-symbol-set)
   ;;Helper  function used  to  implement the  transformer of:  EOL-STYLE
-  ;;ERROR-HANDLING-MODE, BUFFER-MODE.  All of these macros should expand
-  ;;to a quoted symbol among a list of allowed ones.
+  ;;ERROR-HANDLING-MODE, BUFFER-MODE,  ENDIANNESS.  All of  these macros
+  ;;should expand to a quoted symbol among a list of allowed ones.
   ;;
   (syntax-match expr-stx ()
     ((_ ?name)
@@ -3346,19 +3367,6 @@
        (build-lambda (syntax-annotation expr-stx) formals body)))))
 
 
-(define bless
-  (lambda (x)
-    (mkstx
-     (let f ((x x))
-       (cond
-	((<stx>? x) x)
-	((pair? x) (cons (f (car x)) (f (cdr x))))
-	((symbol? x) (scheme-stx x))
-	((vector? x)
-	 (list->vector (map f (vector->list x))))
-	(else x)))
-     '() '() '())))
-
 (define (invalid-fmls-error stx fmls)
   (syntax-match fmls ()
     ((id* ... . last)
