@@ -5012,6 +5012,26 @@
 
 
 ;;;; top-level environments
+;;
+;;The result of parsing  a set of import specs, as  defined by R6RS, and
+;;loading the corresponding libraries is an ENV data structure; ENV data
+;;structures represent an *immutable* top level environment.
+;;
+;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
+;;interaction environment is created to  serve as top level environment.
+;;The  interaction  environment  is  initialised with  the  core  Vicare
+;;library  "(ikarus)";  an  interaction environment  is  *mutable*:  new
+;;bindings can be added to it.  For this reason interaction environments
+;;are  represented by  data  structures of  type INTERACTION-ENV,  whose
+;;internal format allows adding new bindings.
+;;
+;;Let's  step back:  how does  the  REPL work?   Every time  we type  an
+;;expression  and press  "Return":  the expression  is  expanded in  the
+;;context of  the current  interaction environment, compiled  to machine
+;;code, executed.   Every REPL expression  is like a full  R6RS program,
+;;with the  exception that  the interaction environment  "remembers" the
+;;bindings we define.
+;;
 
 ;;An env record encapsulates a substitution and a set of libraries.
 (define-record env
