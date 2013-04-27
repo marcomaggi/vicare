@@ -1733,7 +1733,7 @@
 	 '(displaced-lexical . #f))))
 
 
-(module (macro-transformer)
+(module (non-core-macro-transformer)
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
@@ -1746,16 +1746,16 @@
   ;;introduce bindings, so their transformer functions do *not* take the
   ;;lexical environments as arguments.
   ;;
-  ;;The  function MACRO-TRANSFORMER  maps symbols  representing non-core
-  ;;macros to  their macro transformers.   The expression returned  by a
-  ;;non-core transformer is  further visited to process  the core macros
-  ;;and introduce bindings.
+  ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
+  ;;non-core  macros  to  their   macro  transformers.   The  expression
+  ;;returned by a non-core transformer is further visited to process the
+  ;;core macros and introduce bindings.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
   ;;
-  (define (macro-transformer x)
-    (define who 'macro-transformer)
+  (define (non-core-macro-transformer x)
+    (define who 'non-core-macro-transformer)
     (define (%error-invalid-macro)
       (error who "Vicare: internal error: invalid macro" x))
     (cond ((procedure? x)
@@ -1829,7 +1829,7 @@
     (stx-error expr-stx "incorrect usage of auxiliary keyword"))
 
 
-;;;; module macro-transformer: control structures macros
+;;;; module non-core-macro-transformer: control structures macros
 
 (define (when-macro expr-stx)
   (syntax-match expr-stx ()
@@ -1842,7 +1842,7 @@
      (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
 
-;;;; module macro-transformer: CASE
+;;;; module non-core-macro-transformer: CASE
 
 (module (case-macro)
   ;;Transformer function  used to expand  R6RS's CASE macros  from the
@@ -1879,7 +1879,7 @@
   #| end of module: CASE-MACRO |# )
 
 
-;;;; module macro-transformer: DEFINE-RECORD-TYPE
+;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
 
 (define define-record-type-macro
   (lambda (x)
@@ -2151,7 +2151,7 @@
 	 (do-define-record namespec clause*))))))
 
 
-;;;; module macro-transformer: DEFINE-CONDITION-TYPE
+;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE
 
 (define define-condition-type-macro
   (lambda (x)
@@ -2189,7 +2189,7 @@
 		 accessor* aux-accessor*))))))))
 
 
-;;;; module macro-transformer: PARAMETERIZE and PARAMETRISE
+;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
 
 (define parameterize-macro
   ;;
@@ -2238,7 +2238,7 @@
        ))))
 
 
-;;;; module macro-transformer: DEFINE-STRUCT
+;;;; module non-core-macro-transformer: DEFINE-STRUCT
 
 (define define-struct-macro
   (if-wants-define-struct
@@ -2325,7 +2325,7 @@
      (stx-error stx "define-struct not supported"))))
 
 
-;;;; module macro-transformer: SYNTAX-RULES
+;;;; module non-core-macro-transformer: SYNTAX-RULES
 
 (define syntax-rules-macro
   (lambda (e)
@@ -2347,7 +2347,7 @@
 			 pat* tmp*)))))))))
 
 
-;;;; module macro-transformer: WITH-SYNTAX
+;;;; module non-core-macro-transformer: WITH-SYNTAX
 
 (define with-syntax-macro
   (lambda (e)
@@ -2376,7 +2376,7 @@
 			    ,(car t*)))))))))))))))
 
 
-;;;; module macro-transformer: IDENTIFIER-SYNTAX
+;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
 
 (define identifier-syntax-macro
   (lambda (stx)
@@ -2397,7 +2397,7 @@
 			 ((id e* ...) (identifier? (syntax id)) (syntax (,expr1 e* ...)))))))))))
 
 
-;;;; module macro-transformer: LET, LET*, TRACE-LET
+;;;; module non-core-macro-transformer: LET, LET*, TRACE-LET
 
 (define let-macro
   (lambda (stx)
@@ -2431,7 +2431,7 @@
 	 (invalid-fmls-error stx lhs*))))))
 
 
-;;;; module macro-transformer: LET-VALUES
+;;;; module non-core-macro-transformer: LET-VALUES
 
 (define let-values-macro
   (lambda (stx)
@@ -2479,7 +2479,7 @@
 				 stx others)))))))))))
 
 
-;;;; module macro-transformer: LET*-VALUES
+;;;; module non-core-macro-transformer: LET*-VALUES
 
 (define let*-values-macro
   (lambda (stx)
@@ -2521,7 +2521,7 @@
 				 stx others)))))))))))
 
 
-;;;; module macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
+;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
 
 (define trace-lambda-macro
   (lambda (stx)
@@ -2572,7 +2572,7 @@
 	 (stx-error stx "invalid name"))))))
 
 
-;;;; module macro-transformer: TRACE-LET, TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
+;;;; module non-core-macro-transformer: TRACE-LET, TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
 
 (define trace-let/rec-syntax
   (lambda (who)
@@ -2593,7 +2593,7 @@
   (trace-let/rec-syntax 'letrec-syntax))
 
 
-;;;; module macro-transformer: GUARD
+;;;; module non-core-macro-transformer: GUARD
 
 (define guard-macro
   (lambda (x)
@@ -2645,7 +2645,7 @@
 		      (lambda () ,b ,@b*))))))))))))
 
 
-;;;; module macro-transformer: DEFINE-ENUMERATION
+;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
 
 (define (define-enumeration-macro stx)
   (define who 'define-enumeration)
@@ -2777,7 +2777,7 @@
     ))
 
 
-;;;; module macro-transformer: DO
+;;;; module non-core-macro-transformer: DO
 
 (define do-macro
   (lambda (stx)
@@ -2806,7 +2806,7 @@
 	    (stx-error stx "invalid bindings"))))))))
 
 
-;;;; module macro-transformer: OR, AND
+;;;; module non-core-macro-transformer: OR, AND
 
 (define or-macro
   (lambda (stx)
@@ -2833,7 +2833,7 @@
 	   (else `(if ,e ,(f (car e*) (cdr e*)) #f)))))))))
 
 
-;;;; module macro-transformer: COND
+;;;; module non-core-macro-transformer: COND
 
 (define cond-macro
   (lambda (stx)
@@ -2858,7 +2858,7 @@
 	      (_ (stx-error stx "invalid last clause")))))))))))
 
 
-;;;; module macro-transformer: QUASIQUOTE
+;;;; module non-core-macro-transformer: QUASIQUOTE
 
 (define quasiquote-macro
   (let ()
@@ -2971,7 +2971,7 @@
 	((_ e) (quasi e 0))))))
 
 
-;;;; module macro-transformer: QUASISYNTAX
+;;;; module non-core-macro-transformer: QUASISYNTAX
 
 (define quasisyntax-macro
   (let () ;;; FIXME: not really correct
@@ -3041,7 +3041,7 @@
 	       (,lhs* (syntax ,v))))))))))
 
 
-;;;; module macro-transformer: miscellanea
+;;;; module non-core-macro-transformer: miscellanea
 
 (define time-macro
   (lambda (stx)
@@ -3110,7 +3110,7 @@
      (bless `(quote ,?name)))))
 
 
-;;; end of module: MACRO-TRANSFORMER
+;;; end of module: NON-CORE-MACRO-TRANSFORMER
 
 )
 
@@ -3928,7 +3928,7 @@
 ;;;; chi procedures
 
 (define (chi-macro p e r rib)
-  (do-macro-call (macro-transformer p) e r rib))
+  (do-macro-call (non-core-macro-transformer p) e r rib))
 
 (define (chi-local-macro p e r rib)
   (do-macro-call (local-macro-transformer p) e r rib))
