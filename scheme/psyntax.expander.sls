@@ -1935,6 +1935,42 @@
 			(chi-expr ?consequent lexenv.run lexenv.expand)
 			(build-void)))))
 
+(define (quote-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand R6RS's QUOTE  syntaxes from the
+  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
+  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
+  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?datum)
+     (build-data no-source (syntax->datum ?datum)))))
+
+(define (case-lambda-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand R6RS's CASE-LAMBDA syntaxes from
+  ;;the top-level built in environment.  Expand the contents of EXPR-STX
+  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
+  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?formals* ?body* ?body** ...) ...)
+     (receive (formals* body*)
+	 (chi-lambda-clause* expr-stx ?formals*
+			     (map cons ?body* ?body**) lexenv.run lexenv.expand)
+       (build-case-lambda (syntax-annotation expr-stx) formals* body*)))))
+
+(define (lambda-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand  R6RS's LAMBDA syntaxes from the
+  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
+  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
+  ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?formals ?body ?body* ...)
+     (receive (formals body)
+	 (chi-lambda-clause expr-stx ?formals
+			    (cons ?body ?body*) lexenv.run lexenv.expand)
+       (build-lambda (syntax-annotation expr-stx) formals body)))))
+
 (module (case-macro)
   ;;Transformer function  used to expand  R6RS's CASE syntaxes  from the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
@@ -1968,29 +2004,6 @@
        (%build-one clause '(if #f #f)))))
 
   #| end of module: CASE-MACRO |# )
-
-(define quote-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ datum) (build-data no-source (syntax->datum datum))))))
-
-(define case-lambda-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ (fmls* b* b** ...) ...)
-       (let-values (((fmls* body*)
-		     (chi-lambda-clause* e fmls*
-					 (map cons b* b**) r mr)))
-	 (build-case-lambda (syntax-annotation e) fmls* body*))))))
-
-(define lambda-transformer
-  (lambda (e r mr)
-    (syntax-match e ()
-      ((_ fmls b b* ...)
-       (let-values (((fmls body)
-		     (chi-lambda-clause e fmls
-					(cons b b*) r mr)))
-	 (build-lambda (syntax-annotation e) fmls body))))))
 
 
 (define bless
