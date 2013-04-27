@@ -1706,11 +1706,1395 @@
 	 '(displaced-lexical . #f))))
 
 
-;;;; core syntax transformers
-;;
-;;The core  syntaxes are the  ones exported  by the boot  image: LETREC,
-;;LETREC*, LET-SYNTAX, ...
-;;
+(module (macro-transformer)
+  ;;We distinguish between "non-core macros" and "core macros".
+  ;;
+  ;;Core macros  are part of the  core language: they cannot  be further
+  ;;expanded to a  composition of other more basic  macros.  Core macros
+  ;;*do*  introduce bindings,  so their  transformer functions  take the
+  ;;lexical environments as arguments.
+  ;;
+  ;;Non-core macros are  *not* part of the core language:  they *can* be
+  ;;expanded to  a composition of  core macros.  Non-core macros  do not
+  ;;introduce bindings, so their transformer functions do *not* take the
+  ;;lexical environments as arguments.
+  ;;
+  ;;The  function MACRO-TRANSFORMER  maps symbols  representing non-core
+  ;;macros to their macro transformers.
+  ;;
+  ;;NOTE This  module is very  long, so it  is split into  multiple code
+  ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
+  ;;
+  (define (macro-transformer x)
+    (define who 'macro-transformer)
+    (define (%error-invalid-macro)
+      (error who "Vicare: internal error: invalid macro" x))
+    (cond ((procedure? x)
+	   x)
+	  ((symbol? x)
+	   (case x
+	     ((define-record-type)    define-record-type-macro)
+	     ((define-struct)         define-struct-macro)
+	     ((cond)                  cond-macro)
+	     ((let)                   let-macro)
+	     ((do)                    do-macro)
+	     ((or)                    or-macro)
+	     ((and)                   and-macro)
+	     ((let*)                  let*-macro)
+	     ((let-values)            let-values-macro)
+	     ((let*-values)           let*-values-macro)
+	     ((syntax-rules)          syntax-rules-macro)
+	     ((quasiquote)            quasiquote-macro)
+	     ((quasisyntax)           quasisyntax-macro)
+	     ((with-syntax)           with-syntax-macro)
+	     ((when)                  when-macro)
+	     ((unless)                unless-macro)
+	     ((case)                  case-macro)
+	     ((identifier-syntax)     identifier-syntax-macro)
+	     ((time)                  time-macro)
+	     ((delay)                 delay-macro)
+	     ((assert)                assert-macro)
+	     ((endianness)            endianness-macro)
+	     ((guard)                 guard-macro)
+	     ((define-enumeration)    define-enumeration-macro)
+	     ((trace-lambda)          trace-lambda-macro)
+	     ((trace-define)          trace-define-macro)
+	     ((trace-let)             trace-let-macro)
+	     ((trace-define-syntax)   trace-define-syntax-macro)
+	     ((trace-let-syntax)      trace-let-syntax-macro)
+	     ((trace-letrec-syntax)   trace-letrec-syntax-macro)
+	     ((define-condition-type) define-condition-type-macro)
+	     ((parameterize)          parameterize-macro)
+	     ((parametrise)           parameterize-macro)
+
+	     ((eol-style)
+	      (lambda (x)
+		(%allowed-symbol-macro x '(none lf cr crlf nel crnel ls))))
+
+	     ((error-handling-mode)
+	      (lambda (x)
+		(%allowed-symbol-macro x '(ignore raise replace))))
+
+	     ((buffer-mode)
+	      (lambda (x)
+		(%allowed-symbol-macro x '(none line block))))
+
+	     ((file-options)
+	      file-options-macro)
+
+	     ((... => _ else unquote unquote-splicing
+		   unsyntax unsyntax-splicing
+		   fields mutable immutable parent protocol
+		   sealed opaque nongenerative parent-rtd)
+	      incorrect-usage-macro)
+
+	     (else
+	      (%error-invalid-macro))))
+	  (else
+	   (%error-invalid-macro))))
+
+  (define (incorrect-usage-macro expr-stx)
+    (stx-error expr-stx "incorrect usage of auxiliary keyword"))
+
+
+;;;; module macro-transformer: control structures macros
+
+(define (when-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?test ?expr ?expr* ...)
+     (bless `(if ,?test (begin ,?expr . ,?expr*))))))
+
+(define (unless-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?test ?expr ?expr* ...)
+     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
+
+
+;;;; module macro-transformer: CASE
+
+(module (case-macro)
+  ;;Transformer function  used to expand  R6RS's CASE macros  from the
+  ;;top-level built in environment.   Expand the contents of EXPR-STX.
+  ;;Return a symbolic expression in the core language.
+  ;;
+  (define (case-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?expr)
+       (bless `(let ((t ,?expr))
+		 (if #f #f))))
+      ((_ ?expr ?clause ?clause* ...)
+       (bless
+	`(let ((t ,?expr))
+	   ,(let recur ((clause  ?clause)
+			(clause* ?clause*))
+	      (if (null? clause*)
+		  (%build-last clause)
+		(%build-one clause (recur (car clause*) (cdr clause*))))))))))
+
+  (define (%build-one clause-stx k)
+    (syntax-match clause-stx ()
+      (((?datum* ...) ?expr ?expr* ...)
+       `(if (memv t ',?datum*)
+	    (begin ,?expr . ,?expr*) ,k))))
+
+  (define (%build-last clause)
+    (syntax-match clause (else)
+      ((else ?expr ?expr* ...)
+       `(let () #f ,?expr . ,?expr*))
+      (_
+       (%build-one clause '(if #f #f)))))
+
+  #| end of module: CASE-MACRO |# )
+
+
+;;;; module macro-transformer: DEFINE-RECORD-TYPE
+
+(define define-record-type-macro
+  (lambda (x)
+    (define (id ctxt . str*)
+      (datum->syntax ctxt
+		     (string->symbol
+		      (apply string-append
+			     (map (lambda (x)
+				    (cond
+				     ((symbol? x) (symbol->string x))
+				     ((string? x) x)
+				     (else (assertion-violation 'define-record-type "BUG"))))
+			       str*)))))
+    (define (get-record-name spec)
+      (syntax-match spec ()
+	((foo make-foo foo?) foo)
+	(foo foo)))
+    (define (get-record-constructor-name spec)
+      (syntax-match spec ()
+	((foo make-foo foo?) make-foo)
+	(foo (id? foo) (id foo "make-" (syntax->datum foo)))))
+    (define (get-record-predicate-name spec)
+      (syntax-match spec ()
+	((foo make-foo foo?) foo?)
+	(foo (id? foo) (id foo (syntax->datum foo) "?"))))
+    (define (get-clause id ls)
+      (syntax-match ls ()
+	(() #f)
+	(((x . rest) . ls)
+	 (if (free-id=? (bless id) x)
+	     `(,x . ,rest)
+	   (get-clause id ls)))))
+    (define (foo-rtd-code name clause* parent-rtd-code)
+      (define (convert-field-spec* ls)
+	(list->vector
+	 (map (lambda (x)
+		(syntax-match x (mutable immutable)
+		  ((mutable name . rest) `(mutable ,name))
+		  ((immutable name . rest) `(immutable ,name))
+		  (name `(immutable ,name))))
+	   ls)))
+      (let ((uid-code
+	     (syntax-match (get-clause 'nongenerative clause*) ()
+	       ((_)     `',(gensym))
+	       ((_ uid) `',uid)
+	       (_       #f)))
+	    (sealed?
+	     (syntax-match (get-clause 'sealed clause*) ()
+	       ((_ #t) #t)
+	       (_      #f)))
+	    (opaque?
+	     (syntax-match (get-clause 'opaque clause*) ()
+	       ((_ #t) #t)
+	       (_      #f)))
+	    (fields
+	     (syntax-match (get-clause 'fields clause*) ()
+	       ((_ field-spec* ...)
+		`(quote ,(convert-field-spec* field-spec*)))
+	       (_ ''#()))))
+	(bless
+	 `(make-record-type-descriptor ',name
+				       ,parent-rtd-code
+				       ,uid-code ,sealed? ,opaque? ,fields))))
+    (define (parent-rtd-code clause*)
+      (syntax-match (get-clause 'parent clause*) ()
+	((_ name) `(record-type-descriptor ,name))
+	(#f (syntax-match (get-clause 'parent-rtd clause*) ()
+	      ((_ rtd rcd) rtd)
+	      (#f #f)))))
+    (define (parent-rcd-code clause*)
+      (syntax-match (get-clause 'parent clause*) ()
+	((_ name) `(record-constructor-descriptor ,name))
+	(#f (syntax-match (get-clause 'parent-rtd clause*) ()
+	      ((_ rtd rcd) rcd)
+	      (#f #f)))))
+    (define (foo-rcd-code clause* foo-rtd protocol parent-rcd-code)
+      `(make-record-constructor-descriptor ,foo-rtd
+					   ,parent-rcd-code ,protocol))
+    (define (get-protocol-code clause*)
+      (syntax-match (get-clause 'protocol clause*) ()
+	((_ expr) expr)
+	(_        #f)))
+    (define (get-fields clause*)
+      (syntax-match clause* (fields)
+	(() '())
+	(((fields f* ...) . _) f*)
+	((_ . rest) (get-fields rest))))
+    (define (get-mutator-indices fields)
+      (let f ((fields fields) (i 0))
+	(syntax-match fields (mutable)
+	  (() '())
+	  (((mutable . _) . rest)
+	   (cons i (f rest (+ i 1))))
+	  ((_ . rest)
+	   (f rest (+ i 1))))))
+    (define (get-mutators foo fields)
+      (define (gen-name x)
+	(datum->syntax foo
+		       (string->symbol
+			(string-append (symbol->string (syntax->datum foo)) "-"
+				       (symbol->string (syntax->datum x)) "-set!"))))
+      (let f ((fields fields))
+	(syntax-match fields (mutable)
+	  (() '())
+	  (((mutable name accessor mutator) . rest)
+	   (cons mutator (f rest)))
+	  (((mutable name) . rest)
+	   (cons (gen-name name) (f rest)))
+	  ((_ . rest) (f rest)))))
+    (define (get-unsafe-mutators foo fields)
+      (define (gen-name x)
+	(datum->syntax foo
+		       (string->symbol
+			(string-append "$" (symbol->string (syntax->datum foo))
+				       "-" (symbol->string (syntax->datum x)) "-set!"))))
+      (let f ((fields fields))
+	(syntax-match fields (mutable)
+	  (() '())
+	  (((mutable name accessor mutator) . rest)
+	   (cons (gen-name name) (f rest)))
+	  (((mutable name) . rest)
+	   (cons (gen-name name) (f rest)))
+	  ((_ . rest) (f rest)))))
+    (define (get-unsafe-mutators-idx-names foo fields)
+      (let f ((fields fields))
+	(syntax-match fields (mutable)
+	  (() '())
+	  (((mutable name accessor mutator) . rest)
+	   (cons (gensym) (f rest)))
+	  (((mutable name) . rest)
+	   (cons (gensym) (f rest)))
+	  ((_ . rest) (f rest)))))
+    (define (get-accessors foo fields)
+      (define (gen-name x)
+	(datum->syntax foo
+		       (string->symbol
+			(string-append (symbol->string (syntax->datum foo)) "-"
+				       (symbol->string (syntax->datum x))))))
+      (map
+	  (lambda (field)
+	    (syntax-match field (mutable immutable)
+	      ((mutable name accessor mutator) (id? accessor) accessor)
+	      ((immutable name accessor)       (id? accessor) accessor)
+	      ((mutable name)                  (id? name) (gen-name name))
+	      ((immutable name)                (id? name) (gen-name name))
+	      (name                            (id? name) (gen-name name))
+	      (others (stx-error field "invalid field spec"))))
+	fields))
+    (define (get-unsafe-accessors foo fields)
+      (define (gen-name x)
+	(datum->syntax foo
+		       (string->symbol
+			(string-append "$" (symbol->string (syntax->datum foo))
+				       "-" (symbol->string (syntax->datum x))))))
+      (map
+	  (lambda (field)
+	    (syntax-match field (mutable immutable)
+	      ((mutable name accessor mutator) (id? accessor) (gen-name name))
+	      ((immutable name accessor)       (id? accessor) (gen-name name))
+	      ((mutable name)                  (id? name) (gen-name name))
+	      ((immutable name)                (id? name) (gen-name name))
+	      (name                            (id? name) (gen-name name))
+	      (others (stx-error field "invalid field spec"))))
+	fields))
+    (define (get-unsafe-accessors-idx-names foo fields)
+      (map (lambda (x)
+	     (gensym))
+	fields))
+    (define (enumerate ls)
+      (let f ((ls ls) (i 0))
+	(cond
+	 ((null? ls) '())
+	 (else (cons i (f (cdr ls) (+ i 1)))))))
+    (define (do-define-record namespec clause*)
+      (let* ((foo		(get-record-name namespec))
+	     (foo-rtd		(gensym))
+	     (foo-rcd		(gensym))
+	     (protocol		(gensym))
+	     (make-foo		(get-record-constructor-name namespec))
+	     (fields		(get-fields clause*))
+	     ;;Indexes for safe accessors and mutators.
+	     (idx*		(enumerate fields))
+	     (set-foo-idx*	(get-mutator-indices fields))
+	     ;;Names of safe accessors and mutators.
+	     (foo-x*		(get-accessors foo fields))
+	     (set-foo-x!*	(get-mutators foo fields))
+	     ;;Names of unsafe accessors and mutators.
+	     (unsafe-foo-x*	(get-unsafe-accessors foo fields))
+	     (unsafe-set-foo-x!* (get-unsafe-mutators foo fields))
+	     ;;Names for unsafe index bindings.
+	     (unsafe-foo-x-idx*	     (get-unsafe-accessors-idx-names foo fields))
+	     (unsafe-set-foo-x!-idx* (get-unsafe-mutators-idx-names foo fields))
+	     ;;Predicate name.
+	     (foo?		(get-record-predicate-name namespec))
+	     ;;Code   for   record-type   descriptor   and   record-type
+	     ;;constructor descriptor.
+	     (foo-rtd-code	(foo-rtd-code foo clause* (parent-rtd-code clause*)))
+	     (foo-rcd-code	(foo-rcd-code clause* foo-rtd protocol
+					      (parent-rcd-code clause*)))
+	     ;;Code for protocol.
+	     (protocol-code	(get-protocol-code clause*)))
+	(bless
+	 `(begin
+	    (define ,foo-rtd ,foo-rtd-code)
+	    (define ,protocol ,protocol-code)
+	    (define ,foo-rcd ,foo-rcd-code)
+	    (define-syntax ,foo
+	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)))
+	    (define ,foo? (record-predicate ,foo-rtd))
+	    (define ,make-foo (record-constructor ,foo-rcd))
+	    ,@(map
+		  (lambda (foo-x idx)
+		    `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
+		foo-x* idx*)
+	    ,@(map
+		  (lambda (set-foo-x! idx)
+		    `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
+		set-foo-x!* set-foo-idx*)
+	    ,@(map
+		  (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
+		    `(begin
+		       (define ,unsafe-foo-x-idx
+			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+		       (define-syntax ,unsafe-foo-x
+			 (syntax-rules ()
+			   ((_ x)
+			    ($struct-ref x ,unsafe-foo-x-idx))))
+		       ))
+		unsafe-foo-x* idx* unsafe-foo-x-idx*)
+	    ,@(map
+		  (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
+		    `(begin
+		       (define ,unsafe-set-foo-x!-idx
+			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
+		       (define-syntax ,unsafe-set-foo-x!
+			 (syntax-rules ()
+			   ((_ x v)
+			    ($struct-set! x ,unsafe-set-foo-x!-idx v))))
+		       ))
+		unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
+	    ))))
+    (define (verify-clauses x cls*)
+      (define valid-kwds
+	(map bless
+	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
+      (define (free-id-member? x ls)
+	(and (pair? ls)
+	     (or (free-id=? x (car ls))
+		 (free-id-member? x (cdr ls)))))
+      (let f ((cls* cls*) (seen* '()))
+	(unless (null? cls*)
+	  (syntax-match (car cls*) ()
+	    ((kwd . rest)
+	     (cond
+	      ((or (not (id? kwd))
+		   (not (free-id-member? kwd valid-kwds)))
+	       (stx-error kwd "not a valid define-record-type keyword"))
+	      ((bound-id-member? kwd seen*)
+	       (syntax-violation #f
+		 "duplicate use of keyword "
+		 x kwd))
+	      (else (f (cdr cls*) (cons kwd seen*)))))
+	    (cls
+	     (stx-error cls "malformed define-record-type clause"))))))
+    (syntax-match x ()
+      ((_ namespec clause* ...)
+       (begin
+	 (verify-clauses x clause*)
+	 (do-define-record namespec clause*))))))
+
+
+;;;; module macro-transformer: DEFINE-CONDITION-TYPE
+
+(define define-condition-type-macro
+  (lambda (x)
+    (define (mkname name suffix)
+      (datum->syntax name
+		     (string->symbol
+		      (string-append
+		       (symbol->string (syntax->datum name))
+		       suffix))))
+    (syntax-match x ()
+      ((ctxt name super constructor predicate (field* accessor*) ...)
+       (and (id? name)
+	    (id? super)
+	    (id? constructor)
+	    (id? predicate)
+	    (for-all id? field*)
+	    (for-all id? accessor*))
+       (let ((aux-accessor* (map (lambda (x) (gensym)) accessor*)))
+	 (bless
+	  `(begin
+	     (define-record-type (,name ,constructor ,(gensym))
+	       (parent ,super)
+	       (fields ,@(map (lambda (field aux)
+				`(immutable ,field ,aux))
+			   field* aux-accessor*))
+	       (nongenerative)
+	       (sealed #f) (opaque #f))
+	     (define ,predicate (condition-predicate
+				 (record-type-descriptor ,name)))
+	     ,@(map
+		   (lambda (accessor aux)
+		     `(define ,accessor
+			(condition-accessor
+			 (record-type-descriptor ,name) ,aux)))
+		 accessor* aux-accessor*))))))))
+
+
+;;;; module macro-transformer: PARAMETERIZE and PARAMETRISE
+
+(define parameterize-macro
+  ;;
+  ;;Notice that  MAKE-PARAMETER is  a primitive function  implemented in
+  ;;"ikarus.compiler.sls" by "E-make-parameter".
+  ;;
+  (lambda (e)
+    (syntax-match e ()
+      ((_ () b b* ...)
+       (bless `(let () ,b . ,b*)))
+      ((_ ((olhs* orhs*) ...) b b* ...)
+       (let ((lhs* (generate-temporaries olhs*))
+	     (rhs* (generate-temporaries orhs*)))
+	 (bless
+	  `((lambda ,(append lhs* rhs*)
+	      (let* ((guard? #t) ;apply the guard function only the first time
+		     (swap   (lambda ()
+			       ,@(map (lambda (lhs rhs)
+					`(let ((t (,lhs)))
+					   (,lhs ,rhs guard?)
+					   (set! ,rhs t)))
+				   lhs* rhs*)
+			       (set! guard? #f))))
+		(dynamic-wind
+		    swap
+		    (lambda () ,b . ,b*)
+		    swap)))
+	    ,@(append olhs* orhs*))))
+       ;;Below is the original Ikarus code (Marco Maggi; Feb 3, 2012).
+       ;;
+       ;; (let ((lhs* (generate-temporaries olhs*))
+       ;;       (rhs* (generate-temporaries orhs*)))
+       ;;   (bless
+       ;;     `((lambda ,(append lhs* rhs*)
+       ;;         (let ((swap (lambda ()
+       ;;                       ,@(map (lambda (lhs rhs)
+       ;;                                `(let ((t (,lhs)))
+       ;;                                   (,lhs ,rhs)
+       ;;                                   (set! ,rhs t)))
+       ;;                              lhs* rhs*))))
+       ;;           (dynamic-wind
+       ;;             swap
+       ;;             (lambda () ,b . ,b*)
+       ;;             swap)))
+       ;;       ,@(append olhs* orhs*))))
+       ))))
+
+
+;;;; module macro-transformer: DEFINE-STRUCT
+
+(define define-struct-macro
+  (if-wants-define-struct
+   (lambda (e)
+     (define enumerate
+       (lambda (ls)
+	 (let f ((i 0) (ls ls))
+	   (cond
+	    ((null? ls) '())
+	    (else (cons i (f (+ i 1) (cdr ls))))))))
+     (define mkid
+       (lambda (id str)
+	 (datum->stx id (string->symbol str))))
+     (syntax-match e ()
+       ((_ name (field* ...))
+	(let* ((namestr		(symbol->string (identifier->symbol name)))
+	       (fields		(map identifier->symbol field*))
+	       (fieldstr*	(map symbol->string fields))
+	       (rtd		(datum->stx name (make-struct-type namestr fields)))
+	       (constr		(mkid name (string-append "make-" namestr)))
+	       (pred		(mkid name (string-append namestr "?")))
+	       (i*		(enumerate field*))
+	       (getters		(map (lambda (x)
+				       (mkid name (string-append namestr "-" x)))
+				  fieldstr*))
+	       (setters		(map (lambda (x)
+				       (mkid name (string-append "set-" namestr "-" x "!")))
+				  fieldstr*))
+	       (unsafe-getters	(map (lambda (x)
+				       (mkid name (string-append "$" namestr "-" x)))
+				  fieldstr*))
+	       (unsafe-setters	(map (lambda (x)
+				       (mkid name (string-append "$set-" namestr "-" x "!")))
+				  fieldstr*)))
+	  (bless
+	   `(begin
+	      (define-syntax ,name (cons '$rtd ',rtd))
+	      (define ,constr
+		(lambda ,field*
+		  (let ((S ($struct ',rtd ,@field*)))
+		    (if ($struct-ref ',rtd 5) ;destructor
+			($struct-guardian S)
+		      S))))
+	      (define ,pred
+		(lambda (x) ($struct/rtd? x ',rtd)))
+	      ,@(map (lambda (getter i)
+		       `(define ,getter
+			  (lambda (x)
+			    (if ($struct/rtd? x ',rtd)
+				($struct-ref x ,i)
+			      (assertion-violation ',getter
+				"not a struct of required type as struct getter argument"
+				x ',rtd)))))
+		  getters i*)
+	      ,@(map (lambda (setter i)
+		       `(define ,setter
+			  (lambda (x v)
+			    (if ($struct/rtd? x ',rtd)
+				($struct-set! x ,i v)
+			      (assertion-violation ',setter
+				"not a struct of required type as struct setter argument"
+				x ',rtd)))))
+		  setters i*)
+	      ,@(map (lambda (unsafe-getter i)
+		       `(define-syntax ,unsafe-getter
+			  (syntax-rules ()
+			    ((_ x)
+			     ($struct-ref x ,i))))
+		       #;(unquote (define ,unsafe-getter
+		       (lambda (x)
+		       ($struct-ref x ,i)))))
+	      unsafe-getters i*)
+	   ,@(map (lambda (unsafe-setter i)
+		    `(define-syntax ,unsafe-setter
+		       (syntax-rules ()
+			 ((_ x v)
+			  ($struct-set! x ,i v))))
+		    #;(unquote (define ,unsafe-setter
+		    (lambda (x v)
+		    ($struct-set! x ,i v)))))
+	   unsafe-setters i*))
+	)))))
+   (lambda (stx)
+     (stx-error stx "define-struct not supported"))))
+
+
+;;;; module macro-transformer: SYNTAX-RULES
+
+(define syntax-rules-macro
+  (lambda (e)
+    (syntax-match e ()
+      ((_ (lits ...)
+	  (pat* tmp*) ...)
+       (begin
+	 (verify-literals lits e)
+	 (bless `(lambda (x)
+		   (syntax-case x ,lits
+		     ,@(map (lambda (pat tmp)
+			      (syntax-match pat ()
+				((_ . rest)
+				 `((g . ,rest) (syntax ,tmp)))
+				(_
+				 (syntax-violation #f
+				   "invalid syntax-rules pattern"
+				   e pat))))
+			 pat* tmp*)))))))))
+
+
+;;;; module macro-transformer: WITH-SYNTAX
+
+(define with-syntax-macro
+  (lambda (e)
+    (syntax-match e ()
+      ((_ ((pat* expr*) ...) b b* ...)
+       (let ((idn*
+	      (let f ((pat* pat*))
+		(cond
+		 ((null? pat*) '())
+		 (else
+		  (let-values (((pat idn*) (convert-pattern (car pat*) '())))
+		    (append idn* (f (cdr pat*)))))))))
+	 (verify-formals (map car idn*) e)
+	 (let ((t* (generate-temporaries expr*)))
+	   (bless
+	    `(let ,(map list t* expr*)
+	       ,(let f ((pat* pat*) (t* t*))
+		  (cond
+		   ((null? pat*) `(let () ,b . ,b*))
+		   (else
+		    `(syntax-case ,(car t*) ()
+		       (,(car pat*) ,(f (cdr pat*) (cdr t*)))
+		       (_ (assertion-violation 'with-syntax
+			    "pattern does not match value"
+			    ',(car pat*)
+			    ,(car t*)))))))))))))))
+
+
+;;;; module macro-transformer: IDENTIFIER-SYNTAX
+
+(define identifier-syntax-macro
+  (lambda (stx)
+    (syntax-match stx (set!)
+      ((_ expr)
+       (bless `(lambda (x)
+		 (syntax-case x ()
+		   (id (identifier? (syntax id)) (syntax ,expr))
+		   ((id e* ...) (identifier? (syntax id))
+		    (cons (syntax ,expr) (syntax (e* ...))))))))
+      ((_ (id1 expr1) ((set! id2 expr2) expr3))
+       (and (id? id1) (id? id2) (id? expr2))
+       (bless `(cons 'macro!
+		     (lambda (x)
+		       (syntax-case x (set!)
+			 (id (identifier? (syntax id)) (syntax ,expr1))
+			 ((set! id ,expr2) (syntax ,expr3))
+			 ((id e* ...) (identifier? (syntax id)) (syntax (,expr1 e* ...)))))))))))
+
+
+;;;; module macro-transformer: LET, LET*, TRACE-LET
+
+(define let-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ ((lhs* rhs*) ...) b b* ...)
+       (if (valid-bound-ids? lhs*)
+	   (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
+	 (invalid-fmls-error stx lhs*)))
+      ((_ f ((lhs* rhs*) ...) b b* ...) (id? f)
+       (if (valid-bound-ids? lhs*)
+	   (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
+	 (invalid-fmls-error stx lhs*))))))
+
+(define let*-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ ((lhs* rhs*) ...) b b* ...) (for-all id? lhs*)
+       (bless
+	(let f ((x* (map list lhs* rhs*)))
+	  (cond
+	   ((null? x*) `(let () ,b . ,b*))
+	   (else `(let (,(car x*)) ,(f (cdr x*)))))))))))
+
+(define trace-let-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ f ((lhs* rhs*) ...) b b* ...) (id? f)
+       (if (valid-bound-ids? lhs*)
+	   (bless
+	    `((letrec ((,f (trace-lambda ,f ,lhs* ,b . ,b*))) ,f) . ,rhs*))
+	 (invalid-fmls-error stx lhs*))))))
+
+
+;;;; module macro-transformer: LET-VALUES
+
+(define let-values-macro
+  (lambda (stx)
+    (define (rename x old* new*)
+      (unless (id? x)
+	(syntax-violation #f "not an indentifier" stx x))
+      (when (bound-id-member? x old*)
+	(syntax-violation #f "duplicate binding" stx x))
+      (let ((y (gensym (syntax->datum x))))
+	(values y (cons x old*) (cons y new*))))
+    (define (rename* x* old* new*)
+      (cond
+       ((null? x*) (values '() old* new*))
+       (else
+	(let*-values (((x old* new*) (rename (car x*) old* new*))
+		      ((x* old* new*) (rename* (cdr x*) old* new*)))
+	  (values (cons x x*) old* new*)))))
+    (syntax-match stx ()
+      ((_ () b b* ...)
+       (cons* (bless 'let) '() b b*))
+      ((_ ((lhs* rhs*) ...) b b* ...)
+       (bless
+	(let f ((lhs* lhs*) (rhs* rhs*) (old* '()) (new* '()))
+	  (cond
+	   ((null? lhs*)
+	    `(let ,(map list old* new*) ,b . ,b*))
+	   (else
+	    (syntax-match (car lhs*) ()
+	      ((x* ...)
+	       (let-values (((y* old* new*) (rename* x* old* new*)))
+		 `(call-with-values
+		      (lambda () ,(car rhs*))
+		    (lambda ,y*
+		      ,(f (cdr lhs*) (cdr rhs*) old* new*)))))
+	      ((x* ... . x)
+	       (let*-values (((y old* new*) (rename x old* new*))
+			     ((y* old* new*) (rename* x* old* new*)))
+		 `(call-with-values
+		      (lambda () ,(car rhs*))
+		    (lambda ,(append y* y)
+		      ,(f (cdr lhs*) (cdr rhs*)
+			  old* new*)))))
+	      (others
+	       (syntax-violation #f "malformed bindings"
+				 stx others)))))))))))
+
+
+;;;; module macro-transformer: LET*-VALUES
+
+(define let*-values-macro
+  (lambda (stx)
+    (define (check x*)
+      (unless (null? x*)
+	(let ((x (car x*)))
+	  (unless (id? x)
+	    (syntax-violation #f "not an identifier" stx x))
+	  (check (cdr x*))
+	  (when (bound-id-member? x (cdr x*))
+	    (syntax-violation #f "duplicate identifier" stx x)))))
+    (syntax-match stx ()
+      ((_ () b b* ...)
+       (cons* (bless 'let) '() b b*))
+      ((_ ((lhs* rhs*) ...) b b* ...)
+       (bless
+	(let f ((lhs* lhs*) (rhs* rhs*))
+	  (cond
+	   ((null? lhs*)
+	    `(begin ,b . ,b*))
+	   (else
+	    (syntax-match (car lhs*) ()
+	      ((x* ...)
+	       (begin
+		 (check x*)
+		 `(call-with-values
+		      (lambda () ,(car rhs*))
+		    (lambda ,x*
+		      ,(f (cdr lhs*) (cdr rhs*))))))
+	      ((x* ... . x)
+	       (begin
+		 (check (cons x x*))
+		 `(call-with-values
+		      (lambda () ,(car rhs*))
+		    (lambda ,(append x* x)
+		      ,(f (cdr lhs*) (cdr rhs*))))))
+	      (others
+	       (syntax-violation #f "malformed bindings"
+				 stx others)))))))))))
+
+
+;;;; module macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
+
+(define trace-lambda-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ who (fmls ...) b b* ...)
+       (if (valid-bound-ids? fmls)
+	   (bless `(make-traced-procedure ',who
+					  (lambda ,fmls ,b . ,b*)))
+	 (invalid-fmls-error stx fmls)))
+      ((_  who (fmls ... . last) b b* ...)
+       (if (valid-bound-ids? (cons last fmls))
+	   (bless `(make-traced-procedure ',who
+					  (lambda (,@fmls . ,last) ,b . ,b*)))
+	 (invalid-fmls-error stx (append fmls last)))))))
+
+(define trace-define-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ (who fmls ...) b b* ...)
+       (if (valid-bound-ids? fmls)
+	   (bless `(define ,who
+		     (make-traced-procedure ',who
+					    (lambda ,fmls ,b . ,b*))))
+	 (invalid-fmls-error stx fmls)))
+      ((_ (who fmls ... . last) b b* ...)
+       (if (valid-bound-ids? (cons last fmls))
+	   (bless `(define ,who
+		     (make-traced-procedure ',who
+					    (lambda (,@fmls . ,last) ,b . ,b*))))
+	 (invalid-fmls-error stx (append fmls last))))
+      ((_ who expr)
+       (if (id? who)
+	   (bless `(define ,who
+		     (let ((v ,expr))
+		       (if (procedure? v)
+			   (make-traced-procedure ',who v)
+			 v))))
+	 (stx-error stx "invalid name"))))))
+
+(define trace-define-syntax-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ who expr)
+       (if (id? who)
+	   (bless
+	    `(define-syntax ,who
+	       (make-traced-macro ',who ,expr)))
+	 (stx-error stx "invalid name"))))))
+
+
+;;;; module macro-transformer: TRACE-LET, TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
+
+(define trace-let/rec-syntax
+  (lambda (who)
+    (lambda (stx)
+      (syntax-match stx ()
+	((_ ((lhs* rhs*) ...) b b* ...)
+	 (if (valid-bound-ids? lhs*)
+	     (let ((rhs* (map (lambda (lhs rhs)
+				`(make-traced-macro ',lhs ,rhs))
+			   lhs* rhs*)))
+	       (bless `(,who ,(map list lhs* rhs*) ,b . ,b*)))
+	   (invalid-fmls-error stx lhs*)))))))
+
+(define trace-let-syntax-macro
+  (trace-let/rec-syntax 'let-syntax))
+
+(define trace-letrec-syntax-macro
+  (trace-let/rec-syntax 'letrec-syntax))
+
+
+;;;; module macro-transformer: GUARD
+
+(define guard-macro
+  (lambda (x)
+    (define (gen-clauses raised-obj con outerk clause*)
+      (define (f x k)
+	(syntax-match x (=>)
+	  ((e => p)
+	   (let ((t (gensym)))
+	     `(let ((,t ,e))
+		(if ,t (,p ,t) ,k))))
+	  ((e)
+	   (let ((t (gensym)))
+	     `(let ((,t ,e))
+		(if ,t ,t ,k))))
+	  ((e v v* ...)
+	   `(if ,e (begin ,v ,@v*) ,k))
+	  (_ (stx-error x "invalid guard clause"))))
+      (define (f* x*)
+	(syntax-match x* (else)
+	  (()
+	   (let ((g (gensym)))
+	     (values `(,g (lambda () (raise-continuable ,raised-obj))) g)))
+	  (((else e e* ...))
+	   (values `(begin ,e ,@e*) #f))
+	  ((cls . cls*)
+	   (let-values (((e g) (f* cls*)))
+	     (values (f cls e) g)))
+	  (others (stx-error others "invalid guard clause"))))
+      (let-values (((code raisek) (f* clause*)))
+	(if raisek
+	    `((call/cc
+                  (lambda (,raisek)
+                    (,outerk
+		     (lambda () ,code)))))
+	  `(,outerk (lambda () ,code)))))
+    (syntax-match x ()
+      ((_ (con clause* ...) b b* ...)
+       (id? con)
+       (let ((outerk     (gensym))
+	     (raised-obj (gensym)))
+	 (bless
+	  `((call/cc
+		(lambda (,outerk)
+		  (lambda ()
+		    (with-exception-handler
+			(lambda (,raised-obj)
+			  (let ((,con ,raised-obj))
+			    ,(gen-clauses raised-obj con outerk clause*)))
+		      (lambda () ,b ,@b*))))))))))))
+
+
+;;;; module macro-transformer: DEFINE-ENUMERATION
+
+(define (define-enumeration-macro stx)
+  (define who 'define-enumeration)
+  (define (set? x)
+    (or (null? x)
+	(and (not (memq (car x) (cdr x)))
+	     (set? (cdr x)))))
+  (define (remove-dups ls)
+    (if (null? ls)
+	'()
+      (cons (car ls)
+	    (remove-dups (remq (car ls) (cdr ls))))))
+  (syntax-match stx ()
+    ((_ name (id* ...) maker)
+     (begin
+       (unless (id? name)
+	 (syntax-violation who
+	   "expected identifier as enumeration type name" stx name))
+       (unless (for-all id? id*)
+	 (syntax-violation who
+	   "expected list of symbols as enumeration elements" stx id*))
+       (unless (id? maker)
+	 (syntax-violation who
+	   "expected identifier as enumeration constructor syntax name" stx maker))
+       (let ((name*		(remove-dups (syntax->datum id*)))
+	     (the-constructor	(gensym)))
+	 (bless
+	  `(begin
+	     (define ,the-constructor
+	       (enum-set-constructor (make-enumeration ',name*)))
+
+	     (define-syntax ,name
+	       ;;Check at macro-expansion time whether the symbol ?ARG
+	       ;;is in  the universe associated with NAME.   If it is,
+	       ;;the result  of the  expansion is equivalent  to ?ARG.
+	       ;;It is a syntax violation if it is not.
+	       ;;
+	       (lambda (x)
+		 (define universe-of-symbols ',name*)
+		 (define (%synner message subform)
+		   (syntax-violation ',name message
+				     (syntax->datum x) (syntax->datum subform)))
+		 (syntax-case x ()
+		   ((_ ?arg)
+		    (not (identifier? (syntax ?arg)))
+		    (%synner "expected symbol as argument to enumeration validator"
+			     (syntax ?arg)))
+
+		   ((_ ?arg)
+		    (not (memq (syntax->datum (syntax ?arg)) universe-of-symbols))
+		    (%synner "expected symbol in enumeration as argument to enumeration validator"
+			     (syntax ?arg)))
+
+		   ((_ ?arg)
+		    (syntax (quote ?arg)))
+
+		   (_
+		    (%synner "invalid enumeration validator form" #f)))))
+
+	     (define-syntax ,maker
+	       ;;Given  any  finite sequence  of  the  symbols in  the
+	       ;;universe, possibly  with duplicates, expands  into an
+	       ;;expression that  evaluates to the  enumeration set of
+	       ;;those symbols.
+	       ;;
+	       ;;Check  at macro-expansion  time  whether every  input
+	       ;;symbol is in the universe associated with NAME; it is
+	       ;;a syntax violation if one or more is not.
+	       ;;
+	       (lambda (x)
+		 (define universe-of-symbols ',name*)
+		 (define (%synner message subform-stx)
+		   (syntax-violation ',maker message
+				     (syntax->datum x) (syntax->datum subform-stx)))
+		 (syntax-case x ()
+		   ((_ . ?list-of-symbols)
+		    ;;Check the input  symbols one by one partitioning
+		    ;;the ones in the universe from the one not in the
+		    ;;universe.
+		    ;;
+		    ;;If  an input element  is not  a symbol:  raise a
+		    ;;syntax violation.
+		    ;;
+		    ;;After   all   the   input  symbols   have   been
+		    ;;partitioned,  if the  list of  collected INvalid
+		    ;;ones is not null:  raise a syntax violation with
+		    ;;that list as  subform, else return syntax object
+		    ;;expression   building  a  new   enumeration  set
+		    ;;holding the list of valid symbols.
+		    ;;
+		    (let loop ((valid-symbols-stx	'())
+			       (invalid-symbols-stx	'())
+			       (input-symbols-stx	(syntax ?list-of-symbols)))
+		      (syntax-case input-symbols-stx ()
+
+			;;No more symbols to collect and non-null list
+			;;of collected INvalid symbols.
+			(()
+			 (not (null? invalid-symbols-stx))
+			 (%synner "expected symbols in enumeration as arguments \
+                                     to enumeration constructor syntax"
+				  (reverse invalid-symbols-stx)))
+
+			;;No more symbols to  collect and null list of
+			;;collected INvalid symbols.
+			(()
+			 (quasisyntax (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
+
+			;;Error if element is not a symbol.
+			((?symbol0 . ?rest)
+			 (not (identifier? (syntax ?symbol0)))
+			 (%synner "expected symbols as arguments to enumeration constructor syntax"
+				  (syntax ?symbol0)))
+
+			;;Collect a symbol in the set.
+			((?symbol0 . ?rest)
+			 (memq (syntax->datum (syntax ?symbol0)) universe-of-symbols)
+			 (loop (cons (syntax ?symbol0) valid-symbols-stx)
+			       invalid-symbols-stx (syntax ?rest)))
+
+			;;Collect a symbol not in the set.
+			((?symbol0 . ?rest)
+			 (loop valid-symbols-stx
+			       (cons (syntax ?symbol0) invalid-symbols-stx)
+			       (syntax ?rest)))
+
+			))))))
+	     )))))
+    ))
+
+
+;;;; module macro-transformer: DO
+
+(define do-macro
+  (lambda (stx)
+    (define bind
+      (lambda (x)
+	(syntax-match x ()
+	  ((x init)      `(,x ,init ,x))
+	  ((x init step) `(,x ,init ,step))
+	  (_  (stx-error stx "invalid binding")))))
+    (syntax-match stx ()
+      ((_ (binding* ...)
+	  (test expr* ...)
+	  command* ...)
+       (syntax-match (map bind binding*) ()
+	 (((x* init* step*) ...)
+	  (if (valid-bound-ids? x*)
+	      (bless
+	       `(letrec ((loop
+			  (lambda ,x*
+			    (if ,test
+				(begin (if #f #f) ,@expr*)
+			      (begin
+				,@command*
+				(loop ,@step*))))))
+		  (loop ,@init*)))
+	    (stx-error stx "invalid bindings"))))))))
+
+
+;;;; module macro-transformer: OR, AND
+
+(define or-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_) #f)
+      ((_ e e* ...)
+       (bless
+	(let f ((e e) (e* e*))
+	  (cond
+	   ((null? e*) `(begin #f ,e))
+	   (else
+	    `(let ((t ,e))
+	       (if t t ,(f (car e*) (cdr e*))))))))))))
+
+(define and-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_) #t)
+      ((_ e e* ...)
+       (bless
+	(let f ((e e) (e* e*))
+	  (cond
+	   ((null? e*) `(begin #f ,e))
+	   (else `(if ,e ,(f (car e*) (cdr e*)) #f)))))))))
+
+
+;;;; module macro-transformer: COND
+
+(define cond-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ cls cls* ...)
+       (bless
+	(let f ((cls cls) (cls* cls*))
+	  (cond
+	   ((null? cls*)
+	    (syntax-match cls (else =>)
+	      ((else e e* ...) `(let () #f ,e . ,e*))
+	      ((e => p) `(let ((t ,e)) (if t (,p t))))
+	      ((e) `(or ,e (if #f #f)))
+	      ((e e* ...) `(if ,e (begin . ,e*)))
+	      (_ (stx-error stx "invalid last clause"))))
+	   (else
+	    (syntax-match cls (else =>)
+	      ((else e e* ...) (stx-error stx "incorrect position of keyword else"))
+	      ((e => p) `(let ((t ,e)) (if t (,p t) ,(f (car cls*) (cdr cls*)))))
+	      ((e) `(or ,e ,(f (car cls*) (cdr cls*))))
+	      ((e e* ...) `(if ,e (begin . ,e*) ,(f (car cls*) (cdr cls*))))
+	      (_ (stx-error stx "invalid last clause")))))))))))
+
+
+;;;; module macro-transformer: QUASIQUOTE
+
+(define quasiquote-macro
+  (let ()
+    (define (datum x)
+      (list (scheme-stx 'quote) (mkstx x top-mark* '() '())))
+    (define-syntax app
+      (syntax-rules (quote)
+	((_ 'x arg* ...)
+	 (list (scheme-stx 'x) arg* ...))))
+    (define-syntax app*
+      (syntax-rules (quote)
+	((_ 'x arg* ... last)
+	 (cons* (scheme-stx 'x) arg* ... last))))
+    (define quasicons*
+      (lambda (x y)
+	(let f ((x x))
+	  (if (null? x) y (quasicons (car x) (f (cdr x)))))))
+    (define quasicons
+      (lambda (x y)
+	(syntax-match y (quote list)
+	  ((quote dy)
+	   (syntax-match x (quote)
+	     ((quote dx) (app 'quote (cons dx dy)))
+	     (_
+	      (syntax-match dy ()
+		(() (app 'list x))
+		(_  (app 'cons x y))))))
+	  ((list stuff ...)
+	   (app* 'list x stuff))
+	  (_ (app 'cons x y)))))
+    (define quasiappend
+      (lambda (x y)
+	(let ((ls (let f ((x x))
+		    (if (null? x)
+			(syntax-match y (quote)
+			  ((quote ()) '())
+			  (_ (list y)))
+		      (syntax-match (car x) (quote)
+			((quote ()) (f (cdr x)))
+			(_ (cons (car x) (f (cdr x)))))))))
+	  (cond
+	   ((null? ls) (app 'quote '()))
+	   ((null? (cdr ls)) (car ls))
+	   (else (app* 'append ls))))))
+    (define quasivector
+      (lambda (x)
+	(let ((pat-x x))
+	  (syntax-match pat-x (quote)
+	    ((quote (x* ...)) (app 'quote (list->vector x*)))
+	    (_ (let f ((x x) (k (lambda (ls) (app* 'vector ls))))
+		 (syntax-match x (quote list cons)
+		   ((quote (x* ...))
+		    (k (map (lambda (x) (app 'quote x)) x*)))
+		   ((list x* ...)
+		    (k x*))
+		   ((cons x y)
+		    (f y (lambda (ls) (k (cons x ls)))))
+		   (_ (app 'list->vector pat-x)))))))))
+    (define vquasi
+      (lambda (p lev)
+	(syntax-match p ()
+	  ((p . q)
+	   (syntax-match p (unquote unquote-splicing)
+	     ((unquote p ...)
+	      (if (= lev 0)
+		  (quasicons* p (vquasi q lev))
+		(quasicons
+		 (quasicons (datum 'unquote)
+			    (quasi p (- lev 1)))
+		 (vquasi q lev))))
+	     ((unquote-splicing p ...)
+	      (if (= lev 0)
+		  (quasiappend p (vquasi q lev))
+		(quasicons
+		 (quasicons
+		  (datum 'unquote-splicing)
+		  (quasi p (- lev 1)))
+		 (vquasi q lev))))
+	     (p (quasicons (quasi p lev) (vquasi q lev)))))
+	  (() (app 'quote '())))))
+    (define quasi
+      (lambda (p lev)
+	(syntax-match p (unquote unquote-splicing quasiquote)
+	  ((unquote p)
+	   (if (= lev 0)
+	       p
+	     (quasicons (datum 'unquote) (quasi (list p) (- lev 1)))))
+	  (((unquote p ...) . q)
+	   (if (= lev 0)
+	       (quasicons* p (quasi q lev))
+	     (quasicons
+	      (quasicons (datum 'unquote)
+			 (quasi p (- lev 1)))
+	      (quasi q lev))))
+	  (((unquote-splicing p ...) . q)
+	   (if (= lev 0)
+	       (quasiappend p (quasi q lev))
+	     (quasicons
+	      (quasicons (datum 'unquote-splicing)
+			 (quasi p (- lev 1)))
+	      (quasi q lev))))
+	  ((quasiquote p)
+	   (quasicons (datum 'quasiquote)
+		      (quasi (list p) (+ lev 1))))
+	  ((p . q) (quasicons (quasi p lev) (quasi q lev)))
+	  (#(x ...) (not (<stx>? x)) (quasivector (vquasi x lev)))
+	  (p (app 'quote p)))))
+    (lambda (x)
+      (syntax-match x ()
+	((_ e) (quasi e 0))))))
+
+
+;;;; module macro-transformer: QUASISYNTAX
+
+(define quasisyntax-macro
+  (let () ;;; FIXME: not really correct
+    (define quasi
+      (lambda (p lev)
+	(syntax-match p (unsyntax unsyntax-splicing quasisyntax)
+	  ((unsyntax p)
+	   (if (= lev 0)
+	       (let ((g (gensym)))
+		 (values (list g) (list p) g))
+	     (let-values (((lhs* rhs* p) (quasi p (- lev 1))))
+	       (values lhs* rhs* (list 'unsyntax p)))))
+	  (unsyntax (= lev 0)
+		    (stx-error p "incorrect use of unsyntax"))
+	  (((unsyntax p* ...) . q)
+	   (let-values (((lhs* rhs* q) (quasi q lev)))
+	     (if (= lev 0)
+		 (let ((g* (map (lambda (x) (gensym)) p*)))
+		   (values
+		    (append g* lhs*)
+		    (append p* rhs*)
+		    (append g* q)))
+	       (let-values (((lhs2* rhs2* p*) (quasi p* (- lev 1))))
+		 (values
+		  (append lhs2* lhs*)
+		  (append rhs2* rhs*)
+		  `((unsyntax . ,p*) . ,q))))))
+	  (((unsyntax-splicing p* ...) . q)
+	   (let-values (((lhs* rhs* q) (quasi q lev)))
+	     (if (= lev 0)
+		 (let ((g* (map (lambda (x) (gensym)) p*)))
+		   (values
+		    (append
+		     (map (lambda (g) `(,g ...)) g*)
+		     lhs*)
+		    (append p* rhs*)
+		    (append
+		     (apply append
+			    (map (lambda (g) `(,g ...)) g*))
+		     q)))
+	       (let-values (((lhs2* rhs2* p*) (quasi p* (- lev 1))))
+		 (values
+		  (append lhs2* lhs*)
+		  (append rhs2* rhs*)
+		  `((unsyntax-splicing . ,p*) . ,q))))))
+	  (unsyntax-splicing (= lev 0)
+			     (stx-error p "incorrect use of unsyntax-splicing"))
+	  ((quasisyntax p)
+	   (let-values (((lhs* rhs* p) (quasi p (+ lev 1))))
+	     (values lhs* rhs* `(quasisyntax ,p))))
+	  ((p . q)
+	   (let-values (((lhs* rhs* p) (quasi p lev))
+			((lhs2* rhs2* q) (quasi q lev)))
+	     (values (append lhs2* lhs*)
+		     (append rhs2* rhs*)
+		     (cons p q))))
+	  (#(x* ...)
+	   (let-values (((lhs* rhs* x*) (quasi x* lev)))
+	     (values lhs* rhs* (list->vector x*))))
+	  (_ (values '() '() p)))))
+    (lambda (x)
+      (syntax-match x ()
+	((_ e)
+	 (let-values (((lhs* rhs* v) (quasi e 0)))
+	   (bless
+	    `(syntax-case (list ,@rhs*) ()
+	       (,lhs* (syntax ,v))))))))))
+
+
+;;;; module macro-transformer: miscellanea
+
+(define time-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ expr)
+       (let ((str
+	      (let-values (((p e) (open-string-output-port)))
+		(write (syntax->datum expr) p)
+		(e))))
+	 (bless `(time-it ,str (lambda () ,expr))))))))
+
+(define delay-macro
+  (lambda (stx)
+    (syntax-match stx ()
+      ((_ expr)
+       (bless `(make-promise (lambda () ,expr)))))))
+
+(define (assert-macro stx)
+  ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
+  ;;If  EXPR returns a  true value,  that value  is returned  from the
+  ;;ASSERT  expression.   If EXPR  returns  false,  an exception  with
+  ;;condition  types  "&assertion"  and  "&message"  is  raised.   The
+  ;;message  provided  in   the  condition  object  is  implementation
+  ;;dependent.
+  ;;
+  ;;NOTE  Implementations should  exploit the  fact that  ASSERT  is a
+  ;;syntax  to  provide as  much  information  as  possible about  the
+  ;;location of the assertion failure.
+  ;;
+  (syntax-match stx ()
+    ((_ expr)
+     (let ((pos (or (expression-position stx)
+		    (expression-position expr))))
+       (bless
+	(if (source-position-condition? pos)
+	    `(or ,expr
+		 (assertion-error
+		  ',expr ,(source-position-port-id pos)
+		  ,(source-position-byte pos) ,(source-position-character pos)
+		  ,(source-position-line pos) ,(source-position-column    pos)))
+	  `(or ,expr
+	       (assertion-error ',expr "unknown source" #f #f #f #f))))))))
+
+(define (endianness-macro expr-stx)
+  ;;Transformer for the ENDIANNESS macro.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?sym)
+     (case (syntax->datum ?sym)
+       ((little big)
+	(bless `(quote ,?sym)))
+       (else
+	(stx-error expr-stx "endianness must be big or little"))))))
+
+(define (file-options-macro expr-stx)
+  ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
+  ;;implemented   as   an   enumeration  type   whose   constructor   is
+  ;;MAKE-FILE-OPTIONS from the boot environment.
+  ;;
+  (define (valid-option? opt-stx)
+    (and (id? opt-stx)
+	 (memq (identifier->symbol opt-stx) '(no-fail no-create no-truncate))))
+  (syntax-match expr-stx ()
+    ((_ ?opt* ...)
+     (for-all valid-option? ?opt*)
+     (bless `(make-file-options ',?opt*)))))
+
+(define (%allowed-symbol-macro expr-stx allowed-symbol-set)
+  ;;Helper  function used  to  implement the  transformer of:  EOL-STYLE
+  ;;ERROR-HANDLING-MODE, BUFFER-MODE.  All of these macros should expand
+  ;;to a quoted symbol among a list of allowed ones.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?name)
+     (and (id? ?name)
+	  (memq (identifier->symbol ?name) allowed-symbol-set))
+     (bless `(quote ,?name)))))
+
+
+;;; end of module: MACRO-TRANSFORMER
+
+)
+
+
+
 
 (module (letrec-transformer letrec*-transformer)
 
@@ -1907,16 +3291,6 @@
 
   #| end of module |# )
 
-(define (when-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?test ?expr ?expr* ...)
-     (bless `(if ,?test (begin ,?expr . ,?expr*))))))
-
-(define (unless-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?test ?expr ?expr* ...)
-     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
-
 (define (if-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  R6RS's IF  syntaxes from  the
   ;;top-level built in environment.  Expand  the contents of EXPR-STX in
@@ -1971,40 +3345,6 @@
 			    (cons ?body ?body*) lexenv.run lexenv.expand)
        (build-lambda (syntax-annotation expr-stx) formals body)))))
 
-(module (case-macro)
-  ;;Transformer function  used to expand  R6RS's CASE syntaxes  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a symbolic expression in the core language.
-  ;;
-  (define (case-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ?expr)
-       (bless `(let ((t ,?expr))
-		 (if #f #f))))
-      ((_ ?expr ?clause ?clause* ...)
-       (bless
-	`(let ((t ,?expr))
-	   ,(let recur ((clause  ?clause)
-			(clause* ?clause*))
-	      (if (null? clause*)
-		  (%build-last clause)
-		(%build-one clause (recur (car clause*) (cdr clause*))))))))))
-
-  (define (%build-one clause-stx k)
-    (syntax-match clause-stx ()
-      (((?datum* ...) ?expr ?expr* ...)
-       `(if (memv t ',?datum*)
-	    (begin ,?expr . ,?expr*) ,k))))
-
-  (define (%build-last clause)
-    (syntax-match clause (else)
-      ((else ?expr ?expr* ...)
-       `(let () #f ,?expr . ,?expr*))
-      (_
-       (%build-one clause '(if #f #f)))))
-
-  #| end of module: CASE-MACRO |# )
-
 
 (define bless
   (lambda (x)
@@ -2018,32 +3358,6 @@
 	 (list->vector (map f (vector->list x))))
 	(else x)))
      '() '() '())))
-
-(define with-syntax-macro
-  (lambda (e)
-    (syntax-match e ()
-      ((_ ((pat* expr*) ...) b b* ...)
-       (let ((idn*
-	      (let f ((pat* pat*))
-		(cond
-		 ((null? pat*) '())
-		 (else
-		  (let-values (((pat idn*) (convert-pattern (car pat*) '())))
-		    (append idn* (f (cdr pat*)))))))))
-	 (verify-formals (map car idn*) e)
-	 (let ((t* (generate-temporaries expr*)))
-	   (bless
-	    `(let ,(map list t* expr*)
-	       ,(let f ((pat* pat*) (t* t*))
-		  (cond
-		   ((null? pat*) `(let () ,b . ,b*))
-		   (else
-		    `(syntax-case ,(car t*) ()
-		       (,(car pat*) ,(f (cdr pat*) (cdr t*)))
-		       (_ (assertion-violation 'with-syntax
-			    "pattern does not match value"
-			    ',(car pat*)
-			    ,(car t*)))))))))))))))
 
 (define (invalid-fmls-error stx fmls)
   (syntax-match fmls ()
@@ -2063,1143 +3377,7 @@
 	   (syntax-violation #f "duplicate binding" stx (car id*)))))))
     (_ (syntax-violation #f "malformed binding form" stx fmls))))
 
-(define let-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ ((lhs* rhs*) ...) b b* ...)
-       (if (valid-bound-ids? lhs*)
-	   (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
-	 (invalid-fmls-error stx lhs*)))
-      ((_ f ((lhs* rhs*) ...) b b* ...) (id? f)
-       (if (valid-bound-ids? lhs*)
-	   (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (invalid-fmls-error stx lhs*))))))
-
-(define trace-let-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ f ((lhs* rhs*) ...) b b* ...) (id? f)
-       (if (valid-bound-ids? lhs*)
-	   (bless
-	    `((letrec ((,f (trace-lambda ,f ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (invalid-fmls-error stx lhs*))))))
-
-(define let-values-macro
-  (lambda (stx)
-    (define (rename x old* new*)
-      (unless (id? x)
-	(syntax-violation #f "not an indentifier" stx x))
-      (when (bound-id-member? x old*)
-	(syntax-violation #f "duplicate binding" stx x))
-      (let ((y (gensym (syntax->datum x))))
-	(values y (cons x old*) (cons y new*))))
-    (define (rename* x* old* new*)
-      (cond
-       ((null? x*) (values '() old* new*))
-       (else
-	(let*-values (((x old* new*) (rename (car x*) old* new*))
-		      ((x* old* new*) (rename* (cdr x*) old* new*)))
-	  (values (cons x x*) old* new*)))))
-    (syntax-match stx ()
-      ((_ () b b* ...)
-       (cons* (bless 'let) '() b b*))
-      ((_ ((lhs* rhs*) ...) b b* ...)
-       (bless
-	(let f ((lhs* lhs*) (rhs* rhs*) (old* '()) (new* '()))
-	  (cond
-	   ((null? lhs*)
-	    `(let ,(map list old* new*) ,b . ,b*))
-	   (else
-	    (syntax-match (car lhs*) ()
-	      ((x* ...)
-	       (let-values (((y* old* new*) (rename* x* old* new*)))
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,y*
-		      ,(f (cdr lhs*) (cdr rhs*) old* new*)))))
-	      ((x* ... . x)
-	       (let*-values (((y old* new*) (rename x old* new*))
-			     ((y* old* new*) (rename* x* old* new*)))
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,(append y* y)
-		      ,(f (cdr lhs*) (cdr rhs*)
-			  old* new*)))))
-	      (others
-	       (syntax-violation #f "malformed bindings"
-				 stx others)))))))))))
-
-(define let*-values-macro
-  (lambda (stx)
-    (define (check x*)
-      (unless (null? x*)
-	(let ((x (car x*)))
-	  (unless (id? x)
-	    (syntax-violation #f "not an identifier" stx x))
-	  (check (cdr x*))
-	  (when (bound-id-member? x (cdr x*))
-	    (syntax-violation #f "duplicate identifier" stx x)))))
-    (syntax-match stx ()
-      ((_ () b b* ...)
-       (cons* (bless 'let) '() b b*))
-      ((_ ((lhs* rhs*) ...) b b* ...)
-       (bless
-	(let f ((lhs* lhs*) (rhs* rhs*))
-	  (cond
-	   ((null? lhs*)
-	    `(begin ,b . ,b*))
-	   (else
-	    (syntax-match (car lhs*) ()
-	      ((x* ...)
-	       (begin
-		 (check x*)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,x*
-		      ,(f (cdr lhs*) (cdr rhs*))))))
-	      ((x* ... . x)
-	       (begin
-		 (check (cons x x*))
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,(append x* x)
-		      ,(f (cdr lhs*) (cdr rhs*))))))
-	      (others
-	       (syntax-violation #f "malformed bindings"
-				 stx others)))))))))))
-
-(define trace-lambda-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ who (fmls ...) b b* ...)
-       (if (valid-bound-ids? fmls)
-	   (bless `(make-traced-procedure ',who
-					  (lambda ,fmls ,b . ,b*)))
-	 (invalid-fmls-error stx fmls)))
-      ((_  who (fmls ... . last) b b* ...)
-       (if (valid-bound-ids? (cons last fmls))
-	   (bless `(make-traced-procedure ',who
-					  (lambda (,@fmls . ,last) ,b . ,b*)))
-	 (invalid-fmls-error stx (append fmls last)))))))
-
-(define trace-define-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ (who fmls ...) b b* ...)
-       (if (valid-bound-ids? fmls)
-	   (bless `(define ,who
-		     (make-traced-procedure ',who
-					    (lambda ,fmls ,b . ,b*))))
-	 (invalid-fmls-error stx fmls)))
-      ((_ (who fmls ... . last) b b* ...)
-       (if (valid-bound-ids? (cons last fmls))
-	   (bless `(define ,who
-		     (make-traced-procedure ',who
-					    (lambda (,@fmls . ,last) ,b . ,b*))))
-	 (invalid-fmls-error stx (append fmls last))))
-      ((_ who expr)
-       (if (id? who)
-	   (bless `(define ,who
-		     (let ((v ,expr))
-		       (if (procedure? v)
-			   (make-traced-procedure ',who v)
-			 v))))
-	 (stx-error stx "invalid name"))))))
-
-(define trace-define-syntax-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ who expr)
-       (if (id? who)
-	   (bless
-	    `(define-syntax ,who
-	       (make-traced-macro ',who ,expr)))
-	 (stx-error stx "invalid name"))))))
-
-(define trace-let/rec-syntax
-  (lambda (who)
-    (lambda (stx)
-      (syntax-match stx ()
-	((_ ((lhs* rhs*) ...) b b* ...)
-	 (if (valid-bound-ids? lhs*)
-	     (let ((rhs* (map (lambda (lhs rhs)
-				`(make-traced-macro ',lhs ,rhs))
-			   lhs* rhs*)))
-	       (bless `(,who ,(map list lhs* rhs*) ,b . ,b*)))
-	   (invalid-fmls-error stx lhs*)))))))
-
-(define trace-let-syntax-macro
-  (trace-let/rec-syntax 'let-syntax))
-
-(define trace-letrec-syntax-macro
-  (trace-let/rec-syntax 'letrec-syntax))
-
-(define guard-macro
-  (lambda (x)
-    (define (gen-clauses raised-obj con outerk clause*)
-      (define (f x k)
-	(syntax-match x (=>)
-	  ((e => p)
-	   (let ((t (gensym)))
-	     `(let ((,t ,e))
-		(if ,t (,p ,t) ,k))))
-	  ((e)
-	   (let ((t (gensym)))
-	     `(let ((,t ,e))
-		(if ,t ,t ,k))))
-	  ((e v v* ...)
-	   `(if ,e (begin ,v ,@v*) ,k))
-	  (_ (stx-error x "invalid guard clause"))))
-      (define (f* x*)
-	(syntax-match x* (else)
-	  (()
-	   (let ((g (gensym)))
-	     (values `(,g (lambda () (raise-continuable ,raised-obj))) g)))
-	  (((else e e* ...))
-	   (values `(begin ,e ,@e*) #f))
-	  ((cls . cls*)
-	   (let-values (((e g) (f* cls*)))
-	     (values (f cls e) g)))
-	  (others (stx-error others "invalid guard clause"))))
-      (let-values (((code raisek) (f* clause*)))
-	(if raisek
-	    `((call/cc
-                  (lambda (,raisek)
-                    (,outerk
-		     (lambda () ,code)))))
-	  `(,outerk (lambda () ,code)))))
-    (syntax-match x ()
-      ((_ (con clause* ...) b b* ...)
-       (id? con)
-       (let ((outerk     (gensym))
-	     (raised-obj (gensym)))
-	 (bless
-	  `((call/cc
-		(lambda (,outerk)
-		  (lambda ()
-		    (with-exception-handler
-			(lambda (,raised-obj)
-			  (let ((,con ,raised-obj))
-			    ,(gen-clauses raised-obj con outerk clause*)))
-		      (lambda () ,b ,@b*))))))))))))
-
 
-(define (define-enumeration-macro stx)
-  (define who 'define-enumeration)
-  (define (set? x)
-    (or (null? x)
-	(and (not (memq (car x) (cdr x)))
-	     (set? (cdr x)))))
-  (define (remove-dups ls)
-    (if (null? ls)
-	'()
-      (cons (car ls)
-	    (remove-dups (remq (car ls) (cdr ls))))))
-  (syntax-match stx ()
-    ((_ name (id* ...) maker)
-     (begin
-       (unless (id? name)
-	 (syntax-violation who
-	   "expected identifier as enumeration type name" stx name))
-       (unless (for-all id? id*)
-	 (syntax-violation who
-	   "expected list of symbols as enumeration elements" stx id*))
-       (unless (id? maker)
-	 (syntax-violation who
-	   "expected identifier as enumeration constructor syntax name" stx maker))
-       (let ((name*		(remove-dups (syntax->datum id*)))
-	     (the-constructor	(gensym)))
-	 (bless
-	  `(begin
-	     (define ,the-constructor
-	       (enum-set-constructor (make-enumeration ',name*)))
-
-	     (define-syntax ,name
-	       ;;Check at macro-expansion time whether the symbol ?ARG
-	       ;;is in  the universe associated with NAME.   If it is,
-	       ;;the result  of the  expansion is equivalent  to ?ARG.
-	       ;;It is a syntax violation if it is not.
-	       ;;
-	       (lambda (x)
-		 (define universe-of-symbols ',name*)
-		 (define (%synner message subform)
-		   (syntax-violation ',name message
-				     (syntax->datum x) (syntax->datum subform)))
-		 (syntax-case x ()
-		   ((_ ?arg)
-		    (not (identifier? (syntax ?arg)))
-		    (%synner "expected symbol as argument to enumeration validator"
-			     (syntax ?arg)))
-
-		   ((_ ?arg)
-		    (not (memq (syntax->datum (syntax ?arg)) universe-of-symbols))
-		    (%synner "expected symbol in enumeration as argument to enumeration validator"
-			     (syntax ?arg)))
-
-		   ((_ ?arg)
-		    (syntax (quote ?arg)))
-
-		   (_
-		    (%synner "invalid enumeration validator form" #f)))))
-
-	     (define-syntax ,maker
-	       ;;Given  any  finite sequence  of  the  symbols in  the
-	       ;;universe, possibly  with duplicates, expands  into an
-	       ;;expression that  evaluates to the  enumeration set of
-	       ;;those symbols.
-	       ;;
-	       ;;Check  at macro-expansion  time  whether every  input
-	       ;;symbol is in the universe associated with NAME; it is
-	       ;;a syntax violation if one or more is not.
-	       ;;
-	       (lambda (x)
-		 (define universe-of-symbols ',name*)
-		 (define (%synner message subform-stx)
-		   (syntax-violation ',maker message
-				     (syntax->datum x) (syntax->datum subform-stx)))
-		 (syntax-case x ()
-		   ((_ . ?list-of-symbols)
-		    ;;Check the input  symbols one by one partitioning
-		    ;;the ones in the universe from the one not in the
-		    ;;universe.
-		    ;;
-		    ;;If  an input element  is not  a symbol:  raise a
-		    ;;syntax violation.
-		    ;;
-		    ;;After   all   the   input  symbols   have   been
-		    ;;partitioned,  if the  list of  collected INvalid
-		    ;;ones is not null:  raise a syntax violation with
-		    ;;that list as  subform, else return syntax object
-		    ;;expression   building  a  new   enumeration  set
-		    ;;holding the list of valid symbols.
-		    ;;
-		    (let loop ((valid-symbols-stx	'())
-			       (invalid-symbols-stx	'())
-			       (input-symbols-stx	(syntax ?list-of-symbols)))
-		      (syntax-case input-symbols-stx ()
-
-			;;No more symbols to collect and non-null list
-			;;of collected INvalid symbols.
-			(()
-			 (not (null? invalid-symbols-stx))
-			 (%synner "expected symbols in enumeration as arguments \
-                                     to enumeration constructor syntax"
-				  (reverse invalid-symbols-stx)))
-
-			;;No more symbols to  collect and null list of
-			;;collected INvalid symbols.
-			(()
-			 (quasisyntax (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
-
-			;;Error if element is not a symbol.
-			((?symbol0 . ?rest)
-			 (not (identifier? (syntax ?symbol0)))
-			 (%synner "expected symbols as arguments to enumeration constructor syntax"
-				  (syntax ?symbol0)))
-
-			;;Collect a symbol in the set.
-			((?symbol0 . ?rest)
-			 (memq (syntax->datum (syntax ?symbol0)) universe-of-symbols)
-			 (loop (cons (syntax ?symbol0) valid-symbols-stx)
-			       invalid-symbols-stx (syntax ?rest)))
-
-			;;Collect a symbol not in the set.
-			((?symbol0 . ?rest)
-			 (loop valid-symbols-stx
-			       (cons (syntax ?symbol0) invalid-symbols-stx)
-			       (syntax ?rest)))
-
-			))))))
-	     )))))
-    ))
-
-
-(define time-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ expr)
-       (let ((str
-	      (let-values (((p e) (open-string-output-port)))
-		(write (syntax->datum expr) p)
-		(e))))
-	 (bless `(time-it ,str (lambda () ,expr))))))))
-
-(define delay-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ expr)
-       (bless `(make-promise (lambda () ,expr)))))))
-
-(define (assert-macro stx)
-  ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
-  ;;If  EXPR returns a  true value,  that value  is returned  from the
-  ;;ASSERT  expression.   If EXPR  returns  false,  an exception  with
-  ;;condition  types  "&assertion"  and  "&message"  is  raised.   The
-  ;;message  provided  in   the  condition  object  is  implementation
-  ;;dependent.
-  ;;
-  ;;NOTE  Implementations should  exploit the  fact that  ASSERT  is a
-  ;;syntax  to  provide as  much  information  as  possible about  the
-  ;;location of the assertion failure.
-  ;;
-  (syntax-match stx ()
-    ((_ expr)
-     (let ((pos (or (expression-position stx)
-		    (expression-position expr))))
-       (bless
-	(if (source-position-condition? pos)
-	    `(or ,expr
-		 (assertion-error
-		  ',expr ,(source-position-port-id pos)
-		  ,(source-position-byte pos) ,(source-position-character pos)
-		  ,(source-position-line pos) ,(source-position-column    pos)))
-	  `(or ,expr
-	       (assertion-error ',expr "unknown source" #f #f #f #f))))))))
-
-(define endianness-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ e)
-       (case (syntax->datum e)
-	 ((little) (bless `'little))
-	 ((big)    (bless `'big))
-	 (else (stx-error stx "endianness must be big or little")))))))
-
-(define identifier-syntax-macro
-  (lambda (stx)
-    (syntax-match stx (set!)
-      ((_ expr)
-       (bless `(lambda (x)
-		 (syntax-case x ()
-		   (id (identifier? (syntax id)) (syntax ,expr))
-		   ((id e* ...) (identifier? (syntax id))
-		    (cons (syntax ,expr) (syntax (e* ...))))))))
-      ((_ (id1 expr1) ((set! id2 expr2) expr3))
-       (and (id? id1) (id? id2) (id? expr2))
-       (bless `(cons 'macro!
-		     (lambda (x)
-		       (syntax-case x (set!)
-			 (id (identifier? (syntax id)) (syntax ,expr1))
-			 ((set! id ,expr2) (syntax ,expr3))
-			 ((id e* ...) (identifier? (syntax id)) (syntax (,expr1 e* ...)))))))))))
-
-(define do-macro
-  (lambda (stx)
-    (define bind
-      (lambda (x)
-	(syntax-match x ()
-	  ((x init)      `(,x ,init ,x))
-	  ((x init step) `(,x ,init ,step))
-	  (_  (stx-error stx "invalid binding")))))
-    (syntax-match stx ()
-      ((_ (binding* ...)
-	  (test expr* ...)
-	  command* ...)
-       (syntax-match (map bind binding*) ()
-	 (((x* init* step*) ...)
-	  (if (valid-bound-ids? x*)
-	      (bless
-	       `(letrec ((loop
-			  (lambda ,x*
-			    (if ,test
-				(begin (if #f #f) ,@expr*)
-			      (begin
-				,@command*
-				(loop ,@step*))))))
-		  (loop ,@init*)))
-	    (stx-error stx "invalid bindings"))))))))
-
-(define let*-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ ((lhs* rhs*) ...) b b* ...) (for-all id? lhs*)
-       (bless
-	(let f ((x* (map list lhs* rhs*)))
-	  (cond
-	   ((null? x*) `(let () ,b . ,b*))
-	   (else `(let (,(car x*)) ,(f (cdr x*)))))))))))
-
-(define or-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_) #f)
-      ((_ e e* ...)
-       (bless
-	(let f ((e e) (e* e*))
-	  (cond
-	   ((null? e*) `(begin #f ,e))
-	   (else
-	    `(let ((t ,e))
-	       (if t t ,(f (car e*) (cdr e*))))))))))))
-
-(define and-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_) #t)
-      ((_ e e* ...)
-       (bless
-	(let f ((e e) (e* e*))
-	  (cond
-	   ((null? e*) `(begin #f ,e))
-	   (else `(if ,e ,(f (car e*) (cdr e*)) #f)))))))))
-
-(define cond-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ cls cls* ...)
-       (bless
-	(let f ((cls cls) (cls* cls*))
-	  (cond
-	   ((null? cls*)
-	    (syntax-match cls (else =>)
-	      ((else e e* ...) `(let () #f ,e . ,e*))
-	      ((e => p) `(let ((t ,e)) (if t (,p t))))
-	      ((e) `(or ,e (if #f #f)))
-	      ((e e* ...) `(if ,e (begin . ,e*)))
-	      (_ (stx-error stx "invalid last clause"))))
-	   (else
-	    (syntax-match cls (else =>)
-	      ((else e e* ...) (stx-error stx "incorrect position of keyword else"))
-	      ((e => p) `(let ((t ,e)) (if t (,p t) ,(f (car cls*) (cdr cls*)))))
-	      ((e) `(or ,e ,(f (car cls*) (cdr cls*))))
-	      ((e e* ...) `(if ,e (begin . ,e*) ,(f (car cls*) (cdr cls*))))
-	      (_ (stx-error stx "invalid last clause")))))))))))
-
-(define syntax-rules-macro
-  (lambda (e)
-    (syntax-match e ()
-      ((_ (lits ...)
-	  (pat* tmp*) ...)
-       (begin
-	 (verify-literals lits e)
-	 (bless `(lambda (x)
-		   (syntax-case x ,lits
-		     ,@(map (lambda (pat tmp)
-			      (syntax-match pat ()
-				((_ . rest)
-				 `((g . ,rest) (syntax ,tmp)))
-				(_
-				 (syntax-violation #f
-				   "invalid syntax-rules pattern"
-				   e pat))))
-			 pat* tmp*)))))))))
-
-(define quasiquote-macro
-  (let ()
-    (define (datum x)
-      (list (scheme-stx 'quote) (mkstx x top-mark* '() '())))
-    (define-syntax app
-      (syntax-rules (quote)
-	((_ 'x arg* ...)
-	 (list (scheme-stx 'x) arg* ...))))
-    (define-syntax app*
-      (syntax-rules (quote)
-	((_ 'x arg* ... last)
-	 (cons* (scheme-stx 'x) arg* ... last))))
-    (define quasicons*
-      (lambda (x y)
-	(let f ((x x))
-	  (if (null? x) y (quasicons (car x) (f (cdr x)))))))
-    (define quasicons
-      (lambda (x y)
-	(syntax-match y (quote list)
-	  ((quote dy)
-	   (syntax-match x (quote)
-	     ((quote dx) (app 'quote (cons dx dy)))
-	     (_
-	      (syntax-match dy ()
-		(() (app 'list x))
-		(_  (app 'cons x y))))))
-	  ((list stuff ...)
-	   (app* 'list x stuff))
-	  (_ (app 'cons x y)))))
-    (define quasiappend
-      (lambda (x y)
-	(let ((ls (let f ((x x))
-		    (if (null? x)
-			(syntax-match y (quote)
-			  ((quote ()) '())
-			  (_ (list y)))
-		      (syntax-match (car x) (quote)
-			((quote ()) (f (cdr x)))
-			(_ (cons (car x) (f (cdr x)))))))))
-	  (cond
-	   ((null? ls) (app 'quote '()))
-	   ((null? (cdr ls)) (car ls))
-	   (else (app* 'append ls))))))
-    (define quasivector
-      (lambda (x)
-	(let ((pat-x x))
-	  (syntax-match pat-x (quote)
-	    ((quote (x* ...)) (app 'quote (list->vector x*)))
-	    (_ (let f ((x x) (k (lambda (ls) (app* 'vector ls))))
-		 (syntax-match x (quote list cons)
-		   ((quote (x* ...))
-		    (k (map (lambda (x) (app 'quote x)) x*)))
-		   ((list x* ...)
-		    (k x*))
-		   ((cons x y)
-		    (f y (lambda (ls) (k (cons x ls)))))
-		   (_ (app 'list->vector pat-x)))))))))
-    (define vquasi
-      (lambda (p lev)
-	(syntax-match p ()
-	  ((p . q)
-	   (syntax-match p (unquote unquote-splicing)
-	     ((unquote p ...)
-	      (if (= lev 0)
-		  (quasicons* p (vquasi q lev))
-		(quasicons
-		 (quasicons (datum 'unquote)
-			    (quasi p (- lev 1)))
-		 (vquasi q lev))))
-	     ((unquote-splicing p ...)
-	      (if (= lev 0)
-		  (quasiappend p (vquasi q lev))
-		(quasicons
-		 (quasicons
-		  (datum 'unquote-splicing)
-		  (quasi p (- lev 1)))
-		 (vquasi q lev))))
-	     (p (quasicons (quasi p lev) (vquasi q lev)))))
-	  (() (app 'quote '())))))
-    (define quasi
-      (lambda (p lev)
-	(syntax-match p (unquote unquote-splicing quasiquote)
-	  ((unquote p)
-	   (if (= lev 0)
-	       p
-	     (quasicons (datum 'unquote) (quasi (list p) (- lev 1)))))
-	  (((unquote p ...) . q)
-	   (if (= lev 0)
-	       (quasicons* p (quasi q lev))
-	     (quasicons
-	      (quasicons (datum 'unquote)
-			 (quasi p (- lev 1)))
-	      (quasi q lev))))
-	  (((unquote-splicing p ...) . q)
-	   (if (= lev 0)
-	       (quasiappend p (quasi q lev))
-	     (quasicons
-	      (quasicons (datum 'unquote-splicing)
-			 (quasi p (- lev 1)))
-	      (quasi q lev))))
-	  ((quasiquote p)
-	   (quasicons (datum 'quasiquote)
-		      (quasi (list p) (+ lev 1))))
-	  ((p . q) (quasicons (quasi p lev) (quasi q lev)))
-	  (#(x ...) (not (<stx>? x)) (quasivector (vquasi x lev)))
-	  (p (app 'quote p)))))
-    (lambda (x)
-      (syntax-match x ()
-	((_ e) (quasi e 0))))))
-
-(define quasisyntax-macro
-  (let () ;;; FIXME: not really correct
-    (define quasi
-      (lambda (p lev)
-	(syntax-match p (unsyntax unsyntax-splicing quasisyntax)
-	  ((unsyntax p)
-	   (if (= lev 0)
-	       (let ((g (gensym)))
-		 (values (list g) (list p) g))
-	     (let-values (((lhs* rhs* p) (quasi p (- lev 1))))
-	       (values lhs* rhs* (list 'unsyntax p)))))
-	  (unsyntax (= lev 0)
-		    (stx-error p "incorrect use of unsyntax"))
-	  (((unsyntax p* ...) . q)
-	   (let-values (((lhs* rhs* q) (quasi q lev)))
-	     (if (= lev 0)
-		 (let ((g* (map (lambda (x) (gensym)) p*)))
-		   (values
-		    (append g* lhs*)
-		    (append p* rhs*)
-		    (append g* q)))
-	       (let-values (((lhs2* rhs2* p*) (quasi p* (- lev 1))))
-		 (values
-		  (append lhs2* lhs*)
-		  (append rhs2* rhs*)
-		  `((unsyntax . ,p*) . ,q))))))
-	  (((unsyntax-splicing p* ...) . q)
-	   (let-values (((lhs* rhs* q) (quasi q lev)))
-	     (if (= lev 0)
-		 (let ((g* (map (lambda (x) (gensym)) p*)))
-		   (values
-		    (append
-		     (map (lambda (g) `(,g ...)) g*)
-		     lhs*)
-		    (append p* rhs*)
-		    (append
-		     (apply append
-			    (map (lambda (g) `(,g ...)) g*))
-		     q)))
-	       (let-values (((lhs2* rhs2* p*) (quasi p* (- lev 1))))
-		 (values
-		  (append lhs2* lhs*)
-		  (append rhs2* rhs*)
-		  `((unsyntax-splicing . ,p*) . ,q))))))
-	  (unsyntax-splicing (= lev 0)
-			     (stx-error p "incorrect use of unsyntax-splicing"))
-	  ((quasisyntax p)
-	   (let-values (((lhs* rhs* p) (quasi p (+ lev 1))))
-	     (values lhs* rhs* `(quasisyntax ,p))))
-	  ((p . q)
-	   (let-values (((lhs* rhs* p) (quasi p lev))
-			((lhs2* rhs2* q) (quasi q lev)))
-	     (values (append lhs2* lhs*)
-		     (append rhs2* rhs*)
-		     (cons p q))))
-	  (#(x* ...)
-	   (let-values (((lhs* rhs* x*) (quasi x* lev)))
-	     (values lhs* rhs* (list->vector x*))))
-	  (_ (values '() '() p)))))
-    (lambda (x)
-      (syntax-match x ()
-	((_ e)
-	 (let-values (((lhs* rhs* v) (quasi e 0)))
-	   (bless
-	    `(syntax-case (list ,@rhs*) ()
-	       (,lhs* (syntax ,v))))))))))
-
-
-(define define-struct-macro
-  (if-wants-define-struct
-   (lambda (e)
-     (define enumerate
-       (lambda (ls)
-	 (let f ((i 0) (ls ls))
-	   (cond
-	    ((null? ls) '())
-	    (else (cons i (f (+ i 1) (cdr ls))))))))
-     (define mkid
-       (lambda (id str)
-	 (datum->stx id (string->symbol str))))
-     (syntax-match e ()
-       ((_ name (field* ...))
-	(let* ((namestr		(symbol->string (identifier->symbol name)))
-	       (fields		(map identifier->symbol field*))
-	       (fieldstr*	(map symbol->string fields))
-	       (rtd		(datum->stx name (make-struct-type namestr fields)))
-	       (constr		(mkid name (string-append "make-" namestr)))
-	       (pred		(mkid name (string-append namestr "?")))
-	       (i*		(enumerate field*))
-	       (getters		(map (lambda (x)
-				       (mkid name (string-append namestr "-" x)))
-				  fieldstr*))
-	       (setters		(map (lambda (x)
-				       (mkid name (string-append "set-" namestr "-" x "!")))
-				  fieldstr*))
-	       (unsafe-getters	(map (lambda (x)
-				       (mkid name (string-append "$" namestr "-" x)))
-				  fieldstr*))
-	       (unsafe-setters	(map (lambda (x)
-				       (mkid name (string-append "$set-" namestr "-" x "!")))
-				  fieldstr*)))
-	  (bless
-	   `(begin
-	      (define-syntax ,name (cons '$rtd ',rtd))
-	      (define ,constr
-		(lambda ,field*
-		  (let ((S ($struct ',rtd ,@field*)))
-		    (if ($struct-ref ',rtd 5) ;destructor
-			($struct-guardian S)
-		      S))))
-	      (define ,pred
-		(lambda (x) ($struct/rtd? x ',rtd)))
-	      ,@(map (lambda (getter i)
-		       `(define ,getter
-			  (lambda (x)
-			    (if ($struct/rtd? x ',rtd)
-				($struct-ref x ,i)
-			      (assertion-violation ',getter
-				"not a struct of required type as struct getter argument"
-				x ',rtd)))))
-		  getters i*)
-	      ,@(map (lambda (setter i)
-		       `(define ,setter
-			  (lambda (x v)
-			    (if ($struct/rtd? x ',rtd)
-				($struct-set! x ,i v)
-			      (assertion-violation ',setter
-				"not a struct of required type as struct setter argument"
-				x ',rtd)))))
-		  setters i*)
-	      ,@(map (lambda (unsafe-getter i)
-		       `(define-syntax ,unsafe-getter
-			  (syntax-rules ()
-			    ((_ x)
-			     ($struct-ref x ,i))))
-		       #;(unquote (define ,unsafe-getter
-				  (lambda (x)
-		        	    ($struct-ref x ,i)))))
-		  unsafe-getters i*)
-	      ,@(map (lambda (unsafe-setter i)
-		       `(define-syntax ,unsafe-setter
-			  (syntax-rules ()
-			    ((_ x v)
-			     ($struct-set! x ,i v))))
-		       #;(unquote (define ,unsafe-setter
-				  (lambda (x v)
-				    ($struct-set! x ,i v)))))
-		  unsafe-setters i*))
-	   )))))
-   (lambda (stx)
-     (stx-error stx "define-struct not supported"))))
-
-
-(define define-record-type-macro
-  (lambda (x)
-    (define (id ctxt . str*)
-      (datum->syntax ctxt
-		     (string->symbol
-		      (apply string-append
-			     (map (lambda (x)
-				    (cond
-				     ((symbol? x) (symbol->string x))
-				     ((string? x) x)
-				     (else (assertion-violation 'define-record-type "BUG"))))
-			       str*)))))
-    (define (get-record-name spec)
-      (syntax-match spec ()
-	((foo make-foo foo?) foo)
-	(foo foo)))
-    (define (get-record-constructor-name spec)
-      (syntax-match spec ()
-	((foo make-foo foo?) make-foo)
-	(foo (id? foo) (id foo "make-" (syntax->datum foo)))))
-    (define (get-record-predicate-name spec)
-      (syntax-match spec ()
-	((foo make-foo foo?) foo?)
-	(foo (id? foo) (id foo (syntax->datum foo) "?"))))
-    (define (get-clause id ls)
-      (syntax-match ls ()
-	(() #f)
-	(((x . rest) . ls)
-	 (if (free-id=? (bless id) x)
-	     `(,x . ,rest)
-	   (get-clause id ls)))))
-    (define (foo-rtd-code name clause* parent-rtd-code)
-      (define (convert-field-spec* ls)
-	(list->vector
-	 (map (lambda (x)
-		(syntax-match x (mutable immutable)
-		  ((mutable name . rest) `(mutable ,name))
-		  ((immutable name . rest) `(immutable ,name))
-		  (name `(immutable ,name))))
-	   ls)))
-      (let ((uid-code
-	     (syntax-match (get-clause 'nongenerative clause*) ()
-	       ((_)     `',(gensym))
-	       ((_ uid) `',uid)
-	       (_       #f)))
-	    (sealed?
-	     (syntax-match (get-clause 'sealed clause*) ()
-	       ((_ #t) #t)
-	       (_      #f)))
-	    (opaque?
-	     (syntax-match (get-clause 'opaque clause*) ()
-	       ((_ #t) #t)
-	       (_      #f)))
-	    (fields
-	     (syntax-match (get-clause 'fields clause*) ()
-	       ((_ field-spec* ...)
-		`(quote ,(convert-field-spec* field-spec*)))
-	       (_ ''#()))))
-	(bless
-	 `(make-record-type-descriptor ',name
-				       ,parent-rtd-code
-				       ,uid-code ,sealed? ,opaque? ,fields))))
-    (define (parent-rtd-code clause*)
-      (syntax-match (get-clause 'parent clause*) ()
-	((_ name) `(record-type-descriptor ,name))
-	(#f (syntax-match (get-clause 'parent-rtd clause*) ()
-	      ((_ rtd rcd) rtd)
-	      (#f #f)))))
-    (define (parent-rcd-code clause*)
-      (syntax-match (get-clause 'parent clause*) ()
-	((_ name) `(record-constructor-descriptor ,name))
-	(#f (syntax-match (get-clause 'parent-rtd clause*) ()
-	      ((_ rtd rcd) rcd)
-	      (#f #f)))))
-    (define (foo-rcd-code clause* foo-rtd protocol parent-rcd-code)
-      `(make-record-constructor-descriptor ,foo-rtd
-					   ,parent-rcd-code ,protocol))
-    (define (get-protocol-code clause*)
-      (syntax-match (get-clause 'protocol clause*) ()
-	((_ expr) expr)
-	(_        #f)))
-    (define (get-fields clause*)
-      (syntax-match clause* (fields)
-	(() '())
-	(((fields f* ...) . _) f*)
-	((_ . rest) (get-fields rest))))
-    (define (get-mutator-indices fields)
-      (let f ((fields fields) (i 0))
-	(syntax-match fields (mutable)
-	  (() '())
-	  (((mutable . _) . rest)
-	   (cons i (f rest (+ i 1))))
-	  ((_ . rest)
-	   (f rest (+ i 1))))))
-    (define (get-mutators foo fields)
-      (define (gen-name x)
-	(datum->syntax foo
-		       (string->symbol
-			(string-append (symbol->string (syntax->datum foo)) "-"
-				       (symbol->string (syntax->datum x)) "-set!"))))
-      (let f ((fields fields))
-	(syntax-match fields (mutable)
-	  (() '())
-	  (((mutable name accessor mutator) . rest)
-	   (cons mutator (f rest)))
-	  (((mutable name) . rest)
-	   (cons (gen-name name) (f rest)))
-	  ((_ . rest) (f rest)))))
-    (define (get-unsafe-mutators foo fields)
-      (define (gen-name x)
-	(datum->syntax foo
-		       (string->symbol
-			(string-append "$" (symbol->string (syntax->datum foo))
-				       "-" (symbol->string (syntax->datum x)) "-set!"))))
-      (let f ((fields fields))
-	(syntax-match fields (mutable)
-	  (() '())
-	  (((mutable name accessor mutator) . rest)
-	   (cons (gen-name name) (f rest)))
-	  (((mutable name) . rest)
-	   (cons (gen-name name) (f rest)))
-	  ((_ . rest) (f rest)))))
-    (define (get-unsafe-mutators-idx-names foo fields)
-      (let f ((fields fields))
-	(syntax-match fields (mutable)
-	  (() '())
-	  (((mutable name accessor mutator) . rest)
-	   (cons (gensym) (f rest)))
-	  (((mutable name) . rest)
-	   (cons (gensym) (f rest)))
-	  ((_ . rest) (f rest)))))
-    (define (get-accessors foo fields)
-      (define (gen-name x)
-	(datum->syntax foo
-		       (string->symbol
-			(string-append (symbol->string (syntax->datum foo)) "-"
-				       (symbol->string (syntax->datum x))))))
-      (map
-          (lambda (field)
-            (syntax-match field (mutable immutable)
-              ((mutable name accessor mutator) (id? accessor) accessor)
-              ((immutable name accessor)       (id? accessor) accessor)
-              ((mutable name)                  (id? name) (gen-name name))
-              ((immutable name)                (id? name) (gen-name name))
-              (name                            (id? name) (gen-name name))
-              (others (stx-error field "invalid field spec"))))
-	fields))
-    (define (get-unsafe-accessors foo fields)
-      (define (gen-name x)
-	(datum->syntax foo
-		       (string->symbol
-			(string-append "$" (symbol->string (syntax->datum foo))
-				       "-" (symbol->string (syntax->datum x))))))
-      (map
-          (lambda (field)
-            (syntax-match field (mutable immutable)
-              ((mutable name accessor mutator) (id? accessor) (gen-name name))
-              ((immutable name accessor)       (id? accessor) (gen-name name))
-              ((mutable name)                  (id? name) (gen-name name))
-              ((immutable name)                (id? name) (gen-name name))
-              (name                            (id? name) (gen-name name))
-              (others (stx-error field "invalid field spec"))))
-	fields))
-    (define (get-unsafe-accessors-idx-names foo fields)
-      (map (lambda (x)
-	     (gensym))
-	fields))
-    (define (enumerate ls)
-      (let f ((ls ls) (i 0))
-	(cond
-	 ((null? ls) '())
-	 (else (cons i (f (cdr ls) (+ i 1)))))))
-    (define (do-define-record namespec clause*)
-      (let* ((foo		(get-record-name namespec))
-	     (foo-rtd		(gensym))
-	     (foo-rcd		(gensym))
-	     (protocol		(gensym))
-	     (make-foo		(get-record-constructor-name namespec))
-	     (fields		(get-fields clause*))
-	     ;;Indexes for safe accessors and mutators.
-	     (idx*		(enumerate fields))
-	     (set-foo-idx*	(get-mutator-indices fields))
-	     ;;Names of safe accessors and mutators.
-	     (foo-x*		(get-accessors foo fields))
-	     (set-foo-x!*	(get-mutators foo fields))
-	     ;;Names of unsafe accessors and mutators.
-	     (unsafe-foo-x*	(get-unsafe-accessors foo fields))
-	     (unsafe-set-foo-x!* (get-unsafe-mutators foo fields))
-	     ;;Names for unsafe index bindings.
-	     (unsafe-foo-x-idx*	     (get-unsafe-accessors-idx-names foo fields))
-	     (unsafe-set-foo-x!-idx* (get-unsafe-mutators-idx-names foo fields))
-	     ;;Predicate name.
-	     (foo?		(get-record-predicate-name namespec))
-	     ;;Code   for   record-type   descriptor   and   record-type
-	     ;;constructor descriptor.
-	     (foo-rtd-code	(foo-rtd-code foo clause* (parent-rtd-code clause*)))
-	     (foo-rcd-code	(foo-rcd-code clause* foo-rtd protocol
-					      (parent-rcd-code clause*)))
-	     ;;Code for protocol.
-	     (protocol-code	(get-protocol-code clause*)))
-	(bless
-	 `(begin
-	    (define ,foo-rtd ,foo-rtd-code)
-	    (define ,protocol ,protocol-code)
-	    (define ,foo-rcd ,foo-rcd-code)
-	    (define-syntax ,foo
-	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)))
-	    (define ,foo? (record-predicate ,foo-rtd))
-	    (define ,make-foo (record-constructor ,foo-rcd))
-	    ,@(map
-		  (lambda (foo-x idx)
-		    `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
-		foo-x* idx*)
-	    ,@(map
-		  (lambda (set-foo-x! idx)
-		    `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
-		set-foo-x!* set-foo-idx*)
-	    ,@(map
-		  (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
-		    `(begin
-		       (define ,unsafe-foo-x-idx
-			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		       (define-syntax ,unsafe-foo-x
-			 (syntax-rules ()
-			   ((_ x)
-			    ($struct-ref x ,unsafe-foo-x-idx))))
-		       ))
-		unsafe-foo-x* idx* unsafe-foo-x-idx*)
-	    ,@(map
-		  (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
-		    `(begin
-		       (define ,unsafe-set-foo-x!-idx
-			 ($fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		       (define-syntax ,unsafe-set-foo-x!
-			 (syntax-rules ()
-			   ((_ x v)
-			    ($struct-set! x ,unsafe-set-foo-x!-idx v))))
-		       ))
-		unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
-	    ))))
-    (define (verify-clauses x cls*)
-      (define valid-kwds
-	(map bless
-	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
-      (define (free-id-member? x ls)
-	(and (pair? ls)
-	     (or (free-id=? x (car ls))
-		 (free-id-member? x (cdr ls)))))
-      (let f ((cls* cls*) (seen* '()))
-	(unless (null? cls*)
-	  (syntax-match (car cls*) ()
-	    ((kwd . rest)
-	     (cond
-	      ((or (not (id? kwd))
-		   (not (free-id-member? kwd valid-kwds)))
-	       (stx-error kwd "not a valid define-record-type keyword"))
-	      ((bound-id-member? kwd seen*)
-	       (syntax-violation #f
-		 "duplicate use of keyword "
-		 x kwd))
-	      (else (f (cdr cls*) (cons kwd seen*)))))
-	    (cls
-	     (stx-error cls "malformed define-record-type clause"))))))
-    (syntax-match x ()
-      ((_ namespec clause* ...)
-       (begin
-	 (verify-clauses x clause*)
-	 (do-define-record namespec clause*))))))
-
-(define define-condition-type-macro
-  (lambda (x)
-    (define (mkname name suffix)
-      (datum->syntax name
-		     (string->symbol
-		      (string-append
-		       (symbol->string (syntax->datum name))
-		       suffix))))
-    (syntax-match x ()
-      ((ctxt name super constructor predicate (field* accessor*) ...)
-       (and (id? name)
-	    (id? super)
-	    (id? constructor)
-	    (id? predicate)
-	    (for-all id? field*)
-	    (for-all id? accessor*))
-       (let ((aux-accessor* (map (lambda (x) (gensym)) accessor*)))
-	 (bless
-	  `(begin
-	     (define-record-type (,name ,constructor ,(gensym))
-	       (parent ,super)
-	       (fields ,@(map (lambda (field aux)
-				`(immutable ,field ,aux))
-			   field* aux-accessor*))
-	       (nongenerative)
-	       (sealed #f) (opaque #f))
-	     (define ,predicate (condition-predicate
-				 (record-type-descriptor ,name)))
-	     ,@(map
-		   (lambda (accessor aux)
-		     `(define ,accessor
-			(condition-accessor
-			 (record-type-descriptor ,name) ,aux)))
-		 accessor* aux-accessor*))))))))
-
-(define incorrect-usage-macro
-  (lambda (e) (stx-error e "incorrect usage of auxiliary keyword")))
-
-(define parameterize-macro
-  ;;
-  ;;Notice that MAKE-PARAMETER is  a primitive function implemented in
-  ;;"ikarus.compiler.sls" by "E-make-parameter".
-  ;;
-  (lambda (e)
-    (syntax-match e ()
-      ((_ () b b* ...)
-       (bless `(let () ,b . ,b*)))
-      ((_ ((olhs* orhs*) ...) b b* ...)
-       (let ((lhs* (generate-temporaries olhs*))
-	     (rhs* (generate-temporaries orhs*)))
-	 (bless
-	  `((lambda ,(append lhs* rhs*)
-	      (let* ((guard? #t) ;apply the guard function only the first time
-		     (swap   (lambda ()
-			       ,@(map (lambda (lhs rhs)
-					`(let ((t (,lhs)))
-					   (,lhs ,rhs guard?)
-					   (set! ,rhs t)))
-				   lhs* rhs*)
-			       (set! guard? #f))))
-		(dynamic-wind
-		    swap
-		    (lambda () ,b . ,b*)
-		    swap)))
-	    ,@(append olhs* orhs*))))
-       ;;Below is the original Ikarus code (Marco Maggi; Feb 3, 2012).
-       ;;
-       ;; (let ((lhs* (generate-temporaries olhs*))
-       ;;       (rhs* (generate-temporaries orhs*)))
-       ;;   (bless
-       ;;     `((lambda ,(append lhs* rhs*)
-       ;;         (let ((swap (lambda ()
-       ;;                       ,@(map (lambda (lhs rhs)
-       ;;                                `(let ((t (,lhs)))
-       ;;                                   (,lhs ,rhs)
-       ;;                                   (set! ,rhs t)))
-       ;;                              lhs* rhs*))))
-       ;;           (dynamic-wind
-       ;;             swap
-       ;;             (lambda () ,b . ,b*)
-       ;;             swap)))
-       ;;       ,@(append olhs* orhs*))))
-       ))))
-
 
 (define foreign-call-transformer
   (lambda (e r mr)
@@ -3702,81 +3880,6 @@
                 'macro-transformer
 	      "BUG: cannot find transformer"
 	      name)))))
-
-(define file-options-macro
-  (lambda (x)
-    (define (valid-option? x)
-      (and (id? x) (memq (identifier->symbol x) '(no-fail no-create no-truncate))))
-    (syntax-match x ()
-      ((_ opt* ...)
-       (for-all valid-option? opt*)
-       (bless `(make-file-options ',opt*))))))
-
-(define symbol-macro
-  (lambda (x set)
-    (syntax-match x ()
-      ((_ name)
-       (and (id? name) (memq (identifier->symbol name) set))
-       (bless `(quote ,name))))))
-
-(define macro-transformer
-  (lambda (x)
-    (cond
-     ((procedure? x) x)
-     ((symbol? x)
-      (case x
-	((define-record-type)    define-record-type-macro)
-	((define-struct)         define-struct-macro)
-	((cond)                  cond-macro)
-	((let)                   let-macro)
-	((do)                    do-macro)
-	((or)                    or-macro)
-	((and)                   and-macro)
-	((let*)                  let*-macro)
-	((let-values)            let-values-macro)
-	((let*-values)           let*-values-macro)
-	((syntax-rules)          syntax-rules-macro)
-	((quasiquote)            quasiquote-macro)
-	((quasisyntax)           quasisyntax-macro)
-	((with-syntax)           with-syntax-macro)
-	((when)                  when-macro)
-	((unless)                unless-macro)
-	((case)                  case-macro)
-	((identifier-syntax)     identifier-syntax-macro)
-	((time)                  time-macro)
-	((delay)                 delay-macro)
-	((assert)                assert-macro)
-	((endianness)            endianness-macro)
-	((guard)                 guard-macro)
-	((define-enumeration)    define-enumeration-macro)
-	((trace-lambda)          trace-lambda-macro)
-	((trace-define)          trace-define-macro)
-	((trace-let)             trace-let-macro)
-	((trace-define-syntax)   trace-define-syntax-macro)
-	((trace-let-syntax)      trace-let-syntax-macro)
-	((trace-letrec-syntax)   trace-letrec-syntax-macro)
-	((define-condition-type) define-condition-type-macro)
-	((parameterize)          parameterize-macro)
-	((parametrise)           parameterize-macro)
-	((eol-style)
-	 (lambda (x)
-	   (symbol-macro x '(none lf cr crlf nel crnel ls))))
-	((error-handling-mode)
-	 (lambda (x)
-	   (symbol-macro x '(ignore raise replace))))
-	((buffer-mode)
-	 (lambda (x)
-	   (symbol-macro x '(none line block))))
-	((file-options)     file-options-macro)
-	((... => _ else unquote unquote-splicing
-	      unsyntax unsyntax-splicing
-	      fields mutable immutable parent protocol
-	      sealed opaque nongenerative parent-rtd)
-	 incorrect-usage-macro)
-	(else
-	 (error 'macro-transformer "BUG: invalid macro" x))))
-     (else
-      (error 'core-macro-transformer "BUG: invalid macro" x)))))
 
 (define (local-macro-transformer x)
   (car x))
