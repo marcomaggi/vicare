@@ -218,6 +218,7 @@
   ;;
   ;;   name* -> label*
   ;;
+  ;;where NAME* is a vector of symbols and LABEL* is a vector of labels,
   ;;generate a <RIB> containing:
   ;;
   ;;* name* as the <RIB>-SYM*,
@@ -229,6 +230,7 @@
   ;;so, a name in  a top <RIB> maps to its label if  and only if its set
   ;;of marks is TOP-MARK*.
   ;;
+  (define who 'make-top-rib)
   (let ((rib (make-empty-rib)))
     (vector-for-each
         (lambda (name label)
@@ -236,7 +238,8 @@
 	      (extend-rib! rib
 			   (make-<stx> name top-mark* '() #;subst* '() #;ae* )
 			   label #t)
-            (assertion-violation 'make-top-rib "Vicare bug: expected symbol as binding name" name)))
+            (assertion-violation who
+	      "Vicare bug: expected symbol as binding name" name)))
       name* label*)
     rib))
 
@@ -5586,7 +5589,8 @@
   ;;
   ;;4. Check for name conflicts between imported bindings.
   ;;
-  ;;Return 2 values which can be used to build a new environment object:
+  ;;Return  2  values  which can  be  used  to  build  a new  top  level
+  ;;environment object and so a top rib:
   ;;
   ;;1.   A vector  of  symbols  representing the  visible  names of  the
   ;;   imported  bindings.

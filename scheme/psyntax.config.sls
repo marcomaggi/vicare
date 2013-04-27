@@ -35,7 +35,8 @@
 	  vector-append))
 
 
-(define (base-of-interaction-library) '(ikarus))
+(define (base-of-interaction-library)
+  '(ikarus))
 
 (define-syntax define-option
   (syntax-rules ()
