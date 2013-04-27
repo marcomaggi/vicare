@@ -1294,7 +1294,37 @@ Build and return a new interaction environment object.
 
 @defun environment-symbols @var{env}
 Return a list of symbols representing the names of the bindings from
-@var{env}, which must be en environment.
+@var{env}, which must be an environment.  The name in position @math{i}
+in the returned list is associated to the label in position @math{i} in
+the list returned by @func{environment-labels}.
+@end defun
+
+
+@defun environment-labels @var{env}
+Return a list of symbols representing the labels of the bindings from
+the given non--interaction environment.  The label in position @math{i}
+in the returned list is associated to the name in position @math{i} in
+the list returned by @func{environment-symbols}.
+@end defun
+
+
+@defun environment-libraries @var{env}
+Return the list of @code{library} records representing the libraries
+forming the non--interaction environment @var{env}.
+@end defun
+
+
+@defun environment-binding @var{sym} @var{env}
+Search the symbol @var{sym} in the non--interaction environment
+@var{env}; if @var{sym} is the public name of a binding in @var{env}
+return 2 values: the label associated to the binding, the list of values
+representing the binding.  If @var{sym} is not present in @var{env}
+return false and false.
+
+@example
+(environment-binding 'display (environment '(vicare)))
+@result{} #@{g870 |/1tY778AJ%G&f2UX|@} (core-prim . display)
+@end example
 @end defun
 
 @c page

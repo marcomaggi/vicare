@@ -28,7 +28,10 @@
     environment				environment?
     null-environment			scheme-report-environment
     interaction-environment		new-interaction-environment
-    environment-symbols
+
+    ;; inspection of non-interaction environment objects
+    environment-symbols			environment-libraries
+    environment-labels			environment-binding
 
     expand-form-to-core-language	expand-top-level
     expand-library
@@ -5047,11 +5050,53 @@
   ;;
   (define who 'environment-symbols)
   (cond ((env? x)
-	 (vector->list (env-names x)))
+	 (vector->list ($env-names x)))
 	((interaction-env? x)
 	 (map values (<rib>-sym* (interaction-env-rib x))))
 	(else
 	 (assertion-violation who "not an environment" x))))
+
+(define (environment-labels x)
+  ;;Return a  list of  symbols representing the  labels of  the bindings
+  ;;from the given environment.
+  ;;
+  (define who 'environment-labels)
+  (unless (env? x)
+    (assertion-violation who
+      "expected non-interaction environment object as argument" x))
+  (vector->list ($env-labels x)))
+
+(define (environment-libraries x)
+  ;;Return  the  list  of  LIBRARY records  representing  the  libraries
+  ;;forming the environment.
+  ;;
+  (define who 'environment-libraries)
+  (unless (env? x)
+    (assertion-violation who
+      "expected non-interaction environment object as argument" x))
+  (($env-itc x)))
+
+(define (environment-binding sym env)
+  ;;Search the symbol SYM in the non-interaction environment ENV; if SYM
+  ;;is the public  name of a binding  in ENV return 2  values: the label
+  ;;associated  to the  binding,  the list  of  values representing  the
+  ;;binding.  If SYM is not present in ENV return false and false.
+  ;;
+  (define who 'environment-binding)
+  (unless (env? env)
+    (assertion-violation who
+      "expected non-interaction environment object as argument" env))
+  (let ((P (vector-exists (lambda (name label)
+			    (import (ikarus system $symbols))
+			    (and (eq? sym name)
+				 (cons label ($symbol-value label))))
+	     ($env-names  env)
+	     ($env-labels env))))
+    (if P
+	(values (car P) (cdr P))
+      (values #f #f))))
+
+;;; --------------------------------------------------------------------
 
 (define (environment . import-spec*)
   ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and

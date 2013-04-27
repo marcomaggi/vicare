@@ -173,6 +173,11 @@ Notes for revision 0.3d0
     conforming-version-and-version-reference?
     conforming-library-name-and-library-reference?
 
+* Added functions to (vicare) to inspect environment objects:
+
+    environment-labels			environment-libraries
+    environment-binding
+
 * Added DEPREFIX import specification clause:
 
      (import (rnrs)

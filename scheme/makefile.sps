@@ -660,8 +660,13 @@
     (expand-form-to-core-language		i v $language)
     (expand-library				i v $language)
     (expand-top-level				i v $language)
+;;;
     (environment?				i v $language)
     (environment-symbols			i v $language)
+    (environment-libraries			i v $language)
+    (environment-labels				i v $language)
+    (environment-binding			i v $language)
+;;;
     (time-and-gather				i v $language)
     (stats?					i v $language)
     (stats-user-secs				i v $language)

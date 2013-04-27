@@ -25,6 +25,7 @@
     keyword?				pretty-print
     pretty-print*			bignum?
     module				import
+    vector-exists
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
