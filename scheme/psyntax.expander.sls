@@ -1835,15 +1835,15 @@
   ;;Scan the <RIB> RIB and return a list of symbols representing binding
   ;;names and having the top mark.
   ;;
-  (let-values (((sym* mark**)
-		;;If RIB  is sealed the  fields hold vectors,  else they
-		;;hold lists; we want lists here.
-		(let ((sym*   (<rib>-sym*   rib))
-		      (mark** (<rib>-mark** rib)))
-		  (if (<rib>-sealed/freq rib)
-		      (values (vector->list sym*)
-			      (vector->list mark**))
-		    (values sym* mark**)))))
+  (receive (sym* mark**)
+      ;;If RIB is sealed the fields  hold vectors, else they hold lists;
+      ;;we want lists here.
+      (let ((sym*   (<rib>-sym*   rib))
+	    (mark** (<rib>-mark** rib)))
+	(if (<rib>-sealed/freq rib)
+	    (values (vector->list sym*)
+		    (vector->list mark**))
+	  (values sym* mark**)))
     (let recur ((sym*   sym*)
 		(mark** mark**))
       (cond ((null? sym*)
@@ -1898,7 +1898,51 @@
   ;;
   (gensym))
 
-(define (gen-top-level-label id rib)
+(module (gen-define-label+loc
+	 gen-define-label)
+
+  (define (gen-define-label+loc id rib sd?)
+    (if sd?
+	(values (gensym) (gensym-for-lexical-var id))
+      (let* ((env   (top-level-context))
+	     (label (%gen-top-level-label id rib))
+	     (locs  (interaction-env-locs env)))
+	(values label
+		(cond ((assq label locs)
+		       => cdr)
+		      (else
+		       (let ((loc (gensym-for-lexical-var id)))
+			 (set-interaction-env-locs! env (cons (cons label loc) locs))
+			 loc)))))))
+
+  (define (gen-define-label id rib sd?)
+    (if sd?
+	(gensym)
+      (%gen-top-level-label id rib)))
+
+  (define (%gen-top-level-label id rib)
+    (let ((sym   (identifier->symbol id))
+	  (mark* (<stx>-mark*        id))
+	  (sym*  (<rib>-sym*         rib)))
+      (cond ((and (memq sym (<rib>-sym* rib))
+		  (%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
+	     => (lambda (label)
+		  ;;If we  are here  RIB contains a  binding for  ID and
+		  ;;LABEL is its label.
+		  ;;
+		  ;;If  the symbol  LABEL is  associated to  an imported
+		  ;;binding: the data  structure implementing the symbol
+		  ;;object holds  informations about  the binding  in an
+		  ;;internal field; else such field is set to false.
+		  (if (imported-label->binding label)
+		      ;;Create new label to shadow imported binding.
+		      (gensym)
+		    ;;Recycle old label.
+		    label)))
+	    (else
+	     ;;Create a new label for a new binding.
+	     (gensym)))))
+
   (define (%find sym mark* sym* mark** label*)
     ;;We know  that the list  of symbols SYM*  has at least  one element
     ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
@@ -1910,45 +1954,8 @@
 		  (same-marks? mark* (car mark**)))
 	     (car label*)
 	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
-  (let ((sym   (identifier->symbol id))
-	(mark* (<stx>-mark*        id))
-	(sym*  (<rib>-sym*         rib)))
-    (cond ((and (memq sym (<rib>-sym* rib))
-		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
-	   => (lambda (label)
-		;;If we are here RIB contains a binding for ID and LABEL
-		;;is its label.
-		;;
-		;;If  the  symbol LABEL  is  associated  to an  imported
-		;;binding:  the data  structure implementing  the symbol
-		;;object  holds  informations about  the  binding in  an
-		;;internal field; else such field is set to false.
-		(if (imported-label->binding label)
-		    ;;Create new label to shadow imported binding.
-		    (gensym)
-		  ;;Recycle old label.
-		  label)))
-	  (else
-	   ;;Create a new label for a new binding.
-	   (gensym)))))
 
-(define (gen-define-label+loc id rib sd?)
-  (if sd?
-      (values (gensym) (gensym-for-lexical-var id))
-    (let* ((env   (top-level-context))
-	   (label (gen-top-level-label id rib))
-	   (locs  (interaction-env-locs env)))
-      (values label
-	      (cond ((assq label locs) => cdr)
-		    (else
-		     (let ((loc (gensym-for-lexical-var id)))
-		       (set-interaction-env-locs! env (cons (cons label loc) locs))
-		       loc)))))))
-
-(define (gen-define-label id rib sd?)
-  (if sd?
-      (gensym)
-    (gen-top-level-label id rib)))
+  #| end of module |# )
 
 
 ;;;; syntax objects handling
