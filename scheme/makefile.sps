@@ -483,7 +483,7 @@
   ;;
   ;; abbr.              name			                visible? required?
   '((i			(ikarus)				#t	#t)
-    (v			(vicare)				#t	#f)
+    (v			(vicare)				#t	#t)
     (cm			(chez modules)				#t	#t)
     (symbols		(ikarus symbols)			#t	#t)
     (parameters		(ikarus parameters)			#t	#t)
