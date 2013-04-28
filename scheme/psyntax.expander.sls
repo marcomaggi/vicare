@@ -5055,8 +5055,13 @@
 
 (define-record interaction-env
   (rib
+		;The top <RIB>  structure for the evaluation  of code in
+		;this environment.
    r
-   locs)
+		;The lexical environment for run time.
+   locs
+		;???
+   )
   (lambda (S port sub-printer)
     (display "#<environment>" port)))
 
@@ -5183,9 +5188,11 @@
 (module (eval expand-form-to-core-language)
 
   (define (eval x env)
-    ;;This is  R6RS's eval.   It takes an  expression and  an environment,
-    ;;expands the  expression, invokes  its invoke-required  libraries and
-    ;;evaluates its expanded core form.
+    ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
+    ;;expand the  expression, invoke  its invoke-required  libraries and
+    ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
+    ;;expansion.
+    ;;
     (define who 'eval)
     (unless (environment? env)
       (error who "not an environment" env))
@@ -5194,38 +5201,40 @@
       (for-each invoke-library invoke-req*)
       (eval-core (expanded->core x))))
 
-  (define (expand-form-to-core-language x env)
+  (define (expand-form-to-core-language expr env)
     ;;Interface to the internal expression expander (chi-expr).  Take an
     ;;expression and  an environment.  Return two  values: the resulting
     ;;core-expression, a list  of libraries that must  be invoked before
     ;;evaluating the core expr.
+    ;;
     (define who 'expand-form-to-core-language)
     (cond ((env? env)
 	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	     (let ((x (make-<stx> x top-mark* (list rib) '()))
-		   (itc (env-itc env))
-		   (rtc (make-collector))
-		   (vtc (make-collector)))
-	       (let ((x (parametrise ((top-level-context #f)
-				      (inv-collector rtc)
-				      (vis-collector vtc)
-				      (imp-collector itc))
-			  (chi-expr x '() '()))))
+	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '()))
+		   (rtc      (make-collector))
+		   (vtc      (make-collector))
+		   (itc      (env-itc env)))
+	       (let ((expr.core (parametrise ((top-level-context #f)
+					      (inv-collector rtc)
+					      (vis-collector vtc)
+					      (imp-collector itc))
+				  (chi-expr expr.stx
+					    '() #;lexenv.run '() #;lexenv.expand))))
 		 (seal-rib! rib)
-		 (values x (rtc))))))
+		 (values expr.core (rtc))))))
 	  ((interaction-env? env)
-	   (let ((rib (interaction-env-rib env))
-		 (r (interaction-env-r env))
-		 (rtc (make-collector)))
-	     (let ((x (make-<stx> x top-mark* (list rib) '())))
-	       (let-values (((e r^)
-			     (parametrise ((top-level-context env)
-					   (inv-collector rtc)
-					   (vis-collector (make-collector))
-					   (imp-collector (make-collector)))
-			       (%chi-interaction-expr x rib r))))
-		 (set-interaction-env-r! env r^)
-		 (values e (rtc))))))
+	   (let ((rib         (interaction-env-rib env))
+		 (lexenv.run  (interaction-env-r env))
+		 (rtc         (make-collector)))
+	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '())))
+	       (receive (expr.core lexenv.run^)
+		   (parametrise ((top-level-context env)
+				 (inv-collector rtc)
+				 (vis-collector (make-collector))
+				 (imp-collector (make-collector)))
+		     (%chi-interaction-expr expr.stx rib lexenv.run))
+		 (set-interaction-env-r! env lexenv.run^)
+		 (values expr.core (rtc))))))
 	  (else
 	   (assertion-violation who "not an environment" env))))
 
