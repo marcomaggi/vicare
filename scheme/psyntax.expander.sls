@@ -1358,6 +1358,113 @@
   #| end of module: PARSE-IMPORT-SPEC* |# )
 
 
+(module (library-body-expander)
+  ;;Both the R6RS  programs expander and the R6RS  library expander make
+  ;;use of this module to expand the body forms.
+  ;;
+  ;;When  expanding  the  body  of a  library:  MAIN/EXPORT-SPEC*  is  a
+  ;;SYNTAX-MATCH  input argument  representing a  set of  library export
+  ;;specifications.    When   expanding   the   body   of   a   program:
+  ;;MAIN/EXPORT-SPEC* is the symbol "main".
+  ;;
+  ;;IMPORT-SPEC* is a SYNTAX-MATCH input  argument representing a set of
+  ;;library import specifications.
+  ;;
+  ;;BODY* is a SYNTAX-MATCH input argument representing the body forms.
+  ;;
+  ;;MIX? is  true when expanding  a program  and false when  expanding a
+  ;;library; when  true mixing top-level definitions  and expressions is
+  ;;fine.
+  ;;
+  ;;Return multiple values:
+  ;;
+  ;;1.  A  collector function  (see MAKE-COLLECTOR) holding  the LIBRARY
+  ;;   structs representing the import specifications.
+  ;;
+  ;;2.   A collector  function (see  MAKE-COLLECTOR) holding...   invoke
+  ;;   code...
+  ;;
+  ;;3.   A collector  function  (see  MAKE-COLLECTOR) holding...   visit
+  ;;   code...
+  ;;
+  ;;4. ...
+  ;;
+  ;;5. ...
+  ;;
+  ;;6. ...
+  ;;
+  ;;7. ...
+  ;;
+  (define (library-body-expander main/export-spec* import-spec* body* mix?)
+    (define itc (make-collector))
+    (parametrise ((imp-collector      itc)
+		  (top-level-context  #f))
+      (receive (subst-names subst-labels)
+	  (parse-import-spec* import-spec*)
+	(let ((rib (make-top-rib subst-names subst-labels)))
+	  (define (wrap x)
+	    (make-<stx> x top-mark* (list rib) '()))
+	  (let ((body*  (map wrap body*))
+		(rtc    (make-collector))
+		(vtc    (make-collector)))
+	    (parametrise ((inv-collector  rtc)
+			  (vis-collector  vtc))
+	      (receive (init* lexenv.run lexenv.expand lex* rhs* internal-exp*)
+		  (%chi-library-internal body* rib mix?)
+		(receive (exp-name* exp-id*)
+		    (parse-export-spec* (if (eq? main/export-spec* 'all)
+					    (map wrap (top-marked-symbols rib))
+					  (append (map wrap main/export-spec*)
+						  internal-exp*)))
+		  (seal-rib! rib)
+		  (let* ((init*  (chi-expr* init* lexenv.run lexenv.expand))
+			 (rhs*   (chi-rhs*  rhs*  lexenv.run lexenv.expand)))
+		    (unseal-rib! rib)
+		    (let ((loc*          (map gen-global lex*))
+			  (export-subst  (make-export-subst exp-name* exp-id*)))
+		      (define errstr
+			"attempt to export mutated variable")
+		      (receive (export-env global* macro*)
+			  (make-export-env/macros lex* loc* lexenv.run)
+			(unless (eq? main/export-spec* 'all)
+			  (for-each
+			      (lambda (s)
+				(let ((name  (car s))
+				      (label (cdr s)))
+				  (let ((p (assq label export-env)))
+				    (when p
+				      (let ((b (cdr p)))
+					(let ((type (car b)))
+					  (when (eq? type 'mutable)
+					    (syntax-violation 'export errstr name))))))))
+			    export-subst))
+			(let ((invoke-body
+			       (build-library-letrec* no-source
+						      mix?
+						      lex* loc* rhs*
+						      (if (null? init*)
+							  (build-void)
+							(build-sequence no-source init*))))
+			      ;;(invoke-body
+			      ;; (build-letrec* no-source lex* rhs*
+			      ;;    (build-exports global* init*)))
+			      (invoke-definitions
+			       (map build-global-define (map cdr global*))))
+			  (values (itc) (rtc) (vtc)
+				  (build-sequence no-source
+						  (append invoke-definitions
+							  (list invoke-body)))
+				  macro* export-subst export-env)))))))))))))
+
+  (define (%chi-library-internal e* rib mix?)
+    (receive (e* lexenv.run lexenv.expand lex* rhs* mod** _kwd* exp*)
+	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
+      (values (append (apply append (reverse mod**)) e*)
+	      lexenv.run lexenv.expand (reverse lex*) (reverse rhs*) exp*)))
+
+  #| end of module: LIBRARY-BODY-EXPANDER |# )
+
+
 ;;;; lexical environments
 ;;
 ;;A "lexical  environment" is  an alist managed  somewhat like  a stack;
@@ -6071,113 +6178,6 @@
       (cond ((stale-when-collector)
 	     => (lambda (c)
 		  (c core-expr (stc))))))))
-
-
-(module (library-body-expander)
-  ;;Both the R6RS  programs expander and the R6RS  library expander make
-  ;;use of this module to expand the body forms.
-  ;;
-  ;;When  expanding  the  body  of a  library:  MAIN/EXPORT-SPEC*  is  a
-  ;;SYNTAX-MATCH  input argument  representing a  set of  library export
-  ;;specifications.    When   expanding   the   body   of   a   program:
-  ;;MAIN/EXPORT-SPEC* is the symbol "main".
-  ;;
-  ;;IMPORT-SPEC* is a SYNTAX-MATCH input  argument representing a set of
-  ;;library import specifications.
-  ;;
-  ;;BODY* is a SYNTAX-MATCH input argument representing the body forms.
-  ;;
-  ;;MIX? is  true when expanding  a program  and false when  expanding a
-  ;;library; when  true mixing top-level definitions  and expressions is
-  ;;fine.
-  ;;
-  ;;Return multiple values:
-  ;;
-  ;;1.  A  collector function  (see MAKE-COLLECTOR) holding  the LIBRARY
-  ;;   structs representing the import specifications.
-  ;;
-  ;;2.   A collector  function (see  MAKE-COLLECTOR) holding...   invoke
-  ;;   code...
-  ;;
-  ;;3.   A collector  function  (see  MAKE-COLLECTOR) holding...   visit
-  ;;   code...
-  ;;
-  ;;4. ...
-  ;;
-  ;;5. ...
-  ;;
-  ;;6. ...
-  ;;
-  ;;7. ...
-  ;;
-  (define (library-body-expander main/export-spec* import-spec* body* mix?)
-    (define itc (make-collector))
-    (parametrise ((imp-collector      itc)
-		  (top-level-context  #f))
-      (receive (subst-names subst-labels)
-	  (parse-import-spec* import-spec*)
-	(let ((rib (make-top-rib subst-names subst-labels)))
-	  (define (wrap x)
-	    (make-<stx> x top-mark* (list rib) '()))
-	  (let ((body*  (map wrap body*))
-		(rtc    (make-collector))
-		(vtc    (make-collector)))
-	    (parametrise ((inv-collector  rtc)
-			  (vis-collector  vtc))
-	      (receive (init* lexenv.run lexenv.expand lex* rhs* internal-exp*)
-		  (%chi-library-internal body* rib mix?)
-		(receive (exp-name* exp-id*)
-		    (parse-export-spec* (if (eq? main/export-spec* 'all)
-					    (map wrap (top-marked-symbols rib))
-					  (append (map wrap main/export-spec*)
-						  internal-exp*)))
-		  (seal-rib! rib)
-		  (let* ((init*  (chi-expr* init* lexenv.run lexenv.expand))
-			 (rhs*   (chi-rhs*  rhs*  lexenv.run lexenv.expand)))
-		    (unseal-rib! rib)
-		    (let ((loc*          (map gen-global lex*))
-			  (export-subst  (make-export-subst exp-name* exp-id*)))
-		      (define errstr
-			"attempt to export mutated variable")
-		      (receive (export-env global* macro*)
-			  (make-export-env/macros lex* loc* lexenv.run)
-			(unless (eq? main/export-spec* 'all)
-			  (for-each
-			      (lambda (s)
-				(let ((name  (car s))
-				      (label (cdr s)))
-				  (let ((p (assq label export-env)))
-				    (when p
-				      (let ((b (cdr p)))
-					(let ((type (car b)))
-					  (when (eq? type 'mutable)
-					    (syntax-violation 'export errstr name))))))))
-			    export-subst))
-			(let ((invoke-body
-			       (build-library-letrec* no-source
-						      mix?
-						      lex* loc* rhs*
-						      (if (null? init*)
-							  (build-void)
-							(build-sequence no-source init*))))
-			      ;;(invoke-body
-			      ;; (build-letrec* no-source lex* rhs*
-			      ;;    (build-exports global* init*)))
-			      (invoke-definitions
-			       (map build-global-define (map cdr global*))))
-			  (values (itc) (rtc) (vtc)
-				  (build-sequence no-source
-						  (append invoke-definitions
-							  (list invoke-body)))
-				  macro* export-subst export-env)))))))))))))
-
-  (define (%chi-library-internal e* rib mix?)
-    (receive (e* lexenv.run lexenv.expand lex* rhs* mod** _kwd* exp*)
-	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
-      (values (append (apply append (reverse mod**)) e*)
-	      lexenv.run lexenv.expand (reverse lex*) (reverse rhs*) exp*)))
-
-  #| end of module: LIBRARY-BODY-EXPANDER |# )
 
 
 ;;;; R6RS programs and libraries helpers
