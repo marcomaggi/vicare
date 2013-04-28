@@ -4216,29 +4216,6 @@
 			       (build-void)))))
       (else (assertion-violation 'chi-rhs "BUG: invalid rhs" rhs)))))
 
-(define (expand-interaction-rhs*/init* lhs* rhs* init* r mr)
-  (let f ((lhs* lhs*) (rhs* rhs*))
-    (cond
-     ((null? lhs*)
-      (map (lambda (x) (chi-expr x r mr)) init*))
-     (else
-      (let ((lhs (car lhs*)) (rhs (car rhs*)))
-	(case (car rhs)
-	  ((defun)
-	   (let ((rhs (chi-defun (cdr rhs) r mr)))
-	     (cons
-	      (build-global-assignment no-source lhs rhs)
-	      (f (cdr lhs*) (cdr rhs*)))))
-	  ((expr)
-	   (let ((rhs (chi-expr (cdr rhs) r mr)))
-	     (cons
-	      (build-global-assignment no-source lhs rhs)
-	      (f (cdr lhs*) (cdr rhs*)))))
-	  ((top-expr)
-	   (let ((e (chi-expr (cdr rhs) r mr)))
-	     (cons e (f (cdr lhs*) (cdr rhs*)))))
-	  (else (error 'expand-interaction "invallid" rhs))))))))
-
 (define chi-rhs*
   (lambda (rhs* r mr)
     (let f ((ls rhs*))
@@ -5238,20 +5215,49 @@
 	  (else
 	   (assertion-violation who "not an environment" env))))
 
-  (define (%chi-interaction-expr e rib r)
-    (receive (e* r mr lex* rhs* mod** _kwd* _exp*)
-	(chi-body* (list e) r r '() '() '() '() '() rib #t #f)
-      (let ((e* (expand-interaction-rhs*/init*
-		 (reverse lex*) (reverse rhs*)
-		 (append (apply append (reverse mod**)) e*)
-		 r mr)))
-	(let ((e (cond ((null? e*)
-			(build-void))
-		       ((null? (cdr e*))
-			(car e*))
-		       (else
-			(build-sequence no-source e*)))))
-	  (values e r)))))
+  (define (%chi-interaction-expr expr.stx rib lexenv.run)
+    (receive (e* lexenv.run^ lexenv.expand^ lex* rhs* mod** _kwd* _exp*)
+	(chi-body* (list expr.stx) lexenv.run lexenv.run
+		   '() '() '() '() '() rib #t #f)
+      (let ((expr.core* (%expand-interaction-rhs*/init*
+			 (reverse lex*) (reverse rhs*)
+			 (append (apply append (reverse mod**)) e*)
+			 lexenv.run^ lexenv.expand^)))
+	(let ((expr.core (cond ((null? expr.core*)
+				(build-void))
+			       ((null? (cdr expr.core*))
+				(car expr.core*))
+			       (else
+				(build-sequence no-source expr.core*)))))
+	  (values expr.core lexenv.run^)))))
+
+  (define (%expand-interaction-rhs*/init* lhs* rhs* init* lexenv.run lexenv.expand)
+    ;;Return a list of expressions in the core language.
+    ;;
+    (define who 'expand-interaction)
+    (let recur ((lhs* lhs*)
+		(rhs* rhs*))
+      (if (null? lhs*)
+	  (map (lambda (init)
+		 (chi-expr init lexenv.run lexenv.expand))
+	    init*)
+	(let ((lhs (car lhs*))
+	      (rhs (car rhs*)))
+	  (define-inline (%recurse-and-cons ?core-expr)
+	    (cons ?core-expr
+		  (recur (cdr lhs*) (cdr rhs*))))
+	  (case (car rhs)
+	    ((defun)
+	     (let ((rhs (chi-defun (cdr rhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
+	    ((expr)
+	     (let ((rhs (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
+	    ((top-expr)
+	     (let ((core-expr (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons core-expr)))
+	    (else
+	     (error who "invalid" rhs)))))))
 
   #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
 
