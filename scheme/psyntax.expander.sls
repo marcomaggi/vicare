@@ -635,11 +635,11 @@
 (define (bless x)
   ;;Given a raw  symbolic expression, a single syntax  object, a wrapped
   ;;syntax  object, an  unwrapped syntax  object or  a partly  unwrapped
-  ;;syntax  object X:  build and  return a  corresponding single  syntax
-  ;;object,  wrapped syntax  object, unwrapped  syntax object  or partly
-  ;;unwrapped syntax object.
+  ;;syntax  object X:  return a  syntax object  representing the  input,
+  ;;possibly X itself.
   ;;
-  ;;Raw symbols  in the input  are considered references to  bindings in
+  ;;When X  is a symbolic  expression or a (partially)  unwrapped syntax
+  ;;object: raw  symbols in X  are considered references to  bindings in
   ;;the core  language: they are  converted to identifiers  having empty
   ;;lexical contexts.
   ;;
