@@ -173,6 +173,1381 @@
       )))
 
 
+;;;; top-level environments
+;;
+;;The result of parsing  a set of import specs, as  defined by R6RS, and
+;;loading the corresponding libraries is an ENV data structure; ENV data
+;;structures represent an *immutable* top level environment.
+;;
+;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
+;;interaction environment is created to  serve as top level environment.
+;;The  interaction  environment  is  initialised with  the  core  Vicare
+;;library  "(ikarus)";  an  interaction environment  is  *mutable*:  new
+;;bindings can be added to it.  For this reason interaction environments
+;;are  represented by  data  structures of  type INTERACTION-ENV,  whose
+;;internal format allows adding new bindings.
+;;
+;;Let's  step back:  how does  the  REPL work?   Every time  we type  an
+;;expression  and press  "Return":  the expression  is  expanded in  the
+;;context of  the current  interaction environment, compiled  to machine
+;;code, executed.   Every REPL expression  is like a full  R6RS program,
+;;with the  exception that  the interaction environment  "remembers" the
+;;bindings we define.
+;;
+
+;;An env record encapsulates a substitution and a set of libraries.
+(define-record env
+  (names
+		;A vector  of symbols  representing the public  names of
+		;bindings from a set of import specifications as defined
+		;by  R6RS.   These  names  are from  the  subst  of  the
+		;libraries, already processed with the directives in the
+		;import sets (prefix, deprefix, only, except, rename).
+   labels
+		;A vector of symbols representing the labels of bindings
+		;from a set of import specifications as defined by R6RS.
+		;These labels are from the subst of the libraries.
+   itc
+		;A collector  function (see MAKE-COLLECTOR)  holding the
+		;LIBRARY structs representing  the libraries selected by
+		;the original import specifications.
+   )
+  (lambda (S port sub-printer)
+    (display "#<environment>" port)))
+
+(define-record interaction-env
+  (rib
+		;The top <RIB>  structure for the evaluation  of code in
+		;this environment.
+   r
+		;The lexical environment for run time.
+   locs
+		;???
+   )
+  (lambda (S port sub-printer)
+    (display "#<environment>" port)))
+
+(define (environment? obj)
+  (or (env? obj)
+      (interaction-env? obj)))
+
+(define (environment-symbols x)
+  ;;Return a list of symbols representing the names of the bindings from
+  ;;the given environment.
+  ;;
+  (define who 'environment-symbols)
+  (cond ((env? x)
+	 (vector->list ($env-names x)))
+	((interaction-env? x)
+	 (map values (<rib>-sym* (interaction-env-rib x))))
+	(else
+	 (assertion-violation who "not an environment" x))))
+
+(define (environment-labels x)
+  ;;Return a  list of  symbols representing the  labels of  the bindings
+  ;;from the given environment.
+  ;;
+  (define who 'environment-labels)
+  (unless (env? x)
+    (assertion-violation who
+      "expected non-interaction environment object as argument" x))
+  (vector->list ($env-labels x)))
+
+(define (environment-libraries x)
+  ;;Return  the  list  of  LIBRARY records  representing  the  libraries
+  ;;forming the environment.
+  ;;
+  (define who 'environment-libraries)
+  (unless (env? x)
+    (assertion-violation who
+      "expected non-interaction environment object as argument" x))
+  (($env-itc x)))
+
+(define (environment-binding sym env)
+  ;;Search the symbol SYM in the non-interaction environment ENV; if SYM
+  ;;is the public  name of a binding  in ENV return 2  values: the label
+  ;;associated  to the  binding,  the list  of  values representing  the
+  ;;binding.  If SYM is not present in ENV return false and false.
+  ;;
+  (define who 'environment-binding)
+  (unless (env? env)
+    (assertion-violation who
+      "expected non-interaction environment object as argument" env))
+  (let ((P (vector-exists (lambda (name label)
+			    (import (ikarus system $symbols))
+			    (and (eq? sym name)
+				 (cons label ($symbol-value label))))
+	     ($env-names  env)
+	     ($env-labels env))))
+    (if P
+	(values (car P) (cdr P))
+      (values #f #f))))
+
+;;; --------------------------------------------------------------------
+
+(define (environment . import-spec*)
+  ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
+  ;;constructs  an env  record that  can be  used later  by eval  and/or
+  ;;expand.
+  ;;
+  ;;IMPORT-SPEC* must be a list  of symbolic expressions, or lists/trees
+  ;;of ANNOTATION structs, representing import specifications as defined
+  ;;by R6RS plus Vicare extensions.
+  ;;
+  (let ((itc (make-collector)))
+    (parametrise ((imp-collector itc))
+      (receive (subst.names subst.labels)
+	  (parse-import-spec* import-spec*)
+	(make-env subst.names subst.labels itc)))))
+
+(define (null-environment n)
+  ;;Defined  by R6RS.   The null  environment is  constructed using  the
+  ;;corresponding library.
+  ;;
+  (unless (eqv? n 5)
+    (assertion-violation 'null-environment
+      "only report version 5 is supported" n))
+  (environment '(psyntax null-environment-5)))
+
+(define (scheme-report-environment n)
+  ;;Defined  by R6RS.   The R5RS  environment is  constructed using  the
+  ;;corresponding library.
+  ;;
+  (unless (eqv? n 5)
+    (assertion-violation 'scheme-report-environment
+      "only report version 5 is supported" n))
+  (environment '(psyntax scheme-report-environment-5)))
+
+(define (new-interaction-environment)
+  ;;Build and return a new interaction environment.
+  ;;
+  (let* ((lib (find-library-by-name (base-of-interaction-library)))
+	 (rib (subst->rib (library-subst lib))))
+    (make-interaction-env rib '() '())))
+
+(define interaction-environment
+  ;;When  called  with  no   arguments:  return  an  environment  object
+  ;;representing  the environment  active at  the  REPL; to  be used  as
+  ;;argument for EVAL.
+  ;;
+  ;;When  called with  the argument  ENV, which  must be  an environment
+  ;;object: set ENV as interaction environment.
+  ;;
+  (let ((current-env #f))
+    (case-lambda
+     (()
+      (or current-env
+	  (begin
+	    (set! current-env (new-interaction-environment))
+	    current-env)))
+     ((env)
+      (unless (environment? env)
+	(assertion-violation 'interaction-environment
+	  "expected environment object as argument" env))
+      (set! current-env env)))))
+
+
+(module (eval expand-form-to-core-language)
+
+  (define (eval x env)
+    ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
+    ;;expand the  expression, invoke  its invoke-required  libraries and
+    ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
+    ;;expansion.
+    ;;
+    (define who 'eval)
+    (unless (environment? env)
+      (error who "not an environment" env))
+    (receive (x invoke-req*)
+	(expand-form-to-core-language x env)
+      (for-each invoke-library invoke-req*)
+      (eval-core (expanded->core x))))
+
+  (define (expand-form-to-core-language expr env)
+    ;;Interface to the internal expression expander (chi-expr).  Take an
+    ;;expression and  an environment.  Return two  values: the resulting
+    ;;core-expression, a list  of libraries that must  be invoked before
+    ;;evaluating the core expr.
+    ;;
+    (define who 'expand-form-to-core-language)
+    (cond ((env? env)
+	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
+	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '()))
+		   (rtc      (make-collector))
+		   (vtc      (make-collector))
+		   (itc      (env-itc env)))
+	       (let ((expr.core (parametrise ((top-level-context #f)
+					      (inv-collector rtc)
+					      (vis-collector vtc)
+					      (imp-collector itc))
+				  (chi-expr expr.stx
+					    '() #;lexenv.run '() #;lexenv.expand))))
+		 (seal-rib! rib)
+		 (values expr.core (rtc))))))
+	  ((interaction-env? env)
+	   (let ((rib         (interaction-env-rib env))
+		 (lexenv.run  (interaction-env-r env))
+		 (rtc         (make-collector)))
+	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '())))
+	       (receive (expr.core lexenv.run^)
+		   (parametrise ((top-level-context env)
+				 (inv-collector rtc)
+				 (vis-collector (make-collector))
+				 (imp-collector (make-collector)))
+		     (%chi-interaction-expr expr.stx rib lexenv.run))
+		 (set-interaction-env-r! env lexenv.run^)
+		 (values expr.core (rtc))))))
+	  (else
+	   (assertion-violation who "not an environment" env))))
+
+  (define (%chi-interaction-expr expr.stx rib lexenv.run)
+    (receive (e* lexenv.run^ lexenv.expand^ lex* rhs* mod** _kwd* _exp*)
+	(chi-body* (list expr.stx) lexenv.run lexenv.run
+		   '() '() '() '() '() rib #t #f)
+      (let ((expr.core* (%expand-interaction-rhs*/init*
+			 (reverse lex*) (reverse rhs*)
+			 (append (apply append (reverse mod**)) e*)
+			 lexenv.run^ lexenv.expand^)))
+	(let ((expr.core (cond ((null? expr.core*)
+				(build-void))
+			       ((null? (cdr expr.core*))
+				(car expr.core*))
+			       (else
+				(build-sequence no-source expr.core*)))))
+	  (values expr.core lexenv.run^)))))
+
+  (define (%expand-interaction-rhs*/init* lhs* rhs* init* lexenv.run lexenv.expand)
+    ;;Return a list of expressions in the core language.
+    ;;
+    (define who 'expand-interaction)
+    (let recur ((lhs* lhs*)
+		(rhs* rhs*))
+      (if (null? lhs*)
+	  (map (lambda (init)
+		 (chi-expr init lexenv.run lexenv.expand))
+	    init*)
+	(let ((lhs (car lhs*))
+	      (rhs (car rhs*)))
+	  (define-inline (%recurse-and-cons ?core-expr)
+	    (cons ?core-expr
+		  (recur (cdr lhs*) (cdr rhs*))))
+	  (case (car rhs)
+	    ((defun)
+	     (let ((rhs (chi-defun (cdr rhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
+	    ((expr)
+	     (let ((rhs (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
+	    ((top-expr)
+	     (let ((core-expr (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons core-expr)))
+	    (else
+	     (error who "invalid" rhs)))))))
+
+  #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
+
+
+;;;; R6RS top level programs
+
+(define (compile-r6rs-top-level expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, expand  it and return a thunk  which, when evaluated,
+  ;;compiles   the  program   and  returns   an  INTERACTIN-ENV   struct
+  ;;representing the environment after the program execution.
+  ;;
+  (receive (lib* invoke-code macro* export-subst export-env)
+      (expand-top-level expr*)
+    (lambda ()
+      (for-each invoke-library lib*)
+      (initial-visit! macro*)
+      (eval-core (expanded->core invoke-code))
+      (make-interaction-env (subst->rib export-subst)
+			    (map (lambda (x)
+				   (let* ((label    (car x))
+					  (binding  (cdr x))
+					  (type     (car binding))
+					  (val      (cdr binding)))
+				     (cons* label type '*interaction* val)))
+			      export-env)
+			    '()))))
+
+(define (expand-top-level expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, expand it.
+  ;;
+  (receive (import-spec* body*)
+      (parse-top-level-program expr*)
+    (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
+	(library-body-expander 'all import-spec* body* #t)
+      (values invoke-req* invoke-code macro* export-subst export-env))))
+
+(define (parse-top-level-program expr*)
+  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
+  ;;level program, parse it and return 2 values:
+  ;;
+  ;;1. A list of export specifications.
+  ;;
+  ;;2. A list of body forms.
+  ;;
+  (syntax-match expr* ()
+    (((?import ?import-spec* ...) body* ...)
+     (eq? (syntax->datum ?import) 'import)
+     (values ?import-spec* body*))
+
+    (((?import . x) . y)
+     (eq? (syntax->datum ?import) 'import)
+     (syntax-violation 'expander
+       "invalid syntax of top-level program" (syntax-car expr*)))
+
+    (_
+     (assertion-violation 'expander
+       "top-level program is missing an (import ---) clause"))))
+
+
+(define (boot-library-expand x)
+  ;;When bootstrapping  the system,  visit-code is  not (and  cannot be)
+  ;;used in the "next" system.  So, we drop it.
+  ;;
+  (receive (id
+	    name ver
+	    imp* vis* inv*
+	    invoke-code visit-code export-subst export-env
+	    guard-code guard-dep*)
+      (expand-library x)
+    (values name invoke-code export-subst export-env)))
+
+(define expand-library
+  ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
+  ;;core-form;  register  it  with   the  library  manager;  return  its
+  ;;invoke-code, visit-code, subst and env.
+  ;;
+  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
+  ;;
+  ;;   (library . _)
+  ;;
+  ;;or an ANNOTATION struct representing such expression.
+  ;;
+  ;;The optional FILENAME must be #f or a string representing the source
+  ;;file from which  the library was loaded; it is  used for information
+  ;;purposes.
+  ;;
+  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
+  ;;and returning  unspecified values: the  first argument is a  list of
+  ;;symbols from a  library name; the second argument is  null or a list
+  ;;of exact integers representing  the library version.  VERIFY-NAME is
+  ;;meant to  perform some validation  upon the library  name components
+  ;;and raise  an exception if  something is wrong; otherwise  it should
+  ;;just return.
+  ;;
+  (case-lambda
+   ((library-sexp filename verify-name)
+    (define (build-visit-code macro*)
+      ;;Return a symbolic expression  representing MACRO* definitions in
+      ;;the core language.
+      ;;
+      (if (null? macro*)
+	  (build-void)
+	(build-sequence no-source
+			(map (lambda (x)
+			       (let ((loc (car x))
+				     (src (cddr x)))
+				 (build-global-assignment no-source loc src)))
+			  macro*))))
+    (let-values (((name ver imp* inv* vis*
+			invoke-code macro* export-subst export-env
+			guard-code guard-req*)
+		  (core-library-expander library-sexp verify-name)))
+      (let ((id            (gensym)) ;library UID
+	    (name          name)     ;list of name symbols
+	    (ver           ver)	     ;null or list of version numbers
+
+	    ;;From list  of LIBRARY  records to  list of  lists: library
+	    ;;UID, list of name symbols, list of version numbers.
+	    (imp*          (map library-spec imp*))
+	    (vis*          (map library-spec vis*))
+	    (inv*          (map library-spec inv*))
+	    (guard-req*    (map library-spec guard-req*))
+
+	    ;;Thunk to eval to visit the library.
+	    (visit-proc    (lambda ()
+			     (initial-visit! macro*)))
+	    ;;Thunk to eval to invoke the library.
+	    (invoke-proc   (lambda ()
+			     (eval-core (expanded->core invoke-code))))
+	    (visit-code    (build-visit-code macro*))
+	    (invoke-code   invoke-code))
+	(install-library id name ver
+			 imp* vis* inv* export-subst export-env
+			 visit-proc invoke-proc
+			 visit-code invoke-code
+			 guard-code guard-req*
+			 #t #;visible? filename)
+	(values id name ver imp* vis* inv*
+		invoke-code visit-code
+		export-subst export-env
+		guard-code guard-req*))))
+   ((library-sexp filename)
+    (expand-library library-sexp filename (lambda (ids ver) (values))))
+   ((library-sexp)
+    (expand-library library-sexp #f       (lambda (ids ver) (values))))))
+
+
+(define (core-library-expander library-sexp verify-name)
+  ;;Given an list/tree of ANNOTATION structs representing a LIBRARY form
+  ;;symbolic expression:
+  ;;
+  ;;   (library . _)
+  ;;
+  ;;parse  it  and  return  multiple  values  representing  the  library
+  ;;contents.
+  ;;
+  ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
+  ;;unspecified values: the  first argument is a list of  symbols from a
+  ;;library  name; the  second  argument  is null  or  a  list of  exact
+  ;;integers representing the library  version.  VERIFY-NAME is meant to
+  ;;perform some validation  upon the library name  components and raise
+  ;;an exception if something is wrong; otherwise it should just return.
+  ;;
+  (receive (library-name* export-spec* import-spec* body*)
+      (parse-library library-sexp)
+    (receive (libname.ids libname.version)
+	(parse-library-name library-name*)
+      (verify-name libname.ids libname.version)
+      (let ((stale-c (make-stale-collector)))
+	(receive (import-spec* invoke-req* visit-req*
+			       invoke-code visit-code export-subst export-env)
+	    (parametrise ((stale-when-collector stale-c))
+	      (library-body-expander export-spec* import-spec* body* #f))
+	  (receive (guard-code guard-req*)
+	      (stale-c)
+	    (values libname.ids libname.version
+		    import-spec* invoke-req* visit-req*
+		    invoke-code visit-code export-subst
+		    export-env guard-code guard-req*)))))))
+
+
+(define (parse-library library-sexp)
+  ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
+  ;;expression, return 4 values:
+  ;;
+  ;;1. The  name part.  A  list/tree of ANNOTATION  structs representing
+  ;;   parts of the library name.
+  ;;
+  ;;2. The export specs.  A list/tree of ANNOTATION structs representing
+  ;;   the exports specification.
+  ;;
+  ;;3. The import specs.  A list/tree of ANNOTATION structs representing
+  ;;   the imports specification.
+  ;;
+  ;;4.  The body  of the  library.   A list/tree  of ANNOTATION  structs
+  ;;   representing the body of the library.
+  ;;
+  ;;This function performs no validation of the returned values, it just
+  ;;validates the structure of the LIBRARY form.
+  ;;
+  (syntax-match library-sexp ()
+    ((library (?name* ...)
+       (export ?exp* ...)
+       (import ?imp* ...)
+       ?body* ...)
+     (and (eq? (syntax->datum library) 'library)
+	  (eq? (syntax->datum export)  'export)
+	  (eq? (syntax->datum import)  'import))
+     (values ?name* ?exp* ?imp* ?body*))
+    (_
+     (stx-error library-sexp "malformed library"))))
+
+
+(define (parse-library-name libname)
+  ;;Given  a symbolic  expression, or  list/tree of  ANNOTATION structs,
+  ;;LIBNAME representing  a library  name as defined  by R6RS,  return 2
+  ;;values:
+  ;;
+  ;;1. A list of symbols representing the name identifiers.
+  ;;
+  ;;2. A list of fixnums representing the version of the library.
+  ;;
+  ;;Example:
+  ;;
+  ;;   (parse-library-name (foo bar (1 2 3)))
+  ;;   => (foo bar) (1 2 3)
+  ;;
+  (receive (name* ver*)
+      (let recur ((sexp libname))
+	(syntax-match sexp ()
+	  (((?vers* ...))
+	   (for-all library-version-number? ?vers*) ;this is the fender
+	   (values '() (map syntax->datum ?vers*)))
+
+	  ((?id . ?rest)
+	   (symbol? (syntax->datum ?id)) ;this is the fender
+	   (receive (name* vers*)
+	       (recur ?rest)
+	     (values (cons (syntax->datum ?id) name*) vers*)))
+
+	  (()
+	   (values '() '()))
+
+	  (_
+	   (stx-error libname "invalid library name"))))
+    (when (null? name*)
+      (stx-error libname "empty library name"))
+    (values name* ver*)))
+
+
+(module (parse-export-spec*)
+  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
+  ;;representing the exports specification from a LIBRARY form, return 2
+  ;;values:
+  ;;
+  ;;1. A list of symbols representing the external names of the exported
+  ;;   bindings.
+  ;;
+  ;;2.  A  list of  identifiers  (syntax  objects  holding a  symbol  as
+  ;;    expression)  representing the  internal  names  of the  exported
+  ;;   bindings.
+  ;;
+  ;;This function checks that none  of the identifiers is BOUND-ID=?  to
+  ;;another: the library does not export the same external *name* twice.
+  ;;It is instead possible to  export the same identifier multiple times
+  ;;if we give it different external names.
+  ;;
+  ;;According to R6RS, an export specification has the following syntax:
+  ;;
+  ;;   (export ?export-spec ...)
+  ;;
+  ;;   ?export-spec
+  ;;     == ?identifier
+  ;;     == (rename (?internal-identifier ?external-identifier) ...)
+  ;;
+  ;;Vicare adds the following:
+  ;;
+  ;;     == (prefix   (?internal-identifier ...) the-prefix)
+  ;;     == (deprefix (?internal-identifier ...) the-prefix)
+  ;;
+  (define who 'export)
+
+  (define (parse-export-spec* export-spec*)
+    (define %synner
+      (case-lambda
+       ((message)
+	(syntax-violation who message export-spec*))
+       ((message subform)
+	(syntax-violation who message export-spec* subform))))
+    (let loop ((export-spec*          export-spec*)
+	       (internal-identifier*  '())
+	       (external-identifier*  '()))
+      (if (null? export-spec*)
+	  (if (valid-bound-ids? external-identifier*)
+	      (values (map syntax->datum external-identifier*)
+		      internal-identifier*)
+	    (%synner "invalid exports" (%find-dups external-identifier*)))
+	(syntax-match (car export-spec*) ()
+	  (?identifier
+	   (id? ?identifier)
+	   (loop (cdr export-spec*)
+		 (cons ?identifier internal-identifier*)
+		 (cons ?identifier external-identifier*)))
+
+	  ((?rename (?internal* ?external*) ...)
+	   (and (eq? (syntax->datum ?rename) 'rename)
+		(for-all id? ?internal*)
+		(for-all id? ?external*))
+	   (loop (cdr export-spec*)
+		 (append ?internal* internal-identifier*)
+		 (append ?external* external-identifier*)))
+
+	  ((?prefix (?internal* ...) ?the-prefix)
+	   (and (eq? (syntax->datum ?prefix) 'prefix)
+		(for-all id? ?internal*)
+		(id? ?the-prefix))
+	   (if #f
+	       ;;FIXME At present  there is no way to  disable PREFIX to
+	       ;;enforce strict R6RS compatibility; in future it may be.
+	       ;;(Marco Maggi; Tue Apr 16, 2013)
+	       (%synner "prefix export specification forbidden in R6RS mode")
+	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
+		    (external*  (map (lambda (id)
+				       (datum->syntax
+					id (string->symbol
+					    (string-append
+					     prefix.str
+					     (symbol->string (syntax->datum id))))))
+				  ?internal*)))
+	       (loop (cdr export-spec*)
+		     (append ?internal* internal-identifier*)
+		     (append  external* external-identifier*)))))
+
+	  ((?deprefix (?internal* ...) ?the-prefix)
+	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
+		(for-all id? ?internal*)
+		(id? ?the-prefix))
+	   (if #f
+	       ;;FIXME At present there is no way to disable DEPREFIX to
+	       ;;enforce strict R6RS compatibility; in future it may be.
+	       ;;(Marco Maggi; Tue Apr 16, 2013)
+	       (%synner "deprefix export specification forbidden in R6RS mode")
+	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
+		    (prefix.len (string-length prefix.str))
+		    (external*  (map (lambda (id)
+				       (let* ((id.str  (symbol->string (syntax->datum id)))
+					      (id.len  (string-length id.str)))
+					 (if (and (< prefix.len id.len)
+						  (string=? prefix.str
+							    (substring id.str 0 prefix.len)))
+					     (datum->syntax
+					      id (string->symbol
+						  (substring id.str prefix.len id.len)))
+					   (%synner
+					    (string-append "binding name \"" id.str
+							   "\" cannot be deprefixed of \""
+							   prefix.str "\"")))))
+				  ?internal*)))
+	       (loop (cdr export-spec*)
+		     (append ?internal* internal-identifier*)
+		     (append  external* external-identifier*)))))
+
+	  (_
+	   (%synner "invalid export specification" (car export-spec*)))))))
+
+  (module (%find-dups)
+
+    (define (%find-dups ls)
+      (let loop ((ls    ls)
+		 (dups  '()))
+	(cond ((null? ls)
+	       dups)
+	      ((%find-bound=? (car ls) (cdr ls) (cdr ls))
+	       => (lambda (x)
+		    (loop (cdr ls)
+			  (cons (list (car ls) x)
+				dups))))
+	      (else
+	       (loop (cdr ls) dups)))))
+
+    (define (%find-bound=? x lhs* rhs*)
+      (cond ((null? lhs*)
+	     #f)
+	    ((bound-id=? x (car lhs*))
+	     (car rhs*))
+	    (else
+	     (%find-bound=? x (cdr lhs*) (cdr rhs*)))))
+
+    #| end of module: %FIND-DUPS |# )
+
+  #| end of module: PARSE-EXPORT-SPEC* |# )
+
+
+(module (parse-import-spec*)
+  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
+  ;;representing import  specifications from a LIBRARY  form, as defined
+  ;;by R6RS plus Vicare extensions:
+  ;;
+  ;;1. Parse and validate the import specs.
+  ;;
+  ;;2. For libraries not yet loaded: load the selected library files and
+  ;;    add  them  to  the  current  collector  function  referenced  by
+  ;;   IMP-COLLECTOR.
+  ;;
+  ;;3. Apply to  visible binding names the  transformations described by
+  ;;   the import spec.
+  ;;
+  ;;4. Check for name conflicts between imported bindings.
+  ;;
+  ;;Return  2  values  which can  be  used  to  build  a new  top  level
+  ;;environment object and so a top rib:
+  ;;
+  ;;1.   A vector  of  symbols  representing the  visible  names of  the
+  ;;   imported  bindings.
+  ;;
+  ;;2. A  list of "labels":  unique symbols associated to  the binding's
+  ;;   entry in the lexical environment.
+  ;;
+  ;;
+  ;;A  quick  summary  of  R6RS syntax  definitions  along  with  Vicare
+  ;;extensions:
+  ;;
+  ;;  (import ?import-spec ...)
+  ;;
+  ;;  ?import-spec
+  ;;     == ?import-set
+  ;;     == (for ?import-set ?import-level)
+  ;;
+  ;;  ?import-set
+  ;;     == ?library-reference
+  ;;     == (library ?library-reference)
+  ;;     == (only ?import-set ?identifier ...)
+  ;;     == (exept ?import-set ?identifier)
+  ;;     == (prefix ?import-set ?identifier)
+  ;;     == (deprefix ?import-set ?identifier)
+  ;;     == (rename ?import-set (?identifier1 ?identifier2) ...)
+  ;;
+  ;;  ?library-reference
+  ;;     == (?identifier0 ?identifier ...)
+  ;;     == (?identifier0 ?identifier ... ?version-reference)
+  ;;
+  ;;  ?version-reference
+  ;;     == (?sub-version-reference ...)
+  ;;     == (and ?version-reference ...)
+  ;;     == (or  ?version-reference ...)
+  ;;     == (not ?version-reference)
+  ;;
+  ;;  ?sub-version-reference
+  ;;     == ?sub-version
+  ;;     == (>=  ?sub-version)
+  ;;     == (<=  ?sub-version)
+  ;;     == (and ?sub-version-reference ...)
+  ;;     == (or  ?sub-version-reference ...)
+  ;;     == (not ?sub-version-reference)
+  ;;
+  ;;  ?sub-version
+  ;;     == #<non-negative fixnum>
+  ;;
+  ;;Example, given:
+  ;;
+  ;;  ((rename (only (foo)
+  ;;                 x z)
+  ;;           (x y))
+  ;;   (only (bar)
+  ;;         q))
+  ;;
+  ;;this function returns the names and labels:
+  ;;
+  ;;   #(z y q)		#(z$label x$label q$label)
+  ;;
+  ;;Imported bindings are referenced by "substs".  A "subst" is an alist
+  ;;whose keys are "names" and whose values are "labels":
+  ;;
+  ;;* "Name"  is a symbol  representing the  public name of  an imported
+  ;;  binding, the one we use to reference it in the code of a library.
+  ;;
+  ;;* "Label"  is a unique symbol  associated to the binding's  entry in
+  ;;  the lexical environment.
+  ;;
+  (define who 'import)
+
+  (define (parse-import-spec* import-spec*)
+    (let loop ((import-spec*  import-spec*)
+	       (subst.table   (make-eq-hashtable)))
+      ;;SUBST.TABLE has subst names as  keys and subst labels as values.
+      ;;It is used  to check for duplicate names  with different labels,
+      ;;which is an error.  Example:
+      ;;
+      ;;   (import (rename (french)
+      ;;                   (salut	ciao))	;ERROR!
+      ;;           (rename (british)
+      ;;                   (hello	ciao)))	;ERROR!
+      ;;
+      (if (null? import-spec*)
+	  (hashtable-entries subst.table)
+	  ;; (receive (names labels)
+	  ;;     (hashtable-entries subst.table)
+	  ;;   (debug-print who names labels)
+	  ;;   (values names labels))
+	(begin
+	  (for-each (lambda (subst.entry)
+		      (%add-subst-entry! subst.table subst.entry))
+	    (%import-spec->subst (car import-spec*)))
+	  (loop (cdr import-spec*) subst.table)))))
+
+  (define (%add-subst-entry! subst.table subst.entry)
+    ;;Add  the  given  SUBST.ENTRY to  SUBST.TABLE;  return  unspecified
+    ;;values.  Raise a syntax violation if SUBST.ENTRY has the same name
+    ;;of an entry in SUBST.TABLE, but different label.
+    ;;
+    (let ((entry.name  (car subst.entry))
+	  (entry.label (cdr subst.entry)))
+      (cond ((hashtable-ref subst.table entry.name #f)
+	     => (lambda (label)
+		  (unless (eq? label entry.label)
+		    (%error-two-import-with-different-bindings entry.name))))
+	    (else
+	     (hashtable-set! subst.table entry.name entry.label)))))
+
+;;; --------------------------------------------------------------------
+
+  (module (%import-spec->subst)
+
+    (define (%import-spec->subst import-spec)
+      ;;Process the IMPORT-SPEC and return the corresponding subst.
+      ;;
+      ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
+      ;;installed, if  not already  in the  library collection;  the raw
+      ;;subst from the library definition  is processed according to the
+      ;;rules in IMPORT-SPEC.
+      ;;
+      ;;If an  error is found, including  library version non-conforming
+      ;;to the library reference, an exception is raised.
+      ;;
+      (syntax-match import-spec ()
+	((?for ?import-set . ?import-levels)
+	 ;;FIXME Here we should validate ?IMPORT-LEVELS even if it is no
+	 ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
+	 (eq? (syntax->datum ?for) 'for)
+	 (%import-set->subst ?import-set import-spec))
+
+	(?import-set
+	 (%import-set->subst ?import-set import-spec))))
+
+    (define (%import-set->subst import-set import-spec)
+      ;;Recursive  function.   Process  the IMPORT-SET  and  return  the
+      ;;corresponding   subst.    IMPORT-SPEC   is   the   full   import
+      ;;specification from the IMPORT clause: it is used for descriptive
+      ;;error reporting.
+      ;;
+      (define (%recurse import-set)
+	(%import-set->subst import-set import-spec))
+      (define (%local-synner message)
+	(%synner message import-spec import-set))
+      (syntax-match import-set ()
+	((?spec ?spec* ...)
+	 ;;According to R6RS, the symbol LIBRARY  can be used to quote a
+	 ;;library reference whose first  identifier is "for", "rename",
+	 ;;etc.
+	 (not (memq (syntax->datum ?spec)
+		    '(rename except only prefix deprefix library)))
+	 (%import-library (cons ?spec ?spec*)))
+
+	((?rename ?import-set (?old-name* ?new-name*) ...)
+	 (and (eq? (syntax->datum ?rename) 'rename)
+	      (for-all id-stx? ?old-name*)
+	      (for-all id-stx? ?new-name*))
+	 (let ((subst       (%recurse ?import-set))
+	       (?old-name*  (map syntax->datum ?old-name*))
+	       (?new-name*  (map syntax->datum ?new-name*)))
+	   ;;FIXME Rewrite this  to eliminate find* and  rem* and merge.
+	   ;;(Abdulaziz Ghuloum)
+	   (let ((old-label* (find* ?old-name* subst ?import-set)))
+	     (let ((subst (rem* ?old-name* subst)))
+	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
+	       (merge-substs (map cons ?new-name* old-label*) subst)))))
+
+	((?except ?import-set ?sym* ...)
+	 (and (eq? (syntax->datum ?except) 'except)
+	      (for-all id-stx? ?sym*))
+	 (let ((subst (%recurse ?import-set)))
+	   (rem* (map syntax->datum ?sym*) subst)))
+
+	((?only ?import-set ?name* ...)
+	 (and (eq? (syntax->datum ?only) 'only)
+	      (for-all id-stx? ?name*))
+	 (let* ((subst  (%recurse ?import-set))
+		(name*  (map syntax->datum ?name*))
+		(name*  (remove-dups name*))
+		(lab*   (find* name* subst ?import-set)))
+	   (map cons name* lab*)))
+
+	((?prefix ?import-set ?the-prefix)
+	 (and (eq? (syntax->datum ?prefix) 'prefix)
+	      (id-stx? ?prefix))
+	 (let ((subst   (%recurse ?import-set))
+	       (prefix  (symbol->string (syntax->datum ?the-prefix))))
+	   (map (lambda (x)
+		  (cons (string->symbol
+			 (string-append prefix (symbol->string (car x))))
+			(cdr x)))
+	     subst)))
+
+	((?deprefix ?import-set ?the-prefix)
+	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
+	      (id-stx? ?the-prefix))
+	 (if #f
+	     ;;FIXME At present  there is no way to  disable DEPREFIX to
+	     ;;enforce strict  R6RS compatibility; in future  it may be.
+	     ;;(Marco Maggi; Tue Apr 16, 2013)
+	     (%local-synner "deprefix import specification forbidden in R6RS mode")
+	   (let* ((subst       (%recurse ?import-set))
+		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
+		  (prefix.len  (string-length prefix.str)))
+	     ;;This should never happen.
+	     (when (zero? prefix.len)
+	       (%local-synner "null deprefix prefix"))
+	     (map (lambda (subst.entry)
+		    (let* ((orig.str  (symbol->string (car subst.entry)))
+			   (orig.len  (string-length orig.str)))
+		      (if (and (< prefix.len orig.len)
+			       (string=? prefix.str (substring orig.str 0 prefix.len)))
+			  (cons (string->symbol (substring orig.str prefix.len orig.len))
+				(cdr subst.entry))
+			(%local-synner
+			 (string-append "binding name \"" orig.str
+					"\" cannot be deprefixed of \"" prefix.str "\"")))))
+	       subst))))
+
+	;;According to R6RS:  the symbol LIBRARY can be used  to quote a
+	;;library reference  whose first identifier is  "for", "rename",
+	;;etc.
+	((?library (?spec* ...))
+	 (eq? (syntax->datum ?library) 'library)
+	 (%import-library ?spec*))
+
+	(_
+	 (%synner "invalid import set" import-spec import-set))))
+
+    (define (%import-library spec*)
+      (receive (name version-conforms-to-reference?)
+	  (parse-library-reference spec*)
+	(when (null? name)
+	  (%synner "empty library name" spec*))
+	;;Search  for the  library first  in the  collection of  already
+	;;installed libraires, then on  the file system.  If successful:
+	;;LIB is an instance of LIBRARY struct.
+	(let ((lib (find-library-by-name name)))
+	  (unless lib
+	    (%synner "cannot find library with required name" name))
+	  (unless (version-conforms-to-reference? (library-version lib))
+	    (%synner "library does not satisfy version specification" spec* lib))
+	  ((imp-collector) lib)
+	  (library-subst lib))))
+
+    #| end of module: %IMPORT-SPEC->SUBST |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (parse-library-reference)
+
+    (define (parse-library-reference libref)
+      ;;Given  a  symbolic  expression,  or a  list/tree  of  ANNOTATION
+      ;;structs, LIBREF  representing a library reference  as defined by
+      ;;R6RS: parse and validate it.  Return 2 values:
+      ;;
+      ;;1. A list of symbols representing the library spec identifiers.
+      ;;
+      ;;2. A predicate function to be used to check if a library version
+      ;;   conforms with the requirements of this library specification.
+      ;;
+      (let recur ((spec libref))
+	(syntax-match spec ()
+
+	  (((?version-spec* ...))
+	   (values '() (%build-version-pred ?version-spec* libref)))
+
+	  ((?id . ?rest*)
+	   (id-stx? ?id)
+	   (receive (name pred)
+	       (recur ?rest*)
+	     (values (cons (syntax->datum ?id) name)
+		     pred)))
+
+	  (()
+	   (values '() (lambda (x) #t)))
+
+	  (_
+	   (%synner "invalid library specification in import set" libref spec)))))
+
+    (define (%build-version-pred version-reference libref)
+      ;;Recursive function.  Given a  version reference: validate it and
+      ;;build and return a predicate function that can be used to verify
+      ;;if library versions do conform.
+      ;;
+      ;;LIBREF must be  the enclosing library reference, it  is used for
+      ;;descriptive error reporting.
+      ;;
+      (define (%recurse X)
+	(%build-version-pred X libref))
+      (syntax-match version-reference ()
+	(()
+	 (lambda (x) #t))
+
+	((?and ?version* ...)
+	 (eq? (syntax->datum ?and) 'and)
+	 (let ((predicate* (map %recurse ?version*)))
+	   (lambda (x)
+	     (for-all (lambda (pred)
+			(pred x))
+	       predicate*))))
+
+	((?or ?version* ...)
+	 (eq? (syntax->datum ?or) 'or)
+	 (let ((predicate* (map %recurse ?version*)))
+	   (lambda (x)
+	     (exists (lambda (pred)
+		       (pred x))
+	       predicate*))))
+
+	((?not ?version)
+	 (eq? (syntax->datum ?not) 'not)
+	 (let ((pred (%recurse ?version)))
+	   (lambda (x)
+	     (not (pred x)))))
+
+	((?subversion* ...)
+	 (let ((predicate* (map (lambda (subversion)
+				  (%build-subversion-pred subversion libref))
+			     ?subversion*)))
+	   (lambda (x)
+	     (let loop ((predicate* predicate*)
+			(x          x))
+	       (cond ((null? predicate*)
+		      #t)
+		     ((null? x)
+		      #f)
+		     (else
+		      (and ((car predicate*) (car x))
+			   (loop (cdr predicate*) (cdr x)))))))))
+
+	(_
+	 (%synner "invalid version reference" libref version-reference))))
+
+    (define (%build-subversion-pred subversion* libref)
+      ;;Recursive function.   Given a subversion reference:  validate it
+      ;;and build  and return a predicate  function that can be  used to
+      ;;verify if library versions do conform.
+      ;;
+      ;;LIBREF must be  the enclosing library reference, it  is used for
+      ;;descriptive error reporting.
+      ;;
+      (define (%recurse X)
+	(%build-subversion-pred X libref))
+      (syntax-match subversion* ()
+	(?subversion-number
+	 (%subversion? ?subversion-number)
+	 (let ((N (syntax->datum ?subversion-number)))
+	   (lambda (x)
+	     (= x N))))
+
+	((?and ?subversion* ...)
+	 (eq? (syntax->datum ?and) 'and)
+	 (let ((predicate* (map %recurse ?subversion*)))
+	   (lambda (x)
+	     (for-all (lambda (pred)
+			(pred x))
+	       predicate*))))
+
+	((?or ?subversion* ...)
+	 (eq? (syntax->datum ?or) 'or)
+	 (let ((predicate* (map %recurse ?subversion*)))
+	   (lambda (x)
+	     (exists (lambda (pred)
+		       (pred x))
+	       predicate*))))
+
+	((?not ?subversion)
+	 (eq? (syntax->datum ?not) 'not)
+	 (let ((pred (%recurse ?subversion)))
+	   (lambda (x)
+	     (not (pred x)))))
+
+        ((?<= ?subversion-number)
+	 (and (eq? (syntax->datum ?<=) '<=)
+	      (%subversion? ?subversion-number))
+	 (let ((N (syntax->datum ?subversion-number)))
+	   (lambda (x)
+	     (<= x N))))
+
+	((?>= ?subversion-number)
+	 (and (eq? (syntax->datum ?>=) '>=)
+	      (%subversion? ?subversion-number))
+	 (let ((N (syntax->datum ?subversion-number)))
+	   (lambda (x)
+	     (>= x N))))
+
+	(_
+	 (%synner "invalid sub-version specification in library reference"
+		  libref subversion*))))
+
+    (define (%subversion? stx)
+      (library-version-number? (syntax->datum stx)))
+
+    #| end of module: PARSE-LIBRARY-REFERENCE |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (merge-substs)
+
+    (define (merge-substs subst1 subst2)
+      ;;Recursive function.  Given two substs: merge them and return the
+      ;;result.
+      ;;
+      ;;Assume that SUBST1  has unique entries in itself  and SUBST2 has
+      ;;unique entrie in  itself.  If an entry from SUBST1  has the name
+      ;;name but different label from an entry in SUBST2: raise a syntax
+      ;;error.
+      ;;
+      (if (null? subst1)
+	  subst2
+	(%insert-to-subst (car subst1)
+			  (merge-substs (cdr subst1) subst2))))
+
+    (define (%insert-to-subst entry subst)
+      ;;Given a subst  ENTRY and a SUBST: insert the  entry in the subst
+      ;;if it is not already present  and return the result; else return
+      ;;SUBST.
+      ;;
+      (let ((name  (car entry))
+	    (label (cdr entry)))
+	(cond ((assq name subst)
+	       => (lambda (x)
+		    (if (eq? (cdr x) label)
+			;;Same name and same label: OK.
+			subst
+		      ;;Same name but different label: ERROR.
+		      (%error-two-import-with-different-bindings name))))
+	      (else
+	       (cons entry subst)))))
+
+    #| end of module: MERGE-SUBSTS |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (find* sym* subst import-spec-stx)
+    ;;Find all the entries in SUBST  having as name the symbols in SYM*;
+    ;;return the  list of labels  from the  selected entries.  It  is an
+    ;;error if a name in SYM* is not present in the SUBST.
+    ;;
+    ;;IMPORT-SPEC-STX must  be a  syntax object representing  the import
+    ;;spec in which  we search for the SYM*; it  is used for descriptive
+    ;;error reporting.
+    ;;
+    ;;This function is the one that raises  an error if we try to import
+    ;;an unexistent binding, as in:
+    ;;
+    ;;   (import (only (vicare) this-does-not-exist))
+    ;;
+    (map (lambda (sym)
+	   (cond ((assq sym subst)
+		  => cdr)
+		 (else
+		  (%synner "cannot find identifier in export list of import spec"
+			   import-spec-stx sym))))
+      sym*))
+
+  (define (rem* sym* subst)
+    ;;Remove  from SUBST  all the  entries having  name in  the list  of
+    ;;symbols SYM*.  Return the new  subst with the entries removed.  It
+    ;;is fine if some names in SYM* are not present in SUBST.
+    ;;
+    (let recur ((subst subst))
+      (cond ((null? subst)
+	     '())
+	    ((memq (caar subst) sym*)
+	     (recur (cdr subst)))
+	    (else
+	     (cons (car subst) (recur (cdr subst)))))))
+
+  (define (remove-dups ls)
+    ;;Recursive  function.  Remove  duplicate  items from  the list  LS.
+    ;;Compare items with EQ?.
+    ;;
+    (cond ((null? ls)
+	   '())
+	  ((memq (car ls) (cdr ls))
+	   (remove-dups (cdr ls)))
+	  (else
+	   (cons (car ls) (remove-dups (cdr ls))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (id-stx? x)
+    ;;Return true if X is an identifier.
+    ;;
+    (symbol? (syntax->datum x)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%error-two-import-with-different-bindings name)
+    (%synner "two imports with different bindings" name))
+
+  (define %synner
+    (case-lambda
+     ((message form)
+      (syntax-violation who message form))
+     ((message form subform)
+      (syntax-violation who message form subform))))
+
+  #| end of module: PARSE-IMPORT-SPEC* |# )
+
+
+;;;; lexical environments
+;;
+;;A "lexical  environment" is  an alist managed  somewhat like  a stack;
+;;each entry is a pair, list or improper list and represents a binding.
+;;
+;;While  the  expansion proceeds,  visiting  the  code in  breadth-first
+;;order:  the lexical  environment  is updated  by  pushing new  binding
+;;entries on the stack.
+;;
+;;An entry in the lexical environment alist has the following format:
+;;
+;;   (?label . (?binding-type . ?binding-value))
+;;             |..............................| binding
+;;
+;;where ?LABEL is a gensym, ?BINDING-TYPE is a symbol, ?BINDING-VALUE is
+;;a value whose format depends on the binding type.
+;;
+;;* A  binding representing a  lexical variable,  as created by  LET and
+;;  similar syntaxes, has the format:
+;;
+;;     (lexical . (?lexvar . ?mutable))
+;;
+;;  where  "lexical"  is  the  symbol "lexical";  ?LEXVAR  is  a  symbol
+;;  representing the  name of  the binding in  the core  language forms;
+;;  ?MUTABLE is a boolean, true if this binding is mutable.
+;;
+;;* A  binding representing  a Vicare's struct  type descriptor  has the
+;;  format:
+;;
+;;     ($rtd . #<type-descriptor-struct>)
+;;
+;;  where "$rtd" is the symbol "$rtd".
+;;
+;;*  A binding  representing an  R6RS's record  type descriptor  and the
+;;  default record constructor descriptor has the format:
+;;
+;;     ($rtd . (?rtd-id ?rcd-id))
+;;
+;;  where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
+;;  which the record type descriptor is bound, ?RCD-ID is the identifier
+;;  to which the default record constructor descriptor is bound.
+;;
+;;* A binding representing a fluid syntax has the format:
+;;
+;;     ($fluid . ?label)
+;;
+;;  where ?LABEL is the gensym associated to the fluid syntax.
+;;
+;;* The following special binding represents an unbound label:
+;;
+;;     (displaced-lexical . #f)
+;;
+;;* The  following special  binding represents the  result of  a lexical
+;;  environment query with invalid label value (not a symbol):
+;;
+;;     (displaced-lexical . ())
+;;
+
+;;Build and return a new binding.
+;;
+(define make-binding cons)
+
+;;Given  a binding  return its  type: a  symbol.  Possible  symbols are:
+;;"lexical".
+;;
+(define binding-type car)
+
+;;Given a binding return  is value: a pair.  The car of  the pair is the
+;;lexical  variable; the  cdr  is  a boolean,  true  if  the binding  is
+;;mutable.
+;;
+(define binding-value cdr)
+
+;;Generate a  unique symbol to  represent the name  of a binding  in the
+;;core language forms.
+;;
+(define gensym-for-lexical-var %generate-unique-symbol)
+
+;;Accessors for the pair value in a binding list.
+;;
+(define lexical-var car)
+(define lexical-mutable? cdr)
+
+;;Mutator for the mutable boolean in a pair value of a binding list.
+;;
+(define set-lexical-mutable! set-cdr!)
+
+(define (add-lexical label lexvar lexenv)
+  ;;Push a  new entry on the  lexical environment LEXENV and  return the
+  ;;resulting lexical environment.
+  ;;
+  ;;LABEL must be a unique symbol identifying a binding.  LEXVAR must be
+  ;;a symbol representing  the name of the binding in  the core language
+  ;;forms.
+  ;;
+  (cons (cons* label 'lexical lexvar #f)
+	lexenv))
+
+(define (add-lexicals label* lexvar* lexenv)
+  ;;Push multiple entries  to the lexical environment  LEXENV and return
+  ;;the resulting lexical environment.
+  ;;
+  ;;LABEL*  must  be a  list  of  unique symbols  identifying  bindings.
+  ;;LEXVAR* must  be a  list of  symbols representing  the names  of the
+  ;;binding in the core language forms.
+  ;;
+  (if (null? label*)
+      lexenv
+    (add-lexicals ($cdr label*) ($cdr lexvar*)
+		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
+
+;;; --------------------------------------------------------------------
+
+(define (label->binding label lexenv)
+  ;;Look  up the  symbol LABEL  in  the lexical  environment LEXENV  (an
+  ;;alist) as well  as in the global environment.  If  an entry with key
+  ;;LABEL is found:  return the value of the entry  which is the binding
+  ;;value; if no matching entry is found, return the special binding:
+  ;;
+  ;;   (displaced-lexical . #f)
+  ;;
+  ;;Since all labels are unique,  it doesn't matter which environment we
+  ;;consult first.  we lookup the  global environment first because it's
+  ;;faster  (uses a  hash table)  while  the lexical  environment is  an
+  ;;alist.
+  ;;
+  (define (%fluid-syntax-binding? binding)
+    (and (pair? binding)
+	 (eq? (binding-type binding) '$fluid)))
+  (let ((binding (label->binding/no-fluids label lexenv)))
+    (if (%fluid-syntax-binding? binding)
+	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
+	;;reversed  logic.   We  have  to  look them  up  in  the  local
+	;;environment first, and then in the global.
+	(let ((label (binding-value binding)))
+	  (cond ((assq label lexenv)
+		 => cdr)
+		(else
+		 (label->binding/no-fluids label '()))))
+      binding)))
+
+(define (label->binding/no-fluids label lexenv)
+  ;;Like LABEL->BINDING, but actually does the job.
+  ;;
+  (cond ((not (symbol? label))
+	 '(displaced-lexical))
+
+	;;Each label in the boot  image environment and in every library
+	;;environment  is a  gensym in  which the  "value" field  of the
+	;;symbol object memory blcok contains the associated binding.
+	;;
+	;;So  if we  have  a label  we  can check  if  it references  an
+	;;imported binding  simply by checking its  "value" field.  This
+	;;is what IMPORTED-LABEL->BINDING does.
+	;;
+	((imported-label->binding label)
+	 => (lambda (b)
+	      (cond ((and (pair? b)
+			  (eq? (car b) '$core-rtd))
+		     (cons '$rtd (map bless (cdr b))))
+		    ((and (pair? b)
+			  (eq? (car b) 'global-rtd))
+		     (let ((lib (cadr b))
+			   (loc (cddr b)))
+		       (cons '$rtd (symbol-value loc))))
+		    (else b))))
+
+	;;Search the given lexical environment.
+	;;
+	((assq label lexenv)
+	 => cdr)
+
+	;;Search the interaction top-level environment, if any.
+	;;
+	((top-level-context)
+	 => (lambda (env)
+	      (cond ((assq label (interaction-env-locs env))
+		     => (lambda (p)
+			  ;;Build and  return a binding  representing an
+			  ;;immutable lexical variable.
+			  (cons* 'lexical (cdr p) #f)))
+		    (else
+		     '(displaced-lexical . #f)))))
+
+	;;Unbound label.
+	;;
+	(else
+	 '(displaced-lexical . #f))))
+
+
 ;;;; <RIB> type definition
 
 ;;A  <RIB> is  a  record constructed  at  every lexical  contour in  the
@@ -1693,196 +3068,6 @@
 			       (else stx))))
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
-
-
-;;;; lexical environments
-;;
-;;A "lexical  environment" is  an alist managed  somewhat like  a stack;
-;;each entry is a pair, list or improper list and represents a binding.
-;;
-;;While  the  expansion proceeds,  visiting  the  code in  breadth-first
-;;order:  the lexical  environment  is updated  by  pushing new  binding
-;;entries on the stack.
-;;
-;;An entry in the lexical environment alist has the following format:
-;;
-;;   (?label . (?binding-type . ?binding-value))
-;;             |..............................| binding
-;;
-;;where ?LABEL is a gensym, ?BINDING-TYPE is a symbol, ?BINDING-VALUE is
-;;a value whose format depends on the binding type.
-;;
-;;* A  binding representing a  lexical variable,  as created by  LET and
-;;  similar syntaxes, has the format:
-;;
-;;     (lexical . (?lexvar . ?mutable))
-;;
-;;  where  "lexical"  is  the  symbol "lexical";  ?LEXVAR  is  a  symbol
-;;  representing the  name of  the binding in  the core  language forms;
-;;  ?MUTABLE is a boolean, true if this binding is mutable.
-;;
-;;* A  binding representing  a Vicare's struct  type descriptor  has the
-;;  format:
-;;
-;;     ($rtd . #<type-descriptor-struct>)
-;;
-;;  where "$rtd" is the symbol "$rtd".
-;;
-;;*  A binding  representing an  R6RS's record  type descriptor  and the
-;;  default record constructor descriptor has the format:
-;;
-;;     ($rtd . (?rtd-id ?rcd-id))
-;;
-;;  where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
-;;  which the record type descriptor is bound, ?RCD-ID is the identifier
-;;  to which the default record constructor descriptor is bound.
-;;
-;;* A binding representing a fluid syntax has the format:
-;;
-;;     ($fluid . ?label)
-;;
-;;  where ?LABEL is the gensym associated to the fluid syntax.
-;;
-;;* The following special binding represents an unbound label:
-;;
-;;     (displaced-lexical . #f)
-;;
-;;* The  following special  binding represents the  result of  a lexical
-;;  environment query with invalid label value (not a symbol):
-;;
-;;     (displaced-lexical . ())
-;;
-
-;;Build and return a new binding.
-;;
-(define make-binding cons)
-
-;;Given  a binding  return its  type: a  symbol.  Possible  symbols are:
-;;"lexical".
-;;
-(define binding-type car)
-
-;;Given a binding return  is value: a pair.  The car of  the pair is the
-;;lexical  variable; the  cdr  is  a boolean,  true  if  the binding  is
-;;mutable.
-;;
-(define binding-value cdr)
-
-;;Generate a  unique symbol to  represent the name  of a binding  in the
-;;core language forms.
-;;
-(define gensym-for-lexical-var %generate-unique-symbol)
-
-;;Accessors for the pair value in a binding list.
-;;
-(define lexical-var car)
-(define lexical-mutable? cdr)
-
-;;Mutator for the mutable boolean in a pair value of a binding list.
-;;
-(define set-lexical-mutable! set-cdr!)
-
-(define (add-lexical label lexvar lexenv)
-  ;;Push a  new entry on the  lexical environment LEXENV and  return the
-  ;;resulting lexical environment.
-  ;;
-  ;;LABEL must be a unique symbol identifying a binding.  LEXVAR must be
-  ;;a symbol representing  the name of the binding in  the core language
-  ;;forms.
-  ;;
-  (cons (cons* label 'lexical lexvar #f)
-	lexenv))
-
-(define (add-lexicals label* lexvar* lexenv)
-  ;;Push multiple entries  to the lexical environment  LEXENV and return
-  ;;the resulting lexical environment.
-  ;;
-  ;;LABEL*  must  be a  list  of  unique symbols  identifying  bindings.
-  ;;LEXVAR* must  be a  list of  symbols representing  the names  of the
-  ;;binding in the core language forms.
-  ;;
-  (if (null? label*)
-      lexenv
-    (add-lexicals ($cdr label*) ($cdr lexvar*)
-		  (add-lexical ($car label*) ($car lexvar*) lexenv))))
-
-;;; --------------------------------------------------------------------
-
-(define (label->binding label lexenv)
-  ;;Look  up the  symbol LABEL  in  the lexical  environment LEXENV  (an
-  ;;alist) as well  as in the global environment.  If  an entry with key
-  ;;LABEL is found:  return the value of the entry  which is the binding
-  ;;value; if no matching entry is found, return the special binding:
-  ;;
-  ;;   (displaced-lexical . #f)
-  ;;
-  ;;Since all labels are unique,  it doesn't matter which environment we
-  ;;consult first.  we lookup the  global environment first because it's
-  ;;faster  (uses a  hash table)  while  the lexical  environment is  an
-  ;;alist.
-  ;;
-  (define (%fluid-syntax-binding? binding)
-    (and (pair? binding)
-	 (eq? (binding-type binding) '$fluid)))
-  (let ((binding (label->binding/no-fluids label lexenv)))
-    (if (%fluid-syntax-binding? binding)
-	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
-	;;reversed  logic.   We  have  to  look them  up  in  the  local
-	;;environment first, and then in the global.
-	(let ((label (binding-value binding)))
-	  (cond ((assq label lexenv)
-		 => cdr)
-		(else
-		 (label->binding/no-fluids label '()))))
-      binding)))
-
-(define (label->binding/no-fluids label lexenv)
-  ;;Like LABEL->BINDING, but actually does the job.
-  ;;
-  (cond ((not (symbol? label))
-	 '(displaced-lexical))
-
-	;;Each label in the boot  image environment and in every library
-	;;environment  is a  gensym in  which the  "value" field  of the
-	;;symbol object memory blcok contains the associated binding.
-	;;
-	;;So  if we  have  a label  we  can check  if  it references  an
-	;;imported binding  simply by checking its  "value" field.  This
-	;;is what IMPORTED-LABEL->BINDING does.
-	;;
-	((imported-label->binding label)
-	 => (lambda (b)
-	      (cond ((and (pair? b)
-			  (eq? (car b) '$core-rtd))
-		     (cons '$rtd (map bless (cdr b))))
-		    ((and (pair? b)
-			  (eq? (car b) 'global-rtd))
-		     (let ((lib (cadr b))
-			   (loc (cddr b)))
-		       (cons '$rtd (symbol-value loc))))
-		    (else b))))
-
-	;;Search the given lexical environment.
-	;;
-	((assq label lexenv)
-	 => cdr)
-
-	;;Search the interaction top-level environment, if any.
-	;;
-	((top-level-context)
-	 => (lambda (env)
-	      (cond ((assq label (interaction-env-locs env))
-		     => (lambda (p)
-			  ;;Build and  return a binding  representing an
-			  ;;immutable lexical variable.
-			  (cons* 'lexical (cdr p) #f)))
-		    (else
-		     '(displaced-lexical . #f)))))
-
-	;;Unbound label.
-	;;
-	(else
-	 '(displaced-lexical . #f))))
 
 
 (module (non-core-macro-transformer)
@@ -4986,1191 +6171,6 @@
 	      lexenv.run lexenv.expand (reverse lex*) (reverse rhs*) exp*)))
 
   #| end of module: LIBRARY-BODY-EXPANDER |# )
-
-
-;;;; top-level environments
-;;
-;;The result of parsing  a set of import specs, as  defined by R6RS, and
-;;loading the corresponding libraries is an ENV data structure; ENV data
-;;structures represent an *immutable* top level environment.
-;;
-;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
-;;interaction environment is created to  serve as top level environment.
-;;The  interaction  environment  is  initialised with  the  core  Vicare
-;;library  "(ikarus)";  an  interaction environment  is  *mutable*:  new
-;;bindings can be added to it.  For this reason interaction environments
-;;are  represented by  data  structures of  type INTERACTION-ENV,  whose
-;;internal format allows adding new bindings.
-;;
-;;Let's  step back:  how does  the  REPL work?   Every time  we type  an
-;;expression  and press  "Return":  the expression  is  expanded in  the
-;;context of  the current  interaction environment, compiled  to machine
-;;code, executed.   Every REPL expression  is like a full  R6RS program,
-;;with the  exception that  the interaction environment  "remembers" the
-;;bindings we define.
-;;
-
-;;An env record encapsulates a substitution and a set of libraries.
-(define-record env
-  (names
-		;A vector  of symbols  representing the public  names of
-		;bindings from a set of import specifications as defined
-		;by  R6RS.   These  names  are from  the  subst  of  the
-		;libraries, already processed with the directives in the
-		;import sets (prefix, deprefix, only, except, rename).
-   labels
-		;A vector of symbols representing the labels of bindings
-		;from a set of import specifications as defined by R6RS.
-		;These labels are from the subst of the libraries.
-   itc
-		;A collector  function (see MAKE-COLLECTOR)  holding the
-		;LIBRARY structs representing  the libraries selected by
-		;the original import specifications.
-   )
-  (lambda (S port sub-printer)
-    (display "#<environment>" port)))
-
-(define-record interaction-env
-  (rib
-		;The top <RIB>  structure for the evaluation  of code in
-		;this environment.
-   r
-		;The lexical environment for run time.
-   locs
-		;???
-   )
-  (lambda (S port sub-printer)
-    (display "#<environment>" port)))
-
-(define (environment? obj)
-  (or (env? obj)
-      (interaction-env? obj)))
-
-(define (environment-symbols x)
-  ;;Return a list of symbols representing the names of the bindings from
-  ;;the given environment.
-  ;;
-  (define who 'environment-symbols)
-  (cond ((env? x)
-	 (vector->list ($env-names x)))
-	((interaction-env? x)
-	 (map values (<rib>-sym* (interaction-env-rib x))))
-	(else
-	 (assertion-violation who "not an environment" x))))
-
-(define (environment-labels x)
-  ;;Return a  list of  symbols representing the  labels of  the bindings
-  ;;from the given environment.
-  ;;
-  (define who 'environment-labels)
-  (unless (env? x)
-    (assertion-violation who
-      "expected non-interaction environment object as argument" x))
-  (vector->list ($env-labels x)))
-
-(define (environment-libraries x)
-  ;;Return  the  list  of  LIBRARY records  representing  the  libraries
-  ;;forming the environment.
-  ;;
-  (define who 'environment-libraries)
-  (unless (env? x)
-    (assertion-violation who
-      "expected non-interaction environment object as argument" x))
-  (($env-itc x)))
-
-(define (environment-binding sym env)
-  ;;Search the symbol SYM in the non-interaction environment ENV; if SYM
-  ;;is the public  name of a binding  in ENV return 2  values: the label
-  ;;associated  to the  binding,  the list  of  values representing  the
-  ;;binding.  If SYM is not present in ENV return false and false.
-  ;;
-  (define who 'environment-binding)
-  (unless (env? env)
-    (assertion-violation who
-      "expected non-interaction environment object as argument" env))
-  (let ((P (vector-exists (lambda (name label)
-			    (import (ikarus system $symbols))
-			    (and (eq? sym name)
-				 (cons label ($symbol-value label))))
-	     ($env-names  env)
-	     ($env-labels env))))
-    (if P
-	(values (car P) (cdr P))
-      (values #f #f))))
-
-;;; --------------------------------------------------------------------
-
-(define (environment . import-spec*)
-  ;;This  is  R6RS's  environment.   It  parses  the  import  specs  and
-  ;;constructs  an env  record that  can be  used later  by eval  and/or
-  ;;expand.
-  ;;
-  ;;IMPORT-SPEC* must be a list  of symbolic expressions, or lists/trees
-  ;;of ANNOTATION structs, representing import specifications as defined
-  ;;by R6RS plus Vicare extensions.
-  ;;
-  (let ((itc (make-collector)))
-    (parametrise ((imp-collector itc))
-      (receive (subst.names subst.labels)
-	  (parse-import-spec* import-spec*)
-	(make-env subst.names subst.labels itc)))))
-
-(define (null-environment n)
-  ;;Defined  by R6RS.   The null  environment is  constructed using  the
-  ;;corresponding library.
-  ;;
-  (unless (eqv? n 5)
-    (assertion-violation 'null-environment
-      "only report version 5 is supported" n))
-  (environment '(psyntax null-environment-5)))
-
-(define (scheme-report-environment n)
-  ;;Defined  by R6RS.   The R5RS  environment is  constructed using  the
-  ;;corresponding library.
-  ;;
-  (unless (eqv? n 5)
-    (assertion-violation 'scheme-report-environment
-      "only report version 5 is supported" n))
-  (environment '(psyntax scheme-report-environment-5)))
-
-(define (new-interaction-environment)
-  ;;Build and return a new interaction environment.
-  ;;
-  (let* ((lib (find-library-by-name (base-of-interaction-library)))
-	 (rib (subst->rib (library-subst lib))))
-    (make-interaction-env rib '() '())))
-
-(define interaction-environment
-  ;;When  called  with  no   arguments:  return  an  environment  object
-  ;;representing  the environment  active at  the  REPL; to  be used  as
-  ;;argument for EVAL.
-  ;;
-  ;;When  called with  the argument  ENV, which  must be  an environment
-  ;;object: set ENV as interaction environment.
-  ;;
-  (let ((current-env #f))
-    (case-lambda
-     (()
-      (or current-env
-	  (begin
-	    (set! current-env (new-interaction-environment))
-	    current-env)))
-     ((env)
-      (unless (environment? env)
-	(assertion-violation 'interaction-environment
-	  "expected environment object as argument" env))
-      (set! current-env env)))))
-
-
-(module (eval expand-form-to-core-language)
-
-  (define (eval x env)
-    ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
-    ;;expand the  expression, invoke  its invoke-required  libraries and
-    ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
-    ;;expansion.
-    ;;
-    (define who 'eval)
-    (unless (environment? env)
-      (error who "not an environment" env))
-    (receive (x invoke-req*)
-	(expand-form-to-core-language x env)
-      (for-each invoke-library invoke-req*)
-      (eval-core (expanded->core x))))
-
-  (define (expand-form-to-core-language expr env)
-    ;;Interface to the internal expression expander (chi-expr).  Take an
-    ;;expression and  an environment.  Return two  values: the resulting
-    ;;core-expression, a list  of libraries that must  be invoked before
-    ;;evaluating the core expr.
-    ;;
-    (define who 'expand-form-to-core-language)
-    (cond ((env? env)
-	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '()))
-		   (rtc      (make-collector))
-		   (vtc      (make-collector))
-		   (itc      (env-itc env)))
-	       (let ((expr.core (parametrise ((top-level-context #f)
-					      (inv-collector rtc)
-					      (vis-collector vtc)
-					      (imp-collector itc))
-				  (chi-expr expr.stx
-					    '() #;lexenv.run '() #;lexenv.expand))))
-		 (seal-rib! rib)
-		 (values expr.core (rtc))))))
-	  ((interaction-env? env)
-	   (let ((rib         (interaction-env-rib env))
-		 (lexenv.run  (interaction-env-r env))
-		 (rtc         (make-collector)))
-	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '())))
-	       (receive (expr.core lexenv.run^)
-		   (parametrise ((top-level-context env)
-				 (inv-collector rtc)
-				 (vis-collector (make-collector))
-				 (imp-collector (make-collector)))
-		     (%chi-interaction-expr expr.stx rib lexenv.run))
-		 (set-interaction-env-r! env lexenv.run^)
-		 (values expr.core (rtc))))))
-	  (else
-	   (assertion-violation who "not an environment" env))))
-
-  (define (%chi-interaction-expr expr.stx rib lexenv.run)
-    (receive (e* lexenv.run^ lexenv.expand^ lex* rhs* mod** _kwd* _exp*)
-	(chi-body* (list expr.stx) lexenv.run lexenv.run
-		   '() '() '() '() '() rib #t #f)
-      (let ((expr.core* (%expand-interaction-rhs*/init*
-			 (reverse lex*) (reverse rhs*)
-			 (append (apply append (reverse mod**)) e*)
-			 lexenv.run^ lexenv.expand^)))
-	(let ((expr.core (cond ((null? expr.core*)
-				(build-void))
-			       ((null? (cdr expr.core*))
-				(car expr.core*))
-			       (else
-				(build-sequence no-source expr.core*)))))
-	  (values expr.core lexenv.run^)))))
-
-  (define (%expand-interaction-rhs*/init* lhs* rhs* init* lexenv.run lexenv.expand)
-    ;;Return a list of expressions in the core language.
-    ;;
-    (define who 'expand-interaction)
-    (let recur ((lhs* lhs*)
-		(rhs* rhs*))
-      (if (null? lhs*)
-	  (map (lambda (init)
-		 (chi-expr init lexenv.run lexenv.expand))
-	    init*)
-	(let ((lhs (car lhs*))
-	      (rhs (car rhs*)))
-	  (define-inline (%recurse-and-cons ?core-expr)
-	    (cons ?core-expr
-		  (recur (cdr lhs*) (cdr rhs*))))
-	  (case (car rhs)
-	    ((defun)
-	     (let ((rhs (chi-defun (cdr rhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
-	    ((expr)
-	     (let ((rhs (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
-	    ((top-expr)
-	     (let ((core-expr (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons core-expr)))
-	    (else
-	     (error who "invalid" rhs)))))))
-
-  #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
-
-
-;;;; R6RS top level programs
-
-(define (compile-r6rs-top-level expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, expand  it and return a thunk  which, when evaluated,
-  ;;compiles   the  program   and  returns   an  INTERACTIN-ENV   struct
-  ;;representing the environment after the program execution.
-  ;;
-  (receive (lib* invoke-code macro* export-subst export-env)
-      (expand-top-level expr*)
-    (lambda ()
-      (for-each invoke-library lib*)
-      (initial-visit! macro*)
-      (eval-core (expanded->core invoke-code))
-      (make-interaction-env (subst->rib export-subst)
-			    (map (lambda (x)
-				   (let* ((label    (car x))
-					  (binding  (cdr x))
-					  (type     (car binding))
-					  (val      (cdr binding)))
-				     (cons* label type '*interaction* val)))
-			      export-env)
-			    '()))))
-
-(define (expand-top-level expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, expand it.
-  ;;
-  (receive (import-spec* body*)
-      (parse-top-level-program expr*)
-    (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
-	(library-body-expander 'all import-spec* body* #t)
-      (values invoke-req* invoke-code macro* export-subst export-env))))
-
-(define (parse-top-level-program expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, parse it and return 2 values:
-  ;;
-  ;;1. A list of export specifications.
-  ;;
-  ;;2. A list of body forms.
-  ;;
-  (syntax-match expr* ()
-    (((?import ?import-spec* ...) body* ...)
-     (eq? (syntax->datum ?import) 'import)
-     (values ?import-spec* body*))
-
-    (((?import . x) . y)
-     (eq? (syntax->datum ?import) 'import)
-     (syntax-violation 'expander
-       "invalid syntax of top-level program" (syntax-car expr*)))
-
-    (_
-     (assertion-violation 'expander
-       "top-level program is missing an (import ---) clause"))))
-
-
-(define (boot-library-expand x)
-  ;;When bootstrapping  the system,  visit-code is  not (and  cannot be)
-  ;;used in the "next" system.  So, we drop it.
-  ;;
-  (receive (id
-	    name ver
-	    imp* vis* inv*
-	    invoke-code visit-code export-subst export-env
-	    guard-code guard-dep*)
-      (expand-library x)
-    (values name invoke-code export-subst export-env)))
-
-(define expand-library
-  ;;Expand  a  symbolic  expression   representing  a  LIBRARY  form  to
-  ;;core-form;  register  it  with   the  library  manager;  return  its
-  ;;invoke-code, visit-code, subst and env.
-  ;;
-  ;;The argument LIBRARY-SEXP must  be the symbolic expression:
-  ;;
-  ;;   (library . _)
-  ;;
-  ;;or an ANNOTATION struct representing such expression.
-  ;;
-  ;;The optional FILENAME must be #f or a string representing the source
-  ;;file from which  the library was loaded; it is  used for information
-  ;;purposes.
-  ;;
-  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
-  ;;and returning  unspecified values: the  first argument is a  list of
-  ;;symbols from a  library name; the second argument is  null or a list
-  ;;of exact integers representing  the library version.  VERIFY-NAME is
-  ;;meant to  perform some validation  upon the library  name components
-  ;;and raise  an exception if  something is wrong; otherwise  it should
-  ;;just return.
-  ;;
-  (case-lambda
-   ((library-sexp filename verify-name)
-    (define (build-visit-code macro*)
-      ;;Return a symbolic expression  representing MACRO* definitions in
-      ;;the core language.
-      ;;
-      (if (null? macro*)
-	  (build-void)
-	(build-sequence no-source
-			(map (lambda (x)
-			       (let ((loc (car x))
-				     (src (cddr x)))
-				 (build-global-assignment no-source loc src)))
-			  macro*))))
-    (let-values (((name ver imp* inv* vis*
-			invoke-code macro* export-subst export-env
-			guard-code guard-req*)
-		  (core-library-expander library-sexp verify-name)))
-      (let ((id            (gensym)) ;library UID
-	    (name          name)     ;list of name symbols
-	    (ver           ver)	     ;null or list of version numbers
-
-	    ;;From list  of LIBRARY  records to  list of  lists: library
-	    ;;UID, list of name symbols, list of version numbers.
-	    (imp*          (map library-spec imp*))
-	    (vis*          (map library-spec vis*))
-	    (inv*          (map library-spec inv*))
-	    (guard-req*    (map library-spec guard-req*))
-
-	    ;;Thunk to eval to visit the library.
-	    (visit-proc    (lambda ()
-			     (initial-visit! macro*)))
-	    ;;Thunk to eval to invoke the library.
-	    (invoke-proc   (lambda ()
-			     (eval-core (expanded->core invoke-code))))
-	    (visit-code    (build-visit-code macro*))
-	    (invoke-code   invoke-code))
-	(install-library id name ver
-			 imp* vis* inv* export-subst export-env
-			 visit-proc invoke-proc
-			 visit-code invoke-code
-			 guard-code guard-req*
-			 #t #;visible? filename)
-	(values id name ver imp* vis* inv*
-		invoke-code visit-code
-		export-subst export-env
-		guard-code guard-req*))))
-   ((library-sexp filename)
-    (expand-library library-sexp filename (lambda (ids ver) (values))))
-   ((library-sexp)
-    (expand-library library-sexp #f       (lambda (ids ver) (values))))))
-
-
-(define (core-library-expander library-sexp verify-name)
-  ;;Given an list/tree of ANNOTATION structs representing a LIBRARY form
-  ;;symbolic expression:
-  ;;
-  ;;   (library . _)
-  ;;
-  ;;parse  it  and  return  multiple  values  representing  the  library
-  ;;contents.
-  ;;
-  ;;VERIFY-NAME must be a procedure  accepting 2 arguments and returning
-  ;;unspecified values: the  first argument is a list of  symbols from a
-  ;;library  name; the  second  argument  is null  or  a  list of  exact
-  ;;integers representing the library  version.  VERIFY-NAME is meant to
-  ;;perform some validation  upon the library name  components and raise
-  ;;an exception if something is wrong; otherwise it should just return.
-  ;;
-  (receive (library-name* export-spec* import-spec* body*)
-      (parse-library library-sexp)
-    (receive (libname.ids libname.version)
-	(parse-library-name library-name*)
-      (verify-name libname.ids libname.version)
-      (let ((stale-c (make-stale-collector)))
-	(receive (import-spec* invoke-req* visit-req*
-			       invoke-code visit-code export-subst export-env)
-	    (parametrise ((stale-when-collector stale-c))
-	      (library-body-expander export-spec* import-spec* body* #f))
-	  (receive (guard-code guard-req*)
-	      (stale-c)
-	    (values libname.ids libname.version
-		    import-spec* invoke-req* visit-req*
-		    invoke-code visit-code export-subst
-		    export-env guard-code guard-req*)))))))
-
-
-(define (parse-library library-sexp)
-  ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
-  ;;expression, return 4 values:
-  ;;
-  ;;1. The  name part.  A  list/tree of ANNOTATION  structs representing
-  ;;   parts of the library name.
-  ;;
-  ;;2. The export specs.  A list/tree of ANNOTATION structs representing
-  ;;   the exports specification.
-  ;;
-  ;;3. The import specs.  A list/tree of ANNOTATION structs representing
-  ;;   the imports specification.
-  ;;
-  ;;4.  The body  of the  library.   A list/tree  of ANNOTATION  structs
-  ;;   representing the body of the library.
-  ;;
-  ;;This function performs no validation of the returned values, it just
-  ;;validates the structure of the LIBRARY form.
-  ;;
-  (syntax-match library-sexp ()
-    ((library (?name* ...)
-       (export ?exp* ...)
-       (import ?imp* ...)
-       ?body* ...)
-     (and (eq? (syntax->datum library) 'library)
-	  (eq? (syntax->datum export)  'export)
-	  (eq? (syntax->datum import)  'import))
-     (values ?name* ?exp* ?imp* ?body*))
-    (_
-     (stx-error library-sexp "malformed library"))))
-
-
-(define (parse-library-name libname)
-  ;;Given  a symbolic  expression, or  list/tree of  ANNOTATION structs,
-  ;;LIBNAME representing  a library  name as defined  by R6RS,  return 2
-  ;;values:
-  ;;
-  ;;1. A list of symbols representing the name identifiers.
-  ;;
-  ;;2. A list of fixnums representing the version of the library.
-  ;;
-  ;;Example:
-  ;;
-  ;;   (parse-library-name (foo bar (1 2 3)))
-  ;;   => (foo bar) (1 2 3)
-  ;;
-  (receive (name* ver*)
-      (let recur ((sexp libname))
-	(syntax-match sexp ()
-	  (((?vers* ...))
-	   (for-all library-version-number? ?vers*) ;this is the fender
-	   (values '() (map syntax->datum ?vers*)))
-
-	  ((?id . ?rest)
-	   (symbol? (syntax->datum ?id)) ;this is the fender
-	   (receive (name* vers*)
-	       (recur ?rest)
-	     (values (cons (syntax->datum ?id) name*) vers*)))
-
-	  (()
-	   (values '() '()))
-
-	  (_
-	   (stx-error libname "invalid library name"))))
-    (when (null? name*)
-      (stx-error libname "empty library name"))
-    (values name* ver*)))
-
-
-(module (parse-export-spec*)
-  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
-  ;;representing the exports specification from a LIBRARY form, return 2
-  ;;values:
-  ;;
-  ;;1. A list of symbols representing the external names of the exported
-  ;;   bindings.
-  ;;
-  ;;2.  A  list of  identifiers  (syntax  objects  holding a  symbol  as
-  ;;    expression)  representing the  internal  names  of the  exported
-  ;;   bindings.
-  ;;
-  ;;This function checks that none  of the identifiers is BOUND-ID=?  to
-  ;;another: the library does not export the same external *name* twice.
-  ;;It is instead possible to  export the same identifier multiple times
-  ;;if we give it different external names.
-  ;;
-  ;;According to R6RS, an export specification has the following syntax:
-  ;;
-  ;;   (export ?export-spec ...)
-  ;;
-  ;;   ?export-spec
-  ;;     == ?identifier
-  ;;     == (rename (?internal-identifier ?external-identifier) ...)
-  ;;
-  ;;Vicare adds the following:
-  ;;
-  ;;     == (prefix   (?internal-identifier ...) the-prefix)
-  ;;     == (deprefix (?internal-identifier ...) the-prefix)
-  ;;
-  (define who 'export)
-
-  (define (parse-export-spec* export-spec*)
-    (define %synner
-      (case-lambda
-       ((message)
-	(syntax-violation who message export-spec*))
-       ((message subform)
-	(syntax-violation who message export-spec* subform))))
-    (let loop ((export-spec*          export-spec*)
-	       (internal-identifier*  '())
-	       (external-identifier*  '()))
-      (if (null? export-spec*)
-	  (if (valid-bound-ids? external-identifier*)
-	      (values (map syntax->datum external-identifier*)
-		      internal-identifier*)
-	    (%synner "invalid exports" (%find-dups external-identifier*)))
-	(syntax-match (car export-spec*) ()
-	  (?identifier
-	   (id? ?identifier)
-	   (loop (cdr export-spec*)
-		 (cons ?identifier internal-identifier*)
-		 (cons ?identifier external-identifier*)))
-
-	  ((?rename (?internal* ?external*) ...)
-	   (and (eq? (syntax->datum ?rename) 'rename)
-		(for-all id? ?internal*)
-		(for-all id? ?external*))
-	   (loop (cdr export-spec*)
-		 (append ?internal* internal-identifier*)
-		 (append ?external* external-identifier*)))
-
-	  ((?prefix (?internal* ...) ?the-prefix)
-	   (and (eq? (syntax->datum ?prefix) 'prefix)
-		(for-all id? ?internal*)
-		(id? ?the-prefix))
-	   (if #f
-	       ;;FIXME At present  there is no way to  disable PREFIX to
-	       ;;enforce strict R6RS compatibility; in future it may be.
-	       ;;(Marco Maggi; Tue Apr 16, 2013)
-	       (%synner "prefix export specification forbidden in R6RS mode")
-	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
-		    (external*  (map (lambda (id)
-				       (datum->syntax
-					id (string->symbol
-					    (string-append
-					     prefix.str
-					     (symbol->string (syntax->datum id))))))
-				  ?internal*)))
-	       (loop (cdr export-spec*)
-		     (append ?internal* internal-identifier*)
-		     (append  external* external-identifier*)))))
-
-	  ((?deprefix (?internal* ...) ?the-prefix)
-	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
-		(for-all id? ?internal*)
-		(id? ?the-prefix))
-	   (if #f
-	       ;;FIXME At present there is no way to disable DEPREFIX to
-	       ;;enforce strict R6RS compatibility; in future it may be.
-	       ;;(Marco Maggi; Tue Apr 16, 2013)
-	       (%synner "deprefix export specification forbidden in R6RS mode")
-	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
-		    (prefix.len (string-length prefix.str))
-		    (external*  (map (lambda (id)
-				       (let* ((id.str  (symbol->string (syntax->datum id)))
-					      (id.len  (string-length id.str)))
-					 (if (and (< prefix.len id.len)
-						  (string=? prefix.str
-							    (substring id.str 0 prefix.len)))
-					     (datum->syntax
-					      id (string->symbol
-						  (substring id.str prefix.len id.len)))
-					   (%synner
-					    (string-append "binding name \"" id.str
-							   "\" cannot be deprefixed of \""
-							   prefix.str "\"")))))
-				  ?internal*)))
-	       (loop (cdr export-spec*)
-		     (append ?internal* internal-identifier*)
-		     (append  external* external-identifier*)))))
-
-	  (_
-	   (%synner "invalid export specification" (car export-spec*)))))))
-
-  (module (%find-dups)
-
-    (define (%find-dups ls)
-      (let loop ((ls    ls)
-		 (dups  '()))
-	(cond ((null? ls)
-	       dups)
-	      ((%find-bound=? (car ls) (cdr ls) (cdr ls))
-	       => (lambda (x)
-		    (loop (cdr ls)
-			  (cons (list (car ls) x)
-				dups))))
-	      (else
-	       (loop (cdr ls) dups)))))
-
-    (define (%find-bound=? x lhs* rhs*)
-      (cond ((null? lhs*)
-	     #f)
-	    ((bound-id=? x (car lhs*))
-	     (car rhs*))
-	    (else
-	     (%find-bound=? x (cdr lhs*) (cdr rhs*)))))
-
-    #| end of module: %FIND-DUPS |# )
-
-  #| end of module: PARSE-EXPORT-SPEC* |# )
-
-
-(module (parse-import-spec*)
-  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
-  ;;representing import  specifications from a LIBRARY  form, as defined
-  ;;by R6RS plus Vicare extensions:
-  ;;
-  ;;1. Parse and validate the import specs.
-  ;;
-  ;;2. For libraries not yet loaded: load the selected library files and
-  ;;    add  them  to  the  current  collector  function  referenced  by
-  ;;   IMP-COLLECTOR.
-  ;;
-  ;;3. Apply to  visible binding names the  transformations described by
-  ;;   the import spec.
-  ;;
-  ;;4. Check for name conflicts between imported bindings.
-  ;;
-  ;;Return  2  values  which can  be  used  to  build  a new  top  level
-  ;;environment object and so a top rib:
-  ;;
-  ;;1.   A vector  of  symbols  representing the  visible  names of  the
-  ;;   imported  bindings.
-  ;;
-  ;;2. A  list of "labels":  unique symbols associated to  the binding's
-  ;;   entry in the lexical environment.
-  ;;
-  ;;
-  ;;A  quick  summary  of  R6RS syntax  definitions  along  with  Vicare
-  ;;extensions:
-  ;;
-  ;;  (import ?import-spec ...)
-  ;;
-  ;;  ?import-spec
-  ;;     == ?import-set
-  ;;     == (for ?import-set ?import-level)
-  ;;
-  ;;  ?import-set
-  ;;     == ?library-reference
-  ;;     == (library ?library-reference)
-  ;;     == (only ?import-set ?identifier ...)
-  ;;     == (exept ?import-set ?identifier)
-  ;;     == (prefix ?import-set ?identifier)
-  ;;     == (deprefix ?import-set ?identifier)
-  ;;     == (rename ?import-set (?identifier1 ?identifier2) ...)
-  ;;
-  ;;  ?library-reference
-  ;;     == (?identifier0 ?identifier ...)
-  ;;     == (?identifier0 ?identifier ... ?version-reference)
-  ;;
-  ;;  ?version-reference
-  ;;     == (?sub-version-reference ...)
-  ;;     == (and ?version-reference ...)
-  ;;     == (or  ?version-reference ...)
-  ;;     == (not ?version-reference)
-  ;;
-  ;;  ?sub-version-reference
-  ;;     == ?sub-version
-  ;;     == (>=  ?sub-version)
-  ;;     == (<=  ?sub-version)
-  ;;     == (and ?sub-version-reference ...)
-  ;;     == (or  ?sub-version-reference ...)
-  ;;     == (not ?sub-version-reference)
-  ;;
-  ;;  ?sub-version
-  ;;     == #<non-negative fixnum>
-  ;;
-  ;;Example, given:
-  ;;
-  ;;  ((rename (only (foo)
-  ;;                 x z)
-  ;;           (x y))
-  ;;   (only (bar)
-  ;;         q))
-  ;;
-  ;;this function returns the names and labels:
-  ;;
-  ;;   #(z y q)		#(z$label x$label q$label)
-  ;;
-  ;;Imported bindings are referenced by "substs".  A "subst" is an alist
-  ;;whose keys are "names" and whose values are "labels":
-  ;;
-  ;;* "Name"  is a symbol  representing the  public name of  an imported
-  ;;  binding, the one we use to reference it in the code of a library.
-  ;;
-  ;;* "Label"  is a unique symbol  associated to the binding's  entry in
-  ;;  the lexical environment.
-  ;;
-  (define who 'import)
-
-  (define (parse-import-spec* import-spec*)
-    (let loop ((import-spec*  import-spec*)
-	       (subst.table   (make-eq-hashtable)))
-      ;;SUBST.TABLE has subst names as  keys and subst labels as values.
-      ;;It is used  to check for duplicate names  with different labels,
-      ;;which is an error.  Example:
-      ;;
-      ;;   (import (rename (french)
-      ;;                   (salut	ciao))	;ERROR!
-      ;;           (rename (british)
-      ;;                   (hello	ciao)))	;ERROR!
-      ;;
-      (if (null? import-spec*)
-	  (hashtable-entries subst.table)
-	  ;; (receive (names labels)
-	  ;;     (hashtable-entries subst.table)
-	  ;;   (debug-print who names labels)
-	  ;;   (values names labels))
-	(begin
-	  (for-each (lambda (subst.entry)
-		      (%add-subst-entry! subst.table subst.entry))
-	    (%import-spec->subst (car import-spec*)))
-	  (loop (cdr import-spec*) subst.table)))))
-
-  (define (%add-subst-entry! subst.table subst.entry)
-    ;;Add  the  given  SUBST.ENTRY to  SUBST.TABLE;  return  unspecified
-    ;;values.  Raise a syntax violation if SUBST.ENTRY has the same name
-    ;;of an entry in SUBST.TABLE, but different label.
-    ;;
-    (let ((entry.name  (car subst.entry))
-	  (entry.label (cdr subst.entry)))
-      (cond ((hashtable-ref subst.table entry.name #f)
-	     => (lambda (label)
-		  (unless (eq? label entry.label)
-		    (%error-two-import-with-different-bindings entry.name))))
-	    (else
-	     (hashtable-set! subst.table entry.name entry.label)))))
-
-;;; --------------------------------------------------------------------
-
-  (module (%import-spec->subst)
-
-    (define (%import-spec->subst import-spec)
-      ;;Process the IMPORT-SPEC and return the corresponding subst.
-      ;;
-      ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
-      ;;installed, if  not already  in the  library collection;  the raw
-      ;;subst from the library definition  is processed according to the
-      ;;rules in IMPORT-SPEC.
-      ;;
-      ;;If an  error is found, including  library version non-conforming
-      ;;to the library reference, an exception is raised.
-      ;;
-      (syntax-match import-spec ()
-	((?for ?import-set . ?import-levels)
-	 ;;FIXME Here we should validate ?IMPORT-LEVELS even if it is no
-	 ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
-	 (eq? (syntax->datum ?for) 'for)
-	 (%import-set->subst ?import-set import-spec))
-
-	(?import-set
-	 (%import-set->subst ?import-set import-spec))))
-
-    (define (%import-set->subst import-set import-spec)
-      ;;Recursive  function.   Process  the IMPORT-SET  and  return  the
-      ;;corresponding   subst.    IMPORT-SPEC   is   the   full   import
-      ;;specification from the IMPORT clause: it is used for descriptive
-      ;;error reporting.
-      ;;
-      (define (%recurse import-set)
-	(%import-set->subst import-set import-spec))
-      (define (%local-synner message)
-	(%synner message import-spec import-set))
-      (syntax-match import-set ()
-	((?spec ?spec* ...)
-	 ;;According to R6RS, the symbol LIBRARY  can be used to quote a
-	 ;;library reference whose first  identifier is "for", "rename",
-	 ;;etc.
-	 (not (memq (syntax->datum ?spec)
-		    '(rename except only prefix deprefix library)))
-	 (%import-library (cons ?spec ?spec*)))
-
-	((?rename ?import-set (?old-name* ?new-name*) ...)
-	 (and (eq? (syntax->datum ?rename) 'rename)
-	      (for-all id-stx? ?old-name*)
-	      (for-all id-stx? ?new-name*))
-	 (let ((subst       (%recurse ?import-set))
-	       (?old-name*  (map syntax->datum ?old-name*))
-	       (?new-name*  (map syntax->datum ?new-name*)))
-	   ;;FIXME Rewrite this  to eliminate find* and  rem* and merge.
-	   ;;(Abdulaziz Ghuloum)
-	   (let ((old-label* (find* ?old-name* subst ?import-set)))
-	     (let ((subst (rem* ?old-name* subst)))
-	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
-	       (merge-substs (map cons ?new-name* old-label*) subst)))))
-
-	((?except ?import-set ?sym* ...)
-	 (and (eq? (syntax->datum ?except) 'except)
-	      (for-all id-stx? ?sym*))
-	 (let ((subst (%recurse ?import-set)))
-	   (rem* (map syntax->datum ?sym*) subst)))
-
-	((?only ?import-set ?name* ...)
-	 (and (eq? (syntax->datum ?only) 'only)
-	      (for-all id-stx? ?name*))
-	 (let* ((subst  (%recurse ?import-set))
-		(name*  (map syntax->datum ?name*))
-		(name*  (remove-dups name*))
-		(lab*   (find* name* subst ?import-set)))
-	   (map cons name* lab*)))
-
-	((?prefix ?import-set ?the-prefix)
-	 (and (eq? (syntax->datum ?prefix) 'prefix)
-	      (id-stx? ?prefix))
-	 (let ((subst   (%recurse ?import-set))
-	       (prefix  (symbol->string (syntax->datum ?the-prefix))))
-	   (map (lambda (x)
-		  (cons (string->symbol
-			 (string-append prefix (symbol->string (car x))))
-			(cdr x)))
-	     subst)))
-
-	((?deprefix ?import-set ?the-prefix)
-	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
-	      (id-stx? ?the-prefix))
-	 (if #f
-	     ;;FIXME At present  there is no way to  disable DEPREFIX to
-	     ;;enforce strict  R6RS compatibility; in future  it may be.
-	     ;;(Marco Maggi; Tue Apr 16, 2013)
-	     (%local-synner "deprefix import specification forbidden in R6RS mode")
-	   (let* ((subst       (%recurse ?import-set))
-		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
-		  (prefix.len  (string-length prefix.str)))
-	     ;;This should never happen.
-	     (when (zero? prefix.len)
-	       (%local-synner "null deprefix prefix"))
-	     (map (lambda (subst.entry)
-		    (let* ((orig.str  (symbol->string (car subst.entry)))
-			   (orig.len  (string-length orig.str)))
-		      (if (and (< prefix.len orig.len)
-			       (string=? prefix.str (substring orig.str 0 prefix.len)))
-			  (cons (string->symbol (substring orig.str prefix.len orig.len))
-				(cdr subst.entry))
-			(%local-synner
-			 (string-append "binding name \"" orig.str
-					"\" cannot be deprefixed of \"" prefix.str "\"")))))
-	       subst))))
-
-	;;According to R6RS:  the symbol LIBRARY can be used  to quote a
-	;;library reference  whose first identifier is  "for", "rename",
-	;;etc.
-	((?library (?spec* ...))
-	 (eq? (syntax->datum ?library) 'library)
-	 (%import-library ?spec*))
-
-	(_
-	 (%synner "invalid import set" import-spec import-set))))
-
-    (define (%import-library spec*)
-      (receive (name version-conforms-to-reference?)
-	  (parse-library-reference spec*)
-	(when (null? name)
-	  (%synner "empty library name" spec*))
-	;;Search  for the  library first  in the  collection of  already
-	;;installed libraires, then on  the file system.  If successful:
-	;;LIB is an instance of LIBRARY struct.
-	(let ((lib (find-library-by-name name)))
-	  (unless lib
-	    (%synner "cannot find library with required name" name))
-	  (unless (version-conforms-to-reference? (library-version lib))
-	    (%synner "library does not satisfy version specification" spec* lib))
-	  ((imp-collector) lib)
-	  (library-subst lib))))
-
-    #| end of module: %IMPORT-SPEC->SUBST |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (parse-library-reference)
-
-    (define (parse-library-reference libref)
-      ;;Given  a  symbolic  expression,  or a  list/tree  of  ANNOTATION
-      ;;structs, LIBREF  representing a library reference  as defined by
-      ;;R6RS: parse and validate it.  Return 2 values:
-      ;;
-      ;;1. A list of symbols representing the library spec identifiers.
-      ;;
-      ;;2. A predicate function to be used to check if a library version
-      ;;   conforms with the requirements of this library specification.
-      ;;
-      (let recur ((spec libref))
-	(syntax-match spec ()
-
-	  (((?version-spec* ...))
-	   (values '() (%build-version-pred ?version-spec* libref)))
-
-	  ((?id . ?rest*)
-	   (id-stx? ?id)
-	   (receive (name pred)
-	       (recur ?rest*)
-	     (values (cons (syntax->datum ?id) name)
-		     pred)))
-
-	  (()
-	   (values '() (lambda (x) #t)))
-
-	  (_
-	   (%synner "invalid library specification in import set" libref spec)))))
-
-    (define (%build-version-pred version-reference libref)
-      ;;Recursive function.  Given a  version reference: validate it and
-      ;;build and return a predicate function that can be used to verify
-      ;;if library versions do conform.
-      ;;
-      ;;LIBREF must be  the enclosing library reference, it  is used for
-      ;;descriptive error reporting.
-      ;;
-      (define (%recurse X)
-	(%build-version-pred X libref))
-      (syntax-match version-reference ()
-	(()
-	 (lambda (x) #t))
-
-	((?and ?version* ...)
-	 (eq? (syntax->datum ?and) 'and)
-	 (let ((predicate* (map %recurse ?version*)))
-	   (lambda (x)
-	     (for-all (lambda (pred)
-			(pred x))
-	       predicate*))))
-
-	((?or ?version* ...)
-	 (eq? (syntax->datum ?or) 'or)
-	 (let ((predicate* (map %recurse ?version*)))
-	   (lambda (x)
-	     (exists (lambda (pred)
-		       (pred x))
-	       predicate*))))
-
-	((?not ?version)
-	 (eq? (syntax->datum ?not) 'not)
-	 (let ((pred (%recurse ?version)))
-	   (lambda (x)
-	     (not (pred x)))))
-
-	((?subversion* ...)
-	 (let ((predicate* (map (lambda (subversion)
-				  (%build-subversion-pred subversion libref))
-			     ?subversion*)))
-	   (lambda (x)
-	     (let loop ((predicate* predicate*)
-			(x          x))
-	       (cond ((null? predicate*)
-		      #t)
-		     ((null? x)
-		      #f)
-		     (else
-		      (and ((car predicate*) (car x))
-			   (loop (cdr predicate*) (cdr x)))))))))
-
-	(_
-	 (%synner "invalid version reference" libref version-reference))))
-
-    (define (%build-subversion-pred subversion* libref)
-      ;;Recursive function.   Given a subversion reference:  validate it
-      ;;and build  and return a predicate  function that can be  used to
-      ;;verify if library versions do conform.
-      ;;
-      ;;LIBREF must be  the enclosing library reference, it  is used for
-      ;;descriptive error reporting.
-      ;;
-      (define (%recurse X)
-	(%build-subversion-pred X libref))
-      (syntax-match subversion* ()
-	(?subversion-number
-	 (%subversion? ?subversion-number)
-	 (let ((N (syntax->datum ?subversion-number)))
-	   (lambda (x)
-	     (= x N))))
-
-	((?and ?subversion* ...)
-	 (eq? (syntax->datum ?and) 'and)
-	 (let ((predicate* (map %recurse ?subversion*)))
-	   (lambda (x)
-	     (for-all (lambda (pred)
-			(pred x))
-	       predicate*))))
-
-	((?or ?subversion* ...)
-	 (eq? (syntax->datum ?or) 'or)
-	 (let ((predicate* (map %recurse ?subversion*)))
-	   (lambda (x)
-	     (exists (lambda (pred)
-		       (pred x))
-	       predicate*))))
-
-	((?not ?subversion)
-	 (eq? (syntax->datum ?not) 'not)
-	 (let ((pred (%recurse ?subversion)))
-	   (lambda (x)
-	     (not (pred x)))))
-
-        ((?<= ?subversion-number)
-	 (and (eq? (syntax->datum ?<=) '<=)
-	      (%subversion? ?subversion-number))
-	 (let ((N (syntax->datum ?subversion-number)))
-	   (lambda (x)
-	     (<= x N))))
-
-	((?>= ?subversion-number)
-	 (and (eq? (syntax->datum ?>=) '>=)
-	      (%subversion? ?subversion-number))
-	 (let ((N (syntax->datum ?subversion-number)))
-	   (lambda (x)
-	     (>= x N))))
-
-	(_
-	 (%synner "invalid sub-version specification in library reference"
-		  libref subversion*))))
-
-    (define (%subversion? stx)
-      (library-version-number? (syntax->datum stx)))
-
-    #| end of module: PARSE-LIBRARY-REFERENCE |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (merge-substs)
-
-    (define (merge-substs subst1 subst2)
-      ;;Recursive function.  Given two substs: merge them and return the
-      ;;result.
-      ;;
-      ;;Assume that SUBST1  has unique entries in itself  and SUBST2 has
-      ;;unique entrie in  itself.  If an entry from SUBST1  has the name
-      ;;name but different label from an entry in SUBST2: raise a syntax
-      ;;error.
-      ;;
-      (if (null? subst1)
-	  subst2
-	(%insert-to-subst (car subst1)
-			  (merge-substs (cdr subst1) subst2))))
-
-    (define (%insert-to-subst entry subst)
-      ;;Given a subst  ENTRY and a SUBST: insert the  entry in the subst
-      ;;if it is not already present  and return the result; else return
-      ;;SUBST.
-      ;;
-      (let ((name  (car entry))
-	    (label (cdr entry)))
-	(cond ((assq name subst)
-	       => (lambda (x)
-		    (if (eq? (cdr x) label)
-			;;Same name and same label: OK.
-			subst
-		      ;;Same name but different label: ERROR.
-		      (%error-two-import-with-different-bindings name))))
-	      (else
-	       (cons entry subst)))))
-
-    #| end of module: MERGE-SUBSTS |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (find* sym* subst import-spec-stx)
-    ;;Find all the entries in SUBST  having as name the symbols in SYM*;
-    ;;return the  list of labels  from the  selected entries.  It  is an
-    ;;error if a name in SYM* is not present in the SUBST.
-    ;;
-    ;;IMPORT-SPEC-STX must  be a  syntax object representing  the import
-    ;;spec in which  we search for the SYM*; it  is used for descriptive
-    ;;error reporting.
-    ;;
-    ;;This function is the one that raises  an error if we try to import
-    ;;an unexistent binding, as in:
-    ;;
-    ;;   (import (only (vicare) this-does-not-exist))
-    ;;
-    (map (lambda (sym)
-	   (cond ((assq sym subst)
-		  => cdr)
-		 (else
-		  (%synner "cannot find identifier in export list of import spec"
-			   import-spec-stx sym))))
-      sym*))
-
-  (define (rem* sym* subst)
-    ;;Remove  from SUBST  all the  entries having  name in  the list  of
-    ;;symbols SYM*.  Return the new  subst with the entries removed.  It
-    ;;is fine if some names in SYM* are not present in SUBST.
-    ;;
-    (let recur ((subst subst))
-      (cond ((null? subst)
-	     '())
-	    ((memq (caar subst) sym*)
-	     (recur (cdr subst)))
-	    (else
-	     (cons (car subst) (recur (cdr subst)))))))
-
-  (define (remove-dups ls)
-    ;;Recursive  function.  Remove  duplicate  items from  the list  LS.
-    ;;Compare items with EQ?.
-    ;;
-    (cond ((null? ls)
-	   '())
-	  ((memq (car ls) (cdr ls))
-	   (remove-dups (cdr ls)))
-	  (else
-	   (cons (car ls) (remove-dups (cdr ls))))))
-
-;;; --------------------------------------------------------------------
-
-  (define (id-stx? x)
-    ;;Return true if X is an identifier.
-    ;;
-    (symbol? (syntax->datum x)))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-two-import-with-different-bindings name)
-    (%synner "two imports with different bindings" name))
-
-  (define %synner
-    (case-lambda
-     ((message form)
-      (syntax-violation who message form))
-     ((message form subform)
-      (syntax-violation who message form subform))))
-
-  #| end of module: PARSE-IMPORT-SPEC* |# )
 
 
 ;;;; R6RS programs and libraries helpers
