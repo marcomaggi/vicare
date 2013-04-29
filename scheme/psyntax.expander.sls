@@ -741,23 +741,23 @@
 	    (%synner "invalid exports" (%find-dups external-identifier*)))
 	(syntax-match (car export-spec*) ()
 	  (?identifier
-	   (id? ?identifier)
+	   (identifier? ?identifier)
 	   (loop (cdr export-spec*)
 		 (cons ?identifier internal-identifier*)
 		 (cons ?identifier external-identifier*)))
 
 	  ((?rename (?internal* ?external*) ...)
 	   (and (eq? (syntax->datum ?rename) 'rename)
-		(for-all id? ?internal*)
-		(for-all id? ?external*))
+		(for-all identifier? ?internal*)
+		(for-all identifier? ?external*))
 	   (loop (cdr export-spec*)
 		 (append ?internal* internal-identifier*)
 		 (append ?external* external-identifier*)))
 
 	  ((?prefix (?internal* ...) ?the-prefix)
 	   (and (eq? (syntax->datum ?prefix) 'prefix)
-		(for-all id? ?internal*)
-		(id? ?the-prefix))
+		(for-all identifier? ?internal*)
+		(identifier? ?the-prefix))
 	   (if #f
 	       ;;FIXME At present  there is no way to  disable PREFIX to
 	       ;;enforce strict R6RS compatibility; in future it may be.
@@ -777,8 +777,8 @@
 
 	  ((?deprefix (?internal* ...) ?the-prefix)
 	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
-		(for-all id? ?internal*)
-		(id? ?the-prefix))
+		(for-all identifier? ?internal*)
+		(identifier? ?the-prefix))
 	   (if #f
 	       ;;FIXME At present there is no way to disable DEPREFIX to
 	       ;;enforce strict R6RS compatibility; in future it may be.
@@ -2086,7 +2086,7 @@
 	      (<stx>-ae*    id)))
 
 (define (datum->syntax id datum)
-  (if (id? id)
+  (if (identifier? id)
       (datum->stx id datum)
     (assertion-violation 'datum->syntax
       "expected identifier as context syntax object" id)))
@@ -2462,7 +2462,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (id? x)
+(define (identifier? x)
   ;;Return true if X is an  identifier: a syntax object whose expression
   ;;is a symbol.
   ;;
@@ -2512,7 +2512,7 @@
   ;;Given a list return #t if it  is made of identifers none of which is
   ;;BOUND-ID=? to another; else return #f.
   ;;
-  (and (for-all id? id*)
+  (and (for-all identifier? id*)
        (distinct-bound-ids? id*)))
 
 (define (distinct-bound-ids? id*)
@@ -2666,7 +2666,7 @@
   ;;- The binding of  the identifier (for id-stx) or the  type of car of
   ;;  the pair.
   ;;
-  (cond ((id? e)
+  (cond ((identifier? e)
 	 (let ((id e))
 	   (let* ((label  (id->label/intern id))
 		  (b      (label->binding label r))
@@ -2683,7 +2683,7 @@
 		(values 'other #f #f))))))
 	((syntax-pair? e)
 	 (let ((id (syntax-car e)))
-	   (if (id? id)
+	   (if (identifier? id)
 	       (let* ((label  (id->label/intern id))
 		      (b      (label->binding label r))
 		      (type   (binding-type b)))
@@ -3354,11 +3354,11 @@
     (define (get-record-constructor-name spec)
       (syntax-match spec ()
 	((foo make-foo foo?) make-foo)
-	(foo (id? foo) (id foo "make-" (syntax->datum foo)))))
+	(foo (identifier? foo) (id foo "make-" (syntax->datum foo)))))
     (define (get-record-predicate-name spec)
       (syntax-match spec ()
 	((foo make-foo foo?) foo?)
-	(foo (id? foo) (id foo (syntax->datum foo) "?"))))
+	(foo (identifier? foo) (id foo (syntax->datum foo) "?"))))
     (define (get-clause id ls)
       (syntax-match ls ()
 	(() #f)
@@ -3475,11 +3475,11 @@
       (map
 	  (lambda (field)
 	    (syntax-match field (mutable immutable)
-	      ((mutable name accessor mutator) (id? accessor) accessor)
-	      ((immutable name accessor)       (id? accessor) accessor)
-	      ((mutable name)                  (id? name) (gen-name name))
-	      ((immutable name)                (id? name) (gen-name name))
-	      (name                            (id? name) (gen-name name))
+	      ((mutable name accessor mutator) (identifier? accessor) accessor)
+	      ((immutable name accessor)       (identifier? accessor) accessor)
+	      ((mutable name)                  (identifier? name) (gen-name name))
+	      ((immutable name)                (identifier? name) (gen-name name))
+	      (name                            (identifier? name) (gen-name name))
 	      (others (stx-error field "invalid field spec"))))
 	fields))
     (define (get-unsafe-accessors foo fields)
@@ -3491,11 +3491,11 @@
       (map
 	  (lambda (field)
 	    (syntax-match field (mutable immutable)
-	      ((mutable name accessor mutator) (id? accessor) (gen-name name))
-	      ((immutable name accessor)       (id? accessor) (gen-name name))
-	      ((mutable name)                  (id? name) (gen-name name))
-	      ((immutable name)                (id? name) (gen-name name))
-	      (name                            (id? name) (gen-name name))
+	      ((mutable name accessor mutator) (identifier? accessor) (gen-name name))
+	      ((immutable name accessor)       (identifier? accessor) (gen-name name))
+	      ((mutable name)                  (identifier? name) (gen-name name))
+	      ((immutable name)                (identifier? name) (gen-name name))
+	      (name                            (identifier? name) (gen-name name))
 	      (others (stx-error field "invalid field spec"))))
 	fields))
     (define (get-unsafe-accessors-idx-names foo fields)
@@ -3588,7 +3588,7 @@
 	  (syntax-match (car cls*) ()
 	    ((kwd . rest)
 	     (cond
-	      ((or (not (id? kwd))
+	      ((or (not (identifier? kwd))
 		   (not (free-id-member? kwd valid-kwds)))
 	       (stx-error kwd "not a valid define-record-type keyword"))
 	      ((bound-id-member? kwd seen*)
@@ -3617,12 +3617,12 @@
 		       suffix))))
     (syntax-match x ()
       ((ctxt name super constructor predicate (field* accessor*) ...)
-       (and (id? name)
-	    (id? super)
-	    (id? constructor)
-	    (id? predicate)
-	    (for-all id? field*)
-	    (for-all id? accessor*))
+       (and (identifier? name)
+	    (identifier? super)
+	    (identifier? constructor)
+	    (identifier? predicate)
+	    (for-all identifier? field*)
+	    (for-all identifier? accessor*))
        (let ((aux-accessor* (map (lambda (x) (gensym)) accessor*)))
 	 (bless
 	  `(begin
@@ -3842,7 +3842,7 @@
 		   ((id e* ...) (identifier? (syntax id))
 		    (cons (syntax ,expr) (syntax (e* ...))))))))
       ((_ (id1 expr1) ((set! id2 expr2) expr3))
-       (and (id? id1) (id? id2) (id? expr2))
+       (and (identifier? id1) (identifier? id2) (identifier? expr2))
        (bless `(cons 'macro!
 		     (lambda (x)
 		       (syntax-case x (set!)
@@ -3860,7 +3860,7 @@
        (if (valid-bound-ids? lhs*)
 	   (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
 	 (invalid-fmls-error stx lhs*)))
-      ((_ f ((lhs* rhs*) ...) b b* ...) (id? f)
+      ((_ f ((lhs* rhs*) ...) b b* ...) (identifier? f)
        (if (valid-bound-ids? lhs*)
 	   (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
 	 (invalid-fmls-error stx lhs*))))))
@@ -3868,7 +3868,7 @@
 (define let*-macro
   (lambda (stx)
     (syntax-match stx ()
-      ((_ ((lhs* rhs*) ...) b b* ...) (for-all id? lhs*)
+      ((_ ((lhs* rhs*) ...) b b* ...) (for-all identifier? lhs*)
        (bless
 	(let f ((x* (map list lhs* rhs*)))
 	  (cond
@@ -3878,7 +3878,7 @@
 (define trace-let-macro
   (lambda (stx)
     (syntax-match stx ()
-      ((_ f ((lhs* rhs*) ...) b b* ...) (id? f)
+      ((_ f ((lhs* rhs*) ...) b b* ...) (identifier? f)
        (if (valid-bound-ids? lhs*)
 	   (bless
 	    `((letrec ((,f (trace-lambda ,f ,lhs* ,b . ,b*))) ,f) . ,rhs*))
@@ -3890,7 +3890,7 @@
 (define let-values-macro
   (lambda (stx)
     (define (rename x old* new*)
-      (unless (id? x)
+      (unless (identifier? x)
 	(syntax-violation #f "not an indentifier" stx x))
       (when (bound-id-member? x old*)
 	(syntax-violation #f "duplicate binding" stx x))
@@ -3940,7 +3940,7 @@
     (define (check x*)
       (unless (null? x*)
 	(let ((x (car x*)))
-	  (unless (id? x)
+	  (unless (identifier? x)
 	    (syntax-violation #f "not an identifier" stx x))
 	  (check (cdr x*))
 	  (when (bound-id-member? x (cdr x*))
@@ -4007,7 +4007,7 @@
 					    (lambda (,@fmls . ,last) ,b . ,b*))))
 	 (invalid-fmls-error stx (append fmls last))))
       ((_ who expr)
-       (if (id? who)
+       (if (identifier? who)
 	   (bless `(define ,who
 		     (let ((v ,expr))
 		       (if (procedure? v)
@@ -4019,7 +4019,7 @@
   (lambda (stx)
     (syntax-match stx ()
       ((_ who expr)
-       (if (id? who)
+       (if (identifier? who)
 	   (bless
 	    `(define-syntax ,who
 	       (make-traced-macro ',who ,expr)))
@@ -4085,7 +4085,7 @@
 	  `(,outerk (lambda () ,code)))))
     (syntax-match x ()
       ((_ (con clause* ...) b b* ...)
-       (id? con)
+       (identifier? con)
        (let ((outerk     (gensym))
 	     (raised-obj (gensym)))
 	 (bless
@@ -4115,13 +4115,13 @@
   (syntax-match stx ()
     ((_ name (id* ...) maker)
      (begin
-       (unless (id? name)
+       (unless (identifier? name)
 	 (syntax-violation who
 	   "expected identifier as enumeration type name" stx name))
-       (unless (for-all id? id*)
+       (unless (for-all identifier? id*)
 	 (syntax-violation who
 	   "expected list of symbols as enumeration elements" stx id*))
-       (unless (id? maker)
+       (unless (identifier? maker)
 	 (syntax-violation who
 	   "expected identifier as enumeration constructor syntax name" stx maker))
        (let ((name*		(remove-dups (syntax->datum id*)))
@@ -4624,7 +4624,7 @@
   ;;MAKE-FILE-OPTIONS from the boot environment.
   ;;
   (define (valid-option? opt-stx)
-    (and (id? opt-stx)
+    (and (identifier? opt-stx)
 	 (memq (identifier->symbol opt-stx) '(no-fail no-create no-truncate))))
   (syntax-match expr-stx ()
     ((_ ?opt* ...)
@@ -4638,7 +4638,7 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?name)
-     (and (id? ?name)
+     (and (identifier? ?name)
 	  (memq (identifier->symbol ?name) allowed-symbol-set))
      (bless `(quote ,?name)))))
 
@@ -4822,7 +4822,7 @@
 	 (not (list? (binding-value binding)))))
   (syntax-match expr-stx ()
     ((_ ?identifier)
-     (id? ?identifier)
+     (identifier? ?identifier)
      (let ((label (id->label ?identifier)))
        (unless label
 	 (%raise-unbound-error who expr-stx ?identifier))
@@ -4863,7 +4863,7 @@
     (define who 'record-type-descriptor-transformer)
     (syntax-match expr-stx ()
       ((_ ?identifier)
-       (id? ?identifier)
+       (identifier? ?identifier)
        (let ((label (id->label ?identifier)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?identifier))
@@ -4885,7 +4885,7 @@
     (define who 'record-constructor-descriptor-transformer)
     (syntax-match expr-stx ()
       ((_ ?identifier)
-       (id? ?identifier)
+       (identifier? ?identifier)
        (let ((label (id->label ?identifier)))
 	 (unless label
 	   (%raise-unbound-error who expr-stx ?identifier))
@@ -4980,7 +4980,7 @@
 	(syntax-match e ()
 	  (dots (ellipsis? dots)
 		(stx-error src "misplaced ellipsis in syntax form"))
-	  (id (id? id)
+	  (id (identifier? id)
 	      (let* ((label (id->label e))
 		     (b (label->binding label r)))
 		(if (eq? (binding-type b) 'syntax)
@@ -5143,7 +5143,7 @@
 	(let find ((id* id*) (ok* '()))
 	  (if (null? id*)
 	      (stx-error e) ; shouldn't happen
-	    (if (id? (car id*))
+	    (if (identifier? (car id*))
 		(if (bound-id-member? (car id*) ok*)
 		    (syntax-error (car id*) "duplicate " class)
 		  (find (cdr id*) (cons (car id*) ok*)))
@@ -5192,7 +5192,7 @@
 			       (list (build-lexical-reference no-source x)))
 	  (syntax-match (car clauses) ()
 	    ((pat expr)
-	     (if (and (id? pat)
+	     (if (and (identifier? pat)
 		      (not (bound-id-member? pat keys))
 		      (not (ellipsis? pat)))
 		 (if (free-id=? pat (scheme-stx '_))
@@ -5231,13 +5231,13 @@
   (syntax-match fmls ()
     ((id* ... . last)
      (let f ((id* (cond
-		   ((id? last) (cons last id*))
+		   ((identifier? last) (cons last id*))
 		   ((syntax-null? last) id*)
 		   (else
 		    (syntax-violation #f "not an identifier" stx last)))))
        (cond
 	((null? id*) (values))
-	((not (id? (car id*)))
+	((not (identifier? (car id*)))
 	 (syntax-violation #f "not an identifier" stx (car id*)))
 	(else
 	 (f (cdr id*))
@@ -5276,7 +5276,7 @@
     (define cvt
       (lambda (p n ids)
 	(syntax-match p ()
-	  (id (id? id)
+	  (id (identifier? id)
 	      (cond
                ((bound-id-member? p keys)
                 (values `#(free-id ,p) ids))
@@ -5307,16 +5307,16 @@
 
 (define ellipsis?
   (lambda (x)
-    (and (id? x) (free-id=? x (scheme-stx '...)))))
+    (and (identifier? x) (free-id=? x (scheme-stx '...)))))
 
 (define underscore?
   (lambda (x)
-    (and (id? x) (free-id=? x (scheme-stx '_)))))
+    (and (identifier? x) (free-id=? x (scheme-stx '_)))))
 
 (define (verify-literals lits expr)
   (for-each
       (lambda (x)
-        (when (or (not (id? x)) (ellipsis? x) (underscore? x))
+        (when (or (not (identifier? x)) (ellipsis? x) (underscore? x))
           (syntax-violation #f "invalid literal" expr x)))
     lits))
 
@@ -5356,7 +5356,7 @@
     (if (procedure? x)
 	(return
 	 (x (lambda (id)
-	      (unless (id? id)
+	      (unless (identifier? id)
 		(assertion-violation 'rho "not an identifier" id))
 	      (let ((label (id->label id)))
 		(let ((binding (label->binding label r)))
@@ -5503,7 +5503,7 @@
 (define chi-set!
   (lambda (e r mr)
     (syntax-match e ()
-      ((_ x v) (id? x)
+      ((_ x v) (identifier? x)
        (let-values (((type value kwd) (syntax-type x r)))
 	 (case type
 	   ((lexical)
@@ -5628,14 +5628,14 @@
     (syntax-match e ()
       ((_ (export* ...) b* ...)
        (begin
-	 (unless (for-all id? export*)
+	 (unless (for-all identifier? export*)
 	   (stx-error e "module exports must be identifiers"))
 	 (values #f (list->vector export*) b*)))
       ((_ name (export* ...) b* ...)
        (begin
-	 (unless (id? name)
+	 (unless (identifier? name)
 	   (stx-error e "module name must be an identifier"))
-	 (unless (for-all id? export*)
+	 (unless (for-all identifier? export*)
 	   (stx-error e "module exports must be identifiers"))
 	 (values name (list->vector export*) b*))))))
 
@@ -5684,8 +5684,8 @@
 	      (values (cons m1 nm*)
 		      (append s1* ns*)
 		      (cons (car ae*) nae*))))))))
-  (unless (id? base-id) (err "not an identifier" base-id))
-  (unless (id? new-id) (err "not an identifier" new-id))
+  (unless (identifier? base-id) (err "not an identifier" base-id))
+  (unless (identifier? new-id) (err "not an identifier" new-id))
   (unless (free-identifier=? base-id new-id)
     (err "not the same identifier" base-id new-id))
   (let-values (((m* s* ae*)
@@ -5741,7 +5741,7 @@
 	(values e* r mr lex* rhs* mod** kwd* exp*)
       (let ((e (car e*)))
 	(let-values (((type value kwd) (syntax-type e r)))
-	  (let ((kwd* (if (id? kwd) (cons kwd kwd*) kwd*)))
+	  (let ((kwd* (if (identifier? kwd) (cons kwd kwd*) kwd*)))
 	    (case type
 	      ((define)
 	       (let-values (((id rhs) (parse-define e)))
@@ -5849,12 +5849,12 @@
 	       (let ()
 		 (define (module-import? e)
 		   (syntax-match e ()
-		     ((_ id) (id? id) #t)
+		     ((_ id) (identifier? id) #t)
 		     ((_ imp* ...) #f)
 		     (_ (stx-error e "malformed import form"))))
 		 (define (module-import e r)
 		   (syntax-match e ()
-		     ((_ id) (id? id)
+		     ((_ id) (identifier? id)
 		      (let-values (((type value kwd) (syntax-type id r)))
 			(case type
 			  (($module)
@@ -5875,7 +5875,7 @@
 		     (_
 		      (stx-error e "invalid import form"))))
 		 (define (any-import ctxt e r)
-		   (if (id? e)
+		   (if (identifier? e)
 		       (module-import (list ctxt e) r)
 		     (library-import (list ctxt e))))
 		 (define (any-import* ctxt e* r)
@@ -5912,16 +5912,16 @@
     ;;
     (syntax-match x ()
       ((_ (id . fmls) b b* ...)
-       (id? id)
+       (identifier? id)
        (begin
 	 (verify-formals fmls x)
 	 (values id (cons 'defun x))))
 
-      ((_ id val) (id? id)
+      ((_ id val) (identifier? id)
        (values id (cons 'expr val)))
 
       ((_ id)
-       (id? id)
+       (identifier? id)
        (values id (cons 'expr (bless '(void)))))
       ))
 
@@ -5930,7 +5930,7 @@
     ;;
     (syntax-match x ()
       ((_ id val)
-       (id? id)
+       (identifier? id)
        (values id val))))
 
   #| end of module: CHI-BODY* |# )
@@ -6043,16 +6043,16 @@
 
 (define free-identifier=?
   (lambda (x y)
-    (if (id? x)
-	(if (id? y)
+    (if (identifier? x)
+	(if (identifier? y)
 	    (free-id=? x y)
 	  (assertion-violation 'free-identifier=? "not an identifier" y))
       (assertion-violation 'free-identifier=? "not an identifier" x))))
 
 (define bound-identifier=?
   (lambda (x y)
-    (if (id? x)
-	(if (id? y)
+    (if (identifier? x)
+	(if (identifier? y)
 	    (bound-id=? x y)
 	  (assertion-violation 'bound-identifier=? "not an identifier" y))
       (assertion-violation 'bound-identifier=? "not an identifier" x))))
@@ -6078,9 +6078,6 @@
 		;              x
 		;              (syntax->datum x)))
 		;        (syntax->datum x)))
-
-(define (identifier? x)
-  (id? x))
 
 
 ;;;; errors
@@ -6168,10 +6165,10 @@
 			    ((not source-who)
 			     (syntax-match form ()
 			       (id
-				(id? id)
+				(identifier? id)
 				(syntax->datum id))
 			       ((id . rest)
-				(id? id)
+				(identifier? id)
 				(syntax->datum id))
 			       (_  #f)))
 			    (else
