@@ -140,6 +140,12 @@ the region of such bindings.  The expansion is:
 @end example
 @end deffn
 
+
+@deffn Syntax begin0 @varo{expr} @var{expr} ...
+Evaluate all the expressions in the given order and return the return
+values of @varo{expr}.
+@end deffn
+
 @c page
 @node iklib conditions
 @section Additional condition types

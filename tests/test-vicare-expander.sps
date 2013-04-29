@@ -275,6 +275,44 @@
   #t)
 
 
+(parametrise ((check-test-name	'begin0))
+
+  (check
+      (begin0*
+       1)
+    => 1)
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (begin0*
+	     (values 1 2 3)))
+	list)
+    => '(1 2 3))
+
+  (check
+      (with-result
+       (begin0*
+	1
+	(add-result 2)
+	(add-result 3)))
+    => '(1 (2 3)))
+
+  (check
+      (with-result
+       (call-with-values
+	   (lambda ()
+	     (begin0*
+	      (values 1 10)
+	      (add-result 2)
+	      (add-result 3)))
+	 list))
+    => '((1 10) (2 3)))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

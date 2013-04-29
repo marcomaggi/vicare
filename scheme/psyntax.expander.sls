@@ -3255,6 +3255,7 @@
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive*)			receive-macro)
+	     ((begin0*)				begin0-macro)
 
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
@@ -4568,7 +4569,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RECEIVE
+;;;; module non-core-macro-transformer: RECEIVE, BEGIN0
 
 (define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
@@ -4581,6 +4582,21 @@
       `(call-with-values
 	   (lambda () ,?expression)
 	 (lambda ,?formals ,?form0 ,@?form*))))
+    ))
+
+(define (begin0-macro expr-stx)
+  ;;Transformer function used to expand  Vicare's BEGIN0 macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
+  ;;Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?form0 ?form* ...)
+     (bless
+      `(call-with-values
+	   (lambda () ,?form0)
+	 (lambda args
+	   ,@?form*
+	   (apply values args)))))
     ))
 
 

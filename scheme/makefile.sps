@@ -397,6 +397,7 @@
     (define-values			(macro . define-values))
     (define-constant-values		(macro . define-constant-values))
     (receive*				(macro . receive*))
+    (begin0*				(macro . begin0*))
 ;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
@@ -1979,6 +1980,7 @@
     (define-values				i v $language)
     (define-constant-values			i v $language)
     (receive*					i v $language)
+    (begin0*					i v $language)
 ;;;
     (port-id					i v $language)
     (port-uid					i v $language)

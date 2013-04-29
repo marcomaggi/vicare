@@ -94,7 +94,8 @@
     big				little)
   (import (except (ikarus)
 		  define-values
-		  receive)
+		  receive
+		  begin0)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
