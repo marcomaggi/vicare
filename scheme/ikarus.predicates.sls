@@ -328,6 +328,10 @@
 	((keyword? x)
 	 (and (keyword? y) (keyword=? x y)))
 
+	((struct? x)
+	 (and (struct? y)
+	      (struct=? x y)))
+
 	(else #f)))
 
 
