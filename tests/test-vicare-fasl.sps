@@ -107,6 +107,18 @@
   (fasl->fasl -inf.0-inf.0i)
   (fasl->fasl +nan.0+nan.0i)
 
+  ;; compnums
+  (fasl->fasl 1+2i)
+  (fasl->fasl 1+2.0i)
+  (fasl->fasl 1.0+2i)
+  (fasl->fasl 1/2+2i)
+  (fasl->fasl 1+2/3i)
+  (fasl->fasl 1/2+2/3i)
+  (fasl->fasl +inf.0+2i)
+  (fasl->fasl 2+inf.0i)
+  (fasl->fasl +inf.0+2/3i)
+  (fasl->fasl 2/3+inf.0i)
+
   ;; characters
   (fasl->fasl #\A)
 
@@ -133,6 +145,28 @@
   (fasl->fasl 'ciao)
   (let ((G (gensym)))
     (fasl->fasl G))
+
+  #t)
+
+
+(parametrise ((check-test-name	'structs))
+
+  (define-struct alpha
+    (a b c))
+
+  (fasl->fasl (type-descriptor alpha))
+  (fasl->fasl (make-alpha 1 2 3))
+
+  #t)
+
+
+#;(parametrise ((check-test-name	'records))
+
+  (define-record-type alpha
+    (fields a b c))
+
+  (fasl->fasl (record-type-descriptor alpha))
+  (fasl->fasl (make-alpha 1 2 3))
 
   #t)
 
