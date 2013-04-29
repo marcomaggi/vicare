@@ -1841,6 +1841,7 @@
   (check	;check that  EXPR is not  erroneously bound in  the ELSE
 		;clause
       (guard (E ((undefined-violation? E)
+		 #;(check-pretty-print E)
 		 #t)
 		(else
 		 #;(check-pretty-print E)

@@ -160,9 +160,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (raise-unbound-error id)
-  (%syntax-violation #f "unbound identifier" id (make-undefined-violation)))
-
 (define-syntax stx-error
   (lambda (stx)
     (syntax-case stx (quote)
@@ -2675,7 +2672,7 @@
 		  (b      (label->binding label r))
 		  (type   (binding-type b)))
 	     (unless label ;;fail early
-	       (raise-unbound-error id))
+	       (%raise-unbound-error #f id id))
 	     (case type
 	       ((lexical core-prim macro macro! global local-macro
 			 local-macro! global-macro global-macro!
@@ -2691,7 +2688,7 @@
 		      (b      (label->binding label r))
 		      (type   (binding-type b)))
 		 (unless label ;;fail early
-		   (raise-unbound-error id))
+		   (%raise-unbound-error #f id id))
 		 (case type
 		   ((define define-syntax core-macro begin macro
 		      macro! local-macro local-macro! global-macro
@@ -3213,38 +3210,44 @@
 	   x)
 	  ((symbol? x)
 	   (case x
-	     ((define-record-type)    define-record-type-macro)
-	     ((define-struct)         define-struct-macro)
-	     ((cond)                  cond-macro)
-	     ((let)                   let-macro)
-	     ((do)                    do-macro)
-	     ((or)                    or-macro)
-	     ((and)                   and-macro)
-	     ((let*)                  let*-macro)
-	     ((let-values)            let-values-macro)
-	     ((let*-values)           let*-values-macro)
-	     ((syntax-rules)          syntax-rules-macro)
-	     ((quasiquote)            quasiquote-macro)
-	     ((quasisyntax)           quasisyntax-macro)
-	     ((with-syntax)           with-syntax-macro)
-	     ((when)                  when-macro)
-	     ((unless)                unless-macro)
-	     ((case)                  case-macro)
-	     ((identifier-syntax)     identifier-syntax-macro)
-	     ((time)                  time-macro)
-	     ((delay)                 delay-macro)
-	     ((assert)                assert-macro)
-	     ((guard)                 guard-macro)
-	     ((define-enumeration)    define-enumeration-macro)
-	     ((trace-lambda)          trace-lambda-macro)
-	     ((trace-define)          trace-define-macro)
-	     ((trace-let)             trace-let-macro)
-	     ((trace-define-syntax)   trace-define-syntax-macro)
-	     ((trace-let-syntax)      trace-let-syntax-macro)
-	     ((trace-letrec-syntax)   trace-letrec-syntax-macro)
-	     ((define-condition-type) define-condition-type-macro)
-	     ((parameterize)          parameterize-macro)
-	     ((parametrise)           parameterize-macro)
+	     ((define-record-type)		define-record-type-macro)
+	     ((define-struct)			define-struct-macro)
+	     ((define-condition-type)		define-condition-type-macro)
+	     ((cond)				cond-macro)
+	     ((let)				let-macro)
+	     ((do)				do-macro)
+	     ((or)				or-macro)
+	     ((and)				and-macro)
+	     ((let*)				let*-macro)
+	     ((let-values)			let-values-macro)
+	     ((let*-values)			let*-values-macro)
+	     ((syntax-rules)			syntax-rules-macro)
+	     ((quasiquote)			quasiquote-macro)
+	     ((quasisyntax)			quasisyntax-macro)
+	     ((with-syntax)			with-syntax-macro)
+	     ((when)				when-macro)
+	     ((unless)				unless-macro)
+	     ((case)				case-macro)
+	     ((identifier-syntax)		identifier-syntax-macro)
+	     ((time)				time-macro)
+	     ((delay)				delay-macro)
+	     ((assert)				assert-macro)
+	     ((guard)				guard-macro)
+	     ((define-enumeration)		define-enumeration-macro)
+
+	     ((trace-lambda)			trace-lambda-macro)
+	     ((trace-define)			trace-define-macro)
+	     ((trace-let)			trace-let-macro)
+	     ((trace-define-syntax)		trace-define-syntax-macro)
+	     ((trace-let-syntax)		trace-let-syntax-macro)
+	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
+
+	     #;((define-values)			define-values-macro)
+	     #;((define-constant-values)		define-constant-values-macro)
+	     #;((receive)				receive-macro)
+
+	     ((parameterize)			parameterize-macro)
+	     ((parametrise)			parameterize-macro)
 
 	     ((eol-style)
 	      (lambda (x)
@@ -4492,6 +4495,85 @@
 	       (,lhs* (syntax ,v))))))))))
 
 
+;;;; module non-core-macro-transformer: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
+
+#;(define (define-values-macro expr-stx)
+  ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?var* ... ?var0) ?form* ... ?form0)
+     (let ((TMP* (generate-temporaries ?var*)))
+       (bless
+	`(begin
+	   ;;We must make sure that the ?FORMs do not capture the ?VARs.
+	   (define (return-multiple-values)
+	     ,@?form* ,?form0)
+	   ,@(map (lambda (var)
+		    `(define ,var #f))
+	       ?var*)
+	   (define ,?var0
+	     (call-with-values
+		 return-multiple-values
+	       (lambda (,@TMP* T0)
+		 ,@(map (lambda (var TMP)
+			  `(set! ,var ,TMP))
+		     ?var* TMP*)
+		 T0)))
+	   ))))
+    ))
+
+#;(define (define-constant-values-macro expr-stx)
+  ;;Transformer function used  to expand Vicare's DEFINE-CONSTANT-VALUES
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?var* ... ?var0) ?form* ... ?form0)
+     (let ((SHADOW* (generate-temporaries ?var*))
+	   (TMP*    (generate-temporaries ?var*)))
+       (bless
+	#'(begin
+	    (define (return-multiple-values)
+	      ,@?form* ,?form0)
+	    ,@(map (lambda (SHADOW)
+		     `(define ,SHADOW #f))
+		SHADOW*)
+	    (define SHADOW0
+	      (call-with-values
+		  return-multiple-values
+		(lambda (,@TMP* T0)
+		  ,@(map (lambda (SHADOW TMP)
+			   `(set! ,SHADOW ,TMP))
+		      SHADOW* TMP*)
+		  T0)))
+	    ,@(map (lambda (var SHADOW)
+		     `(define-syntax ,var
+			(identifier-syntax ,SHADOW)))
+		?var* SHADOW*)
+	    (define-syntax ,?var0
+	      (identifier-syntax ,SHADOW0))
+	    ))))
+    ))
+
+
+;;;; module non-core-macro-transformer: RECEIVE
+
+#;(define (receive-macro expr-stx)
+  ;;Transformer function used to expand Vicare's RECEIVE macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
+  ;;Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?formals ?expression ?form0 ?form* ...)
+     (bless
+      `(call-with-values
+	   (lambda () ,?expression)
+	 (lambda ,?formals ,?form0 ,@?form*))))
+    ))
+
+
 ;;;; module non-core-macro-transformer: miscellanea
 
 (define time-macro
@@ -4708,7 +4790,8 @@
 	 (eq? (binding-type binding) '$fluid)))
 
   (define (%synner message subform)
-    (syntax-violation who message expr-stx subform))
+    (stx-error subform message)
+    #;(syntax-violation who message expr-stx subform))
 
   (transformer expr-stx))
 
@@ -4742,7 +4825,7 @@
      (id? ?identifier)
      (let ((label (id->label ?identifier)))
        (unless label
-	 (raise-unbound-error ?identifier))
+	 (%raise-unbound-error who expr-stx ?identifier))
        (let ((binding (label->binding label lexenv.run)))
 	 (unless (%struct-type-descriptor-binding? binding)
 	   (syntax-violation who "not a struct type" expr-stx ?identifier))
@@ -4783,7 +4866,7 @@
        (id? ?identifier)
        (let ((label (id->label ?identifier)))
 	 (unless label
-	   (raise-unbound-error ?identifier))
+	   (%raise-unbound-error who expr-stx ?identifier))
 	 (let ((binding (label->binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-violation who "not a record type" expr-stx ?identifier))
@@ -4805,7 +4888,7 @@
        (id? ?identifier)
        (let ((label (id->label ?identifier)))
 	 (unless label
-	   (raise-unbound-error ?identifier))
+	   (%raise-unbound-error who expr-stx ?identifier))
 	 (let ((binding (label->binding label lexenv.run)))
 	   (unless (%record-type-descriptor-binding? binding)
 	     (syntax-error who "invalid type" expr-stx ?identifier))
@@ -5996,10 +6079,16 @@
 		;              (syntax->datum x)))
 		;        (syntax->datum x)))
 
+(define (identifier? x)
+  (id? x))
+
+
+;;;; errors
+
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset
 			 line-number column-number)
-  ;;Invoked by the expansion of the ASSERT macro to raise an assertion
+  ;;Invoked by the  expansion of the ASSERT macro to  raise an assertion
   ;;violation.
   ;;
   (raise
@@ -6010,35 +6099,6 @@
 	      (make-source-position-condition source-identifier
 					      byte-offset character-offset
 					      line-number column-number))))
-
-(define syntax-error
-  (lambda (x . args)
-    (unless (for-all string? args)
-      (assertion-violation 'syntax-error "invalid argument" args))
-    (raise
-     (condition
-      (make-message-condition
-       (if (null? args)
-	   "invalid syntax"
-	 (apply string-append args)))
-      (make-syntax-violation
-       (syntax->datum x)
-       #f)
-      (expression->source-position-condition x)
-      (extract-trace x)))))
-
-(define (extract-trace x)
-  (define-condition-type &trace &condition
-    make-trace trace?
-    (form trace-form))
-  (let f ((x x))
-    (cond ((<stx>? x)
-	   (apply condition
-		  (make-trace x)
-		  (map f (<stx>-ae* x))))
-	  ((annotation? x)
-	   (make-trace (make-<stx> x '() '() '())))
-	  (else (condition)))))
 
 (define syntax-violation
   ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
@@ -6083,34 +6143,74 @@
     (%syntax-violation who msg form
 		       (make-syntax-violation form subform)))))
 
-(define (%syntax-violation who msg form condition-object)
-  (define who 'syntax-violation)
-  (unless (string? msg)
-    (assertion-violation who "message is not a string" msg))
-  (let ((who (cond ((or (string? who)
-			(symbol? who))
-		    who)
-		   ((not who)
-		    (syntax-match form ()
-		      (id
-		       (id? id)
-		       (syntax->datum id))
-		      ((id . rest)
-		       (id? id)
-		       (syntax->datum id))
-		      (_  #f)))
-		   (else
-		    (assertion-violation who "invalid who argument" who)))))
-    (raise
-     (condition (if who
-		    (make-who-condition who)
-		  (condition))
-		(make-message-condition msg)
-		condition-object
-		(expression->source-position-condition form)
-		(extract-trace form)))))
+(module (syntax-error
+	 %syntax-violation
+	 %raise-unbound-error)
 
-(define identifier? (lambda (x) (id? x)))
+  (define (syntax-error x . args)
+    (unless (for-all string? args)
+      (assertion-violation 'syntax-error "invalid argument" args))
+    (raise
+     (condition (make-message-condition (if (null? args)
+					    "invalid syntax"
+					  (apply string-append args)))
+		(make-syntax-violation (syntax->datum x) #f)
+		(expression->source-position-condition x)
+		(extract-trace x))))
+
+  (define (%syntax-violation source-who msg form condition-object)
+    (define who 'syntax-violation)
+    (unless (string? msg)
+      (assertion-violation who "message is not a string" msg))
+    (let ((source-who (cond ((or (string? source-who)
+				 (symbol? source-who))
+			     source-who)
+			    ((not source-who)
+			     (syntax-match form ()
+			       (id
+				(id? id)
+				(syntax->datum id))
+			       ((id . rest)
+				(id? id)
+				(syntax->datum id))
+			       (_  #f)))
+			    (else
+			     (assertion-violation who "invalid who argument" source-who)))))
+      (raise
+       (condition (if source-who
+		      (make-who-condition source-who)
+		    (condition))
+		  (make-message-condition msg)
+		  condition-object
+		  (expression->source-position-condition form)
+		  (extract-trace form)))))
+
+  (define (%raise-unbound-error source-who form id)
+    (raise
+     (condition (if source-who
+		    (make-who-condition source-who)
+		  (condition))
+		(make-message-condition "unbound identifier")
+		(make-undefined-violation)
+		(make-syntax-violation form id)
+		(expression->source-position-condition id)
+		(extract-trace id))))
+
+  (define (extract-trace x)
+    (define-condition-type &trace &condition
+      make-trace trace?
+      (form trace-form))
+    (let f ((x x))
+      (cond ((<stx>? x)
+	     (apply condition
+		    (make-trace x)
+		    (map f (<stx>-ae* x))))
+	    ((annotation? x)
+	     (make-trace (make-<stx> x '() '() '())))
+	    (else
+	     (condition)))))
+
+  #| end of module |# )
 
 
 ;;;; miscellaneous collectors
