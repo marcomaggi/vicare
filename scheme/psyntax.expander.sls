@@ -161,13 +161,12 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax stx-error
-  (lambda (stx)
-    (syntax-case stx (quote)
-      ((_ ?expr-stx)
-       (syntax (syntax-violation #f "invalid syntax" ?expr-stx)))
-      ((_ ?expr-stx ?mst)
-       (syntax (syntax-violation #f ?mst ?expr-stx)))
-      )))
+  (syntax-rules (quote)
+    ((_ ?expr-stx)
+     (syntax-violation #f "invalid syntax" ?expr-stx))
+    ((_ ?expr-stx ?mst)
+     (syntax-violation #f ?mst ?expr-stx))
+    ))
 
 
 ;;;; top-level environments
@@ -652,7 +651,7 @@
 	  (eq? (syntax->datum import)  'import))
      (values ?name* ?exp* ?imp* ?body*))
     (_
-     (stx-error library-sexp "malformed library"))))
+     (syntax-violation 'expander "malformed library" library-sexp))))
 
 
 (define (parse-library-name libname)
@@ -669,6 +668,7 @@
   ;;   (parse-library-name (foo bar (1 2 3)))
   ;;   => (foo bar) (1 2 3)
   ;;
+  (define who 'expander)
   (receive (name* ver*)
       (let recur ((sexp libname))
 	(syntax-match sexp ()
@@ -686,9 +686,9 @@
 	   (values '() '()))
 
 	  (_
-	   (stx-error libname "invalid library name"))))
+	   (syntax-violation who "invalid library name" libname))))
     (when (null? name*)
-      (stx-error libname "empty library name"))
+      (syntax-violation who "empty library name" libname))
     (values name* ver*)))
 
 
@@ -1817,7 +1817,7 @@
 	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
   (when (<rib>-sealed/freq rib)
     (assertion-violation 'extend-rib!
-      "Vicare bug: attempt to extend sealed RIB" rib))
+      "Vicare: internal error: attempt to extend sealed RIB" rib))
   (let ((sym   (identifier->symbol id))
 	(mark* (<stx>-mark* id))
 	(sym*  (<rib>-sym* rib)))
@@ -1830,7 +1830,7 @@
 		      (set-car! label*-tail label)
 		    ;;Signal an error if the identifier was already in
 		    ;;the rib.
-		    (stx-error id "multiple definitions of identifier")))))
+		    (syntax-violation 'expander "multiple definitions of identifier" id)))))
 	  (else
 	   (set-<rib>-sym*!   rib (cons sym sym*))
 	   (set-<rib>-mark**! rib (cons mark* (<rib>-mark** rib)))
@@ -2784,13 +2784,19 @@
   ;;SYNTAX-DISPATCH along with the input expression.
   ;;
   (let ()
-    (define (transformer ctx)
-      (syntax-case ctx ()
+    (define (transformer stx)
+      (syntax-case stx ()
 
-	;;No clauses.
+	;;No  clauses.  Some  of  the  SYNTAX-MATCH clauses  recursively
+	;;expand  to uses  of  SYNTAX-MATCH; when  no  more clauses  are
+	;;available in the input  form, this SYNTAX-CASE clause matches.
+	;;When this happens: we want to raise a syntax error.
+	;;
+	;;Notice that we  do not want to raise a  syntax error here, but
+	;;in the expanded code.
 	((_ ?expr (?literals ...))
 	 (for-all sys.identifier? (syntax (?literals ...)))
-	 (syntax (stx-error ?expr "invalid syntax")))
+	 (syntax (syntax-violation #f "invalid syntax" ?expr)))
 
 	;;The next clause has a fender.
 	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
@@ -2835,9 +2841,13 @@
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) clause* ...))))))))
 
+	;;This is a true error in he use of SYNTAX-MATCH.  We still want
+	;;the  expanded  code  to  raise  the  violation.   Notice  that
+	;;SYNTAX-VIOLATION  is not  bound in  the expand  environment of
+	;;SYNTAX-MATCH's transformer.
+	;;
 	(?stuff
-	 (syntax
-	  (syntax-violation 'syntax-match "invalid syntax" (quote ?stuff))))
+	 (syntax (syntax-violation #f "invalid syntax" stx)))
 	))
 
     (module (%convert-single-pattern)
@@ -3280,7 +3290,7 @@
 	   (%error-invalid-macro))))
 
   (define (incorrect-usage-macro expr-stx)
-    (stx-error expr-stx "incorrect usage of auxiliary keyword"))
+    (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx))
 
 
 ;;;; module non-core-macro-transformer: control structures macros
