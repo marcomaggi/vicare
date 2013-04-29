@@ -113,17 +113,37 @@ process.
 @deffn Syntax begin0 @metao{expr} @meta{expr} ...
 Evaluate all the expressions in the given order and return the return
 values of @metao{expr}.
+
+@example
+(begin0
+    1
+  2)
+@result{} 1
+@end example
 @end deffn
 
 
 @deffn Syntax define-constant @meta{var} @meta{expr}
 Like @func{define} but create an immutable binding.
+
+@example
+(define-constant X 1)
+X               @result{} 1
+(set! X 2)      @error{} &syntax
+@end example
 @end deffn
 
 
 @deffn Syntax define-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.
+
+@example
+(define-values (a b c)
+  (values 1 2 3))
+
+(list a b c)    @result{} (1 2 3)
+@end example
 @end deffn
 
 
@@ -131,6 +151,14 @@ last one to the given @meta{var} identifiers.
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.  Make the @meta{var}
 identifiers immutable.
+
+@example
+(define-constant-values (a b c)
+  (values 1 2 3))
+
+(list a b c)    @result{} (1 2 3)
+(set! a 99)     @error{} &syntax
+@end example
 @end deffn
 
 
@@ -156,13 +184,35 @@ the region of such bindings.  The expansion is:
 Similar to @func{define}, but create a binding that is always expanded
 inline and @strong{cannot} be invoked recursively.  This syntax only
 defines a syntax.
+
+@example
+(define-inline (incr x)
+  (+ x 1))
+
+(incr 2)        @result{} 3
+@end example
 @end deffn
 
 
-@deffn Syntax define-inline (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
+@deffn Syntax define-integrable (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
 Similar to @func{define}, but create a binding that is always expanded
 inline and @strong{can} be invoked recursively.  This syntax defines
 both a syntax and a function.
+@end deffn
+
+
+@deffn Syntax define-syntax-rule (@meta{name} @meta{pattern} ... . @meta{rest}) @metao{body} @meta{body} ...
+Convenience syntax to define a @func{syntax-rules} transformer with a
+single clause.  Expand to:
+
+@example
+(define-syntax-rule (@meta{name} @meta{pattern} ... . @meta{rest})
+  @metao{body} @meta{body} ...)
+@expansion{} (define-syntax @meta{name}
+      (syntax-rules ()
+        ((_ @meta{pattern} ... . @meta{rest})
+         (begin @metao{body} @meta{body} ...))))
+@end example
 @end deffn
 
 @c page
