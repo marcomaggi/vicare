@@ -154,7 +154,15 @@ the region of such bindings.  The expansion is:
 
 @deffn Syntax define-inline (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
 Similar to @func{define}, but create a binding that is always expanded
-inline and cannot be invoked recursively.
+inline and @strong{cannot} be invoked recursively.  This syntax only
+defines a syntax.
+@end deffn
+
+
+@deffn Syntax define-inline (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
+Similar to @func{define}, but create a binding that is always expanded
+inline and @strong{can} be invoked recursively.  This syntax defines
+both a syntax and a function.
 @end deffn
 
 @c page

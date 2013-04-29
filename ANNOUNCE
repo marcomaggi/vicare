@@ -183,6 +183,7 @@ Notes for revision 0.3d0
     receive				begin0
     define-values			define-constant-values
     define-constant			define-inline
+    define-integrable
 
 * Added DEPREFIX import specification clause:
 

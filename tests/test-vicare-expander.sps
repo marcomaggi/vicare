@@ -357,6 +357,33 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-integrable))
+
+  (check
+      (let ()
+	(define-integrable (fact n)
+	  (if (< n 2)
+	      1
+	    (* n (fact (- n 1)))))
+	(fact 5))
+    => 120)
+
+  (check
+      (let ()
+	(define-integrable (f x) (+ x 1))
+	(eq? f f))
+    => #t)
+
+  (check
+      (let ()
+	(define-integrable (even? n) (or (zero? n) (odd? (- n 1))))
+	(define-integrable (odd? n) (not (even? n)))
+	(even? 5))
+    => #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

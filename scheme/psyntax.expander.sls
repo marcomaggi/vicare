@@ -3252,6 +3252,7 @@
 	     ((trace-let-syntax)		trace-let-syntax-macro)
 	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
+	     ((define-integrable)		define-integrable-macro)
 	     ((define-inline*)			define-inline-macro)
 	     ((define-constant*)		define-constant-macro)
 	     ((define-values)			define-values-macro)
@@ -4602,7 +4603,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-INLINE
+;;;; module non-core-macro-transformer: DEFINE-INLINE, DEFINE-CONSTANT
 
 (define (define-constant-macro expr-stx)
   (syntax-match expr-stx ()
@@ -4640,6 +4641,41 @@
 				  '()
 				`((,?rest (list . rest)))))
 		  ,?form0 ,@?form*))))))))
+    ))
+
+
+;;;; module non-core-macro-transformer: DEFINE-INTEGRABLE
+
+(define (define-integrable-macro expr-stx)
+  ;;The original  syntax was  posted by "leppie"  on the  Ikarus mailing
+  ;;list; subject "Macro Challenge of Last Year [Difficulty: *****]", 20
+  ;;Oct 2009.
+  ;;
+  (syntax-match expr-stx (lambda)
+    ((_ (?name . ?formals) ?form0 ?form* ...)
+     (identifier? ?name)
+     (bless `(define-integrable ,?name (lambda ,?formals ,?form0 ,@?form*))))
+
+    ((_ ?name (lambda ?formals ?form0 ?form* ...))
+     (identifier? ?name)
+     (bless
+      `(begin
+	 (define-fluid-syntax ,?name
+	   (lambda (x)
+	     (syntax-case x ()
+	       (_
+		(identifier? x)
+		#'xname)
+
+	       ((_ arg ...)
+		#'((fluid-let-syntax
+		       ((,?name (identifier-syntax xname)))
+		     (lambda ,?formals ,?form0 ,@?form*))
+		   arg ...)))))
+	 (define xname
+	   (fluid-let-syntax ((,?name (identifier-syntax xname)))
+	     (lambda ,?formals ,?form0 ,@?form*)))
+	 )))
     ))
 
 

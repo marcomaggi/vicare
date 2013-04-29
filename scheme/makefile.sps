@@ -395,6 +395,7 @@
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
 ;;;
+    (define-integrable			(macro . define-integrable))
     (define-inline*			(macro . define-inline*))
     (define-constant*			(macro . define-constant*))
     (define-values			(macro . define-values))
@@ -1980,6 +1981,7 @@
     ($data->transcoder				$transc)
     (make-file-options				i v $language)
 ;;;
+    (define-integrable				i v $language)
     (define-inline*				i v $language)
     (define-constant*				i v $language)
     (define-values				i v $language)
