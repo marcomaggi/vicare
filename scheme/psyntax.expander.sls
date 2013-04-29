@@ -103,14 +103,6 @@
 
 ;;; helpers
 
-(define (%set-cons x ls)
-  ;;Prepend X to the list LS if it is not already contained according to
-  ;;EQ?.
-  ;;
-  (if (memq x ls)
-      ls
-    (cons x ls)))
-
 (define (%set-union ls1 ls2)
   ;;Build and return  a new list holding elements from  LS1 and LS2 with
   ;;duplicates removed.
@@ -6321,7 +6313,11 @@
       ls)
      ((x)
       (unless (eq? x '*interaction*)
-	(set! ls (%set-cons x ls)))))))
+	;;Prepend  X to  the  list LS  if it  is  not already  contained
+	;;according to EQ?.
+	(set! ls (if (memq x ls)
+		     ls
+		   (cons x ls))))))))
 
 (define inv-collector
   (make-parameter
