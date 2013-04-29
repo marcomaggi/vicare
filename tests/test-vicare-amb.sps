@@ -29,7 +29,7 @@
 (import (vicare)
   (vicare language-extensions amb)
   (only (vicare language-extensions syntaxes)
-	define-values
+	#;define-values
 	receive)
   (vicare checks))
 

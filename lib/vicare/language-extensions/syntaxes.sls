@@ -58,7 +58,7 @@
   (export
     ;; miscellaneous extensions
     define-inline		define-inline-constant
-    define-constant		define-values
+    define-constant		#;define-values
     define-integrable
     define-struct-extended	define-record-type-extended
     define-syntax*		define-auxiliary-syntaxes
@@ -92,7 +92,9 @@
 
     ;; auxiliary syntaxes
     big				little)
-  (import (ikarus)
+  (import (except (ikarus)
+		  define-values
+		  receive)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
@@ -284,7 +286,7 @@
 		  (cons #'?arg exprs)))
 	   ))))))
 
-(define-syntax define-values
+#;(define-syntax define-values
   (lambda (stx)
     (syntax-case stx ()
       ((_ (?var ... ?var0) ?form0 ?form ...)

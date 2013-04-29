@@ -3252,9 +3252,9 @@
 	     ((trace-let-syntax)		trace-let-syntax-macro)
 	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
-	     #;((define-values)			define-values-macro)
-	     #;((define-constant-values)		define-constant-values-macro)
-	     #;((receive)				receive-macro)
+	     ((define-values)			define-values-macro)
+	     ((define-constant-values)		define-constant-values-macro)
+	     ((receive*)			receive-macro)
 
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
@@ -4507,7 +4507,7 @@
 
 ;;;; module non-core-macro-transformer: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
 
-#;(define (define-values-macro expr-stx)
+(define (define-values-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX.  Return a symbolic expression in the core language.
@@ -4534,7 +4534,7 @@
 	   ))))
     ))
 
-#;(define (define-constant-values-macro expr-stx)
+(define (define-constant-values-macro expr-stx)
   ;;Transformer function used  to expand Vicare's DEFINE-CONSTANT-VALUES
   ;;macros from the top-level built in environment.  Expand the contents
   ;;of EXPR-STX.  Return a symbolic expression in the core language.
@@ -4544,33 +4544,33 @@
      (let ((SHADOW* (generate-temporaries ?var*))
 	   (TMP*    (generate-temporaries ?var*)))
        (bless
-	#'(begin
-	    (define (return-multiple-values)
-	      ,@?form* ,?form0)
-	    ,@(map (lambda (SHADOW)
-		     `(define ,SHADOW #f))
-		SHADOW*)
-	    (define SHADOW0
-	      (call-with-values
-		  return-multiple-values
-		(lambda (,@TMP* T0)
-		  ,@(map (lambda (SHADOW TMP)
-			   `(set! ,SHADOW ,TMP))
-		      SHADOW* TMP*)
-		  T0)))
-	    ,@(map (lambda (var SHADOW)
-		     `(define-syntax ,var
-			(identifier-syntax ,SHADOW)))
-		?var* SHADOW*)
-	    (define-syntax ,?var0
-	      (identifier-syntax ,SHADOW0))
-	    ))))
+	`(begin
+	   (define (return-multiple-values)
+	     ,@?form* ,?form0)
+	   ,@(map (lambda (SHADOW)
+		    `(define ,SHADOW #f))
+	       SHADOW*)
+	   (define SHADOW0
+	     (call-with-values
+		 return-multiple-values
+	       (lambda (,@TMP* T0)
+		 ,@(map (lambda (SHADOW TMP)
+			  `(set! ,SHADOW ,TMP))
+		     SHADOW* TMP*)
+		 T0)))
+	   ,@(map (lambda (var SHADOW)
+		    `(define-syntax ,var
+		       (identifier-syntax ,SHADOW)))
+	       ?var* SHADOW*)
+	   (define-syntax ,?var0
+	     (identifier-syntax SHADOW0))
+	   ))))
     ))
 
 
 ;;;; module non-core-macro-transformer: RECEIVE
 
-#;(define (receive-macro expr-stx)
+(define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
   ;;Return a symbolic expression in the core language.

@@ -43,6 +43,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
+* iklib syntaxes::              Additional syntaxes.
 * iklib conditions::            Additional condition types.
 * iklib reader::                Extensions to the reader.
 * iklib expander::              Interface to the expander.
@@ -103,6 +104,41 @@ Return a Scheme string holding the C string in the @code{argv[0]}
 argument to the @cfunc{main} function of the current @value{PRJNAME}
 process.
 @end defun
+
+@c page
+@node iklib syntaxes
+@section Additional syntaxes
+
+
+@deffn Syntax define-values (@varo{var} @var{var} ...) @varo{form} @var{form} ...
+Evaluate the given forms and bind the, possibly multiple, result of the
+last one to the given @var{var} identifiers.
+@end deffn
+
+
+@deffn Syntax define-constant-values (@varo{var} @var{var} ...) @varo{form} @var{form} ...
+Evaluate the given forms and bind the, possibly multiple, result of the
+last one to the given @var{var} identifiers.  Make the @var{var}
+identifiers immutable.
+@end deffn
+
+
+@deffn Syntax receive @meta{formals} @meta{expression} @metao{body} @meta{body} ...
+Expect @meta{expression} to evaluate to multiple values and bind such
+values as specified by the @meta{formals}; evaluate the @meta{body} in
+the region of such bindings.  The expansion is:
+
+@example
+(receive @meta{formals}
+    @meta{expression}
+  @metao{body} @meta{body} ...)
+@expansion{} (call-with-values
+        (lambda ()
+          @meta{expression})
+      (lambda @meta{formals}
+        @metao{body} @meta{body} ...))
+@end example
+@end deffn
 
 @c page
 @node iklib conditions

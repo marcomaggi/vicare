@@ -394,6 +394,9 @@
     (define-record-type			(macro . define-record-type))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
+    (define-values			(macro . define-values))
+    (define-constant-values		(macro . define-constant-values))
+    (receive*				(macro . receive*))
 ;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
@@ -1972,6 +1975,10 @@
     ($transcoder->data				$transc)
     ($data->transcoder				$transc)
     (make-file-options				i v $language)
+;;;
+    (define-values				i v $language)
+    (define-constant-values			i v $language)
+    (receive*					i v $language)
 ;;;
     (port-id					i v $language)
     (port-uid					i v $language)

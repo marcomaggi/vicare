@@ -178,6 +178,11 @@ Notes for revision 0.3d0
     environment-labels			environment-libraries
     environment-binding
 
+* Added syntaxes to (vicare):
+
+    receive
+    define-values			define-constant-values
+
 * Added DEPREFIX import specification clause:
 
      (import (rnrs)

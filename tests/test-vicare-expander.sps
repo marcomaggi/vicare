@@ -193,6 +193,71 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-values))
+
+  (check
+      (let ()
+	(define-values (a)
+	  1)
+	a)
+    => 1)
+
+  (check
+      (with-result
+       (let ()
+	 (define-values (a)
+	   (add-result 2)
+	   1)
+	 a))
+    => '(1 (2)))
+
+  (check
+      (let ()
+  	(define-values (a b c)
+  	  #t
+  	  (values 1 2 3))
+  	(list a b c))
+    => '(1 2 3))
+
+  (check
+      (let ((a 2))
+  	(define-values (a)
+  	  (values 1))
+  	a)
+    => 1)
+
+  #t)
+
+
+(parametrise ((check-test-name	'define-constant-values))
+
+  (check
+      (let ()
+	(define-constant-values (a b c)
+	  #t
+	  (values 1 2 3))
+	(list a b c))
+    => '(1 2 3))
+
+  (check
+      (let ()
+	(define-constant-values (a)
+	  #t
+	  (values 1))
+	a)
+    => 1)
+
+  (check
+      (let ()
+	(define-constant-values (a)
+	  #t
+	  1)
+	a)
+    => 1)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
