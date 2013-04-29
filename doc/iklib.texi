@@ -180,10 +180,10 @@ the region of such bindings.  The expansion is:
 @end deffn
 
 
-@deffn Syntax define-inline (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
+@deffn Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
 Similar to @func{define}, but create a binding that is always expanded
-inline and @strong{cannot} be invoked recursively.  This syntax only
-defines a syntax.
+inline and can @strong{neither} be invoked recursively @strong{nor} used
+as function rgument.  This syntax only defines a syntax.
 
 @example
 (define-inline (incr x)
@@ -191,13 +191,39 @@ defines a syntax.
 
 (incr 2)        @result{} 3
 @end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+(let ((x 2))
+  (+ x 1))
+@end example
 @end deffn
 
 
-@deffn Syntax define-integrable (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
+@deffn Syntax define-integrable (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
 Similar to @func{define}, but create a binding that is always expanded
-inline and @strong{can} be invoked recursively.  This syntax defines
-both a syntax and a function.
+inline and @strong{can} be both invoked recursively and used as function
+argument.  This syntax defines both a syntax and a function.
+
+@example
+(define-integrable (incr x)
+  (+ x 1))
+
+(incr 2)
+@result{} 3
+
+(map incr '(10 20 30)))
+@result{} (11 21 31)
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+((lambda (x)
+   (+ x 1))
+ 2)
+@end example
 @end deffn
 
 

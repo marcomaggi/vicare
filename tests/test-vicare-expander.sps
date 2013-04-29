@@ -381,6 +381,13 @@
 	(even? 5))
     => #f)
 
+  (check
+      (let ()
+	(define-integrable (incr x)
+	  (+ x 1))
+	(map incr '(10 20 30)))
+    => '(11 21 31))
+
   #t)
 
 
