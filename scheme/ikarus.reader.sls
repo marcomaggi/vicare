@@ -64,7 +64,7 @@
 		(?raise-error))
 	       . ?cond-clauses)))))
 
-(define-inline (%implementation-violation who msg . irritants)
+(define (%implementation-violation who msg . irritants)
   (raise (condition
 	  (make-assertion-violation)
 	  (make-implementation-restriction-violation)
@@ -98,18 +98,18 @@
 (define custom-named-chars
   (make-parameter #f))
 
-(define-inline (reverse-list->string ell)
+(define-syntax-rule (reverse-list->string ell)
   ;;There are more efficient ways to do this, but ELL is usually short.
   ;;
   (list->string (reverse ell)))
 
-(define-inline (port-in-r6rs-mode? port)
+(define-syntax-rule (port-in-r6rs-mode? port)
   (eq? (port-mode port) 'r6rs))
 
-(define-inline (port-in-vicare-mode? port)
+(define-syntax-rule (port-in-vicare-mode? port)
   (eq? (port-mode port) 'vicare))
 
-(define-inline (source-code-port? port)
+(define-syntax-rule (source-code-port? port)
   (and (or (input-port? port)
 	   (input/output-port? port))
        (textual-port? port)))
@@ -364,16 +364,16 @@
 		(make-irritants-condition irritants))
 	      textual-pos)))
 
-(define-inline (die/pos port offset who msg . irritants)
+(define-syntax-rule (die/pos port offset who msg . irritants)
   (die/lex (make-compound-position/with-offset port offset) who msg . irritants))
 
-(define-inline (die/p p who msg . irritants)
+(define-syntax-rule (die/p p who msg . irritants)
   (die/pos p 0 who msg . irritants))
 
-(define-inline (die/p-1 p who msg . irritants)
+(define-syntax-rule (die/p-1 p who msg . irritants)
   (die/pos p -1 who msg . irritants))
 
-(define-inline (die/ann ann who msg . irritants)
+(define-syntax-rule (die/ann ann who msg . irritants)
   (die/lex (annotation-textual-position ann) who msg . irritants))
 
 
@@ -476,7 +476,7 @@
   ;;N was  parsed.  PORT  must be  the port from  which the  chars where
   ;;drawn.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define (valid-integer-char? N)
     (cond ((<= N #xD7FF)   #t)
@@ -696,7 +696,7 @@
   ;;     locations)
   ;;
   (lambda (entry)
-    (define-inline (%error msg . irritants)
+    (define-syntax-rule (%error msg . irritants)
       (die/p port 'vicare-reader msg . irritants))
     (let ((loc (unsafe.cdr entry)))
       (unless (loc-set? loc)
@@ -741,7 +741,7 @@
   ;;
   (define-inline (recurse)
     (start-tokenising/pos port))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'tokenize msg . irritants))
   (let* ((pos (make-compound-position port))
 	 (ch  (get-char-and-track-textual-position port)))
@@ -798,7 +798,7 @@
   ;;
   (define-inline (recurse)
     (start-tokenising port))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'tokenize msg . irritants))
   (let ((ch (get-char-and-track-textual-position port)))
     (cond ((eof-object? ch)
@@ -862,9 +862,9 @@
   ;;If CH is the dot character:  the return value is the return value of
   ;;FINISH-TOKENISATION-OF-DOT-DATUM.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (cond ((eof-object? ch)
 	 (error 'advance-tokenisation-of-non-hash-datum/c "hmmmm eof")
@@ -1035,15 +1035,15 @@
   ;;is changed accordingly and  START-TOKENISING is applied to the port;
   ;;the return value is the return value of START-TOKENISING.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
-  (define-inline (%unexpected-eof-error)
+  (define-syntax-rule (%unexpected-eof-error)
     (%error "invalid EOF while reading hash datum"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  ;; (define-syntax-rule (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
+  ;;   (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+  ;;     . ?cond-clauses))
 
   (cond
    ((eof-object? ch)
@@ -1329,19 +1329,21 @@
   ;;
   ;; v   e    (                   #ve
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading hash datum"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
-  (define-inline (%invalid-sequence-of-chars   . chars)
+  (define-syntax-rule (%invalid-sequence-of-chars   . chars)
     (%error   "invalid sequence of characters" (string . chars)))
-  (define-inline (%invalid-sequence-of-chars-1 . chars)
+  (define-syntax-rule (%invalid-sequence-of-chars-1 . chars)
     (%error-1 "invalid sequence of characters" (string . chars)))
 
 ;;; --------------------------------------------------------------------
@@ -1369,7 +1371,7 @@
       (else
        (%invalid-sequence-of-chars #\# #\v ch1))))
 
-  (define-inline (%read-open-paren token . chars)
+  (define-syntax-rule (%read-open-paren token . chars)
     (%read-char-no-eof (port ch)
       ((unsafe.char= ch #\()
        token)
@@ -1602,7 +1604,7 @@
   ;;(datum . ...)	The token is the ellipsis symbol.
   ;;(datum . <num>)	The token is the inexact number <NUM>.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (let ((ch (peek-char port)))
     (cond ((or (eof-object? ch)
@@ -1651,13 +1653,15 @@
   ;;
   (define-inline (recurse N1)
     (finish-tokenisation-of-graph-location port N1))
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading character"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (%read-char-no-eof (port ch)
     ((unsafe.char= #\= ch) (cons 'mark N))
@@ -1768,7 +1772,7 @@
   ;;Read from PORT characters from an identifier token, accumulate them,
   ;;in reverse order and return the resulting list.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse accum)
     (%accumulate-identifier-chars accum port))
@@ -1798,13 +1802,15 @@
   ;;This is a syntax outside  of R6RS: identifiers between bars can hold
   ;;any character.
   ;;
-  (define-inline (%unexpected-eof-error . args)
+  (define-syntax-rule (%unexpected-eof-error . args)
     (die/p port 'tokenize "unexpected EOF while reading symbol" . args))
   (define-inline (recurse accum)
     (%accumulate-identifier-chars/bar accum port))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (%read-char-no-eof (port ch)
     ((unsafe.char= #\\ ch)
@@ -1825,15 +1831,17 @@
   ;;reading,  else %ACCUMULATE-IDENTIFIER-CHARS  is invoked  to continue
   ;;reading.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port   'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
-  (define-inline (%unexpected-eof-error . args)
+  (define-syntax-rule (%unexpected-eof-error . args)
     (%error "unexpected EOF while reading symbol" . args))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (define-inline (main)
     (%read-char-no-eof (port ch)
@@ -1866,9 +1874,9 @@
 
 
 (define (finalise-tokenisation port locations kont token pos)
-  (define-inline (%error   msg . irritants)
+  (define-syntax-rule (%error   msg . irritants)
     (die/p   port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
@@ -2139,16 +2147,18 @@
   ;;
   (define-inline (recurse accum)
     (%accumulate-string-chars accum port))
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p   port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading string"))
 
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (define-inline (main)
     (%read-char-no-eof (port ch)
@@ -2318,13 +2328,15 @@
   ;;
   ;;where <CH> is the character value.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (%unexpected-eof-error)
     (%error "invalid EOF while reading character"))
-  (define-inline (%read-char-no-eof (?port ?ch-name) . ?cond-clauses)
-    (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
-      . ?cond-clauses))
+  (define-syntax %read-char-no-eof
+    (syntax-rules ()
+      ((_ (?port ?ch-name) . ?cond-clauses)
+       (read-char-no-eof (?port ?ch-name %unexpected-eof-error)
+	 . ?cond-clauses))))
 
   (define-inline (main)
     (%read-char-no-eof (port ch)
@@ -2437,7 +2449,7 @@
     ;;consumed, and we only need to  verify that the next char from PORT
     ;;is EOF or a delimiter.  In this case DATUM is ignored.
     ;;
-    (define-inline (%error msg . args)
+    (define-syntax-rule (%error msg . args)
       (die/p port 'tokenize msg . args))
     (let ((ch (peek-char port)))
       (cond ((or (eof-object? ch)
@@ -2665,9 +2677,9 @@
   ;;
   ;;	(read-char* port '(#\r) "6rs" #f #f)
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
-  (define-inline (%error-1 msg . args)
+  (define-syntax-rule (%error-1 msg . args)
     (die/p-1 port 'tokenize msg . args))
   (define str.len
     (string-length str))
@@ -2697,7 +2709,7 @@
   ;;CALLER must be a string  describing the token the caller is parsing,
   ;;it is used for error reporting.
   ;;
-  (define-inline (%error msg . args)
+  (define-syntax-rule (%error msg . args)
     (die/p port 'tokenize msg . args))
   (define-inline (recurse)
     (%read-char-skip-whitespace port caller))
@@ -2742,9 +2754,9 @@
 				      reading-first-item?)
   (define-inline (recurse-to-read-cdr locs1 kont1)
     (%finish-tokenisation-of-list port start-pos locs1 kont1 matching-paren wrong-paren #f))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
   (define-inline (%paren-symbol->char paren)
     (if (eq? paren 'rparen) #\) #\]))
@@ -2839,9 +2851,9 @@
   ;;
   (define-inline (recurse locs1 kont1 ls1 ls1/ann)
     (finish-tokenisation-of-vector port locs1 kont1 (fxadd1 count) ls1 ls1/ann))
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (define-inline (main)
@@ -2897,9 +2909,9 @@
      (define (?who port locs kont count ls)
        (define-inline (recurse locs1 kont1 count1 ls1)
 	 (?who port locs1 kont1 count1 ls1))
-       (define-inline (%error msg . irritants)
+       (define-syntax-rule (%error msg . irritants)
 	 (die/p port 'vicare-reader msg . irritants))
-       (define-inline (%error-1 msg . irritants)
+       (define-syntax-rule (%error-1 msg . irritants)
 	 (die/p-1 port 'vicare-reader msg . irritants))
 
        (define-inline (%make-bv the-count the-ls)
@@ -3148,9 +3160,9 @@
 ;;; --------------------------------------------------------------------
 
 (define (finish-tokenisation-of-bytevector-ve port locs kont)
-  (define-inline (%error msg . irritants)
+  (define-syntax-rule (%error msg . irritants)
     (die/p port 'vicare-reader msg . irritants))
-  (define-inline (%error-1 msg . irritants)
+  (define-syntax-rule (%error-1 msg . irritants)
     (die/p-1 port 'vicare-reader msg . irritants))
 
   (let-values (((token pos) (start-tokenising/pos port)))

@@ -261,13 +261,13 @@
 (parametrise ((check-test-name	'receive))
 
   (check
-      (receive* (a b c)
+      (receive (a b c)
 		(values 1 2 3)
 		(list a b c))
     => '(1 2 3))
 
   (check
-      (receive* (a)
+      (receive (a)
 		1
 		a)
     => 1)
@@ -278,21 +278,21 @@
 (parametrise ((check-test-name	'begin0))
 
   (check
-      (begin0*
+      (begin0
        1)
     => 1)
 
   (check
       (call-with-values
 	  (lambda ()
-	    (begin0*
+	    (begin0
 	     (values 1 2 3)))
 	list)
     => '(1 2 3))
 
   (check
       (with-result
-       (begin0*
+       (begin0
 	1
 	(add-result 2)
 	(add-result 3)))
@@ -302,7 +302,7 @@
       (with-result
        (call-with-values
 	   (lambda ()
-	     (begin0*
+	     (begin0
 	      (values 1 10)
 	      (add-result 2)
 	      (add-result 3)))
@@ -317,28 +317,28 @@
 
   (check
       (let ()
-	(define-inline* (ciao a b)
+	(define-inline (ciao a b)
 	  (+ a b))
 	(ciao 1 2))
     => 3)
 
   (check
       (let ()
-	(define-inline* (ciao)
+	(define-inline (ciao)
 	  (+ 1 2))
 	(ciao))
     => 3)
 
   (check
       (let ()
-	(define-inline* (ciao . rest)
+	(define-inline (ciao . rest)
 	  (apply + rest))
 	(ciao 1 2))
     => 3)
 
   (check
       (let ()
-	(define-inline* (ciao a . rest)
+	(define-inline (ciao a . rest)
 	  (apply + a rest))
 	(ciao 1 2))
     => 3)
@@ -350,7 +350,7 @@
 
   (check
       (let ()
-	(define-constant* a 123)
+	(define-constant a 123)
 	a)
     => 123)
 
@@ -380,6 +380,39 @@
 	(define-integrable (odd? n) (not (even? n)))
 	(even? 5))
     => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'define-syntax-rule))
+
+  (check
+      (let ()
+	(define-syntax-rule (ciao a b)
+	  (+ a b))
+	(ciao 1 2))
+    => 3)
+
+  (check
+      (let ()
+	(define-syntax-rule (ciao)
+	  (+ 1 2))
+	(ciao))
+    => 3)
+
+  (check
+      (let ()
+	(define-syntax-rule (ciao . ?rest)
+	  (+ . ?rest))
+	(ciao 1 2))
+    => 3)
+
+  (check
+      (let ()
+	(define-syntax-rule (ciao a . ?rest)
+	  (+ a . ?rest))
+	(ciao 1 2))
+    => 3)
 
   #t)
 

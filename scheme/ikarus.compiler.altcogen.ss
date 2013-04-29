@@ -840,8 +840,10 @@
   (define-inline (%locals-cons A)
     (locals (cons A (locals))))
 
-  (define-inline (%locals-cons* A0 A ...)
-    (locals (cons* A0 A ... (locals))))
+  (define-syntax %locals-cons*
+    (syntax-rules ()
+      ((_ A0 A ...)
+       (locals (cons* A0 A ... (locals))))))
 
 ;;; --------------------------------------------------------------------
 

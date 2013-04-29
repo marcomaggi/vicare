@@ -1691,7 +1691,7 @@
 		bv))))))
 
   (define-inline (%error message . irritants)
-    (error who message . irritants))
+    (apply error who message irritants))
 
   (define-syntax %store-first-word!
     (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)

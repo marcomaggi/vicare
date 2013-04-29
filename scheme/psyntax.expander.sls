@@ -103,21 +103,6 @@
 
 ;;; helpers
 
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-(define-syntax receive
-  (syntax-rules ()
-    ((_ ?formals ?expression ?form0 ?form ...)
-     (call-with-values
-	 (lambda () ?expression)
-       (lambda ?formals ?form0 ?form ...)))))
-
 (define (%set-cons x ls)
   ;;Prepend X to the list LS if it is not already contained according to
   ;;EQ?.
@@ -3253,12 +3238,13 @@
 	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
 	     ((define-integrable)		define-integrable-macro)
-	     ((define-inline*)			define-inline-macro)
-	     ((define-constant*)		define-constant-macro)
+	     ((define-inline)			define-inline-macro)
+	     ((define-constant)			define-constant-macro)
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
-	     ((receive*)			receive-macro)
-	     ((begin0*)				begin0-macro)
+	     ((receive)				receive-macro)
+	     ((begin0)				begin0-macro)
+	     ((define-syntax-rule)		define-syntax-rule-macro)
 
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
@@ -3813,6 +3799,17 @@
 				   "invalid syntax-rules pattern"
 				   e pat))))
 			 pat* tmp*)))))))))
+
+(define (define-syntax-rule-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ (?name ?arg* ... . ?rest) ?body0 ?body* ...)
+     (identifier? ?name)
+     (bless
+      `(define-syntax ,?name
+	 (syntax-rules ()
+	   ((_ ,@?arg* . ,?rest)
+	    (begin ,?body0 ,@?body*))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: WITH-SYNTAX

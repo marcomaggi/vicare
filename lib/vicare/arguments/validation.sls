@@ -275,17 +275,6 @@
 	    $))
 
 
-;;; helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
-
 (define-syntax define-argument-validation
   ;;Define a set of macros to  validate arguments, to be used along with
   ;;WITH-ARGUMENTS-VALIDATION.  Transform:
@@ -323,9 +312,9 @@
 	   (with-syntax
 	       ((VALIDATE (%name ctx name ".vicare-arguments-validation")))
 	     #'(begin
-		 (define-inline (the-predicate ?arg ...) ?predicate)
-		 (define-inline (the-error ?who ?arg ...) ?error-handler)
-		 (define-inline (VALIDATE ?who ?arg ... . body)
+		 (define-syntax-rule (the-predicate ?arg ...) ?predicate)
+		 (define-syntax-rule (the-error ?who ?arg ...) ?error-handler)
+		 (define-syntax-rule (VALIDATE ?who ?arg ... . body)
 		   (if (the-predicate ?arg ...)
 		       (begin . body)
 		     (the-error ?who ?arg ...)))))))
@@ -1402,12 +1391,11 @@
 
 ;;;; generalised C strings
 
-(define-inline (general-c-string? ?obj)
-  (let ((obj ?obj))
-    (or (string?	obj)
-	(bytevector?	obj)
-	(pointer?	obj)
-	(memory-block?	obj))))
+(define-inline (general-c-string? obj)
+  (or (string?		obj)
+      (bytevector?	obj)
+      (pointer?		obj)
+      (memory-block?	obj)))
 
 (define-argument-validation (general-c-string who obj)
   (general-c-string? obj)
@@ -1434,11 +1422,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (general-c-buffer? ?obj)
-  (let ((obj ?obj))
-    (or (bytevector?	obj)
-	(pointer?	obj)
-	(memory-block?	obj))))
+(define-inline (general-c-buffer? obj)
+  (or (bytevector?	obj)
+      (pointer?		obj)
+      (memory-block?	obj)))
 
 (define-argument-validation (general-c-buffer who obj)
   (general-c-buffer? obj)
@@ -1460,10 +1447,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (general-c-sticky-buffer? ?obj)
-  (let ((obj ?obj))
-    (or (pointer?	obj)
-	(memory-block?	obj))))
+(define-inline (general-c-sticky-buffer? obj)
+  (or (pointer?		obj)
+      (memory-block?	obj)))
 
 (define-argument-validation (general-c-sticky-buffer who obj)
   (general-c-sticky-buffer? obj)

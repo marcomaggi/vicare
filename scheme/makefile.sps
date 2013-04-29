@@ -396,12 +396,13 @@
     (define-condition-type		(macro . define-condition-type))
 ;;;
     (define-integrable			(macro . define-integrable))
-    (define-inline*			(macro . define-inline*))
-    (define-constant*			(macro . define-constant*))
+    (define-inline			(macro . define-inline))
+    (define-constant			(macro . define-constant))
     (define-values			(macro . define-values))
     (define-constant-values		(macro . define-constant-values))
-    (receive*				(macro . receive*))
-    (begin0*				(macro . begin0*))
+    (define-syntax-rule			(macro . define-syntax-rule))
+    (receive				(macro . receive))
+    (begin0				(macro . begin0))
 ;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
@@ -1982,12 +1983,13 @@
     (make-file-options				i v $language)
 ;;;
     (define-integrable				i v $language)
-    (define-inline*				i v $language)
-    (define-constant*				i v $language)
+    (define-inline				i v $language)
+    (define-constant				i v $language)
     (define-values				i v $language)
     (define-constant-values			i v $language)
-    (receive*					i v $language)
-    (begin0*					i v $language)
+    (define-syntax-rule				i v $language)
+    (receive					i v $language)
+    (begin0					i v $language)
 ;;;
     (port-id					i v $language)
     (port-uid					i v $language)

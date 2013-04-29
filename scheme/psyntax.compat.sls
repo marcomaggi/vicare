@@ -26,6 +26,7 @@
     pretty-print*			bignum?
     module				import
     vector-exists
+    define-inline			receive
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file

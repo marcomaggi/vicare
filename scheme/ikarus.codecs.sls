@@ -56,14 +56,6 @@
 
 ;;;; helpers
 
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
-
 (define-syntax %unsafe.fxior
   (syntax-rules ()
     ((_ ?op1)
@@ -73,9 +65,9 @@
     ((_ ?op1 ?op2 . ?ops)
      (unsafe.fxior ?op1 (%unsafe.fxior ?op2 . ?ops)))))
 
-(define-inline (%assert-value-is-transcoder ?obj ?who)
-  (unless (transcoder? ?obj)
-    (assertion-violation ?who "not a transcoder" ?obj)))
+(define (%assert-value-is-transcoder obj who)
+  (unless (transcoder? obj)
+    (assertion-violation who "not a transcoder" obj)))
 
 
 (define (latin-1-codec)

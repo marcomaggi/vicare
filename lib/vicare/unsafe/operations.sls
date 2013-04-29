@@ -216,10 +216,7 @@
 	    ($bytevector-s64n-ref	bytevector-s64n-ref)
 	    ($bytevector-s64n-set!	bytevector-s64n-set!)
 
-	    ;;FIXME  To  be  uncommented   after  the  next  boot  image
-	    ;;rotation.  (Marco Maggi; Sun Apr 21, 2013)
-	    #;($bytevector=			bytevector=)
-
+	    ($bytevector=			bytevector=)
 	    ($bytevector-fill!			bytevector-fill!)
 	    ($bytevector-copy!			bytevector-copy!)
 	    ($bytevector-copy!/count		bytevector-copy!/count)
@@ -323,17 +320,6 @@
 		       platform-endianness)
 		 config.)
 	 expand))
-
-
-;;;; helpers
-
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
 
 
 ;;;; structures

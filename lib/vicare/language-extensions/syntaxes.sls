@@ -57,9 +57,9 @@
 (library (vicare language-extensions syntaxes)
   (export
     ;; miscellaneous extensions
-    define-inline		define-inline-constant
-    define-constant		#;define-values
-    define-integrable
+    define-inline		define-integrable
+    define-constant		define-inline-constant
+    define-values		define-constant-values
     define-struct-extended	define-record-type-extended
     define-syntax*		define-auxiliary-syntaxes
     let-inline			let*-inline
@@ -92,12 +92,7 @@
 
     ;; auxiliary syntaxes
     big				little)
-  (import (except (ikarus)
-		  define-values
-		  receive
-		  begin0
-		  define-inline
-		  define-constant)
+  (import (ikarus)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
@@ -113,13 +108,13 @@
 
 ;;;; some defining syntaxes
 
-(define-syntax define-inline
-  (syntax-rules ()
-    ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-     (define-syntax ?name
-       (syntax-rules ()
-	 ((_ ?arg ... . ?rest)
-	  (begin ?form0 ?form ...)))))))
+;; (define-syntax define-inline
+;;   (syntax-rules ()
+;;     ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
+;;      (define-syntax ?name
+;;        (syntax-rules ()
+;; 	 ((_ ?arg ... . ?rest)
+;; 	  (begin ?form0 ?form ...)))))))
 
 ;;Posted  by  "leppie"  on  the  Ikarus  mailing  list;  subject  "Macro
 ;;Challenge of Last Year [Difficulty: *****]", 20 Oct 2009.
@@ -155,18 +150,14 @@
 ;; 		 (lambda ?formals ?form1 ?form2 ...))))))
 ;;       )))
 
-(define-syntax define-constant
-  (syntax-rules ()
-    ((_ ?name ?expr)
-     (begin
-       (define ghost ?expr)
-       (define-syntax ?name
-	 (identifier-syntax ghost))))))
+;; (define-syntax define-constant
+;;   (syntax-rules ()
+;;     ((_ ?name ?expr)
+;;      (begin
+;;        (define ghost ?expr)
+;;        (define-syntax ?name
+;; 	 (identifier-syntax ghost))))))
 
-#;(define-syntax define-inline-constant
-  (syntax-rules ()
-    ((_ ?name ?value)
-     (define-syntax ?name (identifier-syntax ?value)))))
 (define-syntax define-inline-constant
   ;;We want to allow a generic expression to generate the constant value
   ;;at expand time.
@@ -286,23 +277,23 @@
 		  (cons #'?arg exprs)))
 	   ))))))
 
-#;(define-syntax define-values
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ (?var ... ?var0) ?form0 ?form ...)
-       (with-syntax (((VAR ... VAR0) (generate-temporaries #'(?var ... ?var0))))
-	 #'(begin
-	     ;;We  must make  sure that  the ?FORMs  do not  capture the
-	     ;;?VARs.
-	     (define (dummy)
-	       ?form0 ?form ...)
-	     (define ?var  #f)
-	     ...
-	     (define ?var0
-	       (let-values (((VAR ... VAR0) (dummy)))
-		 (set! ?var  VAR)
-		 ...
-		 VAR0))))))))
+;; (define-syntax define-values
+;;   (lambda (stx)
+;;     (syntax-case stx ()
+;;       ((_ (?var ... ?var0) ?form0 ?form ...)
+;;        (with-syntax (((VAR ... VAR0) (generate-temporaries #'(?var ... ?var0))))
+;; 	 #'(begin
+;; 	     ;;We  must make  sure that  the ?FORMs  do not  capture the
+;; 	     ;;?VARs.
+;; 	     (define (dummy)
+;; 	       ?form0 ?form ...)
+;; 	     (define ?var  #f)
+;; 	     ...
+;; 	     (define ?var0
+;; 	       (let-values (((VAR ... VAR0) (dummy)))
+;; 		 (set! ?var  VAR)
+;; 		 ...
+;; 		 VAR0))))))))
 
 
 ;;;; extended struct definition
@@ -451,16 +442,23 @@
 
 ;;;; other syntaxes
 
-(define-syntax begin0
-  ;;This  syntax  comes from  the  R6RS  original  document, Appendix  A
-  ;;``Formal semantics''.
-  (syntax-rules ()
-    ((_ ?expr0 ?expr ...)
-     (call-with-values
-	 (lambda () ?expr0)
-       (lambda args
-	 ?expr ...
-	 (apply values args))))))
+;; (define-syntax receive
+;;   (syntax-rules ()
+;;     ((_ ?formals ?expression ?form0 ?form ...)
+;;      (call-with-values
+;; 	 (lambda () ?expression)
+;;        (lambda ?formals ?form0 ?form ...)))))
+
+;; (define-syntax begin0
+;;   ;;This  syntax  comes from  the  R6RS  original  document, Appendix  A
+;;   ;;``Formal semantics''.
+;;   (syntax-rules ()
+;;     ((_ ?expr0 ?expr ...)
+;;      (call-with-values
+;; 	 (lambda () ?expr0)
+;;        (lambda args
+;; 	 ?expr ...
+;; 	 (apply values args))))))
 
 (define-syntax begin0-let
   (syntax-rules ()
@@ -547,13 +545,6 @@
 			      (else V))))
 	   ...)
        . ?body))))
-
-(define-syntax receive
-  (syntax-rules ()
-    ((_ ?formals ?expression ?form0 ?form ...)
-     (call-with-values
-	 (lambda () ?expression)
-       (lambda ?formals ?form0 ?form ...)))))
 
 
 (define-syntax case-word-size

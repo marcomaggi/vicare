@@ -25,7 +25,8 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare)
+		receive)
   (srfi :8)
   (vicare checks))
 

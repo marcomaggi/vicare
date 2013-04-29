@@ -194,10 +194,14 @@
   (define (apply-primcall op rand* env)
     (define (return t)
       (values (make-funcall (make-primref op) rand*) env t))
-    (define-inline (%inject . ?args)
-      (inject op rand* env . ?args))
-    (define-inline (%inject* . ?args)
-      (inject* op rand* env . ?args))
+    (define-syntax %inject
+      (syntax-rules ()
+	((_ . ?args)
+	 (inject op rand* env . ?args))))
+    (define-syntax %inject*
+      (syntax-rules ()
+	((_ . ?args)
+	 (inject* op rand* env . ?args))))
     (case-symbols op
       ((cons)
        (return T:pair))

@@ -1129,7 +1129,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   (define (%struct-guardian-destructor)
     (guard (E (else (void)))
-      (define-inline (%execute ?S ?body0 . ?body)
+      (define-syntax-rule (%execute ?S ?body0 . ?body)
 	(do ((?S (%struct-guardian) (%struct-guardian)))
 	    ((not ?S))
 	  ?body0 . ?body))
@@ -1237,7 +1237,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;collected by the guardian.
     ;;
     (guard (E (else (void)))
-      (define-inline (%execute ?S ?body0 . ?body)
+      (define-syntax-rule (%execute ?S ?body0 . ?body)
 	(do ((?S (%record-guardian) (%record-guardian)))
 	    ((not ?S))
 	  ?body0 . ?body))

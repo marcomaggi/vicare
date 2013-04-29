@@ -1497,8 +1497,10 @@
 
 ;;;; error helpers
 
-(define-inline (%implementation-violation ?who ?message . ?irritants)
-  (assertion-violation ?who ?message . ?irritants))
+(define-syntax %implementation-violation
+  (syntax-rules ()
+    ((_ ?who ?message . ?irritants)
+     (assertion-violation ?who ?message . ?irritants))))
 
 (define (%raise-port-position-out-of-range who port new-position)
   (raise (condition
@@ -4818,7 +4820,7 @@
     (%do-read-char (current-input-port) 'read-char))))
 
 (define (%do-read-char port who)
-  (define-inline (main)
+  (define (main)
     (%case-textual-input-port-fast-tag (port who)
       ((FAST-GET-UTF8-TAG)
        (%get-it %unsafe.read-char-from-port-with-fast-get-utf8-tag
@@ -4834,35 +4836,37 @@
       ((FAST-GET-UTF16BE-TAG)
        (%get-it %read-utf16be %peek-utf16be))))
 
-  (define-inline (%get-it ?read-char ?peek-char)
-    (let ((eol-bits (%unsafe.port-eol-style-bits port))
-	  (ch (?read-char port who)))
-      (cond ((eof-object? ch)
-	     ch) ;return EOF
-	    ((unsafe.fxzero? eol-bits) ;EOL style none
-	     ch)
-	    ((unsafe.char-is-single-char-line-ending? ch)
-	     LINEFEED-CHAR)
-	    ((unsafe.char-is-carriage-return? ch)
-	     (let ((ch1 (?peek-char port who)))
-	       (cond ((eof-object? ch1)
-		      (void))
-		     ((unsafe.char-is-newline-after-carriage-return? ch1)
-		      (?read-char port who)))
-	       LINEFEED-CHAR))
-	    (else ch))))
+  (define-syntax %get-it
+    (syntax-rules ()
+      ((_ ?read-char ?peek-char)
+       (let ((eol-bits (%unsafe.port-eol-style-bits port))
+	     (ch (?read-char port who)))
+	 (cond ((eof-object? ch)
+		ch)		       ;return EOF
+	       ((unsafe.fxzero? eol-bits) ;EOL style none
+		ch)
+	       ((unsafe.char-is-single-char-line-ending? ch)
+		LINEFEED-CHAR)
+	       ((unsafe.char-is-carriage-return? ch)
+		(let ((ch1 (?peek-char port who)))
+		  (cond ((eof-object? ch1)
+			 (void))
+			((unsafe.char-is-newline-after-carriage-return? ch1)
+			 (?read-char port who)))
+		  LINEFEED-CHAR))
+	       (else ch))))))
 
-  (define-inline (%read-utf16le ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
+  (define (%read-utf16le port who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'little))
 
-  (define-inline (%peek-utf16le ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+  (define (%peek-utf16le port who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
-  (define-inline (%read-utf16be ?port ?who)
-    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big))
+  (define (%read-utf16be port who)
+    (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag port who 'big))
 
-  (define-inline (%peek-utf16be ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+  (define (%peek-utf16be port who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
 
   (main))
 
@@ -4901,7 +4905,7 @@
       ((FAST-GET-UTF16BE-TAG)
        (%do-it 2 %peek-utf16be %peek-utf16be/offset))))
 
-  (define-inline (%do-it ?offset-of-ch2 ?peek-char ?peek-char/offset)
+  (define-syntax %do-it
     ;;Actually  perform the  lookahead.   Return the  next char  without
     ;;modifying  the  port position.   If  no  characters are  available
     ;;return the  EOF object.  Remember  that, as mandated by  R6RS, for
@@ -4926,46 +4930,48 @@
     ;;sequences always have a carriage return as first char and we know,
     ;;once the codec has been selected, the offset of such character.
     ;;
-    (let ((eol-bits (%unsafe.port-eol-style-bits port))
-	  (ch       (?peek-char port who)))
-      (cond ((eof-object? ch)
-	     ch) ;return EOF
-	    ((unsafe.fxzero? eol-bits) ;EOL style none
-	     ch)
-	    ((unsafe.char-is-single-char-line-ending? ch)
-	     LINEFEED-CHAR)
-	    ((unsafe.char-is-carriage-return? ch)
-	     (let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
-	       (cond ((eof-object? ch2)
-		      LINEFEED-CHAR)
-		     ((unsafe.char-is-newline-after-carriage-return? ch2)
-		      LINEFEED-CHAR)
-		     (else ch))))
-	    (else ch))))
+    (syntax-rules ()
+      ((_ ?offset-of-ch2 ?peek-char ?peek-char/offset)
+       (let ((eol-bits (%unsafe.port-eol-style-bits port))
+	     (ch       (?peek-char port who)))
+	 (cond ((eof-object? ch)
+		ch)		       ;return EOF
+	       ((unsafe.fxzero? eol-bits) ;EOL style none
+		ch)
+	       ((unsafe.char-is-single-char-line-ending? ch)
+		LINEFEED-CHAR)
+	       ((unsafe.char-is-carriage-return? ch)
+		(let ((ch2 (?peek-char/offset port who ?offset-of-ch2)))
+		  (cond ((eof-object? ch2)
+			 LINEFEED-CHAR)
+			((unsafe.char-is-newline-after-carriage-return? ch2)
+			 LINEFEED-CHAR)
+			(else ch))))
+	       (else ch))))))
 
-  (define-inline (%peek-char ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-char-tag ?port ?who))
+  (define (%peek-char port who)
+    (%unsafe.peek-char-from-port-with-fast-get-char-tag port who))
 
-  (define-inline (%peek-char/offset ?port ?who ?offset)
-    (%unsafe.read/peek-char-from-port-with-string-buffer ?port ?who 0 ?offset))
+  (define (%peek-char/offset port who offset)
+    (%unsafe.read/peek-char-from-port-with-string-buffer port who 0 offset))
 
-  (define-inline (%peek-latin1 ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-latin1-tag ?port ?who))
+  (define (%peek-latin1 port who)
+    (%unsafe.peek-char-from-port-with-fast-get-latin1-tag port who))
 
-  (define-inline (%peek-latin1/offset ?port ?who ?offset)
-    (%unsafe.read/peek-char-from-port-with-latin1-codec ?port ?who 0 ?offset))
+  (define (%peek-latin1/offset port who offset)
+    (%unsafe.read/peek-char-from-port-with-latin1-codec port who 0 offset))
 
-  (define-inline (%peek-utf16le ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little 0))
+  (define (%peek-utf16le port who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little 0))
 
-  (define-inline (%peek-utf16le/offset ?port ?who ?offset)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little ?offset))
+  (define (%peek-utf16le/offset port who offset)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'little offset))
 
-  (define-inline (%peek-utf16be ?port ?who)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big 0))
+  (define (%peek-utf16be port who)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big 0))
 
-  (define-inline (%peek-utf16be/offset ?port ?who ?offset)
-    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'big ?offset))
+  (define (%peek-utf16be/offset port who offset)
+    (%unsafe.peek-char-from-port-with-fast-get-utf16xe-tag port who 'big offset))
 
   (main))
 
@@ -5889,30 +5895,32 @@
 	((FAST-GET-UTF16BE-TAG)
 	 (%get-it eol-bits dst.past %read-utf16be %peek-utf16be)))))
 
-  (define-inline (%get-it eol-bits dst.past ?read-char ?peek-char)
-    (let loop ((dst.index dst.start))
-      (let ((ch (?read-char port who)))
-	(if (eof-object? ch)
-	    (if (unsafe.fx= dst.index dst.start)
-		ch ;return EOF
-	      (unsafe.fx- dst.index dst.start)) ;return the numbe of chars read
-	  (let ((ch (cond ((unsafe.fxzero? eol-bits) ;EOL style none
-			   ch)
-			  ((unsafe.char-is-single-char-line-ending? ch)
-			   LINEFEED-CHAR)
-			  ((unsafe.char-is-carriage-return? ch)
-			   (let ((ch1 (?peek-char port who)))
-			     (cond ((eof-object? ch1)
-				    (void))
-				   ((unsafe.char-is-newline-after-carriage-return? ch1)
-				    (?read-char port who)))
-			     LINEFEED-CHAR))
-			  (else ch))))
-	    (unsafe.string-set! dst.str dst.index ch)
-	    (let ((dst.index (unsafe.fxadd1 dst.index)))
-	      (if (unsafe.fx= dst.index dst.past)
-		  (unsafe.fx- dst.index dst.start)
-		(loop dst.index))))))))
+  (define-syntax %get-it
+    (syntax-rules ()
+      ((_ ?eol-bits ?dst.past ?read-char ?peek-char)
+       (let loop ((dst.index dst.start))
+	 (let ((ch (?read-char port who)))
+	   (if (eof-object? ch)
+	       (if (unsafe.fx= dst.index dst.start)
+		   ch				;return EOF
+		 (unsafe.fx- dst.index dst.start)) ;return the numbe of chars read
+	     (let ((ch (cond ((unsafe.fxzero? ?eol-bits) ;EOL style none
+			      ch)
+			     ((unsafe.char-is-single-char-line-ending? ch)
+			      LINEFEED-CHAR)
+			     ((unsafe.char-is-carriage-return? ch)
+			      (let ((ch1 (?peek-char port who)))
+				(cond ((eof-object? ch1)
+				       (void))
+				      ((unsafe.char-is-newline-after-carriage-return? ch1)
+				       (?read-char port who)))
+				LINEFEED-CHAR))
+			     (else ch))))
+	       (unsafe.string-set! dst.str dst.index ch)
+	       (let ((dst.index (unsafe.fxadd1 dst.index)))
+		 (if (unsafe.fx= dst.index ?dst.past)
+		     (unsafe.fx- dst.index dst.start)
+		   (loop dst.index))))))))))
 
   (define-inline (%read-utf16le ?port ?who)
     (%unsafe.read-char-from-port-with-fast-get-utf16xe-tag ?port ?who 'little))
@@ -6086,7 +6094,7 @@
       ((FAST-GET-UTF16BE-TAG)
        (%get-it %read-utf16be %peek-utf16be))))
 
-  (define-inline (%get-it ?read-char ?peek-char)
+  (define-syntax-rule (%get-it ?read-char ?peek-char)
     (let ((eol-bits (%unsafe.port-eol-style-bits port)))
       (let loop ((port			port)
 		 (number-of-chars	0)
@@ -6101,7 +6109,7 @@
 		  (%unsafe.reversed-chars->string number-of-chars reverse-chars)
 		(loop port (unsafe.fxadd1 number-of-chars) (cons ch reverse-chars)))))))))
 
-  (define-inline (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
+  (define-syntax-rule (%convert-if-line-ending eol-bits ch ?read-char ?peek-char)
     (cond ((unsafe.fxzero? eol-bits) ;EOL style none
 	   ch)
 	  ((unsafe.char-is-single-char-line-ending? ch)
@@ -6671,7 +6679,7 @@
       (%unsafe.put-string port str start count who)))))
 
 (define (%unsafe.put-string port src.str src.start count who)
-  (define-inline (%put-it ?buffer-mode-line ?eol-bits ?put-char)
+  (define-syntax-rule (%put-it ?buffer-mode-line ?eol-bits ?put-char)
     (let next-char ((src.index src.start)
 		    (src.past  (unsafe.fx+ src.start count)))
       (unless (unsafe.fx= src.index src.past)

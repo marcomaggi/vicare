@@ -105,7 +105,6 @@
     (ikarus.intel-assembler)
     (vicare language-extensions include)
     (except (vicare language-extensions syntaxes)
-	    begin0
 	    case-word-size)
     (vicare arguments validation))
 
@@ -276,15 +275,6 @@
 	       (?func ($car t) ($car T) ...)
 	       (loop  ($cdr t) ($cdr T) ...)))))
       )))
-
-(define-syntax begin0
-  ;;A version of BEGIN0 usable only with single values.
-  ;;
-  (syntax-rules ()
-    ((_ ?form ?body0 ?body ...)
-     (let ((t ?form))
-       ?body0 ?body ...
-       t))))
 
 ;;; --------------------------------------------------------------------
 
