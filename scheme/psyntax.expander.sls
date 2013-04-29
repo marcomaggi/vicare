@@ -3252,6 +3252,8 @@
 	     ((trace-let-syntax)		trace-let-syntax-macro)
 	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
+	     ((define-inline*)			define-inline-macro)
+	     ((define-constant*)		define-constant-macro)
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive*)			receive-macro)
@@ -4597,6 +4599,47 @@
 	 (lambda args
 	   ,@?form*
 	   (apply values args)))))
+    ))
+
+
+;;;; module non-core-macro-transformer: DEFINE-INLINE
+
+(define (define-constant-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?name ?expr)
+     (bless
+      `(begin
+	 (define ghost ,?expr)
+	 (define-syntax ,?name
+	   (identifier-syntax ghost)))))
+    ))
+
+(define (define-inline-macro expr-stx)
+  ;;Transformer function  used to  expand Vicare's  DEFINE-INLINE macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
+     (and (identifier? ?name)
+	  (for-all identifier? ?arg*)
+	  (or (null? (syntax->datum ?rest))
+	      (identifier? ?rest)))
+     (let ((TMP* (generate-temporaries ?arg*)))
+       (bless
+	`(define-fluid-syntax ,?name
+	   (syntax-rules ()
+	     ((_ ,@TMP* . rest)
+	      (fluid-let-syntax
+		  ((,?name (lambda (stx)
+			     (syntax-violation (quote ,?name)
+			       "cannot recursively expand inline expression"
+			       stx))))
+		(let ,(append (map list ?arg* TMP*)
+			      (if (null? (syntax->datum ?rest))
+				  '()
+				`((,?rest (list . rest)))))
+		  ,?form0 ,@?form*))))))))
     ))
 
 

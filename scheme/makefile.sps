@@ -394,6 +394,9 @@
     (define-record-type			(macro . define-record-type))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
+;;;
+    (define-inline*			(macro . define-inline*))
+    (define-constant*			(macro . define-constant*))
     (define-values			(macro . define-values))
     (define-constant-values		(macro . define-constant-values))
     (receive*				(macro . receive*))
@@ -1977,6 +1980,8 @@
     ($data->transcoder				$transc)
     (make-file-options				i v $language)
 ;;;
+    (define-inline*				i v $language)
+    (define-constant*				i v $language)
     (define-values				i v $language)
     (define-constant-values			i v $language)
     (receive*					i v $language)

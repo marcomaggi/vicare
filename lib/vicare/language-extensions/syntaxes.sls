@@ -95,7 +95,9 @@
   (import (except (ikarus)
 		  define-values
 		  receive
-		  begin0)
+		  begin0
+		  define-inline
+		  define-constant)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)

@@ -313,6 +313,50 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-inline))
+
+  (check
+      (let ()
+	(define-inline* (ciao a b)
+	  (+ a b))
+	(ciao 1 2))
+    => 3)
+
+  (check
+      (let ()
+	(define-inline* (ciao)
+	  (+ 1 2))
+	(ciao))
+    => 3)
+
+  (check
+      (let ()
+	(define-inline* (ciao . rest)
+	  (apply + rest))
+	(ciao 1 2))
+    => 3)
+
+  (check
+      (let ()
+	(define-inline* (ciao a . rest)
+	  (apply + a rest))
+	(ciao 1 2))
+    => 3)
+
+  #t)
+
+
+(parametrise ((check-test-name	'define-constant))
+
+  (check
+      (let ()
+	(define-constant* a 123)
+	a)
+    => 123)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

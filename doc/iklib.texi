@@ -110,15 +110,26 @@ process.
 @section Additional syntaxes
 
 
-@deffn Syntax define-values (@varo{var} @var{var} ...) @varo{form} @var{form} ...
-Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @var{var} identifiers.
+@deffn Syntax begin0 @metao{expr} @meta{expr} ...
+Evaluate all the expressions in the given order and return the return
+values of @metao{expr}.
 @end deffn
 
 
-@deffn Syntax define-constant-values (@varo{var} @var{var} ...) @varo{form} @var{form} ...
+@deffn Syntax define-constant @meta{var} @meta{expr}
+Like @func{define} but create an immutable binding.
+@end deffn
+
+
+@deffn Syntax define-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
 Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @var{var} identifiers.  Make the @var{var}
+last one to the given @meta{var} identifiers.
+@end deffn
+
+
+@deffn Syntax define-constant-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
+Evaluate the given forms and bind the, possibly multiple, result of the
+last one to the given @meta{var} identifiers.  Make the @meta{var}
 identifiers immutable.
 @end deffn
 
@@ -141,9 +152,9 @@ the region of such bindings.  The expansion is:
 @end deffn
 
 
-@deffn Syntax begin0 @varo{expr} @var{expr} ...
-Evaluate all the expressions in the given order and return the return
-values of @varo{expr}.
+@deffn Syntax define-inline (@meta{name} . @meta{formals}) @metao{body} @meta{body} ...
+Similar to @func{define}, but create a binding that is always expanded
+inline and cannot be invoked recursively.
 @end deffn
 
 @c page
