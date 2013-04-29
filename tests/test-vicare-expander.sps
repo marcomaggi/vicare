@@ -258,6 +258,23 @@
   #t)
 
 
+(parametrise ((check-test-name	'receive))
+
+  (check
+      (receive* (a b c)
+		(values 1 2 3)
+		(list a b c))
+    => '(1 2 3))
+
+  (check
+      (receive* (a)
+		1
+		a)
+    => 1)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
