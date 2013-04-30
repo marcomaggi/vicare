@@ -1014,6 +1014,69 @@
 	   (list a b c))))
     => '((2 3 4) (in)))
 
+;;; --------------------------------------------------------------------
+
+  (check	;no return, no arguments
+      (with-result
+       (let ()
+	 (define ciao
+	   (lambda-returnable ()
+	     (add-result 'in)
+	     (add-result 'out)
+	     1))
+	 (ciao)))
+    => '(1 (in out)))
+
+  (check	;no return, arguments
+      (with-result
+       (let ()
+	 (define ciao
+	   (lambda-returnable (a b)
+	     (add-result 'in)
+	     (add-result 'out)
+	     (list a b)))
+	 (ciao 1 2)))
+    => '((1 2) (in out)))
+
+  (check	;return no values
+      (with-result
+       (let ()
+	 (define ciao
+	   (lambda-returnable ()
+	     (add-result 'in)
+	     (return)
+	     (add-result 'out)
+	     1))
+	 (ciao)
+	 #t))
+    => '(#t (in)))
+
+  (check	;return single value
+      (with-result
+       (let ()
+	 (define ciao
+	   (lambda-returnable ()
+	     (add-result 'in)
+	     (return 2)
+	     (add-result 'out)
+	     1))
+	 (ciao)))
+    => '(2 (in)))
+
+  (check	;return multiple values
+      (with-result
+       (let ()
+	 (define ciao
+	   (lambda-returnable ()
+	     (add-result 'in)
+	     (return 2 3 4)
+	     (add-result 'out)
+	     (values 1 2 3)))
+	 (receive (a b c)
+	     (ciao)
+	   (list a b c))))
+    => '((2 3 4) (in)))
+
   #f)
 
 
