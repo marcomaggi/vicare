@@ -722,7 +722,8 @@
 
   (define-syntax unwind-protect
     ;;Not a general UNWIND-PROTECT for Scheme,  but fine where we do not
-    ;;use continuations to escape from the body.
+    ;;make the  body return  continuations to the  caller and  then come
+    ;;back again and again, calling CLEANUP multiple times.
     ;;
     (syntax-rules ()
       ((_ ?body ?cleanup0 ?cleanup ...)
