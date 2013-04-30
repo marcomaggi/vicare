@@ -776,7 +776,7 @@
 
   (module (%find-dups)
 
-    (define (%find-dups ls)
+    (define-inline (%find-dups ls)
       (let loop ((ls    ls)
 		 (dups  '()))
 	(cond ((null? ls)
@@ -914,7 +914,7 @@
 	    (%import-spec->subst (car import-spec*)))
 	  (loop (cdr import-spec*) subst.table)))))
 
-  (define (%add-subst-entry! subst.table subst.entry)
+  (define-inline (%add-subst-entry! subst.table subst.entry)
     ;;Add  the  given  SUBST.ENTRY to  SUBST.TABLE;  return  unspecified
     ;;values.  Raise a syntax violation if SUBST.ENTRY has the same name
     ;;of an entry in SUBST.TABLE, but different label.
@@ -932,7 +932,7 @@
 
   (module (%import-spec->subst)
 
-    (define (%import-spec->subst import-spec)
+    (define-inline (%import-spec->subst import-spec)
       ;;Process the IMPORT-SPEC and return the corresponding subst.
       ;;
       ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
@@ -1210,7 +1210,7 @@
 	 (%synner "invalid sub-version specification in library reference"
 		  libref subversion*))))
 
-    (define (%subversion? stx)
+    (define-inline (%subversion? stx)
       (library-version-number? (syntax->datum stx)))
 
     #| end of module: PARSE-LIBRARY-REFERENCE |# )
@@ -1233,7 +1233,7 @@
 	(%insert-to-subst (car subst1)
 			  (merge-substs (cdr subst1) subst2))))
 
-    (define (%insert-to-subst entry subst)
+    (define-inline (%insert-to-subst entry subst)
       ;;Given a subst  ENTRY and a SUBST: insert the  entry in the subst
       ;;if it is not already present  and return the result; else return
       ;;SUBST.
@@ -1420,7 +1420,7 @@
 							  (list invoke-body)))
 				  macro* export-subst export-env)))))))))))))
 
-  (define (%chi-library-internal e* rib mix?)
+  (define-inline (%chi-library-internal e* rib mix?)
     (receive (e* lexenv.run lexenv.expand lex* rhs* mod** _kwd* exp*)
 	(chi-body* e* '() '() '() '() '() '() '() rib mix? #t)
       (values (append (apply append (reverse mod**)) e*)
@@ -1705,9 +1705,9 @@
   ;;  the lexical environment.
   ;;
   (let ((rib (make-empty-rib)))
-    (set-<rib>-sym*!   rib (map car subst))
-    (set-<rib>-mark**! rib (map (lambda (x) top-mark*) subst))
-    (set-<rib>-label*! rib (map cdr subst))
+    ($set-<rib>-sym*!   rib (map car subst))
+    ($set-<rib>-mark**! rib (map (lambda (x) top-mark*) subst))
+    ($set-<rib>-label*! rib (map cdr subst))
     rib))
 
 
@@ -2583,7 +2583,7 @@
 		     (%search-in-sealed-rib rib sym mark* next-search)
 		   (%search-in-rib rib sym mark* next-search))))))))
 
-  (define (%search-in-sealed-rib rib sym mark* next-search)
+  (define-inline (%search-in-sealed-rib rib sym mark* next-search)
     (define sym* ($<rib>-sym* rib))
     (let loop ((i       0)
 	       (rib.len ($vector-length sym*)))
@@ -2597,7 +2597,7 @@
 	    (else
 	     (loop ($fxadd1 i) rib.len)))))
 
-  (define (%search-in-rib rib sym mark* next-search)
+  (define-inline (%search-in-rib rib sym mark* next-search)
     (let loop ((sym*    ($<rib>-sym*   rib))
 	       (mark**  ($<rib>-mark** rib))
 	       (label*  ($<rib>-label* rib)))
