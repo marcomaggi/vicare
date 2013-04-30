@@ -185,7 +185,7 @@ Notes for revision 0.3d0
     define-constant			define-inline
     define-integrable			define-syntax-rule
 
-* Added DEPREFIX import specification clause:
+* Added DEPREFIX, SUFFIX and DESUFFIX import specification clauses:
 
      (import (rnrs)
        (rnrs eval))

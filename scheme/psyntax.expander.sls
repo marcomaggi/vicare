@@ -897,9 +897,7 @@
   ;;     == ?library-reference
   ;;     == (library ?library-reference)
   ;;     == (only ?import-set ?identifier ...)
-  ;;     == (exept ?import-set ?identifier)
-  ;;     == (prefix ?import-set ?identifier)
-  ;;     == (deprefix ?import-set ?identifier)
+  ;;     == (except ?import-set ?identifier)
   ;;     == (rename ?import-set (?identifier1 ?identifier2) ...)
   ;;
   ;;  ?library-reference
@@ -922,6 +920,13 @@
   ;;
   ;;  ?sub-version
   ;;     == #<non-negative fixnum>
+  ;;
+  ;;Vicare extends ?IMPORT-SET with:
+  ;;
+  ;;     == (prefix ?import-set ?identifier)
+  ;;     == (deprefix ?import-set ?identifier)
+  ;;     == (suffix ?import-set ?identifier)
+  ;;     == (desuffix ?import-set ?identifier)
   ;;
   ;;Example, given:
   ;;
@@ -1025,7 +1030,7 @@
 	 ;;library reference whose first  identifier is "for", "rename",
 	 ;;etc.
 	 (not (memq (syntax->datum ?spec)
-		    '(rename except only prefix deprefix library)))
+		    '(rename except only prefix deprefix suffix desuffix library)))
 	 (%import-library (cons ?spec ?spec*)))
 
 	((?rename ?import-set (?old-name* ?new-name*) ...)
@@ -1092,6 +1097,45 @@
 			(%local-synner
 			 (string-append "binding name \"" orig.str
 					"\" cannot be deprefixed of \"" prefix.str "\"")))))
+	       subst))))
+
+	((?suffix ?import-set ?the-suffix)
+	 (and (eq? (syntax->datum ?suffix) 'suffix)
+	      (id-stx? ?suffix))
+	 (let ((subst   (%recurse ?import-set))
+	       (suffix  (symbol->string (syntax->datum ?the-suffix))))
+	   (map (lambda (x)
+		  (cons (string->symbol
+			 (string-append (symbol->string (car x)) suffix))
+			(cdr x)))
+	     subst)))
+
+	((?desuffix ?import-set ?the-suffix)
+	 (and (eq? (syntax->datum ?desuffix) 'desuffix)
+	      (id-stx? ?the-suffix))
+	 (if #f
+	     ;;FIXME At present  there is no way to  disable DESUFFIX to
+	     ;;enforce strict  R6RS compatibility; in future  it may be.
+	     ;;(Marco Maggi; Tue Apr 16, 2013)
+	     (%local-synner "desuffix import specification forbidden in R6RS mode")
+	   (let* ((subst       (%recurse ?import-set))
+		  (suffix.str  (symbol->string (syntax->datum ?the-suffix)))
+		  (suffix.len  (string-length suffix.str)))
+	     ;;This should never happen.
+	     (when (zero? suffix.len)
+	       (%local-synner "null desuffix suffix"))
+	     (map (lambda (subst.entry)
+		    (let* ((orig.str    (symbol->string (car subst.entry)))
+			   (orig.len    (string-length orig.str))
+			   (prefix.len  (fx- orig.len suffix.len)))
+		      (if (and (< suffix.len orig.len)
+			       (string=? suffix.str
+					 (substring orig.str prefix.len orig.len)))
+			  (cons (string->symbol (substring orig.str 0 prefix.len))
+				(cdr subst.entry))
+			(%local-synner
+			 (string-append "binding name \"" orig.str
+					"\" cannot be desuffixed of \"" suffix.str "\"")))))
 	       subst))))
 
 	;;According to R6RS:  the symbol LIBRARY can be used  to quote a

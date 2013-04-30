@@ -1121,7 +1121,7 @@ no way to disable it to enforce @rnrs{6} compatibility.
 
 
 @deffn {Import Spec} deprefix @meta{import-spec} @meta{prefix}
-Similar to the import specification @code{prefix}, but removes a prefix
+Similar to the import specification @code{prefix}, but remove a prefix
 rather than add it.  This clause is always enabled: there is no way to
 disable it to enforce @rnrs{6} compatibility.
 
@@ -1139,6 +1139,20 @@ disable it to enforce @rnrs{6} compatibility.
          str.)))
 @result{} 4
 @end example
+@end deffn
+
+
+@deffn {Import Spec} suffix @meta{import-spec} @meta{suffix}
+Similar to the import specification @code{prefix}, but append a suffix
+rather than a prefix.  This clause is always enabled: there is no way to
+disable it to enforce @rnrs{6} compatibility.
+@end deffn
+
+
+@deffn {Import Spec} desuffix @meta{import-spec} @meta{suffix}
+Similar to the import specification @code{deprefix}, but remove a suffix
+rather than a prefix.  This clause is always enabled: there is no way to
+disable it to enforce @rnrs{6} compatibility.
 @end deffn
 
 @c page
