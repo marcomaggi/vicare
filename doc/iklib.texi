@@ -110,17 +110,14 @@ process.
 @section Additional syntaxes
 
 
-@deffn Syntax begin0 @metao{expr} @meta{expr} ...
-Evaluate all the expressions in the given order and return the return
-values of @metao{expr}.
+@menu
+* iklib syntaxes defines::      Additional binding syntaxes.
+* iklib syntaxes control::      Additional control flow syntaxes.
+@end menu
 
-@example
-(begin0
-    1
-  2)
-@result{} 1
-@end example
-@end deffn
+@c page
+@node iklib syntaxes defines
+@subsection Additional binding syntaxes
 
 
 @deffn Syntax define-constant @meta{var} @meta{expr}
@@ -239,6 +236,63 @@ single clause.  Expand to:
         ((_ @meta{pattern} ... . @meta{rest})
          (begin @metao{body} @meta{body} ...))))
 @end example
+@end deffn
+
+@c page
+@node iklib syntaxes control
+@subsection Additional control flow syntaxes
+
+
+@deffn Syntax begin0 @metao{expr} @meta{expr} ...
+Evaluate all the expressions in the given order and return the return
+values of @metao{expr}.
+
+@example
+(begin0
+    1
+  2)
+@result{} 1
+@end example
+@end deffn
+
+
+@deffn Syntax while @meta{test} @meta{body} ...
+If the expression @meta{test} evaluates to true: evaluate the body forms
+@meta{body} and recurse; else return.  In the body: the syntax
+@func{continue} causes immediate looping to next iteration; the syntax
+@func{break} causes immediate escaping out of the loop.
+
+Use of this syntax involves creating a continuation.
+@end deffn
+
+
+@deffn Syntax until @meta{test} @meta{body} ...
+If the expression @meta{test} evaluates to false: evaluate the body
+forms @meta{body} and recurse; else return.  In the body: the syntax
+@func{continue} causes immediate looping to next iteration; the syntax
+@func{break} causes immediate escaping out of the loop.
+
+Use of this syntax involves creating a continuation.
+@end deffn
+
+
+@deffn Syntax continue
+Causes the innermost @func{while}, @func{until} or @func{for} loop to
+jump immediately to the next iteration.
+@end deffn
+
+
+@deffn Syntax break @meta{expr} ...
+Causes the innermost @func{while}, @func{until} or @func{for} loop to
+exit immediately to the current continuation.  When arguments are given:
+they are returned to the continuation.
+@end deffn
+
+
+@deffn {Fluid Syntax} return @meta{expr} ...
+This syntax should be used to return from some enclosing block,
+returning the given optional arguments.  Being a fluid syntax: it is
+possible to use this syntax in custom syntaxes.
 @end deffn
 
 @c page

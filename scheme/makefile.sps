@@ -403,6 +403,12 @@
     (define-syntax-rule			(macro . define-syntax-rule))
     (receive				(macro . receive))
     (begin0				(macro . begin0))
+    (return				($fluid . return))
+    (continue				($fluid . continue))
+    (break				($fluid . break))
+    (while				(macro . while))
+    (until				(macro . until))
+    (for				(macro . for))
 ;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
@@ -1990,6 +1996,13 @@
     (define-syntax-rule				i v $language)
     (receive					i v $language)
     (begin0					i v $language)
+;;;
+    (return					i v $language)
+    (continue					i v $language)
+    (break					i v $language)
+    (while					i v $language)
+    (until					i v $language)
+    (for					i v $language)
 ;;;
     (port-id					i v $language)
     (port-uid					i v $language)

@@ -185,6 +185,11 @@ Notes for revision 0.3d0
     define-constant			define-inline
     define-integrable			define-syntax-rule
 
+* Added non-Scheme style syntaxes to (vicare):
+
+    while until for
+    continue break return
+
 * Added DEPREFIX, SUFFIX and DESUFFIX import specification clauses:
 
      (import (rnrs)

@@ -3328,6 +3328,13 @@
 	     ((begin0)				begin0-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
 
+	     ((return)				return-macro)
+	     ((continue)			continue-macro)
+	     ((break)				break-macro)
+	     ((while)				while-macro)
+	     ((until)				until-macro)
+	     ((for)				for-macro)
+
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
 
@@ -4351,6 +4358,81 @@
 				(loop ,@step*))))))
 		  (loop ,@init*)))
 	    (stx-error stx "invalid bindings"))))))))
+
+
+;;;; module non-core-macro-transformer: CONTINUE, BREAK, WHILE, UNTIL, FOR
+
+(define (return-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_)
+     (bless
+      (lambda (stx)
+	(syntax-error 'return "syntax \"return\" out of context"))))))
+
+(define (continue-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_)
+     (bless
+      (lambda (stx)
+	(syntax-error 'continue "syntax \"continue\" out of any loop"))))))
+
+(define (break-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_)
+     (bless
+      (lambda (stx)
+	(syntax-error 'break "syntax \"continue\" out of any loop"))))))
+
+(define (while-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?test ?body* ...)
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (let loop ()
+	       (fluid-let-syntax ((break    (syntax-rules ()
+					      ((_ . ?args)
+					       (escape . ?args))))
+				  (continue (lambda (stx) #'(loop))))
+		 (if ,?test
+		     (begin ,@?body* (loop))
+		   (escape))))))))
+    ))
+
+(define (until-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?test ?body* ...)
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (let loop ()
+	       (fluid-let-syntax ((break    (syntax-rules ()
+					      ((_ . ?args)
+					       (escape . ?args))))
+				  (continue (lambda (stx) #'(loop))))
+		 (if ,?test
+		     (escape)
+		   (begin ,@?body* (loop)))))))))
+    ))
+
+(define (for-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ (?init ?test ?incr) ?body* ...)
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     ,?init
+	     (let loop ()
+	       (fluid-let-syntax ((break    (syntax-rules ()
+					      ((_ . ?args)
+					       (escape . ?args))))
+				  (continue (lambda (stx) #'(loop))))
+		 (if ,?test
+		     (begin
+		       ,@?body* ,?incr
+		       (loop))
+		   (escape))))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: OR, AND
