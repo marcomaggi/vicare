@@ -424,6 +424,76 @@
   #t)
 
 
+(parametrise ((check-test-name	'test-while))
+
+  (define-fluid-syntax continue
+    (lambda (stx)
+      (syntax-error 'continue "syntax \"continue\" out of any loop")))
+
+  (define-fluid-syntax break
+    (lambda (stx)
+      (syntax-error 'continue "syntax \"break\" out of any loop")))
+
+  (define-syntax while
+    (syntax-rules ()
+      ((_ ?test ?body ...)
+       (call/cc
+	   (lambda (escape)
+	     (let loop ()
+	       (fluid-let-syntax ((break    (lambda (stx) #'(escape)))
+				  (continue (lambda (stx) #'(loop))))
+		 (if ?test
+		     (begin
+		       ?body ...
+		       (loop))
+		   (escape)))))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (let ((i 5))
+	 (while (positive? i)
+	   (add-result i)
+	   (set! i (+ -1 i)))
+	 i))
+    => '(0 (5 4 3 2 1)))
+
+  (check
+      (with-result
+       (let ((i 0))
+	 (while (positive? i)
+	   (add-result i)
+	   (set! i (+ -1 i)))
+	 i))
+    => '(0 ()))
+
+  (check
+      (with-result
+       (let ((i 5))
+	 (while (positive? i)
+	   (add-result i)
+	   (set! i (+ -1 i))
+	   (continue)
+	   (add-result "post"))
+	 i))
+    => '(0 (5 4 3 2 1)))
+
+  (check
+      (with-result
+       (let ((i 5))
+	 (while (positive? i)
+	   (add-result i)
+	   (set! i (+ -1 i))
+	   (break)
+	   (add-result "post"))
+	 i))
+    => '(4 (5)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
