@@ -125,7 +125,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'fluid-let-syntax))
+(parametrise ((check-test-name	'test-define-integrable))
 
   (define-syntax define-integrable
     ;;Posted  by "leppie"  on the  Ikarus mailing  list; subject  "Macro
