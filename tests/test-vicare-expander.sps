@@ -494,6 +494,162 @@
   #t)
 
 
+(parametrise ((check-test-name	'test-until))
+
+  (define-fluid-syntax continue
+    (lambda (stx)
+      (syntax-error 'continue "syntax \"continue\" out of any loop")))
+
+  (define-fluid-syntax break
+    (lambda (stx)
+      (syntax-error 'continue "syntax \"break\" out of any loop")))
+
+  (define-syntax until
+    (syntax-rules ()
+      ((_ ?test ?body ...)
+       (call/cc
+	   (lambda (escape)
+	     (let loop ()
+	       (fluid-let-syntax ((break    (lambda (stx) #'(escape)))
+				  (continue (lambda (stx) #'(loop))))
+		 (if ?test
+		     (escape)
+		   (begin
+		     ?body ...
+		     (loop))))))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (let ((i 5))
+	 (until (zero? i)
+	   (add-result i)
+	   (set! i (+ -1 i)))
+	 i))
+    => '(0 (5 4 3 2 1)))
+
+  (check
+      (with-result
+       (let ((i 0))
+	 (until (zero? i)
+	   (add-result i)
+	   (set! i (+ -1 i)))
+	 i))
+    => '(0 ()))
+
+  (check
+      (with-result
+       (let ((i 5))
+	 (until (zero? i)
+	   (add-result i)
+	   (set! i (+ -1 i))
+	   (continue)
+	   (add-result "post"))
+	 i))
+    => '(0 (5 4 3 2 1)))
+
+  (check
+      (with-result
+       (let ((i 5))
+	 (until (zero? i)
+	   (add-result i)
+	   (set! i (+ -1 i))
+	   (break)
+	   (add-result "post"))
+	 i))
+    => '(4 (5)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'test-for))
+
+  (define-fluid-syntax continue
+    (lambda (stx)
+      (syntax-error 'continue "syntax \"continue\" out of any loop")))
+
+  (define-fluid-syntax break
+    (lambda (stx)
+      (syntax-error 'continue "syntax \"break\" out of any loop")))
+
+  (define-syntax for
+    (syntax-rules ()
+      ((_ (?init ?test ?incr) ?body ...)
+       (call/cc
+	   (lambda (escape)
+	     ?init
+	     (let loop ()
+	       (fluid-let-syntax ((break    (lambda (stx) #'(escape)))
+				  (continue (lambda (stx) #'(loop))))
+		 (if ?test
+		     (begin
+		       ?body ... ?incr
+		       (loop))
+		   (escape)))))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (check	;test true
+      (with-result
+       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
+	 (add-result i))
+       #t)
+    => '(#t (5 4 3 2 1)))
+
+  (check	;test immediately false
+      (with-result
+       (for ((define i 0) (positive? i) (set! i (+ -1 i)))
+	 (add-result i))
+       #t)
+    => '(#t ()))
+
+  (check	;continue
+      (with-result
+       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
+	 (add-result i)
+	 (set! i (+ -1 i))
+	 (continue)
+	 (add-result "post"))
+       #t)
+    => '(#t (5 4 3 2 1)))
+
+  (check	;break
+      (with-result
+       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
+	 (add-result i)
+	 (break)
+	 (add-result "post"))
+       #t)
+    => '(#t (5)))
+
+  (check	;multiple bindings
+      (with-result
+       (for ((begin
+	       (define i 5)
+	       (define j 10))
+	     (positive? i)
+	     (begin
+	       (set! i (+ -1 i))
+	       (set! j (+ -1 j))))
+	 (add-result i)
+	 (add-result j))
+       #t)
+    => '(#t (5 10 4 9 3 8 2 7 1 6)))
+
+  (check	;no bindings
+      (with-result
+       (let ((i #f))
+	 (for ((set! i 5) (positive? i) (set! i (+ -1 i)))
+	   (add-result i))
+	 i))
+    => '(0 (5 4 3 2 1)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
