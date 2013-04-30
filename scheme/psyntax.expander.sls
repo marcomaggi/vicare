@@ -251,9 +251,9 @@
   ;;constructs  an env  record that  can be  used later  by eval  and/or
   ;;expand.
   ;;
-  ;;IMPORT-SPEC* must be a list  of symbolic expressions, or lists/trees
-  ;;of ANNOTATION structs, representing import specifications as defined
-  ;;by R6RS plus Vicare extensions.
+  ;;IMPORT-SPEC*  must be  a list  of SYNTAX-MATCH  expression arguments
+  ;;representing import  specifications as  defined by R6RS  plus Vicare
+  ;;extensions.
   ;;
   (let ((itc (make-collector)))
     (parametrise ((imp-collector itc))
@@ -411,10 +411,10 @@
 ;;;; R6RS top level programs
 
 (define (compile-r6rs-top-level expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, expand  it and return a thunk  which, when evaluated,
-  ;;compiles   the  program   and  returns   an  INTERACTIN-ENV   struct
-  ;;representing the environment after the program execution.
+  ;;Given a  list of  SYNTAX-MATCH expression arguments  representing an
+  ;;R6RS top  level program, expand  it and  return a thunk  which, when
+  ;;evaluated,  compiles  the  program and  returns  an  INTERACTION-ENV
+  ;;struct representing the environment after the program execution.
   ;;
   (receive (lib* invoke-code macro* export-subst export-env)
       (expand-top-level expr*)
@@ -432,37 +432,41 @@
 			      export-env)
 			    '()))))
 
-(define (expand-top-level expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, expand it.
-  ;;
-  (receive (import-spec* body*)
-      (parse-top-level-program expr*)
-    (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
-	(library-body-expander 'all import-spec* body* #t)
-      (values invoke-req* invoke-code macro* export-subst export-env))))
+(module (expand-top-level)
 
-(define (parse-top-level-program expr*)
-  ;;Given a  list/tree of  ANNOTATION structs  representing an  R6RS top
-  ;;level program, parse it and return 2 values:
-  ;;
-  ;;1. A list of export specifications.
-  ;;
-  ;;2. A list of body forms.
-  ;;
-  (syntax-match expr* ()
-    (((?import ?import-spec* ...) body* ...)
-     (eq? (syntax->datum ?import) 'import)
-     (values ?import-spec* body*))
+  (define (expand-top-level expr*)
+    ;;Given a list of  SYNTAX-MATCH expression arguments representing an
+    ;;R6RS top level program, expand it.
+    ;;
+    (receive (import-spec* body*)
+	(%parse-top-level-program expr*)
+      (receive (import-spec* invoke-req* visit-req* invoke-code macro* export-subst export-env)
+	  (library-body-expander 'all import-spec* body* #t)
+	(values invoke-req* invoke-code macro* export-subst export-env))))
 
-    (((?import . x) . y)
-     (eq? (syntax->datum ?import) 'import)
-     (syntax-violation 'expander
-       "invalid syntax of top-level program" (syntax-car expr*)))
+  (define (%parse-top-level-program expr*)
+    ;;Given a list of  SYNTAX-MATCH expression arguments representing an
+    ;;R6RS top level program, parse it and return 2 values:
+    ;;
+    ;;1. A list of import specifications.
+    ;;
+    ;;2. A list of body forms.
+    ;;
+    (syntax-match expr* ()
+      (((?import ?import-spec* ...) body* ...)
+       (eq? (syntax->datum ?import) 'import)
+       (values ?import-spec* body*))
 
-    (_
-     (assertion-violation 'expander
-       "top-level program is missing an (import ---) clause"))))
+      (((?import . x) . y)
+       (eq? (syntax->datum ?import) 'import)
+       (syntax-violation 'expander
+	 "invalid syntax of top-level program" (syntax-car expr*)))
+
+      (_
+       (assertion-violation 'expander
+	 "top-level program is missing an (import ---) clause"))))
+
+  #| end of module: EXPAND-TOP-LEVEL |# )
 
 
 (define (boot-library-expand x)
@@ -554,7 +558,7 @@
 
 
 (define (core-library-expander library-sexp verify-name)
-  ;;Given an list/tree of ANNOTATION structs representing a LIBRARY form
+  ;;Given a SYNTAX-MATCH expression argument representing a LIBRARY form
   ;;symbolic expression:
   ;;
   ;;   (library . _)
@@ -591,16 +595,16 @@
   ;;Given  an ANNOTATION  struct  representing a  LIBRARY form  symbolic
   ;;expression, return 4 values:
   ;;
-  ;;1. The  name part.  A  list/tree of ANNOTATION  structs representing
+  ;;1. The  name part.  A SYNTAX-MATCH  expression argument representing
   ;;   parts of the library name.
   ;;
-  ;;2. The export specs.  A list/tree of ANNOTATION structs representing
-  ;;   the exports specification.
+  ;;2.   The  export   specs.    A   SYNTAX-MATCH  expression   argument
+  ;;   representing the exports specification.
   ;;
-  ;;3. The import specs.  A list/tree of ANNOTATION structs representing
-  ;;   the imports specification.
+  ;;3.   The  import   specs.    A   SYNTAX-MATCH  expression   argument
+  ;;   representing the imports specification.
   ;;
-  ;;4.  The body  of the  library.   A list/tree  of ANNOTATION  structs
+  ;;4.  The  body of  the library.   A SYNTAX-MATCH  expression argument
   ;;   representing the body of the library.
   ;;
   ;;This function performs no validation of the returned values, it just
@@ -620,9 +624,8 @@
 
 
 (define (parse-library-name libname)
-  ;;Given  a symbolic  expression, or  list/tree of  ANNOTATION structs,
-  ;;LIBNAME representing  a library  name as defined  by R6RS,  return 2
-  ;;values:
+  ;;Given  a SYNTAX-MATCH  expression  argument  LIBNAME representing  a
+  ;;library name as defined by R6RS, return 2 values:
   ;;
   ;;1. A list of symbols representing the name identifiers.
   ;;
@@ -658,9 +661,8 @@
 
 
 (module (parse-export-spec*)
-  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
-  ;;representing the exports specification from a LIBRARY form, return 2
-  ;;values:
+  ;;Given a  list of SYNTAX-MATCH expression  arguments representing the
+  ;;exports specification from a LIBRARY form, return 2 values:
   ;;
   ;;1. A list of symbols representing the external names of the exported
   ;;   bindings.
@@ -801,9 +803,9 @@
 
 
 (module (parse-import-spec*)
-  ;;Given a symbolic  expression, or a list/tree  of ANNOTATION structs,
-  ;;representing import  specifications from a LIBRARY  form, as defined
-  ;;by R6RS plus Vicare extensions:
+  ;;Given  a  list  of SYNTAX-MATCH  expression  arguments  representing
+  ;;import specifications from  a LIBRARY form, as defined  by R6RS plus
+  ;;Vicare extensions:
   ;;
   ;;1. Parse and validate the import specs.
   ;;
@@ -1069,9 +1071,9 @@
   (module (parse-library-reference)
 
     (define (parse-library-reference libref)
-      ;;Given  a  symbolic  expression,  or a  list/tree  of  ANNOTATION
-      ;;structs, LIBREF  representing a library reference  as defined by
-      ;;R6RS: parse and validate it.  Return 2 values:
+      ;;Given a  SYNTAX-MATCH expression argument LIBREF  representing a
+      ;;library reference  as defined  by R6RS:  parse and  validate it.
+      ;;Return 2 values:
       ;;
       ;;1. A list of symbols representing the library spec identifiers.
       ;;
