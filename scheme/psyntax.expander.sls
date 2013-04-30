@@ -103,18 +103,10 @@
 
 ;;; helpers
 
-(define (%set-union ls1 ls2)
-  ;;Build and return  a new list holding elements from  LS1 and LS2 with
-  ;;duplicates removed.
-  ;;
-  (cond ((null? ls1)
-	 ls2)
-	((memq (car ls1) ls2)
-	 (%set-union (cdr ls1) ls2))
-	(else
-	 (cons (car ls1)
-	       (%set-union (cdr ls1) ls2)))))
-
+;;This syntax can be used as standalone identifier andexpands to #f.  It
+;;is  used as  "annotated expression"  argument in  calls to  the BUILD-
+;;functions when there is no annotated expression to be given.
+;;
 (define-syntax no-source
   (lambda (x) #f))
 
@@ -6356,15 +6348,31 @@
 (define stale-when-collector
   (make-parameter #f))
 
-(define (make-stale-collector)
-  (let ((code (build-data no-source #f))
-	(req* '()))
-    (case-lambda
-     (()
-      (values code req*))
-     ((c r*)
-      (set! code (build-conditional no-source code (build-data no-source #t) c))
-      (set! req* (%set-union r* req*))))))
+(module (make-stale-collector)
+
+  (define (make-stale-collector)
+    (let ((code (build-data no-source #f))
+	  (req* '()))
+      (case-lambda
+       (()
+	(values code req*))
+       ((c r*)
+	(set! code (build-conditional no-source code (build-data no-source #t) c))
+	(set! req* (%set-union r* req*))))))
+
+  (define (%set-union ls1 ls2)
+    ;;Build and return a new list holding elements from LS1 and LS2 with
+    ;;duplicates removed.
+    ;;
+    (cond ((null? ls1)
+	   ls2)
+	  ((memq (car ls1) ls2)
+	   (%set-union (cdr ls1) ls2))
+	  (else
+	   (cons (car ls1)
+		 (%set-union (cdr ls1) ls2)))))
+
+  #| end of module: MAKE-STALE-COLLECTOR |# )
 
 (define (handle-stale-when guard-expr mr)
   (let ((stc (make-collector)))
