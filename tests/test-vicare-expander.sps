@@ -1285,6 +1285,33 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-auxiliary-syntaxes))
+
+  (define-auxiliary-syntaxes*)
+  (define-auxiliary-syntaxes* ciao)
+  (define-auxiliary-syntaxes* blu red)
+
+  (define-syntax doit
+    (syntax-rules (blu red)
+      ((_ (blu ?blu) (red ?red))
+       (list ?blu ?red))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (doit (blu 1) (red 2))
+    => '(1 2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'compensations))
+
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

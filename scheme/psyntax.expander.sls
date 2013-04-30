@@ -3328,6 +3328,8 @@
 	     ((begin0)				begin0-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
 
+	     ((define-auxiliary-syntaxes*)	define-auxiliary-syntaxes-macro)
+
 	     ((return)				return-macro)
 	     ((continue)			continue-macro)
 	     ((break)				break-macro)
@@ -3372,6 +3374,27 @@
 
   (define (incorrect-usage-macro expr-stx)
     (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx))
+
+
+;;;; module non-core-macro-transformer: DEFINE-AUXILIARY-SYNTAXES
+
+(define (define-auxiliary-syntaxes-macro expr-stx)
+  ;;Transformer      function      used     to      expand      Vicare's
+  ;;DEFINE-AUXILIARY-SYNTAXES  macros   from  the  top-level   built  in
+  ;;environment.  Expand  the contents  of EXPR-STX.  Return  a symbolic
+  ;;expression in the core language.
+  ;;
+  ;;Using an empty SYNTAX-RULES as  transformer function makes sure that
+  ;;whenever an auxiliary syntax is referenced an error is raised.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?id* ...)
+     (for-all identifier? ?id*)
+     (bless
+      `(begin
+	 ,@(map (lambda (id)
+		  `(define-syntax ,id (syntax-rules ())))
+	     ?id*))))))
 
 
 ;;;; module non-core-macro-transformer: control structures macros

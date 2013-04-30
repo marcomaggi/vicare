@@ -92,7 +92,10 @@
 
     ;; auxiliary syntaxes
     big				little)
-  (import (ikarus)
+  (import (except (ikarus)
+		  ;;FIXME To be removed at the next boot image rotation.
+		  ;;(Marco Maggi; Tue Apr 30, 2013)
+		  define-auxiliary-syntaxes)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)

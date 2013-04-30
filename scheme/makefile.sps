@@ -395,6 +395,7 @@
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
 ;;;
+    (define-auxiliary-syntaxes*		(macro . define-auxiliary-syntaxes*))
     (define-integrable			(macro . define-integrable))
     (define-inline			(macro . define-inline))
     (define-constant			(macro . define-constant))
@@ -403,6 +404,7 @@
     (define-syntax-rule			(macro . define-syntax-rule))
     (receive				(macro . receive))
     (begin0				(macro . begin0))
+;;;
     (return				($fluid . return))
     (continue				($fluid . continue))
     (break				($fluid . break))
@@ -1990,6 +1992,7 @@
     ($data->transcoder				$transc)
     (make-file-options				i v $language)
 ;;;
+    (define-auxiliary-syntaxes*			i v $language)
     (define-integrable				i v $language)
     (define-inline				i v $language)
     (define-constant				i v $language)

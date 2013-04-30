@@ -238,6 +238,18 @@ single clause.  Expand to:
 @end example
 @end deffn
 
+
+@deffn Syntax define-auxiliary-syntaxes @metao{name} @meta{name} ...
+Define auxiliary syntaxes to be used as literal identifiers by
+@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
+
+@example
+(define-syntax @metao{name} (syntax-rules ()))
+(define-syntax @meta{name}  (syntax-rules ()))
+...
+@end example
+@end deffn
+
 @c page
 @node iklib syntaxes control
 @subsection Additional control flow syntaxes
