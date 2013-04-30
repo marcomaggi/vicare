@@ -440,7 +440,9 @@
        (call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (lambda (stx) #'(escape)))
+	       (fluid-let-syntax ((break    (syntax-rules ()
+					      ((_ . ?args)
+					       (escape . ?args))))
 				  (continue (lambda (stx) #'(loop))))
 		 (if ?test
 		     (begin
@@ -470,7 +472,7 @@
     => '(0 ()))
 
   (check
-      (with-result
+      (with-result	;continue
        (let ((i 5))
 	 (while (positive? i)
 	   (add-result i)
@@ -481,7 +483,7 @@
     => '(0 (5 4 3 2 1)))
 
   (check
-      (with-result
+      (with-result	;break
        (let ((i 5))
 	 (while (positive? i)
 	   (add-result i)
@@ -490,6 +492,28 @@
 	   (add-result "post"))
 	 i))
     => '(4 (5)))
+
+  (check		;break with single value
+      (with-result
+       (let ((i 5))
+	 (while (positive? i)
+	   (add-result i)
+	   (set! i (+ -1 i))
+	   (break 'ciao)
+	   (add-result "post"))))
+    => '(ciao (5)))
+
+  (check		;break with multiple values
+      (with-result
+       (let ((i 5))
+	 (receive (a b)
+	     (while (positive? i)
+	       (add-result i)
+	       (set! i (+ -1 i))
+	       (break 'ciao 'hello)
+	       (add-result "post"))
+	   (list a b))))
+    => '((ciao hello) (5)))
 
   #t)
 
@@ -510,7 +534,9 @@
        (call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (lambda (stx) #'(escape)))
+	       (fluid-let-syntax ((break    (syntax-rules ()
+					      ((_ . ?args)
+					       (escape . ?args))))
 				  (continue (lambda (stx) #'(loop))))
 		 (if ?test
 		     (escape)
@@ -539,7 +565,7 @@
 	 i))
     => '(0 ()))
 
-  (check
+  (check	;continue
       (with-result
        (let ((i 5))
 	 (until (zero? i)
@@ -550,7 +576,7 @@
 	 i))
     => '(0 (5 4 3 2 1)))
 
-  (check
+  (check	;break with no values
       (with-result
        (let ((i 5))
 	 (until (zero? i)
@@ -560,6 +586,28 @@
 	   (add-result "post"))
 	 i))
     => '(4 (5)))
+
+  (check	;break with single value
+      (with-result
+       (let ((i 5))
+	 (until (zero? i)
+	   (add-result i)
+	   (set! i (+ -1 i))
+	   (break 'ciao)
+	   (add-result "post"))))
+    => '(ciao (5)))
+
+  (check	;break with multiple values
+      (with-result
+       (let ((i 5))
+	 (receive (a b)
+	     (until (zero? i)
+	       (add-result i)
+	       (set! i (+ -1 i))
+	       (break 'ciao 'hello)
+	       (add-result "post"))
+	   (list a b))))
+    => '((ciao hello) (5)))
 
   #t)
 
@@ -581,7 +629,9 @@
 	   (lambda (escape)
 	     ?init
 	     (let loop ()
-	       (fluid-let-syntax ((break    (lambda (stx) #'(escape)))
+	       (fluid-let-syntax ((break    (syntax-rules ()
+					      ((_ . ?args)
+					       (escape . ?args))))
 				  (continue (lambda (stx) #'(loop))))
 		 (if ?test
 		     (begin
@@ -616,7 +666,7 @@
        #t)
     => '(#t (5 4 3 2 1)))
 
-  (check	;break
+  (check	;break with no values
       (with-result
        (for ((define i 5) (positive? i) (set! i (+ -1 i)))
 	 (add-result i)
@@ -624,6 +674,24 @@
 	 (add-result "post"))
        #t)
     => '(#t (5)))
+
+  (check	;break with single value
+      (with-result
+       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
+	 (add-result i)
+	 (break 'ciao)
+	 (add-result "post")))
+    => '(ciao (5)))
+
+  (check	;break with multiple values
+      (with-result
+       (receive (a b)
+	   (for ((define i 5) (positive? i) (set! i (+ -1 i)))
+	     (add-result i)
+	     (break 'ciao 'hello)
+	     (add-result "post"))
+	 (list a b)))
+    => '((ciao hello) (5)))
 
   (check	;multiple bindings
       (with-result
