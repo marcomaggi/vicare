@@ -718,6 +718,83 @@
   #t)
 
 
+(parametrise ((check-test-name	'unwind-protect))
+
+  (define-syntax unwind-protect
+    ;;Not a general UNWIND-PROTECT for Scheme,  but fine where we do not
+    ;;use continuations to escape from the body.
+    ;;
+    (syntax-rules ()
+      ((_ ?body ?cleanup0 ?cleanup ...)
+       (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
+	 (with-exception-handler
+	     (lambda (E)
+	       (cleanup)
+	       (raise E))
+	   (lambda ()
+	     (begin0
+		 ?body
+	       (cleanup))))))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (unwind-protect
+	   (begin
+	     (add-result 'in)
+	     1)
+	 (add-result 'out)))
+    => '(1 (in out)))
+
+  (check
+      (with-result
+       (unwind-protect
+	   (begin
+	     (add-result 'in)
+	     1)
+	 (add-result 'out1)
+	 (add-result 'out2)))
+    => '(1 (in out1 out2)))
+
+  (check	;multiple return values
+      (with-result
+       (receive (a b)
+	   (unwind-protect
+	       (begin
+		 (add-result 'in)
+		 (values 1 2))
+	     (add-result 'out1)
+	     (add-result 'out2))
+	 (list a b)))
+    => '((1 2) (in out1 out2)))
+
+  (check	;zero return values
+      (with-result
+       (unwind-protect
+  	   (begin
+  	     (add-result 'in)
+  	     (values))
+  	 (add-result 'out1)
+  	 (add-result 'out2))
+       #t)
+    => `(#t (in out1 out2)))
+
+  (check	;exception in body
+      (with-result
+       (guard (E (else #t))
+	 (unwind-protect
+	     (begin
+	       (add-result 'in)
+	       (error #f "fail!!!")
+	       (add-result 'after)
+	       1)
+	   (add-result 'out))))
+    => '(#t (in out)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
