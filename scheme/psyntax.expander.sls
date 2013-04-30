@@ -111,8 +111,8 @@
   (lambda (x) #f))
 
 (define (%generate-unique-symbol seed)
-  ;;Generate and  return a fresh unique  symbol using.  SEED is  used to
-  ;;seed the generation: it must be a symbol or a syntax object.
+  ;;Generate and return a fresh unique symbol.  SEED is used to seed the
+  ;;generation: it must be a symbol or an identifier syntax object.
   ;;
   (define who '%generate-unique-symbol)
   (cond ((symbol? seed)
@@ -120,29 +120,23 @@
 	((<stx>? seed)
 	 (%generate-unique-symbol (identifier->symbol seed)))
 	(else
-	 (assertion-violation who "*** Vicare bug: invalid arg" seed))))
+	 (assertion-violation who
+	   "expected symbol or identifier as argument" seed))))
 
 (define (debug-print . args)
+  ;;Print arguments for debugging purposes.
+  ;;
   (pretty-print args (current-error-port))
   (newline (current-error-port))
   (newline (current-error-port)))
 
-;;; --------------------------------------------------------------------
-
-(define-syntax stx-error
-  (syntax-rules (quote)
-    ((_ ?expr-stx)
-     (syntax-violation #f "invalid syntax" ?expr-stx))
-    ((_ ?expr-stx ?mst)
-     (syntax-violation #f ?mst ?expr-stx))
-    ))
-
 
 ;;;; top-level environments
 ;;
-;;The result of parsing  a set of import specs, as  defined by R6RS, and
-;;loading the corresponding libraries is an ENV data structure; ENV data
-;;structures represent an *immutable* top level environment.
+;;The result of  parsing a set of  import specs in an  IMPORT clause (as
+;;defined by R6RS and extended  by Vicare) and loading the corresponding
+;;libraries is an  ENV data structure; ENV data  structures represent an
+;;*immutable* top level environment.
 ;;
 ;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
 ;;interaction environment is created to  serve as top level environment.
@@ -160,7 +154,8 @@
 ;;bindings we define.
 ;;
 
-;;An env record encapsulates a substitution and a set of libraries.
+;;An ENV record encapsulates a substitution and a set of libraries.
+;;
 (define-record env
   (names
 		;A vector  of symbols  representing the public  names of
@@ -175,7 +170,7 @@
    itc
 		;A collector  function (see MAKE-COLLECTOR)  holding the
 		;LIBRARY structs representing  the libraries selected by
-		;the original import specifications.
+		;the source import specifications.
    )
   (lambda (S port sub-printer)
     (display "#<environment>" port)))
@@ -184,13 +179,14 @@
   (rib
 		;The top <RIB>  structure for the evaluation  of code in
 		;this environment.
-   r
-		;The lexical environment for run time.
+   lexenv
+		;The lexical  environment for  both run time  and expand
+		;time.
    locs
 		;???
    )
   (lambda (S port sub-printer)
-    (display "#<environment>" port)))
+    (display "#<interaction-environment>" port)))
 
 (define (environment? obj)
   (or (env? obj)
@@ -204,7 +200,7 @@
   (cond ((env? x)
 	 (vector->list ($env-names x)))
 	((interaction-env? x)
-	 (map values (<rib>-sym* (interaction-env-rib x))))
+	 (map values ($<rib>-sym* ($interaction-env-rib x))))
 	(else
 	 (assertion-violation who "not an environment" x))))
 
@@ -351,7 +347,7 @@
 		 (values expr.core (rtc))))))
 	  ((interaction-env? env)
 	   (let ((rib         (interaction-env-rib env))
-		 (lexenv.run  (interaction-env-r env))
+		 (lexenv.run  (interaction-env-lexenv env))
 		 (rtc         (make-collector)))
 	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '())))
 	       (receive (expr.core lexenv.run^)
@@ -360,7 +356,7 @@
 				 (vis-collector (make-collector))
 				 (imp-collector (make-collector)))
 		     (%chi-interaction-expr expr.stx rib lexenv.run))
-		 (set-interaction-env-r! env lexenv.run^)
+		 (set-interaction-env-lexenv! env lexenv.run^)
 		 (values expr.core (rtc))))))
 	  (else
 	   (assertion-violation who "not an environment" env))))
@@ -6225,6 +6221,16 @@
    ((who msg form subform)
     (%syntax-violation who msg form
 		       (make-syntax-violation form subform)))))
+
+(define-syntax stx-error
+  ;;Convenience wrapper for raising syntax violations.
+  ;;
+  (syntax-rules (quote)
+    ((_ ?expr-stx)
+     (syntax-violation #f "invalid syntax" ?expr-stx))
+    ((_ ?expr-stx ?msg)
+     (syntax-violation #f ?msg ?expr-stx))
+    ))
 
 (module (syntax-error
 	 %syntax-violation
