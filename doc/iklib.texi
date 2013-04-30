@@ -260,9 +260,8 @@ values of @metao{expr}.
 If the expression @meta{test} evaluates to true: evaluate the body forms
 @meta{body} and recurse; else return.  In the body: the syntax
 @func{continue} causes immediate looping to next iteration; the syntax
-@func{break} causes immediate escaping out of the loop.
-
-Use of this syntax involves creating a continuation.
+@func{break} causes immediate escaping out of the loop.  The use of this
+syntax involves creating a continuation.
 @end deffn
 
 
@@ -270,29 +269,30 @@ Use of this syntax involves creating a continuation.
 If the expression @meta{test} evaluates to false: evaluate the body
 forms @meta{body} and recurse; else return.  In the body: the syntax
 @func{continue} causes immediate looping to next iteration; the syntax
-@func{break} causes immediate escaping out of the loop.
-
-Use of this syntax involves creating a continuation.
+@func{break} causes immediate escaping out of the loop.  The use of this
+syntax involves creating a continuation.
 @end deffn
 
 
-@deffn Syntax continue
+@deffn {Fluid Syntax} continue
 Causes the innermost @func{while}, @func{until} or @func{for} loop to
-jump immediately to the next iteration.
+jump immediately to the next iteration.  Being a fluid syntax: it is
+possible to use this keyword in custom syntaxes.
 @end deffn
 
 
-@deffn Syntax break @meta{expr} ...
+@deffn {Fluid Syntax} break @meta{expr} ...
 Causes the innermost @func{while}, @func{until} or @func{for} loop to
 exit immediately to the current continuation.  When arguments are given:
-they are returned to the continuation.
+they are returned to the continuation.  Being a fluid syntax: it is
+possible to use this keyword in custom syntaxes.
 @end deffn
 
 
 @deffn {Fluid Syntax} return @meta{expr} ...
 This syntax should be used to return from some enclosing block,
 returning the given optional arguments.  Being a fluid syntax: it is
-possible to use this syntax in custom syntaxes.
+possible to use this keyword in custom syntaxes.
 @end deffn
 
 @c page
