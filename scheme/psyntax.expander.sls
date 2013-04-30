@@ -688,6 +688,8 @@
   ;;
   ;;     == (prefix   (?internal-identifier ...) the-prefix)
   ;;     == (deprefix (?internal-identifier ...) the-prefix)
+  ;;     == (suffix   (?internal-identifier ...) the-suffix)
+  ;;     == (desuffix (?internal-identifier ...) the-suffix)
   ;;
   (define who 'export)
 
@@ -766,6 +768,60 @@
 					    (string-append "binding name \"" id.str
 							   "\" cannot be deprefixed of \""
 							   prefix.str "\"")))))
+				  ?internal*)))
+	       (loop (cdr export-spec*)
+		     (append ?internal* internal-identifier*)
+		     (append  external* external-identifier*)))))
+
+	  ((?suffix (?internal* ...) ?the-suffix)
+	   (and (eq? (syntax->datum ?suffix) 'suffix)
+		(for-all identifier? ?internal*)
+		(identifier? ?the-suffix))
+	   (if #f
+	       ;;FIXME At present  there is no way to  disable SUFFIX to
+	       ;;enforce strict R6RS compatibility; in future it may be.
+	       ;;(Marco Maggi; Tue Apr 16, 2013)
+	       (%synner "suffix export specification forbidden in R6RS mode")
+	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
+		    (external*  (map (lambda (id)
+				       (datum->syntax
+					id (string->symbol
+					    (string-append
+					     (symbol->string (syntax->datum id))
+					     suffix.str))))
+				  ?internal*)))
+	       (loop (cdr export-spec*)
+		     (append ?internal* internal-identifier*)
+		     (append  external* external-identifier*)))))
+
+	  ((?desuffix (?internal* ...) ?the-suffix)
+	   (and (eq? (syntax->datum ?desuffix) 'desuffix)
+		(for-all identifier? ?internal*)
+		(identifier? ?the-suffix))
+	   (if #f
+	       ;;FIXME At present there is no way to disable DESUFFIX to
+	       ;;enforce strict R6RS compatibility; in future it may be.
+	       ;;(Marco Maggi; Tue Apr 16, 2013)
+	       (%synner "desuffix export specification forbidden in R6RS mode")
+	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
+		    (suffix.len (string-length suffix.str))
+		    (external*  (map (lambda (id)
+				       (define id.str
+					 (symbol->string (syntax->datum id)))
+				       (define id.len
+					 (string-length id.str))
+				       (define prefix.len
+					 (fx- id.len suffix.len))
+				       (if (and (< suffix.len id.len)
+						(string=? suffix.str
+							  (substring id.str prefix.len id.len)))
+					   (datum->syntax
+					    id (string->symbol
+						(substring id.str 0 prefix.len)))
+					 (%synner
+					  (string-append "binding name \"" id.str
+							 "\" cannot be desuffixed of \""
+							 suffix.str "\""))))
 				  ?internal*)))
 	       (loop (cdr export-spec*)
 		     (append ?internal* internal-identifier*)

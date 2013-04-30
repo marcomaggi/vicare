@@ -1083,6 +1083,38 @@ no way to disable it to enforce @rnrs{6} compatibility.
 @end example
 @end deffn
 
+
+@deffn {Export Spec} suffix (@meta{internal} ...) @meta{suffix}
+Append the specified suffix to the selected internal symbols and add the
+result to the export list.  This clause is always enabled: there is no
+way to disable it to enforce @rnrs{6} compatibility.
+
+@example
+(library (demo)
+  (export
+    (suffix (these those) _yeah))
+  (import (rnrs))
+  (define (these) "these")
+  (define (those) "those"))
+@end example
+@end deffn
+
+
+@deffn {Export Spec} desuffix (@meta{internal} ...) @meta{suffix}
+Remove the specified suffix from the selected internal symbols and add
+the result to the export list.  This clause is always enabled: there is
+no way to disable it to enforce @rnrs{6} compatibility.
+
+@example
+(library (demo)
+  (export
+    (desuffix (this_yeah that_yeah) _yeah))
+  (import (rnrs))
+  (define (this_yeah) "this")
+  (define (that_yeah) "that"))
+@end example
+@end deffn
+
 @c page
 @node iklib expander import specs
 @subsection Additional import specifications

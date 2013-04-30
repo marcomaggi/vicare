@@ -198,7 +198,8 @@ Notes for revision 0.3d0
                      str.)))
      => 4
 
-* Added PREFIX and DEPREFIX export specification clauses:
+* Added  PREFIX,  DEPREFIX,  SUFFIX and  DESUFFIX  export  specification
+  clauses:
 
      (library (demo)
        (export
