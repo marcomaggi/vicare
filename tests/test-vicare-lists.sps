@@ -27,6 +27,8 @@
 
 #!vicare
 (import (for (except (vicare)
+		     break
+
 		     ;; from (rnrs base (6))
 		     pair?		cons
 		     car		cdr

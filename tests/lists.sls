@@ -161,7 +161,8 @@
 		       partition	remove		remp
 		       remq		remv)
 	       expand run)
-    (vicare)
+    (except (vicare)
+	    break)
     (lists low)
     (lists stx))
 
