@@ -245,7 +245,8 @@ single clause.  Expand to:
 
 @deffn Syntax begin0 @metao{expr} @meta{expr} ...
 Evaluate all the expressions in the given order and return the return
-values of @metao{expr}.
+values of @metao{expr}.  This syntax comes from the @rnrs{6} original
+document, Appendix A ``Formal semantics''.
 
 @example
 (begin0

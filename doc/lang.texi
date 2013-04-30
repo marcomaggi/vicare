@@ -2182,35 +2182,6 @@ The following bindings are exported by the library @library{vicare
 language-extensions syntaxes}.
 
 
-@defmac Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{form} @meta{form} ...
-Wrapper for @func{syntax-rules}, expand to:
-
-@example
-(define-syntax @meta{name}
-  (syntax-rules ()
-    ((_ @meta{arg} ... . @meta{rest})
-     (begin @metao{form} @meta{form} ...))))
-@end example
-@end defmac
-
-
-@defmac define-constant @meta{name} @meta{expr}
-Wrapper for @func{identifier-syntax}, expand to:
-
-@example
-(begin
-  (define ghost @meta{expr})
-  (define-syntax @meta{name}
-    (identifier-syntax ghost)))
-@end example
-
-@noindent
-@meta{expr} is evaluated once and the identifier syntax @meta{name} can
-be used to access the result; it is impossible to modify the value by
-acting upon @meta{name}.
-@end defmac
-
-
 @defmac define-inline-constant @meta{name} @meta{expr}
 Expand to:
 
@@ -2309,46 +2280,6 @@ Wrapper for @func{let-syntax}, expand to:
 @end example
 @end defmac
 
-
-@deffn Syntax receive @var{formals} @var{expression} . @var{body}
-The mechanism provided for binding identifiers to the values of a
-multiple--valued expression are @func{call-with-values},
-@func{let-values}, @func{let*-values}.  @func{receive} is another
-concise and readable syntax for creating such bindings.
-
-@var{formals} can have any of 3 forms:
-
-@table @code
-@item (@vari{variable} ... @varn{variable})
-The environment in which the @func{receive}--expression is evaluated is
-extended by binding @vari{variable}, ..., @varn{variable} to fresh
-locations.  The @var{expression} is evaluated, and its values are
-stored into those locations (it is an error if @var{expression} does
-not have exactly @math{N} values).
-
-@item @var{variable}
-The environment in which the @func{receive}--expression is evaluated is
-extended by binding @var{variable} to a fresh location.  The
-@var{expression} is evaluated, its values are converted into a newly
-allocated list, and the list is stored in the location bound to
-@var{variable}.
-
-@item (@vari{variable} ... @varn{variable} . @varni{variable})
-The environment in which the @func{receive}--expression is evaluated is
-extended by binding @vari{variable}, ..., @varni{variable} to fresh
-locations.  The @var{expression} is evaluated.  Its first @math{N}
-values are stored into the locations bound to @vari{variable}, ...,
-@varn{variable}.  Any remaining values are converted into a newly
-allocated list, which is stored into the location bound to
-@varni{variable} (it is an error if @var{expression} does not have at
-least @math{N} values.
-@end table
-
-In any case, the expressions in @var{body} are evaluated sequentially in
-the extended environment.  The results of the last expression in the
-body are the values of the @var{receive}--expression.
-@end deffn
-
 @c page
 @node syntaxes sequencing
 @subsection Sequencing execution
@@ -2356,22 +2287,6 @@ body are the values of the @var{receive}--expression.
 
 The following bindings are exported by the library @library{vicare
 language-extensions syntaxes}.
-
-
-@defmac begin0 @metao{expr} @meta{expr} ...
-Expand to:
-
-@example
-(call-with-values
-     (lambda () @metao{expr})
-  (lambda args
-    @meta{expr} ...
-    (apply values args)))
-@end example
-
-This syntax comes from the @rnrs{6} original document, Appendix A
-``Formal semantics''.
-@end defmac
 
 
 @defmac begin0-let ((@metao{var} @metao{init}) (@meta{var} @meta{init}) ...) @metao{form} @meta{form} ...
