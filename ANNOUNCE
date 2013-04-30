@@ -189,6 +189,7 @@ Notes for revision 0.3d0
 
     while until for
     continue break return
+    define-returnable lambda-returnable
 
 * Added DEPREFIX, SUFFIX and DESUFFIX import specification clauses:
 

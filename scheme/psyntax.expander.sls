@@ -3334,6 +3334,8 @@
 	     ((while)				while-macro)
 	     ((until)				until-macro)
 	     ((for)				for-macro)
+	     ((define-returnable)		define-returnable-macro)
+	     ((lambda-returnable)		lambda-returnable-macro)
 
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
@@ -4360,7 +4362,7 @@
 	    (stx-error stx "invalid bindings"))))))))
 
 
-;;;; module non-core-macro-transformer: CONTINUE, BREAK, WHILE, UNTIL, FOR
+;;;; module non-core-macro-transformer: RETURN, CONTINUE, BREAK, WHILE, UNTIL, FOR
 
 (define (return-macro expr-stx)
   (syntax-match expr-stx ()
@@ -4432,6 +4434,35 @@
 		       ,@?body* ,?incr
 		       (loop))
 		   (escape))))))))
+    ))
+
+
+;;;; module non-core-macro-transformer: DEFINE-RETURNABLE, LAMBDA-RETURNABLE
+
+(define (define-returnable-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ (?name . ?formals) ?body0 ?body* ...)
+     (bless
+      `(define (,?name . ,?formals)
+	 (call/cc
+	     (lambda (escape)
+	       (fluid-let-syntax ((return (syntax-rules ()
+					    ((_ . ?args)
+					     (escape . ?args)))))
+		 ,?body0 ,@?body*))))))
+    ))
+
+(define (lambda-returnable-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?formals ?body0 ?body* ...)
+     (bless
+      `(lambda ,?formals
+	 (call/cc
+	     (lambda (escape)
+	       (fluid-let-syntax ((return (syntax-rules ()
+					    ((_ . ?args)
+					     (escape . ?args)))))
+		 ,?body0 ,@?body*))))))
     ))
 
 

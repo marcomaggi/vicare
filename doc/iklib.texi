@@ -274,6 +274,28 @@ syntax involves creating a continuation.
 @end deffn
 
 
+@deffn Syntax lambda-returnable @meta{formals} @metao{body} @meta{body} @dots{}
+Like @func{lambda}, but allow the use of the keyword @func{return} to
+return values to the caller's continuation.  The use of this syntax
+involves creating a continuation.
+@end deffn
+
+
+@deffn Syntax define-returnable (@meta{name} . @meta{formals}) @metao{body} @meta{body} @dots{}
+Like @func{define}, but allow the use of the keyword @func{return} to
+return values to the caller's continuation.  The use of this syntax
+involves creating a continuation.
+
+@example
+(define-returnable (doit a)
+  (return a)
+  1)
+
+(doit 2)        @result{} 2
+@end example
+@end deffn
+
+
 @deffn {Fluid Syntax} continue
 Causes the innermost @func{while}, @func{until} or @func{for} loop to
 jump immediately to the next iteration.  Being a fluid syntax: it is

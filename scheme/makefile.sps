@@ -409,6 +409,8 @@
     (while				(macro . while))
     (until				(macro . until))
     (for				(macro . for))
+    (define-returnable			(macro . define-returnable))
+    (lambda-returnable			(macro . lambda-returnable))
 ;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
@@ -2003,6 +2005,8 @@
     (while					i v $language)
     (until					i v $language)
     (for					i v $language)
+    (define-returnable				i v $language)
+    (lambda-returnable				i v $language)
 ;;;
     (port-id					i v $language)
     (port-uid					i v $language)
