@@ -1316,13 +1316,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'compensations))
-
-
-
-  #t)
-
-
 ;;;; done
 
 (check-report)
