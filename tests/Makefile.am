@@ -156,6 +156,7 @@ TESTS			=	\
 	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-compensations.sps			\
 	test-vicare-cond-expand.sps			\
 	test-vicare-coroutines.sps			\
 	test-vicare-custom-ports.sps			\
@@ -461,6 +462,7 @@ EXTRA_DIST = \
 	test-vicare-bytevector-compounds.sps		\
 	test-vicare-chars.sps				\
 	test-vicare-collect.sps				\
+	test-vicare-compensations.sps			\
 	test-vicare-cond-expand.sps			\
 	test-vicare-coroutines.sps			\
 	test-vicare-custom-ports.sps			\

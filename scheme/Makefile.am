@@ -133,6 +133,7 @@ EXTRA_DIST= \
 	ikarus.code-objects.sls				\
 	ikarus.codecs.sls				\
 	ikarus.collect.sls				\
+	ikarus.compensations.sls			\
 	ikarus.command-line.sls				\
 	ikarus.conditions.sls				\
 	ikarus.control.sls				\

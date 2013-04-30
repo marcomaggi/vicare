@@ -44,6 +44,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
 * iklib syntaxes::              Additional syntaxes.
+* iklib compensations::
 * iklib conditions::            Additional condition types.
 * iklib reader::                Extensions to the reader.
 * iklib expander::              Interface to the expander.
@@ -337,6 +338,252 @@ This syntax should be used to return from some enclosing block,
 returning the given optional arguments.  Being a fluid syntax: it is
 possible to use this keyword in custom syntaxes.
 @end deffn
+
+@c page
+@node iklib compensations
+@section Compensation stacks
+
+
+Compensation stacks are syntactic sugar that allows us to write code to
+allocate a resource near the code that releases it in case of error.
+Compensation stacks are described in:
+
+@quotation
+Westley Weimer, George C. Necula.  ``Finding and Preventing Run--Time
+Error Handling Mistakes''.  In Proceedings of the @acronym{ACM}
+Conference on Object--Oriented Programming, Systems, Languages, and
+Applications, 2004.
+@end quotation
+
+@menu
+* iklib compensations usage::   Basic compensations usage.
+* iklib compensations api::     Compensations @api{}.
+@end menu
+
+@c page
+@node iklib compensations usage
+@subsection Basic compensations usage
+
+
+A @dfn{compensation} is a chunk of code that undoes a resource
+allocation performed in another chunk, example:
+
+@example
+(define port
+  (open-file-input-port "/tmp/proof.1"))
+@end example
+
+@noindent
+must be ''compensated'' by:
+
+@example
+(close-port port)
+@end example
+
+@noindent
+with the compensations stack such code can be written:
+
+@example
+(with-compensations
+  (letrec
+      ((port (compensate
+                 (open-file-input-port "/tmp/proof.1")
+               (with
+                 (close-port port)))))
+    (make-use-of port)))
+@end example
+
+Compensation forms are embedded in a closure and pushed on a stack, so
+that, in case of error, it is possible to evaluate them in
+allocation--reversed order.
+
+A form that makes use of a compensation stack looks like this:
+
+@example
+(with-compensations
+    (compensate
+        ALLOC-FORMS-1
+      (with RELEASE-FORMS-1))
+    (compensate
+        ALLOC-FORMS-2
+      (with RELEASE-FORMS-2))
+  BODY-FORMS)
+@end example
+
+@noindent
+both @func{with-compensations} and @func{compensate} are syntaxes.  If
+no error occurs the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+ALLOC-FORMS-2
+BODY-FORMS
+RELEASE-FORMS-2
+RELEASE-FORMS-1
+@end example
+
+@noindent
+if an error occurs in @code{BODY-FORMS}, the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+ALLOC-FORMS-2
+BODY-FORMS
+RELEASE-FORMS-2
+RELEASE-FORMS-1
+@end example
+
+@noindent
+if an error occurs in @code{ALLOC-FORMS-2}, the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+ALLOC-FORMS-2
+RELEASE-FORMS-1
+@end example
+
+@noindent
+if an error occurs in @code{ALLOC-FORMS-1}, the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+@end example
+
+@noindent
+if an error occurs in @code{RELEASE-FORMS-1}, the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+ALLOC-FORMS-2
+BODY-FORMS
+RELEASE-FORMS-2
+RELEASE-FORMS-1
+@end example
+
+@noindent
+if an error occurs in @code{RELEASE-FORMS-2}, the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+ALLOC-FORMS-2
+BODY-FORMS
+RELEASE-FORMS-2
+RELEASE-FORMS-1
+@end example
+
+So @func{with-compensations} tries to evaluate all the release forms,
+despite errors.  Of course if an error occurs in the middle of a set of
+forms:
+
+@example
+(first-form)   ;evaluated
+(raise 'here)
+(third-form)   ;not evaluated
+@end example
+
+@noindent
+the forms before the error are evaluated, while the forms after the
+error are not.
+
+A variant of @func{with-compensations} exists to evaluate the
+compensation forms only in case of error:
+
+@example
+(with-compensations/on-error
+    (compensate
+        ALLOC-FORMS-1
+      (with RELEASE-FORMS-1))
+    (compensate
+        ALLOC-FORMS-2
+      (with RELEASE-FORMS-2))
+  BODY-FORMS)
+@end example
+
+@noindent
+if no error occurs the order of evaluation is:
+
+@example
+ALLOC-FORMS-1
+ALLOC-FORMS-2
+BODY-FORMS
+@end example
+
+@noindent
+while if an error occurs the evaluation is equal to the cases of
+@func{with-compensations}.  The ``on error'' variant is useful in
+constructors and initialisation functions, where we want to run the
+compensations only if an error occurs; if no error is raised, we just
+want the constructor to return.
+
+We must not let the control flow return multiple times to the release
+forms; if we create a continuation, return its escape function out of a
+@func{with-compensations} syntax, then invoke it multiple times the
+behaviour is undefined.  It is fine, however, to yield a coroutine and
+come back later; this is because the coroutine reenters at the same
+point without causing the execution of the compensation thunks.
+
+@c page
+@node iklib compensations api
+@subsection Compensations @api{}
+
+
+@deffn Syntax with-compensations @metao{body} @meta{body} @dots{}
+Initialise a new local compensations stack, then evaluate all the
+@meta{body} forms in the given order.  If no error occurs: call
+@func{run-compensations}, reset the compensations stack to empty,
+finally return the result value of the last @meta{body} form.
+
+If a @meta{body} expression raises an exception: the exception is
+intercepted, @func{run-compensations} is called, the compensations stack
+is reset to empty, finally the exception is raised again as
+@strong{non--continuable} exception.  It is @strong{not} possible to
+return to the @meta{body} forms with a continuable exception.
+@end deffn
+
+
+@deffn Syntax with-compensations/on-error @metao{body} @meta{body} @dots{}
+Initialise a new local compensations stack, then evaluate all the
+@meta{body} forms in the given order.  If no error occurs: reset the
+compensations stack to empty, return the result value of the last
+@meta{body} form.
+
+If a @meta{body} expression raises an exception: the exception is
+intercepted, @func{run-compensations} is called, the compensations stack
+is reset to empty, finally the exception is raised again as
+@strong{non--continuable} exception.  It is @strong{not} possible to
+return to the @meta{body} forms with a continuable exception.
+@end deffn
+
+
+@defun run-compensations
+Evaluate all the compensation thunks in the current stack, in last
+in/first out order.  If a compensation thunk raises an exception: the
+exception is catched by @func{guard} and silently discarded.
+
+This function must be called only inside the dynamic environment
+prepared by @func{with-continuations} and similar syntaxes.  It can be
+called multiple times: every time the compensation thunks are consumed
+and removed from the stack.
+@end defun
+
+
+@deffn Syntax compensate @metao{alloc} @meta{alloc} @dots{} (with @metao{release} @meta{release} @dots{})
+@deffnx {Auxiliary Fluid Syntax} with
+Evaluate all the @meta{alloc} expressions and, if no error occurs, push
+a thunk holding the @meta{release} forms on the current compensations
+stack.  Return the result of the last @meta{alloc} expression.
+@end deffn
+
+
+@deffn Syntax push-compensation @metao{release} @meta{release} @dots{}
+Push a thunk holding the @meta{release} forms on the current
+compensations stack.
+@end deffn
+
+
+@defun push-compensation-thunk @var{thunk}
+Push the given thunk on the current compensations stack.
+@end defun
 
 @c page
 @node iklib conditions

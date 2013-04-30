@@ -306,6 +306,7 @@
     "ikarus.time-and-date.sls"
     "ikarus.sort.sls"
     "ikarus.promises.sls"
+    "ikarus.compensations.sls"
     "ikarus.enumerations.sls"
     "ikarus.command-line.sls"
 ;;; "ikarus.trace.sls"
@@ -414,6 +415,12 @@
     (for				(macro . for))
     (define-returnable			(macro . define-returnable))
     (lambda-returnable			(macro . lambda-returnable))
+;;;
+    (with-compensations			(macro . with-compensations))
+    (with-compensations/on-error	(macro . with-compensations/on-error))
+    (compensate				(macro . compensate))
+    (with				($fluid . with))
+    (push-compensation			(macro . push-compensation))
 ;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
@@ -2012,6 +2019,15 @@
     (for					i v $language)
     (define-returnable				i v $language)
     (lambda-returnable				i v $language)
+;;;
+    (with-compensations				i v $language)
+    (with-compensations/on-error		i v $language)
+    (compensate					i v $language)
+    (with					i v $language)
+    (push-compensation				i v $language)
+    (compensations				i v $language)
+    (run-compensations				i v $language)
+    (push-compensation-thunk			i v $language)
 ;;;
     (port-id					i v $language)
     (port-uid					i v $language)

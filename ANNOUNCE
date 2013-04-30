@@ -191,6 +191,9 @@ Notes for revision 0.3d0
     continue break return
     define-returnable lambda-returnable
 
+* Added compensations API to (vicare), see the documentation node "iklib
+  compensations".
+
 * Added DEPREFIX, SUFFIX and DESUFFIX import specification clauses:
 
      (import (rnrs)

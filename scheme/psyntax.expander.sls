@@ -3328,9 +3328,9 @@
 	     ((receive)				receive-macro)
 	     ((begin0)				begin0-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
-
 	     ((define-auxiliary-syntaxes*)	define-auxiliary-syntaxes-macro)
 
+	     ;; non-Scheme style syntaxes
 	     ((return)				return-macro)
 	     ((continue)			continue-macro)
 	     ((break)				break-macro)
@@ -3342,6 +3342,13 @@
 
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
+
+	     ;; compensations
+	     ((with-compensations)		with-compensations-macro)
+	     ((with-compensations/on-error)	with-compensations/on-error-macro)
+	     ((compensate)			compensate-macro)
+	     ((with)				with-macro)
+	     ((push-compensation)		push-compensation-macro)
 
 	     ((eol-style)
 	      (lambda (x)
@@ -3805,6 +3812,79 @@
        ;;             swap)))
        ;;       ,@(append olhs* orhs*))))
        ))))
+
+
+;;;; module non-core-macro-transformer: compensations
+
+(define (with-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_)
+     (bless
+      (lambda (stx)
+	(syntax-error 'with "syntax \"with\" out of context"))))))
+
+(define (with-compensations/on-error-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?body0 ?body* ...)
+     (bless
+      `(parametrise ((compensations '()))
+	 (with-exception-handler
+	     (lambda (E)
+	       (run-compensations)
+	       (compensations #f)
+	       (raise E))
+	   (lambda ()
+	     (begin0
+		 (begin ,?body0 ,@?body*)
+	       (compensations #f)))))))
+    ))
+
+(define (with-compensations-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?body0 ?body* ...)
+     (bless
+      `(parametrise ((compensations '()))
+	 (with-exception-handler
+	     (lambda (E)
+	       (run-compensations)
+	       (compensations #f)
+	       (raise E))
+	   (lambda ()
+	     (begin0
+		 (begin ,?body0 ,@?body*)
+	       (run-compensations)
+	       (compensations #f)))))))
+    ))
+
+(define (push-compensation-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?release0 ?release* ...)
+     (bless
+      `(push-compensation-thunk (lambda () ,?release0 ,@?release*))))
+    ))
+
+(define (compensate-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?alloc0 ?form* ...)
+     (let ()
+       (define free #f)
+       (define alloc*
+	 (let recur ((form-stx ?form*))
+	   (syntax-match form-stx (with)
+	     (()
+	      (syntax-violation 'compensate "invalid compensation syntax" expr-stx))
+
+	     (((with ?release0 ?release* ...))
+	      (begin
+		(set! free `(push-compensation ,?release0 ,@?release*))
+		'()))
+
+	     ((?alloc ?form* ...)
+	      (cons ?alloc (recur ?form*)))
+	     )))
+       (bless
+	`(begin0 (begin ,?alloc0 ,@alloc*) ,free))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: DEFINE-STRUCT
