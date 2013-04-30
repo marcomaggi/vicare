@@ -95,7 +95,8 @@
   (import (except (ikarus)
 		  ;;FIXME To be removed at the next boot image rotation.
 		  ;;(Marco Maggi; Tue Apr 30, 2013)
-		  define-auxiliary-syntaxes)
+		  define-auxiliary-syntaxes
+		  define-inline-constant)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)

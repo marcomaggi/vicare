@@ -131,6 +131,14 @@ X               @result{} 1
 @end deffn
 
 
+@deffn Syntax define-inline-constant @meta{name} @meta{expr}
+@meta{expr} is evaluated only once at expand time, the result is
+returned by the macro transformer bound to @meta{name}.  It is
+impossible to modify the result of the expansion of @meta{name} by
+acting upon @meta{name}.
+@end deffn
+
+
 @deffn Syntax define-values (@metao{var} @meta{var} ...) @metao{form} @meta{form} ...
 Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{var} identifiers.

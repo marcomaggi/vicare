@@ -3322,6 +3322,7 @@
 	     ((define-integrable)		define-integrable-macro)
 	     ((define-inline)			define-inline-macro)
 	     ((define-constant)			define-constant-macro)
+	     ((define-inline-constant*)		define-inline-constant-macro)
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive)				receive-macro)
@@ -4828,6 +4829,26 @@
 	 (define ghost ,?expr)
 	 (define-syntax ,?name
 	   (identifier-syntax ghost)))))
+    ))
+
+(define (define-inline-constant-macro expr-stx)
+  ;;Transformer function used  to expand Vicare's DEFINE-INLINE-CONSTANT
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  ;;We want to allow a generic expression to generate the constant value
+  ;;at expand time.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?name ?expr)
+     (bless
+      `(define-syntax ,?name
+	 (let ((const ,?expr))
+	   (lambda (stx)
+	     (syntax-case stx ()
+	       (?id
+		(identifier? #'?id)
+		#`(quote #,const))))))))
     ))
 
 (define (define-inline-macro expr-stx)

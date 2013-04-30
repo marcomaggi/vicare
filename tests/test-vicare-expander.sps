@@ -357,6 +357,17 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-inline-constant))
+
+  (check
+      (let ()
+	(define-inline-constant* a (+ 1 2 3))
+	a)
+    => 6)
+
+  #t)
+
+
 (parametrise ((check-test-name	'define-integrable))
 
   (check
