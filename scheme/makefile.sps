@@ -406,6 +406,7 @@
     (define-syntax-rule			(macro . define-syntax-rule))
     (receive				(macro . receive))
     (begin0				(macro . begin0))
+    (xor				(macro . xor))
     (unwind-protect			(macro . unwind-protect))
 ;;;
     (return				($fluid . return))
@@ -2011,6 +2012,7 @@
     (define-syntax-rule				i v $language)
     (receive					i v $language)
     (begin0					i v $language)
+    (xor					i v $language)
     (unwind-protect				i v $language)
 ;;;
     (return					i v $language)

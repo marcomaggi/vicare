@@ -22,6 +22,36 @@
 ;;;SOFTWARE.
 
 
+;;;; copyright notice for the original code of the XOR macro
+;;;
+;;;Copyright (c) 2008 Derick Eddington
+;;;
+;;;Permission is hereby granted, free of charge, to any person obtaining
+;;;a  copy of  this  software and  associated  documentation files  (the
+;;;"Software"), to  deal in the Software  without restriction, including
+;;;without limitation the  rights to use, copy,  modify, merge, publish,
+;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
+;;;permit persons to whom the Software is furnished to do so, subject to
+;;;the following conditions:
+;;;
+;;;The  above  copyright notice  and  this  permission  notice shall  be
+;;;included in all copies or substantial portions of the Software.
+;;;
+;;;Except  as  contained  in  this  notice, the  name(s)  of  the  above
+;;;copyright holders  shall not be  used in advertising or  otherwise to
+;;;promote  the sale,  use or  other dealings  in this  Software without
+;;;prior written authorization.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
+;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
+;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
+;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
+;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
+;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
+;;;SOFTWARE.
+
+
 (library (psyntax expander)
   (export
     eval
@@ -3327,6 +3357,7 @@
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive)				receive-macro)
 	     ((begin0)				begin0-macro)
+	     ((xor)				xor-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
 	     ((define-auxiliary-syntaxes*)	define-auxiliary-syntaxes-macro)
 	     ((unwind-protect)			unwind-protect-macro)
@@ -4895,7 +4926,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RECEIVE, BEGIN0
+;;;; module non-core-macro-transformer: RECEIVE, BEGIN0, XOR
 
 (define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
@@ -4924,6 +4955,31 @@
 	   ,@?form*
 	   (apply values args)))))
     ))
+
+(module (xor-macro)
+
+  (define (xor-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?expr* ...)
+       (bless (%xor-aux #f ?expr*)))
+      ))
+
+  (define (%xor-aux bool/var expr*)
+    (cond ((null? expr*)
+	   bool/var)
+	  ((null? (cdr expr*))
+	   `(let ((x ,(car expr*)))
+	      (if ,bool/var
+		  (and (not x) ,bool/var)
+		x)))
+	  (else
+	   `(let ((x ,(car expr*)))
+	      (and (or (not ,bool/var)
+		       (not x))
+		   (let ((n (or ,bool/var x)))
+		     ,(%xor-aux 'n (cdr expr*))))))))
+
+  #| end of module: XOR-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-INLINE, DEFINE-CONSTANT

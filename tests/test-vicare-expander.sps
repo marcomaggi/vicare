@@ -25,6 +25,36 @@
 ;;;
 
 
+;;;; copyright notice for the XOR macro
+;;;
+;;;Copyright (c) 2008 Derick Eddington
+;;;
+;;;Permission is hereby granted, free of charge, to any person obtaining
+;;;a  copy of  this  software and  associated  documentation files  (the
+;;;"Software"), to  deal in the Software  without restriction, including
+;;;without limitation  the rights to use, copy,  modify, merge, publish,
+;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
+;;;permit persons to whom the Software is furnished to do so, subject to
+;;;the following conditions:
+;;;
+;;;The  above  copyright notice  and  this  permission  notice shall  be
+;;;included in all copies or substantial portions of the Software.
+;;;
+;;;Except  as  contained  in  this  notice, the  name(s)  of  the  above
+;;;copyright holders  shall not be  used in advertising or  otherwise to
+;;;promote  the sale,  use or  other dealings  in this  Software without
+;;;prior written authorization.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
+;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
+;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
+;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
+;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
+;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
+;;;SOFTWARE.
+
+
 #!vicare
 (import (vicare)
   (rnrs eval)
@@ -1371,6 +1401,140 @@
   (check
       (doit (blu 1) (red 2))
     => '(1 2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'test-xor))
+
+  (define-syntax xor
+    (syntax-rules ()
+      ((_ expr ...)
+       (xor-aux #F expr ...))))
+
+  (define-syntax xor-aux
+    (syntax-rules ()
+      ((_ r)
+       r)
+      ((_ r expr)
+       (let ((x expr))
+	 (if r
+	     (and (not x) r)
+	   x)))
+      ((_ r expr0 expr ...)
+       (let ((x expr0))
+	 (and (or (not r) (not x))
+	      (let ((n (or r x)))
+		(xor-aux n expr ...)))))))
+
+;;; --------------------------------------------------------------------
+
+  (check (xor) => #f)
+  (check (xor (number? 1)) => #T)
+  (check (xor (null? 1)) => #f)
+  (check (xor (string->symbol "foo")) => 'foo)
+  (check (xor (string? "a") (symbol? 1)) => #T)
+  (check (xor (string? 1) (symbol? 'a)) => #T)
+  (check (xor (string? 1) (symbol? 2)) => #f)
+  (check (xor (pair? '(a)) (list? '(b))) => #f)
+  (check (xor (- 42) (not 42)) => -42)
+  (check (xor (null? 1) (/ 42)) => 1/42)
+  (check (xor (integer? 1.2) (positive? -2) (exact? 3)) => #T)
+  (check (xor (integer? 1.2) (positive? 2) (exact? 3.4)) => #T)
+  (check (xor (integer? 1) (positive? -2) (exact? 3.4)) => #T)
+  (check (xor (integer? 1.2) (positive? -2) (exact? 3.4)) => #f)
+  (check (xor (integer? 1.2) (positive? 2) (exact? 3)) => #f)
+  (check (xor (integer? 1) (positive? -2) (exact? 3)) => #f)
+  (check (xor (integer? 1) (positive? 2) (exact? 3.4)) => #f)
+  (check (xor (integer? 1) (positive? 2) (exact? 3)) => #f)
+  (check (xor "foo" (not 'foo) (eq? 'a 'b)) => "foo")
+  (check (xor (not 'foo) (+ 1 2) (eq? 'a 'b)) => 3)
+  (check (xor (not 'foo) (eq? 'a 'b) (- 1 2)) => -1)
+  (let ((x '()))
+    (check (xor (begin (set! x (cons 'a x)) #f)
+		(begin (set! x (cons 'b x)) #f)
+		(begin (set! x (cons 'c x)) #f)
+		(begin (set! x (cons 'd x)) #f))
+      => #f)
+    (check x => '(d c b a)))
+  (let ((x '()))
+    (check (xor (begin (set! x (cons 'a x)) 'R)
+		(begin (set! x (cons 'b x)) #f)
+		(begin (set! x (cons 'c x)) #f)
+		(begin (set! x (cons 'd x)) #f))
+      => 'R)
+    (check x => '(d c b a)))
+  (let ((x '()))
+    (check (xor (begin (set! x (cons 'a x)) #T)
+		(begin (set! x (cons 'b x)) #f)
+		(begin (set! x (cons 'c x)) #T)
+		(begin (set! x (cons 'd x)) #f))
+      => #f)
+    (check x => '(c b a)))
+  (let-syntax ((macro
+		   (let ((count 0))
+		     (lambda (stx)
+		       (syntax-case stx ()
+			 ((_) (begin (set! count (+ 1 count)) #''foo))
+			 ((_ _) count))))))
+    (check (xor #f (macro) #f) => 'foo)
+    (check (macro 'count) => 1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'xor))
+
+  (check (xor) => #f)
+  (check (xor (number? 1)) => #T)
+  (check (xor (null? 1)) => #f)
+  (check (xor (string->symbol "foo")) => 'foo)
+  (check (xor (string? "a") (symbol? 1)) => #T)
+  (check (xor (string? 1) (symbol? 'a)) => #T)
+  (check (xor (string? 1) (symbol? 2)) => #f)
+  (check (xor (pair? '(a)) (list? '(b))) => #f)
+  (check (xor (- 42) (not 42)) => -42)
+  (check (xor (null? 1) (/ 42)) => 1/42)
+  (check (xor (integer? 1.2) (positive? -2) (exact? 3)) => #T)
+  (check (xor (integer? 1.2) (positive? 2) (exact? 3.4)) => #T)
+  (check (xor (integer? 1) (positive? -2) (exact? 3.4)) => #T)
+  (check (xor (integer? 1.2) (positive? -2) (exact? 3.4)) => #f)
+  (check (xor (integer? 1.2) (positive? 2) (exact? 3)) => #f)
+  (check (xor (integer? 1) (positive? -2) (exact? 3)) => #f)
+  (check (xor (integer? 1) (positive? 2) (exact? 3.4)) => #f)
+  (check (xor (integer? 1) (positive? 2) (exact? 3)) => #f)
+  (check (xor "foo" (not 'foo) (eq? 'a 'b)) => "foo")
+  (check (xor (not 'foo) (+ 1 2) (eq? 'a 'b)) => 3)
+  (check (xor (not 'foo) (eq? 'a 'b) (- 1 2)) => -1)
+  (let ((x '()))
+    (check (xor (begin (set! x (cons 'a x)) #f)
+		(begin (set! x (cons 'b x)) #f)
+		(begin (set! x (cons 'c x)) #f)
+		(begin (set! x (cons 'd x)) #f))
+      => #f)
+    (check x => '(d c b a)))
+  (let ((x '()))
+    (check (xor (begin (set! x (cons 'a x)) 'R)
+		(begin (set! x (cons 'b x)) #f)
+		(begin (set! x (cons 'c x)) #f)
+		(begin (set! x (cons 'd x)) #f))
+      => 'R)
+    (check x => '(d c b a)))
+  (let ((x '()))
+    (check (xor (begin (set! x (cons 'a x)) #T)
+		(begin (set! x (cons 'b x)) #f)
+		(begin (set! x (cons 'c x)) #T)
+		(begin (set! x (cons 'd x)) #f))
+      => #f)
+    (check x => '(c b a)))
+  (let-syntax ((macro
+		   (let ((count 0))
+		     (lambda (stx)
+		       (syntax-case stx ()
+			 ((_) (begin (set! count (+ 1 count)) #''foo))
+			 ((_ _) count))))))
+    (check (xor #f (macro) #f) => 'foo)
+    (check (macro 'count) => 1))
 
   #t)
 

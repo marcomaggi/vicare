@@ -361,6 +361,12 @@ again and again, calling @code{cleanup} multiple times.  Expand to:
 @end example
 @end deffn
 
+
+@deffn Syntax xor @meta{expr} ...
+Exclusive @func{or}.  When expanded with no expressions: evaluate to
+@false{}.
+@end deffn
+
 @c page
 @node iklib compensations
 @section Compensation stacks
