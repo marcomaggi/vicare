@@ -344,9 +344,14 @@ possible to use this keyword in custom syntaxes.
 @section Compensation stacks
 
 
-Compensation stacks are syntactic sugar that allows us to write code to
-allocate a resource near the code that releases it in case of error.
-Compensation stacks are described in:
+@cindex Compensation stacks
+@cindex Stacks of compensation thunks
+@cindex Releasing asynchronous resources
+
+
+Compensation stacks allow us to write code to allocate an asynchronous
+resource near the code that releases it in case of error.  Compensation
+stacks are described in:
 
 @quotation
 Westley Weimer, George C. Necula.  ``Finding and Preventing Run--Time
@@ -354,6 +359,28 @@ Error Handling Mistakes''.  In Proceedings of the @acronym{ACM}
 Conference on Object--Oriented Programming, Systems, Languages, and
 Applications, 2004.
 @end quotation
+
+@value{PRJNAME} has ways to deal with releasing asynchronous resources
+relying on the garbage collector:
+
+@itemize
+@item
+Directly use guardians, @ref{iklib guardians, Guardians and garbage
+collection}.
+
+@item
+Wrap the reference to the resource in a @value{PRJNAME} data structure
+and register a finalisation function in the structure type descriptor,
+@ref{iklib structs rtd, Automatic finalisation of structures}.
+
+@item
+Wrap the reference to the resource in a @rnrs{6} record and register a
+finalisation function in the record type descriptor, @ref{iklib records
+final, Automatic finalisation of records}.
+@end itemize
+
+Compensation stacks are useful when relying on the garbage collector is
+not good for releasing asynchronous resources.
 
 @menu
 * iklib compensations usage::   Basic compensations usage.
