@@ -27,6 +27,7 @@
     module				import
     vector-exists
     define-inline			receive
+    real-pathname			file-modification-time
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -54,7 +55,10 @@
     (only (ikarus.compiler)
 	  eval-core)
     (only (ikarus system $symbols)
-	  $unintern-gensym))
+	  $unintern-gensym)
+    (only (vicare $posix)
+	  real-pathname
+	  file-modification-time))
 
 
 (define (library-version-mismatch-warning name depname filename)

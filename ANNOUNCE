@@ -92,7 +92,6 @@ Notes for revision 0.3d0
      (vicare unsafe-unicode)
      (vicare unsafe-capi)
      (vicare infix)
-     (vicare include)
      (vicare keywords)
      (vicare syntactic-extensions)
      (vicare flonum-formatter)
@@ -108,12 +107,14 @@ Notes for revision 0.3d0
      (vicare unsafe unicode)
      (vicare unsafe capi)
      (vicare language-extensions infix)
-     (vicare language-extensions include)
      (vicare language-extensions keywords)
      (vicare language-extensions syntaxes)
      (vicare numerics flonum-formatter)
      (vicare numerics flonum-parser)
      (vicare containers weak-hashtables)
+
+* BACKWARDS  INCOMPATIBILITY  The  library  (vicare  include)  has  been
+  removed.
 
 * Added  automatic  finalisation of  R6RS  records  through the  garbage
   collector  facilities,  see  the  documentation  node  "iklib  records
@@ -185,6 +186,7 @@ Notes for revision 0.3d0
     define-constant			define-inline
     define-integrable			define-syntax-rule
     unwind-protect			xor
+    include
 
 * Added non-Scheme style syntaxes to (vicare):
 

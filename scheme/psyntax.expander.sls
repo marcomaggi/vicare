@@ -3349,6 +3349,7 @@
 	     ((trace-let-syntax)		trace-let-syntax-macro)
 	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
+	     ((include*)			include-macro)
 	     ((define-integrable)		define-integrable-macro)
 	     ((define-inline)			define-inline-macro)
 	     ((define-constant)			define-constant-macro)
@@ -5041,6 +5042,85 @@
 				`((,?rest (list . rest)))))
 		  ,?form0 ,@?form*))))))))
     ))
+
+
+;;;; module non-core-macro-transformer: INCLUDE
+
+(module (include-macro)
+  ;;Transformer function used to expand Vicare's INCLUDE macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
+  ;;Return a symbolic expression in the core language.
+  ;;
+  (define who 'include)
+
+  (define (include-macro expr-stx)
+    (define (%synner message subform)
+      (syntax-violation who message expr-stx subform))
+    (syntax-match expr-stx ()
+      ((?context ?filename)
+       (%include-file ?filename ?context #f %synner))
+      ((?context ?filename #t)
+       (%include-file ?filename ?context #t %synner))
+      ))
+
+  (define (%include-file filename-stx context-id verbose? synner)
+    (when verbose?
+      (display (string-append "Vicare: searching include file: "
+			      (syntax->datum filename-stx) "\n")
+	       (current-error-port)))
+    (let ((pathname (%filename-stx->pathname filename-stx synner)))
+      (when verbose?
+	(display (string-append "Vicare: including file: " pathname "\n")
+		 (current-error-port)))
+      (bless
+       `(stale-when (let ()
+		      (only (vicare $posix)
+			    file-modification-time)
+		      (or (not (file-exists? ,pathname))
+			  (> (file-modification-time ,pathname)
+			     ,(file-modification-time pathname))))
+	  ,@(%read-content context-id pathname)))))
+
+  (define (%filename-stx->pathname filename-stx synner)
+    ;;Convert  the  string  FILENAME  into the  string  pathname  of  an
+    ;;existing file; return the pathname.
+    ;;
+    (define filename
+      (syntax->datum filename-stx))
+    (unless (and (string? filename)
+		 (not (fxzero? (string-length filename))))
+      (synner "file name must be a nonempty string" filename-stx))
+    (if (char=? (string-ref filename 0) #\/)
+	;;It is an absolute pathname.
+	(real-pathname filename)
+      ;;It is a relative pathname.  Search the file in the library path.
+      (let loop ((ls (library-path)))
+	(if (null? ls)
+	    (synner "file does not exist in library path" filename-stx)
+	  (let ((ptn (string-append (car ls) "/" filename)))
+	    (if (file-exists? ptn)
+		(real-pathname ptn)
+	      (loop (cdr ls))))))))
+
+  (define (%read-content context-id pathname)
+    ;;Open the  file PATHNAME, read all  the datums and convert  them to
+    ;;syntax object  in the  lexical context  of CONTEXT-ID;  return the
+    ;;resulting syntax object.
+    ;;
+    (with-exception-handler
+	(lambda (E)
+	  (raise-continuable (condition (make-who-condition who) E)))
+      (lambda ()
+	(with-input-from-file pathname
+	  (lambda ()
+	    (let recur ()
+	      (let ((datum (get-annotated-datum (current-input-port))))
+		(if (eof-object? datum)
+		    '()
+		  (cons (datum->syntax context-id datum)
+			(recur))))))))))
+
+  #| end of module: INCLUDE-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-INTEGRABLE
