@@ -114,6 +114,8 @@ process.
 @menu
 * iklib syntaxes defines::      Additional binding syntaxes.
 * iklib syntaxes control::      Additional control flow syntaxes.
+* iklib syntaxes stale::        Declaring compiled library in
+                                stale state.
 @end menu
 
 @c page
@@ -365,6 +367,24 @@ again and again, calling @code{cleanup} multiple times.  Expand to:
 @deffn Syntax xor @meta{expr} ...
 Exclusive @func{or}.  When expanded with no expressions: evaluate to
 @false{}.
+@end deffn
+
+@c page
+@node iklib syntaxes stale
+@subsection Declaring compiled library in stale state
+
+
+@cindex Stale libraries
+@cindex Libraries, stale with respect to source
+@cindex Compiled libraries, stale with respect to source
+
+
+@deffn Syntax stale-when @meta{stale-expr} @metao{body} @meta{body} @dots{}
+Act like @func{begin}, but in addition causes an expression,
+@meta{stale-expr}, to be registered in the state of a compiled library.
+When such expression evaluates to false: the compiled library is stale
+with respect to some source file.  See for example the @func{include}
+syntax.
 @end deffn
 
 @c page

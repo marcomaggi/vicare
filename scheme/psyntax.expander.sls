@@ -5954,6 +5954,11 @@
 	    (build-sequence no-source
 			    (chi-expr* (cons x x*) r mr)))))
 	((stale-when)
+	 ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
+	 ;;expression  to  be  registered   in  the  current  stale-when
+	 ;;collector.   When such  expression  evaluates  to false:  the
+	 ;;compiled library is  stale with respect to  some source file.
+	 ;;See for example the INCLUDE syntax.
 	 (syntax-match e ()
 	   ((_ guard x x* ...)
 	    (begin
