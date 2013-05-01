@@ -347,6 +347,7 @@ possible to use this keyword in custom syntaxes.
 @cindex Compensation stacks
 @cindex Stacks of compensation thunks
 @cindex Releasing asynchronous resources
+@cindex Asynchronous resources, releasing
 
 
 Compensation stacks allow us to write code to allocate an asynchronous
