@@ -2113,7 +2113,7 @@ IK_FIELD(s_stru, 2) = s_field;
 
 @c ------------------------------------------------------------
 
-@subsubheading Operations on vectors
+@subsubheading Operations on structs
 
 
 @deftypefun ikptr ika_struct_alloc_no_init (ikpcb * @var{pcb}, ikptr @var{rtd})
