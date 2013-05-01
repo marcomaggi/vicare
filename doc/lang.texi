@@ -2507,27 +2507,6 @@ Like @func{callet}, but define local @func{let*} bindings for the
 @end example
 @end defmac
 
-
-@defmac unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
-Not a general @func{unwind-protect} for Scheme, but fine where we do not
-use continuations to escape from the body.  Expand to:
-
-@example
-(let ((cleanup (lambda ()
-                 @metao{cleanup}
-                 @meta{cleanup}
-                 ...)))
-  (with-exception-handler
-      (lambda (E)
-        (cleanup)
-        (raise E))
-    (lambda ()
-      (begin0
-          @meta{body}
-        (cleanup)))))
-@end example
-@end defmac
-
 @c page
 @node custom-ports
 @section Custom ports

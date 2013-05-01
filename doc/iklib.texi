@@ -339,6 +339,28 @@ returning the given optional arguments.  Being a fluid syntax: it is
 possible to use this keyword in custom syntaxes.
 @end deffn
 
+
+@deffn Syntax unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
+Not a general @func{unwind-protect} for Scheme, but fine where we do not
+make the body return continuations to the caller and then come back
+again and again, calling @code{cleanup} multiple times.  Expand to:
+
+@example
+(let ((cleanup (lambda ()
+                 @metao{cleanup}
+                 @meta{cleanup}
+                 ...)))
+  (with-exception-handler
+      (lambda (E)
+        (cleanup)
+        (raise E))
+    (lambda ()
+      (begin0
+          @meta{body}
+        (cleanup)))))
+@end example
+@end deffn
+
 @c page
 @node iklib compensations
 @section Compensation stacks

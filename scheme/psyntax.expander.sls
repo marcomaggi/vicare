@@ -3329,6 +3329,7 @@
 	     ((begin0)				begin0-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
 	     ((define-auxiliary-syntaxes*)	define-auxiliary-syntaxes-macro)
+	     ((unwind-protect)			unwind-protect-macro)
 
 	     ;; non-Scheme style syntaxes
 	     ((return)				return-macro)
@@ -3812,6 +3813,32 @@
        ;;             swap)))
        ;;       ,@(append olhs* orhs*))))
        ))))
+
+
+;;;; module non-core-macro-transformer: compensations
+
+(define (unwind-protect-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a symbolic expression in the core language.
+  ;;
+  ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where we  do not
+  ;;make the body return continuations to  the caller and then come back
+  ;;again and again, calling CLEANUP multiple times.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?body ?cleanup0 ?cleanup* ...)
+     (bless
+      `(let ((cleanup (lambda () ,?cleanup0 ,@?cleanup*)))
+	 (with-exception-handler
+	     (lambda (E)
+	       (cleanup)
+	       (raise E))
+	   (lambda ()
+	     (begin0
+		 ,?body
+	       (cleanup)))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: compensations

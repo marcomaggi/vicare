@@ -96,7 +96,8 @@
 		  ;;FIXME To be removed at the next boot image rotation.
 		  ;;(Marco Maggi; Tue Apr 30, 2013)
 		  define-auxiliary-syntaxes
-		  define-inline-constant)
+		  define-inline-constant
+		  unwind-protect)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
