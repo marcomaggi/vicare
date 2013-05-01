@@ -144,11 +144,6 @@
 
 ;;;; helpers
 
-(define-syntax define-inline-constant
-  (syntax-rules ()
-    ((_ ?name ?value)
-     (define-syntax ?name (identifier-syntax ?value)))))
-
 (define-syntax case-word-size
   (if (= 4 config.wordsize)
       (syntax-rules ()

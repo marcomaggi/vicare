@@ -25,9 +25,8 @@
     bootfile
     host-info)
   (import (except (ikarus)
-		  host-info)
-    (vicare language-extensions include))
-  (include/verbose "ikarus.config.ss"))
+		  host-info))
+  (include "ikarus.config.ss"))
 
 
 (library (ikarus main)
@@ -93,9 +92,7 @@
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
-	    readline.)
-    (only (vicare language-extensions syntaxes)
-	  define-inline))
+	    readline.))
 
 
 ;;;; helpers

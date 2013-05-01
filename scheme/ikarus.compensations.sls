@@ -31,7 +31,10 @@
     compensations
     run-compensations
     push-compensation-thunk)
-  (import (ikarus))
+  (import (except (ikarus)
+		  compensations
+		  run-compensations
+		  push-compensation-thunk))
 
   (define compensations
     (make-parameter '()))

@@ -52,6 +52,31 @@
 ;;;SOFTWARE.
 
 
+;;;;copyright notice for the original code of RECEIVE
+;;;
+;;;Copyright (C) John David Stone (1999). All Rights Reserved.
+;;;
+;;;Permission is hereby granted, free of charge, to any person obtaining
+;;;a  copy of  this  software and  associated  documentation files  (the
+;;;"Software"), to  deal in the Software  without restriction, including
+;;;without limitation  the rights to use, copy,  modify, merge, publish,
+;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
+;;;permit persons to whom the Software is furnished to do so, subject to
+;;;the following conditions:
+;;;
+;;;The  above  copyright notice  and  this  permission  notice shall  be
+;;;included in all copies or substantial portions of the Software.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
+;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
+;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
+;;;NONINFRINGEMENT. IN  NO EVENT SHALL THE AUTHORS  OR COPYRIGHT HOLDERS
+;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
+;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
+;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
+;;;SOFTWARE.
+
+
 (library (psyntax expander)
   (export
     eval
@@ -3349,18 +3374,18 @@
 	     ((trace-let-syntax)		trace-let-syntax-macro)
 	     ((trace-letrec-syntax)		trace-letrec-syntax-macro)
 
-	     ((include*)			include-macro)
+	     ((include)				include-macro)
 	     ((define-integrable)		define-integrable-macro)
 	     ((define-inline)			define-inline-macro)
 	     ((define-constant)			define-constant-macro)
-	     ((define-inline-constant*)		define-inline-constant-macro)
+	     ((define-inline-constant)		define-inline-constant-macro)
 	     ((define-values)			define-values-macro)
 	     ((define-constant-values)		define-constant-values-macro)
 	     ((receive)				receive-macro)
 	     ((begin0)				begin0-macro)
 	     ((xor)				xor-macro)
 	     ((define-syntax-rule)		define-syntax-rule-macro)
-	     ((define-auxiliary-syntaxes*)	define-auxiliary-syntaxes-macro)
+	     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
 	     ((unwind-protect)			unwind-protect-macro)
 
 	     ;; non-Scheme style syntaxes
@@ -5074,8 +5099,8 @@
 		 (current-error-port)))
       (bless
        `(stale-when (let ()
-		      (only (vicare $posix)
-			    file-modification-time)
+		      (import (only (vicare $posix)
+				    file-modification-time))
 		      (or (not (file-exists? ,pathname))
 			  (> (file-modification-time ,pathname)
 			     ,(file-modification-time pathname))))

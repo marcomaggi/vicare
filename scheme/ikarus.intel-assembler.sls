@@ -35,8 +35,7 @@
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (import (vicare language-extensions include))
-    (include/verbose "ikarus.config.ss"))
+    (include "ikarus.config.ss" #t))
 
 
 ;;;; Introduction

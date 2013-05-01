@@ -32,7 +32,6 @@ nobase_dist_libvicare_DATA	= \
 	vicare/language-extensions/syntaxes.sls				\
 	vicare/language-extensions/coroutines.sls			\
 	vicare/language-extensions/infix.sls				\
-	vicare/language-extensions/include.sls				\
 	vicare/language-extensions/keywords.sls				\
 	vicare/language-extensions/custom-ports.sls			\
 	\

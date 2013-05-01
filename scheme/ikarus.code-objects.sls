@@ -28,8 +28,6 @@
 		  set-code-annotation! procedure-annotation)
     (ikarus system $fx)
     (ikarus system $codes)
-    (only (vicare language-extensions syntaxes)
-	  define-inline)
     (vicare arguments validation))
 
 

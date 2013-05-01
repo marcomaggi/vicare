@@ -189,7 +189,8 @@
 	  string-set!)
     (only (vicare)
 	  module
-	  pretty-print)
+	  pretty-print
+	  define-auxiliary-syntaxes)
     (srfi :14 char-sets)
     (vicare arguments validation)
     (vicare language-extensions syntaxes)

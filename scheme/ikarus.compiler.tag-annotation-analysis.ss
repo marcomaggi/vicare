@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(include/verbose "ikarus.compiler.ontology.ss")
+(include "ikarus.compiler.ontology.ss" #t)
 
 (module (introduce-tags tag-analysis-output)
   (define who 'introduce-tags)

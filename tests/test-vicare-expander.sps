@@ -391,7 +391,7 @@
 
   (check
       (let ()
-	(define-inline-constant* a (+ 1 2 3))
+	(define-inline-constant a (+ 1 2 3))
 	a)
     => 6)
 
@@ -1387,9 +1387,9 @@
 
 (parametrise ((check-test-name	'define-auxiliary-syntaxes))
 
-  (define-auxiliary-syntaxes*)
-  (define-auxiliary-syntaxes* ciao)
-  (define-auxiliary-syntaxes* blu red)
+  (define-auxiliary-syntaxes)
+  (define-auxiliary-syntaxes ciao)
+  (define-auxiliary-syntaxes blu red)
 
   (define-syntax doit
     (syntax-rules (blu red)

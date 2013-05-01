@@ -89,11 +89,6 @@
 	     (- N)
 	   #t))))))
 
-(define-syntax define-inline-constant
-  (syntax-rules ()
-    ((_ ?name ?value)
-     (define-syntax ?name (identifier-syntax ?value)))))
-
 
 ;;;; errno codes
 

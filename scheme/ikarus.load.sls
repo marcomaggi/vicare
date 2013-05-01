@@ -45,8 +45,6 @@
 		  print-loaded-libraries)
 	    config.)
     (only (vicare language-extensions syntaxes)
-	  unwind-protect
-	  define-inline
 	  define-argument-validation
 	  with-arguments-validation))
 

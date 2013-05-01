@@ -27,8 +27,6 @@
 
 #!r6rs
 (import (vicare)
-  (only (vicare language-extensions syntaxes)
-	receive)
   (vicare language-extensions simple-match)
   (vicare checks))
 

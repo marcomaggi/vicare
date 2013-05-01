@@ -188,6 +188,9 @@ Notes for revision 0.3d0
     unwind-protect			xor
     include
 
+  the  corresponding  syntaxes have  been  removed  from the  standalone
+  syntaxes library.
+
 * Added non-Scheme style syntaxes to (vicare):
 
     while until for

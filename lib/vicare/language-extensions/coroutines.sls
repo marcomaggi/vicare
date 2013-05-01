@@ -30,9 +30,7 @@
   (export coroutine yield finish-coroutines)
   (import (vicare)
     (prefix (vicare unsafe operations)
-	    $)
-    (only (vicare language-extensions syntaxes)
-	  begin0))
+	    $))
 
 
 (module (empty-queue? enqueue! dequeue!)

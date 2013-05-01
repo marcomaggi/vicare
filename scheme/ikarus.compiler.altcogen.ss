@@ -785,7 +785,7 @@
 
 ;;;; some external code
 
-(include/verbose "pass-specify-rep.ss")
+(include "pass-specify-rep.ss" #t)
 
 
 ;;;; some CPU registers stuff

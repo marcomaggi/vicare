@@ -48,8 +48,7 @@
 ;;;; helpers
 
 (module (wordsize)
-  (import (vicare language-extensions include))
-  (include/verbose "ikarus.config.ss"))
+  (include "ikarus.config.ss" #t))
 
 (define who 'fasl-write)
 

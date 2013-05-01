@@ -2182,52 +2182,12 @@ The following bindings are exported by the library @library{vicare
 language-extensions syntaxes}.
 
 
-@defmac define-inline-constant @meta{name} @meta{expr}
-Expand to:
-
-@example
-(define-syntax @meta{name}
-  (let ((const @meta{expr}))
-    (lambda (stx)
-      (syntax-case stx ()
-        (?id
-         (identifier? #'?id)
-         (with-syntax ((VALUE const))
-           #'(quote VALUE)))))))
-@end example
-
-@noindent
-@meta{expr} is evaluated only once at expand time; it is impossible to
-modify the result of the expansion of @meta{name} by acting upon
-@meta{name}.
-
-This syntax is also useful to defined constants resulting from @gnu{}
-Autoconf expansion:
-
-@example
-(define-inline-constant SEEK_SET @@VALUEOF_SEEK_SET@@)
-@end example
-@end defmac
-
-
 @defmac define-syntax* (@meta{who} @meta{stx}) . @meta{body}
 Wrapper for @func{define-syntax}, expand to:
 
 @example
 (define-syntax @meta{who}
   (lambda (@meta{stx}) . @meta{body}))
-@end example
-@end defmac
-
-
-@defmac define-auxiliary-syntaxes @metao{name} @meta{name} ...
-Define auxiliary syntaxes to be used as literal identifiers by
-@func{syntax-rules}, @func{syntax-case} and similar macros; expand to:
-
-@example
-(define-syntax @metao{name} (syntax-rules ()))
-(define-syntax @meta{name}  (syntax-rules ()))
-...
 @end example
 @end defmac
 

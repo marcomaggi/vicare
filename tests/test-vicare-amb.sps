@@ -28,9 +28,6 @@
 #!r6rs
 (import (vicare)
   (vicare language-extensions amb)
-  (only (vicare language-extensions syntaxes)
-	#;define-values
-	receive)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

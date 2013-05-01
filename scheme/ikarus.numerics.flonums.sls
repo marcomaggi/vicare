@@ -148,8 +148,7 @@
     (vicare arguments validation)
     (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand
-	  cond-exact-integer-operand
-	  receive))
+	  cond-exact-integer-operand))
 
 
 ;;;; helpers

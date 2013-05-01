@@ -1276,7 +1276,7 @@
 
 ;;;; some external code
 
-(include/verbose "pass-specify-rep-primops.ss")
+(include "pass-specify-rep-primops.ss")
 
 
 ;;;; done

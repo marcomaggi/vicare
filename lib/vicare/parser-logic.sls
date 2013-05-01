@@ -50,7 +50,7 @@
   (import (rnrs)
     (prefix (vicare unsafe operations)
 	    unsafe.)
-    (only (vicare language-extensions syntaxes)
+    (only (vicare)
 	  define-auxiliary-syntaxes))
 
 

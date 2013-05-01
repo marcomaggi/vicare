@@ -60,8 +60,7 @@
   (import (vicare)
     (only (vicare language-extensions syntaxes)
 	  define-argument-validation
-	  with-arguments-validation
-	  define-inline)
+	  with-arguments-validation)
     (prefix (vicare unsafe operations)
 	    unsafe.)
     (prefix (only (vicare ffi)
