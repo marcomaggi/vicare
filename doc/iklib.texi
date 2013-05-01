@@ -4975,6 +4975,16 @@ Reset to empty the list of objects registered to avoid collection with
 @section Guardians and garbage collection
 
 
+@cindex Guardians and garbage collection
+@cindex Guarded values
+@cindex Finalisation of objects through guardians
+@cindex Objects finalisation through guardians
+@cindex Destruction of objects through guardians
+@cindex Objects destruction through guardians
+@cindex Destructors, objects and guardians
+@cindex Finalisers, objects and guardians
+
+
 Guardians are available in the @library{ikarus} library; quoting
 @bibref{DYBGUA}:
 
