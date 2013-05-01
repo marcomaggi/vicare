@@ -2072,6 +2072,13 @@ optionally applied to the field values to print them.
 
 @subsubheading Automatic finalisation of structures
 
+@cindex Automatic finalisation of structures
+@cindex Structures, automatic finalisation
+@cindex Structures, destructors
+@cindex Data structures, automatic finalisation
+@cindex Data structures, destructors
+@cindex Finalisation of data structures
+@cindex Destructors for data structures
 
 @defun set-rtd-destructor! @var{rtd} @var{destructor}
 Select the procedure @var{destructor} as destructor for data structures
@@ -2287,6 +2294,15 @@ Reset to void all the fields of a structure.
 @subsection Automatic finalisation of records
 
 
+@cindex Automatic finalisation of records
+@cindex Records, automatic finalisation
+@cindex Records, destructors
+@cindex Data records, automatic finalisation
+@cindex Data records, destructors
+@cindex Finalisation of data records
+@cindex Destructors for data records
+
+
 It is possible to automatically apply a destructor function whenever an
 @rnrs{6} record reclaimed by the garbage collector.
 
@@ -2320,7 +2336,7 @@ destructor can return unspecified values.
 
 After a destructor is registered in @var{rtd}: new instances of this
 record type are registered, upon creation, into an internal guardian,
-@ref{iklib guardians} for details; whenever such structures are garbage
+@ref{iklib guardians} for details; whenever such records are garbage
 collected: the guardian applies @var{destructor} to them.
 
 Exceptions raised by @var{destructor} are catched with @func{guard} and
@@ -2361,9 +2377,9 @@ protocol of the logger functions.
 
 @defun record-guardian-log @var{record} @var{exception} @var{action}
 Built in logger function to be used to log record instance finalisation
-operations by the garbage collector.  @var{record} is the structure to
-be finalised; @var{exception} is @false{} or an object raised by the
-structure destructor; @var{action} is one of the symbols:
+operations by the garbage collector.  @var{record} is the record to be
+finalised; @var{exception} is @false{} or an object raised by the record
+destructor; @var{action} is one of the symbols:
 @code{before-destruction}, @code{after-destruction}, @code{exception}.
 
 When this function is used as value for the parameter
