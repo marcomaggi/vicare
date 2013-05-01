@@ -585,6 +585,12 @@ compensations stack.
 Push the given thunk on the current compensations stack.
 @end defun
 
+
+@deffn Parameter compensations
+Holds the stack of compensation thunks.  This parameter is exposed in
+the public @api{} for debugging purposes, we should never mess with it.
+@end deffn
+
 @c page
 @node iklib conditions
 @section Additional condition types

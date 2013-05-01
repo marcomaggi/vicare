@@ -46,14 +46,6 @@
 
   (check
       (with-result
-       (compensations '())
-       (push-compensation
-	(add-result 1))
-       (run-compensations))
-    => `(,(void) (1)))
-
-  (check
-      (with-result
        (with-compensations
 	   (compensate
 	       (add-result 'alloc)
