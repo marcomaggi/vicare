@@ -47,7 +47,7 @@
     collected-struct-type)
 
 
-(define-syntax* (define-foreign-pointer-wrapper stx)
+(define-syntax (define-foreign-pointer-wrapper stx)
   (define (main stx)
     (syntax-case stx (foreign-destructor
 		      collector-struct-type

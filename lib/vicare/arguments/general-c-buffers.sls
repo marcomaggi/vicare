@@ -66,7 +66,7 @@
 
 ;;;; general C strings
 
-(define-syntax* (with-general-c-strings stx)
+(define-syntax (with-general-c-strings stx)
   (syntax-case stx (string-to-bytevector)
     ((_ ((?str^ ?str) ...)
 	(string-to-bytevector ?string->bytevector)
@@ -89,7 +89,7 @@
 	 ?body0 . ?body))
     ))
 
-(define-syntax* (with-general-c-strings/false stx)
+(define-syntax (with-general-c-strings/false stx)
   (syntax-case stx (string-to-bytevector)
     ((_ ((?str^ ?str) ...)
 	(string-to-bytevector ?string->bytevector)
@@ -117,7 +117,7 @@
 
 ;;;; general C pathnames
 
-(define-syntax* (with-general-c-pathnames stx)
+(define-syntax (with-general-c-pathnames stx)
   (syntax-case stx ()
     ((_ ((?str^ ?str) ...) ?body0 . ?body)
      #'(let ((?str^ (let ((str ?str))
@@ -132,7 +132,7 @@
 	     ...)
 	 ?body0 . ?body))))
 
-(define-syntax* (with-general-c-pathnames/false stx)
+(define-syntax (with-general-c-pathnames/false stx)
   (syntax-case stx ()
     ((_ ((?str^ ?str) ...) ?body0 . ?body)
      #'(let ((?str^ (let ((str ?str))

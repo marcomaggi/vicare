@@ -2182,16 +2182,6 @@ The following bindings are exported by the library @library{vicare
 language-extensions syntaxes}.
 
 
-@defmac define-syntax* (@meta{who} @meta{stx}) . @meta{body}
-Wrapper for @func{define-syntax}, expand to:
-
-@example
-(define-syntax @meta{who}
-  (lambda (@meta{stx}) . @meta{body}))
-@end example
-@end defmac
-
-
 @defmac define-exact-integer->symbol-function @meta{who} (@meta{code} ...)
 Define a function used to convert exact intgers to the corresponding
 symbolic name.  Expand to:

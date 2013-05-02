@@ -487,6 +487,10 @@
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
   (import (except (ikarus)
+		  ;;FIXME To be removed at the next boot image rotation.
+		  ;;(Marco Maggi; Thu May 2, 2013)
+		  define-syntax
+
 		  ;; port parameters
 		  standard-input-port standard-output-port standard-error-port
 		  current-input-port  current-output-port  current-error-port
@@ -599,6 +603,12 @@
 		  make-binary-socket-input/output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Thu May 2, 2013)
+    (rename (only (rnrs)
+		  define-syntax)
+	    (define-syntax rnrs.define-syntax))
+
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
@@ -610,6 +620,19 @@
 	    capi.)
     (vicare unsafe unicode)
     (vicare platform constants))
+
+
+;;;; syntax helpers
+
+;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
+;;Thu May 2, 2013)
+(rnrs.define-syntax define-syntax
+  (syntax-rules ()
+    ((_ (?who ?stx) ?body0 ?body ...)
+     (rnrs.define-syntax ?who (lambda (?stx) ?body0 ?body ...)))
+    ((_ ?who ?expr)
+     (rnrs.define-syntax ?who ?expr))
+    ))
 
 
 ;;;; port attributes
@@ -1046,7 +1069,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax* (%case-binary-input-port-fast-tag stx)
+(define-syntax (%case-binary-input-port-fast-tag stx)
   ;;Assuming ?PORT  has already been  validated as a port  value, select
   ;;code to be evaluated  if it is a binary input port.   If the port is
   ;;I/O and tagged  as binary output: retag it as  binary input.  If the
@@ -1073,7 +1096,7 @@
 		(%unsafe.assert-value-is-open-port   ?port ?who)
 		(assertion-violation ?who "vicare internal error: corrupted port" ?port)))))))
 
-(define-syntax* (%case-binary-output-port-fast-tag stx)
+(define-syntax (%case-binary-output-port-fast-tag stx)
   ;;Assuming ?PORT  has already been  validated as a port  value, select
   ;;code to be evaluated if it is  a binary output port.  If the port is
   ;;I/O and tagged  as binary input: retag it as  binary output.  If the
@@ -1100,7 +1123,7 @@
 		(%unsafe.assert-value-is-open-port   ?port ?who)
 		(assertion-violation ?who "vicare internal error: corrupted port" ?port)))))))
 
-(define-syntax* (%case-textual-input-port-fast-tag stx)
+(define-syntax (%case-textual-input-port-fast-tag stx)
   ;;For  a port  fast tagged  for input:  select a  body of  code  to be
   ;;evaluated.
   ;;
@@ -1173,7 +1196,7 @@
 	      (%validate-and-tag))))
 	 ))))
 
-(define-syntax* (%case-textual-output-port-fast-tag stx)
+(define-syntax (%case-textual-output-port-fast-tag stx)
   ;;For  a port fast  tagged for  output: select  a body  of code  to be
   ;;evaluated.
   ;;
@@ -1790,7 +1813,7 @@
     ((_ (?port) . ?body)
      (%with-port (?port unsafe.string-length) . ?body))))
 
-(define-syntax* (%with-port stx)
+(define-syntax (%with-port stx)
   (syntax-case stx ()
     ((_ (?port ?buffer-length) . ?body)
      (let* ((port-id	#'?port)

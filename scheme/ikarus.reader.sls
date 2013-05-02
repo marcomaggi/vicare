@@ -54,15 +54,16 @@
 
 ;;;; syntax helpers
 
-(define-syntax* (read-char-no-eof stx)
-  (syntax-case stx ()
-    ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
-     (and (identifier? #'?ch-name)
-	  (identifier? #'?raise-error))
-     #'(let ((?ch-name (get-char-and-track-textual-position ?port)))
-	 (cond ((eof-object? ?ch-name)
-		(?raise-error))
-	       . ?cond-clauses)))))
+(define-syntax read-char-no-eof
+  (lambda (stx)
+    (syntax-case stx ()
+      ((read-char-no-eof (?port ?ch-name ?raise-error) . ?cond-clauses)
+       (and (identifier? #'?ch-name)
+	    (identifier? #'?raise-error))
+       #'(let ((?ch-name (get-char-and-track-textual-position ?port)))
+	   (cond ((eof-object? ?ch-name)
+		  (?raise-error))
+		 . ?cond-clauses))))))
 
 (define (%implementation-violation who msg . irritants)
   (raise (condition

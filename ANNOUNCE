@@ -207,6 +207,9 @@ Notes for revision 0.3d0
      (define-syntax ?name ?transformer-expr)
      (define-syntax (?name ?arg) ?body0 ?body ...)
 
+  the  syntax  DEFINE-SYNTAX*  has  been  removed  from  the  standalone
+  syntaxes library.
+
 * Added DEPREFIX, SUFFIX and DESUFFIX import specification clauses:
 
      (import (rnrs)

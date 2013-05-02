@@ -33,7 +33,6 @@
   (export
     ;; miscellaneous extensions
     define-struct-extended	define-record-type-extended
-    define-syntax*
     let-inline			let*-inline
     debug-assert		begin0-let
     with-pathnames
@@ -77,13 +76,6 @@
 
 
 ;;;; some defining syntaxes
-
-(define-syntax define-syntax*
-  (syntax-rules ()
-    ((_ (?who ?stx) . ?body)
-     (define-syntax ?who (lambda (?stx) . ?body)))))
-
-;;; --------------------------------------------------------------------
 
 (define-syntax let-inline
   (syntax-rules ()
