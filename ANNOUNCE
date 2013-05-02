@@ -193,9 +193,11 @@ Notes for revision 0.3d0
 
 * Added non-Scheme style syntaxes to (vicare):
 
-    while until for
-    continue break return
-    define-returnable lambda-returnable
+    while				until
+    continue				break
+    for
+    return				begin-returnable
+    define-returnable			lambda-returnable
 
 * Added compensations API to (vicare), see the documentation node "iklib
   compensations".

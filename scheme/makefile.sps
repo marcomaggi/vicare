@@ -418,6 +418,7 @@
     (for				(macro . for))
     (define-returnable			(macro . define-returnable))
     (lambda-returnable			(macro . lambda-returnable))
+    (begin-returnable			(macro . begin-returnable))
 ;;;
     (with-compensations			(macro . with-compensations))
     (with-compensations/on-error	(macro . with-compensations/on-error))
@@ -2025,6 +2026,7 @@
     (for					i v $language)
     (define-returnable				i v $language)
     (lambda-returnable				i v $language)
+    (begin-returnable				i v $language)
 ;;;
     (with-compensations				i v $language)
     (with-compensations/on-error		i v $language)

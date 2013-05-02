@@ -997,7 +997,19 @@
 		 ?body0 ?body ...)))))
       ))
 
+  (define-syntax begin-returnable
+    (syntax-rules ()
+      ((_ ?body0 ?body ...)
+       (call/cc
+	   (lambda (escape)
+	     (fluid-let-syntax ((return (syntax-rules ()
+					  ((_ . ?args)
+					   (escape . ?args)))))
+	       ?body0 ?body ...))))
+      ))
+
 ;;; --------------------------------------------------------------------
+;;; define-returnable
 
   (check	;no return, no arguments
       (with-result
@@ -1056,6 +1068,7 @@
     => '((2 3 4) (in)))
 
 ;;; --------------------------------------------------------------------
+;;; lambda-returnable
 
   (check	;no return, no arguments
       (with-result
@@ -1116,6 +1129,55 @@
 	 (receive (a b c)
 	     (ciao)
 	   (list a b c))))
+    => '((2 3 4) (in)))
+
+;;; --------------------------------------------------------------------
+;;; begin-returnable
+
+  (check	;no return, no arguments
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(add-result 'out)
+	1))
+    => '(1 (in out)))
+
+  (check	;no return, arguments
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(add-result 'out)
+	(list 1 2)))
+    => '((1 2) (in out)))
+
+  (check	;return no values
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(return)
+	(add-result 'out)
+	1)
+       #t)
+    => '(#t (in)))
+
+  (check	;return single value
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(return 2)
+	(add-result 'out)
+	1))
+    => '(2 (in)))
+
+  (check	;return multiple values
+      (with-result
+       (receive (a b c)
+	   (begin-returnable
+	    (add-result 'in)
+	    (return 2 3 4)
+	    (add-result 'out)
+	    (values 1 2 3))
+	 (list a b c)))
     => '((2 3 4) (in)))
 
   #f)
@@ -1246,6 +1308,57 @@
     => '((2 3 4) (in)))
 
   #f)
+
+
+(parametrise ((check-test-name	'begin-returnable))
+
+  (check	;no return, no arguments
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(add-result 'out)
+	1))
+    => '(1 (in out)))
+
+  (check	;no return, arguments
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(add-result 'out)
+	(list 1 2)))
+    => '((1 2) (in out)))
+
+  (check	;return no values
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(return)
+	(add-result 'out)
+	1)
+       #t)
+    => '(#t (in)))
+
+  (check	;return single value
+      (with-result
+       (begin-returnable
+	(add-result 'in)
+	(return 2)
+	(add-result 'out)
+	1))
+    => '(2 (in)))
+
+  (check	;return multiple values
+      (with-result
+       (receive (a b c)
+	   (begin-returnable
+	    (add-result 'in)
+	    (return 2 3 4)
+	    (add-result 'out)
+	    (values 1 2 3))
+	 (list a b c)))
+    => '((2 3 4) (in)))
+
+  #t)
 
 
 (parametrise ((check-test-name	'test-unwind-protect))

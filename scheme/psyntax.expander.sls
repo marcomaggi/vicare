@@ -3401,6 +3401,7 @@
 	     ((for)				for-macro)
 	     ((define-returnable)		define-returnable-macro)
 	     ((lambda-returnable)		lambda-returnable-macro)
+	     ((begin-returnable)		begin-returnable-macro)
 
 	     ((parameterize)			parameterize-macro)
 	     ((parametrise)			parameterize-macro)
@@ -4655,6 +4656,18 @@
 					    ((_ . ?args)
 					     (escape . ?args)))))
 		 ,?body0 ,@?body*))))))
+    ))
+
+(define (begin-returnable-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((_ ?body0 ?body* ...)
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (fluid-let-syntax ((return (syntax-rules ()
+					  ((_ . ?args)
+					   (escape . ?args)))))
+	       ,?body0 ,@?body*)))))
     ))
 
 

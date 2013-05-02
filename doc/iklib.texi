@@ -114,6 +114,7 @@ process.
 @menu
 * iklib syntaxes defines::      Additional binding syntaxes.
 * iklib syntaxes control::      Additional control flow syntaxes.
+* iklib syntaxes returnable::   Early return from code blocks.
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
@@ -299,28 +300,6 @@ syntax involves creating a continuation.
 @end deffn
 
 
-@deffn Syntax lambda-returnable @meta{formals} @metao{body} @meta{body} @dots{}
-Like @func{lambda}, but allow the use of the keyword @func{return} to
-return values to the caller's continuation.  The use of this syntax
-involves creating a continuation.
-@end deffn
-
-
-@deffn Syntax define-returnable (@meta{name} . @meta{formals}) @metao{body} @meta{body} @dots{}
-Like @func{define}, but allow the use of the keyword @func{return} to
-return values to the caller's continuation.  The use of this syntax
-involves creating a continuation.
-
-@example
-(define-returnable (doit a)
-  (return a)
-  1)
-
-(doit 2)        @result{} 2
-@end example
-@end deffn
-
-
 @deffn {Fluid Syntax} continue
 Causes the innermost @func{while}, @func{until} or @func{for} loop to
 jump immediately to the next iteration.  Being a fluid syntax: it is
@@ -332,13 +311,6 @@ possible to use this keyword in custom syntaxes.
 Causes the innermost @func{while}, @func{until} or @func{for} loop to
 exit immediately to the current continuation.  When arguments are given:
 they are returned to the continuation.  Being a fluid syntax: it is
-possible to use this keyword in custom syntaxes.
-@end deffn
-
-
-@deffn {Fluid Syntax} return @meta{expr} ...
-This syntax should be used to return from some enclosing block,
-returning the given optional arguments.  Being a fluid syntax: it is
 possible to use this keyword in custom syntaxes.
 @end deffn
 
@@ -368,6 +340,101 @@ again and again, calling @code{cleanup} multiple times.  Expand to:
 @deffn Syntax xor @meta{expr} ...
 Exclusive @func{or}.  When expanded with no expressions: evaluate to
 @false{}.
+@end deffn
+
+@c page
+@node iklib syntaxes returnable
+@subsection Early return from code blocks
+
+
+The standardised Scheme languages do not define the common @code{return}
+keyword present in many languages, like C and Python.  Despite this, it
+is quite easy to obtain the ``early return'' functionality through the
+use of continuations:
+
+@example
+(call/cc
+    (lambda (return)
+      (display 'before)
+      (return 1)
+      (display 'never)))
+@print{} before
+@result{} 1
+@end example
+
+Many programmers are used to the @code{return} keyword, so
+@value{PRJNAME} includes some syntaxes to support it.  The use of all
+these syntaxes involves the creation of a continuation, which is a
+performance penalty.
+
+
+@deffn {Fluid Syntax} return @meta{expr} ...
+This syntax is meant to be used to return from some enclosing block,
+returning the given optional arguments.  Being a fluid syntax: it is
+possible to rebind this keyword in custom syntaxes.
+@end deffn
+
+
+@deffn Syntax begin-returnable @metao{body} @meta{body} @dots{}
+Like @func{begin}, but allow the use of the keyword @func{return} to
+return values to the enclosing continuation.
+
+@example
+(begin-returnable
+  (display 'before)
+  (return)
+  (display 'never))
+@print{} before
+
+(begin-returnable
+  (display 'before)
+  (return 1)
+  (display 'never))
+@print{} before
+@result{} 1
+
+(begin-returnable
+  (display 'before)
+  (return 1 2)
+  (display 'never))
+@print{} before
+@result{} 1 2
+@end example
+@end deffn
+
+
+@deffn Syntax lambda-returnable @meta{formals} @metao{body} @meta{body} @dots{}
+Like @func{lambda}, but allow the use of the keyword @func{return} to
+return values to the caller's continuation.
+
+@example
+(define doit
+  (lambda-returnable (a b)
+    (display a)
+    (return b)
+    (display 'never)))
+
+(doit 1 2)
+@print{} 1
+@result{} 2
+@end example
+@end deffn
+
+
+@deffn Syntax define-returnable (@meta{name} . @meta{formals}) @metao{body} @meta{body} @dots{}
+Like @func{define}, but allow the use of the keyword @func{return} to
+return values to the caller's continuation.
+
+@example
+(define-returnable (doit a b)
+  (display a)
+  (return b)
+  (display 'never))
+
+(doit 1 2)
+@print{} 1
+@result{} 2
+@end example
 @end deffn
 
 @c page
