@@ -115,6 +115,7 @@ process.
 * iklib syntaxes defines::      Additional binding syntaxes.
 * iklib syntaxes control::      Additional control flow syntaxes.
 * iklib syntaxes returnable::   Early return from code blocks.
+* iklib syntaxes integrable::   Integrable expressions and functions.
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
@@ -186,53 +187,6 @@ the region of such bindings.  The expansion is:
           @meta{expression})
       (lambda @meta{formals}
         @metao{body} @meta{body} ...))
-@end example
-@end deffn
-
-
-@deffn Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
-Similar to @func{define}, but create a binding that is always expanded
-inline and can @strong{neither} be invoked recursively @strong{nor} used
-as function rgument.  This syntax only defines a syntax.
-
-@example
-(define-inline (incr x)
-  (+ x 1))
-
-(incr 2)        @result{} 3
-@end example
-
-In the example above, we can think of @code{(incr 2)} as expanding to:
-
-@example
-(let ((x 2))
-  (+ x 1))
-@end example
-@end deffn
-
-
-@deffn Syntax define-integrable (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
-Similar to @func{define}, but create a binding that is always expanded
-inline and @strong{can} be both invoked recursively and used as function
-argument.  This syntax defines both a syntax and a function.
-
-@example
-(define-integrable (incr x)
-  (+ x 1))
-
-(incr 2)
-@result{} 3
-
-(map incr '(10 20 30)))
-@result{} (11 21 31)
-@end example
-
-In the example above, we can think of @code{(incr 2)} as expanding to:
-
-@example
-((lambda (x)
-   (+ x 1))
- 2)
 @end example
 @end deffn
 
@@ -436,6 +390,99 @@ return values to the caller's continuation.
 @result{} 2
 @end example
 @end deffn
+
+@c page
+@node iklib syntaxes integrable
+@subsection Integrable expressions and functions
+
+
+@cindex Function inlining
+@cindex Function integration
+@cindex Expression inlining
+@cindex Expression integration
+@cindex Inlining of functions and expressions
+@cindex Integration of functions and expressions
+@cindex Expanding functions inline
+@cindex Expanding expressions inline
+
+
+Compilers act upon ``compilation units'', which for @value{PRJNAME} are:
+@rnrs{6} libraries, @rnrs{6} programs, symbolic expressions handed to
+@func{eval}; the latter includes standalone expressions typed at the
+@repl{}.  Under @value{PRJNAME}:
+
+@itemize
+@item
+Whenever a function defined in a compilation unit is called in the same
+compilation unit: the compiler has access to the source code, so it
+@strong{always} attempts to integrate it (expand it inline); such
+integration can succeed or fail depending on the cost of such operation.
+
+@item
+Whenever a function defined in a compilation unit is called in another
+compilation unit: the compiler has @strong{no} access to the source
+code, so it never attempts to integrate it.
+@end itemize
+
+@noindent
+this scenario is somewhat different from the one of languages like C,
+which make use of object files that allow inlining of functions defined
+in other files.
+
+Sometimes we do want to always integrate expressions, even across
+compilation unit boundaries; for this purpose @value{PRJNAME} provides
+@func{define-inline} to integrate expressions and
+@func{define-integrable} to integrate functions.
+
+
+@deffn Syntax define-inline (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
+Similar to @func{define}, but create a binding for an expression that is
+always expanded inline and can @strong{neither} be invoked recursively
+@strong{nor} used as function argument.  This syntax only defines a
+syntax embedding the source code of the expression in a syntax object.
+
+@example
+(define-inline (incr x)
+  (+ x 1))
+
+(incr 2)        @result{} 3
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+(let ((x 2))
+  (+ x 1))
+@end example
+@end deffn
+
+
+@deffn Syntax define-integrable (@meta{name} @meta{arg} ... . @meta{rest}) @metao{body} @meta{body} ...
+Similar to @func{define}, but create a binding that is always expanded
+inline and @strong{can} be both invoked recursively and used as function
+argument.  This syntax defines both a syntax and a function, with the
+syntax embedding the source code of the function in a syntax object.
+
+@example
+(define-integrable (incr x)
+  (+ x 1))
+
+(incr 2)
+@result{} 3
+
+(map incr '(10 20 30)))
+@result{} (11 21 31)
+@end example
+
+In the example above, we can think of @code{(incr 2)} as expanding to:
+
+@example
+((lambda (x)
+   (+ x 1))
+ 2)
+@end example
+@end deffn
+
 
 @c page
 @node iklib syntaxes stale
