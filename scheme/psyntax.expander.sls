@@ -5392,7 +5392,7 @@
 	 (let ((label*       (map %lookup-binding-in-run-lexenv ?lhs*))
 	       (rhs-binding* (map (lambda (rhs)
 				    (make-eval-transformer
-				     (expand-transformer rhs lexenv.expand)))
+				     (%expand-macro-transformer rhs lexenv.expand)))
 			       ?rhs*)))
 	   (chi-internal (cons ?body ?body*)
 			 (append (map cons label* rhs-binding*) lexenv.run)
@@ -5853,6 +5853,41 @@
 )
 
 
+;;;; macro transformers
+
+(define (%expand-macro-transformer expr-stx lexenv.expand)
+  ;;Called to expand the right-hand  side of syntax definitions.  Return
+  ;;the fully expanded right-hand side.
+  ;;
+  ;;For:
+  ;;
+  ;;   (define-syntax ?lhs ?rhs)
+  ;;
+  ;;this function is called as:
+  ;;
+  ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
+  ;;
+  ;;For:
+  ;;
+  ;;   (let-syntax ((?lhs ?rhs)) ?body0 ?body ...)
+  ;;
+  ;;this function is called as:
+  ;;
+  ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
+  ;;
+  (let* ((rtc           (make-collector))
+	 (expanded-rhs  (parametrise ((inv-collector rtc)
+				      (vis-collector (lambda (x) (values))))
+			  (chi-expr expr-stx lexenv.expand lexenv.expand))))
+    (for-each
+	(let ((mark-visit (vis-collector)))
+	  (lambda (x)
+	    (invoke-library x)
+	    (mark-visit x)))
+      (rtc))
+    expanded-rhs))
+
+
 ;;;; formals syntax validation
 
 (define (%verify-formals-syntax formals-stx stx)
@@ -6154,7 +6189,7 @@
 		   (xrib (make-full-rib xlhs* xlab*))
 		   (xb* (map (lambda (x)
 			       (make-eval-transformer
-				(expand-transformer
+				(%expand-macro-transformer
 				 (if (eq? type 'let-syntax)
 				     x
 				   (push-lexical-contour xrib x))
@@ -6437,7 +6472,7 @@
 		 (when (bound-id-member? id kwd*)
 		   (stx-error e "cannot redefine keyword"))
 		 (let* ((lab (gen-define-label id rib sd?))
-			(expanded-rhs (expand-transformer rhs mr)))
+			(expanded-rhs (%expand-macro-transformer rhs mr)))
 		   (extend-rib! rib id lab sd?)
 		   (let ((b (make-eval-transformer expanded-rhs)))
 		     (chi-body* (cdr e*)
@@ -6450,7 +6485,7 @@
 		   (stx-error e "cannot redefine keyword"))
 		 (let* ((lab (gen-define-label id rib sd?))
 			(flab (gen-define-label id rib sd?))
-			(expanded-rhs (expand-transformer rhs mr)))
+			(expanded-rhs (%expand-macro-transformer rhs mr)))
 		   (extend-rib! rib id lab sd?)
 		   (let ((b (make-eval-transformer expanded-rhs)))
 		     (let ((t1 (cons lab (cons '$fluid flab)))
@@ -6468,7 +6503,7 @@
 			 (xrib (make-full-rib xlhs* xlab*))
 			 (xb* (map (lambda (x)
 				     (make-eval-transformer
-				      (expand-transformer
+				      (%expand-macro-transformer
 				       (if (eq? type 'let-syntax)
 					   x
 					 (push-lexical-contour xrib x))
@@ -6622,19 +6657,6 @@
       ))
 
   #| end of module: CHI-BODY* |# )
-
-(define (expand-transformer expr lexenv.expand)
-  (let* ((rtc           (make-collector))
-	 (expanded-rhs  (parametrise ((inv-collector rtc)
-				      (vis-collector (lambda (x) (values))))
-			  (chi-expr expr lexenv.expand lexenv.expand))))
-    (for-each
-	(let ((mark-visit (vis-collector)))
-	  (lambda (x)
-	    (invoke-library x)
-	    (mark-visit x)))
-      (rtc))
-    expanded-rhs))
 
 
 (define (rev-map-append f ls ac)
