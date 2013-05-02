@@ -352,43 +352,6 @@
 	  ((procedure	obj))
 	obj))))
 
-(define (%install-library-and-deps filename id name ver imp* vis* inv*
-				   exp-subst exp-env
-				   visit-proc invoke-proc guard-proc
-				   guard-req* visible?)
-  ;;Used  as  success  continuation  function by  the  function  in  the
-  ;;parameter   CURRENT-PRECOMPILED-LIBRARY-LOADER.    Make   sure   all
-  ;;dependencies  are met,  then install  the library  and return  true;
-  ;;otherwise return #f.
-  ;;
-  (let f ((deps (append imp* vis* inv* guard-req*)))
-    (cond ((null? deps)
-	   ;; CHECK
-	   (for-each (lambda (x)
-		       (let* ((label (car x))
-			      (dname (cadr x))
-			      (lib   (find-library-by-name dname)))
-			 (invoke-library lib)))
-	     guard-req*)
-	   (cond ((guard-proc) ;;; stale
-		  (library-stale-warning name filename)
-		  #f)
-		 (else
-		  (install-library id name ver imp* vis* inv*
-				   exp-subst exp-env visit-proc invoke-proc
-				   #f #f ''#f '() visible? #f)
-		  #t)))
-	  (else
-	   (let* ((d		(car deps))
-		  (label	(car d))
-		  (dname	(cadr d))
-		  (l		(find-library-by-name dname)))
-	     (if (and (library? l) (eq? label (library-id l)))
-		 (f (cdr deps))
-	       (begin
-		 (library-version-mismatch-warning name dname filename)
-		 #f)))))))
-
 
 ;;;; loading libraries from files
 ;;
@@ -423,6 +386,43 @@
 	      (lambda (library-name.ids library-name.version)
 		(%verify-library requested-libname filename
 				 library-name.ids library-name.version)))))))
+
+  (define (%install-library-and-deps filename id name ver imp* vis* inv*
+				     exp-subst exp-env
+				     visit-proc invoke-proc guard-proc
+				     guard-req* visible?)
+    ;;Used  as success  continuation  function by  the  function in  the
+    ;;parameter   CURRENT-PRECOMPILED-LIBRARY-LOADER.   Make   sure  all
+    ;;dependencies are  met, then install  the library and  return true;
+    ;;otherwise return #f.
+    ;;
+    (let loop ((deps (append imp* vis* inv* guard-req*)))
+      (cond ((null? deps)
+	     ;; CHECK
+	     (for-each (lambda (x)
+			 (let* ((label (car x))
+				(dname (cadr x))
+				(lib   (find-library-by-name dname)))
+			   (invoke-library lib)))
+	       guard-req*)
+	     (cond ((guard-proc) ;;; stale
+		    (library-stale-warning name filename)
+		    #f)
+		   (else
+		    (install-library id name ver imp* vis* inv*
+				     exp-subst exp-env visit-proc invoke-proc
+				     #f #f ''#f '() visible? #f)
+		    #t)))
+	    (else
+	     (let* ((d		(car deps))
+		    (label	(car d))
+		    (dname	(cadr d))
+		    (l		(find-library-by-name dname)))
+	       (if (and (library? l) (eq? label (library-id l)))
+		   (loop (cdr deps))
+		 (begin
+		   (library-version-mismatch-warning name dname filename)
+		   #f)))))))
 
   (define (%verify-library requested-libname filename
 			   found-library-name.ids found-library-name.version)
