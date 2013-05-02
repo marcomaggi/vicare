@@ -6433,7 +6433,7 @@
 			      (cons lex lex*) (cons rhs rhs*)
 			      mod** kwd* exp* rib mix? sd?))))
 	      ((define-syntax)
-	       (let-values (((id rhs) (parse-define-syntax e)))
+	       (let-values (((id rhs) (%parse-define-syntax e)))
 		 (when (bound-id-member? id kwd*)
 		   (stx-error e "cannot redefine keyword"))
 		 (let* ((lab (gen-define-label id rib sd?))
@@ -6445,7 +6445,7 @@
 				lex* rhs* mod** kwd* exp* rib
 				mix? sd?)))))
 	      ((define-fluid-syntax)
-	       (let-values (((id rhs) (parse-define-syntax e)))
+	       (let-values (((id rhs) (%parse-define-syntax e)))
 		 (when (bound-id-member? id kwd*)
 		   (stx-error e "cannot redefine keyword"))
 		 (let* ((lab (gen-define-label id rib sd?))
@@ -6604,13 +6604,22 @@
        (values id (cons 'expr (bless '(void)))))
       ))
 
-  (define (parse-define-syntax x)
-    ;;Syntax parser for R6RS's DEFINE-SYNTAX.
+  (define (%parse-define-syntax stx)
+    ;;Syntax  parser for  R6RS's DEFINE-SYNTAX,  extended with  Vicare's
+    ;;syntax.  Accept both:
     ;;
-    (syntax-match x ()
-      ((_ id val)
-       (identifier? id)
-       (values id val))))
+    ;;  (define-syntax ?name ?transformer-expr)
+    ;;  (define-syntax (?name ?arg) ?body0 ?body ...)
+    ;;
+    (syntax-match stx ()
+      ((_ ?id ?transformer-expr)
+       (identifier? ?id)
+       (values ?id ?transformer-expr))
+      ((_ (?id ?arg) ?body0 ?body* ...)
+       (and (identifier? ?id)
+	    (identifier? ?arg))
+       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
+      ))
 
   #| end of module: CHI-BODY* |# )
 

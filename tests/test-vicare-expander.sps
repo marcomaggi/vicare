@@ -1652,6 +1652,20 @@
   #t)
 
 
+(parametrise ((check-test-name	'extended-define-syntax))
+
+  (define-syntax (doit stx)
+    (syntax-case stx ()
+      ((_ a b)
+       #'(list a b))))
+
+  (check
+      (doit 1 2)
+    => '(1 2))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
