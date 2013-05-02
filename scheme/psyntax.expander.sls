@@ -5645,30 +5645,29 @@
        (ellipsis? ?dots)
        (stx-error src-stx "misplaced ellipsis in syntax form"))
 
-      (id
-       (identifier? id)
-       (let* ((label (id->label expr-stx))
-	      (b (label->binding label lexenv)))
-	 (if (eq? (binding-type b) 'syntax)
-	     (let-values (((var maps)
-			   (let ((var.lev (binding-value b)))
-			     (gen-ref src-stx (car var.lev) (cdr var.lev) maps))))
+      (?id
+       (identifier? ?id)
+       (let* ((label    (id->label expr-stx))
+	      (binding  (label->binding label lexenv)))
+	 (if (eq? (binding-type binding) 'syntax)
+	     (receive (var maps)
+		 (let ((var.lexenv (binding-value binding)))
+		   (gen-ref src-stx (car var.lexenv) (cdr var.lexenv) maps))
 	       (values (list 'ref var) maps))
 	   (values (list 'quote expr-stx) maps))))
 
-      ((dots e)
-       (ellipsis? dots)
+      ((?dots ?expr)
+       (ellipsis? ?dots)
        (if vec?
 	   (stx-error src-stx "misplaced ellipsis in syntax form")
-	 (gen-syntax src-stx e lexenv maps (lambda (x) #f) #f)))
+	 (gen-syntax src-stx ?expr lexenv maps (lambda (x) #f) #f)))
 
       ((x dots . y)
        (ellipsis? dots)
        (let f ((y y)
 	       (k (lambda (maps)
-		    (let-values (((x maps)
-				  (gen-syntax src-stx x lexenv
-					      (cons '() maps) ellipsis? #f)))
+		    (receive (x maps)
+			(gen-syntax src-stx x lexenv (cons '() maps) ellipsis? #f)
 		      (if (null? (car maps))
 			  (stx-error src-stx
 				     "extra ellipsis in syntax form")
@@ -5678,7 +5677,8 @@
 	   ((dots . y) (ellipsis? dots)
 	    (f y
 	       (lambda (maps)
-		 (let-values (((x maps) (k (cons '() maps))))
+		 (receive (x maps)
+		     (k (cons '() maps))
 		   (if (null? (car maps))
 		       (stx-error src-stx "extra ellipsis in syntax form")
 		     (values (gen-mappend x (car maps)) (cdr maps)))))))
@@ -5686,7 +5686,8 @@
 	    (let-values (((y maps)
 			  (gen-syntax src-stx y lexenv maps ellipsis? vec?)))
 	      (let-values (((x maps) (k maps)))
-		(values (gen-append x y) maps)))))))
+		(values (gen-append x y) maps))))
+	   )))
 
       ((x . y)
        (let-values (((xnew maps)
