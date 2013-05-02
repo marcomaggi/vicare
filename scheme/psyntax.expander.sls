@@ -4108,7 +4108,7 @@
 		 (else
 		  (let-values (((pat idn*) (convert-pattern (car pat*) '())))
 		    (append idn* (f (cdr pat*)))))))))
-	 (verify-formals (map car idn*) e)
+	 (%verify-formals-syntax (map car idn*) e)
 	 (let ((t* (generate-temporaries expr*)))
 	   (bless
 	    `(let ,(map list t* expr*)
@@ -4153,11 +4153,11 @@
       ((_ ((lhs* rhs*) ...) b b* ...)
        (if (valid-bound-ids? lhs*)
 	   (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
-	 (%invalid-fmls-error stx lhs*)))
+	 (%error-invalid-formals-syntax stx lhs*)))
       ((_ f ((lhs* rhs*) ...) b b* ...) (identifier? f)
        (if (valid-bound-ids? lhs*)
 	   (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (%invalid-fmls-error stx lhs*))))))
+	 (%error-invalid-formals-syntax stx lhs*))))))
 
 (define let*-macro
   (lambda (stx)
@@ -4176,7 +4176,7 @@
        (if (valid-bound-ids? lhs*)
 	   (bless
 	    `((letrec ((,f (trace-lambda ,f ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (%invalid-fmls-error stx lhs*))))))
+	 (%error-invalid-formals-syntax stx lhs*))))))
 
 
 ;;;; module non-core-macro-transformer: LET-VALUES
@@ -4278,12 +4278,12 @@
        (if (valid-bound-ids? fmls)
 	   (bless `(make-traced-procedure ',who
 					  (lambda ,fmls ,b . ,b*)))
-	 (%invalid-fmls-error stx fmls)))
+	 (%error-invalid-formals-syntax stx fmls)))
       ((_  who (fmls ... . last) b b* ...)
        (if (valid-bound-ids? (cons last fmls))
 	   (bless `(make-traced-procedure ',who
 					  (lambda (,@fmls . ,last) ,b . ,b*)))
-	 (%invalid-fmls-error stx (append fmls last)))))))
+	 (%error-invalid-formals-syntax stx (append fmls last)))))))
 
 (define trace-define-macro
   (lambda (stx)
@@ -4293,13 +4293,13 @@
 	   (bless `(define ,who
 		     (make-traced-procedure ',who
 					    (lambda ,fmls ,b . ,b*))))
-	 (%invalid-fmls-error stx fmls)))
+	 (%error-invalid-formals-syntax stx fmls)))
       ((_ (who fmls ... . last) b b* ...)
        (if (valid-bound-ids? (cons last fmls))
 	   (bless `(define ,who
 		     (make-traced-procedure ',who
 					    (lambda (,@fmls . ,last) ,b . ,b*))))
-	 (%invalid-fmls-error stx (append fmls last))))
+	 (%error-invalid-formals-syntax stx (append fmls last))))
       ((_ who expr)
        (if (identifier? who)
 	   (bless `(define ,who
@@ -4332,7 +4332,7 @@
 				`(make-traced-macro ',lhs ,rhs))
 			   lhs* rhs*)))
 	       (bless `(,who ,(map list lhs* rhs*) ,b . ,b*)))
-	   (%invalid-fmls-error stx lhs*)))))))
+	   (%error-invalid-formals-syntax stx lhs*)))))))
 
 (define trace-let-syntax-macro
   (trace-let/rec-syntax 'let-syntax))
@@ -5331,7 +5331,7 @@
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
        (if (not (valid-bound-ids? ?lhs*))
-	   (%invalid-fmls-error expr-stx ?lhs*)
+	   (%error-invalid-formals-syntax expr-stx ?lhs*)
 	 ;;Generate  unique variable  names  and labels  for the  LETREC
 	 ;;bindings.
 	 (let ((lex* (map gensym-for-lexical-var ?lhs*))
@@ -5375,7 +5375,7 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (if (not (valid-bound-ids? ?lhs*))
-	   (%invalid-fmls-error expr-stx ?lhs*)
+	   (%error-invalid-formals-syntax expr-stx ?lhs*)
 	 (let ((label*       (map %lookup-binding-in-run-lexenv ?lhs*))
 	       (rhs-binding* (map (lambda (rhs)
 				    (make-eval-transformer
@@ -5840,7 +5840,26 @@
 )
 
 
-(define (%invalid-fmls-error stx formals-stx)
+;;;; formals syntax validation
+
+(define (%verify-formals-syntax formals-stx stx)
+  ;;Verify  that  FORMALS-STX  is  a syntax  object  representing  valid
+  ;;formals for  LAMBDA and WITH-SYNTAX syntaxes.   If successful return
+  ;;unspecified values, else raise a syntax violation.
+  ;;
+  (syntax-match formals-stx ()
+    ((id* ...)
+     (unless (valid-bound-ids? id*)
+       (%error-invalid-formals-syntax stx formals-stx)))
+
+    ((id* ... . last-id)
+     (unless (valid-bound-ids? (cons last-id id*))
+       (%error-invalid-formals-syntax stx formals-stx)))
+
+    (_
+     (stx-error stx "invalid syntax"))))
+
+(define (%error-invalid-formals-syntax stx formals-stx)
   ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and
   ;;similar.
   ;;
@@ -5854,8 +5873,9 @@
   ;;
   ;;it is called as:
   ;;
-  ;;   (%invalid-fmls-error #'(lambda ?formals . ?body)
-  ;;                        #'?formals)
+  ;;   (%error-invalid-formals-syntax
+  ;;      #'(lambda ?formals . ?body)
+  ;;      #'?formals)
   ;;
   ;;For a LET syntax:
   ;;
@@ -5863,8 +5883,9 @@
   ;;
   ;;it is called as:
   ;;
-  ;;   (%invalid-fmls-error #'(let ((?lhs* ?rhs*) ...) . ?body)
-  ;;                        #'?lhs*)
+  ;;   (%error-invalid-formals-syntax
+  ;;      #'(let ((?lhs* ?rhs*) ...) . ?body)
+  ;;      #'?lhs*)
   ;;
   ;;NOTE  Invalid LET-VALUES  and LET*-VALUES  formals are  processed by
   ;;this function  indirectly; LET-VALUES  and LET*-VALUES  syntaxes are
@@ -6182,22 +6203,12 @@
 	      (stx-error e "attempt to modify an unexportable variable")))
 	   (else (stx-error e))))))))
 
-(define (verify-formals fmls stx)
-  (syntax-match fmls ()
-    ((x* ...)
-     (unless (valid-bound-ids? x*)
-       (%invalid-fmls-error stx fmls)))
-    ((x* ... . x)
-     (unless (valid-bound-ids? (cons x x*))
-       (%invalid-fmls-error stx fmls)))
-    (_ (stx-error stx "invalid syntax"))))
-
 (define chi-lambda-clause
   (lambda (stx fmls body* r mr)
     (syntax-match fmls ()
       ((x* ...)
        (begin
-	 (verify-formals fmls stx)
+	 (%verify-formals-syntax fmls stx)
 	 (let ((lex* (map gensym-for-lexical-var x*))
 	       (lab* (map gensym-for-label x*)))
 	   (values
@@ -6208,7 +6219,7 @@
 	     mr)))))
       ((x* ... . x)
        (begin
-	 (verify-formals fmls stx)
+	 (%verify-formals-syntax fmls stx)
 	 (let ((lex* (map gensym-for-lexical-var x*)) (lab* (map gensym-for-label x*))
 	       (lex (gensym-for-lexical-var x)) (lab (gensym-for-label x)))
 	   (values
@@ -6569,7 +6580,7 @@
       ((_ (id . fmls) b b* ...)
        (identifier? id)
        (begin
-	 (verify-formals fmls x)
+	 (%verify-formals-syntax fmls x)
 	 (values id (cons 'defun x))))
 
       ((_ id val) (identifier? id)
