@@ -2634,6 +2634,10 @@
   ;;Given a list return #t if it  is made of identifers none of which is
   ;;BOUND-ID=? to another; else return #f.
   ;;
+  ;;This function is called to validate  both list of LAMBDA formals and
+  ;;list of LET binding identifiers.  The only guarantee about the input
+  ;;is that it is a list.
+  ;;
   (and (for-all identifier? id*)
        (distinct-bound-ids? id*)))
 
@@ -4149,11 +4153,11 @@
       ((_ ((lhs* rhs*) ...) b b* ...)
        (if (valid-bound-ids? lhs*)
 	   (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
-	 (invalid-fmls-error stx lhs*)))
+	 (%invalid-fmls-error stx lhs*)))
       ((_ f ((lhs* rhs*) ...) b b* ...) (identifier? f)
        (if (valid-bound-ids? lhs*)
 	   (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (invalid-fmls-error stx lhs*))))))
+	 (%invalid-fmls-error stx lhs*))))))
 
 (define let*-macro
   (lambda (stx)
@@ -4172,7 +4176,7 @@
        (if (valid-bound-ids? lhs*)
 	   (bless
 	    `((letrec ((,f (trace-lambda ,f ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (invalid-fmls-error stx lhs*))))))
+	 (%invalid-fmls-error stx lhs*))))))
 
 
 ;;;; module non-core-macro-transformer: LET-VALUES
@@ -4274,12 +4278,12 @@
        (if (valid-bound-ids? fmls)
 	   (bless `(make-traced-procedure ',who
 					  (lambda ,fmls ,b . ,b*)))
-	 (invalid-fmls-error stx fmls)))
+	 (%invalid-fmls-error stx fmls)))
       ((_  who (fmls ... . last) b b* ...)
        (if (valid-bound-ids? (cons last fmls))
 	   (bless `(make-traced-procedure ',who
 					  (lambda (,@fmls . ,last) ,b . ,b*)))
-	 (invalid-fmls-error stx (append fmls last)))))))
+	 (%invalid-fmls-error stx (append fmls last)))))))
 
 (define trace-define-macro
   (lambda (stx)
@@ -4289,13 +4293,13 @@
 	   (bless `(define ,who
 		     (make-traced-procedure ',who
 					    (lambda ,fmls ,b . ,b*))))
-	 (invalid-fmls-error stx fmls)))
+	 (%invalid-fmls-error stx fmls)))
       ((_ (who fmls ... . last) b b* ...)
        (if (valid-bound-ids? (cons last fmls))
 	   (bless `(define ,who
 		     (make-traced-procedure ',who
 					    (lambda (,@fmls . ,last) ,b . ,b*))))
-	 (invalid-fmls-error stx (append fmls last))))
+	 (%invalid-fmls-error stx (append fmls last))))
       ((_ who expr)
        (if (identifier? who)
 	   (bless `(define ,who
@@ -4328,7 +4332,7 @@
 				`(make-traced-macro ',lhs ,rhs))
 			   lhs* rhs*)))
 	       (bless `(,who ,(map list lhs* rhs*) ,b . ,b*)))
-	   (invalid-fmls-error stx lhs*)))))))
+	   (%invalid-fmls-error stx lhs*)))))))
 
 (define trace-let-syntax-macro
   (trace-let/rec-syntax 'let-syntax))
@@ -5327,7 +5331,7 @@
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
        (if (not (valid-bound-ids? ?lhs*))
-	   (invalid-fmls-error expr-stx ?lhs*)
+	   (%invalid-fmls-error expr-stx ?lhs*)
 	 ;;Generate  unique variable  names  and labels  for the  LETREC
 	 ;;bindings.
 	 (let ((lex* (map gensym-for-lexical-var ?lhs*))
@@ -5371,7 +5375,7 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (if (not (valid-bound-ids? ?lhs*))
-	   (invalid-fmls-error expr-stx ?lhs*)
+	   (%invalid-fmls-error expr-stx ?lhs*)
 	 (let ((label*       (map %lookup-binding-in-run-lexenv ?lhs*))
 	       (rhs-binding* (map (lambda (rhs)
 				    (make-eval-transformer
@@ -5836,23 +5840,60 @@
 )
 
 
-(define (invalid-fmls-error stx fmls)
-  (syntax-match fmls ()
-    ((id* ... . last)
-     (let f ((id* (cond
-		   ((identifier? last) (cons last id*))
-		   ((syntax-null? last) id*)
-		   (else
-		    (syntax-violation #f "not an identifier" stx last)))))
-       (cond
-	((null? id*) (values))
-	((not (identifier? (car id*)))
-	 (syntax-violation #f "not an identifier" stx (car id*)))
-	(else
-	 (f (cdr id*))
-	 (when (bound-id-member? (car id*) (cdr id*))
-	   (syntax-violation #f "duplicate binding" stx (car id*)))))))
-    (_ (syntax-violation #f "malformed binding form" stx fmls))))
+(define (%invalid-fmls-error stx formals-stx)
+  ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and
+  ;;similar.
+  ;;
+  ;;If no  invalid formals  are found:  return unspecified  values, else
+  ;;raise a syntax violation.  This function  is called when it has been
+  ;;already determined that the formals have something wrong.
+  ;;
+  ;;For a LAMBDA syntax:
+  ;;
+  ;;   (lambda ?formals . ?body)
+  ;;
+  ;;it is called as:
+  ;;
+  ;;   (%invalid-fmls-error #'(lambda ?formals . ?body)
+  ;;                        #'?formals)
+  ;;
+  ;;For a LET syntax:
+  ;;
+  ;;   (let ((?lhs* ?rhs*) ...) . ?body)
+  ;;
+  ;;it is called as:
+  ;;
+  ;;   (%invalid-fmls-error #'(let ((?lhs* ?rhs*) ...) . ?body)
+  ;;                        #'?lhs*)
+  ;;
+  ;;NOTE  Invalid LET-VALUES  and LET*-VALUES  formals are  processed by
+  ;;this function  indirectly; LET-VALUES  and LET*-VALUES  syntaxes are
+  ;;first  transformed into  CALL-WITH-VALUES syntaxes,  then it  is the
+  ;;LAMBDA syntax that takes care of formals validation.
+  ;;
+  (define (%synner message subform)
+    (syntax-violation #f message stx subform))
+  (syntax-match formals-stx ()
+    ((?id* ... . ?last)
+     (let recur ((?id* (cond ((identifier? ?last)
+			      (cons ?last ?id*))
+			     ((syntax-null? ?last)
+			      ?id*)
+			     (else
+			      (%synner "not an identifier" ?last)))))
+       (cond ((null? ?id*)
+	      (values))
+	     ((not (identifier? (car ?id*)))
+	      (%synner "not an identifier" (car ?id*)))
+	     (else
+	      (recur (cdr ?id*))
+	      (when (bound-id-member? (car ?id*)
+				      (cdr ?id*))
+		(%synner "duplicate binding" (car ?id*)))))))
+
+    (_
+     (%synner "malformed binding form" formals-stx))
+    ))
 
 
 (define convert-pattern
@@ -6145,10 +6186,10 @@
   (syntax-match fmls ()
     ((x* ...)
      (unless (valid-bound-ids? x*)
-       (invalid-fmls-error stx fmls)))
+       (%invalid-fmls-error stx fmls)))
     ((x* ... . x)
      (unless (valid-bound-ids? (cons x x*))
-       (invalid-fmls-error stx fmls)))
+       (%invalid-fmls-error stx fmls)))
     (_ (stx-error stx "invalid syntax"))))
 
 (define chi-lambda-clause
