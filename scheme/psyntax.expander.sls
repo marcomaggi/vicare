@@ -5623,42 +5623,51 @@
 	   (gen-syntax src-stx ?expr lexenv.run '() ellipsis? #f)
 	 (regen e)))))
 
-  (define (gen-syntax src-stx e r maps ellipsis? vec?)
-    ;;Recursive function.
-    ;;
-    ;;EXPR-STX must be the subject of the SYNTAX macro.
+  (define (gen-syntax src-stx expr-stx lexenv maps ellipsis? vec?)
+    ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
     ;;SRC-STX must be  the syntax object containing  the original SYNTAX
     ;;macro use; it is used for descriptive error reporting.
     ;;
-    (syntax-match e ()
-      (dots
-       (ellipsis? dots)
+    ;;EXPR-STX must be the subject of the SYNTAX macro.
+    ;;
+    ;;LEXENV is  the lexical  environment in  which the  expansion takes
+    ;;place.
+    ;;
+    ;;ELLIPSIS? must be a predicate function returning true when applied
+    ;;to the ellipsis identifier from the built in environment.
+    ;;
+    ;;VEC? is a boolean: true when this function is processing the items
+    ;;of a vector.
+    ;;
+    (syntax-match expr-stx ()
+      (?dots
+       (ellipsis? ?dots)
        (stx-error src-stx "misplaced ellipsis in syntax form"))
 
       (id
        (identifier? id)
-       (let* ((label (id->label e))
-	      (b (label->binding label r)))
+       (let* ((label (id->label expr-stx))
+	      (b (label->binding label lexenv)))
 	 (if (eq? (binding-type b) 'syntax)
 	     (let-values (((var maps)
 			   (let ((var.lev (binding-value b)))
 			     (gen-ref src-stx (car var.lev) (cdr var.lev) maps))))
 	       (values (list 'ref var) maps))
-	   (values (list 'quote e) maps))))
+	   (values (list 'quote expr-stx) maps))))
 
       ((dots e)
        (ellipsis? dots)
        (if vec?
 	   (stx-error src-stx "misplaced ellipsis in syntax form")
-	 (gen-syntax src-stx e r maps (lambda (x) #f) #f)))
+	 (gen-syntax src-stx e lexenv maps (lambda (x) #f) #f)))
 
       ((x dots . y)
        (ellipsis? dots)
        (let f ((y y)
 	       (k (lambda (maps)
 		    (let-values (((x maps)
-				  (gen-syntax src-stx x r
+				  (gen-syntax src-stx x lexenv
 					      (cons '() maps) ellipsis? #f)))
 		      (if (null? (car maps))
 			  (stx-error src-stx
@@ -5675,24 +5684,24 @@
 		     (values (gen-mappend x (car maps)) (cdr maps)))))))
 	   (_
 	    (let-values (((y maps)
-			  (gen-syntax src-stx y r maps ellipsis? vec?)))
+			  (gen-syntax src-stx y lexenv maps ellipsis? vec?)))
 	      (let-values (((x maps) (k maps)))
 		(values (gen-append x y) maps)))))))
 
       ((x . y)
        (let-values (((xnew maps)
-		     (gen-syntax src-stx x r maps ellipsis? #f)))
+		     (gen-syntax src-stx x lexenv maps ellipsis? #f)))
 	 (let-values (((ynew maps)
-		       (gen-syntax src-stx y r maps ellipsis? vec?)))
-	   (values (gen-cons e x y xnew ynew) maps))))
+		       (gen-syntax src-stx y lexenv maps ellipsis? vec?)))
+	   (values (gen-cons expr-stx x y xnew ynew) maps))))
 
       (#(ls ...)
-       (let-values (((lsnew maps)
-		     (gen-syntax src-stx ls r maps ellipsis? #t)))
-	 (values (gen-vector e ls lsnew) maps)))
+       (receive (lsnew maps)
+	   (gen-syntax src-stx ls lexenv maps ellipsis? #t)
+	 (values (gen-vector expr-stx ls lsnew) maps)))
 
       (_
-       (values `(quote ,e) maps))))
+       (values `(quote ,expr-stx) maps))))
 
   (define (gen-ref src-stx var level maps)
     (if (= level 0)
