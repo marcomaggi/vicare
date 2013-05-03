@@ -4092,7 +4092,7 @@
       ((_ (lits ...)
 	  (pat* tmp*) ...)
        (begin
-	 (verify-literals lits e)
+	 (%verify-literals lits e)
 	 (bless `(lambda (x)
 		   (syntax-case x ,lits
 		     ,@(map (lambda (pat tmp)
@@ -5629,7 +5629,7 @@
 
 (module (syntax-transformer)
   ;;Transformer function used to expand  R6RS's SYNTAX syntaxes from the
-  ;;top-level built in environment.  Process  the contents of SRC-STX in
+  ;;top-level built in environment.  Process  the contents of USE-STX in
   ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
   ;;LEXENV.EXPAND.
   ;;
@@ -5782,19 +5782,19 @@
                                         	 (quote #<syntax expr=()>)))))
            ?a)
   |#
-  (define (syntax-transformer src-stx lexenv.run lexenv.expand)
-    (syntax-match src-stx ()
+  (define (syntax-transformer use-stx lexenv.run lexenv.expand)
+    (syntax-match use-stx ()
       ((_ ?template)
        (receive (intermediate-sexp maps)
-	   (%gen-syntax src-stx ?template lexenv.run '() ellipsis? #f)
+	   (%gen-syntax use-stx ?template lexenv.run '() ellipsis? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
 	   code)))))
 
-  (define (%gen-syntax src-stx template-stx lexenv maps ellipsis? vec?)
+  (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
-    ;;SRC-STX must be  the syntax object containing  the original SYNTAX
+    ;;USE-STX must be  the syntax object containing  the original SYNTAX
     ;;macro use; it is used for descriptive error reporting.
     ;;
     ;;TEMPLATE-STX must be the template from the SYNTAX macro use.
@@ -5837,7 +5837,7 @@
       ;;
       (?dots
        (ellipsis? ?dots)
-       (stx-error src-stx "misplaced ellipsis in syntax form"))
+       (stx-error use-stx "misplaced ellipsis in syntax form"))
 
       ;;Match  a standalone  identifier.   ?ID can  be:  a reference  to
       ;;pattern variable created by SYNTAX-CASE; an identifier that will
@@ -5854,7 +5854,7 @@
 		 (let* ((name.level  (binding-value binding))
 			(name        (car name.level))
 			(level       (cdr name.level)))
-		   (%gen-ref src-stx name level maps))
+		   (%gen-ref use-stx name level maps))
 	       (values (list 'ref var) maps))
 	   ;;It is some other identifier.
 	   (values (list 'quote ?id) maps))))
@@ -5876,8 +5876,8 @@
       ((?dots ?sub-template)
        (ellipsis? ?dots)
        (if vec?
-	   (stx-error src-stx "misplaced ellipsis in syntax form")
-	 (%gen-syntax src-stx ?sub-template lexenv maps (lambda (x) #f) #f)))
+	   (stx-error use-stx "misplaced ellipsis in syntax form")
+	 (%gen-syntax use-stx ?sub-template lexenv maps (lambda (x) #f) #f)))
 
       ;;Match a template followed by ellipsis.
       ;;
@@ -5887,9 +5887,9 @@
 	   ((rest.stx ?rest)
 	    (kont     (lambda (maps)
 			(receive (template^ maps)
-			    (%gen-syntax src-stx ?template lexenv (cons '() maps) ellipsis? #f)
+			    (%gen-syntax use-stx ?template lexenv (cons '() maps) ellipsis? #f)
 			  (if (null? (car maps))
-			      (stx-error src-stx "extra ellipsis in syntax form")
+			      (stx-error use-stx "extra ellipsis in syntax form")
 			    (values (%gen-map template^ (car maps))
 				    (cdr maps)))))))
 	 (syntax-match rest.stx ()
@@ -5902,13 +5902,13 @@
 			  (receive (template^ maps)
 			      (kont (cons '() maps))
 			    (if (null? (car maps))
-				(stx-error src-stx "extra ellipsis in syntax form")
+				(stx-error use-stx "extra ellipsis in syntax form")
 			      (values (%gen-mappend template^ (car maps))
 				      (cdr maps)))))))
 
 	   (_
 	    (receive (rest^ maps)
-		(%gen-syntax src-stx rest.stx lexenv maps ellipsis? vec?)
+		(%gen-syntax use-stx rest.stx lexenv maps ellipsis? vec?)
 	      (receive (template^ maps)
 		  (kont maps)
 		(values (%gen-append template^ rest^) maps))))
@@ -5918,9 +5918,9 @@
       ;;
       ((?car . ?cdr)
        (receive (car.new maps)
-	   (%gen-syntax src-stx ?car lexenv maps ellipsis? #f)
+	   (%gen-syntax use-stx ?car lexenv maps ellipsis? #f)
 	 (receive (cdr.new maps)
-	     (%gen-syntax src-stx ?cdr lexenv maps ellipsis? vec?)
+	     (%gen-syntax use-stx ?cdr lexenv maps ellipsis? vec?)
 	   (values (%gen-cons template-stx ?car ?cdr car.new cdr.new)
 		   maps))))
 
@@ -5929,7 +5929,7 @@
       ;;
       (#(?item* ...)
        (receive (item*.new maps)
-	   (%gen-syntax src-stx ?item* lexenv maps ellipsis? #t)
+	   (%gen-syntax use-stx ?item* lexenv maps ellipsis? #t)
 	 (values (%gen-vector template-stx ?item* item*.new)
 		 maps)))
 
@@ -5940,16 +5940,16 @@
        (values `(quote ,template-stx) maps))
       ))
 
-  (define (%gen-ref src-stx var level maps)
+  (define (%gen-ref use-stx var level maps)
     ;;Recursive function.
     ;;
     #;(debug-print 'gen-ref maps)
     (if (zero? level)
 	(values var maps)
       (if (null? maps)
-	  (stx-error src-stx "missing ellipsis in syntax form")
+	  (stx-error use-stx "missing ellipsis in syntax form")
 	(receive (outer-var outer-maps)
-	    (%gen-ref src-stx var (- level 1) (cdr maps))
+	    (%gen-ref use-stx var (- level 1) (cdr maps))
 	  (cond ((assq outer-var (car maps))
 		 => (lambda (b)
 		      (values (cdr b) maps)))
@@ -6047,81 +6047,24 @@
 ;;;; module core-macro-transformer: SYNTAX-CASE
 
 (module (syntax-case-transformer)
-
-  (define (syntax-case-transformer e r mr)
-    (syntax-match e ()
-      ((_ expr (keys ...) clauses ...)
+  ;;Transformer function used to expand R6RS's SYNTAX-CASE syntaxes from
+  ;;the top-level built in environment.  Process the contents of USE-STX
+  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
+  ;;LEXENV.EXPAND.
+  ;;
+  (define (syntax-case-transformer use-stx lexenv.run lexenv.expand)
+    (syntax-match use-stx ()
+      ((_ ?expr (?keys ...) ?clauses* ...)
        (begin
-	 (verify-literals keys e)
-	 (let ((x (gensym-for-lexical-var 'tmp)))
-	   (let ((body (gen-syntax-case x keys clauses r mr)))
-	     (build-application no-source
-				(build-lambda no-source (list x) body)
-				(list (chi-expr expr r mr)))))))
+	 (%verify-literals ?keys use-stx)
+	 (let* ((x    (gensym-for-lexical-var 'tmp))
+		(body (%gen-syntax-case x ?keys ?clauses* lexenv.run lexenv.expand)))
+	   (build-application no-source
+			      (build-lambda no-source (list x) body)
+			      (list (chi-expr ?expr lexenv.run lexenv.expand))))))
       ))
 
-  (define (build-dispatch-call pvars expr y r mr)
-    (let ((ids (map car pvars))
-	  (levels (map cdr pvars)))
-      (let ((labels (map gensym-for-label ids))
-	    (new-vars (map gensym-for-lexical-var ids)))
-	(let ((body (chi-expr (push-lexical-contour (make-full-rib ids labels) expr)
-			      (append
-			       (map (lambda (label var level)
-				      (cons label (make-binding 'syntax (cons var level))))
-				 labels new-vars (map cdr pvars))
-			       r)
-			      mr)))
-	  (build-application no-source
-			     (build-primref no-source 'apply)
-			     (list (build-lambda no-source new-vars body) y))))))
-
-  (define (invalid-ids-error id* e class)
-    (let find ((id* id*)
-	       (ok* '()))
-      (if (null? id*)
-	  (stx-error e) ; shouldn't happen
-	(if (identifier? (car id*))
-	    (if (bound-id-member? (car id*) ok*)
-		(syntax-error (car id*) "duplicate " class)
-	      (find (cdr id*) (cons (car id*) ok*)))
-	  (syntax-error (car id*) "invalid " class)))))
-
-  (define (gen-clause x keys clauses r mr pat fender expr)
-    (let-values (((p pvars) (convert-pattern pat keys)))
-      (cond
-       ((not (distinct-bound-ids? (map car pvars)))
-	(invalid-ids-error (map car pvars) pat "pattern variable"))
-       ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
-	(stx-error pat "misplaced ellipsis in syntax-case pattern"))
-       (else
-	(let ((y (gensym-for-lexical-var 'tmp)))
-	  (let ((test (cond ((eq? fender #t) y)
-			    (else
-			     (let ((call
-				    (build-dispatch-call
-				     pvars fender y r mr)))
-			       (build-conditional no-source
-						  (build-lexical-reference no-source y)
-						  call
-						  (build-data no-source #f)))))))
-	    (let ((conseq
-		   (build-dispatch-call pvars expr
-					(build-lexical-reference no-source y)
-					r mr)))
-	      (let ((altern
-		     (gen-syntax-case x keys clauses r mr)))
-		(build-application no-source
-				   (build-lambda no-source (list y)
-						 (build-conditional no-source test conseq altern))
-				   (list
-				    (build-application no-source
-						       (build-primref no-source 'syntax-dispatch)
-						       (list
-							(build-lexical-reference no-source x)
-							(build-data no-source p)))))))))))))
-
-  (define (gen-syntax-case x keys clauses r mr)
+  (define (%gen-syntax-case x keys clauses lexenv.run lexenv.expand)
     (if (null? clauses)
 	(build-application no-source
 			   (build-primref no-source 'syntax-error)
@@ -6132,7 +6075,7 @@
 		  (not (bound-id-member? pat keys))
 		  (not (ellipsis? pat)))
 	     (if (free-id=? pat (scheme-stx '_))
-		 (chi-expr expr r mr)
+		 (chi-expr expr lexenv.run lexenv.expand)
 	       (let ((lab (gensym-for-label pat))
 		     (lex (gensym-for-lexical-var pat)))
 		 (let ((body
@@ -6140,14 +6083,75 @@
 			 (push-lexical-contour (make-full-rib (list pat) (list lab)) expr)
 			 ;;Push  a  pattern  variable entry  to  the
 			 ;;lexical environment.
-			 (cons (cons lab (make-binding 'syntax (cons lex 0))) r)
-			 mr)))
+			 (cons (cons lab (make-binding 'syntax (cons lex 0))) lexenv.run)
+			 lexenv.expand)))
 		   (build-application no-source
 				      (build-lambda no-source (list lex) body)
 				      (list (build-lexical-reference no-source x))))))
-	   (gen-clause x keys (cdr clauses) r mr pat #t expr)))
+	   (%gen-clause x keys (cdr clauses) lexenv.run lexenv.expand pat #t expr)))
 	((pat fender expr)
-	 (gen-clause x keys (cdr clauses) r mr pat fender expr)))))
+	 (%gen-clause x keys (cdr clauses) lexenv.run lexenv.expand pat fender expr)))))
+
+  (define (%gen-clause x keys clauses lexenv.run lexenv.expand pat fender expr)
+    (let-values (((p pvars) (convert-pattern pat keys)))
+      (cond
+       ((not (distinct-bound-ids? (map car pvars)))
+	(%invalid-ids-error (map car pvars) pat "pattern variable"))
+       ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
+	(stx-error pat "misplaced ellipsis in syntax-case pattern"))
+       (else
+	(let ((y (gensym-for-lexical-var 'tmp)))
+	  (let ((test (cond ((eq? fender #t) y)
+			    (else
+			     (let ((call
+				    (%build-dispatch-call
+				     pvars fender y lexenv.run lexenv.expand)))
+			       (build-conditional no-source
+						  (build-lexical-reference no-source y)
+						  call
+						  (build-data no-source #f)))))))
+	    (let ((conseq
+		   (%build-dispatch-call pvars expr
+					 (build-lexical-reference no-source y)
+					 lexenv.run lexenv.expand)))
+	      (let ((altern
+		     (%gen-syntax-case x keys clauses lexenv.run lexenv.expand)))
+		(build-application no-source
+				   (build-lambda no-source (list y)
+						 (build-conditional no-source test conseq altern))
+				   (list
+				    (build-application no-source
+						       (build-primref no-source 'syntax-dispatch)
+						       (list
+							(build-lexical-reference no-source x)
+							(build-data no-source p)))))))))))))
+
+  (define (%build-dispatch-call pvars expr y lexenv.run lexenv.expand)
+    (let ((ids (map car pvars))
+	  (levels (map cdr pvars)))
+      (let ((labels (map gensym-for-label ids))
+	    (new-vars (map gensym-for-lexical-var ids)))
+	(let ((body (chi-expr (push-lexical-contour (make-full-rib ids labels) expr)
+			      (append
+			       (map (lambda (label var level)
+				      (cons label (make-binding 'syntax (cons var level))))
+				 labels new-vars (map cdr pvars))
+			       lexenv.run)
+			      lexenv.expand)))
+	  (build-application no-source
+			     (build-primref no-source 'apply)
+			     (list (build-lambda no-source new-vars body) y))))))
+
+  (define (%invalid-ids-error id* e class)
+    (let find ((id* id*)
+	       (ok* '()))
+      (if (null? id*)
+	  (stx-error e) ; shouldn't happen
+	(if (identifier? (car id*))
+	    (if (bound-id-member? (car id*) ok*)
+		(syntax-error (car id*) "duplicate " class)
+	      (find (cdr id*) (cons (car id*) ok*)))
+	  (syntax-error (car id*) "invalid " class)))))
 
   #| end of module: SYNTAX-CASE-TRANSFORMER |# )
 
@@ -6336,12 +6340,22 @@
   (lambda (x)
     (and (identifier? x) (free-id=? x (scheme-stx '_)))))
 
-(define (verify-literals lits expr)
-  (for-each
-      (lambda (x)
-        (when (or (not (identifier? x)) (ellipsis? x) (underscore? x))
-          (syntax-violation #f "invalid literal" expr x)))
-    lits))
+(define (%verify-literals literals use-stx)
+  ;;Verify that  identifiers selected as literals  are: identifiers, not
+  ;;ellipsisi,  not  usderscore.    If  successful:  return  unspecified
+  ;;values, else raise a syntax violation
+  ;;
+  ;;LITERALS is  a list  of literals  from SYNTAX-CASE  or SYNTAX-RULES.
+  ;;USE-STX  is a  syntax  object  representing the  full  macro use  of
+  ;;SYNTAX-CASE or SYNTAX-RULES:  it is used here  for descriptive error
+  ;;reporting.
+  ;;
+  (for-each (lambda (x)
+	      (when (or (not (identifier? x))
+			(ellipsis? x)
+			(underscore? x))
+		(syntax-violation #f "invalid literal" use-stx x)))
+    literals))
 
 (define (ellipsis-map proc ls . ls*)
   (define who '...)
