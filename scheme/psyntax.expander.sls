@@ -1616,9 +1616,19 @@
 ;;     (syntax . (?name . ?level))
 ;;
 ;;  where:  "syntax"  is  the  symbol  "syntax";  ?NAME  is  the  symbol
-;;  representing the  name of the  pattern variable; ?LEVEL is  an exact
-;;  integer  representing  the  expansion  level in  which  the  pattern
-;;  variable is defined.
+;;  representing  the  name  of  the   pattern  variable;  ?LEVEL  is  a
+;;  non-negative exact integer representing the ellipsis nesting level.
+;;
+;;  The SYNTAX-CASE patterns below will generate the entries:
+;;
+;;     ?a			->  (syntax . (?a . 0))
+;;     (?a)			->  (syntax . (?a . 0))
+;;     (((?a)))			->  (syntax . (?a . 0))
+;;     (?a ...)			->  (syntax . (?a . 1))
+;;     ((?a) ...)		->  (syntax . (?a . 1))
+;;     ((((?a))) ...)		->  (syntax . (?a . 1))
+;;     ((?a ...) ...)		->  (syntax . (?a . 2))
+;;     (((?a ...) ...) ...)	->  (syntax . (?a . 3))
 ;;
 ;;* A  binding representing  a Vicare's struct  type descriptor  has the
 ;;  format:
@@ -5669,6 +5679,26 @@
   ;;     (syntax-case #'(1 2 3) ((?a ...) (syntax #(?a ...))))
   ;;     => #(1 2 3)
   ;;
+  ;;About pattern variables:  they are present in  a lexical environment
+  ;;as entries with format:
+  ;;
+  ;;   (?label . (syntax . (?name . ?level)))
+  ;;
+  ;;where:  ?LABEL  is the  label  in  the identifier's  syntax  object,
+  ;;"syntax" is  the symbol "syntax",  ?NAME is the  symbol representing
+  ;;the  name  of the  pattern  variable,  ?LEVEL  is an  exact  integer
+  ;;representing the  nesting ellipsis level.  The  SYNTAX-CASE patterns
+  ;;below will generate the given entries:
+  ;;
+  ;;   ?a			->  (syntax . (?a . 0))
+  ;;   (?a)			->  (syntax . (?a . 0))
+  ;;   (((?a)))			->  (syntax . (?a . 0))
+  ;;   (?a ...)			->  (syntax . (?a . 1))
+  ;;   ((?a) ...)		->  (syntax . (?a . 1))
+  ;;   ((((?a))) ...)		->  (syntax . (?a . 1))
+  ;;   ((?a ...) ...)		->  (syntax . (?a . 2))
+  ;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
+  ;;
   (define (syntax-transformer src-stx lexenv.run lexenv.expand)
     (syntax-match src-stx ()
       ((_ ?template)
@@ -5716,25 +5746,16 @@
       ;;be free,  in which  case an "unbound  identifier" error  will be
       ;;raised later.
       ;;
-      ;;Pattern variables are present  in the lexical environment LEXENV
-      ;;as entries with format:
-      ;;
-      ;;   (?label . (syntax . (?name . ?level)))
-      ;;
-      ;;where: ?LABEL  is the label  in the identifier's  syntax object,
-      ;;"syntax"   is  the   symbol  "syntax",   ?NAME  is   the  symbol
-      ;;representing  the name  of the  pattern variable,  ?LEVEL is  an
-      ;;exact  integer representing  the  expansion level  in which  the
-      ;;pattern variable is present.
-      ;;
       (?id
        (identifier? ?id)
        (let ((binding (label->binding (id->label ?id) lexenv)))
 	 (if (eq? (binding-type binding) 'syntax)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
-		 (let ((name.level (binding-value binding)))
-		   (%gen-ref src-stx (car name.level) (cdr name.level) maps))
+		 (let* ((name.level  (binding-value binding))
+			(name        (car name.level))
+			(level       (cdr name.level)))
+		   (%gen-ref src-stx name level maps))
 	       (values (list 'ref var) maps))
 	   ;;It is some other identifier.
 	   (values (list 'quote ?id) maps))))
@@ -5769,8 +5790,7 @@
 			(receive (template^ maps)
 			    (%gen-syntax src-stx ?template lexenv (cons '() maps) ellipsis? #f)
 			  (if (null? (car maps))
-			      (stx-error src-stx
-					 "extra ellipsis in syntax form")
+			      (stx-error src-stx "extra ellipsis in syntax form")
 			    (values (%gen-map template^ (car maps))
 				    (cdr maps)))))))
 	 (syntax-match rest.stx ()
@@ -5822,7 +5842,9 @@
       ))
 
   (define (%gen-ref src-stx var level maps)
-    (if (= level 0)
+    ;;Recursive function.
+    ;;
+    (if (zero? level)
 	(values var maps)
       (if (null? maps)
 	  (stx-error src-stx "missing ellipsis in syntax form")
@@ -6004,6 +6026,8 @@
 		     (let ((body
 			    (chi-expr
 			     (push-lexical-contour (make-full-rib (list pat) (list lab)) expr)
+			     ;;Push  a  pattern  variable entry  to  the
+			     ;;lexical environment.
 			     (cons (cons lab (make-binding 'syntax (cons lex 0))) r)
 			     mr)))
 		       (build-application no-source
