@@ -5718,6 +5718,14 @@
     ;;place;  it must  contain  the pattern  variables  visible by  this
     ;;SYNTAX use.
     ;;
+    ;;MAPS is  a list  of alists,  one alist  for each  ellipsis nesting
+    ;;level.  If the template has 3 nested ellipsis patterns:
+    ;;
+    ;;   (((?a ...) ...) ...)
+    ;;
+    ;;while  we are  processing the  inner "(?a  ...)"  MAPS  contains 3
+    ;;alists.
+    ;;
     ;;ELLIPSIS? must be a predicate function returning true when applied
     ;;to the  ellipsis identifier from  the built in  environment.  Such
     ;;function  is made  an argument,  so that  it can  be changed  to a
@@ -5888,22 +5896,24 @@
        (else
 	(cons* 'map (list 'lambda formals e) actuals)))))
 
-  (define (%gen-cons e x y xnew ynew)
-    (case (car ynew)
+  (define (%gen-cons e x y x.new y.new)
+    (case (car y.new)
       ((quote)
-       (if (eq? (car xnew) 'quote)
-	   (let ((xnew (cadr xnew)) (ynew (cadr ynew)))
-	     (if (and (eq? xnew x)
-		      (eq? ynew y))
-		 `(quote ,e)
-	       `(quote ,(cons xnew ynew))))
-	 (if (null? (cadr ynew))
-	     `(list ,xnew)
-	   `(cons ,xnew ,ynew))))
+       (cond ((eq? (car x.new) 'quote)
+	      (let ((x.new (cadr x.new))
+		    (y.new (cadr y.new)))
+		(if (and (eq? x.new x)
+			 (eq? y.new y))
+		    `(quote ,e)
+		  `(quote ,(cons x.new y.new)))))
+	     ((null? (cadr y.new))
+	      `(list ,x.new))
+	     (else
+	      `(cons ,x.new ,y.new))))
       ((list)
-       `(list ,xnew . ,(cdr ynew)))
+       `(list ,x.new . ,(cdr y.new)))
       (else
-       `(cons ,xnew ,ynew))))
+       `(cons ,x.new ,y.new))))
 
   (define (%gen-vector e ls lsnew)
     (cond ((eq? (car lsnew) 'quote)
