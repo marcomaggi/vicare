@@ -5700,59 +5700,95 @@
   ;;   ((?a ...) ...)		->  (syntax . (?a . 2))
   ;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
   ;;
-  ;;Examples of  expansion, assuming  identifiers starting with  "?" are
-  ;;pattern variables:
-  ;;
-  ;;  (syntax display)
-  ;;  ==> (quote #<syntax expr=display>)
-  ;;
-  ;;  (syntax (display 123))
-  ;;  ==> (quote #<syntax expr=(display 123)>)
-  ;;
-  ;;  (syntax ?a)
-  ;;  ==> ?a
-  ;;
-  ;;  (syntax (?a))
-  ;;  ==> (cons ?a (quote #<syntax expr=()>))
-  ;;
-  ;;  (syntax (?a 1))
-  ;;  ==> (cons ?a (quote #<syntax expr=(1)>))
-  ;;
-  ;;  (syntax (1 ?a 2))
-  ;;  ==> (cons (quote #<syntax expr=1>)
-  ;;            (cons ?a (quote #<syntax expr=(1)>)))
-  ;;
-  ;;  (syntax (display ?a))
-  ;;  ==> ((primitive cons)
-  ;;           (quote #<syntax expr=display>)
-  ;;           ((primitive cons) ?a (quote #<syntax expr=()>)))
-  ;;
-  ;;  (syntax #(?a))
-  ;;  ==> (vector ?a)
-  ;;
-  ;;  (syntax (?a ...))
-  ;;  ==> ?a
-  ;;
-  ;;  (syntax ((?a ...) ...))
-  ;;  ==> ?a
-  ;;
-  ;;  (syntax ((?a ?b ...) ...))
-  ;;  ==> ((primitive ellipsis-map) (primitive cons) ?a ?b)
-  ;;
-  ;;  (syntax (((?a ?b ...) ...) ...))
-  ;;  ==> ((primitive ellipsis-map)
-  ;;          (case-lambda
-  ;;            ((tmp2 tmp1)
-  ;;             ((primitive ellipsis-map) (primitive cons) tmp1 tmp2)))
-  ;;       ?b ?a)
-  ;;
+  ;;The  input template  is  first visited  in  post-order, building  an
+  ;;intermediate  symbolic  representation  of  it;  then  the  symbolic
+  ;;representation is visited in post-order, building core language code
+  ;;that  evaluates  to  the   resulting  syntax  object.   Examples  of
+  ;;intermediate  representation  (-->)  and  expansion  (==>)  follows,
+  ;;assuming identifiers starting with "?"  are pattern variables:
+  #|
+      (syntax display)
+      --> (quote #<syntax expr=display>)
+      ==> (quote #<syntax expr=display>)
+
+      (syntax (display 123))
+      --> (quote #<syntax expr=(display 123)>)
+      ==> (quote #<syntax expr=(display 123)>)
+
+      (syntax ?a)
+      --> (ref ?a)
+      ==> ?a
+
+      (syntax (?a))
+      --> (cons (ref ?a) (quote #<syntax expr=()>))
+      ==> ((primitive cons) ?a (quote #<syntax expr=()>))
+
+      (syntax (?a 1))
+      --> (cons (ref ?a) (quote #<syntax expr=(1)>))
+      ==> ((primitive cons) ?a (quote #<syntax expr=(1)>))
+
+      (syntax (1 ?a 2))
+      --> (cons (quote #<syntax expr=1>)
+                (cons (ref ?a) (quote #<syntax expr=(2)>)))
+      ==> ((primitive cons)
+	   (quote #<syntax expr=1>)
+	   ((primitive cons) ?a (quote #<syntax expr=(2)>)))
+
+      (syntax (display ?a))
+      ==> (cons
+	   (quote #<syntax expr=display>)
+	   (cons (ref ?a) (quote #<syntax expr=()>)))
+      ==> ((primitive cons)
+	   (quote #<syntax expr=display>)
+	   ((primitive cons) ?a (quote #<syntax expr=()>)))
+
+      (syntax #(?a))
+      --> (vector (ref ?a))
+      ==> ((primitive vector) ?a)
+
+      (syntax (?a ...))
+      --> (ref ?a)
+      ==> ?a
+
+      (syntax ((?a ...) ...))
+      --> (ref ?a)
+      ==> ?a
+
+      (syntax ((?a ?b ...) ...))
+      ==> (map (primitive cons) (ref ?a) (ref ?b))
+      ==> ((primitive ellipsis-map) (primitive cons) ?a ?b)
+
+      (syntax (((?a ?b ...) ...) ...))
+      --> (map (lambda (tmp2 tmp1)
+                 (map (primitive cons) tmp1 tmp2))
+	    (ref ?b) (ref ?a))
+      ==> ((primitive ellipsis-map)
+	   (case-lambda
+	    ((tmp2 tmp1)
+	     ((primitive ellipsis-map) (primitive cons) tmp1 tmp2)))
+           ?b ?a)
+
+      (syntax ((?a (?a ...)) ...))
+      --> (map (lambda (tmp)
+                 (cons (ref tmp)
+		       (cons (ref ?a)
+			     (quote #<syntax expr=()>))))
+            (ref ?a))
+      ==> ((primitive ellipsis-map)
+           (case-lambda
+            ((tmp)
+             ((primitive cons) tmp
+	                       ((primitive cons) ?a
+                                        	 (quote #<syntax expr=()>)))))
+           ?a)
+  |#
   (define (syntax-transformer src-stx lexenv.run lexenv.expand)
     (syntax-match src-stx ()
       ((_ ?template)
-       (receive (expr maps)
+       (receive (intermediate-sexp maps)
 	   (%gen-syntax src-stx ?template lexenv.run '() ellipsis? #f)
-	 (let ((code (%generate-output-code expr)))
-	   #;(debug-print code)
+	 (let ((code (%generate-output-code intermediate-sexp)))
+	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
 	   code)))))
 
   (define (%gen-syntax src-stx template-stx lexenv maps ellipsis? vec?)
@@ -5773,7 +5809,13 @@
     ;;   (((?a ...) ...) ...)
     ;;
     ;;while  we are  processing the  inner "(?a  ...)"  MAPS  contains 3
-    ;;alists.
+    ;;alists.  The  alists are  used when processing  ellipsis templates
+    ;;that recursively reference the same pattern variable, for example:
+    ;;
+    ;;   ((?a (?a ...)) ...)
+    ;;
+    ;;the inner  ?A is mapped  to a gensym which  is used to  generate a
+    ;;binding in the output code.
     ;;
     ;;ELLIPSIS? must be a predicate function returning true when applied
     ;;to the  ellipsis identifier from  the built in  environment.  Such
@@ -5901,6 +5943,7 @@
   (define (%gen-ref src-stx var level maps)
     ;;Recursive function.
     ;;
+    #;(debug-print 'gen-ref maps)
     (if (zero? level)
 	(values var maps)
       (if (null? maps)
