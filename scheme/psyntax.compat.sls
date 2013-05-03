@@ -29,6 +29,9 @@
     define-inline			receive
     real-pathname			file-modification-time
 
+    ;; runtime options
+    report-errors-at-runtime
+
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
     annotation?				annotation-expression
@@ -58,7 +61,9 @@
 	  $unintern-gensym)
     (only (vicare $posix)
 	  real-pathname
-	  file-modification-time))
+	  file-modification-time)
+    (only (vicare options)
+	  report-errors-at-runtime))
 
 
 (define (library-version-mismatch-warning name depname filename)

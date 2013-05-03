@@ -53,7 +53,8 @@
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
-		  print-loaded-libraries)
+		  print-loaded-libraries
+		  report-errors-at-runtime)
 	    config.)
     (prefix (only (ikarus.compiler)
 		  $optimize-level
@@ -513,6 +514,14 @@
 	   (set-run-time-config-print-libraries! cfg #f)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--report-errors-at-runtime")
+	   (config.report-errors-at-runtime #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-report-errors-at-runtime")
+	   (config.report-errors-at-runtime #f)
+	   (next-option (cdr args) k))
+
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -834,6 +843,14 @@ Other options:
 
    --no-print-loaded-libraries
         Disables the effect of --print-loaded-libraries.
+
+   --report-errors-at-runtime
+        When possible and meaningful: report errors at runtime rather
+        than at compile time.  Runtime errors reporting is R6RS
+        compliant.  The default is to raise errors at compile time.
+
+   --no-report-errors-at-runtime
+        Disables the effect of --report-errors-at-runtime.
 
    -O0
         Turn off the source optimizer.

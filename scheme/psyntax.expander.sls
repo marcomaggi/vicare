@@ -6075,7 +6075,11 @@
       ))
 
   (define (%gen-syntax-case expr.id keys clauses lexenv.run lexenv.expand)
+    ;;Recursive functions.
+    ;;
     (if (null? clauses)
+	;;No pattern matched the input  expression: return code to raise
+	;;a syntax error.
 	(build-application no-source
 			   (build-primref no-source 'syntax-error)
 			   (list (build-lexical-reference no-source expr.id)))

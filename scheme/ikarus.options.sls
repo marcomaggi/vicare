@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,17 +27,24 @@
 #!r6rs
 (library (vicare options)
   (export
-    print-loaded-libraries)
+    print-loaded-libraries
+    report-errors-at-runtime)
   (import (rnrs))
 
-  (define print-loaded-libraries
-    (let ((bool #f))
-      (case-lambda
-       (()
-	bool)
-       ((value)
-	(set! bool (and value #t))))))
+  (define-syntax define-boolean-option
+    (syntax-rules ()
+      ((_ ?who ?default)
+       (define ?who
+	 (let ((bool ?default))
+	   (case-lambda
+	    (()
+	     bool)
+	    ((value)
+	     (set! bool (and value #t)))))))
+      ))
 
+  (define-boolean-option print-loaded-libraries   #f)
+  (define-boolean-option report-errors-at-runtime #f)
   )
 
 ;;; end of file

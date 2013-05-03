@@ -216,6 +216,14 @@ port.  This is for debugging purposes.
 @item --no-print-loaded-libraries
 Disables the effect of @option{--print-loaded-libraries}.
 
+@item --report-errors-at-runtime
+When possible and meaningful: report errors at runtime rather than at
+compile time.  Runtime errors reporting is @rnrs{6} compliant.  The
+default is to raise errors at compile time.
+
+@item --no-report-errors-at-runtime
+Disables the effect of @option{--report-errors-at-runtime}.
+
 @item -O0
 Turn off use of the source optimizer.
 
