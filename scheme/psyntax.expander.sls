@@ -1610,6 +1610,16 @@
 ;;  representing the  name of  the binding in  the core  language forms;
 ;;  ?MUTABLE is a boolean, true if this binding is mutable.
 ;;
+;;* A binding representing a pattern variable, as created by SYNTAX-CASE
+;;  and SYNTAX-RULES, has the format:
+;;
+;;     (syntax . (?name . ?level))
+;;
+;;  where:  "syntax"  is  the  symbol  "syntax";  ?NAME  is  the  symbol
+;;  representing the  name of the  pattern variable; ?LEVEL is  an exact
+;;  integer  representing  the  expansion  level in  which  the  pattern
+;;  variable is defined.
+;;
 ;;* A  binding representing  a Vicare's struct  type descriptor  has the
 ;;  format:
 ;;
@@ -2034,8 +2044,9 @@
       (write thing port))
     (define-inline (%pretty-print thing)
       (pretty-print* thing port 0 #f))
-    (%display "#<syntax expr=")
-    (%pretty-print (syntax->datum S))
+    (%display "#<syntax")
+    (%display " expr=")		(%pretty-print (syntax->datum S))
+    (%display " mark*=")	(%pretty-print (<stx>-mark* S))
     (let ((expr (<stx>-expr S)))
       (when (annotation? expr)
 	(let ((pos (annotation-textual-position expr)))
@@ -5607,62 +5618,108 @@
 ;;;; module core-macro-transformer: SYNTAX
 
 (module (syntax-transformer)
-
+  ;;Transformer function used to expand  R6RS's SYNTAX syntaxes from the
+  ;;top-level built in environment.  Process  the contents of SRC-STX in
+  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
+  ;;LEXENV.EXPAND.
+  ;;
+  ;;According to R6RS, the use of the SYNTAX macro must have the format:
+  ;;
+  ;;  (syntax ?template)
+  ;;
+  ;;where ?TEMPLATE is one among:
+  ;;
+  ;;  ?datum
+  ;;  ?pattern-variable
+  ;;  ?id
+  ;;  (?subtemplate ...)
+  ;;  (?subtemplate ... . ?template)
+  ;;  #(?subtemplate ...)
+  ;;
+  ;;in  which:  ?DATUM  is  a literal  datum,  ?PATTERN-VARIABLE  is  an
+  ;;identifier referencing  a pattern  variable created  by SYNTAX-CASE,
+  ;;?ID   is  an   identifier  not   referencing  a   pattern  variable,
+  ;;?SUBTEMPLATE  is  a  template  followed by  zero  or  more  ellipsis
+  ;;identifiers.
+  ;;
+  ;;Return a wrapped or unwrapped syntax object containing an expression
+  ;;in which:
+  ;;
+  ;;* All the template identifiers being references to pattern variables
+  ;;  are substituted with the corresponding syntax objects.
+  ;;
+  ;;     (syntax-case #'123 (?obj (syntax ?obj)))
+  ;;     => #<syntax expr=123>
+  ;;
+  ;;     (syntax-case #'(1 2) ((?a ?b) (syntax #(?a ?b))))
+  ;;     => #(#<syntax expr=1> #<syntax expr=1>)
+  ;;
+  ;;* All the identifiers not  being references to pattern variables are
+  ;;  left  alone to  be captured  by the lexical  context at  the level
+  ;;  below the current,  in the context of the SYNTAX  macro use or the
+  ;;  context of the output form.
+  ;;
+  ;;     (syntax-case #'(1) ((?a) (syntax (display ?b))))
+  ;;     => (#<syntax expr=display>
+  ;;         #<syntax expr=1> . #<syntax expr=()>)
+  ;;
+  ;;* All the sub-templates followed by ellipsis are replicated to match
+  ;;  the input pattern.
+  ;;
+  ;;     (syntax-case #'(1 2 3) ((?a ...) (syntax #(?a ...))))
+  ;;     => #(1 2 3)
+  ;;
   (define (syntax-transformer src-stx lexenv.run lexenv.expand)
-    ;;Transformer function  used to  expand R6RS's SYNTAX  syntaxes from
-    ;;the  top-level  built  in  environment.  Expand  the  contents  of
-    ;;SRC-STX in the context of  the lexical environments LEXENV.RUN and
-    ;;LEXENV.EXPAND.  Return a symbolic expression in the core language.
-    ;;
-    ;;LEXENV.RUN is a lexical environment for run time.
-    ;;
-    ;;LEXENV.EXPAND is a lexical environment  for expand time; it is not
-    ;;used by this transformer.
-    ;;
-    ;;Remember what  the SYNTAX  macro does!!!  It  must expand  to code
-    ;;that, when evaluated, will retrieve values from referenced pattern
-    ;;variables,  replicate the  ellipsis  patterns and  compose a  data
-    ;;structure representing an  output form.  Such code  can be nested:
-    ;;when an UNSYNTAX  is evaluated inside a QUASISYNTAX:  a portion of
-    ;;the thing is evaluated inside a SYNTAX.
-    ;;
     (syntax-match src-stx ()
-      ((_ ?expr)
-       (receive (e maps)
-	   (gen-syntax src-stx ?expr lexenv.run '() ellipsis? #f)
-	 (regen e)))))
+      ((_ ?template)
+       (receive (expr maps)
+	   (%gen-syntax src-stx ?template lexenv.run '() ellipsis? #f)
+	 (%regenerate-syntax-object expr)))))
 
-  (define (gen-syntax src-stx expr-stx lexenv maps ellipsis? vec?)
+  (define (%gen-syntax src-stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
     ;;SRC-STX must be  the syntax object containing  the original SYNTAX
     ;;macro use; it is used for descriptive error reporting.
     ;;
-    ;;EXPR-STX must be the subject of the SYNTAX macro.
+    ;;TEMPLATE-STX must be the template from the SYNTAX macro use.
     ;;
     ;;LEXENV is  the lexical  environment in  which the  expansion takes
-    ;;place.
+    ;;place;  it must  contain  the pattern  variables  visible by  this
+    ;;SYNTAX use.
     ;;
     ;;ELLIPSIS? must be a predicate function returning true when applied
-    ;;to the ellipsis identifier from the built in environment.
+    ;;to the  ellipsis identifier from  the built in  environment.  Such
+    ;;function  is made  an argument,  so that  it can  be changed  to a
+    ;;predicate  returning   always  false   when  we   are  recursively
+    ;;processing a quoted template:
+    ;;
+    ;;   (... ?sub-template)
+    ;;
+    ;;in which the ellipses in ?SUB-TEMPLATE are to be handled as normal
+    ;;identifiers.
     ;;
     ;;VEC? is a boolean: true when this function is processing the items
     ;;of a vector.
     ;;
-    (syntax-match expr-stx ()
+    (syntax-match template-stx ()
+
+      ;;Standalone ellipses are not allowed.
+      ;;
       (?dots
        (ellipsis? ?dots)
        (stx-error src-stx "misplaced ellipsis in syntax form"))
 
       ;;Match  a standalone  identifier.   ?ID can  be:  a reference  to
-      ;;pattern  variable;   a  reference   to  some  binding;   a  free
-      ;;identifier, in which case an  "unbound identifier" error will be
+      ;;pattern variable created by SYNTAX-CASE; an identifier that will
+      ;;be captured by  some binding; an identifier that  will result to
+      ;;be free,  in which  case an "unbound  identifier" error  will be
       ;;raised later.
       ;;
       ;;Pattern variables are present  in the lexical environment LEXENV
       ;;as entries with format:
       ;;
-      ;;   (?label . (syntax . (?name ?level)))
+      ;;   (?label . (syntax . (?name . ?level)))
       ;;
       ;;where: ?LABEL  is the label  in the identifier's  syntax object,
       ;;"syntax"   is  the   symbol  "syntax",   ?NAME  is   the  symbol
@@ -5674,29 +5731,47 @@
        (identifier? ?id)
        (let ((binding (label->binding (id->label ?id) lexenv)))
 	 (if (eq? (binding-type binding) 'syntax)
+	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
-		 (let ((var.lexenv (binding-value binding)))
-		   (gen-ref src-stx (car var.lexenv) (cdr var.lexenv) maps))
+		 (let ((name.level (binding-value binding)))
+		   (%gen-ref src-stx (car name.level) (cdr name.level) maps))
 	       (values (list 'ref var) maps))
+	   ;;It is some other identifier.
 	   (values (list 'quote ?id) maps))))
 
-      ((?dots ?expr)
+      ;;Ellipses starting a vector template are not allowed:
+      ;;
+      ;;   #(... 1 2 3)   ==> ERROR
+      ;;
+      ;;but ellipses  starting a list  template are allowed,  they quote
+      ;;the subsequent sub-template:
+      ;;
+      ;;   (... ...)		==> quoted ellipsis
+      ;;   (... ?sub-template)	==> quoted ?SUB-TEMPLATE
+      ;;
+      ;;so that the ellipses in  the ?SUB-TEMPLATE are treated as normal
+      ;;identifiers.  We change the  ELLIPSIS? argument for recursion to
+      ;;a predicate that always returns false.
+      ;;
+      ((?dots ?sub-template)
        (ellipsis? ?dots)
        (if vec?
 	   (stx-error src-stx "misplaced ellipsis in syntax form")
-	 (gen-syntax src-stx ?expr lexenv maps (lambda (x) #f) #f)))
+	 (%gen-syntax src-stx ?sub-template lexenv maps (lambda (x) #f) #f)))
 
-      ((?pattern ?dots . ?rest)
+      ;;Match a template followed by ellipsis.
+      ;;
+      ((?template ?dots . ?rest)
        (ellipsis? ?dots)
        (let loop
 	   ((rest.stx ?rest)
 	    (kont     (lambda (maps)
-			(receive (pattern^ maps)
-			    (gen-syntax src-stx ?pattern lexenv (cons '() maps) ellipsis? #f)
+			(receive (template^ maps)
+			    (%gen-syntax src-stx ?template lexenv (cons '() maps) ellipsis? #f)
 			  (if (null? (car maps))
 			      (stx-error src-stx
 					 "extra ellipsis in syntax form")
-			    (values (gen-map pattern^ (car maps))
+			    (values (%gen-map template^ (car maps))
 				    (cdr maps)))))))
 	 (syntax-match rest.stx ()
 	   (()
@@ -5705,63 +5780,73 @@
 	   ((?dots . ?tail)
 	    (ellipsis? ?dots)
 	    (loop ?tail (lambda (maps)
-			  (receive (pattern^ maps)
+			  (receive (template^ maps)
 			      (kont (cons '() maps))
 			    (if (null? (car maps))
 				(stx-error src-stx "extra ellipsis in syntax form")
-			      (values (gen-mappend pattern^ (car maps))
+			      (values (%gen-mappend template^ (car maps))
 				      (cdr maps)))))))
 
 	   (_
 	    (receive (rest^ maps)
-		(gen-syntax src-stx rest.stx lexenv maps ellipsis? vec?)
-	      (receive (pattern^ maps)
+		(%gen-syntax src-stx rest.stx lexenv maps ellipsis? vec?)
+	      (receive (template^ maps)
 		  (kont maps)
-		(values (gen-append pattern^ rest^) maps))))
+		(values (%gen-append template^ rest^) maps))))
 	   )))
 
+      ;;Process pair templates.
+      ;;
       ((?car . ?cdr)
        (receive (car.new maps)
-	   (gen-syntax src-stx ?car lexenv maps ellipsis? #f)
+	   (%gen-syntax src-stx ?car lexenv maps ellipsis? #f)
 	 (receive (cdr.new maps)
-	     (gen-syntax src-stx ?cdr lexenv maps ellipsis? vec?)
-	   (values (gen-cons expr-stx ?car ?cdr car.new cdr.new)
+	     (%gen-syntax src-stx ?cdr lexenv maps ellipsis? vec?)
+	   (values (%gen-cons template-stx ?car ?cdr car.new cdr.new)
 		   maps))))
 
+      ;;Process a vector template.  We set to true the VEC? argument for
+      ;;recursion.
+      ;;
       (#(?item* ...)
        (receive (item*.new maps)
-	   (gen-syntax src-stx ?item* lexenv maps ellipsis? #t)
-	 (values (gen-vector expr-stx ?item* item*.new) maps)))
+	   (%gen-syntax src-stx ?item* lexenv maps ellipsis? #t)
+	 (values (%gen-vector template-stx ?item* item*.new)
+		 maps)))
 
+      ;;Everything else is just quoted in the output.  This includes all
+      ;;the literal datums.
+      ;;
       (_
-       (values `(quote ,expr-stx) maps))))
+       (values `(quote ,template-stx) maps))
+      ))
 
-  (define (gen-ref src-stx var level maps)
+  (define (%gen-ref src-stx var level maps)
     (if (= level 0)
 	(values var maps)
       (if (null? maps)
 	  (stx-error src-stx "missing ellipsis in syntax form")
 	(receive (outer-var outer-maps)
-	    (gen-ref src-stx var (- level 1) (cdr maps))
+	    (%gen-ref src-stx var (- level 1) (cdr maps))
 	  (cond ((assq outer-var (car maps))
 		 => (lambda (b)
 		      (values (cdr b) maps)))
-	   (else
-	    (let ((inner-var (gensym-for-lexical-var 'tmp)))
-	      (values inner-var
-		      (cons (cons (cons outer-var inner-var)
-				  (car maps))
-			    outer-maps)))))))))
+		(else
+		 (let ((inner-var (gensym-for-lexical-var 'tmp)))
+		   (values inner-var
+			   (cons (cons (cons outer-var inner-var)
+				       (car maps))
+				 outer-maps)))))))))
 
-  (define (gen-append x y)
+  (define (%gen-append x y)
     (if (equal? y '(quote ()))
 	x
       `(append ,x ,y)))
 
-  (define (gen-mappend e map-env)
-    `(apply (primitive append) ,(gen-map e map-env)))
+  (define (%gen-mappend e map-env)
+    `(apply (primitive append) ,(%gen-map e map-env)))
 
-  (define (gen-map e map-env)
+  (define (%gen-map e map-env)
     (let ((formals (map cdr map-env))
 	  (actuals (map (lambda (x) `(ref ,(car x))) map-env)))
       (cond
@@ -5781,7 +5866,7 @@
        (else
 	(cons* 'map (list 'lambda formals e) actuals)))))
 
-  (define (gen-cons e x y xnew ynew)
+  (define (%gen-cons e x y xnew ynew)
     (case (car ynew)
       ((quote)
        (if (eq? (car xnew) 'quote)
@@ -5798,7 +5883,7 @@
       (else
        `(cons ,xnew ,ynew))))
 
-  (define (gen-vector e ls lsnew)
+  (define (%gen-vector e ls lsnew)
     (cond ((eq? (car lsnew) 'quote)
 	   (if (eq? (cadr lsnew) ls)
 	       `(quote ,e)
@@ -5810,7 +5895,7 @@
 	  (else
 	   `(list->vector ,lsnew))))
 
-  (define (regen x)
+  (define (%regenerate-syntax-object x)
     ;;Recursive function.
     ;;
     (case (car x)
@@ -5821,16 +5906,16 @@
       ((quote)
        (build-data no-source (cadr x)))
       ((lambda)
-       (build-lambda no-source (cadr x) (regen (caddr x))))
+       (build-lambda no-source (cadr x) (%regenerate-syntax-object (caddr x))))
       ((map)
-       (let ((ls (map regen (cdr x))))
+       (let ((ls (map %regenerate-syntax-object (cdr x))))
 	 (build-application no-source
 			    (build-primref no-source 'ellipsis-map)
 			    ls)))
       (else
        (build-application no-source
 			  (build-primref no-source (car x))
-			  (map regen (cdr x))))))
+			  (map %regenerate-syntax-object (cdr x))))))
 
   #| end of module: syntax-transformer |# )
 
