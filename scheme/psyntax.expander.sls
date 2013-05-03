@@ -6046,108 +6046,110 @@
 
 ;;;; module core-macro-transformer: SYNTAX-CASE
 
-(define syntax-case-transformer
-  (let ()
-    (define build-dispatch-call
-      (lambda (pvars expr y r mr)
-	(let ((ids (map car pvars))
-	      (levels (map cdr pvars)))
-	  (let ((labels (map gensym-for-label ids))
-		(new-vars (map gensym-for-lexical-var ids)))
-	    (let ((body (chi-expr (push-lexical-contour (make-full-rib ids labels) expr)
-				  (append
-				   (map (lambda (label var level)
-					  (cons label (make-binding 'syntax (cons var level))))
-				     labels new-vars (map cdr pvars))
-				   r)
-				  mr)))
-	      (build-application no-source
-				 (build-primref no-source 'apply)
-				 (list (build-lambda no-source new-vars body) y)))))))
-    (define invalid-ids-error
-      (lambda (id* e class)
-	(let find ((id* id*) (ok* '()))
-	  (if (null? id*)
-	      (stx-error e) ; shouldn't happen
-	    (if (identifier? (car id*))
-		(if (bound-id-member? (car id*) ok*)
-		    (syntax-error (car id*) "duplicate " class)
-		  (find (cdr id*) (cons (car id*) ok*)))
-	      (syntax-error (car id*) "invalid " class))))))
-    (define gen-clause
-      (lambda (x keys clauses r mr pat fender expr)
-	(let-values (((p pvars) (convert-pattern pat keys)))
-	  (cond
-	   ((not (distinct-bound-ids? (map car pvars)))
-	    (invalid-ids-error (map car pvars) pat "pattern variable"))
-	   ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
-	    (stx-error pat "misplaced ellipsis in syntax-case pattern"))
-	   (else
-	    (let ((y (gensym-for-lexical-var 'tmp)))
-	      (let ((test
-		     (cond
-		      ((eq? fender #t) y)
-		      (else
-		       (let ((call
-			      (build-dispatch-call
-			       pvars fender y r mr)))
-			 (build-conditional no-source
-					    (build-lexical-reference no-source y)
-					    call
-					    (build-data no-source #f)))))))
-		(let ((conseq
-		       (build-dispatch-call pvars expr
-					    (build-lexical-reference no-source y)
-					    r mr)))
-		  (let ((altern
-			 (gen-syntax-case x keys clauses r mr)))
-		    (build-application no-source
-				       (build-lambda no-source (list y)
-						     (build-conditional no-source test conseq altern))
-				       (list
-					(build-application no-source
-							   (build-primref no-source 'syntax-dispatch)
-							   (list
-							    (build-lexical-reference no-source x)
-							    (build-data no-source p))))))))))))))
-    (define gen-syntax-case
-      (lambda (x keys clauses r mr)
-	(if (null? clauses)
-	    (build-application no-source
-			       (build-primref no-source 'syntax-error)
-			       (list (build-lexical-reference no-source x)))
-	  (syntax-match (car clauses) ()
-	    ((pat expr)
-	     (if (and (identifier? pat)
-		      (not (bound-id-member? pat keys))
-		      (not (ellipsis? pat)))
-		 (if (free-id=? pat (scheme-stx '_))
-		     (chi-expr expr r mr)
-		   (let ((lab (gensym-for-label pat))
-			 (lex (gensym-for-lexical-var pat)))
-		     (let ((body
-			    (chi-expr
-			     (push-lexical-contour (make-full-rib (list pat) (list lab)) expr)
-			     ;;Push  a  pattern  variable entry  to  the
-			     ;;lexical environment.
-			     (cons (cons lab (make-binding 'syntax (cons lex 0))) r)
-			     mr)))
-		       (build-application no-source
-					  (build-lambda no-source (list lex) body)
-					  (list (build-lexical-reference no-source x))))))
-	       (gen-clause x keys (cdr clauses) r mr pat #t expr)))
-	    ((pat fender expr)
-	     (gen-clause x keys (cdr clauses) r mr pat fender expr))))))
-    (lambda (e r mr)
-      (syntax-match e ()
-	((_ expr (keys ...) clauses ...)
-	 (begin
-	   (verify-literals keys e)
-	   (let ((x (gensym-for-lexical-var 'tmp)))
-	     (let ((body (gen-syntax-case x keys clauses r mr)))
-	       (build-application no-source
-				  (build-lambda no-source (list x) body)
-				  (list (chi-expr expr r mr)))))))))))
+(module (syntax-case-transformer)
+
+  (define (syntax-case-transformer e r mr)
+    (syntax-match e ()
+      ((_ expr (keys ...) clauses ...)
+       (begin
+	 (verify-literals keys e)
+	 (let ((x (gensym-for-lexical-var 'tmp)))
+	   (let ((body (gen-syntax-case x keys clauses r mr)))
+	     (build-application no-source
+				(build-lambda no-source (list x) body)
+				(list (chi-expr expr r mr)))))))
+      ))
+
+  (define (build-dispatch-call pvars expr y r mr)
+    (let ((ids (map car pvars))
+	  (levels (map cdr pvars)))
+      (let ((labels (map gensym-for-label ids))
+	    (new-vars (map gensym-for-lexical-var ids)))
+	(let ((body (chi-expr (push-lexical-contour (make-full-rib ids labels) expr)
+			      (append
+			       (map (lambda (label var level)
+				      (cons label (make-binding 'syntax (cons var level))))
+				 labels new-vars (map cdr pvars))
+			       r)
+			      mr)))
+	  (build-application no-source
+			     (build-primref no-source 'apply)
+			     (list (build-lambda no-source new-vars body) y))))))
+
+  (define (invalid-ids-error id* e class)
+    (let find ((id* id*)
+	       (ok* '()))
+      (if (null? id*)
+	  (stx-error e) ; shouldn't happen
+	(if (identifier? (car id*))
+	    (if (bound-id-member? (car id*) ok*)
+		(syntax-error (car id*) "duplicate " class)
+	      (find (cdr id*) (cons (car id*) ok*)))
+	  (syntax-error (car id*) "invalid " class)))))
+
+  (define (gen-clause x keys clauses r mr pat fender expr)
+    (let-values (((p pvars) (convert-pattern pat keys)))
+      (cond
+       ((not (distinct-bound-ids? (map car pvars)))
+	(invalid-ids-error (map car pvars) pat "pattern variable"))
+       ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
+	(stx-error pat "misplaced ellipsis in syntax-case pattern"))
+       (else
+	(let ((y (gensym-for-lexical-var 'tmp)))
+	  (let ((test (cond ((eq? fender #t) y)
+			    (else
+			     (let ((call
+				    (build-dispatch-call
+				     pvars fender y r mr)))
+			       (build-conditional no-source
+						  (build-lexical-reference no-source y)
+						  call
+						  (build-data no-source #f)))))))
+	    (let ((conseq
+		   (build-dispatch-call pvars expr
+					(build-lexical-reference no-source y)
+					r mr)))
+	      (let ((altern
+		     (gen-syntax-case x keys clauses r mr)))
+		(build-application no-source
+				   (build-lambda no-source (list y)
+						 (build-conditional no-source test conseq altern))
+				   (list
+				    (build-application no-source
+						       (build-primref no-source 'syntax-dispatch)
+						       (list
+							(build-lexical-reference no-source x)
+							(build-data no-source p)))))))))))))
+
+  (define (gen-syntax-case x keys clauses r mr)
+    (if (null? clauses)
+	(build-application no-source
+			   (build-primref no-source 'syntax-error)
+			   (list (build-lexical-reference no-source x)))
+      (syntax-match (car clauses) ()
+	((pat expr)
+	 (if (and (identifier? pat)
+		  (not (bound-id-member? pat keys))
+		  (not (ellipsis? pat)))
+	     (if (free-id=? pat (scheme-stx '_))
+		 (chi-expr expr r mr)
+	       (let ((lab (gensym-for-label pat))
+		     (lex (gensym-for-lexical-var pat)))
+		 (let ((body
+			(chi-expr
+			 (push-lexical-contour (make-full-rib (list pat) (list lab)) expr)
+			 ;;Push  a  pattern  variable entry  to  the
+			 ;;lexical environment.
+			 (cons (cons lab (make-binding 'syntax (cons lex 0))) r)
+			 mr)))
+		   (build-application no-source
+				      (build-lambda no-source (list lex) body)
+				      (list (build-lexical-reference no-source x))))))
+	   (gen-clause x keys (cdr clauses) r mr pat #t expr)))
+	((pat fender expr)
+	 (gen-clause x keys (cdr clauses) r mr pat fender expr)))))
+
+  #| end of module: SYNTAX-CASE-TRANSFORMER |# )
 
 
 ;;; end of module: CORE-MACRO-TRANSFORMER
