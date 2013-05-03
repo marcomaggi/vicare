@@ -64,6 +64,175 @@
 (check-display "*** testing Vicare expander\n")
 
 
+(parametrise ((check-test-name	'syntax-objects))
+
+  (define-syntax (check-it stx)
+    (syntax-case stx ()
+      ((_ ?pattern ?syntax (_ . ?input) ?output)
+       (let ((out #'(check
+			(let ()
+			  (define-syntax doit
+			    (lambda (stx)
+			      (syntax-case stx ()
+				(?pattern ?syntax))))
+			  (doit . ?input))
+		      => ?output)))
+	 #;(check-pretty-print (syntax->datum out))
+	 out))))
+
+;;; --------------------------------------------------------------------
+;;; lists and pattern variables
+
+  (check-it
+      (_ ())
+    (syntax 123)
+    (_ ())
+    123)
+
+  (check-it
+      (_ ?val)
+    (syntax ?val)
+    (_ 123)
+    123)
+
+  (check-it
+      (_ ?a ?b ?c)
+    (syntax (quote (?a ?b ?c)))
+    (_ 1 2 3)
+    '(1 2 3))
+
+  (check-it
+      (_ ?a ?b ?c)
+    (syntax (list ?a ?b ?c))
+    (_ 1 2 3)
+    '(1 2 3))
+
+  (check-it
+      (_ (((?a ?b ?c))))
+    (syntax (quote (?a ?b ?c)))
+    (_ (((1 2 3))))
+    '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; improper lists and pattern variables
+
+  (check-it
+      (_ (?a ?b . ?c))
+    (syntax (quote (?a ?b ?c)))
+    (_ (1 2 . 3))
+    '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; pairs and pattern variables
+
+  (check-it
+      (_ (?a . ?b))
+    (syntax (quote (?a ?b)))
+    (_ (1 . 2))
+    '(1 2))
+
+  (check-it
+      (_ ((?a . ?b) ?c))
+    (syntax (quote (?a ?b ?c)))
+    (_ ((1 . 2) 3))
+    '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; vectors and pattern variables
+
+  (check-it
+      (_ #())
+    (syntax 123)
+    (_ #())
+    123)
+
+  (check-it
+      (_ #(?a ?b ?c))
+    (syntax (quote (?a ?b ?c)))
+    (_ #(1 2 3))
+    '(1 2 3))
+
+  (check-it
+      (_ #(#(#(?a ?b ?c))))
+    (syntax (quote (?a ?b ?c)))
+    (_ #(#(#(1 2 3))))
+    '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; lists and ellipses
+
+  (check-it
+      (_ ?a ...)
+    (syntax (quote (?a ...)))
+    (_ 1 2 3)
+    '(1 2 3))
+
+  (check-it
+      (_ ?a ?b ...)
+    (syntax (quote (?a ?b ...)))
+    (_ 1 2 3)
+    '(1 2 3))
+
+  (check-it
+      (_ (?a ...) ...)
+    (syntax (quote ((?a ...) ...)))
+    (_ (1 2 3) (4 5 6) (7 8 9))
+    '((1 2 3) (4 5 6) (7 8 9)))
+
+  (check-it
+      (_ (?a ?b ...) ...)
+    (syntax (quote ((?a ?b ...) ...)))
+    (_ (1 2 3) (4 5 6) (7 8 9))
+    '((1 2 3) (4 5 6) (7 8 9)))
+
+  (check-it
+      (_ ?a ... ?b)
+    (syntax (quote ((?a ...) ?b)))
+    (_ 1 2 3)
+    '((1 2) 3))
+
+;;; --------------------------------------------------------------------
+;;; vectors and ellipses
+
+  (check-it
+      (_ #(?a ...))
+    (syntax (quote (?a ...)))
+    (_ #(1 2 3))
+    '(1 2 3))
+
+  (check-it
+      (_ #(?a ?b ...))
+    (syntax (quote (?a ?b ...)))
+    (_ #(1 2 3))
+    '(1 2 3))
+
+  (check-it
+      (_ #(?a ...) ...)
+    (syntax (quote ((?a ...) ...)))
+    (_ #(1 2 3) #(4 5 6) #(7 8 9))
+    '((1 2 3) (4 5 6) (7 8 9)))
+
+  (check-it
+      (_ #(?a ?b ...) ...)
+    (syntax (quote ((?a ?b ...) ...)))
+    (_ #(1 2 3) #(4 5 6) #(7 8 9))
+    '((1 2 3) (4 5 6) (7 8 9)))
+
+  (check-it
+      (_ #(?a ... ?b))
+    (syntax (quote ((?a ...) ?b)))
+    (_ #(1 2 3))
+    '((1 2) 3))
+
+  (check-it
+      (_ #(?a ... (?b ...)))
+    (syntax (quote ((?a ...) ?b ...)))
+    (_ #(1 2 (3 4)))
+    '((1 2) 3 4))
+
+  #t)
+
+
 (parametrise ((check-test-name	'import))
 
   (check	;import separately a named module and a library, library
