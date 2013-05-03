@@ -6057,18 +6057,28 @@
       ((_ ?expr (?keys ...) ?clauses* ...)
        (begin
 	 (%verify-literals ?keys use-stx)
-	 (let* ((x    (gensym-for-lexical-var 'tmp))
-		(body (%gen-syntax-case x ?keys ?clauses* lexenv.run lexenv.expand)))
+	 (let* ( ;;The identifier to  which the result of evaluating the
+		;;?EXPR is bound.
+		(expr.id    (gensym-for-lexical-var 'tmp))
+		;;The full SYNTAX-CASE  pattern matching code, generated
+		;;and transformed to core language.
+		(body.core  (%gen-syntax-case expr.id ?keys ?clauses* lexenv.run lexenv.expand))
+		;;The ?EXPR transformed to core language.
+		(expr.core  (chi-expr ?expr lexenv.run lexenv.expand)))
+	   ;;Return a form like:
+	   ;;
+	   ;;   ((lambda (expr.id) body.core) expr.core)
+	   ;;
 	   (build-application no-source
-			      (build-lambda no-source (list x) body)
-			      (list (chi-expr ?expr lexenv.run lexenv.expand))))))
+			      (build-lambda no-source (list expr.id) body.core)
+			      (list expr.core)))))
       ))
 
-  (define (%gen-syntax-case x keys clauses lexenv.run lexenv.expand)
+  (define (%gen-syntax-case expr.id keys clauses lexenv.run lexenv.expand)
     (if (null? clauses)
 	(build-application no-source
 			   (build-primref no-source 'syntax-error)
-			   (list (build-lexical-reference no-source x)))
+			   (list (build-lexical-reference no-source expr.id)))
       (syntax-match (car clauses) ()
 	((pat expr)
 	 (if (and (identifier? pat)
@@ -6087,17 +6097,19 @@
 			 lexenv.expand)))
 		   (build-application no-source
 				      (build-lambda no-source (list lex) body)
-				      (list (build-lexical-reference no-source x))))))
-	   (%gen-clause x keys (cdr clauses) lexenv.run lexenv.expand pat #t expr)))
+				      (list (build-lexical-reference no-source expr.id))))))
+	   (%gen-clause expr.id keys (cdr clauses) lexenv.run lexenv.expand pat #t expr)))
 	((pat fender expr)
-	 (%gen-clause x keys (cdr clauses) lexenv.run lexenv.expand pat fender expr)))))
+	 (%gen-clause expr.id keys (cdr clauses) lexenv.run lexenv.expand pat fender expr)))))
 
-  (define (%gen-clause x keys clauses lexenv.run lexenv.expand pat fender expr)
+  (define (%gen-clause expr.id keys clauses lexenv.run lexenv.expand pat fender expr)
     (let-values (((p pvars) (convert-pattern pat keys)))
       (cond
        ((not (distinct-bound-ids? (map car pvars)))
 	(%invalid-ids-error (map car pvars) pat "pattern variable"))
-       ((not (for-all (lambda (x) (not (ellipsis? (car x)))) pvars))
+       ((not (for-all (lambda (x)
+			(not (ellipsis? (car x))))
+	       pvars))
 	(stx-error pat "misplaced ellipsis in syntax-case pattern"))
        (else
 	(let ((y (gensym-for-lexical-var 'tmp)))
@@ -6115,7 +6127,7 @@
 					 (build-lexical-reference no-source y)
 					 lexenv.run lexenv.expand)))
 	      (let ((altern
-		     (%gen-syntax-case x keys clauses lexenv.run lexenv.expand)))
+		     (%gen-syntax-case expr.id keys clauses lexenv.run lexenv.expand)))
 		(build-application no-source
 				   (build-lambda no-source (list y)
 						 (build-conditional no-source test conseq altern))
@@ -6123,7 +6135,7 @@
 				    (build-application no-source
 						       (build-primref no-source 'syntax-dispatch)
 						       (list
-							(build-lexical-reference no-source x)
+							(build-lexical-reference no-source expr.id)
 							(build-data no-source p)))))))))))))
 
   (define (%build-dispatch-call pvars expr y lexenv.run lexenv.expand)
