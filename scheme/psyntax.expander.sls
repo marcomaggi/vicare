@@ -4501,7 +4501,8 @@
 			;;No more symbols to  collect and null list of
 			;;collected INvalid symbols.
 			(()
-			 (quasisyntax (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
+			 (quasisyntax
+			  (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
 
 			;;Error if element is not a symbol.
 			((?symbol0 . ?rest)
@@ -4849,8 +4850,9 @@
 		 (values (list g) (list p) g))
 	     (let-values (((lhs* rhs* p) (quasi p (- lev 1))))
 	       (values lhs* rhs* (list 'unsyntax p)))))
-	  (unsyntax (= lev 0)
-		    (stx-error p "incorrect use of unsyntax"))
+	  (unsyntax
+	   (= lev 0)
+	   (stx-error p "incorrect use of unsyntax"))
 	  (((unsyntax p* ...) . q)
 	   (let-values (((lhs* rhs* q) (quasi q lev)))
 	     (if (= lev 0)
@@ -5617,6 +5619,13 @@
     ;;LEXENV.EXPAND is a lexical environment  for expand time; it is not
     ;;used by this transformer.
     ;;
+    ;;Remember what  the SYNTAX  macro does!!!  It  must expand  to code
+    ;;that, when evaluated, will retrieve values from referenced pattern
+    ;;variables,  replicate the  ellipsis  patterns and  compose a  data
+    ;;structure representing an  output form.  Such code  can be nested:
+    ;;when an UNSYNTAX  is evaluated inside a QUASISYNTAX:  a portion of
+    ;;the thing is evaluated inside a SYNTAX.
+    ;;
     (syntax-match src-stx ()
       ((_ ?expr)
        (receive (e maps)
@@ -5645,16 +5654,31 @@
        (ellipsis? ?dots)
        (stx-error src-stx "misplaced ellipsis in syntax form"))
 
+      ;;Match  a standalone  identifier.   ?ID can  be:  a reference  to
+      ;;pattern  variable;   a  reference   to  some  binding;   a  free
+      ;;identifier, in which case an  "unbound identifier" error will be
+      ;;raised later.
+      ;;
+      ;;Pattern variables are present  in the lexical environment LEXENV
+      ;;as entries with format:
+      ;;
+      ;;   (?label . (syntax . (?name ?level)))
+      ;;
+      ;;where: ?LABEL  is the label  in the identifier's  syntax object,
+      ;;"syntax"   is  the   symbol  "syntax",   ?NAME  is   the  symbol
+      ;;representing  the name  of the  pattern variable,  ?LEVEL is  an
+      ;;exact  integer representing  the  expansion level  in which  the
+      ;;pattern variable is present.
+      ;;
       (?id
        (identifier? ?id)
-       (let* ((label    (id->label expr-stx))
-	      (binding  (label->binding label lexenv)))
+       (let ((binding (label->binding (id->label ?id) lexenv)))
 	 (if (eq? (binding-type binding) 'syntax)
 	     (receive (var maps)
 		 (let ((var.lexenv (binding-value binding)))
 		   (gen-ref src-stx (car var.lexenv) (cdr var.lexenv) maps))
 	       (values (list 'ref var) maps))
-	   (values (list 'quote expr-stx) maps))))
+	   (values (list 'quote ?id) maps))))
 
       ((?dots ?expr)
        (ellipsis? ?dots)
@@ -5697,17 +5721,17 @@
 	   )))
 
       ((?car . ?cdr)
-       (receive (xnew maps)
+       (receive (car.new maps)
 	   (gen-syntax src-stx ?car lexenv maps ellipsis? #f)
-	 (receive (ynew maps)
+	 (receive (cdr.new maps)
 	     (gen-syntax src-stx ?cdr lexenv maps ellipsis? vec?)
-	   (values (gen-cons expr-stx ?car ?cdr xnew ynew)
+	   (values (gen-cons expr-stx ?car ?cdr car.new cdr.new)
 		   maps))))
 
       (#(?item* ...)
-       (receive (lsnew maps)
+       (receive (item*.new maps)
 	   (gen-syntax src-stx ?item* lexenv maps ellipsis? #t)
-	 (values (gen-vector expr-stx ?item* lsnew) maps)))
+	 (values (gen-vector expr-stx ?item* item*.new) maps)))
 
       (_
        (values `(quote ,expr-stx) maps))))
