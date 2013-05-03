@@ -5652,8 +5652,9 @@
   ;;?SUBTEMPLATE  is  a  template  followed by  zero  or  more  ellipsis
   ;;identifiers.
   ;;
-  ;;Return a wrapped or unwrapped syntax object containing an expression
-  ;;in which:
+  ;;Return a symbolic expression representing  code in the core language
+  ;;which, when evaluated, returns a  wrapped or unwrapped syntax object
+  ;;containing an expression in which:
   ;;
   ;;* All the template identifiers being references to pattern variables
   ;;  are substituted with the corresponding syntax objects.
@@ -5699,12 +5700,60 @@
   ;;   ((?a ...) ...)		->  (syntax . (?a . 2))
   ;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
   ;;
+  ;;Examples of  expansion, assuming  identifiers starting with  "?" are
+  ;;pattern variables:
+  ;;
+  ;;  (syntax display)
+  ;;  ==> (quote #<syntax expr=display>)
+  ;;
+  ;;  (syntax (display 123))
+  ;;  ==> (quote #<syntax expr=(display 123)>)
+  ;;
+  ;;  (syntax ?a)
+  ;;  ==> ?a
+  ;;
+  ;;  (syntax (?a))
+  ;;  ==> (cons ?a (quote #<syntax expr=()>))
+  ;;
+  ;;  (syntax (?a 1))
+  ;;  ==> (cons ?a (quote #<syntax expr=(1)>))
+  ;;
+  ;;  (syntax (1 ?a 2))
+  ;;  ==> (cons (quote #<syntax expr=1>)
+  ;;            (cons ?a (quote #<syntax expr=(1)>)))
+  ;;
+  ;;  (syntax (display ?a))
+  ;;  ==> ((primitive cons)
+  ;;           (quote #<syntax expr=display>)
+  ;;           ((primitive cons) ?a (quote #<syntax expr=()>)))
+  ;;
+  ;;  (syntax #(?a))
+  ;;  ==> (vector ?a)
+  ;;
+  ;;  (syntax (?a ...))
+  ;;  ==> ?a
+  ;;
+  ;;  (syntax ((?a ...) ...))
+  ;;  ==> ?a
+  ;;
+  ;;  (syntax ((?a ?b ...) ...))
+  ;;  ==> ((primitive ellipsis-map) (primitive cons) ?a ?b)
+  ;;
+  ;;  (syntax (((?a ?b ...) ...) ...))
+  ;;  ==> ((primitive ellipsis-map)
+  ;;          (case-lambda
+  ;;            ((tmp2 tmp1)
+  ;;             ((primitive ellipsis-map) (primitive cons) tmp1 tmp2)))
+  ;;       ?b ?a)
+  ;;
   (define (syntax-transformer src-stx lexenv.run lexenv.expand)
     (syntax-match src-stx ()
       ((_ ?template)
        (receive (expr maps)
 	   (%gen-syntax src-stx ?template lexenv.run '() ellipsis? #f)
-	 (%regenerate-syntax-object expr)))))
+	 (let ((code (%generate-output-code expr)))
+	   #;(debug-print code)
+	   code)))))
 
   (define (%gen-syntax src-stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
@@ -5927,7 +5976,7 @@
 	  (else
 	   `(list->vector ,lsnew))))
 
-  (define (%regenerate-syntax-object x)
+  (define (%generate-output-code x)
     ;;Recursive function.
     ;;
     (case (car x)
@@ -5938,16 +5987,16 @@
       ((quote)
        (build-data no-source (cadr x)))
       ((lambda)
-       (build-lambda no-source (cadr x) (%regenerate-syntax-object (caddr x))))
+       (build-lambda no-source (cadr x) (%generate-output-code (caddr x))))
       ((map)
-       (let ((ls (map %regenerate-syntax-object (cdr x))))
+       (let ((ls (map %generate-output-code (cdr x))))
 	 (build-application no-source
 			    (build-primref no-source 'ellipsis-map)
 			    ls)))
       (else
        (build-application no-source
 			  (build-primref no-source (car x))
-			  (map %regenerate-syntax-object (cdr x))))))
+			  (map %generate-output-code (cdr x))))))
 
   #| end of module: syntax-transformer |# )
 
