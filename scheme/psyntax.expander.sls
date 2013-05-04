@@ -6155,11 +6155,11 @@
       ))
 
   (define (%gen-clause expr.id literals
-		       pattern-stx fender-stx output-expr-stx
+		       pattern.stx fender.stx output-expr.stx
 		       lexenv.run lexenv.expand
 		       next-clauses)
     ;;Generate  the  code needed  to  match  the clause  represented  by
-    ;;PATTERN-STX, FENDER-STX and  OUTPUT-EXPR-STX; recursively generate
+    ;;PATTERN.STX, FENDER.STX and  OUTPUT-EXPR.STX; recursively generate
     ;;the code to match the other clauses in NEXT-CLAUSES.
     ;;
     ;;When there is a fender, we build the output form (pseudo-code):
@@ -6184,17 +6184,29 @@
     ;;pattern did not match, otherwise the list of values to be bound to
     ;;the pattern variables.
     ;;
-    (receive (p pvars)
-	(convert-pattern pattern-stx literals)
-      (unless (distinct-bound-ids? (map car pvars))
-	(%invalid-ids-error (map car pvars) pattern-stx "pattern variable"))
+    (receive (pattern.dispatch pvars.levels)
+	;;CONVERT-PATTERN  return 2  values: the  pattern in  the format
+	;;accepted by SYNTAX-DISPATCH, an alist representing the pattern
+	;;variables:
+	;;
+	;;* The keys of the alist are identifiers representing the names
+	;;  of the pattern variables.
+	;;
+	;;*  The values  of the  alist are  non-negative exact  integers
+	;;  representing the ellipsis nesting level of the corresponding
+	;;  pattern variable.  See SYNTAX-TRANSFORMER for details.
+	;;
+	(convert-pattern pattern.stx literals)
+      (let ((pvars (map car pvars.levels)))
+	(unless (distinct-bound-ids? pvars)
+	  (%invalid-ids-error pvars pattern.stx "pattern variable")))
       (unless (for-all (lambda (x)
 			 (not (ellipsis? (car x))))
-		pvars)
-	(stx-error pattern-stx "misplaced ellipsis in syntax-case pattern"))
+		pvars.levels)
+	(stx-error pattern.stx "misplaced ellipsis in syntax-case pattern"))
       (let* ((tmp-sym      (gensym-for-lexical-var 'tmp))
-	     (fender-cond  (%build-fender-conditional expr.id literals tmp-sym pvars
-						      fender-stx output-expr-stx
+	     (fender-cond  (%build-fender-conditional expr.id literals tmp-sym pvars.levels
+						      fender.stx output-expr.stx
 						      lexenv.run lexenv.expand
 						      next-clauses)))
 	(build-application no-source
@@ -6205,10 +6217,10 @@
 	   (build-application no-source
 	     (build-primref no-source 'syntax-dispatch)
 	     (list (build-lexical-reference no-source expr.id)
-		   (build-data no-source p))))))))
+		   (build-data no-source pattern.dispatch))))))))
 
-  (define (%build-fender-conditional expr.id literals tmp-sym pvars
-				     fender-stx output-expr-stx
+  (define (%build-fender-conditional expr.id literals tmp-sym pvars.levels
+				     fender.stx output-expr.stx
 				     lexenv.run lexenv.expand
 				     next-clauses)
     ;;Generate the  code that tests  the fender: if the  fender succeeds
@@ -6228,17 +6240,17 @@
     ;;       (output-expr)
     ;;     (match-next-clauses))
     ;;
-    (define-inline (%build-call expr-stx)
-      (%build-dispatch-call pvars expr-stx tmp-sym lexenv.run lexenv.expand))
-    (let ((test     (if (eq? fender-stx #t)
+    (define-inline (%build-call expr.stx)
+      (%build-dispatch-call pvars.levels expr.stx tmp-sym lexenv.run lexenv.expand))
+    (let ((test     (if (eq? fender.stx #t)
 			;;There is no fender.
 			tmp-sym
 		      ;;There is a fender.
 		      (build-conditional no-source
 			(build-lexical-reference no-source tmp-sym)
-			(%build-call fender-stx)
+			(%build-call fender.stx)
 			(build-data no-source #f))))
-	  (conseq    (%build-call output-expr-stx))
+	  (conseq    (%build-call output-expr.stx))
 	  (altern    (%gen-syntax-case expr.id literals next-clauses lexenv.run lexenv.expand)))
       (build-conditional no-source
 	test conseq altern)))
